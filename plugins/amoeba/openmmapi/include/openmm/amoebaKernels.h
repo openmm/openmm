@@ -431,7 +431,7 @@ public:
      * Initialize the kernel.
      * 
      * @param system     the System this kernel will be applied to
-     * @param force      the GBSAOBCForce this kernel will be used for
+     * @param force      the AmoebaVdwForce this kernel will be used for
      */
     virtual void initialize(const System& system, const AmoebaVdwForce& force) = 0;
 

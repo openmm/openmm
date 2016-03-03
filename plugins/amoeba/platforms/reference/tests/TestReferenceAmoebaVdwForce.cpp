@@ -1,4 +1,3 @@
-
 /* -------------------------------------------------------------------------- *
  *                                   OpenMMAmoeba                             *
  * -------------------------------------------------------------------------- *
@@ -57,36 +56,43 @@ using namespace std;
 extern "C" OPENMM_EXPORT void registerAmoebaReferenceKernelFactories();
 
 const double TOL = 1e-4;
+const double AngstromToNm = 0.1; 
+const double CalToJoule = 4.184;
+const double sigOH = 3.121421468053779;
+const double epsOH = 0.029615389502684615;
 
 void testVdw() {
 
     System system;
     int numberOfParticles          = 6;
     AmoebaVdwForce* amoebaVdwForce = new AmoebaVdwForce();
+    
     std::string sigmaCombiningRule = std::string("CUBIC-MEAN");
     amoebaVdwForce->setSigmaCombiningRule(sigmaCombiningRule);
-
     std::string epsilonCombiningRule = std::string("HHG");
     amoebaVdwForce->setEpsilonCombiningRule(epsilonCombiningRule);
+
     for (int ii = 0; ii < numberOfParticles; ii++) {
-        int indexIV;
+        int indexIV, vdwprType;
         double mass, sigma, epsilon, reduction, lambda;
         std::vector< int > exclusions;
         if (ii == 0 || ii == 3) {
             mass        = 16.0;
             indexIV     = ii;
+            vdwprType   = 34;
             sigma       = 1.70250E+00;
             epsilon     = 1.10000E-01;
             reduction   = 0.0;
-	    lambda = 1.0;
+            lambda      = 1.0;
         }
         else {
             mass        = 1.0;
             indexIV     = ii < 3 ? 0 : 3;
+            vdwprType   = 35;
             sigma       = 1.32750E+00;
             epsilon     = 1.35000E-02;
             reduction   = 0.91;
-	    lambda =1.0;
+            lambda      = 1.0;
         }
 
         // exclusions
@@ -102,9 +108,10 @@ void testVdw() {
             exclusions.push_back (5);
         }
         system.addParticle(mass);
-        amoebaVdwForce->addParticle(indexIV, sigma, epsilon, reduction, lambda);
+        amoebaVdwForce->addParticle(indexIV, vdwprType, sigma, epsilon, reduction, lambda);
         amoebaVdwForce->setParticleExclusions(ii, exclusions);
     }
+
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
 
     std::vector<Vec3> positions(numberOfParticles);
@@ -131,25 +138,27 @@ void testVdw() {
     expectedForces[4]     = Vec3( 0.735772031E+03, -0.353310112E+04,  0.490066356E+03);
     expectedForces[5]     = Vec3(-0.295245970E+02, -0.306277797E+02,  0.260578506E+02);
 
-    expectedEnergy        = 0.740688488E+03;
+    expectedEnergy        = 0.740688488E+03; // in kcal/mol
 
     system.addForce(amoebaVdwForce);
     std::string platformName;
-    #define AngstromToNm 0.1    
-    #define CalToJoule   4.184    
     for (int ii = 0; ii < numberOfParticles; ii++) {
         positions[ii][0] *= AngstromToNm;
         positions[ii][1] *= AngstromToNm;
         positions[ii][2] *= AngstromToNm;
     }
     for (int ii = 0; ii < amoebaVdwForce->getNumParticles();  ii++) {
-        int indexIV;
-        double sigma, epsilon, reduction,lambda;
-        amoebaVdwForce->getParticleParameters(ii, indexIV, sigma, epsilon, reduction, lambda);
+        int indexIV, vdwprType;
+        double sigma, epsilon, reduction, lambda;
+        amoebaVdwForce->getParticleParameters(ii, indexIV, vdwprType, sigma, epsilon, reduction, lambda);
         sigma        *= AngstromToNm;
         epsilon      *= CalToJoule;
-        amoebaVdwForce->setParticleParameters(ii, indexIV, sigma, epsilon, reduction,lambda);
+        amoebaVdwForce->setParticleParameters(ii, indexIV, vdwprType, sigma, epsilon, reduction, lambda);
     }
+
+    amoebaVdwForce->computeCombinedSigmaEpsilon();
+    amoebaVdwForce->addVdwprByOldTypes(34, 35, sigOH*AngstromToNm, epsOH*CalToJoule);
+
     platformName = "Reference";
     Context context(system, integrator, Platform::getPlatformByName(platformName));
 
@@ -170,45 +179,14 @@ void testVdw() {
         ASSERT_EQUAL_VEC(expectedForces[ii], forces[ii], tolerance);
     }
     ASSERT_EQUAL_TOL(expectedEnergy, state.getPotentialEnergy(), tolerance);
-    
-    // Try changing the particle parameters and make sure it's still correct.
-    
-    for (int i = 0; i < numberOfParticles; i++) {
-        int indexIV;
-        double mass, sigma, epsilon, reduction,lambda;
-        amoebaVdwForce->getParticleParameters(i, indexIV, sigma, epsilon, reduction,lambda);
-        amoebaVdwForce->setParticleParameters(i, indexIV, 0.9*sigma, 2.0*epsilon, 0.95*reduction,lambda);
-    }
-    LangevinIntegrator integrator2(0.0, 0.1, 0.01);
-    Context context2(system, integrator2, Platform::getPlatformByName(platformName));
-    context2.setPositions(positions);
-    State state1 = context.getState(State::Forces | State::Energy);
-    State state2 = context2.getState(State::Forces | State::Energy);
-    bool exceptionThrown = false;
-    try {
-        // This should throw an exception.
-        for (int i = 0; i < numberOfParticles; i++)
-            ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], tolerance);
-    }
-    catch (std::exception ex) {
-        exceptionThrown = true;
-    }
-    ASSERT(exceptionThrown);
-    amoebaVdwForce->updateParametersInContext(context);
-    state1 = context.getState(State::Forces | State::Energy);
-    for (int i = 0; i < numberOfParticles; i++)
-        ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], tolerance);
-    ASSERT_EQUAL_TOL(state1.getPotentialEnergy(), state2.getPotentialEnergy(), tolerance);
 }
 
 void setupAndGetForcesEnergyVdwAmmonia(const std::string& sigmaCombiningRule, const std::string& epsilonCombiningRule, double cutoff,
-                                       double boxDimension, std::vector<Vec3>& forces, double& energy) {
-
-    // beginning of Vdw setup
+                                       double boxDimension, std::vector<Vec3>& forces, double& energy, int useDispersionCorr) {
 
     System system;
-    AmoebaVdwForce* amoebaVdwForce        = new AmoebaVdwForce();;
-    int numberOfParticles                 = 8;
+    AmoebaVdwForce* amoebaVdwForce    = new AmoebaVdwForce();;
+    int numberOfParticles             = 8;
     amoebaVdwForce->setSigmaCombiningRule(sigmaCombiningRule);
     amoebaVdwForce->setEpsilonCombiningRule(epsilonCombiningRule);
     amoebaVdwForce->setCutoff(cutoff);
@@ -218,38 +196,36 @@ void setupAndGetForcesEnergyVdwAmmonia(const std::string& sigmaCombiningRule, co
         Vec3 c(0.0, 0.0, boxDimension);
         system.setDefaultPeriodicBoxVectors(a, b, c);
         amoebaVdwForce->setNonbondedMethod(AmoebaVdwForce::CutoffPeriodic);
-        amoebaVdwForce->setUseDispersionCorrection(1);
+        amoebaVdwForce->setUseDispersionCorrection(useDispersionCorr);
     }
     else {
         amoebaVdwForce->setNonbondedMethod(AmoebaVdwForce::NoCutoff);
         amoebaVdwForce->setUseDispersionCorrection(0);
     }
 
-    // addParticle: ivIndex, radius, epsilon, reductionFactor
+    system.addParticle( 1.4007000e+01);
+    amoebaVdwForce->addParticle(0,   45,   1.8550000e-01,   4.3932000e-01,   0.0000000e+00,   1.0);
+
+    system.addParticle( 1.0080000e+00);
+    amoebaVdwForce->addParticle(0,   46,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01,   1.0);
+
+    system.addParticle( 1.0080000e+00);
+    amoebaVdwForce->addParticle(0,   46,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01,   1.0);
+
+    system.addParticle( 1.0080000e+00);
+    amoebaVdwForce->addParticle(0,   46,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01,   1.0);
 
     system.addParticle( 1.4007000e+01);
-    amoebaVdwForce->addParticle(0,   1.8550000e-01,   4.3932000e-01,   0.0000000e+00,1.0);
+    amoebaVdwForce->addParticle(4,   45,   1.8550000e-01,   4.3932000e-01,   0.0000000e+00,   1.0);
 
     system.addParticle( 1.0080000e+00);
-    amoebaVdwForce->addParticle(0,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01,1.0);
+    amoebaVdwForce->addParticle(4,   46,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01,   1.0);
 
     system.addParticle( 1.0080000e+00);
-    amoebaVdwForce->addParticle(0,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01,1.0);
+    amoebaVdwForce->addParticle(4,   46,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01,   1.0);
 
     system.addParticle( 1.0080000e+00);
-    amoebaVdwForce->addParticle(0,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01,1.0);
-
-    system.addParticle( 1.4007000e+01);
-    amoebaVdwForce->addParticle(4,   1.8550000e-01,   4.3932000e-01,   0.0000000e+00,1.0);
-
-    system.addParticle( 1.0080000e+00);
-    amoebaVdwForce->addParticle(4,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01,1.0);
-
-    system.addParticle( 1.0080000e+00);
-    amoebaVdwForce->addParticle(4,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01,1.0);
-
-    system.addParticle( 1.0080000e+00);
-    amoebaVdwForce->addParticle(4,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01,1.0);
+    amoebaVdwForce->addParticle(4,   46,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01,   1.0);
 
     // ParticleExclusions
 
@@ -310,7 +286,11 @@ void setupAndGetForcesEnergyVdwAmmonia(const std::string& sigmaCombiningRule, co
     exclusions.push_back(6);
     amoebaVdwForce->setParticleExclusions(7, exclusions);
 
-    // end of Vdw setup
+    const double sigNH = 3.3602866425066855 * AngstromToNm;
+    const double epsNH = 0.03877194231798185 * CalToJoule;
+
+    amoebaVdwForce->computeCombinedSigmaEpsilon();
+    amoebaVdwForce->addVdwprByOldTypes(45, 46, sigNH, epsNH);
 
     std::vector<Vec3> positions(numberOfParticles);
 
@@ -352,122 +332,6 @@ void compareForcesEnergy(std::string& testName, double expectedEnergy, double en
     ASSERT_EQUAL_TOL_MOD(expectedEnergy, energy, tolerance, testName);
 }
 
-// test VDW w/ sigmaRule=CubicMean and epsilonRule=HHG
-
-void testVdwAmmoniaCubicMeanHhg() {
-
-    std::string testName      = "testVdwAmmoniaCubicMeanHhg";
-
-    int numberOfParticles     = 8;
-    double boxDimension       = -1.0;
-    double cutoff             = 9000000.0;
-    std::vector<Vec3> forces;
-    double energy;
-
-    setupAndGetForcesEnergyVdwAmmonia("CUBIC-MEAN", "HHG", cutoff, boxDimension, forces, energy);
-    std::vector<Vec3> expectedForces(numberOfParticles);
-
-    double expectedEnergy     =  4.8012258e+00;
-
-    expectedForces[0]         = Vec3( 2.9265247e+02,  -1.4507808e-02,  -6.9562123e+00);
-    expectedForces[1]         = Vec3(-2.2451693e+00,   4.8143073e-01,  -2.0041494e-01);
-    expectedForces[2]         = Vec3(-2.2440698e+00,  -4.7905450e-01,  -2.0125284e-01);
-    expectedForces[3]         = Vec3(-1.0840394e+00,  -5.8531253e-04,   2.6934135e-01);
-    expectedForces[4]         = Vec3(-5.6305662e+01,   1.4733908e-03,  -1.8083306e-01);
-    expectedForces[5]         = Vec3( 1.6750145e+00,  -3.2448374e-01,  -1.8030914e-01);
-    expectedForces[6]         = Vec3(-2.3412420e+02,   1.0754069e-02,   7.6287492e+00);
-    expectedForces[7]         = Vec3( 1.6756544e+00,   3.2497316e-01,  -1.7906832e-01);
-
-    double tolerance          = 1.0e-04;
-    compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
-}
-
-// test VDW w/ sigmaRule=Arithmetic and epsilonRule=Arithmetic
-
-void testVdwAmmoniaArithmeticArithmetic() {
-
-    std::string testName      = "testVdwAmmoniaArithmeticArithmetic";
-
-    int numberOfParticles     = 8;
-    double boxDimension       = -1.0;
-    double cutoff             = 9000000.0;
-
-    std::vector<Vec3> forces;
-    double energy;
-    setupAndGetForcesEnergyVdwAmmonia("ARITHMETIC", "ARITHMETIC", cutoff, boxDimension, forces, energy);
-    std::vector<Vec3> expectedForces(numberOfParticles);
-
-    double expectedEnergy     =  4.2252403e+00;
-
-    expectedForces[0]         = Vec3( 3.0603839e+02,  -1.5550310e-02,  -7.2661707e+00);
-    expectedForces[1]         = Vec3(-2.7801357e+00,   5.8805051e-01,  -2.5907269e-01);
-    expectedForces[2]         = Vec3(-2.7753968e+00,  -5.8440732e-01,  -2.5969111e-01);
-    expectedForces[3]         = Vec3(-2.2496416e+00,  -1.1797440e-03,   5.5501757e-01);
-    expectedForces[4]         = Vec3(-5.5077629e+01,   8.3417114e-04,  -3.3668921e-01);
-    expectedForces[5]         = Vec3( 2.3752452e+00,  -4.6788669e-01,  -2.4907764e-01);
-    expectedForces[6]         = Vec3(-2.4790697e+02,   1.1419770e-02,   8.0629999e+00);
-    expectedForces[7]         = Vec3( 2.3761408e+00,   4.6871961e-01,  -2.4731607e-01);
-
-    double tolerance          = 1.0e-04;
-    compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
-}
-
-// test VDW w/ sigmaRule=Geometric and epsilonRule=Geometric
-
-void testVdwAmmoniaGeometricGeometric() {
-
-    std::string testName      = "testVdwAmmoniaGeometricGeometric";
-
-    int numberOfParticles     = 8;
-    double boxDimension       = -1.0;
-    double cutoff             = 9000000.0;
-    std::vector<Vec3> forces;
-    double energy;
-    setupAndGetForcesEnergyVdwAmmonia("GEOMETRIC", "GEOMETRIC", cutoff, boxDimension, forces, energy);
-    std::vector<Vec3> expectedForces(numberOfParticles);
-
-    double expectedEnergy     =  2.5249914e+00;
-
-    expectedForces[0]         = Vec3( 2.1169631e+02,  -1.0710925e-02,  -4.3728025e+00);
-    expectedForces[1]         = Vec3(-2.2585621e+00,   4.8409995e-01,  -2.0188344e-01);
-    expectedForces[2]         = Vec3(-2.2551351e+00,  -4.8124855e-01,  -2.0246986e-01);
-    expectedForces[3]         = Vec3(-1.7178028e+00,  -9.0851787e-04,   4.2466975e-01);
-    expectedForces[4]         = Vec3(-4.8302147e+01,   9.6603376e-04,  -5.7972068e-01);
-    expectedForces[5]         = Vec3( 1.8100634e+00,  -3.5214093e-01,  -1.9357207e-01);
-    expectedForces[6]         = Vec3(-1.6078365e+02,   7.2117601e-03,   5.3180261e+00);
-    expectedForces[7]         = Vec3( 1.8109211e+00,   3.5273117e-01,  -1.9224723e-01);
-
-    double tolerance          = 1.0e-04;
-    compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
-}
-
-void testVdwAmmoniaCubicMeanHarmonic() {
-
-    std::string testName      = "testVdwAmmoniaCubicMeanHarmonic";
-
-    int numberOfParticles     = 8;
-    double boxDimension       = -1.0;
-    double cutoff             = 9000000.0;
-    std::vector<Vec3> forces;
-    double energy;
-    setupAndGetForcesEnergyVdwAmmonia("CUBIC-MEAN", "HARMONIC", cutoff, boxDimension, forces, energy);
-    std::vector<Vec3> expectedForces(numberOfParticles);
-
-    double expectedEnergy     =  4.1369069e+00;
-
-    expectedForces[0]         = Vec3( 2.5854436e+02,  -1.2779529e-02,  -5.9041148e+00);
-    expectedForces[1]         = Vec3(-2.0832419e+00,   4.4915831e-01,  -1.8266000e-01);
-    expectedForces[2]         = Vec3(-2.0823991e+00,  -4.4699804e-01,  -1.8347141e-01);
-    expectedForces[3]         = Vec3(-9.5914714e-01,  -5.2162026e-04,   2.3873165e-01);
-    expectedForces[4]         = Vec3(-5.3724787e+01,   1.4838241e-03,  -2.8089191e-01);
-    expectedForces[5]         = Vec3( 1.5074325e+00,  -2.9016397e-01,  -1.6385118e-01);
-    expectedForces[6]         = Vec3(-2.0271029e+02,   9.2367947e-03,   6.6389988e+00);
-    expectedForces[7]         = Vec3( 1.5080748e+00,   2.9058422e-01,  -1.6274118e-01);
-
-    double tolerance          = 1.0e-04;
-    compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
-}
-
 // test w/ cutoff=0.25 nm; single ixn between two particles (0 and 6); force nonzero on
 // particle 4 due to reduction applied to NH
 // the distance between 0 and 6 is ~ 0.235 so the ixn is in the tapered region
@@ -482,7 +346,8 @@ void testVdwTaper() {
 
     std::vector<Vec3> forces;
     double energy;
-    setupAndGetForcesEnergyVdwAmmonia("CUBIC-MEAN", "HHG", cutoff, boxDimension, forces, energy);
+    int useDispersionCorr = 0;
+    setupAndGetForcesEnergyVdwAmmonia("CUBIC-MEAN", "HHG", cutoff, boxDimension, forces, energy, useDispersionCorr);
     std::vector<Vec3> expectedForces(numberOfParticles);
 
     double expectedEnergy     =  3.5478444e+00;
@@ -512,10 +377,15 @@ void testVdwPBC() {
 
     std::vector<Vec3> forces;
     double energy;
-    setupAndGetForcesEnergyVdwAmmonia("CUBIC-MEAN", "HHG", cutoff, boxDimension, forces, energy);
+    int useDispersionCorr = 1;
+    setupAndGetForcesEnergyVdwAmmonia("CUBIC-MEAN", "HHG", cutoff, boxDimension, forces, energy, useDispersionCorr);
+
     std::vector<Vec3> expectedForces(numberOfParticles);
 
-    double expectedEnergy     =  1.4949141e+01;
+    // Dispersion corrected energy
+    double expectedEnergy =  19.58069457;
+    // uncorrected expectedEnergy
+    // double expectedEnergy = 8.4385404e+00;
 
     expectedForces[0]         = Vec3( 5.1453069e+02,   4.9751912e-01,  -1.2759570e+01);
     expectedForces[1]         = Vec3(-2.5622586e+02,  -4.6524265e+01,   2.4281465e+01);
@@ -560,19 +430,17 @@ void setupAndGetForcesEnergyVdwWater(const std::string& sigmaCombiningRule, cons
         amoebaVdwForce->setUseDispersionCorrection(0);
     }
 
-    // addParticle: ivIndex, radius, epsilon, reductionFactor
-
     int classIndex = 0;
-    for (int ii = 0; ii < numberOfParticles; ii += 3) {
+    for (unsigned int ii = 0; ii < numberOfParticles; ii += 3) {
 
-       system.addParticle( 1.5995000e+01);
-       amoebaVdwForce->addParticle(ii, 1.7025000e-01,   4.6024000e-01,   0.0000000e+00,1.0);
+       system.addParticle(  1.5995000e+01);
+       amoebaVdwForce->addParticle(ii,  34,  1.7025000e-01,   4.6024000e-01,   0.0000000e+00,  1.0);
 
-       system.addParticle( 1.0080000e+00);
-       amoebaVdwForce->addParticle(ii, 1.3275000e-01,   5.6484000e-02,   9.1000000e-01,1.0);
+       system.addParticle(  1.0080000e+00);
+       amoebaVdwForce->addParticle(ii,  35,  1.3275000e-01,   5.6484000e-02,   9.1000000e-01,  1.0);
 
-       system.addParticle( 1.0080000e+00);
-       amoebaVdwForce->addParticle(ii, 1.3275000e-01,   5.6484000e-02,   9.1000000e-01,1.0);
+       system.addParticle(  1.0080000e+00);
+       amoebaVdwForce->addParticle(ii,  35,  1.3275000e-01,   5.6484000e-02,   9.1000000e-01,  1.0);
    }
 
     // exclusions
@@ -586,6 +454,9 @@ void setupAndGetForcesEnergyVdwWater(const std::string& sigmaCombiningRule, cons
         amoebaVdwForce->setParticleExclusions(ii+1, exclusions);
         amoebaVdwForce->setParticleExclusions(ii+2, exclusions);
     }
+
+    amoebaVdwForce->computeCombinedSigmaEpsilon();
+    amoebaVdwForce->addVdwprByOldTypes(34, 35, sigOH*AngstromToNm, epsOH*CalToJoule);
 
     // end of Vdw setup
 
@@ -1258,7 +1129,6 @@ void setupAndGetForcesEnergyVdwWater(const std::string& sigmaCombiningRule, cons
 // test employing box of 216 water molecules w/ and w/o dispersion correction
 
 void testVdwWater(int includeVdwDispersionCorrection) {
-
 
     std::string testName;
     if (includeVdwDispersionCorrection) {
@@ -1941,90 +1811,6 @@ void testVdwWater(int includeVdwDispersionCorrection) {
 
     double tolerance          = 5.0e-04;
     compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
-
-    // test sigma/epsilon rules for dispersion correction
-
-    if (includeVdwDispersionCorrection) {
-
-         std::vector<std::string> sigmaRules;
-         std::vector<std::string> epsilonRules;
-         std::vector<double> expectedEnergies;
-
-         sigmaRules.push_back("ARITHMETIC");
-         epsilonRules.push_back("ARITHMETIC");
-         expectedEnergies.push_back(6.2137988e+03);
-
-         sigmaRules.push_back("GEOMETRIC");
-         epsilonRules.push_back("GEOMETRIC");
-         expectedEnergies.push_back(3.6358216e+03);
-
-         sigmaRules.push_back("CUBIC-MEAN");
-         epsilonRules.push_back("HARMONIC");
-         expectedEnergies.push_back(3.2774624e+03);
-
-         for (unsigned int ii = 0; ii < sigmaRules.size(); ii++) {
-             setupAndGetForcesEnergyVdwWater(sigmaRules[ii], epsilonRules[ii], cutoff, boxDimension, includeVdwDispersionCorrection, forces, energy);
-             testName    = "testVdwWaterWithDispersionCorrection_" + sigmaRules[ii] + '_' + epsilonRules[ii];
-             ASSERT_EQUAL_TOL_MOD(expectedEnergies[ii], energy, tolerance, testName);
-         }
- 
-    }
-}
-
-void testTriclinic() {
-    System system;
-    system.addParticle(1.0);
-    system.addParticle(1.0);
-    Vec3 a(3.1, 0, 0);
-    Vec3 b(0.4, 3.5, 0);
-    Vec3 c(-0.1, -0.5, 4.0);
-    system.setDefaultPeriodicBoxVectors(a, b, c);
-    LangevinIntegrator integrator(0.0, 0.1, 0.01);
-    AmoebaVdwForce* vdw = new AmoebaVdwForce();
-    vdw->setUseDispersionCorrection(false);
-    vdw->addParticle(0, 0.5, 1.0, 0.0,1.0);
-    vdw->addParticle(1, 0.5, 1.0, 0.0,1.0);
-    vdw->setNonbondedMethod(AmoebaVdwForce::CutoffPeriodic);
-    const double cutoff = 1.5;
-    vdw->setCutoff(cutoff);
-    system.addForce(vdw);
-    Context context(system, integrator, Platform::getPlatformByName("Reference"));
-    vector<Vec3> positions(2);
-    OpenMM_SFMT::SFMT sfmt;
-    init_gen_rand(0, sfmt);
-    for (int iteration = 0; iteration < 50; iteration++) {
-        // Generate random positions for the two particles.
-
-        positions[0] = a*genrand_real2(sfmt) + b*genrand_real2(sfmt) + c*genrand_real2(sfmt);
-        positions[1] = a*genrand_real2(sfmt) + b*genrand_real2(sfmt) + c*genrand_real2(sfmt);
-        context.setPositions(positions);
-
-        // Loop over all possible periodic copies and find the nearest one.
-
-        Vec3 delta;
-        double distance2 = 100.0;
-        for (int i = -1; i < 2; i++)
-            for (int j = -1; j < 2; j++)
-                for (int k = -1; k < 2; k++) {
-                    Vec3 d = positions[1]-positions[0]+a*i+b*j+c*k;
-                    if (d.dot(d) < distance2) {
-                        delta = d;
-                        distance2 = d.dot(d);
-                    }
-                }
-        double distance = sqrt(distance2);
-
-        // See if the energy is correct.
-
-        State state = context.getState(State::Energy);
-        if (distance >= cutoff) {
-            ASSERT_EQUAL(0.0, state.getPotentialEnergy());
-        }
-        else if (distance < 0.9*cutoff) {
-            const double energy = pow(1.07/(distance+0.07), 7.0)*(1.12/(pow(distance, 7.0)+0.12)-2);
-            ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), TOL);
-        }
-    }
 }
 
 int main(int numberOfArguments, char* argv[]) {
@@ -2032,25 +1818,10 @@ int main(int numberOfArguments, char* argv[]) {
     try {
         std::cout << "TestReferenceAmoebaVdwForce running test..." << std::endl;
         registerAmoebaReferenceKernelFactories();
+
         testVdw();
 
         // tests using two ammonia molecules
-
-        // test VDW w/ sigmaRule=CubicMean and epsilonRule=HHG
-
-        testVdwAmmoniaCubicMeanHhg();
-
-        // test VDW w/ sigmaRule=Arithmetic and epsilonRule=Arithmetic
-
-        testVdwAmmoniaArithmeticArithmetic();
-
-        // test VDW w/ sigmaRule=Geometric and epsilonRule=Geometric
-
-        testVdwAmmoniaGeometricGeometric();
-
-        // test VDW w/ sigmaRule=CubicMean and epsilonRule=Harmonic
-
-        testVdwAmmoniaCubicMeanHarmonic();
 
         // test w/ cutoff=0.25 nm; single ixn between two particles (0 and 6); force nonzero on
         // particle 4 due to reduction applied to NH
@@ -2070,13 +1841,8 @@ int main(int numberOfArguments, char* argv[]) {
         // includes tests for various combinations of sigma/epsilon rules
         // when computing vdw dispersion correction
  
-        includeVdwDispersionCorrection     = 1;
+        includeVdwDispersionCorrection = 1;
         testVdwWater(includeVdwDispersionCorrection);
-        
-        // test triclinic boxes
-        
-        testTriclinic();
-
     }
     catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;

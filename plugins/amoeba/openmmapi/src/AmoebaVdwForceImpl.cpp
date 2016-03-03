@@ -37,7 +37,6 @@
 #include "openmm/amoebaKernels.h"
 #include <map>
 #include <cmath>
-#include <iostream>
 
 using namespace OpenMM;
 using namespace std;
@@ -46,11 +45,10 @@ using std::pair;
 using std::vector;
 using std::set;
 
-AmoebaVdwForceImpl::AmoebaVdwForceImpl(const AmoebaVdwForce& owner) : owner(owner) {
-}
+AmoebaVdwForceImpl::AmoebaVdwForceImpl(const AmoebaVdwForce& owner)
+    : owner(owner) {}
 
-AmoebaVdwForceImpl::~AmoebaVdwForceImpl() {
-}
+AmoebaVdwForceImpl::~AmoebaVdwForceImpl() {}
 
 void AmoebaVdwForceImpl::initialize(ContextImpl& context) {
     const System& system = context.getSystem();
@@ -64,63 +62,62 @@ void AmoebaVdwForceImpl::initialize(ContextImpl& context) {
         Vec3 boxVectors[3];
         system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
         double cutoff = owner.getCutoff();
-        if (cutoff > 0.5*boxVectors[0][0] || cutoff > 0.5*boxVectors[1][1] || cutoff > 0.5*boxVectors[2][2])
+        if (cutoff > 0.5 * boxVectors[0][0] || cutoff > 0.5 * boxVectors[1][1] || cutoff > 0.5 * boxVectors[2][2])
             throw OpenMMException("AmoebaVdwForce: The cutoff distance cannot be greater than half the periodic box size.");
-    }   
+    }
 
     kernel = context.getPlatform().createKernel(CalcAmoebaVdwForceKernel::Name(), context);
     kernel.getAs<CalcAmoebaVdwForceKernel>().initialize(context.getSystem(), owner);
 }
 
 double AmoebaVdwForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
-    if ((groups&(1<<owner.getForceGroup())) != 0)
+    if ((groups & (1 << owner.getForceGroup())) != 0)
         return kernel.getAs<CalcAmoebaVdwForceKernel>().execute(context, includeForces, includeEnergy);
     return 0.0;
 }
 
 double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const AmoebaVdwForce& force) {
-
     // Amoeba VdW dispersion correction implemented by LPW
     // There is no dispersion correction if PBC is off or the cutoff is set to the default value of ten billion (AmoebaVdwForce.cpp)
-    if (force.getNonbondedMethod() == AmoebaVdwForce::NoCutoff){
+    if (force.getNonbondedMethod() == AmoebaVdwForce::NoCutoff) {
         return 0.0;
     }
     // Identify all particle classes (defined by sigma and epsilon and reduction), and count the number of
     // particles in each class.
-    double V1lambda=1;
-    map<pair<double, double>, int> NonLigclassCounts;
-    map<pair<double, double>, int> LigclassCounts;
+    double V1lambda = 1.0;
+    map<int, int> NonLigclassCounts;
+    map<int, int> LigclassCounts;
     for (int i = 0; i < force.getNumParticles(); i++) {
-        double sigma, epsilon, reduction,vlambda;
+        double sigma, epsilon, reduction, vlambda;
         // The variables reduction, ivindex are not used.
         int ivindex;
+        int key; // key == vdwType
         // Get the sigma and epsilon parameters, ignoring everything else.
-        force.getParticleParameters(i, ivindex, sigma, epsilon, reduction,vlambda);
-        pair<double, double> key = make_pair(sigma, epsilon);
-	if (vlambda < 1.0 ) {
-	      	V1lambda=vlambda;
-		map<pair<double, double>, int>::iterator entry = LigclassCounts.find(key);
-        	if (entry == LigclassCounts.end()){
-            		LigclassCounts[key]=1;
-			NonLigclassCounts[key]=0;
-		}
-        	else{
-            		entry->second++ ;
-		}
-   	}
-	else{ 
-                map<pair<double, double>, int>::iterator entry = NonLigclassCounts.find(key);
-                if (entry == NonLigclassCounts.end()){
-                        LigclassCounts[key] = 0;
-                        NonLigclassCounts[key] = 1 ;
-                }
-                else{
-                        entry->second++;
-		}
-	}
+        force.getParticleParameters(i, ivindex, key, sigma, epsilon, reduction, vlambda);
+        if (vlambda < 1.0) {
+            V1lambda = vlambda;
+            map<int, int>::iterator entry = LigclassCounts.find(key);
+            if (entry == LigclassCounts.end()) {
+                LigclassCounts[key] = 1;
+                NonLigclassCounts[key] = 0;
+            }
+            else {
+                entry->second++;
+            }
+        }
+        else {
+            map<int, int>::iterator entry = NonLigclassCounts.find(key);
+            if (entry == NonLigclassCounts.end()) {
+                LigclassCounts[key] = 0;
+                NonLigclassCounts[key] = 1;
+            }
+            else {
+                entry->second++;
+            }
+        }
     }
 
-    // Compute the VdW tapering coefficients.  Mostly copied from amoebaCudaGpu.cpp.
+    // Compute the VdW tapering coefficients.
     double cutoff = force.getCutoff();
     double vdwTaper = 0.90; // vdwTaper is a scaling factor, it is not a distance.
     double c0 = 0.0;
@@ -131,30 +128,30 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
     double c5 = 0.0;
 
     double vdwCut = cutoff;
-    double vdwTaperCut = vdwTaper*cutoff;
+    double vdwTaperCut = vdwTaper * cutoff;
 
-    double vdwCut2 = vdwCut*vdwCut;
-    double vdwCut3 = vdwCut2*vdwCut;
-    double vdwCut4 = vdwCut2*vdwCut2;
-    double vdwCut5 = vdwCut2*vdwCut3;
-    double vdwCut6 = vdwCut3*vdwCut3;
-    double vdwCut7 = vdwCut3*vdwCut4;
+    double vdwCut2 = vdwCut * vdwCut;
+    double vdwCut3 = vdwCut2 * vdwCut;
+    double vdwCut4 = vdwCut2 * vdwCut2;
+    double vdwCut5 = vdwCut2 * vdwCut3;
+    double vdwCut6 = vdwCut3 * vdwCut3;
+    double vdwCut7 = vdwCut3 * vdwCut4;
 
-    double vdwTaperCut2 = vdwTaperCut*vdwTaperCut;
-    double vdwTaperCut3 = vdwTaperCut2*vdwTaperCut;
-    double vdwTaperCut4 = vdwTaperCut2*vdwTaperCut2;
-    double vdwTaperCut5 = vdwTaperCut2*vdwTaperCut3;
-    double vdwTaperCut6 = vdwTaperCut3*vdwTaperCut3;
-    double vdwTaperCut7 = vdwTaperCut3*vdwTaperCut4;
+    double vdwTaperCut2 = vdwTaperCut * vdwTaperCut;
+    double vdwTaperCut3 = vdwTaperCut2 * vdwTaperCut;
+    double vdwTaperCut4 = vdwTaperCut2 * vdwTaperCut2;
+    double vdwTaperCut5 = vdwTaperCut2 * vdwTaperCut3;
+    double vdwTaperCut6 = vdwTaperCut3 * vdwTaperCut3;
+    double vdwTaperCut7 = vdwTaperCut3 * vdwTaperCut4;
 
     // get 5th degree multiplicative switching function coefficients;
 
     double denom = 1.0 / (vdwCut - vdwTaperCut);
-    double denom2 = denom*denom;
-    denom = denom * denom2*denom2;
+    double denom2 = denom * denom;
+    denom = denom * denom2 * denom2;
 
     c0 = vdwCut * vdwCut2 * (vdwCut2 - 5.0 * vdwCut * vdwTaperCut + 10.0 * vdwTaperCut2) * denom;
-    c1 = -30.0 * vdwCut2 * vdwTaperCut2*denom;
+    c1 = -30.0 * vdwCut2 * vdwTaperCut2 * denom;
     c2 = 30.0 * (vdwCut2 * vdwTaperCut + vdwCut * vdwTaperCut2) * denom;
     c3 = -10.0 * (vdwCut2 + 4.0 * vdwCut * vdwTaperCut + vdwTaperCut2) * denom;
     c4 = 15.0 * (vdwCut + vdwTaperCut) * denom;
@@ -162,10 +159,10 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
 
     // Loop over all pairs of classes to compute the coefficient.
     // Copied over from TINKER - numerical integration.
-    double range = 20.0;
+    double range = 10;
     double cut = vdwTaperCut; // This is where tapering BEGINS
     double off = vdwCut; // This is where tapering ENDS
-    int nstep = 200;
+    int nstep = 20;
     int ndelta = int(double(nstep) * (range - cut));
     double rdelta = (range - cut) / double(ndelta);
     double offset = cut - 0.5 * rdelta;
@@ -177,83 +174,39 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
     int i = 0, k = 0; // Loop counters.
 
     // Double loop over different atom types.
-    std::string sigmaCombiningRule = force.getSigmaCombiningRule();
-    std::string epsilonCombiningRule = force.getEpsilonCombiningRule();
-    for (map<pair<double, double>, int>::iterator class1 = NonLigclassCounts.begin(); class1 != NonLigclassCounts.end(); ++class1) {
+    for (map<int, int>::iterator class1 = NonLigclassCounts.begin(); class1 != NonLigclassCounts.end(); ++class1) {
         k = 0;
-        for (map<pair<double, double>, int>::const_iterator class2 = NonLigclassCounts.begin(); class2 != NonLigclassCounts.end(); ++class2) { 
-            // AMOEBA combining rules, copied over from the CUDA code.
-            double iSigma = class1->first.first;
-            double jSigma = class2->first.first;
-            double iEpsilon = class1->first.second;
-            double jEpsilon = class2->first.second;
-            // ARITHMETIC = 1
-            // GEOMETRIC  = 2
-            // CUBIC-MEAN = 3
-            if (sigmaCombiningRule == "ARITHMETIC") {
-              sigma = iSigma + jSigma;
-            } else if (sigmaCombiningRule == "GEOMETRIC") {
-              sigma = 2.0f * std::sqrt(iSigma * jSigma);
-            } else {
-              double iSigma2 = iSigma*iSigma;
-              double jSigma2 = jSigma*jSigma;
-              if ((iSigma2 + jSigma2) != 0.0) {
-                sigma = 2.0f * (iSigma2 * iSigma + jSigma2 * jSigma) / (iSigma2 + jSigma2);
-              } else {
-                sigma = 0.0;
-              }
-            }
-            // ARITHMETIC = 1
-            // GEOMETRIC  = 2
-            // HARMONIC   = 3
-            // HHG        = 4
-            if (epsilonCombiningRule == "ARITHMETIC") {
-              epsilon = 0.5f * (iEpsilon + jEpsilon);
-            } else if (epsilonCombiningRule == "GEOMETRIC") {
-              epsilon = std::sqrt(iEpsilon * jEpsilon);
-            } else if (epsilonCombiningRule == "HARMONIC") {
-              if ((iEpsilon + jEpsilon) != 0.0) {
-                epsilon = 2.0f * (iEpsilon * jEpsilon) / (iEpsilon + jEpsilon);
-              } else {
-                epsilon = 0.0;
-              }
-            } else {
-              double epsilonS = std::sqrt(iEpsilon) + std::sqrt(jEpsilon);
-              if (epsilonS != 0.0) {
-                epsilon = 4.0f * (iEpsilon * jEpsilon) / (epsilonS * epsilonS);
-              } else {
-                epsilon = 0.0;
-              }
-            }
-            // Below is an exact copy of stuff from the previous block.
-	    pair<double, double> key1= class1->first;
-	    pair<double, double> key2 = class2->first;
-	    int countNon1 = class1-> second;
-	    int countNon2 = class2-> second;
-	    map<pair<double, double>, int>::iterator Ligclass1 = LigclassCounts.find(key1);
-	    int countLig1 = Ligclass1 ->second;
-	    map<pair<double, double>, int>::iterator Ligclass2 = LigclassCounts.find(key2);
-	    int countLig2 = Ligclass2 ->second;
+        for (map<int, int>::const_iterator class2 = NonLigclassCounts.begin(); class2 != NonLigclassCounts.end(); ++class2) {
+            int key1 = class1->first;
+            int key2 = class2->first;
+            force.getVdwprParameters(key1, key2, sigma, epsilon);
+
+            int countNon1 = class1->second;
+            int countNon2 = class2->second;
+            map<int, int>::iterator Ligclass1 = LigclassCounts.find(key1);
+            int countLig1 = Ligclass1->second;
+            map<int, int>::iterator Ligclass2 = LigclassCounts.find(key2);
+            int countLig2 = Ligclass2->second;
             double rv = sigma;
-	    int total1= countNon1+ countLig1;
-	    total1 *= 2.0*M_PI;
-	 
-	    int	total2= countNon2+countLig1;
-            double termik = total1*total2-(1-V1lambda)*(countLig1*total2+(total1-countLig1)*countLig2); // termik is equivalent to 2 * pi*count.
-	    double rv2 = rv * rv;
+            int total1 = countNon1 + countLig1;
+            int total2 = countNon2 + countLig2;
+
+            double termik = total1 * total2 - (1 - V1lambda) * (countLig1 * total2 + (total1 - countLig1) * countLig2); // termik is equivalent to 2*pi*count.
+            termik *= (2.0 * M_PI);
+            double rv2 = rv * rv;
             double rv6 = rv2 * rv2 * rv2;
             double rv7 = rv6 * rv;
             double etot = 0.0;
             double r2 = 0.0;
             for (int j = 1; j <= ndelta; j++) {
                 double r = offset + double(j) * rdelta;
-                r2 = r*r;
+                r2 = r * r;
                 double r3 = r2 * r;
                 double r6 = r3 * r3;
                 double r7 = r6 * r;
-                double rho = r/rv;
-                double term1 = pow(((dhal + 1.0) / (dhal + rho)),7);
-                double term2 = ((ghal + 1.0) / (ghal + pow(rho,7))) - 2.0;
+                double rho = r / rv;
+                double term1 = pow(((dhal + 1.0) / (dhal + rho)), 7);
+                double term2 = ((ghal + 1.0) / (ghal + pow(rho, 7))) - 2.0;
                 e = epsilon * term1 * term2;
                 double taper = 0.0;
                 if (r < off) {
@@ -269,6 +222,7 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
         }
         i++;
     }
+    std::map<int, int>::iterator it;
     return elrc;
 }
 

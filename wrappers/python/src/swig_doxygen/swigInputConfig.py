@@ -302,7 +302,7 @@ UNITS = {
 ("AmoebaVdwForce",                        "getCutoff")                                     :  ( 'unit.nanometer', ()),
 # LPW 2012-10 Modified because it no longer returns ivIndex and classIndex.
 # ("AmoebaVdwForce",                        "getParticleParameters")                         :  ( None, (None, None, 'unit.nanometer', 'unit.kilojoule_per_mole', None)),
-("AmoebaVdwForce",                        "getParticleParameters")                         :  ( None, (None, 'unit.nanometer', 'unit.kilojoule_per_mole', None,None)),
+("AmoebaVdwForce",                        "getParticleParameters")                         :  ( None, (None, 'unit.nanometer', 'unit.kilojoule_per_mole', None, None, None)),
 
 ("AmoebaWcaDispersionForce",              "getParticleParameters")                         :  ( None, ('unit.nanometer', 'unit.kilojoule_per_mole')),
 ("AmoebaWcaDispersionForce",              "getAwater")                                     :  ( '1/(unit.nanometer*unit.nanometer*unit.nanometer)',()),

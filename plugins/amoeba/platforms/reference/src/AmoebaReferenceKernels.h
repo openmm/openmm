@@ -439,7 +439,7 @@ private:
     RealOpenMM cutoffDistance;
     std::vector<int> pmeGridDimension;
 
-   const System& system;
+    const System& system;
 };
 
 /**
@@ -474,18 +474,18 @@ public:
     void copyParametersToContext(ContextImpl& context, const AmoebaVdwForce& force);
 private:
     int numParticles;
+    int numVdwprTypes;
     int useCutoff;
     int usePBC;
     double cutoff;
     double dispersionCoefficient;
     std::vector<int> indexIVs;
     std::vector< std::set<int> > allExclusions;
-    std::vector<RealOpenMM> sigmas;
-    std::vector<RealOpenMM> epsilons;
+    std::vector<int> vdwprTypes;
+    std::vector<RealOpenMM> combinedSigmas;
+    std::vector<RealOpenMM> combinedEpsilons;
     std::vector<RealOpenMM> reductions;
     std::vector<RealOpenMM> lambdas;
-    std::string sigmaCombiningRule;
-    std::string epsilonCombiningRule;
     const System& system;
     NeighborList* neighborList;
 };

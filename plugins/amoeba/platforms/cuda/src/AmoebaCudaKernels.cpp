@@ -44,6 +44,7 @@
 #include "jama_svd.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #ifdef _MSC_VER
 #include <windows.h>
@@ -2498,28 +2499,44 @@ void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::copyParametersToContext(Conte
 
 class CudaCalcAmoebaVdwForceKernel::ForceInfo : public CudaForceInfo {
 public:
-    ForceInfo(const AmoebaVdwForce& force) : force(force) {
-    }
+    ForceInfo(const AmoebaVdwForce& force)
+        : force(force) {}
+
     bool areParticlesIdentical(int particle1, int particle2) {
-        int iv1, iv2;
-        double sigma1, sigma2, epsilon1, epsilon2, reduction1, reduction2, lambda1, lambda2;
-        force.getParticleParameters(particle1, iv1, sigma1, epsilon1, reduction1,lambda1);
-        force.getParticleParameters(particle2, iv2, sigma2, epsilon2, reduction2,lambda2);
-        return (sigma1 == sigma2 && epsilon1 == epsilon2 && reduction1 == reduction2 && lambda1==lambda2);
+        int vtype1, vtype2;
+        int parentIndex;
+        double sigma, epsilon, reductionFactor, lambda1, lambda2;
+        force.getParticleParameters(particle1, parentIndex, vtype1, sigma, epsilon, reductionFactor, lambda1);
+        force.getParticleParameters(particle2, parentIndex, vtype2, sigma, epsilon, reductionFactor, lambda2);
+        return (vtype1 == vtype2 && lambda1 == lambda2);
     }
+
 private:
     const AmoebaVdwForce& force;
 };
 
-CudaCalcAmoebaVdwForceKernel::CudaCalcAmoebaVdwForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) :
-        CalcAmoebaVdwForceKernel(name, platform), cu(cu), system(system), hasInitializedNonbonded(false), sigmaEpsilon(NULL),
-        bondReductionAtoms(NULL), bondReductionFactors(NULL), tempPosq(NULL), tempForces(NULL), nonbonded(NULL) {
-}
+CudaCalcAmoebaVdwForceKernel::CudaCalcAmoebaVdwForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system)
+    : CalcAmoebaVdwForceKernel(name, platform)
+    , cu(cu)
+    , system(system)
+    , hasInitializedNonbonded(false)
+    , vdwTypes(NULL)
+    , sigmaEpsilon(NULL)
+    , lambdas(NULL)
+    , bondReductionAtoms(NULL)
+    , bondReductionFactors(NULL)
+    , tempPosq(NULL)
+    , tempForces(NULL)
+    , nonbonded(NULL) {}
 
 CudaCalcAmoebaVdwForceKernel::~CudaCalcAmoebaVdwForceKernel() {
     cu.setAsCurrent();
+    if (vdwTypes != NULL)
+        delete vdwTypes;
     if (sigmaEpsilon != NULL)
         delete sigmaEpsilon;
+    if (lambdas != NULL)
+        delete lambdas;
     if (bondReductionAtoms != NULL)
         delete bondReductionAtoms;
     if (bondReductionFactors != NULL)
@@ -2534,79 +2551,80 @@ CudaCalcAmoebaVdwForceKernel::~CudaCalcAmoebaVdwForceKernel() {
 
 void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const AmoebaVdwForce& force) {
     cu.setAsCurrent();
-    sigmaEpsilon = CudaArray::create<float3>(cu, cu.getPaddedNumAtoms(), "sigmaEpsilon");
+    vdwTypes = CudaArray::create<long long>(cu, cu.getPaddedNumAtoms(), "vdwTypes");
+    int xsize = force.getNumVdwprTypes();
+    sigmaEpsilon = CudaArray::create<float2>(cu, xsize * xsize, "sigmaEpsilon");
+    lambdas = CudaArray::create<float>(cu, cu.getPaddedNumAtoms(), "lambdas");
     bondReductionAtoms = CudaArray::create<int>(cu, cu.getPaddedNumAtoms(), "bondReductionAtoms");
     bondReductionFactors = CudaArray::create<float>(cu, cu.getPaddedNumAtoms(), "sigmaEpsilon");
     tempPosq = new CudaArray(cu, cu.getPaddedNumAtoms(), cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4), "tempPosq");
-    tempForces = CudaArray::create<long long>(cu, 3*cu.getPaddedNumAtoms(), "tempForces");
-    
-    // Record atom parameters.
-    
-    vector<float3> sigmaEpsilonVec(cu.getPaddedNumAtoms(), make_float3(0, 1,1));
+    tempForces = CudaArray::create<long long>(cu, 3 * cu.getPaddedNumAtoms(), "tempForces");
+
+    vector<float2> sigmaEpsilonVec(xsize * xsize, make_float2(1, 0));
+    for (int i = 0; i < xsize; ++i) {
+        for (int j = 0; j < xsize; ++j) {
+            int k = i * xsize + j;
+            double combinedSigma, combinedEpsilon;
+            force.getVdwprParameters(i, j, combinedSigma, combinedEpsilon);
+            sigmaEpsilonVec[k].x = static_cast<float>(combinedSigma);
+            sigmaEpsilonVec[k].y = static_cast<float>(combinedEpsilon);
+        }
+    }
+
+    vector<long long> vdwTypesVec(cu.getPaddedNumAtoms(), -1);
+    vector<float> lambdasVec(cu.getPaddedNumAtoms(), 0);
     vector<int> bondReductionAtomsVec(cu.getPaddedNumAtoms(), 0);
     vector<float> bondReductionFactorsVec(cu.getPaddedNumAtoms(), 0);
     vector<vector<int> > exclusions(cu.getNumAtoms());
     for (int i = 0; i < force.getNumParticles(); i++) {
         int ivIndex;
+        int vType;
         double sigma, epsilon, reductionFactor, vlambda;
-        force.getParticleParameters(i, ivIndex, sigma, epsilon, reductionFactor,vlambda);
-        sigmaEpsilonVec[i] = make_float3((float) sigma, (float) epsilon, (float) vlambda);
+        force.getParticleParameters(i, ivIndex, vType, sigma, epsilon, reductionFactor, vlambda);
+        vdwTypesVec[i] = vType;
+        lambdasVec[i] = static_cast<float>(vlambda);
         bondReductionAtomsVec[i] = ivIndex;
-        bondReductionFactorsVec[i] = (float) reductionFactor;
+        bondReductionFactorsVec[i] = static_cast<float>(reductionFactor);
         force.getParticleExclusions(i, exclusions[i]);
         exclusions[i].push_back(i);
     }
+
+    vdwTypes->upload(vdwTypesVec);
+    lambdas->upload(lambdasVec);
     sigmaEpsilon->upload(sigmaEpsilonVec);
     bondReductionAtoms->upload(bondReductionAtomsVec);
     bondReductionFactors->upload(bondReductionFactorsVec);
     if (force.getUseDispersionCorrection())
         dispersionCoefficient = AmoebaVdwForceImpl::calcDispersionCorrection(system, force);
     else
-        dispersionCoefficient = 0.0;               
- 
+        dispersionCoefficient = 0.0;
+
     // This force is applied based on modified atom positions, where hydrogens have been moved slightly
     // closer to their parent atoms.  We therefore create a separate CudaNonbondedUtilities just for
     // this force, so it will have its own neighbor list and interaction kernel.
-    
+
     nonbonded = new CudaNonbondedUtilities(cu);
-    nonbonded->addParameter(CudaNonbondedUtilities::ParameterInfo("sigmaEpsilon", "float", 3, sizeof(float3), sigmaEpsilon->getDevicePointer()));
-    
+    nonbonded->addParameter(CudaNonbondedUtilities::ParameterInfo("vdwTypes", "long long", 1, sizeof(long long), vdwTypes->getDevicePointer()));
+    nonbonded->addParameter(CudaNonbondedUtilities::ParameterInfo("lambdas", "float", 1, sizeof(float), lambdas->getDevicePointer()));
+    nonbonded->addArgument(CudaNonbondedUtilities::ParameterInfo("sigmaEpsilon", "float", 2, sizeof(float2), sigmaEpsilon->getDevicePointer()));
     // Create the interaction kernel.
-    
+
     map<string, string> replacements;
-    string sigmaCombiningRule = force.getSigmaCombiningRule();
-    if (sigmaCombiningRule == "ARITHMETIC")
-        replacements["SIGMA_COMBINING_RULE"] = "1";
-    else if (sigmaCombiningRule == "GEOMETRIC")
-        replacements["SIGMA_COMBINING_RULE"] = "2";
-    else if (sigmaCombiningRule == "CUBIC-MEAN")
-        replacements["SIGMA_COMBINING_RULE"] = "3";
-    else
-        throw OpenMMException("Illegal combining rule for sigma: "+sigmaCombiningRule);
-    string epsilonCombiningRule = force.getEpsilonCombiningRule();
-    if (epsilonCombiningRule == "ARITHMETIC")
-        replacements["EPSILON_COMBINING_RULE"] = "1";
-    else if (epsilonCombiningRule == "GEOMETRIC")
-        replacements["EPSILON_COMBINING_RULE"] = "2";
-    else if (epsilonCombiningRule == "HARMONIC")
-        replacements["EPSILON_COMBINING_RULE"] = "3";
-    else if (epsilonCombiningRule == "HHG")
-        replacements["EPSILON_COMBINING_RULE"] = "4";
-    else
-        throw OpenMMException("Illegal combining rule for sigma: "+sigmaCombiningRule);
+    replacements["NUM_VDWPR_TYPES"] = cu.intToString(xsize);
     double cutoff = force.getCutoff();
-    double taperCutoff = cutoff*0.9;
+    double taperCutoff = cutoff * 0.9;
     replacements["CUTOFF_DISTANCE"] = cu.doubleToString(force.getCutoff());
     replacements["TAPER_CUTOFF"] = cu.doubleToString(taperCutoff);
-    replacements["TAPER_C3"] = cu.doubleToString(10/pow(taperCutoff-cutoff, 3.0));
-    replacements["TAPER_C4"] = cu.doubleToString(15/pow(taperCutoff-cutoff, 4.0));
-    replacements["TAPER_C5"] = cu.doubleToString(6/pow(taperCutoff-cutoff, 5.0));
+    replacements["TAPER_C3"] = cu.doubleToString(10 / pow(taperCutoff - cutoff, 3.0));
+    replacements["TAPER_C4"] = cu.doubleToString(15 / pow(taperCutoff - cutoff, 4.0));
+    replacements["TAPER_C5"] = cu.doubleToString(6 / pow(taperCutoff - cutoff, 5.0));
     bool useCutoff = (force.getNonbondedMethod() != AmoebaVdwForce::NoCutoff);
+    // because either useCutoff == usePeriodic == true or useCutoff == usePeriodic == false
     nonbonded->addInteraction(useCutoff, useCutoff, true, force.getCutoff(), exclusions,
         cu.replaceStrings(CudaAmoebaKernelSources::amoebaVdwForce2, replacements), 0);
-    
+
     // Create the other kernels.
-    
+
     map<string, string> defines;
     defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
     CUmodule module = cu.createModule(CudaAmoebaKernelSources::amoebaVdwForce1, defines);
@@ -2622,47 +2640,83 @@ double CudaCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool includeF
     }
     cu.getPosq().copyTo(*tempPosq);
     cu.getForce().copyTo(*tempForces);
-    void* prepareArgs[] = {&cu.getForce().getDevicePointer(), &cu.getPosq().getDevicePointer(), &tempPosq->getDevicePointer(),
-        &bondReductionAtoms->getDevicePointer(), &bondReductionFactors->getDevicePointer()};
+    void* prepareArgs[] = { &cu.getForce().getDevicePointer(),
+        &cu.getPosq().getDevicePointer(),
+        &tempPosq->getDevicePointer(),
+        &bondReductionAtoms->getDevicePointer(),
+        &bondReductionFactors->getDevicePointer() };
     cu.executeKernel(prepareKernel, prepareArgs, cu.getPaddedNumAtoms());
     nonbonded->prepareInteractions(1);
-    nonbonded->computeInteractions(1, includeForces, includeEnergy);
-    void* spreadArgs[] = {&cu.getForce().getDevicePointer(), &tempForces->getDevicePointer(), &bondReductionAtoms->getDevicePointer(), &bondReductionFactors->getDevicePointer()};
+    nonbonded->computeInteractions(1, true, true);
+    void* spreadArgs[] = { &cu.getForce().getDevicePointer(),
+        &tempForces->getDevicePointer(),
+        &bondReductionAtoms->getDevicePointer(),
+        &bondReductionFactors->getDevicePointer() };
     cu.executeKernel(spreadKernel, spreadArgs, cu.getPaddedNumAtoms());
     tempPosq->copyTo(cu.getPosq());
     tempForces->copyTo(cu.getForce());
     double4 box = cu.getPeriodicBoxSize();
-    return dispersionCoefficient/(box.x*box.y*box.z);
+    return dispersionCoefficient / (box.x * box.y * box.z);
 }
 
 void CudaCalcAmoebaVdwForceKernel::copyParametersToContext(ContextImpl& context, const AmoebaVdwForce& force) {
     // Make sure the new parameters are acceptable.
-    
+
     cu.setAsCurrent();
     if (force.getNumParticles() != cu.getNumAtoms())
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
-    
-    // Record the per-particle parameters.
-    
-    vector<float3> sigmaEpsilonVec(cu.getPaddedNumAtoms(), make_float3(0, 1,1));
+
+    vdwTypes = CudaArray::create<int>(cu, cu.getPaddedNumAtoms(), "vdwTypes");
+    int xsize = force.getNumVdwprTypes();
+    sigmaEpsilon = CudaArray::create<float2>(cu, xsize * xsize, "sigmaEpsilon");
+    lambdas = CudaArray::create<int>(cu, cu.getPaddedNumAtoms(), "lambdas");
+    bondReductionAtoms = CudaArray::create<int>(cu, cu.getPaddedNumAtoms(), "bondReductionAtoms");
+    bondReductionFactors = CudaArray::create<float>(cu, cu.getPaddedNumAtoms(), "sigmaEpsilon");
+    tempPosq = new CudaArray(cu, cu.getPaddedNumAtoms(), cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4), "tempPosq");
+    tempForces = CudaArray::create<long long>(cu, 3 * cu.getPaddedNumAtoms(), "tempForces");
+
+    // Record atom parameters.
+    vector<float2> sigmaEpsilonVec(xsize * xsize, make_float2(1, 0));
+    for (int i = 0; i < xsize; ++i) {
+        for (int j = 0; j < xsize; ++j) {
+            std::array<int, 2> tp;
+            tp[0] = i;
+            tp[1] = j;
+            int k = i * xsize + j;
+            double combinedSigma, combinedEpsilon;
+            force.getVdwprParameters(i, j, combinedSigma, combinedEpsilon);
+            sigmaEpsilonVec[k].x = static_cast<float>(combinedSigma);
+            sigmaEpsilonVec[k].y = static_cast<float>(combinedEpsilon);
+        }
+    }
+
+    vector<long long> vdwTypesVec(cu.getPaddedNumAtoms(), -1);
+    vector<float> lambdasVec(cu.getPaddedNumAtoms(), 0);
     vector<int> bondReductionAtomsVec(cu.getPaddedNumAtoms(), 0);
     vector<float> bondReductionFactorsVec(cu.getPaddedNumAtoms(), 0);
+    vector<vector<int> > exclusions(cu.getNumAtoms());
     for (int i = 0; i < force.getNumParticles(); i++) {
         int ivIndex;
-        double sigma, epsilon, reductionFactor,vlambda;
-        force.getParticleParameters(i, ivIndex, sigma, epsilon, reductionFactor, vlambda);
-        sigmaEpsilonVec[i] = make_float3((float) sigma, (float) epsilon, (float) vlambda);
+        int vType;
+        double sigma, epsilon, reductionFactor, vlambda;
+        force.getParticleParameters(i, ivIndex, vType, sigma, epsilon, reductionFactor, vlambda);
+        vdwTypesVec[i] = vType;
+        lambdasVec[i] = static_cast<float>(vlambda);
         bondReductionAtomsVec[i] = ivIndex;
-        bondReductionFactorsVec[i] = (float) reductionFactor;
+        bondReductionFactorsVec[i] = static_cast<float>(reductionFactor);
+        force.getParticleExclusions(i, exclusions[i]);
+        exclusions[i].push_back(i);
     }
+
+    vdwTypes->upload(vdwTypesVec);
+    lambdas->upload(lambdasVec);
     sigmaEpsilon->upload(sigmaEpsilonVec);
     bondReductionAtoms->upload(bondReductionAtomsVec);
     bondReductionFactors->upload(bondReductionFactorsVec);
     if (force.getUseDispersionCorrection())
         dispersionCoefficient = AmoebaVdwForceImpl::calcDispersionCorrection(system, force);
     else
-        dispersionCoefficient = 0.0;               
-    cu.invalidateMolecules();
+        dispersionCoefficient = 0.0;
 }
 
 /* -------------------------------------------------------------------------- *

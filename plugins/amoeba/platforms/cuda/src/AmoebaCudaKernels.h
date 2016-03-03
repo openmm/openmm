@@ -549,9 +549,10 @@ class CudaCalcAmoebaVdwForceKernel : public CalcAmoebaVdwForceKernel {
 public:
     CudaCalcAmoebaVdwForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system);
     ~CudaCalcAmoebaVdwForceKernel();
+
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaMultipoleForce this kernel will be used for
      */
@@ -578,7 +579,9 @@ private:
     const System& system;
     bool hasInitializedNonbonded;
     double dispersionCoefficient;
+    CudaArray* vdwTypes;
     CudaArray* sigmaEpsilon;
+    CudaArray* lambdas;
     CudaArray* bondReductionAtoms;
     CudaArray* bondReductionFactors;
     CudaArray* tempPosq;
