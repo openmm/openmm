@@ -10,7 +10,7 @@ simulations. In addition, we have released an updated version of tinker dynamic_
 runing simulations using tinker.To install this, move the contents of the online folder http://biomol.bme.utexas.edu/~mh43854/openmm/tinker
  into the source directory of a tinker installation( available at http://dasher.wustl.edu/tinker/).
  Modify the makefile so that all directories point to the appropriate location,
- and then make. documentation specific to this release is available at http://biomol.bme.utexas.edu/wiki/index.php/Research_ex:Openmm) 
+ and then make. documentation specific to this release is available at http://biomol.bme.utexas.edu/wiki/index.php/Research_ex:Openmm
 
 
 Getting Help
