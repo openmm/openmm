@@ -1495,12 +1495,13 @@ public:
             addEnergyKernel(addEnergyKernel), pmeEnergyBuffer(pmeEnergyBuffer), forceGroup(forceGroup) {
     }
     double computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
-        if ((groups&(1<<forceGroup)) != 0)
+        if ((groups&(1<<forceGroup)) != 0) {
             cuStreamWaitEvent(cu.getCurrentStream(), event, 0);
-        if (includeEnergy) {
-            int bufferSize = pmeEnergyBuffer.getSize();
-            void* args[] = {&pmeEnergyBuffer.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(), &bufferSize};
-            cu.executeKernel(addEnergyKernel, args, bufferSize);
+            if (includeEnergy) {
+                int bufferSize = pmeEnergyBuffer.getSize();
+                void* args[] = {&pmeEnergyBuffer.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(), &bufferSize};
+                cu.executeKernel(addEnergyKernel, args, bufferSize);
+            }
         }
         return 0.0;
     }
