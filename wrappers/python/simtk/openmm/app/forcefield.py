@@ -1710,7 +1710,7 @@ class LennardJonesGenerator(object):
 
         for LJ in element.findall('Atom'):
             generator.registerLennardJones(LJ.attrib)
-        for Nbfix in element.findall('AtomTypePair'):
+        for Nbfix in element.findall('NBFixPair'):
             generator.registerNBFIX(Nbfix.attrib)
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
