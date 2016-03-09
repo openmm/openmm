@@ -536,8 +536,8 @@ class AmoebaTestForceField(unittest.TestCase):
             diff = norm(f1-f2)
             self.assertTrue(diff < 0.1 or diff/norm(f1) < 1e-3)
 
-    def test_nbfix_generator(self):
-        """ Test the nbfix generator"""
+    def test_LennardJones_generator(self):
+        """ Test the LennardJones generator"""
         warnings.filterwarnings('ignore', category=CharmmPSFWarning)
         psf = CharmmPsfFile('systems/ions.psf')
         pdb = PDBFile('systems/ions.pdb')
@@ -567,20 +567,22 @@ class AmoebaTestForceField(unittest.TestCase):
  </AtomTypes>
  <Residues>
   <Residue name="CLA">
-   <Atom name="CLA" type="CLA" charge="0"/>
+   <Atom name="CLA" type="CLA" charge="0.0"/>
   </Residue>
   <Residue name="SOD">
-   <Atom name="SOD" type="SOD" charge="0"/>
+   <Atom name="SOD" type="SOD" charge="0.0"/>
   </Residue>
  </Residues>
  <NonbondedForce coulomb14scale="1.0" lj14scale="1.0">
   <UseAttributeFromResidue name="charge"/>
-  <Atom type="SOD" sigma="0.251367073323" epsilon="0.1962296"/>
-  <Atom type="CLA" sigma="0.404468018036" epsilon="0.6276"/>
+  <Atom type="SOD" sigma="1.0" epsilon="0.0"/>
+  <Atom type="CLA" sigma="1.0" epsilon="0.0"/>
  </NonbondedForce>
- <NBFixForce>
-  <NBFix type1="CLA" type2="SOD" emin="0.350933" rmin="0.3731"/>
- </NBFixForce>
+ <LennardJonesForce lj14scale="1.0">
+  <Atom type="CLA" sigma="0.404468018036" epsilon="0.6276"/>
+  <Atom type="SOD" sigma="0.251367073323" epsilon="0.1962296"/>
+  <AtomTypePair type1="CLA" type2="SOD" emin="0.350933" rmin="0.3731"/>
+ </LennardJonesForce>
 </ForceField> """
 
         ff = ForceField(StringIO(xml))
