@@ -175,6 +175,8 @@ class ForceField(object):
                 for residue in tree.getroot().find('Residues').findall('Residue'):
                     resName = residue.attrib['name']
                     template = ForceField._TemplateData(resName)
+                    if 'overload' in residue.attrib:
+                        template.overloadLevel = int(residue.attrib['overload'])
                     atomIndices = {}
                     for atom in residue.findall('Atom'):
                         params = {}
@@ -248,7 +250,25 @@ class ForceField(object):
         self._templates[template.name] = template
         signature = _createResidueSignature([atom.element for atom in template.atoms])
         if signature in self._templateSignatures:
-            self._templateSignatures[signature].append(template)
+            registered = False
+            for regtemplate in self._templateSignatures[signature]:
+                if regtemplate.name == template.name:
+                    if regtemplate.overloadLevel > template.overloadLevel:
+                        # ok to break - this is done every time a template is
+                        # registered so there can only be one already existing
+                        # with same name at a time
+                        registered = True
+                        break
+                    elif regtemplate.overloadLevel < template.overloadLevel:
+                        self._templateSignatures[signature].remove(regtemplate)
+                        self._templateSignatures[signature].append(template)
+                        registered = True
+                    else:
+                        raise Exception('Residue template %s with the same overloadLevel %d already exists.' %
+                                         (template.name, template.overloadLevel)
+                                         )
+            if not registered:
+                self._templateSignatures[signature].append(template)
         else:
             self._templateSignatures[signature] = [template]
 
@@ -390,6 +410,7 @@ class ForceField(object):
             self.virtualSites = []
             self.bonds = []
             self.externalBonds = []
+            self.overloadLevel = 0
 
         def getAtomIndexByName(self, atom_name):
             """Look up an atom index by atom name, providing a helpful error message if not found."""
@@ -577,11 +598,16 @@ class ForceField(object):
         matches = None
         signature = _createResidueSignature([atom.element for atom in res.atoms()])
         if signature in self._templateSignatures:
+            allMatches = []
             for t in self._templateSignatures[signature]:
-                matches = _matchResidue(res, t, bondedToAtom)
-                if matches is not None:
-                    template = t
-                    break
+                match = _matchResidue(res, t, bondedToAtom)
+                if match is not None:
+                    allMatches.append((t, match))
+            if len(allMatches) == 1:
+                template = allMatches[0][0]
+                matches = allMatches[0][1]
+            elif len(allMatches) > 1:
+                raise Exception('Multiple matching templates found for residue %d (%s).' % (res.index+1, res.name))
         return [template, matches]
 
     def _buildBondedToAtomList(self, topology):
@@ -714,7 +740,7 @@ class ForceField(object):
         return [templates, unique_unmatched_residues]
 
     def createSystem(self, topology, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
-                     constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, **args):
+                     constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, residueTemplates=dict(), **args):
         """Construct an OpenMM System representing a Topology with this force field.
 
         Parameters
@@ -738,6 +764,13 @@ class ForceField(object):
             The mass to use for hydrogen atoms bound to heavy atoms.  Any mass
             added to a hydrogen is subtracted from the heavy atom to keep
             their total mass the same.
+        residueTemplates : dict=dict()
+           Key: Topology Residue object
+           Value: string, name of _TemplateData residue template object to use for
+                  (Key) residue
+           This allows user to specify which template to apply to particular Residues
+           in the event that multiple matching templates are available (e.g Fe2+ and Fe3+
+           templates in the ForceField for a monoatomic iron ion in the topology).
         args
              Arbitrary additional keyword arguments may also be specified.
              This allows extra parameters to be specified that are specific to
@@ -776,8 +809,15 @@ class ForceField(object):
 
         for chain in topology.chains():
             for res in chain.residues():
-                # Attempt to match one of the existing templates.
-                [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom)
+                if res in residueTemplates:
+                    tname = residueTemplates[res]
+                    template = self._templates[tname]
+                    matches = _matchResidue(res, template, bondedToAtom)
+                    if matches is None:
+                        raise Exception('User-supplied template %s does not match the residue %d (%s)' % (tname, res.index+1, res.name))
+                else:
+                    # Attempt to match one of the existing templates.
+                    [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom)
                 if matches is None:
                     # No existing templates match.  Try any registered residue template generators.
                     for generator in self._templateGenerators:
