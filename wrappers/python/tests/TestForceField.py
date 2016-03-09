@@ -618,6 +618,7 @@ class TestForceField(unittest.TestCase):
 
         self.assertRaises(Exception, lambda: ForceField(StringIO(ffxml1), StringIO(ffxml2)))
         ff = ForceField(StringIO(ffxml1), StringIO(ffxml3))
+        self.assertEqual(ff._templates['FE2'].atoms[0].type, 'Fe2+_tip3p_standard')
         ff.createSystem(pdb.topology)
 
 class AmoebaTestForceField(unittest.TestCase):
