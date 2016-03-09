@@ -581,7 +581,7 @@ class AmoebaTestForceField(unittest.TestCase):
  <LennardJonesForce lj14scale="1.0">
   <Atom type="CLA" sigma="0.404468018036" epsilon="0.6276"/>
   <Atom type="SOD" sigma="0.251367073323" epsilon="0.1962296"/>
-  <AtomTypePair type1="CLA" type2="SOD" emin="0.350933" rmin="0.3731"/>
+  <NBFixPair type1="CLA" type2="SOD" emin="0.350933" rmin="0.3731"/>
  </LennardJonesForce>
 </ForceField> """
 
