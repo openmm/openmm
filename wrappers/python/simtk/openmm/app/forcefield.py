@@ -1674,18 +1674,19 @@ class NonbondedGenerator(object):
 
 parsers["NonbondedForce"] = NonbondedGenerator.parseElement
 
-class NBFixGenerator(object):
+class LennardJonesGenerator(object):
     """A NBFix generator to construct the L-J force with NBFIX implemented as a lookup table"""
 
-    def __init__(self, forcefield):
+    def __init__(self, forcefield, lj14scale):
         self.ff = forcefield
         self.types1 = []
         self.types2 = []
         self.emin = []
         self.rmin = []
-        self.lj_types = [f for f in forcefield._forces if isinstance(f, NonbondedGenerator)][0].params
+        self.lj14scale = lj14scale
+        self.lj_types = ForceField._AtomTypeParameters(forcefield, 'LennardJonesForce', 'Atom', ('sigma', 'epsilon'))
 
-    def registerNBFix(self, parameters):
+    def registerNBFIX(self, parameters):
         types = self.ff._findAtomTypes(parameters, 2)
         if None not in types:
             self.types1.append(types[0][0])
@@ -1693,36 +1694,27 @@ class NBFixGenerator(object):
             self.emin.append(_convertParameterToNumber(parameters['emin']))
             self.rmin.append(_convertParameterToNumber(parameters['rmin']))
 
+    def registerLennardJones(self, parameters):
+        self.lj_types.registerAtom(parameters)
+
 
     @staticmethod
     def parseElement(element, ff):
-        existing = [f for f in ff._forces if isinstance(f, NBFixGenerator)]
+        existing = [f for f in ff._forces if isinstance(f, LennardJonesGenerator)]
         if len(existing) == 0:
-            generator = NBFixGenerator(ff)
+            generator = LennardJonesGenerator(ff, float(element.attrib['lj14scale']))
             ff.registerGenerator(generator)
         else:
-            # Multiple <NBFixForce> tags were found, probably in different files
+            # Multiple <LennardJonesForce> tags were found, probably in different files
             generator = existing[0]
 
-        for nbfix in element.findall('NBFix'):
-            generator.registerNBFix(nbfix.attrib)
+        for LJ in element.findall('Atom'):
+            generator.registerLennardJones(LJ.attrib)
+        for Nbfix in element.findall('AtomTypePair'):
+            generator.registerNBFIX(Nbfix.attrib)
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         """ Ewald and PME will be interpreted as CutoffPeriodic for the CustomNonbondedForce """
-
-        # First check if there are at least two atoms in the system that have nbfix
-        self.NBFIX = False
-        for a in data.atoms:
-            atype = data.atomType[a]
-            if atype in self.types1:
-                for b in data.atoms:
-                    btype = data.atomType[b]
-                    if btype in self.types2:
-                        self.NBFIX = True
-        if not self.NBFIX:
-            return
-        # NonBondedForce for 'standard' nonbonded interactions. This will be modified
-        nonbonded = [f for f in sys.getForces() if isinstance(f, mm.openmm.NonbondedForce)][0]
 
         # We need a CustomNonbondedForce to implement the NBFIX functionality.
         # First derive the lookup tables
@@ -1798,29 +1790,41 @@ class NBFixGenerator(object):
         # Add the particles
         for i in lj_indx_list:
             self.force.addParticle((i-1,))
-        # Now wipe out the L-J parameters in the nonbonded force
-        for i in range(nonbonded.getNumParticles()):
-            chg, sig, eps = nonbonded.getParticleParameters(i)
-            nonbonded.setParticleParameters(i, chg, 0.5, 0.0)
+        self.force.setUseLongRangeCorrection(True)
+        self.force.setCutoffDistance(nonbondedCutoff)
+
         sys.addForce(self.force)
 
     def postprocessSystem(self, sys, data, args):
-        if not self.NBFIX:
-            return
-        nonbonded = [f for f in sys.getForces() if isinstance(f, mm.NonbondedForce)][0]
 
-        # transfer the exclusions from NonBonded
-        for ii in range(nonbonded.getNumExceptions()):
-            i, j, qq, ss, ee = nonbonded.getExceptionParameters(ii)
-            self.force.addExclusion(i, j)
-        # Now transfer the other properties (cutoff, switching function, etc.)
-        self.force.setUseLongRangeCorrection(True)
-        self.force.setCutoffDistance(nonbonded.getCutoffDistance())
-        if nonbonded.getUseSwitchingFunction():
-            self.force.setUseSwitchingFunction(True)
-            self.force.setSwitchingDistance(nonbonded.getSwitchingDistance())
+        bondIndices = []
+        for bond in data.bonds:
+            bondIndices.append((bond.atom1, bond.atom2))
 
-parsers["NBFixForce"] = NBFixGenerator.parseElement
+        # If a virtual site does *not* share exclusions with another atom, add a bond between it and its first parent
+        # atom.
+        for i in range(sys.getNumParticles()):
+            if sys.isVirtualSite(i):
+                (site, atoms, excludeWith) = data.virtualSites[data.atoms[i]]
+                if excludeWith is None:
+                    bondIndices.append((i, site.getParticle(0)))
+
+        # Certain particles, such as lone pairs and Drude particles, share exclusions with a parent atom.
+        # If the parent atom does not interact with an atom, the child particle does not either.
+
+        for atom1, atom2 in bondIndices:
+            for child1 in data.excludeAtomWith[atom1]:
+                bondIndices.append((child1, atom2))
+                for child2 in data.excludeAtomWith[atom2]:
+                    bondIndices.append((child1, child2))
+            for child2 in data.excludeAtomWith[atom2]:
+                bondIndices.append((atom1, child2))
+
+        # Create the exceptions.
+        self.force.createExclusionsFromBonds(bondIndices, 2)
+
+
+parsers["LennardJonesForce"] = LennardJonesGenerator.parseElement
 
 ## @private
 class GBSAOBCGenerator(object):
