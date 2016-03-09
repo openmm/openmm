@@ -534,6 +534,92 @@ class TestForceField(unittest.TestCase):
         self.assertEqual(len(pertorsion2.proper), 110)
         self.assertEqual(len(pertorsion2.improper), 42)
 
+    def test_ResidueTemplateUserChoice(self):
+        """Test createSystem does not allow multiple matching templates, unless
+           user has specified which template to use via residueTemplates arg"""
+        ffxml = """<ForceField>
+ <AtomTypes>
+  <Type name="Fe2+" class="Fe2+" element="Fe" mass="55.85"/>
+  <Type name="Fe3+" class="Fe3+" element="Fe" mass="55.85"/>
+ </AtomTypes>
+ <Residues>
+  <Residue name="FE2">
+   <Atom name="FE2" type="Fe2+" charge="2.0"/>
+  </Residue>
+  <Residue name="FE">
+   <Atom name="FE" type="Fe3+" charge="3.0"/>
+  </Residue>
+ </Residues>
+ <NonbondedForce coulomb14scale="0.833333333333" lj14scale="0.5">
+  <UseAttributeFromResidue name="charge"/>
+  <Atom type="Fe2+" sigma="0.227535532613" epsilon="0.0150312292"/>
+  <Atom type="Fe3+" sigma="0.192790482606" epsilon="0.00046095128"/>
+ </NonbondedForce>
+</ForceField>"""
+
+        pdb_string = "ATOM      1 FE    FE A   1      20.956  27.448 -29.067  1.00  0.00          Fe"
+        ff = ForceField(StringIO(ffxml))
+        pdb = PDBFile(StringIO(pdb_string))
+
+        self.assertRaises(Exception, lambda: ff.createSystem(pdb.topology))
+        ff.createSystem(pdb.topology, residueTemplates={list(pdb.topology.residues())[0] : 'FE2'})
+        ff.createSystem(pdb.topology, residueTemplates={list(pdb.topology.residues())[0] : 'FE'})
+
+    def test_ResidueOverloading(self):
+        """Test residue overloading via overload tag in the XML"""
+
+        ffxml1 = """<ForceField>
+ <AtomTypes>
+  <Type name="Fe2+_tip3p_HFE" class="Fe2+_tip3p_HFE" element="Fe" mass="55.85"/>
+ </AtomTypes>
+ <Residues>
+  <Residue name="FE2">
+   <Atom name="FE2" type="Fe2+_tip3p_HFE" charge="2.0"/>
+  </Residue>
+ </Residues>
+ <NonbondedForce coulomb14scale="0.833333333333" lj14scale="0.5">
+  <UseAttributeFromResidue name="charge"/>
+  <Atom type="Fe2+_tip3p_HFE" sigma="0.227535532613" epsilon="0.0150312292"/>
+ </NonbondedForce>
+</ForceField>"""
+
+        ffxml2 = """<ForceField>
+ <AtomTypes>
+  <Type name="Fe2+_tip3p_standard" class="Fe2+_tip3p_standard" element="Fe" mass="55.85"/>
+ </AtomTypes>
+ <Residues>
+  <Residue name="FE2">
+   <Atom name="FE2" type="Fe2+_tip3p_standard" charge="2.0"/>
+  </Residue>
+ </Residues>
+ <NonbondedForce coulomb14scale="0.833333333333" lj14scale="0.5">
+  <UseAttributeFromResidue name="charge"/>
+  <Atom type="Fe2+_tip3p_standard" sigma="0.241077193129" epsilon="0.03940482832"/>
+ </NonbondedForce>
+</ForceField>"""
+
+        ffxml3 = """<ForceField>
+ <AtomTypes>
+  <Type name="Fe2+_tip3p_standard" class="Fe2+_tip3p_standard" element="Fe" mass="55.85"/>
+ </AtomTypes>
+ <Residues>
+  <Residue name="FE2" overload="1">
+   <Atom name="FE2" type="Fe2+_tip3p_standard" charge="2.0"/>
+  </Residue>
+ </Residues>
+ <NonbondedForce coulomb14scale="0.833333333333" lj14scale="0.5">
+  <UseAttributeFromResidue name="charge"/>
+  <Atom type="Fe2+_tip3p_standard" sigma="0.241077193129" epsilon="0.03940482832"/>
+ </NonbondedForce>
+</ForceField>"""
+
+        pdb_string = "ATOM      1 FE    FE A   1      20.956  27.448 -29.067  1.00  0.00          Fe"
+        pdb = PDBFile(StringIO(pdb_string))
+
+        self.assertRaises(Exception, lambda: ForceField(StringIO(ffxml1), StringIO(ffxml2)))
+        ff = ForceField(StringIO(ffxml1), StringIO(ffxml3))
+        ff.createSystem(pdb.topology)
+
 class AmoebaTestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method with the AMOEBA forcefield."""
 
