@@ -1,0 +1,241 @@
+<ForceField>
+ <Info>
+  <DateGenerated>2016-03-10</DateGenerated>
+  <Source md5hash="8aaf04e20d8521e2c25fb7b1d6986150" sourcePackage="AmberTools" sourcePackageVersion="15">parm/frcmod.ionslrcm_iod</Source>
+  <Source md5hash="10eba58d3fea660bc0f3e961c3fe36e3" sourcePackage="AmberTools" sourcePackageVersion="15">parm/frcmod.ions34lsm_iod_tip4pew</Source>
+  <Source md5hash="e900cee0c71ec2795d25b3555de486e1" sourcePackage="AmberTools" sourcePackageVersion="15">lib/atomic_ions.lib</Source>
+  <Source md5hash="cb450d015f4c238271cef8825f5ad7bd" sourcePackage="OpenMM" sourcePackageVersion="7.0">tip4pew.xml</Source>
+  <Reference>Li, P., Roberts, B.P., Chakravorty, D.K., and Merz, K.M. (2013). Rational Design of Particle Mesh Ewald Compatible Lennard-Jones Parameters for +2 Metal Cations in Explicit Solvent. J. Chem. Theory Comput. 9, 2733-2748.</Reference>
+  <Reference>Li, P., Song, L.F., and Merz, K.M. (2015). Parameterization of Highly Charged Metal Ions Using the 12-6-4 LJ-Type Nonbonded Model in Explicit Water. J. Phys. Chem. B 119, 883-895.</Reference>
+  <Reference>Horn, H.W., Swope, W.C., Pitera, J.W., Madura, J.D., Dick, T.J., Hura, G.L., and Head-Gordon, T. (2004). Development of an improved four-site water model for biomolecular simulations: TIP4P-Ew. The Journal of Chemical Physics 120, 9665-9678.</Reference>
+  <Reference>Horn, H.W., Swope, W.C., and Pitera, J.W. (2005). Characterization of the TIP4P-Ew water model: Vapor pressure and boiling point. The Journal of Chemical Physics 123, 194504.</Reference>
+ </Info>
+ <AtomTypes>
+  <Type name="Be2+" class="Be2+" element="Be" mass="9.01"/>
+  <Type name="Cu2+" class="Cu2+" element="Cu" mass="63.55"/>
+  <Type name="Ni2+" class="Ni2+" element="Ni" mass="58.69"/>
+  <Type name="Zn2+" class="Zn2+" element="Zn" mass="65.4"/>
+  <Type name="Co2+" class="Co2+" element="Co" mass="58.93"/>
+  <Type name="Cr2+" class="Cr2+" element="Cr" mass="52.0"/>
+  <Type name="Fe2+" class="Fe2+" element="Fe" mass="55.85"/>
+  <Type name="Mg2+" class="Mg2+" element="Mg" mass="24.305"/>
+  <Type name="V2+" class="V2+" element="V" mass="50.94"/>
+  <Type name="Mn2+" class="Mn2+" element="Mn" mass="54.94"/>
+  <Type name="Hg2+" class="Hg2+" element="Hg" mass="200.59"/>
+  <Type name="Cd2+" class="Cd2+" element="Cd" mass="112.41"/>
+  <Type name="Ca2+" class="Ca2+" element="Ca" mass="40.08"/>
+  <Type name="Sn2+" class="Sn2+" element="Sn" mass="118.71"/>
+  <Type name="Sr2+" class="Sr2+" element="Sr" mass="87.62"/>
+  <Type name="Ba2+" class="Ba2+" element="Ba" mass="137.33"/>
+  <Type name="Al3+" class="Al3+" element="Al" mass="26.98"/>
+  <Type name="Fe3+" class="Fe3+" element="Fe" mass="55.85"/>
+  <Type name="Cr3+" class="Cr3+" element="Cr" mass="52.0"/>
+  <Type name="In3+" class="In3+" element="In" mass="114.82"/>
+  <Type name="Tl3+" class="Tl3+" element="Tl" mass="204.38"/>
+  <Type name="Y3+" class="Y3+" element="Y" mass="88.91"/>
+  <Type name="La3+" class="La3+" element="La" mass="138.91"/>
+  <Type name="Ce3+" class="Ce3+" element="Ce" mass="140.12"/>
+  <Type name="Pr3+" class="Pr3+" element="Pr" mass="140.91"/>
+  <Type name="Nd3+" class="Nd3+" element="Nd" mass="144.24"/>
+  <Type name="Sm3+" class="Sm3+" element="Sm" mass="150.36"/>
+  <Type name="Eu3+" class="Eu3+" element="Eu" mass="151.96"/>
+  <Type name="Gd3+" class="Gd3+" element="Gd" mass="157.25"/>
+  <Type name="Tb3+" class="Tb3+" element="Tb" mass="158.93"/>
+  <Type name="Dy3+" class="Dy3+" element="Dy" mass="162.5"/>
+  <Type name="Er3+" class="Er3+" element="Er" mass="167.26"/>
+  <Type name="Tm3+" class="Tm3+" element="Tm" mass="168.93"/>
+  <Type name="Lu3+" class="Lu3+" element="Lu" mass="174.97"/>
+  <Type name="Hf4+" class="Hf4+" element="Hf" mass="178.49"/>
+  <Type name="Zr4+" class="Zr4+" element="Zr" mass="91.22"/>
+  <Type name="Ce4+" class="Ce4+" element="Ce" mass="140.12"/>
+  <Type name="U4+" class="U4+" element="U" mass="238.03"/>
+  <Type name="Pu4+" class="Pu4+" element="Pu" mass="244.06"/>
+  <Type name="Th4+" class="Th4+" element="Th" mass="232.04"/>
+  <Type name="tip4pew-O" class="tip4pew-O" element="O" mass="15.99943"/>
+  <Type name="tip4pew-H" class="tip4pew-H" element="H" mass="1.007947"/>
+  <Type name="tip4pew-M" class="tip4pew-M" mass="0"/>
+ </AtomTypes>
+ <Residues>
+  <Residue name="AL">
+   <Atom name="AL" type="Al3+" charge="3.0"/>
+  </Residue>
+  <Residue name="BA">
+   <Atom name="BA" type="Ba2+" charge="2.0"/>
+  </Residue>
+  <Residue name="Be">
+   <Atom name="Be" type="Be2+" charge="2.0"/>
+  </Residue>
+  <Residue name="CA">
+   <Atom name="CA" type="Ca2+" charge="2.0"/>
+  </Residue>
+  <Residue name="CD">
+   <Atom name="CD" type="Cd2+" charge="2.0"/>
+  </Residue>
+  <Residue name="CE">
+   <Atom name="CE" type="Ce3+" charge="3.0"/>
+  </Residue>
+  <Residue name="CO">
+   <Atom name="CO" type="Co2+" charge="2.0"/>
+  </Residue>
+  <Residue name="CR">
+   <Atom name="CR" type="Cr3+" charge="3.0"/>
+  </Residue>
+  <Residue name="CU">
+   <Atom name="CU" type="Cu2+" charge="2.0"/>
+  </Residue>
+  <Residue name="Ce">
+   <Atom name="Ce" type="Ce4+" charge="4.0"/>
+  </Residue>
+  <Residue name="Cr">
+   <Atom name="Cr" type="Cr2+" charge="2.0"/>
+  </Residue>
+  <Residue name="Dy">
+   <Atom name="Dy" type="Dy3+" charge="3.0"/>
+  </Residue>
+  <Residue name="EU3">
+   <Atom name="EU3" type="Eu3+" charge="3.0"/>
+  </Residue>
+  <Residue name="Er">
+   <Atom name="Er" type="Er3+" charge="3.0"/>
+  </Residue>
+  <Residue name="FE">
+   <Atom name="FE" type="Fe3+" charge="3.0"/>
+  </Residue>
+  <Residue name="FE2">
+   <Atom name="FE2" type="Fe2+" charge="2.0"/>
+  </Residue>
+  <Residue name="GD3">
+   <Atom name="GD" type="Gd3+" charge="3.0"/>
+  </Residue>
+  <Residue name="HG">
+   <Atom name="HG" type="Hg2+" charge="2.0"/>
+  </Residue>
+  <Residue name="Hf">
+   <Atom name="Hf" type="Hf4+" charge="4.0"/>
+  </Residue>
+  <Residue name="IN">
+   <Atom name="IN" type="In3+" charge="3.0"/>
+  </Residue>
+  <Residue name="LA">
+   <Atom name="LA" type="La3+" charge="3.0"/>
+  </Residue>
+  <Residue name="LU">
+   <Atom name="LU" type="Lu3+" charge="3.0"/>
+  </Residue>
+  <Residue name="MG">
+   <Atom name="MG" type="Mg2+" charge="2.0"/>
+  </Residue>
+  <Residue name="MN">
+   <Atom name="MN" type="Mn2+" charge="2.0"/>
+  </Residue>
+  <Residue name="NI">
+   <Atom name="NI" type="Ni2+" charge="2.0"/>
+  </Residue>
+  <Residue name="Nd">
+   <Atom name="Nd" type="Nd3+" charge="3.0"/>
+  </Residue>
+  <Residue name="PR">
+   <Atom name="PR" type="Pr3+" charge="3.0"/>
+  </Residue>
+  <Residue name="Pu">
+   <Atom name="Pu" type="Pu4+" charge="4.0"/>
+  </Residue>
+  <Residue name="SM">
+   <Atom name="SM" type="Sm3+" charge="3.0"/>
+  </Residue>
+  <Residue name="SR">
+   <Atom name="SR" type="Sr2+" charge="2.0"/>
+  </Residue>
+  <Residue name="Sn">
+   <Atom name="Sn" type="Sn2+" charge="2.0"/>
+  </Residue>
+  <Residue name="TB">
+   <Atom name="TB" type="Tb3+" charge="3.0"/>
+  </Residue>
+  <Residue name="Th">
+   <Atom name="Th" type="Th4+" charge="4.0"/>
+  </Residue>
+  <Residue name="Tl">
+   <Atom name="Tl" type="Tl3+" charge="3.0"/>
+  </Residue>
+  <Residue name="Tm">
+   <Atom name="Tm" type="Tm3+" charge="3.0"/>
+  </Residue>
+  <Residue name="U4+">
+   <Atom name="U" type="U4+" charge="4.0"/>
+  </Residue>
+  <Residue name="V2+">
+   <Atom name="V2+" type="V2+" charge="2.0"/>
+  </Residue>
+  <Residue name="Y">
+   <Atom name="Y" type="Y3+" charge="3.0"/>
+  </Residue>
+  <Residue name="ZN">
+   <Atom name="ZN" type="Zn2+" charge="2.0"/>
+  </Residue>
+  <Residue name="Zr">
+   <Atom name="Zr" type="Zr4+" charge="4.0"/>
+  </Residue>
+  <Residue name="HOH">
+   <Atom name="O" type="tip4pew-O" charge="0"/>
+   <Atom name="H1" type="tip4pew-H" charge="0.52422"/>
+   <Atom name="H2" type="tip4pew-H" charge="0.52422"/>
+   <Atom name="M" type="tip4pew-M" charge="-1.04844"/>
+   <VirtualSite type="average3" siteName="M" atomName1="O" atomName2="H1" atomName3="H2" weight1="0.786646558" weight2="0.106676721" weight3="0.106676721"/>
+   <Bond atomName1="O" atomName2="H1"/>
+   <Bond atomName1="O" atomName2="H2"/>
+  </Residue>
+ </Residues>
+ <HarmonicBondForce>
+  <Bond type1="tip4pew-O" type2="tip4pew-H" length="0.09572" k="462750.4"/>
+ </HarmonicBondForce>
+ <HarmonicAngleForce>
+  <Angle type1="tip4pew-H" type2="tip4pew-O" type3="tip4pew-H" angle="1.82421813418" k="836.8"/>
+ </HarmonicAngleForce>
+ <NonbondedForce coulomb14scale="0.833333333333" lj14scale="0.5">
+  <UseAttributeFromResidue name="charge"/>
+  <Atom type="Be2+" sigma="0.208113940558" epsilon="0.00263859776"/>
+  <Atom type="Cu2+" sigma="0.251055258772" epsilon="0.07200664"/>
+  <Atom type="Ni2+" sigma="0.244640788001" epsilon="0.04934496632"/>
+  <Atom type="Zn2+" sigma="0.248560742361" epsilon="0.062412728"/>
+  <Atom type="Co2+" sigma="0.250164360054" epsilon="0.06846053264"/>
+  <Atom type="Cr2+" sigma="0.247313484156" epsilon="0.05799739464"/>
+  <Atom type="Fe2+" sigma="0.251055258772" epsilon="0.07200664"/>
+  <Atom type="Mg2+" sigma="0.248560742361" epsilon="0.062412728"/>
+  <Atom type="V2+" sigma="0.262993301595" epsilon="0.1338302608"/>
+  <Atom type="Mn2+" sigma="0.261389683902" epsilon="0.12386075112"/>
+  <Atom type="Hg2+" sigma="0.280633096214" epsilon="0.28247819944"/>
+  <Atom type="Cd2+" sigma="0.268338693904" epsilon="0.17114857016"/>
+  <Atom type="Ca2+" sigma="0.286513027754" epsilon="0.34886028824"/>
+  <Atom type="Sn2+" sigma="0.309676394426" epsilon="0.69037238464"/>
+  <Atom type="Sr2+" sigma="0.31234909058" epsilon="0.73715046696"/>
+  <Atom type="Ba2+" sigma="0.34085784956" epsilon="1.29955851696"/>
+  <Atom type="Al3+" sigma="0.228960970562" epsilon="0.01678206584"/>
+  <Atom type="Fe3+" sigma="0.244997147489" epsilon="0.05043699032"/>
+  <Atom type="Cr3+" sigma="0.237513598256" epsilon="0.03111050856"/>
+  <Atom type="In3+" sigma="0.258360628261" epsilon="0.10650049832"/>
+  <Atom type="Tl3+" sigma="0.267625974929" epsilon="0.16579982824"/>
+  <Atom type="Y3+" sigma="0.283305792369" epsilon="0.31158691504"/>
+  <Atom type="La3+" sigma="0.304152822373" epsilon="0.59811815528"/>
+  <Atom type="Ce3+" sigma="0.308072776733" epsilon="0.66295839824"/>
+  <Atom type="Pr3+" sigma="0.306825518528" epsilon="0.64198735344"/>
+  <Atom type="Nd3+" sigma="0.297381992115" epsilon="0.49387597096"/>
+  <Atom type="Sm3+" sigma="0.293462037755" epsilon="0.43830358088"/>
+  <Atom type="Eu3+" sigma="0.294887475704" epsilon="0.4580931896"/>
+  <Atom type="Gd3+" sigma="0.287225746728" epsilon="0.35748949536"/>
+  <Atom type="Tb3+" sigma="0.288473004934" epsilon="0.37289213824"/>
+  <Atom type="Dy3+" sigma="0.284553050574" epsilon="0.32577870832"/>
+  <Atom type="Er3+" sigma="0.283305792369" epsilon="0.31158691504"/>
+  <Atom type="Tm3+" sigma="0.283305792369" epsilon="0.31158691504"/>
+  <Atom type="Lu3+" sigma="0.280989455701" epsilon="0.28625681168"/>
+  <Atom type="Hf4+" sigma="0.2642405598" epsilon="0.14196839184"/>
+  <Atom type="Zr4+" sigma="0.267804154673" epsilon="0.16712607256"/>
+  <Atom type="Ce4+" sigma="0.297025632628" epsilon="0.48867542632"/>
+  <Atom type="U4+" sigma="0.297025632628" epsilon="0.48867542632"/>
+  <Atom type="Pu4+" sigma="0.293105678268" epsilon="0.43343181496"/>
+  <Atom type="Th4+" sigma="0.301123766731" epsilon="0.5502288444"/>
+  <Atom type="tip4pew-O" sigma="0.316435" epsilon="0.680946"/>
+  <Atom type="tip4pew-H" sigma="1" epsilon="0"/>
+  <Atom type="tip4pew-M" sigma="1" epsilon="0"/>
+ </NonbondedForce>
+</ForceField>
