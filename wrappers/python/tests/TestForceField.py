@@ -562,8 +562,12 @@ class TestForceField(unittest.TestCase):
         pdb = PDBFile(StringIO(pdb_string))
 
         self.assertRaises(Exception, lambda: ff.createSystem(pdb.topology))
-        ff.createSystem(pdb.topology, residueTemplates={list(pdb.topology.residues())[0] : 'FE2'})
-        ff.createSystem(pdb.topology, residueTemplates={list(pdb.topology.residues())[0] : 'FE'})
+        sys = ff.createSystem(pdb.topology, residueTemplates={list(pdb.topology.residues())[0] : 'FE2'})
+        # confirm charge
+        self.assertEqual(sys.getForce(0).getParticleParameters(0)[0]._value, 2.0)
+        sys = ff.createSystem(pdb.topology, residueTemplates={list(pdb.topology.residues())[0] : 'FE'})
+        # confirm charge
+        self.assertEqual(sys.getForce(0).getParticleParameters(0)[0]._value, 3.0)
 
     def test_ResidueOverloading(self):
         """Test residue overloading via overload tag in the XML"""
