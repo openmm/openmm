@@ -1,6 +1,6 @@
 <ForceField>
  <Info>
-  <DateGenerated>2016-03-01</DateGenerated>
+  <DateGenerated>2016-03-07</DateGenerated>
   <Source md5hash="f1355c4432e6eb1a61979b7a29448539" sourcePackage="AmberTools" sourcePackageVersion="15">oldff/leaprc.parmCHI_YIL.bsc</Source>
   <Reference>Perez, A., Marchan, I., Svozil, D., Sponer, J., Cheatham, T.E., Laughton, C.A., and Orozco, M. (2007). Refinement of the AMBER Force Field for Nucleic Acids: Improving the Description of alpha/gamma Conformers. Biophysical Journal 92, 3817-3829.</Reference>
   <Reference>Yildirim, I., Stern, H.A., Kennedy, S.D., Tubbs, J.D., and Turner, D.H. (2010). Reparameterization of RNA chi Torsion Parameters for the AMBER Force Field and Comparison to NMR Spectra for Cytidine and Uridine. J. Chem. Theory Comput. 6, 1520-1531.</Reference>

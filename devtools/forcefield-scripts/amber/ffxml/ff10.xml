@@ -1,6 +1,6 @@
 <ForceField>
  <Info>
-  <DateGenerated>2016-03-01</DateGenerated>
+  <DateGenerated>2016-03-07</DateGenerated>
   <Source md5hash="61fddee20eaccbeed232331c605544d1" sourcePackage="AmberTools" sourcePackageVersion="15">oldff/leaprc.ff10</Source>
   <Reference>Hornak, V., Abel, R., Okur, A., Strockbine, B., Roitberg, A., and Simmerling, C. (2006). Comparison of multiple Amber force fields and development of improved protein backbone parameters. Proteins 65, 712-725.</Reference>
   <Reference>Perez, A., Marchan, I., Svozil, D., Sponer, J., Cheatham, T.E., Laughton, C.A., and Orozco, M. (2007). Refinement of the AMBER Force Field for Nucleic Acids: Improving the Description of alpha/gamma Conformers. Biophysical Journal 92, 3817-3829.</Reference>
