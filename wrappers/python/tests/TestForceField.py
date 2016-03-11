@@ -539,9 +539,12 @@ class AmoebaTestForceField(unittest.TestCase):
     def test_LennardJones_generator(self):
         """ Test the LennardJones generator"""
         warnings.filterwarnings('ignore', category=CharmmPSFWarning)
-        psf = CharmmPsfFile('systems/ions.psf')
-        pdb = PDBFile('systems/ions.pdb')
-        params = CharmmParameterSet('systems/toppar_water_ions.str')
+        psf = CharmmPsfFile('systems/methanol_ions.psf')
+        pdb = PDBFile('systems/methanol_ions.pdb')
+        params = CharmmParameterSet('systems/top_all36_cgenff.rtf',
+                                    'systems/par_all36_cgenff.prm',
+                                    'systems/toppar_water_ions.str'
+                                    )
 
         # Box dimensions (found from bounding box)
         psf.setBox(12.009*angstroms,   12.338*angstroms,   11.510*angstroms)
@@ -562,10 +565,27 @@ class AmoebaTestForceField(unittest.TestCase):
         xml = """
 <ForceField>
  <AtomTypes>
+  <Type name="CG331" class="CG331" element="C" mass="12.011"/>
+  <Type name="OG311" class="OG311" element="O" mass="15.9994"/>
+  <Type name="HGP1" class="HGP1" element="H" mass="1.008"/>
+  <Type name="HGA3" class="HGA3" element="H" mass="1.008"/>
   <Type name="SOD" class="SOD" element="Na" mass="22.98977"/>
   <Type name="CLA" class="CLA" element="Cl" mass="35.45"/>
  </AtomTypes>
  <Residues>
+  <Residue name="MEOH">
+   <Atom name="CB" type="CG331" charge="0.0"/>
+   <Atom name="OG" type="OG311" charge="0.0"/>
+   <Atom name="HG1" type="HGP1" charge="0.0"/>
+   <Atom name="HB1" type="HGA3" charge="0.0"/>
+   <Atom name="HB2" type="HGA3" charge="0.0"/>
+   <Atom name="HB3" type="HGA3" charge="0.0"/>
+   <Bond atomName1="CB" atomName2="OG"/>
+   <Bond atomName1="OG" atomName2="HG1"/>
+   <Bond atomName1="CB" atomName2="HB1"/>
+   <Bond atomName1="CB" atomName2="HB2"/>
+   <Bond atomName1="CB" atomName2="HB3"/>
+  </Residue>
   <Residue name="CLA">
    <Atom name="CLA" type="CLA" charge="0.0"/>
   </Residue>
@@ -573,18 +593,42 @@ class AmoebaTestForceField(unittest.TestCase):
    <Atom name="SOD" type="SOD" charge="0.0"/>
   </Residue>
  </Residues>
+ <HarmonicBondForce>
+  <Bond type1="CG331" type2="OG311" length="0.142" k="358150.4"/>
+  <Bond type1="CG331" type2="HGA3" length="0.1111" k="269449.6"/>
+  <Bond type1="OG311" type2="HGP1" length="0.096" k="456056.0"/>
+ </HarmonicBondForce>
+ <HarmonicAngleForce>
+  <Angle type1="HGA3" type2="CG331" type3="HGA3" angle="1.89193690916" k="297.064"/>
+  <Angle type1="CG331" type2="OG311" type3="HGP1" angle="1.85004900711" k="481.16"/>
+  <Angle type1="OG311" type2="CG331" type3="HGA3" angle="1.9004890225" k="384.0912"/>
+ </HarmonicAngleForce>
+ <!-- Urey-Bradley terms -->
+ <AmoebaUreyBradleyForce>
+  <UreyBradley type1="HGA3" type2="CG331" type3="HGA3" d="0.1802" k="2259.36"/>
+ </AmoebaUreyBradleyForce>
+ <PeriodicTorsionForce>
+  <Proper type1="HGA3" type2="CG331" type3="OG311" type4="HGP1" periodicity1="3" phase1="0.0" k1="0.75312"/>
+ </PeriodicTorsionForce>
  <NonbondedForce coulomb14scale="1.0" lj14scale="1.0">
   <UseAttributeFromResidue name="charge"/>
+  <Atom type="CG331" sigma="1.0" epsilon="0.0"/>
+  <Atom type="OG311" sigma="1.0" epsilon="0.0"/>
+  <Atom type="HGP1" sigma="1.0" epsilon="0.0"/>
+  <Atom type="HGA3" sigma="1.0" epsilon="0.0"/>
   <Atom type="SOD" sigma="1.0" epsilon="0.0"/>
   <Atom type="CLA" sigma="1.0" epsilon="0.0"/>
  </NonbondedForce>
  <LennardJonesForce lj14scale="1.0">
+  <Atom type="CG331" sigma="0.365268474438" epsilon="0.326352"/>
+  <Atom type="OG311" sigma="0.314487247504" epsilon="0.8037464"/>
+  <Atom type="HGP1" sigma="0.0400013524445" epsilon="0.192464"/>
+  <Atom type="HGA3" sigma="0.238760856462" epsilon="0.100416"/>
   <Atom type="CLA" sigma="0.404468018036" epsilon="0.6276"/>
   <Atom type="SOD" sigma="0.251367073323" epsilon="0.1962296"/>
   <NBFixPair type1="CLA" type2="SOD" emin="0.350933" rmin="0.3731"/>
  </LennardJonesForce>
 </ForceField> """
-
         ff = ForceField(StringIO(xml))
         system2 = ff.createSystem(pdb.topology, nonbondedMethod=PME,
                                   nonbondedCutoff=5*angstroms)
