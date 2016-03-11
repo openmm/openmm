@@ -9,7 +9,7 @@ real tempForce = 0.0f;
 int pairK = vdwTypes1 * NUM_VDWPR_TYPES + vdwTypes2;
 real sigma = sigmaEpsilon[pairK].x;
 real epsilon = sigmaEpsilon[pairK].y;
-real combinedLambda = lambdas1 < lambdas2 ? lambdas1 : lambdas2;
+real combinedLambda = (lambdas1 == lambdas2 ? 1.0f : (lambdas1 < lambdas2 ? lambdas1 : lambdas2));
 
 real comblambda2 = combinedLambda * combinedLambda;
 epsilon = epsilon * comblambda2 * comblambda2 * combinedLambda;

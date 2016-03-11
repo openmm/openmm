@@ -226,7 +226,7 @@ RealOpenMM AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles, in
                 int k = typeI * numVdwprTypes + typeJ;
                 RealOpenMM combinedSigma = combinedSigmas[k];
                 RealOpenMM combinedEpsilon = combinedEpsilons[k];
-                RealOpenMM combinedLambda = std::min(lambdas[ii], lambdas[jj]);
+                RealOpenMM combinedLambda = (lambdas[ii] == lambdas[jj] ? 1.0f : (lambdas[ii] < lambdas[jj] ? lambdas[ii] : lambdas[jj]));
                 Vec3 force;
 
                 energy += calculatePairIxn(combinedSigma, combinedEpsilon, combinedLambda,
@@ -298,7 +298,7 @@ RealOpenMM AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles, in
         int k = typeI * numVdwprTypes + typeJ;
         RealOpenMM combinedSigma = combinedSigmas[k];
         RealOpenMM combinedEpsilon = combinedEpsilons[k];
-        RealOpenMM combinedLambda = std::min(lambdas[siteI], lambdas[siteJ]);
+        RealOpenMM combinedLambda = (lambdas[siteI] == lambdas[siteJ] ? 1.0f : (lambdas[siteI] < lambdas[siteJ] ? lambdas[siteI] : lambdas[siteJ]));
         Vec3 force;
         energy += calculatePairIxn(combinedSigma, combinedEpsilon, combinedLambda,
             reducedPositions[siteI], reducedPositions[siteJ], force);
