@@ -1,236 +1,217 @@
 <ForceField>
  <Info>
-  <DateGenerated>2016-03-10</DateGenerated>
+  <DateGenerated>2016-03-11</DateGenerated>
   <Source md5hash="8aaf04e20d8521e2c25fb7b1d6986150" sourcePackage="AmberTools" sourcePackageVersion="15">parm/frcmod.ionslrcm_iod</Source>
   <Source md5hash="56cee29fb46427e8388c8e8cc4fb4d0d" sourcePackage="AmberTools" sourcePackageVersion="15">parm/frcmod.ions34lsm_iod_spce</Source>
   <Source md5hash="e900cee0c71ec2795d25b3555de486e1" sourcePackage="AmberTools" sourcePackageVersion="15">lib/atomic_ions.lib</Source>
-  <Source md5hash="5c815beccd16958666face51044e4a7b" sourcePackage="OpenMM" sourcePackageVersion="7.0">spce.xml</Source>
   <Reference>Li, P., Roberts, B.P., Chakravorty, D.K., and Merz, K.M. (2013). Rational Design of Particle Mesh Ewald Compatible Lennard-Jones Parameters for +2 Metal Cations in Explicit Solvent. J. Chem. Theory Comput. 9, 2733-2748.</Reference>
   <Reference>Li, P., Song, L.F., and Merz, K.M. (2015). Parameterization of Highly Charged Metal Ions Using the 12-6-4 LJ-Type Nonbonded Model in Explicit Water. J. Phys. Chem. B 119, 883-895.</Reference>
-  <Reference>Berendsen, H.J.C., Grigera, J.R., and Straatsma, T.P. (1987). The missing term in effective pair potentials. J. Phys. Chem. 91, 6269-6271.</Reference>
  </Info>
  <AtomTypes>
-  <Type name="Be2+" class="Be2+" element="Be" mass="9.01"/>
-  <Type name="Cu2+" class="Cu2+" element="Cu" mass="63.55"/>
-  <Type name="Ni2+" class="Ni2+" element="Ni" mass="58.69"/>
-  <Type name="Zn2+" class="Zn2+" element="Zn" mass="65.4"/>
-  <Type name="Co2+" class="Co2+" element="Co" mass="58.93"/>
-  <Type name="Cr2+" class="Cr2+" element="Cr" mass="52.0"/>
-  <Type name="Fe2+" class="Fe2+" element="Fe" mass="55.85"/>
-  <Type name="Mg2+" class="Mg2+" element="Mg" mass="24.305"/>
-  <Type name="V2+" class="V2+" element="V" mass="50.94"/>
-  <Type name="Mn2+" class="Mn2+" element="Mn" mass="54.94"/>
-  <Type name="Hg2+" class="Hg2+" element="Hg" mass="200.59"/>
-  <Type name="Cd2+" class="Cd2+" element="Cd" mass="112.41"/>
-  <Type name="Ca2+" class="Ca2+" element="Ca" mass="40.08"/>
-  <Type name="Sn2+" class="Sn2+" element="Sn" mass="118.71"/>
-  <Type name="Sr2+" class="Sr2+" element="Sr" mass="87.62"/>
-  <Type name="Ba2+" class="Ba2+" element="Ba" mass="137.33"/>
-  <Type name="Al3+" class="Al3+" element="Al" mass="26.98"/>
-  <Type name="Fe3+" class="Fe3+" element="Fe" mass="55.85"/>
-  <Type name="Cr3+" class="Cr3+" element="Cr" mass="52.0"/>
-  <Type name="In3+" class="In3+" element="In" mass="114.82"/>
-  <Type name="Tl3+" class="Tl3+" element="Tl" mass="204.38"/>
-  <Type name="Y3+" class="Y3+" element="Y" mass="88.91"/>
-  <Type name="La3+" class="La3+" element="La" mass="138.91"/>
-  <Type name="Ce3+" class="Ce3+" element="Ce" mass="140.12"/>
-  <Type name="Pr3+" class="Pr3+" element="Pr" mass="140.91"/>
-  <Type name="Nd3+" class="Nd3+" element="Nd" mass="144.24"/>
-  <Type name="Sm3+" class="Sm3+" element="Sm" mass="150.36"/>
-  <Type name="Eu3+" class="Eu3+" element="Eu" mass="151.96"/>
-  <Type name="Gd3+" class="Gd3+" element="Gd" mass="157.25"/>
-  <Type name="Tb3+" class="Tb3+" element="Tb" mass="158.93"/>
-  <Type name="Dy3+" class="Dy3+" element="Dy" mass="162.5"/>
-  <Type name="Er3+" class="Er3+" element="Er" mass="167.26"/>
-  <Type name="Tm3+" class="Tm3+" element="Tm" mass="168.93"/>
-  <Type name="Lu3+" class="Lu3+" element="Lu" mass="174.97"/>
-  <Type name="Hf4+" class="Hf4+" element="Hf" mass="178.49"/>
-  <Type name="Zr4+" class="Zr4+" element="Zr" mass="91.22"/>
-  <Type name="Ce4+" class="Ce4+" element="Ce" mass="140.12"/>
-  <Type name="U4+" class="U4+" element="U" mass="238.03"/>
-  <Type name="Pu4+" class="Pu4+" element="Pu" mass="244.06"/>
-  <Type name="Th4+" class="Th4+" element="Th" mass="232.04"/>
-  <Type name="spce-O" class="spce-O" element="O" mass="15.99943"/>
-  <Type name="spce-H" class="spce-H" element="H" mass="1.007947"/>
+  <Type name="spce_IOD_multivalent-Be2+" class="spce_IOD_multivalent-Be2+" element="Be" mass="9.01"/>
+  <Type name="spce_IOD_multivalent-Cu2+" class="spce_IOD_multivalent-Cu2+" element="Cu" mass="63.55"/>
+  <Type name="spce_IOD_multivalent-Ni2+" class="spce_IOD_multivalent-Ni2+" element="Ni" mass="58.69"/>
+  <Type name="spce_IOD_multivalent-Zn2+" class="spce_IOD_multivalent-Zn2+" element="Zn" mass="65.4"/>
+  <Type name="spce_IOD_multivalent-Co2+" class="spce_IOD_multivalent-Co2+" element="Co" mass="58.93"/>
+  <Type name="spce_IOD_multivalent-Cr2+" class="spce_IOD_multivalent-Cr2+" element="Cr" mass="52.0"/>
+  <Type name="spce_IOD_multivalent-Fe2+" class="spce_IOD_multivalent-Fe2+" element="Fe" mass="55.85"/>
+  <Type name="spce_IOD_multivalent-Mg2+" class="spce_IOD_multivalent-Mg2+" element="Mg" mass="24.305"/>
+  <Type name="spce_IOD_multivalent-V2+" class="spce_IOD_multivalent-V2+" element="V" mass="50.94"/>
+  <Type name="spce_IOD_multivalent-Mn2+" class="spce_IOD_multivalent-Mn2+" element="Mn" mass="54.94"/>
+  <Type name="spce_IOD_multivalent-Hg2+" class="spce_IOD_multivalent-Hg2+" element="Hg" mass="200.59"/>
+  <Type name="spce_IOD_multivalent-Cd2+" class="spce_IOD_multivalent-Cd2+" element="Cd" mass="112.41"/>
+  <Type name="spce_IOD_multivalent-Ca2+" class="spce_IOD_multivalent-Ca2+" element="Ca" mass="40.08"/>
+  <Type name="spce_IOD_multivalent-Sn2+" class="spce_IOD_multivalent-Sn2+" element="Sn" mass="118.71"/>
+  <Type name="spce_IOD_multivalent-Sr2+" class="spce_IOD_multivalent-Sr2+" element="Sr" mass="87.62"/>
+  <Type name="spce_IOD_multivalent-Ba2+" class="spce_IOD_multivalent-Ba2+" element="Ba" mass="137.33"/>
+  <Type name="spce_IOD_multivalent-Al3+" class="spce_IOD_multivalent-Al3+" element="Al" mass="26.98"/>
+  <Type name="spce_IOD_multivalent-Fe3+" class="spce_IOD_multivalent-Fe3+" element="Fe" mass="55.85"/>
+  <Type name="spce_IOD_multivalent-Cr3+" class="spce_IOD_multivalent-Cr3+" element="Cr" mass="52.0"/>
+  <Type name="spce_IOD_multivalent-In3+" class="spce_IOD_multivalent-In3+" element="In" mass="114.82"/>
+  <Type name="spce_IOD_multivalent-Tl3+" class="spce_IOD_multivalent-Tl3+" element="Tl" mass="204.38"/>
+  <Type name="spce_IOD_multivalent-Y3+" class="spce_IOD_multivalent-Y3+" element="Y" mass="88.91"/>
+  <Type name="spce_IOD_multivalent-La3+" class="spce_IOD_multivalent-La3+" element="La" mass="138.91"/>
+  <Type name="spce_IOD_multivalent-Ce3+" class="spce_IOD_multivalent-Ce3+" element="Ce" mass="140.12"/>
+  <Type name="spce_IOD_multivalent-Pr3+" class="spce_IOD_multivalent-Pr3+" element="Pr" mass="140.91"/>
+  <Type name="spce_IOD_multivalent-Nd3+" class="spce_IOD_multivalent-Nd3+" element="Nd" mass="144.24"/>
+  <Type name="spce_IOD_multivalent-Sm3+" class="spce_IOD_multivalent-Sm3+" element="Sm" mass="150.36"/>
+  <Type name="spce_IOD_multivalent-Eu3+" class="spce_IOD_multivalent-Eu3+" element="Eu" mass="151.96"/>
+  <Type name="spce_IOD_multivalent-Gd3+" class="spce_IOD_multivalent-Gd3+" element="Gd" mass="157.25"/>
+  <Type name="spce_IOD_multivalent-Tb3+" class="spce_IOD_multivalent-Tb3+" element="Tb" mass="158.93"/>
+  <Type name="spce_IOD_multivalent-Dy3+" class="spce_IOD_multivalent-Dy3+" element="Dy" mass="162.5"/>
+  <Type name="spce_IOD_multivalent-Er3+" class="spce_IOD_multivalent-Er3+" element="Er" mass="167.26"/>
+  <Type name="spce_IOD_multivalent-Tm3+" class="spce_IOD_multivalent-Tm3+" element="Tm" mass="168.93"/>
+  <Type name="spce_IOD_multivalent-Lu3+" class="spce_IOD_multivalent-Lu3+" element="Lu" mass="174.97"/>
+  <Type name="spce_IOD_multivalent-Hf4+" class="spce_IOD_multivalent-Hf4+" element="Hf" mass="178.49"/>
+  <Type name="spce_IOD_multivalent-Zr4+" class="spce_IOD_multivalent-Zr4+" element="Zr" mass="91.22"/>
+  <Type name="spce_IOD_multivalent-Ce4+" class="spce_IOD_multivalent-Ce4+" element="Ce" mass="140.12"/>
+  <Type name="spce_IOD_multivalent-U4+" class="spce_IOD_multivalent-U4+" element="U" mass="238.03"/>
+  <Type name="spce_IOD_multivalent-Pu4+" class="spce_IOD_multivalent-Pu4+" element="Pu" mass="244.06"/>
+  <Type name="spce_IOD_multivalent-Th4+" class="spce_IOD_multivalent-Th4+" element="Th" mass="232.04"/>
  </AtomTypes>
  <Residues>
-  <Residue name="AL">
-   <Atom name="AL" type="Al3+" charge="3.0"/>
+  <Residue name="AL" overload="1">
+   <Atom name="AL" type="spce_IOD_multivalent-Al3+" charge="3.0"/>
   </Residue>
-  <Residue name="BA">
-   <Atom name="BA" type="Ba2+" charge="2.0"/>
+  <Residue name="BA" overload="1">
+   <Atom name="BA" type="spce_IOD_multivalent-Ba2+" charge="2.0"/>
   </Residue>
-  <Residue name="Be">
-   <Atom name="Be" type="Be2+" charge="2.0"/>
+  <Residue name="Be" overload="1">
+   <Atom name="Be" type="spce_IOD_multivalent-Be2+" charge="2.0"/>
   </Residue>
-  <Residue name="CA">
-   <Atom name="CA" type="Ca2+" charge="2.0"/>
+  <Residue name="CA" overload="1">
+   <Atom name="CA" type="spce_IOD_multivalent-Ca2+" charge="2.0"/>
   </Residue>
-  <Residue name="CD">
-   <Atom name="CD" type="Cd2+" charge="2.0"/>
+  <Residue name="CD" overload="1">
+   <Atom name="CD" type="spce_IOD_multivalent-Cd2+" charge="2.0"/>
   </Residue>
-  <Residue name="CE">
-   <Atom name="CE" type="Ce3+" charge="3.0"/>
+  <Residue name="CE" overload="1">
+   <Atom name="CE" type="spce_IOD_multivalent-Ce3+" charge="3.0"/>
   </Residue>
-  <Residue name="CO">
-   <Atom name="CO" type="Co2+" charge="2.0"/>
+  <Residue name="CO" overload="1">
+   <Atom name="CO" type="spce_IOD_multivalent-Co2+" charge="2.0"/>
   </Residue>
-  <Residue name="CR">
-   <Atom name="CR" type="Cr3+" charge="3.0"/>
+  <Residue name="CR" overload="1">
+   <Atom name="CR" type="spce_IOD_multivalent-Cr3+" charge="3.0"/>
   </Residue>
-  <Residue name="CU">
-   <Atom name="CU" type="Cu2+" charge="2.0"/>
+  <Residue name="CU" overload="1">
+   <Atom name="CU" type="spce_IOD_multivalent-Cu2+" charge="2.0"/>
   </Residue>
-  <Residue name="Ce">
-   <Atom name="Ce" type="Ce4+" charge="4.0"/>
+  <Residue name="Ce" overload="1">
+   <Atom name="Ce" type="spce_IOD_multivalent-Ce4+" charge="4.0"/>
   </Residue>
-  <Residue name="Cr">
-   <Atom name="Cr" type="Cr2+" charge="2.0"/>
+  <Residue name="Cr" overload="1">
+   <Atom name="Cr" type="spce_IOD_multivalent-Cr2+" charge="2.0"/>
   </Residue>
-  <Residue name="Dy">
-   <Atom name="Dy" type="Dy3+" charge="3.0"/>
+  <Residue name="Dy" overload="1">
+   <Atom name="Dy" type="spce_IOD_multivalent-Dy3+" charge="3.0"/>
   </Residue>
-  <Residue name="EU3">
-   <Atom name="EU3" type="Eu3+" charge="3.0"/>
+  <Residue name="EU3" overload="1">
+   <Atom name="EU3" type="spce_IOD_multivalent-Eu3+" charge="3.0"/>
   </Residue>
-  <Residue name="Er">
-   <Atom name="Er" type="Er3+" charge="3.0"/>
+  <Residue name="Er" overload="1">
+   <Atom name="Er" type="spce_IOD_multivalent-Er3+" charge="3.0"/>
   </Residue>
-  <Residue name="FE">
-   <Atom name="FE" type="Fe3+" charge="3.0"/>
+  <Residue name="FE" overload="1">
+   <Atom name="FE" type="spce_IOD_multivalent-Fe3+" charge="3.0"/>
   </Residue>
-  <Residue name="FE2">
-   <Atom name="FE2" type="Fe2+" charge="2.0"/>
+  <Residue name="FE2" overload="1">
+   <Atom name="FE2" type="spce_IOD_multivalent-Fe2+" charge="2.0"/>
   </Residue>
-  <Residue name="GD3">
-   <Atom name="GD" type="Gd3+" charge="3.0"/>
+  <Residue name="GD3" overload="1">
+   <Atom name="GD" type="spce_IOD_multivalent-Gd3+" charge="3.0"/>
   </Residue>
-  <Residue name="HG">
-   <Atom name="HG" type="Hg2+" charge="2.0"/>
+  <Residue name="HG" overload="1">
+   <Atom name="HG" type="spce_IOD_multivalent-Hg2+" charge="2.0"/>
   </Residue>
-  <Residue name="Hf">
-   <Atom name="Hf" type="Hf4+" charge="4.0"/>
+  <Residue name="Hf" overload="1">
+   <Atom name="Hf" type="spce_IOD_multivalent-Hf4+" charge="4.0"/>
   </Residue>
-  <Residue name="IN">
-   <Atom name="IN" type="In3+" charge="3.0"/>
+  <Residue name="IN" overload="1">
+   <Atom name="IN" type="spce_IOD_multivalent-In3+" charge="3.0"/>
   </Residue>
-  <Residue name="LA">
-   <Atom name="LA" type="La3+" charge="3.0"/>
+  <Residue name="LA" overload="1">
+   <Atom name="LA" type="spce_IOD_multivalent-La3+" charge="3.0"/>
   </Residue>
-  <Residue name="LU">
-   <Atom name="LU" type="Lu3+" charge="3.0"/>
+  <Residue name="LU" overload="1">
+   <Atom name="LU" type="spce_IOD_multivalent-Lu3+" charge="3.0"/>
   </Residue>
-  <Residue name="MG">
-   <Atom name="MG" type="Mg2+" charge="2.0"/>
+  <Residue name="MG" overload="1">
+   <Atom name="MG" type="spce_IOD_multivalent-Mg2+" charge="2.0"/>
   </Residue>
-  <Residue name="MN">
-   <Atom name="MN" type="Mn2+" charge="2.0"/>
+  <Residue name="MN" overload="1">
+   <Atom name="MN" type="spce_IOD_multivalent-Mn2+" charge="2.0"/>
   </Residue>
-  <Residue name="NI">
-   <Atom name="NI" type="Ni2+" charge="2.0"/>
+  <Residue name="NI" overload="1">
+   <Atom name="NI" type="spce_IOD_multivalent-Ni2+" charge="2.0"/>
   </Residue>
-  <Residue name="Nd">
-   <Atom name="Nd" type="Nd3+" charge="3.0"/>
+  <Residue name="Nd" overload="1">
+   <Atom name="Nd" type="spce_IOD_multivalent-Nd3+" charge="3.0"/>
   </Residue>
-  <Residue name="PR">
-   <Atom name="PR" type="Pr3+" charge="3.0"/>
+  <Residue name="PR" overload="1">
+   <Atom name="PR" type="spce_IOD_multivalent-Pr3+" charge="3.0"/>
   </Residue>
-  <Residue name="Pu">
-   <Atom name="Pu" type="Pu4+" charge="4.0"/>
+  <Residue name="Pu" overload="1">
+   <Atom name="Pu" type="spce_IOD_multivalent-Pu4+" charge="4.0"/>
   </Residue>
-  <Residue name="SM">
-   <Atom name="SM" type="Sm3+" charge="3.0"/>
+  <Residue name="SM" overload="1">
+   <Atom name="SM" type="spce_IOD_multivalent-Sm3+" charge="3.0"/>
   </Residue>
-  <Residue name="SR">
-   <Atom name="SR" type="Sr2+" charge="2.0"/>
+  <Residue name="SR" overload="1">
+   <Atom name="SR" type="spce_IOD_multivalent-Sr2+" charge="2.0"/>
   </Residue>
-  <Residue name="Sn">
-   <Atom name="Sn" type="Sn2+" charge="2.0"/>
+  <Residue name="Sn" overload="1">
+   <Atom name="Sn" type="spce_IOD_multivalent-Sn2+" charge="2.0"/>
   </Residue>
-  <Residue name="TB">
-   <Atom name="TB" type="Tb3+" charge="3.0"/>
+  <Residue name="TB" overload="1">
+   <Atom name="TB" type="spce_IOD_multivalent-Tb3+" charge="3.0"/>
   </Residue>
-  <Residue name="Th">
-   <Atom name="Th" type="Th4+" charge="4.0"/>
+  <Residue name="Th" overload="1">
+   <Atom name="Th" type="spce_IOD_multivalent-Th4+" charge="4.0"/>
   </Residue>
-  <Residue name="Tl">
-   <Atom name="Tl" type="Tl3+" charge="3.0"/>
+  <Residue name="Tl" overload="1">
+   <Atom name="Tl" type="spce_IOD_multivalent-Tl3+" charge="3.0"/>
   </Residue>
-  <Residue name="Tm">
-   <Atom name="Tm" type="Tm3+" charge="3.0"/>
+  <Residue name="Tm" overload="1">
+   <Atom name="Tm" type="spce_IOD_multivalent-Tm3+" charge="3.0"/>
   </Residue>
-  <Residue name="U4+">
-   <Atom name="U" type="U4+" charge="4.0"/>
+  <Residue name="U4+" overload="1">
+   <Atom name="U" type="spce_IOD_multivalent-U4+" charge="4.0"/>
   </Residue>
-  <Residue name="V2+">
-   <Atom name="V2+" type="V2+" charge="2.0"/>
+  <Residue name="V2+" overload="1">
+   <Atom name="V2+" type="spce_IOD_multivalent-V2+" charge="2.0"/>
   </Residue>
-  <Residue name="Y">
-   <Atom name="Y" type="Y3+" charge="3.0"/>
+  <Residue name="Y" overload="1">
+   <Atom name="Y" type="spce_IOD_multivalent-Y3+" charge="3.0"/>
   </Residue>
-  <Residue name="ZN">
-   <Atom name="ZN" type="Zn2+" charge="2.0"/>
+  <Residue name="ZN" overload="1">
+   <Atom name="ZN" type="spce_IOD_multivalent-Zn2+" charge="2.0"/>
   </Residue>
-  <Residue name="Zr">
-   <Atom name="Zr" type="Zr4+" charge="4.0"/>
-  </Residue>
-  <Residue name="HOH">
-   <Atom name="O" type="spce-O" charge="-0.8476"/>
-   <Atom name="H1" type="spce-H" charge="0.4238"/>
-   <Atom name="H2" type="spce-H" charge="0.4238"/>
-   <Bond atomName1="O" atomName2="H1"/>
-   <Bond atomName1="O" atomName2="H2"/>
+  <Residue name="Zr" overload="1">
+   <Atom name="Zr" type="spce_IOD_multivalent-Zr4+" charge="4.0"/>
   </Residue>
  </Residues>
- <HarmonicBondForce>
-  <Bond type1="spce-O" type2="spce-H" length="0.1" k="462750.4"/>
- </HarmonicBondForce>
- <HarmonicAngleForce>
-  <Angle type1="spce-H" type2="spce-O" type3="spce-H" angle="1.91061193216" k="836.8"/>
- </HarmonicAngleForce>
  <NonbondedForce coulomb14scale="0.833333333333" lj14scale="0.5">
   <UseAttributeFromResidue name="charge"/>
-  <Atom type="Be2+" sigma="0.208113940558" epsilon="0.00263859776"/>
-  <Atom type="Cu2+" sigma="0.251055258772" epsilon="0.07200664"/>
-  <Atom type="Ni2+" sigma="0.244640788001" epsilon="0.04934496632"/>
-  <Atom type="Zn2+" sigma="0.248560742361" epsilon="0.062412728"/>
-  <Atom type="Co2+" sigma="0.250164360054" epsilon="0.06846053264"/>
-  <Atom type="Cr2+" sigma="0.247313484156" epsilon="0.05799739464"/>
-  <Atom type="Fe2+" sigma="0.251055258772" epsilon="0.07200664"/>
-  <Atom type="Mg2+" sigma="0.248560742361" epsilon="0.062412728"/>
-  <Atom type="V2+" sigma="0.262993301595" epsilon="0.1338302608"/>
-  <Atom type="Mn2+" sigma="0.261389683902" epsilon="0.12386075112"/>
-  <Atom type="Hg2+" sigma="0.280633096214" epsilon="0.28247819944"/>
-  <Atom type="Cd2+" sigma="0.268338693904" epsilon="0.17114857016"/>
-  <Atom type="Ca2+" sigma="0.286513027754" epsilon="0.34886028824"/>
-  <Atom type="Sn2+" sigma="0.309676394426" epsilon="0.69037238464"/>
-  <Atom type="Sr2+" sigma="0.31234909058" epsilon="0.73715046696"/>
-  <Atom type="Ba2+" sigma="0.34085784956" epsilon="1.29955851696"/>
-  <Atom type="Al3+" sigma="0.230920947742" epsilon="0.01945869616"/>
-  <Atom type="Fe3+" sigma="0.246957124669" epsilon="0.05678093848"/>
-  <Atom type="Cr3+" sigma="0.239295395692" epsilon="0.03506409568"/>
-  <Atom type="In3+" sigma="0.260320605441" epsilon="0.11751709584"/>
-  <Atom type="Tl3+" sigma="0.269585952109" epsilon="0.18079185336"/>
-  <Atom type="Y3+" sigma="0.285443949292" epsilon="0.33615222504"/>
-  <Atom type="La3+" sigma="0.306112799553" epsilon="0.63014479248"/>
-  <Atom type="Ce3+" sigma="0.310210933656" epsilon="0.69962078192"/>
-  <Atom type="Pr3+" sigma="0.308963675451" epsilon="0.67812656976"/>
-  <Atom type="Nd3+" sigma="0.299520149039" epsilon="0.52569060488"/>
-  <Atom type="Sm3+" sigma="0.295600194679" epsilon="0.46816830344"/>
-  <Atom type="Eu3+" sigma="0.296847452884" epsilon="0.48608615792"/>
-  <Atom type="Gd3+" sigma="0.289185723908" epsilon="0.38186547936"/>
-  <Atom type="Tb3+" sigma="0.290432982114" epsilon="0.39786810784"/>
-  <Atom type="Dy3+" sigma="0.286691207498" epsilon="0.3510058016"/>
-  <Atom type="Er3+" sigma="0.285443949292" epsilon="0.33615222504"/>
-  <Atom type="Tm3+" sigma="0.285443949292" epsilon="0.33615222504"/>
-  <Atom type="Lu3+" sigma="0.282949432881" epsilon="0.30760316128"/>
-  <Atom type="Hf4+" sigma="0.267447795186" epsilon="0.16448090592"/>
-  <Atom type="Zr4+" sigma="0.271011390058" epsilon="0.1922585656"/>
-  <Atom type="Ce4+" sigma="0.300945586988" epsilon="0.5474740988"/>
-  <Atom type="U4+" sigma="0.300945586988" epsilon="0.5474740988"/>
-  <Atom type="Pu4+" sigma="0.296847452884" epsilon="0.48608615792"/>
-  <Atom type="Th4+" sigma="0.305221900835" epsilon="0.61548811496"/>
-  <Atom type="spce-O" sigma="0.31657195050398818" epsilon="0.6497752"/>
-  <Atom type="spce-H" sigma="1" epsilon="0"/>
+  <Atom type="spce_IOD_multivalent-Be2+" sigma="0.208113940558" epsilon="0.00263859776"/>
+  <Atom type="spce_IOD_multivalent-Cu2+" sigma="0.251055258772" epsilon="0.07200664"/>
+  <Atom type="spce_IOD_multivalent-Ni2+" sigma="0.244640788001" epsilon="0.04934496632"/>
+  <Atom type="spce_IOD_multivalent-Zn2+" sigma="0.248560742361" epsilon="0.062412728"/>
+  <Atom type="spce_IOD_multivalent-Co2+" sigma="0.250164360054" epsilon="0.06846053264"/>
+  <Atom type="spce_IOD_multivalent-Cr2+" sigma="0.247313484156" epsilon="0.05799739464"/>
+  <Atom type="spce_IOD_multivalent-Fe2+" sigma="0.251055258772" epsilon="0.07200664"/>
+  <Atom type="spce_IOD_multivalent-Mg2+" sigma="0.248560742361" epsilon="0.062412728"/>
+  <Atom type="spce_IOD_multivalent-V2+" sigma="0.262993301595" epsilon="0.1338302608"/>
+  <Atom type="spce_IOD_multivalent-Mn2+" sigma="0.261389683902" epsilon="0.12386075112"/>
+  <Atom type="spce_IOD_multivalent-Hg2+" sigma="0.280633096214" epsilon="0.28247819944"/>
+  <Atom type="spce_IOD_multivalent-Cd2+" sigma="0.268338693904" epsilon="0.17114857016"/>
+  <Atom type="spce_IOD_multivalent-Ca2+" sigma="0.286513027754" epsilon="0.34886028824"/>
+  <Atom type="spce_IOD_multivalent-Sn2+" sigma="0.309676394426" epsilon="0.69037238464"/>
+  <Atom type="spce_IOD_multivalent-Sr2+" sigma="0.31234909058" epsilon="0.73715046696"/>
+  <Atom type="spce_IOD_multivalent-Ba2+" sigma="0.34085784956" epsilon="1.29955851696"/>
+  <Atom type="spce_IOD_multivalent-Al3+" sigma="0.230920947742" epsilon="0.01945869616"/>
+  <Atom type="spce_IOD_multivalent-Fe3+" sigma="0.246957124669" epsilon="0.05678093848"/>
+  <Atom type="spce_IOD_multivalent-Cr3+" sigma="0.239295395692" epsilon="0.03506409568"/>
+  <Atom type="spce_IOD_multivalent-In3+" sigma="0.260320605441" epsilon="0.11751709584"/>
+  <Atom type="spce_IOD_multivalent-Tl3+" sigma="0.269585952109" epsilon="0.18079185336"/>
+  <Atom type="spce_IOD_multivalent-Y3+" sigma="0.285443949292" epsilon="0.33615222504"/>
+  <Atom type="spce_IOD_multivalent-La3+" sigma="0.306112799553" epsilon="0.63014479248"/>
+  <Atom type="spce_IOD_multivalent-Ce3+" sigma="0.310210933656" epsilon="0.69962078192"/>
+  <Atom type="spce_IOD_multivalent-Pr3+" sigma="0.308963675451" epsilon="0.67812656976"/>
+  <Atom type="spce_IOD_multivalent-Nd3+" sigma="0.299520149039" epsilon="0.52569060488"/>
+  <Atom type="spce_IOD_multivalent-Sm3+" sigma="0.295600194679" epsilon="0.46816830344"/>
+  <Atom type="spce_IOD_multivalent-Eu3+" sigma="0.296847452884" epsilon="0.48608615792"/>
+  <Atom type="spce_IOD_multivalent-Gd3+" sigma="0.289185723908" epsilon="0.38186547936"/>
+  <Atom type="spce_IOD_multivalent-Tb3+" sigma="0.290432982114" epsilon="0.39786810784"/>
+  <Atom type="spce_IOD_multivalent-Dy3+" sigma="0.286691207498" epsilon="0.3510058016"/>
+  <Atom type="spce_IOD_multivalent-Er3+" sigma="0.285443949292" epsilon="0.33615222504"/>
+  <Atom type="spce_IOD_multivalent-Tm3+" sigma="0.285443949292" epsilon="0.33615222504"/>
+  <Atom type="spce_IOD_multivalent-Lu3+" sigma="0.282949432881" epsilon="0.30760316128"/>
+  <Atom type="spce_IOD_multivalent-Hf4+" sigma="0.267447795186" epsilon="0.16448090592"/>
+  <Atom type="spce_IOD_multivalent-Zr4+" sigma="0.271011390058" epsilon="0.1922585656"/>
+  <Atom type="spce_IOD_multivalent-Ce4+" sigma="0.300945586988" epsilon="0.5474740988"/>
+  <Atom type="spce_IOD_multivalent-U4+" sigma="0.300945586988" epsilon="0.5474740988"/>
+  <Atom type="spce_IOD_multivalent-Pu4+" sigma="0.296847452884" epsilon="0.48608615792"/>
+  <Atom type="spce_IOD_multivalent-Th4+" sigma="0.305221900835" epsilon="0.61548811496"/>
  </NonbondedForce>
 </ForceField>

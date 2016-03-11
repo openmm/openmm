@@ -1,4 +1,6 @@
-from __future__ import print_function
+# AMBER --> OpenMM force-field conversion script
+# Author: Rafal P. Wiewiora, ChoderaLab
+from __future__ import print_function, division
 import parmed
 from parmed.utils.six import iteritems
 from parmed.utils.six.moves import StringIO, zip
@@ -16,6 +18,7 @@ from collections import OrderedDict
 import glob
 import argparse
 from lxml import etree as et
+import csv
 import logging
 import warnings
 from parmed.exceptions import ParameterWarning
@@ -42,24 +45,35 @@ no_log = False
 def main():
     global verbose
     global no_log
+    global logger
     # argparse
     parser = argparse.ArgumentParser(description='AMBER --> OpenMM forcefield '
                                                  'conversion script')
-    parser.add_argument('--input', '-i', default='files/master_short.yaml')
-    parser.add_argument('--input-format', '-if', default='yaml')
-    parser.add_argument('--verbose', '-v', action='store_true')
-    parser.add_argument('--no-log', action='store_true')
-    parser.add_argument('--pretty-log', action='store_true')
-    parser.add_argument('--protein-test', action='store_true')
-    parser.add_argument('--nucleic-test', action='store_true')
-    parser.add_argument('--protein-ua-test', action='store_true')
-    parser.add_argument('--phospho-protein-test', action='store_true')
-    parser.add_argument('--gaff-test', action='store_true')
+    parser.add_argument('--input', '-i', default='files/master.yaml',
+                        help='path of the input file. Default: "files/master.yaml"')
+    parser.add_argument('--input-format', '-if', default='yaml',
+                        help='format of the input file: "yaml" or "leaprc". Default: "yaml"')
+    parser.add_argument('--verbose', '-v', action='store_true',
+                        help='turns verbosity on')
+    parser.add_argument('--no-log', action='store_true',
+                        help='turns logging of energies to log.csv off')
+    parser.add_argument('--protein-test', action='store_true',
+                        help='validate resulting XML through protein tests')
+    parser.add_argument('--nucleic-test', action='store_true',
+                        help='validate resulting XML through nucleic acid tests')
+    parser.add_argument('--protein-ua-test', action='store_true',
+                        help='validate resulting XML through united-atom protein tests')
+    parser.add_argument('--phospho-protein-test', action='store_true',
+                        help='validate resulting XML through phosphorylated protein tests')
+    parser.add_argument('--gaff-test', action='store_true',
+                        help='validate resulting XML through small-molecule (GAFF) test')
     # parser.add_argument('--write_unused', action='store_true')
     # parser.add_argument('--default-warnings', action='store_true')
     args = parser.parse_args()
     verbose = args.verbose
     no_log = args.no_log
+
+    if not no_log: logger = Logger('log.csv')
 
     # input is either a YAML or a leaprc - default is leaprc
     # output directory hardcoded here for ffxml/
@@ -80,6 +94,8 @@ def main():
             validate_gaff(ffxml_name, args.input)
     else:
         raise RuntimeError('Wrong input_format chosen.')
+
+    if not no_log: logger.close()
 
 def convert_leaprc(files, split_filename=False, ffxml_dir='./', ignore=None,
     provenance=None, write_unused=False, filter_warnings='error'):
@@ -142,59 +158,76 @@ def convert_leaprc(files, split_filename=False, ffxml_dir='./', ignore=None,
     if verbose: print('%s successfully written!' % ffxml_name)
     return ffxml_name
 
-def convert_recipe(files, solvent_file, ffxml_dir='./', provenance=None, ffxml_basename=None,
+def convert_recipe(files, solvent_file=None, ffxml_dir='./', provenance=None, ffxml_basename=None,
                    filter_warnings='always'):
     if verbose: print('Converting %s to ffxml...' % files)
-    ffxml_name = ffxml_dir + ffxml_basename + '.xml'
+    ffxml_name = os.path.join(ffxml_dir, (ffxml_basename + '.xml'))
     ffxml_temp_stringio = StringIO()
     params = parmed.amber.AmberParameterSet(files)
     params = parmed.openmm.OpenMMParameterSet.from_parameterset(params)
-    # remove old pdb name style Na+, Cl- and K+ ions
-    for res in ('Na+', 'Cl-', 'K+'):
-        if res in params.residues:
-            del params.residues[res]
-    with warnings.catch_warnings():
-        warnings.filterwarnings(filter_warnings, category=ParameterWarning)
-        params.write(ffxml_temp_stringio, provenance=provenance, write_unused=False)
-    ffxml_temp_stringio.seek(0)
-    if verbose: print('Modifying converted ffxml to append solvent parameters')
-    tree_main = et.parse(ffxml_temp_stringio)
-    tree_water = et.parse(solvent_file)
-    root_main = tree_main.getroot()
-    root_water = tree_water.getroot()
-    with open(ffxml_name, 'w') as f:
-        f.write('<ForceField>\n ')
-        f.write(et.tostring(root_main.findall('Info')[0]))
-        f.write('<AtomTypes>\n  ')
-        for subelement in root_main.findall('AtomTypes')[0]:
-            f.write(et.tostring(subelement))
-        f.write(' ')
-        for subelement in root_water.findall('AtomTypes')[0]:
-            f.write(et.tostring(subelement))
-        f.write('</AtomTypes>\n <Residues>\n  ')
-        for subelement in root_main.findall('Residues')[0]:
-            f.write(et.tostring(subelement))
-        f.write(' ')
-        for subelement in root_water.findall('Residues')[0]:
-            f.write(et.tostring(subelement))
-        f.write('</Residues>\n <HarmonicBondForce>\n  ')
-        for subelement in root_water.findall('HarmonicBondForce')[0]:
-            f.write(et.tostring(subelement))
-        f.write('</HarmonicBondForce>\n <HarmonicAngleForce>\n  ')
-        for subelement in root_water.findall('HarmonicAngleForce')[0]:
-            f.write(et.tostring(subelement))
-        f.write('</HarmonicAngleForce>\n ')
-        f.write('<NonbondedForce coulomb14scale="%s" lj14scale="%s">\n  ' %
-               (root_main.findall('NonbondedForce')[0].attrib['coulomb14scale'],
-                root_main.findall('NonbondedForce')[0].attrib['lj14scale'])
-               )
-        for subelement in root_main.findall('NonbondedForce')[0]:
-            f.write(et.tostring(subelement))
-        f.write(' ')
-        for subelement in root_water.findall('NonbondedForce')[0]:
-            if subelement.tag == 'UseAttributeFromResidue': continue
-            f.write(et.tostring(subelement))
-        f.write('</NonbondedForce>\n</ForceField>')
+    # Change atom type naming
+    # atom_types
+    new_atom_types = OrderedDict()
+    for name, atom_type in iteritems(params.atom_types):
+        new_name = ffxml_basename + '-' + name
+        new_atom_types[new_name] = atom_type
+    params.atom_types = new_atom_types
+    # atoms in residues
+    for name, residue in iteritems(params.residues):
+        for atom in residue:
+            new_type = ffxml_basename + '-' + atom.type
+            atom.type = new_type
+    if solvent_file is None:
+    # this means this file does not include a water model - hard-coded assumption it is
+    # then a 'multivalent' file - set overloadLevel to 1 for all residue templates
+        for name, residue in iteritems(params.residues):
+            residue.overload_level = 1
+        with warnings.catch_warnings():
+            warnings.filterwarnings(filter_warnings, category=ParameterWarning)
+            params.write(ffxml_name, provenance=provenance, write_unused=False)
+    else:
+        with warnings.catch_warnings():
+            warnings.filterwarnings(filter_warnings, category=ParameterWarning)
+            params.write(ffxml_temp_stringio, provenance=provenance, write_unused=False)
+        ffxml_temp_stringio.seek(0)
+        if verbose: print('Modifying converted ffxml to append solvent parameters')
+        tree_main = et.parse(ffxml_temp_stringio)
+        tree_water = et.parse(solvent_file)
+        root_main = tree_main.getroot()
+        root_water = tree_water.getroot()
+        with open(ffxml_name, 'w') as f:
+            f.write('<ForceField>\n ')
+            f.write(et.tostring(root_main.findall('Info')[0]))
+            f.write('<AtomTypes>\n  ')
+            for subelement in root_main.findall('AtomTypes')[0]:
+                f.write(et.tostring(subelement))
+            f.write(' ')
+            for subelement in root_water.findall('AtomTypes')[0]:
+                f.write(et.tostring(subelement))
+            f.write('</AtomTypes>\n <Residues>\n  ')
+            for subelement in root_main.findall('Residues')[0]:
+                f.write(et.tostring(subelement))
+            f.write(' ')
+            for subelement in root_water.findall('Residues')[0]:
+                f.write(et.tostring(subelement))
+            f.write('</Residues>\n <HarmonicBondForce>\n  ')
+            for subelement in root_water.findall('HarmonicBondForce')[0]:
+                f.write(et.tostring(subelement))
+            f.write('</HarmonicBondForce>\n <HarmonicAngleForce>\n  ')
+            for subelement in root_water.findall('HarmonicAngleForce')[0]:
+                f.write(et.tostring(subelement))
+            f.write('</HarmonicAngleForce>\n ')
+            f.write('<NonbondedForce coulomb14scale="%s" lj14scale="%s">\n  ' %
+                   (root_main.findall('NonbondedForce')[0].attrib['coulomb14scale'],
+                    root_main.findall('NonbondedForce')[0].attrib['lj14scale'])
+                   )
+            for subelement in root_main.findall('NonbondedForce')[0]:
+                f.write(et.tostring(subelement))
+            f.write(' ')
+            for subelement in root_water.findall('NonbondedForce')[0]:
+                if subelement.tag == 'UseAttributeFromResidue': continue
+                f.write(et.tostring(subelement))
+            f.write('</NonbondedForce>\n</ForceField>')
     if verbose: print('%s successfully written!' % ffxml_name)
     return ffxml_name
 
@@ -221,7 +254,15 @@ def convert_yaml(yaml_name, ffxml_dir):
         leaprc_test = entry['Test']
         if MODE == 'RECIPE':
             recipe_name = entry['Name']
-            recipe_source2 = entry['Source2']
+            solvent_name = entry['Solvent']
+            if 'Solvent_source' in entry:
+                recipe_source2 = entry['Solvent_source']
+            else:
+                recipe_source2 = None
+            if 'Standard' in entry:
+                standard_ffxml = os.path.join(ffxml_dir, (entry['Standard'] + '.xml'))
+            else:
+                standard_ffxml = None
         provenance = OrderedDict()
         if isinstance(leaprc_name, list):
             files = []
@@ -253,7 +294,7 @@ def convert_yaml(yaml_name, ffxml_dir):
             source['sourcePackage'] = source_pack
             source['sourcePackageVersion'] = source_pack_ver
         # add water file and source info for it
-        if MODE == 'RECIPE':
+        if MODE == 'RECIPE' and recipe_source2 is not None:
             _filename = os.path.join('files', recipe_source2)
             solvent_file = _filename
             source.append(OrderedDict())
@@ -265,6 +306,8 @@ def convert_yaml(yaml_name, ffxml_dir):
             source[-1]['md5hash'] = md5
             source[-1]['sourcePackage'] = source_pack2
             source[-1]['sourcePackageVersion'] = source_pack_ver2
+        elif MODE == 'RECIPE' and recipe_source2 is None:
+            solvent_file = None
         provenance['Reference'] = leaprc_reference
         # set default conversion options
         write_unused = False
@@ -284,9 +327,9 @@ def convert_yaml(yaml_name, ffxml_dir):
                          provenance=provenance, write_unused=write_unused,
                          filter_warnings=filter_warnings, split_filename=True)
         elif MODE == 'RECIPE':
-            ffxml_name = convert_recipe(files, solvent_file,
+            ffxml_name = convert_recipe(files, solvent_file=solvent_file,
                          ffxml_dir=ffxml_dir, provenance=provenance,
-                         ffxml_basename=recipe_name, filter_warnings=filter_warnings)
+                         ffxml_basename=recipe_name)
         if verbose: print('Validating the conversion...')
         tested = False
         for test in leaprc_test:
@@ -306,15 +349,15 @@ def convert_yaml(yaml_name, ffxml_dir):
                 validate_gaff(ffxml_name, leaprc_name)
                 tested = True
             elif test == 'water_ion':
-                #validate_water_ion(ffxml_name, files, solvent_file, recipe_name)
+                validate_water_ion(ffxml_name, files, solvent_name, recipe_name,
+                standard_ffxml=standard_ffxml)
                 tested = True
         if not tested:
             raise RuntimeError('No validation tests have been run for %s' %
                                 leaprc_name)
 
 def assert_energies(prmtop, inpcrd, ffxml, system_name='unknown', tolerance=1e-5,
-                    improper_position=3, improper_tolerance=1e-2,
-                    units=u.kilojoules_per_mole):
+                    improper_tolerance=1e-2, units=u.kilojoules_per_mole):
     # AMBER
     parm_amber = parmed.load_file(prmtop, inpcrd)
     system_amber = parm_amber.createSystem(splitDihedrals=True)
@@ -331,19 +374,91 @@ def assert_energies(prmtop, inpcrd, ffxml, system_name='unknown', tolerance=1e-5
     system_omm = parm_omm.createSystem(splitDihedrals=True)
     omm_energies = parmed.openmm.energy_decomposition_system(parm_omm,
                    system_omm, nrg=units)
-    # assertions
-    counter = 0
+
+    # calc rel energies and assert
+    rel_energies = []
     for i, j in zip(amber_energies, omm_energies):
-        if counter != improper_position: # Not Impropers
-            testing.assert_allclose(j[1], i[1], rtol=tolerance,
-            err_msg=('%s energies outside of allowed tolerance for %s' %
-                    (system_name, ffxml)))
-            counter += 1
-        else: # Impropers - higher tolerance
-            testing.assert_allclose(j[1], i[1], rtol=improper_tolerance,
-            err_msg=('%s energies outside of allowed tolerance for %s' %
-                    (system_name, ffxml)))
-            counter += 1
+        if i[0] != j[0]:
+            raise RuntimeError('Mismatch in energy tuples naming.')
+        if i[1] != 0:
+            rel_energies.append((i[0], (abs(i[1]-j[1])/i[1])))
+        else:
+            if j[1] != 0:
+                raise RuntimeError('One of AMBER %s energies (%s) for %s is zero, '
+                      'while the corresponding OpenMM energy is non-zero' %
+                      (system_name, i[0], ffxml))
+            rel_energies.append((i[0], 0))
+
+    dihedrals_done = False
+    for i in rel_energies:
+        if i[0] != 'PeriodicTorsionForce':
+            if i[1] > tolerance:
+                raise AssertionError('%s energies (%s) outside of allowed tolerance for %s' %
+                                     (system_name, i[0], ffxml))
+        else:
+            if not dihedrals_done:
+                if i[1] > tolerance:
+                    raise AssertionError('%s energies (%s) outside of allowed tolerance for %s' %
+                                         (system_name, i[0], ffxml))
+                dihedrals_done = True
+            else: #impropers
+                if i[1] > improper_tolerance:
+                    raise AssertionError('%s energies (%s-impropers) outside of allowed tolerance for %s' %
+                                         (system_name, i[0], ffxml))
+
+    # logging
+    if not no_log:
+        amber_energies_log = dict()
+        omm_energies_log = dict()
+        rel_energies_log = dict()
+        amber_energies_log['ffxml_name'] = ffxml
+        amber_energies_log['test_system'] = system_name
+        amber_energies_log['data_type'] = 'AMBER'
+        amber_energies_log['units'] = units
+        omm_energies_log['ffxml_name'] = ffxml
+        omm_energies_log['test_system'] = system_name
+        omm_energies_log['data_type'] = 'OpenMM'
+        omm_energies_log['units'] = units
+        rel_energies_log['ffxml_name'] = ffxml
+        rel_energies_log['test_system'] = system_name
+        rel_energies_log['data_type'] = 'abs(AMBER-OpenMM)/AMBER'
+        dihedrals_done = False
+        for item in amber_energies:
+            if item[0] == 'PeriodicTorsionForce' and not dihedrals_done:
+                amber_energies_log['PeriodicTorsionForce_dihedrals'] = item[1]
+                dihedrals_done = True
+            elif item[0] == 'PeriodicTorsionForce' and dihedrals_done:
+                amber_energies_log['PeriodicTorsionForce_impropers'] = item[1]
+            elif item[0] == 'CMMotionRemover':
+                continue
+            else:
+                amber_energies_log[item[0]] = item[1]
+        dihedrals_done = False
+        for item in omm_energies:
+            if item[0] == 'PeriodicTorsionForce' and not dihedrals_done:
+                omm_energies_log['PeriodicTorsionForce_dihedrals'] = item[1]
+                dihedrals_done = True
+            elif item[0] == 'PeriodicTorsionForce' and dihedrals_done:
+                omm_energies_log['PeriodicTorsionForce_impropers'] = item[1]
+            elif item[0] == 'CMMotionRemover':
+                continue
+            else:
+                omm_energies_log[item[0]] = item[1]
+        dihedrals_done = False
+        for item in rel_energies:
+            if item[0] == 'PeriodicTorsionForce' and not dihedrals_done:
+                rel_energies_log['PeriodicTorsionForce_dihedrals'] = item[1]
+                dihedrals_done = True
+            elif item[0] == 'PeriodicTorsionForce' and dihedrals_done:
+                rel_energies_log['PeriodicTorsionForce_impropers'] = item[1]
+            elif item[0] == 'CMMotionRemover':
+                continue
+            else:
+                rel_energies_log[item[0]] = item[1]
+
+        logger.log(amber_energies_log)
+        logger.log(omm_energies_log)
+        logger.log(rel_energies_log)
 
 def validate_protein(ffxml_name, leaprc_name, united_atom=False):
     if verbose: print('Protein energy validation for %s' % ffxml_name)
@@ -553,8 +668,9 @@ quit""" % (leaprc_name, imatinib_top[1], imatinib_crd[1])
 
     try:
         if verbose: print('Calculating and validating imatinib energies...')
-        assert_energies(imatinib_top[1], imatinib_crd[1], ffxml_name,
-                        system_name='gaff-imatinib')
+        assert_energies(imatinib_top[1], imatinib_crd[1], (ffxml_name,
+                        'files/imatinib.xml', 'files/imatinib_frcmod.xml'),
+                         system_name='gaff-imatinib')
         if verbose: print('Imatinib energy validation successful!')
     finally:
         if verbose: print('Deleting temp files...')
@@ -604,19 +720,20 @@ quit""" % (supp_leaprc_name, leaprc_name, pdbname, top[1], crd[1])
         if verbose: print('Phosphorylated protein energy validation for %s done!'
                           % ffxml_name)
 
-def validate_water_ion(ffxml_name, source_recipe_files, solvent_ffxml, recipe_name):
+def validate_water_ion(ffxml_name, source_recipe_files, solvent_name, recipe_name,
+                       standard_ffxml=None):
     if verbose: print('Water and ions energy validation for %s' %
                       ffxml_name)
-    if solvent_ffxml == 'files/tip3p.xml':
+    if solvent_name == 'tip3p':
         HOH = 'TP3'
         solvent_frcmod = None
-    elif solvent_ffxml == 'files/tip4pew.xml':
+    elif solvent_name == 'tip4pew':
         HOH = 'T4E'
         solvent_frcmod = 'frcmod.tip4pew'
-    elif solvent_ffxml == 'files/spce.xml':
+    elif solvent_name == 'spce':
         HOH = 'SPC'
         solvent_frcmod = 'frcmod.spce'
-    pdb_name = 'files' + recipe_name + '.pdb'     
+    pdb_name = 'files/water_ion/' + recipe_name + '.pdb'
     if verbose: print('Preparing temporary files for validation...')
     top = tempfile.mkstemp()
     crd = tempfile.mkstemp()
@@ -629,15 +746,17 @@ loadamberparams %s\n""" % (source_recipe_files[0], source_recipe_files[1])
     leap_script_string_part2 = """\nloadOff atomic_ions.lib
 loadoff solvents.lib
 HOH = %s
+# for TIP4PEW
+addPdbAtomMap {{ "M" "EPW" }}
 x = loadPdb %s
 saveAmberParm x %s %s
 quit""" % (HOH, pdb_name, top[1], crd[1])
 
     if solvent_frcmod:
-        leap_script_string = (leap_script_string_part1 + solvent_frcmod +
-                              leap_script_string_part2)
+        leap_script_string = (leap_script_string_part1 + ('loadamberparams %s'
+                               % solvent_frcmod) + leap_script_string_part2)
     else:
-        leap_script_string = leap_script_string_part1 + leap_script_string_part2                     
+        leap_script_string = leap_script_string_part1 + leap_script_string_part2
 
     os.write(leap_script_file[0], leap_script_string)
 
@@ -648,35 +767,77 @@ quit""" % (HOH, pdb_name, top[1], crd[1])
         raise RuntimeError('LEaP fail for %s' % ffxml_name)
     try:
         if verbose: print('Calculating and validating energies...')
-        pdb = app.PDBFile(pdb_name)
-        ff = app.ForceField(ffxml_name)
+        pdb = app.PDBFile(pdb_name, extraParticleIdentifier='')
+        if standard_ffxml is None:
+            ff = app.ForceField(ffxml_name)
+        else:
+            ff = app.ForceField(ffxml_name, standard_ffxml)
         system_omm = ff.createSystem(pdb.topology)
         parm_omm = parmed.openmm.load_topology(pdb.topology, xyz=pdb.positions)
         parm_amber = parmed.load_file(top[1], crd[1])
         system_amber = parm_amber.createSystem()
         omm_energies = parmed.openmm.energy_decomposition_system(parm_omm,
                        system_omm, nrg=u.kilojoules_per_mole)
-        omm_nonbonded = 0
         for entry in omm_energies:
             if entry[0] == 'NonbondedForce':
                 omm_nonbonded = entry[1]
         amber_energies = parmed.openmm.energy_decomposition_system(parm_amber,
                          system_amber, nrg=u.kilojoules_per_mole)
-        amber_nonbonded = 0
         for entry in amber_energies:
             if entry[0] == 'NonbondedForce':
                 amber_nonbonded = entry[1]
-        testing.assert_allclose(omm_nonbonded, amber_nonbonded, rtol=1e-5,
-        err_msg=('Water and ions energies outside of allowed tolerance for %s' %
-                  ffxml_name))
+
+        rel_nonbonded = abs(amber_nonbonded-omm_nonbonded) / amber_nonbonded
+        if rel_nonbonded > 1e-5:
+            raise AssertionError('NonbondedForce Water and ions energy outside of '
+                                 'allowed tolerance for %s' % ffxml_name)
         if verbose: print('Energy validation successful!')
+
     finally:
         if verbose: print('Deleting temp files...')
         for f in (top, crd, leap_script_file):
             os.close(f[0])
             os.unlink(f[1])
+    # logging
+    if not no_log:
+        amber_energies_log = dict()
+        omm_energies_log = dict()
+        rel_energies_log = dict()
+        amber_energies_log['ffxml_name'] = ffxml_name
+        amber_energies_log['test_system'] = 'water_ion'
+        amber_energies_log['data_type'] = 'AMBER'
+        amber_energies_log['NonbondedForce'] = amber_nonbonded
+        omm_energies_log['ffxml_name'] = ffxml_name
+        omm_energies_log['test_system'] = 'water_ion'
+        omm_energies_log['data_type'] = 'OpenMM'
+        omm_energies_log['NonbondedForce'] = omm_nonbonded
+        rel_energies_log['ffxml_name'] = ffxml_name
+        rel_energies_log['test_system'] = 'water_ion'
+        rel_energies_log['data_type'] = 'abs(AMBER-OpenMM)/AMBER'
+        rel_energies_log['NonbondedForce'] = rel_nonbonded
+        logger.log(amber_energies_log)
+        logger.log(omm_energies_log)
+        logger.log(rel_energies_log)
     if verbose: print('Water and ions energy validation for %s done!'
                       % ffxml_name)
+
+class Logger():
+    # logs testing energies into csv
+    def __init__(self, log_file):
+        csvfile = open(log_file, 'w')
+        fieldnames = ['ffxml_name', 'data_type', 'test_system', 'units', 'HarmonicBondForce',
+                      'HarmonicAngleForce', 'PeriodicTorsionForce_dihedrals',
+                      'PeriodicTorsionForce_impropers', 'NonbondedForce']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        self.csvfile = csvfile
+        self.writer = writer
+
+    def close(self):
+        self.csvfile.close()
+
+    def log(self, energies):
+        self.writer.writerow(energies)
 
 if __name__ == '__main__':
     main()

@@ -1,4 +1,4 @@
-REMARK   1 CREATED WITH OPENMM 7.0, 2016-03-09
+REMARK   1 CREATED WITH OPENMM 7.0, 2016-03-10
 CRYST1   22.771   23.117   23.235  90.00  90.00  90.00 P 1           1 
 ATOM      1 BA    BA A   1      10.569  16.024  -1.115  1.00  0.00          Ba  
 ATOM      2 CS    CS A   2       8.569   0.024   7.885  1.00  0.00          Cs  

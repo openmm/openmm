@@ -1,6 +1,6 @@
 <ForceField>
  <Info>
-  <DateGenerated>2016-03-07</DateGenerated>
+  <DateGenerated>2016-03-11</DateGenerated>
   <Source md5hash="50c8c6a3c14c32731680084eaed5d591" sourcePackage="AmberTools" sourcePackageVersion="15">oldff/leaprc.ff99SBnmr</Source>
   <Reference>Li, D.-W., and Bruschweiler, R. (2011). Iterative Optimization of Molecular Mechanics Force Fields from NMR Data of Full-Length Proteins. J. Chem. Theory Comput. 7, 1773-1782.</Reference>
  </Info>

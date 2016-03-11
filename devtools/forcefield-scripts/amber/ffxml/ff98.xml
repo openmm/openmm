@@ -1,6 +1,6 @@
 <ForceField>
  <Info>
-  <DateGenerated>2016-03-07</DateGenerated>
+  <DateGenerated>2016-03-11</DateGenerated>
   <Source md5hash="d3b7061a88b69bd3f34f894bb815aace" sourcePackage="AmberTools" sourcePackageVersion="15">oldff/leaprc.ff98</Source>
   <Reference>III, T.E.C., Cieplak, P., and Kollman, P.A. (1999). A Modified Version of the Cornell et al. Force Field with Improved Sugar Pucker Phases and Helical Repeat. Journal of Biomolecular Structure and Dynamics 16, 845-862.</Reference>
  </Info>

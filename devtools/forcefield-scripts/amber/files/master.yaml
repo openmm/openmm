@@ -75,15 +75,14 @@
   Test:
   - protein
   - nucleic
-# Waiting on the gaff frcmod issue in ForceField
-#- Source: leaprc.gaff
-#  Reference: >-
-#             Wang, J., Wolf, R.M., Caldwell, J.W., Kollman, P.A., and Case, D.A. (2004).
-#             Development and testing of a general amber force field. J. Comput. Chem. 25, 1157-1174.
-#  Options:
-#    write_unused: True
-#  Test:
-#  - gaff
+- Source: leaprc.gaff
+  Reference: >-
+             Wang, J., Wolf, R.M., Caldwell, J.W., Kollman, P.A., and Case, D.A. (2004).
+             Development and testing of a general amber force field. J. Comput. Chem. 25, 1157-1174.
+  Options:
+    write_unused: True
+  Test:
+  - gaff
 - Source: leaprc.phosaa10
   Reference:
   - >-
@@ -210,7 +209,8 @@
   - parm/frcmod.ionsjc_tip3p
   - parm/frcmod.ionslrcm_cm_tip3p
   - lib/atomic_ions.lib
-  Source2: tip3p.xml
+  Solvent_source: tip3p.xml
+  Solvent: tip3p
   Name: tip3p_standard
   Reference:
   - >-
@@ -227,13 +227,12 @@
     Comparison of simple potential functions for simulating liquid water. The Journal of Chemical Physics 79, 926-935.
   Test:
   - water_ion
-  Options:
-    filter_warnings: always
 - Source:
   - parm/frcmod.ionsjc_tip4pew
   - parm/frcmod.ionslrcm_cm_tip4pew
   - lib/atomic_ions.lib
-  Source2: tip4pew.xml
+  Solvent_source: tip4pew.xml
+  Solvent: tip4pew
   Name: tip4pew_standard
   Reference:
   - >-
@@ -253,13 +252,12 @@
     Characterization of the TIP4P-Ew water model: Vapor pressure and boiling point. The Journal of Chemical Physics 123, 194504.
   Test:
   - water_ion
-  Options:
-    filter_warnings: always
 - Source:
   - parm/frcmod.ionsjc_spce
   - parm/frcmod.ionslrcm_cm_spce
   - lib/atomic_ions.lib
-  Source2: spce.xml
+  Solvent_source: spce.xml
+  Solvent: spce
   Name: spce_standard
   Reference:
   - >-
@@ -275,14 +273,13 @@
     Berendsen, H.J.C., Grigera, J.R., and Straatsma, T.P. (1987). The missing term in effective pair potentials. J. Phys. Chem. 91, 6269-6271.
   Test:
   - water_ion
-  Options:
-    filter_warnings: always
 - Source:
   - parm/frcmod.ionslrcm_hfe_tip3p
   - parm/frcmod.ions34lsm_hfe_tip3p
   - lib/atomic_ions.lib
+  Standard: tip3p_standard
+  Solvent: tip3p
   Name: tip3p_HFE_multivalent
-  Source2: tip3p.xml
   Reference:
   - >-
     Li, P., Roberts, B.P., Chakravorty, D.K., and Merz, K.M. (2013).
@@ -290,19 +287,15 @@
   - >-
     Li, P., Song, L.F., and Merz, K.M. (2015).
     Parameterization of Highly Charged Metal Ions Using the 12-6-4 LJ-Type Nonbonded Model in Explicit Water. J. Phys. Chem. B 119, 883-895.
-  - >-
-    Jorgensen, W.L., Chandrasekhar, J., Madura, J.D., Impey, R.W., and Klein, M.L. (1983).
-    Comparison of simple potential functions for simulating liquid water. The Journal of Chemical Physics 79, 926-935.
   Test:
   - water_ion
-  Options:
-    filter_warnings: always
 - Source:
   - parm/frcmod.ionslrcm_iod
   - parm/frcmod.ions34lsm_iod_tip3p
   - lib/atomic_ions.lib
+  Standard: tip3p_standard
+  Solvent: tip3p
   Name: tip3p_IOD_multivalent
-  Source2: tip3p.xml
   Reference:
   - >-
     Li, P., Roberts, B.P., Chakravorty, D.K., and Merz, K.M. (2013).
@@ -310,19 +303,15 @@
   - >-
     Li, P., Song, L.F., and Merz, K.M. (2015).
     Parameterization of Highly Charged Metal Ions Using the 12-6-4 LJ-Type Nonbonded Model in Explicit Water. J. Phys. Chem. B 119, 883-895.
-  - >-
-    Jorgensen, W.L., Chandrasekhar, J., Madura, J.D., Impey, R.W., and Klein, M.L. (1983).
-    Comparison of simple potential functions for simulating liquid water. The Journal of Chemical Physics 79, 926-935.
   Test:
   - water_ion
-  Options:
-    filter_warnings: always
 - Source:
   - parm/frcmod.ionslrcm_hfe_tip4pew
   - parm/frcmod.ions34lsm_hfe_tip4pew
   - lib/atomic_ions.lib
+  Standard: tip4pew_standard
+  Solvent: tip4pew
   Name: tip4pew_HFE_multivalent
-  Source2: tip4pew.xml
   Reference:
   - >-
     Li, P., Roberts, B.P., Chakravorty, D.K., and Merz, K.M. (2013).
@@ -330,22 +319,15 @@
   - >-
     Li, P., Song, L.F., and Merz, K.M. (2015).
     Parameterization of Highly Charged Metal Ions Using the 12-6-4 LJ-Type Nonbonded Model in Explicit Water. J. Phys. Chem. B 119, 883-895.
-  - >-
-    Horn, H.W., Swope, W.C., Pitera, J.W., Madura, J.D., Dick, T.J., Hura, G.L., and Head-Gordon, T. (2004).
-    Development of an improved four-site water model for biomolecular simulations: TIP4P-Ew. The Journal of Chemical Physics 120, 9665-9678.
-  - >-
-    Horn, H.W., Swope, W.C., and Pitera, J.W. (2005).
-    Characterization of the TIP4P-Ew water model: Vapor pressure and boiling point. The Journal of Chemical Physics 123, 194504.
   Test:
   - water_ion
-  Options:
-    filter_warnings: always
 - Source:
   - parm/frcmod.ionslrcm_iod
   - parm/frcmod.ions34lsm_iod_tip4pew
   - lib/atomic_ions.lib
+  Standard: tip4pew_standard
+  Solvent: tip4pew
   Name: tip4pew_IOD_multivalent
-  Source2: tip4pew.xml
   Reference:
   - >-
     Li, P., Roberts, B.P., Chakravorty, D.K., and Merz, K.M. (2013).
@@ -353,21 +335,14 @@
   - >-
     Li, P., Song, L.F., and Merz, K.M. (2015).
     Parameterization of Highly Charged Metal Ions Using the 12-6-4 LJ-Type Nonbonded Model in Explicit Water. J. Phys. Chem. B 119, 883-895.
-  - >-
-    Horn, H.W., Swope, W.C., Pitera, J.W., Madura, J.D., Dick, T.J., Hura, G.L., and Head-Gordon, T. (2004).
-    Development of an improved four-site water model for biomolecular simulations: TIP4P-Ew. The Journal of Chemical Physics 120, 9665-9678.
-  - >-
-    Horn, H.W., Swope, W.C., and Pitera, J.W. (2005).
-    Characterization of the TIP4P-Ew water model: Vapor pressure and boiling point. The Journal of Chemical Physics 123, 194504.
   Test:
   - water_ion
-  Options:
-    filter_warnings: always
 - Source:
   - parm/frcmod.ionslrcm_hfe_spce
   - parm/frcmod.ions34lsm_hfe_spce
   - lib/atomic_ions.lib
-  Source2: spce.xml
+  Standard: spce_standard
+  Solvent: spce
   Name: spce_HFE_multivalent
   Reference:
   - >-
@@ -376,17 +351,14 @@
   - >-
     Li, P., Song, L.F., and Merz, K.M. (2015).
     Parameterization of Highly Charged Metal Ions Using the 12-6-4 LJ-Type Nonbonded Model in Explicit Water. J. Phys. Chem. B 119, 883-895.
-  - >-
-    Berendsen, H.J.C., Grigera, J.R., and Straatsma, T.P. (1987). The missing term in effective pair potentials. J. Phys. Chem. 91, 6269-6271.
   Test:
   - water_ion
-  Options:
-    filter_warnings: always
 - Source:
   - parm/frcmod.ionslrcm_iod
   - parm/frcmod.ions34lsm_iod_spce
   - lib/atomic_ions.lib
-  Source2: spce.xml
+  Standard: spce_standard
+  Solvent: spce
   Name: spce_IOD_multivalent
   Reference:
   - >-
@@ -395,9 +367,5 @@
   - >-
     Li, P., Song, L.F., and Merz, K.M. (2015).
     Parameterization of Highly Charged Metal Ions Using the 12-6-4 LJ-Type Nonbonded Model in Explicit Water. J. Phys. Chem. B 119, 883-895.
-  - >-
-    Berendsen, H.J.C., Grigera, J.R., and Straatsma, T.P. (1987). The missing term in effective pair potentials. J. Phys. Chem. 91, 6269-6271.
   Test:
   - water_ion
-  Options:
-    filter_warnings: always
