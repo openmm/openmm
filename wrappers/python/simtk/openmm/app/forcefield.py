@@ -1801,15 +1801,13 @@ class LennardJonesGenerator(object):
         self.force.setCutoffDistance(nonbondedCutoff)
 
         # Create customBondForce for the 1-4 scaled L-J interactions
-        lj14ScaleForce = mm.CustomBondForce('(a/r6)^2-b/r6; r6=r2*r2*r2; r2=r^2; '
+        lj14ScaleForce = mm.CustomBondForce('(a/r^6)^2-(b/r^6); r6=r2*r2*r2; r2=r^2;'
                                             'a=acoef;'
                                             'b=bcoef;')
         lj14ScaleForce.addGlobalParameter('lj14scale', self.lj14scale)
-        lj14ScaleForce.addPerBondParameter('aceof')
+        lj14ScaleForce.addPerBondParameter('acoef')
         lj14ScaleForce.addPerBondParameter('bcoef')
         lj14Pairs = []
-        #acoefScaled = []
-        #bcoefScaled = []
 
         # Add bonds for 1-4 scaled L-J from dihedrals
         for torsion in data.propers:
@@ -1817,13 +1815,11 @@ class LennardJonesGenerator(object):
         for lj14Pair in lj14Pairs:
             i = lj_indx_list[lj14Pair[0]] - 1
             j = lj_indx_list[lj14Pair[1]] - 1
-            rij = (lj_radii[i] + lj_radii[j])
-            rij6 = rij**6
-            wdij14 = self.lj14scale*(lj_depths[i]*lj_depths[j])
+            rminij = (lj_radii[i] + lj_radii[j])
+            rij6 = rminij**6
+            wdij14 = self.lj14scale*math.sqrt(lj_depths[i]*lj_depths[j])
             acoefScaled = (math.sqrt(wdij14)*rij6)
             bcoefScaled = (2*wdij14*rij6)
-            #acoefScaled.append(math.sqrt(wdij14)*rij6)
-            #bcoefScaled.append(2*wdij14*rij6)
             lj14ScaleForce.addBond(lj14Pair[0], lj14Pair[1], [acoefScaled, bcoefScaled])
 
         sys.addForce(self.force)
