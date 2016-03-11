@@ -1752,22 +1752,29 @@ class LennardJonesGenerator(object):
             for n in range(num_lj_types):
                 namem = lj_type_list[m]
                 namen = lj_type_list[n]
-                for k in range(len(self.types1)):
-                    types1 = self.types1[k]
-                    types2 = self.types2[k]
-                    if  (namem == types1 and namen == types2) or (namem == types2 and namen == types1):
-                        rij  = self.rmin[k]
-                        wdij = self.emin[k]
-                        rij6 = rij**6
-                        acoef[m+num_lj_types*n] = math.sqrt(wdij) * rij6
-                        bcoef[m+num_lj_types*n] = 2 * wdij * rij6
-                        break
-                    else:
-                        rij = (lj_radii[m] + lj_radii[n])
-                        rij6 = rij**6
-                        wdij = math.sqrt(lj_depths[m] * lj_depths[n])
-                        acoef[m+num_lj_types*n] = math.sqrt(wdij) * rij6
-                        bcoef[m+num_lj_types*n] = 2 * wdij * rij6
+                if range(len(self.types1)):
+                    for k in range(len(self.types1)):
+                        types1 = self.types1[k]
+                        types2 = self.types2[k]
+                        if (namem == types1 and namen == types2) or (namem == types2 and namen == types1):
+                            rij = self.rmin[k]
+                            wdij = self.emin[k]
+                            rij6 = rij**6
+                            acoef[m+num_lj_types*n] = math.sqrt(wdij) * rij6
+                            bcoef[m+num_lj_types*n] = 2 * wdij * rij6
+                            break
+                        else:
+                            rij = (lj_radii[m] + lj_radii[n])
+                            rij6 = rij**6
+                            wdij = math.sqrt(lj_depths[m] * lj_depths[n])
+                            acoef[m+num_lj_types*n] = math.sqrt(wdij) * rij6
+                            bcoef[m+num_lj_types*n] = 2 * wdij * rij6
+                else:
+                    rij = (lj_radii[m] + lj_radii[n])
+                    rij6 = rij**6
+                    wdij = math.sqrt(lj_depths[m] * lj_depths[n])
+                    acoef[m+num_lj_types*n] = math.sqrt(wdij) * rij6
+                    bcoef[m+num_lj_types*n] = 2 * wdij * rij6
 
         self.force = mm.CustomNonbondedForce('(a/r6)^2-b/r6; r6=r2*r2*r2; r2=r^2; '
                                 'a=acoef(type1, type2); '
@@ -1793,7 +1800,34 @@ class LennardJonesGenerator(object):
         self.force.setUseLongRangeCorrection(True)
         self.force.setCutoffDistance(nonbondedCutoff)
 
+        # Create customBondForce for the 1-4 scaled L-J interactions
+        lj14ScaleForce = mm.CustomBondForce('(a/r6)^2-b/r6; r6=r2*r2*r2; r2=r^2; '
+                                            'a=acoef;'
+                                            'b=bcoef;')
+        lj14ScaleForce.addGlobalParameter('lj14scale', self.lj14scale)
+        lj14ScaleForce.addPerBondParameter('aceof')
+        lj14ScaleForce.addPerBondParameter('bcoef')
+        lj14Pairs = []
+        #acoefScaled = []
+        #bcoefScaled = []
+
+        # Add bonds for 1-4 scaled L-J from dihedrals
+        for torsion in data.propers:
+            lj14Pairs.append((torsion[0], torsion[3]))
+        for lj14Pair in lj14Pairs:
+            i = lj_indx_list[lj14Pair[0]] - 1
+            j = lj_indx_list[lj14Pair[1]] - 1
+            rij = (lj_radii[i] + lj_radii[j])
+            rij6 = rij**6
+            wdij14 = self.lj14scale*(lj_depths[i]*lj_depths[j])
+            acoefScaled = (math.sqrt(wdij14)*rij6)
+            bcoefScaled = (2*wdij14*rij6)
+            #acoefScaled.append(math.sqrt(wdij14)*rij6)
+            #bcoefScaled.append(2*wdij14*rij6)
+            lj14ScaleForce.addBond(lj14Pair[0], lj14Pair[1], [acoefScaled, bcoefScaled])
+
         sys.addForce(self.force)
+        sys.addForce(lj14ScaleForce)
 
     def postprocessSystem(self, sys, data, args):
 
@@ -1821,8 +1855,7 @@ class LennardJonesGenerator(object):
                 bondIndices.append((atom1, child2))
 
         # Create the exceptions.
-        self.force.createExclusionsFromBonds(bondIndices, 2)
-
+        self.force.createExclusionsFromBonds(bondIndices, 3)
 
 parsers["LennardJonesForce"] = LennardJonesGenerator.parseElement
 
