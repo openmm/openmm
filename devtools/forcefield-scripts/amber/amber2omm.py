@@ -9,7 +9,6 @@ import simtk.unit as u
 import os
 import sys
 import re
-from numpy import testing
 import tempfile
 import yaml
 from distutils.spawn import find_executable
@@ -807,10 +806,12 @@ quit""" % (HOH, pdb_name, top[1], crd[1])
         amber_energies_log['test_system'] = 'water_ion'
         amber_energies_log['data_type'] = 'AMBER'
         amber_energies_log['NonbondedForce'] = amber_nonbonded
+        amber_energies_log['units'] = u.kilojoules_per_mole
         omm_energies_log['ffxml_name'] = ffxml_name
         omm_energies_log['test_system'] = 'water_ion'
         omm_energies_log['data_type'] = 'OpenMM'
         omm_energies_log['NonbondedForce'] = omm_nonbonded
+        omm_energies_log['units'] = u.kilojoules_per_mole
         rel_energies_log['ffxml_name'] = ffxml_name
         rel_energies_log['test_system'] = 'water_ion'
         rel_energies_log['data_type'] = 'abs(AMBER-OpenMM)/AMBER'
