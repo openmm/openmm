@@ -17,10 +17,12 @@ def compare_energies(ff, param, pdb, structure):
     print('pamed energies: %s' % parmed_energies)
     print('omm eneriges %s' % omm_energies)
 
-ff = ForceField('../ffxml/water.xml')
-pdb = PDBFile('water.pdb')
-structure = CharmmPsfFile('water.psf')
-param = CharmmParameterSet('../charmm/toppar/toppar_water_ions.str')
+ff = ForceField('../ffxml/charmm36.xml')
+pdb = PDBFile('methanol_ions.pdb')
+structure = CharmmPsfFile('methanol_ions.psf')
+param = CharmmParameterSet('../charmm/toppar/top_all36_cgenff.rtf',
+                           '../charmm/toppar/par_all36_cgenff.prm',
+                           '../charmm/toppar/toppar_water_ions.str')
 
 compare_energies(ff, param, pdb, structure)
 
