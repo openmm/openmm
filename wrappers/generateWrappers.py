@@ -397,6 +397,7 @@ extern OPENMM_EXPORT void %(name)s_insert(%(name)s* set, %(type)s value);""" % v
 /* These methods need to be handled specially, since their C++ APIs cannot be directly translated to C.
    Unlike the C++ versions, the return value is allocated on the heap, and you must delete it yourself. */
 extern OPENMM_EXPORT OpenMM_State* OpenMM_Context_getState(const OpenMM_Context* target, int types, int enforcePeriodicBox);
+extern OPENMM_EXPORT OpenMM_State* OpenMM_Context_getState_2(const OpenMM_Context* target, int types, int enforcePeriodicBox, int groups);
 extern OPENMM_EXPORT OpenMM_StringArray* OpenMM_Platform_loadPluginsFromDirectory(const char* directory);
 extern OPENMM_EXPORT OpenMM_StringArray* OpenMM_Platform_getPluginLoadFailures();
 extern OPENMM_EXPORT char* OpenMM_XmlSerializer_serializeSystem(const OpenMM_System* system);
@@ -642,7 +643,8 @@ class CSourceGenerator(WrapperGenerator):
 #include <cstring>
 #include <sstream>
 #include <vector>
-
+#include <stdio.h>
+#include <stdlib.h>
 using namespace OpenMM;
 using namespace std;
 
@@ -799,6 +801,13 @@ OPENMM_EXPORT void %(name)s_insert(%(name)s* s, %(type)s value) {
    Unlike the C++ versions, the return value is allocated on the heap, and you must delete it yourself. */
 OPENMM_EXPORT OpenMM_State* OpenMM_Context_getState(const OpenMM_Context* target, int types, int enforcePeriodicBox) {
     State result = reinterpret_cast<const Context*>(target)->getState(types, enforcePeriodicBox);
+    return reinterpret_cast<OpenMM_State*>(new State(result));
+}
+OPENMM_EXPORT OpenMM_State* OpenMM_Context_getState_2(const OpenMM_Context* target, int types, int enforcePeriodicBox, int groups) {
+    State result = reinterpret_cast<const Context*>(target)->getState(types, enforcePeriodicBox, groups);
+    FILE * fp;
+    fp = fopen ("/users/mh43854/test.txt", "w+");
+    fprintf(fp,"group is : %i",groups);
     return reinterpret_cast<OpenMM_State*>(new State(result));
 }
 OPENMM_EXPORT OpenMM_StringArray* OpenMM_Platform_loadPluginsFromDirectory(const char* directory) {
@@ -1312,6 +1321,14 @@ MODULE OpenMM
             type (OpenMM_Context) target
             integer*4 types
             integer*4 enforcePeriodicBox
+            type(OpenMM_State) result
+        end subroutine
+        subroutine OpenMM_Context_getState_2(target, types, enforcePeriodicBox, groups, result)
+            use OpenMM_Types; implicit none
+            type (OpenMM_Context) target
+            integer*4 types
+            integer*4 enforcePeriodicBox
+            integer*4 groups
             type(OpenMM_State) result
         end subroutine
         subroutine OpenMM_Platform_loadPluginsFromDirectory(directory, result)
@@ -1990,6 +2007,12 @@ OPENMM_EXPORT void openmm_context_getstate_(const OpenMM_Context*& target, int c
 }
 OPENMM_EXPORT void OPENMM_CONTEXT_GETSTATE(const OpenMM_Context*& target, int const& types, int const& enforcePeriodicBox, OpenMM_State*& result) {
     result = OpenMM_Context_getState(target, types, enforcePeriodicBox);
+}
+OPENMM_EXPORT void openmm_context_getstate_2_(const OpenMM_Context*& target, int const& types, int const& enforcePeriodicBox, int const& groups, OpenMM_State*& result) {
+    result = OpenMM_Context_getState_2(target, types, enforcePeriodicBox, groups);
+}
+OPENMM_EXPORT void OPENMM_CONTEXT_GETSTATE_2(const OpenMM_Context*& target, int const& types, int const& enforcePeriodicBox, int const& groups, OpenMM_State*& result) {
+    result = OpenMM_Context_getState_2(target, types, enforcePeriodicBox, groups);
 }
 OPENMM_EXPORT void openmm_platform_loadpluginsfromdirectory_(const char* directory, OpenMM_StringArray*& result, int length) {
     result = OpenMM_Platform_loadPluginsFromDirectory(makeString(directory, length).c_str());
