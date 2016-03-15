@@ -1679,20 +1679,20 @@ class LennardJonesGenerator(object):
 
     def __init__(self, forcefield, lj14scale):
         self.ff = forcefield
-        self.types1 = []
-        self.types2 = []
-        self.emin = []
-        self.rmin = []
+        self.nbfix_types = {}
         self.lj14scale = lj14scale
         self.lj_types = ForceField._AtomTypeParameters(forcefield, 'LennardJonesForce', 'Atom', ('sigma', 'epsilon'))
 
     def registerNBFIX(self, parameters):
         types = self.ff._findAtomTypes(parameters, 2)
         if None not in types:
-            self.types1.append(types[0][0])
-            self.types2.append(types[1][0])
-            self.emin.append(_convertParameterToNumber(parameters['emin']))
-            self.rmin.append(_convertParameterToNumber(parameters['rmin']))
+            type1 = types[0][0]
+            type2 = types[1][0]
+            emin = _convertParameterToNumber(parameters['emin'])
+            rmin = _convertParameterToNumber(parameters['rmin'])
+            self.nbfix_types[(type1, type2)] = [emin, rmin]
+            self.nbfix_types[(type2, type1)] = [emin, rmin]
+
 
     def registerLennardJones(self, parameters):
         self.lj_types.registerAtom(parameters)
@@ -1714,68 +1714,54 @@ class LennardJonesGenerator(object):
             generator.registerNBFIX(Nbfix.attrib)
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
-        """ Ewald and PME will be interpreted as CutoffPeriodic for the CustomNonbondedForce """
+
+        #Ewald and PME will be interpreted as CutoffPeriodic for the CustomNonbondedForce
 
         # We need a CustomNonbondedForce to implement the NBFIX functionality.
         # First derive the lookup tables
-
         lj_indx_list = [0 for atom in data.atoms]
-        lj_radii, lj_depths = [], []
         num_lj_types= 0
         lj_type_list = []
+        type_map = {}
         for i, atom in enumerate(data.atoms):
             atype = data.atomType[atom]
             values = self.lj_types.paramsForType[atype]
-            if lj_indx_list[i]: continue
-            num_lj_types +=1
-            lj_indx_list[i] = num_lj_types
-            rmin = values['sigma'] * 2**(1.0/6) / 2
-            ljtype = (rmin, abs(values['epsilon']))
-            lj_type_list.append(atype)
-            lj_radii.append(rmin)
-            lj_depths.append(abs(values['epsilon']))
-            for j in range(i+1, len(data.atoms)):
-                atype2 = data.atomType[data.atoms[j]]
-                if lj_indx_list[j] > 0: continue
-                if atype2 == atype:
-                    lj_indx_list[j] = num_lj_types
-                elif not (atype in self.types1) or (atype in self.types2):
-                    # only non NBFIX types can be compressed
-                    values = self.lj_types.paramsForType[atype2]
-                    ljtype2 = (values['sigma']* 2**(1.0/6) / 2, abs(values['epsilon']))
-                    if ljtype == ljtype2:
-                        lj_indx_list[j] = num_lj_types
+            if lj_indx_list[i]: continue # ljtype has been assigned an index
+            if values in type_map.values() and not atype in [type for key in self.nbfix_types.keys() for type in key]:
+                # only non NBFIX types can be compressed
+                lj_indx_list[i] = type_map.values().index(values) + 1
+            else:
+                type_map[num_lj_types + 1] = values
+                lj_indx_list[i] = num_lj_types + 1
+                num_lj_types +=1
+                lj_type_list.append(atype)
+
         # Now everything is assigned. Create the A- and B-coefficient arrays
         acoef = [0 for i in range(num_lj_types*num_lj_types)]
         bcoef = acoef[:]
         for m in range(num_lj_types):
             for n in range(num_lj_types):
-                namem = lj_type_list[m]
-                namen = lj_type_list[n]
-                if range(len(self.types1)):
-                    for k in range(len(self.types1)):
-                        types1 = self.types1[k]
-                        types2 = self.types2[k]
-                        if (namem == types1 and namen == types2) or (namem == types2 and namen == types1):
-                            rij = self.rmin[k]
-                            wdij = self.emin[k]
-                            rij6 = rij**6
-                            acoef[m+num_lj_types*n] = math.sqrt(wdij) * rij6
-                            bcoef[m+num_lj_types*n] = 2 * wdij * rij6
-                            break
-                        else:
-                            rij = (lj_radii[m] + lj_radii[n])
-                            rij6 = rij**6
-                            wdij = math.sqrt(lj_depths[m] * lj_depths[n])
-                            acoef[m+num_lj_types*n] = math.sqrt(wdij) * rij6
-                            bcoef[m+num_lj_types*n] = 2 * wdij * rij6
+                pair = (lj_type_list[m], lj_type_list[n])
+                if len(self.nbfix_types) > 0:
+                    if pair in self.nbfix_types:
+                        wdij = self.nbfix_types[pair][0]
+                        rij = self.nbfix_types[pair][1]
+                        rij6 = rij**6
+                        acoef[m+num_lj_types*n] = math.sqrt(wdij) * rij6
+                        bcoef[m+num_lj_types*n] = 2 * wdij * rij6
+                        continue
+                    else:
+                        rij = (type_map[m+1]['sigma'] + type_map[n+1]['sigma']) * 2**(1.0/6) / 2
+                        rij6 = rij**6
+                        wdij = math.sqrt(type_map[m+1]['epsilon'] * type_map[n+1]['epsilon'])
+                        acoef[m+num_lj_types*n] = math.sqrt(wdij) * rij6
+                        bcoef[m+num_lj_types*n] = 2 * wdij * rij6
                 else:
-                    rij = (lj_radii[m] + lj_radii[n])
+                    rij = (type_map[m+1]['sigma'] + type_map[n+1]['sigma']) * 2**(1.0/6) / 2
                     rij6 = rij**6
-                    wdij = math.sqrt(lj_depths[m] * lj_depths[n])
+                    wdij = math.sqrt(type_map[m+1]['epsilon'] * type_map[n+1]['epsilon'])
                     acoef[m+num_lj_types*n] = math.sqrt(wdij) * rij6
                     bcoef[m+num_lj_types*n] = 2 * wdij * rij6
-
         self.force = mm.CustomNonbondedForce('(a/r6)^2-b/r6; r6=r2*r2*r2; r2=r^2; '
                                 'a=acoef(type1, type2); '
                                 'b=bcoef(type1, type2)')
@@ -1804,7 +1790,6 @@ class LennardJonesGenerator(object):
         lj14ScaleForce = mm.CustomBondForce('(a/r^6)^2-(b/r^6); r6=r2*r2*r2; r2=r^2;'
                                             'a=acoef;'
                                             'b=bcoef;')
-        lj14ScaleForce.addGlobalParameter('lj14scale', self.lj14scale)
         lj14ScaleForce.addPerBondParameter('acoef')
         lj14ScaleForce.addPerBondParameter('bcoef')
         lj14Pairs = []
@@ -1813,11 +1798,11 @@ class LennardJonesGenerator(object):
         for torsion in data.propers:
             lj14Pairs.append((torsion[0], torsion[3]))
         for lj14Pair in lj14Pairs:
-            i = lj_indx_list[lj14Pair[0]] - 1
-            j = lj_indx_list[lj14Pair[1]] - 1
-            rminij = (lj_radii[i] + lj_radii[j])
+            i = lj_indx_list[lj14Pair[0]]
+            j = lj_indx_list[lj14Pair[1]]
+            rminij = (type_map[i]['sigma'] + type_map[j]['sigma'])* 2**(1.0/6) / 2
             rij6 = rminij**6
-            wdij14 = self.lj14scale*math.sqrt(lj_depths[i]*lj_depths[j])
+            wdij14 = self.lj14scale*math.sqrt(type_map[i]['epsilon'] * type_map[j]['epsilon'])
             acoefScaled = (math.sqrt(wdij14)*rij6)
             bcoefScaled = (2*wdij14*rij6)
             lj14ScaleForce.addBond(lj14Pair[0], lj14Pair[1], [acoefScaled, bcoefScaled])
