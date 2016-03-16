@@ -67,7 +67,7 @@ public:
      * @param particle3    the index of the third particle forming the torsion
      * @param particle4    the index of the fourth particle forming the torsion
      * @param periodicity  the periodicity of the torsion
-     * @param phase        the phase offset of the torsion, measured in radians, on domain [-pi,pi)
+     * @param phase        the phase offset of the torsion, measured in radians, any domain
      * @param k            the force constant for the torsion
      * @return the index of the torsion that was added
      */
@@ -81,7 +81,7 @@ public:
      * @param[out] particle3    the index of the third particle forming the torsion
      * @param[out] particle4    the index of the fourth particle forming the torsion
      * @param[out] periodicity  the periodicity of the torsion
-     * @param[out] phase        the phase offset of the torsion, measured in radians, on domain [-pi,pi)
+     * @param[out] phase        the phase offset of the torsion, measured in radians
      * @param[out] k            the force constant for the torsion
      */
     void getTorsionParameters(int index, int& particle1, int& particle2, int& particle3, int& particle4, int& periodicity, double& phase, double& k) const;
@@ -94,7 +94,7 @@ public:
      * @param particle3    the index of the third particle forming the torsion
      * @param particle4    the index of the fourth particle forming the torsion
      * @param periodicity  the periodicity of the torsion
-     * @param phase        the phase offset of the torsion, measured in radians, on domain [-pi,pi)
+     * @param phase        the phase offset of the torsion, measured in radians, any domain
      * @param k            the force constant for the torsion
      */
     void setTorsionParameters(int index, int particle1, int particle2, int particle3, int particle4, int periodicity, double phase, double k);
