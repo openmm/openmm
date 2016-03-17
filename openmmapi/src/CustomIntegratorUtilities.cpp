@@ -87,7 +87,7 @@ void CustomIntegratorUtilities::analyzeComputations(const ContextImpl& context, 
     for (int step = 0; step < numSteps; step++) {
         string expression;
         integrator.getComputationStep(step, stepType[step], stepVariable[step], expression);
-        if (stepType[step] == CustomIntegrator::BeginIfBlock || stepType[step] == CustomIntegrator::BeginWhileBlock) {
+        if (stepType[step] == CustomIntegrator::IfBlockStart || stepType[step] == CustomIntegrator::WhileBlockStart) {
             // This step involves a condition.
 
             string lhs, rhs;
@@ -158,9 +158,9 @@ void CustomIntegratorUtilities::analyzeComputations(const ContextImpl& context, 
     vector<int> blockStart;
     blockEnd.resize(numSteps, -1);
     for (int step = 0; step < numSteps; step++) {
-        if (stepType[step] == CustomIntegrator::BeginIfBlock || stepType[step] == CustomIntegrator::BeginWhileBlock)
+        if (stepType[step] == CustomIntegrator::IfBlockStart || stepType[step] == CustomIntegrator::WhileBlockStart)
             blockStart.push_back(step);
-        else if (stepType[step] == CustomIntegrator::EndBlock) {
+        else if (stepType[step] == CustomIntegrator::BlockEnd) {
             if (blockStart.size() == 0) {
                 stringstream error("CustomIntegrator: Unexpected end of block at computation ");
                 error << step;
@@ -207,7 +207,7 @@ void CustomIntegratorUtilities::enumeratePaths(int firstStep, vector<int> steps,
             jumps[step] = -1;
             step = nextStep;
         }
-        else if (stepType[step] == CustomIntegrator::BeginIfBlock) {
+        else if (stepType[step] == CustomIntegrator::IfBlockStart) {
             // Consider skipping the block.
 
             enumeratePaths(blockEnd[step]+1, steps, jumps, blockEnd, stepType, needsForces, needsEnergy, invalidatesForces, forceGroup, computeBoth);
@@ -216,7 +216,7 @@ void CustomIntegratorUtilities::enumeratePaths(int firstStep, vector<int> steps,
 
             step++;
         }
-        else if (stepType[step] == CustomIntegrator::BeginWhileBlock && jumps[step] != -2) {
+        else if (stepType[step] == CustomIntegrator::WhileBlockStart && jumps[step] != -2) {
             // Consider skipping the block.
 
             enumeratePaths(blockEnd[step]+1, steps, jumps, blockEnd, stepType, needsForces, needsEnergy, invalidatesForces, forceGroup, computeBoth);
