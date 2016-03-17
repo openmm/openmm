@@ -371,7 +371,10 @@ class ForceField(object):
                 matches = None
                 signature = _createResidueSignature([atom.element for atom in res.atoms()])
                 if signature in self._templateSignatures:
-                    for t in self._templateSignatures[signature]:
+		    templates = [t for t in self._templateSignatures[signature] if t.name == res.name]
+		    if templates == []:
+		        templates = self._templateSignatures[signature]
+                    for t in templates:
                         matches = _matchResidue(res, t, bondedToAtom)
                         if matches is not None:
                             template = t
