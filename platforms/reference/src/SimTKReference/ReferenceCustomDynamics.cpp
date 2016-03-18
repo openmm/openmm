@@ -107,7 +107,7 @@ void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, ve
         for (int i = 0; i < numSteps; i++) {
             for (int j = 0; j < (int) expressions[i].size(); j++)
                 stepExpressions[i].push_back(expressions[i][j].createProgram());
-            if (stepType[i] == CustomIntegrator::BeginWhileBlock)
+            if (stepType[i] == CustomIntegrator::WhileBlockStart)
                 blockEnd[blockEnd[i]] = i; // Record where to branch back to.
         }
 
@@ -213,17 +213,17 @@ void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, ve
                 globals.insert(context.getParameters().begin(), context.getParameters().end());
                 break;
             }
-            case CustomIntegrator::BeginIfBlock: {
+            case CustomIntegrator::IfBlockStart: {
                 if (!evaluateCondition(step, globals))
                     nextStep = blockEnd[step]+1;
                 break;
             }
-            case CustomIntegrator::BeginWhileBlock: {
+            case CustomIntegrator::WhileBlockStart: {
                 if (!evaluateCondition(step, globals))
                     nextStep = blockEnd[step]+1;
                 break;
             }
-            case CustomIntegrator::EndBlock: {
+            case CustomIntegrator::BlockEnd: {
                 if (blockEnd[step] != -1)
                     nextStep = blockEnd[step]; // Return to the start of a while block.
                 break;
