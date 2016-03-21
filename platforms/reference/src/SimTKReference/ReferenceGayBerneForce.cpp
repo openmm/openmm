@@ -88,6 +88,7 @@ RealOpenMM ReferenceGayBerneForce::calculateForce(const vector<RealVec>& positio
 
     RealOpenMM energy = 0;
     int numParticles = particles.size();
+    vector<RealVec> torques(numParticles, Vec3());
     for (int i = 1; i < numParticles; i++) {
         if (particles[i].epsilon == 0.0)
             continue;
@@ -98,7 +99,7 @@ RealOpenMM ReferenceGayBerneForce::calculateForce(const vector<RealVec>& positio
                 continue; // This interaction will be handled by an exception.
             RealOpenMM sigma = 0.5*(particles[i].sigma+particles[j].sigma);
             RealOpenMM epsilon = SQRT(particles[i].epsilon*particles[j].epsilon);
-            energy += computeOneInteraction(i, j, sigma, epsilon, positions, forces, boxVectors);
+            energy += computeOneInteraction(i, j, sigma, epsilon, positions, forces, torques, boxVectors);
         }
     }
 
@@ -107,7 +108,7 @@ RealOpenMM ReferenceGayBerneForce::calculateForce(const vector<RealVec>& positio
     int numExceptions = exceptions.size();
     for (int i = 0; i < numExceptions; i++) {
         ExceptionInfo& e = exceptions[i];
-        energy += computeOneInteraction(e.particle1, e.particle2, e.sigma, e.epsilon, positions, forces, boxVectors);
+        energy += computeOneInteraction(e.particle1, e.particle2, e.sigma, e.epsilon, positions, forces, torques, boxVectors);
     }
     return energy;
 }
@@ -168,7 +169,8 @@ void ReferenceGayBerneForce::computeEllipsoidFrames(const vector<RealVec>& posit
     }
 }
 
-RealOpenMM ReferenceGayBerneForce::computeOneInteraction(int particle1, int particle2, RealOpenMM sigma, RealOpenMM epsilon, const vector<RealVec>& positions, vector<RealVec>& forces, const RealVec* boxVectors) {
+RealOpenMM ReferenceGayBerneForce::computeOneInteraction(int particle1, int particle2, RealOpenMM sigma, RealOpenMM epsilon, const vector<RealVec>& positions,
+        vector<RealVec>& forces, vector<RealVec>& torques, const RealVec* boxVectors) {
     // Compute the displacement and check against the cutoff.
 
     RealOpenMM deltaR[ReferenceForce::LastDeltaRIndex];
@@ -189,6 +191,7 @@ RealOpenMM ReferenceGayBerneForce::computeOneInteraction(int particle1, int part
     Matrix G12 = G[particle1]+G[particle2];
     Matrix B12inv = B12.inverse();
     Matrix G12inv = G12.inverse();
+    RealOpenMM detG12 = G12.determinant();
 
     // Estimate the distance between the ellipsoids and compute the first terms needed for the energy.
 
@@ -200,7 +203,7 @@ RealOpenMM ReferenceGayBerneForce::computeOneInteraction(int particle1, int part
     RealOpenMM rho2 = rho*rho;
     RealOpenMM rho6 = rho2*rho2*rho2;
     RealOpenMM u = 4*epsilon*(rho6*rho6-rho6);
-    RealOpenMM eta = SQRT(2*s[particle1]*s[particle2]/G12.determinant());
+    RealOpenMM eta = SQRT(2*s[particle1]*s[particle2]/detG12);
     RealOpenMM chi = 2*drUnit.dot(B12inv*drUnit);
     chi *= chi;
 
@@ -208,10 +211,76 @@ RealOpenMM ReferenceGayBerneForce::computeOneInteraction(int particle1, int part
 
     RealVec kappa = G12inv*dr;
     RealVec iota = B12inv*dr;
-    RealVec dudr = (drUnit + (kappa-drUnit*kappa.dot(drUnit))*(0.5*sigma12*sigma12*sigma12*rInv*rInv))*(24*epsilon*(2*rho6-1)*rho6*rho/sigma);
-    RealVec dchidr = (iota-drUnit*iota.dot(drUnit))*(-8*rInv*rInv*SQRT(chi));
+    RealOpenMM rInv2 = rInv*rInv;
+    RealOpenMM dUSLJdr = 24*epsilon*(2*rho6-1)*rho6*rho/sigma;
+    RealOpenMM temp = 0.5*sigma12*sigma12*sigma12*rInv2;
+    RealVec dudr = (drUnit + (kappa-drUnit*kappa.dot(drUnit))*temp)*dUSLJdr;
+    RealVec dchidr = (iota-drUnit*iota.dot(drUnit))*(-8*rInv2*SQRT(chi));
     RealVec force = (dchidr*u + dudr*chi)*eta;
     forces[particle1] += force;
     forces[particle2] -= force;
+
+    // Compute the terms needed for the torque.
+
+    for (int j = 0; j < 2; j++) {
+        int particle = (j == 0 ? particle1 : particle2);
+        RealVec dudq = A[particle]*((kappa*G[particle]).cross(kappa*temp));
+        RealVec dchidq = (A[particle]*((iota*B[particle]).cross(iota)))*(-4*rInv2);
+        RealOpenMM (&g12)[3][3] = G12.v;
+        RealOpenMM (&a)[3][3] = A[particle].v;
+        RealVec scale = RealVec(particles[particle].rx, particles[particle].ry, particles[particle].rz)*(-eta/detG12);
+        Matrix D;
+        RealOpenMM (&d)[3][3] = D.v;
+        d[0][0] = scale[0]*(g12[1][2]*g12[0][1]*a[0][2] + 2*g12[1][1]*g12[2][2]*a[0][0] -
+                            g12[1][1]*a[0][2]*g12[0][2] - 2*g12[1][2]*a[0][0]*g12[2][1] +
+                            a[0][1]*g12[0][2]*g12[2][1] -   a[0][1]*g12[0][1]*g12[2][2] -
+                            g12[1][0]*g12[2][2]*a[0][1] +   g12[2][0]*g12[1][2]*a[0][1] +
+                            g12[1][0]*a[0][2]*g12[2][1] -   a[0][2]*g12[2][0]*g12[1][1]);
+        d[0][1] = scale[0]*(  g12[0][2]*a[0][0]*g12[2][1] - g12[2][2]*a[0][0]*g12[0][1] +
+                            2*g12[0][0]*g12[2][2]*a[0][1] - g12[0][0]*a[0][2]*g12[1][2] -
+                            2*g12[2][0]*g12[0][2]*a[0][1] + a[0][2]*g12[1][0]*g12[0][2] -
+                              g12[2][2]*g12[1][0]*a[0][0] + g12[2][0]*a[0][0]*g12[1][2] +
+                              g12[2][0]*a[0][2]*g12[0][1] - a[0][2]*g12[0][0]*g12[2][1]);
+        d[0][2] = scale[0]*(  g12[0][1]*g12[1][2]*a[0][0] -   g12[0][2]*a[0][0]*g12[1][1] -
+                              g12[0][0]*g12[1][2]*a[0][1] +   g12[1][0]*g12[0][2]*a[0][1] -
+                              a[0][1]*g12[0][0]*g12[2][1] -   g12[2][0]*g12[1][1]*a[0][0] +
+                            2*g12[1][1]*g12[0][0]*a[0][2] - 2*g12[1][0]*a[0][2]*g12[0][1] +
+                              g12[1][0]*g12[2][1]*a[0][0] +   g12[2][0]*a[0][1]*g12[0][1]);
+        d[1][0] = scale[1]*(-g12[1][1]*a[1][2]*g12[0][2] + 2*g12[1][1]*g12[2][2]*a[1][0] +
+                             g12[1][2]*g12[0][1]*a[1][2] - 2*g12[1][2]*a[1][0]*g12[2][1] +
+                             a[1][1]*g12[0][2]*g12[2][1] -   a[1][1]*g12[0][1]*g12[2][2] -
+                             g12[1][0]*g12[2][2]*a[1][1] +   g12[2][0]*g12[1][2]*a[1][1] -
+                             a[1][2]*g12[2][0]*g12[1][1] +   g12[1][0]*a[1][2]*g12[2][1]);
+        d[1][1] = scale[1]*(  g12[0][2]*a[1][0]*g12[2][1] - g12[0][1]*g12[2][2]*a[1][0] +
+                            2*g12[2][2]*g12[0][0]*a[1][1] - a[1][2]*g12[0][0]*g12[1][2] -
+                            2*g12[2][0]*a[1][1]*g12[0][2] - g12[1][0]*g12[2][2]*a[1][0] +
+                              g12[2][0]*g12[1][2]*a[1][0] + g12[1][0]*a[1][2]*g12[0][2] -
+                              g12[0][0]*a[1][2]*g12[2][1] + a[1][2]*g12[0][1]*g12[2][0]);
+        d[1][2] = scale[1]*(  g12[0][1]*g12[1][2]*a[1][0] - g12[0][2]*a[1][0]*g12[1][1] -
+                              g12[0][0]*g12[1][2]*a[1][1] + g12[1][0]*g12[0][2]*a[1][1] +
+                            2*g12[1][1]*g12[0][0]*a[1][2] - g12[0][0]*a[1][1]*g12[2][1] +
+                              g12[0][1]*g12[2][0]*a[1][1] - a[1][0]*g12[2][0]*g12[1][1] -
+                            2*g12[1][0]*g12[0][1]*a[1][2] + g12[1][0]*a[1][0]*g12[2][1]);
+        d[2][0] = scale[2]*( -g12[1][1]*g12[0][2]*a[2][2] +   g12[0][1]*g12[1][2]*a[2][2] +
+                            2*g12[1][1]*a[2][0]*g12[2][2] -   g12[0][1]*a[2][1]*g12[2][2] +
+                              g12[0][2]*g12[2][1]*a[2][1] - 2*a[2][0]*g12[2][1]*g12[1][2] -
+                              g12[1][0]*a[2][1]*g12[2][2] +   g12[1][2]*g12[2][0]*a[2][1] -
+                              g12[1][1]*g12[2][0]*a[2][2] +   g12[2][1]*g12[1][0]*a[2][2]);
+        d[2][1] = scale[2]*( -g12[0][1]*g12[2][2]*a[2][0] + g12[0][2]*a[2][0]*g12[2][1] +
+                            2*a[2][1]*g12[0][0]*g12[2][2] - g12[1][2]*a[2][2]*g12[0][0] -
+                            2*a[2][1]*g12[0][2]*g12[2][0] - g12[1][0]*a[2][0]*g12[2][2] +
+                              g12[1][0]*g12[0][2]*a[2][2] + g12[1][2]*g12[2][0]*a[2][0] -
+                              g12[0][0]*a[2][2]*g12[2][1] + a[2][2]*g12[0][1]*g12[2][0]);
+        d[2][2] = scale[2]*(  g12[0][1]*g12[1][2]*a[2][0] -   g12[0][2]*a[2][0]*g12[1][1] -
+                              g12[0][0]*g12[1][2]*a[2][1] +   g12[1][0]*g12[0][2]*a[2][1] -
+                              g12[1][1]*g12[2][0]*a[2][0] -   g12[2][1]*a[2][1]*g12[0][0] +
+                            2*g12[1][1]*a[2][2]*g12[0][0] +   g12[2][1]*g12[1][0]*a[2][0] +
+                              g12[2][0]*g12[0][1]*a[2][1] - 2*a[2][2]*g12[1][0]*g12[0][1]);
+        RealVec detadq;
+        for (int i = 0; i < 3; i++)
+            detadq += RealVec(a[i][0], a[i][1], a[i][2]).cross(RealVec(d[i][0], d[i][1], d[i][2]));
+        RealVec torque = dchidq*(u*eta) + detadq*(u*chi) + dudq*(eta*chi);
+        torques[particle] += torque;
+    }
     return u*eta*chi;
 }

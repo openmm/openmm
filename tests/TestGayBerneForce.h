@@ -135,6 +135,56 @@ void testEnergyScales() {
     ASSERT_EQUAL_VEC(Vec3(0, expectedForce*expectedScale, 0), state.getForces()[3], 1e-5);
 }
 
+void testEnergyConservation() {
+    // Create a box of ellipsoids and make sure a simulation conserves energy.
+    // That verifies that forces and energies are consistent.
+
+    const double boxSize = 3.0;
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    GayBerneForce* gb = new GayBerneForce();
+    system.addForce(gb);
+    gb->setNonbondedMethod(GayBerneForce::CutoffPeriodic);
+    gb->setCutoffDistance(1.0);
+    vector<Vec3> positions;
+    for (int x = 0; x < 3; x++) {
+        for (int y = 0; y < 3; y++) {
+            for (int z = 0; z < 3; z++) {
+                int first = system.getNumParticles();
+                system.addParticle(10.0);
+                system.addParticle(1.0);
+                system.addParticle(1.0);
+                gb->addParticle(0.2, 2.0, first+1, first+2, 0.2, 0.25, 0.3, 0.9, 1.0, 1.1);
+                gb->addParticle(1.0, 0.0, -1, -1, 1, 1, 1, 1, 1, 1);
+                gb->addParticle(1.0, 0.0, -1, -1, 1, 1, 1, 1, 1, 1);
+                positions.push_back(Vec3(x, y, z));
+                positions.push_back(Vec3(x+0.1, y, z));
+                positions.push_back(Vec3(x, y+0.1, z));
+                system.addConstraint(first, first+1, 0.1);
+                system.addConstraint(first, first+2, 0.1);
+                system.addConstraint(first+1, first+2, 0.1*sqrt(2.0));
+            }
+        }
+    }
+    VerletIntegrator integ(0.001);
+    Context context(system, integ, platform);
+    context.setPositions(positions);
+    context.setVelocitiesToTemperature(300.0);
+    for (int i = 0; i < 100; i++) {
+        State state = context.getState(State::Energy);
+        printf("%d %g\n", i, state.getPotentialEnergy()+state.getKineticEnergy());
+        integ.step(10);
+    }
+
+    State state = context.getState(State::Positions);
+    for (int i = 0; i < 9; i++) {
+        Vec3 p1 = state.getPositions()[3*i];
+        Vec3 p2 = state.getPositions()[3*i+1];
+        Vec3 p3 = state.getPositions()[3*i+2];
+        printf("%g %g %g, %g %g %g, %g %g %g\n", p1[0], p1[1], p1[2], p2[0]-p1[0], p2[1]-p1[1], p2[2]-p1[2], p3[0]-p1[0], p3[1]-p1[1], p3[2]-p1[2]);
+    }
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -142,6 +192,7 @@ int main(int argc, char* argv[]) {
         initializeTests(argc, argv);
         testPointParticles();
         testEnergyScales();
+        testEnergyConservation();
         runPlatformTests();
     }
     catch(const exception& e) {

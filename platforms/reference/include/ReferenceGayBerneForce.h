@@ -41,6 +41,7 @@ namespace OpenMM {
 
 class OPENMM_EXPORT ReferenceGayBerneForce {
 public:
+    struct Matrix;
     /**
      * Constructor.
      */
@@ -59,7 +60,6 @@ public:
 private:
     struct ParticleInfo;
     struct ExceptionInfo;
-    struct Matrix;
     std::vector<ParticleInfo> particles;
     std::vector<ExceptionInfo> exceptions;
     std::set<std::pair<int, int> > exclusions;
@@ -71,7 +71,8 @@ private:
 
     void computeEllipsoidFrames(const std::vector<RealVec>& positions);
 
-    RealOpenMM computeOneInteraction(int particle1, int particle2, RealOpenMM sigma, RealOpenMM epsilon, const std::vector<RealVec>& positions, std::vector<RealVec>& forces, const RealVec* boxVectors);
+    RealOpenMM computeOneInteraction(int particle1, int particle2, RealOpenMM sigma, RealOpenMM epsilon, const std::vector<RealVec>& positions,
+            std::vector<RealVec>& forces, std::vector<RealVec>& torques, const RealVec* boxVectors);
 };
 
 struct ReferenceGayBerneForce::ParticleInfo {
@@ -131,6 +132,12 @@ struct ReferenceGayBerneForce::Matrix {
         return result;
     }
 };
+
+static RealVec operator*(const RealVec& r, ReferenceGayBerneForce::Matrix& m) {
+    return RealVec(m.v[0][0]*r[0] + m.v[1][1]*r[1] + m.v[2][2]*r[2],
+                   m.v[0][1]*r[0] + m.v[1][1]*r[1] + m.v[2][1]*r[2],
+                   m.v[0][2]*r[0] + m.v[1][2]*r[1] + m.v[2][2]*r[2]);
+}
 
 } // namespace OpenMM
 
