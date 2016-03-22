@@ -1,36 +1,36 @@
 # for CharMM36 --> OpenMM ffxml conversion
 # Author: Chaya D. Stern, choderalab
 # The include files structure is based on the file structure of unzipped toppar_c36_aug15.tgz
-# excluded files include files that need to excluded from the conversion because of duplicate parameters with different
+# excluded files include files that need to be excluded from the conversion because of duplicate parameters with different
 # values. In addition, toppar_hbond.str and toppar_all36_lipid_list.str are not standard stream files.
 
 - sourcePackage: charmm36
   sourcePackageVersion: toppar_c36_aug15.tgz
 - Source:
     include:
-     - charmm/toppar/top_all36_carb.rtf
-     - charmm/toppar/par_all36_carb.prm
-     - charmm/toppar/top_all36_cgenff.rtf
-     - charmm/toppar/par_all36_cgenff.prm
-     - charmm/toppar/top_all36_lipid.rtf
-     - charmm/toppar/par_all36_lipid.prm
-     - charmm/toppar/top_all36_na.rtf
-     - charmm/toppar/par_all36_na.prm
-     - charmm/toppar/top_all36_prot.rtf
-     - charmm/toppar/par_all36_prot.prm
+     - toppar/top_all36_carb.rtf
+     - toppar/par_all36_carb.prm
+     - toppar/top_all36_cgenff.rtf
+     - toppar/par_all36_cgenff.prm
+     - toppar/top_all36_lipid.rtf
+     - toppar/par_all36_lipid.prm
+     - toppar/top_all36_na.rtf
+     - toppar/par_all36_na.prm
+     - toppar/top_all36_prot.rtf
+     - toppar/par_all36_prot.prm
     stream:
-     - charmm/toppar/toppar_water_ions.str
-     - charmm/toppar/stream/carb/*.str
-     - charmm/toppar/stream/lipid/*.str
-     - charmm/toppar/stream/prot/*.str
-     - charmm/toppar/stream/na/*.str
-     - charmm/toppar/stream/misc/*.str
+     - toppar/toppar_water_ions.str
+     - toppar/stream/carb/*.str
+     - toppar/stream/lipid/*.str
+     - toppar/stream/prot/*.str
+     - toppar/stream/na/*.str
+     - toppar/stream/misc/*.str
     exclude:
-     - charmm/toppar/lipid/toppar_all36_lipid_list.str
-     - charmm/toppar/lipid/toppar_all36_lipid_glycolipid.str
-     - charmm/toppar/prot/toppar_all36_prot_aldehydes.str
-     - charmm/toppar/na/toppar_all36_na_modifications.str
-     - charmm/toppar/misc/toppar_hbond.str
+     - toppar/stream/lipid/toppar_all36_lipid_list.str
+     - toppar/stream/lipid/toppar_all36_lipid_glycolipid.str
+     - toppar/stream/prot/toppar_all36_prot_aldehydes.str
+     - toppar/stream/na/toppar_all36_na_modifications.str
+     - toppar/stream/misc/toppar_hbond.str
   References:
    protein:
      - >-
@@ -107,9 +107,9 @@
          759-776.
      - glycolipids:
        - >-
-         Kern, N. R., Lee, H. S., Wu, E. L., Park, S., Vanommeslaeghe, K., MacKerell, A. D., … Im, W. (2014).
-         Lipid-Linked Oligosaccharides in Membranes Sample Conformations That Facilitate Binding to
-         Oligosaccharyltransferase. Biophysical Journal, 107(8), 1885–1895. http://doi.org/10.1016/j.bpj.2014.09.007
+         Kern, N. R., Lee, H. S., Wu, E. L., Park, S., Vanommeslaeghe, K., MacKerell, A. D., ... Im, W. (2014). Lipid-
+         Linked Oligosaccharides in Membrane Sample Conformations That Faciliate Binding to Oligosaccharyltransferase.
+         Biophysical Journal, 107(8), 1885-1895.
    lipids:
      - >-
        Jeffery B. Klauda, Richard M. Venable, J. Alfredo Freites, Joseph W. O'Connor, Douglas J. Tobias, Carlos
@@ -145,13 +145,13 @@
          All-atom Force Field for Sphingomyelin. In prep. (2013).
    nucleic acids:
      - >-
-       Denning, E.J., Priyakumar, U.D., Nilsson, L., and MacKerell Jr., A.D., “Impact of 2’-hydroxyl sampling on the
-       conformational properties of RNA: Update of the CHARMM all-atom additive force field for RNA,” JCC, 32:
+       Denning, E.J., Priyakumar, U.D., Nilsson, L., and MacKerell Jr., A.D., "Impact of 2'-hydroxyl sampling on the
+       conformational properties of RNA: Update of the CHARMM all-atom additive force field for RNA," JCC, 32:
        1929-1943, 2011, PMC3082605
      - >-
-       Hart, K., Foloppe, N., Baker, C.M., Denning, E.J., Nilsson, L. and MacKerell Jr., A.D. “Optimization of the
-       CHARMM additive force field for DNA: Improved treatment of the BI/BII conformational equilibrium,” JCTC,
-       8:348–362, 2012, PMC3285246
+       Hart, K. Foloppe, N., Baker, C.M, Denning, E.J., Nilsson, L. and MacKerell Jr., A.D. "Optimization of the CHARMM
+       additive force field for DNA: Improved of the BI/BII conformational equilibrium," JCTC, 8:348-362, 2012,
+       PMC3285246
      - >-
        Foloppe, N. and MacKerell, Jr., A.D. "All-Atom Empirical Force Field for Nucleic Acids: 1) Parameter Optimization
        Based on Small Molecule and Condensed Phase Macromolecular Target Data. JCC, 2000, 21: 86-104.
