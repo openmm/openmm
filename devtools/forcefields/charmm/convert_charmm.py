@@ -2,8 +2,11 @@ from parmed.charmm import CharmmParameterSet
 from parmed import openmm
 import glob
 import yaml
+from collections import OrderedDict
+import hashlib
+import os
 
-data = yaml.load(open('charmm36.yaml'))
+data = yaml.safe_load(open('charmm36.yaml'))
 source_pack = data[0]['sourcePackage']
 source_pack_ver = data[0]['sourcePackageVersion']
 
@@ -23,28 +26,39 @@ for files in source_files['stream']:
     charmm_files.extend(glob.glob(files))
 
 # exclude files from conversion
-files_to_convert = set(charmm_files) - exclude_files
+charmm_files = set(charmm_files) - exclude_files
 
+files = []
+provenance = OrderedDict()
+source = provenance['Source'] = []
+for fi in charmm_files:
+    source.append(OrderedDict())
+    source[-1]['Source'] = fi
+    md5 = hashlib.md5()
+    with open(fi) as f:
+        md5.update(f.read())
+    md5 = md5.hexdigest()
+    source[-1]['md5hash'] = md5
+    source[-1]['sourcePackage'] = source_pack
+    source[-1]['sourcePackageVersion'] = source_pack_ver
 
-# # top and par files for Charmm36
-# charmm_files = glob.glob('charmm/toppar/*_all36*')
-# # stream files
-# charmm_files.extend(glob.glob('charmm/toppar/*.str'))
-# charmm_files.extend((glob.glob('charmm/toppar/stream/prot/*.str')))
-# charmm_files.extend(glob.glob('charmm/toppar/stream/carb/*.str'))
-# charmm_files.extend(set(glob.glob('charmm/toppar/stream/lipid/*.str')) - exclude_files)
-# charmm_files.extend(set(glob.glob('charmm/toppar/stream/na/*.str')) - exclude_files)
-# charmm_files.extend(glob.glob('charmm/toppar/stream/misc/*.str'))
+references = provenance['Reference'] = []
+for ff in charmm_references:
+    for cite in charmm_references[ff]:
+        references.append(OrderedDict())
+        if type(cite) is dict:
+            stream = cite.keys()[0]
+            citation = cite[stream]
+            references[-1]['Reference'] = citation[0]
+            references[-1]['forcefield'] = ff
+            references[-1]['type'] = stream
+        else:
+            citation = cite
+            references[-1]['Reference'] = citation
+            references[-1]['forcefield'] = ff
+
 
 #generate recommended combination for charmm36
-params = CharmmParameterSet(*files_to_convert)
+params = CharmmParameterSet(*charmm_files)
 params_omm = openmm.OpenMMParameterSet.from_parameterset(params)
-params_omm.write('ffxml/charmm36.xml')
-
-# for file in (set(glob.glob('charmm/toppar/stream/na/*.str')) - exclude_files):
-#     print(file)
-#     charmm_files.extend([file])
-#     #print(charmm_files)
-#     params = CharmmParameterSet(*charmm_files)
-#     params_omm = openmm.OpenMMParameterSet.from_parameterset(params)
-#     params_omm.write('test.xml')
+params_omm.write('ffxml/charmm36.xml', provenance=provenance)
