@@ -123,14 +123,12 @@
        - >-
          Sundaralingan, M., Ann. N.Y. Acad. Sci. USA, 195:324-355, 1972
      - bacterial:
-       - branched lipids:
-         - >-
-           Lim, J.B. & Klauda, J.B. Branching at the Iso- and Anteiso- Positions in Complex Chlamydia Membranes: A
-           Molecular Dynamics Study. Biochimica et Biophysica Acta (BBA) - Biomembranes 1808:323-331 (2011).
-       - cyclic replacement of double bonds:
-         - >-
-           Pandit, K.R. & Klauda, J.B. Membrane models of E. coli containing cyclic moieties in the aliphatic lipid
-           chain. Biochimica et Biophysica Acta (BBA) - Biomembranes 1818:1205-1210 (2012).
+       - >-
+         Lim, J.B. and Klauda, J.B. Branching at the Iso- and Anteiso- Positions in Complex Chlamydia Membranes: A
+         Molecular Dynamics Study. Biochimica et Biophysica Acta (BBA) - Biomembranes 1808:323-331 (2011).
+       - >-
+         Pandit, K.R. and Klauda, J.B. Membrane models of E. coli containing cyclic moieties in the aliphatic lipid
+         chain. Biochimica et Biophysica Acta (BBA) - Biomembranes 1818:1205-1210 (2012).
      - cholesterol:
        - >-
          Lim, J.B., Rogaski, B. and Klauda, J.B.. "Update of the Cholesterol Force Field Parameters in CHARMM" 116:
@@ -141,7 +139,7 @@
          15318-28, 2004
      - sphingomyelin:
        - >-
-         Venable, R.M., B. Rogaski, H. Rui, A.D. MacKerell, Jr., R.W. Pastor, & J.B. Klauda. An Experimentally Validated
+         Venable, R.M., B. Rogaski, H. Rui, A.D. MacKerell, Jr., R.W. Pastor, and J.B. Klauda. An Experimentally Validated
          All-atom Force Field for Sphingomyelin. In prep. (2013).
    nucleic acids:
      - >-
