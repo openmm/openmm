@@ -1796,7 +1796,9 @@ class LennardJonesGenerator(object):
 
         # Add bonds for 1-4 scaled L-J from dihedrals
         for torsion in data.propers:
-            lj14Pairs.append((torsion[0], torsion[3]))
+            pair = (torsion[0], torsion[3])
+            if pair not in lj14Pairs:
+                lj14Pairs.append((torsion[0], torsion[3]))
         for lj14Pair in lj14Pairs:
             i = lj_indx_list[lj14Pair[0]]
             j = lj_indx_list[lj14Pair[1]]
