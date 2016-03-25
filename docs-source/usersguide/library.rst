@@ -347,11 +347,6 @@ The choice of which platform to use for a simulation depends on various factors:
    OpenCL platform running on the CPU.
 #. The CUDA platform can only be used with NVIDIA GPUs.  For using an AMD or
    Intel GPU, use the OpenCL platform.
-#. When running on recent NVIDIA GPUs (Fermi and Kepler generations), the CUDA
-   platform is usually faster and should be used.  On older GPUs, the OpenCL
-   platform is likely to be faster.  Also, some very old GPUs (GeForce 8000 and
-   9000 series) are only supported by the OpenCL platform, not by the CUDA
-   platform.
 #. The AMOEBA force field only works with the CUDA platform, not with the OpenCL
    platform.  It also works with the Reference and CPU platforms, but the performance
    is usually too slow to be useful on those platforms.
@@ -393,14 +388,9 @@ Mac and Linux: clang or gcc
 
 Use clang or gcc on Mac/Linux.  OpenMM should compile correctly with all recent
 versions of these compilers.  We recommend clang since it produces faster code,
-especially when using the CPU platform.
-
-If you do not already have a compiler installed, you will need to download and
-install it.  On Mac OS X, this means downloading the Xcode Tools from the App
-Store. (With Xcode 4.3, you must then launch Xcode, open the Preferences window,
-go to the Downloads tab, and tell it to install the command line tools.  With
-Xcode 4.2 and earlier, the command line tools are automatically installed when
-you install Xcode.)
+especially when using the CPU platform.  If you do not already have a compiler
+installed, you will need to download and install it.  On Mac OS X, this means
+downloading the Xcode Tools from the App Store.
 
 Windows: Visual Studio
 ----------------------
@@ -545,6 +535,8 @@ There are several variables that can be adjusted in the CMake interface:
   and documentation.
 * Set the variable CMAKE_INSTALL_PREFIX to the location where you want to
   install OpenMM.
+* Set the variable PYTHON_EXECUTABLE to the Python interpreter you plan to use
+  OpenMM with.
 
 
 Configure (press “c”) again.  Adjust any variables that cause an
