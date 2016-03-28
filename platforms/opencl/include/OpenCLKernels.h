@@ -698,7 +698,7 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force);
 private:
-    void initInteractionGroups(const CustomNonbondedForce& force, const std::string& interactionSource);
+    void initInteractionGroups(const CustomNonbondedForce& force, const std::string& interactionSource, const std::vector<std::string>& tableTypes);
     OpenCLContext& cl;
     OpenCLParameterSet* params;
     OpenCLArray* globals;

@@ -718,7 +718,7 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force);
 private:
-    void initInteractionGroups(const CustomNonbondedForce& force, const std::string& interactionSource);
+    void initInteractionGroups(const CustomNonbondedForce& force, const std::string& interactionSource, const std::vector<std::string>& tableTypes);
     CudaContext& cu;
     CudaParameterSet* params;
     CudaArray* globals;
