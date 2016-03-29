@@ -1925,7 +1925,15 @@ The CUDA Platform recognizes the following Platform-specific properties:
   computation, allowing the CPU to do other work.  If it is set to “false”, CUDA
   will spin-lock while the GPU is working.  Setting it to "false" can improve performance slightly,
   but also prevents the CPU from doing anything else while the GPU is working.
-
+* CudaDeterministicForces: In some cases, the CUDA platform may compute forces
+  in ways that are not fully deterministic (typically differing in what order a
+  set of numbers get added together).  This means that if you compute the forces
+  twice for the same particle positions, there may be tiny differences in the
+  results.  In most cases this is not a problem, but certain algorithms depend
+  on forces being exactly reproducible to the last bit.  If you set this
+  property to "true", it will instead do these calculations in a way that
+  produces fully deterministic results, at the cost of a small decrease in
+  performance.
 
 The CUDA Platform also supports parallelizing a simulation across multiple GPUs.
 To do that, set the CudaDeviceIndex property to a comma separated list of

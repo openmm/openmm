@@ -1693,6 +1693,8 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                 pmeDefines["USE_DOUBLE_PRECISION"] = "1";
             if (usePmeStream)
                 pmeDefines["USE_PME_STREAM"] = "1";
+            if (cu.getPlatformData().deterministicForces)
+                pmeDefines["USE_DETERMINISTIC_FORCES"] = "1";
             CUmodule module = cu.createModule(CudaKernelSources::vectorOps+CudaKernelSources::pme, pmeDefines);
             if (cu.getPlatformData().useCpuPme) {
                 // Create the CPU PME kernel.
@@ -1920,7 +1922,7 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
                 recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2], &pmeAtomGridIndex->getDevicePointer()};
         cu.executeKernel(pmeSpreadChargeKernel, spreadArgs, cu.getNumAtoms(), 128);
 
-        if (cu.getUseDoublePrecision() || cu.getComputeCapability() < 2.0) {
+        if (cu.getUseDoublePrecision() || cu.getComputeCapability() < 2.0 || cu.getPlatformData().deterministicForces) {
             void* finishSpreadArgs[] = {&directPmeGrid->getDevicePointer()};
             cu.executeKernel(pmeFinishSpreadChargeKernel, finishSpreadArgs, directPmeGrid->getSize());
         }
