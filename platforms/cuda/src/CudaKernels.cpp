@@ -2434,10 +2434,10 @@ void CudaCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNonbo
     stringstream args;
     for (int i = 0; i < (int) buffers.size(); i++)
         args<<", const "<<buffers[i].getType()<<"* __restrict__ global_params"<<(i+1);
-    if (globals != NULL)
-        args<<", const float* __restrict__ globals";
     for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
         args << ", const " << tableTypes[i]<< "* __restrict__ table" << i;
+    if (globals != NULL)
+        args<<", const float* __restrict__ globals";
     replacements["PARAMETER_ARGUMENTS"] = args.str();
     stringstream load1;
     for (int i = 0; i < (int) buffers.size(); i++)
