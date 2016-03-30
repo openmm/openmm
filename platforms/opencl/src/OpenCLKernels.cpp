@@ -2507,10 +2507,10 @@ void OpenCLCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
     stringstream args;
     for (int i = 0; i < (int) buffers.size(); i++)
         args<<", __global const "<<buffers[i].getType()<<"* restrict global_params"<<(i+1);
-    if (globals != NULL)
-        args<<", __global const float* restrict globals";
     for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
         args << ", __global const " << tableTypes[i]<< "* restrict table" << i;
+    if (globals != NULL)
+        args<<", __global const float* restrict globals";
     replacements["PARAMETER_ARGUMENTS"] = args.str();
     stringstream load1;
     for (int i = 0; i < (int) buffers.size(); i++)
