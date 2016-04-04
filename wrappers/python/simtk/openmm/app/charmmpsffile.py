@@ -8,11 +8,10 @@ Structures at Stanford, funded under the NIH Roadmap for Medical Research,
 grant U54 GM072970. See https://simtk.org.  This code was originally part of
 the ParmEd program and was ported for use with OpenMM.
 
-Copyright (c) 2014-2015 the Authors
+Copyright (c) 2014-2016 the Authors
 
 Author: Jason M. Swails
 Contributors:
-Date: August 19, 2014
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -111,7 +110,7 @@ def _strip_optunit(thing, unit):
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-_resre = re.compile(r'(\d+)([a-zA-Z]*)')
+_resre = re.compile(r'(-?\d+)([a-zA-Z]*)')
 
 class CharmmPsfFile(object):
     """A chemical structure instantiated from CHARMM files.
