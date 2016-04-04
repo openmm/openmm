@@ -117,20 +117,27 @@ public:
         static const std::string key = "CudaDisablePmeStream";
         return key;
     }
+    /**
+     * This is the name of the parameter for requesting that force computations be fully deterministic.
+     */
+    static const std::string& CudaDeterministicForces() {
+        static const std::string key = "CudaDeterministicForces";
+        return key;
+    }
 };
 
 class OPENMM_EXPORT_CUDA CudaPlatform::PlatformData {
 public:
     PlatformData(ContextImpl* context, const System& system, const std::string& deviceIndexProperty, const std::string& blockingProperty, const std::string& precisionProperty,
             const std::string& cpuPmeProperty, const std::string& compilerProperty, const std::string& tempProperty, const std::string& hostCompilerProperty,
-            const std::string& pmeStreamProperty, int numThreads);
+            const std::string& pmeStreamProperty, const std::string& deterministicForcesProperty, int numThreads);
     ~PlatformData();
     void initializeContexts(const System& system);
     void syncContexts();
     ContextImpl* context;
     std::vector<CudaContext*> contexts;
     std::vector<double> contextEnergy;
-    bool hasInitializedContexts, removeCM, peerAccessSupported, useCpuPme, disablePmeStream;
+    bool hasInitializedContexts, removeCM, peerAccessSupported, useCpuPme, disablePmeStream, deterministicForces;
     int cmMotionFrequency;
     int stepCount, computeForceCount;
     double time;

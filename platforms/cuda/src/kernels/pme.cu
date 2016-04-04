@@ -83,7 +83,7 @@ extern "C" __global__ void gridSpreadCharge(const real4* __restrict__ posq, real
 #ifdef USE_DOUBLE_PRECISION
                     unsigned long long * ulonglong_p = (unsigned long long *) originalPmeGrid;
                     atomicAdd(&ulonglong_p[index],  static_cast<unsigned long long>((long long) (add*0x100000000)));
-#elif __CUDA_ARCH__ < 200
+#elif __CUDA_ARCH__ < 200 || defined(USE_DETERMINISTIC_FORCES)
                     unsigned long long * ulonglong_p = (unsigned long long *) originalPmeGrid;
                     int gridIndex = index;
                     gridIndex = (gridIndex%2 == 0 ? gridIndex/2 : (gridIndex+GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z)/2);
