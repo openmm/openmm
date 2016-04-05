@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2015 Stanford University and the Authors.
+Portions copyright (c) 2012-2016 Stanford University and the Authors.
 Authors: Peter Eastman, Mark Friedrichs
 Contributors:
 
@@ -115,6 +115,8 @@ class ForceField(object):
         """
         self._atomTypes = {}
         self._templates = {}
+        self._patches = {}
+        self._templatePatches = {}
         self._templateSignatures = {None:[]}
         self._atomClasses = {'':set()}
         self._forces = []
@@ -201,7 +203,80 @@ class ForceField(object):
                             template.addExternalBondByName(bond.attrib['atomName'])
                         else:
                             template.addExternalBond(int(bond.attrib['from']))
+                    for patch in patch.findall('AllowPatch'):
+                        patchName = patch.attrib['name']
+                        if ':' in name:
+                            colonIndex = name.find(':')
+                            self.registerTemplatePatch(resName, patchName[:colonIndex], int(patchName[colonIndex+1:])-1)
+                        else:
+                            self.registerTemplatePatch(resName, patchName, 0)
                     self.registerResidueTemplate(template)
+
+        # Load the patch defintions.
+
+        for tree in trees:
+            if tree.getroot().find('Patches') is not None:
+                for patch in tree.getroot().find('Patches').findall('Patch'):
+                    patchName = patch.attrib['name']
+                    if 'residues' in patch.attrib:
+                        numResidues = int(patch.attrib['residues'])
+                    else:
+                        numResidues = 1
+                    patchData = ForceField._PatchData(patchName, numResidues)
+                    allAtomNames = set()
+                    for atom in patch.findall('AddAtom'):
+                        params = {}
+                        for key in atom.attrib:
+                            if key not in ('name', 'type'):
+                                params[key] = _convertParameterToNumber(atom.attrib[key])
+                        atomName = atom.attrib['name']
+                        if atomName in allAtomNames:
+                            raise ValueError('Patch '+patchName+' contains multiple atoms named '+atomName)
+                        allAtomNames.add(atomName)
+                        atomDescription = ForceField._PatchAtomData(atomName)
+                        typeName = atom.attrib['type']
+                        patchData.addedAtoms.append(ForceField._TemplateAtomData(atomDescription, typeName, self._atomTypes[typeName].element, params))
+                    for atom in patch.findall('ChangeAtom'):
+                        params = {}
+                        for key in atom.attrib:
+                            if key not in ('name', 'type'):
+                                params[key] = _convertParameterToNumber(atom.attrib[key])
+                        atomName = atom.attrib['name']
+                        if atomName in allAtomNames:
+                            raise ValueError('Patch '+patchName+' contains multiple atoms named '+atomName)
+                        allAtomNames.add(atomName)
+                        atomDescription = ForceField._PatchAtomData(atomName)
+                        typeName = atom.attrib['type']
+                        patchData.changedAtoms.append(ForceField._TemplateAtomData(atomDescription, typeName, self._atomTypes[typeName].element, params))
+                    for atom in patch.findall('RemoveAtom'):
+                        atomName = atom.attrib['name']
+                        if atomName in allAtomNames:
+                            raise ValueError('Patch '+patchName+' contains multiple atoms named '+atomName)
+                        allAtomNames.add(atomName)
+                        atomDescription = ForceField._PatchAtomData(atomName)
+                        patchData.deletedAtoms.append(atomDescription)
+                    for bond in patch.findall('AddBond'):
+                        atom1 = ForceField._PatchAtomData(bond.attrib['atomName1'])
+                        atom2 = ForceField._PatchAtomData(bond.attrib['atomName2'])
+                        patchData.addedBonds.append((atom1, atom2))
+                    for bond in patch.findall('RemoveBond'):
+                        atom1 = ForceField._PatchAtomData(bond.attrib['atomName1'])
+                        atom2 = ForceField._PatchAtomData(bond.attrib['atomName2'])
+                        patchData.deletedBonds.append((atom1, atom2))
+                    for bond in patch.findall('AddExternalBond'):
+                        atom = ForceField._PatchAtomData(bond.attrib['atomName'])
+                        patchData.addedExternalBonds.append(atom)
+                    for bond in patch.findall('RemoveExternalBond'):
+                        atom = ForceField._PatchAtomData(bond.attrib['atomName'])
+                        patchData.deletedExternalBonds.append(atom)
+                    for residue in patch.findall('ApplyToResidue'):
+                        name = residue.attrib['name']
+                        if ':' in name:
+                            colonIndex = name.find(':')
+                            self.registerTemplatePatch(name[colonIndex+1:], patchName, int(name[:colonIndex])-1)
+                        else:
+                            self.registerTemplatePatch(name, patchName, 0)
+                    self.registerPatch(patchData)
 
         # Load force definitions
 
@@ -271,6 +346,16 @@ class ForceField(object):
                 self._templateSignatures[signature].append(template)
         else:
             self._templateSignatures[signature] = [template]
+
+    def registerPatch(self, patch):
+        """Register a new patch that can be applied to templates."""
+        self._patches[patch.name] = patch
+    
+    def registerTemplatePatch(self, residue, patch, patchResidueIndex):
+        """Register that a particular patch can be used with a particular residue."""
+        if residue not in self._templatePatches:
+            self._templatePatches[residue] = []
+        self._templatePatches[residue].append((patch, patchResidueIndex))
 
     def registerScript(self, script):
         """Register a new script to be executed after building the System."""
@@ -495,6 +580,30 @@ class ForceField(object):
                 self.excludeWith = int(attrib['excludeWith'])
             else:
                 self.excludeWith = self.atoms[0]
+
+    class _PatchData(object):
+        """Inner class used to encapsulate data about a patch definition."""
+        def __init__(self, name, numResidues):
+            self.name = name
+            self.numResidues = numResidues
+            self.addedAtoms = []
+            self.deletedAtoms = []
+            self.changedAtoms = []
+            self.addedBonds = []
+            self.deletedBonds = []
+            self.addedExternalBonds = []
+            self.deletedExternalBonds = []
+            
+    class _PatchAtomData(object):
+        """Inner class used to encapsulate data about an atom in a patch definition."""
+        def __init__(self, description):
+            if ':' in description:
+                colonIndex = description.find(':')
+                self.residue = int(description[:colonIndex])-1
+                self.name = description[colonIndex+1:]
+            else:
+                self.residue = 0
+                self.name = description
 
     class _AtomType(object):
         """Inner class used to record atom types and associated properties."""
