@@ -38,6 +38,7 @@ import itertools
 import xml.etree.ElementTree as etree
 import math
 from math import sqrt, cos
+from copy import deepcopy
 import simtk.openmm as mm
 import simtk.unit as unit
 from . import element as elem
@@ -203,7 +204,7 @@ class ForceField(object):
                             template.addExternalBondByName(bond.attrib['atomName'])
                         else:
                             template.addExternalBond(int(bond.attrib['from']))
-                    for patch in patch.findall('AllowPatch'):
+                    for patch in residue.findall('AllowPatch'):
                         patchName = patch.attrib['name']
                         if ':' in name:
                             colonIndex = name.find(':')
@@ -235,7 +236,7 @@ class ForceField(object):
                         allAtomNames.add(atomName)
                         atomDescription = ForceField._PatchAtomData(atomName)
                         typeName = atom.attrib['type']
-                        patchData.addedAtoms.append(ForceField._TemplateAtomData(atomDescription, typeName, self._atomTypes[typeName].element, params))
+                        patchData.addedAtoms[atomDescription.residue].append(ForceField._TemplateAtomData(atomDescription.name, typeName, self._atomTypes[typeName].element, params))
                     for atom in patch.findall('ChangeAtom'):
                         params = {}
                         for key in atom.attrib:
@@ -247,7 +248,7 @@ class ForceField(object):
                         allAtomNames.add(atomName)
                         atomDescription = ForceField._PatchAtomData(atomName)
                         typeName = atom.attrib['type']
-                        patchData.changedAtoms.append(ForceField._TemplateAtomData(atomDescription, typeName, self._atomTypes[typeName].element, params))
+                        patchData.changedAtoms[atomDescription.residue].append(ForceField._TemplateAtomData(atomDescription.name, typeName, self._atomTypes[typeName].element, params))
                     for atom in patch.findall('RemoveAtom'):
                         atomName = atom.attrib['name']
                         if atomName in allAtomNames:
@@ -586,13 +587,73 @@ class ForceField(object):
         def __init__(self, name, numResidues):
             self.name = name
             self.numResidues = numResidues
-            self.addedAtoms = []
+            self.addedAtoms = [[] for i in range(numResidues)]
+            self.changedAtoms = [[] for i in range(numResidues)]
             self.deletedAtoms = []
-            self.changedAtoms = []
             self.addedBonds = []
             self.deletedBonds = []
             self.addedExternalBonds = []
             self.deletedExternalBonds = []
+        
+        def createPatchedTemplates(self, templates):
+            """Apply this patch to a set of templates, creating new modified ones."""
+            if len(templates) != self.numResidues:
+                raise ValueError("Patch '%s' expected %d templates, received %d", (self.name, self.numResidues, len(templates)))
+            
+            # Construct a new version of each template.
+            
+            newTemplates = []
+            for index, template in enumerate(templates):
+                newTemplate = ForceField._TemplateData("%s-%s" % (template.name, self.name))
+                newTemplates.append(newTemplate)
+                
+                # Build the list of atoms in it.
+                
+                for atom in template.atoms:
+                    if not any(deleted.name == atom.name and deleted.residue == index for deleted in self.deletedAtoms):
+                        newTemplate.atoms.append(deepcopy(atom))
+                for atom in self.addedAtoms[index]:
+                    newTemplate.atoms.append(deepcopy(atom))
+                oldAtomIndex = dict([(atom.name, i) for i, atom in enumerate(template.atoms)])
+                newAtomIndex = dict([(atom.name, i) for i, atom in enumerate(newTemplate.atoms)])
+                for atom in self.changedAtoms[index]:
+                    if atom.name not in newAtomIndex:
+                        raise ValueError("Patch '%s' modifies nonexistent atom '%s' in template '%s'" % (self.name, atom.name, template.name))
+                    newTemplate.atoms[newAtomIndex[atom.name]] = deepcopy(atom)
+                
+                # Copy over the virtual sites, translating the atom indices.
+                
+                indexMap = dict([(oldAtomIndex[name], newAtomIndex[name]) for name in newAtomIndex if name in oldAtomIndex])
+                for site in template.virtualSites:
+                    if site.index in indexMap and all(i in indexMap for i in site.atoms):
+                        newSite = deepcopy(site)
+                        newSite.index = indexMap[site.index]
+                        newSite.atoms = [indexMap[i] for i in site.atoms]
+                        newTemplate.virtualSites.append(newSite)
+                
+                # Build the lists of bonds and external bonds.
+                
+                atomMap = dict([(template.atoms[i], indexMap[i]) for i in indexMap])
+                deletedBonds = [(atom1.name, atom2.name) for atom1, atom2 in self.deletedBonds if atom1.residue == index and atom2.residue == index]
+                for atom1, atom2 in template.bonds:
+                    a1 = template.atoms[atom1]
+                    a2 = template.atoms[atom2]
+                    if (a1.name, a2.name) not in deletedBonds and (a2.name, a1.name) not in deletedBonds:
+                        newTemplate.addBond(atomMap[a1], atomMap[a2])
+                deletedExternalBonds = [atom.name for atom in self.deletedExternalBonds if atom.residue == index]
+                for atom in template.externalBonds:
+                    if template.atoms[atom].name not in deletedExternalBonds:
+                        newTemplate.addExternalBond(atomMap[atom])
+                for atom1, atom2 in self.addedBonds:
+                    if atom1.residue == index and atom2.residue == index:
+                        newTemplate.addBondByName(atom1.name, atom2.name)
+                    elif atom1.residue == index:
+                        newTemplate.addExternalBondByName(atom1.name)
+                    elif atom2.residue == index:
+                        newTemplate.addExternalBondByName(atom2.name)
+                for atom in self.addedExternalBonds:
+                    newTemplate.addExternalBondByName(atom.name)
+            return newTemplates
             
     class _PatchAtomData(object):
         """Inner class used to encapsulate data about an atom in a patch definition."""
