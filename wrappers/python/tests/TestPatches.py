@@ -176,5 +176,90 @@ class TestForceField(unittest.TestCase):
         self.assertEqual(indexMap['B'], v.atoms[0])
         self.assertEqual(indexMap['C'], v.atoms[1])
 
+    def testAlaAlaAla(self):
+        """Test constructing a System that involves two patches."""
+
+        xml = """
+<ForceField>
+ <AtomTypes>
+  <Type name="N" class="N" element="N" mass="14.00672"/>
+  <Type name="H" class="H" element="H" mass="1.007947"/>
+  <Type name="CT" class="CT" element="C" mass="12.01078"/>
+  <Type name="H1" class="H1" element="H" mass="1.007947"/>
+  <Type name="HC" class="HC" element="H" mass="1.007947"/>
+  <Type name="C" class="C" element="C" mass="12.01078"/>
+  <Type name="O" class="O" element="O" mass="15.99943"/>
+  <Type name="O2" class="O2" element="O" mass="15.99943"/>
+  <Type name="N3" class="N3" element="N" mass="14.00672"/>
+ </AtomTypes>
+ <Residues>
+  <Residue name="ALA">
+   <Atom name="N" type="N"/>
+   <Atom name="H" type="H"/>
+   <Atom name="CA" type="CT"/>
+   <Atom name="HA" type="H1"/>
+   <Atom name="CB" type="CT"/>
+   <Atom name="HB1" type="HC"/>
+   <Atom name="HB2" type="HC"/>
+   <Atom name="HB3" type="HC"/>
+   <Atom name="C" type="C"/>
+   <Atom name="O" type="O"/>
+   <Bond from="0" to="1"/>
+   <Bond from="0" to="2"/>
+   <Bond from="2" to="3"/>
+   <Bond from="2" to="4"/>
+   <Bond from="2" to="8"/>
+   <Bond from="4" to="5"/>
+   <Bond from="4" to="6"/>
+   <Bond from="4" to="7"/>
+   <Bond from="8" to="9"/>
+   <ExternalBond from="0"/>
+   <ExternalBond from="8"/>
+   <AllowPatch name="CTER"/>
+   <AllowPatch name="NTER"/>
+  </Residue>
+ </Residues>
+ <Patches>
+  <Patch name="CTER">
+    <AddAtom name="OXT" type="O2"/>
+    <ChangeAtom name="O" type="O2"/>
+    <AddBond atomName1="C" atomName2="OXT"/>
+    <RemoveExternalBond atomName="C"/>
+  </Patch>
+  <Patch name="NTER">
+    <RemoveAtom name="H"/>
+    <AddAtom name="H1" type="H"/>
+    <AddAtom name="H2" type="H"/>
+    <AddAtom name="H3" type="H"/>
+    <ChangeAtom name="N" type="N3"/>
+    <RemoveBond atomName1="N" atomName2="H"/>
+    <AddBond atomName1="N" atomName2="H1"/>
+    <AddBond atomName1="N" atomName2="H2"/>
+    <AddBond atomName1="N" atomName2="H3"/>
+    <RemoveExternalBond atomName="N"/>
+  </Patch>
+ </Patches>
+ <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5">
+  <Atom type="N" charge="-0.4157" sigma="0.324999852378" epsilon="0.71128"/>
+  <Atom type="H" charge="0.2719" sigma="0.106907846177" epsilon="0.0656888"/>
+  <Atom type="CT" charge="0.0337" sigma="0.339966950842" epsilon="0.4577296"/>
+  <Atom type="H1" charge="0.0823" sigma="0.247135304412" epsilon="0.0656888"/>
+  <Atom type="HC" charge="0.0603" sigma="0.264953278775" epsilon="0.0656888"/>
+  <Atom type="C" charge="0.5973" sigma="0.339966950842" epsilon="0.359824"/>
+  <Atom type="O" charge="-0.5679" sigma="0.295992190115" epsilon="0.87864"/>
+  <Atom type="O2" charge="-0.8055" sigma="0.295992190115" epsilon="0.87864"/>
+  <Atom type="N3" charge="0.1414" sigma="0.324999852378" epsilon="0.71128"/>
+ </NonbondedForce>
+</ForceField>"""
+        ff = ForceField(StringIO(xml))
+        pdb = PDBFile(os.path.join('systems', 'ala_ala_ala.pdb'))
+        system = ff.createSystem(pdb.topology)
+        nb = system.getForce(0)
+        expectedCharges = [0.1414, 0.2719, 0.2719, 0.2719, 0.0337, 0.0823, 0.0337, 0.0603, 0.0603, 0.0603, 0.5973, -0.5679,
+                           -0.4157, 0.2719, 0.0337, 0.0823, 0.0337, 0.0603, 0.0603, 0.0603, 0.5973, -0.5679,
+                           0.5973, -0.8055, -0.8055, -0.4157, 0.2719, 0.0337, 0.0823, 0.0337, 0.0603, 0.0603, 0.0603]
+        for i in range(system.getNumParticles()):
+            self.assertEqual(expectedCharges[i], nb.getParticleParameters(i)[0].value_in_unit(elementary_charge))
+
 if __name__ == '__main__':
     unittest.main()
