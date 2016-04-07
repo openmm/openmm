@@ -69,8 +69,7 @@ matrix:
            OPENCL=false
            CUDA=false
            CMAKE_FLAGS="
-             -DOPENMM_BUILD_OPENCL_TESTS=OFF
-             -DSWIG_EXECUTABLE=/usr/local/Cellar/swig/3.0.2/bin/swig"
+             -DOPENMM_BUILD_OPENCL_TESTS=OFF"
       addons: {apt: {packages: []}}
 
     - sudo: false
