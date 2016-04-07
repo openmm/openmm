@@ -2157,6 +2157,7 @@ void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const 
     map<string, Lepton::CustomFunction*> functions;
     vector<pair<string, string> > functionDefinitions;
     vector<const TabulatedFunction*> functionList;
+    vector<string> tableTypes;
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         functionList.push_back(&force.getTabulatedFunction(i));
         string name = force.getTabulatedFunctionName(i);
@@ -2168,6 +2169,10 @@ void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const 
         tabulatedFunctions.push_back(CudaArray::create<float>(cu, f.size(), "TabulatedFunction"));
         tabulatedFunctions[tabulatedFunctions.size()-1]->upload(f);
         cu.getNonbondedUtilities().addArgument(CudaNonbondedUtilities::ParameterInfo(arrayName, "float", width, width*sizeof(float), tabulatedFunctions[tabulatedFunctions.size()-1]->getDevicePointer()));
+        if (width == 1)
+            tableTypes.push_back("float");
+        else
+            tableTypes.push_back("float"+cu.intToString(width));
     }
 
     // Record information for the expressions.
@@ -2220,7 +2225,7 @@ void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const 
     }
     string source = cu.replaceStrings(CudaKernelSources::customNonbonded, replacements);
     if (force.getNumInteractionGroups() > 0)
-        initInteractionGroups(force, source);
+        initInteractionGroups(force, source, tableTypes);
     else {
         cu.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source, force.getForceGroup());
         for (int i = 0; i < (int) params->getBuffers().size(); i++) {
@@ -2246,7 +2251,7 @@ void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const 
     }
 }
 
-void CudaCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNonbondedForce& force, const string& interactionSource) {
+void CudaCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNonbondedForce& force, const string& interactionSource, const vector<string>& tableTypes) {
     // Process groups to form tiles.
     
     vector<vector<int> > atomLists;
@@ -2429,6 +2434,8 @@ void CudaCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNonbo
     stringstream args;
     for (int i = 0; i < (int) buffers.size(); i++)
         args<<", const "<<buffers[i].getType()<<"* __restrict__ global_params"<<(i+1);
+    for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
+        args << ", const " << tableTypes[i]<< "* __restrict__ table" << i;
     if (globals != NULL)
         args<<", const float* __restrict__ globals";
     replacements["PARAMETER_ARGUMENTS"] = args.str();
@@ -2519,6 +2526,8 @@ double CudaCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool in
             interactionGroupArgs.push_back(cu.getPeriodicBoxVecZPointer());
             for (int i = 0; i < (int) params->getBuffers().size(); i++)
                 interactionGroupArgs.push_back(&params->getBuffers()[i].getMemory());
+            for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
+                interactionGroupArgs.push_back(&tabulatedFunctions[i]->getDevicePointer());
             if (globals != NULL)
                 interactionGroupArgs.push_back(&globals->getDevicePointer());
         }

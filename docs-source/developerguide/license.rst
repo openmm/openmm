@@ -1,4 +1,4 @@
-Portions copyright (c) 2011-2015 Stanford University and the Authors
+Portions copyright (c) 2011-2016 Stanford University and the Authors
 
 Contributors: Peter Eastman
 

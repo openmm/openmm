@@ -2222,6 +2222,7 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
     map<string, Lepton::CustomFunction*> functions;
     vector<pair<string, string> > functionDefinitions;
     vector<const TabulatedFunction*> functionList;
+    vector<string> tableTypes;
     for (int i = 0; i < force.getNumFunctions(); i++) {
         functionList.push_back(&force.getTabulatedFunction(i));
         string name = force.getTabulatedFunctionName(i);
@@ -2233,6 +2234,10 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
         tabulatedFunctions.push_back(OpenCLArray::create<float>(cl, f.size(), "TabulatedFunction"));
         tabulatedFunctions[tabulatedFunctions.size()-1]->upload(f);
         cl.getNonbondedUtilities().addArgument(OpenCLNonbondedUtilities::ParameterInfo(arrayName, "float", width, width*sizeof(float), tabulatedFunctions[tabulatedFunctions.size()-1]->getDeviceBuffer()));
+        if (width == 1)
+            tableTypes.push_back("float");
+        else
+            tableTypes.push_back("float"+cl.intToString(width));
     }
 
     // Record information for the expressions.
@@ -2285,7 +2290,7 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
     }
     string source = cl.replaceStrings(OpenCLKernelSources::customNonbonded, replacements);
     if (force.getNumInteractionGroups() > 0)
-        initInteractionGroups(force, source);
+        initInteractionGroups(force, source, tableTypes);
     else {
         cl.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source, force.getForceGroup());
         for (int i = 0; i < (int) params->getBuffers().size(); i++) {
@@ -2311,7 +2316,7 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
     }
 }
 
-void OpenCLCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNonbondedForce& force, const string& interactionSource) {
+void OpenCLCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNonbondedForce& force, const string& interactionSource, const vector<string>& tableTypes) {
     // Process groups to form tiles.
     
     vector<vector<int> > atomLists;
@@ -2502,6 +2507,8 @@ void OpenCLCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
     stringstream args;
     for (int i = 0; i < (int) buffers.size(); i++)
         args<<", __global const "<<buffers[i].getType()<<"* restrict global_params"<<(i+1);
+    for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
+        args << ", __global const " << tableTypes[i]<< "* restrict table" << i;
     if (globals != NULL)
         args<<", __global const float* restrict globals";
     replacements["PARAMETER_ARGUMENTS"] = args.str();
@@ -2591,6 +2598,8 @@ double OpenCLCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
             index += 5;
             for (int i = 0; i < (int) params->getBuffers().size(); i++)
                 interactionGroupKernel.setArg<cl::Memory>(index++, params->getBuffers()[i].getMemory());
+            for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
+                interactionGroupKernel.setArg<cl::Memory>(index++, tabulatedFunctions[i]->getDeviceBuffer());
             if (globals != NULL)
                 interactionGroupKernel.setArg<cl::Buffer>(index++, globals->getDeviceBuffer());
         }
