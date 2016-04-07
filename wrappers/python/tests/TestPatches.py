@@ -10,7 +10,7 @@ except ImportError:
     from io import StringIO
 import os
 
-class TestForceField(unittest.TestCase):
+class TestPatches(unittest.TestCase):
     """Test ForceFields that use patches."""
 
     def testParsePatch(self):
@@ -260,6 +260,58 @@ class TestForceField(unittest.TestCase):
                            0.5973, -0.8055, -0.8055, -0.4157, 0.2719, 0.0337, 0.0823, 0.0337, 0.0603, 0.0603, 0.0603]
         for i in range(system.getNumParticles()):
             self.assertEqual(expectedCharges[i], nb.getParticleParameters(i)[0].value_in_unit(elementary_charge))
+
+    def testDisulfidePatch(self):
+        pdb = PDBFile(os.path.join('systems', 'bpti.pdb'))
+        ff = ForceField('amber99sb.xml')
+        system1 = ff.createSystem(pdb.topology)
+        
+        # Override the CYX template so it will no longer match.
+        
+        xml = """
+<ForceField>
+ <Residues>
+  <Residue name="CYX" override="1">
+  </Residue>
+ </Residues>
+</ForceField>"""
+        ff.loadFile(StringIO(xml))
+        try:
+            ff.createSystem(pdb.topology)
+            failed = False
+        except:
+            failed = True
+        self.assertTrue(failed)
+        
+        # Now add a patch for matching disulfides.
+        
+        xml = """
+<ForceField>
+ <Patches>
+  <Patch name="Disulfide" residues="2">
+    <RemoveAtom name="1:HG"/>
+    <RemoveAtom name="2:HG"/>
+    <ChangeAtom name="1:CA" type="83"/>
+    <ChangeAtom name="2:CA" type="83"/>
+    <ChangeAtom name="1:HA" type="84"/>
+    <ChangeAtom name="2:HA" type="84"/>
+    <ChangeAtom name="1:CB" type="85"/>
+    <ChangeAtom name="2:CB" type="85"/>
+    <ChangeAtom name="1:HB2" type="86"/>
+    <ChangeAtom name="2:HB2" type="86"/>
+    <ChangeAtom name="1:HB3" type="86"/>
+    <ChangeAtom name="2:HB3" type="86"/>
+    <ChangeAtom name="1:SG" type="87"/>
+    <ChangeAtom name="2:SG" type="87"/>
+    <AddBond atomName1="1:SG" atomName2="2:SG"/>
+    <ApplyToResidue name="1:CYS"/>
+    <ApplyToResidue name="2:CYS"/>
+  </Patch>
+ </Patches>
+</ForceField>"""
+        ff.loadFile(StringIO(xml))
+        system2 = ff.createSystem(pdb.topology)
+        self.assertEqual(XmlSerializer.serialize(system1), XmlSerializer.serialize(system2))
 
 if __name__ == '__main__':
     unittest.main()

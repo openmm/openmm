@@ -569,8 +569,8 @@ class TestForceField(unittest.TestCase):
         # confirm charge
         self.assertEqual(sys.getForce(0).getParticleParameters(0)[0]._value, 3.0)
 
-    def test_ResidueOverloading(self):
-        """Test residue overloading via overload tag in the XML"""
+    def test_ResidueOverriding(self):
+        """Test residue overriding via override tag in the XML"""
 
         ffxml1 = """<ForceField>
  <AtomTypes>
@@ -607,7 +607,7 @@ class TestForceField(unittest.TestCase):
   <Type name="Fe2+_tip3p_standard" class="Fe2+_tip3p_standard" element="Fe" mass="55.85"/>
  </AtomTypes>
  <Residues>
-  <Residue name="FE2" overload="1">
+  <Residue name="FE2" override="1">
    <Atom name="FE2" type="Fe2+_tip3p_standard" charge="2.0"/>
   </Residue>
  </Residues>
