@@ -110,7 +110,7 @@ endif(SWIG_EXECUTABLE)
 # Enforce swig version
 string(COMPARE LESS "${SWIG_VERSION}" "3.0.5" SWIG_VERSION_ERROR)
 if(SWIG_VERSION_ERROR)
-    message("Swig version must be 3.0.5 or greater! (You have ${SWIG_VERSION})")
+    message(SEND_ERROR "Swig version must be 3.0.5 or greater! (You have ${SWIG_VERSION})")
 endif(SWIG_VERSION_ERROR)
 
 find_package(Doxygen REQUIRED)
