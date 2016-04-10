@@ -18,7 +18,7 @@ Need Help? Check out the [documentation](http://docs.openmm.org/) and [discussio
 Badges
 ------
 * Travis CI `linux` and `osx` integration tests:
-  * GitHub master [![Build Status](https://travis-ci.org/pandegroup/openmm.png?branch=master)](https://travis-ci.org/pandegroup/openmm)
+  * GitHub master [![Build Status](https://travis-ci.org/pandegroup/openmm.svg?branch=master)](https://travis-ci.org/pandegroup/openmm)
   * `openmm-dev` recipe [![Build Status](https://travis-ci.org/omnia-md/conda-dev-recipes.svg?branch=master)](https://travis-ci.org/omnia-md/conda-dev-recipes)
 * Anaconda Cloud `openmm` conda release: [![Binstar `openmm` conda release](https://anaconda.org/omnia/openmm/badges/version.svg)](https://anaconda.org/omnia/openmm)
 * Anaconda Cloud `openmm-dev` conda package: [![Binstar `openmm-dev` conda package](https://anaconda.org/omnia/openmm-dev/badges/version.svg)](https://anaconda.org/omnia/openmm-dev)
