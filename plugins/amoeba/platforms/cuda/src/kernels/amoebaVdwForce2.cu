@@ -4,8 +4,7 @@ unsigned int includeInteraction = (!isExcluded && r2 < CUTOFF_SQUARED);
 unsigned int includeInteraction = (!isExcluded);
 #endif
 
-real tempForce = 0.0f;
-
+if (atom2 < PADDED_NUM_ATOMS) {
 int pairK = vdwTypes1 * NUM_VDWPR_TYPES + vdwTypes2;
 real sigma = sigmaEpsilon[pairK].x;
 real epsilon = sigmaEpsilon[pairK].y;
@@ -42,4 +41,4 @@ if (r > TAPER_CUTOFF) {
 #endif
 tempEnergy += (includeInteraction ? termEnergy : 0);
 dEdR -= (includeInteraction ? deltaE * invR : 0);
-
+}

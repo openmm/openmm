@@ -2556,7 +2556,7 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
     sigmaEpsilon = CudaArray::create<float2>(cu, xsize * xsize, "sigmaEpsilon");
     lambdas = CudaArray::create<float>(cu, cu.getPaddedNumAtoms(), "lambdas");
     bondReductionAtoms = CudaArray::create<int>(cu, cu.getPaddedNumAtoms(), "bondReductionAtoms");
-    bondReductionFactors = CudaArray::create<float>(cu, cu.getPaddedNumAtoms(), "sigmaEpsilon");
+    bondReductionFactors = CudaArray::create<float>(cu, cu.getPaddedNumAtoms(), "bondReductionFactors");
     tempPosq = new CudaArray(cu, cu.getPaddedNumAtoms(), cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4), "tempPosq");
     tempForces = CudaArray::create<long long>(cu, 3 * cu.getPaddedNumAtoms(), "tempForces");
 
@@ -2610,6 +2610,7 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
     // Create the interaction kernel.
 
     map<string, string> replacements;
+    replacements["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
     replacements["NUM_VDWPR_TYPES"] = cu.intToString(xsize);
     double cutoff = force.getCutoff();
     double taperCutoff = cutoff * 0.9;
@@ -2671,7 +2672,7 @@ void CudaCalcAmoebaVdwForceKernel::copyParametersToContext(ContextImpl& context,
     sigmaEpsilon = CudaArray::create<float2>(cu, xsize * xsize, "sigmaEpsilon");
     lambdas = CudaArray::create<int>(cu, cu.getPaddedNumAtoms(), "lambdas");
     bondReductionAtoms = CudaArray::create<int>(cu, cu.getPaddedNumAtoms(), "bondReductionAtoms");
-    bondReductionFactors = CudaArray::create<float>(cu, cu.getPaddedNumAtoms(), "sigmaEpsilon");
+    bondReductionFactors = CudaArray::create<float>(cu, cu.getPaddedNumAtoms(), "bondReductionFactors");
     tempPosq = new CudaArray(cu, cu.getPaddedNumAtoms(), cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4), "tempPosq");
     tempForces = CudaArray::create<long long>(cu, 3 * cu.getPaddedNumAtoms(), "tempForces");
 
