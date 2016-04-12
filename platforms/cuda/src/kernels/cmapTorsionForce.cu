@@ -5,6 +5,11 @@ const real PI = (real) 3.14159265358979323846;
 real3 v0a = make_real3(pos1.x-pos2.x, pos1.y-pos2.y, pos1.z-pos2.z);
 real3 v1a = make_real3(pos3.x-pos2.x, pos3.y-pos2.y, pos3.z-pos2.z);
 real3 v2a = make_real3(pos3.x-pos4.x, pos3.y-pos4.y, pos3.z-pos4.z);
+#if APPLY_PERIODIC
+APPLY_PERIODIC_TO_DELTA(v0a)
+APPLY_PERIODIC_TO_DELTA(v1a)
+APPLY_PERIODIC_TO_DELTA(v2a)
+#endif
 real3 cp0a = cross(v0a, v1a);
 real3 cp1a = cross(v1a, v2a);
 real cosangle = dot(normalize(cp0a), normalize(cp1a));
@@ -28,6 +33,11 @@ angleA = fmod(angleA+2.0f*PI, 2.0f*PI);
 real3 v0b = make_real3(pos5.x-pos6.x, pos5.y-pos6.y, pos5.z-pos6.z);
 real3 v1b = make_real3(pos7.x-pos6.x, pos7.y-pos6.y, pos7.z-pos6.z);
 real3 v2b = make_real3(pos7.x-pos8.x, pos7.y-pos8.y, pos7.z-pos8.z);
+#if APPLY_PERIODIC
+APPLY_PERIODIC_TO_DELTA(v0b)
+APPLY_PERIODIC_TO_DELTA(v1b)
+APPLY_PERIODIC_TO_DELTA(v2b)
+#endif
 real3 cp0b = cross(v0b, v1b);
 real3 cp1b = cross(v1b, v2b);
 cosangle = dot(normalize(cp0b), normalize(cp1b));
