@@ -283,6 +283,7 @@ void CpuCalcHarmonicAngleForceKernel::initialize(const System& system, const Har
         angleParamArray[i][1] = (RealOpenMM) k;
     }
     bondForce.initialize(system.getNumParticles(), numAngles, 3, angleIndexArray, data.threads);
+    usePeriodic = force.usesPeriodicBoundaryConditions();
 }
 
 double CpuCalcHarmonicAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -290,6 +291,8 @@ double CpuCalcHarmonicAngleForceKernel::execute(ContextImpl& context, bool inclu
     vector<RealVec>& forceData = extractForces(context);
     RealOpenMM energy = 0;
     ReferenceAngleBondIxn angleBond;
+    if (usePeriodic)
+        angleBond.setPeriodic(extractBoxVectors(context));
     bondForce.calculateForce(posData, angleParamArray, forceData, includeEnergy ? &energy : NULL, angleBond);
     return energy;
 }
@@ -343,6 +346,7 @@ void CpuCalcPeriodicTorsionForceKernel::initialize(const System& system, const P
         torsionParamArray[i][2] = (RealOpenMM) periodicity;
     }
     bondForce.initialize(system.getNumParticles(), numTorsions, 4, torsionIndexArray, data.threads);
+    usePeriodic = force.usesPeriodicBoundaryConditions();
 }
 
 double CpuCalcPeriodicTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -350,6 +354,8 @@ double CpuCalcPeriodicTorsionForceKernel::execute(ContextImpl& context, bool inc
     vector<RealVec>& forceData = extractForces(context);
     RealOpenMM energy = 0;
     ReferenceProperDihedralBond periodicTorsionBond;
+    if (usePeriodic)
+        periodicTorsionBond.setPeriodic(extractBoxVectors(context));
     bondForce.calculateForce(posData, torsionParamArray, forceData, includeEnergy ? &energy : NULL, periodicTorsionBond);
     return energy;
 }
@@ -407,6 +413,7 @@ void CpuCalcRBTorsionForceKernel::initialize(const System& system, const RBTorsi
         torsionParamArray[i][5] = (RealOpenMM) c5;
     }
     bondForce.initialize(system.getNumParticles(), numTorsions, 4, torsionIndexArray, data.threads);
+    usePeriodic = force.usesPeriodicBoundaryConditions();
 }
 
 double CpuCalcRBTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -414,6 +421,8 @@ double CpuCalcRBTorsionForceKernel::execute(ContextImpl& context, bool includeFo
     vector<RealVec>& forceData = extractForces(context);
     RealOpenMM energy = 0;
     ReferenceRbDihedralBond rbTorsionBond;
+    if (usePeriodic)
+        rbTorsionBond.setPeriodic(extractBoxVectors(context));
     bondForce.calculateForce(posData, torsionParamArray, forceData, includeEnergy ? &energy : NULL, rbTorsionBond);
     return energy;
 }

@@ -33,6 +33,9 @@ class OPENMM_EXPORT ReferenceAngleBondIxn : public ReferenceBondIxn {
 
    private:
 
+        bool usePeriodic;
+        RealVec boxVectors[3];
+
    public:
 
       /**---------------------------------------------------------------------------------------
@@ -50,6 +53,16 @@ class OPENMM_EXPORT ReferenceAngleBondIxn : public ReferenceBondIxn {
          --------------------------------------------------------------------------------------- */
 
        ~ReferenceAngleBondIxn();
+
+       /**---------------------------------------------------------------------------------------
+      
+         Set the force to use periodic boundary conditions.
+      
+         @param vectors    the vectors defining the periodic box
+      
+         --------------------------------------------------------------------------------------- */
+      
+      void setPeriodic(OpenMM::RealVec* vectors);
 
       /**---------------------------------------------------------------------------------------
 

@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2015 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2016 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -46,7 +46,7 @@ using namespace OpenMM;
 ReferenceCustomCompoundBondIxn::ReferenceCustomCompoundBondIxn(int numParticlesPerBond, const vector<vector<int> >& bondAtoms,
             const Lepton::ParsedExpression& energyExpression, const vector<string>& bondParameterNames,
             const map<string, vector<int> >& distances, const map<string, vector<int> >& angles, const map<string, vector<int> >& dihedrals) :
-            bondAtoms(bondAtoms), energyExpression(energyExpression.createProgram()), bondParamNames(bondParameterNames) {
+            bondAtoms(bondAtoms), energyExpression(energyExpression.createProgram()), bondParamNames(bondParameterNames), usePeriodic(false) {
     for (int i = 0; i < numParticlesPerBond; i++) {
         stringstream xname, yname, zname;
         xname << 'x' << (i+1);
@@ -71,6 +71,13 @@ ReferenceCustomCompoundBondIxn::ReferenceCustomCompoundBondIxn(int numParticlesP
    --------------------------------------------------------------------------------------- */
 
 ReferenceCustomCompoundBondIxn::~ReferenceCustomCompoundBondIxn() {
+}
+
+void ReferenceCustomCompoundBondIxn::setPeriodic(OpenMM::RealVec* vectors) {
+    usePeriodic = true;
+    boxVectors[0] = vectors[0];
+    boxVectors[1] = vectors[1];
+    boxVectors[2] = vectors[2];
 }
 
 /**---------------------------------------------------------------------------------------
@@ -232,7 +239,10 @@ void ReferenceCustomCompoundBondIxn::calculateOneIxn(int bond, vector<RealVec>& 
 }
 
 void ReferenceCustomCompoundBondIxn::computeDelta(int atom1, int atom2, RealOpenMM* delta, vector<RealVec>& atomCoordinates) const {
-    ReferenceForce::getDeltaR(atomCoordinates[atom1], atomCoordinates[atom2], delta);
+    if (usePeriodic)
+        ReferenceForce::getDeltaRPeriodic(atomCoordinates[atom1], atomCoordinates[atom2], boxVectors, delta);
+    else
+        ReferenceForce::getDeltaR(atomCoordinates[atom1], atomCoordinates[atom2], delta);
 }
 
 RealOpenMM ReferenceCustomCompoundBondIxn::computeAngle(RealOpenMM* vec1, RealOpenMM* vec2) {

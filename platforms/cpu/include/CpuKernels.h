@@ -98,7 +98,7 @@ private:
 class CpuCalcHarmonicAngleForceKernel : public CalcHarmonicAngleForceKernel {
 public:
     CpuCalcHarmonicAngleForceKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data) :
-            CalcHarmonicAngleForceKernel(name, platform), data(data), angleIndexArray(NULL), angleParamArray(NULL) {
+            CalcHarmonicAngleForceKernel(name, platform), data(data), angleIndexArray(NULL), angleParamArray(NULL), usePeriodic(false) {
     }
     ~CpuCalcHarmonicAngleForceKernel();
     /**
@@ -130,6 +130,7 @@ private:
     int **angleIndexArray;
     RealOpenMM **angleParamArray;
     CpuBondForce bondForce;
+    bool usePeriodic;
 };
 
 /**
@@ -138,7 +139,7 @@ private:
 class CpuCalcPeriodicTorsionForceKernel : public CalcPeriodicTorsionForceKernel {
 public:
     CpuCalcPeriodicTorsionForceKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data) :
-            CalcPeriodicTorsionForceKernel(name, platform), data(data), torsionIndexArray(NULL), torsionParamArray(NULL) {
+            CalcPeriodicTorsionForceKernel(name, platform), data(data), torsionIndexArray(NULL), torsionParamArray(NULL), usePeriodic(false) {
     }
     ~CpuCalcPeriodicTorsionForceKernel();
     /**
@@ -170,6 +171,7 @@ private:
     int **torsionIndexArray;
     RealOpenMM **torsionParamArray;
     CpuBondForce bondForce;
+    bool usePeriodic;
 };
 
 /**
@@ -178,7 +180,7 @@ private:
 class CpuCalcRBTorsionForceKernel : public CalcRBTorsionForceKernel {
 public:
     CpuCalcRBTorsionForceKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data) :
-            CalcRBTorsionForceKernel(name, platform), data(data), torsionIndexArray(NULL), torsionParamArray(NULL) {
+            CalcRBTorsionForceKernel(name, platform), data(data), torsionIndexArray(NULL), torsionParamArray(NULL), usePeriodic(false) {
     }
     ~CpuCalcRBTorsionForceKernel();
     /**
@@ -210,6 +212,7 @@ private:
     int **torsionIndexArray;
     RealOpenMM **torsionParamArray;
     CpuBondForce bondForce;
+    bool usePeriodic;
 };
 
 /**
