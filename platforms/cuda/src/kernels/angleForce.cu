@@ -1,5 +1,9 @@
 real3 v0 = make_real3(pos2.x-pos1.x, pos2.y-pos1.y, pos2.z-pos1.z);
 real3 v1 = make_real3(pos2.x-pos3.x, pos2.y-pos3.y, pos2.z-pos3.z);
+#if APPLY_PERIODIC
+APPLY_PERIODIC_TO_DELTA(v0)
+APPLY_PERIODIC_TO_DELTA(v1)
+#endif
 real3 cp = cross(v0, v1);
 real rp = cp.x*cp.x + cp.y*cp.y + cp.z*cp.z;
 rp = max(SQRT(rp), (real) 1.0e-06f);

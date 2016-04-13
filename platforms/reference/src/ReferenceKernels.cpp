@@ -370,6 +370,7 @@ void ReferenceCalcHarmonicBondForceKernel::initialize(const System& system, cons
         bondParamArray[i][0] = (RealOpenMM) length;
         bondParamArray[i][1] = (RealOpenMM) k;
     }
+    usePeriodic = force.usesPeriodicBoundaryConditions();
 }
 
 double ReferenceCalcHarmonicBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -378,6 +379,8 @@ double ReferenceCalcHarmonicBondForceKernel::execute(ContextImpl& context, bool 
     RealOpenMM energy = 0;
     ReferenceBondForce refBondForce;
     ReferenceHarmonicBondIxn harmonicBond;
+    if (usePeriodic)
+        harmonicBond.setPeriodic(extractBoxVectors(context));
     refBondForce.calculateForce(numBonds, bondIndexArray, posData, bondParamArray, forceData, includeEnergy ? &energy : NULL, harmonicBond);
     return energy;
 }
@@ -409,6 +412,7 @@ ReferenceCalcCustomBondForceKernel::~ReferenceCalcCustomBondForceKernel() {
 void ReferenceCalcCustomBondForceKernel::initialize(const System& system, const CustomBondForce& force) {
     numBonds = force.getNumBonds();
     int numParameters = force.getNumPerBondParameters();
+    usePeriodic = force.usesPeriodicBoundaryConditions();
 
     // Build the arrays.
 
@@ -448,8 +452,10 @@ double ReferenceCalcCustomBondForceKernel::execute(ContextImpl& context, bool in
     for (int i = 0; i < (int) globalParameterNames.size(); i++)
         globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
     ReferenceBondForce refBondForce;
-    ReferenceCustomBondIxn harmonicBond(energyExpression, forceExpression, parameterNames, globalParameters);
-    refBondForce.calculateForce(numBonds, bondIndexArray, posData, bondParamArray, forceData, includeEnergy ? &energy : NULL, harmonicBond);
+    ReferenceCustomBondIxn bond(energyExpression, forceExpression, parameterNames, globalParameters);
+    if (usePeriodic)
+        bond.setPeriodic(extractBoxVectors(context));
+    refBondForce.calculateForce(numBonds, bondIndexArray, posData, bondParamArray, forceData, includeEnergy ? &energy : NULL, bond);
     return energy;
 }
 
@@ -490,6 +496,7 @@ void ReferenceCalcHarmonicAngleForceKernel::initialize(const System& system, con
         angleParamArray[i][0] = (RealOpenMM) angle;
         angleParamArray[i][1] = (RealOpenMM) k;
     }
+    usePeriodic = force.usesPeriodicBoundaryConditions();
 }
 
 double ReferenceCalcHarmonicAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -498,6 +505,8 @@ double ReferenceCalcHarmonicAngleForceKernel::execute(ContextImpl& context, bool
     RealOpenMM energy = 0;
     ReferenceBondForce refBondForce;
     ReferenceAngleBondIxn angleBond;
+    if (usePeriodic)
+        angleBond.setPeriodic(extractBoxVectors(context));
     refBondForce.calculateForce(numAngles, angleIndexArray, posData, angleParamArray, forceData, includeEnergy ? &energy : NULL, angleBond);
     return energy;
 }
@@ -527,6 +536,7 @@ ReferenceCalcCustomAngleForceKernel::~ReferenceCalcCustomAngleForceKernel() {
 void ReferenceCalcCustomAngleForceKernel::initialize(const System& system, const CustomAngleForce& force) {
     numAngles = force.getNumAngles();
     int numParameters = force.getNumPerAngleParameters();
+    usePeriodic = force.usesPeriodicBoundaryConditions();
 
     // Build the arrays.
 
@@ -568,6 +578,8 @@ double ReferenceCalcCustomAngleForceKernel::execute(ContextImpl& context, bool i
         globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
     ReferenceBondForce refBondForce;
     ReferenceCustomAngleIxn customAngle(energyExpression, forceExpression, parameterNames, globalParameters);
+    if (usePeriodic)
+        customAngle.setPeriodic(extractBoxVectors(context));
     refBondForce.calculateForce(numAngles, angleIndexArray, posData, angleParamArray, forceData, includeEnergy ? &energy : NULL, customAngle);
     return energy;
 }
@@ -611,6 +623,7 @@ void ReferenceCalcPeriodicTorsionForceKernel::initialize(const System& system, c
         torsionParamArray[i][1] = (RealOpenMM) phase;
         torsionParamArray[i][2] = (RealOpenMM) periodicity;
     }
+    usePeriodic = force.usesPeriodicBoundaryConditions();
 }
 
 double ReferenceCalcPeriodicTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -619,6 +632,8 @@ double ReferenceCalcPeriodicTorsionForceKernel::execute(ContextImpl& context, bo
     RealOpenMM energy = 0;
     ReferenceBondForce refBondForce;
     ReferenceProperDihedralBond periodicTorsionBond;
+    if (usePeriodic)
+        periodicTorsionBond.setPeriodic(extractBoxVectors(context));
     refBondForce.calculateForce(numTorsions, torsionIndexArray, posData, torsionParamArray, forceData, includeEnergy ? &energy : NULL, periodicTorsionBond);
     return energy;
 }
@@ -665,6 +680,7 @@ void ReferenceCalcRBTorsionForceKernel::initialize(const System& system, const R
         torsionParamArray[i][4] = (RealOpenMM) c4;
         torsionParamArray[i][5] = (RealOpenMM) c5;
     }
+    usePeriodic = force.usesPeriodicBoundaryConditions();
 }
 
 double ReferenceCalcRBTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -673,6 +689,8 @@ double ReferenceCalcRBTorsionForceKernel::execute(ContextImpl& context, bool inc
     RealOpenMM energy = 0;
     ReferenceBondForce refBondForce;
     ReferenceRbDihedralBond rbTorsionBond;
+    if (usePeriodic)
+        rbTorsionBond.setPeriodic(extractBoxVectors(context));
     refBondForce.calculateForce(numTorsions, torsionIndexArray, posData, torsionParamArray, forceData, includeEnergy ? &energy : NULL, rbTorsionBond);
     return energy;
 }
@@ -722,6 +740,7 @@ void ReferenceCalcCMAPTorsionForceKernel::initialize(const System& system, const
         force.getTorsionParameters(i, torsionMaps[i], torsionIndices[i][0], torsionIndices[i][1], torsionIndices[i][2],
             torsionIndices[i][3], torsionIndices[i][4], torsionIndices[i][5], torsionIndices[i][6], torsionIndices[i][7]);
     }
+    usePeriodic = force.usesPeriodicBoundaryConditions();
 }
 
 double ReferenceCalcCMAPTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -729,6 +748,8 @@ double ReferenceCalcCMAPTorsionForceKernel::execute(ContextImpl& context, bool i
     vector<RealVec>& forceData = extractForces(context);
     RealOpenMM totalEnergy = 0;
     ReferenceCMAPTorsionIxn torsion(coeff, torsionMaps, torsionIndices);
+    if (usePeriodic)
+        torsion.setPeriodic(extractBoxVectors(context));
     torsion.calculateIxn(posData, forceData, &totalEnergy);
     return totalEnergy;
 }
@@ -775,6 +796,7 @@ ReferenceCalcCustomTorsionForceKernel::~ReferenceCalcCustomTorsionForceKernel() 
 void ReferenceCalcCustomTorsionForceKernel::initialize(const System& system, const CustomTorsionForce& force) {
     numTorsions = force.getNumTorsions();
     int numParameters = force.getNumPerTorsionParameters();
+    usePeriodic = force.usesPeriodicBoundaryConditions();
 
     // Build the arrays.
 
@@ -817,6 +839,8 @@ double ReferenceCalcCustomTorsionForceKernel::execute(ContextImpl& context, bool
         globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
     ReferenceBondForce refBondForce;
     ReferenceCustomTorsionIxn customTorsion(energyExpression, forceExpression, parameterNames, globalParameters);
+    if (usePeriodic)
+        customTorsion.setPeriodic(extractBoxVectors(context));
     refBondForce.calculateForce(numTorsions, torsionIndexArray, posData, torsionParamArray, forceData, includeEnergy ? &energy : NULL, customTorsion);
     return energy;
 }
@@ -1644,6 +1668,7 @@ ReferenceCalcCustomCentroidBondForceKernel::~ReferenceCalcCustomCentroidBondForc
 }
 
 void ReferenceCalcCustomCentroidBondForceKernel::initialize(const System& system, const CustomCentroidBondForce& force) {
+    usePeriodic = force.usesPeriodicBoundaryConditions();
 
     // Build the arrays.
 
@@ -1697,6 +1722,8 @@ double ReferenceCalcCustomCentroidBondForceKernel::execute(ContextImpl& context,
     map<string, double> globalParameters;
     for (int i = 0; i < (int) globalParameterNames.size(); i++)
         globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
+    if (usePeriodic)
+        ixn->setPeriodic(extractBoxVectors(context));
     ixn->calculatePairIxn(posData, bondParamArray, globalParameters, forceData, includeEnergy ? &energy : NULL);
     return energy;
 }
@@ -1728,6 +1755,7 @@ ReferenceCalcCustomCompoundBondForceKernel::~ReferenceCalcCustomCompoundBondForc
 }
 
 void ReferenceCalcCustomCompoundBondForceKernel::initialize(const System& system, const CustomCompoundBondForce& force) {
+    usePeriodic = force.usesPeriodicBoundaryConditions();
 
     // Build the arrays.
 
@@ -1774,6 +1802,8 @@ double ReferenceCalcCustomCompoundBondForceKernel::execute(ContextImpl& context,
     map<string, double> globalParameters;
     for (int i = 0; i < (int) globalParameterNames.size(); i++)
         globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
+    if (usePeriodic)
+        ixn->setPeriodic(extractBoxVectors(context));
     ixn->calculatePairIxn(posData, bondParamArray, globalParameters, forceData, includeEnergy ? &energy : NULL);
     return energy;
 }
