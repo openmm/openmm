@@ -117,6 +117,7 @@ void CudaCalcAmoebaBondForceKernel::initialize(const System& system, const Amoeb
     }
     params->upload(paramVector);
     map<string, string> replacements;
+    replacements["APPLY_PERIODIC"] = "0";
     replacements["COMPUTE_FORCE"] = CudaAmoebaKernelSources::amoebaBondForce;
     replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params->getDevicePointer(), "float2");
     replacements["CUBIC_K"] = cu.doubleToString(force.getAmoebaGlobalBondCubic());
@@ -214,6 +215,7 @@ void CudaCalcAmoebaAngleForceKernel::initialize(const System& system, const Amoe
     }
     params->upload(paramVector);
     map<string, string> replacements;
+    replacements["APPLY_PERIODIC"] = "0";
     replacements["COMPUTE_FORCE"] = CudaAmoebaKernelSources::amoebaAngleForce;
     replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params->getDevicePointer(), "float2");
     replacements["CUBIC_K"] = cu.doubleToString(force.getAmoebaGlobalAngleCubic());
