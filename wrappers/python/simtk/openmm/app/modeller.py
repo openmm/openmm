@@ -35,7 +35,7 @@ __author__ = "Peter Eastman"
 __version__ = "1.0"
 
 from simtk.openmm.app import Topology, PDBFile, ForceField
-from simtk.openmm.app.forcefield import HAngles, AllBonds, _createResidueSignature, _matchResidue, DrudeGenerator
+from simtk.openmm.app.forcefield import HAngles, AllBonds, CutoffNonPeriodic, _createResidueSignature, _matchResidue, DrudeGenerator
 from simtk.openmm.app.topology import Residue
 from simtk.openmm.vec3 import Vec3
 from simtk.openmm import System, Context, NonbondedForce, CustomNonbondedForce, HarmonicBondForce, HarmonicAngleForce, VerletIntegrator, LocalEnergyMinimizer
@@ -857,7 +857,7 @@ class Modeller(object):
         if forcefield is not None:
             # Use the ForceField the user specified.
 
-            system = forcefield.createSystem(newTopology, rigidWater=False)
+            system = forcefield.createSystem(newTopology, rigidWater=False, nonbondedMethod=CutoffNonPeriodic)
             atoms = list(newTopology.atoms())
             for i in range(system.getNumParticles()):
                 if atoms[i].element != elem.hydrogen:
@@ -869,6 +869,8 @@ class Modeller(object):
 
             system = System()
             nonbonded = CustomNonbondedForce('100/((r/0.1)^4+1)')
+            nonbonded.setNonbondedMethod(CustomNonbondedForce.CutoffNonPeriodic);
+            nonbonded.setCutoffDistance(1*nanometer)
             bonds = HarmonicBondForce()
             angles = HarmonicAngleForce()
             system.addForce(nonbonded)
