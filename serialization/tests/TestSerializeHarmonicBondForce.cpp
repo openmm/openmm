@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -47,6 +47,7 @@ void testSerialization() {
     force.addBond(0, 2, 2.0, 2.1);
     force.addBond(2, 3, 3.0, 2.2);
     force.addBond(5, 1, 4.0, 2.3);
+    force.setUsesPeriodicBoundaryConditions(true);
 
     // Serialize and then deserialize it.
 
@@ -58,6 +59,7 @@ void testSerialization() {
 
     HarmonicBondForce& force2 = *copy;
     ASSERT_EQUAL(force.getForceGroup(), force2.getForceGroup());
+    ASSERT_EQUAL(force.usesPeriodicBoundaryConditions(), force2.usesPeriodicBoundaryConditions());
     ASSERT_EQUAL(force.getNumBonds(), force2.getNumBonds());
     for (int i = 0; i < force.getNumBonds(); i++) {
         int a1, a2, b1, b2;
