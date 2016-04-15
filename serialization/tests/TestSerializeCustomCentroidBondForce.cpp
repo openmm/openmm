@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -77,6 +77,7 @@ void testSerialization() {
     for (int i = 0; i < 10; i++)
         values[i] = sin((double) i);
     force.addTabulatedFunction("f", new Continuous1DFunction(values, 0.5, 1.5));
+    force.setUsesPeriodicBoundaryConditions(true);
 
     // Serialize and then deserialize it.
 
@@ -98,6 +99,7 @@ void testSerialization() {
         ASSERT_EQUAL(force.getGlobalParameterName(i), force2.getGlobalParameterName(i));
         ASSERT_EQUAL(force.getGlobalParameterDefaultValue(i), force2.getGlobalParameterDefaultValue(i));
     }
+    ASSERT_EQUAL(force.usesPeriodicBoundaryConditions(), force2.usesPeriodicBoundaryConditions());
     ASSERT_EQUAL(force.getNumGroups(), force2.getNumGroups());
     for (int i = 0; i < force.getNumGroups(); i++) {
         vector<int> particles1, particles2;

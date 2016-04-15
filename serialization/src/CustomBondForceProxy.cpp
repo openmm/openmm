@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -42,9 +42,10 @@ CustomBondForceProxy::CustomBondForceProxy() : SerializationProxy("CustomBondFor
 }
 
 void CustomBondForceProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 1);
+    node.setIntProperty("version", 2);
     const CustomBondForce& force = *reinterpret_cast<const CustomBondForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setBoolProperty("usesPeriodic", force.usesPeriodicBoundaryConditions());
     node.setStringProperty("energy", force.getEnergyFunction());
     SerializationNode& perBondParams = node.createChildNode("PerBondParameters");
     for (int i = 0; i < force.getNumPerBondParameters(); i++) {
@@ -70,12 +71,15 @@ void CustomBondForceProxy::serialize(const void* object, SerializationNode& node
 }
 
 void* CustomBondForceProxy::deserialize(const SerializationNode& node) const {
-    if (node.getIntProperty("version") != 1)
+    int version = node.getIntProperty("version");
+    if (version < 1 || version > 2)
         throw OpenMMException("Unsupported version number");
     CustomBondForce* force = NULL;
     try {
         CustomBondForce* force = new CustomBondForce(node.getStringProperty("energy"));
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        if (version > 1)
+            force->setUsesPeriodicBoundaryConditions(node.getBoolProperty("usesPeriodic"));
         const SerializationNode& perBondParams = node.getChildNode("PerBondParameters");
         for (int i = 0; i < (int) perBondParams.getChildren().size(); i++) {
             const SerializationNode& parameter = perBondParams.getChildren()[i];

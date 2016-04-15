@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -46,6 +46,7 @@ void testSerialization() {
     force.addTorsion(0, 1, 2, 3, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6);
     force.addTorsion(0, 2, 3, 4, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7);
     force.addTorsion(2, 3, 4, 7, -1, -2, -3, 1.1, 2.2, 3.3);
+    force.setUsesPeriodicBoundaryConditions(true);
 
     // Serialize and then deserialize it.
 
@@ -57,6 +58,7 @@ void testSerialization() {
 
     RBTorsionForce& force2 = *copy;
     ASSERT_EQUAL(force.getForceGroup(), force2.getForceGroup());
+    ASSERT_EQUAL(force.usesPeriodicBoundaryConditions(), force2.usesPeriodicBoundaryConditions());
     ASSERT_EQUAL(force.getNumTorsions(), force2.getNumTorsions());
     for (int i = 0; i < force.getNumTorsions(); i++) {
         int a1, a2, a3, a4, b1, b2, b3, b4;
