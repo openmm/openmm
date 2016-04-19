@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -254,7 +254,7 @@ void CudaExpressionUtilities::processExpression(stringstream& out, const Express
                             for (int k = 3; k >= 0; k--)
                                 for (int m = 0; m < 4; m++) {
                                     int base = 4*m;
-                                    string suffix = suffixes[m];
+                                    string suffix = suffixes[k];
                                     out << "derivy[" << m << "] = da*derivy[" << m << "] + (3*c[" << (base+3) << "]" << suffix << "*db + 2*c[" << (base+2) << "]" << suffix << ")*db + c[" << (base+1) << "]" << suffix << ";\n";
                                 }
                             out << nodeNames[j] << " = derivy[0] + dc*(derivy[1] + dc*(derivy[2] + dc*derivy[3]));\n";
@@ -271,7 +271,7 @@ void CudaExpressionUtilities::processExpression(stringstream& out, const Express
                             out << nodeNames[j] << " *= " << paramsFloat[11] << ";\n";
                         }
                         else
-                            throw OpenMMException("Unsupported derivative order for Continuous2DFunction");
+                            throw OpenMMException("Unsupported derivative order for Continuous3DFunction");
                     }
                     out << "}\n";
                 }
