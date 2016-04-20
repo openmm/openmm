@@ -73,6 +73,10 @@ void ReferenceForce::getDeltaR(const RealVec& atomCoordinatesI, const RealVec& a
    deltaR[RIndex]    = (RealOpenMM) SQRT(deltaR[R2Index]);
 }
 
+RealVec ReferenceForce::getDeltaR(const RealVec& atomCoordinatesI, const RealVec& atomCoordinatesJ) {
+    return atomCoordinatesJ-atomCoordinatesI;
+}
+
 void ReferenceForce::getDeltaRPeriodic(const RealVec& atomCoordinatesI, const RealVec& atomCoordinatesJ,
                                const RealOpenMM* boxSize, RealOpenMM* deltaR) {
    deltaR[XIndex]    = periodicDifference(atomCoordinatesJ[0], atomCoordinatesI[0], boxSize[0]);
@@ -94,6 +98,15 @@ void ReferenceForce::getDeltaRPeriodic(const RealVec& atomCoordinatesI, const Re
     deltaR[ZIndex] = diff[2];
     deltaR[R2Index] = diff.dot(diff);
     deltaR[RIndex] = SQRT(deltaR[R2Index]);
+}
+
+RealVec ReferenceForce::getDeltaRPeriodic(const RealVec& atomCoordinatesI, const RealVec& atomCoordinatesJ,
+                               const RealVec* boxVectors) {
+    RealVec diff = atomCoordinatesJ-atomCoordinatesI;
+    diff -= boxVectors[2]*floor(diff[2]/boxVectors[2][2]+0.5);
+    diff -= boxVectors[1]*floor(diff[1]/boxVectors[1][1]+0.5);
+    diff -= boxVectors[0]*floor(diff[0]/boxVectors[0][0]+0.5);
+    return diff;
 }
 
 double* ReferenceForce::getVariablePointer(Lepton::CompiledExpression& expression, const std::string& name) {
