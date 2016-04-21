@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -52,7 +52,7 @@ void MonteCarloAnisotropicBarostatProxy::serialize(const void* object, Serializa
     node.setBoolProperty("scalex", force.getScaleX());
     node.setBoolProperty("scaley", force.getScaleY());
     node.setBoolProperty("scalez", force.getScaleZ());
-    node.setDoubleProperty("temperature", force.getTemperature());
+    node.setDoubleProperty("temperature", force.getDefaultTemperature());
     node.setIntProperty("frequency", force.getFrequency());
     node.setIntProperty("randomSeed", force.getRandomNumberSeed());
 }

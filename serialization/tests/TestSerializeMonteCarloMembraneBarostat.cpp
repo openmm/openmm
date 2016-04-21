@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -57,7 +57,7 @@ void testSerialization() {
     ASSERT_EQUAL(force.getForceGroup(), force2.getForceGroup());
     ASSERT_EQUAL(force.getDefaultPressure(), force2.getDefaultPressure());
     ASSERT_EQUAL(force.getDefaultSurfaceTension(), force2.getDefaultSurfaceTension());
-    ASSERT_EQUAL(force.getTemperature(), force2.getTemperature());
+    ASSERT_EQUAL(force.getDefaultTemperature(), force2.getDefaultTemperature());
     ASSERT_EQUAL(force.getXYMode(), force2.getXYMode());
     ASSERT_EQUAL(force.getZMode(), force2.getZMode());
     ASSERT_EQUAL(force.getFrequency(), force2.getFrequency());
