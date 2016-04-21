@@ -2711,7 +2711,7 @@ int main(int argc, char* argv[]) {
         std::cout << "TestCudaAmoebaTorsionTorsionForce running test..." << std::endl;
         registerAmoebaCudaKernelFactories();
         if (argc > 1)
-            Platform::getPlatformByName("CUDA").setPropertyDefaultValue("CudaPrecision", std::string(argv[1]));
+            Platform::getPlatformByName("CUDA").setPropertyDefaultValue("Precision", std::string(argv[1]));
         testTorsionTorsion(1);
         testPeriodic();
     } catch(const std::exception& e) {

@@ -110,7 +110,7 @@ void testWater() {
     State state = context.getState(State::Energy);
     double initialEnergy;
     int numSteps = 1000;
-    double maxNorm = (platform.getPropertyValue(context, "CudaPrecision") == "double" ? 1.0 : 5.0);
+    double maxNorm = (platform.getPropertyValue(context, "Precision") == "double" ? 1.0 : 5.0);
     for (int i = 0; i < numSteps; i++) {
         integ.step(1);
         state = context.getState(State::Energy | State::Forces);
@@ -131,7 +131,7 @@ int main(int argc, char* argv[]) {
     try {
         registerDrudeCudaKernelFactories();
         if (argc > 1)
-            Platform::getPlatformByName("CUDA").setPropertyDefaultValue("CudaPrecision", string(argv[1]));
+            Platform::getPlatformByName("CUDA").setPropertyDefaultValue("Precision", string(argv[1]));
         testWater();
     }
     catch(const std::exception& e) {

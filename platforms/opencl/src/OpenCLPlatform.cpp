@@ -56,6 +56,11 @@ extern "C" OPENMM_EXPORT_OPENCL void registerPlatforms() {
 #endif
 
 OpenCLPlatform::OpenCLPlatform() {
+    deprecatedPropertyReplacements["OpenCLDeviceIndex"] = "DeviceIndex";
+    deprecatedPropertyReplacements["OpenCLDeviceName"] = "DeviceName";
+    deprecatedPropertyReplacements["OpenCLPrecision"] = "Precision";
+    deprecatedPropertyReplacements["OpenCLUseCpuPme"] = "UseCpuPme";
+    deprecatedPropertyReplacements["OpenCLDisablePmeStream"] = "DisablePmeStream";
     OpenCLKernelFactory* factory = new OpenCLKernelFactory();
     registerKernelFactory(CalcForcesAndEnergyKernel::Name(), factory);
     registerKernelFactory(UpdateStateDataKernel::Name(), factory);
@@ -139,7 +144,10 @@ bool OpenCLPlatform::isPlatformSupported() {
 const string& OpenCLPlatform::getPropertyValue(const Context& context, const string& property) const {
     const ContextImpl& impl = getContextImpl(context);
     const PlatformData* data = reinterpret_cast<const PlatformData*>(impl.getPlatformData());
-    map<string, string>::const_iterator value = data->propertyValues.find(property);
+    string propertyName = property;
+    if (deprecatedPropertyReplacements.find(property) != deprecatedPropertyReplacements.end())
+        propertyName = deprecatedPropertyReplacements.find(property)->second;
+    map<string, string>::const_iterator value = data->propertyValues.find(propertyName);
     if (value != data->propertyValues.end())
         return value->second;
     return Platform::getPropertyValue(context, property);

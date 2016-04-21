@@ -82,17 +82,12 @@ def runOneTest(testName, options):
     properties = {}
     initialSteps = 5
     if options.device is not None:
-        if platform.getName() == 'CUDA':
-            properties['CudaDeviceIndex'] = options.device
-        elif platform.getName() == 'OpenCL':
-            properties['OpenCLDeviceIndex'] = options.device
+        if platform.getName() in ('CUDA', 'OpenCL'):
+            properties['DeviceIndex'] = options.device
         if ',' in options.device or ' ' in options.device:
             initialSteps = 250
-    if options.precision is not None:
-        if platform.getName() == 'CUDA':
-            properties['CudaPrecision'] = options.precision
-        elif platform.getName() == 'OpenCL':
-            properties['OpenCLPrecision'] = options.precision
+    if options.precision is not None and platform.getName() in ('CUDA', 'OpenCL'):
+        properties['Precision'] = options.precision
     
     # Run the simulation.
     

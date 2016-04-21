@@ -62,6 +62,14 @@ extern "C" OPENMM_EXPORT_CUDA void registerPlatforms() {
 #endif
 
 CudaPlatform::CudaPlatform() {
+    deprecatedPropertyReplacements["CudaDeviceIndex"] = "DeviceIndex";
+    deprecatedPropertyReplacements["CudaDeviceName"] = "DeviceName";
+    deprecatedPropertyReplacements["CudaUseBlockingSync"] = "UseBlockingSync";
+    deprecatedPropertyReplacements["CudaPrecision"] = "Precision";
+    deprecatedPropertyReplacements["CudaUseCpuPme"] = "UseCpuPme";
+    deprecatedPropertyReplacements["CudaTempDirectory"] = "TempDirectory";
+    deprecatedPropertyReplacements["CudaDisablePmeStream"] = "DisablePmeStream";
+    deprecatedPropertyReplacements["CudaDeterministicForces"] = "DeterministicForces";
     CudaKernelFactory* factory = new CudaKernelFactory();
     registerKernelFactory(CalcForcesAndEnergyKernel::Name(), factory);
     registerKernelFactory(UpdateStateDataKernel::Name(), factory);
@@ -144,7 +152,10 @@ bool CudaPlatform::supportsDoublePrecision() const {
 const string& CudaPlatform::getPropertyValue(const Context& context, const string& property) const {
     const ContextImpl& impl = getContextImpl(context);
     const PlatformData* data = reinterpret_cast<const PlatformData*>(impl.getPlatformData());
-    map<string, string>::const_iterator value = data->propertyValues.find(property);
+    string propertyName = property;
+    if (deprecatedPropertyReplacements.find(property) != deprecatedPropertyReplacements.end())
+        propertyName = deprecatedPropertyReplacements.find(property)->second;
+    map<string, string>::const_iterator value = data->propertyValues.find(propertyName);
     if (value != data->propertyValues.end())
         return value->second;
     return Platform::getPropertyValue(context, property);

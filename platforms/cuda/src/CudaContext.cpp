@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -106,7 +106,7 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
         useMixedPrecision = false;
     }
     else
-        throw OpenMMException("Illegal value for CudaPrecision: "+precision);
+        throw OpenMMException("Illegal value for Precision: "+precision);
     char* cacheVariable = getenv("OPENMM_CACHE_DIR");
     cacheDir = (cacheVariable == NULL ? tempDir : string(cacheVariable));
 #ifdef WIN32
@@ -121,7 +121,7 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     string errorMessage = "Error initializing Context";
     CHECK_RESULT(cuDeviceGetCount(&numDevices));
     if (deviceIndex < -1 || deviceIndex >= numDevices)
-        throw OpenMMException("Illegal value for CudaDeviceIndex: "+intToString(deviceIndex));
+        throw OpenMMException("Illegal value for DeviceIndex: "+intToString(deviceIndex));
 
     vector<int> devicePrecedence;
     if (deviceIndex == -1) {

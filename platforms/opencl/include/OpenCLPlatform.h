@@ -58,14 +58,14 @@ public:
      * This is the name of the parameter for selecting which OpenCL device or devices to use.
      */
     static const std::string& OpenCLDeviceIndex() {
-        static const std::string key = "OpenCLDeviceIndex";
+        static const std::string key = "DeviceIndex";
         return key;
     }
     /**
      * This is the name of the parameter that reports the OpenCL device or devices being used.
      */
     static const std::string& OpenCLDeviceName() {
-        static const std::string key = "OpenCLDeviceName";
+        static const std::string key = "DeviceName";
         return key;
     }
     /**
@@ -86,21 +86,21 @@ public:
      * This is the name of the parameter for selecting what numerical precision to use.
      */
     static const std::string& OpenCLPrecision() {
-        static const std::string key = "OpenCLPrecision";
+        static const std::string key = "Precision";
         return key;
     }
     /**
      * This is the name of the parameter for selecting whether to use the CPU based PME calculation.
      */
     static const std::string& OpenCLUseCpuPme() {
-        static const std::string key = "OpenCLUseCpuPme";
+        static const std::string key = "UseCpuPme";
         return key;
     }
     /**
      * This is the name of the parameter for selecting whether to disable use of a separate stream for PME.
      */
     static const std::string& OpenCLDisablePmeStream() {
-        static const std::string key = "OpenCLDisablePmeStream";
+        static const std::string key = "DisablePmeStream";
         return key;
     }
 };
