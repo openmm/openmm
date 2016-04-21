@@ -1,30 +1,30 @@
 // compute the value of the bond angle
 
-real xab = pos1.x - pos2.x;
-real yab = pos1.y - pos2.y;
-real zab = pos1.z - pos2.z;
+real3 ab = make_real3(pos1.x-pos2.x, pos1.y-pos2.y, pos1.z-pos2.z);
+real3 cb = make_real3(pos3.x-pos2.x, pos3.y-pos2.y, pos3.z-pos2.z);
 
-real xcb = pos3.x - pos2.x;
-real ycb = pos3.y - pos2.y;
-real zcb = pos3.z - pos2.z;
+#if APPLY_PERIODIC
+APPLY_PERIODIC_TO_DELTA(ab)
+APPLY_PERIODIC_TO_DELTA(cb)
+#endif
 
-real rab = SQRT(xab*xab + yab*yab + zab*zab);
-real rcb = SQRT(xcb*xcb + ycb*ycb + zcb*zcb);
+real rab = SQRT(ab.x*ab.x + ab.y*ab.y + ab.z*ab.z);
+real rcb = SQRT(cb.x*cb.x + cb.y*cb.y + cb.z*cb.z);
 
-real xp = ycb*zab - zcb*yab;
-real yp = zcb*xab - xcb*zab;
-real zp = xcb*yab - ycb*xab;
+real xp = cb.y*ab.z - cb.z*ab.y;
+real yp = cb.z*ab.x - cb.x*ab.z;
+real zp = cb.x*ab.y - cb.y*ab.x;
 
 real rp = SQRT(xp*xp + yp*yp + zp*zp);
 
-real dotp = xab*xcb + yab*ycb + zab*zcb;
+real dotp = ab.x*cb.x + ab.y*cb.y + ab.z*cb.z;
 real cosine = rab*rcb > 0 ? (dotp / (rab*rcb)) : (real) 1;
 cosine = (cosine > 1 ? (real) 1 : cosine);
 cosine = (cosine < -1 ? -(real) 1 : cosine);
 real angle;
 if (cosine > 0.99f || cosine < -0.99f) {
     // Highly unlikely a stretch-bend angle will be near 0 or 180, but just in case...
-    real3 cross_prod = cross(make_real3(xab, yab, zab), make_real3(xcb, ycb, zcb));
+    real3 cross_prod = cross(make_real3(ab.x, ab.y, ab.z), make_real3(cb.x, cb.y, cb.z));
     angle = ASIN(SQRT(dot(cross_prod, cross_prod))/(rab*rcb))*RAD_TO_DEG;
     if (cosine < 0.0f)
         angle = 180-angle;
@@ -41,13 +41,13 @@ real dt = angle - RAD_TO_DEG*parameters.z;
 real terma = rab*rp != 0 ? (-RAD_TO_DEG/(rab*rab*rp)) : (real) 0;
 real termc = rcb*rp != 0 ? (RAD_TO_DEG/(rcb*rcb*rp)) : (real) 0;
 
-real ddtdxia = terma * (yab*zp-zab*yp);
-real ddtdyia = terma * (zab*xp-xab*zp);
-real ddtdzia = terma * (xab*yp-yab*xp);
+real ddtdxia = terma * (ab.y*zp-ab.z*yp);
+real ddtdyia = terma * (ab.z*xp-ab.x*zp);
+real ddtdzia = terma * (ab.x*yp-ab.y*xp);
 
-real ddtdxic = termc * (ycb*zp-zcb*yp);
-real ddtdyic = termc * (zcb*xp-xcb*zp);
-real ddtdzic = termc * (xcb*yp-ycb*xp);
+real ddtdxic = termc * (cb.y*zp-cb.z*yp);
+real ddtdyic = termc * (cb.z*xp-cb.x*zp);
+real ddtdzic = termc * (cb.x*yp-cb.y*xp);
 
 // find chain rule terms for the bond length deviations
 
@@ -61,13 +61,13 @@ real frc2 = ((rp != 0) ? force_constants.y : (real) 0);
 
 real drkk = dr1*frc1 + dr2*frc2;
 
-real ddrdxia = terma * xab;
-real ddrdyia = terma * yab;
-real ddrdzia = terma * zab;
+real ddrdxia = terma * ab.x;
+real ddrdyia = terma * ab.y;
+real ddrdzia = terma * ab.z;
 
-real ddrdxic = termc * xcb;
-real ddrdyic = termc * ycb;
-real ddrdzic = termc * zcb;
+real ddrdxic = termc * cb.x;
+real ddrdyic = termc * cb.y;
+real ddrdzic = termc * cb.z;
 
 // get the energy and master chain rule terms for derivatives
 

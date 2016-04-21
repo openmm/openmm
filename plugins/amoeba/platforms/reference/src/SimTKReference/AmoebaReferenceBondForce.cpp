@@ -28,6 +28,13 @@
 using std::vector;
 using namespace OpenMM;
 
+void AmoebaReferenceBondForce::setPeriodic(OpenMM::RealVec* vectors) {
+    usePeriodic = true;
+    boxVectors[0] = vectors[0];
+    boxVectors[1] = vectors[1];
+    boxVectors[2] = vectors[2];
+}
+
 /**---------------------------------------------------------------------------------------
 
    Calculate Amoeba bond ixn (force and energy)
@@ -63,7 +70,10 @@ RealOpenMM AmoebaReferenceBondForce::calculateBondIxn(const RealVec& positionAto
    // get deltaR, R2, and R between 2 atoms
 
    std::vector<RealOpenMM> deltaR;
-   AmoebaReferenceForce::loadDeltaR(positionAtomA, positionAtomB, deltaR);
+   if (usePeriodic)
+       AmoebaReferenceForce::loadDeltaRPeriodic(positionAtomA, positionAtomB, deltaR, boxVectors);
+   else
+       AmoebaReferenceForce::loadDeltaR(positionAtomA, positionAtomB, deltaR);
    RealOpenMM r               = AmoebaReferenceForce::getNorm3(deltaR);
 
    // deltaIdeal = r - r_0

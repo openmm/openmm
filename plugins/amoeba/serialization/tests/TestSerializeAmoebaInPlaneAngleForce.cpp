@@ -56,6 +56,7 @@ void testSerialization() {
     force1.addAngle(0, 2, 3, 5, 2.0, 2.1);
     force1.addAngle(2, 3, 5, 6, 3.0, 2.2);
     force1.addAngle(5, 1, 8, 8, 4.0, 2.3);
+    force1.setUsesPeriodicBoundaryConditions(true);
 
     // Serialize and then deserialize it.
 
@@ -67,6 +68,7 @@ void testSerialization() {
     AmoebaInPlaneAngleForce& force2 = *copy;
 
     ASSERT_EQUAL(force1.getForceGroup(), force2.getForceGroup());
+    ASSERT_EQUAL(force1.usesPeriodicBoundaryConditions(), force2.usesPeriodicBoundaryConditions());
     ASSERT_EQUAL(force1.getAmoebaGlobalInPlaneAngleCubic(),    force2.getAmoebaGlobalInPlaneAngleCubic());
     ASSERT_EQUAL(force1.getAmoebaGlobalInPlaneAngleQuartic(),  force2.getAmoebaGlobalInPlaneAngleQuartic());
     ASSERT_EQUAL(force1.getAmoebaGlobalInPlaneAnglePentic(),   force2.getAmoebaGlobalInPlaneAnglePentic());
