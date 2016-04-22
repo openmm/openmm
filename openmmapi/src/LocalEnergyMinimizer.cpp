@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -108,7 +108,8 @@ void LocalEnergyMinimizer::minimize(Context& context, double tolerance, int maxI
     if (x == NULL)
         throw OpenMMException("LocalEnergyMinimizer: Failed to allocate memory");
     double constraintTol = context.getIntegrator().getConstraintTolerance();
-    double k = tolerance/constraintTol;
+    double workingConstraintTol = max(1e-4, constraintTol);
+    double k = tolerance/workingConstraintTol;
 
     // Initialize the minimizer.
 
@@ -121,7 +122,7 @@ void LocalEnergyMinimizer::minimize(Context& context, double tolerance, int maxI
 
     // Make sure the initial configuration satisfies all constraints.
 
-    context.applyConstraints(constraintTol);
+    context.applyConstraints(workingConstraintTol);
 
     // Record the initial positions and determine a normalization constant for scaling the tolerance.
 
@@ -162,14 +163,14 @@ void LocalEnergyMinimizer::minimize(Context& context, double tolerance, int maxI
             if (error > maxError)
                 maxError = error;
         }
-        if (maxError <= constraintTol)
+        if (maxError <= workingConstraintTol)
             break; // All constraints are satisfied.
         context.setPositions(initialPos);
         if (maxError >= prevMaxError)
             break; // Further tightening the springs doesn't seem to be helping, so just give up.
         prevMaxError = maxError;
         k *= 10;
-        if (maxError > 100*constraintTol) {
+        if (maxError > 100*workingConstraintTol) {
             // We've gotten far enough from a valid state that we might have trouble getting
             // back, so reset to the original positions.
             
@@ -181,5 +182,11 @@ void LocalEnergyMinimizer::minimize(Context& context, double tolerance, int maxI
         }
     }
     lbfgs_free(x);
+    
+    // If necessary, do a final constraint projection to make sure they are satisfied
+    // to the full precision requested by the user.
+    
+    if (constraintTol < workingConstraintTol)
+        context.applyConstraints(workingConstraintTol);
 }
 
