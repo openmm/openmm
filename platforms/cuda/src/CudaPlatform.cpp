@@ -62,14 +62,14 @@ extern "C" OPENMM_EXPORT_CUDA void registerPlatforms() {
 #endif
 
 CudaPlatform::CudaPlatform() {
-    deprecatedPropertyReplacements["CudaDeviceIndex"] = "DeviceIndex";
-    deprecatedPropertyReplacements["CudaDeviceName"] = "DeviceName";
-    deprecatedPropertyReplacements["CudaUseBlockingSync"] = "UseBlockingSync";
-    deprecatedPropertyReplacements["CudaPrecision"] = "Precision";
-    deprecatedPropertyReplacements["CudaUseCpuPme"] = "UseCpuPme";
-    deprecatedPropertyReplacements["CudaTempDirectory"] = "TempDirectory";
-    deprecatedPropertyReplacements["CudaDisablePmeStream"] = "DisablePmeStream";
-    deprecatedPropertyReplacements["CudaDeterministicForces"] = "DeterministicForces";
+    deprecatedPropertyReplacements["CudaDeviceIndex"] = CudaDeviceIndex();
+    deprecatedPropertyReplacements["CudaDeviceName"] = CudaDeviceName();
+    deprecatedPropertyReplacements["CudaUseBlockingSync"] = CudaUseBlockingSync();
+    deprecatedPropertyReplacements["CudaPrecision"] = CudaPrecision();
+    deprecatedPropertyReplacements["CudaUseCpuPme"] = CudaUseCpuPme();
+    deprecatedPropertyReplacements["CudaTempDirectory"] = CudaTempDirectory();
+    deprecatedPropertyReplacements["CudaDisablePmeStream"] = CudaDisablePmeStream();
+    deprecatedPropertyReplacements["CudaDeterministicForces"] = CudaDeterministicForces();
     CudaKernelFactory* factory = new CudaKernelFactory();
     registerKernelFactory(CalcForcesAndEnergyKernel::Name(), factory);
     registerKernelFactory(UpdateStateDataKernel::Name(), factory);

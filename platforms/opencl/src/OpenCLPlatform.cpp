@@ -56,11 +56,11 @@ extern "C" OPENMM_EXPORT_OPENCL void registerPlatforms() {
 #endif
 
 OpenCLPlatform::OpenCLPlatform() {
-    deprecatedPropertyReplacements["OpenCLDeviceIndex"] = "DeviceIndex";
-    deprecatedPropertyReplacements["OpenCLDeviceName"] = "DeviceName";
-    deprecatedPropertyReplacements["OpenCLPrecision"] = "Precision";
-    deprecatedPropertyReplacements["OpenCLUseCpuPme"] = "UseCpuPme";
-    deprecatedPropertyReplacements["OpenCLDisablePmeStream"] = "DisablePmeStream";
+    deprecatedPropertyReplacements["OpenCLDeviceIndex"] = OpenCLDeviceIndex();
+    deprecatedPropertyReplacements["OpenCLDeviceName"] = OpenCLDeviceName();
+    deprecatedPropertyReplacements["OpenCLPrecision"] = OpenCLPrecision();
+    deprecatedPropertyReplacements["OpenCLUseCpuPme"] = OpenCLUseCpuPme();
+    deprecatedPropertyReplacements["OpenCLDisablePmeStream"] = OpenCLDisablePmeStream();
     OpenCLKernelFactory* factory = new OpenCLKernelFactory();
     registerKernelFactory(CalcForcesAndEnergyKernel::Name(), factory);
     registerKernelFactory(UpdateStateDataKernel::Name(), factory);

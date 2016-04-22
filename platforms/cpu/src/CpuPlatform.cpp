@@ -59,7 +59,7 @@ extern "C" OPENMM_EXPORT_CPU void registerPlatforms() {
 map<const ContextImpl*, CpuPlatform::PlatformData*> CpuPlatform::contextData;
 
 CpuPlatform::CpuPlatform() {
-    deprecatedPropertyReplacements["CpuThreads"] = "Threads";
+    deprecatedPropertyReplacements["CpuThreads"] = CpuThreads();
     CpuKernelFactory* factory = new CpuKernelFactory();
     registerKernelFactory(CalcForcesAndEnergyKernel::Name(), factory);
     registerKernelFactory(CalcHarmonicAngleForceKernel::Name(), factory);
