@@ -84,7 +84,7 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
         useMixedPrecision = false;
     }
     else
-        throw OpenMMException("Illegal value for OpenCLPrecision: "+precision);
+        throw OpenMMException("Illegal value for Precision: "+precision);
     try {
         contextIndex = platformData.contexts.size();
         std::vector<cl::Platform> platforms;
@@ -105,7 +105,7 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
             vector<cl::Device> devices;
             platforms[j].getDevices(CL_DEVICE_TYPE_ALL, &devices);
             if (deviceIndex < -1 || deviceIndex >= (int) devices.size())
-                throw OpenMMException("Illegal value for OpenCLDeviceIndex: "+intToString(deviceIndex));
+                throw OpenMMException("Illegal value for DeviceIndex: "+intToString(deviceIndex));
 
             for (int i = 0; i < (int) devices.size(); i++) {
                 // If they supplied a valid deviceIndex, we only look through that one

@@ -197,7 +197,7 @@ int main(int argc, char* argv[]) {
     try {
         registerDrudeCudaKernelFactories();
         if (argc > 1)
-            Platform::getPlatformByName("CUDA").setPropertyDefaultValue("CudaPrecision", std::string(argv[1]));
+            Platform::getPlatformByName("CUDA").setPropertyDefaultValue("Precision", std::string(argv[1]));
         testSingleParticle();
         testAnisotropicParticle();
         testThole();

@@ -746,7 +746,7 @@ double precision:
 ::
 
     platform = Platform.getPlatformByName('CUDA')
-    properties = {'CudaDeviceIndex': '0,1', 'CudaPrecision': 'double'}
+    properties = {'DeviceIndex': '0,1', 'Precision': 'double'}
     simulation = Simulation(prmtop.topology, system, integrator, platform, properties)
 
 .. _force-fields:

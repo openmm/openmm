@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -236,7 +236,9 @@ protected:
      */
     const ContextImpl& getContextImpl(const Context& context) const;
     std::vector<std::string> platformProperties;
+    std::map<std::string, std::string> deprecatedPropertyReplacements;
 private:
+    friend class ContextImpl;
     std::map<std::string, KernelFactory*> kernelFactories;
     std::map<std::string, std::string> defaultProperties;
     static std::vector<Platform*>& getPlatforms();

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -59,6 +59,7 @@ extern "C" OPENMM_EXPORT_CPU void registerPlatforms() {
 map<const ContextImpl*, CpuPlatform::PlatformData*> CpuPlatform::contextData;
 
 CpuPlatform::CpuPlatform() {
+    deprecatedPropertyReplacements["CpuThreads"] = CpuThreads();
     CpuKernelFactory* factory = new CpuKernelFactory();
     registerKernelFactory(CalcForcesAndEnergyKernel::Name(), factory);
     registerKernelFactory(CalcHarmonicAngleForceKernel::Name(), factory);
@@ -83,7 +84,10 @@ CpuPlatform::CpuPlatform() {
 const string& CpuPlatform::getPropertyValue(const Context& context, const string& property) const {
     const ContextImpl& impl = getContextImpl(context);
     const PlatformData& data = getPlatformData(impl);
-    map<string, string>::const_iterator value = data.propertyValues.find(property);
+    string propertyName = property;
+    if (deprecatedPropertyReplacements.find(property) != deprecatedPropertyReplacements.end())
+        propertyName = deprecatedPropertyReplacements.find(property)->second;
+    map<string, string>::const_iterator value = data.propertyValues.find(propertyName);
     if (value != data.propertyValues.end())
         return value->second;
     return ReferencePlatform::getPropertyValue(context, property);
