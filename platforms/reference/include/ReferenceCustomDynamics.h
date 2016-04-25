@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2011-2015 Stanford University and Simbios.
+/* Portions copyright (c) 2011-2016 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -29,7 +29,8 @@
 #include "openmm/CustomIntegrator.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/CustomIntegratorUtilities.h"
-#include "lepton/ExpressionProgram.h"
+#include "openmm/internal/CompiledExpressionSet.h"
+#include "lepton/CompiledExpression.h"
 
 #include <map>
 #include <string>
@@ -44,23 +45,27 @@ private:
     std::vector<RealOpenMM> inverseMasses;
     std::vector<OpenMM::RealVec> sumBuffer, oldPos;
     std::vector<OpenMM::CustomIntegrator::ComputationType> stepType;
-    std::vector<std::string> stepVariable, forceName, energyName;
-    std::vector<std::vector<Lepton::ExpressionProgram> > stepExpressions;
+    std::vector<std::string> stepVariable;
+    std::vector<std::vector<Lepton::CompiledExpression> > stepExpressions;
     std::vector<CustomIntegratorUtilities::Comparison> comparisons;
     std::vector<bool> invalidatesForces, needsForces, needsEnergy, computeBothForceAndEnergy;
     std::vector<int> forceGroupFlags, blockEnd;
     RealOpenMM energy;
-    Lepton::ExpressionProgram kineticEnergyExpression;
+    Lepton::CompiledExpression kineticEnergyExpression;
     bool kineticEnergyNeedsForce;
+    CompiledExpressionSet expressionSet;
+    int xIndex, vIndex, mIndex, fIndex, energyIndex, gaussianIndex, uniformIndex;
+    std::vector<int> forceVariableIndex, energyVariableIndex, perDofVariableIndex, stepVariableIndex;
+
+    void initialize(OpenMM::ContextImpl& context, std::vector<RealOpenMM>& masses, std::map<std::string, RealOpenMM>& globals);
     
     void computePerDof(int numberOfAtoms, std::vector<OpenMM::RealVec>& results, const std::vector<OpenMM::RealVec>& atomCoordinates,
                   const std::vector<OpenMM::RealVec>& velocities, const std::vector<OpenMM::RealVec>& forces, const std::vector<RealOpenMM>& masses,
-                  const std::map<std::string, RealOpenMM>& globals, const std::vector<std::vector<OpenMM::RealVec> >& perDof,
-                  const Lepton::ExpressionProgram& expression, const std::string& forceName);
+                  const std::vector<std::vector<OpenMM::RealVec> >& perDof, const Lepton::CompiledExpression& expression, int forceIndex);
     
     void recordChangedParameters(OpenMM::ContextImpl& context, std::map<std::string, RealOpenMM>& globals);
 
-    bool evaluateCondition(int step, std::map<std::string, RealOpenMM>& globals);
+    bool evaluateCondition(int step);
       
 public:
 
