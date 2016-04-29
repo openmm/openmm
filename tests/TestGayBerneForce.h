@@ -146,6 +146,8 @@ void testEnergyConservation() {
     system.addForce(gb);
     gb->setNonbondedMethod(GayBerneForce::CutoffPeriodic);
     gb->setCutoffDistance(1.0);
+    gb->setUseSwitchingFunction(true);
+    gb->setSwitchingDistance(0.9);
     vector<Vec3> positions;
     for (int x = 0; x < 3; x++) {
         for (int y = 0; y < 3; y++) {
@@ -178,7 +180,7 @@ void testEnergyConservation() {
         if (i == 0)
             initialEnergy = energy;
         else
-            ASSERT_EQUAL_TOL(initialEnergy, energy, 1e-3);
+            ASSERT_EQUAL_TOL(initialEnergy, energy, 1e-4);
     }
 }
 

@@ -228,6 +228,15 @@ RealOpenMM ReferenceGayBerneForce::computeOneInteraction(int particle1, int part
     Matrix B12inv = B12.inverse();
     Matrix G12inv = G12.inverse();
     RealOpenMM detG12 = G12.determinant();
+    
+    // Compute the switching function.
+
+    RealOpenMM switchValue = 1, switchDeriv = 0;
+    if (useSwitchingFunction && r > switchingDistance) {
+        RealOpenMM t = (r-switchingDistance)/(cutoffDistance-switchingDistance);
+        switchValue = 1+t*t*t*(-10+t*(15-t*6));
+        switchDeriv = t*t*(-30+t*(60-t*30))/(cutoffDistance-switchingDistance);
+    }
 
     // Estimate the distance between the ellipsoids and compute the first terms needed for the energy.
 
@@ -240,7 +249,8 @@ RealOpenMM ReferenceGayBerneForce::computeOneInteraction(int particle1, int part
     RealOpenMM eta = SQRT(2*s[particle1]*s[particle2]/detG12);
     RealOpenMM chi = 2*drUnit.dot(B12inv*drUnit);
     chi *= chi;
-
+    RealOpenMM energy = u*eta*chi;
+    
     // Compute the terms needed for the force.
 
     RealVec kappa = G12inv*dr;
@@ -250,7 +260,7 @@ RealOpenMM ReferenceGayBerneForce::computeOneInteraction(int particle1, int part
     RealOpenMM temp = 0.5*sigma12*sigma12*sigma12*rInv2;
     RealVec dudr = (drUnit + (kappa-drUnit*kappa.dot(drUnit))*temp)*dUSLJdr;
     RealVec dchidr = (iota-drUnit*iota.dot(drUnit))*(-8*rInv2*SQRT(chi));
-    RealVec force = (dchidr*u + dudr*chi)*eta;
+    RealVec force = (dchidr*u + dudr*chi)*(eta*switchValue) - drUnit*(energy*switchDeriv);
     forces[particle1] += force;
     forces[particle2] -= force;
 
@@ -314,8 +324,8 @@ RealOpenMM ReferenceGayBerneForce::computeOneInteraction(int particle1, int part
         RealVec detadq;
         for (int i = 0; i < 3; i++)
             detadq += RealVec(a[i][0], a[i][1], a[i][2]).cross(RealVec(d[i][0], d[i][1], d[i][2]));
-        RealVec torque = dchidq*(u*eta) + detadq*(u*chi) + dudq*(eta*chi);
+        RealVec torque = (dchidq*(u*eta) + detadq*(u*chi) + dudq*(eta*chi))*switchValue;
         torques[particle] -= torque;
     }
-    return u*eta*chi;
+    return switchValue*energy;
 }

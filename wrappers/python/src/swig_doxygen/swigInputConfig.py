@@ -412,6 +412,8 @@ UNITS = {
 ("PeriodicTorsionForce", "getTorsionParameters")
  : (None, (None, None, None, None,
            None, 'unit.radian', 'unit.kilojoule_per_mole')),
+("GayBerneForce", "getParticleParameters")
+ : (None, ('unit.nanometer', 'unit.kilojoule_per_mole', None, None, 'unit.nanometer', 'unit.nanometer', 'unit.nanometer', None, None, None)),
 ("Platform", "getDefaultPluginsDirectory") : (None, ()),
 ("Platform", "getPropertyDefaultValue") : (None, ()),
 ("Platform", "getPropertyNames") : (None, ()),
