@@ -70,6 +70,8 @@ private:
     std::vector<Matrix> A, B, G;
 
     void computeEllipsoidFrames(const std::vector<RealVec>& positions);
+    
+    void applyTorques(const std::vector<RealVec>& positions, std::vector<RealVec>& forces, const std::vector<RealVec>& torques);
 
     RealOpenMM computeOneInteraction(int particle1, int particle2, RealOpenMM sigma, RealOpenMM epsilon, const std::vector<RealVec>& positions,
             std::vector<RealVec>& forces, std::vector<RealVec>& torques, const RealVec* boxVectors);
@@ -134,7 +136,7 @@ struct ReferenceGayBerneForce::Matrix {
 };
 
 static RealVec operator*(const RealVec& r, ReferenceGayBerneForce::Matrix& m) {
-    return RealVec(m.v[0][0]*r[0] + m.v[1][1]*r[1] + m.v[2][2]*r[2],
+    return RealVec(m.v[0][0]*r[0] + m.v[1][0]*r[1] + m.v[2][0]*r[2],
                    m.v[0][1]*r[0] + m.v[1][1]*r[1] + m.v[2][1]*r[2],
                    m.v[0][2]*r[0] + m.v[1][2]*r[1] + m.v[2][2]*r[2]);
 }

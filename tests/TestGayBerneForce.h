@@ -64,7 +64,7 @@ void testPointParticles() {
     init_gen_rand(0, sfmt);
     for (int i = 0; i < numParticles; i++) {
         system.addParticle(1.0);
-        gb->addParticle(sigma, epsilon, -1, -1, sigma/2, sigma/2, sigma/2, 1, 1, 1);
+        gb->addParticle(sigma, epsilon, -1, -1, sigma, sigma, sigma, 1, 1, 1);
         nb->addParticle(0, sigma, epsilon);
         positions.push_back(Vec3(2.0*genrand_real2(sfmt), 2.0*genrand_real2(sfmt), 2.0*genrand_real2(sfmt)));
     }
@@ -91,10 +91,10 @@ void testEnergyScales() {
         system.addParticle(1.0);
     GayBerneForce* gb = new GayBerneForce();
     system.addForce(gb);
-    gb->addParticle(sigma, epsilon, 1, 2, sigma/2, sigma/2, sigma/2, 1.1, 1.5, 1.8);
+    gb->addParticle(sigma, epsilon, 1, 2, sigma, sigma, sigma, 1.1, 1.5, 1.8);
     gb->addParticle(1, 0, -1, -1, 1, 1, 1, 1, 1, 1);
     gb->addParticle(1, 0, -1, -1, 1, 1, 1, 1, 1, 1);
-    gb->addParticle(sigma, epsilon, 4, 5, sigma/2, sigma/2, sigma/2, 1.2, 1.6, 1.7);
+    gb->addParticle(sigma, epsilon, 4, 5, sigma, sigma, sigma, 1.2, 1.6, 1.7);
     gb->addParticle(1, 0, -1, -1, 1, 1, 1, 1, 1, 1);
     gb->addParticle(1, 0, -1, -1, 1, 1, 1, 1, 1, 1);
     vector<Vec3> positions(6);
@@ -113,7 +113,7 @@ void testEnergyScales() {
 
     double expectedEnergy = 4*epsilon*(pow(sigma, 12.0)-pow(sigma, 6.0));
     double expectedForce = 4*epsilon*(12*pow(sigma, 12.0)-6*pow(sigma, 6.0));
-    double expectedScale = pow(2.0/(1.1*1.1+1.2*1.2), 2.0);
+    double expectedScale = pow(2.0/(1/sqrt(1.1) + 1/sqrt(1.2)), 2.0);
     State state = context.getState(State::Forces | State::Energy);
     ASSERT_EQUAL_TOL(expectedEnergy*expectedScale, state.getPotentialEnergy(), 1e-5);
     ASSERT_EQUAL_VEC(Vec3(expectedForce*expectedScale, 0, 0), state.getForces()[3], 1e-5);
@@ -121,7 +121,7 @@ void testEnergyScales() {
     positions[4] = Vec3(1, 1, 0);
     positions[5] = Vec3(0, 2, 0);
     context.setPositions(positions);
-    expectedScale = pow(2.0/(1.5*1.5+1.6*1.6), 2.0);
+    expectedScale = pow(2.0/(1/sqrt(1.5) + 1/sqrt(1.6)), 2.0);
     state = context.getState(State::Forces | State::Energy);
     ASSERT_EQUAL_TOL(expectedEnergy*expectedScale, state.getPotentialEnergy(), 1e-5);
     ASSERT_EQUAL_VEC(Vec3(0, expectedForce*expectedScale, 0), state.getForces()[3], 1e-5);
@@ -129,7 +129,7 @@ void testEnergyScales() {
     positions[4] = Vec3(1, 1, 0);
     positions[5] = Vec3(0, 1, 1);
     context.setPositions(positions);
-    expectedScale = pow(2.0/(1.5*1.5+1.7*1.7), 2.0);
+    expectedScale = pow(2.0/(1/sqrt(1.5) + 1/sqrt(1.7)), 2.0);
     state = context.getState(State::Forces | State::Energy);
     ASSERT_EQUAL_TOL(expectedEnergy*expectedScale, state.getPotentialEnergy(), 1e-5);
     ASSERT_EQUAL_VEC(Vec3(0, expectedForce*expectedScale, 0), state.getForces()[3], 1e-5);
@@ -154,7 +154,7 @@ void testEnergyConservation() {
                 system.addParticle(10.0);
                 system.addParticle(1.0);
                 system.addParticle(1.0);
-                gb->addParticle(0.2, 2.0, first+1, first+2, 0.2, 0.25, 0.3, 0.9, 1.0, 1.1);
+                gb->addParticle(0.2, 10.0, first+1, first+2, 0.2, 0.25, 0.3, 0.9, 1.0, 1.1);
                 gb->addParticle(1.0, 0.0, -1, -1, 1, 1, 1, 1, 1, 1);
                 gb->addParticle(1.0, 0.0, -1, -1, 1, 1, 1, 1, 1, 1);
                 positions.push_back(Vec3(x, y, z));
@@ -166,22 +166,19 @@ void testEnergyConservation() {
             }
         }
     }
-    VerletIntegrator integ(0.001);
+    VerletIntegrator integ(0.0005);
     Context context(system, integ, platform);
     context.setPositions(positions);
     context.setVelocitiesToTemperature(300.0);
+    double initialEnergy;
     for (int i = 0; i < 100; i++) {
+        integ.step(5);
         State state = context.getState(State::Energy);
-        printf("%d %g\n", i, state.getPotentialEnergy()+state.getKineticEnergy());
-        integ.step(10);
-    }
-
-    State state = context.getState(State::Positions);
-    for (int i = 0; i < 9; i++) {
-        Vec3 p1 = state.getPositions()[3*i];
-        Vec3 p2 = state.getPositions()[3*i+1];
-        Vec3 p3 = state.getPositions()[3*i+2];
-        printf("%g %g %g, %g %g %g, %g %g %g\n", p1[0], p1[1], p1[2], p2[0]-p1[0], p2[1]-p1[1], p2[2]-p1[2], p3[0]-p1[0], p3[1]-p1[1], p3[2]-p1[2]);
+        double energy = state.getPotentialEnergy()+state.getKineticEnergy();
+        if (i == 0)
+            initialEnergy = energy;
+        else
+            ASSERT_EQUAL_TOL(initialEnergy, energy, 1e-3);
     }
 }
 

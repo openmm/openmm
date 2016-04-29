@@ -44,20 +44,19 @@ namespace OpenMM {
 /**
  * This class implements the Gay-Berne anisotropic potential.  This is similar to a Lennard-Jones potential,
  * but it represents the particles as ellipsoids rather than point particles.  In addition to the standard
- * sigma and epsilon parameters, each particle has three radii r_x, r_y, and r_z that give the size of the
- * ellipsoid along each axis.  It also has three scale factors e_x, e_y, and e_z that scale the strength
+ * sigma and epsilon parameters, each particle has three widths sx, sy, and sz that give the diameter of the
+ * ellipsoid along each axis.  It also has three scale factors ex, ey, and ez that scale the strength
  * of the interaction along each axis.  You can think of this force as a Lennard-Jones interaction computed
- * based on the distance between the nearest points on two ellipsoids.  The interpretation of the scale
- * factors is slightly complicated, but roughly speaking, the strength of the interaction along the ellipsoid's
- * x axis is divided by e_x^2, and likewise for the other axes.  If two particles each have all their
- * radii set to sigma/2 and all their scale factors set 1, the interaction simplifies to a standard Lennard-Jones
- * force between point particles.
+ * based on the distance between the nearest points on two ellipsoids.  The scale factors act as multipliers
+ * for epsilon along each axis, so the strength of the interaction along the ellipsoid's x axis is multiplied by
+ * ex, and likewise for the other axes.  If two particles each have all their widths set to sigma and all their
+ * scale factors set to 1, the interaction simplifies to a standard Lennard-Jones force between point particles.
  *
  * The orientation of a particle's ellipsoid is determined based on the positions of two other particles.
  * The vector to the first particle sets the direction of the x axis.  The vector to the second particle
  * (after subtracting out any x component) sets the direction of the y axis.  If the ellipsoid is axially
- * symmetric (r_y=r_z and e_y=e_z), you can omit the second particle and define only an x axis direction.
- * If the ellipsoid is a sphere (all three radii and all three scale factors are equal), both particles
+ * symmetric (sy=sz and ey=ez), you can omit the second particle and define only an x axis direction.
+ * If the ellipsoid is a sphere (all three widths and all three scale factors are equal), both particles
  * can be omitted.
  *
  * To determine the values of sigma and epsilon for an interaction, this class uses Lorentz-Berthelot
@@ -166,15 +165,15 @@ public:
      * @param epsilon   the epsilon parameter (corresponding to the well depth of the van der Waals interaction), measured in kJ/mol
      * @param xparticle the index of the particle whose position defines the ellipsoid's x axis, or -1 if the ellipsoid is a sphere
      * @param yparticle the index of the particle whose position defines the ellipsoid's y axis, or -1 if the ellipsoid is axially symmetric
-     * @param rx        the radius of the ellipsoid along its x axis
-     * @param ry        the radius of the ellipsoid along its y axis
-     * @param rz        the radius of the ellipsoid along its z axis
+     * @param sx        the diameter of the ellipsoid along its x axis
+     * @param sy        the diameter of the ellipsoid along its y axis
+     * @param sz        the diameter of the ellipsoid along its z axis
      * @param ex        the factor by which epsilon is scaled along the ellipsoid's x axis
      * @param ey        the factor by which epsilon is scaled along the ellipsoid's y axis
      * @param ez        the factor by which epsilon is scaled along the ellipsoid's z axis
      * @return the index of the particle that was added
      */
-    int addParticle(double sigma, double epsilon, int xparticle, int yparticle, double rx, double ry, double rz, double ex, double ey, double ez);
+    int addParticle(double sigma, double epsilon, int xparticle, int yparticle, double sx, double sy, double sz, double ex, double ey, double ez);
     /**
      * Get the parameters for a particle.
      *
@@ -183,14 +182,14 @@ public:
      * @param[out] epsilon   the epsilon parameter (corresponding to the well depth of the van der Waals interaction), measured in kJ/mol
      * @param[out] xparticle the index of the particle whose position defines the ellipsoid's x axis, or -1 if the ellipsoid is a sphere
      * @param[out] yparticle the index of the particle whose position defines the ellipsoid's y axis, or -1 if the ellipsoid is axially symmetric
-     * @param[out] rx        the radius of the ellipsoid along its x axis
-     * @param[out] ry        the radius of the ellipsoid along its y axis
-     * @param[out] rz        the radius of the ellipsoid along its z axis
+     * @param[out] sx        the diameter of the ellipsoid along its x axis
+     * @param[out] sy        the diameter of the ellipsoid along its y axis
+     * @param[out] sz        the diameter of the ellipsoid along its z axis
      * @param[out] ex        the factor by which epsilon is scaled along the ellipsoid's x axis
      * @param[out] ey        the factor by which epsilon is scaled along the ellipsoid's y axis
      * @param[out] ez        the factor by which epsilon is scaled along the ellipsoid's z axis
      */
-    void getParticleParameters(int index, double& sigma, double& epsilon, int& xparticle, int& yparticle, double& rx, double& ry, double& rz, double& ex, double& ey, double& ez) const;
+    void getParticleParameters(int index, double& sigma, double& epsilon, int& xparticle, int& yparticle, double& sx, double& sy, double& sz, double& ex, double& ey, double& ez) const;
     /**
      * Set the parameters for a particle.
      *
@@ -199,14 +198,14 @@ public:
      * @param epsilon   the epsilon parameter (corresponding to the well depth of the van der Waals interaction), measured in kJ/mol
      * @param xparticle the index of the particle whose position defines the ellipsoid's x axis, or -1 if the ellipsoid is a sphere
      * @param yparticle the index of the particle whose position defines the ellipsoid's y axis, or -1 if the ellipsoid is axially symmetric
-     * @param rx        the radius of the ellipsoid along its x axis
-     * @param ry        the radius of the ellipsoid along its y axis
-     * @param rz        the radius of the ellipsoid along its z axis
+     * @param sx        the diameter of the ellipsoid along its x axis
+     * @param sy        the diameter of the ellipsoid along its y axis
+     * @param sz        the diameter of the ellipsoid along its z axis
      * @param ex        the factor by which epsilon is scaled along the ellipsoid's x axis
      * @param ey        the factor by which epsilon is scaled along the ellipsoid's y axis
      * @param ez        the factor by which epsilon is scaled along the ellipsoid's z axis
      */
-    void setParticleParameters(int index, double sigma, double epsilon, int xparticle, int yparticle, double rx, double ry, double rz, double ex, double ey, double ez);
+    void setParticleParameters(int index, double sigma, double epsilon, int xparticle, int yparticle, double sx, double sy, double sz, double ex, double ey, double ez);
     /**
      * Add an interaction to the list of exceptions that should be calculated differently from other interactions.  If
      * epsilon is equal to 0, this will cause the interaction to be completely omitted from force and energy calculations.
@@ -284,13 +283,13 @@ private:
 class GayBerneForce::ParticleInfo {
 public:
     int xparticle, yparticle;
-    double sigma, epsilon, rx, ry, rz, ex, ey, ez;
+    double sigma, epsilon, sx, sy, sz, ex, ey, ez;
     ParticleInfo() {
         xparticle = yparticle = -1;
-        sigma = epsilon = rx = ry = rz = ex = ey = ez = 0.0;
+        sigma = epsilon = sx = sy = sz = ex = ey = ez = 0.0;
     }
-    ParticleInfo(double sigma, double epsilon, int xparticle, int yparticle, double rx, double ry, double rz, double ex, double ey, double ez) :
-        sigma(sigma), epsilon(epsilon), xparticle(xparticle), yparticle(yparticle), rx(rx), ry(ry), rz(rz), ex(ex), ey(ey), ez(ez) {
+    ParticleInfo(double sigma, double epsilon, int xparticle, int yparticle, double sx, double sy, double sz, double ex, double ey, double ez) :
+        sigma(sigma), epsilon(epsilon), xparticle(xparticle), yparticle(yparticle), sx(sx), sy(sy), sz(sz), ex(ex), ey(ey), ez(ez) {
     }
 };
 

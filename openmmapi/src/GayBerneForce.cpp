@@ -82,36 +82,36 @@ void GayBerneForce::setSwitchingDistance(double distance) {
     switchingDistance = distance;
 }
 
-int GayBerneForce::addParticle(double sigma, double epsilon, int xparticle, int yparticle, double rx, double ry, double rz, double ex, double ey, double ez) {
-    if (yparticle == -1 && (ry != rz || ey != ez))
+int GayBerneForce::addParticle(double sigma, double epsilon, int xparticle, int yparticle, double sx, double sy, double sz, double ex, double ey, double ez) {
+    if (yparticle == -1 && (sy != sz || ey != ez))
         throw OpenMMException("GayBerneForce: yparticle is -1 for a particle that is not axially symmetric");
-    if (xparticle == -1 && (rx != rz || ex != ez))
+    if (xparticle == -1 && (sx != sz || ex != ez))
         throw OpenMMException("GayBerneForce: xparticle is -1 for a particle that is not spherical");
     if (xparticle == -1 && yparticle != -1)
         throw OpenMMException("GayBerneForce: xparticle cannot be -1 if yparticle is not also -1");
-    particles.push_back(ParticleInfo(sigma, epsilon, xparticle, yparticle, rx, ry, rz, ex, ey, ez));
+    particles.push_back(ParticleInfo(sigma, epsilon, xparticle, yparticle, sx, sy, sz, ex, ey, ez));
     return particles.size()-1;
 }
 
-void GayBerneForce::getParticleParameters(int index, double& sigma, double& epsilon, int& xparticle, int& yparticle, double& rx, double& ry, double& rz, double& ex, double& ey, double& ez) const {
+void GayBerneForce::getParticleParameters(int index, double& sigma, double& epsilon, int& xparticle, int& yparticle, double& sx, double& sy, double& sz, double& ex, double& ey, double& ez) const {
     ASSERT_VALID_INDEX(index, particles);
     sigma = particles[index].sigma;
     epsilon = particles[index].epsilon;
     xparticle = particles[index].xparticle;
     yparticle = particles[index].yparticle;
-    rx = particles[index].rx;
-    ry = particles[index].ry;
-    rz = particles[index].rz;
+    sx = particles[index].sx;
+    sy = particles[index].sy;
+    sz = particles[index].sz;
     ex = particles[index].ex;
     ey = particles[index].ey;
     ez = particles[index].ez;
 }
 
-void GayBerneForce::setParticleParameters(int index, double sigma, double epsilon, int xparticle, int yparticle, double rx, double ry, double rz, double ex, double ey, double ez) {
+void GayBerneForce::setParticleParameters(int index, double sigma, double epsilon, int xparticle, int yparticle, double sx, double sy, double sz, double ex, double ey, double ez) {
     ASSERT_VALID_INDEX(index, particles);
-    if (yparticle == -1 && (ry != rz || ey != ez))
+    if (yparticle == -1 && (sy != sz || ey != ez))
         throw OpenMMException("GayBerneForce: yparticle is -1 for a particle that is not axially symmetric");
-    if (xparticle == -1 && (rx != rz || ex != ez))
+    if (xparticle == -1 && (sx != sz || ex != ez))
         throw OpenMMException("GayBerneForce: xparticle is -1 for a particle that is not spherical");
     if (xparticle == -1 && yparticle != -1)
         throw OpenMMException("GayBerneForce: xparticle cannot be -1 if yparticle is not also -1");
@@ -119,9 +119,9 @@ void GayBerneForce::setParticleParameters(int index, double sigma, double epsilo
     particles[index].epsilon = epsilon;
     particles[index].xparticle = xparticle;
     particles[index].yparticle = yparticle;
-    particles[index].rx = rx;
-    particles[index].ry = ry;
-    particles[index].rz = rx;
+    particles[index].sx = sx;
+    particles[index].sy = sy;
+    particles[index].sz = sz;
     particles[index].ex = ex;
     particles[index].ey = ey;
     particles[index].ez = ez;

@@ -44,7 +44,11 @@ ReferenceGayBerneForce::ReferenceGayBerneForce(const GayBerneForce& force) {
     particles.resize(numParticles);
     for (int i = 0; i < numParticles; i++) {
         ParticleInfo& p = particles[i];
-        force.getParticleParameters(i, p.sigma, p.epsilon, p.xparticle, p.yparticle, p.rx, p.ry, p.rz, p.ex, p.ey, p.ez);
+        double sx, sy, sz;
+        force.getParticleParameters(i, p.sigma, p.epsilon, p.xparticle, p.yparticle, sx, sy, sz, p.ex, p.ey, p.ez);
+        p.rx = 0.5*sx;
+        p.ry = 0.5*sy;
+        p.rz = 0.5*sz;
     }
     int numExceptions = force.getNumExceptions();
     exceptions.resize(numExceptions);
@@ -110,6 +114,10 @@ RealOpenMM ReferenceGayBerneForce::calculateForce(const vector<RealVec>& positio
         ExceptionInfo& e = exceptions[i];
         energy += computeOneInteraction(e.particle1, e.particle2, e.sigma, e.epsilon, positions, forces, torques, boxVectors);
     }
+    
+    // Apply torques.
+    
+    applyTorques(positions, forces, torques);
     return energy;
 }
 
@@ -156,7 +164,7 @@ void ReferenceGayBerneForce::computeEllipsoidFrames(const vector<RealVec>& posit
         a[2][1] = zdir[1];
         a[2][2] = zdir[2];
         RealVec r2(p.rx*p.rx, p.ry*p.ry, p.rz*p.rz);
-        RealVec e2(p.ex*p.ex, p.ey*p.ey, p.ez*p.ez);
+        RealVec e2(1/sqrt(p.ex), 1/sqrt(p.ey), 1/sqrt(p.ez));
         for (int i = 0; i < 3; i++)
             for (int j = 0; j < 3; j++) {
                 b[i][j] = 0;
@@ -166,6 +174,34 @@ void ReferenceGayBerneForce::computeEllipsoidFrames(const vector<RealVec>& posit
                     g[i][j] += a[k][i]*r2[k]*a[k][j];
                 }
             }
+    }
+}
+
+void ReferenceGayBerneForce::applyTorques(const vector<RealVec>& positions, vector<RealVec>& forces, const vector<RealVec>& torques) {
+    int numParticles = particles.size();
+    for (int particle = 0; particle < numParticles; particle++) {
+        ParticleInfo& p = particles[particle];
+        RealVec pos = positions[particle];
+        if (p.xparticle != -1) {
+            // Apply a force to the x particle.
+            
+            RealVec dx = positions[p.xparticle]-pos;
+            double dx2 = dx.dot(dx);
+            RealVec f = torques[particle].cross(dx)/dx2;
+            forces[p.xparticle] += f;
+            forces[particle] -= f;
+            if (p.yparticle != -1) {
+                // Apply a force to the y particle.  This is based on the component of the torque
+                // that was not already applied to the x particle.
+                
+                RealVec dy = positions[p.yparticle]-pos;
+                double dy2 = dy.dot(dy);
+                RealVec torque = dx*(torques[particle].dot(dx)/dx2);
+                f = torque.cross(dy)/dy2;
+                forces[p.yparticle] += f;
+                forces[particle] -= f;
+            }
+        }
     }
 }
 
@@ -195,8 +231,6 @@ RealOpenMM ReferenceGayBerneForce::computeOneInteraction(int particle1, int part
 
     // Estimate the distance between the ellipsoids and compute the first terms needed for the energy.
 
-    ParticleInfo& p1 = particles[particle1];
-    ParticleInfo& p2 = particles[particle2];
     RealOpenMM sigma12 = 1/SQRT(0.5*drUnit.dot(G12inv*drUnit));
     RealOpenMM h12 = r - sigma12;
     RealOpenMM rho = sigma/(h12+sigma);
@@ -224,11 +258,12 @@ RealOpenMM ReferenceGayBerneForce::computeOneInteraction(int particle1, int part
 
     for (int j = 0; j < 2; j++) {
         int particle = (j == 0 ? particle1 : particle2);
-        RealVec dudq = A[particle]*((kappa*G[particle]).cross(kappa*temp));
-        RealVec dchidq = (A[particle]*((iota*B[particle]).cross(iota)))*(-4*rInv2);
+        RealVec dudq = (kappa*G[particle]).cross(kappa*(temp*dUSLJdr));
+        RealVec dchidq = (iota*B[particle]).cross(iota)*(-4*rInv2);
         RealOpenMM (&g12)[3][3] = G12.v;
         RealOpenMM (&a)[3][3] = A[particle].v;
-        RealVec scale = RealVec(particles[particle].rx, particles[particle].ry, particles[particle].rz)*(-eta/detG12);
+        ParticleInfo& p = particles[particle];
+        RealVec scale = RealVec(p.rx*p.rx, p.ry*p.ry, p.rz*p.rz)*(-0.5*eta/detG12);
         Matrix D;
         RealOpenMM (&d)[3][3] = D.v;
         d[0][0] = scale[0]*(g12[1][2]*g12[0][1]*a[0][2] + 2*g12[1][1]*g12[2][2]*a[0][0] -
@@ -280,7 +315,7 @@ RealOpenMM ReferenceGayBerneForce::computeOneInteraction(int particle1, int part
         for (int i = 0; i < 3; i++)
             detadq += RealVec(a[i][0], a[i][1], a[i][2]).cross(RealVec(d[i][0], d[i][1], d[i][2]));
         RealVec torque = dchidq*(u*eta) + detadq*(u*chi) + dudq*(eta*chi);
-        torques[particle] += torque;
+        torques[particle] -= torque;
     }
     return u*eta*chi;
 }
