@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -1203,6 +1203,25 @@ void CpuCalcCustomManyParticleForceKernel::copyParametersToContext(ContextImpl& 
         for (int j = 0; j < numParameters; j++)
             particleParamArray[i][j] = static_cast<RealOpenMM>(parameters[j]);
     }
+}
+
+CpuCalcGayBerneForceKernel::~CpuCalcGayBerneForceKernel() {
+    if (ixn != NULL)
+        delete ixn;
+}
+
+void CpuCalcGayBerneForceKernel::initialize(const System& system, const GayBerneForce& force) {
+    ixn = new CpuGayBerneForce(force);
+}
+
+double CpuCalcGayBerneForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    return ixn->calculateForce(extractPositions(context), extractForces(context), extractBoxVectors(context), data);
+}
+
+void CpuCalcGayBerneForceKernel::copyParametersToContext(ContextImpl& context, const GayBerneForce& force) {
+    delete ixn;
+    ixn = NULL;
+    ixn = new CpuGayBerneForce(force);
 }
 
 CpuIntegrateLangevinStepKernel::~CpuIntegrateLangevinStepKernel() {

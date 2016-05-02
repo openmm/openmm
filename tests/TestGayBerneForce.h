@@ -184,6 +184,42 @@ void testEnergyConservation() {
     }
 }
 
+void testExceptions() {
+    // Create two Lennard-Jones particles for which the energy scale factors vary,
+    // then override their interaction with an exception.
+
+    const double sigma = 0.5;
+    const double epsilon = 1.5;
+    System system;
+    for (int i = 0; i < 6; i++)
+        system.addParticle(1.0);
+    GayBerneForce* gb = new GayBerneForce();
+    system.addForce(gb);
+    gb->addParticle(sigma, epsilon, 1, 2, sigma, sigma, sigma, 1.1, 1.5, 1.8);
+    gb->addParticle(1, 0, -1, -1, 1, 1, 1, 1, 1, 1);
+    gb->addParticle(1, 0, -1, -1, 1, 1, 1, 1, 1, 1);
+    gb->addParticle(sigma, epsilon, 4, 5, sigma, sigma, sigma, 1.2, 1.6, 1.7);
+    gb->addParticle(1, 0, -1, -1, 1, 1, 1, 1, 1, 1);
+    gb->addParticle(1, 0, -1, -1, 1, 1, 1, 1, 1, 1);
+    gb->addException(0, 3, sigma, 3.5*epsilon);
+    vector<Vec3> positions(6);
+    positions[0] = Vec3(0, 0, 0);
+    positions[1] = Vec3(1, 0, 0);
+    positions[2] = Vec3(0, 1, 0);
+    positions[3] = Vec3(1, 0, 0);
+    positions[4] = Vec3(2, 0, 0);
+    positions[5] = Vec3(1, 1, 0);
+    VerletIntegrator integ(0.001);
+    Context context(system, integ, platform);
+    context.setPositions(positions);
+    double expectedEnergy = 3.5*4*epsilon*(pow(sigma, 12.0)-pow(sigma, 6.0));
+    double expectedForce = 3.5*4*epsilon*(12*pow(sigma, 12.0)-6*pow(sigma, 6.0));
+    double expectedScale = pow(2.0/(1/sqrt(1.1) + 1/sqrt(1.2)), 2.0);
+    State state = context.getState(State::Forces | State::Energy);
+    ASSERT_EQUAL_TOL(expectedEnergy*expectedScale, state.getPotentialEnergy(), 1e-5);
+    ASSERT_EQUAL_VEC(Vec3(expectedForce*expectedScale, 0, 0), state.getForces()[3], 1e-5);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -192,6 +228,7 @@ int main(int argc, char* argv[]) {
         testPointParticles();
         testEnergyScales();
         testEnergyConservation();
+        testExceptions();
         runPlatformTests();
     }
     catch(const exception& e) {

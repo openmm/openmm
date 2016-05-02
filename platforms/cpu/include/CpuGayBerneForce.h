@@ -29,23 +29,30 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#ifndef __ReferenceGayBerneForce_H__
-#define __ReferenceGayBerneForce_H__
+#ifndef OPENMM_CPU_GAYBERNEFORCE_H__
+#define OPENMM_CPU_GAYBERNEFORCE_H__
 
 #include "openmm/GayBerneForce.h"
+#include "CpuNeighborList.h"
+#include "CpuPlatform.h"
 #include "RealVec.h"
 #include <set>
 #include <utility>
 
 namespace OpenMM {
 
-class OPENMM_EXPORT ReferenceGayBerneForce {
+class OPENMM_EXPORT CpuGayBerneForce {
 public:
     struct Matrix;
     /**
      * Constructor.
      */
-    ReferenceGayBerneForce(const GayBerneForce& force);
+    CpuGayBerneForce(const GayBerneForce& force);
+
+    /**
+     * Destructor.
+     */
+    ~CpuGayBerneForce();
 
     /**
      * Compute the interaction.
@@ -53,9 +60,10 @@ public:
      * @param positions     the positions of the atoms
      * @param forces        forces will be added to this vector
      * @param boxVectors    the periodic box vectors
+     * @param data          the platform data for the current context
      * @return the energy of the interaction
      */
-    RealOpenMM calculateForce(const std::vector<RealVec>& positions, std::vector<RealVec>& forces, const RealVec* boxVectors);
+    RealOpenMM calculateForce(const std::vector<RealVec>& positions, std::vector<RealVec>& forces, const RealVec* boxVectors, CpuPlatform::PlatformData& data);
 
 private:
     struct ParticleInfo;
@@ -63,11 +71,13 @@ private:
     std::vector<ParticleInfo> particles;
     std::vector<ExceptionInfo> exceptions;
     std::set<std::pair<int, int> > exclusions;
+    std::vector<std::set<int> > particleExclusions;
     GayBerneForce::NonbondedMethod nonbondedMethod;
     RealOpenMM cutoffDistance, switchingDistance;
     bool useSwitchingFunction;
     std::vector<RealOpenMM> s;
     std::vector<Matrix> A, B, G;
+    CpuNeighborList* neighborList;
 
     void computeEllipsoidFrames(const std::vector<RealVec>& positions);
     
@@ -77,17 +87,18 @@ private:
             std::vector<RealVec>& forces, std::vector<RealVec>& torques, const RealVec* boxVectors);
 };
 
-struct ReferenceGayBerneForce::ParticleInfo {
+struct CpuGayBerneForce::ParticleInfo {
     int xparticle, yparticle;
-    RealOpenMM sigma, epsilon, rx, ry, rz, ex, ey, ez;
+    RealOpenMM sigmaOver2, sqrtEpsilon, rx, ry, rz, ex, ey, ez;
+    bool isPointParticle;
 };
 
-struct ReferenceGayBerneForce::ExceptionInfo {
+struct CpuGayBerneForce::ExceptionInfo {
     int particle1, particle2;
     RealOpenMM sigma, epsilon;
 };
 
-struct ReferenceGayBerneForce::Matrix {
+struct CpuGayBerneForce::Matrix {
     RealOpenMM v[3][3];
     RealVec operator*(const RealVec& r) {
         return RealVec(v[0][0]*r[0] + v[0][1]*r[1] + v[0][2]*r[2],
@@ -124,7 +135,7 @@ struct ReferenceGayBerneForce::Matrix {
     }
 };
 
-static RealVec operator*(const RealVec& r, ReferenceGayBerneForce::Matrix& m) {
+static RealVec operator*(const RealVec& r, CpuGayBerneForce::Matrix& m) {
     return RealVec(m.v[0][0]*r[0] + m.v[1][0]*r[1] + m.v[2][0]*r[2],
                    m.v[0][1]*r[0] + m.v[1][1]*r[1] + m.v[2][1]*r[2],
                    m.v[0][2]*r[0] + m.v[1][2]*r[1] + m.v[2][2]*r[2]);
@@ -132,4 +143,4 @@ static RealVec operator*(const RealVec& r, ReferenceGayBerneForce::Matrix& m) {
 
 } // namespace OpenMM
 
-#endif // __ReferenceGayBerneForce_H__
+#endif // OPENMM_CPU_GAYBERNEFORCE_H__
