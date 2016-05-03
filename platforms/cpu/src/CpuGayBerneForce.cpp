@@ -412,11 +412,13 @@ RealOpenMM CpuGayBerneForce::computeOneInteraction(int particle1, int particle2,
 
     for (int j = 0; j < 2; j++) {
         int particle = (j == 0 ? particle1 : particle2);
+        ParticleInfo& p = particles[particle];
+        if (p.isPointParticle)
+            continue;
         RealVec dudq = (kappa*G[particle]).cross(kappa*(temp*dUSLJdr));
         RealVec dchidq = (iota*B[particle]).cross(iota)*(-4*rInv2);
         RealOpenMM (&g12)[3][3] = G12.v;
         RealOpenMM (&a)[3][3] = A[particle].v;
-        ParticleInfo& p = particles[particle];
         RealVec scale = RealVec(p.rx*p.rx, p.ry*p.ry, p.rz*p.rz)*(-0.5*eta/detG12);
         Matrix D;
         RealOpenMM (&d)[3][3] = D.v;
