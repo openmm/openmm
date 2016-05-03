@@ -1215,7 +1215,7 @@ void CpuCalcGayBerneForceKernel::initialize(const System& system, const GayBerne
 }
 
 double CpuCalcGayBerneForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    return ixn->calculateForce(extractPositions(context), extractForces(context), extractBoxVectors(context), data);
+    return ixn->calculateForce(extractPositions(context), extractForces(context), data.threadForce, extractBoxVectors(context), data);
 }
 
 void CpuCalcGayBerneForceKernel::copyParametersToContext(ContextImpl& context, const GayBerneForce& force) {

@@ -33,6 +33,7 @@
 #define OPENMM_CPU_GAYBERNEFORCE_H__
 
 #include "openmm/GayBerneForce.h"
+#include "openmm/internal/ThreadPool.h"
 #include "CpuNeighborList.h"
 #include "CpuPlatform.h"
 #include "RealVec.h"
@@ -44,6 +45,8 @@ namespace OpenMM {
 class OPENMM_EXPORT CpuGayBerneForce {
 public:
     struct Matrix;
+    class ComputeTask;
+
     /**
      * Constructor.
      */
@@ -59,11 +62,17 @@ public:
      *
      * @param positions     the positions of the atoms
      * @param forces        forces will be added to this vector
+     * @param threadForce   individual threads can add their forces to this vector
      * @param boxVectors    the periodic box vectors
      * @param data          the platform data for the current context
      * @return the energy of the interaction
      */
-    RealOpenMM calculateForce(const std::vector<RealVec>& positions, std::vector<RealVec>& forces, const RealVec* boxVectors, CpuPlatform::PlatformData& data);
+    RealOpenMM calculateForce(const std::vector<RealVec>& positions, std::vector<RealVec>& forces, std::vector<AlignedArray<float> >& threadForce, RealVec* boxVectors, CpuPlatform::PlatformData& data);
+
+    /**
+     * This routine contains the code executed by each thread.
+     */
+    void threadComputeForce(ThreadPool& threads, int threadIndex);
 
 private:
     struct ParticleInfo;
@@ -78,13 +87,20 @@ private:
     std::vector<RealOpenMM> s;
     std::vector<Matrix> A, B, G;
     CpuNeighborList* neighborList;
+    std::vector<double> threadEnergy;
+    std::vector<std::vector<RealVec> > threadTorque;
+    // The following variables are used to make information accessible to the individual threads.
+    RealVec const* positions;
+    std::vector<AlignedArray<float> >* threadForce;
+    RealVec* boxVectors;
+    void* atomicCounter;
 
     void computeEllipsoidFrames(const std::vector<RealVec>& positions);
     
-    void applyTorques(const std::vector<RealVec>& positions, std::vector<RealVec>& forces, const std::vector<RealVec>& torques);
+    void applyTorques(const std::vector<RealVec>& positions, std::vector<RealVec>& forces);
 
-    RealOpenMM computeOneInteraction(int particle1, int particle2, RealOpenMM sigma, RealOpenMM epsilon, const std::vector<RealVec>& positions,
-            std::vector<RealVec>& forces, std::vector<RealVec>& torques, const RealVec* boxVectors);
+    RealOpenMM computeOneInteraction(int particle1, int particle2, RealOpenMM sigma, RealOpenMM epsilon, const RealVec* positions,
+            float* forces, std::vector<RealVec>& torques, const RealVec* boxVectors);
 };
 
 struct CpuGayBerneForce::ParticleInfo {

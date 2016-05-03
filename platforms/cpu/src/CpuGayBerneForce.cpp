@@ -33,10 +33,21 @@
 #include "ReferenceForce.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/GayBerneForce.h"
+#include "openmm/internal/gmx_atomic.h"
 #include <cmath>
 
 using namespace OpenMM;
 using namespace std;
+
+class CpuGayBerneForce::ComputeTask : public ThreadPool::Task {
+public:
+    ComputeTask(CpuGayBerneForce& owner) : owner(owner) {
+    }
+    void execute(ThreadPool& threads, int threadIndex) {
+        owner.threadComputeForce(threads, threadIndex);
+    }
+    CpuGayBerneForce& owner;
+};
 
 CpuGayBerneForce::CpuGayBerneForce(const GayBerneForce& force) : neighborList(NULL) {
     // Record the force parameters.
@@ -97,7 +108,7 @@ CpuGayBerneForce::~CpuGayBerneForce() {
         delete neighborList;
 }
 
-RealOpenMM CpuGayBerneForce::calculateForce(const vector<RealVec>& positions, vector<RealVec>& forces, const RealVec* boxVectors, CpuPlatform::PlatformData& data) {
+RealOpenMM CpuGayBerneForce::calculateForce(const vector<RealVec>& positions, std::vector<RealVec>& forces, std::vector<AlignedArray<float> >& threadForce, RealVec* boxVectors, CpuPlatform::PlatformData& data) {
     if (nonbondedMethod == GayBerneForce::CutoffPeriodic) {
         double minAllowedSize = 1.999999*cutoffDistance;
         if (boxVectors[0][0] < minAllowedSize || boxVectors[1][1] < minAllowedSize || boxVectors[2][2] < minAllowedSize)
@@ -114,12 +125,61 @@ RealOpenMM CpuGayBerneForce::calculateForce(const vector<RealVec>& positions, ve
 
     computeEllipsoidFrames(positions);
 
-    // Compute standard interactions.
-
+    // Record the parameters for the threads.
+    
+    ThreadPool& threads = data.threads;
+    int numThreads = threads.getNumThreads();
+    this->positions = &positions[0];
+    this->threadForce = &threadForce;
+    this->boxVectors = boxVectors;
+    threadEnergy.resize(numThreads);
+    threadTorque.resize(numThreads);
+    gmx_atomic_t counter;
+    gmx_atomic_set(&counter, 0);
+    this->atomicCounter = &counter;
+    
+    // Signal the threads to compute the pairwise interactions.
+    
+    ComputeTask task(*this);
+    threads.execute(task);
+    threads.waitForThreads();
+    
+    // Signal the threads to compute exceptions.
+    
+    gmx_atomic_set(&counter, 0);
+    threads.resumeThreads();
+    threads.waitForThreads();
+    
+    // Combine the energies from all the threads.
+    
     double energy = 0;
-    vector<RealVec> torques(numParticles, Vec3());
+    for (int i = 0; i < numThreads; i++)
+        energy += threadEnergy[i];
+    
+    // Apply torques.
+    
+    applyTorques(positions, forces);
+    return energy;
+}
+
+void CpuGayBerneForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
+    int numParticles = particles.size();
+    int numThreads = threads.getNumThreads();
+    threadEnergy[threadIndex] = 0;
+    float* forces = &(*threadForce)[threadIndex][0];
+    vector<RealVec>& torques = threadTorque[threadIndex];
+    torques.resize(numParticles);
+    for (int i = 0; i < numParticles; i++)
+        torques[i] = RealVec();
+    double energy = 0.0;
+
+    // Compute this thread's subset of interactions.
+    
     if (neighborList == NULL) {
-        for (int i = 1; i < numParticles; i++) {
+        while (true) {
+            int i = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            if (i >= numParticles)
+                break;
             if (particles[i].sqrtEpsilon == 0.0f)
                 continue;
             for (int j = 0; j < i; j++) {
@@ -134,7 +194,10 @@ RealOpenMM CpuGayBerneForce::calculateForce(const vector<RealVec>& positions, ve
         }
     }
     else {
-        for (int blockIndex = 0; blockIndex < neighborList->getNumBlocks(); blockIndex++) {
+        while (true) {
+            int blockIndex = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            if (blockIndex >= neighborList->getNumBlocks())
+                break;
             const int* blockAtom = &neighborList->getSortedAtoms()[4*blockIndex];
             const vector<int>& neighbors = neighborList->getBlockNeighbors(blockIndex);
             const vector<char>& exclusions = neighborList->getBlockExclusions(blockIndex);
@@ -158,16 +221,20 @@ RealOpenMM CpuGayBerneForce::calculateForce(const vector<RealVec>& positions, ve
 
     // Compute exceptions.
 
+    threads.syncThreads();
     int numExceptions = exceptions.size();
-    for (int i = 0; i < numExceptions; i++) {
-        ExceptionInfo& e = exceptions[i];
-        energy += computeOneInteraction(e.particle1, e.particle2, e.sigma, e.epsilon, positions, forces, torques, boxVectors);
+    const int groupSize = max(1, numExceptions/(10*numThreads));
+    while (true) {
+        int start = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), groupSize);
+        if (start >= numExceptions)
+            break;
+        int end = min(start+groupSize, numExceptions);
+        for (int i = start; i < end; i++) {
+            ExceptionInfo& e = exceptions[i];
+            energy += computeOneInteraction(e.particle1, e.particle2, e.sigma, e.epsilon, positions, forces, torques, boxVectors);
+        }
     }
-    
-    // Apply torques.
-    
-    applyTorques(positions, forces, torques);
-    return energy;
+    threadEnergy[threadIndex] = energy;
 }
 
 void CpuGayBerneForce::computeEllipsoidFrames(const vector<RealVec>& positions) {
@@ -226,17 +293,24 @@ void CpuGayBerneForce::computeEllipsoidFrames(const vector<RealVec>& positions) 
     }
 }
 
-void CpuGayBerneForce::applyTorques(const vector<RealVec>& positions, vector<RealVec>& forces, const vector<RealVec>& torques) {
+void CpuGayBerneForce::applyTorques(const vector<RealVec>& positions, vector<RealVec>& forces) {
     int numParticles = particles.size();
+    int numThreads = threadTorque.size();
     for (int particle = 0; particle < numParticles; particle++) {
         ParticleInfo& p = particles[particle];
         RealVec pos = positions[particle];
         if (p.xparticle != -1) {
+            // Add up the torques from the individual threads.
+            
+            RealVec torque;
+            for (int i = 0; i < numThreads; i++)
+                torque += threadTorque[i][particle];
+            
             // Apply a force to the x particle.
             
             RealVec dx = positions[p.xparticle]-pos;
             double dx2 = dx.dot(dx);
-            RealVec f = torques[particle].cross(dx)/dx2;
+            RealVec f = torque.cross(dx)/dx2;
             forces[p.xparticle] += f;
             forces[particle] -= f;
             if (p.yparticle != -1) {
@@ -245,8 +319,8 @@ void CpuGayBerneForce::applyTorques(const vector<RealVec>& positions, vector<Rea
                 
                 RealVec dy = positions[p.yparticle]-pos;
                 double dy2 = dy.dot(dy);
-                RealVec torque = dx*(torques[particle].dot(dx)/dx2);
-                f = torque.cross(dy)/dy2;
+                RealVec torque2 = dx*(torque.dot(dx)/dx2);
+                f = torque2.cross(dy)/dy2;
                 forces[p.yparticle] += f;
                 forces[particle] -= f;
             }
@@ -254,8 +328,8 @@ void CpuGayBerneForce::applyTorques(const vector<RealVec>& positions, vector<Rea
     }
 }
 
-RealOpenMM CpuGayBerneForce::computeOneInteraction(int particle1, int particle2, RealOpenMM sigma, RealOpenMM epsilon, const vector<RealVec>& positions,
-        vector<RealVec>& forces, vector<RealVec>& torques, const RealVec* boxVectors) {
+RealOpenMM CpuGayBerneForce::computeOneInteraction(int particle1, int particle2, RealOpenMM sigma, RealOpenMM epsilon, const RealVec* positions,
+        float* forces, vector<RealVec>& torques, const RealVec* boxVectors) {
     // Compute the displacement and check against the cutoff.
 
     RealOpenMM deltaR[ReferenceForce::LastDeltaRIndex];
@@ -287,8 +361,12 @@ RealOpenMM CpuGayBerneForce::computeOneInteraction(int particle1, int particle2,
         RealOpenMM sig6 = sig2*sig2*sig2;
         RealOpenMM energy = 4*epsilon*(sig6-1)*sig6;
         RealVec force = drUnit*(switchValue*4*epsilon*(12*sig6 - 6)*sig6*rInv - energy*switchDeriv);
-        forces[particle1] += force;
-        forces[particle2] -= force;
+        forces[4*particle1] += force[0];
+        forces[4*particle1+1] += force[1];
+        forces[4*particle1+2] += force[2];
+        forces[4*particle2] -= force[0];
+        forces[4*particle2+1] -= force[1];
+        forces[4*particle2+2] -= force[2];
         return energy*switchValue;
     }
 
@@ -323,8 +401,12 @@ RealOpenMM CpuGayBerneForce::computeOneInteraction(int particle1, int particle2,
     RealVec dudr = (drUnit + (kappa-drUnit*kappa.dot(drUnit))*temp)*dUSLJdr;
     RealVec dchidr = (iota-drUnit*iota.dot(drUnit))*(-8*rInv2*SQRT(chi));
     RealVec force = (dchidr*u + dudr*chi)*(eta*switchValue) - drUnit*(energy*switchDeriv);
-    forces[particle1] += force;
-    forces[particle2] -= force;
+    forces[4*particle1] += force[0];
+    forces[4*particle1+1] += force[1];
+    forces[4*particle1+2] += force[2];
+    forces[4*particle2] -= force[0];
+    forces[4*particle2+1] -= force[1];
+    forces[4*particle2+2] -= force[2];
 
     // Compute the terms needed for the torque.
 
