@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -230,6 +230,7 @@ CpuCalcForcesAndEnergyKernel::CpuCalcForcesAndEnergyKernel(std::string name, con
 
 void CpuCalcForcesAndEnergyKernel::initialize(const System& system) {
     referenceKernel.getAs<ReferenceCalcForcesAndEnergyKernel>().initialize(system);
+    lastPositions.resize(system.getNumParticles(), Vec3(1e10, 1e10, 1e10));
 }
 
 void CpuCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups) {
@@ -237,11 +238,60 @@ void CpuCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool i
     
     // Convert positions to single precision and clear the forces.
 
-    InitForceTask task(context.getSystem().getNumParticles(), context, data);
+    int numParticles = context.getSystem().getNumParticles();
+    InitForceTask task(numParticles, context, data);
     data.threads.execute(task);
     data.threads.waitForThreads();
     if (!task.positionsValid)
         throw OpenMMException("Particle coordinate is nan");
+
+    // Determine whether we need to recompute the neighbor list.
+        
+    if (data.neighborList != NULL) {
+        double padding = data.paddedCutoff-data.cutoff;;
+        bool needRecompute = false;
+        double closeCutoff2 = 0.25*padding*padding;
+        double farCutoff2 = 0.5*padding*padding;
+        int maxNumMoved = numParticles/10;
+        vector<int> moved;
+        vector<RealVec>& posData = extractPositions(context);
+        for (int i = 0; i < numParticles; i++) {
+            RealVec delta = posData[i]-lastPositions[i];
+            double dist2 = delta.dot(delta);
+            if (dist2 > closeCutoff2) {
+                moved.push_back(i);
+                if (dist2 > farCutoff2 || moved.size() > maxNumMoved) {
+                    needRecompute = true;
+                    break;
+                }
+            }
+        }
+        if (!needRecompute && moved.size() > 0) {
+            // Some particles have moved further than half the padding distance.  Look for pairs
+            // that are missing from the neighbor list.
+
+            int numMoved = moved.size();
+            double cutoff2 = data.cutoff*data.cutoff;
+            double paddedCutoff2 = data.paddedCutoff*data.paddedCutoff;
+            for (int i = 1; i < numMoved && !needRecompute; i++)
+                for (int j = 0; j < i; j++) {
+                    RealVec delta = posData[moved[i]]-posData[moved[j]];
+                    if (delta.dot(delta) < cutoff2) {
+                        // These particles should interact.  See if they are in the neighbor list.
+                        
+                        RealVec oldDelta = lastPositions[moved[i]]-lastPositions[moved[j]];
+                        if (oldDelta.dot(oldDelta) > paddedCutoff2) {
+                            needRecompute = true;
+                            break;
+                        }
+                    }
+                }
+        }
+        if (needRecompute) {
+            data.neighborList->computeNeighborList(numParticles, data.posq, data.exclusions, extractBoxVectors(context), data.isPeriodic, data.paddedCutoff, data.threads);
+            lastPositions = posData;
+        }
+    }
 }
 
 double CpuCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups, bool& valid) {
@@ -473,15 +523,11 @@ CpuNonbondedForce* createCpuNonbondedForceVec4();
 CpuNonbondedForce* createCpuNonbondedForceVec8();
 
 CpuCalcNonbondedForceKernel::CpuCalcNonbondedForceKernel(string name, const Platform& platform, CpuPlatform::PlatformData& data) : CalcNonbondedForceKernel(name, platform),
-        data(data), bonded14IndexArray(NULL), bonded14ParamArray(NULL), hasInitializedPme(false), neighborList(NULL), nonbonded(NULL) {
-    if (isVec8Supported()) {
-        neighborList = new CpuNeighborList(8);
+        data(data), bonded14IndexArray(NULL), bonded14ParamArray(NULL), hasInitializedPme(false), nonbonded(NULL) {
+    if (isVec8Supported())
         nonbonded = createCpuNonbondedForceVec8();
-    }
-    else {
-        neighborList = new CpuNeighborList(4);
+    else
         nonbonded = createCpuNonbondedForceVec4();
-    }
 }
 
 CpuCalcNonbondedForceKernel::~CpuCalcNonbondedForceKernel() {
@@ -495,8 +541,6 @@ CpuCalcNonbondedForceKernel::~CpuCalcNonbondedForceKernel() {
     }
     if (nonbonded != NULL)
         delete nonbonded;
-    if (neighborList != NULL)
-        delete neighborList;
 }
 
 void CpuCalcNonbondedForceKernel::initialize(const System& system, const NonbondedForce& force) {
@@ -556,6 +600,7 @@ void CpuCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
     if (nonbondedMethod == NoCutoff)
         useSwitchingFunction = false;
     else {
+        data.requestNeighborList(nonbondedCutoff, 0.25*nonbondedCutoff, true, exclusions);
         useSwitchingFunction = force.getUseSwitchingFunction();
         switchingDistance = force.getSwitchingDistance();
     }
@@ -578,7 +623,6 @@ void CpuCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(system, force);
     else
         dispersionCoefficient = 0.0;
-    lastPositions.resize(numParticles, Vec3(1e10, 1e10, 1e10));
     data.isPeriodic = (nonbondedMethod == CutoffPeriodic || nonbondedMethod == Ewald || nonbondedMethod == PME);
 }
 
@@ -605,53 +649,8 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
     double energy = (includeReciprocal ? ewaldSelfEnergy : 0.0);
     bool ewald  = (nonbondedMethod == Ewald);
     bool pme  = (nonbondedMethod == PME);
-    if (nonbondedMethod != NoCutoff) {
-        // Determine whether we need to recompute the neighbor list.
-        
-        double padding = 0.25*nonbondedCutoff;
-        bool needRecompute = false;
-        double closeCutoff2 = 0.25*padding*padding;
-        double farCutoff2 = 0.5*padding*padding;
-        int maxNumMoved = numParticles/10;
-        vector<int> moved;
-        for (int i = 0; i < numParticles; i++) {
-            RealVec delta = posData[i]-lastPositions[i];
-            double dist2 = delta.dot(delta);
-            if (dist2 > closeCutoff2) {
-                moved.push_back(i);
-                if (dist2 > farCutoff2 || moved.size() > maxNumMoved) {
-                    needRecompute = true;
-                    break;
-                }
-            }
-        }
-        if (!needRecompute && moved.size() > 0) {
-            // Some particles have moved further than half the padding distance.  Look for pairs
-            // that are missing from the neighbor list.
-
-            int numMoved = moved.size();
-            double cutoff2 = nonbondedCutoff*nonbondedCutoff;
-            double paddedCutoff2 = (nonbondedCutoff+padding)*(nonbondedCutoff+padding);
-            for (int i = 1; i < numMoved && !needRecompute; i++)
-                for (int j = 0; j < i; j++) {
-                    RealVec delta = posData[moved[i]]-posData[moved[j]];
-                    if (delta.dot(delta) < cutoff2) {
-                        // These particles should interact.  See if they are in the neighbor list.
-                        
-                        RealVec oldDelta = lastPositions[moved[i]]-lastPositions[moved[j]];
-                        if (oldDelta.dot(oldDelta) > paddedCutoff2) {
-                            needRecompute = true;
-                            break;
-                        }
-                    }
-                }
-        }
-        if (needRecompute) {
-            neighborList->computeNeighborList(numParticles, posq, exclusions, boxVectors, data.isPeriodic, nonbondedCutoff+padding, data.threads);
-            lastPositions = posData;
-        }
-        nonbonded->setUseCutoff(nonbondedCutoff, *neighborList, rfDielectric);
-    }
+    if (nonbondedMethod != NoCutoff)
+        nonbonded->setUseCutoff(nonbondedCutoff, *data.neighborList, rfDielectric);
     if (data.isPeriodic) {
         RealVec* boxVectors = extractBoxVectors(context);
         double minAllowedSize = 1.999999*nonbondedCutoff;
@@ -748,7 +747,7 @@ void CpuCalcNonbondedForceKernel::getPMEParameters(double& alpha, int& nx, int& 
 }
 
 CpuCalcCustomNonbondedForceKernel::CpuCalcCustomNonbondedForceKernel(string name, const Platform& platform, CpuPlatform::PlatformData& data) :
-            CalcCustomNonbondedForceKernel(name, platform), data(data), forceCopy(NULL), neighborList(NULL), nonbonded(NULL) {
+            CalcCustomNonbondedForceKernel(name, platform), data(data), forceCopy(NULL), nonbonded(NULL) {
 }
 
 CpuCalcCustomNonbondedForceKernel::~CpuCalcCustomNonbondedForceKernel() {
@@ -757,8 +756,6 @@ CpuCalcCustomNonbondedForceKernel::~CpuCalcCustomNonbondedForceKernel() {
             delete[] particleParamArray[i];
         delete[] particleParamArray;
     }
-    if (neighborList != NULL)
-        delete neighborList;
     if (nonbonded != NULL)
         delete nonbonded;
     if (forceCopy != NULL)
@@ -795,7 +792,7 @@ void CpuCalcCustomNonbondedForceKernel::initialize(const System& system, const C
     if (nonbondedMethod == NoCutoff)
         useSwitchingFunction = false;
     else {
-        neighborList = new CpuNeighborList(4);
+        data.requestNeighborList(nonbondedCutoff, 0.25*nonbondedCutoff, true, exclusions);
         useSwitchingFunction = force.getUseSwitchingFunction();
         switchingDistance = force.getSwitchingDistance();
     }
@@ -861,10 +858,8 @@ double CpuCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool inc
     RealVec* boxVectors = extractBoxVectors(context);
     double energy = 0;
     bool periodic = (nonbondedMethod == CutoffPeriodic);
-    if (nonbondedMethod != NoCutoff) {
-        neighborList->computeNeighborList(numParticles, data.posq, exclusions, boxVectors, data.isPeriodic, nonbondedCutoff, data.threads);
-        nonbonded->setUseCutoff(nonbondedCutoff, *neighborList);
-    }
+    if (nonbondedMethod != NoCutoff)
+        nonbonded->setUseCutoff(nonbondedCutoff, *data.neighborList);
     if (periodic) {
         double minAllowedSize = 2*nonbondedCutoff;
         if (boxVectors[0][0] < minAllowedSize || boxVectors[1][1] < minAllowedSize || boxVectors[2][2] < minAllowedSize)
@@ -972,8 +967,6 @@ CpuCalcCustomGBForceKernel::~CpuCalcCustomGBForceKernel() {
             delete[] particleParamArray[i];
         delete[] particleParamArray;
     }
-    if (neighborList != NULL)
-        delete neighborList;
     if (ixn != NULL)
         delete ixn;
 }
@@ -1021,10 +1014,8 @@ void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGB
         globalParameterNames.push_back(force.getGlobalParameterName(i));
     nonbondedMethod = CalcCustomGBForceKernel::NonbondedMethod(force.getNonbondedMethod());
     nonbondedCutoff = (RealOpenMM) force.getCutoffDistance();
-    if (nonbondedMethod == NoCutoff)
-        neighborList = NULL;
-    else
-        neighborList = new CpuNeighborList(4);
+    if (nonbondedMethod != NoCutoff)
+        data.requestNeighborList(nonbondedCutoff, 0.25*nonbondedCutoff, true, exclusions);
 
     // Create custom functions for the tabulated functions.
 
@@ -1121,8 +1112,7 @@ double CpuCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFor
         ixn->setPeriodic(extractBoxSize(context));
     if (nonbondedMethod != NoCutoff) {
         vector<set<int> > noExclusions(numParticles);
-        neighborList->computeNeighborList(numParticles, data.posq, exclusions, boxVectors, data.isPeriodic, nonbondedCutoff, data.threads);
-        ixn->setUseCutoff(nonbondedCutoff, *neighborList);
+        ixn->setUseCutoff(nonbondedCutoff, *data.neighborList);
     }
     map<string, double> globalParameters;
     for (int i = 0; i < (int) globalParameterNames.size(); i++)

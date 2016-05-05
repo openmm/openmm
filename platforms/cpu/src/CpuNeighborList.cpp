@@ -508,6 +508,10 @@ int CpuNeighborList::getNumBlocks() const {
     return sortedAtoms.size()/blockSize;
 }
 
+int CpuNeighborList::getBlockSize() const {
+    return blockSize;
+}
+
 const std::vector<int>& CpuNeighborList::getSortedAtoms() const {
     return sortedAtoms;
 }

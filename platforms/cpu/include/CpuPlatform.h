@@ -34,6 +34,7 @@
 
 #include "AlignedArray.h"
 #include "CpuRandom.h"
+#include "CpuNeighborList.h"
 #include "ReferencePlatform.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/ThreadPool.h"
@@ -80,12 +81,18 @@ private:
 class CpuPlatform::PlatformData {
 public:
     PlatformData(int numParticles, int numThreads);
+    ~PlatformData();
+    void requestNeighborList(double cutoffDistance, double padding, bool useExclusions, std::vector<std::set<int> >& exclusionList);
     AlignedArray<float> posq;
     std::vector<AlignedArray<float> > threadForce;
     ThreadPool threads;
     bool isPeriodic;
     CpuRandom random;
     std::map<std::string, std::string> propertyValues;
+    CpuNeighborList* neighborList;
+    double cutoff, paddedCutoff;
+    bool anyExclusions;
+    std::vector<std::set<int> > exclusions;
 };
 
 } // namespace OpenMM

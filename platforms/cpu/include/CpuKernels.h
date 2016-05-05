@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013 Stanford University and the Authors.           *
+ * Portions copyright (c) 2013-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -90,6 +90,7 @@ public:
 private:
     CpuPlatform::PlatformData& data;
     Kernel referenceKernel;
+    std::vector<RealVec> lastPositions;
 };
 
 /**
@@ -267,9 +268,7 @@ private:
     bool useSwitchingFunction, useOptimizedPme, hasInitializedPme;
     std::vector<std::set<int> > exclusions;
     std::vector<std::pair<float, float> > particleParams;
-    std::vector<RealVec> lastPositions;
     NonbondedMethod nonbondedMethod;
-    CpuNeighborList* neighborList;
     CpuNonbondedForce* nonbonded;
     Kernel optimizedPme;
     CpuBondForce bondForce;
@@ -317,7 +316,6 @@ private:
     std::vector<std::string> parameterNames, globalParameterNames;
     std::vector<std::pair<std::set<int>, std::set<int> > > interactionGroups;
     NonbondedMethod nonbondedMethod;
-    CpuNeighborList* neighborList;
     CpuCustomNonbondedForce* nonbonded;
 };
 
@@ -403,7 +401,6 @@ private:
     std::vector<OpenMM::CustomGBForce::ComputationType> valueTypes;
     std::vector<OpenMM::CustomGBForce::ComputationType> energyTypes;
     NonbondedMethod nonbondedMethod;
-    CpuNeighborList* neighborList;
 };
 
 /**
