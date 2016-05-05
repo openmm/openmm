@@ -369,10 +369,27 @@ void OpenCLUpdateStateDataKernel::getPeriodicBoxVectors(ContextImpl& context, Ve
     cl.getPeriodicBoxVectors(a, b, c);
 }
 
-void OpenCLUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context, const Vec3& a, const Vec3& b, const Vec3& c) const {
+void OpenCLUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context, const Vec3& a, const Vec3& b, const Vec3& c) {
     vector<OpenCLContext*>& contexts = cl.getPlatformData().contexts;
+
+    // If any particles have been wrapped to the first periodic box, we need to unwrap them
+    // to avoid changing their positions.
+
+    vector<Vec3> positions;
+    for (int i = 0; i < (int) cl.getPosCellOffsets().size(); i++) {
+        mm_int4& offset = cl.getPosCellOffsets()[i];
+        if (offset.x != 0 || offset.y != 0 || offset.z != 0) {
+            getPositions(context, positions);
+            break;
+        }
+    }
+    
+    // Update the vectors.
+
     for (int i = 0; i < (int) contexts.size(); i++)
         contexts[i]->setPeriodicBoxVectors(a, b, c);
+    if (positions.size() > 0)
+        setPositions(context, positions);
 }
 
 void OpenCLUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostream& stream) {
