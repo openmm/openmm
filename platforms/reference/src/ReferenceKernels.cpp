@@ -280,7 +280,7 @@ void ReferenceUpdateStateDataKernel::getPeriodicBoxVectors(ContextImpl& context,
     c = vectors[2];
 }
 
-void ReferenceUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context, const Vec3& a, const Vec3& b, const Vec3& c) const {
+void ReferenceUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context, const Vec3& a, const Vec3& b, const Vec3& c) {
     RealVec& box = extractBoxSize(context);
     box[0] = (RealOpenMM) a[0];
     box[1] = (RealOpenMM) b[1];

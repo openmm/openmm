@@ -340,10 +340,27 @@ void CudaUpdateStateDataKernel::getPeriodicBoxVectors(ContextImpl& context, Vec3
     cu.getPeriodicBoxVectors(a, b, c);
 }
 
-void CudaUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context, const Vec3& a, const Vec3& b, const Vec3& c) const {
+void CudaUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context, const Vec3& a, const Vec3& b, const Vec3& c) {
     vector<CudaContext*>& contexts = cu.getPlatformData().contexts;
+
+    // If any particles have been wrapped to the first periodic box, we need to unwrap them
+    // to avoid changing their positions.
+
+    vector<Vec3> positions;
+    for (int i = 0; i < (int) cu.getPosCellOffsets().size(); i++) {
+        int4& offset = cu.getPosCellOffsets()[i];
+        if (offset.x != 0 || offset.y != 0 || offset.z != 0) {
+            getPositions(context, positions);
+            break;
+        }
+    }
+    
+    // Update the vectors.
+
     for (int i = 0; i < (int) contexts.size(); i++)
         contexts[i]->setPeriodicBoxVectors(a, b, c);
+    if (positions.size() > 0)
+        setPositions(context, positions);
 }
 
 void CudaUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostream& stream) {
@@ -6982,7 +6999,7 @@ void CudaApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, d
         std::stringstream m;
         m<<"Error saving positions for MC barostat: "<<cu.getErrorString(result)<<" ("<<result<<")";
         throw OpenMMException(m.str());
-    }        
+    }
     float scalefX = (float) scaleX;
     float scalefY = (float) scaleY;
     float scalefZ = (float) scaleZ;
