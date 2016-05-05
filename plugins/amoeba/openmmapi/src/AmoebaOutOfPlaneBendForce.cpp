@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors:                                                                   *
  * Contributors:                                                              *
  *                                                                            *
@@ -36,7 +36,7 @@
 
 using namespace OpenMM;
 
-AmoebaOutOfPlaneBendForce::AmoebaOutOfPlaneBendForce() {
+AmoebaOutOfPlaneBendForce::AmoebaOutOfPlaneBendForce() : usePeriodic(false) {
     _globalCubicK     = -0.1400000E-01;
     _globalQuarticK   =  0.5600000E-04;
     _globalPenticK    = -0.7000000E-06;
@@ -105,4 +105,12 @@ ForceImpl* AmoebaOutOfPlaneBendForce::createImpl() const {
 
 void AmoebaOutOfPlaneBendForce::updateParametersInContext(Context& context) {
     dynamic_cast<AmoebaOutOfPlaneBendForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
+}
+
+void AmoebaOutOfPlaneBendForce::setUsesPeriodicBoundaryConditions(bool periodic) {
+    usePeriodic = periodic;
+}
+
+bool AmoebaOutOfPlaneBendForce::usesPeriodicBoundaryConditions() const {
+    return usePeriodic;
 }

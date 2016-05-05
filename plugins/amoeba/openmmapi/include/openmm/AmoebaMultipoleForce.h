@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Mark Friedrichs, Peter Eastman                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -87,7 +87,7 @@ public:
          * Extrapolated perturbation theory approximation.  The dipoles are iterated a few times, and then an analytic
          * approximation is used to extrapolate to the fully converged values.  Call setExtrapolationCoefficients()
          * to set the coefficients used for the extrapolation.  The default coefficients used in this release are
-         * [0, -0.3, 0, 1.3], but be aware that those may change in a future release.
+         * [-0.154, 0.017, 0.658, 0.474], but be aware that those may change in a future release.
          */
         Extrapolated = 2
 
@@ -322,7 +322,7 @@ public:
     /**
      * Get the coefficients for the mu_0, mu_1, mu_2, ..., mu_n terms in the extrapolation
      * algorithm for induced dipoles.  In this release, the default values for the coefficients are
-     * [0, -0.3, 0, 1.3], but be aware that those may change in a future release.
+     * [-0.154, 0.017, 0.658, 0.474], but be aware that those may change in a future release.
      */
     const std::vector<double>& getExtrapolationCoefficients() const;
 

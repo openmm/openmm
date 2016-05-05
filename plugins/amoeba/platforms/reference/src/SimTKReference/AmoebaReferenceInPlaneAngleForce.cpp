@@ -24,9 +24,17 @@
 
 #include "AmoebaReferenceForce.h"
 #include "AmoebaReferenceInPlaneAngleForce.h"
+#include "ReferenceForce.h"
 
 using std::vector;
 using namespace OpenMM;
+
+void AmoebaReferenceInPlaneAngleForce::setPeriodic(OpenMM::RealVec* vectors) {
+    usePeriodic = true;
+    boxVectors[0] = vectors[0];
+    boxVectors[1] = vectors[1];
+    boxVectors[2] = vectors[2];
+}
 
 /**---------------------------------------------------------------------------------------
 
@@ -120,17 +128,6 @@ RealOpenMM AmoebaReferenceInPlaneAngleForce::calculateAngleIxn(const RealVec& po
                                                                         RealOpenMM angleCubic,                 RealOpenMM angleQuartic,
                                                                         RealOpenMM anglePentic,                RealOpenMM angleSextic,
                                                                         RealVec* forces) const {
-
-   // ---------------------------------------------------------------------------------------
-
-    //static const std::string methodName = "AmoebaReferenceInPlaneAngleForce::calculateAngleIxn";
- 
-    static const RealOpenMM zero          = 0.0;
-    static const RealOpenMM one           = 1.0;
-    static const RealOpenMM two           = 2.0;
-
-   // ---------------------------------------------------------------------------------------
-
     // T   = AD x CD
     // P   = B + T*delta
     // AP  = A - P
@@ -139,40 +136,48 @@ RealOpenMM AmoebaReferenceInPlaneAngleForce::calculateAngleIxn(const RealVec& po
 
     enum { AD, BD, CD, T, AP, P, CP, M, APxM, CPxM, ADxBD, BDxCD, TxCD, ADxT, dBxAD, CDxdB, LastDeltaAtomIndex };
 
-    std::vector<RealOpenMM> deltaR[LastDeltaAtomIndex];
-    for (int ii = 0; ii < LastDeltaAtomIndex; ii++) {
-        deltaR[ii].resize(3);
+    RealVec deltaR[LastDeltaAtomIndex];
+    if (usePeriodic) {
+        deltaR[AD] = ReferenceForce::getDeltaRPeriodic(positionAtomD, positionAtomA, boxVectors);
+        deltaR[BD] = ReferenceForce::getDeltaRPeriodic(positionAtomD, positionAtomB, boxVectors);
+        deltaR[CD] = ReferenceForce::getDeltaRPeriodic(positionAtomD, positionAtomC, boxVectors);
     }
-    AmoebaReferenceForce::loadDeltaR(positionAtomD, positionAtomA, deltaR[AD]);
-    AmoebaReferenceForce::loadDeltaR(positionAtomD, positionAtomB, deltaR[BD]);
-    AmoebaReferenceForce::loadDeltaR(positionAtomD, positionAtomC, deltaR[CD]);
+    else {
+        deltaR[AD] = ReferenceForce::getDeltaR(positionAtomD, positionAtomA);
+        deltaR[BD] = ReferenceForce::getDeltaR(positionAtomD, positionAtomB);
+        deltaR[CD] = ReferenceForce::getDeltaR(positionAtomD, positionAtomC);
+    }
  
-    AmoebaReferenceForce::getCrossProduct(deltaR[AD], deltaR[CD], deltaR[T]);
+    deltaR[T] = deltaR[AD].cross(deltaR[CD]);
 
-    RealOpenMM rT2     = AmoebaReferenceForce::getNormSquared3(deltaR[T]);
-    RealOpenMM delta   = AmoebaReferenceForce::getDotProduct3(deltaR[T], deltaR[BD])/rT2;
-         delta        *= -one;
- 
-    for (int ii = 0; ii < 3; ii++) {
-       deltaR[P][ii]  = positionAtomB[ii] + deltaR[T][ii]*delta;
-       deltaR[AP][ii] = positionAtomA[ii] - deltaR[P][ii];
-       deltaR[CP][ii] = positionAtomC[ii] - deltaR[P][ii];
+    RealOpenMM rT2     = deltaR[T].dot(deltaR[T]);
+    RealOpenMM delta   = deltaR[T].dot(deltaR[BD])/rT2;
+         delta        *= -1;
+
+    deltaR[P]  = positionAtomB + deltaR[T]*delta;
+    if (usePeriodic) {
+        deltaR[AP] = ReferenceForce::getDeltaRPeriodic(deltaR[P], positionAtomA, boxVectors);
+        deltaR[CP] = ReferenceForce::getDeltaRPeriodic(deltaR[P], positionAtomC, boxVectors);
+    }
+    else {
+        deltaR[AP] = ReferenceForce::getDeltaR(deltaR[P], positionAtomA);
+        deltaR[CP] = ReferenceForce::getDeltaR(deltaR[P], positionAtomC);
     }
  
-    RealOpenMM rAp2 = AmoebaReferenceForce::getNormSquared3(deltaR[AP]);
-    RealOpenMM rCp2 = AmoebaReferenceForce::getNormSquared3(deltaR[CP]);
-    if (rAp2 <= zero && rCp2 <= zero) {
-       return zero;
+    RealOpenMM rAp2 = deltaR[AP].dot(deltaR[AP]);
+    RealOpenMM rCp2 = deltaR[CP].dot(deltaR[CP]);
+    if (rAp2 <= 0 && rCp2 <= 0) {
+       return 0;
     }
  
-    AmoebaReferenceForce::getCrossProduct(deltaR[CP], deltaR[AP], deltaR[M]);
+    deltaR[M] = deltaR[CP].cross(deltaR[AP]);
  
-    RealOpenMM rm = AmoebaReferenceForce::getNorm3(deltaR[M]);
+    RealOpenMM rm = SQRT(deltaR[M].dot(deltaR[M]));
     if (rm < 1.0e-06) {
        rm = 1.0e-06;
     }
  
-    RealOpenMM dot     = AmoebaReferenceForce::getDotProduct3(deltaR[AP], deltaR[CP]);
+    RealOpenMM dot     = deltaR[AP].dot(deltaR[CP]);
     RealOpenMM cosine  = dot/SQRT(rAp2*rCp2);
  
     RealOpenMM dEdR;
@@ -182,64 +187,47 @@ RealOpenMM AmoebaReferenceInPlaneAngleForce::calculateAngleIxn(const RealVec& po
     RealOpenMM termA   = -dEdR/(rAp2*rm);
     RealOpenMM termC   =  dEdR/(rCp2*rm);
  
-    AmoebaReferenceForce::getCrossProduct(deltaR[AP], deltaR[M], deltaR[APxM]);
-    AmoebaReferenceForce::getCrossProduct(deltaR[CP], deltaR[M], deltaR[CPxM]);
+    deltaR[APxM] = deltaR[AP].cross(deltaR[M]);
+    deltaR[CPxM] = deltaR[CP].cross(deltaR[M]);
  
     // forces will be gathered here
  
     enum { dA, dB, dC, dD, LastDIndex };
-    std::vector<RealOpenMM> forceTerm[LastDIndex];
-    for (int ii = 0; ii < LastDIndex; ii++) {
-        forceTerm[ii].resize(3);
-    }
+    RealVec forceTerm[LastDIndex];
  
-    for (int ii = 0; ii < 3; ii++) {
-       forceTerm[dA][ii] = deltaR[APxM][ii]*termA;
-       forceTerm[dC][ii] = deltaR[CPxM][ii]*termC;
-       forceTerm[dB][ii] = -one*(forceTerm[dA][ii] + forceTerm[dC][ii]);
-    }
- 
-    RealOpenMM pTrT2  = AmoebaReferenceForce::getDotProduct3(forceTerm[dB], deltaR[T]);
+    forceTerm[dA] = deltaR[APxM]*termA;
+    forceTerm[dC] = deltaR[CPxM]*termC;
+    forceTerm[dB] = -(forceTerm[dA] + forceTerm[dC]);
+
+    RealOpenMM pTrT2  = forceTerm[dB].dot(deltaR[T]);
                pTrT2 /= rT2;
  
-    AmoebaReferenceForce::getCrossProduct(deltaR[CD], forceTerm[dB], deltaR[CDxdB]);
-    AmoebaReferenceForce::getCrossProduct(forceTerm[dB], deltaR[AD], deltaR[dBxAD]);
+    deltaR[CDxdB] = deltaR[CD].cross(forceTerm[dB]);
+    deltaR[dBxAD] = forceTerm[dB].cross(deltaR[AD]);
  
     if (FABS(pTrT2) > 1.0e-08) {
  
-       RealOpenMM delta2 = delta*two;
+        RealOpenMM delta2 = delta*2;
  
-       AmoebaReferenceForce::getCrossProduct(deltaR[BD], deltaR[CD], deltaR[BDxCD]);
-       AmoebaReferenceForce::getCrossProduct(deltaR[T],  deltaR[CD], deltaR[TxCD]);
-       AmoebaReferenceForce::getCrossProduct(deltaR[AD], deltaR[BD], deltaR[ADxBD]);
-       AmoebaReferenceForce::getCrossProduct(deltaR[AD], deltaR[T],  deltaR[ADxT]);
-       for (int ii = 0; ii < 3; ii++) {
-    
-          RealOpenMM term     = deltaR[BDxCD][ii] + delta2*deltaR[TxCD][ii];
-          forceTerm[dA][ii]  += delta*deltaR[CDxdB][ii] + term*pTrT2;
-    
-               term           = deltaR[ADxBD][ii] + delta2*deltaR[ADxT][ii];
-          forceTerm[dC][ii]  += delta*deltaR[dBxAD][ii] + term*pTrT2;
-    
-          forceTerm[dD][ii]  = -(forceTerm[dA][ii] + forceTerm[dB][ii] + forceTerm[dC][ii]);
-       }
+        deltaR[BDxCD] = forceTerm[dB].cross(deltaR[CD]);
+        deltaR[TxCD] = forceTerm[T].cross(deltaR[CD]);
+        deltaR[ADxBD] = forceTerm[AD].cross(deltaR[BD]);
+        deltaR[ADxT] = forceTerm[AD].cross(deltaR[T]);
+        RealVec term = deltaR[BDxCD] + deltaR[TxCD]*delta2;
+        forceTerm[dA] += deltaR[CDxdB]*delta + term*pTrT2;
+        term = deltaR[ADxBD] + deltaR[ADxT]*delta2;
+        forceTerm[dC] += deltaR[dBxAD]*delta + term*pTrT2;
+        forceTerm[dD] = -(forceTerm[dA] + forceTerm[dB] + forceTerm[dC]);
     } else {
-       for (int ii = 0; ii < 3; ii++) {
-    
-          forceTerm[dA][ii] += delta*deltaR[CDxdB][ii];
-          forceTerm[dC][ii] += delta*deltaR[dBxAD][ii];
- 
-          forceTerm[dD][ii]  = -(forceTerm[dA][ii] + forceTerm[dB][ii] + forceTerm[dC][ii]);
-       }
+        forceTerm[dA] += deltaR[CDxdB]*delta;
+        forceTerm[dC] += deltaR[dBxAD]*delta;
+        forceTerm[dD]  = -(forceTerm[dA] + forceTerm[dB] + forceTerm[dC]);
     }
  
     // accumulate forces
  
-    for (int jj = 0; jj < 4; jj++) {
-        forces[jj][0] = forceTerm[jj][0];
-        forces[jj][1] = forceTerm[jj][1];
-        forces[jj][2] = forceTerm[jj][2];
-    }
+    for (int jj = 0; jj < 4; jj++)
+        forces[jj] = forceTerm[jj];
  
     return energy;
 

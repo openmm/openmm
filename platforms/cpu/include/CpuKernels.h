@@ -91,6 +91,7 @@ public:
 private:
     CpuPlatform::PlatformData& data;
     Kernel referenceKernel;
+    std::vector<RealVec> lastPositions;
 };
 
 /**
@@ -99,7 +100,7 @@ private:
 class CpuCalcHarmonicAngleForceKernel : public CalcHarmonicAngleForceKernel {
 public:
     CpuCalcHarmonicAngleForceKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data) :
-            CalcHarmonicAngleForceKernel(name, platform), data(data), angleIndexArray(NULL), angleParamArray(NULL) {
+            CalcHarmonicAngleForceKernel(name, platform), data(data), angleIndexArray(NULL), angleParamArray(NULL), usePeriodic(false) {
     }
     ~CpuCalcHarmonicAngleForceKernel();
     /**
@@ -131,6 +132,7 @@ private:
     int **angleIndexArray;
     RealOpenMM **angleParamArray;
     CpuBondForce bondForce;
+    bool usePeriodic;
 };
 
 /**
@@ -139,7 +141,7 @@ private:
 class CpuCalcPeriodicTorsionForceKernel : public CalcPeriodicTorsionForceKernel {
 public:
     CpuCalcPeriodicTorsionForceKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data) :
-            CalcPeriodicTorsionForceKernel(name, platform), data(data), torsionIndexArray(NULL), torsionParamArray(NULL) {
+            CalcPeriodicTorsionForceKernel(name, platform), data(data), torsionIndexArray(NULL), torsionParamArray(NULL), usePeriodic(false) {
     }
     ~CpuCalcPeriodicTorsionForceKernel();
     /**
@@ -171,6 +173,7 @@ private:
     int **torsionIndexArray;
     RealOpenMM **torsionParamArray;
     CpuBondForce bondForce;
+    bool usePeriodic;
 };
 
 /**
@@ -179,7 +182,7 @@ private:
 class CpuCalcRBTorsionForceKernel : public CalcRBTorsionForceKernel {
 public:
     CpuCalcRBTorsionForceKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data) :
-            CalcRBTorsionForceKernel(name, platform), data(data), torsionIndexArray(NULL), torsionParamArray(NULL) {
+            CalcRBTorsionForceKernel(name, platform), data(data), torsionIndexArray(NULL), torsionParamArray(NULL), usePeriodic(false) {
     }
     ~CpuCalcRBTorsionForceKernel();
     /**
@@ -211,6 +214,7 @@ private:
     int **torsionIndexArray;
     RealOpenMM **torsionParamArray;
     CpuBondForce bondForce;
+    bool usePeriodic;
 };
 
 /**
@@ -265,9 +269,7 @@ private:
     bool useSwitchingFunction, useOptimizedPme, hasInitializedPme;
     std::vector<std::set<int> > exclusions;
     std::vector<std::pair<float, float> > particleParams;
-    std::vector<RealVec> lastPositions;
     NonbondedMethod nonbondedMethod;
-    CpuNeighborList* neighborList;
     CpuNonbondedForce* nonbonded;
     Kernel optimizedPme;
     CpuBondForce bondForce;
@@ -315,7 +317,6 @@ private:
     std::vector<std::string> parameterNames, globalParameterNames;
     std::vector<std::pair<std::set<int>, std::set<int> > > interactionGroups;
     NonbondedMethod nonbondedMethod;
-    CpuNeighborList* neighborList;
     CpuCustomNonbondedForce* nonbonded;
 };
 
@@ -401,7 +402,6 @@ private:
     std::vector<OpenMM::CustomGBForce::ComputationType> valueTypes;
     std::vector<OpenMM::CustomGBForce::ComputationType> energyTypes;
     NonbondedMethod nonbondedMethod;
-    CpuNeighborList* neighborList;
 };
 
 /**

@@ -2,6 +2,8 @@
 // This file is part of the "Irrlicht Engine" and the "irrXML" project.
 // For conditions of distribution and use, see copyright notice in irrlicht.h and/or irrXML.h
 
+// MODIFIED by Peter Eastman, Feb. 4, 2016, to support numeric escape sequences
+
 #ifndef __ICXML_READER_IMPL_H_INCLUDED__
 #define __ICXML_READER_IMPL_H_INCLUDED__
 
@@ -530,8 +532,35 @@ private:
 			}
 			else
 			{
-				newstr.append(origstr.subString(oldPos, pos - oldPos + 1));
-				pos += 1;
+				int semicolonPos = origstr.findNext(L';', pos);
+				if (semicolonPos != -1 && origstr.c_str()[pos+1] == L'#')
+				{
+					// it is a numeric character reference
+					int number;
+					core::string<char> numberString;
+					if (origstr.c_str()[pos+2] == L'x')
+					{
+						// hex value
+						for (int i=pos+3; i<semicolonPos; ++i)
+							numberString.append((char) origstr[i]);
+						sscanf(numberString.c_str(), "%x", &number);
+					}
+					else
+					{
+						// decimal value
+						for (int i=pos+2; i<semicolonPos; ++i)
+							numberString.append((char) origstr[i]);
+						sscanf(numberString.c_str(), "%d", &number);
+					}
+					newstr.append(origstr.subString(oldPos, pos - oldPos));
+					newstr.append((char_type) number);
+					pos = semicolonPos+1;
+				}
+				else
+				{
+					newstr.append(origstr.subString(oldPos, pos - oldPos + 1));
+					pos += 1;
+				}
 			}
 
 			// find next &

@@ -17,6 +17,7 @@ env:
 matrix:
   include:
     - sudo: required
+      dist: trusty
       env: ==CPU_OPENCL==
            OPENCL=true
            CUDA=false
@@ -33,7 +34,9 @@ matrix:
            -DOPENMM_BUILD_AMOEBA_PLUGIN=OFF
            -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF
            -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF
-           -DOPENMM_BUILD_EXAMPLES=OFF"
+           -DOPENMM_BUILD_EXAMPLES=OFF
+           -DOPENCL_INCLUDE_DIR=$HOME/AMDAPPSDK/include
+           -DOPENCL_LIBRARY=$HOME/AMDAPPSDK/lib/x86_64/libOpenCL.so"
       addons: {apt: {packages: []}}
 
     - sudo: required
@@ -107,9 +110,16 @@ before_install:
       sudo easy_install pytest;
     fi
   - if [[ "$OPENCL" == "true" ]]; then
-      sudo add-apt-repository "deb http://archive.ubuntu.com/ubuntu $(lsb_release -sc) main universe restricted multiverse";
-      sudo apt-get -yq update > /dev/null 2>&1 ;
-      sudo apt-get install -qq fglrx=2:8.960-0ubuntu1 opencl-headers;
+      wget https://jenkins.choderalab.org/userContent/AMD-APP-SDKInstaller-v3.0.130.135-GA-linux64.tar.bz2;
+      tar -xjf AMD-APP-SDK*.tar.bz2;
+      AMDAPPSDK=${HOME}/AMDAPPSDK;
+      export OPENCL_VENDOR_PATH=${AMDAPPSDK}/etc/OpenCL/vendors;
+      mkdir -p ${OPENCL_VENDOR_PATH};
+      sh AMD-APP-SDK*.sh --tar -xf -C ${AMDAPPSDK};
+      echo libamdocl64.so > ${OPENCL_VENDOR_PATH}/amdocl64.icd;
+      export LD_LIBRARY_PATH=${AMDAPPSDK}/lib/x86_64:${LD_LIBRARY_PATH};
+      chmod +x ${AMDAPPSDK}/bin/x86_64/clinfo;
+      ${AMDAPPSDK}/bin/x86_64/clinfo;
     fi
   # Install swig for Python wrappers. However, testing CUDA and OpenCL, we
   # skip the Python wrapper for speed. We're not using anaconda python,

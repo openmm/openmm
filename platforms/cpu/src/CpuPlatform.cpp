@@ -34,6 +34,7 @@
 #include "CpuKernels.h"
 #include "CpuSETTLE.h"
 #include "ReferenceConstraints.h"
+#include "openmm/OpenMMException.h"
 #include "openmm/internal/hardware.h"
 #include "openmm/internal/vectorize.h"
 #include <sstream>
@@ -59,6 +60,7 @@ extern "C" OPENMM_EXPORT_CPU void registerPlatforms() {
 map<const ContextImpl*, CpuPlatform::PlatformData*> CpuPlatform::contextData;
 
 CpuPlatform::CpuPlatform() {
+    deprecatedPropertyReplacements["CpuThreads"] = CpuThreads();
     CpuKernelFactory* factory = new CpuKernelFactory();
     registerKernelFactory(CalcForcesAndEnergyKernel::Name(), factory);
     registerKernelFactory(CalcHarmonicAngleForceKernel::Name(), factory);
@@ -84,7 +86,10 @@ CpuPlatform::CpuPlatform() {
 const string& CpuPlatform::getPropertyValue(const Context& context, const string& property) const {
     const ContextImpl& impl = getContextImpl(context);
     const PlatformData& data = getPlatformData(impl);
-    map<string, string>::const_iterator value = data.propertyValues.find(property);
+    string propertyName = property;
+    if (deprecatedPropertyReplacements.find(property) != deprecatedPropertyReplacements.end())
+        propertyName = deprecatedPropertyReplacements.find(property)->second;
+    map<string, string>::const_iterator value = data.propertyValues.find(propertyName);
     if (value != data.propertyValues.end())
         return value->second;
     return ReferencePlatform::getPropertyValue(context, property);
@@ -132,7 +137,8 @@ const CpuPlatform::PlatformData& CpuPlatform::getPlatformData(const ContextImpl&
     return *contextData[&context];
 }
 
-CpuPlatform::PlatformData::PlatformData(int numParticles, int numThreads) : posq(4*numParticles), threads(numThreads) {
+CpuPlatform::PlatformData::PlatformData(int numParticles, int numThreads) : posq(4*numParticles), threads(numThreads),
+        neighborList(NULL), cutoff(0.0), paddedCutoff(0.0), anyExclusions(false) {
     numThreads = threads.getNumThreads();
     threadForce.resize(numThreads);
     for (int i = 0; i < numThreads; i++)
@@ -141,4 +147,28 @@ CpuPlatform::PlatformData::PlatformData(int numParticles, int numThreads) : posq
     stringstream threadsProperty;
     threadsProperty << numThreads;
     propertyValues[CpuThreads()] = threadsProperty.str();
+}
+
+CpuPlatform::PlatformData::~PlatformData() {
+    if (neighborList != NULL)
+        delete neighborList;
+}
+
+bool isVec8Supported();
+
+void CpuPlatform::PlatformData::requestNeighborList(double cutoffDistance, double padding, bool useExclusions, vector<set<int> >& exclusionList) {
+    if (neighborList == NULL)
+        neighborList = new CpuNeighborList(isVec8Supported() ? 8 : 4);
+    if (cutoffDistance > cutoff)
+        cutoff = cutoffDistance;
+    if (cutoffDistance+padding > paddedCutoff)
+        paddedCutoff = cutoffDistance+padding;
+    if (useExclusions) {
+        if (anyExclusions && exclusions != exclusionList)
+            throw OpenMMException("All Forces must have identical exclusions");
+        else {
+            exclusions = exclusionList;
+            anyExclusions = true;
+        }
+    }
 }

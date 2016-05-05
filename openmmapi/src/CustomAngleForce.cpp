@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -44,7 +44,7 @@ using std::string;
 using std::stringstream;
 using std::vector;
 
-CustomAngleForce::CustomAngleForce(const string& energy) : energyExpression(energy) {
+CustomAngleForce::CustomAngleForce(const string& energy) : energyExpression(energy), usePeriodic(false) {
 }
 
 const string& CustomAngleForce::getEnergyFunction() const {
@@ -122,4 +122,12 @@ ForceImpl* CustomAngleForce::createImpl() const {
 
 void CustomAngleForce::updateParametersInContext(Context& context) {
     dynamic_cast<CustomAngleForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
+}
+
+void CustomAngleForce::setUsesPeriodicBoundaryConditions(bool periodic) {
+    usePeriodic = periodic;
+}
+
+bool CustomAngleForce::usesPeriodicBoundaryConditions() const {
+    return usePeriodic;
 }

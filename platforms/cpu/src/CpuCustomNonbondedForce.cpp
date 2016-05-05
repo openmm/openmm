@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2014 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2016 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -190,7 +190,8 @@ void CpuCustomNonbondedForce::threadComputeForce(ThreadPool& threads, int thread
             int blockIndex = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
             if (blockIndex >= neighborList->getNumBlocks())
                 break;
-            const int* blockAtom = &neighborList->getSortedAtoms()[4*blockIndex];
+            const int blockSize = neighborList->getBlockSize();
+            const int* blockAtom = &neighborList->getSortedAtoms()[blockSize*blockIndex];
             const vector<int>& neighbors = neighborList->getBlockNeighbors(blockIndex);
             const vector<char>& exclusions = neighborList->getBlockExclusions(blockIndex);
             for (int i = 0; i < (int) neighbors.size(); i++) {
@@ -199,7 +200,7 @@ void CpuCustomNonbondedForce::threadComputeForce(ThreadPool& threads, int thread
                     ReferenceForce::setVariable(data.energyParticleParams[j*2], atomParameters[first][j]);
                     ReferenceForce::setVariable(data.forceParticleParams[j*2], atomParameters[first][j]);
                 }
-                for (int k = 0; k < 4; k++) {
+                for (int k = 0; k < blockSize; k++) {
                     if ((exclusions[i] & (1<<k)) == 0) {
                         int second = blockAtom[k];
                         for (int j = 0; j < (int) paramNames.size(); j++) {

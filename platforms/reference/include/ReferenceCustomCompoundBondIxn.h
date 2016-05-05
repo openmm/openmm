@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2012 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2016 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -48,6 +48,8 @@ class ReferenceCustomCompoundBondIxn : public ReferenceBondIxn {
       std::vector<DistanceTermInfo> distanceTerms;
       std::vector<AngleTermInfo> angleTerms;
       std::vector<DihedralTermInfo> dihedralTerms;
+      bool usePeriodic;
+      RealVec boxVectors[3];
 
 
       /**---------------------------------------------------------------------------------------
@@ -90,6 +92,16 @@ class ReferenceCustomCompoundBondIxn : public ReferenceBondIxn {
          --------------------------------------------------------------------------------------- */
 
        ~ReferenceCustomCompoundBondIxn();
+
+       /**---------------------------------------------------------------------------------------
+      
+         Set the force to use periodic boundary conditions.
+      
+         @param vectors    the vectors defining the periodic box
+      
+         --------------------------------------------------------------------------------------- */
+      
+       void setPeriodic(OpenMM::RealVec* vectors);
 
       /**---------------------------------------------------------------------------------------
 

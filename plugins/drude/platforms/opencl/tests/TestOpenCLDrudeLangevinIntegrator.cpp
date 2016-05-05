@@ -183,7 +183,7 @@ int main(int argc, char* argv[]) {
     try {
         registerDrudeOpenCLKernelFactories();
         if (argc > 1)
-            Platform::getPlatformByName("OpenCL").setPropertyDefaultValue("OpenCLPrecision", string(argv[1]));
+            Platform::getPlatformByName("OpenCL").setPropertyDefaultValue("Precision", string(argv[1]));
         testSinglePair();
         testWater();
     }

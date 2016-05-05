@@ -37,7 +37,7 @@
 
 using namespace OpenMM;
 
-HarmonicBondForce::HarmonicBondForce() {
+HarmonicBondForce::HarmonicBondForce() : usePeriodic(false) {
 }
 
 int HarmonicBondForce::addBond(int particle1, int particle2, double length, double k) {
@@ -67,4 +67,12 @@ ForceImpl* HarmonicBondForce::createImpl() const {
 
 void HarmonicBondForce::updateParametersInContext(Context& context) {
     dynamic_cast<HarmonicBondForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
+}
+
+void HarmonicBondForce::setUsesPeriodicBoundaryConditions(bool periodic) {
+    usePeriodic = periodic;
+}
+
+bool HarmonicBondForce::usesPeriodicBoundaryConditions() const {
+    return usePeriodic;
 }

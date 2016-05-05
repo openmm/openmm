@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -37,7 +37,7 @@
 
 using namespace OpenMM;
 
-CMAPTorsionForce::CMAPTorsionForce() {
+CMAPTorsionForce::CMAPTorsionForce() : usePeriodic(false) {
 }
 
 int CMAPTorsionForce::addMap(int size, const std::vector<double>& energy) {
@@ -98,4 +98,12 @@ ForceImpl* CMAPTorsionForce::createImpl() const {
 
 void CMAPTorsionForce::updateParametersInContext(Context& context) {
     dynamic_cast<CMAPTorsionForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
+}
+
+void CMAPTorsionForce::setUsesPeriodicBoundaryConditions(bool periodic) {
+    usePeriodic = periodic;
+}
+
+bool CMAPTorsionForce::usesPeriodicBoundaryConditions() const {
+    return usePeriodic;
 }

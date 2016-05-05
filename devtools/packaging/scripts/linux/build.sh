@@ -19,13 +19,14 @@ CMAKE_FLAGS="-DCMAKE_INSTALL_PREFIX=$INSTALL"
 # setting the rpath so that libOpenMMPME.so finds the right libfftw3
 #CMAKE_FLAGS+=" -DCMAKE_INSTALL_RPATH=.."
 CMAKE_FLAGS+=" -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++"
-CMAKE_FLAGS+=" -DCUDA_CUDART_LIBRARY=/usr/local/cuda-7.0/lib64/libcudart.so"
-CMAKE_FLAGS+=" -DCUDA_NVCC_EXECUTABLE=/usr/local/cuda-7.0/bin/nvcc"
-CMAKE_FLAGS+=" -DCUDA_SDK_ROOT_DIR=/usr/local/cuda-7.0/"
-CMAKE_FLAGS+=" -DCUDA_TOOLKIT_INCLUDE=/usr/local/cuda-7.0/include"
-CMAKE_FLAGS+=" -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-7.0/"
-CMAKE_FLAGS+=" -DOPENCL_INCLUDE_DIR=/opt/AMDAPPSDK-2.9-1/include/"
-CMAKE_FLAGS+=" -DOPENCL_LIBRARY=/opt/AMDAPPSDK-2.9-1/lib/x86_64/libOpenCL.so"
+CMAKE_FLAGS+=" -DCUDA_CUDART_LIBRARY=/usr/local/cuda-7.5/lib64/libcudart.so"
+CMAKE_FLAGS+=" -DCUDA_NVCC_EXECUTABLE=/usr/local/cuda-7.5/bin/nvcc"
+CMAKE_FLAGS+=" -DCUDA_SDK_ROOT_DIR=/usr/local/cuda-7.5/"
+CMAKE_FLAGS+=" -DCUDA_TOOLKIT_INCLUDE=/usr/local/cuda-7.5/include"
+CMAKE_FLAGS+=" -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-7.5/"
+CMAKE_FLAGS+=" -DOPENCL_INCLUDE_DIR=/opt/AMDAPPSDK-3.0/include/"
+CMAKE_FLAGS+=" -DOPENCL_LIBRARY=/opt/AMDAPPSDK-3.0/lib/x86_64/libOpenCL.so"
+CMAKE_FLAGS+=" -DOPENMM_GENERATE_API_DOCS=ON"
 
 # Set location for FFTW3
 PREFIX="$WORKSPACE/miniconda"
@@ -40,7 +41,8 @@ fi
 mkdir build
 cd build
 cmake ../openmm $CMAKE_FLAGS
-make -j4 all DoxygenApiDocs sphinxpdf
+make -j4 all install
+make -j4 PythonInstall C++ApiDocs PythonApiDocs sphinxpdf
 
 # Install.
 make install

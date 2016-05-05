@@ -120,88 +120,101 @@ class ForceField(object):
         self._forces = []
         self._scripts = []
         self._templateGenerators = []
-        for file in files:
-            self.loadFile(file)
+        self.loadFile(files)
 
-    def loadFile(self, file):
+    def loadFile(self, files):
         """Load an XML file and add the definitions from it to this ForceField.
 
         Parameters
         ----------
-        file : string or file
-            An XML file containing force field definitions.  It may be either an
-            absolute file path, a path relative to the current working
+        files : string or file or tuple
+            An XML file or tuple of XML files containing force field definitions.
+            Each entry may be either an absolute file path, a path relative to the current working
             directory, a path relative to this module's data subdirectory (for
             built in force fields), or an open file-like object with a read()
             method from which the forcefield XML data can be loaded.
         """
-        try:
-            # this handles either filenames or open file-like objects
-            tree = etree.parse(file)
-        except IOError:
-            tree = etree.parse(os.path.join(os.path.dirname(__file__), 'data', file))
-        except Exception as e:
-            # Fail with an error message about which file could not be read.
-            # TODO: Also handle case where fallback to 'data' directory encounters problems,
-            # but this is much less worrisome because we control those files.
-            msg  = str(e) + '\n'
-            if hasattr(file, 'name'):
-                filename = file.name
-            else:
-                filename = str(file)
-            msg += "ForceField.loadFile() encountered an error reading file '%s'\n" % filename
-            raise Exception(msg)
 
-        root = tree.getroot()
+        if not isinstance(files, tuple):
+            files = (files,)
+
+        trees = []
+
+        for file in files:
+            try:
+                # this handles either filenames or open file-like objects
+                tree = etree.parse(file)
+            except IOError:
+                tree = etree.parse(os.path.join(os.path.dirname(__file__), 'data', file))
+            except Exception as e:
+                # Fail with an error message about which file could not be read.
+                # TODO: Also handle case where fallback to 'data' directory encounters problems,
+                # but this is much less worrisome because we control those files.
+                msg  = str(e) + '\n'
+                if hasattr(file, 'name'):
+                    filename = file.name
+                else:
+                    filename = str(file)
+                msg += "ForceField.loadFile() encountered an error reading file '%s'\n" % filename
+                raise Exception(msg)
+
+            trees.append(tree)
+
 
         # Load the atom types.
 
-        if tree.getroot().find('AtomTypes') is not None:
-            for type in tree.getroot().find('AtomTypes').findall('Type'):
-                self.registerAtomType(type.attrib)
+        for tree in trees:
+            if tree.getroot().find('AtomTypes') is not None:
+                for type in tree.getroot().find('AtomTypes').findall('Type'):
+                    self.registerAtomType(type.attrib)
 
         # Load the residue templates.
 
-        if tree.getroot().find('Residues') is not None:
-            for residue in root.find('Residues').findall('Residue'):
-                resName = residue.attrib['name']
-                template = ForceField._TemplateData(resName)
-                atomIndices = {}
-                for atom in residue.findall('Atom'):
-                    params = {}
-                    for key in atom.attrib:
-                        if key not in ('name', 'type'):
-                            params[key] = _convertParameterToNumber(atom.attrib[key])
-                    atomName = atom.attrib['name']
-                    if atomName in atomIndices:
-                        raise ValueError('Residue '+resName+' contains multiple atoms named '+atomName)
-                    atomIndices[atomName] = len(template.atoms)
-                    typeName = atom.attrib['type']
-                    template.atoms.append(ForceField._TemplateAtomData(atomName, typeName, self._atomTypes[typeName].element, params))
-                for site in residue.findall('VirtualSite'):
-                    template.virtualSites.append(ForceField._VirtualSiteData(site, atomIndices))
-                for bond in residue.findall('Bond'):
-                    if 'atomName1' in bond.attrib:
-                        template.addBondByName(bond.attrib['atomName1'], bond.attrib['atomName2'])
-                    else:
-                        template.addBond(int(bond.attrib['from']), int(bond.attrib['to']))
-                for bond in residue.findall('ExternalBond'):
-                    if 'atomName' in bond.attrib:
-                        template.addExternalBondByName(bond.attrib['atomName'])
-                    else:
-                        template.addExternalBond(int(bond.attrib['from']))
-                self.registerResidueTemplate(template)
+        for tree in trees:
+            if tree.getroot().find('Residues') is not None:
+                for residue in tree.getroot().find('Residues').findall('Residue'):
+                    resName = residue.attrib['name']
+                    template = ForceField._TemplateData(resName)
+                    if 'overload' in residue.attrib:
+                        template.overloadLevel = int(residue.attrib['overload'])
+                    atomIndices = {}
+                    for atom in residue.findall('Atom'):
+                        params = {}
+                        for key in atom.attrib:
+                            if key not in ('name', 'type'):
+                                params[key] = _convertParameterToNumber(atom.attrib[key])
+                        atomName = atom.attrib['name']
+                        if atomName in atomIndices:
+                            raise ValueError('Residue '+resName+' contains multiple atoms named '+atomName)
+                        atomIndices[atomName] = len(template.atoms)
+                        typeName = atom.attrib['type']
+                        template.atoms.append(ForceField._TemplateAtomData(atomName, typeName, self._atomTypes[typeName].element, params))
+                    for site in residue.findall('VirtualSite'):
+                        template.virtualSites.append(ForceField._VirtualSiteData(site, atomIndices))
+                    for bond in residue.findall('Bond'):
+                        if 'atomName1' in bond.attrib:
+                            template.addBondByName(bond.attrib['atomName1'], bond.attrib['atomName2'])
+                        else:
+                            template.addBond(int(bond.attrib['from']), int(bond.attrib['to']))
+                    for bond in residue.findall('ExternalBond'):
+                        if 'atomName' in bond.attrib:
+                            template.addExternalBondByName(bond.attrib['atomName'])
+                        else:
+                            template.addExternalBond(int(bond.attrib['from']))
+                    self.registerResidueTemplate(template)
 
         # Load force definitions
 
-        for child in root:
-            if child.tag in parsers:
-                parsers[child.tag](child, self)
+        for tree in trees:
+            for child in tree.getroot():
+                if child.tag in parsers:
+                    parsers[child.tag](child, self)
 
         # Load scripts
 
-        for node in tree.getroot().findall('Script'):
-            self.registerScript(node.text)
+        for tree in trees:
+            for node in tree.getroot().findall('Script'):
+                self.registerScript(node.text)
 
     def getGenerators(self):
         """Get the list of all registered generators."""
@@ -237,7 +250,25 @@ class ForceField(object):
         self._templates[template.name] = template
         signature = _createResidueSignature([atom.element for atom in template.atoms])
         if signature in self._templateSignatures:
-            self._templateSignatures[signature].append(template)
+            registered = False
+            for regtemplate in self._templateSignatures[signature]:
+                if regtemplate.name == template.name:
+                    if regtemplate.overloadLevel > template.overloadLevel:
+                        # ok to break - this is done every time a template is
+                        # registered so there can only be one already existing
+                        # with same name at a time
+                        registered = True
+                        break
+                    elif regtemplate.overloadLevel < template.overloadLevel:
+                        self._templateSignatures[signature].remove(regtemplate)
+                        self._templateSignatures[signature].append(template)
+                        registered = True
+                    else:
+                        raise Exception('Residue template %s with the same overloadLevel %d already exists.' %
+                                         (template.name, template.overloadLevel)
+                                         )
+            if not registered:
+                self._templateSignatures[signature].append(template)
         else:
             self._templateSignatures[signature] = [template]
 
@@ -379,6 +410,7 @@ class ForceField(object):
             self.virtualSites = []
             self.bonds = []
             self.externalBonds = []
+            self.overloadLevel = 0
 
         def getAtomIndexByName(self, atom_name):
             """Look up an atom index by atom name, providing a helpful error message if not found."""
@@ -566,11 +598,16 @@ class ForceField(object):
         matches = None
         signature = _createResidueSignature([atom.element for atom in res.atoms()])
         if signature in self._templateSignatures:
+            allMatches = []
             for t in self._templateSignatures[signature]:
-                matches = _matchResidue(res, t, bondedToAtom)
-                if matches is not None:
-                    template = t
-                    break
+                match = _matchResidue(res, t, bondedToAtom)
+                if match is not None:
+                    allMatches.append((t, match))
+            if len(allMatches) == 1:
+                template = allMatches[0][0]
+                matches = allMatches[0][1]
+            elif len(allMatches) > 1:
+                raise Exception('Multiple matching templates found for residue %d (%s).' % (res.index+1, res.name))
         return [template, matches]
 
     def _buildBondedToAtomList(self, topology):
@@ -703,7 +740,7 @@ class ForceField(object):
         return [templates, unique_unmatched_residues]
 
     def createSystem(self, topology, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
-                     constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, **args):
+                     constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, residueTemplates=dict(), **args):
         """Construct an OpenMM System representing a Topology with this force field.
 
         Parameters
@@ -727,6 +764,13 @@ class ForceField(object):
             The mass to use for hydrogen atoms bound to heavy atoms.  Any mass
             added to a hydrogen is subtracted from the heavy atom to keep
             their total mass the same.
+        residueTemplates : dict=dict()
+           Key: Topology Residue object
+           Value: string, name of _TemplateData residue template object to use for
+                  (Key) residue
+           This allows user to specify which template to apply to particular Residues
+           in the event that multiple matching templates are available (e.g Fe2+ and Fe3+
+           templates in the ForceField for a monoatomic iron ion in the topology).
         args
              Arbitrary additional keyword arguments may also be specified.
              This allows extra parameters to be specified that are specific to
@@ -765,8 +809,15 @@ class ForceField(object):
 
         for chain in topology.chains():
             for res in chain.residues():
-                # Attempt to match one of the existing templates.
-                [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom)
+                if res in residueTemplates:
+                    tname = residueTemplates[res]
+                    template = self._templates[tname]
+                    matches = _matchResidue(res, template, bondedToAtom)
+                    if matches is None:
+                        raise Exception('User-supplied template %s does not match the residue %d (%s)' % (tname, res.index+1, res.name))
+                else:
+                    # Attempt to match one of the existing templates.
+                    [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom)
                 if matches is None:
                     # No existing templates match.  Try any registered residue template generators.
                     for generator in self._templateGenerators:
@@ -856,13 +907,13 @@ class ForceField(object):
         uniquePropers = set()
         for angle in data.angles:
             for atom in bondedToAtom[angle[0]]:
-                if atom != angle[1]:
+                if atom not in angle:
                     if atom < angle[2]:
                         uniquePropers.add((atom, angle[0], angle[1], angle[2]))
                     else:
                         uniquePropers.add((angle[2], angle[1], angle[0], atom))
             for atom in bondedToAtom[angle[2]]:
-                if atom != angle[1]:
+                if atom not in angle:
                     if atom > angle[0]:
                         uniquePropers.add((angle[0], angle[1], angle[2], atom))
                     else:
@@ -1183,8 +1234,12 @@ class HarmonicBondGenerator(object):
 
     @staticmethod
     def parseElement(element, ff):
-        generator = HarmonicBondGenerator(ff)
-        ff.registerGenerator(generator)
+        existing = [f for f in ff._forces if isinstance(f, HarmonicBondGenerator)]
+        if len(existing) == 0:
+            generator = HarmonicBondGenerator(ff)
+            ff.registerGenerator(generator)
+        else:
+            generator = existing[0]
         for bond in element.findall('Bond'):
             generator.registerBond(bond.attrib)
 
@@ -1236,8 +1291,12 @@ class HarmonicAngleGenerator(object):
 
     @staticmethod
     def parseElement(element, ff):
-        generator = HarmonicAngleGenerator(ff)
-        ff.registerGenerator(generator)
+        existing = [f for f in ff._forces if isinstance(f, HarmonicAngleGenerator)]
+        if len(existing) == 0:
+            generator = HarmonicAngleGenerator(ff)
+            ff.registerGenerator(generator)
+        else:
+            generator = existing[0]
         for angle in element.findall('Angle'):
             generator.registerAngle(angle.attrib)
 
@@ -1320,8 +1379,12 @@ class PeriodicTorsionGenerator(object):
 
     @staticmethod
     def parseElement(element, ff):
-        generator = PeriodicTorsionGenerator(ff)
-        ff.registerGenerator(generator)
+        existing = [f for f in ff._forces if isinstance(f, PeriodicTorsionGenerator)]
+        if len(existing) == 0:
+            generator = PeriodicTorsionGenerator(ff)
+            ff.registerGenerator(generator)
+        else:
+            generator = existing[0]
         for torsion in element.findall('Proper'):
             generator.registerProperTorsion(torsion.attrib)
         for torsion in element.findall('Improper'):
@@ -1419,8 +1482,12 @@ class RBTorsionGenerator(object):
 
     @staticmethod
     def parseElement(element, ff):
-        generator = RBTorsionGenerator(ff)
-        ff.registerGenerator(generator)
+        existing = [f for f in ff._forces if isinstance(f, RBTorsionGenerator)]
+        if len(existing) == 0:
+            generator = RBTorsionGenerator(ff)
+            ff.registerGenerator(generator)
+        else:
+            generator = existing[0]
         for torsion in element.findall('Proper'):
             types = ff._findAtomTypes(torsion.attrib, 4)
             if None not in types:
@@ -1523,8 +1590,12 @@ class CMAPTorsionGenerator(object):
 
     @staticmethod
     def parseElement(element, ff):
-        generator = CMAPTorsionGenerator(ff)
-        ff.registerGenerator(generator)
+        existing = [f for f in ff._forces if isinstance(f, CMAPTorsionGenerator)]
+        if len(existing) == 0:
+            generator = CMAPTorsionGenerator(ff)
+            ff.registerGenerator(generator)
+        else:
+            generator = existing[0]
         for map in element.findall('Map'):
             values = [float(x) for x in map.text.split()]
             size = sqrt(len(values))

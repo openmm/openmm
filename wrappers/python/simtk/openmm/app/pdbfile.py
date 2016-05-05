@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2015 Stanford University and the Authors.
+Portions copyright (c) 2012-2016 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
@@ -58,6 +58,9 @@ class PDBFile(object):
 
     _residueNameReplacements = {}
     _atomNameReplacements = {}
+    _standardResidues = ['ALA', 'ASN', 'CYS', 'GLU', 'HIS', 'LEU', 'MET', 'PRO', 'THR', 'TYR',
+                         'ARG', 'ASP', 'GLN', 'GLY', 'ILE', 'LYS', 'PHE', 'SER', 'TRP', 'VAL',
+                         'A', 'G', 'C', 'U', 'I', 'DA', 'DG', 'DC', 'DT', 'DI', 'HOH']
 
     def __init__(self, file, extraParticleIdentifier='EP'):
         """Load a PDB file.
@@ -75,10 +78,6 @@ class PDBFile(object):
         metalElements = ['Al','As','Ba','Ca','Cd','Ce','Co','Cs','Cu','Dy','Fe','Gd','Hg','Ho','In','Ir','K','Li','Mg',
         'Mn','Mo','Na','Ni','Pb','Pd','Pt','Rb','Rh','Sm','Sr','Te','Tl','V','W','Yb','Zn']
         
-        standardResidues = ['ALA', 'ASN', 'CYS', 'GLU', 'HIS', 'LEU', 'MET', 'PRO', 'THR', 'TYR',
-                            'ARG', 'ASP', 'GLN', 'GLY', 'ILE', 'LYS', 'PHE', 'SER', 'TRP', 'VAL',
-                            'A', 'G', 'C', 'U', 'I', 'DA', 'DG', 'DC', 'DT', 'DI', 'HOH']
-
         top = Topology()
         ## The Topology read from the PDB file
         self.topology = top
@@ -173,9 +172,9 @@ class PDBFile(object):
                     if atomByNumber[i].element is not None and atomByNumber[j].element is not None:
                         if atomByNumber[i].element.symbol not in metalElements and atomByNumber[j].element.symbol not in metalElements:
                             connectBonds.append((atomByNumber[i], atomByNumber[j])) 
-                        elif atomByNumber[i].element.symbol in metalElements and atomByNumber[j].residue.name not in standardResidues:
+                        elif atomByNumber[i].element.symbol in metalElements and atomByNumber[j].residue.name not in PDBFile._standardResidues:
                             connectBonds.append((atomByNumber[i], atomByNumber[j])) 
-                        elif atomByNumber[j].element.symbol in metalElements and atomByNumber[i].residue.name not in standardResidues:
+                        elif atomByNumber[j].element.symbol in metalElements and atomByNumber[i].residue.name not in PDBFile._standardResidues:
                             connectBonds.append((atomByNumber[i], atomByNumber[j]))     
                     else:
                         connectBonds.append((atomByNumber[i], atomByNumber[j]))         
@@ -331,6 +330,8 @@ class PDBFile(object):
             raise ValueError('Particle position is NaN')
         if any(math.isinf(norm(pos)) for pos in positions):
             raise ValueError('Particle position is infinite')
+        nonHeterogens = PDBFile._standardResidues[:]
+        nonHeterogens.remove('HOH')
         atomIndex = 1
         posIndex = 0
         if modelIndex is not None:
@@ -350,6 +351,10 @@ class PDBFile(object):
                     resId = res.id
                 else:
                     resId = "%4d" % ((resIndex+1)%10000)
+                if res.name in nonHeterogens:
+                    recordName = "ATOM  "
+                else:
+                    recordName = "HETATM"
                 for atom in res.atoms():
                     if atom.element is not None:
                         symbol = atom.element.symbol
@@ -362,8 +367,8 @@ class PDBFile(object):
                     else:
                         atomName = atom.name
                     coords = positions[posIndex]
-                    line = "ATOM  %5d %-4s %3s %s%4s    %s%s%s  1.00  0.00          %2s  " % (
-                        atomIndex%100000, atomName, resName, chainName, resId, _format_83(coords[0]),
+                    line = "%s%5d %-4s %3s %s%4s    %s%s%s  1.00  0.00          %2s  " % (
+                        recordName, atomIndex%100000, atomName, resName, chainName, resId, _format_83(coords[0]),
                         _format_83(coords[1]), _format_83(coords[2]), symbol)
                     assert len(line) == 80, 'Fixed width overflow detected'
                     print(line, file=file)
@@ -388,12 +393,9 @@ class PDBFile(object):
         """
         # Identify bonds that should be listed as CONECT records.
 
-        standardResidues = ['ALA', 'ASN', 'CYS', 'GLU', 'HIS', 'LEU', 'MET', 'PRO', 'THR', 'TYR',
-                            'ARG', 'ASP', 'GLN', 'GLY', 'ILE', 'LYS', 'PHE', 'SER', 'TRP', 'VAL',
-                            'A', 'G', 'C', 'U', 'I', 'DA', 'DG', 'DC', 'DT', 'DI', 'HOH']
         conectBonds = []
         for atom1, atom2 in topology.bonds():
-            if atom1.residue.name not in standardResidues or atom2.residue.name not in standardResidues:
+            if atom1.residue.name not in PDBFile._standardResidues or atom2.residue.name not in PDBFile._standardResidues:
                 conectBonds.append((atom1, atom2))
             elif atom1.name == 'SG' and atom2.name == 'SG' and atom1.residue.name == 'CYS' and atom2.residue.name == 'CYS':
                 conectBonds.append((atom1, atom2))

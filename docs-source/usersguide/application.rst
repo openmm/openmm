@@ -395,7 +395,7 @@ files in the newer PDBx/mmCIF format: just change :class:`PDBFile` to :class:`PD
 This line specifies the force field to use for the simulation.  Force fields are
 defined by XML files.  OpenMM includes XML files defining lots of standard force fields (see Section :ref:`force-fields`).
 If you find you need to extend the repertoire of force fields available,
-you can find more information on how to create these XML files in Section :ref:`creating-force-fields`.
+you can find more information on how to create these XML files in Chapter :ref:`creating-force-fields`.
 In this case we load two of those files: :file:`amber99sb.xml`, which contains the
 Amber99SB force field, and :file:`tip3p.xml`, which contains the TIP3P water model.  The
 :class:`ForceField` object is assigned to a variable called :code:`forcefield`\ .
@@ -417,10 +417,8 @@ Note the way we specified the cutoff distance 1 nm using :code:`1*nanometer`:
 This is an example of the powerful units tracking and automatic conversion facility
 built into the OpenMM Python API that makes specifying unit-bearing quantities
 convenient and less error-prone.  We could have equivalently specified
-:code:`10*angstrom` instead of :code:`1*nanometer` and achieved the same result,
-but had we specified the wrong dimensions, such as :code:`1*(nanometer**2)` or
-:code:`1*picoseconds`, OpenMM would have thrown an exception. The units system
-will be described in more detail later, in Section :ref:`units-and-dimensional-analysis`.
+:code:`10*angstrom` instead of :code:`1*nanometer` and achieved the same result.
+The units system will be described in more detail later, in Section :ref:`units-and-dimensional-analysis`.
 ::
 
     integrator = LangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
@@ -748,7 +746,7 @@ double precision:
 ::
 
     platform = Platform.getPlatformByName('CUDA')
-    properties = {'CudaDeviceIndex': '0,1', 'CudaPrecision': 'double'}
+    properties = {'DeviceIndex': '0,1', 'Precision': 'double'}
     simulation = Simulation(prmtop.topology, system, integrator, platform, properties)
 
 .. _force-fields:
@@ -1322,11 +1320,12 @@ Writing Trajectories
 ====================
 
 
-OpenMM can save simulation trajectories to disk in two formats: PDB_ and DCD_.
-Both of these are widely supported formats, so you should be able to read them
-into most analysis and visualization programs.
+OpenMM can save simulation trajectories to disk in three formats: PDB_,
+`PDBx/mmCIF`_, and DCD_.  All of these are widely supported formats, so you
+should be able to read them into most analysis and visualization programs.
 
 .. _PDB: http://www.wwpdb.org/documentation/format33/v3.3.html
+.. _PDBx/mmCIF: http://mmcif.wwpdb.org
 .. _DCD: http://www.ks.uiuc.edu/Research/vmd/plugins/molfile/dcdplugin.html
 
 To save a trajectory, just add a “reporter” to the simulation, as shown in the
@@ -1336,9 +1335,9 @@ example scripts above:
     simulation.reporters.append(PDBReporter('output.pdb', 1000))
 
 The two parameters of the :class:`PDBReporter` are the output filename and how often (in
-number of time steps) output structures should be written.  To use DCD format,
-just replace :class:`PDBReporter` with :class:`DCDReporter`.  The parameters represent the
-same values:
+number of time steps) output structures should be written.  To use PDBx/mmCIF or
+DCD format, just replace :class:`PDBReporter` with :class:`PDBxReporter` or
+:class:`DCDReporter`.  The parameters represent the same values:
 ::
 
     simulation.reporters.append(DCDReporter('output.dcd', 1000))
@@ -1771,8 +1770,8 @@ not an arbitrary choice.
 Extracting and Reporting Forces (and other data)
 ************************************************
 
-OpenMM provides reporters for two output formats: PDB_ and DCD_.  Both of those
-formats store only positions, not velocities, forces, or other data.  In this
+OpenMM provides reporters for three output formats: PDB_, `PDBx/mmCIF`_ and DCD_.
+All of those formats store only positions, not velocities, forces, or other data.  In this
 section, we create a new reporter that outputs forces.  This illustrates two
 important things: how to write a reporter, and how to query the simulation for
 forces or other data.
@@ -1862,7 +1861,7 @@ the potential energy of each one.  Assume we have already created our :class:`Sy
             pdb = PDBFile(os.path.join('structures', file))
             simulation.context.setPositions(pdb.positions)
             state = simulation.context.getState(getEnergy=True)
-            print file, state.getPotentialEnergy()
+            print(file, state.getPotentialEnergy())
 
     .. caption::
 
@@ -2068,9 +2067,9 @@ Missing residue templates
 =========================
 
 .. CAUTION::
-   These features are experimental, and its API is subject to change.
+   These features are experimental, and their API is subject to change.
 
-You can use the :method:`getUnmatchedResidues()` method to get a list of residues
+You can use the :meth:`getUnmatchedResidues()` method to get a list of residues
 in the provided :code:`topology` object that do not currently have a matching
 residue template defined in the :class:`ForceField`.
 ::
@@ -2084,7 +2083,7 @@ with residue template definitions, or identifying which additional residues need
 to be parameterized.
 
 As a convenience for parameterizing new residues, you can also get a list of
-residues and empty residue templates using :method:`generateTemplatesForUnmatchedResidues`
+residues and empty residue templates using :meth:`generateTemplatesForUnmatchedResidues`
 ::
 
     pdb = PDBFile('input.pdb')
@@ -2098,7 +2097,7 @@ residues and empty residue templates using :method:`generateTemplatesForUnmatche
         forcefield.registerResidueTemplate(template)
 
 If you find that templates seem to be incorrectly matched, another useful
-function :method:`getMatchingTemplates()` can help you identify which templates
+function :meth:`getMatchingTemplates()` can help you identify which templates
 are being matched:
 ::
 
@@ -2106,7 +2105,7 @@ are being matched:
     forcefield = ForceField('amber99sb.xml', 'tip3p.xml')
     templates = forcefield.getMatchingTemplates(topology)
     for (residue, template) in zip(pdb.topology.residues(), templates):
-        print "Residue %d %s matched template %s" % (residue.id, residue.name, template.name)
+        print("Residue %d %s matched template %s" % (residue.id, residue.name, template.name))
 
 <HarmonicBondForce>
 ===================
@@ -2916,17 +2915,19 @@ This :code:`generator` function must conform to the following API:
         -------
         success : bool
             If the generator is able to successfully parameterize the residue, `True` is returned.
-            If the generator cannot parameterize the residue, it should return `False` and not modify `forcefield`.
+            If the generator cannot parameterize the residue, it should return `False` and not
+            modify `forcefield`.
 
-        The generator should either register a residue template directly with `forcefield.registerResidueTemplate(template)`
-        or it should call `forcefield.loadFile(file)` to load residue definitions from an ffxml file.
+        The generator should either register a residue template directly with
+        `forcefield.registerResidueTemplate(template)` or it should call `forcefield.loadFile(file)`
+        to load residue definitions from an ffxml file.
 
-        It can also use the `ForceField` programmatic API to add additional atom types (via `forcefield.registerAtomType(parameters)`)
-        or additional parameters.
+        It can also use the `ForceField` programmatic API to add additional atom types (via
+        `forcefield.registerAtomType(parameters)`) or additional parameters.
 
         """
 
-The :code:`ForceField` object will be modified by the residue template generator as residues without previously
-defined templates are encountered.  Because these templates are added to `ForceField` as new residue
+The :class:`ForceField` object will be modified by the residue template generator as residues without previously
+defined templates are encountered.  Because these templates are added to the :class:`ForceField` as new residue
 types are encountered, subsequent residues will be parameterized using the same residue templates without
 calling the :code:`generator` again.

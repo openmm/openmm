@@ -42,10 +42,11 @@ AmoebaBondForceProxy::AmoebaBondForceProxy() : SerializationProxy("AmoebaBondFor
 }
 
 void AmoebaBondForceProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 2);
+    node.setIntProperty("version", 3);
     const AmoebaBondForce& force = *reinterpret_cast<const AmoebaBondForce*>(object);
 
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setBoolProperty("usesPeriodic", force.usesPeriodicBoundaryConditions());
     node.setDoubleProperty("cubic",   force.getAmoebaGlobalBondCubic());
     node.setDoubleProperty("quartic", force.getAmoebaGlobalBondQuartic());
 
@@ -60,12 +61,14 @@ void AmoebaBondForceProxy::serialize(const void* object, SerializationNode& node
 
 void* AmoebaBondForceProxy::deserialize(const SerializationNode& node) const {
     int version = node.getIntProperty("version");
-    if (version < 1 || version > 2)
+    if (version < 1 || version > 3)
         throw OpenMMException("Unsupported version number");
     AmoebaBondForce* force = new AmoebaBondForce();
     try {
         if (version > 1)
             force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        if (version > 2)
+            force->setUsesPeriodicBoundaryConditions(node.getBoolProperty("usesPeriodic"));
         force->setAmoebaGlobalBondCubic(node.getDoubleProperty("cubic"));
         force->setAmoebaGlobalBondQuartic(node.getDoubleProperty("quartic"));
         const SerializationNode& bonds = node.getChildNode("Bonds");
