@@ -1212,6 +1212,10 @@ CpuCalcGayBerneForceKernel::~CpuCalcGayBerneForceKernel() {
 void CpuCalcGayBerneForceKernel::initialize(const System& system, const GayBerneForce& force) {
     ixn = new CpuGayBerneForce(force);
     data.isPeriodic = (force.getNonbondedMethod() == GayBerneForce::CutoffPeriodic);
+    if (force.getNonbondedMethod() != GayBerneForce::NoCutoff) {
+        double cutoff = force.getCutoffDistance();
+        data.requestNeighborList(cutoff, 0.1*cutoff, true, ixn->getExclusions());
+    }
 }
 
 double CpuCalcGayBerneForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {

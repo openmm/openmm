@@ -53,11 +53,6 @@ public:
     CpuGayBerneForce(const GayBerneForce& force);
 
     /**
-     * Destructor.
-     */
-    ~CpuGayBerneForce();
-
-    /**
      * Compute the interaction.
      *
      * @param positions     the positions of the atoms
@@ -72,7 +67,12 @@ public:
     /**
      * This routine contains the code executed by each thread.
      */
-    void threadComputeForce(ThreadPool& threads, int threadIndex);
+    void threadComputeForce(ThreadPool& threads, int threadIndex, CpuNeighborList* neighborList);
+    
+    /**
+     * Get the exclusions being used by the force.
+     */
+    const std::vector<std::set<int> >& getExclusions() const;
 
 private:
     struct ParticleInfo;
@@ -86,7 +86,6 @@ private:
     bool useSwitchingFunction;
     std::vector<RealOpenMM> s;
     std::vector<Matrix> A, B, G;
-    CpuNeighborList* neighborList;
     std::vector<double> threadEnergy;
     std::vector<std::vector<RealVec> > threadTorque;
     // The following variables are used to make information accessible to the individual threads.

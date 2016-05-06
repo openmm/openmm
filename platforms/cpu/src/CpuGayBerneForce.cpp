@@ -41,15 +41,16 @@ using namespace std;
 
 class CpuGayBerneForce::ComputeTask : public ThreadPool::Task {
 public:
-    ComputeTask(CpuGayBerneForce& owner) : owner(owner) {
+    ComputeTask(CpuGayBerneForce& owner, CpuNeighborList* neighborList) : owner(owner), neighborList(neighborList) {
     }
     void execute(ThreadPool& threads, int threadIndex) {
-        owner.threadComputeForce(threads, threadIndex);
+        owner.threadComputeForce(threads, threadIndex, neighborList);
     }
     CpuGayBerneForce& owner;
+    CpuNeighborList* neighborList;
 };
 
-CpuGayBerneForce::CpuGayBerneForce(const GayBerneForce& force) : neighborList(NULL) {
+CpuGayBerneForce::CpuGayBerneForce(const GayBerneForce& force) {
     // Record the force parameters.
 
     int numParticles = force.getNumParticles();
@@ -85,8 +86,6 @@ CpuGayBerneForce::CpuGayBerneForce(const GayBerneForce& force) : neighborList(NU
     cutoffDistance = force.getCutoffDistance();
     switchingDistance = force.getSwitchingDistance();
     useSwitchingFunction = force.getUseSwitchingFunction();
-    if (nonbondedMethod != GayBerneForce::NoCutoff)
-        neighborList = new CpuNeighborList(4);
 
     // Allocate workspace for calculations.
 
@@ -103,9 +102,8 @@ CpuGayBerneForce::CpuGayBerneForce(const GayBerneForce& force) : neighborList(NU
     }
 }
 
-CpuGayBerneForce::~CpuGayBerneForce() {
-    if (neighborList != NULL)
-        delete neighborList;
+const vector<set<int> >& CpuGayBerneForce::getExclusions() const {
+    return particleExclusions;
 }
 
 RealOpenMM CpuGayBerneForce::calculateForce(const vector<RealVec>& positions, std::vector<RealVec>& forces, std::vector<AlignedArray<float> >& threadForce, RealVec* boxVectors, CpuPlatform::PlatformData& data) {
@@ -114,12 +112,6 @@ RealOpenMM CpuGayBerneForce::calculateForce(const vector<RealVec>& positions, st
         if (boxVectors[0][0] < minAllowedSize || boxVectors[1][1] < minAllowedSize || boxVectors[2][2] < minAllowedSize)
             throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
     }
-    
-    // Build the neighbor list.
-    
-    int numParticles = particles.size();
-    if (nonbondedMethod != GayBerneForce::NoCutoff)
-        neighborList->computeNeighborList(numParticles, data.posq, particleExclusions, boxVectors, nonbondedMethod == GayBerneForce::CutoffPeriodic, cutoffDistance, data.threads);
 
     // First find the orientations of the particles and compute the matrices we'll be needing.
 
@@ -140,7 +132,7 @@ RealOpenMM CpuGayBerneForce::calculateForce(const vector<RealVec>& positions, st
     
     // Signal the threads to compute the pairwise interactions.
     
-    ComputeTask task(*this);
+    ComputeTask task(*this, data.neighborList);
     threads.execute(task);
     threads.waitForThreads();
     
@@ -162,7 +154,7 @@ RealOpenMM CpuGayBerneForce::calculateForce(const vector<RealVec>& positions, st
     return energy;
 }
 
-void CpuGayBerneForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
+void CpuGayBerneForce::threadComputeForce(ThreadPool& threads, int threadIndex, CpuNeighborList* neighborList) {
     int numParticles = particles.size();
     int numThreads = threads.getNumThreads();
     threadEnergy[threadIndex] = 0;
@@ -198,14 +190,15 @@ void CpuGayBerneForce::threadComputeForce(ThreadPool& threads, int threadIndex) 
             int blockIndex = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
             if (blockIndex >= neighborList->getNumBlocks())
                 break;
-            const int* blockAtom = &neighborList->getSortedAtoms()[4*blockIndex];
+            const int blockSize = neighborList->getBlockSize();
+            const int* blockAtom = &neighborList->getSortedAtoms()[blockSize*blockIndex];
             const vector<int>& neighbors = neighborList->getBlockNeighbors(blockIndex);
             const vector<char>& exclusions = neighborList->getBlockExclusions(blockIndex);
             for (int i = 0; i < (int) neighbors.size(); i++) {
                 int first = neighbors[i];
                 if (particles[first].sqrtEpsilon == 0.0f)
                     continue;
-                for (int k = 0; k < 4; k++) {
+                for (int k = 0; k < blockSize; k++) {
                     if ((exclusions[i] & (1<<k)) == 0) {
                         int second = blockAtom[k];
                         if (particles[second].sqrtEpsilon == 0.0f)
