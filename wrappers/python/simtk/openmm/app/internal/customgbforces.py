@@ -335,7 +335,7 @@ def _mbondi3_radii(topology):
 
 def _createEnergyTerms(force, solventDielectric, soluteDielectric, SA, cutoff, kappa, offset):
     # Add the energy terms to the CustomGBForce.  These are identical for all the GB models.
-    
+
     params = "; solventDielectric=%.16g; soluteDielectric=%.16g; kappa=%.16g; offset=%.16g" % (solventDielectric, soluteDielectric, kappa, offset)
     if cutoff is not None:
         params += "; cutoff=%.16g" % cutoff
@@ -535,7 +535,7 @@ class GBSAGBnForce(CustomAmberGBForce):
 
     def addParticle(self, parameters):
         parameters = CustomAmberGBForce.addParticle(self, parameters)
-        if parameters[1] < 0.1 or parameters[1] > 0.2:
+        if parameters[1] + self.OFFSET < 0.1 or parameters[1] + self.OFFSET > 0.2:
             raise ValueError('Radii must be between 1 and 2 Angstroms for neck lookup')
 
     def setParticleParameters(self, idx, parameters):
