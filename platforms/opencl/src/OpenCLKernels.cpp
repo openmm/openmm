@@ -1888,7 +1888,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             pmeInterpolateForceKernel.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
             pmeInterpolateForceKernel.setArg<cl::Buffer>(1, cl.getForceBuffers().getDeviceBuffer());
             pmeInterpolateForceKernel.setArg<cl::Buffer>(2, pmeGrid->getDeviceBuffer());
-            pmeInterpolateForceKernel.setArg<cl::Buffer>(7, pmeAtomGridIndex->getDeviceBuffer());
+            pmeInterpolateForceKernel.setArg<cl::Buffer>(11, pmeAtomGridIndex->getDeviceBuffer());
             if (cl.getSupports64BitGlobalAtomics()) {
                 pmeFinishSpreadChargeKernel = cl::Kernel(program, "finishSpreadCharge");
                 pmeFinishSpreadChargeKernel.setArg<cl::Buffer>(0, pmeGrid2->getDeviceBuffer());
@@ -1937,16 +1937,16 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
         
         // Execute the reciprocal space kernels.
 
-        setPeriodicBoxSizeArg(cl, pmeUpdateBsplinesKernel, 4);
+        setPeriodicBoxArgs(cl, pmeUpdateBsplinesKernel, 4);
         if (cl.getUseDoublePrecision()) {
-            pmeUpdateBsplinesKernel.setArg<mm_double4>(5, recipBoxVectors[0]);
-            pmeUpdateBsplinesKernel.setArg<mm_double4>(6, recipBoxVectors[1]);
-            pmeUpdateBsplinesKernel.setArg<mm_double4>(7, recipBoxVectors[2]);
+            pmeUpdateBsplinesKernel.setArg<mm_double4>(9, recipBoxVectors[0]);
+            pmeUpdateBsplinesKernel.setArg<mm_double4>(10, recipBoxVectors[1]);
+            pmeUpdateBsplinesKernel.setArg<mm_double4>(11, recipBoxVectors[2]);
         }
         else {
-            pmeUpdateBsplinesKernel.setArg<mm_float4>(5, recipBoxVectorsFloat[0]);
-            pmeUpdateBsplinesKernel.setArg<mm_float4>(6, recipBoxVectorsFloat[1]);
-            pmeUpdateBsplinesKernel.setArg<mm_float4>(7, recipBoxVectorsFloat[2]);
+            pmeUpdateBsplinesKernel.setArg<mm_float4>(9, recipBoxVectorsFloat[0]);
+            pmeUpdateBsplinesKernel.setArg<mm_float4>(10, recipBoxVectorsFloat[1]);
+            pmeUpdateBsplinesKernel.setArg<mm_float4>(11, recipBoxVectorsFloat[2]);
         }
         cl.executeKernel(pmeUpdateBsplinesKernel, cl.getNumAtoms());
         if (deviceIsCpu && !cl.getSupports64BitGlobalAtomics()) {
@@ -2013,16 +2013,16 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             cl.executeKernel(pmeEvalEnergyKernel, cl.getNumAtoms());
         cl.executeKernel(pmeConvolutionKernel, cl.getNumAtoms());
         fft->execFFT(*pmeGrid2, *pmeGrid, false);
-        setPeriodicBoxSizeArg(cl, pmeInterpolateForceKernel, 3);
+        setPeriodicBoxArgs(cl, pmeInterpolateForceKernel, 3);
         if (cl.getUseDoublePrecision()) {
-            pmeInterpolateForceKernel.setArg<mm_double4>(4, recipBoxVectors[0]);
-            pmeInterpolateForceKernel.setArg<mm_double4>(5, recipBoxVectors[1]);
-            pmeInterpolateForceKernel.setArg<mm_double4>(6, recipBoxVectors[2]);
+            pmeInterpolateForceKernel.setArg<mm_double4>(8, recipBoxVectors[0]);
+            pmeInterpolateForceKernel.setArg<mm_double4>(9, recipBoxVectors[1]);
+            pmeInterpolateForceKernel.setArg<mm_double4>(10, recipBoxVectors[2]);
         }
         else {
-            pmeInterpolateForceKernel.setArg<mm_float4>(4, recipBoxVectorsFloat[0]);
-            pmeInterpolateForceKernel.setArg<mm_float4>(5, recipBoxVectorsFloat[1]);
-            pmeInterpolateForceKernel.setArg<mm_float4>(6, recipBoxVectorsFloat[2]);
+            pmeInterpolateForceKernel.setArg<mm_float4>(8, recipBoxVectorsFloat[0]);
+            pmeInterpolateForceKernel.setArg<mm_float4>(9, recipBoxVectorsFloat[1]);
+            pmeInterpolateForceKernel.setArg<mm_float4>(10, recipBoxVectorsFloat[2]);
         }
         if (deviceIsCpu)
             cl.executeKernel(pmeInterpolateForceKernel, 2*cl.getDevice().getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>(), 1);

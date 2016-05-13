@@ -270,6 +270,49 @@ void testTriclinic() {
     ASSERT_EQUAL_TOL(expectedEnergy, state.getPotentialEnergy(), 1e-4);
 }
 
+void testTriclinic2() {
+    // Create a triclinic box containing a large molecule made up of randomly positioned particles and make sure the
+    // results match the reference platform.
+
+    if (platform.getName() == "Reference")
+        return;
+    const int numParticles = 1000;
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(3.2, 0, 0), Vec3(-1.1, 3.1, 0), Vec3(-1.1, -1.5, 2.7));
+    vector<Vec3> positions(numParticles);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    NonbondedForce* force = new NonbondedForce();
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(1.0);
+        force->addParticle(i%2 == 0 ? -1.0 : 1.0, 1.0, 0.0);
+        positions[i] = Vec3(10*genrand_real2(sfmt)-2, 10*genrand_real2(sfmt)-2, 10*genrand_real2(sfmt)-2);
+        if (i > 0) {
+            Vec3 delta = positions[i-1]-positions[i];
+            system.addConstraint(i-1, i, sqrt(delta.dot(delta)));
+        }
+    }
+    system.addForce(force);
+    force->setNonbondedMethod(NonbondedForce::PME);
+    force->setCutoffDistance(1.0);
+    force->setReciprocalSpaceForceGroup(1);
+    force->setPMEParameters(2.62826, 27, 25, 24);
+
+    // Compute the forces and energy.
+
+    VerletIntegrator integ1(0.001);
+    Context context1(system, integ1, platform);
+    context1.setPositions(positions);
+    VerletIntegrator integ2(0.001);
+    Context context2(system, integ2, Platform::getPlatformByName("Reference"));
+    context2.setPositions(positions);
+    State state1 = context1.getState(State::Forces | State::Energy, false, 2);
+    State state2 = context2.getState(State::Forces | State::Energy, false, 2);
+    ASSERT_EQUAL_TOL(state2.getPotentialEnergy(), state1.getPotentialEnergy(), 1e-4);
+    for (int i = 0; i < numParticles; i++)
+        ASSERT_EQUAL_VEC(state2.getForces()[i], state1.getForces()[i], 1e-4);
+}
+
 void testErrorTolerance(NonbondedForce::NonbondedMethod method) {
     // Create a cloud of random point charges.
 
@@ -391,6 +434,7 @@ int main(int argc, char* argv[]) {
         testEwaldPME(false);
         testEwaldPME(true);
         testTriclinic();
+        testTriclinic2();
         testErrorTolerance(NonbondedForce::Ewald);
         testErrorTolerance(NonbondedForce::PME);
         testPMEParameters();
