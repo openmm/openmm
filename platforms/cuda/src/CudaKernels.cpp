@@ -1938,12 +1938,14 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
         // Execute the reciprocal space kernels.
 
         void* gridIndexArgs[] = {&cu.getPosq().getDevicePointer(), &pmeAtomGridIndex->getDevicePointer(), cu.getPeriodicBoxSizePointer(),
+                cu.getInvPeriodicBoxSizePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
                 recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
         cu.executeKernel(pmeGridIndexKernel, gridIndexArgs, cu.getNumAtoms());
 
         sort->sort(*pmeAtomGridIndex);
 
         void* spreadArgs[] = {&cu.getPosq().getDevicePointer(), &directPmeGrid->getDevicePointer(), cu.getPeriodicBoxSizePointer(),
+                cu.getInvPeriodicBoxSizePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
                 recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2], &pmeAtomGridIndex->getDevicePointer()};
         cu.executeKernel(pmeSpreadChargeKernel, spreadArgs, cu.getNumAtoms(), 128);
 
@@ -1984,8 +1986,9 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
             fft->execFFT(*reciprocalPmeGrid, *directPmeGrid, false);
         }
 
-        void* interpolateArgs[] = {&cu.getPosq().getDevicePointer(), &cu.getForce().getDevicePointer(), &directPmeGrid->getDevicePointer(),
-                cu.getPeriodicBoxSizePointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2], &pmeAtomGridIndex->getDevicePointer()};
+        void* interpolateArgs[] = {&cu.getPosq().getDevicePointer(), &cu.getForce().getDevicePointer(), &directPmeGrid->getDevicePointer(), cu.getPeriodicBoxSizePointer(),
+                cu.getInvPeriodicBoxSizePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
+                recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2], &pmeAtomGridIndex->getDevicePointer()};
         cu.executeKernel(pmeInterpolateForceKernel, interpolateArgs, cu.getNumAtoms(), 128);
         if (usePmeStream) {
             cuEventRecord(pmeSyncEvent, pmeStream);
