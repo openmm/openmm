@@ -171,7 +171,7 @@ void testContinuous2DFunction() {
     const double xmin = 0.4;
     const double xmax = 1.1;
     const double ymin = 0.0;
-    const double ymax = 0.9;
+    const double ymax = 0.95;
     System system;
     system.addParticle(1.0);
     VerletIntegrator integrator(0.01);
@@ -218,7 +218,7 @@ void testContinuous3DFunction() {
     const double ymin = 2.0;
     const double ymax = 2.9;
     const double zmin = 0.2;
-    const double zmax = 1.3;
+    const double zmax = 1.35;
     System system;
     system.addParticle(1.0);
     VerletIntegrator integrator(0.01);
