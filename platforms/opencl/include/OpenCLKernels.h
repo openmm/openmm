@@ -1075,6 +1075,68 @@ private:
 };
 
 /**
+ * This kernel is invoked by GayBerneForce to calculate the forces acting on the system.
+ */
+class OpenCLCalcGayBerneForceKernel : public CalcGayBerneForceKernel {
+public:
+    OpenCLCalcGayBerneForceKernel(std::string name, const Platform& platform, OpenCLContext& cl) : CalcGayBerneForceKernel(name, platform), cl(cl),
+            hasInitializedKernels(false), sortedParticles(NULL), axisParticleIndices(NULL), sigParams(NULL), epsParams(NULL), scale(NULL), aMatrix(NULL),
+            bMatrix(NULL), gMatrix(NULL), exclusions(NULL), exclusionStartIndex(NULL), blockCenter(NULL), blockBoundingBox(NULL), sortedPos(NULL),
+            torque(NULL) {
+    }
+    ~OpenCLCalcGayBerneForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the GayBerneForce this kernel will be used for
+     */
+    void initialize(const System& system, const GayBerneForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the GayBerneForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const GayBerneForce& force);
+private:
+    class ReorderListener;
+    void sortAtoms();
+    OpenCLContext& cl;
+    bool hasInitializedKernels;
+    int numRealParticles;
+    GayBerneForce::NonbondedMethod nonbondedMethod;
+    OpenCLArray* sortedParticles;
+    OpenCLArray* axisParticleIndices;
+    OpenCLArray* sigParams;
+    OpenCLArray* epsParams;
+    OpenCLArray* scale;
+    OpenCLArray* exceptionParticles;
+    OpenCLArray* exceptionParams;
+    OpenCLArray* aMatrix;
+    OpenCLArray* bMatrix;
+    OpenCLArray* gMatrix;
+    OpenCLArray* exclusions;
+    OpenCLArray* exclusionStartIndex;
+    OpenCLArray* blockCenter;
+    OpenCLArray* blockBoundingBox;
+    OpenCLArray* sortedPos;
+    OpenCLArray* torque;
+    std::vector<bool> isRealParticle;
+    std::vector<std::pair<int, int> > exceptionAtoms;
+    std::vector<std::pair<int, int> > excludedPairs;
+    cl::Kernel framesKernel, blockBoundsKernel, neighborsKernel, forceKernel;
+};
+
+/**
  * This kernel is invoked by VerletIntegrator to take one time step.
  */
 class OpenCLIntegrateVerletStepKernel : public IntegrateVerletStepKernel {

@@ -5946,6 +5946,371 @@ void OpenCLCalcCustomManyParticleForceKernel::copyParametersToContext(ContextImp
     cl.invalidateMolecules();
 }
 
+class OpenCLGayBerneForceInfo : public OpenCLForceInfo {
+public:
+    OpenCLGayBerneForceInfo(int requiredBuffers, const GayBerneForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {
+    }
+    bool areParticlesIdentical(int particle1, int particle2) {
+        int xparticle1, yparticle1;
+        double sigma1, epsilon1, sx1, sy1, sz1, ex1, ey1, ez1;
+        int xparticle2, yparticle2;
+        double sigma2, epsilon2, sx2, sy2, sz2, ex2, ey2, ez2;
+        force.getParticleParameters(particle1, sigma1, epsilon1, xparticle1, yparticle1, sx1, sy1, sz1, ex1, ey1, ez1);
+        force.getParticleParameters(particle2, sigma2, epsilon2, xparticle2, yparticle2, sx2, sy2, sz2, ex2, ey2, ez2);
+        return (sigma1 == sigma2 && epsilon1 == epsilon2 && sx1 == sx2 && sy1 == sy2 && sz1 == sz2 && ex1 == ex2 && ey1 == ey2 && ez1 == ez2);
+    }
+    int getNumParticleGroups() {
+        return force.getNumExceptions()+force.getNumParticles();
+    }
+    void getParticlesInGroup(int index, vector<int>& particles) {
+        if (index < force.getNumExceptions()) {
+            int particle1, particle2;
+            double sigma, epsilon;
+            force.getExceptionParameters(index, particle1, particle2, sigma, epsilon);
+            particles.resize(2);
+            particles[0] = particle1;
+            particles[1] = particle2;
+        }
+        else {
+            int particle = index-force.getNumExceptions();
+            int xparticle, yparticle;
+            double sigma, epsilon, sx, sy, sz, ex, ey, ez;
+            force.getParticleParameters(particle, sigma, epsilon, xparticle, yparticle, sx, sy, sz, ex, ey, ez);
+            particles.clear();
+            particles.push_back(particle);
+            if (xparticle > -1)
+                particles.push_back(xparticle);
+            if (yparticle > -1)
+                particles.push_back(yparticle);
+        }
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        if (group1 < force.getNumExceptions() && group2 < force.getNumExceptions()) {
+            int particle1, particle2;
+            double sigma1, sigma2, epsilon1, epsilon2;
+            force.getExceptionParameters(group1, particle1, particle2, sigma1, epsilon1);
+            force.getExceptionParameters(group2, particle1, particle2, sigma2, epsilon2);
+            return (sigma1 == sigma2 && epsilon1 == epsilon2);
+        }
+        return true;
+    }
+private:
+    const GayBerneForce& force;
+};
+
+class OpenCLCalcGayBerneForceKernel::ReorderListener : public OpenCLContext::ReorderListener {
+public:
+    ReorderListener(OpenCLCalcGayBerneForceKernel& owner) : owner(owner) {
+    }
+    void execute() {
+        owner.sortAtoms();
+    }
+private:
+    OpenCLCalcGayBerneForceKernel& owner;
+};
+
+OpenCLCalcGayBerneForceKernel::~OpenCLCalcGayBerneForceKernel() {
+    if (sortedParticles != NULL)
+        delete sortedParticles;
+    if (axisParticleIndices != NULL)
+        delete axisParticleIndices;
+    if (sigParams != NULL)
+        delete sigParams;
+    if (epsParams != NULL)
+        delete epsParams;
+    if (scale != NULL)
+        delete scale;
+    if (exceptionParticles != NULL)
+        delete exceptionParticles;
+    if (exceptionParams != NULL)
+        delete exceptionParams;
+    if (aMatrix != NULL)
+        delete aMatrix;
+    if (bMatrix != NULL)
+        delete bMatrix;
+    if (gMatrix != NULL)
+        delete gMatrix;
+    if (exclusions != NULL)
+        delete exclusions;
+    if (exclusionStartIndex != NULL)
+        delete exclusionStartIndex;
+    if (blockCenter != NULL)
+        delete blockCenter;
+    if (blockBoundingBox != NULL)
+        delete blockBoundingBox;
+    if (sortedPos != NULL)
+        delete sortedPos;
+    if (torque != NULL)
+        delete torque;
+}
+
+void OpenCLCalcGayBerneForceKernel::initialize(const System& system, const GayBerneForce& force) {
+
+    // Initialize interactions.
+
+    int numParticles = force.getNumParticles();
+    sigParams = OpenCLArray::create<mm_float4>(cl, cl.getPaddedNumAtoms(), "sigParams");
+    epsParams = OpenCLArray::create<mm_float2>(cl, cl.getPaddedNumAtoms(), "epsParams");
+    scale = OpenCLArray::create<mm_float4>(cl, cl.getPaddedNumAtoms(), "scale");
+    axisParticleIndices = OpenCLArray::create<mm_int2>(cl, cl.getPaddedNumAtoms(), "axisParticleIndices");
+    sortedParticles = OpenCLArray::create<cl_int>(cl, cl.getPaddedNumAtoms(), "sortedParticles");
+    aMatrix = OpenCLArray::create<cl_float>(cl, 9*cl.getPaddedNumAtoms(), "aMatrix");
+    bMatrix = OpenCLArray::create<cl_float>(cl, 9*cl.getPaddedNumAtoms(), "bMatrix");
+    gMatrix = OpenCLArray::create<cl_float>(cl, 9*cl.getPaddedNumAtoms(), "gMatrix");
+    vector<mm_float4> sigParamsVector(cl.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
+    vector<mm_float2> epsParamsVector(cl.getPaddedNumAtoms(), mm_float2(0, 0));
+    vector<mm_float4> scaleVector(cl.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
+    vector<mm_int2> axisParticleVector(cl.getPaddedNumAtoms(), mm_int2(0, 0));
+    isRealParticle.resize(cl.getPaddedNumAtoms());
+    vector<vector<int> > exclusionList(numParticles);
+    numRealParticles = 0;
+    for (int i = 0; i < numParticles; i++) {
+        int xparticle, yparticle;
+        double sigma, epsilon, sx, sy, sz, ex, ey, ez;
+        force.getParticleParameters(i, sigma, epsilon, xparticle, yparticle, sx, sy, sz, ex, ey, ez);
+        axisParticleVector[i] = mm_int2(xparticle, yparticle);
+        sigParamsVector[i] = mm_float4((float) (0.5*sigma), (float) (0.25*sx*sx), (float) (0.25*sy*sy), (float) (0.25*sz*sz));
+        epsParamsVector[i] = mm_float2((float) sqrt(epsilon), (float) (0.125*(sx*sy + sz*sz)*sqrt(sx*sy)));
+        scaleVector[i] = mm_float4((float) (1/sqrt(ex)), (float) (1/sqrt(ey)), (float) (1/sqrt(ez)), 0);
+        if (epsilon != 0.0) {
+            numRealParticles++;
+            isRealParticle[i] = true;
+        }
+        else
+            isRealParticle[i] = false;
+       exclusionList[i].push_back(i);
+    }
+    sigParams->upload(sigParamsVector);
+    epsParams->upload(epsParamsVector);
+    scale->upload(scaleVector);
+    axisParticleIndices->upload(axisParticleVector);
+    
+    // Create data structures used for the neighbor list.
+
+    int numAtomBlocks = (numRealParticles+31)/32;
+    int elementSize = (cl.getUseDoublePrecision() ? sizeof(cl_double) : sizeof(cl_float));
+    blockCenter = new OpenCLArray(cl, numAtomBlocks, 4*elementSize, "blockCenter");
+    blockBoundingBox = new OpenCLArray(cl, numAtomBlocks, 4*elementSize, "blockBoundingBox");
+    sortedPos = new OpenCLArray(cl, numRealParticles, 4*elementSize, "sortedPos");
+
+    // Create arrays for accumulating torques.
+    
+    if (cl.getSupports64BitGlobalAtomics())
+        torque = OpenCLArray::create<cl_long>(cl, 3*cl.getPaddedNumAtoms(), "torque");
+    else
+        torque = new OpenCLArray(cl, cl.getPaddedNumAtoms()*cl.getNonbondedUtilities().getNumForceBuffers(), elementSize, "torque");
+    cl.addAutoclearBuffer(*torque);
+
+    // Create the kernels.
+    
+    nonbondedMethod = force.getNonbondedMethod();
+    bool useCutoff = (nonbondedMethod != GayBerneForce::NoCutoff);
+    bool usePeriodic = (nonbondedMethod == GayBerneForce::CutoffPeriodic);
+    map<string, string> defines;
+    defines["USE_SWITCH"] = (useCutoff && force.getUseSwitchingFunction() ? "1" : "0");
+    if (useCutoff) {
+        // Compute the switching coefficients.
+        
+        if (force.getUseSwitchingFunction()) {
+            defines["SWITCH_CUTOFF"] = cl.doubleToString(force.getSwitchingDistance());
+            defines["SWITCH_C3"] = cl.doubleToString(10/pow(force.getSwitchingDistance()-force.getCutoffDistance(), 3.0));
+            defines["SWITCH_C4"] = cl.doubleToString(15/pow(force.getSwitchingDistance()-force.getCutoffDistance(), 4.0));
+            defines["SWITCH_C5"] = cl.doubleToString(6/pow(force.getSwitchingDistance()-force.getCutoffDistance(), 5.0));
+        }
+    }
+    if (!cl.getSupports64BitGlobalAtomics()) {
+        defines["PADDED_NUM_ATOMS"] = cl.intToString(cl.getPaddedNumAtoms());
+    }
+    cl::Program program = cl.createProgram(OpenCLKernelSources::gayBerne, defines);
+    framesKernel = cl::Kernel(program, "computeEllipsoidFrames");
+    blockBoundsKernel = cl::Kernel(program, "findBlockBounds");
+    neighborsKernel = cl::Kernel(program, "findNeighbors");
+    forceKernel = cl::Kernel(program, "computeForce");
+    
+    // Add the interaction to the default nonbonded kernel.
+    
+    string source = cl.replaceStrings(OpenCLKernelSources::coulombLennardJones, defines);
+//    cl.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source, force.getForceGroup());
+    cl.getNonbondedUtilities().addParameter(OpenCLNonbondedUtilities::ParameterInfo("sigParams", "float", 4, sizeof(cl_float4), sigParams->getDeviceBuffer()));
+    cl.getNonbondedUtilities().addParameter(OpenCLNonbondedUtilities::ParameterInfo("epsParams", "float", 2, sizeof(cl_float2), epsParams->getDeviceBuffer()));
+    
+    // Record exceptions and exclusions.
+
+    vector<int> exceptions;
+    for (int i = 0; i < force.getNumExceptions(); i++) {
+        int particle1, particle2;
+        double sigma, epsilon;
+        force.getExceptionParameters(i, particle1, particle2, sigma, epsilon);
+        if (isRealParticle[particle1] && isRealParticle[particle2])
+            excludedPairs.push_back(pair<int, int>(particle1, particle2));
+        if (epsilon != 0.0)
+            exceptions.push_back(i);
+    }
+    exclusions = OpenCLArray::create<cl_int>(cl, max(1, (int) excludedPairs.size()), "exclusions");
+    exclusionStartIndex = OpenCLArray::create<cl_int>(cl, numRealParticles+1, "exclusionStartIndex");
+    
+    // Initialize the exceptions.
+
+    int numExceptions = exceptions.size();
+    if (numExceptions > 0) {
+        exceptionAtoms.resize(numExceptions);
+        vector<vector<int> > atoms(numExceptions, vector<int>(2));
+        exceptionParams = OpenCLArray::create<mm_float2>(cl, numExceptions, "exceptionParams");
+        vector<mm_float2> exceptionParamsVector(numExceptions);
+        for (int i = 0; i < numExceptions; i++) {
+            double sigma, epsilon;
+            force.getExceptionParameters(exceptions[i], atoms[i][0], atoms[i][1], sigma, epsilon);
+            exceptionParamsVector[i] = mm_float2((float) sigma, (float) (4.0*epsilon));
+            exceptionAtoms[i] = make_pair(atoms[i][0], atoms[i][1]);
+        }
+        exceptionParams->upload(exceptionParamsVector);
+        map<string, string> replacements;
+        replacements["PARAMS"] = cl.getBondedUtilities().addArgument(exceptionParams->getDeviceBuffer(), "float2");
+//        cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::nonbondedExceptions, replacements), force.getForceGroup());
+    }
+    cl.addForce(new OpenCLGayBerneForceInfo(cl.getNonbondedUtilities().getNumForceBuffers(), force));
+    cl.addReorderListener(new ReorderListener(*this));
+}
+
+double OpenCLCalcGayBerneForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    if (!hasInitializedKernels) {
+        hasInitializedKernels = true;
+        sortAtoms();
+        framesKernel.setArg<cl_int>(0, numRealParticles);
+        framesKernel.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
+        framesKernel.setArg<cl::Buffer>(2, axisParticleIndices->getDeviceBuffer());
+        framesKernel.setArg<cl::Buffer>(3, sigParams->getDeviceBuffer());
+        framesKernel.setArg<cl::Buffer>(4, scale->getDeviceBuffer());
+        framesKernel.setArg<cl::Buffer>(5, aMatrix->getDeviceBuffer());
+        framesKernel.setArg<cl::Buffer>(6, bMatrix->getDeviceBuffer());
+        framesKernel.setArg<cl::Buffer>(7, gMatrix->getDeviceBuffer());
+        framesKernel.setArg<cl::Buffer>(8, sortedParticles->getDeviceBuffer());
+        blockBoundsKernel.setArg<cl_int>(0, numRealParticles);
+        blockBoundsKernel.setArg<cl::Buffer>(6, sortedParticles->getDeviceBuffer());
+        blockBoundsKernel.setArg<cl::Buffer>(7, cl.getPosq().getDeviceBuffer());
+        blockBoundsKernel.setArg<cl::Buffer>(8, sortedPos->getDeviceBuffer());
+        blockBoundsKernel.setArg<cl::Buffer>(9, blockCenter->getDeviceBuffer());
+        blockBoundsKernel.setArg<cl::Buffer>(10, blockBoundingBox->getDeviceBuffer());
+        bool useLong = cl.getSupports64BitGlobalAtomics();
+        int index = 0;
+        forceKernel.setArg<cl::Buffer>(index++, (useLong ? cl.getLongForceBuffer().getDeviceBuffer() : cl.getForceBuffers().getDeviceBuffer()));
+        forceKernel.setArg<cl::Buffer>(index++, torque->getDeviceBuffer());
+        forceKernel.setArg<cl_int>(index++, numRealParticles);
+        forceKernel.setArg<cl::Buffer>(index++, cl.getEnergyBuffer().getDeviceBuffer());
+        forceKernel.setArg<cl::Buffer>(index++, sortedPos->getDeviceBuffer());
+        forceKernel.setArg<cl::Buffer>(index++, sigParams->getDeviceBuffer());
+        forceKernel.setArg<cl::Buffer>(index++, epsParams->getDeviceBuffer());
+        forceKernel.setArg<cl::Buffer>(index++, sortedParticles->getDeviceBuffer());
+        forceKernel.setArg<cl::Buffer>(index++, aMatrix->getDeviceBuffer());
+        forceKernel.setArg<cl::Buffer>(index++, bMatrix->getDeviceBuffer());
+        forceKernel.setArg<cl::Buffer>(index++, gMatrix->getDeviceBuffer());
+        forceKernel.setArg<cl::Buffer>(index++, exclusions->getDeviceBuffer());
+        forceKernel.setArg<cl::Buffer>(index++, exclusionStartIndex->getDeviceBuffer());
+    }
+    cl.executeKernel(framesKernel, cl.getNumAtoms());
+    setPeriodicBoxArgs(cl, blockBoundsKernel, 1);
+    cl.executeKernel(blockBoundsKernel, (numRealParticles+31)/32);
+    if (nonbondedMethod != GayBerneForce::NoCutoff) {
+    }
+    cl.executeKernel(forceKernel, cl.getNonbondedUtilities().getNumForceThreadBlocks()*cl.getNonbondedUtilities().getForceThreadBlockSize());
+    return 0.0;
+}
+
+void OpenCLCalcGayBerneForceKernel::copyParametersToContext(ContextImpl& context, const GayBerneForce& force) {
+    // Make sure the new parameters are acceptable.
+    
+    if (force.getNumParticles() != cl.getNumAtoms())
+        throw OpenMMException("updateParametersInContext: The number of particles has changed");
+    vector<int> exceptions;
+    for (int i = 0; i < force.getNumExceptions(); i++) {
+        int particle1, particle2;
+        double sigma, epsilon;
+        force.getExceptionParameters(i, particle1, particle2, sigma, epsilon);
+        if (exceptionAtoms.size() > exceptions.size() && make_pair(particle1, particle2) == exceptionAtoms[exceptions.size()])
+            exceptions.push_back(i);
+        else if (epsilon != 0.0)
+            throw OpenMMException("updateParametersInContext: The set of non-excluded exceptions has changed");
+    }
+    int numContexts = cl.getPlatformData().contexts.size();
+    int startIndex = cl.getContextIndex()*exceptions.size()/numContexts;
+    int endIndex = (cl.getContextIndex()+1)*exceptions.size()/numContexts;
+    int numExceptions = endIndex-startIndex;
+    
+    // Record the per-particle parameters.
+    
+    vector<mm_float4> sigParamsVector(cl.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
+    vector<mm_float2> epsParamsVector(cl.getPaddedNumAtoms(), mm_float2(0, 0));
+    vector<mm_float4> scaleVector(cl.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
+    numRealParticles = 0;
+    for (int i = 0; i < force.getNumParticles(); i++) {
+        int xparticle, yparticle;
+        double sigma, epsilon, sx, sy, sz, ex, ey, ez;
+        force.getParticleParameters(i, sigma, epsilon, xparticle, yparticle, sx, sy, sz, ex, ey, ez);
+        sigParamsVector[i] = mm_float4((float) (0.5*sigma), (float) (0.5*sx), (float) (0.5*sy), (float) (0.5*sz));
+        epsParamsVector[i] = mm_float2((float) sqrt(epsilon), (float) (0.125*(sx*sy + sz*sz)*sqrt(sx*sy)));
+        scaleVector[i] = mm_float4((float) (1/sqrt(ex)), (float) (1/sqrt(ey)), (float) (1/sqrt(ez)), 0);
+        if (epsilon != 0.0) {
+            numRealParticles++;
+            isRealParticle[i] = true;
+        }
+        else
+            isRealParticle[i] = false;
+    }
+    sigParams->upload(sigParamsVector);
+    epsParams->upload(epsParamsVector);
+    scale->upload(scaleVector);
+    
+    // Record the exceptions.
+    
+    if (numExceptions > 0) {
+        vector<vector<int> > atoms(numExceptions, vector<int>(2));
+        vector<mm_float2> exceptionParamsVector(numExceptions);
+        for (int i = 0; i < numExceptions; i++) {
+            double sigma, epsilon;
+            force.getExceptionParameters(exceptions[startIndex+i], atoms[i][0], atoms[i][1], sigma, epsilon);
+            exceptionParamsVector[i] = mm_float2((float) sigma, (float) (4.0*epsilon));
+        }
+        exceptionParams->upload(exceptionParamsVector);
+    }
+    cl.invalidateMolecules();
+    sortAtoms();
+}
+
+void OpenCLCalcGayBerneForceKernel::sortAtoms() {
+    // Sort the list of atoms by type to avoid thread divergence.  This is executed every time
+    // the atoms are reordered.
+    
+    int nextIndex = 0;
+    vector<cl_int> particles(cl.getPaddedNumAtoms(), 0);
+    const vector<int>& order = cl.getAtomIndex();
+    for (int i = 0; i < cl.getNumAtoms(); i++) {
+        int atom = order[i];
+        if (isRealParticle[atom])
+            particles[nextIndex++] = atom;
+    }
+    sortedParticles->upload(particles);
+    
+    // Rebuild the list of exclusions.
+    
+    vector<vector<int> > excludedAtoms(numRealParticles);
+    for (int i = 0; i < excludedPairs.size(); i++) {
+        int first = min(excludedPairs[i].first, excludedPairs[i].second);
+        int second = max(excludedPairs[i].first, excludedPairs[i].second);
+        excludedAtoms[first].push_back(second);
+    }
+    int index = 0;
+    vector<int> exclusionVec(exclusions->getSize());
+    vector<int> startIndexVec(exclusionStartIndex->getSize());
+    for (int i = 0; i < numRealParticles; i++) {
+        startIndexVec[i] = index;
+        for (int j = 0; j < excludedAtoms[i].size(); j++)
+            exclusionVec[index++] = excludedAtoms[i][j];
+    }
+    startIndexVec[numRealParticles] = index;
+    exclusions->upload(exclusionVec);
+    exclusionStartIndex->upload(startIndexVec);
+}
+
 OpenCLIntegrateVerletStepKernel::~OpenCLIntegrateVerletStepKernel() {
 }
 
