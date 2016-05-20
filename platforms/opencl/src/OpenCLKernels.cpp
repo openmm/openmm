@@ -6038,6 +6038,12 @@ OpenCLCalcGayBerneForceKernel::~OpenCLCalcGayBerneForceKernel() {
         delete blockCenter;
     if (blockBoundingBox != NULL)
         delete blockBoundingBox;
+    if (neighbors != NULL)
+        delete neighbors;
+    if (neighborIndex != NULL)
+        delete neighborIndex;
+    if (neighborBlockCount != NULL)
+        delete neighborBlockCount;
     if (sortedPos != NULL)
         delete sortedPos;
     if (torque != NULL)
@@ -6062,8 +6068,6 @@ void OpenCLCalcGayBerneForceKernel::initialize(const System& system, const GayBe
     vector<mm_float4> scaleVector(cl.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
     vector<mm_int2> axisParticleVector(cl.getPaddedNumAtoms(), mm_int2(0, 0));
     isRealParticle.resize(cl.getPaddedNumAtoms());
-    vector<vector<int> > exclusionList(numParticles);
-    numRealParticles = 0;
     for (int i = 0; i < numParticles; i++) {
         int xparticle, yparticle;
         double sigma, epsilon, sx, sy, sz, ex, ey, ez;
@@ -6072,18 +6076,40 @@ void OpenCLCalcGayBerneForceKernel::initialize(const System& system, const GayBe
         sigParamsVector[i] = mm_float4((float) (0.5*sigma), (float) (0.25*sx*sx), (float) (0.25*sy*sy), (float) (0.25*sz*sz));
         epsParamsVector[i] = mm_float2((float) sqrt(epsilon), (float) (0.125*(sx*sy + sz*sz)*sqrt(sx*sy)));
         scaleVector[i] = mm_float4((float) (1/sqrt(ex)), (float) (1/sqrt(ey)), (float) (1/sqrt(ez)), 0);
-        if (epsilon != 0.0) {
-            numRealParticles++;
-            isRealParticle[i] = true;
-        }
-        else
-            isRealParticle[i] = false;
-       exclusionList[i].push_back(i);
+        isRealParticle[i] = (epsilon != 0.0);
     }
     sigParams->upload(sigParamsVector);
     epsParams->upload(epsParamsVector);
     scale->upload(scaleVector);
     axisParticleIndices->upload(axisParticleVector);
+    
+    // Record exceptions and exclusions.
+
+    vector<mm_float2> exceptionParamsVec;
+    for (int i = 0; i < force.getNumExceptions(); i++) {
+        int particle1, particle2;
+        double sigma, epsilon;
+        force.getExceptionParameters(i, particle1, particle2, sigma, epsilon);
+        if (epsilon != 0.0) {
+            exceptionParamsVec.push_back(mm_float2((float) sigma, (float) epsilon));
+            exceptionAtoms.push_back(make_pair(particle1, particle2));
+            isRealParticle[particle1] = true;
+            isRealParticle[particle2] = true;
+        }
+        if (isRealParticle[particle1] && isRealParticle[particle2])
+            excludedPairs.push_back(pair<int, int>(particle1, particle2));
+    }
+    numRealParticles = 0;
+    for (int i = 0; i < isRealParticle.size(); i++)
+        if (isRealParticle[i])
+            numRealParticles++;
+    int numExceptions = exceptionParamsVec.size();
+    exclusions = OpenCLArray::create<cl_int>(cl, max(1, (int) excludedPairs.size()), "exclusions");
+    exclusionStartIndex = OpenCLArray::create<cl_int>(cl, numRealParticles+1, "exclusionStartIndex");
+    exceptionParticles = OpenCLArray::create<mm_int4>(cl, max(1, numExceptions), "exceptionParticles");
+    exceptionParams = OpenCLArray::create<mm_float2>(cl, max(1, numExceptions), "exceptionParams");
+    if (numExceptions > 0)
+        exceptionParams->upload(exceptionParamsVec);
     
     // Create data structures used for the neighbor list.
 
@@ -6092,6 +6118,10 @@ void OpenCLCalcGayBerneForceKernel::initialize(const System& system, const GayBe
     blockCenter = new OpenCLArray(cl, numAtomBlocks, 4*elementSize, "blockCenter");
     blockBoundingBox = new OpenCLArray(cl, numAtomBlocks, 4*elementSize, "blockBoundingBox");
     sortedPos = new OpenCLArray(cl, numRealParticles, 4*elementSize, "sortedPos");
+    maxNeighborBlocks = numRealParticles*2;
+    neighbors = OpenCLArray::create<cl_int>(cl, maxNeighborBlocks*32, "neighbors");
+    neighborIndex = OpenCLArray::create<mm_int2>(cl, maxNeighborBlocks, "neighbors");
+    neighborBlockCount = OpenCLArray::create<cl_int>(cl, 1, "neighborBlockCount");
 
     // Create arrays for accumulating torques.
     
@@ -6126,48 +6156,7 @@ void OpenCLCalcGayBerneForceKernel::initialize(const System& system, const GayBe
     blockBoundsKernel = cl::Kernel(program, "findBlockBounds");
     neighborsKernel = cl::Kernel(program, "findNeighbors");
     forceKernel = cl::Kernel(program, "computeForce");
-    
-    // Add the interaction to the default nonbonded kernel.
-    
-    string source = cl.replaceStrings(OpenCLKernelSources::coulombLennardJones, defines);
-//    cl.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source, force.getForceGroup());
-    cl.getNonbondedUtilities().addParameter(OpenCLNonbondedUtilities::ParameterInfo("sigParams", "float", 4, sizeof(cl_float4), sigParams->getDeviceBuffer()));
-    cl.getNonbondedUtilities().addParameter(OpenCLNonbondedUtilities::ParameterInfo("epsParams", "float", 2, sizeof(cl_float2), epsParams->getDeviceBuffer()));
-    
-    // Record exceptions and exclusions.
-
-    vector<int> exceptions;
-    for (int i = 0; i < force.getNumExceptions(); i++) {
-        int particle1, particle2;
-        double sigma, epsilon;
-        force.getExceptionParameters(i, particle1, particle2, sigma, epsilon);
-        if (isRealParticle[particle1] && isRealParticle[particle2])
-            excludedPairs.push_back(pair<int, int>(particle1, particle2));
-        if (epsilon != 0.0)
-            exceptions.push_back(i);
-    }
-    exclusions = OpenCLArray::create<cl_int>(cl, max(1, (int) excludedPairs.size()), "exclusions");
-    exclusionStartIndex = OpenCLArray::create<cl_int>(cl, numRealParticles+1, "exclusionStartIndex");
-    
-    // Initialize the exceptions.
-
-    int numExceptions = exceptions.size();
-    if (numExceptions > 0) {
-        exceptionAtoms.resize(numExceptions);
-        vector<vector<int> > atoms(numExceptions, vector<int>(2));
-        exceptionParams = OpenCLArray::create<mm_float2>(cl, numExceptions, "exceptionParams");
-        vector<mm_float2> exceptionParamsVector(numExceptions);
-        for (int i = 0; i < numExceptions; i++) {
-            double sigma, epsilon;
-            force.getExceptionParameters(exceptions[i], atoms[i][0], atoms[i][1], sigma, epsilon);
-            exceptionParamsVector[i] = mm_float2((float) sigma, (float) (4.0*epsilon));
-            exceptionAtoms[i] = make_pair(atoms[i][0], atoms[i][1]);
-        }
-        exceptionParams->upload(exceptionParamsVector);
-        map<string, string> replacements;
-        replacements["PARAMS"] = cl.getBondedUtilities().addArgument(exceptionParams->getDeviceBuffer(), "float2");
-//        cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::nonbondedExceptions, replacements), force.getForceGroup());
-    }
+    torqueKernel = cl::Kernel(program, "applyTorques");
     cl.addForce(new OpenCLGayBerneForceInfo(cl.getNonbondedUtilities().getNumForceBuffers(), force));
     cl.addReorderListener(new ReorderListener(*this));
 }
@@ -6191,11 +6180,21 @@ double OpenCLCalcGayBerneForceKernel::execute(ContextImpl& context, bool include
         blockBoundsKernel.setArg<cl::Buffer>(8, sortedPos->getDeviceBuffer());
         blockBoundsKernel.setArg<cl::Buffer>(9, blockCenter->getDeviceBuffer());
         blockBoundsKernel.setArg<cl::Buffer>(10, blockBoundingBox->getDeviceBuffer());
+        blockBoundsKernel.setArg<cl::Buffer>(11, neighborBlockCount->getDeviceBuffer());
+        neighborsKernel.setArg<cl_int>(0, numRealParticles);
+        neighborsKernel.setArg<cl_int>(1, maxNeighborBlocks);
+        neighborsKernel.setArg<cl::Buffer>(7, sortedPos->getDeviceBuffer());
+        neighborsKernel.setArg<cl::Buffer>(8, blockCenter->getDeviceBuffer());
+        neighborsKernel.setArg<cl::Buffer>(9, blockBoundingBox->getDeviceBuffer());
+        neighborsKernel.setArg<cl::Buffer>(10, neighbors->getDeviceBuffer());
+        neighborsKernel.setArg<cl::Buffer>(11, neighborIndex->getDeviceBuffer());
+        neighborsKernel.setArg<cl::Buffer>(12, neighborBlockCount->getDeviceBuffer());
         bool useLong = cl.getSupports64BitGlobalAtomics();
         int index = 0;
         forceKernel.setArg<cl::Buffer>(index++, (useLong ? cl.getLongForceBuffer().getDeviceBuffer() : cl.getForceBuffers().getDeviceBuffer()));
         forceKernel.setArg<cl::Buffer>(index++, torque->getDeviceBuffer());
         forceKernel.setArg<cl_int>(index++, numRealParticles);
+        forceKernel.setArg<cl_int>(index++, exceptionAtoms.size());
         forceKernel.setArg<cl::Buffer>(index++, cl.getEnergyBuffer().getDeviceBuffer());
         forceKernel.setArg<cl::Buffer>(index++, sortedPos->getDeviceBuffer());
         forceKernel.setArg<cl::Buffer>(index++, sigParams->getDeviceBuffer());
@@ -6206,13 +6205,27 @@ double OpenCLCalcGayBerneForceKernel::execute(ContextImpl& context, bool include
         forceKernel.setArg<cl::Buffer>(index++, gMatrix->getDeviceBuffer());
         forceKernel.setArg<cl::Buffer>(index++, exclusions->getDeviceBuffer());
         forceKernel.setArg<cl::Buffer>(index++, exclusionStartIndex->getDeviceBuffer());
+        forceKernel.setArg<cl::Buffer>(index++, exceptionParticles->getDeviceBuffer());
+        forceKernel.setArg<cl::Buffer>(index++, exceptionParams->getDeviceBuffer());
+        index = 0;
+        torqueKernel.setArg<cl::Buffer>(index++, (useLong ? cl.getLongForceBuffer().getDeviceBuffer() : cl.getForceBuffers().getDeviceBuffer()));
+        torqueKernel.setArg<cl::Buffer>(index++, torque->getDeviceBuffer());
+        if (!useLong)
+            torqueKernel.setArg<cl_int>(index++, cl.getNumForceBuffers());
+        torqueKernel.setArg<cl_int>(index++, numRealParticles);
+        torqueKernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
+        torqueKernel.setArg<cl::Buffer>(index++, axisParticleIndices->getDeviceBuffer());
+        torqueKernel.setArg<cl::Buffer>(index++, sortedParticles->getDeviceBuffer());
     }
-    cl.executeKernel(framesKernel, cl.getNumAtoms());
+    cl.executeKernel(framesKernel, numRealParticles);
     setPeriodicBoxArgs(cl, blockBoundsKernel, 1);
     cl.executeKernel(blockBoundsKernel, (numRealParticles+31)/32);
     if (nonbondedMethod != GayBerneForce::NoCutoff) {
+        setPeriodicBoxArgs(cl, neighborsKernel, 2);
+        cl.executeKernel(neighborsKernel, numRealParticles);
     }
     cl.executeKernel(forceKernel, cl.getNonbondedUtilities().getNumForceThreadBlocks()*cl.getNonbondedUtilities().getForceThreadBlockSize());
+    cl.executeKernel(torqueKernel, numRealParticles);
     return 0.0;
 }
 
@@ -6231,10 +6244,7 @@ void OpenCLCalcGayBerneForceKernel::copyParametersToContext(ContextImpl& context
         else if (epsilon != 0.0)
             throw OpenMMException("updateParametersInContext: The set of non-excluded exceptions has changed");
     }
-    int numContexts = cl.getPlatformData().contexts.size();
-    int startIndex = cl.getContextIndex()*exceptions.size()/numContexts;
-    int endIndex = (cl.getContextIndex()+1)*exceptions.size()/numContexts;
-    int numExceptions = endIndex-startIndex;
+    int numExceptions = exceptionAtoms.size();
     
     // Record the per-particle parameters.
     
@@ -6263,14 +6273,14 @@ void OpenCLCalcGayBerneForceKernel::copyParametersToContext(ContextImpl& context
     // Record the exceptions.
     
     if (numExceptions > 0) {
-        vector<vector<int> > atoms(numExceptions, vector<int>(2));
-        vector<mm_float2> exceptionParamsVector(numExceptions);
+        vector<mm_float2> exceptionParamsVec(numExceptions);
         for (int i = 0; i < numExceptions; i++) {
+            int atom1, atom2;
             double sigma, epsilon;
-            force.getExceptionParameters(exceptions[startIndex+i], atoms[i][0], atoms[i][1], sigma, epsilon);
-            exceptionParamsVector[i] = mm_float2((float) sigma, (float) (4.0*epsilon));
+            force.getExceptionParameters(exceptions[i], atom1, atom2, sigma, epsilon);
+            exceptionParamsVec[i] = mm_float2((float) sigma, (float) epsilon);
         }
-        exceptionParams->upload(exceptionParamsVector);
+        exceptionParams->upload(exceptionParamsVec);
     }
     cl.invalidateMolecules();
     sortAtoms();
@@ -6283,12 +6293,25 @@ void OpenCLCalcGayBerneForceKernel::sortAtoms() {
     int nextIndex = 0;
     vector<cl_int> particles(cl.getPaddedNumAtoms(), 0);
     const vector<int>& order = cl.getAtomIndex();
+    vector<int> inverseOrder(order.size(), -1);
     for (int i = 0; i < cl.getNumAtoms(); i++) {
         int atom = order[i];
-        if (isRealParticle[atom])
+        if (isRealParticle[atom]) {
+            inverseOrder[atom] = nextIndex;
             particles[nextIndex++] = atom;
+        }
     }
     sortedParticles->upload(particles);
+    
+    // Update the list of exception particles.
+    
+    int numExceptions = exceptionAtoms.size();
+    if (numExceptions > 0) {
+        vector<mm_int4> exceptionParticlesVec(numExceptions);
+        for (int i = 0; i < numExceptions; i++)
+            exceptionParticlesVec[i] = mm_int4(exceptionAtoms[i].first, exceptionAtoms[i].second, inverseOrder[exceptionAtoms[i].first], inverseOrder[exceptionAtoms[i].second]);
+        exceptionParticles->upload(exceptionParticlesVec);
+    }
     
     // Rebuild the list of exclusions.
     

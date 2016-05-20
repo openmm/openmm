@@ -1080,9 +1080,10 @@ private:
 class OpenCLCalcGayBerneForceKernel : public CalcGayBerneForceKernel {
 public:
     OpenCLCalcGayBerneForceKernel(std::string name, const Platform& platform, OpenCLContext& cl) : CalcGayBerneForceKernel(name, platform), cl(cl),
-            hasInitializedKernels(false), sortedParticles(NULL), axisParticleIndices(NULL), sigParams(NULL), epsParams(NULL), scale(NULL), aMatrix(NULL),
-            bMatrix(NULL), gMatrix(NULL), exclusions(NULL), exclusionStartIndex(NULL), blockCenter(NULL), blockBoundingBox(NULL), sortedPos(NULL),
-            torque(NULL) {
+            hasInitializedKernels(false), sortedParticles(NULL), axisParticleIndices(NULL), sigParams(NULL), epsParams(NULL), scale(NULL), exceptionParticles(NULL),
+            exceptionParams(NULL), aMatrix(NULL),
+            bMatrix(NULL), gMatrix(NULL), exclusions(NULL), exclusionStartIndex(NULL), blockCenter(NULL), blockBoundingBox(NULL), neighbors(NULL),
+            neighborIndex(NULL), neighborBlockCount(NULL), sortedPos(NULL), torque(NULL) {
     }
     ~OpenCLCalcGayBerneForceKernel();
     /**
@@ -1112,7 +1113,7 @@ private:
     void sortAtoms();
     OpenCLContext& cl;
     bool hasInitializedKernels;
-    int numRealParticles;
+    int numRealParticles, maxNeighborBlocks;
     GayBerneForce::NonbondedMethod nonbondedMethod;
     OpenCLArray* sortedParticles;
     OpenCLArray* axisParticleIndices;
@@ -1128,12 +1129,15 @@ private:
     OpenCLArray* exclusionStartIndex;
     OpenCLArray* blockCenter;
     OpenCLArray* blockBoundingBox;
+    OpenCLArray* neighbors;
+    OpenCLArray* neighborIndex;
+    OpenCLArray* neighborBlockCount;
     OpenCLArray* sortedPos;
     OpenCLArray* torque;
     std::vector<bool> isRealParticle;
     std::vector<std::pair<int, int> > exceptionAtoms;
     std::vector<std::pair<int, int> > excludedPairs;
-    cl::Kernel framesKernel, blockBoundsKernel, neighborsKernel, forceKernel;
+    cl::Kernel framesKernel, blockBoundsKernel, neighborsKernel, forceKernel, torqueKernel;
 };
 
 /**

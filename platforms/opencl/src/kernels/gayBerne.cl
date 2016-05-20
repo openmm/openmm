@@ -71,7 +71,7 @@ __kernel void computeEllipsoidFrames(int numParticles, __global const real4* res
  */
 __kernel void findBlockBounds(int numAtoms, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
         __global const int* sortedAtoms, __global const real4* restrict posq, __global real4* restrict sortedPos, __global real4* restrict blockCenter,
-        __global real4* restrict blockBoundingBox) {
+        __global real4* restrict blockBoundingBox, __global int* restrict neighborBlockCount) {
     int index = get_global_id(0);
     int base = index*TILE_SIZE;
     while (base < numAtoms) {
@@ -99,14 +99,16 @@ __kernel void findBlockBounds(int numAtoms, real4 periodicBoxSize, real4 invPeri
         index += get_global_size(0);
         base = index*TILE_SIZE;
     }
+    if (get_global_id(0) == 0)
+        *neighborBlockCount = 0;
 }
 
 /**
  * Build a list of neighbors for each atom.
  */
-__kernel void findNeighbors(int numAtoms, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
-        __global const int* sortedAtoms, __global const real4* restrict posq, __global real4* restrict sortedPos, __global real4* restrict blockCenter,
-        __global real4* restrict blockBoundingBox) {
+__kernel void findNeighbors(int numAtoms, int maxNeighborBlocks, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
+        __global real4* restrict sortedPos, __global real4* restrict blockCenter, __global real4* restrict blockBoundingBox, __global int* restrict neighbors,
+        __global int2* restrict neighborIndex, __global int* restrict neighborBlockCount) {
 }
 
 typedef struct {
@@ -281,10 +283,11 @@ __kernel void computeForce(
 #else
         __global real4* restrict forceBuffers, __global real4* restrict torqueBuffers,
 #endif
-        int numAtoms, __global mixed* restrict energyBuffer, __global const real4* restrict pos, __global const float4* restrict sigParams,
-        __global const float2* restrict epsParams, __global const int* restrict sortedAtoms, __global const real* restrict aMatrix,
-        __global const real* restrict bMatrix, __global const real* restrict gMatrix, __global const int* restrict exclusions,
-        __global const int* restrict exclusionStartIndex
+        int numAtoms, int numExceptions, __global mixed* restrict energyBuffer, __global const real4* restrict pos,
+        __global const float4* restrict sigParams, __global const float2* restrict epsParams, __global const int* restrict sortedAtoms,
+        __global const real* restrict aMatrix, __global const real* restrict bMatrix, __global const real* restrict gMatrix,
+        __global const int* restrict exclusions, __global const int* restrict exclusionStartIndex,
+        __global const int4* restrict exceptionParticles, __global const float2* restrict exceptionParams
 #ifdef USE_CUTOFF
         __global const unsigned int* restrict interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, 
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, __global const real4* restrict blockCenter,
@@ -306,14 +309,14 @@ __kernel void computeForce(
         for (int atom2 = atom1+1; atom2 < numAtoms; atom2++) {
             // Skip over excluded interactions.
             
-            if (nextExclusion < lastExclusion && exclusions[nextExclusion] == atom2) {
+            int index2 = sortedAtoms[atom2];
+            if (nextExclusion < lastExclusion && exclusions[nextExclusion] == index2) {
                 nextExclusion++;
                 continue;
             }
             
             // Load parameters for atom2.
             
-            int index2 = sortedAtoms[atom2];
             AtomData data2;
             loadAtomData(&data2, atom2, index2, pos, sigParams, epsParams, aMatrix, bMatrix, gMatrix);
             real3 force2 = 0.0f;
@@ -361,5 +364,118 @@ __kernel void computeForce(
         torqueBuffers[offset].xyz += torque1.xyz;
 #endif
     }
+    
+    // Now compute exceptions.
+    
+    for (int index = get_global_id(0); index < numExceptions; index += get_global_size(0)) {
+        int4 atomIndices = exceptionParticles[index];
+        real2 params = exceptionParams[index];
+        int index1 = atomIndices.x, index2 = atomIndices.y;
+        int atom1 = atomIndices.z, atom2 = atomIndices.w;
+        AtomData data1, data2;
+        loadAtomData(&data1, atom1, index1, pos, sigParams, epsParams, aMatrix, bMatrix, gMatrix);
+        loadAtomData(&data2, atom2, index2, pos, sigParams, epsParams, aMatrix, bMatrix, gMatrix);
+        real3 force1 = 0, force2 = 0;
+        real3 torque1 = 0, torque2 = 0;
+        real3 delta = data1.pos-data2.pos;
+        real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+#ifdef USE_CUTOFF
+        if (r2 < CUTOFF_SQUARED) {
+#endif
+            computeOneInteraction(&data1, &data2, params.x, params.y, delta, r2, &force1, &force2, &torque1, &torque2, &energy);
+#ifdef SUPPORTS_64_BIT_ATOMICS
+            atom_add(&forceBuffers[index1], (long) (force1.x*0x100000000));
+            atom_add(&forceBuffers[index1+PADDED_NUM_ATOMS], (long) (force1.y*0x100000000));
+            atom_add(&forceBuffers[index1+2*PADDED_NUM_ATOMS], (long) (force1.z*0x100000000));
+            atom_add(&forceBuffers[index2], (long) (force2.x*0x100000000));
+            atom_add(&forceBuffers[index2+PADDED_NUM_ATOMS], (long) (force2.y*0x100000000));
+            atom_add(&forceBuffers[index2+2*PADDED_NUM_ATOMS], (long) (force2.z*0x100000000));
+            atom_add(&torqueBuffers[index1], (long) (torque1.x*0x100000000));
+            atom_add(&torqueBuffers[index1+PADDED_NUM_ATOMS], (long) (torque1.y*0x100000000));
+            atom_add(&torqueBuffers[index1+2*PADDED_NUM_ATOMS], (long) (torque1.z*0x100000000));
+            atom_add(&torqueBuffers[index2], (long) (torque2.x*0x100000000));
+            atom_add(&torqueBuffers[index2+PADDED_NUM_ATOMS], (long) (torque2.y*0x100000000));
+            atom_add(&torqueBuffers[index2+2*PADDED_NUM_ATOMS], (long) (torque2.z*0x100000000));
+#else
+            int offset = index1 + warp*PADDED_NUM_ATOMS;
+            forceBuffers[offset].xyz += force1.xyz;
+            torqueBuffers[offset].xyz += torque1.xyz;
+            offset = index2 + warp*PADDED_NUM_ATOMS;
+            forceBuffers[offset].xyz += force2.xyz;
+            torqueBuffers[offset].xyz += torque2.xyz;
+#endif
+#ifdef USE_CUTOFF
+        }
+#endif
+    }
     energyBuffer[get_global_id(0)] += energy;
+}
+
+/**
+ * Convert the torques to forces on the connected particles.
+ */
+__kernel void applyTorques(
+#ifdef SUPPORTS_64_BIT_ATOMICS
+        __global long* restrict forceBuffers, __global long* restrict torqueBuffers,
+#else
+        __global real4* restrict forceBuffers, __global real4* restrict torqueBuffers, int numBuffers,
+#endif
+        int numParticles, __global const real4* restrict posq, __global int2* const restrict axisParticleIndices,
+        __global const int* sortedParticles) {
+    const unsigned int warp = get_global_id(0)/TILE_SIZE;
+    for (int sortedIndex = get_global_id(0); sortedIndex < numParticles; sortedIndex += get_global_size(0)) {
+        int originalIndex = sortedParticles[sortedIndex];
+        real3 pos = posq[originalIndex].xyz;
+        int2 axisParticles = axisParticleIndices[originalIndex];
+        if (axisParticles.x != -1) {
+            // Load the torque.
+
+#ifdef SUPPORTS_64_BIT_ATOMICS
+            real scale = 1/(real) 0x100000000;
+            real3 torque = (real3) (scale*torqueBuffers[originalIndex], scale*torqueBuffers[originalIndex+PADDED_NUM_ATOMS], scale*torqueBuffers[originalIndex+2*PADDED_NUM_ATOMS]);
+#else
+            real3 torque = 0;
+            for (int i = 0; i < numBuffers; i++)
+                torque += torqueBuffers[originalIndex+i*PADDED_NUM_ATOMS].xyz;
+#endif
+            real3 force = 0, xforce = 0, yforce = 0;
+
+            // Apply a force to the x particle.
+            
+            real3 dx = posq[axisParticles.x].xyz-pos;
+            real dx2 = dot(dx, dx);
+            real3 f = cross(torque, dx)/dx2;
+            xforce += f;
+            force -= f;
+            if (axisParticles.y != -1) {
+                // Apply a force to the y particle.  This is based on the component of the torque
+                // that was not already applied to the x particle.
+                
+                real3 dy = posq[axisParticles.y].xyz-pos;
+                real dy2 = dot(dy, dy);
+                real3 torque2 = dx*dot(torque, dx)/dx2;
+                f = cross(torque2, dy)/dy2;
+                yforce += f;
+                force -= f;
+            }
+#ifdef SUPPORTS_64_BIT_ATOMICS
+            atom_add(&forceBuffers[originalIndex], (long) (force.x*0x100000000));
+            atom_add(&forceBuffers[originalIndex+PADDED_NUM_ATOMS], (long) (force.y*0x100000000));
+            atom_add(&forceBuffers[originalIndex+2*PADDED_NUM_ATOMS], (long) (force.z*0x100000000));
+            atom_add(&forceBuffers[axisParticles.x], (long) (xforce.x*0x100000000));
+            atom_add(&forceBuffers[axisParticles.x+PADDED_NUM_ATOMS], (long) (xforce.y*0x100000000));
+            atom_add(&forceBuffers[axisParticles.x+2*PADDED_NUM_ATOMS], (long) (xforce.z*0x100000000));
+            if (axisParticles.y != -1) {
+                atom_add(&forceBuffers[axisParticles.y], (long) (yforce.x*0x100000000));
+                atom_add(&forceBuffers[axisParticles.y+PADDED_NUM_ATOMS], (long) (yforce.y*0x100000000));
+                atom_add(&forceBuffers[axisParticles.y+2*PADDED_NUM_ATOMS], (long) (yforce.z*0x100000000));
+            }
+#else
+            forceBuffers[originalIndex + warp*PADDED_NUM_ATOMS].xyz += force.xyz;
+            forceBuffers[axisParticles.x + warp*PADDED_NUM_ATOMS].xyz += xforce.xyz;
+            if (axisParticles.y != -1)
+                forceBuffers[axisParticles.y + warp*PADDED_NUM_ATOMS].xyz += yforce.xyz;
+#endif
+        }
+    }
 }
