@@ -6120,7 +6120,7 @@ void OpenCLCalcGayBerneForceKernel::initialize(const System& system, const GayBe
     sortedPos = new OpenCLArray(cl, numRealParticles, 4*elementSize, "sortedPos");
     maxNeighborBlocks = numRealParticles*2;
     neighbors = OpenCLArray::create<cl_int>(cl, maxNeighborBlocks*32, "neighbors");
-    neighborIndex = OpenCLArray::create<mm_int2>(cl, maxNeighborBlocks, "neighbors");
+    neighborIndex = OpenCLArray::create<cl_int>(cl, maxNeighborBlocks, "neighbors");
     neighborBlockCount = OpenCLArray::create<cl_int>(cl, 1, "neighborBlockCount");
 
     // Create arrays for accumulating torques.
@@ -6128,7 +6128,7 @@ void OpenCLCalcGayBerneForceKernel::initialize(const System& system, const GayBe
     if (cl.getSupports64BitGlobalAtomics())
         torque = OpenCLArray::create<cl_long>(cl, 3*cl.getPaddedNumAtoms(), "torque");
     else
-        torque = new OpenCLArray(cl, cl.getPaddedNumAtoms()*cl.getNonbondedUtilities().getNumForceBuffers(), elementSize, "torque");
+        torque = new OpenCLArray(cl, cl.getPaddedNumAtoms()*cl.getNonbondedUtilities().getNumForceBuffers(), 4*elementSize, "torque");
     cl.addAutoclearBuffer(*torque);
 
     // Create the kernels.
@@ -6138,14 +6138,20 @@ void OpenCLCalcGayBerneForceKernel::initialize(const System& system, const GayBe
     bool usePeriodic = (nonbondedMethod == GayBerneForce::CutoffPeriodic);
     map<string, string> defines;
     defines["USE_SWITCH"] = (useCutoff && force.getUseSwitchingFunction() ? "1" : "0");
+    double cutoff = force.getCutoffDistance();
+    defines["CUTOFF_SQUARED"] = cl.doubleToString(cutoff*cutoff);
     if (useCutoff) {
+        defines["USE_CUTOFF"] = 1;
+        if (usePeriodic)
+            defines["USE_PERIODIC"] = "1";
+        
         // Compute the switching coefficients.
         
         if (force.getUseSwitchingFunction()) {
             defines["SWITCH_CUTOFF"] = cl.doubleToString(force.getSwitchingDistance());
-            defines["SWITCH_C3"] = cl.doubleToString(10/pow(force.getSwitchingDistance()-force.getCutoffDistance(), 3.0));
-            defines["SWITCH_C4"] = cl.doubleToString(15/pow(force.getSwitchingDistance()-force.getCutoffDistance(), 4.0));
-            defines["SWITCH_C5"] = cl.doubleToString(6/pow(force.getSwitchingDistance()-force.getCutoffDistance(), 5.0));
+            defines["SWITCH_C3"] = cl.doubleToString(10/pow(force.getSwitchingDistance()-cutoff, 3.0));
+            defines["SWITCH_C4"] = cl.doubleToString(15/pow(force.getSwitchingDistance()-cutoff, 4.0));
+            defines["SWITCH_C5"] = cl.doubleToString(6/pow(force.getSwitchingDistance()-cutoff, 5.0));
         }
     }
     if (!cl.getSupports64BitGlobalAtomics()) {
@@ -6189,6 +6195,8 @@ double OpenCLCalcGayBerneForceKernel::execute(ContextImpl& context, bool include
         neighborsKernel.setArg<cl::Buffer>(10, neighbors->getDeviceBuffer());
         neighborsKernel.setArg<cl::Buffer>(11, neighborIndex->getDeviceBuffer());
         neighborsKernel.setArg<cl::Buffer>(12, neighborBlockCount->getDeviceBuffer());
+        neighborsKernel.setArg<cl::Buffer>(13, exclusions->getDeviceBuffer());
+        neighborsKernel.setArg<cl::Buffer>(14, exclusionStartIndex->getDeviceBuffer());
         bool useLong = cl.getSupports64BitGlobalAtomics();
         int index = 0;
         forceKernel.setArg<cl::Buffer>(index++, (useLong ? cl.getLongForceBuffer().getDeviceBuffer() : cl.getForceBuffers().getDeviceBuffer()));
@@ -6207,6 +6215,12 @@ double OpenCLCalcGayBerneForceKernel::execute(ContextImpl& context, bool include
         forceKernel.setArg<cl::Buffer>(index++, exclusionStartIndex->getDeviceBuffer());
         forceKernel.setArg<cl::Buffer>(index++, exceptionParticles->getDeviceBuffer());
         forceKernel.setArg<cl::Buffer>(index++, exceptionParams->getDeviceBuffer());
+        if (nonbondedMethod != GayBerneForce::NoCutoff) {
+            forceKernel.setArg<cl_int>(index++, maxNeighborBlocks);
+            forceKernel.setArg<cl::Buffer>(index++, neighbors->getDeviceBuffer());
+            forceKernel.setArg<cl::Buffer>(index++, neighborIndex->getDeviceBuffer());
+            forceKernel.setArg<cl::Buffer>(index++, neighborBlockCount->getDeviceBuffer());
+        }
         index = 0;
         torqueKernel.setArg<cl::Buffer>(index++, (useLong ? cl.getLongForceBuffer().getDeviceBuffer() : cl.getForceBuffers().getDeviceBuffer()));
         torqueKernel.setArg<cl::Buffer>(index++, torque->getDeviceBuffer());
@@ -6223,6 +6237,7 @@ double OpenCLCalcGayBerneForceKernel::execute(ContextImpl& context, bool include
     if (nonbondedMethod != GayBerneForce::NoCutoff) {
         setPeriodicBoxArgs(cl, neighborsKernel, 2);
         cl.executeKernel(neighborsKernel, numRealParticles);
+        setPeriodicBoxArgs(cl, forceKernel, 20);
     }
     cl.executeKernel(forceKernel, cl.getNonbondedUtilities().getNumForceThreadBlocks()*cl.getNonbondedUtilities().getForceThreadBlockSize());
     cl.executeKernel(torqueKernel, numRealParticles);
@@ -6317,8 +6332,8 @@ void OpenCLCalcGayBerneForceKernel::sortAtoms() {
     
     vector<vector<int> > excludedAtoms(numRealParticles);
     for (int i = 0; i < excludedPairs.size(); i++) {
-        int first = min(excludedPairs[i].first, excludedPairs[i].second);
-        int second = max(excludedPairs[i].first, excludedPairs[i].second);
+        int first = inverseOrder[min(excludedPairs[i].first, excludedPairs[i].second)];
+        int second = inverseOrder[max(excludedPairs[i].first, excludedPairs[i].second)];
         excludedAtoms[first].push_back(second);
     }
     int index = 0;

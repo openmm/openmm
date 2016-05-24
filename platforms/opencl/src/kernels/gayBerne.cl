@@ -1,6 +1,7 @@
 #pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
 
 #define TILE_SIZE 32
+#define NEIGHBOR_BLOCK_SIZE 32
 
 /**
  * Calculate the ellipsoid coordinate frames and associated matrices.
@@ -104,11 +105,78 @@ __kernel void findBlockBounds(int numAtoms, real4 periodicBoxSize, real4 invPeri
 }
 
 /**
+ * This is called by findNeighbors() to write a block to the neighbor list.
+ */
+void storeNeighbors(int atom1, int* neighborBuffer, int numAtomsInBuffer, int maxNeighborBlocks, __global int* restrict neighbors,
+        __global int* restrict neighborIndex, __global int* restrict neighborBlockCount) {
+    int blockIndex = atom_add(neighborBlockCount, 1);
+    if (blockIndex >= maxNeighborBlocks)
+        return; // We don't have enough room for the neighbor list.
+    neighborIndex[blockIndex] = atom1;
+    int baseIndex = blockIndex*NEIGHBOR_BLOCK_SIZE;
+    for (int i = 0; i < numAtomsInBuffer; i++)
+        neighbors[baseIndex+i] = neighborBuffer[i];
+    for (int i = numAtomsInBuffer; i < NEIGHBOR_BLOCK_SIZE; i++)
+        neighbors[baseIndex+i] = -1;
+}
+
+/**
  * Build a list of neighbors for each atom.
  */
 __kernel void findNeighbors(int numAtoms, int maxNeighborBlocks, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
         __global real4* restrict sortedPos, __global real4* restrict blockCenter, __global real4* restrict blockBoundingBox, __global int* restrict neighbors,
-        __global int2* restrict neighborIndex, __global int* restrict neighborBlockCount) {
+        __global int* restrict neighborIndex, __global int* restrict neighborBlockCount, __global const int* restrict exclusions, __global const int* restrict exclusionStartIndex) {
+    const int numBlocks = (numAtoms+TILE_SIZE-1)/TILE_SIZE;
+    int neighborBuffer[NEIGHBOR_BLOCK_SIZE];
+    for (int atom1 = get_global_id(0); atom1 < numAtoms; atom1 += get_global_size(0)) {
+        int nextExclusion = exclusionStartIndex[atom1];
+        int lastExclusion = exclusionStartIndex[atom1+1];
+        real4 pos = sortedPos[atom1];
+        int nextBufferIndex = 0;
+        
+        // Loop over atom blocks and compute the distance of this atom from each one's bounding box.
+        
+        for (int block = (atom1+1)/TILE_SIZE; block < numBlocks; block++) {
+            real4 center = blockCenter[block];
+            real4 blockSize = blockBoundingBox[block];
+            real4 blockDelta = center-pos;
+#ifdef USE_PERIODIC
+            APPLY_PERIODIC_TO_DELTA(blockDelta)
+#endif
+            blockDelta.x = max((real) 0, fabs(blockDelta.x)-blockSize.x);
+            blockDelta.y = max((real) 0, fabs(blockDelta.y)-blockSize.y);
+            blockDelta.z = max((real) 0, fabs(blockDelta.z)-blockSize.z);
+            if (blockDelta.x*blockDelta.x+blockDelta.y*blockDelta.y+blockDelta.z*blockDelta.z >= CUTOFF_SQUARED)
+                continue;
+            
+            // Loop over atoms within this block.
+            
+            int first = max(block*TILE_SIZE, atom1+1);
+            int last = min((block+1)*TILE_SIZE, numAtoms);
+            for (int atom2 = first; atom2 < last; atom2++) {
+                // Skip over excluded interactions.
+
+                if (nextExclusion < lastExclusion && exclusions[nextExclusion] >= atom2) {
+                    nextExclusion++;
+                    continue;
+                }
+                real4 delta = pos-sortedPos[atom2];
+#ifdef USE_PERIODIC
+                APPLY_PERIODIC_TO_DELTA(delta)
+#endif
+                real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+                if (r2 < CUTOFF_SQUARED) {
+                    neighborBuffer[nextBufferIndex++] = atom2;
+                    if (nextBufferIndex == NEIGHBOR_BLOCK_SIZE) {
+                        storeNeighbors(atom1, neighborBuffer, nextBufferIndex, maxNeighborBlocks, neighbors, neighborIndex, neighborBlockCount);
+                        nextBufferIndex = 0;
+                    }
+                }
+            }
+        }
+        if (nextBufferIndex > 0)
+            storeNeighbors(atom1, neighborBuffer, nextBufferIndex, maxNeighborBlocks, neighbors, neighborIndex, neighborBlockCount);
+    }
 }
 
 typedef struct {
@@ -184,11 +252,11 @@ void computeOneInteraction(AtomData* data1, AtomData* data2, real sigma, real ep
     // Compute the switching function.
 
     real switchValue = 1, switchDeriv = 0;
-    #if USE_LJ_SWITCH
-    if (r > LJ_SWITCH_CUTOFF) {
-        real x = r-LJ_SWITCH_CUTOFF;
-        switchValue = 1+x*x*x*(LJ_SWITCH_C3+x*(LJ_SWITCH_C4+x*LJ_SWITCH_C5));
-        switchDeriv = x*x*(3*LJ_SWITCH_C3+x*(4*LJ_SWITCH_C4+x*5*LJ_SWITCH_C5));
+    #if USE_SWITCH
+    if (r > SWITCH_CUTOFF) {
+        real x = r-SWITCH_CUTOFF;
+        switchValue = 1+x*x*x*(SWITCH_C3+x*(SWITCH_C4+x*SWITCH_C5));
+        switchDeriv = x*x*(3*SWITCH_C3+x*(4*SWITCH_C4+x*5*SWITCH_C5));
     }
     #endif
 
@@ -265,7 +333,7 @@ void computeOneInteraction(AtomData* data1, AtomData* data2, real sigma, real ep
         d[2][2] = scale[2]*(  a[2][0]*(G12[0][1]*G12[1][2] + G12[2][1]*G12[1][0] - G12[1][1]*(G12[0][2] + G12[2][0])) +
                               a[2][1]*(G12[1][0]*G12[0][2] + G12[2][0]*G12[0][1] - G12[0][0]*(G12[1][2] + G12[2][1])) +
                             2*a[2][2]*(G12[1][1]*G12[0][0] - G12[1][0]*G12[0][1]));
-        real3 detadq;
+        real3 detadq = 0;
         for (int i = 0; i < 3; i++)
             detadq += cross((real3) (a[i][0], a[i][1], a[i][2]), (real3) (d[i][0], d[i][1], d[i][2]));
         real3 torque = (dchidq*(u*eta) + detadq*(u*chi) + dudq*(eta*chi))*switchValue;
@@ -289,34 +357,30 @@ __kernel void computeForce(
         __global const int* restrict exclusions, __global const int* restrict exclusionStartIndex,
         __global const int4* restrict exceptionParticles, __global const float2* restrict exceptionParams
 #ifdef USE_CUTOFF
-        __global const unsigned int* restrict interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, 
-        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, __global const real4* restrict blockCenter,
-        __global const real4* restrict blockSize, __global const int* restrict interactingAtoms,
+        , int maxNeighborBlocks, __global int* restrict neighbors, __global int* restrict neighborIndex, __global int* restrict neighborBlockCount,
+        real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ
 #endif
         ) {
     const unsigned int warp = get_global_id(0)/TILE_SIZE;
     mixed energy = 0;
-    for (int atom1 = get_global_id(0); atom1 < numAtoms; atom1 += get_global_size(0)) {
+#ifdef USE_CUTOFF
+    const int numBlocks = *neighborBlockCount;
+    for (int block = get_global_id(0); block < numBlocks; block += get_global_size(0)) {
         // Load parameters for atom1.
         
+        int atom1 = neighborIndex[block];
         int index1 = sortedAtoms[atom1];
         AtomData data1;
         loadAtomData(&data1, atom1, index1, pos, sigParams, epsParams, aMatrix, bMatrix, gMatrix);
         real3 force1 = 0.0f;
         real3 torque1 = 0.0f;
-        int nextExclusion = exclusionStartIndex[atom1];
-        int lastExclusion = exclusionStartIndex[atom1+1];
-        for (int atom2 = atom1+1; atom2 < numAtoms; atom2++) {
-            // Skip over excluded interactions.
-            
-            int index2 = sortedAtoms[atom2];
-            if (nextExclusion < lastExclusion && exclusions[nextExclusion] == index2) {
-                nextExclusion++;
-                continue;
-            }
-            
+        for (int indexInBlock = 0; indexInBlock < NEIGHBOR_BLOCK_SIZE; indexInBlock++) {
             // Load parameters for atom2.
             
+            int atom2 = neighbors[NEIGHBOR_BLOCK_SIZE*block+indexInBlock];
+            if (atom2 == -1)
+                continue;
+            int index2 = sortedAtoms[atom2];
             AtomData data2;
             loadAtomData(&data2, atom2, index2, pos, sigParams, epsParams, aMatrix, bMatrix, gMatrix);
             real3 force2 = 0.0f;
@@ -329,26 +393,20 @@ __kernel void computeForce(
             APPLY_PERIODIC_TO_DELTA(delta)
 #endif
             real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-#ifdef USE_CUTOFF
-            if (r2 < CUTOFF_SQUARED) {
-#endif
-                real sigma = data1.sig.x+data2.sig.x;
-                real epsilon = data1.eps.x*data2.eps.x;
-                computeOneInteraction(&data1, &data2, sigma, epsilon, delta, r2, &force1, &force2, &torque1, &torque2, &energy);
+            real sigma = data1.sig.x+data2.sig.x;
+            real epsilon = data1.eps.x*data2.eps.x;
+            computeOneInteraction(&data1, &data2, sigma, epsilon, delta, r2, &force1, &force2, &torque1, &torque2, &energy);
 #ifdef SUPPORTS_64_BIT_ATOMICS
-                atom_add(&forceBuffers[index2], (long) (force2.x*0x100000000));
-                atom_add(&forceBuffers[index2+PADDED_NUM_ATOMS], (long) (force2.y*0x100000000));
-                atom_add(&forceBuffers[index2+2*PADDED_NUM_ATOMS], (long) (force2.z*0x100000000));
-                atom_add(&torqueBuffers[index2], (long) (torque2.x*0x100000000));
-                atom_add(&torqueBuffers[index2+PADDED_NUM_ATOMS], (long) (torque2.y*0x100000000));
-                atom_add(&torqueBuffers[index2+2*PADDED_NUM_ATOMS], (long) (torque2.z*0x100000000));
+            atom_add(&forceBuffers[index2], (long) (force2.x*0x100000000));
+            atom_add(&forceBuffers[index2+PADDED_NUM_ATOMS], (long) (force2.y*0x100000000));
+            atom_add(&forceBuffers[index2+2*PADDED_NUM_ATOMS], (long) (force2.z*0x100000000));
+            atom_add(&torqueBuffers[index2], (long) (torque2.x*0x100000000));
+            atom_add(&torqueBuffers[index2+PADDED_NUM_ATOMS], (long) (torque2.y*0x100000000));
+            atom_add(&torqueBuffers[index2+2*PADDED_NUM_ATOMS], (long) (torque2.z*0x100000000));
 #else
-                unsigned int offset = index2 + warp*PADDED_NUM_ATOMS;
-                forceBuffers[offset].xyz += force2.xyz;
-                torqueBuffers[offset].xyz += torque2.xyz;
-#endif
-#ifdef USE_CUTOFF
-            }
+            unsigned int offset = index2 + warp*PADDED_NUM_ATOMS;
+            forceBuffers[offset].xyz += force2.xyz;
+            torqueBuffers[offset].xyz += torque2.xyz;
 #endif
         }
 #ifdef SUPPORTS_64_BIT_ATOMICS
@@ -364,12 +422,73 @@ __kernel void computeForce(
         torqueBuffers[offset].xyz += torque1.xyz;
 #endif
     }
+#else
+    for (int atom1 = get_global_id(0); atom1 < numAtoms; atom1 += get_global_size(0)) {
+        // Load parameters for atom1.
+        
+        int index1 = sortedAtoms[atom1];
+        AtomData data1;
+        loadAtomData(&data1, atom1, index1, pos, sigParams, epsParams, aMatrix, bMatrix, gMatrix);
+        real3 force1 = 0.0f;
+        real3 torque1 = 0.0f;
+        int nextExclusion = exclusionStartIndex[atom1];
+        int lastExclusion = exclusionStartIndex[atom1+1];
+        for (int atom2 = atom1+1; atom2 < numAtoms; atom2++) {
+            // Skip over excluded interactions.
+            
+            if (nextExclusion < lastExclusion && exclusions[nextExclusion] == atom2) {
+                nextExclusion++;
+                continue;
+            }
+            
+            // Load parameters for atom2.
+            
+            int index2 = sortedAtoms[atom2];
+            AtomData data2;
+            loadAtomData(&data2, atom2, index2, pos, sigParams, epsParams, aMatrix, bMatrix, gMatrix);
+            real3 force2 = 0.0f;
+            real3 torque2 = 0.0f;
+            
+            // Compute the interaction.
+            
+            real3 delta = data1.pos-data2.pos;
+            real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+            real sigma = data1.sig.x+data2.sig.x;
+            real epsilon = data1.eps.x*data2.eps.x;
+            computeOneInteraction(&data1, &data2, sigma, epsilon, delta, r2, &force1, &force2, &torque1, &torque2, &energy);
+#ifdef SUPPORTS_64_BIT_ATOMICS
+            atom_add(&forceBuffers[index2], (long) (force2.x*0x100000000));
+            atom_add(&forceBuffers[index2+PADDED_NUM_ATOMS], (long) (force2.y*0x100000000));
+            atom_add(&forceBuffers[index2+2*PADDED_NUM_ATOMS], (long) (force2.z*0x100000000));
+            atom_add(&torqueBuffers[index2], (long) (torque2.x*0x100000000));
+            atom_add(&torqueBuffers[index2+PADDED_NUM_ATOMS], (long) (torque2.y*0x100000000));
+            atom_add(&torqueBuffers[index2+2*PADDED_NUM_ATOMS], (long) (torque2.z*0x100000000));
+#else
+            unsigned int offset = index2 + warp*PADDED_NUM_ATOMS;
+            forceBuffers[offset].xyz += force2.xyz;
+            torqueBuffers[offset].xyz += torque2.xyz;
+#endif
+        }
+#ifdef SUPPORTS_64_BIT_ATOMICS
+        atom_add(&forceBuffers[index1], (long) (force1.x*0x100000000));
+        atom_add(&forceBuffers[index1+PADDED_NUM_ATOMS], (long) (force1.y*0x100000000));
+        atom_add(&forceBuffers[index1+2*PADDED_NUM_ATOMS], (long) (force1.z*0x100000000));
+        atom_add(&torqueBuffers[index1], (long) (torque1.x*0x100000000));
+        atom_add(&torqueBuffers[index1+PADDED_NUM_ATOMS], (long) (torque1.y*0x100000000));
+        atom_add(&torqueBuffers[index1+2*PADDED_NUM_ATOMS], (long) (torque1.z*0x100000000));
+#else
+        unsigned int offset = index1 + warp*PADDED_NUM_ATOMS;
+        forceBuffers[offset].xyz += force1.xyz;
+        torqueBuffers[offset].xyz += torque1.xyz;
+#endif
+    }
+#endif
     
     // Now compute exceptions.
     
     for (int index = get_global_id(0); index < numExceptions; index += get_global_size(0)) {
         int4 atomIndices = exceptionParticles[index];
-        real2 params = exceptionParams[index];
+        float2 params = exceptionParams[index];
         int index1 = atomIndices.x, index2 = atomIndices.y;
         int atom1 = atomIndices.z, atom2 = atomIndices.w;
         AtomData data1, data2;
