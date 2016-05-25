@@ -6051,6 +6051,8 @@ OpenCLCalcGayBerneForceKernel::~OpenCLCalcGayBerneForceKernel() {
 }
 
 void OpenCLCalcGayBerneForceKernel::initialize(const System& system, const GayBerneForce& force) {
+    if (!cl.getSupports64BitGlobalAtomics())
+        throw OpenMMException("GayBerneForce requires a device that supports 64 bit atomic operations");
 
     // Initialize interactions.
 
@@ -6123,12 +6125,9 @@ void OpenCLCalcGayBerneForceKernel::initialize(const System& system, const GayBe
     neighborIndex = OpenCLArray::create<cl_int>(cl, maxNeighborBlocks, "neighbors");
     neighborBlockCount = OpenCLArray::create<cl_int>(cl, 1, "neighborBlockCount");
 
-    // Create arrays for accumulating torques.
+    // Create array for accumulating torques.
     
-    if (cl.getSupports64BitGlobalAtomics())
-        torque = OpenCLArray::create<cl_long>(cl, 3*cl.getPaddedNumAtoms(), "torque");
-    else
-        torque = new OpenCLArray(cl, cl.getPaddedNumAtoms()*cl.getNonbondedUtilities().getNumForceBuffers(), 4*elementSize, "torque");
+    torque = OpenCLArray::create<cl_long>(cl, 3*cl.getPaddedNumAtoms(), "torque");
     cl.addAutoclearBuffer(*torque);
 
     // Create the kernels.
@@ -6195,9 +6194,8 @@ double OpenCLCalcGayBerneForceKernel::execute(ContextImpl& context, bool include
         neighborsKernel.setArg<cl::Buffer>(12, neighborBlockCount->getDeviceBuffer());
         neighborsKernel.setArg<cl::Buffer>(13, exclusions->getDeviceBuffer());
         neighborsKernel.setArg<cl::Buffer>(14, exclusionStartIndex->getDeviceBuffer());
-        bool useLong = cl.getSupports64BitGlobalAtomics();
         int index = 0;
-        forceKernel.setArg<cl::Buffer>(index++, (useLong ? cl.getLongForceBuffer().getDeviceBuffer() : cl.getForceBuffers().getDeviceBuffer()));
+        forceKernel.setArg<cl::Buffer>(index++, cl.getLongForceBuffer().getDeviceBuffer());
         forceKernel.setArg<cl::Buffer>(index++, torque->getDeviceBuffer());
         forceKernel.setArg<cl_int>(index++, numRealParticles);
         forceKernel.setArg<cl_int>(index++, exceptionAtoms.size());
@@ -6220,10 +6218,8 @@ double OpenCLCalcGayBerneForceKernel::execute(ContextImpl& context, bool include
             forceKernel.setArg<cl::Buffer>(index++, neighborBlockCount->getDeviceBuffer());
         }
         index = 0;
-        torqueKernel.setArg<cl::Buffer>(index++, (useLong ? cl.getLongForceBuffer().getDeviceBuffer() : cl.getForceBuffers().getDeviceBuffer()));
+        torqueKernel.setArg<cl::Buffer>(index++, cl.getLongForceBuffer().getDeviceBuffer());
         torqueKernel.setArg<cl::Buffer>(index++, torque->getDeviceBuffer());
-        if (!useLong)
-            torqueKernel.setArg<cl_int>(index++, cl.getNumForceBuffers());
         torqueKernel.setArg<cl_int>(index++, numRealParticles);
         torqueKernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
         torqueKernel.setArg<cl::Buffer>(index++, axisParticleIndices->getDeviceBuffer());

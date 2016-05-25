@@ -1,7 +1,5 @@
 #pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
-#ifdef SUPPORTS_64_BIT_ATOMICS
 #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
-#endif
 
 #define TILE_SIZE 32
 #define NEIGHBOR_BLOCK_SIZE 32
@@ -343,11 +341,7 @@ void computeOneInteraction(AtomData* data1, AtomData* data2, real sigma, real ep
  * Compute the interactions.
  */
 __kernel void computeForce(
-#ifdef SUPPORTS_64_BIT_ATOMICS
         __global long* restrict forceBuffers, __global long* restrict torqueBuffers,
-#else
-        __global real4* restrict forceBuffers, __global real4* restrict torqueBuffers,
-#endif
         int numAtoms, int numExceptions, __global mixed* restrict energyBuffer, __global const real4* restrict pos,
         __global const float4* restrict sigParams, __global const float2* restrict epsParams, __global const int* restrict sortedAtoms,
         __global const real* restrict aMatrix, __global const real* restrict bMatrix, __global const real* restrict gMatrix,
@@ -395,31 +389,19 @@ __kernel void computeForce(
             real sigma = data1.sig.x+data2.sig.x;
             real epsilon = data1.eps.x*data2.eps.x;
             computeOneInteraction(&data1, &data2, sigma, epsilon, delta, r2, &force1, &force2, &torque1, &torque2, &energy);
-#ifdef SUPPORTS_64_BIT_ATOMICS
             atom_add(&forceBuffers[index2], (long) (force2.x*0x100000000));
             atom_add(&forceBuffers[index2+PADDED_NUM_ATOMS], (long) (force2.y*0x100000000));
             atom_add(&forceBuffers[index2+2*PADDED_NUM_ATOMS], (long) (force2.z*0x100000000));
             atom_add(&torqueBuffers[index2], (long) (torque2.x*0x100000000));
             atom_add(&torqueBuffers[index2+PADDED_NUM_ATOMS], (long) (torque2.y*0x100000000));
             atom_add(&torqueBuffers[index2+2*PADDED_NUM_ATOMS], (long) (torque2.z*0x100000000));
-#else
-            unsigned int offset = index2 + warp*PADDED_NUM_ATOMS;
-            forceBuffers[offset].xyz += force2.xyz;
-            torqueBuffers[offset].xyz += torque2.xyz;
-#endif
         }
-#ifdef SUPPORTS_64_BIT_ATOMICS
         atom_add(&forceBuffers[index1], (long) (force1.x*0x100000000));
         atom_add(&forceBuffers[index1+PADDED_NUM_ATOMS], (long) (force1.y*0x100000000));
         atom_add(&forceBuffers[index1+2*PADDED_NUM_ATOMS], (long) (force1.z*0x100000000));
         atom_add(&torqueBuffers[index1], (long) (torque1.x*0x100000000));
         atom_add(&torqueBuffers[index1+PADDED_NUM_ATOMS], (long) (torque1.y*0x100000000));
         atom_add(&torqueBuffers[index1+2*PADDED_NUM_ATOMS], (long) (torque1.z*0x100000000));
-#else
-        unsigned int offset = index1 + warp*PADDED_NUM_ATOMS;
-        forceBuffers[offset].xyz += force1.xyz;
-        torqueBuffers[offset].xyz += torque1.xyz;
-#endif
     }
 #else
     for (int atom1 = get_global_id(0); atom1 < numAtoms; atom1 += get_global_size(0)) {
@@ -455,31 +437,19 @@ __kernel void computeForce(
             real sigma = data1.sig.x+data2.sig.x;
             real epsilon = data1.eps.x*data2.eps.x;
             computeOneInteraction(&data1, &data2, sigma, epsilon, delta, r2, &force1, &force2, &torque1, &torque2, &energy);
-#ifdef SUPPORTS_64_BIT_ATOMICS
             atom_add(&forceBuffers[index2], (long) (force2.x*0x100000000));
             atom_add(&forceBuffers[index2+PADDED_NUM_ATOMS], (long) (force2.y*0x100000000));
             atom_add(&forceBuffers[index2+2*PADDED_NUM_ATOMS], (long) (force2.z*0x100000000));
             atom_add(&torqueBuffers[index2], (long) (torque2.x*0x100000000));
             atom_add(&torqueBuffers[index2+PADDED_NUM_ATOMS], (long) (torque2.y*0x100000000));
             atom_add(&torqueBuffers[index2+2*PADDED_NUM_ATOMS], (long) (torque2.z*0x100000000));
-#else
-            unsigned int offset = index2 + warp*PADDED_NUM_ATOMS;
-            forceBuffers[offset].xyz += force2.xyz;
-            torqueBuffers[offset].xyz += torque2.xyz;
-#endif
         }
-#ifdef SUPPORTS_64_BIT_ATOMICS
         atom_add(&forceBuffers[index1], (long) (force1.x*0x100000000));
         atom_add(&forceBuffers[index1+PADDED_NUM_ATOMS], (long) (force1.y*0x100000000));
         atom_add(&forceBuffers[index1+2*PADDED_NUM_ATOMS], (long) (force1.z*0x100000000));
         atom_add(&torqueBuffers[index1], (long) (torque1.x*0x100000000));
         atom_add(&torqueBuffers[index1+PADDED_NUM_ATOMS], (long) (torque1.y*0x100000000));
         atom_add(&torqueBuffers[index1+2*PADDED_NUM_ATOMS], (long) (torque1.z*0x100000000));
-#else
-        unsigned int offset = index1 + warp*PADDED_NUM_ATOMS;
-        forceBuffers[offset].xyz += force1.xyz;
-        torqueBuffers[offset].xyz += torque1.xyz;
-#endif
     }
 #endif
     
@@ -501,7 +471,6 @@ __kernel void computeForce(
         if (r2 < CUTOFF_SQUARED) {
 #endif
             computeOneInteraction(&data1, &data2, params.x, params.y, delta, r2, &force1, &force2, &torque1, &torque2, &energy);
-#ifdef SUPPORTS_64_BIT_ATOMICS
             atom_add(&forceBuffers[index1], (long) (force1.x*0x100000000));
             atom_add(&forceBuffers[index1+PADDED_NUM_ATOMS], (long) (force1.y*0x100000000));
             atom_add(&forceBuffers[index1+2*PADDED_NUM_ATOMS], (long) (force1.z*0x100000000));
@@ -514,14 +483,6 @@ __kernel void computeForce(
             atom_add(&torqueBuffers[index2], (long) (torque2.x*0x100000000));
             atom_add(&torqueBuffers[index2+PADDED_NUM_ATOMS], (long) (torque2.y*0x100000000));
             atom_add(&torqueBuffers[index2+2*PADDED_NUM_ATOMS], (long) (torque2.z*0x100000000));
-#else
-            int offset = index1 + warp*PADDED_NUM_ATOMS;
-            forceBuffers[offset].xyz += force1.xyz;
-            torqueBuffers[offset].xyz += torque1.xyz;
-            offset = index2 + warp*PADDED_NUM_ATOMS;
-            forceBuffers[offset].xyz += force2.xyz;
-            torqueBuffers[offset].xyz += torque2.xyz;
-#endif
 #ifdef USE_CUTOFF
         }
 #endif
@@ -533,11 +494,7 @@ __kernel void computeForce(
  * Convert the torques to forces on the connected particles.
  */
 __kernel void applyTorques(
-#ifdef SUPPORTS_64_BIT_ATOMICS
         __global long* restrict forceBuffers, __global long* restrict torqueBuffers,
-#else
-        __global real4* restrict forceBuffers, __global real4* restrict torqueBuffers, int numBuffers,
-#endif
         int numParticles, __global const real4* restrict posq, __global int2* const restrict axisParticleIndices,
         __global const int* sortedParticles) {
     const unsigned int warp = get_global_id(0)/TILE_SIZE;
@@ -548,14 +505,8 @@ __kernel void applyTorques(
         if (axisParticles.x != -1) {
             // Load the torque.
 
-#ifdef SUPPORTS_64_BIT_ATOMICS
             real scale = 1/(real) 0x100000000;
             real3 torque = (real3) (scale*torqueBuffers[originalIndex], scale*torqueBuffers[originalIndex+PADDED_NUM_ATOMS], scale*torqueBuffers[originalIndex+2*PADDED_NUM_ATOMS]);
-#else
-            real3 torque = 0;
-            for (int i = 0; i < numBuffers; i++)
-                torque += torqueBuffers[originalIndex+i*PADDED_NUM_ATOMS].xyz;
-#endif
             real3 force = 0, xforce = 0, yforce = 0;
 
             // Apply a force to the x particle.
@@ -576,7 +527,6 @@ __kernel void applyTorques(
                 yforce += f;
                 force -= f;
             }
-#ifdef SUPPORTS_64_BIT_ATOMICS
             atom_add(&forceBuffers[originalIndex], (long) (force.x*0x100000000));
             atom_add(&forceBuffers[originalIndex+PADDED_NUM_ATOMS], (long) (force.y*0x100000000));
             atom_add(&forceBuffers[originalIndex+2*PADDED_NUM_ATOMS], (long) (force.z*0x100000000));
@@ -588,12 +538,6 @@ __kernel void applyTorques(
                 atom_add(&forceBuffers[axisParticles.y+PADDED_NUM_ATOMS], (long) (yforce.y*0x100000000));
                 atom_add(&forceBuffers[axisParticles.y+2*PADDED_NUM_ATOMS], (long) (yforce.z*0x100000000));
             }
-#else
-            forceBuffers[originalIndex + warp*PADDED_NUM_ATOMS].xyz += force.xyz;
-            forceBuffers[axisParticles.x + warp*PADDED_NUM_ATOMS].xyz += xforce.xyz;
-            if (axisParticles.y != -1)
-                forceBuffers[axisParticles.y + warp*PADDED_NUM_ATOMS].xyz += yforce.xyz;
-#endif
         }
     }
 }
