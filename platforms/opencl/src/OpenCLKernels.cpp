@@ -6154,9 +6154,7 @@ void OpenCLCalcGayBerneForceKernel::initialize(const System& system, const GayBe
             defines["SWITCH_C5"] = cl.doubleToString(6/pow(force.getSwitchingDistance()-cutoff, 5.0));
         }
     }
-    if (!cl.getSupports64BitGlobalAtomics()) {
-        defines["PADDED_NUM_ATOMS"] = cl.intToString(cl.getPaddedNumAtoms());
-    }
+    defines["PADDED_NUM_ATOMS"] = cl.intToString(cl.getPaddedNumAtoms());
     cl::Program program = cl.createProgram(OpenCLKernelSources::gayBerne, defines);
     framesKernel = cl::Kernel(program, "computeEllipsoidFrames");
     blockBoundsKernel = cl::Kernel(program, "findBlockBounds");
@@ -6234,12 +6232,37 @@ double OpenCLCalcGayBerneForceKernel::execute(ContextImpl& context, bool include
     cl.executeKernel(framesKernel, numRealParticles);
     setPeriodicBoxArgs(cl, blockBoundsKernel, 1);
     cl.executeKernel(blockBoundsKernel, (numRealParticles+31)/32);
-    if (nonbondedMethod != GayBerneForce::NoCutoff) {
-        setPeriodicBoxArgs(cl, neighborsKernel, 2);
-        cl.executeKernel(neighborsKernel, numRealParticles);
-        setPeriodicBoxArgs(cl, forceKernel, 20);
+    if (nonbondedMethod == GayBerneForce::NoCutoff) {
+        cl.executeKernel(forceKernel, cl.getNonbondedUtilities().getNumForceThreadBlocks()*cl.getNonbondedUtilities().getForceThreadBlockSize());
     }
-    cl.executeKernel(forceKernel, cl.getNonbondedUtilities().getNumForceThreadBlocks()*cl.getNonbondedUtilities().getForceThreadBlockSize());
+    else {
+        while (true) {
+            setPeriodicBoxArgs(cl, neighborsKernel, 2);
+            cl.executeKernel(neighborsKernel, numRealParticles);
+            cl_int* count = (cl_int*) cl.getPinnedBuffer();
+            cl::Event event;
+            cl.getQueue().enqueueReadBuffer(neighborBlockCount->getDeviceBuffer(), CL_FALSE, 0, neighborBlockCount->getSize()*neighborBlockCount->getElementSize(), count, NULL, &event);
+            setPeriodicBoxArgs(cl, forceKernel, 20);
+            cl.executeKernel(forceKernel, cl.getNonbondedUtilities().getNumForceThreadBlocks()*cl.getNonbondedUtilities().getForceThreadBlockSize());
+            event.wait();
+            if (*count <= maxNeighborBlocks)
+                break;
+            
+            // There wasn't enough room for the neighbor list, so we need to recreate it.
+
+            delete neighbors;
+            neighbors = NULL;
+            delete neighborIndex;
+            neighborIndex = NULL;
+            maxNeighborBlocks = (int) ceil((*count)*1.1);
+            neighbors = OpenCLArray::create<cl_int>(cl, maxNeighborBlocks*32, "neighbors");
+            neighborIndex = OpenCLArray::create<cl_int>(cl, maxNeighborBlocks, "neighbors");
+            neighborsKernel.setArg<cl::Buffer>(10, neighbors->getDeviceBuffer());
+            neighborsKernel.setArg<cl::Buffer>(11, neighborIndex->getDeviceBuffer());
+            forceKernel.setArg<cl::Buffer>(17, neighbors->getDeviceBuffer());
+            forceKernel.setArg<cl::Buffer>(18, neighborIndex->getDeviceBuffer());
+        }
+    }
     cl.executeKernel(torqueKernel, numRealParticles);
     return 0.0;
 }
@@ -6266,20 +6289,15 @@ void OpenCLCalcGayBerneForceKernel::copyParametersToContext(ContextImpl& context
     vector<mm_float4> sigParamsVector(cl.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
     vector<mm_float2> epsParamsVector(cl.getPaddedNumAtoms(), mm_float2(0, 0));
     vector<mm_float4> scaleVector(cl.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
-    numRealParticles = 0;
     for (int i = 0; i < force.getNumParticles(); i++) {
         int xparticle, yparticle;
         double sigma, epsilon, sx, sy, sz, ex, ey, ez;
         force.getParticleParameters(i, sigma, epsilon, xparticle, yparticle, sx, sy, sz, ex, ey, ez);
-        sigParamsVector[i] = mm_float4((float) (0.5*sigma), (float) (0.5*sx), (float) (0.5*sy), (float) (0.5*sz));
+        sigParamsVector[i] = mm_float4((float) (0.5*sigma), (float) (0.25*sx*sx), (float) (0.25*sy*sy), (float) (0.25*sz*sz));
         epsParamsVector[i] = mm_float2((float) sqrt(epsilon), (float) (0.125*(sx*sy + sz*sz)*sqrt(sx*sy)));
         scaleVector[i] = mm_float4((float) (1/sqrt(ex)), (float) (1/sqrt(ey)), (float) (1/sqrt(ez)), 0);
-        if (epsilon != 0.0) {
-            numRealParticles++;
-            isRealParticle[i] = true;
-        }
-        else
-            isRealParticle[i] = false;
+        if (epsilon != 0.0 && !isRealParticle[i])
+            throw OpenMMException("updateParametersInContext: The set of ignored particles (ones with epsilon=0) has changed");
     }
     sigParams->upload(sigParamsVector);
     epsParams->upload(epsParamsVector);

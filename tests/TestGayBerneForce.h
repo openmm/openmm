@@ -133,6 +133,20 @@ void testEnergyScales() {
     state = context.getState(State::Forces | State::Energy);
     ASSERT_EQUAL_TOL(expectedEnergy*expectedScale, state.getPotentialEnergy(), 1e-5);
     ASSERT_EQUAL_VEC(Vec3(0, expectedForce*expectedScale, 0), state.getForces()[3], 1e-5);
+    
+    // Modify their parameters and see if the result is still correct.
+    
+    double newSigma = 1.1*sigma;
+    gb->setParticleParameters(0, newSigma, 1.5*epsilon, 1, 2, newSigma, newSigma, newSigma, 1.2, 1.6, 1.9);
+    gb->setParticleParameters(3, newSigma, epsilon, 4, 5, newSigma, newSigma, newSigma, 1.3, 1.7, 1.8);
+    gb->updateParametersInContext(context);
+    double combinedEpsilon = sqrt(1.5)*epsilon;
+    expectedEnergy = 4*combinedEpsilon*(pow(newSigma, 12.0)-pow(newSigma, 6.0));
+    expectedForce = 4*combinedEpsilon*(12*pow(newSigma, 12.0)-6*pow(newSigma, 6.0));
+    expectedScale = pow(2.0/(1/sqrt(1.6) + 1/sqrt(1.8)), 2.0);
+    state = context.getState(State::Forces | State::Energy);
+    ASSERT_EQUAL_TOL(expectedEnergy*expectedScale, state.getPotentialEnergy(), 1e-5);
+    ASSERT_EQUAL_VEC(Vec3(0, expectedForce*expectedScale, 0), state.getForces()[3], 1e-5);
 }
 
 void testEnergyConservation() {
@@ -216,6 +230,16 @@ void testExceptions() {
     double expectedForce = 3.5*4*epsilon*(12*pow(sigma, 12.0)-6*pow(sigma, 6.0));
     double expectedScale = pow(2.0/(1/sqrt(1.1) + 1/sqrt(1.2)), 2.0);
     State state = context.getState(State::Forces | State::Energy);
+    ASSERT_EQUAL_TOL(expectedEnergy*expectedScale, state.getPotentialEnergy(), 1e-5);
+    ASSERT_EQUAL_VEC(Vec3(expectedForce*expectedScale, 0, 0), state.getForces()[3], 1e-5);
+    
+    // Modify the exception and see if the results are still correct.
+
+    gb->setExceptionParameters(0, 0, 3, sigma, 3.1*epsilon);
+    gb->updateParametersInContext(context);
+    expectedEnergy = 3.1*4*epsilon*(pow(sigma, 12.0)-pow(sigma, 6.0));
+    expectedForce = 3.1*4*epsilon*(12*pow(sigma, 12.0)-6*pow(sigma, 6.0));
+    state = context.getState(State::Forces | State::Energy);
     ASSERT_EQUAL_TOL(expectedEnergy*expectedScale, state.getPotentialEnergy(), 1e-5);
     ASSERT_EQUAL_VEC(Vec3(expectedForce*expectedScale, 0, 0), state.getForces()[3], 1e-5);
 }

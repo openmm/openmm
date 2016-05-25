@@ -115,6 +115,7 @@ void GayBerneForceImpl::initialize(ContextImpl& context) {
 double GayBerneForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     if ((groups&(1<<owner.getForceGroup())) != 0)
         return kernel.getAs<CalcGayBerneForceKernel>().execute(context, includeForces, includeEnergy);
+    return 0.0;
 }
 
 std::vector<std::string> GayBerneForceImpl::getKernelNames() {
