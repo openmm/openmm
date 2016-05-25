@@ -94,6 +94,7 @@ void CudaCalcForcesAndEnergyKernel::initialize(const System& system) {
 }
 
 void CudaCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
+    cu.setForcesValid(true);
     cu.setAsCurrent();
     cu.clearAutoclearBuffers();
     for (vector<CudaContext::ForcePreComputation*>::iterator iter = cu.getPreComputations().begin(); iter != cu.getPreComputations().end(); ++iter)
@@ -125,6 +126,8 @@ double CudaCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bo
                 sum += energy[i];
         }
     }
+    if (!cu.getForcesValid())
+        valid = false;
     return sum;
 }
 

@@ -118,6 +118,7 @@ void OpenCLCalcForcesAndEnergyKernel::initialize(const System& system) {
 }
 
 void OpenCLCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
+    cl.setForcesValid(true);
     cl.clearAutoclearBuffers();
     for (vector<OpenCLContext::ForcePreComputation*>::iterator iter = cl.getPreComputations().begin(); iter != cl.getPreComputations().end(); ++iter)
         (*iter)->computeForceAndEnergy(includeForces, includeEnergy, groups);
@@ -149,6 +150,8 @@ double OpenCLCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, 
                 sum += energy[i];
         }
     }
+    if (!cl.getForcesValid())
+        valid = false;
     return sum;
 }
 

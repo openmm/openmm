@@ -65,12 +65,14 @@ private:
 CudaNonbondedUtilities::CudaNonbondedUtilities(CudaContext& context) : context(context), useCutoff(false), usePeriodic(false), anyExclusions(false), usePadding(true),
         exclusionIndices(NULL), exclusionRowIndices(NULL), exclusionTiles(NULL), exclusions(NULL), interactingTiles(NULL), interactingAtoms(NULL),
         interactionCount(NULL), blockCenter(NULL), blockBoundingBox(NULL), sortedBlocks(NULL), sortedBlockCenter(NULL), sortedBlockBoundingBox(NULL),
-        oldPositions(NULL), rebuildNeighborList(NULL), blockSorter(NULL), forceRebuildNeighborList(true), lastCutoff(0.0), groupFlags(0) {
+        oldPositions(NULL), rebuildNeighborList(NULL), blockSorter(NULL), pinnedCountBuffer(NULL), forceRebuildNeighborList(true), lastCutoff(0.0), groupFlags(0) {
     // Decide how many thread blocks to use.
 
     string errorMessage = "Error initializing nonbonded utilities";
     int multiprocessors;
     CHECK_RESULT(cuDeviceGetAttribute(&multiprocessors, CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, context.getDevice()));
+    CHECK_RESULT(cuEventCreate(&downloadCountEvent, 0));
+    CHECK_RESULT(cuMemHostAlloc((void**) &pinnedCountBuffer, sizeof(int), CU_MEMHOSTALLOC_PORTABLE));
     numForceThreadBlocks = 4*multiprocessors;
     forceThreadBlockSize = (context.getComputeCapability() < 2.0 ? 128 : 256);
 }
@@ -106,6 +108,9 @@ CudaNonbondedUtilities::~CudaNonbondedUtilities() {
         delete rebuildNeighborList;
     if (blockSorter != NULL)
         delete blockSorter;
+    if (pinnedCountBuffer != NULL)
+        cuMemFreeHost(pinnedCountBuffer);
+    cuEventDestroy(downloadCountEvent);
 }
 
 void CudaNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance, const vector<vector<int> >& exclusionList, const string& kernel, int forceGroup) {
@@ -375,17 +380,14 @@ void CudaNonbondedUtilities::prepareInteractions(int forceGroups) {
 
     if (lastCutoff != kernels.cutoffDistance)
         forceRebuildNeighborList = true;
-    bool rebuild = false;
-    do {
-        context.executeKernel(kernels.findBlockBoundsKernel, &findBlockBoundsArgs[0], context.getNumAtoms());
-        blockSorter->sort(*sortedBlocks);
-        context.executeKernel(kernels.sortBoxDataKernel, &sortBoxDataArgs[0], context.getNumAtoms());
-        context.executeKernel(kernels.findInteractingBlocksKernel, &findInteractingBlocksArgs[0], context.getNumAtoms(), 256);
-        forceRebuildNeighborList = false;
-        if (context.getComputeForceCount() == 1)
-            rebuild = updateNeighborListSize(); // This is the first time step, so check whether our initial guess was large enough.
-    } while(rebuild);
+    context.executeKernel(kernels.findBlockBoundsKernel, &findBlockBoundsArgs[0], context.getNumAtoms());
+    blockSorter->sort(*sortedBlocks);
+    context.executeKernel(kernels.sortBoxDataKernel, &sortBoxDataArgs[0], context.getNumAtoms());
+    context.executeKernel(kernels.findInteractingBlocksKernel, &findInteractingBlocksArgs[0], context.getNumAtoms(), 256);
+    forceRebuildNeighborList = false;
     lastCutoff = kernels.cutoffDistance;
+    interactionCount->download(pinnedCountBuffer, false);
+    cuEventRecord(downloadCountEvent, context.getCurrentStream());
 }
 
 void CudaNonbondedUtilities::computeInteractions(int forceGroups, bool includeForces, bool includeEnergy) {
@@ -398,20 +400,22 @@ void CudaNonbondedUtilities::computeInteractions(int forceGroups, bool includeFo
             kernel = createInteractionKernel(kernels.source, parameters, arguments, true, true, forceGroups, includeForces, includeEnergy);
         context.executeKernel(kernel, &forceArgs[0], numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
     }
+    if (useCutoff && numTiles > 0) {
+        cuEventSynchronize(downloadCountEvent);
+        updateNeighborListSize();
+    }
 }
 
 bool CudaNonbondedUtilities::updateNeighborListSize() {
     if (!useCutoff)
         return false;
-    unsigned int* pinnedInteractionCount = (unsigned int*) context.getPinnedBuffer();
-    interactionCount->download(pinnedInteractionCount);
-    if (pinnedInteractionCount[0] <= (unsigned int) maxTiles)
+    if (pinnedCountBuffer[0] <= (unsigned int) maxTiles)
         return false;
 
     // The most recent timestep had too many interactions to fit in the arrays.  Make the arrays bigger to prevent
     // this from happening in the future.
 
-    maxTiles = (int) (1.2*pinnedInteractionCount[0]);
+    maxTiles = (int) (1.2*pinnedCountBuffer[0]);
     int totalTiles = context.getNumAtomBlocks()*(context.getNumAtomBlocks()+1)/2;
     if (maxTiles > totalTiles)
         maxTiles = totalTiles;
@@ -428,6 +432,7 @@ bool CudaNonbondedUtilities::updateNeighborListSize() {
         forceArgs[17] = &interactingAtoms->getDevicePointer();
     findInteractingBlocksArgs[7] = &interactingAtoms->getDevicePointer();
     forceRebuildNeighborList = true;
+    context.setForcesValid(false);
     return true;
 }
 
