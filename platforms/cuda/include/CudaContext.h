@@ -327,6 +327,18 @@ public:
         stepsSinceReorder = steps;
     }
     /**
+     * Get the flag that marks whether the current force evaluation is valid.
+     */
+    bool getForcesValid() const {
+        return forcesValid;
+    }
+    /**
+     * Get the flag that marks whether the current force evaluation is valid.
+     */
+    void setForcesValid(bool valid) {
+        forcesValid = valid;
+    }
+    /**
      * Get the number of atoms.
      */
     int getNumAtoms() const {
@@ -572,7 +584,7 @@ private:
     int paddedNumAtoms;
     int numAtomBlocks;
     int numThreadBlocks;
-    bool useBlockingSync, useDoublePrecision, useMixedPrecision, contextIsValid, atomsWereReordered, boxIsTriclinic, hasCompilerKernel;
+    bool useBlockingSync, useDoublePrecision, useMixedPrecision, contextIsValid, atomsWereReordered, boxIsTriclinic, hasCompilerKernel, forcesValid;
     std::string compiler, tempDir, cacheDir, gpuArchitecture;
     float4 periodicBoxVecXFloat, periodicBoxVecYFloat, periodicBoxVecZFloat, periodicBoxSizeFloat, invPeriodicBoxSizeFloat;
     double4 periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ, periodicBoxSize, invPeriodicBoxSize;

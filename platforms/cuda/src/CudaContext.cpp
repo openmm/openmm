@@ -1131,7 +1131,6 @@ void CudaContext::reorderAtoms() {
         reorderAtomsImpl<float, float4, double, double4>();
     else
         reorderAtomsImpl<float, float4, float, float4>();
-    nonbonded->updateNeighborListSize();
 }
 
 template <class Real, class Real4, class Mixed, class Mixed4>

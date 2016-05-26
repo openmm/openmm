@@ -1052,7 +1052,6 @@ void OpenCLContext::reorderAtoms() {
         reorderAtomsImpl<cl_float, mm_float4, cl_double, mm_double4>();
     else
         reorderAtomsImpl<cl_float, mm_float4, cl_float, mm_float4>();
-    nonbonded->updateNeighborListSize();
 }
 
 template <class Real, class Real4, class Mixed, class Mixed4>
