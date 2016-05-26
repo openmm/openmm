@@ -320,7 +320,11 @@ const string& Platform::getDefaultPluginsDirectory() {
 #define STRING(x) STRING1(x)
 
 const string& Platform::getOpenMMVersion() {
+#if OPENMM_BUILD_VERSION == 0
     static const string version = STRING(OPENMM_MAJOR_VERSION) "." STRING(OPENMM_MINOR_VERSION);
+#else
+    static const string version = STRING(OPENMM_MAJOR_VERSION) "." STRING(OPENMM_MINOR_VERSION) "." STRING(OPENMM_BUILD_VERSION);
+#endif
     return version;
 }
 
