@@ -1217,6 +1217,7 @@ class CharmmPsfFile(object):
             else:
                 raise ValueError('Illegal nonbonded method for use with GBSA')
             gb.setForceGroup(self.GB_FORCE_GROUP)
+            gb.finalize()
             system.addForce(gb)
             force.setReactionFieldDielectric(1.0) # applies to NonbondedForce
 
