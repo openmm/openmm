@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2015 Stanford University and the Authors.s      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.s      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -93,12 +93,40 @@ void testAngles() {
     }
 }
 
+void testPeriodic() {
+    // Create a force that uses periodic boundary conditions.
+    
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.setDefaultPeriodicBoxVectors(Vec3(3, 0, 0), Vec3(0, 1.5, 0), Vec3(0, 0, 3));
+    VerletIntegrator integrator(0.01);
+    HarmonicAngleForce* angles = new HarmonicAngleForce();
+    angles->addAngle(0, 1, 2, PI_M/3, 1.1);
+    system.addForce(angles);
+    angles->setUsesPeriodicBoundaryConditions(true);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(3);
+    positions[0] = Vec3(0, 1, 0);
+    positions[1] = Vec3(0, 0, 0);
+    positions[2] = Vec3(1, 0, 0);
+    context.setPositions(positions);
+    State state = context.getState(State::Forces | State::Energy);
+    const vector<Vec3>& forces = state.getForces();
+    double torque = 1.1*PI_M/6;
+    ASSERT_EQUAL_VEC(Vec3(2*torque, 0, 0), forces[0], TOL);
+    ASSERT_EQUAL_VEC(Vec3(0, -torque, 0), forces[2], TOL);
+    ASSERT_EQUAL_TOL(0.5*1.1*(PI_M/6)*(PI_M/6), state.getPotentialEnergy(), TOL);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
     try {
         initializeTests(argc, argv);
         testAngles();
+        testPeriodic();
         runPlatformTests();
     }
     catch(const exception& e) {

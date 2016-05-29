@@ -1,5 +1,4 @@
-
-/* Portions copyright (c) 2006 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2016 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -28,6 +27,13 @@
 
 using std::vector;
 using namespace OpenMM;
+
+void AmoebaReferencePiTorsionForce::setPeriodic(OpenMM::RealVec* vectors) {
+    usePeriodic = true;
+    boxVectors[0] = vectors[0];
+    boxVectors[1] = vectors[1];
+    boxVectors[2] = vectors[2];
+}
 
 /**---------------------------------------------------------------------------------------
 
@@ -66,11 +72,19 @@ RealOpenMM AmoebaReferencePiTorsionForce::calculatePiTorsionIxn(const RealVec& p
     std::vector<RealOpenMM> deltaR[LastDeltaIndex];
     for (unsigned int ii = 0; ii < LastDeltaIndex; ii++) {
         deltaR[ii].resize(3);
-    }   
-    AmoebaReferenceForce::loadDeltaR(positionAtomD, positionAtomA, deltaR[AD]);
-    AmoebaReferenceForce::loadDeltaR(positionAtomD, positionAtomB, deltaR[BD]);
-    AmoebaReferenceForce::loadDeltaR(positionAtomC, positionAtomE, deltaR[EC]);
-    AmoebaReferenceForce::loadDeltaR(positionAtomC, positionAtomF, deltaR[FC]);
+    }
+    if (usePeriodic) {
+        AmoebaReferenceForce::loadDeltaRPeriodic(positionAtomD, positionAtomA, deltaR[AD], boxVectors);
+        AmoebaReferenceForce::loadDeltaRPeriodic(positionAtomD, positionAtomB, deltaR[BD], boxVectors);
+        AmoebaReferenceForce::loadDeltaRPeriodic(positionAtomC, positionAtomE, deltaR[EC], boxVectors);
+        AmoebaReferenceForce::loadDeltaRPeriodic(positionAtomC, positionAtomF, deltaR[FC], boxVectors);
+    }
+    else {
+        AmoebaReferenceForce::loadDeltaR(positionAtomD, positionAtomA, deltaR[AD]);
+        AmoebaReferenceForce::loadDeltaR(positionAtomD, positionAtomB, deltaR[BD]);
+        AmoebaReferenceForce::loadDeltaR(positionAtomC, positionAtomE, deltaR[EC]);
+        AmoebaReferenceForce::loadDeltaR(positionAtomC, positionAtomF, deltaR[FC]);
+    }
 
     enum { A, B, C, D, E, F, LastAtomIndex };
     std::vector<RealOpenMM> d[LastAtomIndex];

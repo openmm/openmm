@@ -118,9 +118,44 @@ void testReordering() {
     }
 }
 
+void testDeterministicForces() {
+    // Check that the CudaDeterministicForces property works correctly.
+    
+    const int numParticles = 1000;
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(6, 0, 0), Vec3(2.1, 6, 0), Vec3(-1.5, -0.5, 6));
+    NonbondedForce *nonbonded = new NonbondedForce();
+    nonbonded->setNonbondedMethod(NonbondedForce::PME);
+    system.addForce(nonbonded);
+    vector<Vec3> positions;
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(1.0);
+        nonbonded->addParticle(i%2 == 0 ? 1 : -1, 1, 0);
+        positions.push_back(Vec3(genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5)*6);
+    }
+    VerletIntegrator integrator(0.001);
+    map<string, string> properties;
+    properties[CudaPlatform::CudaDeterministicForces()] = "true";
+    Context context(system, integrator, platform, properties);
+    context.setPositions(positions);
+    State state1 = context.getState(State::Forces);
+    State state2 = context.getState(State::Forces);
+    
+    // All forces should be *exactly* equal.
+    
+    for (int i = 0; i < numParticles; i++) {
+        ASSERT_EQUAL(state1.getForces()[i][0], state2.getForces()[i][0]);
+        ASSERT_EQUAL(state1.getForces()[i][1], state2.getForces()[i][1]);
+        ASSERT_EQUAL(state1.getForces()[i][2], state2.getForces()[i][2]);
+    }
+}
+
 void runPlatformTests() {
     testParallelComputation(NonbondedForce::NoCutoff);
     testParallelComputation(NonbondedForce::Ewald);
     testParallelComputation(NonbondedForce::PME);
     testReordering();
+    testDeterministicForces();
 }

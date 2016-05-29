@@ -1,44 +1,36 @@
 // compute the value of the bond angle
 
-real xab = pos1.x - pos2.x;
-real yab = pos1.y - pos2.y;
-real zab = pos1.z - pos2.z;
+real3 ab = make_real3(pos1.x-pos2.x, pos1.y-pos2.y, pos1.z-pos2.z);
+real3 cb = make_real3(pos3.x-pos2.x, pos3.y-pos2.y, pos3.z-pos2.z);
+real3 db = make_real3(pos4.x-pos2.x, pos4.y-pos2.y, pos4.z-pos2.z);
+real3 ad = make_real3(pos1.x-pos4.x, pos1.y-pos4.y, pos1.z-pos4.z);
+real3 cd = make_real3(pos3.x-pos4.x, pos3.y-pos4.y, pos3.z-pos4.z);
 
-real xcb = pos3.x - pos2.x;
-real ycb = pos3.y - pos2.y;
-real zcb = pos3.z - pos2.z;
+#if APPLY_PERIODIC
+APPLY_PERIODIC_TO_DELTA(ab)
+APPLY_PERIODIC_TO_DELTA(cb)
+APPLY_PERIODIC_TO_DELTA(db)
+APPLY_PERIODIC_TO_DELTA(ad)
+APPLY_PERIODIC_TO_DELTA(cd)
+#endif
 
-// compute the out-of-plane bending angle
+real rdb2 = db.x*db.x + db.y*db.y + db.z*db.z;
+real rad2 = ad.x*ad.x + ad.y*ad.y + ad.z*ad.z;
+real rcd2 = cd.x*cd.x + cd.y*cd.y + cd.z*cd.z;
 
-real xdb = pos4.x - pos2.x;
-real ydb = pos4.y - pos2.y;
-real zdb = pos4.z - pos2.z;
+real ee = ab.x*(cb.y*db.z-cb.z*db.y) + ab.y*(cb.z*db.x-cb.x*db.z) + ab.z*(cb.x*db.y-cb.y*db.x);
 
-real xad = pos1.x - pos4.x;
-real yad = pos1.y - pos4.y;
-real zad = pos1.z - pos4.z;
-
-real xcd = pos3.x - pos4.x;
-real ycd = pos3.y - pos4.y;
-real zcd = pos3.z - pos4.z;
-
-real rdb2 = xdb*xdb + ydb*ydb + zdb*zdb;
-real rad2 = xad*xad + yad*yad + zad*zad;
-real rcd2 = xcd*xcd + ycd*ycd + zcd*zcd;
-
-real ee = xab*(ycb*zdb-zcb*ydb) + yab*(zcb*xdb-xcb*zdb) + zab*(xcb*ydb-ycb*xdb);
-
-real dot = xad*xcd + yad*ycd + zad*zcd;
+real dot = ad.x*cd.x + ad.y*cd.y + ad.z*cd.z;
 real cc = rad2*rcd2 - dot*dot;
 real bkk2 = (cc != 0 ? (ee*ee)/(cc) : (real) 0);
 bkk2 = rdb2 - bkk2;
 
-real adXcd_0 = yad*zcd - zad*ycd;
-real adXcd_1 = zad*xcd - xad*zcd;
-real adXcd_2 = xad*ycd - yad*xcd;
+real adXcd_0 = ad.y*cd.z - ad.z*cd.y;
+real adXcd_1 = ad.z*cd.x - ad.x*cd.z;
+real adXcd_2 = ad.x*cd.y - ad.y*cd.x;
 real adXcd_nrm2 = adXcd_0*adXcd_0 + adXcd_1*adXcd_1 + adXcd_2*adXcd_2;
 
-real adXcd_dot_db = xdb*adXcd_0 + ydb*adXcd_1 + zdb*adXcd_2;
+real adXcd_dot_db = db.x*adXcd_0 + db.y*adXcd_1 + db.z*adXcd_2;
 adXcd_dot_db /= SQRT(rdb2*adXcd_nrm2);
 
 real angle = abs(ASIN(adXcd_dot_db));
@@ -62,13 +54,13 @@ real dedcos = -deddt*eeSign/SQRT(cc*bkk2);
 
 real term = ee / cc;
 
-real dccdxia = (xad*rcd2-xcd*dot) * term;
-real dccdyia = (yad*rcd2-ycd*dot) * term;
-real dccdzia = (zad*rcd2-zcd*dot) * term;
+real dccdxia = (ad.x*rcd2-cd.x*dot) * term;
+real dccdyia = (ad.y*rcd2-cd.y*dot) * term;
+real dccdzia = (ad.z*rcd2-cd.z*dot) * term;
 
-real dccdxic = (xcd*rad2-xad*dot) * term;
-real dccdyic = (ycd*rad2-yad*dot) * term;
-real dccdzic = (zcd*rad2-zad*dot) * term;
+real dccdxic = (cd.x*rad2-ad.x*dot) * term;
+real dccdyic = (cd.y*rad2-ad.y*dot) * term;
+real dccdzic = (cd.z*rad2-ad.z*dot) * term;
 
 real dccdxid = -dccdxia - dccdxic;
 real dccdyid = -dccdyia - dccdyic;
@@ -76,17 +68,17 @@ real dccdzid = -dccdzia - dccdzic;
 
 term = ee / rdb2;
 
-real deedxia = ydb*zcb - zdb*ycb;
-real deedyia = zdb*xcb - xdb*zcb;
-real deedzia = xdb*ycb - ydb*xcb;
+real deedxia = db.y*cb.z - db.z*cb.y;
+real deedyia = db.z*cb.x - db.x*cb.z;
+real deedzia = db.x*cb.y - db.y*cb.x;
 
-real deedxic = yab*zdb - zab*ydb;
-real deedyic = zab*xdb - xab*zdb;
-real deedzic = xab*ydb - yab*xdb;
+real deedxic = ab.y*db.z - ab.z*db.y;
+real deedyic = ab.z*db.x - ab.x*db.z;
+real deedzic = ab.x*db.y - ab.y*db.x;
 
-real deedxid = ycb*zab - zcb*yab + xdb*term;
-real deedyid = zcb*xab - xcb*zab + ydb*term;
-real deedzid = xcb*yab - ycb*xab + zdb*term;
+real deedxid = cb.y*ab.z - cb.z*ab.y + db.x*term;
+real deedyid = cb.z*ab.x - cb.x*ab.z + db.y*term;
+real deedzid = cb.x*ab.y - cb.y*ab.x + db.z*term;
 
 // compute first derivative components for this angle
 

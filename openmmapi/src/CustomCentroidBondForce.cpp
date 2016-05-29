@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2015 Stanford University and the Authors.           *
+ * Portions copyright (c) 2015-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -48,7 +48,7 @@ using std::string;
 using std::stringstream;
 using std::vector;
 
-CustomCentroidBondForce::CustomCentroidBondForce(int numGroups, const string& energy) : groupsPerBond(numGroups), energyExpression(energy) {
+CustomCentroidBondForce::CustomCentroidBondForce(int numGroups, const string& energy) : groupsPerBond(numGroups), energyExpression(energy), usePeriodic(false) {
 }
 
 CustomCentroidBondForce::~CustomCentroidBondForce() {
@@ -172,4 +172,12 @@ ForceImpl* CustomCentroidBondForce::createImpl() const {
 
 void CustomCentroidBondForce::updateParametersInContext(Context& context) {
     dynamic_cast<CustomCentroidBondForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
+}
+
+void CustomCentroidBondForce::setUsesPeriodicBoundaryConditions(bool periodic) {
+    usePeriodic = periodic;
+}
+
+bool CustomCentroidBondForce::usesPeriodicBoundaryConditions() const {
+    return usePeriodic;
 }

@@ -347,11 +347,6 @@ The choice of which platform to use for a simulation depends on various factors:
    OpenCL platform running on the CPU.
 #. The CUDA platform can only be used with NVIDIA GPUs.  For using an AMD or
    Intel GPU, use the OpenCL platform.
-#. When running on recent NVIDIA GPUs (Fermi and Kepler generations), the CUDA
-   platform is usually faster and should be used.  On older GPUs, the OpenCL
-   platform is likely to be faster.  Also, some very old GPUs (GeForce 8000 and
-   9000 series) are only supported by the OpenCL platform, not by the CUDA
-   platform.
 #. The AMOEBA force field only works with the CUDA platform, not with the OpenCL
    platform.  It also works with the Reference and CPU platforms, but the performance
    is usually too slow to be useful on those platforms.
@@ -393,14 +388,9 @@ Mac and Linux: clang or gcc
 
 Use clang or gcc on Mac/Linux.  OpenMM should compile correctly with all recent
 versions of these compilers.  We recommend clang since it produces faster code,
-especially when using the CPU platform.
-
-If you do not already have a compiler installed, you will need to download and
-install it.  On Mac OS X, this means downloading the Xcode Tools from the App
-Store. (With Xcode 4.3, you must then launch Xcode, open the Preferences window,
-go to the Downloads tab, and tell it to install the command line tools.  With
-Xcode 4.2 and earlier, the command line tools are automatically installed when
-you install Xcode.)
+especially when using the CPU platform.  If you do not already have a compiler
+installed, you will need to download and install it.  On Mac OS X, this means
+downloading the Xcode Tools from the App Store.
 
 Windows: Visual Studio
 ----------------------
@@ -545,6 +535,8 @@ There are several variables that can be adjusted in the CMake interface:
   and documentation.
 * Set the variable CMAKE_INSTALL_PREFIX to the location where you want to
   install OpenMM.
+* Set the variable PYTHON_EXECUTABLE to the Python interpreter you plan to use
+  OpenMM with.
 
 
 Configure (press “c”) again.  Adjust any variables that cause an
@@ -1844,7 +1836,7 @@ Context constructor:
 
     Platform& platform = Platform::getPlatformByName("OpenCL");
     map<string, string> properties;
-    properties["OpenCLDeviceIndex"] = "1";
+    properties["DeviceIndex"] = "1";
     Context context(system, integrator, platform, properties);
 
 After a Context is created, you can use the Platform’s \
@@ -1855,7 +1847,7 @@ OpenCL Platform
 
 The OpenCL Platform recognizes the following Platform-specific properties:
 
-* OpenCLPrecision: This selects what numeric precision to use for calculations.
+* Precision: This selects what numeric precision to use for calculations.
   The allowed values are “single”, “mixed”, and “double”.  If it is set to
   “single”, nearly all calculations are done in single precision.  This is the
   fastest option but also the least accurate.  If it is set to “mixed”, forces are
@@ -1863,7 +1855,7 @@ The OpenCL Platform recognizes the following Platform-specific properties:
   gives much better energy conservation with only a slight decrease in speed.
   If it is set to “double”, all calculations are done in double precision.  This
   is the most accurate option, but is usually much slower than the others.
-* OpenCLUseCpuPme: This selects whether to use the CPU-based PME
+* UseCpuPme: This selects whether to use the CPU-based PME
   implementation.  The allowed values are “true” or “false”.  Depending on your
   hardware, this might (or might not) improve performance.  To use this option,
   you must have FFTW (single precision, multithreaded) installed, and your CPU
@@ -1873,19 +1865,19 @@ The OpenCL Platform recognizes the following Platform-specific properties:
   zero-based index of the platform (in the OpenCL sense, not the OpenMM sense) to use,
   in the order they are returned by the OpenCL platform API.  This is useful, for
   example, in selecting whether to use a GPU or CPU based OpenCL implementation.
-* OpenCLDeviceIndex: When multiple OpenCL devices are available on your
+* DeviceIndex: When multiple OpenCL devices are available on your
   computer, this is used to select which one to use.  The value is the zero-based
   index of the device to use, in the order they are returned by the OpenCL device
   API.
 
 
 The OpenCL Platform also supports parallelizing a simulation across multiple
-GPUs.  To do that, set the OpenCLDeviceIndex property to a comma separated list
+GPUs.  To do that, set the DeviceIndex property to a comma separated list
 of values.  For example,
 
 .. code-block:: c
 
-    properties["OpenCLDeviceIndex"] = "0,1";
+    properties["DeviceIndex"] = "0,1";
 
 This tells it to use both devices 0 and 1, splitting the work between them.
 
@@ -1894,7 +1886,7 @@ CUDA Platform
 
 The CUDA Platform recognizes the following Platform-specific properties:
 
-* CudaPrecision: This selects what numeric precision to use for calculations.
+* Precision: This selects what numeric precision to use for calculations.
   The allowed values are “single”, “mixed”, and “double”.  If it is set to
   “single”, nearly all calculations are done in single precision.  This is the
   fastest option but also the least accurate.  If it is set to “mixed”, forces are
@@ -1902,7 +1894,7 @@ The CUDA Platform recognizes the following Platform-specific properties:
   gives much better energy conservation with only a slight decrease in speed.
   If it is set to “double”, all calculations are done in double precision.  This
   is the most accurate option, but is usually much slower than the others.
-* CudaUseCpuPme: This selects whether to use the CPU-based PME implementation.
+* UseCpuPme: This selects whether to use the CPU-based PME implementation.
   The allowed values are “true” or “false”.  Depending on your hardware, this
   might (or might not) improve performance.  To use this option, you must have
   FFTW (single precision, multithreaded) installed, and your CPU must support SSE
@@ -1920,28 +1912,36 @@ The CUDA Platform recognizes the following Platform-specific properties:
     appends \nvcc.exe to it.  That environment variable is set by the CUDA
     installer, so it usually is present.
 
-* CudaTempDirectory: This specifies a directory where temporary files can be
+* TempDirectory: This specifies a directory where temporary files can be
   written while compiling kernels.  OpenMM usually can locate your operating
   system’s temp directory automatically (for example, by looking for the TEMP
   environment variable), so you rarely need to specify this.
-* CudaDeviceIndex: When multiple CUDA devices are available on your computer,
+* DeviceIndex: When multiple CUDA devices are available on your computer,
   this is used to select which one to use.  The value is the zero-based index of
   the device to use, in the order they are returned by the CUDA API.
-* CudaUseBlockingSync: This is used to control how the CUDA runtime
+* UseBlockingSync: This is used to control how the CUDA runtime
   synchronizes between the CPU and GPU.  If this is set to “true” (the default),
   CUDA will allow the calling thread to sleep while the GPU is performing a
   computation, allowing the CPU to do other work.  If it is set to “false”, CUDA
   will spin-lock while the GPU is working.  Setting it to "false" can improve performance slightly,
   but also prevents the CPU from doing anything else while the GPU is working.
-
+* DeterministicForces: In some cases, the CUDA platform may compute forces
+  in ways that are not fully deterministic (typically differing in what order a
+  set of numbers get added together).  This means that if you compute the forces
+  twice for the same particle positions, there may be tiny differences in the
+  results.  In most cases this is not a problem, but certain algorithms depend
+  on forces being exactly reproducible to the last bit.  If you set this
+  property to "true", it will instead do these calculations in a way that
+  produces fully deterministic results, at the cost of a small decrease in
+  performance.
 
 The CUDA Platform also supports parallelizing a simulation across multiple GPUs.
-To do that, set the CudaDeviceIndex property to a comma separated list of
+To do that, set the DeviceIndex property to a comma separated list of
 values.  For example,
 
 .. code-block:: c
 
-    properties["CudaDeviceIndex"] = "0,1";
+    properties["DeviceIndex"] = "0,1";
 
 This tells it to use both devices 0 and 1, splitting the work between them.
 
@@ -1950,7 +1950,7 @@ CPU Platform
 
 The CPU Platform recognizes the following Platform-specific properties:
 
-* CpuThreads: This specifies the number of CPU threads to use.  If you do not
+* Threads: This specifies the number of CPU threads to use.  If you do not
   specify this, OpenMM will select a default number of threads as follows:
 
   * If an environment variable called OPENMM_CPU_THREADS is set, its value is

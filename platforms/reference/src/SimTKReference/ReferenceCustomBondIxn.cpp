@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2013 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2016 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -40,7 +40,7 @@ using namespace OpenMM;
 
 ReferenceCustomBondIxn::ReferenceCustomBondIxn(const Lepton::CompiledExpression& energyExpression,
         const Lepton::CompiledExpression& forceExpression, const vector<string>& parameterNames, map<string, double> globalParameters) :
-        energyExpression(energyExpression), forceExpression(forceExpression) {
+        energyExpression(energyExpression), forceExpression(forceExpression), usePeriodic(false) {
     energyR = ReferenceForce::getVariablePointer(this->energyExpression, "r");
     forceR = ReferenceForce::getVariablePointer(this->forceExpression, "r");
     numParameters = parameterNames.size();
@@ -61,13 +61,13 @@ ReferenceCustomBondIxn::ReferenceCustomBondIxn(const Lepton::CompiledExpression&
    --------------------------------------------------------------------------------------- */
 
 ReferenceCustomBondIxn::~ReferenceCustomBondIxn() {
+}
 
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceCustomBondIxn::~ReferenceCustomBondIxn";
-
-   // ---------------------------------------------------------------------------------------
-
+void ReferenceCustomBondIxn::setPeriodic(OpenMM::RealVec* vectors) {
+    usePeriodic = true;
+    boxVectors[0] = vectors[0];
+    boxVectors[1] = vectors[1];
+    boxVectors[2] = vectors[2];
 }
 
 /**---------------------------------------------------------------------------------------
@@ -108,7 +108,10 @@ void ReferenceCustomBondIxn::calculateBondIxn(int* atomIndices,
 
    int atomAIndex = atomIndices[0];
    int atomBIndex = atomIndices[1];
-   ReferenceForce::getDeltaR(atomCoordinates[atomAIndex], atomCoordinates[atomBIndex], deltaR);
+   if (usePeriodic)
+       ReferenceForce::getDeltaRPeriodic(atomCoordinates[atomAIndex], atomCoordinates[atomBIndex], boxVectors, deltaR);
+   else
+       ReferenceForce::getDeltaR(atomCoordinates[atomAIndex], atomCoordinates[atomBIndex], deltaR);
    
    ReferenceForce::setVariable(energyR, deltaR[ReferenceForce::RIndex]);
    ReferenceForce::setVariable(forceR, deltaR[ReferenceForce::RIndex]);

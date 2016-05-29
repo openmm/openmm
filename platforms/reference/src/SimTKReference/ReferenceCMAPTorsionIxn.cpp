@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2010 Stanford University and Simbios.
+/* Portions copyright (c) 2010-2016 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -36,7 +36,14 @@ using namespace OpenMM;
 
 ReferenceCMAPTorsionIxn::ReferenceCMAPTorsionIxn(const vector<vector<vector<RealOpenMM> > >& coeff,
         const vector<int>& torsionMaps, const vector<vector<int> >& torsionIndices) :
-        coeff(coeff), torsionMaps(torsionMaps), torsionIndices(torsionIndices) {
+        coeff(coeff), torsionMaps(torsionMaps), torsionIndices(torsionIndices), usePeriodic(false) {
+}
+
+void ReferenceCMAPTorsionIxn::setPeriodic(OpenMM::RealVec* vectors) {
+    usePeriodic = true;
+    boxVectors[0] = vectors[0];
+    boxVectors[1] = vectors[1];
+    boxVectors[2] = vectors[2];
 }
 
 /**---------------------------------------------------------------------------------------
@@ -83,13 +90,23 @@ void ReferenceCMAPTorsionIxn::calculateOneIxn(int index, vector<RealVec>& atomCo
     // Compute deltas between the various atoms involved.
 
     RealOpenMM deltaA[3][ReferenceForce::LastDeltaRIndex];
-    ReferenceForce::getDeltaR(atomCoordinates[a2], atomCoordinates[a1], deltaA[0]);
-    ReferenceForce::getDeltaR(atomCoordinates[a2], atomCoordinates[a3], deltaA[1]);
-    ReferenceForce::getDeltaR(atomCoordinates[a4], atomCoordinates[a3], deltaA[2]);
     RealOpenMM deltaB[3][ReferenceForce::LastDeltaRIndex];
-    ReferenceForce::getDeltaR(atomCoordinates[b2], atomCoordinates[b1], deltaB[0]);
-    ReferenceForce::getDeltaR(atomCoordinates[b2], atomCoordinates[b3], deltaB[1]);
-    ReferenceForce::getDeltaR(atomCoordinates[b4], atomCoordinates[b3], deltaB[2]);
+    if (usePeriodic) {
+        ReferenceForce::getDeltaRPeriodic(atomCoordinates[a2], atomCoordinates[a1], boxVectors, deltaA[0]);
+        ReferenceForce::getDeltaRPeriodic(atomCoordinates[a2], atomCoordinates[a3], boxVectors, deltaA[1]);
+        ReferenceForce::getDeltaRPeriodic(atomCoordinates[a4], atomCoordinates[a3], boxVectors, deltaA[2]);
+        ReferenceForce::getDeltaRPeriodic(atomCoordinates[b2], atomCoordinates[b1], boxVectors, deltaB[0]);
+        ReferenceForce::getDeltaRPeriodic(atomCoordinates[b2], atomCoordinates[b3], boxVectors, deltaB[1]);
+        ReferenceForce::getDeltaRPeriodic(atomCoordinates[b4], atomCoordinates[b3], boxVectors, deltaB[2]);
+    }
+    else {
+        ReferenceForce::getDeltaR(atomCoordinates[a2], atomCoordinates[a1], deltaA[0]);
+        ReferenceForce::getDeltaR(atomCoordinates[a2], atomCoordinates[a3], deltaA[1]);
+        ReferenceForce::getDeltaR(atomCoordinates[a4], atomCoordinates[a3], deltaA[2]);
+        ReferenceForce::getDeltaR(atomCoordinates[b2], atomCoordinates[b1], deltaB[0]);
+        ReferenceForce::getDeltaR(atomCoordinates[b2], atomCoordinates[b3], deltaB[1]);
+        ReferenceForce::getDeltaR(atomCoordinates[b4], atomCoordinates[b3], deltaB[2]);
+    }
 
     // Visual Studio complains if crossProduct declared as 'crossProduct[2][3]'
 

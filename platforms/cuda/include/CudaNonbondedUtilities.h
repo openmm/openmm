@@ -269,6 +269,8 @@ private:
     CudaArray* oldPositions;
     CudaArray* rebuildNeighborList;
     CudaSort* blockSorter;
+    CUevent downloadCountEvent;
+    int* pinnedCountBuffer;
     std::vector<void*> forceArgs, findBlockBoundsArgs, sortBoxDataArgs, findInteractingBlocksArgs;
     std::vector<std::vector<int> > atomExclusions;
     std::vector<ParameterInfo> parameters;

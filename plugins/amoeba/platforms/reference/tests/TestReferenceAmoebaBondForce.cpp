@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -35,6 +35,7 @@
 
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
+#include "openmm/CustomBondForce.h"
 #include "OpenMMAmoeba.h"
 #include "openmm/System.h"
 #include "openmm/LangevinIntegrator.h"
@@ -201,6 +202,49 @@ void testTwoBond() {
     compareWithExpectedForceAndEnergy(context, *amoebaBondForce, TOL, "testTwoBond");
 }
 
+void testPeriodic() {
+    // Create a force that uses periodic boundary conditions, then compare to an identical custom force.
+    
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(3, 0, 0), Vec3(0, 3, 0), Vec3(0, 0, 3));
+    int numParticles = 2;
+    for (int ii = 0; ii < numParticles; ii++)
+        system.addParticle(1.0);
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
+    AmoebaBondForce* amoebaBondForce = new AmoebaBondForce();
+    double bondLength = 1.5;
+    double quadraticK = 1.0;
+    double cubicK     = 2.0;
+    double quarticK   = 3.0;
+    amoebaBondForce->setAmoebaGlobalBondCubic(cubicK);
+    amoebaBondForce->setAmoebaGlobalBondQuartic(quarticK);
+    amoebaBondForce->addBond(0, 1, bondLength, quadraticK);
+    amoebaBondForce->setUsesPeriodicBoundaryConditions(true);
+    system.addForce(amoebaBondForce);
+    CustomBondForce* customForce = new CustomBondForce("k2*delta^2 + k3*delta^3 + k4*delta^4; delta=r-r0");
+    customForce->addGlobalParameter("r0", bondLength);
+    customForce->addGlobalParameter("k2", quadraticK);
+    customForce->addGlobalParameter("k3", cubicK);
+    customForce->addGlobalParameter("k4", quarticK);
+    customForce->addBond(0, 1);
+    customForce->setUsesPeriodicBoundaryConditions(true);
+    customForce->setForceGroup(1);
+    system.addForce(customForce);
+    Context context(system, integrator, Platform::getPlatformByName("Reference"));
+
+    std::vector<Vec3> positions(numParticles);
+
+    positions[0] = Vec3(0, 2, 0);
+    positions[1] = Vec3(0, 0, 0);
+
+    context.setPositions(positions);
+    State s1 = context.getState(State::Forces | State::Energy, true, 1);
+    State s2 = context.getState(State::Forces | State::Energy, true, 2);
+    ASSERT_EQUAL_TOL(s2.getPotentialEnergy(), s1.getPotentialEnergy(), 1e-5);
+    for (int i = 0; i < numParticles; i++)
+        ASSERT_EQUAL_VEC(s2.getForces()[i], s1.getForces()[i], 1e-5);
+}
+
 int main(int numberOfArguments, char* argv[]) {
 
     try {
@@ -208,6 +252,7 @@ int main(int numberOfArguments, char* argv[]) {
         registerAmoebaReferenceKernelFactories();
         //testOneBond();
         testTwoBond();
+        testPeriodic();
     }
     catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;

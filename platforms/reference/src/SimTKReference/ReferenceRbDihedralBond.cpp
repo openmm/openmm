@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2016 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -38,14 +38,7 @@ using namespace OpenMM;
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceRbDihedralBond::ReferenceRbDihedralBond() {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceRbDihedralBond::ReferenceRbDihedralBond";
-
-   // ---------------------------------------------------------------------------------------
-
+ReferenceRbDihedralBond::ReferenceRbDihedralBond() : usePeriodic(false) {
 }
 
 /**---------------------------------------------------------------------------------------
@@ -55,13 +48,13 @@ ReferenceRbDihedralBond::ReferenceRbDihedralBond() {
    --------------------------------------------------------------------------------------- */
 
 ReferenceRbDihedralBond::~ReferenceRbDihedralBond() {
+}
 
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceRbDihedralBond::~ReferenceRbDihedralBond";
-
-   // ---------------------------------------------------------------------------------------
-
+void ReferenceRbDihedralBond::setPeriodic(OpenMM::RealVec* vectors) {
+    usePeriodic = true;
+    boxVectors[0] = vectors[0];
+    boxVectors[1] = vectors[1];
+    boxVectors[2] = vectors[2];
 }
 
 /**---------------------------------------------------------------------------------------
@@ -112,9 +105,16 @@ void ReferenceRbDihedralBond::calculateBondIxn(int* atomIndices,
    int atomBIndex = atomIndices[1];
    int atomCIndex = atomIndices[2];
    int atomDIndex = atomIndices[3];
-   ReferenceForce::getDeltaR(atomCoordinates[atomBIndex], atomCoordinates[atomAIndex], deltaR[0]);  
-   ReferenceForce::getDeltaR(atomCoordinates[atomBIndex], atomCoordinates[atomCIndex], deltaR[1]);  
-   ReferenceForce::getDeltaR(atomCoordinates[atomDIndex], atomCoordinates[atomCIndex], deltaR[2]);  
+   if (usePeriodic) {
+      ReferenceForce::getDeltaRPeriodic(atomCoordinates[atomBIndex], atomCoordinates[atomAIndex], boxVectors, deltaR[0]);  
+      ReferenceForce::getDeltaRPeriodic(atomCoordinates[atomBIndex], atomCoordinates[atomCIndex], boxVectors, deltaR[1]);  
+      ReferenceForce::getDeltaRPeriodic(atomCoordinates[atomDIndex], atomCoordinates[atomCIndex], boxVectors, deltaR[2]);  
+   }
+   else {
+      ReferenceForce::getDeltaR(atomCoordinates[atomBIndex], atomCoordinates[atomAIndex], deltaR[0]);  
+      ReferenceForce::getDeltaR(atomCoordinates[atomBIndex], atomCoordinates[atomCIndex], deltaR[1]);  
+      ReferenceForce::getDeltaR(atomCoordinates[atomDIndex], atomCoordinates[atomCIndex], deltaR[2]);  
+   }
 
    RealOpenMM cosPhi;
    RealOpenMM signOfAngle;

@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2014 Stanford University and the Authors.           *
+ * Portions copyright (c) 2014-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -55,6 +55,7 @@ public:
     double evaluateDerivative(const double* arguments, const int* derivOrder) const;
     CustomFunction* clone() const;
 private:
+    ReferenceContinuous1DFunction(const ReferenceContinuous1DFunction& other);
     const Continuous1DFunction& function;
     double min, max;
     std::vector<double> x, values, derivs;
@@ -71,6 +72,7 @@ public:
     double evaluateDerivative(const double* arguments, const int* derivOrder) const;
     CustomFunction* clone() const;
 private:
+    ReferenceContinuous2DFunction(const ReferenceContinuous2DFunction& other);
     const Continuous2DFunction& function;
     int xsize, ysize;
     double xmin, xmax, ymin, ymax;
@@ -89,6 +91,7 @@ public:
     double evaluateDerivative(const double* arguments, const int* derivOrder) const;
     CustomFunction* clone() const;
 private:
+    ReferenceContinuous3DFunction(const ReferenceContinuous3DFunction& other);
     const Continuous3DFunction& function;
     int xsize, ysize, zsize;
     double xmin, xmax, ymin, ymax, zmin, zmax;

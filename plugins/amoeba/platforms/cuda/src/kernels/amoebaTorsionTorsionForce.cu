@@ -1,42 +1,38 @@
 int2 torsionParams = TORSION_PARAMS[index];
 
-real xba = pos2.x - pos1.x;
-real yba = pos2.y - pos1.y;
-real zba = pos2.z - pos1.z;
+real3 ba = make_real3(pos2.x-pos1.x, pos2.y-pos1.y, pos2.z-pos1.z);
+real3 cb = make_real3(pos3.x-pos2.x, pos3.y-pos2.y, pos3.z-pos2.z);
+real3 dc = make_real3(pos4.x-pos3.x, pos4.y-pos3.y, pos4.z-pos3.z);
+real3 ed = make_real3(pos5.x-pos4.x, pos5.y-pos4.y, pos5.z-pos4.z);
 
-real xcb = pos3.x - pos2.x;
-real ycb = pos3.y - pos2.y;
-real zcb = pos3.z - pos2.z;
+#if APPLY_PERIODIC
+APPLY_PERIODIC_TO_DELTA(ba)
+APPLY_PERIODIC_TO_DELTA(cb)
+APPLY_PERIODIC_TO_DELTA(dc)
+APPLY_PERIODIC_TO_DELTA(ed)
+#endif
 
-real xdc = pos4.x - pos3.x;
-real ydc = pos4.y - pos3.y;
-real zdc = pos4.z - pos3.z;
+real xt = ba.y*cb.z - cb.y*ba.z;
+real yt = ba.z*cb.x - cb.z*ba.x;
+real zt = ba.x*cb.y - cb.x*ba.y;
 
-real xed = pos5.x - pos4.x;
-real yed = pos5.y - pos4.y;
-real zed = pos5.z - pos4.z;
-
-real xt = yba*zcb - ycb*zba;
-real yt = zba*xcb - zcb*xba;
-real zt = xba*ycb - xcb*yba;
-
-real xu = ycb*zdc - ydc*zcb;
-real yu = zcb*xdc - zdc*xcb;
-real zu = xcb*ydc - xdc*ycb;
+real xu = cb.y*dc.z - dc.y*cb.z;
+real yu = cb.z*dc.x - dc.z*cb.x;
+real zu = cb.x*dc.y - dc.x*cb.y;
 
 real rt2 = xt*xt + yt*yt + zt*zt;
 real ru2 = xu*xu + yu*yu + zu*zu;
 
 real rtru = SQRT(rt2 * ru2);
 
-real xv = ydc*zed - yed*zdc;
-real yv = zdc*xed - zed*xdc;
-real zv = xdc*yed - xed*ydc;
+real xv = dc.y*ed.z - ed.y*dc.z;
+real yv = dc.z*ed.x - ed.z*dc.x;
+real zv = dc.x*ed.y - ed.x*dc.y;
 
 real rv2 = xv*xv + yv*yv + zv*zv;
 real rurv = SQRT(ru2 * rv2);
 
-real rcb = SQRT(xcb*xcb + ycb*ycb + zcb*zcb);
+real rcb = SQRT(cb.x*cb.x + cb.y*cb.y + cb.z*cb.z);
 real cosine1 = (rtru != 0 ? (xt*xu+yt*yu+zt*zu)/rtru : (real) 0);
 cosine1 = (cosine1 > 1 ? (real) 1 : cosine1);
 cosine1 = (cosine1 < -1 ? (real) -1 : cosine1);
@@ -51,11 +47,11 @@ if (cosine1 > 0.99f || cosine1 < -0.99f) {
 }
 else
    angle1 = RAD_TO_DEG*ACOS(cosine1);
-real sign = xba*xu + yba*yu + zba*zu;
+real sign = ba.x*xu + ba.y*yu + ba.z*zu;
 angle1 = (sign < 0 ? -angle1 : angle1);
 real value1 = angle1;
 
-real rdc = SQRT(xdc*xdc + ydc*ydc + zdc*zdc);
+real rdc = SQRT(dc.x*dc.x + dc.y*dc.y + dc.z*dc.z);
 real cosine2 = (xu*xv + yu*yv + zu*zv) / rurv;
 cosine2 = (cosine2 > 1 ? (real) 1 : cosine2);
 cosine2 = (cosine2 < -1 ? (real) -1 : cosine2);
@@ -70,7 +66,7 @@ if (cosine2 > 0.99f || cosine2 < -0.99f) {
 }
 else
    angle2 = RAD_TO_DEG*ACOS(cosine2);
-sign = xcb*xv + ycb*yv + zcb*zv;
+sign = cb.x*xv + cb.y*yv + cb.z*zv;
 angle2 = (sign < 0 ? -angle2 : angle2);
 real value2 = angle2;
 
@@ -83,24 +79,20 @@ real value2 = angle2;
 int chiralAtomIndex = (torsionParams.x > -1 ? torsionParams.x : atom5);
 real4 pos6 = posq[chiralAtomIndex];
 
-real xac = pos6.x - pos3.x;
-real yac = pos6.y - pos3.y;
-real zac = pos6.z - pos3.z;
+real3 ac = make_real3(pos6.x-pos3.x, pos6.y-pos3.y, pos6.z-pos3.z);
+real3 bc = make_real3(pos2.x-pos3.x, pos2.y-pos3.y, pos2.z-pos3.z);
+real3 dc1 = make_real3(pos4.x-pos3.x, pos4.y-pos3.y, pos4.z-pos3.z);
 
-real xbc = pos2.x - pos3.x;
-real ybc = pos2.y - pos3.y;
-real zbc = pos2.z - pos3.z;
+#if APPLY_PERIODIC
+APPLY_PERIODIC_TO_DELTA(ac)
+APPLY_PERIODIC_TO_DELTA(bc)
+APPLY_PERIODIC_TO_DELTA(dc1)
+#endif
 
-// xdc, ydc, zdc appear above
-
-real xdc1 = pos4.x - pos3.x;
-real ydc1 = pos4.y - pos3.y;
-real zdc1 = pos4.z - pos3.z;
-
-real c1 = ybc*zdc1 - zbc*ydc1;
-real c2 = ydc1*zac - zdc1*yac;
-real c3 = yac*zbc - zac*ybc;
-real vol = xac*c1 + xbc*c2 + xdc1*c3;
+real c1 = bc.y*dc1.z - bc.z*dc1.y;
+real c2 = dc1.y*ac.z - dc1.z*ac.y;
+real c3 = ac.y*bc.z - ac.z*bc.y;
+real vol = ac.x*c1 + bc.x*c2 + dc1.x*c3;
 sign = (vol > 0 ? (real) 1 : (real) -1);
 sign = (torsionParams.x < 0 ? (real) 1 : sign);
 value1 *= sign;
@@ -170,66 +162,68 @@ dedang2 *= sign * RAD_TO_DEG;
 
 // chain rule terms for first angle derivative components
 
-real xca = pos3.x - pos1.x;
-real yca = pos3.y - pos1.y;
-real zca = pos3.z - pos1.z;
+real3 ca = make_real3(pos3.x-pos1.x, pos3.y-pos1.y, pos3.z-pos1.z);
+real3 db = make_real3(pos4.x-pos2.x, pos4.y-pos2.y, pos4.z-pos2.z);
 
-real xdb = pos4.x - pos2.x;
-real ydb = pos4.y - pos2.y;
-real zdb = pos4.z - pos2.z;
+#if APPLY_PERIODIC
+APPLY_PERIODIC_TO_DELTA(ca)
+APPLY_PERIODIC_TO_DELTA(db)
+#endif
 
-real dedxt = dedang1 * (yt*zcb - ycb*zt) / (rt2*rcb);
-real dedyt = dedang1 * (zt*xcb - zcb*xt) / (rt2*rcb);
-real dedzt = dedang1 * (xt*ycb - xcb*yt) / (rt2*rcb);
-real dedxu = -dedang1 * (yu*zcb - ycb*zu) / (ru2*rcb);
-real dedyu = -dedang1 * (zu*xcb - zcb*xu) / (ru2*rcb);
-real dedzu = -dedang1 * (xu*ycb - xcb*yu) / (ru2*rcb);
+real dedxt = dedang1 * (yt*cb.z - cb.y*zt) / (rt2*rcb);
+real dedyt = dedang1 * (zt*cb.x - cb.z*xt) / (rt2*rcb);
+real dedzt = dedang1 * (xt*cb.y - cb.x*yt) / (rt2*rcb);
+real dedxu = -dedang1 * (yu*cb.z - cb.y*zu) / (ru2*rcb);
+real dedyu = -dedang1 * (zu*cb.x - cb.z*xu) / (ru2*rcb);
+real dedzu = -dedang1 * (xu*cb.y - cb.x*yu) / (ru2*rcb);
 
 // compute first derivative components for first angle
 
-real dedxia = zcb*dedyt - ycb*dedzt;
-real dedyia = xcb*dedzt - zcb*dedxt;
-real dedzia = ycb*dedxt - xcb*dedyt;
+real dedxia = cb.z*dedyt - cb.y*dedzt;
+real dedyia = cb.x*dedzt - cb.z*dedxt;
+real dedzia = cb.y*dedxt - cb.x*dedyt;
 
-real dedxib = yca*dedzt - zca*dedyt + zdc*dedyu - ydc*dedzu;
-real dedyib = zca*dedxt - xca*dedzt + xdc*dedzu - zdc*dedxu;
-real dedzib = xca*dedyt - yca*dedxt + ydc*dedxu - xdc*dedyu;
+real dedxib = ca.y*dedzt - ca.z*dedyt + dc.z*dedyu - dc.y*dedzu;
+real dedyib = ca.z*dedxt - ca.x*dedzt + dc.x*dedzu - dc.z*dedxu;
+real dedzib = ca.x*dedyt - ca.y*dedxt + dc.y*dedxu - dc.x*dedyu;
 
-real dedxic = zba*dedyt - yba*dedzt + ydb*dedzu - zdb*dedyu;
-real dedyic = xba*dedzt - zba*dedxt + zdb*dedxu - xdb*dedzu;
-real dedzic = yba*dedxt - xba*dedyt + xdb*dedyu - ydb*dedxu;
+real dedxic = ba.z*dedyt - ba.y*dedzt + db.y*dedzu - db.z*dedyu;
+real dedyic = ba.x*dedzt - ba.z*dedxt + db.z*dedxu - db.x*dedzu;
+real dedzic = ba.y*dedxt - ba.x*dedyt + db.x*dedyu - db.y*dedxu;
 
-real dedxid = zcb*dedyu - ycb*dedzu;
-real dedyid = xcb*dedzu - zcb*dedxu;
-real dedzid = ycb*dedxu - xcb*dedyu;
+real dedxid = cb.z*dedyu - cb.y*dedzu;
+real dedyid = cb.x*dedzu - cb.z*dedxu;
+real dedzid = cb.y*dedxu - cb.x*dedyu;
 
 // chain rule terms for second angle derivative components
 
-real xec = pos5.x - pos3.x;
-real yec = pos5.y - pos3.y;
-real zec = pos5.z - pos3.z;
+real3 ec = make_real3(pos5.x-pos3.x, pos5.y-pos3.y, pos5.z-pos3.z);
 
-real dedxu2 = dedang2 * (yu*zdc - ydc*zu) / (ru2*rdc);
-real dedyu2 = dedang2 * (zu*xdc - zdc*xu) / (ru2*rdc);
-real dedzu2 = dedang2 * (xu*ydc - xdc*yu) / (ru2*rdc);
-real dedxv2 = -dedang2 * (yv*zdc - ydc*zv) / (rv2*rdc);
-real dedyv2 = -dedang2 * (zv*xdc - zdc*xv) / (rv2*rdc);
-real dedzv2 = -dedang2 * (xv*ydc - xdc*yv) / (rv2*rdc);
+#if APPLY_PERIODIC
+APPLY_PERIODIC_TO_DELTA(ec)
+#endif
+
+real dedxu2 = dedang2 * (yu*dc.z - dc.y*zu) / (ru2*rdc);
+real dedyu2 = dedang2 * (zu*dc.x - dc.z*xu) / (ru2*rdc);
+real dedzu2 = dedang2 * (xu*dc.y - dc.x*yu) / (ru2*rdc);
+real dedxv2 = -dedang2 * (yv*dc.z - dc.y*zv) / (rv2*rdc);
+real dedyv2 = -dedang2 * (zv*dc.x - dc.z*xv) / (rv2*rdc);
+real dedzv2 = -dedang2 * (xv*dc.y - dc.x*yv) / (rv2*rdc);
 
 // compute first derivative components for second angle
 
-real dedxib2 = zdc*dedyu2 - ydc*dedzu2;
-real dedyib2 = xdc*dedzu2 - zdc*dedxu2;
-real dedzib2 = ydc*dedxu2 - xdc*dedyu2;
-real dedxic2 = ydb*dedzu2 - zdb*dedyu2 + zed*dedyv2 - yed*dedzv2;
-real dedyic2 = zdb*dedxu2 - xdb*dedzu2 + xed*dedzv2 - zed*dedxv2;
-real dedzic2 = xdb*dedyu2 - ydb*dedxu2 + yed*dedxv2 - xed*dedyv2;
-real dedxid2 = zcb*dedyu2 - ycb*dedzu2 + yec*dedzv2 - zec*dedyv2;
-real dedyid2 = xcb*dedzu2 - zcb*dedxu2 + zec*dedxv2 - xec*dedzv2;
-real dedzid2 = ycb*dedxu2 - xcb*dedyu2 + xec*dedyv2 - yec*dedxv2;
-real dedxie2 = zdc*dedyv2 - ydc*dedzv2;
-real dedyie2 = xdc*dedzv2 - zdc*dedxv2;
-real dedzie2 = ydc*dedxv2 - xdc*dedyv2;
+real dedxib2 = dc.z*dedyu2 - dc.y*dedzu2;
+real dedyib2 = dc.x*dedzu2 - dc.z*dedxu2;
+real dedzib2 = dc.y*dedxu2 - dc.x*dedyu2;
+real dedxic2 = db.y*dedzu2 - db.z*dedyu2 + ed.z*dedyv2 - ed.y*dedzv2;
+real dedyic2 = db.z*dedxu2 - db.x*dedzu2 + ed.x*dedzv2 - ed.z*dedxv2;
+real dedzic2 = db.x*dedyu2 - db.y*dedxu2 + ed.y*dedxv2 - ed.x*dedyv2;
+real dedxid2 = cb.z*dedyu2 - cb.y*dedzu2 + ec.y*dedzv2 - ec.z*dedyv2;
+real dedyid2 = cb.x*dedzu2 - cb.z*dedxu2 + ec.z*dedxv2 - ec.x*dedzv2;
+real dedzid2 = cb.y*dedxu2 - cb.x*dedyu2 + ec.x*dedyv2 - ec.y*dedxv2;
+real dedxie2 = dc.z*dedyv2 - dc.y*dedzv2;
+real dedyie2 = dc.x*dedzv2 - dc.z*dedxv2;
+real dedzie2 = dc.y*dedxv2 - dc.x*dedyv2;
 
 real3 force1 = make_real3(-dedxia, -dedyia, -dedzia);
 real3 force2 = make_real3(-dedxib-dedxib2, -dedyib-dedyib2, -dedzib-dedzib2);

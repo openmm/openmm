@@ -409,6 +409,18 @@ public:
         stepsSinceReorder = steps;
     }
     /**
+     * Get the flag that marks whether the current force evaluation is valid.
+     */
+    bool getForcesValid() const {
+        return forcesValid;
+    }
+    /**
+     * Get the flag that marks whether the current force evaluation is valid.
+     */
+    void setForcesValid(bool valid) {
+        forcesValid = valid;
+    }
+    /**
      * Get the number of atoms.
      */
     int getNumAtoms() const {
@@ -684,7 +696,7 @@ private:
     int numThreadBlocks;
     int numForceBuffers;
     int simdWidth;
-    bool supports64BitGlobalAtomics, supportsDoublePrecision, useDoublePrecision, useMixedPrecision, atomsWereReordered, boxIsTriclinic;
+    bool supports64BitGlobalAtomics, supportsDoublePrecision, useDoublePrecision, useMixedPrecision, atomsWereReordered, boxIsTriclinic, forcesValid;
     mm_float4 periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ;
     mm_double4 periodicBoxSizeDouble, invPeriodicBoxSizeDouble, periodicBoxVecXDouble, periodicBoxVecYDouble, periodicBoxVecZDouble;
     std::string defaultOptimizationOptions;

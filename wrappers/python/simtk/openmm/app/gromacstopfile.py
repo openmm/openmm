@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2015 Stanford University and the Authors.
+Portions copyright (c) 2012-2016 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors: Jason Swails
 
@@ -814,7 +814,7 @@ class GromacsTopFile(object):
                     map = []
                     for i in range(mapSize):
                         for j in range(mapSize):
-                            map.append(float(params[8+mapSize*((j+mapSize/2)%mapSize)+((i+mapSize/2)%mapSize)]))
+                            map.append(float(params[8+mapSize*((j+mapSize//2)%mapSize)+((i+mapSize//2)%mapSize)]))
                     map = tuple(map)
                     if map not in mapIndices:
                         mapIndices[map] = cmap.addMap(mapSize, map)

@@ -50,6 +50,7 @@ void testSerialization() {
     force1.addPiTorsion(0, 2, 3, 5, 12, 13, 2.1);
     force1.addPiTorsion(2, 3, 5, 6, 81, 91, 2.2);
     force1.addPiTorsion(5, 1, 8, 8, 101, 102, 2.3);
+    force1.setUsesPeriodicBoundaryConditions(true);
 
     // Serialize and then deserialize it.
 
@@ -60,6 +61,7 @@ void testSerialization() {
     // Compare the two forces to see if they are identical.  
     AmoebaPiTorsionForce& force2 = *copy;
     ASSERT_EQUAL(force1.getForceGroup(), force2.getForceGroup());
+    ASSERT_EQUAL(force1.usesPeriodicBoundaryConditions(), force2.usesPeriodicBoundaryConditions());
     ASSERT_EQUAL(force1.getNumPiTorsions(), force2.getNumPiTorsions());
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(force1.getNumPiTorsions()); ii++) {
         int a1, a2, a3, a4, a5, a6, b1, b2, b3, b4, b5, b6;

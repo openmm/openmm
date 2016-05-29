@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman, Lee-Ping Wang                                      *
  * Contributors:                                                              *
  *                                                                            *
@@ -119,7 +119,7 @@ void MonteCarloAnisotropicBarostatImpl::updateContextState(ContextImpl& context)
     // Compute the energy of the modified system.
     
     double finalEnergy = context.getOwner().getState(State::Energy).getPotentialEnergy();
-    double kT = BOLTZ*owner.getTemperature();
+    double kT = BOLTZ*context.getParameter(MonteCarloAnisotropicBarostat::Temperature());
     double w = finalEnergy-initialEnergy + pressure*deltaVolume - context.getMolecules().size()*kT*std::log(newVolume/volume);
     if (w > 0 && genrand_real2(random) > std::exp(-w/kT)) {
         // Reject the step.
@@ -150,6 +150,7 @@ std::map<std::string, double> MonteCarloAnisotropicBarostatImpl::getDefaultParam
     parameters[MonteCarloAnisotropicBarostat::PressureX()] = getOwner().getDefaultPressure()[0];
     parameters[MonteCarloAnisotropicBarostat::PressureY()] = getOwner().getDefaultPressure()[1];
     parameters[MonteCarloAnisotropicBarostat::PressureZ()] = getOwner().getDefaultPressure()[2];
+    parameters[MonteCarloAnisotropicBarostat::Temperature()] = getOwner().getDefaultTemperature();
     return parameters;
 }
 
