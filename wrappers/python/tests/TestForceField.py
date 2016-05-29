@@ -712,5 +712,15 @@ class AmoebaTestForceField(unittest.TestCase):
             diff = norm(f1-f2)
             self.assertTrue(diff < 0.1 or diff/norm(f1) < 1e-3)
 
+    def test_ImatinibProtomers(self):
+        """Ensure imatinib can be correctly parameterized."""
+        from simtk.openmm import app
+        import cPickle as pickle
+        topology = pickle.load(open('systems/small-molecules/imatinib-topology.pkl', 'r'))
+        from openeye import oechem
+        forcefield = app.ForceField('systems/small-molecules/gaff.xml', 'systems/small-molecules/imatinib-protonation-states.xml')
+        system = forcefield.createSystem(topology, nonbondedMethod=app.CutoffPeriodic)
+
+
 if __name__ == '__main__':
     unittest.main()
