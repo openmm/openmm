@@ -712,5 +712,22 @@ class AmoebaTestForceField(unittest.TestCase):
             diff = norm(f1-f2)
             self.assertTrue(diff < 0.1 or diff/norm(f1) < 1e-3)
 
+    def test_ForceFieldTiming(self):
+        """Timing test for ForceField."""
+        pdb = PDBFile('systems/small-molecules/abl-imatinib-complex-explicit.pdb')
+        forcefield = ForceField('systems/small-molecules/gaff.xml', 'amber99sbildn.xml', 'tip3p.xml', 'systems/small-molecules/imatinib-protonation-states.xml')
+        import time
+        start_time = time.time()
+        system = forcefield.createSystem(topology, nonbondedMethod=CutoffPeriodic)
+        elapsed_time = time.time() - start_time
+        print('Abl:imatinib parameterization took %.3f s' % elapsed_time)
+
+    def test_ImatinibProtomers(self):
+        """Ensure imatinib can be parameterized by ForceField."""
+        import cPickle as pickle
+        topology = pickle.load(open('systems/small-molecules/imatinib-topology.pkl', 'r'))
+        forcefield = ForceField('systems/small-molecules/gaff.xml', 'systems/small-molecules/imatinib-protonation-states.xml')
+        system = forcefield.createSystem(topology, nonbondedMethod=CutoffPeriodic)
+
 if __name__ == '__main__':
     unittest.main()
