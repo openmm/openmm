@@ -107,7 +107,7 @@ before_install:
   - mkdir -p $HOME/ccache && tar xf ccache-3.2.4-0.tar.bz2 -C $HOME/ccache
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
       brew install doxygen swig fftw;
-      sudo easy_install pytest;
+      sudo easy_install pytest pytest-timeout;
     fi
   - if [[ "$OPENCL" == "true" ]]; then
       wget https://jenkins.choderalab.org/userContent/AMD-APP-SDKInstaller-v3.0.130.135-GA-linux64.tar.bz2;

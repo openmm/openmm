@@ -722,6 +722,7 @@ class AmoebaTestForceField(unittest.TestCase):
         elapsed_time = time.time() - start_time
         print('Abl:imatinib parameterization took %.3f s' % elapsed_time)
 
+    @pytest.mark.timeout(60) # This test needs a timeout because old implementation gets stuck in infinite loop
     def test_ImatinibProtomers(self):
         """Ensure imatinib can be parameterized by ForceField."""
         import cPickle as pickle
