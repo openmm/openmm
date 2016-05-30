@@ -718,16 +718,24 @@ class AmoebaTestForceField(unittest.TestCase):
         forcefield = ForceField('systems/small-molecules/gaff.xml', 'amber99sbildn.xml', 'tip3p.xml', 'systems/small-molecules/imatinib-protonation-states.xml')
         import time
         start_time = time.time()
-        system = forcefield.createSystem(pdb.topology, nonbondedMethod=CutoffPeriodic)
+        system = forcefield.createSystem(pdb.topology, nonbondedMethod=NoCutoff)
         elapsed_time = time.time() - start_time
         print('Abl:imatinib parameterization took %.3f s' % elapsed_time)
 
     def test_ImatinibProtomers(self):
         """Ensure imatinib can be parameterized by ForceField."""
         import cPickle as pickle
-        topology = pickle.load(open('systems/small-molecules/imatinib-topology.pkl', 'r'))
         forcefield = ForceField('systems/small-molecules/gaff.xml', 'systems/small-molecules/imatinib-protonation-states.xml')
-        system = forcefield.createSystem(topology, nonbondedMethod=CutoffPeriodic)
+        topology_filename = os.path.join('systems', 'small-molecules', 'imatinib-topology.pkl')
+        # debug
+        print('.')
+        print(os.listdir('.'))
+        print('systems/')
+        print(os.listdir('systems'))
+        print('small-molecules/')
+        print(os.listdir('systems/small-molecules'))
+        topology = pickle.load(open(topology_filename, 'r'))
+        system = forcefield.createSystem(topology, nonbondedMethod=NoCutoff)
 
 if __name__ == '__main__':
     unittest.main()
