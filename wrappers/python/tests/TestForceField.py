@@ -718,7 +718,7 @@ class AmoebaTestForceField(unittest.TestCase):
         forcefield = ForceField('systems/small-molecules/gaff.xml', 'amber99sbildn.xml', 'tip3p.xml', 'systems/small-molecules/imatinib-protonation-states.xml')
         import time
         start_time = time.time()
-        system = forcefield.createSystem(topology, nonbondedMethod=CutoffPeriodic)
+        system = forcefield.createSystem(pdb.topology, nonbondedMethod=CutoffPeriodic)
         elapsed_time = time.time() - start_time
         print('Abl:imatinib parameterization took %.3f s' % elapsed_time)
 
