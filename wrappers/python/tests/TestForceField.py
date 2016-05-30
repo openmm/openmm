@@ -729,13 +729,6 @@ class AmoebaTestForceField(unittest.TestCase):
         import cPickle as pickle
         forcefield = ForceField('systems/small-molecules/gaff.xml', 'systems/small-molecules/imatinib-protonation-states.xml')
         topology_filename = os.path.join('systems', 'small-molecules', 'imatinib-topology.pkl')
-        # debug
-        print('.')
-        print(os.listdir('.'))
-        print('systems/')
-        print(os.listdir('systems'))
-        print('small-molecules/')
-        print(os.listdir('systems/small-molecules'))
         topology = pickle.load(open(topology_filename, 'r'))
         system = forcefield.createSystem(topology, nonbondedMethod=NoCutoff)
 
