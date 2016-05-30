@@ -157,7 +157,7 @@ script:
           make PythonInstall;
       fi;
       python -m simtk.testInstallation;
-      (cd python/tests && py.test -v);
+      (cd python/tests && py.test -v --capture=sys);
     fi
 
   # Run the tests, and rerun any failing tests.
