@@ -449,6 +449,183 @@ class TestForceField(unittest.TestCase):
         self.assertEqual(templates[1].name, 'ALA')
         self.assertEqual(templates[2].name, 'CALA')
 
+    def test_Wildcard(self):
+        """Test that PeriodicTorsionForces using wildcard ('') for atom types / classes in the ffxml are correctly registered"""
+
+        # Use wildcards in types
+        xml = """
+<ForceField>
+ <AtomTypes>
+  <Type name="C" class="C" element="C" mass="12.010000"/>
+  <Type name="O" class="O" element="O" mass="16.000000"/>
+ </AtomTypes>
+ <PeriodicTorsionForce>
+  <Proper type1="" type2="C" type3="C" type4="" periodicity1="2" phase1="3.141593" k1="15.167000"/>
+  <Improper type1="C" type2="" type3="" type4="O" periodicity1="2" phase1="3.141593" k1="43.932000"/>
+ </PeriodicTorsionForce>
+</ForceField>"""
+
+        ff = ForceField(StringIO(xml))
+
+        self.assertEqual(len(ff._forces[0].proper), 1)
+        self.assertEqual(len(ff._forces[0].improper), 1)
+
+       # Use wildcards in classes
+        xml = """
+<ForceField>
+ <AtomTypes>
+  <Type name="C" class="C" element="C" mass="12.010000"/>
+  <Type name="O" class="O" element="O" mass="16.000000"/>
+ </AtomTypes>
+ <PeriodicTorsionForce>
+  <Proper class1="" class2="C" class3="C" class4="" periodicity1="2" phase1="3.141593" k1="15.167000"/>
+  <Improper class1="C" class2="" class3="" class4="O" periodicity1="2" phase1="3.141593" k1="43.932000"/>
+ </PeriodicTorsionForce>
+</ForceField>"""
+
+        ff = ForceField(StringIO(xml))
+
+        self.assertEqual(len(ff._forces[0].proper), 1)
+        self.assertEqual(len(ff._forces[0].improper), 1)
+
+    def test_ScalingFactorCombining(self):
+        """ Tests that FFs can be combined if their scaling factors are very close """
+        forcefield = ForceField('amber99sb.xml', os.path.join('systems', 'test_amber_ff.xml'))
+        # This would raise an exception if it didn't work
+
+    def test_MultipleFilesandForceTags(self):
+        """Test that the order of listing of multiple ffxmls does not matter.
+           Tests that one generator per force type is created and that the ffxml
+           defining atom types does not have to be listed first"""
+
+        ffxml = """<ForceField>
+ <Residues>
+  <Residue name="ACE-Test">
+   <Atom name="HH31" type="710"/>
+   <Atom name="CH3" type="711"/>
+   <Atom name="HH32" type="710"/>
+   <Atom name="HH33" type="710"/>
+   <Atom name="C" type="712"/>
+   <Atom name="O" type="713"/>
+   <Bond from="0" to="1"/>
+   <Bond from="1" to="2"/>
+   <Bond from="1" to="3"/>
+   <Bond from="1" to="4"/>
+   <Bond from="4" to="5"/>
+   <ExternalBond from="4"/>
+  </Residue>
+ </Residues>
+ <PeriodicTorsionForce>
+  <Proper class1="C" class2="C" class3="C" class4="C" periodicity1="2" phase1="3.14159265359" k1="10.46"/>
+  <Improper class1="C" class2="C" class3="C" class4="C" periodicity1="2" phase1="3.14159265359" k1="43.932"/>
+ </PeriodicTorsionForce>
+</ForceField>"""
+
+        ff1 = ForceField(StringIO(ffxml), 'amber99sbildn.xml')
+        ff2 = ForceField('amber99sbildn.xml', StringIO(ffxml))
+
+        self.assertEqual(len(ff1._forces), 4)
+        self.assertEqual(len(ff2._forces), 4)
+
+        pertorsion1 = ff1._forces[0]
+        pertorsion2 = ff2._forces[2]
+
+        self.assertEqual(len(pertorsion1.proper), 110)
+        self.assertEqual(len(pertorsion1.improper), 42)
+        self.assertEqual(len(pertorsion2.proper), 110)
+        self.assertEqual(len(pertorsion2.improper), 42)
+
+    def test_ResidueTemplateUserChoice(self):
+        """Test createSystem does not allow multiple matching templates, unless
+           user has specified which template to use via residueTemplates arg"""
+        ffxml = """<ForceField>
+ <AtomTypes>
+  <Type name="Fe2+" class="Fe2+" element="Fe" mass="55.85"/>
+  <Type name="Fe3+" class="Fe3+" element="Fe" mass="55.85"/>
+ </AtomTypes>
+ <Residues>
+  <Residue name="FE2">
+   <Atom name="FE2" type="Fe2+" charge="2.0"/>
+  </Residue>
+  <Residue name="FE">
+   <Atom name="FE" type="Fe3+" charge="3.0"/>
+  </Residue>
+ </Residues>
+ <NonbondedForce coulomb14scale="0.833333333333" lj14scale="0.5">
+  <UseAttributeFromResidue name="charge"/>
+  <Atom type="Fe2+" sigma="0.227535532613" epsilon="0.0150312292"/>
+  <Atom type="Fe3+" sigma="0.192790482606" epsilon="0.00046095128"/>
+ </NonbondedForce>
+</ForceField>"""
+
+        pdb_string = "ATOM      1 FE    FE A   1      20.956  27.448 -29.067  1.00  0.00          Fe"
+        ff = ForceField(StringIO(ffxml))
+        pdb = PDBFile(StringIO(pdb_string))
+
+        self.assertRaises(Exception, lambda: ff.createSystem(pdb.topology))
+        sys = ff.createSystem(pdb.topology, residueTemplates={list(pdb.topology.residues())[0] : 'FE2'})
+        # confirm charge
+        self.assertEqual(sys.getForce(0).getParticleParameters(0)[0]._value, 2.0)
+        sys = ff.createSystem(pdb.topology, residueTemplates={list(pdb.topology.residues())[0] : 'FE'})
+        # confirm charge
+        self.assertEqual(sys.getForce(0).getParticleParameters(0)[0]._value, 3.0)
+
+    def test_ResidueOverloading(self):
+        """Test residue overloading via overload tag in the XML"""
+
+        ffxml1 = """<ForceField>
+ <AtomTypes>
+  <Type name="Fe2+_tip3p_HFE" class="Fe2+_tip3p_HFE" element="Fe" mass="55.85"/>
+ </AtomTypes>
+ <Residues>
+  <Residue name="FE2">
+   <Atom name="FE2" type="Fe2+_tip3p_HFE" charge="2.0"/>
+  </Residue>
+ </Residues>
+ <NonbondedForce coulomb14scale="0.833333333333" lj14scale="0.5">
+  <UseAttributeFromResidue name="charge"/>
+  <Atom type="Fe2+_tip3p_HFE" sigma="0.227535532613" epsilon="0.0150312292"/>
+ </NonbondedForce>
+</ForceField>"""
+
+        ffxml2 = """<ForceField>
+ <AtomTypes>
+  <Type name="Fe2+_tip3p_standard" class="Fe2+_tip3p_standard" element="Fe" mass="55.85"/>
+ </AtomTypes>
+ <Residues>
+  <Residue name="FE2">
+   <Atom name="FE2" type="Fe2+_tip3p_standard" charge="2.0"/>
+  </Residue>
+ </Residues>
+ <NonbondedForce coulomb14scale="0.833333333333" lj14scale="0.5">
+  <UseAttributeFromResidue name="charge"/>
+  <Atom type="Fe2+_tip3p_standard" sigma="0.241077193129" epsilon="0.03940482832"/>
+ </NonbondedForce>
+</ForceField>"""
+
+        ffxml3 = """<ForceField>
+ <AtomTypes>
+  <Type name="Fe2+_tip3p_standard" class="Fe2+_tip3p_standard" element="Fe" mass="55.85"/>
+ </AtomTypes>
+ <Residues>
+  <Residue name="FE2" overload="1">
+   <Atom name="FE2" type="Fe2+_tip3p_standard" charge="2.0"/>
+  </Residue>
+ </Residues>
+ <NonbondedForce coulomb14scale="0.833333333333" lj14scale="0.5">
+  <UseAttributeFromResidue name="charge"/>
+  <Atom type="Fe2+_tip3p_standard" sigma="0.241077193129" epsilon="0.03940482832"/>
+ </NonbondedForce>
+</ForceField>"""
+
+        pdb_string = "ATOM      1 FE    FE A   1      20.956  27.448 -29.067  1.00  0.00          Fe"
+        pdb = PDBFile(StringIO(pdb_string))
+
+        self.assertRaises(Exception, lambda: ForceField(StringIO(ffxml1), StringIO(ffxml2)))
+        ff = ForceField(StringIO(ffxml1), StringIO(ffxml3))
+        self.assertEqual(ff._templates['FE2'].atoms[0].type, 'Fe2+_tip3p_standard')
+        ff.createSystem(pdb.topology)
+
 class AmoebaTestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method with the AMOEBA forcefield."""
 
@@ -539,11 +716,9 @@ class AmoebaTestForceField(unittest.TestCase):
     def test_LennardJones_generator(self):
         """ Test the LennardJones generator"""
         warnings.filterwarnings('ignore', category=CharmmPSFWarning)
-        psf = CharmmPsfFile('systems/methanol_ions.psf')
-        pdb = PDBFile('systems/methanol_ions.pdb')
-        params = CharmmParameterSet('systems/top_all36_cgenff.rtf',
-                                    'systems/par_all36_cgenff.prm',
-                                    'systems/toppar_water_ions.str'
+        psf = CharmmPsfFile('systems/ions.psf')
+        pdb = PDBFile('systems/ions.pdb')
+        params = CharmmParameterSet('systems/toppar_water_ions.str'
                                     )
 
         # Box dimensions (found from bounding box)
@@ -565,27 +740,10 @@ class AmoebaTestForceField(unittest.TestCase):
         xml = """
 <ForceField>
  <AtomTypes>
-  <Type name="CG331" class="CG331" element="C" mass="12.011"/>
-  <Type name="OG311" class="OG311" element="O" mass="15.9994"/>
-  <Type name="HGP1" class="HGP1" element="H" mass="1.008"/>
-  <Type name="HGA3" class="HGA3" element="H" mass="1.008"/>
   <Type name="SOD" class="SOD" element="Na" mass="22.98977"/>
   <Type name="CLA" class="CLA" element="Cl" mass="35.45"/>
  </AtomTypes>
  <Residues>
-  <Residue name="MEOH">
-   <Atom name="CB" type="CG331" charge="0.0"/>
-   <Atom name="OG" type="OG311" charge="0.0"/>
-   <Atom name="HG1" type="HGP1" charge="0.0"/>
-   <Atom name="HB1" type="HGA3" charge="0.0"/>
-   <Atom name="HB2" type="HGA3" charge="0.0"/>
-   <Atom name="HB3" type="HGA3" charge="0.0"/>
-   <Bond atomName1="CB" atomName2="OG"/>
-   <Bond atomName1="OG" atomName2="HG1"/>
-   <Bond atomName1="CB" atomName2="HB1"/>
-   <Bond atomName1="CB" atomName2="HB2"/>
-   <Bond atomName1="CB" atomName2="HB3"/>
-  </Residue>
   <Residue name="CLA">
    <Atom name="CLA" type="CLA" charge="0.0"/>
   </Residue>
@@ -593,37 +751,12 @@ class AmoebaTestForceField(unittest.TestCase):
    <Atom name="SOD" type="SOD" charge="0.0"/>
   </Residue>
  </Residues>
- <HarmonicBondForce>
-  <Bond type1="CG331" type2="OG311" length="0.142" k="358150.4"/>
-  <Bond type1="CG331" type2="HGA3" length="0.1111" k="269449.6"/>
-  <Bond type1="OG311" type2="HGP1" length="0.096" k="456056.0"/>
- </HarmonicBondForce>
- <HarmonicAngleForce>
-  <Angle type1="HGA3" type2="CG331" type3="HGA3" angle="1.89193690916" k="297.064"/>
-  <Angle type1="CG331" type2="OG311" type3="HGP1" angle="1.85004900711" k="481.16"/>
-  <Angle type1="OG311" type2="CG331" type3="HGA3" angle="1.9004890225" k="384.0912"/>
- </HarmonicAngleForce>
- <!-- Urey-Bradley terms -->
- <AmoebaUreyBradleyForce>
-  <UreyBradley type1="HGA3" type2="CG331" type3="HGA3" d="0.1802" k="2259.36"/>
- </AmoebaUreyBradleyForce>
- <PeriodicTorsionForce>
-  <Proper type1="HGA3" type2="CG331" type3="OG311" type4="HGP1" periodicity1="3" phase1="0.0" k1="0.75312"/>
- </PeriodicTorsionForce>
  <NonbondedForce coulomb14scale="1.0" lj14scale="1.0">
   <UseAttributeFromResidue name="charge"/>
-  <Atom type="CG331" sigma="1.0" epsilon="0.0"/>
-  <Atom type="OG311" sigma="1.0" epsilon="0.0"/>
-  <Atom type="HGP1" sigma="1.0" epsilon="0.0"/>
-  <Atom type="HGA3" sigma="1.0" epsilon="0.0"/>
   <Atom type="SOD" sigma="1.0" epsilon="0.0"/>
   <Atom type="CLA" sigma="1.0" epsilon="0.0"/>
  </NonbondedForce>
  <LennardJonesForce lj14scale="1.0">
-  <Atom type="CG331" sigma="0.365268474438" epsilon="0.326352"/>
-  <Atom type="OG311" sigma="0.314487247504" epsilon="0.8037464"/>
-  <Atom type="HGP1" sigma="0.0400013524445" epsilon="0.192464"/>
-  <Atom type="HGA3" sigma="0.238760856462" epsilon="0.100416"/>
   <Atom type="CLA" sigma="0.404468018036" epsilon="0.6276"/>
   <Atom type="SOD" sigma="0.251367073323" epsilon="0.1962296"/>
   <NBFixPair type1="CLA" type2="SOD" emin="0.350933" rmin="0.3731"/>
@@ -640,51 +773,6 @@ class AmoebaTestForceField(unittest.TestCase):
         state2 = con2.getState(getEnergy=True, enforcePeriodicBox=True)
         ene2 = state2.getPotentialEnergy().value_in_unit(kilocalories_per_mole)
         self.assertAlmostEqual(ene, ene2)
-
-
-    def test_Wildcard(self):
-        """Test that PeriodicTorsionForces using wildcard ('') for atom types / classes in the ffxml are correctly registered"""
-
-        # Use wildcards in types
-        xml = """
-<ForceField>
- <AtomTypes>
-  <Type name="C" class="C" element="C" mass="12.010000"/>
-  <Type name="O" class="O" element="O" mass="16.000000"/>
- </AtomTypes>
- <PeriodicTorsionForce>
-  <Proper type1="" type2="C" type3="C" type4="" periodicity1="2" phase1="3.141593" k1="15.167000"/>
-  <Improper type1="C" type2="" type3="" type4="O" periodicity1="2" phase1="3.141593" k1="43.932000"/>
- </PeriodicTorsionForce>
-</ForceField>"""
-
-        ff = ForceField(StringIO(xml))
-
-        self.assertEqual(len(ff._forces[0].proper), 1)
-        self.assertEqual(len(ff._forces[0].improper), 1)
-
-       # Use wildcards in classes
-        xml = """
-<ForceField>
- <AtomTypes>
-  <Type name="C" class="C" element="C" mass="12.010000"/>
-  <Type name="O" class="O" element="O" mass="16.000000"/>
- </AtomTypes>
- <PeriodicTorsionForce>
-  <Proper class1="" class2="C" class3="C" class4="" periodicity1="2" phase1="3.141593" k1="15.167000"/>
-  <Improper class1="C" class2="" class3="" class4="O" periodicity1="2" phase1="3.141593" k1="43.932000"/>
- </PeriodicTorsionForce>
-</ForceField>"""
-
-        ff = ForceField(StringIO(xml))
-
-        self.assertEqual(len(ff._forces[0].proper), 1)
-        self.assertEqual(len(ff._forces[0].improper), 1)
-
-    def test_ScalingFactorCombining(self):
-        """ Tests that FFs can be combined if their scaling factors are very close """
-        forcefield = ForceField('amber99sb.xml', os.path.join('systems', 'test_amber_ff.xml'))
-        # This would raise an exception if it didn't work
 
 if __name__ == '__main__':
     unittest.main()

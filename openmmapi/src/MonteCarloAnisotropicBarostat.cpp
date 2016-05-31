@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -34,8 +34,8 @@
 
 using namespace OpenMM;
 
-MonteCarloAnisotropicBarostat::MonteCarloAnisotropicBarostat(const Vec3& defaultPressure, double temperature, bool scaleX, bool scaleY, bool scaleZ, int frequency) :
-        defaultPressure(defaultPressure), temperature(temperature), scaleX(scaleX), scaleY(scaleY), scaleZ(scaleZ), frequency(frequency) {
+MonteCarloAnisotropicBarostat::MonteCarloAnisotropicBarostat(const Vec3& defaultPressure, double defaultTemperature, bool scaleX, bool scaleY, bool scaleZ, int frequency) :
+        defaultPressure(defaultPressure), defaultTemperature(defaultTemperature), scaleX(scaleX), scaleY(scaleY), scaleZ(scaleZ), frequency(frequency) {
     setRandomNumberSeed(0);
 }
 

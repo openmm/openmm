@@ -1,4 +1,4 @@
-/* Portions copyright (c) 2010-2013 Stanford University and Simbios.
+/* Portions copyright (c) 2010-2016 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -39,6 +39,8 @@ class ReferenceCustomAngleIxn : public ReferenceBondIxn {
       double* energyTheta;
       double* forceTheta;
       int numParameters;
+      bool usePeriodic;
+      RealVec boxVectors[3];
 
    public:
 
@@ -58,6 +60,16 @@ class ReferenceCustomAngleIxn : public ReferenceBondIxn {
          --------------------------------------------------------------------------------------- */
 
        ~ReferenceCustomAngleIxn();
+
+       /**---------------------------------------------------------------------------------------
+      
+         Set the force to use periodic boundary conditions.
+      
+         @param vectors    the vectors defining the periodic box
+      
+         --------------------------------------------------------------------------------------- */
+      
+      void setPeriodic(OpenMM::RealVec* vectors);
 
       /**---------------------------------------------------------------------------------------
 

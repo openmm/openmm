@@ -28,6 +28,13 @@
 using std::vector;
 using namespace OpenMM;
 
+void AmoebaReferenceOutOfPlaneBendForce::setPeriodic(OpenMM::RealVec* vectors) {
+    usePeriodic = true;
+    boxVectors[0] = vectors[0];
+    boxVectors[1] = vectors[1];
+    boxVectors[2] = vectors[2];
+}
+
 /**---------------------------------------------------------------------------------------
 
    Calculate Amoeba Out-Of-Plane-Bend  ixn (force and energy)
@@ -78,12 +85,21 @@ RealOpenMM AmoebaReferenceOutOfPlaneBendForce::calculateOutOfPlaneBendIxn(const 
     std::vector<RealOpenMM> deltaR[LastDeltaIndex];
     for (int ii = 0; ii < LastDeltaIndex; ii++) {
         deltaR[ii].resize(3);
-    }   
-    AmoebaReferenceForce::loadDeltaR(positionAtomB, positionAtomA, deltaR[AB]);
-    AmoebaReferenceForce::loadDeltaR(positionAtomB, positionAtomC, deltaR[CB]);
-    AmoebaReferenceForce::loadDeltaR(positionAtomB, positionAtomD, deltaR[DB]);
-    AmoebaReferenceForce::loadDeltaR(positionAtomD, positionAtomA, deltaR[AD]);
-    AmoebaReferenceForce::loadDeltaR(positionAtomD, positionAtomC, deltaR[CD]);
+    }
+    if (usePeriodic) {
+        AmoebaReferenceForce::loadDeltaRPeriodic(positionAtomB, positionAtomA, deltaR[AB], boxVectors);
+        AmoebaReferenceForce::loadDeltaRPeriodic(positionAtomB, positionAtomC, deltaR[CB], boxVectors);
+        AmoebaReferenceForce::loadDeltaRPeriodic(positionAtomB, positionAtomD, deltaR[DB], boxVectors);
+        AmoebaReferenceForce::loadDeltaRPeriodic(positionAtomD, positionAtomA, deltaR[AD], boxVectors);
+        AmoebaReferenceForce::loadDeltaRPeriodic(positionAtomD, positionAtomC, deltaR[CD], boxVectors);
+    }
+    else {
+        AmoebaReferenceForce::loadDeltaR(positionAtomB, positionAtomA, deltaR[AB]);
+        AmoebaReferenceForce::loadDeltaR(positionAtomB, positionAtomC, deltaR[CB]);
+        AmoebaReferenceForce::loadDeltaR(positionAtomB, positionAtomD, deltaR[DB]);
+        AmoebaReferenceForce::loadDeltaR(positionAtomD, positionAtomA, deltaR[AD]);
+        AmoebaReferenceForce::loadDeltaR(positionAtomD, positionAtomC, deltaR[CD]);
+    }
 
     RealOpenMM rDB2  = AmoebaReferenceForce::getNormSquared3(deltaR[DB]);
     RealOpenMM rAD2  = AmoebaReferenceForce::getNormSquared3(deltaR[AD]);

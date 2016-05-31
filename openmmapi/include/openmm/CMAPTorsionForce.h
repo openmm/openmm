@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -160,14 +160,17 @@ public:
      */
     void updateParametersInContext(Context& context);
     /**
+     * Set whether this force should apply periodic boundary conditions when calculating displacements.
+     * Usually this is not appropriate for bonded forces, but there are situations when it can be useful.
+     */
+    void setUsesPeriodicBoundaryConditions(bool periodic);
+    /**
      * Returns whether or not this force makes use of periodic boundary
      * conditions.
      *
-     * @returns false
+     * @returns true if force uses PBC and false otherwise
      */
-    bool usesPeriodicBoundaryConditions() const {
-        return false;
-    }
+    bool usesPeriodicBoundaryConditions() const;
 protected:
     ForceImpl* createImpl() const;
 private:
@@ -175,6 +178,7 @@ private:
     class CMAPTorsionInfo;
     std::vector<MapInfo> maps;
     std::vector<CMAPTorsionInfo> torsions;
+    bool usePeriodic;
 };
 
 /**

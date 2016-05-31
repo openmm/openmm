@@ -104,12 +104,15 @@ void ReferenceCalcAmoebaBondForceKernel::initialize(const System& system, const 
     } 
     globalBondCubic   = static_cast<RealOpenMM>(force.getAmoebaGlobalBondCubic());
     globalBondQuartic = static_cast<RealOpenMM>(force.getAmoebaGlobalBondQuartic());
+    usePeriodic = force.usesPeriodicBoundaryConditions();
 }
 
 double ReferenceCalcAmoebaBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     vector<RealVec>& posData   = extractPositions(context);
     vector<RealVec>& forceData = extractForces(context);
     AmoebaReferenceBondForce amoebaReferenceBondForce;
+    if (usePeriodic)
+        amoebaReferenceBondForce.setPeriodic(extractBoxVectors(context));
     RealOpenMM energy      = amoebaReferenceBondForce.calculateForceAndEnergy(numBonds, posData, particle1, particle2, length, kQuadratic,
                                                                                        globalBondCubic, globalBondQuartic,
                                                                                        forceData);
@@ -160,12 +163,15 @@ void ReferenceCalcAmoebaAngleForceKernel::initialize(const System& system, const
     globalAngleQuartic  = static_cast<RealOpenMM>(force.getAmoebaGlobalAngleQuartic());
     globalAnglePentic   = static_cast<RealOpenMM>(force.getAmoebaGlobalAnglePentic());
     globalAngleSextic   = static_cast<RealOpenMM>(force.getAmoebaGlobalAngleSextic());
+    usePeriodic = force.usesPeriodicBoundaryConditions();
 }
 
 double ReferenceCalcAmoebaAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     vector<RealVec>& posData   = extractPositions(context);
     vector<RealVec>& forceData = extractForces(context);
     AmoebaReferenceAngleForce amoebaReferenceAngleForce;
+    if (usePeriodic)
+        amoebaReferenceAngleForce.setPeriodic(extractBoxVectors(context));
     RealOpenMM energy      = amoebaReferenceAngleForce.calculateForceAndEnergy(numAngles, 
                                        posData, particle1, particle2, particle3, angle, kQuadratic, globalAngleCubic, globalAngleQuartic, globalAnglePentic, globalAngleSextic, forceData);
     return static_cast<double>(energy);
@@ -213,6 +219,7 @@ void ReferenceCalcAmoebaInPlaneAngleForceKernel::initialize(const System& system
     globalInPlaneAngleQuartic  = static_cast<RealOpenMM>(force.getAmoebaGlobalInPlaneAngleQuartic());
     globalInPlaneAnglePentic   = static_cast<RealOpenMM>(force.getAmoebaGlobalInPlaneAnglePentic());
     globalInPlaneAngleSextic   = static_cast<RealOpenMM>(force.getAmoebaGlobalInPlaneAngleSextic());
+    usePeriodic = force.usesPeriodicBoundaryConditions();
 }
 
 double ReferenceCalcAmoebaInPlaneAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -220,6 +227,8 @@ double ReferenceCalcAmoebaInPlaneAngleForceKernel::execute(ContextImpl& context,
     vector<RealVec>& posData   = extractPositions(context);
     vector<RealVec>& forceData = extractForces(context);
     AmoebaReferenceInPlaneAngleForce amoebaReferenceInPlaneAngleForce;
+    if (usePeriodic)
+        amoebaReferenceInPlaneAngleForce.setPeriodic(extractBoxVectors(context));
     RealOpenMM energy      = amoebaReferenceInPlaneAngleForce.calculateForceAndEnergy(numAngles, posData, particle1, particle2, particle3, particle4, 
                                                                                                angle, kQuadratic, globalInPlaneAngleCubic, globalInPlaneAngleQuartic,
                                                                                                globalInPlaneAnglePentic, globalInPlaneAngleSextic, forceData);
@@ -266,12 +275,15 @@ void ReferenceCalcAmoebaPiTorsionForceKernel::initialize(const System& system, c
         particle6.push_back(particle6Index); 
         kTorsion.push_back(static_cast<RealOpenMM>(kTorsionParameter));
     }
+    usePeriodic = force.usesPeriodicBoundaryConditions();
 }
 
 double ReferenceCalcAmoebaPiTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     vector<RealVec>& posData   = extractPositions(context);
     vector<RealVec>& forceData = extractForces(context);
     AmoebaReferencePiTorsionForce amoebaReferencePiTorsionForce;
+    if (usePeriodic)
+        amoebaReferencePiTorsionForce.setPeriodic(extractBoxVectors(context));
     RealOpenMM energy      = amoebaReferencePiTorsionForce.calculateForceAndEnergy(numPiTorsions, posData, particle1, particle2,
                                                                                     particle3, particle4, particle5, particle6,
                                                                                     kTorsion, forceData);
@@ -318,12 +330,15 @@ void ReferenceCalcAmoebaStretchBendForceKernel::initialize(const System& system,
         k1Parameters.push_back(static_cast<RealOpenMM>(k1));
         k2Parameters.push_back(static_cast<RealOpenMM>(k2));
     }
+    usePeriodic = force.usesPeriodicBoundaryConditions();
 }
 
 double ReferenceCalcAmoebaStretchBendForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     vector<RealVec>& posData   = extractPositions(context);
     vector<RealVec>& forceData = extractForces(context);
     AmoebaReferenceStretchBendForce amoebaReferenceStretchBendForce;
+    if (usePeriodic)
+        amoebaReferenceStretchBendForce.setPeriodic(extractBoxVectors(context));
     RealOpenMM energy      = amoebaReferenceStretchBendForce.calculateForceAndEnergy(numStretchBends, posData, particle1, particle2, particle3,
                                                                                       lengthABParameters, lengthCBParameters, angleParameters, k1Parameters,
                                                                                       k2Parameters, forceData);
@@ -376,13 +391,15 @@ void ReferenceCalcAmoebaOutOfPlaneBendForceKernel::initialize(const System& syst
     globalOutOfPlaneBendAngleQuartic    = static_cast<RealOpenMM>(force.getAmoebaGlobalOutOfPlaneBendQuartic());
     globalOutOfPlaneBendAnglePentic     = static_cast<RealOpenMM>(force.getAmoebaGlobalOutOfPlaneBendPentic());
     globalOutOfPlaneBendAngleSextic     = static_cast<RealOpenMM>(force.getAmoebaGlobalOutOfPlaneBendSextic());
-
+    usePeriodic = force.usesPeriodicBoundaryConditions();
 }
 
 double ReferenceCalcAmoebaOutOfPlaneBendForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     vector<RealVec>& posData   = extractPositions(context);
     vector<RealVec>& forceData = extractForces(context);
     AmoebaReferenceOutOfPlaneBendForce amoebaReferenceOutOfPlaneBendForce;
+    if (usePeriodic)
+        amoebaReferenceOutOfPlaneBendForce.setPeriodic(extractBoxVectors(context));
     RealOpenMM energy      = amoebaReferenceOutOfPlaneBendForce.calculateForceAndEnergy(numOutOfPlaneBends, posData,
                                                                                          particle1, particle2, particle3, particle4,
                                                                                          kParameters, 
@@ -434,6 +451,7 @@ void ReferenceCalcAmoebaTorsionTorsionForceKernel::initialize(const System& syst
         chiralCheckAtom.push_back(chiralCheckAtomIndex); 
         gridIndices.push_back(gridIndex); 
     }
+    usePeriodic = force.usesPeriodicBoundaryConditions();
 
     // torsion-torsion grids
 
@@ -478,6 +496,8 @@ double ReferenceCalcAmoebaTorsionTorsionForceKernel::execute(ContextImpl& contex
     vector<RealVec>& posData   = extractPositions(context);
     vector<RealVec>& forceData = extractForces(context);
     AmoebaReferenceTorsionTorsionForce amoebaReferenceTorsionTorsionForce;
+    if (usePeriodic)
+        amoebaReferenceTorsionTorsionForce.setPeriodic(extractBoxVectors(context));
     RealOpenMM energy      = amoebaReferenceTorsionTorsionForce.calculateForceAndEnergy(numTorsionTorsions, posData,
                                                                                          particle1, particle2, particle3, particle4, particle5,
                                                                                          chiralCheckAtom, gridIndices, torsionTorsionGrids, forceData);

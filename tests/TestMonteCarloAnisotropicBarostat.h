@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman, Lee-Ping Wang                                      *
  * Contributors:                                                              *
  *                                                                            *
@@ -75,7 +75,7 @@ void testIdealGas() {
     // Test it for three different temperatures.
     
     for (int i = 0; i < 3; i++) {
-        barostat->setTemperature(temp[i]);
+        barostat->setDefaultTemperature(temp[i]);
         LangevinIntegrator integrator(temp[i], 0.1, 0.01);
         Context context(system, integrator, platform);
         context.setPositions(positions);
@@ -135,7 +135,7 @@ void testIdealGasAxis(int axis) {
     // Test it for three different temperatures.
     
     for (int i = 0; i < 3; i++) {
-        barostat->setTemperature(temp[i]);
+        barostat->setDefaultTemperature(temp[i]);
         LangevinIntegrator integrator(temp[i], 0.1, 0.01);
         Context context(system, integrator, platform);
         context.setPositions(positions);
@@ -371,7 +371,7 @@ void testEinsteinCrystal() {
             // Create the barostat.
             MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(Vec3(pres3[p], pres3[p], pres3[p]), temp, (a==0||a==3), (a==1||a==3), (a==2||a==3), frequency);
             system.addForce(barostat);
-            barostat->setTemperature(temp);
+            barostat->setDefaultTemperature(temp);
             LangevinIntegrator integrator(temp, 0.1, 0.01);
             Context context(system, integrator, platform);
             context.setPositions(positions);
@@ -417,7 +417,7 @@ void testEinsteinCrystal() {
         // Create the barostat.
         MonteCarloBarostat* barostat = new MonteCarloBarostat(pres3[p], temp, frequency);
         system.addForce(barostat);
-        barostat->setTemperature(temp);
+        barostat->setDefaultTemperature(temp);
         LangevinIntegrator integrator(temp, 0.1, 0.001);
         Context context(system, integrator, platform);
         context.setPositions(positions);

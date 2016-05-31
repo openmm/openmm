@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2014 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2016 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -294,12 +294,13 @@ void CpuCustomGBForce::calculateParticlePairValue(int index, ThreadData& data, i
             int blockIndex = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
             if (blockIndex >= neighborList->getNumBlocks())
                 break;
-            const int* blockAtom = &neighborList->getSortedAtoms()[4*blockIndex];
+            const int blockSize = neighborList->getBlockSize();
+            const int* blockAtom = &neighborList->getSortedAtoms()[blockSize*blockIndex];
             const vector<int>& neighbors = neighborList->getBlockNeighbors(blockIndex);
             const vector<char>& blockExclusions = neighborList->getBlockExclusions(blockIndex);
             for (int i = 0; i < (int) neighbors.size(); i++) {
                 int first = neighbors[i];
-                for (int k = 0; k < 4; k++) {
+                for (int k = 0; k < blockSize; k++) {
                     if ((blockExclusions[i] & (1<<k)) == 0) {
                         int second = blockAtom[k];
                         if (useExclusions && exclusions[first].find(second) != exclusions[first].end())
@@ -379,12 +380,13 @@ void CpuCustomGBForce::calculateParticlePairEnergyTerm(int index, ThreadData& da
             int blockIndex = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
             if (blockIndex >= neighborList->getNumBlocks())
                 break;
-            const int* blockAtom = &neighborList->getSortedAtoms()[4*blockIndex];
+            const int blockSize = neighborList->getBlockSize();
+            const int* blockAtom = &neighborList->getSortedAtoms()[blockSize*blockIndex];
             const vector<int>& neighbors = neighborList->getBlockNeighbors(blockIndex);
             const vector<char>& blockExclusions = neighborList->getBlockExclusions(blockIndex);
             for (int i = 0; i < (int) neighbors.size(); i++) {
                 int first = neighbors[i];
-                for (int k = 0; k < 4; k++) {
+                for (int k = 0; k < blockSize; k++) {
                     if ((blockExclusions[i] & (1<<k)) == 0) {
                         int second = blockAtom[k];
                         if (useExclusions && exclusions[first].find(second) != exclusions[first].end())
@@ -460,12 +462,13 @@ void CpuCustomGBForce::calculateChainRuleForces(ThreadData& data, int numAtoms, 
             int blockIndex = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
             if (blockIndex >= neighborList->getNumBlocks())
                 break;
-            const int* blockAtom = &neighborList->getSortedAtoms()[4*blockIndex];
+            const int blockSize = neighborList->getBlockSize();
+            const int* blockAtom = &neighborList->getSortedAtoms()[blockSize*blockIndex];
             const vector<int>& neighbors = neighborList->getBlockNeighbors(blockIndex);
             const vector<char>& blockExclusions = neighborList->getBlockExclusions(blockIndex);
             for (int i = 0; i < (int) neighbors.size(); i++) {
                 int first = neighbors[i];
-                for (int k = 0; k < 4; k++) {
+                for (int k = 0; k < blockSize; k++) {
                     if ((blockExclusions[i] & (1<<k)) == 0) {
                         int second = blockAtom[k];
                         bool isExcluded = (exclusions[first].find(second) != exclusions[first].end());

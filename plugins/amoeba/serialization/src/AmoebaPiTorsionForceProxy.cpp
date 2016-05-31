@@ -42,9 +42,10 @@ AmoebaPiTorsionForceProxy::AmoebaPiTorsionForceProxy() : SerializationProxy("Amo
 }
 
 void AmoebaPiTorsionForceProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 2);
+    node.setIntProperty("version", 3);
     const AmoebaPiTorsionForce& force = *reinterpret_cast<const AmoebaPiTorsionForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setBoolProperty("usesPeriodic", force.usesPeriodicBoundaryConditions());
     SerializationNode& bonds = node.createChildNode("PiTorsion");
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(force.getNumPiTorsions()); ii++) {
         int particle1, particle2, particle3, particle4, particle5, particle6;
@@ -56,12 +57,14 @@ void AmoebaPiTorsionForceProxy::serialize(const void* object, SerializationNode&
 
 void* AmoebaPiTorsionForceProxy::deserialize(const SerializationNode& node) const {
     int version = node.getIntProperty("version");
-    if (version < 1 || version > 2)
+    if (version < 1 || version > 3)
         throw OpenMMException("Unsupported version number");
     AmoebaPiTorsionForce* force = new AmoebaPiTorsionForce();
     try {
         if (version > 1)
             force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        if (version > 2)
+            force->setUsesPeriodicBoundaryConditions(node.getBoolProperty("usesPeriodic"));
         const SerializationNode& bonds = node.getChildNode("PiTorsion");
         for (unsigned int ii = 0; ii < bonds.getChildren().size(); ii++) {
             const SerializationNode& bond = bonds.getChildren()[ii];

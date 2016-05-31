@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman, Mark Friedrichs                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -117,6 +117,7 @@ void CudaCalcAmoebaBondForceKernel::initialize(const System& system, const Amoeb
     }
     params->upload(paramVector);
     map<string, string> replacements;
+    replacements["APPLY_PERIODIC"] = (force.usesPeriodicBoundaryConditions() ? "1" : "0");
     replacements["COMPUTE_FORCE"] = CudaAmoebaKernelSources::amoebaBondForce;
     replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params->getDevicePointer(), "float2");
     replacements["CUBIC_K"] = cu.doubleToString(force.getAmoebaGlobalBondCubic());
@@ -214,6 +215,7 @@ void CudaCalcAmoebaAngleForceKernel::initialize(const System& system, const Amoe
     }
     params->upload(paramVector);
     map<string, string> replacements;
+    replacements["APPLY_PERIODIC"] = (force.usesPeriodicBoundaryConditions() ? "1" : "0");
     replacements["COMPUTE_FORCE"] = CudaAmoebaKernelSources::amoebaAngleForce;
     replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params->getDevicePointer(), "float2");
     replacements["CUBIC_K"] = cu.doubleToString(force.getAmoebaGlobalAngleCubic());
@@ -315,6 +317,7 @@ void CudaCalcAmoebaInPlaneAngleForceKernel::initialize(const System& system, con
     }
     params->upload(paramVector);
     map<string, string> replacements;
+    replacements["APPLY_PERIODIC"] = (force.usesPeriodicBoundaryConditions() ? "1" : "0");
     replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params->getDevicePointer(), "float2");
     replacements["CUBIC_K"] = cu.doubleToString(force.getAmoebaGlobalInPlaneAngleCubic());
     replacements["QUARTIC_K"] = cu.doubleToString(force.getAmoebaGlobalInPlaneAngleQuartic());
@@ -417,6 +420,7 @@ void CudaCalcAmoebaPiTorsionForceKernel::initialize(const System& system, const 
     }
     params->upload(paramVector);
     map<string, string> replacements;
+    replacements["APPLY_PERIODIC"] = (force.usesPeriodicBoundaryConditions() ? "1" : "0");
     replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params->getDevicePointer(), "float");
     cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaAmoebaKernelSources::amoebaPiTorsionForce, replacements), force.getForceGroup());
     cu.addForce(new ForceInfo(force));
@@ -517,6 +521,7 @@ void CudaCalcAmoebaStretchBendForceKernel::initialize(const System& system, cons
     params1->upload(paramVector);
     params2->upload(paramVectorK);
     map<string, string> replacements;
+    replacements["APPLY_PERIODIC"] = (force.usesPeriodicBoundaryConditions() ? "1" : "0");
     replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params1->getDevicePointer(), "float3");
     replacements["FORCE_CONSTANTS"] = cu.getBondedUtilities().addArgument(params2->getDevicePointer(), "float2");
     replacements["RAD_TO_DEG"] = cu.doubleToString(180/M_PI);
@@ -617,6 +622,7 @@ void CudaCalcAmoebaOutOfPlaneBendForceKernel::initialize(const System& system, c
     }
     params->upload(paramVector);
     map<string, string> replacements;
+    replacements["APPLY_PERIODIC"] = (force.usesPeriodicBoundaryConditions() ? "1" : "0");
     replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params->getDevicePointer(), "float");
     replacements["CUBIC_K"] = cu.doubleToString(force.getAmoebaGlobalOutOfPlaneBendCubic());
     replacements["QUARTIC_K"] = cu.doubleToString(force.getAmoebaGlobalOutOfPlaneBendQuartic());
@@ -748,6 +754,7 @@ void CudaCalcAmoebaTorsionTorsionForceKernel::initialize(const System& system, c
     gridValues->upload(gridValuesVec);
     gridParams->upload(gridParamsVec);
     map<string, string> replacements;
+    replacements["APPLY_PERIODIC"] = (force.usesPeriodicBoundaryConditions() ? "1" : "0");
     replacements["GRID_VALUES"] = cu.getBondedUtilities().addArgument(gridValues->getDevicePointer(), "float4");
     replacements["GRID_PARAMS"] = cu.getBondedUtilities().addArgument(gridParams->getDevicePointer(), "float4");
     replacements["TORSION_PARAMS"] = cu.getBondedUtilities().addArgument(torsionParams->getDevicePointer(), "int2");

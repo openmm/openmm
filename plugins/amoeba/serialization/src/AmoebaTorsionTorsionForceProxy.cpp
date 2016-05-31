@@ -63,9 +63,10 @@ static void loadGrid(const SerializationNode& grid, std::vector< std::vector< st
 }
 
 void AmoebaTorsionTorsionForceProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 2);
+    node.setIntProperty("version", 3);
     const AmoebaTorsionTorsionForce& force = *reinterpret_cast<const AmoebaTorsionTorsionForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setBoolProperty("usesPeriodic", force.usesPeriodicBoundaryConditions());
 
     // grid[xIdx][yIdx][6 values]
 
@@ -118,13 +119,15 @@ void AmoebaTorsionTorsionForceProxy::serialize(const void* object, Serialization
 void* AmoebaTorsionTorsionForceProxy::deserialize(const SerializationNode& node) const {
 
     int version = node.getIntProperty("version");
-    if (version < 1 || version > 2)
+    if (version < 1 || version > 3)
         throw OpenMMException("Unsupported version number");
 
     AmoebaTorsionTorsionForce* force = new AmoebaTorsionTorsionForce();
     try {
         if (version > 1)
             force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        if (version > 2)
+            force->setUsesPeriodicBoundaryConditions(node.getBoolProperty("usesPeriodic"));
         const SerializationNode& grids                    = node.getChildNode("TorsionTorsionGrids");
         const std::vector<SerializationNode>& gridList    = grids.getChildren();
         for (unsigned int ii = 0; ii < gridList.size(); ii++) {

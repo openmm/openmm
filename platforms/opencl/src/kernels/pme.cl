@@ -1,9 +1,11 @@
 __kernel void updateBsplines(__global const real4* restrict posq, __global real4* restrict pmeBsplineTheta, __local real4* restrict bsplinesCache,
-        __global int2* restrict pmeAtomGridIndex, real4 periodicBoxSize, real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ) {
+        __global int2* restrict pmeAtomGridIndex, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
+        real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ) {
     const real4 scale = 1/(real) (PME_ORDER-1);
     for (int i = get_global_id(0); i < NUM_ATOMS; i += get_global_size(0)) {
         __local real4* data = &bsplinesCache[get_local_id(0)*PME_ORDER];
         real4 pos = posq[i];
+        APPLY_PERIODIC_TO_POS(pos)
         real3 t = (real3) (pos.x*recipBoxVecX.x+pos.y*recipBoxVecY.x+pos.z*recipBoxVecZ.x,
                            pos.y*recipBoxVecY.y+pos.z*recipBoxVecZ.y,
                            pos.z*recipBoxVecZ.z);
@@ -83,7 +85,8 @@ __kernel void recordZIndex(__global int2* restrict pmeAtomGridIndex, __global co
 #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
 
 __kernel void gridSpreadCharge(__global const real4* restrict posq, __global const int2* restrict pmeAtomGridIndex, __global const int* restrict pmeAtomRange,
-        __global long* restrict pmeGrid, __global const real4* restrict pmeBsplineTheta, real4 periodicBoxSize, real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ) {
+        __global long* restrict pmeGrid, __global const real4* restrict pmeBsplineTheta, real4 periodicBoxSize, real4 invPeriodicBoxSize,
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ) {
     const real scale = 1/(real) (PME_ORDER-1);
     real4 data[PME_ORDER];
     
@@ -93,9 +96,7 @@ __kernel void gridSpreadCharge(__global const real4* restrict posq, __global con
     for (int i = get_global_id(0); i < NUM_ATOMS; i += get_global_size(0)) {
         int atom = pmeAtomGridIndex[i].x;
         real4 pos = posq[atom];
-        pos.x -= floor(pos.x*recipBoxVecX.x)*periodicBoxSize.x;
-        pos.y -= floor(pos.y*recipBoxVecY.y)*periodicBoxSize.y;
-        pos.z -= floor(pos.z*recipBoxVecZ.z)*periodicBoxSize.z;
+        APPLY_PERIODIC_TO_POS(pos)
         real3 t = (real3) (pos.x*recipBoxVecX.x+pos.y*recipBoxVecY.x+pos.z*recipBoxVecZ.x,
                            pos.y*recipBoxVecY.y+pos.z*recipBoxVecZ.y,
                            pos.z*recipBoxVecZ.z);
@@ -165,7 +166,8 @@ __kernel void finishSpreadCharge(__global long* restrict fixedGrid, __global rea
 }
 #elif defined(DEVICE_IS_CPU)
 __kernel void gridSpreadCharge(__global const real4* restrict posq, __global const int2* restrict pmeAtomGridIndex, __global const int* restrict pmeAtomRange,
-        __global real* restrict pmeGrid, __global const real4* restrict pmeBsplineTheta, real4 periodicBoxSize, real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ) {
+        __global real* restrict pmeGrid, __global const real4* restrict pmeBsplineTheta, real4 periodicBoxSize, real4 invPeriodicBoxSize,
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ) {
     const int firstx = get_global_id(0)*GRID_SIZE_X/get_global_size(0);
     const int lastx = (get_global_id(0)+1)*GRID_SIZE_X/get_global_size(0);
     if (firstx == lastx)
@@ -179,9 +181,7 @@ __kernel void gridSpreadCharge(__global const real4* restrict posq, __global con
     for (int i = 0; i < NUM_ATOMS; i++) {
         int atom = i;//pmeAtomGridIndex[i].x;
         real4 pos = posq[atom];
-        pos.x -= floor(pos.x*recipBoxVecX.x)*periodicBoxSize.x;
-        pos.y -= floor(pos.y*recipBoxVecY.y)*periodicBoxSize.y;
-        pos.z -= floor(pos.z*recipBoxVecZ.z)*periodicBoxSize.z;
+        APPLY_PERIODIC_TO_POS(pos)
         real3 t = (real3) (pos.x*recipBoxVecX.x+pos.y*recipBoxVecY.x+pos.z*recipBoxVecZ.x,
                            pos.y*recipBoxVecY.y+pos.z*recipBoxVecZ.y,
                            pos.z*recipBoxVecZ.z);
@@ -370,7 +370,8 @@ __kernel void gridEvaluateEnergy(__global real2* restrict pmeGrid, __global mixe
 }
 
 __kernel void gridInterpolateForce(__global const real4* restrict posq, __global real4* restrict forceBuffers, __global const real* restrict pmeGrid,
-        real4 periodicBoxSize, real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ, __global int2* restrict pmeAtomGridIndex) {
+        real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, real4 recipBoxVecX,
+        real4 recipBoxVecY, real4 recipBoxVecZ, __global int2* restrict pmeAtomGridIndex) {
     const real scale = 1/(real) (PME_ORDER-1);
     real4 data[PME_ORDER];
     real4 ddata[PME_ORDER];
@@ -382,9 +383,7 @@ __kernel void gridInterpolateForce(__global const real4* restrict posq, __global
         int atom = pmeAtomGridIndex[i].x;
         real4 force = 0.0f;
         real4 pos = posq[atom];
-        pos.x -= floor(pos.x*recipBoxVecX.x)*periodicBoxSize.x;
-        pos.y -= floor(pos.y*recipBoxVecY.y)*periodicBoxSize.y;
-        pos.z -= floor(pos.z*recipBoxVecZ.z)*periodicBoxSize.z;
+        APPLY_PERIODIC_TO_POS(pos)
         real3 t = (real3) (pos.x*recipBoxVecX.x+pos.y*recipBoxVecY.x+pos.z*recipBoxVecZ.x,
                            pos.y*recipBoxVecY.y+pos.z*recipBoxVecZ.y,
                            pos.z*recipBoxVecZ.z);

@@ -57,7 +57,7 @@ private:
 OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : context(context), useCutoff(false), usePeriodic(false), anyExclusions(false), usePadding(true),
         numForceBuffers(0), exclusionIndices(NULL), exclusionRowIndices(NULL), exclusionTiles(NULL), exclusions(NULL), interactingTiles(NULL), interactingAtoms(NULL),
         interactionCount(NULL), blockCenter(NULL), blockBoundingBox(NULL), sortedBlocks(NULL), sortedBlockCenter(NULL), sortedBlockBoundingBox(NULL),
-        oldPositions(NULL), rebuildNeighborList(NULL), blockSorter(NULL), forceRebuildNeighborList(true), lastCutoff(0.0), groupFlags(0) {
+        oldPositions(NULL), rebuildNeighborList(NULL), blockSorter(NULL), pinnedCountBuffer(NULL), pinnedCountMemory(NULL), forceRebuildNeighborList(true), lastCutoff(0.0), groupFlags(0) {
     // Decide how many thread blocks and force buffers to use.
 
     deviceIsCpu = (context.getDevice().getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU);
@@ -90,6 +90,8 @@ OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : con
             numForceBuffers = numForceThreadBlocks*forceThreadBlockSize/OpenCLContext::TileSize;
         }
     }
+    pinnedCountBuffer = new cl::Buffer(context.getContext(), CL_MEM_ALLOC_HOST_PTR, sizeof(int));
+    pinnedCountMemory = (int*) context.getQueue().enqueueMapBuffer(*pinnedCountBuffer, CL_TRUE, CL_MAP_READ, 0, sizeof(int));
 }
 
 OpenCLNonbondedUtilities::~OpenCLNonbondedUtilities() {
@@ -123,6 +125,8 @@ OpenCLNonbondedUtilities::~OpenCLNonbondedUtilities() {
         delete rebuildNeighborList;
     if (blockSorter != NULL)
         delete blockSorter;
+    if (pinnedCountBuffer != NULL)
+        delete pinnedCountBuffer;
 }
 
 void OpenCLNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance, const vector<vector<int> >& exclusionList, const string& kernel, int forceGroup) {
@@ -357,20 +361,16 @@ void OpenCLNonbondedUtilities::prepareInteractions(int forceGroups) {
 
     if (lastCutoff != kernels.cutoffDistance)
         forceRebuildNeighborList = true;
-    bool rebuild = false;
-    do {
-        setPeriodicBoxArgs(context, kernels.findBlockBoundsKernel, 1);
-        context.executeKernel(kernels.findBlockBoundsKernel, context.getNumAtoms());
-        blockSorter->sort(*sortedBlocks);
-        kernels.sortBoxDataKernel.setArg<cl_int>(9, forceRebuildNeighborList);
-        context.executeKernel(kernels.sortBoxDataKernel, context.getNumAtoms());
-        setPeriodicBoxArgs(context, kernels.findInteractingBlocksKernel, 0);
-        context.executeKernel(kernels.findInteractingBlocksKernel, context.getNumAtoms(), interactingBlocksThreadBlockSize);
-        forceRebuildNeighborList = false;
-        if (context.getComputeForceCount() == 1)
-            rebuild = updateNeighborListSize(); // This is the first time step, so check whether our initial guess was large enough.
-    } while (rebuild);
+    setPeriodicBoxArgs(context, kernels.findBlockBoundsKernel, 1);
+    context.executeKernel(kernels.findBlockBoundsKernel, context.getNumAtoms());
+    blockSorter->sort(*sortedBlocks);
+    kernels.sortBoxDataKernel.setArg<cl_int>(9, forceRebuildNeighborList);
+    context.executeKernel(kernels.sortBoxDataKernel, context.getNumAtoms());
+    setPeriodicBoxArgs(context, kernels.findInteractingBlocksKernel, 0);
+    context.executeKernel(kernels.findInteractingBlocksKernel, context.getNumAtoms(), interactingBlocksThreadBlockSize);
+    forceRebuildNeighborList = false;
     lastCutoff = kernels.cutoffDistance;
+    context.getQueue().enqueueReadBuffer(interactionCount->getDeviceBuffer(), CL_FALSE, 0, sizeof(int), pinnedCountMemory, NULL, &downloadCountEvent); 
 }
 
 void OpenCLNonbondedUtilities::computeInteractions(int forceGroups, bool includeForces, bool includeEnergy) {
@@ -385,20 +385,22 @@ void OpenCLNonbondedUtilities::computeInteractions(int forceGroups, bool include
             setPeriodicBoxArgs(context, kernel, 9);
         context.executeKernel(kernel, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
     }
+    if (useCutoff && numTiles > 0) {
+        downloadCountEvent.wait();
+        updateNeighborListSize();
+    }
 }
 
 bool OpenCLNonbondedUtilities::updateNeighborListSize() {
     if (!useCutoff)
         return false;
-    unsigned int* pinnedInteractionCount = (unsigned int*) context.getPinnedBuffer();
-    interactionCount->download(pinnedInteractionCount);
-    if (pinnedInteractionCount[0] <= (unsigned int) interactingTiles->getSize())
+    if (pinnedCountMemory[0] <= (unsigned int) interactingTiles->getSize())
         return false;
 
     // The most recent timestep had too many interactions to fit in the arrays.  Make the arrays bigger to prevent
     // this from happening in the future.
 
-    int maxTiles = (int) (1.2*pinnedInteractionCount[0]);
+    int maxTiles = (int) (1.2*pinnedCountMemory[0]);
     int totalTiles = context.getNumAtomBlocks()*(context.getNumAtomBlocks()+1)/2;
     if (maxTiles > totalTiles)
         maxTiles = totalTiles;
@@ -430,6 +432,7 @@ bool OpenCLNonbondedUtilities::updateNeighborListSize() {
         kernels.findInteractingBlocksKernel.setArg<cl_uint>(9, maxTiles);
     }
     forceRebuildNeighborList = true;
+    context.setForcesValid(false);
     return true;
 }
 

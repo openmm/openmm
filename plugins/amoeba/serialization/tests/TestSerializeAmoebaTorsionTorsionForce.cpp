@@ -90,6 +90,7 @@ void testSerialization() {
     for (unsigned int ii = 0; ii < 5; ii++) {
         force1.addTorsionTorsion(ii, ii+1,ii+3, ii+4, ii+5, ((ii % 2) ? 1 : 0), (ii % 4));
     }
+    force1.setUsesPeriodicBoundaryConditions(true);
 
     // Serialize and then deserialize it.
 
@@ -101,6 +102,7 @@ void testSerialization() {
 
     AmoebaTorsionTorsionForce & force2 = *copy;
     ASSERT_EQUAL(force1.getForceGroup(), force2.getForceGroup());
+    ASSERT_EQUAL(force1.usesPeriodicBoundaryConditions(), force2.usesPeriodicBoundaryConditions());
     ASSERT_EQUAL(force1.getNumTorsionTorsions(), force2.getNumTorsionTorsions());
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(force1.getNumTorsionTorsions()); ii++) {
 

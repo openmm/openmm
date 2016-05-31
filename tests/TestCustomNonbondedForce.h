@@ -937,6 +937,37 @@ void testInteractionGroupLongRangeCorrection() {
     ASSERT_EQUAL_TOL(expected, energy2-energy1, 1e-4);
 }
 
+void testInteractionGroupTabulatedFunction() {
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    VerletIntegrator integrator(0.01);
+    CustomNonbondedForce* forceField = new CustomNonbondedForce("fn(r-1)+1");
+    set<int> set1, set2;
+    set1.insert(0);
+    set2.insert(1);
+    forceField->addInteractionGroup(set1, set2);
+    forceField->addParticle(vector<double>());
+    forceField->addParticle(vector<double>());
+    vector<double> table;
+    for (int i = 0; i < 21; i++)
+        table.push_back(sin(0.25*i));
+    forceField->addTabulatedFunction("fn", new Discrete1DFunction(table));
+    system.addForce(forceField);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(2);
+    positions[0] = Vec3(0, 0, 0);
+    for (int i = 0; i < (int) table.size(); i++) {
+        positions[1] = Vec3(i+1, 0, 0);
+        context.setPositions(positions);
+        State state = context.getState(State::Forces | State::Energy);
+        const vector<Vec3>& forces = state.getForces();
+        ASSERT_EQUAL_VEC(Vec3(0, 0, 0), forces[0], 1e-6);
+        ASSERT_EQUAL_VEC(Vec3(0, 0, 0), forces[1], 1e-6);
+        ASSERT_EQUAL_TOL(table[i]+1.0, state.getPotentialEnergy(), 1e-6);
+    }
+}
+
 void testMultipleCutoffs() {
     System system;
     system.addParticle(1.0);
@@ -1033,6 +1064,7 @@ int main(int argc, char* argv[]) {
         testInteractionGroups();
         testLargeInteractionGroup();
         testInteractionGroupLongRangeCorrection();
+        testInteractionGroupTabulatedFunction();
         testMultipleCutoffs();
         testIllegalVariable();
         runPlatformTests();
