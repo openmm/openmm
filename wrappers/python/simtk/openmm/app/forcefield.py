@@ -1759,10 +1759,10 @@ class LennardJonesGenerator(object):
         if None not in types:
             type1 = types[0][0]
             type2 = types[1][0]
-            emin = _convertParameterToNumber(parameters['emin'])
-            rmin = _convertParameterToNumber(parameters['rmin'])
-            self.nbfix_types[(type1, type2)] = [emin, rmin]
-            self.nbfix_types[(type2, type1)] = [emin, rmin]
+            epsilon = _convertParameterToNumber(parameters['epsilon'])
+            sigma = _convertParameterToNumber(parameters['sigma'])
+            self.nbfix_types[(type1, type2)] = [sigma, epsilon]
+            self.nbfix_types[(type2, type1)] = [sigma, epsilon]
 
     def registerLennardJones(self, parameters):
         self.lj_types.registerAtom(parameters)
@@ -1817,20 +1817,20 @@ class LennardJonesGenerator(object):
             for n in range(num_lj_types):
                 pair = (lj_type_list[m], lj_type_list[n])
                 if pair in self.nbfix_types:
-                    wdij = self.nbfix_types[pair][0]
-                    rij = self.nbfix_types[pair][1]
+                    wdij = self.nbfix_types[pair][1]
+                    rij = self.nbfix_types[pair][0] * 2**(1.0/6) / 2
                     rij6 = rij**6
-                    acoef[m+num_lj_types*n] = math.sqrt(wdij) * rij6
+                    acoef[m+num_lj_types*n] = wdij * rij6**2
                     bcoef[m+num_lj_types*n] = 2 * wdij * rij6
                     continue
                 else:
                     rij = (reverse_map[m][0] + reverse_map[n][0]) * 2**(1.0/6) / 2
                     rij6 = rij**6
                     wdij = math.sqrt(reverse_map[m][-1] * reverse_map[n][-1])
-                    acoef[m+num_lj_types*n] = math.sqrt(wdij) * rij6
+                    acoef[m+num_lj_types*n] = wdij * rij6**2
                     bcoef[m+num_lj_types*n] = 2 * wdij * rij6
 
-        self.force = mm.CustomNonbondedForce('a^2/r^12-b/r6; r6=r2*r2*r2; r2=r^2; '
+        self.force = mm.CustomNonbondedForce('a/r^12-b/r^6;'
                                 'a=acoef(type1, type2);'
                                 'b=bcoef(type1, type2)')
         self.force.addTabulatedFunction('acoef',
