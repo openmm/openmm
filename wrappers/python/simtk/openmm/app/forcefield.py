@@ -1693,7 +1693,6 @@ class LennardJonesGenerator(object):
             self.nbfix_types[(type1, type2)] = [emin, rmin]
             self.nbfix_types[(type2, type1)] = [emin, rmin]
 
-
     def registerLennardJones(self, parameters):
         self.lj_types.registerAtom(parameters)
 
@@ -1715,26 +1714,30 @@ class LennardJonesGenerator(object):
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
 
-        #Ewald and PME will be interpreted as CutoffPeriodic for the CustomNonbondedForce
+        # Ewald and PME will be interpreted as CutoffPeriodic for the CustomNonbondedForce
 
         # We need a CustomNonbondedForce to implement the NBFIX functionality.
+        nbfix_type_set = set().union(*self.nbfix_types)
         # First derive the lookup tables
-        lj_indx_list = [0 for atom in data.atoms]
-        num_lj_types= 0
+        lj_indx_list = [None for atom in data.atoms]
+        num_lj_types = 0
         lj_type_list = []
         type_map = {}
         for i, atom in enumerate(data.atoms):
             atype = data.atomType[atom]
-            values = self.lj_types.paramsForType[atype]
-            if lj_indx_list[i]: continue # ljtype has been assigned an index
-            if values in type_map.values() and not atype in [type for key in self.nbfix_types.keys() for type in key]:
+            values = (self.lj_types.paramsForType[atype]['sigma'], self.lj_types.paramsForType[atype]['epsilon'])
+            if lj_indx_list[i] is not None: continue # ljtype has been assigned an index
+            if values in type_map and atype not in nbfix_type_set:
                 # only non NBFIX types can be compressed
-                lj_indx_list[i] = type_map.values().index(values) + 1
+                lj_indx_list[i] = type_map[values]
             else:
-                type_map[num_lj_types + 1] = values
-                lj_indx_list[i] = num_lj_types + 1
-                num_lj_types +=1
+                type_map[values] = num_lj_types
+                lj_indx_list[i] = num_lj_types
+                num_lj_types += 1
                 lj_type_list.append(atype)
+        reverse_map = [0 for type_values in range(len(type_map))]
+        for type_value in type_map:
+            reverse_map[type_map[type_value]] = type_value
 
         # Now everything is assigned. Create the A- and B-coefficient arrays
         acoef = [0 for i in range(num_lj_types*num_lj_types)]
@@ -1742,28 +1745,22 @@ class LennardJonesGenerator(object):
         for m in range(num_lj_types):
             for n in range(num_lj_types):
                 pair = (lj_type_list[m], lj_type_list[n])
-                if len(self.nbfix_types) > 0:
-                    if pair in self.nbfix_types:
-                        wdij = self.nbfix_types[pair][0]
-                        rij = self.nbfix_types[pair][1]
-                        rij6 = rij**6
-                        acoef[m+num_lj_types*n] = math.sqrt(wdij) * rij6
-                        bcoef[m+num_lj_types*n] = 2 * wdij * rij6
-                        continue
-                    else:
-                        rij = (type_map[m+1]['sigma'] + type_map[n+1]['sigma']) * 2**(1.0/6) / 2
-                        rij6 = rij**6
-                        wdij = math.sqrt(type_map[m+1]['epsilon'] * type_map[n+1]['epsilon'])
-                        acoef[m+num_lj_types*n] = math.sqrt(wdij) * rij6
-                        bcoef[m+num_lj_types*n] = 2 * wdij * rij6
-                else:
-                    rij = (type_map[m+1]['sigma'] + type_map[n+1]['sigma']) * 2**(1.0/6) / 2
+                if pair in self.nbfix_types:
+                    wdij = self.nbfix_types[pair][0]
+                    rij = self.nbfix_types[pair][1]
                     rij6 = rij**6
-                    wdij = math.sqrt(type_map[m+1]['epsilon'] * type_map[n+1]['epsilon'])
                     acoef[m+num_lj_types*n] = math.sqrt(wdij) * rij6
                     bcoef[m+num_lj_types*n] = 2 * wdij * rij6
-        self.force = mm.CustomNonbondedForce('(a/r6)^2-b/r6; r6=r2*r2*r2; r2=r^2; '
-                                'a=acoef(type1, type2); '
+                    continue
+                else:
+                    rij = (reverse_map[m][0] + reverse_map[n][0]) * 2**(1.0/6) / 2
+                    rij6 = rij**6
+                    wdij = math.sqrt(reverse_map[m][-1] * reverse_map[n][-1])
+                    acoef[m+num_lj_types*n] = math.sqrt(wdij) * rij6
+                    bcoef[m+num_lj_types*n] = 2 * wdij * rij6
+
+        self.force = mm.CustomNonbondedForce('a^2/r^12-b/r6; r6=r2*r2*r2; r2=r^2; '
+                                'a=acoef(type1, type2);'
                                 'b=bcoef(type1, type2)')
         self.force.addTabulatedFunction('acoef',
                 mm.Discrete2DFunction(num_lj_types, num_lj_types, acoef))
@@ -1782,35 +1779,11 @@ class LennardJonesGenerator(object):
                                  nonbondedMethod)
         # Add the particles
         for i in lj_indx_list:
-            self.force.addParticle((i-1,))
+            self.force.addParticle((i,))
         self.force.setUseLongRangeCorrection(True)
         self.force.setCutoffDistance(nonbondedCutoff)
 
-        # Create customBondForce for the 1-4 scaled L-J interactions
-        lj14ScaleForce = mm.CustomBondForce('(a/r^6)^2-(b/r^6); r6=r2*r2*r2; r2=r^2;'
-                                            'a=acoef;'
-                                            'b=bcoef;')
-        lj14ScaleForce.addPerBondParameter('acoef')
-        lj14ScaleForce.addPerBondParameter('bcoef')
-        lj14Pairs = []
-
-        # Add bonds for 1-4 scaled L-J from dihedrals
-        for torsion in data.propers:
-            pair = (torsion[0], torsion[3])
-            if pair not in lj14Pairs:
-                lj14Pairs.append((torsion[0], torsion[3]))
-        for lj14Pair in lj14Pairs:
-            i = lj_indx_list[lj14Pair[0]]
-            j = lj_indx_list[lj14Pair[1]]
-            rminij = (type_map[i]['sigma'] + type_map[j]['sigma'])* 2**(1.0/6) / 2
-            rij6 = rminij**6
-            wdij14 = self.lj14scale*math.sqrt(type_map[i]['epsilon'] * type_map[j]['epsilon'])
-            acoefScaled = (math.sqrt(wdij14)*rij6)
-            bcoefScaled = (2*wdij14*rij6)
-            lj14ScaleForce.addBond(lj14Pair[0], lj14Pair[1], [acoefScaled, bcoefScaled])
-
         sys.addForce(self.force)
-        sys.addForce(lj14ScaleForce)
 
     def postprocessSystem(self, sys, data, args):
 
