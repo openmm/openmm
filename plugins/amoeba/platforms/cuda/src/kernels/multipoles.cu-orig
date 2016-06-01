@@ -24,8 +24,7 @@ extern "C" __global__ void computeLabFrameMoments(real4* __restrict__ posq, int4
         // code common to ZThenX and Bisector
         
         int4 particles = multipoleParticles[atom];
-
-        if (particles.z >= 0) {
+        if (particles.x >= 0 && particles.z >= 0) {
             real4 thisParticlePos = posq[atom];
             real4 posZ = posq[particles.z];
             real3 vectorZ = make_real3(posZ.x-thisParticlePos.x, posZ.y-thisParticlePos.y, posZ.z-thisParticlePos.z);
@@ -109,22 +108,15 @@ extern "C" __global__ void computeLabFrameMoments(real4* __restrict__ posq, int4
                 }
          
             }
-            else if (axisType == 4) {
-                vectorX.x = 1;
-                vectorX.y = 0;
-                vectorX.z = 0;
-                if (abs(vectorZ.x) > 0.866) {
-                    vectorX.x = 0;
-                    vectorX.y = 1;
-                }
-            }
-        
+            else if (axisType >= 4)
+                vectorX = make_real3((real) 0.1f);
+            
             // x = x - (x.z)z
         
             vectorX -= dot(vectorZ, vectorX)*vectorZ;
             vectorX = normalize(vectorX);
             real3 vectorY = cross(vectorZ, vectorX);
-        
+         
             // use identity rotation matrix for unrecognized axis types
         
             if (axisType < 0 || axisType > 4) {
@@ -364,21 +356,10 @@ extern "C" __global__ void mapTorqueToForce(unsigned long long* __restrict__ for
             real3 atomPos = trimTo3(posq[atom]);
             vector[U] = atomPos - trimTo3(posq[axisAtom]);
             norms[U] = normVector(vector[U]);
-
-            // V is 2nd bond, or "random" vector not parallel to U
-
-            if (axisType != 4 && particles.x >= 0) {
+            if (axisType != 4 && particles.x >= 0)
                 vector[V] = atomPos - trimTo3(posq[particles.x]);
-            }
-            else {
-                vector[V].x = 1;
-                vector[V].y = 0;
-                vector[V].z = 0;
-                if (abs(vector[U].x/norms[U]) > 0.866) {
-                    vector[V].x = 0;
-                    vector[V].y = 1;
-                }
-            }
+            else
+                vector[V] = make_real3(0.1f);
             norms[V] = normVector(vector[V]);
         
             // W = UxV
