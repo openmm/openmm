@@ -383,8 +383,11 @@ void SimTKOpenMMUtilities::createCheckpoint(std::ostream& stream) {
 
 void SimTKOpenMMUtilities::loadCheckpoint(std::istream& stream) {
     stream.read((char*) &_randomNumberSeed, sizeof(uint32_t));
+    bool prevInitialized = _randomInitialized;
     stream.read((char*) &_randomInitialized, sizeof(bool));
     if (_randomInitialized) {
+        if (!prevInitialized)
+            init_gen_rand(0, sfmt);
         stream.read((char*) &nextGaussianIsValid, sizeof(bool));
         stream.read((char*) &nextGaussian, sizeof(RealOpenMM));
         sfmt.loadCheckpoint(stream);
