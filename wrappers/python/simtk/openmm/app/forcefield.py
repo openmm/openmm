@@ -1054,15 +1054,14 @@ def _matchResidue(res, template, bondedToAtom):
         corresponds to, or None if it does not match the template
     """
     atoms = list(res.atoms())
-    if len(atoms) != len(template.atoms):
+    numAtoms = len(atoms)
+    if numAtoms != len(template.atoms):
         return None
-    matches = len(atoms)*[0]
-    hasMatch = len(atoms)*[False]
 
     # Translate from global to local atom indices, and record the bonds for each atom.
 
     renumberAtoms = {}
-    for i in range(len(atoms)):
+    for i in range(numAtoms):
         renumberAtoms[atoms[i].index] = i
     bondedTo = []
     externalBonds = []
@@ -1088,32 +1087,81 @@ def _matchResidue(res, template, bondedToAtom):
         templateTypeCount[key] += 1
     if residueTypeCount != templateTypeCount:
         return None
+        
+    # Identify template atoms that could potentially be matches for each atom.
+    
+    candidates = [[] for i in range(numAtoms)]
+    for i in range(numAtoms):
+        for j, atom in enumerate(template.atoms):
+            if (atom.element is not None and atom.element != atoms[i].element) or (atom.element is None and atom.name != atoms[i].name):
+                continue
+            if len(atom.bondedTo) != len(bondedTo[i]):
+                continue
+            if atom.externalBonds != externalBonds[i]:
+                continue
+            candidates[i].append(j)
+
+    # Find an optimal ordering for matching atoms.  This means 1) start with the one that has the fewest options,
+    # and 2) follow with ones that are bonded to an already matched atom.
+    
+    searchOrder = []
+    atomsToOrder = set(range(numAtoms))
+    efficientAtoms = set()
+    while len(atomsToOrder) > 0:
+        if len(efficientAtoms) == 0:
+            fewestNeighbors = numAtoms+1
+            for i in atomsToOrder:
+                if len(candidates[i]) < fewestNeighbors:
+                    nextAtom = i
+                    fewestNeighbors = len(candidates[i])
+        else:
+            nextAtom = efficientAtoms.pop()
+        searchOrder.append(nextAtom)
+        atomsToOrder.remove(nextAtom)
+        for i in bondedTo[nextAtom]:
+            if i in atomsToOrder:
+                efficientAtoms.add(i)
+    inverseSearchOrder = [0]*numAtoms
+    for i in range(numAtoms):
+        inverseSearchOrder[searchOrder[i]] = i
+    bondedTo = [[inverseSearchOrder[bondedTo[i][j]] for j in range(len(bondedTo[i]))] for i in searchOrder]
+    candidates = [candidates[i] for i in searchOrder]
 
     # Recursively match atoms.
 
-    if _findAtomMatches(atoms, template, bondedTo, externalBonds, matches, hasMatch, 0):
-        return matches
+    matches = numAtoms*[0]
+    hasMatch = numAtoms*[False]
+    if _findAtomMatches(template, bondedTo, matches, hasMatch, candidates, 0):
+        return [matches[inverseSearchOrder[i]] for i in range(numAtoms)]
     return None
 
 
-def _findAtomMatches(atoms, template, bondedTo, externalBonds, matches, hasMatch, position):
+def _getAtomMatchCandidates(template, bondedTo, matches, candidates, position):
+    """Get a list of template atoms that are potential matches for the next atom."""
+    for bonded in bondedTo[position]:
+        if bonded < position:
+            # This atom is bonded to another one for which we already have a match, so only consider
+            # template atoms that *that* one is bonded to.
+            return template.atoms[matches[bonded]].bondedTo
+    return candidates[position]
+
+
+def _findAtomMatches(template, bondedTo, matches, hasMatch, candidates, position):
     """This is called recursively from inside _matchResidue() to identify matching atoms."""
-    if position == len(atoms):
+    if position == len(matches):
         return True
-    elem = atoms[position].element
-    name = atoms[position].name
-    for i in range(len(atoms)):
+    for i in _getAtomMatchCandidates(template, bondedTo, matches, candidates, position):
         atom = template.atoms[i]
-        if ((atom.element is not None and atom.element == elem) or (atom.element is None and atom.name == name)) and not hasMatch[i] and len(atom.bondedTo) == len(bondedTo[position]) and atom.externalBonds == externalBonds[position]:
+        if not hasMatch[i] and i in candidates[position]:
             # See if the bonds for this identification are consistent
 
             allBondsMatch = all((bonded > position or matches[bonded] in atom.bondedTo for bonded in bondedTo[position]))
             if allBondsMatch:
-                # This is a possible match, so trying matching the rest of the residue.
+                # This is a possible match, so try matching the rest of the residue.
 
                 matches[position] = i
                 hasMatch[i] = True
-                if _findAtomMatches(atoms, template, bondedTo, externalBonds, matches, hasMatch, position+1):
+                if _findAtomMatches(template, bondedTo, matches, hasMatch, candidates, position+1):
                     return True
                 hasMatch[i] = False
     return False
