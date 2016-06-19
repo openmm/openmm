@@ -1019,8 +1019,13 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
                                 gb_parm[2], gb_parm[3], gb_parm[4]])
             else:
                 gb.addParticle([charge, gb_parm[0], gb_parm[1]])
-        gb.finalize()
+
+        # OBC2 with kappa == 0 uses mm.GBSAOBC2Force, which doesn't have
+        # a finalize method
+        if not (gbmodel == 'OBC2' and implicitSolventKappa == 0.):
+            gb.finalize()
         system.addForce(gb)
+
         if nonbondedMethod == 'NoCutoff':
             gb.setNonbondedMethod(mm.NonbondedForce.NoCutoff)
         elif nonbondedMethod == 'CutoffNonPeriodic':
