@@ -2063,6 +2063,107 @@ are :code:`wo1`\ , :code:`wo2`\ , :code:`wo3`\ , :code:`wx1`\ , :code:`wx2`\ ,
 :code:`wx3`\ , :code:`wy1`\ , :code:`wy2`\ , :code:`wy3`\ , :code:`p1`\ ,
 :code:`p2`\ , and :code:`p3`\ .
 
+<Patches>
+=========
+
+A "patch" is a set of rules for modifying a residue template (or possibly multiple
+templates at once).  For example a terminal amino acid is slightly different from
+one in the middle of a chain.  A force field could of course define multiple
+templates for each amino acid (standard, N-terminal, C-terminal, and monomer),
+but since the modifications are the same for nearly all amino acids, it is simpler
+to include only the "standard" templates, along with a set of patches for
+modifying terminal residues.
+
+Here is an example of a patch definition:
+
+.. code-block:: xml
+
+    <Patch name="NTER">
+     <RemoveAtom name="H"/>
+     <RemoveBond atomName1="N" atomName2="H"/>
+     <AddAtom name="H1" type="H"/>
+     <AddAtom name="H2" type="H"/>
+     <AddAtom name="H3" type="H"/>
+     <AddBond atomName1="N" atomName2="H1"/>
+     <AddBond atomName1="N" atomName2="H2"/>
+     <AddBond atomName1="N" atomName2="H3"/>
+     <RemoveExternalBond atomName="N"/>
+     <ChangeAtom name="N" type="N3"/>
+    </Patch>
+
+There is one :code:`<Patch>` tag for each patch definition.  That in turn may
+contain any of the following tags:
+
+ * An :code:`<AddAtom>` tag indicates that an atom should be added to the
+   template.  It specifies the name of the atom and its atom type.
+ * A :code:`<ChangeAtom>` tag indicates that the type of an atom already present
+   in the template should be altered.  It specifies the name of the atom and its
+   new atom type.
+ * A :code:`<RemoveAtom>` tag indicates that an atom should be removed from the
+   template.  It specifies the name of the atom to remove.
+ * An :code:`<AddBond>` tag indicates that a bond should be added to the
+   template.  It specifies the names of the two bonded atoms.
+ * A :code:`<RemoveBond>` tag indicates that a bond already present in the
+   template should be removed.  It specifies the names of the two bonded atoms.
+ * An :code:`<AddExternalBond>` tag indicates that a new external bond should be
+   added to the template.  It specifies the name of the bonded atom.
+ * A :code:`<RemoveExternalBond>` tag indicates that an external bond aleady
+   present in the template should be removed.  It specifies the name of the
+   bonded atom.
+
+In addition to defining the patches, you also must identify which residue
+templates each patch can be applied to.  This can be done in two ways.  The more
+common one is to have each template identify the patches that can be applied to
+it.  This is done with an :code:`<AllowPatch>` tag:
+
+.. code-block:: xml
+
+    <Residue name="ALA">
+     <AllowPatch name="CTER"/>
+     <AllowPatch name="NTER"/>
+     ...
+    </Residue>
+
+Alternatively, the patch can indicate which residues it may be applied to.  This
+is done with an :code:`<ApplyToResidue>` tag:
+
+.. code-block:: xml
+
+    <Patch name="NTER">
+     <ApplyToResidue name="ALA"/>
+     <ApplyToResidue name="ARG"/>
+     ...
+    </Patch>
+
+A patch can alter multiple templates at once.  This is useful for creating bonds
+between molecules, and allows the atom types in one residue to depend on the
+identity of the other residue it is bonded to.  To create a multi-residue patch,
+added a :code:`residues` attribute to the :code:`<Patch>` tag specifying how many
+residues that patch covers.  Then whenever you refer to an atom, prefix its name
+with the index of the residue it belongs to:
+
+.. code-block:: xml
+
+  <Patch name="Disulfide" residues="2">
+    <RemoveAtom name="1:HG"/>
+    <RemoveAtom name="2:HG"/>
+    <AddBond atomName1="1:SG" atomName2="2:SG"/>
+    <ApplyToResidue name="1:CYS"/>
+    <ApplyToResidue name="2:CYS"/>
+  </Patch>
+
+In this example, the patch modifies two residues of the same type, but that need
+not always be true.  Each :code:`<ApplyToResidue>` tag therefore indicates which
+one of the residue templates it modifies may be of the specified type.  Similarly,
+if a residue template includes an :code:`<AcceptPatch>` tag for a multi-residue
+patch, it must specify the name of the patch, followed by the index of the residue
+within that patch:
+
+.. code-block:: xml
+
+    <AllowPatch name="Disulfide:1"/>
+
+
 Missing residue templates
 =========================
 

@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2015 Stanford University and the Authors.
+Portions copyright (c) 2012-2016 Stanford University and the Authors.
 Authors: Peter Eastman, Mark Friedrichs
 Contributors:
 
@@ -38,6 +38,7 @@ import itertools
 import xml.etree.ElementTree as etree
 import math
 from math import sqrt, cos
+from copy import deepcopy
 import simtk.openmm as mm
 import simtk.unit as unit
 from . import element as elem
@@ -115,6 +116,8 @@ class ForceField(object):
         """
         self._atomTypes = {}
         self._templates = {}
+        self._patches = {}
+        self._templatePatches = {}
         self._templateSignatures = {None:[]}
         self._atomClasses = {'':set()}
         self._forces = []
@@ -175,8 +178,8 @@ class ForceField(object):
                 for residue in tree.getroot().find('Residues').findall('Residue'):
                     resName = residue.attrib['name']
                     template = ForceField._TemplateData(resName)
-                    if 'overload' in residue.attrib:
-                        template.overloadLevel = int(residue.attrib['overload'])
+                    if 'override' in residue.attrib:
+                        template.overrideLevel = int(residue.attrib['override'])
                     atomIndices = {}
                     for atom in residue.findall('Atom'):
                         params = {}
@@ -201,7 +204,80 @@ class ForceField(object):
                             template.addExternalBondByName(bond.attrib['atomName'])
                         else:
                             template.addExternalBond(int(bond.attrib['from']))
+                    for patch in residue.findall('AllowPatch'):
+                        patchName = patch.attrib['name']
+                        if ':' in patchName:
+                            colonIndex = patchName.find(':')
+                            self.registerTemplatePatch(resName, patchName[:colonIndex], int(patchName[colonIndex+1:])-1)
+                        else:
+                            self.registerTemplatePatch(resName, patchName, 0)
                     self.registerResidueTemplate(template)
+
+        # Load the patch defintions.
+
+        for tree in trees:
+            if tree.getroot().find('Patches') is not None:
+                for patch in tree.getroot().find('Patches').findall('Patch'):
+                    patchName = patch.attrib['name']
+                    if 'residues' in patch.attrib:
+                        numResidues = int(patch.attrib['residues'])
+                    else:
+                        numResidues = 1
+                    patchData = ForceField._PatchData(patchName, numResidues)
+                    allAtomNames = set()
+                    for atom in patch.findall('AddAtom'):
+                        params = {}
+                        for key in atom.attrib:
+                            if key not in ('name', 'type'):
+                                params[key] = _convertParameterToNumber(atom.attrib[key])
+                        atomName = atom.attrib['name']
+                        if atomName in allAtomNames:
+                            raise ValueError('Patch '+patchName+' contains multiple atoms named '+atomName)
+                        allAtomNames.add(atomName)
+                        atomDescription = ForceField._PatchAtomData(atomName)
+                        typeName = atom.attrib['type']
+                        patchData.addedAtoms[atomDescription.residue].append(ForceField._TemplateAtomData(atomDescription.name, typeName, self._atomTypes[typeName].element, params))
+                    for atom in patch.findall('ChangeAtom'):
+                        params = {}
+                        for key in atom.attrib:
+                            if key not in ('name', 'type'):
+                                params[key] = _convertParameterToNumber(atom.attrib[key])
+                        atomName = atom.attrib['name']
+                        if atomName in allAtomNames:
+                            raise ValueError('Patch '+patchName+' contains multiple atoms named '+atomName)
+                        allAtomNames.add(atomName)
+                        atomDescription = ForceField._PatchAtomData(atomName)
+                        typeName = atom.attrib['type']
+                        patchData.changedAtoms[atomDescription.residue].append(ForceField._TemplateAtomData(atomDescription.name, typeName, self._atomTypes[typeName].element, params))
+                    for atom in patch.findall('RemoveAtom'):
+                        atomName = atom.attrib['name']
+                        if atomName in allAtomNames:
+                            raise ValueError('Patch '+patchName+' contains multiple atoms named '+atomName)
+                        allAtomNames.add(atomName)
+                        atomDescription = ForceField._PatchAtomData(atomName)
+                        patchData.deletedAtoms.append(atomDescription)
+                    for bond in patch.findall('AddBond'):
+                        atom1 = ForceField._PatchAtomData(bond.attrib['atomName1'])
+                        atom2 = ForceField._PatchAtomData(bond.attrib['atomName2'])
+                        patchData.addedBonds.append((atom1, atom2))
+                    for bond in patch.findall('RemoveBond'):
+                        atom1 = ForceField._PatchAtomData(bond.attrib['atomName1'])
+                        atom2 = ForceField._PatchAtomData(bond.attrib['atomName2'])
+                        patchData.deletedBonds.append((atom1, atom2))
+                    for bond in patch.findall('AddExternalBond'):
+                        atom = ForceField._PatchAtomData(bond.attrib['atomName'])
+                        patchData.addedExternalBonds.append(atom)
+                    for bond in patch.findall('RemoveExternalBond'):
+                        atom = ForceField._PatchAtomData(bond.attrib['atomName'])
+                        patchData.deletedExternalBonds.append(atom)
+                    for residue in patch.findall('ApplyToResidue'):
+                        name = residue.attrib['name']
+                        if ':' in name:
+                            colonIndex = name.find(':')
+                            self.registerTemplatePatch(name[colonIndex+1:], patchName, int(name[:colonIndex])-1)
+                        else:
+                            self.registerTemplatePatch(name, patchName, 0)
+                    self.registerPatch(patchData)
 
         # Load force definitions
 
@@ -247,30 +323,39 @@ class ForceField(object):
 
     def registerResidueTemplate(self, template):
         """Register a new residue template."""
+        if template.name in self._templates:
+            # There is already a template with this name, so check the override levels.
+            
+            existingTemplate = self._templates[template.name]
+            if template.overrideLevel < existingTemplate.overrideLevel:
+                # The existing one takes precedence, so just return.
+                return
+            if template.overrideLevel > existingTemplate.overrideLevel:
+                # We need to delete the existing template.
+                del self._templates[template.name]
+                existingSignature = _createResidueSignature([atom.element for atom in existingTemplate.atoms])
+                self._templateSignatures[existingSignature].remove(existingTemplate)
+            else:
+                raise ValueError('Residue template %s with the same override level %d already exists.' % (template.name, template.overrideLevel))
+        
+        # Register the template.
+        
         self._templates[template.name] = template
         signature = _createResidueSignature([atom.element for atom in template.atoms])
         if signature in self._templateSignatures:
-            registered = False
-            for regtemplate in self._templateSignatures[signature]:
-                if regtemplate.name == template.name:
-                    if regtemplate.overloadLevel > template.overloadLevel:
-                        # ok to break - this is done every time a template is
-                        # registered so there can only be one already existing
-                        # with same name at a time
-                        registered = True
-                        break
-                    elif regtemplate.overloadLevel < template.overloadLevel:
-                        self._templateSignatures[signature].remove(regtemplate)
-                        self._templateSignatures[signature].append(template)
-                        registered = True
-                    else:
-                        raise Exception('Residue template %s with the same overloadLevel %d already exists.' %
-                                         (template.name, template.overloadLevel)
-                                         )
-            if not registered:
-                self._templateSignatures[signature].append(template)
+            self._templateSignatures[signature].append(template)
         else:
             self._templateSignatures[signature] = [template]
+
+    def registerPatch(self, patch):
+        """Register a new patch that can be applied to templates."""
+        self._patches[patch.name] = patch
+    
+    def registerTemplatePatch(self, residue, patch, patchResidueIndex):
+        """Register that a particular patch can be used with a particular residue."""
+        if residue not in self._templatePatches:
+            self._templatePatches[residue] = []
+        self._templatePatches[residue].append((patch, patchResidueIndex))
 
     def registerScript(self, script):
         """Register a new script to be executed after building the System."""
@@ -401,6 +486,16 @@ class ForceField(object):
             else:
                 self.constraints[key] = distance
                 system.addConstraint(atom1, atom2, distance)
+        
+        def recordMatchedAtomParameters(self, residue, template, matches):
+            """Record parameters for atoms based on having matched a residue to a template."""
+            matchAtoms = dict(zip(matches, residue.atoms()))
+            for atom, match in zip(residue.atoms(), matches):
+                self.atomType[atom] = template.atoms[match].type
+                self.atomParameters[atom] = template.atoms[match].parameters
+                for site in template.virtualSites:
+                    if match == site.index:
+                        self.virtualSites[atom] = (site, [matchAtoms[i].index for i in site.atoms], matchAtoms[site.excludeWith].index)
 
     class _TemplateData(object):
         """Inner class used to encapsulate data about a residue template definition."""
@@ -410,7 +505,7 @@ class ForceField(object):
             self.virtualSites = []
             self.bonds = []
             self.externalBonds = []
-            self.overloadLevel = 0
+            self.overrideLevel = 0
 
         def getAtomIndexByName(self, atom_name):
             """Look up an atom index by atom name, providing a helpful error message if not found."""
@@ -496,6 +591,92 @@ class ForceField(object):
             else:
                 self.excludeWith = self.atoms[0]
 
+    class _PatchData(object):
+        """Inner class used to encapsulate data about a patch definition."""
+        def __init__(self, name, numResidues):
+            self.name = name
+            self.numResidues = numResidues
+            self.addedAtoms = [[] for i in range(numResidues)]
+            self.changedAtoms = [[] for i in range(numResidues)]
+            self.deletedAtoms = []
+            self.addedBonds = []
+            self.deletedBonds = []
+            self.addedExternalBonds = []
+            self.deletedExternalBonds = []
+        
+        def createPatchedTemplates(self, templates):
+            """Apply this patch to a set of templates, creating new modified ones."""
+            if len(templates) != self.numResidues:
+                raise ValueError("Patch '%s' expected %d templates, received %d", (self.name, self.numResidues, len(templates)))
+            
+            # Construct a new version of each template.
+            
+            newTemplates = []
+            for index, template in enumerate(templates):
+                newTemplate = ForceField._TemplateData("%s-%s" % (template.name, self.name))
+                newTemplates.append(newTemplate)
+                
+                # Build the list of atoms in it.
+                
+                for atom in template.atoms:
+                    if not any(deleted.name == atom.name and deleted.residue == index for deleted in self.deletedAtoms):
+                        newTemplate.atoms.append(ForceField._TemplateAtomData(atom.name, atom.type, atom.element, atom.parameters))
+                for atom in self.addedAtoms[index]:
+                    if any(a.name == atom.name for a in newTemplate.atoms):
+                        raise ValueError("Patch '%s' adds an atom with the same name as an existing atom: %s" % (self.name, atom.name))
+                    newTemplate.atoms.append(ForceField._TemplateAtomData(atom.name, atom.type, atom.element, atom.parameters))
+                oldAtomIndex = dict([(atom.name, i) for i, atom in enumerate(template.atoms)])
+                newAtomIndex = dict([(atom.name, i) for i, atom in enumerate(newTemplate.atoms)])
+                for atom in self.changedAtoms[index]:
+                    if atom.name not in newAtomIndex:
+                        raise ValueError("Patch '%s' modifies nonexistent atom '%s' in template '%s'" % (self.name, atom.name, template.name))
+                    newTemplate.atoms[newAtomIndex[atom.name]] = ForceField._TemplateAtomData(atom.name, atom.type, atom.element, atom.parameters)
+                
+                # Copy over the virtual sites, translating the atom indices.
+                
+                indexMap = dict([(oldAtomIndex[name], newAtomIndex[name]) for name in newAtomIndex if name in oldAtomIndex])
+                for site in template.virtualSites:
+                    if site.index in indexMap and all(i in indexMap for i in site.atoms):
+                        newSite = deepcopy(site)
+                        newSite.index = indexMap[site.index]
+                        newSite.atoms = [indexMap[i] for i in site.atoms]
+                        newTemplate.virtualSites.append(newSite)
+                
+                # Build the lists of bonds and external bonds.
+                
+                atomMap = dict([(template.atoms[i], indexMap[i]) for i in indexMap])
+                deletedBonds = [(atom1.name, atom2.name) for atom1, atom2 in self.deletedBonds if atom1.residue == index and atom2.residue == index]
+                for atom1, atom2 in template.bonds:
+                    a1 = template.atoms[atom1]
+                    a2 = template.atoms[atom2]
+                    if a1 in atomMap and a2 in atomMap and (a1.name, a2.name) not in deletedBonds and (a2.name, a1.name) not in deletedBonds:
+                        newTemplate.addBond(atomMap[a1], atomMap[a2])
+                deletedExternalBonds = [atom.name for atom in self.deletedExternalBonds if atom.residue == index]
+                for atom in template.externalBonds:
+                    if template.atoms[atom].name not in deletedExternalBonds:
+                        newTemplate.addExternalBond(indexMap[atom])
+                for atom1, atom2 in self.addedBonds:
+                    if atom1.residue == index and atom2.residue == index:
+                        newTemplate.addBondByName(atom1.name, atom2.name)
+                    elif atom1.residue == index:
+                        newTemplate.addExternalBondByName(atom1.name)
+                    elif atom2.residue == index:
+                        newTemplate.addExternalBondByName(atom2.name)
+                for atom in self.addedExternalBonds:
+                    newTemplate.addExternalBondByName(atom.name)
+            return newTemplates
+            
+    class _PatchAtomData(object):
+        """Inner class used to encapsulate data about an atom in a patch definition."""
+        def __init__(self, description):
+            if ':' in description:
+                colonIndex = description.find(':')
+                self.residue = int(description[:colonIndex])-1
+                self.name = description[colonIndex+1:]
+            else:
+                self.residue = 0
+                self.name = description
+
     class _AtomType(object):
         """Inner class used to record atom types and associated properties."""
         def __init__(self, name, atomClass, mass, element):
@@ -575,7 +756,7 @@ class ForceField(object):
                 raise ValueError('%s: No parameters defined for atom type %s' % (self.forceName, t))
 
 
-    def _getResidueTemplateMatches(self, res, bondedToAtom):
+    def _getResidueTemplateMatches(self, res, bondedToAtom, templateSignatures=None):
         """Return the residue template matches, or None if none are found.
 
         Parameters
@@ -596,10 +777,12 @@ class ForceField(object):
         """
         template = None
         matches = None
+        if templateSignatures is None:
+            templateSignatures = self._templateSignatures
         signature = _createResidueSignature([atom.element for atom in res.atoms()])
-        if signature in self._templateSignatures:
+        if signature in templateSignatures:
             allMatches = []
-            for t in self._templateSignatures[signature]:
+            for t in templateSignatures[signature]:
                 match = _matchResidue(res, t, bondedToAtom)
                 if match is not None:
                     allMatches.append((t, match))
@@ -805,8 +988,8 @@ class ForceField(object):
             data.atomBonds[bond.atom2].append(i)
 
         # Find the template matching each residue and assign atom types.
-        # If no templates are found, attempt to use residue template generators to create new templates (and potentially atom types/parameters).
 
+        unmatchedResidues = []
         for chain in topology.chains():
             for res in chain.residues():
                 if res in residueTemplates:
@@ -819,30 +1002,37 @@ class ForceField(object):
                     # Attempt to match one of the existing templates.
                     [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom)
                 if matches is None:
-                    # No existing templates match.  Try any registered residue template generators.
-                    for generator in self._templateGenerators:
-                        if generator(self, res):
-                            # This generator has registered a new residue template that should match.
-                            [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom)
-                            if matches is None:
-                                # Something went wrong because the generated template does not match the residue signature.
-                                raise Exception('The residue handler %s indicated it had correctly parameterized residue %s, but the generated template did not match the residue signature.' % (generator.__class__.__name__, str(res)))
-                            else:
-                                # We successfully generated a residue template.  Break out of the for loop.
-                                break
+                    unmatchedResidues.append(res)
+                else:
+                    data.recordMatchedAtomParameters(res, template, matches)
+        
+        # Try to apply patches to find matches for any unmatched residues.
+        
+        if len(unmatchedResidues) > 0:
+            unmatchedResidues = _applyPatchesToMatchResidues(self, data, unmatchedResidues, bondedToAtom)
+        
+        # If we still haven't found a match for a residue, attempt to use residue template generators to create
+        # new templates (and potentially atom types/parameters).
 
-                # Raise an exception if we have found no templates that match.
-                if matches is None:
-                    raise ValueError('No template found for residue %d (%s).  %s' % (res.index+1, res.name, _findMatchErrors(self, res)))
-
-                # Store parameters for the matched residue template.
-                matchAtoms = dict(zip(matches, res.atoms()))
-                for atom, match in zip(res.atoms(), matches):
-                    data.atomType[atom] = template.atoms[match].type
-                    data.atomParameters[atom] = template.atoms[match].parameters
-                    for site in template.virtualSites:
-                        if match == site.index:
-                            data.virtualSites[atom] = (site, [matchAtoms[i].index for i in site.atoms], matchAtoms[site.excludeWith].index)
+        for res in unmatchedResidues:
+            # A template might have been generated on an earlier iteration of this loop.
+            [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom)
+            if matches is None:
+                # Try all generators.
+                for generator in self._templateGenerators:
+                    if generator(self, res):
+                        # This generator has registered a new residue template that should match.
+                        [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom)
+                        if matches is None:
+                            # Something went wrong because the generated template does not match the residue signature.
+                            raise Exception('The residue handler %s indicated it had correctly parameterized residue %s, but the generated template did not match the residue signature.' % (generator.__class__.__name__, str(res)))
+                        else:
+                            # We successfully generated a residue template.  Break out of the for loop.
+                            break
+            if matches is None:
+                raise ValueError('No template found for residue %d (%s).  %s' % (res.index+1, res.name, _findMatchErrors(self, res)))
+            else:
+                data.recordMatchedAtomParameters(res, template, matches)
 
         # Create the System and add atoms
 
@@ -1166,6 +1356,180 @@ def _findAtomMatches(template, bondedTo, matches, hasMatch, candidates, position
                 hasMatch[i] = False
     return False
 
+
+def _applyPatchesToMatchResidues(forcefield, data, residues, bondedToAtom):
+    """Try to apply patches to find matches for residues."""
+    # Start by creating all templates than can be created by applying a combination of one-residue patches
+    # to a single template.  The number of these is usually not too large, and they often cover a large fraction
+    # of residues.
+    
+    patchedTemplateSignatures = {}
+    patchedTemplates = {}
+    for name, template in forcefield._templates.items():
+        if name in forcefield._templatePatches:
+            patches = [forcefield._patches[patchName] for patchName, patchResidueIndex in forcefield._templatePatches[name] if forcefield._patches[patchName].numResidues == 1]
+            if len(patches) > 0:
+                newTemplates = []
+                patchedTemplates[name] = newTemplates
+                _generatePatchedSingleResidueTemplates(template, patches, 0, newTemplates)
+                for patchedTemplate in newTemplates:
+                    signature = _createResidueSignature([atom.element for atom in patchedTemplate.atoms])
+                    if signature in patchedTemplateSignatures:
+                        patchedTemplateSignatures[signature].append(patchedTemplate)
+                    else:
+                        patchedTemplateSignatures[signature] = [patchedTemplate]
+    
+    # Now see if any of those templates matches any of the residues.
+    
+    unmatchedResidues = []
+    for res in residues:
+        [template, matches] = forcefield._getResidueTemplateMatches(res, bondedToAtom, patchedTemplateSignatures)
+        if matches is None:
+            unmatchedResidues.append(res)
+        else:
+            data.recordMatchedAtomParameters(res, template, matches)
+    if len(unmatchedResidues) == 0:
+        return []
+    
+    # We need to consider multi-residue patches.  This can easily lead to a combinatorial explosion, so we make a simplifying
+    # assumption: that no residue is affected by more than one multi-residue patch (in addition to any number of single-residue
+    # patches).  Record all multi-residue patches, and the templates they can be applied to.
+    
+    patches = {}
+    maxPatchSize = 0
+    for patch in forcefield._patches.values():
+        if patch.numResidues > 1:
+            patches[patch.name] = [[] for i in range(patch.numResidues)]
+            maxPatchSize = max(maxPatchSize, patch.numResidues)
+    if maxPatchSize == 0:
+        return unmatchedResidues # There aren't any multi-residue patches
+    for templateName in forcefield._templatePatches:
+        for patchName, patchResidueIndex in forcefield._templatePatches[templateName]:
+            if patchName in patches:
+                # The patch should accept this template, *and* all patched versions of it generated above.
+                patches[patchName][patchResidueIndex].append(forcefield._templates[templateName])
+                if templateName in patchedTemplates:
+                    patches[patchName][patchResidueIndex] += patchedTemplates[templateName]
+    
+    # Record which unmatched residues are bonded to each other.
+    
+    bonds = set()
+    topology = residues[0].chain.topology
+    for atom1, atom2 in topology.bonds():
+        if atom1.residue != atom2.residue:
+            res1 = atom1.residue
+            res2 = atom2.residue
+            if res1 in unmatchedResidues and res2 in unmatchedResidues:
+                bond = tuple(sorted((res1, res2), key=lambda x: x.index))
+                if bond not in bonds:
+                    bonds.add(bond)
+    
+    # Identify clusters of unmatched residues that are all bonded to each other.  These are the ones we'll
+    # try to apply multi-residue patches to.
+    
+    clusterSize = 2
+    clusters = bonds
+    while clusterSize <= maxPatchSize:
+        # Try to apply patches to clusters of this size.
+        
+        for patchName in patches:
+            patch = forcefield._patches[patchName]
+            if patch.numResidues == clusterSize:
+                matchedClusters = _matchToMultiResiduePatchedTemplates(data, clusters, patch, patches[patchName], bondedToAtom)
+                for cluster in matchedClusters:
+                    for residue in cluster:
+                        unmatchedResidues.remove(residue)
+                bonds = set(bond for bond in bonds if bond[0] in unmatchedResidues and bond[1] in unmatchedResidues)
+
+        # Now extend the clusters to find ones of the next size up.
+        
+        largerClusters = set()
+        for cluster in clusters:
+            for bond in bonds:
+                if bond[0] in cluster and bond[1] not in cluster:
+                    newCluster = tuple(sorted(cluster+(bond[1],), key=lambda x: x.index))
+                    largerClusters.add(newCluster)
+                elif bond[1] in cluster and bond[0] not in cluster:
+                    newCluster = tuple(sorted(cluster+(bond[0],), key=lambda x: x.index))
+                    largerClusters.add(newCluster)
+        if len(largerClusters) == 0:
+            # There are no clusters of this size or larger
+            break
+        clusters = largerClusters
+        clusterSize += 1
+
+    return unmatchedResidues
+
+
+def _generatePatchedSingleResidueTemplates(template, patches, index, newTemplates):
+    """Apply all possible combinations of a set of single-residue patches to a template."""
+    try:
+        patchedTemplate = patches[index].createPatchedTemplates([template])[0]
+        newTemplates.append(patchedTemplate)
+    except:
+        # This probably means the patch is inconsistent with another one that has already been applied,
+        # so just ignore it.
+        patchedTemplate = None
+    
+    # Call this function recursively to generate combinations of patches.
+    
+    if index+1 < len(patches):
+        _generatePatchedSingleResidueTemplates(template, patches, index+1, newTemplates)
+        if patchedTemplate is not None:
+            _generatePatchedSingleResidueTemplates(patchedTemplate, patches, index+1, newTemplates)
+
+
+def _matchToMultiResiduePatchedTemplates(data, clusters, patch, residueTemplates, bondedToAtom):
+    """Apply a multi-residue patch to templates, then try to match them against clusters of residues."""
+    matchedClusters = []
+    selectedTemplates = [None]*patch.numResidues
+    _applyMultiResiduePatch(data, clusters, patch, residueTemplates, selectedTemplates, 0, matchedClusters, bondedToAtom)
+    return matchedClusters
+
+
+def _applyMultiResiduePatch(data, clusters, patch, candidateTemplates, selectedTemplates, index, matchedClusters, bondedToAtom):
+    """This is called recursively to apply a multi-residue patch to all possible combinations of templates."""
+
+    if index < patch.numResidues:
+        for template in candidateTemplates[index]:
+            selectedTemplates[index] = template
+            _applyMultiResiduePatch(data, clusters, patch, candidateTemplates, selectedTemplates, index+1, matchedClusters, bondedToAtom)
+    else:
+        # We're at the deepest level of the recursion.  We've selected a template for each residue, so apply the patch,
+        # then try to match it against clusters.
+        
+        try:
+            patchedTemplates = patch.createPatchedTemplates(selectedTemplates)
+        except:
+            # This probably means the patch is inconsistent with another one that has already been applied,
+            # so just ignore it.
+            raise
+            return
+        newlyMatchedClusters = []
+        for cluster in clusters:
+            for residues in itertools.permutations(cluster):
+                residueMatches = []
+                for residue, template in zip(residues, patchedTemplates):
+                    matches = _matchResidue(residue, template, bondedToAtom)
+                    if matches is None:
+                        residueMatches = None
+                        break
+                    else:
+                        residueMatches.append(matches)
+                if residueMatches is not None:
+                    # We successfully matched the template to the residues.  Record the parameters.
+                    
+                    for i in range(patch.numResidues):
+                        data.recordMatchedAtomParameters(residues[i], patchedTemplates[i], residueMatches[i])
+                    newlyMatchedClusters.append(cluster)
+                    break
+        
+        # Record which clusters were successfully matched.
+        
+        matchedClusters += newlyMatchedClusters
+        for cluster in newlyMatchedClusters:
+            clusters.remove(cluster)
+        
 
 def _findMatchErrors(forcefield, res):
     """Try to guess why a residue failed to match any template and return an error message."""
