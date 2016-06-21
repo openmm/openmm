@@ -33,6 +33,9 @@
  * This tests the Cuda implementation of CudaAmoebaAngleForce.
  */
 
+#ifdef WIN32
+  #define _USE_MATH_DEFINES // Needed to get M_PI
+#endif
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
 #include "openmm/CustomAngleForce.h"
