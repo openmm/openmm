@@ -2293,7 +2293,7 @@ class LennardJonesGenerator(object):
         if self.lj14scale == 1:
             # Just exclude the 1-2 and 1-3 interactions.
             
-            self.force.createExclusionsFromBonds(bondIndices, 3)
+            self.force.createExclusionsFromBonds(bondIndices, 2)
         else:
             forceCopy = deepcopy(self.force)
             forceCopy.createExclusionsFromBonds(bondIndices, 2)
