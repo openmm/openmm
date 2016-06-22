@@ -2157,14 +2157,16 @@ class NonbondedGenerator(object):
 
 parsers["NonbondedForce"] = NonbondedGenerator.parseElement
 
+
+## @private
 class LennardJonesGenerator(object):
     """A NBFix generator to construct the L-J force with NBFIX implemented as a lookup table"""
 
     def __init__(self, forcefield, lj14scale):
         self.ff = forcefield
-        self.nbfix_types = {}
+        self.nbfixTypes = {}
         self.lj14scale = lj14scale
-        self.lj_types = ForceField._AtomTypeParameters(forcefield, 'LennardJonesForce', 'Atom', ('sigma', 'epsilon'))
+        self.ljTypes = ForceField._AtomTypeParameters(forcefield, 'LennardJonesForce', 'Atom', ('sigma', 'epsilon'))
 
     def registerNBFIX(self, parameters):
         types = self.ff._findAtomTypes(parameters, 2)
@@ -2173,12 +2175,11 @@ class LennardJonesGenerator(object):
             type2 = types[1][0]
             epsilon = _convertParameterToNumber(parameters['epsilon'])
             sigma = _convertParameterToNumber(parameters['sigma'])
-            self.nbfix_types[(type1, type2)] = [sigma, epsilon]
-            self.nbfix_types[(type2, type1)] = [sigma, epsilon]
+            self.nbfixTypes[(type1, type2)] = [sigma, epsilon]
+            self.nbfixTypes[(type2, type1)] = [sigma, epsilon]
 
     def registerLennardJones(self, parameters):
-        self.lj_types.registerAtom(parameters)
-
+        self.ljTypes.registerAtom(parameters)
 
     @staticmethod
     def parseElement(element, ff):
@@ -2189,93 +2190,87 @@ class LennardJonesGenerator(object):
         else:
             # Multiple <LennardJonesForce> tags were found, probably in different files
             generator = existing[0]
-
+            if abs(generator.lj14scale - float(element.attrib['lj14scale'])) > NonbondedGenerator.SCALETOL:
+                raise ValueError('Found multiple LennardJonesForce tags with different 1-4 scales')
         for LJ in element.findall('Atom'):
             generator.registerLennardJones(LJ.attrib)
         for Nbfix in element.findall('NBFixPair'):
             generator.registerNBFIX(Nbfix.attrib)
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
-
-        # Ewald and PME will be interpreted as CutoffPeriodic for the CustomNonbondedForce
-
-        # We need a CustomNonbondedForce to implement the NBFIX functionality.
-        nbfix_type_set = set().union(*self.nbfix_types)
         # First derive the lookup tables
-        lj_indx_list = [None for atom in data.atoms]
-        num_lj_types = 0
-        lj_type_list = []
-        type_map = {}
+
+        nbfixTypeSet = set().union(*self.nbfixTypes)
+        ljIndexList = [None]*len(data.atoms)
+        numLjTypes = 0
+        ljTypeList = []
+        typeMap = {}
         for i, atom in enumerate(data.atoms):
             atype = data.atomType[atom]
-            values = (self.lj_types.paramsForType[atype]['sigma'], self.lj_types.paramsForType[atype]['epsilon'])
-            if lj_indx_list[i] is not None: continue # ljtype has been assigned an index
-            if values in type_map and atype not in nbfix_type_set:
-                # only non NBFIX types can be compressed
-                lj_indx_list[i] = type_map[values]
+            values = tuple(self.ljTypes.getAtomParameters(atom, data))
+            if values in typeMap and atype not in nbfixTypeSet:
+                # Only non-NBFIX types can be compressed
+                ljIndexList[i] = typeMap[values]
             else:
-                type_map[values] = num_lj_types
-                lj_indx_list[i] = num_lj_types
-                num_lj_types += 1
-                lj_type_list.append(atype)
-        reverse_map = [0 for type_values in range(len(type_map))]
-        for type_value in type_map:
-            reverse_map[type_map[type_value]] = type_value
+                typeMap[values] = numLjTypes
+                ljIndexList[i] = numLjTypes
+                numLjTypes += 1
+                ljTypeList.append(atype)
+        reverseMap = [0]*len(typeMap)
+        for typeValue in typeMap:
+            reverseMap[typeMap[typeValue]] = typeValue
 
         # Now everything is assigned. Create the A- and B-coefficient arrays
-        acoef = [0 for i in range(num_lj_types*num_lj_types)]
+        
+        acoef = [0]*(numLjTypes*numLjTypes)
         bcoef = acoef[:]
-        for m in range(num_lj_types):
-            for n in range(num_lj_types):
-                pair = (lj_type_list[m], lj_type_list[n])
-                if pair in self.nbfix_types:
-                    wdij = self.nbfix_types[pair][1]
-                    rij = self.nbfix_types[pair][0] * 2**(1.0/6) / 2
-                    rij6 = rij**6
-                    acoef[m+num_lj_types*n] = wdij * rij6**2
-                    bcoef[m+num_lj_types*n] = 2 * wdij * rij6
+        for m in range(numLjTypes):
+            for n in range(numLjTypes):
+                pair = (ljTypeList[m], ljTypeList[n])
+                if pair in self.nbfixTypes:
+                    epsilon = self.nbfixTypes[pair][1]
+                    sigma = self.nbfixTypes[pair][0]
+                    sigma6 = sigma**6
+                    acoef[m+numLjTypes*n] = 4*epsilon*sigma6*sigma6
+                    bcoef[m+numLjTypes*n] = 4*epsilon*sigma6
                     continue
                 else:
-                    rij = (reverse_map[m][0] + reverse_map[n][0]) * 2**(1.0/6) / 2
-                    rij6 = rij**6
-                    wdij = math.sqrt(reverse_map[m][-1] * reverse_map[n][-1])
-                    acoef[m+num_lj_types*n] = wdij * rij6**2
-                    bcoef[m+num_lj_types*n] = 2 * wdij * rij6
+                    sigma = 0.5*(reverseMap[m][0]+reverseMap[n][0])
+                    sigma6 = sigma**6
+                    epsilon = math.sqrt(reverseMap[m][-1]*reverseMap[n][-1])
+                    acoef[m+numLjTypes*n] = 4*epsilon*sigma6*sigma6
+                    bcoef[m+numLjTypes*n] = 4*epsilon*sigma6
 
-        self.force = mm.CustomNonbondedForce('a/r^12-b/r^6;'
-                                'a=acoef(type1, type2);'
-                                'b=bcoef(type1, type2)')
-        self.force.addTabulatedFunction('acoef',
-                mm.Discrete2DFunction(num_lj_types, num_lj_types, acoef))
-        self.force.addTabulatedFunction('bcoef',
-                mm.Discrete2DFunction(num_lj_types, num_lj_types, bcoef))
+        self.force = mm.CustomNonbondedForce('acoef(type1, type2)/r^12 - bcoef(type1, type2)/r^6;')
+        self.force.addTabulatedFunction('acoef', mm.Discrete2DFunction(numLjTypes, numLjTypes, acoef))
+        self.force.addTabulatedFunction('bcoef', mm.Discrete2DFunction(numLjTypes, numLjTypes, bcoef))
         self.force.addPerParticleParameter('type')
-        if (nonbondedMethod is PME or nonbondedMethod is Ewald or
-                nonbondedMethod is CutoffPeriodic):
+        if nonbondedMethod in [CutoffPeriodic, Ewald, PME]:
             self.force.setNonbondedMethod(mm.CustomNonbondedForce.CutoffPeriodic)
         elif nonbondedMethod is NoCutoff:
             self.force.setNonbondedMethod(mm.CustomNonbondedForce.NoCutoff)
         elif nonbondedMethod is CutoffNonPeriodic:
             self.force.setNonbondedMethod(mm.CustomNonbondedForce.CutoffNonPeriodic)
         else:
-            raise AssertionError('Unrecognized nonbonded method [%s]' %
-                                 nonbondedMethod)
+            raise AssertionError('Unrecognized nonbonded method [%s]' % nonbondedMethod)
+
         # Add the particles
-        for i in lj_indx_list:
+
+        for i in ljIndexList:
             self.force.addParticle((i,))
         self.force.setUseLongRangeCorrection(True)
         self.force.setCutoffDistance(nonbondedCutoff)
-
         sys.addForce(self.force)
 
     def postprocessSystem(self, sys, data, args):
+        # Create exceptions based on bonds.
 
         bondIndices = []
         for bond in data.bonds:
             bondIndices.append((bond.atom1, bond.atom2))
 
-        # If a virtual site does *not* share exclusions with another atom, add a bond between it and its first parent
-        # atom.
+        # If a virtual site does *not* share exclusions with another atom, add a bond between it and its first parent atom.
+        
         for i in range(sys.getNumParticles()):
             if sys.isVirtualSite(i):
                 (site, atoms, excludeWith) = data.virtualSites[data.atoms[i]]
@@ -2294,9 +2289,41 @@ class LennardJonesGenerator(object):
                 bondIndices.append((atom1, child2))
 
         # Create the exceptions.
-        self.force.createExclusionsFromBonds(bondIndices, 3)
+        
+        if self.lj14scale == 1:
+            # Just exclude the 1-2 and 1-3 interactions.
+            
+            self.force.createExclusionsFromBonds(bondIndices, 3)
+        else:
+            forceCopy = deepcopy(self.force)
+            forceCopy.createExclusionsFromBonds(bondIndices, 2)
+            self.force.createExclusionsFromBonds(bondIndices, 3)
+            if self.force.getNumExclusions() > forceCopy.getNumExclusions() and self.lj14scale != 0:
+                # We need to create a CustomBondForce and use it to implement the scaled 1-4 interactions.
+                
+                bonded = mm.CustomBondForce('%g*epsilon*((sigma/r)^12-(sigma/r)^6)' % (4*self.lj14scale))
+                bonded.addPerBondParameter('sigma')
+                bonded.addPerBondParameter('epsilon')
+                sys.addForce(bonded)
+                skip = set(tuple(forceCopy.getExclusionParticles(i)) for i in range(forceCopy.getNumExclusions()))
+                for i in range(self.force.getNumExclusions()):
+                    p1,p2 = self.force.getExclusionParticles(i)
+                    a1 = data.atoms[p1]
+                    a2 = data.atoms[p2]
+                    if (p1,p2) not in skip and (p2,p1) not in skip:
+                        type1 = data.atomType[a1]
+                        type2 = data.atomType[a2]
+                        if (type1, type2) in self.nbfixTypes:
+                            sigma, epsilon = self.nbfixTypes[(type1, type2)]
+                        else:
+                            values1 = self.ljTypes.getAtomParameters(a1, data)
+                            values2 = self.ljTypes.getAtomParameters(a2, data)
+                            sigma = 0.5*(values1[0]+values2[0])
+                            epsilon = sqrt(values1[1]*values2[1])
+                        bonded.addBond(p1, p2, (sigma, epsilon))
 
 parsers["LennardJonesForce"] = LennardJonesGenerator.parseElement
+
 
 ## @private
 class GBSAOBCGenerator(object):
