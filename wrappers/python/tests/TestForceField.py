@@ -11,6 +11,7 @@ try:
 except ImportError:
     from io import StringIO
 import os
+import warnings
 
 class TestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method."""
@@ -711,6 +712,67 @@ class AmoebaTestForceField(unittest.TestCase):
         for f1, f2, in zip(state1.getForces().value_in_unit(kilojoules_per_mole/nanometer), state2.getForces().value_in_unit(kilojoules_per_mole/nanometer)):
             diff = norm(f1-f2)
             self.assertTrue(diff < 0.1 or diff/norm(f1) < 1e-3)
+
+    def test_LennardJones_generator(self):
+        """ Test the LennardJones generator"""
+        warnings.filterwarnings('ignore', category=CharmmPSFWarning)
+        psf = CharmmPsfFile('systems/ions.psf')
+        pdb = PDBFile('systems/ions.pdb')
+        params = CharmmParameterSet('systems/toppar_water_ions.str'
+                                    )
+
+        # Box dimensions (found from bounding box)
+        psf.setBox(12.009*angstroms,   12.338*angstroms,   11.510*angstroms)
+
+        # Turn off charges so we only test the Lennard-Jones energies
+        for a in psf.atom_list:
+            a.charge = 0.0
+
+        # Now compute the full energy
+        plat = Platform.getPlatformByName('Reference')
+        system = psf.createSystem(params, nonbondedMethod=PME,
+                                  nonbondedCutoff=5*angstroms)
+
+        con = Context(system, VerletIntegrator(2*femtoseconds), plat)
+        con.setPositions(pdb.positions)
+
+        # Now set up stystem from ffxml. Setting chareges to 0 so we only test the Lennard-Jones energies
+        xml = """
+<ForceField>
+ <AtomTypes>
+  <Type name="SOD" class="SOD" element="Na" mass="22.98977"/>
+  <Type name="CLA" class="CLA" element="Cl" mass="35.45"/>
+ </AtomTypes>
+ <Residues>
+  <Residue name="CLA">
+   <Atom name="CLA" type="CLA" charge="0.0"/>
+  </Residue>
+  <Residue name="SOD">
+   <Atom name="SOD" type="SOD" charge="0.0"/>
+  </Residue>
+ </Residues>
+ <NonbondedForce coulomb14scale="1.0" lj14scale="1.0">
+  <UseAttributeFromResidue name="charge"/>
+  <Atom type="SOD" sigma="1.0" epsilon="0.0"/>
+  <Atom type="CLA" sigma="1.0" epsilon="0.0"/>
+ </NonbondedForce>
+ <LennardJonesForce lj14scale="1.0">
+  <Atom type="CLA" sigma="0.404468018036" epsilon="0.6276"/>
+  <Atom type="SOD" sigma="0.251367073323" epsilon="0.1962296"/>
+  <NBFixPair type1="CLA" type2="SOD" sigma="0.664788623476" epsilon="0.350933"/>
+ </LennardJonesForce>
+</ForceField> """
+        ff = ForceField(StringIO(xml))
+        system2 = ff.createSystem(pdb.topology, nonbondedMethod=PME,
+                                  nonbondedCutoff=5*angstroms)
+        con2 = Context(system2, VerletIntegrator(2*femtoseconds), plat)
+        con2.setPositions(pdb.positions)
+
+        state = con.getState(getEnergy=True, enforcePeriodicBox=True)
+        ene = state.getPotentialEnergy().value_in_unit(kilocalories_per_mole)
+        state2 = con2.getState(getEnergy=True, enforcePeriodicBox=True)
+        ene2 = state2.getPotentialEnergy().value_in_unit(kilocalories_per_mole)
+        self.assertAlmostEqual(ene, ene2)
 
 if __name__ == '__main__':
     unittest.main()
