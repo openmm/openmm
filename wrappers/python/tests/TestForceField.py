@@ -11,6 +11,7 @@ try:
 except ImportError:
     from io import StringIO
 import os
+import warnings
 
 class TestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method."""
@@ -624,6 +625,128 @@ class TestForceField(unittest.TestCase):
         ff = ForceField(StringIO(ffxml1), StringIO(ffxml3))
         self.assertEqual(ff._templates['FE2'].atoms[0].type, 'Fe2+_tip3p_standard')
         ff.createSystem(pdb.topology)
+
+    def test_LennardJonesGenerator(self):
+        """ Test the LennardJones generator"""
+        warnings.filterwarnings('ignore', category=CharmmPSFWarning)
+        psf = CharmmPsfFile('systems/ions.psf')
+        pdb = PDBFile('systems/ions.pdb')
+        params = CharmmParameterSet('systems/toppar_water_ions.str'
+                                    )
+
+        # Box dimensions (found from bounding box)
+        psf.setBox(12.009*angstroms,   12.338*angstroms,   11.510*angstroms)
+
+        # Turn off charges so we only test the Lennard-Jones energies
+        for a in psf.atom_list:
+            a.charge = 0.0
+
+        # Now compute the full energy
+        plat = Platform.getPlatformByName('Reference')
+        system = psf.createSystem(params, nonbondedMethod=PME,
+                                  nonbondedCutoff=5*angstroms)
+
+        con = Context(system, VerletIntegrator(2*femtoseconds), plat)
+        con.setPositions(pdb.positions)
+
+        # Now set up system from ffxml.
+        xml = """
+<ForceField>
+ <AtomTypes>
+  <Type name="SOD" class="SOD" element="Na" mass="22.98977"/>
+  <Type name="CLA" class="CLA" element="Cl" mass="35.45"/>
+ </AtomTypes>
+ <Residues>
+  <Residue name="CLA">
+   <Atom name="CLA" type="CLA"/>
+  </Residue>
+  <Residue name="SOD">
+   <Atom name="SOD" type="SOD"/>
+  </Residue>
+ </Residues>
+ <LennardJonesForce lj14scale="1.0">
+  <Atom type="CLA" sigma="0.404468018036" epsilon="0.6276"/>
+  <Atom type="SOD" sigma="0.251367073323" epsilon="0.1962296"/>
+  <NBFixPair type1="CLA" type2="SOD" sigma="0.33239431" epsilon="0.350933"/>
+ </LennardJonesForce>
+</ForceField> """
+        ff = ForceField(StringIO(xml))
+        system2 = ff.createSystem(pdb.topology, nonbondedMethod=PME,
+                                  nonbondedCutoff=5*angstroms)
+        con2 = Context(system2, VerletIntegrator(2*femtoseconds), plat)
+        con2.setPositions(pdb.positions)
+
+        state = con.getState(getEnergy=True, enforcePeriodicBox=True)
+        ene = state.getPotentialEnergy().value_in_unit(kilocalories_per_mole)
+        state2 = con2.getState(getEnergy=True, enforcePeriodicBox=True)
+        ene2 = state2.getPotentialEnergy().value_in_unit(kilocalories_per_mole)
+        self.assertAlmostEqual(ene, ene2)
+
+    def test_NBFix(self):
+        """Test using LennardJonesGenerator to implement NBFix terms."""
+        # Create a chain of five atoms.
+        
+        top = Topology()
+        chain = top.addChain()
+        res = top.addResidue('RES', chain)
+        top.addAtom('A', elem.oxygen, res)
+        top.addAtom('B', elem.carbon, res)
+        top.addAtom('C', elem.carbon, res)
+        top.addAtom('D', elem.carbon, res)
+        top.addAtom('E', elem.nitrogen, res)
+        atoms = list(top.atoms())
+        top.addBond(atoms[0], atoms[1])
+        top.addBond(atoms[1], atoms[2])
+        top.addBond(atoms[2], atoms[3])
+        top.addBond(atoms[3], atoms[4])
+        
+        # Create the force field and system.
+        
+        xml = """
+<ForceField>
+ <AtomTypes>
+  <Type name="A" class="A" element="O" mass="1"/>
+  <Type name="B" class="B" element="C" mass="1"/>
+  <Type name="C" class="C" element="C" mass="1"/>
+  <Type name="D" class="D" element="C" mass="1"/>
+  <Type name="E" class="E" element="N" mass="1"/>
+ </AtomTypes>
+ <Residues>
+  <Residue name="RES">
+   <Atom name="A" type="A"/>
+   <Atom name="B" type="B"/>
+   <Atom name="C" type="C"/>
+   <Atom name="D" type="D"/>
+   <Atom name="E" type="E"/>
+   <Bond atomName1="A" atomName2="B"/>
+   <Bond atomName1="B" atomName2="C"/>
+   <Bond atomName1="C" atomName2="D"/>
+   <Bond atomName1="D" atomName2="E"/>
+  </Residue>
+ </Residues>
+ <LennardJonesForce lj14scale="0.3">
+  <Atom type="A" sigma="1" epsilon="0.1"/>
+  <Atom type="B" sigma="2" epsilon="0.2"/>
+  <Atom type="C" sigma="3" epsilon="0.3"/>
+  <Atom type="D" sigma="4" epsilon="0.4"/>
+  <Atom type="E" sigma="5" epsilon="0.5"/>
+  <NBFixPair type1="A" type2="D" sigma="2.5" epsilon="1.1"/>
+  <NBFixPair type1="A" type2="E" sigma="3.5" epsilon="1.5"/>
+ </LennardJonesForce>
+</ForceField> """
+        ff = ForceField(StringIO(xml))
+        system = ff.createSystem(top)
+        
+        # Check that it produces the correct energy.
+        
+        integrator = VerletIntegrator(0.001)
+        context = Context(system, integrator, Platform.getPlatform(0))
+        positions = [Vec3(i, 0, 0) for i in range(5)]*nanometers
+        context.setPositions(positions)
+        def ljEnergy(sigma, epsilon, r):
+            return 4*epsilon*((sigma/r)**12-(sigma/r)**6)
+        expected = 0.3*ljEnergy(2.5, 1.1, 3)  + 0.3*ljEnergy(3.5, sqrt(0.1), 3) + ljEnergy(3.5, 1.5, 4)
+        self.assertAlmostEqual(expected, context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilojoules_per_mole))
 
 class AmoebaTestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method with the AMOEBA forcefield."""
