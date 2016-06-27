@@ -420,6 +420,7 @@ void ReferenceLJCoulombIxn::calculateEwaldIxn(int numberOfAtoms, vector<RealVec>
     // Now subtract off the exclusions, since they were implicitly included in the reciprocal space sum.
 
     RealOpenMM totalExclusionEnergy = 0.0f;
+    const double TWO_OVER_SQRT_PI = 2/sqrt(PI_M);
     for (int i = 0; i < numberOfAtoms; i++)
         for (set<int>::const_iterator iter = exclusions[i].begin(); iter != exclusions[i].end(); ++iter) {
             if (*iter > i) {
@@ -448,7 +449,7 @@ void ReferenceLJCoulombIxn::calculateEwaldIxn(int numberOfAtoms, vector<RealVec>
                    realSpaceEwaldEnergy = (RealOpenMM) (ONE_4PI_EPS0*atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*inverseR*erf(alphaR));
                }
                else {
-                   realSpaceEwaldEnergy = (RealOpenMM) (alphaEwald*M_2_SQRTPI*ONE_4PI_EPS0*atomParameters[ii][QIndex]*atomParameters[jj][QIndex]);
+                   realSpaceEwaldEnergy = (RealOpenMM) (alphaEwald*TWO_OVER_SQRT_PI*ONE_4PI_EPS0*atomParameters[ii][QIndex]*atomParameters[jj][QIndex]);
                }
 
                totalExclusionEnergy += realSpaceEwaldEnergy;
