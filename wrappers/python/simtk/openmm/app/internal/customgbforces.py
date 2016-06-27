@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2015 University of Virginia and the Authors.
+Portions copyright (c) 2012-2016 University of Virginia and the Authors.
 Authors: Christoph Klein, Michael R. Shirts
 Contributors: Jason M. Swails, Peter Eastman, Justin L. MacCallum
 
@@ -34,11 +34,10 @@ from __future__ import division, absolute_import
 
 from collections import defaultdict
 import copy
-import numpy as np
-from scipy import interpolate
 from simtk.openmm.app import element as E
 from simtk.openmm import CustomGBForce, Discrete2DFunction
 import simtk.unit as u
+from math import floor
 
 
 def strip_unit(value, unit):
@@ -715,13 +714,30 @@ class GBSAGBnForce(CustomAmberGBForceBase):
         self._radiusToIndex = {r: i for i, r in enumerate(self._uniqueRadii)}
 
     def _createUniqueTable(self, fullTable):
-        fullTable = np.array(fullTable).reshape((21, 21))
-        xs = np.linspace(0.1, 0.2, 21)
-        interp = interpolate.interp2d(xs, xs, fullTable.T, kind='linear')
+        tablePositions = [(r+self.OFFSET-0.1)*200 for r in self._uniqueRadii]
+        numRadii = len(self._uniqueRadii)
+        index1 = [0]*numRadii
+        index2 = [0]*numRadii
+        weight1 = [0]*numRadii
+        weight2 = [0]*numRadii
+        for i,p in enumerate(tablePositions):
+            if p <= 0:
+                weight1[i] = 1.0
+            elif p >= 20:
+                index1[i] = 20
+                weight1[i] = 1.0
+            else:
+                index1[i] = int(floor(p))
+                index2[i] = index1[i]+1
+                weight1[i] = index2[i]-p
+                weight2[i] = 1.0-weight1[i]
         table = []
-        for r1 in self._uniqueRadii:
-            for r2 in self._uniqueRadii:
-                table.append(interp(r1 + self.OFFSET, r2 + self.OFFSET)[0])
+        for i in range(numRadii):
+            for j in range(numRadii):
+                table.append(weight1[i]*weight1[j]*fullTable[index1[i]*21+index1[j]] +
+                              weight1[i]*weight2[j]*fullTable[index1[i]*21+index2[j]] +
+                              weight2[i]*weight1[j]*fullTable[index2[i]*21+index1[j]] +
+                              weight2[i]*weight2[j]*fullTable[index2[i]*21+index2[j]])
         return table
 
     def _addParticles(self):
