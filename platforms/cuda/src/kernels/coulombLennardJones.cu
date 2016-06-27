@@ -25,8 +25,10 @@
             tempForce = -prefactor*(erfAlphaR-alphaR*expAlphaRSqr*TWO_OVER_SQRT_PI);
             tempEnergy += -prefactor*erfAlphaR;
         }
-        else
+        else {
             includeInteraction = false;
+            tempEnergy -= TWO_OVER_SQRT_PI*EWALD_ALPHA*138.935456f*posq1.w*posq2.w;
+        }
     }
     else {
 #if HAS_LENNARD_JONES

@@ -179,10 +179,8 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
         compilationDefines["WORK_GROUP_SIZE"] = intToString(ThreadBlockSize);
         if (platformVendor.size() >= 5 && platformVendor.substr(0, 5) == "Intel")
             defaultOptimizationOptions = "";
-        else if (platformVendor == "Apple")
-            defaultOptimizationOptions = "-cl-mad-enable -cl-no-signed-zeros";
         else
-            defaultOptimizationOptions = "-cl-fast-relaxed-math";
+            defaultOptimizationOptions = "-cl-mad-enable -cl-no-signed-zeros";
         supports64BitGlobalAtomics = (device.getInfo<CL_DEVICE_EXTENSIONS>().find("cl_khr_int64_base_atomics") != string::npos);
         supportsDoublePrecision = (device.getInfo<CL_DEVICE_EXTENSIONS>().find("cl_khr_fp64") != string::npos);
         if ((useDoublePrecision || useMixedPrecision) && !supportsDoublePrecision)

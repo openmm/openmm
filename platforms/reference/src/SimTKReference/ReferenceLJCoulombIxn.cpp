@@ -446,12 +446,15 @@ void ReferenceLJCoulombIxn::calculateEwaldIxn(int numberOfAtoms, vector<RealVec>
                    // accumulate energies
 
                    realSpaceEwaldEnergy = (RealOpenMM) (ONE_4PI_EPS0*atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*inverseR*erf(alphaR));
+               }
+               else {
+                   realSpaceEwaldEnergy = (RealOpenMM) (alphaEwald*M_2_SQRTPI*ONE_4PI_EPS0*atomParameters[ii][QIndex]*atomParameters[jj][QIndex]);
+               }
 
-                   totalExclusionEnergy += realSpaceEwaldEnergy;
-                   if (energyByAtom) {
-                       energyByAtom[ii] -= realSpaceEwaldEnergy;
-                       energyByAtom[jj] -= realSpaceEwaldEnergy;
-                   }
+               totalExclusionEnergy += realSpaceEwaldEnergy;
+               if (energyByAtom) {
+                   energyByAtom[ii] -= realSpaceEwaldEnergy;
+                   energyByAtom[jj] -= realSpaceEwaldEnergy;
                }
             }
         }
