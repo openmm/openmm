@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -195,6 +195,9 @@ void CustomNonbondedForce::setExclusionParticles(int index, int particle1, int p
 void CustomNonbondedForce::createExclusionsFromBonds(const vector<pair<int, int> >& bonds, int bondCutoff) {
     if (bondCutoff < 1)
         return;
+    for (int i = 0; i < (int) bonds.size(); ++i)
+        if (bonds[i].first < 0 || bonds[i].second < 0 || bonds[i].first >= particles.size() || bonds[i].second >= particles.size())
+            throw OpenMMException("createExclusionsFromBonds: Illegal particle index in list of bonds");
     vector<set<int> > exclusions(particles.size());
     vector<set<int> > bonded12(exclusions.size());
     for (int i = 0; i < (int) bonds.size(); ++i) {
