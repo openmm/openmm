@@ -39,6 +39,7 @@ import xml.etree.ElementTree as etree
 import math
 from math import sqrt, cos
 from copy import deepcopy
+from heapq import heappush, heappop
 import simtk.openmm as mm
 import simtk.unit as unit
 from . import element as elem
@@ -1296,21 +1297,25 @@ def _matchResidue(res, template, bondedToAtom):
     
     searchOrder = []
     atomsToOrder = set(range(numAtoms))
-    efficientAtoms = set()
+    efficientAtomSet = set()
+    efficientAtomHeap = []
     while len(atomsToOrder) > 0:
-        if len(efficientAtoms) == 0:
+        if len(efficientAtomSet) == 0:
             fewestNeighbors = numAtoms+1
             for i in atomsToOrder:
                 if len(candidates[i]) < fewestNeighbors:
                     nextAtom = i
                     fewestNeighbors = len(candidates[i])
         else:
-            nextAtom = efficientAtoms.pop()
+            nextAtom = heappop(efficientAtomHeap)[1]
+            efficientAtomSet.remove(nextAtom)
         searchOrder.append(nextAtom)
         atomsToOrder.remove(nextAtom)
         for i in bondedTo[nextAtom]:
             if i in atomsToOrder:
-                efficientAtoms.add(i)
+                if i not in efficientAtomSet:
+                    efficientAtomSet.add(i)
+                    heappush(efficientAtomHeap, (len(candidates[i]), i))
     inverseSearchOrder = [0]*numAtoms
     for i in range(numAtoms):
         inverseSearchOrder[searchOrder[i]] = i
