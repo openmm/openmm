@@ -1146,11 +1146,10 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         coefficients << cu.doubleToString(sum);
     }
     defines["EXTRAPOLATION_COEFFICIENTS_SUM"] = coefficients.str();
-    alpha = force.getAEwald();
     if (usePME) {
-        vector<int> pmeGridDimension;
-        force.getPmeGridDimensions(pmeGridDimension);
-        if (pmeGridDimension[0] == 0 || alpha == 0.0) {
+        int nx, ny, nz;
+        force.getPMEParameters(alpha, nx, ny, nz);
+        if (nx == 0 || alpha == 0.0) {
             NonbondedForce nb;
             nb.setEwaldErrorTolerance(force.getEwaldErrorTolerance());
             nb.setCutoffDistance(force.getCutoffDistance());
@@ -1159,9 +1158,9 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
             gridSizeY = CudaFFT3D::findLegalDimension(gridSizeY);
             gridSizeZ = CudaFFT3D::findLegalDimension(gridSizeZ);
         } else {
-            gridSizeX = CudaFFT3D::findLegalDimension(pmeGridDimension[0]);
-            gridSizeY = CudaFFT3D::findLegalDimension(pmeGridDimension[1]);
-            gridSizeZ = CudaFFT3D::findLegalDimension(pmeGridDimension[2]);
+            gridSizeX = CudaFFT3D::findLegalDimension(nx);
+            gridSizeY = CudaFFT3D::findLegalDimension(ny);
+            gridSizeZ = CudaFFT3D::findLegalDimension(nz);
         }
         defines["EWALD_ALPHA"] = cu.doubleToString(alpha);
         defines["SQRT_PI"] = cu.doubleToString(sqrt(M_PI));
@@ -2601,15 +2600,15 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
         replacements["EPSILON_COMBINING_RULE"] = "4";
     else
         throw OpenMMException("Illegal combining rule for sigma: "+sigmaCombiningRule);
-    double cutoff = force.getCutoff();
+    double cutoff = force.getCutoffDistance();
     double taperCutoff = cutoff*0.9;
-    replacements["CUTOFF_DISTANCE"] = cu.doubleToString(force.getCutoff());
+    replacements["CUTOFF_DISTANCE"] = cu.doubleToString(force.getCutoffDistance());
     replacements["TAPER_CUTOFF"] = cu.doubleToString(taperCutoff);
     replacements["TAPER_C3"] = cu.doubleToString(10/pow(taperCutoff-cutoff, 3.0));
     replacements["TAPER_C4"] = cu.doubleToString(15/pow(taperCutoff-cutoff, 4.0));
     replacements["TAPER_C5"] = cu.doubleToString(6/pow(taperCutoff-cutoff, 5.0));
     bool useCutoff = (force.getNonbondedMethod() != AmoebaVdwForce::NoCutoff);
-    nonbonded->addInteraction(useCutoff, useCutoff, true, force.getCutoff(), exclusions,
+    nonbonded->addInteraction(useCutoff, useCutoff, true, force.getCutoffDistance(), exclusions,
         cu.replaceStrings(CudaAmoebaKernelSources::amoebaVdwForce2, replacements), 0);
     
     // Create the other kernels.
