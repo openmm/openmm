@@ -1822,34 +1822,34 @@ void CudaCalcAmoebaMultipoleForceKernel::getTotalDipoles(ContextImpl& context, v
         vector<double4> posqVec;
         vector<double> labDipoleVec;
         vector<double> inducedDipoleVec;
-        vector<double> totalDipoleVecX(numParticles);
-        vector<double> totalDipoleVecY(numParticles);
-        vector<double> totalDipoleVecZ(numParticles);
+        double totalDipoleVecX;
+        double totalDipoleVecY;
+        double totalDipoleVecZ;
         inducedDipole->download(inducedDipoleVec);
         labFrameDipoles->download(labDipoleVec);
         cu.getPosq().download(posqVec);
         for (int i = 0; i < numParticles; i++) {
-            totalDipoleVecX[i] = posqVec[i].x * posqVec[i].w + labDipoleVec[3*i] + inducedDipoleVec[3*i];
-            totalDipoleVecY[i] = posqVec[i].y * posqVec[i].w + labDipoleVec[3*i+1] + inducedDipoleVec[3*i+1];
-            totalDipoleVecZ[i] = posqVec[i].z * posqVec[i].w + labDipoleVec[3*i+2] + inducedDipoleVec[3*i+2];
-            dipoles[order[i]] = Vec3(totalDipoleVecX[i], totalDipoleVecY[i], totalDipoleVecZ[i]);
+            totalDipoleVecX = posqVec[i].x * posqVec[i].w + labDipoleVec[3*i] + inducedDipoleVec[3*i];
+            totalDipoleVecY = posqVec[i].y * posqVec[i].w + labDipoleVec[3*i+1] + inducedDipoleVec[3*i+1];
+            totalDipoleVecZ = posqVec[i].z * posqVec[i].w + labDipoleVec[3*i+2] + inducedDipoleVec[3*i+2];
+            dipoles[order[i]] = Vec3(totalDipoleVecX, totalDipoleVecY, totalDipoleVecZ);
         }
     }
     else {
         vector<float4> posqVec;
         vector<float> labDipoleVec;
         vector<float> inducedDipoleVec;
-        vector<float> totalDipoleVecX(numParticles);
-        vector<float> totalDipoleVecY(numParticles);
-        vector<float> totalDipoleVecZ(numParticles);
+        float totalDipoleVecX;
+        float totalDipoleVecY;
+        float totalDipoleVecZ;
         inducedDipole->download(inducedDipoleVec);
         labFrameDipoles->download(labDipoleVec);
         cu.getPosq().download(posqVec);
         for (int i = 0; i < numParticles; i++) {
-            totalDipoleVecX[i] = posqVec[i].x * posqVec[i].w + labDipoleVec[3*i] + inducedDipoleVec[3*i];
-            totalDipoleVecY[i] = posqVec[i].y * posqVec[i].w + labDipoleVec[3*i+1] + inducedDipoleVec[3*i+1];
-            totalDipoleVecZ[i] = posqVec[i].z * posqVec[i].w + labDipoleVec[3*i+2] + inducedDipoleVec[3*i+2];
-            dipoles[order[i]] = Vec3(totalDipoleVecX[i], totalDipoleVecY[i], totalDipoleVecZ[i]);
+            totalDipoleVecX = posqVec[i].x * posqVec[i].w + labDipoleVec[3*i] + inducedDipoleVec[3*i];
+            totalDipoleVecY = posqVec[i].y * posqVec[i].w + labDipoleVec[3*i+1] + inducedDipoleVec[3*i+1];
+            totalDipoleVecZ = posqVec[i].z * posqVec[i].w + labDipoleVec[3*i+2] + inducedDipoleVec[3*i+2];
+            dipoles[order[i]] = Vec3(totalDipoleVecX, totalDipoleVecY, totalDipoleVecZ);
         }
     }
 }

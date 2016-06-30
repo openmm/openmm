@@ -674,13 +674,6 @@ protected:
             RealOpenMM quadrupole[6];
             RealVec sphericalDipole;
             RealOpenMM sphericalQuadrupole[5];
-            RealOpenMM thole;
-            RealOpenMM dampingFactor;
-            RealOpenMM polarity;
-
-            std::vector<RealOpenMM> xDipoleTraj;
-            std::vector<RealOpenMM> yDipoleTraj;
-            std::vector<RealOpenMM> zDipoleTraj;
     };
     
     /**
@@ -720,10 +713,6 @@ protected:
     RealOpenMM _uScale[5];
 
     std::vector<TransformedMultipole> _transformed;
-    std::vector<RealVec> _fixedMultipoleField;
-    std::vector<RealVec> _fixedMultipoleFieldPolar;
-    std::vector<RealVec> _inducedDipole;
-    std::vector<RealVec> _labFramePermanentDipole;
     std::vector<RealVec> _inducedDipolePolar;
 
     int _mutualInducedDipoleConverged;
@@ -1048,13 +1037,6 @@ protected:
      */
     virtual void calculateInducedDipoles(const std::vector<MultipoleParticleData>& particleData);
 
-    /*
-     * Calculate permanent dipoles rotated in the lab frame.
-     * 
-     * @param particleData      vector of particle positions and parameters (charge, labFrame dipoles, quadrupoles, ...)
-     */
- //   virtual void calculateLabFramePermanentDipoles(const std::vector<MultipoleParticleData>& particleData);
-
     /**
      * Setup: 
      *        if needed invert multipole moments at chiral centers
@@ -1302,13 +1284,6 @@ private:
      * @param particleData      vector of particle positions and parameters (charge, labFrame dipoles, quadrupoles, ...)
      */
     void calculateInducedDipoles(const std::vector<MultipoleParticleData>& particleData);
-
-    /*
-     * Calculate fixed dipoles rotated in the lab frame.
-     * 
-     * @param particleData      vector of particle positions and parameters (charge, labFrame dipoles, quadrupoles, ...)
-     */
- //   void calculateLabFramePermanentDipoles(const std::vector<MultipoleParticleData>& particleData);
 
     /**
      * Calculate fields due induced dipoles at each site.
