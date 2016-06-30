@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors:                                                                   *
  * Contributors:                                                              *
  *                                                                            *
@@ -594,9 +594,9 @@ void ReferenceCalcAmoebaMultipoleForceKernel::initialize(const System& system, c
     nonbondedMethod  = force.getNonbondedMethod();
     if (nonbondedMethod == AmoebaMultipoleForce::PME) {
         usePme     = true;
-        alphaEwald = force.getAEwald();
+        pmeGridDimension.resize(3);
+        force.getPMEParameters(alphaEwald, pmeGridDimension[0], pmeGridDimension[1], pmeGridDimension[2]);
         cutoffDistance = force.getCutoffDistance();
-        force.getPmeGridDimensions(pmeGridDimension);
         if (pmeGridDimension[0] == 0 || alphaEwald == 0.0) {
             NonbondedForce nb;
             nb.setEwaldErrorTolerance(force.getEwaldErrorTolerance());
@@ -996,7 +996,7 @@ void ReferenceCalcAmoebaVdwForceKernel::initialize(const System& system, const A
     epsilonCombiningRule   = force.getEpsilonCombiningRule();
     useCutoff              = (force.getNonbondedMethod() != AmoebaVdwForce::NoCutoff);
     usePBC                 = (force.getNonbondedMethod() == AmoebaVdwForce::CutoffPeriodic);
-    cutoff                 = force.getCutoff();
+    cutoff                 = force.getCutoffDistance();
     neighborList           = useCutoff ? new NeighborList() : NULL;
     dispersionCoefficient  = force.getUseDispersionCorrection() ?  AmoebaVdwForceImpl::calcDispersionCorrection(system, force) : 0.0;
 

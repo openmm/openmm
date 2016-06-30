@@ -116,11 +116,8 @@ void testSerialization() {
     ASSERT_EQUAL(force1.getCutoffDistance(),                force2.getCutoffDistance());
     ASSERT_EQUAL(force1.getNonbondedMethod(),               force2.getNonbondedMethod());
     ASSERT_EQUAL(force1.getAEwald(),                        force2.getAEwald());
-    //ASSERT_EQUAL(force1.getPmeBSplineOrder(),               force2.getPmeBSplineOrder());
-    //ASSERT_EQUAL(force1.getMutualInducedIterationMethod(),  force2.getMutualInducedIterationMethod());
     ASSERT_EQUAL(force1.getMutualInducedMaxIterations(),    force2.getMutualInducedMaxIterations());
     ASSERT_EQUAL(force1.getMutualInducedTargetEpsilon(),    force2.getMutualInducedTargetEpsilon());
-    //ASSERT_EQUAL(force1.getElectricConstant(),              force2.getElectricConstant());
     ASSERT_EQUAL(force1.getEwaldErrorTolerance(),           force2.getEwaldErrorTolerance());
 
 

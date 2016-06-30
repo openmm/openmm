@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Mark Friedrichs, Peter Eastman                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -184,12 +184,33 @@ public:
     void getParticleExclusions(int particleIndex, std::vector<int>& exclusions) const;
 
     /**
+     * Get the cutoff distance (in nm) being used for nonbonded interactions.  If the NonbondedMethod in use
+     * is NoCutoff, this value will have no effect.
+     *
+     * @return the cutoff distance, measured in nm
+     */
+
+    double getCutoffDistance() const;
+    
+    /**
+     * Set the cutoff distance (in nm) being used for nonbonded interactions.  If the NonbondedMethod in use
+     * is NoCutoff, this value will have no effect.
+     *
+     * @param distance    the cutoff distance, measured in nm
+     */
+    void setCutoffDistance(double distance);
+
+    /**
      * Set the cutoff distance.
+     * 
+     * @deprecated This method exists only for backward compatibility.  Use setCutoffDistance() instead.
      */
     void setCutoff(double cutoff);
 
     /**
      * Get the cutoff distance.
+     * 
+     * @deprecated This method exists only for backward compatibility.  Use getCutoffDistance() instead.
      */
     double getCutoff() const;
 

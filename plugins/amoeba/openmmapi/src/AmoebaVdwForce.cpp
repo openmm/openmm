@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors:                                                                   *
  * Contributors:                                                              *
  *                                                                            *
@@ -102,12 +102,20 @@ void AmoebaVdwForce::getParticleExclusions(int particleIndex, std::vector< int >
 
 }
 
-void AmoebaVdwForce::setCutoff(double inputCutoff) {
+double AmoebaVdwForce::getCutoffDistance() const {
+    return cutoff;
+}
+
+void AmoebaVdwForce::setCutoffDistance(double inputCutoff) {
     cutoff = inputCutoff;
 }
 
+void AmoebaVdwForce::setCutoff(double inputCutoff) {
+    setCutoffDistance(inputCutoff);
+}
+
 double AmoebaVdwForce::getCutoff() const {
-    return cutoff;
+    return getCutoffDistance();
 }
 
 AmoebaVdwForce::NonbondedMethod AmoebaVdwForce::getNonbondedMethod() const {
