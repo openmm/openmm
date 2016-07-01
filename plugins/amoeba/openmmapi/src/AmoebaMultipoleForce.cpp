@@ -117,7 +117,6 @@ void AmoebaMultipoleForce::setPmeGridDimensions(const std::vector<int>& gridDime
     nx = gridDimension[0];
     ny = gridDimension[1];
     nz = gridDimension[2];
->>>>>>> upstream/master
 }
 
 void AmoebaMultipoleForce::getPMEParametersInContext(const Context& context, double& alpha, int& nx, int& ny, int& nz) const {
