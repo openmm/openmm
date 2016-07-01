@@ -369,8 +369,8 @@ public:
      * Get the donor and acceptor in a pair whose interaction should be excluded.
      *
      * @param index           the index of the exclusion for which to get donor and acceptor indices
-     * @param[out] particle1  the index of the donor
-     * @param[out] particle2  the index of the acceptor
+     * @param[out] donor      the index of the donor
+     * @param[out] acceptor   the index of the acceptor
      */
     void getExclusionParticles(int index, int& donor, int& acceptor) const;
     /**

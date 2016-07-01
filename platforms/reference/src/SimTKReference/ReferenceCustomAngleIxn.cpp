@@ -1,4 +1,4 @@
-/* Portions copyright (c) 2010-2013 Stanford University and Simbios.
+/* Portions copyright (c) 2010-2016 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -39,7 +39,7 @@ using namespace std;
 
 ReferenceCustomAngleIxn::ReferenceCustomAngleIxn(const Lepton::CompiledExpression& energyExpression,
         const Lepton::CompiledExpression& forceExpression, const vector<string>& parameterNames, map<string, double> globalParameters) :
-        energyExpression(energyExpression), forceExpression(forceExpression) {
+        energyExpression(energyExpression), forceExpression(forceExpression), usePeriodic(false) {
     
     energyTheta = ReferenceForce::getVariablePointer(this->energyExpression, "theta");
     forceTheta = ReferenceForce::getVariablePointer(this->forceExpression, "theta");
@@ -61,13 +61,13 @@ ReferenceCustomAngleIxn::ReferenceCustomAngleIxn(const Lepton::CompiledExpressio
    --------------------------------------------------------------------------------------- */
 
 ReferenceCustomAngleIxn::~ReferenceCustomAngleIxn() {
+}
 
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceCustomAngleIxn::~ReferenceCustomAngleIxn";
-
-   // ---------------------------------------------------------------------------------------
-
+void ReferenceCustomAngleIxn::setPeriodic(OpenMM::RealVec* vectors) {
+    usePeriodic = true;
+    boxVectors[0] = vectors[0];
+    boxVectors[1] = vectors[1];
+    boxVectors[2] = vectors[2];
 }
 
 /**---------------------------------------------------------------------------------------
@@ -106,8 +106,14 @@ void ReferenceCustomAngleIxn::calculateBondIxn(int* atomIndices,
    int atomAIndex = atomIndices[0];
    int atomBIndex = atomIndices[1];
    int atomCIndex = atomIndices[2];
-   ReferenceForce::getDeltaR(atomCoordinates[atomAIndex], atomCoordinates[atomBIndex], deltaR[0]);
-   ReferenceForce::getDeltaR(atomCoordinates[atomCIndex], atomCoordinates[atomBIndex], deltaR[1]);
+   if (usePeriodic) {
+      ReferenceForce::getDeltaRPeriodic(atomCoordinates[atomAIndex], atomCoordinates[atomBIndex], boxVectors, deltaR[0]);
+      ReferenceForce::getDeltaRPeriodic(atomCoordinates[atomCIndex], atomCoordinates[atomBIndex], boxVectors, deltaR[1]);
+   }
+   else {
+      ReferenceForce::getDeltaR(atomCoordinates[atomAIndex], atomCoordinates[atomBIndex], deltaR[0]);
+      ReferenceForce::getDeltaR(atomCoordinates[atomCIndex], atomCoordinates[atomBIndex], deltaR[1]);
+   }
    RealOpenMM pVector[3];
    SimTKOpenMMUtilities::crossProductVector3(deltaR[0], deltaR[1], pVector);
    RealOpenMM rp = SQRT(DOT3(pVector, pVector));

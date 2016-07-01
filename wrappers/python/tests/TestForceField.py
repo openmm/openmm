@@ -6,16 +6,18 @@ from simtk.unit import *
 import simtk.openmm.app.element as elem
 import simtk.openmm.app.forcefield as forcefield
 import math
-if sys.version_info >= (3, 0):
-    from io import StringIO
-else:
+try:
     from cStringIO import StringIO
+except ImportError:
+    from io import StringIO
+import os
+import warnings
 
 class TestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method."""
- 
+
     def setUp(self):
-        """Set up the tests by loading the input pdb files and force field 
+        """Set up the tests by loading the input pdb files and force field
         xml files.
 
         """
@@ -33,16 +35,16 @@ class TestForceField(unittest.TestCase):
     def test_NonbondedMethod(self):
         """Test all five options for the nonbondedMethod parameter."""
 
-        methodMap = {NoCutoff:NonbondedForce.NoCutoff, 
-                     CutoffNonPeriodic:NonbondedForce.CutoffNonPeriodic, 
-                     CutoffPeriodic:NonbondedForce.CutoffPeriodic, 
+        methodMap = {NoCutoff:NonbondedForce.NoCutoff,
+                     CutoffNonPeriodic:NonbondedForce.CutoffNonPeriodic,
+                     CutoffPeriodic:NonbondedForce.CutoffPeriodic,
                      Ewald:NonbondedForce.Ewald, PME: NonbondedForce.PME}
         for method in methodMap:
             system = self.forcefield1.createSystem(self.pdb1.topology,
                                                   nonbondedMethod=method)
             forces = system.getForces()
-            self.assertTrue(any(isinstance(f, NonbondedForce) and 
-                                f.getNonbondedMethod()==methodMap[method] 
+            self.assertTrue(any(isinstance(f, NonbondedForce) and
+                                f.getNonbondedMethod()==methodMap[method]
                                 for f in forces))
 
     def test_DispersionCorrection(self):
@@ -50,7 +52,7 @@ class TestForceField(unittest.TestCase):
 
         for useDispersionCorrection in [True, False]:
             system = self.forcefield1.createSystem(self.pdb1.topology,
-                                                   nonbondedCutoff=2*nanometer, 
+                                                   nonbondedCutoff=2*nanometer,
                                                    useDispersionCorrection=useDispersionCorrection)
 
             for force in system.getForces():
@@ -62,8 +64,8 @@ class TestForceField(unittest.TestCase):
 
         for method in [CutoffNonPeriodic, CutoffPeriodic, Ewald, PME]:
             system = self.forcefield1.createSystem(self.pdb1.topology,
-                                                   nonbondedMethod=method, 
-                                                   nonbondedCutoff=2*nanometer, 
+                                                   nonbondedMethod=method,
+                                                   nonbondedCutoff=2*nanometer,
                                                    constraints=HBonds)
             cutoff_distance = 0.0*nanometer
             cutoff_check = 2.0*nanometer
@@ -81,29 +83,29 @@ class TestForceField(unittest.TestCase):
 
     def test_RigidWaterAndConstraints(self):
         """Test all eight options for the constraints and rigidWater parameters."""
-        
+
         topology = self.pdb1.topology
         for constraints_value in [None, HBonds, AllBonds, HAngles]:
             for rigidWater_value in [True, False]:
                 system = self.forcefield1.createSystem(topology,
-                                                       constraints=constraints_value, 
+                                                       constraints=constraints_value,
                                                        rigidWater=rigidWater_value)
-                validateConstraints(self, topology, system, 
+                validateConstraints(self, topology, system,
                                     constraints_value, rigidWater_value)
 
     def test_ImplicitSolvent(self):
-        """Test the four types of implicit solvents using the implicitSolvent 
+        """Test the four types of implicit solvents using the implicitSolvent
         parameter.
 
         """
-        
-        topology = self.pdb2.topology 
+
+        topology = self.pdb2.topology
         system = self.forcefield2.createSystem(topology)
         forces = system.getForces()
         self.assertTrue(any(isinstance(f, GBSAOBCForce) for f in forces))
 
     def test_ImplicitSolventParameters(self):
-        """Test that solventDielectric and soluteDielectric are passed correctly 
+        """Test that solventDielectric and soluteDielectric are passed correctly
         for the different types of implicit solvent.
 
         """
@@ -121,12 +123,12 @@ class TestForceField(unittest.TestCase):
                     found_matching_solute_dielectric = True
             if isinstance(force, NonbondedForce):
                 self.assertEqual(force.getReactionFieldDielectric(), 1.0)
-        self.assertTrue(found_matching_solvent_dielectric and 
+        self.assertTrue(found_matching_solvent_dielectric and
                         found_matching_solute_dielectric)
 
     def test_HydrogenMass(self):
         """Test that altering the mass of hydrogens works correctly."""
-        
+
         topology = self.pdb1.topology
         hydrogenMass = 4*amu
         system1 = self.forcefield1.createSystem(topology)
@@ -138,10 +140,10 @@ class TestForceField(unittest.TestCase):
         totalMass1 = sum([system1.getParticleMass(i) for i in range(system1.getNumParticles())]).value_in_unit(amu)
         totalMass2 = sum([system2.getParticleMass(i) for i in range(system2.getNumParticles())]).value_in_unit(amu)
         self.assertAlmostEqual(totalMass1, totalMass2)
-    
+
     def test_Forces(self):
         """Compute forces and compare them to ones generated with a previous version of OpenMM to ensure they haven't changed."""
-        
+
         pdb = PDBFile('systems/lysozyme-implicit.pdb')
         system = self.forcefield2.createSystem(pdb.topology)
         integrator = VerletIntegrator(0.001)
@@ -156,10 +158,10 @@ class TestForceField(unittest.TestCase):
             if diff > 0.1 and diff/norm(f1) > 1e-3:
                 numDifferences += 1
         self.assertTrue(numDifferences < system.getNumParticles()/20) # Tolerate occasional differences from numerical error
-    
+
     def test_ProgrammaticForceField(self):
         """Test building a ForceField programmatically."""
-        
+
         # Build the ForceField for TIP3P programmatically.
         ff = ForceField()
         ff.registerAtomType({'name':'tip3p-O', 'class':'OW', 'mass':15.99943*daltons, 'element':elem.oxygen})
@@ -181,11 +183,11 @@ class TestForceField(unittest.TestCase):
         nonbonded.registerAtom({'type':'tip3p-O', 'charge':-0.834, 'sigma':0.31507524065751241*nanometers, 'epsilon':0.635968*kilojoules_per_mole})
         nonbonded.registerAtom({'type':'tip3p-H', 'charge':0.417, 'sigma':1*nanometers, 'epsilon':0*kilojoules_per_mole})
         ff.registerGenerator(nonbonded)
-        
+
         # Build a water box.
         modeller = Modeller(Topology(), [])
         modeller.addSolvent(ff, boxSize=Vec3(3, 3, 3)*nanometers)
-        
+
         # Create a system using the programmatic force field as well as one from an XML file.
         system1 = ff.createSystem(modeller.topology)
         ff2 = ForceField('tip3p.xml')
@@ -248,11 +250,509 @@ class TestForceField(unittest.TestCase):
                 self.assertEqual(params[1], 1.0*nanometers)
                 self.assertEqual(params[2], 0.0*kilojoule_per_mole)
 
+    def test_residueTemplateGenerator(self):
+        """Test the ability to add residue template generators to parameterize unmatched residues."""
+        def simpleTemplateGenerator(forcefield, residue):
+            """\
+            Simple residue template generator.
+            This implementation uses the programmatic API to define residue templates.
+
+            NOTE: We presume we have already loaded the force definitions into ForceField.
+            """
+            # Generate a unique prefix name for generating parameters.
+            from uuid import uuid4
+            template_name = uuid4()
+            # Create residue template.
+            from simtk.openmm.app.forcefield import _createResidueTemplate
+            template = _createResidueTemplate(residue) # use helper function
+            template.name = template_name # replace template name
+            for (template_atom, residue_atom) in zip(template.atoms, residue.atoms()):
+                template_atom.type = 'XXX' # replace atom type
+            # Register the template.
+            forcefield.registerResidueTemplate(template)
+
+            # Signal that we have successfully parameterized the residue.
+            return True
+
+        # Define forcefield parameters used by simpleTemplateGenerator.
+        # NOTE: This parameter definition file will currently only work for residues that either have
+        # no external bonds or external bonds to other residues parameterized by the simpleTemplateGenerator.
+        simple_ffxml_contents = """
+<ForceField>
+ <AtomTypes>
+  <Type name="XXX" class="XXX" element="C" mass="12.0"/>
+ </AtomTypes>
+ <HarmonicBondForce>
+  <Bond type1="XXX" type2="XXX" length="0.1409" k="392459.2"/>
+ </HarmonicBondForce>
+ <HarmonicAngleForce>
+  <Angle type1="XXX" type2="XXX" type3="XXX" angle="2.09439510239" k="527.184"/>
+ </HarmonicAngleForce>
+ <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5">
+  <Atom type="XXX" charge="0.000" sigma="0.315" epsilon="0.635"/>
+ </NonbondedForce>
+</ForceField>"""
+
+        #
+        # Test where we generate parameters for only a ligand.
+        #
+
+        # Load the PDB file.
+        pdb = PDBFile(os.path.join('systems', 'T4-lysozyme-L99A-p-xylene-implicit.pdb'))
+        # Create a ForceField object.
+        forcefield = ForceField('amber99sb.xml', 'tip3p.xml', StringIO(simple_ffxml_contents))
+        # Add the residue template generator.
+        forcefield.registerTemplateGenerator(simpleTemplateGenerator)
+        # Parameterize system.
+        system = forcefield.createSystem(pdb.topology, nonbondedMethod=NoCutoff)
+        # TODO: Test energies are finite?
+
+        #
+        # Test for a few systems where we generate all parameters.
+        #
+
+        tests = [
+            { 'pdb_filename' : 'alanine-dipeptide-implicit.pdb', 'nonbondedMethod' : NoCutoff },
+            { 'pdb_filename' : 'lysozyme-implicit.pdb', 'nonbondedMethod' : NoCutoff },
+            { 'pdb_filename' : 'alanine-dipeptide-explicit.pdb', 'nonbondedMethod' : CutoffPeriodic },
+            ]
+
+        # Test all systems with separate ForceField objects.
+        for test in tests:
+            # Load the PDB file.
+            pdb = PDBFile(os.path.join('systems', test['pdb_filename']))
+            # Create a ForceField object.
+            forcefield = ForceField(StringIO(simple_ffxml_contents))
+            # Add the residue template generator.
+            forcefield.registerTemplateGenerator(simpleTemplateGenerator)
+            # Parameterize system.
+            system = forcefield.createSystem(pdb.topology, nonbondedMethod=test['nonbondedMethod'])
+            # TODO: Test energies are finite?
+
+        # Now test all systems with a single ForceField object.
+        # Create a ForceField object.
+        forcefield = ForceField(StringIO(simple_ffxml_contents))
+        # Add the residue template generator.
+        forcefield.registerTemplateGenerator(simpleTemplateGenerator)
+        for test in tests:
+            # Load the PDB file.
+            pdb = PDBFile(os.path.join('systems', test['pdb_filename']))
+            # Parameterize system.
+            system = forcefield.createSystem(pdb.topology, nonbondedMethod=test['nonbondedMethod'])
+            # TODO: Test energies are finite?
+
+    def test_getUnmatchedResidues(self):
+        """Test retrieval of list of residues for which no templates are available."""
+
+        # Load the PDB file.
+        pdb = PDBFile(os.path.join('systems', 'T4-lysozyme-L99A-p-xylene-implicit.pdb'))
+        # Create a ForceField object.
+        forcefield = ForceField('amber99sb.xml', 'tip3p.xml')
+        # Get list of unmatched residues.
+        unmatched_residues = forcefield.getUnmatchedResidues(pdb.topology)
+        # Check results.
+        self.assertEqual(len(unmatched_residues), 1)
+        self.assertEqual(unmatched_residues[0].name, 'TMP')
+        self.assertEqual(unmatched_residues[0].id, '163')
+
+        # Load the PDB file.
+        pdb = PDBFile(os.path.join('systems', 'ala_ala_ala.pdb'))
+        # Create a ForceField object.
+        forcefield = ForceField('tip3p.xml')
+        # Get list of unmatched residues.
+        unmatched_residues = forcefield.getUnmatchedResidues(pdb.topology)
+        # Check results.
+        self.assertEqual(len(unmatched_residues), 3)
+        self.assertEqual(unmatched_residues[0].name, 'ALA')
+        self.assertEqual(unmatched_residues[0].chain.id, 'X')
+        self.assertEqual(unmatched_residues[0].id, '1')
+
+    def test_ggenerateTemplatesForUnmatchedResidues(self):
+        """Test generation of blank forcefield residue templates for unmatched residues."""
+        #
+        # Test where we generate parameters for only a ligand.
+        #
+
+        # Load the PDB file.
+        pdb = PDBFile(os.path.join('systems', 'nacl-water.pdb'))
+        # Create a ForceField object.
+        forcefield = ForceField('tip3p.xml')
+        # Get list of unmatched residues.
+        unmatched_residues = forcefield.getUnmatchedResidues(pdb.topology)
+        [templates, residues] = forcefield.generateTemplatesForUnmatchedResidues(pdb.topology)
+        # Check results.
+        self.assertEqual(len(unmatched_residues), 24)
+        self.assertEqual(len(residues), 2)
+        self.assertEqual(len(templates), 2)
+        unique_names = set([ residue.name for residue in residues ])
+        self.assertTrue('HOH' not in unique_names)
+        self.assertTrue('NA' in unique_names)
+        self.assertTrue('CL' in unique_names)
+        template_names = set([ template.name for template in templates ])
+        self.assertTrue('HOH' not in template_names)
+        self.assertTrue('NA' in template_names)
+        self.assertTrue('CL' in template_names)
+
+        # Define forcefield parameters using returned templates.
+        # NOTE: This parameter definition file will currently only work for residues that either have
+        # no external bonds or external bonds to other residues parameterized by the simpleTemplateGenerator.
+        simple_ffxml_contents = """
+<ForceField>
+ <AtomTypes>
+  <Type name="XXX" class="XXX" element="C" mass="12.0"/>
+ </AtomTypes>
+ <HarmonicBondForce>
+  <Bond type1="XXX" type2="XXX" length="0.1409" k="392459.2"/>
+ </HarmonicBondForce>
+ <HarmonicAngleForce>
+  <Angle type1="XXX" type2="XXX" type3="XXX" angle="2.09439510239" k="527.184"/>
+ </HarmonicAngleForce>
+ <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5">
+  <Atom type="XXX" charge="0.000" sigma="0.315" epsilon="0.635"/>
+ </NonbondedForce>
+</ForceField>"""
+
+        #
+        # Test the pre-geenration of missing residue template for a ligand.
+        #
+
+        # Load the PDB file.
+        pdb = PDBFile(os.path.join('systems', 'T4-lysozyme-L99A-p-xylene-implicit.pdb'))
+        # Create a ForceField object.
+        forcefield = ForceField('amber99sb.xml', 'tip3p.xml', StringIO(simple_ffxml_contents))
+        # Get list of unique unmatched residues.
+        [templates, residues] = forcefield.generateTemplatesForUnmatchedResidues(pdb.topology)
+        # Add residue templates to forcefield.
+        for template in templates:
+            # Replace atom types.
+            for atom in template.atoms:
+                atom.type = 'XXX'
+            # Register the template.
+            forcefield.registerResidueTemplate(template)
+        # Parameterize system.
+        system = forcefield.createSystem(pdb.topology, nonbondedMethod=NoCutoff)
+        # TODO: Test energies are finite?
+
+    def test_getMatchingTemplates(self):
+        """Test retrieval of list of templates that match residues in a topology."""
+
+        # Load the PDB file.
+        pdb = PDBFile(os.path.join('systems', 'ala_ala_ala.pdb'))
+        # Create a ForceField object.
+        forcefield = ForceField('amber99sb.xml')
+        # Get list of matching residue templates.
+        templates = forcefield.getMatchingTemplates(pdb.topology)
+        # Check results.
+        residues = [ residue for residue in pdb.topology.residues() ]
+        self.assertEqual(len(templates), len(residues))
+        self.assertEqual(templates[0].name, 'NALA')
+        self.assertEqual(templates[1].name, 'ALA')
+        self.assertEqual(templates[2].name, 'CALA')
+
+    def test_Wildcard(self):
+        """Test that PeriodicTorsionForces using wildcard ('') for atom types / classes in the ffxml are correctly registered"""
+
+        # Use wildcards in types
+        xml = """
+<ForceField>
+ <AtomTypes>
+  <Type name="C" class="C" element="C" mass="12.010000"/>
+  <Type name="O" class="O" element="O" mass="16.000000"/>
+ </AtomTypes>
+ <PeriodicTorsionForce>
+  <Proper type1="" type2="C" type3="C" type4="" periodicity1="2" phase1="3.141593" k1="15.167000"/>
+  <Improper type1="C" type2="" type3="" type4="O" periodicity1="2" phase1="3.141593" k1="43.932000"/>
+ </PeriodicTorsionForce>
+</ForceField>"""
+
+        ff = ForceField(StringIO(xml))
+
+        self.assertEqual(len(ff._forces[0].proper), 1)
+        self.assertEqual(len(ff._forces[0].improper), 1)
+
+       # Use wildcards in classes
+        xml = """
+<ForceField>
+ <AtomTypes>
+  <Type name="C" class="C" element="C" mass="12.010000"/>
+  <Type name="O" class="O" element="O" mass="16.000000"/>
+ </AtomTypes>
+ <PeriodicTorsionForce>
+  <Proper class1="" class2="C" class3="C" class4="" periodicity1="2" phase1="3.141593" k1="15.167000"/>
+  <Improper class1="C" class2="" class3="" class4="O" periodicity1="2" phase1="3.141593" k1="43.932000"/>
+ </PeriodicTorsionForce>
+</ForceField>"""
+
+        ff = ForceField(StringIO(xml))
+
+        self.assertEqual(len(ff._forces[0].proper), 1)
+        self.assertEqual(len(ff._forces[0].improper), 1)
+
+    def test_ScalingFactorCombining(self):
+        """ Tests that FFs can be combined if their scaling factors are very close """
+        forcefield = ForceField('amber99sb.xml', os.path.join('systems', 'test_amber_ff.xml'))
+        # This would raise an exception if it didn't work
+
+    def test_MultipleFilesandForceTags(self):
+        """Test that the order of listing of multiple ffxmls does not matter.
+           Tests that one generator per force type is created and that the ffxml
+           defining atom types does not have to be listed first"""
+
+        ffxml = """<ForceField>
+ <Residues>
+  <Residue name="ACE-Test">
+   <Atom name="HH31" type="710"/>
+   <Atom name="CH3" type="711"/>
+   <Atom name="HH32" type="710"/>
+   <Atom name="HH33" type="710"/>
+   <Atom name="C" type="712"/>
+   <Atom name="O" type="713"/>
+   <Bond from="0" to="1"/>
+   <Bond from="1" to="2"/>
+   <Bond from="1" to="3"/>
+   <Bond from="1" to="4"/>
+   <Bond from="4" to="5"/>
+   <ExternalBond from="4"/>
+  </Residue>
+ </Residues>
+ <PeriodicTorsionForce>
+  <Proper class1="C" class2="C" class3="C" class4="C" periodicity1="2" phase1="3.14159265359" k1="10.46"/>
+  <Improper class1="C" class2="C" class3="C" class4="C" periodicity1="2" phase1="3.14159265359" k1="43.932"/>
+ </PeriodicTorsionForce>
+</ForceField>"""
+
+        ff1 = ForceField(StringIO(ffxml), 'amber99sbildn.xml')
+        ff2 = ForceField('amber99sbildn.xml', StringIO(ffxml))
+
+        self.assertEqual(len(ff1._forces), 4)
+        self.assertEqual(len(ff2._forces), 4)
+
+        pertorsion1 = ff1._forces[0]
+        pertorsion2 = ff2._forces[2]
+
+        self.assertEqual(len(pertorsion1.proper), 110)
+        self.assertEqual(len(pertorsion1.improper), 42)
+        self.assertEqual(len(pertorsion2.proper), 110)
+        self.assertEqual(len(pertorsion2.improper), 42)
+
+    def test_ResidueTemplateUserChoice(self):
+        """Test createSystem does not allow multiple matching templates, unless
+           user has specified which template to use via residueTemplates arg"""
+        ffxml = """<ForceField>
+ <AtomTypes>
+  <Type name="Fe2+" class="Fe2+" element="Fe" mass="55.85"/>
+  <Type name="Fe3+" class="Fe3+" element="Fe" mass="55.85"/>
+ </AtomTypes>
+ <Residues>
+  <Residue name="FE2">
+   <Atom name="FE2" type="Fe2+" charge="2.0"/>
+  </Residue>
+  <Residue name="FE">
+   <Atom name="FE" type="Fe3+" charge="3.0"/>
+  </Residue>
+ </Residues>
+ <NonbondedForce coulomb14scale="0.833333333333" lj14scale="0.5">
+  <UseAttributeFromResidue name="charge"/>
+  <Atom type="Fe2+" sigma="0.227535532613" epsilon="0.0150312292"/>
+  <Atom type="Fe3+" sigma="0.192790482606" epsilon="0.00046095128"/>
+ </NonbondedForce>
+</ForceField>"""
+
+        pdb_string = "ATOM      1 FE    FE A   1      20.956  27.448 -29.067  1.00  0.00          Fe"
+        ff = ForceField(StringIO(ffxml))
+        pdb = PDBFile(StringIO(pdb_string))
+
+        self.assertRaises(Exception, lambda: ff.createSystem(pdb.topology))
+        sys = ff.createSystem(pdb.topology, residueTemplates={list(pdb.topology.residues())[0] : 'FE2'})
+        # confirm charge
+        self.assertEqual(sys.getForce(0).getParticleParameters(0)[0]._value, 2.0)
+        sys = ff.createSystem(pdb.topology, residueTemplates={list(pdb.topology.residues())[0] : 'FE'})
+        # confirm charge
+        self.assertEqual(sys.getForce(0).getParticleParameters(0)[0]._value, 3.0)
+
+    def test_ResidueOverriding(self):
+        """Test residue overriding via override tag in the XML"""
+
+        ffxml1 = """<ForceField>
+ <AtomTypes>
+  <Type name="Fe2+_tip3p_HFE" class="Fe2+_tip3p_HFE" element="Fe" mass="55.85"/>
+ </AtomTypes>
+ <Residues>
+  <Residue name="FE2">
+   <Atom name="FE2" type="Fe2+_tip3p_HFE" charge="2.0"/>
+  </Residue>
+ </Residues>
+ <NonbondedForce coulomb14scale="0.833333333333" lj14scale="0.5">
+  <UseAttributeFromResidue name="charge"/>
+  <Atom type="Fe2+_tip3p_HFE" sigma="0.227535532613" epsilon="0.0150312292"/>
+ </NonbondedForce>
+</ForceField>"""
+
+        ffxml2 = """<ForceField>
+ <AtomTypes>
+  <Type name="Fe2+_tip3p_standard" class="Fe2+_tip3p_standard" element="Fe" mass="55.85"/>
+ </AtomTypes>
+ <Residues>
+  <Residue name="FE2">
+   <Atom name="FE2" type="Fe2+_tip3p_standard" charge="2.0"/>
+  </Residue>
+ </Residues>
+ <NonbondedForce coulomb14scale="0.833333333333" lj14scale="0.5">
+  <UseAttributeFromResidue name="charge"/>
+  <Atom type="Fe2+_tip3p_standard" sigma="0.241077193129" epsilon="0.03940482832"/>
+ </NonbondedForce>
+</ForceField>"""
+
+        ffxml3 = """<ForceField>
+ <AtomTypes>
+  <Type name="Fe2+_tip3p_standard" class="Fe2+_tip3p_standard" element="Fe" mass="55.85"/>
+ </AtomTypes>
+ <Residues>
+  <Residue name="FE2" override="1">
+   <Atom name="FE2" type="Fe2+_tip3p_standard" charge="2.0"/>
+  </Residue>
+ </Residues>
+ <NonbondedForce coulomb14scale="0.833333333333" lj14scale="0.5">
+  <UseAttributeFromResidue name="charge"/>
+  <Atom type="Fe2+_tip3p_standard" sigma="0.241077193129" epsilon="0.03940482832"/>
+ </NonbondedForce>
+</ForceField>"""
+
+        pdb_string = "ATOM      1 FE    FE A   1      20.956  27.448 -29.067  1.00  0.00          Fe"
+        pdb = PDBFile(StringIO(pdb_string))
+
+        self.assertRaises(Exception, lambda: ForceField(StringIO(ffxml1), StringIO(ffxml2)))
+        ff = ForceField(StringIO(ffxml1), StringIO(ffxml3))
+        self.assertEqual(ff._templates['FE2'].atoms[0].type, 'Fe2+_tip3p_standard')
+        ff.createSystem(pdb.topology)
+
+    def test_LennardJonesGenerator(self):
+        """ Test the LennardJones generator"""
+        warnings.filterwarnings('ignore', category=CharmmPSFWarning)
+        psf = CharmmPsfFile('systems/ions.psf')
+        pdb = PDBFile('systems/ions.pdb')
+        params = CharmmParameterSet('systems/toppar_water_ions.str'
+                                    )
+
+        # Box dimensions (found from bounding box)
+        psf.setBox(12.009*angstroms,   12.338*angstroms,   11.510*angstroms)
+
+        # Turn off charges so we only test the Lennard-Jones energies
+        for a in psf.atom_list:
+            a.charge = 0.0
+
+        # Now compute the full energy
+        plat = Platform.getPlatformByName('Reference')
+        system = psf.createSystem(params, nonbondedMethod=PME,
+                                  nonbondedCutoff=5*angstroms)
+
+        con = Context(system, VerletIntegrator(2*femtoseconds), plat)
+        con.setPositions(pdb.positions)
+
+        # Now set up system from ffxml.
+        xml = """
+<ForceField>
+ <AtomTypes>
+  <Type name="SOD" class="SOD" element="Na" mass="22.98977"/>
+  <Type name="CLA" class="CLA" element="Cl" mass="35.45"/>
+ </AtomTypes>
+ <Residues>
+  <Residue name="CLA">
+   <Atom name="CLA" type="CLA"/>
+  </Residue>
+  <Residue name="SOD">
+   <Atom name="SOD" type="SOD"/>
+  </Residue>
+ </Residues>
+ <LennardJonesForce lj14scale="1.0">
+  <Atom type="CLA" sigma="0.404468018036" epsilon="0.6276"/>
+  <Atom type="SOD" sigma="0.251367073323" epsilon="0.1962296"/>
+  <NBFixPair type1="CLA" type2="SOD" sigma="0.33239431" epsilon="0.350933"/>
+ </LennardJonesForce>
+</ForceField> """
+        ff = ForceField(StringIO(xml))
+        system2 = ff.createSystem(pdb.topology, nonbondedMethod=PME,
+                                  nonbondedCutoff=5*angstroms)
+        con2 = Context(system2, VerletIntegrator(2*femtoseconds), plat)
+        con2.setPositions(pdb.positions)
+
+        state = con.getState(getEnergy=True, enforcePeriodicBox=True)
+        ene = state.getPotentialEnergy().value_in_unit(kilocalories_per_mole)
+        state2 = con2.getState(getEnergy=True, enforcePeriodicBox=True)
+        ene2 = state2.getPotentialEnergy().value_in_unit(kilocalories_per_mole)
+        self.assertAlmostEqual(ene, ene2)
+
+    def test_NBFix(self):
+        """Test using LennardJonesGenerator to implement NBFix terms."""
+        # Create a chain of five atoms.
+        
+        top = Topology()
+        chain = top.addChain()
+        res = top.addResidue('RES', chain)
+        top.addAtom('A', elem.oxygen, res)
+        top.addAtom('B', elem.carbon, res)
+        top.addAtom('C', elem.carbon, res)
+        top.addAtom('D', elem.carbon, res)
+        top.addAtom('E', elem.nitrogen, res)
+        atoms = list(top.atoms())
+        top.addBond(atoms[0], atoms[1])
+        top.addBond(atoms[1], atoms[2])
+        top.addBond(atoms[2], atoms[3])
+        top.addBond(atoms[3], atoms[4])
+        
+        # Create the force field and system.
+        
+        xml = """
+<ForceField>
+ <AtomTypes>
+  <Type name="A" class="A" element="O" mass="1"/>
+  <Type name="B" class="B" element="C" mass="1"/>
+  <Type name="C" class="C" element="C" mass="1"/>
+  <Type name="D" class="D" element="C" mass="1"/>
+  <Type name="E" class="E" element="N" mass="1"/>
+ </AtomTypes>
+ <Residues>
+  <Residue name="RES">
+   <Atom name="A" type="A"/>
+   <Atom name="B" type="B"/>
+   <Atom name="C" type="C"/>
+   <Atom name="D" type="D"/>
+   <Atom name="E" type="E"/>
+   <Bond atomName1="A" atomName2="B"/>
+   <Bond atomName1="B" atomName2="C"/>
+   <Bond atomName1="C" atomName2="D"/>
+   <Bond atomName1="D" atomName2="E"/>
+  </Residue>
+ </Residues>
+ <LennardJonesForce lj14scale="0.3">
+  <Atom type="A" sigma="1" epsilon="0.1"/>
+  <Atom type="B" sigma="2" epsilon="0.2"/>
+  <Atom type="C" sigma="3" epsilon="0.3"/>
+  <Atom type="D" sigma="4" epsilon="0.4"/>
+  <Atom type="E" sigma="5" epsilon="0.5"/>
+  <NBFixPair type1="A" type2="D" sigma="2.5" epsilon="1.1"/>
+  <NBFixPair type1="A" type2="E" sigma="3.5" epsilon="1.5"/>
+ </LennardJonesForce>
+</ForceField> """
+        ff = ForceField(StringIO(xml))
+        system = ff.createSystem(top)
+        
+        # Check that it produces the correct energy.
+        
+        integrator = VerletIntegrator(0.001)
+        context = Context(system, integrator, Platform.getPlatform(0))
+        positions = [Vec3(i, 0, 0) for i in range(5)]*nanometers
+        context.setPositions(positions)
+        def ljEnergy(sigma, epsilon, r):
+            return 4*epsilon*((sigma/r)**12-(sigma/r)**6)
+        expected = 0.3*ljEnergy(2.5, 1.1, 3)  + 0.3*ljEnergy(3.5, sqrt(0.1), 3) + ljEnergy(3.5, 1.5, 4)
+        self.assertAlmostEqual(expected, context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilojoules_per_mole))
+
 class AmoebaTestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method with the AMOEBA forcefield."""
- 
+
     def setUp(self):
-        """Set up the tests by loading the input pdb files and force field 
+        """Set up the tests by loading the input pdb files and force field
         xml files.
 
         """
@@ -337,4 +837,3 @@ class AmoebaTestForceField(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-

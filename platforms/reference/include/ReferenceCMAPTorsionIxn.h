@@ -38,6 +38,8 @@ private:
     std::vector<std::vector<std::vector<RealOpenMM> > > coeff;
     std::vector<int> torsionMaps;
     std::vector<std::vector<int> > torsionIndices;
+    bool usePeriodic;
+    RealVec boxVectors[3];
 
     /**---------------------------------------------------------------------------------------
 
@@ -64,6 +66,16 @@ public:
     ReferenceCMAPTorsionIxn(const std::vector<std::vector<std::vector<RealOpenMM> > >& coeff,
                             const std::vector<int>& torsionMaps,
                             const std::vector<std::vector<int> >& torsionIndices);
+
+       /**---------------------------------------------------------------------------------------
+      
+         Set the force to use periodic boundary conditions.
+      
+         @param vectors    the vectors defining the periodic box
+      
+         --------------------------------------------------------------------------------------- */
+      
+       void setPeriodic(OpenMM::RealVec* vectors);
 
     /**---------------------------------------------------------------------------------------
 

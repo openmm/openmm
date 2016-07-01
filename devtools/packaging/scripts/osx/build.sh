@@ -20,8 +20,9 @@ CMAKE_FLAGS="-DCMAKE_INSTALL_PREFIX=$INSTALL"
 # setting the rpath so that libOpenMMPME.so finds the right libfftw3
 #CMAKE_FLAGS+=" -DCMAKE_INSTALL_RPATH=.."
 CMAKE_FLAGS+=" -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++"
-CMAKE_FLAGS+=" -DCMAKE_OSX_DEPLOYMENT_TARGET=10.10"
-CMAKE_FLAGS+=" -DCMAKE_OSX_SYSROOT=/Users/saurabhbelsare/software/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.10.sdk"
+CMAKE_FLAGS+=" -DCMAKE_OSX_DEPLOYMENT_TARGET=10.9"
+CMAKE_FLAGS+=" -DCMAKE_OSX_SYSROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.9.sdk"
+CMAKE_FLAGS+=" -DOPENMM_GENERATE_API_DOCS=ON"
 
 # Build in subdirectory.
 # Set location for FFTW3
@@ -37,7 +38,8 @@ fi
 mkdir build
 cd build
 cmake ../openmm $CMAKE_FLAGS
-make -j4 all DoxygenApiDocs sphinxpdf
+make -j4 all install
+make -j4 PythonInstall C++ApiDocs PythonApiDocs sphinxpdf
 
 # Install.
 make install

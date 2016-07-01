@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -48,7 +48,7 @@ using std::string;
 using std::stringstream;
 using std::vector;
 
-CustomCompoundBondForce::CustomCompoundBondForce(int numParticles, const string& energy) : particlesPerBond(numParticles), energyExpression(energy) {
+CustomCompoundBondForce::CustomCompoundBondForce(int numParticles, const string& energy) : particlesPerBond(numParticles), energyExpression(energy), usePeriodic(false) {
 }
 
 
@@ -175,4 +175,12 @@ ForceImpl* CustomCompoundBondForce::createImpl() const {
 
 void CustomCompoundBondForce::updateParametersInContext(Context& context) {
     dynamic_cast<CustomCompoundBondForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
+}
+
+void CustomCompoundBondForce::setUsesPeriodicBoundaryConditions(bool periodic) {
+    usePeriodic = periodic;
+}
+
+bool CustomCompoundBondForce::usesPeriodicBoundaryConditions() const {
+    return usePeriodic;
 }

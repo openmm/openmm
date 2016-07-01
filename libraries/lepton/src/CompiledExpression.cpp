@@ -78,7 +78,8 @@ CompiledExpression& CompiledExpression::operator=(const CompiledExpression& expr
     for (int i = 0; i < (int) operation.size(); i++)
         operation[i] = expression.operation[i]->clone();
 #ifdef LEPTON_USE_JIT
-    generateJitCode();
+    if (workspace.size() > 0)
+        generateJitCode();
 #endif
     return *this;
 }

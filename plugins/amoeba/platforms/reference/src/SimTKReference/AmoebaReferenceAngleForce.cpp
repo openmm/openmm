@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2016 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -27,6 +27,13 @@
 
 using std::vector;
 using namespace OpenMM;
+
+void AmoebaReferenceAngleForce::setPeriodic(OpenMM::RealVec* vectors) {
+    usePeriodic = true;
+    boxVectors[0] = vectors[0];
+    boxVectors[1] = vectors[1];
+    boxVectors[2] = vectors[2];
+}
 
 /**---------------------------------------------------------------------------------------
 
@@ -132,11 +139,17 @@ RealOpenMM AmoebaReferenceAngleForce::calculateAngleIxn(const RealVec& positionA
    // ---------------------------------------------------------------------------------------
 
     std::vector<RealOpenMM> deltaR[2];
-    AmoebaReferenceForce::loadDeltaR(positionAtomA, positionAtomB, deltaR[0]);
+    if (usePeriodic)
+        AmoebaReferenceForce::loadDeltaRPeriodic(positionAtomA, positionAtomB, deltaR[0], boxVectors);
+    else
+        AmoebaReferenceForce::loadDeltaR(positionAtomA, positionAtomB, deltaR[0]);
     RealOpenMM rAB2      = AmoebaReferenceForce::getNormSquared3(deltaR[0]);
     RealOpenMM rAB       = SQRT(rAB2);
  
-    AmoebaReferenceForce::loadDeltaR(positionAtomC, positionAtomB, deltaR[1]);
+    if (usePeriodic)
+        AmoebaReferenceForce::loadDeltaRPeriodic(positionAtomC, positionAtomB, deltaR[1], boxVectors);
+    else
+        AmoebaReferenceForce::loadDeltaR(positionAtomC, positionAtomB, deltaR[1]);
     RealOpenMM rCB2      = AmoebaReferenceForce::getNormSquared3(deltaR[1]);
     RealOpenMM rCB       = SQRT(rCB2);
  

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors:                                                                   *
  * Contributors:                                                              *
  *                                                                            *
@@ -40,9 +40,11 @@ using std::string;
 using std::vector;
 
 AmoebaMultipoleForce::AmoebaMultipoleForce() : nonbondedMethod(NoCutoff), polarizationType(Mutual), pmeBSplineOrder(5), cutoffDistance(1.0), ewaldErrorTol(1e-4), mutualInducedMaxIterations(60),
-                                               mutualInducedTargetEpsilon(1.0e-02), scalingDistanceCutoff(100.0), electricConstant(138.9354558456), aewald(0.0) {
-    pmeGridDimension.resize(3);
-    pmeGridDimension[0] = pmeGridDimension[1] = pmeGridDimension[2];
+                                               mutualInducedTargetEpsilon(1.0e-02), scalingDistanceCutoff(100.0), electricConstant(138.9354558456), alpha(0.0), nx(0), ny(0), nz(0) {
+    extrapolationCoefficients.push_back(-0.154);
+    extrapolationCoefficients.push_back(0.017);
+    extrapolationCoefficients.push_back(0.658);
+    extrapolationCoefficients.push_back(0.474);
 }
 
 AmoebaMultipoleForce::NonbondedMethod AmoebaMultipoleForce::getNonbondedMethod() const {
@@ -61,6 +63,14 @@ void AmoebaMultipoleForce::setPolarizationType(AmoebaMultipoleForce::Polarizatio
     polarizationType = type;
 }
 
+void AmoebaMultipoleForce::setExtrapolationCoefficients(const std::vector<double> &coefficients) {
+    extrapolationCoefficients = coefficients;
+}
+
+const std::vector<double> & AmoebaMultipoleForce::getExtrapolationCoefficients() const {
+    return extrapolationCoefficients;
+}
+
 double AmoebaMultipoleForce::getCutoffDistance() const {
     return cutoffDistance;
 }
@@ -69,38 +79,45 @@ void AmoebaMultipoleForce::setCutoffDistance(double distance) {
     cutoffDistance = distance;
 }
 
-double AmoebaMultipoleForce::getAEwald() const {
-    return aewald;
+void AmoebaMultipoleForce::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
+    alpha = this->alpha;
+    nx = this->nx;
+    ny = this->ny;
+    nz = this->nz;
 }
 
-void AmoebaMultipoleForce::setAEwald(double inputAewald) {
-    aewald = inputAewald;
+void AmoebaMultipoleForce::setPMEParameters(double alpha, int nx, int ny, int nz) {
+    this->alpha = alpha;
+    this->nx = nx;
+    this->ny = ny;
+    this->nz = nz;
 }
 
-int AmoebaMultipoleForce::getPmeBSplineOrder() const {
-    return pmeBSplineOrder;
-}
-
-void AmoebaMultipoleForce::getPmeGridDimensions(std::vector<int>& gridDimension) const {
-    if (gridDimension.size() < 3) {
+double AmoebaMultipoleForce::getAEwald() const { 
+    return alpha; 
+} 
+ 
+void AmoebaMultipoleForce::setAEwald(double inputAewald) { 
+    alpha = inputAewald; 
+} 
+ 
+int AmoebaMultipoleForce::getPmeBSplineOrder() const { 
+    return pmeBSplineOrder; 
+} 
+ 
+void AmoebaMultipoleForce::getPmeGridDimensions(std::vector<int>& gridDimension) const { 
+    if (gridDimension.size() < 3)
         gridDimension.resize(3);
-    }
-    if (pmeGridDimension.size() > 2) {
-        gridDimension[0] = pmeGridDimension[0];
-        gridDimension[1] = pmeGridDimension[1];
-        gridDimension[2] = pmeGridDimension[2];
-    } else {
-        gridDimension[0] = gridDimension[1] = gridDimension[2] = 0;
-    }
-    return;
-}
-
+    gridDimension[0] = nx;
+    gridDimension[1] = ny;
+    gridDimension[2] = nz;
+} 
+ 
 void AmoebaMultipoleForce::setPmeGridDimensions(const std::vector<int>& gridDimension) {
-    pmeGridDimension.resize(3);
-    pmeGridDimension[0] = gridDimension[0];
-    pmeGridDimension[1] = gridDimension[1];
-    pmeGridDimension[2] = gridDimension[2];
-    return;
+    nx = gridDimension[0];
+    ny = gridDimension[1];
+    nz = gridDimension[2];
+>>>>>>> upstream/master
 }
 
 void AmoebaMultipoleForce::getPMEParametersInContext(const Context& context, double& alpha, int& nx, int& ny, int& nz) const {

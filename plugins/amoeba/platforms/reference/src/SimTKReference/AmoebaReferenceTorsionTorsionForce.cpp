@@ -1,5 +1,4 @@
-
-/* Portions copyright (c) 2006 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2016 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -27,6 +26,13 @@
 
 using std::vector;
 using namespace OpenMM;
+
+void AmoebaReferenceTorsionTorsionForce::setPeriodic(OpenMM::RealVec* vectors) {
+    usePeriodic = true;
+    boxVectors[0] = vectors[0];
+    boxVectors[1] = vectors[1];
+    boxVectors[2] = vectors[2];
+}
 
 /**---------------------------------------------------------------------------------------
 
@@ -294,9 +300,16 @@ int AmoebaReferenceTorsionTorsionForce::checkTorsionSign(
         deltaR[ii].resize(3);
     }   
 
-    AmoebaReferenceForce::loadDeltaR(positionAtomC, positionAtomA, deltaR[CA]);
-    AmoebaReferenceForce::loadDeltaR(positionAtomC, positionAtomB, deltaR[CB]);
-    AmoebaReferenceForce::loadDeltaR(positionAtomC, positionAtomD, deltaR[CD]);
+    if (usePeriodic) {
+        AmoebaReferenceForce::loadDeltaRPeriodic(positionAtomC, positionAtomA, deltaR[CA], boxVectors);
+        AmoebaReferenceForce::loadDeltaRPeriodic(positionAtomC, positionAtomB, deltaR[CB], boxVectors);
+        AmoebaReferenceForce::loadDeltaRPeriodic(positionAtomC, positionAtomD, deltaR[CD], boxVectors);
+    }
+    else {
+        AmoebaReferenceForce::loadDeltaR(positionAtomC, positionAtomA, deltaR[CA]);
+        AmoebaReferenceForce::loadDeltaR(positionAtomC, positionAtomB, deltaR[CB]);
+        AmoebaReferenceForce::loadDeltaR(positionAtomC, positionAtomD, deltaR[CD]);
+    }
 
     RealOpenMM volume = deltaR[CA][0]*(deltaR[CB][1]*deltaR[CD][2] - deltaR[CB][2]*deltaR[CD][1]) +
                         deltaR[CB][0]*(deltaR[CD][1]*deltaR[CA][2] - deltaR[CD][2]*deltaR[CA][1]) +
@@ -351,13 +364,24 @@ RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateTorsionTorsionIxn(const 
         deltaR[ii].resize(3);
     }   
 
-    AmoebaReferenceForce::loadDeltaR(positionAtomA, positionAtomB, deltaR[BA]);
-    AmoebaReferenceForce::loadDeltaR(positionAtomB, positionAtomC, deltaR[CB]);
-    AmoebaReferenceForce::loadDeltaR(positionAtomC, positionAtomD, deltaR[DC]);
-    AmoebaReferenceForce::loadDeltaR(positionAtomD, positionAtomE, deltaR[ED]);
-    AmoebaReferenceForce::loadDeltaR(positionAtomA, positionAtomC, deltaR[CA]);
-    AmoebaReferenceForce::loadDeltaR(positionAtomB, positionAtomD, deltaR[DB]);
-    AmoebaReferenceForce::loadDeltaR(positionAtomC, positionAtomE, deltaR[EC]);
+    if (usePeriodic) {
+        AmoebaReferenceForce::loadDeltaRPeriodic(positionAtomA, positionAtomB, deltaR[BA], boxVectors);
+        AmoebaReferenceForce::loadDeltaRPeriodic(positionAtomB, positionAtomC, deltaR[CB], boxVectors);
+        AmoebaReferenceForce::loadDeltaRPeriodic(positionAtomC, positionAtomD, deltaR[DC], boxVectors);
+        AmoebaReferenceForce::loadDeltaRPeriodic(positionAtomD, positionAtomE, deltaR[ED], boxVectors);
+        AmoebaReferenceForce::loadDeltaRPeriodic(positionAtomA, positionAtomC, deltaR[CA], boxVectors);
+        AmoebaReferenceForce::loadDeltaRPeriodic(positionAtomB, positionAtomD, deltaR[DB], boxVectors);
+        AmoebaReferenceForce::loadDeltaRPeriodic(positionAtomC, positionAtomE, deltaR[EC], boxVectors);
+    }
+    else {
+        AmoebaReferenceForce::loadDeltaR(positionAtomA, positionAtomB, deltaR[BA]);
+        AmoebaReferenceForce::loadDeltaR(positionAtomB, positionAtomC, deltaR[CB]);
+        AmoebaReferenceForce::loadDeltaR(positionAtomC, positionAtomD, deltaR[DC]);
+        AmoebaReferenceForce::loadDeltaR(positionAtomD, positionAtomE, deltaR[ED]);
+        AmoebaReferenceForce::loadDeltaR(positionAtomA, positionAtomC, deltaR[CA]);
+        AmoebaReferenceForce::loadDeltaR(positionAtomB, positionAtomD, deltaR[DB]);
+        AmoebaReferenceForce::loadDeltaR(positionAtomC, positionAtomE, deltaR[EC]);
+    }
 
     std::vector<RealOpenMM> d[LastAtomIndex];
     for (unsigned int ii = 0; ii < LastAtomIndex; ii++) {

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -42,8 +42,10 @@ AmoebaPiTorsionForceProxy::AmoebaPiTorsionForceProxy() : SerializationProxy("Amo
 }
 
 void AmoebaPiTorsionForceProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 1);
+    node.setIntProperty("version", 3);
     const AmoebaPiTorsionForce& force = *reinterpret_cast<const AmoebaPiTorsionForce*>(object);
+    node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setBoolProperty("usesPeriodic", force.usesPeriodicBoundaryConditions());
     SerializationNode& bonds = node.createChildNode("PiTorsion");
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(force.getNumPiTorsions()); ii++) {
         int particle1, particle2, particle3, particle4, particle5, particle6;
@@ -54,10 +56,15 @@ void AmoebaPiTorsionForceProxy::serialize(const void* object, SerializationNode&
 }
 
 void* AmoebaPiTorsionForceProxy::deserialize(const SerializationNode& node) const {
-    if (node.getIntProperty("version") != 1)
+    int version = node.getIntProperty("version");
+    if (version < 1 || version > 3)
         throw OpenMMException("Unsupported version number");
     AmoebaPiTorsionForce* force = new AmoebaPiTorsionForce();
     try {
+        if (version > 1)
+            force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        if (version > 2)
+            force->setUsesPeriodicBoundaryConditions(node.getBoolProperty("usesPeriodic"));
         const SerializationNode& bonds = node.getChildNode("PiTorsion");
         for (unsigned int ii = 0; ii < bonds.getChildren().size(); ii++) {
             const SerializationNode& bond = bonds.getChildren()[ii];

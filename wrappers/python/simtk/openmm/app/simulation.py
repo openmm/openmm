@@ -36,6 +36,10 @@ import simtk.openmm as mm
 import simtk.unit as unit
 import sys
 from datetime import datetime, timedelta
+try:
+    string_types = (unicode, str)
+except NameError:
+    string_types = (str,)
 
 class Simulation(object):
     """Simulation provides a simplified API for running simulations with OpenMM and reporting results.
@@ -52,40 +56,62 @@ class Simulation(object):
     simulation.reporters.append(PDBReporter('output.pdb', 1000))
     """
 
-    def __init__(self, topology, system, integrator, platform=None, platformProperties=None):
+    def __init__(self, topology, system, integrator, platform=None, platformProperties=None, state=None):
         """Create a Simulation.
 
         Parameters
         ----------
         topology : Topology
             A Topology describing the the system to simulate
-        system : System
-            The OpenMM System object to simulate
-        integrator : Integrator
-            The OpenMM Integrator to use for simulating the System
+        system : System or XML file name
+            The OpenMM System object to simulate (or the name of an XML file
+            with a serialized System)
+        integrator : Integrator or XML file name
+            The OpenMM Integrator to use for simulating the System (or the name
+            of an XML file with a serialized System)
         platform : Platform=None
             If not None, the OpenMM Platform to use
         platformProperties : map=None
             If not None, a set of platform-specific properties to pass to the
             Context's constructor
+        state : XML file name=None
+            The name of an XML file containing a serialized State. If not None,
+            the information stored in state will be transferred to the generated
+            Simulation object.
         """
-        ## The Topology describing the system being simulated
         self.topology = topology
         ## The System being simulated
-        self.system = system
+        if isinstance(system, string_types):
+            with open(system, 'r') as f:
+                self.system = mm.XmlSerializer.deserialize(f.read())
+        else:
+            self.system = system
         ## The Integrator used to advance the simulation
-        self.integrator = integrator
+        if isinstance(integrator, string_types):
+            with open(integrator, 'r') as f:
+                self.integrator = mm.XmlSerializer.deserialize(f.read())
+        else:
+            self.integrator = integrator
         ## The index of the current time step
         self.currentStep = 0
         ## A list of reporters to invoke during the simulation
         self.reporters = []
         if platform is None:
             ## The Context containing the current state of the simulation
-            self.context = mm.Context(system, integrator)
+            self.context = mm.Context(self.system, self.integrator)
         elif platformProperties is None:
-            self.context = mm.Context(system, integrator, platform)
+            self.context = mm.Context(self.system, self.integrator, platform)
         else:
-            self.context = mm.Context(system, integrator, platform, platformProperties)
+            self.context = mm.Context(self.system, self.integrator, platform, platformProperties)
+        if state is not None:
+            with open(state, 'r') as f:
+                self.context.setState(mm.XmlSerializer.deserialize(f.read()))
+        ## Determines whether or not we are using PBC. Try from the System first,
+        ## fall back to Topology if that doesn't work
+        try:
+            self._usesPBC = self.system.usesPeriodicBoundaryConditions()
+        except Exception: # OpenMM just raises Exception if it's not implemented everywhere
+            self._usesPBC = topology.getUnitCellDimensions() is not None
 
     def minimizeEnergy(self, tolerance=10*unit.kilojoule/unit.mole, maxIterations=0):
         """Perform a local energy minimization on the system.
@@ -186,7 +212,8 @@ class Simulation(object):
                             getForces = True
                         if next[4]:
                             getEnergy = True
-                state = self.context.getState(getPositions=getPositions, getVelocities=getVelocities, getForces=getForces, getEnergy=getEnergy, getParameters=True, enforcePeriodicBox=(self.topology.getUnitCellDimensions() is not None))
+                state = self.context.getState(getPositions=getPositions, getVelocities=getVelocities, getForces=getForces,
+                                              getEnergy=getEnergy, getParameters=True, enforcePeriodicBox=self._usesPBC)
                 for reporter, next in zip(self.reporters, nextReport):
                     if next[0] == nextSteps:
                         reporter.report(self, state)

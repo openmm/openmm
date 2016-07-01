@@ -9,14 +9,20 @@ addons:
       - python-scipy
       - libfftw3-dev
 
+env:
+  global:
+    - CCACHE=$HOME/ccache/lib/ccache/bin
+
+
 matrix:
   include:
     - sudo: required
+      dist: trusty
       env: ==CPU_OPENCL==
            OPENCL=true
            CUDA=false
-           CC=gcc
-           CXX=g++
+           CC=$CCACHE/gcc
+           CXX=$CCACHE/g++
            CMAKE_FLAGS="
            -OPENMM_BUILD_OPENCL_LIB=ON
            -DOPENMM_BUILD_OPENCL_TESTS=ON
@@ -28,14 +34,19 @@ matrix:
            -DOPENMM_BUILD_AMOEBA_PLUGIN=OFF
            -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF
            -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF
-           -DOPENMM_BUILD_EXAMPLES=OFF"
+           -DOPENMM_BUILD_EXAMPLES=OFF
+           -DOPENCL_INCLUDE_DIR=$HOME/AMDAPPSDK/include
+           -DOPENCL_LIBRARY=$HOME/AMDAPPSDK/lib/x86_64/libOpenCL.so"
       addons: {apt: {packages: []}}
 
     - sudo: required
+      dist: trusty
       env: ==CUDA_COMPILE==
            CUDA=true
            OPENCL=false
-           CUDA_VERSION="7.0-28"
+           CUDA_VERSION="7.5-18"
+           CC=$CCACHE/gcc
+           CXX=$CCACHE/g++
            CMAKE_FLAGS="
              -DOPENMM_BUILD_CUDA_TESTS=OFF
              -DOPENMM_BUILD_OPENCL_TESTS=OFF
@@ -44,7 +55,12 @@ matrix:
              -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF
              -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF
              -DOPENMM_BUILD_EXAMPLES=OFF
-             -DOPENCL_LIBRARY=/usr/local/cuda-7.0/lib64/libOpenCL.so"
+             -DOPENCL_LIBRARY=/usr/local/cuda-7.5/lib64/libOpenCL.so
+             -DCUDA_CUDART_LIBRARY=/usr/local/cuda-7.5/lib64/libcudart.so
+             -DCUDA_NVCC_EXECUTABLE=/usr/local/cuda-7.5/bin/nvcc
+             -DCUDA_SDK_ROOT_DIR=/usr/local/cuda-7.5/
+             -DCUDA_TOOLKIT_INCLUDE=/usr/local/cuda-7.5/include
+             -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-7.5/"
       addons: {apt: {packages: []}}
 
     - language: objective-c
@@ -62,37 +78,48 @@ matrix:
       env: ==STATIC_LIB==
            OPENCL=false
            CUDA=false
-           CC=clang
-           CXX=clang++
+           CC=$CCACHE/clang
+           CXX=$CCACHE/clang++
            CMAKE_FLAGS="-DOPENMM_BUILD_STATIC_LIB=ON"
 
     - sudo: false
       python: 2.7_with_system_site_packages
-      env: ==PYTNON_2==
+      env: ==PYTHON_2==
            OPENCL=false
            CUDA=false
-           CC=clang
-           CXX=clang++
+           CC=$CCACHE/clang
+           CXX=$CCACHE/clang++
            DOCS_DEPLOY=true
-           CMAKE_FLAGS=""
+           CMAKE_FLAGS="-DOPENMM_GENERATE_API_DOCS=ON"
 
     - sudo: false
       python: 3.4
       env: ==PYTHON_3==
            OPENCL=false
            CUDA=false
-           CC=gcc
-           CXX=g++
+           CC=$CCACHE/gcc
+           CXX=$CCACHE/g++
            CMAKE_FLAGS=""
 
 before_install:
+  - START_TIME=$(date +%s)
+  - wget https://anaconda.org/omnia/ccache/3.2.4/download/${TRAVIS_OS_NAME}-64/ccache-3.2.4-0.tar.bz2
+  - mkdir -p $HOME/ccache && tar xf ccache-3.2.4-0.tar.bz2 -C $HOME/ccache
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
       brew install doxygen swig fftw;
       sudo easy_install pytest;
     fi
   - if [[ "$OPENCL" == "true" ]]; then
-      sudo apt-get -yq update > /dev/null 2>&1 ;
-      sudo apt-get install -qq fglrx=2:8.960-0ubuntu1 opencl-headers;
+      wget https://jenkins.choderalab.org/userContent/AMD-APP-SDKInstaller-v3.0.130.135-GA-linux64.tar.bz2;
+      tar -xjf AMD-APP-SDK*.tar.bz2;
+      AMDAPPSDK=${HOME}/AMDAPPSDK;
+      export OPENCL_VENDOR_PATH=${AMDAPPSDK}/etc/OpenCL/vendors;
+      mkdir -p ${OPENCL_VENDOR_PATH};
+      sh AMD-APP-SDK*.sh --tar -xf -C ${AMDAPPSDK};
+      echo libamdocl64.so > ${OPENCL_VENDOR_PATH}/amdocl64.icd;
+      export LD_LIBRARY_PATH=${AMDAPPSDK}/lib/x86_64:${LD_LIBRARY_PATH};
+      chmod +x ${AMDAPPSDK}/bin/x86_64/clinfo;
+      ${AMDAPPSDK}/bin/x86_64/clinfo;
     fi
   # Install swig for Python wrappers. However, testing CUDA and OpenCL, we
   # skip the Python wrapper for speed. We're not using anaconda python,
@@ -107,8 +134,8 @@ before_install:
     fi
 
   - if [[ "$CUDA" == "true" ]]; then
-      wget "http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1204/x86_64/cuda-repo-ubuntu1204_${CUDA_VERSION}_amd64.deb";
-      sudo dpkg -i cuda-repo-ubuntu1204_${CUDA_VERSION}_amd64.deb;
+      wget "http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1404/x86_64/cuda-repo-ubuntu1404_${CUDA_VERSION}_amd64.deb";
+      sudo dpkg -i cuda-repo-ubuntu1404_${CUDA_VERSION}_amd64.deb;
       sudo apt-get update -qq;
       export CUDA_APT=${CUDA_VERSION%-*};
       export CUDA_APT=${CUDA_APT/./-};
@@ -120,7 +147,6 @@ before_install:
     fi
 
 script:
-  - CTEST_STOP_TIME=$(python -c "from datetime import datetime, timedelta; import sys; sys.stdout.write((datetime.now() + timedelta(minutes=25)).strftime('%H:%M:%S'))")
   - cmake . $CMAKE_FLAGS -DCMAKE_INSTALL_PREFIX=$HOME/OpenMM
   - make -j2 install
   - if [[ "$OPENCL" == "true" ]]; then ./TestOpenCLDeviceQuery; fi
@@ -131,20 +157,19 @@ script:
           make PythonInstall;
       fi;
       python -m simtk.testInstallation;
-      (cd python/tests && py.test -v *);
+      (cd python/tests && py.test -v);
     fi
 
-  - # run all of the tests, making sure failures at this stage don't cause travis failures
-  - ctest -j2 --output-on-failure --schedule-random --stop-time $CTEST_STOP_TIME || true
-  - # get a list of all of the failed tests into this stupid ctest format
-  - python -c "import os; fn = os.path.join('Testing', 'Temporary', 'LastTestsFailed.log'); os.path.exists(fn) or exit(0); failed = [line.split(':')[0] for line in open(fn)]; print(','.join(x+','+x for x in failed))" > FailedTests.log
-  - if [ -s Testing/Temporary/LastTestsFailed.log ]; then
-      ctest -I FailedTests.log;
-    fi
+  # Run the tests, and rerun any failing tests.
+  - python devtools/run-ctest.py --start-time $START_TIME
+
   - if [[ ! -z "${DOCS_DEPLOY}" && "${DOCS_DEPLOY}" = "true" ]]; then
-      pip install sphinx numpydoc;
-      make DoxygenApiDocs PythonApiDocs;
+      pip install sphinx sphinxcontrib-bibtex sphinxcontrib-lunrsearch sphinxcontrib-autodoc_doxygen;
+      make sphinxhtml;
+      make C++ApiDocs PythonApiDocs;
       mkdir -p api-docs;
+      mv sphinx-docs/userguide/html api-docs/userguide;
+      mv sphinx-docs/developerguide/html api-docs/developerguide;
       mv api-python api-docs;
       mv api-c++ api-docs;
     fi
@@ -163,3 +188,7 @@ deploy:
     on:
       branch: master
       condition: '! -z "${DOCS_DEPLOY}" && "${DOCS_DEPLOY}" = "true"'
+
+cache:
+  directories:
+    - $HOME/.ccache

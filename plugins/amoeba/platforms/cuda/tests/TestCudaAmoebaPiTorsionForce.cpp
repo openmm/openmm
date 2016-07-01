@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Mark Friedrichs                                                   *
  * Contributors:                                                              *
  *                                                                            *
@@ -288,13 +288,49 @@ void testOnePiTorsion() {
     compareWithExpectedForceAndEnergy(context, *amoebaPiTorsionForce, TOL, "testOnePiTorsion");
 }
 
+void testPeriodic() {
+    // Create a force that uses periodic boundary conditions.
+
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(3, 0, 0), Vec3(0, 3, 0), Vec3(0, 0, 3));
+    int numberOfParticles = 6;
+    for (int ii = 0; ii < numberOfParticles; ii++)
+        system.addParticle(1.0);
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
+    AmoebaPiTorsionForce* amoebaPiTorsionForce = new AmoebaPiTorsionForce();
+    double kTorsion = 6.85;
+    amoebaPiTorsionForce->addPiTorsion(0, 1, 2, 3, 4, 5, kTorsion);
+    amoebaPiTorsionForce->setUsesPeriodicBoundaryConditions(true);
+    system.addForce(amoebaPiTorsionForce);
+    Context context(system, integrator, Platform::getPlatformByName("CUDA"));
+    std::vector<Vec3> positions(numberOfParticles);
+    positions[0] = Vec3(0, 1, 0);
+    positions[1] = Vec3(0, 0, 0);
+    positions[2] = Vec3(0, 0, 0.5);
+    positions[3] = Vec3(0.4, 0.4, 0.4);
+    positions[4] = Vec3(1, 0, 1);
+    positions[5] = Vec3(1, 1, 0);
+    context.setPositions(positions);
+    State s1 = context.getState(State::Forces | State::Energy);
+    
+    // Move one atom to a position that should give identical results.
+
+    positions[0] = Vec3(0, -2, 0);
+    context.setPositions(positions);
+    State s2 = context.getState(State::Forces | State::Energy);
+    ASSERT_EQUAL_TOL(s1.getPotentialEnergy(), s2.getPotentialEnergy(), 1e-5);
+    for (int i = 0; i < numberOfParticles; i++)
+        ASSERT_EQUAL_VEC(s1.getForces()[i], s2.getForces()[i], 1e-5);
+}
+
 int main(int argc, char* argv[]) {
     try {
         std::cout << "TestCudaAmoebaPiTorsionForce running test..." << std::endl;
         registerAmoebaCudaKernelFactories();
         if (argc > 1)
-            Platform::getPlatformByName("CUDA").setPropertyDefaultValue("CudaPrecision", std::string(argv[1]));
+            Platform::getPlatformByName("CUDA").setPropertyDefaultValue("Precision", std::string(argv[1]));
         testOnePiTorsion();
+        testPeriodic();
     } catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;
         std::cout << "FAIL - ERROR.  Test failed." << std::endl;

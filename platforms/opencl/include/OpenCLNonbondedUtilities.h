@@ -281,6 +281,9 @@ private:
     OpenCLArray* oldPositions;
     OpenCLArray* rebuildNeighborList;
     OpenCLSort* blockSorter;
+    cl::Event downloadCountEvent;
+    cl::Buffer* pinnedCountBuffer;
+    int* pinnedCountMemory;
     std::vector<std::vector<int> > atomExclusions;
     std::vector<ParameterInfo> parameters;
     std::vector<ParameterInfo> arguments;

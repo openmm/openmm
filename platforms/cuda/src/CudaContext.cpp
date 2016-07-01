@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -76,7 +76,7 @@ bool CudaContext::hasInitializedCuda = false;
 CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlockingSync, const string& precision, const string& compiler,
         const string& tempDir, const std::string& hostCompiler, CudaPlatform::PlatformData& platformData) : system(system), currentStream(0),
         time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), stepsSinceReorder(99999), contextIsValid(false), atomsWereReordered(false), hasCompilerKernel(false),
-        pinnedBuffer(NULL), posq(NULL), posqCorrection(NULL), velm(NULL), force(NULL), energyBuffer(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
+        pinnedBuffer(NULL), posq(NULL), posqCorrection(NULL), velm(NULL), force(NULL), energyBuffer(NULL), atomIndexDevice(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
     this->compiler = "\""+compiler+"\"";
     if (platformData.context != NULL) {
         try {
@@ -106,7 +106,7 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
         useMixedPrecision = false;
     }
     else
-        throw OpenMMException("Illegal value for CudaPrecision: "+precision);
+        throw OpenMMException("Illegal value for Precision: "+precision);
     char* cacheVariable = getenv("OPENMM_CACHE_DIR");
     cacheDir = (cacheVariable == NULL ? tempDir : string(cacheVariable));
 #ifdef WIN32
@@ -121,7 +121,7 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     string errorMessage = "Error initializing Context";
     CHECK_RESULT(cuDeviceGetCount(&numDevices));
     if (deviceIndex < -1 || deviceIndex >= numDevices)
-        throw OpenMMException("Illegal value for CudaDeviceIndex: "+intToString(deviceIndex));
+        throw OpenMMException("Illegal value for DeviceIndex: "+intToString(deviceIndex));
 
     vector<int> devicePrecedence;
     if (deviceIndex == -1) {
@@ -339,6 +339,8 @@ CudaContext::~CudaContext() {
         delete force;
     if (energyBuffer != NULL)
         delete energyBuffer;
+    if (atomIndexDevice != NULL)
+        delete atomIndexDevice;
     if (integration != NULL)
         delete integration;
     if (expression != NULL)
@@ -1117,7 +1119,7 @@ void CudaContext::invalidateMolecules() {
 
 void CudaContext::reorderAtoms() {
     atomsWereReordered = false;
-    if (numAtoms == 0 || nonbonded == NULL || !nonbonded->getUseCutoff() || stepsSinceReorder < 100) {
+    if (numAtoms == 0 || nonbonded == NULL || !nonbonded->getUseCutoff() || stepsSinceReorder < 250) {
         stepsSinceReorder++;
         return;
     }
@@ -1129,7 +1131,6 @@ void CudaContext::reorderAtoms() {
         reorderAtomsImpl<float, float4, double, double4>();
     else
         reorderAtomsImpl<float, float4, float, float4>();
-    nonbonded->updateNeighborListSize();
 }
 
 template <class Real, class Real4, class Mixed, class Mixed4>

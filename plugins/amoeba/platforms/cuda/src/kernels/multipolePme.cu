@@ -643,8 +643,8 @@ extern "C" __global__ void computeInducedPotentialFromGrid(const real2* __restri
     // Process the atoms in spatially sorted order.  This improves cache performance when loading
     // the grid values.
     
-    for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
-        int m = pmeAtomGridIndex[i].x;
+    for (int atom = blockIdx.x*blockDim.x+threadIdx.x; atom < NUM_ATOMS; atom += blockDim.x*gridDim.x) {
+        int m = pmeAtomGridIndex[atom].x;
         real4 pos = posq[m];
         pos -= periodicBoxVecZ*floor(pos.z*recipBoxVecZ.z+0.5f);
         pos -= periodicBoxVecY*floor(pos.y*recipBoxVecY.z+0.5f);
@@ -1051,7 +1051,7 @@ extern "C" __global__ void computeInducedDipoleForceAndEnergy(real4* __restrict_
             f.x += (inducedDipole[k]+inducedDipolePolar[k])*phi[i+NUM_ATOMS*j1];
             f.y += (inducedDipole[k]+inducedDipolePolar[k])*phi[i+NUM_ATOMS*j2];
             f.z += (inducedDipole[k]+inducedDipolePolar[k])*phi[i+NUM_ATOMS*j3];
-#ifndef DIRECT_POLARIZATION
+#ifdef MUTUAL_POLARIZATION
             f.x += (inducedDipole[k]*phip[i+NUM_ATOMS*j1] + inducedDipolePolar[k]*phid[i+NUM_ATOMS*j1]);
             f.y += (inducedDipole[k]*phip[i+NUM_ATOMS*j2] + inducedDipolePolar[k]*phid[i+NUM_ATOMS*j2]);
             f.z += (inducedDipole[k]*phip[i+NUM_ATOMS*j3] + inducedDipolePolar[k]*phid[i+NUM_ATOMS*j3]);
@@ -1073,8 +1073,12 @@ extern "C" __global__ void computeInducedDipoleForceAndEnergy(real4* __restrict_
     energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += 0.25f*EPSILON_FACTOR*energy;
 }
 
-extern "C" __global__ void recordInducedFieldDipoles(const real* __restrict__ phid, real* const __restrict__ phip,
-        long long* __restrict__ inducedField, long long* __restrict__ inducedFieldPolar, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
+extern "C" __global__ void recordInducedFieldDipoles(const real* __restrict__ phid, real* const __restrict__ phip, long long* __restrict__ inducedField,
+        long long* __restrict__ inducedFieldPolar, const real* __restrict__ inducedDipole, const real* __restrict__ inducedDipolePolar,
+#ifdef EXTRAPOLATED_POLARIZATION
+        unsigned long long* __restrict__ fieldGradient, unsigned long long* __restrict__ fieldGradientPolar,
+#endif
+        real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
     __shared__ real fracToCart[3][3];
     if (threadIdx.x == 0) {
         fracToCart[0][0] = GRID_SIZE_X*recipBoxVecX.x;
@@ -1088,12 +1092,62 @@ extern "C" __global__ void recordInducedFieldDipoles(const real* __restrict__ ph
         fracToCart[2][2] = GRID_SIZE_Z*recipBoxVecZ.z;
     }
     __syncthreads();
+    real selfDipoleScale = (4/(real) 3)*(EWALD_ALPHA*EWALD_ALPHA*EWALD_ALPHA)/SQRT_PI;
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
-        inducedField[i] -= (long long) (0x100000000*(phid[i+NUM_ATOMS]*fracToCart[0][0] + phid[i+NUM_ATOMS*2]*fracToCart[0][1] + phid[i+NUM_ATOMS*3]*fracToCart[0][2]));
-        inducedField[i+PADDED_NUM_ATOMS] -= (long long) (0x100000000*(phid[i+NUM_ATOMS]*fracToCart[1][0] + phid[i+NUM_ATOMS*2]*fracToCart[1][1] + phid[i+NUM_ATOMS*3]*fracToCart[1][2]));
-        inducedField[i+PADDED_NUM_ATOMS*2] -= (long long) (0x100000000*(phid[i+NUM_ATOMS]*fracToCart[2][0] + phid[i+NUM_ATOMS*2]*fracToCart[2][1] + phid[i+NUM_ATOMS*3]*fracToCart[2][2]));
-        inducedFieldPolar[i] -= (long long) (0x100000000*(phip[i+NUM_ATOMS]*fracToCart[0][0] + phip[i+NUM_ATOMS*2]*fracToCart[0][1] + phip[i+NUM_ATOMS*3]*fracToCart[0][2]));
-        inducedFieldPolar[i+PADDED_NUM_ATOMS] -= (long long) (0x100000000*(phip[i+NUM_ATOMS]*fracToCart[1][0] + phip[i+NUM_ATOMS*2]*fracToCart[1][1] + phip[i+NUM_ATOMS*3]*fracToCart[1][2]));
-        inducedFieldPolar[i+PADDED_NUM_ATOMS*2] -= (long long) (0x100000000*(phip[i+NUM_ATOMS]*fracToCart[2][0] + phip[i+NUM_ATOMS*2]*fracToCart[2][1] + phip[i+NUM_ATOMS*3]*fracToCart[2][2]));
+        inducedField[i] -= (long long) (0x100000000*(phid[i+NUM_ATOMS]*fracToCart[0][0] + phid[i+NUM_ATOMS*2]*fracToCart[0][1] + phid[i+NUM_ATOMS*3]*fracToCart[0][2] - selfDipoleScale*inducedDipole[3*i]));
+        inducedField[i+PADDED_NUM_ATOMS] -= (long long) (0x100000000*(phid[i+NUM_ATOMS]*fracToCart[1][0] + phid[i+NUM_ATOMS*2]*fracToCart[1][1] + phid[i+NUM_ATOMS*3]*fracToCart[1][2] - selfDipoleScale*inducedDipole[3*i+1]));
+        inducedField[i+PADDED_NUM_ATOMS*2] -= (long long) (0x100000000*(phid[i+NUM_ATOMS]*fracToCart[2][0] + phid[i+NUM_ATOMS*2]*fracToCart[2][1] + phid[i+NUM_ATOMS*3]*fracToCart[2][2] - selfDipoleScale*inducedDipole[3*i+2]));
+        inducedFieldPolar[i] -= (long long) (0x100000000*(phip[i+NUM_ATOMS]*fracToCart[0][0] + phip[i+NUM_ATOMS*2]*fracToCart[0][1] + phip[i+NUM_ATOMS*3]*fracToCart[0][2] - selfDipoleScale*inducedDipolePolar[3*i]));
+        inducedFieldPolar[i+PADDED_NUM_ATOMS] -= (long long) (0x100000000*(phip[i+NUM_ATOMS]*fracToCart[1][0] + phip[i+NUM_ATOMS*2]*fracToCart[1][1] + phip[i+NUM_ATOMS*3]*fracToCart[1][2] - selfDipoleScale*inducedDipolePolar[3*i+1]));
+        inducedFieldPolar[i+PADDED_NUM_ATOMS*2] -= (long long) (0x100000000*(phip[i+NUM_ATOMS]*fracToCart[2][0] + phip[i+NUM_ATOMS*2]*fracToCart[2][1] + phip[i+NUM_ATOMS*3]*fracToCart[2][2] - selfDipoleScale*inducedDipolePolar[3*i+2]));
+#ifdef EXTRAPOLATED_POLARIZATION
+        // Compute and store the field gradients for later use.
+
+        real EmatD[3][3] = {
+            {phid[i+NUM_ATOMS*4], phid[i+NUM_ATOMS*7], phid[i+NUM_ATOMS*8]},
+            {phid[i+NUM_ATOMS*7], phid[i+NUM_ATOMS*5], phid[i+NUM_ATOMS*9]},
+            {phid[i+NUM_ATOMS*8], phid[i+NUM_ATOMS*9], phid[i+NUM_ATOMS*6]}
+        };
+        real Exx = 0, Eyy = 0, Ezz = 0, Exy = 0, Exz = 0, Eyz = 0;
+        for (int k = 0; k < 3; ++k) {
+            for (int l = 0; l < 3; ++l) {
+                Exx += fracToCart[0][k] * EmatD[k][l] * fracToCart[0][l];
+                Eyy += fracToCart[1][k] * EmatD[k][l] * fracToCart[1][l];
+                Ezz += fracToCart[2][k] * EmatD[k][l] * fracToCart[2][l];
+                Exy += fracToCart[0][k] * EmatD[k][l] * fracToCart[1][l];
+                Exz += fracToCart[0][k] * EmatD[k][l] * fracToCart[2][l];
+                Eyz += fracToCart[1][k] * EmatD[k][l] * fracToCart[2][l];
+            }
+        }
+        atomicAdd(&fieldGradient[6*i+0], static_cast<unsigned long long>((long long) (-Exx*0x100000000)));
+        atomicAdd(&fieldGradient[6*i+1], static_cast<unsigned long long>((long long) (-Eyy*0x100000000)));
+        atomicAdd(&fieldGradient[6*i+2], static_cast<unsigned long long>((long long) (-Ezz*0x100000000)));
+        atomicAdd(&fieldGradient[6*i+3], static_cast<unsigned long long>((long long) (-Exy*0x100000000)));
+        atomicAdd(&fieldGradient[6*i+4], static_cast<unsigned long long>((long long) (-Exz*0x100000000)));
+        atomicAdd(&fieldGradient[6*i+5], static_cast<unsigned long long>((long long) (-Eyz*0x100000000)));
+
+        real EmatP[3][3] = {
+            {phip[i+NUM_ATOMS*4], phip[i+NUM_ATOMS*7], phip[i+NUM_ATOMS*8]},
+            {phip[i+NUM_ATOMS*7], phip[i+NUM_ATOMS*5], phip[i+NUM_ATOMS*9]},
+            {phip[i+NUM_ATOMS*8], phip[i+NUM_ATOMS*9], phip[i+NUM_ATOMS*6]}
+        };
+        Exx = 0; Eyy = 0; Ezz = 0; Exy = 0; Exz = 0; Eyz = 0;
+        for (int k = 0; k < 3; ++k) {
+            for (int l = 0; l < 3; ++l) {
+                Exx += fracToCart[0][k] * EmatP[k][l] * fracToCart[0][l];
+                Eyy += fracToCart[1][k] * EmatP[k][l] * fracToCart[1][l];
+                Ezz += fracToCart[2][k] * EmatP[k][l] * fracToCart[2][l];
+                Exy += fracToCart[0][k] * EmatP[k][l] * fracToCart[1][l];
+                Exz += fracToCart[0][k] * EmatP[k][l] * fracToCart[2][l];
+                Eyz += fracToCart[1][k] * EmatP[k][l] * fracToCart[2][l];
+            }
+        }
+        atomicAdd(&fieldGradientPolar[6*i+0], static_cast<unsigned long long>((long long) (-Exx*0x100000000)));
+        atomicAdd(&fieldGradientPolar[6*i+1], static_cast<unsigned long long>((long long) (-Eyy*0x100000000)));
+        atomicAdd(&fieldGradientPolar[6*i+2], static_cast<unsigned long long>((long long) (-Ezz*0x100000000)));
+        atomicAdd(&fieldGradientPolar[6*i+3], static_cast<unsigned long long>((long long) (-Exy*0x100000000)));
+        atomicAdd(&fieldGradientPolar[6*i+4], static_cast<unsigned long long>((long long) (-Exz*0x100000000)));
+        atomicAdd(&fieldGradientPolar[6*i+5], static_cast<unsigned long long>((long long) (-Eyz*0x100000000)));
+#endif
     }
 }

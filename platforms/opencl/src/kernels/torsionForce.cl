@@ -2,6 +2,11 @@ const real PI = 3.14159265358979323846f;
 real4 v0 = (real4) (pos1.xyz-pos2.xyz, 0.0f);
 real4 v1 = (real4) (pos3.xyz-pos2.xyz, 0.0f);
 real4 v2 = (real4) (pos3.xyz-pos4.xyz, 0.0f);
+#if APPLY_PERIODIC
+APPLY_PERIODIC_TO_DELTA(v0)
+APPLY_PERIODIC_TO_DELTA(v1)
+APPLY_PERIODIC_TO_DELTA(v2)
+#endif
 real4 cp0 = cross(v0, v1);
 real4 cp1 = cross(v1, v2);
 real cosangle = dot(normalize(cp0), normalize(cp1));

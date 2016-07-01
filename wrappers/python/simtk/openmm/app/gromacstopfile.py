@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2015 Stanford University and the Authors.
+Portions copyright (c) 2012-2016 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors: Jason Swails
 
@@ -259,7 +259,7 @@ class GromacsTopFile(object):
         """Process the [ defaults ] line."""
         fields = line.split()
         if len(fields) < 4:
-            raise ValueError('Too few fields in [ defaults ] line: '+line);
+            raise ValueError('Too few fields in [ defaults ] line: '+line)
         if fields[0] != '1':
             raise ValueError('Unsupported nonbonded type: '+fields[0])
         if fields[1] != '2':
@@ -272,7 +272,7 @@ class GromacsTopFile(object):
         """Process a line in the [ moleculetypes ] category."""
         fields = line.split()
         if len(fields) < 1:
-            raise ValueError('Too few fields in [ moleculetypes ] line: '+line);
+            raise ValueError('Too few fields in [ moleculetypes ] line: '+line)
         type = GromacsTopFile._MoleculeType()
         self._moleculeTypes[fields[0]] = type
         self._currentMoleculeType = type
@@ -281,7 +281,7 @@ class GromacsTopFile(object):
         """Process a line in the [ molecules ] category."""
         fields = line.split()
         if len(fields) < 2:
-            raise ValueError('Too few fields in [ molecules ] line: '+line);
+            raise ValueError('Too few fields in [ molecules ] line: '+line)
         self._molecules.append((fields[0], int(fields[1])))
 
     def _processAtom(self, line):
@@ -290,7 +290,7 @@ class GromacsTopFile(object):
             raise ValueError('Found [ atoms ] section before [ moleculetype ]')
         fields = line.split()
         if len(fields) < 5:
-            raise ValueError('Too few fields in [ atoms ] line: '+line);
+            raise ValueError('Too few fields in [ atoms ] line: '+line)
         self._currentMoleculeType.atoms.append(fields)
 
     def _processBond(self, line):
@@ -299,9 +299,9 @@ class GromacsTopFile(object):
             raise ValueError('Found [ bonds ] section before [ moleculetype ]')
         fields = line.split()
         if len(fields) < 3:
-            raise ValueError('Too few fields in [ bonds ] line: '+line);
+            raise ValueError('Too few fields in [ bonds ] line: '+line)
         if fields[2] != '1':
-            raise ValueError('Unsupported function type in [ bonds ] line: '+line);
+            raise ValueError('Unsupported function type in [ bonds ] line: '+line)
         self._currentMoleculeType.bonds.append(fields)
 
     def _processAngle(self, line):
@@ -310,9 +310,9 @@ class GromacsTopFile(object):
             raise ValueError('Found [ angles ] section before [ moleculetype ]')
         fields = line.split()
         if len(fields) < 4:
-            raise ValueError('Too few fields in [ angles ] line: '+line);
+            raise ValueError('Too few fields in [ angles ] line: '+line)
         if fields[3] not in ('1', '5'):
-            raise ValueError('Unsupported function type in [ angles ] line: '+line);
+            raise ValueError('Unsupported function type in [ angles ] line: '+line)
         self._currentMoleculeType.angles.append(fields)
 
     def _processDihedral(self, line):
@@ -321,9 +321,9 @@ class GromacsTopFile(object):
             raise ValueError('Found [ dihedrals ] section before [ moleculetype ]')
         fields = line.split()
         if len(fields) < 5:
-            raise ValueError('Too few fields in [ dihedrals ] line: '+line);
+            raise ValueError('Too few fields in [ dihedrals ] line: '+line)
         if fields[4] not in ('1', '2', '3', '4', '9'):
-            raise ValueError('Unsupported function type in [ dihedrals ] line: '+line);
+            raise ValueError('Unsupported function type in [ dihedrals ] line: '+line)
         self._currentMoleculeType.dihedrals.append(fields)
 
     def _processExclusion(self, line):
@@ -332,7 +332,7 @@ class GromacsTopFile(object):
             raise ValueError('Found [ exclusions ] section before [ moleculetype ]')
         fields = line.split()
         if len(fields) < 2:
-            raise ValueError('Too few fields in [ exclusions ] line: '+line);
+            raise ValueError('Too few fields in [ exclusions ] line: '+line)
         self._currentMoleculeType.exclusions.append(fields)
 
     def _processPair(self, line):
@@ -341,9 +341,9 @@ class GromacsTopFile(object):
             raise ValueError('Found [ pairs ] section before [ moleculetype ]')
         fields = line.split()
         if len(fields) < 3:
-            raise ValueError('Too few fields in [ pairs ] line: '+line);
+            raise ValueError('Too few fields in [ pairs ] line: '+line)
         if fields[2] != '1':
-            raise ValueError('Unsupported function type in [ pairs ] line: '+line);
+            raise ValueError('Unsupported function type in [ pairs ] line: '+line)
         self._currentMoleculeType.pairs.append(fields)
 
     def _processCmap(self, line):
@@ -352,14 +352,14 @@ class GromacsTopFile(object):
             raise ValueError('Found [ cmap ] section before [ moleculetype ]')
         fields = line.split()
         if len(fields) < 6:
-            raise ValueError('Too few fields in [ cmap ] line: '+line);
+            raise ValueError('Too few fields in [ cmap ] line: '+line)
         self._currentMoleculeType.cmaps.append(fields)
 
     def _processAtomType(self, line):
         """Process a line in the [ atomtypes ] category."""
         fields = line.split()
         if len(fields) < 6:
-            raise ValueError('Too few fields in [ atomtypes ] line: '+line);
+            raise ValueError('Too few fields in [ atomtypes ] line: '+line)
         if len(fields[3]) == 1:
             # Bonded type and atomic number are both missing.
             fields.insert(1, None)
@@ -377,27 +377,27 @@ class GromacsTopFile(object):
         """Process a line in the [ bondtypes ] category."""
         fields = line.split()
         if len(fields) < 5:
-            raise ValueError('Too few fields in [ bondtypes ] line: '+line);
+            raise ValueError('Too few fields in [ bondtypes ] line: '+line)
         if fields[2] != '1':
-            raise ValueError('Unsupported function type in [ bondtypes ] line: '+line);
+            raise ValueError('Unsupported function type in [ bondtypes ] line: '+line)
         self._bondTypes[tuple(fields[:2])] = fields
 
     def _processAngleType(self, line):
         """Process a line in the [ angletypes ] category."""
         fields = line.split()
         if len(fields) < 6:
-            raise ValueError('Too few fields in [ angletypes ] line: '+line);
+            raise ValueError('Too few fields in [ angletypes ] line: '+line)
         if fields[3] not in ('1', '5'):
-            raise ValueError('Unsupported function type in [ angletypes ] line: '+line);
+            raise ValueError('Unsupported function type in [ angletypes ] line: '+line)
         self._angleTypes[tuple(fields[:3])] = fields
 
     def _processDihedralType(self, line):
         """Process a line in the [ dihedraltypes ] category."""
         fields = line.split()
         if len(fields) < 7:
-            raise ValueError('Too few fields in [ dihedraltypes ] line: '+line);
+            raise ValueError('Too few fields in [ dihedraltypes ] line: '+line)
         if fields[4] not in ('1', '2', '3', '4', '9'):
-            raise ValueError('Unsupported function type in [ dihedraltypes ] line: '+line);
+            raise ValueError('Unsupported function type in [ dihedraltypes ] line: '+line)
         key = tuple(fields[:5])
         if fields[4] == '9' and key in self._dihedralTypes:
             # There are multiple dihedrals defined for these atom types.
@@ -409,25 +409,25 @@ class GromacsTopFile(object):
         """Process a line in the [ implicit_genborn_params ] category."""
         fields = line.split()
         if len(fields) < 6:
-            raise ValueError('Too few fields in [ implicit_genborn_params ] line: '+line);
+            raise ValueError('Too few fields in [ implicit_genborn_params ] line: '+line)
         self._implicitTypes[fields[0]] = fields
 
     def _processPairType(self, line):
         """Process a line in the [ pairtypes ] category."""
         fields = line.split()
         if len(fields) < 5:
-            raise ValueError('Too few fields in [ pairtypes] line: '+line);
+            raise ValueError('Too few fields in [ pairtypes] line: '+line)
         if fields[2] != '1':
-            raise ValueError('Unsupported function type in [ pairtypes ] line: '+line);
+            raise ValueError('Unsupported function type in [ pairtypes ] line: '+line)
         self._pairTypes[tuple(fields[:2])] = fields
 
     def _processCmapType(self, line):
         """Process a line in the [ cmaptypes ] category."""
         fields = line.split()
         if len(fields) < 8 or len(fields) < 8+int(fields[6])*int(fields[7]):
-            raise ValueError('Too few fields in [ cmaptypes ] line: '+line);
+            raise ValueError('Too few fields in [ cmaptypes ] line: '+line)
         if fields[5] != '1':
-            raise ValueError('Unsupported function type in [ cmaptypes ] line: '+line);
+            raise ValueError('Unsupported function type in [ cmaptypes ] line: '+line)
         self._cmapTypes[tuple(fields[:5])] = fields
 
     def __init__(self, file, periodicBoxVectors=None, unitCellDimensions=None, includeDir=None, defines=None):
@@ -814,7 +814,7 @@ class GromacsTopFile(object):
                     map = []
                     for i in range(mapSize):
                         for j in range(mapSize):
-                            map.append(float(params[8+mapSize*((j+mapSize/2)%mapSize)+((i+mapSize/2)%mapSize)]))
+                            map.append(float(params[8+mapSize*((j+mapSize//2)%mapSize)+((i+mapSize//2)%mapSize)]))
                     map = tuple(map)
                     if map not in mapIndices:
                         mapIndices[map] = cmap.addMap(mapSize, map)

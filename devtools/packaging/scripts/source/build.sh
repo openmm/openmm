@@ -28,6 +28,7 @@ CMAKE_FLAGS+=" -DOPENMM_BUILD_DRUDE_OPENCL_LIB=OFF"
 CMAKE_FLAGS+=" -DOPENMM_BUILD_OPENCL_LIB=OFF"
 CMAKE_FLAGS+=" -DOPENMM_BUILD_RPMD_CUDA_LIB=OFF"
 CMAKE_FLAGS+=" -DOPENMM_BUILD_RPMD_OPENCL_LIB=OFF"
+CMAKE_FLAGS+=" -DOPENMM_GENERATE_API_DOCS=ON"
 
 # Set location for FFTW3
 #PREFIX="$WORKSPACE/miniconda"
@@ -42,7 +43,8 @@ fi
 mkdir build
 cd build
 cmake ../openmm $CMAKE_FLAGS
-make -j4 all DoxygenApiDocs sphinxpdf
+make -j4 all install
+make -j4 PythonInstall C++ApiDocs PythonApiDocs sphinxpdf
 
 # Install.
 make install

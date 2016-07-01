@@ -37,6 +37,7 @@
 #include "openmm/internal/hardware.h"
 #include "openmm/internal/vectorize.h"
 #include <cmath>
+#include <algorithm>
 #include <cstring>
 #include <sstream>
 #include <cstdlib>
@@ -395,7 +396,7 @@ void CpuCalcPmeReciprocalForceKernel::initialize(int xsize, int ysize, int zsize
     
     // Initialize the b-spline moduli.
 
-    int maxSize = max(max(gridx, gridy), gridz);
+    int maxSize = std::max(std::max(gridx, gridy), gridz);
     vector<double> data(PME_ORDER);
     vector<double> ddata(PME_ORDER);
     vector<double> bsplinesData(maxSize);
@@ -521,7 +522,7 @@ void CpuCalcPmeReciprocalForceKernel::runWorkerThread(ThreadPool& threads, int i
     int gridStart = 4*((index*gridSize)/numThreads);
     int gridEnd = 4*(((index+1)*gridSize)/numThreads);
     int complexSize = gridx*gridy*(gridz/2+1);
-    int complexStart = max(1, ((index*complexSize)/numThreads));
+    int complexStart = std::max(1, ((index*complexSize)/numThreads));
     int complexEnd = (((index+1)*complexSize)/numThreads);
     spreadCharge(posq, tempGrid[index], gridx, gridy, gridz, numParticles, periodicBoxVectors, recipBoxVectors, atomicCounter);
     threads.syncThreads();

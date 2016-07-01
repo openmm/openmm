@@ -71,20 +71,17 @@ class Topology(object):
     def getNumAtoms(self):
         """Return the number of atoms in the Topology.
         """
-        natom = self._numAtoms
-        return natom
+        return self._numAtoms
 
     def getNumResidues(self):
         """Return the number of residues in the Topology.
         """
-        nres = self._numResidues
-        return nres
+        return self._numResidues
 
     def getNumChains(self):
         """Return the number of chains in the Topology.
         """
-        nchain = len(self._chains)
-        return nchain
+        return len(self._chains)
 
     def addChain(self, id=None):
         """Create a new Chain and add it to the Topology.
@@ -370,6 +367,18 @@ class Residue(object):
     def atoms(self):
         """Iterate over all Atoms in the Residue."""
         return iter(self._atoms)
+
+    def bonds(self):
+        """Iterate over all Bonds involving any atom in this residue."""
+        return ( bond for bond in self.chain.topology.bonds() if ((bond[0] in self._atoms) or (bond[1] in self._atoms)) )
+
+    def internal_bonds(self):
+        """Iterate over all internal Bonds."""
+        return ( bond for bond in self.chain.topology.bonds() if ((bond[0] in self._atoms) and (bond[1] in self._atoms)) )
+
+    def external_bonds(self):
+        """Iterate over all Bonds to external atoms."""
+        return ( bond for bond in self.chain.topology.bonds() if ((bond[0] in self._atoms) != (bond[1] in self._atoms)) )
 
     def __len__(self):
         return len(self._atoms)

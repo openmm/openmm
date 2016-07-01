@@ -1,28 +1,24 @@
 // compute the value of the pi-orbital torsion angle
 
-real xad = pos1.x - pos4.x;
-real yad = pos1.y - pos4.y;
-real zad = pos1.z - pos4.z;
+real3 ad = make_real3(pos1.x-pos4.x, pos1.y-pos4.y, pos1.z-pos4.z);
+real3 bd = make_real3(pos2.x-pos4.x, pos2.y-pos4.y, pos2.z-pos4.z);
+real3 ec = make_real3(pos5.x-pos3.x, pos5.y-pos3.y, pos5.z-pos3.z);
+real3 gc = make_real3(pos6.x-pos3.x, pos6.y-pos3.y, pos6.z-pos3.z);
 
-real xbd = pos2.x - pos4.x;
-real ybd = pos2.y - pos4.y;
-real zbd = pos2.z - pos4.z;
+#if APPLY_PERIODIC
+APPLY_PERIODIC_TO_DELTA(ad)
+APPLY_PERIODIC_TO_DELTA(bd)
+APPLY_PERIODIC_TO_DELTA(ec)
+APPLY_PERIODIC_TO_DELTA(gc)
+#endif
 
-real xec = pos5.x - pos3.x;
-real yec = pos5.y - pos3.y;
-real zec = pos5.z - pos3.z;
+real xip = ad.y*bd.z - bd.y*ad.z + pos3.x;
+real yip = ad.z*bd.x - bd.z*ad.x + pos3.y;
+real zip = ad.x*bd.y - bd.x*ad.y + pos3.z;
 
-real xgc = pos6.x - pos3.x;
-real ygc = pos6.y - pos3.y;
-real zgc = pos6.z - pos3.z;
-
-real xip = yad*zbd - ybd*zad + pos3.x;
-real yip = zad*xbd - zbd*xad + pos3.y;
-real zip = xad*ybd - xbd*yad + pos3.z;
-
-real xiq = yec*zgc - ygc*zec + pos4.x;
-real yiq = zec*xgc - zgc*xec + pos4.y;
-real ziq = xec*ygc - xgc*yec + pos4.z;
+real xiq = ec.y*gc.z - gc.y*ec.z + pos4.x;
+real yiq = ec.z*gc.x - gc.z*ec.x + pos4.y;
+real ziq = ec.x*gc.y - gc.x*ec.y + pos4.z;
 
 real xcp = pos3.x - xip;
 real ycp = pos3.y - yip;
@@ -112,21 +108,21 @@ real dedziq = ydc*dedxu - xdc*dedyu;
 
 // compute first derivative components for individual atoms
 
-real dedxia = ybd*dedzip - zbd*dedyip;
-real dedyia = zbd*dedxip - xbd*dedzip;
-real dedzia = xbd*dedyip - ybd*dedxip;
+real dedxia = bd.y*dedzip - bd.z*dedyip;
+real dedyia = bd.z*dedxip - bd.x*dedzip;
+real dedzia = bd.x*dedyip - bd.y*dedxip;
 
-real dedxib = zad*dedyip - yad*dedzip;
-real dedyib = xad*dedzip - zad*dedxip;
-real dedzib = yad*dedxip - xad*dedyip;
+real dedxib = ad.z*dedyip - ad.y*dedzip;
+real dedyib = ad.x*dedzip - ad.z*dedxip;
+real dedzib = ad.y*dedxip - ad.x*dedyip;
 
-real dedxie = ygc*dedziq - zgc*dedyiq;
-real dedyie = zgc*dedxiq - xgc*dedziq;
-real dedzie = xgc*dedyiq - ygc*dedxiq;
+real dedxie = gc.y*dedziq - gc.z*dedyiq;
+real dedyie = gc.z*dedxiq - gc.x*dedziq;
+real dedzie = gc.x*dedyiq - gc.y*dedxiq;
 
-real dedxig = zec*dedyiq - yec*dedziq;
-real dedyig = xec*dedziq - zec*dedxiq;
-real dedzig = yec*dedxiq - xec*dedyiq;
+real dedxig = ec.z*dedyiq - ec.y*dedziq;
+real dedyig = ec.x*dedziq - ec.z*dedxiq;
+real dedzig = ec.y*dedxiq - ec.x*dedyiq;
 
 dedxic = dedxic + dedxip - dedxie - dedxig;
 dedyic = dedyic + dedyip - dedyie - dedyig;

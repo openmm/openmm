@@ -133,7 +133,7 @@ void System::setDefaultPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Ve
     periodicBoxVectors[2] = c;
 }
 
-bool System::usesPeriodicBoundaryConditions() {
+bool System::usesPeriodicBoundaryConditions() const {
 
     bool uses_pbc = false;
     bool all_forces_implement = true;

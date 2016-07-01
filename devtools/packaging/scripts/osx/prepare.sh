@@ -27,4 +27,4 @@ export PATH=$WORKSPACE/miniconda/bin:$PATH
 # Ensure configuration is up to date.
 conda config --add channels http://conda.binstar.org/omnia
 conda install --yes --quiet swig fftw3f pip
-pip install sphinxcontrib-bibtex
+pip install sphinxcontrib-bibtex sphinxcontrib-lunrsearch sphinxcontrib-autodoc_doxygen

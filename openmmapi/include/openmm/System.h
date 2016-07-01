@@ -243,7 +243,7 @@ public:
      *
      * @return true if at least one force uses PBC and false otherwise
      */
-    bool usesPeriodicBoundaryConditions();
+    bool usesPeriodicBoundaryConditions() const;
 private:
     class ConstraintInfo;
     Vec3 periodicBoxVectors[3];

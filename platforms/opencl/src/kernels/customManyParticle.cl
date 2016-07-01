@@ -55,7 +55,7 @@ inline real4 computeCross(real4 vec1, real4 vec2) {
 /**
  * Determine whether a particular interaction is in the list of exclusions.
  */
-inline bool isInteractionExcluded(int atom1, int atom2, __global int* restrict exclusions, __global int* restrict exclusionStartIndex) {
+inline bool isInteractionExcluded(int atom1, int atom2, __global const int* restrict exclusions, __global const int* restrict exclusionStartIndex) {
     int first = exclusionStartIndex[atom1];
     int last = exclusionStartIndex[atom1+1];
     for (int i = last-1; i >= first; i--) {
@@ -174,7 +174,7 @@ __kernel void findNeighbors(real4 periodicBoxSize, real4 invPeriodicBoxSize, rea
         __global const real4* restrict posq, __global const real4* restrict blockCenter, __global const real4* restrict blockBoundingBox, __global int2* restrict neighborPairs,
         __global int* restrict numNeighborPairs, __global int* restrict numNeighborsForAtom, int maxNeighborPairs
 #ifdef USE_EXCLUSIONS
-        , __global int* restrict exclusions, __global int* restrict exclusionStartIndex
+        , __global const int* restrict exclusions, __global const int* restrict exclusionStartIndex
 #endif
         ) {
     __local real4 positionCache[FIND_NEIGHBORS_WORKGROUP_SIZE];
@@ -264,7 +264,9 @@ __kernel void findNeighbors(real4 periodicBoxSize, real4 invPeriodicBoxSize, rea
                 }
             }
         }
-        numNeighborsForAtom[atom1] = totalNeighborsForAtom1;
+        if (atom1 < NUM_ATOMS)
+            numNeighborsForAtom[atom1] = totalNeighborsForAtom1;
+        SYNC_WARPS;
     }
 }
 
@@ -307,6 +309,7 @@ __kernel void computeNeighborStartIndices(__global int* restrict numNeighborsFor
             numNeighborsForAtom[globalIndex] = 0; // Clear this so the next kernel can use it as a counter
         }
         globalOffset += posBuffer[get_local_size(0)-1];
+        barrier(CLK_LOCAL_MEM_FENCE);
     }
     if (get_local_id(0) == 0)
         neighborStartIndex[0] = 0;

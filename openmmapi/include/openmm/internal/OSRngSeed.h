@@ -1,4 +1,4 @@
-﻿#ifndef OPENMM_OSRNGSEED_H_
+#ifndef OPENMM_OSRNGSEED_H_
 #define OPENMM_OSRNGSEED_H_
 
 
