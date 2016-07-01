@@ -7,7 +7,7 @@
 export WORKSPACE=`pwd`
 
 # Add conda binaries to path.
-PATH=$WORKSPACE/miniconda/bin:$PATH
+PATH=/Users/saurabhbelsare/software/anaconda/bin:$PATH
 
 # Set install directory.
 INSTALL=`pwd`/install
@@ -20,12 +20,12 @@ CMAKE_FLAGS="-DCMAKE_INSTALL_PREFIX=$INSTALL"
 # setting the rpath so that libOpenMMPME.so finds the right libfftw3
 #CMAKE_FLAGS+=" -DCMAKE_INSTALL_RPATH=.."
 CMAKE_FLAGS+=" -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++"
-CMAKE_FLAGS+=" -DCMAKE_OSX_DEPLOYMENT_TARGET=10.9"
-CMAKE_FLAGS+=" -DCMAKE_OSX_SYSROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.9.sdk"
+CMAKE_FLAGS+=" -DCMAKE_OSX_DEPLOYMENT_TARGET=10.10"
+CMAKE_FLAGS+=" -DCMAKE_OSX_SYSROOT=/Users/saurabhbelsare/software/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.10.sdk"
 
 # Build in subdirectory.
 # Set location for FFTW3
-PREFIX="$WORKSPACE/miniconda"
+PREFIX="/Users/saurabhbelsare/software/anaconda"
 CMAKE_FLAGS+=" -DFFTW_INCLUDES=$PREFIX/include"
 CMAKE_FLAGS+=" -DFFTW_LIBRARY=$PREFIX/lib/libfftw3f.dylib"
 CMAKE_FLAGS+=" -DFFTW_THREADS_LIBRARY=$PREFIX/lib/libfftw3f_threads.dylib"
