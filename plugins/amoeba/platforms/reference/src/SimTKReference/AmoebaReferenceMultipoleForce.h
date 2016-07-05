@@ -688,6 +688,9 @@ protected:
             RealOpenMM quadrupole[6];
             RealVec sphericalDipole;
             RealOpenMM sphericalQuadrupole[5];
+            RealOpenMM thole;
+            RealOpenMM dampingFactor;
+            RealOpenMM polarity;
     };
     
     /**
@@ -730,6 +733,9 @@ protected:
     RealOpenMM _uScale[5];
 
     std::vector<TransformedMultipole> _transformed;
+    std::vector<RealVec> _fixedMultipoleField;
+    std::vector<RealVec> _fixedMultipoleFieldPolar;
+    std::vector<RealVec> _inducedDipole;
     std::vector<RealVec> _inducedDipolePolar;
     std::vector<std::vector<RealVec> > _ptDipoleP;
     std::vector<std::vector<RealVec> > _ptDipoleD;
