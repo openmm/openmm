@@ -2722,14 +2722,14 @@ static void testParticleTotalDipoles() {
     // Compare to values calculated by TINKER.
     
     std::vector<Vec3> expectedDipole(numberOfParticles);
-    expectedDipole[0] = Vec3(-0.0803788842, -2.09909888e-6, -0.00392375693);
-    expectedDipole[1] = Vec3(0.0410569403, -0.0203074199, 0.00962003321);
-    expectedDipole[2] = Vec3(0.0411504999, 0.0202374437, 0.00966782877);
-    expectedDipole[3] = Vec3(0.0321482430, 5.32063061e-5, -0.0246587492);
-    expectedDipole[4] = Vec3(1.01040926, -3.19669827e-5, 0.0133900749);
-    expectedDipole[5] = Vec3(-0.0410404238, 0.0192119351, 0.00832856054);
-    expectedDipole[6] = Vec3(-0.00347968243, 4.61438806e-6, 0.00138347597);
-    expectedDipole[7] = Vec3(-0.0410361153, -0.0192440597, 0.00825472631);
+    expectedDipole[0] = Vec3(0.0119356307, -1.11302433e-6, -0.00296793872);
+    expectedDipole[1] = Vec3(8.60636211e-4, -0.00460821816, 0.00241705344);
+    expectedDipole[2] = Vec3(8.80646403e-4, 0.00459728769, 0.00243013245);
+    expectedDipole[3] = Vec3(-0.00123822377, 1.31555550e-5, -0.00558185336);
+    expectedDipole[4] = Vec3(0.00399455556, -2.27511931e-5, 0.00955607952);
+    expectedDipole[5] = Vec3(-0.00157302682, 0.00354892386, 3.40921137e-4);
+    expectedDipole[6] = Vec3(0.00952428069, 2.14171505e-6, -6.68945865e-4);
+    expectedDipole[7] = Vec3(-0.00157252460, -0.00355015528, 3.27055162e-4);
     for (int i = 0; i < numberOfParticles; i++)
         ASSERT_EQUAL_VEC(expectedDipole[i], dipole[i], 1e-4);
 }

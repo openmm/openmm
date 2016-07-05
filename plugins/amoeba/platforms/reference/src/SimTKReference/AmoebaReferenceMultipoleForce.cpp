@@ -1996,7 +1996,7 @@ void AmoebaReferenceMultipoleForce::calculateTotalDipoles(const vector<RealVec>&
       {
       for (int j = 0; j < 3; j++)
         {
-        outputTotalDipoles[i][j] = particleData[i].position[j] * particleData[i].charge + particleData[i].dipole[j] + _inducedDipole[i][j];
+        outputTotalDipoles[i][j] = particleData[i].dipole[j] + _inducedDipole[i][j];
         }
       }
 }

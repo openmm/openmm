@@ -2049,9 +2049,9 @@ void CudaCalcAmoebaMultipoleForceKernel::getTotalDipoles(ContextImpl& context, v
         labFrameDipoles->download(labDipoleVec);
         cu.getPosq().download(posqVec);
         for (int i = 0; i < numParticles; i++) {
-            totalDipoleVecX = posqVec[i].x * posqVec[i].w + labDipoleVec[3*i] + inducedDipoleVec[3*i];
-            totalDipoleVecY = posqVec[i].y * posqVec[i].w + labDipoleVec[3*i+1] + inducedDipoleVec[3*i+1];
-            totalDipoleVecZ = posqVec[i].z * posqVec[i].w + labDipoleVec[3*i+2] + inducedDipoleVec[3*i+2];
+            totalDipoleVecX = labDipoleVec[3*i] + inducedDipoleVec[3*i];
+            totalDipoleVecY = labDipoleVec[3*i+1] + inducedDipoleVec[3*i+1];
+            totalDipoleVecZ = labDipoleVec[3*i+2] + inducedDipoleVec[3*i+2];
             dipoles[order[i]] = Vec3(totalDipoleVecX, totalDipoleVecY, totalDipoleVecZ);
         }
     }
@@ -2066,9 +2066,9 @@ void CudaCalcAmoebaMultipoleForceKernel::getTotalDipoles(ContextImpl& context, v
         labFrameDipoles->download(labDipoleVec);
         cu.getPosq().download(posqVec);
         for (int i = 0; i < numParticles; i++) {
-            totalDipoleVecX = posqVec[i].x * posqVec[i].w + labDipoleVec[3*i] + inducedDipoleVec[3*i];
-            totalDipoleVecY = posqVec[i].y * posqVec[i].w + labDipoleVec[3*i+1] + inducedDipoleVec[3*i+1];
-            totalDipoleVecZ = posqVec[i].z * posqVec[i].w + labDipoleVec[3*i+2] + inducedDipoleVec[3*i+2];
+            totalDipoleVecX = labDipoleVec[3*i] + inducedDipoleVec[3*i];
+            totalDipoleVecY = labDipoleVec[3*i+1] + inducedDipoleVec[3*i+1];
+            totalDipoleVecZ = labDipoleVec[3*i+2] + inducedDipoleVec[3*i+2];
             dipoles[order[i]] = Vec3(totalDipoleVecX, totalDipoleVecY, totalDipoleVecZ);
         }
     }
