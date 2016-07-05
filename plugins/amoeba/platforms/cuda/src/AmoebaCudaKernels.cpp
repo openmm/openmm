@@ -1992,6 +1992,27 @@ void CudaCalcAmoebaMultipoleForceKernel::ensureMultipolesValid(ContextImpl& cont
         context.calcForcesAndEnergy(false, false, -1);
 }
 
+
+void CudaCalcAmoebaMultipoleForceKernel::getLabFramePermanentDipoles(ContextImpl& context, vector<Vec3>& dipoles) {
+    ensureMultipolesValid(context);
+    int numParticles = cu.getNumAtoms();
+    dipoles.resize(numParticles);
+    const vector<int>& order = cu.getAtomIndex();
+    if (cu.getUseDoublePrecision()) {
+        vector<double> labDipoleVec;
+        labFrameDipoles->download(labDipoleVec);
+        for (int i = 0; i < numParticles; i++)
+            dipoles[order[i]] = Vec3(labDipoleVec[3*i], labDipoleVec[3*i+1], labDipoleVec[3*i+2]);
+    }
+    else {
+        vector<float> labDipoleVec;
+        labFrameDipoles->download(labDipoleVec);
+        for (int i = 0; i < numParticles; i++)
+            dipoles[order[i]] = Vec3(labDipoleVec[3*i], labDipoleVec[3*i+1], labDipoleVec[3*i+2]);
+    }
+}
+
+
 void CudaCalcAmoebaMultipoleForceKernel::getInducedDipoles(ContextImpl& context, vector<Vec3>& dipoles) {
     ensureMultipolesValid(context);
     int numParticles = cu.getNumAtoms();
@@ -2008,6 +2029,48 @@ void CudaCalcAmoebaMultipoleForceKernel::getInducedDipoles(ContextImpl& context,
         inducedDipole->download(d);
         for (int i = 0; i < numParticles; i++)
             dipoles[order[i]] = Vec3(d[3*i], d[3*i+1], d[3*i+2]);
+    }
+}
+
+
+void CudaCalcAmoebaMultipoleForceKernel::getTotalDipoles(ContextImpl& context, vector<Vec3>& dipoles) {
+    ensureMultipolesValid(context);
+    int numParticles = cu.getNumAtoms();
+    dipoles.resize(numParticles);
+    const vector<int>& order = cu.getAtomIndex();
+    if (cu.getUseDoublePrecision()) {
+        vector<double4> posqVec;
+        vector<double> labDipoleVec;
+        vector<double> inducedDipoleVec;
+        double totalDipoleVecX;
+        double totalDipoleVecY;
+        double totalDipoleVecZ;
+        inducedDipole->download(inducedDipoleVec);
+        labFrameDipoles->download(labDipoleVec);
+        cu.getPosq().download(posqVec);
+        for (int i = 0; i < numParticles; i++) {
+            totalDipoleVecX = labDipoleVec[3*i] + inducedDipoleVec[3*i];
+            totalDipoleVecY = labDipoleVec[3*i+1] + inducedDipoleVec[3*i+1];
+            totalDipoleVecZ = labDipoleVec[3*i+2] + inducedDipoleVec[3*i+2];
+            dipoles[order[i]] = Vec3(totalDipoleVecX, totalDipoleVecY, totalDipoleVecZ);
+        }
+    }
+    else {
+        vector<float4> posqVec;
+        vector<float> labDipoleVec;
+        vector<float> inducedDipoleVec;
+        float totalDipoleVecX;
+        float totalDipoleVecY;
+        float totalDipoleVecZ;
+        inducedDipole->download(inducedDipoleVec);
+        labFrameDipoles->download(labDipoleVec);
+        cu.getPosq().download(posqVec);
+        for (int i = 0; i < numParticles; i++) {
+            totalDipoleVecX = labDipoleVec[3*i] + inducedDipoleVec[3*i];
+            totalDipoleVecY = labDipoleVec[3*i+1] + inducedDipoleVec[3*i+1];
+            totalDipoleVecZ = labDipoleVec[3*i+2] + inducedDipoleVec[3*i+2];
+            dipoles[order[i]] = Vec3(totalDipoleVecX, totalDipoleVecY, totalDipoleVecZ);
+        }
     }
 }
 
@@ -2163,6 +2226,7 @@ void CudaCalcAmoebaMultipoleForceKernel::computeSystemMultipoleMoments(ContextIm
     outputMultipoleMoments[11] = 100.0*zyqdp*debye;
     outputMultipoleMoments[12] = 100.0*zzqdp*debye;
 }
+
 
 void CudaCalcAmoebaMultipoleForceKernel::getSystemMultipoleMoments(ContextImpl& context, vector<double>& outputMultipoleMoments) {
     ensureMultipolesValid(context);
