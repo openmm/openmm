@@ -1199,6 +1199,32 @@ class ForceField(object):
         return sys
 
 
+def _findBondsForExclusions(data, sys):
+    """Create a list of bonds to use when identifying exclusions."""
+    bondIndices = []
+    for bond in data.bonds:
+        bondIndices.append((bond.atom1, bond.atom2))
+
+    # If a virtual site does *not* share exclusions with another atom, add a bond between it and its first parent atom.
+
+    for i in range(sys.getNumParticles()):
+        if sys.isVirtualSite(i):
+            (site, atoms, excludeWith) = data.virtualSites[data.atoms[i]]
+            if excludeWith is None:
+                bondIndices.append((i, site.getParticle(0)))
+
+    # Certain particles, such as lone pairs and Drude particles, share exclusions with a parent atom.
+    # If the parent atom does not interact with an atom, the child particle does not either.
+
+    for atom1, atom2 in bondIndices:
+        for child1 in data.excludeAtomWith[atom1]:
+            bondIndices.append((child1, atom2))
+            for child2 in data.excludeAtomWith[atom2]:
+                bondIndices.append((child1, child2))
+        for child2 in data.excludeAtomWith[atom2]:
+            bondIndices.append((atom1, child2))
+    return bondIndices
+
 def _countResidueAtoms(elements):
     """Count the number of atoms of each element in a residue."""
     counts = {}
@@ -2130,33 +2156,9 @@ class NonbondedGenerator(object):
         sys.addForce(force)
 
     def postprocessSystem(self, sys, data, args):
-        # Create exceptions based on bonds.
-
-        bondIndices = []
-        for bond in data.bonds:
-            bondIndices.append((bond.atom1, bond.atom2))
-
-        # If a virtual site does *not* share exclusions with another atom, add a bond between it and its first parent atom.
-
-        for i in range(sys.getNumParticles()):
-            if sys.isVirtualSite(i):
-                (site, atoms, excludeWith) = data.virtualSites[data.atoms[i]]
-                if excludeWith is None:
-                    bondIndices.append((i, site.getParticle(0)))
-
-        # Certain particles, such as lone pairs and Drude particles, share exclusions with a parent atom.
-        # If the parent atom does not interact with an atom, the child particle does not either.
-
-        for atom1, atom2 in bondIndices:
-            for child1 in data.excludeAtomWith[atom1]:
-                bondIndices.append((child1, atom2))
-                for child2 in data.excludeAtomWith[atom2]:
-                    bondIndices.append((child1, child2))
-            for child2 in data.excludeAtomWith[atom2]:
-                bondIndices.append((atom1, child2))
-
         # Create the exceptions.
 
+        bondIndices = _findBondsForExclusions(data, sys)
         nonbonded = [f for f in sys.getForces() if isinstance(f, mm.NonbondedForce)][0]
         nonbonded.createExceptionsFromBonds(bondIndices, self.coulomb14scale, self.lj14scale)
 
@@ -2268,33 +2270,9 @@ class LennardJonesGenerator(object):
         sys.addForce(self.force)
 
     def postprocessSystem(self, sys, data, args):
-        # Create exceptions based on bonds.
-
-        bondIndices = []
-        for bond in data.bonds:
-            bondIndices.append((bond.atom1, bond.atom2))
-
-        # If a virtual site does *not* share exclusions with another atom, add a bond between it and its first parent atom.
-        
-        for i in range(sys.getNumParticles()):
-            if sys.isVirtualSite(i):
-                (site, atoms, excludeWith) = data.virtualSites[data.atoms[i]]
-                if excludeWith is None:
-                    bondIndices.append((i, site.getParticle(0)))
-
-        # Certain particles, such as lone pairs and Drude particles, share exclusions with a parent atom.
-        # If the parent atom does not interact with an atom, the child particle does not either.
-
-        for atom1, atom2 in bondIndices:
-            for child1 in data.excludeAtomWith[atom1]:
-                bondIndices.append((child1, atom2))
-                for child2 in data.excludeAtomWith[atom2]:
-                    bondIndices.append((child1, child2))
-            for child2 in data.excludeAtomWith[atom2]:
-                bondIndices.append((atom1, child2))
-
         # Create the exceptions.
         
+        bondIndices = _findBondsForExclusions(data, sys)
         if self.lj14scale == 1:
             # Just exclude the 1-2 and 1-3 interactions.
             
@@ -2644,33 +2622,9 @@ class CustomNonbondedGenerator(object):
         sys.addForce(force)
 
     def postprocessSystem(self, sys, data, args):
-        # Create exclusions based on bonds.
-
-        bondIndices = []
-        for bond in data.bonds:
-            bondIndices.append((bond.atom1, bond.atom2))
-
-        # If a virtual site does *not* share exclusions with another atom, add a bond between it and its first parent atom.
-
-        for i in range(sys.getNumParticles()):
-            if sys.isVirtualSite(i):
-                (site, atoms, excludeWith) = data.virtualSites[data.atoms[i]]
-                if excludeWith is None:
-                    bondIndices.append((i, site.getParticle(0)))
-
-        # Certain particles, such as lone pairs and Drude particles, share exclusions with a parent atom.
-        # If the parent atom does not interact with an atom, the child particle does not either.
-
-        for atom1, atom2 in bondIndices:
-            for child1 in data.excludeAtomWith[atom1]:
-                bondIndices.append((child1, atom2))
-                for child2 in data.excludeAtomWith[atom2]:
-                    bondIndices.append((child1, child2))
-            for child2 in data.excludeAtomWith[atom2]:
-                bondIndices.append((atom1, child2))
-
         # Create the exclusions.
 
+        bondIndices = _findBondsForExclusions(data, sys)
         nonbonded = [f for f in sys.getForces() if isinstance(f, mm.CustomNonbondedForce)][0]
         nonbonded.createExclusionsFromBonds(bondIndices, self.bondCutoff)
 
@@ -4097,24 +4051,15 @@ class AmoebaVdwGenerator(object):
 
     #=============================================================================================
 
-    # Return a set containing the indices of particles bonded to particle with index=particleIndex
-
-    #=============================================================================================
-
     @staticmethod
-    def getBondedParticleSet(particleIndex, data):
+    def getBondedParticleSets(sys, data):
 
-        bondedParticleSet = set()
-
-        for bond in data.atomBonds[particleIndex]:
-            atom1 = data.bonds[bond].atom1
-            atom2 = data.bonds[bond].atom2
-            if (atom1 != particleIndex):
-                bondedParticleSet.add(atom1)
-            else:
-                bondedParticleSet.add(atom2)
-
-        return bondedParticleSet
+        bondedParticleSets = [set() for i in range(len(data.atoms))]
+        bondIndices = _findBondsForExclusions(data, sys)
+        for atom1, atom2 in bondIndices:
+            bondedParticleSets[atom1].add(atom2)
+            bondedParticleSets[atom2].add(atom1)
+        return bondedParticleSets
 
     #=============================================================================================
 
@@ -4198,9 +4143,7 @@ class AmoebaVdwGenerator(object):
         # (1) collect in bondedParticleSets[i], 1-2 indices for all bonded partners of particle i
         # (2) add 1-2,1-3 and self to exclusion set
 
-        bondedParticleSets = []
-        for i in range(len(data.atoms)):
-            bondedParticleSets.append(AmoebaVdwGenerator.getBondedParticleSet(i, data))
+        bondedParticleSets = AmoebaVdwGenerator.getBondedParticleSets(sys, data)
 
         for (i,atom) in enumerate(data.atoms):
 
@@ -4619,11 +4562,7 @@ class AmoebaMultipoleGenerator(object):
 
         # 1-2
 
-        bonded12ParticleSets = []
-        for i in range(len(data.atoms)):
-            bonded12ParticleSet = AmoebaVdwGenerator.getBondedParticleSet(i, data)
-            bonded12ParticleSet = set(sorted(bonded12ParticleSet))
-            bonded12ParticleSets.append(bonded12ParticleSet)
+        bonded12ParticleSets = AmoebaVdwGenerator.getBondedParticleSets(sys, data)
 
         # 1-3
 
@@ -5211,11 +5150,7 @@ class AmoebaGeneralizedKirkwoodGenerator(object):
 
         # 1-2
 
-        bonded12ParticleSets = []
-        for i in range(len(data.atoms)):
-            bonded12ParticleSet = AmoebaVdwGenerator.getBondedParticleSet(i, data)
-            bonded12ParticleSet = set(sorted(bonded12ParticleSet))
-            bonded12ParticleSets.append(bonded12ParticleSet)
+        bonded12ParticleSets = AmoebaVdwGenerator.getBondedParticleSets(sys, data)
 
         radiusType = 'Bondi'
         for atomIndex in range(0, amoebaMultipoleForce.getNumMultipoles()):
