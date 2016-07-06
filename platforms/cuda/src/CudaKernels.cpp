@@ -339,6 +339,10 @@ void CudaUpdateStateDataKernel::getForces(ContextImpl& context, vector<Vec3>& fo
         forces[order[i]] = Vec3(scale*force[i], scale*force[i+paddedNumParticles], scale*force[i+paddedNumParticles*2]);
 }
 
+void CudaUpdateStateDataKernel::getEnergyParameterDerivatives(ContextImpl& context, map<string, double>& derivs) {
+    
+}
+
 void CudaUpdateStateDataKernel::getPeriodicBoxVectors(ContextImpl& context, Vec3& a, Vec3& b, Vec3& c) const {
     cu.getPeriodicBoxVectors(a, b, c);
 }

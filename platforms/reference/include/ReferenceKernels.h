@@ -158,6 +158,12 @@ public:
      */
     void getForces(ContextImpl& context, std::vector<Vec3>& forces);
     /**
+     * Get the current derivatives of the energy with respect to context parameters.
+     *
+     * @param derivs  on exit, this contains the derivatives
+     */
+    void getEnergyParameterDerivatives(ContextImpl& context, std::map<std::string, double>& derivs);
+    /**
      * Get the current periodic box vectors.
      *
      * @param a      on exit, this contains the vector defining the first edge of the periodic box
@@ -319,7 +325,8 @@ private:
     int **bondIndexArray;
     RealOpenMM **bondParamArray;
     Lepton::CompiledExpression energyExpression, forceExpression;
-    std::vector<std::string> parameterNames, globalParameterNames;
+    std::vector<Lepton::CompiledExpression> energyParamDerivExpressions;
+    std::vector<std::string> parameterNames, globalParameterNames, energyParamDerivNames;
     bool usePeriodic;
 };
 

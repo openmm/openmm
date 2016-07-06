@@ -368,6 +368,10 @@ void OpenCLUpdateStateDataKernel::getForces(ContextImpl& context, vector<Vec3>& 
     }
 }
 
+void OpenCLUpdateStateDataKernel::getEnergyParameterDerivatives(ContextImpl& context, map<string, double>& derivs) {
+    
+}
+
 void OpenCLUpdateStateDataKernel::getPeriodicBoxVectors(ContextImpl& context, Vec3& a, Vec3& b, Vec3& c) const {
     cl.getPeriodicBoxVectors(a, b, c);
 }

@@ -39,19 +39,19 @@ using namespace OpenMM;
    --------------------------------------------------------------------------------------- */
 
 ReferenceCustomBondIxn::ReferenceCustomBondIxn(const Lepton::CompiledExpression& energyExpression,
-        const Lepton::CompiledExpression& forceExpression, const vector<string>& parameterNames, map<string, double> globalParameters) :
-        energyExpression(energyExpression), forceExpression(forceExpression), usePeriodic(false) {
-    energyR = ReferenceForce::getVariablePointer(this->energyExpression, "r");
-    forceR = ReferenceForce::getVariablePointer(this->forceExpression, "r");
+        const Lepton::CompiledExpression& forceExpression, const vector<string>& parameterNames, map<string, double> globalParameters,
+        const vector<Lepton::CompiledExpression> energyParamDerivExpressions) :
+        energyExpression(energyExpression), forceExpression(forceExpression), usePeriodic(false), energyParamDerivExpressions(energyParamDerivExpressions) {
+    expressionSet.registerExpression(this->energyExpression);
+    expressionSet.registerExpression(this->forceExpression);
+    for (int i = 0; i < this->energyParamDerivExpressions.size(); i++)
+        expressionSet.registerExpression(this->energyParamDerivExpressions[i]);
+    rIndex = expressionSet.getVariableIndex("r");
     numParameters = parameterNames.size();
-    for (int i = 0; i < (int) numParameters; i++) {
-        energyParams.push_back(ReferenceForce::getVariablePointer(this->energyExpression, parameterNames[i]));
-        forceParams.push_back(ReferenceForce::getVariablePointer(this->forceExpression, parameterNames[i]));
-    }
-    for (map<string, double>::const_iterator iter = globalParameters.begin(); iter != globalParameters.end(); ++iter) {
-        ReferenceForce::setVariable(ReferenceForce::getVariablePointer(this->energyExpression, iter->first), iter->second);
-        ReferenceForce::setVariable(ReferenceForce::getVariablePointer(this->forceExpression, iter->first), iter->second);
-    }
+    for (int i = 0; i < (int) numParameters; i++)
+        bondParamIndex.push_back(expressionSet.getVariableIndex(parameterNames[i]));
+    for (map<string, double>::const_iterator iter = globalParameters.begin(); iter != globalParameters.end(); ++iter)
+        expressionSet.setVariable(expressionSet.getVariableIndex(iter->first), iter->second);
 }
 
 /**---------------------------------------------------------------------------------------
@@ -86,21 +86,10 @@ void ReferenceCustomBondIxn::calculateBondIxn(int* atomIndices,
                                               vector<RealVec>& atomCoordinates,
                                               RealOpenMM* parameters,
                                               vector<RealVec>& forces,
-                                              RealOpenMM* totalEnergy) const {
-
-   static const std::string methodName = "\nReferenceCustomBondIxn::calculateBondIxn";
-
-   static const int twoI               = 2;
-
-   static const RealOpenMM zero        = 0.0;
-   static const RealOpenMM two         = 2.0;
-   static const RealOpenMM half        = 0.5;
-
+                                              RealOpenMM* totalEnergy, double* energyParamDerivs) {
    RealOpenMM deltaR[ReferenceForce::LastDeltaRIndex];
-   for (int i = 0; i < numParameters; i++) {
-       ReferenceForce::setVariable(energyParams[i], parameters[i]);
-       ReferenceForce::setVariable(forceParams[i], parameters[i]);
-   }
+   for (int i = 0; i < numParameters; i++)
+       expressionSet.setVariable(bondParamIndex[i], parameters[i]);
 
    // ---------------------------------------------------------------------------------------
 
@@ -113,10 +102,9 @@ void ReferenceCustomBondIxn::calculateBondIxn(int* atomIndices,
    else
        ReferenceForce::getDeltaR(atomCoordinates[atomAIndex], atomCoordinates[atomBIndex], deltaR);
    
-   ReferenceForce::setVariable(energyR, deltaR[ReferenceForce::RIndex]);
-   ReferenceForce::setVariable(forceR, deltaR[ReferenceForce::RIndex]);
+   expressionSet.setVariable(rIndex, deltaR[ReferenceForce::RIndex]);
    RealOpenMM dEdR            = (RealOpenMM) forceExpression.evaluate();
-   dEdR                       = deltaR[ReferenceForce::RIndex] > zero ? (dEdR/deltaR[ReferenceForce::RIndex]) : zero;
+   dEdR                       = deltaR[ReferenceForce::RIndex] > 0 ? (dEdR/deltaR[ReferenceForce::RIndex]) : 0;
 
    forces[atomAIndex][0]     += dEdR*deltaR[ReferenceForce::XIndex];
    forces[atomAIndex][1]     += dEdR*deltaR[ReferenceForce::YIndex];
@@ -126,6 +114,8 @@ void ReferenceCustomBondIxn::calculateBondIxn(int* atomIndices,
    forces[atomBIndex][1]     -= dEdR*deltaR[ReferenceForce::YIndex];
    forces[atomBIndex][2]     -= dEdR*deltaR[ReferenceForce::ZIndex];
 
+   for (int i = 0; i < energyParamDerivExpressions.size(); i++)
+       energyParamDerivs[i] += energyParamDerivExpressions[i].evaluate();
    if (totalEnergy != NULL)
        *totalEnergy += (RealOpenMM) energyExpression.evaluate();
 }

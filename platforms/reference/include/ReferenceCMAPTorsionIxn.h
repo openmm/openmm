@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2010 Stanford University and Simbios.
+/* Portions copyright (c) 2010-2016 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -97,7 +97,7 @@ public:
 
     void calculateBondIxn(int* atomIndices, std::vector<OpenMM::RealVec>& atomCoordinates,
                          RealOpenMM* parameters, std::vector<OpenMM::RealVec>& forces,
-                         RealOpenMM* totalEnergy) const;
+                         RealOpenMM* totalEnergy, double* energyParamDerivs);
 
 // ---------------------------------------------------------------------------------------
 

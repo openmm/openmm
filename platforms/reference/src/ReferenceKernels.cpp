@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -146,6 +146,11 @@ static ReferenceConstraints& extractConstraints(ContextImpl& context) {
     return *(ReferenceConstraints*) data->constraints;
 }
 
+static map<string, double>& extractEnergyParameterDerivatives(ContextImpl& context) {
+    ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
+    return *((map<string, double>*) data->energyParameterDerivatives);
+}
+
 /**
  * Make sure an expression doesn't use any undefined variables.
  */
@@ -208,6 +213,8 @@ void ReferenceCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, 
     }
     else
         savedForces = forceData;
+    for (map<string, double>::const_iterator iter = context.getParameters().begin(); iter != context.getParameters().end(); ++iter)
+        extractEnergyParameterDerivatives(context)[iter->first] = 0;
 }
 
 double ReferenceCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForces, bool includeEnergy, int groups, bool& valid) {
@@ -271,6 +278,10 @@ void ReferenceUpdateStateDataKernel::getForces(ContextImpl& context, std::vector
     forces.resize(numParticles);
     for (int i = 0; i < numParticles; ++i)
         forces[i] = Vec3(forceData[i][0], forceData[i][1], forceData[i][2]);
+}
+
+void ReferenceUpdateStateDataKernel::getEnergyParameterDerivatives(ContextImpl& context, map<string, double>& derivs) {
+    derivs = extractEnergyParameterDerivatives(context);
 }
 
 void ReferenceUpdateStateDataKernel::getPeriodicBoxVectors(ContextImpl& context, Vec3& a, Vec3& b, Vec3& c) const {
@@ -437,6 +448,11 @@ void ReferenceCalcCustomBondForceKernel::initialize(const System& system, const 
         parameterNames.push_back(force.getPerBondParameterName(i));
     for (int i = 0; i < force.getNumGlobalParameters(); i++)
         globalParameterNames.push_back(force.getGlobalParameterName(i));
+    for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
+        string param = force.getEnergyParameterDerivativeName(i);
+        energyParamDerivNames.push_back(param);
+        energyParamDerivExpressions.push_back(expression.differentiate(param).createCompiledExpression());
+    }
     set<string> variables;
     variables.insert("r");
     variables.insert(parameterNames.begin(), parameterNames.end());
@@ -451,11 +467,15 @@ double ReferenceCalcCustomBondForceKernel::execute(ContextImpl& context, bool in
     map<string, double> globalParameters;
     for (int i = 0; i < (int) globalParameterNames.size(); i++)
         globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
-    ReferenceBondForce refBondForce;
-    ReferenceCustomBondIxn bond(energyExpression, forceExpression, parameterNames, globalParameters);
+    ReferenceCustomBondIxn bond(energyExpression, forceExpression, parameterNames, globalParameters, energyParamDerivExpressions);
     if (usePeriodic)
         bond.setPeriodic(extractBoxVectors(context));
-    refBondForce.calculateForce(numBonds, bondIndexArray, posData, bondParamArray, forceData, includeEnergy ? &energy : NULL, bond);
+    vector<double> energyParamDerivValues(energyParamDerivNames.size()+1, 0.0);
+    for (int i = 0; i < numBonds; i++)
+        bond.calculateBondIxn(bondIndexArray[i], posData, bondParamArray[i], forceData, includeEnergy ? &energy : NULL, &energyParamDerivValues[0]);
+    map<string, double>& energyParamDerivs = extractEnergyParameterDerivatives(context);
+    for (int i = 0; i < energyParamDerivNames.size(); i++)
+        energyParamDerivs[energyParamDerivNames[i]] += energyParamDerivValues[i];
     return energy;
 }
 

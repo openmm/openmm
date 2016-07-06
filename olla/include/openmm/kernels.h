@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -172,6 +172,12 @@ public:
      * @param forces  on exit, this contains the forces
      */
     virtual void getForces(ContextImpl& context, std::vector<Vec3>& forces) = 0;
+    /**
+     * Get the current derivatives of the energy with respect to context parameters.
+     *
+     * @param derivs  on exit, this contains the derivatives
+     */
+    virtual void getEnergyParameterDerivatives(ContextImpl& context, std::map<std::string, double>& derivs) = 0;
     /**
      * Get the current periodic box vectors.
      *
