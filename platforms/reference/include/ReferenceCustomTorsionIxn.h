@@ -25,7 +25,7 @@
 #define __ReferenceCustomTorsionIxn_H__
 
 #include "ReferenceBondIxn.h"
-#include "lepton/CompiledExpression.h"
+#include "openmm/internal/CompiledExpressionSet.h"
 
 namespace OpenMM {
 
@@ -34,10 +34,10 @@ class ReferenceCustomTorsionIxn : public ReferenceBondIxn {
    private:
       Lepton::CompiledExpression energyExpression;
       Lepton::CompiledExpression forceExpression;
-      std::vector<double*> energyParams;
-      std::vector<double*> forceParams;
-      double* energyTheta;
-      double* forceTheta;
+      std::vector<Lepton::CompiledExpression> energyParamDerivExpressions;
+      CompiledExpressionSet expressionSet;
+      std::vector<int> torsionParamIndex;
+      int thetaIndex;
       int numParameters;
       bool usePeriodic;
       RealVec boxVectors[3];
@@ -51,7 +51,8 @@ class ReferenceCustomTorsionIxn : public ReferenceBondIxn {
          --------------------------------------------------------------------------------------- */
 
        ReferenceCustomTorsionIxn(const Lepton::CompiledExpression& energyExpression, const Lepton::CompiledExpression& forceExpression,
-                              const std::vector<std::string>& parameterNames, std::map<std::string, double> globalParameters);
+                              const std::vector<std::string>& parameterNames, std::map<std::string, double> globalParameters,
+                              const std::vector<Lepton::CompiledExpression> energyParamDerivExpressions);
 
       /**---------------------------------------------------------------------------------------
 

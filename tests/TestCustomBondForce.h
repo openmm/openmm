@@ -212,6 +212,7 @@ void testEnergyParameterDerivatives() {
         ASSERT_EQUAL_TOL(dEdk, derivs["k"], 1e-5);
     }
 }
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {

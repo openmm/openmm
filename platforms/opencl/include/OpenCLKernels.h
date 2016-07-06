@@ -715,6 +715,7 @@ private:
     std::vector<cl_float> globalParamValues;
     std::vector<OpenCLArray*> tabulatedFunctions;
     double longRangeCoefficient;
+    std::vector<double> longRangeCoefficientDerivs;
     bool hasInitializedLongRangeCorrection, hasInitializedKernel;
     int numGroupThreadBlocks;
     CustomNonbondedForce* forceCopy;

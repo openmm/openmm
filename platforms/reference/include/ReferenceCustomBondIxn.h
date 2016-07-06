@@ -27,7 +27,6 @@
 
 #include "ReferenceBondIxn.h"
 #include "openmm/internal/CompiledExpressionSet.h"
-#include "lepton/CompiledExpression.h"
 
 namespace OpenMM {
 

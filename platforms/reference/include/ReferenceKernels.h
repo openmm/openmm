@@ -404,7 +404,8 @@ private:
     int **angleIndexArray;
     RealOpenMM **angleParamArray;
     Lepton::CompiledExpression energyExpression, forceExpression;
-    std::vector<std::string> parameterNames, globalParameterNames;
+    std::vector<Lepton::CompiledExpression> energyParamDerivExpressions;
+    std::vector<std::string> parameterNames, globalParameterNames, energyParamDerivNames;
     bool usePeriodic;
 };
 
@@ -557,7 +558,8 @@ private:
     int **torsionIndexArray;
     RealOpenMM **torsionParamArray;
     Lepton::CompiledExpression energyExpression, forceExpression;
-    std::vector<std::string> parameterNames, globalParameterNames;
+    std::vector<Lepton::CompiledExpression> energyParamDerivExpressions;
+    std::vector<std::string> parameterNames, globalParameterNames, energyParamDerivNames;
     bool usePeriodic;
 };
 
@@ -654,8 +656,10 @@ private:
     std::map<std::string, double> globalParamValues;
     std::vector<std::set<int> > exclusions;
     Lepton::CompiledExpression energyExpression, forceExpression;
-    std::vector<std::string> parameterNames, globalParameterNames;
+    std::vector<Lepton::CompiledExpression> energyParamDerivExpressions;
+    std::vector<std::string> parameterNames, globalParameterNames, energyParamDerivNames;
     std::vector<std::pair<std::set<int>, std::set<int> > > interactionGroups;
+    std::vector<double> longRangeCoefficientDerivs;
     NonbondedMethod nonbondedMethod;
     NeighborList* neighborList;
 };

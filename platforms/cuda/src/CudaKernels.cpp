@@ -2540,13 +2540,13 @@ double CudaCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool in
         if (changed) {
             globals->upload(globalParamValues);
             if (forceCopy != NULL) {
-                longRangeCoefficient = CustomNonbondedForceImpl::calcLongRangeCorrection(*forceCopy, context.getOwner());
+                CustomNonbondedForceImpl::calcLongRangeCorrection(*forceCopy, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs);
                 hasInitializedLongRangeCorrection = true;
             }
         }
     }
     if (!hasInitializedLongRangeCorrection) {
-        longRangeCoefficient = CustomNonbondedForceImpl::calcLongRangeCorrection(*forceCopy, context.getOwner());
+        CustomNonbondedForceImpl::calcLongRangeCorrection(*forceCopy, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs);
         hasInitializedLongRangeCorrection = true;
     }
     if (interactionGroupData != NULL) {
@@ -2596,7 +2596,7 @@ void CudaCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& co
     // If necessary, recompute the long range correction.
     
     if (forceCopy != NULL) {
-        longRangeCoefficient = CustomNonbondedForceImpl::calcLongRangeCorrection(force, context.getOwner());
+        CustomNonbondedForceImpl::calcLongRangeCorrection(force, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs);
         hasInitializedLongRangeCorrection = true;
         *forceCopy = force;
     }

@@ -181,6 +181,41 @@ void testPeriodic() {
     ASSERT_EQUAL_TOL(0.5*1.1*(M_PI/6)*(M_PI/6), state.getPotentialEnergy(), TOL);
 }
 
+void testEnergyParameterDerivatives() {
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    VerletIntegrator integrator(0.01);
+    CustomAngleForce* angles = new CustomAngleForce("k*(theta-theta0)^2");
+    angles->addGlobalParameter("theta0", 0.0);
+    angles->addGlobalParameter("k", 0.0);
+    angles->addEnergyParameterDerivative("theta0");
+    angles->addEnergyParameterDerivative("k");
+    vector<double> parameters;
+    angles->addAngle(0, 1, 2, parameters);
+    system.addForce(angles);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(3);
+    positions[0] = Vec3(0, 2, 0);
+    positions[1] = Vec3(0, 0, 0);
+    positions[2] = Vec3(1, 1, 0);
+    context.setPositions(positions);
+    double theta = M_PI/4;
+    for (int i = 0; i < 10; i++) {
+        double theta0 = 0.1*i;
+        double k = 10-i;
+        context.setParameter("theta0", theta0);
+        context.setParameter("k", k);
+        State state = context.getState(State::ParameterDerivatives);
+        map<string, double> derivs = state.getEnergyParameterDerivatives();
+        double dEdtheta0 = -2*k*(theta-theta0);
+        double dEdk = (theta-theta0)*(theta-theta0);
+        ASSERT_EQUAL_TOL(dEdtheta0, derivs["theta0"], 1e-5);
+        ASSERT_EQUAL_TOL(dEdk, derivs["k"], 1e-5);
+    }
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -189,6 +224,7 @@ int main(int argc, char* argv[]) {
         testAngles();
         testIllegalVariable();
         testPeriodic();
+        testEnergyParameterDerivatives();
         runPlatformTests();
     }
     catch(const exception& e) {

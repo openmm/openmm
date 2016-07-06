@@ -735,6 +735,7 @@ private:
     std::vector<float> globalParamValues;
     std::vector<CudaArray*> tabulatedFunctions;
     double longRangeCoefficient;
+    std::vector<double> longRangeCoefficientDerivs;
     bool hasInitializedLongRangeCorrection, hasInitializedKernel;
     int numGroupThreadBlocks;
     CustomNonbondedForce* forceCopy;
