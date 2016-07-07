@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -101,6 +101,15 @@ public:
      */
     std::string addArgument(cl::Memory& data, const std::string& type);
     /**
+     * Register that the interaction kernel will be computing the derivative of the potential energy
+     * with respect to a parameter.
+     * 
+     * @param param   the name of the parameter
+     * @return the variable that will be used to accumulate the derivative.  Any code you pass to addInteraction() should
+     * add its contributions to this variable.
+     */
+    std::string addEnergyParameterDerivative(const std::string& param);
+    /**
      * Add some OpenCL code that should be included in the program, before the start of the kernel.
      * This can be used, for example, to define functions that will be called by the kernel.
      * 
@@ -137,6 +146,7 @@ private:
     std::vector<OpenCLArray*> atomIndices;
     std::vector<OpenCLArray*> bufferIndices;
     std::vector<std::string> prefixCode;
+    std::vector<std::string> energyParameterDerivatives;
     int numForceBuffers, maxBonds, allGroups;
     bool hasInitializedKernels;
 };

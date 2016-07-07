@@ -35,6 +35,7 @@ __kernel void computeNonbonded(
     const unsigned int tgx = get_local_id(0) & (TILE_SIZE-1);
     const unsigned int tbx = get_local_id(0) - tgx;
     mixed energy = 0;
+    INIT_DERIVATIVES
     __local AtomData localData[FORCE_WORK_GROUP_SIZE];
 
     // First loop: process tiles that contain exclusions.
@@ -85,6 +86,7 @@ __kernel void computeNonbonded(
                 bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS || !(excl & 0x1));
 #endif
                 real tempEnergy = 0;
+                const real interactionScale = 0.5f;
                 COMPUTE_INTERACTION
                 energy += 0.5f*tempEnergy;
 #ifdef INCLUDE_FORCES
@@ -144,6 +146,7 @@ __kernel void computeNonbonded(
                     bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS || !(excl & 0x1));
 #endif
                     real tempEnergy = 0;
+                    const real interactionScale = 1.0f;
                     COMPUTE_INTERACTION
                     energy += tempEnergy;
 #ifdef INCLUDE_FORCES
@@ -320,6 +323,7 @@ __kernel void computeNonbonded(
                         bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS);
 #endif
                         real tempEnergy = 0;
+                        const real interactionScale = 1.0f;
                         COMPUTE_INTERACTION
                         energy += tempEnergy;
 #ifdef INCLUDE_FORCES
@@ -374,6 +378,7 @@ __kernel void computeNonbonded(
                         bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS);
 #endif
                         real tempEnergy = 0;
+                        const real interactionScale = 1.0f;
                         COMPUTE_INTERACTION
                         energy += tempEnergy;
 #ifdef INCLUDE_FORCES
@@ -429,4 +434,5 @@ __kernel void computeNonbonded(
 #ifdef INCLUDE_ENERGY
     energyBuffer[get_global_id(0)] += energy;
 #endif
+    SAVE_DERIVATIVES
 }

@@ -125,6 +125,9 @@ void OpenCLCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, boo
     OpenCLNonbondedUtilities& nb = cl.getNonbondedUtilities();
     cl.setComputeForceCount(cl.getComputeForceCount()+1);
     nb.prepareInteractions(groups);
+    map<string, double>& derivs = cl.getEnergyParamDerivWorkspace();
+    for (map<string, double>::const_iterator iter = context.getParameters().begin(); iter != context.getParameters().end(); ++iter)
+        derivs[iter->first] = 0;
 }
 
 double OpenCLCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForces, bool includeEnergy, int groups, bool& valid) {
@@ -369,7 +372,30 @@ void OpenCLUpdateStateDataKernel::getForces(ContextImpl& context, vector<Vec3>& 
 }
 
 void OpenCLUpdateStateDataKernel::getEnergyParameterDerivatives(ContextImpl& context, map<string, double>& derivs) {
-    
+    const vector<string>& paramDerivNames = cl.getEnergyParamDerivNames();
+    int numDerivs = paramDerivNames.size();
+    if (numDerivs == 0)
+        return;
+    derivs = cl.getEnergyParamDerivWorkspace();
+    OpenCLArray& derivArray = cl.getEnergyParamDerivBuffer();
+    if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {
+        vector<double> derivBuffers;
+        derivArray.download(derivBuffers);
+        for (int i = numDerivs; i < derivArray.getSize(); i += numDerivs)
+            for (int j = 0; j < numDerivs; j++)
+                derivBuffers[j] += derivBuffers[i+j];
+        for (int i = 0; i < numDerivs; i++)
+            derivs[paramDerivNames[i]] += derivBuffers[i];
+    }
+    else {
+        vector<float> derivBuffers;
+        derivArray.download(derivBuffers);
+        for (int i = numDerivs; i < derivArray.getSize(); i += numDerivs)
+            for (int j = 0; j < numDerivs; j++)
+                derivBuffers[j] += derivBuffers[i+j];
+        for (int i = 0; i < numDerivs; i++)
+            derivs[paramDerivNames[i]] += derivBuffers[i];
+    }
 }
 
 void OpenCLUpdateStateDataKernel::getPeriodicBoxVectors(ContextImpl& context, Vec3& a, Vec3& b, Vec3& c) const {
@@ -675,6 +701,12 @@ void OpenCLCalcCustomBondForceKernel::initialize(const System& system, const Cus
             variables[name] = value;
         }
     }
+    for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
+        string paramName = force.getEnergyParameterDerivativeName(i);
+        string derivVariable = cl.getBondedUtilities().addEnergyParameterDerivative(paramName);
+        Lepton::ParsedExpression derivExpression = energyExpression.differentiate(paramName).optimize();
+        expressions[derivVariable+" += "] = derivExpression;
+    }
     stringstream compute;
     for (int i = 0; i < (int) params->getBuffers().size(); i++) {
         const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
@@ -906,6 +938,12 @@ void OpenCLCalcCustomAngleForceKernel::initialize(const System& system, const Cu
             string value = argName+"["+cl.intToString(i)+"]";
             variables[name] = value;
         }
+    }
+    for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
+        string paramName = force.getEnergyParameterDerivativeName(i);
+        string derivVariable = cl.getBondedUtilities().addEnergyParameterDerivative(paramName);
+        Lepton::ParsedExpression derivExpression = energyExpression.differentiate(paramName).optimize();
+        expressions[derivVariable+" += "] = derivExpression;
     }
     stringstream compute;
     for (int i = 0; i < (int) params->getBuffers().size(); i++) {
@@ -1358,6 +1396,12 @@ void OpenCLCalcCustomTorsionForceKernel::initialize(const System& system, const 
             string value = argName+"["+cl.intToString(i)+"]";
             variables[name] = value;
         }
+    }
+    for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
+        string paramName = force.getEnergyParameterDerivativeName(i);
+        string derivVariable = cl.getBondedUtilities().addEnergyParameterDerivative(paramName);
+        Lepton::ParsedExpression derivExpression = energyExpression.differentiate(paramName).optimize();
+        expressions[derivVariable+" += "] = derivExpression;
     }
     stringstream compute;
     for (int i = 0; i < (int) params->getBuffers().size(); i++) {
@@ -2307,6 +2351,12 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
         string value = "globals["+cl.intToString(i)+"]";
         variables.push_back(makeVariable(name, prefix+value));
     }
+    for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
+        string paramName = force.getEnergyParameterDerivativeName(i);
+        string derivVariable = cl.getNonbondedUtilities().addEnergyParameterDerivative(paramName);
+        Lepton::ParsedExpression derivExpression = energyExpression.differentiate(paramName).optimize();
+        forceExpressions[derivVariable+" += interactionScale*switchValue*"] = derivExpression;
+    }
     stringstream compute;
     compute << cl.getExpressionUtilities().createExpressions(forceExpressions, variables, functionList, functionDefinitions, prefix+"temp");
     map<string, string> replacements;
@@ -2639,7 +2689,11 @@ double OpenCLCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
         cl.executeKernel(interactionGroupKernel, numGroupThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
     }
     mm_double4 boxSize = cl.getPeriodicBoxSizeDouble();
-    return longRangeCoefficient/(boxSize.x*boxSize.y*boxSize.z);
+    double volume = boxSize.x*boxSize.y*boxSize.z;
+    map<string, double>& derivs = cl.getEnergyParamDerivWorkspace();
+    for (int i = 0; i < longRangeCoefficientDerivs.size(); i++)
+        derivs[forceCopy->getEnergyParameterDerivativeName(i)] += longRangeCoefficientDerivs[i]/volume;
+    return longRangeCoefficient/volume;
 }
 
 void OpenCLCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force) {

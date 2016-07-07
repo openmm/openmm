@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -160,6 +160,19 @@ void OpenCLNonbondedUtilities::addParameter(const ParameterInfo& parameter) {
 
 void OpenCLNonbondedUtilities::addArgument(const ParameterInfo& parameter) {
     arguments.push_back(parameter);
+}
+
+string OpenCLNonbondedUtilities::addEnergyParameterDerivative(const string& param) {
+    // See if the parameter has already been added.
+    
+    int index;
+    for (index = 0; index < energyParameterDerivatives.size(); index++)
+        if (param == energyParameterDerivatives[index])
+            break;
+    if (index == energyParameterDerivatives.size())
+        energyParameterDerivatives.push_back(param);
+    context.addEnergyParameterDerivative(param);
+    return string("energyParamDeriv")+context.intToString(index);
 }
 
 void OpenCLNonbondedUtilities::requestExclusions(const vector<vector<int> >& exclusionList) {
@@ -591,6 +604,8 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
             args << arguments[i].getName();
         }
     }
+    if (energyParameterDerivatives.size() > 0)
+        args << ", __global mixed* energyParamDerivs";
     replacements["PARAMETER_ARGUMENTS"] = args.str();
     stringstream loadLocal1;
     for (int i = 0; i < (int) params.size(); i++) {
@@ -641,6 +656,18 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
         }
     }
     replacements["LOAD_ATOM2_PARAMETERS"] = load2j.str();
+    stringstream initDerivs;
+    for (int i = 0; i < energyParameterDerivatives.size(); i++)
+        initDerivs<<"mixed energyParamDeriv"<<i<<" = 0;\n";
+    replacements["INIT_DERIVATIVES"] = initDerivs.str();
+    stringstream saveDerivs;
+    const vector<string>& allParamDerivNames = context.getEnergyParamDerivNames();
+    int numDerivs = allParamDerivNames.size();
+    for (int i = 0; i < energyParameterDerivatives.size(); i++)
+        for (int index = 0; index < numDerivs; index++)
+            if (allParamDerivNames[index] == energyParameterDerivatives[i])
+                saveDerivs<<"energyParamDerivs[get_global_id(0)*"<<numDerivs<<"+"<<i<<"] += energyParamDeriv"<<i<<";\n";
+    replacements["SAVE_DERIVATIVES"] = saveDerivs.str();
     map<string, string> defines;
     if (useCutoff)
         defines["USE_CUTOFF"] = "1";
@@ -716,5 +743,7 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     for (int i = 0; i < (int) arguments.size(); i++) {
         kernel.setArg<cl::Memory>(index++, arguments[i].getMemory());
     }
+    if (energyParameterDerivatives.size() > 0)
+        kernel.setArg<cl::Memory>(index++, context.getEnergyParamDerivBuffer().getDeviceBuffer());
     return kernel;
 }

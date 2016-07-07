@@ -69,7 +69,7 @@ static void CL_CALLBACK errorCallback(const char* errinfo, const void* private_i
 
 OpenCLContext::OpenCLContext(const System& system, int platformIndex, int deviceIndex, const string& precision, OpenCLPlatform::PlatformData& platformData) :
         system(system), time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), stepsSinceReorder(99999), atomsWereReordered(false), posq(NULL),
-        posqCorrection(NULL), velm(NULL), forceBuffers(NULL), longForceBuffer(NULL), energyBuffer(NULL), atomIndexDevice(NULL), integration(NULL),
+        posqCorrection(NULL), velm(NULL), forceBuffers(NULL), longForceBuffer(NULL), energyBuffer(NULL), energyParamDerivBuffer(NULL), atomIndexDevice(NULL), integration(NULL),
         expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
     if (precision == "single") {
         useDoublePrecision = false;
@@ -435,6 +435,8 @@ OpenCLContext::~OpenCLContext() {
         delete longForceBuffer;
     if (energyBuffer != NULL)
         delete energyBuffer;
+    if (energyParamDerivBuffer != NULL)
+        delete energyParamDerivBuffer;
     if (atomIndexDevice != NULL)
         delete atomIndexDevice;
     if (integration != NULL)
@@ -455,15 +457,16 @@ void OpenCLContext::initialize() {
     numForceBuffers = std::max(numForceBuffers, bonded->getNumForceBuffers());
     for (int i = 0; i < (int) forces.size(); i++)
         numForceBuffers = std::max(numForceBuffers, forces[i]->getRequiredForceBuffers());
+    int energyBufferSize = max(numThreadBlocks*ThreadBlockSize, nonbonded->getNumEnergyBuffers());
     if (useDoublePrecision) {
         forceBuffers = OpenCLArray::create<mm_double4>(*this, paddedNumAtoms*numForceBuffers, "forceBuffers");
         force = OpenCLArray::create<mm_double4>(*this, &forceBuffers->getDeviceBuffer(), paddedNumAtoms, "force");
-        energyBuffer = OpenCLArray::create<cl_double>(*this, max(numThreadBlocks*ThreadBlockSize, nonbonded->getNumEnergyBuffers()), "energyBuffer");
+        energyBuffer = OpenCLArray::create<cl_double>(*this, energyBufferSize, "energyBuffer");
     }
     else {
         forceBuffers = OpenCLArray::create<mm_float4>(*this, paddedNumAtoms*numForceBuffers, "forceBuffers");
         force = OpenCLArray::create<mm_float4>(*this, &forceBuffers->getDeviceBuffer(), paddedNumAtoms, "force");
-        energyBuffer = OpenCLArray::create<cl_double>(*this, max(numThreadBlocks*ThreadBlockSize, nonbonded->getNumEnergyBuffers()), "energyBuffer");
+        energyBuffer = OpenCLArray::create<cl_double>(*this, energyBufferSize, "energyBuffer");
     }
     if (supports64BitGlobalAtomics) {
         longForceBuffer = OpenCLArray::create<cl_long>(*this, 3*paddedNumAtoms, "longForceBuffer");
@@ -475,7 +478,15 @@ void OpenCLContext::initialize() {
     }
     addAutoclearBuffer(*forceBuffers);
     addAutoclearBuffer(*energyBuffer);
-    int bufferBytes = max(velm->getSize()*velm->getElementSize(), energyBuffer->getSize()*energyBuffer->getElementSize());
+    int numEnergyParamDerivs = energyParamDerivNames.size();
+    if (numEnergyParamDerivs > 0) {
+        if (useDoublePrecision || useMixedPrecision)
+            energyParamDerivBuffer = OpenCLArray::create<cl_double>(*this, numEnergyParamDerivs*energyBufferSize, "energyParamDerivBuffer");
+        else
+            energyParamDerivBuffer = OpenCLArray::create<cl_float>(*this, numEnergyParamDerivs*energyBufferSize, "energyParamDerivBuffer");
+        addAutoclearBuffer(*energyParamDerivBuffer);
+    }
+    int bufferBytes = max(velm->getSize()*velm->getElementSize(), energyBufferSize*energyBuffer->getElementSize());
     pinnedBuffer = new cl::Buffer(context, CL_MEM_ALLOC_HOST_PTR, bufferBytes);
     pinnedMemory = currentQueue.enqueueMapBuffer(*pinnedBuffer, CL_TRUE, CL_MAP_READ | CL_MAP_WRITE, 0, bufferBytes);
     for (int i = 0; i < numAtoms; i++) {
@@ -1227,6 +1238,15 @@ void OpenCLContext::addPreComputation(ForcePreComputation* computation) {
 
 void OpenCLContext::addPostComputation(ForcePostComputation* computation) {
     postComputations.push_back(computation);
+}
+
+void OpenCLContext::addEnergyParameterDerivative(const string& param) {
+    // See if this parameter has already been registered.
+    
+    for (int i = 0; i < energyParamDerivNames.size(); i++)
+        if (param == energyParamDerivNames[i])
+            return;
+    energyParamDerivNames.push_back(param);
 }
 
 struct OpenCLContext::WorkThread::ThreadData {
