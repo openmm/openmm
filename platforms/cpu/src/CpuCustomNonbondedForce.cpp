@@ -43,25 +43,30 @@ public:
     CpuCustomNonbondedForce& owner;
 };
 
-CpuCustomNonbondedForce::ThreadData::ThreadData(const Lepton::CompiledExpression& energyExpression, const Lepton::CompiledExpression& forceExpression, const vector<string>& parameterNames) :
-            energyExpression(energyExpression), forceExpression(forceExpression) {
-    energyR = ReferenceForce::getVariablePointer(this->energyExpression, "r");
-    forceR = ReferenceForce::getVariablePointer(this->forceExpression, "r");
+CpuCustomNonbondedForce::ThreadData::ThreadData(const Lepton::CompiledExpression& energyExpression, const Lepton::CompiledExpression& forceExpression,
+            const vector<string>& parameterNames, const std::vector<Lepton::CompiledExpression> energyParamDerivExpressions) :
+            energyExpression(energyExpression), forceExpression(forceExpression), energyParamDerivExpressions(energyParamDerivExpressions) {
+    expressionSet.registerExpression(this->energyExpression);
+    expressionSet.registerExpression(this->forceExpression);
+    for (int i = 0; i < this->energyParamDerivExpressions.size(); i++)
+        expressionSet.registerExpression(this->energyParamDerivExpressions[i]);
+    rIndex = expressionSet.getVariableIndex("r");
     for (int i = 0; i < (int) parameterNames.size(); i++) {
         for (int j = 1; j < 3; j++) {
             stringstream name;
             name << parameterNames[i] << j;
-            energyParticleParams.push_back(ReferenceForce::getVariablePointer(this->energyExpression, name.str()));
-            forceParticleParams.push_back(ReferenceForce::getVariablePointer(this->forceExpression, name.str()));
+            particleParamIndex.push_back(expressionSet.getVariableIndex(name.str()));
         }
     }
+    energyParamDerivs.resize(energyParamDerivExpressions.size());
 }
 
 CpuCustomNonbondedForce::CpuCustomNonbondedForce(const Lepton::CompiledExpression& energyExpression,
-            const Lepton::CompiledExpression& forceExpression, const vector<string>& parameterNames, const vector<set<int> >& exclusions,ThreadPool& threads) :
+            const Lepton::CompiledExpression& forceExpression, const vector<string>& parameterNames, const vector<set<int> >& exclusions,
+            const std::vector<Lepton::CompiledExpression> energyParamDerivExpressions, ThreadPool& threads) :
             cutoff(false), useSwitch(false), periodic(false), paramNames(parameterNames), exclusions(exclusions), threads(threads) {
     for (int i = 0; i < threads.getNumThreads(); i++)
-        threadData.push_back(new ThreadData(energyExpression, forceExpression, parameterNames));
+        threadData.push_back(new ThreadData(energyExpression, forceExpression, parameterNames, energyParamDerivExpressions));
 }
 
 CpuCustomNonbondedForce::~CpuCustomNonbondedForce() {
@@ -120,7 +125,7 @@ void CpuCustomNonbondedForce::setPeriodic(RealVec* periodicBoxVectors) {
 
 void CpuCustomNonbondedForce::calculatePairIxn(int numberOfAtoms, float* posq, vector<RealVec>& atomCoordinates, RealOpenMM** atomParameters,
                                              RealOpenMM* fixedParameters, const map<string, double>& globalParameters,
-                                             vector<AlignedArray<float> >& threadForce, bool includeForce, bool includeEnergy, double& totalEnergy) {
+                                             vector<AlignedArray<float> >& threadForce, bool includeForce, bool includeEnergy, double& totalEnergy, double* energyParamDerivs) {
     // Record the parameters for the threads.
     
     this->numberOfAtoms = numberOfAtoms;
@@ -144,11 +149,18 @@ void CpuCustomNonbondedForce::calculatePairIxn(int numberOfAtoms, float* posq, v
     
     // Combine the energies from all the threads.
     
+    int numThreads = threads.getNumThreads();
     if (includeEnergy) {
-        int numThreads = threads.getNumThreads();
         for (int i = 0; i < numThreads; i++)
             totalEnergy += threadEnergy[i];
     }
+
+    // Combine the energy derivatives from all threads.
+    
+    int numDerivs = threadData[0]->energyParamDerivs.size();
+    for (int i = 0; i < numThreads; i++)
+        for (int j = 0; j < numDerivs; j++)
+            energyParamDerivs[j] += threadData[i]->energyParamDerivs[j];
 }
 
 void CpuCustomNonbondedForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
@@ -159,10 +171,10 @@ void CpuCustomNonbondedForce::threadComputeForce(ThreadPool& threads, int thread
     double& energy = threadEnergy[threadIndex];
     float* forces = &(*threadForce)[threadIndex][0];
     ThreadData& data = *threadData[threadIndex];
-    for (map<string, double>::const_iterator iter = globalParameters->begin(); iter != globalParameters->end(); ++iter) {
-        ReferenceForce::setVariable(ReferenceForce::getVariablePointer(data.energyExpression, iter->first), iter->second);
-        ReferenceForce::setVariable(ReferenceForce::getVariablePointer(data.forceExpression, iter->first), iter->second);
-    }
+    for (map<string, double>::const_iterator iter = globalParameters->begin(); iter != globalParameters->end(); ++iter)
+        data.expressionSet.setVariable(data.expressionSet.getVariableIndex(iter->first), iter->second);
+    for (int i = 0; i < data.energyParamDerivs.size(); i++)
+        data.energyParamDerivs[i] = 0.0;
     fvec4 boxSize(periodicBoxVectors[0][0], periodicBoxVectors[1][1], periodicBoxVectors[2][2], 0);
     fvec4 invBoxSize(recipBoxSize[0], recipBoxSize[1], recipBoxSize[2], 0);
     if (groupInteractions.size() > 0) {
@@ -175,10 +187,8 @@ void CpuCustomNonbondedForce::threadComputeForce(ThreadPool& threads, int thread
             int atom1 = groupInteractions[i].first;
             int atom2 = groupInteractions[i].second;
             for (int j = 0; j < (int) paramNames.size(); j++) {
-                ReferenceForce::setVariable(data.energyParticleParams[j*2], atomParameters[atom1][j]);
-                ReferenceForce::setVariable(data.energyParticleParams[j*2+1], atomParameters[atom2][j]);
-                ReferenceForce::setVariable(data.forceParticleParams[j*2], atomParameters[atom1][j]);
-                ReferenceForce::setVariable(data.forceParticleParams[j*2+1], atomParameters[atom2][j]);
+                data.expressionSet.setVariable(data.particleParamIndex[j*2], atomParameters[atom1][j]);
+                data.expressionSet.setVariable(data.particleParamIndex[j*2+1], atomParameters[atom2][j]);
             }
             calculateOneIxn(atom1, atom2, data, forces, energy, boxSize, invBoxSize);
         }
@@ -196,17 +206,13 @@ void CpuCustomNonbondedForce::threadComputeForce(ThreadPool& threads, int thread
             const vector<char>& exclusions = neighborList->getBlockExclusions(blockIndex);
             for (int i = 0; i < (int) neighbors.size(); i++) {
                 int first = neighbors[i];
-                for (int j = 0; j < (int) paramNames.size(); j++) {
-                    ReferenceForce::setVariable(data.energyParticleParams[j*2], atomParameters[first][j]);
-                    ReferenceForce::setVariable(data.forceParticleParams[j*2], atomParameters[first][j]);
-                }
+                for (int j = 0; j < (int) paramNames.size(); j++)
+                    data.expressionSet.setVariable(data.particleParamIndex[j*2], atomParameters[first][j]);
                 for (int k = 0; k < blockSize; k++) {
                     if ((exclusions[i] & (1<<k)) == 0) {
                         int second = blockAtom[k];
-                        for (int j = 0; j < (int) paramNames.size(); j++) {
-                            ReferenceForce::setVariable(data.energyParticleParams[j*2+1], atomParameters[second][j]);
-                            ReferenceForce::setVariable(data.forceParticleParams[j*2+1], atomParameters[second][j]);
-                        }
+                        for (int j = 0; j < (int) paramNames.size(); j++)
+                            data.expressionSet.setVariable(data.particleParamIndex[j*2+1], atomParameters[second][j]);
                         calculateOneIxn(first, second, data, forces, energy, boxSize, invBoxSize);
                     }
                 }
@@ -223,10 +229,8 @@ void CpuCustomNonbondedForce::threadComputeForce(ThreadPool& threads, int thread
             for (int jj = ii+1; jj < numberOfAtoms; jj++) {
                 if (exclusions[jj].find(ii) == exclusions[jj].end()) {
                     for (int j = 0; j < (int) paramNames.size(); j++) {
-                        ReferenceForce::setVariable(data.energyParticleParams[j*2], atomParameters[ii][j]);
-                        ReferenceForce::setVariable(data.energyParticleParams[j*2+1], atomParameters[jj][j]);
-                        ReferenceForce::setVariable(data.forceParticleParams[j*2], atomParameters[ii][j]);
-                        ReferenceForce::setVariable(data.forceParticleParams[j*2+1], atomParameters[jj][j]);
+                        data.expressionSet.setVariable(data.particleParamIndex[j*2], atomParameters[ii][j]);
+                        data.expressionSet.setVariable(data.particleParamIndex[j*2+1], atomParameters[jj][j]);
                     }
                     calculateOneIxn(ii, jj, data, forces, energy, boxSize, invBoxSize);
                 }
@@ -250,15 +254,15 @@ void CpuCustomNonbondedForce::calculateOneIxn(int ii, int jj, ThreadData& data,
 
     // accumulate forces
 
-    ReferenceForce::setVariable(data.energyR, r);
-    ReferenceForce::setVariable(data.forceR, r);
+    data.expressionSet.setVariable(data.rIndex, r);
     double dEdR = (includeForce ? data.forceExpression.evaluate()/r : 0.0);
     double energy = (includeEnergy ? data.energyExpression.evaluate() : 0.0);
+    double switchValue = 1.0;
     if (useSwitch) {
         if (r > switchingDistance) {
-            RealOpenMM t = (r-switchingDistance)/(cutoffDistance-switchingDistance);
-            RealOpenMM switchValue = 1+t*t*t*(-10+t*(15-t*6));
-            RealOpenMM switchDeriv = t*t*(-30+t*(60-t*30))/(cutoffDistance-switchingDistance);
+            double t = (r-switchingDistance)/(cutoffDistance-switchingDistance);
+            switchValue = 1+t*t*t*(-10+t*(15-t*6));
+            double switchDeriv = t*t*(-30+t*(60-t*30))/(cutoffDistance-switchingDistance);
             dEdR = switchValue*dEdR + energy*switchDeriv/r;
             energy *= switchValue;
         }
@@ -270,6 +274,11 @@ void CpuCustomNonbondedForce::calculateOneIxn(int ii, int jj, ThreadData& data,
     // accumulate energies
 
     totalEnergy += energy;
+    
+    // Accumulate energy derivatives.
+
+    for (int i = 0; i < data.energyParamDerivExpressions.size(); i++)
+        data.energyParamDerivs[i] += switchValue*data.energyParamDerivExpressions[i].evaluate();
 }
 
 void CpuCustomNonbondedForce::getDeltaR(const fvec4& posI, const fvec4& posJ, fvec4& deltaR, float& r2, const fvec4& boxSize, const fvec4& invBoxSize) const {

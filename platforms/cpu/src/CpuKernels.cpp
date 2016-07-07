@@ -85,6 +85,11 @@ static ReferenceConstraints& extractConstraints(ContextImpl& context) {
     return *(ReferenceConstraints*) data->constraints;
 }
 
+static map<string, double>& extractEnergyParameterDerivatives(ContextImpl& context) {
+    ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
+    return *((map<string, double>*) data->energyParameterDerivatives);
+}
+
 /**
  * Make sure an expression doesn't use any undefined variables.
  */
@@ -814,6 +819,12 @@ void CpuCalcCustomNonbondedForceKernel::initialize(const System& system, const C
         globalParameterNames.push_back(force.getGlobalParameterName(i));
         globalParamValues[force.getGlobalParameterName(i)] = force.getGlobalParameterDefaultValue(i);
     }
+    std::vector<Lepton::CompiledExpression> energyParamDerivExpressions;
+    for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
+        string param = force.getEnergyParameterDerivativeName(i);
+        energyParamDerivNames.push_back(param);
+        energyParamDerivExpressions.push_back(expression.differentiate(param).createCompiledExpression());
+    }
     set<string> variables;
     variables.insert("r");
     for (int i = 0; i < numParameters; i++) {
@@ -847,7 +858,7 @@ void CpuCalcCustomNonbondedForceKernel::initialize(const System& system, const C
         interactionGroups.push_back(make_pair(set1, set2));
     }
     data.isPeriodic = (nonbondedMethod == CutoffPeriodic);
-    nonbonded = new CpuCustomNonbondedForce(energyExpression, forceExpression, parameterNames, exclusions, data.threads);
+    nonbonded = new CpuCustomNonbondedForce(energyExpression, forceExpression, parameterNames, exclusions, energyParamDerivExpressions, data.threads);
     if (interactionGroups.size() > 0)
         nonbonded->setInteractionGroups(interactionGroups);
 }
@@ -875,7 +886,11 @@ double CpuCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool inc
     }
     if (useSwitchingFunction)
         nonbonded->setUseSwitchingFunction(switchingDistance);
-    nonbonded->calculatePairIxn(numParticles, &data.posq[0], posData, particleParamArray, 0, globalParamValues, data.threadForce, includeForces, includeEnergy, energy);
+    vector<double> energyParamDerivValues(energyParamDerivNames.size()+1, 0.0);
+    nonbonded->calculatePairIxn(numParticles, &data.posq[0], posData, particleParamArray, 0, globalParamValues, data.threadForce, includeForces, includeEnergy, energy, &energyParamDerivValues[0]);
+    map<string, double>& energyParamDerivs = extractEnergyParameterDerivatives(context);
+    for (int i = 0; i < energyParamDerivNames.size(); i++)
+        energyParamDerivs[energyParamDerivNames[i]] += energyParamDerivValues[i];
     
     // Add in the long range correction.
     
@@ -883,7 +898,10 @@ double CpuCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool inc
         CustomNonbondedForceImpl::calcLongRangeCorrection(*forceCopy, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs);
         hasInitializedLongRangeCorrection = true;
     }
-    energy += longRangeCoefficient/(boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2]);
+    double volume = boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2];
+    energy += longRangeCoefficient/volume;
+    for (int i = 0; i < longRangeCoefficientDerivs.size(); i++)
+        energyParamDerivs[energyParamDerivNames[i]] += longRangeCoefficientDerivs[i]/volume;
     return energy;
 }
 
