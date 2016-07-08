@@ -40,23 +40,47 @@ using namespace OpenMM;
 ReferenceCustomCentroidBondIxn::ReferenceCustomCentroidBondIxn(int numGroupsPerBond, const vector<vector<int> >& groupAtoms,
             const vector<vector<double> >& normalizedWeights, const vector<vector<int> >& bondGroups,
             const Lepton::ParsedExpression& energyExpression, const vector<string>& bondParameterNames,
-            const map<string, vector<int> >& distances, const map<string, vector<int> >& angles, const map<string, vector<int> >& dihedrals) :
-            groupAtoms(groupAtoms), normalizedWeights(normalizedWeights), bondGroups(bondGroups), energyExpression(energyExpression.createProgram()), bondParamNames(bondParameterNames), usePeriodic(false) {
+            const map<string, vector<int> >& distances, const map<string, vector<int> >& angles, const map<string, vector<int> >& dihedrals,
+            const std::vector<Lepton::CompiledExpression> energyParamDerivExpressions) :
+            groupAtoms(groupAtoms), normalizedWeights(normalizedWeights), bondGroups(bondGroups), energyExpression(energyExpression.createCompiledExpression()),
+            usePeriodic(false), energyParamDerivExpressions(energyParamDerivExpressions) {
+    expressionSet.registerExpression(this->energyExpression);
+    for (int i = 0; i < this->energyParamDerivExpressions.size(); i++)
+        expressionSet.registerExpression(this->energyParamDerivExpressions[i]);
     for (int i = 0; i < numGroupsPerBond; i++) {
         stringstream xname, yname, zname;
         xname << 'x' << (i+1);
         yname << 'y' << (i+1);
         zname << 'z' << (i+1);
-        positionTerms.push_back(ReferenceCustomCentroidBondIxn::PositionTermInfo(xname.str(), i, 0, energyExpression.differentiate(xname.str()).optimize().createProgram()));
-        positionTerms.push_back(ReferenceCustomCentroidBondIxn::PositionTermInfo(yname.str(), i, 1, energyExpression.differentiate(yname.str()).optimize().createProgram()));
-        positionTerms.push_back(ReferenceCustomCentroidBondIxn::PositionTermInfo(zname.str(), i, 2, energyExpression.differentiate(zname.str()).optimize().createProgram()));
+        positionTerms.push_back(ReferenceCustomCentroidBondIxn::PositionTermInfo(xname.str(), i, 0, energyExpression.differentiate(xname.str()).createCompiledExpression()));
+        positionTerms.push_back(ReferenceCustomCentroidBondIxn::PositionTermInfo(yname.str(), i, 1, energyExpression.differentiate(yname.str()).createCompiledExpression()));
+        positionTerms.push_back(ReferenceCustomCentroidBondIxn::PositionTermInfo(zname.str(), i, 2, energyExpression.differentiate(zname.str()).createCompiledExpression()));
     }
     for (map<string, vector<int> >::const_iterator iter = distances.begin(); iter != distances.end(); ++iter)
-        distanceTerms.push_back(ReferenceCustomCentroidBondIxn::DistanceTermInfo(iter->first, iter->second, energyExpression.differentiate(iter->first).optimize().createProgram()));
+        distanceTerms.push_back(ReferenceCustomCentroidBondIxn::DistanceTermInfo(iter->first, iter->second, energyExpression.differentiate(iter->first).createCompiledExpression()));
     for (map<string, vector<int> >::const_iterator iter = angles.begin(); iter != angles.end(); ++iter)
-        angleTerms.push_back(ReferenceCustomCentroidBondIxn::AngleTermInfo(iter->first, iter->second, energyExpression.differentiate(iter->first).optimize().createProgram()));
+        angleTerms.push_back(ReferenceCustomCentroidBondIxn::AngleTermInfo(iter->first, iter->second, energyExpression.differentiate(iter->first).createCompiledExpression()));
     for (map<string, vector<int> >::const_iterator iter = dihedrals.begin(); iter != dihedrals.end(); ++iter)
-        dihedralTerms.push_back(ReferenceCustomCentroidBondIxn::DihedralTermInfo(iter->first, iter->second, energyExpression.differentiate(iter->first).optimize().createProgram()));
+        dihedralTerms.push_back(ReferenceCustomCentroidBondIxn::DihedralTermInfo(iter->first, iter->second, energyExpression.differentiate(iter->first).createCompiledExpression()));
+    for (int i = 0; i < positionTerms.size(); i++) {
+        expressionSet.registerExpression(positionTerms[i].forceExpression);
+        positionTerms[i].index = expressionSet.getVariableIndex(positionTerms[i].name);
+    }
+    for (int i = 0; i < distanceTerms.size(); i++) {
+        expressionSet.registerExpression(distanceTerms[i].forceExpression);
+        distanceTerms[i].index = expressionSet.getVariableIndex(distanceTerms[i].name);
+    }
+    for (int i = 0; i < angleTerms.size(); i++) {
+        expressionSet.registerExpression(angleTerms[i].forceExpression);
+        angleTerms[i].index = expressionSet.getVariableIndex(angleTerms[i].name);
+    }
+    for (int i = 0; i < dihedralTerms.size(); i++) {
+        expressionSet.registerExpression(dihedralTerms[i].forceExpression);
+        dihedralTerms[i].index = expressionSet.getVariableIndex(dihedralTerms[i].name);
+    }
+    numParameters = bondParameterNames.size();
+    for (int i = 0; i < numParameters; i++)
+        bondParamIndex.push_back(expressionSet.getVariableIndex(bondParameterNames[i]));
 }
 
 ReferenceCustomCentroidBondIxn::~ReferenceCustomCentroidBondIxn() {
@@ -71,7 +95,7 @@ void ReferenceCustomCentroidBondIxn::setPeriodic(OpenMM::RealVec* vectors) {
 
 void ReferenceCustomCentroidBondIxn::calculatePairIxn(vector<RealVec>& atomCoordinates, RealOpenMM** bondParameters,
                                              const map<string, double>& globalParameters, vector<RealVec>& forces,
-                                             RealOpenMM* totalEnergy) const {
+                                             RealOpenMM* totalEnergy, double* energyParamDerivs) {
 
     // First compute the center of each group.
 
@@ -84,13 +108,14 @@ void ReferenceCustomCentroidBondIxn::calculatePairIxn(vector<RealVec>& atomCoord
 
     // Compute the forces on groups.
 
-    map<string, double> variables = globalParameters;
+    for (map<string, double>::const_iterator iter = globalParameters.begin(); iter != globalParameters.end(); ++iter)
+        expressionSet.setVariable(expressionSet.getVariableIndex(iter->first), iter->second);
     vector<RealVec> groupForces(numGroups);
     int numBonds = bondGroups.size();
     for (int bond = 0; bond < numBonds; bond++) {
-        for (int j = 0; j < (int) bondParamNames.size(); j++)
-            variables[bondParamNames[j]] = bondParameters[bond][j];
-        calculateOneIxn(bond, groupCenters, variables, groupForces, totalEnergy);
+        for (int i = 0; i < numParameters; i++)
+            expressionSet.setVariable(bondParamIndex[i], bondParameters[bond][i]);
+        calculateOneIxn(bond, groupCenters, groupForces, totalEnergy, energyParamDerivs);
     }
 
     // Apply the forces to the individual atoms.
@@ -102,31 +127,24 @@ void ReferenceCustomCentroidBondIxn::calculatePairIxn(vector<RealVec>& atomCoord
 }
 
 void ReferenceCustomCentroidBondIxn::calculateOneIxn(int bond, vector<RealVec>& groupCenters,
-                        map<string, double>& variables, vector<RealVec>& forces, RealOpenMM* totalEnergy) const {
-
-    // ---------------------------------------------------------------------------------------
-
-    static const std::string methodName = "\nReferenceCustomCentroidBondIxn::calculateOneIxn";
-
-    // ---------------------------------------------------------------------------------------
-
+                        vector<RealVec>& forces, RealOpenMM* totalEnergy, double* energyParamDerivs) {
     // Compute all of the variables the energy can depend on.
 
     const vector<int>& groups = bondGroups[bond];
     for (int i = 0; i < (int) positionTerms.size(); i++) {
         const PositionTermInfo& term = positionTerms[i];
-        variables[term.name] = groupCenters[groups[term.group]][term.component];
+        expressionSet.setVariable(term.index, groupCenters[groups[term.group]][term.component]);
     }
     for (int i = 0; i < (int) distanceTerms.size(); i++) {
         const DistanceTermInfo& term = distanceTerms[i];
         computeDelta(groups[term.g1], groups[term.g2], term.delta, groupCenters);
-        variables[term.name] = term.delta[ReferenceForce::RIndex];
+        expressionSet.setVariable(term.index, term.delta[ReferenceForce::RIndex]);
     }
     for (int i = 0; i < (int) angleTerms.size(); i++) {
         const AngleTermInfo& term = angleTerms[i];
         computeDelta(groups[term.g1], groups[term.g2], term.delta1, groupCenters);
         computeDelta(groups[term.g3], groups[term.g2], term.delta2, groupCenters);
-        variables[term.name] = computeAngle(term.delta1, term.delta2);
+        expressionSet.setVariable(term.index, computeAngle(term.delta1, term.delta2));
     }
     for (int i = 0; i < (int) dihedralTerms.size(); i++) {
         const DihedralTermInfo& term = dihedralTerms[i];
@@ -135,21 +153,21 @@ void ReferenceCustomCentroidBondIxn::calculateOneIxn(int bond, vector<RealVec>& 
         computeDelta(groups[term.g4], groups[term.g3], term.delta3, groupCenters);
         RealOpenMM dotDihedral, signOfDihedral;
         RealOpenMM* crossProduct[] = {term.cross1, term.cross2};
-        variables[term.name] = getDihedralAngleBetweenThreeVectors(term.delta1, term.delta2, term.delta3, crossProduct, &dotDihedral, term.delta1, &signOfDihedral, 1);
+        expressionSet.setVariable(term.index, getDihedralAngleBetweenThreeVectors(term.delta1, term.delta2, term.delta3, crossProduct, &dotDihedral, term.delta1, &signOfDihedral, 1));
     }
 
     // Apply forces based on individual particle coordinates.
 
     for (int i = 0; i < (int) positionTerms.size(); i++) {
         const PositionTermInfo& term = positionTerms[i];
-        forces[groups[term.group]][term.component] -= term.forceExpression.evaluate(variables);
+        forces[groups[term.group]][term.component] -= term.forceExpression.evaluate();
     }
 
     // Apply forces based on distances.
 
     for (int i = 0; i < (int) distanceTerms.size(); i++) {
         const DistanceTermInfo& term = distanceTerms[i];
-        RealOpenMM dEdR = (RealOpenMM) (term.forceExpression.evaluate(variables)/(term.delta[ReferenceForce::RIndex]));
+        RealOpenMM dEdR = (RealOpenMM) (term.forceExpression.evaluate()/(term.delta[ReferenceForce::RIndex]));
         for (int i = 0; i < 3; i++) {
            RealOpenMM force  = -dEdR*term.delta[i];
            forces[groups[term.g1]][i] -= force;
@@ -161,7 +179,7 @@ void ReferenceCustomCentroidBondIxn::calculateOneIxn(int bond, vector<RealVec>& 
 
     for (int i = 0; i < (int) angleTerms.size(); i++) {
         const AngleTermInfo& term = angleTerms[i];
-        RealOpenMM dEdTheta = (RealOpenMM) term.forceExpression.evaluate(variables);
+        RealOpenMM dEdTheta = (RealOpenMM) term.forceExpression.evaluate();
         RealOpenMM thetaCross[ReferenceForce::LastDeltaRIndex];
         SimTKOpenMMUtilities::crossProductVector3(term.delta1, term.delta2, thetaCross);
         RealOpenMM lengthThetaCross = SQRT(DOT3(thetaCross, thetaCross));
@@ -188,7 +206,7 @@ void ReferenceCustomCentroidBondIxn::calculateOneIxn(int bond, vector<RealVec>& 
 
     for (int i = 0; i < (int) dihedralTerms.size(); i++) {
         const DihedralTermInfo& term = dihedralTerms[i];
-        RealOpenMM dEdTheta = (RealOpenMM) term.forceExpression.evaluate(variables);
+        RealOpenMM dEdTheta = (RealOpenMM) term.forceExpression.evaluate();
         RealOpenMM internalF[4][3];
         RealOpenMM forceFactors[4];
         RealOpenMM normCross1 = DOT3(term.cross1, term.cross1);
@@ -218,7 +236,12 @@ void ReferenceCustomCentroidBondIxn::calculateOneIxn(int bond, vector<RealVec>& 
     // Add the energy
 
     if (totalEnergy)
-        *totalEnergy += (RealOpenMM) energyExpression.evaluate(variables);
+        *totalEnergy += (RealOpenMM) energyExpression.evaluate();
+    
+    // Compute derivatives of the energy.
+    
+    for (int i = 0; i < energyParamDerivExpressions.size(); i++)
+        energyParamDerivs[i] += energyParamDerivExpressions[i].evaluate();
 }
 
 void ReferenceCustomCentroidBondIxn::computeDelta(int group1, int group2, RealOpenMM* delta, vector<RealVec>& groupCenters) const {

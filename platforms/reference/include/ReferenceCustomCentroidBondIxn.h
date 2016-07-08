@@ -26,7 +26,7 @@
 #define __ReferenceCustomCentroidBondIxn_H__
 
 #include "ReferenceBondIxn.h"
-#include "lepton/ExpressionProgram.h"
+#include "openmm/internal/CompiledExpressionSet.h"
 #include "lepton/ParsedExpression.h"
 #include <map>
 #include <vector>
@@ -44,12 +44,15 @@ class ReferenceCustomCentroidBondIxn : public ReferenceBondIxn {
       std::vector<std::vector<int> > groupAtoms;
       std::vector<std::vector<double> > normalizedWeights;
       std::vector<std::vector<int> > bondGroups;
-      Lepton::ExpressionProgram energyExpression;
-      std::vector<std::string> bondParamNames;
+      CompiledExpressionSet expressionSet;
+      Lepton::CompiledExpression energyExpression;
+      std::vector<Lepton::CompiledExpression> energyParamDerivExpressions;
+      std::vector<int> bondParamIndex;
       std::vector<PositionTermInfo> positionTerms;
       std::vector<DistanceTermInfo> distanceTerms;
       std::vector<AngleTermInfo> angleTerms;
       std::vector<DihedralTermInfo> dihedralTerms;
+      int numParameters;
       bool usePeriodic;
       RealVec boxVectors[3];
 
@@ -60,15 +63,13 @@ class ReferenceCustomCentroidBondIxn : public ReferenceBondIxn {
 
          @param bond             the index of the bond
          @param groupCenters     group center coordinates
-         @param variables        the values of variables that may appear in expressions
          @param forces           force array (forces added)
          @param totalEnergy      total energy
 
          --------------------------------------------------------------------------------------- */
 
       void calculateOneIxn(int bond, std::vector<OpenMM::RealVec>& groupCenters,
-                           std::map<std::string, double>& variables, std::vector<OpenMM::RealVec>& forces,
-                           RealOpenMM* totalEnergy) const;
+                           std::vector<OpenMM::RealVec>& forces, RealOpenMM* totalEnergy, double* energyParamDerivs);
 
       void computeDelta(int group1, int group2, RealOpenMM* delta, std::vector<OpenMM::RealVec>& groupCenters) const;
 
@@ -86,7 +87,8 @@ class ReferenceCustomCentroidBondIxn : public ReferenceBondIxn {
        ReferenceCustomCentroidBondIxn(int numGroupsPerBond, const std::vector<std::vector<int> >& groupAtoms,
                                const std::vector<std::vector<double> >& normalizedWeights, const std::vector<std::vector<int> >& bondGroups, const Lepton::ParsedExpression& energyExpression,
                                const std::vector<std::string>& bondParameterNames, const std::map<std::string, std::vector<int> >& distances,
-                               const std::map<std::string, std::vector<int> >& angles, const std::map<std::string, std::vector<int> >& dihedrals);
+                               const std::map<std::string, std::vector<int> >& angles, const std::map<std::string, std::vector<int> >& dihedrals,
+                               const std::vector<Lepton::CompiledExpression> energyParamDerivExpressions);
 
       /**---------------------------------------------------------------------------------------
 
@@ -130,7 +132,7 @@ class ReferenceCustomCentroidBondIxn : public ReferenceBondIxn {
 
       void calculatePairIxn(std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** bondParameters,
                             const std::map<std::string, double>& globalParameters,
-                            std::vector<OpenMM::RealVec>& forces, RealOpenMM* totalEnergy) const;
+                            std::vector<OpenMM::RealVec>& forces, RealOpenMM* totalEnergy, double* energyParamDerivs);
 
 // ---------------------------------------------------------------------------------------
 
@@ -139,9 +141,9 @@ class ReferenceCustomCentroidBondIxn : public ReferenceBondIxn {
 class ReferenceCustomCentroidBondIxn::PositionTermInfo {
 public:
     std::string name;
-    int group, component;
-    Lepton::ExpressionProgram forceExpression;
-    PositionTermInfo(const std::string& name, int group, int component, const Lepton::ExpressionProgram& forceExpression) :
+    int group, component, index;
+    Lepton::CompiledExpression forceExpression;
+    PositionTermInfo(const std::string& name, int group, int component, const Lepton::CompiledExpression& forceExpression) :
             name(name), group(group), component(component), forceExpression(forceExpression) {
     }
 };
@@ -149,10 +151,10 @@ public:
 class ReferenceCustomCentroidBondIxn::DistanceTermInfo {
 public:
     std::string name;
-    int g1, g2;
-    Lepton::ExpressionProgram forceExpression;
+    int g1, g2, index;
+    Lepton::CompiledExpression forceExpression;
     mutable RealOpenMM delta[ReferenceForce::LastDeltaRIndex];
-    DistanceTermInfo(const std::string& name, const std::vector<int>& groups, const Lepton::ExpressionProgram& forceExpression) :
+    DistanceTermInfo(const std::string& name, const std::vector<int>& groups, const Lepton::CompiledExpression& forceExpression) :
             name(name), g1(groups[0]), g2(groups[1]), forceExpression(forceExpression) {
     }
 };
@@ -160,11 +162,11 @@ public:
 class ReferenceCustomCentroidBondIxn::AngleTermInfo {
 public:
     std::string name;
-    int g1, g2, g3;
-    Lepton::ExpressionProgram forceExpression;
+    int g1, g2, g3, index;
+    Lepton::CompiledExpression forceExpression;
     mutable RealOpenMM delta1[ReferenceForce::LastDeltaRIndex];
     mutable RealOpenMM delta2[ReferenceForce::LastDeltaRIndex];
-    AngleTermInfo(const std::string& name, const std::vector<int>& groups, const Lepton::ExpressionProgram& forceExpression) :
+    AngleTermInfo(const std::string& name, const std::vector<int>& groups, const Lepton::CompiledExpression& forceExpression) :
             name(name), g1(groups[0]), g2(groups[1]), g3(groups[2]), forceExpression(forceExpression) {
     }
 };
@@ -172,14 +174,14 @@ public:
 class ReferenceCustomCentroidBondIxn::DihedralTermInfo {
 public:
     std::string name;
-    int g1, g2, g3, g4;
-    Lepton::ExpressionProgram forceExpression;
+    int g1, g2, g3, g4, index;
+    Lepton::CompiledExpression forceExpression;
     mutable RealOpenMM delta1[ReferenceForce::LastDeltaRIndex];
     mutable RealOpenMM delta2[ReferenceForce::LastDeltaRIndex];
     mutable RealOpenMM delta3[ReferenceForce::LastDeltaRIndex];
     mutable RealOpenMM cross1[3];
     mutable RealOpenMM cross2[3];
-    DihedralTermInfo(const std::string& name, const std::vector<int>& groups, const Lepton::ExpressionProgram& forceExpression) :
+    DihedralTermInfo(const std::string& name, const std::vector<int>& groups, const Lepton::CompiledExpression& forceExpression) :
             name(name), g1(groups[0]), g2(groups[1]), g3(groups[2]), g4(groups[3]), forceExpression(forceExpression) {
     }
 };

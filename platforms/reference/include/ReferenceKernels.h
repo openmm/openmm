@@ -878,7 +878,7 @@ private:
     int numBonds, numParticles;
     RealOpenMM **bondParamArray;
     ReferenceCustomCentroidBondIxn* ixn;
-    std::vector<std::string> globalParameterNames;
+    std::vector<std::string> globalParameterNames, energyParamDerivNames;
     bool usePeriodic;
 };
 
@@ -917,7 +917,7 @@ private:
     int numBonds;
     RealOpenMM **bondParamArray;
     ReferenceCustomCompoundBondIxn* ixn;
-    std::vector<std::string> globalParameterNames;
+    std::vector<std::string> globalParameterNames, energyParamDerivNames;
     bool usePeriodic;
 };
 
