@@ -1376,19 +1376,19 @@ void ReferenceCalcCustomGBForceKernel::initialize(const System& system, const Cu
         CustomGBForce::ComputationType type;
         force.getComputedValueParameters(i, name, expression, type);
         Lepton::ParsedExpression ex = Lepton::Parser::parse(expression, functions).optimize();
-        valueExpressions.push_back(ex.createProgram());
+        valueExpressions.push_back(ex.createCompiledExpression());
         valueTypes.push_back(type);
         valueNames.push_back(name);
         if (i == 0) {
-            valueDerivExpressions[i].push_back(ex.differentiate("r").optimize().createProgram());
+            valueDerivExpressions[i].push_back(ex.differentiate("r").optimize().createCompiledExpression());
             validateVariables(ex.getRootNode(), pairVariables);
         }
         else {
-            valueGradientExpressions[i].push_back(ex.differentiate("x").optimize().createProgram());
-            valueGradientExpressions[i].push_back(ex.differentiate("y").optimize().createProgram());
-            valueGradientExpressions[i].push_back(ex.differentiate("z").optimize().createProgram());
+            valueGradientExpressions[i].push_back(ex.differentiate("x").optimize().createCompiledExpression());
+            valueGradientExpressions[i].push_back(ex.differentiate("y").optimize().createCompiledExpression());
+            valueGradientExpressions[i].push_back(ex.differentiate("z").optimize().createCompiledExpression());
             for (int j = 0; j < i; j++)
-                valueDerivExpressions[i].push_back(ex.differentiate(valueNames[j]).optimize().createProgram());
+                valueDerivExpressions[i].push_back(ex.differentiate(valueNames[j]).optimize().createCompiledExpression());
             validateVariables(ex.getRootNode(), particleVariables);
         }
         particleVariables.insert(name);
@@ -1405,21 +1405,21 @@ void ReferenceCalcCustomGBForceKernel::initialize(const System& system, const Cu
         CustomGBForce::ComputationType type;
         force.getEnergyTermParameters(i, expression, type);
         Lepton::ParsedExpression ex = Lepton::Parser::parse(expression, functions).optimize();
-        energyExpressions.push_back(ex.createProgram());
+        energyExpressions.push_back(ex.createCompiledExpression());
         energyTypes.push_back(type);
         if (type != CustomGBForce::SingleParticle)
-            energyDerivExpressions[i].push_back(ex.differentiate("r").optimize().createProgram());
+            energyDerivExpressions[i].push_back(ex.differentiate("r").optimize().createCompiledExpression());
         for (int j = 0; j < force.getNumComputedValues(); j++) {
             if (type == CustomGBForce::SingleParticle) {
-                energyDerivExpressions[i].push_back(ex.differentiate(valueNames[j]).optimize().createProgram());
-                energyGradientExpressions[i].push_back(ex.differentiate("x").optimize().createProgram());
-                energyGradientExpressions[i].push_back(ex.differentiate("y").optimize().createProgram());
-                energyGradientExpressions[i].push_back(ex.differentiate("z").optimize().createProgram());
+                energyDerivExpressions[i].push_back(ex.differentiate(valueNames[j]).optimize().createCompiledExpression());
+                energyGradientExpressions[i].push_back(ex.differentiate("x").optimize().createCompiledExpression());
+                energyGradientExpressions[i].push_back(ex.differentiate("y").optimize().createCompiledExpression());
+                energyGradientExpressions[i].push_back(ex.differentiate("z").optimize().createCompiledExpression());
                 validateVariables(ex.getRootNode(), particleVariables);
             }
             else {
-                energyDerivExpressions[i].push_back(ex.differentiate(valueNames[j]+"1").optimize().createProgram());
-                energyDerivExpressions[i].push_back(ex.differentiate(valueNames[j]+"2").optimize().createProgram());
+                energyDerivExpressions[i].push_back(ex.differentiate(valueNames[j]+"1").optimize().createCompiledExpression());
+                energyDerivExpressions[i].push_back(ex.differentiate(valueNames[j]+"2").optimize().createCompiledExpression());
                 validateVariables(ex.getRootNode(), pairVariables);
             }
         }

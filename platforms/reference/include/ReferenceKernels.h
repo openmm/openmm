@@ -38,7 +38,6 @@
 #include "ReferenceNeighborList.h"
 #include "lepton/CompiledExpression.h"
 #include "lepton/CustomFunction.h"
-#include "lepton/ExpressionProgram.h"
 
 namespace OpenMM {
 
@@ -739,13 +738,13 @@ private:
     RealOpenMM nonbondedCutoff;
     std::vector<std::set<int> > exclusions;
     std::vector<std::string> particleParameterNames, globalParameterNames, valueNames;
-    std::vector<Lepton::ExpressionProgram> valueExpressions;
-    std::vector<std::vector<Lepton::ExpressionProgram> > valueDerivExpressions;
-    std::vector<std::vector<Lepton::ExpressionProgram> > valueGradientExpressions;
+    std::vector<Lepton::CompiledExpression> valueExpressions;
+    std::vector<std::vector<Lepton::CompiledExpression> > valueDerivExpressions;
+    std::vector<std::vector<Lepton::CompiledExpression> > valueGradientExpressions;
     std::vector<OpenMM::CustomGBForce::ComputationType> valueTypes;
-    std::vector<Lepton::ExpressionProgram> energyExpressions;
-    std::vector<std::vector<Lepton::ExpressionProgram> > energyDerivExpressions;
-    std::vector<std::vector<Lepton::ExpressionProgram> > energyGradientExpressions;
+    std::vector<Lepton::CompiledExpression> energyExpressions;
+    std::vector<std::vector<Lepton::CompiledExpression> > energyDerivExpressions;
+    std::vector<std::vector<Lepton::CompiledExpression> > energyGradientExpressions;
     std::vector<OpenMM::CustomGBForce::ComputationType> energyTypes;
     NonbondedMethod nonbondedMethod;
     NeighborList* neighborList;
