@@ -482,7 +482,7 @@ class ForceField(object):
             """Add a constraint to the system, avoiding duplicate constraints."""
             key = (min(atom1, atom2), max(atom1, atom2))
             if key in self.constraints:
-                if self.constraints(key) != distance:
+                if self.constraints[key] != distance:
                     raise ValueError('Two constraints were specified between atoms %d and %d with different distances' % (atom1, atom2))
             else:
                 self.constraints[key] = distance
@@ -4042,10 +4042,22 @@ class AmoebaVdwGenerator(object):
         #   <Vdw class="1" sigma="0.371" epsilon="0.46024" reduction="1.0" />
         #   <Vdw class="2" sigma="0.382" epsilon="0.422584" reduction="1.0" />
 
-        generator = AmoebaVdwGenerator(element.attrib['type'], element.attrib['radiusrule'], element.attrib['radiustype'], element.attrib['radiussize'], element.attrib['epsilonrule'],
+        existing = [f for f in forceField._forces if isinstance(f, AmoebaVdwGenerator)]
+        if len(existing) == 0:
+            generator = AmoebaVdwGenerator(element.attrib['type'], element.attrib['radiusrule'], element.attrib['radiustype'], element.attrib['radiussize'], element.attrib['epsilonrule'],
                                         float(element.attrib['vdw-13-scale']), float(element.attrib['vdw-14-scale']), float(element.attrib['vdw-15-scale']))
-        forceField._forces.append(generator)
-        generator.params = ForceField._AtomTypeParameters(forceField, 'AmoebaVdwForce', 'Vdw', ('sigma', 'epsilon', 'reduction'))
+            forceField.registerGenerator(generator)
+            generator.params = ForceField._AtomTypeParameters(forceField, 'AmoebaVdwForce', 'Vdw', ('sigma', 'epsilon', 'reduction'))
+        else:
+            # Multiple <AmoebaVdwForce> tags were found, probably in different files.  Simply add more types to the existing one.
+            generator = existing[0]
+            if abs(generator.vdw13Scale - float(element.attrib['vdw-13-scale'])) > NonbondedGenerator.SCALETOL or \
+                    abs(generator.vdw14Scale - float(element.attrib['vdw-14-scale'])) > NonbondedGenerator.SCALETOL or \
+                    abs(generator.vdw15Scale - float(element.attrib['vdw-15-scale'])) > NonbondedGenerator.SCALETOL:
+                raise ValueError('Found multiple AmoebaVdwForce tags with different scale factors')
+            if generator.radiusrule != element.attrib['radiusrule'] or generator.epsilonrule != element.attrib['epsilonrule'] or \
+                    generator.radiustype != element.attrib['radiustype'] or generator.radiussize != element.attrib['radiussize']:
+                raise ValueError('Found multiple AmoebaVdwForce tags with different combining rules')
         generator.params.parseDefinitions(element)
         two_six = 1.122462048309372
 
@@ -4068,53 +4080,45 @@ class AmoebaVdwGenerator(object):
         sigmaMap = {'ARITHMETIC':1, 'GEOMETRIC':1, 'CUBIC-MEAN':1}
         epsilonMap = {'ARITHMETIC':1, 'GEOMETRIC':1, 'HARMONIC':1, 'HHG':1}
 
-        # get or create force depending on whether it has already been added to the system
+        force = mm.AmoebaVdwForce()
+        sys.addForce(force)
 
-        existing = [sys.getForce(i) for i in range(sys.getNumForces())]
-        existing = [f for f in existing if type(f) == mm.AmoebaVdwForce]
-        if len(existing) == 0:
-            force = mm.AmoebaVdwForce()
-            sys.addForce(force)
+        # sigma and epsilon combining rules
 
-            # sigma and epsilon combining rules
-
-            if ('sigmaCombiningRule' in args):
-                sigmaRule = args['sigmaCombiningRule'].upper()
-                if (sigmaRule.upper() in sigmaMap):
-                    force.setSigmaCombiningRule(sigmaRule.upper())
-                else:
-                    stringList = ' ' . join(str(x) for x in sigmaMap.keys())
-                    raise ValueError( "AmoebaVdwGenerator: sigma combining rule %s not recognized; valid values are %s; using default." % (sigmaRule, stringList) )
+        if ('sigmaCombiningRule' in args):
+            sigmaRule = args['sigmaCombiningRule'].upper()
+            if (sigmaRule.upper() in sigmaMap):
+                force.setSigmaCombiningRule(sigmaRule.upper())
             else:
-                force.setSigmaCombiningRule(self.radiusrule)
-
-            if ('epsilonCombiningRule' in args):
-                epsilonRule = args['epsilonCombiningRule'].upper()
-                if (epsilonRule.upper() in epsilonMap):
-                    force.setEpsilonCombiningRule(epsilonRule.upper())
-                else:
-                    stringList = ' ' . join(str(x) for x in epsilonMap.keys())
-                    raise ValueError( "AmoebaVdwGenerator: epsilon combining rule %s not recognized; valid values are %s; using default." % (epsilonRule, stringList) )
-            else:
-                force.setEpsilonCombiningRule(self.epsilonrule)
-
-            # cutoff
-
-            if ('vdwCutoff' in args):
-                force.setCutoff(args['vdwCutoff'])
-            else:
-                force.setCutoff(nonbondedCutoff)
-
-            # dispersion correction
-
-            if ('useDispersionCorrection' in args):
-                force.setUseDispersionCorrection(bool(args['useDispersionCorrection']))
-
-            if (nonbondedMethod == PME):
-                force.setNonbondedMethod(mm.AmoebaVdwForce.CutoffPeriodic)
-
+                stringList = ' ' . join(str(x) for x in sigmaMap.keys())
+                raise ValueError( "AmoebaVdwGenerator: sigma combining rule %s not recognized; valid values are %s; using default." % (sigmaRule, stringList) )
         else:
-            force = existing[0]
+            force.setSigmaCombiningRule(self.radiusrule)
+
+        if ('epsilonCombiningRule' in args):
+            epsilonRule = args['epsilonCombiningRule'].upper()
+            if (epsilonRule.upper() in epsilonMap):
+                force.setEpsilonCombiningRule(epsilonRule.upper())
+            else:
+                stringList = ' ' . join(str(x) for x in epsilonMap.keys())
+                raise ValueError( "AmoebaVdwGenerator: epsilon combining rule %s not recognized; valid values are %s; using default." % (epsilonRule, stringList) )
+        else:
+            force.setEpsilonCombiningRule(self.epsilonrule)
+
+        # cutoff
+
+        if ('vdwCutoff' in args):
+            force.setCutoff(args['vdwCutoff'])
+        else:
+            force.setCutoff(nonbondedCutoff)
+
+        # dispersion correction
+
+        if ('useDispersionCorrection' in args):
+            force.setUseDispersionCorrection(bool(args['useDispersionCorrection']))
+
+        if (nonbondedMethod == PME):
+            force.setNonbondedMethod(mm.AmoebaVdwForce.CutoffPeriodic)
 
         # add particles to force
 
@@ -4176,34 +4180,8 @@ class AmoebaMultipoleGenerator(object):
 
     #=============================================================================================
 
-    def __init__(self, forceField,
-                       direct11Scale, direct12Scale, direct13Scale, direct14Scale,
-                       mpole12Scale,  mpole13Scale,  mpole14Scale,  mpole15Scale,
-                       mutual11Scale, mutual12Scale, mutual13Scale, mutual14Scale,
-                       polar12Scale,  polar13Scale,  polar14Scale,  polar15Scale):
-
+    def __init__(self, forceField):
         self.forceField = forceField
-
-        self.direct11Scale = direct11Scale
-        self.direct12Scale = direct12Scale
-        self.direct13Scale = direct13Scale
-        self.direct14Scale = direct14Scale
-
-        self.mpole12Scale = mpole12Scale
-        self.mpole13Scale = mpole13Scale
-        self.mpole14Scale = mpole14Scale
-        self.mpole15Scale = mpole15Scale
-
-        self.mutual11Scale = mutual11Scale
-        self.mutual12Scale = mutual12Scale
-        self.mutual13Scale = mutual13Scale
-        self.mutual14Scale = mutual14Scale
-
-        self.polar12Scale = polar12Scale
-        self.polar13Scale = polar13Scale
-        self.polar14Scale = polar14Scale
-        self.polar15Scale = polar15Scale
-
         self.typeMap = {}
 
     #=============================================================================================
@@ -4261,30 +4239,13 @@ class AmoebaMultipoleGenerator(object):
         # <Multipole class="1"    kz="2"    kx="4"    c0="-0.22620" d1="0.08214" d2="0.00000" d3="0.34883" q11="0.11775" q21="0.00000" q22="-1.02185" q31="-0.17555" q32="0.00000" q33="0.90410"  />
         # <Multipole class="2"    kz="1"    kx="3"    c0="-0.15245" d1="0.19517" d2="0.00000" d3="0.19687" q11="-0.20677" q21="0.00000" q22="-0.48084" q31="-0.01672" q32="0.00000" q33="0.68761"  />
 
-        generator = AmoebaMultipoleGenerator(forceField,
-                                              element.attrib['direct11Scale'],
-                                              element.attrib['direct12Scale'],
-                                              element.attrib['direct13Scale'],
-                                              element.attrib['direct14Scale'],
-
-                                              element.attrib['mpole12Scale'],
-                                              element.attrib['mpole13Scale'],
-                                              element.attrib['mpole14Scale'],
-                                              element.attrib['mpole15Scale'],
-
-                                              element.attrib['mutual11Scale'],
-                                              element.attrib['mutual12Scale'],
-                                              element.attrib['mutual13Scale'],
-                                              element.attrib['mutual14Scale'],
-
-                                              element.attrib['polar12Scale'],
-                                              element.attrib['polar13Scale'],
-                                              element.attrib['polar14Scale'],
-                                              element.attrib['polar15Scale'])
-
-
-
-        forceField._forces.append(generator)
+        existing = [f for f in forceField._forces if isinstance(f, AmoebaMultipoleGenerator)]
+        if len(existing) == 0:
+            generator = AmoebaMultipoleGenerator(forceField)
+            forceField.registerGenerator(generator)
+        else:
+            # Multiple <AmoebaMultipoleForce> tags were found, probably in different files.  Simply add more types to the existing one.
+            generator = existing[0]
 
         # set type map: [ kIndices, multipoles, AMOEBA/OpenMM axis type]
 
@@ -4515,45 +4476,37 @@ class AmoebaMultipoleGenerator(object):
         methodMap = {NoCutoff:mm.AmoebaMultipoleForce.NoCutoff,
                      PME:mm.AmoebaMultipoleForce.PME}
 
-        # get or create force depending on whether it has already been added to the system
-
-        existing = [sys.getForce(i) for i in range(sys.getNumForces())]
-        existing = [f for f in existing if type(f) == mm.AmoebaMultipoleForce]
-        if len(existing) == 0:
-            force = mm.AmoebaMultipoleForce()
-            sys.addForce(force)
-            if (nonbondedMethod not in methodMap):
-                raise ValueError( "AmoebaMultipoleForce: input cutoff method not available." )
-            else:
-                force.setNonbondedMethod(methodMap[nonbondedMethod])
-            force.setCutoffDistance(nonbondedCutoff)
-
-            if ('ewaldErrorTolerance' in args):
-                force.setEwaldErrorTolerance(float(args['ewaldErrorTolerance']))
-
-            if ('polarization' in args):
-                polarizationType = args['polarization']
-                if (polarizationType.lower() == 'direct'):
-                    force.setPolarizationType(mm.AmoebaMultipoleForce.Direct)
-                elif (polarizationType.lower() == 'extrapolated'):
-                    force.setPolarizationType(mm.AmoebaMultipoleForce.Extrapolated)
-                else:
-                    force.setPolarizationType(mm.AmoebaMultipoleForce.Mutual)
-
-            if ('aEwald' in args):
-                force.setAEwald(float(args['aEwald']))
-
-            if ('pmeGridDimensions' in args):
-                force.setPmeGridDimensions(args['pmeGridDimensions'])
-
-            if ('mutualInducedMaxIterations' in args):
-                force.setMutualInducedMaxIterations(int(args['mutualInducedMaxIterations']))
-
-            if ('mutualInducedTargetEpsilon' in args):
-                force.setMutualInducedTargetEpsilon(float(args['mutualInducedTargetEpsilon']))
-
+        force = mm.AmoebaMultipoleForce()
+        sys.addForce(force)
+        if (nonbondedMethod not in methodMap):
+            raise ValueError( "AmoebaMultipoleForce: input cutoff method not available." )
         else:
-            force = existing[0]
+            force.setNonbondedMethod(methodMap[nonbondedMethod])
+        force.setCutoffDistance(nonbondedCutoff)
+
+        if ('ewaldErrorTolerance' in args):
+            force.setEwaldErrorTolerance(float(args['ewaldErrorTolerance']))
+
+        if ('polarization' in args):
+            polarizationType = args['polarization']
+            if (polarizationType.lower() == 'direct'):
+                force.setPolarizationType(mm.AmoebaMultipoleForce.Direct)
+            elif (polarizationType.lower() == 'extrapolated'):
+                force.setPolarizationType(mm.AmoebaMultipoleForce.Extrapolated)
+            else:
+                force.setPolarizationType(mm.AmoebaMultipoleForce.Mutual)
+
+        if ('aEwald' in args):
+            force.setAEwald(float(args['aEwald']))
+
+        if ('pmeGridDimensions' in args):
+            force.setPmeGridDimensions(args['pmeGridDimensions'])
+
+        if ('mutualInducedMaxIterations' in args):
+            force.setMutualInducedMaxIterations(int(args['mutualInducedMaxIterations']))
+
+        if ('mutualInducedTargetEpsilon' in args):
+            force.setMutualInducedTargetEpsilon(float(args['mutualInducedTargetEpsilon']))
 
         # add particles to force
         # throw error if particle type not available
