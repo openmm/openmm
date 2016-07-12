@@ -1359,6 +1359,7 @@ void ReferenceCalcCustomGBForceKernel::initialize(const System& system, const Cu
 
     valueDerivExpressions.resize(force.getNumComputedValues());
     valueGradientExpressions.resize(force.getNumComputedValues());
+    valueParamDerivExpressions.resize(force.getNumComputedValues());
     set<string> particleVariables, pairVariables;
     pairVariables.insert("r");
     particleVariables.insert("x");
@@ -1380,16 +1381,21 @@ void ReferenceCalcCustomGBForceKernel::initialize(const System& system, const Cu
         valueTypes.push_back(type);
         valueNames.push_back(name);
         if (i == 0) {
-            valueDerivExpressions[i].push_back(ex.differentiate("r").optimize().createCompiledExpression());
+            valueDerivExpressions[i].push_back(ex.differentiate("r").createCompiledExpression());
             validateVariables(ex.getRootNode(), pairVariables);
         }
         else {
-            valueGradientExpressions[i].push_back(ex.differentiate("x").optimize().createCompiledExpression());
-            valueGradientExpressions[i].push_back(ex.differentiate("y").optimize().createCompiledExpression());
-            valueGradientExpressions[i].push_back(ex.differentiate("z").optimize().createCompiledExpression());
+            valueGradientExpressions[i].push_back(ex.differentiate("x").createCompiledExpression());
+            valueGradientExpressions[i].push_back(ex.differentiate("y").createCompiledExpression());
+            valueGradientExpressions[i].push_back(ex.differentiate("z").createCompiledExpression());
             for (int j = 0; j < i; j++)
-                valueDerivExpressions[i].push_back(ex.differentiate(valueNames[j]).optimize().createCompiledExpression());
+                valueDerivExpressions[i].push_back(ex.differentiate(valueNames[j]).createCompiledExpression());
             validateVariables(ex.getRootNode(), particleVariables);
+        }
+        for (int j = 0; j < force.getNumEnergyParameterDerivatives(); j++) {
+            string param = force.getEnergyParameterDerivativeName(j);
+            energyParamDerivNames.push_back(param);
+            valueParamDerivExpressions[i].push_back(ex.differentiate(param).createCompiledExpression());
         }
         particleVariables.insert(name);
         pairVariables.insert(name+"1");
@@ -1400,6 +1406,7 @@ void ReferenceCalcCustomGBForceKernel::initialize(const System& system, const Cu
 
     energyDerivExpressions.resize(force.getNumEnergyTerms());
     energyGradientExpressions.resize(force.getNumEnergyTerms());
+    energyParamDerivExpressions.resize(force.getNumEnergyTerms());
     for (int i = 0; i < force.getNumEnergyTerms(); i++) {
         string expression;
         CustomGBForce::ComputationType type;
@@ -1408,21 +1415,23 @@ void ReferenceCalcCustomGBForceKernel::initialize(const System& system, const Cu
         energyExpressions.push_back(ex.createCompiledExpression());
         energyTypes.push_back(type);
         if (type != CustomGBForce::SingleParticle)
-            energyDerivExpressions[i].push_back(ex.differentiate("r").optimize().createCompiledExpression());
+            energyDerivExpressions[i].push_back(ex.differentiate("r").createCompiledExpression());
         for (int j = 0; j < force.getNumComputedValues(); j++) {
             if (type == CustomGBForce::SingleParticle) {
-                energyDerivExpressions[i].push_back(ex.differentiate(valueNames[j]).optimize().createCompiledExpression());
-                energyGradientExpressions[i].push_back(ex.differentiate("x").optimize().createCompiledExpression());
-                energyGradientExpressions[i].push_back(ex.differentiate("y").optimize().createCompiledExpression());
-                energyGradientExpressions[i].push_back(ex.differentiate("z").optimize().createCompiledExpression());
+                energyDerivExpressions[i].push_back(ex.differentiate(valueNames[j]).createCompiledExpression());
+                energyGradientExpressions[i].push_back(ex.differentiate("x").createCompiledExpression());
+                energyGradientExpressions[i].push_back(ex.differentiate("y").createCompiledExpression());
+                energyGradientExpressions[i].push_back(ex.differentiate("z").createCompiledExpression());
                 validateVariables(ex.getRootNode(), particleVariables);
             }
             else {
-                energyDerivExpressions[i].push_back(ex.differentiate(valueNames[j]+"1").optimize().createCompiledExpression());
-                energyDerivExpressions[i].push_back(ex.differentiate(valueNames[j]+"2").optimize().createCompiledExpression());
+                energyDerivExpressions[i].push_back(ex.differentiate(valueNames[j]+"1").createCompiledExpression());
+                energyDerivExpressions[i].push_back(ex.differentiate(valueNames[j]+"2").createCompiledExpression());
                 validateVariables(ex.getRootNode(), pairVariables);
             }
         }
+        for (int j = 0; j < force.getNumEnergyParameterDerivatives(); j++)
+            energyParamDerivExpressions[i].push_back(ex.differentiate(force.getEnergyParameterDerivativeName(j)).createCompiledExpression());
     }
 
     // Delete the custom functions.
@@ -1435,8 +1444,8 @@ double ReferenceCalcCustomGBForceKernel::execute(ContextImpl& context, bool incl
     vector<RealVec>& posData = extractPositions(context);
     vector<RealVec>& forceData = extractForces(context);
     RealOpenMM energy = 0;
-    ReferenceCustomGBIxn ixn(valueExpressions, valueDerivExpressions, valueGradientExpressions, valueNames, valueTypes, energyExpressions,
-        energyDerivExpressions, energyGradientExpressions, energyTypes, particleParameterNames);
+    ReferenceCustomGBIxn ixn(valueExpressions, valueDerivExpressions, valueGradientExpressions, valueParamDerivExpressions, valueNames, valueTypes,
+        energyExpressions, energyDerivExpressions, energyGradientExpressions, energyParamDerivExpressions, energyTypes, particleParameterNames);
     bool periodic = (nonbondedMethod == CutoffPeriodic);
     if (periodic)
         ixn.setPeriodic(extractBoxVectors(context));
@@ -1447,7 +1456,11 @@ double ReferenceCalcCustomGBForceKernel::execute(ContextImpl& context, bool incl
     map<string, double> globalParameters;
     for (int i = 0; i < (int) globalParameterNames.size(); i++)
         globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
-    ixn.calculateIxn(numParticles, posData, particleParamArray, exclusions, globalParameters, forceData, includeEnergy ? &energy : NULL);
+    vector<double> energyParamDerivValues(energyParamDerivNames.size()+1, 0.0);
+    ixn.calculateIxn(numParticles, posData, particleParamArray, exclusions, globalParameters, forceData, includeEnergy ? &energy : NULL, &energyParamDerivValues[0]);
+    map<string, double>& energyParamDerivs = extractEnergyParameterDerivatives(context);
+    for (int i = 0; i < energyParamDerivNames.size(); i++)
+        energyParamDerivs[energyParamDerivNames[i]] += energyParamDerivValues[i];
     return energy;
 }
 

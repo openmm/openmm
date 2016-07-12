@@ -737,14 +737,16 @@ private:
     RealOpenMM **particleParamArray;
     RealOpenMM nonbondedCutoff;
     std::vector<std::set<int> > exclusions;
-    std::vector<std::string> particleParameterNames, globalParameterNames, valueNames;
+    std::vector<std::string> particleParameterNames, globalParameterNames, energyParamDerivNames, valueNames;
     std::vector<Lepton::CompiledExpression> valueExpressions;
     std::vector<std::vector<Lepton::CompiledExpression> > valueDerivExpressions;
     std::vector<std::vector<Lepton::CompiledExpression> > valueGradientExpressions;
+    std::vector<std::vector<Lepton::CompiledExpression> > valueParamDerivExpressions;
     std::vector<OpenMM::CustomGBForce::ComputationType> valueTypes;
     std::vector<Lepton::CompiledExpression> energyExpressions;
     std::vector<std::vector<Lepton::CompiledExpression> > energyDerivExpressions;
     std::vector<std::vector<Lepton::CompiledExpression> > energyGradientExpressions;
+    std::vector<std::vector<Lepton::CompiledExpression> > energyParamDerivExpressions;
     std::vector<OpenMM::CustomGBForce::ComputationType> energyTypes;
     NonbondedMethod nonbondedMethod;
     NeighborList* neighborList;
