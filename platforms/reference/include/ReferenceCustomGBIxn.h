@@ -170,7 +170,7 @@ class ReferenceCustomGBIxn {
          --------------------------------------------------------------------------------------- */
 
       void calculateChainRuleForces(int numAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** atomParameters,
-                                      const std::vector<std::set<int> >& exclusions, std::vector<OpenMM::RealVec>& forces);
+                                      const std::vector<std::set<int> >& exclusions, std::vector<OpenMM::RealVec>& forces, double* energyParamDerivs);
 
       /**---------------------------------------------------------------------------------------
 

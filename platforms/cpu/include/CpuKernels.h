@@ -398,7 +398,7 @@ private:
     RealOpenMM nonbondedCutoff;
     CpuCustomGBForce* ixn;
     std::vector<std::set<int> > exclusions;
-    std::vector<std::string> particleParameterNames, globalParameterNames, valueNames;
+    std::vector<std::string> particleParameterNames, globalParameterNames, energyParamDerivNames, valueNames;
     std::vector<OpenMM::CustomGBForce::ComputationType> valueTypes;
     std::vector<OpenMM::CustomGBForce::ComputationType> energyTypes;
     NonbondedMethod nonbondedMethod;

@@ -1045,6 +1045,7 @@ void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGB
 
     vector<vector<Lepton::CompiledExpression> > valueDerivExpressions(force.getNumComputedValues());
     vector<vector<Lepton::CompiledExpression> > valueGradientExpressions(force.getNumComputedValues());
+    vector<vector<Lepton::CompiledExpression> > valueParamDerivExpressions(force.getNumComputedValues());
     vector<Lepton::CompiledExpression> valueExpressions;
     vector<Lepton::CompiledExpression> energyExpressions;
     set<string> particleVariables, pairVariables;
@@ -1079,6 +1080,11 @@ void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGB
                 valueDerivExpressions[i].push_back(ex.differentiate(valueNames[j]).createCompiledExpression());
             validateVariables(ex.getRootNode(), particleVariables);
         }
+        for (int j = 0; j < force.getNumEnergyParameterDerivatives(); j++) {
+            string param = force.getEnergyParameterDerivativeName(j);
+            energyParamDerivNames.push_back(param);
+            valueParamDerivExpressions[i].push_back(ex.differentiate(param).createCompiledExpression());
+        }
         particleVariables.insert(name);
         pairVariables.insert(name+"1");
         pairVariables.insert(name+"2");
@@ -1088,6 +1094,7 @@ void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGB
 
     vector<vector<Lepton::CompiledExpression> > energyDerivExpressions(force.getNumEnergyTerms());
     vector<vector<Lepton::CompiledExpression> > energyGradientExpressions(force.getNumEnergyTerms());
+    vector<vector<Lepton::CompiledExpression> > energyParamDerivExpressions(force.getNumEnergyTerms());
     for (int i = 0; i < force.getNumEnergyTerms(); i++) {
         string expression;
         CustomGBForce::ComputationType type;
@@ -1111,14 +1118,17 @@ void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGB
                 validateVariables(ex.getRootNode(), pairVariables);
             }
         }
+        for (int j = 0; j < force.getNumEnergyParameterDerivatives(); j++)
+            energyParamDerivExpressions[i].push_back(ex.differentiate(force.getEnergyParameterDerivativeName(j)).createCompiledExpression());
     }
 
     // Delete the custom functions.
 
     for (map<string, Lepton::CustomFunction*>::iterator iter = functions.begin(); iter != functions.end(); iter++)
         delete iter->second;
-    ixn = new CpuCustomGBForce(numParticles, exclusions, valueExpressions, valueDerivExpressions, valueGradientExpressions, valueNames, valueTypes, energyExpressions,
-        energyDerivExpressions, energyGradientExpressions, energyTypes, particleParameterNames, data.threads);
+    ixn = new CpuCustomGBForce(numParticles, exclusions, valueExpressions, valueDerivExpressions, valueGradientExpressions, valueParamDerivExpressions,
+        valueNames, valueTypes, energyExpressions, energyDerivExpressions, energyGradientExpressions, energyParamDerivExpressions, energyTypes,
+        particleParameterNames, data.threads);
     data.isPeriodic = (force.getNonbondedMethod() == CustomGBForce::CutoffPeriodic);
 }
 
@@ -1135,7 +1145,11 @@ double CpuCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFor
     map<string, double> globalParameters;
     for (int i = 0; i < (int) globalParameterNames.size(); i++)
         globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
-    ixn->calculateIxn(numParticles, &data.posq[0], particleParamArray, globalParameters, data.threadForce, includeForces, includeEnergy, energy);
+    vector<double> energyParamDerivValues(energyParamDerivNames.size()+1, 0.0);
+    ixn->calculateIxn(numParticles, &data.posq[0], particleParamArray, globalParameters, data.threadForce, includeForces, includeEnergy, energy, &energyParamDerivValues[0]);
+    map<string, double>& energyParamDerivs = extractEnergyParameterDerivatives(context);
+    for (int i = 0; i < energyParamDerivNames.size(); i++)
+        energyParamDerivs[energyParamDerivNames[i]] += energyParamDerivValues[i];
     return energy;
 }
 

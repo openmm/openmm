@@ -190,7 +190,7 @@ void ReferenceCustomGBIxn::calculateIxn(int numberOfAtoms, vector<RealVec>& atom
 
     // Apply the chain rule to evaluate forces.
 
-    calculateChainRuleForces(numberOfAtoms, atomCoordinates, atomParameters, exclusions, forces);
+    calculateChainRuleForces(numberOfAtoms, atomCoordinates, atomParameters, exclusions, forces, energyParamDerivs);
 }
 
 void ReferenceCustomGBIxn::calculateSingleParticleValue(int index, int numAtoms, vector<RealVec>& atomCoordinates, RealOpenMM** atomParameters) {
@@ -204,11 +204,11 @@ void ReferenceCustomGBIxn::calculateSingleParticleValue(int index, int numAtoms,
         for (int j = 0; j < index; j++)
             expressionSet.setVariable(valueIndex[j], values[j][i]);
         values[index][i] = (RealOpenMM) valueExpressions[index].evaluate();
-        for (int j = 0; j < valueParamDerivExpressions[index].size(); j++)
-            dValuedParam[index][j][i] += valueParamDerivExpressions[index][j].evaluate();
 
         // Calculate derivatives with respect to parameters.
 
+        for (int j = 0; j < valueParamDerivExpressions[index].size(); j++)
+            dValuedParam[index][j][i] += valueParamDerivExpressions[index][j].evaluate();
         for (int j = 0; j < index; j++) {
             RealOpenMM dVdV = valueDerivExpressions[index][j].evaluate();
             for (int k = 0; k < valueParamDerivExpressions[index].size(); k++)
@@ -296,11 +296,8 @@ void ReferenceCustomGBIxn::calculateSingleParticleEnergyTerm(int index, int numA
         
         // Compute derivatives with respect to parameters.
         
-        for (int k = 0; k < energyParamDerivExpressions[index].size(); k++) {
+        for (int k = 0; k < energyParamDerivExpressions[index].size(); k++)
             energyParamDerivs[k] += energyParamDerivExpressions[index][k].evaluate();
-            for (int j = 0; j < (int) valueIndex.size(); j++)
-                energyParamDerivs[k] += dEdV[j][i]*dValuedParam[j][k][i];
-        }
     }
 }
 
@@ -376,7 +373,7 @@ void ReferenceCustomGBIxn::calculateOnePairEnergyTerm(int index, int atom1, int 
 }
 
 void ReferenceCustomGBIxn::calculateChainRuleForces(int numAtoms, vector<RealVec>& atomCoordinates, RealOpenMM** atomParameters,
-        const vector<set<int> >& exclusions, vector<RealVec>& forces) {
+        const vector<set<int> >& exclusions, vector<RealVec>& forces, double* energyParamDerivs) {
     if (cutoff) {
         // Loop over all pairs in the neighbor list.
 
@@ -426,6 +423,13 @@ void ReferenceCustomGBIxn::calculateChainRuleForces(int numAtoms, vector<RealVec
             forces[i][2] -= dEdV[j][i]*dVdZ[j];
         }
     }
+        
+    // Compute chain rule terms for derivatives with respect to parameters.
+
+    for (int i = 0; i < numAtoms; i++)
+        for (int j = 0; j < (int) valueIndex.size(); j++)
+            for (int k = 0; k < dValuedParam[j].size(); k++)
+                energyParamDerivs[k] += dEdV[j][i]*dValuedParam[j][k][i];
 }
 
 void ReferenceCustomGBIxn::calculateOnePairChainRule(int atom1, int atom2, vector<RealVec>& atomCoordinates, RealOpenMM** atomParameters,
