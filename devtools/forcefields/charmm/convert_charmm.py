@@ -65,23 +65,4 @@ params = CharmmParameterSet(*charmm_files)
 params_omm = openmm.OpenMMParameterSet.from_parameterset(params)
 params_omm.write('ffxml/charmm36.xml', provenance=provenance)
 
-def compare_energies(pdb_name, psf_name, ffxml, param, tolerance=1e-5, units=u.kilojoules_per_mole):
-
-    pdb = app.PDBFile(pdb_name)
-    # CHARMM system through ParmEd
-    structure = CharmmPsfFile(psf_name)
-    structure.positions = pdb.positions
-    system_charmm = structure.createSystem(param)
-    charmm_energies = openmm.energy_decomposition_system(structure, system_charmm, nrg=units)
-
-    # OpenMM system with ffxml
-    ff = app.ForceField(ffxml)
-    system_omm = ff.createSystem(pdb.topology)
-    topology = openmm.load_topology(pdb.topology, system_omm, xyz=pdb.positions)
-    omm_energies = openmm.energy_decomposition_system(topology, system_omm, nrg=units)
-
-    print('charmm_energies')
-    print(charmm_energies)
-    print('omm_energies')
-    print(omm_energies)
 
