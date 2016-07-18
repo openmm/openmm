@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -42,8 +42,9 @@ AmoebaWcaDispersionForceProxy::AmoebaWcaDispersionForceProxy() : SerializationPr
 }
 
 void AmoebaWcaDispersionForceProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 1);
+    node.setIntProperty("version", 2);
     const AmoebaWcaDispersionForce& force = *reinterpret_cast<const AmoebaWcaDispersionForce*>(object);
+    node.setIntProperty("forceGroup", force.getForceGroup());
     node.setDoubleProperty("Epso",    force.getEpso());
     node.setDoubleProperty("Epsh",    force.getEpsh());
     node.setDoubleProperty("Rmino",   force.getRmino());
@@ -63,12 +64,14 @@ void AmoebaWcaDispersionForceProxy::serialize(const void* object, SerializationN
 }
 
 void* AmoebaWcaDispersionForceProxy::deserialize(const SerializationNode& node) const {
-    if (node.getIntProperty("version") != 1)
+    int version = node.getIntProperty("version");
+    if (version < 1 || version > 2)
         throw OpenMMException("Unsupported version number");
     AmoebaWcaDispersionForce* force = new AmoebaWcaDispersionForce();
 
     try {
-
+        if (version > 1)
+            force->setForceGroup(node.getIntProperty("forceGroup", 0));
         force->setEpso(   node.getDoubleProperty("Epso"));
         force->setEpsh(   node.getDoubleProperty("Epsh"));
         force->setRmino(  node.getDoubleProperty("Rmino"));

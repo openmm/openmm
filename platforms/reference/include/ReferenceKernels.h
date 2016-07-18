@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -172,7 +172,7 @@ public:
      * @param b      the vector defining the second edge of the periodic box
      * @param c      the vector defining the third edge of the periodic box
      */
-    void setPeriodicBoxVectors(ContextImpl& context, const Vec3& a, const Vec3& b, const Vec3& c) const;
+    void setPeriodicBoxVectors(ContextImpl& context, const Vec3& a, const Vec3& b, const Vec3& c);
     /**
      * Create a checkpoint recording the current state of the Context.
      * 
@@ -280,6 +280,7 @@ private:
     int numBonds;
     int **bondIndexArray;
     RealOpenMM **bondParamArray;
+    bool usePeriodic;
 };
 
 /**
@@ -319,6 +320,7 @@ private:
     RealOpenMM **bondParamArray;
     Lepton::CompiledExpression energyExpression, forceExpression;
     std::vector<std::string> parameterNames, globalParameterNames;
+    bool usePeriodic;
 };
 
 /**
@@ -356,6 +358,7 @@ private:
     int numAngles;
     int **angleIndexArray;
     RealOpenMM **angleParamArray;
+    bool usePeriodic;
 };
 
 /**
@@ -395,6 +398,7 @@ private:
     RealOpenMM **angleParamArray;
     Lepton::CompiledExpression energyExpression, forceExpression;
     std::vector<std::string> parameterNames, globalParameterNames;
+    bool usePeriodic;
 };
 
 /**
@@ -432,6 +436,7 @@ private:
     int numTorsions;
     int **torsionIndexArray;
     RealOpenMM **torsionParamArray;
+    bool usePeriodic;
 };
 
 /**
@@ -469,6 +474,7 @@ private:
     int numTorsions;
     int **torsionIndexArray;
     RealOpenMM **torsionParamArray;
+    bool usePeriodic;
 };
 
 /**
@@ -505,6 +511,7 @@ private:
     std::vector<std::vector<std::vector<RealOpenMM> > > coeff;
     std::vector<int> torsionMaps;
     std::vector<std::vector<int> > torsionIndices;
+    bool usePeriodic;
 };
 
 /**
@@ -544,6 +551,7 @@ private:
     RealOpenMM **torsionParamArray;
     Lepton::CompiledExpression energyExpression, forceExpression;
     std::vector<std::string> parameterNames, globalParameterNames;
+    bool usePeriodic;
 };
 
 /**
@@ -860,6 +868,7 @@ private:
     RealOpenMM **bondParamArray;
     ReferenceCustomCentroidBondIxn* ixn;
     std::vector<std::string> globalParameterNames;
+    bool usePeriodic;
 };
 
 /**
@@ -898,6 +907,7 @@ private:
     RealOpenMM **bondParamArray;
     ReferenceCustomCompoundBondIxn* ixn;
     std::vector<std::string> globalParameterNames;
+    bool usePeriodic;
 };
 
 /**

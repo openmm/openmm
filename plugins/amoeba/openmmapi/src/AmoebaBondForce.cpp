@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors:                                                                   *
  * Contributors:                                                              *
  *                                                                            *
@@ -36,7 +36,7 @@
 
 using namespace OpenMM;
 
-AmoebaBondForce::AmoebaBondForce() {
+AmoebaBondForce::AmoebaBondForce() : usePeriodic(false) {
    _globalCubicK = _globalQuarticK = 0.0;
 }
 
@@ -81,4 +81,12 @@ ForceImpl* AmoebaBondForce::createImpl() const {
 
 void AmoebaBondForce::updateParametersInContext(Context& context) {
     dynamic_cast<AmoebaBondForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
+}
+
+void AmoebaBondForce::setUsesPeriodicBoundaryConditions(bool periodic) {
+    usePeriodic = periodic;
+}
+
+bool AmoebaBondForce::usesPeriodicBoundaryConditions() const {
+    return usePeriodic;
 }

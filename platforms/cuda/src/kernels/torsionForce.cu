@@ -2,6 +2,11 @@ const real PI = (real) 3.14159265358979323846;
 real3 v0 = make_real3(pos1.x-pos2.x, pos1.y-pos2.y, pos1.z-pos2.z);
 real3 v1 = make_real3(pos3.x-pos2.x, pos3.y-pos2.y, pos3.z-pos2.z);
 real3 v2 = make_real3(pos3.x-pos4.x, pos3.y-pos4.y, pos3.z-pos4.z);
+#if APPLY_PERIODIC
+APPLY_PERIODIC_TO_DELTA(v0)
+APPLY_PERIODIC_TO_DELTA(v1)
+APPLY_PERIODIC_TO_DELTA(v2)
+#endif
 real3 cp0 = cross(v0, v1);
 real3 cp1 = cross(v1, v2);
 real cosangle = dot(normalize(cp0), normalize(cp1));

@@ -89,7 +89,7 @@ void MonteCarloBarostatImpl::updateContextState(ContextImpl& context) {
     
     double finalEnergy = context.getOwner().getState(State::Energy).getPotentialEnergy();
     double pressure = context.getParameter(MonteCarloBarostat::Pressure())*(AVOGADRO*1e-25);
-    double kT = BOLTZ*owner.getTemperature();
+    double kT = BOLTZ*context.getParameter(MonteCarloBarostat::Temperature());
     double w = finalEnergy-initialEnergy + pressure*deltaVolume - context.getMolecules().size()*kT*std::log(newVolume/volume);
     if (w > 0 && genrand_real2(random) > std::exp(-w/kT)) {
         // Reject the step.
@@ -118,6 +118,7 @@ void MonteCarloBarostatImpl::updateContextState(ContextImpl& context) {
 std::map<std::string, double> MonteCarloBarostatImpl::getDefaultParameters() {
     std::map<std::string, double> parameters;
     parameters[MonteCarloBarostat::Pressure()] = getOwner().getDefaultPressure();
+    parameters[MonteCarloBarostat::Temperature()] = getOwner().getDefaultTemperature();
     return parameters;
 }
 

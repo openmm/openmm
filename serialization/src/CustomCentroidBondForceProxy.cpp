@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -42,9 +42,10 @@ CustomCentroidBondForceProxy::CustomCentroidBondForceProxy() : SerializationProx
 }
 
 void CustomCentroidBondForceProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 1);
+    node.setIntProperty("version", 2);
     const CustomCentroidBondForce& force = *reinterpret_cast<const CustomCentroidBondForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setBoolProperty("usesPeriodic", force.usesPeriodicBoundaryConditions());
     node.setIntProperty("groups", force.getNumGroupsPerBond());
     node.setStringProperty("energy", force.getEnergyFunction());
     SerializationNode& perBondParams = node.createChildNode("PerBondParameters");
@@ -64,7 +65,8 @@ void CustomCentroidBondForceProxy::serialize(const void* object, SerializationNo
         for (int j = 0; j < (int) particles.size(); j++) {
             SerializationNode& node = group.createChildNode("Particle");
             node.setIntProperty("p", particles[j]);
-            node.setDoubleProperty("weight", weights[j]);
+            if (j < weights.size())
+                node.setDoubleProperty("weight", weights[j]);
         }
     }
     SerializationNode& bonds = node.createChildNode("Bonds");
@@ -92,12 +94,15 @@ void CustomCentroidBondForceProxy::serialize(const void* object, SerializationNo
 }
 
 void* CustomCentroidBondForceProxy::deserialize(const SerializationNode& node) const {
-    if (node.getIntProperty("version") != 1)
+    int version = node.getIntProperty("version");
+    if (version < 1 || version > 2)
         throw OpenMMException("Unsupported version number");
     CustomCentroidBondForce* force = NULL;
     try {
         CustomCentroidBondForce* force = new CustomCentroidBondForce(node.getIntProperty("groups"), node.getStringProperty("energy"));
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        if (version > 1)
+            force->setUsesPeriodicBoundaryConditions(node.getBoolProperty("usesPeriodic"));
         const SerializationNode& perBondParams = node.getChildNode("PerBondParameters");
         for (int i = 0; i < (int) perBondParams.getChildren().size(); i++) {
             const SerializationNode& parameter = perBondParams.getChildren()[i];
@@ -115,7 +120,8 @@ void* CustomCentroidBondForceProxy::deserialize(const SerializationNode& node) c
             vector<double> weights;
             for (int j = 0; j < (int) group.getChildren().size(); j++) {
                 particles.push_back(group.getChildren()[j].getIntProperty("p"));
-                weights.push_back(group.getChildren()[j].getDoubleProperty("weight"));
+                if (group.getChildren()[j].hasProperty("weight"))
+                    weights.push_back(group.getChildren()[j].getDoubleProperty("weight"));
             }
             force->addGroup(particles, weights);
         }

@@ -81,51 +81,51 @@ class CharmmCrdFile(object):
 
     def _parse(self, fname):
 
-        crdfile = open(fname, 'r')
-        line = crdfile.readline()
-
-        while len(line.strip()) == 0:      # Skip whitespace, as a precaution
+        with open(fname, 'r') as crdfile:
             line = crdfile.readline()
-
-        intitle = True
-
-        while intitle:
-            self.title.append(line.strip())
-            line = crdfile.readline()
-            if len(line.strip()) == 0:
-                intitle = False
-            elif line.strip()[0] != '*':
-                intitle = False
-            else:
-                intitle = True
-
-        while len(line.strip()) == 0:      # Skip whitespace
-            line = crdfile.readline()
-
-        try:
-            self.natom = int(line.strip().split()[0])
-
-            for row in range(self.natom):
-                line = crdfile.readline().strip().split()
-                self.atomno.append(int(line[0]))
-                self.resno.append(int(line[1]))
-                self.resname.append(line[2])
-                self.attype.append(line[3])
-                pos = Vec3(float(line[4]), float(line[5]), float(line[6]))
-                self.positions.append(pos)
-                self.segid.append(line[7])
-                self.resid.append(int(line[8]))
-                self.weighting.append(float(line[9]))
-
-            if self.natom != len(self.positions):
-                raise CharmmFileError("Error parsing CHARMM .crd file: %d "
-                                      "atoms requires %d positions (not %d)" %
-                                      (self.natom, self.natom,
-                                       len(self.positions))
-                )
-
-        except (ValueError, IndexError) as e:
-            raise CharmmFileError('Error parsing CHARMM coordinate file')
+    
+            while len(line.strip()) == 0:      # Skip whitespace, as a precaution
+                line = crdfile.readline()
+    
+            intitle = True
+    
+            while intitle:
+                self.title.append(line.strip())
+                line = crdfile.readline()
+                if len(line.strip()) == 0:
+                    intitle = False
+                elif line.strip()[0] != '*':
+                    intitle = False
+                else:
+                    intitle = True
+    
+            while len(line.strip()) == 0:      # Skip whitespace
+                line = crdfile.readline()
+    
+            try:
+                self.natom = int(line.strip().split()[0])
+    
+                for row in range(self.natom):
+                    line = crdfile.readline().strip().split()
+                    self.atomno.append(int(line[0]))
+                    self.resno.append(int(line[1]))
+                    self.resname.append(line[2])
+                    self.attype.append(line[3])
+                    pos = Vec3(float(line[4]), float(line[5]), float(line[6]))
+                    self.positions.append(pos)
+                    self.segid.append(line[7])
+                    self.resid.append(int(line[8]))
+                    self.weighting.append(float(line[9]))
+    
+                if self.natom != len(self.positions):
+                    raise CharmmFileError("Error parsing CHARMM .crd file: %d "
+                                          "atoms requires %d positions (not %d)" %
+                                          (self.natom, self.natom,
+                                           len(self.positions))
+                    )
+    
+            except (ValueError, IndexError) as e:
+                raise CharmmFileError('Error parsing CHARMM coordinate file')
 
         # Apply units to the positions now. Do it this way to allow for
         # (possible) numpy functionality in the future.

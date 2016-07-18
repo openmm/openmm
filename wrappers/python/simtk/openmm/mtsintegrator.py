@@ -45,11 +45,9 @@ class MTSIntegrator(CustomIntegrator):
     setForceGroup() on them) that should be evaluated at different frequencies.  When
     you create the integrator, you provide a tuple for each group specifying the index
     of the force group and the frequency (as a fraction of the outermost time step) at
-    which to evaluate it.  For example:
+    which to evaluate it.  For example::
 
-    <pre>
-    integrator = MTSIntegrator(4*femtoseconds, [(0,1), (1,2), (2,8)])
-    </pre>
+        integrator = MTSIntegrator(4*femtoseconds, [(0,1), (1,2), (2,8)])
 
     This specifies that the outermost time step is 4 fs, so each step of the integrator
     will advance time by that much.  It also says that force group 0 should be evaluated
@@ -60,13 +58,11 @@ class MTSIntegrator(CustomIntegrator):
     less often than the bonded and direct space nonbonded interactions.  The following
     example looks up the NonbondedForce, sets the reciprocal space interactions to their
     own force group, and then creates an integrator that evaluates them once every 4 fs,
-    but all other interactions every 2 fs.
+    but all other interactions every 2 fs::
 
-    <pre>
-    nonbonded = [f for f in system.getForces() if isinstance(f, NonbondedForce)][0]
-    nonbonded.setReciprocalSpaceForceGroup(1)
-    integrator = MTSIntegrator(4*femtoseconds, [(1,1), (0,2)])
-    </pre>
+        nonbonded = [f for f in system.getForces() if isinstance(f, NonbondedForce)][0]
+        nonbonded.setReciprocalSpaceForceGroup(1)
+        integrator = MTSIntegrator(4*femtoseconds, [(1,1), (0,2)])
 
     For details, see Tuckerman et al., J. Chem. Phys. 97(3) pp. 1990-2001 (1992).
     """
@@ -94,7 +90,7 @@ class MTSIntegrator(CustomIntegrator):
 
     def _createSubsteps(self, parentSubsteps, groups):
         group, substeps = groups[0]
-        stepsPerParentStep = substeps/parentSubsteps
+        stepsPerParentStep = substeps//parentSubsteps
         if stepsPerParentStep < 1 or stepsPerParentStep != int(stepsPerParentStep):
             raise ValueError("The number for substeps for each group must be a multiple of the number for the previous group")
         if group < 0 or group > 31:

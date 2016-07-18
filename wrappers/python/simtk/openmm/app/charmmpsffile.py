@@ -8,11 +8,10 @@ Structures at Stanford, funded under the NIH Roadmap for Medical Research,
 grant U54 GM072970. See https://simtk.org.  This code was originally part of
 the ParmEd program and was ported for use with OpenMM.
 
-Copyright (c) 2014-2015 the Authors
+Copyright (c) 2014-2016 the Authors
 
 Author: Jason M. Swails
 Contributors:
-Date: August 19, 2014
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -32,9 +31,7 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
+from __future__ import division, absolute_import, print_function
 
 from functools import wraps
 from math import pi, cos, sin, sqrt
@@ -113,7 +110,7 @@ def _strip_optunit(thing, unit):
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-_resre = re.compile(r'(\d+)([a-zA-Z]*)')
+_resre = re.compile(r'(-?\d+)([a-zA-Z]*)')
 
 class CharmmPsfFile(object):
     """A chemical structure instantiated from CHARMM files.
@@ -181,23 +178,23 @@ class CharmmPsfFile(object):
         if not os.path.exists(psf_name):
             raise IOError('Could not find PSF file %s' % psf_name)
         # Open the PSF and read the first line. It must start with "PSF"
-        psf = open(psf_name, 'r')
-        line = psf.readline()
-        if not line.startswith('PSF'):
-            raise CharmmPSFError('Unrecognized PSF file. First line is %s' %
-                                 line.strip())
-        # Store the flags
-        psf_flags = line.split()[1:]
-        # Now get all of the sections and store them in a dict
-        psf.readline()
-        # Now get all of the sections
-        psfsections = _ZeroDict()
-        while True:
-            try:
-                sec, ptr, data = CharmmPsfFile._parse_psf_section(psf)
-            except CharmmPsfEOF:
-                break
-            psfsections[sec] = (ptr, data)
+        with open(psf_name, 'r') as psf:
+            line = psf.readline()
+            if not line.startswith('PSF'):
+                raise CharmmPSFError('Unrecognized PSF file. First line is %s' %
+                                     line.strip())
+            # Store the flags
+            psf_flags = line.split()[1:]
+            # Now get all of the sections and store them in a dict
+            psf.readline()
+            # Now get all of the sections
+            psfsections = _ZeroDict()
+            while True:
+                try:
+                    sec, ptr, data = CharmmPsfFile._parse_psf_section(psf)
+                except CharmmPsfEOF:
+                    break
+                psfsections[sec] = (ptr, data)
         # store the title
         title = psfsections['NTITLE'][1]
         # Next is the number of atoms
@@ -665,88 +662,6 @@ class CharmmPsfFile(object):
             topology.setUnitCellDimensions(self.boxLengths)
 
         return topology
-
-    def _get_gb_params(self, gb_model=HCT):
-        """ Gets the GB parameters. Need this method to special-case GB neck """
-        screen = [0 for atom in self.atom_list]
-        if gb_model is GBn:
-            radii = _bondi_radii(self.atom_list)
-            screen = [0.5 for atom in self.atom_list]
-            for i, atom in enumerate(self.atom_list):
-                if atom.type.atomic_number == 6:
-                    screen[i] = 0.48435382330
-                elif atom.type.atomic_number == 1:
-                    screen[i] = 1.09085413633
-                elif atom.type.atomic_number == 7:
-                    screen[i] = 0.700147318409
-                elif atom.type.atomic_number == 8:
-                    screen[i] = 1.06557401132
-                elif atom.type.atomic_number == 16:
-                    screen[i] = 0.602256336067
-        elif gb_model is GBn2:
-            radii = _mbondi3_radii(self.atom_list)
-            # Add non-optimized values as defaults
-            alpha = [1.0 for i in self.atom_list]
-            beta = [0.8 for i in self.atom_list]
-            gamma = [4.85 for i in self.atom_list]
-            screen = [0.5 for i in self.atom_list]
-            for i, atom in enumerate(self.atom_list):
-                if atom.type.atomic_number == 6:
-                    screen[i] = 1.058554
-                    alpha[i] = 0.733756
-                    beta[i] = 0.506378
-                    gamma[i] = 0.205844
-                elif atom.type.atomic_number == 1:
-                    screen[i] = 1.425952
-                    alpha[i] = 0.788440
-                    beta[i] = 0.798699
-                    gamma[i] = 0.437334
-                elif atom.type.atomic_number == 7:
-                    screen[i] = 0.733599
-                    alpha[i] = 0.503364
-                    beta[i] = 0.316828
-                    gamma[i] = 0.192915
-                elif atom.type.atomic_number == 8:
-                    screen[i] = 1.061039
-                    alpha[i] = 0.867814
-                    beta[i] = 0.876635
-                    gamma[i] = 0.387882
-                elif atom.type.atomic_number == 16:
-                    screen[i] = -0.703469
-                    alpha[i] = 0.867814
-                    beta[i] = 0.876635
-                    gamma[i] = 0.387882
-        else:
-            # Set the default screening parameters
-            for i, atom in enumerate(self.atom_list):
-                if atom.type.atomic_number == 1:
-                    screen[i] = 0.85
-                elif atom.type.atomic_number == 6:
-                    screen[i] = 0.72
-                elif atom.type.atomic_number == 7:
-                    screen[i] = 0.79
-                elif atom.type.atomic_number == 8:
-                    screen[i] = 0.85
-                elif atom.type.atomic_number == 9:
-                    screen[i] = 0.88
-                elif atom.type.atomic_number == 15:
-                    screen[i] = 0.86
-                elif atom.type.atomic_number == 16:
-                    screen[i] = 0.96
-                else:
-                    screen[i] = 0.8
-            # Determine which radii set we need
-            if gb_model is OBC1 or gb_model is OBC2:
-                radii = _mbondi2_radii(self.atom_list)
-            elif gb_model is HCT:
-                radii = _mbondi_radii(self.atom_list)
-
-        length_conv = u.angstrom.conversion_factor_to(u.nanometer)
-        radii = [x * length_conv for x in radii]
-
-        if gb_model is GBn2:
-            return zip(radii, screen, alpha, beta, gamma)
-        return zip(radii, screen)
 
     def createSystem(self, params, nonbondedMethod=ff.NoCutoff,
                      nonbondedCutoff=1.0*u.nanometer,
@@ -1249,8 +1164,6 @@ class CharmmPsfFile(object):
         # Add GB model if we're doing one
         if implicitSolvent is not None:
             if verbose: print('Adding GB parameters...')
-            gb_parms = self._get_gb_params(implicitSolvent)
-
             # If implicitSolventKappa is None, compute it from salt
             # concentration
             if implicitSolventKappa is None:
@@ -1289,6 +1202,7 @@ class CharmmPsfFile(object):
             elif implicitSolvent is GBn2:
                 gb = GBSAGBn2Force(solventDielectric, soluteDielectric, None,
                                    cutoff, kappa=implicitSolventKappa)
+            gb_parms = gb.getStandardParameters(self.topology)
             for atom, gb_parm in zip(self.atom_list, gb_parms):
                 gb.addParticle([atom.charge] + list(gb_parm))
             # Set cutoff method
@@ -1303,6 +1217,7 @@ class CharmmPsfFile(object):
             else:
                 raise ValueError('Illegal nonbonded method for use with GBSA')
             gb.setForceGroup(self.GB_FORCE_GROUP)
+            gb.finalize()
             system.addForce(gb)
             force.setReactionFieldDielectric(1.0) # applies to NonbondedForce
 

@@ -50,9 +50,35 @@
 
 
 using namespace OpenMM;
+using namespace std;
+
 const double TOL = 1e-4;
 
 extern "C" void registerAmoebaCudaKernelFactories();
+
+static void checkFiniteDifferences(vector<Vec3> forces, Context &context, vector<Vec3> positions)
+{
+    // Take a small step in the direction of the energy gradient and see whether the potential energy changes by the expected amount.
+
+    double norm = 0.0;
+    for (int i = 0; i < (int) forces.size(); ++i)
+        norm += forces[i].dot(forces[i]);
+    norm = std::sqrt(norm);
+    const double stepSize = 1e-3;
+    double step = 0.5*stepSize/norm;
+    vector<Vec3> positions2(forces.size()), positions3(forces.size());
+    for (int i = 0; i < (int) positions.size(); ++i) {
+        Vec3 p = positions[i];
+        Vec3 f = forces[i];
+        positions2[i] = Vec3(p[0]-f[0]*step, p[1]-f[1]*step, p[2]-f[2]*step);
+        positions3[i] = Vec3(p[0]+f[0]*step, p[1]+f[1]*step, p[2]+f[2]*step);
+    }
+    context.setPositions(positions2);
+    State state2 = context.getState(State::Energy);
+    context.setPositions(positions3);
+    State state3 = context.getState(State::Energy);
+    ASSERT_EQUAL_TOL(state3.getPotentialEnergy()+norm*stepSize, state2.getPotentialEnergy(), 1e-4);
+}
 
 // setup for 2 ammonia molecules
 
@@ -289,6 +315,10 @@ static void getForcesEnergyMultipoleAmmonia(Context& context, std::vector<Vec3>&
     State state                      = context.getState(State::Forces | State::Energy);
     forces                           = state.getForces();
     energy                           = state.getPotentialEnergy();
+    
+    // Check that the forces and energy are consistent.
+    
+    checkFiniteDifferences(forces, context, positions);
 }
 
 // setup for villin
@@ -6972,6 +7002,10 @@ static void setupAndGetForcesEnergyMultipoleVillin(AmoebaMultipoleForce::Polariz
     State state                      = context.getState(State::Forces | State::Energy);
     forces                           = state.getForces();
     energy                           = state.getPotentialEnergy();
+    
+    // Check that the forces and energy are consistent.
+    
+    checkFiniteDifferences(forces, context, positions);
 }
 
 // compare forces and energies 
@@ -7047,6 +7081,25 @@ static void testGeneralizedKirkwoodAmmoniaDirectPolarization() {
 
     double tolerance          = 1.0e-04;
     compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
+}
+
+static void testGeneralizedKirkwoodAmmoniaExtrapolatedPolarization() {
+
+    std::string testName      = "testGeneralizedKirkwoodAmmoniaExtrapolatedPolarization";
+
+    int numberOfParticles     = 8;
+    std::vector<Vec3> forces;
+    double energy;
+
+    System system;
+    AmoebaGeneralizedKirkwoodForce* amoebaGeneralizedKirkwoodForce  = new AmoebaGeneralizedKirkwoodForce();
+    setupMultipoleAmmonia(system, amoebaGeneralizedKirkwoodForce, AmoebaMultipoleForce::Direct, 0);
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
+    Context context(system, integrator, Platform::getPlatformByName("CUDA"));
+
+    // We don't have reference values for this case, but at least check that force and energy are consistent.
+
+    getForcesEnergyMultipoleAmmonia(context, forces, energy);
 }
 
 // test GK mutual polarization for system comprised of two ammonia molecules
@@ -7765,6 +7818,19 @@ static void testGeneralizedKirkwoodVillinDirectPolarization() {
     compareForceNormsEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
 }
 
+static void testGeneralizedKirkwoodVillinExtrapolatedPolarization() {
+
+    std::string testName      = "testGeneralizedKirkwoodVillinExtrapolatedPolarization";
+
+    int numberOfParticles     = 596;
+    std::vector<Vec3> forces;
+    double energy;
+
+    // We don't have reference values for this case, but at least check that force and energy are consistent.
+    
+    setupAndGetForcesEnergyMultipoleVillin(AmoebaMultipoleForce::Extrapolated, 0, forces, energy);
+}
+
 // test GK mutual polarization for villin system
 
 static void testGeneralizedKirkwoodVillinMutualPolarization() {
@@ -8394,16 +8460,17 @@ int main(int argc, char* argv[]) {
         std::cout << "TestCudaAmoebaGeneralizedKirkwoodForce running test..." << std::endl;
         registerAmoebaCudaKernelFactories();
         if (argc > 1)
-            Platform::getPlatformByName("CUDA").setPropertyDefaultValue("CudaPrecision", std::string(argv[1]));
+            Platform::getPlatformByName("CUDA").setPropertyDefaultValue("Precision", std::string(argv[1]));
 
         // test direct and mutual polarization cases and
         // mutual polarization w/ the cavity term
 
         testGeneralizedKirkwoodAmmoniaDirectPolarization();
         testGeneralizedKirkwoodAmmoniaMutualPolarization();
+        testGeneralizedKirkwoodAmmoniaExtrapolatedPolarization();
         testGeneralizedKirkwoodAmmoniaMutualPolarizationWithCavityTerm();
-
         testGeneralizedKirkwoodVillinDirectPolarization();
+        testGeneralizedKirkwoodVillinExtrapolatedPolarization();
         testGeneralizedKirkwoodVillinMutualPolarization();
 
     } catch(const std::exception& e) {

@@ -5,6 +5,11 @@ const real PI = 3.14159265358979323846f;
 real4 v0a = (real4) (pos1.xyz-pos2.xyz, 0.0f);
 real4 v1a = (real4) (pos3.xyz-pos2.xyz, 0.0f);
 real4 v2a = (real4) (pos3.xyz-pos4.xyz, 0.0f);
+#if APPLY_PERIODIC
+APPLY_PERIODIC_TO_DELTA(v0a)
+APPLY_PERIODIC_TO_DELTA(v1a)
+APPLY_PERIODIC_TO_DELTA(v2a)
+#endif
 real4 cp0a = cross(v0a, v1a);
 real4 cp1a = cross(v1a, v2a);
 real cosangle = dot(normalize(cp0a), normalize(cp1a));
@@ -28,6 +33,11 @@ angleA = fmod(angleA+2.0f*PI, 2.0f*PI);
 real4 v0b = (real4) (pos5.xyz-pos6.xyz, 0.0f);
 real4 v1b = (real4) (pos7.xyz-pos6.xyz, 0.0f);
 real4 v2b = (real4) (pos7.xyz-pos8.xyz, 0.0f);
+#if APPLY_PERIODIC
+APPLY_PERIODIC_TO_DELTA(v0b)
+APPLY_PERIODIC_TO_DELTA(v1b)
+APPLY_PERIODIC_TO_DELTA(v2b)
+#endif
 real4 cp0b = cross(v0b, v1b);
 real4 cp1b = cross(v1b, v2b);
 cosangle = dot(normalize(cp0b), normalize(cp1b));

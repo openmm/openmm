@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -42,9 +42,10 @@ CMAPTorsionForceProxy::CMAPTorsionForceProxy() : SerializationProxy("CMAPTorsion
 }
 
 void CMAPTorsionForceProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 1);
+    node.setIntProperty("version", 2);
     const CMAPTorsionForce& force = *reinterpret_cast<const CMAPTorsionForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setBoolProperty("usesPeriodic", force.usesPeriodicBoundaryConditions());
     SerializationNode& maps = node.createChildNode("Maps");
     for (int i = 0; i < force.getNumMaps(); i++) {
         int size;
@@ -63,11 +64,14 @@ void CMAPTorsionForceProxy::serialize(const void* object, SerializationNode& nod
 }
 
 void* CMAPTorsionForceProxy::deserialize(const SerializationNode& node) const {
-    if (node.getIntProperty("version") != 1)
+    int version = node.getIntProperty("version");
+    if (version < 1 || version > 2)
         throw OpenMMException("Unsupported version number");
     CMAPTorsionForce* force = new CMAPTorsionForce();
     try {
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        if (version > 1)
+            force->setUsesPeriodicBoundaryConditions(node.getBoolProperty("usesPeriodic"));
         const SerializationNode& maps = node.getChildNode("Maps");
         for (int i = 0; i < (int) maps.getChildren().size(); i++) {
             const SerializationNode& map = maps.getChildren()[i];

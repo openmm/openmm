@@ -365,7 +365,22 @@ __device__ void computeOneEDiffInteractionT3(AtomData4& atom1, volatile AtomData
 
     // correction to convert mutual to direct polarization force
 
-#ifdef DIRECT_POLARIZATION
+#ifdef MUTUAL_POLARIZATION
+    real findmp1 = uscale*(scip2*ddsc3_1 - ddsc5_1*(sci3*scip4+scip3*sci4));
+    real findmp2 = uscale*(scip2*ddsc3_2 - ddsc5_2*(sci3*scip4+scip3*sci4));
+    real findmp3 = uscale*(scip2*ddsc3_3 - ddsc5_3*(sci3*scip4+scip3*sci4));
+    ftm2i1 -= 0.5f*findmp1;
+    ftm2i2 -= 0.5f*findmp2;
+    ftm2i3 -= 0.5f*findmp3;
+
+    real sci3X = sci3 - sci3Y;
+    real sci4X = sci4 - sci4Y;
+    real scip3X = scip3 - scip3Y;
+    real scip4X = scip4 - scip4Y;
+    ftm2i1 += 0.5f*uscale*(-ddsc5_1*(sci3X*scip4X+scip3X*sci4X));
+    ftm2i2 += 0.5f*uscale*(-ddsc5_2*(sci3X*scip4X+scip3X*sci4X));
+    ftm2i3 += 0.5f*uscale*(-ddsc5_3*(sci3X*scip4X+scip3X*sci4X)); 
+#else
     real gfd = (scip2*scale3i - 5*rr2*(scip3*sci4+sci3*scip4)*scale5i);
     real fdir1 = gfd*xr + scale5i* (sci4*atom1.inducedDipolePolarS.x+scip4*atom1.inducedDipoleS.x + sci3*atom2.inducedDipolePolarS.x+scip3*atom2.inducedDipoleS.x);
     real fdir2 = gfd*yr + scale5i* (sci4*atom1.inducedDipolePolarS.y+scip4*atom1.inducedDipoleS.y + sci3*atom2.inducedDipolePolarS.y+scip3*atom2.inducedDipoleS.y);
@@ -385,21 +400,6 @@ __device__ void computeOneEDiffInteractionT3(AtomData4& atom1, volatile AtomData
     ftm2i1 += 0.5f*fdir1;
     ftm2i2 += 0.5f*fdir2;
     ftm2i3 += 0.5f*fdir3;
-#else
-    real findmp1 = uscale*(scip2*ddsc3_1 - ddsc5_1*(sci3*scip4+scip3*sci4));
-    real findmp2 = uscale*(scip2*ddsc3_2 - ddsc5_2*(sci3*scip4+scip3*sci4));
-    real findmp3 = uscale*(scip2*ddsc3_3 - ddsc5_3*(sci3*scip4+scip3*sci4));
-    ftm2i1 -= 0.5f*findmp1;
-    ftm2i2 -= 0.5f*findmp2;
-    ftm2i3 -= 0.5f*findmp3;
-
-    real sci3X = sci3 - sci3Y;
-    real sci4X = sci4 - sci4Y;
-    real scip3X = scip3 - scip3Y;
-    real scip4X = scip4 - scip4Y;
-    ftm2i1 += 0.5f*uscale*(-ddsc5_1*(sci3X*scip4X+scip3X*sci4X));
-    ftm2i2 += 0.5f*uscale*(-ddsc5_2*(sci3X*scip4X+scip3X*sci4X));
-    ftm2i3 += 0.5f*uscale*(-ddsc5_3*(sci3X*scip4X+scip3X*sci4X)); 
 #endif
 #endif
 

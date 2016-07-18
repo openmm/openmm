@@ -148,6 +148,36 @@ void testIllegalVariable() {
     ASSERT(threwException);
 }
 
+void testPeriodic() {
+    // Create a force that uses periodic boundary conditions.
+    
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.setDefaultPeriodicBoxVectors(Vec3(3, 0, 0), Vec3(0, 3, 0), Vec3(0, 0, 3));
+    VerletIntegrator integrator(0.01);
+    CustomBondForce* forceField = new CustomBondForce("scale*k*(r-r0)^2");
+    forceField->addPerBondParameter("r0");
+    forceField->addPerBondParameter("k");
+    forceField->addGlobalParameter("scale", 0.5);
+    vector<double> parameters(2);
+    parameters[0] = 1.9;
+    parameters[1] = 0.8;
+    forceField->addBond(0, 1, parameters);
+    forceField->setUsesPeriodicBoundaryConditions(true);
+    system.addForce(forceField);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(2);
+    positions[0] = Vec3(0, 2, 0);
+    positions[1] = Vec3(0, 0, 0);
+    context.setPositions(positions);
+    State state = context.getState(State::Forces | State::Energy);
+    const vector<Vec3>& forces = state.getForces();
+    ASSERT_EQUAL_VEC(Vec3(0, -0.8*0.9, 0), forces[0], TOL);
+    ASSERT_EQUAL_VEC(Vec3(0, 0.8*0.9, 0), forces[1], TOL);
+    ASSERT_EQUAL_TOL(0.5*0.8*0.9*0.9, state.getPotentialEnergy(), TOL);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -156,6 +186,7 @@ int main(int argc, char* argv[]) {
         testBonds();
         testManyParameters();
         testIllegalVariable();
+        testPeriodic();
         runPlatformTests();
     }
     catch(const exception& e) {
