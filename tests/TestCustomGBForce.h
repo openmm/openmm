@@ -505,10 +505,10 @@ void testEnergyParameterDerivatives() {
     force->addComputedValue("b", "a+B", CustomGBForce::SingleParticle);
     force->addEnergyTerm("C*(a1+b1+a2+b2+r)^0.8", CustomGBForce::ParticlePair);
     force->addEnergyTerm("(D-B)*b", CustomGBForce::SingleParticle);
-    for (int i = 0; i < numParameters; i++) {
+    for (int i = 0; i < numParameters; i++)
         force->addGlobalParameter(paramNames[i], paramValues[i]);
+    for (int i = numParameters-1; i >= 0; i--)
         force->addEnergyParameterDerivative(paramNames[i]);
-    }
     force->setNonbondedMethod(CustomGBForce::CutoffPeriodic);
     force->setCutoffDistance(1.0);
     vector<Vec3> positions;

@@ -1050,8 +1050,8 @@ void testEnergyParameterDerivatives() {
     CustomNonbondedForce* nonbonded = new CustomNonbondedForce("k*(r-r0)^2");
     nonbonded->addGlobalParameter("r0", 0.0);
     nonbonded->addGlobalParameter("k", 0.0);
-    nonbonded->addEnergyParameterDerivative("r0");
     nonbonded->addEnergyParameterDerivative("k");
+    nonbonded->addEnergyParameterDerivative("r0");
     vector<double> parameters;
     nonbonded->addParticle(parameters);
     nonbonded->addParticle(parameters);

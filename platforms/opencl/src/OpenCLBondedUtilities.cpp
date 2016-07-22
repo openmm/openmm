@@ -204,7 +204,7 @@ void OpenCLBondedUtilities::initialize(const System& system) {
         for (int i = 0; i < (int) arguments.size(); i++)
             s<<", __global "<<argTypes[i]<<"* customArg"<<(i+1);
         if (energyParameterDerivatives.size() > 0)
-            s<<", __global mixed* energyParamDerivs";
+            s<<", __global mixed* restrict energyParamDerivs";
         s<<") {\n";
         s<<"mixed energy = 0;\n";
         for (int i = 0; i < energyParameterDerivatives.size(); i++)
@@ -219,7 +219,7 @@ void OpenCLBondedUtilities::initialize(const System& system) {
         for (int i = 0; i < energyParameterDerivatives.size(); i++)
             for (int index = 0; index < numDerivs; index++)
                 if (allParamDerivNames[index] == energyParameterDerivatives[i])
-                    s<<"energyParamDerivs[get_global_id(0)*"<<numDerivs<<"+"<<i<<"] += energyParamDeriv"<<i<<";\n";
+                    s<<"energyParamDerivs[get_global_id(0)*"<<numDerivs<<"+"<<index<<"] += energyParamDeriv"<<i<<";\n";
         s<<"}\n";
         map<string, string> defines;
         defines["PADDED_NUM_ATOMS"] = context.intToString(context.getPaddedNumAtoms());

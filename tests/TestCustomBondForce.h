@@ -187,8 +187,8 @@ void testEnergyParameterDerivatives() {
     CustomBondForce* bonds = new CustomBondForce("k*(r-r0)^2");
     bonds->addGlobalParameter("r0", 0.0);
     bonds->addGlobalParameter("k", 0.0);
-    bonds->addEnergyParameterDerivative("r0");
     bonds->addEnergyParameterDerivative("k");
+    bonds->addEnergyParameterDerivative("r0");
     vector<double> parameters;
     bonds->addBond(0, 1, parameters);
     bonds->addBond(1, 2, parameters);

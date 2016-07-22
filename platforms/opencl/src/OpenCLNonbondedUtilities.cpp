@@ -605,7 +605,7 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
         }
     }
     if (energyParameterDerivatives.size() > 0)
-        args << ", __global mixed* energyParamDerivs";
+        args << ", __global mixed* restrict energyParamDerivs";
     replacements["PARAMETER_ARGUMENTS"] = args.str();
     stringstream loadLocal1;
     for (int i = 0; i < (int) params.size(); i++) {
@@ -666,7 +666,7 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     for (int i = 0; i < energyParameterDerivatives.size(); i++)
         for (int index = 0; index < numDerivs; index++)
             if (allParamDerivNames[index] == energyParameterDerivatives[i])
-                saveDerivs<<"energyParamDerivs[get_global_id(0)*"<<numDerivs<<"+"<<i<<"] += energyParamDeriv"<<i<<";\n";
+                saveDerivs<<"energyParamDerivs[get_global_id(0)*"<<numDerivs<<"+"<<index<<"] += energyParamDeriv"<<i<<";\n";
     replacements["SAVE_DERIVATIVES"] = saveDerivs.str();
     map<string, string> defines;
     if (useCutoff)

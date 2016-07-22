@@ -74,6 +74,7 @@ __kernel void computeN2Value(__global const real4* restrict posq, __local real4*
                         COMPUTE_VALUE
                     }
                     value += tempValue1;
+                    ADD_TEMP_DERIVS1
 #ifdef USE_CUTOFF
                 }
 #endif
@@ -123,6 +124,8 @@ __kernel void computeN2Value(__global const real4* restrict posq, __local real4*
                     }
                     value += tempValue1;
                     local_value[tbx+tj] += tempValue2;
+                    ADD_TEMP_DERIVS1
+                    ADD_TEMP_DERIVS2
 #ifdef USE_CUTOFF
                 }
 #endif
@@ -137,18 +140,23 @@ __kernel void computeN2Value(__global const real4* restrict posq, __local real4*
         // Write results.
 
 #ifdef SUPPORTS_64_BIT_ATOMICS
-        unsigned int offset = x*TILE_SIZE + tgx;
-        atom_add(&global_value[offset], (long) (value*0x100000000));
+        unsigned int offset1 = x*TILE_SIZE + tgx;
+        atom_add(&global_value[offset1], (long) (value*0x100000000));
+        STORE_PARAM_DERIVS1
         if (x != y) {
-            offset = y*TILE_SIZE + tgx;
-            atom_add(&global_value[offset], (long) (local_value[get_local_id(0)]*0x100000000));
+            unsigned int offset2 = y*TILE_SIZE + tgx;
+            atom_add(&global_value[offset2], (long) (local_value[get_local_id(0)]*0x100000000));
+            STORE_PARAM_DERIVS2
         }
 #else
         unsigned int offset1 = x*TILE_SIZE + tgx + warp*PADDED_NUM_ATOMS;
         unsigned int offset2 = y*TILE_SIZE + tgx + warp*PADDED_NUM_ATOMS;
         global_value[offset1] += value;
-        if (x != y)
+        STORE_PARAM_DERIVS1
+        if (x != y) {
             global_value[offset2] += local_value[get_local_id(0)];
+            STORE_PARAM_DERIVS2
+        }
 #endif
     }
 
@@ -292,6 +300,8 @@ __kernel void computeN2Value(__global const real4* restrict posq, __local real4*
                         }
                         value += tempValue1;
                         local_value[tbx+tj] += tempValue2;
+                        ADD_TEMP_DERIVS1
+                        ADD_TEMP_DERIVS2
 #ifdef USE_CUTOFF
                     }
 #endif
@@ -308,15 +318,23 @@ __kernel void computeN2Value(__global const real4* restrict posq, __local real4*
             unsigned int atom2 = y*TILE_SIZE + tgx;
 #endif
 #ifdef SUPPORTS_64_BIT_ATOMICS
-            atom_add(&global_value[atom1], (long) (value*0x100000000));
-            if (atom2 < PADDED_NUM_ATOMS)
-                atom_add(&global_value[atom2], (long) (local_value[get_local_id(0)]*0x100000000));
+            unsigned in offset1 = atom1;
+            atom_add(&global_value[offset1], (long) (value*0x100000000));
+            STORE_PARAM_DERIVS1
+            if (atom2 < PADDED_NUM_ATOMS) {
+                unsigned int offset2 = atom2;
+                atom_add(&global_value[offset2], (long) (local_value[get_local_id(0)]*0x100000000));
+                STORE_PARAM_DERIVS2
+            }
 #else
             unsigned int offset1 = atom1 + warp*PADDED_NUM_ATOMS;
-            unsigned int offset2 = atom2 + warp*PADDED_NUM_ATOMS;
             global_value[offset1] += value;
-            if (atom2 < PADDED_NUM_ATOMS)
+            STORE_PARAM_DERIVS1
+            if (atom2 < PADDED_NUM_ATOMS) {
+                unsigned int offset2 = atom2 + warp*PADDED_NUM_ATOMS;
                 global_value[offset2] += local_value[get_local_id(0)];
+                STORE_PARAM_DERIVS2
+            }
 #endif
         }
         pos++;

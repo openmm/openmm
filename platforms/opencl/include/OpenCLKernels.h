@@ -808,13 +808,15 @@ public:
     void copyParametersToContext(ContextImpl& context, const CustomGBForce& force);
 private:
     double cutoff;
-    bool hasInitializedKernels, needParameterGradient;
+    bool hasInitializedKernels, needParameterGradient, needEnergyParamDerivs;
     int maxTiles, numComputedValues;
     OpenCLContext& cl;
     OpenCLParameterSet* params;
     OpenCLParameterSet* computedValues;
     OpenCLParameterSet* energyDerivs;
     OpenCLParameterSet* energyDerivChain;
+    std::vector<OpenCLParameterSet*> dValuedParam;
+    std::vector<OpenCLArray*> dValue0dParam;
     OpenCLArray* longEnergyDerivs;
     OpenCLArray* globals;
     OpenCLArray* valueBuffers;
