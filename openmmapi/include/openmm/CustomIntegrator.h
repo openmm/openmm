@@ -201,6 +201,16 @@ namespace OpenMM {
  * only involve global variables, not per-DOF ones.  It may use any of the
  * following comparison operators: =, <. >, !=, <=, >=.  Blocks may be nested
  * inside each other.
+ * 
+ * Another feature of CustomIntegrator is that it can use derivatives of the
+ * potential energy with respect to context parameters.  These derivatives are
+ * typically computed by custom forces, and are only computed if a Force object
+ * has been specifically told to compute them by calling addEnergyParameterDerivative()
+ * on it.  CustomIntegrator provides a deriv() function for accessing these
+ * derivatives in global or per-DOF expressions.  For example, "deriv(energy, lambda)"
+ * is the derivative of the total potentially energy with respect to the parameter
+ * lambda.  You can also restrict it to a single force group by specifying a different
+ * variable for the first argument, such as "deriv(energy1, lambda)".
  *
  * An Integrator has one other job in addition to evolving the equations of motion:
  * it defines how to compute the kinetic energy of the system.  Depending on the

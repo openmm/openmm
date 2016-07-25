@@ -41,6 +41,7 @@ namespace OpenMM {
 class ReferenceCustomDynamics : public ReferenceDynamics {
 private:
 
+    class DerivFunction;
     const OpenMM::CustomIntegrator& integrator;
     std::vector<RealOpenMM> inverseMasses;
     std::vector<OpenMM::RealVec> sumBuffer, oldPos;
@@ -51,6 +52,7 @@ private:
     std::vector<bool> invalidatesForces, needsForces, needsEnergy, computeBothForceAndEnergy;
     std::vector<int> forceGroupFlags, blockEnd;
     RealOpenMM energy;
+    std::map<std::string, double> energyParamDerivs;
     Lepton::CompiledExpression kineticEnergyExpression;
     bool kineticEnergyNeedsForce;
     CompiledExpressionSet expressionSet;
@@ -58,6 +60,8 @@ private:
     std::vector<int> forceVariableIndex, energyVariableIndex, perDofVariableIndex, stepVariableIndex;
 
     void initialize(OpenMM::ContextImpl& context, std::vector<RealOpenMM>& masses, std::map<std::string, RealOpenMM>& globals);
+    
+    Lepton::ExpressionTreeNode replaceDerivFunctions(const Lepton::ExpressionTreeNode& node, OpenMM::ContextImpl& context);
     
     void computePerDof(int numberOfAtoms, std::vector<OpenMM::RealVec>& results, const std::vector<OpenMM::RealVec>& atomCoordinates,
                   const std::vector<OpenMM::RealVec>& velocities, const std::vector<OpenMM::RealVec>& forces, const std::vector<RealOpenMM>& masses,

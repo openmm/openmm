@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -29,15 +29,21 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#ifdef WIN32
+  #define _USE_MATH_DEFINES // Needed to get M_PI
+#endif
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
 #include "openmm/AndersenThermostat.h"
+#include "openmm/CustomAngleForce.h"
+#include "openmm/CustomBondForce.h"
+#include "openmm/CustomIntegrator.h"
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/System.h"
-#include "openmm/CustomIntegrator.h"
 #include "SimTKOpenMMRealType.h"
 #include "sfmt/SFMT.h"
+#include <cmath>
 #include <iostream>
 #include <vector>
 
@@ -770,6 +776,84 @@ void testChangingGlobal() {
     }
 }
 
+/**
+ * Test steps that depend on derivatives of the energy with respect to parameters.
+ */
+void testEnergyParameterDerivatives() {
+    System system;
+    for (int i = 0; i < 3; i++)
+        system.addParticle(1.0);
+    
+    // Create some custom forces that depend on parameters.
+    
+    CustomBondForce* bonds = new CustomBondForce("K*(A*r-r0)^2");
+    system.addForce(bonds);
+    bonds->addGlobalParameter("K", 2.0);
+    bonds->addGlobalParameter("A", 1.0);
+    bonds->addGlobalParameter("r0", 1.5);
+    bonds->addEnergyParameterDerivative("K");
+    bonds->addEnergyParameterDerivative("r0");
+    bonds->addBond(0, 1);
+    bonds->setForceGroup(0);
+    CustomAngleForce* angles = new CustomAngleForce("K*(B*theta-theta0)^2");
+    system.addForce(angles);
+    angles->addGlobalParameter("K", 2.0);
+    angles->addGlobalParameter("B", 1.0);
+    angles->addGlobalParameter("theta0", M_PI/3);
+    angles->addEnergyParameterDerivative("K");
+    angles->addEnergyParameterDerivative("theta0");
+    angles->addAngle(0, 1, 2);
+    angles->setForceGroup(1);
+    
+    // Create an integrator that records parameter derivatives.
+    
+    CustomIntegrator integrator(0.1);
+    integrator.addGlobalVariable("dEdK", 0.0);
+    integrator.addGlobalVariable("dEdr0", 0.0);
+    integrator.addGlobalVariable("dEdtheta0", 0.0);
+    integrator.addGlobalVariable("dEdK_0", 0.0);
+    integrator.addGlobalVariable("dEdr0_0", 0.0);
+    integrator.addGlobalVariable("dEdtheta0_0", 0.0);
+    integrator.addGlobalVariable("dEdK_1", 0.0);
+    integrator.addGlobalVariable("dEdr0_1", 0.0);
+    integrator.addGlobalVariable("dEdtheta0_1", 0.0);
+    integrator.addComputeGlobal("dEdK", "deriv(energy, K)");
+    integrator.addComputeGlobal("dEdr0", "deriv(energy, r0)");
+    integrator.addComputeGlobal("dEdtheta0", "deriv(energy, theta0)");
+    integrator.addComputeGlobal("dEdK_0", "deriv(energy0, K)");
+    integrator.addComputeGlobal("dEdr0_0", "deriv(energy0, r0)");
+    integrator.addComputeGlobal("dEdtheta0_0", "deriv(energy0, theta0)");
+    integrator.addComputeGlobal("dEdK_1", "deriv(energy1, K)");
+    integrator.addComputeGlobal("dEdr0_1", "deriv(energy1, r0)");
+    integrator.addComputeGlobal("dEdtheta0_1", "deriv(energy1, theta0)");
+    
+    // Create a Context.
+    
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(3);
+    positions[0] = Vec3(0, 1, 0);
+    positions[1] = Vec3(0, 0, 0);
+    positions[2] = Vec3(1, 0, 0);
+    context.setPositions(positions);
+    
+    // Check the results.
+    
+    integrator.step(1);
+    double dEdK_0 = (1.0-1.5)*(1.0-1.5);
+    double dEdK_1 = (M_PI/2-M_PI/3)*(M_PI/2-M_PI/3);
+    ASSERT_EQUAL_TOL(dEdK_0, integrator.getGlobalVariableByName("dEdK_0"), 1e-5);
+    ASSERT_EQUAL_TOL(dEdK_1, integrator.getGlobalVariableByName("dEdK_1"), 1e-5);
+    ASSERT_EQUAL_TOL(dEdK_0+dEdK_1, integrator.getGlobalVariableByName("dEdK"), 1e-5);
+    double dEdr0 = -2.0*2.0*(1.0-1.5);
+    ASSERT_EQUAL_TOL(dEdr0, integrator.getGlobalVariableByName("dEdr0_0"), 1e-5);
+    ASSERT_EQUAL_TOL(0.0, integrator.getGlobalVariableByName("dEdr0_1"), 1e-5);
+    ASSERT_EQUAL_TOL(dEdr0, integrator.getGlobalVariableByName("dEdr0"), 1e-5);
+    double dEdtheta0 = -2.0*2.0*(M_PI/2-M_PI/3);
+    ASSERT_EQUAL_TOL(0.0, integrator.getGlobalVariableByName("dEdtheta0_0"), 1e-5);
+    ASSERT_EQUAL_TOL(dEdtheta0, integrator.getGlobalVariableByName("dEdtheta0_1"), 1e-5);
+    ASSERT_EQUAL_TOL(dEdtheta0, integrator.getGlobalVariableByName("dEdtheta0"), 1e-5);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -790,6 +874,7 @@ int main(int argc, char* argv[]) {
         testIfBlock();
         testWhileBlock();
         testChangingGlobal();
+        testEnergyParameterDerivatives();
         runPlatformTests();
     }
     catch(const exception& e) {
