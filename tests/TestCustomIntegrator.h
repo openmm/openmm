@@ -810,20 +810,20 @@ void testEnergyParameterDerivatives() {
     CustomIntegrator integrator(0.1);
     integrator.addGlobalVariable("dEdK", 0.0);
     integrator.addGlobalVariable("dEdr0", 0.0);
-    integrator.addGlobalVariable("dEdtheta0", 0.0);
+    integrator.addPerDofVariable("dEdtheta0", 0.0);
     integrator.addGlobalVariable("dEdK_0", 0.0);
-    integrator.addGlobalVariable("dEdr0_0", 0.0);
+    integrator.addPerDofVariable("dEdr0_0", 0.0);
     integrator.addGlobalVariable("dEdtheta0_0", 0.0);
-    integrator.addGlobalVariable("dEdK_1", 0.0);
+    integrator.addPerDofVariable("dEdK_1", 0.0);
     integrator.addGlobalVariable("dEdr0_1", 0.0);
     integrator.addGlobalVariable("dEdtheta0_1", 0.0);
     integrator.addComputeGlobal("dEdK", "deriv(energy, K)");
     integrator.addComputeGlobal("dEdr0", "deriv(energy, r0)");
-    integrator.addComputeGlobal("dEdtheta0", "deriv(energy, theta0)");
+    integrator.addComputePerDof("dEdtheta0", "deriv(energy, theta0)");
     integrator.addComputeGlobal("dEdK_0", "deriv(energy0, K)");
-    integrator.addComputeGlobal("dEdr0_0", "deriv(energy0, r0)");
+    integrator.addComputePerDof("dEdr0_0", "deriv(energy0, r0)");
     integrator.addComputeGlobal("dEdtheta0_0", "deriv(energy0, theta0)");
-    integrator.addComputeGlobal("dEdK_1", "deriv(energy1, K)");
+    integrator.addComputePerDof("dEdK_1", "deriv(energy1, K)");
     integrator.addComputeGlobal("dEdr0_1", "deriv(energy1, r0)");
     integrator.addComputeGlobal("dEdtheta0_1", "deriv(energy1, theta0)");
     
@@ -839,19 +839,23 @@ void testEnergyParameterDerivatives() {
     // Check the results.
     
     integrator.step(1);
+    vector<Vec3> values;
     double dEdK_0 = (1.0-1.5)*(1.0-1.5);
     double dEdK_1 = (M_PI/2-M_PI/3)*(M_PI/2-M_PI/3);
     ASSERT_EQUAL_TOL(dEdK_0, integrator.getGlobalVariableByName("dEdK_0"), 1e-5);
-    ASSERT_EQUAL_TOL(dEdK_1, integrator.getGlobalVariableByName("dEdK_1"), 1e-5);
+    integrator.getPerDofVariableByName("dEdK_1", values);
+    ASSERT_EQUAL_TOL(dEdK_1, values[0][2], 1e-5);
     ASSERT_EQUAL_TOL(dEdK_0+dEdK_1, integrator.getGlobalVariableByName("dEdK"), 1e-5);
     double dEdr0 = -2.0*2.0*(1.0-1.5);
-    ASSERT_EQUAL_TOL(dEdr0, integrator.getGlobalVariableByName("dEdr0_0"), 1e-5);
+    integrator.getPerDofVariableByName("dEdr0_0", values);
+    ASSERT_EQUAL_TOL(dEdr0, values[1][0], 1e-5);
     ASSERT_EQUAL_TOL(0.0, integrator.getGlobalVariableByName("dEdr0_1"), 1e-5);
     ASSERT_EQUAL_TOL(dEdr0, integrator.getGlobalVariableByName("dEdr0"), 1e-5);
     double dEdtheta0 = -2.0*2.0*(M_PI/2-M_PI/3);
     ASSERT_EQUAL_TOL(0.0, integrator.getGlobalVariableByName("dEdtheta0_0"), 1e-5);
     ASSERT_EQUAL_TOL(dEdtheta0, integrator.getGlobalVariableByName("dEdtheta0_1"), 1e-5);
-    ASSERT_EQUAL_TOL(dEdtheta0, integrator.getGlobalVariableByName("dEdtheta0"), 1e-5);
+    integrator.getPerDofVariableByName("dEdtheta0", values);
+    ASSERT_EQUAL_TOL(dEdtheta0, values[2][1], 1e-5);
 }
 
 void runPlatformTests();

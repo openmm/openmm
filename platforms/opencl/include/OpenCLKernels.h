@@ -1282,7 +1282,7 @@ public:
     enum GlobalTargetType {DT, VARIABLE, PARAMETER};
     OpenCLIntegrateCustomStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateCustomStepKernel(name, platform), cl(cl),
             hasInitializedKernels(false), localValuesAreCurrent(false), globalValues(NULL), sumBuffer(NULL), summedValue(NULL), uniformRandoms(NULL),
-            randomSeed(NULL), perDofValues(NULL) {
+            randomSeed(NULL), perDofEnergyParamDerivs(NULL), perDofValues(NULL), needsEnergyParamDerivs(false) {
     }
     ~OpenCLIntegrateCustomStepKernel();
     /**
@@ -1347,8 +1347,11 @@ public:
 private:
     class ReorderListener;
     class GlobalTarget;
+    class DerivFunction;
     std::string createPerDofComputation(const std::string& variable, const Lepton::ParsedExpression& expr, int component, CustomIntegrator& integrator, const std::string& forceName, const std::string& energyName);
     void prepareForComputation(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid);
+    Lepton::ExpressionTreeNode replaceDerivFunctions(const Lepton::ExpressionTreeNode& node, OpenMM::ContextImpl& context);
+    void findExpressionsForDerivs(const Lepton::ExpressionTreeNode& node, std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& variableNodes);
     void recordGlobalValue(double value, GlobalTarget target);
     void recordChangedParameters(ContextImpl& context);
     bool evaluateCondition(int step);
@@ -1356,18 +1359,23 @@ private:
     double energy;
     float energyFloat;
     int numGlobalVariables;
-    bool hasInitializedKernels, deviceValuesAreCurrent, deviceGlobalsAreCurrent, modifiesParameters, keNeedsForce, hasAnyConstraints;
+    bool hasInitializedKernels, deviceValuesAreCurrent, deviceGlobalsAreCurrent, modifiesParameters, keNeedsForce, hasAnyConstraints, needsEnergyParamDerivs;
     mutable bool localValuesAreCurrent;
     OpenCLArray* globalValues;
     OpenCLArray* sumBuffer;
     OpenCLArray* summedValue;
     OpenCLArray* uniformRandoms;
     OpenCLArray* randomSeed;
+    OpenCLArray* perDofEnergyParamDerivs;
     std::map<int, OpenCLArray*> savedForces;
     std::set<int> validSavedForces;
     OpenCLParameterSet* perDofValues;
     mutable std::vector<std::vector<cl_float> > localPerDofValuesFloat;
     mutable std::vector<std::vector<cl_double> > localPerDofValuesDouble;
+    std::map<std::string, double> energyParamDerivs;
+    std::vector<std::string> perDofEnergyParamDerivNames;
+    std::vector<cl_float> localPerDofEnergyParamDerivsFloat;
+    std::vector<cl_double> localPerDofEnergyParamDerivsDouble;
     std::vector<float> globalValuesFloat;
     std::vector<double> globalValuesDouble;
     std::vector<double> initialGlobalVariables;
