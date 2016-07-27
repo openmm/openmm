@@ -75,6 +75,7 @@ __kernel void computeN2Value(__global const real4* restrict posq, __local real4*
                             COMPUTE_VALUE
                         }
                         value += tempValue1;
+                        ADD_TEMP_DERIVS1
 #ifdef USE_CUTOFF
                     }
 #endif
@@ -133,6 +134,8 @@ __kernel void computeN2Value(__global const real4* restrict posq, __local real4*
                         }
                         value += tempValue1;
                         local_value[j] += tempValue2;
+                        ADD_TEMP_DERIVS1
+                        ADD_TEMP_DERIVS2
 #ifdef USE_CUTOFF
                     }
 #endif
@@ -144,23 +147,26 @@ __kernel void computeN2Value(__global const real4* restrict posq, __local real4*
                 // Write results for atom1.
 
 #ifdef SUPPORTS_64_BIT_ATOMICS
-                atom_add(&global_value[atom1], (long) (value*0x100000000));
+                unsigned int offset1 = atom1;
+                atom_add(&global_value[offset1], (long) (value*0x100000000));
 #else
-                unsigned int offset = atom1 + get_group_id(0)*PADDED_NUM_ATOMS;
-                global_value[offset] += value;
+                unsigned int offset1 = atom1 + get_group_id(0)*PADDED_NUM_ATOMS;
+                global_value[offset1] += value;
 #endif
+                STORE_PARAM_DERIVS1
             }
 
             // Write results.
 
             for (int tgx = 0; tgx < TILE_SIZE; tgx++) {
 #ifdef SUPPORTS_64_BIT_ATOMICS
-                unsigned int offset = y*TILE_SIZE+tgx;
-                atom_add(&global_value[offset], (long) (local_value[tgx]*0x100000000));
+                unsigned int offset2 = y*TILE_SIZE+tgx;
+                atom_add(&global_value[offset2], (long) (local_value[tgx]*0x100000000));
 #else
-                unsigned int offset = y*TILE_SIZE+tgx + get_group_id(0)*PADDED_NUM_ATOMS;
-                global_value[offset] += local_value[tgx];
+                unsigned int offset2 = y*TILE_SIZE+tgx + get_group_id(0)*PADDED_NUM_ATOMS;
+                global_value[offset2] += local_value[tgx];
 #endif
+                STORE_PARAM_DERIVS2
             }
         }
     }
@@ -260,6 +266,8 @@ __kernel void computeN2Value(__global const real4* restrict posq, __local real4*
                             COMPUTE_VALUE
                             value += tempValue1;
                             local_value[j] += tempValue2;
+                            ADD_TEMP_DERIVS1
+                            ADD_TEMP_DERIVS2
                         }
                     }
 
@@ -305,17 +313,21 @@ __kernel void computeN2Value(__global const real4* restrict posq, __local real4*
                             COMPUTE_VALUE
                             value += tempValue1;
                             local_value[j] += tempValue2;
+                            ADD_TEMP_DERIVS1
+                            ADD_TEMP_DERIVS2
                         }
                     }
 
                     // Write results for atom1.
 
 #ifdef SUPPORTS_64_BIT_ATOMICS
-                    atom_add(&global_value[atom1], (long) (value*0x100000000));
+                    unsigned int offset1 = atom1;
+                    atom_add(&global_value[offset1], (long) (value*0x100000000));
 #else
-                    unsigned int offset = atom1 + get_group_id(0)*PADDED_NUM_ATOMS;
-                    global_value[offset] += value;
+                    unsigned int offset1 = atom1 + get_group_id(0)*PADDED_NUM_ATOMS;
+                    global_value[offset1] += value;
 #endif
+                    STORE_PARAM_DERIVS1
                 }
             }
 
@@ -329,11 +341,13 @@ __kernel void computeN2Value(__global const real4* restrict posq, __local real4*
 #endif
                 if (atom2 < PADDED_NUM_ATOMS) {
 #ifdef SUPPORTS_64_BIT_ATOMICS
-                    atom_add(&global_value[atom2], (long) (local_value[tgx]*0x100000000));
+                    unsigned int offset2 = atom2;
+                    atom_add(&global_value[offset2], (long) (local_value[tgx]*0x100000000));
 #else
-                    unsigned int offset = atom2 + get_group_id(0)*PADDED_NUM_ATOMS;
-                    global_value[offset] += local_value[tgx];
+                    unsigned int offset2 = atom2 + get_group_id(0)*PADDED_NUM_ATOMS;
+                    global_value[offset2] += local_value[tgx];
 #endif
+                    STORE_PARAM_DERIVS2
                 }
             }
         }

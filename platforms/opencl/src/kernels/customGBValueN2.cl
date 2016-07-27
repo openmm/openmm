@@ -267,6 +267,8 @@ __kernel void computeN2Value(__global const real4* restrict posq, __local real4*
                         }
                         value += tempValue1;
                         local_value[tbx+tj] += tempValue2;
+                        ADD_TEMP_DERIVS1
+                        ADD_TEMP_DERIVS2
                     }
                     tj = (tj + 1) & (TILE_SIZE - 1);
                     SYNC_WARPS;
