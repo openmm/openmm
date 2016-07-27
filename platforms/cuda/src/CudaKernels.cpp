@@ -5169,6 +5169,12 @@ void CudaCalcCustomCompoundBondForceKernel::initialize(const System& system, con
         compute<<buffer.getType()<<" bondParams"<<(i+1)<<" = "<<argName<<"[index];\n";
     }
     forceExpressions["energy += "] = energyExpression;
+    for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
+        string paramName = force.getEnergyParameterDerivativeName(i);
+        string derivVariable = cu.getBondedUtilities().addEnergyParameterDerivative(paramName);
+        Lepton::ParsedExpression derivExpression = energyExpression.differentiate(paramName).optimize();
+        forceExpressions[derivVariable+" += "] = derivExpression;
+    }
     compute << cu.getExpressionUtilities().createExpressions(forceExpressions, variables, functionList, functionDefinitions, "temp");
 
     // Finally, apply forces to atoms.
@@ -6375,6 +6381,27 @@ private:
     vector<int> lastAtomOrder;
 };
 
+class CudaIntegrateCustomStepKernel::DerivFunction : public CustomFunction {
+public:
+    DerivFunction(map<string, double>& energyParamDerivs, const string& param) : energyParamDerivs(energyParamDerivs), param(param) {
+    }
+    int getNumArguments() const {
+        return 0;
+    }
+    double evaluate(const double* arguments) const {
+        return energyParamDerivs[param];
+    }
+    double evaluateDerivative(const double* arguments, const int* derivOrder) const {
+        return 0;
+    }
+    CustomFunction* clone() const {
+        return new DerivFunction(energyParamDerivs, param);
+    }
+private:
+    map<string, double>& energyParamDerivs;
+    string param;
+};
+
 CudaIntegrateCustomStepKernel::~CudaIntegrateCustomStepKernel() {
     cu.setAsCurrent();
     if (globalValues != NULL)
@@ -6387,6 +6414,8 @@ CudaIntegrateCustomStepKernel::~CudaIntegrateCustomStepKernel() {
         delete uniformRandoms;
     if (randomSeed != NULL)
         delete randomSeed;
+    if (perDofEnergyParamDerivs != NULL)
+        delete perDofEnergyParamDerivs;
     if (perDofValues != NULL)
         delete perDofValues;
     for (map<int, CudaArray*>::iterator iter = savedForces.begin(); iter != savedForces.end(); ++iter)
@@ -6441,7 +6470,11 @@ string CudaIntegrateCustomStepKernel::createPerDofComputation(const string& vari
         variables[parameterNames[i]] = "globals["+cu.intToString(parameterVariableIndex[i])+"]";
     vector<const TabulatedFunction*> functions;
     vector<pair<string, string> > functionNames;
-    return cu.getExpressionUtilities().createExpressions(expressions, variables, functions, functionNames, "temp"+cu.intToString(component)+"_", "double");
+    vector<pair<ExpressionTreeNode, string> > variableNodes;
+    findExpressionsForDerivs(expr.getRootNode(), variableNodes);
+    for (map<string, string>::const_iterator iter = variables.begin(); iter != variables.end(); ++iter)
+        variableNodes.push_back(make_pair(ExpressionTreeNode(new Operation::Variable(iter->first)), iter->second));
+    return cu.getExpressionUtilities().createExpressions(expressions, variableNodes, functions, functionNames, "temp"+cu.intToString(component)+"_", "double");
 }
 
 void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid) {
@@ -6487,7 +6520,7 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
                 blockEnd[blockEnd[step]] = step; // Record where to branch back to.
             if (stepType[step] == CustomIntegrator::ComputeGlobal || stepType[step] == CustomIntegrator::IfBlockStart || stepType[step] == CustomIntegrator::WhileBlockStart)
                 for (int i = 0; i < (int) expression[step].size(); i++)
-                    globalExpressions[step].push_back(expression[step][i].createCompiledExpression());
+                    globalExpressions[step].push_back(ParsedExpression(replaceDerivFunctions(expression[step][i].getRootNode(), context)).createCompiledExpression());
         }
         for (int step = 0; step < numSteps; step++) {
             for (int i = 0; i < (int) globalExpressions[step].size(); i++)
@@ -6550,6 +6583,10 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
             globalValuesDouble[parameterVariableIndex[i]] = value;
             expressionSet.setVariable(parameterVariableIndex[i], value);
         }
+        int numContextParams = context.getParameters().size();
+        localPerDofEnergyParamDerivsFloat.resize(numContextParams);
+        localPerDofEnergyParamDerivsDouble.resize(numContextParams);
+        perDofEnergyParamDerivs = new CudaArray(cu, max(1, numContextParams), elementSize, "perDofEnergyParamDerivs");
         
         // Record information about the targets of steps that will be stored in global variables.
         
@@ -6700,6 +6737,7 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
                     args1.push_back(&energy);
                 else
                     args1.push_back(&energyFloat);
+                args1.push_back(&perDofEnergyParamDerivs->getDevicePointer());
                 for (int i = 0; i < (int) perDofValues->getBuffers().size(); i++)
                     args1.push_back(&perDofValues->getBuffers()[i].getMemory());
                 kernelArgs[step].push_back(args1);
@@ -6794,6 +6832,7 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
             kineticEnergyArgs.push_back(&energy);
         else
             kineticEnergyArgs.push_back(&energyFloat);
+        kineticEnergyArgs.push_back(&perDofEnergyParamDerivs->getDevicePointer());
         for (int i = 0; i < (int) perDofValues->getBuffers().size(); i++)
             kineticEnergyArgs.push_back(&perDofValues->getBuffers()[i].getMemory());
         keNeedsForce = usesVariable(keExpression, "f");
@@ -6823,6 +6862,47 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
             globalValuesDouble[parameterVariableIndex[i]] = value;
             deviceGlobalsAreCurrent = false;
         }
+    }
+}
+
+ExpressionTreeNode CudaIntegrateCustomStepKernel::replaceDerivFunctions(const ExpressionTreeNode& node, ContextImpl& context) {
+    // This is called recursively to identify calls to the deriv() function inside global expressions,
+    // and replace them with a custom function that returns the correct value.
+    
+    const Operation& op = node.getOperation();
+    if (op.getId() == Operation::CUSTOM && op.getName() == "deriv") {
+        string param = node.getChildren()[1].getOperation().getName();
+        if (context.getParameters().find(param) == context.getParameters().end())
+            throw OpenMMException("The second argument to deriv() must be a context parameter");
+        needsEnergyParamDerivs = true;
+        return ExpressionTreeNode(new Operation::Custom("deriv", new DerivFunction(energyParamDerivs, param)));
+    }
+    else {
+        vector<ExpressionTreeNode> children;
+        for (int i = 0; i < (int) node.getChildren().size(); i++)
+            children.push_back(replaceDerivFunctions(node.getChildren()[i], context));
+        return ExpressionTreeNode(op.clone(), children);
+    }
+}
+
+void CudaIntegrateCustomStepKernel::findExpressionsForDerivs(const ExpressionTreeNode& node, vector<pair<ExpressionTreeNode, string> >& variableNodes) {
+    // This is called recursively to identify calls to the deriv() function inside per-DOF expressions,
+    // and record the code to replace them with.
+    
+    const Operation& op = node.getOperation();
+    if (op.getId() == Operation::CUSTOM && op.getName() == "deriv") {
+        string param = node.getChildren()[1].getOperation().getName();
+        int index;
+        for (index = 0; index < perDofEnergyParamDerivNames.size() && param != perDofEnergyParamDerivNames[index]; index++)
+            ;
+        if (index == perDofEnergyParamDerivNames.size())
+            perDofEnergyParamDerivNames.push_back(param);
+        variableNodes.push_back(make_pair(node, "energyParamDerivs["+cu.intToString(index)+"]"));
+        needsEnergyParamDerivs = true;
+    }
+    else {
+        for (int i = 0; i < (int) node.getChildren().size(); i++)
+            findExpressionsForDerivs(node.getChildren()[i], variableNodes);
     }
 }
 
@@ -6865,6 +6945,21 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
                 recordChangedParameters(context);
                 energy = context.calcForcesAndEnergy(computeForce, computeEnergy, forceGroupFlags[step]);
                 energyFloat = (float) energy;
+                if (needsEnergyParamDerivs) {
+                    context.getEnergyParameterDerivatives(energyParamDerivs);
+                    if (perDofEnergyParamDerivNames.size() > 0) {
+                        if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
+                            for (int i = 0; i < perDofEnergyParamDerivNames.size(); i++)
+                                localPerDofEnergyParamDerivsDouble[i] = energyParamDerivs[perDofEnergyParamDerivNames[i]];
+                            perDofEnergyParamDerivs->upload(localPerDofEnergyParamDerivsDouble);
+                        }
+                        else {
+                            for (int i = 0; i < perDofEnergyParamDerivNames.size(); i++)
+                                localPerDofEnergyParamDerivsFloat[i] = (float) energyParamDerivs[perDofEnergyParamDerivNames[i]];
+                            perDofEnergyParamDerivs->upload(localPerDofEnergyParamDerivsFloat);
+                        }
+                    }
+                }
             }
             forcesAreValid = true;
         }
