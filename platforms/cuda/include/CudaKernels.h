@@ -826,13 +826,15 @@ public:
     void copyParametersToContext(ContextImpl& context, const CustomGBForce& force);
 private:
     double cutoff;
-    bool hasInitializedKernels, needParameterGradient;
+    bool hasInitializedKernels, needParameterGradient, needEnergyParamDerivs;
     int maxTiles, numComputedValues;
     CudaContext& cu;
     CudaParameterSet* params;
     CudaParameterSet* computedValues;
     CudaParameterSet* energyDerivs;
     CudaParameterSet* energyDerivChain;
+    std::vector<CudaParameterSet*> dValuedParam;
+    std::vector<CudaArray*> dValue0dParam;
     CudaArray* longEnergyDerivs;
     CudaArray* globals;
     CudaArray* valueBuffers;

@@ -3301,7 +3301,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
             string variableName = "dValuedParam_0_"+cl.intToString(i);
             if (useLong) {
                 extraArgs << ", __global const long* restrict dValue0dParam" << i;
-                deriv0 << "real " << variableName << " = (1.0f/0x100000000)*dValue0dParam[index];\n";
+                deriv0 << "real " << variableName << " = (1.0f/0x100000000)*dValue0dParam" << i << "[index];\n";
             }
             else {
                 extraArgs << ", __global const real* restrict dValue0dParam" << i;

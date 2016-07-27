@@ -320,7 +320,7 @@ __kernel void computeN2Value(__global const real4* restrict posq, __local real4*
             unsigned int atom2 = y*TILE_SIZE + tgx;
 #endif
 #ifdef SUPPORTS_64_BIT_ATOMICS
-            unsigned in offset1 = atom1;
+            unsigned int offset1 = atom1;
             atom_add(&global_value[offset1], (long) (value*0x100000000));
             STORE_PARAM_DERIVS1
             if (atom2 < PADDED_NUM_ATOMS) {
