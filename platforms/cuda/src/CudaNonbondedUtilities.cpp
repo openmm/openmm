@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -144,6 +144,19 @@ void CudaNonbondedUtilities::addParameter(const ParameterInfo& parameter) {
 
 void CudaNonbondedUtilities::addArgument(const ParameterInfo& parameter) {
     arguments.push_back(parameter);
+}
+
+string CudaNonbondedUtilities::addEnergyParameterDerivative(const string& param) {
+    // See if the parameter has already been added.
+    
+    int index;
+    for (index = 0; index < energyParameterDerivatives.size(); index++)
+        if (param == energyParameterDerivatives[index])
+            break;
+    if (index == energyParameterDerivatives.size())
+        energyParameterDerivatives.push_back(param);
+    context.addEnergyParameterDerivative(param);
+    return string("energyParamDeriv")+context.intToString(index);
 }
 
 void CudaNonbondedUtilities::requestExclusions(const vector<vector<int> >& exclusionList) {
@@ -308,6 +321,8 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         forceArgs.push_back(&parameters[i].getMemory());
     for (int i = 0; i < (int) arguments.size(); i++)
         forceArgs.push_back(&arguments[i].getMemory());
+    if (energyParameterDerivatives.size() > 0)
+        forceArgs.push_back(&context.getEnergyParamDerivBuffer().getDevicePointer());
     if (useCutoff) {
         findBlockBoundsArgs.push_back(&numAtoms);
         findBlockBoundsArgs.push_back(context.getPeriodicBoxSizePointer());
@@ -515,6 +530,8 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
         args << "* __restrict__ ";
         args << arguments[i].getName();
     }
+    if (energyParameterDerivatives.size() > 0)
+        args << ", mixed* __restrict__ energyParamDerivs";
     replacements["PARAMETER_ARGUMENTS"] = args.str();
 
     stringstream load1;
@@ -623,6 +640,18 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
         }
     }
     replacements["LOAD_ATOM2_PARAMETERS"] = load2j.str();
+    stringstream initDerivs;
+    for (int i = 0; i < energyParameterDerivatives.size(); i++)
+        initDerivs<<"mixed energyParamDeriv"<<i<<" = 0;\n";
+    replacements["INIT_DERIVATIVES"] = initDerivs.str();
+    stringstream saveDerivs;
+    const vector<string>& allParamDerivNames = context.getEnergyParamDerivNames();
+    int numDerivs = allParamDerivNames.size();
+    for (int i = 0; i < energyParameterDerivatives.size(); i++)
+        for (int index = 0; index < numDerivs; index++)
+            if (allParamDerivNames[index] == energyParameterDerivatives[i])
+                saveDerivs<<"energyParamDerivs[(blockIdx.x*blockDim.x+threadIdx.x)*"<<numDerivs<<"+"<<index<<"] += energyParamDeriv"<<i<<";\n";
+    replacements["SAVE_DERIVATIVES"] = saveDerivs.str();
 
     stringstream shuffleWarpData;
     if(useShuffle) {
