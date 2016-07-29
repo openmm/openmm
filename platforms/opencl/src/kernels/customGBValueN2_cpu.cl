@@ -87,11 +87,13 @@ __kernel void computeN2Value(__global const real4* restrict posq, __local real4*
                 // Write results.
 
 #ifdef SUPPORTS_64_BIT_ATOMICS
-                atom_add(&global_value[atom1], (long) (value*0x100000000));
+                unsigned int offset1 = atom1;
+                atom_add(&global_value[offset1], (long) (value*0x100000000));
 #else
-                unsigned int offset = atom1 + get_group_id(0)*PADDED_NUM_ATOMS;
-                global_value[offset] += value;
+                unsigned int offset1 = atom1 + get_group_id(0)*PADDED_NUM_ATOMS;
+                global_value[offset1] += value;
 #endif
+                STORE_PARAM_DERIVS1
             }
         }
         else {
@@ -274,11 +276,13 @@ __kernel void computeN2Value(__global const real4* restrict posq, __local real4*
                     // Write results for atom1.
 
 #ifdef SUPPORTS_64_BIT_ATOMICS
-                    atom_add(&global_value[atom1], (long) (value*0x100000000));
+                    unsigned int offset1 = atom1;
+                    atom_add(&global_value[offset1], (long) (value*0x100000000));
 #else
-                    unsigned int offset = atom1 + get_group_id(0)*PADDED_NUM_ATOMS;
-                    global_value[offset] += value;
+                    unsigned int offset1 = atom1 + get_group_id(0)*PADDED_NUM_ATOMS;
+                    global_value[offset1] += value;
 #endif
+                    STORE_PARAM_DERIVS1
                 }
             }
             else

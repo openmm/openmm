@@ -491,7 +491,7 @@ void testIllegalVariable() {
 void testEnergyParameterDerivatives() {
     // Create a box of particles.
     
-    const int numParticles = 30;
+    const int numParticles = 40;
     const int numParameters = 4;
     const double boxSize = 2.0;
     const double delta = 1e-3;

@@ -3239,14 +3239,23 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
                 load2 << "real temp_" << derivName << "_1 = 0;\n";
                 load2 << "real temp_" << derivName << "_2 = 0;\n";
                 tempDerivs1 << derivName << " += temp_" << derivName << "_1;\n";
-                tempDerivs2 << "local_" << derivName << "[tbx+tj] += temp_" << derivName << "_2;\n";
+                if (deviceIsCpu)
+                    tempDerivs2 << "local_" << derivName << "[j] += temp_" << derivName << "_2;\n";
+                else
+                    tempDerivs2 << "local_" << derivName << "[tbx+tj] += temp_" << derivName << "_2;\n";
                 if (useLong) {
                     storeDeriv1 << "atom_add(&global_" << derivName << "[offset1], (long) (" << derivName << "*0x100000000));\n";
-                    storeDeriv2 << "atom_add(&global_" << derivName << "[offset2], (long) (local_" << derivName << "[get_local_id(0)]*0x100000000));\n";
+                    if (deviceIsCpu)
+                        storeDeriv2 << "atom_add(&global_" << derivName << "[offset2], (long) (local_" << derivName << "[tgx]*0x100000000));\n";
+                    else
+                        storeDeriv2 << "atom_add(&global_" << derivName << "[offset2], (long) (local_" << derivName << "[get_local_id(0)]*0x100000000));\n";
                 }
                 else {
                     storeDeriv1 << "global_" << derivName << "[offset1] += " << derivName << ";\n";
-                    storeDeriv2 << "global_" << derivName << "[offset2] += local_" << derivName << "[get_local_id(0)];\n";
+                    if (deviceIsCpu)
+                        storeDeriv2 << "global_" << derivName << "[offset2] += local_" << derivName << "[tgx];\n";
+                    else
+                        storeDeriv2 << "global_" << derivName << "[offset2] += local_" << derivName << "[get_local_id(0)];\n";
                 }
             }
         }
