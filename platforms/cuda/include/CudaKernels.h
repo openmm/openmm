@@ -979,6 +979,7 @@ public:
 
 private:
     int numGroups, numBonds;
+    bool needEnergyParamDerivs;
     CudaContext& cu;
     CudaParameterSet* params;
     CudaArray* globals;

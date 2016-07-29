@@ -4933,6 +4933,9 @@ void OpenCLCalcCustomCentroidBondForceKernel::initialize(const System& system, c
         const string& name = force.getPerBondParameterName(i);
         variables[name] = "bondParams"+params->getParameterSuffix(i);
     }
+    needEnergyParamDerivs = (force.getNumEnergyParameterDerivatives() > 0);
+    if (needEnergyParamDerivs)
+        extraArgs << ", __global mixed* restrict energyParamDerivs";
     if (force.getNumGlobalParameters() > 0) {
         globals = OpenCLArray::create<float>(cl, force.getNumGlobalParameters(), "customCentroidBondGlobals");
         globals->upload(globalParamValues);
@@ -4959,7 +4962,7 @@ void OpenCLCalcCustomCentroidBondForceKernel::initialize(const System& system, c
         atomNames.push_back("P"+index);
         posNames.push_back("pos"+index);
     }
-    stringstream compute;
+    stringstream compute, initParamDerivs, saveParamDerivs;
     for (int i = 0; i < groupsPerBond; i++) {
         compute<<"int group"<<(i+1)<<" = bondGroups[index+"<<(i*numBonds)<<"];\n";
         compute<<"real4 pos"<<(i+1)<<" = centerPositions[group"<<(i+1)<<"];\n";
@@ -5031,6 +5034,21 @@ void OpenCLCalcCustomCentroidBondForceKernel::initialize(const System& system, c
         compute<<buffer.getType()<<" bondParams"<<(i+1)<<" = globalParams"<<i<<"[index];\n";
     }
     forceExpressions["energy += "] = energyExpression;
+    if (needEnergyParamDerivs) {
+        for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
+            string paramName = force.getEnergyParameterDerivativeName(i);
+            cl.addEnergyParameterDerivative(paramName);
+            Lepton::ParsedExpression derivExpression = energyExpression.differentiate(paramName).optimize();
+            forceExpressions[string("energyParamDeriv")+cl.intToString(i)+" += "] = derivExpression;
+            initParamDerivs << "mixed energyParamDeriv" << i << " = 0;\n";
+        }
+        const vector<string>& allParamDerivNames = cl.getEnergyParamDerivNames();
+        int numDerivs = allParamDerivNames.size();
+        for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++)
+            for (int index = 0; index < numDerivs; index++)
+                if (allParamDerivNames[index] == force.getEnergyParameterDerivativeName(i))
+                    saveParamDerivs << "energyParamDerivs[get_global_id(0)*" << numDerivs << "+" << index << "] += energyParamDeriv" << i << ";\n";
+    }
     compute << cl.getExpressionUtilities().createExpressions(forceExpressions, variables, functionList, functionDefinitions, "temp");
 
     // Finally, apply forces to groups.
@@ -5119,6 +5137,8 @@ void OpenCLCalcCustomCentroidBondForceKernel::initialize(const System& system, c
     replacements["PADDED_NUM_ATOMS"] = cl.intToString(cl.getPaddedNumAtoms());
     replacements["EXTRA_ARGS"] = extraArgs.str();
     replacements["COMPUTE_FORCE"] = compute.str();
+    replacements["INIT_PARAM_DERIVS"] = initParamDerivs.str();
+    replacements["SAVE_PARAM_DERIVS"] = saveParamDerivs.str();
     cl::Program program = cl.createProgram(cl.replaceStrings(OpenCLKernelSources::customCentroidBond, replacements));
     index = 0;
     computeCentersKernel = cl::Kernel(program, "computeGroupCenters");
@@ -5134,6 +5154,8 @@ void OpenCLCalcCustomCentroidBondForceKernel::initialize(const System& system, c
     groupForcesKernel.setArg<cl::Buffer>(index++, centerPositions->getDeviceBuffer());
     groupForcesKernel.setArg<cl::Buffer>(index++, bondGroups->getDeviceBuffer());
     index += 5; // Periodic box information
+    if (needEnergyParamDerivs)
+        index++; // Deriv buffer hasn't been created yet.
     for (int i = 0; i < tabulatedFunctions.size(); i++)
         groupForcesKernel.setArg<cl::Buffer>(index++, tabulatedFunctions[i]->getDeviceBuffer());
     if (globals != NULL)
@@ -5165,6 +5187,8 @@ double OpenCLCalcCustomCentroidBondForceKernel::execute(ContextImpl& context, bo
     cl.executeKernel(computeCentersKernel, OpenCLContext::TileSize*numGroups);
     groupForcesKernel.setArg<cl::Buffer>(1, cl.getEnergyBuffer().getDeviceBuffer());
     setPeriodicBoxArgs(cl, groupForcesKernel, 4);
+    if (needEnergyParamDerivs)
+        groupForcesKernel.setArg<cl::Memory>(9, cl.getEnergyParamDerivBuffer().getDeviceBuffer());
     cl.executeKernel(groupForcesKernel, numBonds);
     applyForcesKernel.setArg<cl::Buffer>(4, cl.getLongForceBuffer().getDeviceBuffer());
     cl.executeKernel(applyForcesKernel, OpenCLContext::TileSize*numGroups);

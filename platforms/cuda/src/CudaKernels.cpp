@@ -4693,6 +4693,9 @@ void CudaCalcCustomCentroidBondForceKernel::initialize(const System& system, con
     groupForcesArgs.push_back(cu.getPeriodicBoxVecXPointer());
     groupForcesArgs.push_back(cu.getPeriodicBoxVecYPointer());
     groupForcesArgs.push_back(cu.getPeriodicBoxVecZPointer());
+    needEnergyParamDerivs = (force.getNumEnergyParameterDerivatives() > 0);
+    if (needEnergyParamDerivs)
+        groupForcesArgs.push_back(NULL); // Derivatives buffer hasn't been created yet
 
     // Record the tabulated functions.
 
@@ -4736,6 +4739,8 @@ void CudaCalcCustomCentroidBondForceKernel::initialize(const System& system, con
         const string& name = force.getPerBondParameterName(i);
         variables[name] = "bondParams"+params->getParameterSuffix(i);
     }
+    if (needEnergyParamDerivs)
+        extraArgs << ", mixed* __restrict__ energyParamDerivs";
     if (force.getNumGlobalParameters() > 0) {
         globals = CudaArray::create<float>(cu, force.getNumGlobalParameters(), "customCentroidBondGlobals");
         globals->upload(globalParamValues);
@@ -4763,7 +4768,7 @@ void CudaCalcCustomCentroidBondForceKernel::initialize(const System& system, con
         atomNames.push_back("P"+index);
         posNames.push_back("pos"+index);
     }
-    stringstream compute;
+    stringstream compute, initParamDerivs, saveParamDerivs;
     for (int i = 0; i < groupsPerBond; i++) {
         compute<<"int group"<<(i+1)<<" = bondGroups[index+"<<(i*numBonds)<<"];\n";
         compute<<"real4 pos"<<(i+1)<<" = centerPositions[group"<<(i+1)<<"];\n";
@@ -4836,6 +4841,21 @@ void CudaCalcCustomCentroidBondForceKernel::initialize(const System& system, con
         groupForcesArgs.push_back(&buffer.getMemory());
     }
     forceExpressions["energy += "] = energyExpression;
+    if (needEnergyParamDerivs) {
+        for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
+            string paramName = force.getEnergyParameterDerivativeName(i);
+            cu.addEnergyParameterDerivative(paramName);
+            Lepton::ParsedExpression derivExpression = energyExpression.differentiate(paramName).optimize();
+            forceExpressions[string("energyParamDeriv")+cu.intToString(i)+" += "] = derivExpression;
+            initParamDerivs << "mixed energyParamDeriv" << i << " = 0;\n";
+        }
+        const vector<string>& allParamDerivNames = cu.getEnergyParamDerivNames();
+        int numDerivs = allParamDerivNames.size();
+        for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++)
+            for (int index = 0; index < numDerivs; index++)
+                if (allParamDerivNames[index] == force.getEnergyParameterDerivativeName(i))
+                    saveParamDerivs << "energyParamDerivs[(blockIdx.x*blockDim.x+threadIdx.x)*" << numDerivs << "+" << index << "] += energyParamDeriv" << i << ";\n";
+    }
     compute << cu.getExpressionUtilities().createExpressions(forceExpressions, variables, functionList, functionDefinitions, "temp");
 
     // Finally, apply forces to groups.
@@ -4925,6 +4945,8 @@ void CudaCalcCustomCentroidBondForceKernel::initialize(const System& system, con
     replacements["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
     replacements["EXTRA_ARGS"] = extraArgs.str();
     replacements["COMPUTE_FORCE"] = compute.str();
+    replacements["INIT_PARAM_DERIVS"] = initParamDerivs.str();
+    replacements["SAVE_PARAM_DERIVS"] = saveParamDerivs.str();
     CUmodule module = cu.createModule(CudaKernelSources::vectorOps+cu.replaceStrings(CudaKernelSources::customCentroidBond, replacements));
     computeCentersKernel = cu.getKernel(module, "computeGroupCenters");
     groupForcesKernel = cu.getKernel(module, "computeGroupForces");
@@ -4949,6 +4971,8 @@ double CudaCalcCustomCentroidBondForceKernel::execute(ContextImpl& context, bool
             &groupOffsets->getDevicePointer(), &centerPositions->getDevicePointer()};
     cu.executeKernel(computeCentersKernel, computeCentersArgs, CudaContext::TileSize*numGroups);
     groupForcesArgs[1] = &cu.getEnergyBuffer().getDevicePointer();
+    if (needEnergyParamDerivs)
+        groupForcesArgs[9] = &cu.getEnergyParamDerivBuffer().getDevicePointer();
     cu.executeKernel(groupForcesKernel, &groupForcesArgs[0], numBonds);
     void* applyForcesArgs[] = {&groupParticles->getDevicePointer(), &groupWeights->getDevicePointer(), &groupOffsets->getDevicePointer(),
             &groupForces->getDevicePointer(), &cu.getForce().getDevicePointer()};

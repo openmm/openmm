@@ -962,6 +962,7 @@ public:
 
 private:
     int numGroups, numBonds;
+    bool needEnergyParamDerivs;
     OpenCLContext& cl;
     OpenCLParameterSet* params;
     OpenCLArray* globals;
