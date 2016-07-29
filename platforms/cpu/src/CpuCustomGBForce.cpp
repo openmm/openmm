@@ -231,7 +231,7 @@ void CpuCustomGBForce::calculateIxn(int numberOfAtoms, float* posq, RealOpenMM**
     }
     if (hasParamDerivs)
         for (int i = 0; i < threads.getNumThreads(); i++)
-            for (int j = 0; j < threadData[j]->energyParamDerivs.size(); j++)
+            for (int j = 0; j < threadData[i]->energyParamDerivs.size(); j++)
                 energyParamDerivs[j] += threadData[i]->energyParamDerivs[j];
 }
 
