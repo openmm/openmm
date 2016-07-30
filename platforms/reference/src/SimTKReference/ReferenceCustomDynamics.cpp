@@ -36,6 +36,28 @@
 
 using namespace std;
 using namespace OpenMM;
+using namespace Lepton;
+
+class ReferenceCustomDynamics::DerivFunction : public CustomFunction {
+public:
+    DerivFunction(map<string, double>& energyParamDerivs, const string& param) : energyParamDerivs(energyParamDerivs), param(param) {
+    }
+    int getNumArguments() const {
+        return 0;
+    }
+    double evaluate(const double* arguments) const {
+        return energyParamDerivs[param];
+    }
+    double evaluateDerivative(const double* arguments, const int* derivOrder) const {
+        return 0;
+    }
+    CustomFunction* clone() const {
+        return new DerivFunction(energyParamDerivs, param);
+    }
+private:
+    map<string, double>& energyParamDerivs;
+    string param;
+};
 
 /**---------------------------------------------------------------------------------------
 
@@ -56,7 +78,7 @@ ReferenceCustomDynamics::ReferenceCustomDynamics(int numberOfAtoms, const Custom
         string expression;
         integrator.getComputationStep(i, stepType[i], stepVariable[i], expression);
     }
-    kineticEnergyExpression = Lepton::Parser::parse(integrator.getKineticEnergyExpression()).optimize().createCompiledExpression();
+    kineticEnergyExpression = Parser::parse(integrator.getKineticEnergyExpression()).optimize().createCompiledExpression();
     expressionSet.registerExpression(kineticEnergyExpression);
     kineticEnergyNeedsForce = false;
     if (kineticEnergyExpression.getVariables().find("f") != kineticEnergyExpression.getVariables().end())
@@ -78,13 +100,13 @@ void ReferenceCustomDynamics::initialize(ContextImpl& context, vector<RealOpenMM
 
     int numSteps = stepType.size();
     vector<int> forceGroup;
-    vector<vector<Lepton::ParsedExpression> > expressions;
+    vector<vector<ParsedExpression> > expressions;
     CustomIntegratorUtilities::analyzeComputations(context, integrator, expressions, comparisons, blockEnd, invalidatesForces, needsForces, needsEnergy, computeBothForceAndEnergy, forceGroup);
     stepExpressions.resize(expressions.size());
     for (int i = 0; i < numSteps; i++) {
         stepExpressions[i].resize(expressions[i].size());
         for (int j = 0; j < (int) expressions[i].size(); j++) {
-            stepExpressions[i][j] = expressions[i][j].createCompiledExpression();
+            stepExpressions[i][j] = ParsedExpression(replaceDerivFunctions(expressions[i][j].getRootNode(), context)).createCompiledExpression();
             expressionSet.registerExpression(stepExpressions[i][j]);
         }
         if (stepType[i] == CustomIntegrator::WhileBlockStart)
@@ -141,6 +163,22 @@ void ReferenceCustomDynamics::initialize(ContextImpl& context, vector<RealOpenMM
         stepVariableIndex.push_back(expressionSet.getVariableIndex(stepVariable[i]));
 }
 
+ExpressionTreeNode ReferenceCustomDynamics::replaceDerivFunctions(const ExpressionTreeNode& node, ContextImpl& context) {
+    const Operation& op = node.getOperation();
+    if (op.getId() == Operation::CUSTOM && op.getName() == "deriv") {
+        string param = node.getChildren()[1].getOperation().getName();
+        if (context.getParameters().find(param) == context.getParameters().end())
+            throw OpenMMException("The second argument to deriv() must be a context parameter");
+        return ExpressionTreeNode(new Operation::Custom("deriv", new DerivFunction(energyParamDerivs, param)));
+    }
+    else {
+        vector<ExpressionTreeNode> children;
+        for (int i = 0; i < (int) node.getChildren().size(); i++)
+            children.push_back(replaceDerivFunctions(node.getChildren()[i], context));
+        return ExpressionTreeNode(op.clone(), children);
+    }
+}
+
 /**---------------------------------------------------------------------------------------
 
    Update -- driver routine for performing Custom dynamics update of coordinates
@@ -178,8 +216,10 @@ void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, ve
             bool computeEnergy = needsEnergy[step] || computeBothForceAndEnergy[step];
             recordChangedParameters(context, globals);
             RealOpenMM e = context.calcForcesAndEnergy(computeForce, computeEnergy, forceGroupFlags[step]);
-            if (computeEnergy)
+            if (computeEnergy) {
                 energy = e;
+                context.getEnergyParameterDerivatives(energyParamDerivs);
+            }
             forcesAreValid = true;
         }
         expressionSet.setVariable(energyVariableIndex[step], energy);
@@ -266,7 +306,7 @@ void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, ve
 
 void ReferenceCustomDynamics::computePerDof(int numberOfAtoms, vector<RealVec>& results, const vector<RealVec>& atomCoordinates,
               const vector<RealVec>& velocities, const vector<RealVec>& forces, const vector<RealOpenMM>& masses,
-              const vector<vector<RealVec> >& perDof, const Lepton::CompiledExpression& expression, int forceIndex) {
+              const vector<vector<RealVec> >& perDof, const CompiledExpression& expression, int forceIndex) {
     // Loop over all degrees of freedom.
 
     for (int i = 0; i < numberOfAtoms; i++) {

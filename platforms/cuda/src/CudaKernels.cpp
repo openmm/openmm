@@ -43,6 +43,7 @@
 #include "CudaIntegrationUtilities.h"
 #include "CudaNonbondedUtilities.h"
 #include "CudaKernelSources.h"
+#include "lepton/CustomFunction.h"
 #include "lepton/ExpressionTreeNode.h"
 #include "lepton/Operation.h"
 #include "lepton/Parser.h"
@@ -55,8 +56,7 @@
 
 using namespace OpenMM;
 using namespace std;
-using Lepton::ExpressionTreeNode;
-using Lepton::Operation;
+using namespace Lepton;
 
 #define CHECK_RESULT(result, prefix) \
     if (result != CUDA_SUCCESS) { \
@@ -102,6 +102,9 @@ void CudaCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool 
     CudaNonbondedUtilities& nb = cu.getNonbondedUtilities();
     cu.setComputeForceCount(cu.getComputeForceCount()+1);
     nb.prepareInteractions(groups);
+    map<string, double>& derivs = cu.getEnergyParamDerivWorkspace();
+    for (map<string, double>::const_iterator iter = context.getParameters().begin(); iter != context.getParameters().end(); ++iter)
+        derivs[iter->first] = 0;
 }
 
 double CudaCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForces, bool includeEnergy, int groups, bool& valid) {
@@ -337,6 +340,33 @@ void CudaUpdateStateDataKernel::getForces(ContextImpl& context, vector<Vec3>& fo
     double scale = 1.0/(double) 0x100000000LL;
     for (int i = 0; i < numParticles; ++i)
         forces[order[i]] = Vec3(scale*force[i], scale*force[i+paddedNumParticles], scale*force[i+paddedNumParticles*2]);
+}
+
+void CudaUpdateStateDataKernel::getEnergyParameterDerivatives(ContextImpl& context, map<string, double>& derivs) {
+    const vector<string>& paramDerivNames = cu.getEnergyParamDerivNames();
+    int numDerivs = paramDerivNames.size();
+    if (numDerivs == 0)
+        return;
+    derivs = cu.getEnergyParamDerivWorkspace();
+    CudaArray& derivArray = cu.getEnergyParamDerivBuffer();
+    if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
+        vector<double> derivBuffers;
+        derivArray.download(derivBuffers);
+        for (int i = numDerivs; i < derivArray.getSize(); i += numDerivs)
+            for (int j = 0; j < numDerivs; j++)
+                derivBuffers[j] += derivBuffers[i+j];
+        for (int i = 0; i < numDerivs; i++)
+            derivs[paramDerivNames[i]] += derivBuffers[i];
+    }
+    else {
+        vector<float> derivBuffers;
+        derivArray.download(derivBuffers);
+        for (int i = numDerivs; i < derivArray.getSize(); i += numDerivs)
+            for (int j = 0; j < numDerivs; j++)
+                derivBuffers[j] += derivBuffers[i+j];
+        for (int i = 0; i < numDerivs; i++)
+            derivs[paramDerivNames[i]] += derivBuffers[i];
+    }
 }
 
 void CudaUpdateStateDataKernel::getPeriodicBoxVectors(ContextImpl& context, Vec3& a, Vec3& b, Vec3& c) const {
@@ -649,6 +679,12 @@ void CudaCalcCustomBondForceKernel::initialize(const System& system, const Custo
             variables[name] = value;
         }
     }
+    for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
+        string paramName = force.getEnergyParameterDerivativeName(i);
+        string derivVariable = cu.getBondedUtilities().addEnergyParameterDerivative(paramName);
+        Lepton::ParsedExpression derivExpression = energyExpression.differentiate(paramName).optimize();
+        expressions[derivVariable+" += "] = derivExpression;
+    }
     stringstream compute;
     for (int i = 0; i < (int) params->getBuffers().size(); i++) {
         CudaNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
@@ -886,6 +922,12 @@ void CudaCalcCustomAngleForceKernel::initialize(const System& system, const Cust
             string value = argName+"["+cu.intToString(i)+"]";
             variables[name] = value;
         }
+    }
+    for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
+        string paramName = force.getEnergyParameterDerivativeName(i);
+        string derivVariable = cu.getBondedUtilities().addEnergyParameterDerivative(paramName);
+        Lepton::ParsedExpression derivExpression = energyExpression.differentiate(paramName).optimize();
+        expressions[derivVariable+" += "] = derivExpression;
     }
     stringstream compute;
     for (int i = 0; i < (int) params->getBuffers().size(); i++) {
@@ -1357,6 +1399,12 @@ void CudaCalcCustomTorsionForceKernel::initialize(const System& system, const Cu
             string value = argName+"["+cu.intToString(i)+"]";
             variables[name] = value;
         }
+    }
+    for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
+        string paramName = force.getEnergyParameterDerivativeName(i);
+        string derivVariable = cu.getBondedUtilities().addEnergyParameterDerivative(paramName);
+        Lepton::ParsedExpression derivExpression = energyExpression.differentiate(paramName).optimize();
+        expressions[derivVariable+" += "] = derivExpression;
     }
     stringstream compute;
     for (int i = 0; i < (int) params->getBuffers().size(); i++) {
@@ -2243,6 +2291,12 @@ void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const 
         string value = "globals["+cu.intToString(i)+"]";
         variables.push_back(makeVariable(name, prefix+value));
     }
+    for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
+        string paramName = force.getEnergyParameterDerivativeName(i);
+        string derivVariable = cu.getNonbondedUtilities().addEnergyParameterDerivative(paramName);
+        Lepton::ParsedExpression derivExpression = energyExpression.differentiate(paramName).optimize();
+        forceExpressions[derivVariable+" += interactionScale*switchValue*"] = derivExpression;
+    }
     stringstream compute;
     compute << cu.getExpressionUtilities().createExpressions(forceExpressions, variables, functionList, functionDefinitions, prefix+"temp");
     map<string, string> replacements;
@@ -2536,13 +2590,13 @@ double CudaCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool in
         if (changed) {
             globals->upload(globalParamValues);
             if (forceCopy != NULL) {
-                longRangeCoefficient = CustomNonbondedForceImpl::calcLongRangeCorrection(*forceCopy, context.getOwner());
+                CustomNonbondedForceImpl::calcLongRangeCorrection(*forceCopy, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs);
                 hasInitializedLongRangeCorrection = true;
             }
         }
     }
     if (!hasInitializedLongRangeCorrection) {
-        longRangeCoefficient = CustomNonbondedForceImpl::calcLongRangeCorrection(*forceCopy, context.getOwner());
+        CustomNonbondedForceImpl::calcLongRangeCorrection(*forceCopy, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs);
         hasInitializedLongRangeCorrection = true;
     }
     if (interactionGroupData != NULL) {
@@ -2568,7 +2622,11 @@ double CudaCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool in
         cu.executeKernel(interactionGroupKernel, &interactionGroupArgs[0], numGroupThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
     }
     double4 boxSize = cu.getPeriodicBoxSize();
-    return longRangeCoefficient/(boxSize.x*boxSize.y*boxSize.z);
+    double volume = boxSize.x*boxSize.y*boxSize.z;
+    map<string, double>& derivs = cu.getEnergyParamDerivWorkspace();
+    for (int i = 0; i < longRangeCoefficientDerivs.size(); i++)
+        derivs[forceCopy->getEnergyParameterDerivativeName(i)] += longRangeCoefficientDerivs[i]/volume;
+    return longRangeCoefficient/volume;
 }
 
 void CudaCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force) {
@@ -2592,7 +2650,7 @@ void CudaCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& co
     // If necessary, recompute the long range correction.
     
     if (forceCopy != NULL) {
-        longRangeCoefficient = CustomNonbondedForceImpl::calcLongRangeCorrection(force, context.getOwner());
+        CustomNonbondedForceImpl::calcLongRangeCorrection(force, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs);
         hasInitializedLongRangeCorrection = true;
         *forceCopy = force;
     }
@@ -2859,6 +2917,10 @@ CudaCalcCustomGBForceKernel::~CudaCalcCustomGBForceKernel() {
         delete valueBuffers;
     for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
         delete tabulatedFunctions[i];
+    for (int i = 0; i < dValue0dParam.size(); i++)
+        delete dValue0dParam[i];
+    for (int i = 0; i < dValuedParam.size(); i++)
+        delete dValuedParam[i];
 }
 
 void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomGBForce& force) {
@@ -2951,18 +3013,24 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
 
     vector<vector<Lepton::ParsedExpression> > valueGradientExpressions(force.getNumComputedValues());
     vector<vector<Lepton::ParsedExpression> > valueDerivExpressions(force.getNumComputedValues());
+    vector<vector<Lepton::ParsedExpression> > valueParamDerivExpressions(force.getNumComputedValues());
     needParameterGradient = false;
-    for (int i = 1; i < force.getNumComputedValues(); i++) {
+    for (int i = 0; i < force.getNumComputedValues(); i++) {
         Lepton::ParsedExpression ex = Lepton::Parser::parse(computedValueExpressions[i], functions).optimize();
-        valueGradientExpressions[i].push_back(ex.differentiate("x").optimize());
-        valueGradientExpressions[i].push_back(ex.differentiate("y").optimize());
-        valueGradientExpressions[i].push_back(ex.differentiate("z").optimize());
-        if (!isZeroExpression(valueGradientExpressions[i][0]) || !isZeroExpression(valueGradientExpressions[i][1]) || !isZeroExpression(valueGradientExpressions[i][2]))
-            needParameterGradient = true;
-         for (int j = 0; j < i; j++)
-            valueDerivExpressions[i].push_back(ex.differentiate(computedValueNames[j]).optimize());
+        if (i > 0) {
+            valueGradientExpressions[i].push_back(ex.differentiate("x").optimize());
+            valueGradientExpressions[i].push_back(ex.differentiate("y").optimize());
+            valueGradientExpressions[i].push_back(ex.differentiate("z").optimize());
+            if (!isZeroExpression(valueGradientExpressions[i][0]) || !isZeroExpression(valueGradientExpressions[i][1]) || !isZeroExpression(valueGradientExpressions[i][2]))
+                needParameterGradient = true;
+            for (int j = 0; j < i; j++)
+                valueDerivExpressions[i].push_back(ex.differentiate(computedValueNames[j]).optimize());
+        }
+        for (int j = 0; j < force.getNumEnergyParameterDerivatives(); j++)
+            valueParamDerivExpressions[i].push_back(ex.differentiate(force.getEnergyParameterDerivativeName(j)).optimize());
     }
     vector<vector<Lepton::ParsedExpression> > energyDerivExpressions(force.getNumEnergyTerms());
+    vector<vector<Lepton::ParsedExpression> > energyParamDerivExpressions(force.getNumEnergyTerms());
     vector<bool> needChainForValue(force.getNumComputedValues(), false);
     for (int i = 0; i < force.getNumEnergyTerms(); i++) {
         string expression;
@@ -2984,10 +3052,21 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
                     needChainForValue[j] = true;
             }
         }
+        for (int j = 0; j < force.getNumEnergyParameterDerivatives(); j++)
+            energyParamDerivExpressions[i].push_back(ex.differentiate(force.getEnergyParameterDerivativeName(j)).optimize());
     }
     longEnergyDerivs = CudaArray::create<long long>(cu, force.getNumComputedValues()*cu.getPaddedNumAtoms(), "customGBLongEnergyDerivatives");
     energyDerivs = new CudaParameterSet(cu, force.getNumComputedValues(), cu.getPaddedNumAtoms(), "customGBEnergyDerivatives", true);
     energyDerivChain = new CudaParameterSet(cu, force.getNumComputedValues(), cu.getPaddedNumAtoms(), "customGBEnergyDerivativeChain", true);
+    int elementSize = (cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
+    needEnergyParamDerivs = (force.getNumEnergyParameterDerivatives() > 0);
+    for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
+        dValuedParam.push_back(new CudaParameterSet(cu, force.getNumComputedValues(), cu.getPaddedNumAtoms(), "dValuedParam", true));
+        dValue0dParam.push_back(CudaArray::create<long long>(cu, cu.getPaddedNumAtoms(), "dValue0dParam"));
+        cu.addAutoclearBuffer(*dValue0dParam.back());
+        string name = force.getEnergyParameterDerivativeName(i);
+        cu.addEnergyParameterDerivative(name);
+    }
  
     // Create the kernels.
 
@@ -3019,11 +3098,18 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
         Lepton::ParsedExpression ex = Lepton::Parser::parse(computedValueExpressions[0], functions).optimize();
         n2ValueExpressions["tempValue1 = "] = ex;
         n2ValueExpressions["tempValue2 = "] = ex.renameVariables(rename);
+        for (int i = 0; i < valueParamDerivExpressions[0].size(); i++) {
+            string variableBase = "temp_dValue0dParam"+cu.intToString(i+1);
+            if (!isZeroExpression(valueParamDerivExpressions[0][i])) {
+                n2ValueExpressions[variableBase+"_1 = "] = valueParamDerivExpressions[0][i];
+                n2ValueExpressions[variableBase+"_2 = "] = valueParamDerivExpressions[0][i].renameVariables(rename);
+            }
+        }
         n2ValueSource << cu.getExpressionUtilities().createExpressions(n2ValueExpressions, variables, functionList, functionDefinitions, "temp");
         map<string, string> replacements;
         string n2ValueStr = n2ValueSource.str();
         replacements["COMPUTE_VALUE"] = n2ValueStr;
-        stringstream extraArgs, atomParams, loadLocal1, loadLocal2, load1, load2;
+        stringstream extraArgs, atomParams, loadLocal1, loadLocal2, load1, load2, tempDerivs1, tempDerivs2, storeDeriv1, storeDeriv2;
         if (force.getNumGlobalParameters() > 0)
             extraArgs << ", const float* globals";
         pairValueUsesParam.resize(params->getBuffers().size(), false);
@@ -3042,12 +3128,31 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
                 atomParamSize += buffer.getNumComponents();
             }
         }
+        for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
+            string derivName = "dValue0dParam"+cu.intToString(i+1);
+            extraArgs << ", unsigned long long* __restrict__ global_" << derivName;
+            atomParams << "real " << derivName << ";\n";
+            loadLocal2 << "localData[localAtomIndex]." << derivName << " = 0;\n";
+            load1 << "real " << derivName << " = 0;\n";
+            if (!isZeroExpression(valueParamDerivExpressions[0][i])) {
+                load2 << "real temp_" << derivName << "_1 = 0;\n";
+                load2 << "real temp_" << derivName << "_2 = 0;\n";
+                tempDerivs1 << derivName << " += temp_" << derivName << "_1;\n";
+                tempDerivs2 << "localData[tbx+tj]." << derivName << " += temp_" << derivName << "_2;\n";
+                storeDeriv1 << "atomicAdd(&global_" << derivName << "[offset1], static_cast<unsigned long long>((long long) (" << derivName << "*0x100000000)));\n";
+                storeDeriv2 << "atomicAdd(&global_" << derivName << "[offset2], static_cast<unsigned long long>((long long) (localData[threadIdx.x]." << derivName << "*0x100000000)));\n";
+            }
+        }
         replacements["PARAMETER_ARGUMENTS"] = extraArgs.str()+tableArgs.str();
         replacements["ATOM_PARAMETER_DATA"] = atomParams.str();
         replacements["LOAD_LOCAL_PARAMETERS_FROM_1"] = loadLocal1.str();
         replacements["LOAD_LOCAL_PARAMETERS_FROM_GLOBAL"] = loadLocal2.str();
         replacements["LOAD_ATOM1_PARAMETERS"] = load1.str();
         replacements["LOAD_ATOM2_PARAMETERS"] = load2.str();
+        replacements["ADD_TEMP_DERIVS1"] = tempDerivs1.str();
+        replacements["ADD_TEMP_DERIVS2"] = tempDerivs2.str();
+        replacements["STORE_PARAM_DERIVS1"] = storeDeriv1.str();
+        replacements["STORE_PARAM_DERIVS2"] = storeDeriv2.str();
         if (useCutoff)
             pairValueDefines["USE_CUTOFF"] = "1";
         if (usePeriodic)
@@ -3070,7 +3175,7 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
     {
         // Create the kernel to reduce the N2 value and calculate other values.
 
-        stringstream reductionSource, extraArgs;
+        stringstream reductionSource, extraArgs, deriv0;
         if (force.getNumGlobalParameters() > 0)
             extraArgs << ", const float* globals";
         for (int i = 0; i < (int) params->getBuffers().size(); i++) {
@@ -3083,6 +3188,14 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
             string valueName = "values"+cu.intToString(i+1);
             extraArgs << ", " << buffer.getType() << "* __restrict__ global_" << valueName;
             reductionSource << buffer.getType() << " local_" << valueName << ";\n";
+        }
+        for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
+            string variableName = "dValuedParam_0_"+cu.intToString(i);
+            extraArgs << ", const long long* __restrict__ dValue0dParam" << i;
+            deriv0 << "real " << variableName << " = (1.0f/0x100000000)*dValue0dParam" << i << "[index];\n";
+            for (int j = 0; j < dValuedParam[i]->getBuffers().size(); j++)
+                extraArgs << ", real* __restrict__ global_dValuedParam_" << j << "_" << i;
+            deriv0 << "global_dValuedParam_0_" << i << "[index] = dValuedParam_0_" << i << ";\n";
         }
         reductionSource << "local_values" << computedValues->getParameterSuffix(0) << " = sum;\n";
         map<string, string> variables;
@@ -3103,8 +3216,26 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
             string valueName = "values"+cu.intToString(i+1);
             reductionSource << "global_" << valueName << "[index] = local_" << valueName << ";\n";
         }
+        if (needEnergyParamDerivs) {
+            map<string, Lepton::ParsedExpression> derivExpressions;
+            for (int i = 1; i < force.getNumComputedValues(); i++) {
+                for (int j = 0; j < valueParamDerivExpressions[i].size(); j++)
+                    derivExpressions["real dValuedParam_"+cu.intToString(i)+"_"+cu.intToString(j)+" = "] = valueParamDerivExpressions[i][j];
+                for (int j = 0; j < i; j++)
+                    derivExpressions["real dVdV_"+cu.intToString(i)+"_"+cu.intToString(j)+" = "] = valueDerivExpressions[i][j];
+            }
+            reductionSource << cu.getExpressionUtilities().createExpressions(derivExpressions, variables, functionList, functionDefinitions, "derivChain_temp");
+            for (int i = 1; i < force.getNumComputedValues(); i++) {
+                for (int j = 0; j < i; j++)
+                    for (int k = 0; k < valueParamDerivExpressions[i].size(); k++)
+                        reductionSource << "dValuedParam_" << i << "_" << k << " += dVdV_" << i << "_" << j << "*dValuedParam_" << j <<"_" << k << ";\n";
+                for (int j = 0; j < valueParamDerivExpressions[i].size(); j++)
+                    reductionSource << "global_dValuedParam_" << i << "_" << j << "[index] = dValuedParam_" << i << "_" << j << ";\n";
+            }
+        }
         map<string, string> replacements;
         replacements["PARAMETER_ARGUMENTS"] = extraArgs.str()+tableArgs.str();
+        replacements["REDUCE_PARAM0_DERIV"] = deriv0.str();
         replacements["COMPUTE_VALUES"] = reductionSource.str();
         map<string, string> defines;
         defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
@@ -3149,6 +3280,8 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
                     n2EnergyExpressions["/*"+cu.intToString(i+1)+"*/ deriv"+index+"_2 += "] = energyDerivExpressions[i][2*j+1];
                 }
             }
+            for (int j = 0; j < force.getNumEnergyParameterDerivatives(); j++)
+                n2EnergyExpressions["energyParamDeriv"+cu.intToString(j)+" += interactionScale*"] = energyParamDerivExpressions[i][j];
             if (exclude)
                 n2EnergySource << "if (!isExcluded) {\n";
             n2EnergySource << cu.getExpressionUtilities().createExpressions(n2EnergyExpressions, variables, functionList, functionDefinitions, "temp");
@@ -3158,7 +3291,7 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
         map<string, string> replacements;
         string n2EnergyStr = n2EnergySource.str();
         replacements["COMPUTE_INTERACTION"] = n2EnergyStr;
-        stringstream extraArgs, atomParams, loadLocal1, loadLocal2, clearLocal, load1, load2, declare1, recordDeriv, storeDerivs1, storeDerivs2;
+        stringstream extraArgs, atomParams, loadLocal1, loadLocal2, clearLocal, load1, load2, declare1, recordDeriv, storeDerivs1, storeDerivs2, initParamDerivs, saveParamDerivs;
         if (force.getNumGlobalParameters() > 0)
             extraArgs << ", const float* globals";
         pairEnergyUsesParam.resize(params->getBuffers().size(), false);
@@ -3204,6 +3337,17 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
             storeDerivs2 << "STORE_DERIVATIVE_2(" << index << ")\n";
             atomParamSize++;
         }
+        if (needEnergyParamDerivs) {
+            extraArgs << ", mixed* __restrict__ energyParamDerivs";
+            const vector<string>& allParamDerivNames = cu.getEnergyParamDerivNames();
+            int numDerivs = allParamDerivNames.size();
+            for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
+                initParamDerivs << "mixed energyParamDeriv" << i << " = 0;\n";
+                for (int index = 0; index < numDerivs; index++)
+                    if (allParamDerivNames[index] == force.getEnergyParameterDerivativeName(i))
+                        saveParamDerivs << "energyParamDerivs[(blockIdx.x*blockDim.x+threadIdx.x)*" << numDerivs << "+" << index << "] += energyParamDeriv" << i << ";\n";
+            }
+        }
         replacements["PARAMETER_ARGUMENTS"] = extraArgs.str()+tableArgs.str();
         replacements["ATOM_PARAMETER_DATA"] = atomParams.str();
         replacements["LOAD_LOCAL_PARAMETERS_FROM_1"] = loadLocal1.str();
@@ -3215,6 +3359,8 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
         replacements["RECORD_DERIVATIVE_2"] = recordDeriv.str();
         replacements["STORE_DERIVATIVES_1"] = storeDerivs1.str();
         replacements["STORE_DERIVATIVES_2"] = storeDerivs2.str();
+        replacements["INIT_PARAM_DERIVS"] = initParamDerivs.str();
+        replacements["SAVE_PARAM_DERIVS"] = saveParamDerivs.str();
         if (useCutoff)
             pairEnergyDefines["USE_CUTOFF"] = "1";
         if (usePeriodic)
@@ -3235,7 +3381,7 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
     {
         // Create the kernel to reduce the derivatives and calculate per-particle energy terms.
 
-        stringstream compute, extraArgs, load;
+        stringstream compute, extraArgs, load, initParamDerivs, saveParamDerivs;
         if (force.getNumGlobalParameters() > 0)
             extraArgs << ", const float* globals";
         for (int i = 0; i < (int) params->getBuffers().size(); i++) {
@@ -3263,6 +3409,17 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
         for (int i = 0; i < energyDerivs->getNumParameters(); ++i)
             load << "derivBuffers" << energyDerivs->getParameterSuffix(i, "[index]") <<
                     " = RECIP(0x100000000)*derivBuffersIn[index+PADDED_NUM_ATOMS*" << cu.intToString(i) << "];\n";
+        if (needEnergyParamDerivs) {
+            extraArgs << ", mixed* __restrict__ energyParamDerivs";
+            const vector<string>& allParamDerivNames = cu.getEnergyParamDerivNames();
+            int numDerivs = allParamDerivNames.size();
+            for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
+                initParamDerivs << "mixed energyParamDeriv" << i << " = 0;\n";
+                for (int index = 0; index < numDerivs; index++)
+                    if (allParamDerivNames[index] == force.getEnergyParameterDerivativeName(i))
+                        saveParamDerivs << "energyParamDerivs[(blockIdx.x*blockDim.x+threadIdx.x)*" << numDerivs << "+" << index << "] += energyParamDeriv" << i << ";\n";
+            }
+        }
         
         // Compute the various expressions.
         
@@ -3296,6 +3453,8 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
                 expressions["/*"+cu.intToString(i+1)+"*/ force.y -= "] = grady;
             if (!isZeroExpression(gradz))
                 expressions["/*"+cu.intToString(i+1)+"*/ force.z -= "] = gradz;
+            for (int j = 0; j < force.getNumEnergyParameterDerivatives(); j++)
+                expressions["/*"+cu.intToString(i+1)+"*/ energyParamDeriv"+cu.intToString(j)+" += "] = energyParamDerivExpressions[i][j];
         }
         for (int i = 1; i < force.getNumComputedValues(); i++)
             for (int j = 0; j < i; j++)
@@ -3326,16 +3485,19 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
         replacements["PARAMETER_ARGUMENTS"] = extraArgs.str()+tableArgs.str();
         replacements["LOAD_DERIVATIVES"] = load.str();
         replacements["COMPUTE_ENERGY"] = compute.str();
+        replacements["INIT_PARAM_DERIVS"] = initParamDerivs.str();
+        replacements["SAVE_PARAM_DERIVS"] = saveParamDerivs.str();
         map<string, string> defines;
         defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
         defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
         CUmodule module = cu.createModule(cu.replaceStrings(CudaKernelSources::customGBEnergyPerParticle, replacements), defines);
         perParticleEnergyKernel = cu.getKernel(module, "computePerParticleEnergy");
     }
-    if (needParameterGradient) {
-        // Create the kernel to compute chain rule terms for computed values that depend explicitly on particle coordinates.
+    if (needParameterGradient || needEnergyParamDerivs) {
+        // Create the kernel to compute chain rule terms for computed values that depend explicitly on particle coordinates, and for
+        // derivatives with respect to global parameters.
 
-        stringstream compute, extraArgs;
+        stringstream compute, extraArgs, initParamDerivs, saveParamDerivs;
         if (force.getNumGlobalParameters() > 0)
             extraArgs << ", const float* globals";
         for (int i = 0; i < (int) params->getBuffers().size(); i++) {
@@ -3354,6 +3516,19 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
             extraArgs << ", " << buffer.getType() << "* __restrict__ derivBuffers" << index;
             compute << buffer.getType() << " deriv" << index << " = derivBuffers" << index << "[index];\n";
         }
+        if (needEnergyParamDerivs) {
+            extraArgs << ", mixed* __restrict__ energyParamDerivs";
+            const vector<string>& allParamDerivNames = cu.getEnergyParamDerivNames();
+            int numDerivs = allParamDerivNames.size();
+            for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
+                for (int j = 0; j < dValuedParam[i]->getBuffers().size(); j++)
+                    extraArgs << ", real* __restrict__ dValuedParam_" << j << "_" << i;
+                initParamDerivs << "mixed energyParamDeriv" << i << " = 0;\n";
+                for (int index = 0; index < numDerivs; index++)
+                    if (allParamDerivNames[index] == force.getEnergyParameterDerivativeName(i))
+                        saveParamDerivs << "energyParamDerivs[(blockIdx.x*blockDim.x+threadIdx.x)*" << numDerivs << "+" << index << "] += energyParamDeriv" << i << ";\n";
+            }
+        }
         map<string, string> variables;
         variables["x"] = "pos.x";
         variables["y"] = "pos.y";
@@ -3364,34 +3539,42 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
             variables[force.getGlobalParameterName(i)] = "globals["+cu.intToString(i)+"]";
         for (int i = 0; i < force.getNumComputedValues(); i++)
             variables[computedValueNames[i]] = "values"+computedValues->getParameterSuffix(i, "[index]");
-        for (int i = 1; i < force.getNumComputedValues(); i++) {
-            string is = cu.intToString(i);
-            compute << "real3 dV"<<is<<"dR = make_real3(0);\n";
-            for (int j = 1; j < i; j++) {
-                if (!isZeroExpression(valueDerivExpressions[i][j])) {
-                    map<string, Lepton::ParsedExpression> derivExpressions;
-                    string js = cu.intToString(j);
-                    derivExpressions["real dV"+is+"dV"+js+" = "] = valueDerivExpressions[i][j];
-                    compute << cu.getExpressionUtilities().createExpressions(derivExpressions, variables, functionList, functionDefinitions, "temp_"+is+"_"+js);
-                    compute << "dV"<<is<<"dR += dV"<<is<<"dV"<<js<<"*dV"<<js<<"dR;\n";
+        if (needParameterGradient) {
+            for (int i = 1; i < force.getNumComputedValues(); i++) {
+                string is = cu.intToString(i);
+                compute << "real3 dV"<<is<<"dR = make_real3(0);\n";
+                for (int j = 1; j < i; j++) {
+                    if (!isZeroExpression(valueDerivExpressions[i][j])) {
+                        map<string, Lepton::ParsedExpression> derivExpressions;
+                        string js = cu.intToString(j);
+                        derivExpressions["real dV"+is+"dV"+js+" = "] = valueDerivExpressions[i][j];
+                        compute << cu.getExpressionUtilities().createExpressions(derivExpressions, variables, functionList, functionDefinitions, "temp_"+is+"_"+js);
+                        compute << "dV"<<is<<"dR += dV"<<is<<"dV"<<js<<"*dV"<<js<<"dR;\n";
+                    }
                 }
+                map<string, Lepton::ParsedExpression> gradientExpressions;
+                if (!isZeroExpression(valueGradientExpressions[i][0]))
+                    gradientExpressions["dV"+is+"dR.x += "] = valueGradientExpressions[i][0];
+                if (!isZeroExpression(valueGradientExpressions[i][1]))
+                    gradientExpressions["dV"+is+"dR.y += "] = valueGradientExpressions[i][1];
+                if (!isZeroExpression(valueGradientExpressions[i][2]))
+                    gradientExpressions["dV"+is+"dR.z += "] = valueGradientExpressions[i][2];
+                compute << cu.getExpressionUtilities().createExpressions(gradientExpressions, variables, functionList, functionDefinitions, "temp");
             }
-            map<string, Lepton::ParsedExpression> gradientExpressions;
-            if (!isZeroExpression(valueGradientExpressions[i][0]))
-                gradientExpressions["dV"+is+"dR.x += "] = valueGradientExpressions[i][0];
-            if (!isZeroExpression(valueGradientExpressions[i][1]))
-                gradientExpressions["dV"+is+"dR.y += "] = valueGradientExpressions[i][1];
-            if (!isZeroExpression(valueGradientExpressions[i][2]))
-                gradientExpressions["dV"+is+"dR.z += "] = valueGradientExpressions[i][2];
-            compute << cu.getExpressionUtilities().createExpressions(gradientExpressions, variables, functionList, functionDefinitions, "temp");
+            for (int i = 1; i < force.getNumComputedValues(); i++) {
+                string is = cu.intToString(i);
+                compute << "force -= deriv"<<energyDerivs->getParameterSuffix(i)<<"*dV"<<is<<"dR;\n";
+            }
         }
-        for (int i = 1; i < force.getNumComputedValues(); i++) {
-            string is = cu.intToString(i);
-            compute << "force -= deriv"<<energyDerivs->getParameterSuffix(i)<<"*dV"<<is<<"dR;\n";
-        }
+        if (needEnergyParamDerivs)
+            for (int i = 0; i < force.getNumComputedValues(); i++)
+                for (int j = 0; j < dValuedParam.size(); j++)
+                    compute << "energyParamDeriv"<<j<<" += deriv"<<energyDerivs->getParameterSuffix(i)<<"*dValuedParam_"<<i<<"_"<<j<<"[index];\n";
         map<string, string> replacements;
         replacements["PARAMETER_ARGUMENTS"] = extraArgs.str()+tableArgs.str();
         replacements["COMPUTE_FORCES"] = compute.str();
+        replacements["INIT_PARAM_DERIVS"] = initParamDerivs.str();
+        replacements["SAVE_PARAM_DERIVS"] = saveParamDerivs.str();
         map<string, string> defines;
         defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
         defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
@@ -3547,6 +3730,8 @@ double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFo
             if (pairValueUsesParam[i])
                 pairValueArgs.push_back(&params->getBuffers()[i].getMemory());
         }
+        for (int i = 0; i < dValue0dParam.size(); i++)
+            pairValueArgs.push_back(&dValue0dParam[i]->getDevicePointer());
         for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
             pairValueArgs.push_back(&tabulatedFunctions[i]->getDevicePointer());
         perParticleValueArgs.push_back(&cu.getPosq().getDevicePointer());
@@ -3557,6 +3742,11 @@ double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFo
             perParticleValueArgs.push_back(&params->getBuffers()[i].getMemory());
         for (int i = 0; i < (int) computedValues->getBuffers().size(); i++)
             perParticleValueArgs.push_back(&computedValues->getBuffers()[i].getMemory());
+        for (int i = 0; i < dValuedParam.size(); i++) {
+            perParticleValueArgs.push_back(&dValue0dParam[i]->getDevicePointer());
+            for (int j = 0; j < dValuedParam[i]->getBuffers().size(); j++)
+                perParticleValueArgs.push_back(&dValuedParam[i]->getBuffers()[j].getMemory());
+        }
         for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
             perParticleValueArgs.push_back(&tabulatedFunctions[i]->getDevicePointer());
         pairEnergyArgs.push_back(&cu.getForce().getDevicePointer());
@@ -3590,6 +3780,8 @@ double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFo
                 pairEnergyArgs.push_back(&computedValues->getBuffers()[i].getMemory());
         }
         pairEnergyArgs.push_back(&longEnergyDerivs->getDevicePointer());
+        if (needEnergyParamDerivs)
+            pairEnergyArgs.push_back(&cu.getEnergyParamDerivBuffer().getDevicePointer());
         for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
             pairEnergyArgs.push_back(&tabulatedFunctions[i]->getDevicePointer());
         perParticleEnergyArgs.push_back(&cu.getForce().getDevicePointer());
@@ -3606,9 +3798,11 @@ double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFo
         for (int i = 0; i < (int) energyDerivChain->getBuffers().size(); i++)
             perParticleEnergyArgs.push_back(&energyDerivChain->getBuffers()[i].getMemory());
         perParticleEnergyArgs.push_back(&longEnergyDerivs->getDevicePointer());
+        if (needEnergyParamDerivs)
+            perParticleEnergyArgs.push_back(&cu.getEnergyParamDerivBuffer().getDevicePointer());
         for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
             perParticleEnergyArgs.push_back(&tabulatedFunctions[i]->getDevicePointer());
-        if (needParameterGradient) {
+        if (needParameterGradient || needEnergyParamDerivs) {
             gradientChainRuleArgs.push_back(&cu.getForce().getDevicePointer());
             gradientChainRuleArgs.push_back(&cu.getPosq().getDevicePointer());
             if (globals != NULL)
@@ -3619,6 +3813,12 @@ double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFo
                 gradientChainRuleArgs.push_back(&computedValues->getBuffers()[i].getMemory());
             for (int i = 0; i < (int) energyDerivs->getBuffers().size(); i++)
                 gradientChainRuleArgs.push_back(&energyDerivs->getBuffers()[i].getMemory());
+            if (needEnergyParamDerivs) {
+                gradientChainRuleArgs.push_back(&cu.getEnergyParamDerivBuffer().getDevicePointer());
+                for (int i = 0; i < dValuedParam.size(); i++)
+                    for (int j = 0; j < dValuedParam[i]->getBuffers().size(); j++)
+                        gradientChainRuleArgs.push_back(&dValuedParam[i]->getBuffers()[j].getMemory());
+            }
         }
     }
     if (globals != NULL) {
@@ -3645,7 +3845,7 @@ double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFo
     cu.executeKernel(perParticleValueKernel, &perParticleValueArgs[0], cu.getPaddedNumAtoms());
     cu.executeKernel(pairEnergyKernel, &pairEnergyArgs[0], nb.getNumForceThreadBlocks()*nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());
     cu.executeKernel(perParticleEnergyKernel, &perParticleEnergyArgs[0], cu.getPaddedNumAtoms());
-    if (needParameterGradient)
+    if (needParameterGradient || needEnergyParamDerivs)
         cu.executeKernel(gradientChainRuleKernel, &gradientChainRuleArgs[0], cu.getPaddedNumAtoms());
     return 0.0;
 }
@@ -4493,6 +4693,9 @@ void CudaCalcCustomCentroidBondForceKernel::initialize(const System& system, con
     groupForcesArgs.push_back(cu.getPeriodicBoxVecXPointer());
     groupForcesArgs.push_back(cu.getPeriodicBoxVecYPointer());
     groupForcesArgs.push_back(cu.getPeriodicBoxVecZPointer());
+    needEnergyParamDerivs = (force.getNumEnergyParameterDerivatives() > 0);
+    if (needEnergyParamDerivs)
+        groupForcesArgs.push_back(NULL); // Derivatives buffer hasn't been created yet
 
     // Record the tabulated functions.
 
@@ -4536,6 +4739,8 @@ void CudaCalcCustomCentroidBondForceKernel::initialize(const System& system, con
         const string& name = force.getPerBondParameterName(i);
         variables[name] = "bondParams"+params->getParameterSuffix(i);
     }
+    if (needEnergyParamDerivs)
+        extraArgs << ", mixed* __restrict__ energyParamDerivs";
     if (force.getNumGlobalParameters() > 0) {
         globals = CudaArray::create<float>(cu, force.getNumGlobalParameters(), "customCentroidBondGlobals");
         globals->upload(globalParamValues);
@@ -4563,7 +4768,7 @@ void CudaCalcCustomCentroidBondForceKernel::initialize(const System& system, con
         atomNames.push_back("P"+index);
         posNames.push_back("pos"+index);
     }
-    stringstream compute;
+    stringstream compute, initParamDerivs, saveParamDerivs;
     for (int i = 0; i < groupsPerBond; i++) {
         compute<<"int group"<<(i+1)<<" = bondGroups[index+"<<(i*numBonds)<<"];\n";
         compute<<"real4 pos"<<(i+1)<<" = centerPositions[group"<<(i+1)<<"];\n";
@@ -4636,6 +4841,21 @@ void CudaCalcCustomCentroidBondForceKernel::initialize(const System& system, con
         groupForcesArgs.push_back(&buffer.getMemory());
     }
     forceExpressions["energy += "] = energyExpression;
+    if (needEnergyParamDerivs) {
+        for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
+            string paramName = force.getEnergyParameterDerivativeName(i);
+            cu.addEnergyParameterDerivative(paramName);
+            Lepton::ParsedExpression derivExpression = energyExpression.differentiate(paramName).optimize();
+            forceExpressions[string("energyParamDeriv")+cu.intToString(i)+" += "] = derivExpression;
+            initParamDerivs << "mixed energyParamDeriv" << i << " = 0;\n";
+        }
+        const vector<string>& allParamDerivNames = cu.getEnergyParamDerivNames();
+        int numDerivs = allParamDerivNames.size();
+        for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++)
+            for (int index = 0; index < numDerivs; index++)
+                if (allParamDerivNames[index] == force.getEnergyParameterDerivativeName(i))
+                    saveParamDerivs << "energyParamDerivs[(blockIdx.x*blockDim.x+threadIdx.x)*" << numDerivs << "+" << index << "] += energyParamDeriv" << i << ";\n";
+    }
     compute << cu.getExpressionUtilities().createExpressions(forceExpressions, variables, functionList, functionDefinitions, "temp");
 
     // Finally, apply forces to groups.
@@ -4725,6 +4945,8 @@ void CudaCalcCustomCentroidBondForceKernel::initialize(const System& system, con
     replacements["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
     replacements["EXTRA_ARGS"] = extraArgs.str();
     replacements["COMPUTE_FORCE"] = compute.str();
+    replacements["INIT_PARAM_DERIVS"] = initParamDerivs.str();
+    replacements["SAVE_PARAM_DERIVS"] = saveParamDerivs.str();
     CUmodule module = cu.createModule(CudaKernelSources::vectorOps+cu.replaceStrings(CudaKernelSources::customCentroidBond, replacements));
     computeCentersKernel = cu.getKernel(module, "computeGroupCenters");
     groupForcesKernel = cu.getKernel(module, "computeGroupForces");
@@ -4749,6 +4971,8 @@ double CudaCalcCustomCentroidBondForceKernel::execute(ContextImpl& context, bool
             &groupOffsets->getDevicePointer(), &centerPositions->getDevicePointer()};
     cu.executeKernel(computeCentersKernel, computeCentersArgs, CudaContext::TileSize*numGroups);
     groupForcesArgs[1] = &cu.getEnergyBuffer().getDevicePointer();
+    if (needEnergyParamDerivs)
+        groupForcesArgs[9] = &cu.getEnergyParamDerivBuffer().getDevicePointer();
     cu.executeKernel(groupForcesKernel, &groupForcesArgs[0], numBonds);
     void* applyForcesArgs[] = {&groupParticles->getDevicePointer(), &groupWeights->getDevicePointer(), &groupOffsets->getDevicePointer(),
             &groupForces->getDevicePointer(), &cu.getForce().getDevicePointer()};
@@ -4969,6 +5193,12 @@ void CudaCalcCustomCompoundBondForceKernel::initialize(const System& system, con
         compute<<buffer.getType()<<" bondParams"<<(i+1)<<" = "<<argName<<"[index];\n";
     }
     forceExpressions["energy += "] = energyExpression;
+    for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
+        string paramName = force.getEnergyParameterDerivativeName(i);
+        string derivVariable = cu.getBondedUtilities().addEnergyParameterDerivative(paramName);
+        Lepton::ParsedExpression derivExpression = energyExpression.differentiate(paramName).optimize();
+        forceExpressions[derivVariable+" += "] = derivExpression;
+    }
     compute << cu.getExpressionUtilities().createExpressions(forceExpressions, variables, functionList, functionDefinitions, "temp");
 
     // Finally, apply forces to atoms.
@@ -6175,6 +6405,27 @@ private:
     vector<int> lastAtomOrder;
 };
 
+class CudaIntegrateCustomStepKernel::DerivFunction : public CustomFunction {
+public:
+    DerivFunction(map<string, double>& energyParamDerivs, const string& param) : energyParamDerivs(energyParamDerivs), param(param) {
+    }
+    int getNumArguments() const {
+        return 0;
+    }
+    double evaluate(const double* arguments) const {
+        return energyParamDerivs[param];
+    }
+    double evaluateDerivative(const double* arguments, const int* derivOrder) const {
+        return 0;
+    }
+    CustomFunction* clone() const {
+        return new DerivFunction(energyParamDerivs, param);
+    }
+private:
+    map<string, double>& energyParamDerivs;
+    string param;
+};
+
 CudaIntegrateCustomStepKernel::~CudaIntegrateCustomStepKernel() {
     cu.setAsCurrent();
     if (globalValues != NULL)
@@ -6187,6 +6438,8 @@ CudaIntegrateCustomStepKernel::~CudaIntegrateCustomStepKernel() {
         delete uniformRandoms;
     if (randomSeed != NULL)
         delete randomSeed;
+    if (perDofEnergyParamDerivs != NULL)
+        delete perDofEnergyParamDerivs;
     if (perDofValues != NULL)
         delete perDofValues;
     for (map<int, CudaArray*>::iterator iter = savedForces.begin(); iter != savedForces.end(); ++iter)
@@ -6241,7 +6494,11 @@ string CudaIntegrateCustomStepKernel::createPerDofComputation(const string& vari
         variables[parameterNames[i]] = "globals["+cu.intToString(parameterVariableIndex[i])+"]";
     vector<const TabulatedFunction*> functions;
     vector<pair<string, string> > functionNames;
-    return cu.getExpressionUtilities().createExpressions(expressions, variables, functions, functionNames, "temp"+cu.intToString(component)+"_", "double");
+    vector<pair<ExpressionTreeNode, string> > variableNodes;
+    findExpressionsForDerivs(expr.getRootNode(), variableNodes);
+    for (map<string, string>::const_iterator iter = variables.begin(); iter != variables.end(); ++iter)
+        variableNodes.push_back(make_pair(ExpressionTreeNode(new Operation::Variable(iter->first)), iter->second));
+    return cu.getExpressionUtilities().createExpressions(expressions, variableNodes, functions, functionNames, "temp"+cu.intToString(component)+"_", "double");
 }
 
 void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid) {
@@ -6287,7 +6544,7 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
                 blockEnd[blockEnd[step]] = step; // Record where to branch back to.
             if (stepType[step] == CustomIntegrator::ComputeGlobal || stepType[step] == CustomIntegrator::IfBlockStart || stepType[step] == CustomIntegrator::WhileBlockStart)
                 for (int i = 0; i < (int) expression[step].size(); i++)
-                    globalExpressions[step].push_back(expression[step][i].createCompiledExpression());
+                    globalExpressions[step].push_back(ParsedExpression(replaceDerivFunctions(expression[step][i].getRootNode(), context)).createCompiledExpression());
         }
         for (int step = 0; step < numSteps; step++) {
             for (int i = 0; i < (int) globalExpressions[step].size(); i++)
@@ -6350,6 +6607,10 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
             globalValuesDouble[parameterVariableIndex[i]] = value;
             expressionSet.setVariable(parameterVariableIndex[i], value);
         }
+        int numContextParams = context.getParameters().size();
+        localPerDofEnergyParamDerivsFloat.resize(numContextParams);
+        localPerDofEnergyParamDerivsDouble.resize(numContextParams);
+        perDofEnergyParamDerivs = new CudaArray(cu, max(1, numContextParams), elementSize, "perDofEnergyParamDerivs");
         
         // Record information about the targets of steps that will be stored in global variables.
         
@@ -6500,6 +6761,7 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
                     args1.push_back(&energy);
                 else
                     args1.push_back(&energyFloat);
+                args1.push_back(&perDofEnergyParamDerivs->getDevicePointer());
                 for (int i = 0; i < (int) perDofValues->getBuffers().size(); i++)
                     args1.push_back(&perDofValues->getBuffers()[i].getMemory());
                 kernelArgs[step].push_back(args1);
@@ -6594,6 +6856,7 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
             kineticEnergyArgs.push_back(&energy);
         else
             kineticEnergyArgs.push_back(&energyFloat);
+        kineticEnergyArgs.push_back(&perDofEnergyParamDerivs->getDevicePointer());
         for (int i = 0; i < (int) perDofValues->getBuffers().size(); i++)
             kineticEnergyArgs.push_back(&perDofValues->getBuffers()[i].getMemory());
         keNeedsForce = usesVariable(keExpression, "f");
@@ -6623,6 +6886,47 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
             globalValuesDouble[parameterVariableIndex[i]] = value;
             deviceGlobalsAreCurrent = false;
         }
+    }
+}
+
+ExpressionTreeNode CudaIntegrateCustomStepKernel::replaceDerivFunctions(const ExpressionTreeNode& node, ContextImpl& context) {
+    // This is called recursively to identify calls to the deriv() function inside global expressions,
+    // and replace them with a custom function that returns the correct value.
+    
+    const Operation& op = node.getOperation();
+    if (op.getId() == Operation::CUSTOM && op.getName() == "deriv") {
+        string param = node.getChildren()[1].getOperation().getName();
+        if (context.getParameters().find(param) == context.getParameters().end())
+            throw OpenMMException("The second argument to deriv() must be a context parameter");
+        needsEnergyParamDerivs = true;
+        return ExpressionTreeNode(new Operation::Custom("deriv", new DerivFunction(energyParamDerivs, param)));
+    }
+    else {
+        vector<ExpressionTreeNode> children;
+        for (int i = 0; i < (int) node.getChildren().size(); i++)
+            children.push_back(replaceDerivFunctions(node.getChildren()[i], context));
+        return ExpressionTreeNode(op.clone(), children);
+    }
+}
+
+void CudaIntegrateCustomStepKernel::findExpressionsForDerivs(const ExpressionTreeNode& node, vector<pair<ExpressionTreeNode, string> >& variableNodes) {
+    // This is called recursively to identify calls to the deriv() function inside per-DOF expressions,
+    // and record the code to replace them with.
+    
+    const Operation& op = node.getOperation();
+    if (op.getId() == Operation::CUSTOM && op.getName() == "deriv") {
+        string param = node.getChildren()[1].getOperation().getName();
+        int index;
+        for (index = 0; index < perDofEnergyParamDerivNames.size() && param != perDofEnergyParamDerivNames[index]; index++)
+            ;
+        if (index == perDofEnergyParamDerivNames.size())
+            perDofEnergyParamDerivNames.push_back(param);
+        variableNodes.push_back(make_pair(node, "energyParamDerivs["+cu.intToString(index)+"]"));
+        needsEnergyParamDerivs = true;
+    }
+    else {
+        for (int i = 0; i < (int) node.getChildren().size(); i++)
+            findExpressionsForDerivs(node.getChildren()[i], variableNodes);
     }
 }
 
@@ -6665,6 +6969,21 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
                 recordChangedParameters(context);
                 energy = context.calcForcesAndEnergy(computeForce, computeEnergy, forceGroupFlags[step]);
                 energyFloat = (float) energy;
+                if (needsEnergyParamDerivs) {
+                    context.getEnergyParameterDerivatives(energyParamDerivs);
+                    if (perDofEnergyParamDerivNames.size() > 0) {
+                        if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
+                            for (int i = 0; i < perDofEnergyParamDerivNames.size(); i++)
+                                localPerDofEnergyParamDerivsDouble[i] = energyParamDerivs[perDofEnergyParamDerivNames[i]];
+                            perDofEnergyParamDerivs->upload(localPerDofEnergyParamDerivsDouble);
+                        }
+                        else {
+                            for (int i = 0; i < perDofEnergyParamDerivNames.size(); i++)
+                                localPerDofEnergyParamDerivsFloat[i] = (float) energyParamDerivs[perDofEnergyParamDerivNames[i]];
+                            perDofEnergyParamDerivs->upload(localPerDofEnergyParamDerivsFloat);
+                        }
+                    }
+                }
             }
             forcesAreValid = true;
         }

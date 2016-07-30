@@ -47,14 +47,14 @@ private:
     const CpuNeighborList* neighborList;
     float periodicBoxSize[3];
     float cutoffDistance, cutoffDistance2;
+    int numValues, numParams;
     const std::vector<std::set<int> > exclusions;
-    std::vector<std::string> valueNames;
     std::vector<CustomGBForce::ComputationType> valueTypes;
-    std::vector<std::string> paramNames;
     std::vector<CustomGBForce::ComputationType> energyTypes;
     ThreadPool& threads;
     std::vector<ThreadData*> threadData;
     std::vector<double> threadEnergy;
+    std::vector<std::vector<std::vector<float> > > dValuedParam;
     // Workspace vectors
     std::vector<std::vector<float> > values, dEdV;
     // The following variables are used to make information accessible to the individual threads.
@@ -189,11 +189,13 @@ public:
                         const std::vector<Lepton::CompiledExpression>& valueExpressions,
                         const std::vector<std::vector<Lepton::CompiledExpression> >& valueDerivExpressions,
                         const std::vector<std::vector<Lepton::CompiledExpression> >& valueGradientExpressions,
+                        const std::vector<std::vector<Lepton::CompiledExpression> >& valueParamDerivExpressions,
                         const std::vector<std::string>& valueNames,
                         const std::vector<CustomGBForce::ComputationType>& valueTypes,
                         const std::vector<Lepton::CompiledExpression>& energyExpressions,
                         const std::vector<std::vector<Lepton::CompiledExpression> >& energyDerivExpressions,
                         const std::vector<std::vector<Lepton::CompiledExpression> >& energyGradientExpressions,
+                        const std::vector<std::vector<Lepton::CompiledExpression> >& energyParamDerivExpressions,
                         const std::vector<CustomGBForce::ComputationType>& energyTypes,
                         const std::vector<std::string>& parameterNames, ThreadPool& threads);
 
@@ -221,16 +223,17 @@ public:
     /**
      * Calculate custom GB ixn
      * 
-     * @param numberOfAtoms    number of atoms
-     * @param posq             atom coordinates
-     * @param atomParameters   atomParameters[atomIndex][paramterIndex]
-     * @param globalParameters the values of global parameters
-     * @param forces           force array (forces added)
-     * @param totalEnergy      total energy
+     * @param numberOfAtoms      number of atoms
+     * @param posq               atom coordinates
+     * @param atomParameters     atomParameters[atomIndex][paramterIndex]
+     * @param globalParameters   the values of global parameters
+     * @param forces             force array (forces added)
+     * @param totalEnergy        total energy
+     * @param energyParamDerivs  derivatives of the energy with respect to global parameters
      */
 
-    void calculateIxn(int numberOfAtoms, float* posq, RealOpenMM** atomParameters,
-                     std::map<std::string, double>& globalParameters, std::vector<AlignedArray<float> >& threadForce, bool includeForce, bool includeEnergy, double& totalEnergy);
+    void calculateIxn(int numberOfAtoms, float* posq, RealOpenMM** atomParameters, std::map<std::string, double>& globalParameters,
+            std::vector<AlignedArray<float> >& threadForce, bool includeForce, bool includeEnergy, double& totalEnergy, double* energyParamDerivs);
 };
 
 class CpuCustomGBForce::ThreadData {
@@ -239,19 +242,23 @@ public:
                const std::vector<Lepton::CompiledExpression>& valueExpressions,
                const std::vector<std::vector<Lepton::CompiledExpression> >& valueDerivExpressions,
                const std::vector<std::vector<Lepton::CompiledExpression> >& valueGradientExpressions,
+               const std::vector<std::vector<Lepton::CompiledExpression> >& valueParamDerivExpressions,
                const std::vector<std::string>& valueNames,
                const std::vector<Lepton::CompiledExpression>& energyExpressions,
                const std::vector<std::vector<Lepton::CompiledExpression> >& energyDerivExpressions,
                const std::vector<std::vector<Lepton::CompiledExpression> >& energyGradientExpressions,
+               const std::vector<std::vector<Lepton::CompiledExpression> >& energyParamDerivExpressions,
                const std::vector<std::string>& parameterNames);
     CompiledExpressionSet expressionSet;
     std::vector<Lepton::CompiledExpression> valueExpressions;
     std::vector<std::vector<Lepton::CompiledExpression> > valueDerivExpressions;
     std::vector<std::vector<Lepton::CompiledExpression> > valueGradientExpressions;
+    std::vector<std::vector<Lepton::CompiledExpression> > valueParamDerivExpressions;
     std::vector<int> valueIndex;
     std::vector<Lepton::CompiledExpression> energyExpressions;
     std::vector<std::vector<Lepton::CompiledExpression> > energyDerivExpressions;
     std::vector<std::vector<Lepton::CompiledExpression> > energyGradientExpressions;
+    std::vector<std::vector<Lepton::CompiledExpression> > energyParamDerivExpressions;
     std::vector<int> paramIndex;
     std::vector<int> particleParamIndex;
     std::vector<int> particleValueIndex;
@@ -260,6 +267,8 @@ public:
     // Workspace vectors
     std::vector<float> value0, dVdR1, dVdR2, dVdX, dVdY, dVdZ;
     std::vector<std::vector<float> > dEdV;
+    std::vector<std::vector<float> > dValue0dParam;
+    std::vector<float> energyParamDerivs;
 };
 
 } // namespace OpenMM

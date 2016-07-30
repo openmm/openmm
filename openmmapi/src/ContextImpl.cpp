@@ -240,6 +240,10 @@ void ContextImpl::setParameter(std::string name, double value) {
     integrator.stateChanged(State::Parameters);
 }
 
+void ContextImpl::getEnergyParameterDerivatives(std::map<std::string, double>& derivs) {
+    updateStateDataKernel.getAs<UpdateStateDataKernel>().getEnergyParameterDerivatives(*this, derivs);
+}
+
 void ContextImpl::getPeriodicBoxVectors(Vec3& a, Vec3& b, Vec3& c) {
     updateStateDataKernel.getAs<UpdateStateDataKernel>().getPeriodicBoxVectors(*this, a, b, c);
 }

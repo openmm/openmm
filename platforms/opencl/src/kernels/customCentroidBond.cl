@@ -116,10 +116,12 @@ __kernel void computeGroupForces(__global long* restrict groupForce, __global mi
         __global const int* restrict bondGroups, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ
         EXTRA_ARGS) {
     mixed energy = 0;
+    INIT_PARAM_DERIVS
     for (int index = get_global_id(0); index < NUM_BONDS; index += get_global_size(0)) {
         COMPUTE_FORCE
     }
     energyBuffer[get_global_id(0)] += energy;
+    SAVE_PARAM_DERIVS
 }
 
 /**

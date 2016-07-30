@@ -207,5 +207,5 @@ void ReferenceCMAPTorsionIxn::calculateOneIxn(int index, vector<RealVec>& atomCo
    --------------------------------------------------------------------------------------- */
 
 void ReferenceCMAPTorsionIxn::calculateBondIxn(int* atomIndices, vector<RealVec>& atomCoordinates,
-        RealOpenMM* parameters, vector<RealVec>& forces, RealOpenMM* totalEnergy) const {
+        RealOpenMM* parameters, vector<RealVec>& forces, RealOpenMM* totalEnergy, double* energyParamDerivs) {
 }

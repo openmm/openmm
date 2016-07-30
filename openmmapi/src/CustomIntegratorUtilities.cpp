@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2015 Stanford University and the Authors.           *
+ * Portions copyright (c) 2015-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -34,6 +34,7 @@
 #include "openmm/internal/ForceImpl.h"
 #include "lepton/Operation.h"
 #include "lepton/Parser.h"
+#include <algorithm>
 #include <set>
 #include <sstream>
 
@@ -81,6 +82,9 @@ void CustomIntegratorUtilities::analyzeComputations(const ContextImpl& context, 
     forceGroup.resize(numSteps, -2);
     vector<CustomIntegrator::ComputationType> stepType(numSteps);
     vector<string> stepVariable(numSteps);
+    map<string, Lepton::CustomFunction*> customFunctions;
+    DerivFunction derivFunction;
+    customFunctions["deriv"] = &derivFunction;
 
     // Parse the expressions.
 
@@ -92,11 +96,11 @@ void CustomIntegratorUtilities::analyzeComputations(const ContextImpl& context, 
 
             string lhs, rhs;
             parseCondition(expression, lhs, rhs, comparisons[step]);
-            expressions[step].push_back(Lepton::Parser::parse(lhs).optimize());
-            expressions[step].push_back(Lepton::Parser::parse(rhs).optimize());
+            expressions[step].push_back(Lepton::Parser::parse(lhs, customFunctions).optimize());
+            expressions[step].push_back(Lepton::Parser::parse(rhs, customFunctions).optimize());
         }
         else if (expression.size() > 0)
-            expressions[step].push_back(Lepton::Parser::parse(expression).optimize());
+            expressions[step].push_back(Lepton::Parser::parse(expression, customFunctions).optimize());
     }
 
     // Identify which steps invalidate the forces.
@@ -191,6 +195,14 @@ void CustomIntegratorUtilities::analyzeComputations(const ContextImpl& context, 
     vector<int> jumps(numSteps, -1);
     vector<int> stepsInPath;
     enumeratePaths(0, stepsInPath, jumps, blockEnd, stepType, needsForces, needsEnergy, invalidatesForces, forceGroup, computeBoth);
+    
+    // Make sure calls to deriv() all valid.
+    
+    vector<string> derivNames = energyGroupName;
+    derivNames.push_back("energy");
+    for (int i = 0; i < expressions.size(); i++)
+        for (int j = 0; j < expressions[i].size(); j++)
+            validateDerivatives(expressions[i][j].getRootNode(), derivNames);
 }
 
 void CustomIntegratorUtilities::enumeratePaths(int firstStep, vector<int> steps, vector<int> jumps, const vector<int>& blockEnd,
@@ -263,5 +275,20 @@ void CustomIntegratorUtilities::analyzeForceComputationsForPath(vector<int>& ste
             candidatePoints.push_back(step);
             currentGroup = forceGroup[step];
         }
+    }
+}
+
+void CustomIntegratorUtilities::validateDerivatives(const Lepton::ExpressionTreeNode& node, const vector<string>& derivNames) {
+    const Lepton::Operation& op = node.getOperation();
+    if (op.getId() == Lepton::Operation::CUSTOM && op.getName() == "deriv") {
+        const Lepton::Operation& child = node.getChildren()[0].getOperation();
+        if (child.getId() != Lepton::Operation::VARIABLE || find(derivNames.begin(), derivNames.end(), child.getName()) == derivNames.end())
+            throw OpenMMException("The first argument to deriv() must be an energy variable");
+        if (node.getChildren()[1].getOperation().getId() != Lepton::Operation::VARIABLE)
+            throw OpenMMException("The second argument to deriv() must be a context parameter");
+    }
+    else {
+        for (int i = 0; i < node.getChildren().size(); i++)
+            validateDerivatives(node.getChildren()[i], derivNames);
     }
 }

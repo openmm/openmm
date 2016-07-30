@@ -113,6 +113,7 @@ extern "C" __global__ void computeNonbonded(
     const unsigned int tgx = threadIdx.x & (TILE_SIZE-1); // index within the warp
     const unsigned int tbx = threadIdx.x - tgx;           // block warpIndex
     mixed energy = 0;
+    INIT_DERIVATIVES
     // used shared memory if the device cannot shuffle
 #ifndef ENABLE_SHUFFLE
     __shared__ AtomData localData[THREAD_BLOCK_SIZE];
@@ -175,6 +176,7 @@ extern "C" __global__ void computeNonbonded(
                 bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS || !(excl & 0x1));
 #endif
                 real tempEnergy = 0.0f;
+                const real interactionScale = 0.5f;
                 COMPUTE_INTERACTION
                 energy += 0.5f*tempEnergy;
 #ifdef INCLUDE_FORCES
@@ -243,6 +245,7 @@ extern "C" __global__ void computeNonbonded(
                 bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS || !(excl & 0x1));
 #endif
                 real tempEnergy = 0.0f;
+                const real interactionScale = 1.0f;
                 COMPUTE_INTERACTION
                 energy += tempEnergy;
 #ifdef INCLUDE_FORCES
@@ -448,6 +451,7 @@ extern "C" __global__ void computeNonbonded(
                     bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS);
 #endif
                     real tempEnergy = 0.0f;
+                    const real interactionScale = 1.0f;
                     COMPUTE_INTERACTION
                     energy += tempEnergy;
 #ifdef INCLUDE_FORCES
@@ -518,6 +522,7 @@ extern "C" __global__ void computeNonbonded(
                     bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS);
 #endif
                     real tempEnergy = 0.0f;
+                    const real interactionScale = 1.0f;
                     COMPUTE_INTERACTION
                     energy += tempEnergy;
 #ifdef INCLUDE_FORCES
@@ -586,4 +591,5 @@ extern "C" __global__ void computeNonbonded(
 #ifdef INCLUDE_ENERGY
     energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += energy;
 #endif
+    SAVE_DERIVATIVES
 }

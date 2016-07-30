@@ -42,7 +42,7 @@ CustomAngleForceProxy::CustomAngleForceProxy() : SerializationProxy("CustomAngle
 }
 
 void CustomAngleForceProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 2);
+    node.setIntProperty("version", 3);
     const CustomAngleForce& force = *reinterpret_cast<const CustomAngleForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
     node.setBoolProperty("usesPeriodic", force.usesPeriodicBoundaryConditions());
@@ -54,6 +54,10 @@ void CustomAngleForceProxy::serialize(const void* object, SerializationNode& nod
     SerializationNode& globalParams = node.createChildNode("GlobalParameters");
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {
         globalParams.createChildNode("Parameter").setStringProperty("name", force.getGlobalParameterName(i)).setDoubleProperty("default", force.getGlobalParameterDefaultValue(i));
+    }
+    SerializationNode& energyDerivs = node.createChildNode("EnergyParameterDerivatives");
+    for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
+        energyDerivs.createChildNode("Parameter").setStringProperty("name", force.getEnergyParameterDerivativeName(i));
     }
     SerializationNode& angles = node.createChildNode("Angles");
     for (int i = 0; i < force.getNumAngles(); i++) {
@@ -72,7 +76,7 @@ void CustomAngleForceProxy::serialize(const void* object, SerializationNode& nod
 
 void* CustomAngleForceProxy::deserialize(const SerializationNode& node) const {
     int version = node.getIntProperty("version");
-    if (version < 1 || version > 2)
+    if (version < 1 || version > 3)
         throw OpenMMException("Unsupported version number");
     CustomAngleForce* force = NULL;
     try {
@@ -89,6 +93,13 @@ void* CustomAngleForceProxy::deserialize(const SerializationNode& node) const {
         for (int i = 0; i < (int) globalParams.getChildren().size(); i++) {
             const SerializationNode& parameter = globalParams.getChildren()[i];
             force->addGlobalParameter(parameter.getStringProperty("name"), parameter.getDoubleProperty("default"));
+        }
+        if (version > 2) {
+            const SerializationNode& energyDerivs = node.getChildNode("EnergyParameterDerivatives");
+            for (int i = 0; i < (int) energyDerivs.getChildren().size(); i++) {
+                const SerializationNode& parameter = energyDerivs.getChildren()[i];
+                force->addEnergyParameterDerivative(parameter.getStringProperty("name"));
+            }
         }
         const SerializationNode& angles = node.getChildNode("Angles");
         vector<double> params(force->getNumPerAngleParameters());

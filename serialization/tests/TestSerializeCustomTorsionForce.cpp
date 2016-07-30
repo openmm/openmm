@@ -46,6 +46,7 @@ void testSerialization() {
     force.addGlobalParameter("x", 1.3);
     force.addGlobalParameter("y", 2.221);
     force.addPerTorsionParameter("z");
+    force.addEnergyParameterDerivative("y");
     vector<double> params(1);
     params[0] = 1.0;
     force.addTorsion(1, 2, 3, 4, params);
@@ -74,6 +75,9 @@ void testSerialization() {
         ASSERT_EQUAL(force.getGlobalParameterName(i), force2.getGlobalParameterName(i));
         ASSERT_EQUAL(force.getGlobalParameterDefaultValue(i), force2.getGlobalParameterDefaultValue(i));
     }
+    ASSERT_EQUAL(force.getNumEnergyParameterDerivatives(), force2.getNumEnergyParameterDerivatives());
+    for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++)
+        ASSERT_EQUAL(force.getEnergyParameterDerivativeName(i), force2.getEnergyParameterDerivativeName(i));
     ASSERT_EQUAL(force.usesPeriodicBoundaryConditions(), force2.usesPeriodicBoundaryConditions());
     ASSERT_EQUAL(force.getNumTorsions(), force2.getNumTorsions());
     for (int i = 0; i < force.getNumTorsions(); i++) {

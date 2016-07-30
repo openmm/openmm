@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -176,6 +176,12 @@ public:
      */
     CudaArray& getEnergyBuffer() {
         return *energyBuffer;
+    }
+    /**
+     * Get the array which contains the buffer in which derivatives of the energy with respect to parameters are computed.
+     */
+    CudaArray& getEnergyParamDerivBuffer() {
+        return *energyParamDerivBuffer;
     }
     /**
      * Get a pointer to a block of pinned memory that can be used for efficient transfers between host and device.
@@ -545,6 +551,27 @@ public:
         return postComputations;
     }
     /**
+     * Get the names of all parameters with respect to which energy derivatives are computed.
+     */
+    const std::vector<std::string>& getEnergyParamDerivNames() const {
+        return energyParamDerivNames;
+    }
+    /**
+     * Get a workspace data structure used for accumulating the values of derivatives of the energy
+     * with respect to parameters.
+     */
+    std::map<std::string, double>& getEnergyParamDerivWorkspace() {
+        return energyParamDerivWorkspace;
+    }
+    /**
+     * Register that the derivative of potential energy with respect to a context parameter
+     * will need to be calculated.  If this is called multiple times for a single parameter,
+     * it is only added to the list once.
+     * 
+     * @param param    the name of the parameter to add
+     */
+    void addEnergyParameterDerivative(const std::string& param);
+    /**
      * Mark that the current molecule definitions (and hence the atom order) may be invalid.
      * This should be called whenever force field parameters change.  It will cause the definitions
      * and order to be revalidated.
@@ -609,7 +636,10 @@ private:
     CudaArray* velm;
     CudaArray* force;
     CudaArray* energyBuffer;
+    CudaArray* energyParamDerivBuffer;
     CudaArray* atomIndexDevice;
+    std::vector<std::string> energyParamDerivNames;
+    std::map<std::string, double> energyParamDerivWorkspace;
     std::vector<int> atomIndex;
     std::vector<CUdeviceptr> autoclearBuffers;
     std::vector<int> autoclearBufferSizes;

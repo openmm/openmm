@@ -26,7 +26,7 @@
 #define __ReferenceCustomBondIxn_H__
 
 #include "ReferenceBondIxn.h"
-#include "lepton/CompiledExpression.h"
+#include "openmm/internal/CompiledExpressionSet.h"
 
 namespace OpenMM {
 
@@ -35,10 +35,10 @@ class ReferenceCustomBondIxn : public ReferenceBondIxn {
    private:
       Lepton::CompiledExpression energyExpression;
       Lepton::CompiledExpression forceExpression;
-      std::vector<double*> energyParams;
-      std::vector<double*> forceParams;
-      double* energyR;
-      double* forceR;
+      std::vector<Lepton::CompiledExpression> energyParamDerivExpressions;
+      CompiledExpressionSet expressionSet;
+      std::vector<int> bondParamIndex;
+      int rIndex;
       int numParameters;
       bool usePeriodic;
       RealVec boxVectors[3];
@@ -52,7 +52,8 @@ class ReferenceCustomBondIxn : public ReferenceBondIxn {
          --------------------------------------------------------------------------------------- */
 
        ReferenceCustomBondIxn(const Lepton::CompiledExpression& energyExpression, const Lepton::CompiledExpression& forceExpression,
-                              const std::vector<std::string>& parameterNames, std::map<std::string, double> globalParameters);
+                              const std::vector<std::string>& parameterNames, std::map<std::string, double> globalParameters,
+                              const std::vector<Lepton::CompiledExpression> energyParamDerivExpressions);
 
       /**---------------------------------------------------------------------------------------
 
@@ -86,7 +87,7 @@ class ReferenceCustomBondIxn : public ReferenceBondIxn {
 
       void calculateBondIxn(int* atomIndices, std::vector<OpenMM::RealVec>& atomCoordinates,
                             RealOpenMM* parameters, std::vector<OpenMM::RealVec>& forces,
-                            RealOpenMM* totalEnergy) const;
+                            RealOpenMM* totalEnergy, double* energyParamDerivs);
 
 
 };

@@ -61,6 +61,7 @@ CustomNonbondedForce::CustomNonbondedForce(const CustomNonbondedForce& rhs) {
     useLongRangeCorrection = rhs.useLongRangeCorrection;
     parameters = rhs.parameters;
     globalParameters = rhs.globalParameters;
+    energyParameterDerivatives = rhs.energyParameterDerivatives;
     particles = rhs.particles;
     exclusions = rhs.exclusions;
     interactionGroups = rhs.interactionGroups;
@@ -159,6 +160,20 @@ double CustomNonbondedForce::getGlobalParameterDefaultValue(int index) const {
 void CustomNonbondedForce::setGlobalParameterDefaultValue(int index, double defaultValue) {
     ASSERT_VALID_INDEX(index, globalParameters);
     globalParameters[index].defaultValue = defaultValue;
+}
+
+void CustomNonbondedForce::addEnergyParameterDerivative(const string& name) {
+    for (int i = 0; i < globalParameters.size(); i++)
+        if (name == globalParameters[i].name) {
+            energyParameterDerivatives.push_back(i);
+            return;
+        }
+    throw OpenMMException(string("addEnergyParameterDerivative: Unknown global parameter '"+name+"'"));
+}
+
+const string& CustomNonbondedForce::getEnergyParameterDerivativeName(int index) const {
+    ASSERT_VALID_INDEX(index, energyParameterDerivatives);
+    return globalParameters[energyParameterDerivatives[index]].name;
 }
 
 int CustomNonbondedForce::addParticle(const vector<double>& parameters) {

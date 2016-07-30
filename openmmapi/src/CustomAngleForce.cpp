@@ -95,6 +95,20 @@ void CustomAngleForce::setGlobalParameterDefaultValue(int index, double defaultV
     globalParameters[index].defaultValue = defaultValue;
 }
 
+void CustomAngleForce::addEnergyParameterDerivative(const string& name) {
+    for (int i = 0; i < globalParameters.size(); i++)
+        if (name == globalParameters[i].name) {
+            energyParameterDerivatives.push_back(i);
+            return;
+        }
+    throw OpenMMException(string("addEnergyParameterDerivative: Unknown global parameter '"+name+"'"));
+}
+
+const string& CustomAngleForce::getEnergyParameterDerivativeName(int index) const {
+    ASSERT_VALID_INDEX(index, energyParameterDerivatives);
+    return globalParameters[energyParameterDerivatives[index]].name;
+}
+
 int CustomAngleForce::addAngle(int particle1, int particle2, int particle3, const vector<double>& parameters) {
     angles.push_back(AngleInfo(particle1, particle2, particle3, parameters));
     return angles.size()-1;
