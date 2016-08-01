@@ -1105,6 +1105,74 @@ private:
 };
 
 /**
+ * This kernel is invoked by GayBerneForce to calculate the forces acting on the system.
+ */
+class CudaCalcGayBerneForceKernel : public CalcGayBerneForceKernel {
+public:
+    CudaCalcGayBerneForceKernel(std::string name, const Platform& platform, CudaContext& cu) : CalcGayBerneForceKernel(name, platform), cu(cu),
+            hasInitializedKernels(false), sortedParticles(NULL), axisParticleIndices(NULL), sigParams(NULL), epsParams(NULL), scale(NULL), exceptionParticles(NULL),
+            exceptionParams(NULL), aMatrix(NULL),
+            bMatrix(NULL), gMatrix(NULL), exclusions(NULL), exclusionStartIndex(NULL), blockCenter(NULL), blockBoundingBox(NULL), neighbors(NULL),
+            neighborIndex(NULL), neighborBlockCount(NULL), sortedPos(NULL), torque(NULL) {
+    }
+    ~CudaCalcGayBerneForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the GayBerneForce this kernel will be used for
+     */
+    void initialize(const System& system, const GayBerneForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the GayBerneForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const GayBerneForce& force);
+private:
+    class ReorderListener;
+    void sortAtoms();
+    CudaContext& cu;
+    bool hasInitializedKernels;
+    int numRealParticles, numExceptions, maxNeighborBlocks;
+    GayBerneForce::NonbondedMethod nonbondedMethod;
+    CudaArray* sortedParticles;
+    CudaArray* axisParticleIndices;
+    CudaArray* sigParams;
+    CudaArray* epsParams;
+    CudaArray* scale;
+    CudaArray* exceptionParticles;
+    CudaArray* exceptionParams;
+    CudaArray* aMatrix;
+    CudaArray* bMatrix;
+    CudaArray* gMatrix;
+    CudaArray* exclusions;
+    CudaArray* exclusionStartIndex;
+    CudaArray* blockCenter;
+    CudaArray* blockBoundingBox;
+    CudaArray* neighbors;
+    CudaArray* neighborIndex;
+    CudaArray* neighborBlockCount;
+    CudaArray* sortedPos;
+    CudaArray* torque;
+    std::vector<bool> isRealParticle;
+    std::vector<std::pair<int, int> > exceptionAtoms;
+    std::vector<std::pair<int, int> > excludedPairs;
+    std::vector<void*> framesArgs, blockBoundsArgs, neighborsArgs, forceArgs, torqueArgs;
+    CUfunction framesKernel, blockBoundsKernel, neighborsKernel, forceKernel, torqueKernel;
+    CUevent event;
+};
+
+/**
  * This kernel is invoked by VerletIntegrator to take one time step.
  */
 class CudaIntegrateVerletStepKernel : public IntegrateVerletStepKernel {

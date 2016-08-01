@@ -5988,6 +5988,431 @@ void CudaCalcCustomManyParticleForceKernel::copyParametersToContext(ContextImpl&
     cu.invalidateMolecules();
 }
 
+class CudaGayBerneForceInfo : public CudaForceInfo {
+public:
+    CudaGayBerneForceInfo(const GayBerneForce& force) : force(force) {
+    }
+    bool areParticlesIdentical(int particle1, int particle2) {
+        int xparticle1, yparticle1;
+        double sigma1, epsilon1, sx1, sy1, sz1, ex1, ey1, ez1;
+        int xparticle2, yparticle2;
+        double sigma2, epsilon2, sx2, sy2, sz2, ex2, ey2, ez2;
+        force.getParticleParameters(particle1, sigma1, epsilon1, xparticle1, yparticle1, sx1, sy1, sz1, ex1, ey1, ez1);
+        force.getParticleParameters(particle2, sigma2, epsilon2, xparticle2, yparticle2, sx2, sy2, sz2, ex2, ey2, ez2);
+        return (sigma1 == sigma2 && epsilon1 == epsilon2 && sx1 == sx2 && sy1 == sy2 && sz1 == sz2 && ex1 == ex2 && ey1 == ey2 && ez1 == ez2);
+    }
+    int getNumParticleGroups() {
+        return force.getNumExceptions()+force.getNumParticles();
+    }
+    void getParticlesInGroup(int index, vector<int>& particles) {
+        if (index < force.getNumExceptions()) {
+            int particle1, particle2;
+            double sigma, epsilon;
+            force.getExceptionParameters(index, particle1, particle2, sigma, epsilon);
+            particles.resize(2);
+            particles[0] = particle1;
+            particles[1] = particle2;
+        }
+        else {
+            int particle = index-force.getNumExceptions();
+            int xparticle, yparticle;
+            double sigma, epsilon, sx, sy, sz, ex, ey, ez;
+            force.getParticleParameters(particle, sigma, epsilon, xparticle, yparticle, sx, sy, sz, ex, ey, ez);
+            particles.clear();
+            particles.push_back(particle);
+            if (xparticle > -1)
+                particles.push_back(xparticle);
+            if (yparticle > -1)
+                particles.push_back(yparticle);
+        }
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        if (group1 < force.getNumExceptions() && group2 < force.getNumExceptions()) {
+            int particle1, particle2;
+            double sigma1, sigma2, epsilon1, epsilon2;
+            force.getExceptionParameters(group1, particle1, particle2, sigma1, epsilon1);
+            force.getExceptionParameters(group2, particle1, particle2, sigma2, epsilon2);
+            return (sigma1 == sigma2 && epsilon1 == epsilon2);
+        }
+        return true;
+    }
+private:
+    const GayBerneForce& force;
+};
+
+class CudaCalcGayBerneForceKernel::ReorderListener : public CudaContext::ReorderListener {
+public:
+    ReorderListener(CudaCalcGayBerneForceKernel& owner) : owner(owner) {
+    }
+    void execute() {
+        owner.sortAtoms();
+    }
+private:
+    CudaCalcGayBerneForceKernel& owner;
+};
+
+CudaCalcGayBerneForceKernel::~CudaCalcGayBerneForceKernel() {
+    if (sortedParticles != NULL)
+        delete sortedParticles;
+    if (axisParticleIndices != NULL)
+        delete axisParticleIndices;
+    if (sigParams != NULL)
+        delete sigParams;
+    if (epsParams != NULL)
+        delete epsParams;
+    if (scale != NULL)
+        delete scale;
+    if (exceptionParticles != NULL)
+        delete exceptionParticles;
+    if (exceptionParams != NULL)
+        delete exceptionParams;
+    if (aMatrix != NULL)
+        delete aMatrix;
+    if (bMatrix != NULL)
+        delete bMatrix;
+    if (gMatrix != NULL)
+        delete gMatrix;
+    if (exclusions != NULL)
+        delete exclusions;
+    if (exclusionStartIndex != NULL)
+        delete exclusionStartIndex;
+    if (blockCenter != NULL)
+        delete blockCenter;
+    if (blockBoundingBox != NULL)
+        delete blockBoundingBox;
+    if (neighbors != NULL)
+        delete neighbors;
+    if (neighborIndex != NULL)
+        delete neighborIndex;
+    if (neighborBlockCount != NULL)
+        delete neighborBlockCount;
+    if (sortedPos != NULL)
+        delete sortedPos;
+    if (torque != NULL)
+        delete torque;
+}
+
+void CudaCalcGayBerneForceKernel::initialize(const System& system, const GayBerneForce& force) {
+    // Initialize interactions.
+
+    int numParticles = force.getNumParticles();
+    sigParams = CudaArray::create<float4>(cu, cu.getPaddedNumAtoms(), "sigParams");
+    epsParams = CudaArray::create<float2>(cu, cu.getPaddedNumAtoms(), "epsParams");
+    scale = CudaArray::create<float4>(cu, cu.getPaddedNumAtoms(), "scale");
+    axisParticleIndices = CudaArray::create<int2>(cu, cu.getPaddedNumAtoms(), "axisParticleIndices");
+    sortedParticles = CudaArray::create<int>(cu, cu.getPaddedNumAtoms(), "sortedParticles");
+    aMatrix = CudaArray::create<float>(cu, 9*cu.getPaddedNumAtoms(), "aMatrix");
+    bMatrix = CudaArray::create<float>(cu, 9*cu.getPaddedNumAtoms(), "bMatrix");
+    gMatrix = CudaArray::create<float>(cu, 9*cu.getPaddedNumAtoms(), "gMatrix");
+    vector<float4> sigParamsVector(cu.getPaddedNumAtoms(), make_float4(0, 0, 0, 0));
+    vector<float2> epsParamsVector(cu.getPaddedNumAtoms(), make_float2(0, 0));
+    vector<float4> scaleVector(cu.getPaddedNumAtoms(), make_float4(0, 0, 0, 0));
+    vector<int2> axisParticleVector(cu.getPaddedNumAtoms(), make_int2(0, 0));
+    isRealParticle.resize(cu.getPaddedNumAtoms());
+    for (int i = 0; i < numParticles; i++) {
+        int xparticle, yparticle;
+        double sigma, epsilon, sx, sy, sz, ex, ey, ez;
+        force.getParticleParameters(i, sigma, epsilon, xparticle, yparticle, sx, sy, sz, ex, ey, ez);
+        axisParticleVector[i] = make_int2(xparticle, yparticle);
+        sigParamsVector[i] = make_float4((float) (0.5*sigma), (float) (0.25*sx*sx), (float) (0.25*sy*sy), (float) (0.25*sz*sz));
+        epsParamsVector[i] = make_float2((float) sqrt(epsilon), (float) (0.125*(sx*sy + sz*sz)*sqrt(sx*sy)));
+        scaleVector[i] = make_float4((float) (1/sqrt(ex)), (float) (1/sqrt(ey)), (float) (1/sqrt(ez)), 0);
+        isRealParticle[i] = (epsilon != 0.0);
+    }
+    sigParams->upload(sigParamsVector);
+    epsParams->upload(epsParamsVector);
+    scale->upload(scaleVector);
+    axisParticleIndices->upload(axisParticleVector);
+    
+    // Record exceptions and exclusions.
+
+    vector<float2> exceptionParamsVec;
+    for (int i = 0; i < force.getNumExceptions(); i++) {
+        int particle1, particle2;
+        double sigma, epsilon;
+        force.getExceptionParameters(i, particle1, particle2, sigma, epsilon);
+        if (epsilon != 0.0) {
+            exceptionParamsVec.push_back(make_float2((float) sigma, (float) epsilon));
+            exceptionAtoms.push_back(make_pair(particle1, particle2));
+            isRealParticle[particle1] = true;
+            isRealParticle[particle2] = true;
+        }
+        if (isRealParticle[particle1] && isRealParticle[particle2])
+            excludedPairs.push_back(pair<int, int>(particle1, particle2));
+    }
+    numRealParticles = 0;
+    for (int i = 0; i < isRealParticle.size(); i++)
+        if (isRealParticle[i])
+            numRealParticles++;
+    numExceptions = exceptionParamsVec.size();
+    exclusions = CudaArray::create<int>(cu, max(1, (int) excludedPairs.size()), "exclusions");
+    exclusionStartIndex = CudaArray::create<int>(cu, numRealParticles+1, "exclusionStartIndex");
+    exceptionParticles = CudaArray::create<int4>(cu, max(1, numExceptions), "exceptionParticles");
+    exceptionParams = CudaArray::create<float2>(cu, max(1, numExceptions), "exceptionParams");
+    if (numExceptions > 0)
+        exceptionParams->upload(exceptionParamsVec);
+    
+    // Create data structures used for the neighbor list.
+
+    int numAtomBlocks = (numRealParticles+31)/32;
+    int elementSize = (cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
+    blockCenter = new CudaArray(cu, numAtomBlocks, 4*elementSize, "blockCenter");
+    blockBoundingBox = new CudaArray(cu, numAtomBlocks, 4*elementSize, "blockBoundingBox");
+    sortedPos = new CudaArray(cu, numRealParticles, 4*elementSize, "sortedPos");
+    maxNeighborBlocks = numRealParticles*2;
+    neighbors = CudaArray::create<int>(cu, maxNeighborBlocks*32, "neighbors");
+    neighborIndex = CudaArray::create<int>(cu, maxNeighborBlocks, "neighbors");
+    neighborBlockCount = CudaArray::create<int>(cu, 1, "neighborBlockCount");
+    if (force.getNonbondedMethod() != GayberneForce::NoCutoff)
+        CHECK_RESULT(cuEventCreate(&event, CU_EVENT_DISABLE_TIMING), "Error creating event for CustomManyParticleForce");
+
+    // Create array for accumulating torques.
+    
+    torque = CudaArray::create<long long>(cu, 3*cu.getPaddedNumAtoms(), "torque");
+    cu.addAutoclearBuffer(*torque);
+
+    // Create the kernels.
+    
+    nonbondedMethod = force.getNonbondedMethod();
+    bool useCutoff = (nonbondedMethod != GayBerneForce::NoCutoff);
+    bool usePeriodic = (nonbondedMethod == GayBerneForce::CutoffPeriodic);
+    map<string, string> defines;
+    defines["USE_SWITCH"] = (useCutoff && force.getUseSwitchingFunction() ? "1" : "0");
+    double cutoff = force.getCutoffDistance();
+    defines["CUTOFF_SQUARED"] = cu.doubleToString(cutoff*cutoff);
+    if (useCutoff) {
+        defines["USE_CUTOFF"] = 1;
+        if (usePeriodic)
+            defines["USE_PERIODIC"] = "1";
+        
+        // Compute the switching coefficients.
+        
+        if (force.getUseSwitchingFunction()) {
+            defines["SWITCH_CUTOFF"] = cu.doubleToString(force.getSwitchingDistance());
+            defines["SWITCH_C3"] = cu.doubleToString(10/pow(force.getSwitchingDistance()-cutoff, 3.0));
+            defines["SWITCH_C4"] = cu.doubleToString(15/pow(force.getSwitchingDistance()-cutoff, 4.0));
+            defines["SWITCH_C5"] = cu.doubleToString(6/pow(force.getSwitchingDistance()-cutoff, 5.0));
+        }
+    }
+    defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
+    CUmodule module = cu.createModule(CudakernelSources::vectorOps+CudaKernelSources::gayBerne, defines);
+    framesKernel = cu.getKernel(module, "computeEllipsoidFrames");
+    blockBoundsKernel = cu.getKernel(module, "findBlockBounds");
+    neighborsKernel = cu.getKernel(module, "findNeighbors");
+    forceKernel = cu.getKernel(module, "computeForce");
+    torqueKernel = cu.getKernel(module, "applyTorques");
+    cu.addForce(new CudaGayBerneForceInfo(force));
+    cu.addReorderListener(new ReorderListener(*this));
+}
+
+double CudaCalcGayBerneForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    if (!hasInitializedKernels) {
+        hasInitializedKernels = true;
+        sortAtoms();
+        framesArgs.push_back(&numRealParticles);
+        framesArgs.push_back(&cu.getPosq().getDevicePointer());
+        framesArgs.push_back(&axisParticleIndices->getDevicePointer());
+        framesArgs.push_back(&sigParams->getDevicePointer());
+        framesArgs.push_back(&scale->getDevicePointer());
+        framesArgs.push_back(&aMatrix->getDevicePointer());
+        framesArgs.push_back(&bMatrix->getDevicePointer());
+        framesArgs.push_back(&gMatrix->getDevicePointer());
+        framesArgs.push_back(&sortedParticles->getDevicePointer());
+        blockBoundsArgs.push_back(&numRealParticles);
+        blockBoundsArgs.push_back(cu.getPeriodicBoxSizePointer());
+        blockBoundsArgs.push_back(cu.getInvPeriodicBoxSizePointer());
+        blockBoundsArgs.push_back(cu.getPeriodicBoxVecXPointer());
+        blockBoundsArgs.push_back(cu.getPeriodicBoxVecYPointer());
+        blockBoundsArgs.push_back(cu.getPeriodicBoxVecZPointer());
+        blockBoundsArgs.push_back(&sortedParticles->getDevicePointer());
+        blockBoundsArgs.push_back(&cu.getPosq().getDevicePointer());
+        blockBoundsArgs.push_back(&sortedPos->getDevicePointer());
+        blockBoundsArgs.push_back(&blockCenter->getDevicePointer());
+        blockBoundsArgs.push_back(&blockBoundingBox->getDevicePointer());
+        blockBoundsArgs.push_back(&neighborBlockCount->getDevicePointer());
+        neighborsArgs.push_back(&numRealParticles);
+        neighborsArgs.push_back(&maxNeighborBlocks);
+        neighborsArgs.push_back(cu.getPeriodicBoxSizePointer());
+        neighborsArgs.push_back(cu.getInvPeriodicBoxSizePointer());
+        neighborsArgs.push_back(cu.getPeriodicBoxVecXPointer());
+        neighborsArgs.push_back(cu.getPeriodicBoxVecYPointer());
+        neighborsArgs.push_back(cu.getPeriodicBoxVecZPointer());
+        neighborsArgs.push_back(&sortedPos->getDevicePointer());
+        neighborsArgs.push_back(&blockCenter->getDevicePointer());
+        neighborsArgs.push_back(&blockBoundingBox->getDevicePointer());
+        neighborsArgs.push_back(&neighbors->getDevicePointer());
+        neighborsArgs.push_back(&neighborIndex->getDevicePointer());
+        neighborsArgs.push_back(&neighborBlockCount->getDevicePointer());
+        neighborsArgs.push_back(&exclusions->getDevicePointer());
+        neighborsArgs.push_back(&exclusionStartIndex->getDevicePointer());
+        forceArgs.push_back(&cu.getLongForceBuffer().getDevicePointer());
+        forceArgs.push_back(&torque->getDevicePointer());
+        forceArgs.push_back(&numRealParticles);
+        forceArgs.push_back(&numExceptions);
+        forceArgs.push_back(&cu.getEnergyBuffer().getDevicePointer());
+        forceArgs.push_back(&sortedPos->getDevicePointer());
+        forceArgs.push_back(&sigParams->getDevicePointer());
+        forceArgs.push_back(&epsParams->getDevicePointer());
+        forceArgs.push_back(&sortedParticles->getDevicePointer());
+        forceArgs.push_back(&aMatrix->getDevicePointer());
+        forceArgs.push_back(&bMatrix->getDevicePointer());
+        forceArgs.push_back(&gMatrix->getDevicePointer());
+        forceArgs.push_back(&exclusions->getDevicePointer());
+        forceArgs.push_back(&exclusionStartIndex->getDevicePointer());
+        forceArgs.push_back(&exceptionParticles->getDevicePointer());
+        forceArgs.push_back(&exceptionParams->getDevicePointer());
+        if (nonbondedMethod != GayBerneForce::NoCutoff) {
+            forceArgs.push_back(&maxNeighborBlocks);
+            forceArgs.push_back(&neighbors->getDevicePointer());
+            forceArgs.push_back(&neighborIndex->getDevicePointer());
+            forceArgs.push_back(&neighborBlockCount->getDevicePointer());
+            forceArgs.push_back(cu.getPeriodicBoxSizePointer());
+            forceArgs.push_back(cu.getInvPeriodicBoxSizePointer());
+            forceArgs.push_back(cu.getPeriodicBoxVecXPointer());
+            forceArgs.push_back(cu.getPeriodicBoxVecYPointer());
+            forceArgs.push_back(cu.getPeriodicBoxVecZPointer());
+        }
+        torqueArgs.push_back(&cu.getLongForceBuffer().getDevicePointer());
+        torqueArgs.push_back(&torque->getDevicePointer());
+        torqueArgs.push_back(&numRealParticles);
+        torqueArgs.push_back(&cu.getPosq().getDevicePointer());
+        torqueArgs.push_back(&axisParticleIndices->getDevicePointer());
+        torqueArgs.push_back(&sortedParticles->getDevicePointer());
+    }
+    cu.executeKernel(framesKernel, &framesArgs[0], numRealParticles);
+    cu.executeKernel(blockBoundsKernel, &blockBoundsArgs[0], (numRealParticles+31)/32);
+    if (nonbondedMethod == GayBerneForce::NoCutoff) {
+        cu.executeKernel(forceKernel, &forceArgs[0], cu.getNonbondedUtilities().getNumForceThreadBlocks()*cu.getNonbondedUtilities().getForceThreadBlockSize());
+    }
+    else {
+        while (true) {
+            cu.executeKernel(neighborsKernel, &neighborsArgs[0], numRealParticles);
+            int* count = (int*) cu.getPinnedBuffer();
+            neighborBlockCount->download(count, false);
+            cu.executeKernel(forceKernel, &forceArgs[0], cu.getNonbondedUtilities().getNumForceThreadBlocks()*cu.getNonbondedUtilities().getForceThreadBlockSize());
+            CHECK_RESULT(cuEventSynchronize(event), "Error synchronizing on event for GayBerneForce");
+            if (*count <= maxNeighborBlocks)
+                break;
+            
+            // There wasn't enough room for the neighbor list, so we need to recreate it.
+
+            delete neighbors;
+            neighbors = NULL;
+            delete neighborIndex;
+            neighborIndex = NULL;
+            maxNeighborBlocks = (int) ceil((*count)*1.1);
+            neighbors = CudaArray::create<int>(cu, maxNeighborBlocks*32, "neighbors");
+            neighborIndex = CudaArray::create<int>(cu, maxNeighborBlocks, "neighbors");
+            neighborsArgs[10] = &neighbors->getDevicePointer();
+            neighborsArgs[11] = &neighborIndex->getDevicePointer();
+            forceArgs[17] = &neighbors->getDevicePointer();
+            forceArgs[18] = &neighborIndex->getDevicePointer();
+        }
+    }
+    cu.executeKernel(torqueKernel, &torqueArgs[0], numRealParticles);
+    return 0.0;
+}
+
+void CudaCalcGayBerneForceKernel::copyParametersToContext(ContextImpl& context, const GayBerneForce& force) {
+    // Make sure the new parameters are acceptable.
+    
+    if (force.getNumParticles() != cu.getNumAtoms())
+        throw OpenMMException("updateParametersInContext: The number of particles has changed");
+    vector<int> exceptions;
+    for (int i = 0; i < force.getNumExceptions(); i++) {
+        int particle1, particle2;
+        double sigma, epsilon;
+        force.getExceptionParameters(i, particle1, particle2, sigma, epsilon);
+        if (exceptionAtoms.size() > exceptions.size() && make_pair(particle1, particle2) == exceptionAtoms[exceptions.size()])
+            exceptions.push_back(i);
+        else if (epsilon != 0.0)
+            throw OpenMMException("updateParametersInContext: The set of non-excluded exceptions has changed");
+    }
+    int numExceptions = exceptionAtoms.size();
+    
+    // Record the per-particle parameters.
+    
+    vector<float4> sigParamsVector(cu.getPaddedNumAtoms(), make_float4(0, 0, 0, 0));
+    vector<float2> epsParamsVector(cu.getPaddedNumAtoms(), make_float2(0, 0));
+    vector<float4> scaleVector(cu.getPaddedNumAtoms(), make_float4(0, 0, 0, 0));
+    for (int i = 0; i < force.getNumParticles(); i++) {
+        int xparticle, yparticle;
+        double sigma, epsilon, sx, sy, sz, ex, ey, ez;
+        force.getParticleParameters(i, sigma, epsilon, xparticle, yparticle, sx, sy, sz, ex, ey, ez);
+        sigParamsVector[i] = make_float4((float) (0.5*sigma), (float) (0.25*sx*sx), (float) (0.25*sy*sy), (float) (0.25*sz*sz));
+        epsParamsVector[i] = make_float2((float) sqrt(epsilon), (float) (0.125*(sx*sy + sz*sz)*sqrt(sx*sy)));
+        scaleVector[i] = make_float4((float) (1/sqrt(ex)), (float) (1/sqrt(ey)), (float) (1/sqrt(ez)), 0);
+        if (epsilon != 0.0 && !isRealParticle[i])
+            throw OpenMMException("updateParametersInContext: The set of ignored particles (ones with epsilon=0) has changed");
+    }
+    sigParams->upload(sigParamsVector);
+    epsParams->upload(epsParamsVector);
+    scale->upload(scaleVector);
+    
+    // Record the exceptions.
+    
+    if (numExceptions > 0) {
+        vector<float2> exceptionParamsVec(numExceptions);
+        for (int i = 0; i < numExceptions; i++) {
+            int atom1, atom2;
+            double sigma, epsilon;
+            force.getExceptionParameters(exceptions[i], atom1, atom2, sigma, epsilon);
+            exceptionParamsVec[i] = make_float2((float) sigma, (float) epsilon);
+        }
+        exceptionParams->upload(exceptionParamsVec);
+    }
+    cu.invalidateMolecules();
+    sortAtoms();
+}
+
+void CudaCalcGayBerneForceKernel::sortAtoms() {
+    // Sort the list of atoms by type to avoid thread divergence.  This is executed every time
+    // the atoms are reordered.
+    
+    int nextIndex = 0;
+    vector<int> particles(cu.getPaddedNumAtoms(), 0);
+    const vector<int>& order = cu.getAtomIndex();
+    vector<int> inverseOrder(order.size(), -1);
+    for (int i = 0; i < cu.getNumAtoms(); i++) {
+        int atom = order[i];
+        if (isRealParticle[atom]) {
+            inverseOrder[atom] = nextIndex;
+            particles[nextIndex++] = atom;
+        }
+    }
+    sortedParticles->upload(particles);
+    
+    // Update the list of exception particles.
+    
+    int numExceptions = exceptionAtoms.size();
+    if (numExceptions > 0) {
+        vector<int4> exceptionParticlesVec(numExceptions);
+        for (int i = 0; i < numExceptions; i++)
+            exceptionParticlesVec[i] = make_int4(exceptionAtoms[i].first, exceptionAtoms[i].second, inverseOrder[exceptionAtoms[i].first], inverseOrder[exceptionAtoms[i].second]);
+        exceptionParticles->upload(exceptionParticlesVec);
+    }
+    
+    // Rebuild the list of exclusions.
+    
+    vector<vector<int> > excludedAtoms(numRealParticles);
+    for (int i = 0; i < excludedPairs.size(); i++) {
+        int first = inverseOrder[min(excludedPairs[i].first, excludedPairs[i].second)];
+        int second = inverseOrder[max(excludedPairs[i].first, excludedPairs[i].second)];
+        excludedAtoms[first].push_back(second);
+    }
+    int index = 0;
+    vector<int> exclusionVec(exclusions->getSize());
+    vector<int> startIndexVec(exclusionStartIndex->getSize());
+    for (int i = 0; i < numRealParticles; i++) {
+        startIndexVec[i] = index;
+        for (int j = 0; j < excludedAtoms[i].size(); j++)
+            exclusionVec[index++] = excludedAtoms[i][j];
+    }
+    startIndexVec[numRealParticles] = index;
+    exclusions->upload(exclusionVec);
+    exclusionStartIndex->upload(startIndexVec);
+}
+
 CudaIntegrateVerletStepKernel::~CudaIntegrateVerletStepKernel() {
 }
 
