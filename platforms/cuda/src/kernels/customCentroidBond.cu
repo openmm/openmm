@@ -111,10 +111,12 @@ extern "C" __global__ void computeGroupForces(unsigned long long* __restrict__ g
         const int* __restrict__ bondGroups, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ
         EXTRA_ARGS) {
     mixed energy = 0;
+    INIT_PARAM_DERIVS
     for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_BONDS; index += blockDim.x*gridDim.x) {
         COMPUTE_FORCE
     }
     energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += energy;
+    SAVE_PARAM_DERIVS
 }
 
 /**

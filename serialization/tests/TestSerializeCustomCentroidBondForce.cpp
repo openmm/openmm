@@ -46,6 +46,7 @@ void testSerialization() {
     force.addGlobalParameter("x", 1.3);
     force.addGlobalParameter("y", 2.221);
     force.addPerBondParameter("z");
+    force.addEnergyParameterDerivative("y");
     for (int i = 0; i < 3; i++) {
         vector<int> particles;
         vector<double> weights;
@@ -99,6 +100,9 @@ void testSerialization() {
         ASSERT_EQUAL(force.getGlobalParameterName(i), force2.getGlobalParameterName(i));
         ASSERT_EQUAL(force.getGlobalParameterDefaultValue(i), force2.getGlobalParameterDefaultValue(i));
     }
+    ASSERT_EQUAL(force.getNumEnergyParameterDerivatives(), force2.getNumEnergyParameterDerivatives());
+    for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++)
+        ASSERT_EQUAL(force.getEnergyParameterDerivativeName(i), force2.getEnergyParameterDerivativeName(i));
     ASSERT_EQUAL(force.usesPeriodicBoundaryConditions(), force2.usesPeriodicBoundaryConditions());
     ASSERT_EQUAL(force.getNumGroups(), force2.getNumGroups());
     for (int i = 0; i < force.getNumGroups(); i++) {

@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2014 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2016 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -27,9 +27,9 @@
 
 #include "AlignedArray.h"
 #include "CpuNeighborList.h"
+#include "openmm/internal/CompiledExpressionSet.h"
 #include "openmm/internal/ThreadPool.h"
 #include "openmm/internal/vectorize.h"
-#include "lepton/CompiledExpression.h"
 #include <map>
 #include <set>
 #include <utility>
@@ -47,7 +47,8 @@ class CpuCustomNonbondedForce {
          --------------------------------------------------------------------------------------- */
 
        CpuCustomNonbondedForce(const Lepton::CompiledExpression& energyExpression, const Lepton::CompiledExpression& forceExpression,
-                                   const std::vector<std::string>& parameterNames, const std::vector<std::set<int> >& exclusions, ThreadPool& threads);
+                               const std::vector<std::string>& parameterNames, const std::vector<std::set<int> >& exclusions,
+                               const std::vector<Lepton::CompiledExpression> energyParamDerivExpressions, ThreadPool& threads);
 
       /**---------------------------------------------------------------------------------------
 
@@ -119,7 +120,7 @@ class CpuCustomNonbondedForce {
 
     void calculatePairIxn(int numberOfAtoms, float* posq, std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** atomParameters,
                           RealOpenMM* fixedParameters, const std::map<std::string, double>& globalParameters,
-                          std::vector<AlignedArray<float> >& threadForce, bool includeForce, bool includeEnergy, double& totalEnergy);
+                          std::vector<AlignedArray<float> >& threadForce, bool includeForce, bool includeEnergy, double& totalEnergy, double* energyParamDerivs);
 private:
     class ComputeForceTask;
     class ThreadData;
@@ -176,13 +177,15 @@ private:
 
 class CpuCustomNonbondedForce::ThreadData {
 public:
-    ThreadData(const Lepton::CompiledExpression& energyExpression, const Lepton::CompiledExpression& forceExpression, const std::vector<std::string>& parameterNames);
+    ThreadData(const Lepton::CompiledExpression& energyExpression, const Lepton::CompiledExpression& forceExpression, const std::vector<std::string>& parameterNames,
+            const std::vector<Lepton::CompiledExpression> energyParamDerivExpressions);
     Lepton::CompiledExpression energyExpression;
     Lepton::CompiledExpression forceExpression;
-    std::vector<double*> energyParticleParams;
-    std::vector<double*> forceParticleParams;
-    double* energyR;
-    double* forceR;
+    std::vector<Lepton::CompiledExpression> energyParamDerivExpressions;
+    CompiledExpressionSet expressionSet;
+    std::vector<int> particleParamIndex;
+    int rIndex;
+    std::vector<RealOpenMM> energyParamDerivs; 
 };
 
 } // namespace OpenMM

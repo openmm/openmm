@@ -108,10 +108,9 @@ else(SWIG_EXECUTABLE)
     set(SWIG_VERSION "0.0.0" CACHE STRING "Swig version" FORCE)
 endif(SWIG_EXECUTABLE)
 # Enforce swig version
-string(COMPARE LESS "${SWIG_VERSION}" "3.0.5" SWIG_VERSION_ERROR)
-if(SWIG_VERSION_ERROR)
-    message("Swig version must be 3.0.5 or greater! (You have ${SWIG_VERSION})")
-endif(SWIG_VERSION_ERROR)
+if(SWIG_VERSION VERSION_LESS "3.0.5")
+    message(SEND_ERROR "Swig version must be 3.0.5 or greater! (You have ${SWIG_VERSION})")
+endif(SWIG_VERSION VERSION_LESS "3.0.5")
 
 find_package(Doxygen REQUIRED)
 mark_as_advanced(CLEAR DOXYGEN_EXECUTABLE)

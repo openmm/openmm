@@ -345,8 +345,11 @@ class Modeller(object):
         elif padding is not None:
             if is_quantity(padding):
                 padding = padding.value_in_unit(nanometer)
-            maxSize = max(max((pos[i] for pos in self.positions))-min((pos[i] for pos in self.positions)) for i in range(3))
-            maxSize = maxSize.value_in_unit(nanometer)
+            if len(self.positions) == 0:
+                maxSize = 0
+            else:
+                maxSize = max(max((pos[i] for pos in self.positions))-min((pos[i] for pos in self.positions)) for i in range(3))
+                maxSize = maxSize.value_in_unit(nanometer)
             box = (maxSize+2*padding)*Vec3(1, 1, 1)
             vectors = (Vec3(maxSize+2*padding, 0, 0), Vec3(0, maxSize+2*padding, 0), Vec3(0, 0, maxSize+2*padding))
         else:

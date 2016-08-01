@@ -38,20 +38,19 @@ using namespace OpenMM;
    --------------------------------------------------------------------------------------- */
 
 ReferenceCustomTorsionIxn::ReferenceCustomTorsionIxn(const Lepton::CompiledExpression& energyExpression,
-        const Lepton::CompiledExpression& forceExpression, const vector<string>& parameterNames, map<string, double> globalParameters) :
-        energyExpression(energyExpression), forceExpression(forceExpression), usePeriodic(false) {
-
-    energyTheta = ReferenceForce::getVariablePointer(this->energyExpression, "theta");
-    forceTheta = ReferenceForce::getVariablePointer(this->forceExpression, "theta");
+        const Lepton::CompiledExpression& forceExpression, const vector<string>& parameterNames, map<string, double> globalParameters,
+        const vector<Lepton::CompiledExpression> energyParamDerivExpressions) :
+        energyExpression(energyExpression), forceExpression(forceExpression), usePeriodic(false), energyParamDerivExpressions(energyParamDerivExpressions) {
+    expressionSet.registerExpression(this->energyExpression);
+    expressionSet.registerExpression(this->forceExpression);
+    for (int i = 0; i < this->energyParamDerivExpressions.size(); i++)
+        expressionSet.registerExpression(this->energyParamDerivExpressions[i]);
+    thetaIndex = expressionSet.getVariableIndex("theta");
     numParameters = parameterNames.size();
-    for (int i = 0; i < (int) numParameters; i++) {
-        energyParams.push_back(ReferenceForce::getVariablePointer(this->energyExpression, parameterNames[i]));
-        forceParams.push_back(ReferenceForce::getVariablePointer(this->forceExpression, parameterNames[i]));
-    }
-    for (map<string, double>::const_iterator iter = globalParameters.begin(); iter != globalParameters.end(); ++iter) {
-        ReferenceForce::setVariable(ReferenceForce::getVariablePointer(this->energyExpression, iter->first), iter->second);
-        ReferenceForce::setVariable(ReferenceForce::getVariablePointer(this->forceExpression, iter->first), iter->second);
-    }
+    for (int i = 0; i < (int) numParameters; i++)
+        torsionParamIndex.push_back(expressionSet.getVariableIndex(parameterNames[i]));
+    for (map<string, double>::const_iterator iter = globalParameters.begin(); iter != globalParameters.end(); ++iter)
+        expressionSet.setVariable(expressionSet.getVariableIndex(iter->first), iter->second);
 }
 
 /**---------------------------------------------------------------------------------------
@@ -86,18 +85,10 @@ void ReferenceCustomTorsionIxn::calculateBondIxn(int* atomIndices,
                                                 vector<RealVec>& atomCoordinates,
                                                 RealOpenMM* parameters,
                                                 vector<RealVec>& forces,
-                                                RealOpenMM* totalEnergy) const {
-
-   static const std::string methodName = "\nReferenceCustomTorsionIxn::calculateTorsionIxn";
-
-   static const RealOpenMM zero        = 0.0;
-   static const RealOpenMM one         = 1.0;
-
+                                                RealOpenMM* totalEnergy, double* energyParamDerivs) {
    RealOpenMM deltaR[3][ReferenceForce::LastDeltaRIndex];
-   for (int i = 0; i < numParameters; i++) {
-       ReferenceForce::setVariable(energyParams[i], parameters[i]);
-       ReferenceForce::setVariable(forceParams[i], parameters[i]);
-   }
+   for (int i = 0; i < numParameters; i++)
+       expressionSet.setVariable(torsionParamIndex[i], parameters[i]);
 
    // ---------------------------------------------------------------------------------------
 
@@ -130,8 +121,7 @@ void ReferenceCustomTorsionIxn::calculateBondIxn(int* atomIndices,
    RealOpenMM dotDihedral;
    RealOpenMM signOfAngle;
    RealOpenMM angle = getDihedralAngleBetweenThreeVectors(deltaR[0], deltaR[1], deltaR[2], crossProduct, &dotDihedral, deltaR[0], &signOfAngle, 1);
-   ReferenceForce::setVariable(energyTheta, angle);
-   ReferenceForce::setVariable(forceTheta, angle);
+   expressionSet.setVariable(thetaIndex, angle);
 
    // evaluate delta angle, dE/d(angle)
 
@@ -173,6 +163,11 @@ void ReferenceCustomTorsionIxn::calculateBondIxn(int* atomIndices,
       forces[atomCIndex][ii] -= internalF[2][ii];
       forces[atomDIndex][ii] += internalF[3][ii];
    }
+
+   // Record parameter derivatives.
+
+   for (int i = 0; i < energyParamDerivExpressions.size(); i++)
+       energyParamDerivs[i] += energyParamDerivExpressions[i].evaluate();
 
    // accumulate energies
 

@@ -21,6 +21,9 @@ Representation and Manipulation
     :template: class.rst
 
     ~simtk.openmm.app.topology.Topology
+    ~simtk.openmm.app.topology.Chain
+    ~simtk.openmm.app.topology.Residue
+    ~simtk.openmm.app.topology.Atom
     ~simtk.openmm.app.modeller.Modeller
 
 Simulation
@@ -52,4 +55,15 @@ Extras
 
     {% for extra in app_extras %}
     ~{{ extra }}
+    {% endfor %}
+
+Units
+~~~~~~
+.. autosummary::
+    :toctree: generated/
+    :template: class.rst
+    :nosignatures:
+
+    {% for unit in units %}
+    ~{{ unit }}
     {% endfor %}

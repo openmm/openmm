@@ -63,6 +63,10 @@ namespace OpenMM {
  * force->addPerBondParameter("k");
  * force->addPerBondParameter("r0");
  * </pre></tt>
+ * 
+ * This class also has the ability to compute derivatives of the potential energy with respect to global parameters.
+ * Call addEnergyParameterDerivative() to request that the derivative with respect to a particular parameter be
+ * computed.  You can then query its value in a Context by calling getState() on it.
  *
  * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
  * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs, floor, ceil, step, delta, select.  All trigonometric functions
@@ -96,6 +100,13 @@ public:
      */
     int getNumGlobalParameters() const {
         return globalParameters.size();
+    }
+    /**
+     * Get the number of global parameters with respect to which the derivative of the energy
+     * should be computed.
+     */
+    int getNumEnergyParameterDerivatives() const {
+        return energyParameterDerivatives.size();
     }
     /**
      * Get the algebraic expression that gives the interaction energy for each bond
@@ -163,6 +174,21 @@ public:
      */
     void setGlobalParameterDefaultValue(int index, double defaultValue);
     /**
+     * Request that this Force compute the derivative of its energy with respect to a global parameter.
+     * The parameter must have already been added with addGlobalParameter().
+     *
+     * @param name             the name of the parameter
+     */
+    void addEnergyParameterDerivative(const std::string& name);
+    /**
+     * Get the name of a global parameter with respect to which this Force should compute the
+     * derivative of the energy.
+     *
+     * @param index     the index of the parameter derivative, between 0 and getNumEnergyParameterDerivatives()
+     * @return the parameter name
+     */
+    const std::string& getEnergyParameterDerivativeName(int index) const;
+    /**
      * Add a bond term to the force field.
      *
      * @param particle1     the index of the first particle connected by the bond
@@ -222,6 +248,7 @@ private:
     std::vector<BondParameterInfo> parameters;
     std::vector<GlobalParameterInfo> globalParameters;
     std::vector<BondInfo> bonds;
+    std::vector<int> energyParameterDerivatives;
     bool usePeriodic;
 };
 

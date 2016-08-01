@@ -148,10 +148,33 @@ public:
     void setCutoffDistance(double distance);
 
     /**
+     * Get the parameters to use for PME calculations.  If alpha is 0 (the default), these parameters are
+     * ignored and instead their values are chosen based on the Ewald error tolerance.
+     *
+     * @param[out] alpha   the separation parameter
+     * @param[out] nx      the number of grid points along the X axis
+     * @param[out] ny      the number of grid points along the Y axis
+     * @param[out] nz      the number of grid points along the Z axis
+     */
+    void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
+
+    /**
+     * Set the parameters to use for PME calculations.  If alpha is 0 (the default), these parameters are
+     * ignored and instead their values are chosen based on the Ewald error tolerance.
+     *
+     * @param alpha   the separation parameter
+     * @param nx      the number of grid points along the X axis
+     * @param ny      the number of grid points along the Y axis
+     * @param nz      the number of grid points along the Z axis
+     */
+    void setPMEParameters(double alpha, int nx, int ny, int nz);
+
+    /**
      * Get the Ewald alpha parameter.  If this is 0 (the default), a value is chosen automatically
      * based on the Ewald error tolerance.
      *
      * @return the Ewald alpha parameter
+     * @deprecated This method exists only for backward compatibility.  Use getPMEParameters() instead.
      */
     double getAEwald() const;
 
@@ -160,6 +183,7 @@ public:
      * based on the Ewald error tolerance.
      *
      * @param aewald alpha parameter
+     * @deprecated This method exists only for backward compatibility.  Use setPMEParameters() instead.
      */
     void setAEwald(double aewald);
 
@@ -175,6 +199,7 @@ public:
      * are chosen automatically based on the Ewald error tolerance.
      *
      * @return the PME grid dimensions
+     * @deprecated This method exists only for backward compatibility.  Use getPMEParameters() instead.
      */
     void getPmeGridDimensions(std::vector<int>& gridDimension) const;
 
@@ -183,6 +208,7 @@ public:
      * are chosen automatically based on the Ewald error tolerance.
      *
      * @param gridDimension   the PME grid dimensions
+     * @deprecated This method exists only for backward compatibility.  Use setPMEParameters() instead.
      */
     void setPmeGridDimensions(const std::vector<int>& gridDimension);
 
@@ -344,7 +370,13 @@ public:
      * This can be overridden by explicitly setting an alpha parameter and grid dimensions to use.
      */
     void setEwaldErrorTolerance(double tol);
-
+    /**
+     * Get the fixed dipole moments of all particles in the global reference frame.
+     *
+     * @param context         the Context for which to get the fixed dipoles
+     * @param[out] dipoles    the fixed dipole moment of particle i is stored into the i'th element
+     */
+    void getLabFramePermanentDipoles(Context& context, std::vector<Vec3>& dipoles);
     /**
      * Get the induced dipole moments of all particles.
      *
@@ -352,6 +384,14 @@ public:
      * @param[out] dipoles    the induced dipole moment of particle i is stored into the i'th element
      */
     void getInducedDipoles(Context& context, std::vector<Vec3>& dipoles);
+
+    /**
+     * Get the total dipole moments (fixed plus induced) of all particles.
+     *
+     * @param context         the Context for which to get the total dipoles
+     * @param[out] dipoles    the total dipole moment of particle i is stored into the i'th element
+     */
+    void getTotalDipoles(Context& context, std::vector<Vec3>& dipoles);
 
     /**
      * Get the electrostatic potential.
@@ -408,9 +448,8 @@ private:
     NonbondedMethod nonbondedMethod;
     PolarizationType polarizationType;
     double cutoffDistance;
-    double aewald;
-    int pmeBSplineOrder;
-    std::vector<int> pmeGridDimension;
+    double alpha;
+    int pmeBSplineOrder, nx, ny, nz;
     int mutualInducedMaxIterations;
     std::vector<double> extrapolationCoefficients;
 

@@ -174,6 +174,12 @@ public:
      */
     virtual void getForces(ContextImpl& context, std::vector<Vec3>& forces) = 0;
     /**
+     * Get the current derivatives of the energy with respect to context parameters.
+     *
+     * @param derivs  on exit, this contains the derivatives
+     */
+    virtual void getEnergyParameterDerivatives(ContextImpl& context, std::map<std::string, double>& derivs) = 0;
+    /**
      * Get the current periodic box vectors.
      *
      * @param a      on exit, this contains the vector defining the first edge of the periodic box

@@ -7,7 +7,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -1041,6 +1041,84 @@ void testIllegalVariable() {
     ASSERT(threwException);
 }
 
+void testEnergyParameterDerivatives() {
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    VerletIntegrator integrator(0.01);
+    CustomNonbondedForce* nonbonded = new CustomNonbondedForce("k*(r-r0)^2");
+    nonbonded->addGlobalParameter("r0", 0.0);
+    nonbonded->addGlobalParameter("k", 0.0);
+    nonbonded->addEnergyParameterDerivative("k");
+    nonbonded->addEnergyParameterDerivative("r0");
+    vector<double> parameters;
+    nonbonded->addParticle(parameters);
+    nonbonded->addParticle(parameters);
+    nonbonded->addParticle(parameters);
+    nonbonded->addExclusion(0, 2);
+    system.addForce(nonbonded);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(3);
+    positions[0] = Vec3(0, 2, 0);
+    positions[1] = Vec3(0, 0, 0);
+    positions[2] = Vec3(1, 0, 0);
+    context.setPositions(positions);
+    for (int i = 0; i < 10; i++) {
+        double r0 = 0.1*i;
+        double k = 10-i;
+        context.setParameter("r0", r0);
+        context.setParameter("k", k);
+        State state = context.getState(State::ParameterDerivatives);
+        map<string, double> derivs = state.getEnergyParameterDerivatives();
+        double dEdr0 = -2*k*((2-r0)+(1-r0));
+        double dEdk = (2-r0)*(2-r0) + (1-r0)*(1-r0);
+        ASSERT_EQUAL_TOL(dEdr0, derivs["r0"], 1e-5);
+        ASSERT_EQUAL_TOL(dEdk, derivs["k"], 1e-5);
+    }
+}
+
+void testEnergyParameterDerivatives2() {
+    // Create a box of particles.
+    
+    const int numParticles = 30;
+    const double boxSize = 2.0;
+    const double a = 1.0;
+    const double delta = 1e-3;
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    CustomNonbondedForce* nonbonded = new CustomNonbondedForce("(r+a)^-4");
+    system.addForce(nonbonded);
+    nonbonded->addGlobalParameter("a", a);
+    nonbonded->addEnergyParameterDerivative("a");
+    nonbonded->setNonbondedMethod(CustomNonbondedForce::CutoffPeriodic);
+    nonbonded->setCutoffDistance(1.0);
+    nonbonded->setSwitchingDistance(0.9);
+    nonbonded->setUseSwitchingFunction(true);
+    nonbonded->setUseLongRangeCorrection(true);
+    vector<Vec3> positions;
+    vector<double> parameters;
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(1.0);
+        nonbonded->addParticle(parameters);
+        positions.push_back(Vec3(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt))*boxSize);
+    }
+    
+    // Compute the energy derivative and compare it to a finite difference approximation.
+    
+    VerletIntegrator integrator(0.01);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    map<string, double> derivs = context.getState(State::ParameterDerivatives).getEnergyParameterDerivatives();
+    context.setParameter("a", a+delta);
+    double energy1 = context.getState(State::Energy).getPotentialEnergy();
+    context.setParameter("a", a-delta);
+    double energy2 = context.getState(State::Energy).getPotentialEnergy();
+    ASSERT_EQUAL_TOL((energy1-energy2)/(2*delta), derivs["a"], 1e-4);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -1067,6 +1145,8 @@ int main(int argc, char* argv[]) {
         testInteractionGroupTabulatedFunction();
         testMultipleCutoffs();
         testIllegalVariable();
+        testEnergyParameterDerivatives();
+        testEnergyParameterDerivatives2();
         runPlatformTests();
     }
     catch(const exception& e) {

@@ -36,6 +36,7 @@
 #include <cmath>
 #include <sstream>
 #include <vector>
+#include <algorithm>
 
 using namespace OpenMM;
 using namespace std;
@@ -108,7 +109,7 @@ void LocalEnergyMinimizer::minimize(Context& context, double tolerance, int maxI
     if (x == NULL)
         throw OpenMMException("LocalEnergyMinimizer: Failed to allocate memory");
     double constraintTol = context.getIntegrator().getConstraintTolerance();
-    double workingConstraintTol = max(1e-4, constraintTol);
+    double workingConstraintTol = std::max(1e-4, constraintTol);
     double k = tolerance/workingConstraintTol;
 
     // Initialize the minimizer.

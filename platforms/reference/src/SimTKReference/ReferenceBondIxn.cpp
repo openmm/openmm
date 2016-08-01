@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2009 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2016 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -78,7 +78,7 @@ ReferenceBondIxn::~ReferenceBondIxn() {
      
    void ReferenceBondIxn::calculateBondIxn(int* atomIndices, vector<RealVec>& atomCoordinates,
                                            RealOpenMM* parameters, vector<RealVec>& forces,
-                                           RealOpenMM* totalEnergy) const {
+                                           RealOpenMM* totalEnergy, double* energyParamDerivs) {
    // ---------------------------------------------------------------------------------------
 
    // static const std::string methodName = "\nReferenceBondIxn::calculateBondIxn";

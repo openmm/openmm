@@ -36,6 +36,7 @@
 #include "openmm/internal/ContextImpl.h"
 #include "SimTKOpenMMRealType.h"
 #include "RealVec.h"
+#include <map>
 #include <vector>
 
 using namespace OpenMM;
@@ -100,6 +101,7 @@ ReferencePlatform::PlatformData::PlatformData(const System& system) : time(0.0),
     periodicBoxSize = new RealVec();
     periodicBoxVectors = new RealVec[3];
     constraints = new ReferenceConstraints(system);
+    energyParameterDerivatives = new map<string, double>();
 }
 
 ReferencePlatform::PlatformData::~PlatformData() {
@@ -109,4 +111,5 @@ ReferencePlatform::PlatformData::~PlatformData() {
     delete (RealVec*) periodicBoxSize;
     delete[] (RealVec*) periodicBoxVectors;
     delete (ReferenceConstraints*) constraints;
+    delete (map<string, double>*) energyParameterDerivatives;
 }

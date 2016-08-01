@@ -76,7 +76,7 @@ bool CudaContext::hasInitializedCuda = false;
 CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlockingSync, const string& precision, const string& compiler,
         const string& tempDir, const std::string& hostCompiler, CudaPlatform::PlatformData& platformData) : system(system), currentStream(0),
         time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), stepsSinceReorder(99999), contextIsValid(false), atomsWereReordered(false), hasCompilerKernel(false),
-        pinnedBuffer(NULL), posq(NULL), posqCorrection(NULL), velm(NULL), force(NULL), energyBuffer(NULL), atomIndexDevice(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
+        pinnedBuffer(NULL), posq(NULL), posqCorrection(NULL), velm(NULL), force(NULL), energyBuffer(NULL), energyParamDerivBuffer(NULL), atomIndexDevice(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
     this->compiler = "\""+compiler+"\"";
     if (platformData.context != NULL) {
         try {
@@ -339,6 +339,8 @@ CudaContext::~CudaContext() {
         delete force;
     if (energyBuffer != NULL)
         delete energyBuffer;
+    if (energyParamDerivBuffer != NULL)
+        delete energyParamDerivBuffer;
     if (atomIndexDevice != NULL)
         delete atomIndexDevice;
     if (integration != NULL)
@@ -390,6 +392,14 @@ void CudaContext::initialize() {
     force = CudaArray::create<long long>(*this, paddedNumAtoms*3, "force");
     addAutoclearBuffer(force->getDevicePointer(), force->getSize()*force->getElementSize());
     addAutoclearBuffer(energyBuffer->getDevicePointer(), energyBuffer->getSize()*energyBuffer->getElementSize());
+    int numEnergyParamDerivs = energyParamDerivNames.size();
+    if (numEnergyParamDerivs > 0) {
+        if (useDoublePrecision || useMixedPrecision)
+            energyParamDerivBuffer = CudaArray::create<double>(*this, numEnergyParamDerivs*numEnergyBuffers, "energyParamDerivBuffer");
+        else
+            energyParamDerivBuffer = CudaArray::create<float>(*this, numEnergyParamDerivs*numEnergyBuffers, "energyParamDerivBuffer");
+        addAutoclearBuffer(*energyParamDerivBuffer);
+    }
     atomIndexDevice = CudaArray::create<int>(*this, paddedNumAtoms, "atomIndex");
     atomIndex.resize(paddedNumAtoms);
     for (int i = 0; i < paddedNumAtoms; ++i)
@@ -1131,7 +1141,6 @@ void CudaContext::reorderAtoms() {
         reorderAtomsImpl<float, float4, double, double4>();
     else
         reorderAtomsImpl<float, float4, float, float4>();
-    nonbonded->updateNeighborListSize();
 }
 
 template <class Real, class Real4, class Mixed, class Mixed4>
@@ -1310,6 +1319,15 @@ void CudaContext::addPreComputation(ForcePreComputation* computation) {
 
 void CudaContext::addPostComputation(ForcePostComputation* computation) {
     postComputations.push_back(computation);
+}
+
+void CudaContext::addEnergyParameterDerivative(const string& param) {
+    // See if this parameter has already been registered.
+    
+    for (int i = 0; i < energyParamDerivNames.size(); i++)
+        if (param == energyParamDerivNames[i])
+            return;
+    energyParamDerivNames.push_back(param);
 }
 
 struct CudaContext::WorkThread::ThreadData {

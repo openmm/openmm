@@ -88,8 +88,7 @@ class DCDReporter(object):
 
         if self._dcd is None:
             self._dcd = DCDFile(self._out, simulation.topology, simulation.integrator.getStepSize(), 0, self._reportInterval)
-        a,b,c = state.getPeriodicBoxVectors()
-        self._dcd.writeModel(state.getPositions(), mm.Vec3(a[0].value_in_unit(nanometer), b[1].value_in_unit(nanometer), c[2].value_in_unit(nanometer))*nanometer)
+        self._dcd.writeModel(state.getPositions(), periodicBoxVectors=state.getPeriodicBoxVectors())
 
     def __del__(self):
         self._out.close()

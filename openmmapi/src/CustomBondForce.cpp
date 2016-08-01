@@ -95,6 +95,20 @@ void CustomBondForce::setGlobalParameterDefaultValue(int index, double defaultVa
     globalParameters[index].defaultValue = defaultValue;
 }
 
+void CustomBondForce::addEnergyParameterDerivative(const string& name) {
+    for (int i = 0; i < globalParameters.size(); i++)
+        if (name == globalParameters[i].name) {
+            energyParameterDerivatives.push_back(i);
+            return;
+        }
+    throw OpenMMException(string("addEnergyParameterDerivative: Unknown global parameter '"+name+"'"));
+}
+
+const string& CustomBondForce::getEnergyParameterDerivativeName(int index) const {
+    ASSERT_VALID_INDEX(index, energyParameterDerivatives);
+    return globalParameters[energyParameterDerivatives[index]].name;
+}
+
 int CustomBondForce::addBond(int particle1, int particle2, const vector<double>& parameters) {
     bonds.push_back(BondInfo(particle1, particle2, parameters));
     return bonds.size()-1;

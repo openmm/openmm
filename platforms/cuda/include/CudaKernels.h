@@ -164,6 +164,12 @@ public:
      */
     void getForces(ContextImpl& context, std::vector<Vec3>& forces);
     /**
+     * Get the current derivatives of the energy with respect to context parameters.
+     *
+     * @param derivs  on exit, this contains the derivatives
+     */
+    void getEnergyParameterDerivatives(ContextImpl& context, std::map<std::string, double>& derivs);
+    /**
      * Get the current periodic box vectors.
      *
      * @param a      on exit, this contains the vector defining the first edge of the periodic box
@@ -729,6 +735,7 @@ private:
     std::vector<float> globalParamValues;
     std::vector<CudaArray*> tabulatedFunctions;
     double longRangeCoefficient;
+    std::vector<double> longRangeCoefficientDerivs;
     bool hasInitializedLongRangeCorrection, hasInitializedKernel;
     int numGroupThreadBlocks;
     CustomNonbondedForce* forceCopy;
@@ -819,13 +826,15 @@ public:
     void copyParametersToContext(ContextImpl& context, const CustomGBForce& force);
 private:
     double cutoff;
-    bool hasInitializedKernels, needParameterGradient;
+    bool hasInitializedKernels, needParameterGradient, needEnergyParamDerivs;
     int maxTiles, numComputedValues;
     CudaContext& cu;
     CudaParameterSet* params;
     CudaParameterSet* computedValues;
     CudaParameterSet* energyDerivs;
     CudaParameterSet* energyDerivChain;
+    std::vector<CudaParameterSet*> dValuedParam;
+    std::vector<CudaArray*> dValue0dParam;
     CudaArray* longEnergyDerivs;
     CudaArray* globals;
     CudaArray* valueBuffers;
@@ -970,6 +979,7 @@ public:
 
 private:
     int numGroups, numBonds;
+    bool needEnergyParamDerivs;
     CudaContext& cu;
     CudaParameterSet* params;
     CudaArray* globals;
@@ -1284,7 +1294,7 @@ public:
     enum GlobalTargetType {DT, VARIABLE, PARAMETER};
     CudaIntegrateCustomStepKernel(std::string name, const Platform& platform, CudaContext& cu) : IntegrateCustomStepKernel(name, platform), cu(cu),
             hasInitializedKernels(false), localValuesAreCurrent(false), globalValues(NULL), sumBuffer(NULL), summedValue(NULL), uniformRandoms(NULL),
-            randomSeed(NULL), perDofValues(NULL) {
+            randomSeed(NULL), perDofEnergyParamDerivs(NULL), perDofValues(NULL), needsEnergyParamDerivs(false) {
     }
     ~CudaIntegrateCustomStepKernel();
     /**
@@ -1349,8 +1359,11 @@ public:
 private:
     class ReorderListener;
     class GlobalTarget;
+    class DerivFunction;
     std::string createPerDofComputation(const std::string& variable, const Lepton::ParsedExpression& expr, int component, CustomIntegrator& integrator, const std::string& forceName, const std::string& energyName);
     void prepareForComputation(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid);
+    Lepton::ExpressionTreeNode replaceDerivFunctions(const Lepton::ExpressionTreeNode& node, OpenMM::ContextImpl& context);
+    void findExpressionsForDerivs(const Lepton::ExpressionTreeNode& node, std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& variableNodes);
     void recordGlobalValue(double value, GlobalTarget target);
     void recordChangedParameters(ContextImpl& context);
     bool evaluateCondition(int step);
@@ -1358,18 +1371,23 @@ private:
     double energy;
     float energyFloat;
     int numGlobalVariables;
-    bool hasInitializedKernels, deviceValuesAreCurrent, deviceGlobalsAreCurrent, modifiesParameters, keNeedsForce, hasAnyConstraints;
+    bool hasInitializedKernels, deviceValuesAreCurrent, deviceGlobalsAreCurrent, modifiesParameters, keNeedsForce, hasAnyConstraints, needsEnergyParamDerivs;
     mutable bool localValuesAreCurrent;
     CudaArray* globalValues;
     CudaArray* sumBuffer;
     CudaArray* summedValue;
     CudaArray* uniformRandoms;
     CudaArray* randomSeed;
+    CudaArray* perDofEnergyParamDerivs;
     std::map<int, CudaArray*> savedForces;
     std::set<int> validSavedForces;
     CudaParameterSet* perDofValues;
     mutable std::vector<std::vector<float> > localPerDofValuesFloat;
     mutable std::vector<std::vector<double> > localPerDofValuesDouble;
+    std::map<std::string, double> energyParamDerivs;
+    std::vector<std::string> perDofEnergyParamDerivNames;
+    std::vector<float> localPerDofEnergyParamDerivsFloat;
+    std::vector<double> localPerDofEnergyParamDerivsDouble;
     std::vector<float> globalValuesFloat;
     std::vector<double> globalValuesDouble;
     std::vector<double> initialGlobalVariables;

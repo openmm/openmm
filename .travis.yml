@@ -69,8 +69,7 @@ matrix:
            OPENCL=false
            CUDA=false
            CMAKE_FLAGS="
-             -DOPENMM_BUILD_OPENCL_TESTS=OFF
-             -DSWIG_EXECUTABLE=/usr/local/Cellar/swig/3.0.2/bin/swig"
+             -DOPENMM_BUILD_OPENCL_TESTS=OFF"
       addons: {apt: {packages: []}}
 
     - sudo: false
@@ -106,7 +105,7 @@ before_install:
   - wget https://anaconda.org/omnia/ccache/3.2.4/download/${TRAVIS_OS_NAME}-64/ccache-3.2.4-0.tar.bz2
   - mkdir -p $HOME/ccache && tar xf ccache-3.2.4-0.tar.bz2 -C $HOME/ccache
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-      brew install doxygen swig fftw;
+      brew install doxygen fftw;
       sudo easy_install pytest;
     fi
   - if [[ "$OPENCL" == "true" ]]; then
@@ -127,6 +126,13 @@ before_install:
   # build of swig that's more modern than what's in apt.
   - if [[ "$OPENCL" == "false" && "$CUDA" == "false" && "$TRAVIS_OS_NAME" == "linux" ]]; then
       wget https://anaconda.org/omnia/swig/3.0.7/download/linux-64/swig-3.0.7-0.tar.bz2;
+      mkdir $HOME/swig;
+      tar -xjvf swig-3.0.7-0.tar.bz2 -C $HOME/swig;
+      export PATH=$HOME/swig/bin:$PATH;
+      export SWIG_LIB=$HOME/swig/share/swig/3.0.7;
+    fi
+  - if [[ "$OPENCL" == "false" && "$CUDA" == "false" && "$TRAVIS_OS_NAME" == "osx" ]]; then
+      wget https://anaconda.org/omnia/swig/3.0.7/download/osx-64/swig-3.0.7-0.tar.bz2;
       mkdir $HOME/swig;
       tar -xjvf swig-3.0.7-0.tar.bz2 -C $HOME/swig;
       export PATH=$HOME/swig/bin:$PATH;

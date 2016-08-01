@@ -105,6 +105,20 @@ void CustomCompoundBondForce::setGlobalParameterDefaultValue(int index, double d
     globalParameters[index].defaultValue = defaultValue;
 }
 
+void CustomCompoundBondForce::addEnergyParameterDerivative(const string& name) {
+    for (int i = 0; i < globalParameters.size(); i++)
+        if (name == globalParameters[i].name) {
+            energyParameterDerivatives.push_back(i);
+            return;
+        }
+    throw OpenMMException(string("addEnergyParameterDerivative: Unknown global parameter '"+name+"'"));
+}
+
+const string& CustomCompoundBondForce::getEnergyParameterDerivativeName(int index) const {
+    ASSERT_VALID_INDEX(index, energyParameterDerivatives);
+    return globalParameters[energyParameterDerivatives[index]].name;
+}
+
 int CustomCompoundBondForce::addBond(const vector<int>& particles, const vector<double>& parameters) {
     if (particles.size() != particlesPerBond)
         throw OpenMMException("CustomCompoundBondForce: wrong number of particles specified for a bond.");

@@ -1086,6 +1086,24 @@ is exactly equivalent to
 The definition of an intermediate value may itself involve other intermediate
 values.  All uses of a value must appear *before* that value’s definition.
 
+Parameter Derivatives
+*********************
+
+Many custom forces have the ability to compute derivatives of the potential energy
+with respect to global parameters.  To use this feature, first define a global
+parameter that the energy depends on.  Then instruct the custom force to compute
+the derivative with respect to that parameter by calling :meth:`addEnergyParameterDerivative()`
+on it.  Whenever forces and energies are computed, the specified derivative will
+then also be computed at the same time.  You can query it by calling :meth:`getState()`
+on a :class:`Context`, just as you would query forces or energies.
+
+An important application of this feature is to use it in combination with a
+:class:`CustomIntegrator` (described in section :ref:`custom-integrator`\ ).  The
+derivative can appear directly in expressions that define the integration
+algorithm.  This can be used to implement algorithms such as lambda-dynamics,
+where a global parameter is integrated as a dynamic variable.
+
+
 Integrators
 ###########
 
@@ -1234,6 +1252,8 @@ the fixed step size Langevin integrator for the reasons given above.
 Furthermore, because Langevin dynamics involves a random force, it can never be
 symplectic and therefore the fixed step size Verlet integrator’s advantages do
 not apply to the Langevin integrator.
+
+.. _custom-integrator:
 
 CustomIntegrator
 ****************

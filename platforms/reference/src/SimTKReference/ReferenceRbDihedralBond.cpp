@@ -73,7 +73,7 @@ void ReferenceRbDihedralBond::calculateBondIxn(int* atomIndices,
                                                vector<RealVec>& atomCoordinates,
                                                RealOpenMM* parameters,
                                                vector<RealVec>& forces,
-                                               RealOpenMM* totalEnergy) const {
+                                               RealOpenMM* totalEnergy, double* energyParamDerivs) {
 
    static const std::string methodName = "\nReferenceRbDihedralBond::calculateBondIxn";
 
