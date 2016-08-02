@@ -6161,9 +6161,9 @@ void CudaCalcGayBerneForceKernel::initialize(const System& system, const GayBern
     sortedPos = new CudaArray(cu, numRealParticles, 4*elementSize, "sortedPos");
     maxNeighborBlocks = numRealParticles*2;
     neighbors = CudaArray::create<int>(cu, maxNeighborBlocks*32, "neighbors");
-    neighborIndex = CudaArray::create<int>(cu, maxNeighborBlocks, "neighbors");
+    neighborIndex = CudaArray::create<int>(cu, maxNeighborBlocks, "neighborIndex");
     neighborBlockCount = CudaArray::create<int>(cu, 1, "neighborBlockCount");
-    if (force.getNonbondedMethod() != GayberneForce::NoCutoff)
+    if (force.getNonbondedMethod() != GayBerneForce::NoCutoff)
         CHECK_RESULT(cuEventCreate(&event, CU_EVENT_DISABLE_TIMING), "Error creating event for CustomManyParticleForce");
 
     // Create array for accumulating torques.
@@ -6195,7 +6195,7 @@ void CudaCalcGayBerneForceKernel::initialize(const System& system, const GayBern
         }
     }
     defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
-    CUmodule module = cu.createModule(CudakernelSources::vectorOps+CudaKernelSources::gayBerne, defines);
+    CUmodule module = cu.createModule(CudaKernelSources::vectorOps+CudaKernelSources::gayBerne, defines);
     framesKernel = cu.getKernel(module, "computeEllipsoidFrames");
     blockBoundsKernel = cu.getKernel(module, "findBlockBounds");
     neighborsKernel = cu.getKernel(module, "findNeighbors");
@@ -6245,7 +6245,7 @@ double CudaCalcGayBerneForceKernel::execute(ContextImpl& context, bool includeFo
         neighborsArgs.push_back(&neighborBlockCount->getDevicePointer());
         neighborsArgs.push_back(&exclusions->getDevicePointer());
         neighborsArgs.push_back(&exclusionStartIndex->getDevicePointer());
-        forceArgs.push_back(&cu.getLongForceBuffer().getDevicePointer());
+        forceArgs.push_back(&cu.getForce().getDevicePointer());
         forceArgs.push_back(&torque->getDevicePointer());
         forceArgs.push_back(&numRealParticles);
         forceArgs.push_back(&numExceptions);
@@ -6272,7 +6272,7 @@ double CudaCalcGayBerneForceKernel::execute(ContextImpl& context, bool includeFo
             forceArgs.push_back(cu.getPeriodicBoxVecYPointer());
             forceArgs.push_back(cu.getPeriodicBoxVecZPointer());
         }
-        torqueArgs.push_back(&cu.getLongForceBuffer().getDevicePointer());
+        torqueArgs.push_back(&cu.getForce().getDevicePointer());
         torqueArgs.push_back(&torque->getDevicePointer());
         torqueArgs.push_back(&numRealParticles);
         torqueArgs.push_back(&cu.getPosq().getDevicePointer());
@@ -6289,6 +6289,7 @@ double CudaCalcGayBerneForceKernel::execute(ContextImpl& context, bool includeFo
             cu.executeKernel(neighborsKernel, &neighborsArgs[0], numRealParticles);
             int* count = (int*) cu.getPinnedBuffer();
             neighborBlockCount->download(count, false);
+            CHECK_RESULT(cuEventRecord(event, 0), "Error recording event for GayBerneForce");
             cu.executeKernel(forceKernel, &forceArgs[0], cu.getNonbondedUtilities().getNumForceThreadBlocks()*cu.getNonbondedUtilities().getForceThreadBlockSize());
             CHECK_RESULT(cuEventSynchronize(event), "Error synchronizing on event for GayBerneForce");
             if (*count <= maxNeighborBlocks)
@@ -6302,7 +6303,7 @@ double CudaCalcGayBerneForceKernel::execute(ContextImpl& context, bool includeFo
             neighborIndex = NULL;
             maxNeighborBlocks = (int) ceil((*count)*1.1);
             neighbors = CudaArray::create<int>(cu, maxNeighborBlocks*32, "neighbors");
-            neighborIndex = CudaArray::create<int>(cu, maxNeighborBlocks, "neighbors");
+            neighborIndex = CudaArray::create<int>(cu, maxNeighborBlocks, "neighborIndex");
             neighborsArgs[10] = &neighbors->getDevicePointer();
             neighborsArgs[11] = &neighborIndex->getDevicePointer();
             forceArgs[17] = &neighbors->getDevicePointer();
