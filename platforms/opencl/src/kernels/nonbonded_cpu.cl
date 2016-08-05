@@ -28,6 +28,7 @@ __kernel void computeNonbonded(
 #endif
         PARAMETER_ARGUMENTS) {
     mixed energy = 0;
+    INIT_DERIVATIVES
     __local AtomData localData[TILE_SIZE];
 
     // First loop: process tiles that contain exclusions.
@@ -87,6 +88,7 @@ __kernel void computeNonbonded(
                         bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS || !(excl & 0x1));
 #endif
                         real tempEnergy = 0;
+                        const real interactionScale = 0.5f;
                         COMPUTE_INTERACTION
                         energy += 0.5f*tempEnergy;
 #ifdef USE_SYMMETRIC
@@ -155,6 +157,7 @@ __kernel void computeNonbonded(
                         bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS || !(excl & 0x1));
 #endif
                         real tempEnergy = 0;
+                        const real interactionScale = 1.0f;
                         COMPUTE_INTERACTION
                         energy += tempEnergy;
 #ifdef USE_SYMMETRIC
@@ -318,6 +321,7 @@ __kernel void computeNonbonded(
                             bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS);
 #endif
                             real tempEnergy = 0;
+                            const real interactionScale = 1.0f;
                             COMPUTE_INTERACTION
                             energy += tempEnergy;
 #ifdef USE_SYMMETRIC
@@ -382,6 +386,7 @@ __kernel void computeNonbonded(
                             bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS);
 #endif
                             real tempEnergy = 0;
+                            const real interactionScale = 1.0f;
                             COMPUTE_INTERACTION
                             energy += tempEnergy;
 #ifdef USE_SYMMETRIC
@@ -441,4 +446,5 @@ __kernel void computeNonbonded(
         pos++;
     }
     energyBuffer[get_global_id(0)] += energy;
+    SAVE_DERIVATIVES
 }
