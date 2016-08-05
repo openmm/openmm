@@ -364,7 +364,7 @@ class GromacsTopFile(object):
             # Bonded type and atomic number are both missing.
             fields.insert(1, None)
             fields.insert(1, None)
-        elif len(fields[4]) == 1 and len(fields[5]) > 1:
+        elif len(fields[4]) == 1 and fields[4].isalpha():
             if fields[1][0].isalpha():
                 # Atomic number is missing.
                 fields.insert(2, None)
@@ -586,9 +586,9 @@ class GromacsTopFile(object):
         # Create the System.
 
         sys = mm.System()
-        boxSize = self.topology.getUnitCellDimensions()
-        if boxSize is not None:
-            sys.setDefaultPeriodicBoxVectors((boxSize[0], 0, 0), (0, boxSize[1], 0), (0, 0, boxSize[2]))
+        boxVectors = self.topology.getPeriodicBoxVectors()
+        if boxVectors is not None:
+            sys.setDefaultPeriodicBoxVectors(*boxVectors)
         elif nonbondedMethod in (ff.CutoffPeriodic, ff.Ewald, ff.PME):
             raise ValueError('Illegal nonbonded method for a non-periodic system')
         nb = mm.NonbondedForce()
