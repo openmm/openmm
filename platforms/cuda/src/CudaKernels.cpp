@@ -3061,7 +3061,7 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
     int elementSize = (cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
     needEnergyParamDerivs = (force.getNumEnergyParameterDerivatives() > 0);
     for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
-        dValuedParam.push_back(new CudaParameterSet(cu, force.getNumComputedValues(), cu.getPaddedNumAtoms(), "dValuedParam", true));
+        dValuedParam.push_back(new CudaParameterSet(cu, force.getNumComputedValues(), cu.getPaddedNumAtoms(), "dValuedParam", true, cu.getUseDoublePrecision()));
         dValue0dParam.push_back(CudaArray::create<long long>(cu, cu.getPaddedNumAtoms(), "dValue0dParam"));
         cu.addAutoclearBuffer(*dValue0dParam.back());
         string name = force.getEnergyParameterDerivativeName(i);
