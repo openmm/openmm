@@ -57,6 +57,7 @@ ReferencePlatform::ReferencePlatform() {
     registerKernelFactory(CalcCMAPTorsionForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomTorsionForceKernel::Name(), factory);
     registerKernelFactory(CalcNonbondedForceKernel::Name(), factory);
+    registerKernelFactory(CalcDPMENonbondedForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomNonbondedForceKernel::Name(), factory);
     registerKernelFactory(CalcGBSAOBCForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomGBForceKernel::Name(), factory);

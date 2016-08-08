@@ -49,6 +49,7 @@
 #include "openmm/CustomTorsionForce.h"
 #include "openmm/GayBerneForce.h"
 #include "openmm/GBSAOBCForce.h"
+#include "openmm/DPMENonbondedForce.h"
 #include "openmm/HarmonicAngleForce.h"
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/KernelImpl.h"
@@ -596,6 +597,68 @@ public:
      * @param nz      the number of grid points along the Z axis
      */
     virtual void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const = 0;
+};
+
+/**
+ * This kernel is invoked by DPMENonbondedForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CalcDPMENonbondedForceKernel : public KernelImpl {
+public:
+    enum DPMENonbondedMethod {
+        NoCutoff = 0,
+        CutoffNonPeriodic = 1,
+        CutoffPeriodic = 2,
+        Ewald = 3,
+        PME = 4
+    };
+    static std::string Name() {
+        return "CalcDPMENonbondedForce";
+    }
+    CalcDPMENonbondedForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param force      the DPMENonbondedForce this kernel will be used for
+     */
+    virtual void initialize(const System& system, const DPMENonbondedForce& force) = 0;
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @param includeDirect  true if direct space interactions should be included
+     * @param includeReciprocal  true if reciprocal space interactions should be included
+     * @return the potential energy due to the force
+     */
+    virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy, bool includeDirect, bool includeReciprocal) = 0;
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the DPMENonbondedForce to copy the parameters from
+     */
+    virtual void copyParametersToContext(ContextImpl& context, const DPMENonbondedForce& force) = 0;
+    /**
+     * Get the parameters being used for PME.
+     * 
+     * @param alpha   the separation parameter
+     * @param nx      the number of grid points along the X axis
+     * @param ny      the number of grid points along the Y axis
+     * @param nz      the number of grid points along the Z axis
+     */
+    virtual void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const = 0;
+    /**
+     * Get the parameters being used for dispersionPME.
+     *
+     * @param alpha   the dispersionseparation parameter
+     * @param nx      the number of dispersion grid points along the X axis
+     * @param ny      the number of dispersion grid points along the Y axis
+     * @param nz      the number of dispersion grid points along the Z axis
+     */
+    virtual void getDispersionPMEParameters(double& dalpha, int& dnx, int& dny, int& dnz) const = 0;
 };
 
 /**

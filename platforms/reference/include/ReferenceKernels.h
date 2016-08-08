@@ -616,6 +616,67 @@ private:
     NeighborList* neighborList;
 };
 
+
+/**
+ * This kernel is invoked by DPMENonbondedForce to calculate the forces acting on the system.
+ */
+class ReferenceCalcDPMENonbondedForceKernel : public CalcDPMENonbondedForceKernel {
+public:
+    ReferenceCalcDPMENonbondedForceKernel(std::string name, const Platform& platform) : CalcDPMENonbondedForceKernel(name, platform) {
+    }
+    ~ReferenceCalcDPMENonbondedForceKernel();
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param force      the DPMENonbondedForce this kernel will be used for
+     */
+    void initialize(const System& system, const DPMENonbondedForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @param includeReciprocal  true if reciprocal space interactions should be included
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy, bool includeDirect, bool includeReciprocal);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the DPMENonbondedForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const DPMENonbondedForce& force);
+    /**
+     * Get the parameters being used for PME.
+     * 
+     * @param alpha   the separation parameter
+     * @param nx      the number of grid points along the X axis
+     * @param ny      the number of grid points along the Y axis
+     * @param nz      the number of grid points along the Z axis
+     */
+    void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
+    /**
+     * Get the parameters being used for dispersion PME.
+     *
+     * @param dalpha   the dispersion separation parameter
+     * @param dnx      the number of dispersion grid points along the X axis
+     * @param dny      the number of dispersion grid points along the Y axis
+     * @param dnz      the number of dispersion grid points along the Z axis
+     */
+    void getDispersionPMEParameters(double& dalpha, int& dnx, int& dny, int& dnz) const;
+private:
+    int numParticles, num14;
+    int **bonded14IndexArray;
+    RealOpenMM **particleParamArray, **bonded14ParamArray;
+    RealOpenMM nonbondedCutoff, rfDielectric, ewaldDispersionAlpha, ewaldAlpha, dispersionCoefficient;
+    int kmax[3], dispersionGridSize[3], gridSize[3];
+    std::vector<std::set<int> > exclusions;
+    NeighborList* neighborList;
+};
+
 /**
  * This kernel is invoked by CustomNonbondedForce to calculate the forces acting on the system.
  */
