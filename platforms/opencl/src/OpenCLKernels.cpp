@@ -3159,7 +3159,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
     int elementSize = (cl.getUseDoublePrecision() ? sizeof(cl_double) : sizeof(cl_float));
     needEnergyParamDerivs = (force.getNumEnergyParameterDerivatives() > 0);
     for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
-        dValuedParam.push_back(new OpenCLParameterSet(cl, force.getNumComputedValues(), cl.getPaddedNumAtoms(), "dValuedParam", true));
+        dValuedParam.push_back(new OpenCLParameterSet(cl, force.getNumComputedValues(), cl.getPaddedNumAtoms(), "dValuedParam", true, cl.getUseDoublePrecision()));
         if (useLong)
             dValue0dParam.push_back(OpenCLArray::create<cl_long>(cl, cl.getPaddedNumAtoms(), "dValue0dParam"));
         else
