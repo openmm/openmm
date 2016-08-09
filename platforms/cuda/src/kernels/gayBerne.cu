@@ -49,7 +49,7 @@ extern "C" __global__ void computeEllipsoidFrames(int numParticles, const real4*
         a[2][1] = zdir.y;
         a[2][2] = zdir.z;
         float4 sig = sigParams[originalIndex];
-        float3 r2 = sig.yzw;
+        float3 r2 = make_float3(sig.y, sig.z, sig.w);
         float3 e2 = trimTo3(scale[originalIndex]);
         for (int i = 0; i < 3; i++)
             for (int j = 0; j < 3; j++) {
@@ -83,8 +83,8 @@ extern "C" __global__ void findBlockBounds(int numAtoms, real4 periodicBoxSize, 
             real4 center = 0.5f*(maxPos+minPos);
             APPLY_PERIODIC_TO_POS_WITH_CENTER(pos, center)
 #endif
-            minPos = min(minPos, pos);
-            maxPos = max(maxPos, pos);
+            minPos = make_real4(min(minPos.x,pos.x), min(minPos.y,pos.y), min(minPos.z,pos.z), 0);
+            maxPos = make_real4(max(maxPos.x,pos.x), max(maxPos.y,pos.y), max(maxPos.z,pos.z), 0);
         }
         real4 blockSize = 0.5f*(maxPos-minPos);
         blockBoundingBox[index] = blockSize;
@@ -99,7 +99,7 @@ extern "C" __global__ void findBlockBounds(int numAtoms, real4 periodicBoxSize, 
 /**
  * This is called by findNeighbors() to write a block to the neighbor list.
  */
-void storeNeighbors(int atom1, int* neighborBuffer, int numAtomsInBuffer, int maxNeighborBlocks, int* __restrict__ neighbors,
+__device__ void storeNeighbors(int atom1, int* neighborBuffer, int numAtomsInBuffer, int maxNeighborBlocks, int* __restrict__ neighbors,
         int* __restrict__ neighborIndex, int* __restrict__ neighborBlockCount) {
     int blockIndex = atomicAdd(neighborBlockCount, 1);
     if (blockIndex >= maxNeighborBlocks)
@@ -178,7 +178,7 @@ typedef struct {
     real a[3][3], b[3][3], g[3][3];
 } AtomData;
 
-void loadAtomData(AtomData* data, int sortedIndex, int originalIndex, const real4* __restrict__ pos, const float4* __restrict__ sigParams,
+__device__ void loadAtomData(AtomData* data, int sortedIndex, int originalIndex, const real4* __restrict__ pos, const float4* __restrict__ sigParams,
         const float2* __restrict__ epsParams, const real* __restrict__ aMatrix, const real* __restrict__ bMatrix, const real* __restrict__ gMatrix) {
     data->sig = sigParams[originalIndex];
     data->eps = epsParams[originalIndex];
@@ -192,20 +192,19 @@ void loadAtomData(AtomData* data, int sortedIndex, int originalIndex, const real
         }
 }
 
-real3 matrixVectorProduct(real (*m)[3], real3 v) {
+inline __device__ real3 matrixVectorProduct(real (*m)[3], real3 v) {
     return make_real3(m[0][0]*v.x + m[0][1]*v.y + m[0][2]*v.z,
                       m[1][0]*v.x + m[1][1]*v.y + m[1][2]*v.z,
                       m[2][0]*v.x + m[2][1]*v.y + m[2][2]*v.z);
 }
 
-real3 vectorMatrixProduct(real3 v, real (*m)[3]) {
+inline __device__ real3 vectorMatrixProduct(real3 v, real (*m)[3]) {
     return make_real3(m[0][0]*v.x + m[1][0]*v.y + m[2][0]*v.z,
                       m[0][1]*v.x + m[1][1]*v.y + m[2][1]*v.z,
                       m[0][2]*v.x + m[1][2]*v.y + m[2][2]*v.z);
 }
 
-
-void matrixSum(real (*result)[3], real (*a)[3], real (*b)[3]) {
+inline __device__ void matrixSum(real (*result)[3], real (*a)[3], real (*b)[3]) {
     result[0][0] = a[0][0]+b[0][0];
     result[0][1] = a[0][1]+b[0][1];
     result[0][2] = a[0][2]+b[0][2];
@@ -217,13 +216,12 @@ void matrixSum(real (*result)[3], real (*a)[3], real (*b)[3]) {
     result[2][2] = a[2][2]+b[2][2];
 }
 
-real determinant(real (*m)[3]) {
+inline __device__ real determinant(real (*m)[3]) {
     return (m[0][0]*m[1][1]*m[2][2] + m[0][1]*m[1][2]*m[2][0] + m[0][2]*m[1][0]*m[2][1] -
             m[0][0]*m[1][2]*m[2][1] - m[0][1]*m[1][0]*m[2][2] - m[0][2]*m[1][1]*m[2][0]);
 }
 
-
-void matrixInverse(real (*result)[3], real (*m)[3]) {
+inline __device__ void matrixInverse(real (*result)[3], real (*m)[3]) {
     real invDet = RECIP(determinant(m));
     result[0][0] = invDet*(m[1][1]*m[2][2] - m[1][2]*m[2][1]);
     result[1][0] = -invDet*(m[1][0]*m[2][2] - m[1][2]*m[2][0]);
@@ -236,7 +234,7 @@ void matrixInverse(real (*result)[3], real (*m)[3]) {
     result[2][2] = invDet*(m[0][0]*m[1][1] - m[0][1]*m[1][0]);
 }
 
-void computeOneInteraction(AtomData* data1, AtomData* data2, real sigma, real epsilon, real3 dr, real r2, real3* force1, real3* force2, real3* torque1, real3* torque2, real *totalEnergy) {
+__device__ void computeOneInteraction(AtomData* data1, AtomData* data2, real sigma, real epsilon, real3 dr, real r2, real3* force1, real3* force2, real3* torque1, real3* torque2, real *totalEnergy) {
     real rInv = RSQRT(r2);
     real r = r2*rInv;
     real3 drUnit = dr*rInv;
@@ -325,7 +323,7 @@ void computeOneInteraction(AtomData* data1, AtomData* data2, real sigma, real ep
         d[2][2] = scale.z*(  a[2][0]*(G12[0][1]*G12[1][2] + G12[2][1]*G12[1][0] - G12[1][1]*(G12[0][2] + G12[2][0])) +
                              a[2][1]*(G12[1][0]*G12[0][2] + G12[2][0]*G12[0][1] - G12[0][0]*(G12[1][2] + G12[2][1])) +
                            2*a[2][2]*(G12[1][1]*G12[0][0] - G12[1][0]*G12[0][1]));
-        real3 detadq = 0;
+        real3 detadq = make_real3(0);
         for (int i = 0; i < 3; i++)
             detadq += cross(make_real3(a[i][0], a[i][1], a[i][2]), make_real3(d[i][0], d[i][1], d[i][2]));
         real3 torque = (dchidq*(u*eta) + detadq*(u*chi) + dudq*(eta*chi))*switchValue;
@@ -338,7 +336,7 @@ void computeOneInteraction(AtomData* data1, AtomData* data2, real sigma, real ep
  * Compute the interactions.
  */
 extern "C" __global__ void computeForce(
-        long* __restrict__ forceBuffers, long* __restrict__ torqueBuffers,
+        unsigned long long* __restrict__ forceBuffers, unsigned long long* __restrict__ torqueBuffers,
         int numAtoms, int numExceptions, mixed* __restrict__ energyBuffer, const real4* __restrict__ pos,
         const float4* __restrict__ sigParams, const float2* __restrict__ epsParams, const int* __restrict__ sortedAtoms,
         const real* __restrict__ aMatrix, const real* __restrict__ bMatrix, const real* __restrict__ gMatrix,
@@ -362,8 +360,8 @@ extern "C" __global__ void computeForce(
         int index1 = sortedAtoms[atom1];
         AtomData data1;
         loadAtomData(&data1, atom1, index1, pos, sigParams, epsParams, aMatrix, bMatrix, gMatrix);
-        real3 force1 = 0.0f;
-        real3 torque1 = 0.0f;
+        real3 force1 = make_real3(0);
+        real3 torque1 = make_real3(0);
         for (int indexInBlock = 0; indexInBlock < NEIGHBOR_BLOCK_SIZE; indexInBlock++) {
             // Load parameters for atom2.
             
@@ -373,8 +371,8 @@ extern "C" __global__ void computeForce(
             int index2 = sortedAtoms[atom2];
             AtomData data2;
             loadAtomData(&data2, atom2, index2, pos, sigParams, epsParams, aMatrix, bMatrix, gMatrix);
-            real3 force2 = 0.0f;
-            real3 torque2 = 0.0f;
+            real3 force2 = make_real3(0);
+            real3 torque2 = make_real3(0);
             
             // Compute the interaction.
             
@@ -407,8 +405,8 @@ extern "C" __global__ void computeForce(
         int index1 = sortedAtoms[atom1];
         AtomData data1;
         loadAtomData(&data1, atom1, index1, pos, sigParams, epsParams, aMatrix, bMatrix, gMatrix);
-        real3 force1 = 0.0f;
-        real3 torque1 = 0.0f;
+        real3 force1 = make_real3(0);
+        real3 torque1 = make_real3(0);
         int nextExclusion = exclusionStartIndex[atom1];
         int lastExclusion = exclusionStartIndex[atom1+1];
         for (int atom2 = atom1+1; atom2 < numAtoms; atom2++) {
@@ -424,8 +422,8 @@ extern "C" __global__ void computeForce(
             int index2 = sortedAtoms[atom2];
             AtomData data2;
             loadAtomData(&data2, atom2, index2, pos, sigParams, epsParams, aMatrix, bMatrix, gMatrix);
-            real3 force2 = 0.0f;
-            real3 torque2 = 0.0f;
+            real3 force2 = make_real3(0);
+            real3 torque2 = make_real3(0);
             
             // Compute the interaction.
             
@@ -460,8 +458,8 @@ extern "C" __global__ void computeForce(
         AtomData data1, data2;
         loadAtomData(&data1, atom1, index1, pos, sigParams, epsParams, aMatrix, bMatrix, gMatrix);
         loadAtomData(&data2, atom2, index2, pos, sigParams, epsParams, aMatrix, bMatrix, gMatrix);
-        real3 force1 = 0, force2 = 0;
-        real3 torque1 = 0, torque2 = 0;
+        real3 force1 = make_real3(0), force2 = make_real3(0);
+        real3 torque1 = make_real3(0), torque2 = make_real3(0);
         real3 delta = data1.pos-data2.pos;
         real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
 #ifdef USE_CUTOFF
@@ -491,7 +489,7 @@ extern "C" __global__ void computeForce(
  * Convert the torques to forces on the connected particles.
  */
 extern "C" __global__ void applyTorques(
-        long* __restrict__ forceBuffers, long* __restrict__ torqueBuffers,
+        unsigned long long* __restrict__ forceBuffers, long long* __restrict__ torqueBuffers,
         int numParticles, const real4* __restrict__ posq, int2* const __restrict__ axisParticleIndices,
         const int* sortedParticles) {
     const unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/TILE_SIZE;
@@ -504,7 +502,7 @@ extern "C" __global__ void applyTorques(
 
             real scale = 1/(real) 0x100000000;
             real3 torque = make_real3(scale*torqueBuffers[originalIndex], scale*torqueBuffers[originalIndex+PADDED_NUM_ATOMS], scale*torqueBuffers[originalIndex+2*PADDED_NUM_ATOMS]);
-            real3 force = 0, xforce = 0, yforce = 0;
+            real3 force = make_real3(0), xforce = make_real3(0), yforce = make_real3(0);
 
             // Apply a force to the x particle.
             

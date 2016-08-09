@@ -6384,7 +6384,7 @@ void OpenCLCalcGayBerneForceKernel::initialize(const System& system, const GayBe
     sortedPos = new OpenCLArray(cl, numRealParticles, 4*elementSize, "sortedPos");
     maxNeighborBlocks = numRealParticles*2;
     neighbors = OpenCLArray::create<cl_int>(cl, maxNeighborBlocks*32, "neighbors");
-    neighborIndex = OpenCLArray::create<cl_int>(cl, maxNeighborBlocks, "neighbors");
+    neighborIndex = OpenCLArray::create<cl_int>(cl, maxNeighborBlocks, "neighborIndex");
     neighborBlockCount = OpenCLArray::create<cl_int>(cl, 1, "neighborBlockCount");
 
     // Create array for accumulating torques.
@@ -6514,7 +6514,7 @@ double OpenCLCalcGayBerneForceKernel::execute(ContextImpl& context, bool include
             neighborIndex = NULL;
             maxNeighborBlocks = (int) ceil((*count)*1.1);
             neighbors = OpenCLArray::create<cl_int>(cl, maxNeighborBlocks*32, "neighbors");
-            neighborIndex = OpenCLArray::create<cl_int>(cl, maxNeighborBlocks, "neighbors");
+            neighborIndex = OpenCLArray::create<cl_int>(cl, maxNeighborBlocks, "neighborIndex");
             neighborsKernel.setArg<cl::Buffer>(10, neighbors->getDeviceBuffer());
             neighborsKernel.setArg<cl::Buffer>(11, neighborIndex->getDeviceBuffer());
             forceKernel.setArg<cl::Buffer>(17, neighbors->getDeviceBuffer());
