@@ -239,7 +239,7 @@ void matrixInverse(real (*result)[3], real (*m)[3]) {
     result[2][2] = invDet*(m[0][0]*m[1][1] - m[0][1]*m[1][0]);
 }
 
-void computeOneInteraction(AtomData* data1, AtomData* data2, real sigma, real epsilon, real3 dr, real r2, real3* force1, real3* force2, real3* torque1, real3* torque2, real *totalEnergy) {
+void computeOneInteraction(AtomData* data1, AtomData* data2, real sigma, real epsilon, real3 dr, real r2, real3* force1, real3* force2, real3* torque1, real3* torque2, mixed *totalEnergy) {
     real rInv = RSQRT(r2);
     real r = r2*rInv;
     real3 drUnit = dr*rInv;
