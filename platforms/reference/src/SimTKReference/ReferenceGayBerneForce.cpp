@@ -29,9 +29,14 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#ifdef _MSC_VER
+    // Prevent Windows from defining macros that interfere with other code.
+    #define NOMINMAX
+#endif
 #include "ReferenceGayBerneForce.h"
 #include "ReferenceForce.h"
 #include "openmm/OpenMMException.h"
+#include <algorithm>
 #include <cmath>
 
 using namespace OpenMM;

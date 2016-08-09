@@ -42,7 +42,7 @@
 
 namespace OpenMM {
 
-class OPENMM_EXPORT CpuGayBerneForce {
+class CpuGayBerneForce {
 public:
     struct Matrix;
     class ComputeTask;
