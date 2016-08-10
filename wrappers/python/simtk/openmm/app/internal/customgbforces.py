@@ -267,7 +267,7 @@ def _mbondi_radii(topology):
             bondeds = all_bonds[atom]
             if bondeds[0].element in (E.carbon, E.nitrogen):
                 radii[i] = 1.3
-            elif bondeds[0].type.atomic_number in (E.oxygen, E.sulfur):
+            elif bondeds[0].element in (E.oxygen, E.sulfur):
                 radii[i] = 0.8
             else:
                 radii[i] = 1.2

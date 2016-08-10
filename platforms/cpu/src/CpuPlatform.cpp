@@ -171,4 +171,6 @@ void CpuPlatform::PlatformData::requestNeighborList(double cutoffDistance, doubl
             anyExclusions = true;
         }
     }
+    else if (!anyExclusions)
+        exclusions = exclusionList;
 }
