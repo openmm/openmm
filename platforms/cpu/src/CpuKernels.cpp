@@ -1033,7 +1033,7 @@ void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGB
     nonbondedMethod = CalcCustomGBForceKernel::NonbondedMethod(force.getNonbondedMethod());
     nonbondedCutoff = (RealOpenMM) force.getCutoffDistance();
     if (nonbondedMethod != NoCutoff)
-        data.requestNeighborList(nonbondedCutoff, 0.25*nonbondedCutoff, true, exclusions);
+        data.requestNeighborList(nonbondedCutoff, 0.25*nonbondedCutoff, force.getNumExclusions() > 0, exclusions);
 
     // Create custom functions for the tabulated functions.
 
