@@ -1236,6 +1236,30 @@ void CpuCalcCustomManyParticleForceKernel::copyParametersToContext(ContextImpl& 
     }
 }
 
+CpuCalcGayBerneForceKernel::~CpuCalcGayBerneForceKernel() {
+    if (ixn != NULL)
+        delete ixn;
+}
+
+void CpuCalcGayBerneForceKernel::initialize(const System& system, const GayBerneForce& force) {
+    ixn = new CpuGayBerneForce(force);
+    data.isPeriodic = (force.getNonbondedMethod() == GayBerneForce::CutoffPeriodic);
+    if (force.getNonbondedMethod() != GayBerneForce::NoCutoff) {
+        double cutoff = force.getCutoffDistance();
+        data.requestNeighborList(cutoff, 0.1*cutoff, true, ixn->getExclusions());
+    }
+}
+
+double CpuCalcGayBerneForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    return ixn->calculateForce(extractPositions(context), extractForces(context), data.threadForce, extractBoxVectors(context), data);
+}
+
+void CpuCalcGayBerneForceKernel::copyParametersToContext(ContextImpl& context, const GayBerneForce& force) {
+    delete ixn;
+    ixn = NULL;
+    ixn = new CpuGayBerneForce(force);
+}
+
 CpuIntegrateLangevinStepKernel::~CpuIntegrateLangevinStepKernel() {
     if (dynamics)
         delete dynamics;

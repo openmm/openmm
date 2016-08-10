@@ -71,6 +71,7 @@ CpuPlatform::CpuPlatform() {
     registerKernelFactory(CalcCustomManyParticleForceKernel::Name(), factory);
     registerKernelFactory(CalcGBSAOBCForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomGBForceKernel::Name(), factory);
+    registerKernelFactory(CalcGayBerneForceKernel::Name(), factory);
     registerKernelFactory(IntegrateLangevinStepKernel::Name(), factory);
     platformProperties.push_back(CpuThreads());
     int threads = getNumProcessors();
@@ -155,7 +156,7 @@ CpuPlatform::PlatformData::~PlatformData() {
 
 bool isVec8Supported();
 
-void CpuPlatform::PlatformData::requestNeighborList(double cutoffDistance, double padding, bool useExclusions, vector<set<int> >& exclusionList) {
+void CpuPlatform::PlatformData::requestNeighborList(double cutoffDistance, double padding, bool useExclusions, const vector<set<int> >& exclusionList) {
     if (neighborList == NULL)
         neighborList = new CpuNeighborList(isVec8Supported() ? 8 : 4);
     if (cutoffDistance > cutoff)

@@ -1,5 +1,5 @@
-#ifndef OPENMM_CPUPLATFORM_H_
-#define OPENMM_CPUPLATFORM_H_
+#ifndef OPENMM_GAYBERNEFORCE_PROXY_H_
+#define OPENMM_GAYBERNEFORCE_PROXY_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2016 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,69 +32,22 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "AlignedArray.h"
-#include "CpuRandom.h"
-#include "CpuNeighborList.h"
-#include "ReferencePlatform.h"
-#include "openmm/internal/ContextImpl.h"
-#include "openmm/internal/ThreadPool.h"
-#include "windowsExportCpu.h"
-#include <map>
+#include "openmm/internal/windowsExport.h"
+#include "openmm/serialization/SerializationProxy.h"
 
 namespace OpenMM {
-    
+
 /**
- * This Platform subclass uses CPU implementations of the OpenMM kernels.
+ * This is a proxy for serializing GayBerneForce objects.
  */
 
-class OPENMM_EXPORT_CPU CpuPlatform : public ReferencePlatform {
+class OPENMM_EXPORT GayBerneForceProxy : public SerializationProxy {
 public:
-    class PlatformData;
-    CpuPlatform();
-    const std::string& getName() const {
-        static const std::string name = "CPU";
-        return name;
-    }
-    double getSpeed() const;
-    const std::string& getPropertyValue(const Context& context, const std::string& property) const;
-    bool supportsDoublePrecision() const;
-    static bool isProcessorSupported();
-    void contextCreated(ContextImpl& context, const std::map<std::string, std::string>& properties) const;
-    void contextDestroyed(ContextImpl& context) const;
-    /**
-     * This is the name of the parameter for selecting the number of threads to use.
-     */
-    static const std::string& CpuThreads() {
-        static const std::string key = "Threads";
-        return key;
-    }
-    /**
-     * We cannot use the standard mechanism for platform data, because that is already used by the superclass.
-     * Instead, we maintain a table of ContextImpls to PlatformDatas.
-     */
-    static PlatformData& getPlatformData(ContextImpl& context);
-    static const PlatformData& getPlatformData(const ContextImpl& context);
-private:
-    static std::map<const ContextImpl*, PlatformData*> contextData;
-};
-
-class CpuPlatform::PlatformData {
-public:
-    PlatformData(int numParticles, int numThreads);
-    ~PlatformData();
-    void requestNeighborList(double cutoffDistance, double padding, bool useExclusions, const std::vector<std::set<int> >& exclusionList);
-    AlignedArray<float> posq;
-    std::vector<AlignedArray<float> > threadForce;
-    ThreadPool threads;
-    bool isPeriodic;
-    CpuRandom random;
-    std::map<std::string, std::string> propertyValues;
-    CpuNeighborList* neighborList;
-    double cutoff, paddedCutoff;
-    bool anyExclusions;
-    std::vector<std::set<int> > exclusions;
+    GayBerneForceProxy();
+    void serialize(const void* object, SerializationNode& node) const;
+    void* deserialize(const SerializationNode& node) const;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_CPUPLATFORM_H_*/
+#endif /*OPENMM_GAYBERNEFORCE_PROXY_H_*/

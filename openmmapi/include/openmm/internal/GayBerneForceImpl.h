@@ -1,5 +1,5 @@
-#ifndef OPENMM_CPUPLATFORM_H_
-#define OPENMM_CPUPLATFORM_H_
+#ifndef OPENMM_GAYBERNEFORCEIMPL_H_
+#define OPENMM_GAYBERNEFORCEIMPL_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,69 +32,43 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "AlignedArray.h"
-#include "CpuRandom.h"
-#include "CpuNeighborList.h"
-#include "ReferencePlatform.h"
-#include "openmm/internal/ContextImpl.h"
-#include "openmm/internal/ThreadPool.h"
-#include "windowsExportCpu.h"
-#include <map>
+#include "ForceImpl.h"
+#include "openmm/GayBerneForce.h"
+#include "openmm/Kernel.h"
+#include <utility>
+#include <set>
+#include <string>
 
 namespace OpenMM {
-    
+
+class System;
+
 /**
- * This Platform subclass uses CPU implementations of the OpenMM kernels.
+ * This is the internal implementation of GayBerneForce.
  */
 
-class OPENMM_EXPORT_CPU CpuPlatform : public ReferencePlatform {
+class OPENMM_EXPORT GayBerneForceImpl : public ForceImpl {
 public:
-    class PlatformData;
-    CpuPlatform();
-    const std::string& getName() const {
-        static const std::string name = "CPU";
-        return name;
+    GayBerneForceImpl(const GayBerneForce& owner);
+    ~GayBerneForceImpl();
+    void initialize(ContextImpl& context);
+    const GayBerneForce& getOwner() const {
+        return owner;
     }
-    double getSpeed() const;
-    const std::string& getPropertyValue(const Context& context, const std::string& property) const;
-    bool supportsDoublePrecision() const;
-    static bool isProcessorSupported();
-    void contextCreated(ContextImpl& context, const std::map<std::string, std::string>& properties) const;
-    void contextDestroyed(ContextImpl& context) const;
-    /**
-     * This is the name of the parameter for selecting the number of threads to use.
-     */
-    static const std::string& CpuThreads() {
-        static const std::string key = "Threads";
-        return key;
+    void updateContextState(ContextImpl& context) {
+        // This force field doesn't update the state directly.
     }
-    /**
-     * We cannot use the standard mechanism for platform data, because that is already used by the superclass.
-     * Instead, we maintain a table of ContextImpls to PlatformDatas.
-     */
-    static PlatformData& getPlatformData(ContextImpl& context);
-    static const PlatformData& getPlatformData(const ContextImpl& context);
+    double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups);
+    std::map<std::string, double> getDefaultParameters() {
+        return std::map<std::string, double>(); // This force field doesn't define any parameters.
+    }
+    std::vector<std::string> getKernelNames();
+    void updateParametersInContext(ContextImpl& context);
 private:
-    static std::map<const ContextImpl*, PlatformData*> contextData;
-};
-
-class CpuPlatform::PlatformData {
-public:
-    PlatformData(int numParticles, int numThreads);
-    ~PlatformData();
-    void requestNeighborList(double cutoffDistance, double padding, bool useExclusions, const std::vector<std::set<int> >& exclusionList);
-    AlignedArray<float> posq;
-    std::vector<AlignedArray<float> > threadForce;
-    ThreadPool threads;
-    bool isPeriodic;
-    CpuRandom random;
-    std::map<std::string, std::string> propertyValues;
-    CpuNeighborList* neighborList;
-    double cutoff, paddedCutoff;
-    bool anyExclusions;
-    std::vector<std::set<int> > exclusions;
+    const GayBerneForce& owner;
+    Kernel kernel;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_CPUPLATFORM_H_*/
+#endif /*OPENMM_GAYBERNEFORCEIMPL_H_*/

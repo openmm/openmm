@@ -47,6 +47,7 @@ class ReferenceCustomCentroidBondIxn;
 class ReferenceCustomCompoundBondIxn;
 class ReferenceCustomHbondIxn;
 class ReferenceCustomManyParticleIxn;
+class ReferenceGayBerneForce;
 class ReferenceBrownianDynamics;
 class ReferenceStochasticDynamics;
 class ReferenceConstraintAlgorithm;
@@ -960,6 +961,40 @@ private:
     ReferenceCustomManyParticleIxn* ixn;
     std::vector<std::string> globalParameterNames;
     NonbondedMethod nonbondedMethod;
+};
+
+/**
+ * This kernel is invoked by GayBerneForce to calculate the forces acting on the system.
+ */
+class ReferenceCalcGayBerneForceKernel : public CalcGayBerneForceKernel {
+public:
+    ReferenceCalcGayBerneForceKernel(std::string name, const Platform& platform) : CalcGayBerneForceKernel(name, platform), ixn(NULL) {
+    }
+    ~ReferenceCalcGayBerneForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the GayBerneForce this kernel will be used for
+     */
+    void initialize(const System& system, const GayBerneForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the GayBerneForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const GayBerneForce& force);
+private:
+    ReferenceGayBerneForce* ixn;
 };
 
 /**

@@ -182,7 +182,7 @@ an energy term of the form
 
 
 .. math::
-   E=4\epsilon\left({\left(\frac{\sigma}{r}\right)}^{\text{12}}-{\left(\frac{\sigma}{r}\right)}^{6}\right)
+   E=4\epsilon\left({\left(\frac{\sigma}{r}\right)}^{12}-{\left(\frac{\sigma}{r}\right)}^{6}\right)
 
 
 where *r* is the distance between the two particles, :math:`\sigma` is the distance
@@ -201,7 +201,7 @@ at the cutoff distance.  When :math:`r_\mathit{switch} < r < r_\mathit{cutoff}`\
 
 where :math:`x = (r-r_\mathit{switch})/(r_\mathit{cutoff}-r_\mathit{switch})`. This function decreases smoothly from 1 at
 :math:`r = r_\mathit{switch}` to 0 at :math:`r = r_\mathit{cutoff}`, and has continuous first and
-second derivatives at both ends
+second derivatives at both ends.
 
 When an exception has been added for a pair of particles, :math:`\sigma` and :math:`\epsilon`
 are the parameters specified by the exception.  Otherwise they are determined
@@ -495,6 +495,84 @@ The surface area term is given by\ :cite:`Schaefer1998`\ :cite:`Ponder`
 where :math:`r_i` is the atomic radius of particle *i*\ , :math:`r_i` is
 its atomic radius, and :math:`r_\mathit{solvent}` is the solvent radius, which is taken
 to be 0.14 nm.  The default value for the energy scale :math:`E_{SA}` is 2.25936 kJ/mol/nm\ :sup:`2`\ .
+
+
+GayBerneForce
+*************
+
+This is similar to the Lennard-Jones interaction described in section :ref:`lennard-jones-interaction`,
+but instead of being based on the distance between two point particles, it is based
+on the distance of closest approach between two ellipsoids.\ :cite:`Everaers2003`
+Let :math:`\mathbf{A}_1` and :math:`\mathbf{A}_2` be rotation matrices that transform
+from the lab frame to the body frames of two interacting ellipsoids.  These rotations
+are determined from the positions of other particles, as described in the API documentation.
+Let :math:`\mathbf{r}_{12}` be the vector pointing from particle 1 to particle 2, and
+:math:`\hat{\mathbf{r}}_{12}=\mathbf{r}_{12}/|\mathbf{r}_{12}|`.  Let :math:`\mathbf{S}_1`
+and :math:`\mathbf{S}_2` be diagonal matrices containing the three radii of each particle:
+
+.. math::
+   \mathbf{S}_i=\begin{bmatrix}
+   a_i & 0 & 0 \\
+   0 & b_i & 0 \\
+   0 & 0 & c_i
+   \end{bmatrix}
+
+The energy is computed as a product of three terms:
+
+.. math::
+   E=U_r(\mathbf{A}_1, \mathbf{A}_2, \mathbf{r}_{12}) \cdot \eta_{12}(\mathbf{A}_1, \mathbf{A}_2) \cdot \chi_{12}(\mathbf{A}_1, \mathbf{A}_2, \hat{\mathbf{r}}_{12}) 
+
+The first term describes the distance dependence, and is very similar in form to
+the Lennard-Jones interaction:
+
+.. math::
+   U_r=4\epsilon\left({\left(\frac{\sigma}{h_{12}+\sigma}\right)}^{12}-{\left(\frac{\sigma}{h_{12}+\sigma}\right)}^{6}\right)
+
+where :math:`h_{12}` is an approximation to the distance of closest approach between
+the two ellipsoids:
+
+.. math::
+   h_{12}=|\mathbf{r}_{12}|-\sigma_{12}(\mathbf{A}_1, \mathbf{A}_2, \hat{\mathbf{r}}_{12})
+
+.. math::
+   \sigma_{12}(\mathbf{A}_1, \mathbf{A}_2, \hat{\mathbf{r}}_{12})=\left[ \frac{1}{2} \hat{\mathbf{r}}_{12}^T \mathbf{G}_{12}^{-1} \hat{\mathbf{r}}_{12} \right]^{-1/2}
+
+.. math::
+   \mathbf{G}_{12}=\mathbf{A}_1^T \mathbf{S}_1^2 \mathbf{A}_1 + \mathbf{A}_2^T \mathbf{S}_2^2 \mathbf{A}_2
+
+The second term adjusts the energy based on the relative orientations of the two ellipsoids:
+
+.. math::
+   \eta_{12}(\mathbf{A}_1, \mathbf{A}_2)=\left[ \frac{2 s_1 s_2}{\text{det}(\mathbf{G}_{12})} \right]^{1/2}
+
+.. math::
+   s_i=(a_i b_i + c_i^2)\sqrt{a_i b_i}
+
+The third term applies the user-defined scale factors :math:`e_a`, :math:`e_b`,
+and :math:`e_c` that adjust the strength of the interaction along each axis:
+
+.. math::
+   \chi_{12}(\mathbf{A}_1, \mathbf{A}_2, \hat{\mathbf{r}}_{12})=(2 \hat{\mathbf{r}}_{12}^T \mathbf{B}_{12}^{-1} \hat{\mathbf{r}}_{12})^2
+
+.. math::
+   \mathbf{B}_{12}=\mathbf{A}_1^T \mathbf{E}_1 \mathbf{A}_1 + \mathbf{A}_2^T \mathbf{E}_2 \mathbf{A}_2
+
+.. math::
+   \mathbf{E}_i=\begin{bmatrix}
+   e_{ai}^{-1/2} & 0 & 0 \\
+   0 & e_{bi}^{-1/2} & 0 \\
+   0 & 0 & e_{ci}^{-1/2}
+   \end{bmatrix}
+
+When using a cutoff, you can optionally use a switching function to make the energy go smoothly to 0
+at the cutoff distance.  When :math:`r_\mathit{switch} < r < r_\mathit{cutoff}`\ , the energy is multiplied by
+
+.. math::
+   S=1-{6x}^{5}+15{x}^{4}-10{x}^{3}
+
+where :math:`x = (r-r_\mathit{switch})/(r_\mathit{cutoff}-r_\mathit{switch})`. This function decreases smoothly from 1 at
+:math:`r = r_\mathit{switch}` to 0 at :math:`r = r_\mathit{cutoff}`, and has continuous first and
+second derivatives at both ends.
 
 
 AndersenThermostat
