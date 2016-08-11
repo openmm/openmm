@@ -51,13 +51,14 @@ private:
     std::vector<CustomIntegratorUtilities::Comparison> comparisons;
     std::vector<bool> invalidatesForces, needsForces, needsEnergy, computeBothForceAndEnergy;
     std::vector<int> forceGroupFlags, blockEnd;
-    RealOpenMM energy;
     std::map<std::string, double> energyParamDerivs;
     Lepton::CompiledExpression kineticEnergyExpression;
     bool kineticEnergyNeedsForce;
     CompiledExpressionSet expressionSet;
-    int xIndex, vIndex, mIndex, fIndex, energyIndex, gaussianIndex, uniformIndex;
-    std::vector<int> forceVariableIndex, energyVariableIndex, perDofVariableIndex, stepVariableIndex;
+    double x, v, m, f, energy, gaussian, uniform;
+    int xIndex, vIndex;
+    std::vector<int> perDofVariableIndex, stepVariableIndex;
+    std::vector<double> perDofVariable;
 
     void initialize(OpenMM::ContextImpl& context, std::vector<RealOpenMM>& masses, std::map<std::string, RealOpenMM>& globals);
     
@@ -65,7 +66,7 @@ private:
     
     void computePerDof(int numberOfAtoms, std::vector<OpenMM::RealVec>& results, const std::vector<OpenMM::RealVec>& atomCoordinates,
                   const std::vector<OpenMM::RealVec>& velocities, const std::vector<OpenMM::RealVec>& forces, const std::vector<RealOpenMM>& masses,
-                  const std::vector<std::vector<OpenMM::RealVec> >& perDof, const Lepton::CompiledExpression& expression, int forceIndex);
+                  const std::vector<std::vector<OpenMM::RealVec> >& perDof, const Lepton::CompiledExpression& expression);
     
     void recordChangedParameters(OpenMM::ContextImpl& context, std::map<std::string, RealOpenMM>& globals);
 

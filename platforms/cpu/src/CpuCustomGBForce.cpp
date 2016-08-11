@@ -513,7 +513,8 @@ void CpuCustomGBForce::calculateOnePairEnergyTerm(int index, int atom1, int atom
     getDeltaR(pos2, pos1, deltaR, r2, periodic, boxSize, invBoxSize);
     if (cutoff && r2 >= cutoffDistance2)
         return;
-    data.r = sqrtf(r2);
+    float r = sqrtf(r2);
+    data.r = r;
 
     // Record variables for evaluating expressions.
 
@@ -531,7 +532,7 @@ void CpuCustomGBForce::calculateOnePairEnergyTerm(int index, int atom1, int atom
     if (includeEnergy)
         totalEnergy += (float) data.energyExpressions[index].evaluate();
     float dEdR = (float) data.energyDerivExpressions[index][0].evaluate();
-    dEdR *= 1/data.r;
+    dEdR *= 1/r;
     fvec4 result = deltaR*dEdR;
     (fvec4(forces+4*atom1)-result).store(forces+4*atom1);
     (fvec4(forces+4*atom2)+result).store(forces+4*atom2);
@@ -634,7 +635,8 @@ void CpuCustomGBForce::calculateOnePairChainRule(int atom1, int atom2, ThreadDat
     getDeltaR(pos2, pos1, deltaR, r2, periodic, boxSize, invBoxSize);
     if (cutoff && r2 >= cutoffDistance2)
         return;
-    data.r = sqrtf(r2);
+    float r = sqrtf(r2);
+    data.r = r;
 
     // Record variables for evaluating expressions.
 
@@ -652,7 +654,7 @@ void CpuCustomGBForce::calculateOnePairChainRule(int atom1, int atom2, ThreadDat
 
     // Evaluate the derivative of each parameter with respect to position and apply forces.
 
-    float rinv = 1/data.r;
+    float rinv = 1/r;
     deltaR *= rinv;
     fvec4 f1(0.0f), f2(0.0f);
     if (!isExcluded || valueTypes[0] != CustomGBForce::ParticlePair) {
