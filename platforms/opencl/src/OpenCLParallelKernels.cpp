@@ -583,6 +583,10 @@ void OpenCLParallelCalcNonbondedForceKernel::getPMEParameters(double& alpha, int
     dynamic_cast<const OpenCLCalcNonbondedForceKernel&>(kernels[0].getImpl()).getPMEParameters(alpha, nx, ny, nz);
 }
 
+void OpenCLParallelCalcNonbondedForceKernel::getLJPMEParameters(double& dalpha, int& dnx, int& dny, int& dnz) const {
+    dynamic_cast<const OpenCLCalcNonbondedForceKernel&>(kernels[0].getImpl()).getLJPMEParameters(dalpha, dnx, dny, dnz);
+}
+
 class OpenCLParallelCalcCustomNonbondedForceKernel::Task : public OpenCLContext::WorkTask {
 public:
     Task(ContextImpl& context, OpenCLCalcCustomNonbondedForceKernel& kernel, bool includeForce,

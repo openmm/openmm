@@ -528,7 +528,7 @@ CpuNonbondedForce* createCpuNonbondedForceVec4();
 CpuNonbondedForce* createCpuNonbondedForceVec8();
 
 CpuCalcNonbondedForceKernel::CpuCalcNonbondedForceKernel(string name, const Platform& platform, CpuPlatform::PlatformData& data) : CalcNonbondedForceKernel(name, platform),
-        data(data), bonded14IndexArray(NULL), bonded14ParamArray(NULL), hasInitializedPme(false), nonbonded(NULL) {
+        data(data), bonded14IndexArray(NULL), bonded14ParamArray(NULL), hasInitializedPme(false), hasInitializedDispersionPme(false), nonbonded(NULL) {
     if (isVec8Supported())
         nonbonded = createCpuNonbondedForceVec8();
     else
@@ -616,7 +616,7 @@ void CpuCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
     }
     else if (nonbondedMethod == PME) {
         double alpha;
-        NonbondedForceImpl::calcPMEParameters(system, force, alpha, gridSize[0], gridSize[1], gridSize[2]);
+        NonbondedForceImpl::calcPMEParameters(system, force, alpha, gridSize[0], gridSize[1], gridSize[2], false);
         ewaldAlpha = alpha;
     }
     if (nonbondedMethod == Ewald || nonbondedMethod == PME)
@@ -739,7 +739,7 @@ void CpuCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, 
 }
 
 void CpuCalcNonbondedForceKernel::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
-    if (nonbondedMethod != PME)
+    if (nonbondedMethod != PME && nonbondedMethod != LJPME)
         throw OpenMMException("getPMEParametersInContext: This Context is not using PME");
     if (useOptimizedPme)
         optimizedPme.getAs<const CalcPmeReciprocalForceKernel>().getPMEParameters(alpha, nx, ny, nz);
@@ -748,6 +748,19 @@ void CpuCalcNonbondedForceKernel::getPMEParameters(double& alpha, int& nx, int& 
         nx = gridSize[0];
         ny = gridSize[1];
         nz = gridSize[2];
+    }
+}
+
+void CpuCalcNonbondedForceKernel::getLJPMEParameters(double& dalpha, int& dnx, int& dny, int& dnz) const {
+    if (nonbondedMethod != LJPME)
+        throw OpenMMException("getPMEParametersInContext: This Context is not using PME");
+    if (useOptimizedPme)
+        optimizedDispersionPme.getAs<const CalcPmeReciprocalForceKernel>().getPMEParameters(dalpha, dnx, dny, dnz);
+    else {
+        dalpha = ewaldDispersionAlpha;
+        dnx = dispersionGridSize[0];
+        dny = dispersionGridSize[1];
+        dnz = dispersionGridSize[2];
     }
 }
 

@@ -1733,7 +1733,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     else if (nonbondedMethod == PME) {
         // Compute the PME parameters.
 
-        NonbondedForceImpl::calcPMEParameters(system, force, alpha, gridSizeX, gridSizeY, gridSizeZ);
+        NonbondedForceImpl::calcPMEParameters(system, force, alpha, gridSizeX, gridSizeY, gridSizeZ, false);
         gridSizeX = OpenCLFFT3D::findLegalDimension(gridSizeX);
         gridSizeY = OpenCLFFT3D::findLegalDimension(gridSizeY);
         gridSizeZ = OpenCLFFT3D::findLegalDimension(gridSizeZ);
@@ -2202,6 +2202,19 @@ void OpenCLCalcNonbondedForceKernel::getPMEParameters(double& alpha, int& nx, in
         nx = gridSizeX;
         ny = gridSizeY;
         nz = gridSizeZ;
+    }
+}
+
+void OpenCLCalcNonbondedForceKernel::getLJPMEParameters(double& dalpha, int& dnx, int& dny, int& dnz) const {
+    if (nonbondedMethod != LJPME)
+        throw OpenMMException("getPMEParametersInContext: This Context is not using PME");
+    if (cl.getPlatformData().useCpuPme)
+        cpuPme.getAs<CalcPmeReciprocalForceKernel>().getPMEParameters(dalpha, dnx, dny, dnz);
+    else {
+        dalpha = this->alpha;
+        dnx = gridSizeX;
+        dny = gridSizeY;
+        dnz = gridSizeZ;
     }
 }
 
