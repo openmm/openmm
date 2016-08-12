@@ -365,7 +365,7 @@ void testErrorTolerance(NonbondedForce::NonbondedMethod method) {
 
                 double expectedAlpha, actualAlpha;
                 int expectedSize[3], actualSize[3];
-                NonbondedForceImpl::calcPMEParameters(system, *force, expectedAlpha, expectedSize[0], expectedSize[1], expectedSize[2]);
+                NonbondedForceImpl::calcPMEParameters(system, *force, expectedAlpha, expectedSize[0], expectedSize[1], expectedSize[2], false);
                 force->getPMEParametersInContext(context, actualAlpha, actualSize[0], actualSize[1], actualSize[2]);
                 ASSERT_EQUAL_TOL(expectedAlpha, actualAlpha, 1e-5);
                 for (int i = 0; i < 3; i++) {

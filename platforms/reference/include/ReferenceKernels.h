@@ -604,12 +604,21 @@ public:
      * @param nz      the number of grid points along the Z axis
      */
     void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
+    /**
+     * Get the dispersion parameters being used for the dispersion term in LJPME.
+     *
+     * @param dalpha   the separation parameter
+     * @param dnx      the number of grid points along the X axis
+     * @param dny      the number of grid points along the Y axis
+     * @param dnz      the number of grid points along the Z axis
+     */
+    void getLJPMEParameters(double& dalpha, int& dnx, int& dny, int& dnz) const;
 private:
     int numParticles, num14;
     int **bonded14IndexArray;
     RealOpenMM **particleParamArray, **bonded14ParamArray;
-    RealOpenMM nonbondedCutoff, switchingDistance, rfDielectric, ewaldAlpha, dispersionCoefficient;
-    int kmax[3], gridSize[3];
+    RealOpenMM nonbondedCutoff, switchingDistance, rfDielectric, ewaldAlpha, ewaldDispersionAlpha, dispersionCoefficient;
+    int kmax[3], gridSize[3], dispersionGridSize[3];
     bool useSwitchingFunction;
     std::vector<std::set<int> > exclusions;
     NonbondedMethod nonbondedMethod;

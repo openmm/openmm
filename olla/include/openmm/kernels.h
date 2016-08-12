@@ -555,7 +555,8 @@ public:
         CutoffNonPeriodic = 1,
         CutoffPeriodic = 2,
         Ewald = 3,
-        PME = 4
+        PME = 4,
+        LJPME = 5
     };
     static std::string Name() {
         return "CalcNonbondedForce";
@@ -589,13 +590,22 @@ public:
     virtual void copyParametersToContext(ContextImpl& context, const NonbondedForce& force) = 0;
     /**
      * Get the parameters being used for PME.
-     * 
+     *
      * @param alpha   the separation parameter
      * @param nx      the number of grid points along the X axis
      * @param ny      the number of grid points along the Y axis
      * @param nz      the number of grid points along the Z axis
      */
     virtual void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const = 0;
+    /**
+     * Get the parameters being used for the dispersion terms in LJPME.
+     *
+     * @param dalpha   the separation parameter
+     * @param dnx      the number of grid points along the X axis
+     * @param dny      the number of grid points along the Y axis
+     * @param dnz      the number of grid points along the Z axis
+     */
+    virtual void getLJPMEParameters(double& dalpha, int& dnx, int& dny, int& dnz) const = 0;
 };
 
 /**

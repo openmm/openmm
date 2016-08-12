@@ -108,7 +108,7 @@ void testPME(bool triclinic) {
     
     double alpha;
     int gridx, gridy, gridz;
-    NonbondedForceImpl::calcPMEParameters(system, *force, alpha, gridx, gridy, gridz);
+    NonbondedForceImpl::calcPMEParameters(system, *force, alpha, gridx, gridy, gridz, false);
     CpuCalcPmeReciprocalForceKernel pme(CalcPmeReciprocalForceKernel::Name(), platform);
     IO io;
     double sumSquaredCharges = 0;
