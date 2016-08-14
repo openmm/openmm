@@ -467,6 +467,7 @@ class ForceField(object):
         def __init__(self):
             self.atomType = {}
             self.atomParameters = {}
+            self.atomTemplateIndexes = {}
             self.atoms = []
             self.excludeAtomWith = []
             self.virtualSites = {}
@@ -494,6 +495,7 @@ class ForceField(object):
             for atom, match in zip(residue.atoms(), matches):
                 self.atomType[atom] = template.atoms[match].type
                 self.atomParameters[atom] = template.atoms[match].parameters
+                self.atomTemplateIndexes[atom] = match
                 for site in template.virtualSites:
                     if match == site.index:
                         self.virtualSites[atom] = (site, [matchAtoms[i].index for i in site.atoms], matchAtoms[site.excludeWith].index)
@@ -1875,24 +1877,59 @@ class PeriodicTorsionGenerator(object):
                 types3 = tordef.types3
                 types4 = tordef.types4
                 hasWildcard = (wildcard in (types1, types2, types3, types4))
+                if (types1, types2, types3, types4).count(wildcard) == 2:
+                    hasTwoWildcards = True
+                else:
+                    hasTwoWildcards = False
                 if match is not None and hasWildcard:
                     # Prefer specific definitions over ones with wildcards
                     continue
                 if type1 in types1:
                     for (t2, t3, t4) in itertools.permutations(((type2, 1), (type3, 2), (type4, 3))):
                         if t2[0] in types2 and t3[0] in types3 and t4[0] in types4:
-                            # Workaround to be more consistent with AMBER.  It uses wildcards to define most of its
-                            # impropers, which leaves the ordering ambiguous.  It then follows some bizarre rules
-                            # to pick the order.
+                            # topology atom indexes
                             a1 = torsion[t2[1]]
                             a2 = torsion[t3[1]]
+                            a4 = torsion[t4[1]]
+                            # residue indexes
+                            r1 = data.atoms[a1].residue.index
+                            r2 = data.atoms[a2].residue.index
+                            r4 = data.atoms[a4].residue.index
+                            # template atom indexes
+                            ta1 = data.atomTemplateIndexes[data.atoms[a1]]
+                            ta2 = data.atomTemplateIndexes[data.atoms[a2]]
+                            ta4 = data.atomTemplateIndexes[data.atoms[a4]]
+                            # elements
                             e1 = data.atoms[a1].element
                             e2 = data.atoms[a2].element
-                            if e1 == e2 and a1 > a2:
-                                (a1, a2) = (a2, a1)
-                            elif e1 != elem.carbon and (e2 == elem.carbon or e1.mass < e2.mass):
-                                (a1, a2) = (a2, a1)
-                            match = (a1, a2, torsion[0], torsion[t4[1]], tordef)
+                            e4 = data.atoms[a4].element
+                            # the following for AMBER only - TODO: decide how to pass this in ffxml's
+                            if isAmber:
+                                if not hasWildcard:
+                                    if t2[0] == t4[0] and (r1 > r4 or (r1 == r4 and ta1 > ta4)):
+                                        (a1, a4) = (a4, a1)
+                                    if t3[0] == t4[0] and (r2 > r4 or (r2 == r4 and ta2 > ta4)):
+                                        (a2, a4) = (a4, a2)
+                                    if t2[0] == t3[0] and (r1 > r2 or (r1 == r2 and ta1 > ta2)):
+                                        (a1, a2) = (a2, a1)
+                                else:
+                                    if e1 == e4 and (r1 > r4 or (r1 == r4 and ta1 > ta4)):
+                                        (a1, a4) = (a4, a1)
+                                    if e2 == e4 and (r2 > r4 or (r2 == r4 and ta2 > ta4)):
+                                        (a2, a4) = (a4, a2)
+                                    if (r1 > r2 or (r1 == r2 and ta1 > ta2)):
+                                        (a1, a2) = (a2, a1)
+                            # the following is OpenMM default
+                            else:
+                                    if t2[0] == t4[0] and (r1 > r4 or (r1 == r4 and ta1 > ta4)):
+                                        (a1, a4) = (a4, a1)
+                                    if t3[0] == t4[0] and (r2 > r4 or (r2 == r4 and ta2 > ta4)):
+                                        (a2, a4) = (a4, a2)
+                                    if t2[0] == t3[0] and (r1 > r2 or (r1 == r2 and ta1 > ta2)):
+                                        (a1, a2) = (a2, a1)
+                                    if hasTwoWildcards and (r1 > r2 or (r1 == r2 and ta1 > ta2)):
+                                        (a1, a2) = (a2, a1)
+                            match = (a1, a2, torsion[0], a4, tordef)
                             break
             if match is not None:
                 (a1, a2, a3, a4, tordef) = match
