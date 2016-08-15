@@ -622,7 +622,7 @@ public:
      * @param ny      the number of grid points along the Y axis
      * @param nz      the number of grid points along the Z axis
      */
-    void getLJPMEParameters(double& dalpha, int& dnx, int& dny, int& dnz) const;
+    void getLJPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
 private:
     class SortTrait : public OpenCLSort::SortTrait {
         int getDataSize() const {return 8;}

@@ -166,18 +166,18 @@ void ReferenceLJCoulombIxn::setUsePME(RealOpenMM alpha, int meshSize[3]) {
 
 /**---------------------------------------------------------------------------------------
 
-     Set the force to use Particle-Mesh Ewald (PME) summation for dispersion and terms.
+     Set the force to use Particle-Mesh Ewald (PME) summation for dispersion terms.
 
-     @param dalpha  the dispersion Ewald separation parameter
-     @param dgridSize the dimensions of the dispersion mesh
+     @param alpha  the dispersion Ewald separation parameter
+     @param gridSize the dimensions of the dispersion mesh
 
      --------------------------------------------------------------------------------------- */
 
-void ReferenceLJCoulombIxn::setUseLJPME(RealOpenMM dalpha, int dmeshSize[3]) {
-    alphaDispersionEwald = dalpha;
-    dispersionMeshDim[0] = dmeshSize[0];
-    dispersionMeshDim[1] = dmeshSize[1];
-    dispersionMeshDim[2] = dmeshSize[2];
+void ReferenceLJCoulombIxn::setUseLJPME(RealOpenMM alpha, int meshSize[3]) {
+    alphaDispersionEwald = alpha;
+    dispersionMeshDim[0] = meshSize[0];
+    dispersionMeshDim[1] = meshSize[1];
+    dispersionMeshDim[2] = meshSize[2];
     ljpme = true;
 }
 
@@ -455,13 +455,14 @@ void ReferenceLJCoulombIxn::calculateEwaldIxn(int numberOfAtoms, vector<RealVec>
             // and multiplicative functional forms at the cutoff.
             RealOpenMM emult = c6i*c6j*inverseR2*inverseR2*inverseR2*(1.0 - EXP(-dar2) * (1.0 + dar2 + 0.5*dar4));
             dEdR += 6.0*c6i*c6j*inverseR2*inverseR2*inverseR2*inverseR2*(1.0 - EXP(-dar2) * (1.0 + dar2 + 0.5*dar4 + dar6/6.0));
-            // The additive part of the potential shift
+
             RealOpenMM inverseCut2 = 1.0/(cutoffDistance*cutoffDistance);
             RealOpenMM inverseCut6 = inverseCut2*inverseCut2*inverseCut2;
             sig2 = atomParameters[ii][SigIndex] +  atomParameters[jj][SigIndex];
             sig2 *= sig2;
             sig6 = sig2*sig2*sig2;
-            RealOpenMM potentialshift = eps*sig6*inverseCut6;
+            // The additive part of the potential shift
+            RealOpenMM potentialshift = eps*(one-sig6*inverseCut6)*sig6*inverseCut6;
             dalphaR   = alphaDispersionEwald * cutoffDistance;
             dar2 = dalphaR*dalphaR;
             dar4 = dar2*dar2;

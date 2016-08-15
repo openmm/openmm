@@ -261,12 +261,12 @@ public:
     /**
      * Get the parameters being used for the dispersion term in LJPME.
      *
-     * @param dalpha   the separation parameter
-     * @param dnx      the number of grid points along the X axis
-     * @param dny      the number of grid points along the Y axis
-     * @param dnz      the number of grid points along the Z axis
+     * @param alpha   the separation parameter
+     * @param nx      the number of grid points along the X axis
+     * @param ny      the number of grid points along the Y axis
+     * @param nz      the number of grid points along the Z axis
      */
-    void getLJPMEParameters(double& dalpha, int& dnx, int& dny, int& dnz) const;
+    void getLJPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
 private:
     class PmeIO;
     CpuPlatform::PlatformData& data;
