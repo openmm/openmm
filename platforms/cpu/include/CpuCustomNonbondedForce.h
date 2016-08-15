@@ -129,6 +129,7 @@ private:
     bool useSwitch;
     bool periodic;
     bool triclinic;
+    bool useInteractionGroups;
     const CpuNeighborList* neighborList;
     float recipBoxSize[3];
     RealVec periodicBoxVectors[3];

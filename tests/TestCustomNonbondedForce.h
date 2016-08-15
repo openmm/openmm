@@ -878,6 +878,16 @@ void testLargeInteractionGroup() {
     State state3 = context.getState(State::Forces);
     for (int i = 0; i < numParticles; i++)
         ASSERT_EQUAL_VEC(state1.getForces()[i], state3.getForces()[i], 1e-4);
+    
+    // Now make the interaction group empty.  The energy should then be zero.
+    
+    set1.clear();
+    set2.clear();
+    nonbonded->setInteractionGroupParameters(0, set1, set2);
+    context.reinitialize();
+    context.setPositions(positions);
+    State state4 = context.getState(State::Energy);
+    ASSERT_EQUAL(0.0, state4.getPotentialEnergy());
 }
 
 void testInteractionGroupLongRangeCorrection() {
