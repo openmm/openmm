@@ -70,7 +70,7 @@ CpuCustomNonbondedForce::ThreadData::ThreadData(const Lepton::CompiledExpression
 CpuCustomNonbondedForce::CpuCustomNonbondedForce(const Lepton::CompiledExpression& energyExpression,
             const Lepton::CompiledExpression& forceExpression, const vector<string>& parameterNames, const vector<set<int> >& exclusions,
             const std::vector<Lepton::CompiledExpression> energyParamDerivExpressions, ThreadPool& threads) :
-            cutoff(false), useSwitch(false), periodic(false), paramNames(parameterNames), exclusions(exclusions), threads(threads) {
+            cutoff(false), useSwitch(false), periodic(false), useInteractionGroups(false), paramNames(parameterNames), exclusions(exclusions), threads(threads) {
     for (int i = 0; i < threads.getNumThreads(); i++)
         threadData.push_back(new ThreadData(energyExpression, forceExpression, parameterNames, energyParamDerivExpressions));
 }
@@ -87,6 +87,7 @@ void CpuCustomNonbondedForce::setUseCutoff(RealOpenMM distance, const CpuNeighbo
   }
 
 void CpuCustomNonbondedForce::setInteractionGroups(const vector<pair<set<int>, set<int> > >& groups) {
+    useInteractionGroups = true;
     for (int group = 0; group < (int) groups.size(); group++) {
         const set<int>& set1 = groups[group].first;
         const set<int>& set2 = groups[group].second;
@@ -183,7 +184,7 @@ void CpuCustomNonbondedForce::threadComputeForce(ThreadPool& threads, int thread
         data.energyParamDerivs[i] = 0.0;
     fvec4 boxSize(periodicBoxVectors[0][0], periodicBoxVectors[1][1], periodicBoxVectors[2][2], 0);
     fvec4 invBoxSize(recipBoxSize[0], recipBoxSize[1], recipBoxSize[2], 0);
-    if (groupInteractions.size() > 0) {
+    if (useInteractionGroups) {
         // The user has specified interaction groups, so compute only the requested interactions.
         
         while (true) {
