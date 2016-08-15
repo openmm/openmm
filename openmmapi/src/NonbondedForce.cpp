@@ -106,11 +106,11 @@ void NonbondedForce::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) 
     nz = this->nz;
 }
 
-void NonbondedForce::getLJPMEParameters(double& dalpha, int& dnx, int& dny, int& dnz) const {
-    dalpha = this->dalpha;
-    dnx = this->dnx;
-    dny = this->dny;
-    dnz = this->dnz;
+void NonbondedForce::getLJPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
+    alpha = this->dalpha;
+    nx = this->dnx;
+    ny = this->dny;
+    nz = this->dnz;
 }
 
 void NonbondedForce::setPMEParameters(double alpha, int nx, int ny, int nz) {
@@ -120,19 +120,19 @@ void NonbondedForce::setPMEParameters(double alpha, int nx, int ny, int nz) {
     this->nz = nz;
 }
 
-void NonbondedForce::setLJPMEParameters(double dalpha, int dnx, int dny, int dnz) {
-    this->dalpha = dalpha;
-    this->dnx = dnx;
-    this->dny = dny;
-    this->dnz = dnz;
+void NonbondedForce::setLJPMEParameters(double alpha, int nx, int ny, int nz) {
+    this->dalpha = alpha;
+    this->dnx = nx;
+    this->dny = ny;
+    this->dnz = nz;
 }
 
 void NonbondedForce::getPMEParametersInContext(const Context& context, double& alpha, int& nx, int& ny, int& nz) const {
     dynamic_cast<const NonbondedForceImpl&>(getImplInContext(context)).getPMEParameters(alpha, nx, ny, nz);
 }
 
-void NonbondedForce::getLJPMEParametersInContext(const Context& context, double& dalpha, int& dnx, int& dny, int& dnz) const {
-    dynamic_cast<const NonbondedForceImpl&>(getImplInContext(context)).getLJPMEParameters(dalpha, dnx, dny, dnz);
+void NonbondedForce::getLJPMEParametersInContext(const Context& context, double& alpha, int& nx, int& ny, int& nz) const {
+    dynamic_cast<const NonbondedForceImpl&>(getImplInContext(context)).getLJPMEParameters(alpha, nx, ny, nz);
 }
 
 int NonbondedForce::addParticle(double charge, double sigma, double epsilon) {

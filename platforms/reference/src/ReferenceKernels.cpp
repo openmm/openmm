@@ -1080,13 +1080,13 @@ void ReferenceCalcNonbondedForceKernel::getPMEParameters(double& alpha, int& nx,
     nz = gridSize[2];
 }
 
-void ReferenceCalcNonbondedForceKernel::getLJPMEParameters(double& dalpha, int& dnx, int& dny, int& dnz) const {
+void ReferenceCalcNonbondedForceKernel::getLJPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
     if (nonbondedMethod != LJPME)
         throw OpenMMException("getPMEParametersInContext: This Context is not using LJPME");
-    dalpha = ewaldDispersionAlpha;
-    dnx = dispersionGridSize[0];
-    dny = dispersionGridSize[1];
-    dnz = dispersionGridSize[2];
+    alpha = ewaldDispersionAlpha;
+    nx = dispersionGridSize[0];
+    ny = dispersionGridSize[1];
+    nz = dispersionGridSize[2];
 }
 
 ReferenceCalcCustomNonbondedForceKernel::~ReferenceCalcCustomNonbondedForceKernel() {

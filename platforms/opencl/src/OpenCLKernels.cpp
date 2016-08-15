@@ -2205,16 +2205,16 @@ void OpenCLCalcNonbondedForceKernel::getPMEParameters(double& alpha, int& nx, in
     }
 }
 
-void OpenCLCalcNonbondedForceKernel::getLJPMEParameters(double& dalpha, int& dnx, int& dny, int& dnz) const {
+void OpenCLCalcNonbondedForceKernel::getLJPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
     if (nonbondedMethod != LJPME)
         throw OpenMMException("getPMEParametersInContext: This Context is not using PME");
     if (cl.getPlatformData().useCpuPme)
-        cpuPme.getAs<CalcPmeReciprocalForceKernel>().getPMEParameters(dalpha, dnx, dny, dnz);
+        cpuPme.getAs<CalcPmeReciprocalForceKernel>().getPMEParameters(alpha, nx, ny, nz);
     else {
-        dalpha = this->alpha;
-        dnx = gridSizeX;
-        dny = gridSizeY;
-        dnz = gridSizeZ;
+        alpha = this->alpha;
+        nx = gridSizeX;
+        ny = gridSizeY;
+        nz = gridSizeZ;
     }
 }
 

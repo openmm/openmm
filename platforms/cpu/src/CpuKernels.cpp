@@ -751,16 +751,16 @@ void CpuCalcNonbondedForceKernel::getPMEParameters(double& alpha, int& nx, int& 
     }
 }
 
-void CpuCalcNonbondedForceKernel::getLJPMEParameters(double& dalpha, int& dnx, int& dny, int& dnz) const {
+void CpuCalcNonbondedForceKernel::getLJPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
     if (nonbondedMethod != LJPME)
         throw OpenMMException("getPMEParametersInContext: This Context is not using PME");
     if (useOptimizedPme)
-        optimizedDispersionPme.getAs<const CalcPmeReciprocalForceKernel>().getPMEParameters(dalpha, dnx, dny, dnz);
+        optimizedDispersionPme.getAs<const CalcPmeReciprocalForceKernel>().getPMEParameters(alpha, nx, ny, nz);
     else {
-        dalpha = ewaldDispersionAlpha;
-        dnx = dispersionGridSize[0];
-        dny = dispersionGridSize[1];
-        dnz = dispersionGridSize[2];
+        alpha = ewaldDispersionAlpha;
+        nx = dispersionGridSize[0];
+        ny = dispersionGridSize[1];
+        nz = dispersionGridSize[2];
     }
 }
 

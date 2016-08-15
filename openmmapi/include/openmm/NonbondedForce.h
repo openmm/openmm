@@ -216,12 +216,12 @@ public:
      * Get the parameters to use for dispersion term in LJ-PME calculations.  If alpha is 0 (the default),
      * these parameters are ignored and instead their values are chosen based on the Ewald error tolerance.
      *
-     * @param[out] dalpha   the separation parameter
-     * @param[out] dnx      the number of dispersion grid points along the X axis
-     * @param[out] dny      the number of dispersion grid points along the Y axis
-     * @param[out] dnz      the number of dispersion grid points along the Z axis
+     * @param[out] alpha   the separation parameter
+     * @param[out] nx      the number of dispersion grid points along the X axis
+     * @param[out] ny      the number of dispersion grid points along the Y axis
+     * @param[out] nz      the number of dispersion grid points along the Z axis
      */
-    void getLJPMEParameters(double& dalpha, int& dnx, int& dny, int& dnz) const;
+    void getLJPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
     /**
      * Set the parameters to use for PME calculations.  If alpha is 0 (the default), these parameters are
      * ignored and instead their values are chosen based on the Ewald error tolerance.
@@ -236,12 +236,12 @@ public:
      * Set the parameters to use for the dispersion term in LJPME calculations.  If alpha is 0 (the default),
      * these parameters are ignored and instead their values are chosen based on the Ewald error tolerance.
      *
-     * @param dalpha   the separation parameter
-     * @param dnx      the number of grid points along the X axis
-     * @param dny      the number of grid points along the Y axis
-     * @param dnz      the number of grid points along the Z axis
+     * @param alpha   the separation parameter
+     * @param nx      the number of grid points along the X axis
+     * @param ny      the number of grid points along the Y axis
+     * @param nz      the number of grid points along the Z axis
      */
-    void setLJPMEParameters(double dalpha, int dnx, int dny, int dnz);
+    void setLJPMEParameters(double alpha, int nx, int ny, int nz);
     /**
      * Get the parameters being used for PME in a particular Context.  Because some platforms have restrictions
      * on the allowed grid sizes, the values that are actually used may be slightly different from those
@@ -262,12 +262,12 @@ public:
      * See the manual for details.
      *
      * @param context      the Context for which to get the parameters
-     * @param[out] dalpha   the separation parameter
-     * @param[out] dnx      the number of grid points along the X axis
-     * @param[out] dny      the number of grid points along the Y axis
-     * @param[out] dnz      the number of grid points along the Z axis
+     * @param[out] alpha   the separation parameter
+     * @param[out] nx      the number of grid points along the X axis
+     * @param[out] ny      the number of grid points along the Y axis
+     * @param[out] nz      the number of grid points along the Z axis
      */
-    void getLJPMEParametersInContext(const Context& context, double& dalpha, int& dnx, int& dny, int& dnz) const;
+    void getLJPMEParametersInContext(const Context& context, double& alpha, int& nx, int& ny, int& nz) const;
     /**
      * Add the nonbonded force parameters for a particle.  This should be called once for each particle
      * in the System.  When it is called for the i'th time, it specifies the parameters for the i'th particle.
