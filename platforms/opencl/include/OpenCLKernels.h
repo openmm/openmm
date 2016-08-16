@@ -142,6 +142,12 @@ public:
      */
     void getForces(ContextImpl& context, std::vector<Vec3>& forces);
     /**
+     * Get the current derivatives of the energy with respect to context parameters.
+     *
+     * @param derivs  on exit, this contains the derivatives
+     */
+    void getEnergyParameterDerivatives(ContextImpl& context, std::map<std::string, double>& derivs);
+    /**
      * Get the current periodic box vectors.
      *
      * @param a      on exit, this contains the vector defining the first edge of the periodic box
@@ -709,6 +715,7 @@ private:
     std::vector<cl_float> globalParamValues;
     std::vector<OpenCLArray*> tabulatedFunctions;
     double longRangeCoefficient;
+    std::vector<double> longRangeCoefficientDerivs;
     bool hasInitializedLongRangeCorrection, hasInitializedKernel;
     int numGroupThreadBlocks;
     CustomNonbondedForce* forceCopy;
@@ -801,13 +808,15 @@ public:
     void copyParametersToContext(ContextImpl& context, const CustomGBForce& force);
 private:
     double cutoff;
-    bool hasInitializedKernels, needParameterGradient;
+    bool hasInitializedKernels, needParameterGradient, needEnergyParamDerivs;
     int maxTiles, numComputedValues;
     OpenCLContext& cl;
     OpenCLParameterSet* params;
     OpenCLParameterSet* computedValues;
     OpenCLParameterSet* energyDerivs;
     OpenCLParameterSet* energyDerivChain;
+    std::vector<OpenCLParameterSet*> dValuedParam;
+    std::vector<OpenCLArray*> dValue0dParam;
     OpenCLArray* longEnergyDerivs;
     OpenCLArray* globals;
     OpenCLArray* valueBuffers;
@@ -953,6 +962,7 @@ public:
 
 private:
     int numGroups, numBonds;
+    bool needEnergyParamDerivs;
     OpenCLContext& cl;
     OpenCLParameterSet* params;
     OpenCLArray* globals;
@@ -1072,6 +1082,72 @@ private:
     std::vector<OpenCLArray*> tabulatedFunctions;
     const System& system;
     cl::Kernel forceKernel, blockBoundsKernel, neighborsKernel, startIndicesKernel, copyPairsKernel;
+};
+
+/**
+ * This kernel is invoked by GayBerneForce to calculate the forces acting on the system.
+ */
+class OpenCLCalcGayBerneForceKernel : public CalcGayBerneForceKernel {
+public:
+    OpenCLCalcGayBerneForceKernel(std::string name, const Platform& platform, OpenCLContext& cl) : CalcGayBerneForceKernel(name, platform), cl(cl),
+            hasInitializedKernels(false), sortedParticles(NULL), axisParticleIndices(NULL), sigParams(NULL), epsParams(NULL), scale(NULL), exceptionParticles(NULL),
+            exceptionParams(NULL), aMatrix(NULL),
+            bMatrix(NULL), gMatrix(NULL), exclusions(NULL), exclusionStartIndex(NULL), blockCenter(NULL), blockBoundingBox(NULL), neighbors(NULL),
+            neighborIndex(NULL), neighborBlockCount(NULL), sortedPos(NULL), torque(NULL) {
+    }
+    ~OpenCLCalcGayBerneForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the GayBerneForce this kernel will be used for
+     */
+    void initialize(const System& system, const GayBerneForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the GayBerneForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const GayBerneForce& force);
+private:
+    class ReorderListener;
+    void sortAtoms();
+    OpenCLContext& cl;
+    bool hasInitializedKernels;
+    int numRealParticles, maxNeighborBlocks;
+    GayBerneForce::NonbondedMethod nonbondedMethod;
+    OpenCLArray* sortedParticles;
+    OpenCLArray* axisParticleIndices;
+    OpenCLArray* sigParams;
+    OpenCLArray* epsParams;
+    OpenCLArray* scale;
+    OpenCLArray* exceptionParticles;
+    OpenCLArray* exceptionParams;
+    OpenCLArray* aMatrix;
+    OpenCLArray* bMatrix;
+    OpenCLArray* gMatrix;
+    OpenCLArray* exclusions;
+    OpenCLArray* exclusionStartIndex;
+    OpenCLArray* blockCenter;
+    OpenCLArray* blockBoundingBox;
+    OpenCLArray* neighbors;
+    OpenCLArray* neighborIndex;
+    OpenCLArray* neighborBlockCount;
+    OpenCLArray* sortedPos;
+    OpenCLArray* torque;
+    std::vector<bool> isRealParticle;
+    std::vector<std::pair<int, int> > exceptionAtoms;
+    std::vector<std::pair<int, int> > excludedPairs;
+    cl::Kernel framesKernel, blockBoundsKernel, neighborsKernel, forceKernel, torqueKernel;
 };
 
 /**
@@ -1273,7 +1349,7 @@ public:
     enum GlobalTargetType {DT, VARIABLE, PARAMETER};
     OpenCLIntegrateCustomStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateCustomStepKernel(name, platform), cl(cl),
             hasInitializedKernels(false), localValuesAreCurrent(false), globalValues(NULL), sumBuffer(NULL), summedValue(NULL), uniformRandoms(NULL),
-            randomSeed(NULL), perDofValues(NULL) {
+            randomSeed(NULL), perDofEnergyParamDerivs(NULL), perDofValues(NULL), needsEnergyParamDerivs(false) {
     }
     ~OpenCLIntegrateCustomStepKernel();
     /**
@@ -1338,8 +1414,11 @@ public:
 private:
     class ReorderListener;
     class GlobalTarget;
+    class DerivFunction;
     std::string createPerDofComputation(const std::string& variable, const Lepton::ParsedExpression& expr, int component, CustomIntegrator& integrator, const std::string& forceName, const std::string& energyName);
     void prepareForComputation(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid);
+    Lepton::ExpressionTreeNode replaceDerivFunctions(const Lepton::ExpressionTreeNode& node, OpenMM::ContextImpl& context);
+    void findExpressionsForDerivs(const Lepton::ExpressionTreeNode& node, std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& variableNodes);
     void recordGlobalValue(double value, GlobalTarget target);
     void recordChangedParameters(ContextImpl& context);
     bool evaluateCondition(int step);
@@ -1347,18 +1426,23 @@ private:
     double energy;
     float energyFloat;
     int numGlobalVariables;
-    bool hasInitializedKernels, deviceValuesAreCurrent, deviceGlobalsAreCurrent, modifiesParameters, keNeedsForce, hasAnyConstraints;
+    bool hasInitializedKernels, deviceValuesAreCurrent, deviceGlobalsAreCurrent, modifiesParameters, keNeedsForce, hasAnyConstraints, needsEnergyParamDerivs;
     mutable bool localValuesAreCurrent;
     OpenCLArray* globalValues;
     OpenCLArray* sumBuffer;
     OpenCLArray* summedValue;
     OpenCLArray* uniformRandoms;
     OpenCLArray* randomSeed;
+    OpenCLArray* perDofEnergyParamDerivs;
     std::map<int, OpenCLArray*> savedForces;
     std::set<int> validSavedForces;
     OpenCLParameterSet* perDofValues;
     mutable std::vector<std::vector<cl_float> > localPerDofValuesFloat;
     mutable std::vector<std::vector<cl_double> > localPerDofValuesDouble;
+    std::map<std::string, double> energyParamDerivs;
+    std::vector<std::string> perDofEnergyParamDerivNames;
+    std::vector<cl_float> localPerDofEnergyParamDerivsFloat;
+    std::vector<cl_double> localPerDofEnergyParamDerivsDouble;
     std::vector<float> globalValuesFloat;
     std::vector<double> globalValuesDouble;
     std::vector<double> initialGlobalVariables;

@@ -61,7 +61,7 @@ void AmoebaMultipoleForceImpl::initialize(ContextImpl& context) {
         double cutoff = owner.getCutoffDistance();
         if (cutoff > 0.5*boxVectors[0][0] || cutoff > 0.5*boxVectors[1][1] || cutoff > 0.5*boxVectors[2][2])
             throw OpenMMException("AmoebaMultipoleForce: The cutoff distance cannot be greater than half the periodic box size.");
-    }   
+    }
 
     double quadrupoleValidationTolerance = 1.0e-05;
     for (int ii = 0; ii < system.getNumParticles(); ii++) {
@@ -170,7 +170,7 @@ void AmoebaMultipoleForceImpl::getCovalentRange(const AmoebaMultipoleForce& forc
                *maxCovalentIndex = covalentList[ii];
             }
         }
-    }   
+    }
     return;
 }
 
@@ -179,12 +179,20 @@ void AmoebaMultipoleForceImpl::getCovalentDegree(const AmoebaMultipoleForce& for
     const int* CovalentDegrees = AmoebaMultipoleForceImpl::getCovalentDegrees();
     for (unsigned int kk = 0; kk < AmoebaMultipoleForce::CovalentEnd; kk++) {
         covalentDegree[kk] = CovalentDegrees[kk];
-    }   
+    }
     return;
+}
+
+void AmoebaMultipoleForceImpl::getLabFramePermanentDipoles(ContextImpl& context, vector<Vec3>& dipoles) {
+    kernel.getAs<CalcAmoebaMultipoleForceKernel>().getLabFramePermanentDipoles(context, dipoles);
 }
 
 void AmoebaMultipoleForceImpl::getInducedDipoles(ContextImpl& context, vector<Vec3>& dipoles) {
     kernel.getAs<CalcAmoebaMultipoleForceKernel>().getInducedDipoles(context, dipoles);
+}
+
+void AmoebaMultipoleForceImpl::getTotalDipoles(ContextImpl& context, vector<Vec3>& dipoles) {
+    kernel.getAs<CalcAmoebaMultipoleForceKernel>().getTotalDipoles(context, dipoles);
 }
 
 void AmoebaMultipoleForceImpl::getElectrostaticPotential(ContextImpl& context, const std::vector< Vec3 >& inputGrid,

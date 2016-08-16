@@ -95,6 +95,20 @@ void CustomTorsionForce::setGlobalParameterDefaultValue(int index, double defaul
     globalParameters[index].defaultValue = defaultValue;
 }
 
+void CustomTorsionForce::addEnergyParameterDerivative(const string& name) {
+    for (int i = 0; i < globalParameters.size(); i++)
+        if (name == globalParameters[i].name) {
+            energyParameterDerivatives.push_back(i);
+            return;
+        }
+    throw OpenMMException(string("addEnergyParameterDerivative: Unknown global parameter '"+name+"'"));
+}
+
+const string& CustomTorsionForce::getEnergyParameterDerivativeName(int index) const {
+    ASSERT_VALID_INDEX(index, energyParameterDerivatives);
+    return globalParameters[energyParameterDerivatives[index]].name;
+}
+
 int CustomTorsionForce::addTorsion(int particle1, int particle2, int particle3, int particle4, const vector<double>& parameters) {
     torsions.push_back(TorsionInfo(particle1, particle2, particle3, particle4, parameters));
     return torsions.size()-1;

@@ -48,7 +48,7 @@ void AmoebaVdwForceProxy::serialize(const void* object, SerializationNode& node)
     node.setIntProperty("forceGroup", force.getForceGroup());
     node.setStringProperty("SigmaCombiningRule", force.getSigmaCombiningRule());
     node.setStringProperty("EpsilonCombiningRule", force.getEpsilonCombiningRule());
-    node.setDoubleProperty("VdwCutoff", force.getCutoff());
+    node.setDoubleProperty("VdwCutoff", force.getCutoffDistance());
 
     node.setIntProperty("method", (int) force.getNonbondedMethod());
 
@@ -82,7 +82,7 @@ void* AmoebaVdwForceProxy::deserialize(const SerializationNode& node) const {
             force->setForceGroup(node.getIntProperty("forceGroup", 0));
         force->setSigmaCombiningRule(node.getStringProperty("SigmaCombiningRule"));
         force->setEpsilonCombiningRule(node.getStringProperty("EpsilonCombiningRule"));
-        force->setCutoff(node.getDoubleProperty("VdwCutoff"));
+        force->setCutoffDistance(node.getDoubleProperty("VdwCutoff"));
         force->setNonbondedMethod((AmoebaVdwForce::NonbondedMethod) node.getIntProperty("method"));
 
         const SerializationNode& particles = node.getChildNode("VdwParticles");

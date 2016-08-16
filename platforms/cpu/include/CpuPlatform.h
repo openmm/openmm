@@ -82,7 +82,7 @@ class CpuPlatform::PlatformData {
 public:
     PlatformData(int numParticles, int numThreads);
     ~PlatformData();
-    void requestNeighborList(double cutoffDistance, double padding, bool useExclusions, std::vector<std::set<int> >& exclusionList);
+    void requestNeighborList(double cutoffDistance, double padding, bool useExclusions, const std::vector<std::set<int> >& exclusionList);
     AlignedArray<float> posq;
     std::vector<AlignedArray<float> > threadForce;
     ThreadPool threads;

@@ -376,7 +376,8 @@ void OpenCLIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, const
     
     // Apply hard wall constraints.
     
-    cl.executeKernel(hardwallKernel, pairParticles->getSize());
+    if (maxDrudeDistance > 0)
+        cl.executeKernel(hardwallKernel, pairParticles->getSize());
     integration.computeVirtualSites();
 
     // Update the time and step count.

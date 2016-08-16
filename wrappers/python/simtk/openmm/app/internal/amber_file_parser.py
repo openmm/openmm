@@ -1006,8 +1006,8 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
         for i, (r, s) in enumerate(zip(radii, screen)):
             if abs(r - gb_parms[i][0]) > 1e-4 or abs(s - gb_parms[i][1]) > 1e-4:
                 if not warned:
-                    warnings.warn('Non-optimal GB parameters detected for GB '
-                                  'model %s' % gbmodel)
+                    warnings.warn(
+                        'Non-optimal GB parameters detected for GB model %s' % gbmodel)
                     warned = True
             gb_parms[i][0], gb_parms[i][1] = r, s
 
@@ -1019,7 +1019,13 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
                                 gb_parm[2], gb_parm[3], gb_parm[4]])
             else:
                 gb.addParticle([charge, gb_parm[0], gb_parm[1]])
+
+        # OBC2 with kappa == 0 uses mm.GBSAOBC2Force, which doesn't have
+        # a finalize method
+        if not (gbmodel == 'OBC2' and implicitSolventKappa == 0.):
+            gb.finalize()
         system.addForce(gb)
+
         if nonbondedMethod == 'NoCutoff':
             gb.setNonbondedMethod(mm.NonbondedForce.NoCutoff)
         elif nonbondedMethod == 'CutoffNonPeriodic':

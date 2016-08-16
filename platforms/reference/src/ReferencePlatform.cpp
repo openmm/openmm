@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -36,6 +36,7 @@
 #include "openmm/internal/ContextImpl.h"
 #include "SimTKOpenMMRealType.h"
 #include "RealVec.h"
+#include <map>
 #include <vector>
 
 using namespace OpenMM;
@@ -64,6 +65,7 @@ ReferencePlatform::ReferencePlatform() {
     registerKernelFactory(CalcCustomCentroidBondForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomCompoundBondForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomManyParticleForceKernel::Name(), factory);
+    registerKernelFactory(CalcGayBerneForceKernel::Name(), factory);
     registerKernelFactory(IntegrateVerletStepKernel::Name(), factory);
     registerKernelFactory(IntegrateLangevinStepKernel::Name(), factory);
     registerKernelFactory(IntegrateBrownianStepKernel::Name(), factory);
@@ -99,6 +101,7 @@ ReferencePlatform::PlatformData::PlatformData(const System& system) : time(0.0),
     periodicBoxSize = new RealVec();
     periodicBoxVectors = new RealVec[3];
     constraints = new ReferenceConstraints(system);
+    energyParameterDerivatives = new map<string, double>();
 }
 
 ReferencePlatform::PlatformData::~PlatformData() {
@@ -108,4 +111,5 @@ ReferencePlatform::PlatformData::~PlatformData() {
     delete (RealVec*) periodicBoxSize;
     delete[] (RealVec*) periodicBoxVectors;
     delete (ReferenceConstraints*) constraints;
+    delete (map<string, double>*) energyParameterDerivatives;
 }

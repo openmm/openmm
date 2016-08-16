@@ -1146,11 +1146,10 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         coefficients << cu.doubleToString(sum);
     }
     defines["EXTRAPOLATION_COEFFICIENTS_SUM"] = coefficients.str();
-    alpha = force.getAEwald();
     if (usePME) {
-        vector<int> pmeGridDimension;
-        force.getPmeGridDimensions(pmeGridDimension);
-        if (pmeGridDimension[0] == 0 || alpha == 0.0) {
+        int nx, ny, nz;
+        force.getPMEParameters(alpha, nx, ny, nz);
+        if (nx == 0 || alpha == 0.0) {
             NonbondedForce nb;
             nb.setEwaldErrorTolerance(force.getEwaldErrorTolerance());
             nb.setCutoffDistance(force.getCutoffDistance());
@@ -1159,9 +1158,9 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
             gridSizeY = CudaFFT3D::findLegalDimension(gridSizeY);
             gridSizeZ = CudaFFT3D::findLegalDimension(gridSizeZ);
         } else {
-            gridSizeX = CudaFFT3D::findLegalDimension(pmeGridDimension[0]);
-            gridSizeY = CudaFFT3D::findLegalDimension(pmeGridDimension[1]);
-            gridSizeZ = CudaFFT3D::findLegalDimension(pmeGridDimension[2]);
+            gridSizeX = CudaFFT3D::findLegalDimension(nx);
+            gridSizeY = CudaFFT3D::findLegalDimension(ny);
+            gridSizeZ = CudaFFT3D::findLegalDimension(nz);
         }
         defines["EWALD_ALPHA"] = cu.doubleToString(alpha);
         defines["SQRT_PI"] = cu.doubleToString(sqrt(M_PI));
@@ -1993,6 +1992,27 @@ void CudaCalcAmoebaMultipoleForceKernel::ensureMultipolesValid(ContextImpl& cont
         context.calcForcesAndEnergy(false, false, -1);
 }
 
+
+void CudaCalcAmoebaMultipoleForceKernel::getLabFramePermanentDipoles(ContextImpl& context, vector<Vec3>& dipoles) {
+    ensureMultipolesValid(context);
+    int numParticles = cu.getNumAtoms();
+    dipoles.resize(numParticles);
+    const vector<int>& order = cu.getAtomIndex();
+    if (cu.getUseDoublePrecision()) {
+        vector<double> labDipoleVec;
+        labFrameDipoles->download(labDipoleVec);
+        for (int i = 0; i < numParticles; i++)
+            dipoles[order[i]] = Vec3(labDipoleVec[3*i], labDipoleVec[3*i+1], labDipoleVec[3*i+2]);
+    }
+    else {
+        vector<float> labDipoleVec;
+        labFrameDipoles->download(labDipoleVec);
+        for (int i = 0; i < numParticles; i++)
+            dipoles[order[i]] = Vec3(labDipoleVec[3*i], labDipoleVec[3*i+1], labDipoleVec[3*i+2]);
+    }
+}
+
+
 void CudaCalcAmoebaMultipoleForceKernel::getInducedDipoles(ContextImpl& context, vector<Vec3>& dipoles) {
     ensureMultipolesValid(context);
     int numParticles = cu.getNumAtoms();
@@ -2009,6 +2029,48 @@ void CudaCalcAmoebaMultipoleForceKernel::getInducedDipoles(ContextImpl& context,
         inducedDipole->download(d);
         for (int i = 0; i < numParticles; i++)
             dipoles[order[i]] = Vec3(d[3*i], d[3*i+1], d[3*i+2]);
+    }
+}
+
+
+void CudaCalcAmoebaMultipoleForceKernel::getTotalDipoles(ContextImpl& context, vector<Vec3>& dipoles) {
+    ensureMultipolesValid(context);
+    int numParticles = cu.getNumAtoms();
+    dipoles.resize(numParticles);
+    const vector<int>& order = cu.getAtomIndex();
+    if (cu.getUseDoublePrecision()) {
+        vector<double4> posqVec;
+        vector<double> labDipoleVec;
+        vector<double> inducedDipoleVec;
+        double totalDipoleVecX;
+        double totalDipoleVecY;
+        double totalDipoleVecZ;
+        inducedDipole->download(inducedDipoleVec);
+        labFrameDipoles->download(labDipoleVec);
+        cu.getPosq().download(posqVec);
+        for (int i = 0; i < numParticles; i++) {
+            totalDipoleVecX = labDipoleVec[3*i] + inducedDipoleVec[3*i];
+            totalDipoleVecY = labDipoleVec[3*i+1] + inducedDipoleVec[3*i+1];
+            totalDipoleVecZ = labDipoleVec[3*i+2] + inducedDipoleVec[3*i+2];
+            dipoles[order[i]] = Vec3(totalDipoleVecX, totalDipoleVecY, totalDipoleVecZ);
+        }
+    }
+    else {
+        vector<float4> posqVec;
+        vector<float> labDipoleVec;
+        vector<float> inducedDipoleVec;
+        float totalDipoleVecX;
+        float totalDipoleVecY;
+        float totalDipoleVecZ;
+        inducedDipole->download(inducedDipoleVec);
+        labFrameDipoles->download(labDipoleVec);
+        cu.getPosq().download(posqVec);
+        for (int i = 0; i < numParticles; i++) {
+            totalDipoleVecX = labDipoleVec[3*i] + inducedDipoleVec[3*i];
+            totalDipoleVecY = labDipoleVec[3*i+1] + inducedDipoleVec[3*i+1];
+            totalDipoleVecZ = labDipoleVec[3*i+2] + inducedDipoleVec[3*i+2];
+            dipoles[order[i]] = Vec3(totalDipoleVecX, totalDipoleVecY, totalDipoleVecZ);
+        }
     }
 }
 
@@ -2164,6 +2226,7 @@ void CudaCalcAmoebaMultipoleForceKernel::computeSystemMultipoleMoments(ContextIm
     outputMultipoleMoments[11] = 100.0*zyqdp*debye;
     outputMultipoleMoments[12] = 100.0*zzqdp*debye;
 }
+
 
 void CudaCalcAmoebaMultipoleForceKernel::getSystemMultipoleMoments(ContextImpl& context, vector<double>& outputMultipoleMoments) {
     ensureMultipolesValid(context);
@@ -2601,15 +2664,15 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
         replacements["EPSILON_COMBINING_RULE"] = "4";
     else
         throw OpenMMException("Illegal combining rule for sigma: "+sigmaCombiningRule);
-    double cutoff = force.getCutoff();
+    double cutoff = force.getCutoffDistance();
     double taperCutoff = cutoff*0.9;
-    replacements["CUTOFF_DISTANCE"] = cu.doubleToString(force.getCutoff());
+    replacements["CUTOFF_DISTANCE"] = cu.doubleToString(force.getCutoffDistance());
     replacements["TAPER_CUTOFF"] = cu.doubleToString(taperCutoff);
     replacements["TAPER_C3"] = cu.doubleToString(10/pow(taperCutoff-cutoff, 3.0));
     replacements["TAPER_C4"] = cu.doubleToString(15/pow(taperCutoff-cutoff, 4.0));
     replacements["TAPER_C5"] = cu.doubleToString(6/pow(taperCutoff-cutoff, 5.0));
     bool useCutoff = (force.getNonbondedMethod() != AmoebaVdwForce::NoCutoff);
-    nonbonded->addInteraction(useCutoff, useCutoff, true, force.getCutoff(), exclusions,
+    nonbonded->addInteraction(useCutoff, useCutoff, true, force.getCutoffDistance(), exclusions,
         cu.replaceStrings(CudaAmoebaKernelSources::amoebaVdwForce2, replacements), 0);
     
     // Create the other kernels.

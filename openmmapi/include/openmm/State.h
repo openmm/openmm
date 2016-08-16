@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -58,7 +58,7 @@ public:
      * This is an enumeration of the types of data which may be stored in a State.  When you create
      * a State, use these values to specify which data types it should contain.
      */
-    enum DataType {Positions=1, Velocities=2, Forces=4, Energy=8, Parameters=16};
+    enum DataType {Positions=1, Velocities=2, Forces=4, Energy=8, Parameters=16, ParameterDerivatives=32};
     /**
      * Construct an empty State containing no data.  This exists so State objects can be used in STL containers.
      */
@@ -109,6 +109,17 @@ public:
      */
     const std::map<std::string, double>& getParameters() const;
     /**
+     * Get a map containing derivatives of the potential energy with respect to context parameters.
+     * In most cases derivatives are only calculated if the corresponding Force objects have been
+     * specifically told to compute them.  Otherwise, the values in the map will be zero.  Likewise,
+     * if multiple Forces depend on the same parameter but only some have been told to compute
+     * derivatives with respect to it, the returned value will include only the contributions from
+     * the Forces that were told to compute it.
+     * 
+     * If this State does not contain parameter derivatives, this will throw an exception.
+     */
+    const std::map<std::string, double>& getEnergyParameterDerivatives() const;
+    /**
      * Get which data types are stored in this State.  The return value is a sum of DataType flags.
      */
     int getDataTypes() const;
@@ -118,6 +129,7 @@ private:
     void setVelocities(const std::vector<Vec3>& vel);
     void setForces(const std::vector<Vec3>& force);
     void setParameters(const std::map<std::string, double>& params);
+    void setEnergyParameterDerivatives(const std::map<std::string, double>& derivs);
     void setEnergy(double ke, double pe);
     void setPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3& c);
     int types;
@@ -126,7 +138,7 @@ private:
     std::vector<Vec3> velocities;
     std::vector<Vec3> forces;
     Vec3 periodicBoxVectors[3];
-    std::map<std::string, double> parameters;
+    std::map<std::string, double> parameters, energyParameterDerivatives;
 };
 
 /**
@@ -142,6 +154,7 @@ public:
     void setVelocities(const std::vector<Vec3>& vel);
     void setForces(const std::vector<Vec3>& force);
     void setParameters(const std::map<std::string, double>& params);
+    void setEnergyParameterDerivatives(const std::map<std::string, double>& params);
     void setEnergy(double ke, double pe);
     void setPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3& c);
 private:

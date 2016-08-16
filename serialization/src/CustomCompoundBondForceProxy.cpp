@@ -42,7 +42,7 @@ CustomCompoundBondForceProxy::CustomCompoundBondForceProxy() : SerializationProx
 }
 
 void CustomCompoundBondForceProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 2);
+    node.setIntProperty("version", 3);
     const CustomCompoundBondForce& force = *reinterpret_cast<const CustomCompoundBondForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
     node.setBoolProperty("usesPeriodic", force.usesPeriodicBoundaryConditions());
@@ -55,6 +55,10 @@ void CustomCompoundBondForceProxy::serialize(const void* object, SerializationNo
     SerializationNode& globalParams = node.createChildNode("GlobalParameters");
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {
         globalParams.createChildNode("Parameter").setStringProperty("name", force.getGlobalParameterName(i)).setDoubleProperty("default", force.getGlobalParameterDefaultValue(i));
+    }
+    SerializationNode& energyDerivs = node.createChildNode("EnergyParameterDerivatives");
+    for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
+        energyDerivs.createChildNode("Parameter").setStringProperty("name", force.getEnergyParameterDerivativeName(i));
     }
     SerializationNode& bonds = node.createChildNode("Bonds");
     for (int i = 0; i < force.getNumBonds(); i++) {
@@ -82,7 +86,7 @@ void CustomCompoundBondForceProxy::serialize(const void* object, SerializationNo
 
 void* CustomCompoundBondForceProxy::deserialize(const SerializationNode& node) const {
     int version = node.getIntProperty("version");
-    if (version < 1 || version > 2)
+    if (version < 1 || version > 3)
         throw OpenMMException("Unsupported version number");
     CustomCompoundBondForce* force = NULL;
     try {
@@ -99,6 +103,13 @@ void* CustomCompoundBondForceProxy::deserialize(const SerializationNode& node) c
         for (int i = 0; i < (int) globalParams.getChildren().size(); i++) {
             const SerializationNode& parameter = globalParams.getChildren()[i];
             force->addGlobalParameter(parameter.getStringProperty("name"), parameter.getDoubleProperty("default"));
+        }
+        if (version > 2) {
+            const SerializationNode& energyDerivs = node.getChildNode("EnergyParameterDerivatives");
+            for (int i = 0; i < (int) energyDerivs.getChildren().size(); i++) {
+                const SerializationNode& parameter = energyDerivs.getChildren()[i];
+                force->addEnergyParameterDerivative(parameter.getStringProperty("name"));
+            }
         }
         const SerializationNode& bonds = node.getChildNode("Bonds");
         vector<int> particles(force->getNumParticlesPerBond());

@@ -104,6 +104,20 @@ void CustomCentroidBondForce::setGlobalParameterDefaultValue(int index, double d
     globalParameters[index].defaultValue = defaultValue;
 }
 
+void CustomCentroidBondForce::addEnergyParameterDerivative(const string& name) {
+    for (int i = 0; i < globalParameters.size(); i++)
+        if (name == globalParameters[i].name) {
+            energyParameterDerivatives.push_back(i);
+            return;
+        }
+    throw OpenMMException(string("addEnergyParameterDerivative: Unknown global parameter '"+name+"'"));
+}
+
+const string& CustomCentroidBondForce::getEnergyParameterDerivativeName(int index) const {
+    ASSERT_VALID_INDEX(index, energyParameterDerivatives);
+    return globalParameters[energyParameterDerivatives[index]].name;
+}
+
 int CustomCentroidBondForce::addGroup(const vector<int>& particles, const vector<double>& weights) {
     if (particles.size() != weights.size() && weights.size() > 0)
         throw OpenMMException("CustomCentroidBondForce: wrong number of weights specified for a group.");

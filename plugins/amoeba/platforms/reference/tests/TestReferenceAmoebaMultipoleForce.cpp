@@ -2587,6 +2587,76 @@ static void testParticleInducedDipoles() {
         ASSERT_EQUAL_VEC(expectedDipole[i], dipole[i], 1e-4);
 }
 
+// test querying particle lab frame permanent dipoles
+
+static void testParticleLabFramePermanentDipoles() {
+    int numberOfParticles     = 8;
+    int inputPmeGridDimension = 0;
+    double cutoff             = 9000000.0;
+    std::vector<Vec3> forces;
+    double energy;
+
+    System system;
+    AmoebaMultipoleForce* amoebaMultipoleForce = new AmoebaMultipoleForce();;
+    setupMultipoleAmmonia(system, amoebaMultipoleForce, AmoebaMultipoleForce::NoCutoff, AmoebaMultipoleForce::Mutual, 
+                                             cutoff, inputPmeGridDimension);
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
+    Context context(system, integrator, Platform::getPlatformByName("Reference"));
+    getForcesEnergyMultipoleAmmonia(context, forces, energy);
+    std::vector<Vec3> dipole;
+    amoebaMultipoleForce->getLabFramePermanentDipoles(context, dipole);
+    
+    // Compare to values calculated by TINKER.
+    
+    std::vector<Vec3> expectedDipole(numberOfParticles);
+    expectedDipole[0] = Vec3(0.00876454250, -2.04310718E-06, -0.00227593519);
+    expectedDipole[1] = Vec3(0.000780382180, -0.00432882849, 0.00236926761);
+    expectedDipole[2] = Vec3(0.000801345883, 0.00431830946, 0.00238143437);
+    expectedDipole[3] = Vec3(-0.00109746996, 1.16087953e-5, -0.00487407492);
+    expectedDipole[4] = Vec3(0.00203814102, -2.26554196e-5, 0.00882284298);
+    expectedDipole[5] = Vec3(-0.00239443187, 0.00432388648, 0.000729303209);
+    expectedDipole[6] = Vec3(0.00491086743, 2.86430963e-6, -0.000918996348);
+    expectedDipole[7] = Vec3(-0.00239301946, -0.00432743976, 0.000712674115);
+    for (int i = 0; i < numberOfParticles; i++)
+        ASSERT_EQUAL_VEC(expectedDipole[i], dipole[i], 1e-4);
+}
+
+
+// test querying particle total dipoles (fixed + induced)
+
+static void testParticleTotalDipoles() {
+    int numberOfParticles     = 8;
+    int inputPmeGridDimension = 0;
+    double cutoff             = 9000000.0;
+    std::vector<Vec3> forces;
+    double energy;
+
+    System system;
+    AmoebaMultipoleForce* amoebaMultipoleForce = new AmoebaMultipoleForce();;
+    setupMultipoleAmmonia(system, amoebaMultipoleForce, AmoebaMultipoleForce::NoCutoff, AmoebaMultipoleForce::Mutual, 
+                                             cutoff, inputPmeGridDimension);
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
+    Context context(system, integrator, Platform::getPlatformByName("Reference"));
+    getForcesEnergyMultipoleAmmonia(context, forces, energy);
+    std::vector<Vec3> dipole;
+    amoebaMultipoleForce->getTotalDipoles(context, dipole);
+    
+    // Compare to values calculated by TINKER.
+    
+    std::vector<Vec3> expectedDipole(numberOfParticles);
+    expectedDipole[0] = Vec3(0.0119356307, -1.11302433e-6, -0.00296793872);
+    expectedDipole[1] = Vec3(8.60636211e-4, -0.00460821816, 0.00241705344);
+    expectedDipole[2] = Vec3(8.80646403e-4, 0.00459728769, 0.00243013245);
+    expectedDipole[3] = Vec3(-0.00123822377, 1.31555550e-5, -0.00558185336);
+    expectedDipole[4] = Vec3(0.00399455556, -2.27511931e-5, 0.00955607952);
+    expectedDipole[5] = Vec3(-0.00157302682, 0.00354892386, 3.40921137e-4);
+    expectedDipole[6] = Vec3(0.00952428069, 2.14171505e-6, -6.68945865e-4);
+    expectedDipole[7] = Vec3(-0.00157252460, -0.00355015528, 3.27055162e-4);
+    for (int i = 0; i < numberOfParticles; i++)
+        ASSERT_EQUAL_VEC(expectedDipole[i], dipole[i], 1e-4);
+}
+
+
 // test computation of system multipole moments
 
 static void testSystemMultipoleMoments() {

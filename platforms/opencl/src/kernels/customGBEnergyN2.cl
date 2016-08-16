@@ -32,6 +32,7 @@ __kernel void computeN2Energy(
     const unsigned int tgx = get_local_id(0) & (TILE_SIZE-1);
     const unsigned int tbx = get_local_id(0) - tgx;
     mixed energy = 0;
+    INIT_PARAM_DERIVS
 
     // First loop: process tiles that contain exclusions.
     
@@ -73,6 +74,7 @@ __kernel void computeN2Energy(
                     atom2 = y*TILE_SIZE+j;
                     real dEdR = 0;
                     real tempEnergy = 0;
+                    const real interactionScale = 0.5f;
 #ifdef USE_EXCLUSIONS
                     bool isExcluded = !(excl & 0x1);
 #endif
@@ -123,6 +125,7 @@ __kernel void computeN2Energy(
                     atom2 = y*TILE_SIZE+tj;
                     real dEdR = 0;
                     real tempEnergy = 0;
+                    const real interactionScale = 1.0f;
 #ifdef USE_EXCLUSIONS
                     bool isExcluded = !(excl & 0x1);
 #endif
@@ -281,6 +284,7 @@ __kernel void computeN2Energy(
                         atom2 = atomIndices[tbx+tj];
                         real dEdR = 0;
                         real tempEnergy = 0;
+                        const real interactionScale = 1.0f;
                         if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
                             COMPUTE_INTERACTION
                             dEdR /= -r;
@@ -319,6 +323,7 @@ __kernel void computeN2Energy(
                         atom2 = atomIndices[tbx+tj];
                         real dEdR = 0;
                         real tempEnergy = 0;
+                        const real interactionScale = 1.0f;
                         if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
                             COMPUTE_INTERACTION
                             dEdR /= -r;
@@ -373,4 +378,5 @@ __kernel void computeN2Energy(
         pos++;
     }
     energyBuffer[get_global_id(0)] += energy;
+    SAVE_PARAM_DERIVS
 }

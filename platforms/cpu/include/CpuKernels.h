@@ -36,6 +36,7 @@
 #include "CpuCustomGBForce.h"
 #include "CpuCustomManyParticleForce.h"
 #include "CpuCustomNonbondedForce.h"
+#include "CpuGayBerneForce.h"
 #include "CpuGBSAOBCForce.h"
 #include "CpuLangevinDynamics.h"
 #include "CpuNeighborList.h"
@@ -313,8 +314,9 @@ private:
     CustomNonbondedForce* forceCopy;
     std::map<std::string, double> globalParamValues;
     std::vector<std::set<int> > exclusions;
-    std::vector<std::string> parameterNames, globalParameterNames;
+    std::vector<std::string> parameterNames, globalParameterNames, energyParamDerivNames;
     std::vector<std::pair<std::set<int>, std::set<int> > > interactionGroups;
+    std::vector<double> longRangeCoefficientDerivs;
     NonbondedMethod nonbondedMethod;
     CpuCustomNonbondedForce* nonbonded;
 };
@@ -397,7 +399,7 @@ private:
     RealOpenMM nonbondedCutoff;
     CpuCustomGBForce* ixn;
     std::vector<std::set<int> > exclusions;
-    std::vector<std::string> particleParameterNames, globalParameterNames, valueNames;
+    std::vector<std::string> particleParameterNames, globalParameterNames, energyParamDerivNames, valueNames;
     std::vector<OpenMM::CustomGBForce::ComputationType> valueTypes;
     std::vector<OpenMM::CustomGBForce::ComputationType> energyTypes;
     NonbondedMethod nonbondedMethod;
@@ -443,6 +445,42 @@ private:
     CpuCustomManyParticleForce* ixn;
     std::vector<std::string> globalParameterNames;
     NonbondedMethod nonbondedMethod;
+};
+
+/**
+ * This kernel is invoked by GayBerneForce to calculate the forces acting on the system.
+ */
+class CpuCalcGayBerneForceKernel : public CalcGayBerneForceKernel {
+public:
+    CpuCalcGayBerneForceKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data) : CalcGayBerneForceKernel(name, platform),
+            data(data), ixn(NULL) {
+    }
+    ~CpuCalcGayBerneForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the GayBerneForce this kernel will be used for
+     */
+    void initialize(const System& system, const GayBerneForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the GayBerneForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const GayBerneForce& force);
+private:
+    CpuPlatform::PlatformData& data;
+    CpuGayBerneForce* ixn;
 };
 
 /**

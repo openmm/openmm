@@ -90,7 +90,7 @@ class MTSIntegrator(CustomIntegrator):
 
     def _createSubsteps(self, parentSubsteps, groups):
         group, substeps = groups[0]
-        stepsPerParentStep = substeps/parentSubsteps
+        stepsPerParentStep = substeps//parentSubsteps
         if stepsPerParentStep < 1 or stepsPerParentStep != int(stepsPerParentStep):
             raise ValueError("The number for substeps for each group must be a multiple of the number for the previous group")
         if group < 0 or group > 31:

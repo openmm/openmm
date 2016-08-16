@@ -45,23 +45,47 @@ using namespace OpenMM;
 
 ReferenceCustomCompoundBondIxn::ReferenceCustomCompoundBondIxn(int numParticlesPerBond, const vector<vector<int> >& bondAtoms,
             const Lepton::ParsedExpression& energyExpression, const vector<string>& bondParameterNames,
-            const map<string, vector<int> >& distances, const map<string, vector<int> >& angles, const map<string, vector<int> >& dihedrals) :
-            bondAtoms(bondAtoms), energyExpression(energyExpression.createProgram()), bondParamNames(bondParameterNames), usePeriodic(false) {
+            const map<string, vector<int> >& distances, const map<string, vector<int> >& angles, const map<string, vector<int> >& dihedrals,
+            const std::vector<Lepton::CompiledExpression> energyParamDerivExpressions) :
+            bondAtoms(bondAtoms), energyExpression(energyExpression.createCompiledExpression()), usePeriodic(false),
+            energyParamDerivExpressions(energyParamDerivExpressions) {
+    expressionSet.registerExpression(this->energyExpression);
+    for (int i = 0; i < this->energyParamDerivExpressions.size(); i++)
+        expressionSet.registerExpression(this->energyParamDerivExpressions[i]);
     for (int i = 0; i < numParticlesPerBond; i++) {
         stringstream xname, yname, zname;
         xname << 'x' << (i+1);
         yname << 'y' << (i+1);
         zname << 'z' << (i+1);
-        particleTerms.push_back(ReferenceCustomCompoundBondIxn::ParticleTermInfo(xname.str(), i, 0, energyExpression.differentiate(xname.str()).optimize().createProgram()));
-        particleTerms.push_back(ReferenceCustomCompoundBondIxn::ParticleTermInfo(yname.str(), i, 1, energyExpression.differentiate(yname.str()).optimize().createProgram()));
-        particleTerms.push_back(ReferenceCustomCompoundBondIxn::ParticleTermInfo(zname.str(), i, 2, energyExpression.differentiate(zname.str()).optimize().createProgram()));
+        particleTerms.push_back(ReferenceCustomCompoundBondIxn::ParticleTermInfo(xname.str(), i, 0, energyExpression.differentiate(xname.str()).createCompiledExpression()));
+        particleTerms.push_back(ReferenceCustomCompoundBondIxn::ParticleTermInfo(yname.str(), i, 1, energyExpression.differentiate(yname.str()).createCompiledExpression()));
+        particleTerms.push_back(ReferenceCustomCompoundBondIxn::ParticleTermInfo(zname.str(), i, 2, energyExpression.differentiate(zname.str()).createCompiledExpression()));
     }
     for (map<string, vector<int> >::const_iterator iter = distances.begin(); iter != distances.end(); ++iter)
-        distanceTerms.push_back(ReferenceCustomCompoundBondIxn::DistanceTermInfo(iter->first, iter->second, energyExpression.differentiate(iter->first).optimize().createProgram()));
+        distanceTerms.push_back(ReferenceCustomCompoundBondIxn::DistanceTermInfo(iter->first, iter->second, energyExpression.differentiate(iter->first).createCompiledExpression()));
     for (map<string, vector<int> >::const_iterator iter = angles.begin(); iter != angles.end(); ++iter)
-        angleTerms.push_back(ReferenceCustomCompoundBondIxn::AngleTermInfo(iter->first, iter->second, energyExpression.differentiate(iter->first).optimize().createProgram()));
+        angleTerms.push_back(ReferenceCustomCompoundBondIxn::AngleTermInfo(iter->first, iter->second, energyExpression.differentiate(iter->first).createCompiledExpression()));
     for (map<string, vector<int> >::const_iterator iter = dihedrals.begin(); iter != dihedrals.end(); ++iter)
-        dihedralTerms.push_back(ReferenceCustomCompoundBondIxn::DihedralTermInfo(iter->first, iter->second, energyExpression.differentiate(iter->first).optimize().createProgram()));
+        dihedralTerms.push_back(ReferenceCustomCompoundBondIxn::DihedralTermInfo(iter->first, iter->second, energyExpression.differentiate(iter->first).createCompiledExpression()));
+    for (int i = 0; i < particleTerms.size(); i++) {
+        expressionSet.registerExpression(particleTerms[i].forceExpression);
+        particleTerms[i].index = expressionSet.getVariableIndex(particleTerms[i].name);
+    }
+    for (int i = 0; i < distanceTerms.size(); i++) {
+        expressionSet.registerExpression(distanceTerms[i].forceExpression);
+        distanceTerms[i].index = expressionSet.getVariableIndex(distanceTerms[i].name);
+    }
+    for (int i = 0; i < angleTerms.size(); i++) {
+        expressionSet.registerExpression(angleTerms[i].forceExpression);
+        angleTerms[i].index = expressionSet.getVariableIndex(angleTerms[i].name);
+    }
+    for (int i = 0; i < dihedralTerms.size(); i++) {
+        expressionSet.registerExpression(dihedralTerms[i].forceExpression);
+        dihedralTerms[i].index = expressionSet.getVariableIndex(dihedralTerms[i].name);
+    }
+    numParameters = bondParameterNames.size();
+    for (int i = 0; i < numParameters; i++)
+        bondParamIndex.push_back(expressionSet.getVariableIndex(bondParameterNames[i]));
 }
 
 /**---------------------------------------------------------------------------------------
@@ -94,14 +118,14 @@ void ReferenceCustomCompoundBondIxn::setPeriodic(OpenMM::RealVec* vectors) {
 
 void ReferenceCustomCompoundBondIxn::calculatePairIxn(vector<RealVec>& atomCoordinates, RealOpenMM** bondParameters,
                                              const map<string, double>& globalParameters, vector<RealVec>& forces,
-                                             RealOpenMM* totalEnergy) const {
-
-    map<string, double> variables = globalParameters;
+                                             RealOpenMM* totalEnergy, double* energyParamDerivs) {
+    for (map<string, double>::const_iterator iter = globalParameters.begin(); iter != globalParameters.end(); ++iter)
+        expressionSet.setVariable(expressionSet.getVariableIndex(iter->first), iter->second);
     int numBonds = bondAtoms.size();
     for (int bond = 0; bond < numBonds; bond++) {
-        for (int j = 0; j < (int) bondParamNames.size(); j++)
-            variables[bondParamNames[j]] = bondParameters[bond][j];
-        calculateOneIxn(bond, atomCoordinates, variables, forces, totalEnergy);
+        for (int i = 0; i < numParameters; i++)
+            expressionSet.setVariable(bondParamIndex[i], bondParameters[bond][i]);
+        calculateOneIxn(bond, atomCoordinates, forces, totalEnergy, energyParamDerivs);
     }
 }
 
@@ -111,7 +135,6 @@ void ReferenceCustomCompoundBondIxn::calculatePairIxn(vector<RealVec>& atomCoord
 
      @param bond             the index of the bond
      @param atomCoordinates  atom coordinates
-     @param variables        the values of variables that may appear in expressions
      @param forces           force array (forces added)
      @param energyByAtom     atom energy
      @param totalEnergy      total energy
@@ -119,31 +142,24 @@ void ReferenceCustomCompoundBondIxn::calculatePairIxn(vector<RealVec>& atomCoord
      --------------------------------------------------------------------------------------- */
 
 void ReferenceCustomCompoundBondIxn::calculateOneIxn(int bond, vector<RealVec>& atomCoordinates,
-                        map<string, double>& variables, vector<RealVec>& forces, RealOpenMM* totalEnergy) const {
-
-    // ---------------------------------------------------------------------------------------
-
-    static const std::string methodName = "\nReferenceCustomCompoundBondIxn::calculateOneIxn";
-
-    // ---------------------------------------------------------------------------------------
-
+                        vector<RealVec>& forces, RealOpenMM* totalEnergy, double* energyParamDerivs) {
     // Compute all of the variables the energy can depend on.
 
     const vector<int>& atoms = bondAtoms[bond];
     for (int i = 0; i < (int) particleTerms.size(); i++) {
         const ParticleTermInfo& term = particleTerms[i];
-        variables[term.name] = atomCoordinates[atoms[term.atom]][term.component];
+        expressionSet.setVariable(term.index, atomCoordinates[atoms[term.atom]][term.component]);
     }
     for (int i = 0; i < (int) distanceTerms.size(); i++) {
         const DistanceTermInfo& term = distanceTerms[i];
         computeDelta(atoms[term.p1], atoms[term.p2], term.delta, atomCoordinates);
-        variables[term.name] = term.delta[ReferenceForce::RIndex];
+        expressionSet.setVariable(term.index, term.delta[ReferenceForce::RIndex]);
     }
     for (int i = 0; i < (int) angleTerms.size(); i++) {
         const AngleTermInfo& term = angleTerms[i];
         computeDelta(atoms[term.p1], atoms[term.p2], term.delta1, atomCoordinates);
         computeDelta(atoms[term.p3], atoms[term.p2], term.delta2, atomCoordinates);
-        variables[term.name] = computeAngle(term.delta1, term.delta2);
+        expressionSet.setVariable(term.index, computeAngle(term.delta1, term.delta2));
     }
     for (int i = 0; i < (int) dihedralTerms.size(); i++) {
         const DihedralTermInfo& term = dihedralTerms[i];
@@ -152,21 +168,21 @@ void ReferenceCustomCompoundBondIxn::calculateOneIxn(int bond, vector<RealVec>& 
         computeDelta(atoms[term.p4], atoms[term.p3], term.delta3, atomCoordinates);
         RealOpenMM dotDihedral, signOfDihedral;
         RealOpenMM* crossProduct[] = {term.cross1, term.cross2};
-        variables[term.name] = getDihedralAngleBetweenThreeVectors(term.delta1, term.delta2, term.delta3, crossProduct, &dotDihedral, term.delta1, &signOfDihedral, 1);
+        expressionSet.setVariable(term.index,getDihedralAngleBetweenThreeVectors(term.delta1, term.delta2, term.delta3, crossProduct, &dotDihedral, term.delta1, &signOfDihedral, 1));
     }
     
     // Apply forces based on individual particle coordinates.
     
     for (int i = 0; i < (int) particleTerms.size(); i++) {
         const ParticleTermInfo& term = particleTerms[i];
-        forces[atoms[term.atom]][term.component] -= term.forceExpression.evaluate(variables);
+        forces[atoms[term.atom]][term.component] -= term.forceExpression.evaluate();
     }
 
     // Apply forces based on distances.
 
     for (int i = 0; i < (int) distanceTerms.size(); i++) {
         const DistanceTermInfo& term = distanceTerms[i];
-        RealOpenMM dEdR = (RealOpenMM) (term.forceExpression.evaluate(variables)/(term.delta[ReferenceForce::RIndex]));
+        RealOpenMM dEdR = (RealOpenMM) (term.forceExpression.evaluate()/(term.delta[ReferenceForce::RIndex]));
         for (int i = 0; i < 3; i++) {
            RealOpenMM force  = -dEdR*term.delta[i];
            forces[atoms[term.p1]][i] -= force;
@@ -178,7 +194,7 @@ void ReferenceCustomCompoundBondIxn::calculateOneIxn(int bond, vector<RealVec>& 
 
     for (int i = 0; i < (int) angleTerms.size(); i++) {
         const AngleTermInfo& term = angleTerms[i];
-        RealOpenMM dEdTheta = (RealOpenMM) term.forceExpression.evaluate(variables);
+        RealOpenMM dEdTheta = (RealOpenMM) term.forceExpression.evaluate();
         RealOpenMM thetaCross[ReferenceForce::LastDeltaRIndex];
         SimTKOpenMMUtilities::crossProductVector3(term.delta1, term.delta2, thetaCross);
         RealOpenMM lengthThetaCross = SQRT(DOT3(thetaCross, thetaCross));
@@ -205,7 +221,7 @@ void ReferenceCustomCompoundBondIxn::calculateOneIxn(int bond, vector<RealVec>& 
 
     for (int i = 0; i < (int) dihedralTerms.size(); i++) {
         const DihedralTermInfo& term = dihedralTerms[i];
-        RealOpenMM dEdTheta = (RealOpenMM) term.forceExpression.evaluate(variables);
+        RealOpenMM dEdTheta = (RealOpenMM) term.forceExpression.evaluate();
         RealOpenMM internalF[4][3];
         RealOpenMM forceFactors[4];
         RealOpenMM normCross1 = DOT3(term.cross1, term.cross1);
@@ -235,7 +251,12 @@ void ReferenceCustomCompoundBondIxn::calculateOneIxn(int bond, vector<RealVec>& 
     // Add the energy
 
     if (totalEnergy)
-        *totalEnergy += (RealOpenMM) energyExpression.evaluate(variables);
+        *totalEnergy += (RealOpenMM) energyExpression.evaluate();
+    
+    // Compute derivatives of the energy.
+    
+    for (int i = 0; i < energyParamDerivExpressions.size(); i++)
+        energyParamDerivs[i] += energyParamDerivExpressions[i].evaluate();
 }
 
 void ReferenceCustomCompoundBondIxn::computeDelta(int atom1, int atom2, RealOpenMM* delta, vector<RealVec>& atomCoordinates) const {

@@ -8,6 +8,7 @@ extern "C" __global__ void computePerParticleValues(real4* posq, long long* valu
         // Load the pairwise value
 
         real sum = valueBuffers[index]/(real) 0x100000000;
+        REDUCE_PARAM0_DERIV
         
         // Now calculate other values
 

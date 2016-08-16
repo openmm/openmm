@@ -28,6 +28,7 @@ extern "C" __global__ void computeN2Energy(unsigned long long* __restrict__ forc
     const unsigned int tgx = threadIdx.x & (TILE_SIZE-1);
     const unsigned int tbx = threadIdx.x - tgx;
     mixed energy = 0;
+    INIT_PARAM_DERIVS
     __shared__ AtomData localData[THREAD_BLOCK_SIZE];
 
     // First loop: process tiles that contain exclusions.
@@ -69,6 +70,7 @@ extern "C" __global__ void computeN2Energy(unsigned long long* __restrict__ forc
                     atom2 = y*TILE_SIZE+j;
                     real dEdR = 0;
                     real tempEnergy = 0;
+                    const real interactionScale = 0.5f;
 #ifdef USE_EXCLUSIONS
                     bool isExcluded = !(excl & 0x1);
 #endif
@@ -120,6 +122,7 @@ extern "C" __global__ void computeN2Energy(unsigned long long* __restrict__ forc
                     atom2 = y*TILE_SIZE+tj;
                     real dEdR = 0;
                     real tempEnergy = 0;
+                    const real interactionScale = 1;
 #ifdef USE_EXCLUSIONS
                     bool isExcluded = !(excl & 0x1);
 #endif
@@ -266,6 +269,7 @@ extern "C" __global__ void computeN2Energy(unsigned long long* __restrict__ forc
                         atom2 = atomIndices[tbx+tj];
                         real dEdR = 0;
                         real tempEnergy = 0;
+                        const real interactionScale = 1;
                         if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
                             COMPUTE_INTERACTION
                             dEdR /= -r;
@@ -309,6 +313,7 @@ extern "C" __global__ void computeN2Energy(unsigned long long* __restrict__ forc
                         atom2 = atomIndices[tbx+tj];
                         real dEdR = 0;
                         real tempEnergy = 0;
+                        const real interactionScale = 1;
                         if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
                             COMPUTE_INTERACTION
                             dEdR /= -r;
@@ -353,4 +358,5 @@ extern "C" __global__ void computeN2Energy(unsigned long long* __restrict__ forc
         pos++;
     }
     energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += energy;
+    SAVE_PARAM_DERIVS
 }

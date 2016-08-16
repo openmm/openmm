@@ -73,6 +73,7 @@ extern "C" __global__ void computeN2Value(const real4* __restrict__ posq, const 
                         COMPUTE_VALUE
                     }
                     value += tempValue1;
+                    ADD_TEMP_DERIVS1
 #ifdef USE_CUTOFF
                 }
 #endif
@@ -121,6 +122,8 @@ extern "C" __global__ void computeN2Value(const real4* __restrict__ posq, const 
                     }
                     value += tempValue1;
                     localData[tbx+tj].value += tempValue2;
+                    ADD_TEMP_DERIVS1
+                    ADD_TEMP_DERIVS2
 #ifdef USE_CUTOFF
                 }
 #endif
@@ -133,11 +136,13 @@ extern "C" __global__ void computeN2Value(const real4* __restrict__ posq, const 
 
         // Write results.
 
-        unsigned int offset = x*TILE_SIZE + tgx;
-        atomicAdd(&global_value[offset], static_cast<unsigned long long>((long long) (value*0x100000000)));
+        unsigned int offset1 = x*TILE_SIZE + tgx;
+        atomicAdd(&global_value[offset1], static_cast<unsigned long long>((long long) (value*0x100000000)));
+        STORE_PARAM_DERIVS1
         if (x != y) {
-            offset = y*TILE_SIZE + tgx;
-            atomicAdd(&global_value[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].value*0x100000000)));
+            unsigned int offset2 = y*TILE_SIZE + tgx;
+            atomicAdd(&global_value[offset2], static_cast<unsigned long long>((long long) (localData[threadIdx.x].value*0x100000000)));
+            STORE_PARAM_DERIVS2
         }
     }
 
@@ -244,6 +249,8 @@ extern "C" __global__ void computeN2Value(const real4* __restrict__ posq, const 
                         }
                         value += tempValue1;
                         localData[tbx+tj].value += tempValue2;
+                        ADD_TEMP_DERIVS1
+                        ADD_TEMP_DERIVS2
                     }
                     tj = (tj + 1) & (TILE_SIZE - 1);
                 }
@@ -276,6 +283,8 @@ extern "C" __global__ void computeN2Value(const real4* __restrict__ posq, const 
                         }
                         value += tempValue1;
                         localData[tbx+tj].value += tempValue2;
+                        ADD_TEMP_DERIVS1
+                        ADD_TEMP_DERIVS2
 #ifdef USE_CUTOFF
                     }
 #endif
@@ -285,14 +294,19 @@ extern "C" __global__ void computeN2Value(const real4* __restrict__ posq, const 
         
             // Write results.
 
-            atomicAdd(&global_value[atom1], static_cast<unsigned long long>((long long) (value*0x100000000)));
+            unsigned int offset1 = atom1;
+            atomicAdd(&global_value[offset1], static_cast<unsigned long long>((long long) (value*0x100000000)));
+            STORE_PARAM_DERIVS1
 #ifdef USE_CUTOFF
             unsigned int atom2 = atomIndices[threadIdx.x];
 #else
             unsigned int atom2 = y*TILE_SIZE + tgx;
 #endif
-            if (atom2 < PADDED_NUM_ATOMS)
-                atomicAdd(&global_value[atom2], static_cast<unsigned long long>((long long) (localData[threadIdx.x].value*0x100000000)));
+            if (atom2 < PADDED_NUM_ATOMS) {
+                unsigned int offset2 = atom2;
+                atomicAdd(&global_value[offset2], static_cast<unsigned long long>((long long) (localData[threadIdx.x].value*0x100000000)));
+                STORE_PARAM_DERIVS2
+            }
         }
         pos++;
     }

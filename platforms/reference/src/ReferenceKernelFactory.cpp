@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -56,8 +56,6 @@ KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Pla
         return new ReferenceCalcCustomBondForceKernel(name, platform);
     if (name == CalcHarmonicAngleForceKernel::Name())
         return new ReferenceCalcHarmonicAngleForceKernel(name, platform);
-    if (name == CalcHarmonicAngleForceKernel::Name())
-        return new ReferenceCalcHarmonicAngleForceKernel(name, platform);
     if (name == CalcCustomAngleForceKernel::Name())
         return new ReferenceCalcCustomAngleForceKernel(name, platform);
     if (name == CalcPeriodicTorsionForceKernel::Name())
@@ -82,6 +80,8 @@ KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Pla
         return new ReferenceCalcCustomCompoundBondForceKernel(name, platform);
     if (name == CalcCustomManyParticleForceKernel::Name())
         return new ReferenceCalcCustomManyParticleForceKernel(name, platform);
+    if (name == CalcGayBerneForceKernel::Name())
+        return new ReferenceCalcGayBerneForceKernel(name, platform);
     if (name == IntegrateVerletStepKernel::Name())
         return new ReferenceIntegrateVerletStepKernel(name, platform, data);
     if (name == IntegrateLangevinStepKernel::Name())
