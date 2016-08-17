@@ -278,6 +278,7 @@ private:
     bool useSwitchingFunction, useOptimizedPme, hasInitializedPme, hasInitializedDispersionPme;
     std::vector<std::set<int> > exclusions;
     std::vector<std::pair<float, float> > particleParams;
+    std::vector<float> C6params;
     NonbondedMethod nonbondedMethod;
     CpuNonbondedForce* nonbonded;
     Kernel optimizedPme, optimizedDispersionPme;
