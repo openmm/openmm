@@ -40,6 +40,7 @@ import math
 from math import sqrt, cos
 from copy import deepcopy
 from heapq import heappush, heappop
+from collections import defaultdict
 import simtk.openmm as mm
 import simtk.unit as unit
 from . import element as elem
@@ -1662,6 +1663,7 @@ class HarmonicBondGenerator(object):
 
     def __init__(self, forcefield):
         self.ff = forcefield
+        self.bondsForAtomType = defaultdict(set)
         self.types1 = []
         self.types2 = []
         self.length = []
@@ -1670,8 +1672,13 @@ class HarmonicBondGenerator(object):
     def registerBond(self, parameters):
         types = self.ff._findAtomTypes(parameters, 2)
         if None not in types:
+            index = len(self.types1)
             self.types1.append(types[0])
             self.types2.append(types[1])
+            for t in types[0]:
+                self.bondsForAtomType[t].add(index)
+            for t in types[1]:
+                self.bondsForAtomType[t].add(index)
             self.length.append(_convertParameterToNumber(parameters['length']))
             self.k.append(_convertParameterToNumber(parameters['k']))
 
@@ -1697,7 +1704,7 @@ class HarmonicBondGenerator(object):
         for bond in data.bonds:
             type1 = data.atomType[data.atoms[bond.atom1]]
             type2 = data.atomType[data.atoms[bond.atom2]]
-            for i in range(len(self.types1)):
+            for i in self.bondsForAtomType[type1]:
                 types1 = self.types1[i]
                 types2 = self.types2[i]
                 if (type1 in types1 and type2 in types2) or (type1 in types2 and type2 in types1):
@@ -1717,6 +1724,7 @@ class HarmonicAngleGenerator(object):
 
     def __init__(self, forcefield):
         self.ff = forcefield
+        self.anglesForAtom2Type = defaultdict(list)
         self.types1 = []
         self.types2 = []
         self.types3 = []
@@ -1726,9 +1734,12 @@ class HarmonicAngleGenerator(object):
     def registerAngle(self, parameters):
         types = self.ff._findAtomTypes(parameters, 3)
         if None not in types:
+            index = len(self.types1)
             self.types1.append(types[0])
             self.types2.append(types[1])
             self.types3.append(types[2])
+            for t in types[1]:
+                self.anglesForAtom2Type[t].append(index)
             self.angle.append(_convertParameterToNumber(parameters['angle']))
             self.k.append(_convertParameterToNumber(parameters['k']))
 
@@ -1755,7 +1766,7 @@ class HarmonicAngleGenerator(object):
             type1 = data.atomType[data.atoms[angle[0]]]
             type2 = data.atomType[data.atoms[angle[1]]]
             type3 = data.atomType[data.atoms[angle[2]]]
-            for i in range(len(self.types1)):
+            for i in self.anglesForAtom2Type[type2]:
                 types1 = self.types1[i]
                 types2 = self.types2[i]
                 types3 = self.types3[i]
