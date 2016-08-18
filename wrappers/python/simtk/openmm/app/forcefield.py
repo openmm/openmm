@@ -1908,23 +1908,47 @@ class PeriodicTorsionGenerator(object):
                                 if not hasWildcard:
                                     if t2[0] == t4[0] and (r2 > r4 or (r2 == r4 and ta2 > ta4)):
                                         (a2, a4) = (a4, a2)
+                                        r2 = data.atoms[a2].residue.index
+                                        r4 = data.atoms[a4].residue.index
+                                        ta2 = data.atomTemplateIndexes[data.atoms[a2]]
+                                        ta4 = data.atomTemplateIndexes[data.atoms[a4]]
                                     if t3[0] == t4[0] and (r3 > r4 or (r3 == r4 and ta3 > ta4)):
                                         (a3, a4) = (a4, a3)
+                                        r3 = data.atoms[a3].residue.index
+                                        r4 = data.atoms[a4].residue.index
+                                        ta3 = data.atomTemplateIndexes[data.atoms[a3]]
+                                        ta4 = data.atomTemplateIndexes[data.atoms[a4]]
                                     if t2[0] == t3[0] and (r2 > r3 or (r2 == r3 and ta2 > ta3)):
                                         (a2, a3) = (a3, a2)
                                 else:
                                     if e2 == e4 and (r2 > r4 or (r2 == r4 and ta2 > ta4)):
                                         (a2, a4) = (a4, a2)
+                                        r2 = data.atoms[a2].residue.index
+                                        r4 = data.atoms[a4].residue.index
+                                        ta2 = data.atomTemplateIndexes[data.atoms[a2]]
+                                        ta4 = data.atomTemplateIndexes[data.atoms[a4]]
                                     if e3 == e4 and (r3 > r4 or (r3 == r4 and ta3 > ta4)):
                                         (a3, a4) = (a4, a3)
+                                        r3 = data.atoms[a3].residue.index
+                                        r4 = data.atoms[a4].residue.index
+                                        ta3 = data.atomTemplateIndexes[data.atoms[a3]]
+                                        ta4 = data.atomTemplateIndexes[data.atoms[a4]]
                                     if r2 > r3 or (r2 == r3 and ta2 > ta3):
                                         (a2, a3) = (a3, a2)
                             # the following is OpenMM default
                             else:
                                     if t2[0] == t4[0] and (r2 > r4 or (r2 == r4 and ta2 > ta4)):
                                         (a2, a4) = (a4, a2)
+                                        r2 = data.atoms[a2].residue.index
+                                        r4 = data.atoms[a4].residue.index
+                                        ta3 = data.atomTemplateIndexes[data.atoms[a3]]
+                                        ta4 = data.atomTemplateIndexes[data.atoms[a4]]
                                     if t3[0] == t4[0] and (r3 > r4 or (r3 == r4 and ta3 > ta4)):
                                         (a3, a4) = (a4, a3)
+                                        r3 = data.atoms[a3].residue.index
+                                        r4 = data.atoms[a4].residue.index
+                                        ta3 = data.atomTemplateIndexes[data.atoms[a3]]
+                                        ta4 = data.atomTemplateIndexes[data.atoms[a4]]
                                     if t2[0] == t3[0] and (r2 > r3 or (r2 == r3 and ta2 > ta3)):
                                         (a2, a3) = (a3, a2)
                                     elif hasTwoWildcards and (r2 > r3 or (r2 == r3 and ta2 > ta3)):
