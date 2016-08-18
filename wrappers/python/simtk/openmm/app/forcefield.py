@@ -1888,48 +1888,48 @@ class PeriodicTorsionGenerator(object):
                     for (t2, t3, t4) in itertools.permutations(((type2, 1), (type3, 2), (type4, 3))):
                         if t2[0] in types2 and t3[0] in types3 and t4[0] in types4:
                             # topology atom indexes
-                            a1 = torsion[t2[1]]
-                            a2 = torsion[t3[1]]
+                            a2 = torsion[t2[1]]
+                            a3 = torsion[t3[1]]
                             a4 = torsion[t4[1]]
                             # residue indexes
-                            r1 = data.atoms[a1].residue.index
                             r2 = data.atoms[a2].residue.index
+                            r3 = data.atoms[a3].residue.index
                             r4 = data.atoms[a4].residue.index
                             # template atom indexes
-                            ta1 = data.atomTemplateIndexes[data.atoms[a1]]
                             ta2 = data.atomTemplateIndexes[data.atoms[a2]]
+                            ta3 = data.atomTemplateIndexes[data.atoms[a3]]
                             ta4 = data.atomTemplateIndexes[data.atoms[a4]]
                             # elements
-                            e1 = data.atoms[a1].element
                             e2 = data.atoms[a2].element
+                            e3 = data.atoms[a3].element
                             e4 = data.atoms[a4].element
                             # the following for AMBER only - TODO: decide how to pass this in ffxml's
                             if isAmber:
                                 if not hasWildcard:
-                                    if t2[0] == t4[0] and (r1 > r4 or (r1 == r4 and ta1 > ta4)):
-                                        (a1, a4) = (a4, a1)
-                                    if t3[0] == t4[0] and (r2 > r4 or (r2 == r4 and ta2 > ta4)):
+                                    if t2[0] == t4[0] and (r2 > r4 or (r2 == r4 and ta2 > ta4)):
                                         (a2, a4) = (a4, a2)
-                                    if t2[0] == t3[0] and (r1 > r2 or (r1 == r2 and ta1 > ta2)):
-                                        (a1, a2) = (a2, a1)
+                                    if t3[0] == t4[0] and (r3 > r4 or (r3 == r4 and ta3 > ta4)):
+                                        (a3, a4) = (a4, a3)
+                                    if t2[0] == t3[0] and (r2 > r3 or (r2 == r3 and ta2 > ta3)):
+                                        (a2, a3) = (a3, a2)
                                 else:
-                                    if e1 == e4 and (r1 > r4 or (r1 == r4 and ta1 > ta4)):
-                                        (a1, a4) = (a4, a1)
                                     if e2 == e4 and (r2 > r4 or (r2 == r4 and ta2 > ta4)):
                                         (a2, a4) = (a4, a2)
-                                    if (r1 > r2 or (r1 == r2 and ta1 > ta2)):
-                                        (a1, a2) = (a2, a1)
+                                    if e3 == e4 and (r3 > r4 or (r3 == r4 and ta3 > ta4)):
+                                        (a3, a4) = (a4, a3)
+                                    if r2 > r3 or (r2 == r3 and ta2 > ta3):
+                                        (a2, a3) = (a3, a2)
                             # the following is OpenMM default
                             else:
-                                    if t2[0] == t4[0] and (r1 > r4 or (r1 == r4 and ta1 > ta4)):
-                                        (a1, a4) = (a4, a1)
-                                    if t3[0] == t4[0] and (r2 > r4 or (r2 == r4 and ta2 > ta4)):
+                                    if t2[0] == t4[0] and (r2 > r4 or (r2 == r4 and ta2 > ta4)):
                                         (a2, a4) = (a4, a2)
-                                    if t2[0] == t3[0] and (r1 > r2 or (r1 == r2 and ta1 > ta2)):
-                                        (a1, a2) = (a2, a1)
-                                    if hasTwoWildcards and (r1 > r2 or (r1 == r2 and ta1 > ta2)):
-                                        (a1, a2) = (a2, a1)
-                            match = (a1, a2, torsion[0], a4, tordef)
+                                    if t3[0] == t4[0] and (r3 > r4 or (r3 == r4 and ta3 > ta4)):
+                                        (a3, a4) = (a4, a3)
+                                    if t2[0] == t3[0] and (r2 > r3 or (r2 == r3 and ta2 > ta3)):
+                                        (a2, a3) = (a3, a2)
+                                    elif hasTwoWildcards and (r2 > r3 or (r2 == r3 and ta2 > ta3)):
+                                        (a2, a3) = (a3, a2)
+                            match = (a2, a3, torsion[0], a4, tordef)
                             break
             if match is not None:
                 (a1, a2, a3, a4, tordef) = match
