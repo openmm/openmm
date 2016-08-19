@@ -27,8 +27,18 @@ extern "C" __global__ void findBlockBounds(int numAtoms, real4 periodicBoxSize, 
             maxPos = make_real4(max(maxPos.x,pos.x), max(maxPos.y,pos.y), max(maxPos.z,pos.z), 0);
         }
         real4 blockSize = 0.5f*(maxPos-minPos);
+        real4 center = 0.5f*(maxPos+minPos);
+        blockSize.w = 0;
+        for (int i = base+1; i < last; i++) {
+            pos = posq[i];
+            real4 delta = posq[i]-center;
+#ifdef USE_PERIODIC
+            APPLY_PERIODIC_TO_DELTA(delta)
+#endif
+            blockSize.w = max(blockSize.w, delta.x*delta.x+delta.y*delta.y+delta.z*delta.z);
+        }
         blockBoundingBox[index] = blockSize;
-        blockCenter[index] = 0.5f*(maxPos+minPos);
+        blockCenter[index] = center;
         sortedBlocks[index] = make_real2(blockSize.x+blockSize.y+blockSize.z, index);
         index += blockDim.x*gridDim.x;
         base = index*TILE_SIZE;
@@ -182,6 +192,7 @@ extern "C" __global__ void findBlocksWithInteractions(real4 periodicBoxSize, rea
 #ifdef USE_PERIODIC
                 APPLY_PERIODIC_TO_DELTA(blockDelta)
 #endif
+                includeBlock2 &= (blockDelta.x*blockDelta.x+blockDelta.y*blockDelta.y+blockDelta.z*blockDelta.z < (PADDED_CUTOFF+blockSizeX.w+blockSizeY.w)*(PADDED_CUTOFF+blockSizeX.w+blockSizeY.w));
                 blockDelta.x = max(0.0f, fabs(blockDelta.x)-blockSizeX.x-blockSizeY.x);
                 blockDelta.y = max(0.0f, fabs(blockDelta.y)-blockSizeX.y-blockSizeY.y);
                 blockDelta.z = max(0.0f, fabs(blockDelta.z)-blockSizeX.z-blockSizeY.z);
