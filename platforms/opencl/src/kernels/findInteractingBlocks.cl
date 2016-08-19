@@ -28,14 +28,14 @@ __kernel void findBlockBounds(int numAtoms, real4 periodicBoxSize, real4 invPeri
         }
         real4 blockSize = 0.5f*(maxPos-minPos);
         real4 center = 0.5f*(maxPos+minPos);
-        blockSize.w = 0;
+        center.w = 0;
         for (int i = base+1; i < last; i++) {
             pos = posq[i];
             real4 delta = posq[i]-center;
 #ifdef USE_PERIODIC
             APPLY_PERIODIC_TO_DELTA(delta)
 #endif
-            blockSize.w = max(blockSize.w, delta.x*delta.x+delta.y*delta.y+delta.z*delta.z);
+            center.w = max(center.w, delta.x*delta.x+delta.y*delta.y+delta.z*delta.z);
         }
         blockBoundingBox[index] = blockSize;
         blockCenter[index] = center;
@@ -152,7 +152,7 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
 #ifdef USE_PERIODIC
                 APPLY_PERIODIC_TO_DELTA(blockDelta)
 #endif
-                includeBlock2 &= (blockDelta.x*blockDelta.x+blockDelta.y*blockDelta.y+blockDelta.z*blockDelta.z < (PADDED_CUTOFF+blockSizeX.w+blockSizeY.w)*(PADDED_CUTOFF+blockSizeX.w+blockSizeY.w));
+                includeBlock2 &= (blockDelta.x*blockDelta.x+blockDelta.y*blockDelta.y+blockDelta.z*blockDelta.z < (PADDED_CUTOFF+blockCenterX.w+blockCenterY.w)*(PADDED_CUTOFF+blockCenterX.w+blockCenterY.w));
                 blockDelta.x = max((real) 0, fabs(blockDelta.x)-blockSizeX.x-blockSizeY.x);
                 blockDelta.y = max((real) 0, fabs(blockDelta.y)-blockSizeX.y-blockSizeY.y);
                 blockDelta.z = max((real) 0, fabs(blockDelta.z)-blockSizeX.z-blockSizeY.z);
@@ -176,8 +176,7 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
 
                     // Check each atom in block Y for interactions.
 
-                    int start = y*TILE_SIZE;
-                    int atom2 = start+indexInWarp;
+                    int atom2 = y*TILE_SIZE+indexInWarp;
                     real3 pos2 = posq[atom2].xyz;
 #ifdef USE_PERIODIC
                     if (singlePeriodicCopy)

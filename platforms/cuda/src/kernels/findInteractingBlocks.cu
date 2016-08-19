@@ -28,14 +28,14 @@ extern "C" __global__ void findBlockBounds(int numAtoms, real4 periodicBoxSize, 
         }
         real4 blockSize = 0.5f*(maxPos-minPos);
         real4 center = 0.5f*(maxPos+minPos);
-        blockSize.w = 0;
+        center.w = 0;
         for (int i = base+1; i < last; i++) {
             pos = posq[i];
             real4 delta = posq[i]-center;
 #ifdef USE_PERIODIC
             APPLY_PERIODIC_TO_DELTA(delta)
 #endif
-            blockSize.w = max(blockSize.w, delta.x*delta.x+delta.y*delta.y+delta.z*delta.z);
+            center.w = max(center.w, delta.x*delta.x+delta.y*delta.y+delta.z*delta.z);
         }
         blockBoundingBox[index] = blockSize;
         blockCenter[index] = center;
@@ -186,13 +186,13 @@ extern "C" __global__ void findBlocksWithInteractions(real4 periodicBoxSize, rea
             int block2 = block2Base+indexInWarp;
             bool includeBlock2 = (block2 < NUM_BLOCKS);
             if (includeBlock2) {
-                real4 blockCenterY = (block2 < NUM_BLOCKS ? sortedBlockCenter[block2] : make_real4(0));
-                real4 blockSizeY = (block2 < NUM_BLOCKS ? sortedBlockBoundingBox[block2] : make_real4(0));
+                real4 blockCenterY = sortedBlockCenter[block2];
+                real4 blockSizeY = sortedBlockBoundingBox[block2];
                 real4 blockDelta = blockCenterX-blockCenterY;
 #ifdef USE_PERIODIC
                 APPLY_PERIODIC_TO_DELTA(blockDelta)
 #endif
-                includeBlock2 &= (blockDelta.x*blockDelta.x+blockDelta.y*blockDelta.y+blockDelta.z*blockDelta.z < (PADDED_CUTOFF+blockSizeX.w+blockSizeY.w)*(PADDED_CUTOFF+blockSizeX.w+blockSizeY.w));
+                includeBlock2 &= (blockDelta.x*blockDelta.x+blockDelta.y*blockDelta.y+blockDelta.z*blockDelta.z < (PADDED_CUTOFF+blockCenterX.w+blockCenterY.w)*(PADDED_CUTOFF+blockCenterX.w+blockCenterY.w));
                 blockDelta.x = max(0.0f, fabs(blockDelta.x)-blockSizeX.x-blockSizeY.x);
                 blockDelta.y = max(0.0f, fabs(blockDelta.y)-blockSizeX.y-blockSizeY.y);
                 blockDelta.z = max(0.0f, fabs(blockDelta.z)-blockSizeX.z-blockSizeY.z);
@@ -214,19 +214,26 @@ extern "C" __global__ void findBlocksWithInteractions(real4 periodicBoxSize, rea
 
                 // Check each atom in block Y for interactions.
 
-                int start = y*TILE_SIZE;
-                int atom2 = start+indexInWarp;
+                int atom2 = y*TILE_SIZE+indexInWarp;
                 real3 pos2 = trimTo3(posq[atom2]);
 #ifdef USE_PERIODIC
                 if (singlePeriodicCopy) {
                     APPLY_PERIODIC_TO_POS_WITH_CENTER(pos2, blockCenterX)
                 }
 #endif
+                real4 blockCenterY = sortedBlockCenter[block2Base+i];
+                real3 atomDelta = posBuffer[warpStart+indexInWarp]-trimTo3(blockCenterY);
+#ifdef USE_PERIODIC
+                APPLY_PERIODIC_TO_DELTA(atomDelta)
+#endif
+                int atomFlags = ballot(atomDelta.x*atomDelta.x+atomDelta.y*atomDelta.y+atomDelta.z*atomDelta.z < (PADDED_CUTOFF+blockCenterY.w)*(PADDED_CUTOFF+blockCenterY.w));
                 bool interacts = false;
-                if (atom2 < NUM_ATOMS) {
+                if (atom2 < NUM_ATOMS && atomFlags != 0) {
+                    int first = __ffs(atomFlags)-1;
+                    int last = 32-__clz(atomFlags);
 #ifdef USE_PERIODIC
                     if (!singlePeriodicCopy) {
-                        for (int j = 0; j < TILE_SIZE; j++) {
+                        for (int j = first; j < last; j++) {
                             real3 delta = pos2-posBuffer[warpStart+j];
                             APPLY_PERIODIC_TO_DELTA(delta)
                             interacts |= (delta.x*delta.x+delta.y*delta.y+delta.z*delta.z < PADDED_CUTOFF_SQUARED);
@@ -234,7 +241,7 @@ extern "C" __global__ void findBlocksWithInteractions(real4 periodicBoxSize, rea
                     }
                     else {
 #endif
-                        for (int j = 0; j < TILE_SIZE; j++) {
+                        for (int j = first; j < last; j++) {
                             real3 delta = pos2-posBuffer[warpStart+j];
                             interacts |= (delta.x*delta.x+delta.y*delta.y+delta.z*delta.z < PADDED_CUTOFF_SQUARED);
                         }
