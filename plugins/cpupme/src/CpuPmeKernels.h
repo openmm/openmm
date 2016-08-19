@@ -51,8 +51,10 @@ namespace OpenMM {
 
 class OPENMM_EXPORT_PME CpuCalcPmeReciprocalForceKernel : public CalcPmeReciprocalForceKernel {
 public:
+    enum CalculationType { Electrostatic=0, Dispersion=1 };
+
     CpuCalcPmeReciprocalForceKernel(std::string name, const Platform& platform) : CalcPmeReciprocalForceKernel(name, platform),
-            hasCreatedPlan(false), isDeleted(false), realGrid(NULL), complexGrid(NULL) {
+            hasCreatedPlan(false), isDeleted(false), realGrid(NULL), complexGrid(NULL), calculationType(Electrostatic) {
     }
     /**
      * Initialize the kernel.
@@ -101,6 +103,11 @@ public:
      * @param nz      the number of grid points along the Z axis
      */
     void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
+    /**
+     * Sets the type of reciprocal space computation to perform (Electrostatic or Dispersion).
+     * @param type The type of computation
+     */
+    void setCalculationType(CalculationType type) { calculationType = type; }
 private:
     class ComputeTask;
     /**
@@ -131,6 +138,7 @@ private:
     float* posq;
     Vec3 periodicBoxVectors[3], recipBoxVectors[3];
     bool includeEnergy;
+    CalculationType calculationType;
     gmx_atomic_t atomicCounter;
 };
 
