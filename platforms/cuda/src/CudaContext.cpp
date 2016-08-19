@@ -205,6 +205,7 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
 
     int major, minor;
     CHECK_RESULT(cuDeviceComputeCapability(&major, &minor, device));
+    int numThreadBlocksPerComputeUnit = (major >= 6 ? 4 : 6);
 #if __CUDA_API_VERSION < 7000
         // This is a workaround to support GTX 980 with CUDA 6.5.  It reports
         // its compute capability as 5.2, but the compiler doesn't support
@@ -241,7 +242,6 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     numAtomBlocks = (paddedNumAtoms+(TileSize-1))/TileSize;
     int multiprocessors;
     CHECK_RESULT(cuDeviceGetAttribute(&multiprocessors, CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, device));
-    int numThreadBlocksPerComputeUnit = 6;
     numThreadBlocks = numThreadBlocksPerComputeUnit*multiprocessors;
     if (useDoublePrecision) {
         posq = CudaArray::create<double4>(*this, paddedNumAtoms, "posq");
