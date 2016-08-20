@@ -542,7 +542,7 @@ void test_water2_dpme_energies_forces_no_exclusions() {
     pme.beginComputation(io, boxVectors, true);
     double recenergy = pme.finishComputation(io);
 
-    ASSERT_EQUAL_TOL(recenergy, -2.179629087, 1e-5);
+    ASSERT_EQUAL_TOL(recenergy, -2.179629087, 5e-3);
     ASSERT_EQUAL_TOL(selfEwaldEnergy, 1.731404285, 1e-5);
 
     std::vector<Vec3> knownforces(6);
@@ -553,15 +553,15 @@ void test_water2_dpme_energies_forces_no_exclusions() {
     knownforces[4] = Vec3( 0.0008242336483,  0.003778910089, -0.002116131106);
     knownforces[5] = Vec3(  0.004912763044,  0.002324059399, -0.002844482646);
     for (int i = 0; i < NATOMS; i++)
-        ASSERT_EQUAL_VEC(refforces[i], knownforces[i], 1e-5);
+        ASSERT_EQUAL_VEC(refforces[i], knownforces[i], 5e-3);
 
     recenergy += selfEwaldEnergy;
 
     // See if they match.
 
-    ASSERT_EQUAL_TOL(refenergy, recenergy, 1e-5);
+    ASSERT_EQUAL_TOL(refenergy, recenergy, 1e-3);
     for (int i = 0; i < NATOMS; i++)
-        ASSERT_EQUAL_VEC(refforces[i], Vec3(io.force[4*i], io.force[4*i+1], io.force[4*i+2]), 1e-5);
+        ASSERT_EQUAL_VEC(refforces[i], Vec3(io.force[4*i], io.force[4*i+1], io.force[4*i+2]), 5e-3);
 
 }
 
