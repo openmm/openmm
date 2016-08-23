@@ -21,6 +21,7 @@ SET(OPENMM_SOURCE_SUBDIRS .)
 SET(OPENMMCUDACOMPILER_LIBRARY_NAME OpenMMCudaCompiler)
 
 SET(SHARED_TARGET ${OPENMMCUDACOMPILER_LIBRARY_NAME})
+SET(STATIC_TARGET ${OPENMMCUDACOMPILER_LIBRARY_NAME}_static)
 
 # These are all the places to search for header files which are
 # to be part of the API.
