@@ -1802,6 +1802,7 @@ class PeriodicTorsion(object):
         self.periodicity = []
         self.phase = []
         self.k = []
+        self.ordering = 'default'
 
 ## @private
 class PeriodicTorsionGenerator(object):
@@ -1817,9 +1818,15 @@ class PeriodicTorsionGenerator(object):
         if torsion is not None:
             self.proper.append(torsion)
 
-    def registerImproperTorsion(self, parameters):
+    def registerImproperTorsion(self, parameters, ordering='default'):
         torsion = self.ff._parseTorsion(parameters)
         if torsion is not None:
+            if ordering == 'default':
+                pass
+            elif ordering == 'amber':
+                torsion.ordering = ordering
+            else:
+                raise ValueError('Illegal ordering type for improper torsion %s' % torsion)
             self.improper.append(torsion)
 
     @staticmethod
@@ -1833,7 +1840,7 @@ class PeriodicTorsionGenerator(object):
         for torsion in element.findall('Proper'):
             generator.registerProperTorsion(torsion.attrib)
         for torsion in element.findall('Improper'):
-            generator.registerImproperTorsion(torsion.attrib)
+            generator.registerImproperTorsion(torsion.attrib, element.attrib['ordering'])
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         existing = [sys.getForce(i) for i in range(sys.getNumForces())]
@@ -1903,8 +1910,24 @@ class PeriodicTorsionGenerator(object):
                             e2 = data.atoms[a2].element
                             e3 = data.atoms[a3].element
                             e4 = data.atoms[a4].element
-                            # the following for AMBER only - TODO: decide how to pass this in ffxml's
-                            if isAmber:
+                            if tordef.ordering == 'default':
+                                    if t2[0] == t4[0] and (r2 > r4 or (r2 == r4 and ta2 > ta4)):
+                                        (a2, a4) = (a4, a2)
+                                        r2 = data.atoms[a2].residue.index
+                                        r4 = data.atoms[a4].residue.index
+                                        ta2 = data.atomTemplateIndexes[data.atoms[a3]]
+                                        ta4 = data.atomTemplateIndexes[data.atoms[a4]]
+                                    if t3[0] == t4[0] and (r3 > r4 or (r3 == r4 and ta3 > ta4)):
+                                        (a3, a4) = (a4, a3)
+                                        r3 = data.atoms[a3].residue.index
+                                        r4 = data.atoms[a4].residue.index
+                                        ta3 = data.atomTemplateIndexes[data.atoms[a3]]
+                                        ta4 = data.atomTemplateIndexes[data.atoms[a4]]
+                                    if t2[0] == t3[0] and (r2 > r3 or (r2 == r3 and ta2 > ta3)):
+                                        (a2, a3) = (a3, a2)
+                                    elif hasTwoWildcards and (r2 > r3 or (r2 == r3 and ta2 > ta3)):
+                                        (a2, a3) = (a3, a2)
+                            elif tordef.ordering == 'amber':
                                 if not hasWildcard:
                                     if t2[0] == t4[0] and (r2 > r4 or (r2 == r4 and ta2 > ta4)):
                                         (a2, a4) = (a4, a2)
@@ -1934,24 +1957,6 @@ class PeriodicTorsionGenerator(object):
                                         ta3 = data.atomTemplateIndexes[data.atoms[a3]]
                                         ta4 = data.atomTemplateIndexes[data.atoms[a4]]
                                     if r2 > r3 or (r2 == r3 and ta2 > ta3):
-                                        (a2, a3) = (a3, a2)
-                            # the following is OpenMM default
-                            else:
-                                    if t2[0] == t4[0] and (r2 > r4 or (r2 == r4 and ta2 > ta4)):
-                                        (a2, a4) = (a4, a2)
-                                        r2 = data.atoms[a2].residue.index
-                                        r4 = data.atoms[a4].residue.index
-                                        ta2 = data.atomTemplateIndexes[data.atoms[a3]]
-                                        ta4 = data.atomTemplateIndexes[data.atoms[a4]]
-                                    if t3[0] == t4[0] and (r3 > r4 or (r3 == r4 and ta3 > ta4)):
-                                        (a3, a4) = (a4, a3)
-                                        r3 = data.atoms[a3].residue.index
-                                        r4 = data.atoms[a4].residue.index
-                                        ta3 = data.atomTemplateIndexes[data.atoms[a3]]
-                                        ta4 = data.atomTemplateIndexes[data.atoms[a4]]
-                                    if t2[0] == t3[0] and (r2 > r3 or (r2 == r3 and ta2 > ta3)):
-                                        (a2, a3) = (a3, a2)
-                                    elif hasTwoWildcards and (r2 > r3 or (r2 == r3 and ta2 > ta3)):
                                         (a2, a3) = (a3, a2)
                             match = (a2, a3, torsion[0], a4, tordef)
                             break
