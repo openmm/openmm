@@ -1,0 +1,427 @@
+# AMBER --> OpenMM-ffxml conversion YAML
+# Author: Rafal P. Wiewiora, ChoderaLab
+# Structure: list - first entry - source package info, further entries - 1/resulting ffxml file
+
+- sourcePackage: AmberTools
+  sourcePackageVersion: 16
+- MODE: LEAPRC
+- Source: leaprc.protein.ff14SB
+  Reference:
+  - >-
+    Maier, J.A., Martinez, C., Kasavajhala, K., Wickstrom, L., Hauser, K.E., and Simmerling, C. (2015).
+    ff14SB: Improving the Accuracy of Protein Side Chain and Backbone Parameters from ff99SB. J. Chem. Theory Comput. 11, 3696-3713.
+  Test:
+  - protein
+- Source: leaprc.ff14SB.redq
+  Reference:
+  - >-
+    Maier, J.A., Martinez, C., Kasavajhala, K., Wickstrom, L., Hauser, K.E., and Simmerling, C. (2015).
+    ff14SB: Improving the Accuracy of Protein Side Chain and Backbone Parameters from ff99SB. J. Chem. Theory Comput. 11, 3696-3713.
+  Test:
+  - protein
+  - nucleic
+- Source: leaprc.protein.ff14SBonlysc
+  Reference:
+  - >-
+    Maier, J.A., Martinez, C., Kasavajhala, K., Wickstrom, L., Hauser, K.E., and Simmerling, C. (2015).
+    ff14SB: Improving the Accuracy of Protein Side Chain and Backbone Parameters from ff99SB. J. Chem. Theory Comput. 11, 3696-3713.
+  - >-
+    Hornak, V., Abel, R., Okur, A., Strockbine, B., Roitberg, A., and Simmerling, C. (2006).
+    Comparison of multiple Amber force fields and development of improved protein backbone parameters. Proteins 65, 712-725.
+  Test:
+  - protein
+- Source: leaprc.protein.ff03.r1
+  Reference:
+  - >-
+    Duan, Y., Wu, C., Chowdhury, S., Lee, M.C., Xiong, G., Zhang, W., Yang, R., Cieplak, P., Luo, R., Lee, T., et al. (2003).
+    A point-charge force field for molecular mechanics simulations of proteins based on condensed-phase quantum mechanical calculations.
+    J. Comput. Chem. 24, 1999-2012.
+  - >-
+    Lee, M.C., and Duan, Y. (2004). Distinguish protein decoys by Using a scoring function based on a new AMBER force field,
+    short molecular dynamics simulations, and the generalized born solvent model. Proteins 55, 620-634.
+  Test:
+  - protein
+- Source: leaprc.protein.ff03ua
+  Reference:
+  - >-
+    Yang, L., Tan, C., Hsieh, M.-J., Wang, J., Duan, Y., Cieplak, P., Caldwell, J., Kollman, P.A., and Luo, R. (2006).
+    New-Generation Amber United-Atom Force Field. J. Phys. Chem. B 110, 13166-13176.
+  Test:
+  - protein_ua
+- Source: leaprc.ffAM1
+  Reference:
+  - >-
+    Wollacott, A.M., and Merz, K.M. (2006). Development of a Parametrized Force Field To Reproduce Semiempirical Geometries.
+    J. Chem. Theory Comput. 2, 1070-1077.
+  Test:
+  - protein
+  - nucleic
+- Source: leaprc.ffPM3
+  Reference:
+  - >-
+    Wollacott, A.M., and Merz, K.M. (2006). Development of a Parametrized Force Field To Reproduce Semiempirical Geometries.
+    J. Chem. Theory Comput. 2, 1070-1077.
+  Test:
+  - protein
+  - nucleic
+- Source: leaprc.gaff
+  Reference:
+  - >-
+    Wang, J., Wolf, R.M., Caldwell, J.W., Kollman, P.A., and Case, D.A. (2004).
+    Development and testing of a general amber force field. J. Comput. Chem. 25, 1157-1174.
+  Options:
+    write_unused: True
+  Test:
+  - gaff
+#- Source: leaprc.phosaa10
+#  Reference:
+#  - >-
+#    Steinbrecher, T., Latzer, J., and Case, D.A. (2012). Revised AMBER parameters for bioorganic phosphates.
+#    J. Chem. Theory Comput. 8, 4405-4412.
+#  Options:
+#    filter_warnings: always
+#    write_unused: True
+#  Test:
+#  - protein_phospho
+- Source: leaprc.gaff2
+  Reference:
+  - >-
+    Wang, J., Wolf, R.M., Caldwell, J.W., Kollman, P.A., and Case, D.A. (2004).
+    Development and testing of a general amber force field. J. Comput. Chem. 25, 1157-1174.
+  Options:
+    write_unused: True
+  Test:
+  - gaff
+- Source: leaprc.DNA.OL15
+  Reference:
+  - >-
+    Placeholder
+    Placeholder
+  Test:
+  - dna
+- Source: leaprc.DNA.bsc1
+  Reference:
+  - >-
+    Placeholder
+    Placeholder
+  Test:
+  - dna
+- Source: leaprc.RNA.OL3
+  Reference:
+  - >-
+    Placeholder
+    Placeholder
+  Test:
+  - rna 
+- Source: leaprc.RNA.YIL
+  Reference:
+  - >-
+    Placeholder
+    Placeholder
+  Test:
+  - rna
+- Source: leaprc.protein.fb15
+  Reference:
+  - >-
+    Placeholder
+    Placeholder
+  Test:
+  - protein
+# Torsion problem
+#- Source: leaprc.protein.ff15ipq
+#  Reference:
+#  - >-
+#    Placeholder
+#    Placeholder
+#  Test:
+#  - protein
+#- Source: leaprc.protein.ff15ipq-vac
+#  Reference:
+#  - >-
+#    Placeholder
+#    Placeholder
+#  Test:
+#  - protein  
+- Source: oldff/leaprc.ff10
+  Reference:
+  - >-
+    Hornak, V., Abel, R., Okur, A., Strockbine, B., Roitberg, A., and Simmerling, C. (2006).
+    Comparison of multiple Amber force fields and development of improved protein backbone parameters. Proteins 65, 712-725.
+  - >-
+    Perez, A., Marchan, I., Svozil, D., Sponer, J., Cheatham, T.E., Laughton, C.A., and Orozco, M. (2007).
+    Refinement of the AMBER Force Field for Nucleic Acids: Improving the Description of alpha/gamma Conformers. Biophysical Journal 92, 3817-3829.
+  - >-
+    Banas, P., Hollas, D., Zgarbova, M., Jurecka, P., Orozco, M., Cheatham, T.E., Sponer, J., and Otyepka, M. (2010).
+    Performance of Molecular Mechanics Force Fields for RNA Simulations: Stability of UUCG and GNRA Hairpins. J. Chem. Theory Comput. 6, 3836-3849.
+  - >-
+    Zgarbova, M., Otyepka, M., Sponer, J., Mladek, A., Banas, P., Cheatham, T.E., and Jurecka, P. (2011).
+    Refinement of the Cornell et al. Nucleic Acids Force Field Based on Reference Quantum Chemical Calculations of Glycosidic Torsion Profiles.
+    J. Chem. Theory. Comput. 7, 2886-2902.
+  Test:
+  - protein
+  - nucleic
+- Source: oldff/leaprc.ff03
+  Reference:
+  - >-
+    Duan, Y., Wu, C., Chowdhury, S., Lee, M.C., Xiong, G., Zhang, W., Yang, R., Cieplak, P., Luo, R., Lee, T., et al. (2003).
+    A point-charge force field for molecular mechanics simulations of proteins based on condensed-phase quantum mechanical calculations.
+    J. Comput. Chem. 24, 1999-2012.
+  - >-
+    Lee, M.C., and Duan, Y. (2004). Distinguish protein decoys by Using a scoring function based on a new AMBER force field,
+    short molecular dynamics simulations, and the generalized born solvent model. Proteins 55, 620-634.
+  Test:
+  - protein
+  - nucleic
+- Source: oldff/leaprc.ff99
+  Reference:
+  - >-
+    Wang, J., Cieplak, P., and Kollman, P.A. (2000).
+    How well does a restrained electrostatic potential (RESP) model perform in calculating conformational energies of organic and biological molecules?
+    J. Comput. Chem. 21, 1049-1074.
+  Test:
+  - protein
+  - nucleic
+- Source: oldff/leaprc.ff99SB
+  Reference:
+  - >-
+    Hornak, V., Abel, R., Okur, A., Strockbine, B., Roitberg, A., and Simmerling, C. (2006).
+    Comparison of multiple Amber force fields and development of improved protein backbone parameters. Proteins 65, 712-725.
+  Test:
+  - protein
+  - nucleic
+- Source: oldff/leaprc.ff99SBildn
+  Reference:
+  - >-
+    Lindorff-Larsen, K., Piana, S., Palmo, K., Maragakis, P., Klepeis, J.L., Dror, R.O., and Shaw, D.E. (2010).
+    Improved side-chain torsion potentials for the Amber ff99SB protein force field. Proteins 78, 1950-1958.
+  Test:
+  - protein
+  - nucleic
+- Source: oldff/leaprc.ff99SBnmr
+  Reference:
+  - >-
+    Li, D.-W., and Bruschweiler, R. (2011).
+    Iterative Optimization of Molecular Mechanics Force Fields from NMR Data of Full-Length Proteins. J. Chem. Theory Comput. 7, 1773-1782.
+  Test:
+  - protein
+  - nucleic
+- Source: oldff/leaprc.ff99bsc0
+  Reference:
+  - >-
+    Perez, A., Marchan, I., Svozil, D., Sponer, J., Cheatham, T.E., Laughton, C.A., and Orozco, M. (2007).
+    Refinement of the AMBER Force Field for Nucleic Acids: Improving the Description of alpha/gamma Conformers. Biophysical Journal 92, 3817-3829.
+  Test:
+  - protein
+  - nucleic
+- Source: oldff/leaprc.ff98
+  Reference:
+  - >-
+    III, T.E.C., Cieplak, P., and Kollman, P.A. (1999).
+    A Modified Version of the Cornell et al. Force Field with Improved Sugar Pucker Phases and Helical Repeat.
+    Journal of Biomolecular Structure and Dynamics 16, 845-862.
+  Test:
+  - protein
+  - nucleic
+- Source: oldff/leaprc.ff96
+  Reference:
+  - >-
+    Kollman, P., Dixon, R., Cornell, W., Fox, T., Chipot, C., and Pohorille, A. (1997).
+    The development/application of a minimalist molecular mechanics force field using a combination of ab initio calculations and experimental data.
+    Computer Simulations of Biomolecular Systems: Computer Simulations of Biomolecular Systems, ESCOM.
+  Test:
+  - protein
+  - nucleic
+- Source: oldff/leaprc.ff94
+  Reference:
+  - >-
+    Cornell, W.D., Cieplak, P., Bayly, C.I., Gould, I.R., Merz, K.M., Ferguson, D.M., Spellmeyer, D.C., Fox, T., Caldwell, J.W., and Kollman, P.A. (1995).
+    A Second Generation Force Field for the Simulation of Proteins, Nucleic Acids, and Organic Molecules. J. Am. Chem. Soc. 117, 5179-5197.
+  Test:
+  - protein
+  - nucleic
+- Source: oldff/leaprc.DNA.bsc0
+  Reference:
+  - >-
+    Placeholder
+    Placeholder
+  Test:
+  - dna
+- Source: oldff/leaprc.ff14SB
+  Reference:
+  - >-
+    Maier, J.A., Martinez, C., Kasavajhala, K., Wickstrom, L., Hauser, K.E., and Simmerling, C. (2015).
+    ff14SB: Improving the Accuracy of Protein Side Chain and Backbone Parameters from ff99SB. J. Chem. Theory Comput. 11, 3696-3713.
+  Test:
+  - protein
+  - nucleic
+# Problem  
+#- Source: oldff/leaprc.ff14ipq
+#  Reference:
+#  - >-
+#    Placeholder
+#    Placeholder
+#  Test:
+#  - protein
+#  - nucleic  
+# IONS & SOLVENTS
+- MODE: RECIPE
+- sourcePackage2: OpenMM
+  sourcePackageVersion2: 7.0
+- Source:
+  - parm/frcmod.ionsjc_tip3p
+  - parm/frcmod.ions234lm_126_tip3p
+  - lib/atomic_ions.lib
+  Solvent_source: tip3p.xml
+  Solvent: tip3p
+  Name: tip3p_standard
+  Reference:
+  - >-
+    Joung, I.S., and Cheatham, Thomas E. (2008).
+    Determination of Alkali and Halide Monovalent Ion Parameters for Use in Explicitly Solvated Biomolecular Simulations. J. Phys. Chem. B 112, 9020-9041.
+  - >-
+    Joung, I.S., and Cheatham, T.E. (2009).
+    Molecular Dynamics Simulations of the Dynamic and Energetic Properties of Alkali and Halide Ions Using Water-Model-Specific Ion Parameters. J. Phys. Chem. B 113, 13279-13290.
+  - >-
+    Li, P., Roberts, B.P., Chakravorty, D.K., and Merz, K.M. (2013).
+    Rational Design of Particle Mesh Ewald Compatible Lennard-Jones Parameters for +2 Metal Cations in Explicit Solvent. J. Chem. Theory Comput. 9, 2733-2748.
+  - >-
+    Jorgensen, W.L., Chandrasekhar, J., Madura, J.D., Impey, R.W., and Klein, M.L. (1983).
+    Comparison of simple potential functions for simulating liquid water. The Journal of Chemical Physics 79, 926-935.
+  Test:
+  - water_ion
+- Source:
+  - parm/frcmod.ionsjc_tip4pew
+  - parm/frcmod.ions234lm_126_tip4pew
+  - lib/atomic_ions.lib
+  Solvent_source: tip4pew.xml
+  Solvent: tip4pew
+  Name: tip4pew_standard
+  Reference:
+  - >-
+    Joung, I.S., and Cheatham, Thomas E. (2008).
+    Determination of Alkali and Halide Monovalent Ion Parameters for Use in Explicitly Solvated Biomolecular Simulations. J. Phys. Chem. B 112, 9020-9041.
+  - >-
+    Joung, I.S., and Cheatham, T.E. (2009).
+    Molecular Dynamics Simulations of the Dynamic and Energetic Properties of Alkali and Halide Ions Using Water-Model-Specific Ion Parameters. J. Phys. Chem. B 113, 13279q13290.
+  - >-
+    Li, P., Roberts, B.P., Chakravorty, D.K., and Merz, K.M. (2013).
+    Rational Design of Particle Mesh Ewald Compatible Lennard-Jones Parameters for +2 Metal Cations in Explicit Solvent. J. Chem. Theory Comput. 9, 2733-2748.
+  - >-
+    Horn, H.W., Swope, W.C., Pitera, J.W., Madura, J.D., Dick, T.J., Hura, G.L., and Head-Gordon, T. (2004).
+    Development of an improved four-site water model for biomolecular simulations: TIP4P-Ew. The Journal of Chemical Physics 120, 9665-9678.
+  - >-
+    Horn, H.W., Swope, W.C., and Pitera, J.W. (2005).
+    Characterization of the TIP4P-Ew water model: Vapor pressure and boiling point. The Journal of Chemical Physics 123, 194504.
+  Test:
+  - water_ion
+- Source:
+  - parm/frcmod.ionsjc_spce
+  - parm/frcmod.ions234lm_126_spce
+  - lib/atomic_ions.lib
+  Solvent_source: spce.xml
+  Solvent: spce
+  Name: spce_standard
+  Reference:
+  - >-
+    Joung, I.S., and Cheatham, Thomas E. (2008).
+    Determination of Alkali and Halide Monovalent Ion Parameters for Use in Explicitly Solvated Biomolecular Simulations. J. Phys. Chem. B 112, 9020-9041.
+  - >-
+    Joung, I.S., and Cheatham, T.E. (2009).
+    Molecular Dynamics Simulations of the Dynamic and Energetic Properties of Alkali and Halide Ions Using Water-Model-Specific Ion Parameters. J. Phys. Chem. B 113, 13279-13290.
+  - >-
+    Li, P., Roberts, B.P., Chakravorty, D.K., and Merz, K.M. (2013).
+    Rational Design of Particle Mesh Ewald Compatible Lennard-Jones Parameters for +2 Metal Cations in Explicit Solvent. J. Chem. Theory Comput. 9, 2733-2748.
+  - >-
+    Berendsen, H.J.C., Grigera, J.R., and Straatsma, T.P. (1987). The missing term in effective pair potentials. J. Phys. Chem. 91, 6269-6271.
+  Test:
+  - water_ion
+- Source:
+  - parm/frcmod.ions234lm_hfe_tip3p
+  - lib/atomic_ions.lib
+  Standard: tip3p_standard
+  Solvent: tip3p
+  Name: tip3p_HFE_multivalent
+  Reference:
+  - >-
+    Li, P., Roberts, B.P., Chakravorty, D.K., and Merz, K.M. (2013).
+    Rational Design of Particle Mesh Ewald Compatible Lennard-Jones Parameters for +2 Metal Cations in Explicit Solvent. J. Chem. Theory Comput. 9, 2733-2748.
+  - >-
+    Li, P., Song, L.F., and Merz, K.M. (2015).
+    Parameterization of Highly Charged Metal Ions Using the 12-6-4 LJ-Type Nonbonded Model in Explicit Water. J. Phys. Chem. B 119, 883-895.
+  Test:
+  - water_ion
+- Source:
+  - parm/frcmod.ions234lm_iod_tip3p
+  - lib/atomic_ions.lib
+  Standard: tip3p_standard
+  Solvent: tip3p
+  Name: tip3p_IOD_multivalent
+  Reference:
+  - >-
+    Li, P., Roberts, B.P., Chakravorty, D.K., and Merz, K.M. (2013).
+    Rational Design of Particle Mesh Ewald Compatible Lennard-Jones Parameters for +2 Metal Cations in Explicit Solvent. J. Chem. Theory Comput. 9, 2733-2748.
+  - >-
+    Li, P., Song, L.F., and Merz, K.M. (2015).
+    Parameterization of Highly Charged Metal Ions Using the 12-6-4 LJ-Type Nonbonded Model in Explicit Water. J. Phys. Chem. B 119, 883-895.
+  Test:
+  - water_ion
+- Source:
+  - parm/frcmod.ions234lm_hfe_tip4pew
+  - lib/atomic_ions.lib
+  Standard: tip4pew_standard
+  Solvent: tip4pew
+  Name: tip4pew_HFE_multivalent
+  Reference:
+  - >-
+    Li, P., Roberts, B.P., Chakravorty, D.K., and Merz, K.M. (2013).
+    Rational Design of Particle Mesh Ewald Compatible Lennard-Jones Parameters for +2 Metal Cations in Explicit Solvent. J. Chem. Theory Comput. 9, 2733-2748.
+  - >-
+    Li, P., Song, L.F., and Merz, K.M. (2015).
+    Parameterization of Highly Charged Metal Ions Using the 12-6-4 LJ-Type Nonbonded Model in Explicit Water. J. Phys. Chem. B 119, 883-895.
+  Test:
+  - water_ion
+- Source:
+  - parm/frcmod.ions234lm_iod_tip4pew
+  - lib/atomic_ions.lib
+  Standard: tip4pew_standard
+  Solvent: tip4pew
+  Name: tip4pew_IOD_multivalent
+  Reference:
+  - >-
+    Li, P., Roberts, B.P., Chakravorty, D.K., and Merz, K.M. (2013).
+    Rational Design of Particle Mesh Ewald Compatible Lennard-Jones Parameters for +2 Metal Cations in Explicit Solvent. J. Chem. Theory Comput. 9, 2733-2748.
+  - >-
+    Li, P., Song, L.F., and Merz, K.M. (2015).
+    Parameterization of Highly Charged Metal Ions Using the 12-6-4 LJ-Type Nonbonded Model in Explicit Water. J. Phys. Chem. B 119, 883-895.
+  Test:
+  - water_ion
+- Source:
+  - parm/frcmod.ions234lm_hfe_spce
+  - lib/atomic_ions.lib
+  Standard: spce_standard
+  Solvent: spce
+  Name: spce_HFE_multivalent
+  Reference:
+  - >-
+    Li, P., Roberts, B.P., Chakravorty, D.K., and Merz, K.M. (2013).
+    Rational Design of Particle Mesh Ewald Compatible Lennard-Jones Parameters for +2 Metal Cations in Explicit Solvent. J. Chem. Theory Comput. 9, 2733-2748.
+  - >-
+    Li, P., Song, L.F., and Merz, K.M. (2015).
+    Parameterization of Highly Charged Metal Ions Using the 12-6-4 LJ-Type Nonbonded Model in Explicit Water. J. Phys. Chem. B 119, 883-895.
+  Test:
+  - water_ion
+- Source:
+  - parm/frcmod.ions234lm_iod_spce
+  - lib/atomic_ions.lib
+  Standard: spce_standard
+  Solvent: spce
+  Name: spce_IOD_multivalent
+  Reference:
+  - >-
+    Li, P., Roberts, B.P., Chakravorty, D.K., and Merz, K.M. (2013).
+    Rational Design of Particle Mesh Ewald Compatible Lennard-Jones Parameters for +2 Metal Cations in Explicit Solvent. J. Chem. Theory Comput. 9, 2733-2748.
+  - >-
+    Li, P., Song, L.F., and Merz, K.M. (2015).
+    Parameterization of Highly Charged Metal Ions Using the 12-6-4 LJ-Type Nonbonded Model in Explicit Water. J. Phys. Chem. B 119, 883-895.
+  Test:
+  - water_ion
