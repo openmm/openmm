@@ -182,14 +182,3 @@ As I've said before already, the system is:
 * naming of the water atom types has stayed as was (`tip3p-O`)
 
 * naming of the ion atom types is `name_of_set (dash) amber_atom_type_name`, e.g. `tip3p_standard-Na+`, `tip3p_HFE_multivalent-Zn2+`.
-
-
-**TODO**
-
-* Please look through, see what you like, what you don't like!
-
-* https://github.com/pandegroup/openmm/pull/1373 must be merged before the script is functional.
-
-* The impropers problem in nucleic acids is the only thing outstanding and I will attempt a solution next week. (https://github.com/choderalab/openmm/issues/9). Currently the improper energies are not validated for nucleic acid systems because of this.
-
-* Travis testing
