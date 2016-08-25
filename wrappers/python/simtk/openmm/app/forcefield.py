@@ -1840,7 +1840,10 @@ class PeriodicTorsionGenerator(object):
         for torsion in element.findall('Proper'):
             generator.registerProperTorsion(torsion.attrib)
         for torsion in element.findall('Improper'):
-            generator.registerImproperTorsion(torsion.attrib, element.attrib['ordering'])
+            if 'ordering' in element.attrib:
+                generator.registerImproperTorsion(torsion.attrib, element.attrib['ordering'])
+            else:
+                generator.registerImproperTorsion(torsion.attrib)
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         existing = [sys.getForce(i) for i in range(sys.getNumForces())]
