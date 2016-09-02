@@ -52,6 +52,7 @@
 #include <set>
 #include <sstream>
 #include <typeinfo>
+#include <sys/stat.h>
 #include <cudaProfiler.h>
 #ifndef WIN32
   #include <unistd.h>
@@ -127,7 +128,8 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     string testCompilerCommand = this->compiler+" --version > /dev/null 2> /dev/null";
     int res = std::system(testCompilerCommand.c_str());
 #endif
-    isNvccAvailable = (res == 0);
+    struct stat info;
+    isNvccAvailable = (res == 0 && stat(tempDir.c_str(), &info) == 0);
     static bool hasShownNvccWarning = false;
     if (hasCompilerKernel && !isNvccAvailable && !hasShownNvccWarning) {
         hasShownNvccWarning = true;
