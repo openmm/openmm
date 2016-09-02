@@ -98,7 +98,7 @@ __global__ void computeRange(const DATA_TYPE* __restrict__ data, unsigned int le
  * Assign elements to buckets.
  */
 __global__ void assignElementsToBuckets(const DATA_TYPE* __restrict__ data, unsigned int length, unsigned int numBuckets, const KEY_TYPE* __restrict__ range,
-        unsigned int* bucketOffset, unsigned int* __restrict__ bucketOfElement, unsigned int* __restrict__ offsetInBucket) {
+        unsigned int* __restrict__ bucketOffset, unsigned int* __restrict__ bucketOfElement, unsigned int* __restrict__ offsetInBucket) {
     float minValue = (float) (range[0]);
     float maxValue = (float) (range[1]);
     float bucketWidth = (maxValue-minValue)/numBuckets;

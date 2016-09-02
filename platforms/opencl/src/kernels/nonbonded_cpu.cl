@@ -269,7 +269,7 @@ __kernel void computeNonbonded(
 
             for (int localAtomIndex = 0; localAtomIndex < TILE_SIZE; localAtomIndex++) {
 #ifdef USE_CUTOFF
-                unsigned int j = (numTiles <= maxTiles ? interactingAtoms[pos*TILE_SIZE+localAtomIndex] : y*TILE_SIZE+localAtomIndex);
+                unsigned int j = interactingAtoms[pos*TILE_SIZE+localAtomIndex];
 #else
                 unsigned int j = y*TILE_SIZE+localAtomIndex;
 #endif

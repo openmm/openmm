@@ -514,7 +514,7 @@ extern "C" __global__ void computeInducedField(
             loadAtomData(data, atom1, posq, inducedDipole, inducedDipolePolar, dampingAndThole);
 #endif
 #ifdef USE_CUTOFF
-            unsigned int j = (numTiles <= maxTiles ? interactingAtoms[pos*TILE_SIZE+tgx] : y*TILE_SIZE + tgx);
+            unsigned int j = interactingAtoms[pos*TILE_SIZE+tgx];
 #else
             unsigned int j = y*TILE_SIZE + tgx;
 #endif
@@ -607,11 +607,6 @@ extern "C" __global__ void recordInducedDipolesForDIIS(const long long* __restri
         const real* __restrict__ inducedDipole, const real* __restrict__ inducedDipolePolar, const float* __restrict__ polarizability, float2* __restrict__ errors,
         real* __restrict__ prevDipoles, real* __restrict__ prevDipolesPolar, real* __restrict__ prevErrors, int iteration, bool recordPrevErrors, real* __restrict__ matrix) {
     extern __shared__ real2 buffer[];
-#ifdef USE_EWALD
-    const real ewaldScale = (4/(real) 3)*(EWALD_ALPHA*EWALD_ALPHA*EWALD_ALPHA)/SQRT_PI;
-#else
-    const real ewaldScale = 0;
-#endif
     const real fieldScale = 1/(real) 0x100000000;
     real sumErrors = 0;
     real sumPolarErrors = 0;
