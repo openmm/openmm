@@ -18,7 +18,7 @@ __kernel void computeN2Energy(
 #endif
         __global mixed* restrict energyBuffer, __local real4* restrict local_force,
         __global const real4* restrict posq, __local real4* restrict local_posq, __global const unsigned int* restrict exclusions,
-        __global const ushort2* exclusionTiles,
+        __global const ushort2* exclusionTiles, int needEnergy,
 #ifdef USE_CUTOFF
         __global const int* restrict tiles, __global const unsigned int* restrict interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, __global const real4* restrict blockCenter,
