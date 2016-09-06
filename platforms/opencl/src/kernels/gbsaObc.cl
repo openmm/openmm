@@ -385,7 +385,7 @@ __kernel void computeGBSAForce1(
 #else
         __global real4* restrict forceBuffers, __global real* restrict global_bornForce,
 #endif
-        __global mixed* restrict energyBuffer, __global const real4* restrict posq, __global const real* restrict global_bornRadii,
+        __global mixed* restrict energyBuffer, __global const real4* restrict posq, __global const real* restrict global_bornRadii, int needEnergy,
 #ifdef USE_CUTOFF
         __global const int* restrict tiles, __global const unsigned int* restrict interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, 
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, __global const real4* restrict blockCenter,
@@ -452,7 +452,8 @@ __kernel void computeGBSAForce1(
                         if (atom1 != y*TILE_SIZE+j)
                             tempEnergy -= scaledChargeProduct/CUTOFF;
 #endif
-                        energy += 0.5f*tempEnergy;
+                        if (needEnergy)
+                            energy += 0.5f*tempEnergy;
                         delta.xyz *= dEdR;
                         force.xyz -= delta.xyz;
 #ifdef USE_CUTOFF
@@ -506,7 +507,8 @@ __kernel void computeGBSAForce1(
 #ifdef USE_CUTOFF
                         tempEnergy -= scaledChargeProduct/CUTOFF;
 #endif
-                        energy += tempEnergy;
+                        if (needEnergy)
+                            energy += tempEnergy;
                         delta.xyz *= dEdR;
                         force.xyz -= delta.xyz;
                         localData[tbx+tj].fx += delta.x;
@@ -669,7 +671,8 @@ __kernel void computeGBSAForce1(
 #ifdef USE_CUTOFF
                             tempEnergy -= scaledChargeProduct/CUTOFF;
 #endif
-                            energy += tempEnergy;
+                            if (needEnergy)
+                                energy += tempEnergy;
                             delta.xyz *= dEdR;
                             force.xyz -= delta.xyz;
                             localData[tbx+tj].fx += delta.x;
@@ -717,7 +720,8 @@ __kernel void computeGBSAForce1(
 #ifdef USE_CUTOFF
                             tempEnergy -= scaledChargeProduct/CUTOFF;
 #endif
-                            energy += tempEnergy;
+                            if (needEnergy)
+                                energy += tempEnergy;
                             delta.xyz *= dEdR;
                             force.xyz -= delta.xyz;
                             localData[tbx+tj].fx += delta.x;

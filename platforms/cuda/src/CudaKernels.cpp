@@ -2794,6 +2794,7 @@ double CudaCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeFor
         force1Args.push_back(&cu.getEnergyBuffer().getDevicePointer());
         force1Args.push_back(&cu.getPosq().getDevicePointer());
         force1Args.push_back(&bornRadii->getDevicePointer());
+        force1Args.push_back(NULL);
         if (nb.getUseCutoff()) {
             force1Args.push_back(&nb.getInteractingTiles().getDevicePointer());
             force1Args.push_back(&nb.getInteractionCount().getDevicePointer());
@@ -2813,13 +2814,14 @@ double CudaCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeFor
         reduceBornSumKernel = cu.getKernel(module, "reduceBornSum");
         reduceBornForceKernel = cu.getKernel(module, "reduceBornForce");
     }
+    force1Args[5] = &includeEnergy;
     if (nb.getUseCutoff()) {
         if (maxTiles < nb.getInteractingTiles().getSize()) {
             maxTiles = nb.getInteractingTiles().getSize();
             computeSumArgs[3] = &nb.getInteractingTiles().getDevicePointer();
-            force1Args[5] = &nb.getInteractingTiles().getDevicePointer();
+            force1Args[6] = &nb.getInteractingTiles().getDevicePointer();
             computeSumArgs[13] = &nb.getInteractingAtoms().getDevicePointer();
-            force1Args[15] = &nb.getInteractingAtoms().getDevicePointer();
+            force1Args[16] = &nb.getInteractingAtoms().getDevicePointer();
         }
     }
     cu.executeKernel(computeBornSumKernel, &computeSumArgs[0], nb.getNumForceThreadBlocks()*nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());
@@ -3754,6 +3756,7 @@ double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFo
         pairEnergyArgs.push_back(&cu.getPosq().getDevicePointer());
         pairEnergyArgs.push_back(&cu.getNonbondedUtilities().getExclusions().getDevicePointer());
         pairEnergyArgs.push_back(&cu.getNonbondedUtilities().getExclusionTiles().getDevicePointer());
+        pairEnergyArgs.push_back(NULL);
         if (nb.getUseCutoff()) {
             pairEnergyArgs.push_back(&nb.getInteractingTiles().getDevicePointer());
             pairEnergyArgs.push_back(&nb.getInteractionCount().getDevicePointer());
@@ -3832,13 +3835,14 @@ double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFo
         if (changed)
             globals->upload(globalParamValues);
     }
+    pairEnergyArgs[5] = &includeEnergy;
     if (nb.getUseCutoff()) {
         if (maxTiles < nb.getInteractingTiles().getSize()) {
             maxTiles = nb.getInteractingTiles().getSize();
             pairValueArgs[4] = &nb.getInteractingTiles().getDevicePointer();
-            pairEnergyArgs[5] = &nb.getInteractingTiles().getDevicePointer();
+            pairEnergyArgs[6] = &nb.getInteractingTiles().getDevicePointer();
             pairValueArgs[14] = &nb.getInteractingAtoms().getDevicePointer();
-            pairEnergyArgs[15] = &nb.getInteractingAtoms().getDevicePointer();
+            pairEnergyArgs[16] = &nb.getInteractingAtoms().getDevicePointer();
         }
     }
     cu.executeKernel(pairValueKernel, &pairValueArgs[0], nb.getNumForceThreadBlocks()*nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());
