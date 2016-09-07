@@ -41,7 +41,7 @@
 #include "CudaForceInfo.h"
 #include "CudaKernelSources.h"
 #include "CudaNonbondedUtilities.h"
-#include "jama_svd.h"
+#include "jama_lu.h"
 
 #include <algorithm>
 #include <cmath>
@@ -1837,7 +1837,8 @@ bool CudaCalcAmoebaMultipoleForceKernel::iterateDipolesByDIIS(int iteration) {
     int numPrev = (iteration+1 < MaxPrevDIISDipoles ? iteration+1 : MaxPrevDIISDipoles);
     void* buildMatrixArgs[] = {&prevErrors->getDevicePointer(), &iteration, &diisMatrix->getDevicePointer()};
     int threadBlocks = min(numPrev, cu.getNumThreadBlocks());
-    cu.executeKernel(buildMatrixKernel, buildMatrixArgs, threadBlocks*128, 128, 128*elementSize);
+    int blockSize = 512;
+    cu.executeKernel(buildMatrixKernel, buildMatrixArgs, threadBlocks*blockSize, blockSize, blockSize*elementSize);
     vector<float> matrixf;
     vector<double> matrix;
     if (cu.getUseDoublePrecision())
@@ -1877,20 +1878,16 @@ bool CudaCalcAmoebaMultipoleForceKernel::iterateDipolesByDIIS(int iteration) {
                     b[i+1][j+1] = matrixf[i*MaxPrevDIISDipoles+j];
         }
 
-        // Solve using SVD.  Since the right hand side is (-1, 0, 0, 0, ...), this is simpler than the general case.
+        // Solve using LU.
 
-        JAMA::SVD<double> svd(b);
-        Array2D<double> u, v;
-        svd.getU(u);
-        svd.getV(v);
-        Array1D<double> s;
-        svd.getSingularValues(s);
-        int effectiveRank = svd.rank();
-        for (int i = 1; i < rank; i++) {
-            double d = 0;
-            for (int j = 0; j < effectiveRank; j++)
-                d -= u[0][j]*v[i][j]/s[j];
-            coefficients[i-1] = d;
+        JAMA::LU<double> lu(b);
+        Array1D<double> x(rank, 0.0);
+        x[0] = -1.0;
+        Array1D<double> coeff = lu.solve(x);
+        coefficients[rank-1] = 1.0;
+        for (int i = 0; i < rank-1; i++) {
+            coefficients[i] = coeff[i+1];
+            coefficients[rank-1] -= coefficients[i];
         }
     }
     diisCoefficients->upload(coefficients, false);
