@@ -236,7 +236,7 @@ extern "C" __global__ void computeN2Energy(unsigned long long* __restrict__ forc
             LOAD_ATOM1_PARAMETERS
             const unsigned int localAtomIndex = threadIdx.x;
 #ifdef USE_CUTOFF
-            unsigned int j = (numTiles <= maxTiles ? interactingAtoms[pos*TILE_SIZE+tgx] : y*TILE_SIZE + tgx);
+            unsigned int j = interactingAtoms[pos*TILE_SIZE+tgx];
 #else
             unsigned int j = y*TILE_SIZE + tgx;
 #endif

@@ -8,7 +8,7 @@ KEY_TYPE getValue(DATA_TYPE value) {
  * Sort a list that is short enough to entirely fit in local memory.  This is executed as
  * a single thread block.
  */
-__kernel void sortShortList(__global DATA_TYPE* __restrict__ data, uint length, __local DATA_TYPE* dataBuffer) {
+__kernel void sortShortList(__global DATA_TYPE* restrict data, uint length, __local DATA_TYPE* dataBuffer) {
     // Load the data into local memory.
     
     for (int index = get_local_id(0); index < length; index += get_local_size(0))
@@ -96,7 +96,7 @@ __kernel void computeRange(__global const DATA_TYPE* restrict data, uint length,
  * Assign elements to buckets.
  */
 __kernel void assignElementsToBuckets(__global const DATA_TYPE* restrict data, uint length, uint numBuckets, __global const KEY_TYPE* restrict range,
-        __global uint* bucketOffset, __global uint* restrict bucketOfElement, __global uint* restrict offsetInBucket) {
+        __global uint* restrict bucketOffset, __global uint* restrict bucketOfElement, __global uint* restrict offsetInBucket) {
 #ifdef AMD_ATOMIC_WORK_AROUND
     // Do a byte write to force all memory accesses to interactionCount to use the complete path.
     // This avoids the atomic access from causing all word accesses to other buffers from using the slow complete path.

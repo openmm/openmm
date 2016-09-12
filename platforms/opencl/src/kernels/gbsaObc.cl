@@ -232,7 +232,7 @@ __kernel void computeBornSum(
             real4 posq1 = posq[atom1];
             float2 params1 = global_params[atom1];
 #ifdef USE_CUTOFF
-            unsigned int j = (numTiles <= maxTiles ? interactingAtoms[pos*TILE_SIZE+tgx] : y*TILE_SIZE + tgx);
+            unsigned int j = interactingAtoms[pos*TILE_SIZE+tgx];
 #else
             unsigned int j = y*TILE_SIZE + tgx;
 #endif
@@ -619,7 +619,7 @@ __kernel void computeGBSAForce1(
             real4 posq1 = posq[atom1];
             real bornRadius1 = global_bornRadii[atom1];
 #ifdef USE_CUTOFF
-            unsigned int j = (numTiles <= maxTiles ? interactingAtoms[pos*TILE_SIZE+tgx] : y*TILE_SIZE + tgx);
+            unsigned int j = interactingAtoms[pos*TILE_SIZE+tgx];
 #else
             unsigned int j = y*TILE_SIZE + tgx;
 #endif
