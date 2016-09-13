@@ -2086,8 +2086,8 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             pmeEvalEnergyKernel.setArg<mm_float4>(7, recipBoxVectorsFloat[2]);
         }
         if (includeEnergy)
-            cl.executeKernel(pmeEvalEnergyKernel, cl.getNumAtoms());
-        cl.executeKernel(pmeConvolutionKernel, cl.getNumAtoms());
+            cl.executeKernel(pmeEvalEnergyKernel, gridSizeX*gridSizeY*gridSizeZ);
+        cl.executeKernel(pmeConvolutionKernel, gridSizeX*gridSizeY*gridSizeZ);
         fft->execFFT(*pmeGrid2, *pmeGrid, false);
         setPeriodicBoxArgs(cl, pmeInterpolateForceKernel, 3);
         if (cl.getUseDoublePrecision()) {
