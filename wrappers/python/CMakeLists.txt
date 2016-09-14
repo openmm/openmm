@@ -274,7 +274,7 @@ add_custom_target(PythonSdist
 )
 
 # Install binary module (to system location)
-set(PYTHON_SETUP_COMMAND "install")
+set(PYTHON_SETUP_COMMAND "install --root=\$ENV{DESTDIR}/")
 configure_file(pysetup.cmake.in
     "${CMAKE_CURRENT_BINARY_DIR}/pysetupinstall.cmake" @ONLY)
 add_custom_target(PythonInstall
