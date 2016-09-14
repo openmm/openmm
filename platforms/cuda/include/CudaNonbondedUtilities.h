@@ -270,6 +270,8 @@ private:
     CudaArray* interactingTiles;
     CudaArray* interactingAtoms;
     CudaArray* interactionCount;
+    CudaArray* singlePairs;
+    CudaArray* singlePairCount;
     CudaArray* blockCenter;
     CudaArray* blockBoundingBox;
     CudaArray* sortedBlocks;
@@ -289,7 +291,7 @@ private:
     std::map<int, std::string> groupKernelSource;
     double lastCutoff;
     bool useCutoff, usePeriodic, anyExclusions, usePadding, forceRebuildNeighborList;
-    int startTileIndex, numTiles, startBlockIndex, numBlocks, maxTiles, maxExclusions, numForceThreadBlocks, forceThreadBlockSize, numAtoms, groupFlags;
+    int startTileIndex, numTiles, startBlockIndex, numBlocks, maxTiles, maxSinglePairs, maxExclusions, numForceThreadBlocks, forceThreadBlockSize, numAtoms, groupFlags;
 };
 
 /**

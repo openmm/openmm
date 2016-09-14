@@ -64,7 +64,7 @@ private:
 
 CudaNonbondedUtilities::CudaNonbondedUtilities(CudaContext& context) : context(context), useCutoff(false), usePeriodic(false), anyExclusions(false), usePadding(true),
         exclusionIndices(NULL), exclusionRowIndices(NULL), exclusionTiles(NULL), exclusions(NULL), interactingTiles(NULL), interactingAtoms(NULL),
-        interactionCount(NULL), blockCenter(NULL), blockBoundingBox(NULL), sortedBlocks(NULL), sortedBlockCenter(NULL), sortedBlockBoundingBox(NULL),
+        interactionCount(NULL), singlePairs(NULL), singlePairCount(NULL), blockCenter(NULL), blockBoundingBox(NULL), sortedBlocks(NULL), sortedBlockCenter(NULL), sortedBlockBoundingBox(NULL),
         oldPositions(NULL), rebuildNeighborList(NULL), blockSorter(NULL), pinnedCountBuffer(NULL), forceRebuildNeighborList(true), lastCutoff(0.0), groupFlags(0) {
     // Decide how many thread blocks to use.
 
@@ -72,7 +72,7 @@ CudaNonbondedUtilities::CudaNonbondedUtilities(CudaContext& context) : context(c
     int multiprocessors;
     CHECK_RESULT(cuDeviceGetAttribute(&multiprocessors, CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, context.getDevice()));
     CHECK_RESULT(cuEventCreate(&downloadCountEvent, 0));
-    CHECK_RESULT(cuMemHostAlloc((void**) &pinnedCountBuffer, sizeof(int), CU_MEMHOSTALLOC_PORTABLE));
+    CHECK_RESULT(cuMemHostAlloc((void**) &pinnedCountBuffer, 2*sizeof(int), CU_MEMHOSTALLOC_PORTABLE));
     numForceThreadBlocks = 4*multiprocessors;
     forceThreadBlockSize = (context.getComputeCapability() < 2.0 ? 128 : 256);
 }
@@ -92,6 +92,10 @@ CudaNonbondedUtilities::~CudaNonbondedUtilities() {
         delete interactingAtoms;
     if (interactionCount != NULL)
         delete interactionCount;
+    if (singlePairs != NULL)
+        delete singlePairs;
+    if (singlePairCount != NULL)
+        delete singlePairCount;
     if (blockCenter != NULL)
         delete blockCenter;
     if (blockBoundingBox != NULL)
@@ -279,9 +283,12 @@ void CudaNonbondedUtilities::initialize(const System& system) {
             maxTiles = numTiles;
         if (maxTiles < 1)
             maxTiles = 1;
+        maxSinglePairs = 5*numAtoms;
         interactingTiles = CudaArray::create<int>(context, maxTiles, "interactingTiles");
         interactingAtoms = CudaArray::create<int>(context, CudaContext::TileSize*maxTiles, "interactingAtoms");
         interactionCount = CudaArray::create<unsigned int>(context, 1, "interactionCount");
+        singlePairs = CudaArray::create<int2>(context, maxSinglePairs, "singlePairs");
+        singlePairCount = CudaArray::create<unsigned int>(context, 1, "singlePairCount");
         int elementSize = (context.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
         blockCenter = new CudaArray(context, numAtomBlocks, 4*elementSize, "blockCenter");
         blockBoundingBox = new CudaArray(context, numAtomBlocks, 4*elementSize, "blockBoundingBox");
@@ -293,6 +300,7 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         blockSorter = new CudaSort(context, new BlockSortTrait(context.getUseDoublePrecision()), numAtomBlocks);
         vector<unsigned int> count(1, 0);
         interactionCount->upload(count);
+        singlePairCount->upload(count);
     }
 
     // Record arguments for kernels.
@@ -316,6 +324,9 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         forceArgs.push_back(&blockCenter->getDevicePointer());
         forceArgs.push_back(&blockBoundingBox->getDevicePointer());
         forceArgs.push_back(&interactingAtoms->getDevicePointer());
+        forceArgs.push_back(&maxSinglePairs);
+        forceArgs.push_back(&singlePairCount->getDevicePointer());
+        forceArgs.push_back(&singlePairs->getDevicePointer());
     }
     for (int i = 0; i < (int) parameters.size(); i++)
         forceArgs.push_back(&parameters[i].getMemory());
@@ -343,6 +354,7 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         sortBoxDataArgs.push_back(&context.getPosq().getDevicePointer());
         sortBoxDataArgs.push_back(&oldPositions->getDevicePointer());
         sortBoxDataArgs.push_back(&interactionCount->getDevicePointer());
+        sortBoxDataArgs.push_back(&singlePairCount->getDevicePointer());
         sortBoxDataArgs.push_back(&rebuildNeighborList->getDevicePointer());
         sortBoxDataArgs.push_back(&forceRebuildNeighborList);
         findInteractingBlocksArgs.push_back(context.getPeriodicBoxSizePointer());
@@ -353,8 +365,11 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         findInteractingBlocksArgs.push_back(&interactionCount->getDevicePointer());
         findInteractingBlocksArgs.push_back(&interactingTiles->getDevicePointer());
         findInteractingBlocksArgs.push_back(&interactingAtoms->getDevicePointer());
+        findInteractingBlocksArgs.push_back(&singlePairCount->getDevicePointer());
+        findInteractingBlocksArgs.push_back(&singlePairs->getDevicePointer());
         findInteractingBlocksArgs.push_back(&context.getPosq().getDevicePointer());
         findInteractingBlocksArgs.push_back(&maxTiles);
+        findInteractingBlocksArgs.push_back(&maxSinglePairs);
         findInteractingBlocksArgs.push_back(&startBlockIndex);
         findInteractingBlocksArgs.push_back(&numBlocks);
         findInteractingBlocksArgs.push_back(&sortedBlocks->getDevicePointer());
@@ -402,6 +417,7 @@ void CudaNonbondedUtilities::prepareInteractions(int forceGroups) {
     forceRebuildNeighborList = false;
     lastCutoff = kernels.cutoffDistance;
     interactionCount->download(pinnedCountBuffer, false);
+    singlePairCount->download(pinnedCountBuffer+1, false);
     cuEventRecord(downloadCountEvent, context.getCurrentStream());
 }
 
@@ -424,28 +440,39 @@ void CudaNonbondedUtilities::computeInteractions(int forceGroups, bool includeFo
 bool CudaNonbondedUtilities::updateNeighborListSize() {
     if (!useCutoff)
         return false;
-    if (pinnedCountBuffer[0] <= (unsigned int) maxTiles)
+    if (pinnedCountBuffer[0] <= maxTiles && pinnedCountBuffer[1] <= maxSinglePairs)
         return false;
 
     // The most recent timestep had too many interactions to fit in the arrays.  Make the arrays bigger to prevent
     // this from happening in the future.
 
-    maxTiles = (int) (1.2*pinnedCountBuffer[0]);
-    int totalTiles = context.getNumAtomBlocks()*(context.getNumAtomBlocks()+1)/2;
-    if (maxTiles > totalTiles)
-        maxTiles = totalTiles;
-    delete interactingTiles;
-    delete interactingAtoms;
-    interactingTiles = NULL; // Avoid an error in the destructor if the following allocation fails
-    interactingAtoms = NULL;
-    interactingTiles = CudaArray::create<int>(context, maxTiles, "interactingTiles");
-    interactingAtoms = CudaArray::create<int>(context, CudaContext::TileSize*maxTiles, "interactingAtoms");
-    if (forceArgs.size() > 0)
-        forceArgs[7] = &interactingTiles->getDevicePointer();
-    findInteractingBlocksArgs[6] = &interactingTiles->getDevicePointer();
-    if (forceArgs.size() > 0)
-        forceArgs[17] = &interactingAtoms->getDevicePointer();
-    findInteractingBlocksArgs[7] = &interactingAtoms->getDevicePointer();
+    if (pinnedCountBuffer[0] > maxTiles) {
+        maxTiles = (int) (1.2*pinnedCountBuffer[0]);
+        int totalTiles = context.getNumAtomBlocks()*(context.getNumAtomBlocks()+1)/2;
+        if (maxTiles > totalTiles)
+            maxTiles = totalTiles;
+        delete interactingTiles;
+        delete interactingAtoms;
+        interactingTiles = NULL; // Avoid an error in the destructor if the following allocation fails
+        interactingAtoms = NULL;
+        interactingTiles = CudaArray::create<int>(context, maxTiles, "interactingTiles");
+        interactingAtoms = CudaArray::create<int>(context, CudaContext::TileSize*maxTiles, "interactingAtoms");
+        if (forceArgs.size() > 0)
+            forceArgs[7] = &interactingTiles->getDevicePointer();
+        findInteractingBlocksArgs[6] = &interactingTiles->getDevicePointer();
+        if (forceArgs.size() > 0)
+            forceArgs[17] = &interactingAtoms->getDevicePointer();
+        findInteractingBlocksArgs[7] = &interactingAtoms->getDevicePointer();
+    }
+    if (pinnedCountBuffer[1] > maxSinglePairs) {
+        maxSinglePairs = (int) (1.2*pinnedCountBuffer[1]);
+        delete singlePairs;
+        singlePairs = NULL; // Avoid an error in the destructor if the following allocation fails
+        singlePairs = CudaArray::create<int2>(context, maxSinglePairs, "singlePairs");
+        if (forceArgs.size() > 0)
+            forceArgs[20] = &singlePairs->getDevicePointer();
+        findInteractingBlocksArgs[9] = &singlePairs->getDevicePointer();
+    }
     forceRebuildNeighborList = true;
     context.setForcesValid(false);
     return true;
