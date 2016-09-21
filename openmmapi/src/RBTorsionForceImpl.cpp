@@ -63,4 +63,5 @@ std::vector<std::string> RBTorsionForceImpl::getKernelNames() {
 
 void RBTorsionForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcRBTorsionForceKernel>().copyParametersToContext(context, owner);
+    context.systemChanged();
 }
