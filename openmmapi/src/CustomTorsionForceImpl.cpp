@@ -115,4 +115,5 @@ map<string, double> CustomTorsionForceImpl::getDefaultParameters() {
 
 void CustomTorsionForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcCustomTorsionForceKernel>().copyParametersToContext(context, owner);
+    context.systemChanged();
 }

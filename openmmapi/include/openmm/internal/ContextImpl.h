@@ -253,6 +253,10 @@ public:
         integratorIsDeleted = true;
     }
     /**
+     * Notify the integrator that some aspect of the system has changed, and cached information should be discarded.
+     */
+    void systemChanged();
+    /**
      * This is the routine that actually computes the list of molecules returned by getMolecules().  Normally
      * you should never call it.  It is exposed here because the same logic is useful to other classes too.
      */

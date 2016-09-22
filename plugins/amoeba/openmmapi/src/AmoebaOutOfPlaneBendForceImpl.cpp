@@ -64,4 +64,5 @@ std::vector<std::string> AmoebaOutOfPlaneBendForceImpl::getKernelNames() {
 
 void AmoebaOutOfPlaneBendForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcAmoebaOutOfPlaneBendForceKernel>().copyParametersToContext(context, owner);
+    context.systemChanged();
 }
