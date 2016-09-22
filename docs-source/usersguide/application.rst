@@ -2696,6 +2696,62 @@ must include an attribute called :code:`radius`\ .
 CustomGBForce also allows you to define tabulated functions.  See section
 :ref:`tabulated-functions` for details.
 
+<CustomHbondForce>
+=========================
+
+To add a CustomHbondForce to the System, include a tag that looks like this:
+
+.. code-block:: xml
+
+    <CustomHbondForce particlesPerDonor="3" particlesPerAcceptor="2" bondCutoff="2"
+        energy="scale*k*(distance(a1,d1)-r0)^2*(angle(a1,d1,d2)-theta0)^2">
+     <GlobalParameter name="scale" defaultValue="1"/>
+     <PerDonorParameter name="theta0"/>
+     <PerAcceptorParameter name="k"/>
+     <PerAcceptorParameter name="r0"/>
+     <Donor class1="H" class2="N" class3="C" theta0="2.1"/>
+     <Acceptor class1="O" class2="C" k="115.0" r0="0.2"/>
+     ...
+    </CustomHbondForce>
+
+The energy expression for the CustomHbondForce is specified by the
+:code:`energy` attribute.  This is a mathematical expression that gives the
+energy of each donor-acceptor interaction as a function of various particle coordinates,
+distances, and angles.  See the API documentation for details.  :code:`particlesPerDonor`
+specifies the number of particles that make up a donor group, and :code:`particlesPerAcceptor`
+specifies the number of particles that make up an acceptor group.
+
+The expression may depend on an arbitrary list of global, per-donor, or
+per-acceptor parameters.  Use a :code:`<GlobalParameter>` tag to define a global
+parameter, a :code:`<PerDonorParameter>` tag to define a per-donor parameter,
+and a :code:`<PerAcceptorParameter>` tag to define a per-acceptor parameter.
+
+Exclusions are created automatically based on the :code:`bondCutoff` attribute.
+If any atom of a donor is within the specified distance (measured in bonds) of
+any atom of an acceptor, an exclusion is added to prevent them from interacting
+with each other.  If a donor and an acceptor share any atom in common, that is a
+bond distance of 0, so they are always excluded.
+
+Every :code:`<Donor>` or :code:`<Acceptor>` tag defines a rule for creating donor
+or acceptor groups.  The number of atoms specified in each one must match the
+value of :code:`particlesPerDonor` or :code:`particlesPerAcceptor` specified in the
+parent tag. Each tag may identify the atoms either by type (using the attributes
+:code:`type1`\ , :code:`type2`\ , ...) or by class (using the attributes
+:code:`class1`\ , :code:`class2`\ , ...).  The force field considers every atom
+in the system (if the number of atoms is 1), every pair of bonded atoms (if the number
+of atoms is 2), or every set of three atoms where the first is bonded to the second
+and the second to the third (if the number of atoms is 3).  For each one, it searches
+for a rule whose atom types or atom classes match the atoms.  If it finds one,
+it calls :code:`addDonor()` or :code:`addAcceptor()` on the CustomHbondForce.
+Otherwise, it ignores that set and continues. The remaining attributes are the
+values to use for the per-donor and per-acceptor parameters. All parameters must
+be specified for every tag, and the attribute name must match the name of the
+parameter.  For instance, if there is a per-donor parameter with the name “k”,
+then every :code:`<Donor>` tag must include an attribute called :code:`k`\ .
+
+CustomHbondForce also allows you to define tabulated functions.  See section
+:ref:`tabulated-functions` for details.
+
 <CustomManyParticleForce>
 =========================
 
@@ -2716,7 +2772,7 @@ To add a CustomManyParticleForce to the System, include a tag that looks like th
 
 The energy expression for the CustomManyParticleForce is specified by the
 :code:`energy` attribute.  This is a mathematical expression that gives the
-energy of each pairwise interaction as a function of various particle coordinates,
+energy of each interaction as a function of various particle coordinates,
 distances, and angles.  See the API documentation for details.  :code:`particlesPerSet`
 specifies the number of particles involved in the interaction and
 :code:`permutationMode` specifies the permutation mode.
