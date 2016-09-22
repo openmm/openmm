@@ -88,7 +88,7 @@ void CpuGBSAOBCForce::setParticleParameters(const std::vector<std::pair<float, f
     particleParams = params;
     bornRadii.resize(params.size()+3);
     obcChain.resize(params.size()+3);
-    for (int i = bornRadii.size()-3; i < bornRadii.size()-1; i++) {
+    for (int i = bornRadii.size()-3; i < bornRadii.size(); i++) {
         bornRadii[i] = 0;
         obcChain[i] = 0;
     }
