@@ -7309,7 +7309,7 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
     }
     localValuesAreCurrent = false;
     double stepSize = integrator.getStepSize();
-    recordGlobalValue(stepSize, GlobalTarget(DT, dtVariableIndex));
+    recordGlobalValue(stepSize, GlobalTarget(DT, dtVariableIndex), integrator);
     for (int i = 0; i < (int) parameterNames.size(); i++) {
         double value = context.getParameter(parameterNames[i]);
         if (value != globalValuesDouble[parameterVariableIndex[i]]) {
@@ -7442,7 +7442,7 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
             expressionSet.setVariable(uniformVariableIndex, SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber());
             expressionSet.setVariable(gaussianVariableIndex, SimTKOpenMMUtilities::getNormallyDistributedRandomNumber());
             expressionSet.setVariable(stepEnergyVariableIndex[step], energy);
-            recordGlobalValue(globalExpressions[step][0].evaluate(), stepTarget[step]);
+            recordGlobalValue(globalExpressions[step][0].evaluate(), stepTarget[step], integrator);
         }
         else if (stepType[step] == CustomIntegrator::ComputeSum) {
             int randomIndex = integration.prepareRandomNumbers(requiredGaussian[step]);
@@ -7458,12 +7458,12 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
             if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
                 double value;
                 summedValue->download(&value);
-                recordGlobalValue(value, stepTarget[step]);
+                recordGlobalValue(value, stepTarget[step], integrator);
             }
             else {
                 float value;
                 summedValue->download(&value);
-                recordGlobalValue(value, stepTarget[step]);
+                recordGlobalValue(value, stepTarget[step], integrator);
             }
         }
         else if (stepType[step] == CustomIntegrator::UpdateContextState) {
@@ -7567,7 +7567,7 @@ double CudaIntegrateCustomStepKernel::computeKineticEnergy(ContextImpl& context,
     }
 }
 
-void CudaIntegrateCustomStepKernel::recordGlobalValue(double value, GlobalTarget target) {
+void CudaIntegrateCustomStepKernel::recordGlobalValue(double value, GlobalTarget target, CustomIntegrator& integrator) {
     switch (target.type) {
         case DT:
             if (value != globalValuesDouble[dtVariableIndex])
@@ -7575,6 +7575,7 @@ void CudaIntegrateCustomStepKernel::recordGlobalValue(double value, GlobalTarget
             expressionSet.setVariable(dtVariableIndex, value);
             globalValuesDouble[dtVariableIndex] = value;
             cu.getIntegrationUtilities().setNextStepSize(value);
+            integrator.setStepSize(value);
             break;
         case VARIABLE:
         case PARAMETER:

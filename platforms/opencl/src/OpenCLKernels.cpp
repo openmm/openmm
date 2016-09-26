@@ -7598,7 +7598,7 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
     }
     localValuesAreCurrent = false;
     double stepSize = integrator.getStepSize();
-    recordGlobalValue(stepSize, GlobalTarget(DT, dtVariableIndex));
+    recordGlobalValue(stepSize, GlobalTarget(DT, dtVariableIndex), integrator);
     for (int i = 0; i < (int) parameterNames.size(); i++) {
         double value = context.getParameter(parameterNames[i]);
         if (value != globalValuesDouble[parameterVariableIndex[i]]) {
@@ -7729,7 +7729,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
             expressionSet.setVariable(uniformVariableIndex, SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber());
             expressionSet.setVariable(gaussianVariableIndex, SimTKOpenMMUtilities::getNormallyDistributedRandomNumber());
             expressionSet.setVariable(stepEnergyVariableIndex[step], energy);
-            recordGlobalValue(globalExpressions[step][0].evaluate(), stepTarget[step]);
+            recordGlobalValue(globalExpressions[step][0].evaluate(), stepTarget[step], integrator);
         }
         else if (stepType[step] == CustomIntegrator::ComputeSum) {
             kernels[step][0].setArg<cl_uint>(9, integration.prepareRandomNumbers(requiredGaussian[step]));
@@ -7747,12 +7747,12 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
             if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {
                 double value;
                 summedValue->download(&value);
-                recordGlobalValue(value, stepTarget[step]);
+                recordGlobalValue(value, stepTarget[step], integrator);
             }
             else {
                 float value;
                 summedValue->download(&value);
-                recordGlobalValue(value, stepTarget[step]);
+                recordGlobalValue(value, stepTarget[step], integrator);
             }
         }
         else if (stepType[step] == CustomIntegrator::UpdateContextState) {
@@ -7856,7 +7856,7 @@ double OpenCLIntegrateCustomStepKernel::computeKineticEnergy(ContextImpl& contex
     }
 }
 
-void OpenCLIntegrateCustomStepKernel::recordGlobalValue(double value, GlobalTarget target) {
+void OpenCLIntegrateCustomStepKernel::recordGlobalValue(double value, GlobalTarget target, CustomIntegrator& integrator) {
     switch (target.type) {
         case DT:
             if (value != globalValuesDouble[dtVariableIndex])
@@ -7864,6 +7864,7 @@ void OpenCLIntegrateCustomStepKernel::recordGlobalValue(double value, GlobalTarg
             expressionSet.setVariable(dtVariableIndex, value);
             globalValuesDouble[dtVariableIndex] = value;
             cl.getIntegrationUtilities().setNextStepSize(value);
+            integrator.setStepSize(value);
             break;
         case VARIABLE:
         case PARAMETER:
