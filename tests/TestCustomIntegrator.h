@@ -881,7 +881,7 @@ void testChangeDT() {
         ASSERT_EQUAL_TOL(dt, integrator.getGlobalVariable(0), 1e-5);
         vector<Vec3> values;
         integrator.getPerDofVariable(0, values);
-        ASSERT_EQUAL_TOL(dt, integrator.getGlobalVariable(0), 1e-5);
+        ASSERT_EQUAL_VEC(Vec3(dt, dt, dt), values[0], 1e-5);
     }
     integrator.setStepSize(1.0);
     for (int i = 0; i < 5; i++) {
@@ -891,7 +891,7 @@ void testChangeDT() {
         ASSERT_EQUAL_TOL(dt, integrator.getGlobalVariable(0), 1e-5);
         vector<Vec3> values;
         integrator.getPerDofVariable(0, values);
-        ASSERT_EQUAL_TOL(dt, integrator.getGlobalVariable(0), 1e-5);
+        ASSERT_EQUAL_VEC(Vec3(dt, dt, dt), values[0], 1e-5);
     }
 }
 
