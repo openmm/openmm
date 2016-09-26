@@ -1432,7 +1432,7 @@ private:
     void prepareForComputation(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid);
     Lepton::ExpressionTreeNode replaceDerivFunctions(const Lepton::ExpressionTreeNode& node, OpenMM::ContextImpl& context);
     void findExpressionsForDerivs(const Lepton::ExpressionTreeNode& node, std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& variableNodes);
-    void recordGlobalValue(double value, GlobalTarget target);
+    void recordGlobalValue(double value, GlobalTarget target, CustomIntegrator& integrator);
     void recordChangedParameters(ContextImpl& context);
     bool evaluateCondition(int step);
     CudaContext& cu;

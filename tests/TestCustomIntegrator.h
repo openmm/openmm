@@ -858,6 +858,43 @@ void testEnergyParameterDerivatives() {
     ASSERT_EQUAL_TOL(dEdtheta0, values[2][1], 1e-5);
 }
 
+/**
+ * Test an integrator that modifies the step size.
+ */
+void testChangeDT() {
+    System system;
+    system.addParticle(1.0);
+    CustomIntegrator integrator(0.5);
+    integrator.addGlobalVariable("dt_global", 0.0);
+    integrator.addPerDofVariable("dt_dof", 0.0);
+    integrator.addComputeGlobal("dt", "dt+1");
+    integrator.addComputePerDof("dt_dof", "dt");
+    integrator.addComputeGlobal("dt_global", "dt");
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(1);
+    positions[0] = Vec3(0, 0, 0);
+    context.setPositions(positions);
+    for (int i = 0; i < 5; i++) {
+        integrator.step(1);
+        double dt = 1.5+i;
+        ASSERT_EQUAL_TOL(dt, integrator.getStepSize(), 1e-5);
+        ASSERT_EQUAL_TOL(dt, integrator.getGlobalVariable(0), 1e-5);
+        vector<Vec3> values;
+        integrator.getPerDofVariable(0, values);
+        ASSERT_EQUAL_TOL(dt, integrator.getGlobalVariable(0), 1e-5);
+    }
+    integrator.setStepSize(1.0);
+    for (int i = 0; i < 5; i++) {
+        integrator.step(1);
+        double dt = 2.0+i;
+        ASSERT_EQUAL_TOL(dt, integrator.getStepSize(), 1e-5);
+        ASSERT_EQUAL_TOL(dt, integrator.getGlobalVariable(0), 1e-5);
+        vector<Vec3> values;
+        integrator.getPerDofVariable(0, values);
+        ASSERT_EQUAL_TOL(dt, integrator.getGlobalVariable(0), 1e-5);
+    }
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -879,6 +916,7 @@ int main(int argc, char* argv[]) {
         testWhileBlock();
         testChangingGlobal();
         testEnergyParameterDerivatives();
+        testChangeDT();
         runPlatformTests();
     }
     catch(const exception& e) {
