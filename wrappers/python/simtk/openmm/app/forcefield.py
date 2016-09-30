@@ -2760,7 +2760,7 @@ class CustomHbondGenerator(object):
         for param in element.findall('PerAcceptorParameter'):
             generator.perAcceptorParams.append(param.attrib['name'])
         for donor in element.findall('Donor'):
-            types = ff._findAtomTypes(donor.attrib, generator.particlesPerDonor)
+            types = ff._findAtomTypes(donor.attrib, 3)[:generator.particlesPerDonor]
             if None not in types:
                 generator.donorTypes1.append(types[0])
                 if len(types) > 1:
@@ -2769,7 +2769,7 @@ class CustomHbondGenerator(object):
                     generator.donorTypes3.append(types[2])
                 generator.donorParamValues.append([float(donor.attrib[param]) for param in generator.perDonorParams])
         for acceptor in element.findall('Acceptor'):
-            types = ff._findAtomTypes(acceptor.attrib, generator.particlesPerAcceptor)
+            types = ff._findAtomTypes(acceptor.attrib, 3)[:generator.particlesPerAcceptor]
             if None not in types:
                 generator.acceptorTypes1.append(types[0])
                 if len(types) > 1:
@@ -2813,8 +2813,10 @@ class CustomHbondGenerator(object):
                 for i in range(len(self.donorTypes1)):
                     types1 = self.donorTypes1[i]
                     types2 = self.donorTypes2[i]
-                    if (type1 in types1 and type2 in types2) or (type1 in types2 and type2 in types1):
-                        force.addDonor(bond[0], bond[1], -1, self.donorParamValues[i])
+                    if type1 in types1 and type2 in types2:
+                        force.addDonor(bond.atom1, bond.atom2, -1, self.donorParamValues[i])
+                    elif type1 in types2 and type2 in types1:
+                        force.addDonor(bond.atom2, bond.atom1, -1, self.donorParamValues[i])
         else:
             for angle in data.angles:
                 type1 = data.atomType[data.atoms[angle[0]]]
@@ -2843,8 +2845,10 @@ class CustomHbondGenerator(object):
                 for i in range(len(self.acceptorTypes1)):
                     types1 = self.acceptorTypes1[i]
                     types2 = self.acceptorTypes2[i]
-                    if (type1 in types1 and type2 in types2) or (type1 in types2 and type2 in types1):
+                    if type1 in types1 and type2 in types2:
                         force.addAcceptor(bond.atom1, bond.atom2, -1, self.acceptorParamValues[i])
+                    elif type1 in types2 and type2 in types1:
+                        force.addAcceptor(bond.atom2, bond.atom1, -1, self.acceptorParamValues[i])
         else:
             for angle in data.angles:
                 type1 = data.atomType[data.atoms[angle[0]]]
