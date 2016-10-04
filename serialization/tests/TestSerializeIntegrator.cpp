@@ -146,10 +146,10 @@ void testSerializeCustomIntegrator() {
     intg->addComputeGlobal("oute1", "energy1");
     intg->addComputeGlobal("oute2", "energy2");
     intg->beginIfBlock("1 > 0");
-    intg->addComputeGlobal("conditional_v1", "1");
+    intg->addComputeGlobal("conditional_v1", "energy");
     intg->endBlock();
     intg->beginWhileBlock("0 > 1");
-    intg->addComputeGlobal("conditional_v2", "1");
+    intg->addComputeGlobal("conditional_v2", "energy");
     intg->endBlock();
     intg->addUpdateContextState();
     intg->addConstrainVelocities();
