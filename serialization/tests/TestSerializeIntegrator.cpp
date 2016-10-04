@@ -137,12 +137,20 @@ void testSerializeCustomIntegrator() {
     intg->addGlobalVariable("oute", 0);
     intg->addGlobalVariable("oute1", 0);
     intg->addGlobalVariable("oute2", 0);
+    intg->addGlobalVariable("conditional_v1", 0);
+    intg->addGlobalVariable("conditional_v2", 0);
     intg->addComputePerDof("outf", "f");
     intg->addComputePerDof("outf1", "f1");
     intg->addComputePerDof("outf2", "f2");
     intg->addComputeGlobal("oute", "energy");
     intg->addComputeGlobal("oute1", "energy1");
     intg->addComputeGlobal("oute2", "energy2");
+    intg->beginIfBlock("1 > 0");
+    intg->addComputeGlobal("conditional_v1", "1");
+    intg->endBlock();
+    intg->beginWhileBlock("0 > 1");
+    intg->addComputeGlobal("conditional_v2", "1");
+    intg->endBlock();
     intg->addUpdateContextState();
     intg->addConstrainVelocities();
     intg->addComputeSum("summand2", "v*v+f*f");
@@ -216,7 +224,7 @@ int main() {
         testSerializeVerletIntegrator();
         testSerializeVariableLangevinIntegrator();
         testSerializeVariableVerletIntegrator();
-        testSerializeLangevinIntegrator(); 
+        testSerializeLangevinIntegrator();
         testSerializeCompoundIntegrator();
     }
     catch(const exception& e) {
@@ -224,5 +232,3 @@ int main() {
     }
     return 0;
 }
-
-
