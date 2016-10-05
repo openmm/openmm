@@ -67,5 +67,38 @@ class TestGenerators(unittest.TestCase):
                 self.assertTrue(tuple(hbond.getExclusionParticles(i)) in expectedExclusions)
 
 
+    def test_CustomHbondGenerator2(self):
+        """Test the generator for CustomHbondForce with different parameters."""
+
+        xml = """
+<ForceField>
+ <CustomHbondForce energy="a*b*distance(a1,d1)" particlesPerDonor="2" particlesPerAcceptor="1" bondCutoff="0">
+  <PerDonorParameter name="a"/>
+  <PerAcceptorParameter name="b"/>
+  <Donor class1="N" class2="H" a="3"/>
+  <Acceptor class1="O" b="2"/>
+ </CustomHbondForce>
+</ForceField>"""
+        ff = ForceField('amber99sb.xml', StringIO(xml))
+        system = ff.createSystem(self.pdb1.topology)
+        hbond = [f for f in system.getForces() if isinstance(f, CustomHbondForce)][0]
+        self.assertEqual(1, hbond.getNumPerDonorParameters())
+        self.assertEqual(1, hbond.getNumPerAcceptorParameters())
+        self.assertEqual('a', hbond.getPerDonorParameterName(0))
+        self.assertEqual('b', hbond.getPerAcceptorParameterName(0))
+        expectedDonors = [(6,7,-1), (16,17,-1)]
+        expectedAcceptors = [(5,-1,-1), (15,-1,-1)]
+        self.assertEqual(len(expectedDonors), hbond.getNumDonors())
+        self.assertEqual(len(expectedAcceptors), hbond.getNumAcceptors())
+        for i in range(hbond.getNumDonors()):
+            atom1, atom2, atom3, params = hbond.getDonorParameters(i)
+            self.assertTrue((atom1, atom2, atom3) in expectedDonors)
+            self.assertEqual((3.0,), params)
+        for i in range(hbond.getNumAcceptors()):
+            atom1, atom2, atom3, params = hbond.getAcceptorParameters(i)
+            self.assertTrue((atom1, atom2, atom3) in expectedAcceptors)
+            self.assertEqual((2.0,), params)
+
+
 if __name__ == '__main__':
     unittest.main()
