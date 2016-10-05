@@ -137,8 +137,8 @@ void testSerializeCustomIntegrator() {
     intg->addGlobalVariable("oute", 0);
     intg->addGlobalVariable("oute1", 0);
     intg->addGlobalVariable("oute2", 0);
-    intg->addGlobalVariable("conditional_v1", 0);
-    intg->addGlobalVariable("conditional_v2", 0);
+    intg->addGlobalVariable("oute3_conditional_v1", 0);// HACK: need addGlobals to be alphabetical to work around bug
+    intg->addGlobalVariable("oute3_conditional_v2", 0);
     intg->addComputePerDof("outf", "f");
     intg->addComputePerDof("outf1", "f1");
     intg->addComputePerDof("outf2", "f2");
@@ -146,10 +146,10 @@ void testSerializeCustomIntegrator() {
     intg->addComputeGlobal("oute1", "energy1");
     intg->addComputeGlobal("oute2", "energy2");
     intg->beginIfBlock("1 > 0");
-    intg->addComputeGlobal("conditional_v1", "energy");
+    intg->addComputeGlobal("oute3_conditional_v1", "energy");
     intg->endBlock();
     intg->beginWhileBlock("0 > 1");
-    intg->addComputeGlobal("conditional_v2", "energy");
+    intg->addComputeGlobal("oute3_conditional_v2", "energy");
     intg->endBlock();
     intg->addUpdateContextState();
     intg->addConstrainVelocities();
@@ -227,8 +227,10 @@ int main() {
         testSerializeLangevinIntegrator();
         testSerializeCompoundIntegrator();
     }
-    catch(const exception& e) {
-		return 1;
-    }
-    return 0;
+catch(const exception& e) {
+    cout << "exception: " << e.what() << endl;
+    return 1;
+}
+cout << "Done" << endl;
+return 0;
 }
