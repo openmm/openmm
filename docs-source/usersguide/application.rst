@@ -63,7 +63,7 @@ Anaconda or Miniconda.
 
 2. (Optional) If you want to run OpenMM on a GPU, install CUDA and/or OpenCL.
 
-  * If you have an Nvidia GPU, download CUDA 7.5 from
+  * If you have an Nvidia GPU, download CUDA 8.0 from
     https://developer.nvidia.com/cuda-downloads.  Be sure to install both the
     drivers and toolkit.  OpenCL is included with the CUDA drivers.
   * If you have an AMD GPU and are using Linux or Windows, download the latest
@@ -105,7 +105,7 @@ and tell it to install the command line tools.  With Xcode 4.2 and earlier, the
 command line tools are automatically installed when you install Xcode.)
 
 3. (Optional) If you have an Nvidia GPU and want to use the CUDA platform,
-download CUDA 7.5 from https://developer.nvidia.com/cuda-downloads.  Be sure to
+download CUDA 8.0 from https://developer.nvidia.com/cuda-downloads.  Be sure to
 install both the drivers and toolkit.
 
 4. (Optional) If you plan to use the CPU platform, it is recommended that you
@@ -171,7 +171,7 @@ into a console window.
 
 3. (Optional) If you want to run OpenMM on a GPU, install CUDA and/or OpenCL.
 
-  * If you have an Nvidia GPU, download CUDA 7.5 from
+  * If you have an Nvidia GPU, download CUDA 8.0 from
     https://developer.nvidia.com/cuda-downloads.  Be sure to install both the
     drivers and toolkit.  OpenCL is included with the CUDA drivers.
   * If you have an AMD GPU, download the latest version of the Catalyst driver
@@ -243,7 +243,7 @@ and ignore it.)
 
 4. (Optional) If you want to run OpenMM on a GPU, install CUDA and/or OpenCL.
 
-  * If you have an Nvidia GPU, download CUDA 7.5 from
+  * If you have an Nvidia GPU, download CUDA 8.0 from
     https://developer.nvidia.com/cuda-downloads.  Be sure to install both the
     drivers and toolkit.  OpenCL is included with the CUDA drivers.
   * If you have an AMD GPU, download the latest version of the Catalyst driver
