@@ -1,5 +1,4 @@
-
-/* Portions copyright (c) 2006-2013 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2016 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -89,6 +88,10 @@ void CpuGBSAOBCForce::setParticleParameters(const std::vector<std::pair<float, f
     particleParams = params;
     bornRadii.resize(params.size()+3);
     obcChain.resize(params.size()+3);
+    for (int i = bornRadii.size()-3; i < bornRadii.size(); i++) {
+        bornRadii[i] = 0;
+        obcChain[i] = 0;
+    }
 }
 
 void CpuGBSAOBCForce::computeForce(const AlignedArray<float>& posq, vector<AlignedArray<float> >& threadForce, double* totalEnergy, ThreadPool& threads) {

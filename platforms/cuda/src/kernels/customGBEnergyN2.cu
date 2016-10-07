@@ -14,7 +14,7 @@ typedef struct {
  * Compute a force based on pair interactions.
  */
 extern "C" __global__ void computeN2Energy(unsigned long long* __restrict__ forceBuffers, mixed* __restrict__ energyBuffer,
-        const real4* __restrict__ posq, const unsigned int* __restrict__ exclusions, const ushort2* __restrict__ exclusionTiles,
+        const real4* __restrict__ posq, const unsigned int* __restrict__ exclusions, const ushort2* __restrict__ exclusionTiles, bool needEnergy,
 #ifdef USE_CUTOFF
         const int* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, const real4* __restrict__ blockCenter,
@@ -78,7 +78,8 @@ extern "C" __global__ void computeN2Energy(unsigned long long* __restrict__ forc
                         COMPUTE_INTERACTION
                         dEdR /= -r;
                     }
-                    energy += 0.5f*tempEnergy;
+                    if (needEnergy)
+                        energy += 0.5f*tempEnergy;
                     delta *= dEdR;
                     force.x -= delta.x;
                     force.y -= delta.y;
@@ -130,7 +131,8 @@ extern "C" __global__ void computeN2Energy(unsigned long long* __restrict__ forc
                         COMPUTE_INTERACTION
                         dEdR /= -r;
                     }
-                    energy += tempEnergy;
+                    if (needEnergy)
+                        energy += tempEnergy;
                     delta *= dEdR;
                     force.x -= delta.x;
                     force.y -= delta.y;
@@ -234,7 +236,7 @@ extern "C" __global__ void computeN2Energy(unsigned long long* __restrict__ forc
             LOAD_ATOM1_PARAMETERS
             const unsigned int localAtomIndex = threadIdx.x;
 #ifdef USE_CUTOFF
-            unsigned int j = (numTiles <= maxTiles ? interactingAtoms[pos*TILE_SIZE+tgx] : y*TILE_SIZE + tgx);
+            unsigned int j = interactingAtoms[pos*TILE_SIZE+tgx];
 #else
             unsigned int j = y*TILE_SIZE + tgx;
 #endif
@@ -274,7 +276,8 @@ extern "C" __global__ void computeN2Energy(unsigned long long* __restrict__ forc
                             COMPUTE_INTERACTION
                             dEdR /= -r;
                         }
-                        energy += tempEnergy;
+                        if (needEnergy)
+                            energy += tempEnergy;
                         delta *= dEdR;
                         force.x -= delta.x;
                         force.y -= delta.y;
@@ -318,7 +321,8 @@ extern "C" __global__ void computeN2Energy(unsigned long long* __restrict__ forc
                             COMPUTE_INTERACTION
                             dEdR /= -r;
                         }
-                        energy += tempEnergy;
+                        if (needEnergy)
+                            energy += tempEnergy;
                         delta *= dEdR;
                         force.x -= delta.x;
                         force.y -= delta.y;

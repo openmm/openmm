@@ -52,6 +52,7 @@
 #include <set>
 #include <sstream>
 #include <typeinfo>
+#include <sys/stat.h>
 #include <cudaProfiler.h>
 #ifndef WIN32
   #include <unistd.h>
@@ -127,7 +128,8 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     string testCompilerCommand = this->compiler+" --version > /dev/null 2> /dev/null";
     int res = std::system(testCompilerCommand.c_str());
 #endif
-    isNvccAvailable = (res == 0);
+    struct stat info;
+    isNvccAvailable = (res == 0 && stat(tempDir.c_str(), &info) == 0);
     static bool hasShownNvccWarning = false;
     if (hasCompilerKernel && !isNvccAvailable && !hasShownNvccWarning) {
         hasShownNvccWarning = true;
@@ -205,6 +207,7 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
 
     int major, minor;
     CHECK_RESULT(cuDeviceComputeCapability(&major, &minor, device));
+    int numThreadBlocksPerComputeUnit = (major >= 6 ? 4 : 6);
 #if __CUDA_API_VERSION < 7000
         // This is a workaround to support GTX 980 with CUDA 6.5.  It reports
         // its compute capability as 5.2, but the compiler doesn't support
@@ -241,7 +244,6 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     numAtomBlocks = (paddedNumAtoms+(TileSize-1))/TileSize;
     int multiprocessors;
     CHECK_RESULT(cuDeviceGetAttribute(&multiprocessors, CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, device));
-    int numThreadBlocksPerComputeUnit = 6;
     numThreadBlocks = numThreadBlocksPerComputeUnit*multiprocessors;
     if (useDoublePrecision) {
         posq = CudaArray::create<double4>(*this, paddedNumAtoms, "posq");

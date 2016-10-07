@@ -264,7 +264,7 @@ extern "C" __global__ void computeBornSum(unsigned long long* __restrict__ globa
             real4 posq1 = posq[atom1];
             float2 params1 = global_params[atom1];
 #ifdef USE_CUTOFF
-            unsigned int j = (numTiles <= maxTiles ? interactingAtoms[pos*TILE_SIZE+tgx] : y*TILE_SIZE + tgx);
+            unsigned int j = interactingAtoms[pos*TILE_SIZE+tgx];
 #else
             unsigned int j = y*TILE_SIZE + tgx;
 #endif
@@ -400,7 +400,7 @@ typedef struct {
  */
 
 extern "C" __global__ void computeGBSAForce1(unsigned long long* __restrict__ forceBuffers, unsigned long long* __restrict__ global_bornForce,
-        mixed* __restrict__ energyBuffer, const real4* __restrict__ posq, const real* __restrict__ global_bornRadii,
+        mixed* __restrict__ energyBuffer, const real4* __restrict__ posq, const real* __restrict__ global_bornRadii, bool needEnergy,
 #ifdef USE_CUTOFF
         const int* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, const real4* __restrict__ blockCenter,
@@ -465,7 +465,8 @@ extern "C" __global__ void computeGBSAForce1(unsigned long long* __restrict__ fo
                         if (atom1 != y*TILE_SIZE+j)
                             tempEnergy -= scaledChargeProduct/CUTOFF;
 #endif
-                        energy += 0.5f*tempEnergy;
+                        if (needEnergy)
+                            energy += 0.5f*tempEnergy;
                         delta *= dEdR;
                         force.x -= delta.x;
                         force.y -= delta.y;
@@ -519,7 +520,8 @@ extern "C" __global__ void computeGBSAForce1(unsigned long long* __restrict__ fo
 #ifdef USE_CUTOFF
                         tempEnergy -= scaledChargeProduct/CUTOFF;
 #endif
-                        energy += tempEnergy;
+                        if (needEnergy)
+                            energy += tempEnergy;
                         delta *= dEdR;
                         force.x -= delta.x;
                         force.y -= delta.y;
@@ -617,7 +619,7 @@ extern "C" __global__ void computeGBSAForce1(unsigned long long* __restrict__ fo
             real4 posq1 = posq[atom1];
             real bornRadius1 = global_bornRadii[atom1];
 #ifdef USE_CUTOFF
-            unsigned int j = (numTiles <= maxTiles ? interactingAtoms[pos*TILE_SIZE+tgx] : y*TILE_SIZE + tgx);
+            unsigned int j = interactingAtoms[pos*TILE_SIZE+tgx];
 #else
             unsigned int j = y*TILE_SIZE + tgx;
 #endif
@@ -667,7 +669,8 @@ extern "C" __global__ void computeGBSAForce1(unsigned long long* __restrict__ fo
 #ifdef USE_CUTOFF
                             tempEnergy -= scaledChargeProduct/CUTOFF;
 #endif
-                            energy += tempEnergy;
+                            if (needEnergy)
+                                energy += tempEnergy;
                             delta *= dEdR;
                             force.x -= delta.x;
                             force.y -= delta.y;
@@ -716,7 +719,8 @@ extern "C" __global__ void computeGBSAForce1(unsigned long long* __restrict__ fo
 #ifdef USE_CUTOFF
                             tempEnergy -= scaledChargeProduct/CUTOFF;
 #endif
-                            energy += tempEnergy;
+                            if (needEnergy)
+                                energy += tempEnergy;
                             delta *= dEdR;
                             force.x -= delta.x;
                             force.y -= delta.y;

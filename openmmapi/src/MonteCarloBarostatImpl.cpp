@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -34,6 +34,7 @@
 #include "openmm/internal/OSRngSeed.h"
 #include "openmm/Context.h"
 #include "openmm/kernels.h"
+#include "openmm/OpenMMException.h"
 #include <cmath>
 #include <vector>
 #include <algorithm>
@@ -51,6 +52,8 @@ MonteCarloBarostatImpl::MonteCarloBarostatImpl(const MonteCarloBarostat& owner) 
 }
 
 void MonteCarloBarostatImpl::initialize(ContextImpl& context) {
+    if (!context.getSystem().usesPeriodicBoundaryConditions())
+        throw OpenMMException("A barostat cannot be used with a non-periodic system");
     kernel = context.getPlatform().createKernel(ApplyMonteCarloBarostatKernel::Name(), context);
     kernel.getAs<ApplyMonteCarloBarostatKernel>().initialize(context.getSystem(), owner);
     Vec3 box[3];

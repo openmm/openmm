@@ -228,7 +228,7 @@ __kernel void computeBornSum(
 
             for (int localAtomIndex = 0; localAtomIndex < TILE_SIZE; localAtomIndex++) {
 #ifdef USE_CUTOFF
-                unsigned int j = (numTiles <= maxTiles ? interactingAtoms[pos*TILE_SIZE+localAtomIndex] : y*TILE_SIZE+localAtomIndex);
+                unsigned int j = interactingAtoms[pos*TILE_SIZE+localAtomIndex];
 #else
                 unsigned int j = y*TILE_SIZE+localAtomIndex;
 #endif
@@ -407,7 +407,7 @@ __kernel void computeGBSAForce1(
 #else
         __global real4* restrict forceBuffers, __global real* restrict global_bornForce,
 #endif
-        __global mixed* restrict energyBuffer, __global const real4* restrict posq, __global const real* restrict global_bornRadii,
+        __global mixed* restrict energyBuffer, __global const real4* restrict posq, __global const real* restrict global_bornRadii, int needEnergy,
 #ifdef USE_CUTOFF
         __global const int* restrict tiles, __global const unsigned int* restrict interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, __global const real4* restrict blockCenter,
@@ -641,7 +641,7 @@ __kernel void computeGBSAForce1(
 
             for (int localAtomIndex = 0; localAtomIndex < TILE_SIZE; localAtomIndex++) {
 #ifdef USE_CUTOFF
-                unsigned int j = (numTiles <= maxTiles ? interactingAtoms[pos*TILE_SIZE+localAtomIndex] : y*TILE_SIZE+localAtomIndex);
+                unsigned int j = interactingAtoms[pos*TILE_SIZE+localAtomIndex];
 #else
                 unsigned int j = y*TILE_SIZE+localAtomIndex;
 #endif

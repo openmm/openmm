@@ -40,6 +40,7 @@ import math
 from math import sqrt, cos
 from copy import deepcopy
 from heapq import heappush, heappop
+from collections import defaultdict
 import simtk.openmm as mm
 import simtk.unit as unit
 from . import element as elem
@@ -51,6 +52,40 @@ def _convertParameterToNumber(param):
             return param / unit.bar
         return param.value_in_unit_system(unit.md_unit_system)
     return float(param)
+
+def _parseFunctions(element):
+    """Parse the attributes on an XML tag to find any tabulated functions it defines."""
+    functions = []
+    for function in element.findall('Function'):
+        values = [float(x) for x in function.text.split()]
+        if 'type' in function.attrib:
+            functionType = function.attrib['type']
+        else:
+            functionType = 'Continuous1D'
+        params = {}
+        for key in function.attrib:
+            if key.endswith('size'):
+                params[key] = int(function.attrib[key])
+            elif key.endswith('min') or key.endswith('max'):
+                params[key] = float(function.attrib[key])
+        functions.append((function.attrib['name'], functionType, values, params))
+    return functions
+
+def _createFunctions(force, functions):
+    """Add TabulatedFunctions to a Force based on the information that was recorded by _parseFunctions()."""
+    for (name, type, values, params) in functions:
+        if type == 'Continuous1D':
+            force.addTabulatedFunction(name, mm.Continuous1DFunction(values, params['min'], params['max']))
+        elif type == 'Continuous2D':
+            force.addTabulatedFunction(name, mm.Continuous2DFunction(params['xsize'], params['ysize'], values, params['xmin'], params['xmax'], params['ymin'], params['ymax']))
+        elif type == 'Continuous3D':
+            force.addTabulatedFunction(name, mm.Continuous2DFunction(params['xsize'], params['ysize'], params['zsize'], values, params['xmin'], params['xmax'], params['ymin'], params['ymax'], params['zmin'], params['zmax']))
+        elif type == 'Discrete1D':
+            force.addTabulatedFunction(name, mm.Discrete1DFunction(values))
+        elif type == 'Discrete2D':
+            force.addTabulatedFunction(name, mm.Discrete2DFunction(params['xsize'], params['ysize'], values))
+        elif type == 'Discrete3D':
+            force.addTabulatedFunction(name, mm.Discrete2DFunction(params['xsize'], params['ysize'], params['zsize'], values))
 
 # Enumerated values for nonbonded method
 
@@ -461,7 +496,7 @@ class ForceField(object):
             torsion.k.append(_convertParameterToNumber(attrib['k%d'%index]))
             index += 1
         return torsion
-
+        
     class _SystemData(object):
         """Inner class used to encapsulate data about the system being created."""
         def __init__(self):
@@ -1662,6 +1697,7 @@ class HarmonicBondGenerator(object):
 
     def __init__(self, forcefield):
         self.ff = forcefield
+        self.bondsForAtomType = defaultdict(set)
         self.types1 = []
         self.types2 = []
         self.length = []
@@ -1670,8 +1706,13 @@ class HarmonicBondGenerator(object):
     def registerBond(self, parameters):
         types = self.ff._findAtomTypes(parameters, 2)
         if None not in types:
+            index = len(self.types1)
             self.types1.append(types[0])
             self.types2.append(types[1])
+            for t in types[0]:
+                self.bondsForAtomType[t].add(index)
+            for t in types[1]:
+                self.bondsForAtomType[t].add(index)
             self.length.append(_convertParameterToNumber(parameters['length']))
             self.k.append(_convertParameterToNumber(parameters['k']))
 
@@ -1697,7 +1738,7 @@ class HarmonicBondGenerator(object):
         for bond in data.bonds:
             type1 = data.atomType[data.atoms[bond.atom1]]
             type2 = data.atomType[data.atoms[bond.atom2]]
-            for i in range(len(self.types1)):
+            for i in self.bondsForAtomType[type1]:
                 types1 = self.types1[i]
                 types2 = self.types2[i]
                 if (type1 in types1 and type2 in types2) or (type1 in types2 and type2 in types1):
@@ -1717,6 +1758,7 @@ class HarmonicAngleGenerator(object):
 
     def __init__(self, forcefield):
         self.ff = forcefield
+        self.anglesForAtom2Type = defaultdict(list)
         self.types1 = []
         self.types2 = []
         self.types3 = []
@@ -1726,9 +1768,12 @@ class HarmonicAngleGenerator(object):
     def registerAngle(self, parameters):
         types = self.ff._findAtomTypes(parameters, 3)
         if None not in types:
+            index = len(self.types1)
             self.types1.append(types[0])
             self.types2.append(types[1])
             self.types3.append(types[2])
+            for t in types[1]:
+                self.anglesForAtom2Type[t].append(index)
             self.angle.append(_convertParameterToNumber(parameters['angle']))
             self.k.append(_convertParameterToNumber(parameters['k']))
 
@@ -1755,7 +1800,7 @@ class HarmonicAngleGenerator(object):
             type1 = data.atomType[data.atoms[angle[0]]]
             type2 = data.atomType[data.atoms[angle[1]]]
             type3 = data.atomType[data.atoms[angle[2]]]
-            for i in range(len(self.types1)):
+            for i in self.anglesForAtom2Type[type2]:
                 types1 = self.types1[i]
                 types2 = self.types2[i]
                 types3 = self.types3[i]
@@ -2589,6 +2634,7 @@ class CustomNonbondedGenerator(object):
             generator.perParticleParams.append(param.attrib['name'])
         generator.params = ForceField._AtomTypeParameters(ff, 'CustomNonbondedForce', 'Atom', generator.perParticleParams)
         generator.params.parseDefinitions(element)
+        generator.functions += _parseFunctions(element)
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         methodMap = {NoCutoff:mm.CustomNonbondedForce.NoCutoff,
@@ -2601,19 +2647,7 @@ class CustomNonbondedGenerator(object):
             force.addGlobalParameter(param, self.globalParams[param])
         for param in self.perParticleParams:
             force.addPerParticleParameter(param)
-        for (name, type, values, params) in self.functions:
-            if type == 'Continuous1D':
-                force.addTabulatedFunction(name, mm.Continuous1DFunction(values, params['min'], params['max']))
-            elif type == 'Continuous2D':
-                force.addTabulatedFunction(name, mm.Continuous2DFunction(params['xsize'], params['ysize'], values, params['xmin'], params['xmax'], params['ymin'], params['ymax']))
-            elif type == 'Continuous3D':
-                force.addTabulatedFunction(name, mm.Continuous2DFunction(params['xsize'], params['ysize'], params['zsize'], values, params['xmin'], params['xmax'], params['ymin'], params['ymax'], params['zmin'], params['zmax']))
-            elif type == 'Discrete1D':
-                force.addTabulatedFunction(name, mm.Discrete1DFunction(values))
-            elif type == 'Discrete2D':
-                force.addTabulatedFunction(name, mm.Discrete2DFunction(params['xsize'], params['ysize'], values))
-            elif type == 'Discrete3D':
-                force.addTabulatedFunction(name, mm.Discrete2DFunction(params['xsize'], params['ysize'], params['zsize'], values))
+        _createFunctions(force, self.functions)
         for atom in data.atoms:
             values = self.params.getAtomParameters(atom, data)
             force.addParticle(values)
@@ -2660,19 +2694,7 @@ class CustomGBGenerator(object):
             generator.computedValues.append((value.attrib['name'], value.text, computationMap[value.attrib['type']]))
         for term in element.findall('EnergyTerm'):
             generator.energyTerms.append((term.text, computationMap[term.attrib['type']]))
-        for function in element.findall("Function"):
-            values = [float(x) for x in function.text.split()]
-            if 'type' in function.attrib:
-                type = function.attrib['type']
-            else:
-                type = 'Continuous1D'
-            params = {}
-            for key in function.attrib:
-                if key.endswith('size'):
-                    params[key] = int(function.attrib[key])
-                elif key.endswith('min') or key.endswith('max'):
-                    params[key] = float(function.attrib[key])
-            generator.functions.append((function.attrib['name'], type, values, params))
+        generator.functions += _parseFunctions(element)
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         methodMap = {NoCutoff:mm.CustomGBForce.NoCutoff,
@@ -2689,19 +2711,7 @@ class CustomGBGenerator(object):
             force.addComputedValue(value[0], value[1], value[2])
         for term in self.energyTerms:
             force.addEnergyTerm(term[0], term[1])
-        for (name, type, values, params) in self.functions:
-            if type == 'Continuous1D':
-                force.addTabulatedFunction(name, mm.Continuous1DFunction(values, params['min'], params['max']))
-            elif type == 'Continuous2D':
-                force.addTabulatedFunction(name, mm.Continuous2DFunction(params['xsize'], params['ysize'], values, params['xmin'], params['xmax'], params['ymin'], params['ymax']))
-            elif type == 'Continuous3D':
-                force.addTabulatedFunction(name, mm.Continuous2DFunction(params['xsize'], params['ysize'], params['zsize'], values, params['xmin'], params['xmax'], params['ymin'], params['ymax'], params['zmin'], params['zmax']))
-            elif type == 'Discrete1D':
-                force.addTabulatedFunction(name, mm.Discrete1DFunction(values))
-            elif type == 'Discrete2D':
-                force.addTabulatedFunction(name, mm.Discrete2DFunction(params['xsize'], params['ysize'], values))
-            elif type == 'Discrete3D':
-                force.addTabulatedFunction(name, mm.Discrete2DFunction(params['xsize'], params['ysize'], params['zsize'], values))
+        _createFunctions(force, self.functions)
         for atom in data.atoms:
             values = self.params.getAtomParameters(atom, data)
             force.addParticle(values)
@@ -2710,6 +2720,171 @@ class CustomGBGenerator(object):
         sys.addForce(force)
 
 parsers["CustomGBForce"] = CustomGBGenerator.parseElement
+
+
+## @private
+class CustomHbondGenerator(object):
+    """A CustomHbondGenerator constructs a CustomHbondForce."""
+
+    def __init__(self, forcefield):
+        self.ff = forcefield
+        self.donorTypes1 = []
+        self.donorTypes2 = []
+        self.donorTypes3 = []
+        self.acceptorTypes1 = []
+        self.acceptorTypes2 = []
+        self.acceptorTypes3 = []
+        self.globalParams = {}
+        self.perDonorParams = []
+        self.perAcceptorParams = []
+        self.donorParamValues = []
+        self.acceptorParamValues = []
+        self.functions = []
+
+    @staticmethod
+    def parseElement(element, ff):
+        generator = CustomHbondGenerator(ff)
+        ff.registerGenerator(generator)
+        generator.energy = element.attrib['energy']
+        generator.bondCutoff = int(element.attrib['bondCutoff'])
+        generator.particlesPerDonor = int(element.attrib['particlesPerDonor'])
+        generator.particlesPerAcceptor = int(element.attrib['particlesPerAcceptor'])
+        if generator.particlesPerDonor < 1 or generator.particlesPerDonor > 3:
+            raise ValueError('Illegal value for particlesPerDonor for CustomHbondForce')
+        if generator.particlesPerAcceptor < 1 or generator.particlesPerAcceptor > 3:
+            raise ValueError('Illegal value for particlesPerAcceptor for CustomHbondForce')
+        for param in element.findall('GlobalParameter'):
+            generator.globalParams[param.attrib['name']] = float(param.attrib['defaultValue'])
+        for param in element.findall('PerDonorParameter'):
+            generator.perDonorParams.append(param.attrib['name'])
+        for param in element.findall('PerAcceptorParameter'):
+            generator.perAcceptorParams.append(param.attrib['name'])
+        for donor in element.findall('Donor'):
+            types = ff._findAtomTypes(donor.attrib, 3)[:generator.particlesPerDonor]
+            if None not in types:
+                generator.donorTypes1.append(types[0])
+                if len(types) > 1:
+                    generator.donorTypes2.append(types[1])
+                if len(types) > 2:
+                    generator.donorTypes3.append(types[2])
+                generator.donorParamValues.append([float(donor.attrib[param]) for param in generator.perDonorParams])
+        for acceptor in element.findall('Acceptor'):
+            types = ff._findAtomTypes(acceptor.attrib, 3)[:generator.particlesPerAcceptor]
+            if None not in types:
+                generator.acceptorTypes1.append(types[0])
+                if len(types) > 1:
+                    generator.acceptorTypes2.append(types[1])
+                if len(types) > 2:
+                    generator.acceptorTypes3.append(types[2])
+                generator.acceptorParamValues.append([float(acceptor.attrib[param]) for param in generator.perAcceptorParams])
+        generator.functions += _parseFunctions(element)
+
+    def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
+        methodMap = {NoCutoff:mm.CustomHbondForce.NoCutoff,
+                     CutoffNonPeriodic:mm.CustomHbondForce.CutoffNonPeriodic,
+                     CutoffPeriodic:mm.CustomHbondForce.CutoffPeriodic}
+        if nonbondedMethod not in methodMap:
+            raise ValueError('Illegal nonbonded method for CustomNonbondedForce')
+        force = mm.CustomHbondForce(self.energy)
+        sys.addForce(force)
+        for param in self.globalParams:
+            force.addGlobalParameter(param, self.globalParams[param])
+        for param in self.perDonorParams:
+            force.addPerDonorParameter(param)
+        for param in self.perAcceptorParams:
+            force.addPerAcceptorParameter(param)
+        _createFunctions(force, self.functions)
+        force.setNonbondedMethod(methodMap[nonbondedMethod])
+        force.setCutoffDistance(nonbondedCutoff)
+
+        # Add donors.
+
+        if self.particlesPerDonor == 1:
+            for atom in data.atoms:
+                type1 = data.atomType[atom]
+                for i in range(len(self.donorTypes1)):
+                    types1 = self.donorTypes1[i]
+                    if type1 in self.donorTypes1[i]:
+                        force.addDonor(atom.index, -1, -1, self.donorParamValues[i])
+        elif self.particlesPerDonor == 2:
+            for bond in data.bonds:
+                type1 = data.atomType[data.atoms[bond.atom1]]
+                type2 = data.atomType[data.atoms[bond.atom2]]
+                for i in range(len(self.donorTypes1)):
+                    types1 = self.donorTypes1[i]
+                    types2 = self.donorTypes2[i]
+                    if type1 in types1 and type2 in types2:
+                        force.addDonor(bond.atom1, bond.atom2, -1, self.donorParamValues[i])
+                    elif type1 in types2 and type2 in types1:
+                        force.addDonor(bond.atom2, bond.atom1, -1, self.donorParamValues[i])
+        else:
+            for angle in data.angles:
+                type1 = data.atomType[data.atoms[angle[0]]]
+                type2 = data.atomType[data.atoms[angle[1]]]
+                type3 = data.atomType[data.atoms[angle[2]]]
+                for i in range(len(self.donorTypes1)):
+                    types1 = self.donorTypes1[i]
+                    types2 = self.donorTypes2[i]
+                    types3 = self.donorTypes3[i]
+                    if (type1 in types1 and type2 in types2 and type3 in types3) or (type1 in types3 and type2 in types2 and type3 in types1):
+                        force.addDonor(angle[0], angle[1], angle[2], self.donorParamValues[i])
+
+        # Add acceptors.
+
+        if self.particlesPerAcceptor == 1:
+            for atom in data.atoms:
+                type1 = data.atomType[atom]
+                for i in range(len(self.acceptorTypes1)):
+                    types1 = self.acceptorTypes1[i]
+                    if type1 in self.acceptorTypes1[i]:
+                        force.addAcceptor(atom.index, -1, -1, self.acceptorParamValues[i])
+        elif self.particlesPerAcceptor == 2:
+            for bond in data.bonds:
+                type1 = data.atomType[data.atoms[bond.atom1]]
+                type2 = data.atomType[data.atoms[bond.atom2]]
+                for i in range(len(self.acceptorTypes1)):
+                    types1 = self.acceptorTypes1[i]
+                    types2 = self.acceptorTypes2[i]
+                    if type1 in types1 and type2 in types2:
+                        force.addAcceptor(bond.atom1, bond.atom2, -1, self.acceptorParamValues[i])
+                    elif type1 in types2 and type2 in types1:
+                        force.addAcceptor(bond.atom2, bond.atom1, -1, self.acceptorParamValues[i])
+        else:
+            for angle in data.angles:
+                type1 = data.atomType[data.atoms[angle[0]]]
+                type2 = data.atomType[data.atoms[angle[1]]]
+                type3 = data.atomType[data.atoms[angle[2]]]
+                for i in range(len(self.acceptorTypes1)):
+                    types1 = self.acceptorTypes1[i]
+                    types2 = self.acceptorTypes2[i]
+                    types3 = self.acceptorTypes3[i]
+                    if (type1 in types1 and type2 in types2 and type3 in types3) or (type1 in types3 and type2 in types2 and type3 in types1):
+                        force.addAcceptor(angle[0], angle[1], angle[2], self.acceptorParamValues[i])
+
+        # Add exclusions.
+
+        for donor in range(force.getNumDonors()):
+            (d1, d2, d3, params) = force.getDonorParameters(donor)
+            outerAtoms = set((d1, d2, d3))
+            if -1 in outerAtoms:
+                outerAtoms.remove(-1)
+            excludedAtoms = set(outerAtoms)
+            for i in range(self.bondCutoff):
+                newOuterAtoms = set()
+                for atom in outerAtoms:
+                    for bond in data.atomBonds[atom]:
+                        b = data.bonds[bond]
+                        bondedAtom = (b.atom2 if b.atom1 == atom else b.atom1)
+                        if bondedAtom not in excludedAtoms:
+                            newOuterAtoms.add(bondedAtom)
+                            excludedAtoms.add(bondedAtom)
+                outerAtoms = newOuterAtoms
+            for acceptor in range(force.getNumAcceptors()):
+                (a1, a2, a3, params) = force.getAcceptorParameters(acceptor)
+                if a1 in excludedAtoms or a2 in excludedAtoms or a3 in excludedAtoms:
+                    force.addExclusion(donor, acceptor)
+
+parsers["CustomHbondForce"] = CustomHbondGenerator.parseElement
 
 
 ## @private
