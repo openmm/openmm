@@ -13,6 +13,48 @@ else:
 class TestPdbFile(unittest.TestCase):
     """Test the PDB file parser"""
 
+    def build_bond_dict(topology):
+        bonds = dict()
+        for (atom1,atom2) in pdb.topology.bonds():
+            if atom1.id in bonds:
+                bonds[atom1.id].add(atom2.id)
+            else:
+                bonds[atom1.id] = set([atom2.id])
+
+            if atom2.id in bonds:
+                bonds[atom2.id].add(atom1.id)
+            else:
+                bonds[atom2.id] = set([atom1.id])
+
+    def test_ReadFile_standardBonds(self):
+        """Test parsing a file to see if standard bonds are correctly applied."""
+
+        # phosphorylated p38 kinase
+        pdb = PDBFile('systems/3py3.pdb')
+        bonds = build_bond_dict(pdb.topology)
+        # Check peptide bonds
+        assert('3' in bonds['5'])
+        assert('7' in bonds['11'])
+        assert('1473' in bonds['1479']) # MET179-TPO180
+        assert('1488' in bonds['1490']) # TPO180-GLY181
+        # Check bonds in TPO180 residue
+        assert('1479' in bonds['1480']) # N-CA
+        assert('1480' in bonds['1488']) # CA-C
+        assert('1484' in bonds['1485']) # P-O1P
+        assert('1484' in bonds['1486']) # P-O2P
+        assert('1484' in bonds['1487']) # P-O3P
+
+        # metal-binding protein
+        pdb = PDBFile('systems/1T2Y.pdb')
+        bonds = build_bond_dict(pdb.topology)
+        # Check N-terminus
+        assert('1' in bonds['5']) # N-H1
+        assert('1' in bonds['6']) # N-H2
+        assert('1' in bonds['7']) # N-H3
+        # Check C-terminus
+        assert('251' in bonds['252']) # C-O
+        assert('251' in bonds['258']) # C-OXT
+
     def test_Triclinic(self):
         """Test parsing a file that describes a triclinic box."""
         pdb = PDBFile('systems/triclinic.pdb')
@@ -72,7 +114,7 @@ class TestPdbFile(unittest.TestCase):
 
     def test_ExtraParticles(self):
         """Test reading, and writing and re-reading of a file containing extra particle atoms."""
-        pdb = PDBFile('systems/tip5p.pdb')  
+        pdb = PDBFile('systems/tip5p.pdb')
         for atom in pdb.topology.atoms():
             if atom.index > 2:
                 self.assertEqual(None, atom.element)
