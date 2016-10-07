@@ -257,7 +257,11 @@ class Topology(object):
         """
         if not Topology._hasLoadedStandardBonds:
             # Load the standard bond definitions.
-            infile = GzipFile(os.path.join(os.path.dirname(__file__), 'data', 'residues.xml'), 'r:gz')
+            try:
+                infile = GzipFile(os.path.join(os.path.dirname(__file__), 'data', 'residues.xml.gz'), 'r:gz')
+            exception Exception as e:
+                infile = open(os.path.join(os.path.dirname(__file__), 'data', 'residues.xml'), 'r')
+
             Topology.loadBondDefinitions(infile)
             Topology._hasLoadedStandardBonds = True
         for chain in self._chains:
