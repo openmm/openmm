@@ -64,7 +64,7 @@ def parse_monomer(infile, outfile):
 #
 
 # Open output file.
-outfile = open('residues.xml', 'w')
+outfile = GzipFile('residues.xml.gz', 'w:gz')
 
 # Write header
 outfile.write("<Residues>\n")
