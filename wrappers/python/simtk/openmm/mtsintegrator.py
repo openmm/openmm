@@ -98,10 +98,11 @@ class MTSIntegrator(CustomIntegrator):
         for i in range(stepsPerParentStep):
             self.addComputePerDof("v", "v+0.5*(dt/"+str(substeps)+")*f"+str(group)+"/m")
             if len(groups) == 1:
-                self.addComputePerDof("x1", "x")
                 self.addComputePerDof("x", "x+(dt/"+str(substeps)+")*v")
+                self.addComputePerDof("x1", "x")
                 self.addConstrainPositions();
-                self.addComputePerDof("v", "(x-x1)/(dt/"+str(substeps)+")");
+                self.addComputePerDof("v", "v+(x-x1)/(dt/"+str(substeps)+")");
+                self.addConstrainVelocities()
             else:
                 self._createSubsteps(substeps, groups[1:])
             self.addComputePerDof("v", "v+0.5*(dt/"+str(substeps)+")*f"+str(group)+"/m")
