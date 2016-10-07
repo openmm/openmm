@@ -33,6 +33,7 @@ __author__ = "Peter Eastman"
 __version__ = "1.0"
 
 import os
+from gzip import GzipFile
 import xml.etree.ElementTree as etree
 from simtk.openmm.vec3 import Vec3
 from simtk.unit import nanometers, sqrt, is_quantity
@@ -256,8 +257,8 @@ class Topology(object):
         """
         if not Topology._hasLoadedStandardBonds:
             # Load the standard bond definitions.
-
-            Topology.loadBondDefinitions(os.path.join(os.path.dirname(__file__), 'data', 'residues.xml'))
+            infile = GzipFile(os.path.join(os.path.dirname(__file__), 'data', 'residues.xml'), 'r:gz')
+            Topology.loadBondDefinitions(infile)
             Topology._hasLoadedStandardBonds = True
         for chain in self._chains:
             # First build a map of atom names to atoms.
