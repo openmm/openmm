@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.org/pandegroup/openmm.svg?branch=master)](https://travis-ci.org/pandegroup/openmm)
+[![Anaconda Cloud Badge](https://anaconda.org/omnia/openmm/badges/downloads.svg)](https://anaconda.org/omnia/openmm)
+
 ## OpenMM: A High Performance Molecular Dynamics Library
 
 Introduction
@@ -14,8 +17,3 @@ Need Help? Check out the [documentation](http://docs.openmm.org/) and [discussio
 [C++ API Reference](http://docs.openmm.org/6.3.0/api-c++/namespaceOpenMM.html)
 
 [Python API Reference](http://docs.openmm.org/6.3.0/api-python/annotated.html)
-
-Badges
-------
-* Travis CI `linux` and `osx` integration tests: [![Build Status](https://travis-ci.org/pandegroup/openmm.svg?branch=master)](https://travis-ci.org/pandegroup/openmm)
-* Anaconda Cloud `openmm` conda release: [![Anaconda Cloud Badge](https://anaconda.org/omnia/openmm/badges/downloads.svg)](https://anaconda.org/omnia/openmm)
