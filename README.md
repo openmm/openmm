@@ -20,4 +20,4 @@ Badges
 * Travis CI `linux` and `osx` integration tests:
   * GitHub master [![Build Status](https://travis-ci.org/pandegroup/openmm.svg?branch=master)](https://travis-ci.org/pandegroup/openmm)
   * `openmm-dev` recipe [![Build Status](https://travis-ci.org/omnia-md/conda-dev-recipes.svg?branch=master)](https://travis-ci.org/omnia-md/conda-dev-recipes)
-* Anaconda Cloud `openmm` conda release: [![Anaconda Cloud Badge](https://anaconda.org/pandegroup/openmm/badges/downloads.svg)](https://anaconda.org/pandegroup/openmm)
+* Anaconda Cloud `openmm` conda release: [![Anaconda Cloud Badge](https://anaconda.org/omnia/openmm/badges/downloads.svg)](https://anaconda.org/omnia/openmm)
