@@ -28,6 +28,7 @@ State _convertListsToState( const std::vector<Vec3> &pos,
                             double time,
                             const std::vector<Vec3> &boxVectors,
                             const std::map<std::string, double> &params,
+                            const std::map<std::string, double> &paramDerivs,
                             int types ) {  
     State::StateBuilder sb(time); 
     if(types & State::Positions)
@@ -40,6 +41,8 @@ State _convertListsToState( const std::vector<Vec3> &pos,
       sb.setEnergy(kineticEnergy, potentialEnergy);
     if(types & State::Parameters)
       sb.setParameters(params);
+    if(types & State::ParameterDerivatives)
+      sb.setEnergyParameterDerivatives(paramDerivs);
     sb.setPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
     return sb.getState();
 }
@@ -53,6 +56,7 @@ PyObject *_convertStateToLists(const State& state) {
     PyObject *pForces;
     PyObject *pyTuple;
     PyObject *pParameters;
+    PyObject *pParameterDerivs;
     simTime=state.getTime();
 
     OpenMM::Vec3 myVecA;
@@ -112,11 +116,21 @@ PyObject *_convertStateToLists(const State& state) {
       pParameters = Py_None;
       Py_INCREF(Py_None);
     }
+    try {
+      pParameterDerivs = PyDict_New();
+      const std::map<std::string, double>& params = state.getEnergyParameterDerivatives();
+      for (std::map<std::string, double>::const_iterator iter = params.begin(); iter != params.end(); ++iter)
+          PyDict_SetItemString(pParameterDerivs, iter->first.c_str(), Py_BuildValue("d", iter->second));
+    }
+    catch (std::exception& ex) {
+      pParameterDerivs = Py_None;
+      Py_INCREF(Py_None);
+    }
   
-    pyTuple=Py_BuildValue("(d,N,N,N,N,N,N)",
+    pyTuple=Py_BuildValue("(d,N,N,N,N,N,N,N)",
                           simTime, pPeriodicBoxVectorsList, pEnergy,
                           pPositions, pVelocities,
-                          pForces, pParameters);
+                          pForces, pParameters, pParameterDerivs);
   
     return pyTuple;
 }
