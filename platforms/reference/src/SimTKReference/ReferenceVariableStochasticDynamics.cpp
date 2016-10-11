@@ -266,11 +266,11 @@ void ReferenceVariableStochasticDynamics::update(const OpenMM::System& system, v
 
    // copy xPrime -> atomCoordinates
 
+   RealOpenMM invStepSize = 1.0/getDeltaT();
    for (int ii = 0; ii < numberOfAtoms; ii++) {
        if (masses[ii] != 0.0) {
-           atomCoordinates[ii][0] = xPrime[ii][0];
-           atomCoordinates[ii][1] = xPrime[ii][1];
-           atomCoordinates[ii][2] = xPrime[ii][2];
+           velocities[ii] = (xPrime[ii]-atomCoordinates[ii])*invStepSize;
+           atomCoordinates[ii] = xPrime[ii];
        }
    }
 
