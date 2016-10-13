@@ -278,9 +278,9 @@ extern "C" __global__ void computeNonbonded(
                 localData[tbx+tj].fz += dEdR2.z;
 #endif 
 #endif // end USE_SYMMETRIC
+#endif
 #ifdef ENABLE_SHUFFLE
                 SHUFFLE_WARP_DATA
-#endif
 #endif
 #ifdef USE_EXCLUSIONS
                 excl >>= 1;
@@ -484,9 +484,9 @@ extern "C" __global__ void computeNonbonded(
                     localData[tbx+tj].fz += dEdR2.z;
 #endif 
 #endif // end USE_SYMMETRIC
+#endif
 #ifdef ENABLE_SHUFFLE
                     SHUFFLE_WARP_DATA
-#endif
 #endif
                     tj = (tj + 1) & (TILE_SIZE - 1);
                 }
@@ -555,9 +555,9 @@ extern "C" __global__ void computeNonbonded(
                     localData[tbx+tj].fz += dEdR2.z;
 #endif 
 #endif // end USE_SYMMETRIC
+#endif
 #ifdef ENABLE_SHUFFLE
                     SHUFFLE_WARP_DATA
-#endif
 #endif
                     tj = (tj + 1) & (TILE_SIZE - 1);
                 }
