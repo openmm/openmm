@@ -130,8 +130,10 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
 #endif
     struct stat info;
     isNvccAvailable = (res == 0 && stat(tempDir.c_str(), &info) == 0);
+    int cudaDriverVersion;
+    cuDriverGetVersion(&cudaDriverVersion);
     static bool hasShownNvccWarning = false;
-    if (hasCompilerKernel && !isNvccAvailable && !hasShownNvccWarning) {
+    if (hasCompilerKernel && !isNvccAvailable && !hasShownNvccWarning && cudaDriverVersion < 8000) {
         hasShownNvccWarning = true;
         printf("Could not find nvcc.  Using runtime compiler, which may produce slower performance.  ");
 #ifdef WIN32
@@ -208,14 +210,14 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     int major, minor;
     CHECK_RESULT(cuDeviceComputeCapability(&major, &minor, device));
     int numThreadBlocksPerComputeUnit = (major >= 6 ? 4 : 6);
-#if __CUDA_API_VERSION < 7000
+    if (cudaDriverVersion < 7000) {
         // This is a workaround to support GTX 980 with CUDA 6.5.  It reports
         // its compute capability as 5.2, but the compiler doesn't support
         // anything beyond 5.0.
         if (major == 5)
             minor = 0;
-#endif
-#if __CUDA_API_VERSION < 8000
+    }
+    if (cudaDriverVersion < 8000) {
         // This is a workaround to support Pascal with CUDA 7.5.  It reports
         // its compute capability as 6.x, but the compiler doesn't support
         // anything beyond 5.3.
@@ -223,7 +225,7 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
             major = 5;
             minor = 3;
         }
-#endif
+    }
     gpuArchitecture = intToString(major)+intToString(minor);
     computeCapability = major+0.1*minor;
 
