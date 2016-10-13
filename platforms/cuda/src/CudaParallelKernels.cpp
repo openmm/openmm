@@ -63,8 +63,8 @@ if (result != CUDA_SUCCESS) { \
 class CudaParallelCalcForcesAndEnergyKernel::BeginComputationTask : public CudaContext::WorkTask {
 public:
     BeginComputationTask(ContextImpl& context, CudaContext& cu, CudaCalcForcesAndEnergyKernel& kernel,
-            bool includeForce, bool includeEnergy, int groups, void* pinnedMemory, CUevent event, int& numTiles) : context(context), cu(cu), kernel(kernel),
-            includeForce(includeForce), includeEnergy(includeEnergy), groups(groups), pinnedMemory(pinnedMemory), event(event), numTiles(numTiles) {
+            bool includeForce, bool includeEnergy, int groups, void* pinnedMemory, CUevent event, int2& interactionCount) : context(context), cu(cu), kernel(kernel),
+            includeForce(includeForce), includeEnergy(includeEnergy), groups(groups), pinnedMemory(pinnedMemory), event(event), interactionCount(interactionCount) {
     }
     void execute() {
         // Copy coordinates over to this device and execute the kernel.
@@ -77,7 +77,7 @@ public:
         }
         kernel.beginComputation(context, includeForce, includeEnergy, groups);
         if (cu.getNonbondedUtilities().getUsePeriodic())
-            cu.getNonbondedUtilities().getInteractionCount().download(&numTiles, false);
+            cu.getNonbondedUtilities().getInteractionCount().download(&interactionCount, false);
     }
 private:
     ContextImpl& context;
@@ -87,15 +87,15 @@ private:
     int groups;
     void* pinnedMemory;
     CUevent event;
-    int& numTiles;
+    int2& interactionCount;
 };
 
 class CudaParallelCalcForcesAndEnergyKernel::FinishComputationTask : public CudaContext::WorkTask {
 public:
     FinishComputationTask(ContextImpl& context, CudaContext& cu, CudaCalcForcesAndEnergyKernel& kernel,
-            bool includeForce, bool includeEnergy, int groups, double& energy, long long& completionTime, long long* pinnedMemory, CudaArray& contextForces, bool& valid, int& numTiles) :
+            bool includeForce, bool includeEnergy, int groups, double& energy, long long& completionTime, long long* pinnedMemory, CudaArray& contextForces, bool& valid, int2& interactionCount) :
             context(context), cu(cu), kernel(kernel), includeForce(includeForce), includeEnergy(includeEnergy), groups(groups), energy(energy),
-            completionTime(completionTime), pinnedMemory(pinnedMemory), contextForces(contextForces), valid(valid), numTiles(numTiles) {
+            completionTime(completionTime), pinnedMemory(pinnedMemory), contextForces(contextForces), valid(valid), interactionCount(interactionCount) {
     }
     void execute() {
         // Execute the kernel, then download forces.
@@ -120,7 +120,8 @@ public:
                     cu.getForce().download(&pinnedMemory[(cu.getContextIndex()-1)*numAtoms*3]);
             }
         }
-        if (cu.getNonbondedUtilities().getUsePeriodic() && numTiles > cu.getNonbondedUtilities().getInteractingTiles().getSize()) {
+        if (cu.getNonbondedUtilities().getUsePeriodic() && (interactionCount.x > cu.getNonbondedUtilities().getInteractingTiles().getSize() ||
+                interactionCount.y > cu.getNonbondedUtilities().getSinglePairs().getSize())) {
             valid = false;
             cu.getNonbondedUtilities().updateNeighborListSize();
         }
@@ -136,12 +137,12 @@ private:
     long long* pinnedMemory;
     CudaArray& contextForces;
     bool& valid;
-    int& numTiles;
+    int2& interactionCount;
 };
 
 CudaParallelCalcForcesAndEnergyKernel::CudaParallelCalcForcesAndEnergyKernel(string name, const Platform& platform, CudaPlatform::PlatformData& data) :
         CalcForcesAndEnergyKernel(name, platform), data(data), completionTimes(data.contexts.size()), contextNonbondedFractions(data.contexts.size()),
-        tileCounts(NULL), contextForces(NULL), pinnedPositionBuffer(NULL), pinnedForceBuffer(NULL) {
+        interactionCounts(NULL), contextForces(NULL), pinnedPositionBuffer(NULL), pinnedForceBuffer(NULL) {
     for (int i = 0; i < (int) data.contexts.size(); i++)
         kernels.push_back(Kernel(new CudaCalcForcesAndEnergyKernel(name, platform, *data.contexts[i])));
 }
@@ -156,8 +157,8 @@ CudaParallelCalcForcesAndEnergyKernel::~CudaParallelCalcForcesAndEnergyKernel() 
         cuMemFreeHost(pinnedForceBuffer);
     cuEventDestroy(event);
     cuStreamDestroy(peerCopyStream);
-    if (tileCounts != NULL)
-        cuMemFreeHost(tileCounts);
+    if (interactionCounts != NULL)
+        cuMemFreeHost(interactionCounts);
 }
 
 void CudaParallelCalcForcesAndEnergyKernel::initialize(const System& system) {
@@ -172,7 +173,7 @@ void CudaParallelCalcForcesAndEnergyKernel::initialize(const System& system) {
         contextNonbondedFractions[i] = 1/(double) numContexts;
     CHECK_RESULT(cuEventCreate(&event, 0), "Error creating event");
     CHECK_RESULT(cuStreamCreate(&peerCopyStream, CU_STREAM_NON_BLOCKING), "Error creating stream");
-    CHECK_RESULT(cuMemHostAlloc((void**) &tileCounts, numContexts*sizeof(int), 0), "Error creating tile count buffer");
+    CHECK_RESULT(cuMemHostAlloc((void**) &interactionCounts, numContexts*sizeof(int2), 0), "Error creating interaction counts buffer");
 }
 
 void CudaParallelCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups) {
@@ -202,7 +203,7 @@ void CudaParallelCalcForcesAndEnergyKernel::beginComputation(ContextImpl& contex
         data.contextEnergy[i] = 0.0;
         CudaContext& cu = *data.contexts[i];
         CudaContext::WorkThread& thread = cu.getWorkThread();
-        thread.addTask(new BeginComputationTask(context, cu, getKernel(i), includeForce, includeEnergy, groups, pinnedPositionBuffer, event, tileCounts[i]));
+        thread.addTask(new BeginComputationTask(context, cu, getKernel(i), includeForce, includeEnergy, groups, pinnedPositionBuffer, event, interactionCounts[i]));
     }
 }
 
@@ -210,7 +211,7 @@ double CudaParallelCalcForcesAndEnergyKernel::finishComputation(ContextImpl& con
     for (int i = 0; i < (int) data.contexts.size(); i++) {
         CudaContext& cu = *data.contexts[i];
         CudaContext::WorkThread& thread = cu.getWorkThread();
-        thread.addTask(new FinishComputationTask(context, cu, getKernel(i), includeForce, includeEnergy, groups, data.contextEnergy[i], completionTimes[i], pinnedForceBuffer, *contextForces, valid, tileCounts[i]));
+        thread.addTask(new FinishComputationTask(context, cu, getKernel(i), includeForce, includeEnergy, groups, data.contextEnergy[i], completionTimes[i], pinnedForceBuffer, *contextForces, valid, interactionCounts[i]));
     }
     data.syncContexts();
     double energy = 0.0;

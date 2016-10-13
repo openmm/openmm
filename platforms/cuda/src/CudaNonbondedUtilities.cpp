@@ -64,8 +64,9 @@ private:
 
 CudaNonbondedUtilities::CudaNonbondedUtilities(CudaContext& context) : context(context), useCutoff(false), usePeriodic(false), anyExclusions(false), usePadding(true),
         exclusionIndices(NULL), exclusionRowIndices(NULL), exclusionTiles(NULL), exclusions(NULL), interactingTiles(NULL), interactingAtoms(NULL),
-        interactionCount(NULL), singlePairs(NULL), singlePairCount(NULL), blockCenter(NULL), blockBoundingBox(NULL), sortedBlocks(NULL), sortedBlockCenter(NULL), sortedBlockBoundingBox(NULL),
-        oldPositions(NULL), rebuildNeighborList(NULL), blockSorter(NULL), pinnedCountBuffer(NULL), forceRebuildNeighborList(true), lastCutoff(0.0), groupFlags(0) {
+        interactionCount(NULL), singlePairs(NULL), blockCenter(NULL), blockBoundingBox(NULL), sortedBlocks(NULL), sortedBlockCenter(NULL), sortedBlockBoundingBox(NULL),
+        oldPositions(NULL), rebuildNeighborList(NULL), blockSorter(NULL), pinnedCountBuffer(NULL), forceRebuildNeighborList(true), lastCutoff(0.0), groupFlags(0),
+        canUsePairList(true) {
     // Decide how many thread blocks to use.
 
     string errorMessage = "Error initializing nonbonded utilities";
@@ -94,8 +95,6 @@ CudaNonbondedUtilities::~CudaNonbondedUtilities() {
         delete interactionCount;
     if (singlePairs != NULL)
         delete singlePairs;
-    if (singlePairCount != NULL)
-        delete singlePairCount;
     if (blockCenter != NULL)
         delete blockCenter;
     if (blockBoundingBox != NULL)
@@ -117,7 +116,7 @@ CudaNonbondedUtilities::~CudaNonbondedUtilities() {
     cuEventDestroy(downloadCountEvent);
 }
 
-void CudaNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance, const vector<vector<int> >& exclusionList, const string& kernel, int forceGroup) {
+void CudaNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance, const vector<vector<int> >& exclusionList, const string& kernel, int forceGroup, bool supportsPairList) {
     if (groupCutoff.size() > 0) {
         if (usesCutoff != useCutoff)
             throw OpenMMException("All Forces must agree on whether to use a cutoff");
@@ -132,6 +131,7 @@ void CudaNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic, 
     usePeriodic = usesPeriodic;
     groupCutoff[forceGroup] = cutoffDistance;
     groupFlags |= 1<<forceGroup;
+    canUsePairList &= supportsPairList;
     if (kernel.size() > 0) {
         if (groupKernelSource.find(forceGroup) == groupKernelSource.end())
             groupKernelSource[forceGroup] = "";
@@ -286,9 +286,8 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         maxSinglePairs = 5*numAtoms;
         interactingTiles = CudaArray::create<int>(context, maxTiles, "interactingTiles");
         interactingAtoms = CudaArray::create<int>(context, CudaContext::TileSize*maxTiles, "interactingAtoms");
-        interactionCount = CudaArray::create<unsigned int>(context, 1, "interactionCount");
+        interactionCount = CudaArray::create<unsigned int>(context, 2, "interactionCount");
         singlePairs = CudaArray::create<int2>(context, maxSinglePairs, "singlePairs");
-        singlePairCount = CudaArray::create<unsigned int>(context, 1, "singlePairCount");
         int elementSize = (context.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
         blockCenter = new CudaArray(context, numAtomBlocks, 4*elementSize, "blockCenter");
         blockBoundingBox = new CudaArray(context, numAtomBlocks, 4*elementSize, "blockBoundingBox");
@@ -298,9 +297,8 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         oldPositions = new CudaArray(context, numAtoms, 4*elementSize, "oldPositions");
         rebuildNeighborList = CudaArray::create<int>(context, 1, "rebuildNeighborList");
         blockSorter = new CudaSort(context, new BlockSortTrait(context.getUseDoublePrecision()), numAtomBlocks);
-        vector<unsigned int> count(1, 0);
+        vector<unsigned int> count(2, 0);
         interactionCount->upload(count);
-        singlePairCount->upload(count);
     }
 
     // Record arguments for kernels.
@@ -325,7 +323,6 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         forceArgs.push_back(&blockBoundingBox->getDevicePointer());
         forceArgs.push_back(&interactingAtoms->getDevicePointer());
         forceArgs.push_back(&maxSinglePairs);
-        forceArgs.push_back(&singlePairCount->getDevicePointer());
         forceArgs.push_back(&singlePairs->getDevicePointer());
     }
     for (int i = 0; i < (int) parameters.size(); i++)
@@ -354,7 +351,6 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         sortBoxDataArgs.push_back(&context.getPosq().getDevicePointer());
         sortBoxDataArgs.push_back(&oldPositions->getDevicePointer());
         sortBoxDataArgs.push_back(&interactionCount->getDevicePointer());
-        sortBoxDataArgs.push_back(&singlePairCount->getDevicePointer());
         sortBoxDataArgs.push_back(&rebuildNeighborList->getDevicePointer());
         sortBoxDataArgs.push_back(&forceRebuildNeighborList);
         findInteractingBlocksArgs.push_back(context.getPeriodicBoxSizePointer());
@@ -365,7 +361,6 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         findInteractingBlocksArgs.push_back(&interactionCount->getDevicePointer());
         findInteractingBlocksArgs.push_back(&interactingTiles->getDevicePointer());
         findInteractingBlocksArgs.push_back(&interactingAtoms->getDevicePointer());
-        findInteractingBlocksArgs.push_back(&singlePairCount->getDevicePointer());
         findInteractingBlocksArgs.push_back(&singlePairs->getDevicePointer());
         findInteractingBlocksArgs.push_back(&context.getPosq().getDevicePointer());
         findInteractingBlocksArgs.push_back(&maxTiles);
@@ -417,7 +412,6 @@ void CudaNonbondedUtilities::prepareInteractions(int forceGroups) {
     forceRebuildNeighborList = false;
     lastCutoff = kernels.cutoffDistance;
     interactionCount->download(pinnedCountBuffer, false);
-    singlePairCount->download(pinnedCountBuffer+1, false);
     cuEventRecord(downloadCountEvent, context.getCurrentStream());
 }
 
@@ -470,8 +464,8 @@ bool CudaNonbondedUtilities::updateNeighborListSize() {
         singlePairs = NULL; // Avoid an error in the destructor if the following allocation fails
         singlePairs = CudaArray::create<int2>(context, maxSinglePairs, "singlePairs");
         if (forceArgs.size() > 0)
-            forceArgs[20] = &singlePairs->getDevicePointer();
-        findInteractingBlocksArgs[9] = &singlePairs->getDevicePointer();
+            forceArgs[19] = &singlePairs->getDevicePointer();
+        findInteractingBlocksArgs[8] = &singlePairs->getDevicePointer();
     }
     forceRebuildNeighborList = true;
     context.setForcesValid(false);
@@ -520,6 +514,7 @@ void CudaNonbondedUtilities::createKernelsForGroups(int groups) {
         if (usePeriodic)
             defines["USE_PERIODIC"] = "1";
         defines["MAX_EXCLUSIONS"] = context.intToString(maxExclusions);
+        defines["MAX_BITS_FOR_PAIRS"] = (canUsePairList ? "2" : "0");
         CUmodule interactingBlocksProgram = context.createModule(CudaKernelSources::vectorOps+CudaKernelSources::findInteractingBlocks, defines);
         kernels.findBlockBoundsKernel = context.getKernel(interactingBlocksProgram, "findBlockBounds");
         kernels.sortBoxDataKernel = context.getKernel(interactingBlocksProgram, "sortBoxData");
