@@ -109,7 +109,7 @@ before_install:
       sudo easy_install pytest;
     fi
   - if [[ "$OPENCL" == "true" ]]; then
-      wget https://jenkins.choderalab.org/userContent/AMD-APP-SDKInstaller-v3.0.130.135-GA-linux64.tar.bz2;
+      wget http://s3.amazonaws.com/omnia-ci/AMD-APP-SDKInstaller-v3.0.130.135-GA-linux64.tar.bz2;
       tar -xjf AMD-APP-SDK*.tar.bz2;
       AMDAPPSDK=${HOME}/AMDAPPSDK;
       export OPENCL_VENDOR_PATH=${AMDAPPSDK}/etc/OpenCL/vendors;
