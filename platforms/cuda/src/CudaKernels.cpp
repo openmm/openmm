@@ -1920,7 +1920,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
     // Add the interaction to the default nonbonded kernel.
    
     string source = cu.replaceStrings(CudaKernelSources::coulombLennardJones, defines);
-    cu.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source, force.getForceGroup());
+    cu.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source, force.getForceGroup(), true);
     if (hasLJ)
         cu.getNonbondedUtilities().addParameter(CudaNonbondedUtilities::ParameterInfo("sigmaEpsilon", "float", 2, sizeof(float2), sigmaEpsilon->getDevicePointer()));
 
@@ -2314,7 +2314,7 @@ void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const 
     if (force.getNumInteractionGroups() > 0)
         initInteractionGroups(force, source, tableTypes);
     else {
-        cu.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source, force.getForceGroup());
+        cu.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source, force.getForceGroup(), true);
         for (int i = 0; i < (int) params->getBuffers().size(); i++) {
             CudaNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
             cu.getNonbondedUtilities().addParameter(CudaNonbondedUtilities::ParameterInfo(prefix+"params"+cu.intToString(i+1), buffer.getComponentType(), buffer.getNumComponents(), buffer.getSize(), buffer.getMemory()));

@@ -83,7 +83,7 @@ private:
     std::vector<Kernel> kernels;
     std::vector<long long> completionTimes;
     std::vector<double> contextNonbondedFractions;
-    int* tileCounts;
+    int2* interactionCounts;
     CudaArray* contextForces;
     void* pinnedPositionBuffer;
     long long* pinnedForceBuffer;
