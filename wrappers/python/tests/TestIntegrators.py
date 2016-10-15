@@ -37,9 +37,6 @@ class TestIntegrators(unittest.TestCase):
         if not (state.getPotentialEnergy() / kilojoules_per_mole < 0.0):
             raise Exception('Potential energy of alanine dipeptide system with MTS integrator is blowing up: %s' % str(state.getPotentialEnergy()))
 
-        # Clean up
-        del context, integrator
-
     def testMTSIntegratorConstraints(self):
         """Test the MTS integrator energy conservation on a system of constrained particles with no inner force (just constraints)"""
 
