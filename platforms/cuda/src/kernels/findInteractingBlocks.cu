@@ -71,7 +71,58 @@ extern "C" __global__ void sortBoxData(const real2* __restrict__ sortedBlock, co
     if (rebuild) {
         rebuildNeighborList[0] = 1;
         interactionCount[0] = 0;
+        interactionCount[1] = 0;
     }
+}
+
+__device__ int saveSinglePairs(int x, int* atoms, int* flags, int length, unsigned int maxSinglePairs, unsigned int* singlePairCount, int2* singlePairs, int* sumBuffer, volatile int& pairStartIndex) {
+    // Record interactions that should be computed as single pairs rather than in blocks.
+    
+    const int indexInWarp = threadIdx.x%32;
+    int sum = 0;
+    for (int i = indexInWarp; i < length; i += 32) {
+        int count = __popc(flags[i]);
+        sum += (count <= MAX_BITS_FOR_PAIRS ? count : 0);
+    }
+    sumBuffer[indexInWarp] = sum;
+    for (int step = 1; step < 32; step *= 2) {
+        int add = (indexInWarp >= step ? sumBuffer[indexInWarp-step] : 0);
+        sumBuffer[indexInWarp] += add;
+    }
+    int pairsToStore = sumBuffer[31];
+    if (indexInWarp == 0)
+        pairStartIndex = atomicAdd(singlePairCount, pairsToStore);
+    int pairIndex = pairStartIndex + (indexInWarp > 0 ? sumBuffer[indexInWarp-1] : 0);
+    for (int i = indexInWarp; i < length; i += 32) {
+        int count = __popc(flags[i]);
+        if (count <= MAX_BITS_FOR_PAIRS && pairIndex+count < maxSinglePairs) {
+            int f = flags[i];
+            while (f != 0) {
+                singlePairs[pairIndex] = make_int2(atoms[i], x*TILE_SIZE+__ffs(f)-1);
+                f &= f-1;
+                pairIndex++;
+            }
+        }
+    }
+    
+    // Compact the remaining interactions.
+    
+    const int warpMask = (1<<indexInWarp)-1;
+    int numCompacted = 0;
+    for (int start = 0; start < length; start += 32) {
+        int i = start+indexInWarp;
+        int atom = atoms[i];
+        int flag = flags[i];
+        bool include = (i < length && __popc(flags[i]) > MAX_BITS_FOR_PAIRS);
+        int includeFlags = __ballot(include);
+        if (include) {
+            int index = numCompacted+__popc(includeFlags&warpMask);
+            atoms[index] = atom;
+            flags[index] = flag;
+        }
+        numCompacted += __popc(includeFlags);
+    }
+    return numCompacted;
 }
 
 /**
@@ -124,8 +175,9 @@ extern "C" __global__ void sortBoxData(const real2* __restrict__ sortedBlock, co
  *
  */
 extern "C" __global__ void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
-        unsigned int* __restrict__ interactionCount, int* __restrict__ interactingTiles, unsigned int* __restrict__ interactingAtoms, const real4* __restrict__ posq,
-        unsigned int maxTiles, unsigned int startBlockIndex, unsigned int numBlocks, real2* __restrict__ sortedBlocks, const real4* __restrict__ sortedBlockCenter,
+        unsigned int* __restrict__ interactionCount, int* __restrict__ interactingTiles, unsigned int* __restrict__ interactingAtoms,
+        int2* __restrict__ singlePairs, const real4* __restrict__ posq, unsigned int maxTiles, unsigned int maxSinglePairs,
+        unsigned int startBlockIndex, unsigned int numBlocks, real2* __restrict__ sortedBlocks, const real4* __restrict__ sortedBlockCenter,
         const real4* __restrict__ sortedBlockBoundingBox, const unsigned int* __restrict__ exclusionIndices, const unsigned int* __restrict__ exclusionRowIndices,
         real4* __restrict__ oldPositions, const int* __restrict__ rebuildNeighborList) {
 
@@ -138,12 +190,17 @@ extern "C" __global__ void findBlocksWithInteractions(real4 periodicBoxSize, rea
     const int warpIndex = (blockIdx.x*blockDim.x+threadIdx.x)/32;
     const int warpMask = (1<<indexInWarp)-1;
     __shared__ int workgroupBuffer[BUFFER_SIZE*(GROUP_SIZE/32)];
+    __shared__ int workgroupFlagsBuffer[BUFFER_SIZE*(GROUP_SIZE/32)];
     __shared__ int warpExclusions[MAX_EXCLUSIONS*(GROUP_SIZE/32)];
     __shared__ real3 posBuffer[GROUP_SIZE];
     __shared__ volatile int workgroupTileIndex[GROUP_SIZE/32];
+    __shared__ int sumBuffer[GROUP_SIZE];
+    __shared__ int worksgroupPairStartIndex[GROUP_SIZE/32];
     int* buffer = workgroupBuffer+BUFFER_SIZE*(warpStart/32);
+    int* flagsBuffer = workgroupFlagsBuffer+BUFFER_SIZE*(warpStart/32);
     int* exclusionsForX = warpExclusions+MAX_EXCLUSIONS*(warpStart/32);
     volatile int& tileStartIndex = workgroupTileIndex[warpStart/32];
+    volatile int& pairStartIndex = worksgroupPairStartIndex[warpStart/32];
 
     // Loop over blocks.
     
@@ -227,7 +284,7 @@ extern "C" __global__ void findBlocksWithInteractions(real4 periodicBoxSize, rea
                 APPLY_PERIODIC_TO_DELTA(atomDelta)
 #endif
                 int atomFlags = ballot(atomDelta.x*atomDelta.x+atomDelta.y*atomDelta.y+atomDelta.z*atomDelta.z < (PADDED_CUTOFF+blockCenterY.w)*(PADDED_CUTOFF+blockCenterY.w));
-                bool interacts = false;
+                int interacts = 0;
                 if (atom2 < NUM_ATOMS && atomFlags != 0) {
                     int first = __ffs(atomFlags)-1;
                     int last = 32-__clz(atomFlags);
@@ -236,14 +293,14 @@ extern "C" __global__ void findBlocksWithInteractions(real4 periodicBoxSize, rea
                         for (int j = first; j < last; j++) {
                             real3 delta = pos2-posBuffer[warpStart+j];
                             APPLY_PERIODIC_TO_DELTA(delta)
-                            interacts |= (delta.x*delta.x+delta.y*delta.y+delta.z*delta.z < PADDED_CUTOFF_SQUARED);
+                            interacts |= (delta.x*delta.x+delta.y*delta.y+delta.z*delta.z < PADDED_CUTOFF_SQUARED ? 1<<j : 0);
                         }
                     }
                     else {
 #endif
                         for (int j = first; j < last; j++) {
                             real3 delta = pos2-posBuffer[warpStart+j];
-                            interacts |= (delta.x*delta.x+delta.y*delta.y+delta.z*delta.z < PADDED_CUTOFF_SQUARED);
+                            interacts |= (delta.x*delta.x+delta.y*delta.y+delta.z*delta.z < PADDED_CUTOFF_SQUARED ? 1<<j : 0);
                         }
 #ifdef USE_PERIODIC
                     }
@@ -253,34 +310,46 @@ extern "C" __global__ void findBlocksWithInteractions(real4 periodicBoxSize, rea
                 // Add any interacting atoms to the buffer.
                 
                 int includeAtomFlags = __ballot(interacts);
-                if (interacts)
-                    buffer[neighborsInBuffer+__popc(includeAtomFlags&warpMask)] = atom2;
+                if (interacts) {
+                    int index = neighborsInBuffer+__popc(includeAtomFlags&warpMask);
+                    buffer[index] = atom2;
+                    flagsBuffer[index] = interacts;
+                }
                 neighborsInBuffer += __popc(includeAtomFlags);
                 if (neighborsInBuffer > BUFFER_SIZE-TILE_SIZE) {
                     // Store the new tiles to memory.
                     
+#if MAX_BITS_FOR_PAIRS > 0
+                    neighborsInBuffer = saveSinglePairs(x, buffer, flagsBuffer, neighborsInBuffer, maxSinglePairs, &interactionCount[1], singlePairs, sumBuffer+warpStart, pairStartIndex);
+#endif
                     int tilesToStore = neighborsInBuffer/TILE_SIZE;
-                    if (indexInWarp == 0)
-                        tileStartIndex = atomicAdd(interactionCount, tilesToStore);
-                    int newTileStartIndex = tileStartIndex;
-                    if (newTileStartIndex+tilesToStore <= maxTiles) {
-                        if (indexInWarp < tilesToStore)
-                            interactingTiles[newTileStartIndex+indexInWarp] = x;
-                        for (int j = 0; j < tilesToStore; j++)
-                            interactingAtoms[(newTileStartIndex+j)*TILE_SIZE+indexInWarp] = buffer[indexInWarp+j*TILE_SIZE];
+                    if (tilesToStore > 0) {
+                        if (indexInWarp == 0)
+                            tileStartIndex = atomicAdd(&interactionCount[0], tilesToStore);
+                        int newTileStartIndex = tileStartIndex;
+                        if (newTileStartIndex+tilesToStore <= maxTiles) {
+                            if (indexInWarp < tilesToStore)
+                                interactingTiles[newTileStartIndex+indexInWarp] = x;
+                            for (int j = 0; j < tilesToStore; j++)
+                                interactingAtoms[(newTileStartIndex+j)*TILE_SIZE+indexInWarp] = buffer[indexInWarp+j*TILE_SIZE];
+                        }
+                        buffer[indexInWarp] = buffer[indexInWarp+TILE_SIZE*tilesToStore];
+                        neighborsInBuffer -= TILE_SIZE*tilesToStore;
                     }
-                    buffer[indexInWarp] = buffer[indexInWarp+TILE_SIZE*tilesToStore];
-                    neighborsInBuffer -= TILE_SIZE*tilesToStore;
                 }
             }
         }
         
         // If we have a partially filled buffer,  store it to memory.
         
+#if MAX_BITS_FOR_PAIRS > 0
+        if (neighborsInBuffer > 32)
+            neighborsInBuffer = saveSinglePairs(x, buffer, flagsBuffer, neighborsInBuffer, maxSinglePairs, &interactionCount[1], singlePairs, sumBuffer+warpStart, pairStartIndex);
+#endif
         if (neighborsInBuffer > 0) {
             int tilesToStore = (neighborsInBuffer+TILE_SIZE-1)/TILE_SIZE;
             if (indexInWarp == 0)
-                tileStartIndex = atomicAdd(interactionCount, tilesToStore);
+                tileStartIndex = atomicAdd(&interactionCount[0], tilesToStore);
             int newTileStartIndex = tileStartIndex;
             if (newTileStartIndex+tilesToStore <= maxTiles) {
                 if (indexInWarp < tilesToStore)
