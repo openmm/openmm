@@ -63,14 +63,15 @@ namespace OpenMM {
  * force->addPerTorsionParameter("k");
  * force->addPerTorsionParameter("theta0");
  * </pre></tt>
- * 
+ *
  * This class also has the ability to compute derivatives of the potential energy with respect to global parameters.
  * Call addEnergyParameterDerivative() to request that the derivative with respect to a particular parameter be
  * computed.  You can then query its value in a Context by calling getState() on it.
  *
  * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
- * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs, floor, ceil, step, delta, select.  All trigonometric functions
- * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  delta(x) = 1 if x is 0, 0 otherwise.
+ * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs, floor, ceil, step, delta, select.
+ * All trigonometric functions are defined in radians, with the torsion `theta` on the domain [-pi, +pi), and log is the natural logarithm.
+ * step(x) = 0 if x is less than 0, 1 otherwise.  delta(x) = 1 if x is 0, 0 otherwise.
  * select(x,y,z) = z if x = 0, y otherwise.
  */
 
