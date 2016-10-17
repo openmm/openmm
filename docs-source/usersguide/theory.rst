@@ -48,15 +48,15 @@ Angstroms or nm, and angles may be in degrees or radians.  OpenMM uses the
 following units everywhere.
 
 ===========  =================
-Quantity     Units            
+Quantity     Units
 ===========  =================
-distance     nm               
-time         ps               
+distance     nm
+time         ps
 mass         atomic mass units
-charge       proton charge    
-temperature  Kelvin           
-angle        radians          
-energy       kJ/mol           
+charge       proton charge
+temperature  Kelvin
+angle        radians
+energy       kJ/mol
 ===========  =================
 
 These units have the important feature that they form an internally consistent
@@ -373,7 +373,7 @@ where *d* is the width of the periodic box, and selects the smallest value
 for k\ :sub:`max` which gives *error* < :math:`\delta`\ .  (If the box is not square,
 k\ :sub:`max` will have a different value along each axis.)
 
-This means that the accuracy of the calculation is determined by :math:`\delta`\ . 
+This means that the accuracy of the calculation is determined by :math:`\delta`\ .
 :math:`r_\mathit{cutoff}` does not affect the accuracy of the result, but does affect the speed
 of the calculation by changing the relative costs of the direct space and
 reciprocal space sums.  You therefore should test different cutoffs to find the
@@ -520,7 +520,7 @@ and :math:`\mathbf{S}_2` be diagonal matrices containing the three radii of each
 The energy is computed as a product of three terms:
 
 .. math::
-   E=U_r(\mathbf{A}_1, \mathbf{A}_2, \mathbf{r}_{12}) \cdot \eta_{12}(\mathbf{A}_1, \mathbf{A}_2) \cdot \chi_{12}(\mathbf{A}_1, \mathbf{A}_2, \hat{\mathbf{r}}_{12}) 
+   E=U_r(\mathbf{A}_1, \mathbf{A}_2, \mathbf{r}_{12}) \cdot \eta_{12}(\mathbf{A}_1, \mathbf{A}_2) \cdot \chi_{12}(\mathbf{A}_1, \mathbf{A}_2, \hat{\mathbf{r}}_{12})
 
 The first term describes the distance dependence, and is very similar in form to
 the Lennard-Jones interaction:
@@ -920,7 +920,8 @@ of four particles.  That is, the interaction energy of each bond is given by
 
 where *f*\ (\ *...*\ ) is a user defined mathematical expression.  It may
 depend on an arbitrary set of positions {\ :math:`x_i`\ }, distances {\ :math:`r_i`\ },
-angles {\ :math:`\theta_i`\ }, and dihedral angles {\ :math:`\phi_i`\ }.
+angles {\ :math:`\theta_i`\ }, and dihedral angles {\ :math:`\phi_i`\ }
+guaranteed to be in the range [-π, π]. 
 
 Each distance, angle, or dihedral is defined by specifying a sequence of
 particles chosen from among the particles that make up the bond.  A distance
@@ -995,7 +996,7 @@ Parameters may be specified in two ways:
 * Per-particle parameters are defined by specifying a value for each particle.
 
 The energy function is evaluated one or more times for every unique set of
-:math:`N` particles in the system.  The exact number of times depends on the 
+:math:`N` particles in the system.  The exact number of times depends on the
 *permutation mode*\ .  A set of :math:`N` particles has :math:`N!` possible
 permutations.  In :code:`SinglePermutation` mode, the function is evaluated
 for a single arbitrarily chosen one of those permutations.  In
