@@ -52,10 +52,10 @@
 using namespace OpenMM;
 using namespace std;
 
-#define CHECK_RESULT(result) \
+#define CHECK_RESULT(result, prefix) \
     if (result != CUDA_SUCCESS) { \
         std::stringstream m; \
-        m<<errorMessage<<": "<<cu.getErrorString(result)<<" ("<<result<<")"<<" at "<<__FILE__<<":"<<__LINE__; \
+        m<<prefix<<": "<<cu.getErrorString(result)<<" ("<<result<<")"<<" at "<<__FILE__<<":"<<__LINE__; \
         throw OpenMMException(m.str());\
     }
 
@@ -813,7 +813,7 @@ private:
 };
 
 CudaCalcAmoebaMultipoleForceKernel::CudaCalcAmoebaMultipoleForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : 
-        CalcAmoebaMultipoleForceKernel(name, platform), cu(cu), system(system), hasInitializedScaleFactors(false), hasInitializedFFT(false), multipolesAreValid(false),
+        CalcAmoebaMultipoleForceKernel(name, platform), cu(cu), system(system), hasInitializedScaleFactors(false), hasInitializedFFT(false), multipolesAreValid(false), hasCreatedEvent(false),
         multipoleParticles(NULL), molecularDipoles(NULL), molecularQuadrupoles(NULL), labFrameDipoles(NULL), labFrameQuadrupoles(NULL), sphericalDipoles(NULL), sphericalQuadrupoles(NULL),
         fracDipoles(NULL), fracQuadrupoles(NULL), field(NULL), fieldPolar(NULL), inducedField(NULL), inducedFieldPolar(NULL), torque(NULL), dampingAndThole(NULL), inducedDipole(NULL),
         diisCoefficients(NULL), inducedDipolePolar(NULL), inducedDipoleErrors(NULL), prevDipoles(NULL), prevDipolesPolar(NULL), prevDipolesGk(NULL),
@@ -933,6 +933,8 @@ CudaCalcAmoebaMultipoleForceKernel::~CudaCalcAmoebaMultipoleForceKernel() {
         delete sort;
     if (hasInitializedFFT)
         cufftDestroy(fft);
+    if (hasCreatedEvent)
+        cuEventDestroy(syncEvent);
 }
 
 void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const AmoebaMultipoleForce& force) {
@@ -1019,6 +1021,8 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         prevErrors = new CudaArray(cu, 3*numMultipoles*MaxPrevDIISDipoles, elementSize, "prevErrors");
         diisMatrix = new CudaArray(cu, MaxPrevDIISDipoles*MaxPrevDIISDipoles, elementSize, "diisMatrix");
         diisCoefficients = new CudaArray(cu, MaxPrevDIISDipoles+1, sizeof(float), "diisMatrix");
+        CHECK_RESULT(cuEventCreate(&syncEvent, CU_EVENT_DISABLE_TIMING), "Error creating event for AmoebaMultipoleForce");
+        hasCreatedEvent = true;
     }
     else if (polarizationType == AmoebaMultipoleForce::Extrapolated) {
         int numOrders = force.getExtrapolationCoefficients().size();
@@ -1210,6 +1214,7 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         updateInducedFieldKernel = cu.getKernel(module, "updateInducedFieldByDIIS");
         recordDIISDipolesKernel = cu.getKernel(module, "recordInducedDipolesForDIIS");
         buildMatrixKernel = cu.getKernel(module, "computeDIISMatrix");
+        solveMatrixKernel = cu.getKernel(module, "solveDIISMatrix");
         initExtrapolatedKernel = cu.getKernel(module, "initExtrapolatedDipoles");
         iterateExtrapolatedKernel = cu.getKernel(module, "iterateExtrapolatedDipoles");
         computeExtrapolatedKernel = cu.getKernel(module, "computeExtrapolatedDipoles");
@@ -1820,6 +1825,7 @@ bool CudaCalcAmoebaMultipoleForceKernel::iterateDipolesByDIIS(int iteration) {
     cu.executeKernel(recordDIISDipolesKernel, recordDIISDipolesArgs, cu.getNumThreadBlocks()*cu.ThreadBlockSize, cu.ThreadBlockSize, cu.ThreadBlockSize*elementSize*2);
     float2* errors = (float2*) cu.getPinnedBuffer();
     inducedDipoleErrors->download(errors, false);
+    cuEventRecord(syncEvent, cu.getCurrentStream());
     
     // Build the DIIS matrix.
     
@@ -1828,15 +1834,15 @@ bool CudaCalcAmoebaMultipoleForceKernel::iterateDipolesByDIIS(int iteration) {
     int threadBlocks = min(numPrev, cu.getNumThreadBlocks());
     int blockSize = 512;
     cu.executeKernel(buildMatrixKernel, buildMatrixArgs, threadBlocks*blockSize, blockSize, blockSize*elementSize);
-    vector<float> matrixf;
-    vector<double> matrix;
-    if (cu.getUseDoublePrecision())
-        diisMatrix->download(matrix);
-    else
-        diisMatrix->download(matrixf);
+    
+    // Solve the matrix.
+
+    void* solveMatrixArgs[] = {&iteration, &diisMatrix->getDevicePointer(), &diisCoefficients->getDevicePointer()};
+    cu.executeKernel(solveMatrixKernel, solveMatrixArgs, 32, 32);
     
     // Determine whether the iteration has converged.
     
+    cuEventSynchronize(syncEvent);
     double total1 = 0.0, total2 = 0.0;
     for (int j = 0; j < inducedDipoleErrors->getSize(); j++) {
         total1 += errors[j].x;
@@ -1844,42 +1850,6 @@ bool CudaCalcAmoebaMultipoleForceKernel::iterateDipolesByDIIS(int iteration) {
     }
     if (48.033324*sqrt(max(total1, total2)/cu.getNumAtoms()) < inducedEpsilon)
         return true;
-
-    // Compute the coefficients for selecting the new dipoles.
-
-    float* coefficients = (float*) cu.getPinnedBuffer();
-    if (iteration == 0)
-        coefficients[0] = 1;
-    else {
-        int rank = numPrev+1;
-        Array2D<double> b(rank, rank);
-        b[0][0] = 0;
-        for (int i = 1; i < rank; i++)
-            b[i][0] = b[0][i] = -1;
-        if (cu.getUseDoublePrecision()) {
-            for (int i = 0; i < numPrev; i++)
-                for (int j = 0; j < numPrev; j++)
-                    b[i+1][j+1] = matrix[i*MaxPrevDIISDipoles+j];
-        }
-        else {
-            for (int i = 0; i < numPrev; i++)
-                for (int j = 0; j < numPrev; j++)
-                    b[i+1][j+1] = matrixf[i*MaxPrevDIISDipoles+j];
-        }
-
-        // Solve using LU.
-
-        JAMA::LU<double> lu(b);
-        Array1D<double> x(rank, 0.0);
-        x[0] = -1.0;
-        Array1D<double> coeff = lu.solve(x);
-        coefficients[rank-1] = 1.0;
-        for (int i = 0; i < rank-1; i++) {
-            coefficients[i] = coeff[i+1];
-            coefficients[rank-1] -= coefficients[i];
-        }
-    }
-    diisCoefficients->upload(coefficients, false);
     
     // Compute the dipoles.
     

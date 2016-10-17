@@ -408,7 +408,7 @@ private:
     int fixedFieldThreads, inducedFieldThreads, electrostaticsThreads;
     int gridSizeX, gridSizeY, gridSizeZ;
     double alpha, inducedEpsilon;
-    bool usePME, hasQuadrupoles, hasInitializedScaleFactors, hasInitializedFFT, multipolesAreValid;
+    bool usePME, hasQuadrupoles, hasInitializedScaleFactors, hasInitializedFFT, multipolesAreValid, hasCreatedEvent;
     AmoebaMultipoleForce::PolarizationType polarizationType;
     CudaContext& cu;
     const System& system;
@@ -471,9 +471,10 @@ private:
     CUfunction computeMomentsKernel, recordInducedDipolesKernel, computeFixedFieldKernel, computeInducedFieldKernel, updateInducedFieldKernel, electrostaticsKernel, mapTorqueKernel;
     CUfunction pmeSpreadFixedMultipolesKernel, pmeSpreadInducedDipolesKernel, pmeFinishSpreadChargeKernel, pmeConvolutionKernel;
     CUfunction pmeFixedPotentialKernel, pmeInducedPotentialKernel, pmeFixedForceKernel, pmeInducedForceKernel, pmeRecordInducedFieldDipolesKernel, computePotentialKernel;
-    CUfunction recordDIISDipolesKernel, buildMatrixKernel;
+    CUfunction recordDIISDipolesKernel, buildMatrixKernel, solveMatrixKernel;
     CUfunction initExtrapolatedKernel, iterateExtrapolatedKernel, computeExtrapolatedKernel, addExtrapolatedGradientKernel;
     CUfunction pmeTransformMultipolesKernel, pmeTransformPotentialKernel;
+    CUevent syncEvent;
     CudaCalcAmoebaGeneralizedKirkwoodForceKernel* gkKernel;
     static const int PmeOrder = 5;
     static const int MaxPrevDIISDipoles = 20;

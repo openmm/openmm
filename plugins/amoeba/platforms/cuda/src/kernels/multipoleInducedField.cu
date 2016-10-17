@@ -694,6 +694,117 @@ extern "C" __global__ void computeDIISMatrix(real* __restrict__ prevErrors, int 
     }
 }
 
+extern "C" __global__ void solveDIISMatrix(int iteration, const real* __restrict__ matrix, float* __restrict__ coefficients) {
+    __shared__ real b[MAX_PREV_DIIS_DIPOLES+1][MAX_PREV_DIIS_DIPOLES+1];
+    __shared__ real piv[MAX_PREV_DIIS_DIPOLES+1];
+    __shared__ real x[MAX_PREV_DIIS_DIPOLES+1];
+
+    // On the first iteration we don't need to do any calculation.
+    
+    if (iteration == 0) {
+        if (threadIdx.x == 0)
+            coefficients[0] = 1;
+        return;
+    }
+    
+    // Load the matrix.
+    
+    int numPrev = min(iteration+1, MAX_PREV_DIIS_DIPOLES);
+    int rank = numPrev+1;
+    for (int index = threadIdx.x; index < numPrev*numPrev; index += blockDim.x) {
+        int i = index/numPrev;
+        int j = index-i*numPrev;
+        b[i+1][j+1] = matrix[i*MAX_PREV_DIIS_DIPOLES+j];
+    }
+    for (int i = threadIdx.x; i < rank; i += blockDim.x) {
+        b[i][0] = -1;
+        piv[i] = i;
+    }
+    __syncthreads();
+    
+    // Compute the mean absolute value of the values we just loaded.  We use that for preconditioning it,
+    // which is essential for doing the computation in single precision.
+    
+    if (threadIdx.x == 0) {
+        real mean = 0;
+        for (int i = 0; i < numPrev; i++)
+            for (int j = 0; j < numPrev; j++)
+                mean += b[i+1][j+1];
+        mean /= numPrev*numPrev;
+        b[0][0] = 0;
+        for (int i = 1; i < rank; i++)
+            b[0][i] = -mean;
+
+        // Compute the LU decomposition of the matrix.  This code is adapted from JAMA.
+    
+        int pivsign = 1;
+        for (int j = 0; j < rank; j++) {
+            // Apply previous transformations.
+
+            for (int i = 0; i < rank; i++) {
+                // Most of the time is spent in the following dot product.
+
+                int kmax = min(i, j);
+                real s = 0;
+                for (int k = 0; k < kmax; k++)
+                    s += b[i][k] * b[k][j];
+                b[i][j] -= s;
+            }
+
+            // Find pivot and exchange if necessary.
+
+            int p = j;
+            for (int i = j+1; i < rank; i++)
+                if (abs(b[i][j]) > abs(b[p][j]))
+                    p = i;
+            if (p != j) {
+                int k = 0;
+                for (k = 0; k < rank; k++) {
+                    real t = b[p][k];
+                    b[p][k] = b[j][k];
+                    b[j][k] = t;
+                }
+                k = piv[p];
+                piv[p] = piv[j];
+                piv[j] = k;
+                pivsign = -pivsign;
+            }
+
+            // Compute multipliers.
+
+            if ((j < rank) && (b[j][j] != 0))
+                for (int i = j+1; i < rank; i++)
+                    b[i][j] /= b[j][j];
+        }
+
+        // Solve b*Y = X(piv)
+        
+        for (int i = 0; i < rank; i++) 
+            x[i] = (piv[i] == 0 ? -1 : 0);
+        for (int k = 0; k < rank; k++)
+            for (int i = k+1; i < rank; i++)
+                x[i] -= x[k] * b[i][k];
+
+        // Solve U*X = Y;
+        
+        for (int k = rank-1; k >= 0; k--) {
+            x[k] /= b[k][k];
+            for (int i = 0; i < k; i++)
+                x[i] -= x[k] * b[i][k];
+        }
+        
+        // Record the coefficients.
+        
+        real lastCoeff = 1;
+        for (int i = 0; i < rank-1; i++) {
+            real c = x[i+1]*mean;
+            coefficients[i] = c;
+            lastCoeff -= c;
+        }
+        coefficients[rank-1] = lastCoeff;
+    }
+}
+
 extern "C" __global__ void updateInducedFieldByDIIS(real* __restrict__ inducedDipole, real* __restrict__ inducedDipolePolar, 
         const real* __restrict__ prevDipoles, const real* __restrict__ prevDipolesPolar, const float* __restrict__ coefficients, int numPrev) {
     for (int index = blockIdx.x*blockDim.x + threadIdx.x; index < 3*NUM_ATOMS; index += blockDim.x*gridDim.x) {
