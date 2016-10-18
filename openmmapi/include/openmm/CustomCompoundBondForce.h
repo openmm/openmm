@@ -57,7 +57,7 @@ namespace OpenMM {
  * <li>distance(p1, p2): the distance between particles p1 and p2 (where "p1" and "p2" may be replaced by the names
  * of whichever particles you want to calculate the distance between).</li>
  * <li>angle(p1, p2, p3): the angle formed by the three specified particles.</li>
- * <li>dihedral(p1, p2, p3, p4): the dihedral angle formed by the four specified particles.</li>
+ * <li>dihedral(p1, p2, p3, p4): the dihedral angle formed by the four specified particles, guaranteed to be in the range [-pi,+pi].</li>
  * </ul>
  *
  * The expression also may involve tabulated functions, and may depend on arbitrary
@@ -87,7 +87,7 @@ namespace OpenMM {
  * force->addPerBondParameter("theta0");
  * force->addPerBondParameter("r0");
  * </pre></tt>
- * 
+ *
  * This class also has the ability to compute derivatives of the potential energy with respect to global parameters.
  * Call addEnergyParameterDerivative() to request that the derivative with respect to a particular parameter be
  * computed.  You can then query its value in a Context by calling getState() on it.
