@@ -37,6 +37,7 @@ __kernel void findBlockBounds(int numAtoms, real4 periodicBoxSize, real4 invPeri
 #endif
             center.w = max(center.w, delta.x*delta.x+delta.y*delta.y+delta.z*delta.z);
         }
+        center.w = sqrt(center.w);
         blockBoundingBox[index] = blockSize;
         blockCenter[index] = center;
         sortedBlocks[index] = (real2) (blockSize.x+blockSize.y+blockSize.z, index);
