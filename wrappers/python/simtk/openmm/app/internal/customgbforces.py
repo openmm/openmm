@@ -353,13 +353,13 @@ def _createEnergyTerms(force, solventDielectric, soluteDielectric, SA, cutoff, k
     if cutoff is not None:
         params += "; cutoff=%.16g" % cutoff
     if kappa > 0:
-        force.addEnergyTerm("-0.5*138.935485*(1/soluteDielectric-exp(-kappa*B)/solventDielectric)*q^2/B"+params,
+        force.addEnergyTerm("-0.5*138.935485*(1/soluteDielectric-exp(-kappa*B)/solventDielectric)*charge^2/B"+params,
                 CustomGBForce.SingleParticle)
     elif kappa < 0:
         # Do kappa check here to avoid repeating code everywhere
         raise ValueError('kappa/ionic strength must be >= 0')
     else:
-        force.addEnergyTerm("-0.5*138.935485*(1/soluteDielectric-1/solventDielectric)*q^2/B"+params,
+        force.addEnergyTerm("-0.5*138.935485*(1/soluteDielectric-1/solventDielectric)*charge^2/B"+params,
                 CustomGBForce.SingleParticle)
     if SA=='ACE':
         force.addEnergyTerm("28.3919551*(radius+0.14)^2*(radius/B)^6; radius=or+offset"+params, CustomGBForce.SingleParticle)
@@ -367,17 +367,17 @@ def _createEnergyTerms(force, solventDielectric, soluteDielectric, SA, cutoff, k
         raise ValueError('Unknown surface area method: '+SA)
     if cutoff is None:
         if kappa > 0:
-            force.addEnergyTerm("-138.935485*(1/soluteDielectric-exp(-kappa*f)/solventDielectric)*q1*q2/f;"
+            force.addEnergyTerm("-138.935485*(1/soluteDielectric-exp(-kappa*f)/solventDielectric)*charge1*charge2/f;"
                                 "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))"+params, CustomGBForce.ParticlePairNoExclusions)
         else:
-            force.addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*q1*q2/f;"
+            force.addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*charge1*charge2/f;"
                                 "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))"+params, CustomGBForce.ParticlePairNoExclusions)
     else:
         if kappa > 0:
-            force.addEnergyTerm("-138.935485*(1/soluteDielectric-exp(-kappa*f)/solventDielectric)*q1*q2*(1/f-"+str(1/cutoff)+");"
+            force.addEnergyTerm("-138.935485*(1/soluteDielectric-exp(-kappa*f)/solventDielectric)*charge1*charge2*(1/f-"+str(1/cutoff)+");"
                                 "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))"+params, CustomGBForce.ParticlePairNoExclusions)
         else:
-            force.addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*q1*q2*(1/f-"+str(1/cutoff)+");"
+            force.addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*charge1*charge2*(1/f-"+str(1/cutoff)+");"
                                 "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))"+params, CustomGBForce.ParticlePairNoExclusions)
 
 
@@ -476,7 +476,7 @@ class CustomAmberGBForceBase(CustomGBForce):
 class GBSAHCTForce(CustomAmberGBForceBase):
     """This class is equivalent to Amber ``igb=1``
 
-    The list of parameters to ``addParticle`` is: ``[q, or, sr]``.
+    The list of parameters to ``addParticle`` is: ``[charge, or, sr]``.
 
     Parameters
     ----------
@@ -499,7 +499,7 @@ class GBSAHCTForce(CustomAmberGBForceBase):
                  cutoff=None, kappa=0.0):
         CustomAmberGBForceBase.__init__(self)
 
-        self.addPerParticleParameter("q")
+        self.addPerParticleParameter("charge")
         self.addPerParticleParameter("or") # Offset radius
         self.addPerParticleParameter("sr") # Scaled offset radius
         self.addComputedValue("I", "step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r);"
@@ -537,7 +537,7 @@ class GBSAHCTForce(CustomAmberGBForceBase):
 class GBSAOBC1Force(CustomAmberGBForceBase):
     """This class is equivalent to Amber ``igb=2``
 
-    The list of parameters to ``addParticle`` is: ``[q, or, sr]``.
+    The list of parameters to ``addParticle`` is: ``[charge, or, sr]``.
 
     Parameters
     ----------
@@ -561,7 +561,7 @@ class GBSAOBC1Force(CustomAmberGBForceBase):
 
         CustomAmberGBForceBase.__init__(self)
 
-        self.addPerParticleParameter("q")
+        self.addPerParticleParameter("charge")
         self.addPerParticleParameter("or") # Offset radius
         self.addPerParticleParameter("sr") # Scaled offset radius
         self.addComputedValue("I",  "step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r);"
@@ -599,7 +599,7 @@ class GBSAOBC1Force(CustomAmberGBForceBase):
 class GBSAOBC2Force(GBSAOBC1Force):
     """This class is equivalent to Amber ``igb=5``
 
-    The list of parameters to ``addParticle`` is: ``[q, or, sr]``.
+    The list of parameters to ``addParticle`` is: ``[charge, or, sr]``.
 
     Parameters
     ----------
@@ -625,7 +625,7 @@ class GBSAOBC2Force(GBSAOBC1Force):
         # is different. We inherit for getStandardParameters.
         CustomAmberGBForceBase.__init__(self)
 
-        self.addPerParticleParameter("q")
+        self.addPerParticleParameter("charge")
         self.addPerParticleParameter("or") # Offset radius
         self.addPerParticleParameter("sr") # Scaled offset radius
         self.addComputedValue("I",  "step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r);"
@@ -641,7 +641,7 @@ class GBSAOBC2Force(GBSAOBC1Force):
 class GBSAGBnForce(CustomAmberGBForceBase):
     """This class is equivalent to Amber ``igb=7``
 
-    The list of parameters to ``addParticle`` is: ``[q, or, sr]``.
+    The list of parameters to ``addParticle`` is: ``[charge, or, sr]``.
 
     Parameters
     ----------
@@ -746,7 +746,7 @@ class GBSAGBnForce(CustomAmberGBForceBase):
             CustomGBForce.addParticle(self, p + [radIndex])
 
     def _addEnergyTerms(self):
-        self.addPerParticleParameter("q")
+        self.addPerParticleParameter("charge")
         self.addPerParticleParameter("or") # Offset radius
         self.addPerParticleParameter("sr") # Scaled offset radius
         self.addPerParticleParameter("radindex")
@@ -834,7 +834,7 @@ class GBSAGBn2Force(GBSAGBnForce):
         return radii
 
     def _addEnergyTerms(self):
-        self.addPerParticleParameter("q")
+        self.addPerParticleParameter("charge")
         self.addPerParticleParameter("or") # Offset radius
         self.addPerParticleParameter("sr") # Scaled offset radius
         self.addPerParticleParameter("alpha")
