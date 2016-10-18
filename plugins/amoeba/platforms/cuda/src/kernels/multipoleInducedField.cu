@@ -729,7 +729,7 @@ extern "C" __global__ void solveDIISMatrix(int iteration, const real* __restrict
         real mean = 0;
         for (int i = 0; i < numPrev; i++)
             for (int j = 0; j < numPrev; j++)
-                mean += b[i+1][j+1];
+                mean += fabs(b[i+1][j+1]);
         mean /= numPrev*numPrev;
         b[0][0] = 0;
         for (int i = 1; i < rank; i++)
