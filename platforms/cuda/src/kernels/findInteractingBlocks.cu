@@ -37,6 +37,7 @@ extern "C" __global__ void findBlockBounds(int numAtoms, real4 periodicBoxSize, 
 #endif
             center.w = max(center.w, delta.x*delta.x+delta.y*delta.y+delta.z*delta.z);
         }
+        center.w = sqrt(center.w);
         blockBoundingBox[index] = blockSize;
         blockCenter[index] = center;
         sortedBlocks[index] = make_real2(blockSize.x+blockSize.y+blockSize.z, index);
