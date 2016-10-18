@@ -52,6 +52,7 @@ namespace OpenMM {
  * part of the system definition, while values of global parameters may be modified during a simulation by calling Context::setParameter().
  * Finally, call addTorsion() once for each torsion.  After an torsion has been added, you can modify its parameters by calling setTorsionParameters().
  * This will have no effect on Contexts that already exist unless you call updateParametersInContext().
+ * theta is guaranteed to be in the range [-pi,+pi]
  *
  * As an example, the following code creates a CustomTorsionForce that implements a harmonic potential:
  *
@@ -69,9 +70,8 @@ namespace OpenMM {
  * computed.  You can then query its value in a Context by calling getState() on it.
  *
  * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
- * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs, floor, ceil, step, delta, select.
- * All trigonometric functions are defined in radians, with the torsion `theta` guranteed to be in the range [-pi,+pi].
- * log is the natural logarithm. step(x) = 0 if x is less than 0, 1 otherwise.  delta(x) = 1 if x is 0, 0 otherwise.
+ * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs, floor, ceil, step, delta, select.  All trigonometric functions
+ * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  delta(x) = 1 if x is 0, 0 otherwise.
  * select(x,y,z) = z if x = 0, y otherwise.
  */
 
