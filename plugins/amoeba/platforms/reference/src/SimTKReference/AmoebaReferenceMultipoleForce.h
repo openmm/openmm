@@ -900,8 +900,8 @@ protected:
      * @param  axisType             axis type
      */
     void applyRotationMatrixToParticle(      MultipoleParticleData& particleI,
-                                       const MultipoleParticleData& particleZ,
-                                       const MultipoleParticleData& particleX,
+                                       const MultipoleParticleData* particleZ,
+                                       const MultipoleParticleData* particleX,
                                              MultipoleParticleData* particleY, int axisType) const;
 
     /**
