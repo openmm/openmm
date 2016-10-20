@@ -397,8 +397,8 @@ void AmoebaReferenceMultipoleForce::checkChiral(vector<MultipoleParticleData>& p
 }
 
 void AmoebaReferenceMultipoleForce::applyRotationMatrixToParticle(      MultipoleParticleData& particleI,
-                                                                  const MultipoleParticleData& particleZ,
-                                                                  const MultipoleParticleData& particleX,
+                                                                  const MultipoleParticleData* particleZ,
+                                                                  const MultipoleParticleData* particleX,
                                                                         MultipoleParticleData* particleY,
                                                                         int axisType) const
 {
@@ -410,58 +410,58 @@ void AmoebaReferenceMultipoleForce::applyRotationMatrixToParticle(      Multipol
     // this atom and the axis atom
 
 
-    RealVec vectorY;
-    RealVec vectorZ = particleZ.position - particleI.position;
-    RealVec vectorX = particleX.position - particleI.position;
-
+    RealVec vectorX, vectorY;
+    RealVec vectorZ = particleZ->position - particleI.position;
     normalizeRealVec(vectorZ);
 
     // branch based on axis type
 
-    if (axisType == AmoebaMultipoleForce::Bisector) {
-
-        // bisector
-
-        // dx = dx1 + dx2 (in TINKER code)
-
-        normalizeRealVec(vectorX);
-        vectorZ      += vectorX;
-        normalizeRealVec(vectorZ);
-
-    } else if (axisType == AmoebaMultipoleForce::ZBisect) {
-
-        // z-bisect
-
-        // dx = dx1 + dx2 (in TINKER code)
-
-        normalizeRealVec(vectorX);
-
-        vectorY  = particleY->position - particleI.position;
-        normalizeRealVec(vectorY);
-
-        vectorX += vectorY;
-        normalizeRealVec(vectorX);
-
-    } else if (axisType == AmoebaMultipoleForce::ThreeFold) {
-
-        // 3-fold
-
-        // dx = dx1 + dx2 + dx3 (in TINKER code)
-
-        normalizeRealVec(vectorX);
-
-        vectorY   = particleY->position - particleI.position;
-        normalizeRealVec(vectorY);
-
-        vectorZ  += vectorX +  vectorY;
-        normalizeRealVec(vectorZ);
-
-    } else if (axisType == AmoebaMultipoleForce::ZOnly) {
+    if (axisType == AmoebaMultipoleForce::ZOnly) {
 
         // z-only
 
         vectorX = RealVec(0.1, 0.1, 0.1);
+    }
+    else {
+        vectorX = particleX->position - particleI.position;
+        if (axisType == AmoebaMultipoleForce::Bisector) {
 
+            // bisector
+
+            // dx = dx1 + dx2 (in TINKER code)
+
+            normalizeRealVec(vectorX);
+            vectorZ      += vectorX;
+            normalizeRealVec(vectorZ);
+        }
+        else if (axisType == AmoebaMultipoleForce::ZBisect) {
+
+            // z-bisect
+
+            // dx = dx1 + dx2 (in TINKER code)
+
+            normalizeRealVec(vectorX);
+
+            vectorY  = particleY->position - particleI.position;
+            normalizeRealVec(vectorY);
+
+            vectorX += vectorY;
+            normalizeRealVec(vectorX);
+        }
+        else if (axisType == AmoebaMultipoleForce::ThreeFold) {
+
+            // 3-fold
+
+            // dx = dx1 + dx2 + dx3 (in TINKER code)
+
+            normalizeRealVec(vectorX);
+
+            vectorY   = particleY->position - particleI.position;
+            normalizeRealVec(vectorY);
+
+            vectorZ  += vectorX +  vectorY;
+            normalizeRealVec(vectorZ);
+        }
     }
 
     RealOpenMM dot      = vectorZ.dot(vectorX);
@@ -652,9 +652,10 @@ void AmoebaReferenceMultipoleForce::applyRotationMatrix(vector<MultipoleParticle
 {
 
     for (unsigned int ii = 0; ii < _numParticles; ii++) {
-        if (multipoleAtomZs[ii] >= 0 && multipoleAtomXs[ii] >= 0) {
-            applyRotationMatrixToParticle(particleData[ii], particleData[multipoleAtomZs[ii]], particleData[multipoleAtomXs[ii]],
-                                           multipoleAtomYs[ii] > -1 ? &particleData[multipoleAtomYs[ii]] : NULL, axisTypes[ii]);
+        if (multipoleAtomZs[ii] >= 0) {
+            applyRotationMatrixToParticle(particleData[ii], &particleData[multipoleAtomZs[ii]],
+                                          multipoleAtomXs[ii] > -1 ? &particleData[multipoleAtomXs[ii]] : NULL,
+                                          multipoleAtomYs[ii] > -1 ? &particleData[multipoleAtomYs[ii]] : NULL, axisTypes[ii]);
         }
     }
 }

@@ -4907,7 +4907,7 @@ class AmoebaMultipoleGenerator(object):
                         bondedAtomZ = data.atoms[bondedAtomZIndex]
 
                         if (kx == 0 and kz == bondedAtomZType):
-                            kz = bondedAtomZIndex
+                            zaxis = bondedAtomZIndex
                             savedMultipoleDict = multipoleDict
                             hit = 5
 
