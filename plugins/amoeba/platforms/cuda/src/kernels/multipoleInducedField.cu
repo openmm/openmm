@@ -776,6 +776,15 @@ extern "C" __global__ void solveDIISMatrix(int iteration, const real* __restrict
                 for (int i = j+1; i < rank; i++)
                     b[i][j] /= b[j][j];
         }
+        for (int i = 0; i < rank; i++)
+            if (b[i][i] == 0) {
+                // The matrix is singular.
+                
+                for (int j = 0; j < rank-1; j++)
+                    coefficients[j] = 0;
+                coefficients[rank-1] = 1;
+                return;
+            }
 
         // Solve b*Y = X(piv)
         
