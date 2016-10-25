@@ -63,4 +63,5 @@ std::vector<std::string> PeriodicTorsionForceImpl::getKernelNames() {
 
 void PeriodicTorsionForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcPeriodicTorsionForceKernel>().copyParametersToContext(context, owner);
+    context.systemChanged();
 }

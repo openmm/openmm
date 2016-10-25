@@ -113,4 +113,5 @@ vector<pair<int, int> > CustomBondForceImpl::getBondedParticles() const {
 
 void CustomBondForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcCustomBondForceKernel>().copyParametersToContext(context, owner);
+    context.systemChanged();
 }

@@ -460,3 +460,7 @@ void ContextImpl::loadCheckpoint(istream& stream) {
     updateStateDataKernel.getAs<UpdateStateDataKernel>().loadCheckpoint(*this, stream);
     hasSetPositions = true;
 }
+
+void ContextImpl::systemChanged() {
+    integrator.stateChanged(State::Energy);
+}

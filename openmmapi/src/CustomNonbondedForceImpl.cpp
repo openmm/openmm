@@ -155,6 +155,7 @@ map<string, double> CustomNonbondedForceImpl::getDefaultParameters() {
 
 void CustomNonbondedForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcCustomNonbondedForceKernel>().copyParametersToContext(context, owner);
+    context.systemChanged();
 }
 
 void CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedForce& force, const Context& context, double& coefficient, vector<double>& derivatives) {

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2015 Stanford University and the Authors.           *
+ * Portions copyright (c) 2015-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -118,6 +118,11 @@ vector<string> CompoundIntegrator::getKernelNames() {
         kernels.insert(kernels.end(), integratorKernels.begin(), integratorKernels.end());
     }
     return kernels;
+}
+
+void CompoundIntegrator::stateChanged(State::DataType changed) {
+    for (int i = 0; i < integrators.size(); i++)
+        integrators[i]->stateChanged(changed);
 }
 
 double CompoundIntegrator::computeKineticEnergy() {
