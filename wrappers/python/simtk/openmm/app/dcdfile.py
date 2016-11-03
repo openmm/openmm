@@ -122,7 +122,7 @@ class DCDFile(object):
         file.seek(8, os.SEEK_SET)
         file.write(struct.pack('<i', self._modelCount))
         file.seek(20, os.SEEK_SET)
-        file.write(struct.pack('<i', self._firstStep+self._modelCount*self._interval))
+        file.write(struct.pack('<i', (self._firstStep+self._modelCount*self._interval) % (2**32-1)))
 
         # Write the data.
 
