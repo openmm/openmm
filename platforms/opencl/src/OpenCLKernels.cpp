@@ -2331,7 +2331,7 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
     Lepton::ParsedExpression energyExpression = Lepton::Parser::parse(force.getEnergyFunction(), functions).optimize();
     Lepton::ParsedExpression forceExpression = energyExpression.differentiate("r").optimize();
     map<string, Lepton::ParsedExpression> forceExpressions;
-    forceExpressions["tempEnergy += "] = energyExpression;
+    forceExpressions["real customEnergy = "] = energyExpression;
     forceExpressions["tempForce -= "] = forceExpression;
 
     // Create the kernels.
