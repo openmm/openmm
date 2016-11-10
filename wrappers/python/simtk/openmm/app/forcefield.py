@@ -792,7 +792,7 @@ class ForceField(object):
                 raise ValueError('%s: No parameters defined for atom type %s' % (self.forceName, t))
 
 
-    def _getResidueTemplateMatches(self, res, bondedToAtom, templateSignatures=None):
+    def _getResidueTemplateMatches(self, res, bondedToAtom, templateSignatures=None, ignoreExternalBonds=False):
         """Return the residue template matches, or None if none are found.
 
         Parameters
@@ -819,14 +819,14 @@ class ForceField(object):
         if signature in templateSignatures:
             allMatches = []
             for t in templateSignatures[signature]:
-                match = _matchResidue(res, t, bondedToAtom)
+                match = _matchResidue(res, t, bondedToAtom, ignoreExternalBonds)
                 if match is not None:
                     allMatches.append((t, match))
             if len(allMatches) == 1:
                 template = allMatches[0][0]
                 matches = allMatches[0][1]
             elif len(allMatches) > 1:
-                raise Exception('Multiple matching templates found for residue %d (%s).' % (res.index+1, res.name))
+                raise Exception('Multiple matching templates found for residue %d (%s): %s.' % (res.index+1, res.name, ', '.join(match[0].name for match in allMatches)))
         return [template, matches]
 
     def _buildBondedToAtomList(self, topology):
@@ -881,7 +881,7 @@ class ForceField(object):
 
         return unmatched_residues
 
-    def getMatchingTemplates(self, topology):
+    def getMatchingTemplates(self, topology, ignoreExternalBonds=False):
         """Return a list of forcefield residue templates matching residues in the specified topology.
 
         .. CAUTION:: This method is experimental, and its API is subject to change.
@@ -890,7 +890,8 @@ class ForceField(object):
         ----------
         topology : Topology
             The Topology whose residues are to be checked against the forcefield residue templates.
-
+        ignoreExternalBonds : bool=False
+            If true, ignore external bonds when matching residues to templates.
         Returns
         -------
         templates : list of _TemplateData
@@ -904,7 +905,7 @@ class ForceField(object):
         templates = list() # list of templates matching the corresponding residues
         for res in topology.residues():
             # Attempt to match one of the existing templates.
-            [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom)
+            [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom, ignoreExternalBonds=ignoreExternalBonds)
             # Raise an exception if we have found no templates that match.
             if matches is None:
                 raise ValueError('No template found for residue %d (%s).  %s' % (res.index+1, res.name, _findMatchErrors(self, res)))
@@ -947,7 +948,7 @@ class ForceField(object):
             if signature in signatures:
                 # Signature is the same as an existing residue; check connectivity.
                 for check_residue in unique_unmatched_residues:
-                    matches = _matchResidue(check_residue, template, bondedToAtom)
+                    matches = _matchResidue(check_residue, template, bondedToAtom, False)
                     if matches is not None:
                         is_unique = False
             if is_unique:
@@ -959,7 +960,8 @@ class ForceField(object):
         return [templates, unique_unmatched_residues]
 
     def createSystem(self, topology, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
-                     constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, residueTemplates=dict(), **args):
+                     constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, residueTemplates=dict(),
+                     ignoreExternalBonds=False, **args):
         """Construct an OpenMM System representing a Topology with this force field.
 
         Parameters
@@ -984,16 +986,21 @@ class ForceField(object):
             added to a hydrogen is subtracted from the heavy atom to keep
             their total mass the same.
         residueTemplates : dict=dict()
-           Key: Topology Residue object
-           Value: string, name of _TemplateData residue template object to use for
-                  (Key) residue
-           This allows user to specify which template to apply to particular Residues
-           in the event that multiple matching templates are available (e.g Fe2+ and Fe3+
-           templates in the ForceField for a monoatomic iron ion in the topology).
+            Key: Topology Residue object
+            Value: string, name of _TemplateData residue template object to use for (Key) residue.
+            This allows user to specify which template to apply to particular Residues
+            in the event that multiple matching templates are available (e.g Fe2+ and Fe3+
+            templates in the ForceField for a monoatomic iron ion in the topology).
+        ignoreExternalBonds : boolean=False
+            If true, ignore external bonds when matching residues to templates.  This is
+            useful when the Topology represents one piece of a larger molecule, so chains are
+            not terminated properly.  This option can create ambiguities where multiple
+            templates match the same residue.  If that happens, use the residueTemplates
+            argument to specify which one to use.
         args
-             Arbitrary additional keyword arguments may also be specified.
-             This allows extra parameters to be specified that are specific to
-             particular force fields.
+            Arbitrary additional keyword arguments may also be specified.
+            This allows extra parameters to be specified that are specific to
+            particular force fields.
 
         Returns
         -------
@@ -1031,12 +1038,12 @@ class ForceField(object):
                 if res in residueTemplates:
                     tname = residueTemplates[res]
                     template = self._templates[tname]
-                    matches = _matchResidue(res, template, bondedToAtom)
+                    matches = _matchResidue(res, template, bondedToAtom, ignoreExternalBonds)
                     if matches is None:
                         raise Exception('User-supplied template %s does not match the residue %d (%s)' % (tname, res.index+1, res.name))
                 else:
                     # Attempt to match one of the existing templates.
-                    [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom)
+                    [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom, ignoreExternalBonds=ignoreExternalBonds)
                 if matches is None:
                     unmatchedResidues.append(res)
                 else:
@@ -1045,20 +1052,20 @@ class ForceField(object):
         # Try to apply patches to find matches for any unmatched residues.
         
         if len(unmatchedResidues) > 0:
-            unmatchedResidues = _applyPatchesToMatchResidues(self, data, unmatchedResidues, bondedToAtom)
+            unmatchedResidues = _applyPatchesToMatchResidues(self, data, unmatchedResidues, bondedToAtom, ignoreExternalBonds)
         
         # If we still haven't found a match for a residue, attempt to use residue template generators to create
         # new templates (and potentially atom types/parameters).
 
         for res in unmatchedResidues:
             # A template might have been generated on an earlier iteration of this loop.
-            [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom)
+            [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom, ignoreExternalBonds=ignoreExternalBonds)
             if matches is None:
                 # Try all generators.
                 for generator in self._templateGenerators:
                     if generator(self, res):
                         # This generator has registered a new residue template that should match.
-                        [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom)
+                        [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom, ignoreExternalBonds=ignoreExternalBonds)
                         if matches is None:
                             # Something went wrong because the generated template does not match the residue signature.
                             raise Exception('The residue handler %s indicated it had correctly parameterized residue %s, but the generated template did not match the residue signature.' % (generator.__class__.__name__, str(res)))
@@ -1287,7 +1294,7 @@ def _createResidueSignature(elements):
         s += element.symbol+str(count)
     return s
 
-def _matchResidue(res, template, bondedToAtom):
+def _matchResidue(res, template, bondedToAtom, ignoreExternalBonds):
     """Determine whether a residue matches a template and return a list of corresponding atoms.
 
     Parameters
@@ -1298,6 +1305,8 @@ def _matchResidue(res, template, bondedToAtom):
         The template to compare it to
     bondedToAtom : list
         Enumerates which other atoms each atom is bonded to
+    ignoreExternalBonds : bool
+        If true, ignore external bonds when matching templates
 
     Returns
     -------
@@ -1320,7 +1329,7 @@ def _matchResidue(res, template, bondedToAtom):
     for atom in atoms:
         bonds = [renumberAtoms[x] for x in bondedToAtom[atom.index] if x in renumberAtoms]
         bondedTo.append(bonds)
-        externalBonds.append(len([x for x in bondedToAtom[atom.index] if x not in renumberAtoms]))
+        externalBonds.append(0 if ignoreExternalBonds else len([x for x in bondedToAtom[atom.index] if x not in renumberAtoms]))
 
     # For each unique combination of element and number of bonds, make sure the residue and
     # template have the same number of atoms.
@@ -1333,7 +1342,7 @@ def _matchResidue(res, template, bondedToAtom):
         residueTypeCount[key] += 1
     templateTypeCount = {}
     for i, atom in enumerate(template.atoms):
-        key = (atom.element, len(atom.bondedTo), atom.externalBonds)
+        key = (atom.element, len(atom.bondedTo), 0 if ignoreExternalBonds else atom.externalBonds)
         if key not in templateTypeCount:
             templateTypeCount[key] = 1
         templateTypeCount[key] += 1
@@ -1349,7 +1358,7 @@ def _matchResidue(res, template, bondedToAtom):
                 continue
             if len(atom.bondedTo) != len(bondedTo[i]):
                 continue
-            if atom.externalBonds != externalBonds[i]:
+            if not ignoreExternalBonds and atom.externalBonds != externalBonds[i]:
                 continue
             candidates[i].append(j)
 
@@ -1423,7 +1432,7 @@ def _findAtomMatches(template, bondedTo, matches, hasMatch, candidates, position
     return False
 
 
-def _applyPatchesToMatchResidues(forcefield, data, residues, bondedToAtom):
+def _applyPatchesToMatchResidues(forcefield, data, residues, bondedToAtom, ignoreExternalBonds):
     """Try to apply patches to find matches for residues."""
     # Start by creating all templates than can be created by applying a combination of one-residue patches
     # to a single template.  The number of these is usually not too large, and they often cover a large fraction
@@ -1449,7 +1458,7 @@ def _applyPatchesToMatchResidues(forcefield, data, residues, bondedToAtom):
     
     unmatchedResidues = []
     for res in residues:
-        [template, matches] = forcefield._getResidueTemplateMatches(res, bondedToAtom, patchedTemplateSignatures)
+        [template, matches] = forcefield._getResidueTemplateMatches(res, bondedToAtom, patchedTemplateSignatures, ignoreExternalBonds)
         if matches is None:
             unmatchedResidues.append(res)
         else:
@@ -1501,7 +1510,7 @@ def _applyPatchesToMatchResidues(forcefield, data, residues, bondedToAtom):
         for patchName in patches:
             patch = forcefield._patches[patchName]
             if patch.numResidues == clusterSize:
-                matchedClusters = _matchToMultiResiduePatchedTemplates(data, clusters, patch, patches[patchName], bondedToAtom)
+                matchedClusters = _matchToMultiResiduePatchedTemplates(data, clusters, patch, patches[patchName], bondedToAtom, ignoreExternalBonds)
                 for cluster in matchedClusters:
                     for residue in cluster:
                         unmatchedResidues.remove(residue)
@@ -1545,21 +1554,21 @@ def _generatePatchedSingleResidueTemplates(template, patches, index, newTemplate
             _generatePatchedSingleResidueTemplates(patchedTemplate, patches, index+1, newTemplates)
 
 
-def _matchToMultiResiduePatchedTemplates(data, clusters, patch, residueTemplates, bondedToAtom):
+def _matchToMultiResiduePatchedTemplates(data, clusters, patch, residueTemplates, bondedToAtom, ignoreExternalBonds):
     """Apply a multi-residue patch to templates, then try to match them against clusters of residues."""
     matchedClusters = []
     selectedTemplates = [None]*patch.numResidues
-    _applyMultiResiduePatch(data, clusters, patch, residueTemplates, selectedTemplates, 0, matchedClusters, bondedToAtom)
+    _applyMultiResiduePatch(data, clusters, patch, residueTemplates, selectedTemplates, 0, matchedClusters, bondedToAtom, ignoreExternalBonds)
     return matchedClusters
 
 
-def _applyMultiResiduePatch(data, clusters, patch, candidateTemplates, selectedTemplates, index, matchedClusters, bondedToAtom):
+def _applyMultiResiduePatch(data, clusters, patch, candidateTemplates, selectedTemplates, index, matchedClusters, bondedToAtom, ignoreExternalBonds):
     """This is called recursively to apply a multi-residue patch to all possible combinations of templates."""
 
     if index < patch.numResidues:
         for template in candidateTemplates[index]:
             selectedTemplates[index] = template
-            _applyMultiResiduePatch(data, clusters, patch, candidateTemplates, selectedTemplates, index+1, matchedClusters, bondedToAtom)
+            _applyMultiResiduePatch(data, clusters, patch, candidateTemplates, selectedTemplates, index+1, matchedClusters, bondedToAtom, ignoreExternalBonds)
     else:
         # We're at the deepest level of the recursion.  We've selected a template for each residue, so apply the patch,
         # then try to match it against clusters.
@@ -1576,7 +1585,7 @@ def _applyMultiResiduePatch(data, clusters, patch, candidateTemplates, selectedT
             for residues in itertools.permutations(cluster):
                 residueMatches = []
                 for residue, template in zip(residues, patchedTemplates):
-                    matches = _matchResidue(residue, template, bondedToAtom)
+                    matches = _matchResidue(residue, template, bondedToAtom, ignoreExternalBonds)
                     if matches is None:
                         residueMatches = None
                         break

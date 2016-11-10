@@ -1006,7 +1006,7 @@ class Modeller(object):
                 signature = _createResidueSignature([atom.element for atom in residue.atoms()])
                 if signature in forcefield._templateSignatures:
                     for t in forcefield._templateSignatures[signature]:
-                        if _matchResidue(residue, t, bondedToAtom) is not None:
+                        if _matchResidue(residue, t, bondedToAtom, False) is not None:
                             matchFound = True
                 if matchFound:
                     # Just copy the residue over.
@@ -1025,7 +1025,7 @@ class Modeller(object):
                     if signature in forcefield._templateSignatures:
                         for t in forcefield._templateSignatures[signature]:
                             if t in templatesNoEP:
-                                matches = _matchResidue(residueNoEP, templatesNoEP[t], bondedToAtomNoEP)
+                                matches = _matchResidue(residueNoEP, templatesNoEP[t], bondedToAtomNoEP, False)
                                 if matches is not None:
                                     template = t;
                                     # Record the corresponding atoms.

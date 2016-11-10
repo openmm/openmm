@@ -748,6 +748,19 @@ class TestForceField(unittest.TestCase):
         expected = 0.3*ljEnergy(2.5, 1.1, 3)  + 0.3*ljEnergy(3.5, sqrt(0.1), 3) + ljEnergy(3.5, 1.5, 4)
         self.assertAlmostEqual(expected, context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilojoules_per_mole))
 
+    def test_IgnoreExternalBonds(self):
+        """Test the ignoreExternalBonds option"""
+
+        modeller = Modeller(self.pdb2.topology, self.pdb2.positions)
+        modeller.delete([next(modeller.topology.residues())])
+        self.assertRaises(Exception, lambda: self.forcefield2.createSystem(modeller.topology))
+        system = self.forcefield2.createSystem(modeller.topology, ignoreExternalBonds=True)
+        templates = self.forcefield2.getMatchingTemplates(modeller.topology, ignoreExternalBonds=True)
+        self.assertEqual(2, len(templates))
+        self.assertEqual('ALA', templates[0].name)
+        self.assertEqual('NME', templates[1].name)
+
+
 class AmoebaTestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method with the AMOEBA forcefield."""
 
