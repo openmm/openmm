@@ -45,6 +45,7 @@ import simtk.openmm as mm
 import simtk.unit as unit
 from . import element as elem
 from simtk.openmm.app import Topology
+from simtk.openmm.app.internal.singleton import Singleton
 
 def _convertParameterToNumber(param):
     if unit.is_quantity(param):
@@ -89,44 +90,44 @@ def _createFunctions(force, functions):
 
 # Enumerated values for nonbonded method
 
-class NoCutoff(object):
+class NoCutoff(Singleton):
     def __repr__(self):
         return 'NoCutoff'
 NoCutoff = NoCutoff()
 
-class CutoffNonPeriodic(object):
+class CutoffNonPeriodic(Singleton):
     def __repr__(self):
         return 'CutoffNonPeriodic'
 CutoffNonPeriodic = CutoffNonPeriodic()
 
-class CutoffPeriodic(object):
+class CutoffPeriodic(Singleton):
     def __repr__(self):
         return 'CutoffPeriodic'
 CutoffPeriodic = CutoffPeriodic()
 
-class Ewald(object):
+class Ewald(Singleton):
     def __repr__(self):
         return 'Ewald'
 Ewald = Ewald()
 
-class PME(object):
+class PME(Singleton):
     def __repr__(self):
         return 'PME'
 PME = PME()
 
 # Enumerated values for constraint type
 
-class HBonds(object):
+class HBonds(Singleton):
     def __repr__(self):
         return 'HBonds'
 HBonds = HBonds()
 
-class AllBonds(object):
+class AllBonds(Singleton):
     def __repr__(self):
         return 'AllBonds'
 AllBonds = AllBonds()
 
-class HAngles(object):
+class HAngles(Singleton):
     def __repr__(self):
         return 'HAngles'
 HAngles = HAngles()
@@ -361,7 +362,7 @@ class ForceField(object):
         """Register a new residue template."""
         if template.name in self._templates:
             # There is already a template with this name, so check the override levels.
-            
+
             existingTemplate = self._templates[template.name]
             if template.overrideLevel < existingTemplate.overrideLevel:
                 # The existing one takes precedence, so just return.
@@ -373,9 +374,9 @@ class ForceField(object):
                 self._templateSignatures[existingSignature].remove(existingTemplate)
             else:
                 raise ValueError('Residue template %s with the same override level %d already exists.' % (template.name, template.overrideLevel))
-        
+
         # Register the template.
-        
+
         self._templates[template.name] = template
         signature = _createResidueSignature([atom.element for atom in template.atoms])
         if signature in self._templateSignatures:
@@ -386,7 +387,7 @@ class ForceField(object):
     def registerPatch(self, patch):
         """Register a new patch that can be applied to templates."""
         self._patches[patch.name] = patch
-    
+
     def registerTemplatePatch(self, residue, patch, patchResidueIndex):
         """Register that a particular patch can be used with a particular residue."""
         if residue not in self._templatePatches:
@@ -496,7 +497,7 @@ class ForceField(object):
             torsion.k.append(_convertParameterToNumber(attrib['k%d'%index]))
             index += 1
         return torsion
-        
+
     class _SystemData(object):
         """Inner class used to encapsulate data about the system being created."""
         def __init__(self):
@@ -522,7 +523,7 @@ class ForceField(object):
             else:
                 self.constraints[key] = distance
                 system.addConstraint(atom1, atom2, distance)
-        
+
         def recordMatchedAtomParameters(self, residue, template, matches):
             """Record parameters for atoms based on having matched a residue to a template."""
             matchAtoms = dict(zip(matches, residue.atoms()))
@@ -639,21 +640,21 @@ class ForceField(object):
             self.deletedBonds = []
             self.addedExternalBonds = []
             self.deletedExternalBonds = []
-        
+
         def createPatchedTemplates(self, templates):
             """Apply this patch to a set of templates, creating new modified ones."""
             if len(templates) != self.numResidues:
                 raise ValueError("Patch '%s' expected %d templates, received %d", (self.name, self.numResidues, len(templates)))
-            
+
             # Construct a new version of each template.
-            
+
             newTemplates = []
             for index, template in enumerate(templates):
                 newTemplate = ForceField._TemplateData("%s-%s" % (template.name, self.name))
                 newTemplates.append(newTemplate)
-                
+
                 # Build the list of atoms in it.
-                
+
                 for atom in template.atoms:
                     if not any(deleted.name == atom.name and deleted.residue == index for deleted in self.deletedAtoms):
                         newTemplate.atoms.append(ForceField._TemplateAtomData(atom.name, atom.type, atom.element, atom.parameters))
@@ -667,9 +668,9 @@ class ForceField(object):
                     if atom.name not in newAtomIndex:
                         raise ValueError("Patch '%s' modifies nonexistent atom '%s' in template '%s'" % (self.name, atom.name, template.name))
                     newTemplate.atoms[newAtomIndex[atom.name]] = ForceField._TemplateAtomData(atom.name, atom.type, atom.element, atom.parameters)
-                
+
                 # Copy over the virtual sites, translating the atom indices.
-                
+
                 indexMap = dict([(oldAtomIndex[name], newAtomIndex[name]) for name in newAtomIndex if name in oldAtomIndex])
                 for site in template.virtualSites:
                     if site.index in indexMap and all(i in indexMap for i in site.atoms):
@@ -677,9 +678,9 @@ class ForceField(object):
                         newSite.index = indexMap[site.index]
                         newSite.atoms = [indexMap[i] for i in site.atoms]
                         newTemplate.virtualSites.append(newSite)
-                
+
                 # Build the lists of bonds and external bonds.
-                
+
                 atomMap = dict([(template.atoms[i], indexMap[i]) for i in indexMap])
                 deletedBonds = [(atom1.name, atom2.name) for atom1, atom2 in self.deletedBonds if atom1.residue == index and atom2.residue == index]
                 for atom1, atom2 in template.bonds:
@@ -701,7 +702,7 @@ class ForceField(object):
                 for atom in self.addedExternalBonds:
                     newTemplate.addExternalBondByName(atom.name)
             return newTemplates
-            
+
     class _PatchAtomData(object):
         """Inner class used to encapsulate data about an atom in a patch definition."""
         def __init__(self, description):
@@ -1048,12 +1049,12 @@ class ForceField(object):
                     unmatchedResidues.append(res)
                 else:
                     data.recordMatchedAtomParameters(res, template, matches)
-        
+
         # Try to apply patches to find matches for any unmatched residues.
-        
+
         if len(unmatchedResidues) > 0:
             unmatchedResidues = _applyPatchesToMatchResidues(self, data, unmatchedResidues, bondedToAtom, ignoreExternalBonds)
-        
+
         # If we still haven't found a match for a residue, attempt to use residue template generators to create
         # new templates (and potentially atom types/parameters).
 
@@ -1348,9 +1349,9 @@ def _matchResidue(res, template, bondedToAtom, ignoreExternalBonds):
         templateTypeCount[key] += 1
     if residueTypeCount != templateTypeCount:
         return None
-        
+
     # Identify template atoms that could potentially be matches for each atom.
-    
+
     candidates = [[] for i in range(numAtoms)]
     for i in range(numAtoms):
         for j, atom in enumerate(template.atoms):
@@ -1364,7 +1365,7 @@ def _matchResidue(res, template, bondedToAtom, ignoreExternalBonds):
 
     # Find an optimal ordering for matching atoms.  This means 1) start with the one that has the fewest options,
     # and 2) follow with ones that are bonded to an already matched atom.
-    
+
     searchOrder = []
     atomsToOrder = set(range(numAtoms))
     efficientAtomSet = set()
@@ -1437,7 +1438,7 @@ def _applyPatchesToMatchResidues(forcefield, data, residues, bondedToAtom, ignor
     # Start by creating all templates than can be created by applying a combination of one-residue patches
     # to a single template.  The number of these is usually not too large, and they often cover a large fraction
     # of residues.
-    
+
     patchedTemplateSignatures = {}
     patchedTemplates = {}
     for name, template in forcefield._templates.items():
@@ -1453,9 +1454,9 @@ def _applyPatchesToMatchResidues(forcefield, data, residues, bondedToAtom, ignor
                         patchedTemplateSignatures[signature].append(patchedTemplate)
                     else:
                         patchedTemplateSignatures[signature] = [patchedTemplate]
-    
+
     # Now see if any of those templates matches any of the residues.
-    
+
     unmatchedResidues = []
     for res in residues:
         [template, matches] = forcefield._getResidueTemplateMatches(res, bondedToAtom, patchedTemplateSignatures, ignoreExternalBonds)
@@ -1465,11 +1466,11 @@ def _applyPatchesToMatchResidues(forcefield, data, residues, bondedToAtom, ignor
             data.recordMatchedAtomParameters(res, template, matches)
     if len(unmatchedResidues) == 0:
         return []
-    
+
     # We need to consider multi-residue patches.  This can easily lead to a combinatorial explosion, so we make a simplifying
     # assumption: that no residue is affected by more than one multi-residue patch (in addition to any number of single-residue
     # patches).  Record all multi-residue patches, and the templates they can be applied to.
-    
+
     patches = {}
     maxPatchSize = 0
     for patch in forcefield._patches.values():
@@ -1485,9 +1486,9 @@ def _applyPatchesToMatchResidues(forcefield, data, residues, bondedToAtom, ignor
                 patches[patchName][patchResidueIndex].append(forcefield._templates[templateName])
                 if templateName in patchedTemplates:
                     patches[patchName][patchResidueIndex] += patchedTemplates[templateName]
-    
+
     # Record which unmatched residues are bonded to each other.
-    
+
     bonds = set()
     topology = residues[0].chain.topology
     for atom1, atom2 in topology.bonds():
@@ -1498,15 +1499,15 @@ def _applyPatchesToMatchResidues(forcefield, data, residues, bondedToAtom, ignor
                 bond = tuple(sorted((res1, res2), key=lambda x: x.index))
                 if bond not in bonds:
                     bonds.add(bond)
-    
+
     # Identify clusters of unmatched residues that are all bonded to each other.  These are the ones we'll
     # try to apply multi-residue patches to.
-    
+
     clusterSize = 2
     clusters = bonds
     while clusterSize <= maxPatchSize:
         # Try to apply patches to clusters of this size.
-        
+
         for patchName in patches:
             patch = forcefield._patches[patchName]
             if patch.numResidues == clusterSize:
@@ -1517,7 +1518,7 @@ def _applyPatchesToMatchResidues(forcefield, data, residues, bondedToAtom, ignor
                 bonds = set(bond for bond in bonds if bond[0] in unmatchedResidues and bond[1] in unmatchedResidues)
 
         # Now extend the clusters to find ones of the next size up.
-        
+
         largerClusters = set()
         for cluster in clusters:
             for bond in bonds:
@@ -1545,9 +1546,9 @@ def _generatePatchedSingleResidueTemplates(template, patches, index, newTemplate
         # This probably means the patch is inconsistent with another one that has already been applied,
         # so just ignore it.
         patchedTemplate = None
-    
+
     # Call this function recursively to generate combinations of patches.
-    
+
     if index+1 < len(patches):
         _generatePatchedSingleResidueTemplates(template, patches, index+1, newTemplates)
         if patchedTemplate is not None:
@@ -1572,7 +1573,7 @@ def _applyMultiResiduePatch(data, clusters, patch, candidateTemplates, selectedT
     else:
         # We're at the deepest level of the recursion.  We've selected a template for each residue, so apply the patch,
         # then try to match it against clusters.
-        
+
         try:
             patchedTemplates = patch.createPatchedTemplates(selectedTemplates)
         except:
@@ -1593,18 +1594,18 @@ def _applyMultiResiduePatch(data, clusters, patch, candidateTemplates, selectedT
                         residueMatches.append(matches)
                 if residueMatches is not None:
                     # We successfully matched the template to the residues.  Record the parameters.
-                    
+
                     for i in range(patch.numResidues):
                         data.recordMatchedAtomParameters(residues[i], patchedTemplates[i], residueMatches[i])
                     newlyMatchedClusters.append(cluster)
                     break
-        
+
         # Record which clusters were successfully matched.
-        
+
         matchedClusters += newlyMatchedClusters
         for cluster in newlyMatchedClusters:
             clusters.remove(cluster)
-        
+
 
 def _findMatchErrors(forcefield, res):
     """Try to guess why a residue failed to match any template and return an error message."""
@@ -2282,7 +2283,7 @@ class LennardJonesGenerator(object):
             reverseMap[typeMap[typeValue]] = typeValue
 
         # Now everything is assigned. Create the A- and B-coefficient arrays
-        
+
         acoef = [0]*(numLjTypes*numLjTypes)
         bcoef = acoef[:]
         for m in range(numLjTypes):
@@ -2325,11 +2326,11 @@ class LennardJonesGenerator(object):
 
     def postprocessSystem(self, sys, data, args):
         # Create the exceptions.
-        
+
         bondIndices = _findBondsForExclusions(data, sys)
         if self.lj14scale == 1:
             # Just exclude the 1-2 and 1-3 interactions.
-            
+
             self.force.createExclusionsFromBonds(bondIndices, 2)
         else:
             forceCopy = deepcopy(self.force)
@@ -2337,7 +2338,7 @@ class LennardJonesGenerator(object):
             self.force.createExclusionsFromBonds(bondIndices, 3)
             if self.force.getNumExclusions() > forceCopy.getNumExclusions() and self.lj14scale != 0:
                 # We need to create a CustomBondForce and use it to implement the scaled 1-4 interactions.
-                
+
                 bonded = mm.CustomBondForce('%g*epsilon*((sigma/r)^12-(sigma/r)^6)' % (4*self.lj14scale))
                 bonded.addPerBondParameter('sigma')
                 bonded.addPerBondParameter('epsilon')
