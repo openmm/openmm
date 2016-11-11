@@ -32,35 +32,37 @@ from __future__ import absolute_import
 __author__ = "Peter Eastman"
 __version__ = "1.0"
 
+from collections import namedtuple
 import os
 import xml.etree.ElementTree as etree
 from simtk.openmm.vec3 import Vec3
+from simtk.openmm.app.internal.singleton import Singleton
 from simtk.unit import nanometers, sqrt, is_quantity
 from copy import deepcopy
 
 # Enumerated values for bond type
 
-class Single(object):
+class Single(Singleton):
     def __repr__(self):
         return 'Single'
 Single = Single()
 
-class Double(object):
+class Double(Singleton):
     def __repr__(self):
         return 'Double'
 Double = Double()
 
-class Triple(object):
+class Triple(Singleton):
     def __repr__(self):
         return 'Triple'
 Triple = Triple()
 
-class Aromatic(object):
+class Aromatic(Singleton):
     def __repr__(self):
         return 'Aromatic'
 Aromatic = Aromatic()
 
-class Amide(object):
+class Amide(Singleton):
     def __repr__(self):
         return 'Amide'
 Amide = Amide()
@@ -437,15 +439,15 @@ class Atom(object):
     def __repr__(self):
         return "<Atom %d (%s) of chain %d residue %d (%s)>" % (self.index, self.name, self.residue.chain.index, self.residue.index, self.residue.name)
 
-class Bond(tuple):
+class Bond(namedtuple('Bond', ['atom1', 'atom2'])):
     """A Bond object represents a bond between two Atoms within a Topology.
-    
+
     This class extends tuple, and may be interpreted as a 2 element tuple of Atom objects.
     It also has fields that can optionally be used to describe the bond order and type of bond."""
 
     def __new__(cls, atom1, atom2, type=None, order=None):
         """Create a new Bond.  You should call addBond() on the Topology instead of calling this directly."""
-        bond = tuple.__new__(cls, (atom1, atom2))
+        bond = super(Bond, cls).__new__(cls, atom1, atom2)
         bond.type = type
         bond.order = order
         return bond
