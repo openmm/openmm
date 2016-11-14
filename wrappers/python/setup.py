@@ -229,8 +229,8 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
 
 
 def main():
-    if sys.version_info < (2, 6):
-        reportError("OpenMM requires Python 2.6 or better.")
+    if sys.version_info < (2, 7):
+        reportError("OpenMM requires Python 2.7 or better.")
     if platform.system() == 'Darwin':
         macVersion = [int(x) for x in platform.mac_ver()[0].split('.')]
         if tuple(macVersion) < (10, 5):
