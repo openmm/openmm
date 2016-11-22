@@ -359,7 +359,7 @@ void AmoebaReferenceMultipoleForce::checkChiralCenterAtParticle(MultipoleParticl
                                                                 MultipoleParticleData& particleY) const
 {
 
-    if (axisType == AmoebaMultipoleForce::ZThenX || particleY.particleIndex == -1) {
+    if (axisType != AmoebaMultipoleForce::ZThenX || particleY.particleIndex == -1) {
         return;
     }
 
