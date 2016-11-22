@@ -141,7 +141,7 @@ extern "C" __global__ void computeLabFrameMoments(real4* __restrict__ posq, int4
             // Check the chirality and see whether it needs to be reversed
             
             bool reverse = false;
-            if (axisType != 0 && particles.x >= 0 && particles.y >=0 && particles.z >= 0) {
+            if (axisType == 0 && particles.x >= 0 && particles.y >=0 && particles.z >= 0) {
                 real4 posY = posq[particles.y];
                 real delta[4][3];
 
