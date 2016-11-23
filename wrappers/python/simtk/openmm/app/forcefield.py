@@ -1295,7 +1295,7 @@ def _createResidueSignature(elements):
         s += element.symbol+str(count)
     return s
 
-def _matchResidue(res, template, bondedToAtom, ignoreExternalBonds):
+def _matchResidue(res, template, bondedToAtom, ignoreExternalBonds=False):
     """Determine whether a residue matches a template and return a list of corresponding atoms.
 
     Parameters
