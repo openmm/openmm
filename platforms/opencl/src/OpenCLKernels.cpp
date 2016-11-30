@@ -7398,6 +7398,7 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
                 needsForces[step-1] = (needsForces[step] || needsForces[step-1]);
                 needsEnergy[step-1] = (needsEnergy[step] || needsEnergy[step-1]);
                 needsGlobals[step-1] = (needsGlobals[step] || needsGlobals[step-1]);
+                computeBothForceAndEnergy[step-1] = (computeBothForceAndEnergy[step] || computeBothForceAndEnergy[step-1]);
             }
         
         // Loop over all steps and create the kernels for them.
@@ -7568,7 +7569,7 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
         kineticEnergyKernel.setArg<cl::Buffer>(index++, sumBuffer->getDeviceBuffer());
         index += 2;
         kineticEnergyKernel.setArg<cl::Buffer>(index++, uniformRandoms->getDeviceBuffer());
-        if (cl.getUseDoublePrecision())
+        if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision())
             kineticEnergyKernel.setArg<cl_double>(index++, 0.0);
         else
             kineticEnergyKernel.setArg<cl_float>(index++, 0.0f);
@@ -7717,7 +7718,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
             kernels[step][0].setArg<cl_uint>(9, integration.prepareRandomNumbers(requiredGaussian[step]));
             kernels[step][0].setArg<cl::Buffer>(8, integration.getRandom().getDeviceBuffer());
             kernels[step][0].setArg<cl::Buffer>(10, uniformRandoms->getDeviceBuffer());
-            if (cl.getUseDoublePrecision())
+            if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision())
                 kernels[step][0].setArg<cl_double>(11, energy);
             else
                 kernels[step][0].setArg<cl_float>(11, (cl_float) energy);
@@ -7735,7 +7736,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
             kernels[step][0].setArg<cl_uint>(9, integration.prepareRandomNumbers(requiredGaussian[step]));
             kernels[step][0].setArg<cl::Buffer>(8, integration.getRandom().getDeviceBuffer());
             kernels[step][0].setArg<cl::Buffer>(10, uniformRandoms->getDeviceBuffer());
-            if (cl.getUseDoublePrecision())
+            if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision())
                 kernels[step][0].setArg<cl_double>(11, energy);
             else
                 kernels[step][0].setArg<cl_float>(11, (cl_float) energy);
