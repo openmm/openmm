@@ -514,7 +514,8 @@ void CudaNonbondedUtilities::createKernelsForGroups(int groups) {
         if (usePeriodic)
             defines["USE_PERIODIC"] = "1";
         defines["MAX_EXCLUSIONS"] = context.intToString(maxExclusions);
-        defines["MAX_BITS_FOR_PAIRS"] = (canUsePairList ? "2" : "0");
+        // Temporarily disable the pair list until we figure out why it's failing on some GPUs.
+        defines["MAX_BITS_FOR_PAIRS"] = "0";//(canUsePairList ? "2" : "0");
         CUmodule interactingBlocksProgram = context.createModule(CudaKernelSources::vectorOps+CudaKernelSources::findInteractingBlocks, defines);
         kernels.findBlockBoundsKernel = context.getKernel(interactingBlocksProgram, "findBlockBounds");
         kernels.sortBoxDataKernel = context.getKernel(interactingBlocksProgram, "sortBoxData");
