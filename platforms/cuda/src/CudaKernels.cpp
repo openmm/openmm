@@ -7109,6 +7109,7 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
                 needsForces[step-1] = (needsForces[step] || needsForces[step-1]);
                 needsEnergy[step-1] = (needsEnergy[step] || needsEnergy[step-1]);
                 needsGlobals[step-1] = (needsGlobals[step] || needsGlobals[step-1]);
+                computeBothForceAndEnergy[step-1] = (computeBothForceAndEnergy[step] || computeBothForceAndEnergy[step-1]);
             }
         
         // Loop over all steps and create the kernels for them.
@@ -7187,7 +7188,7 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
                 args1.push_back(NULL);
                 args1.push_back(NULL);
                 args1.push_back(NULL);
-                if (cu.getUseDoublePrecision())
+                if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision())
                     args1.push_back(&energy);
                 else
                     args1.push_back(&energyFloat);
@@ -7282,7 +7283,7 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
         kineticEnergyArgs.push_back(NULL);
         kineticEnergyArgs.push_back(NULL);
         kineticEnergyArgs.push_back(&uniformRandoms->getDevicePointer());
-        if (cu.getUseDoublePrecision())
+        if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision())
             kineticEnergyArgs.push_back(&energy);
         else
             kineticEnergyArgs.push_back(&energyFloat);
