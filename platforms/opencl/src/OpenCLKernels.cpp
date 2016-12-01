@@ -6733,11 +6733,10 @@ void OpenCLIntegrateLangevinStepKernel::execute(ContextImpl& context, const Lang
     if (temperature != prevTemp || friction != prevFriction || stepSize != prevStepSize) {
         // Calculate the integration parameters.
 
-        double tau = (friction == 0.0 ? 0.0 : 1.0/friction);
         double kT = BOLTZ*temperature;
-        double vscale = exp(-stepSize/tau);
-        double fscale = (1-vscale)*tau;
-        double noisescale = sqrt(2*kT/tau)*sqrt(0.5*(1-vscale*vscale)*tau);
+        double vscale = exp(-stepSize*friction);
+        double fscale = (friction == 0 ? stepSize : (1-vscale)/friction);
+        double noisescale = sqrt(kT*(1-vscale*vscale));
         if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {
             vector<cl_double> p(params->getSize());
             p[0] = vscale;
@@ -7015,13 +7014,13 @@ double OpenCLIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, 
     if (useDouble) {
         selectSizeKernel.setArg<cl_double>(0, maxStepSize);
         selectSizeKernel.setArg<cl_double>(1, integrator.getErrorTolerance());
-        selectSizeKernel.setArg<cl_double>(2, integrator.getFriction() == 0.0 ? 0.0 : 1.0/integrator.getFriction());
+        selectSizeKernel.setArg<cl_double>(2, integrator.getFriction());
         selectSizeKernel.setArg<cl_double>(3, BOLTZ*integrator.getTemperature());
     }
     else {
         selectSizeKernel.setArg<cl_float>(0, maxStepSizeFloat);
         selectSizeKernel.setArg<cl_float>(1, (cl_float) integrator.getErrorTolerance());
-        selectSizeKernel.setArg<cl_float>(2, (cl_float) (integrator.getFriction() == 0.0 ? 0.0 : 1.0/integrator.getFriction()));
+        selectSizeKernel.setArg<cl_float>(2, (cl_float) integrator.getFriction());
         selectSizeKernel.setArg<cl_float>(3, (cl_float) (BOLTZ*integrator.getTemperature()));
     }
     cl.executeKernel(selectSizeKernel, blockSize, blockSize);

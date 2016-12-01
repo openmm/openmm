@@ -1285,8 +1285,7 @@ void CpuIntegrateLangevinStepKernel::execute(ContextImpl& context, const Langevi
         
         if (dynamics)
             delete dynamics;
-        RealOpenMM tau = (friction == 0.0 ? 0.0 : 1.0/friction);
-        dynamics = new CpuLangevinDynamics(context.getSystem().getNumParticles(), stepSize, tau, temperature, data.threads, data.random);
+        dynamics = new CpuLangevinDynamics(context.getSystem().getNumParticles(), stepSize, friction, temperature, data.threads, data.random);
         dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
         prevTemp = temperature;
         prevFriction = friction;
