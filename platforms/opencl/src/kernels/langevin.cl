@@ -110,9 +110,9 @@ __kernel void selectLangevinStepSize(mixed maxStepSize, mixed errorTol, mixed fr
 
         // Recalculate the integration parameters.
 
-        mixed vscale = EXP(-newStepSize*friction);
+        mixed vscale = exp(-newStepSize*friction);
         mixed fscale = (friction == 0 ? newStepSize : (1-vscale)/friction);
-        mixed noisescale = SQRT(kT*(1-vscale*vscale));
+        mixed noisescale = sqrt(kT*(1-vscale*vscale));
         params[VelScale] = vscale;
         params[ForceScale] = fscale;
         params[NoiseScale] = noisescale;
