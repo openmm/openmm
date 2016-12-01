@@ -6497,11 +6497,10 @@ void CudaIntegrateLangevinStepKernel::execute(ContextImpl& context, const Langev
     if (temperature != prevTemp || friction != prevFriction || stepSize != prevStepSize) {
         // Calculate the integration parameters.
 
-        double tau = (friction == 0.0 ? 0.0 : 1.0/friction);
         double kT = BOLTZ*temperature;
-        double vscale = exp(-stepSize/tau);
-        double fscale = (1-vscale)*tau;
-        double noisescale = sqrt(2*kT/tau)*sqrt(0.5*(1-vscale*vscale)*tau);
+        double vscale = exp(-stepSize*friction);
+        double fscale = (friction == 0 ? stepSize : (1-vscale)/friction);
+        double noisescale = sqrt(kT*(1-vscale*vscale));
         if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
             vector<double> p(params->getSize());
             p[0] = vscale;
@@ -6719,14 +6718,14 @@ double CudaIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, co
     float maxStepSizeFloat = (float) maxStepSize;
     double tol = integrator.getErrorTolerance();
     float tolFloat = (float) tol;
-    double tau = integrator.getFriction() == 0.0 ? 0.0 : 1.0/integrator.getFriction();
-    float tauFloat = (float) tau;
+    double friction = integrator.getFriction();
+    float frictionFloat = (float) friction;
     double kT = BOLTZ*integrator.getTemperature();
     float kTFloat = (float) kT;
     bool useDouble = cu.getUseDoublePrecision() || cu.getUseMixedPrecision();
     void* argsSelect[] = {&numAtoms, &paddedNumAtoms, useDouble ? (void*) &maxStepSize : (void*) &maxStepSizeFloat,
             useDouble ? (void*) &tol : (void*) &tolFloat,
-            useDouble ? (void*) &tau : (void*) &tauFloat,
+            useDouble ? (void*) &friction : (void*) &frictionFloat,
             useDouble ? (void*) &kT : (void*) &kTFloat,
             &cu.getIntegrationUtilities().getStepSize().getDevicePointer(),
             &cu.getVelm().getDevicePointer(), &cu.getForce().getDevicePointer(), &params->getDevicePointer()};

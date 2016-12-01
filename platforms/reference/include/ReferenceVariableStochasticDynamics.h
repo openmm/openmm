@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2012 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2016 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -35,7 +35,7 @@ class ReferenceVariableStochasticDynamics : public ReferenceDynamics {
 
       std::vector<OpenMM::RealVec> xPrime;
       std::vector<RealOpenMM> inverseMasses;
-      RealOpenMM _tau, _accuracy;
+      RealOpenMM friction, _accuracy;
 
    public:
 
@@ -44,13 +44,13 @@ class ReferenceVariableStochasticDynamics : public ReferenceDynamics {
          Constructor
 
          @param numberOfAtoms  number of atoms
-         @param tau            viscosity
+         @param friction       friction coefficient
          @param temperature    temperature
          @param accuracy       required accuracy
 
          --------------------------------------------------------------------------------------- */
 
-       ReferenceVariableStochasticDynamics(int numberOfAtoms, RealOpenMM tau, RealOpenMM temperature, RealOpenMM accuracy);
+       ReferenceVariableStochasticDynamics(int numberOfAtoms, RealOpenMM friction, RealOpenMM temperature, RealOpenMM accuracy);
 
       /**---------------------------------------------------------------------------------------
 
@@ -62,13 +62,11 @@ class ReferenceVariableStochasticDynamics : public ReferenceDynamics {
 
       /**---------------------------------------------------------------------------------------
 
-         Get tau
-
-         @return tau
+         Get friction coefficient
 
          --------------------------------------------------------------------------------------- */
 
-      RealOpenMM getTau() const;
+      RealOpenMM getFriction() const;
       
       /**---------------------------------------------------------------------------------------
 

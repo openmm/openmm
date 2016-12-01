@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2013-2015 Stanford University and Simbios.
+/* Portions copyright (c) 2013-2016 Stanford University and Simbios.
  * Authors: Peter Eastman
  * Contributors: 
  *
@@ -43,12 +43,12 @@ public:
      *
      * @param numberOfAtoms  number of atoms
      * @param deltaT         delta t for dynamics
-     * @param tau            viscosity
+     * @param friction       friction coefficient
      * @param temperature    temperature
      * @param threads        thread pool for parallelizing computation
      * @param random         random number generator
      */
-    CpuLangevinDynamics(int numberOfAtoms, RealOpenMM deltaT, RealOpenMM tau, RealOpenMM temperature, OpenMM::ThreadPool& threads, OpenMM::CpuRandom& random);
+    CpuLangevinDynamics(int numberOfAtoms, RealOpenMM deltaT, RealOpenMM friction, RealOpenMM temperature, OpenMM::ThreadPool& threads, OpenMM::CpuRandom& random);
 
     /**
      * Destructor.

@@ -2053,11 +2053,10 @@ void ReferenceIntegrateLangevinStepKernel::execute(ContextImpl& context, const L
         
         if (dynamics)
             delete dynamics;
-        RealOpenMM tau = static_cast<RealOpenMM>(friction == 0.0 ? 0.0 : 1.0/friction);
         dynamics = new ReferenceStochasticDynamics(
                 context.getSystem().getNumParticles(), 
                 static_cast<RealOpenMM>(stepSize), 
-                static_cast<RealOpenMM>(tau), 
+                static_cast<RealOpenMM>(friction), 
                 static_cast<RealOpenMM>(temperature));
         dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
         prevTemp = temperature;
@@ -2142,8 +2141,7 @@ double ReferenceIntegrateVariableLangevinStepKernel::execute(ContextImpl& contex
 
         if (dynamics)
             delete dynamics;
-        RealOpenMM tau = static_cast<RealOpenMM>(friction == 0.0 ? 0.0 : 1.0/friction);
-        dynamics = new ReferenceVariableStochasticDynamics(context.getSystem().getNumParticles(), (RealOpenMM) tau, (RealOpenMM) temperature, (RealOpenMM) errorTol);
+        dynamics = new ReferenceVariableStochasticDynamics(context.getSystem().getNumParticles(), (RealOpenMM) friction, (RealOpenMM) temperature, (RealOpenMM) errorTol);
         dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
         prevTemp = temperature;
         prevFriction = friction;
