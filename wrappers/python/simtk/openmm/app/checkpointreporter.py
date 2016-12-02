@@ -29,10 +29,12 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 from __future__ import absolute_import
+
+import os
+
 __author__ = "Robert McGibbon"
 __version__ = "1.0"
 
-import simtk.openmm as mm
 __all__ = ['CheckpointReporter']
 
 
@@ -68,7 +70,8 @@ class CheckpointReporter(object):
     throwing an exception.
 
     """
-    def __init__(self, file, reportInterval):
+
+    def __init__(self, file, reportInterval, tempFile=None):
         """Create a CheckpointReporter.
 
         Parameters
@@ -77,15 +80,25 @@ class CheckpointReporter(object):
             The file to write to. Any current contents will be overwritten.
         reportInterval : int
             The interval (in time steps) at which to write checkpoints.
+        tempFile : string
+            Try to make checkpoint reporting atomic.
+            Write the new checkpoint to this filename instead, and then use
+            ``os.replace`` to (atomically) replace the previous checkpoint with
+            name ``file``. This only works if ``file`` is given as a filename.
+            This is only supported on Python 3.
         """
 
         self._reportInterval = reportInterval
-        if isinstance(file, str):
-            self._own_handle = True
-            self._out = open(file, 'w+b', 0)
-        else:
-            self._out = file
-            self._own_handle = False
+        self._given_path = isinstance(file, str)
+        if not self._given_path and tempFile is not None:
+            raise ValueError("tempFile can only be given when passing in "
+                             "a file name/path; not a file object.")
+
+        if tempFile is not None:
+            if not hasattr(os, 'replace'):
+                raise ValueError("tempFile is only supported on Python 3.")
+        self.tempFile = tempFile
+        self._out = file
 
     def describeNextReport(self, simulation):
         """Get information about the next report this object will generate.
@@ -103,8 +116,27 @@ class CheckpointReporter(object):
             that report will require positions, velocities, forces, and
             energies respectively.
         """
-        steps = self._reportInterval - simulation.currentStep%self._reportInterval
+        steps = self._reportInterval - simulation.currentStep % self._reportInterval
         return (steps, False, False, False, False)
+
+    def _reportFileObject(self, chk):
+        out = self._out
+        out.seek(0)
+        out.write(chk)
+        out.truncate()
+        out.flush()
+
+    def _reportFilePath(self, chk):
+        if self.tempFile is not None:
+            out = self.tempFile
+        else:
+            out = self._out
+
+        with open(out, 'wb') as out:
+            out.write(chk)
+
+        if self.tempFile is not None:
+            os.replace(self.tempFile, self._out)
 
     def report(self, simulation, state):
         """Generate a report.
@@ -116,13 +148,8 @@ class CheckpointReporter(object):
         state : State
             The current state of the simulation
         """
-        self._out.seek(0)
         chk = simulation.context.createCheckpoint()
-        self._out.write(chk)
-        self._out.truncate()
-        self._out.flush()
-
-    def __del__(self):
-        if self._own_handle:
-            self._out.close()
-
+        if self._given_path:
+            self._reportFilePath(chk)
+        else:
+            self._reportFileObject(chk)
