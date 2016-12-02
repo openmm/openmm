@@ -153,7 +153,3 @@ class CheckpointReporter(object):
             self._reportFilePath(chk)
         else:
             self._reportFileObject(chk)
-
-    def __del__(self):
-        if self._out is not None:
-            self._out.close()
