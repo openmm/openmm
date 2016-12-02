@@ -82,7 +82,8 @@ class CheckpointReporter(object):
         self._reportInterval = reportInterval
         if isinstance(file, str):
             self._own_handle = True
-            self._out = open(file, 'w+b', 0)
+            self._filename = file
+            self._out = None
         else:
             self._out = file
             self._own_handle = False
@@ -116,6 +117,8 @@ class CheckpointReporter(object):
         state : State
             The current state of the simulation
         """
+        if self._out is None:
+            self._out = open(self._filename, 'w+b', 0)
         self._out.seek(0)
         chk = simulation.context.createCheckpoint()
         self._out.write(chk)
@@ -123,6 +126,6 @@ class CheckpointReporter(object):
         self._out.flush()
 
     def __del__(self):
-        if self._own_handle:
+        if self._own_handle and self._out is not None:
             self._out.close()
 
