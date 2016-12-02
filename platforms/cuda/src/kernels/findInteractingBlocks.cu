@@ -255,6 +255,13 @@ extern "C" __global__ void findBlocksWithInteractions(real4 periodicBoxSize, rea
                 blockDelta.y = max(0.0f, fabs(blockDelta.y)-blockSizeX.y-blockSizeY.y);
                 blockDelta.z = max(0.0f, fabs(blockDelta.z)-blockSizeX.z-blockSizeY.z);
                 includeBlock2 &= (blockDelta.x*blockDelta.x+blockDelta.y*blockDelta.y+blockDelta.z*blockDelta.z < PADDED_CUTOFF_SQUARED);
+#ifdef TRICLINIC
+                // The calculation to find the nearest periodic copy is only guaranteed to work if the nearest copy is less than half a box width away.
+                // If there's any possibility we might have missed it, do a detailed check.
+
+                if (periodicBoxSize.z/2-blockSizeX.z-blockSizeY.z < PADDED_CUTOFF || periodicBoxSize.y/2-blockSizeX.y-blockSizeY.y < PADDED_CUTOFF)
+                    includeBlock2 = true;
+#endif
                 if (includeBlock2) {
                     unsigned short y = (unsigned short) sortedBlocks[block2].y;
                     for (int k = 0; k < numExclusions; k++)

@@ -105,7 +105,7 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
     __local volatile int* tileStartIndex = workgroupTileIndex+(warpStart/32);
 
     // Loop over blocks.
-    
+
     for (int block1 = startBlockIndex+warpIndex; block1 < startBlockIndex+numBlocks; block1 += totalWarps) {
         // Load data for this block.  Note that all threads in a warp are processing the same block.
         
@@ -158,6 +158,13 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
                 blockDelta.y = max((real) 0, fabs(blockDelta.y)-blockSizeX.y-blockSizeY.y);
                 blockDelta.z = max((real) 0, fabs(blockDelta.z)-blockSizeX.z-blockSizeY.z);
                 includeBlock2 &= (blockDelta.x*blockDelta.x+blockDelta.y*blockDelta.y+blockDelta.z*blockDelta.z < PADDED_CUTOFF_SQUARED);
+#ifdef TRICLINIC
+                // The calculation to find the nearest periodic copy is only guaranteed to work if the nearest copy is less than half a box width away.
+                // If there's any possibility we might have missed it, do a detailed check.
+
+                if (periodicBoxSize.z/2-blockSizeX.z-blockSizeY.z < PADDED_CUTOFF || periodicBoxSize.y/2-blockSizeX.y-blockSizeY.y < PADDED_CUTOFF)
+                    includeBlock2 = true;
+#endif
                 if (includeBlock2) {
                     unsigned short y = (unsigned short) sortedBlocks[block2].y;
                     for (int k = 0; k < numExclusions; k++)
