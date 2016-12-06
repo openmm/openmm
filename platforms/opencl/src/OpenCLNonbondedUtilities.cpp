@@ -511,6 +511,8 @@ void OpenCLNonbondedUtilities::createKernelsForGroups(int groups) {
         defines["SIMD_WIDTH"] = context.intToString(context.getSIMDWidth());
         if (usePeriodic)
             defines["USE_PERIODIC"] = "1";
+        if (context.getBoxIsTriclinic())
+            defines["TRICLINIC"] = "1";
         defines["MAX_EXCLUSIONS"] = context.intToString(maxExclusions);
         defines["BUFFER_GROUPS"] = (deviceIsCpu ? "4" : "2");
         string file = (deviceIsCpu ? OpenCLKernelSources::findInteractingBlocks_cpu : OpenCLKernelSources::findInteractingBlocks);

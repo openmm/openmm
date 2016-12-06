@@ -513,6 +513,8 @@ void CudaNonbondedUtilities::createKernelsForGroups(int groups) {
         defines["NUM_TILES_WITH_EXCLUSIONS"] = context.intToString(exclusionTiles->getSize());
         if (usePeriodic)
             defines["USE_PERIODIC"] = "1";
+        if (context.getBoxIsTriclinic())
+            defines["TRICLINIC"] = "1";
         defines["MAX_EXCLUSIONS"] = context.intToString(maxExclusions);
         // Temporarily disable the pair list until we figure out why it's failing on some GPUs.
         defines["MAX_BITS_FOR_PAIRS"] = "0";//(canUsePairList ? "2" : "0");
