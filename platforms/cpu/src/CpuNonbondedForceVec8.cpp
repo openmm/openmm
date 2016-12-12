@@ -27,6 +27,7 @@
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/hardware.h"
 #include <algorithm>
+#include <cstdio>
 
 using namespace std;
 using namespace OpenMM;
@@ -338,7 +339,7 @@ void CpuNonbondedForceVec8::calculateBlockEwaldIxnImpl(int blockIndex, float* fo
             continue; // No interactions to compute.
         
         // Compute the interactions.
-        
+
         fvec8 inverseR = rsqrt(r2);
         fvec8 r = r2*inverseR;
         fvec8 energy, dEdR;
@@ -364,7 +365,7 @@ void CpuNonbondedForceVec8::calculateBlockEwaldIxnImpl(int blockIndex, float* fo
             dEdR = 0.0f;
         }
         fvec8 chargeProd = blockAtomCharge*posq[4*atom+3];
-        dEdR += chargeProd*inverseR*ewaldScaleFunction(r);
+        dEdR += chargeProd*inverseR*ewaldScaleFunction(sqrt(r2));
         dEdR *= inverseR*inverseR;
 
         // Accumulate energies.
@@ -452,6 +453,19 @@ fvec8 CpuNonbondedForceVec8::ewaldScaleFunction(const fvec8& x) {
     fvec8 coeff1 = 1.0f-coeff2;
     ivec4 indexLower = index.lowerVec();
     ivec4 indexUpper = index.upperVec();
+
+    int lowerIndex[4] = {0,0,0,0};
+    int upperIndex[4] = {0,0,0,0};
+
+    printf("ewaldDXInv: %f\n", ewaldDXInv);
+    printf("x\n ");  x.print();
+    printf("x1\n ");x1.print();
+    
+    indexLower.store(lowerIndex);
+    indexUpper.store(upperIndex);
+    printf("indexLower: %d %d %d %d\n", lowerIndex[0], lowerIndex[1], lowerIndex[2], lowerIndex[3]);
+    printf("indexUpper: %d %d %d %d\n", upperIndex[0], upperIndex[1], upperIndex[2], upperIndex[3]);
+    
     fvec4 t1(&ewaldScaleTable[indexLower[0]]);
     fvec4 t2(&ewaldScaleTable[indexLower[1]]);
     fvec4 t3(&ewaldScaleTable[indexLower[2]]);

@@ -63,6 +63,14 @@ public:
     void store(float* v) const {
         _mm256_storeu_ps(v, val);
     }
+    void print() const {
+      float low[4];
+      float high[4];
+      lowerVec().store(low);
+      upperVec().store(high);
+      printf("%.5f %.5f %.5f %.5f %.5f %.5f %.5f %.5f\n", low[0], low[1], low[2], low[3],
+	     high[0], high[1], high[2], high[3]);
+    }
     fvec8 operator+(const fvec8& other) const {
         return _mm256_add_ps(val, other);
     }
