@@ -56,7 +56,7 @@ public:
     void contextDestroyed(ContextImpl& context) const;
 };
 
-class ReferencePlatform::PlatformData {
+class OPENMM_EXPORT ReferencePlatform::PlatformData {
 public:
     PlatformData(const System& system);
     ~PlatformData();
