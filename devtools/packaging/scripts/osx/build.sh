@@ -43,3 +43,6 @@ make -j4 PythonInstall C++ApiDocs PythonApiDocs sphinxpdf
 
 # Install.
 make install
+
+# Return to directory
+cd $WORKSPACE
