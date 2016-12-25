@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e -x
 
+pushd .
+cd ..
+
 # Update homebrew
 brew uninstall -y brew-cask || brew untap -y caskroom/cask || 1
 brew update -y --quiet
@@ -24,9 +27,11 @@ sudo tlmgr update --self
 sudo tlmgr install titlesec framed threeparttable wrapfig multirow collection-fontsrecommended hyphenat xstring
 
 # Build packages
-source devtools/packaging/scripts/osx/prepare.sh
-source devtools/packaging/scripts/osx/build.sh
-source devtools/packaging/scripts/osx/package.sh
+source openmm/devtools/packaging/scripts/osx/prepare.sh
+source openmm/devtools/packaging/scripts/osx/build.sh
+source openmm/devtools/packaging/scripts/osx/package.sh
 
 # Copy packages out
 cp -r packaging/* /io
+
+popd
