@@ -110,4 +110,17 @@ make -j4 PythonInstall C++ApiDocs PythonApiDocs sphinxpdf
 # Install.
 make install
 
+#
+# TESTING
+#
+
+# Test build was successful
+python -m simtk.testInstallation;
+
+# Run C tests
+python devtools/run-ctest.py --start-time $START_TIME
+
+# Run Python tests
+pushd && cd python/tests && py.test -v && popd
+
 cd ..

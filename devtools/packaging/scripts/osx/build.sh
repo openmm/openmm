@@ -39,10 +39,25 @@ mkdir build
 cd build
 cmake ../openmm $CMAKE_FLAGS
 make -j4 all install
-make -j4 PythonInstall C++ApiDocs PythonApiDocs sphinxpdf
+make -j4 PythonInstall
+#make -j4 C++ApiDocs # BROKEN; TODO: FIX
+make -j4 PythonApiDocs sphinxpdf
 
 # Install.
 make install
+
+#
+# TESTING
+#
+
+# Test build was successful
+python -m simtk.testInstallation;
+
+# Run C tests
+python devtools/run-ctest.py --start-time $START_TIME
+
+# Run Python tests
+pushd && cd python/tests && py.test -v && popd
 
 # Return to directory
 cd $WORKSPACE

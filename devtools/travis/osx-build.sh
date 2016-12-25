@@ -31,7 +31,7 @@ source openmm/devtools/packaging/scripts/osx/prepare.sh
 source openmm/devtools/packaging/scripts/osx/build.sh
 source openmm/devtools/packaging/scripts/osx/package.sh
 
-# Copy packages out
-cp -r packaging/* /io
+# Copy packages
+cp -r packaging /openmm/
 
 popd

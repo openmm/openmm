@@ -2,6 +2,7 @@ env:
   global:
     - CUDA_VERSION: "8.0"
     - CUDA_SHORT_VERSION: "80"
+    - UPLOAD_BUILD_ARTIFACTS: "true" # If "true", will upload build artifacts to S3 bucket at http://docs.openmm.org/build-artifacts/
 
 osx_image: xcode6.4 # Supported versions: https://docs.travis-ci.com/user/languages/objective-c/#Supported-Xcode-versions
 
@@ -27,22 +28,23 @@ matrix:
       addons: {apt: {packages: []}}
 
 script:
+  - START_TIME=$(date +%s)
   - if [[ "$BUILD" == "linux" ]]; then
 
-        docker run -e TRAVIS_PULL_REQUEST
+        docker run -e TRAVIS_PULL_REQUEST -e START_TIME
             -t -i --rm -v `pwd`:/io jchodera/omnia-build-box:cuda${CUDA_SHORT_VERSION}-amd30-clang38
             bash /io/devtools/travis/linux-build.sh;
 
     elif [[ "$BUILD" == "source" ]]; then
 
-        docker run -e TRAVIS_PULL_REQUEST
+        docker run -e TRAVIS_PULL_REQUEST -e START_TIME
             -t -i --rm -v `pwd`:/io jchodera/omnia-build-box:cuda${CUDA_SHORT_VERSION}-amd30-clang38
             bash /io/devtools/travis/source-build.sh;
 
     elif [[ "$BUILD" == "osx" ]]; then
 
         echo "Building osx...";
-        bash devtools/travis/osx-build.sh;
+        source devtools/travis/osx-build.sh;
 
     fi
 
@@ -56,8 +58,8 @@ deploy:
     bucket: "docs.openmm.org"
     skip_cleanup: true
     region: us-west-1
-    local_dir: api-docs/
-    upload_dir: development
+    local_dir: packaging/
+    upload_dir: build-artifacts
     on:
       branch: master
-      condition: '! -z "${DOCS_DEPLOY}" && "${DOCS_DEPLOY}" = "true"'
+      condition: '! -z "${UPLOAD_BUILD_ARTIFACTS}" && "${UPLOAD_BUILD_ARTIFACTS}" = "true"'

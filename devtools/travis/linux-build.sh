@@ -8,4 +8,4 @@ source openmm/devtools/packaging/scripts/linux/build.sh
 source openmm/devtools/packaging/scripts/linux/package.sh
 
 # Copy packages out
-cp -r packaging/* /io
+cp -r packaging /io/
