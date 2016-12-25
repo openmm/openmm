@@ -117,7 +117,7 @@ cd $WORKSPACE
 # TESTING
 #
 
-pwd
+echo `pwd`
 
 # Test build was successful
 python -m simtk.testInstallation;
