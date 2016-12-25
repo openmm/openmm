@@ -46,9 +46,14 @@ make -j4 PythonApiDocs sphinxpdf
 # Install.
 make install
 
+# Restore working directory
+cd $WORKSPACE
+
 #
 # TESTING
 #
+
+pwd
 
 # Test build was successful
 python -m simtk.testInstallation;
@@ -58,6 +63,3 @@ python devtools/run-ctest.py --start-time $START_TIME
 
 # Run Python tests
 pushd && cd python/tests && py.test -v && popd
-
-# Return to directory
-cd $WORKSPACE

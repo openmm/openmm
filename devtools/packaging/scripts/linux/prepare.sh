@@ -4,6 +4,7 @@
 
 # Set relative workspace path.
 export WORKSPACE=`pwd`
+echo "WORKSPACE: $WORKSPACE"
 
 # Install miniconda
 export VERSION="latest"
