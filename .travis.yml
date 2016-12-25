@@ -3,6 +3,8 @@ env:
     - CUDA_VERSION: "8.0"
     - CUDA_SHORT_VERSION: "80"
 
+osx_image: xcode6.4 # Supported versions: https://docs.travis-ci.com/user/languages/objective-c/#Supported-Xcode-versions
+
 matrix:
   include:
     - sudo: required
@@ -23,7 +25,6 @@ matrix:
       os: osx
       env: BUILD="osx"
       addons: {apt: {packages: []}}
-      osx_image: xcode6.4 # Supported versions: https://docs.travis-ci.com/user/languages/objective-c/#Supported-Xcode-versions
 
 script:
   - if [[ "$BUILD" == "linux" ]]; then

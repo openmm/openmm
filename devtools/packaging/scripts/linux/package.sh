@@ -9,9 +9,6 @@ export VERSION=$(sed -nr "s/OPENMM_VERSION:STRING=(.*)/\1/p" build/CMakeCache.tx
 export PACKAGE_SUBDIR="OpenMM-${VERSION}-Linux" # directory where distribution will be unpacked
 export DISTRO_PREFIX="OpenMM-${VERSION}-Linux" # prefix for source distribution (e.g. ${DISTRIBUTION_NAME}.zip)
 
-# Perform all work in a work directory.
-cd work
-
 # Clean up.
 rm -rf $PACKAGE_DIR
 
