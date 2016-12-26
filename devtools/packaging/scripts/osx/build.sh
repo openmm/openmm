@@ -50,6 +50,8 @@ make install
 # TESTING
 #
 
+set -x # echo off for debugging
+
 # Test build was successful
 python -m simtk.testInstallation;
 
@@ -58,3 +60,5 @@ cd $WORKSPACE/openmm && python devtools/run-ctest.py --start-time $START_TIME &&
 
 # Run Python tests
 cd $WORKSPACE/build && cd python/tests && py.test -v && cd $WORKSPACE
+
+set +x # echo off; end debugging
