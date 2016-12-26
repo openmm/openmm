@@ -46,20 +46,15 @@ make -j4 PythonApiDocs sphinxpdf
 # Install.
 make install
 
-# Restore working directory
-cd $WORKSPACE
-
 #
 # TESTING
 #
-
-echo `pwd`
 
 # Test build was successful
 python -m simtk.testInstallation;
 
 # Run C tests
-python devtools/run-ctest.py --start-time $START_TIME
+cd $WORKSPACE/openmm && python devtools/run-ctest.py --start-time $START_TIME && cd $WORKSPACE
 
 # Run Python tests
-pushd && cd python/tests && py.test -v && popd
+cd $WORKSPACE/build && cd python/tests && py.test -v && cd $WORKSPACE
