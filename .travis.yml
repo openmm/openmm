@@ -28,7 +28,8 @@ matrix:
       addons: {apt: {packages: []}}
 
 script:
-  - START_TIME=$(date +%s)
+  - export START_TIME=$(date +%s)
+  - echo $START_TIME
   - if [[ "$BUILD" == "linux" ]]; then
 
         docker run -e TRAVIS_PULL_REQUEST -e START_TIME
