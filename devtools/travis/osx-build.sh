@@ -24,7 +24,7 @@ brew tap -y --quiet Caskroom/cask;
 brew cask install -y --quiet basictex
 export PATH="/usr/texbin:${PATH}:/usr/bin"
 sudo tlmgr update --self
-sudo tlmgr install titlesec framed threeparttable wrapfig multirow collection-fontsrecommended hyphenat xstring fncychap
+sudo tlmgr install titlesec framed threeparttable wrapfig multirow collection-fontsrecommended hyphenat xstring fncychap tabulary
 ls -ltr /usr/local/texlive/*/texmf-dist/tex/latex/
 
 # Build packages

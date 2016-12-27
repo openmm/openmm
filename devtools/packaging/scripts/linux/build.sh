@@ -3,6 +3,9 @@
 # Build script for Linux distribution, for use in automated packaging.
 # Note that this must be run from outside the checked-out openmm/ directory.
 
+# Set relative workspace path.
+export WORKSPACE=`pwd`
+
 #
 # For Docker build
 #
@@ -49,8 +52,6 @@ export CFLAGS="$MINIMAL_CFLAGS"
 export CXXFLAGS="$MINIMAL_CFLAGS"
 export LDFLAGS="$LDPATHFLAGS"
 
-# Set relative workspace path.
-export WORKSPACE=`pwd`
 
 # Add conda binaries to path.
 PATH=$WORKSPACE/miniconda/bin:$PATH
@@ -124,5 +125,7 @@ cd $WORKSPACE/openmm && python devtools/run-ctest.py --start-time "$START_TIME" 
 
 # Run Python tests
 cd $WORKSPACE/build && cd python/tests && py.test -v && cd $WORKSPACE
+
+cd $WORKSPACE
 
 set +x # echo off; end debugging
