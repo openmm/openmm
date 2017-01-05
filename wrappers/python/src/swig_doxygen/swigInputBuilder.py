@@ -74,6 +74,11 @@ def getNodeText(node):
             s = "%s%s\n\n" % (s, getNodeText(n))
         elif n.tag == "ref":
             s = "%s%s" % (s, getNodeText(n))
+        elif n.tag == "xrefsect":
+            title = n.find("xreftitle")
+            description = n.find("xrefdescription")
+            if title is not None and description is not None and getNodeText(title).lower() == "deprecated":
+                s = "%s\n@deprecated %s\n\n" % (s, getNodeText(description))
         else:
             if n.tag in docTags:
                 tag = docTags[n.tag]
