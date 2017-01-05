@@ -186,8 +186,7 @@ class Modeller(object):
     def convertWater(self, model='tip3p'):
         """Convert all water molecules to a different water model.
 
-        @deprecated Use addExtraParticles() instead.  It performs the same
-        function but in a more general way.
+        @deprecated Use addExtraParticles() instead.  It performs the same function but in a more general way.
 
         Parameters
         ----------

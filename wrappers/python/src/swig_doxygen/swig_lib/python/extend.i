@@ -322,14 +322,14 @@ Parameters:
 }
 
 %extend OpenMM::XmlSerializer {
-  %feature(docstring, "This method exists only for backward compatibility. @deprecated Use serialize() instead.") serializeSystem;
+  %feature(docstring, "This method exists only for backward compatibility.\n@deprecated Use serialize() instead.") serializeSystem;
   static std::string serializeSystem(const OpenMM::System* object) {
       std::stringstream ss;
       OpenMM::XmlSerializer::serialize<OpenMM::System>(object, "System", ss);
       return ss.str();
   }
 
-  %feature(docstring, "This method exists only for backward compatibility. @deprecated Use deserialize() instead.") deserializeSystem;
+  %feature(docstring, "This method exists only for backward compatibility.\n@deprecated Use deserialize() instead.") deserializeSystem;
   %newobject deserializeSystem;
   static OpenMM::System* deserializeSystem(const char* inputString) {
       std::stringstream ss;
