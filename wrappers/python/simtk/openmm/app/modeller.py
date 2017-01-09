@@ -870,7 +870,7 @@ class Modeller(object):
             # and causes hydrogens to spread out evenly.
 
             system = System()
-            nonbonded = CustomNonbondedForce('100/((r/0.1)^4+1)')
+            nonbonded = CustomNonbondedForce('100/(r/0.1)^4')
             nonbonded.setNonbondedMethod(CustomNonbondedForce.CutoffNonPeriodic);
             nonbonded.setCutoffDistance(1*nanometer)
             bonds = HarmonicBondForce()
