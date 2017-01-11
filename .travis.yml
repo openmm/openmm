@@ -65,7 +65,7 @@ matrix:
 
     - language: objective-c
       os: osx
-      osx_image: xcode8.2
+      #osx_image: xcode8.2
       env: ==OSX==
            OPENCL=false
            CUDA=false
@@ -109,8 +109,8 @@ before_install:
       brew update;
       brew update;
       brew doctor;
-      brew install doxygen --with-dot --with-doxywizard --with-libclang;
-      brew install doxygen fftw;
+      brew install doxygen --with-llvm;
+      brew install fftw;
       sudo easy_install pytest;
     fi
   - if [[ "$OPENCL" == "true" ]]; then
