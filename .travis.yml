@@ -109,6 +109,7 @@ before_install:
       brew update;
       brew update;
       brew doctor;
+      brew install doxygen --with-dot --with-doxywizard --with-libclang;
       brew install doxygen fftw;
       sudo easy_install pytest;
     fi
