@@ -105,13 +105,12 @@ before_install:
   - START_TIME=$(date +%s)
   - wget https://anaconda.org/omnia/ccache/3.2.4/download/${TRAVIS_OS_NAME}-64/ccache-3.2.4-0.tar.bz2
   - mkdir -p $HOME/ccache && tar xf ccache-3.2.4-0.tar.bz2 -C $HOME/ccache
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-      brew update;
-      brew update;
-      brew doctor;
-      brew install doxygen --with-llvm;
-      brew install fftw;
-      sudo easy_install pytest;
+  - |
+    if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+       brew update
+       if [ -z `brew list | grep doxygen` ]; then brew install doxygen; fi
+       if [ -z `brew list | grep fftw` ]; then brew install fftw; fi
+       sudo easy_install pytest
     fi
   - if [[ "$OPENCL" == "true" ]]; then
       wget http://s3.amazonaws.com/omnia-ci/AMD-APP-SDKInstaller-v3.0.130.135-GA-linux64.tar.bz2;
