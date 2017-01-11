@@ -29,7 +29,7 @@ extern "C" __global__ void findBlockBounds(int numAtoms, real4 periodicBoxSize, 
         real4 blockSize = 0.5f*(maxPos-minPos);
         real4 center = 0.5f*(maxPos+minPos);
         center.w = 0;
-        for (int i = base+1; i < last; i++) {
+        for (int i = base; i < last; i++) {
             pos = posq[i];
             real4 delta = posq[i]-center;
 #ifdef USE_PERIODIC
