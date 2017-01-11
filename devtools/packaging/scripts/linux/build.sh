@@ -121,7 +121,7 @@ set -x # echo on for debugging
 python -m simtk.testInstallation;
 
 # Run C tests
-cd $WORKSPACE/build && python $WORKSPACE/devtools/run-ctest.py --start-time "$START_TIME" && cd $WORKSPACE
+cd $WORKSPACE/build && python $WORKSPACE/openmm/devtools/run-ctest.py --start-time "$START_TIME" && cd $WORKSPACE
 
 # Run Python tests
 cd $WORKSPACE/build && cd python/tests && py.test -v && cd $WORKSPACE
