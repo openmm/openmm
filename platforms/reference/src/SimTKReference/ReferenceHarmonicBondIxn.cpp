@@ -50,7 +50,7 @@ ReferenceHarmonicBondIxn::ReferenceHarmonicBondIxn() : usePeriodic(false) {
 ReferenceHarmonicBondIxn::~ReferenceHarmonicBondIxn() {
 }
 
-void ReferenceHarmonicBondIxn::setPeriodic(OpenMM::RealVec* vectors) {
+void ReferenceHarmonicBondIxn::setPeriodic(OpenMM::Vec3* vectors) {
     usePeriodic = true;
     boxVectors[0] = vectors[0];
     boxVectors[1] = vectors[1];
@@ -71,20 +71,11 @@ void ReferenceHarmonicBondIxn::setPeriodic(OpenMM::RealVec* vectors) {
    --------------------------------------------------------------------------------------- */
 
 void ReferenceHarmonicBondIxn::calculateBondIxn(int* atomIndices,
-                                                vector<RealVec>& atomCoordinates,
-                                                RealOpenMM* parameters,
-                                                vector<RealVec>& forces,
-                                                RealOpenMM* totalEnergy, double* energyParamDerivs) {
-
-   static const std::string methodName = "\nReferenceHarmonicBondIxn::calculateBondIxn";
-
-   static const int twoI               = 2;
-
-   static const RealOpenMM zero        = 0.0;
-   static const RealOpenMM two         = 2.0;
-   static const RealOpenMM half        = 0.5;
-
-   RealOpenMM deltaR[ReferenceForce::LastDeltaRIndex];
+                                                vector<Vec3>& atomCoordinates,
+                                                double* parameters,
+                                                vector<Vec3>& forces,
+                                                double* totalEnergy, double* energyParamDerivs) {
+   double deltaR[ReferenceForce::LastDeltaRIndex];
 
    // ---------------------------------------------------------------------------------------
 
@@ -99,14 +90,14 @@ void ReferenceHarmonicBondIxn::calculateBondIxn(int* atomIndices,
 
    // deltaIdeal = r - r_0
 
-   RealOpenMM deltaIdeal      = deltaR[ReferenceForce::RIndex] - parameters[0];
-   RealOpenMM deltaIdeal2     = deltaIdeal*deltaIdeal;
+   double deltaIdeal      = deltaR[ReferenceForce::RIndex] - parameters[0];
+   double deltaIdeal2     = deltaIdeal*deltaIdeal;
 
-   RealOpenMM dEdR            = parameters[1]*deltaIdeal;
+   double dEdR            = parameters[1]*deltaIdeal;
 
    // chain rule
 
-   dEdR                       = deltaR[ReferenceForce::RIndex] > zero ? (dEdR/deltaR[ReferenceForce::RIndex]) : zero;
+   dEdR                       = deltaR[ReferenceForce::RIndex] > 0.0 ? (dEdR/deltaR[ReferenceForce::RIndex]) : 0.0;
 
    forces[atomAIndex][0]     += dEdR*deltaR[ReferenceForce::XIndex];
    forces[atomAIndex][1]     += dEdR*deltaR[ReferenceForce::YIndex];
@@ -117,5 +108,5 @@ void ReferenceHarmonicBondIxn::calculateBondIxn(int* atomIndices,
    forces[atomBIndex][2]     -= dEdR*deltaR[ReferenceForce::ZIndex];
 
    if (totalEnergy != NULL)
-       *totalEnergy += half*parameters[1]*deltaIdeal2;
+       *totalEnergy += 0.5*parameters[1]*deltaIdeal2;
 }

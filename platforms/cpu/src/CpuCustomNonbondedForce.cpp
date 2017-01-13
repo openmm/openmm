@@ -80,7 +80,7 @@ CpuCustomNonbondedForce::~CpuCustomNonbondedForce() {
         delete threadData[i];
 }
 
-void CpuCustomNonbondedForce::setUseCutoff(RealOpenMM distance, const CpuNeighborList& neighbors) {
+void CpuCustomNonbondedForce::setUseCutoff(double distance, const CpuNeighborList& neighbors) {
     cutoff = true;
     cutoffDistance = distance;
     neighborList = &neighbors;
@@ -103,12 +103,12 @@ void CpuCustomNonbondedForce::setInteractionGroups(const vector<pair<set<int>, s
     }
 }
 
-void CpuCustomNonbondedForce::setUseSwitchingFunction(RealOpenMM distance) {
+void CpuCustomNonbondedForce::setUseSwitchingFunction(double distance) {
     useSwitch = true;
     switchingDistance = distance;
 }
 
-void CpuCustomNonbondedForce::setPeriodic(RealVec* periodicBoxVectors) {
+void CpuCustomNonbondedForce::setPeriodic(Vec3* periodicBoxVectors) {
     assert(cutoff);
     assert(periodicBoxVectors[0][0] >= 2.0*cutoffDistance);
     assert(periodicBoxVectors[1][1] >= 2.0*cutoffDistance);
@@ -130,9 +130,9 @@ void CpuCustomNonbondedForce::setPeriodic(RealVec* periodicBoxVectors) {
 }
 
 
-void CpuCustomNonbondedForce::calculatePairIxn(int numberOfAtoms, float* posq, vector<RealVec>& atomCoordinates, RealOpenMM** atomParameters,
-                                             RealOpenMM* fixedParameters, const map<string, double>& globalParameters,
-                                             vector<AlignedArray<float> >& threadForce, bool includeForce, bool includeEnergy, double& totalEnergy, double* energyParamDerivs) {
+void CpuCustomNonbondedForce::calculatePairIxn(int numberOfAtoms, float* posq, vector<Vec3>& atomCoordinates, double** atomParameters,
+                                               double* fixedParameters, const map<string, double>& globalParameters,
+                                               vector<AlignedArray<float> >& threadForce, bool includeForce, bool includeEnergy, double& totalEnergy, double* energyParamDerivs) {
     // Record the parameters for the threads.
     
     this->numberOfAtoms = numberOfAtoms;

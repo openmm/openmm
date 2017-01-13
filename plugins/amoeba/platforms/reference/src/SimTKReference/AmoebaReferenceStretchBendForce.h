@@ -25,7 +25,7 @@
 #ifndef __AmoebaReferenceStretchBendForce_H__
 #define __AmoebaReferenceStretchBendForce_H__
 
-#include "RealVec.h"
+#include "openmm/Vec3.h"
 #include <vector>
 
 namespace OpenMM {
@@ -58,7 +58,7 @@ public:
       
        --------------------------------------------------------------------------------------- */
       
-    void setPeriodic(OpenMM::RealVec* vectors);
+    void setPeriodic(OpenMM::Vec3* vectors);
 
      /**---------------------------------------------------------------------------------------
      
@@ -80,22 +80,22 @@ public:
      
         --------------------------------------------------------------------------------------- */
 
-    RealOpenMM calculateForceAndEnergy(int numAngles, std::vector<OpenMM::RealVec>& posData,
-                                       const std::vector<int>& particle1,
-                                       const std::vector<int>&  particle2,
-                                       const std::vector<int>&  particle3,
-                                       const std::vector<RealOpenMM>& lengthABParameters,
-                                       const std::vector<RealOpenMM>& lengthCBParameters,
-                                       const std::vector<RealOpenMM>&  angle,
-                                       const std::vector<RealOpenMM>&  k1Quadratic,
-                                       const std::vector<RealOpenMM>&  k2Quadratic,
-                                       std::vector<OpenMM::RealVec>& forceData) const;
+    double calculateForceAndEnergy(int numAngles, std::vector<OpenMM::Vec3>& posData,
+                                   const std::vector<int>& particle1,
+                                   const std::vector<int>&  particle2,
+                                   const std::vector<int>&  particle3,
+                                   const std::vector<double>& lengthABParameters,
+                                   const std::vector<double>& lengthCBParameters,
+                                   const std::vector<double>&  angle,
+                                   const std::vector<double>&  k1Quadratic,
+                                   const std::vector<double>&  k2Quadratic,
+                                   std::vector<OpenMM::Vec3>& forceData) const;
 
 
 private:
 
     bool usePeriodic;
-    RealVec boxVectors[3];
+    Vec3 boxVectors[3];
 
     /**---------------------------------------------------------------------------------------
     
@@ -115,11 +115,11 @@ private:
     
        --------------------------------------------------------------------------------------- */
 
-    RealOpenMM calculateStretchBendIxn(const OpenMM::RealVec& positionAtomA, const OpenMM::RealVec& positionAtomB,
-                                       const OpenMM::RealVec& positionAtomC,
-                                       RealOpenMM lengthAB,      RealOpenMM lengthCB,
-                                       RealOpenMM idealAngle,    RealOpenMM k1Parameter,
-                                       RealOpenMM k2Parameter,   OpenMM::RealVec* forces) const;
+    double calculateStretchBendIxn(const OpenMM::Vec3& positionAtomA, const OpenMM::Vec3& positionAtomB,
+                                   const OpenMM::Vec3& positionAtomC,
+                                   double lengthAB,      double lengthCB,
+                                   double idealAngle,    double k1Parameter,
+                                   double k2Parameter,   OpenMM::Vec3* forces) const;
  
 };
 

@@ -176,7 +176,7 @@ void CpuCustomGBForce::setUseCutoff(float distance, const CpuNeighborList& neigh
     neighborList = &neighbors;
   }
 
-void CpuCustomGBForce::setPeriodic(RealVec& boxSize) {
+void CpuCustomGBForce::setPeriodic(Vec3& boxSize) {
     if (cutoff) {
         assert(boxSize[0] >= 2.0*cutoffDistance);
         assert(boxSize[1] >= 2.0*cutoffDistance);
@@ -188,7 +188,7 @@ void CpuCustomGBForce::setPeriodic(RealVec& boxSize) {
     periodicBoxSize[2] = boxSize[2];
   }
 
-void CpuCustomGBForce::calculateIxn(int numberOfAtoms, float* posq, RealOpenMM** atomParameters,
+void CpuCustomGBForce::calculateIxn(int numberOfAtoms, float* posq, double** atomParameters,
                                            map<string, double>& globalParameters, vector<AlignedArray<float> >& threadForce,
                                            bool includeForce, bool includeEnergy, double& totalEnergy, double* energyParamDerivs) {
     // Record the parameters for the threads.
@@ -362,7 +362,7 @@ void CpuCustomGBForce::threadComputeForce(ThreadPool& threads, int threadIndex) 
     calculateChainRuleForces(data, numberOfAtoms, posq, atomParameters, forces, boxSize, invBoxSize);
 }
 
-void CpuCustomGBForce::calculateParticlePairValue(int index, ThreadData& data, int numAtoms, float* posq, RealOpenMM** atomParameters,
+void CpuCustomGBForce::calculateParticlePairValue(int index, ThreadData& data, int numAtoms, float* posq, double** atomParameters,
         bool useExclusions, const fvec4& boxSize, const fvec4& invBoxSize) {
     for (int i = 0; i < numAtoms; i++)
         values[index][i] = 0.0f;
@@ -409,7 +409,7 @@ void CpuCustomGBForce::calculateParticlePairValue(int index, ThreadData& data, i
     }
 }
 
-void CpuCustomGBForce::calculateOnePairValue(int index, int atom1, int atom2, ThreadData& data, float* posq, RealOpenMM** atomParameters,
+void CpuCustomGBForce::calculateOnePairValue(int index, int atom1, int atom2, ThreadData& data, float* posq, double** atomParameters,
         vector<float>& valueArray, const fvec4& boxSize, const fvec4& invBoxSize) {
     fvec4 deltaR;
     fvec4 pos1(posq+4*atom1);
@@ -436,7 +436,7 @@ void CpuCustomGBForce::calculateOnePairValue(int index, int atom1, int atom2, Th
 }
 
 void CpuCustomGBForce::calculateSingleParticleEnergyTerm(int index, ThreadData& data, int numAtoms, float* posq,
-        RealOpenMM** atomParameters, float* forces, double& totalEnergy) {
+        double** atomParameters, float* forces, double& totalEnergy) {
     for (int i = data.firstAtom; i < data.lastAtom; i++) {
         data.x = posq[4*i];
         data.y = posq[4*i+1];
@@ -460,7 +460,7 @@ void CpuCustomGBForce::calculateSingleParticleEnergyTerm(int index, ThreadData& 
     }
 }
 
-void CpuCustomGBForce::calculateParticlePairEnergyTerm(int index, ThreadData& data, int numAtoms, float* posq, RealOpenMM** atomParameters,
+void CpuCustomGBForce::calculateParticlePairEnergyTerm(int index, ThreadData& data, int numAtoms, float* posq, double** atomParameters,
         bool useExclusions, float* forces, double& totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize) {
     if (cutoff) {
         // Loop over all pairs in the neighbor list.
@@ -502,7 +502,7 @@ void CpuCustomGBForce::calculateParticlePairEnergyTerm(int index, ThreadData& da
     }
 }
 
-void CpuCustomGBForce::calculateOnePairEnergyTerm(int index, int atom1, int atom2, ThreadData& data, float* posq, RealOpenMM** atomParameters,
+void CpuCustomGBForce::calculateOnePairEnergyTerm(int index, int atom1, int atom2, ThreadData& data, float* posq, double** atomParameters,
         float* forces, double& totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize) {
     // Compute the displacement.
 
@@ -547,7 +547,7 @@ void CpuCustomGBForce::calculateOnePairEnergyTerm(int index, int atom1, int atom
         data.energyParamDerivs[i] += data.energyParamDerivExpressions[index][i].evaluate();
 }
 
-void CpuCustomGBForce::calculateChainRuleForces(ThreadData& data, int numAtoms, float* posq, RealOpenMM** atomParameters,
+void CpuCustomGBForce::calculateChainRuleForces(ThreadData& data, int numAtoms, float* posq, double** atomParameters,
         float* forces, const fvec4& boxSize, const fvec4& invBoxSize) {
     if (cutoff) {
         // Loop over all pairs in the neighbor list.
@@ -624,7 +624,7 @@ void CpuCustomGBForce::calculateChainRuleForces(ThreadData& data, int numAtoms, 
                 data.energyParamDerivs[k] += dEdV[j][i]*dValuedParam[j][k][i];
 }
 
-void CpuCustomGBForce::calculateOnePairChainRule(int atom1, int atom2, ThreadData& data, float* posq, RealOpenMM** atomParameters,
+void CpuCustomGBForce::calculateOnePairChainRule(int atom1, int atom2, ThreadData& data, float* posq, double** atomParameters,
         float* forces, bool isExcluded, const fvec4& boxSize, const fvec4& invBoxSize) {
     // Compute the displacement.
 

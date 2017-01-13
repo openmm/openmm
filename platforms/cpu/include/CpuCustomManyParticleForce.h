@@ -52,9 +52,9 @@ private:
     class ThreadData;
     int numParticles, numParticlesPerSet, numPerParticleParameters, numTypes;
     bool useCutoff, usePeriodic, triclinic, centralParticleMode;
-    RealOpenMM cutoffDistance;
+    double cutoffDistance;
     float recipBoxSize[3];
-    RealVec periodicBoxVectors[3];
+    Vec3 periodicBoxVectors[3];
     AlignedArray<fvec4> periodicBoxVec4;
     CpuNeighborList* neighborList;
     ThreadPool& threads;
@@ -66,7 +66,7 @@ private:
     std::vector<ThreadData*> threadData;
     // The following variables are used to make information accessible to the individual threads.
     float* posq;
-    RealOpenMM** particleParameters;        
+    double** particleParameters;        
     const std::map<std::string, double>* globalParameters;
     std::vector<AlignedArray<float> >* threadForce;
     bool includeForces, includeEnergy;
@@ -82,7 +82,7 @@ private:
      * interaction for each one.
      */
     void loopOverInteractions(std::vector<int>& availableParticles, std::vector<int>& particleSet, int loopIndex, int startIndex,
-                              RealOpenMM** particleParameters, float* forces, ThreadData& data, const fvec4& boxSize, const fvec4& invBoxSize);
+                              double** particleParameters, float* forces, ThreadData& data, const fvec4& boxSize, const fvec4& invBoxSize);
 
     /**---------------------------------------------------------------------------------------
 
@@ -105,7 +105,7 @@ private:
      * @param boxSize            the size of the periodic box
      * @param invBoxSize         the inverse size of the periodic box
      */
-    void calculateOneIxn(std::vector<int>& particleSet, RealOpenMM** particleParameters, float* forces, ThreadData& data, const fvec4& boxSize, const fvec4& invBoxSize);
+    void calculateOneIxn(std::vector<int>& particleSet, double** particleParameters, float* forces, ThreadData& data, const fvec4& boxSize, const fvec4& invBoxSize);
 
     /**
      * Compute the displacement and squared distance between two points, optionally using
@@ -133,7 +133,7 @@ public:
      * 
      * @param distance   the cutoff distance
      */
-    void setUseCutoff(RealOpenMM distance);
+    void setUseCutoff(double distance);
 
     /**
      * Set the force to use periodic boundary conditions.  This requires that a cutoff has
@@ -142,7 +142,7 @@ public:
      * 
      * @param periodicBoxVectors    the vectors defining the periodic box
      */
-    void setPeriodic(RealVec* periodicBoxVectors);
+    void setPeriodic(Vec3* periodicBoxVectors);
 
     /**
      * Calculate the interaction.
@@ -155,7 +155,7 @@ public:
      * @param includeEnergy      whether to compute energy
      * @param energy             the total energy is added to this
      */
-    void calculateIxn(AlignedArray<float>& posq, RealOpenMM** particleParameters, const std::map<std::string, double>& globalParameters,
+    void calculateIxn(AlignedArray<float>& posq, double** particleParameters, const std::map<std::string, double>& globalParameters,
                       std::vector<AlignedArray<float> >& threadForce, bool includeForces, bool includeEnergy, double& energy);
 };
 

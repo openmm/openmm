@@ -33,8 +33,8 @@ class ReferenceVerletDynamics : public ReferenceDynamics {
 
    private:
 
-      std::vector<OpenMM::RealVec> xPrime;
-      std::vector<RealOpenMM> inverseMasses;
+      std::vector<OpenMM::Vec3> xPrime;
+      std::vector<double> inverseMasses;
       
    public:
 
@@ -49,7 +49,7 @@ class ReferenceVerletDynamics : public ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
 
-       ReferenceVerletDynamics(int numberOfAtoms, RealOpenMM deltaT);
+       ReferenceVerletDynamics(int numberOfAtoms, double deltaT);
 
       /**---------------------------------------------------------------------------------------
       
@@ -72,8 +72,8 @@ class ReferenceVerletDynamics : public ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
      
-      void update(const OpenMM::System& system, std::vector<OpenMM::RealVec>& atomCoordinates,
-                  std::vector<OpenMM::RealVec>& velocities, std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& masses, RealOpenMM tolerance);
+      void update(const OpenMM::System& system, std::vector<OpenMM::Vec3>& atomCoordinates,
+                  std::vector<OpenMM::Vec3>& velocities, std::vector<OpenMM::Vec3>& forces, std::vector<double>& masses, double tolerance);
       
 };
 

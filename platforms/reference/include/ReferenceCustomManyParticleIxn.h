@@ -45,8 +45,8 @@ class ReferenceCustomManyParticleIxn {
       class DihedralTermInfo;
       int numParticlesPerSet, numPerParticleParameters, numTypes;
       bool useCutoff, usePeriodic, centralParticleMode;
-      RealOpenMM cutoffDistance;
-      OpenMM::RealVec periodicBoxVectors[3];
+      double cutoffDistance;
+      OpenMM::Vec3 periodicBoxVectors[3];
       Lepton::ExpressionProgram energyExpression;
       std::vector<std::vector<std::string> > particleParamNames;
       std::vector<std::set<int> > exclusions;
@@ -58,9 +58,9 @@ class ReferenceCustomManyParticleIxn {
       std::vector<AngleTermInfo> angleTerms;
       std::vector<DihedralTermInfo> dihedralTerms;
 
-      void loopOverInteractions(std::vector<int>& particles, int loopIndex, std::vector<OpenMM::RealVec>& atomCoordinates,
-                                RealOpenMM** particleParameters, std::map<std::string, double>& variables, std::vector<OpenMM::RealVec>& forces,
-                                RealOpenMM* totalEnergy) const;
+      void loopOverInteractions(std::vector<int>& particles, int loopIndex, std::vector<OpenMM::Vec3>& atomCoordinates,
+                                double** particleParameters, std::map<std::string, double>& variables, std::vector<OpenMM::Vec3>& forces,
+                                double* totalEnergy) const;
 
       /**---------------------------------------------------------------------------------------
 
@@ -75,13 +75,13 @@ class ReferenceCustomManyParticleIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateOneIxn(const std::vector<int>& particles, std::vector<OpenMM::RealVec>& atomCoordinates,
-                           RealOpenMM** particleParameters, std::map<std::string, double>& variables, std::vector<OpenMM::RealVec>& forces,
-                           RealOpenMM* totalEnergy) const;
+      void calculateOneIxn(const std::vector<int>& particles, std::vector<OpenMM::Vec3>& atomCoordinates,
+                           double** particleParameters, std::map<std::string, double>& variables, std::vector<OpenMM::Vec3>& forces,
+                           double* totalEnergy) const;
 
-      void computeDelta(int atom1, int atom2, RealOpenMM* delta, std::vector<OpenMM::RealVec>& atomCoordinates) const;
+      void computeDelta(int atom1, int atom2, double* delta, std::vector<OpenMM::Vec3>& atomCoordinates) const;
 
-      static RealOpenMM computeAngle(RealOpenMM* vec1, RealOpenMM* vec2);
+      static double computeAngle(double* vec1, double* vec2);
 
 
    public:
@@ -110,7 +110,7 @@ class ReferenceCustomManyParticleIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void setUseCutoff(RealOpenMM distance);
+      void setUseCutoff(double distance);
 
       /**---------------------------------------------------------------------------------------
 
@@ -122,7 +122,7 @@ class ReferenceCustomManyParticleIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void setPeriodic(OpenMM::RealVec* vectors);
+      void setPeriodic(OpenMM::Vec3* vectors);
 
       /**---------------------------------------------------------------------------------------
 
@@ -136,12 +136,9 @@ class ReferenceCustomManyParticleIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateIxn(std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** particleParameters,
+      void calculateIxn(std::vector<OpenMM::Vec3>& atomCoordinates, double** particleParameters,
                         const std::map<std::string, double>& globalParameters,
-                        std::vector<OpenMM::RealVec>& forces, RealOpenMM* totalEnergy) const;
-
-// ---------------------------------------------------------------------------------------
-
+                        std::vector<OpenMM::Vec3>& forces, double* totalEnergy) const;
 };
 
 class ReferenceCustomManyParticleIxn::ParticleTermInfo {
@@ -159,7 +156,7 @@ public:
     std::string name;
     int p1, p2;
     Lepton::ExpressionProgram forceExpression;
-    mutable RealOpenMM delta[ReferenceForce::LastDeltaRIndex];
+    mutable double delta[ReferenceForce::LastDeltaRIndex];
     DistanceTermInfo(const std::string& name, const std::vector<int>& atoms, const Lepton::ExpressionProgram& forceExpression) :
             name(name), p1(atoms[0]), p2(atoms[1]), forceExpression(forceExpression) {
     }
@@ -170,8 +167,8 @@ public:
     std::string name;
     int p1, p2, p3;
     Lepton::ExpressionProgram forceExpression;
-    mutable RealOpenMM delta1[ReferenceForce::LastDeltaRIndex];
-    mutable RealOpenMM delta2[ReferenceForce::LastDeltaRIndex];
+    mutable double delta1[ReferenceForce::LastDeltaRIndex];
+    mutable double delta2[ReferenceForce::LastDeltaRIndex];
     AngleTermInfo(const std::string& name, const std::vector<int>& atoms, const Lepton::ExpressionProgram& forceExpression) :
             name(name), p1(atoms[0]), p2(atoms[1]), p3(atoms[2]), forceExpression(forceExpression) {
     }
@@ -182,11 +179,11 @@ public:
     std::string name;
     int p1, p2, p3, p4;
     Lepton::ExpressionProgram forceExpression;
-    mutable RealOpenMM delta1[ReferenceForce::LastDeltaRIndex];
-    mutable RealOpenMM delta2[ReferenceForce::LastDeltaRIndex];
-    mutable RealOpenMM delta3[ReferenceForce::LastDeltaRIndex];
-    mutable RealOpenMM cross1[3];
-    mutable RealOpenMM cross2[3];
+    mutable double delta1[ReferenceForce::LastDeltaRIndex];
+    mutable double delta2[ReferenceForce::LastDeltaRIndex];
+    mutable double delta3[ReferenceForce::LastDeltaRIndex];
+    mutable double cross1[3];
+    mutable double cross2[3];
     DihedralTermInfo(const std::string& name, const std::vector<int>& atoms, const Lepton::ExpressionProgram& forceExpression) :
             name(name), p1(atoms[0]), p2(atoms[1]), p3(atoms[2]), p4(atoms[3]), forceExpression(forceExpression) {
     }

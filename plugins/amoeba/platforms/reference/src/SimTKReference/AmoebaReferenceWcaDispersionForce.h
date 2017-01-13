@@ -25,7 +25,6 @@
 #ifndef __AmoebaReferenceWcaDispersionForce_H__
 #define __AmoebaReferenceWcaDispersionForce_H__
 
-#include "RealVec.h"
 #include "openmm/Vec3.h"
 #include <string>
 #include <vector>
@@ -51,8 +50,8 @@ public:
 
        --------------------------------------------------------------------------------------- */
  
-    AmoebaReferenceWcaDispersionForce(RealOpenMM epso, RealOpenMM epsh, RealOpenMM rmino, RealOpenMM rminh, 
-                                      RealOpenMM awater, RealOpenMM shctd, RealOpenMM dispoff, RealOpenMM slevy);
+    AmoebaReferenceWcaDispersionForce(double epso, double epsh, double rmino, double rminh, 
+                                      double awater, double shctd, double dispoff, double slevy);
  
     /**---------------------------------------------------------------------------------------
        
@@ -77,20 +76,20 @@ public:
     
        --------------------------------------------------------------------------------------- */
     
-    RealOpenMM calculateForceAndEnergy(int numParticles, const std::vector<OpenMM::RealVec>& particlePositions, 
-                                       const std::vector<RealOpenMM>& radii, 
-                                       const std::vector<RealOpenMM>& epsilons,
-                                       RealOpenMM totalMaximumDispersionEnergy, std::vector<OpenMM::RealVec>& forces) const;
+    double calculateForceAndEnergy(int numParticles, const std::vector<OpenMM::Vec3>& particlePositions, 
+                                   const std::vector<double>& radii, 
+                                   const std::vector<double>& epsilons,
+                                   double totalMaximumDispersionEnergy, std::vector<OpenMM::Vec3>& forces) const;
 private:
 
-    RealOpenMM _epso; 
-    RealOpenMM _epsh; 
-    RealOpenMM _rmino; 
-    RealOpenMM _rminh; 
-    RealOpenMM _awater; 
-    RealOpenMM _shctd; 
-    RealOpenMM _dispoff;
-    RealOpenMM _slevy;
+    double _epso; 
+    double _epsh; 
+    double _rmino; 
+    double _rminh; 
+    double _awater; 
+    double _shctd; 
+    double _dispoff;
+    double _slevy;
 
     enum { EMIXO, RMIXO, RMIXO7, AO, EMIXH, RMIXH, RMIXH7, AH, LastIntermediateValueIndex }; 
 
@@ -109,10 +108,10 @@ private:
 
        --------------------------------------------------------------------------------------- */
     
-    RealOpenMM calculatePairIxn(RealOpenMM radiusI, RealOpenMM radiusJ,
-                                const OpenMM::RealVec& particleIPosition, const OpenMM::RealVec& particleJPosition,
-                                const RealOpenMM* const intermediateValues,
-                                Vec3& force) const;
+    double calculatePairIxn(double radiusI, double radiusJ,
+                            const OpenMM::Vec3& particleIPosition, const OpenMM::Vec3& particleJPosition,
+                            const double* const intermediateValues,
+                            Vec3& force) const;
 
 };
 

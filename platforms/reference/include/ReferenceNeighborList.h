@@ -1,14 +1,14 @@
 #ifndef OPENMM_REFERENCE_NEIGHBORLIST_H_
 #define OPENMM_REFERENCE_NEIGHBORLIST_H_
 
-#include "RealVec.h"
+#include "openmm/Vec3.h"
 #include "openmm/internal/windowsExport.h"
 #include <set>
 #include <vector>
 
 namespace OpenMM {
 
-typedef std::vector<RealVec> AtomLocationList;
+typedef std::vector<Vec3> AtomLocationList;
 typedef unsigned int AtomIndex;
 typedef std::pair<AtomIndex, AtomIndex> AtomPair;
 typedef std::vector<AtomPair>  NeighborList;
@@ -22,7 +22,7 @@ void OPENMM_EXPORT computeNeighborListNaive(
                               int nAtoms,
                               const AtomLocationList& atomLocations, 
                               const std::vector<std::set<int> >& exclusions,
-                              const RealVec* periodicBoxVectors,
+                              const Vec3* periodicBoxVectors,
                               bool usePeriodic,
                               double maxDistance,
                               double minDistance = 0.0,
@@ -37,7 +37,7 @@ void OPENMM_EXPORT computeNeighborListVoxelHash(
                               int nAtoms,
                               const AtomLocationList& atomLocations,
                               const std::vector<std::set<int> >& exclusions,
-                              const RealVec* periodicBoxVectors,
+                              const Vec3* periodicBoxVectors,
                               bool usePeriodic,
                               double maxDistance,
                               double minDistance = 0.0,

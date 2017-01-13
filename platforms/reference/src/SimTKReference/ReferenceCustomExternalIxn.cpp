@@ -78,13 +78,6 @@ ReferenceCustomExternalIxn::ReferenceCustomExternalIxn(const Lepton::CompiledExp
    --------------------------------------------------------------------------------------- */
 
 ReferenceCustomExternalIxn::~ReferenceCustomExternalIxn() {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceCustomExternalIxn::~ReferenceCustomExternalIxn";
-
-   // ---------------------------------------------------------------------------------------
-
 }
 
 /**---------------------------------------------------------------------------------------
@@ -100,12 +93,10 @@ ReferenceCustomExternalIxn::~ReferenceCustomExternalIxn() {
    --------------------------------------------------------------------------------------- */
 
 void ReferenceCustomExternalIxn::calculateForce(int atomIndex,
-                                                vector<RealVec>& atomCoordinates,
-                                                RealOpenMM* parameters,
-                                                vector<RealVec>& forces,
-                                                RealOpenMM* energy) const {
-
-   static const std::string methodName = "\nReferenceCustomExternalIxn::calculateBondIxn";
+                                                vector<Vec3>& atomCoordinates,
+                                                double* parameters,
+                                                vector<Vec3>& forces,
+                                                double* energy) const {
 
    for (int i = 0; i < numParameters; i++) {
        ReferenceForce::setVariable(energyParams[i], parameters[i]);
@@ -128,9 +119,9 @@ void ReferenceCustomExternalIxn::calculateForce(int atomIndex,
 
    // ---------------------------------------------------------------------------------------
 
-   forces[atomIndex][0] -= (RealOpenMM) forceExpressionX.evaluate();
-   forces[atomIndex][1] -= (RealOpenMM) forceExpressionY.evaluate();
-   forces[atomIndex][2] -= (RealOpenMM) forceExpressionZ.evaluate();
+   forces[atomIndex][0] -= forceExpressionX.evaluate();
+   forces[atomIndex][1] -= forceExpressionY.evaluate();
+   forces[atomIndex][2] -= forceExpressionZ.evaluate();
    if (energy != NULL)
-       *energy += (RealOpenMM) energyExpression.evaluate();
+       *energy += energyExpression.evaluate();
 }

@@ -41,8 +41,8 @@ class ReferenceCustomGBIxn {
       bool cutoff;
       bool periodic;
       const OpenMM::NeighborList* neighborList;
-      OpenMM::RealVec periodicBoxVectors[3];
-      RealOpenMM cutoffDistance;
+      OpenMM::Vec3 periodicBoxVectors[3];
+      double cutoffDistance;
       CompiledExpressionSet expressionSet;
       std::vector<Lepton::CompiledExpression> valueExpressions;
       std::vector<std::vector<Lepton::CompiledExpression> > valueDerivExpressions;
@@ -59,8 +59,8 @@ class ReferenceCustomGBIxn {
       std::vector<int> particleParamIndex;
       std::vector<int> particleValueIndex;
       int rIndex, xIndex, yIndex, zIndex;
-      std::vector<std::vector<RealOpenMM> > values, dEdV;
-      std::vector<std::vector<std::vector<RealOpenMM> > > dValuedParam;
+      std::vector<std::vector<double> > values, dEdV;
+      std::vector<std::vector<std::vector<double> > > dValuedParam;
 
       /**---------------------------------------------------------------------------------------
 
@@ -73,7 +73,7 @@ class ReferenceCustomGBIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateSingleParticleValue(int index, int numAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** atomParameters);
+      void calculateSingleParticleValue(int index, int numAtoms, std::vector<OpenMM::Vec3>& atomCoordinates, double** atomParameters);
 
       /**---------------------------------------------------------------------------------------
 
@@ -88,7 +88,7 @@ class ReferenceCustomGBIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateParticlePairValue(int index, int numAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** atomParameters,
+      void calculateParticlePairValue(int index, int numAtoms, std::vector<OpenMM::Vec3>& atomCoordinates, double** atomParameters,
                                       const std::vector<std::set<int> >& exclusions, bool useExclusions);
 
       /**---------------------------------------------------------------------------------------
@@ -103,7 +103,7 @@ class ReferenceCustomGBIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateOnePairValue(int index, int atom1, int atom2, std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** atomParameters);
+      void calculateOnePairValue(int index, int atom1, int atom2, std::vector<OpenMM::Vec3>& atomCoordinates, double** atomParameters);
 
       /**---------------------------------------------------------------------------------------
 
@@ -118,8 +118,8 @@ class ReferenceCustomGBIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateSingleParticleEnergyTerm(int index, int numAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
-                        RealOpenMM** atomParameters, std::vector<OpenMM::RealVec>& forces, RealOpenMM* totalEnergy, double* energyParamDerivs);
+      void calculateSingleParticleEnergyTerm(int index, int numAtoms, std::vector<OpenMM::Vec3>& atomCoordinates,
+                        double** atomParameters, std::vector<OpenMM::Vec3>& forces, double* totalEnergy, double* energyParamDerivs);
 
       /**---------------------------------------------------------------------------------------
 
@@ -136,9 +136,9 @@ class ReferenceCustomGBIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateParticlePairEnergyTerm(int index, int numAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** atomParameters,
+      void calculateParticlePairEnergyTerm(int index, int numAtoms, std::vector<OpenMM::Vec3>& atomCoordinates, double** atomParameters,
                                       const std::vector<std::set<int> >& exclusions, bool useExclusions,
-                                      std::vector<OpenMM::RealVec>& forces, RealOpenMM* totalEnergy, double* energyParamDerivs);
+                                      std::vector<OpenMM::Vec3>& forces, double* totalEnergy, double* energyParamDerivs);
 
       /**---------------------------------------------------------------------------------------
 
@@ -154,8 +154,8 @@ class ReferenceCustomGBIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateOnePairEnergyTerm(int index, int atom1, int atom2, std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** atomParameters,
-                                 std::vector<OpenMM::RealVec>& forces, RealOpenMM* totalEnergy, double* energyParamDerivs);
+      void calculateOnePairEnergyTerm(int index, int atom1, int atom2, std::vector<OpenMM::Vec3>& atomCoordinates, double** atomParameters,
+                                 std::vector<OpenMM::Vec3>& forces, double* totalEnergy, double* energyParamDerivs);
 
       /**---------------------------------------------------------------------------------------
 
@@ -169,8 +169,8 @@ class ReferenceCustomGBIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateChainRuleForces(int numAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** atomParameters,
-                                      const std::vector<std::set<int> >& exclusions, std::vector<OpenMM::RealVec>& forces, double* energyParamDerivs);
+      void calculateChainRuleForces(int numAtoms, std::vector<OpenMM::Vec3>& atomCoordinates, double** atomParameters,
+                                      const std::vector<std::set<int> >& exclusions, std::vector<OpenMM::Vec3>& forces, double* energyParamDerivs);
 
       /**---------------------------------------------------------------------------------------
 
@@ -185,8 +185,8 @@ class ReferenceCustomGBIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateOnePairChainRule(int atom1, int atom2, std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** atomParameters,
-                                 std::vector<OpenMM::RealVec>& forces, bool isExcluded);
+      void calculateOnePairChainRule(int atom1, int atom2, std::vector<OpenMM::Vec3>& atomCoordinates, double** atomParameters,
+                                 std::vector<OpenMM::Vec3>& forces, bool isExcluded);
 
    public:
 
@@ -226,7 +226,7 @@ class ReferenceCustomGBIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void setUseCutoff(RealOpenMM distance, const OpenMM::NeighborList& neighbors);
+      void setUseCutoff(double distance, const OpenMM::NeighborList& neighbors);
 
       /**---------------------------------------------------------------------------------------
 
@@ -238,7 +238,7 @@ class ReferenceCustomGBIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void setPeriodic(OpenMM::RealVec* vectors);
+      void setPeriodic(OpenMM::Vec3* vectors);
 
       /**---------------------------------------------------------------------------------------
 
@@ -254,8 +254,8 @@ class ReferenceCustomGBIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateIxn(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** atomParameters, const std::vector<std::set<int> >& exclusions,
-                       std::map<std::string, double>& globalParameters, std::vector<OpenMM::RealVec>& forces, RealOpenMM* totalEnergy, double* energyParamDerivs);
+      void calculateIxn(int numberOfAtoms, std::vector<OpenMM::Vec3>& atomCoordinates, double** atomParameters, const std::vector<std::set<int> >& exclusions,
+                       std::map<std::string, double>& globalParameters, std::vector<OpenMM::Vec3>& forces, double* totalEnergy, double* energyParamDerivs);
 
 // ---------------------------------------------------------------------------------------
 

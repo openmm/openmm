@@ -34,7 +34,7 @@
 
 #include "ReferencePlatform.h"
 #include "openmm/DrudeKernels.h"
-#include "RealVec.h"
+#include "openmm/Vec3.h"
 #include "lbfgs.h"
 #include <utility>
 #include <vector>

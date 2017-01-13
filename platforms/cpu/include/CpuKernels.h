@@ -91,7 +91,7 @@ public:
 private:
     CpuPlatform::PlatformData& data;
     Kernel referenceKernel;
-    std::vector<RealVec> lastPositions;
+    std::vector<Vec3> lastPositions;
 };
 
 /**
@@ -130,7 +130,7 @@ private:
     CpuPlatform::PlatformData& data;
     int numAngles;
     int **angleIndexArray;
-    RealOpenMM **angleParamArray;
+    double **angleParamArray;
     CpuBondForce bondForce;
     bool usePeriodic;
 };
@@ -171,7 +171,7 @@ private:
     CpuPlatform::PlatformData& data;
     int numTorsions;
     int **torsionIndexArray;
-    RealOpenMM **torsionParamArray;
+    double **torsionParamArray;
     CpuBondForce bondForce;
     bool usePeriodic;
 };
@@ -212,7 +212,7 @@ private:
     CpuPlatform::PlatformData& data;
     int numTorsions;
     int **torsionIndexArray;
-    RealOpenMM **torsionParamArray;
+    double **torsionParamArray;
     CpuBondForce bondForce;
     bool usePeriodic;
 };
@@ -395,8 +395,8 @@ private:
     CpuPlatform::PlatformData& data;
     int numParticles;
     bool isPeriodic;
-    RealOpenMM **particleParamArray;
-    RealOpenMM nonbondedCutoff;
+    double **particleParamArray;
+    double nonbondedCutoff;
     CpuCustomGBForce* ixn;
     std::vector<std::set<int> > exclusions;
     std::vector<std::string> particleParameterNames, globalParameterNames, energyParamDerivNames, valueNames;
@@ -440,8 +440,8 @@ public:
 private:
     CpuPlatform::PlatformData& data;
     int numParticles;
-    RealOpenMM cutoffDistance;
-    RealOpenMM **particleParamArray;
+    double cutoffDistance;
+    double **particleParamArray;
     CpuCustomManyParticleForce* ixn;
     std::vector<std::string> globalParameterNames;
     NonbondedMethod nonbondedMethod;
@@ -516,7 +516,7 @@ public:
 private:
     CpuPlatform::PlatformData& data;
     CpuLangevinDynamics* dynamics;
-    std::vector<RealOpenMM> masses;
+    std::vector<double> masses;
     double prevTemp, prevFriction, prevStepSize;
 };
 

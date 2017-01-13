@@ -44,13 +44,7 @@ using namespace OpenMM;
 
 ReferenceLincsAlgorithm::ReferenceLincsAlgorithm(int numberOfConstraints,
                                                  int** atomIndices,
-                                                 RealOpenMM* distance) {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceLincsAlgorithm::ReferenceLincsAlgorithm";
-
-   // ---------------------------------------------------------------------------------------
+                                                 double* distance) {
 
    _numberOfConstraints        = numberOfConstraints;
    _atomIndices                = atomIndices;
@@ -69,13 +63,6 @@ ReferenceLincsAlgorithm::ReferenceLincsAlgorithm(int numberOfConstraints,
    --------------------------------------------------------------------------------------- */
 
 int ReferenceLincsAlgorithm::getNumberOfConstraints() const {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceLincsAlgorithm::getNumberOfConstraints";
-
-   // ---------------------------------------------------------------------------------------
-
    return _numberOfConstraints;
 }
 
@@ -88,13 +75,6 @@ int ReferenceLincsAlgorithm::getNumberOfConstraints() const {
    --------------------------------------------------------------------------------------- */
 
 int ReferenceLincsAlgorithm::getNumTerms() const {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceLincsAlgorithm::getNumTerms";
-
-   // ---------------------------------------------------------------------------------------
-
    return _numTerms;
 }
 
@@ -105,13 +85,6 @@ int ReferenceLincsAlgorithm::getNumTerms() const {
    --------------------------------------------------------------------------------------- */
 
 void ReferenceLincsAlgorithm::setNumTerms(int terms) {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceLincsAlgorithm::setNumTerms";
-
-   // ---------------------------------------------------------------------------------------
-
    _numTerms = terms;
 }
 
@@ -125,8 +98,7 @@ void ReferenceLincsAlgorithm::setNumTerms(int terms) {
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceLincsAlgorithm::initialize(int numberOfAtoms, vector<RealOpenMM>& inverseMasses) {
-    static const RealOpenMM one = 1.0;
+void ReferenceLincsAlgorithm::initialize(int numberOfAtoms, vector<double>& inverseMasses) {
     _hasInitialized = true;
     vector<vector<int> > atomConstraints(numberOfAtoms);
     for (int constraint = 0; constraint < _numberOfConstraints; constraint++) {
@@ -145,7 +117,7 @@ void ReferenceLincsAlgorithm::initialize(int numberOfAtoms, vector<RealOpenMM>& 
     }
     _sMatrix.resize(_numberOfConstraints);
     for (int constraint = 0; constraint < _numberOfConstraints; constraint++)
-        _sMatrix[constraint] = one/SQRT(inverseMasses[_atomIndices[constraint][0]]+inverseMasses[_atomIndices[constraint][1]]);
+        _sMatrix[constraint] = 1.0/sqrt(inverseMasses[_atomIndices[constraint][0]]+inverseMasses[_atomIndices[constraint][1]]);
     _couplingMatrix.resize(_numberOfConstraints);
     for (int constraint = 0; constraint < _numberOfConstraints; constraint++)
         _couplingMatrix[constraint].resize(_linkedConstraints[constraint].size());
@@ -162,12 +134,11 @@ void ReferenceLincsAlgorithm::initialize(int numberOfAtoms, vector<RealOpenMM>& 
  --------------------------------------------------------------------------------------- */
 
 void ReferenceLincsAlgorithm::solveMatrix() {
-    static const RealOpenMM zero = 0.0;
     for (int iteration = 0; iteration < _numTerms; iteration++) {
-        vector<RealOpenMM>& rhs1 = (iteration%2 == 0 ? _rhs1 : _rhs2);
-        vector<RealOpenMM>& rhs2 = (iteration%2 == 0 ? _rhs2 : _rhs1);
+        vector<double>& rhs1 = (iteration%2 == 0 ? _rhs1 : _rhs2);
+        vector<double>& rhs2 = (iteration%2 == 0 ? _rhs2 : _rhs1);
         for (int c1 = 0; c1 < _numberOfConstraints; c1++) {
-            rhs2[c1] = zero;
+            rhs2[c1] = 0.0;
             for (int j = 0; j < (int)_linkedConstraints[c1].size(); j++) {
                 int c2 = _linkedConstraints[c1][j];
                 rhs2[c1] += _couplingMatrix[c1][j]*rhs1[c2];
@@ -187,19 +158,19 @@ void ReferenceLincsAlgorithm::solveMatrix() {
 
  --------------------------------------------------------------------------------------- */
 
-void ReferenceLincsAlgorithm::updateAtomPositions(int numberOfAtoms, vector<RealVec>& atomCoordinates, vector<RealOpenMM>& inverseMasses) {
+void ReferenceLincsAlgorithm::updateAtomPositions(int numberOfAtoms, vector<Vec3>& atomCoordinates, vector<double>& inverseMasses) {
     for (int i = 0; i < _numberOfConstraints; i++) {
-        RealVec delta(_sMatrix[i]*_solution[i]*_constraintDir[i][0],
+        Vec3 delta(_sMatrix[i]*_solution[i]*_constraintDir[i][0],
                    _sMatrix[i]*_solution[i]*_constraintDir[i][1],
                    _sMatrix[i]*_solution[i]*_constraintDir[i][2]);
         int atom1 = _atomIndices[i][0];
         int atom2 = _atomIndices[i][1];
-        atomCoordinates[atom1][0] -= (RealOpenMM)(inverseMasses[atom1]*delta[0]);
-        atomCoordinates[atom1][1] -= (RealOpenMM)(inverseMasses[atom1]*delta[1]);
-        atomCoordinates[atom1][2] -= (RealOpenMM)(inverseMasses[atom1]*delta[2]);
-        atomCoordinates[atom2][0] += (RealOpenMM)(inverseMasses[atom2]*delta[0]);
-        atomCoordinates[atom2][1] += (RealOpenMM)(inverseMasses[atom2]*delta[1]);
-        atomCoordinates[atom2][2] += (RealOpenMM)(inverseMasses[atom2]*delta[2]);
+        atomCoordinates[atom1][0] -= inverseMasses[atom1]*delta[0];
+        atomCoordinates[atom1][1] -= inverseMasses[atom1]*delta[1];
+        atomCoordinates[atom1][2] -= inverseMasses[atom1]*delta[2];
+        atomCoordinates[atom2][0] += inverseMasses[atom2]*delta[0];
+        atomCoordinates[atom2][1] += inverseMasses[atom2]*delta[1];
+        atomCoordinates[atom2][2] += inverseMasses[atom2]*delta[2];
     }
 }
 
@@ -214,19 +185,9 @@ void ReferenceLincsAlgorithm::updateAtomPositions(int numberOfAtoms, vector<Real
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceLincsAlgorithm::apply(int numberOfAtoms, vector<RealVec>& atomCoordinates,
-                                         vector<RealVec>& atomCoordinatesP,
-                                         vector<RealOpenMM>& inverseMasses) {
-
-   // ---------------------------------------------------------------------------------------
-
-   static const char* methodName = "\nReferenceLincsAlgorithm::apply";
-
-   static const RealOpenMM zero        =  0.0;
-   static const RealOpenMM one         =  1.0;
-   static const RealOpenMM two         =  2.0;
-
-   // ---------------------------------------------------------------------------------------
+void ReferenceLincsAlgorithm::apply(int numberOfAtoms, vector<Vec3>& atomCoordinates,
+                                         vector<Vec3>& atomCoordinatesP,
+                                         vector<double>& inverseMasses) {
 
    if (_numberOfConstraints == 0)
        return;
@@ -239,27 +200,27 @@ void ReferenceLincsAlgorithm::apply(int numberOfAtoms, vector<RealVec>& atomCoor
    for (int i = 0; i < _numberOfConstraints; i++) {
        int atom1 = _atomIndices[i][0];
        int atom2 = _atomIndices[i][1];
-       _constraintDir[i] = RealVec(atomCoordinatesP[atom1][0]-atomCoordinatesP[atom2][0],
+       _constraintDir[i] = Vec3(atomCoordinatesP[atom1][0]-atomCoordinatesP[atom2][0],
                                 atomCoordinatesP[atom1][1]-atomCoordinatesP[atom2][1],
                                 atomCoordinatesP[atom1][2]-atomCoordinatesP[atom2][2]);
-       RealOpenMM invLength = (RealOpenMM)(1/SQRT((RealOpenMM)_constraintDir[i].dot(_constraintDir[i])));
+       double invLength = 1/sqrt(_constraintDir[i].dot(_constraintDir[i]));
        _constraintDir[i][0] *= invLength;
        _constraintDir[i][1] *= invLength;
        _constraintDir[i][2] *= invLength;
-       _rhs1[i] = _solution[i] = _sMatrix[i]*(one/invLength-_distance[i]);
+       _rhs1[i] = _solution[i] = _sMatrix[i]*(1.0/invLength-_distance[i]);
    }
 
    // Build the coupling matrix.
 
    for (int c1 = 0; c1 < (int)_couplingMatrix.size(); c1++) {
-       RealVec& dir1 = _constraintDir[c1];
+       Vec3& dir1 = _constraintDir[c1];
        for (int j = 0; j < (int)_couplingMatrix[c1].size(); j++) {
            int c2 = _linkedConstraints[c1][j];
-           RealVec& dir2 = _constraintDir[c2];
+           Vec3& dir2 = _constraintDir[c2];
            if (_atomIndices[c1][0] == _atomIndices[c2][0] || _atomIndices[c1][1] == _atomIndices[c2][1])
-               _couplingMatrix[c1][j] = (RealOpenMM)(-inverseMasses[_atomIndices[c1][0]]*_sMatrix[c1]*dir1.dot(dir2)*_sMatrix[c2]);
+               _couplingMatrix[c1][j] = -inverseMasses[_atomIndices[c1][0]]*_sMatrix[c1]*dir1.dot(dir2)*_sMatrix[c2];
            else
-               _couplingMatrix[c1][j] = (RealOpenMM)(inverseMasses[_atomIndices[c1][1]]*_sMatrix[c1]*dir1.dot(dir2)*_sMatrix[c2]);
+               _couplingMatrix[c1][j] = inverseMasses[_atomIndices[c1][1]]*_sMatrix[c1]*dir1.dot(dir2)*_sMatrix[c2];
        }
    }
 
@@ -273,13 +234,13 @@ void ReferenceLincsAlgorithm::apply(int numberOfAtoms, vector<RealVec>& atomCoor
    for (int i = 0; i < _numberOfConstraints; i++) {
        int atom1 = _atomIndices[i][0];
        int atom2 = _atomIndices[i][1];
-       RealVec delta(atomCoordinatesP[atom1][0]-atomCoordinatesP[atom2][0],
+       Vec3 delta(atomCoordinatesP[atom1][0]-atomCoordinatesP[atom2][0],
                   atomCoordinatesP[atom1][1]-atomCoordinatesP[atom2][1],
                   atomCoordinatesP[atom1][2]-atomCoordinatesP[atom2][2]);
-       RealOpenMM p2 = (RealOpenMM)(two*_distance[i]*_distance[i]-delta.dot(delta));
-       if (p2 < zero)
-           p2 = zero;
-       _rhs1[i] = _solution[i] = _sMatrix[i]*(_distance[i]-SQRT(p2));
+       double p2 = 2.0*_distance[i]*_distance[i]-delta.dot(delta);
+       if (p2 < 0.0)
+           p2 = 0.0;
+       _rhs1[i] = _solution[i] = _sMatrix[i]*(_distance[i]-sqrt(p2));
    }
    solveMatrix();
    updateAtomPositions(numberOfAtoms, atomCoordinatesP, inverseMasses);
@@ -296,7 +257,7 @@ void ReferenceLincsAlgorithm::apply(int numberOfAtoms, vector<RealVec>& atomCoor
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceLincsAlgorithm::applyToVelocities(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
-               std::vector<OpenMM::RealVec>& velocities, std::vector<RealOpenMM>& inverseMasses) {
+void ReferenceLincsAlgorithm::applyToVelocities(int numberOfAtoms, std::vector<OpenMM::Vec3>& atomCoordinates,
+               std::vector<OpenMM::Vec3>& velocities, std::vector<double>& inverseMasses) {
     throw OpenMM::OpenMMException("applyToVelocities is not implemented");
 }

@@ -37,20 +37,20 @@ using namespace std;
 
 class CpuBondForce::ComputeForceTask : public ThreadPool::Task {
 public:
-    ComputeForceTask(CpuBondForce& owner, vector<RealVec>& atomCoordinates, RealOpenMM** parameters, vector<RealVec>& forces, 
-        vector<RealOpenMM>& threadEnergy, RealOpenMM* totalEnergy, ReferenceBondIxn& referenceBondIxn) : owner(owner), atomCoordinates(atomCoordinates),
+    ComputeForceTask(CpuBondForce& owner, vector<Vec3>& atomCoordinates, double** parameters, vector<Vec3>& forces, 
+        vector<double>& threadEnergy, double* totalEnergy, ReferenceBondIxn& referenceBondIxn) : owner(owner), atomCoordinates(atomCoordinates),
         parameters(parameters), forces(forces), threadEnergy(threadEnergy), totalEnergy(totalEnergy), referenceBondIxn(referenceBondIxn) {
     }
     void execute(ThreadPool& threads, int threadIndex) {
-        RealOpenMM* energy = (totalEnergy == NULL ? NULL : &threadEnergy[threadIndex]);
+        double* energy = (totalEnergy == NULL ? NULL : &threadEnergy[threadIndex]);
         owner.threadComputeForce(threads, threadIndex, atomCoordinates, parameters, forces, energy, referenceBondIxn);
     }
     CpuBondForce& owner;
-    vector<RealVec>& atomCoordinates;
-    RealOpenMM** parameters;
-    vector<RealVec>& forces;
-    vector<RealOpenMM>& threadEnergy;
-    RealOpenMM* totalEnergy;
+    vector<Vec3>& atomCoordinates;
+    double** parameters;
+    vector<Vec3>& forces;
+    vector<double>& threadEnergy;
+    double* totalEnergy;
     ReferenceBondIxn& referenceBondIxn;
 };
 
@@ -183,11 +183,11 @@ void CpuBondForce::assignBond(int bond, int thread, vector<int>& atomThread, vec
     }
 }
 
-void CpuBondForce::calculateForce(vector<RealVec>& atomCoordinates, RealOpenMM** parameters, vector<RealVec>& forces, 
-        RealOpenMM* totalEnergy, ReferenceBondIxn& referenceBondIxn) {
+void CpuBondForce::calculateForce(vector<Vec3>& atomCoordinates, double** parameters, vector<Vec3>& forces, 
+        double* totalEnergy, ReferenceBondIxn& referenceBondIxn) {
     // Have the worker threads compute their forces.
     
-    vector<RealOpenMM> threadEnergy(threads->getNumThreads(), 0);
+    vector<double> threadEnergy(threads->getNumThreads(), 0);
     ComputeForceTask task(*this, atomCoordinates, parameters, forces, threadEnergy, totalEnergy, referenceBondIxn);
     threads->execute(task);
     threads->waitForThreads();
@@ -206,8 +206,8 @@ void CpuBondForce::calculateForce(vector<RealVec>& atomCoordinates, RealOpenMM**
             *totalEnergy += threadEnergy[i];
 }
 
-void CpuBondForce::threadComputeForce(ThreadPool& threads, int threadIndex, vector<RealVec>& atomCoordinates, RealOpenMM** parameters, vector<RealVec>& forces, 
-            RealOpenMM* totalEnergy, ReferenceBondIxn& referenceBondIxn) {
+void CpuBondForce::threadComputeForce(ThreadPool& threads, int threadIndex, vector<Vec3>& atomCoordinates, double** parameters, vector<Vec3>& forces, 
+            double* totalEnergy, ReferenceBondIxn& referenceBondIxn) {
     vector<int>& bonds = threadBonds[threadIndex];
     int numBonds = bonds.size();
     for (int i = 0; i < numBonds; i++) {
