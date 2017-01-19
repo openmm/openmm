@@ -1695,8 +1695,10 @@ void test_water125_dpme_vs_long_cutoff_with_exclusions() {
     ASSERT_EQUAL_TOL(refenergy, energy, 5E-4);
     ASSERT_EQUAL_TOL(gromacs_energy, energy, 5E-5);
 
+    // Forces accumulated in single precision are tested to a more permissive criterion; the double
+    // precision platform can match to 5E-5.
     for(int n = 0; n < NATOMS; ++n)
-        ASSERT_EQUAL_VEC(refforces[n], forces[n], 5E-5);
+        ASSERT_EQUAL_VEC(refforces[n], forces[n], 1E-4);
 
 }
 

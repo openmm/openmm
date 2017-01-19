@@ -523,8 +523,7 @@ void test_water2_dpme_energies_forces_no_exclusions() {
     const vector<Vec3>& refforces = state.getForces();
 
     // Optimized CPU calculation
-    CpuCalcPmeReciprocalForceKernel pme(CalcPmeReciprocalForceKernel::Name(), platform);
-    pme.setCalculationType(CpuCalcPmeReciprocalForceKernel::Dispersion);
+    CpuCalcDispersionPmeReciprocalForceKernel pme(CalcPmeReciprocalForceKernel::Name(), platform);
     IO io;
     double selfEwaldEnergy = 0;
     double dalpha6 = pow(dalpha, 6.0);

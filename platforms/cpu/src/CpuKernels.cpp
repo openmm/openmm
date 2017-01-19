@@ -674,8 +674,9 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
             if (useOptimizedPme) {
                 optimizedPme = getPlatform().createKernel(CalcPmeReciprocalForceKernel::Name(), context);
                 optimizedPme.getAs<CalcPmeReciprocalForceKernel>().initialize(gridSize[0], gridSize[1], gridSize[2], numParticles, ewaldAlpha);
-                optimizedDispersionPme = getPlatform().createKernel(CalcPmeReciprocalForceKernel::Name(), context);
-                optimizedDispersionPme.getAs<CalcPmeReciprocalForceKernel>().initialize(dispersionGridSize[0], dispersionGridSize[1], dispersionGridSize[2], numParticles, ewaldDispersionAlpha);
+                optimizedDispersionPme = getPlatform().createKernel(CalcDispersionPmeReciprocalForceKernel::Name(), context);
+                optimizedDispersionPme.getAs<CalcDispersionPmeReciprocalForceKernel>().initialize(dispersionGridSize[0], dispersionGridSize[1],
+                                                                                                  dispersionGridSize[2], numParticles, ewaldDispersionAlpha);
             }
         }
     }

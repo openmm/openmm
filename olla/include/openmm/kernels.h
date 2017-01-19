@@ -1345,6 +1345,57 @@ public:
 };
 
 
+/**
+ * This kernel performs the dispersion reciprocal space calculation for LJPME.  In most cases, this
+ * calculation is done directly by CalcNonbondedForceKernel so this kernel is unneeded.
+ * In some cases it may want to outsource the work to a different kernel.  In particular,
+ * GPU based platforms sometimes use a CPU based implementation provided by a separate
+ * plugin.
+ */
+class CalcDispersionPmeReciprocalForceKernel : public KernelImpl {
+public:
+    class IO;
+    static std::string Name() {
+        return "CalcDispersionPmeReciprocalForce";
+    }
+    CalcDispersionPmeReciprocalForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     * 
+     * @param gridx        the x size of the PME grid
+     * @param gridy        the y size of the PME grid
+     * @param gridz        the z size of the PME grid
+     * @param numParticles the number of particles in the system
+     * @param alpha        the Ewald blending parameter
+     */
+    virtual void initialize(int gridx, int gridy, int gridz, int numParticles, double alpha) = 0;
+    /**
+     * Begin computing the force and energy.
+     *
+     * @param io                  an object that coordinates data transfer
+     * @param periodicBoxVectors  the vectors defining the periodic box (measured in nm)
+     * @param includeEnergy       true if potential energy should be computed
+     */
+    virtual void beginComputation(IO& io, const Vec3* periodicBoxVectors, bool includeEnergy) = 0;
+    /**
+     * Finish computing the force and energy.
+     * 
+     * @param io   an object that coordinates data transfer
+     * @return the potential energy due to the PME reciprocal space interactions
+     */
+    virtual double finishComputation(IO& io) = 0;
+    /**
+     * Get the parameters being used for PME.
+     * 
+     * @param alpha   the separation parameter
+     * @param nx      the number of grid points along the X axis
+     * @param ny      the number of grid points along the Y axis
+     * @param nz      the number of grid points along the Z axis
+     */
+    virtual void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const = 0;
+};
+
 } // namespace OpenMM
 
 #endif /*OPENMM_KERNELS_H_*/

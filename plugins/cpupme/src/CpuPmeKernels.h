@@ -51,10 +51,8 @@ namespace OpenMM {
 
 class OPENMM_EXPORT_PME CpuCalcPmeReciprocalForceKernel : public CalcPmeReciprocalForceKernel {
 public:
-    enum CalculationType { Electrostatic=0, Dispersion=1 };
-
     CpuCalcPmeReciprocalForceKernel(std::string name, const Platform& platform) : CalcPmeReciprocalForceKernel(name, platform),
-            hasCreatedPlan(false), isDeleted(false), realGrid(NULL), complexGrid(NULL), calculationType(Electrostatic) {
+            hasCreatedPlan(false), isDeleted(false), realGrid(NULL), complexGrid(NULL) {
     }
     /**
      * Initialize the kernel.
@@ -103,11 +101,6 @@ public:
      * @param nz      the number of grid points along the Z axis
      */
     void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
-    /**
-     * Sets the type of reciprocal space computation to perform (Electrostatic or Dispersion).
-     * @param type The type of computation
-     */
-    void setCalculationType(CalculationType type) { calculationType = type; }
 private:
     class ComputeTask;
     /**
@@ -138,7 +131,98 @@ private:
     float* posq;
     Vec3 periodicBoxVectors[3], recipBoxVectors[3];
     bool includeEnergy;
-    CalculationType calculationType;
+    gmx_atomic_t atomicCounter;
+};
+
+
+
+/**
+ * This is an optimized CPU implementation of CalcDispersionPmeReciprocalForceKernel.  It is both
+ * vectorized (requiring SSE 4.1) and multithreaded.  It uses FFTW to perform the FFTs.
+ */
+
+class OPENMM_EXPORT_PME CpuCalcDispersionPmeReciprocalForceKernel : public CalcPmeReciprocalForceKernel {
+public:
+    CpuCalcDispersionPmeReciprocalForceKernel(std::string name, const Platform& platform) : CalcPmeReciprocalForceKernel(name, platform),
+            hasCreatedPlan(false), isDeleted(false), realGrid(NULL), complexGrid(NULL)  {
+    }
+    /**
+     * Initialize the kernel.
+     * 
+     * @param gridx        the x size of the PME grid
+     * @param gridy        the y size of the PME grid
+     * @param gridz        the z size of the PME grid
+     * @param numParticles the number of particles in the system
+     * @param alpha        the Ewald blending parameter
+     */
+    void initialize(int xsize, int ysize, int zsize, int numParticles, double alpha);
+    ~CpuCalcDispersionPmeReciprocalForceKernel();
+    /**
+     * Begin computing the force and energy.
+     * 
+     * @param io                  an object that coordinates data transfer
+     * @param periodicBoxVectors  the vectors defining the periodic box (measured in nm)
+     * @param includeEnergy       true if potential energy should be computed
+     */
+    void beginComputation(IO& io, const Vec3* periodicBoxVectors, bool includeEnergy);
+    /**
+     * Finish computing the force and energy.
+     * 
+     * @param io   an object that coordinates data transfer
+     * @return the potential energy due to the PME reciprocal space interactions
+     */
+    double finishComputation(IO& io);
+    /**
+     * This routine contains the code executed by the main thread.
+     */
+    void runMainThread();
+    /**
+     * This routine contains the code executed by each worker thread.
+     */
+    void runWorkerThread(ThreadPool& threads, int index);
+    /**
+     * Get whether the current CPU supports all features needed by this kernel.
+     */
+    static bool isProcessorSupported();
+    /**
+     * Get the parameters being used for PME.
+     * 
+     * @param alpha   the separation parameter
+     * @param nx      the number of grid points along the X axis
+     * @param ny      the number of grid points along the Y axis
+     * @param nz      the number of grid points along the Z axis
+     */
+    void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
+private:
+    class ComputeTask;
+    /**
+     * Select a size for one grid dimension that FFTW can handle efficiently.
+     */
+    int findFFTDimension(int minimum, bool isZ);
+    static bool hasInitializedThreads;
+    static int numThreads;
+    int gridx, gridy, gridz, numParticles;
+    double alpha;
+    bool hasCreatedPlan, isFinished, isDeleted;
+    std::vector<float> force;
+    std::vector<float> bsplineModuli[3];
+    std::vector<float> recipEterm;
+    Vec3 lastBoxVectors[3];
+    std::vector<float> threadEnergy;
+    std::vector<float*> tempGrid;
+    float* realGrid;
+    fftwf_complex* complexGrid;
+    fftwf_plan forwardFFT, backwardFFT;
+    int waitCount;
+    pthread_cond_t startCondition, endCondition;
+    pthread_mutex_t lock;
+    pthread_t mainThread;
+    // The following variables are used to store information about the calculation currently being performed.
+    IO* io;
+    float energy;
+    float* posq;
+    Vec3 periodicBoxVectors[3], recipBoxVectors[3];
+    bool includeEnergy;
     gmx_atomic_t atomicCounter;
 };
 

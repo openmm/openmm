@@ -55,5 +55,7 @@ extern "C" OPENMM_EXPORT_PME void registerPlatforms() {
 KernelImpl* CpuPmeKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {
     if (name == CalcPmeReciprocalForceKernel::Name())
         return new CpuCalcPmeReciprocalForceKernel(name, platform);
+    if (name == CalcDispersionPmeReciprocalForceKernel::Name())
+        return new CpuCalcDispersionPmeReciprocalForceKernel(name, platform);
     throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '")+name+"'").c_str());
 }

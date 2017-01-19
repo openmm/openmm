@@ -2209,12 +2209,13 @@ void OpenCLCalcNonbondedForceKernel::getLJPMEParameters(double& alpha, int& nx, 
     if (nonbondedMethod != LJPME)
         throw OpenMMException("getPMEParametersInContext: This Context is not using PME");
     if (cl.getPlatformData().useCpuPme)
-        cpuPme.getAs<CalcPmeReciprocalForceKernel>().getPMEParameters(alpha, nx, ny, nz);
+        //cpuPme.getAs<CalcPmeReciprocalForceKernel>().getLJPMEParameters(alpha, nx, ny, nz);
+        throw OpenMMException("getPMEParametersInContext: CPUPME has not been implemented for LJPME yet.");
     else {
-        alpha = this->alpha;
-        nx = gridSizeX;
-        ny = gridSizeY;
-        nz = gridSizeZ;
+        alpha = this->dispersionAlpha;
+        nx = dispersionGridSizeX;
+        ny = dispersionGridSizeY;
+        nz = dispersionGridSizeZ;
     }
 }
 
