@@ -336,7 +336,7 @@ __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, bool has
     iEIY -= eCoef*(qiUinpI.y*qiUindJ.x + qiUindI.y*qiUinpJ.x);
     iEJY -= eCoef*(qiUinpJ.y*qiUindI.x + qiUindJ.y*qiUinpI.x);
     fIZ += dCoef*(qiUinpI.x*qiUindJ.x + qiUindI.x*qiUinpJ.x);
-    fIZ += dCoef*(qiUinpJ.x*qiUindI.x + qiUindJ.x*qiUinpI.x);
+    fJZ += dCoef*(qiUinpJ.x*qiUindI.x + qiUindJ.x*qiUinpI.x);
     // Uind-Uind terms (m=1)
     eCoef = 2*rInvVec[3]*thole_d1;
     dCoef = -3*rInvVec[4]*dthole_d1;
@@ -345,7 +345,7 @@ __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, bool has
     iEIY += eCoef*(qiUinpI.x*qiUindJ.y + qiUindI.x*qiUinpJ.y);
     iEJY += eCoef*(qiUinpJ.x*qiUindI.y + qiUindJ.x*qiUinpI.y);
     fIZ += dCoef*(qiUinpI.y*qiUindJ.y + qiUindI.y*qiUinpJ.y + qiUinpI.z*qiUindJ.z + qiUindI.z*qiUinpJ.z);
-    fIZ += dCoef*(qiUinpJ.y*qiUindI.y + qiUindJ.y*qiUinpI.y + qiUinpJ.z*qiUindI.z + qiUindJ.z*qiUinpI.z);
+    fJZ += dCoef*(qiUinpJ.y*qiUindI.y + qiUindJ.y*qiUinpI.y + qiUinpJ.z*qiUindI.z + qiUindJ.z*qiUinpI.z);
 #endif
 
     // The quasi-internal frame forces and torques.  Note that the induced torque intermediates are

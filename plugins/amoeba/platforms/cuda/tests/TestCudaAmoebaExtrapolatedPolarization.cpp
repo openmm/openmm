@@ -284,8 +284,10 @@ vector<Vec3> setupWaterDimer(System& system,  AmoebaMultipoleForce* amoebaMultip
 
 static void check_finite_differences(vector<Vec3> analytic_forces, Context &context, vector<Vec3> positions)
 {
-    // Take a small step in the direction of the energy gradient and see whether the potential energy changes by the expected amount.
+    // This is a bad test in single precision, due to roundoff errors; skip it in this case.
+    if(Platform::getPlatformByName("CUDA").getPropertyValue(context, "Precision") != "double") return;
 
+    // Take a small step in the direction of the energy gradient and see whether the potential energy changes by the expected amount.
     double norm = 0.0;
     for (int i = 0; i < (int) analytic_forces.size(); ++i)
         norm += analytic_forces[i].dot(analytic_forces[i]);
