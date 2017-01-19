@@ -164,7 +164,7 @@ Installing on Linux
 https://simtk.org/project/xml/downloads.xml?group_id=161, then double click the
 .zip file to expand it.
 
-2. Make sure you have Python 2.6 or higher (earlier versions will not work) and
+2. Make sure you have Python 2.7 or higher (earlier versions will not work) and
 a C++ compiler (typically :program:`gcc` or :program:`clang`) installed on your computer.  You can
 check what version of Python is installed by typing :code:`python` |--|\ :code:`version`
 into a console window.

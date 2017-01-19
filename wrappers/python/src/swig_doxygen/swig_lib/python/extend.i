@@ -322,14 +322,14 @@ Parameters:
 }
 
 %extend OpenMM::XmlSerializer {
-  %feature(docstring, "This method exists only for backward compatibility. @deprecated Use serialize() instead.") serializeSystem;
+  %feature(docstring, "This method exists only for backward compatibility.\n@deprecated Use serialize() instead.") serializeSystem;
   static std::string serializeSystem(const OpenMM::System* object) {
       std::stringstream ss;
       OpenMM::XmlSerializer::serialize<OpenMM::System>(object, "System", ss);
       return ss.str();
   }
 
-  %feature(docstring, "This method exists only for backward compatibility. @deprecated Use deserialize() instead.") deserializeSystem;
+  %feature(docstring, "This method exists only for backward compatibility.\n@deprecated Use deserialize() instead.") deserializeSystem;
   %newobject deserializeSystem;
   static OpenMM::System* deserializeSystem(const char* inputString) {
       std::stringstream ss;
@@ -361,6 +361,19 @@ Parameters:
       std::stringstream ss;
       ss << inputString;
       return OpenMM::XmlSerializer::deserialize<OpenMM::Integrator>(ss);
+  }
+
+  static std::string _serializeTabulatedFunction(const OpenMM::TabulatedFunction* object) {
+      std::stringstream ss;
+      OpenMM::XmlSerializer::serialize<OpenMM::TabulatedFunction>(object, "TabulatedFunction", ss);
+      return ss.str();
+  }
+
+  %newobject _deserializeTabulatedFunction;
+  static OpenMM::TabulatedFunction* _deserializeTabulatedFunction(const char* inputString) {
+      std::stringstream ss;
+      ss << inputString;
+      return OpenMM::XmlSerializer::deserialize<OpenMM::TabulatedFunction>(ss);
   }
 
   static std::string _serializeStateAsLists(
@@ -463,6 +476,8 @@ Parameters:
         return XmlSerializer._serializeIntegrator(object)
       elif isinstance(object, State):
         return XmlSerializer._serializeState(object)
+      elif isinstance(object, TabulatedFunction):
+        return XmlSerializer._serializeTabulatedFunction(object)
       raise ValueError("Unsupported object type")
 
     @staticmethod
@@ -481,6 +496,8 @@ Parameters:
         return XmlSerializer._deserializeIntegrator(inputString)
       if type == "State":
         return XmlSerializer._deserializeState(inputString)
+      if type == "TabulatedFunction":
+        return XmlSerializer._deserializeTabulatedFunction(inputString)
       raise ValueError("Unsupported object type")
   %}
 }
@@ -528,5 +545,24 @@ Parameters:
   %newobject __copy__;
   OpenMM::Integrator* __copy__() {
       return OpenMM::XmlSerializer::clone<OpenMM::Integrator>(*self);
+  }
+}
+
+%extend OpenMM::TabulatedFunction {
+  %pythoncode %{
+    def __getstate__(self):
+        serializationString = XmlSerializer.serialize(self)
+        return serializationString
+
+    def __setstate__(self, serializationString):
+        system = XmlSerializer.deserialize(serializationString)
+        self.this = system.this
+
+    def __deepcopy__(self, memo):
+        return self.__copy__()
+  %}
+  %newobject __copy__;
+  OpenMM::TabulatedFunction* __copy__() {
+      return OpenMM::XmlSerializer::clone<OpenMM::TabulatedFunction>(*self);
   }
 }
