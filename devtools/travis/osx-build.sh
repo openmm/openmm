@@ -1,5 +1,6 @@
 #!/bin/bash
-set -e -x
+#set -e -x
+set +e
 
 pushd .
 cd ..
