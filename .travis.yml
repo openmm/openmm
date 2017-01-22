@@ -5,7 +5,7 @@ env:
     - UPLOAD_BUILD_ARTIFACTS: "true" # If "true", will upload build artifacts to S3 bucket at http://docs.openmm.org/build-artifacts/
 
 #osx_image: xcode6.4 # Supported versions: https://docs.travis-ci.com/user/languages/objective-c/#Supported-Xcode-versions
-osx_image: xcode8.2 # Supported versions: https://docs.travis-ci.com/user/languages/objective-c/#Supported-Xcode-versions
+osx_image: xcode8.1 # Supported versions: https://docs.travis-ci.com/user/languages/objective-c/#Supported-Xcode-versions
 
 matrix:
   include:
