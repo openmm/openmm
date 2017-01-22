@@ -19,7 +19,7 @@ conda install -yq conda-build jinja2 anaconda-client;
 
 # Install doxygen
 #brew install -y --quiet doxygen
-conda install -c conda-forge doxygen
+conda install --yes -c conda-forge doxygen
 
 # Install CUDA
 curl -O -s http://developer.download.nvidia.com/compute/cuda/$CUDA_VERSION/Prod/network_installers/mac/x86_64/cuda_mac_installer_tk.tar.gz
