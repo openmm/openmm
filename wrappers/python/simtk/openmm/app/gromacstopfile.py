@@ -772,7 +772,7 @@ class GromacsTopFile(object):
                                 if periodic is None:
                                     periodic = mm.PeriodicTorsionForce()
                                     sys.addForce(periodic)
-                                periodic.addTorsion(baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], baseAtomIndex+atoms[2], baseAtomIndex+atoms[3], int(params[7]), float(params[5])*degToRad, k)
+                                periodic.addTorsion(baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], baseAtomIndex+atoms[2], baseAtomIndex+atoms[3], int(float(params[7])), float(params[5])*degToRad, k)
                         elif dihedralType == '2':
                             # Harmonic torsion
                             k = float(params[6])

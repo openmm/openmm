@@ -53,9 +53,9 @@ script:
 deploy:
   - provider: s3
     access_key_id:
-      secure: "AjE3nuj6kVuf21mOf0aZydW/3S/uCWsaoXC/huRxkxrmsNlnHBNGHZ9N48san1IxZAQM5pyaf7Yo9gkHur9obgq+e3lNgGvPp2mfkNXtLYcLJ46JF4kYliAtutjLWskrLg25Gu3xzF4EQkqSe0Le/oWldWWbTgvvH+KRq/vTHzI="
+      secure: "OEY0sp5FlM4kixFNVAktN6YHwKm5ieMswWCHj3MU+rWsAeGCULl/0kyKTfwCPknVlQv+SXBaPP3I4m1fv9FwHt0bbwy5EfmO4crrW8cE4ofq4vnwHi9UG77oEKKRrbxFUZD1y7ywI2W9SyVI6qfggZlJowRy9GV9Lin5vGzhqsw="
     secret_access_key:
-      secure: "ISDQNSG2t0666PULtffo4wsKLFdu622EzuZxmiTxvLkjQGQlqm5+qn1Gd5UMLk7Ts2E0psdnmSrf6LVVCfrrQO/hcZHiJw3ZslMPDBBlRr8Epwdldn98ULhVoyQKtjXjCPzroa2UZCl1RFs4Nwb/VdDlI490XV0Lp4Woj1AT8tY="
+      secure: "P7DOYn77bH5Gg1obIwCxanhH0Kgh22Pv1pCGvmI6gHXOE1dxf5pnCSQGFKO6g1K6eaN5TbTjh+BmMXmxgkqByvQ4uZtkTGlPq3HI9YeRjZE2H7bRpIYjXXRwA1RMOA3ofLDw1FXNmwMo8BtRIl4jljR5Iw5rytUZmLlk3zgtcr4="
     bucket: "docs.openmm.org"
     skip_cleanup: true
     region: us-west-1

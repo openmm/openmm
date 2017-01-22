@@ -29,7 +29,7 @@ __kernel void findBlockBounds(int numAtoms, real4 periodicBoxSize, real4 invPeri
         real4 blockSize = 0.5f*(maxPos-minPos);
         real4 center = 0.5f*(maxPos+minPos);
         center.w = 0;
-        for (int i = base+1; i < last; i++) {
+        for (int i = base; i < last; i++) {
             pos = posq[i];
             real4 delta = posq[i]-center;
 #ifdef USE_PERIODIC
@@ -99,7 +99,7 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
     __local real3 posBuffer[GROUP_SIZE];
     __local volatile int workgroupTileIndex[GROUP_SIZE/32];
     __local bool includeBlockFlags[GROUP_SIZE];
-    __local short2 atomCountBuffer[GROUP_SIZE];
+    __local volatile short2 atomCountBuffer[GROUP_SIZE];
     __local int* buffer = workgroupBuffer+BUFFER_SIZE*(warpStart/32);
     __local int* exclusionsForX = warpExclusions+MAX_EXCLUSIONS*(warpStart/32);
     __local volatile int* tileStartIndex = workgroupTileIndex+(warpStart/32);
