@@ -10,21 +10,12 @@ brew update -y --quiet
 brew tap -y caskroom/cask
 
 # Install Miniconda
-MINICONDA=Miniconda2-latest-Linux-x86_64.sh
-MINICONDA_HOME=$HOME/miniconda
-MINICONDA_MD5=$(curl -s https://repo.continuum.io/miniconda/ | grep -A3 $MINICONDA | sed -n '4p' | sed -n 's/ *<td>\(.*\)<\/td> */\1/p')
-wget -q https://repo.continuum.io/miniconda/$MINICONDA
-if [[ $MINICONDA_MD5 != $(md5sum $MINICONDA | cut -d ' ' -f 1) ]]; then
-    echo "Miniconda MD5 mismatch"
-    exit 1
-fi
-bash $MINICONDA -b -p $MINICONDA_HOME
-
-# Configure miniconda
-export PIP_ARGS="-U"
-export PATH=$MINICONDA_HOME/bin:$PATH
-conda update --yes conda
-conda install --yes conda-build jinja2 anaconda-client pip
+curl -s -O https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh;
+bash Miniconda3-latest-MacOSX-x86_64.sh -b -p $HOME/anaconda;
+export PATH=$HOME/anaconda/bin:$PATH;
+conda config --add channels omnia;
+conda config --show;
+conda install -yq conda-build jinja2 anaconda-client;
 
 # Install doxygen
 #brew install -y --quiet doxygen
