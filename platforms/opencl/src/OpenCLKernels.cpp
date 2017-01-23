@@ -2676,7 +2676,6 @@ double OpenCLCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
             interactionGroupKernel.setArg<cl::Buffer>(index++, cl.getEnergyBuffer().getDeviceBuffer());
             interactionGroupKernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
             interactionGroupKernel.setArg<cl::Buffer>(index++, interactionGroupData->getDeviceBuffer());
-            setPeriodicBoxArgs(cl, interactionGroupKernel, index);
             index += 5;
             for (int i = 0; i < (int) params->getBuffers().size(); i++)
                 interactionGroupKernel.setArg<cl::Memory>(index++, params->getBuffers()[i].getMemory());
@@ -2685,6 +2684,7 @@ double OpenCLCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
             if (globals != NULL)
                 interactionGroupKernel.setArg<cl::Buffer>(index++, globals->getDeviceBuffer());
         }
+        setPeriodicBoxArgs(cl, interactionGroupKernel, 4);
         int forceThreadBlockSize = max(32, cl.getNonbondedUtilities().getForceThreadBlockSize());
         cl.executeKernel(interactionGroupKernel, numGroupThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
     }
