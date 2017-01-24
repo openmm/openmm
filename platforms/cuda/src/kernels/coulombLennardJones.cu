@@ -30,7 +30,8 @@
             const real dar6 = dar4*dar2;
             const real invR2 = invR*invR;
             const real expDar2 = EXP(-dar2);
-            const real c6 = C6s1*C6s2;
+            const real2 sigExpProd = sigmaEpsilon1*sigmaEpsilon2;
+            const real c6 = 64*sigExpProd.x*sigExpProd.x*sigExpProd.x*sigExpProd.y;
             const real coef = invR2*invR2*invR2*c6;
             const real eprefac = 1.0f + dar2 + 0.5f*dar4;
             const real dprefac = eprefac + dar6/6.0f;

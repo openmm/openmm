@@ -75,7 +75,7 @@ public:
      * This is a utility routine that calculates the values to use for alpha and grid size when using
      * Particle Mesh Ewald.
      */
-    static void calcPMEParameters(const System& system, const NonbondedForce& force, double& alpha, int& xsize, int& ysize, int& zsize, bool LJ);
+    static void calcPMEParameters(const System& system, const NonbondedForce& force, double& alpha, int& xsize, int& ysize, int& zsize, bool lj);
     /**
      * Compute the coefficient which, when divided by the periodic box volume, gives the
      * long range dispersion correction to the energy.

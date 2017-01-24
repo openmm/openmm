@@ -151,12 +151,11 @@ void NonbondedForceImpl::calcEwaldParameters(const System& system, const Nonbond
         kmaxz++;
 }
 
-void NonbondedForceImpl::calcPMEParameters(const System& system, const NonbondedForce& force, double& alpha, int& xsize, int& ysize, int& zsize, bool LJ) {
-    if(LJ) {
+void NonbondedForceImpl::calcPMEParameters(const System& system, const NonbondedForce& force, double& alpha, int& xsize, int& ysize, int& zsize, bool lj) {
+    if (lj)
         force.getLJPMEParameters(alpha, xsize, ysize, zsize);
-    } else {
+    else
         force.getPMEParameters(alpha, xsize, ysize, zsize);
-    }
     if (alpha == 0.0) {
         Vec3 boxVectors[3];
         system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);

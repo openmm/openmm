@@ -22,7 +22,7 @@ extern "C" __global__ void findAtomDispersionGridIndex(const real4* __restrict__
 extern "C" __global__ void gridSpreadC6(const real4* __restrict__ posq, real* __restrict__ originalPmeGrid,
         real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
         real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ, const int2* __restrict__ pmeAtomGridIndex,
-        const real* __restrict__ C6s) {
+        const real2* __restrict__ sigmaEpsilon) {
     real3 data[PME_ORDER];
     const real scale = RECIP(PME_ORDER-1);
     
@@ -63,7 +63,9 @@ extern "C" __global__ void gridSpreadC6(const real4* __restrict__ posq, real* __
         data[0] = scale*(make_real3(1)-dr)*data[0];
         
         // Spread the charge from this atom onto each grid point.
-         
+        
+        const real2 sigEps = sigmaEpsilon[atom];
+        const real c6 = 8*sigEps.x*sigEps.x*sigEps.x*sigEps.y;
         for (int ix = 0; ix < PME_ORDER; ix++) {
             int xbase = gridIndex.x+ix;
             xbase -= (xbase >= DISPERSION_GRID_SIZE_X ? DISPERSION_GRID_SIZE_X : 0);
@@ -81,8 +83,7 @@ extern "C" __global__ void gridSpreadC6(const real4* __restrict__ posq, real* __
                     zindex -= (zindex >= DISPERSION_GRID_SIZE_Z ? DISPERSION_GRID_SIZE_Z : 0);
                     int index = ybase + zindex;
 
-                    // We need to grab the C6 coefficient from the array
-                    real add = C6s[atom]*dx*dy*data[iz].z;
+                    real add = c6*dx*dy*data[iz].z;
 #ifdef USE_DOUBLE_PRECISION
                     unsigned long long * ulonglong_p = (unsigned long long *) originalPmeGrid;
                     atomicAdd(&ulonglong_p[index],  static_cast<unsigned long long>((long long) (add*0x100000000)));
@@ -241,7 +242,7 @@ gridEvaluateDispersionEnergy(real2* __restrict__ halfcomplex_pmeGrid, mixed* __r
 extern "C" __global__
 void gridInterpolateDispersionForce(const real4* __restrict__ posq, unsigned long long* __restrict__ forceBuffers, const real* __restrict__ originalPmeGrid,
         real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
-        real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ, const int2* __restrict__ pmeAtomGridIndex, const real* __restrict__ C6s) {
+        real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ, const int2* __restrict__ pmeAtomGridIndex, const real2* __restrict__ sigmaEpsilon) {
     real3 data[PME_ORDER];
     real3 ddata[PME_ORDER];
     const real scale = RECIP(PME_ORDER-1);
@@ -287,7 +288,7 @@ void gridInterpolateDispersionForce(const real4* __restrict__ posq, unsigned lon
 
         
         // Compute the force on this atom.
-         
+        
         for (int ix = 0; ix < PME_ORDER; ix++) {
             int xbase = gridIndex.x+ix;
             xbase -= (xbase >= DISPERSION_GRID_SIZE_X ? DISPERSION_GRID_SIZE_X : 0);
@@ -313,7 +314,8 @@ void gridInterpolateDispersionForce(const real4* __restrict__ posq, unsigned lon
                 }
             }
         }
-        real q = C6s[atom];
+        const real2 sigEps = sigmaEpsilon[atom];
+        real q = 8*sigEps.x*sigEps.x*sigEps.x*sigEps.y;
         real forceX = -q*(force.x*DISPERSION_GRID_SIZE_X*recipBoxVecX.x);
         real forceY = -q*(force.x*DISPERSION_GRID_SIZE_X*recipBoxVecY.x+force.y*DISPERSION_GRID_SIZE_Y*recipBoxVecY.y);
         real forceZ = -q*(force.x*DISPERSION_GRID_SIZE_X*recipBoxVecZ.x+force.y*DISPERSION_GRID_SIZE_Y*recipBoxVecZ.y+force.z*DISPERSION_GRID_SIZE_Z*recipBoxVecZ.z);

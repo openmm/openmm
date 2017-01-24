@@ -598,10 +598,9 @@ private:
 class CudaCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 public:
     CudaCalcNonbondedForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcNonbondedForceKernel(name, platform),
-            cu(cu), hasInitializedFFT(false), sigmaEpsilon(NULL), C6s(NULL), exceptionParams(NULL), cosSinSums(NULL), directPmeGrid(NULL), reciprocalPmeGrid(NULL),
-            directDispersionPmeGrid(NULL), reciprocalDispersionPmeGrid(NULL),
-            pmeBsplineModuliX(NULL), pmeBsplineModuliY(NULL), pmeBsplineModuliZ(NULL),  pmeAtomRange(NULL), pmeAtomGridIndex(NULL), pmeAtomDispersionGridIndex(NULL),
-            pmeEnergyBuffer(NULL), dispersionPmeEnergyBuffer(NULL), sort(NULL), dispersionFft(NULL), fft(NULL), pmeio(NULL), dispersionPmeio(NULL) {
+            cu(cu), hasInitializedFFT(false), sigmaEpsilon(NULL), exceptionParams(NULL), cosSinSums(NULL), directPmeGrid(NULL), reciprocalPmeGrid(NULL),
+            pmeBsplineModuliX(NULL), pmeBsplineModuliY(NULL), pmeBsplineModuliZ(NULL),  pmeAtomRange(NULL), pmeAtomGridIndex(NULL),
+            pmeEnergyBuffer(NULL), sort(NULL), dispersionFft(NULL), fft(NULL), pmeio(NULL) {
     }
     ~CudaCalcNonbondedForceKernel();
     /**
@@ -666,28 +665,22 @@ private:
     CudaContext& cu;
     bool hasInitializedFFT;
     CudaArray* sigmaEpsilon;
-    CudaArray* C6s;
     CudaArray* exceptionParams;
     CudaArray* cosSinSums;
     CudaArray* directPmeGrid;
     CudaArray* reciprocalPmeGrid;
-    CudaArray* directDispersionPmeGrid;
-    CudaArray* reciprocalDispersionPmeGrid;
     CudaArray* pmeBsplineModuliX;
     CudaArray* pmeBsplineModuliY;
     CudaArray* pmeBsplineModuliZ;
     CudaArray* pmeAtomRange;
     CudaArray* pmeAtomGridIndex;
-    CudaArray* pmeAtomDispersionGridIndex;
     CudaArray* pmeEnergyBuffer;
-    CudaArray* dispersionPmeEnergyBuffer;
     CudaSort* sort;
     Kernel cpuPme;
     Kernel cpuDispersionPme;
     PmeIO* pmeio;
-    PmeIO* dispersionPmeio;
-    CUstream pmeStream, dispersionPmeStream;
-    CUevent pmeSyncEvent, dispersionPmeSyncEvent;
+    CUstream pmeStream;
+    CUevent pmeSyncEvent;
     CudaFFT3D* fft;
     cufftHandle fftForward;
     cufftHandle fftBackward;
@@ -710,7 +703,7 @@ private:
     CUfunction pmeInterpolateDispersionForceKernel;
     std::map<std::string, std::string> pmeDefines;
     std::vector<std::pair<int, int> > exceptionAtoms;
-    double ewaldSelfEnergy, dispersionSelfEnergy, dispersionCoefficient, alpha, dispersionAlpha;
+    double ewaldSelfEnergy, dispersionCoefficient, alpha, dispersionAlpha;
     int interpolateForceThreads;
     int gridSizeX, gridSizeY, gridSizeZ;
     int dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ;
