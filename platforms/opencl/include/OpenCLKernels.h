@@ -607,13 +607,22 @@ public:
     void copyParametersToContext(ContextImpl& context, const NonbondedForce& force);
     /**
      * Get the parameters being used for PME.
-     * 
+     *
      * @param alpha   the separation parameter
      * @param nx      the number of grid points along the X axis
      * @param ny      the number of grid points along the Y axis
      * @param nz      the number of grid points along the Z axis
      */
     void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
+    /**
+     * Get the parameters being used for the dispersion term in LJPME.
+     *
+     * @param alpha   the separation parameter
+     * @param nx      the number of grid points along the X axis
+     * @param ny      the number of grid points along the Y axis
+     * @param nz      the number of grid points along the Z axis
+     */
+    void getLJPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
 private:
     class SortTrait : public OpenCLSort::SortTrait {
         int getDataSize() const {return 8;}
@@ -664,8 +673,9 @@ private:
     cl::Kernel pmeInterpolateForceKernel;
     std::map<std::string, std::string> pmeDefines;
     std::vector<std::pair<int, int> > exceptionAtoms;
-    double ewaldSelfEnergy, dispersionCoefficient, alpha;
+    double ewaldSelfEnergy, dispersionCoefficient, alpha, dispersionAlpha;
     int gridSizeX, gridSizeY, gridSizeZ;
+    int dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ;
     bool hasCoulomb, hasLJ, usePmeQueue;
     NonbondedMethod nonbondedMethod;
     static const int PmeOrder = 5;

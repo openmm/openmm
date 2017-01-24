@@ -247,6 +247,10 @@ CudaPlatform::PlatformData::PlatformData(ContextImpl* context, const System& sys
         CHECK_RESULT(cuDeviceGetName(name, 1000, contexts[i]->getDevice()), "Error querying device name");
         deviceName << name;
     }
+    size_t printfsize;
+    cuCtxGetLimit(&printfsize, CU_LIMIT_PRINTF_FIFO_SIZE);
+    cuCtxSetLimit(CU_LIMIT_PRINTF_FIFO_SIZE, 10*printfsize);
+
     useCpuPme = (cpuPmeProperty == "true" && !contexts[0]->getUseDoublePrecision());
     disablePmeStream = (pmeStreamProperty == "true");
     deterministicForces = (deterministicForcesProperty == "true");
