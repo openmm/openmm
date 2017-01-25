@@ -1763,19 +1763,11 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         }
 
         defines["EWALD_ALPHA"] = cu.doubleToString(alpha);
-        if (doLJPME) {
-            defines["EWALD_DISPERSION_ALPHA"] = cu.doubleToString(dispersionAlpha);
-            double invRCut6 = pow(force.getCutoffDistance(), -6);
-            double dalphaR = dispersionAlpha * force.getCutoffDistance();
-            double dar2 = dalphaR*dalphaR;
-            double dar4 = dar2*dar2;
-            double multShift6 = -invRCut6*(1.0 - exp(-dar2) * (1.0 + dar2 + 0.5*dar4));
-            defines["INVCUT6"] = cu.doubleToString(invRCut6);
-            defines["MULTSHIFT6"] = cu.doubleToString(multShift6);
-        }
         defines["TWO_OVER_SQRT_PI"] = cu.doubleToString(2.0/sqrt(M_PI));
         defines["USE_EWALD"] = "1";
         defines["DO_LJPME"] = doLJPME ? "1" : "0";
+        if (doLJPME)
+            defines["EWALD_DISPERSION_ALPHA"] = cu.doubleToString(dispersionAlpha);
         if (cu.getContextIndex() == 0) {
             ewaldSelfEnergy = -ONE_4PI_EPS0*alpha*sumSquaredCharges/sqrt(M_PI);
             if (doLJPME)
@@ -1784,6 +1776,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
             char deviceName[100];
             cuDeviceGetName(deviceName, 100, cu.getDevice());
             usePmeStream = (!cu.getPlatformData().disablePmeStream && string(deviceName) != "GeForce GTX 980"); // Using a separate stream is slower on GTX 980
+            map<string, string> pmeDefines;
             pmeDefines["PME_ORDER"] = cu.intToString(PmeOrder);
             pmeDefines["NUM_ATOMS"] = cu.intToString(numParticles);
             pmeDefines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
@@ -1799,18 +1792,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                 pmeDefines["USE_PME_STREAM"] = "1";
             if (cu.getPlatformData().deterministicForces)
                 pmeDefines["USE_DETERMINISTIC_FORCES"] = "1";
-            if (doLJPME) {
-                pmeDefines["EWALD_DISPERSION_ALPHA"] = cu.doubleToString(dispersionAlpha);
-                pmeDefines["DISPERSION_GRID_SIZE_X"] = cu.intToString(dispersionGridSizeX);
-                pmeDefines["DISPERSION_GRID_SIZE_Y"] = cu.intToString(dispersionGridSizeY);
-                pmeDefines["DISPERSION_GRID_SIZE_Z"] = cu.intToString(dispersionGridSizeZ);
-                pmeDefines["RECIP_DISPERSION_EXP_FACTOR"] = cu.doubleToString(M_PI*M_PI/(dispersionAlpha*dispersionAlpha));
-            }
-            CUmodule module;
-            if (doLJPME)
-                module = cu.createModule(CudaKernelSources::vectorOps+CudaKernelSources::pme+CudaKernelSources::ljpme, pmeDefines);
-            else
-                module = cu.createModule(CudaKernelSources::vectorOps+CudaKernelSources::pme, pmeDefines);
+            CUmodule module = cu.createModule(CudaKernelSources::vectorOps+CudaKernelSources::pme, pmeDefines);
             if (cu.getPlatformData().useCpuPme) {
                 // Create the CPU PME kernel.
 
@@ -1843,12 +1825,27 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                 cuFuncSetCacheConfig(pmeSpreadChargeKernel, CU_FUNC_CACHE_PREFER_L1);
                 cuFuncSetCacheConfig(pmeInterpolateForceKernel, CU_FUNC_CACHE_PREFER_L1);
                 if (doLJPME) {
-                    pmeDispersionFinishSpreadChargeKernel = cu.getKernel(module, "finishSpreadC6");
-                    pmeDispersionGridIndexKernel = cu.getKernel(module, "findAtomDispersionGridIndex");
-                    pmeDispersionSpreadChargeKernel = cu.getKernel(module, "gridSpreadC6");
-                    pmeDispersionConvolutionKernel = cu.getKernel(module, "reciprocalDispersionConvolution");
-                    pmeEvalDispersionEnergyKernel = cu.getKernel(module, "gridEvaluateDispersionEnergy");
-                    pmeInterpolateDispersionForceKernel = cu.getKernel(module, "gridInterpolateDispersionForce");
+                    pmeDefines["EWALD_ALPHA"] = cu.doubleToString(dispersionAlpha);
+                    pmeDefines["GRID_SIZE_X"] = cu.intToString(dispersionGridSizeX);
+                    pmeDefines["GRID_SIZE_Y"] = cu.intToString(dispersionGridSizeY);
+                    pmeDefines["GRID_SIZE_Z"] = cu.intToString(dispersionGridSizeZ);
+                    pmeDefines["EPSILON_FACTOR"] = "1";
+                    pmeDefines["RECIP_EXP_FACTOR"] = cu.doubleToString(M_PI*M_PI/(dispersionAlpha*dispersionAlpha));
+                    pmeDefines["USE_LJPME"] = "1";
+                    double invRCut6 = pow(force.getCutoffDistance(), -6);
+                    double dalphaR = dispersionAlpha * force.getCutoffDistance();
+                    double dar2 = dalphaR*dalphaR;
+                    double dar4 = dar2*dar2;
+                    double multShift6 = -invRCut6*(1.0 - exp(-dar2) * (1.0 + dar2 + 0.5*dar4));
+                    defines["INVCUT6"] = cu.doubleToString(invRCut6);
+                    defines["MULTSHIFT6"] = cu.doubleToString(multShift6);
+                    module = cu.createModule(CudaKernelSources::vectorOps+CudaKernelSources::pme, pmeDefines);
+                    pmeDispersionFinishSpreadChargeKernel = cu.getKernel(module, "finishSpreadCharge");
+                    pmeDispersionGridIndexKernel = cu.getKernel(module, "findAtomGridIndex");
+                    pmeDispersionSpreadChargeKernel = cu.getKernel(module, "gridSpreadCharge");
+                    pmeDispersionConvolutionKernel = cu.getKernel(module, "reciprocalConvolution");
+                    pmeEvalDispersionEnergyKernel = cu.getKernel(module, "gridEvaluateEnergy");
+                    pmeInterpolateDispersionForceKernel = cu.getKernel(module, "gridInterpolateForce");
                     cuFuncSetCacheConfig(pmeDispersionSpreadChargeKernel, CU_FUNC_CACHE_PREFER_L1);
                 }
 

@@ -701,7 +701,6 @@ private:
     CUfunction pmeDispersionConvolutionKernel;
     CUfunction pmeInterpolateForceKernel;
     CUfunction pmeInterpolateDispersionForceKernel;
-    std::map<std::string, std::string> pmeDefines;
     std::vector<std::pair<int, int> > exceptionAtoms;
     double ewaldSelfEnergy, dispersionCoefficient, alpha, dispersionAlpha;
     int interpolateForceThreads;
