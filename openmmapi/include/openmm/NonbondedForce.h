@@ -412,7 +412,8 @@ public:
     bool usesPeriodicBoundaryConditions() const {
         return nonbondedMethod == NonbondedForce::CutoffPeriodic ||
                nonbondedMethod == NonbondedForce::Ewald ||
-               nonbondedMethod == NonbondedForce::PME;
+               nonbondedMethod == NonbondedForce::PME ||
+               nonbondedMethod == NonbondedForce::LJPME;
     }
 protected:
     ForceImpl* createImpl() const;

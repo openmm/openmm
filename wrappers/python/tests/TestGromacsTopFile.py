@@ -22,12 +22,14 @@ class TestGromacsTopFile(unittest.TestCase):
         self.top2 = GromacsTopFile('systems/implicit.top')
 
     def test_NonbondedMethod(self):
-        """Test all five options for the nonbondedMethod parameter."""
+        """Test all six options for the nonbondedMethod parameter."""
 
         methodMap = {NoCutoff:NonbondedForce.NoCutoff,
                      CutoffNonPeriodic:NonbondedForce.CutoffNonPeriodic,
                      CutoffPeriodic:NonbondedForce.CutoffPeriodic,
-                     Ewald:NonbondedForce.Ewald, PME: NonbondedForce.PME}
+                     Ewald:NonbondedForce.Ewald,
+                     PME:NonbondedForce.PME,
+                     LJPME:NonbondedForce.LJPME}
         for method in methodMap:
             system = self.top1.createSystem(nonbondedMethod=method)
             forces = system.getForces()
@@ -52,7 +54,7 @@ class TestGromacsTopFile(unittest.TestCase):
     def test_Cutoff(self):
         """Test to make sure the nonbondedCutoff parameter is passed correctly."""
 
-        for method in [CutoffNonPeriodic, CutoffPeriodic, Ewald, PME]:
+        for method in [CutoffNonPeriodic, CutoffPeriodic, Ewald, PME, LJPME]:
             system = self.top1.createSystem(nonbondedMethod=method,
                                                nonbondedCutoff=2*nanometer,
                                                constraints=HBonds)
@@ -66,7 +68,7 @@ class TestGromacsTopFile(unittest.TestCase):
     def test_EwaldErrorTolerance(self):
         """Test to make sure the ewaldErrorTolerance parameter is passed correctly."""
 
-        for method in [Ewald, PME]:
+        for method in [Ewald, PME, LJPME]:
             system = self.top1.createSystem(nonbondedMethod=method,
                                                ewaldErrorTolerance=1e-6,
                                                constraints=HBonds)

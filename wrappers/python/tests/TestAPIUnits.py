@@ -186,6 +186,8 @@ class TestAPIUnits(unittest.TestCase):
         self.assertTrue(force.usesPeriodicBoundaryConditions())
         force.setNonbondedMethod(NonbondedForce.PME)
         self.assertTrue(force.usesPeriodicBoundaryConditions())
+        force.setNonbondedMethod(NonbondedForce.LJPME)
+        self.assertTrue(force.usesPeriodicBoundaryConditions())
 
     def testCmapForce(self):
         """ Tests the CMAPTorsionForce API features """

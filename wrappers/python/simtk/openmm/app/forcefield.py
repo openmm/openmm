@@ -115,6 +115,11 @@ class PME(Singleton):
         return 'PME'
 PME = PME()
 
+class LJPME(Singleton):
+    def __repr__(self):
+        return 'LJPME'
+LJPME = LJPME()
+
 # Enumerated values for constraint type
 
 class HBonds(Singleton):
@@ -971,7 +976,7 @@ class ForceField(object):
             The Topology for which to create a System
         nonbondedMethod : object=NoCutoff
             The method to use for nonbonded interactions.  Allowed values are
-            NoCutoff, CutoffNonPeriodic, CutoffPeriodic, Ewald, or PME.
+            NoCutoff, CutoffNonPeriodic, CutoffPeriodic, Ewald, PME, or LJPME.
         nonbondedCutoff : distance=1*nanometer
             The cutoff distance to use for nonbonded interactions
         constraints : object=None
@@ -2195,7 +2200,8 @@ class NonbondedGenerator(object):
                      CutoffNonPeriodic:mm.NonbondedForce.CutoffNonPeriodic,
                      CutoffPeriodic:mm.NonbondedForce.CutoffPeriodic,
                      Ewald:mm.NonbondedForce.Ewald,
-                     PME:mm.NonbondedForce.PME}
+                     PME:mm.NonbondedForce.PME,
+                     LJPME:mm.NonbondedForce.LJPME}
         if nonbondedMethod not in methodMap:
             raise ValueError('Illegal nonbonded method for NonbondedForce')
         force = mm.NonbondedForce()
@@ -2307,7 +2313,7 @@ class LennardJonesGenerator(object):
         self.force.addTabulatedFunction('acoef', mm.Discrete2DFunction(numLjTypes, numLjTypes, acoef))
         self.force.addTabulatedFunction('bcoef', mm.Discrete2DFunction(numLjTypes, numLjTypes, bcoef))
         self.force.addPerParticleParameter('type')
-        if nonbondedMethod in [CutoffPeriodic, Ewald, PME]:
+        if nonbondedMethod in [CutoffPeriodic, Ewald, PME, LJPME]:
             self.force.setNonbondedMethod(mm.CustomNonbondedForce.CutoffPeriodic)
         elif nonbondedMethod is NoCutoff:
             self.force.setNonbondedMethod(mm.CustomNonbondedForce.NoCutoff)

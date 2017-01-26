@@ -90,7 +90,7 @@ void NonbondedForceImpl::initialize(ContextImpl& context) {
         exceptions[particle1].insert(particle2);
         exceptions[particle2].insert(particle1);
     }
-    if (owner.getNonbondedMethod() != NonbondedForce::NoCutoff) {
+    if (owner.getNonbondedMethod() != NonbondedForce::NoCutoff && owner.getNonbondedMethod() != NonbondedForce::CutoffNonPeriodic) {
         Vec3 boxVectors[3];
         system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
         double cutoff = owner.getCutoffDistance();

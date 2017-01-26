@@ -776,6 +776,8 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
             force.setNonbondedMethod(mm.NonbondedForce.Ewald)
         elif nonbondedMethod == 'PME':
             force.setNonbondedMethod(mm.NonbondedForce.PME)
+        elif nonbondedMethod == 'LJPME':
+            force.setNonbondedMethod(mm.NonbondedForce.LJPME)
         else:
             raise Exception("Cutoff method not understood.")
 
@@ -885,7 +887,7 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
             ii, jj, chg, sig, eps = force.getExceptionParameters(i)
             cforce.addExclusion(ii, jj)
         # Now set the various properties based on the NonbondedForce object
-        if nonbondedMethod in ('PME', 'Ewald', 'CutoffPeriodic'):
+        if nonbondedMethod in ('PME', 'LJPME', 'Ewald', 'CutoffPeriodic'):
             cforce.setNonbondedMethod(cforce.CutoffPeriodic)
             cforce.setCutoffDistance(nonbondedCutoff)
             cforce.setUseLongRangeCorrection(True)
