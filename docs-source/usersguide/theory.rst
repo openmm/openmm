@@ -412,7 +412,7 @@ and the number of nodes in the mesh along each dimension as
 
 
 .. math::
-   n_\mathit{mesh}=\frac{2\alpha d}{{3d}^{1/5}}
+   n_\mathit{mesh}=\frac{2\alpha d}{{3\delta}^{1/5}}
 
 
 where *d* is the width of the periodic box along that dimension.  Alternatively,
@@ -431,6 +431,38 @@ or similar to :math:`\delta`\ , this is not a rigorous guarantee.  PME is also m
 to numerical round-off error than Ewald summation.  For Platforms that do
 calculations in single precision, making :math:`\delta` too small (typically below about
 5·10\ :sup:`-5`\ ) can actually cause the error to increase.
+
+Lennard-Jones Interaction With Particle Mesh Ewald
+==================================================
+
+The PME algorithm can also be used for Lennard-Jones interactions.  Usually this
+is not necessary, since Lennard-Jones forces are short ranged, but there are
+situations (such as membrane simulations) where neglecting interactions beyond
+the cutoff can measurably affect results.
+
+For computational efficiency, certain approximations are made\ :cite:`Wennberg2015`.
+Interactions beyond the cutoff distance include only the attractive :math:`1/r^6`
+term, not the repulsive :math:`1/r^{12}` term.  Since the latter is much smaller
+than the former at long distances, this usually has negligible effect.  Also,
+the interaction between particles farther apart than the cutoff distance is
+computed using geometric combination rules:
+
+.. math::
+   \sigma=\sqrt{\sigma_1 \sigma_2}
+
+The effect of this approximation is also quite small, and it is still far more
+accurate than ignoring the interactions altogether (which is what would happen
+with PME).
+
+The formula used to compute the number of nodes along each dimension of the mesh
+is slightly different from the one used for Coulomb interactions:
+
+.. math::
+   n_\mathit{mesh}=\frac{\alpha d}{{3\delta}^{1/20}}
+
+As before, this is an empirical formula.  It will usually produce an average
+relative error in the forces less than or similar to :math:`\delta`\ , but that
+is not guaranteed.
 
 .. _gbsaobcforce:
 
