@@ -90,9 +90,7 @@ void NonbondedForceImpl::initialize(ContextImpl& context) {
         exceptions[particle1].insert(particle2);
         exceptions[particle2].insert(particle1);
     }
-    if (owner.getNonbondedMethod() == NonbondedForce::CutoffPeriodic ||
-            owner.getNonbondedMethod() == NonbondedForce::Ewald ||
-            owner.getNonbondedMethod() == NonbondedForce::PME) {
+    if (owner.getNonbondedMethod() != NonbondedForce::NoCutoff) {
         Vec3 boxVectors[3];
         system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
         double cutoff = owner.getCutoffDistance();
@@ -161,12 +159,19 @@ void NonbondedForceImpl::calcPMEParameters(const System& system, const Nonbonded
         system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
         double tol = force.getEwaldErrorTolerance();
         alpha = (1.0/force.getCutoffDistance())*std::sqrt(-log(2.0*tol));
-        xsize = (int) ceil(2*alpha*boxVectors[0][0]/(3*pow(tol, 0.2)));
-        ysize = (int) ceil(2*alpha*boxVectors[1][1]/(3*pow(tol, 0.2)));
-        zsize = (int) ceil(2*alpha*boxVectors[2][2]/(3*pow(tol, 0.2)));
-        xsize = max(xsize, 5);
-        ysize = max(ysize, 5);
-        zsize = max(zsize, 5);
+        if (lj) {
+            xsize = (int) ceil(alpha*boxVectors[0][0]/(3*pow(tol, 0.05)));
+            ysize = (int) ceil(alpha*boxVectors[1][1]/(3*pow(tol, 0.05)));
+            zsize = (int) ceil(alpha*boxVectors[2][2]/(3*pow(tol, 0.05)));
+        }
+        else {
+            xsize = (int) ceil(2*alpha*boxVectors[0][0]/(3*pow(tol, 0.2)));
+            ysize = (int) ceil(2*alpha*boxVectors[1][1]/(3*pow(tol, 0.2)));
+            zsize = (int) ceil(2*alpha*boxVectors[2][2]/(3*pow(tol, 0.2)));
+        }
+        xsize = max(xsize, 6);
+        ysize = max(ysize, 6);
+        zsize = max(zsize, 6);
     }
 }
 

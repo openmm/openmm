@@ -48,7 +48,8 @@ using std::stringstream;
 using std::vector;
 
 NonbondedForce::NonbondedForce() : nonbondedMethod(NoCutoff), cutoffDistance(1.0), switchingDistance(-1.0), rfDielectric(78.3),
-        ewaldErrorTol(5e-4), alpha(0.0), useSwitchingFunction(false), useDispersionCorrection(true), recipForceGroup(-1), nx(0), ny(0), nz(0) {
+        ewaldErrorTol(5e-4), alpha(0.0), dalpha(0.0), useSwitchingFunction(false), useDispersionCorrection(true), recipForceGroup(-1),
+        nx(0), ny(0), nz(0), dnx(0), dny(0), dnz(0) {
 }
 
 NonbondedForce::NonbondedMethod NonbondedForce::getNonbondedMethod() const {
