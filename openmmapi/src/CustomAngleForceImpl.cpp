@@ -108,4 +108,5 @@ map<string, double> CustomAngleForceImpl::getDefaultParameters() {
 
 void CustomAngleForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcCustomAngleForceKernel>().copyParametersToContext(context, owner);
+    context.systemChanged();
 }

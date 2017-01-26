@@ -83,7 +83,7 @@ private:
     std::vector<Kernel> kernels;
     std::vector<long long> completionTimes;
     std::vector<double> contextNonbondedFractions;
-    int* tileCounts;
+    int2* interactionCounts;
     CudaArray* contextForces;
     void* pinnedPositionBuffer;
     long long* pinnedForceBuffer;
@@ -439,6 +439,15 @@ public:
      * @param nz      the number of grid points along the Z axis
      */
     void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
+    /**
+     * Get the dispersion parameters being used for the dispersion term in LJPME.
+     * 
+     * @param alpha   the separation parameter
+     * @param nx      the number of grid points along the X axis
+     * @param ny      the number of grid points along the Y axis
+     * @param nz      the number of grid points along the Z axis
+     */
+    void getLJPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
 private:
     class Task;
     CudaPlatform::PlatformData& data;

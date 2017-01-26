@@ -34,6 +34,7 @@
 #include "openmm/internal/OSRngSeed.h"
 #include "openmm/Context.h"
 #include "openmm/kernels.h"
+#include "openmm/OpenMMException.h"
 #include <cmath>
 #include <vector>
 #include <algorithm>
@@ -51,6 +52,8 @@ MonteCarloMembraneBarostatImpl::MonteCarloMembraneBarostatImpl(const MonteCarloM
 }
 
 void MonteCarloMembraneBarostatImpl::initialize(ContextImpl& context) {
+    if (!context.getSystem().usesPeriodicBoundaryConditions())
+        throw OpenMMException("A barostat cannot be used with a non-periodic system");
     kernel = context.getPlatform().createKernel(ApplyMonteCarloBarostatKernel::Name(), context);
     kernel.getAs<ApplyMonteCarloBarostatKernel>().initialize(context.getSystem(), owner);
     Vec3 box[3];

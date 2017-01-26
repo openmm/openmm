@@ -129,6 +129,7 @@ private:
     bool useSwitch;
     bool periodic;
     bool triclinic;
+    bool useInteractionGroups;
     const CpuNeighborList* neighborList;
     float recipBoxSize[3];
     RealVec periodicBoxVectors[3];
@@ -183,8 +184,8 @@ public:
     Lepton::CompiledExpression forceExpression;
     std::vector<Lepton::CompiledExpression> energyParamDerivExpressions;
     CompiledExpressionSet expressionSet;
-    std::vector<int> particleParamIndex;
-    int rIndex;
+    std::vector<double> particleParam;
+    double r;
     std::vector<RealOpenMM> energyParamDerivs; 
 };
 

@@ -191,7 +191,7 @@ public:
      * @returns true if force uses PBC and false otherwise
      */
     bool usesPeriodicBoundaryConditions() const {
-        return true;
+        return false;
     }
 protected:
     ForceImpl* createImpl() const;

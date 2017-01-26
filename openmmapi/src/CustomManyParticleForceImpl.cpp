@@ -240,6 +240,7 @@ ExpressionTreeNode CustomManyParticleForceImpl::replaceFunctions(const Expressio
 
 void CustomManyParticleForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcCustomManyParticleForceKernel>().copyParametersToContext(context, owner);
+    context.systemChanged();
 }
 
 void CustomManyParticleForceImpl::buildFilterArrays(const CustomManyParticleForce& force, int& numTypes, vector<int>& particleTypes, vector<int>& orderIndex, vector<vector<int> >& particleOrder) {

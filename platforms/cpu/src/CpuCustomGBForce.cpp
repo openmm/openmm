@@ -59,48 +59,69 @@ CpuCustomGBForce::ThreadData::ThreadData(int numAtoms, int numThreads, int threa
             energyGradientExpressions(energyGradientExpressions), energyParamDerivExpressions(energyParamDerivExpressions) {
     firstAtom = (threadIndex*(long long) numAtoms)/numThreads;
     lastAtom = ((threadIndex+1)*(long long) numAtoms)/numThreads;
-    for (int i = 0; i < (int) valueExpressions.size(); i++)
-        expressionSet.registerExpression(this->valueExpressions[i]);
-    for (int i = 0; i < (int) valueDerivExpressions.size(); i++)
-        for (int j = 0; j < (int) valueDerivExpressions[i].size(); j++)
-            expressionSet.registerExpression(this->valueDerivExpressions[i][j]);
-    for (int i = 0; i < (int) valueGradientExpressions.size(); i++)
-        for (int j = 0; j < (int) valueGradientExpressions[i].size(); j++)
-            expressionSet.registerExpression(this->valueGradientExpressions[i][j]);
-    for (int i = 0; i < (int) valueParamDerivExpressions.size(); i++)
-        for (int j = 0; j < (int) valueParamDerivExpressions[i].size(); j++)
-            expressionSet.registerExpression(this->valueParamDerivExpressions[i][j]);
-    for (int i = 0; i < (int) energyExpressions.size(); i++)
-        expressionSet.registerExpression(this->energyExpressions[i]);
-    for (int i = 0; i < (int) energyDerivExpressions.size(); i++)
-        for (int j = 0; j < (int) energyDerivExpressions[i].size(); j++)
-            expressionSet.registerExpression(this->energyDerivExpressions[i][j]);
-    for (int i = 0; i < (int) energyGradientExpressions.size(); i++)
-        for (int j = 0; j < (int) energyGradientExpressions[i].size(); j++)
-            expressionSet.registerExpression(this->energyGradientExpressions[i][j]);
-    for (int i = 0; i < (int) energyParamDerivExpressions.size(); i++)
-        for (int j = 0; j < (int) energyParamDerivExpressions[i].size(); j++)
-            expressionSet.registerExpression(this->energyParamDerivExpressions[i][j]);
-    xindex = expressionSet.getVariableIndex("x");
-    yindex = expressionSet.getVariableIndex("y");
-    zindex = expressionSet.getVariableIndex("z");
-    rindex = expressionSet.getVariableIndex("r");
+    map<string, double*> variableLocations;
+    variableLocations["x"] = &x;
+    variableLocations["y"] = &y;
+    variableLocations["z"] = &z;
+    variableLocations["r"] = &r;
+    param.resize(parameterNames.size());
+    particleParam.resize(parameterNames.size()*2);
     for (int i = 0; i < (int) parameterNames.size(); i++) {
-        paramIndex.push_back(expressionSet.getVariableIndex(parameterNames[i]));
-        for (int j = 1; j < 3; j++) {
+        variableLocations[parameterNames[i]] = &param[i];
+        for (int j = 0; j < 2; j++) {
             stringstream name;
-            name << parameterNames[i] << j;
-            particleParamIndex.push_back(expressionSet.getVariableIndex(name.str()));
+            name << parameterNames[i] << (j+1);
+            variableLocations[name.str()] = &particleParam[2*i+j];
         }
     }
+    value.resize(valueNames.size());
+    particleValue.resize(valueNames.size()*2);
     for (int i = 0; i < (int) valueNames.size(); i++) {
-        valueIndex.push_back(expressionSet.getVariableIndex(valueNames[i]));
-        for (int j = 1; j < 3; j++) {
+        variableLocations[valueNames[i]] = &value[i];
+        for (int j = 0; j < 2; j++) {
             stringstream name;
-            name << valueNames[i] << j;
-            particleValueIndex.push_back(expressionSet.getVariableIndex(name.str()));
+            name << valueNames[i] << (j+1);
+            variableLocations[name.str()] = &particleValue[2*i+j];
         }
     }
+    for (int i = 0; i < (int) valueExpressions.size(); i++) {
+        this->valueExpressions[i].setVariableLocations(variableLocations);
+        expressionSet.registerExpression(this->valueExpressions[i]);
+    }
+    for (int i = 0; i < (int) valueDerivExpressions.size(); i++)
+        for (int j = 0; j < (int) valueDerivExpressions[i].size(); j++) {
+            this->valueDerivExpressions[i][j].setVariableLocations(variableLocations);
+            expressionSet.registerExpression(this->valueDerivExpressions[i][j]);
+        }
+    for (int i = 0; i < (int) valueGradientExpressions.size(); i++)
+        for (int j = 0; j < (int) valueGradientExpressions[i].size(); j++) {
+            this->valueGradientExpressions[i][j].setVariableLocations(variableLocations);
+            expressionSet.registerExpression(this->valueGradientExpressions[i][j]);
+        }
+    for (int i = 0; i < (int) valueParamDerivExpressions.size(); i++)
+        for (int j = 0; j < (int) valueParamDerivExpressions[i].size(); j++) {
+            this->valueParamDerivExpressions[i][j].setVariableLocations(variableLocations);
+            expressionSet.registerExpression(this->valueParamDerivExpressions[i][j]);
+        }
+    for (int i = 0; i < (int) energyExpressions.size(); i++) {
+        this->energyExpressions[i].setVariableLocations(variableLocations);
+        expressionSet.registerExpression(this->energyExpressions[i]);
+    }
+    for (int i = 0; i < (int) energyDerivExpressions.size(); i++)
+        for (int j = 0; j < (int) energyDerivExpressions[i].size(); j++) {
+            this->energyDerivExpressions[i][j].setVariableLocations(variableLocations);
+            expressionSet.registerExpression(this->energyDerivExpressions[i][j]);
+        }
+    for (int i = 0; i < (int) energyGradientExpressions.size(); i++)
+        for (int j = 0; j < (int) energyGradientExpressions[i].size(); j++) {
+            this->energyGradientExpressions[i][j].setVariableLocations(variableLocations);
+            expressionSet.registerExpression(this->energyGradientExpressions[i][j]);
+        }
+    for (int i = 0; i < (int) energyParamDerivExpressions.size(); i++)
+        for (int j = 0; j < (int) energyParamDerivExpressions[i].size(); j++) {
+            this->energyParamDerivExpressions[i][j].setVariableLocations(variableLocations);
+            expressionSet.registerExpression(this->energyParamDerivExpressions[i][j]);
+        }
     value0.resize(numAtoms);
     dEdV.resize(valueNames.size());
     for (int i = 0; i < (int) dEdV.size(); i++)
@@ -283,13 +304,13 @@ void CpuCustomGBForce::threadComputeForce(ThreadPool& threads, int threadIndex) 
         for (int j = 0; j < (int) threadData.size(); j++)
             sum += threadData[j]->value0[atom];
         values[0][atom] = sum;
-        data.expressionSet.setVariable(data.xindex, posq[4*atom]);
-        data.expressionSet.setVariable(data.yindex, posq[4*atom+1]);
-        data.expressionSet.setVariable(data.zindex, posq[4*atom+2]);
+        data.x = posq[4*atom];
+        data.y = posq[4*atom+1];
+        data.z = posq[4*atom+2];
         for (int j = 0; j < numParams; j++)
-            data.expressionSet.setVariable(data.paramIndex[j], atomParameters[atom][j]);
+            data.param[j] = atomParameters[atom][j];
         for (int i = 1; i < numValues; i++) {
-            data.expressionSet.setVariable(data.valueIndex[i-1], values[i-1][atom]);
+            data.value[i-1] = values[i-1][atom];
             values[i][atom] = (float) data.valueExpressions[i].evaluate();
 
             // Calculate derivatives with respect to parameters.
@@ -397,15 +418,14 @@ void CpuCustomGBForce::calculateOnePairValue(int index, int atom1, int atom2, Th
     getDeltaR(pos2, pos1, deltaR, r2, periodic, boxSize, invBoxSize);
     if (cutoff && r2 >= cutoffDistance2)
         return;
-    float r = sqrtf(r2);
+    data.r = sqrtf(r2);
     for (int i = 0; i < numParams; i++) {
-        data.expressionSet.setVariable(data.particleParamIndex[i*2], atomParameters[atom1][i]);
-        data.expressionSet.setVariable(data.particleParamIndex[i*2+1], atomParameters[atom2][i]);
+        data.particleParam[i*2] = atomParameters[atom1][i];
+        data.particleParam[i*2+1] = atomParameters[atom2][i];
     }
-    data.expressionSet.setVariable(data.rindex, r);
     for (int i = 0; i < index; i++) {
-        data.expressionSet.setVariable(data.particleValueIndex[i*2], values[i][atom1]);
-        data.expressionSet.setVariable(data.particleValueIndex[i*2+1], values[i][atom2]);
+        data.particleValue[i*2] = values[i][atom1];
+        data.particleValue[i*2+1] = values[i][atom2];
     }
     valueArray[atom1] += (float) data.valueExpressions[index].evaluate();
     
@@ -418,13 +438,13 @@ void CpuCustomGBForce::calculateOnePairValue(int index, int atom1, int atom2, Th
 void CpuCustomGBForce::calculateSingleParticleEnergyTerm(int index, ThreadData& data, int numAtoms, float* posq,
         RealOpenMM** atomParameters, float* forces, double& totalEnergy) {
     for (int i = data.firstAtom; i < data.lastAtom; i++) {
-        data.expressionSet.setVariable(data.xindex, posq[4*i]);
-        data.expressionSet.setVariable(data.yindex, posq[4*i+1]);
-        data.expressionSet.setVariable(data.zindex, posq[4*i+2]);
+        data.x = posq[4*i];
+        data.y = posq[4*i+1];
+        data.z = posq[4*i+2];
         for (int j = 0; j < numParams; j++)
-            data.expressionSet.setVariable(data.paramIndex[j], atomParameters[i][j]);
+            data.param[j] = atomParameters[i][j];
         for (int j = 0; j < (int) values.size(); j++)
-            data.expressionSet.setVariable(data.valueIndex[j], values[j][i]);
+            data.value[j] = values[j][i];
         if (includeEnergy)
             totalEnergy += (float) data.energyExpressions[index].evaluate();
         for (int j = 0; j < (int) values.size(); j++)
@@ -494,17 +514,17 @@ void CpuCustomGBForce::calculateOnePairEnergyTerm(int index, int atom1, int atom
     if (cutoff && r2 >= cutoffDistance2)
         return;
     float r = sqrtf(r2);
+    data.r = r;
 
     // Record variables for evaluating expressions.
 
     for (int i = 0; i < numParams; i++) {
-        data.expressionSet.setVariable(data.particleParamIndex[i*2], atomParameters[atom1][i]);
-        data.expressionSet.setVariable(data.particleParamIndex[i*2+1], atomParameters[atom2][i]);
+        data.particleParam[i*2] = atomParameters[atom1][i];
+        data.particleParam[i*2+1] = atomParameters[atom2][i];
     }
-    data.expressionSet.setVariable(data.rindex, r);
     for (int i = 0; i < (int) values.size(); i++) {
-        data.expressionSet.setVariable(data.particleValueIndex[i*2], values[i][atom1]);
-        data.expressionSet.setVariable(data.particleValueIndex[i*2+1], values[i][atom2]);
+        data.particleValue[i*2] = values[i][atom1];
+        data.particleValue[i*2+1] = values[i][atom2];
     }
 
     // Evaluate the energy and its derivatives.
@@ -571,13 +591,13 @@ void CpuCustomGBForce::calculateChainRuleForces(ThreadData& data, int numAtoms, 
     // Compute chain rule terms for computed values that depend explicitly on particle coordinates.
 
     for (int i = data.firstAtom; i < data.lastAtom; i++) {
-        data.expressionSet.setVariable(data.xindex, posq[4*i]);
-        data.expressionSet.setVariable(data.yindex, posq[4*i+1]);
-        data.expressionSet.setVariable(data.zindex, posq[4*i+2]);
+        data.x = posq[4*i];
+        data.y = posq[4*i+1];
+        data.z = posq[4*i+2];
         for (int j = 0; j < numParams; j++)
-            data.expressionSet.setVariable(data.paramIndex[j], atomParameters[i][j]);
+            data.param[j] = atomParameters[i][j];
         for (int j = 1; j < (int) values.size(); j++) {
-            data.expressionSet.setVariable(data.valueIndex[j-1], values[j-1][i]);
+            data.value[j-1] = values[j-1][i];
             data.dVdX[j] = 0.0;
             data.dVdY[j] = 0.0;
             data.dVdZ[j] = 0.0;
@@ -599,7 +619,7 @@ void CpuCustomGBForce::calculateChainRuleForces(ThreadData& data, int numAtoms, 
     // Compute chain rule terms for derivatives with respect to parameters.
 
     for (int i = data.firstAtom; i < data.lastAtom; i++)
-        for (int j = 0; j < data.valueIndex.size(); j++)
+        for (int j = 0; j < data.value.size(); j++)
             for (int k = 0; k < dValuedParam[j].size(); k++)
                 data.energyParamDerivs[k] += dEdV[j][i]*dValuedParam[j][k][i];
 }
@@ -616,21 +636,21 @@ void CpuCustomGBForce::calculateOnePairChainRule(int atom1, int atom2, ThreadDat
     if (cutoff && r2 >= cutoffDistance2)
         return;
     float r = sqrtf(r2);
+    data.r = r;
 
     // Record variables for evaluating expressions.
 
     for (int i = 0; i < numParams; i++) {
-        data.expressionSet.setVariable(data.particleParamIndex[i*2], atomParameters[atom1][i]);
-        data.expressionSet.setVariable(data.particleParamIndex[i*2+1], atomParameters[atom2][i]);
-        data.expressionSet.setVariable(data.paramIndex[i], atomParameters[atom1][i]);
+        data.particleParam[i*2] = atomParameters[atom1][i];
+        data.particleParam[i*2+1] = atomParameters[atom2][i];
+        data.param[i] = atomParameters[atom1][i];
     }
-    data.expressionSet.setVariable(data.valueIndex[0], values[0][atom1]);
-    data.expressionSet.setVariable(data.xindex, posq[4*atom1]);
-    data.expressionSet.setVariable(data.yindex, posq[4*atom1+1]);
-    data.expressionSet.setVariable(data.zindex, posq[4*atom1+2]);
-    data.expressionSet.setVariable(data.rindex, r);
-    data.expressionSet.setVariable(data.particleValueIndex[0], values[0][atom1]);
-    data.expressionSet.setVariable(data.particleValueIndex[1], values[0][atom2]);
+    data.value[0] = values[0][atom1];
+    data.x = posq[4*atom1];
+    data.y = posq[4*atom1+1];
+    data.z = posq[4*atom1+2];
+    data.particleValue[0] = values[0][atom1];
+    data.particleValue[1] = values[0][atom2];
 
     // Evaluate the derivative of each parameter with respect to position and apply forces.
 
@@ -644,7 +664,7 @@ void CpuCustomGBForce::calculateOnePairChainRule(int atom1, int atom2, ThreadDat
         f2 -= deltaR*(dEdV[0][atom1]*data.dVdR2[0]);
     }
     for (int i = 1; i < (int) values.size(); i++) {
-        data.expressionSet.setVariable(data.valueIndex[i], values[i][atom1]);
+        data.value[i] = values[i][atom1];
         data.dVdR1[i] = 0.0;
         data.dVdR2[i] = 0.0;
         for (int j = 0; j < i; j++) {

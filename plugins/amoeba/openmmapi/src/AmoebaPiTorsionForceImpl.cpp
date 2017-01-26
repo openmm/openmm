@@ -64,4 +64,5 @@ std::vector<std::string> AmoebaPiTorsionForceImpl::getKernelNames() {
 
 void AmoebaPiTorsionForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcAmoebaPiTorsionForceKernel>().copyParametersToContext(context, owner);
+    context.systemChanged();
 }

@@ -18,7 +18,7 @@ __kernel void computeN2Energy(
 #endif
         __global mixed* restrict energyBuffer, __local real4* restrict local_force,
         __global const real4* restrict posq, __local real4* restrict local_posq, __global const unsigned int* restrict exclusions,
-        __global const ushort2* exclusionTiles,
+        __global const ushort2* exclusionTiles, int needEnergy,
 #ifdef USE_CUTOFF
         __global const int* restrict tiles, __global const unsigned int* restrict interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, __global const real4* restrict blockCenter,
@@ -82,7 +82,8 @@ __kernel void computeN2Energy(
                         COMPUTE_INTERACTION
                         dEdR /= -r;
                     }
-                    energy += 0.5f*tempEnergy;
+                    if (needEnergy)
+                        energy += 0.5f*tempEnergy;
                     delta.xyz *= dEdR;
                     force.xyz -= delta.xyz;
 #ifdef USE_CUTOFF
@@ -133,7 +134,8 @@ __kernel void computeN2Energy(
                         COMPUTE_INTERACTION
                         dEdR /= -r;
                     }
-                    energy += tempEnergy;
+                    if (needEnergy)
+                        energy += tempEnergy;
                     delta.xyz *= dEdR;
                     force.xyz -= delta.xyz;
                     atom2 = tbx+tj;
@@ -250,7 +252,7 @@ __kernel void computeN2Energy(
             LOAD_ATOM1_PARAMETERS
             const unsigned int localAtomIndex = get_local_id(0);
 #ifdef USE_CUTOFF
-            unsigned int j = (numTiles <= maxTiles ? interactingAtoms[pos*TILE_SIZE+tgx] : y*TILE_SIZE + tgx);
+            unsigned int j = interactingAtoms[pos*TILE_SIZE+tgx];
 #else
             unsigned int j = y*TILE_SIZE + tgx;
 #endif
@@ -289,7 +291,8 @@ __kernel void computeN2Energy(
                             COMPUTE_INTERACTION
                             dEdR /= -r;
                         }
-                        energy += tempEnergy;
+                        if (needEnergy)
+                            energy += tempEnergy;
                         delta.xyz *= dEdR;
                         force.xyz -= delta.xyz;
                         atom2 = tbx+tj;
@@ -328,7 +331,8 @@ __kernel void computeN2Energy(
                             COMPUTE_INTERACTION
                             dEdR /= -r;
                         }
-                        energy += tempEnergy;
+                        if (needEnergy)
+                            energy += tempEnergy;
                         delta.xyz *= dEdR;
                         force.xyz -= delta.xyz;
                         atom2 = tbx+tj;

@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2015 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2016 Stanford University and Simbios.
  * Authors: Peter Eastman
  * Contributors: 
  *
@@ -59,8 +59,8 @@ public:
     CpuLangevinDynamics& owner;
 };
 
-CpuLangevinDynamics::CpuLangevinDynamics(int numberOfAtoms, RealOpenMM deltaT, RealOpenMM tau, RealOpenMM temperature, ThreadPool& threads, CpuRandom& random) : 
-           ReferenceStochasticDynamics(numberOfAtoms, deltaT, tau, temperature), threads(threads), random(random) {
+CpuLangevinDynamics::CpuLangevinDynamics(int numberOfAtoms, RealOpenMM deltaT, RealOpenMM friction, RealOpenMM temperature, ThreadPool& threads, CpuRandom& random) : 
+           ReferenceStochasticDynamics(numberOfAtoms, deltaT, friction, temperature), threads(threads), random(random) {
 }
 
 CpuLangevinDynamics::~CpuLangevinDynamics() {
@@ -120,11 +120,12 @@ void CpuLangevinDynamics::updatePart3(int numberOfAtoms, vector<RealVec>& atomCo
 }
 
 void CpuLangevinDynamics::threadUpdate1(int threadIndex) {
-    const RealOpenMM tau = getTau();
-    const RealOpenMM vscale = EXP(-getDeltaT()/tau);
-    const RealOpenMM fscale = (1-vscale)*tau;
+    RealOpenMM dt = getDeltaT();
+    RealOpenMM friction = getFriction();
+    const RealOpenMM vscale = EXP(-dt*friction);
+    const RealOpenMM fscale = (friction == 0 ? dt : (1-vscale)/friction);
     const RealOpenMM kT = BOLTZ*getTemperature();
-    const RealOpenMM noisescale = SQRT(2*kT/tau)*SQRT(0.5*(1-vscale*vscale)*tau);
+    const RealOpenMM noisescale = SQRT(kT*(1-vscale*vscale));
     int start = threadIndex*numberOfAtoms/threads.getNumThreads();
     int end = (threadIndex+1)*numberOfAtoms/threads.getNumThreads();
 

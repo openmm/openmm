@@ -52,6 +52,7 @@
 #include <set>
 #include <sstream>
 #include <typeinfo>
+#include <sys/stat.h>
 #include <cudaProfiler.h>
 #ifndef WIN32
   #include <unistd.h>
@@ -127,9 +128,12 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     string testCompilerCommand = this->compiler+" --version > /dev/null 2> /dev/null";
     int res = std::system(testCompilerCommand.c_str());
 #endif
-    isNvccAvailable = (res == 0);
+    struct stat info;
+    isNvccAvailable = (res == 0 && stat(tempDir.c_str(), &info) == 0);
+    int cudaDriverVersion;
+    cuDriverGetVersion(&cudaDriverVersion);
     static bool hasShownNvccWarning = false;
-    if (hasCompilerKernel && !isNvccAvailable && !hasShownNvccWarning) {
+    if (hasCompilerKernel && !isNvccAvailable && !hasShownNvccWarning && cudaDriverVersion < 8000) {
         hasShownNvccWarning = true;
         printf("Could not find nvcc.  Using runtime compiler, which may produce slower performance.  ");
 #ifdef WIN32
@@ -205,14 +209,15 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
 
     int major, minor;
     CHECK_RESULT(cuDeviceComputeCapability(&major, &minor, device));
-#if __CUDA_API_VERSION < 7000
+    int numThreadBlocksPerComputeUnit = (major >= 6 ? 4 : 6);
+    if (cudaDriverVersion < 7000) {
         // This is a workaround to support GTX 980 with CUDA 6.5.  It reports
         // its compute capability as 5.2, but the compiler doesn't support
         // anything beyond 5.0.
         if (major == 5)
             minor = 0;
-#endif
-#if __CUDA_API_VERSION < 8000
+    }
+    if (cudaDriverVersion < 8000) {
         // This is a workaround to support Pascal with CUDA 7.5.  It reports
         // its compute capability as 6.x, but the compiler doesn't support
         // anything beyond 5.3.
@@ -220,7 +225,7 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
             major = 5;
             minor = 3;
         }
-#endif
+    }
     gpuArchitecture = intToString(major)+intToString(minor);
     computeCapability = major+0.1*minor;
 
@@ -241,7 +246,6 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     numAtomBlocks = (paddedNumAtoms+(TileSize-1))/TileSize;
     int multiprocessors;
     CHECK_RESULT(cuDeviceGetAttribute(&multiprocessors, CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, device));
-    int numThreadBlocksPerComputeUnit = 6;
     numThreadBlocks = numThreadBlocksPerComputeUnit*multiprocessors;
     if (useDoublePrecision) {
         posq = CudaArray::create<double4>(*this, paddedNumAtoms, "posq");

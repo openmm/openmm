@@ -186,8 +186,7 @@ class Modeller(object):
     def convertWater(self, model='tip3p'):
         """Convert all water molecules to a different water model.
 
-        @deprecated Use addExtraParticles() instead.  It performs the same
-        function but in a more general way.
+        @deprecated Use addExtraParticles() instead.  It performs the same function but in a more general way.
 
         Parameters
         ----------
@@ -871,7 +870,7 @@ class Modeller(object):
             # and causes hydrogens to spread out evenly.
 
             system = System()
-            nonbonded = CustomNonbondedForce('100/((r/0.1)^4+1)')
+            nonbonded = CustomNonbondedForce('100/(r/0.1)^4')
             nonbonded.setNonbondedMethod(CustomNonbondedForce.CutoffNonPeriodic);
             nonbonded.setCutoffDistance(1*nanometer)
             bonds = HarmonicBondForce()
@@ -1006,7 +1005,7 @@ class Modeller(object):
                 signature = _createResidueSignature([atom.element for atom in residue.atoms()])
                 if signature in forcefield._templateSignatures:
                     for t in forcefield._templateSignatures[signature]:
-                        if _matchResidue(residue, t, bondedToAtom) is not None:
+                        if _matchResidue(residue, t, bondedToAtom, False) is not None:
                             matchFound = True
                 if matchFound:
                     # Just copy the residue over.
@@ -1025,7 +1024,7 @@ class Modeller(object):
                     if signature in forcefield._templateSignatures:
                         for t in forcefield._templateSignatures[signature]:
                             if t in templatesNoEP:
-                                matches = _matchResidue(residueNoEP, templatesNoEP[t], bondedToAtomNoEP)
+                                matches = _matchResidue(residueNoEP, templatesNoEP[t], bondedToAtomNoEP, False)
                                 if matches is not None:
                                     template = t;
                                     # Record the corresponding atoms.

@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2014 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2016 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -254,15 +254,15 @@ public:
     std::vector<std::vector<Lepton::CompiledExpression> > valueDerivExpressions;
     std::vector<std::vector<Lepton::CompiledExpression> > valueGradientExpressions;
     std::vector<std::vector<Lepton::CompiledExpression> > valueParamDerivExpressions;
-    std::vector<int> valueIndex;
+    std::vector<double> value;
     std::vector<Lepton::CompiledExpression> energyExpressions;
     std::vector<std::vector<Lepton::CompiledExpression> > energyDerivExpressions;
     std::vector<std::vector<Lepton::CompiledExpression> > energyGradientExpressions;
     std::vector<std::vector<Lepton::CompiledExpression> > energyParamDerivExpressions;
-    std::vector<int> paramIndex;
-    std::vector<int> particleParamIndex;
-    std::vector<int> particleValueIndex;
-    int xindex, yindex, zindex, rindex;
+    std::vector<double> param;
+    std::vector<double> particleParam;
+    std::vector<double> particleValue;
+    double x, y, z, r;
     int firstAtom, lastAtom;
     // Workspace vectors
     std::vector<float> value0, dVdR1, dVdR2, dVdX, dVdY, dVdZ;

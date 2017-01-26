@@ -1733,7 +1733,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     else if (nonbondedMethod == PME) {
         // Compute the PME parameters.
 
-        NonbondedForceImpl::calcPMEParameters(system, force, alpha, gridSizeX, gridSizeY, gridSizeZ);
+        NonbondedForceImpl::calcPMEParameters(system, force, alpha, gridSizeX, gridSizeY, gridSizeZ, false);
         gridSizeX = OpenCLFFT3D::findLegalDimension(gridSizeX);
         gridSizeY = OpenCLFFT3D::findLegalDimension(gridSizeY);
         gridSizeZ = OpenCLFFT3D::findLegalDimension(gridSizeZ);
@@ -2086,8 +2086,8 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             pmeEvalEnergyKernel.setArg<mm_float4>(7, recipBoxVectorsFloat[2]);
         }
         if (includeEnergy)
-            cl.executeKernel(pmeEvalEnergyKernel, cl.getNumAtoms());
-        cl.executeKernel(pmeConvolutionKernel, cl.getNumAtoms());
+            cl.executeKernel(pmeEvalEnergyKernel, gridSizeX*gridSizeY*gridSizeZ);
+        cl.executeKernel(pmeConvolutionKernel, gridSizeX*gridSizeY*gridSizeZ);
         fft->execFFT(*pmeGrid2, *pmeGrid, false);
         setPeriodicBoxArgs(cl, pmeInterpolateForceKernel, 3);
         if (cl.getUseDoublePrecision()) {
@@ -2202,6 +2202,20 @@ void OpenCLCalcNonbondedForceKernel::getPMEParameters(double& alpha, int& nx, in
         nx = gridSizeX;
         ny = gridSizeY;
         nz = gridSizeZ;
+    }
+}
+
+void OpenCLCalcNonbondedForceKernel::getLJPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
+    if (nonbondedMethod != LJPME)
+        throw OpenMMException("getPMEParametersInContext: This Context is not using PME");
+    if (cl.getPlatformData().useCpuPme)
+        //cpuPme.getAs<CalcPmeReciprocalForceKernel>().getLJPMEParameters(alpha, nx, ny, nz);
+        throw OpenMMException("getPMEParametersInContext: CPUPME has not been implemented for LJPME yet.");
+    else {
+        alpha = this->dispersionAlpha;
+        nx = dispersionGridSizeX;
+        ny = dispersionGridSizeY;
+        nz = dispersionGridSizeZ;
     }
 }
 
@@ -2331,7 +2345,7 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
     Lepton::ParsedExpression energyExpression = Lepton::Parser::parse(force.getEnergyFunction(), functions).optimize();
     Lepton::ParsedExpression forceExpression = energyExpression.differentiate("r").optimize();
     map<string, Lepton::ParsedExpression> forceExpressions;
-    forceExpressions["tempEnergy += "] = energyExpression;
+    forceExpressions["real customEnergy = "] = energyExpression;
     forceExpressions["tempForce -= "] = forceExpression;
 
     // Create the kernels.
@@ -2676,7 +2690,6 @@ double OpenCLCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
             interactionGroupKernel.setArg<cl::Buffer>(index++, cl.getEnergyBuffer().getDeviceBuffer());
             interactionGroupKernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
             interactionGroupKernel.setArg<cl::Buffer>(index++, interactionGroupData->getDeviceBuffer());
-            setPeriodicBoxArgs(cl, interactionGroupKernel, index);
             index += 5;
             for (int i = 0; i < (int) params->getBuffers().size(); i++)
                 interactionGroupKernel.setArg<cl::Memory>(index++, params->getBuffers()[i].getMemory());
@@ -2685,6 +2698,7 @@ double OpenCLCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
             if (globals != NULL)
                 interactionGroupKernel.setArg<cl::Buffer>(index++, globals->getDeviceBuffer());
         }
+        setPeriodicBoxArgs(cl, interactionGroupKernel, 4);
         int forceThreadBlockSize = max(32, cl.getNonbondedUtilities().getForceThreadBlockSize());
         cl.executeKernel(interactionGroupKernel, numGroupThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
     }
@@ -2872,6 +2886,7 @@ double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
         force1Kernel.setArg<cl::Buffer>(index++, cl.getEnergyBuffer().getDeviceBuffer());
         force1Kernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
         force1Kernel.setArg<cl::Buffer>(index++, bornRadii->getDeviceBuffer());
+        index++; // Whether to include energy.
         if (nb.getUseCutoff()) {
             force1Kernel.setArg<cl::Buffer>(index++, nb.getInteractingTiles().getDeviceBuffer());
             force1Kernel.setArg<cl::Buffer>(index++, nb.getInteractionCount().getDeviceBuffer());
@@ -2907,17 +2922,18 @@ double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
         reduceBornForceKernel.setArg<cl::Buffer>(index++, bornRadii->getDeviceBuffer());
         reduceBornForceKernel.setArg<cl::Buffer>(index++, obcChain->getDeviceBuffer());
     }
+    force1Kernel.setArg<cl_int>(5, includeEnergy);
     if (nb.getUseCutoff()) {
         setPeriodicBoxArgs(cl, computeBornSumKernel, 5);
-        setPeriodicBoxArgs(cl, force1Kernel, 7);
+        setPeriodicBoxArgs(cl, force1Kernel, 8);
         if (maxTiles < nb.getInteractingTiles().getSize()) {
             maxTiles = nb.getInteractingTiles().getSize();
             computeBornSumKernel.setArg<cl::Buffer>(3, nb.getInteractingTiles().getDeviceBuffer());
             computeBornSumKernel.setArg<cl_uint>(10, maxTiles);
             computeBornSumKernel.setArg<cl::Buffer>(13, nb.getInteractingAtoms().getDeviceBuffer());
-            force1Kernel.setArg<cl::Buffer>(5, nb.getInteractingTiles().getDeviceBuffer());
-            force1Kernel.setArg<cl_uint>(12, maxTiles);
-            force1Kernel.setArg<cl::Buffer>(15, nb.getInteractingAtoms().getDeviceBuffer());
+            force1Kernel.setArg<cl::Buffer>(6, nb.getInteractingTiles().getDeviceBuffer());
+            force1Kernel.setArg<cl_uint>(13, maxTiles);
+            force1Kernel.setArg<cl::Buffer>(16, nb.getInteractingAtoms().getDeviceBuffer());
         }
     }
     cl.executeKernel(computeBornSumKernel, nb.getNumForceThreadBlocks()*nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());
@@ -3933,6 +3949,7 @@ double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
         pairEnergyKernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : nb.getForceThreadBlockSize())*4*elementSize, NULL);
         pairEnergyKernel.setArg<cl::Buffer>(index++, cl.getNonbondedUtilities().getExclusions().getDeviceBuffer());
         pairEnergyKernel.setArg<cl::Buffer>(index++, cl.getNonbondedUtilities().getExclusionTiles().getDeviceBuffer());
+        index++; // Whether to include energy.
         if (nb.getUseCutoff()) {
             pairEnergyKernel.setArg<cl::Buffer>(index++, nb.getInteractingTiles().getDeviceBuffer());
             pairEnergyKernel.setArg<cl::Buffer>(index++, nb.getInteractionCount().getDeviceBuffer());
@@ -4029,17 +4046,18 @@ double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
         if (changed)
             globals->upload(globalParamValues);
     }
+    pairEnergyKernel.setArg<cl_int>(7, includeEnergy);
     if (nb.getUseCutoff()) {
         setPeriodicBoxArgs(cl, pairValueKernel, 8);
-        setPeriodicBoxArgs(cl, pairEnergyKernel, 9);
+        setPeriodicBoxArgs(cl, pairEnergyKernel, 10);
         if (maxTiles < nb.getInteractingTiles().getSize()) {
             maxTiles = nb.getInteractingTiles().getSize();
             pairValueKernel.setArg<cl::Buffer>(6, nb.getInteractingTiles().getDeviceBuffer());
             pairValueKernel.setArg<cl_uint>(13, maxTiles);
             pairValueKernel.setArg<cl::Buffer>(16, nb.getInteractingAtoms().getDeviceBuffer());
-            pairEnergyKernel.setArg<cl::Buffer>(7, nb.getInteractingTiles().getDeviceBuffer());
-            pairEnergyKernel.setArg<cl_uint>(14, maxTiles);
-            pairEnergyKernel.setArg<cl::Buffer>(17, nb.getInteractingAtoms().getDeviceBuffer());
+            pairEnergyKernel.setArg<cl::Buffer>(8, nb.getInteractingTiles().getDeviceBuffer());
+            pairEnergyKernel.setArg<cl_uint>(15, maxTiles);
+            pairEnergyKernel.setArg<cl::Buffer>(18, nb.getInteractingAtoms().getDeviceBuffer());
         }
     }
     cl.executeKernel(pairValueKernel, nb.getNumForceThreadBlocks()*nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());
@@ -6729,11 +6747,10 @@ void OpenCLIntegrateLangevinStepKernel::execute(ContextImpl& context, const Lang
     if (temperature != prevTemp || friction != prevFriction || stepSize != prevStepSize) {
         // Calculate the integration parameters.
 
-        double tau = (friction == 0.0 ? 0.0 : 1.0/friction);
         double kT = BOLTZ*temperature;
-        double vscale = exp(-stepSize/tau);
-        double fscale = (1-vscale)*tau;
-        double noisescale = sqrt(2*kT/tau)*sqrt(0.5*(1-vscale*vscale)*tau);
+        double vscale = exp(-stepSize*friction);
+        double fscale = (friction == 0 ? stepSize : (1-vscale)/friction);
+        double noisescale = sqrt(kT*(1-vscale*vscale));
         if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {
             vector<cl_double> p(params->getSize());
             p[0] = vscale;
@@ -7011,13 +7028,13 @@ double OpenCLIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, 
     if (useDouble) {
         selectSizeKernel.setArg<cl_double>(0, maxStepSize);
         selectSizeKernel.setArg<cl_double>(1, integrator.getErrorTolerance());
-        selectSizeKernel.setArg<cl_double>(2, integrator.getFriction() == 0.0 ? 0.0 : 1.0/integrator.getFriction());
+        selectSizeKernel.setArg<cl_double>(2, integrator.getFriction());
         selectSizeKernel.setArg<cl_double>(3, BOLTZ*integrator.getTemperature());
     }
     else {
         selectSizeKernel.setArg<cl_float>(0, maxStepSizeFloat);
         selectSizeKernel.setArg<cl_float>(1, (cl_float) integrator.getErrorTolerance());
-        selectSizeKernel.setArg<cl_float>(2, (cl_float) (integrator.getFriction() == 0.0 ? 0.0 : 1.0/integrator.getFriction()));
+        selectSizeKernel.setArg<cl_float>(2, (cl_float) integrator.getFriction());
         selectSizeKernel.setArg<cl_float>(3, (cl_float) (BOLTZ*integrator.getTemperature()));
     }
     cl.executeKernel(selectSizeKernel, blockSize, blockSize);
@@ -7368,8 +7385,10 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
             for (int step = numSteps-1; step >= 0; step--) {
                 if (stepType[step] == CustomIntegrator::ConstrainPositions)
                     beforeConstrain = true;
-                else if (stepType[step] == CustomIntegrator::ComputePerDof && variable[step] == "x" && beforeConstrain)
+                else if (stepType[step] == CustomIntegrator::ComputePerDof && variable[step] == "x" && beforeConstrain) {
                     storePosAsDelta[step] = true;
+                    beforeConstrain = false;
+                }
             }
             bool storedAsDelta = false;
             for (int step = 0; step < numSteps; step++) {
@@ -7384,7 +7403,7 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
         // Identify steps that can be merged into a single kernel.
         
         for (int step = 1; step < numSteps; step++) {
-            if ((needsForces[step] || needsEnergy[step]) && (invalidatesForces[step-1] || forceGroupFlags[step] != forceGroupFlags[step-1]))
+            if (invalidatesForces[step-1] || forceGroupFlags[step] != forceGroupFlags[step-1])
                 continue;
             if (stepType[step-1] == CustomIntegrator::ComputePerDof && stepType[step] == CustomIntegrator::ComputePerDof)
                 merged[step] = true;
@@ -7394,6 +7413,7 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
                 needsForces[step-1] = (needsForces[step] || needsForces[step-1]);
                 needsEnergy[step-1] = (needsEnergy[step] || needsEnergy[step-1]);
                 needsGlobals[step-1] = (needsGlobals[step] || needsGlobals[step-1]);
+                computeBothForceAndEnergy[step-1] = (computeBothForceAndEnergy[step] || computeBothForceAndEnergy[step-1]);
             }
         
         // Loop over all steps and create the kernels for them.
@@ -7564,7 +7584,7 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
         kineticEnergyKernel.setArg<cl::Buffer>(index++, sumBuffer->getDeviceBuffer());
         index += 2;
         kineticEnergyKernel.setArg<cl::Buffer>(index++, uniformRandoms->getDeviceBuffer());
-        if (cl.getUseDoublePrecision())
+        if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision())
             kineticEnergyKernel.setArg<cl_double>(index++, 0.0);
         else
             kineticEnergyKernel.setArg<cl_float>(index++, 0.0f);
@@ -7594,7 +7614,7 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
     }
     localValuesAreCurrent = false;
     double stepSize = integrator.getStepSize();
-    recordGlobalValue(stepSize, GlobalTarget(DT, dtVariableIndex));
+    recordGlobalValue(stepSize, GlobalTarget(DT, dtVariableIndex), integrator);
     for (int i = 0; i < (int) parameterNames.size(); i++) {
         double value = context.getParameter(parameterNames[i]);
         if (value != globalValuesDouble[parameterVariableIndex[i]]) {
@@ -7713,7 +7733,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
             kernels[step][0].setArg<cl_uint>(9, integration.prepareRandomNumbers(requiredGaussian[step]));
             kernels[step][0].setArg<cl::Buffer>(8, integration.getRandom().getDeviceBuffer());
             kernels[step][0].setArg<cl::Buffer>(10, uniformRandoms->getDeviceBuffer());
-            if (cl.getUseDoublePrecision())
+            if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision())
                 kernels[step][0].setArg<cl_double>(11, energy);
             else
                 kernels[step][0].setArg<cl_float>(11, (cl_float) energy);
@@ -7725,13 +7745,13 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
             expressionSet.setVariable(uniformVariableIndex, SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber());
             expressionSet.setVariable(gaussianVariableIndex, SimTKOpenMMUtilities::getNormallyDistributedRandomNumber());
             expressionSet.setVariable(stepEnergyVariableIndex[step], energy);
-            recordGlobalValue(globalExpressions[step][0].evaluate(), stepTarget[step]);
+            recordGlobalValue(globalExpressions[step][0].evaluate(), stepTarget[step], integrator);
         }
         else if (stepType[step] == CustomIntegrator::ComputeSum) {
             kernels[step][0].setArg<cl_uint>(9, integration.prepareRandomNumbers(requiredGaussian[step]));
             kernels[step][0].setArg<cl::Buffer>(8, integration.getRandom().getDeviceBuffer());
             kernels[step][0].setArg<cl::Buffer>(10, uniformRandoms->getDeviceBuffer());
-            if (cl.getUseDoublePrecision())
+            if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision())
                 kernels[step][0].setArg<cl_double>(11, energy);
             else
                 kernels[step][0].setArg<cl_float>(11, (cl_float) energy);
@@ -7743,12 +7763,12 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
             if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {
                 double value;
                 summedValue->download(&value);
-                recordGlobalValue(value, stepTarget[step]);
+                recordGlobalValue(value, stepTarget[step], integrator);
             }
             else {
                 float value;
                 summedValue->download(&value);
-                recordGlobalValue(value, stepTarget[step]);
+                recordGlobalValue(value, stepTarget[step], integrator);
             }
         }
         else if (stepType[step] == CustomIntegrator::UpdateContextState) {
@@ -7852,7 +7872,7 @@ double OpenCLIntegrateCustomStepKernel::computeKineticEnergy(ContextImpl& contex
     }
 }
 
-void OpenCLIntegrateCustomStepKernel::recordGlobalValue(double value, GlobalTarget target) {
+void OpenCLIntegrateCustomStepKernel::recordGlobalValue(double value, GlobalTarget target, CustomIntegrator& integrator) {
     switch (target.type) {
         case DT:
             if (value != globalValuesDouble[dtVariableIndex])
@@ -7860,6 +7880,7 @@ void OpenCLIntegrateCustomStepKernel::recordGlobalValue(double value, GlobalTarg
             expressionSet.setVariable(dtVariableIndex, value);
             globalValuesDouble[dtVariableIndex] = value;
             cl.getIntegrationUtilities().setNextStepSize(value);
+            integrator.setStepSize(value);
             break;
         case VARIABLE:
         case PARAMETER:
