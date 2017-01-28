@@ -690,7 +690,7 @@ class CharmmPsfFile(object):
             The parameter set to use to parametrize this molecule
         nonbondedMethod : object=NoCutoff
             The method to use for nonbonded interactions. Allowed values are
-            NoCutoff, CutoffNonPeriodic, CutoffPeriodic, Ewald, or PME.
+            NoCutoff, CutoffNonPeriodic, CutoffPeriodic, Ewald, PME, or LJPME.
         nonbondedCutoff : distance=1*nanometer
             The cutoff distance to use for nonbonded interactions.
         switchDistance : distance=0*nanometer
@@ -728,7 +728,7 @@ class CharmmPsfFile(object):
             added to a hydrogen is subtracted from the heavy atom to keep their
             total mass the same.
         ewaldErrorTolerance : float=0.0005
-            The error tolerance to use if the nonbonded method is Ewald or PME.
+            The error tolerance to use if the nonbonded method is Ewald, PME, or LJPME.
         flexibleConstraints : bool=True
             Are our constraints flexible or not?
         verbose : bool=False
@@ -746,10 +746,10 @@ class CharmmPsfFile(object):
                 cutoff = cutoff.value_in_unit(u.nanometers)
 
         if nonbondedMethod not in (ff.NoCutoff, ff.CutoffNonPeriodic,
-                                   ff.CutoffPeriodic, ff.Ewald, ff.PME):
+                                   ff.CutoffPeriodic, ff.Ewald, ff.PME, ff.LJPME):
             raise ValueError('Illegal value for nonbonded method')
         if not hasbox and nonbondedMethod in (ff.CutoffPeriodic,
-                                              ff.Ewald, ff.PME):
+                                              ff.Ewald, ff.PME, ff.LJPME):
             raise ValueError('Illegal nonbonded method for a '
                              'non-periodic system')
         if implicitSolvent not in (HCT, OBC1, OBC2, GBn, GBn2, None):
@@ -1009,6 +1009,8 @@ class CharmmPsfFile(object):
                 force.setNonbondedMethod(mm.NonbondedForce.Ewald)
             elif nonbondedMethod is ff.PME:
                 force.setNonbondedMethod(mm.NonbondedForce.PME)
+            elif nonbondedMethod is ff.LJPME:
+                force.setNonbondedMethod(mm.NonbondedForce.LJPME)
             else:
                 raise ValueError('Cutoff method is not understood')
 
@@ -1088,8 +1090,7 @@ class CharmmPsfFile(object):
                     mm.Discrete2DFunction(num_lj_types, num_lj_types, bcoef))
             cforce.addPerParticleParameter('type')
             cforce.setForceGroup(self.NONBONDED_FORCE_GROUP)
-            if (nonbondedMethod is ff.PME or nonbondedMethod is ff.Ewald or
-                        nonbondedMethod is ff.CutoffPeriodic):
+            if (nonbondedMethod in (ff.PME, ff.LJPME, ff.Ewald, ff.CutoffPeriodic)):
                 cforce.setNonbondedMethod(cforce.CutoffPeriodic)
                 cforce.setCutoffDistance(nonbondedCutoff)
                 cforce.setUseLongRangeCorrection(True)

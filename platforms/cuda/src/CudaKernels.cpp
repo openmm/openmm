@@ -1607,6 +1607,12 @@ CudaCalcNonbondedForceKernel::~CudaCalcNonbondedForceKernel() {
         delete pmeBsplineModuliY;
     if (pmeBsplineModuliZ != NULL)
         delete pmeBsplineModuliZ;
+    if (pmeDispersionBsplineModuliX != NULL)
+        delete pmeDispersionBsplineModuliX;
+    if (pmeDispersionBsplineModuliY != NULL)
+        delete pmeDispersionBsplineModuliY;
+    if (pmeDispersionBsplineModuliZ != NULL)
+        delete pmeDispersionBsplineModuliZ;
     if (pmeAtomRange != NULL)
         delete pmeAtomRange;
     if (pmeAtomGridIndex != NULL)
@@ -1861,6 +1867,11 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                 pmeBsplineModuliX = new CudaArray(cu, gridSizeX, elementSize, "pmeBsplineModuliX");
                 pmeBsplineModuliY = new CudaArray(cu, gridSizeY, elementSize, "pmeBsplineModuliY");
                 pmeBsplineModuliZ = new CudaArray(cu, gridSizeZ, elementSize, "pmeBsplineModuliZ");
+                if (doLJPME) {
+                    pmeDispersionBsplineModuliX = new CudaArray(cu, dispersionGridSizeX, elementSize, "pmeDispersionBsplineModuliX");
+                    pmeDispersionBsplineModuliY = new CudaArray(cu, dispersionGridSizeY, elementSize, "pmeDispersionBsplineModuliY");
+                    pmeDispersionBsplineModuliZ = new CudaArray(cu, dispersionGridSizeZ, elementSize, "pmeDispersionBsplineModuliZ");
+                }
                 pmeAtomRange = CudaArray::create<int>(cu, gridSizeX*gridSizeY*gridSizeZ+1, "pmeAtomRange");
                 pmeAtomGridIndex = CudaArray::create<int2>(cu, numParticles, "pmeAtomGridIndex");
                 int energyElementSize = (cu.getUseDoublePrecision() || cu.getUseMixedPrecision() ? sizeof(double) : sizeof(float));
@@ -1911,72 +1922,94 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                 hasInitializedFFT = true;
                 // Initialize the b-spline moduli.
 
-                int maxSize = max(max(gridSizeX, gridSizeY), gridSizeZ);
-                vector<double> data(PmeOrder);
-                vector<double> ddata(PmeOrder);
-                vector<double> bsplines_data(maxSize);
-                data[PmeOrder-1] = 0.0;
-                data[1] = 0.0;
-                data[0] = 1.0;
-                for (int i = 3; i < PmeOrder; i++) {
-                    double div = 1.0/(i-1.0);
-                    data[i-1] = 0.0;
-                    for (int j = 1; j < (i-1); j++)
-                        data[i-j-1] = div*(j*data[i-j-2]+(i-j)*data[i-j-1]);
-                    data[0] = div*data[0];
-                }
-
-                // Differentiate.
-
-                ddata[0] = -data[0];
-                for (int i = 1; i < PmeOrder; i++)
-                    ddata[i] = data[i-1]-data[i];
-                double div = 1.0/(PmeOrder-1);
-                data[PmeOrder-1] = 0.0;
-                for (int i = 1; i < (PmeOrder-1); i++)
-                    data[PmeOrder-i-1] = div*(i*data[PmeOrder-i-2]+(PmeOrder-i)*data[PmeOrder-i-1]);
-                data[0] = div*data[0];
-                for (int i = 0; i < maxSize; i++)
-                    bsplines_data[i] = 0.0;
-                for (int i = 1; i <= PmeOrder; i++)
-                    bsplines_data[i] = data[i-1];
-
-                // Evaluate the actual bspline moduli for X/Y/Z.
-
-                for(int dim = 0; dim < 3; dim++) {
-                    int ndata = (dim == 0 ? gridSizeX : dim == 1 ? gridSizeY : gridSizeZ);
-                    vector<double> moduli(ndata);
-                    for (int i = 0; i < ndata; i++) {
-                        double sc = 0.0;
-                        double ss = 0.0;
-                        for (int j = 0; j < ndata; j++) {
-                            double arg = (2.0*M_PI*i*j)/ndata;
-                            sc += bsplines_data[j]*cos(arg);
-                            ss += bsplines_data[j]*sin(arg);
-                        }
-                        moduli[i] = sc*sc+ss*ss;
-                    }
-                    for (int i = 0; i < ndata; i++)
-                        if (moduli[i] < 1.0e-7)
-                            moduli[i] = (moduli[i-1]+moduli[i+1])*0.5;
-                    if (cu.getUseDoublePrecision()) {
-                        if (dim == 0)
-                            pmeBsplineModuliX->upload(moduli);
-                        else if (dim == 1)
-                            pmeBsplineModuliY->upload(moduli);
-                        else
-                            pmeBsplineModuliZ->upload(moduli);
+                for (int grid = 0; grid < 2; grid++) {
+                    int xsize, ysize, zsize;
+                    CudaArray *xmoduli, *ymoduli, *zmoduli;
+                    if (grid == 0) {
+                        xsize = gridSizeX;
+                        ysize = gridSizeY;
+                        zsize = gridSizeZ;
+                        xmoduli = pmeBsplineModuliX;
+                        ymoduli = pmeBsplineModuliY;
+                        zmoduli = pmeBsplineModuliZ;
                     }
                     else {
-                        vector<float> modulif(ndata);
+                        if (!doLJPME)
+                            continue;
+                        xsize = dispersionGridSizeX;
+                        ysize = dispersionGridSizeY;
+                        zsize = dispersionGridSizeZ;
+                        xmoduli = pmeDispersionBsplineModuliX;
+                        ymoduli = pmeDispersionBsplineModuliY;
+                        zmoduli = pmeDispersionBsplineModuliZ;
+                    }
+                    int maxSize = max(max(xsize, ysize), zsize);
+                    vector<double> data(PmeOrder);
+                    vector<double> ddata(PmeOrder);
+                    vector<double> bsplines_data(maxSize);
+                    data[PmeOrder-1] = 0.0;
+                    data[1] = 0.0;
+                    data[0] = 1.0;
+                    for (int i = 3; i < PmeOrder; i++) {
+                        double div = 1.0/(i-1.0);
+                        data[i-1] = 0.0;
+                        for (int j = 1; j < (i-1); j++)
+                            data[i-j-1] = div*(j*data[i-j-2]+(i-j)*data[i-j-1]);
+                        data[0] = div*data[0];
+                    }
+
+                    // Differentiate.
+
+                    ddata[0] = -data[0];
+                    for (int i = 1; i < PmeOrder; i++)
+                        ddata[i] = data[i-1]-data[i];
+                    double div = 1.0/(PmeOrder-1);
+                    data[PmeOrder-1] = 0.0;
+                    for (int i = 1; i < (PmeOrder-1); i++)
+                        data[PmeOrder-i-1] = div*(i*data[PmeOrder-i-2]+(PmeOrder-i)*data[PmeOrder-i-1]);
+                    data[0] = div*data[0];
+                    for (int i = 0; i < maxSize; i++)
+                        bsplines_data[i] = 0.0;
+                    for (int i = 1; i <= PmeOrder; i++)
+                        bsplines_data[i] = data[i-1];
+
+                    // Evaluate the actual bspline moduli for X/Y/Z.
+
+                    for(int dim = 0; dim < 3; dim++) {
+                        int ndata = (dim == 0 ? xsize : dim == 1 ? ysize : zsize);
+                        vector<double> moduli(ndata);
+                        for (int i = 0; i < ndata; i++) {
+                            double sc = 0.0;
+                            double ss = 0.0;
+                            for (int j = 0; j < ndata; j++) {
+                                double arg = (2.0*M_PI*i*j)/ndata;
+                                sc += bsplines_data[j]*cos(arg);
+                                ss += bsplines_data[j]*sin(arg);
+                            }
+                            moduli[i] = sc*sc+ss*ss;
+                        }
                         for (int i = 0; i < ndata; i++)
-                            modulif[i] = (float) moduli[i];
-                        if (dim == 0)
-                            pmeBsplineModuliX->upload(modulif);
-                        else if (dim == 1)
-                            pmeBsplineModuliY->upload(modulif);
-                        else
-                            pmeBsplineModuliZ->upload(modulif);
+                            if (moduli[i] < 1.0e-7)
+                                moduli[i] = (moduli[i-1]+moduli[i+1])*0.5;
+                        if (cu.getUseDoublePrecision()) {
+                            if (dim == 0)
+                                xmoduli->upload(moduli);
+                            else if (dim == 1)
+                                ymoduli->upload(moduli);
+                            else
+                                zmoduli->upload(moduli);
+                        }
+                        else {
+                            vector<float> modulif(ndata);
+                            for (int i = 0; i < ndata; i++)
+                                modulif[i] = (float) moduli[i];
+                            if (dim == 0)
+                                xmoduli->upload(modulif);
+                            else if (dim == 1)
+                                ymoduli->upload(modulif);
+                            else
+                                zmoduli->upload(modulif);
+                        }
                     }
                 }
             }

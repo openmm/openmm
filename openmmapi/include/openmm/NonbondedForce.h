@@ -101,18 +101,18 @@ public:
          */
         CutoffPeriodic = 2,
         /**
-         * Periodic boundary conditions are used, and Ewald summation is used to compute the interaction of each particle
+         * Periodic boundary conditions are used, and Ewald summation is used to compute the Coulomb interaction of each particle
          * with all periodic copies of every other particle.
          */
         Ewald = 3,
         /**
-         * Periodic boundary conditions are used, and Particle-Mesh Ewald (PME) summation is used to compute the interaction of each particle
+         * Periodic boundary conditions are used, and Particle-Mesh Ewald (PME) summation is used to compute the Coulomb interaction of each particle
          * with all periodic copies of every other particle.
          */
         PME = 4,
         /**
          * Periodic boundary conditions are used, and Particle-Mesh Ewald (PME) summation is used to compute the interaction of each particle
-         * with all periodic copies of every other particle for both electrostatics and dispersion.  No switching is used for either interaction.
+         * with all periodic copies of every other particle for both Coulomb and Lennard-Jones.  No switching is used for either interaction.
          */
         LJPME = 5
     };
@@ -412,7 +412,8 @@ public:
     bool usesPeriodicBoundaryConditions() const {
         return nonbondedMethod == NonbondedForce::CutoffPeriodic ||
                nonbondedMethod == NonbondedForce::Ewald ||
-               nonbondedMethod == NonbondedForce::PME;
+               nonbondedMethod == NonbondedForce::PME ||
+               nonbondedMethod == NonbondedForce::LJPME;
     }
 protected:
     ForceImpl* createImpl() const;

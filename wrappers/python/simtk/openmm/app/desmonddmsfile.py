@@ -165,11 +165,11 @@ class DesmondDMSFile(object):
         ----------
         nonbondedMethod : object=NoCutoff
             The method to use for nonbonded interactions.  Allowed values are
-            NoCutoff, CutoffNonPeriodic, CutoffPeriodic, Ewald, or PME.
+            NoCutoff, CutoffNonPeriodic, CutoffPeriodic, Ewald, PME, or LJPME.
         nonbondedCutoff : distance=1*nanometer
             The cutoff distance to use for nonbonded interactions
         ewaldErrorTolerance : float=0.0005
-            The error tolerance to use if nonbondedMethod is Ewald or PME.
+            The error tolerance to use if nonbondedMethod is Ewald, PME, or LJPME.
         removeCMMotion : boolean=True
             If true, a CMMotionRemover will be added to the System
         hydrogenMass : mass=None
@@ -185,7 +185,7 @@ class DesmondDMSFile(object):
         boxSize = self.topology.getUnitCellDimensions()
         if boxSize is not None:
             sys.setDefaultPeriodicBoxVectors((boxSize[0], 0, 0), (0, boxSize[1], 0), (0, 0, boxSize[2]))
-        elif nonbondedMethod in (ff.CutoffPeriodic, ff.Ewald, ff.PME):
+        elif nonbondedMethod in (ff.CutoffPeriodic, ff.Ewald, ff.PME, ff.LJPME):
             raise ValueError('Illegal nonbonded method for a non-periodic system')
 
         # Create all of the particles
@@ -207,7 +207,8 @@ class DesmondDMSFile(object):
                      ff.CutoffNonPeriodic:mm.NonbondedForce.CutoffNonPeriodic,
                      ff.CutoffPeriodic:mm.NonbondedForce.CutoffPeriodic,
                      ff.Ewald:mm.NonbondedForce.Ewald,
-                     ff.PME:mm.NonbondedForce.PME}
+                     ff.PME:mm.NonbondedForce.PME,
+                     ff.LJPME:mm.NonbondedForce.LJPME}
         nb.setNonbondedMethod(methodMap[nonbondedMethod])
         nb.setCutoffDistance(nonbondedCutoff)
         nb.setEwaldErrorTolerance(ewaldErrorTolerance)
