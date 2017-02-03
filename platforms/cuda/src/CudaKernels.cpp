@@ -1629,6 +1629,10 @@ CudaCalcNonbondedForceKernel::~CudaCalcNonbondedForceKernel() {
         if (useCudaFFT) {
             cufftDestroy(fftForward);
             cufftDestroy(fftBackward);
+            if (doLJPME) {
+                cufftDestroy(dispersionFftForward);
+                cufftDestroy(dispersionFftBackward);                
+            }
         }
         if (usePmeStream) {
             cuStreamDestroy(pmeStream);

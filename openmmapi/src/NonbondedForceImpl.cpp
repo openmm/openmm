@@ -160,9 +160,9 @@ void NonbondedForceImpl::calcPMEParameters(const System& system, const Nonbonded
         double tol = force.getEwaldErrorTolerance();
         alpha = (1.0/force.getCutoffDistance())*std::sqrt(-log(2.0*tol));
         if (lj) {
-            xsize = (int) ceil(alpha*boxVectors[0][0]/(3*pow(tol, 0.05)));
-            ysize = (int) ceil(alpha*boxVectors[1][1]/(3*pow(tol, 0.05)));
-            zsize = (int) ceil(alpha*boxVectors[2][2]/(3*pow(tol, 0.05)));
+            xsize = (int) ceil(alpha*boxVectors[0][0]/(3*pow(tol, 0.2)));
+            ysize = (int) ceil(alpha*boxVectors[1][1]/(3*pow(tol, 0.2)));
+            zsize = (int) ceil(alpha*boxVectors[2][2]/(3*pow(tol, 0.2)));
         }
         else {
             xsize = (int) ceil(2*alpha*boxVectors[0][0]/(3*pow(tol, 0.2)));

@@ -458,7 +458,7 @@ The formula used to compute the number of nodes along each dimension of the mesh
 is slightly different from the one used for Coulomb interactions:
 
 .. math::
-   n_\mathit{mesh}=\frac{\alpha d}{{3\delta}^{1/20}}
+   n_\mathit{mesh}=\frac{\alpha d}{{3\delta}^{1/5}}
 
 As before, this is an empirical formula.  It will usually produce an average
 relative error in the forces less than or similar to :math:`\delta`\ , but that
