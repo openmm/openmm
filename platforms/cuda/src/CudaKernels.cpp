@@ -1623,6 +1623,8 @@ CudaCalcNonbondedForceKernel::~CudaCalcNonbondedForceKernel() {
         delete sort;
     if (fft != NULL)
         delete fft;
+    if (dispersionFft != NULL)
+        delete dispersionFft;
     if (pmeio != NULL)
         delete pmeio;
     if (hasInitializedFFT) {
@@ -1915,6 +1917,8 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                     if (useCudaFFT) {
                         cufftSetStream(fftForward, pmeStream);
                         cufftSetStream(fftBackward, pmeStream);
+                        cufftSetStream(dispersionFftForward, pmeStream);
+                        cufftSetStream(dispersionFftBackward, pmeStream);
                     }
                     CHECK_RESULT(cuEventCreate(&pmeSyncEvent, CU_EVENT_DISABLE_TIMING), "Error creating event for NonbondedForce");
                     int recipForceGroup = force.getReciprocalSpaceForceGroup();
@@ -2174,7 +2178,7 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
                     cufftExecR2C(dispersionFftForward, (float*) directPmeGrid->getDevicePointer(), (float2*) reciprocalPmeGrid->getDevicePointer());
             }
             else {
-                fft->execFFT(*directPmeGrid, *reciprocalPmeGrid, true);
+                dispersionFft->execFFT(*directPmeGrid, *reciprocalPmeGrid, true);
             }
 
             if (includeEnergy) {
@@ -2196,7 +2200,7 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
                     cufftExecC2R(dispersionFftBackward, (float2*) reciprocalPmeGrid->getDevicePointer(), (float*)  directPmeGrid->getDevicePointer());
             }
             else {
-                fft->execFFT(*reciprocalPmeGrid, *directPmeGrid, false);
+                dispersionFft->execFFT(*reciprocalPmeGrid, *directPmeGrid, false);
             }
 
             void* interpolateArgs[] = {&cu.getPosq().getDevicePointer(), &cu.getForce().getDevicePointer(), &directPmeGrid->getDevicePointer(), cu.getPeriodicBoxSizePointer(),
