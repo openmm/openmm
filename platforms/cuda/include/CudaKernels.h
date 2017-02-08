@@ -680,7 +680,6 @@ private:
     CudaArray* pmeEnergyBuffer;
     CudaSort* sort;
     Kernel cpuPme;
-    Kernel cpuDispersionPme;
     PmeIO* pmeio;
     CUstream pmeStream;
     CUevent pmeSyncEvent;

@@ -1804,7 +1804,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
             if (cu.getPlatformData().deterministicForces)
                 pmeDefines["USE_DETERMINISTIC_FORCES"] = "1";
             CUmodule module = cu.createModule(CudaKernelSources::vectorOps+CudaKernelSources::pme, pmeDefines);
-            if (cu.getPlatformData().useCpuPme) {
+            if (cu.getPlatformData().useCpuPme && !doLJPME) {
                 // Create the CPU PME kernel.
 
                 try {
@@ -1814,13 +1814,6 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                     pmeio = new PmeIO(cu, addForcesKernel);
                     cu.addPreComputation(new PmePreComputation(cu, cpuPme, *pmeio));
                     cu.addPostComputation(new PmePostComputation(cpuPme, *pmeio));
-                    if (doLJPME) {
-                        cpuDispersionPme = getPlatform().createKernel(CalcDispersionPmeReciprocalForceKernel::Name(), *cu.getPlatformData().context);
-                        cpuDispersionPme.getAs<CalcDispersionPmeReciprocalForceKernel>().initialize(dispersionGridSizeX, dispersionGridSizeY,
-                                                     dispersionGridSizeZ, numParticles, dispersionAlpha);
-                        cu.addPreComputation(new PmePreComputation(cu, cpuDispersionPme, *pmeio));
-                        cu.addPostComputation(new PmePostComputation(cpuDispersionPme, *pmeio));
-                    }
                 }
                 catch (OpenMMException& ex) {
                     // The CPU PME plugin isn't available.
