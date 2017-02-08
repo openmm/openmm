@@ -43,8 +43,60 @@
 using namespace OpenMM;
 using namespace std;
 
+void testConvergence() {
+    // Create a cloud of random particles.
+
+    const int numParticles = 1000;
+    const double boxWidth = 6.0;
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(boxWidth, 0, 0), Vec3(0, boxWidth, 0), Vec3(0, 0, boxWidth));
+    NonbondedForce* force = new NonbondedForce();
+    system.addForce(force);
+    vector<Vec3> positions(numParticles);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(1.0);
+        force->addParticle(0.0, 0.1+0.3*genrand_real2(sfmt), genrand_real2(sfmt));
+        while (true) {
+            Vec3 pos = Vec3(boxWidth*genrand_real2(sfmt), boxWidth*genrand_real2(sfmt), boxWidth*genrand_real2(sfmt));
+            double minDist = boxWidth;
+            for (int j = 0; j < i; j++) {
+                Vec3 delta = pos-positions[j];
+                minDist = min(minDist, sqrt(delta.dot(delta)));
+            }
+            if (minDist > 0.15) {
+                positions[i] = pos;
+                break;
+            }
+        }
+    }
+    
+    // Compute the energy with short and long cutoffs, and compare them to LJPME.
+    // The long cutoff should match the LJPME result better than the short cutoff.
+    
+    force->setNonbondedMethod(NonbondedForce::LJPME);
+    force->setCutoffDistance(1.0);
+    force->setEwaldErrorTolerance(1e-5);
+    force->setUseDispersionCorrection(false);
+    VerletIntegrator integrator(0.01);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    double pmeEnergy = context.getState(State::Energy, false, 1).getPotentialEnergy();
+    force->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    context.reinitialize();
+    context.setPositions(positions);
+    double shortEnergy = context.getState(State::Energy, false, 1).getPotentialEnergy();
+    force->setCutoffDistance(3.0);
+    context.reinitialize();
+    context.setPositions(positions);
+    double longEnergy = context.getState(State::Energy, false, 1).getPotentialEnergy();
+    ASSERT(fabs(longEnergy-pmeEnergy) < fabs(shortEnergy-pmeEnergy))
+}
+
 void testErrorTolerance() {
-    // Create a cloud of random point charges.
+    // Create a cloud of random particles.
 
     const int numParticles = 200;
     const double boxWidth = 5.0;
@@ -118,7 +170,7 @@ void testErrorTolerance() {
 }
 
 void testPMEParameters() {
-    // Create a cloud of random point charges.
+    // Create a cloud of random particles.
 
     const int numParticles = 51;
     const double boxWidth = 4.7;
@@ -136,10 +188,11 @@ void testPMEParameters() {
         positions[i] = Vec3(boxWidth*genrand_real2(sfmt), boxWidth*genrand_real2(sfmt), boxWidth*genrand_real2(sfmt));
     }
     force->setNonbondedMethod(NonbondedForce::LJPME);
+    force->setCutoffDistance(0.5);
     
-    // Compute the energy with an error tolerance of 1e-3.
+    // Compute the energy with an error tolerance of 0.1.
 
-    force->setEwaldErrorTolerance(1e-3);
+    force->setEwaldErrorTolerance(0.1);
     VerletIntegrator integrator1(0.01);
     Context context1(system, integrator1, platform);
     context1.setPositions(positions);
@@ -157,7 +210,7 @@ void testPMEParameters() {
     double energy2 = context2.getState(State::Energy).getPotentialEnergy();
     
     // Now explicitly set the parameters.  These should match the values that were
-    // used for tolerance 1e-3.
+    // used for tolerance 0.1.
 
     force->setLJPMEParameters(alpha, gridx, gridy, gridz);
     VerletIntegrator integrator3(0.01);
@@ -1806,6 +1859,7 @@ void runPlatformTests();
 int main(int argc, char* argv[]) {
     try {
         initializeTests(argc, argv);
+        testConvergence();
         testErrorTolerance();
         testPMEParameters();
         testWater2DpmeEnergiesForcesNoExclusions();
