@@ -1779,7 +1779,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
             bool deviceIsCpu = (cl.getDevice().getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU);
             if (deviceIsCpu)
                 pmeDefines["DEVICE_IS_CPU"] = "1";
-            if (cl.getPlatformData().useCpuPme) {
+            if (cl.getPlatformData().useCpuPme && !doLJPME) {
                 // Create the CPU PME kernel.
 
                 try {
@@ -1790,13 +1790,6 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
                     pmeio = new PmeIO(cl, addForcesKernel);
                     cl.addPreComputation(new PmePreComputation(cl, cpuPme, *pmeio));
                     cl.addPostComputation(new PmePostComputation(cpuPme, *pmeio));
-                    if (doLJPME) {
-                        cpuDispersionPme = getPlatform().createKernel(CalcDispersionPmeReciprocalForceKernel::Name(), *cl.getPlatformData().context);
-                        cpuDispersionPme.getAs<CalcDispersionPmeReciprocalForceKernel>().initialize(dispersionGridSizeX, dispersionGridSizeY,
-                                                     dispersionGridSizeZ, numParticles, dispersionAlpha);
-                        cl.addPreComputation(new PmePreComputation(cl, cpuDispersionPme, *pmeio));
-                        cl.addPostComputation(new PmePostComputation(cpuDispersionPme, *pmeio));
-                    }
                 }
                 catch (OpenMMException& ex) {
                     // The CPU PME plugin isn't available.

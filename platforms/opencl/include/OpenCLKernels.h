@@ -663,7 +663,6 @@ private:
     OpenCLFFT3D* fft;
     OpenCLFFT3D* dispersionFft;
     Kernel cpuPme;
-    Kernel cpuDispersionPme;
     PmeIO* pmeio;
     SyncQueuePostComputation* syncQueue;
     cl::Kernel ewaldSumsKernel;
