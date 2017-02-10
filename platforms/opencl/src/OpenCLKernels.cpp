@@ -1608,6 +1608,12 @@ OpenCLCalcNonbondedForceKernel::~OpenCLCalcNonbondedForceKernel() {
         delete pmeBsplineModuliY;
     if (pmeBsplineModuliZ != NULL)
         delete pmeBsplineModuliZ;
+    if (pmeDispersionBsplineModuliX != NULL)
+        delete pmeDispersionBsplineModuliX;
+    if (pmeDispersionBsplineModuliY != NULL)
+        delete pmeDispersionBsplineModuliY;
+    if (pmeDispersionBsplineModuliZ != NULL)
+        delete pmeDispersionBsplineModuliZ;
     if (pmeBsplineTheta != NULL)
         delete pmeBsplineTheta;
     if (pmeAtomRange != NULL)
@@ -1620,6 +1626,8 @@ OpenCLCalcNonbondedForceKernel::~OpenCLCalcNonbondedForceKernel() {
         delete sort;
     if (fft != NULL)
         delete fft;
+    if (dispersionFft != NULL)
+        delete dispersionFft;
     if (pmeio != NULL)
         delete pmeio;
 }
@@ -1648,6 +1656,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     vector<mm_float2> sigmaEpsilonVector(cl.getPaddedNumAtoms(), mm_float2(0,0));
     vector<vector<int> > exclusionList(numParticles);
     double sumSquaredCharges = 0.0;
+    double sumSquaredC6 = 0.0;
     hasCoulomb = false;
     hasLJ = false;
     for (int i = 0; i < numParticles; i++) {
@@ -1657,9 +1666,13 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
             posqd[i] = mm_double4(0, 0, 0, charge);
         else
             posqf[i] = mm_float4(0, 0, 0, (float) charge);
-        sigmaEpsilonVector[i] = mm_float2((float) (0.5*sigma), (float) (2.0*sqrt(epsilon)));
+        double sig = 0.5*sigma;
+        double eps = 2.0*sqrt(epsilon);
+        sigmaEpsilonVector[i] = mm_float2((float) sig, (float) eps);
         exclusionList[i].push_back(i);
         sumSquaredCharges += charge*charge;
+        double C6 = 8.0*sig*sig*sig*eps;
+        sumSquaredC6 += C6*C6;
         if (charge != 0.0)
             hasCoulomb = true;
         if (epsilon != 0.0)
@@ -1677,6 +1690,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     nonbondedMethod = CalcNonbondedForceKernel::NonbondedMethod(force.getNonbondedMethod());
     bool useCutoff = (nonbondedMethod != NoCutoff);
     bool usePeriodic = (nonbondedMethod != NoCutoff && nonbondedMethod != CutoffNonPeriodic);
+    doLJPME = (nonbondedMethod == LJPME);
     map<string, string> defines;
     defines["HAS_COULOMB"] = (hasCoulomb ? "1" : "0");
     defines["HAS_LENNARD_JONES"] = (hasLJ ? "1" : "0");
@@ -1698,7 +1712,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
             defines["LJ_SWITCH_C5"] = cl.doubleToString(6/pow(force.getSwitchingDistance()-force.getCutoffDistance(), 5.0));
         }
     }
-    if (force.getUseDispersionCorrection() && cl.getContextIndex() == 0)
+    if (force.getUseDispersionCorrection() && cl.getContextIndex() == 0 && !doLJPME)
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(system, force);
     else
         dispersionCoefficient = 0.0;
@@ -1730,18 +1744,30 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
             cosSinSums = new OpenCLArray(cl, (2*kmaxx-1)*(2*kmaxy-1)*(2*kmaxz-1), elementSize, "cosSinSums");
         }
     }
-    else if (nonbondedMethod == PME) {
+    else if (nonbondedMethod == PME || nonbondedMethod == LJPME) {
         // Compute the PME parameters.
 
         NonbondedForceImpl::calcPMEParameters(system, force, alpha, gridSizeX, gridSizeY, gridSizeZ, false);
         gridSizeX = OpenCLFFT3D::findLegalDimension(gridSizeX);
         gridSizeY = OpenCLFFT3D::findLegalDimension(gridSizeY);
         gridSizeZ = OpenCLFFT3D::findLegalDimension(gridSizeZ);
+        if (doLJPME) {
+            NonbondedForceImpl::calcPMEParameters(system, force, dispersionAlpha, dispersionGridSizeX,
+                                                  dispersionGridSizeY, dispersionGridSizeZ, true);
+            dispersionGridSizeX = OpenCLFFT3D::findLegalDimension(dispersionGridSizeX);
+            dispersionGridSizeY = OpenCLFFT3D::findLegalDimension(dispersionGridSizeY);
+            dispersionGridSizeZ = OpenCLFFT3D::findLegalDimension(dispersionGridSizeZ);
+        }
         defines["EWALD_ALPHA"] = cl.doubleToString(alpha);
         defines["TWO_OVER_SQRT_PI"] = cl.doubleToString(2.0/sqrt(M_PI));
         defines["USE_EWALD"] = "1";
+        defines["DO_LJPME"] = doLJPME ? "1" : "0";
+        if (doLJPME)
+            defines["EWALD_DISPERSION_ALPHA"] = cl.doubleToString(dispersionAlpha);
         if (cl.getContextIndex() == 0) {
             ewaldSelfEnergy = -ONE_4PI_EPS0*alpha*sumSquaredCharges/sqrt(M_PI);
+            if (doLJPME)
+                ewaldSelfEnergy += pow(dispersionAlpha, 6)*sumSquaredC6/12.0;
             pmeDefines["PME_ORDER"] = cl.intToString(PmeOrder);
             pmeDefines["NUM_ATOMS"] = cl.intToString(numParticles);
             pmeDefines["RECIP_EXP_FACTOR"] = cl.doubleToString(M_PI*M_PI/(alpha*alpha));
@@ -1753,7 +1779,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
             bool deviceIsCpu = (cl.getDevice().getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU);
             if (deviceIsCpu)
                 pmeDefines["DEVICE_IS_CPU"] = "1";
-            if (cl.getPlatformData().useCpuPme) {
+            if (cl.getPlatformData().useCpuPme && !doLJPME) {
                 // Create the CPU PME kernel.
 
                 try {
@@ -1772,9 +1798,21 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
             if (pmeio == NULL) {
                 // Create required data structures.
 
+                if (doLJPME) {
+                    double invRCut6 = pow(force.getCutoffDistance(), -6);
+                    double dalphaR = dispersionAlpha * force.getCutoffDistance();
+                    double dar2 = dalphaR*dalphaR;
+                    double dar4 = dar2*dar2;
+                    double multShift6 = -invRCut6*(1.0 - exp(-dar2) * (1.0 + dar2 + 0.5*dar4));
+                    defines["INVCUT6"] = cl.doubleToString(invRCut6);
+                    defines["MULTSHIFT6"] = cl.doubleToString(multShift6);
+                }
                 int elementSize = (cl.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
-                pmeGrid = new OpenCLArray(cl, gridSizeX*gridSizeY*gridSizeZ, 2*elementSize, "pmeGrid");
-                pmeGrid2 = new OpenCLArray(cl, gridSizeX*gridSizeY*gridSizeZ, 2*elementSize, "pmeGrid2");
+                int gridElements = gridSizeX*gridSizeY*gridSizeZ;
+                if (doLJPME)
+                    gridElements = max(gridElements, dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ);
+                pmeGrid = new OpenCLArray(cl, gridElements, 2*elementSize, "pmeGrid");
+                pmeGrid2 = new OpenCLArray(cl, gridElements, 2*elementSize, "pmeGrid2");
                 if (cl.getSupports64BitGlobalAtomics())
                     cl.addAutoclearBuffer(*pmeGrid2);
                 else
@@ -1782,6 +1820,11 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
                 pmeBsplineModuliX = new OpenCLArray(cl, gridSizeX, elementSize, "pmeBsplineModuliX");
                 pmeBsplineModuliY = new OpenCLArray(cl, gridSizeY, elementSize, "pmeBsplineModuliY");
                 pmeBsplineModuliZ = new OpenCLArray(cl, gridSizeZ, elementSize, "pmeBsplineModuliZ");
+                if (doLJPME) {
+                    pmeDispersionBsplineModuliX = new OpenCLArray(cl, dispersionGridSizeX, elementSize, "pmeDispersionBsplineModuliX");
+                    pmeDispersionBsplineModuliY = new OpenCLArray(cl, dispersionGridSizeY, elementSize, "pmeDispersionBsplineModuliY");
+                    pmeDispersionBsplineModuliZ = new OpenCLArray(cl, dispersionGridSizeZ, elementSize, "pmeDispersionBsplineModuliZ");
+                }
                 pmeBsplineTheta = new OpenCLArray(cl, PmeOrder*numParticles, 4*elementSize, "pmeBsplineTheta");
                 pmeAtomRange = OpenCLArray::create<cl_int>(cl, gridSizeX*gridSizeY*gridSizeZ+1, "pmeAtomRange");
                 pmeAtomGridIndex = OpenCLArray::create<mm_int2>(cl, numParticles, "pmeAtomGridIndex");
@@ -1790,6 +1833,8 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
                 cl.clearBuffer(*pmeEnergyBuffer);
                 sort = new OpenCLSort(cl, new SortTrait(), cl.getNumAtoms());
                 fft = new OpenCLFFT3D(cl, gridSizeX, gridSizeY, gridSizeZ, true);
+                if (doLJPME)
+                    dispersionFft = new OpenCLFFT3D(cl, dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, true);
                 string vendor = cl.getDevice().getInfo<CL_DEVICE_VENDOR>();
                 bool isNvidia = (vendor.size() >= 6 && vendor.substr(0, 6) == "NVIDIA");
                 if (isNvidia)
@@ -1807,74 +1852,96 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
 
                 // Initialize the b-spline moduli.
 
-                int maxSize = max(max(gridSizeX, gridSizeY), gridSizeZ);
-                vector<double> data(PmeOrder);
-                vector<double> ddata(PmeOrder);
-                vector<double> bsplines_data(maxSize);
-                data[PmeOrder-1] = 0.0;
-                data[1] = 0.0;
-                data[0] = 1.0;
-                for (int i = 3; i < PmeOrder; i++) {
-                    double div = 1.0/(i-1.0);
-                    data[i-1] = 0.0;
-                    for (int j = 1; j < (i-1); j++)
-                        data[i-j-1] = div*(j*data[i-j-2]+(i-j)*data[i-j-1]);
-                    data[0] = div*data[0];
-                }
-
-                // Differentiate.
-
-                ddata[0] = -data[0];
-                for (int i = 1; i < PmeOrder; i++)
-                    ddata[i] = data[i-1]-data[i];
-                double div = 1.0/(PmeOrder-1);
-                data[PmeOrder-1] = 0.0;
-                for (int i = 1; i < (PmeOrder-1); i++)
-                    data[PmeOrder-i-1] = div*(i*data[PmeOrder-i-2]+(PmeOrder-i)*data[PmeOrder-i-1]);
-                data[0] = div*data[0];
-                for (int i = 0; i < maxSize; i++)
-                    bsplines_data[i] = 0.0;
-                for (int i = 1; i <= PmeOrder; i++)
-                    bsplines_data[i] = data[i-1];
-
-                // Evaluate the actual bspline moduli for X/Y/Z.
-
-                for(int dim = 0; dim < 3; dim++) {
-                    int ndata = (dim == 0 ? gridSizeX : dim == 1 ? gridSizeY : gridSizeZ);
-                    vector<cl_double> moduli(ndata);
-                    for (int i = 0; i < ndata; i++) {
-                        double sc = 0.0;
-                        double ss = 0.0;
-                        for (int j = 0; j < ndata; j++) {
-                            double arg = (2.0*M_PI*i*j)/ndata;
-                            sc += bsplines_data[j]*cos(arg);
-                            ss += bsplines_data[j]*sin(arg);
-                        }
-                        moduli[i] = (float) (sc*sc+ss*ss);
-                    }
-                    for (int i = 0; i < ndata; i++)
-                    {
-                        if (moduli[i] < 1.0e-7)
-                            moduli[i] = (moduli[i-1]+moduli[i+1])*0.5f;
-                    }
-                    if (cl.getUseDoublePrecision()) {
-                        if (dim == 0)
-                            pmeBsplineModuliX->upload(moduli);
-                        else if (dim == 1)
-                            pmeBsplineModuliY->upload(moduli);
-                        else
-                            pmeBsplineModuliZ->upload(moduli);
+                for (int grid = 0; grid < 2; grid++) {
+                    int xsize, ysize, zsize;
+                    OpenCLArray *xmoduli, *ymoduli, *zmoduli;
+                    if (grid == 0) {
+                        xsize = gridSizeX;
+                        ysize = gridSizeY;
+                        zsize = gridSizeZ;
+                        xmoduli = pmeBsplineModuliX;
+                        ymoduli = pmeBsplineModuliY;
+                        zmoduli = pmeBsplineModuliZ;
                     }
                     else {
-                        vector<float> modulif(ndata);
+                        if (!doLJPME)
+                            continue;
+                        xsize = dispersionGridSizeX;
+                        ysize = dispersionGridSizeY;
+                        zsize = dispersionGridSizeZ;
+                        xmoduli = pmeDispersionBsplineModuliX;
+                        ymoduli = pmeDispersionBsplineModuliY;
+                        zmoduli = pmeDispersionBsplineModuliZ;
+                    }
+                    int maxSize = max(max(xsize, ysize), zsize);
+                    vector<double> data(PmeOrder);
+                    vector<double> ddata(PmeOrder);
+                    vector<double> bsplines_data(maxSize);
+                    data[PmeOrder-1] = 0.0;
+                    data[1] = 0.0;
+                    data[0] = 1.0;
+                    for (int i = 3; i < PmeOrder; i++) {
+                        double div = 1.0/(i-1.0);
+                        data[i-1] = 0.0;
+                        for (int j = 1; j < (i-1); j++)
+                            data[i-j-1] = div*(j*data[i-j-2]+(i-j)*data[i-j-1]);
+                        data[0] = div*data[0];
+                    }
+
+                    // Differentiate.
+
+                    ddata[0] = -data[0];
+                    for (int i = 1; i < PmeOrder; i++)
+                        ddata[i] = data[i-1]-data[i];
+                    double div = 1.0/(PmeOrder-1);
+                    data[PmeOrder-1] = 0.0;
+                    for (int i = 1; i < (PmeOrder-1); i++)
+                        data[PmeOrder-i-1] = div*(i*data[PmeOrder-i-2]+(PmeOrder-i)*data[PmeOrder-i-1]);
+                    data[0] = div*data[0];
+                    for (int i = 0; i < maxSize; i++)
+                        bsplines_data[i] = 0.0;
+                    for (int i = 1; i <= PmeOrder; i++)
+                        bsplines_data[i] = data[i-1];
+
+                    // Evaluate the actual bspline moduli for X/Y/Z.
+
+                    for(int dim = 0; dim < 3; dim++) {
+                        int ndata = (dim == 0 ? xsize : dim == 1 ? ysize : zsize);
+                        vector<cl_double> moduli(ndata);
+                        for (int i = 0; i < ndata; i++) {
+                            double sc = 0.0;
+                            double ss = 0.0;
+                            for (int j = 0; j < ndata; j++) {
+                                double arg = (2.0*M_PI*i*j)/ndata;
+                                sc += bsplines_data[j]*cos(arg);
+                                ss += bsplines_data[j]*sin(arg);
+                            }
+                            moduli[i] = (float) (sc*sc+ss*ss);
+                        }
                         for (int i = 0; i < ndata; i++)
-                            modulif[i] = (float) moduli[i];
-                        if (dim == 0)
-                            pmeBsplineModuliX->upload(modulif);
-                        else if (dim == 1)
-                            pmeBsplineModuliY->upload(modulif);
-                        else
-                            pmeBsplineModuliZ->upload(modulif);
+                        {
+                            if (moduli[i] < 1.0e-7)
+                                moduli[i] = (moduli[i-1]+moduli[i+1])*0.5f;
+                        }
+                        if (cl.getUseDoublePrecision()) {
+                            if (dim == 0)
+                                xmoduli->upload(moduli);
+                            else if (dim == 1)
+                                ymoduli->upload(moduli);
+                            else
+                                zmoduli->upload(moduli);
+                        }
+                        else {
+                            vector<float> modulif(ndata);
+                            for (int i = 0; i < ndata; i++)
+                                modulif[i] = (float) moduli[i];
+                            if (dim == 0)
+                                xmoduli->upload(modulif);
+                            else if (dim == 1)
+                                ymoduli->upload(modulif);
+                            else
+                                zmoduli->upload(modulif);
+                        }
                     }
                 }
             }
@@ -1926,6 +1993,8 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             ewaldForcesKernel.setArg<cl::Buffer>(2, cosSinSums->getDeviceBuffer());
         }
         if (pmeGrid != NULL) {
+            // Create kernels for Coulomb PME.
+            
             cl::Program program = cl.createProgram(OpenCLKernelSources::pme, pmeDefines);
             pmeUpdateBsplinesKernel = cl::Kernel(program, "updateBsplines");
             pmeAtomRangeKernel = cl::Kernel(program, "findAtomRangeForGrid");
@@ -1972,6 +2041,65 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             }
             if (usePmeQueue)
                 syncQueue->setKernel(cl::Kernel(program, "addEnergy"));
+
+            if (doLJPME) {
+                // Create kernels for LJ PME.
+
+                pmeDefines["EWALD_ALPHA"] = cl.doubleToString(dispersionAlpha);
+                pmeDefines["GRID_SIZE_X"] = cl.intToString(dispersionGridSizeX);
+                pmeDefines["GRID_SIZE_Y"] = cl.intToString(dispersionGridSizeY);
+                pmeDefines["GRID_SIZE_Z"] = cl.intToString(dispersionGridSizeZ);
+                pmeDefines["EPSILON_FACTOR"] = "1";
+                pmeDefines["RECIP_EXP_FACTOR"] = cl.doubleToString(M_PI*M_PI/(dispersionAlpha*dispersionAlpha));
+                pmeDefines["USE_LJPME"] = "1";
+                program = cl.createProgram(OpenCLKernelSources::pme, pmeDefines);
+                pmeDispersionUpdateBsplinesKernel = cl::Kernel(program, "updateBsplines");
+                pmeDispersionAtomRangeKernel = cl::Kernel(program, "findAtomRangeForGrid");
+                pmeDispersionZIndexKernel = cl::Kernel(program, "recordZIndex");
+                pmeDispersionSpreadChargeKernel = cl::Kernel(program, "gridSpreadCharge");
+                pmeDispersionConvolutionKernel = cl::Kernel(program, "reciprocalConvolution");
+                pmeDispersionEvalEnergyKernel = cl::Kernel(program, "gridEvaluateEnergy");
+                pmeDispersionInterpolateForceKernel = cl::Kernel(program, "gridInterpolateForce");
+                int elementSize = (cl.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4));
+                pmeDispersionUpdateBsplinesKernel.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
+                pmeDispersionUpdateBsplinesKernel.setArg<cl::Buffer>(1, pmeBsplineTheta->getDeviceBuffer());
+                pmeDispersionUpdateBsplinesKernel.setArg(2, OpenCLContext::ThreadBlockSize*PmeOrder*elementSize, NULL);
+                pmeDispersionUpdateBsplinesKernel.setArg<cl::Buffer>(3, pmeAtomGridIndex->getDeviceBuffer());
+                pmeDispersionUpdateBsplinesKernel.setArg<cl::Buffer>(12, sigmaEpsilon->getDeviceBuffer());
+                pmeDispersionAtomRangeKernel.setArg<cl::Buffer>(0, pmeAtomGridIndex->getDeviceBuffer());
+                pmeDispersionAtomRangeKernel.setArg<cl::Buffer>(1, pmeAtomRange->getDeviceBuffer());
+                pmeDispersionAtomRangeKernel.setArg<cl::Buffer>(2, cl.getPosq().getDeviceBuffer());
+                pmeDispersionZIndexKernel.setArg<cl::Buffer>(0, pmeAtomGridIndex->getDeviceBuffer());
+                pmeDispersionZIndexKernel.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
+                pmeDispersionSpreadChargeKernel.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
+                pmeDispersionSpreadChargeKernel.setArg<cl::Buffer>(1, pmeAtomGridIndex->getDeviceBuffer());
+                pmeDispersionSpreadChargeKernel.setArg<cl::Buffer>(2, pmeAtomRange->getDeviceBuffer());
+                if (cl.getSupports64BitGlobalAtomics())
+                    pmeDispersionSpreadChargeKernel.setArg<cl::Buffer>(3, pmeGrid2->getDeviceBuffer());
+                else
+                    pmeDispersionSpreadChargeKernel.setArg<cl::Buffer>(3, pmeGrid->getDeviceBuffer());
+                pmeDispersionSpreadChargeKernel.setArg<cl::Buffer>(4, pmeBsplineTheta->getDeviceBuffer());
+                pmeDispersionSpreadChargeKernel.setArg<cl::Buffer>(13, sigmaEpsilon->getDeviceBuffer());
+                pmeDispersionConvolutionKernel.setArg<cl::Buffer>(0, pmeGrid2->getDeviceBuffer());
+                pmeDispersionConvolutionKernel.setArg<cl::Buffer>(1, pmeDispersionBsplineModuliX->getDeviceBuffer());
+                pmeDispersionConvolutionKernel.setArg<cl::Buffer>(2, pmeDispersionBsplineModuliY->getDeviceBuffer());
+                pmeDispersionConvolutionKernel.setArg<cl::Buffer>(3, pmeDispersionBsplineModuliZ->getDeviceBuffer());
+                pmeDispersionEvalEnergyKernel.setArg<cl::Buffer>(0, pmeGrid2->getDeviceBuffer());
+                pmeDispersionEvalEnergyKernel.setArg<cl::Buffer>(1, usePmeQueue ? pmeEnergyBuffer->getDeviceBuffer() : cl.getEnergyBuffer().getDeviceBuffer());
+                pmeDispersionEvalEnergyKernel.setArg<cl::Buffer>(2, pmeDispersionBsplineModuliX->getDeviceBuffer());
+                pmeDispersionEvalEnergyKernel.setArg<cl::Buffer>(3, pmeDispersionBsplineModuliY->getDeviceBuffer());
+                pmeDispersionEvalEnergyKernel.setArg<cl::Buffer>(4, pmeDispersionBsplineModuliZ->getDeviceBuffer());
+                pmeDispersionInterpolateForceKernel.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
+                pmeDispersionInterpolateForceKernel.setArg<cl::Buffer>(1, cl.getForceBuffers().getDeviceBuffer());
+                pmeDispersionInterpolateForceKernel.setArg<cl::Buffer>(2, pmeGrid->getDeviceBuffer());
+                pmeDispersionInterpolateForceKernel.setArg<cl::Buffer>(11, pmeAtomGridIndex->getDeviceBuffer());
+                pmeDispersionInterpolateForceKernel.setArg<cl::Buffer>(12, sigmaEpsilon->getDeviceBuffer());
+                if (cl.getSupports64BitGlobalAtomics()) {
+                    pmeDispersionFinishSpreadChargeKernel = cl::Kernel(program, "finishSpreadCharge");
+                    pmeDispersionFinishSpreadChargeKernel.setArg<cl::Buffer>(0, pmeGrid2->getDeviceBuffer());
+                    pmeDispersionFinishSpreadChargeKernel.setArg<cl::Buffer>(1, pmeGrid->getDeviceBuffer());
+                }
+            }
        }
     }
     if (cosSinSums != NULL && includeReciprocal) {
@@ -2042,7 +2170,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
         else {
             sort->sort(*pmeAtomGridIndex);
             if (cl.getSupports64BitGlobalAtomics()) {
-            setPeriodicBoxArgs(cl, pmeSpreadChargeKernel, 5);
+                setPeriodicBoxArgs(cl, pmeSpreadChargeKernel, 5);
                 if (cl.getUseDoublePrecision()) {
                     pmeSpreadChargeKernel.setArg<mm_double4>(10, recipBoxVectors[0]);
                     pmeSpreadChargeKernel.setArg<mm_double4>(11, recipBoxVectors[1]);
@@ -2054,7 +2182,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
                     pmeSpreadChargeKernel.setArg<mm_float4>(12, recipBoxVectorsFloat[2]);
                 }
                 cl.executeKernel(pmeSpreadChargeKernel, cl.getNumAtoms());
-                cl.executeKernel(pmeFinishSpreadChargeKernel, pmeGrid->getSize());
+                cl.executeKernel(pmeFinishSpreadChargeKernel, gridSizeX*gridSizeY*gridSizeZ);
             }
             else {
                 cl.executeKernel(pmeAtomRangeKernel, cl.getNumAtoms());
@@ -2104,6 +2232,103 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             cl.executeKernel(pmeInterpolateForceKernel, 2*cl.getDevice().getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>(), 1);
         else
             cl.executeKernel(pmeInterpolateForceKernel, cl.getNumAtoms());
+        
+        if (doLJPME) {
+            setPeriodicBoxArgs(cl, pmeDispersionUpdateBsplinesKernel, 4);
+            if (cl.getUseDoublePrecision()) {
+                pmeDispersionUpdateBsplinesKernel.setArg<mm_double4>(9, recipBoxVectors[0]);
+                pmeDispersionUpdateBsplinesKernel.setArg<mm_double4>(10, recipBoxVectors[1]);
+                pmeDispersionUpdateBsplinesKernel.setArg<mm_double4>(11, recipBoxVectors[2]);
+            }
+            else {
+                pmeDispersionUpdateBsplinesKernel.setArg<mm_float4>(9, recipBoxVectorsFloat[0]);
+                pmeDispersionUpdateBsplinesKernel.setArg<mm_float4>(10, recipBoxVectorsFloat[1]);
+                pmeDispersionUpdateBsplinesKernel.setArg<mm_float4>(11, recipBoxVectorsFloat[2]);
+            }
+            cl.executeKernel(pmeDispersionUpdateBsplinesKernel, cl.getNumAtoms());
+            if (deviceIsCpu && !cl.getSupports64BitGlobalAtomics()) {
+                cl.clearBuffer(*pmeGrid);
+                setPeriodicBoxArgs(cl, pmeDispersionSpreadChargeKernel, 5);
+                if (cl.getUseDoublePrecision()) {
+                    pmeDispersionSpreadChargeKernel.setArg<mm_double4>(10, recipBoxVectors[0]);
+                    pmeDispersionSpreadChargeKernel.setArg<mm_double4>(11, recipBoxVectors[1]);
+                    pmeDispersionSpreadChargeKernel.setArg<mm_double4>(12, recipBoxVectors[2]);
+                }
+                else {
+                    pmeDispersionSpreadChargeKernel.setArg<mm_float4>(10, recipBoxVectorsFloat[0]);
+                    pmeDispersionSpreadChargeKernel.setArg<mm_float4>(11, recipBoxVectorsFloat[1]);
+                    pmeDispersionSpreadChargeKernel.setArg<mm_float4>(12, recipBoxVectorsFloat[2]);
+                }
+                cl.executeKernel(pmeDispersionSpreadChargeKernel, 2*cl.getDevice().getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>(), 1);
+            }
+            else {
+                sort->sort(*pmeAtomGridIndex);
+                if (cl.getSupports64BitGlobalAtomics()) {
+                    cl.clearBuffer(*pmeGrid2);
+                    setPeriodicBoxArgs(cl, pmeDispersionSpreadChargeKernel, 5);
+                    if (cl.getUseDoublePrecision()) {
+                        pmeDispersionSpreadChargeKernel.setArg<mm_double4>(10, recipBoxVectors[0]);
+                        pmeDispersionSpreadChargeKernel.setArg<mm_double4>(11, recipBoxVectors[1]);
+                        pmeDispersionSpreadChargeKernel.setArg<mm_double4>(12, recipBoxVectors[2]);
+                    }
+                    else {
+                        pmeDispersionSpreadChargeKernel.setArg<mm_float4>(10, recipBoxVectorsFloat[0]);
+                        pmeDispersionSpreadChargeKernel.setArg<mm_float4>(11, recipBoxVectorsFloat[1]);
+                        pmeDispersionSpreadChargeKernel.setArg<mm_float4>(12, recipBoxVectorsFloat[2]);
+                    }
+                    cl.executeKernel(pmeDispersionSpreadChargeKernel, cl.getNumAtoms());
+                    cl.executeKernel(pmeDispersionFinishSpreadChargeKernel, gridSizeX*gridSizeY*gridSizeZ);
+                }
+                else {
+                    cl.clearBuffer(*pmeGrid);
+                    cl.executeKernel(pmeDispersionAtomRangeKernel, cl.getNumAtoms());
+                    setPeriodicBoxSizeArg(cl, pmeDispersionZIndexKernel, 2);
+                    if (cl.getUseDoublePrecision())
+                        pmeDispersionZIndexKernel.setArg<mm_double4>(3, recipBoxVectors[2]);
+                    else
+                        pmeDispersionZIndexKernel.setArg<mm_float4>(3, recipBoxVectorsFloat[2]);
+                    cl.executeKernel(pmeDispersionZIndexKernel, cl.getNumAtoms());
+                    cl.executeKernel(pmeDispersionSpreadChargeKernel, cl.getNumAtoms());
+                }
+            }
+            dispersionFft->execFFT(*pmeGrid, *pmeGrid2, true);
+            mm_double4 boxSize = cl.getPeriodicBoxSizeDouble();
+            if (cl.getUseDoublePrecision()) {
+                pmeDispersionConvolutionKernel.setArg<mm_double4>(4, recipBoxVectors[0]);
+                pmeDispersionConvolutionKernel.setArg<mm_double4>(5, recipBoxVectors[1]);
+                pmeDispersionConvolutionKernel.setArg<mm_double4>(6, recipBoxVectors[2]);
+                pmeDispersionEvalEnergyKernel.setArg<mm_double4>(5, recipBoxVectors[0]);
+                pmeDispersionEvalEnergyKernel.setArg<mm_double4>(6, recipBoxVectors[1]);
+                pmeDispersionEvalEnergyKernel.setArg<mm_double4>(7, recipBoxVectors[2]);
+            }
+            else {
+                pmeDispersionConvolutionKernel.setArg<mm_float4>(4, recipBoxVectorsFloat[0]);
+                pmeDispersionConvolutionKernel.setArg<mm_float4>(5, recipBoxVectorsFloat[1]);
+                pmeDispersionConvolutionKernel.setArg<mm_float4>(6, recipBoxVectorsFloat[2]);
+                pmeDispersionEvalEnergyKernel.setArg<mm_float4>(5, recipBoxVectorsFloat[0]);
+                pmeDispersionEvalEnergyKernel.setArg<mm_float4>(6, recipBoxVectorsFloat[1]);
+                pmeDispersionEvalEnergyKernel.setArg<mm_float4>(7, recipBoxVectorsFloat[2]);
+            }
+            if (includeEnergy)
+                cl.executeKernel(pmeDispersionEvalEnergyKernel, gridSizeX*gridSizeY*gridSizeZ);
+            cl.executeKernel(pmeDispersionConvolutionKernel, gridSizeX*gridSizeY*gridSizeZ);
+            fft->execFFT(*pmeGrid2, *pmeGrid, false);
+            setPeriodicBoxArgs(cl, pmeDispersionInterpolateForceKernel, 3);
+            if (cl.getUseDoublePrecision()) {
+                pmeDispersionInterpolateForceKernel.setArg<mm_double4>(8, recipBoxVectors[0]);
+                pmeDispersionInterpolateForceKernel.setArg<mm_double4>(9, recipBoxVectors[1]);
+                pmeDispersionInterpolateForceKernel.setArg<mm_double4>(10, recipBoxVectors[2]);
+            }
+            else {
+                pmeDispersionInterpolateForceKernel.setArg<mm_float4>(8, recipBoxVectorsFloat[0]);
+                pmeDispersionInterpolateForceKernel.setArg<mm_float4>(9, recipBoxVectorsFloat[1]);
+                pmeDispersionInterpolateForceKernel.setArg<mm_float4>(10, recipBoxVectorsFloat[2]);
+            }
+            if (deviceIsCpu)
+                cl.executeKernel(pmeDispersionInterpolateForceKernel, 2*cl.getDevice().getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>(), 1);
+            else
+                cl.executeKernel(pmeDispersionInterpolateForceKernel, cl.getNumAtoms());
+        }
         if (usePmeQueue) {
             pmeQueue.enqueueMarker(&pmeSyncEvent);
             cl.restoreDefaultQueue();

@@ -1646,8 +1646,6 @@ CudaCalcNonbondedForceKernel::~CudaCalcNonbondedForceKernel() {
 void CudaCalcNonbondedForceKernel::initialize(const System& system, const NonbondedForce& force) {
     cu.setAsCurrent();
 
-    nonbondedMethod = CalcNonbondedForceKernel::NonbondedMethod(force.getNonbondedMethod());
-
     // Identify which exceptions are 1-4 interactions.
 
     vector<pair<int, int> > exclusions;
@@ -1664,7 +1662,6 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
     // Initialize nonbonded interactions.
 
     int numParticles = force.getNumParticles();
-    doLJPME = (nonbondedMethod == LJPME);
     sigmaEpsilon = CudaArray::create<float2>(cu, cu.getPaddedNumAtoms(), "sigmaEpsilon");
     CudaArray& posq = cu.getPosq();
     vector<double4> temp(posq.getSize());
@@ -1683,8 +1680,8 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
             posqd[i] = make_double4(0, 0, 0, charge);
         else
             posqf[i] = make_float4(0, 0, 0, (float) charge);
-        double sig = (float) (0.5*sigma);
-        double eps = (float) (2.0*sqrt(epsilon));
+        double sig = 0.5*sigma;
+        double eps = 2.0*sqrt(epsilon);
         sigmaEpsilonVector[i] = make_float2(sig, eps);
         exclusionList[i].push_back(i);
         sumSquaredCharges += charge*charge;
@@ -1701,8 +1698,10 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
     }
     posq.upload(&temp[0]);
     sigmaEpsilon->upload(sigmaEpsilonVector);
+    nonbondedMethod = CalcNonbondedForceKernel::NonbondedMethod(force.getNonbondedMethod());
     bool useCutoff = (nonbondedMethod != NoCutoff);
     bool usePeriodic = (nonbondedMethod != NoCutoff && nonbondedMethod != CutoffNonPeriodic);
+    doLJPME = (nonbondedMethod == LJPME);
     map<string, string> defines;
     defines["HAS_COULOMB"] = (hasCoulomb ? "1" : "0");
     defines["HAS_LENNARD_JONES"] = (hasLJ ? "1" : "0");
@@ -1761,7 +1760,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
     }
     else if (nonbondedMethod == PME || nonbondedMethod == LJPME) {
         // Compute the PME parameters.
-        //
+
         NonbondedForceImpl::calcPMEParameters(system, force, alpha, gridSizeX, gridSizeY, gridSizeZ, false);
         gridSizeX = CudaFFT3D::findLegalDimension(gridSizeX);
         gridSizeY = CudaFFT3D::findLegalDimension(gridSizeY);
@@ -1805,7 +1804,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
             if (cu.getPlatformData().deterministicForces)
                 pmeDefines["USE_DETERMINISTIC_FORCES"] = "1";
             CUmodule module = cu.createModule(CudaKernelSources::vectorOps+CudaKernelSources::pme, pmeDefines);
-            if (cu.getPlatformData().useCpuPme) {
+            if (cu.getPlatformData().useCpuPme && !doLJPME) {
                 // Create the CPU PME kernel.
 
                 try {
@@ -1815,13 +1814,6 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                     pmeio = new PmeIO(cu, addForcesKernel);
                     cu.addPreComputation(new PmePreComputation(cu, cpuPme, *pmeio));
                     cu.addPostComputation(new PmePostComputation(cpuPme, *pmeio));
-                    if (doLJPME) {
-                        cpuDispersionPme = getPlatform().createKernel(CalcDispersionPmeReciprocalForceKernel::Name(), *cu.getPlatformData().context);
-                        cpuDispersionPme.getAs<CalcDispersionPmeReciprocalForceKernel>().initialize(dispersionGridSizeX, dispersionGridSizeY,
-                                                     dispersionGridSizeZ, numParticles, dispersionAlpha);
-                        cu.addPreComputation(new PmePreComputation(cu, cpuDispersionPme, *pmeio));
-                        cu.addPostComputation(new PmePostComputation(cpuDispersionPme, *pmeio));
-                    }
                 }
                 catch (OpenMMException& ex) {
                     // The CPU PME plugin isn't available.
@@ -1907,7 +1899,8 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                 }
                 else {
                     fft = new CudaFFT3D(cu, gridSizeX, gridSizeY, gridSizeZ, true);
-                    dispersionFft = new CudaFFT3D(cu, dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, true);
+                    if (doLJPME)
+                        dispersionFft = new CudaFFT3D(cu, dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, true);
                 }
 
                 // Prepare for doing PME on its own stream.
@@ -1928,6 +1921,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                     cu.addPostComputation(new SyncStreamPostComputation(cu, pmeSyncEvent, cu.getKernel(module, "addEnergy"), *pmeEnergyBuffer, recipForceGroup));
                 }
                 hasInitializedFFT = true;
+
                 // Initialize the b-spline moduli.
 
                 for (int grid = 0; grid < 2; grid++) {
@@ -2025,11 +2019,11 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
     }
     // Add the interaction to the default nonbonded kernel.
 
-   string source = cu.replaceStrings(CudaKernelSources::coulombLennardJones, defines);
-   cu.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source, force.getForceGroup(), true);
-   if (hasLJ)
-       cu.getNonbondedUtilities().addParameter(CudaNonbondedUtilities::ParameterInfo("sigmaEpsilon", "float", 2,
-                                               sizeof(float2), sigmaEpsilon->getDevicePointer()));
+    string source = cu.replaceStrings(CudaKernelSources::coulombLennardJones, defines);
+    cu.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source, force.getForceGroup(), true);
+    if (hasLJ)
+        cu.getNonbondedUtilities().addParameter(CudaNonbondedUtilities::ParameterInfo("sigmaEpsilon", "float", 2,
+                                                sizeof(float2), sigmaEpsilon->getDevicePointer()));
 
     // Initialize the exceptions.
 

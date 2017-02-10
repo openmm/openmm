@@ -222,6 +222,71 @@ void testPMEParameters() {
     force->getLJPMEParametersInContext(context2, alpha, gridx, gridy, gridz);
 }
 
+void testCoulombAndLJ() {
+    // Create a cloud of random particles.
+
+    const int numParticles = 200;
+    const double boxWidth = 5.0;
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(boxWidth, 0, 0), Vec3(0, boxWidth, 0), Vec3(0, 0, boxWidth));
+    NonbondedForce* force = new NonbondedForce();
+    system.addForce(force);
+    vector<Vec3> positions(numParticles);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+
+    vector<double> charge(numParticles), sigma(numParticles), epsilon(numParticles);
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(1.0);
+        charge[i] = -1.0+i*2.0/(numParticles-1);
+        sigma[i] = 0.1+0.2*genrand_real2(sfmt);
+        epsilon[i] = genrand_real2(sfmt);
+        force->addParticle(charge[i], 1.0, 0.0);
+        while (true) {
+            Vec3 pos = Vec3(boxWidth*genrand_real2(sfmt), boxWidth*genrand_real2(sfmt), boxWidth*genrand_real2(sfmt));
+            double minDist = boxWidth;
+            for (int j = 0; j < i; j++) {
+                Vec3 delta = pos-positions[j];
+                minDist = min(minDist, sqrt(delta.dot(delta)));
+            }
+            if (minDist > 0.1) {
+                positions[i] = pos;
+                break;
+            }
+        }
+    }
+    force->setNonbondedMethod(NonbondedForce::LJPME);
+    
+    // Compute forces and energy with only Coulomb interactions.
+    
+    VerletIntegrator integrator(0.01);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    State state1 = context.getState(State::Forces | State::Energy);
+    
+    // Now repeat with only LJ interactions.
+    
+    for (int i = 0; i < numParticles; i++)
+        force->setParticleParameters(i, 0.0, sigma[i], epsilon[i]);
+    context.reinitialize();
+    context.setPositions(positions);
+    State state2 = context.getState(State::Forces | State::Energy);
+    
+    // Finally compute with both Coulomb and LJ.
+    
+    for (int i = 0; i < numParticles; i++)
+        force->setParticleParameters(i, charge[i], sigma[i], epsilon[i]);
+    context.reinitialize();
+    context.setPositions(positions);
+    State state3 = context.getState(State::Forces | State::Energy);
+    
+    // Make sure the results agree.
+    
+    ASSERT_EQUAL_TOL(state1.getPotentialEnergy()+state2.getPotentialEnergy(), state3.getPotentialEnergy(), 1e-5);
+    for (int i = 0; i < numParticles; i++)
+        ASSERT_EQUAL_VEC(state1.getForces()[i]+state2.getForces()[i], state3.getForces()[i], 1e-5);
+}
+
 void make_waterbox(int natoms, double boxEdgeLength, NonbondedForce *forceField,  vector<Vec3> &positions, vector<double>& eps, vector<double>& sig,
                    vector<pair<int, int> >& bonds, System &system, bool do_electrostatics) {
     const int RESSIZE = 3;
@@ -1862,6 +1927,7 @@ int main(int argc, char* argv[]) {
         testConvergence();
         testErrorTolerance();
         testPMEParameters();
+        testCoulombAndLJ();
         testWater2DpmeEnergiesForcesNoExclusions();
         testWater2DpmeEnergiesForcesWithExclusions();
         testWater125DpmeVsLongCutoffNoExclusions();
