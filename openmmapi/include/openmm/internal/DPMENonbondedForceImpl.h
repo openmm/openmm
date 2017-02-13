@@ -1,3 +1,6 @@
+#ifndef OPENMM_DPMENONBONDEDFORCEIMPL_H_
+#define OPENMM_DPMENONBONDEDFORCEIMPL_H_
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -6,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2010 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -29,39 +32,52 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "CpuKernelFactory.h"
-#include "CpuKernels.h"
-#include "CpuPlatform.h"
-#include "openmm/internal/ContextImpl.h"
-#include "openmm/OpenMMException.h"
+#include "ForceImpl.h"
+#include "openmm/DPMENonbondedForce.h"
+#include "openmm/Kernel.h"
+#include <utility>
+#include <set>
+#include <string>
 
-using namespace OpenMM;
+namespace OpenMM {
 
-KernelImpl* CpuKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {
-    CpuPlatform::PlatformData& data = CpuPlatform::getPlatformData(context);
-    if (name == CalcForcesAndEnergyKernel::Name())
-        return new CpuCalcForcesAndEnergyKernel(name, platform, data, context);
-    if (name == CalcHarmonicAngleForceKernel::Name())
-        return new CpuCalcHarmonicAngleForceKernel(name, platform, data);
-    if (name == CalcPeriodicTorsionForceKernel::Name())
-        return new CpuCalcPeriodicTorsionForceKernel(name, platform, data);
-    if (name == CalcRBTorsionForceKernel::Name())
-        return new CpuCalcRBTorsionForceKernel(name, platform, data);
-    if (name == CalcNonbondedForceKernel::Name())
-        return new CpuCalcNonbondedForceKernel(name, platform, data);
-    if (name == CalcDPMENonbondedForceKernel::Name())
-        return new CpuCalcDPMENonbondedForceKernel(name, platform, data);
-    if (name == CalcCustomNonbondedForceKernel::Name())
-        return new CpuCalcCustomNonbondedForceKernel(name, platform, data);
-    if (name == CalcCustomManyParticleForceKernel::Name())
-        return new CpuCalcCustomManyParticleForceKernel(name, platform, data);
-    if (name == CalcGBSAOBCForceKernel::Name())
-        return new CpuCalcGBSAOBCForceKernel(name, platform, data);
-    if (name == CalcCustomGBForceKernel::Name())
-        return new CpuCalcCustomGBForceKernel(name, platform, data);
-    if (name == CalcGayBerneForceKernel::Name())
-        return new CpuCalcGayBerneForceKernel(name, platform, data);
-    if (name == IntegrateLangevinStepKernel::Name())
-        return new CpuIntegrateLangevinStepKernel(name, platform, data);
-    throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '") + name + "'").c_str());
-}
+class System;
+
+/**
+ * This is the internal implementation of DPMENonbondedForce.
+ */
+
+class OPENMM_EXPORT DPMENonbondedForceImpl : public ForceImpl {
+public:
+    DPMENonbondedForceImpl(const DPMENonbondedForce& owner);
+    ~DPMENonbondedForceImpl();
+    void initialize(ContextImpl& context);
+    const DPMENonbondedForce& getOwner() const {
+        return owner;
+    }
+    void updateContextState(ContextImpl& context) {
+        // This force field doesn't update the state directly.
+    }
+    double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups);
+    std::map<std::string, double> getDefaultParameters() {
+        return std::map<std::string, double>(); // This force field doesn't define any parameters.
+    }
+    std::vector<std::string> getKernelNames();
+    void updateParametersInContext(ContextImpl& context);
+    void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
+    void getDispersionPMEParameters(double& dalpha, int& dnx, int& dny, int& dnz) const;
+    /**
+     * This is a utility routine that calculates the values to use for alpha and grid size when using
+     * Particle Mesh Ewald.
+     */
+    static void calcPMEParameters(const System& system, const DPMENonbondedForce& force, double& alpha, int& xsize, int& ysize, int& zsize, bool dispersion);
+private:
+    class ErrorFunction;
+    class EwaldErrorFunction;
+    const DPMENonbondedForce& owner;
+    Kernel kernel;
+};
+
+} // namespace OpenMM
+
+#endif /*OPENMM_DPMENONBONDEDFORCEIMPL_H_*/

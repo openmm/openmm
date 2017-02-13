@@ -44,6 +44,7 @@
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/CustomNonbondedForceImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
+#include "openmm/internal/DPMENonbondedForceImpl.h"
 #include "openmm/internal/vectorize.h"
 #include "RealVec.h"
 #include "lepton/CompiledExpression.h"
@@ -748,6 +749,239 @@ void CpuCalcNonbondedForceKernel::getPMEParameters(double& alpha, int& nx, int& 
         nx = gridSize[0];
         ny = gridSize[1];
         nz = gridSize[2];
+    }
+}
+
+
+class CpuCalcDPMENonbondedForceKernel::PmeIO : public CalcPmeReciprocalForceKernel::IO {
+public:
+    PmeIO(float* posq, float* force, int numParticles) : posq(posq), force(force), numParticles(numParticles) {
+    }
+    float* getPosq() {
+        return posq;
+    }
+    void setForce(float* f) {
+        for (int i = 0; i < numParticles; i++) {
+            force[4*i] += f[4*i];
+            force[4*i+1] += f[4*i+1];
+            force[4*i+2] += f[4*i+2];
+        }
+    }
+private:
+    float* posq;
+    float* force;
+    int numParticles;
+};
+
+CpuDPMENonbondedForce* createCpuDPMENonbondedForceVec4();
+
+CpuCalcDPMENonbondedForceKernel::CpuCalcDPMENonbondedForceKernel(string name, const Platform& platform, CpuPlatform::PlatformData& data) : CalcDPMENonbondedForceKernel(name, platform),
+        data(data), bonded14IndexArray(NULL), bonded14ParamArray(NULL), hasInitializedPme(false) {
+    nonbonded = createCpuDPMENonbondedForceVec4(); // No vec8 right now
+}
+
+CpuCalcDPMENonbondedForceKernel::~CpuCalcDPMENonbondedForceKernel() {
+    if (bonded14ParamArray != NULL) {
+        for (int i = 0; i < num14; i++) {
+            delete[] bonded14IndexArray[i];
+            delete[] bonded14ParamArray[i];
+        }
+        delete[] bonded14IndexArray;
+        delete[] bonded14ParamArray;
+    }
+    if (nonbonded != NULL)
+        delete nonbonded;
+}
+
+void CpuCalcDPMENonbondedForceKernel::initialize(const System& system, const DPMENonbondedForce& force) {
+
+    // Identify which exceptions are 1-4 interactions.
+
+    numParticles = force.getNumParticles();
+    exclusions.resize(numParticles);
+    vector<int> nb14s;
+    for (int i = 0; i < force.getNumExceptions(); i++) {
+        int particle1, particle2;
+        double chargeProd, sigma, epsilon;
+        force.getExceptionParameters(i, particle1, particle2, chargeProd, sigma, epsilon);
+        exclusions[particle1].insert(particle2);
+        exclusions[particle2].insert(particle1);
+        if (chargeProd != 0.0 || epsilon != 0.0)
+            nb14s.push_back(i);
+    }
+
+    // Record the particle parameters.
+
+    num14 = nb14s.size();
+    bonded14IndexArray = new int*[num14];
+    for (int i = 0; i < num14; i++)
+        bonded14IndexArray[i] = new int[2];
+    bonded14ParamArray = new double*[num14];
+    for (int i = 0; i < num14; i++)
+        bonded14ParamArray[i] = new double[3];
+    particleParams.resize(numParticles);
+    double sumSquaredCharges = 0.0;
+    for (int i = 0; i < numParticles; ++i) {
+        double charge, radius, depth;
+        force.getParticleParameters(i, charge, radius, depth);
+        data.posq[4*i+3] = (float) charge;
+        particleParams[i] = make_pair((float) (0.5*radius), (float) (2.0*sqrt(depth)));
+        sumSquaredCharges += charge*charge;
+    }
+    
+    // Recorded exception parameters.
+    
+    for (int i = 0; i < num14; ++i) {
+        int particle1, particle2;
+        double charge, radius, depth;
+        force.getExceptionParameters(nb14s[i], particle1, particle2, charge, radius, depth);
+        bonded14IndexArray[i][0] = particle1;
+        bonded14IndexArray[i][1] = particle2;
+        bonded14ParamArray[i][0] = static_cast<RealOpenMM>(radius);
+        bonded14ParamArray[i][1] = static_cast<RealOpenMM>(4.0*depth);
+        bonded14ParamArray[i][2] = static_cast<RealOpenMM>(charge);
+    }
+    bondForce.initialize(system.getNumParticles(), num14, 2, bonded14IndexArray, data.threads);
+    
+    // Record other parameters.
+    
+    nonbondedMethod = CalcDPMENonbondedForceKernel::DPMENonbondedMethod(force.getNonbondedMethod());
+    nonbondedCutoff = force.getCutoffDistance();
+    data.requestNeighborList(nonbondedCutoff, 0.25*nonbondedCutoff, true, exclusions);
+    double alpha;
+    // Work out optimal grid parameters for electrostatic PME..
+    DPMENonbondedForceImpl::calcPMEParameters(system, force, alpha, gridSize[0], gridSize[1], gridSize[2], false);
+    ewaldAlpha = alpha;
+    // .. and for dispersion PME
+    DPMENonbondedForceImpl::calcPMEParameters(system, force, alpha, dispersionGridSize[0], dispersionGridSize[1], dispersionGridSize[2], true);
+    ewaldDispersionAlpha = alpha;
+    if (nonbondedMethod == PME)
+        ewaldSelfEnergy = -ONE_4PI_EPS0*ewaldAlpha*sumSquaredCharges/sqrt(M_PI);
+    else
+        ewaldSelfEnergy = 0.0;
+    rfDielectric = force.getReactionFieldDielectric();
+    data.isPeriodic = true;
+}
+
+double CpuCalcDPMENonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy, bool includeDirect, bool includeReciprocal) {
+    if (!hasInitializedPme) {
+        hasInitializedPme = true;
+        useOptimizedPme = false;
+        if (nonbondedMethod == PME) {
+            // If available, use the optimized PME implementation.
+
+            vector<string> kernelNames;
+            kernelNames.push_back("CalcPmeReciprocalForce");
+            useOptimizedPme = getPlatform().supportsKernels(kernelNames);
+            if (useOptimizedPme) {
+                optimizedPme = getPlatform().createKernel(CalcPmeReciprocalForceKernel::Name(), context);
+                optimizedPme.getAs<CalcPmeReciprocalForceKernel>().initialize(gridSize[0], gridSize[1], gridSize[2], numParticles, ewaldAlpha);
+            }
+        }
+    }
+    AlignedArray<float>& posq = data.posq;
+    vector<RealVec>& posData = extractPositions(context);
+    vector<RealVec>& forceData = extractForces(context);
+    RealVec* boxVectors = extractBoxVectors(context);
+    double energy = (includeReciprocal ? ewaldSelfEnergy : 0.0);
+    bool ewald  = (nonbondedMethod == Ewald);
+    bool pme  = (nonbondedMethod == PME);
+    if (nonbondedMethod != NoCutoff)
+        nonbonded->setUseCutoff(nonbondedCutoff, *data.neighborList, rfDielectric);
+    if (data.isPeriodic) {
+        RealVec* boxVectors = extractBoxVectors(context);
+        double minAllowedSize = 1.999999*nonbondedCutoff;
+        if (boxVectors[0][0] < minAllowedSize || boxVectors[1][1] < minAllowedSize || boxVectors[2][2] < minAllowedSize)
+            throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
+        nonbonded->setPeriodic(boxVectors);
+    }
+    if (pme)
+        nonbonded->setUsePME(ewaldAlpha, gridSize);
+    double nonbondedEnergy = 0;
+    if (includeDirect)
+        nonbonded->calculateDirectIxn(numParticles, &posq[0], posData, particleParams, exclusions, data.threadForce, includeEnergy ? &nonbondedEnergy : NULL, data.threads);
+    if (includeReciprocal) {
+        if (useOptimizedPme) {
+            PmeIO io(&posq[0], &data.threadForce[0][0], numParticles);
+            Vec3 periodicBoxVectors[3] = {boxVectors[0], boxVectors[1], boxVectors[2]};
+            optimizedPme.getAs<CalcPmeReciprocalForceKernel>().beginComputation(io, periodicBoxVectors, includeEnergy);
+            nonbondedEnergy += optimizedPme.getAs<CalcPmeReciprocalForceKernel>().finishComputation(io);
+        }
+        else
+            nonbonded->calculateReciprocalIxn(numParticles, &posq[0], posData, particleParams, exclusions, forceData, includeEnergy ? &nonbondedEnergy : NULL);
+    }
+    energy += nonbondedEnergy;
+    if (includeDirect) {
+        ReferenceLJCoulomb14 nonbonded14;
+        bondForce.calculateForce(posData, bonded14ParamArray, forceData, includeEnergy ? &energy : NULL, nonbonded14);
+    }
+    return energy;
+}
+
+void CpuCalcDPMENonbondedForceKernel::copyParametersToContext(ContextImpl& context, const DPMENonbondedForce& force) {
+    if (force.getNumParticles() != numParticles)
+        throw OpenMMException("updateParametersInContext: The number of particles has changed");
+    vector<int> nb14s;
+    for (int i = 0; i < force.getNumExceptions(); i++) {
+        int particle1, particle2;
+        double chargeProd, sigma, epsilon;
+        force.getExceptionParameters(i, particle1, particle2, chargeProd, sigma, epsilon);
+        if (chargeProd != 0.0 || epsilon != 0.0)
+            nb14s.push_back(i);
+    }
+    if (nb14s.size() != num14)
+        throw OpenMMException("updateParametersInContext: The number of non-excluded exceptions has changed");
+
+    // Record the values.
+
+    double sumSquaredCharges = 0.0;
+    for (int i = 0; i < numParticles; ++i) {
+        double charge, radius, depth;
+        force.getParticleParameters(i, charge, radius, depth);
+        data.posq[4*i+3] = (float) charge;
+        particleParams[i] = make_pair((float) (0.5*radius), (float) (2.0*sqrt(depth)));
+        sumSquaredCharges += charge*charge;
+    }
+    if (nonbondedMethod == Ewald || nonbondedMethod == PME)
+        ewaldSelfEnergy = -ONE_4PI_EPS0*ewaldAlpha*sumSquaredCharges/sqrt(M_PI);
+    else
+        ewaldSelfEnergy = 0.0;
+    for (int i = 0; i < num14; ++i) {
+        int particle1, particle2;
+        double charge, radius, depth;
+        force.getExceptionParameters(nb14s[i], particle1, particle2, charge, radius, depth);
+        bonded14IndexArray[i][0] = particle1;
+        bonded14IndexArray[i][1] = particle2;
+        bonded14ParamArray[i][0] = static_cast<RealOpenMM>(radius);
+        bonded14ParamArray[i][1] = static_cast<RealOpenMM>(4.0*depth);
+        bonded14ParamArray[i][2] = static_cast<RealOpenMM>(charge);
+    }
+    
+}
+
+void CpuCalcDPMENonbondedForceKernel::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
+    if (nonbondedMethod != PME)
+        throw OpenMMException("getPMEParametersInContext: This Context is not using PME");
+    if (useOptimizedPme)
+        optimizedPme.getAs<const CalcPmeReciprocalForceKernel>().getPMEParameters(alpha, nx, ny, nz);
+    else {
+        alpha = ewaldAlpha;
+        nx = gridSize[0];
+        ny = gridSize[1];
+        nz = gridSize[2];
+    }
+}
+
+void CpuCalcDPMENonbondedForceKernel::getDispersionPMEParameters(double& dalpha, int& dnx, int& dny, int& dnz) const {
+    if (nonbondedMethod != PME)
+        throw OpenMMException("getPMEParametersInContext: This Context is not using PME");
+    if (useOptimizedPme)
+        optimizedDispersionPme.getAs<const CalcPmeReciprocalForceKernel>().getPMEParameters(dalpha, dnx, dny, dnz);
+    else {
+        dalpha = ewaldDispersionAlpha;
+        dnx = gridSize[0];
+        dny = gridSize[1];
+        dnz = gridSize[2];
     }
 }
 

@@ -41,6 +41,7 @@
 #include "CpuLangevinDynamics.h"
 #include "CpuNeighborList.h"
 #include "CpuNonbondedForce.h"
+#include "CpuDPMENonbondedForce.h"
 #include "CpuPlatform.h"
 #include "openmm/kernels.h"
 #include "openmm/System.h"
@@ -272,6 +273,74 @@ private:
     NonbondedMethod nonbondedMethod;
     CpuNonbondedForce* nonbonded;
     Kernel optimizedPme;
+    CpuBondForce bondForce;
+};
+
+/**
+ * This kernel is invoked by NonbondedForce to calculate the forces acting on the system.
+ */
+class CpuCalcDPMENonbondedForceKernel : public CalcDPMENonbondedForceKernel {
+public:
+    CpuCalcDPMENonbondedForceKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data);
+    ~CpuCalcDPMENonbondedForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the NonbondedForce this kernel will be used for
+     */
+    void initialize(const System& system, const DPMENonbondedForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @param includeDirect  true if direct space interactions should be included
+     * @param includeReciprocal  true if reciprocal space interactions should be included
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy, bool includeDirect, bool includeReciprocal);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the NonbondedForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const DPMENonbondedForce& force);
+    /**
+     * Get the parameters being used for PME.
+     * 
+     * @param alpha   the separation parameter
+     * @param nx      the number of grid points along the X axis
+     * @param ny      the number of grid points along the Y axis
+     * @param nz      the number of grid points along the Z axis
+     */
+    void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
+    /**
+     * Get the parameters being used for dispersion PME.
+     *
+     * @param dalpha   the dispersion separation parameter
+     * @param dnx      the number of dispersion grid points along the X axis
+     * @param dny      the number of dispersion grid points along the Y axis
+     * @param dnz      the number of dispersion grid points along the Z axis
+     */
+    void getDispersionPMEParameters(double& dalpha, int& dnx, int& dny, int& dnz) const;
+private:
+    class PmeIO;
+    CpuPlatform::PlatformData& data;
+    int numParticles, num14;
+    int **bonded14IndexArray;
+    double **bonded14ParamArray;
+    double nonbondedCutoff, rfDielectric, ewaldAlpha, ewaldDispersionAlpha, ewaldDispersionSelfEnergy, ewaldSelfEnergy;
+    int kmax[3], dispersionGridSize[3], gridSize[3];
+    bool useOptimizedPme, hasInitializedPme, hasInitializedDispersionPME;
+    std::vector<std::set<int> > exclusions;
+    std::vector<std::pair<float, float> > particleParams;
+    DPMENonbondedMethod nonbondedMethod;
+    CpuDPMENonbondedForce* nonbonded;
+    Kernel optimizedPme;
+    Kernel optimizedDispersionPme;
     CpuBondForce bondForce;
 };
 
