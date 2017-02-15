@@ -44,6 +44,7 @@ AmoebaVdwForce::AmoebaVdwForce()
     : nonbondedMethod(NoCutoff)
     , sigmaCombiningRule("CUBIC-MEAN")
     , epsilonCombiningRule("HHG")
+    , functionalForm("BUFFERED-14-7")
     , cutoff(1.0e+10)
     , useDispersionCorrection(false)
     , numVdwprTypes(0) {}
@@ -262,6 +263,14 @@ void AmoebaVdwForce::setEpsilonCombiningRule(const std::string& inputEpsilonComb
 
 const std::string& AmoebaVdwForce::getEpsilonCombiningRule() const {
     return epsilonCombiningRule;
+}
+
+void AmoebaVdwForce::setFunctionalForm(const std::string& inputFuncForm) {
+    functionalForm = inputFuncForm;
+}
+
+const std::string& AmoebaVdwForce::getFunctionalForm() const {
+    return functionalForm;
 }
 
 void AmoebaVdwForce::setParticleExclusions(int particleIndex, const std::vector<int>& inputExclusions) {

@@ -33,6 +33,7 @@ using namespace OpenMM;
 
 AmoebaReferenceVdwForce::AmoebaReferenceVdwForce()
     : _nonbondedMethod(NoCutoff)
+    , _functionalForm(BUFFERED_14_7)
     , _cutoff(1.0e+10)
     , _taperCutoffFactor(0.9) {
     setTaperCoefficients(_cutoff);
@@ -67,6 +68,14 @@ void AmoebaReferenceVdwForce::setCutoff(double cutoff) {
 
 double AmoebaReferenceVdwForce::getCutoff() const {
     return _cutoff;
+}
+
+void AmoebaReferenceVdwForce::setFunctionalForm(FunctionalForm functionalForm) {
+    _functionalForm = functionalForm;
+}
+
+AmoebaReferenceVdwForce::FunctionalForm AmoebaReferenceVdwForce::getFunctionalForm() const {
+    return _functionalForm;
 }
 
 void AmoebaReferenceVdwForce::setPeriodicBox(OpenMM::RealVec* vectors) {
@@ -120,28 +129,39 @@ RealOpenMM AmoebaReferenceVdwForce::calculatePairIxn(RealOpenMM combinedSigma,
     else
         ReferenceForce::getDeltaR(particleJPosition, particleIPosition, deltaR);
 
+    RealOpenMM energy = 0.0;
+    RealOpenMM dEdR = 0.0;
     RealOpenMM r_ij_2 = deltaR[ReferenceForce::R2Index];
     RealOpenMM r_ij = deltaR[ReferenceForce::RIndex];
-    RealOpenMM comblambda2 = combinedLambda * combinedLambda;
-    combinedEpsilon = combinedEpsilon * comblambda2 * comblambda2 * combinedLambda;
-    RealOpenMM rho = r_ij / combinedSigma;
-    RealOpenMM rho2 = rho * rho;
-    RealOpenMM rho6 = rho2 * rho2 * rho2;
-    RealOpenMM rhoplus = rho + 0.07;
-    RealOpenMM rhodec2 = rhoplus * rhoplus;
-    RealOpenMM rhodec = rhodec2 * rhodec2 * rhodec2;
-    RealOpenMM scal = 0.7 * (1 - combinedLambda) * (1 - combinedLambda);
-    RealOpenMM s1 = 1 / (scal + rhodec * rhoplus);
-    RealOpenMM s2 = 1 / (scal + rho6 * rho + 0.12);
-    RealOpenMM point72 = 1.07 * 1.07;
-    RealOpenMM t1 = 1.07 * point72 * point72 * point72 * s1;
-    RealOpenMM t2 = 1.12 * s2;
-    RealOpenMM t2min = t2 - 2;
-    RealOpenMM dt1 = -7.0 * rhodec * t1 * s1;
-    RealOpenMM dt2 = -7.0 * rho6 * t2 * s2;
-    RealOpenMM energy = combinedEpsilon * t1 * (t2min);
-    RealOpenMM dEdR = combinedEpsilon * (dt1 * t2min + t1 * dt2) / combinedSigma;
-
+    if (_functionalForm == BUFFERED_14_7) {
+        RealOpenMM comblambda2 = combinedLambda * combinedLambda;
+        combinedEpsilon = combinedEpsilon * comblambda2 * comblambda2 * combinedLambda;
+        RealOpenMM rho = r_ij / combinedSigma;
+        RealOpenMM rho2 = rho * rho;
+        RealOpenMM rho6 = rho2 * rho2 * rho2;
+        RealOpenMM rhoplus = rho + 0.07;
+        RealOpenMM rhodec2 = rhoplus * rhoplus;
+        RealOpenMM rhodec = rhodec2 * rhodec2 * rhodec2;
+        RealOpenMM scal = 0.7 * (1 - combinedLambda) * (1 - combinedLambda);
+        RealOpenMM s1 = 1 / (scal + rhodec * rhoplus);
+        RealOpenMM s2 = 1 / (scal + rho6 * rho + 0.12);
+        RealOpenMM point72 = 1.07 * 1.07;
+        RealOpenMM t1 = 1.07 * point72 * point72 * point72 * s1;
+        RealOpenMM t2 = 1.12 * s2;
+        RealOpenMM t2min = t2 - 2;
+        RealOpenMM dt1 = -7.0 * rhodec * t1 * s1;
+        RealOpenMM dt2 = -7.0 * rho6 * t2 * s2;
+        energy = combinedEpsilon * t1 * (t2min);
+        dEdR = combinedEpsilon * (dt1 * t2min + t1 * dt2) / combinedSigma;
+    } else if (_functionalForm == LENNARD_JONES) {
+        RealOpenMM pp1 = combinedSigma / r_ij;
+        RealOpenMM pp2 = pp1 * pp1;
+        RealOpenMM pp3 = pp2 * pp1;
+        RealOpenMM pp6 = pp3 * pp3;
+        RealOpenMM pp12 = pp6 * pp6;
+        energy = combinedEpsilon * (pp12 - ((RealOpenMM)2.0) * pp6);
+        dEdR = -combinedEpsilon * (pp12 - pp6) * ((RealOpenMM)12.0) / r_ij;
+    }
     // tapering
 
     if ((_nonbondedMethod == CutoffNonPeriodic || _nonbondedMethod == CutoffPeriodic) && r_ij > _taperCutoff) {

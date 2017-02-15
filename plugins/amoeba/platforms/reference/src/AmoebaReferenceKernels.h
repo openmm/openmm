@@ -41,13 +41,13 @@ namespace OpenMM {
  */
 class ReferenceCalcAmoebaBondForceKernel : public CalcAmoebaBondForceKernel {
 public:
-    ReferenceCalcAmoebaBondForceKernel(std::string name, 
+    ReferenceCalcAmoebaBondForceKernel(std::string name,
                                                const Platform& platform,
                                                const System& system);
     ~ReferenceCalcAmoebaBondForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaBondForce this kernel will be used for
      */
@@ -88,7 +88,7 @@ public:
     ~ReferenceCalcAmoebaAngleForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaAngleForce this kernel will be used for
      */
@@ -132,7 +132,7 @@ public:
     ~ReferenceCalcAmoebaInPlaneAngleForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaInPlaneAngleForce this kernel will be used for
      */
@@ -177,7 +177,7 @@ public:
     ~ReferenceCalcAmoebaPiTorsionForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaPiTorsionForce this kernel will be used for
      */
@@ -219,7 +219,7 @@ public:
     ~ReferenceCalcAmoebaStretchBendForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaStretchBendForce this kernel will be used for
      */
@@ -262,7 +262,7 @@ public:
     ~ReferenceCalcAmoebaOutOfPlaneBendForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaOutOfPlaneBendForce this kernel will be used for
      */
@@ -306,7 +306,7 @@ public:
     ~ReferenceCalcAmoebaTorsionTorsionForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaTorsionTorsionForce this kernel will be used for
      */
@@ -345,13 +345,13 @@ public:
     ~ReferenceCalcAmoebaMultipoleForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaMultipoleForce this kernel will be used for
      */
     void initialize(const System& system, const AmoebaMultipoleForce& force);
     /**
-     * Setup for AmoebaReferenceMultipoleForce instance. 
+     * Setup for AmoebaReferenceMultipoleForce instance.
      *
      * @param context        the current context
      *
@@ -369,17 +369,17 @@ public:
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
     /**
      * Get the induced dipole moments of all particles.
-     * 
+     *
      * @param context    the Context for which to get the induced dipoles
      * @param dipoles    the induced dipole moment of particle i is stored into the i'th element
      */
     void getInducedDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
-    /** 
+    /**
      * Calculate the electrostatic potential given vector of grid coordinates.
      *
      * @param context                      context
      * @param inputGrid                    input grid coordinates
-     * @param outputElectrostaticPotential output potential 
+     * @param outputElectrostaticPotential output potential
      */
     void getElectrostaticPotential(ContextImpl& context, const std::vector< Vec3 >& inputGrid,
                                    std::vector< double >& outputElectrostaticPotential);
@@ -387,7 +387,7 @@ public:
     /**
      * Get the system multipole moments.
      *
-     * @param context                context 
+     * @param context                context
      * @param outputMultipoleMoments vector of multipole moments:
                                      (charge,
                                       dipole_x, dipole_y, dipole_z,
@@ -405,7 +405,7 @@ public:
     void copyParametersToContext(ContextImpl& context, const AmoebaMultipoleForce& force);
     /**
      * Get the parameters being used for PME.
-     * 
+     *
      * @param alpha   the separation parameter
      * @param nx      the number of grid points along the X axis
      * @param ny      the number of grid points along the Y axis
@@ -451,7 +451,7 @@ public:
     ~ReferenceCalcAmoebaVdwForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaVdwForce this kernel will be used for
      */
@@ -479,6 +479,7 @@ private:
     int usePBC;
     double cutoff;
     double dispersionCoefficient;
+    std::string functionalForm;
     std::vector<int> indexIVs;
     std::vector< std::set<int> > allExclusions;
     std::vector<int> vdwprTypes;
@@ -499,7 +500,7 @@ public:
     ~ReferenceCalcAmoebaWcaDispersionForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaMultipoleForce this kernel will be used for
      */
@@ -525,12 +526,12 @@ private:
     int numParticles;
     std::vector<RealOpenMM> radii;
     std::vector<RealOpenMM> epsilons;
-    RealOpenMM epso; 
-    RealOpenMM epsh; 
-    RealOpenMM rmino; 
-    RealOpenMM rminh; 
-    RealOpenMM awater; 
-    RealOpenMM shctd; 
+    RealOpenMM epso;
+    RealOpenMM epsh;
+    RealOpenMM rmino;
+    RealOpenMM rminh;
+    RealOpenMM awater;
+    RealOpenMM shctd;
     RealOpenMM dispoff;
     RealOpenMM slevy;
     RealOpenMM totalMaximumDispersionEnergy;
@@ -546,7 +547,7 @@ public:
     ~ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaMultipoleForce this kernel will be used for
      */
@@ -560,7 +561,7 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
- 
+
     /**
      *  Get the 'include cavity term' flag.
      *

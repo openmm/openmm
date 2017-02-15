@@ -8,8 +8,9 @@ if (atom2 < PADDED_NUM_ATOMS) {
 int pairK = vdwTypes1 * NUM_VDWPR_TYPES + vdwTypes2;
 real sigma = sigmaEpsilon[pairK].x;
 real epsilon = sigmaEpsilon[pairK].y;
-real combinedLambda = (lambdas1 == lambdas2 ? 1.0f : (lambdas1 < lambdas2 ? lambdas1 : lambdas2));
 
+#if FUNCTIONAL_FORM == 1
+real combinedLambda = (lambdas1 == lambdas2 ? 1.0f : (lambdas1 < lambdas2 ? lambdas1 : lambdas2));
 real comblambda2 = combinedLambda * combinedLambda;
 epsilon = epsilon * comblambda2 * comblambda2 * combinedLambda;
 real r_sigma = RECIP(sigma);
@@ -30,6 +31,18 @@ real dt1 = -7.0f * rhodec * t1 * s1;
 real dt2 = -7.0f * rho6 * t2 * s2;
 real termEnergy = epsilon * t1 * t2min;
 real deltaE = epsilon * (dt1 * t2min + t1 * dt2) * r_sigma;
+#endif /* FUNCTIONAL_FORM == 1 BUFFERED-14-7 */
+
+#if FUNCTIONAL_FORM == 2
+real pp1 = sigma * invR;
+real pp2 = pp1 * pp1;
+real pp3 = pp2 * pp1;
+real pp6 = pp3 * pp3;
+real pp12 = pp6 * pp6;
+real termEnergy = epsilon * (pp12 - 2.0f * pp6);
+real deltaE = epsilon * (pp12 - pp6) * (-12.0f) * invR;
+#endif /* FUNCTIONAL_FORM == 2 LENNARD-JONES */
+
 #ifdef USE_CUTOFF
 if (r > TAPER_CUTOFF) {
     real x = r - TAPER_CUTOFF;
