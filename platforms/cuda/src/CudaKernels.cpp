@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2017 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -502,9 +502,9 @@ void CudaVirtualSitesKernel::computePositions(ContextImpl& context) {
     cu.getIntegrationUtilities().computeVirtualSites();
 }
 
-class CudaHarmonicBondForceInfo : public CudaForceInfo {
+class CudaCalcHarmonicBondForceKernel::ForceInfo : public CudaForceInfo {
 public:
-    CudaHarmonicBondForceInfo(const HarmonicBondForce& force) : force(force) {
+    ForceInfo(const HarmonicBondForce& force) : force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumBonds();
@@ -556,7 +556,8 @@ void CudaCalcHarmonicBondForceKernel::initialize(const System& system, const Har
     replacements["COMPUTE_FORCE"] = CudaKernelSources::harmonicBondForce;
     replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params->getDevicePointer(), "float2");
     cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaKernelSources::bondForce, replacements), force.getForceGroup());
-    cu.addForce(new CudaHarmonicBondForceInfo(force));
+    info = new ForceInfo(force);
+    cu.addForce(info);
 }
 
 double CudaCalcHarmonicBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -589,9 +590,9 @@ void CudaCalcHarmonicBondForceKernel::copyParametersToContext(ContextImpl& conte
     cu.invalidateMolecules();
 }
 
-class CudaCustomBondForceInfo : public CudaForceInfo {
+class CudaCalcCustomBondForceKernel::ForceInfo : public CudaForceInfo {
 public:
-    CudaCustomBondForceInfo(const CustomBondForce& force) : force(force) {
+    ForceInfo(const CustomBondForce& force) : force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumBonds();
@@ -645,7 +646,8 @@ void CudaCalcCustomBondForceKernel::initialize(const System& system, const Custo
             paramVector[i][j] = (float) parameters[j];
     }
     params->setParameterValues(paramVector);
-    cu.addForce(new CudaCustomBondForceInfo(force));
+    info = new ForceInfo(force);
+    cu.addForce(info);
 
     // Record information for the expressions.
 
@@ -743,9 +745,9 @@ void CudaCalcCustomBondForceKernel::copyParametersToContext(ContextImpl& context
     cu.invalidateMolecules();
 }
 
-class CudaHarmonicAngleForceInfo : public CudaForceInfo {
+class CudaCalcHarmonicAngleForceKernel::ForceInfo : public CudaForceInfo {
 public:
-    CudaHarmonicAngleForceInfo(const HarmonicAngleForce& force) : force(force) {
+    ForceInfo(const HarmonicAngleForce& force) : force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumAngles();
@@ -799,7 +801,8 @@ void CudaCalcHarmonicAngleForceKernel::initialize(const System& system, const Ha
     replacements["COMPUTE_FORCE"] = CudaKernelSources::harmonicAngleForce;
     replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params->getDevicePointer(), "float2");
     cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaKernelSources::angleForce, replacements), force.getForceGroup());
-    cu.addForce(new CudaHarmonicAngleForceInfo(force));
+    info = new ForceInfo(force);
+    cu.addForce(info);
 }
 
 double CudaCalcHarmonicAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -832,9 +835,9 @@ void CudaCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl& cont
     cu.invalidateMolecules();
 }
 
-class CudaCustomAngleForceInfo : public CudaForceInfo {
+class CudaCalcCustomAngleForceKernel::ForceInfo : public CudaForceInfo {
 public:
-    CudaCustomAngleForceInfo(const CustomAngleForce& force) : force(force) {
+    ForceInfo(const CustomAngleForce& force) : force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumAngles();
@@ -889,7 +892,8 @@ void CudaCalcCustomAngleForceKernel::initialize(const System& system, const Cust
             paramVector[i][j] = (float) parameters[j];
     }
     params->setParameterValues(paramVector);
-    cu.addForce(new CudaCustomAngleForceInfo(force));
+    info = new ForceInfo(force);
+    cu.addForce(info);
 
     // Record information for the expressions.
 
@@ -987,9 +991,9 @@ void CudaCalcCustomAngleForceKernel::copyParametersToContext(ContextImpl& contex
     cu.invalidateMolecules();
 }
 
-class CudaPeriodicTorsionForceInfo : public CudaForceInfo {
+class CudaCalcPeriodicTorsionForceKernel::ForceInfo : public CudaForceInfo {
 public:
-    CudaPeriodicTorsionForceInfo(const PeriodicTorsionForce& force) : force(force) {
+    ForceInfo(const PeriodicTorsionForce& force) : force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumTorsions();
@@ -1044,7 +1048,8 @@ void CudaCalcPeriodicTorsionForceKernel::initialize(const System& system, const 
     replacements["COMPUTE_FORCE"] = CudaKernelSources::periodicTorsionForce;
     replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params->getDevicePointer(), "float4");
     cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaKernelSources::torsionForce, replacements), force.getForceGroup());
-    cu.addForce(new CudaPeriodicTorsionForceInfo(force));
+    info = new ForceInfo(force);
+    cu.addForce(info);
 }
 
 double CudaCalcPeriodicTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -1077,9 +1082,9 @@ void CudaCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImpl& co
     cu.invalidateMolecules();
 }
 
-class CudaRBTorsionForceInfo : public CudaForceInfo {
+class CudaCalcRBTorsionForceKernel::ForceInfo : public CudaForceInfo {
 public:
-    CudaRBTorsionForceInfo(const RBTorsionForce& force) : force(force) {
+    ForceInfo(const RBTorsionForce& force) : force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumTorsions();
@@ -1141,7 +1146,8 @@ void CudaCalcRBTorsionForceKernel::initialize(const System& system, const RBTors
     replacements["PARAMS1"] = cu.getBondedUtilities().addArgument(params1->getDevicePointer(), "float4");
     replacements["PARAMS2"] = cu.getBondedUtilities().addArgument(params2->getDevicePointer(), "float2");
     cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaKernelSources::torsionForce, replacements), force.getForceGroup());
-    cu.addForce(new CudaRBTorsionForceInfo(force));
+    info = new ForceInfo(force);
+    cu.addForce(info);
 }
 
 double CudaCalcRBTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -1177,9 +1183,9 @@ void CudaCalcRBTorsionForceKernel::copyParametersToContext(ContextImpl& context,
     cu.invalidateMolecules();
 }
 
-class CudaCMAPTorsionForceInfo : public CudaForceInfo {
+class CudaCalcCMAPTorsionForceKernel::ForceInfo : public CudaForceInfo {
 public:
-    CudaCMAPTorsionForceInfo(const CMAPTorsionForce& force) : force(force) {
+    ForceInfo(const CMAPTorsionForce& force) : force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumTorsions();
@@ -1259,7 +1265,8 @@ void CudaCalcCMAPTorsionForceKernel::initialize(const System& system, const CMAP
     replacements["MAP_POS"] = cu.getBondedUtilities().addArgument(mapPositions->getDevicePointer(), "int2");
     replacements["MAPS"] = cu.getBondedUtilities().addArgument(torsionMaps->getDevicePointer(), "int");
     cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaKernelSources::cmapTorsionForce, replacements), force.getForceGroup());
-    cu.addForce(new CudaCMAPTorsionForceInfo(force));
+    info = new ForceInfo(force);
+    cu.addForce(info);
 }
 
 double CudaCalcCMAPTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -1309,9 +1316,9 @@ void CudaCalcCMAPTorsionForceKernel::copyParametersToContext(ContextImpl& contex
     torsionMaps->upload(torsionMapsVec);
 }
 
-class CudaCustomTorsionForceInfo : public CudaForceInfo {
+class CudaCalcCustomTorsionForceKernel::ForceInfo : public CudaForceInfo {
 public:
-    CudaCustomTorsionForceInfo(const CustomTorsionForce& force) : force(force) {
+    ForceInfo(const CustomTorsionForce& force) : force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumTorsions();
@@ -1366,7 +1373,8 @@ void CudaCalcCustomTorsionForceKernel::initialize(const System& system, const Cu
             paramVector[i][j] = (float) parameters[j];
     }
     params->setParameterValues(paramVector);
-    cu.addForce(new CudaCustomTorsionForceInfo(force));
+    info = new ForceInfo(force);
+    cu.addForce(info);
 
     // Record information for the expressions.
 
@@ -1464,9 +1472,9 @@ void CudaCalcCustomTorsionForceKernel::copyParametersToContext(ContextImpl& cont
     cu.invalidateMolecules();
 }
 
-class CudaNonbondedForceInfo : public CudaForceInfo {
+class CudaCalcNonbondedForceKernel::ForceInfo : public CudaForceInfo {
 public:
-    CudaNonbondedForceInfo(const NonbondedForce& force) : force(force) {
+    ForceInfo(const NonbondedForce& force) : force(force) {
     }
     bool areParticlesIdentical(int particle1, int particle2) {
         double charge1, charge2, sigma1, sigma2, epsilon1, epsilon2;
@@ -1946,7 +1954,8 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         replacements["PARAMS"] = cu.getBondedUtilities().addArgument(exceptionParams->getDevicePointer(), "float4");
         cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaKernelSources::nonbondedExceptions, replacements), force.getForceGroup());
     }
-    cu.addForce(new CudaNonbondedForceInfo(force));
+    info = new ForceInfo(force);
+    cu.addForce(info);
 }
 
 double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy, bool includeDirect, bool includeReciprocal) {
@@ -2087,25 +2096,18 @@ void CudaCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context,
     
     // Record the per-particle parameters.
     
-    CudaArray& posq = cu.getPosq();
-    posq.download(cu.getPinnedBuffer());
-    float4* posqf = (float4*) cu.getPinnedBuffer();
-    double4* posqd = (double4*) cu.getPinnedBuffer();
+    vector<double> chargeVector(cu.getNumAtoms());
     vector<float2> sigmaEpsilonVector(cu.getPaddedNumAtoms(), make_float2(0, 0));
     double sumSquaredCharges = 0.0;
     const vector<int>& order = cu.getAtomIndex();
     for (int i = 0; i < force.getNumParticles(); i++) {
-        int index = order[i];
         double charge, sigma, epsilon;
-        force.getParticleParameters(index, charge, sigma, epsilon);
-        if (cu.getUseDoublePrecision())
-            posqd[i].w = charge;
-        else
-            posqf[i].w = (float) charge;
-        sigmaEpsilonVector[index] = make_float2((float) (0.5*sigma), (float) (2.0*sqrt(epsilon)));
+        force.getParticleParameters(i, charge, sigma, epsilon);
+        chargeVector[i] = charge;
+        sigmaEpsilonVector[i] = make_float2((float) (0.5*sigma), (float) (2.0*sqrt(epsilon)));
         sumSquaredCharges += charge*charge;
     }
-    posq.upload(cu.getPinnedBuffer());
+    cu.setCharges(chargeVector);
     sigmaEpsilon->upload(sigmaEpsilonVector);
     
     // Record the exceptions.
@@ -2143,9 +2145,9 @@ void CudaCalcNonbondedForceKernel::getPMEParameters(double& alpha, int& nx, int&
     }
 }
 
-class CudaCustomNonbondedForceInfo : public CudaForceInfo {
+class CudaCalcCustomNonbondedForceKernel::ForceInfo : public CudaForceInfo {
 public:
-    CudaCustomNonbondedForceInfo(const CustomNonbondedForce& force) : force(force) {
+    ForceInfo(const CustomNonbondedForce& force) : force(force) {
         if (force.getNumInteractionGroups() > 0) {
             groupsForParticle.resize(force.getNumParticles());
             for (int i = 0; i < force.getNumInteractionGroups(); i++) {
@@ -2324,7 +2326,8 @@ void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const 
             cu.getNonbondedUtilities().addArgument(CudaNonbondedUtilities::ParameterInfo(prefix+"globals", "float", 1, sizeof(float), globals->getDevicePointer()));
         }
     }
-    cu.addForce(new CudaCustomNonbondedForceInfo(force));
+    info = new ForceInfo(force);
+    cu.addForce(info);
     
     // Record information for the long range correction.
     
@@ -2660,9 +2663,9 @@ void CudaCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& co
     cu.invalidateMolecules();
 }
 
-class CudaGBSAOBCForceInfo : public CudaForceInfo {
+class CudaCalcGBSAOBCForceKernel::ForceInfo : public CudaForceInfo {
 public:
-    CudaGBSAOBCForceInfo(const GBSAOBCForce& force) : force(force) {
+    ForceInfo(const GBSAOBCForce& force) : force(force) {
     }
     bool areParticlesIdentical(int particle1, int particle2) {
         double charge1, charge2, radius1, radius2, scale1, scale2;
@@ -2733,7 +2736,8 @@ void CudaCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOBCF
     nb.addInteraction(useCutoff, usePeriodic, false, cutoff, vector<vector<int> >(), source, force.getForceGroup());
     nb.addParameter(CudaNonbondedUtilities::ParameterInfo("obcParams", "float", 2, sizeof(float2), params->getDevicePointer()));
     nb.addParameter(CudaNonbondedUtilities::ParameterInfo("bornForce", "long long", 1, sizeof(long long), bornForce->getDevicePointer()));
-    cu.addForce(new CudaGBSAOBCForceInfo(force));
+    info = new ForceInfo(force);
+    cu.addForce(info);
 }
 
 double CudaCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -2846,23 +2850,17 @@ void CudaCalcGBSAOBCForceKernel::copyParametersToContext(ContextImpl& context, c
     
     // Record the per-particle parameters.
     
-    CudaArray& posq = cu.getPosq();
-    float4* posqf = (float4*) cu.getPinnedBuffer();
-    double4* posqd = (double4*) cu.getPinnedBuffer();
-    posq.download(cu.getPinnedBuffer());
+    vector<double> chargeVector(cu.getNumAtoms());
     vector<float2> paramsVector(cu.getPaddedNumAtoms(), make_float2(1, 1));
     const double dielectricOffset = 0.009;
     for (int i = 0; i < numParticles; i++) {
         double charge, radius, scalingFactor;
         force.getParticleParameters(i, charge, radius, scalingFactor);
+        chargeVector[i] = charge;
         radius -= dielectricOffset;
         paramsVector[i] = make_float2((float) radius, (float) (scalingFactor*radius));
-        if (cu.getUseDoublePrecision())
-            posqd[i].w = charge;
-        else
-            posqf[i].w = (float) charge;
     }
-    posq.upload(cu.getPinnedBuffer());
+    cu.setCharges(chargeVector);
     params->upload(paramsVector);
     
     // Mark that the current reordering may be invalid.
@@ -2870,9 +2868,9 @@ void CudaCalcGBSAOBCForceKernel::copyParametersToContext(ContextImpl& context, c
     cu.invalidateMolecules();
 }
 
-class CudaCustomGBForceInfo : public CudaForceInfo {
+class CudaCalcCustomGBForceKernel::ForceInfo : public CudaForceInfo {
 public:
-    CudaCustomGBForceInfo(const CustomGBForce& force) : force(force) {
+    ForceInfo(const CustomGBForce& force) : force(force) {
     }
     bool areParticlesIdentical(int particle1, int particle2) {
         vector<double> params1;
@@ -3660,7 +3658,8 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
         for (int i = 0; i < (int) arguments.size(); i++)
             cu.getNonbondedUtilities().addArgument(arguments[i]);
     }
-    cu.addForce(new CudaCustomGBForceInfo(force));
+    info = new ForceInfo(force);
+    cu.addForce(info);
     cu.addAutoclearBuffer(*longEnergyDerivs);
 }
 
@@ -3876,9 +3875,9 @@ void CudaCalcCustomGBForceKernel::copyParametersToContext(ContextImpl& context, 
     cu.invalidateMolecules();
 }
 
-class CudaCustomExternalForceInfo : public CudaForceInfo {
+class CudaCalcCustomExternalForceKernel::ForceInfo : public CudaForceInfo {
 public:
-    CudaCustomExternalForceInfo(const CustomExternalForce& force, int numParticles) : force(force), indices(numParticles, -1) {
+    ForceInfo(const CustomExternalForce& force, int numParticles) : force(force), indices(numParticles, -1) {
         vector<double> params;
         for (int i = 0; i < force.getNumParticles(); i++) {
             int particle;
@@ -3935,7 +3934,8 @@ void CudaCalcCustomExternalForceKernel::initialize(const System& system, const C
             paramVector[i][j] = (float) parameters[j];
     }
     params->setParameterValues(paramVector);
-    cu.addForce(new CudaCustomExternalForceInfo(force, system.getNumParticles()));
+    info = new ForceInfo(force, system.getNumParticles());
+    cu.addForce(info);
 
     // Record information for the expressions.
 
@@ -4034,9 +4034,9 @@ void CudaCalcCustomExternalForceKernel::copyParametersToContext(ContextImpl& con
     cu.invalidateMolecules();
 }
 
-class CudaCustomHbondForceInfo : public CudaForceInfo {
+class CudaCalcCustomHbondForceKernel::ForceInfo : public CudaForceInfo {
 public:
-    CudaCustomHbondForceInfo(const CustomHbondForce& force) : force(force) {
+    ForceInfo(const CustomHbondForce& force) : force(force) {
     }
     bool areParticlesIdentical(int particle1, int particle2) {
         return true;
@@ -4183,7 +4183,8 @@ void CudaCalcCustomHbondForceKernel::initialize(const System& system, const Cust
     }
     acceptors->upload(acceptorVector);
     acceptorParams->setParameterValues(acceptorParamVector);
-    cu.addForce(new CudaCustomHbondForceInfo(force));
+    info = new ForceInfo(force);
+    cu.addForce(info);
 
     // Record exclusions.
 
@@ -4551,9 +4552,9 @@ void CudaCalcCustomHbondForceKernel::copyParametersToContext(ContextImpl& contex
     cu.invalidateMolecules();
 }
 
-class CudaCustomCentroidBondForceInfo : public CudaForceInfo {
+class CudaCalcCustomCentroidBondForceKernel::ForceInfo : public CudaForceInfo {
 public:
-    CudaCustomCentroidBondForceInfo(const CustomCentroidBondForce& force) : force(force) {
+    ForceInfo(const CustomCentroidBondForce& force) : force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumBonds();
@@ -4621,7 +4622,8 @@ void CudaCalcCustomCentroidBondForceKernel::initialize(const System& system, con
     numBonds = force.getNumBonds();
     if (numBonds == 0)
         return;
-    cu.addForce(new CudaCustomCentroidBondForceInfo(force));
+    info = new ForceInfo(force);
+    cu.addForce(info);
     
     // Record the groups.
     
@@ -5009,9 +5011,9 @@ void CudaCalcCustomCentroidBondForceKernel::copyParametersToContext(ContextImpl&
     cu.invalidateMolecules();
 }
 
-class CudaCustomCompoundBondForceInfo : public CudaForceInfo {
+class CudaCalcCustomCompoundBondForceKernel::ForceInfo : public CudaForceInfo {
 public:
-    CudaCustomCompoundBondForceInfo(const CustomCompoundBondForce& force) : force(force) {
+    ForceInfo(const CustomCompoundBondForce& force) : force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumBonds();
@@ -5064,7 +5066,8 @@ void CudaCalcCustomCompoundBondForceKernel::initialize(const System& system, con
             paramVector[i][j] = (float) parameters[j];
     }
     params->setParameterValues(paramVector);
-    cu.addForce(new CudaCustomCompoundBondForceInfo(force));
+    info = new ForceInfo(force);
+    cu.addForce(info);
 
     // Record the tabulated functions.
 
@@ -5325,9 +5328,9 @@ void CudaCalcCustomCompoundBondForceKernel::copyParametersToContext(ContextImpl&
     cu.invalidateMolecules();
 }
 
-class CudaCustomManyParticleForceInfo : public CudaForceInfo {
+class CudaCalcCustomManyParticleForceKernel::ForceInfo : public CudaForceInfo {
 public:
-    CudaCustomManyParticleForceInfo(const CustomManyParticleForce& force) : force(force) {
+    ForceInfo(const CustomManyParticleForce& force) : force(force) {
     }
     bool areParticlesIdentical(int particle1, int particle2) {
         vector<double> params1, params2;
@@ -5412,7 +5415,8 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
             paramVector[i][j] = (float) parameters[j];
     }
     params->setParameterValues(paramVector);
-    cu.addForce(new CudaCustomManyParticleForceInfo(force));
+    info = new ForceInfo(force);
+    cu.addForce(info);
 
     // Record the tabulated functions.
 
@@ -5992,9 +5996,9 @@ void CudaCalcCustomManyParticleForceKernel::copyParametersToContext(ContextImpl&
     cu.invalidateMolecules();
 }
 
-class CudaGayBerneForceInfo : public CudaForceInfo {
+class CudaCalcGayBerneForceKernel::ForceInfo : public CudaForceInfo {
 public:
-    CudaGayBerneForceInfo(const GayBerneForce& force) : force(force) {
+    ForceInfo(const GayBerneForce& force) : force(force) {
     }
     bool areParticlesIdentical(int particle1, int particle2) {
         int xparticle1, yparticle1;
@@ -6205,7 +6209,8 @@ void CudaCalcGayBerneForceKernel::initialize(const System& system, const GayBern
     neighborsKernel = cu.getKernel(module, "findNeighbors");
     forceKernel = cu.getKernel(module, "computeForce");
     torqueKernel = cu.getKernel(module, "applyTorques");
-    cu.addForce(new CudaGayBerneForceInfo(force));
+    info = new ForceInfo(force);
+    cu.addForce(info);
     cu.addReorderListener(new ReorderListener(*this));
 }
 
