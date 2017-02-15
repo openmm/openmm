@@ -137,35 +137,27 @@ static double computeShiftedKineticEnergy(ContextImpl& context, vector<double>& 
     return 0.5*energy;
 }
 
-class CpuCalcForcesAndEnergyKernel::SumForceTask : public ThreadPool::Task {
-public:
-    SumForceTask(int numParticles, vector<RealVec>& forceData, CpuPlatform::PlatformData& data) : numParticles(numParticles), forceData(forceData), data(data) {
-    }
-    void execute(ThreadPool& threads, int threadIndex) {
-        // Sum the contributions to forces that have been calculated by different threads.
-        
-        int numThreads = threads.getNumThreads();
-        int start = threadIndex*numParticles/numThreads;
-        int end = (threadIndex+1)*numParticles/numThreads;
-        for (int i = start; i < end; i++) {
-            fvec4 f(0.0f);
-            for (int j = 0; j < numThreads; j++)
-                f += fvec4(&data.threadForce[j][4*i]);
-            forceData[i][0] += f[0];
-            forceData[i][1] += f[1];
-            forceData[i][2] += f[2];
-        }
-    }
-    int numParticles;
-    vector<RealVec>& forceData;
-    CpuPlatform::PlatformData& data;
-};
+CpuCalcForcesAndEnergyKernel::CpuCalcForcesAndEnergyKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data, ContextImpl& context) :
+        CalcForcesAndEnergyKernel(name, platform), data(data) {
+    // Create a Reference platform version of this kernel.
+    
+    ReferenceKernelFactory referenceFactory;
+    referenceKernel = Kernel(referenceFactory.createKernelImpl(name, platform, context));
+}
 
-class CpuCalcForcesAndEnergyKernel::InitForceTask : public ThreadPool::Task {
-public:
-    InitForceTask(int numParticles, ContextImpl& context, CpuPlatform::PlatformData& data) : numParticles(numParticles), positionsValid(true), context(context), data(data) {
-    }
-    void execute(ThreadPool& threads, int threadIndex) {
+void CpuCalcForcesAndEnergyKernel::initialize(const System& system) {
+    referenceKernel.getAs<ReferenceCalcForcesAndEnergyKernel>().initialize(system);
+    lastPositions.resize(system.getNumParticles(), Vec3(1e10, 1e10, 1e10));
+}
+
+void CpuCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups) {
+    referenceKernel.getAs<ReferenceCalcForcesAndEnergyKernel>().beginComputation(context, includeForce, includeEnergy, groups);
+    
+    // Convert positions to single precision and clear the forces.
+
+    int numParticles = context.getSystem().getNumParticles();
+    bool positionsValid = true;
+    data.threads.execute([&] (ThreadPool& threads, int threadIndex) {
         // Convert the positions to single precision and apply periodic boundary conditions
 
         AlignedArray<float>& posq = data.posq;
@@ -218,36 +210,9 @@ public:
         fvec4 zero(0.0f);
         for (int j = 0; j < numParticles; j++)
             zero.store(&data.threadForce[threadIndex][j*4]);
-    }
-    int numParticles;
-    bool positionsValid;
-    ContextImpl& context;
-    CpuPlatform::PlatformData& data;
-};
-
-CpuCalcForcesAndEnergyKernel::CpuCalcForcesAndEnergyKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data, ContextImpl& context) :
-        CalcForcesAndEnergyKernel(name, platform), data(data) {
-    // Create a Reference platform version of this kernel.
-    
-    ReferenceKernelFactory referenceFactory;
-    referenceKernel = Kernel(referenceFactory.createKernelImpl(name, platform, context));
-}
-
-void CpuCalcForcesAndEnergyKernel::initialize(const System& system) {
-    referenceKernel.getAs<ReferenceCalcForcesAndEnergyKernel>().initialize(system);
-    lastPositions.resize(system.getNumParticles(), Vec3(1e10, 1e10, 1e10));
-}
-
-void CpuCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups) {
-    referenceKernel.getAs<ReferenceCalcForcesAndEnergyKernel>().beginComputation(context, includeForce, includeEnergy, groups);
-    
-    // Convert positions to single precision and clear the forces.
-
-    int numParticles = context.getSystem().getNumParticles();
-    InitForceTask task(numParticles, context, data);
-    data.threads.execute(task);
+    });
     data.threads.waitForThreads();
-    if (!task.positionsValid)
+    if (!positionsValid)
         throw OpenMMException("Particle coordinate is nan");
 
     // Determine whether we need to recompute the neighbor list.
@@ -302,8 +267,23 @@ void CpuCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool i
 double CpuCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups, bool& valid) {
     // Sum the forces from all the threads.
     
-    SumForceTask task(context.getSystem().getNumParticles(), extractForces(context), data);
-    data.threads.execute(task);
+    data.threads.execute([&] (ThreadPool& threads, int threadIndex) {
+        // Sum the contributions to forces that have been calculated by different threads.
+        
+        int numParticles = context.getSystem().getNumParticles();
+        int numThreads = threads.getNumThreads();
+        int start = threadIndex*numParticles/numThreads;
+        int end = (threadIndex+1)*numParticles/numThreads;
+        vector<RealVec>& forceData = extractForces(context);
+        for (int i = start; i < end; i++) {
+            fvec4 f(0.0f);
+            for (int j = 0; j < numThreads; j++)
+                f += fvec4(&data.threadForce[j][4*i]);
+            forceData[i][0] += f[0];
+            forceData[i][1] += f[1];
+            forceData[i][2] += f[2];
+        }
+    });
     data.threads.waitForThreads();
     return referenceKernel.getAs<ReferenceCalcForcesAndEnergyKernel>().finishComputation(context, includeForce, includeEnergy, groups, valid);
 }

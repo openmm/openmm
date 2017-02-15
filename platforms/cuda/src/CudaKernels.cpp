@@ -147,11 +147,29 @@ void CudaUpdateStateDataKernel::setTime(ContextImpl& context, double time) {
         contexts[i]->setTime(time);
 }
 
-class CudaUpdateStateDataKernel::GetPositionsTask : public ThreadPool::Task {
-public:
-    GetPositionsTask(CudaContext& cu, vector<Vec3>& positions, vector<float4>& posCorrection) : cu(cu), positions(positions), posCorrection(posCorrection) {
+void CudaUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3>& positions) {
+    cu.setAsCurrent();
+    int numParticles = context.getSystem().getNumParticles();
+    positions.resize(numParticles);
+    vector<float4> posCorrection;
+    if (cu.getUseDoublePrecision()) {
+        double4* posq = (double4*) cu.getPinnedBuffer();
+        cu.getPosq().download(posq);
     }
-    void execute(ThreadPool& threads, int threadIndex) {
+    else if (cu.getUseMixedPrecision()) {
+        float4* posq = (float4*) cu.getPinnedBuffer();
+        cu.getPosq().download(posq, false);
+        posCorrection.resize(numParticles);
+        cu.getPosqCorrection().download(posCorrection);
+    }
+    else {
+        float4* posq = (float4*) cu.getPinnedBuffer();
+        cu.getPosq().download(posq);
+    }
+    
+    // Filling in the output array is done in parallel for speed.
+    
+    cu.getPlatformData().threads.execute([&] (ThreadPool& threads, int threadIndex) {
         // Compute the position of each particle to return to the user.  This is done in parallel for speed.
         
         const vector<int>& order = cu.getAtomIndex();
@@ -186,36 +204,7 @@ public:
                 positions[order[i]] = Vec3(pos.x, pos.y, pos.z)-boxVectors[0]*offset.x-boxVectors[1]*offset.y-boxVectors[2]*offset.z;
             }
         }
-    }
-    CudaContext& cu;
-    vector<Vec3>& positions;
-    vector<float4>& posCorrection;
-};
-
-void CudaUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3>& positions) {
-    cu.setAsCurrent();
-    int numParticles = context.getSystem().getNumParticles();
-    positions.resize(numParticles);
-    vector<float4> posCorrection;
-    if (cu.getUseDoublePrecision()) {
-        double4* posq = (double4*) cu.getPinnedBuffer();
-        cu.getPosq().download(posq);
-    }
-    else if (cu.getUseMixedPrecision()) {
-        float4* posq = (float4*) cu.getPinnedBuffer();
-        cu.getPosq().download(posq, false);
-        posCorrection.resize(numParticles);
-        cu.getPosqCorrection().download(posCorrection);
-    }
-    else {
-        float4* posq = (float4*) cu.getPinnedBuffer();
-        cu.getPosq().download(posq);
-    }
-    
-    // Filling in the output array is done in parallel for speed.
-    
-    GetPositionsTask task(cu, positions, posCorrection);
-    cu.getPlatformData().threads.execute(task);
+    });
     cu.getPlatformData().threads.waitForThreads();
 }
 
