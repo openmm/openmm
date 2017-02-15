@@ -73,4 +73,11 @@ __global__ void clearSixBuffers(int* __restrict__ buffer1, int size1, int* __res
     clearSingleBuffer(buffer6, size6);
 }
 
+/**
+ * Record the atomic charges into the posq array.
+ */
+__global__ void setCharges(real* __restrict__ charges, real4* __restrict__ posq, int* __restrict__ atomOrder, int numAtoms) {
+    for (int i = blockDim.x*blockIdx.x+threadIdx.x; i < numAtoms; i += blockDim.x*gridDim.x)
+        posq[i].w = charges[atomOrder[i]];
+}
 }
