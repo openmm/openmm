@@ -52,6 +52,7 @@ void AmoebaVdwForceProxy::serialize(const void* object, SerializationNode& node)
     node.setIntProperty("numVdwprTypes", force.getNumVdwprTypes());
     node.setStringProperty("SigmaCombiningRule", force.getSigmaCombiningRule());
     node.setStringProperty("EpsilonCombiningRule", force.getEpsilonCombiningRule());
+    node.setStringProperty("FunctionalForm", force.getFunctionalForm());
 
     SerializationNode& particles = node.createChildNode("VdwParticles");
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(force.getNumParticles()); ii++) {
@@ -100,6 +101,7 @@ void* AmoebaVdwForceProxy::deserialize(const SerializationNode& node) const {
         force->setNumVdwprTypes(node.getIntProperty("numVdwprTypes"));
         force->setSigmaCombiningRule(node.getStringProperty("SigmaCombiningRule"));
         force->setEpsilonCombiningRule(node.getStringProperty("EpsilonCombiningRule"));
+        force->setFunctionalForm(node.getStringProperty("FunctionalForm"));
         const SerializationNode& particles = node.getChildNode("VdwParticles");
         for (unsigned int ii = 0; ii < particles.getChildren().size(); ii++) {
             const SerializationNode& particle = particles.getChildren()[ii];

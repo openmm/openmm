@@ -256,6 +256,20 @@ public:
     const std::string& getEpsilonCombiningRule(void) const;
 
     /**
+     * Set vdw functional form
+     *
+     * @param functionalForm   functional form:  'BUFFERED-14-7', 'LENNARD-JONES'
+     */
+    void setFunctionalForm(const std::string& functionalForm);
+
+    /**
+     * Get vdw functional form
+     *
+     * @return functionalForm   functional form:  'BUFFERED-14-7', 'LENNARD-JONES'
+     */
+    const std::string& getFunctionalForm(void) const;
+
+    /**
      * Get whether to add a contribution to the energy that approximately represents the effect of VdW
      * interactions beyond the cutoff distance.  The energy depends on the volume of the periodic box, and is only
      * applicable when periodic boundary conditions are used.  When running simulations at constant pressure, adding
@@ -343,6 +357,7 @@ private:
 
     std::string sigmaCombiningRule;
     std::string epsilonCombiningRule;
+    std::string functionalForm;
 
     std::vector< std::vector<int> > exclusions; // size = number of atoms
     std::vector<VdwInfo> parameters; // size = number of atoms

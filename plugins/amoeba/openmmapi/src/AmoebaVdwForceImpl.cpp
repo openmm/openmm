@@ -173,6 +173,8 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
     double sigma, epsilon; // The pairwise sigma and epsilon parameters.
     int i = 0, k = 0; // Loop counters.
 
+    std::string functionalForm = force.getFunctionalForm();
+
     // Double loop over different atom types.
     for (map<int, int>::iterator class1 = NonLigclassCounts.begin(); class1 != NonLigclassCounts.end(); ++class1) {
         k = 0;
@@ -205,9 +207,15 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
                 double r6 = r3 * r3;
                 double r7 = r6 * r;
                 double rho = r / rv;
-                double term1 = pow(((dhal + 1.0) / (dhal + rho)), 7);
-                double term2 = ((ghal + 1.0) / (ghal + pow(rho, 7))) - 2.0;
-                e = epsilon * term1 * term2;
+                if (functionalForm == "BUFFERED-14-7") {
+                    double term1 = pow(((dhal + 1.0) / (dhal + rho)), 7);
+                    double term2 = ((ghal + 1.0) / (ghal + pow(rho, 7))) - 2.0;
+                    e = epsilon * term1 * term2;
+                } else if (functionalForm == "LENNARD-JONES") {
+                    double p6 = rv6 / r6;
+                    double p12 = p6 * p6;
+                    e = epsilon * (p12 - 2.0 * p6);
+                }
                 double taper = 0.0;
                 if (r < off) {
                     double r4 = r2 * r2;
