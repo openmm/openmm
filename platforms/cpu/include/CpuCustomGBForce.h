@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2016 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2017 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -39,7 +39,6 @@ namespace OpenMM {
 
 class CpuCustomGBForce {
 private:
-    class ComputeForceTask;
     class ThreadData;
 
     bool cutoff;

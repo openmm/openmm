@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2017 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -409,16 +409,6 @@ private:
     vector<vector<vector<pair<float, int> > > > bins;
 };
 
-class CpuNeighborList::ThreadTask : public ThreadPool::Task {
-public:
-    ThreadTask(CpuNeighborList& owner) : owner(owner) {
-    }
-    void execute(ThreadPool& threads, int threadIndex) {
-        owner.threadComputeNeighborList(threads, threadIndex);
-    }
-    CpuNeighborList& owner;
-};
-
 CpuNeighborList::CpuNeighborList(int blockSize) : blockSize(blockSize) {
 }
 
@@ -460,8 +450,7 @@ void CpuNeighborList::computeNeighborList(int numAtoms, const AlignedArray<float
     // Sort the atoms based on a Hilbert curve.
     
     atomBins.resize(numAtoms);
-    ThreadTask task(*this);
-    threads.execute(task);
+    threads.execute([&] (ThreadPool& threads, int threadIndex) { threadComputeNeighborList(threads, threadIndex); });
     threads.waitForThreads();
     sort(atomBins.begin(), atomBins.end());
 

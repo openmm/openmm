@@ -171,11 +171,28 @@ void OpenCLUpdateStateDataKernel::setTime(ContextImpl& context, double time) {
         contexts[i]->setTime(time);
 }
 
-class OpenCLUpdateStateDataKernel::GetPositionsTask : public ThreadPool::Task {
-public:
-    GetPositionsTask(OpenCLContext& cl, vector<Vec3>& positions, vector<mm_float4>& posCorrection) : cl(cl), positions(positions), posCorrection(posCorrection) {
+void OpenCLUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3>& positions) {
+    int numParticles = context.getSystem().getNumParticles();
+    positions.resize(numParticles);
+    vector<mm_float4> posCorrection;
+    if (cl.getUseDoublePrecision()) {
+        mm_double4* posq = (mm_double4*) cl.getPinnedBuffer();
+        cl.getPosq().download(posq);
     }
-    void execute(ThreadPool& threads, int threadIndex) {
+    else if (cl.getUseMixedPrecision()) {
+        mm_float4* posq = (mm_float4*) cl.getPinnedBuffer();
+        cl.getPosq().download(posq, false);
+        posCorrection.resize(numParticles);
+        cl.getPosqCorrection().download(posCorrection);
+    }
+    else {
+        mm_float4* posq = (mm_float4*) cl.getPinnedBuffer();
+        cl.getPosq().download(posq);
+    }
+    
+    // Filling in the output array is done in parallel for speed.
+    
+    cl.getPlatformData().threads.execute([&] (ThreadPool& threads, int threadIndex) {
         // Compute the position of each particle to return to the user.  This is done in parallel for speed.
         
         const vector<int>& order = cl.getAtomIndex();
@@ -210,35 +227,7 @@ public:
                 positions[order[i]] = Vec3(pos.x, pos.y, pos.z)-boxVectors[0]*offset.x-boxVectors[1]*offset.y-boxVectors[2]*offset.z;
             }
         }
-    }
-    OpenCLContext& cl;
-    vector<Vec3>& positions;
-    vector<mm_float4>& posCorrection;
-};
-
-void OpenCLUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3>& positions) {
-    int numParticles = context.getSystem().getNumParticles();
-    positions.resize(numParticles);
-    vector<mm_float4> posCorrection;
-    if (cl.getUseDoublePrecision()) {
-        mm_double4* posq = (mm_double4*) cl.getPinnedBuffer();
-        cl.getPosq().download(posq);
-    }
-    else if (cl.getUseMixedPrecision()) {
-        mm_float4* posq = (mm_float4*) cl.getPinnedBuffer();
-        cl.getPosq().download(posq, false);
-        posCorrection.resize(numParticles);
-        cl.getPosqCorrection().download(posCorrection);
-    }
-    else {
-        mm_float4* posq = (mm_float4*) cl.getPinnedBuffer();
-        cl.getPosq().download(posq);
-    }
-    
-    // Filling in the output array is done in parallel for speed.
-    
-    GetPositionsTask task(cl, positions, posCorrection);
-    cl.getPlatformData().threads.execute(task);
+    });
     cl.getPlatformData().threads.waitForThreads();
 }
 

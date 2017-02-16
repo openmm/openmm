@@ -54,8 +54,6 @@ namespace OpenMM {
  */
 class CpuCalcForcesAndEnergyKernel : public CalcForcesAndEnergyKernel {
 public:
-    class InitForceTask;
-    class SumForceTask;
     CpuCalcForcesAndEnergyKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data, ContextImpl& context);
     /**
      * Initialize the kernel.

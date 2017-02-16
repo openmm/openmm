@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2015 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2017 Stanford University and Simbios.
  * Contributors: Peter Eastman, Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -37,42 +37,6 @@
 
 using namespace OpenMM;
 using namespace std;
-
-// This class extracts columns from the inverse matrix one at a time.  It is done in parallel,
-// since this can be very slow.
-
-class ExtractMatrixTask : public ThreadPool::Task {
-public:
-    ExtractMatrixTask(int numConstraints, vector<vector<pair<int, RealOpenMM> > >& transposedMatrix, const vector<RealOpenMM>& distance, RealOpenMM elementCutoff,
-                      const int* qRowStart, const int* qColIndex, const int* rRowStart, const int* rColIndex, const double* qValue, const double* rValue) :
-                numConstraints(numConstraints), transposedMatrix(transposedMatrix), distance(distance), elementCutoff(elementCutoff), qRowStart(qRowStart), qColIndex(qColIndex),
-                rRowStart(rRowStart), rColIndex(rColIndex), qValue(qValue), rValue(rValue) {
-    }
-
-    void execute(ThreadPool& pool, int threadIndex) {
-        vector<double> rhs(numConstraints);
-        for (int i = threadIndex; i < numConstraints; i += pool.getNumThreads()) {
-            // Extract column i of the inverse matrix.
-
-            for (int j = 0; j < numConstraints; j++)
-                rhs[j] = (i == j ? 1.0 : 0.0);
-            QUERN_multiply_with_q_transpose(numConstraints, qRowStart, qColIndex, qValue, &rhs[0]);
-            QUERN_solve_with_r(numConstraints, rRowStart, rColIndex, rValue, &rhs[0], &rhs[0]);
-            for (int j = 0; j < numConstraints; j++) {
-                double value = rhs[j]*distance[i]/distance[j];
-                if (FABS((RealOpenMM) value) > elementCutoff)
-                    transposedMatrix[i].push_back(pair<int, RealOpenMM>(j, (RealOpenMM) value));
-            }
-        }
-    }
-private:
-    int numConstraints;
-    vector<vector<pair<int, RealOpenMM> > >& transposedMatrix;
-    const vector<RealOpenMM>& distance;
-    RealOpenMM elementCutoff;
-    const int *qRowStart, *qColIndex, *rRowStart, *rColIndex;
-    const double *qValue, *rValue;
-};
 
 ReferenceCCMAAlgorithm::ReferenceCCMAAlgorithm(int numberOfAtoms,
                                                int numberOfConstraints,
@@ -194,9 +158,27 @@ ReferenceCCMAAlgorithm::ReferenceCCMAAlgorithm(int numberOfAtoms,
                 &qRowStart, &qColIndex, &qValue, &rRowStart, &rColIndex, &rValue);
         vector<vector<pair<int, RealOpenMM> > > transposedMatrix(numberOfConstraints);
         _matrix.resize(numberOfConstraints);
+
+        // Extract columns from the inverse matrix one at a time.  It is done in parallel,
+        // since this can be very slow.
+        
         ThreadPool threads;
-        ExtractMatrixTask task(numberOfConstraints, transposedMatrix, _distance, _elementCutoff, qRowStart, qColIndex, rRowStart, rColIndex, qValue, rValue);
-        threads.execute(task);
+        threads.execute([&] (ThreadPool& pool, int threadIndex) {
+            vector<double> rhs(numberOfConstraints);
+            for (int i = threadIndex; i < numberOfConstraints; i += pool.getNumThreads()) {
+                // Extract column i of the inverse matrix.
+
+                for (int j = 0; j < numberOfConstraints; j++)
+                    rhs[j] = (i == j ? 1.0 : 0.0);
+                QUERN_multiply_with_q_transpose(numberOfConstraints, qRowStart, qColIndex, qValue, &rhs[0]);
+                QUERN_solve_with_r(numberOfConstraints, rRowStart, rColIndex, rValue, &rhs[0], &rhs[0]);
+                for (int j = 0; j < numberOfConstraints; j++) {
+                    double value = rhs[j]*distance[i]/distance[j];
+                    if (FABS((RealOpenMM) value) > elementCutoff)
+                        transposedMatrix[i].push_back(pair<int, RealOpenMM>(j, (RealOpenMM) value));
+                }
+            }
+        });
         threads.waitForThreads();
 
         // For purposes of thread safety we extracted the matrix in transposed form, so we need to transpose it again.

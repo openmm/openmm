@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2016 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2017 Stanford University and Simbios.
  * Authors: Peter Eastman
  * Contributors: 
  *
@@ -29,36 +29,6 @@
 using namespace OpenMM;
 using namespace std;
 
-class CpuLangevinDynamics::Update1Task : public ThreadPool::Task {
-public:
-    Update1Task(CpuLangevinDynamics& owner) : owner(owner) {
-    }
-    void execute(ThreadPool& threads, int threadIndex) {
-        owner.threadUpdate1(threadIndex);
-    }
-    CpuLangevinDynamics& owner;
-};
-
-class CpuLangevinDynamics::Update2Task : public ThreadPool::Task {
-public:
-    Update2Task(CpuLangevinDynamics& owner) : owner(owner) {
-    }
-    void execute(ThreadPool& threads, int threadIndex) {
-        owner.threadUpdate2(threadIndex);
-    }
-    CpuLangevinDynamics& owner;
-};
-
-class CpuLangevinDynamics::Update3Task : public ThreadPool::Task {
-public:
-    Update3Task(CpuLangevinDynamics& owner) : owner(owner) {
-    }
-    void execute(ThreadPool& threads, int threadIndex) {
-        owner.threadUpdate3(threadIndex);
-    }
-    CpuLangevinDynamics& owner;
-};
-
 CpuLangevinDynamics::CpuLangevinDynamics(int numberOfAtoms, RealOpenMM deltaT, RealOpenMM friction, RealOpenMM temperature, ThreadPool& threads, CpuRandom& random) : 
            ReferenceStochasticDynamics(numberOfAtoms, deltaT, friction, temperature), threads(threads), random(random) {
 }
@@ -79,8 +49,7 @@ void CpuLangevinDynamics::updatePart1(int numberOfAtoms, vector<RealVec>& atomCo
     
     // Signal the threads to start running and wait for them to finish.
     
-    Update1Task task(*this);
-    threads.execute(task);
+    threads.execute([&] (ThreadPool& threads, int threadIndex) { threadUpdate1(threadIndex); });
     threads.waitForThreads();
 }
 
@@ -97,8 +66,7 @@ void CpuLangevinDynamics::updatePart2(int numberOfAtoms, vector<RealVec>& atomCo
     
     // Signal the threads to start running and wait for them to finish.
     
-    Update2Task task(*this);
-    threads.execute(task);
+    threads.execute([&] (ThreadPool& threads, int threadIndex) { threadUpdate2(threadIndex); });
     threads.waitForThreads();
 }
 
@@ -114,8 +82,7 @@ void CpuLangevinDynamics::updatePart3(int numberOfAtoms, vector<RealVec>& atomCo
     
     // Signal the threads to start running and wait for them to finish.
     
-    Update3Task task(*this);
-    threads.execute(task);
+    threads.execute([&] (ThreadPool& threads, int threadIndex) { threadUpdate3(threadIndex); });
     threads.waitForThreads();
 }
 

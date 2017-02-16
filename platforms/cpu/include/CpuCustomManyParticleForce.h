@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2014 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2017 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -48,7 +48,6 @@ private:
     class DistanceTermInfo;
     class AngleTermInfo;
     class DihedralTermInfo;
-    class ComputeForceTask;
     class ThreadData;
     int numParticles, numParticlesPerSet, numPerParticleParameters, numTypes;
     bool useCutoff, usePeriodic, triclinic, centralParticleMode;

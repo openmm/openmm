@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2017 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -35,52 +35,6 @@
 using namespace OpenMM;
 using namespace std;
 
-class CpuSETTLE::ApplyToPositionsTask : public ThreadPool::Task {
-public:
-    ApplyToPositionsTask(vector<OpenMM::RealVec>& atomCoordinates, vector<OpenMM::RealVec>& atomCoordinatesP, vector<RealOpenMM>& inverseMasses,
-            RealOpenMM tolerance, vector<ReferenceSETTLEAlgorithm*>& threadSettle) : atomCoordinates(atomCoordinates), atomCoordinatesP(atomCoordinatesP),
-            inverseMasses(inverseMasses), tolerance(tolerance), threadSettle(threadSettle) {
-        gmx_atomic_set(&atomicCounter, 0);
-    }
-    void execute(ThreadPool& threads, int threadIndex) {
-        while (true) {
-            int index = gmx_atomic_fetch_add(&atomicCounter, 1);
-            if (index >= threadSettle.size())
-                break;
-            threadSettle[index]->apply(atomCoordinates, atomCoordinatesP, inverseMasses, tolerance);
-        }
-    }
-    vector<OpenMM::RealVec>& atomCoordinates;
-    vector<OpenMM::RealVec>& atomCoordinatesP;
-    vector<RealOpenMM>& inverseMasses;
-    RealOpenMM tolerance;
-    vector<ReferenceSETTLEAlgorithm*>& threadSettle;
-    gmx_atomic_t atomicCounter;
-};
-
-class CpuSETTLE::ApplyToVelocitiesTask : public ThreadPool::Task {
-public:
-    ApplyToVelocitiesTask(vector<OpenMM::RealVec>& atomCoordinates, vector<OpenMM::RealVec>& velocities, vector<RealOpenMM>& inverseMasses,
-            RealOpenMM tolerance, vector<ReferenceSETTLEAlgorithm*>& threadSettle) : atomCoordinates(atomCoordinates), velocities(velocities),
-            inverseMasses(inverseMasses), tolerance(tolerance), threadSettle(threadSettle) {
-        gmx_atomic_set(&atomicCounter, 0);
-    }
-    void execute(ThreadPool& threads, int threadIndex) {
-        while (true) {
-            int index = gmx_atomic_fetch_add(&atomicCounter, 1);
-            if (index >= threadSettle.size())
-                break;
-            threadSettle[index]->applyToVelocities(atomCoordinates, velocities, inverseMasses, tolerance);
-        }
-    }
-    vector<OpenMM::RealVec>& atomCoordinates;
-    vector<OpenMM::RealVec>& velocities;
-    vector<RealOpenMM>& inverseMasses;
-    RealOpenMM tolerance;
-    vector<ReferenceSETTLEAlgorithm*>& threadSettle;
-    gmx_atomic_t atomicCounter;
-};
-
 CpuSETTLE::CpuSETTLE(const System& system, const ReferenceSETTLEAlgorithm& settle, ThreadPool& threads) : threads(threads) {
     int numBlocks = 10*threads.getNumThreads();
     int numClusters = settle.getNumClusters();
@@ -107,13 +61,29 @@ CpuSETTLE::~CpuSETTLE() {
 }
 
 void CpuSETTLE::apply(vector<OpenMM::RealVec>& atomCoordinates, vector<OpenMM::RealVec>& atomCoordinatesP, vector<RealOpenMM>& inverseMasses, RealOpenMM tolerance) {
-    ApplyToPositionsTask task(atomCoordinates, atomCoordinatesP, inverseMasses, tolerance, threadSettle);
-    threads.execute(task);
+    gmx_atomic_t atomicCounter;
+    gmx_atomic_set(&atomicCounter, 0);
+    threads.execute([&] (ThreadPool& threads, int threadIndex) {
+        while (true) {
+            int index = gmx_atomic_fetch_add(&atomicCounter, 1);
+            if (index >= threadSettle.size())
+                break;
+            threadSettle[index]->apply(atomCoordinates, atomCoordinatesP, inverseMasses, tolerance);
+        }
+    });
     threads.waitForThreads();
 }
 
 void CpuSETTLE::applyToVelocities(vector<OpenMM::RealVec>& atomCoordinates, vector<OpenMM::RealVec>& velocities, vector<RealOpenMM>& inverseMasses, RealOpenMM tolerance) {
-    ApplyToVelocitiesTask task(atomCoordinates, velocities, inverseMasses, tolerance, threadSettle);
-    threads.execute(task);
+    gmx_atomic_t atomicCounter;
+    gmx_atomic_set(&atomicCounter, 0);
+    threads.execute([&] (ThreadPool& threads, int threadIndex) {
+        while (true) {
+            int index = gmx_atomic_fetch_add(&atomicCounter, 1);
+            if (index >= threadSettle.size())
+                break;
+            threadSettle[index]->applyToVelocities(atomCoordinates, velocities, inverseMasses, tolerance);
+        }
+    });
     threads.waitForThreads();
 }

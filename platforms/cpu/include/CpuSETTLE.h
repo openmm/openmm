@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013 Stanford University and the Authors.           *
+ * Portions copyright (c) 2013-2017 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -45,8 +45,6 @@ namespace OpenMM {
  */
 class OPENMM_EXPORT_CPU CpuSETTLE : public ReferenceConstraintAlgorithm {
 public:
-    class ApplyToPositionsTask;
-    class ApplyToVelocitiesTask;
     CpuSETTLE(const System& system, const ReferenceSETTLEAlgorithm& settle, ThreadPool& threads);
     ~CpuSETTLE();
 

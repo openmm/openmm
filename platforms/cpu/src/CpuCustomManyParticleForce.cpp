@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2014 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2017 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -36,16 +36,6 @@
 
 using namespace OpenMM;
 using namespace std;
-
-class CpuCustomManyParticleForce::ComputeForceTask : public ThreadPool::Task {
-public:
-    ComputeForceTask(CpuCustomManyParticleForce& owner) : owner(owner) {
-    }
-    void execute(ThreadPool& threads, int threadIndex) {
-        owner.threadComputeForce(threads, threadIndex);
-    }
-    CpuCustomManyParticleForce& owner;
-};
 
 CpuCustomManyParticleForce::CpuCustomManyParticleForce(const CustomManyParticleForce& force, ThreadPool& threads) :
             threads(threads), useCutoff(false), usePeriodic(false), neighborList(NULL) {
@@ -141,8 +131,7 @@ void CpuCustomManyParticleForce::calculateIxn(AlignedArray<float>& posq, RealOpe
     
     // Signal the threads to start running and wait for them to finish.
     
-    ComputeForceTask task(*this);
-    threads.execute(task);
+    threads.execute([&] (ThreadPool& threads, int threadIndex) { threadComputeForce(threads, threadIndex); });
     threads.waitForThreads();
     
     // Combine the energies from all the threads.

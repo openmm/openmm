@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2016 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2017 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -122,7 +122,6 @@ class CpuCustomNonbondedForce {
                           RealOpenMM* fixedParameters, const std::map<std::string, double>& globalParameters,
                           std::vector<AlignedArray<float> >& threadForce, bool includeForce, bool includeEnergy, double& totalEnergy, double* energyParamDerivs);
 private:
-    class ComputeForceTask;
     class ThreadData;
 
     bool cutoff;

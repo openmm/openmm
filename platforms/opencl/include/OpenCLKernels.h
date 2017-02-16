@@ -176,7 +176,6 @@ public:
      */
     void loadCheckpoint(ContextImpl& context, std::istream& stream);
 private:
-    class GetPositionsTask;
     OpenCLContext& cl;
 };
 
