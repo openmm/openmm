@@ -27,16 +27,6 @@ CMAKE_POLICY(SET CMP0003 NEW)
 CMAKE_POLICY(SET CMP0005 NEW)
 CMAKE_POLICY(SET CMP0011 NEW)
 
-#SET(CMAKE_VERBOSE_MAKEFILE 1)
-
-# CMake 2.4 on dart server only needs to know about Dart
-INCLUDE(Dart)
-MARK_AS_ADVANCED(DART_ROOT)
-
-# Avoid dart server problem with cmake 2.4 --cmb
-set(cmv "${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}")
-IF(NOT cmv EQUAL "2.4") # This whole file...
-
 # We have custom cmake modules for FindOpenMM and running python tests
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake_modules")
 
@@ -86,22 +76,6 @@ ELSE(WIN32)
         SET(PTHREADS_LIB_STATIC pthread)
     ENDIF (NOT ANDROID)
 ENDIF(WIN32)
-
-# The build system will set ARCH64 for 64 bit builds, which require
-# use of the lib64/ library directories rather than lib/.
-#SET( ARCH64 OFF CACHE BOOL "ON for 64bit builds, OFF for 32bit builds")
-#MARK_AS_ADVANCED( ARCH64  )
-#IF (ARCH64)
-#    SET(LIB64 64)
-#ELSE (ARCH64)
-#    SET(LIB64) # nothing
-#ENDIF (ARCH64)
-
-IF( CMAKE_SIZEOF_VOID_P EQUAL 8 )
-  SET( LIB64 64 )
-ELSE( CMAKE_SIZEOF_VOID_P EQUAL 8 )
-  SET( LIB64  )
-ENDIF( CMAKE_SIZEOF_VOID_P EQUAL 8 )
 
 SET (CMAKE_CXX_STANDARD 11)
 
@@ -167,36 +141,10 @@ SET(OPENMM_MAJOR_VERSION 7)
 SET(OPENMM_MINOR_VERSION 1)
 SET(OPENMM_BUILD_VERSION 0)
 
-SET(OPENMM_COPYRIGHT_YEARS "2008-2015")
-
-# underbar separated list of dotted authors, no spaces or commas
-SET(OPENMM_AUTHORS "Peter.Eastman")
-
 ADD_DEFINITIONS(-DOPENMM_LIBRARY_NAME=${OPENMM_LIBRARY_NAME}
                 -DOPENMM_MAJOR_VERSION=${OPENMM_MAJOR_VERSION}
                 -DOPENMM_MINOR_VERSION=${OPENMM_MINOR_VERSION}
                 -DOPENMM_BUILD_VERSION=${OPENMM_BUILD_VERSION})
-
-# CMake quotes automatically when building Visual Studio projects but we need
-# to add them ourselves for Linux or Cygwin. Two cases to avoid duplicate quotes
-# in Visual Studio which end up in the binary.
-
-IF (MSVC)
-   SET(NEED_QUOTES FALSE)
-ELSE (MSVC)
-   SET(NEED_QUOTES TRUE)
-ENDIF (MSVC)
-
-##TODO: doesn't work without quotes in nightly build
-SET(NEED_QUOTES TRUE)
-
-IF(NEED_QUOTES)
-   ADD_DEFINITIONS(-DOPENMM_COPYRIGHT_YEARS="${OPENMM_COPYRIGHT_YEARS}"
-                   -DOPENMM_AUTHORS="${OPENMM_AUTHORS}")
-ELSE(NEED_QUOTES)
-   ADD_DEFINITIONS(-DOPENMM_COPYRIGHT_YEARS=${OPENMM_COPYRIGHT_YEARS}
-                   -DOPENMM_AUTHORS=${OPENMM_AUTHORS})
-ENDIF(NEED_QUOTES)
 
 # -DOPENMM_TYPE has to be defined in the target subdirectories.
 # -Dsimbody_EXPORTS defined automatically when Windows DLL build is being done.
@@ -350,63 +298,19 @@ IF(BUILD_TESTING AND OPENMM_BUILD_REFERENCE_TESTS)
     ADD_SUBDIRECTORY(platforms/reference/tests)
 ENDIF(BUILD_TESTING AND OPENMM_BUILD_REFERENCE_TESTS)
 
-# Which hardware platforms to build
+# CUDA platform
 
-# A bit of tedium because we are using custom FindCUDA files that happen to work...
-SET(FINDCUDA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/FindCUDA")
-SET(CUDA_BUILD_CUBIN OFF)
 FIND_PACKAGE(CUDA QUIET)
 IF(CUDA_FOUND)
-    IF(NOT CUDA_NVCC_FLAGS)
-        SET(FLAGS "")
-        # Note that cmake will insert semicolons between these item automatically...
-        SET(FLAGS ${FLAGS} -gencode arch=compute_11,code=sm_11)
-        SET(FLAGS ${FLAGS} -gencode arch=compute_12,code=sm_12)
-        SET(FLAGS ${FLAGS} -gencode arch=compute_13,code=sm_13)
-        SET(FLAGS ${FLAGS} -gencode arch=compute_20,code=sm_20)
-        SET(FLAGS ${FLAGS} -use_fast_math)
-        IF(MSVC)
-            # Unfortunately the variables CUDA_NVCC_FLAGS_RELEASE and CUDA_NVCC_FLAGS_DEBUG
-            # appear to be unused, at least in CMake 2.6
-            # Release /MD linkage
-            set(FLAGS ${FLAGS} "-Xcompiler \"/MD\" -DOPENMMCUDA_BUILDING_SHARED_LIBRARY")
-        ENDIF(MSVC)
-        SET(CUDA_NVCC_FLAGS  "${FLAGS}"
-            CACHE STRING "Semicolon delimit multiple arguments")
-    ENDIF(NOT CUDA_NVCC_FLAGS)
     SET(OPENMM_BUILD_CUDA_LIB ON CACHE BOOL "Build OpenMMCuda library for Nvidia GPUs")
-
-    # I wish I was not hardcoding /MD here
-    # Avoid strange windows link error with cuda free energy
-    # plugin by specifying /MD to CUDA_NVCC_FLAGS
-    MARK_AS_ADVANCED(CLEAR CUDA_NVCC_FLAGS)
-    IF(MSVC)
-        # Unfortunately the variables CUDA_NVCC_FLAGS_RELEASE and CUDA_NVCC_FLAGS_DEBUG
-        # appear to be unused, at least in CMake 2.6
-        # Release /MD linkage
-        SET(HAS_NVCC_FLAG FALSE)
-        IF(CUDA_NVCC_FLAGS MATCHES "-Xcompiler")
-            SET(HAS_NVCC_FLAG TRUE)
-        ENDIF(CUDA_NVCC_FLAGS MATCHES "-Xcompiler")
-        IF(NOT HAS_NVCC_FLAG)
-            set(new_flags "-Xcompiler \"/MD\" -DOPENMMCUDA_BUILDING_SHARED_LIBRARY")
-            if(CUDA_NVCC_FLAGS)
-                set(new_flags "${CUDA_NVCC_FLAGS};${new_flags}")
-            endif(CUDA_NVCC_FLAGS)
-            SET(CUDA_NVCC_FLAGS "${new_flags}"
-                CACHE STRING "Semicolon delimit multiple arguments" FORCE)
-        ENDIF(NOT HAS_NVCC_FLAG)
-    ENDIF(MSVC)
 ELSE(CUDA_FOUND)
     SET(OPENMM_BUILD_CUDA_LIB OFF CACHE BOOL "Build OpenMMCuda library for Nvidia GPUs")
 ENDIF(CUDA_FOUND)
 IF(OPENMM_BUILD_CUDA_LIB)
     ADD_SUBDIRECTORY(platforms/cuda)
 ENDIF(OPENMM_BUILD_CUDA_LIB)
-MARK_AS_ADVANCED(CUDA_VERBOSE_BUILD)
-MARK_AS_ADVANCED(CUDA_BUILD_CUBIN)
-MARK_AS_ADVANCED(CUDA_BUILD_EMULATION)
-MARK_AS_ADVANCED(CUDA_HOST_COMPILER CUDA_HOST_COMPILER_OPTIONS)
+
+# OpenCL platform
 
 FIND_PACKAGE(OpenCL QUIET)
 IF(OPENCL_FOUND)
@@ -504,7 +408,7 @@ INSTALL_FILES(/include/sfmt            FILES ${SFMT_HEADERS})
 
 ADD_SUBDIRECTORY(serialization)
 FILE(GLOB serialization_files  ${CMAKE_SOURCE_DIR}/serialization/src/*.cpp)
-SET_SOURCE_FILES_PROPERTIES(${serialization_files} PROPERTIES COMPILE_FLAGS "-DOPENMM_BUILDING_SHARED_LIBRARY -DTIXML_USE_STL -DIEEE_8087")
+SET_SOURCE_FILES_PROPERTIES(${serialization_files} PROPERTIES COMPILE_FLAGS "-DOPENMM_BUILDING_SHARED_LIBRARY -DIEEE_8087")
 
 # Python wrappers
 
@@ -521,23 +425,6 @@ IF(OPENMM_BUILD_PYTHON_WRAPPERS)
     ENDIF(NOT OPENMM_BUILD_DRUDE_PLUGIN)
     ADD_SUBDIRECTORY(wrappers/python)
 ENDIF(OPENMM_BUILD_PYTHON_WRAPPERS)
-
-
-
-
-#
-# Allow automated build and dashboard.
-#
-# redundant INCLUDE(Dart) statement
-# INCLUDE (Dart)
-
-#IF (UNIX AND NOT CYGWIN AND NOT APPLE)
-#  IF (NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE MATCHES Debug)
-#    ADD_DEFINITIONS(-fprofile-arcs -ftest-coverage)
-#    LINK_LIBRARIES(gcov)
-#  ENDIF (NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE MATCHES Debug)
-#ENDIF (UNIX AND NOT CYGWIN AND NOT APPLE)
-
 
 #
 # Testing
@@ -560,5 +447,3 @@ SET(OPENMM_BUILD_EXAMPLES ON CACHE BOOL "Build example executables")
 IF(OPENMM_BUILD_EXAMPLES)
   ADD_SUBDIRECTORY(examples)
 ENDIF(OPENMM_BUILD_EXAMPLES)
-
-ENDIF(NOT cmv EQUAL "2.4") # This whole file...
