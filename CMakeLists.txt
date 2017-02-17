@@ -27,16 +27,6 @@ CMAKE_POLICY(SET CMP0003 NEW)
 CMAKE_POLICY(SET CMP0005 NEW)
 CMAKE_POLICY(SET CMP0011 NEW)
 
-#SET(CMAKE_VERBOSE_MAKEFILE 1)
-
-# CMake 2.4 on dart server only needs to know about Dart
-INCLUDE(Dart)
-MARK_AS_ADVANCED(DART_ROOT)
-
-# Avoid dart server problem with cmake 2.4 --cmb
-set(cmv "${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}")
-IF(NOT cmv EQUAL "2.4") # This whole file...
-
 # We have custom cmake modules for FindOpenMM and running python tests
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake_modules")
 
@@ -86,22 +76,6 @@ ELSE(WIN32)
         SET(PTHREADS_LIB_STATIC pthread)
     ENDIF (NOT ANDROID)
 ENDIF(WIN32)
-
-# The build system will set ARCH64 for 64 bit builds, which require
-# use of the lib64/ library directories rather than lib/.
-#SET( ARCH64 OFF CACHE BOOL "ON for 64bit builds, OFF for 32bit builds")
-#MARK_AS_ADVANCED( ARCH64  )
-#IF (ARCH64)
-#    SET(LIB64 64)
-#ELSE (ARCH64)
-#    SET(LIB64) # nothing
-#ENDIF (ARCH64)
-
-IF( CMAKE_SIZEOF_VOID_P EQUAL 8 )
-  SET( LIB64 64 )
-ELSE( CMAKE_SIZEOF_VOID_P EQUAL 8 )
-  SET( LIB64  )
-ENDIF( CMAKE_SIZEOF_VOID_P EQUAL 8 )
 
 SET (CMAKE_CXX_STANDARD 11)
 
@@ -522,23 +496,6 @@ IF(OPENMM_BUILD_PYTHON_WRAPPERS)
     ADD_SUBDIRECTORY(wrappers/python)
 ENDIF(OPENMM_BUILD_PYTHON_WRAPPERS)
 
-
-
-
-#
-# Allow automated build and dashboard.
-#
-# redundant INCLUDE(Dart) statement
-# INCLUDE (Dart)
-
-#IF (UNIX AND NOT CYGWIN AND NOT APPLE)
-#  IF (NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE MATCHES Debug)
-#    ADD_DEFINITIONS(-fprofile-arcs -ftest-coverage)
-#    LINK_LIBRARIES(gcov)
-#  ENDIF (NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE MATCHES Debug)
-#ENDIF (UNIX AND NOT CYGWIN AND NOT APPLE)
-
-
 #
 # Testing
 #
@@ -560,5 +517,3 @@ SET(OPENMM_BUILD_EXAMPLES ON CACHE BOOL "Build example executables")
 IF(OPENMM_BUILD_EXAMPLES)
   ADD_SUBDIRECTORY(examples)
 ENDIF(OPENMM_BUILD_EXAMPLES)
-
-ENDIF(NOT cmv EQUAL "2.4") # This whole file...
