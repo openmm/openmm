@@ -29,13 +29,8 @@ CMAKE_POLICY(SET CMP0011 NEW)
 
 #SET(CMAKE_VERBOSE_MAKEFILE 1)
 
-# CMake 2.4 on dart server only needs to know about Dart
 INCLUDE(Dart)
 MARK_AS_ADVANCED(DART_ROOT)
-
-# Avoid dart server problem with cmake 2.4 --cmb
-set(cmv "${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}")
-IF(NOT cmv EQUAL "2.4") # This whole file...
 
 # We have custom cmake modules for FindOpenMM and running python tests
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake_modules")
@@ -560,5 +555,3 @@ SET(OPENMM_BUILD_EXAMPLES ON CACHE BOOL "Build example executables")
 IF(OPENMM_BUILD_EXAMPLES)
   ADD_SUBDIRECTORY(examples)
 ENDIF(OPENMM_BUILD_EXAMPLES)
-
-ENDIF(NOT cmv EQUAL "2.4") # This whole file...
