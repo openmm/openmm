@@ -1208,8 +1208,10 @@ void testDMFDpmeEnergiesForcesWithExclusions() {
 
     ASSERT_EQUAL_TOL(refenergy, energy, 1E-4);
     for (int n = 0; n < numAtoms; ++n)
-        ASSERT_EQUAL_VEC(refforces[n], forces[n], 1E-4);
+        ASSERT_EQUAL_VEC(refforces[n], forces[n], 5E-4);
 }
+
+
 void testWater2DpmeEnergiesForcesWithExclusions() {
     const double cutoff = 7.0*OpenMM::NmPerAngstrom;
     const double alpha = 4.0124063605;
