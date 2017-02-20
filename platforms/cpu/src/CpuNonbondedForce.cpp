@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2015 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2017 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -41,16 +41,6 @@ using namespace OpenMM;
 
 const float CpuNonbondedForce::TWO_OVER_SQRT_PI = (float) (2/sqrt(PI_M));
 const int CpuNonbondedForce::NUM_TABLE_POINTS = 2048;
-
-class CpuNonbondedForce::ComputeDirectTask : public ThreadPool::Task {
-public:
-    ComputeDirectTask(CpuNonbondedForce& owner) : owner(owner) {
-    }
-    void execute(ThreadPool& threads, int threadIndex) {
-        owner.threadComputeDirect(threads, threadIndex);
-    }
-    CpuNonbondedForce& owner;
-};
 
 /**---------------------------------------------------------------------------------------
 
@@ -405,8 +395,7 @@ void CpuNonbondedForce::calculateDirectIxn(int numberOfAtoms, float* posq, const
     
     // Signal the threads to start running and wait for them to finish.
     
-    ComputeDirectTask task(*this);
-    threads.execute(task); // ACS calls threadcomputedirect
+    threads.execute([&] (ThreadPool& threads, int threadIndex) { threadComputeDirect(threads, threadIndex); });
     threads.waitForThreads();
     
     // Signal the threads to subtract the exclusions.

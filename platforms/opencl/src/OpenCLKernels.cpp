@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2017 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -171,11 +171,28 @@ void OpenCLUpdateStateDataKernel::setTime(ContextImpl& context, double time) {
         contexts[i]->setTime(time);
 }
 
-class OpenCLUpdateStateDataKernel::GetPositionsTask : public ThreadPool::Task {
-public:
-    GetPositionsTask(OpenCLContext& cl, vector<Vec3>& positions, vector<mm_float4>& posCorrection) : cl(cl), positions(positions), posCorrection(posCorrection) {
+void OpenCLUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3>& positions) {
+    int numParticles = context.getSystem().getNumParticles();
+    positions.resize(numParticles);
+    vector<mm_float4> posCorrection;
+    if (cl.getUseDoublePrecision()) {
+        mm_double4* posq = (mm_double4*) cl.getPinnedBuffer();
+        cl.getPosq().download(posq);
     }
-    void execute(ThreadPool& threads, int threadIndex) {
+    else if (cl.getUseMixedPrecision()) {
+        mm_float4* posq = (mm_float4*) cl.getPinnedBuffer();
+        cl.getPosq().download(posq, false);
+        posCorrection.resize(numParticles);
+        cl.getPosqCorrection().download(posCorrection);
+    }
+    else {
+        mm_float4* posq = (mm_float4*) cl.getPinnedBuffer();
+        cl.getPosq().download(posq);
+    }
+    
+    // Filling in the output array is done in parallel for speed.
+    
+    cl.getPlatformData().threads.execute([&] (ThreadPool& threads, int threadIndex) {
         // Compute the position of each particle to return to the user.  This is done in parallel for speed.
         
         const vector<int>& order = cl.getAtomIndex();
@@ -210,35 +227,7 @@ public:
                 positions[order[i]] = Vec3(pos.x, pos.y, pos.z)-boxVectors[0]*offset.x-boxVectors[1]*offset.y-boxVectors[2]*offset.z;
             }
         }
-    }
-    OpenCLContext& cl;
-    vector<Vec3>& positions;
-    vector<mm_float4>& posCorrection;
-};
-
-void OpenCLUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3>& positions) {
-    int numParticles = context.getSystem().getNumParticles();
-    positions.resize(numParticles);
-    vector<mm_float4> posCorrection;
-    if (cl.getUseDoublePrecision()) {
-        mm_double4* posq = (mm_double4*) cl.getPinnedBuffer();
-        cl.getPosq().download(posq);
-    }
-    else if (cl.getUseMixedPrecision()) {
-        mm_float4* posq = (mm_float4*) cl.getPinnedBuffer();
-        cl.getPosq().download(posq, false);
-        posCorrection.resize(numParticles);
-        cl.getPosqCorrection().download(posCorrection);
-    }
-    else {
-        mm_float4* posq = (mm_float4*) cl.getPinnedBuffer();
-        cl.getPosq().download(posq);
-    }
-    
-    // Filling in the output array is done in parallel for speed.
-    
-    GetPositionsTask task(cl, positions, posCorrection);
-    cl.getPlatformData().threads.execute(task);
+    });
     cl.getPlatformData().threads.waitForThreads();
 }
 
@@ -529,9 +518,9 @@ void OpenCLVirtualSitesKernel::computePositions(ContextImpl& context) {
     cl.getIntegrationUtilities().computeVirtualSites();
 }
 
-class OpenCLHarmonicBondForceInfo : public OpenCLForceInfo {
+class OpenCLCalcHarmonicBondForceKernel::ForceInfo : public OpenCLForceInfo {
 public:
-    OpenCLHarmonicBondForceInfo(const HarmonicBondForce& force) : OpenCLForceInfo(0), force(force) {
+    ForceInfo(const HarmonicBondForce& force) : OpenCLForceInfo(0), force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumBonds();
@@ -581,7 +570,8 @@ void OpenCLCalcHarmonicBondForceKernel::initialize(const System& system, const H
     replacements["COMPUTE_FORCE"] = OpenCLKernelSources::harmonicBondForce;
     replacements["PARAMS"] = cl.getBondedUtilities().addArgument(params->getDeviceBuffer(), "float2");
     cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::bondForce, replacements), force.getForceGroup());
-    cl.addForce(new OpenCLHarmonicBondForceInfo(force));
+    info = new ForceInfo(force);
+    cl.addForce(info);
 }
 
 double OpenCLCalcHarmonicBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -610,12 +600,12 @@ void OpenCLCalcHarmonicBondForceKernel::copyParametersToContext(ContextImpl& con
     
     // Mark that the current reordering may be invalid.
     
-    cl.invalidateMolecules();
+    cl.invalidateMolecules(info);
 }
 
-class OpenCLCustomBondForceInfo : public OpenCLForceInfo {
+class OpenCLCalcCustomBondForceKernel::ForceInfo : public OpenCLForceInfo {
 public:
-    OpenCLCustomBondForceInfo(const CustomBondForce& force) : OpenCLForceInfo(0), force(force) {
+    ForceInfo(const CustomBondForce& force) : OpenCLForceInfo(0), force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumBonds();
@@ -667,7 +657,8 @@ void OpenCLCalcCustomBondForceKernel::initialize(const System& system, const Cus
             paramVector[i][j] = (cl_float) parameters[j];
     }
     params->setParameterValues(paramVector);
-    cl.addForce(new OpenCLCustomBondForceInfo(force));
+    info = new ForceInfo(force);
+    cl.addForce(info);
 
     // Record information for the expressions.
 
@@ -761,12 +752,12 @@ void OpenCLCalcCustomBondForceKernel::copyParametersToContext(ContextImpl& conte
     
     // Mark that the current reordering may be invalid.
     
-    cl.invalidateMolecules();
+    cl.invalidateMolecules(info);
 }
 
-class OpenCLHarmonicAngleForceInfo : public OpenCLForceInfo {
+class OpenCLCalcHarmonicAngleForceKernel::ForceInfo : public OpenCLForceInfo {
 public:
-    OpenCLHarmonicAngleForceInfo(const HarmonicAngleForce& force) : OpenCLForceInfo(0), force(force) {
+    ForceInfo(const HarmonicAngleForce& force) : OpenCLForceInfo(0), force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumAngles();
@@ -818,7 +809,8 @@ void OpenCLCalcHarmonicAngleForceKernel::initialize(const System& system, const 
     replacements["COMPUTE_FORCE"] = OpenCLKernelSources::harmonicAngleForce;
     replacements["PARAMS"] = cl.getBondedUtilities().addArgument(params->getDeviceBuffer(), "float2");
     cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::angleForce, replacements), force.getForceGroup());
-    cl.addForce(new OpenCLHarmonicAngleForceInfo(force));
+    info = new ForceInfo(force);
+    cl.addForce(info);
 }
 
 double OpenCLCalcHarmonicAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -847,12 +839,12 @@ void OpenCLCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl& co
     
     // Mark that the current reordering may be invalid.
     
-    cl.invalidateMolecules();
+    cl.invalidateMolecules(info);
 }
 
-class OpenCLCustomAngleForceInfo : public OpenCLForceInfo {
+class OpenCLCalcCustomAngleForceKernel::ForceInfo : public OpenCLForceInfo {
 public:
-    OpenCLCustomAngleForceInfo(const CustomAngleForce& force) : OpenCLForceInfo(0), force(force) {
+    ForceInfo(const CustomAngleForce& force) : OpenCLForceInfo(0), force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumAngles();
@@ -905,7 +897,8 @@ void OpenCLCalcCustomAngleForceKernel::initialize(const System& system, const Cu
             paramVector[i][j] = (cl_float) parameters[j];
     }
     params->setParameterValues(paramVector);
-    cl.addForce(new OpenCLCustomAngleForceInfo(force));
+    info = new ForceInfo(force);
+    cl.addForce(info);
 
     // Record information for the expressions.
 
@@ -999,12 +992,12 @@ void OpenCLCalcCustomAngleForceKernel::copyParametersToContext(ContextImpl& cont
     
     // Mark that the current reordering may be invalid.
     
-    cl.invalidateMolecules();
+    cl.invalidateMolecules(info);
 }
 
-class OpenCLPeriodicTorsionForceInfo : public OpenCLForceInfo {
+class OpenCLCalcPeriodicTorsionForceKernel::ForceInfo : public OpenCLForceInfo {
 public:
-    OpenCLPeriodicTorsionForceInfo(const PeriodicTorsionForce& force) : OpenCLForceInfo(0), force(force) {
+    ForceInfo(const PeriodicTorsionForce& force) : OpenCLForceInfo(0), force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumTorsions();
@@ -1057,7 +1050,8 @@ void OpenCLCalcPeriodicTorsionForceKernel::initialize(const System& system, cons
     replacements["COMPUTE_FORCE"] = OpenCLKernelSources::periodicTorsionForce;
     replacements["PARAMS"] = cl.getBondedUtilities().addArgument(params->getDeviceBuffer(), "float4");
     cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::torsionForce, replacements), force.getForceGroup());
-    cl.addForce(new OpenCLPeriodicTorsionForceInfo(force));
+    info = new ForceInfo(force);
+    cl.addForce(info);
 }
 
 double OpenCLCalcPeriodicTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -1086,12 +1080,12 @@ void OpenCLCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImpl& 
     
     // Mark that the current reordering may be invalid.
     
-    cl.invalidateMolecules();
+    cl.invalidateMolecules(info);
 }
 
-class OpenCLRBTorsionForceInfo : public OpenCLForceInfo {
+class OpenCLCalcRBTorsionForceKernel::ForceInfo : public OpenCLForceInfo {
 public:
-    OpenCLRBTorsionForceInfo(const RBTorsionForce& force) : OpenCLForceInfo(0), force(force) {
+    ForceInfo(const RBTorsionForce& force) : OpenCLForceInfo(0), force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumTorsions();
@@ -1144,7 +1138,8 @@ void OpenCLCalcRBTorsionForceKernel::initialize(const System& system, const RBTo
     replacements["COMPUTE_FORCE"] = OpenCLKernelSources::rbTorsionForce;
     replacements["PARAMS"] = cl.getBondedUtilities().addArgument(params->getDeviceBuffer(), "float8");
     cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::torsionForce, replacements), force.getForceGroup());
-    cl.addForce(new OpenCLRBTorsionForceInfo(force));
+    info = new ForceInfo(force);
+    cl.addForce(info);
 }
 
 double OpenCLCalcRBTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -1173,12 +1168,12 @@ void OpenCLCalcRBTorsionForceKernel::copyParametersToContext(ContextImpl& contex
     
     // Mark that the current reordering may be invalid.
     
-    cl.invalidateMolecules();
+    cl.invalidateMolecules(info);
 }
 
-class OpenCLCMAPTorsionForceInfo : public OpenCLForceInfo {
+class OpenCLCalcCMAPTorsionForceKernel::ForceInfo : public OpenCLForceInfo {
 public:
-    OpenCLCMAPTorsionForceInfo(const CMAPTorsionForce& force) : OpenCLForceInfo(0), force(force) {
+    ForceInfo(const CMAPTorsionForce& force) : OpenCLForceInfo(0), force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumTorsions();
@@ -1257,7 +1252,8 @@ void OpenCLCalcCMAPTorsionForceKernel::initialize(const System& system, const CM
     replacements["MAP_POS"] = cl.getBondedUtilities().addArgument(mapPositions->getDeviceBuffer(), "int2");
     replacements["MAPS"] = cl.getBondedUtilities().addArgument(torsionMaps->getDeviceBuffer(), "int");
     cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::cmapTorsionForce, replacements), force.getForceGroup());
-    cl.addForce(new OpenCLCMAPTorsionForceInfo(force));
+    info = new ForceInfo(force);
+    cl.addForce(info);
 }
 
 double OpenCLCalcCMAPTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -1307,9 +1303,9 @@ void OpenCLCalcCMAPTorsionForceKernel::copyParametersToContext(ContextImpl& cont
     torsionMaps->upload(torsionMapsVec);
 }
 
-class OpenCLCustomTorsionForceInfo : public OpenCLForceInfo {
+class OpenCLCalcCustomTorsionForceKernel::ForceInfo : public OpenCLForceInfo {
 public:
-    OpenCLCustomTorsionForceInfo(const CustomTorsionForce& force) : OpenCLForceInfo(0), force(force) {
+    ForceInfo(const CustomTorsionForce& force) : OpenCLForceInfo(0), force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumTorsions();
@@ -1363,7 +1359,8 @@ void OpenCLCalcCustomTorsionForceKernel::initialize(const System& system, const 
             paramVector[i][j] = (cl_float) parameters[j];
     }
     params->setParameterValues(paramVector);
-    cl.addForce(new OpenCLCustomTorsionForceInfo(force));
+    info = new ForceInfo(force);
+    cl.addForce(info);
 
     // Record information for the expressions.
 
@@ -1457,12 +1454,12 @@ void OpenCLCalcCustomTorsionForceKernel::copyParametersToContext(ContextImpl& co
     
     // Mark that the current reordering may be invalid.
     
-    cl.invalidateMolecules();
+    cl.invalidateMolecules(info);
 }
 
-class OpenCLNonbondedForceInfo : public OpenCLForceInfo {
+class OpenCLCalcNonbondedForceKernel::ForceInfo : public OpenCLForceInfo {
 public:
-    OpenCLNonbondedForceInfo(int requiredBuffers, const NonbondedForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {
+    ForceInfo(int requiredBuffers, const NonbondedForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {
     }
     bool areParticlesIdentical(int particle1, int particle2) {
         double charge1, charge2, sigma1, sigma2, epsilon1, epsilon2;
@@ -1977,7 +1974,8 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         replacements["PARAMS"] = cl.getBondedUtilities().addArgument(exceptionParams->getDeviceBuffer(), "float4");
         cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::nonbondedExceptions, replacements), force.getForceGroup());
     }
-    cl.addForce(new OpenCLNonbondedForceInfo(cl.getNonbondedUtilities().getNumForceBuffers(), force));
+    info = new ForceInfo(cl.getNonbondedUtilities().getNumForceBuffers(), force);
+    cl.addForce(info);
 }
 
 double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy, bool includeDirect, bool includeReciprocal) {
@@ -2374,25 +2372,17 @@ void OpenCLCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& contex
     
     // Record the per-particle parameters.
     
-    OpenCLArray& posq = cl.getPosq();
-    posq.download(cl.getPinnedBuffer());
-    mm_float4* posqf = (mm_float4*) cl.getPinnedBuffer();
-    mm_double4* posqd = (mm_double4*) cl.getPinnedBuffer();
+    vector<double> chargeVector(cl.getNumAtoms());
     vector<mm_float2> sigmaEpsilonVector(cl.getPaddedNumAtoms(), mm_float2(0,0));
     double sumSquaredCharges = 0.0;
-    const vector<cl_int>& order = cl.getAtomIndex();
     for (int i = 0; i < force.getNumParticles(); i++) {
-        int index = order[i];
         double charge, sigma, epsilon;
-        force.getParticleParameters(index, charge, sigma, epsilon);
-        if (cl.getUseDoublePrecision())
-            posqd[i].w = charge;
-        else
-            posqf[i].w = (float) charge;
-        sigmaEpsilonVector[index] = mm_float2((float) (0.5*sigma), (float) (2.0*sqrt(epsilon)));
+        force.getParticleParameters(i, charge, sigma, epsilon);
+        chargeVector[i] = charge;
+        sigmaEpsilonVector[i] = mm_float2((float) (0.5*sigma), (float) (2.0*sqrt(epsilon)));
         sumSquaredCharges += charge*charge;
     }
-    posq.upload(cl.getPinnedBuffer());
+    cl.setCharges(chargeVector);
     sigmaEpsilon->upload(sigmaEpsilonVector);
     
     // Record the exceptions.
@@ -2414,7 +2404,7 @@ void OpenCLCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& contex
         ewaldSelfEnergy = (cl.getContextIndex() == 0 ? -ONE_4PI_EPS0*alpha*sumSquaredCharges/sqrt(M_PI) : 0.0);
     if (force.getUseDispersionCorrection() && cl.getContextIndex() == 0 && (nonbondedMethod == CutoffPeriodic || nonbondedMethod == Ewald || nonbondedMethod == PME))
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(context.getSystem(), force);
-    cl.invalidateMolecules();
+    cl.invalidateMolecules(info);
 }
 
 void OpenCLCalcNonbondedForceKernel::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
@@ -2444,9 +2434,9 @@ void OpenCLCalcNonbondedForceKernel::getLJPMEParameters(double& alpha, int& nx, 
     }
 }
 
-class OpenCLCustomNonbondedForceInfo : public OpenCLForceInfo {
+class OpenCLCalcCustomNonbondedForceKernel::ForceInfo : public OpenCLForceInfo {
 public:
-    OpenCLCustomNonbondedForceInfo(int requiredBuffers, const CustomNonbondedForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {
+    ForceInfo(int requiredBuffers, const CustomNonbondedForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {
         if (force.getNumInteractionGroups() > 0) {
             groupsForParticle.resize(force.getNumParticles());
             for (int i = 0; i < force.getNumInteractionGroups(); i++) {
@@ -2623,7 +2613,8 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
             cl.getNonbondedUtilities().addArgument(OpenCLNonbondedUtilities::ParameterInfo(prefix+"globals", "float", 1, sizeof(cl_float), globals->getDeviceBuffer()));
         }
     }
-    cl.addForce(new OpenCLCustomNonbondedForceInfo(cl.getNonbondedUtilities().getNumForceBuffers(), force));
+    info = new ForceInfo(cl.getNonbondedUtilities().getNumForceBuffers(), force);
+    cl.addForce(info);
     
     // Record information for the long range correction.
     
@@ -2962,12 +2953,12 @@ void OpenCLCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& 
     
     // Mark that the current reordering may be invalid.
     
-    cl.invalidateMolecules();
+    cl.invalidateMolecules(info);
 }
 
-class OpenCLGBSAOBCForceInfo : public OpenCLForceInfo {
+class OpenCLCalcGBSAOBCForceKernel::ForceInfo : public OpenCLForceInfo {
 public:
-    OpenCLGBSAOBCForceInfo(int requiredBuffers, const GBSAOBCForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {
+    ForceInfo(int requiredBuffers, const GBSAOBCForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {
     }
     bool areParticlesIdentical(int particle1, int particle2) {
         double charge1, charge2, radius1, radius2, scale1, scale2;
@@ -3045,7 +3036,8 @@ void OpenCLCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOB
     nb.addInteraction(useCutoff, usePeriodic, false, cutoff, vector<vector<int> >(), source, force.getForceGroup());
     nb.addParameter(OpenCLNonbondedUtilities::ParameterInfo("obcParams", "float", 2, sizeof(cl_float2), params->getDeviceBuffer()));;
     nb.addParameter(OpenCLNonbondedUtilities::ParameterInfo("bornForce", "real", 1, elementSize, bornForce->getDeviceBuffer()));;
-    cl.addForce(new OpenCLGBSAOBCForceInfo(nb.getNumForceBuffers(), force));
+    info = new ForceInfo(nb.getNumForceBuffers(), force);
+    cl.addForce(info);
 }
 
 double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -3177,33 +3169,27 @@ void OpenCLCalcGBSAOBCForceKernel::copyParametersToContext(ContextImpl& context,
     
     // Record the per-particle parameters.
     
-    OpenCLArray& posq = cl.getPosq();
-    mm_float4* posqf = (mm_float4*) cl.getPinnedBuffer();
-    mm_double4* posqd = (mm_double4*) cl.getPinnedBuffer();
-    posq.download(cl.getPinnedBuffer());
+    vector<double> chargeVector(cl.getNumAtoms());
     vector<mm_float2> paramsVector(cl.getPaddedNumAtoms(), mm_float2(1,1));
     const double dielectricOffset = 0.009;
     for (int i = 0; i < numParticles; i++) {
         double charge, radius, scalingFactor;
         force.getParticleParameters(i, charge, radius, scalingFactor);
+        chargeVector[i] = charge;
         radius -= dielectricOffset;
         paramsVector[i] = mm_float2((float) radius, (float) (scalingFactor*radius));
-        if (cl.getUseDoublePrecision())
-            posqd[i].w = charge;
-        else
-            posqf[i].w = (float) charge;
     }
-    posq.upload(cl.getPinnedBuffer());
+    cl.setCharges(chargeVector);
     params->upload(paramsVector);
     
     // Mark that the current reordering may be invalid.
     
-    cl.invalidateMolecules();
+    cl.invalidateMolecules(info);
 }
 
-class OpenCLCustomGBForceInfo : public OpenCLForceInfo {
+class OpenCLCalcCustomGBForceKernel::ForceInfo : public OpenCLForceInfo {
 public:
-    OpenCLCustomGBForceInfo(int requiredBuffers, const CustomGBForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {
+    ForceInfo(int requiredBuffers, const CustomGBForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {
     }
     bool areParticlesIdentical(int particle1, int particle2) {
         vector<double> params1;
@@ -4051,7 +4037,8 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         for (int i = 0; i < (int) arguments.size(); i++)
             cl.getNonbondedUtilities().addArgument(arguments[i]);
     }
-    cl.addForce(new OpenCLCustomGBForceInfo(cl.getNonbondedUtilities().getNumForceBuffers(), force));
+    info = new ForceInfo(cl.getNonbondedUtilities().getNumForceBuffers(), force);
+    cl.addForce(info);
     if (useLong)
         cl.addAutoclearBuffer(*longEnergyDerivs);
     else {
@@ -4312,12 +4299,12 @@ void OpenCLCalcCustomGBForceKernel::copyParametersToContext(ContextImpl& context
     
     // Mark that the current reordering may be invalid.
     
-    cl.invalidateMolecules();
+    cl.invalidateMolecules(info);
 }
 
-class OpenCLCustomExternalForceInfo : public OpenCLForceInfo {
+class OpenCLCalcCustomExternalForceKernel::ForceInfo : public OpenCLForceInfo {
 public:
-    OpenCLCustomExternalForceInfo(const CustomExternalForce& force, int numParticles) : OpenCLForceInfo(0), force(force), indices(numParticles, -1) {
+    ForceInfo(const CustomExternalForce& force, int numParticles) : OpenCLForceInfo(0), force(force), indices(numParticles, -1) {
         vector<double> params;
         for (int i = 0; i < force.getNumParticles(); i++) {
             int particle;
@@ -4372,7 +4359,8 @@ void OpenCLCalcCustomExternalForceKernel::initialize(const System& system, const
             paramVector[i][j] = (cl_float) parameters[j];
     }
     params->setParameterValues(paramVector);
-    cl.addForce(new OpenCLCustomExternalForceInfo(force, system.getNumParticles()));
+    info = new ForceInfo(force, system.getNumParticles());
+    cl.addForce(info);
 
     // Record information for the expressions.
 
@@ -4467,12 +4455,12 @@ void OpenCLCalcCustomExternalForceKernel::copyParametersToContext(ContextImpl& c
     
     // Mark that the current reordering may be invalid.
     
-    cl.invalidateMolecules();
+    cl.invalidateMolecules(info);
 }
 
-class OpenCLCustomHbondForceInfo : public OpenCLForceInfo {
+class OpenCLCalcCustomHbondForceKernel::ForceInfo : public OpenCLForceInfo {
 public:
-    OpenCLCustomHbondForceInfo(int requiredBuffers, const CustomHbondForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {
+    ForceInfo(int requiredBuffers, const CustomHbondForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {
     }
     bool areParticlesIdentical(int particle1, int particle2) {
         return true;
@@ -4645,7 +4633,8 @@ void OpenCLCalcCustomHbondForceKernel::initialize(const System& system, const Cu
         maxBuffers = max(maxBuffers, donorBufferCounter[i]);
     for (int i = 0; i < (int) acceptorBufferCounter.size(); i++)
         maxBuffers = max(maxBuffers, acceptorBufferCounter[i]);
-    cl.addForce(new OpenCLCustomHbondForceInfo(maxBuffers, force));
+    info = new ForceInfo(maxBuffers, force);
+    cl.addForce(info);
 
     // Record exclusions.
 
@@ -5006,12 +4995,12 @@ void OpenCLCalcCustomHbondForceKernel::copyParametersToContext(ContextImpl& cont
     
     // Mark that the current reordering may be invalid.
     
-    cl.invalidateMolecules();
+    cl.invalidateMolecules(info);
 }
 
-class OpenCLCustomCentroidBondForceInfo : public OpenCLForceInfo {
+class OpenCLCalcCustomCentroidBondForceKernel::ForceInfo : public OpenCLForceInfo {
 public:
-    OpenCLCustomCentroidBondForceInfo(const CustomCentroidBondForce& force) : OpenCLForceInfo(0), force(force) {
+    ForceInfo(const CustomCentroidBondForce& force) : OpenCLForceInfo(0), force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumBonds();
@@ -5079,7 +5068,8 @@ void OpenCLCalcCustomCentroidBondForceKernel::initialize(const System& system, c
         return;
     if (!cl.getSupports64BitGlobalAtomics())
         throw OpenMMException("CustomCentroidBondForce requires a device that supports 64 bit atomic operations");
-    cl.addForce(new OpenCLCustomCentroidBondForceInfo(force));
+    info = new ForceInfo(force);
+    cl.addForce(info);
     
     // Record the groups.
     
@@ -5468,12 +5458,12 @@ void OpenCLCalcCustomCentroidBondForceKernel::copyParametersToContext(ContextImp
     
     // Mark that the current reordering may be invalid.
     
-    cl.invalidateMolecules();
+    cl.invalidateMolecules(info);
 }
 
-class OpenCLCustomCompoundBondForceInfo : public OpenCLForceInfo {
+class OpenCLCalcCustomCompoundBondForceKernel::ForceInfo : public OpenCLForceInfo {
 public:
-    OpenCLCustomCompoundBondForceInfo(const CustomCompoundBondForce& force) : OpenCLForceInfo(0), force(force) {
+    ForceInfo(const CustomCompoundBondForce& force) : OpenCLForceInfo(0), force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumBonds();
@@ -5524,7 +5514,8 @@ void OpenCLCalcCustomCompoundBondForceKernel::initialize(const System& system, c
             paramVector[i][j] = (cl_float) parameters[j];
     }
     params->setParameterValues(paramVector);
-    cl.addForce(new OpenCLCustomCompoundBondForceInfo(force));
+    info = new ForceInfo(force);
+    cl.addForce(info);
 
     // Record the tabulated functions.
 
@@ -5782,12 +5773,12 @@ void OpenCLCalcCustomCompoundBondForceKernel::copyParametersToContext(ContextImp
     
     // Mark that the current reordering may be invalid.
     
-    cl.invalidateMolecules();
+    cl.invalidateMolecules(info);
 }
 
-class OpenCLCustomManyParticleForceInfo : public OpenCLForceInfo {
+class OpenCLCalcCustomManyParticleForceKernel::ForceInfo : public OpenCLForceInfo {
 public:
-    OpenCLCustomManyParticleForceInfo(const CustomManyParticleForce& force) : OpenCLForceInfo(0), force(force) {
+    ForceInfo(const CustomManyParticleForce& force) : OpenCLForceInfo(0), force(force) {
     }
     bool areParticlesIdentical(int particle1, int particle2) {
         vector<double> params1, params2;
@@ -5874,7 +5865,8 @@ void OpenCLCalcCustomManyParticleForceKernel::initialize(const System& system, c
             paramVector[i][j] = (float) parameters[j];
     }
     params->setParameterValues(paramVector);
-    cl.addForce(new OpenCLCustomManyParticleForceInfo(force));
+    info = new ForceInfo(force);
+    cl.addForce(info);
 
     // Record the tabulated functions.
 
@@ -6448,12 +6440,12 @@ void OpenCLCalcCustomManyParticleForceKernel::copyParametersToContext(ContextImp
     
     // Mark that the current reordering may be invalid.
     
-    cl.invalidateMolecules();
+    cl.invalidateMolecules(info);
 }
 
-class OpenCLGayBerneForceInfo : public OpenCLForceInfo {
+class OpenCLCalcGayBerneForceKernel::ForceInfo : public OpenCLForceInfo {
 public:
-    OpenCLGayBerneForceInfo(int requiredBuffers, const GayBerneForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {
+    ForceInfo(int requiredBuffers, const GayBerneForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {
     }
     bool areParticlesIdentical(int particle1, int particle2) {
         int xparticle1, yparticle1;
@@ -6665,7 +6657,8 @@ void OpenCLCalcGayBerneForceKernel::initialize(const System& system, const GayBe
     neighborsKernel = cl::Kernel(program, "findNeighbors");
     forceKernel = cl::Kernel(program, "computeForce");
     torqueKernel = cl::Kernel(program, "applyTorques");
-    cl.addForce(new OpenCLGayBerneForceInfo(cl.getNonbondedUtilities().getNumForceBuffers(), force));
+    info = new ForceInfo(cl.getNonbondedUtilities().getNumForceBuffers(), force);
+    cl.addForce(info);
     cl.addReorderListener(new ReorderListener(*this));
 }
 
@@ -6816,7 +6809,7 @@ void OpenCLCalcGayBerneForceKernel::copyParametersToContext(ContextImpl& context
         }
         exceptionParams->upload(exceptionParamsVec);
     }
-    cl.invalidateMolecules();
+    cl.invalidateMolecules(info);
     sortAtoms();
 }
 

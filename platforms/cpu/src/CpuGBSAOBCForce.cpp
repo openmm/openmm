@@ -1,4 +1,4 @@
-/* Portions copyright (c) 2006-2016 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2017 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -35,16 +35,6 @@ using namespace OpenMM;
 const int CpuGBSAOBCForce::NUM_TABLE_POINTS = 4096;
 const float CpuGBSAOBCForce::TABLE_MIN = 0.25f;
 const float CpuGBSAOBCForce::TABLE_MAX = 1.5f;
-
-class CpuGBSAOBCForce::ComputeTask : public ThreadPool::Task {
-public:
-    ComputeTask(CpuGBSAOBCForce& owner) : owner(owner) {
-    }
-    void execute(ThreadPool& threads, int threadIndex) {
-        owner.threadComputeForce(threads, threadIndex);
-    }
-    CpuGBSAOBCForce& owner;
-};
 
 CpuGBSAOBCForce::CpuGBSAOBCForce() : cutoff(false), periodic(false) {
     logDX = (TABLE_MAX-TABLE_MIN)/NUM_TABLE_POINTS;
@@ -110,9 +100,8 @@ void CpuGBSAOBCForce::computeForce(const AlignedArray<float>& posq, vector<Align
     
     // Signal the threads to start running and wait for them to finish.
     
-    ComputeTask task(*this);
     gmx_atomic_set(&counter, 0);
-    threads.execute(task);
+    threads.execute([&] (ThreadPool& threads, int threadIndex) { threadComputeForce(threads, threadIndex); });
     threads.waitForThreads(); // Compute Born radii
     gmx_atomic_set(&counter, 0);
     threads.resumeThreads();

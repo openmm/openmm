@@ -284,8 +284,11 @@ vector<Vec3> setupWaterDimer(System& system,  AmoebaMultipoleForce* amoebaMultip
 
 static void check_finite_differences(vector<Vec3> analytic_forces, Context &context, vector<Vec3> positions)
 {
-    // Take a small step in the direction of the energy gradient and see whether the potential energy changes by the expected amount.
+    double tol = 1e-5;
+    // We allow more permissive testing for single precision.
+    if(Platform::getPlatformByName("CUDA").getPropertyValue(context, "Precision") != "double") tol = 5e-4;
 
+    // Take a small step in the direction of the energy gradient and see whether the potential energy changes by the expected amount.
     double norm = 0.0;
     for (int i = 0; i < (int) analytic_forces.size(); ++i)
         norm += analytic_forces[i].dot(analytic_forces[i]);
@@ -303,7 +306,7 @@ static void check_finite_differences(vector<Vec3> analytic_forces, Context &cont
     State state2 = context.getState(State::Energy);
     context.setPositions(positions3);
     State state3 = context.getState(State::Energy);
-    ASSERT_EQUAL_TOL(norm, (state2.getPotentialEnergy()-state3.getPotentialEnergy())/stepSize, 1e-4);
+    ASSERT_EQUAL_TOL(norm, (state2.getPotentialEnergy()-state3.getPotentialEnergy())/stepSize, tol);
 }
 
 
@@ -493,6 +496,8 @@ int main(int numberOfArguments, char* argv[]) {
 
     try {
         registerAmoebaCudaKernelFactories();
+        if (numberOfArguments > 1)
+            Platform::getPlatformByName("CUDA").setPropertyDefaultValue("Precision", std::string(argv[1]));
 
         /*
          * Water dimer energy / force tests under various conditions.

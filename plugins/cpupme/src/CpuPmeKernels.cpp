@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2017 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -400,16 +400,6 @@ static void interpolateForces(float* posq, float* force, float* grid, int gridx,
     }
 }
 
-class CpuCalcPmeReciprocalForceKernel::ComputeTask : public ThreadPool::Task {
-public:
-    ComputeTask(CpuCalcPmeReciprocalForceKernel& owner) : owner(owner) {
-    }
-    void execute(ThreadPool& threads, int threadIndex) {
-        owner.runWorkerThread(threads, threadIndex);
-    }
-    CpuCalcPmeReciprocalForceKernel& owner;
-};
-
 static void* threadBody(void* args) {
     CpuCalcPmeReciprocalForceKernel& owner = *reinterpret_cast<CpuCalcPmeReciprocalForceKernel*>(args);
     owner.runMainThread();
@@ -549,9 +539,8 @@ void CpuCalcPmeReciprocalForceKernel::runMainThread() {
         if (isDeleted)
             break;
         posq = io->getPosq();
-        ComputeTask task(*this);
         gmx_atomic_set(&atomicCounter, 0);
-        threads.execute(task); // Signal threads to perform charge spreading.
+        threads.execute([&] (ThreadPool& threads, int threadIndex) { runWorkerThread(threads, threadIndex); }); // Signal threads to perform charge spreading.
         threads.waitForThreads();
         threads.resumeThreads(); // Signal threads to sum the charge grids.
         threads.waitForThreads();

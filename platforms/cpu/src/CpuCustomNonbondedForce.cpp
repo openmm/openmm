@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2016 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2017 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -32,16 +32,6 @@
 
 using namespace OpenMM;
 using namespace std;
-
-class CpuCustomNonbondedForce::ComputeForceTask : public ThreadPool::Task {
-public:
-    ComputeForceTask(CpuCustomNonbondedForce& owner) : owner(owner) {
-    }
-    void execute(ThreadPool& threads, int threadIndex) {
-        owner.threadComputeForce(threads, threadIndex);
-    }
-    CpuCustomNonbondedForce& owner;
-};
 
 CpuCustomNonbondedForce::ThreadData::ThreadData(const Lepton::CompiledExpression& energyExpression, const Lepton::CompiledExpression& forceExpression,
             const vector<string>& parameterNames, const std::vector<Lepton::CompiledExpression> energyParamDerivExpressions) :
@@ -150,8 +140,7 @@ void CpuCustomNonbondedForce::calculatePairIxn(int numberOfAtoms, float* posq, v
     
     // Signal the threads to start running and wait for them to finish.
     
-    ComputeForceTask task(*this);
-    threads.execute(task);
+    threads.execute([&] (ThreadPool& threads, int threadIndex) { threadComputeForce(threads, threadIndex); });
     threads.waitForThreads();
     
     // Combine the energies from all the threads.
