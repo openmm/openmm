@@ -287,6 +287,98 @@ void testCoulombAndLJ() {
         ASSERT_EQUAL_VEC(state1.getForces()[i]+state2.getForces()[i], state3.getForces()[i], 1e-5);
 }
 
+void make_dmfbox(int natoms, double boxEdgeLength, NonbondedForce *forceField,  vector<Vec3> &positions, vector<double>& eps, vector<double>& sig,
+                   vector<pair<int, int> >& bonds, System &system, bool do_electrostatics) {
+
+    const int RESSIZE = 12;
+    const double charges[RESSIZE] = {
+        0.08, 0.43, -0.54, -0.33, -0.09, 0.09,
+        0.09, 0.09, -0.09, 0.09, 0.09, 0.09
+    };
+    const double masses[RESSIZE] = {
+        1.008, 12.011, 15.9994, 14.007, 12.011, 1.008,
+        1.008, 1.008, 12.011, 1.008, 1.008, 1.008
+    };
+    const double sigmas[RESSIZE] = {
+        0.160361769265, 0.356359487256, 0.302905564168, 0.329632525712, 0.365268474438, 0.238760856462,
+        0.238760856462, 0.238760856462, 0.365268474438, 0.238760856462, 0.238760856462, 0.238760856462
+    };
+    const double epsilons[RESSIZE] = {
+        0.19246, 0.46024, 0.50208, 0.83680, 0.32635, 0.10042,
+        0.10042, 0.10042, 0.32635, 0.10042, 0.10042, 0.10042
+    };
+    positions.clear();
+    if (natoms == 12) {
+        const double coords[12][3] = {
+            {  0.620,  0.945,  0.128 },
+            {  0.560,  0.905,  0.045 },
+            {  0.502,  0.987, -0.026 },
+            {  0.556,  0.770,  0.028 },
+            {  0.643,  0.685,  0.106 },
+            {  0.680,  0.741,  0.193 },
+            {  0.729,  0.653,  0.045 },
+            {  0.587,  0.597,  0.140 },
+            {  0.477,  0.708, -0.072 },
+            {  0.377,  0.688, -0.032 },
+            {  0.524,  0.614, -0.102 },
+            {  0.468,  0.775, -0.158 }
+        };
+        for (int atom = 0; atom < natoms; ++atom)
+            positions.push_back(Vec3(coords[atom][0], coords[atom][1], coords[atom][2]));
+    }
+    else
+        throw exception();
+
+    system.setDefaultPeriodicBoxVectors(Vec3(boxEdgeLength, 0, 0),
+                                        Vec3(0, boxEdgeLength, 0),
+                                        Vec3(0, 0, boxEdgeLength));
+    sig.clear();
+    eps.clear();
+    bonds.clear();
+    for (int atom = 0; atom < natoms; ++atom) {
+        system.addParticle(masses[atom%RESSIZE]);
+        double sigma = sigmas[atom%RESSIZE];
+        double epsilon = epsilons[atom%RESSIZE];
+        sig.push_back(sigma);
+        eps.push_back(epsilon);
+        if (atom%RESSIZE == 0) {
+            int offset = atom-1;
+            bonds.push_back(pair<int, int>(offset+1, offset+ 2));
+            bonds.push_back(pair<int, int>(offset+2, offset+ 3));
+            bonds.push_back(pair<int, int>(offset+2, offset+ 4));
+            bonds.push_back(pair<int, int>(offset+4, offset+ 5));
+            bonds.push_back(pair<int, int>(offset+4, offset+ 9));
+            bonds.push_back(pair<int, int>(offset+5, offset+ 6));
+            bonds.push_back(pair<int, int>(offset+5, offset+ 7));
+            bonds.push_back(pair<int, int>(offset+5, offset+ 8));
+            bonds.push_back(pair<int, int>(offset+9, offset+10));
+            bonds.push_back(pair<int, int>(offset+9, offset+11));
+            bonds.push_back(pair<int, int>(offset+9, offset+12));
+        }
+        double charge = do_electrostatics ? charges[atom] : 0;
+        forceField->addParticle(charge, sigma, epsilon);
+    }
+    // Make exceptions and replacement 1-4 parameters
+    forceField->createExceptionsFromBonds(bonds, 1.0, 1.0);
+    int nres = natoms / RESSIZE;
+    double newqq = do_electrostatics ? charges[8]*charges[8] : 0.0;
+    double newsig = 0.293996576986;
+    double neweps = 0.144938011577;
+    for(int i = 0; i < forceField->getNumExceptions(); ++i){
+        for(int res = 0; res < nres; ++res){
+            int particle1, particle2;
+            double chargeProd, sigma, epsilon;
+            forceField->getExceptionParameters(i, particle1, particle2, chargeProd, sigma, epsilon);
+            if((particle1 == res+2 && particle2 == res+8) ||
+               (particle1 == res+8 && particle2 == res+2) ||
+               (particle1 == res+2 && particle2 == res+4) ||
+               (particle1 == res+4 && particle2 == res+2))
+                forceField->setExceptionParameters(i, particle1, particle2, newqq, newsig, neweps);
+        }
+    }
+}
+
+
 void make_waterbox(int natoms, double boxEdgeLength, NonbondedForce *forceField,  vector<Vec3> &positions, vector<double>& eps, vector<double>& sig,
                    vector<pair<int, int> >& bonds, System &system, bool do_electrostatics) {
     const int RESSIZE = 3;
@@ -869,6 +961,255 @@ void testWater2DpmeEnergiesForcesNoExclusions() {
 }
 
 
+void testDMFDpmeEnergiesForcesWithExclusions() {
+    const double cutoff = 7.0*OpenMM::NmPerAngstrom;
+    const double alpha = 4.0124063605;
+    const double dalpha = 4.0124063605;
+    const int grid = 32;
+    NonbondedForce* forceField = new NonbondedForce();
+
+    vector<Vec3> positions;
+    vector<double> epsvals;
+    vector<double> sigvals;
+    vector<pair<int, int> > bonds;
+    System system;
+
+    const int numAtoms = 12;
+    double boxEdgeLength = 20*OpenMM::NmPerAngstrom;
+
+    make_dmfbox(numAtoms, boxEdgeLength, forceField,  positions, epsvals, sigvals, bonds, system, false);
+
+    forceField->setNonbondedMethod(OpenMM::NonbondedForce::LJPME);
+    forceField->setPMEParameters(alpha, grid, grid, grid);
+    forceField->setLJPMEParameters(dalpha, grid, grid, grid);
+    forceField->setCutoffDistance(cutoff);
+    forceField->setUseSwitchingFunction(false);
+    forceField->setUseDispersionCorrection(false);
+
+    forceField->setReactionFieldDielectric(1.0);
+    system.addForce(forceField);
+
+    VerletIntegrator integrator(0.01);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+
+    double refenergy = 1.29545e+01;
+    vector<Vec3> refforces(12);
+//Gromacs reference values from the following inputs
+//------------------------------------------------
+// dmf.mdp
+//------------------------------------------------
+//rvdw             = 0.7
+//vdw-modifier     = Potential-Shift
+//rlist            = 0.9
+//rcoulomb         = 0.7
+//nstfout          = 1
+//fourierspacing   = 0.0625
+//pme-order        = 5
+//ewald-rtol       = 1.5E-2
+//ewald-rtol-lj    = 1.5E-2
+//vdwtype          = PME
+//lj-pme-comb-rule = geometric
+//continuation     = yes
+//------------------------------------------------
+// dmf.gro
+//------------------------------------------------
+//Guyana Rwanda Oman Macau Angola Cameroon Senegal
+//   12
+//  101DMF     HA    1   0.620   0.945   0.128
+//  101DMF      C    2   0.560   0.905   0.045
+//  101DMF      O    3   0.502   0.987  -0.026
+//  101DMF      N    4   0.556   0.770   0.028
+//  101DMF     CC    5   0.643   0.685   0.106
+//  101DMF    HC1    6   0.680   0.741   0.193
+//  101DMF    HC2    7   0.729   0.653   0.045
+//  101DMF    HC3    8   0.587   0.597   0.140
+//  101DMF     CT    9   0.477   0.708  -0.072
+//  101DMF    HT1   10   0.377   0.688  -0.032
+//  101DMF    HT2   11   0.524   0.614  -0.102
+//  101DMF    HT3   12   0.468   0.775  -0.158
+//   2.00000   2.00000   2.00000
+//------------------------------------------------
+// dmf.top
+//------------------------------------------------
+//[ defaults ]
+//; nbfunc	comb-rule	gen-pairs	fudgeLJ	fudgeQQ
+//1	2	yes	1.0	1.0
+//
+//[ atomtypes ]
+//HGR52     1     1.008000    0.000  A  0.160361769265  0.19246
+//CG2O1     6    12.011000    0.000  A  0.356359487256  0.46024
+//OG2D1     8    15.999400    0.000  A  0.302905564168  0.50208
+//NG2S0     7    14.007000    0.000  A  0.329632525712  0.83680
+//CG331     6    12.011000    0.000  A  0.365268474438  0.32635
+// HGA3     1     1.008000    0.000  A  0.238760856462  0.10042
+//
+//[ pairtypes ]
+//OG2D1 CG331  1  0.293996576986  0.144938011577
+//
+//[ bondtypes ]
+//;      i        j  func           b0           kb
+//   CG2O1    HGR52     1   0.11000000    0.0000000000
+//   CG2O1    OG2D1     1   0.12300000    0.0000000000
+//   CG2O1    NG2S0     1   0.13500000    0.0000000000
+//   CG331    NG2S0     1   0.14340000    0.0000000000
+//   CG331     HGA3     1   0.11110000    0.0000000000
+//
+//[ angletypes ]
+//;      i        j        k  func       theta0       ktheta          ub0          kub
+//    HGA3    CG331     HGA3     5   108.400000 0.0000000000000   0.18020000  0.0000000
+//   NG2S0    CG331     HGA3     5   105.000000 0.0000000000000   0.00000000  0.0000000
+//   CG331    NG2S0    CG331     5   121.000000 0.0000000000000   0.00000000  0.0000000
+//   CG2O1    NG2S0    CG331     5   119.500000 0.0000000000000   0.00000000  0.0000000
+//   NG2S0    CG2O1    OG2D1     5   124.000000 0.0000000000000   0.00000000  0.0000000
+//   NG2S0    CG2O1    HGR52     5   115.000000 0.0000000000000   0.00000000  0.0000000
+//   OG2D1    CG2O1    HGR52     5   122.000000 0.0000000000000   0.00000000  0.0000000
+//
+//[ dihedraltypes ]
+//;      i        j        k        l  func         phi0         kphi  mult
+//   OG2D1    CG2O1    NG2S0    CG331     9   180.000000   0.00000000     2
+//   HGR52    CG2O1    NG2S0    CG331     9   180.000000   0.00000000     2
+//    HGA3    CG331    NG2S0    CG331     9     0.000000   0.00000000     3
+//    HGA3    CG331    NG2S0    CG2O1     9     0.000000   0.00000000     3
+//
+//[ dihedraltypes ]
+//; 'improper' dihedrals 
+//;      i        j        k        l  func         phi0         kphi
+//   CG2O1    NG2S0    OG2D1    HGR52     2     0.000000 0.0000000
+//
+//[ moleculetype ]
+//; Name            nrexcl
+//DMF       3
+//
+//[ atoms ]
+//;   nr       type  resnr residue  atom   cgnr     charge       mass  typeB    chargeB      massB
+//; residue 101 DMF rtp DMF  q  0.0
+//     1      HGR52    101    DMF     HA      1    0.00      1.008   ; qtot 0.00
+//     2      CG2O1    101    DMF      C      2    0.00     12.011   ; qtot 0.00
+//     3      OG2D1    101    DMF      O      3    0.00    15.9994   ; qtot 0.00
+//     4      NG2S0    101    DMF      N      4    0.00     14.007   ; qtot 0.00
+//     5      CG331    101    DMF     CC      5    0.00     12.011   ; qtot 0.00
+//     6       HGA3    101    DMF    HC1      6    0.00      1.008   ; qtot 0.00
+//     7       HGA3    101    DMF    HC2      7    0.00      1.008   ; qtot 0.00
+//     8       HGA3    101    DMF    HC3      8    0.00      1.008   ; qtot 0.00
+//     9      CG331    101    DMF     CT      9    0.00     12.011   ; qtot 0.00
+//    10       HGA3    101    DMF    HT1     10    0.00      1.008   ; qtot 0.00
+//    11       HGA3    101    DMF    HT2     11    0.00      1.008   ; qtot 0.00
+//    12       HGA3    101    DMF    HT3     12    0.00      1.008   ; qtot 0
+//
+//[ bonds ]
+//;  ai    aj funct            c0            c1            c2            c3
+//    1     2     1 
+//    2     3     1 
+//    2     4     1 
+//    4     5     1 
+//    4     9     1 
+//    5     6     1 
+//    5     7     1 
+//    5     8     1 
+//    9    10     1 
+//    9    11     1 
+//    9    12     1 
+//
+//[ pairs ]
+//;  ai    aj funct            c0            c1            c2            c3
+//    1     5     1 
+//    1     9     1 
+//    2     6     1 
+//    2     7     1 
+//    2     8     1 
+//    2    10     1 
+//    2    11     1 
+//    2    12     1 
+//    3     5     1 
+//    3     9     1 
+//    5    10     1 
+//    5    11     1 
+//    5    12     1 
+//    6     9     1 
+//    7     9     1 
+//    8     9     1 
+//
+//[ angles ]
+//;  ai    aj    ak funct            c0            c1            c2            c3
+//    1     2     3     5 
+//    1     2     4     5 
+//    3     2     4     5 
+//    2     4     5     5 
+//    2     4     9     5 
+//    5     4     9     5 
+//    4     5     6     5 
+//    4     5     7     5 
+//    4     5     8     5 
+//    6     5     7     5 
+//    6     5     8     5 
+//    7     5     8     5 
+//    4     9    10     5 
+//    4     9    11     5 
+//    4     9    12     5 
+//   10     9    11     5 
+//   10     9    12     5 
+//   11     9    12     5 
+//
+//[ dihedrals ]
+//;  ai    aj    ak    al funct            c0            c1            c2            c3            c4            c5
+//    1     2     4     5     9 
+//    1     2     4     9     9 
+//    3     2     4     5     9 
+//    3     2     4     9     9 
+//    2     4     5     6     9 
+//    2     4     5     7     9 
+//    2     4     5     8     9 
+//    9     4     5     6     9 
+//    9     4     5     7     9 
+//    9     4     5     8     9 
+//    2     4     9    10     9 
+//    2     4     9    11     9 
+//    2     4     9    12     9 
+//    5     4     9    10     9 
+//    5     4     9    11     9 
+//    5     4     9    12     9 
+//
+//[ dihedrals ]
+//;  ai    aj    ak    al funct            c0            c1            c2            c3
+//    1     3     4     2     2 
+//
+//[ system ]
+//; Name
+//DMF Monomer
+//
+//[ molecules ]
+//; Compound        #mols
+//DMF       1
+//
+//
+//run commands:-
+//gmx_d grompp -c dmf.gro -p dmf.top -f dmf.mdp -o run.tpr
+//gmx_d mdrun -s run.tpr -o traj.trr -pforce 1E-16 -debug
+//gmx_d dump -f traj.trr
+
+    // Gromacs reference values.  See inputs above.
+    refforces[ 0] = Vec3(-3.19942e+00,  2.19766e+01,  2.72861e-01);
+    refforces[ 1] = Vec3(-5.22879e+01,  2.82006e+02, -6.86534e+00);
+    refforces[ 2] = Vec3( 1.23583e+01,  7.31235e+01,  4.08375e+01);
+    refforces[ 3] = Vec3(-1.28656e-03,  1.14097e-03,  4.07527e-04);
+    refforces[ 4] = Vec3( 1.51942e+02,  5.65684e+01,  2.41818e+02);
+    refforces[ 5] = Vec3( 1.20290e+02, -1.65176e+02,  1.48309e+02);
+    refforces[ 6] = Vec3( 4.57022e+01, -1.65198e+01,  1.88824e+01);
+    refforces[ 7] = Vec3( 5.57228e+01, -5.68770e+01,  1.09979e+02);
+    refforces[ 8] = Vec3(-9.58422e+01,  4.41982e+01, -1.27887e+02);
+    refforces[ 9] = Vec3(-2.59754e+01, -1.42402e+01, -1.23475e+01);
+    refforces[10] = Vec3(-1.37259e+02, -7.97690e+01, -2.39814e+02);
+    refforces[11] = Vec3(-7.14520e+01, -1.45287e+02, -1.73189e+02);
+
+    State state = context.getState(State::Forces | State::Energy);
+    double energy = state.getPotentialEnergy();
+    const vector<Vec3>& forces = state.getForces();
+
+    ASSERT_EQUAL_TOL(refenergy, energy, 1E-4);
+    for (int n = 0; n < numAtoms; ++n)
+        ASSERT_EQUAL_VEC(refforces[n], forces[n], 1E-4);
+}
 void testWater2DpmeEnergiesForcesWithExclusions() {
     const double cutoff = 7.0*OpenMM::NmPerAngstrom;
     const double alpha = 4.0124063605;
@@ -1924,6 +2265,7 @@ void runPlatformTests();
 int main(int argc, char* argv[]) {
     try {
         initializeTests(argc, argv);
+        testDMFDpmeEnergiesForcesWithExclusions();
         testConvergence();
         testErrorTolerance();
         testPMEParameters();
