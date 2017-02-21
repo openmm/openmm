@@ -43,6 +43,7 @@
 #include "sfmt/SFMT.h"
 #include <iostream>
 #include <vector>
+#include <algorithm>
 
 using namespace OpenMM;
 using namespace std;
@@ -68,7 +69,7 @@ void testConvergence() {
             double minDist = boxWidth;
             for (int j = 0; j < i; j++) {
                 Vec3 delta = pos-positions[j];
-                minDist = min(minDist, sqrt(delta.dot(delta)));
+                minDist = std::min(minDist, sqrt(delta.dot(delta)));
             }
             if (minDist > 0.15) {
                 positions[i] = pos;
@@ -120,7 +121,7 @@ void testErrorTolerance() {
             double minDist = boxWidth;
             for (int j = 0; j < i; j++) {
                 Vec3 delta = pos-positions[j];
-                minDist = min(minDist, sqrt(delta.dot(delta)));
+                minDist = std::min(minDist, sqrt(delta.dot(delta)));
             }
             if (minDist > 0.1) {
                 positions[i] = pos;
@@ -251,7 +252,7 @@ void testCoulombAndLJ() {
             double minDist = boxWidth;
             for (int j = 0; j < i; j++) {
                 Vec3 delta = pos-positions[j];
-                minDist = min(minDist, sqrt(delta.dot(delta)));
+                minDist = std::min(minDist, sqrt(delta.dot(delta)));
             }
             if (minDist > 0.1) {
                 positions[i] = pos;
