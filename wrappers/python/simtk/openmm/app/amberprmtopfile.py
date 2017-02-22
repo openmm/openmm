@@ -169,7 +169,7 @@ class AmberPrmtopFile(object):
         ----------
         nonbondedMethod : object=NoCutoff
             The method to use for nonbonded interactions.  Allowed values are
-            NoCutoff, CutoffNonPeriodic, CutoffPeriodic, Ewald, or PME.
+            NoCutoff, CutoffNonPeriodic, CutoffPeriodic, Ewald, PME, or LJPME.
         nonbondedCutoff : distance=1*nanometer
             The cutoff distance to use for nonbonded interactions
         constraints : object=None
@@ -202,7 +202,7 @@ class AmberPrmtopFile(object):
             added to a hydrogen is subtracted from the heavy atom to keep their
             total mass the same.
         ewaldErrorTolerance : float=0.0005
-            The error tolerance to use if nonbondedMethod is Ewald or PME.
+            The error tolerance to use if nonbondedMethod is Ewald, PME, or LJPME.
         switchDistance : float=0*nanometers
             The distance at which the potential energy switching function is
             turned on for Lennard-Jones interactions. If the switchDistance is 0
@@ -222,10 +222,11 @@ class AmberPrmtopFile(object):
                      ff.CutoffNonPeriodic:'CutoffNonPeriodic',
                      ff.CutoffPeriodic:'CutoffPeriodic',
                      ff.Ewald:'Ewald',
-                     ff.PME:'PME'}
+                     ff.PME:'PME',
+                     ff.LJPME:'LJPME'}
         if nonbondedMethod not in methodMap:
             raise ValueError('Illegal value for nonbonded method')
-        if not self._prmtop.getIfBox() and nonbondedMethod in (ff.CutoffPeriodic, ff.Ewald, ff.PME):
+        if not self._prmtop.getIfBox() and nonbondedMethod in (ff.CutoffPeriodic, ff.Ewald, ff.PME, ff.LJPME):
             raise ValueError('Illegal nonbonded method for a non-periodic system')
         constraintMap = {None:None,
                          ff.HBonds:'h-bonds',

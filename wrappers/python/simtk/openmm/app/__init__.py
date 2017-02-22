@@ -40,6 +40,7 @@ CutoffNonPeriodic = forcefield.CutoffNonPeriodic
 CutoffPeriodic = forcefield.CutoffPeriodic
 Ewald = forcefield.Ewald
 PME = forcefield.PME
+LJPME = forcefield.LJPME
 
 HBonds = forcefield.HBonds
 AllBonds = forcefield.AllBonds

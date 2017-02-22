@@ -88,11 +88,25 @@ protected:
        * Compute a fast approximation to erfc(x).
        */
       fvec4 erfcApprox(const fvec4& x);
-      
+
       /**
        * Evaluate the scale factor used with Ewald and PME: erfc(alpha*r) + 2*alpha*r*exp(-alpha*alpha*r*r)/sqrt(PI)
        */
       fvec4 ewaldScaleFunction(const fvec4& x);
+
+      /**
+       * Compute a fast approximation to (1.0 - EXP(-dar^2) * (1.0 + dar^2 + 0.5*dar^4))
+       * where dar = (dispersionAlpha * R)
+       * needed for LJPME energies.
+       */
+      fvec4 exptermsApprox(const fvec4& R);
+
+      /**
+       * Compute a fast approximation to (1.0 - EXP(-dar^2) * (1.0 + dar^2 + 0.5*dar^4 + dar^6/6.0))
+       * where dar = (dispersionAlpha * R)
+       * needed for LJPME forces.
+       */
+      fvec4 dExptermsApprox(const fvec4& R);
 };
 
 } // namespace OpenMM

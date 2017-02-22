@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2016 Stanford University and the Authors.           *
+ * Portions copyright (c) 2016-2017 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -43,17 +43,6 @@
 
 using namespace OpenMM;
 using namespace std;
-
-class CpuGayBerneForce::ComputeTask : public ThreadPool::Task {
-public:
-    ComputeTask(CpuGayBerneForce& owner, CpuNeighborList* neighborList) : owner(owner), neighborList(neighborList) {
-    }
-    void execute(ThreadPool& threads, int threadIndex) {
-        owner.threadComputeForce(threads, threadIndex, neighborList);
-    }
-    CpuGayBerneForce& owner;
-    CpuNeighborList* neighborList;
-};
 
 CpuGayBerneForce::CpuGayBerneForce(const GayBerneForce& force) {
     // Record the force parameters.
@@ -137,8 +126,7 @@ double CpuGayBerneForce::calculateForce(const vector<Vec3>& positions, std::vect
     
     // Signal the threads to compute the pairwise interactions.
     
-    ComputeTask task(*this, data.neighborList);
-    threads.execute(task);
+    threads.execute([&] (ThreadPool& threads, int threadIndex) { threadComputeForce(threads, threadIndex, data.neighborList); });
     threads.waitForThreads();
     
     // Signal the threads to compute exceptions.

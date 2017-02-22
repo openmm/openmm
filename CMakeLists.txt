@@ -21,38 +21,17 @@ IF( NOT PROJECT_NAME )
     PROJECT (OpenMM)
 ENDIF( NOT PROJECT_NAME )
 
-CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
-if("${CMAKE_VERSION}" VERSION_GREATER "3.0" OR "${CMAKE_VERSION}" VERSION_EQUAL "3.0")
-    CMAKE_POLICY(SET CMP0042 OLD)
-endif()
+CMAKE_MINIMUM_REQUIRED(VERSION 3.1)
+CMAKE_POLICY(SET CMP0042 OLD)
+CMAKE_POLICY(SET CMP0003 NEW)
+CMAKE_POLICY(SET CMP0005 NEW)
+CMAKE_POLICY(SET CMP0011 NEW)
 
-#SET(CMAKE_VERBOSE_MAKEFILE 1)
-
-# CMake 2.4 on dart server only needs to know about Dart
 INCLUDE(Dart)
 MARK_AS_ADVANCED(DART_ROOT)
 
-# Avoid dart server problem with cmake 2.4 --cmb
-set(cmv "${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}")
-IF(NOT cmv EQUAL "2.4") # This whole file...
-
 # We have custom cmake modules for FindOpenMM and running python tests
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake_modules")
-
-# Older cmake versions do not have cmake_policy command
-# Cmake 2.4.5, the default cmake on red hat linux, has the
-# cmake_policy command, but it does not work
-# "if(POLICY ..." does not work with cmake 2.4.[56] on red hat
-# (cmake 2.4.7 is OK)
-if(COMMAND cmake_policy)
-    if(CMAKE_MAJOR_VERSION GREATER 2 OR CMAKE_MINOR_VERSION GREATER 5)
-        cmake_policy(SET CMP0003 NEW)
-        cmake_policy(SET CMP0005 NEW)
-    endif(CMAKE_MAJOR_VERSION GREATER 2 OR CMAKE_MINOR_VERSION GREATER 5)
-    if(CMAKE_MAJOR_VERSION GREATER 2 OR CMAKE_MINOR_VERSION GREATER 6 OR CMAKE_PATCH_VERSION GREATER 2)
-        cmake_policy(SET CMP0011 NEW)
-    endif(CMAKE_MAJOR_VERSION GREATER 2 OR CMAKE_MINOR_VERSION GREATER 6 OR CMAKE_PATCH_VERSION GREATER 2)
-endif(COMMAND cmake_policy)
 
 # Where to install
 IF(WIN32)
@@ -69,6 +48,9 @@ IF(WIN32)
     ADD_DEFINITIONS(-DWIN32)
 ENDIF(WIN32)
 
+# What type of libraries to build
+SET(OPENMM_BUILD_SHARED_LIB ON CACHE BOOL "Whether to build shared OpenMM libraries")
+SET(OPENMM_BUILD_STATIC_LIB OFF CACHE BOOL "Whether to build static OpenMM libraries")
 
 # Include CPU-Features for Android
 IF (ANDROID)
@@ -98,22 +80,7 @@ ELSE(WIN32)
     ENDIF (NOT ANDROID)
 ENDIF(WIN32)
 
-# The build system will set ARCH64 for 64 bit builds, which require
-# use of the lib64/ library directories rather than lib/.
-#SET( ARCH64 OFF CACHE BOOL "ON for 64bit builds, OFF for 32bit builds")
-#MARK_AS_ADVANCED( ARCH64  )
-#IF (ARCH64)
-#    SET(LIB64 64)
-#ELSE (ARCH64)
-#    SET(LIB64) # nothing
-#ENDIF (ARCH64)
-
-IF( CMAKE_SIZEOF_VOID_P EQUAL 8 )
-  SET( LIB64 64 )
-ELSE( CMAKE_SIZEOF_VOID_P EQUAL 8 )
-  SET( LIB64  )
-ENDIF( CMAKE_SIZEOF_VOID_P EQUAL 8 )
-
+SET (CMAKE_CXX_STANDARD 11)
 
 IF (APPLE AND (NOT PNACL))
     # Build 64 bit binaries compatible with OS X 10.7
@@ -177,36 +144,10 @@ SET(OPENMM_MAJOR_VERSION 7)
 SET(OPENMM_MINOR_VERSION 1)
 SET(OPENMM_BUILD_VERSION 0)
 
-SET(OPENMM_COPYRIGHT_YEARS "2008-2015")
-
-# underbar separated list of dotted authors, no spaces or commas
-SET(OPENMM_AUTHORS "Peter.Eastman")
-
 ADD_DEFINITIONS(-DOPENMM_LIBRARY_NAME=${OPENMM_LIBRARY_NAME}
                 -DOPENMM_MAJOR_VERSION=${OPENMM_MAJOR_VERSION}
                 -DOPENMM_MINOR_VERSION=${OPENMM_MINOR_VERSION}
                 -DOPENMM_BUILD_VERSION=${OPENMM_BUILD_VERSION})
-
-# CMake quotes automatically when building Visual Studio projects but we need
-# to add them ourselves for Linux or Cygwin. Two cases to avoid duplicate quotes
-# in Visual Studio which end up in the binary.
-
-IF (MSVC)
-   SET(NEED_QUOTES FALSE)
-ELSE (MSVC)
-   SET(NEED_QUOTES TRUE)
-ENDIF (MSVC)
-
-##TODO: doesn't work without quotes in nightly build
-SET(NEED_QUOTES TRUE)
-
-IF(NEED_QUOTES)
-   ADD_DEFINITIONS(-DOPENMM_COPYRIGHT_YEARS="${OPENMM_COPYRIGHT_YEARS}"
-                   -DOPENMM_AUTHORS="${OPENMM_AUTHORS}")
-ELSE(NEED_QUOTES)
-   ADD_DEFINITIONS(-DOPENMM_COPYRIGHT_YEARS=${OPENMM_COPYRIGHT_YEARS}
-                   -DOPENMM_AUTHORS=${OPENMM_AUTHORS})
-ENDIF(NEED_QUOTES)
 
 # -DOPENMM_TYPE has to be defined in the target subdirectories.
 # -Dsimbody_EXPORTS defined automatically when Windows DLL build is being done.
@@ -283,7 +224,7 @@ IF (ANDROID OR PNACL)
 ELSE (ANDROID OR PNACL)
     SET_SOURCE_FILES_PROPERTIES(${CMAKE_SOURCE_DIR}/libraries/sfmt/src/SFMT.cpp PROPERTIES COMPILE_FLAGS "-DHAVE_SSE2=1")
 ENDIF(ANDROID OR PNACL)
-IF (NOT (ANDROID OR PNACL))
+IF (NOT (ANDROID OR PNACL OR (WIN32 AND OPENMM_BUILD_STATIC_LIB)))
     FILE(GLOB src_files ${CMAKE_CURRENT_SOURCE_DIR}/libraries/asmjit/*/*.cpp)
     FILE(GLOB incl_files ${CMAKE_CURRENT_SOURCE_DIR}/libraries/asmjit/*.h)
     SET(SOURCE_FILES ${SOURCE_FILES} ${src_files})
@@ -302,8 +243,6 @@ ENDIF(OPENMM_BUILD_C_AND_FORTRAN_WRAPPERS)
 
 INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-SET(OPENMM_BUILD_SHARED_LIB ON CACHE BOOL "Whether to build shared OpenMM libraries")
-
 SET(EXTRA_LINK_FLAGS ${EXTRA_COMPILE_FLAGS})
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
     IF (NOT ANDROID)
@@ -319,7 +258,6 @@ IF(OPENMM_BUILD_SHARED_LIB)
     SET_TARGET_PROPERTIES(${SHARED_TARGET} PROPERTIES LINK_FLAGS "${EXTRA_LINK_FLAGS}" COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS} -DOPENMM_BUILDING_SHARED_LIBRARY -DLEPTON_BUILDING_SHARED_LIBRARY -DPTHREAD_BUILDING_SHARED_LIBRARY")
 ENDIF(OPENMM_BUILD_SHARED_LIB)
 
-SET(OPENMM_BUILD_STATIC_LIB OFF CACHE BOOL "Whether to build static OpenMM libraries")
 IF(OPENMM_BUILD_STATIC_LIB)
     ADD_LIBRARY(${STATIC_TARGET} STATIC ${SOURCE_FILES} ${SOURCE_INCLUDE_FILES} ${API_ABS_INCLUDE_FILES})
     SET(EXTRA_COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS} -DOPENMM_USE_STATIC_LIBRARIES -DLEPTON_USE_STATIC_LIBRARIES -DPTW32_STATIC_LIB")
@@ -363,63 +301,19 @@ IF(BUILD_TESTING AND OPENMM_BUILD_REFERENCE_TESTS)
     ADD_SUBDIRECTORY(platforms/reference/tests)
 ENDIF(BUILD_TESTING AND OPENMM_BUILD_REFERENCE_TESTS)
 
-# Which hardware platforms to build
+# CUDA platform
 
-# A bit of tedium because we are using custom FindCUDA files that happen to work...
-SET(FINDCUDA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/FindCUDA")
-SET(CUDA_BUILD_CUBIN OFF)
 FIND_PACKAGE(CUDA QUIET)
 IF(CUDA_FOUND)
-    IF(NOT CUDA_NVCC_FLAGS)
-        SET(FLAGS "")
-        # Note that cmake will insert semicolons between these item automatically...
-        SET(FLAGS ${FLAGS} -gencode arch=compute_11,code=sm_11)
-        SET(FLAGS ${FLAGS} -gencode arch=compute_12,code=sm_12)
-        SET(FLAGS ${FLAGS} -gencode arch=compute_13,code=sm_13)
-        SET(FLAGS ${FLAGS} -gencode arch=compute_20,code=sm_20)
-        SET(FLAGS ${FLAGS} -use_fast_math)
-        IF(MSVC)
-            # Unfortunately the variables CUDA_NVCC_FLAGS_RELEASE and CUDA_NVCC_FLAGS_DEBUG
-            # appear to be unused, at least in CMake 2.6
-            # Release /MD linkage
-            set(FLAGS ${FLAGS} "-Xcompiler \"/MD\" -DOPENMMCUDA_BUILDING_SHARED_LIBRARY")
-        ENDIF(MSVC)
-        SET(CUDA_NVCC_FLAGS  "${FLAGS}"
-            CACHE STRING "Semicolon delimit multiple arguments")
-    ENDIF(NOT CUDA_NVCC_FLAGS)
     SET(OPENMM_BUILD_CUDA_LIB ON CACHE BOOL "Build OpenMMCuda library for Nvidia GPUs")
-
-    # I wish I was not hardcoding /MD here
-    # Avoid strange windows link error with cuda free energy
-    # plugin by specifying /MD to CUDA_NVCC_FLAGS
-    MARK_AS_ADVANCED(CLEAR CUDA_NVCC_FLAGS)
-    IF(MSVC)
-        # Unfortunately the variables CUDA_NVCC_FLAGS_RELEASE and CUDA_NVCC_FLAGS_DEBUG
-        # appear to be unused, at least in CMake 2.6
-        # Release /MD linkage
-        SET(HAS_NVCC_FLAG FALSE)
-        IF(CUDA_NVCC_FLAGS MATCHES "-Xcompiler")
-            SET(HAS_NVCC_FLAG TRUE)
-        ENDIF(CUDA_NVCC_FLAGS MATCHES "-Xcompiler")
-        IF(NOT HAS_NVCC_FLAG)
-            set(new_flags "-Xcompiler \"/MD\" -DOPENMMCUDA_BUILDING_SHARED_LIBRARY")
-            if(CUDA_NVCC_FLAGS)
-                set(new_flags "${CUDA_NVCC_FLAGS};${new_flags}")
-            endif(CUDA_NVCC_FLAGS)
-            SET(CUDA_NVCC_FLAGS "${new_flags}"
-                CACHE STRING "Semicolon delimit multiple arguments" FORCE)
-        ENDIF(NOT HAS_NVCC_FLAG)
-    ENDIF(MSVC)
 ELSE(CUDA_FOUND)
     SET(OPENMM_BUILD_CUDA_LIB OFF CACHE BOOL "Build OpenMMCuda library for Nvidia GPUs")
 ENDIF(CUDA_FOUND)
 IF(OPENMM_BUILD_CUDA_LIB)
     ADD_SUBDIRECTORY(platforms/cuda)
 ENDIF(OPENMM_BUILD_CUDA_LIB)
-MARK_AS_ADVANCED(CUDA_VERBOSE_BUILD)
-MARK_AS_ADVANCED(CUDA_BUILD_CUBIN)
-MARK_AS_ADVANCED(CUDA_BUILD_EMULATION)
-MARK_AS_ADVANCED(CUDA_HOST_COMPILER CUDA_HOST_COMPILER_OPTIONS)
+
+# OpenCL platform
 
 FIND_PACKAGE(OpenCL QUIET)
 IF(OPENCL_FOUND)
@@ -517,7 +411,7 @@ INSTALL_FILES(/include/sfmt            FILES ${SFMT_HEADERS})
 
 ADD_SUBDIRECTORY(serialization)
 FILE(GLOB serialization_files  ${CMAKE_SOURCE_DIR}/serialization/src/*.cpp)
-SET_SOURCE_FILES_PROPERTIES(${serialization_files} PROPERTIES COMPILE_FLAGS "-DOPENMM_BUILDING_SHARED_LIBRARY -DTIXML_USE_STL -DIEEE_8087")
+SET_SOURCE_FILES_PROPERTIES(${serialization_files} PROPERTIES COMPILE_FLAGS "-DOPENMM_BUILDING_SHARED_LIBRARY -DIEEE_8087")
 
 # Python wrappers
 
@@ -534,23 +428,6 @@ IF(OPENMM_BUILD_PYTHON_WRAPPERS)
     ENDIF(NOT OPENMM_BUILD_DRUDE_PLUGIN)
     ADD_SUBDIRECTORY(wrappers/python)
 ENDIF(OPENMM_BUILD_PYTHON_WRAPPERS)
-
-
-
-
-#
-# Allow automated build and dashboard.
-#
-# redundant INCLUDE(Dart) statement
-# INCLUDE (Dart)
-
-#IF (UNIX AND NOT CYGWIN AND NOT APPLE)
-#  IF (NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE MATCHES Debug)
-#    ADD_DEFINITIONS(-fprofile-arcs -ftest-coverage)
-#    LINK_LIBRARIES(gcov)
-#  ENDIF (NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE MATCHES Debug)
-#ENDIF (UNIX AND NOT CYGWIN AND NOT APPLE)
-
 
 #
 # Testing
@@ -573,5 +450,3 @@ SET(OPENMM_BUILD_EXAMPLES ON CACHE BOOL "Build example executables")
 IF(OPENMM_BUILD_EXAMPLES)
   ADD_SUBDIRECTORY(examples)
 ENDIF(OPENMM_BUILD_EXAMPLES)
-
-ENDIF(NOT cmv EQUAL "2.4") # This whole file...

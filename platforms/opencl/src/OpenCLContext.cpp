@@ -69,8 +69,8 @@ static void CL_CALLBACK errorCallback(const char* errinfo, const void* private_i
 
 OpenCLContext::OpenCLContext(const System& system, int platformIndex, int deviceIndex, const string& precision, OpenCLPlatform::PlatformData& platformData) :
         system(system), time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), stepsSinceReorder(99999), atomsWereReordered(false), posq(NULL),
-        posqCorrection(NULL), velm(NULL), forceBuffers(NULL), longForceBuffer(NULL), energyBuffer(NULL), energyParamDerivBuffer(NULL), atomIndexDevice(NULL), integration(NULL),
-        expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
+        posqCorrection(NULL), velm(NULL), forceBuffers(NULL), longForceBuffer(NULL), energyBuffer(NULL), energyParamDerivBuffer(NULL), atomIndexDevice(NULL),
+        chargeBuffer(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
     if (precision == "single") {
         useDoublePrecision = false;
         useMixedPrecision = false;
@@ -309,6 +309,7 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
     reduceReal4Kernel = cl::Kernel(utilities, "reduceReal4Buffer");
     if (supports64BitGlobalAtomics)
         reduceForcesKernel = cl::Kernel(utilities, "reduceForces");
+    setChargesKernel = cl::Kernel(utilities, "setCharges");
 
     // Decide whether native_sqrt(), native_rsqrt(), and native_recip() are sufficiently accurate to use.
 
@@ -439,6 +440,8 @@ OpenCLContext::~OpenCLContext() {
         delete energyParamDerivBuffer;
     if (atomIndexDevice != NULL)
         delete atomIndexDevice;
+    if (chargeBuffer != NULL)
+        delete chargeBuffer;
     if (integration != NULL)
         delete integration;
     if (expression != NULL)
@@ -747,6 +750,28 @@ void OpenCLContext::reduceBuffer(OpenCLArray& array, int numBuffers) {
     executeKernel(reduceReal4Kernel, bufferSize, 128);
 }
 
+void OpenCLContext::setCharges(const vector<double>& charges) {
+    if (chargeBuffer == NULL)
+        chargeBuffer = new OpenCLArray(*this, numAtoms, useDoublePrecision ? sizeof(double) : sizeof(float), "chargeBuffer");
+    if (getUseDoublePrecision()) {
+        double* c = (double*) getPinnedBuffer();
+        for (int i = 0; i < charges.size(); i++)
+            c[i] = charges[i];
+        chargeBuffer->upload(c);
+    }
+    else {
+        float* c = (float*) getPinnedBuffer();
+        for (int i = 0; i < charges.size(); i++)
+            c[i] = (float) charges[i];
+        chargeBuffer->upload(c);
+    }
+    setChargesKernel.setArg<cl::Buffer>(0, chargeBuffer->getDeviceBuffer());
+    setChargesKernel.setArg<cl::Buffer>(1, posq->getDeviceBuffer());
+    setChargesKernel.setArg<cl::Buffer>(2, atomIndexDevice->getDeviceBuffer());
+    setChargesKernel.setArg<cl_int>(3, numAtoms);
+    executeKernel(setChargesKernel, numAtoms);
+}
+
 /**
  * This class ensures that atom reordering doesn't break virtual sites.
  */
@@ -945,9 +970,19 @@ void OpenCLContext::findMoleculeGroups() {
 }
 
 void OpenCLContext::invalidateMolecules() {
+    for (int i = 0; i < forces.size(); i++)
+        if (invalidateMolecules(forces[i]))
+            return;
+}
+
+bool OpenCLContext::invalidateMolecules(OpenCLForceInfo* force) {
     if (numAtoms == 0 || nonbonded == NULL || !nonbonded->getUseCutoff())
-        return;
+        return false;
     bool valid = true;
+    int forceIndex = -1;
+    for (int i = 0; i < forces.size(); i++)
+        if (forces[i] == force)
+            forceIndex = i;
     for (int group = 0; valid && group < (int) moleculeGroups.size(); group++) {
         MoleculeGroup& mol = moleculeGroups[group];
         vector<int>& instances = mol.instances;
@@ -962,22 +997,21 @@ void OpenCLContext::invalidateMolecules() {
             Molecule& m2 = molecules[instances[j]];
             int offset2 = offsets[j];
             for (int i = 0; i < (int) atoms.size() && valid; i++) {
-                for (int k = 0; k < (int) forces.size(); k++)
-                    if (!forces[k]->areParticlesIdentical(atoms[i]+offset1, atoms[i]+offset2))
-                        valid = false;
+                if (!force->areParticlesIdentical(atoms[i]+offset1, atoms[i]+offset2))
+                    valid = false;
             }
 
             // See if the force groups are identical.
 
-            for (int i = 0; i < (int) forces.size() && valid; i++) {
-                for (int k = 0; k < (int) m1.groups[i].size() && valid; k++)
-                    if (!forces[i]->areGroupsIdentical(m1.groups[i][k], m2.groups[i][k]))
+            if (valid && forceIndex > -1) {
+                for (int k = 0; k < (int) m1.groups[forceIndex].size() && valid; k++)
+                    if (!force->areGroupsIdentical(m1.groups[forceIndex][k], m2.groups[forceIndex][k]))
                         valid = false;
             }
         }
     }
     if (valid)
-        return;
+        return false;
 
     // The list of which molecules are identical is no longer valid.  We need to restore the
     // atoms to their original order, rebuild the list of identical molecules, and sort them
@@ -1045,6 +1079,7 @@ void OpenCLContext::invalidateMolecules() {
     for (int i = 0; i < (int) reorderListeners.size(); i++)
         reorderListeners[i]->execute();
     reorderAtoms();
+    return true;
 }
 
 void OpenCLContext::reorderAtoms() {

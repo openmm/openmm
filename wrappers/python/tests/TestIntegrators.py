@@ -96,5 +96,29 @@ class TestIntegrators(unittest.TestCase):
             # Take a step
             integrator.step(1)
 
+    def testBadGroups(self):
+        """Test the MTS integrator with bad force group substeps."""
+        # Create a periodic solvated system with PME
+        pdb = PDBFile('systems/alanine-dipeptide-explicit.pdb')
+        ff = ForceField('amber99sbildn.xml', 'tip3p.xml')
+        system = ff.createSystem(pdb.topology, cutoffMethod=PME)
+
+        # Split forces into groups
+        for force in system.getForces():
+            if force.__class__.__name__ == 'NonbondedForce':
+                force.setForceGroup(1)
+                force.setReciprocalSpaceForceGroup(2)
+            else:
+                force.setForceGroup(0)
+
+        with self.assertRaises(ValueError):
+            # Create an integrator
+            integrator = MTSIntegrator(4*femtoseconds, [(2,1), (1,3), (0,8)])
+
+            # Run a few steps of dynamics
+            context = Context(system, integrator)
+            context.setPositions(pdb.positions)
+            integrator.step(10)
+
 if __name__ == '__main__':
     unittest.main()

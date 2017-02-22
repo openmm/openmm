@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2013-2016 Stanford University and Simbios.
+/* Portions copyright (c) 2013-2017 Stanford University and Simbios.
  * Authors: Peter Eastman
  * Contributors: 
  *
@@ -35,9 +35,6 @@ namespace OpenMM {
 
 class CpuLangevinDynamics : public ReferenceStochasticDynamics {
 public:
-    class Update1Task;
-    class Update2Task;
-    class Update3Task;
     /**
      * Constructor.
      *

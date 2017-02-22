@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2016 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2017 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -32,16 +32,6 @@
 
 using namespace OpenMM;
 using namespace std;
-
-class CpuCustomGBForce::ComputeForceTask : public ThreadPool::Task {
-public:
-    ComputeForceTask(CpuCustomGBForce& owner) : owner(owner) {
-    }
-    void execute(ThreadPool& threads, int threadIndex) {
-        owner.threadComputeForce(threads, threadIndex);
-    }
-    CpuCustomGBForce& owner;
-};
 
 CpuCustomGBForce::ThreadData::ThreadData(int numAtoms, int numThreads, int threadIndex,
                       const vector<Lepton::CompiledExpression>& valueExpressions,
@@ -206,7 +196,7 @@ void CpuCustomGBForce::calculateIxn(int numberOfAtoms, float* posq, double** ato
 
     // Calculate the first computed value.
 
-    ComputeForceTask task(*this);
+    auto task = [&] (ThreadPool& threads, int threadIndex) { threadComputeForce(threads, threadIndex); };
     gmx_atomic_set(&counter, 0);
     threads.execute(task);
     threads.waitForThreads();

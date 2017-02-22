@@ -50,6 +50,7 @@
 #include "lepton/CustomFunction.h"
 #include "lepton/Operation.h"
 #include "lepton/Parser.h"
+#include <iostream>
 #include "lepton/ParsedExpression.h"
 
 using namespace OpenMM;
@@ -137,35 +138,27 @@ static double computeShiftedKineticEnergy(ContextImpl& context, vector<double>& 
     return 0.5*energy;
 }
 
-class CpuCalcForcesAndEnergyKernel::SumForceTask : public ThreadPool::Task {
-public:
-    SumForceTask(int numParticles, vector<Vec3>& forceData, CpuPlatform::PlatformData& data) : numParticles(numParticles), forceData(forceData), data(data) {
-    }
-    void execute(ThreadPool& threads, int threadIndex) {
-        // Sum the contributions to forces that have been calculated by different threads.
-        
-        int numThreads = threads.getNumThreads();
-        int start = threadIndex*numParticles/numThreads;
-        int end = (threadIndex+1)*numParticles/numThreads;
-        for (int i = start; i < end; i++) {
-            fvec4 f(0.0f);
-            for (int j = 0; j < numThreads; j++)
-                f += fvec4(&data.threadForce[j][4*i]);
-            forceData[i][0] += f[0];
-            forceData[i][1] += f[1];
-            forceData[i][2] += f[2];
-        }
-    }
-    int numParticles;
-    vector<Vec3>& forceData;
-    CpuPlatform::PlatformData& data;
-};
+CpuCalcForcesAndEnergyKernel::CpuCalcForcesAndEnergyKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data, ContextImpl& context) :
+        CalcForcesAndEnergyKernel(name, platform), data(data) {
+    // Create a Reference platform version of this kernel.
+    
+    ReferenceKernelFactory referenceFactory;
+    referenceKernel = Kernel(referenceFactory.createKernelImpl(name, platform, context));
+}
 
-class CpuCalcForcesAndEnergyKernel::InitForceTask : public ThreadPool::Task {
-public:
-    InitForceTask(int numParticles, ContextImpl& context, CpuPlatform::PlatformData& data) : numParticles(numParticles), positionsValid(true), context(context), data(data) {
-    }
-    void execute(ThreadPool& threads, int threadIndex) {
+void CpuCalcForcesAndEnergyKernel::initialize(const System& system) {
+    referenceKernel.getAs<ReferenceCalcForcesAndEnergyKernel>().initialize(system);
+    lastPositions.resize(system.getNumParticles(), Vec3(1e10, 1e10, 1e10));
+}
+
+void CpuCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups) {
+    referenceKernel.getAs<ReferenceCalcForcesAndEnergyKernel>().beginComputation(context, includeForce, includeEnergy, groups);
+    
+    // Convert positions to single precision and clear the forces.
+
+    int numParticles = context.getSystem().getNumParticles();
+    bool positionsValid = true;
+    data.threads.execute([&] (ThreadPool& threads, int threadIndex) {
         // Convert the positions to single precision and apply periodic boundary conditions
 
         AlignedArray<float>& posq = data.posq;
@@ -218,36 +211,9 @@ public:
         fvec4 zero(0.0f);
         for (int j = 0; j < numParticles; j++)
             zero.store(&data.threadForce[threadIndex][j*4]);
-    }
-    int numParticles;
-    bool positionsValid;
-    ContextImpl& context;
-    CpuPlatform::PlatformData& data;
-};
-
-CpuCalcForcesAndEnergyKernel::CpuCalcForcesAndEnergyKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data, ContextImpl& context) :
-        CalcForcesAndEnergyKernel(name, platform), data(data) {
-    // Create a Reference platform version of this kernel.
-    
-    ReferenceKernelFactory referenceFactory;
-    referenceKernel = Kernel(referenceFactory.createKernelImpl(name, platform, context));
-}
-
-void CpuCalcForcesAndEnergyKernel::initialize(const System& system) {
-    referenceKernel.getAs<ReferenceCalcForcesAndEnergyKernel>().initialize(system);
-    lastPositions.resize(system.getNumParticles(), Vec3(1e10, 1e10, 1e10));
-}
-
-void CpuCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups) {
-    referenceKernel.getAs<ReferenceCalcForcesAndEnergyKernel>().beginComputation(context, includeForce, includeEnergy, groups);
-    
-    // Convert positions to single precision and clear the forces.
-
-    int numParticles = context.getSystem().getNumParticles();
-    InitForceTask task(numParticles, context, data);
-    data.threads.execute(task);
+    });
     data.threads.waitForThreads();
-    if (!task.positionsValid)
+    if (!positionsValid)
         throw OpenMMException("Particle coordinate is nan");
 
     // Determine whether we need to recompute the neighbor list.
@@ -302,8 +268,23 @@ void CpuCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool i
 double CpuCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups, bool& valid) {
     // Sum the forces from all the threads.
     
-    SumForceTask task(context.getSystem().getNumParticles(), extractForces(context), data);
-    data.threads.execute(task);
+    data.threads.execute([&] (ThreadPool& threads, int threadIndex) {
+        // Sum the contributions to forces that have been calculated by different threads.
+        
+        int numParticles = context.getSystem().getNumParticles();
+        int numThreads = threads.getNumThreads();
+        int start = threadIndex*numParticles/numThreads;
+        int end = (threadIndex+1)*numParticles/numThreads;
+        vector<Vec3>& forceData = extractForces(context);
+        for (int i = start; i < end; i++) {
+            fvec4 f(0.0f);
+            for (int j = 0; j < numThreads; j++)
+                f += fvec4(&data.threadForce[j][4*i]);
+            forceData[i][0] += f[0];
+            forceData[i][1] += f[1];
+            forceData[i][2] += f[2];
+        }
+    });
     data.threads.waitForThreads();
     return referenceKernel.getAs<ReferenceCalcForcesAndEnergyKernel>().finishComputation(context, includeForce, includeEnergy, groups, valid);
 }
@@ -528,7 +509,7 @@ CpuNonbondedForce* createCpuNonbondedForceVec4();
 CpuNonbondedForce* createCpuNonbondedForceVec8();
 
 CpuCalcNonbondedForceKernel::CpuCalcNonbondedForceKernel(string name, const Platform& platform, CpuPlatform::PlatformData& data) : CalcNonbondedForceKernel(name, platform),
-        data(data), bonded14IndexArray(NULL), bonded14ParamArray(NULL), hasInitializedPme(false), nonbonded(NULL) {
+        data(data), bonded14IndexArray(NULL), bonded14ParamArray(NULL), hasInitializedPme(false), hasInitializedDispersionPme(false), nonbonded(NULL) {
     if (isVec8Supported())
         nonbonded = createCpuNonbondedForceVec8();
     else
@@ -575,12 +556,14 @@ void CpuCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
     for (int i = 0; i < num14; i++)
         bonded14ParamArray[i] = new double[3];
     particleParams.resize(numParticles);
+    C6params.resize(numParticles);
     double sumSquaredCharges = 0.0;
     for (int i = 0; i < numParticles; ++i) {
         double charge, radius, depth;
         force.getParticleParameters(i, charge, radius, depth);
         data.posq[4*i+3] = (float) charge;
         particleParams[i] = make_pair((float) (0.5*radius), (float) (2.0*sqrt(depth)));
+        C6params[i] = 8.0*pow(particleParams[i].first, 3.0) * particleParams[i].second;
         sumSquaredCharges += charge*charge;
     }
     
@@ -616,19 +599,35 @@ void CpuCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
     }
     else if (nonbondedMethod == PME) {
         double alpha;
-        NonbondedForceImpl::calcPMEParameters(system, force, alpha, gridSize[0], gridSize[1], gridSize[2]);
+        NonbondedForceImpl::calcPMEParameters(system, force, alpha, gridSize[0], gridSize[1], gridSize[2], false);
         ewaldAlpha = alpha;
     }
-    if (nonbondedMethod == Ewald || nonbondedMethod == PME)
+    else if (nonbondedMethod == LJPME) {
+        double alpha;
+        NonbondedForceImpl::calcPMEParameters(system, force, alpha, gridSize[0], gridSize[1], gridSize[2], false);
+        ewaldAlpha = alpha;
+        NonbondedForceImpl::calcPMEParameters(system, force, alpha, dispersionGridSize[0], dispersionGridSize[1], dispersionGridSize[2], true);
+        ewaldDispersionAlpha = alpha;
+        useSwitchingFunction = false;
+    }
+
+    if (nonbondedMethod == Ewald || nonbondedMethod == PME || nonbondedMethod == LJPME) {
         ewaldSelfEnergy = -ONE_4PI_EPS0*ewaldAlpha*sumSquaredCharges/sqrt(M_PI);
-    else
+        if(nonbondedMethod == LJPME){
+            for (int atom = 0; atom < numParticles; atom++) {
+                // Dispersion self term
+                ewaldSelfEnergy += pow(ewaldDispersionAlpha, 6.0) * C6params[atom]*C6params[atom] / 12.0;
+            }
+        }
+    } else {
         ewaldSelfEnergy = 0.0;
+    }
     rfDielectric = force.getReactionFieldDielectric();
     if (force.getUseDispersionCorrection())
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(system, force);
     else
         dispersionCoefficient = 0.0;
-    data.isPeriodic = (nonbondedMethod == CutoffPeriodic || nonbondedMethod == Ewald || nonbondedMethod == PME);
+    data.isPeriodic = (nonbondedMethod == CutoffPeriodic || nonbondedMethod == Ewald || nonbondedMethod == PME || nonbondedMethod == LJPME);
 }
 
 double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy, bool includeDirect, bool includeReciprocal) {
@@ -646,6 +645,20 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
                 optimizedPme.getAs<CalcPmeReciprocalForceKernel>().initialize(gridSize[0], gridSize[1], gridSize[2], numParticles, ewaldAlpha);
             }
         }
+        if (nonbondedMethod == LJPME) {
+            // If available, use the optimized PME implementation.
+
+            vector<string> kernelNames;
+            kernelNames.push_back("CalcPmeReciprocalForce");
+            useOptimizedPme = getPlatform().supportsKernels(kernelNames);
+            if (useOptimizedPme) {
+                optimizedPme = getPlatform().createKernel(CalcPmeReciprocalForceKernel::Name(), context);
+                optimizedPme.getAs<CalcPmeReciprocalForceKernel>().initialize(gridSize[0], gridSize[1], gridSize[2], numParticles, ewaldAlpha);
+                optimizedDispersionPme = getPlatform().createKernel(CalcDispersionPmeReciprocalForceKernel::Name(), context);
+                optimizedDispersionPme.getAs<CalcDispersionPmeReciprocalForceKernel>().initialize(dispersionGridSize[0], dispersionGridSize[1],
+                                                                                                  dispersionGridSize[2], numParticles, ewaldDispersionAlpha);
+            }
+        }
     }
     AlignedArray<float>& posq = data.posq;
     vector<Vec3>& posData = extractPositions(context);
@@ -654,6 +667,7 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
     double energy = (includeReciprocal ? ewaldSelfEnergy : 0.0);
     bool ewald  = (nonbondedMethod == Ewald);
     bool pme  = (nonbondedMethod == PME);
+    bool ljpme = (nonbondedMethod == LJPME);
     if (nonbondedMethod != NoCutoff)
         nonbonded->setUseCutoff(nonbondedCutoff, *data.neighborList, rfDielectric);
     if (data.isPeriodic) {
@@ -669,9 +683,13 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
         nonbonded->setUsePME(ewaldAlpha, gridSize);
     if (useSwitchingFunction)
         nonbonded->setUseSwitchingFunction(switchingDistance);
+    if (ljpme){
+        nonbonded->setUsePME(ewaldAlpha, gridSize);
+        nonbonded->setUseLJPME(ewaldDispersionAlpha, dispersionGridSize);
+    }
     double nonbondedEnergy = 0;
     if (includeDirect)
-        nonbonded->calculateDirectIxn(numParticles, &posq[0], posData, particleParams, exclusions, data.threadForce, includeEnergy ? &nonbondedEnergy : NULL, data.threads);
+        nonbonded->calculateDirectIxn(numParticles, &posq[0], posData, particleParams, C6params, exclusions, data.threadForce, includeEnergy ? &nonbondedEnergy : NULL, data.threads);
     if (includeReciprocal) {
         if (useOptimizedPme) {
             PmeIO io(&posq[0], &data.threadForce[0][0], numParticles);
@@ -680,13 +698,13 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
             nonbondedEnergy += optimizedPme.getAs<CalcPmeReciprocalForceKernel>().finishComputation(io);
         }
         else
-            nonbonded->calculateReciprocalIxn(numParticles, &posq[0], posData, particleParams, exclusions, forceData, includeEnergy ? &nonbondedEnergy : NULL);
+            nonbonded->calculateReciprocalIxn(numParticles, &posq[0], posData, particleParams, C6params, exclusions, forceData, includeEnergy ? &nonbondedEnergy : NULL);
     }
     energy += nonbondedEnergy;
     if (includeDirect) {
         ReferenceLJCoulomb14 nonbonded14;
         bondForce.calculateForce(posData, bonded14ParamArray, forceData, includeEnergy ? &energy : NULL, nonbonded14);
-        if (data.isPeriodic)
+        if (data.isPeriodic && nonbondedMethod != LJPME)
             energy += dispersionCoefficient/(boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2]);
     }
     return energy;
@@ -739,7 +757,7 @@ void CpuCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, 
 }
 
 void CpuCalcNonbondedForceKernel::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
-    if (nonbondedMethod != PME)
+    if (nonbondedMethod != PME && nonbondedMethod != LJPME)
         throw OpenMMException("getPMEParametersInContext: This Context is not using PME");
     if (useOptimizedPme)
         optimizedPme.getAs<const CalcPmeReciprocalForceKernel>().getPMEParameters(alpha, nx, ny, nz);
@@ -748,6 +766,19 @@ void CpuCalcNonbondedForceKernel::getPMEParameters(double& alpha, int& nx, int& 
         nx = gridSize[0];
         ny = gridSize[1];
         nz = gridSize[2];
+    }
+}
+
+void CpuCalcNonbondedForceKernel::getLJPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
+    if (nonbondedMethod != LJPME)
+        throw OpenMMException("getPMEParametersInContext: This Context is not using PME");
+    if (useOptimizedPme)
+        optimizedDispersionPme.getAs<const CalcPmeReciprocalForceKernel>().getPMEParameters(alpha, nx, ny, nz);
+    else {
+        alpha = ewaldDispersionAlpha;
+        nx = dispersionGridSize[0];
+        ny = dispersionGridSize[1];
+        nz = dispersionGridSize[2];
     }
 }
 

@@ -916,8 +916,9 @@ Value                      Meaning
 :code:`NoCutoff`           No cutoff is applied.
 :code:`CutoffNonPeriodic`  The reaction field method is used to eliminate all interactions beyond a cutoff distance.  Not valid for AMOEBA.
 :code:`CutoffPeriodic`     The reaction field method is used to eliminate all interactions beyond a cutoff distance.  Periodic boundary conditions are applied, so each atom interacts only with the nearest periodic copy of every other atom.  Not valid for AMOEBA.
-:code:`Ewald`              Periodic boundary conditions are applied.  Ewald summation is used to compute long range interactions.  (This option is rarely used, since PME is much faster for all but the smallest systems.)  Not valid for AMOEBA.
-:code:`PME`                Periodic boundary conditions are applied.  The Particle Mesh Ewald method is used to compute long range interactions.
+:code:`Ewald`              Periodic boundary conditions are applied.  Ewald summation is used to compute long range Coulomb interactions.  (This option is rarely used, since PME is much faster for all but the smallest systems.)  Not valid for AMOEBA.
+:code:`PME`                Periodic boundary conditions are applied.  The Particle Mesh Ewald method is used to compute long range Coulomb interactions.
+:code:`LJPME`              Periodic boundary conditions are applied.  The Particle Mesh Ewald method is used to compute long range interactions for both Coulomb and Lennard-Jones.
 =========================  ===========================================================================================================================================================================================================================================
 
 
@@ -926,7 +927,7 @@ cutoff distance.  Be sure to specify units, as shown in the examples above. For
 example, :code:`nonbondedCutoff=1.5*nanometers` or
 :code:`nonbondedCutoff=12*angstroms` are legal values.
 
-When using :code:`Ewald` or :code:`PME`\ , you can optionally specify an
+When using :code:`Ewald`, :code:`PME`, or :code:`LJPME`\ , you can optionally specify an
 error tolerance for the force computation.  For example:
 ::
 

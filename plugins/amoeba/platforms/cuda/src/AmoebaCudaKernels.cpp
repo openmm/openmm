@@ -1155,7 +1155,7 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
             NonbondedForce nb;
             nb.setEwaldErrorTolerance(force.getEwaldErrorTolerance());
             nb.setCutoffDistance(force.getCutoffDistance());
-            NonbondedForceImpl::calcPMEParameters(system, nb, alpha, gridSizeX, gridSizeY, gridSizeZ);
+            NonbondedForceImpl::calcPMEParameters(system, nb, alpha, gridSizeX, gridSizeY, gridSizeZ, false);
             gridSizeX = CudaFFT3D::findLegalDimension(gridSizeX);
             gridSizeY = CudaFFT3D::findLegalDimension(gridSizeY);
             gridSizeZ = CudaFFT3D::findLegalDimension(gridSizeZ);

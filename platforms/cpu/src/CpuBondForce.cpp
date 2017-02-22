@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2014-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2014-2017 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -34,25 +34,6 @@
 
 using namespace OpenMM;
 using namespace std;
-
-class CpuBondForce::ComputeForceTask : public ThreadPool::Task {
-public:
-    ComputeForceTask(CpuBondForce& owner, vector<Vec3>& atomCoordinates, double** parameters, vector<Vec3>& forces, 
-        vector<double>& threadEnergy, double* totalEnergy, ReferenceBondIxn& referenceBondIxn) : owner(owner), atomCoordinates(atomCoordinates),
-        parameters(parameters), forces(forces), threadEnergy(threadEnergy), totalEnergy(totalEnergy), referenceBondIxn(referenceBondIxn) {
-    }
-    void execute(ThreadPool& threads, int threadIndex) {
-        double* energy = (totalEnergy == NULL ? NULL : &threadEnergy[threadIndex]);
-        owner.threadComputeForce(threads, threadIndex, atomCoordinates, parameters, forces, energy, referenceBondIxn);
-    }
-    CpuBondForce& owner;
-    vector<Vec3>& atomCoordinates;
-    double** parameters;
-    vector<Vec3>& forces;
-    vector<double>& threadEnergy;
-    double* totalEnergy;
-    ReferenceBondIxn& referenceBondIxn;
-};
 
 CpuBondForce::CpuBondForce() {
 }
@@ -188,8 +169,10 @@ void CpuBondForce::calculateForce(vector<Vec3>& atomCoordinates, double** parame
     // Have the worker threads compute their forces.
     
     vector<double> threadEnergy(threads->getNumThreads(), 0);
-    ComputeForceTask task(*this, atomCoordinates, parameters, forces, threadEnergy, totalEnergy, referenceBondIxn);
-    threads->execute(task);
+    threads->execute([&] (ThreadPool& threads, int threadIndex) {
+        double* energy = (totalEnergy == NULL ? NULL : &threadEnergy[threadIndex]);
+        threadComputeForce(threads, threadIndex, atomCoordinates, parameters, forces, energy, referenceBondIxn);
+    });
     threads->waitForThreads();
     
     // Compute any "extra" bonds.
