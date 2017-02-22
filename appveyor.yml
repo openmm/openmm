@@ -10,6 +10,7 @@ install:
   - "set PATH=C:\\Python35-x64;C:\\Python35-x64\\Scripts;%PATH%"
   - "set PATH=C:\\Program Files (x86)\\Git\\bin;%PATH%"
   - pip install pytest
+  - pip install numpy
 
 # Use cclash for compiler caching (experimental)
   - ps: wget https://github.com/inorton/cclash/releases/download/0.3.14/cclash-0.3.14.zip -OutFile cclash-0.3.14.zip
