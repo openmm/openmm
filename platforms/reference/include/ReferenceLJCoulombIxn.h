@@ -38,14 +38,14 @@ class ReferenceLJCoulombIxn {
       bool useSwitch;
       bool periodic;
       bool ewald;
-      bool pme;
+      bool pme, ljpme;
       const OpenMM::NeighborList* neighborList;
       OpenMM::RealVec periodicBoxVectors[3];
       RealOpenMM cutoffDistance, switchingDistance;
       RealOpenMM krf, crf;
-      RealOpenMM alphaEwald;
+      RealOpenMM alphaEwald, alphaDispersionEwald;
       int numRx, numRy, numRz;
-      int meshDim[3];
+      int meshDim[3], dispersionMeshDim[3];
 
       // parameter indices
 
@@ -139,16 +139,28 @@ class ReferenceLJCoulombIxn {
 
      
       /**---------------------------------------------------------------------------------------
-      
+
          Set the force to use Particle-Mesh Ewald (PME) summation.
-      
+
          @param alpha    the Ewald separation parameter
          @param gridSize the dimensions of the mesh
-      
+
          --------------------------------------------------------------------------------------- */
-      
+
       void setUsePME(RealOpenMM alpha, int meshSize[3]);
-      
+
+
+      /**---------------------------------------------------------------------------------------
+
+         Set the force to use Particle-Mesh Ewald (PME) summation for dispersion.
+
+         @param dalpha    the dispersion Ewald separation parameter
+         @param dgridSize the dimensions of the dispersion mesh
+
+         --------------------------------------------------------------------------------------- */
+
+      void setUseLJPME(RealOpenMM dalpha, int dmeshSize[3]);
+
       /**---------------------------------------------------------------------------------------
       
          Calculate LJ Coulomb pair ixn

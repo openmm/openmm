@@ -87,6 +87,28 @@ pme_exec(pme_t       pme,
          RealOpenMM *    energy);
 
 
+/*
+ * Evaluate reciprocal space PME dispersion energy and forces.
+ *
+ * Args:
+ *
+ * pme         Opaque pme_t object, must have been initialized with pme_init()
+ * x           Pointer to coordinate data array (nm)
+ * f           Pointer to force data array (will be written as kJ/mol/nm)
+ * c6s         Array of c6 coefficients (units of sqrt(kJ/mol).nm^3 )
+ * box         Simulation cell dimensions (nm)
+ * energy      Total energy (will be written in units of kJ/mol)
+ */
+int OPENMM_EXPORT
+pme_exec_dpme(pme_t       pme,
+              const std::vector<OpenMM::RealVec>& atomCoordinates,
+              std::vector<OpenMM::RealVec>& forces,
+              const std::vector<RealOpenMM>& c6s,
+              const OpenMM::RealVec  periodicBoxVectors[3],
+              RealOpenMM *    energy);
+
+
+
 
 /* Release all memory in pme structure */
 int OPENMM_EXPORT

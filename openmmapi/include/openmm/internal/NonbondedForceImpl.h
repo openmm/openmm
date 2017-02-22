@@ -65,6 +65,7 @@ public:
     std::vector<std::string> getKernelNames();
     void updateParametersInContext(ContextImpl& context);
     void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
+    void getLJPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
     /**
      * This is a utility routine that calculates the values to use for alpha and kmax when using
      * Ewald summation.
@@ -74,7 +75,7 @@ public:
      * This is a utility routine that calculates the values to use for alpha and grid size when using
      * Particle Mesh Ewald.
      */
-    static void calcPMEParameters(const System& system, const NonbondedForce& force, double& alpha, int& xsize, int& ysize, int& zsize);
+    static void calcPMEParameters(const System& system, const NonbondedForce& force, double& alpha, int& xsize, int& ysize, int& zsize, bool lj);
     /**
      * Compute the coefficient which, when divided by the periodic box volume, gives the
      * long range dispersion correction to the energy.

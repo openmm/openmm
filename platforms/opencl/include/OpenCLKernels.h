@@ -591,8 +591,9 @@ class OpenCLCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 public:
     OpenCLCalcNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcNonbondedForceKernel(name, platform),
             hasInitializedKernel(false), cl(cl), sigmaEpsilon(NULL), exceptionParams(NULL), cosSinSums(NULL), pmeGrid(NULL),
-            pmeGrid2(NULL), pmeBsplineModuliX(NULL), pmeBsplineModuliY(NULL), pmeBsplineModuliZ(NULL), pmeBsplineTheta(NULL),
-            pmeAtomRange(NULL), pmeAtomGridIndex(NULL), pmeEnergyBuffer(NULL), sort(NULL), fft(NULL), pmeio(NULL) {
+            pmeGrid2(NULL), pmeBsplineModuliX(NULL), pmeBsplineModuliY(NULL), pmeBsplineModuliZ(NULL), pmeDispersionBsplineModuliX(NULL),
+            pmeDispersionBsplineModuliY(NULL), pmeDispersionBsplineModuliZ(NULL), pmeBsplineTheta(NULL), pmeAtomRange(NULL),
+            pmeAtomGridIndex(NULL), pmeEnergyBuffer(NULL), sort(NULL), fft(NULL), dispersionFft(NULL), pmeio(NULL) {
     }
     ~OpenCLCalcNonbondedForceKernel();
     /**
@@ -622,13 +623,22 @@ public:
     void copyParametersToContext(ContextImpl& context, const NonbondedForce& force);
     /**
      * Get the parameters being used for PME.
-     * 
+     *
      * @param alpha   the separation parameter
      * @param nx      the number of grid points along the X axis
      * @param ny      the number of grid points along the Y axis
      * @param nz      the number of grid points along the Z axis
      */
     void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
+    /**
+     * Get the parameters being used for the dispersion term in LJPME.
+     *
+     * @param alpha   the separation parameter
+     * @param nx      the number of grid points along the X axis
+     * @param ny      the number of grid points along the Y axis
+     * @param nz      the number of grid points along the Z axis
+     */
+    void getLJPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
 private:
     class SortTrait : public OpenCLSort::SortTrait {
         int getDataSize() const {return 8;}
@@ -657,6 +667,9 @@ private:
     OpenCLArray* pmeBsplineModuliX;
     OpenCLArray* pmeBsplineModuliY;
     OpenCLArray* pmeBsplineModuliZ;
+    OpenCLArray* pmeDispersionBsplineModuliX;
+    OpenCLArray* pmeDispersionBsplineModuliY;
+    OpenCLArray* pmeDispersionBsplineModuliZ;
     OpenCLArray* pmeBsplineTheta;
     OpenCLArray* pmeAtomRange;
     OpenCLArray* pmeAtomGridIndex;
@@ -665,25 +678,34 @@ private:
     cl::CommandQueue pmeQueue;
     cl::Event pmeSyncEvent;
     OpenCLFFT3D* fft;
+    OpenCLFFT3D* dispersionFft;
     Kernel cpuPme;
     PmeIO* pmeio;
     SyncQueuePostComputation* syncQueue;
     cl::Kernel ewaldSumsKernel;
     cl::Kernel ewaldForcesKernel;
-    cl::Kernel pmeGridIndexKernel;
     cl::Kernel pmeAtomRangeKernel;
+    cl::Kernel pmeDispersionAtomRangeKernel;
     cl::Kernel pmeZIndexKernel;
+    cl::Kernel pmeDispersionZIndexKernel;
     cl::Kernel pmeUpdateBsplinesKernel;
+    cl::Kernel pmeDispersionUpdateBsplinesKernel;
     cl::Kernel pmeSpreadChargeKernel;
+    cl::Kernel pmeDispersionSpreadChargeKernel;
     cl::Kernel pmeFinishSpreadChargeKernel;
+    cl::Kernel pmeDispersionFinishSpreadChargeKernel;
     cl::Kernel pmeConvolutionKernel;
+    cl::Kernel pmeDispersionConvolutionKernel;
     cl::Kernel pmeEvalEnergyKernel;
+    cl::Kernel pmeDispersionEvalEnergyKernel;
     cl::Kernel pmeInterpolateForceKernel;
+    cl::Kernel pmeDispersionInterpolateForceKernel;
     std::map<std::string, std::string> pmeDefines;
     std::vector<std::pair<int, int> > exceptionAtoms;
-    double ewaldSelfEnergy, dispersionCoefficient, alpha;
+    double ewaldSelfEnergy, dispersionCoefficient, alpha, dispersionAlpha;
     int gridSizeX, gridSizeY, gridSizeZ;
-    bool hasCoulomb, hasLJ, usePmeQueue;
+    int dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ;
+    bool hasCoulomb, hasLJ, usePmeQueue, doLJPME;
     NonbondedMethod nonbondedMethod;
     static const int PmeOrder = 5;
 };

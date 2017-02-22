@@ -33,12 +33,14 @@ class TestForceField(unittest.TestCase):
 
 
     def test_NonbondedMethod(self):
-        """Test all five options for the nonbondedMethod parameter."""
+        """Test all six options for the nonbondedMethod parameter."""
 
         methodMap = {NoCutoff:NonbondedForce.NoCutoff,
                      CutoffNonPeriodic:NonbondedForce.CutoffNonPeriodic,
                      CutoffPeriodic:NonbondedForce.CutoffPeriodic,
-                     Ewald:NonbondedForce.Ewald, PME: NonbondedForce.PME}
+                     Ewald:NonbondedForce.Ewald,
+                     PME:NonbondedForce.PME,
+                     LJPME:NonbondedForce.LJPME}
         for method in methodMap:
             system = self.forcefield1.createSystem(self.pdb1.topology,
                                                   nonbondedMethod=method)
@@ -62,7 +64,7 @@ class TestForceField(unittest.TestCase):
     def test_Cutoff(self):
         """Test to make sure the nonbondedCutoff parameter is passed correctly."""
 
-        for method in [CutoffNonPeriodic, CutoffPeriodic, Ewald, PME]:
+        for method in [CutoffNonPeriodic, CutoffPeriodic, Ewald, PME, LJPME]:
             system = self.forcefield1.createSystem(self.pdb1.topology,
                                                    nonbondedMethod=method,
                                                    nonbondedCutoff=2*nanometer,
@@ -776,7 +778,7 @@ class AmoebaTestForceField(unittest.TestCase):
 
 
     def test_NonbondedMethod(self):
-        """Test all five options for the nonbondedMethod parameter."""
+        """Test both options for the nonbondedMethod parameter."""
 
         methodMap = {NoCutoff:AmoebaMultipoleForce.NoCutoff,
                      PME:AmoebaMultipoleForce.PME}

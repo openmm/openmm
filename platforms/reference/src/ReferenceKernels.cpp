@@ -969,8 +969,16 @@ void ReferenceCalcNonbondedForceKernel::initialize(const System& system, const N
     }
     else if (nonbondedMethod == PME) {
         double alpha;
-        NonbondedForceImpl::calcPMEParameters(system, force, alpha, gridSize[0], gridSize[1], gridSize[2]);
+        NonbondedForceImpl::calcPMEParameters(system, force, alpha, gridSize[0], gridSize[1], gridSize[2], false);
         ewaldAlpha = (RealOpenMM) alpha;
+    }
+    else if (nonbondedMethod == LJPME) {
+        double alpha;
+        NonbondedForceImpl::calcPMEParameters(system, force, alpha, gridSize[0], gridSize[1], gridSize[2], false);
+        ewaldAlpha = (RealOpenMM) alpha;
+        NonbondedForceImpl::calcPMEParameters(system, force, alpha, dispersionGridSize[0], dispersionGridSize[1], dispersionGridSize[2], true);
+        ewaldDispersionAlpha = (RealOpenMM) alpha;
+        useSwitchingFunction = false;
     }
     rfDielectric = (RealOpenMM)force.getReactionFieldDielectric();
     if (force.getUseDispersionCorrection())
@@ -987,11 +995,12 @@ double ReferenceCalcNonbondedForceKernel::execute(ContextImpl& context, bool inc
     bool periodic = (nonbondedMethod == CutoffPeriodic);
     bool ewald  = (nonbondedMethod == Ewald);
     bool pme  = (nonbondedMethod == PME);
+    bool ljpme = (nonbondedMethod == LJPME);
     if (nonbondedMethod != NoCutoff) {
-        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, extractBoxVectors(context), periodic || ewald || pme, nonbondedCutoff, 0.0);
+        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, extractBoxVectors(context), periodic || ewald || pme || ljpme, nonbondedCutoff, 0.0);
         clj.setUseCutoff(nonbondedCutoff, *neighborList, rfDielectric);
     }
-    if (periodic || ewald || pme) {
+    if (periodic || ewald || pme || ljpme) {
         RealVec* boxVectors = extractBoxVectors(context);
         double minAllowedSize = 1.999999*nonbondedCutoff;
         if (boxVectors[0][0] < minAllowedSize || boxVectors[1][1] < minAllowedSize || boxVectors[2][2] < minAllowedSize)
@@ -1002,6 +1011,10 @@ double ReferenceCalcNonbondedForceKernel::execute(ContextImpl& context, bool inc
         clj.setUseEwald(ewaldAlpha, kmax[0], kmax[1], kmax[2]);
     if (pme)
         clj.setUsePME(ewaldAlpha, gridSize);
+    if (ljpme){
+        clj.setUsePME(ewaldAlpha, gridSize);
+        clj.setUseLJPME(ewaldDispersionAlpha, dispersionGridSize);
+    }
     if (useSwitchingFunction)
         clj.setUseSwitchingFunction(switchingDistance);
     clj.calculatePairIxn(numParticles, posData, particleParamArray, exclusions, 0, forceData, 0, includeEnergy ? &energy : NULL, includeDirect, includeReciprocal);
@@ -1059,12 +1072,21 @@ void ReferenceCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& con
 }
 
 void ReferenceCalcNonbondedForceKernel::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
-    if (nonbondedMethod != PME)
-        throw OpenMMException("getPMEParametersInContext: This Context is not using PME");
+    if (nonbondedMethod != PME && nonbondedMethod != LJPME)
+        throw OpenMMException("getPMEParametersInContext: This Context is not using PME or LJPME");
     alpha = ewaldAlpha;
     nx = gridSize[0];
     ny = gridSize[1];
     nz = gridSize[2];
+}
+
+void ReferenceCalcNonbondedForceKernel::getLJPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
+    if (nonbondedMethod != LJPME)
+        throw OpenMMException("getPMEParametersInContext: This Context is not using LJPME");
+    alpha = ewaldDispersionAlpha;
+    nx = dispersionGridSize[0];
+    ny = dispersionGridSize[1];
+    nz = dispersionGridSize[2];
 }
 
 ReferenceCalcCustomNonbondedForceKernel::~ReferenceCalcCustomNonbondedForceKernel() {
