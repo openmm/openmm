@@ -105,7 +105,8 @@ before_install:
   - wget https://anaconda.org/omnia/ccache/3.2.4/download/${TRAVIS_OS_NAME}-64/ccache-3.2.4-0.tar.bz2
   - mkdir -p $HOME/ccache && tar xf ccache-3.2.4-0.tar.bz2 -C $HOME/ccache
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-      brew install doxygen fftw;
+      brew install fftw;
+      brew install -y https://raw.githubusercontent.com/Homebrew/homebrew-core/5b680fb58fedfb00cd07a7f69f5a621bb9240f3b/Formula/doxygen.rb;
       sudo easy_install pytest;
     fi
   - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
