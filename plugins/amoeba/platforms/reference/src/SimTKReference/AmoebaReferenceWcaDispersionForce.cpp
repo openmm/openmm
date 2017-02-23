@@ -22,6 +22,9 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#ifdef WIN32
+  #define _USE_MATH_DEFINES // Needed to get M_PI
+#endif
 #include "AmoebaReferenceForce.h"
 #include "AmoebaReferenceWcaDispersionForce.h"
 #include <cmath>
