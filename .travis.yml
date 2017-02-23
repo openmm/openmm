@@ -65,6 +65,7 @@ matrix:
 
     - language: objective-c
       os: osx
+      #osx_image: xcode8.2
       env: ==OSX==
            OPENCL=false
            CUDA=false
@@ -104,9 +105,12 @@ before_install:
   - START_TIME=$(date +%s)
   - wget https://anaconda.org/omnia/ccache/3.2.4/download/${TRAVIS_OS_NAME}-64/ccache-3.2.4-0.tar.bz2
   - mkdir -p $HOME/ccache && tar xf ccache-3.2.4-0.tar.bz2 -C $HOME/ccache
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-      brew install doxygen fftw;
-      sudo easy_install pytest;
+  - |
+    if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+       brew update
+       if [ -z `brew list | grep doxygen` ]; then brew install doxygen; fi
+       if [ -z `brew list | grep fftw` ]; then brew install fftw; fi
+       sudo easy_install pytest
     fi
   - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
       CMAKE_URL="https://cmake.org/files/v3.7/cmake-3.7.2-Linux-x86_64.tar.gz";
