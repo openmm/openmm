@@ -2077,7 +2077,10 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
                 else
                     pmeDispersionSpreadChargeKernel.setArg<cl::Buffer>(3, pmeGrid->getDeviceBuffer());
                 pmeDispersionSpreadChargeKernel.setArg<cl::Buffer>(4, pmeBsplineTheta->getDeviceBuffer());
-                pmeDispersionSpreadChargeKernel.setArg<cl::Buffer>(13, sigmaEpsilon->getDeviceBuffer());
+                if (deviceIsCpu || cl.getSupports64BitGlobalAtomics())
+                    pmeDispersionSpreadChargeKernel.setArg<cl::Buffer>(13, sigmaEpsilon->getDeviceBuffer());
+                else
+                    pmeDispersionSpreadChargeKernel.setArg<cl::Buffer>(5, sigmaEpsilon->getDeviceBuffer());
                 pmeDispersionConvolutionKernel.setArg<cl::Buffer>(0, pmeGrid2->getDeviceBuffer());
                 pmeDispersionConvolutionKernel.setArg<cl::Buffer>(1, pmeDispersionBsplineModuliX->getDeviceBuffer());
                 pmeDispersionConvolutionKernel.setArg<cl::Buffer>(2, pmeDispersionBsplineModuliY->getDeviceBuffer());

@@ -72,10 +72,10 @@ private:
     int numBonds;
     std::vector<int>   particle1;
     std::vector<int>   particle2;
-    std::vector<RealOpenMM> length;
-    std::vector<RealOpenMM> kQuadratic;
-    RealOpenMM globalBondCubic;
-    RealOpenMM globalBondQuartic;
+    std::vector<double> length;
+    std::vector<double> kQuadratic;
+    double globalBondCubic;
+    double globalBondQuartic;
     const System& system;
     bool usePeriodic;
 };
@@ -115,12 +115,12 @@ private:
     std::vector<int>   particle1;
     std::vector<int>   particle2;
     std::vector<int>   particle3;
-    std::vector<RealOpenMM> angle;
-    std::vector<RealOpenMM> kQuadratic;
-    RealOpenMM globalAngleCubic;
-    RealOpenMM globalAngleQuartic;
-    RealOpenMM globalAnglePentic;
-    RealOpenMM globalAngleSextic;
+    std::vector<double> angle;
+    std::vector<double> kQuadratic;
+    double globalAngleCubic;
+    double globalAngleQuartic;
+    double globalAnglePentic;
+    double globalAngleSextic;
     const System& system;
     bool usePeriodic;
 };
@@ -161,12 +161,12 @@ private:
     std::vector<int>   particle2;
     std::vector<int>   particle3;
     std::vector<int>   particle4;
-    std::vector<RealOpenMM> angle;
-    std::vector<RealOpenMM> kQuadratic;
-    RealOpenMM globalInPlaneAngleCubic;
-    RealOpenMM globalInPlaneAngleQuartic;
-    RealOpenMM globalInPlaneAnglePentic;
-    RealOpenMM globalInPlaneAngleSextic;
+    std::vector<double> angle;
+    std::vector<double> kQuadratic;
+    double globalInPlaneAngleCubic;
+    double globalInPlaneAngleQuartic;
+    double globalInPlaneAnglePentic;
+    double globalInPlaneAngleSextic;
     const System& system;
     bool usePeriodic;
 };
@@ -209,7 +209,7 @@ private:
     std::vector<int>   particle4;
     std::vector<int>   particle5;
     std::vector<int>   particle6;
-    std::vector<RealOpenMM> kTorsion;
+    std::vector<double> kTorsion;
     const System& system;
     bool usePeriodic;
 };
@@ -249,11 +249,11 @@ private:
     std::vector<int>   particle1;
     std::vector<int>   particle2;
     std::vector<int>   particle3;
-    std::vector<RealOpenMM> lengthABParameters;
-    std::vector<RealOpenMM> lengthCBParameters;
-    std::vector<RealOpenMM> angleParameters;
-    std::vector<RealOpenMM> k1Parameters;
-    std::vector<RealOpenMM> k2Parameters;
+    std::vector<double> lengthABParameters;
+    std::vector<double> lengthCBParameters;
+    std::vector<double> angleParameters;
+    std::vector<double> k1Parameters;
+    std::vector<double> k2Parameters;
     const System& system;
     bool usePeriodic;
 };
@@ -294,11 +294,11 @@ private:
     std::vector<int>   particle2;
     std::vector<int>   particle3;
     std::vector<int>   particle4;
-    std::vector<RealOpenMM> kParameters;
-    RealOpenMM globalOutOfPlaneBendAngleCubic;
-    RealOpenMM globalOutOfPlaneBendAngleQuartic;
-    RealOpenMM globalOutOfPlaneBendAnglePentic;
-    RealOpenMM globalOutOfPlaneBendAngleSextic;
+    std::vector<double> kParameters;
+    double globalOutOfPlaneBendAngleCubic;
+    double globalOutOfPlaneBendAngleQuartic;
+    double globalOutOfPlaneBendAnglePentic;
+    double globalOutOfPlaneBendAngleSextic;
     const System& system;
     bool usePeriodic;
 };
@@ -337,7 +337,7 @@ private:
     std::vector<int>   gridIndices;
 
     int numTorsionTorsionGrids;
-    std::vector< std::vector< std::vector< std::vector<RealOpenMM> > > > torsionTorsionGrids;
+    std::vector< std::vector< std::vector< std::vector<double> > > > torsionTorsionGrids;
 
     const System& system;
     bool usePeriodic;
@@ -439,12 +439,12 @@ private:
     int numMultipoles;
     AmoebaMultipoleForce::NonbondedMethod nonbondedMethod;
     AmoebaMultipoleForce::PolarizationType polarizationType;
-    std::vector<RealOpenMM> charges;
-    std::vector<RealOpenMM> dipoles;
-    std::vector<RealOpenMM> quadrupoles;
-    std::vector<RealOpenMM> tholes;
-    std::vector<RealOpenMM> dampingFactors;
-    std::vector<RealOpenMM> polarity;
+    std::vector<double> charges;
+    std::vector<double> dipoles;
+    std::vector<double> quadrupoles;
+    std::vector<double> tholes;
+    std::vector<double> dampingFactors;
+    std::vector<double> polarity;
     std::vector<int>   axisTypes;
     std::vector<int>   multipoleAtomZs;
     std::vector<int>   multipoleAtomXs;
@@ -452,12 +452,12 @@ private:
     std::vector< std::vector< std::vector<int> > > multipoleAtomCovalentInfo;
 
     int mutualInducedMaxIterations;
-    RealOpenMM mutualInducedTargetEpsilon;
+    double mutualInducedTargetEpsilon;
     std::vector<double> extrapolationCoefficients;
 
     bool usePme;
-    RealOpenMM alphaEwald;
-    RealOpenMM cutoffDistance;
+    double alphaEwald;
+    double cutoffDistance;
     std::vector<int> pmeGridDimension;
 
     const System& system;
@@ -501,9 +501,9 @@ private:
     double dispersionCoefficient;
     std::vector<int> indexIVs;
     std::vector< std::set<int> > allExclusions;
-    std::vector<RealOpenMM> sigmas;
-    std::vector<RealOpenMM> epsilons;
-    std::vector<RealOpenMM> reductions;
+    std::vector<double> sigmas;
+    std::vector<double> epsilons;
+    std::vector<double> reductions;
     std::string sigmaCombiningRule;
     std::string epsilonCombiningRule;
     const System& system;
@@ -543,17 +543,17 @@ public:
 private:
 
     int numParticles;
-    std::vector<RealOpenMM> radii;
-    std::vector<RealOpenMM> epsilons;
-    RealOpenMM epso; 
-    RealOpenMM epsh; 
-    RealOpenMM rmino; 
-    RealOpenMM rminh; 
-    RealOpenMM awater; 
-    RealOpenMM shctd; 
-    RealOpenMM dispoff;
-    RealOpenMM slevy;
-    RealOpenMM totalMaximumDispersionEnergy;
+    std::vector<double> radii;
+    std::vector<double> epsilons;
+    double epso; 
+    double epsh; 
+    double rmino; 
+    double rminh; 
+    double awater; 
+    double shctd; 
+    double dispoff;
+    double slevy;
+    double totalMaximumDispersionEnergy;
     const System& system;
 };
 
@@ -609,7 +609,7 @@ public:
      *  @return soluteDielectric
      *
      */
-    RealOpenMM getSoluteDielectric() const;
+    double getSoluteDielectric() const;
 
     /**
      *  Get the solvent dielectric.
@@ -617,7 +617,7 @@ public:
      *  @return solventDielectric
      *
      */
-    RealOpenMM getSolventDielectric() const;
+    double getSolventDielectric() const;
 
     /**
      *  Get the dielectric offset.
@@ -625,7 +625,7 @@ public:
      *  @return dielectricOffset
      *
      */
-    RealOpenMM getDielectricOffset() const;
+    double getDielectricOffset() const;
 
     /**
      *  Get the probe radius.
@@ -633,7 +633,7 @@ public:
      *  @return probeRadius
      *
      */
-    RealOpenMM getProbeRadius() const;
+    double getProbeRadius() const;
 
     /**
      *  Get the surface area factor.
@@ -641,7 +641,7 @@ public:
      *  @return surfaceAreaFactor
      *
      */
-    RealOpenMM getSurfaceAreaFactor() const;
+    double getSurfaceAreaFactor() const;
 
     /**
      *  Get the vector of particle radii.
@@ -649,7 +649,7 @@ public:
      *  @param atomicRadii vector of atomic radii
      *
      */
-    void getAtomicRadii(std::vector<RealOpenMM>& atomicRadii) const;
+    void getAtomicRadii(std::vector<double>& atomicRadii) const;
 
     /**
      *  Get the vector of scale factors.
@@ -657,7 +657,7 @@ public:
      *  @param scaleFactors vector of scale factors
      *
      */
-    void getScaleFactors(std::vector<RealOpenMM>& scaleFactors) const;
+    void getScaleFactors(std::vector<double>& scaleFactors) const;
 
     /**
      *  Get the vector of charges.
@@ -665,7 +665,7 @@ public:
      *  @param charges vector of charges
      *
      */
-    void getCharges(std::vector<RealOpenMM>& charges) const;
+    void getCharges(std::vector<double>& charges) const;
 
     /**
      * Copy changed parameters over to a context.
@@ -678,14 +678,14 @@ public:
 private:
 
     int numParticles;
-    std::vector<RealOpenMM> atomicRadii;
-    std::vector<RealOpenMM> scaleFactors;
-    std::vector<RealOpenMM> charges;
-    RealOpenMM soluteDielectric;
-    RealOpenMM solventDielectric;
-    RealOpenMM dielectricOffset;
-    RealOpenMM probeRadius;
-    RealOpenMM surfaceAreaFactor;
+    std::vector<double> atomicRadii;
+    std::vector<double> scaleFactors;
+    std::vector<double> charges;
+    double soluteDielectric;
+    double solventDielectric;
+    double dielectricOffset;
+    double probeRadius;
+    double surfaceAreaFactor;
     int includeCavityTerm;
     int directPolarization;
     const System& system;

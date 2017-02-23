@@ -25,7 +25,7 @@
 #ifndef __AmoebaReferenceInPlaneAngleForce_H__
 #define __AmoebaReferenceInPlaneAngleForce_H__
 
-#include "RealVec.h"
+#include "openmm/Vec3.h"
 #include <vector>
 
 namespace OpenMM {
@@ -58,7 +58,7 @@ public:
       
        --------------------------------------------------------------------------------------- */
       
-    void setPeriodic(OpenMM::RealVec* vectors);
+    void setPeriodic(OpenMM::Vec3* vectors);
 
      /**---------------------------------------------------------------------------------------
      
@@ -83,23 +83,23 @@ public:
      
         --------------------------------------------------------------------------------------- */
 
-    RealOpenMM calculateForceAndEnergy(int numAngles, std::vector<OpenMM::RealVec>& posData,
-                                       const std::vector<int>& particle1,
-                                       const std::vector<int>&  particle2,
-                                       const std::vector<int>&  particle3,
-                                       const std::vector<int>&  particle4,
-                                       const std::vector<RealOpenMM>& angle,
-                                       const std::vector<RealOpenMM>& kQuadratic,
-                                       RealOpenMM globalAngleCubic,
-                                       RealOpenMM globalAngleQuartic,
-                                       RealOpenMM globalAnglePentic,
-                                       RealOpenMM globalAngleSextic,
-                                       std::vector<OpenMM::RealVec>& forceData) const;
+    double calculateForceAndEnergy(int numAngles, std::vector<OpenMM::Vec3>& posData,
+                                   const std::vector<int>& particle1,
+                                   const std::vector<int>&  particle2,
+                                   const std::vector<int>&  particle3,
+                                   const std::vector<int>&  particle4,
+                                   const std::vector<double>& angle,
+                                   const std::vector<double>& kQuadratic,
+                                   double globalAngleCubic,
+                                   double globalAngleQuartic,
+                                   double globalAnglePentic,
+                                   double globalAngleSextic,
+                                   std::vector<OpenMM::Vec3>& forceData) const;
 
 private:
 
     bool usePeriodic;
-    RealVec boxVectors[3];
+    Vec3 boxVectors[3];
 
     /**---------------------------------------------------------------------------------------
     
@@ -119,11 +119,11 @@ private:
     
        --------------------------------------------------------------------------------------- */
     
-    RealOpenMM getPrefactorsGivenAngleCosine(RealOpenMM cosine, RealOpenMM idealAngle, RealOpenMM angleK,
-                                             RealOpenMM angleCubic,     RealOpenMM angleQuartic,
-                                             RealOpenMM anglePentic,    RealOpenMM angleSextic,
-                                             RealOpenMM* dEdR) const;
-    
+    double getPrefactorsGivenAngleCosine(double cosine, double idealAngle, double angleK,
+                                         double angleCubic,     double angleQuartic,
+                                         double anglePentic,    double angleSextic,
+                                         double* dEdR) const;
+
     /**---------------------------------------------------------------------------------------
     
        Calculate Amoeba angle ixn (force and energy)
@@ -144,12 +144,12 @@ private:
     
        --------------------------------------------------------------------------------------- */
     
-    RealOpenMM calculateAngleIxn(const OpenMM::RealVec& positionAtomA, const OpenMM::RealVec& positionAtomB,
-                                 const OpenMM::RealVec& positionAtomC, const OpenMM::RealVec& positionAtomD,
-                                 RealOpenMM angle,          RealOpenMM angleK,
-                                 RealOpenMM angleCubic,     RealOpenMM angleQuartic,
-                                 RealOpenMM anglePentic,    RealOpenMM angleSextic,
-                                 OpenMM::RealVec* forces) const;
+    double calculateAngleIxn(const OpenMM::Vec3& positionAtomA, const OpenMM::Vec3& positionAtomB,
+                             const OpenMM::Vec3& positionAtomC, const OpenMM::Vec3& positionAtomD,
+                             double angle,          double angleK,
+                             double angleCubic,     double angleQuartic,
+                             double anglePentic,    double angleSextic,
+                             OpenMM::Vec3* forces) const;
          
 };
 

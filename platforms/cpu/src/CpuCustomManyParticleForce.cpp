@@ -88,7 +88,7 @@ CpuCustomManyParticleForce::~CpuCustomManyParticleForce() {
         delete threadData[i];
 }
 
-void CpuCustomManyParticleForce::calculateIxn(AlignedArray<float>& posq, RealOpenMM** particleParameters,
+void CpuCustomManyParticleForce::calculateIxn(AlignedArray<float>& posq, double** particleParameters,
                                                   const map<string, double>& globalParameters, vector<AlignedArray<float> >& threadForce,
                                                   bool includeForces, bool includeEnergy, double& energy) {
     // Record the parameters for the threads.
@@ -180,14 +180,14 @@ void CpuCustomManyParticleForce::threadComputeForce(ThreadPool& threads, int thr
     }
 }
 
-void CpuCustomManyParticleForce::setUseCutoff(RealOpenMM distance) {
+void CpuCustomManyParticleForce::setUseCutoff(double distance) {
     useCutoff = true;
     cutoffDistance = distance;
     if (neighborList == NULL)
         neighborList = new CpuNeighborList(4);
 }
 
-void CpuCustomManyParticleForce::setPeriodic(RealVec* periodicBoxVectors) {
+void CpuCustomManyParticleForce::setPeriodic(Vec3* periodicBoxVectors) {
     assert(useCutoff);
     assert(periodicBoxVectors[0][0] >= 2.0*cutoffDistance);
     assert(periodicBoxVectors[1][1] >= 2.0*cutoffDistance);
@@ -209,7 +209,7 @@ void CpuCustomManyParticleForce::setPeriodic(RealVec* periodicBoxVectors) {
 }
 
 void CpuCustomManyParticleForce::loopOverInteractions(vector<int>& availableParticles, vector<int>& particleSet, int loopIndex, int startIndex,
-                                                          RealOpenMM** particleParameters, float* forces, ThreadData& data, const fvec4& boxSize, const fvec4& invBoxSize) {
+                                                          double** particleParameters, float* forces, ThreadData& data, const fvec4& boxSize, const fvec4& invBoxSize) {
     int numParticles = availableParticles.size();
     double cutoff2 = cutoffDistance*cutoffDistance;
     int checkRange = (centralParticleMode ? 1 : loopIndex);
@@ -243,7 +243,7 @@ void CpuCustomManyParticleForce::loopOverInteractions(vector<int>& availablePart
     }
 }
 
-void CpuCustomManyParticleForce::calculateOneIxn(vector<int>& particleSet, RealOpenMM** particleParameters, float* forces, ThreadData& data, const fvec4& boxSize, const fvec4& invBoxSize) {
+void CpuCustomManyParticleForce::calculateOneIxn(vector<int>& particleSet, double** particleParameters, float* forces, ThreadData& data, const fvec4& boxSize, const fvec4& invBoxSize) {
     // Select the ordering to use for the particles.
     
     vector<int>& permutedParticles = data.permutedParticles;

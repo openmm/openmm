@@ -38,7 +38,7 @@ __kernel void updateBsplines(__global const real4* restrict posq, __global real4
         data[0] = scale*(-dr+1.0f)*data[0];
         for (int j = 0; j < PME_ORDER; j++) {
 #ifdef USE_LJPME
-            const float2 sigEps = sigmaEpsilon[atom];
+            const float2 sigEps = sigmaEpsilon[i];
             const real charge = 8*sigEps.x*sigEps.x*sigEps.x*sigEps.y;
 #else
             const real charge = pos.w;

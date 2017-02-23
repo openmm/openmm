@@ -59,7 +59,7 @@ public:
  */
 class CpuNeighborList::Voxels {
 public:
-    Voxels(int blockSize, float vsy, float vsz, float miny, float maxy, float minz, float maxz, const RealVec* boxVectors, bool usePeriodic) :
+    Voxels(int blockSize, float vsy, float vsz, float miny, float maxy, float minz, float maxz, const Vec3* boxVectors, bool usePeriodic) :
             blockSize(blockSize), voxelSizeY(vsy), voxelSizeZ(vsz), miny(miny), maxy(maxy), minz(minz), maxz(maxz), usePeriodic(usePeriodic) {
         for (int i = 0; i < 3; i++)
             for (int j = 0; j < 3; j++)
@@ -413,7 +413,7 @@ CpuNeighborList::CpuNeighborList(int blockSize) : blockSize(blockSize) {
 }
 
 void CpuNeighborList::computeNeighborList(int numAtoms, const AlignedArray<float>& atomLocations, const vector<set<int> >& exclusions,
-            const RealVec* periodicBoxVectors, bool usePeriodic, float maxDistance, ThreadPool& threads) {
+            const Vec3* periodicBoxVectors, bool usePeriodic, float maxDistance, ThreadPool& threads) {
     int numBlocks = (numAtoms+blockSize-1)/blockSize;
     blockNeighbors.resize(numBlocks);
     blockExclusions.resize(numBlocks);

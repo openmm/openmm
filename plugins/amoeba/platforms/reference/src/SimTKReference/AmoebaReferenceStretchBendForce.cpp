@@ -24,12 +24,13 @@
 
 #include "AmoebaReferenceForce.h"
 #include "AmoebaReferenceStretchBendForce.h"
+#include "SimTKOpenMMRealType.h"
 #include <vector>
 
 using std::vector;
 using namespace OpenMM;
 
-void AmoebaReferenceStretchBendForce::setPeriodic(OpenMM::RealVec* vectors) {
+void AmoebaReferenceStretchBendForce::setPeriodic(OpenMM::Vec3* vectors) {
     usePeriodic = true;
     boxVectors[0] = vectors[0];
     boxVectors[1] = vectors[1];
@@ -56,20 +57,11 @@ void AmoebaReferenceStretchBendForce::setPeriodic(OpenMM::RealVec* vectors) {
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM AmoebaReferenceStretchBendForce::calculateStretchBendIxn(const RealVec& positionAtomA, const RealVec& positionAtomB,
-                                                                    const RealVec& positionAtomC,
-                                                                    RealOpenMM lengthAB,      RealOpenMM lengthCB,
-                                                                    RealOpenMM idealAngle,    RealOpenMM k1Parameter,
-                                                                    RealOpenMM k2Parameter, RealVec* forces) const {
-
-   // ---------------------------------------------------------------------------------------
-
-    //static const std::string methodName = "AmoebaReferenceStretchBendForce::calculateStretchBendIxn";
- 
-    static const RealOpenMM zero          = 0.0;
-    static const RealOpenMM one           = 1.0;
-
-   // ---------------------------------------------------------------------------------------
+double AmoebaReferenceStretchBendForce::calculateStretchBendIxn(const Vec3& positionAtomA, const Vec3& positionAtomB,
+                                                                const Vec3& positionAtomC,
+                                                                double lengthAB,      double lengthCB,
+                                                                double idealAngle,    double k1Parameter,
+                                                                double k2Parameter, Vec3* forces) const {
 
    enum { A, B, C, LastAtomIndex };
    enum { AB, CB, CBxAB, ABxP, CBxP, LastDeltaIndex };
@@ -79,7 +71,7 @@ RealOpenMM AmoebaReferenceStretchBendForce::calculateStretchBendIxn(const RealVe
    // get deltaR between various combinations of the 3 atoms
    // and various intermediate terms
 
-    std::vector<RealOpenMM> deltaR[LastDeltaIndex];
+    std::vector<double> deltaR[LastDeltaIndex];
     for (unsigned int ii = 0; ii < LastDeltaIndex; ii++) {
         deltaR[ii].resize(3);
     }
@@ -91,30 +83,30 @@ RealOpenMM AmoebaReferenceStretchBendForce::calculateStretchBendIxn(const RealVe
         AmoebaReferenceForce::loadDeltaR(positionAtomB, positionAtomA, deltaR[AB]);
         AmoebaReferenceForce::loadDeltaR(positionAtomB, positionAtomC, deltaR[CB]);
     }
-    RealOpenMM  rAB2 = AmoebaReferenceForce::getNormSquared3(deltaR[AB]);
-    RealOpenMM  rAB  = SQRT(rAB2);
-    RealOpenMM  rCB2 = AmoebaReferenceForce::getNormSquared3(deltaR[CB]);
-    RealOpenMM  rCB  = SQRT(rCB2);
+    double  rAB2 = AmoebaReferenceForce::getNormSquared3(deltaR[AB]);
+    double  rAB  = sqrt(rAB2);
+    double  rCB2 = AmoebaReferenceForce::getNormSquared3(deltaR[CB]);
+    double  rCB  = sqrt(rCB2);
 
     AmoebaReferenceForce::getCrossProduct(deltaR[CB], deltaR[AB], deltaR[CBxAB]);
-    RealOpenMM  rP   = AmoebaReferenceForce::getNorm3(deltaR[CBxAB]);
-    if (rP <= zero) {
-       return zero;
+    double  rP   = AmoebaReferenceForce::getNorm3(deltaR[CBxAB]);
+    if (rP <= 0.0) {
+       return 0.0;
     }
-    RealOpenMM dot    = AmoebaReferenceForce::getDotProduct3(deltaR[CB], deltaR[AB]);
-    RealOpenMM cosine = dot/(rAB*rCB);
+    double dot    = AmoebaReferenceForce::getDotProduct3(deltaR[CB], deltaR[AB]);
+    double cosine = dot/(rAB*rCB);
  
-    RealOpenMM angle;
-    if (cosine >= one) {
-       angle = zero;
-    } else if (cosine <= -one) {
-       angle = PI_M;
+    double angle;
+    if (cosine >= 1.0) {
+       angle = 0.0;
+    } else if (cosine <= -1.0) {
+       angle = M_PI;
     } else {
-       angle = RADIAN*ACOS(cosine);
+       angle = RADIAN*acos(cosine);
     }
  
-    RealOpenMM termA = -RADIAN/(rAB2*rP);
-    RealOpenMM termC =  RADIAN/(rCB2*rP);
+    double termA = -RADIAN/(rAB2*rP);
+    double termC =  RADIAN/(rCB2*rP);
  
     // P = CBxAB
  
@@ -125,11 +117,11 @@ RealOpenMM AmoebaReferenceStretchBendForce::calculateStretchBendIxn(const RealVe
        deltaR[CBxP][ii] *= termC;
     }
  
-    RealOpenMM dr1   = rAB - lengthAB;
-    RealOpenMM dr2   = rCB - lengthCB;
-    RealOpenMM drkk  = dr1*k1Parameter + dr2*k2Parameter;
-    termA            = one/rAB;
-    termC            = one/rCB;
+    double dr1   = rAB - lengthAB;
+    double dr2   = rCB - lengthCB;
+    double drkk  = dr1*k1Parameter + dr2*k2Parameter;
+    termA            = 1.0/rAB;
+    termC            = 1.0/rCB;
  
     // ---------------------------------------------------------------------------------------
  
@@ -138,11 +130,11 @@ RealOpenMM AmoebaReferenceStretchBendForce::calculateStretchBendIxn(const RealVe
     // calculate forces for atoms a, b, c
     // the force for b is then -(a + c)
  
-    std::vector<RealOpenMM> subForce[LastAtomIndex];
+    std::vector<double> subForce[LastAtomIndex];
     for (int ii = 0; ii < LastAtomIndex; ii++) {
         subForce[ii].resize(3);
     }
-    RealOpenMM dt = angle - idealAngle*RADIAN;
+    double dt = angle - idealAngle*RADIAN;
     for (int jj = 0; jj < 3; jj++) {
        subForce[A][jj] = k1Parameter*dt*termA*deltaR[AB][jj] + drkk*deltaR[ABxP][jj];
        subForce[C][jj] = k2Parameter*dt*termC*deltaR[CB][jj] + drkk*deltaR[CBxP][jj];
@@ -162,29 +154,29 @@ RealOpenMM AmoebaReferenceStretchBendForce::calculateStretchBendIxn(const RealVe
     return dt*drkk;
 }
 
-RealOpenMM AmoebaReferenceStretchBendForce::calculateForceAndEnergy(int numStretchBends, vector<RealVec>& posData,
-                                                                       const std::vector<int>&  particle1,
-                                                                       const std::vector<int>&  particle2,
-                                                                       const std::vector<int>&  particle3,
-                                                                       const std::vector<RealOpenMM>& lengthABParameters,
-                                                                       const std::vector<RealOpenMM>& lengthCBParameters,
-                                                                       const std::vector<RealOpenMM>&  angle,
-                                                                       const std::vector<RealOpenMM>&  k1Quadratic,
-                                                                       const std::vector<RealOpenMM>&  k2Quadratic,
-                                                                       vector<RealVec>& forceData) const {
-    RealOpenMM energy      = 0.0; 
+double AmoebaReferenceStretchBendForce::calculateForceAndEnergy(int numStretchBends, vector<Vec3>& posData,
+                                                                const std::vector<int>&  particle1,
+                                                                const std::vector<int>&  particle2,
+                                                                const std::vector<int>&  particle3,
+                                                                const std::vector<double>& lengthABParameters,
+                                                                const std::vector<double>& lengthCBParameters,
+                                                                const std::vector<double>&  angle,
+                                                                const std::vector<double>&  k1Quadratic,
+                                                                const std::vector<double>&  k2Quadratic,
+                                                                vector<Vec3>& forceData) const {
+    double energy = 0.0; 
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(numStretchBends); ii++) {
-        int particle1Index      = particle1[ii];
-        int particle2Index      = particle2[ii];
-        int particle3Index      = particle3[ii];
-        RealOpenMM abLength     = lengthABParameters[ii];
-        RealOpenMM cbLength     = lengthCBParameters[ii];
-        RealOpenMM idealAngle   = angle[ii];
-        RealOpenMM angleK1      = k1Quadratic[ii];
-        RealOpenMM angleK2      = k2Quadratic[ii];
-        RealVec forces[3];
-        energy                 += calculateStretchBendIxn(posData[particle1Index], posData[particle2Index], posData[particle3Index],
-                                                          abLength, cbLength, idealAngle, angleK1, angleK2, forces);
+        int particle1Index  = particle1[ii];
+        int particle2Index  = particle2[ii];
+        int particle3Index  = particle3[ii];
+        double abLength     = lengthABParameters[ii];
+        double cbLength     = lengthCBParameters[ii];
+        double idealAngle   = angle[ii];
+        double angleK1      = k1Quadratic[ii];
+        double angleK2      = k2Quadratic[ii];
+        Vec3 forces[3];
+        energy             += calculateStretchBendIxn(posData[particle1Index], posData[particle2Index], posData[particle3Index],
+                                                      abLength, cbLength, idealAngle, angleK1, angleK2, forces);
         // accumulate forces
     
         for (int jj = 0; jj < 3; jj++) {

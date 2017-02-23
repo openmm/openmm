@@ -109,7 +109,7 @@ void CpuNonbondedForce::setUseSwitchingFunction(float distance) {
 
      --------------------------------------------------------------------------------------- */
 
-void CpuNonbondedForce::setPeriodic(RealVec* periodicBoxVectors) {
+void CpuNonbondedForce::setPeriodic(Vec3* periodicBoxVectors) {
 
     assert(cutoff);
     assert(periodicBoxVectors[0][0] >= 2.0*cutoffDistance);
@@ -241,9 +241,9 @@ void CpuNonbondedForce::tabulateExpTerms() {
     }
 }
 
-void CpuNonbondedForce::calculateReciprocalIxn(int numberOfAtoms, float* posq, const vector<RealVec>& atomCoordinates,
+void CpuNonbondedForce::calculateReciprocalIxn(int numberOfAtoms, float* posq, const vector<Vec3>& atomCoordinates,
                                                const vector<pair<float, float> >& atomParameters, const vector<float> &C6params, const vector<set<int> >& exclusions,
-                                               vector<RealVec>& forces, double* totalEnergy) const {
+                                               vector<Vec3>& forces, double* totalEnergy) const {
     typedef std::complex<float> d_complex;
 
     static const float epsilon     =  1.0;
@@ -256,10 +256,10 @@ void CpuNonbondedForce::calculateReciprocalIxn(int numberOfAtoms, float* posq, c
     if (pme) {
         pme_t pmedata;
         pme_init(&pmedata, alphaEwald, numberOfAtoms, meshDim, 5, 1);
-        vector<RealOpenMM> charges(numberOfAtoms);
+        vector<double> charges(numberOfAtoms);
         for (int i = 0; i < numberOfAtoms; i++)
             charges[i] = posq[4*i+3];
-        RealOpenMM recipEnergy = 0.0;
+        double recipEnergy = 0.0;
         pme_exec(pmedata, atomCoordinates, forces, charges, periodicBoxVectors, &recipEnergy);
         if (totalEnergy)
             *totalEnergy += recipEnergy;
@@ -269,12 +269,12 @@ void CpuNonbondedForce::calculateReciprocalIxn(int numberOfAtoms, float* posq, c
             // Dispersion reciprocal space terms
             pme_init(&pmedata,alphaDispersionEwald,numberOfAtoms,dispersionMeshDim,5,1);
 
-            std::vector<RealVec> dpmeforces;
+            std::vector<Vec3> dpmeforces;
             for (int i = 0; i < numberOfAtoms; i++){
-                charges[i] = (RealOpenMM)C6params[i];
-                dpmeforces.push_back(RealVec());
+                charges[i] = C6params[i];
+                dpmeforces.push_back(Vec3());
             }
-            RealOpenMM recipDispersionEnergy    = 0.0;
+            double recipDispersionEnergy = 0.0;
             pme_exec_dpme(pmedata,atomCoordinates,dpmeforces,charges,periodicBoxVectors,&recipDispersionEnergy);
             for (int i = 0; i < numberOfAtoms; i++){
                 forces[i][0] -= 2.0*dpmeforces[i][0];
@@ -376,7 +376,7 @@ void CpuNonbondedForce::calculateReciprocalIxn(int numberOfAtoms, float* posq, c
 }
 
 
-void CpuNonbondedForce::calculateDirectIxn(int numberOfAtoms, float* posq, const vector<RealVec>& atomCoordinates, const vector<pair<float, float> >& atomParameters,
+void CpuNonbondedForce::calculateDirectIxn(int numberOfAtoms, float* posq, const vector<Vec3>& atomCoordinates, const vector<pair<float, float> >& atomParameters,
                                            const vector<float>& C6params, const vector<set<int> >& exclusions, vector<AlignedArray<float> >& threadForce, double* totalEnergy, ThreadPool& threads) {
     // Record the parameters for the threads.
     

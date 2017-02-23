@@ -35,11 +35,11 @@ class ReferenceCMAPTorsionIxn : public ReferenceBondIxn {
 
 private:
 
-    std::vector<std::vector<std::vector<RealOpenMM> > > coeff;
+    std::vector<std::vector<std::vector<double> > > coeff;
     std::vector<int> torsionMaps;
     std::vector<std::vector<int> > torsionIndices;
     bool usePeriodic;
-    RealVec boxVectors[3];
+    Vec3 boxVectors[3];
 
     /**---------------------------------------------------------------------------------------
 
@@ -52,8 +52,8 @@ private:
 
          --------------------------------------------------------------------------------------- */
 
-    void calculateOneIxn(int index, std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& forces,
-                         RealOpenMM* totalEnergy) const;
+    void calculateOneIxn(int index, std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<OpenMM::Vec3>& forces,
+                         double* totalEnergy) const;
 
 public:
 
@@ -63,7 +63,7 @@ public:
 
        --------------------------------------------------------------------------------------- */
 
-    ReferenceCMAPTorsionIxn(const std::vector<std::vector<std::vector<RealOpenMM> > >& coeff,
+    ReferenceCMAPTorsionIxn(const std::vector<std::vector<std::vector<double> > >& coeff,
                             const std::vector<int>& torsionMaps,
                             const std::vector<std::vector<int> >& torsionIndices);
 
@@ -75,7 +75,7 @@ public:
       
          --------------------------------------------------------------------------------------- */
       
-       void setPeriodic(OpenMM::RealVec* vectors);
+       void setPeriodic(OpenMM::Vec3* vectors);
 
     /**---------------------------------------------------------------------------------------
 
@@ -87,7 +87,7 @@ public:
 
          --------------------------------------------------------------------------------------- */
 
-    void calculateIxn(std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& forces, RealOpenMM* totalEnergy) const;
+    void calculateIxn(std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<OpenMM::Vec3>& forces, double* totalEnergy) const;
 
     /**---------------------------------------------------------------------------------------
 
@@ -95,9 +95,9 @@ public:
 
        --------------------------------------------------------------------------------------- */
 
-    void calculateBondIxn(int* atomIndices, std::vector<OpenMM::RealVec>& atomCoordinates,
-                         RealOpenMM* parameters, std::vector<OpenMM::RealVec>& forces,
-                         RealOpenMM* totalEnergy, double* energyParamDerivs);
+    void calculateBondIxn(int* atomIndices, std::vector<OpenMM::Vec3>& atomCoordinates,
+                         double* parameters, std::vector<OpenMM::Vec3>& forces,
+                         double* totalEnergy, double* energyParamDerivs);
 
 // ---------------------------------------------------------------------------------------
 

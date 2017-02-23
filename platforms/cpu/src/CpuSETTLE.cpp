@@ -38,7 +38,7 @@ using namespace std;
 CpuSETTLE::CpuSETTLE(const System& system, const ReferenceSETTLEAlgorithm& settle, ThreadPool& threads) : threads(threads) {
     int numBlocks = 10*threads.getNumThreads();
     int numClusters = settle.getNumClusters();
-    vector<RealOpenMM> mass(system.getNumParticles());
+    vector<double> mass(system.getNumParticles());
     for (int i = 0; i < system.getNumParticles(); i++)
         mass[i] = system.getParticleMass(i);
     for (int i = 0; i < numBlocks; i++) {
@@ -47,7 +47,7 @@ CpuSETTLE::CpuSETTLE(const System& system, const ReferenceSETTLEAlgorithm& settl
         if (start != end) {
             int numThreadClusters = end-start;
             vector<int> atom1(numThreadClusters), atom2(numThreadClusters), atom3(numThreadClusters);
-            vector<RealOpenMM> distance1(numThreadClusters), distance2(numThreadClusters);
+            vector<double> distance1(numThreadClusters), distance2(numThreadClusters);
             for (int j = 0; j < numThreadClusters; j++)
                 settle.getClusterParameters(start+j, atom1[j], atom2[j], atom3[j], distance1[j], distance2[j]);
             threadSettle.push_back(new ReferenceSETTLEAlgorithm(atom1, atom2, atom3, distance1, distance2, mass));
@@ -60,7 +60,7 @@ CpuSETTLE::~CpuSETTLE() {
         delete threadSettle[i];
 }
 
-void CpuSETTLE::apply(vector<OpenMM::RealVec>& atomCoordinates, vector<OpenMM::RealVec>& atomCoordinatesP, vector<RealOpenMM>& inverseMasses, RealOpenMM tolerance) {
+void CpuSETTLE::apply(vector<OpenMM::Vec3>& atomCoordinates, vector<OpenMM::Vec3>& atomCoordinatesP, vector<double>& inverseMasses, double tolerance) {
     gmx_atomic_t atomicCounter;
     gmx_atomic_set(&atomicCounter, 0);
     threads.execute([&] (ThreadPool& threads, int threadIndex) {
@@ -74,7 +74,7 @@ void CpuSETTLE::apply(vector<OpenMM::RealVec>& atomCoordinates, vector<OpenMM::R
     threads.waitForThreads();
 }
 
-void CpuSETTLE::applyToVelocities(vector<OpenMM::RealVec>& atomCoordinates, vector<OpenMM::RealVec>& velocities, vector<RealOpenMM>& inverseMasses, RealOpenMM tolerance) {
+void CpuSETTLE::applyToVelocities(vector<OpenMM::Vec3>& atomCoordinates, vector<OpenMM::Vec3>& velocities, vector<double>& inverseMasses, double tolerance) {
     gmx_atomic_t atomicCounter;
     gmx_atomic_set(&atomicCounter, 0);
     threads.execute([&] (ThreadPool& threads, int threadIndex) {

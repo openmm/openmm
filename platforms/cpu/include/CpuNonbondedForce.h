@@ -86,7 +86,7 @@ class CpuNonbondedForce {
       
          --------------------------------------------------------------------------------------- */
       
-      void setPeriodic(RealVec* periodicBoxVectors);
+      void setPeriodic(Vec3* periodicBoxVectors);
        
       /**---------------------------------------------------------------------------------------
       
@@ -140,9 +140,9 @@ class CpuNonbondedForce {
             
          --------------------------------------------------------------------------------------- */
 
-      void calculateReciprocalIxn(int numberOfAtoms, float* posq, const std::vector<RealVec>& atomCoordinates,
+      void calculateReciprocalIxn(int numberOfAtoms, float* posq, const std::vector<Vec3>& atomCoordinates,
                                   const std::vector<std::pair<float, float> >& atomParameters, const std::vector<float> &C6params,
-                                  const std::vector<std::set<int> >& exclusions, std::vector<RealVec>& forces, double* totalEnergy) const;
+                                  const std::vector<std::set<int> >& exclusions, std::vector<Vec3>& forces, double* totalEnergy) const;
       
       /**---------------------------------------------------------------------------------------
       
@@ -160,7 +160,7 @@ class CpuNonbondedForce {
       
          --------------------------------------------------------------------------------------- */
           
-      void calculateDirectIxn(int numberOfAtoms, float* posq, const std::vector<RealVec>& atomCoordinates, const std::vector<std::pair<float, float> >& atomParameters,
+      void calculateDirectIxn(int numberOfAtoms, float* posq, const std::vector<Vec3>& atomCoordinates, const std::vector<std::pair<float, float> >& atomParameters,
             const std::vector<float>& C6params, const std::vector<std::set<int> >& exclusions, std::vector<AlignedArray<float> >& threadForce, double* totalEnergy, ThreadPool& threads);
 
     /**
@@ -178,7 +178,7 @@ protected:
         bool tableIsValid, expTableIsValid;
         const CpuNeighborList* neighborList;
         float recipBoxSize[3];
-        RealVec periodicBoxVectors[3];
+        Vec3 periodicBoxVectors[3];
         AlignedArray<fvec4> periodicBoxVec4;
         float cutoffDistance, switchingDistance;
         float krf, crf;
@@ -192,8 +192,8 @@ protected:
         // The following variables are used to make information accessible to the individual threads.
         int numberOfAtoms;
         float* posq;
-        RealVec const* atomCoordinates;
-        std::pair<float, float> const* atomParameters;
+        Vec3 const* atomCoordinates;
+        std::pair<float, float> const* atomParameters;        
         float const *C6params;
         std::set<int> const* exclusions;
         std::vector<AlignedArray<float> >* threadForce;

@@ -29,15 +29,15 @@
 using namespace OpenMM;
 using namespace std;
 
-CpuLangevinDynamics::CpuLangevinDynamics(int numberOfAtoms, RealOpenMM deltaT, RealOpenMM friction, RealOpenMM temperature, ThreadPool& threads, CpuRandom& random) : 
+CpuLangevinDynamics::CpuLangevinDynamics(int numberOfAtoms, double deltaT, double friction, double temperature, ThreadPool& threads, CpuRandom& random) : 
            ReferenceStochasticDynamics(numberOfAtoms, deltaT, friction, temperature), threads(threads), random(random) {
 }
 
 CpuLangevinDynamics::~CpuLangevinDynamics() {
 }
 
-void CpuLangevinDynamics::updatePart1(int numberOfAtoms, vector<RealVec>& atomCoordinates, vector<RealVec>& velocities,
-                                      vector<RealVec>& forces, vector<RealOpenMM>& inverseMasses, vector<RealVec>& xPrime) {
+void CpuLangevinDynamics::updatePart1(int numberOfAtoms, vector<Vec3>& atomCoordinates, vector<Vec3>& velocities,
+                                      vector<Vec3>& forces, vector<double>& inverseMasses, vector<Vec3>& xPrime) {
     // Record the parameters for the threads.
     
     this->numberOfAtoms = numberOfAtoms;
@@ -53,8 +53,8 @@ void CpuLangevinDynamics::updatePart1(int numberOfAtoms, vector<RealVec>& atomCo
     threads.waitForThreads();
 }
 
-void CpuLangevinDynamics::updatePart2(int numberOfAtoms, vector<RealVec>& atomCoordinates, vector<RealVec>& velocities,
-                                      vector<RealVec>& forces, vector<RealOpenMM>& inverseMasses, vector<RealVec>& xPrime) {
+void CpuLangevinDynamics::updatePart2(int numberOfAtoms, vector<Vec3>& atomCoordinates, vector<Vec3>& velocities,
+                                      vector<Vec3>& forces, vector<double>& inverseMasses, vector<Vec3>& xPrime) {
     // Record the parameters for the threads.
     
     this->numberOfAtoms = numberOfAtoms;
@@ -70,8 +70,8 @@ void CpuLangevinDynamics::updatePart2(int numberOfAtoms, vector<RealVec>& atomCo
     threads.waitForThreads();
 }
 
-void CpuLangevinDynamics::updatePart3(int numberOfAtoms, vector<RealVec>& atomCoordinates, vector<RealVec>& velocities,
-                                       vector<RealOpenMM>& inverseMasses, vector<RealVec>& xPrime) {
+void CpuLangevinDynamics::updatePart3(int numberOfAtoms, vector<Vec3>& atomCoordinates, vector<Vec3>& velocities,
+                                       vector<double>& inverseMasses, vector<Vec3>& xPrime) {
     // Record the parameters for the threads.
     
     this->numberOfAtoms = numberOfAtoms;
@@ -87,39 +87,39 @@ void CpuLangevinDynamics::updatePart3(int numberOfAtoms, vector<RealVec>& atomCo
 }
 
 void CpuLangevinDynamics::threadUpdate1(int threadIndex) {
-    RealOpenMM dt = getDeltaT();
-    RealOpenMM friction = getFriction();
-    const RealOpenMM vscale = EXP(-dt*friction);
-    const RealOpenMM fscale = (friction == 0 ? dt : (1-vscale)/friction);
-    const RealOpenMM kT = BOLTZ*getTemperature();
-    const RealOpenMM noisescale = SQRT(kT*(1-vscale*vscale));
+    double dt = getDeltaT();
+    double friction = getFriction();
+    const double vscale = exp(-dt*friction);
+    const double fscale = (friction == 0 ? dt : (1-vscale)/friction);
+    const double kT = BOLTZ*getTemperature();
+    const double noisescale = sqrt(kT*(1-vscale*vscale));
     int start = threadIndex*numberOfAtoms/threads.getNumThreads();
     int end = (threadIndex+1)*numberOfAtoms/threads.getNumThreads();
 
     for (int i = start; i < end; i++) {
         if (inverseMasses[i] != 0.0) {
-            RealOpenMM sqrtInvMass = SQRT(inverseMasses[i]);
-            RealVec noise(random.getGaussianRandom(threadIndex), random.getGaussianRandom(threadIndex), random.getGaussianRandom(threadIndex));
+            double sqrtInvMass = sqrt(inverseMasses[i]);
+            Vec3 noise(random.getGaussianRandom(threadIndex), random.getGaussianRandom(threadIndex), random.getGaussianRandom(threadIndex));
             velocities[i]  = velocities[i]*vscale + forces[i]*(fscale*inverseMasses[i]) + noise*(noisescale*sqrtInvMass);
         }
    }
 }
 
 void CpuLangevinDynamics::threadUpdate2(int threadIndex) {
-    const RealOpenMM dt = getDeltaT();
+    const double dt = getDeltaT();
     int start = threadIndex*numberOfAtoms/threads.getNumThreads();
     int end = (threadIndex+1)*numberOfAtoms/threads.getNumThreads();
 
     for (int i = start; i < end; i++) {
         if (inverseMasses[i] != 0.0) {
-            RealOpenMM sqrtInvMass = SQRT(inverseMasses[i]);
+            double sqrtInvMass = sqrt(inverseMasses[i]);
             xPrime[i] = atomCoordinates[i]+velocities[i]*dt;
         }
    }
 }
 
 void CpuLangevinDynamics::threadUpdate3(int threadIndex) {
-   const RealOpenMM invStepSize = 1.0/getDeltaT();
+   const double invStepSize = 1.0/getDeltaT();
     int start = threadIndex*numberOfAtoms/threads.getNumThreads();
     int end = (threadIndex+1)*numberOfAtoms/threads.getNumThreads();
 

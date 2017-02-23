@@ -59,7 +59,7 @@ private:
     // The following variables are used to make information accessible to the individual threads.
     int numberOfAtoms;
     float* posq;
-    RealOpenMM** atomParameters;
+    double** atomParameters;
     const std::map<std::string, double>* globalParameters;
     std::vector<AlignedArray<float> >* threadForce;
     bool includeForce, includeEnergy;
@@ -81,7 +81,7 @@ private:
      * @param useExclusions    specifies whether to use exclusions
      */
 
-    void calculateParticlePairValue(int index, ThreadData& data, int numAtoms, float* posq, RealOpenMM** atomParameters,
+    void calculateParticlePairValue(int index, ThreadData& data, int numAtoms, float* posq, double** atomParameters,
                                     bool useExclusions, const fvec4& boxSize, const fvec4& invBoxSize);
 
     /**
@@ -95,7 +95,7 @@ private:
      * @param atomParameters   atomParameters[atomIndex][paramterIndex]
      */
 
-    void calculateOnePairValue(int index, int atom1, int atom2, ThreadData& data, float* posq, RealOpenMM** atomParameters,
+    void calculateOnePairValue(int index, int atom1, int atom2, ThreadData& data, float* posq, double** atomParameters,
                                std::vector<float>& valueArray, const fvec4& boxSize, const fvec4& invBoxSize);
 
     /**
@@ -110,7 +110,7 @@ private:
      * @param totalEnergy      the energy contribution is added to this
      */
 
-    void calculateSingleParticleEnergyTerm(int index, ThreadData& data, int numAtoms, float* posq, RealOpenMM** atomParameters, float* forces, double& totalEnergy);
+    void calculateSingleParticleEnergyTerm(int index, ThreadData& data, int numAtoms, float* posq, double** atomParameters, float* forces, double& totalEnergy);
 
     /**
      * Calculate an energy term that is based on particle pairs
@@ -125,7 +125,7 @@ private:
      * @param totalEnergy      the energy contribution is added to this
      */
 
-    void calculateParticlePairEnergyTerm(int index, ThreadData& data, int numAtoms, float* posq, RealOpenMM** atomParameters,
+    void calculateParticlePairEnergyTerm(int index, ThreadData& data, int numAtoms, float* posq, double** atomParameters,
                                     bool useExclusions, float* forces, double& totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize);
 
     /**
@@ -141,7 +141,7 @@ private:
      * @param totalEnergy      the energy contribution is added to this
      */
 
-    void calculateOnePairEnergyTerm(int index, int atom1, int atom2, ThreadData& data, float* posq, RealOpenMM** atomParameters,
+    void calculateOnePairEnergyTerm(int index, int atom1, int atom2, ThreadData& data, float* posq, double** atomParameters,
                                float* forces, double& totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize);
 
     /**
@@ -154,7 +154,7 @@ private:
      * @param forces           forces on atoms are added to this
      */
 
-    void calculateChainRuleForces(ThreadData& data, int numAtoms, float* posq, RealOpenMM** atomParameters,
+    void calculateChainRuleForces(ThreadData& data, int numAtoms, float* posq, double** atomParameters,
                                     float* forces, const fvec4& boxSize, const fvec4& invBoxSize);
 
     /**
@@ -169,7 +169,7 @@ private:
      * @param isExcluded       specifies whether this is an excluded pair
      */
 
-    void calculateOnePairChainRule(int atom1, int atom2, ThreadData& data, float* posq, RealOpenMM** atomParameters,
+    void calculateOnePairChainRule(int atom1, int atom2, ThreadData& data, float* posq, double** atomParameters,
                                float* forces, bool isExcluded, const fvec4& boxSize, const fvec4& invBoxSize);
 
     /**
@@ -217,7 +217,7 @@ public:
      * @param boxSize             the X, Y, and Z widths of the periodic box
      */
 
-    void setPeriodic(RealVec& boxSize);
+    void setPeriodic(Vec3& boxSize);
 
     /**
      * Calculate custom GB ixn
@@ -231,7 +231,7 @@ public:
      * @param energyParamDerivs  derivatives of the energy with respect to global parameters
      */
 
-    void calculateIxn(int numberOfAtoms, float* posq, RealOpenMM** atomParameters, std::map<std::string, double>& globalParameters,
+    void calculateIxn(int numberOfAtoms, float* posq, double** atomParameters, std::map<std::string, double>& globalParameters,
             std::vector<AlignedArray<float> >& threadForce, bool includeForce, bool includeEnergy, double& totalEnergy, double* energyParamDerivs);
 };
 

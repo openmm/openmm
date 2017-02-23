@@ -43,7 +43,7 @@ using namespace OpenMM;
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceVariableVerletDynamics::ReferenceVariableVerletDynamics(int numberOfAtoms, RealOpenMM accuracy) :
+ReferenceVariableVerletDynamics::ReferenceVariableVerletDynamics(int numberOfAtoms, double accuracy) :
            ReferenceDynamics(numberOfAtoms, 0.0f, 0.0f), _accuracy(accuracy) {
     xPrime.resize(numberOfAtoms);
     inverseMasses.resize(numberOfAtoms);
@@ -56,13 +56,6 @@ ReferenceVariableVerletDynamics::ReferenceVariableVerletDynamics(int numberOfAto
    --------------------------------------------------------------------------------------- */
 
 ReferenceVariableVerletDynamics::~ReferenceVariableVerletDynamics() {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceVariableVerletDynamics::~ReferenceVariableVerletDynamics";
-
-   // ---------------------------------------------------------------------------------------
-
 }
 
 /**---------------------------------------------------------------------------------------
@@ -73,7 +66,7 @@ ReferenceVariableVerletDynamics::~ReferenceVariableVerletDynamics() {
 
  --------------------------------------------------------------------------------------- */
 
-RealOpenMM ReferenceVariableVerletDynamics::getAccuracy() const {
+double ReferenceVariableVerletDynamics::getAccuracy() const {
     return _accuracy;
 }
 
@@ -83,7 +76,7 @@ RealOpenMM ReferenceVariableVerletDynamics::getAccuracy() const {
 
  --------------------------------------------------------------------------------------- */
 
-void ReferenceVariableVerletDynamics::setAccuracy(RealOpenMM accuracy) {
+void ReferenceVariableVerletDynamics::setAccuracy(double accuracy) {
     _accuracy = accuracy;
 }
 
@@ -101,19 +94,9 @@ void ReferenceVariableVerletDynamics::setAccuracy(RealOpenMM accuracy) {
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceVariableVerletDynamics::update(const OpenMM::System& system, vector<RealVec>& atomCoordinates,
-                                          vector<RealVec>& velocities,
-                                          vector<RealVec>& forces, vector<RealOpenMM>& masses, RealOpenMM maxStepSize, RealOpenMM tolerance) {
-
-    // ---------------------------------------------------------------------------------------
-
-    static const char* methodName      = "\nReferenceVariableVerletDynamics::update";
-
-    static const RealOpenMM zero       =  0.0;
-    static const RealOpenMM one        =  1.0;
-
-    // ---------------------------------------------------------------------------------------
-
+void ReferenceVariableVerletDynamics::update(const OpenMM::System& system, vector<Vec3>& atomCoordinates,
+                                          vector<Vec3>& velocities,
+                                          vector<Vec3>& forces, vector<double>& masses, double maxStepSize, double tolerance) {
     // first-time-through initialization
 
     int numberOfAtoms = system.getNumParticles();
@@ -121,34 +104,34 @@ void ReferenceVariableVerletDynamics::update(const OpenMM::System& system, vecto
        // invert masses
 
        for (int ii = 0; ii < numberOfAtoms; ii++) {
-          if (masses[ii] == zero)
-              inverseMasses[ii] = zero;
+          if (masses[ii] == 0.0)
+              inverseMasses[ii] = 0.0;
           else
-              inverseMasses[ii] = one/masses[ii];
+              inverseMasses[ii] = 1.0/masses[ii];
        }
     }
 
-    RealOpenMM error = zero;
+    double error = 0.0;
     for (int i = 0; i < numberOfAtoms; ++i) {
         for (int j = 0; j < 3; ++j) {
-            RealOpenMM xerror = inverseMasses[i]*forces[i][j];
+            double xerror = inverseMasses[i]*forces[i][j];
             error += xerror*xerror;
         }
     }
-    error = SQRT(error/(numberOfAtoms*3));
-    RealOpenMM newStepSize = SQRT(getAccuracy()/error);
+    error = sqrt(error/(numberOfAtoms*3));
+    double newStepSize = sqrt(getAccuracy()/error);
     if (getDeltaT() > 0.0f)
         newStepSize = std::min(newStepSize, getDeltaT()*2.0f); // For safety, limit how quickly dt can increase.
     if (newStepSize > getDeltaT() && newStepSize < 1.2f*getDeltaT())
         newStepSize = getDeltaT(); // Keeping dt constant between steps improves the behavior of the integrator.
     if (newStepSize > maxStepSize)
         newStepSize = maxStepSize;
-    RealOpenMM vstep = 0.5f*(newStepSize+getDeltaT()); // The time interval by which to advance the velocities
+    double vstep = 0.5f*(newStepSize+getDeltaT()); // The time interval by which to advance the velocities
     setDeltaT(newStepSize);
     for (int i = 0; i < numberOfAtoms; ++i) {
-        if (masses[i] != zero)
+        if (masses[i] != 0.0)
             for (int j = 0; j < 3; ++j) {
-                RealOpenMM vPrime = velocities[i][j] + inverseMasses[i]*forces[i][j]*vstep;
+                double vPrime = velocities[i][j] + inverseMasses[i]*forces[i][j]*vstep;
                 xPrime[i][j] = atomCoordinates[i][j] + vPrime*getDeltaT();
             }
     }
@@ -158,9 +141,9 @@ void ReferenceVariableVerletDynamics::update(const OpenMM::System& system, vecto
 
    // Update the positions and velocities.
 
-   RealOpenMM velocityScale = one/getDeltaT();
+   double velocityScale = 1.0/getDeltaT();
    for (int i = 0; i < numberOfAtoms; ++i) {
-       if (masses[i] != zero)
+       if (masses[i] != 0.0)
            for (int j = 0; j < 3; ++j) {
                velocities[i][j] = velocityScale*(xPrime[i][j] - atomCoordinates[i][j]);
                atomCoordinates[i][j] = xPrime[i][j];

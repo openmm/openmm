@@ -31,11 +31,12 @@
 
 #include "ReferenceVirtualSites.h"
 #include "openmm/VirtualSite.h"
+#include <cmath>
 
 using namespace OpenMM;
 using namespace std;
 
-void ReferenceVirtualSites::computePositions(const OpenMM::System& system, vector<OpenMM::RealVec>& atomCoordinates) {
+void ReferenceVirtualSites::computePositions(const OpenMM::System& system, vector<OpenMM::Vec3>& atomCoordinates) {
     for (int i = 0; i < system.getNumParticles(); i++)
         if (system.isVirtualSite(i)) {
             if (dynamic_cast<const TwoParticleAverageSite*>(&system.getVirtualSite(i)) != NULL) {
@@ -43,7 +44,7 @@ void ReferenceVirtualSites::computePositions(const OpenMM::System& system, vecto
                 
                 const TwoParticleAverageSite& site = dynamic_cast<const TwoParticleAverageSite&>(system.getVirtualSite(i));
                 int p1 = site.getParticle(0), p2 = site.getParticle(1);
-                RealOpenMM w1 = site.getWeight(0), w2 = site.getWeight(1);
+                double w1 = site.getWeight(0), w2 = site.getWeight(1);
                 atomCoordinates[i] = atomCoordinates[p1]*w1 + atomCoordinates[p2]*w2;
             }
             else if (dynamic_cast<const ThreeParticleAverageSite*>(&system.getVirtualSite(i)) != NULL) {
@@ -51,7 +52,7 @@ void ReferenceVirtualSites::computePositions(const OpenMM::System& system, vecto
                 
                 const ThreeParticleAverageSite& site = dynamic_cast<const ThreeParticleAverageSite&>(system.getVirtualSite(i));
                 int p1 = site.getParticle(0), p2 = site.getParticle(1), p3 = site.getParticle(2);
-                RealOpenMM w1 = site.getWeight(0), w2 = site.getWeight(1), w3 = site.getWeight(2);
+                double w1 = site.getWeight(0), w2 = site.getWeight(1), w3 = site.getWeight(2);
                 atomCoordinates[i] = atomCoordinates[p1]*w1 + atomCoordinates[p2]*w2 + atomCoordinates[p3]*w3;
             }
             else if (dynamic_cast<const OutOfPlaneSite*>(&system.getVirtualSite(i)) != NULL) {
@@ -59,10 +60,10 @@ void ReferenceVirtualSites::computePositions(const OpenMM::System& system, vecto
                 
                 const OutOfPlaneSite& site = dynamic_cast<const OutOfPlaneSite&>(system.getVirtualSite(i));
                 int p1 = site.getParticle(0), p2 = site.getParticle(1), p3 = site.getParticle(2);
-                RealOpenMM w12 = site.getWeight12(), w13 = site.getWeight13(), wcross = site.getWeightCross();
-                RealVec v12 = atomCoordinates[p2]-atomCoordinates[p1];
-                RealVec v13 = atomCoordinates[p3]-atomCoordinates[p1];
-                RealVec cross = v12.cross(v13);
+                double w12 = site.getWeight12(), w13 = site.getWeight13(), wcross = site.getWeightCross();
+                Vec3 v12 = atomCoordinates[p2]-atomCoordinates[p1];
+                Vec3 v13 = atomCoordinates[p3]-atomCoordinates[p1];
+                Vec3 cross = v12.cross(v13);
                 atomCoordinates[i] = atomCoordinates[p1] + v12*w12 + v13*w13 + cross*wcross;
             }
             else if (dynamic_cast<const LocalCoordinatesSite*>(&system.getVirtualSite(i)) != NULL) {
@@ -70,14 +71,14 @@ void ReferenceVirtualSites::computePositions(const OpenMM::System& system, vecto
                 
                 const LocalCoordinatesSite& site = dynamic_cast<const LocalCoordinatesSite&>(system.getVirtualSite(i));
                 int p1 = site.getParticle(0), p2 = site.getParticle(1), p3 = site.getParticle(2);
-                RealVec originWeights = site.getOriginWeights();
-                RealVec xWeights = site.getXWeights();
-                RealVec yWeights = site.getYWeights();
-                RealVec localPosition = site.getLocalPosition();
-                RealVec origin = atomCoordinates[p1]*originWeights[0] + atomCoordinates[p2]*originWeights[1] + atomCoordinates[p3]*originWeights[2];
-                RealVec xdir = atomCoordinates[p1]*xWeights[0] + atomCoordinates[p2]*xWeights[1] + atomCoordinates[p3]*xWeights[2];
-                RealVec ydir = atomCoordinates[p1]*yWeights[0] + atomCoordinates[p2]*yWeights[1] + atomCoordinates[p3]*yWeights[2];
-                RealVec zdir = xdir.cross(ydir);
+                Vec3 originWeights = site.getOriginWeights();
+                Vec3 xWeights = site.getXWeights();
+                Vec3 yWeights = site.getYWeights();
+                Vec3 localPosition = site.getLocalPosition();
+                Vec3 origin = atomCoordinates[p1]*originWeights[0] + atomCoordinates[p2]*originWeights[1] + atomCoordinates[p3]*originWeights[2];
+                Vec3 xdir = atomCoordinates[p1]*xWeights[0] + atomCoordinates[p2]*xWeights[1] + atomCoordinates[p3]*xWeights[2];
+                Vec3 ydir = atomCoordinates[p1]*yWeights[0] + atomCoordinates[p2]*yWeights[1] + atomCoordinates[p3]*yWeights[2];
+                Vec3 zdir = xdir.cross(ydir);
                 xdir /= sqrt(xdir.dot(xdir));
                 zdir /= sqrt(zdir.dot(zdir));
                 ydir = zdir.cross(xdir);
@@ -87,16 +88,16 @@ void ReferenceVirtualSites::computePositions(const OpenMM::System& system, vecto
 
 }
 
-void ReferenceVirtualSites::distributeForces(const OpenMM::System& system, const vector<OpenMM::RealVec>& atomCoordinates, vector<OpenMM::RealVec>& forces) {
+void ReferenceVirtualSites::distributeForces(const OpenMM::System& system, const vector<OpenMM::Vec3>& atomCoordinates, vector<OpenMM::Vec3>& forces) {
     for (int i = 0; i < system.getNumParticles(); i++)
         if (system.isVirtualSite(i)) {
-            RealVec f = forces[i];
+            Vec3 f = forces[i];
             if (dynamic_cast<const TwoParticleAverageSite*>(&system.getVirtualSite(i)) != NULL) {
                 // A two particle average.
                 
                 const TwoParticleAverageSite& site = dynamic_cast<const TwoParticleAverageSite&>(system.getVirtualSite(i));
                 int p1 = site.getParticle(0), p2 = site.getParticle(1);
-                RealOpenMM w1 = site.getWeight(0), w2 = site.getWeight(1);
+                double w1 = site.getWeight(0), w2 = site.getWeight(1);
                 forces[p1] += f*w1;
                 forces[p2] += f*w2;
             }
@@ -105,7 +106,7 @@ void ReferenceVirtualSites::distributeForces(const OpenMM::System& system, const
                 
                 const ThreeParticleAverageSite& site = dynamic_cast<const ThreeParticleAverageSite&>(system.getVirtualSite(i));
                 int p1 = site.getParticle(0), p2 = site.getParticle(1), p3 = site.getParticle(2);
-                RealOpenMM w1 = site.getWeight(0), w2 = site.getWeight(1), w3 = site.getWeight(2);
+                double w1 = site.getWeight(0), w2 = site.getWeight(1), w3 = site.getWeight(2);
                 forces[p1] += f*w1;
                 forces[p2] += f*w2;
                 forces[p3] += f*w3;
@@ -115,15 +116,15 @@ void ReferenceVirtualSites::distributeForces(const OpenMM::System& system, const
                 
                 const OutOfPlaneSite& site = dynamic_cast<const OutOfPlaneSite&>(system.getVirtualSite(i));
                 int p1 = site.getParticle(0), p2 = site.getParticle(1), p3 = site.getParticle(2);
-                RealOpenMM w12 = site.getWeight12(), w13 = site.getWeight13(), wcross = site.getWeightCross();
-                RealVec v12 = atomCoordinates[p2]-atomCoordinates[p1];
-                RealVec v13 = atomCoordinates[p3]-atomCoordinates[p1];
-                RealVec f2(w12*f[0] - wcross*v13[2]*f[1] + wcross*v13[1]*f[2],
-                           wcross*v13[2]*f[0] + w12*f[1] - wcross*v13[0]*f[2],
-                          -wcross*v13[1]*f[0] + wcross*v13[0]*f[1] + w12*f[2]);
-                RealVec f3(w13*f[0] + wcross*v12[2]*f[1] - wcross*v12[1]*f[2],
-                          -wcross*v12[2]*f[0] + w13*f[1] + wcross*v12[0]*f[2],
-                           wcross*v12[1]*f[0] - wcross*v12[0]*f[1] + w13*f[2]);
+                double w12 = site.getWeight12(), w13 = site.getWeight13(), wcross = site.getWeightCross();
+                Vec3 v12 = atomCoordinates[p2]-atomCoordinates[p1];
+                Vec3 v13 = atomCoordinates[p3]-atomCoordinates[p1];
+                Vec3 f2(w12*f[0] - wcross*v13[2]*f[1] + wcross*v13[1]*f[2],
+                        wcross*v13[2]*f[0] + w12*f[1] - wcross*v13[0]*f[2],
+                       -wcross*v13[1]*f[0] + wcross*v13[0]*f[1] + w12*f[2]);
+                Vec3 f3(w13*f[0] + wcross*v12[2]*f[1] - wcross*v12[1]*f[2],
+                       -wcross*v12[2]*f[0] + w13*f[1] + wcross*v12[0]*f[2],
+                        wcross*v12[1]*f[0] - wcross*v12[0]*f[1] + w13*f[2]);
                 forces[p1] += f-f2-f3;
                 forces[p2] += f2;
                 forces[p3] += f3;
@@ -133,43 +134,43 @@ void ReferenceVirtualSites::distributeForces(const OpenMM::System& system, const
                 
                 const LocalCoordinatesSite& site = dynamic_cast<const LocalCoordinatesSite&>(system.getVirtualSite(i));
                 int p1 = site.getParticle(0), p2 = site.getParticle(1), p3 = site.getParticle(2);
-                RealVec originWeights = site.getOriginWeights();
-                RealVec wx = site.getXWeights();
-                RealVec wy = site.getYWeights();
-                RealVec localPosition = site.getLocalPosition();
-                RealVec xdir = atomCoordinates[p1]*wx[0] + atomCoordinates[p2]*wx[1] + atomCoordinates[p3]*wx[2];
-                RealVec ydir = atomCoordinates[p1]*wy[0] + atomCoordinates[p2]*wy[1] + atomCoordinates[p3]*wy[2];
-                RealVec zdir = xdir.cross(ydir);
-                RealOpenMM invNormXdir = 1.0/SQRT(xdir.dot(xdir));
-                RealOpenMM invNormZdir = 1.0/SQRT(zdir.dot(zdir));
-                RealVec dx = xdir*invNormXdir;
-                RealVec dz = zdir*invNormZdir;
-                RealVec dy = dz.cross(dx);
+                Vec3 originWeights = site.getOriginWeights();
+                Vec3 wx = site.getXWeights();
+                Vec3 wy = site.getYWeights();
+                Vec3 localPosition = site.getLocalPosition();
+                Vec3 xdir = atomCoordinates[p1]*wx[0] + atomCoordinates[p2]*wx[1] + atomCoordinates[p3]*wx[2];
+                Vec3 ydir = atomCoordinates[p1]*wy[0] + atomCoordinates[p2]*wy[1] + atomCoordinates[p3]*wy[2];
+                Vec3 zdir = xdir.cross(ydir);
+                double invNormXdir = 1.0/sqrt(xdir.dot(xdir));
+                double invNormZdir = 1.0/sqrt(zdir.dot(zdir));
+                Vec3 dx = xdir*invNormXdir;
+                Vec3 dz = zdir*invNormZdir;
+                Vec3 dy = dz.cross(dx);
                 
                 // The derivatives for this case are very complicated.  They were computed with SymPy then simplified by hand.
                 
-                RealOpenMM t11 = (wx[0]*ydir[0]-wy[0]*xdir[0])*invNormZdir;
-                RealOpenMM t12 = (wx[0]*ydir[1]-wy[0]*xdir[1])*invNormZdir;
-                RealOpenMM t13 = (wx[0]*ydir[2]-wy[0]*xdir[2])*invNormZdir;
-                RealOpenMM t21 = (wx[1]*ydir[0]-wy[1]*xdir[0])*invNormZdir;
-                RealOpenMM t22 = (wx[1]*ydir[1]-wy[1]*xdir[1])*invNormZdir;
-                RealOpenMM t23 = (wx[1]*ydir[2]-wy[1]*xdir[2])*invNormZdir;
-                RealOpenMM t31 = (wx[2]*ydir[0]-wy[2]*xdir[0])*invNormZdir;
-                RealOpenMM t32 = (wx[2]*ydir[1]-wy[2]*xdir[1])*invNormZdir;
-                RealOpenMM t33 = (wx[2]*ydir[2]-wy[2]*xdir[2])*invNormZdir;
-                RealOpenMM sx1 = t13*dz[1]-t12*dz[2];
-                RealOpenMM sy1 = t11*dz[2]-t13*dz[0];
-                RealOpenMM sz1 = t12*dz[0]-t11*dz[1];
-                RealOpenMM sx2 = t23*dz[1]-t22*dz[2];
-                RealOpenMM sy2 = t21*dz[2]-t23*dz[0];
-                RealOpenMM sz2 = t22*dz[0]-t21*dz[1];
-                RealOpenMM sx3 = t33*dz[1]-t32*dz[2];
-                RealOpenMM sy3 = t31*dz[2]-t33*dz[0];
-                RealOpenMM sz3 = t32*dz[0]-t31*dz[1];
-                RealVec wxScaled = wx*invNormXdir;
-                RealVec fp1 = localPosition*f[0];
-                RealVec fp2 = localPosition*f[1];
-                RealVec fp3 = localPosition*f[2];
+                double t11 = (wx[0]*ydir[0]-wy[0]*xdir[0])*invNormZdir;
+                double t12 = (wx[0]*ydir[1]-wy[0]*xdir[1])*invNormZdir;
+                double t13 = (wx[0]*ydir[2]-wy[0]*xdir[2])*invNormZdir;
+                double t21 = (wx[1]*ydir[0]-wy[1]*xdir[0])*invNormZdir;
+                double t22 = (wx[1]*ydir[1]-wy[1]*xdir[1])*invNormZdir;
+                double t23 = (wx[1]*ydir[2]-wy[1]*xdir[2])*invNormZdir;
+                double t31 = (wx[2]*ydir[0]-wy[2]*xdir[0])*invNormZdir;
+                double t32 = (wx[2]*ydir[1]-wy[2]*xdir[1])*invNormZdir;
+                double t33 = (wx[2]*ydir[2]-wy[2]*xdir[2])*invNormZdir;
+                double sx1 = t13*dz[1]-t12*dz[2];
+                double sy1 = t11*dz[2]-t13*dz[0];
+                double sz1 = t12*dz[0]-t11*dz[1];
+                double sx2 = t23*dz[1]-t22*dz[2];
+                double sy2 = t21*dz[2]-t23*dz[0];
+                double sz2 = t22*dz[0]-t21*dz[1];
+                double sx3 = t33*dz[1]-t32*dz[2];
+                double sy3 = t31*dz[2]-t33*dz[0];
+                double sz3 = t32*dz[0]-t31*dz[1];
+                Vec3 wxScaled = wx*invNormXdir;
+                Vec3 fp1 = localPosition*f[0];
+                Vec3 fp2 = localPosition*f[1];
+                Vec3 fp3 = localPosition*f[2];
                 forces[p1][0] += fp1[0]*wxScaled[0]*(1-dx[0]*dx[0]) + fp1[2]*(dz[0]*sx1    ) + fp1[1]*((-dx[0]*dy[0]      )*wxScaled[0] + dy[0]*sx1 - dx[1]*t12 - dx[2]*t13) + f[0]*originWeights[0];
                 forces[p1][1] += fp1[0]*wxScaled[0]*( -dx[0]*dx[1]) + fp1[2]*(dz[0]*sy1+t13) + fp1[1]*((-dx[1]*dy[0]-dz[2])*wxScaled[0] + dy[0]*sy1 + dx[1]*t11);
                 forces[p1][2] += fp1[0]*wxScaled[0]*( -dx[0]*dx[2]) + fp1[2]*(dz[0]*sz1-t12) + fp1[1]*((-dx[2]*dy[0]+dz[1])*wxScaled[0] + dy[0]*sz1 + dx[2]*t11);

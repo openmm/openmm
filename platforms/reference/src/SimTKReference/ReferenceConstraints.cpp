@@ -43,9 +43,9 @@ using namespace std;
 
 ReferenceConstraints::ReferenceConstraints(const System& system) : ccma(NULL), settle(NULL) {
     int numParticles = system.getNumParticles();
-    vector<RealOpenMM> masses(numParticles);
+    vector<double> masses(numParticles);
     for (int i = 0; i < numParticles; ++i)
-        masses[i] = (RealOpenMM) system.getParticleMass(i);
+        masses[i] = system.getParticleMass(i);
 
     // Record the set of constraints and how many constraints each atom is involved in.
 
@@ -102,8 +102,8 @@ ReferenceConstraints::ReferenceConstraints(const System& system) : ccma(NULL), s
         vector<int> atom1;
         vector<int> atom2;
         vector<int> atom3;
-        vector<RealOpenMM> distance1;
-        vector<RealOpenMM> distance2;
+        vector<double> distance1;
+        vector<double> distance2;
         for (int i = 0; i < settleClusters.size(); i++) {
             int p1 = settleClusters[i];
             int p2 = settleConstraints[p1].begin()->first;
@@ -156,7 +156,7 @@ ReferenceConstraints::ReferenceConstraints(const System& system) : ccma(NULL), s
         // Record particles and distances for CCMA.
         
         vector<pair<int, int> > ccmaIndices(numCCMA);
-        vector<RealOpenMM> ccmaDistance(numCCMA);
+        vector<double> ccmaDistance(numCCMA);
         for (int i = 0; i < numCCMA; i++) {
             int index = ccmaConstraints[i];
             ccmaIndices[i] = make_pair(atom1[index], atom2[index]);
@@ -173,7 +173,7 @@ ReferenceConstraints::ReferenceConstraints(const System& system) : ccma(NULL), s
                     int atom1, atom2, atom3;
                     double angle, k;
                     force->getAngleParameters(j, atom1, atom2, atom3, angle, k);
-                    angles.push_back(ReferenceCCMAAlgorithm::AngleInfo(atom1, atom2, atom3, (RealOpenMM) angle));
+                    angles.push_back(ReferenceCCMAAlgorithm::AngleInfo(atom1, atom2, atom3, angle));
                 }
             }
         }
@@ -191,14 +191,14 @@ ReferenceConstraints::~ReferenceConstraints() {
         delete settle;
 }
 
-void ReferenceConstraints::apply(vector<OpenMM::RealVec>& atomCoordinates, vector<OpenMM::RealVec>& atomCoordinatesP, vector<RealOpenMM>& inverseMasses, RealOpenMM tolerance) {
+void ReferenceConstraints::apply(vector<OpenMM::Vec3>& atomCoordinates, vector<OpenMM::Vec3>& atomCoordinatesP, vector<double>& inverseMasses, double tolerance) {
     if (ccma != NULL)
         ccma->apply(atomCoordinates, atomCoordinatesP, inverseMasses, tolerance);
     if (settle != NULL)
         settle->apply(atomCoordinates, atomCoordinatesP, inverseMasses, tolerance);
 }
 
-void ReferenceConstraints::applyToVelocities(vector<OpenMM::RealVec>& atomCoordinates, vector<OpenMM::RealVec>& velocities, vector<RealOpenMM>& inverseMasses, RealOpenMM tolerance) {
+void ReferenceConstraints::applyToVelocities(vector<OpenMM::Vec3>& atomCoordinates, vector<OpenMM::Vec3>& velocities, vector<double>& inverseMasses, double tolerance) {
     if (ccma != NULL)
         ccma->applyToVelocities(atomCoordinates, velocities, inverseMasses, tolerance);
     if (settle != NULL)

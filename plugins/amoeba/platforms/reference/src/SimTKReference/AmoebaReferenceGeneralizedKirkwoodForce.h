@@ -25,7 +25,7 @@
 #ifndef __AmoebaReferenceGeneralizedKirkwoodForce_H__
 #define __AmoebaReferenceGeneralizedKirkwoodForce_H__
 
-#include "RealVec.h"
+#include "openmm/Vec3.h"
 #include <vector>
 
 using namespace OpenMM;
@@ -101,7 +101,7 @@ public:
      *
      *  @return soluteDielectric
      */
-    RealOpenMM getSoluteDielectric() const;
+    double getSoluteDielectric() const;
 
     /**
      *  Set solute dielectric
@@ -109,7 +109,7 @@ public:
      *  @param soluteDielectric solute dielectric
      * 
      */
-    void setSoluteDielectric(RealOpenMM soluteDielectric);
+    void setSoluteDielectric(double soluteDielectric);
 
     /**
      *  Get solvent dielectric
@@ -117,7 +117,7 @@ public:
      *  @return solventDielectric
      *
      */
-    RealOpenMM getSolventDielectric() const;
+    double getSolventDielectric() const;
 
     /**
      *  Set solvent dielectric 
@@ -125,7 +125,7 @@ public:
      *  @param solventDielectric solvent dielectric
      *
      */
-    void setSolventDielectric(RealOpenMM solventDielectric);
+    void setSolventDielectric(double solventDielectric);
 
     /**
      *  Get dielectric offset
@@ -133,7 +133,7 @@ public:
      *  @return dielectricOffset
      *
      */
-    RealOpenMM getDielectricOffset() const;
+    double getDielectricOffset() const;
 
     /**
      * Set dielectric offset
@@ -141,7 +141,7 @@ public:
      * @param dielectricOffset dielectric offset
      *
      */
-    void setDielectricOffset(RealOpenMM dielectricOffset);
+    void setDielectricOffset(double dielectricOffset);
 
     /**
      * Get probeRadius
@@ -149,7 +149,7 @@ public:
      * @return probeRadius
      *
      */
-    RealOpenMM getProbeRadius() const;
+    double getProbeRadius() const;
 
     /**
      * Set probe radius
@@ -157,7 +157,7 @@ public:
      * @param probeRadius probe radiue
      *
      */
-    void setProbeRadius(RealOpenMM probeRadius);
+    void setProbeRadius(double probeRadius);
 
     /**
      * Get surfaceAreaFactor
@@ -165,7 +165,7 @@ public:
      * @return surfaceAreaFactor
      *
      */
-    RealOpenMM getSurfaceAreaFactor() const;
+    double getSurfaceAreaFactor() const;
 
     /**
      * Set surface area factor
@@ -173,7 +173,7 @@ public:
      * @param surfaceAreaFactor surface area factor
      *
      */
-    void setSurfaceAreaFactor(RealOpenMM surfaceAreaFactor);
+    void setSurfaceAreaFactor(double surfaceAreaFactor);
 
     /**
      * Set atomic radii
@@ -181,7 +181,7 @@ public:
      * @param atomicRadii input vector of atomic radii
      *
      */
-    void setAtomicRadii(const vector<RealOpenMM>& atomicRadii);
+    void setAtomicRadii(const vector<double>& atomicRadii);
 
     /**
      * Get atomic radii
@@ -189,7 +189,7 @@ public:
      * @param atomicRadii output vector of atomic radii
      *
      */
-    void getAtomicRadii(vector<RealOpenMM>& atomicRadii) const;
+    void getAtomicRadii(vector<double>& atomicRadii) const;
 
     /**
      * Set scale factors
@@ -197,7 +197,7 @@ public:
      * @param scaleFactors input vector of scale factors
      *
      */
-    void setScaleFactors(const vector<RealOpenMM>& scaleFactors);
+    void setScaleFactors(const vector<double>& scaleFactors);
 
     /**
      * Get scale factors
@@ -205,7 +205,7 @@ public:
      * @param scaleFactors output vector of scale factors
      *
      */
-    void getScaleFactors(vector<RealOpenMM>& scaleFactors) const;
+    void getScaleFactors(vector<double>& scaleFactors) const;
 
     /**
      * Set charges
@@ -213,7 +213,7 @@ public:
      * @param charges input vector of charges
      *
      */
-    void setCharges(const vector<RealOpenMM>& charges);
+    void setCharges(const vector<double>& charges);
 
     /**
      * Calculate Grycuk Born radii
@@ -221,7 +221,7 @@ public:
      * @param particlePositions particle positions
      *
      */
-    void calculateGrycukBornRadii(const vector<RealVec>& particlePositions);
+    void calculateGrycukBornRadii(const vector<Vec3>& particlePositions);
          
     /**
      * Get Grycik Born radii (must have called calculateGrycukBornRadii())
@@ -229,7 +229,7 @@ public:
      * @param bornRadii vector of Born radii
      *
      */
-    void getGrycukBornRadii(vector<RealOpenMM>& bornRadii) const;     
+    void getGrycukBornRadii(vector<double>& bornRadii) const;     
 
 private:
 
@@ -237,17 +237,17 @@ private:
     int _includeCavityTerm;
     int _directPolarization;
 
-    RealOpenMM _soluteDielectric;
-    RealOpenMM _solventDielectric;
-    RealOpenMM _dielectricOffset;
-    RealOpenMM _probeRadius;
-    RealOpenMM _surfaceAreaFactor;
+    double _soluteDielectric;
+    double _solventDielectric;
+    double _dielectricOffset;
+    double _probeRadius;
+    double _surfaceAreaFactor;
 
-    std::vector<RealOpenMM> _atomicRadii;
-    std::vector<RealOpenMM> _scaleFactors;
-    std::vector<RealOpenMM> _charges;
+    std::vector<double> _atomicRadii;
+    std::vector<double> _scaleFactors;
+    std::vector<double> _charges;
 
-    std::vector<RealOpenMM> _bornRadii;
+    std::vector<double> _bornRadii;
 
 };
 

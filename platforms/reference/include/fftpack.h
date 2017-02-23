@@ -20,7 +20,6 @@
 
 #include <stdio.h>
 
-#include "RealVec.h"
 #include "openmm/internal/windowsExport.h"
 
 #ifdef __cplusplus
@@ -33,15 +32,15 @@ extern "C" {
 
 class t_complex {
 public:
-    RealOpenMM re;
-    RealOpenMM im;
+    double re;
+    double im;
     t_complex() : re(0.0), im(0.0) {
     }
-    t_complex(RealOpenMM re, RealOpenMM im) : re(re), im(im) {
+    t_complex(double re, double im) : re(re), im(im) {
     }
     t_complex(const t_complex& c) : re(c.re), im(c.im) {
     }
-    t_complex operator*(RealOpenMM r) {
+    t_complex operator*(double r) {
         return t_complex(re*r, im*r);
     }
     t_complex operator+(const t_complex& c) const {
