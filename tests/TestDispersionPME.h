@@ -1758,7 +1758,7 @@ void testWater125DpmeVsLongCutoffNoExclusions() {
     // is just 1.062 kJ/mol.  The difference is due to the fact that arithmetic mean combination rules are used
     // up to the cutoff, while the reciprocal space uses the geometric mean.  See DOI: 10.1021/acs.jctc.5b00726
 
-    ASSERT_EQUAL_TOL(refenergy, energy, 5E-6);
+    ASSERT_EQUAL_TOL(refenergy, energy, 5E-5);
     ASSERT_EQUAL_TOL(gromacs_energy, energy, 5E-4);
 
     for (int n = 0; n < numAtoms; ++n)
