@@ -64,6 +64,18 @@ public:
     
     static void loadDeltaR(const OpenMM::RealVec& xVector, const OpenMM::RealVec& yVector,
                            std::vector<RealOpenMM>& deltaR);
+    /**---------------------------------------------------------------------------------------
+
+       Load delta of two vectors, applying periodic boundary conditions
+
+       @param xVector      first vector
+       @param yVector      second vector
+       @param deltaR       output vector: y - x
+       @param boxVectors   periodic box vectors
+
+       --------------------------------------------------------------------------------------- */
+
+    static void loadDeltaRPeriodic(const RealVec& xVector, const RealVec& yVector, std::vector<RealOpenMM>& deltaR, const RealVec* boxVectors);
     
     /**---------------------------------------------------------------------------------------
     

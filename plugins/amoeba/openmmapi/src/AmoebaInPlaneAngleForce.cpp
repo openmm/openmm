@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors:                                                                   *
  * Contributors:                                                              *
  *                                                                            *
@@ -36,7 +36,7 @@
 
 using namespace OpenMM;
 
-AmoebaInPlaneAngleForce::AmoebaInPlaneAngleForce() {
+AmoebaInPlaneAngleForce::AmoebaInPlaneAngleForce() : usePeriodic(false) {
     _globalCubicK = _globalQuarticK = _globalPenticK = _globalSexticK = 0.0;
 }
 
@@ -103,4 +103,12 @@ ForceImpl* AmoebaInPlaneAngleForce::createImpl() const {
 
 void AmoebaInPlaneAngleForce::updateParametersInContext(Context& context) {
     dynamic_cast<AmoebaInPlaneAngleForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
+}
+
+void AmoebaInPlaneAngleForce::setUsesPeriodicBoundaryConditions(bool periodic) {
+    usePeriodic = periodic;
+}
+
+bool AmoebaInPlaneAngleForce::usesPeriodicBoundaryConditions() const {
+    return usePeriodic;
 }

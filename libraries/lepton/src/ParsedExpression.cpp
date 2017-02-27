@@ -109,7 +109,7 @@ ExpressionTreeNode ParsedExpression::precalculateConstantSubexpressions(const Ex
     for (int i = 0; i < (int) children.size(); i++)
         children[i] = precalculateConstantSubexpressions(node.getChildren()[i]);
     ExpressionTreeNode result = ExpressionTreeNode(node.getOperation().clone(), children);
-    if (node.getOperation().getId() == Operation::VARIABLE)
+    if (node.getOperation().getId() == Operation::VARIABLE || node.getOperation().getId() == Operation::CUSTOM)
         return result;
     for (int i = 0; i < (int) children.size(); i++)
         if (children[i].getOperation().getId() != Operation::CONSTANT)

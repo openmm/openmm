@@ -32,6 +32,7 @@ def library_template_variables():
         'integrators': [],
         'forces': [],
         'library_extras': [],
+        'units': [],
     }
 
     mm_klasses = inspect.getmembers(simtk.openmm, predicate=inspect.isclass)
@@ -65,6 +66,11 @@ def library_template_variables():
         if full not in exclude and not klass.__name__[0].islower():
             data['library_extras'].append(full)
 
+    # gather units related classes
+    unit_klasses = inspect.getmembers(simtk.unit, predicate=inspect.isclass)
+    for name, klass in unit_klasses:
+        data['units'].append(fullname(klass))
+
     return data
 
 
@@ -93,11 +99,14 @@ def app_template_variables():
 
     # gather all classes with "File" in the name
     for name, klass in app_klasses:
-        if 'File' in name:
+        if 'File' in name or 'CharmmParameterSet' in name:
             data['fileclasses'].append(fullname(klass))
 
     # gather all extra subclasses in simtk.openmm.app
     exclude = ['simtk.openmm.app.topology.Topology',
+               'simtk.openmm.app.topology.Chain',
+               'simtk.openmm.app.topology.Residue',
+               'simtk.openmm.app.topology.Atom',
                'simtk.openmm.app.modeller.Modeller',
                'simtk.openmm.app.forcefield.ForceField',
                'simtk.openmm.app.simulation.Simulation']

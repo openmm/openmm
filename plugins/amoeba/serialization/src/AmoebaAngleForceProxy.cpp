@@ -42,11 +42,12 @@ AmoebaAngleForceProxy::AmoebaAngleForceProxy() : SerializationProxy("AmoebaAngle
 }
 
 void AmoebaAngleForceProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 2);
+    node.setIntProperty("version", 3);
 
     const AmoebaAngleForce& force = *reinterpret_cast<const AmoebaAngleForce*>(object);
 
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setBoolProperty("usesPeriodic", force.usesPeriodicBoundaryConditions());
     node.setDoubleProperty("cubic",   force.getAmoebaGlobalAngleCubic());
     node.setDoubleProperty("quartic", force.getAmoebaGlobalAngleQuartic());
     node.setDoubleProperty("pentic",  force.getAmoebaGlobalAnglePentic());
@@ -63,12 +64,14 @@ void AmoebaAngleForceProxy::serialize(const void* object, SerializationNode& nod
 
 void* AmoebaAngleForceProxy::deserialize(const SerializationNode& node) const {
     int version = node.getIntProperty("version");
-    if (version < 1 || version > 2)
+    if (version < 1 || version > 3)
         throw OpenMMException("Unsupported version number");
     AmoebaAngleForce* force = new AmoebaAngleForce();
     try {
         if (version > 1)
             force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        if (version > 2)
+            force->setUsesPeriodicBoundaryConditions(node.getBoolProperty("usesPeriodic"));
         force->setAmoebaGlobalAngleCubic(node.getDoubleProperty("cubic"));
         force->setAmoebaGlobalAngleQuartic(node.getDoubleProperty("quartic"));
         force->setAmoebaGlobalAnglePentic(node.getDoubleProperty("pentic"));

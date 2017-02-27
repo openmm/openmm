@@ -33,7 +33,8 @@ inline __device__ mixed4 convertFromDouble4(double4 a) {
 
 extern "C" __global__ void computePerDof(real4* __restrict__ posq, real4* __restrict__ posqCorrection, mixed4* __restrict__ posDelta,
         mixed4* __restrict__ velm, const long long* __restrict__ force, const mixed2* __restrict__ dt, const mixed* __restrict__ globals,
-        mixed* __restrict__ sum, const float4* __restrict__ gaussianValues, unsigned int gaussianBaseIndex, const float4* __restrict__ uniformValues, const real energy
+        mixed* __restrict__ sum, const float4* __restrict__ gaussianValues, unsigned int gaussianBaseIndex, const float4* __restrict__ uniformValues,
+        const mixed energy, mixed* __restrict__ energyParamDerivs
         PARAMETER_ARGUMENTS) {
     mixed stepSize = dt[0].y;
     int index = blockIdx.x*blockDim.x+threadIdx.x;

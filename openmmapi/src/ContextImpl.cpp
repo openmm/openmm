@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -56,12 +56,13 @@ const static char CHECKPOINT_MAGIC_BYTES[] = "OpenMM Binary Checkpoint\n";
 ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integrator, Platform* platform, const map<string, string>& properties) :
         owner(owner), system(system), integrator(integrator), hasInitializedForces(false), hasSetPositions(false), integratorIsDeleted(false),
         lastForceGroups(-1), platform(platform), platformData(NULL) {
-    if (system.getNumParticles() == 0)
+    int numParticles = system.getNumParticles();
+    if (numParticles == 0)
         throw OpenMMException("Cannot create a Context for a System with no particles");
     
     // Check for errors in virtual sites and massless particles.
     
-    for (int i = 0; i < system.getNumParticles(); i++) {
+    for (int i = 0; i < numParticles; i++) {
         if (system.isVirtualSite(i)) {
             if (system.getParticleMass(i) != 0.0)
                 throw OpenMMException("Virtual site has nonzero mass");
@@ -71,28 +72,42 @@ ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integ
                     throw OpenMMException("A virtual site cannot depend on another virtual site");
         }
     }
+    set<pair<int, int> > constraintAtoms;
     for (int i = 0; i < system.getNumConstraints(); i++) {
         int particle1, particle2;
         double distance;
         system.getConstraintParameters(i, particle1, particle2, distance);
+        if (particle1 == particle2)
+            throw OpenMMException("A constraint cannot connect a particle to itself");
+        if (particle1 < 0 || particle2 < 0 || particle1 >= numParticles || particle2 >= numParticles)
+            throw OpenMMException("Illegal particle index in constraint");
         double mass1 = system.getParticleMass(particle1);
         double mass2 = system.getParticleMass(particle2);
         if ((mass1 == 0.0 && mass2 != 0.0) || (mass2 == 0.0 && mass1 != 0.0))
             throw OpenMMException("A constraint cannot involve a massless particle");
+        pair<int, int> atoms = make_pair(min(particle1, particle2), max(particle1, particle2));
+        if (constraintAtoms.find(atoms) != constraintAtoms.end())
+            throw OpenMMException("The System has two constraints between the same atoms.  This will produce a singular constraint matrix.");
+        constraintAtoms.insert(atoms);
     }
     
     // Validate the list of properties.
 
     const vector<string>& platformProperties = platform->getPropertyNames();
+    map<string, string> validatedProperties;
     for (map<string, string>::const_iterator iter = properties.begin(); iter != properties.end(); ++iter) {
+        string property = iter->first;
+        if (platform->deprecatedPropertyReplacements.find(property) != platform->deprecatedPropertyReplacements.end())
+            property = platform->deprecatedPropertyReplacements[property];
         bool valid = false;
         for (int i = 0; i < (int) platformProperties.size(); i++)
-            if (platformProperties[i] == iter->first) {
+            if (platformProperties[i] == property) {
                 valid = true;
                 break;
             }
         if (!valid)
             throw OpenMMException("Illegal property name: "+iter->first);
+        validatedProperties[property] = iter->second;
     }
     
     // Find the list of kernels required.
@@ -139,7 +154,7 @@ ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integ
     for (int i = candidatePlatforms.size()-1; i >= 0; i--) {
         try {
             this->platform = platform = candidatePlatforms[i].second;
-            platform->contextCreated(*this, properties);
+            platform->contextCreated(*this, validatedProperties);
             break;
         }
         catch (...) {
@@ -165,7 +180,7 @@ ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integ
     for (size_t i = 0; i < forceImpls.size(); ++i)
         forceImpls[i]->initialize(*this);
     integrator.initialize(*this);
-    updateStateDataKernel.getAs<UpdateStateDataKernel>().setVelocities(*this, vector<Vec3>(system.getNumParticles()));
+    updateStateDataKernel.getAs<UpdateStateDataKernel>().setVelocities(*this, vector<Vec3>(numParticles));
 }
 
 ContextImpl::~ContextImpl() {
@@ -235,6 +250,10 @@ void ContextImpl::setParameter(std::string name, double value) {
     integrator.stateChanged(State::Parameters);
 }
 
+void ContextImpl::getEnergyParameterDerivatives(std::map<std::string, double>& derivs) {
+    updateStateDataKernel.getAs<UpdateStateDataKernel>().getEnergyParameterDerivatives(*this, derivs);
+}
+
 void ContextImpl::getPeriodicBoxVectors(Vec3& a, Vec3& b, Vec3& c) {
     updateStateDataKernel.getAs<UpdateStateDataKernel>().getPeriodicBoxVectors(*this, a, b, c);
 }
@@ -250,10 +269,14 @@ void ContextImpl::setPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3
 }
 
 void ContextImpl::applyConstraints(double tol) {
+    if (!hasSetPositions)
+        throw OpenMMException("Particle positions have not been set");
     applyConstraintsKernel.getAs<ApplyConstraintsKernel>().apply(*this, tol);
 }
 
 void ContextImpl::applyVelocityConstraints(double tol) {
+    if (!hasSetPositions)
+        throw OpenMMException("Particle positions have not been set");
     applyConstraintsKernel.getAs<ApplyConstraintsKernel>().applyToVelocities(*this, tol);
 }
 
@@ -450,4 +473,8 @@ void ContextImpl::loadCheckpoint(istream& stream) {
     }
     updateStateDataKernel.getAs<UpdateStateDataKernel>().loadCheckpoint(*this, stream);
     hasSetPositions = true;
+}
+
+void ContextImpl::systemChanged() {
+    integrator.stateChanged(State::Energy);
 }

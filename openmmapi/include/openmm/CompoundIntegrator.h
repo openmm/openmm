@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2015 Stanford University and the Authors.           *
+ * Portions copyright (c) 2015-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -171,6 +171,16 @@ protected:
      * The implementation returns the union of all kernel names required by all Integrators that have been added.
      */
     std::vector<std::string> getKernelNames();
+    /**
+     * This will be called by the Context when the user modifies aspects of the context state, such
+     * as positions, velocities, or parameters.  This gives the Integrator a chance to discard cached
+     * information.  This is <i>only</i> called when the user modifies information using methods of the Context
+     * object.  It is <i>not</i> called when a ForceImpl object modifies state information in its updateContextState()
+     * method (unless the ForceImpl calls a Context method to perform the modification).
+     * 
+     * @param changed     this specifies what aspect of the Context was changed
+     */
+    void stateChanged(State::DataType changed);
     /**
      * Compute the kinetic energy of the system at the current time.
      * 

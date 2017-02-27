@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2013 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2016 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -41,20 +41,15 @@ using namespace OpenMM;
 
    @param numberOfAtoms  number of atoms
    @param deltaT         delta t for dynamics
-   @param tau            viscosity(?)
+   @param friction       friction coefficient
    @param temperature    temperature
 
    --------------------------------------------------------------------------------------- */
 
 ReferenceStochasticDynamics::ReferenceStochasticDynamics(int numberOfAtoms,
-                                                         RealOpenMM deltaT, RealOpenMM tau,
+                                                         RealOpenMM deltaT, RealOpenMM friction,
                                                          RealOpenMM temperature) : 
-           ReferenceDynamics(numberOfAtoms, deltaT, temperature), _tau(tau) {
-   if (tau <= 0) {
-      std::stringstream message;
-      message << "illegal tau value: " << tau;
-      throw OpenMMException(message.str());
-   }
+           ReferenceDynamics(numberOfAtoms, deltaT, temperature), friction(friction) {
    xPrime.resize(numberOfAtoms);
    inverseMasses.resize(numberOfAtoms);
 }
@@ -77,21 +72,12 @@ ReferenceStochasticDynamics::~ReferenceStochasticDynamics() {
 
 /**---------------------------------------------------------------------------------------
 
-   Get tau
-
-   @return tau
+   Get friction coefficient
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM ReferenceStochasticDynamics::getTau() const {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName  = "\nReferenceStochasticDynamics::getTau";
-
-   // ---------------------------------------------------------------------------------------
-
-   return _tau;
+RealOpenMM ReferenceStochasticDynamics::getFriction() const {
+   return friction;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -120,11 +106,12 @@ void ReferenceStochasticDynamics::updatePart1(int numberOfAtoms, vector<RealVec>
 
    // perform first update
 
-   RealOpenMM tau = getTau();
-   const RealOpenMM vscale = EXP(-getDeltaT()/tau);
-   const RealOpenMM fscale = (1-vscale)*tau;
+   RealOpenMM dt = getDeltaT();
+   RealOpenMM friction = getFriction();
+   const RealOpenMM vscale = EXP(-dt*friction);
+   const RealOpenMM fscale = (friction == 0 ? dt : (1-vscale)/friction);
    const RealOpenMM kT = BOLTZ*getTemperature();
-   const RealOpenMM noisescale = SQRT(2*kT/tau)*SQRT(0.5*(1-vscale*vscale)*tau);
+   const RealOpenMM noisescale = SQRT(kT*(1-vscale*vscale));
 
    for (int ii = 0; ii < numberOfAtoms; ii++) {
        if (inverseMasses[ii] != 0.0) {

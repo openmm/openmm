@@ -7,7 +7,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -488,6 +488,54 @@ void testIllegalVariable() {
     ASSERT(threwException);
 }
 
+void testEnergyParameterDerivatives() {
+    // Create a box of particles.
+    
+    const int numParticles = 40;
+    const int numParameters = 4;
+    const double boxSize = 2.0;
+    const double delta = 1e-3;
+    const string paramNames[] = {"A", "B", "C", "D"};
+    const double paramValues[] = {0.8, 2.1, 3.2, 1.3};
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    CustomGBForce* force = new CustomGBForce();
+    system.addForce(force);
+    force->addComputedValue("a", "0.5*(r-A)^2", CustomGBForce::ParticlePair);
+    force->addComputedValue("b", "a+B", CustomGBForce::SingleParticle);
+    force->addEnergyTerm("C*(a1+b1+a2+b2+r)^0.8", CustomGBForce::ParticlePair);
+    force->addEnergyTerm("(D-B)*b", CustomGBForce::SingleParticle);
+    for (int i = 0; i < numParameters; i++)
+        force->addGlobalParameter(paramNames[i], paramValues[i]);
+    for (int i = numParameters-1; i >= 0; i--)
+        force->addEnergyParameterDerivative(paramNames[i]);
+    force->setNonbondedMethod(CustomGBForce::CutoffPeriodic);
+    force->setCutoffDistance(1.0);
+    vector<Vec3> positions;
+    vector<double> parameters;
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(1.0);
+        force->addParticle(parameters);
+        positions.push_back(Vec3(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt))*boxSize);
+    }
+    
+    // Compute the energy derivative and compare it to a finite difference approximation.
+    
+    VerletIntegrator integrator(0.01);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    map<string, double> derivs = context.getState(State::ParameterDerivatives).getEnergyParameterDerivatives();
+    for (int i = 0; i < numParameters; i++) {
+        context.setParameter(paramNames[i], paramValues[i]+delta);
+        double energy1 = context.getState(State::Energy).getPotentialEnergy();
+        context.setParameter(paramNames[i], paramValues[i]-delta);
+        double energy2 = context.getState(State::Energy).getPotentialEnergy();
+        ASSERT_EQUAL_TOL((energy1-energy2)/(2*delta), derivs[paramNames[i]], 5e-3);
+    }
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -502,6 +550,7 @@ int main(int argc, char* argv[]) {
         testPositionDependence();
         testExclusions();
         testIllegalVariable();
+        testEnergyParameterDerivatives();
         runPlatformTests();
     }
     catch(const exception& e) {

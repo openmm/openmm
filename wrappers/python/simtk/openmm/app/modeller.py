@@ -35,7 +35,7 @@ __author__ = "Peter Eastman"
 __version__ = "1.0"
 
 from simtk.openmm.app import Topology, PDBFile, ForceField
-from simtk.openmm.app.forcefield import HAngles, AllBonds, _createResidueSignature, _matchResidue, DrudeGenerator
+from simtk.openmm.app.forcefield import HAngles, AllBonds, CutoffNonPeriodic, _createResidueSignature, _matchResidue, DrudeGenerator
 from simtk.openmm.app.topology import Residue
 from simtk.openmm.vec3 import Vec3
 from simtk.openmm import System, Context, NonbondedForce, CustomNonbondedForce, HarmonicBondForce, HarmonicAngleForce, VerletIntegrator, LocalEnergyMinimizer
@@ -186,8 +186,7 @@ class Modeller(object):
     def convertWater(self, model='tip3p'):
         """Convert all water molecules to a different water model.
 
-        @deprecated Use addExtraParticles() instead.  It performs the same
-        function but in a more general way.
+        @deprecated Use addExtraParticles() instead.  It performs the same function but in a more general way.
 
         Parameters
         ----------
@@ -345,8 +344,11 @@ class Modeller(object):
         elif padding is not None:
             if is_quantity(padding):
                 padding = padding.value_in_unit(nanometer)
-            maxSize = max(max((pos[i] for pos in self.positions))-min((pos[i] for pos in self.positions)) for i in range(3))
-            maxSize = maxSize.value_in_unit(nanometer)
+            if len(self.positions) == 0:
+                maxSize = 0
+            else:
+                maxSize = max(max((pos[i] for pos in self.positions))-min((pos[i] for pos in self.positions)) for i in range(3))
+                maxSize = maxSize.value_in_unit(nanometer)
             box = (maxSize+2*padding)*Vec3(1, 1, 1)
             vectors = (Vec3(maxSize+2*padding, 0, 0), Vec3(0, maxSize+2*padding, 0), Vec3(0, 0, maxSize+2*padding))
         else:
@@ -857,7 +859,7 @@ class Modeller(object):
         if forcefield is not None:
             # Use the ForceField the user specified.
 
-            system = forcefield.createSystem(newTopology, rigidWater=False)
+            system = forcefield.createSystem(newTopology, rigidWater=False, nonbondedMethod=CutoffNonPeriodic)
             atoms = list(newTopology.atoms())
             for i in range(system.getNumParticles()):
                 if atoms[i].element != elem.hydrogen:
@@ -868,7 +870,9 @@ class Modeller(object):
             # and causes hydrogens to spread out evenly.
 
             system = System()
-            nonbonded = CustomNonbondedForce('100/((r/0.1)^4+1)')
+            nonbonded = CustomNonbondedForce('100/(r/0.1)^4')
+            nonbonded.setNonbondedMethod(CustomNonbondedForce.CutoffNonPeriodic);
+            nonbonded.setCutoffDistance(1*nanometer)
             bonds = HarmonicBondForce()
             angles = HarmonicAngleForce()
             system.addForce(nonbonded)
@@ -1001,7 +1005,7 @@ class Modeller(object):
                 signature = _createResidueSignature([atom.element for atom in residue.atoms()])
                 if signature in forcefield._templateSignatures:
                     for t in forcefield._templateSignatures[signature]:
-                        if _matchResidue(residue, t, bondedToAtom) is not None:
+                        if _matchResidue(residue, t, bondedToAtom, False) is not None:
                             matchFound = True
                 if matchFound:
                     # Just copy the residue over.
@@ -1020,7 +1024,7 @@ class Modeller(object):
                     if signature in forcefield._templateSignatures:
                         for t in forcefield._templateSignatures[signature]:
                             if t in templatesNoEP:
-                                matches = _matchResidue(residueNoEP, templatesNoEP[t], bondedToAtomNoEP)
+                                matches = _matchResidue(residueNoEP, templatesNoEP[t], bondedToAtomNoEP, False)
                                 if matches is not None:
                                     template = t;
                                     # Record the corresponding atoms.

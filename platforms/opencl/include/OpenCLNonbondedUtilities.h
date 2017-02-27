@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -88,6 +88,15 @@ public:
      * Add an array (other than a per-atom parameter) that should be passed as an argument to the default interaction kernel.
      */
     void addArgument(const ParameterInfo& parameter);
+    /**
+     * Register that the interaction kernel will be computing the derivative of the potential energy
+     * with respect to a parameter.
+     * 
+     * @param param   the name of the parameter
+     * @return the variable that will be used to accumulate the derivative.  Any code you pass to addInteraction() should
+     * add its contributions to this variable.
+     */
+    std::string addEnergyParameterDerivative(const std::string& param);
     /**
      * Specify the list of exclusions that an interaction outside the default kernel will depend on.
      * 
@@ -281,9 +290,13 @@ private:
     OpenCLArray* oldPositions;
     OpenCLArray* rebuildNeighborList;
     OpenCLSort* blockSorter;
+    cl::Event downloadCountEvent;
+    cl::Buffer* pinnedCountBuffer;
+    int* pinnedCountMemory;
     std::vector<std::vector<int> > atomExclusions;
     std::vector<ParameterInfo> parameters;
     std::vector<ParameterInfo> arguments;
+    std::vector<std::string> energyParameterDerivatives;
     std::map<int, double> groupCutoff;
     std::map<int, std::string> groupKernelSource;
     double lastCutoff;

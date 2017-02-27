@@ -2642,16 +2642,16 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
     }
     replacements["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
     replacements["NUM_VDWPR_TYPES"] = cu.intToString(xsize);
-    double cutoff = force.getCutoff();
+    double cutoff = force.getCutoffDistance();
     double taperCutoff = cutoff * 0.9;
-    replacements["CUTOFF_DISTANCE"] = cu.doubleToString(force.getCutoff());
+    replacements["CUTOFF_DISTANCE"] = cu.doubleToString(force.getCutoffDistance());
     replacements["TAPER_CUTOFF"] = cu.doubleToString(taperCutoff);
     replacements["TAPER_C3"] = cu.doubleToString(10/pow(taperCutoff-cutoff, 3.0));
     replacements["TAPER_C4"] = cu.doubleToString(15/pow(taperCutoff-cutoff, 4.0));
     replacements["TAPER_C5"] = cu.doubleToString(6/pow(taperCutoff-cutoff, 5.0));
     bool useCutoff = (force.getNonbondedMethod() != AmoebaVdwForce::NoCutoff);
     // because either useCutoff == usePeriodic == true or useCutoff == usePeriodic == false
-    nonbonded->addInteraction(useCutoff, useCutoff, true, force.getCutoff(), exclusions,
+    nonbonded->addInteraction(useCutoff, useCutoff, true, force.getCutoffDistance(), exclusions,
         cu.replaceStrings(CudaAmoebaKernelSources::amoebaVdwForce2, replacements), 0);
 
     // Create the other kernels.

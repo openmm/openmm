@@ -75,6 +75,7 @@ __kernel void computeN2Value(__global const real4* restrict posq, __local real4*
                             COMPUTE_VALUE
                         }
                         value += tempValue1;
+                        ADD_TEMP_DERIVS1
 #ifdef USE_CUTOFF
                     }
 #endif
@@ -86,11 +87,13 @@ __kernel void computeN2Value(__global const real4* restrict posq, __local real4*
                 // Write results.
 
 #ifdef SUPPORTS_64_BIT_ATOMICS
-                atom_add(&global_value[atom1], (long) (value*0x100000000));
+                unsigned int offset1 = atom1;
+                atom_add(&global_value[offset1], (long) (value*0x100000000));
 #else
-                unsigned int offset = atom1 + get_group_id(0)*PADDED_NUM_ATOMS;
-                global_value[offset] += value;
+                unsigned int offset1 = atom1 + get_group_id(0)*PADDED_NUM_ATOMS;
+                global_value[offset1] += value;
 #endif
+                STORE_PARAM_DERIVS1
             }
         }
         else {
@@ -133,6 +136,8 @@ __kernel void computeN2Value(__global const real4* restrict posq, __local real4*
                         }
                         value += tempValue1;
                         local_value[j] += tempValue2;
+                        ADD_TEMP_DERIVS1
+                        ADD_TEMP_DERIVS2
 #ifdef USE_CUTOFF
                     }
 #endif
@@ -144,23 +149,26 @@ __kernel void computeN2Value(__global const real4* restrict posq, __local real4*
                 // Write results for atom1.
 
 #ifdef SUPPORTS_64_BIT_ATOMICS
-                atom_add(&global_value[atom1], (long) (value*0x100000000));
+                unsigned int offset1 = atom1;
+                atom_add(&global_value[offset1], (long) (value*0x100000000));
 #else
-                unsigned int offset = atom1 + get_group_id(0)*PADDED_NUM_ATOMS;
-                global_value[offset] += value;
+                unsigned int offset1 = atom1 + get_group_id(0)*PADDED_NUM_ATOMS;
+                global_value[offset1] += value;
 #endif
+                STORE_PARAM_DERIVS1
             }
 
             // Write results.
 
             for (int tgx = 0; tgx < TILE_SIZE; tgx++) {
 #ifdef SUPPORTS_64_BIT_ATOMICS
-                unsigned int offset = y*TILE_SIZE+tgx;
-                atom_add(&global_value[offset], (long) (local_value[tgx]*0x100000000));
+                unsigned int offset2 = y*TILE_SIZE+tgx;
+                atom_add(&global_value[offset2], (long) (local_value[tgx]*0x100000000));
 #else
-                unsigned int offset = y*TILE_SIZE+tgx + get_group_id(0)*PADDED_NUM_ATOMS;
-                global_value[offset] += local_value[tgx];
+                unsigned int offset2 = y*TILE_SIZE+tgx + get_group_id(0)*PADDED_NUM_ATOMS;
+                global_value[offset2] += local_value[tgx];
 #endif
+                STORE_PARAM_DERIVS2
             }
         }
     }
@@ -170,6 +178,8 @@ __kernel void computeN2Value(__global const real4* restrict posq, __local real4*
 
 #ifdef USE_CUTOFF
     const unsigned int numTiles = interactionCount[0];
+    if (numTiles > maxTiles)
+        return; // There wasn't enough memory for the neighbor list.
     int pos = (int) (get_group_id(0)*(numTiles > maxTiles ? NUM_BLOCKS*((long)NUM_BLOCKS+1)/2 : numTiles)/get_num_groups(0));
     int end = (int) ((get_group_id(0)+1)*(numTiles > maxTiles ? NUM_BLOCKS*((long)NUM_BLOCKS+1)/2 : numTiles)/get_num_groups(0));
 #else
@@ -188,41 +198,37 @@ __kernel void computeN2Value(__global const real4* restrict posq, __local real4*
         int x, y;
         bool singlePeriodicCopy = false;
 #ifdef USE_CUTOFF
-        if (numTiles <= maxTiles) {
-            x = tiles[pos];
-            real4 blockSizeX = blockSize[x];
-            singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= CUTOFF &&
-                                  0.5f*periodicBoxSize.y-blockSizeX.y >= CUTOFF &&
-                                  0.5f*periodicBoxSize.z-blockSizeX.z >= CUTOFF);
-        }
-        else
-#endif
-        {
-            y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+        x = tiles[pos];
+        real4 blockSizeX = blockSize[x];
+        singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= CUTOFF &&
+                              0.5f*periodicBoxSize.y-blockSizeX.y >= CUTOFF &&
+                              0.5f*periodicBoxSize.z-blockSizeX.z >= CUTOFF);
+#else
+        y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+        x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+        if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
+            y += (x < y ? -1 : 1);
             x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
-            if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
-                y += (x < y ? -1 : 1);
-                x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
-            }
-
-            // Skip over tiles that have exclusions, since they were already processed.
-
-            while (nextToSkip < pos) {
-                if (currentSkipIndex < NUM_TILES_WITH_EXCLUSIONS) {
-                    ushort2 tile = exclusionTiles[currentSkipIndex++];
-                    nextToSkip = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
-                }
-                else
-                    nextToSkip = end;
-            }
-            includeTile = (nextToSkip != pos);
         }
+
+        // Skip over tiles that have exclusions, since they were already processed.
+
+        while (nextToSkip < pos) {
+            if (currentSkipIndex < NUM_TILES_WITH_EXCLUSIONS) {
+                ushort2 tile = exclusionTiles[currentSkipIndex++];
+                nextToSkip = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
+            }
+            else
+                nextToSkip = end;
+        }
+        includeTile = (nextToSkip != pos);
+#endif
         if (includeTile) {
             // Load the data for this tile.
 
             for (int localAtomIndex = 0; localAtomIndex < TILE_SIZE; localAtomIndex++) {
 #ifdef USE_CUTOFF
-                unsigned int j = (numTiles <= maxTiles ? interactingAtoms[pos*TILE_SIZE+localAtomIndex] : y*TILE_SIZE+localAtomIndex);
+                unsigned int j = interactingAtoms[pos*TILE_SIZE+localAtomIndex];
 #else
                 unsigned int j = y*TILE_SIZE+localAtomIndex;
 #endif
@@ -262,17 +268,21 @@ __kernel void computeN2Value(__global const real4* restrict posq, __local real4*
                             COMPUTE_VALUE
                             value += tempValue1;
                             local_value[j] += tempValue2;
+                            ADD_TEMP_DERIVS1
+                            ADD_TEMP_DERIVS2
                         }
                     }
 
                     // Write results for atom1.
 
 #ifdef SUPPORTS_64_BIT_ATOMICS
-                    atom_add(&global_value[atom1], (long) (value*0x100000000));
+                    unsigned int offset1 = atom1;
+                    atom_add(&global_value[offset1], (long) (value*0x100000000));
 #else
-                    unsigned int offset = atom1 + get_group_id(0)*PADDED_NUM_ATOMS;
-                    global_value[offset] += value;
+                    unsigned int offset1 = atom1 + get_group_id(0)*PADDED_NUM_ATOMS;
+                    global_value[offset1] += value;
 #endif
+                    STORE_PARAM_DERIVS1
                 }
             }
             else
@@ -307,17 +317,21 @@ __kernel void computeN2Value(__global const real4* restrict posq, __local real4*
                             COMPUTE_VALUE
                             value += tempValue1;
                             local_value[j] += tempValue2;
+                            ADD_TEMP_DERIVS1
+                            ADD_TEMP_DERIVS2
                         }
                     }
 
                     // Write results for atom1.
 
 #ifdef SUPPORTS_64_BIT_ATOMICS
-                    atom_add(&global_value[atom1], (long) (value*0x100000000));
+                    unsigned int offset1 = atom1;
+                    atom_add(&global_value[offset1], (long) (value*0x100000000));
 #else
-                    unsigned int offset = atom1 + get_group_id(0)*PADDED_NUM_ATOMS;
-                    global_value[offset] += value;
+                    unsigned int offset1 = atom1 + get_group_id(0)*PADDED_NUM_ATOMS;
+                    global_value[offset1] += value;
 #endif
+                    STORE_PARAM_DERIVS1
                 }
             }
 
@@ -331,11 +345,13 @@ __kernel void computeN2Value(__global const real4* restrict posq, __local real4*
 #endif
                 if (atom2 < PADDED_NUM_ATOMS) {
 #ifdef SUPPORTS_64_BIT_ATOMICS
-                    atom_add(&global_value[atom2], (long) (local_value[tgx]*0x100000000));
+                    unsigned int offset2 = atom2;
+                    atom_add(&global_value[offset2], (long) (local_value[tgx]*0x100000000));
 #else
-                    unsigned int offset = atom2 + get_group_id(0)*PADDED_NUM_ATOMS;
-                    global_value[offset] += local_value[tgx];
+                    unsigned int offset2 = atom2 + get_group_id(0)*PADDED_NUM_ATOMS;
+                    global_value[offset2] += local_value[tgx];
 #endif
+                    STORE_PARAM_DERIVS2
                 }
             }
         }

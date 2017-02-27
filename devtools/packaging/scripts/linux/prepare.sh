@@ -1,4 +1,4 @@
-#!/bin/tcsh
+#!/bin/bash
 
 # Prepare for build by ensuring necessary prerequisites are locally installed.
 
@@ -9,14 +9,14 @@ export WORKSPACE=`pwd`
 export VERSION="latest"
 export PLATFORM="Linux"
 export ARCH="x86_64"
-export MINICONDA="Miniconda2-$VERSION-$PLATFORM-$ARCH.sh"
+export MINICONDA="Miniconda3-$VERSION-$PLATFORM-$ARCH.sh"
 if [ -f miniconda ];
 then
    echo "miniconda already exists"
 else
    echo "Downloading miniconda..."
-   rm -rf Miniconda-*
-   wget --quiet http://repo.continuum.io/miniconda/${MINICONDA}
+   rm -rf Miniconda-* miniconda ~/.condarc
+   wget --quiet https://repo.continuum.io/miniconda/${MINICONDA}
    bash ${MINICONDA} -b -p miniconda
    PIP_ARGS="-U"
 fi
@@ -24,7 +24,9 @@ fi
 # Add to path.
 export PATH=$WORKSPACE/miniconda/bin:$PATH
 
+# Workaround for missing libgcrypt
+yum install -y libgcrypt
+
 # Ensure configuration is up to date.
-conda config --add channels http://conda.binstar.org/omnia
-conda install --yes --quiet swig fftw3f pip
-pip install sphinxcontrib-bibtex sphinxcontrib-lunrsearch sphinxcontrib-autodoc_doxygen
+conda config --add channels omnia
+conda install --yes --quiet swig fftw3f pip doxygen sphinx sphinxcontrib-bibtex sphinxcontrib-lunrsearch sphinxcontrib-autodoc_doxygen lxml cmake

@@ -364,9 +364,11 @@ void CudaIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, const D
     
     // Apply hard wall constraints.
     
-    void* hardwallArgs[] = {&cu.getPosq().getDevicePointer(), &posCorrection, &cu.getVelm().getDevicePointer(),
-            &pairParticles->getDevicePointer(), &integration.getStepSize().getDevicePointer(), maxDrudeDistancePtr, hardwallscaleDrudePtr};
-    cu.executeKernel(hardwallKernel, hardwallArgs, pairParticles->getSize());
+    if (maxDrudeDistance > 0) {
+        void* hardwallArgs[] = {&cu.getPosq().getDevicePointer(), &posCorrection, &cu.getVelm().getDevicePointer(),
+                &pairParticles->getDevicePointer(), &integration.getStepSize().getDevicePointer(), maxDrudeDistancePtr, hardwallscaleDrudePtr};
+        cu.executeKernel(hardwallKernel, hardwallArgs, pairParticles->getSize());
+    }
     integration.computeVirtualSites();
 
     // Update the time and step count.

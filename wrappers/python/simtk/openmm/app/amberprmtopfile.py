@@ -36,6 +36,7 @@ from math import sqrt
 from simtk.openmm.app import Topology
 from simtk.openmm.app import PDBFile
 from simtk.openmm.app.internal import amber_file_parser
+from simtk.openmm.app.internal.singleton import Singleton
 from . import forcefield as ff
 from . import element as elem
 import simtk.unit as u
@@ -44,27 +45,27 @@ from simtk.openmm.app.internal.unitcell import computePeriodicBoxVectors
 
 # Enumerated values for implicit solvent model
 
-class HCT(object):
+class HCT(Singleton):
     def __repr__(self):
         return 'HCT'
 HCT = HCT()
 
-class OBC1(object):
+class OBC1(Singleton):
     def __repr__(self):
         return 'OBC1'
 OBC1 = OBC1()
 
-class OBC2(object):
+class OBC2(Singleton):
     def __repr__(self):
         return 'OBC2'
 OBC2 = OBC2()
 
-class GBn(object):
+class GBn(Singleton):
     def __repr__(self):
         return 'GBn'
 GBn = GBn()
 
-class GBn2(object):
+class GBn2(Singleton):
     def __repr__(self):
         return 'GBn2'
 GBn2 = GBn2()

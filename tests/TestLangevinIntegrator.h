@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -74,9 +74,9 @@ void testSingleBond() {
         integrator.step(1);
     }
     
-    // Not set the friction to a tiny value and see if it conserves energy.
+    // Now set the friction to 0 and see if it conserves energy.
     
-    integrator.setFriction(5e-5);
+    integrator.setFriction(0.0);
     context.setPositions(positions);
     State state = context.getState(State::Energy);
     double initialEnergy = state.getKineticEnergy()+state.getPotentialEnergy();

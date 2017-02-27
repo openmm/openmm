@@ -90,7 +90,7 @@ class MTSIntegrator(CustomIntegrator):
 
     def _createSubsteps(self, parentSubsteps, groups):
         group, substeps = groups[0]
-        stepsPerParentStep = substeps/parentSubsteps
+        stepsPerParentStep = substeps//parentSubsteps
         if stepsPerParentStep < 1 or stepsPerParentStep != int(stepsPerParentStep):
             raise ValueError("The number for substeps for each group must be a multiple of the number for the previous group")
         if group < 0 or group > 31:
@@ -98,10 +98,11 @@ class MTSIntegrator(CustomIntegrator):
         for i in range(stepsPerParentStep):
             self.addComputePerDof("v", "v+0.5*(dt/"+str(substeps)+")*f"+str(group)+"/m")
             if len(groups) == 1:
-                self.addComputePerDof("x1", "x")
                 self.addComputePerDof("x", "x+(dt/"+str(substeps)+")*v")
+                self.addComputePerDof("x1", "x")
                 self.addConstrainPositions();
-                self.addComputePerDof("v", "(x-x1)/(dt/"+str(substeps)+")");
+                self.addComputePerDof("v", "v+(x-x1)/(dt/"+str(substeps)+")");
+                self.addConstrainVelocities()
             else:
                 self._createSubsteps(substeps, groups[1:])
             self.addComputePerDof("v", "v+0.5*(dt/"+str(substeps)+")*f"+str(group)+"/m")

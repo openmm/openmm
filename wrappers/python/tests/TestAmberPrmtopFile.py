@@ -361,5 +361,17 @@ class TestAmberPrmtopFile(unittest.TestCase):
             # Make sure it says something about chamber
             self.assertTrue('chamber' in str(e).lower())
 
+    def testGBneckRadii(self):
+        """ Tests that GBneck radii limits are correctly enforced """
+        from simtk.openmm.app.internal.customgbforces import GBSAGBnForce
+        f = GBSAGBnForce()
+        # Make sure legal parameters do not raise
+        f.addParticle([0, 0.1, 0.5])
+        f.addParticle([0, 0.2, 0.5])
+        f.addParticle([0, 0.15, 0.5])
+        # Now make sure that out-of-range parameters *do* raise
+        self.assertRaises(ValueError, lambda: f.addParticle([0, 0.9, 0.5]))
+        self.assertRaises(ValueError, lambda: f.addParticle([0, 0.21, 0.5]))
+
 if __name__ == '__main__':
     unittest.main()

@@ -70,8 +70,11 @@ __kernel void computeGroupCenters(__global const real4* restrict posq, __global 
 /**
  * Compute the difference between two vectors, setting the fourth component to the squared magnitude.
  */
-real4 delta(real4 vec1, real4 vec2) {
+real4 delta(real4 vec1, real4 vec2, bool periodic, real4 periodicBoxSize, real4 invPeriodicBoxSize, 
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ) {
     real4 result = (real4) (vec1.x-vec2.x, vec1.y-vec2.y, vec1.z-vec2.z, 0);
+    if (periodic)
+        APPLY_PERIODIC_TO_DELTA(result);
     result.w = result.x*result.x + result.y*result.y + result.z*result.z;
     return result;
 }
@@ -110,13 +113,15 @@ real4 computeCross(real4 vec1, real4 vec2) {
  * Compute the forces on groups based on the bonds.
  */
 __kernel void computeGroupForces(__global long* restrict groupForce, __global mixed* restrict energyBuffer, __global const real4* restrict centerPositions,
-        __global const int* restrict bondGroups
+        __global const int* restrict bondGroups, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ
         EXTRA_ARGS) {
     mixed energy = 0;
+    INIT_PARAM_DERIVS
     for (int index = get_global_id(0); index < NUM_BONDS; index += get_global_size(0)) {
         COMPUTE_FORCE
     }
     energyBuffer[get_global_id(0)] += energy;
+    SAVE_PARAM_DERIVS
 }
 
 /**

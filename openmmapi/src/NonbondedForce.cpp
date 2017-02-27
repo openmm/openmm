@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -184,6 +184,9 @@ ForceImpl* NonbondedForce::createImpl() const {
 }
 
 void NonbondedForce::createExceptionsFromBonds(const vector<pair<int, int> >& bonds, double coulomb14Scale, double lj14Scale) {
+    for (int i = 0; i < (int) bonds.size(); ++i)
+        if (bonds[i].first < 0 || bonds[i].second < 0 || bonds[i].first >= particles.size() || bonds[i].second >= particles.size())
+            throw OpenMMException("createExceptionsFromBonds: Illegal particle index in list of bonds");
 
     // Find particles separated by 1, 2, or 3 bonds.
 

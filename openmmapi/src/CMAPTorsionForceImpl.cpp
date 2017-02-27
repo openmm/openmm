@@ -158,4 +158,5 @@ void CMAPTorsionForceImpl::calcMapDerivatives(int size, const vector<double>& en
 
 void CMAPTorsionForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcCMAPTorsionForceKernel>().copyParametersToContext(context, owner);
+    context.systemChanged();
 }

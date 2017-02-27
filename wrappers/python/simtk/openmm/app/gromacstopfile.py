@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2015 Stanford University and the Authors.
+Portions copyright (c) 2012-2016 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors: Jason Swails
 
@@ -364,7 +364,7 @@ class GromacsTopFile(object):
             # Bonded type and atomic number are both missing.
             fields.insert(1, None)
             fields.insert(1, None)
-        elif len(fields[4]) == 1 and len(fields[5]) > 1:
+        elif len(fields[4]) == 1 and fields[4].isalpha():
             if fields[1][0].isalpha():
                 # Atomic number is missing.
                 fields.insert(2, None)
@@ -586,9 +586,9 @@ class GromacsTopFile(object):
         # Create the System.
 
         sys = mm.System()
-        boxSize = self.topology.getUnitCellDimensions()
-        if boxSize is not None:
-            sys.setDefaultPeriodicBoxVectors((boxSize[0], 0, 0), (0, boxSize[1], 0), (0, 0, boxSize[2]))
+        boxVectors = self.topology.getPeriodicBoxVectors()
+        if boxVectors is not None:
+            sys.setDefaultPeriodicBoxVectors(*boxVectors)
         elif nonbondedMethod in (ff.CutoffPeriodic, ff.Ewald, ff.PME):
             raise ValueError('Illegal nonbonded method for a non-periodic system')
         nb = mm.NonbondedForce()
@@ -772,7 +772,7 @@ class GromacsTopFile(object):
                                 if periodic is None:
                                     periodic = mm.PeriodicTorsionForce()
                                     sys.addForce(periodic)
-                                periodic.addTorsion(baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], baseAtomIndex+atoms[2], baseAtomIndex+atoms[3], int(params[7]), float(params[5])*degToRad, k)
+                                periodic.addTorsion(baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], baseAtomIndex+atoms[2], baseAtomIndex+atoms[3], int(float(params[7])), float(params[5])*degToRad, k)
                         elif dihedralType == '2':
                             # Harmonic torsion
                             k = float(params[6])
@@ -814,7 +814,7 @@ class GromacsTopFile(object):
                     map = []
                     for i in range(mapSize):
                         for j in range(mapSize):
-                            map.append(float(params[8+mapSize*((j+mapSize/2)%mapSize)+((i+mapSize/2)%mapSize)]))
+                            map.append(float(params[8+mapSize*((j+mapSize//2)%mapSize)+((i+mapSize//2)%mapSize)]))
                     map = tuple(map)
                     if map not in mapIndices:
                         mapIndices[map] = cmap.addMap(mapSize, map)

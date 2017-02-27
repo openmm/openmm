@@ -59,6 +59,9 @@ class OPENMM_EXPORT TabulatedFunction {
 public:
     virtual ~TabulatedFunction() {
     }
+    /**
+     * @deprecated This will be removed in a future release.
+     */
     virtual TabulatedFunction* Copy() const = 0;
 };
 
@@ -99,6 +102,8 @@ public:
     void setFunctionParameters(const std::vector<double>& values, double min, double max);
     /**
      * Create a deep copy of the tabulated function.
+     * 
+     * @deprecated This will be removed in a future release.
      */
     Continuous1DFunction* Copy() const;
 private:
@@ -158,6 +163,8 @@ public:
     void setFunctionParameters(int xsize, int ysize, const std::vector<double>& values, double xmin, double xmax, double ymin, double ymax);
     /**
      * Create a deep copy of the tabulated function
+     * 
+     * @deprecated This will be removed in a future release.
      */
     Continuous2DFunction* Copy() const;
 private:
@@ -233,6 +240,8 @@ public:
     void setFunctionParameters(int xsize, int ysize, int zsize, const std::vector<double>& values, double xmin, double xmax, double ymin, double ymax, double zmin, double zmax);
     /**
      * Create a deep copy of the tabulated function
+     * 
+     * @deprecated This will be removed in a future release.
      */
     Continuous3DFunction* Copy() const;
 private:
@@ -268,6 +277,8 @@ public:
     void setFunctionParameters(const std::vector<double>& values);
     /**
      * Create a deep copy of the tabulated function
+     * 
+     * @deprecated This will be removed in a future release.
      */
     Discrete1DFunction* Copy() const;
 private:
@@ -310,6 +321,8 @@ public:
     void setFunctionParameters(int xsize, int ysize, const std::vector<double>& values);
     /**
      * Create a deep copy of the tabulated function
+     * 
+     * @deprecated This will be removed in a future release.
      */
     Discrete2DFunction* Copy() const;
 private:
@@ -356,6 +369,8 @@ public:
     void setFunctionParameters(int xsize, int ysize, int zsize, const std::vector<double>& values);
     /**
      * Create a deep copy of the tabulated function
+     * 
+     * @deprecated This will be removed in a future release.
      */
     Discrete3DFunction* Copy() const;
 private:

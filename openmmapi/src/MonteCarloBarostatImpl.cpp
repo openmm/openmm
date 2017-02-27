@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -34,6 +34,7 @@
 #include "openmm/internal/OSRngSeed.h"
 #include "openmm/Context.h"
 #include "openmm/kernels.h"
+#include "openmm/OpenMMException.h"
 #include <cmath>
 #include <vector>
 #include <algorithm>
@@ -51,6 +52,8 @@ MonteCarloBarostatImpl::MonteCarloBarostatImpl(const MonteCarloBarostat& owner) 
 }
 
 void MonteCarloBarostatImpl::initialize(ContextImpl& context) {
+    if (!context.getSystem().usesPeriodicBoundaryConditions())
+        throw OpenMMException("A barostat cannot be used with a non-periodic system");
     kernel = context.getPlatform().createKernel(ApplyMonteCarloBarostatKernel::Name(), context);
     kernel.getAs<ApplyMonteCarloBarostatKernel>().initialize(context.getSystem(), owner);
     Vec3 box[3];
@@ -89,7 +92,7 @@ void MonteCarloBarostatImpl::updateContextState(ContextImpl& context) {
     
     double finalEnergy = context.getOwner().getState(State::Energy).getPotentialEnergy();
     double pressure = context.getParameter(MonteCarloBarostat::Pressure())*(AVOGADRO*1e-25);
-    double kT = BOLTZ*owner.getTemperature();
+    double kT = BOLTZ*context.getParameter(MonteCarloBarostat::Temperature());
     double w = finalEnergy-initialEnergy + pressure*deltaVolume - context.getMolecules().size()*kT*std::log(newVolume/volume);
     if (w > 0 && genrand_real2(random) > std::exp(-w/kT)) {
         // Reject the step.
@@ -118,6 +121,7 @@ void MonteCarloBarostatImpl::updateContextState(ContextImpl& context) {
 std::map<std::string, double> MonteCarloBarostatImpl::getDefaultParameters() {
     std::map<std::string, double> parameters;
     parameters[MonteCarloBarostat::Pressure()] = getOwner().getDefaultPressure();
+    parameters[MonteCarloBarostat::Temperature()] = getOwner().getDefaultTemperature();
     return parameters;
 }
 

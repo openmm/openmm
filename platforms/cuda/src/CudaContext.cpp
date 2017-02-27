@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -52,6 +52,7 @@
 #include <set>
 #include <sstream>
 #include <typeinfo>
+#include <sys/stat.h>
 #include <cudaProfiler.h>
 #ifndef WIN32
   #include <unistd.h>
@@ -73,10 +74,43 @@ const int CudaContext::ThreadBlockSize = 64;
 const int CudaContext::TileSize = sizeof(tileflags)*8;
 bool CudaContext::hasInitializedCuda = false;
 
+#ifdef WIN32
+#include <Windows.h>
+static int executeInWindows(const string &command) {
+    // COMSPEC is an env variable pointing to full dir of cmd.exe
+    // it always defined on pretty much all Windows OSes
+    string fullcommand = getenv("COMSPEC") + string(" /C ") + command;
+    STARTUPINFO si;
+    PROCESS_INFORMATION pi;
+    ZeroMemory( &si, sizeof(si) );
+    si.cb = sizeof(si);
+    ZeroMemory( &pi, sizeof(pi) );
+    vector<char> args(std::max(1000, (int) fullcommand.size()+1));
+    strcpy(&args[0], fullcommand.c_str());
+    si.dwFlags = STARTF_USESHOWWINDOW;
+    si.wShowWindow = SW_HIDE;
+    if (!CreateProcess(NULL, &args[0], NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
+        return -1;
+    }
+    WaitForSingleObject(pi.hProcess, INFINITE);
+    DWORD exitCode = -1;
+    if(!GetExitCodeProcess(pi.hProcess, &exitCode)) {
+        throw(OpenMMException("Could not get nvcc.exe's exit code\n"));
+    } else {
+        if(exitCode == 0)
+            return 0;
+        else
+            return -1;
+    }
+}
+#endif
+
 CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlockingSync, const string& precision, const string& compiler,
         const string& tempDir, const std::string& hostCompiler, CudaPlatform::PlatformData& platformData) : system(system), currentStream(0),
-        time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), stepsSinceReorder(99999), contextIsValid(false), atomsWereReordered(false), hasCompilerKernel(false),
-        pinnedBuffer(NULL), posq(NULL), posqCorrection(NULL), velm(NULL), force(NULL), energyBuffer(NULL), atomIndexDevice(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
+        time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), stepsSinceReorder(99999), contextIsValid(false), atomsWereReordered(false), hasCompilerKernel(false), isNvccAvailable(false),
+        pinnedBuffer(NULL), posq(NULL), posqCorrection(NULL), velm(NULL), force(NULL), energyBuffer(NULL), energyParamDerivBuffer(NULL), atomIndexDevice(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
+    // Determine what compiler to use.
+    
     this->compiler = "\""+compiler+"\"";
     if (platformData.context != NULL) {
         try {
@@ -86,6 +120,27 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
         catch (...) {
             // The runtime compiler plugin isn't available.
         }
+    }
+#ifdef WIN32
+    string testCompilerCommand = this->compiler+" --version > nul 2> nul";
+    int res = executeInWindows(testCompilerCommand.c_str());
+#else
+    string testCompilerCommand = this->compiler+" --version > /dev/null 2> /dev/null";
+    int res = std::system(testCompilerCommand.c_str());
+#endif
+    struct stat info;
+    isNvccAvailable = (res == 0 && stat(tempDir.c_str(), &info) == 0);
+    int cudaDriverVersion;
+    cuDriverGetVersion(&cudaDriverVersion);
+    static bool hasShownNvccWarning = false;
+    if (hasCompilerKernel && !isNvccAvailable && !hasShownNvccWarning && cudaDriverVersion < 8000) {
+        hasShownNvccWarning = true;
+        printf("Could not find nvcc.  Using runtime compiler, which may produce slower performance.  ");
+#ifdef WIN32
+        printf("Set CUDA_BIN_PATH to specify where nvcc is located.\n");
+#else
+        printf("Set OPENMM_CUDA_COMPILER to specify where nvcc is located.\n");
+#endif
     }
     if (hostCompiler.size() > 0)
         this->compiler = compiler+" --compiler-bindir "+hostCompiler;
@@ -106,7 +161,7 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
         useMixedPrecision = false;
     }
     else
-        throw OpenMMException("Illegal value for CudaPrecision: "+precision);
+        throw OpenMMException("Illegal value for Precision: "+precision);
     char* cacheVariable = getenv("OPENMM_CACHE_DIR");
     cacheDir = (cacheVariable == NULL ? tempDir : string(cacheVariable));
 #ifdef WIN32
@@ -121,7 +176,7 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     string errorMessage = "Error initializing Context";
     CHECK_RESULT(cuDeviceGetCount(&numDevices));
     if (deviceIndex < -1 || deviceIndex >= numDevices)
-        throw OpenMMException("Illegal value for CudaDeviceIndex: "+intToString(deviceIndex));
+        throw OpenMMException("Illegal value for DeviceIndex: "+intToString(deviceIndex));
 
     vector<int> devicePrecedence;
     if (deviceIndex == -1) {
@@ -154,13 +209,23 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
 
     int major, minor;
     CHECK_RESULT(cuDeviceComputeCapability(&major, &minor, device));
-#if __CUDA_API_VERSION < 7000
+    int numThreadBlocksPerComputeUnit = (major >= 6 ? 4 : 6);
+    if (cudaDriverVersion < 7000) {
         // This is a workaround to support GTX 980 with CUDA 6.5.  It reports
         // its compute capability as 5.2, but the compiler doesn't support
         // anything beyond 5.0.
         if (major == 5)
             minor = 0;
-#endif
+    }
+    if (cudaDriverVersion < 8000) {
+        // This is a workaround to support Pascal with CUDA 7.5.  It reports
+        // its compute capability as 6.x, but the compiler doesn't support
+        // anything beyond 5.3.
+        if (major == 6) {
+            major = 5;
+            minor = 3;
+        }
+    }
     gpuArchitecture = intToString(major)+intToString(minor);
     computeCapability = major+0.1*minor;
 
@@ -181,7 +246,6 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     numAtomBlocks = (paddedNumAtoms+(TileSize-1))/TileSize;
     int multiprocessors;
     CHECK_RESULT(cuDeviceGetAttribute(&multiprocessors, CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, device));
-    int numThreadBlocksPerComputeUnit = 6;
     numThreadBlocks = numThreadBlocksPerComputeUnit*multiprocessors;
     if (useDoublePrecision) {
         posq = CudaArray::create<double4>(*this, paddedNumAtoms, "posq");
@@ -339,6 +403,8 @@ CudaContext::~CudaContext() {
         delete force;
     if (energyBuffer != NULL)
         delete energyBuffer;
+    if (energyParamDerivBuffer != NULL)
+        delete energyParamDerivBuffer;
     if (atomIndexDevice != NULL)
         delete atomIndexDevice;
     if (integration != NULL)
@@ -390,6 +456,14 @@ void CudaContext::initialize() {
     force = CudaArray::create<long long>(*this, paddedNumAtoms*3, "force");
     addAutoclearBuffer(force->getDevicePointer(), force->getSize()*force->getElementSize());
     addAutoclearBuffer(energyBuffer->getDevicePointer(), energyBuffer->getSize()*energyBuffer->getElementSize());
+    int numEnergyParamDerivs = energyParamDerivNames.size();
+    if (numEnergyParamDerivs > 0) {
+        if (useDoublePrecision || useMixedPrecision)
+            energyParamDerivBuffer = CudaArray::create<double>(*this, numEnergyParamDerivs*numEnergyBuffers, "energyParamDerivBuffer");
+        else
+            energyParamDerivBuffer = CudaArray::create<float>(*this, numEnergyParamDerivs*numEnergyBuffers, "energyParamDerivBuffer");
+        addAutoclearBuffer(*energyParamDerivBuffer);
+    }
     atomIndexDevice = CudaArray::create<int>(*this, paddedNumAtoms, "atomIndex");
     atomIndex.resize(paddedNumAtoms);
     for (int i = 0; i < paddedNumAtoms; ++i)
@@ -443,37 +517,6 @@ string CudaContext::replaceStrings(const string& input, const std::map<std::stri
 CUmodule CudaContext::createModule(const string source, const char* optimizationFlags) {
     return createModule(source, map<string, string>(), optimizationFlags);
 }
-
-#ifdef WIN32
-#include <Windows.h>
-static bool compileInWindows(const string &command) {
-    // COMSPEC is an env variable pointing to full dir of cmd.exe
-    // it always defined on pretty much all Windows OSes
-    string fullcommand = getenv("COMSPEC") + string(" /C ") + command;
-    STARTUPINFO si;
-    PROCESS_INFORMATION pi;
-    ZeroMemory( &si, sizeof(si) );
-    si.cb = sizeof(si);
-    ZeroMemory( &pi, sizeof(pi) );
-    vector<char> args(std::max(1000, (int) fullcommand.size()+1));
-    strcpy(&args[0], fullcommand.c_str());
-    si.dwFlags = STARTF_USESHOWWINDOW;
-    si.wShowWindow = SW_HIDE;
-    if (!CreateProcess(NULL, &args[0], NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
-        return -1;
-    }
-    WaitForSingleObject(pi.hProcess, INFINITE);
-    DWORD exitCode = -1;
-    if(!GetExitCodeProcess(pi.hProcess, &exitCode)) {
-        throw(OpenMMException("Could not get nvcc.exe's exit code\n"));
-    } else {
-        if(exitCode == 0)
-            return 0;
-        else
-            return -1;
-    }
-}
-#endif
 
 CUmodule CudaContext::createModule(const string source, const map<string, string>& defines, const char* optimizationFlags) {
     string bits = intToString(8*sizeof(void*));
@@ -557,7 +600,7 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
 
     // If the runtime compiler plugin is available, use it.
 
-    if (hasCompilerKernel) {
+    if (hasCompilerKernel && !isNvccAvailable) {
         string ptx = compilerKernel.getAs<CudaCompilerKernel>().createModule(src.str(), "-arch=compute_"+gpuArchitecture+" "+options, *this);
 
         // If possible, write the PTX out to a temporary file so we can cache it for later use.
@@ -592,7 +635,7 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
 #else
         string command = compiler+" --ptx -lineinfo --machine "+bits+" -arch=sm_"+gpuArchitecture+" -o "+outputFile+" "+options+" "+inputFile+" 2> "+logFile;
 #endif
-        int res = compileInWindows(command);
+        int res = executeInWindows(command);
 #else
         string command = compiler+" --ptx --machine "+bits+" -arch=sm_"+gpuArchitecture+" -o \""+outputFile+"\" "+options+" \""+inputFile+"\" 2> \""+logFile+"\"";
         res = std::system(command.c_str());
@@ -1131,7 +1174,6 @@ void CudaContext::reorderAtoms() {
         reorderAtomsImpl<float, float4, double, double4>();
     else
         reorderAtomsImpl<float, float4, float, float4>();
-    nonbonded->updateNeighborListSize();
 }
 
 template <class Real, class Real4, class Mixed, class Mixed4>
@@ -1310,6 +1352,15 @@ void CudaContext::addPreComputation(ForcePreComputation* computation) {
 
 void CudaContext::addPostComputation(ForcePostComputation* computation) {
     postComputations.push_back(computation);
+}
+
+void CudaContext::addEnergyParameterDerivative(const string& param) {
+    // See if this parameter has already been registered.
+    
+    for (int i = 0; i < energyParamDerivNames.size(); i++)
+        if (param == energyParamDerivNames[i])
+            return;
+    energyParamDerivNames.push_back(param);
 }
 
 struct CudaContext::WorkThread::ThreadData {

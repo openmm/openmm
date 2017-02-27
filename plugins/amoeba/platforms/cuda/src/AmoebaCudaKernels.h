@@ -328,6 +328,13 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+     /**
+     * Get the LabFrame dipole moments of all particles.
+     *
+     * @param context    the Context for which to get the induced dipoles
+     * @param dipoles    the induced dipole moment of particle i is stored into the i'th element
+     */
+    void getLabFramePermanentDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
     /**
      * Get the LabFrame dipole moments of all particles.
      *

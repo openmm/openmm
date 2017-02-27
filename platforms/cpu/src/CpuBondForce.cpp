@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2014 Stanford University and the Authors.           *
+ * Portions copyright (c) 2014-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -196,7 +196,7 @@ void CpuBondForce::calculateForce(vector<RealVec>& atomCoordinates, RealOpenMM**
     
     for (int i = 0; i < extraBonds.size(); i++) {
         int bond = extraBonds[i];
-        referenceBondIxn.calculateBondIxn(bondAtoms[bond], atomCoordinates, parameters[bond], forces, totalEnergy);
+        referenceBondIxn.calculateBondIxn(bondAtoms[bond], atomCoordinates, parameters[bond], forces, totalEnergy, NULL);
     }
 
     // Compute the total energy.
@@ -212,6 +212,6 @@ void CpuBondForce::threadComputeForce(ThreadPool& threads, int threadIndex, vect
     int numBonds = bonds.size();
     for (int i = 0; i < numBonds; i++) {
         int bond = bonds[i];
-        referenceBondIxn.calculateBondIxn(bondAtoms[bond], atomCoordinates, parameters[bond], forces, totalEnergy);
+        referenceBondIxn.calculateBondIxn(bondAtoms[bond], atomCoordinates, parameters[bond], forces, totalEnergy, NULL);
     }
 }

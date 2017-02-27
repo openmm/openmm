@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2012-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2012-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -171,7 +171,7 @@ void testContinuous2DFunction() {
     const double xmin = 0.4;
     const double xmax = 1.1;
     const double ymin = 0.0;
-    const double ymax = 0.9;
+    const double ymax = 0.95;
     System system;
     system.addParticle(1.0);
     VerletIntegrator integrator(0.01);
@@ -215,10 +215,10 @@ void testContinuous3DFunction() {
     const int zsize = 12;
     const double xmin = 0.4;
     const double xmax = 1.1;
-    const double ymin = 0.0;
-    const double ymax = 0.9;
+    const double ymin = 2.0;
+    const double ymax = 2.9;
     const double zmin = 0.2;
-    const double zmax = 1.3;
+    const double zmax = 1.35;
     System system;
     system.addParticle(1.0);
     VerletIntegrator integrator(0.01);
@@ -330,6 +330,124 @@ void testIllegalVariable() {
     ASSERT(threwException);
 }
 
+void testPeriodic() {
+    // Create a force that uses periodic boundary conditions.
+
+    System customSystem;
+    customSystem.addParticle(1.0);
+    customSystem.addParticle(1.0);
+    customSystem.addParticle(1.0);
+    customSystem.addParticle(1.0);
+    customSystem.setDefaultPeriodicBoxVectors(Vec3(3, 0, 0), Vec3(0, 3, 0), Vec3(0, 0, 3));
+    CustomCompoundBondForce* custom = new CustomCompoundBondForce(4, "0.5*kb*((distance(p1,p2)-b0)^2+(distance(p2,p3)-b0)^2)+0.5*ka*(angle(p2,p3,p4)-a0)^2+kt*(1+cos(dihedral(p1,p2,p3,p4)-t0))");
+    custom->addPerBondParameter("kb");
+    custom->addPerBondParameter("ka");
+    custom->addPerBondParameter("kt");
+    custom->addPerBondParameter("b0");
+    custom->addPerBondParameter("a0");
+    custom->addPerBondParameter("t0");
+    vector<int> particles(4);
+    particles[0] = 0;
+    particles[1] = 1;
+    particles[2] = 3;
+    particles[3] = 2;
+    vector<double> parameters(6);
+    parameters[0] = 1.5;
+    parameters[1] = 0.8;
+    parameters[2] = 0.6;
+    parameters[3] = 1.1;
+    parameters[4] = 2.9;
+    parameters[5] = 1.3;
+    custom->addBond(particles, parameters);
+    custom->setUsesPeriodicBoundaryConditions(true);
+    customSystem.addForce(custom);
+
+    // Create an identical system using standard forces.
+
+    System standardSystem;
+    standardSystem.addParticle(1.0);
+    standardSystem.addParticle(1.0);
+    standardSystem.addParticle(1.0);
+    standardSystem.addParticle(1.0);
+    standardSystem.setDefaultPeriodicBoxVectors(Vec3(3, 0, 0), Vec3(0, 3, 0), Vec3(0, 0, 3));
+    HarmonicBondForce* bonds = new HarmonicBondForce();
+    bonds->addBond(0, 1, 1.1, 1.5);
+    bonds->addBond(1, 3, 1.1, 1.5);
+    bonds->setUsesPeriodicBoundaryConditions(true);
+    standardSystem.addForce(bonds);
+    HarmonicAngleForce* angles = new HarmonicAngleForce();
+    angles->addAngle(1, 3, 2, 2.9, 0.8);
+    angles->setUsesPeriodicBoundaryConditions(true);
+    standardSystem.addForce(angles);
+    PeriodicTorsionForce* torsions = new PeriodicTorsionForce();
+    torsions->addTorsion(0, 1, 3, 2, 1, 1.3, 0.6);
+    torsions->setUsesPeriodicBoundaryConditions(true);
+    standardSystem.addForce(torsions);
+
+    // Set the atoms in various positions, and verify that both systems give identical forces and energy.
+
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    VerletIntegrator integrator1(0.01);
+    VerletIntegrator integrator2(0.01);
+    Context c1(customSystem, integrator1, platform);
+    Context c2(standardSystem, integrator2, platform);
+    vector<Vec3> positions(4);
+    for (int i = 0; i < 10; i++) {
+        for (int j = 0; j < (int) positions.size(); j++)
+            positions[j] = Vec3(5.0*genrand_real2(sfmt), 5.0*genrand_real2(sfmt), 5.0*genrand_real2(sfmt));
+        c1.setPositions(positions);
+        c2.setPositions(positions);
+        State s1 = c1.getState(State::Forces | State::Energy);
+        State s2 = c2.getState(State::Forces | State::Energy);
+        for (int i = 0; i < customSystem.getNumParticles(); i++)
+            ASSERT_EQUAL_VEC(s1.getForces()[i], s2.getForces()[i], TOL);
+        ASSERT_EQUAL_TOL(s1.getPotentialEnergy(), s2.getPotentialEnergy(), TOL);
+    }
+}
+
+void testEnergyParameterDerivatives() {
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    VerletIntegrator integrator(0.01);
+    CustomCompoundBondForce* custom = new CustomCompoundBondForce(4, "k*(dihedral(p1,p2,p3,p4)-theta0)^2");
+    custom->addGlobalParameter("theta0", 0.0);
+    custom->addGlobalParameter("k", 0.0);
+    custom->addEnergyParameterDerivative("theta0");
+    custom->addEnergyParameterDerivative("k");
+    vector<int> particles(4);
+    particles[0] = 0;
+    particles[1] = 1;
+    particles[2] = 2;
+    particles[3] = 3;
+    vector<double> parameters;
+    custom->addBond(particles, parameters);
+    system.addForce(custom);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(4);
+    positions[0] = Vec3(0, 2, 0);
+    positions[1] = Vec3(0, 0, 0);
+    positions[2] = Vec3(1, 0, 0);
+    positions[3] = Vec3(1, 1, 1);
+    context.setPositions(positions);
+    double theta = M_PI/4;
+    for (int i = 0; i < 10; i++) {
+        double theta0 = 0.1*i;
+        double k = 10-i;
+        context.setParameter("theta0", theta0);
+        context.setParameter("k", k);
+        State state = context.getState(State::ParameterDerivatives);
+        map<string, double> derivs = state.getEnergyParameterDerivatives();
+        double dEdtheta0 = -2*k*(theta-theta0);
+        double dEdk = (theta-theta0)*(theta-theta0);
+        ASSERT_EQUAL_TOL(dEdtheta0, derivs["theta0"], 1e-5);
+        ASSERT_EQUAL_TOL(dEdk, derivs["k"], 1e-5);
+    }
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -341,6 +459,8 @@ int main(int argc, char* argv[]) {
         testContinuous3DFunction();
         testMultipleBonds();
         testIllegalVariable();
+        testPeriodic();
+        testEnergyParameterDerivatives();
         runPlatformTests();
     }
     catch(const exception& e) {

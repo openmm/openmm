@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2016 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -97,7 +97,7 @@ void ReferenceBondForce::calculateForce(int numberOfBonds, int** atomIndices,
       // calculate bond ixn
 
       referenceBondIxn.calculateBondIxn(atomIndices[ii], atomCoordinates, parameters[ii], 
-                                        forces, totalEnergy);
+                                        forces, totalEnergy, NULL);
    }
 }
 

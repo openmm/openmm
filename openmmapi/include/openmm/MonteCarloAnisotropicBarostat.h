@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman, Lee-Ping Wang                                      *
  * Contributors:                                                              *
  *                                                                            *
@@ -82,16 +82,24 @@ public:
         return key;
     }
     /**
+     * This is the name of the parameter which stores the current temperature at which the
+     * system is being maintained (in Kelvin)
+     */
+    static const std::string& Temperature() {
+        static const std::string key = "AnisotropicMonteCarloTemperature";
+        return key;
+    }
+    /**
      * Create a MonteCarloAnisotropicBarostat.
      *
-     * @param defaultPressure   The default pressure acting on each axis (in bar)
-     * @param temperature       the temperature at which the system is being maintained (in Kelvin)
-     * @param scaleX            whether to allow the X dimension of the periodic box to change size
-     * @param scaleY            whether to allow the Y dimension of the periodic box to change size
-     * @param scaleZ            whether to allow the Z dimension of the periodic box to change size
-     * @param frequency         the frequency at which Monte Carlo pressure changes should be attempted (in time steps)
+     * @param defaultPressure     The default pressure acting on each axis (in bar)
+     * @param defaultTemperature  the default temperature at which the system is being maintained (in Kelvin)
+     * @param scaleX              whether to allow the X dimension of the periodic box to change size
+     * @param scaleY              whether to allow the Y dimension of the periodic box to change size
+     * @param scaleZ              whether to allow the Z dimension of the periodic box to change size
+     * @param frequency           the frequency at which Monte Carlo pressure changes should be attempted (in time steps)
      */
-    MonteCarloAnisotropicBarostat(const Vec3& defaultPressure, double temperature, bool scaleX = true, bool scaleY = true, bool scaleZ = true, int frequency = 25);
+    MonteCarloAnisotropicBarostat(const Vec3& defaultPressure, double defaultTemperature, bool scaleX = true, bool scaleY = true, bool scaleZ = true, int frequency = 25);
     /**
      * Get the default pressure (in bar).
      *
@@ -142,18 +150,19 @@ public:
         frequency = freq;
     }
     /**
-     * Get the temperature at which the system is being maintained, measured in Kelvin.
+     * Get the default temperature at which the system is being maintained, measured in Kelvin.
      */
-    double getTemperature() const {
-        return temperature;
+    double getDefaultTemperature() const {
+        return defaultTemperature;
     }
     /**
-     * Set the temperature at which the system is being maintained.
+     * Set the default temperature at which the system is being maintained.  This will affect any new Contexts you create,
+     * but not ones that already exist.
      *
      * @param temp     the system temperature, measured in Kelvin.
      */
-    void setTemperature(double temp) {
-        temperature = temp;
+    void setDefaultTemperature(double temp) {
+        defaultTemperature = temp;
     }
     /**
      * Get the random number seed.  See setRandomNumberSeed() for details.
@@ -182,13 +191,13 @@ public:
      * @returns true if force uses PBC and false otherwise
      */
     bool usesPeriodicBoundaryConditions() const {
-        return true;
+        return false;
     }
 protected:
     ForceImpl* createImpl() const;
 private:
     Vec3 defaultPressure;
-    double temperature;
+    double defaultTemperature;
     bool scaleX, scaleY, scaleZ;
     int frequency, randomNumberSeed;
 };

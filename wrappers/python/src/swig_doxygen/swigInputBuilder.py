@@ -74,6 +74,11 @@ def getNodeText(node):
             s = "%s%s\n\n" % (s, getNodeText(n))
         elif n.tag == "ref":
             s = "%s%s" % (s, getNodeText(n))
+        elif n.tag == "xrefsect":
+            title = n.find("xreftitle")
+            description = n.find("xrefdescription")
+            if title is not None and description is not None and getNodeText(title).lower() == "deprecated":
+                s = "%s\n@deprecated %s\n\n" % (s, getNodeText(description))
         else:
             if n.tag in docTags:
                 tag = docTags[n.tag]
@@ -242,6 +247,7 @@ class SwigInputBuilder:
         self.fOut.write("\n/* Declare factories */\n\n")
         forceSubclassList = []
         integratorSubclassList = []
+        tabulatedFunctionSubclassList = []
         for classNode in findNodes(self.doc.getroot(), "compounddef", kind="class", prot="public"):
             className = getText("compoundname", classNode)
             shortClassName=stripOpenmmPrefix(className)
@@ -256,6 +262,8 @@ class SwigInputBuilder:
                         forceSubclassList.append(shortClassName)
                     elif baseName == 'OpenMM::Integrator':
                         integratorSubclassList.append(shortClassName)
+                    elif baseName == 'OpenMM::TabulatedFunction':
+                        tabulatedFunctionSubclassList.append(shortClassName)
 
         self.fOut.write("%factory(OpenMM::Force& OpenMM::System::getForce")
         for name in sorted(forceSubclassList):
@@ -289,6 +297,16 @@ class SwigInputBuilder:
 
         self.fOut.write("%factory(OpenMM::Integrator& OpenMM::CompoundIntegrator::getIntegrator")
         for name in sorted(integratorSubclassList):
+            self.fOut.write(",\n         OpenMM::%s" % name)
+        self.fOut.write(");\n\n")
+
+        self.fOut.write("%factory(OpenMM::TabulatedFunction* OpenMM::TabulatedFunction::__copy__")
+        for name in sorted(tabulatedFunctionSubclassList):
+            self.fOut.write(",\n         OpenMM::%s" % name)
+        self.fOut.write(");\n\n")
+
+        self.fOut.write("%factory(OpenMM::TabulatedFunction* OpenMM_XmlSerializer__deserializeTabulatedFunction")
+        for name in sorted(tabulatedFunctionSubclassList):
             self.fOut.write(",\n         OpenMM::%s" % name)
         self.fOut.write(");\n\n")
 

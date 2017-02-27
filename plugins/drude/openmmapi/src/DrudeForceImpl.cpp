@@ -154,6 +154,7 @@ vector<string> DrudeForceImpl::getKernelNames() {
 
 void DrudeForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcDrudeForceKernel>().copyParametersToContext(context, owner);
+    context.systemChanged();
 }
 
 vector<pair<int, int> > DrudeForceImpl::getBondedParticles() const {

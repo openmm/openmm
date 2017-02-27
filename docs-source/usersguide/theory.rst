@@ -48,15 +48,15 @@ Angstroms or nm, and angles may be in degrees or radians.  OpenMM uses the
 following units everywhere.
 
 ===========  =================
-Quantity     Units            
+Quantity     Units
 ===========  =================
-distance     nm               
-time         ps               
+distance     nm
+time         ps
 mass         atomic mass units
-charge       proton charge    
-temperature  Kelvin           
-angle        radians          
-energy       kJ/mol           
+charge       proton charge
+temperature  Kelvin
+angle        radians
+energy       kJ/mol
 ===========  =================
 
 These units have the important feature that they form an internally consistent
@@ -182,7 +182,7 @@ an energy term of the form
 
 
 .. math::
-   E=4\epsilon\left({\left(\frac{\sigma}{r}\right)}^{\text{12}}-{\left(\frac{\sigma}{r}\right)}^{6}\right)
+   E=4\epsilon\left({\left(\frac{\sigma}{r}\right)}^{12}-{\left(\frac{\sigma}{r}\right)}^{6}\right)
 
 
 where *r* is the distance between the two particles, :math:`\sigma` is the distance
@@ -201,7 +201,7 @@ at the cutoff distance.  When :math:`r_\mathit{switch} < r < r_\mathit{cutoff}`\
 
 where :math:`x = (r-r_\mathit{switch})/(r_\mathit{cutoff}-r_\mathit{switch})`. This function decreases smoothly from 1 at
 :math:`r = r_\mathit{switch}` to 0 at :math:`r = r_\mathit{cutoff}`, and has continuous first and
-second derivatives at both ends
+second derivatives at both ends.
 
 When an exception has been added for a pair of particles, :math:`\sigma` and :math:`\epsilon`
 are the parameters specified by the exception.  Otherwise they are determined
@@ -373,7 +373,7 @@ where *d* is the width of the periodic box, and selects the smallest value
 for k\ :sub:`max` which gives *error* < :math:`\delta`\ .  (If the box is not square,
 k\ :sub:`max` will have a different value along each axis.)
 
-This means that the accuracy of the calculation is determined by :math:`\delta`\ . 
+This means that the accuracy of the calculation is determined by :math:`\delta`\ .
 :math:`r_\mathit{cutoff}` does not affect the accuracy of the result, but does affect the speed
 of the calculation by changing the relative costs of the direct space and
 reciprocal space sums.  You therefore should test different cutoffs to find the
@@ -495,6 +495,84 @@ The surface area term is given by\ :cite:`Schaefer1998`\ :cite:`Ponder`
 where :math:`r_i` is the atomic radius of particle *i*\ , :math:`r_i` is
 its atomic radius, and :math:`r_\mathit{solvent}` is the solvent radius, which is taken
 to be 0.14 nm.  The default value for the energy scale :math:`E_{SA}` is 2.25936 kJ/mol/nm\ :sup:`2`\ .
+
+
+GayBerneForce
+*************
+
+This is similar to the Lennard-Jones interaction described in section :ref:`lennard-jones-interaction`,
+but instead of being based on the distance between two point particles, it is based
+on the distance of closest approach between two ellipsoids.\ :cite:`Everaers2003`
+Let :math:`\mathbf{A}_1` and :math:`\mathbf{A}_2` be rotation matrices that transform
+from the lab frame to the body frames of two interacting ellipsoids.  These rotations
+are determined from the positions of other particles, as described in the API documentation.
+Let :math:`\mathbf{r}_{12}` be the vector pointing from particle 1 to particle 2, and
+:math:`\hat{\mathbf{r}}_{12}=\mathbf{r}_{12}/|\mathbf{r}_{12}|`.  Let :math:`\mathbf{S}_1`
+and :math:`\mathbf{S}_2` be diagonal matrices containing the three radii of each particle:
+
+.. math::
+   \mathbf{S}_i=\begin{bmatrix}
+   a_i & 0 & 0 \\
+   0 & b_i & 0 \\
+   0 & 0 & c_i
+   \end{bmatrix}
+
+The energy is computed as a product of three terms:
+
+.. math::
+   E=U_r(\mathbf{A}_1, \mathbf{A}_2, \mathbf{r}_{12}) \cdot \eta_{12}(\mathbf{A}_1, \mathbf{A}_2) \cdot \chi_{12}(\mathbf{A}_1, \mathbf{A}_2, \hat{\mathbf{r}}_{12})
+
+The first term describes the distance dependence, and is very similar in form to
+the Lennard-Jones interaction:
+
+.. math::
+   U_r=4\epsilon\left({\left(\frac{\sigma}{h_{12}+\sigma}\right)}^{12}-{\left(\frac{\sigma}{h_{12}+\sigma}\right)}^{6}\right)
+
+where :math:`h_{12}` is an approximation to the distance of closest approach between
+the two ellipsoids:
+
+.. math::
+   h_{12}=|\mathbf{r}_{12}|-\sigma_{12}(\mathbf{A}_1, \mathbf{A}_2, \hat{\mathbf{r}}_{12})
+
+.. math::
+   \sigma_{12}(\mathbf{A}_1, \mathbf{A}_2, \hat{\mathbf{r}}_{12})=\left[ \frac{1}{2} \hat{\mathbf{r}}_{12}^T \mathbf{G}_{12}^{-1} \hat{\mathbf{r}}_{12} \right]^{-1/2}
+
+.. math::
+   \mathbf{G}_{12}=\mathbf{A}_1^T \mathbf{S}_1^2 \mathbf{A}_1 + \mathbf{A}_2^T \mathbf{S}_2^2 \mathbf{A}_2
+
+The second term adjusts the energy based on the relative orientations of the two ellipsoids:
+
+.. math::
+   \eta_{12}(\mathbf{A}_1, \mathbf{A}_2)=\left[ \frac{2 s_1 s_2}{\text{det}(\mathbf{G}_{12})} \right]^{1/2}
+
+.. math::
+   s_i=(a_i b_i + c_i^2)\sqrt{a_i b_i}
+
+The third term applies the user-defined scale factors :math:`e_a`, :math:`e_b`,
+and :math:`e_c` that adjust the strength of the interaction along each axis:
+
+.. math::
+   \chi_{12}(\mathbf{A}_1, \mathbf{A}_2, \hat{\mathbf{r}}_{12})=(2 \hat{\mathbf{r}}_{12}^T \mathbf{B}_{12}^{-1} \hat{\mathbf{r}}_{12})^2
+
+.. math::
+   \mathbf{B}_{12}=\mathbf{A}_1^T \mathbf{E}_1 \mathbf{A}_1 + \mathbf{A}_2^T \mathbf{E}_2 \mathbf{A}_2
+
+.. math::
+   \mathbf{E}_i=\begin{bmatrix}
+   e_{ai}^{-1/2} & 0 & 0 \\
+   0 & e_{bi}^{-1/2} & 0 \\
+   0 & 0 & e_{ci}^{-1/2}
+   \end{bmatrix}
+
+When using a cutoff, you can optionally use a switching function to make the energy go smoothly to 0
+at the cutoff distance.  When :math:`r_\mathit{switch} < r < r_\mathit{cutoff}`\ , the energy is multiplied by
+
+.. math::
+   S=1-{6x}^{5}+15{x}^{4}-10{x}^{3}
+
+where :math:`x = (r-r_\mathit{switch})/(r_\mathit{cutoff}-r_\mathit{switch})`. This function decreases smoothly from 1 at
+:math:`r = r_\mathit{switch}` to 0 at :math:`r = r_\mathit{cutoff}`, and has continuous first and
+second derivatives at both ends.
 
 
 AndersenThermostat
@@ -842,7 +920,8 @@ of four particles.  That is, the interaction energy of each bond is given by
 
 where *f*\ (\ *...*\ ) is a user defined mathematical expression.  It may
 depend on an arbitrary set of positions {\ :math:`x_i`\ }, distances {\ :math:`r_i`\ },
-angles {\ :math:`\theta_i`\ }, and dihedral angles {\ :math:`\phi_i`\ }.
+angles {\ :math:`\theta_i`\ }, and dihedral angles {\ :math:`\phi_i`\ }
+guaranteed to be in the range [-π, π]. 
 
 Each distance, angle, or dihedral is defined by specifying a sequence of
 particles chosen from among the particles that make up the bond.  A distance
@@ -917,7 +996,7 @@ Parameters may be specified in two ways:
 * Per-particle parameters are defined by specifying a value for each particle.
 
 The energy function is evaluated one or more times for every unique set of
-:math:`N` particles in the system.  The exact number of times depends on the 
+:math:`N` particles in the system.  The exact number of times depends on the
 *permutation mode*\ .  A set of :math:`N` particles has :math:`N!` possible
 permutations.  In :code:`SinglePermutation` mode, the function is evaluated
 for a single arbitrarily chosen one of those permutations.  In
@@ -1086,6 +1165,24 @@ is exactly equivalent to
 The definition of an intermediate value may itself involve other intermediate
 values.  All uses of a value must appear *before* that value’s definition.
 
+Parameter Derivatives
+*********************
+
+Many custom forces have the ability to compute derivatives of the potential energy
+with respect to global parameters.  To use this feature, first define a global
+parameter that the energy depends on.  Then instruct the custom force to compute
+the derivative with respect to that parameter by calling :meth:`addEnergyParameterDerivative()`
+on it.  Whenever forces and energies are computed, the specified derivative will
+then also be computed at the same time.  You can query it by calling :meth:`getState()`
+on a :class:`Context`, just as you would query forces or energies.
+
+An important application of this feature is to use it in combination with a
+:class:`CustomIntegrator` (described in section :ref:`custom-integrator`\ ).  The
+derivative can appear directly in expressions that define the integration
+algorithm.  This can be used to implement algorithms such as lambda-dynamics,
+where a global parameter is integrated as a dynamic variable.
+
+
 Integrators
 ###########
 
@@ -1234,6 +1331,8 @@ the fixed step size Langevin integrator for the reasons given above.
 Furthermore, because Langevin dynamics involves a random force, it can never be
 symplectic and therefore the fixed step size Verlet integrator’s advantages do
 not apply to the Langevin integrator.
+
+.. _custom-integrator:
 
 CustomIntegrator
 ****************

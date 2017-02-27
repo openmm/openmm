@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -63,9 +63,10 @@ public:
     void updateParametersInContext(ContextImpl& context);
     /**
      * Compute the coefficient which, when divided by the periodic box volume, gives the
-     * long range correction to the energy.
+     * long range correction to the energy.  If the Force computes parameter derivatives,
+     * also compute the corresponding derivatives of the correction.
      */
-    static double calcLongRangeCorrection(const CustomNonbondedForce& force, const Context& context);
+    static void calcLongRangeCorrection(const CustomNonbondedForce& force, const Context& context, double& coefficient, std::vector<double>& derivatives);
 private:
     static double integrateInteraction(Lepton::CompiledExpression& expression, const std::vector<double>& params1, const std::vector<double>& params2,
             const CustomNonbondedForce& force, const Context& context);

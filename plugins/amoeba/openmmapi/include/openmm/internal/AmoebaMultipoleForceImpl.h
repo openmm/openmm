@@ -64,7 +64,7 @@ public:
 
     /**
      * Get the CovalentMap for an atom
-     * 
+     *
      * @param force                AmoebaMultipoleForce force reference
      * @param index                the index of the atom for which to set parameters
      * @param minCovalentIndex     minimum covalent index
@@ -76,13 +76,14 @@ public:
 
     /**
      * Get the covalent degree for the  CovalentEnd lists
-     * 
+     *
      * @param force                AmoebaMultipoleForce force reference
      * @param covalentDegree      covalent degrees for the CovalentEnd lists
      */
     static void getCovalentDegree(const AmoebaMultipoleForce& force, std::vector<int>& covalentDegree);
-
+    void getLabFramePermanentDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
     void getInducedDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
+    void getTotalDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
 
     void getElectrostaticPotential(ContextImpl& context, const std::vector< Vec3 >& inputGrid,
                                    std::vector< double >& outputElectrostaticPotential);
@@ -90,7 +91,7 @@ public:
     void getSystemMultipoleMoments(ContextImpl& context, std::vector< double >& outputMultipoleMoments);
     void updateParametersInContext(ContextImpl& context);
     void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
- 
+
 
 private:
     const AmoebaMultipoleForce& owner;

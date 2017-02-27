@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -38,7 +38,6 @@
 #include "ReferenceNeighborList.h"
 #include "lepton/CompiledExpression.h"
 #include "lepton/CustomFunction.h"
-#include "lepton/ExpressionProgram.h"
 
 namespace OpenMM {
 
@@ -48,6 +47,7 @@ class ReferenceCustomCentroidBondIxn;
 class ReferenceCustomCompoundBondIxn;
 class ReferenceCustomHbondIxn;
 class ReferenceCustomManyParticleIxn;
+class ReferenceGayBerneForce;
 class ReferenceBrownianDynamics;
 class ReferenceStochasticDynamics;
 class ReferenceConstraintAlgorithm;
@@ -158,6 +158,12 @@ public:
      */
     void getForces(ContextImpl& context, std::vector<Vec3>& forces);
     /**
+     * Get the current derivatives of the energy with respect to context parameters.
+     *
+     * @param derivs  on exit, this contains the derivatives
+     */
+    void getEnergyParameterDerivatives(ContextImpl& context, std::map<std::string, double>& derivs);
+    /**
      * Get the current periodic box vectors.
      *
      * @param a      on exit, this contains the vector defining the first edge of the periodic box
@@ -172,7 +178,7 @@ public:
      * @param b      the vector defining the second edge of the periodic box
      * @param c      the vector defining the third edge of the periodic box
      */
-    void setPeriodicBoxVectors(ContextImpl& context, const Vec3& a, const Vec3& b, const Vec3& c) const;
+    void setPeriodicBoxVectors(ContextImpl& context, const Vec3& a, const Vec3& b, const Vec3& c);
     /**
      * Create a checkpoint recording the current state of the Context.
      * 
@@ -280,6 +286,7 @@ private:
     int numBonds;
     int **bondIndexArray;
     RealOpenMM **bondParamArray;
+    bool usePeriodic;
 };
 
 /**
@@ -318,7 +325,9 @@ private:
     int **bondIndexArray;
     RealOpenMM **bondParamArray;
     Lepton::CompiledExpression energyExpression, forceExpression;
-    std::vector<std::string> parameterNames, globalParameterNames;
+    std::vector<Lepton::CompiledExpression> energyParamDerivExpressions;
+    std::vector<std::string> parameterNames, globalParameterNames, energyParamDerivNames;
+    bool usePeriodic;
 };
 
 /**
@@ -356,6 +365,7 @@ private:
     int numAngles;
     int **angleIndexArray;
     RealOpenMM **angleParamArray;
+    bool usePeriodic;
 };
 
 /**
@@ -394,7 +404,9 @@ private:
     int **angleIndexArray;
     RealOpenMM **angleParamArray;
     Lepton::CompiledExpression energyExpression, forceExpression;
-    std::vector<std::string> parameterNames, globalParameterNames;
+    std::vector<Lepton::CompiledExpression> energyParamDerivExpressions;
+    std::vector<std::string> parameterNames, globalParameterNames, energyParamDerivNames;
+    bool usePeriodic;
 };
 
 /**
@@ -432,6 +444,7 @@ private:
     int numTorsions;
     int **torsionIndexArray;
     RealOpenMM **torsionParamArray;
+    bool usePeriodic;
 };
 
 /**
@@ -469,6 +482,7 @@ private:
     int numTorsions;
     int **torsionIndexArray;
     RealOpenMM **torsionParamArray;
+    bool usePeriodic;
 };
 
 /**
@@ -505,6 +519,7 @@ private:
     std::vector<std::vector<std::vector<RealOpenMM> > > coeff;
     std::vector<int> torsionMaps;
     std::vector<std::vector<int> > torsionIndices;
+    bool usePeriodic;
 };
 
 /**
@@ -543,7 +558,9 @@ private:
     int **torsionIndexArray;
     RealOpenMM **torsionParamArray;
     Lepton::CompiledExpression energyExpression, forceExpression;
-    std::vector<std::string> parameterNames, globalParameterNames;
+    std::vector<Lepton::CompiledExpression> energyParamDerivExpressions;
+    std::vector<std::string> parameterNames, globalParameterNames, energyParamDerivNames;
+    bool usePeriodic;
 };
 
 /**
@@ -639,8 +656,10 @@ private:
     std::map<std::string, double> globalParamValues;
     std::vector<std::set<int> > exclusions;
     Lepton::CompiledExpression energyExpression, forceExpression;
-    std::vector<std::string> parameterNames, globalParameterNames;
+    std::vector<Lepton::CompiledExpression> energyParamDerivExpressions;
+    std::vector<std::string> parameterNames, globalParameterNames, energyParamDerivNames;
     std::vector<std::pair<std::set<int>, std::set<int> > > interactionGroups;
+    std::vector<double> longRangeCoefficientDerivs;
     NonbondedMethod nonbondedMethod;
     NeighborList* neighborList;
 };
@@ -719,14 +738,16 @@ private:
     RealOpenMM **particleParamArray;
     RealOpenMM nonbondedCutoff;
     std::vector<std::set<int> > exclusions;
-    std::vector<std::string> particleParameterNames, globalParameterNames, valueNames;
-    std::vector<Lepton::ExpressionProgram> valueExpressions;
-    std::vector<std::vector<Lepton::ExpressionProgram> > valueDerivExpressions;
-    std::vector<std::vector<Lepton::ExpressionProgram> > valueGradientExpressions;
+    std::vector<std::string> particleParameterNames, globalParameterNames, energyParamDerivNames, valueNames;
+    std::vector<Lepton::CompiledExpression> valueExpressions;
+    std::vector<std::vector<Lepton::CompiledExpression> > valueDerivExpressions;
+    std::vector<std::vector<Lepton::CompiledExpression> > valueGradientExpressions;
+    std::vector<std::vector<Lepton::CompiledExpression> > valueParamDerivExpressions;
     std::vector<OpenMM::CustomGBForce::ComputationType> valueTypes;
-    std::vector<Lepton::ExpressionProgram> energyExpressions;
-    std::vector<std::vector<Lepton::ExpressionProgram> > energyDerivExpressions;
-    std::vector<std::vector<Lepton::ExpressionProgram> > energyGradientExpressions;
+    std::vector<Lepton::CompiledExpression> energyExpressions;
+    std::vector<std::vector<Lepton::CompiledExpression> > energyDerivExpressions;
+    std::vector<std::vector<Lepton::CompiledExpression> > energyGradientExpressions;
+    std::vector<std::vector<Lepton::CompiledExpression> > energyParamDerivExpressions;
     std::vector<OpenMM::CustomGBForce::ComputationType> energyTypes;
     NonbondedMethod nonbondedMethod;
     NeighborList* neighborList;
@@ -859,7 +880,8 @@ private:
     int numBonds, numParticles;
     RealOpenMM **bondParamArray;
     ReferenceCustomCentroidBondIxn* ixn;
-    std::vector<std::string> globalParameterNames;
+    std::vector<std::string> globalParameterNames, energyParamDerivNames;
+    bool usePeriodic;
 };
 
 /**
@@ -897,7 +919,8 @@ private:
     int numBonds;
     RealOpenMM **bondParamArray;
     ReferenceCustomCompoundBondIxn* ixn;
-    std::vector<std::string> globalParameterNames;
+    std::vector<std::string> globalParameterNames, energyParamDerivNames;
+    bool usePeriodic;
 };
 
 /**
@@ -938,6 +961,40 @@ private:
     ReferenceCustomManyParticleIxn* ixn;
     std::vector<std::string> globalParameterNames;
     NonbondedMethod nonbondedMethod;
+};
+
+/**
+ * This kernel is invoked by GayBerneForce to calculate the forces acting on the system.
+ */
+class ReferenceCalcGayBerneForceKernel : public CalcGayBerneForceKernel {
+public:
+    ReferenceCalcGayBerneForceKernel(std::string name, const Platform& platform) : CalcGayBerneForceKernel(name, platform), ixn(NULL) {
+    }
+    ~ReferenceCalcGayBerneForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the GayBerneForce this kernel will be used for
+     */
+    void initialize(const System& system, const GayBerneForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the GayBerneForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const GayBerneForce& force);
+private:
+    ReferenceGayBerneForce* ixn;
 };
 
 /**

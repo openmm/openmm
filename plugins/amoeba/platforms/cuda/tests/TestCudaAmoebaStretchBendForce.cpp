@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Mark Friedrichs                                                   *
  * Contributors:                                                              *
  *                                                                            *
@@ -266,13 +266,49 @@ void testOneStretchBend() {
     compareWithExpectedForceAndEnergy(context, *amoebaStretchBendForce, TOL, "testOneStretchBend");
 }
 
+void testPeriodic() {
+    // Create a force that uses periodic boundary conditions.
+
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(3, 0, 0), Vec3(0, 3, 0), Vec3(0, 0, 3));
+    int numberOfParticles = 3;
+    for (int ii = 0; ii < numberOfParticles; ii++)
+        system.addParticle(1.0);
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
+    AmoebaStretchBendForce* amoebaStretchBendForce = new AmoebaStretchBendForce();
+    double abLength         = 0.144800000E+01;
+    double cbLength         = 0.101500000E+01;
+    double angleStretchBend = 0.108500000E+03*DegreesToRadians;
+    double kStretchBend     = 1.0;
+    amoebaStretchBendForce->addStretchBend(0, 1, 2, abLength, cbLength, angleStretchBend, kStretchBend, kStretchBend);
+    amoebaStretchBendForce->setUsesPeriodicBoundaryConditions(true);
+    system.addForce(amoebaStretchBendForce);
+    Context context(system, integrator, Platform::getPlatformByName("CUDA"));
+    std::vector<Vec3> positions(numberOfParticles);
+    positions[0] = Vec3(0, 1, 0);
+    positions[1] = Vec3(0, 0, 0);
+    positions[2] = Vec3(0, 0, 1);
+    context.setPositions(positions);
+    State s1 = context.getState(State::Forces | State::Energy);
+    
+    // Move one atom to a position that should give identical results.
+
+    positions[2] = Vec3(0, 0, -2);
+    context.setPositions(positions);
+    State s2 = context.getState(State::Forces | State::Energy);
+    ASSERT_EQUAL_TOL(s1.getPotentialEnergy(), s2.getPotentialEnergy(), 1e-5);
+    for (int i = 0; i < numberOfParticles; i++)
+        ASSERT_EQUAL_VEC(s1.getForces()[i], s2.getForces()[i], 1e-5);
+}
+
 int main(int argc, char* argv[]) {
     try {
         std::cout << "TestCudaAmoebaStretchBendForce running test..." << std::endl;
         registerAmoebaCudaKernelFactories();
         if (argc > 1)
-            Platform::getPlatformByName("CUDA").setPropertyDefaultValue("CudaPrecision", std::string(argv[1]));
+            Platform::getPlatformByName("CUDA").setPropertyDefaultValue("Precision", std::string(argv[1]));
         testOneStretchBend();
+        testPeriodic();
     } catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;
         std::cout << "FAIL - ERROR.  Test failed." << std::endl;

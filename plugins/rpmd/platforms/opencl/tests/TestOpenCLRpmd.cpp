@@ -555,7 +555,7 @@ int main(int argc, char* argv[]) {
     try {
         registerRPMDOpenCLKernelFactories();
         if (argc > 1)
-            Platform::getPlatformByName("OpenCL").setPropertyDefaultValue("OpenCLPrecision", string(argv[1]));
+            Platform::getPlatformByName("OpenCL").setPropertyDefaultValue("Precision", string(argv[1]));
         testFreeParticles();
         testParaHydrogen();
         testCMMotionRemoval();

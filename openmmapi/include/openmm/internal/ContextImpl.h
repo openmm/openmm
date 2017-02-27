@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -139,6 +139,10 @@ public:
      */
     void setParameter(std::string name, double value);
     /**
+     * Get the derivatives of the energy with respect to parameters.
+     */
+    void getEnergyParameterDerivatives(std::map<std::string, double>& derivs);
+    /**
      * Get the vectors defining the axes of the periodic box (measured in nm).  They will affect
      * any Force that uses periodic boundary conditions.
      *
@@ -248,6 +252,10 @@ public:
     void integratorDeleted() {
         integratorIsDeleted = true;
     }
+    /**
+     * Notify the integrator that some aspect of the system has changed, and cached information should be discarded.
+     */
+    void systemChanged();
     /**
      * This is the routine that actually computes the list of molecules returned by getMolecules().  Normally
      * you should never call it.  It is exposed here because the same logic is useful to other classes too.

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -42,7 +42,7 @@ CustomGBForceProxy::CustomGBForceProxy() : SerializationProxy("CustomGBForce") {
 }
 
 void CustomGBForceProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 1);
+    node.setIntProperty("version", 2);
     const CustomGBForce& force = *reinterpret_cast<const CustomGBForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
     node.setIntProperty("method", (int) force.getNonbondedMethod());
@@ -54,6 +54,10 @@ void CustomGBForceProxy::serialize(const void* object, SerializationNode& node) 
     SerializationNode& globalParams = node.createChildNode("GlobalParameters");
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {
         globalParams.createChildNode("Parameter").setStringProperty("name", force.getGlobalParameterName(i)).setDoubleProperty("default", force.getGlobalParameterDefaultValue(i));
+    }
+    SerializationNode& energyDerivs = node.createChildNode("EnergyParameterDerivatives");
+    for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
+        energyDerivs.createChildNode("Parameter").setStringProperty("name", force.getEnergyParameterDerivativeName(i));
     }
     SerializationNode& computedValues = node.createChildNode("ComputedValues");
     for (int i = 0; i < force.getNumComputedValues(); i++) {
@@ -93,7 +97,8 @@ void CustomGBForceProxy::serialize(const void* object, SerializationNode& node) 
 }
 
 void* CustomGBForceProxy::deserialize(const SerializationNode& node) const {
-    if (node.getIntProperty("version") != 1)
+    int version = node.getIntProperty("version");
+    if (version < 1 || version > 2)
         throw OpenMMException("Unsupported version number");
     CustomGBForce* force = NULL;
     try {
@@ -110,6 +115,13 @@ void* CustomGBForceProxy::deserialize(const SerializationNode& node) const {
         for (int i = 0; i < (int) globalParams.getChildren().size(); i++) {
             const SerializationNode& parameter = globalParams.getChildren()[i];
             force->addGlobalParameter(parameter.getStringProperty("name"), parameter.getDoubleProperty("default"));
+        }
+        if (version > 1) {
+            const SerializationNode& energyDerivs = node.getChildNode("EnergyParameterDerivatives");
+            for (int i = 0; i < (int) energyDerivs.getChildren().size(); i++) {
+                const SerializationNode& parameter = energyDerivs.getChildren()[i];
+                force->addEnergyParameterDerivative(parameter.getStringProperty("name"));
+            }
         }
         const SerializationNode& computedValues = node.getChildNode("ComputedValues");
         for (int i = 0; i < (int) computedValues.getChildren().size(); i++) {

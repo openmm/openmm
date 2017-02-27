@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2010 Stanford University and Simbios.
+/* Portions copyright (c) 2010-2016 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -38,6 +38,8 @@ private:
     std::vector<std::vector<std::vector<RealOpenMM> > > coeff;
     std::vector<int> torsionMaps;
     std::vector<std::vector<int> > torsionIndices;
+    bool usePeriodic;
+    RealVec boxVectors[3];
 
     /**---------------------------------------------------------------------------------------
 
@@ -65,6 +67,16 @@ public:
                             const std::vector<int>& torsionMaps,
                             const std::vector<std::vector<int> >& torsionIndices);
 
+       /**---------------------------------------------------------------------------------------
+      
+         Set the force to use periodic boundary conditions.
+      
+         @param vectors    the vectors defining the periodic box
+      
+         --------------------------------------------------------------------------------------- */
+      
+       void setPeriodic(OpenMM::RealVec* vectors);
+
     /**---------------------------------------------------------------------------------------
 
        Calculate torsion interaction
@@ -85,7 +97,7 @@ public:
 
     void calculateBondIxn(int* atomIndices, std::vector<OpenMM::RealVec>& atomCoordinates,
                          RealOpenMM* parameters, std::vector<OpenMM::RealVec>& forces,
-                         RealOpenMM* totalEnergy) const;
+                         RealOpenMM* totalEnergy, double* energyParamDerivs);
 
 // ---------------------------------------------------------------------------------------
 

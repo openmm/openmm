@@ -6,9 +6,9 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2015 University of Virginia and the Authors.
+Portions copyright (c) 2012-2016 University of Virginia and the Authors.
 Authors: Christoph Klein, Michael R. Shirts
-Contributors: Jason M. Swails, Peter Eastman
+Contributors: Jason M. Swails, Peter Eastman, Justin L. MacCallum
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -29,19 +29,25 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
+
 from __future__ import division, absolute_import
 
 from collections import defaultdict
 import copy
 from simtk.openmm.app import element as E
-from simtk.openmm import CustomGBForce, Continuous2DFunction
+from simtk.openmm import CustomGBForce, Discrete2DFunction
 import simtk.unit as u
+from math import floor
+
 
 def strip_unit(value, unit):
+    """Strip off any units and return value in unit"""
     if not u.is_quantity(value):
         return value
     return value.value_in_unit(unit)
 
+
+# GBn and GBn2 lookup tables
 d0=[2.26685,2.32548,2.38397,2.44235,2.50057,2.55867,2.61663,2.67444,
     2.73212,2.78965,2.84705,2.9043,2.96141,3.0184,3.07524,3.13196,
     3.18854,3.24498,3.30132,3.35752,3.4136,
@@ -105,8 +111,6 @@ d0=[2.26685,2.32548,2.38397,2.44235,2.50057,2.55867,2.61663,2.67444,
     3.22855,3.28307,3.33751,3.39188,3.4462,3.50046,3.55466,3.6088,
     3.6629,3.71694,3.77095,3.82489,3.8788,3.93265,3.98646,4.04022,
     4.09395,4.14762,4.20126,4.25485,4.3084]
-
-
 
 m0=[0.0381511,0.0338587,0.0301776,0.027003,0.0242506,0.0218529,
     0.0197547,0.0179109,0.0162844,0.0148442,0.0135647,0.0124243,
@@ -192,10 +196,10 @@ m0=[0.0381511,0.0338587,0.0301776,0.027003,0.0242506,0.0218529,
     0.0332033,0.030322,0.0277596,0.0254732,0.0234266,0.0215892,
     0.0199351,0.018442,0.0170909,0.0158654,0.0147514,0.0137365,
     0.0128101,0.0119627,0.0111863]
-# Rescale to nm
-for i in range (len(d0)):
-    d0[i]=d0[i]/10
-    m0[i]=m0[i]*10
+# Rescale to nanometers
+d0 = [d / 10. for d in d0]
+m0 = [m * 10. for m in m0]
+
 
 def _get_bonded_atom_list(topology):
     """ Returns a list of atoms bonded to each other atom in a dict """
@@ -204,6 +208,7 @@ def _get_bonded_atom_list(topology):
         bondeds[a1].append(a2)
         bondeds[a2].append(a1)
     return bondeds
+
 
 def _is_carboxylateO(atom, all_bonds):
     if atom is not E.oxygen: return False
@@ -223,6 +228,7 @@ def _is_carboxylateO(atom, all_bonds):
         return False
     # If we got here, must be a carboxylate
     return True
+
 
 def _bondi_radii(topology):
     """ Sets the bondi radii """
@@ -250,6 +256,7 @@ def _bondi_radii(topology):
             radii[i] = 1.5
     return radii  # converted to nanometers above
 
+
 def _mbondi_radii(topology):
     """ Sets the mbondi radii """
     radii = [0.0 for atom in topology.atoms()]
@@ -260,7 +267,7 @@ def _mbondi_radii(topology):
             bondeds = all_bonds[atom]
             if bondeds[0].element in (E.carbon, E.nitrogen):
                 radii[i] = 1.3
-            elif bondeds[0].type.atomic_number in (E.oxygen, E.sulfur):
+            elif bondeds[0].element in (E.oxygen, E.sulfur):
                 radii[i] = 0.8
             else:
                 radii[i] = 1.2
@@ -285,6 +292,7 @@ def _mbondi_radii(topology):
         else:
             radii[i] = 1.5
     return radii  # converted to nanometers above
+
 
 def _mbondi2_radii(topology):
     """ Sets the mbondi2 radii """
@@ -320,6 +328,7 @@ def _mbondi2_radii(topology):
             radii[i] = 1.5
     return radii  # Converted to nanometers above
 
+
 def _mbondi3_radii(topology):
     """ Sets the mbondi3 radii """
     radii = _mbondi2_radii(topology)
@@ -333,20 +342,24 @@ def _mbondi3_radii(topology):
                 radii[i] = 1.17
     return radii  # Converted to nanometers above
 
+
 def _createEnergyTerms(force, solventDielectric, soluteDielectric, SA, cutoff, kappa, offset):
-    # Add the energy terms to the CustomGBForce.  These are identical for all the GB models.
-    
+    """Add the energy terms to the CustomGBForce.
+
+    These are identical for all the GB models.
+
+    """
     params = "; solventDielectric=%.16g; soluteDielectric=%.16g; kappa=%.16g; offset=%.16g" % (solventDielectric, soluteDielectric, kappa, offset)
     if cutoff is not None:
         params += "; cutoff=%.16g" % cutoff
     if kappa > 0:
-        force.addEnergyTerm("-0.5*138.935485*(1/soluteDielectric-exp(-kappa*B)/solventDielectric)*q^2/B"+params,
+        force.addEnergyTerm("-0.5*138.935485*(1/soluteDielectric-exp(-kappa*B)/solventDielectric)*charge^2/B"+params,
                 CustomGBForce.SingleParticle)
     elif kappa < 0:
         # Do kappa check here to avoid repeating code everywhere
         raise ValueError('kappa/ionic strength must be >= 0')
     else:
-        force.addEnergyTerm("-0.5*138.935485*(1/soluteDielectric-1/solventDielectric)*q^2/B"+params,
+        force.addEnergyTerm("-0.5*138.935485*(1/soluteDielectric-1/solventDielectric)*charge^2/B"+params,
                 CustomGBForce.SingleParticle)
     if SA=='ACE':
         force.addEnergyTerm("28.3919551*(radius+0.14)^2*(radius/B)^6; radius=or+offset"+params, CustomGBForce.SingleParticle)
@@ -354,18 +367,19 @@ def _createEnergyTerms(force, solventDielectric, soluteDielectric, SA, cutoff, k
         raise ValueError('Unknown surface area method: '+SA)
     if cutoff is None:
         if kappa > 0:
-            force.addEnergyTerm("-138.935485*(1/soluteDielectric-exp(-kappa*f)/solventDielectric)*q1*q2/f;"
+            force.addEnergyTerm("-138.935485*(1/soluteDielectric-exp(-kappa*f)/solventDielectric)*charge1*charge2/f;"
                                 "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))"+params, CustomGBForce.ParticlePairNoExclusions)
         else:
-            force.addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*q1*q2/f;"
+            force.addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*charge1*charge2/f;"
                                 "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))"+params, CustomGBForce.ParticlePairNoExclusions)
     else:
         if kappa > 0:
-            force.addEnergyTerm("-138.935485*(1/soluteDielectric-exp(-kappa*f)/solventDielectric)*q1*q2*(1/f-"+str(1/cutoff)+");"
+            force.addEnergyTerm("-138.935485*(1/soluteDielectric-exp(-kappa*f)/solventDielectric)*charge1*charge2*(1/f-"+str(1/cutoff)+");"
                                 "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))"+params, CustomGBForce.ParticlePairNoExclusions)
         else:
-            force.addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*q1*q2*(1/f-"+str(1/cutoff)+");"
+            force.addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*charge1*charge2*(1/f-"+str(1/cutoff)+");"
                                 "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))"+params, CustomGBForce.ParticlePairNoExclusions)
+
 
 _SCREEN_PARAMETERS = { # normal, GBn, GBn2
         E.hydrogen : (0.85, 1.09085413633, 1.425952),
@@ -377,33 +391,52 @@ _SCREEN_PARAMETERS = { # normal, GBn, GBn2
         E.sulfur : (0.96, 0.602256336067, -0.703469),
         None : (0.8, 0.5, 0.5) # default
 }
+
 _SCREEN_PARAMETERS[E.deuterium] = _SCREEN_PARAMETERS[E.hydrogen]
 def _screen_parameter(atom):
     if atom.element in _SCREEN_PARAMETERS:
         return _SCREEN_PARAMETERS[atom.element]
     return _SCREEN_PARAMETERS[None]
 
-class CustomAmberGBForce(CustomGBForce):
 
+class CustomAmberGBForceBase(CustomGBForce):
+    """Base class for all of the Amber custom GB forces.
+
+    Should not be instantiated directly, use one of its
+    derived classes instead.
+
+    """
     OFFSET = 0.009
     RADIUS_ARG_POSITION = 1
     SCREEN_POSITION = 2
 
-    def __init__(self, *args, **kwargs):
-        raise NotImplementedError('Cannot instantiate ABC')
+    def __init__(self):
+        CustomGBForce.__init__(self)
+        self.parameters = []
 
     def addParticle(self, params):
-        params = copy.deepcopy(params)
-        params[self.RADIUS_ARG_POSITION] = strip_unit(params[self.RADIUS_ARG_POSITION], u.nanometer) - self.OFFSET
-        params[self.SCREEN_POSITION] *= params[self.RADIUS_ARG_POSITION]
-        CustomGBForce.addParticle(self, params)
-        return params
+        """Add a particle to the force
 
-    def setParticleParameters(self, idx, params):
+        Particles are added in order. The number of particles
+        added must match the number of particles in the system.
+
+        Parameters
+        ----------
+        params : list
+            A list of parameters to add to the force. The meaning
+            parameters depends on the model.
+
+        Returns
+        -------
+        list
+            The list of parameters after stripping off units and
+            modifying SCREEN.
+
+        """
         params = copy.deepcopy(params)
         params[self.RADIUS_ARG_POSITION] = strip_unit(params[self.RADIUS_ARG_POSITION], u.nanometer) - self.OFFSET
         params[self.SCREEN_POSITION] *= params[self.RADIUS_ARG_POSITION]
-        CustomGBForce.addParticle(self, params)
+        self.parameters.append(params)
         return params
 
     @staticmethod
@@ -421,19 +454,52 @@ class CustomAmberGBForce(CustomGBForce):
             List of all parameters needed for this GB model. These can be passed
             to addParticle or setParticleParameters after the charge is inserted
             at the beginning of the list
+
         """
-        raise NotImplementedError('Must override getStandardParameters in subclasses')
+        raise NotImplementedError(
+            'getStandardParameters must be defined in derived classes')
 
-"""
-Amber Equivalent: igb = 1
-"""
-class GBSAHCTForce(CustomAmberGBForce):
+    def finalize(self):
+        """Finalize this force so it can be added to a system.
 
+        This method must be called before the force is added
+        to the system.
+
+        """
+        self._addParticles()
+
+    def _addParticles(self):
+        for params in self.parameters:
+            CustomGBForce.addParticle(self, params)
+
+
+class GBSAHCTForce(CustomAmberGBForceBase):
+    """This class is equivalent to Amber ``igb=1``
+
+    The list of parameters to ``addParticle`` is: ``[charge, or, sr]``.
+
+    Parameters
+    ----------
+    solventDielectric: float
+        Dielectric constant for the solvent
+    soluteDielectric: float
+        Dielectric constant for the solute
+    SA: string or None
+        Surface area model to use
+    cutoff: float or Quantity or None
+        Cutoff distance to use. If float, value is in nm. If ``None``,
+        then no cutoffs are used.
+    kappa: float or Quantity
+        Debye kappa parameter related to modelling salt in GB. It has
+        units of 1 / length with 1 / nanometer assumed if a float
+        is given. A value of zero corresponds to zero salt concentration.
+
+    """
     def __init__(self, solventDielectric=78.5, soluteDielectric=1, SA=None,
                  cutoff=None, kappa=0.0):
-        CustomGBForce.__init__(self)
+        CustomAmberGBForceBase.__init__(self)
 
-        self.addPerParticleParameter("q")
+        self.addPerParticleParameter("charge")
         self.addPerParticleParameter("or") # Offset radius
         self.addPerParticleParameter("sr") # Scaled offset radius
         self.addComputedValue("I", "step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r);"
@@ -447,22 +513,55 @@ class GBSAHCTForce(CustomAmberGBForce):
 
     @staticmethod
     def getStandardParameters(topology):
+        """ Gets list of standard parameters for this GB model based on an input Topology
+
+        Parameters
+        ----------
+        topology : simtk.openmm.app.Topology
+            Topology of the system to get parameters for
+
+        Returns
+        -------
+        list of float
+            List of all parameters needed for this GB model. These can be passed
+            to addParticle or setParticleParameters after the charge is inserted
+            at the beginning of the list
+
+        """
         radii = [[x/10] for x in _mbondi_radii(topology)]
         for i, atom in enumerate(topology.atoms()):
             radii[i].append(_screen_parameter(atom)[0])
         return radii
 
-"""
-Amber Equivalents: igb = 2
-"""
-class GBSAOBC1Force(CustomAmberGBForce):
 
+class GBSAOBC1Force(CustomAmberGBForceBase):
+    """This class is equivalent to Amber ``igb=2``
+
+    The list of parameters to ``addParticle`` is: ``[charge, or, sr]``.
+
+    Parameters
+    ----------
+    solventDielectric: float
+        Dielectric constant for the solvent
+    soluteDielectric: float
+        Dielectric constant for the solute
+    SA: string or None
+        Surface area model to use
+    cutoff: float or Quantity or None
+        Cutoff distance to use. If float, value is in nm. If ``None``,
+        then no cutoffs are used.
+    kappa: float or Quantity
+        Debye kappa parameter related to modelling salt in GB. It has
+        units of 1 / length with 1 / nanometer assumed if a float
+        is given. A value of zero corresponds to zero salt concentration.
+
+    """
     def __init__(self, solventDielectric=78.5, soluteDielectric=1, SA=None,
                  cutoff=None, kappa=0.0):
 
-        CustomGBForce.__init__(self)
+        CustomAmberGBForceBase.__init__(self)
 
-        self.addPerParticleParameter("q")
+        self.addPerParticleParameter("charge")
         self.addPerParticleParameter("or") # Offset radius
         self.addPerParticleParameter("sr") # Scaled offset radius
         self.addComputedValue("I",  "step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r);"
@@ -476,22 +575,57 @@ class GBSAOBC1Force(CustomAmberGBForce):
 
     @staticmethod
     def getStandardParameters(topology):
+        """ Gets list of standard parameters for this GB model based on an input Topology
+
+        Parameters
+        ----------
+        topology : simtk.openmm.app.Topology
+            Topology of the system to get parameters for
+
+        Returns
+        -------
+        list of float
+            List of all parameters needed for this GB model. These can be passed
+            to addParticle or setParticleParameters after the charge is inserted
+            at the beginning of the list
+
+        """
         radii = [[x/10] for x in _mbondi2_radii(topology)]
         for i, atom in enumerate(topology.atoms()):
             radii[i].append(_screen_parameter(atom)[0])
         return radii
 
-"""
-Amber Equivalents: igb = 5
-"""
-class GBSAOBC2Force(GBSAOBC1Force):
 
+class GBSAOBC2Force(GBSAOBC1Force):
+    """This class is equivalent to Amber ``igb=5``
+
+    The list of parameters to ``addParticle`` is: ``[charge, or, sr]``.
+
+    Parameters
+    ----------
+    solventDielectric: float
+        Dielectric constant for the solvent
+    soluteDielectric: float
+        Dielectric constant for the solute
+    SA: string or None
+        Surface area model to use
+    cutoff: float or Quantity or None
+        Cutoff distance to use. If float, value is in nm. If ``None``,
+        then no cutoffs are used.
+    kappa: float or Quantity
+        Debye kappa parameter related to modelling salt in GB. It has
+        units of 1 / length with 1 / nanometer assumed if a float
+        is given. A value of zero corresponds to zero salt concentration.
+
+    """
     def __init__(self, solventDielectric=78.5, soluteDielectric=1, SA=None,
                  cutoff=None, kappa=0.0):
 
-        CustomGBForce.__init__(self)
+        # Note that this is not GBSAOBC1Force, as our initialization
+        # is different. We inherit for getStandardParameters.
+        CustomAmberGBForceBase.__init__(self)
 
-        self.addPerParticleParameter("q")
+        self.addPerParticleParameter("charge")
         self.addPerParticleParameter("or") # Offset radius
         self.addPerParticleParameter("sr") # Scaled offset radius
         self.addComputedValue("I",  "step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r);"
@@ -503,90 +637,185 @@ class GBSAOBC2Force(GBSAOBC1Force):
                                      "psi=I*or; radius=or+offset; offset=0.009", CustomGBForce.SingleParticle)
         _createEnergyTerms(self, solventDielectric, soluteDielectric, SA, cutoff, kappa, 0.009)
 
-"""
-Amber Equivalents: igb = 7
-"""
-class GBSAGBnForce(CustomAmberGBForce):
 
-    def __init__(self, solventDielectric=78.5, soluteDielectric=1, SA=None,
-                 cutoff=None, kappa=0.0):
+class GBSAGBnForce(CustomAmberGBForceBase):
+    """This class is equivalent to Amber ``igb=7``
 
-        CustomGBForce.__init__(self)
+    The list of parameters to ``addParticle`` is: ``[charge, or, sr]``.
 
-        self.addPerParticleParameter("q")
-        self.addPerParticleParameter("or") # Offset radius
-        self.addPerParticleParameter("sr") # Scaled offset radius
+    Parameters
+    ----------
+    solventDielectric: float
+        Dielectric constant for the solvent
+    soluteDielectric: float
+        Dielectric constant for the solute
+    SA: string or None
+        Surface area model to use
+    cutoff: float or Quantity or None
+        Cutoff distance to use. If float, value is in nm. If ``None``,
+        then no cutoffs are used.
+    kappa: float or Quantity
+        Debye kappa parameter related to modelling salt in GB. It has
+        units of 1 / length with 1 / nanometer assumed if a float
+        is given. A value of zero corresponds to zero salt concentration.
 
-        self.addTabulatedFunction("getd0", Continuous2DFunction(21, 21, d0, 0.1, 0.2, 0.1, 0.2))
-        self.addTabulatedFunction("getm0", Continuous2DFunction(21, 21, m0, 0.1, 0.2, 0.1, 0.2))
+    """
+    OFFSET = 0.009
 
-        self.addComputedValue("I",  "Ivdw+neckScale*Ineck;"
-                                    "Ineck=step(radius1+radius2+neckCut-r)*getm0(radius1,radius2)/(1+100*(r-getd0(radius1,radius2))^2+0.3*1000000*(r-getd0(radius1,radius2))^6);"
-                                    "Ivdw=step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r);"
-                                    "U=r+sr2;"
-                                    "L=max(or1, D);"
-                                    "D=abs(r-sr2);"
-                                    "radius1=or1+offset; radius2=or2+offset;"
-                                    "neckScale=0.361825; neckCut=0.68; offset=0.009", CustomGBForce.ParticlePairNoExclusions)
+    def __init__(self, solventDielectric=78.5, soluteDielectric=1, SA=None, cutoff=None, kappa=0.0):
 
-        self.addComputedValue("B", "1/(1/or-tanh(1.09511284*psi-1.907992938*psi^2+2.50798245*psi^3)/radius);"
-                                  "psi=I*or; radius=or+offset; offset=0.009", CustomGBForce.SingleParticle)
-        _createEnergyTerms(self, solventDielectric, soluteDielectric, SA, cutoff, kappa, 0.009)
+        CustomAmberGBForceBase.__init__(self)
+        self.solventDielectric = solventDielectric
+        self.soluteDielectric = soluteDielectric
+        self.SA = SA
+        self.cutoff = cutoff
+        self.kappa = kappa
+        self._uniqueRadii = None
+        self._radiusToIndex = None
 
     def addParticle(self, parameters):
-        parameters = CustomAmberGBForce.addParticle(self, parameters)
-        if parameters[1] < 0.1 or parameters[1] > 0.2:
+        parameters = CustomAmberGBForceBase.addParticle(self, parameters)
+        if parameters[1] + self.OFFSET < 0.1 or parameters[1] + self.OFFSET > 0.2:
             raise ValueError('Radii must be between 1 and 2 Angstroms for neck lookup')
 
-    def setParticleParameters(self, idx, parameters):
-        parameters = CustomAmberGBForce.setParticleParameters(self, idx, parameters)
-        if parameters[1] < 0.1 or parameters[1] > 0.2:
-            raise ValueError('Radii must be between 1 and 2 Angstroms for neck lookup')
+    def finalize(self):
+        self._findUniqueRadii()
+        self._createRadiusToIndexMap()
+        self._addEnergyTerms()
+        self._addParticles()
 
     @staticmethod
     def getStandardParameters(topology):
+        """ Gets list of standard parameters for this GB model based on an input Topology
+
+        Parameters
+        ----------
+        topology : simtk.openmm.app.Topology
+            Topology of the system to get parameters for
+
+        Returns
+        -------
+        list of float
+            List of all parameters needed for this GB model. These can be passed
+            to addParticle or setParticleParameters after the charge is inserted
+            at the beginning of the list
+
+        """
         radii = [[x/10] for x in _bondi_radii(topology)]
         for i, atom in enumerate(topology.atoms()):
             radii[i].append(_screen_parameter(atom)[1])
         return radii
 
-"""
-Amber Equivalents: igb = 8
-"""
-class GBSAGBn2Force(GBSAGBnForce):
+    def _findUniqueRadii(self):
+        radii = [p[self.RADIUS_ARG_POSITION] for p in self.parameters]
+        self._uniqueRadii = list(sorted(set(radii)))
 
-    OFFSET = 0.0195141
+    def _createRadiusToIndexMap(self):
+        self._radiusToIndex = {r: i for i, r in enumerate(self._uniqueRadii)}
 
-    def __init__(self, solventDielectric=78.5, soluteDielectric=1, SA=None,
-                 cutoff=None, kappa=0.0):
+    def _createUniqueTable(self, fullTable):
+        tablePositions = [(r+self.OFFSET-0.1)*200 for r in self._uniqueRadii]
+        numRadii = len(self._uniqueRadii)
+        index1 = [0]*numRadii
+        index2 = [0]*numRadii
+        weight1 = [0]*numRadii
+        weight2 = [0]*numRadii
+        for i,p in enumerate(tablePositions):
+            if p <= 0:
+                weight1[i] = 1.0
+            elif p >= 20:
+                index1[i] = 20
+                weight1[i] = 1.0
+            else:
+                index1[i] = int(floor(p))
+                index2[i] = index1[i]+1
+                weight1[i] = index2[i]-p
+                weight2[i] = 1.0-weight1[i]
+        table = []
+        for i in range(numRadii):
+            for j in range(numRadii):
+                table.append(weight1[i]*weight1[j]*fullTable[index1[i]*21+index1[j]] +
+                              weight1[i]*weight2[j]*fullTable[index1[i]*21+index2[j]] +
+                              weight2[i]*weight1[j]*fullTable[index2[i]*21+index1[j]] +
+                              weight2[i]*weight2[j]*fullTable[index2[i]*21+index2[j]])
+        return table
 
-        CustomGBForce.__init__(self)
+    def _addParticles(self):
+        for p in self.parameters:
+            radIndex = self._radiusToIndex[p[self.RADIUS_ARG_POSITION]]
+            CustomGBForce.addParticle(self, p + [radIndex])
 
-        self.addPerParticleParameter("q")
+    def _addEnergyTerms(self):
+        self.addPerParticleParameter("charge")
         self.addPerParticleParameter("or") # Offset radius
         self.addPerParticleParameter("sr") # Scaled offset radius
-        self.addPerParticleParameter("alpha")
-        self.addPerParticleParameter("beta")
-        self.addPerParticleParameter("gamma")
+        self.addPerParticleParameter("radindex")
 
-        self.addTabulatedFunction("getd0", Continuous2DFunction(21, 21, d0, 0.1, 0.2, 0.1, 0.2))
-        self.addTabulatedFunction("getm0", Continuous2DFunction(21, 21, m0, 0.1, 0.2, 0.1, 0.2))
+        n = len(self._uniqueRadii)
+        m0Table = self._createUniqueTable(m0)
+        d0Table = self._createUniqueTable(d0)
+        self.addTabulatedFunction("getd0", Discrete2DFunction(n, n, d0Table))
+        self.addTabulatedFunction("getm0", Discrete2DFunction(n, n, m0Table))
 
-        self.addComputedValue("I",  "Ivdw+neckScale*Ineck;"
-                                    "Ineck=step(radius1+radius2+neckCut-r)*getm0(radius1,radius2)/(1+100*(r-getd0(radius1,radius2))^2+0.3*1000000*(r-getd0(radius1,radius2))^6);"
-                                    "Ivdw=step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r);"
-                                    "U=r+sr2;"
-                                    "L=max(or1, D);"
-                                    "D=abs(r-sr2);"
-                                    "radius1=or1+offset; radius2=or2+offset;"
-                                    "neckScale=0.826836; neckCut=0.68; offset=0.0195141", CustomGBForce.ParticlePairNoExclusions)
+        self.addComputedValue("I", "Ivdw+neckScale*Ineck;"
+                                   "Ineck=step(radius1+radius2+neckCut-r)*getm0(radindex1,radindex2)/(1+100*(r-getd0(radindex1,radindex2))^2+"
+                                   "0.3*1000000*(r-getd0(radindex1,radindex2))^6);"
+                                   "Ivdw=select(step(r+sr2-or1), 0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r), 0);"
+                                   "U=r+sr2;"
+                                   "L=max(or1, D);"
+                                   "D=abs(r-sr2);"
+                                   "radius1=or1+offset; radius2=or2+offset;"
+                                   "neckScale=0.361825; neckCut=0.68; offset=0.009", CustomGBForce.ParticlePairNoExclusions)
 
-        self.addComputedValue("B", "1/(1/or-tanh(alpha*psi-beta*psi^2+gamma*psi^3)/radius);"
-                                     "psi=I*or; radius=or+offset; offset=0.0195141", CustomGBForce.SingleParticle)
-        _createEnergyTerms(self, solventDielectric, soluteDielectric, SA, cutoff, kappa, 0.0195141)
+        self.addComputedValue("B", "1/(1/or-tanh(1.09511284*psi-1.907992938*psi^2+2.50798245*psi^3)/radius);"
+                                  "psi=I*or; radius=or+offset; offset=0.009", CustomGBForce.SingleParticle)
+        _createEnergyTerms(self, self.solventDielectric, self.soluteDielectric, self.SA, self.cutoff, self.kappa, self.OFFSET)
+
+
+class GBSAGBn2Force(GBSAGBnForce):
+    """This class is equivalent to Amber ``igb=8``
+
+    The list of parameters to ``addParticle`` is: ``[q, or, sr, alpha, beta, gamma]``.
+
+    Parameters
+    ----------
+    solventDielectric: float
+        Dielectric constant for the solvent
+    soluteDielectric: float
+        Dielectric constant for the solute
+    SA: string or None
+        Surface area model to use
+    cutoff: float or Quantity or None
+        Cutoff distance to use. If float, value is in nm. If ``None``,
+        then no cutoffs are used.
+    kappa: float or Quantity
+        Debye kappa parameter related to modelling salt in GB. It has
+        units of 1 / length with 1 / nanometer assumed if a float
+        is given. A value of zero corresponds to zero salt concentration.
+
+    """
+    OFFSET = 0.0195141
+
+    def __init__(self, solventDielectric=78.5, soluteDielectric=1, SA=None, cutoff=None, kappa=0.0):
+        GBSAGBnForce.__init__(self, solventDielectric, soluteDielectric, SA, cutoff, kappa)
 
     @staticmethod
     def getStandardParameters(topology):
+        """ Gets list of standard parameters for this GB model based on an input Topology
+
+        Parameters
+        ----------
+        topology : simtk.openmm.app.Topology
+            Topology of the system to get parameters for
+
+        Returns
+        -------
+        list of float
+            List of all parameters needed for this GB model. These can be passed
+            to addParticle or setParticleParameters after the charge is inserted
+            at the beginning of the list
+
+        """
         radii = [[x/10] for x in _mbondi3_radii(topology)]
         for i, atom in enumerate(topology.atoms()):
             radii[i].append(_screen_parameter(atom)[2])
@@ -603,3 +832,32 @@ class GBSAGBn2Force(GBSAGBnForce):
             else:
                 radii[i].extend([0.8, 4.85, 0.5])
         return radii
+
+    def _addEnergyTerms(self):
+        self.addPerParticleParameter("charge")
+        self.addPerParticleParameter("or") # Offset radius
+        self.addPerParticleParameter("sr") # Scaled offset radius
+        self.addPerParticleParameter("alpha")
+        self.addPerParticleParameter("beta")
+        self.addPerParticleParameter("gamma")
+        self.addPerParticleParameter("radindex")
+
+        n = len(self._uniqueRadii)
+        m0Table = self._createUniqueTable(m0)
+        d0Table = self._createUniqueTable(d0)
+        self.addTabulatedFunction("getd0", Discrete2DFunction(n, n, d0Table))
+        self.addTabulatedFunction("getm0", Discrete2DFunction(n, n, m0Table))
+
+        self.addComputedValue("I", "Ivdw+neckScale*Ineck;"
+                                   "Ineck=step(radius1+radius2+neckCut-r)*getm0(radindex1,radindex2)/(1+100*(r-getd0(radindex1,radindex2))^2+"
+                                   "0.3*1000000*(r-getd0(radindex1,radindex2))^6);"
+                                   "Ivdw=select(step(r+sr2-or1), 0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r), 0);"
+                                   "U=r+sr2;"
+                                   "L=max(or1, D);"
+                                   "D=abs(r-sr2);"
+                                   "radius1=or1+offset; radius2=or2+offset;"
+                                   "neckScale=0.826836; neckCut=0.68; offset=0.0195141", CustomGBForce.ParticlePairNoExclusions)
+
+        self.addComputedValue("B", "1/(1/or-tanh(alpha*psi-beta*psi^2+gamma*psi^3)/radius);"
+                                     "psi=I*or; radius=or+offset; offset=0.0195141", CustomGBForce.SingleParticle)
+        _createEnergyTerms(self, self.solventDielectric, self.soluteDielectric, self.SA, self.cutoff, self.kappa, self.OFFSET)

@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2015 Stanford University and the Authors.
+Portions copyright (c) 2012-2016 Stanford University and the Authors.
 Authors: Peter Eastman, Mark Friedrichs
 Contributors:
 
@@ -38,10 +38,14 @@ import itertools
 import xml.etree.ElementTree as etree
 import math
 from math import sqrt, cos
+from copy import deepcopy
+from heapq import heappush, heappop
+from collections import defaultdict
 import simtk.openmm as mm
 import simtk.unit as unit
 from . import element as elem
 from simtk.openmm.app import Topology
+from simtk.openmm.app.internal.singleton import Singleton
 
 def _convertParameterToNumber(param):
     if unit.is_quantity(param):
@@ -50,46 +54,80 @@ def _convertParameterToNumber(param):
         return param.value_in_unit_system(unit.md_unit_system)
     return float(param)
 
+def _parseFunctions(element):
+    """Parse the attributes on an XML tag to find any tabulated functions it defines."""
+    functions = []
+    for function in element.findall('Function'):
+        values = [float(x) for x in function.text.split()]
+        if 'type' in function.attrib:
+            functionType = function.attrib['type']
+        else:
+            functionType = 'Continuous1D'
+        params = {}
+        for key in function.attrib:
+            if key.endswith('size'):
+                params[key] = int(function.attrib[key])
+            elif key.endswith('min') or key.endswith('max'):
+                params[key] = float(function.attrib[key])
+        functions.append((function.attrib['name'], functionType, values, params))
+    return functions
+
+def _createFunctions(force, functions):
+    """Add TabulatedFunctions to a Force based on the information that was recorded by _parseFunctions()."""
+    for (name, type, values, params) in functions:
+        if type == 'Continuous1D':
+            force.addTabulatedFunction(name, mm.Continuous1DFunction(values, params['min'], params['max']))
+        elif type == 'Continuous2D':
+            force.addTabulatedFunction(name, mm.Continuous2DFunction(params['xsize'], params['ysize'], values, params['xmin'], params['xmax'], params['ymin'], params['ymax']))
+        elif type == 'Continuous3D':
+            force.addTabulatedFunction(name, mm.Continuous2DFunction(params['xsize'], params['ysize'], params['zsize'], values, params['xmin'], params['xmax'], params['ymin'], params['ymax'], params['zmin'], params['zmax']))
+        elif type == 'Discrete1D':
+            force.addTabulatedFunction(name, mm.Discrete1DFunction(values))
+        elif type == 'Discrete2D':
+            force.addTabulatedFunction(name, mm.Discrete2DFunction(params['xsize'], params['ysize'], values))
+        elif type == 'Discrete3D':
+            force.addTabulatedFunction(name, mm.Discrete2DFunction(params['xsize'], params['ysize'], params['zsize'], values))
+
 # Enumerated values for nonbonded method
 
-class NoCutoff(object):
+class NoCutoff(Singleton):
     def __repr__(self):
         return 'NoCutoff'
 NoCutoff = NoCutoff()
 
-class CutoffNonPeriodic(object):
+class CutoffNonPeriodic(Singleton):
     def __repr__(self):
         return 'CutoffNonPeriodic'
 CutoffNonPeriodic = CutoffNonPeriodic()
 
-class CutoffPeriodic(object):
+class CutoffPeriodic(Singleton):
     def __repr__(self):
         return 'CutoffPeriodic'
 CutoffPeriodic = CutoffPeriodic()
 
-class Ewald(object):
+class Ewald(Singleton):
     def __repr__(self):
         return 'Ewald'
 Ewald = Ewald()
 
-class PME(object):
+class PME(Singleton):
     def __repr__(self):
         return 'PME'
 PME = PME()
 
 # Enumerated values for constraint type
 
-class HBonds(object):
+class HBonds(Singleton):
     def __repr__(self):
         return 'HBonds'
 HBonds = HBonds()
 
-class AllBonds(object):
+class AllBonds(Singleton):
     def __repr__(self):
         return 'AllBonds'
 AllBonds = AllBonds()
 
-class HAngles(object):
+class HAngles(Singleton):
     def __repr__(self):
         return 'HAngles'
 HAngles = HAngles()
@@ -115,93 +153,181 @@ class ForceField(object):
         """
         self._atomTypes = {}
         self._templates = {}
+        self._patches = {}
+        self._templatePatches = {}
         self._templateSignatures = {None:[]}
         self._atomClasses = {'':set()}
         self._forces = []
         self._scripts = []
         self._templateGenerators = []
-        for file in files:
-            self.loadFile(file)
+        self.loadFile(files)
 
-    def loadFile(self, file):
+    def loadFile(self, files):
         """Load an XML file and add the definitions from it to this ForceField.
 
         Parameters
         ----------
-        file : string or file
-            An XML file containing force field definitions.  It may be either an
-            absolute file path, a path relative to the current working
+        files : string or file or tuple
+            An XML file or tuple of XML files containing force field definitions.
+            Each entry may be either an absolute file path, a path relative to the current working
             directory, a path relative to this module's data subdirectory (for
             built in force fields), or an open file-like object with a read()
             method from which the forcefield XML data can be loaded.
         """
-        try:
-            # this handles either filenames or open file-like objects
-            tree = etree.parse(file)
-        except IOError:
-            tree = etree.parse(os.path.join(os.path.dirname(__file__), 'data', file))
-        except Exception as e:
-            # Fail with an error message about which file could not be read.
-            # TODO: Also handle case where fallback to 'data' directory encounters problems,
-            # but this is much less worrisome because we control those files.
-            msg  = str(e) + '\n'
-            if hasattr(file, 'name'):
-                filename = file.name
-            else:
-                filename = str(file)
-            msg += "ForceField.loadFile() encountered an error reading file '%s'\n" % filename
-            raise Exception(msg)
 
-        root = tree.getroot()
+        if not isinstance(files, tuple):
+            files = (files,)
+
+        trees = []
+
+        for file in files:
+            try:
+                # this handles either filenames or open file-like objects
+                tree = etree.parse(file)
+            except IOError:
+                tree = etree.parse(os.path.join(os.path.dirname(__file__), 'data', file))
+            except Exception as e:
+                # Fail with an error message about which file could not be read.
+                # TODO: Also handle case where fallback to 'data' directory encounters problems,
+                # but this is much less worrisome because we control those files.
+                msg  = str(e) + '\n'
+                if hasattr(file, 'name'):
+                    filename = file.name
+                else:
+                    filename = str(file)
+                msg += "ForceField.loadFile() encountered an error reading file '%s'\n" % filename
+                raise Exception(msg)
+
+            trees.append(tree)
+
 
         # Load the atom types.
 
-        if tree.getroot().find('AtomTypes') is not None:
-            for type in tree.getroot().find('AtomTypes').findall('Type'):
-                self.registerAtomType(type.attrib)
+        for tree in trees:
+            if tree.getroot().find('AtomTypes') is not None:
+                for type in tree.getroot().find('AtomTypes').findall('Type'):
+                    self.registerAtomType(type.attrib)
 
         # Load the residue templates.
 
-        if tree.getroot().find('Residues') is not None:
-            for residue in root.find('Residues').findall('Residue'):
-                resName = residue.attrib['name']
-                template = ForceField._TemplateData(resName)
-                atomIndices = {}
-                for atom in residue.findall('Atom'):
-                    params = {}
-                    for key in atom.attrib:
-                        if key not in ('name', 'type'):
-                            params[key] = _convertParameterToNumber(atom.attrib[key])
-                    atomName = atom.attrib['name']
-                    if atomName in atomIndices:
-                        raise ValueError('Residue '+resName+' contains multiple atoms named '+atomName)
-                    atomIndices[atomName] = len(template.atoms)
-                    typeName = atom.attrib['type']
-                    template.atoms.append(ForceField._TemplateAtomData(atomName, typeName, self._atomTypes[typeName].element, params))
-                for site in residue.findall('VirtualSite'):
-                    template.virtualSites.append(ForceField._VirtualSiteData(site, atomIndices))
-                for bond in residue.findall('Bond'):
-                    if 'atomName1' in bond.attrib:
-                        template.addBondByName(bond.attrib['atomName1'], bond.attrib['atomName2'])
+        for tree in trees:
+            if tree.getroot().find('Residues') is not None:
+                for residue in tree.getroot().find('Residues').findall('Residue'):
+                    resName = residue.attrib['name']
+                    template = ForceField._TemplateData(resName)
+                    if 'override' in residue.attrib:
+                        template.overrideLevel = int(residue.attrib['override'])
+                    atomIndices = {}
+                    for atom in residue.findall('Atom'):
+                        params = {}
+                        for key in atom.attrib:
+                            if key not in ('name', 'type'):
+                                params[key] = _convertParameterToNumber(atom.attrib[key])
+                        atomName = atom.attrib['name']
+                        if atomName in atomIndices:
+                            raise ValueError('Residue '+resName+' contains multiple atoms named '+atomName)
+                        atomIndices[atomName] = len(template.atoms)
+                        typeName = atom.attrib['type']
+                        template.atoms.append(ForceField._TemplateAtomData(atomName, typeName, self._atomTypes[typeName].element, params))
+                    for site in residue.findall('VirtualSite'):
+                        template.virtualSites.append(ForceField._VirtualSiteData(site, atomIndices))
+                    for bond in residue.findall('Bond'):
+                        if 'atomName1' in bond.attrib:
+                            template.addBondByName(bond.attrib['atomName1'], bond.attrib['atomName2'])
+                        else:
+                            template.addBond(int(bond.attrib['from']), int(bond.attrib['to']))
+                    for bond in residue.findall('ExternalBond'):
+                        if 'atomName' in bond.attrib:
+                            template.addExternalBondByName(bond.attrib['atomName'])
+                        else:
+                            template.addExternalBond(int(bond.attrib['from']))
+                    for patch in residue.findall('AllowPatch'):
+                        patchName = patch.attrib['name']
+                        if ':' in patchName:
+                            colonIndex = patchName.find(':')
+                            self.registerTemplatePatch(resName, patchName[:colonIndex], int(patchName[colonIndex+1:])-1)
+                        else:
+                            self.registerTemplatePatch(resName, patchName, 0)
+                    self.registerResidueTemplate(template)
+
+        # Load the patch defintions.
+
+        for tree in trees:
+            if tree.getroot().find('Patches') is not None:
+                for patch in tree.getroot().find('Patches').findall('Patch'):
+                    patchName = patch.attrib['name']
+                    if 'residues' in patch.attrib:
+                        numResidues = int(patch.attrib['residues'])
                     else:
-                        template.addBond(int(bond.attrib['from']), int(bond.attrib['to']))
-                for bond in residue.findall('ExternalBond'):
-                    if 'atomName' in bond.attrib:
-                        template.addExternalBondByName(bond.attrib['atomName'])
-                    else:
-                        template.addExternalBond(int(bond.attrib['from']))
-                self.registerResidueTemplate(template)
+                        numResidues = 1
+                    patchData = ForceField._PatchData(patchName, numResidues)
+                    allAtomNames = set()
+                    for atom in patch.findall('AddAtom'):
+                        params = {}
+                        for key in atom.attrib:
+                            if key not in ('name', 'type'):
+                                params[key] = _convertParameterToNumber(atom.attrib[key])
+                        atomName = atom.attrib['name']
+                        if atomName in allAtomNames:
+                            raise ValueError('Patch '+patchName+' contains multiple atoms named '+atomName)
+                        allAtomNames.add(atomName)
+                        atomDescription = ForceField._PatchAtomData(atomName)
+                        typeName = atom.attrib['type']
+                        patchData.addedAtoms[atomDescription.residue].append(ForceField._TemplateAtomData(atomDescription.name, typeName, self._atomTypes[typeName].element, params))
+                    for atom in patch.findall('ChangeAtom'):
+                        params = {}
+                        for key in atom.attrib:
+                            if key not in ('name', 'type'):
+                                params[key] = _convertParameterToNumber(atom.attrib[key])
+                        atomName = atom.attrib['name']
+                        if atomName in allAtomNames:
+                            raise ValueError('Patch '+patchName+' contains multiple atoms named '+atomName)
+                        allAtomNames.add(atomName)
+                        atomDescription = ForceField._PatchAtomData(atomName)
+                        typeName = atom.attrib['type']
+                        patchData.changedAtoms[atomDescription.residue].append(ForceField._TemplateAtomData(atomDescription.name, typeName, self._atomTypes[typeName].element, params))
+                    for atom in patch.findall('RemoveAtom'):
+                        atomName = atom.attrib['name']
+                        if atomName in allAtomNames:
+                            raise ValueError('Patch '+patchName+' contains multiple atoms named '+atomName)
+                        allAtomNames.add(atomName)
+                        atomDescription = ForceField._PatchAtomData(atomName)
+                        patchData.deletedAtoms.append(atomDescription)
+                    for bond in patch.findall('AddBond'):
+                        atom1 = ForceField._PatchAtomData(bond.attrib['atomName1'])
+                        atom2 = ForceField._PatchAtomData(bond.attrib['atomName2'])
+                        patchData.addedBonds.append((atom1, atom2))
+                    for bond in patch.findall('RemoveBond'):
+                        atom1 = ForceField._PatchAtomData(bond.attrib['atomName1'])
+                        atom2 = ForceField._PatchAtomData(bond.attrib['atomName2'])
+                        patchData.deletedBonds.append((atom1, atom2))
+                    for bond in patch.findall('AddExternalBond'):
+                        atom = ForceField._PatchAtomData(bond.attrib['atomName'])
+                        patchData.addedExternalBonds.append(atom)
+                    for bond in patch.findall('RemoveExternalBond'):
+                        atom = ForceField._PatchAtomData(bond.attrib['atomName'])
+                        patchData.deletedExternalBonds.append(atom)
+                    for residue in patch.findall('ApplyToResidue'):
+                        name = residue.attrib['name']
+                        if ':' in name:
+                            colonIndex = name.find(':')
+                            self.registerTemplatePatch(name[colonIndex+1:], patchName, int(name[:colonIndex])-1)
+                        else:
+                            self.registerTemplatePatch(name, patchName, 0)
+                    self.registerPatch(patchData)
 
         # Load force definitions
 
-        for child in root:
-            if child.tag in parsers:
-                parsers[child.tag](child, self)
+        for tree in trees:
+            for child in tree.getroot():
+                if child.tag in parsers:
+                    parsers[child.tag](child, self)
 
         # Load scripts
 
-        for node in tree.getroot().findall('Script'):
-            self.registerScript(node.text)
+        for tree in trees:
+            for node in tree.getroot().findall('Script'):
+                self.registerScript(node.text)
 
     def getGenerators(self):
         """Get the list of all registered generators."""
@@ -234,12 +360,39 @@ class ForceField(object):
 
     def registerResidueTemplate(self, template):
         """Register a new residue template."""
+        if template.name in self._templates:
+            # There is already a template with this name, so check the override levels.
+
+            existingTemplate = self._templates[template.name]
+            if template.overrideLevel < existingTemplate.overrideLevel:
+                # The existing one takes precedence, so just return.
+                return
+            if template.overrideLevel > existingTemplate.overrideLevel:
+                # We need to delete the existing template.
+                del self._templates[template.name]
+                existingSignature = _createResidueSignature([atom.element for atom in existingTemplate.atoms])
+                self._templateSignatures[existingSignature].remove(existingTemplate)
+            else:
+                raise ValueError('Residue template %s with the same override level %d already exists.' % (template.name, template.overrideLevel))
+
+        # Register the template.
+
         self._templates[template.name] = template
         signature = _createResidueSignature([atom.element for atom in template.atoms])
         if signature in self._templateSignatures:
             self._templateSignatures[signature].append(template)
         else:
             self._templateSignatures[signature] = [template]
+
+    def registerPatch(self, patch):
+        """Register a new patch that can be applied to templates."""
+        self._patches[patch.name] = patch
+
+    def registerTemplatePatch(self, residue, patch, patchResidueIndex):
+        """Register that a particular patch can be used with a particular residue."""
+        if residue not in self._templatePatches:
+            self._templatePatches[residue] = []
+        self._templatePatches[residue].append((patch, patchResidueIndex))
 
     def registerScript(self, script):
         """Register a new script to be executed after building the System."""
@@ -365,11 +518,21 @@ class ForceField(object):
             """Add a constraint to the system, avoiding duplicate constraints."""
             key = (min(atom1, atom2), max(atom1, atom2))
             if key in self.constraints:
-                if self.constraints(key) != distance:
+                if self.constraints[key] != distance:
                     raise ValueError('Two constraints were specified between atoms %d and %d with different distances' % (atom1, atom2))
             else:
                 self.constraints[key] = distance
                 system.addConstraint(atom1, atom2, distance)
+
+        def recordMatchedAtomParameters(self, residue, template, matches):
+            """Record parameters for atoms based on having matched a residue to a template."""
+            matchAtoms = dict(zip(matches, residue.atoms()))
+            for atom, match in zip(residue.atoms(), matches):
+                self.atomType[atom] = template.atoms[match].type
+                self.atomParameters[atom] = template.atoms[match].parameters
+                for site in template.virtualSites:
+                    if match == site.index:
+                        self.virtualSites[atom] = (site, [matchAtoms[i].index for i in site.atoms], matchAtoms[site.excludeWith].index)
 
     class _TemplateData(object):
         """Inner class used to encapsulate data about a residue template definition."""
@@ -379,6 +542,7 @@ class ForceField(object):
             self.virtualSites = []
             self.bonds = []
             self.externalBonds = []
+            self.overrideLevel = 0
 
         def getAtomIndexByName(self, atom_name):
             """Look up an atom index by atom name, providing a helpful error message if not found."""
@@ -464,6 +628,92 @@ class ForceField(object):
             else:
                 self.excludeWith = self.atoms[0]
 
+    class _PatchData(object):
+        """Inner class used to encapsulate data about a patch definition."""
+        def __init__(self, name, numResidues):
+            self.name = name
+            self.numResidues = numResidues
+            self.addedAtoms = [[] for i in range(numResidues)]
+            self.changedAtoms = [[] for i in range(numResidues)]
+            self.deletedAtoms = []
+            self.addedBonds = []
+            self.deletedBonds = []
+            self.addedExternalBonds = []
+            self.deletedExternalBonds = []
+
+        def createPatchedTemplates(self, templates):
+            """Apply this patch to a set of templates, creating new modified ones."""
+            if len(templates) != self.numResidues:
+                raise ValueError("Patch '%s' expected %d templates, received %d", (self.name, self.numResidues, len(templates)))
+
+            # Construct a new version of each template.
+
+            newTemplates = []
+            for index, template in enumerate(templates):
+                newTemplate = ForceField._TemplateData("%s-%s" % (template.name, self.name))
+                newTemplates.append(newTemplate)
+
+                # Build the list of atoms in it.
+
+                for atom in template.atoms:
+                    if not any(deleted.name == atom.name and deleted.residue == index for deleted in self.deletedAtoms):
+                        newTemplate.atoms.append(ForceField._TemplateAtomData(atom.name, atom.type, atom.element, atom.parameters))
+                for atom in self.addedAtoms[index]:
+                    if any(a.name == atom.name for a in newTemplate.atoms):
+                        raise ValueError("Patch '%s' adds an atom with the same name as an existing atom: %s" % (self.name, atom.name))
+                    newTemplate.atoms.append(ForceField._TemplateAtomData(atom.name, atom.type, atom.element, atom.parameters))
+                oldAtomIndex = dict([(atom.name, i) for i, atom in enumerate(template.atoms)])
+                newAtomIndex = dict([(atom.name, i) for i, atom in enumerate(newTemplate.atoms)])
+                for atom in self.changedAtoms[index]:
+                    if atom.name not in newAtomIndex:
+                        raise ValueError("Patch '%s' modifies nonexistent atom '%s' in template '%s'" % (self.name, atom.name, template.name))
+                    newTemplate.atoms[newAtomIndex[atom.name]] = ForceField._TemplateAtomData(atom.name, atom.type, atom.element, atom.parameters)
+
+                # Copy over the virtual sites, translating the atom indices.
+
+                indexMap = dict([(oldAtomIndex[name], newAtomIndex[name]) for name in newAtomIndex if name in oldAtomIndex])
+                for site in template.virtualSites:
+                    if site.index in indexMap and all(i in indexMap for i in site.atoms):
+                        newSite = deepcopy(site)
+                        newSite.index = indexMap[site.index]
+                        newSite.atoms = [indexMap[i] for i in site.atoms]
+                        newTemplate.virtualSites.append(newSite)
+
+                # Build the lists of bonds and external bonds.
+
+                atomMap = dict([(template.atoms[i], indexMap[i]) for i in indexMap])
+                deletedBonds = [(atom1.name, atom2.name) for atom1, atom2 in self.deletedBonds if atom1.residue == index and atom2.residue == index]
+                for atom1, atom2 in template.bonds:
+                    a1 = template.atoms[atom1]
+                    a2 = template.atoms[atom2]
+                    if a1 in atomMap and a2 in atomMap and (a1.name, a2.name) not in deletedBonds and (a2.name, a1.name) not in deletedBonds:
+                        newTemplate.addBond(atomMap[a1], atomMap[a2])
+                deletedExternalBonds = [atom.name for atom in self.deletedExternalBonds if atom.residue == index]
+                for atom in template.externalBonds:
+                    if template.atoms[atom].name not in deletedExternalBonds:
+                        newTemplate.addExternalBond(indexMap[atom])
+                for atom1, atom2 in self.addedBonds:
+                    if atom1.residue == index and atom2.residue == index:
+                        newTemplate.addBondByName(atom1.name, atom2.name)
+                    elif atom1.residue == index:
+                        newTemplate.addExternalBondByName(atom1.name)
+                    elif atom2.residue == index:
+                        newTemplate.addExternalBondByName(atom2.name)
+                for atom in self.addedExternalBonds:
+                    newTemplate.addExternalBondByName(atom.name)
+            return newTemplates
+
+    class _PatchAtomData(object):
+        """Inner class used to encapsulate data about an atom in a patch definition."""
+        def __init__(self, description):
+            if ':' in description:
+                colonIndex = description.find(':')
+                self.residue = int(description[:colonIndex])-1
+                self.name = description[colonIndex+1:]
+            else:
+                self.residue = 0
+                self.name = description
+
     class _AtomType(object):
         """Inner class used to record atom types and associated properties."""
         def __init__(self, name, atomClass, mass, element):
@@ -543,7 +793,7 @@ class ForceField(object):
                 raise ValueError('%s: No parameters defined for atom type %s' % (self.forceName, t))
 
 
-    def _getResidueTemplateMatches(self, res, bondedToAtom):
+    def _getResidueTemplateMatches(self, res, bondedToAtom, templateSignatures=None, ignoreExternalBonds=False):
         """Return the residue template matches, or None if none are found.
 
         Parameters
@@ -564,13 +814,20 @@ class ForceField(object):
         """
         template = None
         matches = None
+        if templateSignatures is None:
+            templateSignatures = self._templateSignatures
         signature = _createResidueSignature([atom.element for atom in res.atoms()])
-        if signature in self._templateSignatures:
-            for t in self._templateSignatures[signature]:
-                matches = _matchResidue(res, t, bondedToAtom)
-                if matches is not None:
-                    template = t
-                    break
+        if signature in templateSignatures:
+            allMatches = []
+            for t in templateSignatures[signature]:
+                match = _matchResidue(res, t, bondedToAtom, ignoreExternalBonds)
+                if match is not None:
+                    allMatches.append((t, match))
+            if len(allMatches) == 1:
+                template = allMatches[0][0]
+                matches = allMatches[0][1]
+            elif len(allMatches) > 1:
+                raise Exception('Multiple matching templates found for residue %d (%s): %s.' % (res.index+1, res.name, ', '.join(match[0].name for match in allMatches)))
         return [template, matches]
 
     def _buildBondedToAtomList(self, topology):
@@ -625,7 +882,7 @@ class ForceField(object):
 
         return unmatched_residues
 
-    def getMatchingTemplates(self, topology):
+    def getMatchingTemplates(self, topology, ignoreExternalBonds=False):
         """Return a list of forcefield residue templates matching residues in the specified topology.
 
         .. CAUTION:: This method is experimental, and its API is subject to change.
@@ -634,7 +891,8 @@ class ForceField(object):
         ----------
         topology : Topology
             The Topology whose residues are to be checked against the forcefield residue templates.
-
+        ignoreExternalBonds : bool=False
+            If true, ignore external bonds when matching residues to templates.
         Returns
         -------
         templates : list of _TemplateData
@@ -648,7 +906,7 @@ class ForceField(object):
         templates = list() # list of templates matching the corresponding residues
         for res in topology.residues():
             # Attempt to match one of the existing templates.
-            [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom)
+            [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom, ignoreExternalBonds=ignoreExternalBonds)
             # Raise an exception if we have found no templates that match.
             if matches is None:
                 raise ValueError('No template found for residue %d (%s).  %s' % (res.index+1, res.name, _findMatchErrors(self, res)))
@@ -691,7 +949,7 @@ class ForceField(object):
             if signature in signatures:
                 # Signature is the same as an existing residue; check connectivity.
                 for check_residue in unique_unmatched_residues:
-                    matches = _matchResidue(check_residue, template, bondedToAtom)
+                    matches = _matchResidue(check_residue, template, bondedToAtom, False)
                     if matches is not None:
                         is_unique = False
             if is_unique:
@@ -703,7 +961,8 @@ class ForceField(object):
         return [templates, unique_unmatched_residues]
 
     def createSystem(self, topology, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
-                     constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, **args):
+                     constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, residueTemplates=dict(),
+                     ignoreExternalBonds=False, **args):
         """Construct an OpenMM System representing a Topology with this force field.
 
         Parameters
@@ -727,10 +986,22 @@ class ForceField(object):
             The mass to use for hydrogen atoms bound to heavy atoms.  Any mass
             added to a hydrogen is subtracted from the heavy atom to keep
             their total mass the same.
+        residueTemplates : dict=dict()
+            Key: Topology Residue object
+            Value: string, name of _TemplateData residue template object to use for (Key) residue.
+            This allows user to specify which template to apply to particular Residues
+            in the event that multiple matching templates are available (e.g Fe2+ and Fe3+
+            templates in the ForceField for a monoatomic iron ion in the topology).
+        ignoreExternalBonds : boolean=False
+            If true, ignore external bonds when matching residues to templates.  This is
+            useful when the Topology represents one piece of a larger molecule, so chains are
+            not terminated properly.  This option can create ambiguities where multiple
+            templates match the same residue.  If that happens, use the residueTemplates
+            argument to specify which one to use.
         args
-             Arbitrary additional keyword arguments may also be specified.
-             This allows extra parameters to be specified that are specific to
-             particular force fields.
+            Arbitrary additional keyword arguments may also be specified.
+            This allows extra parameters to be specified that are specific to
+            particular force fields.
 
         Returns
         -------
@@ -761,37 +1032,51 @@ class ForceField(object):
             data.atomBonds[bond.atom2].append(i)
 
         # Find the template matching each residue and assign atom types.
-        # If no templates are found, attempt to use residue template generators to create new templates (and potentially atom types/parameters).
 
+        unmatchedResidues = []
         for chain in topology.chains():
             for res in chain.residues():
-                # Attempt to match one of the existing templates.
-                [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom)
+                if res in residueTemplates:
+                    tname = residueTemplates[res]
+                    template = self._templates[tname]
+                    matches = _matchResidue(res, template, bondedToAtom, ignoreExternalBonds)
+                    if matches is None:
+                        raise Exception('User-supplied template %s does not match the residue %d (%s)' % (tname, res.index+1, res.name))
+                else:
+                    # Attempt to match one of the existing templates.
+                    [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom, ignoreExternalBonds=ignoreExternalBonds)
                 if matches is None:
-                    # No existing templates match.  Try any registered residue template generators.
-                    for generator in self._templateGenerators:
-                        if generator(self, res):
-                            # This generator has registered a new residue template that should match.
-                            [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom)
-                            if matches is None:
-                                # Something went wrong because the generated template does not match the residue signature.
-                                raise Exception('The residue handler %s indicated it had correctly parameterized residue %s, but the generated template did not match the residue signature.' % (generator.__class__.__name__, str(res)))
-                            else:
-                                # We successfully generated a residue template.  Break out of the for loop.
-                                break
+                    unmatchedResidues.append(res)
+                else:
+                    data.recordMatchedAtomParameters(res, template, matches)
 
-                # Raise an exception if we have found no templates that match.
-                if matches is None:
-                    raise ValueError('No template found for residue %d (%s).  %s' % (res.index+1, res.name, _findMatchErrors(self, res)))
+        # Try to apply patches to find matches for any unmatched residues.
 
-                # Store parameters for the matched residue template.
-                matchAtoms = dict(zip(matches, res.atoms()))
-                for atom, match in zip(res.atoms(), matches):
-                    data.atomType[atom] = template.atoms[match].type
-                    data.atomParameters[atom] = template.atoms[match].parameters
-                    for site in template.virtualSites:
-                        if match == site.index:
-                            data.virtualSites[atom] = (site, [matchAtoms[i].index for i in site.atoms], matchAtoms[site.excludeWith].index)
+        if len(unmatchedResidues) > 0:
+            unmatchedResidues = _applyPatchesToMatchResidues(self, data, unmatchedResidues, bondedToAtom, ignoreExternalBonds)
+
+        # If we still haven't found a match for a residue, attempt to use residue template generators to create
+        # new templates (and potentially atom types/parameters).
+
+        for res in unmatchedResidues:
+            # A template might have been generated on an earlier iteration of this loop.
+            [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom, ignoreExternalBonds=ignoreExternalBonds)
+            if matches is None:
+                # Try all generators.
+                for generator in self._templateGenerators:
+                    if generator(self, res):
+                        # This generator has registered a new residue template that should match.
+                        [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom, ignoreExternalBonds=ignoreExternalBonds)
+                        if matches is None:
+                            # Something went wrong because the generated template does not match the residue signature.
+                            raise Exception('The residue handler %s indicated it had correctly parameterized residue %s, but the generated template did not match the residue signature.' % (generator.__class__.__name__, str(res)))
+                        else:
+                            # We successfully generated a residue template.  Break out of the for loop.
+                            break
+            if matches is None:
+                raise ValueError('No template found for residue %d (%s).  %s' % (res.index+1, res.name, _findMatchErrors(self, res)))
+            else:
+                data.recordMatchedAtomParameters(res, template, matches)
 
         # Create the System and add atoms
 
@@ -856,13 +1141,13 @@ class ForceField(object):
         uniquePropers = set()
         for angle in data.angles:
             for atom in bondedToAtom[angle[0]]:
-                if atom != angle[1]:
+                if atom not in angle:
                     if atom < angle[2]:
                         uniquePropers.add((atom, angle[0], angle[1], angle[2]))
                     else:
                         uniquePropers.add((angle[2], angle[1], angle[0], atom))
             for atom in bondedToAtom[angle[2]]:
-                if atom != angle[1]:
+                if atom not in angle:
                     if atom > angle[0]:
                         uniquePropers.add((angle[0], angle[1], angle[2], atom))
                     else:
@@ -957,6 +1242,32 @@ class ForceField(object):
         return sys
 
 
+def _findBondsForExclusions(data, sys):
+    """Create a list of bonds to use when identifying exclusions."""
+    bondIndices = []
+    for bond in data.bonds:
+        bondIndices.append((bond.atom1, bond.atom2))
+
+    # If a virtual site does *not* share exclusions with another atom, add a bond between it and its first parent atom.
+
+    for i in range(sys.getNumParticles()):
+        if sys.isVirtualSite(i):
+            (site, atoms, excludeWith) = data.virtualSites[data.atoms[i]]
+            if excludeWith is None:
+                bondIndices.append((i, site.getParticle(0)))
+
+    # Certain particles, such as lone pairs and Drude particles, share exclusions with a parent atom.
+    # If the parent atom does not interact with an atom, the child particle does not either.
+
+    for atom1, atom2 in bondIndices:
+        for child1 in data.excludeAtomWith[atom1]:
+            bondIndices.append((child1, atom2))
+            for child2 in data.excludeAtomWith[atom2]:
+                bondIndices.append((child1, child2))
+        for child2 in data.excludeAtomWith[atom2]:
+            bondIndices.append((atom1, child2))
+    return bondIndices
+
 def _countResidueAtoms(elements):
     """Count the number of atoms of each element in a residue."""
     counts = {}
@@ -984,7 +1295,7 @@ def _createResidueSignature(elements):
         s += element.symbol+str(count)
     return s
 
-def _matchResidue(res, template, bondedToAtom):
+def _matchResidue(res, template, bondedToAtom, ignoreExternalBonds=False):
     """Determine whether a residue matches a template and return a list of corresponding atoms.
 
     Parameters
@@ -995,6 +1306,8 @@ def _matchResidue(res, template, bondedToAtom):
         The template to compare it to
     bondedToAtom : list
         Enumerates which other atoms each atom is bonded to
+    ignoreExternalBonds : bool
+        If true, ignore external bonds when matching templates
 
     Returns
     -------
@@ -1003,22 +1316,21 @@ def _matchResidue(res, template, bondedToAtom):
         corresponds to, or None if it does not match the template
     """
     atoms = list(res.atoms())
-    if len(atoms) != len(template.atoms):
+    numAtoms = len(atoms)
+    if numAtoms != len(template.atoms):
         return None
-    matches = len(atoms)*[0]
-    hasMatch = len(atoms)*[False]
 
     # Translate from global to local atom indices, and record the bonds for each atom.
 
     renumberAtoms = {}
-    for i in range(len(atoms)):
+    for i in range(numAtoms):
         renumberAtoms[atoms[i].index] = i
     bondedTo = []
     externalBonds = []
     for atom in atoms:
         bonds = [renumberAtoms[x] for x in bondedToAtom[atom.index] if x in renumberAtoms]
         bondedTo.append(bonds)
-        externalBonds.append(len([x for x in bondedToAtom[atom.index] if x not in renumberAtoms]))
+        externalBonds.append(0 if ignoreExternalBonds else len([x for x in bondedToAtom[atom.index] if x not in renumberAtoms]))
 
     # For each unique combination of element and number of bonds, make sure the residue and
     # template have the same number of atoms.
@@ -1031,41 +1343,268 @@ def _matchResidue(res, template, bondedToAtom):
         residueTypeCount[key] += 1
     templateTypeCount = {}
     for i, atom in enumerate(template.atoms):
-        key = (atom.element, len(atom.bondedTo), atom.externalBonds)
+        key = (atom.element, len(atom.bondedTo), 0 if ignoreExternalBonds else atom.externalBonds)
         if key not in templateTypeCount:
             templateTypeCount[key] = 1
         templateTypeCount[key] += 1
     if residueTypeCount != templateTypeCount:
         return None
 
+    # Identify template atoms that could potentially be matches for each atom.
+
+    candidates = [[] for i in range(numAtoms)]
+    for i in range(numAtoms):
+        for j, atom in enumerate(template.atoms):
+            if (atom.element is not None and atom.element != atoms[i].element) or (atom.element is None and atom.name != atoms[i].name):
+                continue
+            if len(atom.bondedTo) != len(bondedTo[i]):
+                continue
+            if not ignoreExternalBonds and atom.externalBonds != externalBonds[i]:
+                continue
+            candidates[i].append(j)
+
+    # Find an optimal ordering for matching atoms.  This means 1) start with the one that has the fewest options,
+    # and 2) follow with ones that are bonded to an already matched atom.
+
+    searchOrder = []
+    atomsToOrder = set(range(numAtoms))
+    efficientAtomSet = set()
+    efficientAtomHeap = []
+    while len(atomsToOrder) > 0:
+        if len(efficientAtomSet) == 0:
+            fewestNeighbors = numAtoms+1
+            for i in atomsToOrder:
+                if len(candidates[i]) < fewestNeighbors:
+                    nextAtom = i
+                    fewestNeighbors = len(candidates[i])
+        else:
+            nextAtom = heappop(efficientAtomHeap)[1]
+            efficientAtomSet.remove(nextAtom)
+        searchOrder.append(nextAtom)
+        atomsToOrder.remove(nextAtom)
+        for i in bondedTo[nextAtom]:
+            if i in atomsToOrder:
+                if i not in efficientAtomSet:
+                    efficientAtomSet.add(i)
+                    heappush(efficientAtomHeap, (len(candidates[i]), i))
+    inverseSearchOrder = [0]*numAtoms
+    for i in range(numAtoms):
+        inverseSearchOrder[searchOrder[i]] = i
+    bondedTo = [[inverseSearchOrder[bondedTo[i][j]] for j in range(len(bondedTo[i]))] for i in searchOrder]
+    candidates = [candidates[i] for i in searchOrder]
+
     # Recursively match atoms.
 
-    if _findAtomMatches(atoms, template, bondedTo, externalBonds, matches, hasMatch, 0):
-        return matches
+    matches = numAtoms*[0]
+    hasMatch = numAtoms*[False]
+    if _findAtomMatches(template, bondedTo, matches, hasMatch, candidates, 0):
+        return [matches[inverseSearchOrder[i]] for i in range(numAtoms)]
     return None
 
 
-def _findAtomMatches(atoms, template, bondedTo, externalBonds, matches, hasMatch, position):
+def _getAtomMatchCandidates(template, bondedTo, matches, candidates, position):
+    """Get a list of template atoms that are potential matches for the next atom."""
+    for bonded in bondedTo[position]:
+        if bonded < position:
+            # This atom is bonded to another one for which we already have a match, so only consider
+            # template atoms that *that* one is bonded to.
+            return template.atoms[matches[bonded]].bondedTo
+    return candidates[position]
+
+
+def _findAtomMatches(template, bondedTo, matches, hasMatch, candidates, position):
     """This is called recursively from inside _matchResidue() to identify matching atoms."""
-    if position == len(atoms):
+    if position == len(matches):
         return True
-    elem = atoms[position].element
-    name = atoms[position].name
-    for i in range(len(atoms)):
+    for i in _getAtomMatchCandidates(template, bondedTo, matches, candidates, position):
         atom = template.atoms[i]
-        if ((atom.element is not None and atom.element == elem) or (atom.element is None and atom.name == name)) and not hasMatch[i] and len(atom.bondedTo) == len(bondedTo[position]) and atom.externalBonds == externalBonds[position]:
+        if not hasMatch[i] and i in candidates[position]:
             # See if the bonds for this identification are consistent
 
             allBondsMatch = all((bonded > position or matches[bonded] in atom.bondedTo for bonded in bondedTo[position]))
             if allBondsMatch:
-                # This is a possible match, so trying matching the rest of the residue.
+                # This is a possible match, so try matching the rest of the residue.
 
                 matches[position] = i
                 hasMatch[i] = True
-                if _findAtomMatches(atoms, template, bondedTo, externalBonds, matches, hasMatch, position+1):
+                if _findAtomMatches(template, bondedTo, matches, hasMatch, candidates, position+1):
                     return True
                 hasMatch[i] = False
     return False
+
+
+def _applyPatchesToMatchResidues(forcefield, data, residues, bondedToAtom, ignoreExternalBonds):
+    """Try to apply patches to find matches for residues."""
+    # Start by creating all templates than can be created by applying a combination of one-residue patches
+    # to a single template.  The number of these is usually not too large, and they often cover a large fraction
+    # of residues.
+
+    patchedTemplateSignatures = {}
+    patchedTemplates = {}
+    for name, template in forcefield._templates.items():
+        if name in forcefield._templatePatches:
+            patches = [forcefield._patches[patchName] for patchName, patchResidueIndex in forcefield._templatePatches[name] if forcefield._patches[patchName].numResidues == 1]
+            if len(patches) > 0:
+                newTemplates = []
+                patchedTemplates[name] = newTemplates
+                _generatePatchedSingleResidueTemplates(template, patches, 0, newTemplates)
+                for patchedTemplate in newTemplates:
+                    signature = _createResidueSignature([atom.element for atom in patchedTemplate.atoms])
+                    if signature in patchedTemplateSignatures:
+                        patchedTemplateSignatures[signature].append(patchedTemplate)
+                    else:
+                        patchedTemplateSignatures[signature] = [patchedTemplate]
+
+    # Now see if any of those templates matches any of the residues.
+
+    unmatchedResidues = []
+    for res in residues:
+        [template, matches] = forcefield._getResidueTemplateMatches(res, bondedToAtom, patchedTemplateSignatures, ignoreExternalBonds)
+        if matches is None:
+            unmatchedResidues.append(res)
+        else:
+            data.recordMatchedAtomParameters(res, template, matches)
+    if len(unmatchedResidues) == 0:
+        return []
+
+    # We need to consider multi-residue patches.  This can easily lead to a combinatorial explosion, so we make a simplifying
+    # assumption: that no residue is affected by more than one multi-residue patch (in addition to any number of single-residue
+    # patches).  Record all multi-residue patches, and the templates they can be applied to.
+
+    patches = {}
+    maxPatchSize = 0
+    for patch in forcefield._patches.values():
+        if patch.numResidues > 1:
+            patches[patch.name] = [[] for i in range(patch.numResidues)]
+            maxPatchSize = max(maxPatchSize, patch.numResidues)
+    if maxPatchSize == 0:
+        return unmatchedResidues # There aren't any multi-residue patches
+    for templateName in forcefield._templatePatches:
+        for patchName, patchResidueIndex in forcefield._templatePatches[templateName]:
+            if patchName in patches:
+                # The patch should accept this template, *and* all patched versions of it generated above.
+                patches[patchName][patchResidueIndex].append(forcefield._templates[templateName])
+                if templateName in patchedTemplates:
+                    patches[patchName][patchResidueIndex] += patchedTemplates[templateName]
+
+    # Record which unmatched residues are bonded to each other.
+
+    bonds = set()
+    topology = residues[0].chain.topology
+    for atom1, atom2 in topology.bonds():
+        if atom1.residue != atom2.residue:
+            res1 = atom1.residue
+            res2 = atom2.residue
+            if res1 in unmatchedResidues and res2 in unmatchedResidues:
+                bond = tuple(sorted((res1, res2), key=lambda x: x.index))
+                if bond not in bonds:
+                    bonds.add(bond)
+
+    # Identify clusters of unmatched residues that are all bonded to each other.  These are the ones we'll
+    # try to apply multi-residue patches to.
+
+    clusterSize = 2
+    clusters = bonds
+    while clusterSize <= maxPatchSize:
+        # Try to apply patches to clusters of this size.
+
+        for patchName in patches:
+            patch = forcefield._patches[patchName]
+            if patch.numResidues == clusterSize:
+                matchedClusters = _matchToMultiResiduePatchedTemplates(data, clusters, patch, patches[patchName], bondedToAtom, ignoreExternalBonds)
+                for cluster in matchedClusters:
+                    for residue in cluster:
+                        unmatchedResidues.remove(residue)
+                bonds = set(bond for bond in bonds if bond[0] in unmatchedResidues and bond[1] in unmatchedResidues)
+
+        # Now extend the clusters to find ones of the next size up.
+
+        largerClusters = set()
+        for cluster in clusters:
+            for bond in bonds:
+                if bond[0] in cluster and bond[1] not in cluster:
+                    newCluster = tuple(sorted(cluster+(bond[1],), key=lambda x: x.index))
+                    largerClusters.add(newCluster)
+                elif bond[1] in cluster and bond[0] not in cluster:
+                    newCluster = tuple(sorted(cluster+(bond[0],), key=lambda x: x.index))
+                    largerClusters.add(newCluster)
+        if len(largerClusters) == 0:
+            # There are no clusters of this size or larger
+            break
+        clusters = largerClusters
+        clusterSize += 1
+
+    return unmatchedResidues
+
+
+def _generatePatchedSingleResidueTemplates(template, patches, index, newTemplates):
+    """Apply all possible combinations of a set of single-residue patches to a template."""
+    try:
+        patchedTemplate = patches[index].createPatchedTemplates([template])[0]
+        newTemplates.append(patchedTemplate)
+    except:
+        # This probably means the patch is inconsistent with another one that has already been applied,
+        # so just ignore it.
+        patchedTemplate = None
+
+    # Call this function recursively to generate combinations of patches.
+
+    if index+1 < len(patches):
+        _generatePatchedSingleResidueTemplates(template, patches, index+1, newTemplates)
+        if patchedTemplate is not None:
+            _generatePatchedSingleResidueTemplates(patchedTemplate, patches, index+1, newTemplates)
+
+
+def _matchToMultiResiduePatchedTemplates(data, clusters, patch, residueTemplates, bondedToAtom, ignoreExternalBonds):
+    """Apply a multi-residue patch to templates, then try to match them against clusters of residues."""
+    matchedClusters = []
+    selectedTemplates = [None]*patch.numResidues
+    _applyMultiResiduePatch(data, clusters, patch, residueTemplates, selectedTemplates, 0, matchedClusters, bondedToAtom, ignoreExternalBonds)
+    return matchedClusters
+
+
+def _applyMultiResiduePatch(data, clusters, patch, candidateTemplates, selectedTemplates, index, matchedClusters, bondedToAtom, ignoreExternalBonds):
+    """This is called recursively to apply a multi-residue patch to all possible combinations of templates."""
+
+    if index < patch.numResidues:
+        for template in candidateTemplates[index]:
+            selectedTemplates[index] = template
+            _applyMultiResiduePatch(data, clusters, patch, candidateTemplates, selectedTemplates, index+1, matchedClusters, bondedToAtom, ignoreExternalBonds)
+    else:
+        # We're at the deepest level of the recursion.  We've selected a template for each residue, so apply the patch,
+        # then try to match it against clusters.
+
+        try:
+            patchedTemplates = patch.createPatchedTemplates(selectedTemplates)
+        except:
+            # This probably means the patch is inconsistent with another one that has already been applied,
+            # so just ignore it.
+            raise
+            return
+        newlyMatchedClusters = []
+        for cluster in clusters:
+            for residues in itertools.permutations(cluster):
+                residueMatches = []
+                for residue, template in zip(residues, patchedTemplates):
+                    matches = _matchResidue(residue, template, bondedToAtom, ignoreExternalBonds)
+                    if matches is None:
+                        residueMatches = None
+                        break
+                    else:
+                        residueMatches.append(matches)
+                if residueMatches is not None:
+                    # We successfully matched the template to the residues.  Record the parameters.
+
+                    for i in range(patch.numResidues):
+                        data.recordMatchedAtomParameters(residues[i], patchedTemplates[i], residueMatches[i])
+                    newlyMatchedClusters.append(cluster)
+                    break
+
+        # Record which clusters were successfully matched.
+
+        matchedClusters += newlyMatchedClusters
+        for cluster in newlyMatchedClusters:
+            clusters.remove(cluster)
 
 
 def _findMatchErrors(forcefield, res):
@@ -1168,6 +1707,7 @@ class HarmonicBondGenerator(object):
 
     def __init__(self, forcefield):
         self.ff = forcefield
+        self.bondsForAtomType = defaultdict(set)
         self.types1 = []
         self.types2 = []
         self.length = []
@@ -1176,15 +1716,24 @@ class HarmonicBondGenerator(object):
     def registerBond(self, parameters):
         types = self.ff._findAtomTypes(parameters, 2)
         if None not in types:
+            index = len(self.types1)
             self.types1.append(types[0])
             self.types2.append(types[1])
+            for t in types[0]:
+                self.bondsForAtomType[t].add(index)
+            for t in types[1]:
+                self.bondsForAtomType[t].add(index)
             self.length.append(_convertParameterToNumber(parameters['length']))
             self.k.append(_convertParameterToNumber(parameters['k']))
 
     @staticmethod
     def parseElement(element, ff):
-        generator = HarmonicBondGenerator(ff)
-        ff.registerGenerator(generator)
+        existing = [f for f in ff._forces if isinstance(f, HarmonicBondGenerator)]
+        if len(existing) == 0:
+            generator = HarmonicBondGenerator(ff)
+            ff.registerGenerator(generator)
+        else:
+            generator = existing[0]
         for bond in element.findall('Bond'):
             generator.registerBond(bond.attrib)
 
@@ -1199,7 +1748,7 @@ class HarmonicBondGenerator(object):
         for bond in data.bonds:
             type1 = data.atomType[data.atoms[bond.atom1]]
             type2 = data.atomType[data.atoms[bond.atom2]]
-            for i in range(len(self.types1)):
+            for i in self.bondsForAtomType[type1]:
                 types1 = self.types1[i]
                 types2 = self.types2[i]
                 if (type1 in types1 and type2 in types2) or (type1 in types2 and type2 in types1):
@@ -1219,6 +1768,7 @@ class HarmonicAngleGenerator(object):
 
     def __init__(self, forcefield):
         self.ff = forcefield
+        self.anglesForAtom2Type = defaultdict(list)
         self.types1 = []
         self.types2 = []
         self.types3 = []
@@ -1228,16 +1778,23 @@ class HarmonicAngleGenerator(object):
     def registerAngle(self, parameters):
         types = self.ff._findAtomTypes(parameters, 3)
         if None not in types:
+            index = len(self.types1)
             self.types1.append(types[0])
             self.types2.append(types[1])
             self.types3.append(types[2])
+            for t in types[1]:
+                self.anglesForAtom2Type[t].append(index)
             self.angle.append(_convertParameterToNumber(parameters['angle']))
             self.k.append(_convertParameterToNumber(parameters['k']))
 
     @staticmethod
     def parseElement(element, ff):
-        generator = HarmonicAngleGenerator(ff)
-        ff.registerGenerator(generator)
+        existing = [f for f in ff._forces if isinstance(f, HarmonicAngleGenerator)]
+        if len(existing) == 0:
+            generator = HarmonicAngleGenerator(ff)
+            ff.registerGenerator(generator)
+        else:
+            generator = existing[0]
         for angle in element.findall('Angle'):
             generator.registerAngle(angle.attrib)
 
@@ -1253,7 +1810,7 @@ class HarmonicAngleGenerator(object):
             type1 = data.atomType[data.atoms[angle[0]]]
             type2 = data.atomType[data.atoms[angle[1]]]
             type3 = data.atomType[data.atoms[angle[2]]]
-            for i in range(len(self.types1)):
+            for i in self.anglesForAtom2Type[type2]:
                 types1 = self.types1[i]
                 types2 = self.types2[i]
                 types3 = self.types3[i]
@@ -1320,8 +1877,12 @@ class PeriodicTorsionGenerator(object):
 
     @staticmethod
     def parseElement(element, ff):
-        generator = PeriodicTorsionGenerator(ff)
-        ff.registerGenerator(generator)
+        existing = [f for f in ff._forces if isinstance(f, PeriodicTorsionGenerator)]
+        if len(existing) == 0:
+            generator = PeriodicTorsionGenerator(ff)
+            ff.registerGenerator(generator)
+        else:
+            generator = existing[0]
         for torsion in element.findall('Proper'):
             generator.registerProperTorsion(torsion.attrib)
         for torsion in element.findall('Improper'):
@@ -1419,8 +1980,12 @@ class RBTorsionGenerator(object):
 
     @staticmethod
     def parseElement(element, ff):
-        generator = RBTorsionGenerator(ff)
-        ff.registerGenerator(generator)
+        existing = [f for f in ff._forces if isinstance(f, RBTorsionGenerator)]
+        if len(existing) == 0:
+            generator = RBTorsionGenerator(ff)
+            ff.registerGenerator(generator)
+        else:
+            generator = existing[0]
         for torsion in element.findall('Proper'):
             types = ff._findAtomTypes(torsion.attrib, 4)
             if None not in types:
@@ -1523,8 +2088,12 @@ class CMAPTorsionGenerator(object):
 
     @staticmethod
     def parseElement(element, ff):
-        generator = CMAPTorsionGenerator(ff)
-        ff.registerGenerator(generator)
+        existing = [f for f in ff._forces if isinstance(f, CMAPTorsionGenerator)]
+        if len(existing) == 0:
+            generator = CMAPTorsionGenerator(ff)
+            ff.registerGenerator(generator)
+        else:
+            generator = existing[0]
         for map in element.findall('Map'):
             values = [float(x) for x in map.text.split()]
             size = sqrt(len(values))
@@ -1642,37 +2211,156 @@ class NonbondedGenerator(object):
         sys.addForce(force)
 
     def postprocessSystem(self, sys, data, args):
-        # Create exceptions based on bonds.
-
-        bondIndices = []
-        for bond in data.bonds:
-            bondIndices.append((bond.atom1, bond.atom2))
-
-        # If a virtual site does *not* share exclusions with another atom, add a bond between it and its first parent atom.
-
-        for i in range(sys.getNumParticles()):
-            if sys.isVirtualSite(i):
-                (site, atoms, excludeWith) = data.virtualSites[data.atoms[i]]
-                if excludeWith is None:
-                    bondIndices.append((i, site.getParticle(0)))
-
-        # Certain particles, such as lone pairs and Drude particles, share exclusions with a parent atom.
-        # If the parent atom does not interact with an atom, the child particle does not either.
-
-        for atom1, atom2 in bondIndices:
-            for child1 in data.excludeAtomWith[atom1]:
-                bondIndices.append((child1, atom2))
-                for child2 in data.excludeAtomWith[atom2]:
-                    bondIndices.append((child1, child2))
-            for child2 in data.excludeAtomWith[atom2]:
-                bondIndices.append((atom1, child2))
-
         # Create the exceptions.
 
+        bondIndices = _findBondsForExclusions(data, sys)
         nonbonded = [f for f in sys.getForces() if isinstance(f, mm.NonbondedForce)][0]
         nonbonded.createExceptionsFromBonds(bondIndices, self.coulomb14scale, self.lj14scale)
 
 parsers["NonbondedForce"] = NonbondedGenerator.parseElement
+
+
+## @private
+class LennardJonesGenerator(object):
+    """A NBFix generator to construct the L-J force with NBFIX implemented as a lookup table"""
+
+    def __init__(self, forcefield, lj14scale):
+        self.ff = forcefield
+        self.nbfixTypes = {}
+        self.lj14scale = lj14scale
+        self.ljTypes = ForceField._AtomTypeParameters(forcefield, 'LennardJonesForce', 'Atom', ('sigma', 'epsilon'))
+
+    def registerNBFIX(self, parameters):
+        types = self.ff._findAtomTypes(parameters, 2)
+        if None not in types:
+            type1 = types[0][0]
+            type2 = types[1][0]
+            epsilon = _convertParameterToNumber(parameters['epsilon'])
+            sigma = _convertParameterToNumber(parameters['sigma'])
+            self.nbfixTypes[(type1, type2)] = [sigma, epsilon]
+            self.nbfixTypes[(type2, type1)] = [sigma, epsilon]
+
+    def registerLennardJones(self, parameters):
+        self.ljTypes.registerAtom(parameters)
+
+    @staticmethod
+    def parseElement(element, ff):
+        existing = [f for f in ff._forces if isinstance(f, LennardJonesGenerator)]
+        if len(existing) == 0:
+            generator = LennardJonesGenerator(ff, float(element.attrib['lj14scale']))
+            ff.registerGenerator(generator)
+        else:
+            # Multiple <LennardJonesForce> tags were found, probably in different files
+            generator = existing[0]
+            if abs(generator.lj14scale - float(element.attrib['lj14scale'])) > NonbondedGenerator.SCALETOL:
+                raise ValueError('Found multiple LennardJonesForce tags with different 1-4 scales')
+        for LJ in element.findall('Atom'):
+            generator.registerLennardJones(LJ.attrib)
+        for Nbfix in element.findall('NBFixPair'):
+            generator.registerNBFIX(Nbfix.attrib)
+
+    def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
+        # First derive the lookup tables
+
+        nbfixTypeSet = set().union(*self.nbfixTypes)
+        ljIndexList = [None]*len(data.atoms)
+        numLjTypes = 0
+        ljTypeList = []
+        typeMap = {}
+        for i, atom in enumerate(data.atoms):
+            atype = data.atomType[atom]
+            values = tuple(self.ljTypes.getAtomParameters(atom, data))
+            if values in typeMap and atype not in nbfixTypeSet:
+                # Only non-NBFIX types can be compressed
+                ljIndexList[i] = typeMap[values]
+            else:
+                typeMap[values] = numLjTypes
+                ljIndexList[i] = numLjTypes
+                numLjTypes += 1
+                ljTypeList.append(atype)
+        reverseMap = [0]*len(typeMap)
+        for typeValue in typeMap:
+            reverseMap[typeMap[typeValue]] = typeValue
+
+        # Now everything is assigned. Create the A- and B-coefficient arrays
+
+        acoef = [0]*(numLjTypes*numLjTypes)
+        bcoef = acoef[:]
+        for m in range(numLjTypes):
+            for n in range(numLjTypes):
+                pair = (ljTypeList[m], ljTypeList[n])
+                if pair in self.nbfixTypes:
+                    epsilon = self.nbfixTypes[pair][1]
+                    sigma = self.nbfixTypes[pair][0]
+                    sigma6 = sigma**6
+                    acoef[m+numLjTypes*n] = 4*epsilon*sigma6*sigma6
+                    bcoef[m+numLjTypes*n] = 4*epsilon*sigma6
+                    continue
+                else:
+                    sigma = 0.5*(reverseMap[m][0]+reverseMap[n][0])
+                    sigma6 = sigma**6
+                    epsilon = math.sqrt(reverseMap[m][-1]*reverseMap[n][-1])
+                    acoef[m+numLjTypes*n] = 4*epsilon*sigma6*sigma6
+                    bcoef[m+numLjTypes*n] = 4*epsilon*sigma6
+
+        self.force = mm.CustomNonbondedForce('acoef(type1, type2)/r^12 - bcoef(type1, type2)/r^6;')
+        self.force.addTabulatedFunction('acoef', mm.Discrete2DFunction(numLjTypes, numLjTypes, acoef))
+        self.force.addTabulatedFunction('bcoef', mm.Discrete2DFunction(numLjTypes, numLjTypes, bcoef))
+        self.force.addPerParticleParameter('type')
+        if nonbondedMethod in [CutoffPeriodic, Ewald, PME]:
+            self.force.setNonbondedMethod(mm.CustomNonbondedForce.CutoffPeriodic)
+        elif nonbondedMethod is NoCutoff:
+            self.force.setNonbondedMethod(mm.CustomNonbondedForce.NoCutoff)
+        elif nonbondedMethod is CutoffNonPeriodic:
+            self.force.setNonbondedMethod(mm.CustomNonbondedForce.CutoffNonPeriodic)
+        else:
+            raise AssertionError('Unrecognized nonbonded method [%s]' % nonbondedMethod)
+
+        # Add the particles
+
+        for i in ljIndexList:
+            self.force.addParticle((i,))
+        self.force.setUseLongRangeCorrection(True)
+        self.force.setCutoffDistance(nonbondedCutoff)
+        sys.addForce(self.force)
+
+    def postprocessSystem(self, sys, data, args):
+        # Create the exceptions.
+
+        bondIndices = _findBondsForExclusions(data, sys)
+        if self.lj14scale == 1:
+            # Just exclude the 1-2 and 1-3 interactions.
+
+            self.force.createExclusionsFromBonds(bondIndices, 2)
+        else:
+            forceCopy = deepcopy(self.force)
+            forceCopy.createExclusionsFromBonds(bondIndices, 2)
+            self.force.createExclusionsFromBonds(bondIndices, 3)
+            if self.force.getNumExclusions() > forceCopy.getNumExclusions() and self.lj14scale != 0:
+                # We need to create a CustomBondForce and use it to implement the scaled 1-4 interactions.
+
+                bonded = mm.CustomBondForce('%g*epsilon*((sigma/r)^12-(sigma/r)^6)' % (4*self.lj14scale))
+                bonded.addPerBondParameter('sigma')
+                bonded.addPerBondParameter('epsilon')
+                sys.addForce(bonded)
+                skip = set(tuple(forceCopy.getExclusionParticles(i)) for i in range(forceCopy.getNumExclusions()))
+                for i in range(self.force.getNumExclusions()):
+                    p1,p2 = self.force.getExclusionParticles(i)
+                    a1 = data.atoms[p1]
+                    a2 = data.atoms[p2]
+                    if (p1,p2) not in skip and (p2,p1) not in skip:
+                        type1 = data.atomType[a1]
+                        type2 = data.atomType[a2]
+                        if (type1, type2) in self.nbfixTypes:
+                            sigma, epsilon = self.nbfixTypes[(type1, type2)]
+                        else:
+                            values1 = self.ljTypes.getAtomParameters(a1, data)
+                            values2 = self.ljTypes.getAtomParameters(a2, data)
+                            sigma = 0.5*(values1[0]+values2[0])
+                            epsilon = sqrt(values1[1]*values2[1])
+                        bonded.addBond(p1, p2, (sigma, epsilon))
+
+parsers["LennardJonesForce"] = LennardJonesGenerator.parseElement
 
 
 ## @private
@@ -1956,6 +2644,7 @@ class CustomNonbondedGenerator(object):
             generator.perParticleParams.append(param.attrib['name'])
         generator.params = ForceField._AtomTypeParameters(ff, 'CustomNonbondedForce', 'Atom', generator.perParticleParams)
         generator.params.parseDefinitions(element)
+        generator.functions += _parseFunctions(element)
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         methodMap = {NoCutoff:mm.CustomNonbondedForce.NoCutoff,
@@ -1968,19 +2657,7 @@ class CustomNonbondedGenerator(object):
             force.addGlobalParameter(param, self.globalParams[param])
         for param in self.perParticleParams:
             force.addPerParticleParameter(param)
-        for (name, type, values, params) in self.functions:
-            if type == 'Continuous1D':
-                force.addTabulatedFunction(name, mm.Continuous1DFunction(values, params['min'], params['max']))
-            elif type == 'Continuous2D':
-                force.addTabulatedFunction(name, mm.Continuous2DFunction(params['xsize'], params['ysize'], values, params['xmin'], params['xmax'], params['ymin'], params['ymax']))
-            elif type == 'Continuous3D':
-                force.addTabulatedFunction(name, mm.Continuous2DFunction(params['xsize'], params['ysize'], params['zsize'], values, params['xmin'], params['xmax'], params['ymin'], params['ymax'], params['zmin'], params['zmax']))
-            elif type == 'Discrete1D':
-                force.addTabulatedFunction(name, mm.Discrete1DFunction(values))
-            elif type == 'Discrete2D':
-                force.addTabulatedFunction(name, mm.Discrete2DFunction(params['xsize'], params['ysize'], values))
-            elif type == 'Discrete3D':
-                force.addTabulatedFunction(name, mm.Discrete2DFunction(params['xsize'], params['ysize'], params['zsize'], values))
+        _createFunctions(force, self.functions)
         for atom in data.atoms:
             values = self.params.getAtomParameters(atom, data)
             force.addParticle(values)
@@ -1989,33 +2666,9 @@ class CustomNonbondedGenerator(object):
         sys.addForce(force)
 
     def postprocessSystem(self, sys, data, args):
-        # Create exclusions based on bonds.
-
-        bondIndices = []
-        for bond in data.bonds:
-            bondIndices.append((bond.atom1, bond.atom2))
-
-        # If a virtual site does *not* share exclusions with another atom, add a bond between it and its first parent atom.
-
-        for i in range(sys.getNumParticles()):
-            if sys.isVirtualSite(i):
-                (site, atoms, excludeWith) = data.virtualSites[data.atoms[i]]
-                if excludeWith is None:
-                    bondIndices.append((i, site.getParticle(0)))
-
-        # Certain particles, such as lone pairs and Drude particles, share exclusions with a parent atom.
-        # If the parent atom does not interact with an atom, the child particle does not either.
-
-        for atom1, atom2 in bondIndices:
-            for child1 in data.excludeAtomWith[atom1]:
-                bondIndices.append((child1, atom2))
-                for child2 in data.excludeAtomWith[atom2]:
-                    bondIndices.append((child1, child2))
-            for child2 in data.excludeAtomWith[atom2]:
-                bondIndices.append((atom1, child2))
-
         # Create the exclusions.
 
+        bondIndices = _findBondsForExclusions(data, sys)
         nonbonded = [f for f in sys.getForces() if isinstance(f, mm.CustomNonbondedForce)][0]
         nonbonded.createExclusionsFromBonds(bondIndices, self.bondCutoff)
 
@@ -2051,19 +2704,7 @@ class CustomGBGenerator(object):
             generator.computedValues.append((value.attrib['name'], value.text, computationMap[value.attrib['type']]))
         for term in element.findall('EnergyTerm'):
             generator.energyTerms.append((term.text, computationMap[term.attrib['type']]))
-        for function in element.findall("Function"):
-            values = [float(x) for x in function.text.split()]
-            if 'type' in function.attrib:
-                type = function.attrib['type']
-            else:
-                type = 'Continuous1D'
-            params = {}
-            for key in function.attrib:
-                if key.endswith('size'):
-                    params[key] = int(function.attrib[key])
-                elif key.endswith('min') or key.endswith('max'):
-                    params[key] = float(function.attrib[key])
-            generator.functions.append((function.attrib['name'], type, values, params))
+        generator.functions += _parseFunctions(element)
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         methodMap = {NoCutoff:mm.CustomGBForce.NoCutoff,
@@ -2080,19 +2721,7 @@ class CustomGBGenerator(object):
             force.addComputedValue(value[0], value[1], value[2])
         for term in self.energyTerms:
             force.addEnergyTerm(term[0], term[1])
-        for (name, type, values, params) in self.functions:
-            if type == 'Continuous1D':
-                force.addTabulatedFunction(name, mm.Continuous1DFunction(values, params['min'], params['max']))
-            elif type == 'Continuous2D':
-                force.addTabulatedFunction(name, mm.Continuous2DFunction(params['xsize'], params['ysize'], values, params['xmin'], params['xmax'], params['ymin'], params['ymax']))
-            elif type == 'Continuous3D':
-                force.addTabulatedFunction(name, mm.Continuous2DFunction(params['xsize'], params['ysize'], params['zsize'], values, params['xmin'], params['xmax'], params['ymin'], params['ymax'], params['zmin'], params['zmax']))
-            elif type == 'Discrete1D':
-                force.addTabulatedFunction(name, mm.Discrete1DFunction(values))
-            elif type == 'Discrete2D':
-                force.addTabulatedFunction(name, mm.Discrete2DFunction(params['xsize'], params['ysize'], values))
-            elif type == 'Discrete3D':
-                force.addTabulatedFunction(name, mm.Discrete2DFunction(params['xsize'], params['ysize'], params['zsize'], values))
+        _createFunctions(force, self.functions)
         for atom in data.atoms:
             values = self.params.getAtomParameters(atom, data)
             force.addParticle(values)
@@ -2101,6 +2730,171 @@ class CustomGBGenerator(object):
         sys.addForce(force)
 
 parsers["CustomGBForce"] = CustomGBGenerator.parseElement
+
+
+## @private
+class CustomHbondGenerator(object):
+    """A CustomHbondGenerator constructs a CustomHbondForce."""
+
+    def __init__(self, forcefield):
+        self.ff = forcefield
+        self.donorTypes1 = []
+        self.donorTypes2 = []
+        self.donorTypes3 = []
+        self.acceptorTypes1 = []
+        self.acceptorTypes2 = []
+        self.acceptorTypes3 = []
+        self.globalParams = {}
+        self.perDonorParams = []
+        self.perAcceptorParams = []
+        self.donorParamValues = []
+        self.acceptorParamValues = []
+        self.functions = []
+
+    @staticmethod
+    def parseElement(element, ff):
+        generator = CustomHbondGenerator(ff)
+        ff.registerGenerator(generator)
+        generator.energy = element.attrib['energy']
+        generator.bondCutoff = int(element.attrib['bondCutoff'])
+        generator.particlesPerDonor = int(element.attrib['particlesPerDonor'])
+        generator.particlesPerAcceptor = int(element.attrib['particlesPerAcceptor'])
+        if generator.particlesPerDonor < 1 or generator.particlesPerDonor > 3:
+            raise ValueError('Illegal value for particlesPerDonor for CustomHbondForce')
+        if generator.particlesPerAcceptor < 1 or generator.particlesPerAcceptor > 3:
+            raise ValueError('Illegal value for particlesPerAcceptor for CustomHbondForce')
+        for param in element.findall('GlobalParameter'):
+            generator.globalParams[param.attrib['name']] = float(param.attrib['defaultValue'])
+        for param in element.findall('PerDonorParameter'):
+            generator.perDonorParams.append(param.attrib['name'])
+        for param in element.findall('PerAcceptorParameter'):
+            generator.perAcceptorParams.append(param.attrib['name'])
+        for donor in element.findall('Donor'):
+            types = ff._findAtomTypes(donor.attrib, 3)[:generator.particlesPerDonor]
+            if None not in types:
+                generator.donorTypes1.append(types[0])
+                if len(types) > 1:
+                    generator.donorTypes2.append(types[1])
+                if len(types) > 2:
+                    generator.donorTypes3.append(types[2])
+                generator.donorParamValues.append([float(donor.attrib[param]) for param in generator.perDonorParams])
+        for acceptor in element.findall('Acceptor'):
+            types = ff._findAtomTypes(acceptor.attrib, 3)[:generator.particlesPerAcceptor]
+            if None not in types:
+                generator.acceptorTypes1.append(types[0])
+                if len(types) > 1:
+                    generator.acceptorTypes2.append(types[1])
+                if len(types) > 2:
+                    generator.acceptorTypes3.append(types[2])
+                generator.acceptorParamValues.append([float(acceptor.attrib[param]) for param in generator.perAcceptorParams])
+        generator.functions += _parseFunctions(element)
+
+    def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
+        methodMap = {NoCutoff:mm.CustomHbondForce.NoCutoff,
+                     CutoffNonPeriodic:mm.CustomHbondForce.CutoffNonPeriodic,
+                     CutoffPeriodic:mm.CustomHbondForce.CutoffPeriodic}
+        if nonbondedMethod not in methodMap:
+            raise ValueError('Illegal nonbonded method for CustomNonbondedForce')
+        force = mm.CustomHbondForce(self.energy)
+        sys.addForce(force)
+        for param in self.globalParams:
+            force.addGlobalParameter(param, self.globalParams[param])
+        for param in self.perDonorParams:
+            force.addPerDonorParameter(param)
+        for param in self.perAcceptorParams:
+            force.addPerAcceptorParameter(param)
+        _createFunctions(force, self.functions)
+        force.setNonbondedMethod(methodMap[nonbondedMethod])
+        force.setCutoffDistance(nonbondedCutoff)
+
+        # Add donors.
+
+        if self.particlesPerDonor == 1:
+            for atom in data.atoms:
+                type1 = data.atomType[atom]
+                for i in range(len(self.donorTypes1)):
+                    types1 = self.donorTypes1[i]
+                    if type1 in self.donorTypes1[i]:
+                        force.addDonor(atom.index, -1, -1, self.donorParamValues[i])
+        elif self.particlesPerDonor == 2:
+            for bond in data.bonds:
+                type1 = data.atomType[data.atoms[bond.atom1]]
+                type2 = data.atomType[data.atoms[bond.atom2]]
+                for i in range(len(self.donorTypes1)):
+                    types1 = self.donorTypes1[i]
+                    types2 = self.donorTypes2[i]
+                    if type1 in types1 and type2 in types2:
+                        force.addDonor(bond.atom1, bond.atom2, -1, self.donorParamValues[i])
+                    elif type1 in types2 and type2 in types1:
+                        force.addDonor(bond.atom2, bond.atom1, -1, self.donorParamValues[i])
+        else:
+            for angle in data.angles:
+                type1 = data.atomType[data.atoms[angle[0]]]
+                type2 = data.atomType[data.atoms[angle[1]]]
+                type3 = data.atomType[data.atoms[angle[2]]]
+                for i in range(len(self.donorTypes1)):
+                    types1 = self.donorTypes1[i]
+                    types2 = self.donorTypes2[i]
+                    types3 = self.donorTypes3[i]
+                    if (type1 in types1 and type2 in types2 and type3 in types3) or (type1 in types3 and type2 in types2 and type3 in types1):
+                        force.addDonor(angle[0], angle[1], angle[2], self.donorParamValues[i])
+
+        # Add acceptors.
+
+        if self.particlesPerAcceptor == 1:
+            for atom in data.atoms:
+                type1 = data.atomType[atom]
+                for i in range(len(self.acceptorTypes1)):
+                    types1 = self.acceptorTypes1[i]
+                    if type1 in self.acceptorTypes1[i]:
+                        force.addAcceptor(atom.index, -1, -1, self.acceptorParamValues[i])
+        elif self.particlesPerAcceptor == 2:
+            for bond in data.bonds:
+                type1 = data.atomType[data.atoms[bond.atom1]]
+                type2 = data.atomType[data.atoms[bond.atom2]]
+                for i in range(len(self.acceptorTypes1)):
+                    types1 = self.acceptorTypes1[i]
+                    types2 = self.acceptorTypes2[i]
+                    if type1 in types1 and type2 in types2:
+                        force.addAcceptor(bond.atom1, bond.atom2, -1, self.acceptorParamValues[i])
+                    elif type1 in types2 and type2 in types1:
+                        force.addAcceptor(bond.atom2, bond.atom1, -1, self.acceptorParamValues[i])
+        else:
+            for angle in data.angles:
+                type1 = data.atomType[data.atoms[angle[0]]]
+                type2 = data.atomType[data.atoms[angle[1]]]
+                type3 = data.atomType[data.atoms[angle[2]]]
+                for i in range(len(self.acceptorTypes1)):
+                    types1 = self.acceptorTypes1[i]
+                    types2 = self.acceptorTypes2[i]
+                    types3 = self.acceptorTypes3[i]
+                    if (type1 in types1 and type2 in types2 and type3 in types3) or (type1 in types3 and type2 in types2 and type3 in types1):
+                        force.addAcceptor(angle[0], angle[1], angle[2], self.acceptorParamValues[i])
+
+        # Add exclusions.
+
+        for donor in range(force.getNumDonors()):
+            (d1, d2, d3, params) = force.getDonorParameters(donor)
+            outerAtoms = set((d1, d2, d3))
+            if -1 in outerAtoms:
+                outerAtoms.remove(-1)
+            excludedAtoms = set(outerAtoms)
+            for i in range(self.bondCutoff):
+                newOuterAtoms = set()
+                for atom in outerAtoms:
+                    for bond in data.atomBonds[atom]:
+                        b = data.bonds[bond]
+                        bondedAtom = (b.atom2 if b.atom1 == atom else b.atom1)
+                        if bondedAtom not in excludedAtoms:
+                            newOuterAtoms.add(bondedAtom)
+                            excludedAtoms.add(bondedAtom)
+                outerAtoms = newOuterAtoms
+            for acceptor in range(force.getNumAcceptors()):
+                (a1, a2, a3, params) = force.getAcceptorParameters(acceptor)
+                if a1 in excludedAtoms or a2 in excludedAtoms or a3 in excludedAtoms:
+                    force.addExclusion(donor, acceptor)
+
+parsers["CustomHbondForce"] = CustomHbondGenerator.parseElement
 
 
 ## @private
@@ -3433,33 +4227,36 @@ class AmoebaVdwGenerator(object):
         #   <Vdw class="1" sigma="0.371" epsilon="0.46024" reduction="1.0" />
         #   <Vdw class="2" sigma="0.382" epsilon="0.422584" reduction="1.0" />
 
-        generator = AmoebaVdwGenerator(element.attrib['type'], element.attrib['radiusrule'], element.attrib['radiustype'], element.attrib['radiussize'], element.attrib['epsilonrule'],
+        existing = [f for f in forceField._forces if isinstance(f, AmoebaVdwGenerator)]
+        if len(existing) == 0:
+            generator = AmoebaVdwGenerator(element.attrib['type'], element.attrib['radiusrule'], element.attrib['radiustype'], element.attrib['radiussize'], element.attrib['epsilonrule'],
                                         float(element.attrib['vdw-13-scale']), float(element.attrib['vdw-14-scale']), float(element.attrib['vdw-15-scale']))
-        forceField._forces.append(generator)
-        generator.params = ForceField._AtomTypeParameters(forceField, 'AmoebaVdwForce', 'Vdw', ('sigma', 'epsilon', 'reduction'))
+            forceField.registerGenerator(generator)
+            generator.params = ForceField._AtomTypeParameters(forceField, 'AmoebaVdwForce', 'Vdw', ('sigma', 'epsilon', 'reduction'))
+        else:
+            # Multiple <AmoebaVdwForce> tags were found, probably in different files.  Simply add more types to the existing one.
+            generator = existing[0]
+            if abs(generator.vdw13Scale - float(element.attrib['vdw-13-scale'])) > NonbondedGenerator.SCALETOL or \
+                    abs(generator.vdw14Scale - float(element.attrib['vdw-14-scale'])) > NonbondedGenerator.SCALETOL or \
+                    abs(generator.vdw15Scale - float(element.attrib['vdw-15-scale'])) > NonbondedGenerator.SCALETOL:
+                raise ValueError('Found multiple AmoebaVdwForce tags with different scale factors')
+            if generator.radiusrule != element.attrib['radiusrule'] or generator.epsilonrule != element.attrib['epsilonrule'] or \
+                    generator.radiustype != element.attrib['radiustype'] or generator.radiussize != element.attrib['radiussize']:
+                raise ValueError('Found multiple AmoebaVdwForce tags with different combining rules')
         generator.params.parseDefinitions(element)
         two_six = 1.122462048309372
 
     #=============================================================================================
 
-    # Return a set containing the indices of particles bonded to particle with index=particleIndex
-
-    #=============================================================================================
-
     @staticmethod
-    def getBondedParticleSet(particleIndex, data):
+    def getBondedParticleSets(sys, data):
 
-        bondedParticleSet = set()
-
-        for bond in data.atomBonds[particleIndex]:
-            atom1 = data.bonds[bond].atom1
-            atom2 = data.bonds[bond].atom2
-            if (atom1 != particleIndex):
-                bondedParticleSet.add(atom1)
-            else:
-                bondedParticleSet.add(atom2)
-
-        return bondedParticleSet
+        bondedParticleSets = [set() for i in range(len(data.atoms))]
+        bondIndices = _findBondsForExclusions(data, sys)
+        for atom1, atom2 in bondIndices:
+            bondedParticleSets[atom1].add(atom2)
+            bondedParticleSets[atom2].add(atom1)
+        return bondedParticleSets
 
     #=============================================================================================
 
@@ -3468,54 +4265,47 @@ class AmoebaVdwGenerator(object):
         sigmaMap = {'ARITHMETIC':1, 'GEOMETRIC':1, 'CUBIC-MEAN':1}
         epsilonMap = {'ARITHMETIC':1, 'GEOMETRIC':1, 'HARMONIC':1, 'HHG':1}
 
-        # get or create force depending on whether it has already been added to the system
+        force = mm.AmoebaVdwForce()
+        sys.addForce(force)
 
-        existing = [sys.getForce(i) for i in range(sys.getNumForces())]
-        existing = [f for f in existing if type(f) == mm.AmoebaVdwForce]
-        if len(existing) == 0:
-            force = mm.AmoebaVdwForce()
-            sys.addForce(force)
+        # sigma and epsilon combining rules
 
-            # sigma and epsilon combining rules
-
-            if ('sigmaCombiningRule' in args):
-                sigmaRule = args['sigmaCombiningRule'].upper()
-                if (sigmaRule.upper() in sigmaMap):
-                    force.setSigmaCombiningRule(sigmaRule.upper())
-                else:
-                    stringList = ' ' . join(str(x) for x in sigmaMap.keys())
-                    raise ValueError( "AmoebaVdwGenerator: sigma combining rule %s not recognized; valid values are %s; using default." % (sigmaRule, stringList) )
+        if ('sigmaCombiningRule' in args):
+            sigmaRule = args['sigmaCombiningRule'].upper()
+            if (sigmaRule.upper() in sigmaMap):
+                force.setSigmaCombiningRule(sigmaRule.upper())
             else:
-                force.setSigmaCombiningRule(self.radiusrule)
+                stringList = ' ' . join(str(x) for x in sigmaMap.keys())
+                raise ValueError( "AmoebaVdwGenerator: sigma combining rule %s not recognized; valid values are %s; using default." % (sigmaRule, stringList) )
+        else:
+            force.setSigmaCombiningRule(self.radiusrule)
 
-            if ('epsilonCombiningRule' in args):
-                epsilonRule = args['epsilonCombiningRule'].upper()
-                if (epsilonRule.upper() in epsilonMap):
-                    force.setEpsilonCombiningRule(epsilonRule.upper())
-                else:
-                    stringList = ' ' . join(str(x) for x in epsilonMap.keys())
-                    raise ValueError( "AmoebaVdwGenerator: epsilon combining rule %s not recognized; valid values are %s; using default." % (epsilonRule, stringList) )
+        if ('epsilonCombiningRule' in args):
+            epsilonRule = args['epsilonCombiningRule'].upper()
+            if (epsilonRule.upper() in epsilonMap):
+                force.setEpsilonCombiningRule(epsilonRule.upper())
             else:
-                force.setEpsilonCombiningRule(self.epsilonrule)
+                stringList = ' ' . join(str(x) for x in epsilonMap.keys())
+                raise ValueError( "AmoebaVdwGenerator: epsilon combining rule %s not recognized; valid values are %s; using default." % (epsilonRule, stringList) )
+        else:
+            force.setEpsilonCombiningRule(self.epsilonrule)
 
-            # cutoff
+        # cutoff
 
-            if ('vdwCutoff' in args):
-                force.setCutoff(args['vdwCutoff'])
-            else:
-                force.setCutoff(nonbondedCutoff)
+        if ('vdwCutoff' in args):
+            force.setCutoff(args['vdwCutoff'])
+        else:
+            force.setCutoff(nonbondedCutoff)
 
-            # dispersion correction
+        # dispersion correction
 
-            if ('useDispersionCorrection' in args):
-                force.setUseDispersionCorrection(bool(args['useDispersionCorrection']))
-
-            if (nonbondedMethod == PME):
-                force.setNonbondedMethod(mm.AmoebaVdwForce.CutoffPeriodic)
+        if ('useDispersionCorrection' in args):
+            force.setUseDispersionCorrection(bool(args['useDispersionCorrection']))
 
         else:
             force = existing[0]
-	if ('lambdaFile' in args):
+
+        if ('lambdaFile' in args):
             LambdaOpen= open(args['lambdaFile'],'r')
             lines=[]
             for line in LambdaOpen:
@@ -3545,11 +4335,14 @@ class AmoebaVdwGenerator(object):
                         else:
                             ivIndex = data.bonds[bondIndex].atom1
                     if int(atom.id.strip()) in ligAtomlist:
-                        force.addParticle(ivIndex, values[0], values[1], values[2],vlambda)
+                        force.addParticle(ivIndex, values[0], values[1], values[2], vlambda)
                     else:
-                        force.addParticle(ivIndex, values[0], values[1], values[2],1.0)
+                        force.addParticle(ivIndex, values[0], values[1], values[2], 1.0)
  #                else:
  #                   raise ValueError('No vdw type for atom %s' % (atom.name))
+
+        if nonbondedMethod in [CutoffPeriodic, Ewald, PME]:
+            force.setNonbondedMethod(mm.AmoebaVdwForce.CutoffPeriodic)
 
         # add particles to force
 
@@ -3578,9 +4371,7 @@ class AmoebaVdwGenerator(object):
         # (1) collect in bondedParticleSets[i], 1-2 indices for all bonded partners of particle i
         # (2) add 1-2,1-3 and self to exclusion set
 
-        bondedParticleSets = []
-        for i in range(len(data.atoms)):
-            bondedParticleSets.append(AmoebaVdwGenerator.getBondedParticleSet(i, data))
+        bondedParticleSets = AmoebaVdwGenerator.getBondedParticleSets(sys, data)
 
         for (i,atom) in enumerate(data.atoms):
 
@@ -3613,34 +4404,8 @@ class AmoebaMultipoleGenerator(object):
 
     #=============================================================================================
 
-    def __init__(self, forceField,
-                       direct11Scale, direct12Scale, direct13Scale, direct14Scale,
-                       mpole12Scale,  mpole13Scale,  mpole14Scale,  mpole15Scale,
-                       mutual11Scale, mutual12Scale, mutual13Scale, mutual14Scale,
-                       polar12Scale,  polar13Scale,  polar14Scale,  polar15Scale):
-
+    def __init__(self, forceField):
         self.forceField = forceField
-
-        self.direct11Scale = direct11Scale
-        self.direct12Scale = direct12Scale
-        self.direct13Scale = direct13Scale
-        self.direct14Scale = direct14Scale
-
-        self.mpole12Scale = mpole12Scale
-        self.mpole13Scale = mpole13Scale
-        self.mpole14Scale = mpole14Scale
-        self.mpole15Scale = mpole15Scale
-
-        self.mutual11Scale = mutual11Scale
-        self.mutual12Scale = mutual12Scale
-        self.mutual13Scale = mutual13Scale
-        self.mutual14Scale = mutual14Scale
-
-        self.polar12Scale = polar12Scale
-        self.polar13Scale = polar13Scale
-        self.polar14Scale = polar14Scale
-        self.polar15Scale = polar15Scale
-
         self.typeMap = {}
 
     #=============================================================================================
@@ -3698,30 +4463,13 @@ class AmoebaMultipoleGenerator(object):
         # <Multipole class="1"    kz="2"    kx="4"    c0="-0.22620" d1="0.08214" d2="0.00000" d3="0.34883" q11="0.11775" q21="0.00000" q22="-1.02185" q31="-0.17555" q32="0.00000" q33="0.90410"  />
         # <Multipole class="2"    kz="1"    kx="3"    c0="-0.15245" d1="0.19517" d2="0.00000" d3="0.19687" q11="-0.20677" q21="0.00000" q22="-0.48084" q31="-0.01672" q32="0.00000" q33="0.68761"  />
 
-        generator = AmoebaMultipoleGenerator(forceField,
-                                              element.attrib['direct11Scale'],
-                                              element.attrib['direct12Scale'],
-                                              element.attrib['direct13Scale'],
-                                              element.attrib['direct14Scale'],
-
-                                              element.attrib['mpole12Scale'],
-                                              element.attrib['mpole13Scale'],
-                                              element.attrib['mpole14Scale'],
-                                              element.attrib['mpole15Scale'],
-
-                                              element.attrib['mutual11Scale'],
-                                              element.attrib['mutual12Scale'],
-                                              element.attrib['mutual13Scale'],
-                                              element.attrib['mutual14Scale'],
-
-                                              element.attrib['polar12Scale'],
-                                              element.attrib['polar13Scale'],
-                                              element.attrib['polar14Scale'],
-                                              element.attrib['polar15Scale'])
-
-
-
-        forceField._forces.append(generator)
+        existing = [f for f in forceField._forces if isinstance(f, AmoebaMultipoleGenerator)]
+        if len(existing) == 0:
+            generator = AmoebaMultipoleGenerator(forceField)
+            forceField.registerGenerator(generator)
+        else:
+            # Multiple <AmoebaMultipoleForce> tags were found, probably in different files.  Simply add more types to the existing one.
+            generator = existing[0]
 
         # set type map: [ kIndices, multipoles, AMOEBA/OpenMM axis type]
 
@@ -3952,54 +4700,50 @@ class AmoebaMultipoleGenerator(object):
         methodMap = {NoCutoff:mm.AmoebaMultipoleForce.NoCutoff,
                      PME:mm.AmoebaMultipoleForce.PME}
 
-        # get or create force depending on whether it has already been added to the system
+        force = mm.AmoebaMultipoleForce()
+        sys.addForce(force)
+        if (nonbondedMethod not in methodMap):
+            raise ValueError( "AmoebaMultipoleForce: input cutoff method not available." )
+        else:
+            force.setNonbondedMethod(methodMap[nonbondedMethod])
+        force.setCutoffDistance(nonbondedCutoff)
 
-        existing = [sys.getForce(i) for i in range(sys.getNumForces())]
-        existing = [f for f in existing if type(f) == mm.AmoebaMultipoleForce]
-        if len(existing) == 0:
-            force = mm.AmoebaMultipoleForce()
-            sys.addForce(force)
-            if (nonbondedMethod not in methodMap):
-                raise ValueError( "AmoebaMultipoleForce: input cutoff method not available." )
+        if ('ewaldErrorTolerance' in args):
+            force.setEwaldErrorTolerance(float(args['ewaldErrorTolerance']))
+
+        if ('polarization' in args):
+            polarizationType = args['polarization']
+            if (polarizationType.lower() == 'direct'):
+                force.setPolarizationType(mm.AmoebaMultipoleForce.Direct)
+            elif (polarizationType.lower() == 'extrapolated'):
+                force.setPolarizationType(mm.AmoebaMultipoleForce.Extrapolated)
             else:
-                force.setNonbondedMethod(methodMap[nonbondedMethod])
-            force.setCutoffDistance(nonbondedCutoff)
+                force.setPolarizationType(mm.AmoebaMultipoleForce.Mutual)
 
-            if ('ewaldErrorTolerance' in args):
-                force.setEwaldErrorTolerance(float(args['ewaldErrorTolerance']))
+        if ('aEwald' in args):
+            force.setAEwald(float(args['aEwald']))
 
-            if ('polarization' in args):
-                polarizationType = args['polarization']
-                if (polarizationType.lower() == 'direct'):
-                    force.setPolarizationType(mm.AmoebaMultipoleForce.Direct)
-                elif (polarizationType.lower() == 'extrapolated'):
-                    force.setPolarizationType(mm.AmoebaMultipoleForce.Extrapolated)
-                else:
-                    force.setPolarizationType(mm.AmoebaMultipoleForce.Mutual)
+        if ('pmeGridDimensions' in args):
+            force.setPmeGridDimensions(args['pmeGridDimensions'])
 
-            if ('aEwald' in args):
-                force.setAEwald(float(args['aEwald']))
+        if ('mutualInducedMaxIterations' in args):
+            force.setMutualInducedMaxIterations(int(args['mutualInducedMaxIterations']))
 
-            if ('pmeGridDimensions' in args):
-                force.setPmeGridDimensions(args['pmeGridDimensions'])
+        if ('mutualInducedTargetEpsilon' in args):
+            force.setMutualInducedTargetEpsilon(float(args['mutualInducedTargetEpsilon']))
 
-            if ('mutualInducedMaxIterations' in args):
-                force.setMutualInducedMaxIterations(int(args['mutualInducedMaxIterations']))
-
-            if ('mutualInducedTargetEpsilon' in args):
-                force.setMutualInducedTargetEpsilon(float(args['mutualInducedTargetEpsilon']))
-	    if ('lambdaFile' in args):
-                LambdaOpen= open(args['lambdaFile'],'r')
-		lines=[]
-                for line in LambdaOpen:
-                    lines.append(line)
-                vlambda= float(lines[1].split()[1])
-                ligAtomlist =[]
-                for line in lines[2:]:
-                        min = line.split("-")[0]
-                        max = line.split("-")[1]
-                        for i in range ( int(min), int(max)+1):
-                                ligAtomlist.append(i)
+        if ('lambdaFile' in args):
+            LambdaOpen= open(args['lambdaFile'],'r')
+            lines=[]
+            for line in LambdaOpen:
+                lines.append(line)
+            vlambda= float(lines[1].split()[1])
+            ligAtomlist =[]
+            for line in lines[2:]:
+                min = line.split("-")[0]
+                max = line.split("-")[1]
+                for i in range (int(min), int(max)+1):
+                    ligAtomlist.append(i)
         else:
             force = existing[0]
 
@@ -4010,11 +4754,7 @@ class AmoebaMultipoleGenerator(object):
 
         # 1-2
 
-        bonded12ParticleSets = []
-        for i in range(len(data.atoms)):
-            bonded12ParticleSet = AmoebaVdwGenerator.getBondedParticleSet(i, data)
-            bonded12ParticleSet = set(sorted(bonded12ParticleSet))
-            bonded12ParticleSets.append(bonded12ParticleSet)
+        bonded12ParticleSets = AmoebaVdwGenerator.getBondedParticleSets(sys, data)
 
         # 1-3
 
@@ -4231,7 +4971,7 @@ class AmoebaMultipoleGenerator(object):
                         bondedAtomZ = data.atoms[bondedAtomZIndex]
 
                         if (kx == 0 and kz == bondedAtomZType):
-                            kz = bondedAtomZIndex
+                            zaxis = bondedAtomZIndex
                             savedMultipoleDict = multipoleDict
                             hit = 5
 
@@ -4619,11 +5359,7 @@ class AmoebaGeneralizedKirkwoodGenerator(object):
 
         # 1-2
 
-        bonded12ParticleSets = []
-        for i in range(len(data.atoms)):
-            bonded12ParticleSet = AmoebaVdwGenerator.getBondedParticleSet(i, data)
-            bonded12ParticleSet = set(sorted(bonded12ParticleSet))
-            bonded12ParticleSets.append(bonded12ParticleSet)
+        bonded12ParticleSets = AmoebaVdwGenerator.getBondedParticleSets(sys, data)
 
         radiusType = 'Bondi'
         for atomIndex in range(0, amoebaMultipoleForce.getNumMultipoles()):

@@ -1,3 +1,4 @@
+import pickle
 import sys
 import unittest
 from simtk.openmm.app import *
@@ -25,6 +26,14 @@ class TestTopology(unittest.TestCase):
     def test_getters(self):
         """Test getters for number of atoms, residues, chains."""
         self.check_pdbfile('systems/1T2Y.pdb', 271, 25, 1)
+
+    def test_bondtype_singleton(self):
+        """ Tests that the bond types are really singletons """
+        self.assertIs(Single, pickle.loads(pickle.dumps(Single)))
+        self.assertIs(Double, pickle.loads(pickle.dumps(Double)))
+        self.assertIs(Triple, pickle.loads(pickle.dumps(Triple)))
+        self.assertIs(Aromatic, pickle.loads(pickle.dumps(Aromatic)))
+        self.assertIs(Amide, pickle.loads(pickle.dumps(Amide)))
 
     def test_residue_bonds(self):
         """Test retrieving bonds for a residue produces expected results."""
