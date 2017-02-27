@@ -1813,7 +1813,7 @@ void testVdwWater(int includeVdwDispersionCorrection) {
     compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
 }
 
-int main(int numberOfArguments, char* argv[]) {
+int main(int argc, char* argv[]) {
 
     try {
         std::cout << "TestCudaAmoebaVdwForce running test..." << std::endl;
