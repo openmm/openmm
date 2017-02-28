@@ -27,16 +27,15 @@ conda install -yn ${CONDAENV} numpy scipy pytest --quiet
 source activate ${CONDAENV} # enter our new environment
 
 # Build OpenMM
-CMAKE_FLAGS="-DCMAKE_INSTALL_PREFIX=\"${INSTALL_DIRECTORY}\" -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang"
 cd "${SRC_DIRECTORY}"
-cmake $CMAKE_FLAGS .
+cmake -DCMAKE_INSTALL_PREFIX="${INSTALL_DIRECTORY}" -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang .
 make -j4 install
 make PythonInstall
 
 # Now run the tests
 python -m simtk.testInstallation
-cd python/tests && py.test -v
-python devtools/run-ctest.py --start-time $START_TIME
+cd python/tests && py.test -v && cd ../..
+python devtools/run-ctest.py --start-time $(date +%s)
 
 # Now remove the conda environment
 source deactivate
