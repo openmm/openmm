@@ -9,7 +9,7 @@ echo "Using cmake (`which cmake`) version":
 cmake --version
 
 echo "Using clang (`which clang`) version:"
-clang -version
+clang --version
 
 module load cuda conda/jenkins
 
