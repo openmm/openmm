@@ -17,6 +17,7 @@ module load cuda conda/jenkins
 CONDAENV=openmm-test-3.5
 INSTALL_DIRECTORY="${WORKSPACE}/openmm-install"
 SRC_DIRECTORY="${WORKSPACE}/openmm-src" # set in the Jenkins configuration
+export OPENMM_CUDA_COMPILER=`which nvcc`
 
 # Create a conda environment, but clean up after one first. If it doesn't exist, don't complain.
 # But since we are invoking this shell with -e (exit on all errors), we need || true to prevent this
