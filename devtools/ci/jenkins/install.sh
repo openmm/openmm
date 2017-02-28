@@ -15,7 +15,6 @@ module load cuda conda/jenkins
 
 # Constants
 CONDAENV=openmm-test-3.5
-BUILD_DIRECTORY="${WORKSPACE}/openmm-build"
 INSTALL_DIRECTORY="${WORKSPACE}/openmm-install"
 SRC_DIRECTORY="${WORKSPACE}/openmm-src" # set in the Jenkins configuration
 
@@ -29,10 +28,8 @@ source activate ${CONDAENV} # enter our new environment
 
 # Build OpenMM
 CMAKE_FLAGS="-DCMAKE_INSTALL_PREFIX=\"${INSTALL_DIRECTORY}\" -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang"
-test -d "${BUILD_DIRECTORY}" && rm -fr "${BUILD_DIRECTORY}"
-mkdir "${BUILD_DIRECTORY}"
-cd "$BUILD_DIRECTORY"
-cmake $CMAKE_FLAGS "${SRC_DIRECTORY}"
+cd "${SRC_DIRECTORY}"
+cmake $CMAKE_FLAGS .
 make -j4 install
 make PythonInstall
 
