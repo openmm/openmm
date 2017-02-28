@@ -29,8 +29,10 @@ source activate ${CONDAENV} # enter our new environment
 
 # Build OpenMM
 CMAKE_FLAGS="-DCMAKE_INSTALL_PREFIX=\"${INSTALL_DIRECTORY}\" -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang"
-cd $BUILD_DIRECTORY
-cmake $CMAKE_FLAGS ${SRC_DIRECTORY}
+test -d "${BUILD_DIRECTORY}" && rm -fr "${BUILD_DIRECTORY}"
+mkdir "${BUILD_DIRECTORY}"
+cd "$BUILD_DIRECTORY"
+cmake $CMAKE_FLAGS "${SRC_DIRECTORY}"
 make -j4 install
 make PythonInstall
 
