@@ -38,3 +38,7 @@ make PythonInstall
 python -m simtk.testInstallation
 cd python/tests && py.test -v
 python devtools/run-ctest.py --start-time $START_TIME
+
+# Now remove the conda environment
+source deactivate
+conda remove -yn ${CONDAENV} --all --quiet
