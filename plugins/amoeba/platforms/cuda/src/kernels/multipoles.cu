@@ -508,7 +508,7 @@ extern "C" __global__ void mapTorqueToForce(unsigned long long* __restrict__ for
             else if (axisType == 4) {
                 // z-only
 
-                forces[Z] = vector[UV]*dphi[V]/(norms[U]*angles[UV][1]);
+                forces[Z] = vector[UV]*dphi[V]/(norms[U]*angles[UV][1]) + vector[UW]*dphi[W]/norms[U];
                 forces[X] = make_real3(0);
                 forces[Y] = make_real3(0);
                 forces[I] = -forces[Z];
