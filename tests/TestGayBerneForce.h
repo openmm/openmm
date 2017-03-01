@@ -78,7 +78,7 @@ void testPointParticles() {
     State state2 = context.getState(State::Forces | State::Energy, false, 2);
     ASSERT_EQUAL_TOL(state1.getPotentialEnergy(), state2.getPotentialEnergy(), 1e-5);
     for (int i = 0; i < numParticles; i++)
-        ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], 1e-5);
+        ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], 1e-4);
 }
 
 void testEnergyScales() {

@@ -25,7 +25,7 @@
 #ifndef __AmoebaReferenceOutOfPlaneBendForce_H__
 #define __AmoebaReferenceOutOfPlaneBendForce_H__
 
-#include "RealVec.h"
+#include "openmm/Vec3.h"
 #include <vector>
 
 namespace OpenMM {
@@ -58,7 +58,7 @@ public:
       
        --------------------------------------------------------------------------------------- */
       
-    void setPeriodic(OpenMM::RealVec* vectors);
+    void setPeriodic(OpenMM::Vec3* vectors);
 
     /**---------------------------------------------------------------------------------------
      
@@ -82,22 +82,22 @@ public:
      
         --------------------------------------------------------------------------------------- */
 
-    RealOpenMM calculateForceAndEnergy(int numOutOfPlaneBends, std::vector<OpenMM::RealVec>& posData,
-                                       const std::vector<int>&  particle1,
-                                       const std::vector<int>&  particle2,
-                                       const std::vector<int>&  particle3,
-                                       const std::vector<int>&  particle4,
-                                       const std::vector<RealOpenMM>&  kAngle,
-                                       RealOpenMM angleCubic,
-                                       RealOpenMM angleQuartic,
-                                       RealOpenMM anglePentic,
-                                       RealOpenMM angleSextic,
-                                       std::vector<OpenMM::RealVec>& forceData) const;
+    double calculateForceAndEnergy(int numOutOfPlaneBends, std::vector<OpenMM::Vec3>& posData,
+                                   const std::vector<int>&  particle1,
+                                   const std::vector<int>&  particle2,
+                                   const std::vector<int>&  particle3,
+                                   const std::vector<int>&  particle4,
+                                   const std::vector<double>&  kAngle,
+                                   double angleCubic,
+                                   double angleQuartic,
+                                   double anglePentic,
+                                   double angleSextic,
+                                   std::vector<OpenMM::Vec3>& forceData) const;
 
 private:
 
     bool usePeriodic;
-    RealVec boxVectors[3];
+    Vec3 boxVectors[3];
 
     /**---------------------------------------------------------------------------------------
     
@@ -118,13 +118,12 @@ private:
     
        --------------------------------------------------------------------------------------- */
     
-    RealOpenMM calculateOutOfPlaneBendIxn(const OpenMM::RealVec& positionAtomA, const OpenMM::RealVec& positionAtomB,
-                                          const OpenMM::RealVec& positionAtomC, const OpenMM::RealVec& positionAtomD,
-                                          RealOpenMM angleK,
-                                          RealOpenMM angleCubic,     RealOpenMM angleQuartic,
-                                          RealOpenMM anglePentic,    RealOpenMM angleSextic,
-                                          OpenMM::RealVec* forces) const;
-         
+    double calculateOutOfPlaneBendIxn(const OpenMM::Vec3& positionAtomA, const OpenMM::Vec3& positionAtomB,
+                                     const OpenMM::Vec3& positionAtomC, const OpenMM::Vec3& positionAtomD,
+                                     double angleK,
+                                     double angleCubic,     double angleQuartic,
+                                     double anglePentic,    double angleSextic,
+                                     OpenMM::Vec3* forces) const;
 };
 
 } // namespace OpenMM

@@ -126,4 +126,5 @@ std::vector<std::string> GayBerneForceImpl::getKernelNames() {
 
 void GayBerneForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcGayBerneForceKernel>().copyParametersToContext(context, owner);
+    context.systemChanged();
 }

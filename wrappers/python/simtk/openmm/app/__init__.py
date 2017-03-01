@@ -6,7 +6,7 @@ from __future__ import absolute_import
 __docformat__ = "epytext en"
 
 __author__ = "Peter Eastman"
-__copyright__ = "Copyright 2015, Stanford University and Peter Eastman"
+__copyright__ = "Copyright 2016, Stanford University and Peter Eastman"
 __credits__ = []
 __license__ = "MIT"
 __maintainer__ = "Peter Eastman"
@@ -40,7 +40,15 @@ CutoffNonPeriodic = forcefield.CutoffNonPeriodic
 CutoffPeriodic = forcefield.CutoffPeriodic
 Ewald = forcefield.Ewald
 PME = forcefield.PME
+LJPME = forcefield.LJPME
 
 HBonds = forcefield.HBonds
 AllBonds = forcefield.AllBonds
 HAngles = forcefield.HAngles
+
+Single = topology.Single
+Double = topology.Double
+Triple = topology.Triple
+Aromatic = topology.Aromatic
+Amide = topology.Amide
+

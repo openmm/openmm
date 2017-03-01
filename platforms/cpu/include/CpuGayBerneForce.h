@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2016 Stanford University and the Authors.           *
+ * Portions copyright (c) 2016-2017 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -36,7 +36,7 @@
 #include "openmm/internal/ThreadPool.h"
 #include "CpuNeighborList.h"
 #include "CpuPlatform.h"
-#include "RealVec.h"
+#include "openmm/Vec3.h"
 #include <set>
 #include <utility>
 
@@ -45,7 +45,6 @@ namespace OpenMM {
 class CpuGayBerneForce {
 public:
     struct Matrix;
-    class ComputeTask;
 
     /**
      * Constructor.
@@ -62,7 +61,7 @@ public:
      * @param data          the platform data for the current context
      * @return the energy of the interaction
      */
-    RealOpenMM calculateForce(const std::vector<RealVec>& positions, std::vector<RealVec>& forces, std::vector<AlignedArray<float> >& threadForce, RealVec* boxVectors, CpuPlatform::PlatformData& data);
+    double calculateForce(const std::vector<Vec3>& positions, std::vector<Vec3>& forces, std::vector<AlignedArray<float> >& threadForce, Vec3* boxVectors, CpuPlatform::PlatformData& data);
 
     /**
      * This routine contains the code executed by each thread.
@@ -82,43 +81,43 @@ private:
     std::set<std::pair<int, int> > exclusions;
     std::vector<std::set<int> > particleExclusions;
     GayBerneForce::NonbondedMethod nonbondedMethod;
-    RealOpenMM cutoffDistance, switchingDistance;
+    double cutoffDistance, switchingDistance;
     bool useSwitchingFunction;
-    std::vector<RealOpenMM> s;
+    std::vector<double> s;
     std::vector<Matrix> A, B, G;
     std::vector<double> threadEnergy;
-    std::vector<std::vector<RealVec> > threadTorque;
+    std::vector<std::vector<Vec3> > threadTorque;
     // The following variables are used to make information accessible to the individual threads.
-    RealVec const* positions;
+    Vec3 const* positions;
     std::vector<AlignedArray<float> >* threadForce;
-    RealVec* boxVectors;
+    Vec3* boxVectors;
     void* atomicCounter;
 
-    void computeEllipsoidFrames(const std::vector<RealVec>& positions);
+    void computeEllipsoidFrames(const std::vector<Vec3>& positions);
     
-    void applyTorques(const std::vector<RealVec>& positions, std::vector<RealVec>& forces);
+    void applyTorques(const std::vector<Vec3>& positions, std::vector<Vec3>& forces);
 
-    RealOpenMM computeOneInteraction(int particle1, int particle2, RealOpenMM sigma, RealOpenMM epsilon, const RealVec* positions,
-            float* forces, std::vector<RealVec>& torques, const RealVec* boxVectors);
+    double computeOneInteraction(int particle1, int particle2, double sigma, double epsilon, const Vec3* positions,
+            float* forces, std::vector<Vec3>& torques, const Vec3* boxVectors);
 };
 
 struct CpuGayBerneForce::ParticleInfo {
     int xparticle, yparticle;
-    RealOpenMM sigmaOver2, sqrtEpsilon, rx, ry, rz, ex, ey, ez;
+    double sigmaOver2, sqrtEpsilon, rx, ry, rz, ex, ey, ez;
     bool isPointParticle;
 };
 
 struct CpuGayBerneForce::ExceptionInfo {
     int particle1, particle2;
-    RealOpenMM sigma, epsilon;
+    double sigma, epsilon;
 };
 
 struct CpuGayBerneForce::Matrix {
-    RealOpenMM v[3][3];
-    RealVec operator*(const RealVec& r) {
-        return RealVec(v[0][0]*r[0] + v[0][1]*r[1] + v[0][2]*r[2],
-                       v[1][0]*r[0] + v[1][1]*r[1] + v[1][2]*r[2],
-                       v[2][0]*r[0] + v[2][1]*r[1] + v[2][2]*r[2]);
+    double v[3][3];
+    Vec3 operator*(const Vec3& r) {
+        return Vec3(v[0][0]*r[0] + v[0][1]*r[1] + v[0][2]*r[2],
+                    v[1][0]*r[0] + v[1][1]*r[1] + v[1][2]*r[2],
+                    v[2][0]*r[0] + v[2][1]*r[1] + v[2][2]*r[2]);
     }
 
     Matrix operator+(const Matrix& m) {
@@ -129,13 +128,13 @@ struct CpuGayBerneForce::Matrix {
         return result;
     }
 
-    RealOpenMM determinant() {
+    double determinant() {
         return (v[0][0]*v[1][1]*v[2][2] + v[0][1]*v[1][2]*v[2][0] + v[0][2]*v[1][0]*v[2][1] -
                 v[0][0]*v[1][2]*v[2][1] - v[0][1]*v[1][0]*v[2][2] - v[0][2]*v[1][1]*v[2][0]);
     }
     
     Matrix inverse() {
-        RealOpenMM invDet = 1/determinant();
+        double invDet = 1/determinant();
         Matrix result;
         result.v[0][0] = invDet*(v[1][1]*v[2][2] - v[1][2]*v[2][1]);
         result.v[1][0] = -invDet*(v[1][0]*v[2][2] - v[1][2]*v[2][0]);
@@ -150,10 +149,10 @@ struct CpuGayBerneForce::Matrix {
     }
 };
 
-static RealVec operator*(const RealVec& r, CpuGayBerneForce::Matrix& m) {
-    return RealVec(m.v[0][0]*r[0] + m.v[1][0]*r[1] + m.v[2][0]*r[2],
-                   m.v[0][1]*r[0] + m.v[1][1]*r[1] + m.v[2][1]*r[2],
-                   m.v[0][2]*r[0] + m.v[1][2]*r[1] + m.v[2][2]*r[2]);
+static Vec3 operator*(const Vec3& r, CpuGayBerneForce::Matrix& m) {
+    return Vec3(m.v[0][0]*r[0] + m.v[1][0]*r[1] + m.v[2][0]*r[2],
+                m.v[0][1]*r[0] + m.v[1][1]*r[1] + m.v[2][1]*r[2],
+                m.v[0][2]*r[0] + m.v[1][2]*r[1] + m.v[2][2]*r[2]);
 }
 
 } // namespace OpenMM

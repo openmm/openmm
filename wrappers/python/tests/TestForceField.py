@@ -33,12 +33,14 @@ class TestForceField(unittest.TestCase):
 
 
     def test_NonbondedMethod(self):
-        """Test all five options for the nonbondedMethod parameter."""
+        """Test all six options for the nonbondedMethod parameter."""
 
         methodMap = {NoCutoff:NonbondedForce.NoCutoff,
                      CutoffNonPeriodic:NonbondedForce.CutoffNonPeriodic,
                      CutoffPeriodic:NonbondedForce.CutoffPeriodic,
-                     Ewald:NonbondedForce.Ewald, PME: NonbondedForce.PME}
+                     Ewald:NonbondedForce.Ewald,
+                     PME:NonbondedForce.PME,
+                     LJPME:NonbondedForce.LJPME}
         for method in methodMap:
             system = self.forcefield1.createSystem(self.pdb1.topology,
                                                   nonbondedMethod=method)
@@ -62,7 +64,7 @@ class TestForceField(unittest.TestCase):
     def test_Cutoff(self):
         """Test to make sure the nonbondedCutoff parameter is passed correctly."""
 
-        for method in [CutoffNonPeriodic, CutoffPeriodic, Ewald, PME]:
+        for method in [CutoffNonPeriodic, CutoffPeriodic, Ewald, PME, LJPME]:
             system = self.forcefield1.createSystem(self.pdb1.topology,
                                                    nonbondedMethod=method,
                                                    nonbondedCutoff=2*nanometer,
@@ -748,6 +750,19 @@ class TestForceField(unittest.TestCase):
         expected = 0.3*ljEnergy(2.5, 1.1, 3)  + 0.3*ljEnergy(3.5, sqrt(0.1), 3) + ljEnergy(3.5, 1.5, 4)
         self.assertAlmostEqual(expected, context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilojoules_per_mole))
 
+    def test_IgnoreExternalBonds(self):
+        """Test the ignoreExternalBonds option"""
+
+        modeller = Modeller(self.pdb2.topology, self.pdb2.positions)
+        modeller.delete([next(modeller.topology.residues())])
+        self.assertRaises(Exception, lambda: self.forcefield2.createSystem(modeller.topology))
+        system = self.forcefield2.createSystem(modeller.topology, ignoreExternalBonds=True)
+        templates = self.forcefield2.getMatchingTemplates(modeller.topology, ignoreExternalBonds=True)
+        self.assertEqual(2, len(templates))
+        self.assertEqual('ALA', templates[0].name)
+        self.assertEqual('NME', templates[1].name)
+
+
 class AmoebaTestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method with the AMOEBA forcefield."""
 
@@ -763,7 +778,7 @@ class AmoebaTestForceField(unittest.TestCase):
 
 
     def test_NonbondedMethod(self):
-        """Test all five options for the nonbondedMethod parameter."""
+        """Test both options for the nonbondedMethod parameter."""
 
         methodMap = {NoCutoff:AmoebaMultipoleForce.NoCutoff,
                      PME:AmoebaMultipoleForce.PME}

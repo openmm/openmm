@@ -278,4 +278,5 @@ ExpressionTreeNode CustomHbondForceImpl::replaceFunctions(const ExpressionTreeNo
 
 void CustomHbondForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcCustomHbondForceKernel>().copyParametersToContext(context, owner);
+    context.systemChanged();
 }

@@ -22,6 +22,7 @@
  */
 
 #include "AmoebaReferenceGeneralizedKirkwoodForce.h"
+#include <cmath>
 
 using std::vector;
 using namespace OpenMM;
@@ -61,120 +62,113 @@ int AmoebaReferenceGeneralizedKirkwoodForce::getDirectPolarization() const {
     return _directPolarization;
 }
 
-void AmoebaReferenceGeneralizedKirkwoodForce::setSoluteDielectric(RealOpenMM soluteDielectric) {
+void AmoebaReferenceGeneralizedKirkwoodForce::setSoluteDielectric(double soluteDielectric) {
     _soluteDielectric  = soluteDielectric;
 }
 
-RealOpenMM AmoebaReferenceGeneralizedKirkwoodForce::getSoluteDielectric() const {
+double AmoebaReferenceGeneralizedKirkwoodForce::getSoluteDielectric() const {
     return _soluteDielectric;
 }
 
-void AmoebaReferenceGeneralizedKirkwoodForce::setSolventDielectric(RealOpenMM solventDielectric) {
+void AmoebaReferenceGeneralizedKirkwoodForce::setSolventDielectric(double solventDielectric) {
     _solventDielectric  = solventDielectric;
 }
 
-RealOpenMM AmoebaReferenceGeneralizedKirkwoodForce::getSolventDielectric() const {
+double AmoebaReferenceGeneralizedKirkwoodForce::getSolventDielectric() const {
     return _solventDielectric;
 }
 
-void AmoebaReferenceGeneralizedKirkwoodForce::setDielectricOffset(RealOpenMM dielectricOffset) {
+void AmoebaReferenceGeneralizedKirkwoodForce::setDielectricOffset(double dielectricOffset) {
     _dielectricOffset  = dielectricOffset;
 }
 
-RealOpenMM AmoebaReferenceGeneralizedKirkwoodForce::getDielectricOffset() const {
+double AmoebaReferenceGeneralizedKirkwoodForce::getDielectricOffset() const {
     return _dielectricOffset;
 }
 
-void AmoebaReferenceGeneralizedKirkwoodForce::setProbeRadius(RealOpenMM probeRadius) {
+void AmoebaReferenceGeneralizedKirkwoodForce::setProbeRadius(double probeRadius) {
     _probeRadius  = probeRadius;
 }
 
-RealOpenMM AmoebaReferenceGeneralizedKirkwoodForce::getProbeRadius() const {
+double AmoebaReferenceGeneralizedKirkwoodForce::getProbeRadius() const {
     return _probeRadius;
 }
 
-void AmoebaReferenceGeneralizedKirkwoodForce::setSurfaceAreaFactor(RealOpenMM surfaceAreaFactor) {
+void AmoebaReferenceGeneralizedKirkwoodForce::setSurfaceAreaFactor(double surfaceAreaFactor) {
     _surfaceAreaFactor  = surfaceAreaFactor;
 }
 
-RealOpenMM AmoebaReferenceGeneralizedKirkwoodForce::getSurfaceAreaFactor() const {
+double AmoebaReferenceGeneralizedKirkwoodForce::getSurfaceAreaFactor() const {
     return _surfaceAreaFactor;
 }
 
-void AmoebaReferenceGeneralizedKirkwoodForce::setAtomicRadii(const vector<RealOpenMM>& atomicRadii) {
+void AmoebaReferenceGeneralizedKirkwoodForce::setAtomicRadii(const vector<double>& atomicRadii) {
     _atomicRadii.resize(atomicRadii.size());
     copy(atomicRadii.begin(), atomicRadii.end(), _atomicRadii.begin());
 }
 
-void AmoebaReferenceGeneralizedKirkwoodForce::getAtomicRadii(vector<RealOpenMM>& atomicRadii) const {
+void AmoebaReferenceGeneralizedKirkwoodForce::getAtomicRadii(vector<double>& atomicRadii) const {
     atomicRadii.resize(_atomicRadii.size());
     copy(_atomicRadii.begin(), _atomicRadii.end(), atomicRadii.begin());
 }
 
-void AmoebaReferenceGeneralizedKirkwoodForce::setScaleFactors(const vector<RealOpenMM>& scaleFactors) {
+void AmoebaReferenceGeneralizedKirkwoodForce::setScaleFactors(const vector<double>& scaleFactors) {
     _scaleFactors.resize(scaleFactors.size());
     copy(scaleFactors.begin(), scaleFactors.end(), _scaleFactors.begin());
 }
 
-void AmoebaReferenceGeneralizedKirkwoodForce::getScaleFactors(vector<RealOpenMM>& scaleFactors) const {
+void AmoebaReferenceGeneralizedKirkwoodForce::getScaleFactors(vector<double>& scaleFactors) const {
     scaleFactors.resize(_scaleFactors.size());
     copy(_scaleFactors.begin(), _scaleFactors.end(), scaleFactors.begin());
 }
 
-void AmoebaReferenceGeneralizedKirkwoodForce::setCharges(const vector<RealOpenMM>& charges) {
+void AmoebaReferenceGeneralizedKirkwoodForce::setCharges(const vector<double>& charges) {
     _charges.resize(charges.size());
     copy(charges.begin(), charges.end(), _charges.begin());
 }
 
-void AmoebaReferenceGeneralizedKirkwoodForce::getGrycukBornRadii(vector<RealOpenMM>& bornRadii) const {
+void AmoebaReferenceGeneralizedKirkwoodForce::getGrycukBornRadii(vector<double>& bornRadii) const {
     bornRadii.resize(_bornRadii.size());
     copy(_bornRadii.begin(), _bornRadii.end(), bornRadii.begin());
 }
 
-void AmoebaReferenceGeneralizedKirkwoodForce::calculateGrycukBornRadii(const vector<RealVec>& particlePositions) {
+void AmoebaReferenceGeneralizedKirkwoodForce::calculateGrycukBornRadii(const vector<Vec3>& particlePositions) {
 
-    const RealOpenMM zero      = 0.0;
-    const RealOpenMM one       = 1.0;
-    const RealOpenMM three     = 3.0;
-    const RealOpenMM six       = 6.0;
-    const RealOpenMM eight     = 8.0;
-    const RealOpenMM sixteen   = 16.0;
-    const RealOpenMM oneThird  = 1.0/3.0;
-    const RealOpenMM bigRadius = 1000.0;
+    const double bigRadius = 1000.0;
 
     _bornRadii.resize(_numParticles);
     for (unsigned int ii = 0; ii < _numParticles; ii++) {
 
-        if (_atomicRadii[ii] <= zero) {
+        if (_atomicRadii[ii] <= 0.0) {
             _bornRadii[ii] = bigRadius;
             continue;
         }
 
-        RealOpenMM bornSum = zero;
+        double bornSum = 0.0;
         for (unsigned int jj = 0; jj < _numParticles; jj++) {
 
-            if (ii == jj || _atomicRadii[jj] < zero)continue;
+            if (ii == jj || _atomicRadii[jj] < 0.0)continue;
           
-            RealOpenMM xr       = particlePositions[jj][0] - particlePositions[ii][0];
-            RealOpenMM yr       = particlePositions[jj][1] - particlePositions[ii][1];
-            RealOpenMM zr       = particlePositions[jj][2] - particlePositions[ii][2];
+            double xr       = particlePositions[jj][0] - particlePositions[ii][0];
+            double yr       = particlePositions[jj][1] - particlePositions[ii][1];
+            double zr       = particlePositions[jj][2] - particlePositions[ii][2];
 
-            RealOpenMM r2       = xr*xr + yr*yr + zr*zr;
-            RealOpenMM r        = SQRT(r2);
+            double r2       = xr*xr + yr*yr + zr*zr;
+            double r        = sqrt(r2);
 
-            RealOpenMM sk       = _atomicRadii[jj]*_scaleFactors[jj];
-            RealOpenMM sk2      = sk*sk;
+            double sk       = _atomicRadii[jj]*_scaleFactors[jj];
+            double sk2      = sk*sk;
 
             if ((_atomicRadii[ii] + r) < sk) {
-                RealOpenMM lik       = _atomicRadii[ii];
-                RealOpenMM uik       = sk - r;  
-                RealOpenMM lik3      = lik*lik*lik;
-                RealOpenMM uik3      = uik*uik*uik;
-                bornSum             -= (one/uik3 - one/lik3);
+                double lik       = _atomicRadii[ii];
+                double uik       = sk - r;  
+                double lik3      = lik*lik*lik;
+                double uik3      = uik*uik*uik;
+                bornSum             -= (1.0/uik3 - 1.0/lik3);
             }   
         
-            RealOpenMM uik = r + sk; 
-            RealOpenMM lik;
+            double uik = r + sk; 
+            double lik;
             if ((_atomicRadii[ii] + r) < sk) {
                 lik = sk - r;  
             } else if (r < (_atomicRadii[ii] + sk)) {
@@ -183,22 +177,22 @@ void AmoebaReferenceGeneralizedKirkwoodForce::calculateGrycukBornRadii(const vec
                 lik = r - sk; 
             }   
         
-            RealOpenMM l2          = lik*lik; 
-            RealOpenMM l4          = l2*l2;
-            RealOpenMM lr          = lik*r;
-            RealOpenMM l4r         = l4*r;
+            double l2          = lik*lik; 
+            double l4          = l2*l2;
+            double lr          = lik*r;
+            double l4r         = l4*r;
         
-            RealOpenMM u2          = uik*uik;
-            RealOpenMM u4          = u2*u2;
-            RealOpenMM ur          = uik*r;
-            RealOpenMM u4r         = u4*r;
+            double u2          = uik*uik;
+            double u4          = u2*u2;
+            double ur          = uik*r;
+            double u4r         = u4*r;
         
-            RealOpenMM term        = (three*(r2-sk2) + six*u2 - eight*ur)/u4r - (three*(r2-sk2) + six*l2 - eight*lr)/l4r;
-            bornSum               += term/sixteen;
+            double term        = (3.0*(r2-sk2) + 6.0*u2 - 8.0*ur)/u4r - (3.0*(r2-sk2) + 6.0*l2 - 8.0*lr)/l4r;
+            bornSum           += term/16.0;
         
         }
-        bornSum        = one/(_atomicRadii[ii]*_atomicRadii[ii]*_atomicRadii[ii]) - bornSum;
-        _bornRadii[ii] = (bornSum <= zero) ? bigRadius : POW(bornSum, -oneThird);
+        bornSum        = 1.0/(_atomicRadii[ii]*_atomicRadii[ii]*_atomicRadii[ii]) - bornSum;
+        _bornRadii[ii] = (bornSum <= 0.0) ? bigRadius : pow(bornSum, -1.0/3.0);
     }
 
     return;

@@ -39,6 +39,7 @@
 #include "SimTKOpenMMRealType.h"
 #include "sfmt/SFMT.h"
 #include <iostream>
+#include <iomanip>
 #include <vector>
 
 using namespace OpenMM;

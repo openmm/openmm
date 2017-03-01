@@ -25,6 +25,7 @@
 #include "SimTKOpenMMUtilities.h"
 #include "CpuNonbondedForceVec4.h"
 #include <algorithm>
+#include <iostream>
 
 using namespace std;
 using namespace OpenMM;
@@ -213,7 +214,6 @@ void CpuNonbondedForceVec4::calculateBlockIxnImpl(int blockIndex, float* forces,
 
 void CpuNonbondedForceVec4::calculateBlockEwaldIxn(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize) {
     // Determine whether we need to apply periodic boundary conditions.
-    
     PeriodicType periodicType;
     fvec4 blockCenter;
     if (!periodic) {
@@ -263,7 +263,6 @@ void CpuNonbondedForceVec4::calculateBlockEwaldIxn(int blockIndex, float* forces
 template <int PERIODIC_TYPE>
 void CpuNonbondedForceVec4::calculateBlockEwaldIxnImpl(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize, const fvec4& blockCenter) {
     // Load the positions and parameters of the atoms in the block.
-    
     const int* blockAtom = &neighborList->getSortedAtoms()[4*blockIndex];
     fvec4 blockAtomPosq[4];
     fvec4 blockAtomForceX(0.0f), blockAtomForceY(0.0f), blockAtomForceZ(0.0f);
@@ -278,9 +277,10 @@ void CpuNonbondedForceVec4::calculateBlockEwaldIxnImpl(int blockIndex, float* fo
     fvec4 blockAtomCharge = fvec4(ONE_4PI_EPS0)*fvec4(blockAtomPosq[0][3], blockAtomPosq[1][3], blockAtomPosq[2][3], blockAtomPosq[3][3]);
     fvec4 blockAtomSigma(atomParameters[blockAtom[0]].first, atomParameters[blockAtom[1]].first, atomParameters[blockAtom[2]].first, atomParameters[blockAtom[3]].first);
     fvec4 blockAtomEpsilon(atomParameters[blockAtom[0]].second, atomParameters[blockAtom[1]].second, atomParameters[blockAtom[2]].second, atomParameters[blockAtom[3]].second);
+    fvec4 C6s(C6params[blockAtom[0]], C6params[blockAtom[1]], C6params[blockAtom[2]], C6params[blockAtom[3]]);
     const bool needPeriodic = (PERIODIC_TYPE == PeriodicPerInteraction || PERIODIC_TYPE == PeriodicTriclinic);
     const float invSwitchingInterval = 1/(cutoffDistance-switchingDistance);
-    
+
     // Loop over neighbors for this block.
     
     const vector<int>& neighbors = neighborList->getBlockNeighbors(blockIndex);
@@ -318,7 +318,8 @@ void CpuNonbondedForceVec4::calculateBlockEwaldIxnImpl(int blockIndex, float* fo
             fvec4 sig2 = inverseR*sig;
             sig2 *= sig2;
             fvec4 sig6 = sig2*sig2*sig2;
-            fvec4 epsSig6 = blockAtomEpsilon*atomEpsilon*sig6;
+            fvec4 eps = blockAtomEpsilon*atomEpsilon;
+            fvec4 epsSig6 = eps*sig6;
             dEdR = epsSig6*(12.0f*sig6 - 6.0f);
             energy = epsSig6*(sig6-1.0f);
             if (useSwitch) {
@@ -327,6 +328,17 @@ void CpuNonbondedForceVec4::calculateBlockEwaldIxnImpl(int blockIndex, float* fo
                 fvec4 switchDeriv = t*t*(-30.0f+t*(60.0f-t*30.0f))*invSwitchingInterval;
                 dEdR = switchValue*dEdR - energy*switchDeriv*r;
                 energy *= switchValue;
+            }
+
+            if (ljpme) {
+                fvec4 C6ij = C6s*C6params[atom];
+                fvec4 inverseR2 = inverseR*inverseR;
+                fvec4 mysig2 = sig*sig;
+                fvec4 mysig6 = mysig2*mysig2*mysig2;
+                fvec4 emult = C6ij*inverseR2*inverseR2*inverseR2*exptermsApprox(r);
+                fvec4 potentialShift = eps*(1.0f-mysig6*inverseRcut6)*mysig6*inverseRcut6 - C6ij*inverseRcut6Expterm;
+                dEdR += 6.0f*C6ij*inverseR2*inverseR2*inverseR2*dExptermsApprox(r);
+                energy += emult + potentialShift;
             }
         }
         else {
@@ -362,7 +374,7 @@ void CpuNonbondedForceVec4::calculateBlockEwaldIxnImpl(int blockIndex, float* fo
     }
     
     // Record the forces on the block atoms.
-    
+
     fvec4 f[4] = {blockAtomForceX, blockAtomForceY, blockAtomForceZ, 0.0f};
     transpose(f[0], f[1], f[2], f[3]);
     for (int j = 0; j < 4; j++)
@@ -420,3 +432,30 @@ fvec4 CpuNonbondedForceVec4::ewaldScaleFunction(const fvec4& x) {
     transpose(t1, t2, t3, t4);
     return coeff1*t1 + coeff2*t2;
 }
+
+fvec4 CpuNonbondedForceVec4::exptermsApprox(const fvec4& r) {
+    fvec4 r1 = r*exptermsDXInv;
+    ivec4 index = min(floor(r1), NUM_TABLE_POINTS);
+    fvec4 coeff2 = r1-index;
+    fvec4 coeff1 = 1.0f-coeff2;
+    fvec4 t1(&exptermsTable[index[0]]);
+    fvec4 t2(&exptermsTable[index[1]]);
+    fvec4 t3(&exptermsTable[index[2]]);
+    fvec4 t4(&exptermsTable[index[3]]);
+    transpose(t1, t2, t3, t4);
+    return coeff1*t1 + coeff2*t2;
+}
+
+fvec4 CpuNonbondedForceVec4::dExptermsApprox(const fvec4& r) {
+    fvec4 r1 = r*exptermsDXInv;
+    ivec4 index = min(floor(r1), NUM_TABLE_POINTS);
+    fvec4 coeff2 = r1-index;
+    fvec4 coeff1 = 1.0f-coeff2;
+    fvec4 t1(&dExptermsTable[index[0]]);
+    fvec4 t2(&dExptermsTable[index[1]]);
+    fvec4 t3(&dExptermsTable[index[2]]);
+    fvec4 t4(&dExptermsTable[index[3]]);
+    transpose(t1, t2, t3, t4);
+    return coeff1*t1 + coeff2*t2;
+}
+

@@ -48,15 +48,15 @@ Angstroms or nm, and angles may be in degrees or radians.  OpenMM uses the
 following units everywhere.
 
 ===========  =================
-Quantity     Units            
+Quantity     Units
 ===========  =================
-distance     nm               
-time         ps               
+distance     nm
+time         ps
 mass         atomic mass units
-charge       proton charge    
-temperature  Kelvin           
-angle        radians          
-energy       kJ/mol           
+charge       proton charge
+temperature  Kelvin
+angle        radians
+energy       kJ/mol
 ===========  =================
 
 These units have the important feature that they form an internally consistent
@@ -373,7 +373,7 @@ where *d* is the width of the periodic box, and selects the smallest value
 for k\ :sub:`max` which gives *error* < :math:`\delta`\ .  (If the box is not square,
 k\ :sub:`max` will have a different value along each axis.)
 
-This means that the accuracy of the calculation is determined by :math:`\delta`\ . 
+This means that the accuracy of the calculation is determined by :math:`\delta`\ .
 :math:`r_\mathit{cutoff}` does not affect the accuracy of the result, but does affect the speed
 of the calculation by changing the relative costs of the direct space and
 reciprocal space sums.  You therefore should test different cutoffs to find the
@@ -412,7 +412,7 @@ and the number of nodes in the mesh along each dimension as
 
 
 .. math::
-   n_\mathit{mesh}=\frac{2\alpha d}{{3d}^{1/5}}
+   n_\mathit{mesh}=\frac{2\alpha d}{{3\delta}^{1/5}}
 
 
 where *d* is the width of the periodic box along that dimension.  Alternatively,
@@ -431,6 +431,38 @@ or similar to :math:`\delta`\ , this is not a rigorous guarantee.  PME is also m
 to numerical round-off error than Ewald summation.  For Platforms that do
 calculations in single precision, making :math:`\delta` too small (typically below about
 5·10\ :sup:`-5`\ ) can actually cause the error to increase.
+
+Lennard-Jones Interaction With Particle Mesh Ewald
+==================================================
+
+The PME algorithm can also be used for Lennard-Jones interactions.  Usually this
+is not necessary, since Lennard-Jones forces are short ranged, but there are
+situations (such as membrane simulations) where neglecting interactions beyond
+the cutoff can measurably affect results.
+
+For computational efficiency, certain approximations are made\ :cite:`Wennberg2015`.
+Interactions beyond the cutoff distance include only the attractive :math:`1/r^6`
+term, not the repulsive :math:`1/r^{12}` term.  Since the latter is much smaller
+than the former at long distances, this usually has negligible effect.  Also,
+the interaction between particles farther apart than the cutoff distance is
+computed using geometric combination rules:
+
+.. math::
+   \sigma=\sqrt{\sigma_1 \sigma_2}
+
+The effect of this approximation is also quite small, and it is still far more
+accurate than ignoring the interactions altogether (which is what would happen
+with PME).
+
+The formula used to compute the number of nodes along each dimension of the mesh
+is slightly different from the one used for Coulomb interactions:
+
+.. math::
+   n_\mathit{mesh}=\frac{\alpha d}{{3\delta}^{1/5}}
+
+As before, this is an empirical formula.  It will usually produce an average
+relative error in the forces less than or similar to :math:`\delta`\ , but that
+is not guaranteed.
 
 .. _gbsaobcforce:
 
@@ -520,7 +552,7 @@ and :math:`\mathbf{S}_2` be diagonal matrices containing the three radii of each
 The energy is computed as a product of three terms:
 
 .. math::
-   E=U_r(\mathbf{A}_1, \mathbf{A}_2, \mathbf{r}_{12}) \cdot \eta_{12}(\mathbf{A}_1, \mathbf{A}_2) \cdot \chi_{12}(\mathbf{A}_1, \mathbf{A}_2, \hat{\mathbf{r}}_{12}) 
+   E=U_r(\mathbf{A}_1, \mathbf{A}_2, \mathbf{r}_{12}) \cdot \eta_{12}(\mathbf{A}_1, \mathbf{A}_2) \cdot \chi_{12}(\mathbf{A}_1, \mathbf{A}_2, \hat{\mathbf{r}}_{12})
 
 The first term describes the distance dependence, and is very similar in form to
 the Lennard-Jones interaction:
@@ -920,7 +952,8 @@ of four particles.  That is, the interaction energy of each bond is given by
 
 where *f*\ (\ *...*\ ) is a user defined mathematical expression.  It may
 depend on an arbitrary set of positions {\ :math:`x_i`\ }, distances {\ :math:`r_i`\ },
-angles {\ :math:`\theta_i`\ }, and dihedral angles {\ :math:`\phi_i`\ }.
+angles {\ :math:`\theta_i`\ }, and dihedral angles {\ :math:`\phi_i`\ }
+guaranteed to be in the range [-π, π]. 
 
 Each distance, angle, or dihedral is defined by specifying a sequence of
 particles chosen from among the particles that make up the bond.  A distance
@@ -995,7 +1028,7 @@ Parameters may be specified in two ways:
 * Per-particle parameters are defined by specifying a value for each particle.
 
 The energy function is evaluated one or more times for every unique set of
-:math:`N` particles in the system.  The exact number of times depends on the 
+:math:`N` particles in the system.  The exact number of times depends on the
 *permutation mode*\ .  A set of :math:`N` particles has :math:`N!` possible
 permutations.  In :code:`SinglePermutation` mode, the function is evaluated
 for a single arbitrarily chosen one of those permutations.  In

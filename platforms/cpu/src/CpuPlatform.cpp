@@ -127,6 +127,8 @@ void CpuPlatform::contextDestroyed(ContextImpl& context) const {
     PlatformData* data = contextData[&context];
     delete data;
     contextData.erase(&context);
+    ReferencePlatform::PlatformData* refPlatformData = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
+    delete refPlatformData;
 }
 
 CpuPlatform::PlatformData& CpuPlatform::getPlatformData(ContextImpl& context) {

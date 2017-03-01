@@ -41,14 +41,14 @@ using namespace OpenMM;
 
 void testNeighborList()
 {
-    vector<RealVec> particleList(2);
-    particleList[0] = RealVec(13.6, 0, 0);
-    particleList[1] = RealVec(0, 0, 0);
+    vector<Vec3> particleList(2);
+    particleList[0] = Vec3(13.6, 0, 0);
+    particleList[1] = Vec3(0, 0, 0);
     vector<set<int> > exclusions(2);
     
     NeighborList neighborList;
 
-    RealVec boxVectors[3];
+    Vec3 boxVectors[3];
     computeNeighborListNaive(neighborList, 2, particleList, exclusions, boxVectors, false, 13.7, 0.01);
     assert(neighborList.size() == 1);
     
@@ -62,15 +62,15 @@ void testNeighborList()
     assert(neighborList.size() == 0);
 }
 
-double distance2(RealVec& pos1, RealVec& pos2, const RealVec* periodicBoxVectors) {
-    RealVec diff = pos1-pos2;
+double distance2(Vec3& pos1, Vec3& pos2, const Vec3* periodicBoxVectors) {
+    Vec3 diff = pos1-pos2;
     diff -= periodicBoxVectors[2]*floor(diff[2]/periodicBoxVectors[2][2]+0.5);
     diff -= periodicBoxVectors[1]*floor(diff[1]/periodicBoxVectors[1][1]+0.5);
     diff -= periodicBoxVectors[0]*floor(diff[0]/periodicBoxVectors[0][0]+0.5);
     return diff.dot(diff);
 }
 
-void verifyNeighborList(NeighborList& list, int numParticles, vector<RealVec>& positions, const RealVec* periodicBoxVectors, double cutoff) {
+void verifyNeighborList(NeighborList& list, int numParticles, vector<Vec3>& positions, const Vec3* periodicBoxVectors, double cutoff) {
     for (int i = 0; i < (int) list.size(); i++) {
         int particle1 = list[i].first;
         int particle2 = list[i].second;
@@ -87,18 +87,18 @@ void verifyNeighborList(NeighborList& list, int numParticles, vector<RealVec>& p
 void testPeriodic() {
     const int numParticles = 100;
     const double cutoff = 3.0;
-    RealVec periodicBoxVectors[3];
-    periodicBoxVectors[0] = RealVec(20, 0, 0);
-    periodicBoxVectors[1] = RealVec(0, 15, 0);
-    periodicBoxVectors[2] = RealVec(0, 0, 22);
-    vector<RealVec> particleList(numParticles);
+    Vec3 periodicBoxVectors[3];
+    periodicBoxVectors[0] = Vec3(20, 0, 0);
+    periodicBoxVectors[1] = Vec3(0, 15, 0);
+    periodicBoxVectors[2] = Vec3(0, 0, 22);
+    vector<Vec3> particleList(numParticles);
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
 
     for (int i = 0; i <numParticles; i++) {
-        particleList[i][0] = (RealOpenMM) (genrand_real2(sfmt)*periodicBoxVectors[0][0]*3);
-        particleList[i][1] = (RealOpenMM) (genrand_real2(sfmt)*periodicBoxVectors[1][1]*3);
-        particleList[i][2] = (RealOpenMM) (genrand_real2(sfmt)*periodicBoxVectors[2][2]*3);
+        particleList[i][0] = genrand_real2(sfmt)*periodicBoxVectors[0][0]*3;
+        particleList[i][1] = genrand_real2(sfmt)*periodicBoxVectors[1][1]*3;
+        particleList[i][2] = genrand_real2(sfmt)*periodicBoxVectors[2][2]*3;
     }
     vector<set<int> > exclusions(numParticles);
     NeighborList neighborList;
@@ -111,18 +111,18 @@ void testPeriodic() {
 void testTriclinic() {
     const int numParticles = 1000;
     const double cutoff = 3.0;
-    RealVec periodicBoxVectors[3];
-    periodicBoxVectors[0] = RealVec(20, 0, 0);
-    periodicBoxVectors[1] = RealVec(5, 15, 0);
-    periodicBoxVectors[2] = RealVec(-3, -7, 22);
-    vector<RealVec> particleList(numParticles);
+    Vec3 periodicBoxVectors[3];
+    periodicBoxVectors[0] = Vec3(20, 0, 0);
+    periodicBoxVectors[1] = Vec3(5, 15, 0);
+    periodicBoxVectors[2] = Vec3(-3, -7, 22);
+    vector<Vec3> particleList(numParticles);
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
 
     for (int i = 0; i <numParticles; i++) {
-        particleList[i][0] = (RealOpenMM) (genrand_real2(sfmt)*periodicBoxVectors[0][0]*3);
-        particleList[i][1] = (RealOpenMM) (genrand_real2(sfmt)*periodicBoxVectors[1][1]*3);
-        particleList[i][2] = (RealOpenMM) (genrand_real2(sfmt)*periodicBoxVectors[2][2]*3);
+        particleList[i][0] = genrand_real2(sfmt)*periodicBoxVectors[0][0]*3;
+        particleList[i][1] = genrand_real2(sfmt)*periodicBoxVectors[1][1]*3;
+        particleList[i][2] = genrand_real2(sfmt)*periodicBoxVectors[2][2]*3;
     }
     vector<set<int> > exclusions(numParticles);
     NeighborList neighborList;

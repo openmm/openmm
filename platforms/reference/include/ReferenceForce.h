@@ -24,7 +24,7 @@
 #ifndef __ReferenceForce_H__
 #define __ReferenceForce_H__
 
-#include "RealVec.h"
+#include "openmm/Vec3.h"
 #include "lepton/CompiledExpression.h"
 #include "openmm/internal/windowsExport.h"
 
@@ -34,7 +34,7 @@ class OPENMM_EXPORT  ReferenceForce {
 
    private:
        
-       static RealOpenMM periodicDifference(RealOpenMM val1, RealOpenMM val2, RealOpenMM period);
+       static double periodicDifference(double val1, double val2, double period);
 
    public:
 
@@ -80,8 +80,8 @@ class OPENMM_EXPORT  ReferenceForce {
       
          --------------------------------------------------------------------------------------- */
       
-      static void getDeltaR(const OpenMM::RealVec& atomCoordinatesI, const OpenMM::RealVec& atomCoordinatesJ,
-                            RealOpenMM* deltaR);
+      static void getDeltaR(const OpenMM::Vec3& atomCoordinatesI, const OpenMM::Vec3& atomCoordinatesJ,
+                            double* deltaR);
       
       /**---------------------------------------------------------------------------------------
       
@@ -94,7 +94,7 @@ class OPENMM_EXPORT  ReferenceForce {
       
          --------------------------------------------------------------------------------------- */
       
-      static RealVec getDeltaR(const OpenMM::RealVec& atomCoordinatesI, const OpenMM::RealVec& atomCoordinatesJ);
+      static Vec3 getDeltaR(const OpenMM::Vec3& atomCoordinatesI, const OpenMM::Vec3& atomCoordinatesJ);
       
       /**---------------------------------------------------------------------------------------
 
@@ -108,8 +108,8 @@ class OPENMM_EXPORT  ReferenceForce {
 
          --------------------------------------------------------------------------------------- */
 
-      static void getDeltaRPeriodic(const OpenMM::RealVec& atomCoordinatesI, const OpenMM::RealVec& atomCoordinatesJ,
-                                    const RealOpenMM* boxSize, RealOpenMM* deltaR);
+      static void getDeltaRPeriodic(const OpenMM::Vec3& atomCoordinatesI, const OpenMM::Vec3& atomCoordinatesJ,
+                                    const double* boxSize, double* deltaR);
 
       /**---------------------------------------------------------------------------------------
 
@@ -123,8 +123,8 @@ class OPENMM_EXPORT  ReferenceForce {
 
          --------------------------------------------------------------------------------------- */
 
-      static void getDeltaRPeriodic(const OpenMM::RealVec& atomCoordinatesI, const OpenMM::RealVec& atomCoordinatesJ,
-                                    const OpenMM::RealVec* boxVectors, RealOpenMM* deltaR);
+      static void getDeltaRPeriodic(const OpenMM::Vec3& atomCoordinatesI, const OpenMM::Vec3& atomCoordinatesJ,
+                                    const OpenMM::Vec3* boxVectors, double* deltaR);
 
       /**---------------------------------------------------------------------------------------
 
@@ -138,8 +138,8 @@ class OPENMM_EXPORT  ReferenceForce {
 
          --------------------------------------------------------------------------------------- */
 
-      static RealVec getDeltaRPeriodic(const OpenMM::RealVec& atomCoordinatesI, const OpenMM::RealVec& atomCoordinatesJ,
-                                    const OpenMM::RealVec* boxVectors);
+      static Vec3 getDeltaRPeriodic(const OpenMM::Vec3& atomCoordinatesI, const OpenMM::Vec3& atomCoordinatesJ,
+                                    const OpenMM::Vec3* boxVectors);
 
       /**
        * Get a pointer to the memory for setting a variable in a CompiledExpression.  If the expression

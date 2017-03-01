@@ -38,13 +38,6 @@ using namespace OpenMM;
    --------------------------------------------------------------------------------------- */
 
 ReferenceBondForce::ReferenceBondForce() {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceBondForce::ReferenceBondForce";
-
-   // ---------------------------------------------------------------------------------------
-
 }
 
 /**---------------------------------------------------------------------------------------
@@ -54,13 +47,6 @@ ReferenceBondForce::ReferenceBondForce() {
    --------------------------------------------------------------------------------------- */
 
 ReferenceBondForce::~ReferenceBondForce() {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceBondForce::~ReferenceBondForce";
-
-   // ---------------------------------------------------------------------------------------
-
 }
 
 /**---------------------------------------------------------------------------------------
@@ -79,18 +65,11 @@ ReferenceBondForce::~ReferenceBondForce() {
    --------------------------------------------------------------------------------------- */
 
 void ReferenceBondForce::calculateForce(int numberOfBonds, int** atomIndices,
-                                        vector<RealVec>& atomCoordinates,
-                                        RealOpenMM** parameters,
-                                        vector<RealVec>& forces, 
-                                        RealOpenMM *totalEnergy, 
+                                        vector<Vec3>& atomCoordinates,
+                                        double** parameters,
+                                        vector<Vec3>& forces, 
+                                        double *totalEnergy, 
                                         ReferenceBondIxn& referenceBondIxn) {
-
-
-   // ---------------------------------------------------------------------------------------
-
-   static const char* methodName = "\nReferenceBondForce::calculateForce";
-
-   // ---------------------------------------------------------------------------------------
 
    for (int ii = 0; ii < numberOfBonds; ii++) {
 

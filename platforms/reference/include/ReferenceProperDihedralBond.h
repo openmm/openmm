@@ -34,7 +34,7 @@ class OPENMM_EXPORT ReferenceProperDihedralBond : public ReferenceBondIxn {
    private:
 
         bool usePeriodic;
-        RealVec boxVectors[3];
+        Vec3 boxVectors[3];
        
    public:
 
@@ -62,7 +62,7 @@ class OPENMM_EXPORT ReferenceProperDihedralBond : public ReferenceBondIxn {
       
          --------------------------------------------------------------------------------------- */
       
-       void setPeriodic(OpenMM::RealVec* vectors);
+       void setPeriodic(OpenMM::Vec3* vectors);
 
       /**---------------------------------------------------------------------------------------
       
@@ -78,9 +78,9 @@ class OPENMM_EXPORT ReferenceProperDihedralBond : public ReferenceBondIxn {
       
          --------------------------------------------------------------------------------------- */
       
-      void calculateBondIxn(int* atomIndices, std::vector<OpenMM::RealVec>& atomCoordinates,
-                            RealOpenMM* parameters, std::vector<OpenMM::RealVec>& forces,
-                            RealOpenMM* totalEnergy, double* energyParamDerivs);
+      void calculateBondIxn(int* atomIndices, std::vector<OpenMM::Vec3>& atomCoordinates,
+                            double* parameters, std::vector<OpenMM::Vec3>& forces,
+                            double* totalEnergy, double* energyParamDerivs);
 
 };
 

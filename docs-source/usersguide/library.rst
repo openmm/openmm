@@ -395,16 +395,16 @@ downloading the Xcode Tools from the App Store.
 Windows: Visual Studio
 ----------------------
 
-On Windows systems, use the C++ compiler in Visual Studio version 10 (2010) or
-later.  You can download a free version of Visual C++ Express Edition from
-http://www.microsoft.com/express/vc/.  If you plan to use use OpenMM from
+On Windows systems, use the C++ compiler in Visual Studio 2015 or later.  You
+can download a free version of the Visual Studio C++ build tools from
+http://landinghub.visualstudio.com/visual-cpp-build-tools.  If you plan to use OpenMM from
 Python, it is critical that both OpenMM and Python be compiled with the same
 version of Visual Studio.
 
 Install CMake
 =============
 
-CMake is the build system used for OpenMM.  You must install CMake version 2.8
+CMake is the build system used for OpenMM.  You must install CMake version 3.1
 or higher before attempting to build OpenMM from source.  You can get CMake from
 http://www.cmake.org/.  If you choose to build CMake from source on Linux, make
 sure you have the curses library installed beforehand, so that you will be able
@@ -446,13 +446,13 @@ CMake.
 
 * For compiling C and Fortran API wrappers, you need:
 
-   * Python 2.6 or later (http://www.python.org)
+   * Python 2.7 or later (http://www.python.org)
    * Doxygen (http://www.doxygen.org)
    * A Fortran compiler
 
 * For compiling the Python API wrappers, you need:
 
-   * Python 2.6 or later (http://www.python.org)
+   * Python 2.7 or later (http://www.python.org)
    * SWIG (http://www.swig.org)
    * Doxygen (http://www.doxygen.org)
 
@@ -509,7 +509,7 @@ Windows
 
 On Windows, perform the following steps:
 
-#. Click Start->All Programs->CMake 2.8->CMake
+#. Click Start->All Programs->CMake 3.1->CMake
 #. In the box labeled "Where is the source code:" browse to OpenMM src directory
    (containing top CMakeLists.txt)
 #. In the box labeled "Where to build the binaries" browse to your build_openmm
@@ -2568,23 +2568,21 @@ install binary packages).
 Installing on Windows
 ---------------------
 
-OpenMM on Windows only works with Python 3.3, so make sure that version is
+OpenMM on Windows only works with Python 3.5, so make sure that version is
 installed before you try installing. For Python installation packages and
-instructions, go to http://python.org.  Note that if you have a 64-bit machine,
-you should still install the 32-bit version of Python since the OpenMM Python
-API binary is 32-bit.  We suggest that you install Python using the default
-options.
+instructions, go to http://python.org.  We suggest that you install Python using
+the default options.
 
 Double click on the Python API Installer icon, located in the top level
 directory for the OpenMM installation (by default, this is C:\Program
 Files\OpenMM).  This will install the OpenMM package into the Python
 installation area.  If you have more than one Python installation, you will be
-asked which Python to use—make sure to select Python 3.3.
+asked which Python to use—make sure to select Python 3.5.
 
 Installing on Linux and Mac
 ---------------------------
 
-Make sure you have Python 2.6 or later installed.  For Python installation
+Make sure you have Python 2.7 or later installed.  For Python installation
 packages and instructions, go to http://python.org.  If you do not have the
 correct Python version, install a valid version using the default options.  Most
 versions of Linux and Mac OS X have a suitable Python preinstalled.  You can
@@ -2593,7 +2591,8 @@ check by typing “\ :code:`python` |--|\ :code:`version`\ ” in a terminal win
 You must have a C++ compiler to install the OpenMM Python API.  If you are using
 a Mac, install Apple's Xcode development tools
 (http://developer.apple.com/TOOLS/Xcode) to get the needed compiler.  On other
-Unix-type systems, install gcc or clang.
+Unix-type systems, install gcc or clang.  We recommend clang, since it produces
+faster code than gcc.
 
 The install.sh script installs the Python API automatically as part of the
 installation process, so you probably already have it installed.  If for some

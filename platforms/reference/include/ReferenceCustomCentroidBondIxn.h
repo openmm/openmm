@@ -54,7 +54,7 @@ class ReferenceCustomCentroidBondIxn : public ReferenceBondIxn {
       std::vector<DihedralTermInfo> dihedralTerms;
       int numParameters;
       bool usePeriodic;
-      RealVec boxVectors[3];
+      Vec3 boxVectors[3];
 
 
       /**---------------------------------------------------------------------------------------
@@ -68,12 +68,12 @@ class ReferenceCustomCentroidBondIxn : public ReferenceBondIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateOneIxn(int bond, std::vector<OpenMM::RealVec>& groupCenters,
-                           std::vector<OpenMM::RealVec>& forces, RealOpenMM* totalEnergy, double* energyParamDerivs);
+      void calculateOneIxn(int bond, std::vector<OpenMM::Vec3>& groupCenters,
+                           std::vector<OpenMM::Vec3>& forces, double* totalEnergy, double* energyParamDerivs);
 
-      void computeDelta(int group1, int group2, RealOpenMM* delta, std::vector<OpenMM::RealVec>& groupCenters) const;
+      void computeDelta(int group1, int group2, double* delta, std::vector<OpenMM::Vec3>& groupCenters) const;
 
-      static RealOpenMM computeAngle(RealOpenMM* vec1, RealOpenMM* vec2);
+      static double computeAngle(double* vec1, double* vec2);
 
 
    public:
@@ -106,7 +106,7 @@ class ReferenceCustomCentroidBondIxn : public ReferenceBondIxn {
       
          --------------------------------------------------------------------------------------- */
       
-       void setPeriodic(OpenMM::RealVec* vectors);
+       void setPeriodic(OpenMM::Vec3* vectors);
 
       /**---------------------------------------------------------------------------------------
 
@@ -130,9 +130,9 @@ class ReferenceCustomCentroidBondIxn : public ReferenceBondIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculatePairIxn(std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** bondParameters,
+      void calculatePairIxn(std::vector<OpenMM::Vec3>& atomCoordinates, double** bondParameters,
                             const std::map<std::string, double>& globalParameters,
-                            std::vector<OpenMM::RealVec>& forces, RealOpenMM* totalEnergy, double* energyParamDerivs);
+                            std::vector<OpenMM::Vec3>& forces, double* totalEnergy, double* energyParamDerivs);
 
 // ---------------------------------------------------------------------------------------
 
@@ -153,7 +153,7 @@ public:
     std::string name;
     int g1, g2, index;
     Lepton::CompiledExpression forceExpression;
-    mutable RealOpenMM delta[ReferenceForce::LastDeltaRIndex];
+    mutable double delta[ReferenceForce::LastDeltaRIndex];
     DistanceTermInfo(const std::string& name, const std::vector<int>& groups, const Lepton::CompiledExpression& forceExpression) :
             name(name), g1(groups[0]), g2(groups[1]), forceExpression(forceExpression) {
     }
@@ -164,8 +164,8 @@ public:
     std::string name;
     int g1, g2, g3, index;
     Lepton::CompiledExpression forceExpression;
-    mutable RealOpenMM delta1[ReferenceForce::LastDeltaRIndex];
-    mutable RealOpenMM delta2[ReferenceForce::LastDeltaRIndex];
+    mutable double delta1[ReferenceForce::LastDeltaRIndex];
+    mutable double delta2[ReferenceForce::LastDeltaRIndex];
     AngleTermInfo(const std::string& name, const std::vector<int>& groups, const Lepton::CompiledExpression& forceExpression) :
             name(name), g1(groups[0]), g2(groups[1]), g3(groups[2]), forceExpression(forceExpression) {
     }
@@ -176,11 +176,11 @@ public:
     std::string name;
     int g1, g2, g3, g4, index;
     Lepton::CompiledExpression forceExpression;
-    mutable RealOpenMM delta1[ReferenceForce::LastDeltaRIndex];
-    mutable RealOpenMM delta2[ReferenceForce::LastDeltaRIndex];
-    mutable RealOpenMM delta3[ReferenceForce::LastDeltaRIndex];
-    mutable RealOpenMM cross1[3];
-    mutable RealOpenMM cross2[3];
+    mutable double delta1[ReferenceForce::LastDeltaRIndex];
+    mutable double delta2[ReferenceForce::LastDeltaRIndex];
+    mutable double delta3[ReferenceForce::LastDeltaRIndex];
+    mutable double cross1[3];
+    mutable double cross2[3];
     DihedralTermInfo(const std::string& name, const std::vector<int>& groups, const Lepton::CompiledExpression& forceExpression) :
             name(name), g1(groups[0]), g2(groups[1]), g3(groups[2]), g4(groups[3]), forceExpression(forceExpression) {
     }

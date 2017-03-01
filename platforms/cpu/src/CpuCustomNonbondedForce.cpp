@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2016 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2017 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -33,16 +33,6 @@
 using namespace OpenMM;
 using namespace std;
 
-class CpuCustomNonbondedForce::ComputeForceTask : public ThreadPool::Task {
-public:
-    ComputeForceTask(CpuCustomNonbondedForce& owner) : owner(owner) {
-    }
-    void execute(ThreadPool& threads, int threadIndex) {
-        owner.threadComputeForce(threads, threadIndex);
-    }
-    CpuCustomNonbondedForce& owner;
-};
-
 CpuCustomNonbondedForce::ThreadData::ThreadData(const Lepton::CompiledExpression& energyExpression, const Lepton::CompiledExpression& forceExpression,
             const vector<string>& parameterNames, const std::vector<Lepton::CompiledExpression> energyParamDerivExpressions) :
             energyExpression(energyExpression), forceExpression(forceExpression), energyParamDerivExpressions(energyParamDerivExpressions) {
@@ -70,7 +60,7 @@ CpuCustomNonbondedForce::ThreadData::ThreadData(const Lepton::CompiledExpression
 CpuCustomNonbondedForce::CpuCustomNonbondedForce(const Lepton::CompiledExpression& energyExpression,
             const Lepton::CompiledExpression& forceExpression, const vector<string>& parameterNames, const vector<set<int> >& exclusions,
             const std::vector<Lepton::CompiledExpression> energyParamDerivExpressions, ThreadPool& threads) :
-            cutoff(false), useSwitch(false), periodic(false), paramNames(parameterNames), exclusions(exclusions), threads(threads) {
+            cutoff(false), useSwitch(false), periodic(false), useInteractionGroups(false), paramNames(parameterNames), exclusions(exclusions), threads(threads) {
     for (int i = 0; i < threads.getNumThreads(); i++)
         threadData.push_back(new ThreadData(energyExpression, forceExpression, parameterNames, energyParamDerivExpressions));
 }
@@ -80,13 +70,14 @@ CpuCustomNonbondedForce::~CpuCustomNonbondedForce() {
         delete threadData[i];
 }
 
-void CpuCustomNonbondedForce::setUseCutoff(RealOpenMM distance, const CpuNeighborList& neighbors) {
+void CpuCustomNonbondedForce::setUseCutoff(double distance, const CpuNeighborList& neighbors) {
     cutoff = true;
     cutoffDistance = distance;
     neighborList = &neighbors;
   }
 
 void CpuCustomNonbondedForce::setInteractionGroups(const vector<pair<set<int>, set<int> > >& groups) {
+    useInteractionGroups = true;
     for (int group = 0; group < (int) groups.size(); group++) {
         const set<int>& set1 = groups[group].first;
         const set<int>& set2 = groups[group].second;
@@ -102,12 +93,12 @@ void CpuCustomNonbondedForce::setInteractionGroups(const vector<pair<set<int>, s
     }
 }
 
-void CpuCustomNonbondedForce::setUseSwitchingFunction(RealOpenMM distance) {
+void CpuCustomNonbondedForce::setUseSwitchingFunction(double distance) {
     useSwitch = true;
     switchingDistance = distance;
 }
 
-void CpuCustomNonbondedForce::setPeriodic(RealVec* periodicBoxVectors) {
+void CpuCustomNonbondedForce::setPeriodic(Vec3* periodicBoxVectors) {
     assert(cutoff);
     assert(periodicBoxVectors[0][0] >= 2.0*cutoffDistance);
     assert(periodicBoxVectors[1][1] >= 2.0*cutoffDistance);
@@ -129,9 +120,9 @@ void CpuCustomNonbondedForce::setPeriodic(RealVec* periodicBoxVectors) {
 }
 
 
-void CpuCustomNonbondedForce::calculatePairIxn(int numberOfAtoms, float* posq, vector<RealVec>& atomCoordinates, RealOpenMM** atomParameters,
-                                             RealOpenMM* fixedParameters, const map<string, double>& globalParameters,
-                                             vector<AlignedArray<float> >& threadForce, bool includeForce, bool includeEnergy, double& totalEnergy, double* energyParamDerivs) {
+void CpuCustomNonbondedForce::calculatePairIxn(int numberOfAtoms, float* posq, vector<Vec3>& atomCoordinates, double** atomParameters,
+                                               double* fixedParameters, const map<string, double>& globalParameters,
+                                               vector<AlignedArray<float> >& threadForce, bool includeForce, bool includeEnergy, double& totalEnergy, double* energyParamDerivs) {
     // Record the parameters for the threads.
     
     this->numberOfAtoms = numberOfAtoms;
@@ -149,8 +140,7 @@ void CpuCustomNonbondedForce::calculatePairIxn(int numberOfAtoms, float* posq, v
     
     // Signal the threads to start running and wait for them to finish.
     
-    ComputeForceTask task(*this);
-    threads.execute(task);
+    threads.execute([&] (ThreadPool& threads, int threadIndex) { threadComputeForce(threads, threadIndex); });
     threads.waitForThreads();
     
     // Combine the energies from all the threads.
@@ -183,7 +173,7 @@ void CpuCustomNonbondedForce::threadComputeForce(ThreadPool& threads, int thread
         data.energyParamDerivs[i] = 0.0;
     fvec4 boxSize(periodicBoxVectors[0][0], periodicBoxVectors[1][1], periodicBoxVectors[2][2], 0);
     fvec4 invBoxSize(recipBoxSize[0], recipBoxSize[1], recipBoxSize[2], 0);
-    if (groupInteractions.size() > 0) {
+    if (useInteractionGroups) {
         // The user has specified interaction groups, so compute only the requested interactions.
         
         while (true) {

@@ -73,4 +73,5 @@ vector<pair<int, int> > HarmonicBondForceImpl::getBondedParticles() const {
 
 void HarmonicBondForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcHarmonicBondForceKernel>().copyParametersToContext(context, owner);
+    context.systemChanged();
 }

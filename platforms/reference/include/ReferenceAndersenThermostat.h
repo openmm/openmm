@@ -25,6 +25,7 @@
 #ifndef __ReferenceAndersenThermostat_H__
 #define __ReferenceAndersenThermostat_H__
 
+#include "openmm/Vec3.h"
 #include <vector>
 
 namespace OpenMM {
@@ -64,8 +65,8 @@ class ReferenceAndersenThermostat {
                   
          --------------------------------------------------------------------------------------- */
           
-      void applyThermostat(const std::vector<std::vector<int> >& atomGroups, std::vector<OpenMM::RealVec>& atomVelocities, std::vector<RealOpenMM>& atomMasses,
-              RealOpenMM temperature, RealOpenMM collisionFrequency, RealOpenMM stepSize) const;
+      void applyThermostat(const std::vector<std::vector<int> >& atomGroups, std::vector<OpenMM::Vec3>& atomVelocities, std::vector<double>& atomMasses,
+              double temperature, double collisionFrequency, double stepSize) const;
       
 };
 

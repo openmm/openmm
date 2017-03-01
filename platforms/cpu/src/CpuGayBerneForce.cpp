@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2016 Stanford University and the Authors.           *
+ * Portions copyright (c) 2016-2017 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -43,17 +43,6 @@
 
 using namespace OpenMM;
 using namespace std;
-
-class CpuGayBerneForce::ComputeTask : public ThreadPool::Task {
-public:
-    ComputeTask(CpuGayBerneForce& owner, CpuNeighborList* neighborList) : owner(owner), neighborList(neighborList) {
-    }
-    void execute(ThreadPool& threads, int threadIndex) {
-        owner.threadComputeForce(threads, threadIndex, neighborList);
-    }
-    CpuGayBerneForce& owner;
-    CpuNeighborList* neighborList;
-};
 
 CpuGayBerneForce::CpuGayBerneForce(const GayBerneForce& force) {
     // Record the force parameters.
@@ -111,7 +100,7 @@ const vector<set<int> >& CpuGayBerneForce::getExclusions() const {
     return particleExclusions;
 }
 
-RealOpenMM CpuGayBerneForce::calculateForce(const vector<RealVec>& positions, std::vector<RealVec>& forces, std::vector<AlignedArray<float> >& threadForce, RealVec* boxVectors, CpuPlatform::PlatformData& data) {
+double CpuGayBerneForce::calculateForce(const vector<Vec3>& positions, std::vector<Vec3>& forces, std::vector<AlignedArray<float> >& threadForce, Vec3* boxVectors, CpuPlatform::PlatformData& data) {
     if (nonbondedMethod == GayBerneForce::CutoffPeriodic) {
         double minAllowedSize = 1.999999*cutoffDistance;
         if (boxVectors[0][0] < minAllowedSize || boxVectors[1][1] < minAllowedSize || boxVectors[2][2] < minAllowedSize)
@@ -137,8 +126,7 @@ RealOpenMM CpuGayBerneForce::calculateForce(const vector<RealVec>& positions, st
     
     // Signal the threads to compute the pairwise interactions.
     
-    ComputeTask task(*this, data.neighborList);
-    threads.execute(task);
+    threads.execute([&] (ThreadPool& threads, int threadIndex) { threadComputeForce(threads, threadIndex, data.neighborList); });
     threads.waitForThreads();
     
     // Signal the threads to compute exceptions.
@@ -164,10 +152,10 @@ void CpuGayBerneForce::threadComputeForce(ThreadPool& threads, int threadIndex, 
     int numThreads = threads.getNumThreads();
     threadEnergy[threadIndex] = 0;
     float* forces = &(*threadForce)[threadIndex][0];
-    vector<RealVec>& torques = threadTorque[threadIndex];
+    vector<Vec3>& torques = threadTorque[threadIndex];
     torques.resize(numParticles);
     for (int i = 0; i < numParticles; i++)
-        torques[i] = RealVec();
+        torques[i] = Vec3();
     double energy = 0.0;
 
     // Compute this thread's subset of interactions.
@@ -184,8 +172,8 @@ void CpuGayBerneForce::threadComputeForce(ThreadPool& threads, int threadIndex, 
                     continue;
                 if (particleExclusions[i].find(j) != particleExclusions[i].end())
                     continue; // This interaction will be handled by an exception.
-                RealOpenMM sigma = particles[i].sigmaOver2+particles[j].sigmaOver2;
-                RealOpenMM epsilon = particles[i].sqrtEpsilon*particles[j].sqrtEpsilon;
+                double sigma = particles[i].sigmaOver2+particles[j].sigmaOver2;
+                double epsilon = particles[i].sqrtEpsilon*particles[j].sqrtEpsilon;
                 energy += computeOneInteraction(i, j, sigma, epsilon, positions, forces, torques, boxVectors);
             }
         }
@@ -208,8 +196,8 @@ void CpuGayBerneForce::threadComputeForce(ThreadPool& threads, int threadIndex, 
                         int second = blockAtom[k];
                         if (particles[second].sqrtEpsilon == 0.0f)
                             continue;
-                        RealOpenMM sigma = particles[first].sigmaOver2+particles[second].sigmaOver2;
-                        RealOpenMM epsilon = particles[first].sqrtEpsilon*particles[second].sqrtEpsilon;
+                        double sigma = particles[first].sigmaOver2+particles[second].sigmaOver2;
+                        double epsilon = particles[first].sqrtEpsilon*particles[second].sqrtEpsilon;
                         energy += computeOneInteraction(first, second, sigma, epsilon, positions, forces, torques, boxVectors);
                     }
                 }
@@ -235,39 +223,39 @@ void CpuGayBerneForce::threadComputeForce(ThreadPool& threads, int threadIndex, 
     threadEnergy[threadIndex] = energy;
 }
 
-void CpuGayBerneForce::computeEllipsoidFrames(const vector<RealVec>& positions) {
+void CpuGayBerneForce::computeEllipsoidFrames(const vector<Vec3>& positions) {
     int numParticles = particles.size();
     for (int particle = 0; particle < numParticles; particle++) {
         ParticleInfo& p = particles[particle];
 
         // Compute the local coordinate system of the ellipsoid;
 
-        RealVec xdir, ydir, zdir;
+        Vec3 xdir, ydir, zdir;
         if (p.xparticle == -1) {
-            xdir = RealVec(1, 0, 0);
-            ydir = RealVec(0, 1, 0);
+            xdir = Vec3(1, 0, 0);
+            ydir = Vec3(0, 1, 0);
         }
         else {
             xdir = positions[particle]-positions[p.xparticle];
-            xdir /= SQRT(xdir.dot(xdir));
+            xdir /= sqrt(xdir.dot(xdir));
             if (p.yparticle == -1) {
                 if (xdir[1] > -0.5 && xdir[1] < 0.5)
-                    ydir = RealVec(0, 1, 0);
+                    ydir = Vec3(0, 1, 0);
                 else
-                    ydir = RealVec(1, 0, 0);
+                    ydir = Vec3(1, 0, 0);
             }
             else
                 ydir = positions[particle]-positions[p.yparticle];
             ydir -= xdir*(xdir.dot(ydir));
-            ydir /= SQRT(ydir.dot(ydir));
+            ydir /= sqrt(ydir.dot(ydir));
         }
         zdir = xdir.cross(ydir);
 
         // Compute matrices we will need later.
 
-        RealOpenMM (&a)[3][3] = A[particle].v;
-        RealOpenMM (&b)[3][3] = B[particle].v;
-        RealOpenMM (&g)[3][3] = G[particle].v;
+        double (&a)[3][3] = A[particle].v;
+        double (&b)[3][3] = B[particle].v;
+        double (&g)[3][3] = G[particle].v;
         a[0][0] = xdir[0];
         a[0][1] = xdir[1];
         a[0][2] = xdir[2];
@@ -277,8 +265,8 @@ void CpuGayBerneForce::computeEllipsoidFrames(const vector<RealVec>& positions) 
         a[2][0] = zdir[0];
         a[2][1] = zdir[1];
         a[2][2] = zdir[2];
-        RealVec r2(p.rx*p.rx, p.ry*p.ry, p.rz*p.rz);
-        RealVec e2(1/sqrt(p.ex), 1/sqrt(p.ey), 1/sqrt(p.ez));
+        Vec3 r2(p.rx*p.rx, p.ry*p.ry, p.rz*p.rz);
+        Vec3 e2(1/sqrt(p.ex), 1/sqrt(p.ey), 1/sqrt(p.ez));
         for (int i = 0; i < 3; i++)
             for (int j = 0; j < 3; j++) {
                 b[i][j] = 0;
@@ -291,33 +279,33 @@ void CpuGayBerneForce::computeEllipsoidFrames(const vector<RealVec>& positions) 
     }
 }
 
-void CpuGayBerneForce::applyTorques(const vector<RealVec>& positions, vector<RealVec>& forces) {
+void CpuGayBerneForce::applyTorques(const vector<Vec3>& positions, vector<Vec3>& forces) {
     int numParticles = particles.size();
     int numThreads = threadTorque.size();
     for (int particle = 0; particle < numParticles; particle++) {
         ParticleInfo& p = particles[particle];
-        RealVec pos = positions[particle];
+        Vec3 pos = positions[particle];
         if (p.xparticle != -1) {
             // Add up the torques from the individual threads.
             
-            RealVec torque;
+            Vec3 torque;
             for (int i = 0; i < numThreads; i++)
                 torque += threadTorque[i][particle];
             
             // Apply a force to the x particle.
             
-            RealVec dx = positions[p.xparticle]-pos;
+            Vec3 dx = positions[p.xparticle]-pos;
             double dx2 = dx.dot(dx);
-            RealVec f = torque.cross(dx)/dx2;
+            Vec3 f = torque.cross(dx)/dx2;
             forces[p.xparticle] += f;
             forces[particle] -= f;
             if (p.yparticle != -1) {
                 // Apply a force to the y particle.  This is based on the component of the torque
                 // that was not already applied to the x particle.
                 
-                RealVec dy = positions[p.yparticle]-pos;
+                Vec3 dy = positions[p.yparticle]-pos;
                 double dy2 = dy.dot(dy);
-                RealVec torque2 = dx*(torque.dot(dx)/dx2);
+                Vec3 torque2 = dx*(torque.dot(dx)/dx2);
                 f = torque2.cross(dy)/dy2;
                 forces[p.yparticle] += f;
                 forces[particle] -= f;
@@ -326,27 +314,27 @@ void CpuGayBerneForce::applyTorques(const vector<RealVec>& positions, vector<Rea
     }
 }
 
-RealOpenMM CpuGayBerneForce::computeOneInteraction(int particle1, int particle2, RealOpenMM sigma, RealOpenMM epsilon, const RealVec* positions,
-        float* forces, vector<RealVec>& torques, const RealVec* boxVectors) {
+double CpuGayBerneForce::computeOneInteraction(int particle1, int particle2, double sigma, double epsilon, const Vec3* positions,
+        float* forces, vector<Vec3>& torques, const Vec3* boxVectors) {
     // Compute the displacement and check against the cutoff.
 
-    RealOpenMM deltaR[ReferenceForce::LastDeltaRIndex];
+    double deltaR[ReferenceForce::LastDeltaRIndex];
     if (nonbondedMethod == GayBerneForce::CutoffPeriodic)
         ReferenceForce::getDeltaRPeriodic(positions[particle2], positions[particle1], boxVectors, deltaR);
     else
         ReferenceForce::getDeltaR(positions[particle2], positions[particle1], deltaR);
-    RealOpenMM r = deltaR[ReferenceForce::RIndex];
+    double r = deltaR[ReferenceForce::RIndex];
     if (nonbondedMethod != GayBerneForce::NoCutoff && r >= cutoffDistance)
         return 0;
-    RealOpenMM rInv = 1/r;
-    RealVec dr(deltaR[ReferenceForce::XIndex], deltaR[ReferenceForce::YIndex], deltaR[ReferenceForce::ZIndex]);
-    RealVec drUnit = dr*rInv;
+    double rInv = 1/r;
+    Vec3 dr(deltaR[ReferenceForce::XIndex], deltaR[ReferenceForce::YIndex], deltaR[ReferenceForce::ZIndex]);
+    Vec3 drUnit = dr*rInv;
     
     // Compute the switching function.
 
-    RealOpenMM switchValue = 1, switchDeriv = 0;
+    double switchValue = 1, switchDeriv = 0;
     if (useSwitchingFunction && r > switchingDistance) {
-        RealOpenMM t = (r-switchingDistance)/(cutoffDistance-switchingDistance);
+        double t = (r-switchingDistance)/(cutoffDistance-switchingDistance);
         switchValue = 1+t*t*t*(-10+t*(15-t*6));
         switchDeriv = t*t*(-30+t*(60-t*30))/(cutoffDistance-switchingDistance);
     }
@@ -354,11 +342,11 @@ RealOpenMM CpuGayBerneForce::computeOneInteraction(int particle1, int particle2,
     // Interactions between two point particles can be computed more easily.
     
     if (particles[particle1].isPointParticle && particles[particle2].isPointParticle) {
-        RealOpenMM sig = sigma*rInv;
-        RealOpenMM sig2 = sig*sig;
-        RealOpenMM sig6 = sig2*sig2*sig2;
-        RealOpenMM energy = 4*epsilon*(sig6-1)*sig6;
-        RealVec force = drUnit*(switchValue*4*epsilon*(12*sig6 - 6)*sig6*rInv - energy*switchDeriv);
+        double sig = sigma*rInv;
+        double sig2 = sig*sig;
+        double sig6 = sig2*sig2*sig2;
+        double energy = 4*epsilon*(sig6-1)*sig6;
+        Vec3 force = drUnit*(switchValue*4*epsilon*(12*sig6 - 6)*sig6*rInv - energy*switchDeriv);
         forces[4*particle1] += force[0];
         forces[4*particle1+1] += force[1];
         forces[4*particle1+2] += force[2];
@@ -374,31 +362,31 @@ RealOpenMM CpuGayBerneForce::computeOneInteraction(int particle1, int particle2,
     Matrix G12 = G[particle1]+G[particle2];
     Matrix B12inv = B12.inverse();
     Matrix G12inv = G12.inverse();
-    RealOpenMM detG12 = G12.determinant();
+    double detG12 = G12.determinant();
 
     // Estimate the distance between the ellipsoids and compute the first terms needed for the energy.
 
-    RealOpenMM sigma12 = 1/SQRT(0.5*drUnit.dot(G12inv*drUnit));
-    RealOpenMM h12 = r - sigma12;
-    RealOpenMM rho = sigma/(h12+sigma);
-    RealOpenMM rho2 = rho*rho;
-    RealOpenMM rho6 = rho2*rho2*rho2;
-    RealOpenMM u = 4*epsilon*(rho6*rho6-rho6);
-    RealOpenMM eta = SQRT(2*s[particle1]*s[particle2]/detG12);
-    RealOpenMM chi = 2*drUnit.dot(B12inv*drUnit);
+    double sigma12 = 1/sqrt(0.5*drUnit.dot(G12inv*drUnit));
+    double h12 = r - sigma12;
+    double rho = sigma/(h12+sigma);
+    double rho2 = rho*rho;
+    double rho6 = rho2*rho2*rho2;
+    double u = 4*epsilon*(rho6*rho6-rho6);
+    double eta = sqrt(2*s[particle1]*s[particle2]/detG12);
+    double chi = 2*drUnit.dot(B12inv*drUnit);
     chi *= chi;
-    RealOpenMM energy = u*eta*chi;
+    double energy = u*eta*chi;
     
     // Compute the terms needed for the force.
 
-    RealVec kappa = G12inv*dr;
-    RealVec iota = B12inv*dr;
-    RealOpenMM rInv2 = rInv*rInv;
-    RealOpenMM dUSLJdr = 24*epsilon*(2*rho6-1)*rho6*rho/sigma;
-    RealOpenMM temp = 0.5*sigma12*sigma12*sigma12*rInv2;
-    RealVec dudr = (drUnit + (kappa-drUnit*kappa.dot(drUnit))*temp)*dUSLJdr;
-    RealVec dchidr = (iota-drUnit*iota.dot(drUnit))*(-8*rInv2*SQRT(chi));
-    RealVec force = (dchidr*u + dudr*chi)*(eta*switchValue) - drUnit*(energy*switchDeriv);
+    Vec3 kappa = G12inv*dr;
+    Vec3 iota = B12inv*dr;
+    double rInv2 = rInv*rInv;
+    double dUSLJdr = 24*epsilon*(2*rho6-1)*rho6*rho/sigma;
+    double temp = 0.5*sigma12*sigma12*sigma12*rInv2;
+    Vec3 dudr = (drUnit + (kappa-drUnit*kappa.dot(drUnit))*temp)*dUSLJdr;
+    Vec3 dchidr = (iota-drUnit*iota.dot(drUnit))*(-8*rInv2*sqrt(chi));
+    Vec3 force = (dchidr*u + dudr*chi)*(eta*switchValue) - drUnit*(energy*switchDeriv);
     forces[4*particle1] += force[0];
     forces[4*particle1+1] += force[1];
     forces[4*particle1+2] += force[2];
@@ -413,13 +401,13 @@ RealOpenMM CpuGayBerneForce::computeOneInteraction(int particle1, int particle2,
         ParticleInfo& p = particles[particle];
         if (p.isPointParticle)
             continue;
-        RealVec dudq = (kappa*G[particle]).cross(kappa*(temp*dUSLJdr));
-        RealVec dchidq = (iota*B[particle]).cross(iota)*(-4*rInv2);
-        RealOpenMM (&g12)[3][3] = G12.v;
-        RealOpenMM (&a)[3][3] = A[particle].v;
-        RealVec scale = RealVec(p.rx*p.rx, p.ry*p.ry, p.rz*p.rz)*(-0.5*eta/detG12);
+        Vec3 dudq = (kappa*G[particle]).cross(kappa*(temp*dUSLJdr));
+        Vec3 dchidq = (iota*B[particle]).cross(iota)*(-4*rInv2);
+        double (&g12)[3][3] = G12.v;
+        double (&a)[3][3] = A[particle].v;
+        Vec3 scale = Vec3(p.rx*p.rx, p.ry*p.ry, p.rz*p.rz)*(-0.5*eta/detG12);
         Matrix D;
-        RealOpenMM (&d)[3][3] = D.v;
+        double (&d)[3][3] = D.v;
         d[0][0] = scale[0]*(2*a[0][0]*(g12[1][1]*g12[2][2] - g12[1][2]*g12[2][1]) +
                               a[0][2]*(g12[1][2]*g12[0][1] + g12[1][0]*g12[2][1] - g12[1][1]*(g12[0][2] + g12[2][0])) +
                               a[0][1]*(g12[0][2]*g12[2][1] + g12[2][0]*g12[1][2] - g12[2][2]*(g12[0][1] + g12[1][0])));
@@ -447,10 +435,10 @@ RealOpenMM CpuGayBerneForce::computeOneInteraction(int particle1, int particle2,
         d[2][2] = scale[2]*(  a[2][0]*(g12[0][1]*g12[1][2] + g12[2][1]*g12[1][0] - g12[1][1]*(g12[0][2] + g12[2][0])) +
                               a[2][1]*(g12[1][0]*g12[0][2] + g12[2][0]*g12[0][1] - g12[0][0]*(g12[1][2] + g12[2][1])) +
                             2*a[2][2]*(g12[1][1]*g12[0][0] - g12[1][0]*g12[0][1]));
-        RealVec detadq;
+        Vec3 detadq;
         for (int i = 0; i < 3; i++)
-            detadq += RealVec(a[i][0], a[i][1], a[i][2]).cross(RealVec(d[i][0], d[i][1], d[i][2]));
-        RealVec torque = (dchidq*(u*eta) + detadq*(u*chi) + dudq*(eta*chi))*switchValue;
+            detadq += Vec3(a[i][0], a[i][1], a[i][2]).cross(Vec3(d[i][0], d[i][1], d[i][2]));
+        Vec3 torque = (dchidq*(u*eta) + detadq*(u*chi) + dudq*(eta*chi))*switchValue;
         torques[particle] -= torque;
     }
     return switchValue*energy;

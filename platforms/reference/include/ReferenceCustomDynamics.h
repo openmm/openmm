@@ -43,8 +43,8 @@ private:
 
     class DerivFunction;
     const OpenMM::CustomIntegrator& integrator;
-    std::vector<RealOpenMM> inverseMasses;
-    std::vector<OpenMM::RealVec> sumBuffer, oldPos;
+    std::vector<double> inverseMasses;
+    std::vector<OpenMM::Vec3> sumBuffer, oldPos;
     std::vector<OpenMM::CustomIntegrator::ComputationType> stepType;
     std::vector<std::string> stepVariable;
     std::vector<std::vector<Lepton::CompiledExpression> > stepExpressions;
@@ -60,15 +60,15 @@ private:
     std::vector<int> perDofVariableIndex, stepVariableIndex;
     std::vector<double> perDofVariable;
 
-    void initialize(OpenMM::ContextImpl& context, std::vector<RealOpenMM>& masses, std::map<std::string, RealOpenMM>& globals);
+    void initialize(OpenMM::ContextImpl& context, std::vector<double>& masses, std::map<std::string, double>& globals);
     
     Lepton::ExpressionTreeNode replaceDerivFunctions(const Lepton::ExpressionTreeNode& node, OpenMM::ContextImpl& context);
     
-    void computePerDof(int numberOfAtoms, std::vector<OpenMM::RealVec>& results, const std::vector<OpenMM::RealVec>& atomCoordinates,
-                  const std::vector<OpenMM::RealVec>& velocities, const std::vector<OpenMM::RealVec>& forces, const std::vector<RealOpenMM>& masses,
-                  const std::vector<std::vector<OpenMM::RealVec> >& perDof, const Lepton::CompiledExpression& expression);
+    void computePerDof(int numberOfAtoms, std::vector<OpenMM::Vec3>& results, const std::vector<OpenMM::Vec3>& atomCoordinates,
+                  const std::vector<OpenMM::Vec3>& velocities, const std::vector<OpenMM::Vec3>& forces, const std::vector<double>& masses,
+                  const std::vector<std::vector<OpenMM::Vec3> >& perDof, const Lepton::CompiledExpression& expression);
     
-    void recordChangedParameters(OpenMM::ContextImpl& context, std::map<std::string, RealOpenMM>& globals);
+    void recordChangedParameters(OpenMM::ContextImpl& context, std::map<std::string, double>& globals);
 
     bool evaluateCondition(int step);
       
@@ -110,9 +110,9 @@ public:
       
          --------------------------------------------------------------------------------------- */
      
-      void update(OpenMM::ContextImpl& context, int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
-                  std::vector<OpenMM::RealVec>& velocities, std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& masses,
-                  std::map<std::string, RealOpenMM>& globals, std::vector<std::vector<OpenMM::RealVec> >& perDof, bool& forcesAreValid, RealOpenMM tolerance);
+      void update(OpenMM::ContextImpl& context, int numberOfAtoms, std::vector<OpenMM::Vec3>& atomCoordinates,
+                  std::vector<OpenMM::Vec3>& velocities, std::vector<OpenMM::Vec3>& forces, std::vector<double>& masses,
+                  std::map<std::string, double>& globals, std::vector<std::vector<OpenMM::Vec3> >& perDof, bool& forcesAreValid, double tolerance);
       
       /**---------------------------------------------------------------------------------------
       
@@ -130,9 +130,9 @@ public:
 
          --------------------------------------------------------------------------------------- */
 
-       double computeKineticEnergy(OpenMM::ContextImpl& context, int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
-                                   std::vector<OpenMM::RealVec>& velocities, std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& masses,
-                                   std::map<std::string, RealOpenMM>& globals, std::vector<std::vector<OpenMM::RealVec> >& perDof, bool& forcesAreValid);
+       double computeKineticEnergy(OpenMM::ContextImpl& context, int numberOfAtoms, std::vector<OpenMM::Vec3>& atomCoordinates,
+                                   std::vector<OpenMM::Vec3>& velocities, std::vector<OpenMM::Vec3>& forces, std::vector<double>& masses,
+                                   std::map<std::string, double>& globals, std::vector<std::vector<OpenMM::Vec3> >& perDof, bool& forcesAreValid);
 };
 
 } // namespace OpenMM

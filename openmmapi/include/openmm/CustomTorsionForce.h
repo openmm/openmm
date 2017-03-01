@@ -52,6 +52,7 @@ namespace OpenMM {
  * part of the system definition, while values of global parameters may be modified during a simulation by calling Context::setParameter().
  * Finally, call addTorsion() once for each torsion.  After an torsion has been added, you can modify its parameters by calling setTorsionParameters().
  * This will have no effect on Contexts that already exist unless you call updateParametersInContext().
+ * theta is guaranteed to be in the range [-pi,+pi]
  *
  * As an example, the following code creates a CustomTorsionForce that implements a harmonic potential:
  *
@@ -63,7 +64,7 @@ namespace OpenMM {
  * force->addPerTorsionParameter("k");
  * force->addPerTorsionParameter("theta0");
  * </pre></tt>
- * 
+ *
  * This class also has the ability to compute derivatives of the potential energy with respect to global parameters.
  * Call addEnergyParameterDerivative() to request that the derivative with respect to a particular parameter be
  * computed.  You can then query its value in a Context by calling getState() on it.

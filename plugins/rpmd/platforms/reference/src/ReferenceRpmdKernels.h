@@ -34,7 +34,7 @@
 
 #include "ReferencePlatform.h"
 #include "openmm/RpmdKernels.h"
-#include "RealVec.h"
+#include "openmm/Vec3.h"
 #include "fftpack.h"
 
 namespace OpenMM {
@@ -86,11 +86,11 @@ public:
     void copyToContext(int copy, ContextImpl& context);
 private:
     void computeForces(ContextImpl& context, const RPMDIntegrator& integrator);
-    std::vector<std::vector<RealVec> > positions;
-    std::vector<std::vector<RealVec> > velocities;
-    std::vector<std::vector<RealVec> > forces;
-    std::vector<std::vector<RealVec> > contractedPositions;
-    std::vector<std::vector<RealVec> > contractedForces;
+    std::vector<std::vector<Vec3> > positions;
+    std::vector<std::vector<Vec3> > velocities;
+    std::vector<std::vector<Vec3> > forces;
+    std::vector<std::vector<Vec3> > contractedPositions;
+    std::vector<std::vector<Vec3> > contractedForces;
     std::map<int, int> groupsByCopies;
     int groupsNotContracted;
     fftpack* fft;

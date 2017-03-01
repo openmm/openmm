@@ -329,15 +329,15 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
         // Record information needed by ReferenceCCMAAlgorithm.
         
         vector<pair<int, int> > refIndices(numCCMA);
-        vector<RealOpenMM> refDistance(numCCMA);
+        vector<double> refDistance(numCCMA);
         for (int i = 0; i < numCCMA; i++) {
             int index = ccmaConstraints[i];
             refIndices[i] = make_pair(atom1[index], atom2[index]);
             refDistance[i] = distance[index];
         }
-        vector<RealOpenMM> refMasses(numAtoms);
+        vector<double> refMasses(numAtoms);
         for (int i = 0; i < numAtoms; ++i)
-            refMasses[i] = (RealOpenMM) system.getParticleMass(i);
+            refMasses[i] = (double) system.getParticleMass(i);
 
         // Look up angles for CCMA.
         
@@ -349,7 +349,7 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
                     int atom1, atom2, atom3;
                     double angle, k;
                     force->getAngleParameters(j, atom1, atom2, atom3, angle, k);
-                    angles.push_back(ReferenceCCMAAlgorithm::AngleInfo(atom1, atom2, atom3, (RealOpenMM) angle));
+                    angles.push_back(ReferenceCCMAAlgorithm::AngleInfo(atom1, atom2, atom3, angle));
                 }
             }
         }

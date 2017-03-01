@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2017 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -495,6 +495,10 @@ public:
         return *nonbonded;
     }
     /**
+     * Set the particle charges.  These are packed into the fourth element of the posq array.
+     */
+    void setCharges(const std::vector<double>& charges);
+    /**
      * Get the thread used by this context for executing parallel computations.
      */
     WorkThread& getWorkThread() {
@@ -577,6 +581,12 @@ public:
      * and order to be revalidated.
      */
     void invalidateMolecules();
+    /**
+     * Mark that the current molecule definitions from one particular force (and hence the atom order)
+     * may be invalid.  This should be called whenever force field parameters change.  It will cause the
+     * definitions and order to be revalidated.
+     */
+    bool invalidateMolecules(CudaForceInfo* force);
 private:
     /**
      * Compute a sorted list of device indices in decreasing order of desirability
@@ -626,6 +636,7 @@ private:
     CUfunction clearFourBuffersKernel;
     CUfunction clearFiveBuffersKernel;
     CUfunction clearSixBuffersKernel;
+    CUfunction setChargesKernel;
     std::vector<CudaForceInfo*> forces;
     std::vector<Molecule> molecules;
     std::vector<MoleculeGroup> moleculeGroups;
@@ -638,6 +649,7 @@ private:
     CudaArray* energyBuffer;
     CudaArray* energyParamDerivBuffer;
     CudaArray* atomIndexDevice;
+    CudaArray* chargeBuffer;
     std::vector<std::string> energyParamDerivNames;
     std::map<std::string, double> energyParamDerivWorkspace;
     std::vector<int> atomIndex;

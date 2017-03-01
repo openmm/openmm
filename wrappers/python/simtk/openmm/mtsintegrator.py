@@ -28,7 +28,7 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
-from __future__ import absolute_import
+from __future__ import absolute_import, division
 __author__ = "Peter Eastman"
 __version__ = "1.0"
 
@@ -90,18 +90,20 @@ class MTSIntegrator(CustomIntegrator):
 
     def _createSubsteps(self, parentSubsteps, groups):
         group, substeps = groups[0]
-        stepsPerParentStep = substeps//parentSubsteps
+        stepsPerParentStep = substeps / parentSubsteps
         if stepsPerParentStep < 1 or stepsPerParentStep != int(stepsPerParentStep):
             raise ValueError("The number for substeps for each group must be a multiple of the number for the previous group")
+        stepsPerParentStep = int(stepsPerParentStep)
         if group < 0 or group > 31:
             raise ValueError("Force group must be between 0 and 31")
         for i in range(stepsPerParentStep):
             self.addComputePerDof("v", "v+0.5*(dt/"+str(substeps)+")*f"+str(group)+"/m")
             if len(groups) == 1:
-                self.addComputePerDof("x1", "x")
                 self.addComputePerDof("x", "x+(dt/"+str(substeps)+")*v")
+                self.addComputePerDof("x1", "x")
                 self.addConstrainPositions();
-                self.addComputePerDof("v", "(x-x1)/(dt/"+str(substeps)+")");
+                self.addComputePerDof("v", "v+(x-x1)/(dt/"+str(substeps)+")");
+                self.addConstrainVelocities()
             else:
                 self._createSubsteps(substeps, groups[1:])
             self.addComputePerDof("v", "v+0.5*(dt/"+str(substeps)+")*f"+str(group)+"/m")

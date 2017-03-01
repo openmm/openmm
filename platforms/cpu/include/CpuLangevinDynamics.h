@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2013-2015 Stanford University and Simbios.
+/* Portions copyright (c) 2013-2017 Stanford University and Simbios.
  * Authors: Peter Eastman
  * Contributors: 
  *
@@ -35,20 +35,17 @@ namespace OpenMM {
 
 class CpuLangevinDynamics : public ReferenceStochasticDynamics {
 public:
-    class Update1Task;
-    class Update2Task;
-    class Update3Task;
     /**
      * Constructor.
      *
      * @param numberOfAtoms  number of atoms
      * @param deltaT         delta t for dynamics
-     * @param tau            viscosity
+     * @param friction       friction coefficient
      * @param temperature    temperature
      * @param threads        thread pool for parallelizing computation
      * @param random         random number generator
      */
-    CpuLangevinDynamics(int numberOfAtoms, RealOpenMM deltaT, RealOpenMM tau, RealOpenMM temperature, OpenMM::ThreadPool& threads, OpenMM::CpuRandom& random);
+    CpuLangevinDynamics(int numberOfAtoms, double deltaT, double friction, double temperature, OpenMM::ThreadPool& threads, OpenMM::CpuRandom& random);
 
     /**
      * Destructor.
@@ -65,8 +62,8 @@ public:
      * @param inverseMasses       inverse atom masses
      * @param xPrime              xPrime
      */
-    void updatePart1(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& velocities,
-                     std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& inverseMasses, std::vector<OpenMM::RealVec>& xPrime);
+    void updatePart1(int numberOfAtoms, std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<OpenMM::Vec3>& velocities,
+                     std::vector<OpenMM::Vec3>& forces, std::vector<double>& inverseMasses, std::vector<OpenMM::Vec3>& xPrime);
       
     /**
      * Second update step.
@@ -78,8 +75,8 @@ public:
      * @param inverseMasses       inverse atom masses
      * @param xPrime              xPrime
      */
-    void updatePart2(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& velocities,
-                     std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& inverseMasses, std::vector<OpenMM::RealVec>& xPrime);
+    void updatePart2(int numberOfAtoms, std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<OpenMM::Vec3>& velocities,
+                     std::vector<OpenMM::Vec3>& forces, std::vector<double>& inverseMasses, std::vector<OpenMM::Vec3>& xPrime);
 
     /**  
      * Third update
@@ -89,8 +86,8 @@ public:
      * @param velocities          velocities
      * @param inverseMasses       inverse atom masses
      */
-    void updatePart3(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& velocities,
-                     std::vector<RealOpenMM>& inverseMasses, std::vector<OpenMM::RealVec>& xPrime);
+    void updatePart3(int numberOfAtoms, std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<OpenMM::Vec3>& velocities,
+                     std::vector<double>& inverseMasses, std::vector<OpenMM::Vec3>& xPrime);
 
 private:
     void threadUpdate1(int threadIndex);
@@ -101,11 +98,11 @@ private:
     std::vector<OpenMM_SFMT::SFMT> threadRandom;
     // The following variables are used to make information accessible to the individual threads.
     int numberOfAtoms;
-    OpenMM::RealVec* atomCoordinates;
-    OpenMM::RealVec* velocities;
-    OpenMM::RealVec* forces;
-    RealOpenMM* inverseMasses;
-    OpenMM::RealVec* xPrime;
+    OpenMM::Vec3* atomCoordinates;
+    OpenMM::Vec3* velocities;
+    OpenMM::Vec3* forces;
+    double* inverseMasses;
+    OpenMM::Vec3* xPrime;
 };
 
 } // namespace OpenMM

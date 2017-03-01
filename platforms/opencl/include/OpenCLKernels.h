@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2017 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -176,7 +176,6 @@ public:
      */
     void loadCheckpoint(ContextImpl& context, std::istream& stream);
 private:
-    class GetPositionsTask;
     OpenCLContext& cl;
 };
 
@@ -270,9 +269,11 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const HarmonicBondForce& force);
 private:
+    class ForceInfo;
     int numBonds;
     bool hasInitializedKernel;
     OpenCLContext& cl;
+    ForceInfo* info;
     const System& system;
     OpenCLArray* params;
 };
@@ -310,9 +311,11 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomBondForce& force);
 private:
+    class ForceInfo;
     int numBonds;
     bool hasInitializedKernel;
     OpenCLContext& cl;
+    ForceInfo* info;
     const System& system;
     OpenCLParameterSet* params;
     OpenCLArray* globals;
@@ -353,9 +356,11 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force);
 private:
+    class ForceInfo;
     int numAngles;
     bool hasInitializedKernel;
     OpenCLContext& cl;
+    ForceInfo* info;
     const System& system;
     OpenCLArray* params;
 };
@@ -393,9 +398,11 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomAngleForce& force);
 private:
+    class ForceInfo;
     int numAngles;
     bool hasInitializedKernel;
     OpenCLContext& cl;
+    ForceInfo* info;
     const System& system;
     OpenCLParameterSet* params;
     OpenCLArray* globals;
@@ -436,9 +443,11 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force);
 private:
+    class ForceInfo;
     int numTorsions;
     bool hasInitializedKernel;
     OpenCLContext& cl;
+    ForceInfo* info;
     const System& system;
     OpenCLArray* params;
 };
@@ -476,9 +485,11 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const RBTorsionForce& force);
 private:
+    class ForceInfo;
     int numTorsions;
     bool hasInitializedKernel;
     OpenCLContext& cl;
+    ForceInfo* info;
     const System& system;
     OpenCLArray* params;
 };
@@ -516,9 +527,11 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CMAPTorsionForce& force);
 private:
+    class ForceInfo;
     int numTorsions;
     bool hasInitializedKernel;
     OpenCLContext& cl;
+    ForceInfo* info;
     const System& system;
     std::vector<mm_int2> mapPositionsVec;
     OpenCLArray* coefficients;
@@ -559,9 +572,11 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomTorsionForce& force);
 private:
+    class ForceInfo;
     int numTorsions;
     bool hasInitializedKernel;
     OpenCLContext& cl;
+    ForceInfo* info;
     const System& system;
     OpenCLParameterSet* params;
     OpenCLArray* globals;
@@ -576,8 +591,9 @@ class OpenCLCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 public:
     OpenCLCalcNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcNonbondedForceKernel(name, platform),
             hasInitializedKernel(false), cl(cl), sigmaEpsilon(NULL), exceptionParams(NULL), cosSinSums(NULL), pmeGrid(NULL),
-            pmeGrid2(NULL), pmeBsplineModuliX(NULL), pmeBsplineModuliY(NULL), pmeBsplineModuliZ(NULL), pmeBsplineTheta(NULL),
-            pmeAtomRange(NULL), pmeAtomGridIndex(NULL), pmeEnergyBuffer(NULL), sort(NULL), fft(NULL), pmeio(NULL) {
+            pmeGrid2(NULL), pmeBsplineModuliX(NULL), pmeBsplineModuliY(NULL), pmeBsplineModuliZ(NULL), pmeDispersionBsplineModuliX(NULL),
+            pmeDispersionBsplineModuliY(NULL), pmeDispersionBsplineModuliZ(NULL), pmeBsplineTheta(NULL), pmeAtomRange(NULL),
+            pmeAtomGridIndex(NULL), pmeEnergyBuffer(NULL), sort(NULL), fft(NULL), dispersionFft(NULL), pmeio(NULL) {
     }
     ~OpenCLCalcNonbondedForceKernel();
     /**
@@ -607,13 +623,22 @@ public:
     void copyParametersToContext(ContextImpl& context, const NonbondedForce& force);
     /**
      * Get the parameters being used for PME.
-     * 
+     *
      * @param alpha   the separation parameter
      * @param nx      the number of grid points along the X axis
      * @param ny      the number of grid points along the Y axis
      * @param nz      the number of grid points along the Z axis
      */
     void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
+    /**
+     * Get the parameters being used for the dispersion term in LJPME.
+     *
+     * @param alpha   the separation parameter
+     * @param nx      the number of grid points along the X axis
+     * @param ny      the number of grid points along the Y axis
+     * @param nz      the number of grid points along the Z axis
+     */
+    void getLJPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
 private:
     class SortTrait : public OpenCLSort::SortTrait {
         int getDataSize() const {return 8;}
@@ -625,12 +650,14 @@ private:
         const char* getMaxValue() const {return "(int2) (INT_MAX, INT_MAX)";}
         const char* getSortKey() const {return "value.y";}
     };
+    class ForceInfo;
     class PmeIO;
     class PmePreComputation;
     class PmePostComputation;
     class SyncQueuePreComputation;
     class SyncQueuePostComputation;
     OpenCLContext& cl;
+    ForceInfo* info;
     bool hasInitializedKernel;
     OpenCLArray* sigmaEpsilon;
     OpenCLArray* exceptionParams;
@@ -640,6 +667,9 @@ private:
     OpenCLArray* pmeBsplineModuliX;
     OpenCLArray* pmeBsplineModuliY;
     OpenCLArray* pmeBsplineModuliZ;
+    OpenCLArray* pmeDispersionBsplineModuliX;
+    OpenCLArray* pmeDispersionBsplineModuliY;
+    OpenCLArray* pmeDispersionBsplineModuliZ;
     OpenCLArray* pmeBsplineTheta;
     OpenCLArray* pmeAtomRange;
     OpenCLArray* pmeAtomGridIndex;
@@ -648,25 +678,34 @@ private:
     cl::CommandQueue pmeQueue;
     cl::Event pmeSyncEvent;
     OpenCLFFT3D* fft;
+    OpenCLFFT3D* dispersionFft;
     Kernel cpuPme;
     PmeIO* pmeio;
     SyncQueuePostComputation* syncQueue;
     cl::Kernel ewaldSumsKernel;
     cl::Kernel ewaldForcesKernel;
-    cl::Kernel pmeGridIndexKernel;
     cl::Kernel pmeAtomRangeKernel;
+    cl::Kernel pmeDispersionAtomRangeKernel;
     cl::Kernel pmeZIndexKernel;
+    cl::Kernel pmeDispersionZIndexKernel;
     cl::Kernel pmeUpdateBsplinesKernel;
+    cl::Kernel pmeDispersionUpdateBsplinesKernel;
     cl::Kernel pmeSpreadChargeKernel;
+    cl::Kernel pmeDispersionSpreadChargeKernel;
     cl::Kernel pmeFinishSpreadChargeKernel;
+    cl::Kernel pmeDispersionFinishSpreadChargeKernel;
     cl::Kernel pmeConvolutionKernel;
+    cl::Kernel pmeDispersionConvolutionKernel;
     cl::Kernel pmeEvalEnergyKernel;
+    cl::Kernel pmeDispersionEvalEnergyKernel;
     cl::Kernel pmeInterpolateForceKernel;
+    cl::Kernel pmeDispersionInterpolateForceKernel;
     std::map<std::string, std::string> pmeDefines;
     std::vector<std::pair<int, int> > exceptionAtoms;
-    double ewaldSelfEnergy, dispersionCoefficient, alpha;
+    double ewaldSelfEnergy, dispersionCoefficient, alpha, dispersionAlpha;
     int gridSizeX, gridSizeY, gridSizeZ;
-    bool hasCoulomb, hasLJ, usePmeQueue;
+    int dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ;
+    bool hasCoulomb, hasLJ, usePmeQueue, doLJPME;
     NonbondedMethod nonbondedMethod;
     static const int PmeOrder = 5;
 };
@@ -704,8 +743,10 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force);
 private:
+    class ForceInfo;
     void initInteractionGroups(const CustomNonbondedForce& force, const std::string& interactionSource, const std::vector<std::string>& tableTypes);
     OpenCLContext& cl;
+    ForceInfo* info;
     OpenCLParameterSet* params;
     OpenCLArray* globals;
     OpenCLArray* interactionGroupData;
@@ -756,10 +797,12 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const GBSAOBCForce& force);
 private:
+    class ForceInfo;
     double prefactor, surfaceAreaFactor, cutoff;
     bool hasCreatedKernels;
     int maxTiles;
     OpenCLContext& cl;
+    ForceInfo* info;
     OpenCLArray* params;
     OpenCLArray* bornSum;
     OpenCLArray* longBornSum;
@@ -807,10 +850,12 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomGBForce& force);
 private:
+    class ForceInfo;
     double cutoff;
     bool hasInitializedKernels, needParameterGradient, needEnergyParamDerivs;
     int maxTiles, numComputedValues;
     OpenCLContext& cl;
+    ForceInfo* info;
     OpenCLParameterSet* params;
     OpenCLParameterSet* computedValues;
     OpenCLParameterSet* energyDerivs;
@@ -864,9 +909,11 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomExternalForce& force);
 private:
+    class ForceInfo;
     int numParticles;
     bool hasInitializedKernel;
     OpenCLContext& cl;
+    ForceInfo* info;
     const System& system;
     OpenCLParameterSet* params;
     OpenCLArray* globals;
@@ -908,9 +955,11 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomHbondForce& force);
 private:
+    class ForceInfo;
     int numDonors, numAcceptors;
     bool hasInitializedKernel;
     OpenCLContext& cl;
+    ForceInfo* info;
     OpenCLParameterSet* donorParams;
     OpenCLParameterSet* acceptorParams;
     OpenCLArray* globals;
@@ -961,9 +1010,11 @@ public:
     void copyParametersToContext(ContextImpl& context, const CustomCentroidBondForce& force);
 
 private:
+    class ForceInfo;
     int numGroups, numBonds;
     bool needEnergyParamDerivs;
     OpenCLContext& cl;
+    ForceInfo* info;
     OpenCLParameterSet* params;
     OpenCLArray* globals;
     OpenCLArray* groupParticles;
@@ -1013,8 +1064,10 @@ public:
     void copyParametersToContext(ContextImpl& context, const CustomCompoundBondForce& force);
 
 private:
+    class ForceInfo;
     int numBonds;
     OpenCLContext& cl;
+    ForceInfo* info;
     OpenCLParameterSet* params;
     OpenCLArray* globals;
     std::vector<std::string> globalParamNames;
@@ -1059,7 +1112,9 @@ public:
     void copyParametersToContext(ContextImpl& context, const CustomManyParticleForce& force);
 
 private:
+    class ForceInfo;
     OpenCLContext& cl;
+    ForceInfo* info;
     bool hasInitializedKernel;
     NonbondedMethod nonbondedMethod;
     int maxNeighborPairs, forceWorkgroupSize, findNeighborsWorkgroupSize;
@@ -1119,9 +1174,11 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const GayBerneForce& force);
 private:
+    class ForceInfo;
     class ReorderListener;
     void sortAtoms();
     OpenCLContext& cl;
+    ForceInfo* info;
     bool hasInitializedKernels;
     int numRealParticles, maxNeighborBlocks;
     GayBerneForce::NonbondedMethod nonbondedMethod;
@@ -1419,7 +1476,7 @@ private:
     void prepareForComputation(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid);
     Lepton::ExpressionTreeNode replaceDerivFunctions(const Lepton::ExpressionTreeNode& node, OpenMM::ContextImpl& context);
     void findExpressionsForDerivs(const Lepton::ExpressionTreeNode& node, std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& variableNodes);
-    void recordGlobalValue(double value, GlobalTarget target);
+    void recordGlobalValue(double value, GlobalTarget target, CustomIntegrator& integrator);
     void recordChangedParameters(ContextImpl& context);
     bool evaluateCondition(int step);
     OpenCLContext& cl;

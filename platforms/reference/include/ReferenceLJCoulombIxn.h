@@ -38,14 +38,14 @@ class ReferenceLJCoulombIxn {
       bool useSwitch;
       bool periodic;
       bool ewald;
-      bool pme;
+      bool pme, ljpme;
       const OpenMM::NeighborList* neighborList;
-      OpenMM::RealVec periodicBoxVectors[3];
-      RealOpenMM cutoffDistance, switchingDistance;
-      RealOpenMM krf, crf;
-      RealOpenMM alphaEwald;
+      OpenMM::Vec3 periodicBoxVectors[3];
+      double cutoffDistance, switchingDistance;
+      double krf, crf;
+      double alphaEwald, alphaDispersionEwald;
       int numRx, numRy, numRz;
-      int meshDim[3];
+      int meshDim[3], dispersionMeshDim[3];
 
       // parameter indices
 
@@ -67,9 +67,9 @@ class ReferenceLJCoulombIxn {
             
          --------------------------------------------------------------------------------------- */
           
-      void calculateOneIxn(int atom1, int atom2, std::vector<OpenMM::RealVec>& atomCoordinates,
-                           RealOpenMM** atomParameters, std::vector<OpenMM::RealVec>& forces,
-                           RealOpenMM* energyByAtom, RealOpenMM* totalEnergy) const;
+      void calculateOneIxn(int atom1, int atom2, std::vector<OpenMM::Vec3>& atomCoordinates,
+                           double** atomParameters, std::vector<OpenMM::Vec3>& forces,
+                           double* energyByAtom, double* totalEnergy) const;
 
 
    public:
@@ -100,7 +100,7 @@ class ReferenceLJCoulombIxn {
       
          --------------------------------------------------------------------------------------- */
       
-      void setUseCutoff(RealOpenMM distance, const OpenMM::NeighborList& neighbors, RealOpenMM solventDielectric);
+      void setUseCutoff(double distance, const OpenMM::NeighborList& neighbors, double solventDielectric);
 
       /**---------------------------------------------------------------------------------------
       
@@ -110,7 +110,7 @@ class ReferenceLJCoulombIxn {
       
          --------------------------------------------------------------------------------------- */
       
-      void setUseSwitchingFunction(RealOpenMM distance);
+      void setUseSwitchingFunction(double distance);
       
       /**---------------------------------------------------------------------------------------
       
@@ -122,7 +122,7 @@ class ReferenceLJCoulombIxn {
       
          --------------------------------------------------------------------------------------- */
       
-      void setPeriodic(OpenMM::RealVec* vectors);
+      void setPeriodic(OpenMM::Vec3* vectors);
        
       /**---------------------------------------------------------------------------------------
       
@@ -135,20 +135,31 @@ class ReferenceLJCoulombIxn {
       
          --------------------------------------------------------------------------------------- */
       
-      void setUseEwald(RealOpenMM alpha, int kmaxx, int kmaxy, int kmaxz);
+      void setUseEwald(double alpha, int kmaxx, int kmaxy, int kmaxz);
 
      
       /**---------------------------------------------------------------------------------------
-      
+
          Set the force to use Particle-Mesh Ewald (PME) summation.
-      
+
          @param alpha    the Ewald separation parameter
          @param gridSize the dimensions of the mesh
-      
+
          --------------------------------------------------------------------------------------- */
       
-      void setUsePME(RealOpenMM alpha, int meshSize[3]);
+      void setUsePME(double alpha, int meshSize[3]);
       
+      /**---------------------------------------------------------------------------------------
+
+         Set the force to use Particle-Mesh Ewald (PME) summation for dispersion.
+
+         @param dalpha    the dispersion Ewald separation parameter
+         @param dgridSize the dimensions of the dispersion mesh
+
+         --------------------------------------------------------------------------------------- */
+
+      void setUseLJPME(double dalpha, int dmeshSize[3]);
+
       /**---------------------------------------------------------------------------------------
       
          Calculate LJ Coulomb pair ixn
@@ -167,10 +178,10 @@ class ReferenceLJCoulombIxn {
       
          --------------------------------------------------------------------------------------- */
           
-      void calculatePairIxn(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
-                            RealOpenMM** atomParameters, std::vector<std::set<int> >& exclusions,
-                            RealOpenMM* fixedParameters, std::vector<OpenMM::RealVec>& forces,
-                            RealOpenMM* energyByAtom, RealOpenMM* totalEnergy, bool includeDirect, bool includeReciprocal) const;
+      void calculatePairIxn(int numberOfAtoms, std::vector<OpenMM::Vec3>& atomCoordinates,
+                            double** atomParameters, std::vector<std::set<int> >& exclusions,
+                            double* fixedParameters, std::vector<OpenMM::Vec3>& forces,
+                            double* energyByAtom, double* totalEnergy, bool includeDirect, bool includeReciprocal) const;
 
 private:
       /**---------------------------------------------------------------------------------------
@@ -191,10 +202,10 @@ private:
             
          --------------------------------------------------------------------------------------- */
           
-      void calculateEwaldIxn(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
-                            RealOpenMM** atomParameters, std::vector<std::set<int> >& exclusions,
-                            RealOpenMM* fixedParameters, std::vector<OpenMM::RealVec>& forces,
-                            RealOpenMM* energyByAtom, RealOpenMM* totalEnergy, bool includeDirect, bool includeReciprocal) const;
+      void calculateEwaldIxn(int numberOfAtoms, std::vector<OpenMM::Vec3>& atomCoordinates,
+                            double** atomParameters, std::vector<std::set<int> >& exclusions,
+                            double* fixedParameters, std::vector<OpenMM::Vec3>& forces,
+                            double* energyByAtom, double* totalEnergy, bool includeDirect, bool includeReciprocal) const;
 };
 
 } // namespace OpenMM

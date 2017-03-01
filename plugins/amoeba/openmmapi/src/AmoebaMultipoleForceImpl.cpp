@@ -50,7 +50,8 @@ AmoebaMultipoleForceImpl::~AmoebaMultipoleForceImpl() {
 void AmoebaMultipoleForceImpl::initialize(ContextImpl& context) {
 
     const System& system = context.getSystem();
-    if (owner.getNumMultipoles() != system.getNumParticles())
+    int numParticles = system.getNumParticles();
+    if (owner.getNumMultipoles() != numParticles)
         throw OpenMMException("AmoebaMultipoleForce must have exactly as many particles as the System it belongs to.");
 
     // check cutoff < 0.5*boxSize
@@ -64,7 +65,7 @@ void AmoebaMultipoleForceImpl::initialize(ContextImpl& context) {
     }
 
     double quadrupoleValidationTolerance = 1.0e-05;
-    for (int ii = 0; ii < system.getNumParticles(); ii++) {
+    for (int ii = 0; ii < numParticles; ii++) {
 
         int axisType, multipoleAtomZ, multipoleAtomX, multipoleAtomY;
         double charge, thole, dampingFactor, polarity ;
@@ -120,6 +121,23 @@ void AmoebaMultipoleForceImpl::initialize(ContextImpl& context) {
              buffer << AmoebaMultipoleForce::NoAxisType;
              buffer << "] (ZThenX, Bisector, Z-Bisect, ThreeFold, NoAxisType) currently handled .";
              throw OpenMMException(buffer.str());
+        }
+        if (axisType != AmoebaMultipoleForce::NoAxisType && (multipoleAtomZ < 0 || multipoleAtomZ >= numParticles)) {
+            std::stringstream buffer;
+            buffer << "AmoebaMultipoleForce: invalid z axis particle: " << multipoleAtomZ;
+            throw OpenMMException(buffer.str());
+        }
+        if (axisType != AmoebaMultipoleForce::NoAxisType && axisType != AmoebaMultipoleForce::ZOnly &&
+                (multipoleAtomX < 0 || multipoleAtomX >= numParticles)) {
+            std::stringstream buffer;
+            buffer << "AmoebaMultipoleForce: invalid x axis particle: " << multipoleAtomX;
+            throw OpenMMException(buffer.str());
+        }
+        if ((axisType == AmoebaMultipoleForce::ZBisect || axisType == AmoebaMultipoleForce::ThreeFold) &&
+                (multipoleAtomY < 0 || multipoleAtomY >= numParticles)) {
+            std::stringstream buffer;
+            buffer << "AmoebaMultipoleForce: invalid y axis particle: " << multipoleAtomY;
+            throw OpenMMException(buffer.str());
         }
     }
     kernel = context.getPlatform().createKernel(CalcAmoebaMultipoleForceKernel::Name(), context);
@@ -206,6 +224,7 @@ void AmoebaMultipoleForceImpl::getSystemMultipoleMoments(ContextImpl& context, s
 
 void AmoebaMultipoleForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcAmoebaMultipoleForceKernel>().copyParametersToContext(context, owner);
+    context.systemChanged();
 }
 
 void AmoebaMultipoleForceImpl::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {

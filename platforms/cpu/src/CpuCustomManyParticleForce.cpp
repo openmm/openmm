@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2014 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2017 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -36,16 +36,6 @@
 
 using namespace OpenMM;
 using namespace std;
-
-class CpuCustomManyParticleForce::ComputeForceTask : public ThreadPool::Task {
-public:
-    ComputeForceTask(CpuCustomManyParticleForce& owner) : owner(owner) {
-    }
-    void execute(ThreadPool& threads, int threadIndex) {
-        owner.threadComputeForce(threads, threadIndex);
-    }
-    CpuCustomManyParticleForce& owner;
-};
 
 CpuCustomManyParticleForce::CpuCustomManyParticleForce(const CustomManyParticleForce& force, ThreadPool& threads) :
             threads(threads), useCutoff(false), usePeriodic(false), neighborList(NULL) {
@@ -98,7 +88,7 @@ CpuCustomManyParticleForce::~CpuCustomManyParticleForce() {
         delete threadData[i];
 }
 
-void CpuCustomManyParticleForce::calculateIxn(AlignedArray<float>& posq, RealOpenMM** particleParameters,
+void CpuCustomManyParticleForce::calculateIxn(AlignedArray<float>& posq, double** particleParameters,
                                                   const map<string, double>& globalParameters, vector<AlignedArray<float> >& threadForce,
                                                   bool includeForces, bool includeEnergy, double& energy) {
     // Record the parameters for the threads.
@@ -141,8 +131,7 @@ void CpuCustomManyParticleForce::calculateIxn(AlignedArray<float>& posq, RealOpe
     
     // Signal the threads to start running and wait for them to finish.
     
-    ComputeForceTask task(*this);
-    threads.execute(task);
+    threads.execute([&] (ThreadPool& threads, int threadIndex) { threadComputeForce(threads, threadIndex); });
     threads.waitForThreads();
     
     // Combine the energies from all the threads.
@@ -191,14 +180,14 @@ void CpuCustomManyParticleForce::threadComputeForce(ThreadPool& threads, int thr
     }
 }
 
-void CpuCustomManyParticleForce::setUseCutoff(RealOpenMM distance) {
+void CpuCustomManyParticleForce::setUseCutoff(double distance) {
     useCutoff = true;
     cutoffDistance = distance;
     if (neighborList == NULL)
         neighborList = new CpuNeighborList(4);
 }
 
-void CpuCustomManyParticleForce::setPeriodic(RealVec* periodicBoxVectors) {
+void CpuCustomManyParticleForce::setPeriodic(Vec3* periodicBoxVectors) {
     assert(useCutoff);
     assert(periodicBoxVectors[0][0] >= 2.0*cutoffDistance);
     assert(periodicBoxVectors[1][1] >= 2.0*cutoffDistance);
@@ -220,7 +209,7 @@ void CpuCustomManyParticleForce::setPeriodic(RealVec* periodicBoxVectors) {
 }
 
 void CpuCustomManyParticleForce::loopOverInteractions(vector<int>& availableParticles, vector<int>& particleSet, int loopIndex, int startIndex,
-                                                          RealOpenMM** particleParameters, float* forces, ThreadData& data, const fvec4& boxSize, const fvec4& invBoxSize) {
+                                                          double** particleParameters, float* forces, ThreadData& data, const fvec4& boxSize, const fvec4& invBoxSize) {
     int numParticles = availableParticles.size();
     double cutoff2 = cutoffDistance*cutoffDistance;
     int checkRange = (centralParticleMode ? 1 : loopIndex);
@@ -254,7 +243,7 @@ void CpuCustomManyParticleForce::loopOverInteractions(vector<int>& availablePart
     }
 }
 
-void CpuCustomManyParticleForce::calculateOneIxn(vector<int>& particleSet, RealOpenMM** particleParameters, float* forces, ThreadData& data, const fvec4& boxSize, const fvec4& invBoxSize) {
+void CpuCustomManyParticleForce::calculateOneIxn(vector<int>& particleSet, double** particleParameters, float* forces, ThreadData& data, const fvec4& boxSize, const fvec4& invBoxSize) {
     // Select the ordering to use for the particles.
     
     vector<int>& permutedParticles = data.permutedParticles;

@@ -32,13 +32,13 @@
 #ifndef __ReferencePME_H__
 #define __ReferencePME_H__
 
-#include "RealVec.h"
+#include "openmm/Vec3.h"
 #include "openmm/internal/windowsExport.h"
 #include <vector>
 
 namespace OpenMM {
 
-typedef RealOpenMM rvec[3];
+typedef double rvec[3];
 
 
 typedef struct pme *
@@ -59,12 +59,12 @@ pme_t;
  * epsilon_r   Dielectric coefficient, typically 1.0.
  */
 int OPENMM_EXPORT
-pme_init(pme_t *       ppme,
-         RealOpenMM    ewaldcoeff,
-         int           natoms,
-         const int     ngrid[3],
-         int           pme_order,
-         RealOpenMM    epsilon_r);
+pme_init(pme_t* ppme,
+         double ewaldcoeff,
+         int natoms,
+         const int ngrid[3],
+         int pme_order,
+         double epsilon_r);
 
 /*
  * Evaluate reciprocal space PME energy and forces.
@@ -79,12 +79,34 @@ pme_init(pme_t *       ppme,
  * energy      Total energy (will be written in units of kJ/mol)
  */
 int OPENMM_EXPORT
-pme_exec(pme_t       pme,
-         const std::vector<OpenMM::RealVec>& atomCoordinates,
-         std::vector<OpenMM::RealVec>& forces,
-         const std::vector<RealOpenMM>& charges,
-         const OpenMM::RealVec  periodicBoxVectors[3],
-         RealOpenMM *    energy);
+pme_exec(pme_t pme,
+         const std::vector<OpenMM::Vec3>& atomCoordinates,
+         std::vector<OpenMM::Vec3>& forces,
+         const std::vector<double>& charges,
+         const OpenMM::Vec3 periodicBoxVectors[3],
+         double* energy);
+
+
+/**
+ * Evaluate reciprocal space PME dispersion energy and forces.
+ *
+ * Args:
+ *
+ * pme         Opaque pme_t object, must have been initialized with pme_init()
+ * x           Pointer to coordinate data array (nm)
+ * f           Pointer to force data array (will be written as kJ/mol/nm)
+ * c6s         Array of c6 coefficients (units of sqrt(kJ/mol).nm^3 )
+ * box         Simulation cell dimensions (nm)
+ * energy      Total energy (will be written in units of kJ/mol)
+ */
+int OPENMM_EXPORT
+pme_exec_dpme(pme_t pme,
+              const std::vector<OpenMM::Vec3>& atomCoordinates,
+              std::vector<OpenMM::Vec3>& forces,
+              const std::vector<double>& c6s,
+              const OpenMM::Vec3 periodicBoxVectors[3],
+              double* energy);
+
 
 
 

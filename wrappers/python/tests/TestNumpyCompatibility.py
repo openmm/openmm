@@ -59,6 +59,12 @@ class TestNumpyCompatibility(unittest.TestCase):
         np.testing.assert_array_almost_equal(input.value_in_unit(unit.angstroms / unit.femtoseconds),
                                              output.value_in_unit(unit.angstroms / unit.femtoseconds))
 
+    def test_periodicBoxVectors(self):
+        output = self.simulation.context.getState(getVelocities=True).getPeriodicBoxVectors(asNumpy=True)
+        systemBox = self.simulation.system.getDefaultPeriodicBoxVectors()
+        for i in range(3):
+            np.testing.assert_array_almost_equal(systemBox[i].value_in_unit(unit.nanometers), output[i].value_in_unit(unit.nanometers))
+
 
     def test_tabulatedFunction(self):
         f = mm.CustomNonbondedForce('g(r)')

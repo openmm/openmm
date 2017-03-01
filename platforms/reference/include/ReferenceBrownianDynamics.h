@@ -33,9 +33,9 @@ class ReferenceBrownianDynamics : public ReferenceDynamics {
 
    private:
 
-      std::vector<OpenMM::RealVec> xPrime;
-      std::vector<RealOpenMM> inverseMasses;
-      RealOpenMM friction;
+      std::vector<OpenMM::Vec3> xPrime;
+      std::vector<double> inverseMasses;
+      double friction;
       
    public:
 
@@ -50,7 +50,7 @@ class ReferenceBrownianDynamics : public ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
 
-       ReferenceBrownianDynamics(int numberOfAtoms, RealOpenMM deltaT, RealOpenMM friction, RealOpenMM temperature);
+       ReferenceBrownianDynamics(int numberOfAtoms, double deltaT, double friction, double temperature);
 
       /**---------------------------------------------------------------------------------------
       
@@ -68,7 +68,7 @@ class ReferenceBrownianDynamics : public ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
       
-      RealOpenMM getFriction() const;
+      double getFriction() const;
       
       /**---------------------------------------------------------------------------------------
       
@@ -83,8 +83,8 @@ class ReferenceBrownianDynamics : public ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
      
-      void update(const OpenMM::System& system, std::vector<OpenMM::RealVec>& atomCoordinates,
-                  std::vector<OpenMM::RealVec>& velocities, std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& masses, RealOpenMM tolerance);
+      void update(const OpenMM::System& system, std::vector<OpenMM::Vec3>& atomCoordinates,
+                  std::vector<OpenMM::Vec3>& velocities, std::vector<OpenMM::Vec3>& forces, std::vector<double>& masses, double tolerance);
       
 };
 

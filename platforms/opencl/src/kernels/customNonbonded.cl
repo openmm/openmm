@@ -14,8 +14,10 @@ if (!isExcluded) {
 #endif
     COMPUTE_FORCE
 #if USE_SWITCH
-    tempForce = tempForce*switchValue - tempEnergy*switchDeriv;
-    tempEnergy *= switchValue;
+    tempForce = tempForce*switchValue - customEnergy*switchDeriv;
+    tempEnergy += customEnergy*switchValue;
+#else
+    tempEnergy += customEnergy;
 #endif
     dEdR += tempForce*invR;
 }

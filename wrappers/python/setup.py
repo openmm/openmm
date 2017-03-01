@@ -6,6 +6,7 @@ import re
 import os
 import sys
 import platform
+import numpy
 from distutils.core import setup
 
 MAJOR_VERSION_NUM='@OPENMM_MAJOR_VERSION@'
@@ -203,6 +204,7 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
 
     library_dirs=[openmm_lib_path]
     include_dirs=openmm_include_path.split(';')
+    include_dirs.append(numpy.get_include())
 
     extensionArgs = {"name": "simtk.openmm._openmm",
                     "sources": ["src/swig_doxygen/OpenMMSwig.cxx"],
@@ -229,8 +231,8 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
 
 
 def main():
-    if sys.version_info < (2, 6):
-        reportError("OpenMM requires Python 2.6 or better.")
+    if sys.version_info < (2, 7):
+        reportError("OpenMM requires Python 2.7 or better.")
     if platform.system() == 'Darwin':
         macVersion = [int(x) for x in platform.mac_ver()[0].split('.')]
         if tuple(macVersion) < (10, 5):

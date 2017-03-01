@@ -104,7 +104,7 @@ void Platform::setPropertyDefaultValue(const string& property, const string& val
         propertyName = deprecatedPropertyReplacements.find(property)->second;
     for (int i = 0; i < (int) platformProperties.size(); i++)
         if (platformProperties[i] == propertyName) {
-            defaultProperties[property] = value;
+            defaultProperties[propertyName] = value;
             return;
         }
     throw OpenMMException("setPropertyDefaultValue: Illegal property name");

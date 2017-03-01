@@ -186,8 +186,7 @@ class Modeller(object):
     def convertWater(self, model='tip3p'):
         """Convert all water molecules to a different water model.
 
-        @deprecated Use addExtraParticles() instead.  It performs the same
-        function but in a more general way.
+        @deprecated Use addExtraParticles() instead.  It performs the same function but in a more general way.
 
         Parameters
         ----------
@@ -408,12 +407,17 @@ class Modeller(object):
         if len(self.positions) == 0:
             positions = []
         else:
-            positions = self.positions.value_in_unit(nanometer)
+            positions = self.positions.value_in_unit(nanometer)[:]
         cells = {}
         numCells = tuple((max(1, int(floor(box[i]/maxCutoff))) for i in range(3)))
         cellSize = tuple((box[i]/numCells[i] for i in range(3)))
         for i in range(len(positions)):
-            cell = tuple((int(floor(positions[i][j]/cellSize[j]))%numCells[j] for j in range(3)))
+            pos = positions[i]
+            pos = pos - floor(pos[2]*invBox[2])*vectors[2]
+            pos -= floor(pos[1]*invBox[1])*vectors[1]
+            pos -= floor(pos[0]*invBox[0])*vectors[0]
+            positions[i] = pos
+            cell = tuple((int(floor(pos[j]/cellSize[j]))%numCells[j] for j in range(3)))
             if cell in cells:
                 cells[cell].append(i)
             else:
@@ -871,7 +875,7 @@ class Modeller(object):
             # and causes hydrogens to spread out evenly.
 
             system = System()
-            nonbonded = CustomNonbondedForce('100/((r/0.1)^4+1)')
+            nonbonded = CustomNonbondedForce('100/(r/0.1)^4')
             nonbonded.setNonbondedMethod(CustomNonbondedForce.CutoffNonPeriodic);
             nonbonded.setCutoffDistance(1*nanometer)
             bonds = HarmonicBondForce()
@@ -1006,7 +1010,7 @@ class Modeller(object):
                 signature = _createResidueSignature([atom.element for atom in residue.atoms()])
                 if signature in forcefield._templateSignatures:
                     for t in forcefield._templateSignatures[signature]:
-                        if _matchResidue(residue, t, bondedToAtom) is not None:
+                        if _matchResidue(residue, t, bondedToAtom, False) is not None:
                             matchFound = True
                 if matchFound:
                     # Just copy the residue over.
@@ -1025,7 +1029,7 @@ class Modeller(object):
                     if signature in forcefield._templateSignatures:
                         for t in forcefield._templateSignatures[signature]:
                             if t in templatesNoEP:
-                                matches = _matchResidue(residueNoEP, templatesNoEP[t], bondedToAtomNoEP)
+                                matches = _matchResidue(residueNoEP, templatesNoEP[t], bondedToAtomNoEP, False)
                                 if matches is not None:
                                     template = t;
                                     # Record the corresponding atoms.

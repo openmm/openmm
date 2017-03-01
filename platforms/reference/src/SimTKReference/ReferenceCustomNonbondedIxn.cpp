@@ -69,13 +69,6 @@ ReferenceCustomNonbondedIxn::ReferenceCustomNonbondedIxn(const Lepton::CompiledE
    --------------------------------------------------------------------------------------- */
 
 ReferenceCustomNonbondedIxn::~ReferenceCustomNonbondedIxn() {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceCustomNonbondedIxn::~ReferenceCustomNonbondedIxn";
-
-   // ---------------------------------------------------------------------------------------
-
 }
 
   /**---------------------------------------------------------------------------------------
@@ -87,7 +80,7 @@ ReferenceCustomNonbondedIxn::~ReferenceCustomNonbondedIxn() {
 
      --------------------------------------------------------------------------------------- */
 
-  void ReferenceCustomNonbondedIxn::setUseCutoff(RealOpenMM distance, const OpenMM::NeighborList& neighbors) {
+  void ReferenceCustomNonbondedIxn::setUseCutoff(double distance, const OpenMM::NeighborList& neighbors) {
 
     cutoff = true;
     cutoffDistance = distance;
@@ -115,7 +108,7 @@ void ReferenceCustomNonbondedIxn::setInteractionGroups(const vector<pair<set<int
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceCustomNonbondedIxn::setUseSwitchingFunction(RealOpenMM distance) {
+void ReferenceCustomNonbondedIxn::setUseSwitchingFunction(double distance) {
     useSwitch = true;
     switchingDistance = distance;
 }
@@ -130,7 +123,7 @@ void ReferenceCustomNonbondedIxn::setUseSwitchingFunction(RealOpenMM distance) {
 
      --------------------------------------------------------------------------------------- */
 
-  void ReferenceCustomNonbondedIxn::setPeriodic(OpenMM::RealVec* vectors) {
+  void ReferenceCustomNonbondedIxn::setPeriodic(OpenMM::Vec3* vectors) {
 
     assert(cutoff);
     assert(vectors[0][0] >= 2.0*cutoffDistance);
@@ -161,10 +154,10 @@ void ReferenceCustomNonbondedIxn::setUseSwitchingFunction(RealOpenMM distance) {
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceCustomNonbondedIxn::calculatePairIxn(int numberOfAtoms, vector<RealVec>& atomCoordinates,
-                                             RealOpenMM** atomParameters, vector<set<int> >& exclusions,
-                                             RealOpenMM* fixedParameters, const map<string, double>& globalParameters, vector<RealVec>& forces,
-                                             RealOpenMM* energyByAtom, RealOpenMM* totalEnergy, double* energyParamDerivs) {
+void ReferenceCustomNonbondedIxn::calculatePairIxn(int numberOfAtoms, vector<Vec3>& atomCoordinates,
+                                             double** atomParameters, vector<set<int> >& exclusions,
+                                             double* fixedParameters, const map<string, double>& globalParameters, vector<Vec3>& forces,
+                                             double* energyByAtom, double* totalEnergy, double* energyParamDerivs) {
 
     for (map<string, double>::const_iterator iter = globalParameters.begin(); iter != globalParameters.end(); ++iter)
         expressionSet.setVariable(expressionSet.getVariableIndex(iter->first), iter->second);
@@ -232,38 +225,38 @@ void ReferenceCustomNonbondedIxn::calculatePairIxn(int numberOfAtoms, vector<Rea
 
      --------------------------------------------------------------------------------------- */
 
-void ReferenceCustomNonbondedIxn::calculateOneIxn(int ii, int jj, vector<RealVec>& atomCoordinates, vector<RealVec>& forces,
-                        RealOpenMM* energyByAtom, RealOpenMM* totalEnergy, double* energyParamDerivs) {
+void ReferenceCustomNonbondedIxn::calculateOneIxn(int ii, int jj, vector<Vec3>& atomCoordinates, vector<Vec3>& forces,
+                        double* energyByAtom, double* totalEnergy, double* energyParamDerivs) {
     // get deltaR, R2, and R between 2 atoms
 
-    RealOpenMM deltaR[ReferenceForce::LastDeltaRIndex];
+    double deltaR[ReferenceForce::LastDeltaRIndex];
     if (periodic)
         ReferenceForce::getDeltaRPeriodic(atomCoordinates[jj], atomCoordinates[ii], periodicBoxVectors, deltaR);
     else
         ReferenceForce::getDeltaR(atomCoordinates[jj], atomCoordinates[ii], deltaR);
-    RealOpenMM r = deltaR[ReferenceForce::RIndex];
+    double r = deltaR[ReferenceForce::RIndex];
     if (cutoff && r >= cutoffDistance)
         return;
 
     // accumulate forces
 
     expressionSet.setVariable(rIndex, r);
-    RealOpenMM dEdR = (RealOpenMM) (forceExpression.evaluate()/(deltaR[ReferenceForce::RIndex]));
-    RealOpenMM energy = (RealOpenMM) energyExpression.evaluate();
-    RealOpenMM switchValue = 1.0;
+    double dEdR = forceExpression.evaluate()/(deltaR[ReferenceForce::RIndex]);
+    double energy = energyExpression.evaluate();
+    double switchValue = 1.0;
     if (useSwitch) {
         if (r > switchingDistance) {
-            RealOpenMM t = (r-switchingDistance)/(cutoffDistance-switchingDistance);
+            double t = (r-switchingDistance)/(cutoffDistance-switchingDistance);
             switchValue = 1+t*t*t*(-10+t*(15-t*6));
-            RealOpenMM switchDeriv = t*t*(-30+t*(60-t*30))/(cutoffDistance-switchingDistance);
+            double switchDeriv = t*t*(-30+t*(60-t*30))/(cutoffDistance-switchingDistance);
             dEdR = switchValue*dEdR + energy*switchDeriv/r;
             energy *= switchValue;
         }
     }
     for (int kk = 0; kk < 3; kk++) {
-       RealOpenMM force  = -dEdR*deltaR[kk];
-       forces[ii][kk]   += force;
-       forces[jj][kk]   -= force;
+       double force = -dEdR*deltaR[kk];
+       forces[ii][kk] += force;
+       forces[jj][kk] -= force;
     }
     for (int i = 0; i < energyParamDerivExpressions.size(); i++)
         energyParamDerivs[i] += switchValue*energyParamDerivExpressions[i].evaluate();
