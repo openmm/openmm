@@ -3223,6 +3223,55 @@ void testZBisect() {
     ASSERT_EQUAL_TOL(-84.1532, state.getPotentialEnergy(), 0.01);
 }
 
+void testZOnly() {
+    int numParticles = 3;
+    System system;
+    for (int i = 0; i < numParticles; i++)
+        system.addParticle(1.0);
+    AmoebaMultipoleForce* force = new AmoebaMultipoleForce();
+    system.addForce(force);
+    vector<double> d(3), q(9, 0.0);
+    d[0] = 0.05;
+    d[1] = -0.05;
+    d[2] = 0.1;
+    force->addMultipole(0.0, d, q, AmoebaMultipoleForce::ZOnly, 1, 0, 0, 0.39, 0.33, 0.001);
+    force->addMultipole(0.0, d, q, AmoebaMultipoleForce::Bisector, 0, 2, 0, 0.39, 0.33, 0.001);
+    force->addMultipole(0.0, d, q, AmoebaMultipoleForce::ZOnly, 1, 0, 0, 0.39, 0.33, 0.001);
+    vector<Vec3> positions(3);
+    positions[0] = Vec3(0, 0, 0);
+    positions[1] = Vec3(0.2, 0, 0);
+    positions[2] = Vec3(0.2, 0.2, -0.05);
+    
+    // Evaluate the forces.
+    
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
+    Context context(system, integrator, Platform::getPlatformByName("CUDA"));
+    context.setPositions(positions);
+    State state = context.getState(State::Forces);
+    double norm = 0.0;
+    for (Vec3 f : state.getForces())
+        norm += f[0]*f[0] + f[1]*f[1] + f[2]*f[2];
+    norm = std::sqrt(norm);
+
+    // Take a small step in the direction of the energy gradient and see whether the potential energy changes by the expected amount.
+
+    const double delta = 1e-3;
+    double step = 0.5*delta/norm;
+    vector<Vec3> positions2(numParticles), positions3(numParticles);
+    for (int i = 0; i < numParticles; ++i) {
+        Vec3 p = positions[i];
+        Vec3 f = state.getForces()[i];
+        positions2[i] = Vec3(p[0]-f[0]*step, p[1]-f[1]*step, p[2]-f[2]*step);
+        positions3[i] = Vec3(p[0]+f[0]*step, p[1]+f[1]*step, p[2]+f[2]*step);
+    }
+    context.setPositions(positions2);
+    State state2 = context.getState(State::Energy);
+    context.setPositions(positions3);
+    State state3 = context.getState(State::Energy);
+    ASSERT_EQUAL_TOL(state2.getPotentialEnergy(), state3.getPotentialEnergy()+norm*delta, 1e-3)
+}
+
+
 int main(int argc, char* argv[]) {
     try {
         std::cout << "TestCudaAmoebaMultipoleForce running test..." << std::endl;
@@ -3279,6 +3328,10 @@ int main(int argc, char* argv[]) {
         // test the ZBisect axis type.
         
         testZBisect();
+        
+        // test the ZOnly axis type.
+        
+        testZOnly();
 
     } catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;
