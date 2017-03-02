@@ -763,7 +763,7 @@ class TestForceField(unittest.TestCase):
         self.assertEqual('NME', templates[1].name)
 
     def test_ImpropersOrdering(self):
-        """Test corectness of the ordering of atom indexes in improper torsions
+        """Test correctness of the ordering of atom indexes in improper torsions
         and the torsion.ordering parameter.
         """
 
