@@ -47,6 +47,7 @@ class TestDCDFile(unittest.TestCase):
         simulation.step(10)
         self.assertEqual(5, dcd._dcd._modelCount)
         del simulation
+        del dcd
         len1 = os.stat(fname).st_size
 
         # Create a new simulation and have it append some more frames.
