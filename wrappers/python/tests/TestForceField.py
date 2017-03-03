@@ -837,7 +837,7 @@ ATOM     60  OXT GLU A   4      26.692  14.850  11.569  1.00  0.00           O
  </PeriodicTorsionForce>
 </ForceField>
 """
-        pdb_ = PBDFile(StringIO(pdb))
+        pdb_ = PDBFile(StringIO(pdb))
         # ff1 uses default ordering of impropers, ff2 uses "amber" for the one
         # problematic improper
         ff1 = ForceField('amber99sbildn.xml')
