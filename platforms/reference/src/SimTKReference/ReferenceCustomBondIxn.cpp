@@ -48,10 +48,10 @@ ReferenceCustomBondIxn::ReferenceCustomBondIxn(const Lepton::CompiledExpression&
         expressionSet.registerExpression(this->energyParamDerivExpressions[i]);
     rIndex = expressionSet.getVariableIndex("r");
     numParameters = parameterNames.size();
-    for (int i = 0; i < (int) numParameters; i++)
-        bondParamIndex.push_back(expressionSet.getVariableIndex(parameterNames[i]));
-    for (map<string, double>::const_iterator iter = globalParameters.begin(); iter != globalParameters.end(); ++iter)
-        expressionSet.setVariable(expressionSet.getVariableIndex(iter->first), iter->second);
+    for (auto& param : parameterNames)
+        bondParamIndex.push_back(expressionSet.getVariableIndex(param));
+    for (auto& param : globalParameters)
+        expressionSet.setVariable(expressionSet.getVariableIndex(param.first), param.second);
 }
 
 /**---------------------------------------------------------------------------------------

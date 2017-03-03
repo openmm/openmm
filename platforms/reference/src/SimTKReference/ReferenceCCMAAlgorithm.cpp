@@ -145,8 +145,7 @@ ReferenceCCMAAlgorithm::ReferenceCCMAAlgorithm(int numberOfAtoms,
         vector<double> matrixValue;
         for (int i = 0; i < numberOfConstraints; i++) {
             matrixRowStart.push_back(matrixValue.size());
-            for (int j = 0; j < (int) matrix[i].size(); j++) {
-                pair<int, double> element = matrix[i][j];
+            for (auto& element : matrix[i]) {
                 matrixColIndex.push_back(element.first);
                 matrixValue.push_back(element.second);
             }
@@ -292,10 +291,8 @@ void ReferenceCCMAAlgorithm::applyConstraints(vector<Vec3>& atomCoordinates,
         if (_matrix.size() > 0) {
             for (int i = 0; i < _numberOfConstraints; i++) {
                 double sum = 0.0;
-                for (int j = 0; j < (int) _matrix[i].size(); j++) {
-                    pair<int, double> element = _matrix[i][j];
+                for (auto& element : _matrix[i])
                     sum += element.second*constraintDelta[element.first];
-                }
                 tempDelta[i] = sum;
             }
             constraintDelta = tempDelta;

@@ -395,8 +395,7 @@ void ReferenceLJCoulombIxn::calculateEwaldIxn(int numberOfAtoms, vector<Vec3>& a
     double totalRealSpaceEwaldEnergy = 0.0f;
 
 
-    for (int i = 0; i < (int) neighborList->size(); i++) {
-        OpenMM::AtomPair pair = (*neighborList)[i];
+    for (auto& pair : *neighborList) {
         int ii = pair.first;
         int jj = pair.second;
 
@@ -581,10 +580,8 @@ void ReferenceLJCoulombIxn::calculatePairIxn(int numberOfAtoms, vector<Vec3>& at
     if (!includeDirect)
         return;
     if (cutoff) {
-        for (int i = 0; i < (int) neighborList->size(); i++) {
-            OpenMM::AtomPair pair = (*neighborList)[i];
+        for (auto& pair : *neighborList)
             calculateOneIxn(pair.first, pair.second, atomCoordinates, atomParameters, forces, energyByAtom, totalEnergy);
-        }
     }
     else {
         for (int ii = 0; ii < numberOfAtoms; ii++) {
