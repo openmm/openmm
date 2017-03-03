@@ -159,8 +159,8 @@ static void validateVariables(const Lepton::ExpressionTreeNode& node, const set<
     const Lepton::Operation& op = node.getOperation();
     if (op.getId() == Lepton::Operation::VARIABLE && variables.find(op.getName()) == variables.end())
         throw OpenMMException("Unknown variable in expression: "+op.getName());
-    for (int i = 0; i < (int) node.getChildren().size(); i++)
-        validateVariables(node.getChildren()[i], variables);
+    for (auto& child : node.getChildren())
+        validateVariables(child, variables);
 }
 
 /**
@@ -214,8 +214,8 @@ void ReferenceCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, 
     }
     else
         savedForces = forceData;
-    for (map<string, double>::const_iterator iter = context.getParameters().begin(); iter != context.getParameters().end(); ++iter)
-        extractEnergyParameterDerivatives(context)[iter->first] = 0;
+    for (auto& param : context.getParameters())
+        extractEnergyParameterDerivatives(context)[param.first] = 0;
 }
 
 double ReferenceCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForces, bool includeEnergy, int groups, bool& valid) {
@@ -466,8 +466,8 @@ double ReferenceCalcCustomBondForceKernel::execute(ContextImpl& context, bool in
     vector<Vec3>& forceData = extractForces(context);
     double energy = 0;
     map<string, double> globalParameters;
-    for (int i = 0; i < (int) globalParameterNames.size(); i++)
-        globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
+    for (auto& name : globalParameterNames)
+        globalParameters[name] = context.getParameter(name);
     ReferenceCustomBondIxn bond(energyExpression, forceExpression, parameterNames, globalParameters, energyParamDerivExpressions);
     if (usePeriodic)
         bond.setPeriodic(extractBoxVectors(context));
@@ -600,8 +600,8 @@ double ReferenceCalcCustomAngleForceKernel::execute(ContextImpl& context, bool i
     vector<Vec3>& forceData = extractForces(context);
     double energy = 0;
     map<string, double> globalParameters;
-    for (int i = 0; i < (int) globalParameterNames.size(); i++)
-        globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
+    for (auto& name : globalParameterNames)
+        globalParameters[name] = context.getParameter(name);
     ReferenceCustomAngleIxn customAngle(energyExpression, forceExpression, parameterNames, globalParameters, energyParamDerivExpressions);
     if (usePeriodic)
         customAngle.setPeriodic(extractBoxVectors(context));
@@ -870,8 +870,8 @@ double ReferenceCalcCustomTorsionForceKernel::execute(ContextImpl& context, bool
     vector<Vec3>& forceData = extractForces(context);
     double energy = 0;
     map<string, double> globalParameters;
-    for (int i = 0; i < (int) globalParameterNames.size(); i++)
-        globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
+    for (auto& name : globalParameterNames)
+        globalParameters[name] = context.getParameter(name);
     ReferenceCustomTorsionIxn customTorsion(energyExpression, forceExpression, parameterNames, globalParameters, energyParamDerivExpressions);
     if (usePeriodic)
         customTorsion.setPeriodic(extractBoxVectors(context));
@@ -1165,8 +1165,8 @@ void ReferenceCalcCustomNonbondedForceKernel::initialize(const System& system, c
 
     // Delete the custom functions.
 
-    for (map<string, Lepton::CustomFunction*>::iterator iter = functions.begin(); iter != functions.end(); iter++)
-        delete iter->second;
+    for (auto& function : functions)
+        delete function.second;
     
     // Record information for the long range correction.
     
@@ -1208,11 +1208,11 @@ double ReferenceCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bo
     if (interactionGroups.size() > 0)
         ixn.setInteractionGroups(interactionGroups);
     bool globalParamsChanged = false;
-    for (int i = 0; i < (int) globalParameterNames.size(); i++) {
-        double value = context.getParameter(globalParameterNames[i]);
-        if (globalParamValues[globalParameterNames[i]] != value)
+    for (auto& name : globalParameterNames) {
+        double value = context.getParameter(name);
+        if (globalParamValues[name] != value)
             globalParamsChanged = true;
-        globalParamValues[globalParameterNames[i]] = value;
+        globalParamValues[name] = value;
     }
     if (useSwitchingFunction)
         ixn.setUseSwitchingFunction(switchingDistance);
@@ -1459,8 +1459,8 @@ void ReferenceCalcCustomGBForceKernel::initialize(const System& system, const Cu
 
     // Delete the custom functions.
 
-    for (map<string, Lepton::CustomFunction*>::iterator iter = functions.begin(); iter != functions.end(); iter++)
-        delete iter->second;
+    for (auto& function : functions)
+        delete function.second;
 }
 
 double ReferenceCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -1477,8 +1477,8 @@ double ReferenceCalcCustomGBForceKernel::execute(ContextImpl& context, bool incl
         ixn.setUseCutoff(nonbondedCutoff, *neighborList);
     }
     map<string, double> globalParameters;
-    for (int i = 0; i < (int) globalParameterNames.size(); i++)
-        globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
+    for (auto& name : globalParameterNames)
+        globalParameters[name] = context.getParameter(name);
     vector<double> energyParamDerivValues(energyParamDerivNames.size()+1, 0.0);
     ixn.calculateIxn(numParticles, posData, particleParamArray, exclusions, globalParameters, forceData, includeEnergy ? &energy : NULL, &energyParamDerivValues[0]);
     map<string, double>& energyParamDerivs = extractEnergyParameterDerivatives(context);
@@ -1593,8 +1593,8 @@ double ReferenceCalcCustomExternalForceKernel::execute(ContextImpl& context, boo
     boxVectors = extractBoxVectors(context);
     double energy = 0;
     map<string, double> globalParameters;
-    for (int i = 0; i < (int) globalParameterNames.size(); i++)
-        globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
+    for (auto& name : globalParameterNames)
+        globalParameters[name] = context.getParameter(name);
     ReferenceCustomExternalIxn force(energyExpression, forceExpressionX, forceExpressionY, forceExpressionZ, parameterNames, globalParameters);
     for (int i = 0; i < numParticles; ++i)
         force.calculateForce(particles[i], posData, particleParamArray[i], forceData, includeEnergy ? &energy : NULL);
@@ -1699,8 +1699,8 @@ void ReferenceCalcCustomHbondForceKernel::initialize(const System& system, const
 
     // Delete the custom functions.
 
-    for (map<string, Lepton::CustomFunction*>::iterator iter = functions.begin(); iter != functions.end(); iter++)
-        delete iter->second;
+    for (auto& function : functions)
+        delete function.second;
 }
 
 double ReferenceCalcCustomHbondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -1710,8 +1710,8 @@ double ReferenceCalcCustomHbondForceKernel::execute(ContextImpl& context, bool i
         ixn->setPeriodic(extractBoxVectors(context));
     double energy = 0;
     map<string, double> globalParameters;
-    for (int i = 0; i < (int) globalParameterNames.size(); i++)
-        globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
+    for (auto& name : globalParameterNames)
+        globalParameters[name] = context.getParameter(name);
     ixn->calculatePairIxn(posData, donorParamArray, acceptorParamArray, exclusions, globalParameters, forceData, includeEnergy ? &energy : NULL);
     return energy;
 }
@@ -1803,8 +1803,8 @@ void ReferenceCalcCustomCentroidBondForceKernel::initialize(const System& system
 
     // Delete the custom functions.
 
-    for (map<string, Lepton::CustomFunction*>::iterator iter = functions.begin(); iter != functions.end(); iter++)
-        delete iter->second;
+    for (auto& function : functions)
+        delete function.second;
 }
 
 double ReferenceCalcCustomCentroidBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -1812,8 +1812,8 @@ double ReferenceCalcCustomCentroidBondForceKernel::execute(ContextImpl& context,
     vector<Vec3>& forceData = extractForces(context);
     double energy = 0;
     map<string, double> globalParameters;
-    for (int i = 0; i < (int) globalParameterNames.size(); i++)
-        globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
+    for (auto& name : globalParameterNames)
+        globalParameters[name] = context.getParameter(name);
     if (usePeriodic)
         ixn->setPeriodic(extractBoxVectors(context));
     vector<double> energyParamDerivValues(energyParamDerivNames.size()+1, 0.0);
@@ -1893,8 +1893,8 @@ void ReferenceCalcCustomCompoundBondForceKernel::initialize(const System& system
 
     // Delete the custom functions.
 
-    for (map<string, Lepton::CustomFunction*>::iterator iter = functions.begin(); iter != functions.end(); iter++)
-        delete iter->second;
+    for (auto& function : functions)
+        delete function.second;
 }
 
 double ReferenceCalcCustomCompoundBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -1902,8 +1902,8 @@ double ReferenceCalcCustomCompoundBondForceKernel::execute(ContextImpl& context,
     vector<Vec3>& forceData = extractForces(context);
     double energy = 0;
     map<string, double> globalParameters;
-    for (int i = 0; i < (int) globalParameterNames.size(); i++)
-        globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
+    for (auto& name : globalParameterNames)
+        globalParameters[name] = context.getParameter(name);
     if (usePeriodic)
         ixn->setPeriodic(extractBoxVectors(context));
     vector<double> energyParamDerivValues(energyParamDerivNames.size()+1, 0.0);
@@ -1966,8 +1966,8 @@ double ReferenceCalcCustomManyParticleForceKernel::execute(ContextImpl& context,
     vector<Vec3>& forceData = extractForces(context);
     double energy = 0;
     map<string, double> globalParameters;
-    for (int i = 0; i < (int) globalParameterNames.size(); i++)
-        globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
+    for (auto& name : globalParameterNames)
+        globalParameters[name] = context.getParameter(name);
     if (nonbondedMethod == CutoffPeriodic) {
         Vec3* boxVectors = extractBoxVectors(context);
         double minAllowedSize = 2*cutoffDistance;
@@ -2232,8 +2232,8 @@ void ReferenceIntegrateCustomStepKernel::initialize(const System& system, const 
     for (int i = 0; i < numParticles; ++i)
         masses[i] = system.getParticleMass(i);
     perDofValues.resize(integrator.getNumPerDofVariables());
-    for (int i = 0; i < (int) perDofValues.size(); i++)
-        perDofValues[i].resize(numParticles);
+    for (auto& values : perDofValues)
+        values.resize(numParticles);
 
     // Create the computation objects.
 
