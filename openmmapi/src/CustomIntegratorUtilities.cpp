@@ -59,8 +59,8 @@ bool CustomIntegratorUtilities::usesVariable(const Lepton::ExpressionTreeNode& n
     const Lepton::Operation& op = node.getOperation();
     if (op.getId() == Lepton::Operation::VARIABLE && op.getName() == variable)
         return true;
-    for (int i = 0; i < (int) node.getChildren().size(); i++)
-        if (usesVariable(node.getChildren()[i], variable))
+    for (auto& child : node.getChildren())
+        if (usesVariable(child, variable))
             return true;
     return false;
 }
@@ -107,11 +107,9 @@ void CustomIntegratorUtilities::analyzeComputations(const ContextImpl& context, 
 
     set<string> affectsForce;
     affectsForce.insert("x");
-    for (vector<ForceImpl*>::const_iterator iter = context.getForceImpls().begin(); iter != context.getForceImpls().end(); ++iter) {
-        const map<string, double> params = (*iter)->getDefaultParameters();
-        for (map<string, double>::const_iterator param = params.begin(); param != params.end(); ++param)
-            affectsForce.insert(param->first);
-    }
+    for (auto force : context.getForceImpls())
+        for (auto& param : force->getDefaultParameters())
+            affectsForce.insert(param.first);
     for (int i = 0; i < numSteps; i++)
         invalidatesForces[i] = (stepType[i] == CustomIntegrator::ConstrainPositions || affectsForce.find(stepVariable[i]) != affectsForce.end());
 
@@ -253,8 +251,7 @@ void CustomIntegratorUtilities::analyzeForceComputationsForPath(vector<int>& ste
             const vector<bool>& invalidatesForces, const vector<int>& forceGroup, vector<bool>& computeBoth) {
     vector<int> candidatePoints;
     int currentGroup = -1;
-    for (int i = 0; i < (int) steps.size(); i++) {
-        int step = steps[i];
+    for (int step : steps) {
         if (invalidatesForces[step] || ((needsForces[step] || needsEnergy[step]) && forceGroup[step] != currentGroup)) {
             // Forces and energies are invalidated at this step, or it changes to a different force group,
             // so anything from this point on won't affect what we do at earlier steps.
@@ -264,11 +261,9 @@ void CustomIntegratorUtilities::analyzeForceComputationsForPath(vector<int>& ste
         if (needsForces[step] || needsEnergy[step]) {
             // See if this step affects what we do at earlier points.
 
-            for (int j = 0; j < (int) candidatePoints.size(); j++) {
-                int candidate = candidatePoints[j];
+            for (int candidate : candidatePoints)
                 if ((needsForces[candidate] && needsEnergy[step]) || (needsEnergy[candidate] && needsForces[step]))
                     computeBoth[candidate] = true;
-            }
 
             // Add this to the list of candidates that might be affected by later steps.
 

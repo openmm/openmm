@@ -89,13 +89,13 @@ ThreadPool::ThreadPool(int numThreads) : currentTask(NULL) {
 }
 
 ThreadPool::~ThreadPool() {
-    for (int i = 0; i < (int) threadData.size(); i++)
-        threadData[i]->isDeleted = true;
+    for (auto data : threadData)
+        data->isDeleted = true;
     pthread_mutex_lock(&lock);
     pthread_cond_broadcast(&startCondition);
     pthread_mutex_unlock(&lock);
-    for (int i = 0; i < (int) thread.size(); i++)
-        pthread_join(thread[i], NULL);
+    for (auto t : thread)
+        pthread_join(t, NULL);
     pthread_mutex_destroy(&lock);
     pthread_cond_destroy(&startCondition);
     pthread_cond_destroy(&endCondition);

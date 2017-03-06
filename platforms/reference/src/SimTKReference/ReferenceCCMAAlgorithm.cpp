@@ -127,8 +127,8 @@ ReferenceCCMAAlgorithm::ReferenceCCMAAlgorithm(int numberOfAtoms,
                     // We didn't find one, so look for an angle force field term.
 
                     const vector<int>& angleCandidates = atomAngles[atomb];
-                    for (vector<int>::const_iterator iter = angleCandidates.begin(); iter != angleCandidates.end(); iter++) {
-                        const AngleInfo& angle = angles[*iter];
+                    for (int candidate : angleCandidates) {
+                        const AngleInfo& angle = angles[candidate];
                         if ((angle.atom1 == atoma && angle.atom3 == atomc) || (angle.atom3 == atoma && angle.atom1 == atomc)) {
                             matrix[j].push_back(pair<int, double>(k, scale*cos(angle.angle)));
                             break;

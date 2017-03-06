@@ -488,10 +488,10 @@ void ReferenceLJCoulombIxn::calculateEwaldIxn(int numberOfAtoms, vector<Vec3>& a
     double totalExclusionEnergy = 0.0f;
     const double TWO_OVER_SQRT_PI = 2/sqrt(PI_M);
     for (int i = 0; i < numberOfAtoms; i++)
-        for (set<int>::const_iterator iter = exclusions[i].begin(); iter != exclusions[i].end(); ++iter) {
-            if (*iter > i) {
+        for (int exclusion : exclusions[i]) {
+            if (exclusion > i) {
                 int ii = i;
-                int jj = *iter;
+                int jj = exclusion;
 
                 double deltaR[2][ReferenceForce::LastDeltaRIndex];
                 ReferenceForce::getDeltaR(atomCoordinates[jj], atomCoordinates[ii], deltaR[0]);
