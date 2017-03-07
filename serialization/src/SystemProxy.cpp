@@ -129,14 +129,11 @@ void* SystemProxy::deserialize(const SerializationNode& node) const {
             }
         }
         const SerializationNode& constraints = node.getChildNode("Constraints");
-        for (int i = 0; i < (int) constraints.getChildren().size(); i++) {
-            const SerializationNode& constraint = constraints.getChildren()[i];
+        for (auto& constraint : constraints.getChildren())
             system->addConstraint(constraint.getIntProperty("p1"), constraint.getIntProperty("p2"), constraint.getDoubleProperty("d"));
-        }
         const SerializationNode& forces = node.getChildNode("Forces");
-        for (int i = 0; i < (int) forces.getChildren().size(); i++) {
-            system->addForce(forces.getChildren()[i].decodeObject<Force>());
-        }
+        for (auto& force : forces.getChildren())
+            system->addForce(force.decodeObject<Force>());
     }
     catch (...) {
         delete system;

@@ -65,10 +65,8 @@ void* HarmonicBondForceProxy::deserialize(const SerializationNode& node) const {
         if (version > 1)
             force->setUsesPeriodicBoundaryConditions(node.getBoolProperty("usesPeriodic"));
         const SerializationNode& bonds = node.getChildNode("Bonds");
-        for (int i = 0; i < (int) bonds.getChildren().size(); i++) {
-            const SerializationNode& bond = bonds.getChildren()[i];
+        for (auto& bond : bonds.getChildren())
             force->addBond(bond.getIntProperty("p1"), bond.getIntProperty("p2"), bond.getDoubleProperty("d"), bond.getDoubleProperty("k"));
-        }
     }
     catch (...) {
         delete force;

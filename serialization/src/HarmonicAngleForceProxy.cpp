@@ -65,10 +65,8 @@ void* HarmonicAngleForceProxy::deserialize(const SerializationNode& node) const 
         if (version > 1)
             force->setUsesPeriodicBoundaryConditions(node.getBoolProperty("usesPeriodic"));
         const SerializationNode& angles = node.getChildNode("Angles");
-        for (int i = 0; i < (int) angles.getChildren().size(); i++) {
-            const SerializationNode& angle = angles.getChildren()[i];
+        for (auto& angle : angles.getChildren())
             force->addAngle(angle.getIntProperty("p1"), angle.getIntProperty("p2"), angle.getIntProperty("p3"), angle.getDoubleProperty("a"), angle.getDoubleProperty("k"));
-        }
     }
     catch (...) {
         delete force;

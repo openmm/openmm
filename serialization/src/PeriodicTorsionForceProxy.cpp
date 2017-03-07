@@ -65,11 +65,9 @@ void* PeriodicTorsionForceProxy::deserialize(const SerializationNode& node) cons
         if (version > 1)
             force->setUsesPeriodicBoundaryConditions(node.getBoolProperty("usesPeriodic"));
         const SerializationNode& torsions = node.getChildNode("Torsions");
-        for (int i = 0; i < (int) torsions.getChildren().size(); i++) {
-            const SerializationNode& torsion = torsions.getChildren()[i];
+        for (auto& torsion : torsions.getChildren())
             force->addTorsion(torsion.getIntProperty("p1"), torsion.getIntProperty("p2"), torsion.getIntProperty("p3"), torsion.getIntProperty("p4"),
                     torsion.getIntProperty("periodicity"), torsion.getDoubleProperty("phase"), torsion.getDoubleProperty("k"));
-        }
     }
     catch (...) {
         delete force;

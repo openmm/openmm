@@ -56,11 +56,8 @@ void StateProxy::serialize(const void* object, SerializationNode& node) const {
     if ((s.getDataTypes()&State::Parameters) != 0) {
         s.getParameters();
         SerializationNode& parametersNode = node.createChildNode("Parameters");
-        map<string, double> stateParams = s.getParameters();
-        map<string, double>::const_iterator it;
-        for (it = stateParams.begin(); it!=stateParams.end();it++) {
-            parametersNode.setDoubleProperty(it->first, it->second);
-        }
+        for (auto& param : s.getParameters())
+            parametersNode.setDoubleProperty(param.first, param.second);
     }
     if ((s.getDataTypes()&State::Energy) != 0) {
         s.getPotentialEnergy();
@@ -108,17 +105,11 @@ void* StateProxy::deserialize(const SerializationNode& node) const {
     int types = 0;
     vector<int> arraySizes;
     State::StateBuilder builder(outTime);
-    const vector<SerializationNode>& children = node.getChildren();
-    for (int j = 0; j < (int) children.size(); j++) {
-        const SerializationNode& child = children[j];
+    for (auto& child : node.getChildren()) {
         if (child.getName() == "Parameters") {
             map<string, double> outStateParams;
-            // inStateParams is really a <string,double> pair, where string is the name and double is the value
-            // but we want to avoid casting a string to a double and instead use the built in routines,
-            map<string, string> inStateParams = child.getProperties();
-            for (map<string, string>::const_iterator pit = inStateParams.begin(); pit != inStateParams.end(); pit++) {
-                outStateParams[pit->first] = child.getDoubleProperty(pit->first);
-            }
+            for (auto& param : child.getProperties())
+                outStateParams[param.first] = child.getDoubleProperty(param.first);
             builder.setParameters(outStateParams);
         }
         else if (child.getName() == "Energies") {
@@ -128,28 +119,22 @@ void* StateProxy::deserialize(const SerializationNode& node) const {
         }
         else if (child.getName() == "Positions") {
             vector<Vec3> outPositions;
-            for (int i = 0; i < (int) child.getChildren().size(); i++) {
-                const SerializationNode& particle = child.getChildren()[i];
+            for (auto& particle : child.getChildren())
                 outPositions.push_back(Vec3(particle.getDoubleProperty("x"),particle.getDoubleProperty("y"),particle.getDoubleProperty("z")));
-            }
             builder.setPositions(outPositions);
             arraySizes.push_back(outPositions.size());
         }
         else if (child.getName() == "Velocities") {
             vector<Vec3> outVelocities;
-            for (int i = 0; i < (int) child.getChildren().size(); i++) {
-                const SerializationNode& particle = child.getChildren()[i];
+            for (auto& particle : child.getChildren())
                 outVelocities.push_back(Vec3(particle.getDoubleProperty("x"),particle.getDoubleProperty("y"),particle.getDoubleProperty("z")));
-            }
             builder.setVelocities(outVelocities);
             arraySizes.push_back(outVelocities.size());
         }
         else if (child.getName() == "Forces") {
             vector<Vec3> outForces;
-            for (int i = 0; i < (int) child.getChildren().size(); i++) {
-                const SerializationNode& particle = child.getChildren()[i];
+            for (auto& particle : child.getChildren())
                 outForces.push_back(Vec3(particle.getDoubleProperty("x"),particle.getDoubleProperty("y"),particle.getDoubleProperty("z")));
-            }
             builder.setForces(outForces);
             arraySizes.push_back(outForces.size());
         }

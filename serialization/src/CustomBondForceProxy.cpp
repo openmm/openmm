@@ -85,26 +85,19 @@ void* CustomBondForceProxy::deserialize(const SerializationNode& node) const {
         if (version > 1)
             force->setUsesPeriodicBoundaryConditions(node.getBoolProperty("usesPeriodic"));
         const SerializationNode& perBondParams = node.getChildNode("PerBondParameters");
-        for (int i = 0; i < (int) perBondParams.getChildren().size(); i++) {
-            const SerializationNode& parameter = perBondParams.getChildren()[i];
+        for (auto& parameter : perBondParams.getChildren())
             force->addPerBondParameter(parameter.getStringProperty("name"));
-        }
         const SerializationNode& globalParams = node.getChildNode("GlobalParameters");
-        for (int i = 0; i < (int) globalParams.getChildren().size(); i++) {
-            const SerializationNode& parameter = globalParams.getChildren()[i];
+        for (auto& parameter : globalParams.getChildren())
             force->addGlobalParameter(parameter.getStringProperty("name"), parameter.getDoubleProperty("default"));
-        }
         if (version > 2) {
             const SerializationNode& energyDerivs = node.getChildNode("EnergyParameterDerivatives");
-            for (int i = 0; i < (int) energyDerivs.getChildren().size(); i++) {
-                const SerializationNode& parameter = energyDerivs.getChildren()[i];
+            for (auto& parameter : energyDerivs.getChildren())
                 force->addEnergyParameterDerivative(parameter.getStringProperty("name"));
-            }
         }
         const SerializationNode& bonds = node.getChildNode("Bonds");
         vector<double> params(force->getNumPerBondParameters());
-        for (int i = 0; i < (int) bonds.getChildren().size(); i++) {
-            const SerializationNode& bond = bonds.getChildren()[i];
+        for (auto& bond : bonds.getChildren()) {
             for (int j = 0; j < (int) params.size(); j++) {
                 stringstream key;
                 key << "param";
