@@ -54,9 +54,9 @@ namespace OpenMM {
  * This will have no effect on Contexts that already exist unless you call updateParametersInContext().
  * theta is guaranteed to be in the range [-pi,+pi]
  *
- * As an example, the following code creates a CustomTorsionForce that implements a harmonic potential:
+ * As an example, the following code creates a CustomTorsionForce that implements a periodic potential:
  *
- * <tt>CustomTorsionForce* force = new CustomTorsionForce("0.5*k*(theta-theta0)^2");</tt>
+ * <tt>CustomTorsionForce* force = new CustomTorsionForce("0.5*k*(1-cos(theta-theta0))");</tt>
  *
  * This force depends on two parameters: the spring constant k and equilibrium angle theta0.  The following code defines these parameters:
  *
