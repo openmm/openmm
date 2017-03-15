@@ -910,6 +910,7 @@ class CharmmPsfFile(object):
         energy_function  = 'k*dtheta_torus^2;'
         energy_function += 'dtheta_torus = dtheta - floor(dtheta/(2*pi)+0.5)*(2*pi);'
         energy_function += 'dtheta = theta - theta0;'
+        energy_function += 'pi = %f;' % pi
         force = mm.CustomTorsionForce(energy_function)
         force.addPerTorsionParameter('k')
         force.addPerTorsionParameter('theta0')
