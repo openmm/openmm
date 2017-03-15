@@ -1,10 +1,16 @@
 # Packaging OpenMM into ZIP installers
 
+Set your environment variable `TAG` to the git tag for the release:
+```bash
+# OpenMM 7.1.0rc1
+export TAG="9567ddb"
+```
+
 ## Source
 
 Start the docker container:
 ```bash
-docker run -i -t --rm -v `pwd`:/io jchodera/omnia-build-box:cuda80-amd30-clang38 bash
+docker run -i -t --rm -e TAG -v `pwd`:/io jchodera/omnia-build-box:cuda80-amd30-clang38 bash
 ```
 Inside the docker container:
 ```bash
@@ -23,7 +29,7 @@ cp packaging/compressed/* /io
 
 Start the docker container:
 ```bash
-docker run -i -t --rm -v `pwd`:/io jchodera/omnia-build-box:cuda80-amd30-clang38 bash
+docker run -i -t --rm -e TAG -v `pwd`:/io jchodera/omnia-build-box:cuda80-amd30-clang38 bash
 ```
 Inside the docker container:
 ```bash
@@ -50,4 +56,3 @@ source openmm/devtools/packaging/scripts/osx/prepare.sh
 source openmm/devtools/packaging/scripts/osx/build.sh
 source openmm/devtools/packaging/scripts/osx/package.sh
 ```
-
