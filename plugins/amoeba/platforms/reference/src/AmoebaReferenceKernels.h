@@ -77,6 +77,7 @@ private:
     RealOpenMM globalBondCubic;
     RealOpenMM globalBondQuartic;
     const System& system;
+    bool usePeriodic;
 };
 
 /**
@@ -121,6 +122,7 @@ private:
     RealOpenMM globalAnglePentic;
     RealOpenMM globalAngleSextic;
     const System& system;
+    bool usePeriodic;
 };
 
 /**
@@ -166,6 +168,7 @@ private:
     RealOpenMM globalInPlaneAnglePentic;
     RealOpenMM globalInPlaneAngleSextic;
     const System& system;
+    bool usePeriodic;
 };
 
 /**
@@ -208,6 +211,7 @@ private:
     std::vector<int>   particle6;
     std::vector<RealOpenMM> kTorsion;
     const System& system;
+    bool usePeriodic;
 };
 
 /**
@@ -251,6 +255,7 @@ private:
     std::vector<RealOpenMM> k1Parameters;
     std::vector<RealOpenMM> k2Parameters;
     const System& system;
+    bool usePeriodic;
 };
 
 /**
@@ -295,6 +300,7 @@ private:
     RealOpenMM globalOutOfPlaneBendAnglePentic;
     RealOpenMM globalOutOfPlaneBendAngleSextic;
     const System& system;
+    bool usePeriodic;
 };
 
 /**
@@ -334,6 +340,7 @@ private:
     std::vector< std::vector< std::vector< std::vector<RealOpenMM> > > > torsionTorsionGrids;
 
     const System& system;
+    bool usePeriodic;
 };
 
 /**
@@ -374,6 +381,20 @@ public:
      * @param dipoles    the induced dipole moment of particle i is stored into the i'th element
      */
     void getInducedDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
+    /**
+     * Get the fixed dipole moments of all particles in the global reference frame.
+     *
+     * @param context    the Context for which to get the fixed dipoles
+     * @param dipoles    the fixed dipole moment of particle i is stored into the i'th element
+     */
+    void getLabFramePermanentDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
+    /**
+     * Get the total dipole moments of all particles in the global reference frame.
+     *
+     * @param context    the Context for which to get the fixed dipoles
+     * @param dipoles    the fixed dipole moment of particle i is stored into the i'th element
+     */
+    void getTotalDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
     /**
      * Calculate the electrostatic potential given vector of grid coordinates.
      *

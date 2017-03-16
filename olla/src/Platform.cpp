@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -89,16 +89,22 @@ void Platform::setPropertyValue(Context& context, const string& property, const 
 }
 
 const string& Platform::getPropertyDefaultValue(const string& property) const {
-    map<string, string>::const_iterator value = defaultProperties.find(property);
+    string propertyName = property;
+    if (deprecatedPropertyReplacements.find(property) != deprecatedPropertyReplacements.end())
+        propertyName = deprecatedPropertyReplacements.find(property)->second;
+    map<string, string>::const_iterator value = defaultProperties.find(propertyName);
     if (value == defaultProperties.end())
         throw OpenMMException("getPropertyDefaultValue: Illegal property name");
     return value->second;
 }
 
 void Platform::setPropertyDefaultValue(const string& property, const string& value) {
+    string propertyName = property;
+    if (deprecatedPropertyReplacements.find(property) != deprecatedPropertyReplacements.end())
+        propertyName = deprecatedPropertyReplacements.find(property)->second;
     for (int i = 0; i < (int) platformProperties.size(); i++)
-        if (platformProperties[i] == property) {
-            defaultProperties[property] = value;
+        if (platformProperties[i] == propertyName) {
+            defaultProperties[propertyName] = value;
             return;
         }
     throw OpenMMException("setPropertyDefaultValue: Illegal property name");
@@ -314,7 +320,11 @@ const string& Platform::getDefaultPluginsDirectory() {
 #define STRING(x) STRING1(x)
 
 const string& Platform::getOpenMMVersion() {
+#if OPENMM_BUILD_VERSION == 0
     static const string version = STRING(OPENMM_MAJOR_VERSION) "." STRING(OPENMM_MINOR_VERSION);
+#else
+    static const string version = STRING(OPENMM_MAJOR_VERSION) "." STRING(OPENMM_MINOR_VERSION) "." STRING(OPENMM_BUILD_VERSION);
+#endif
     return version;
 }
 

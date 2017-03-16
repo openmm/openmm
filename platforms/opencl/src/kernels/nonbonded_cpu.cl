@@ -28,6 +28,7 @@ __kernel void computeNonbonded(
 #endif
         PARAMETER_ARGUMENTS) {
     mixed energy = 0;
+    INIT_DERIVATIVES
     __local AtomData localData[TILE_SIZE];
 
     // First loop: process tiles that contain exclusions.
@@ -87,6 +88,7 @@ __kernel void computeNonbonded(
                         bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS || !(excl & 0x1));
 #endif
                         real tempEnergy = 0;
+                        const real interactionScale = 0.5f;
                         COMPUTE_INTERACTION
                         energy += 0.5f*tempEnergy;
 #ifdef USE_SYMMETRIC
@@ -155,6 +157,7 @@ __kernel void computeNonbonded(
                         bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS || !(excl & 0x1));
 #endif
                         real tempEnergy = 0;
+                        const real interactionScale = 1.0f;
                         COMPUTE_INTERACTION
                         energy += tempEnergy;
 #ifdef USE_SYMMETRIC
@@ -214,6 +217,8 @@ __kernel void computeNonbonded(
 
 #ifdef USE_CUTOFF
     const unsigned int numTiles = interactionCount[0];
+    if (numTiles > maxTiles)
+        return; // There wasn't enough memory for the neighbor list.
     int pos = (int) (numTiles > maxTiles ? (unsigned int) (startTileIndex+get_group_id(0)*(long)numTileIndices/get_num_groups(0)) : get_group_id(0)*(long)numTiles/get_num_groups(0));
     int end = (int) (numTiles > maxTiles ? (unsigned int) (startTileIndex+(get_group_id(0)+1)*(long)numTileIndices/get_num_groups(0)) : (get_group_id(0)+1)*(long)numTiles/get_num_groups(0));
 #else
@@ -234,41 +239,37 @@ __kernel void computeNonbonded(
         int x, y;
         bool singlePeriodicCopy = false;
 #ifdef USE_CUTOFF
-        if (numTiles <= maxTiles) {
-            x = tiles[pos];
-            real4 blockSizeX = blockSize[x];
-            singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= MAX_CUTOFF &&
-                                  0.5f*periodicBoxSize.y-blockSizeX.y >= MAX_CUTOFF &&
-                                  0.5f*periodicBoxSize.z-blockSizeX.z >= MAX_CUTOFF);
-        }
-        else
-#endif
-        {
-            y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+        x = tiles[pos];
+        real4 blockSizeX = blockSize[x];
+        singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= MAX_CUTOFF &&
+                              0.5f*periodicBoxSize.y-blockSizeX.y >= MAX_CUTOFF &&
+                              0.5f*periodicBoxSize.z-blockSizeX.z >= MAX_CUTOFF);
+#else
+        y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+        x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+        if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
+            y += (x < y ? -1 : 1);
             x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
-            if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
-                y += (x < y ? -1 : 1);
-                x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
-            }
-
-            // Skip over tiles that have exclusions, since they were already processed.
-
-            while (nextToSkip < pos) {
-                if (currentSkipIndex < NUM_TILES_WITH_EXCLUSIONS) {
-                    ushort2 tile = exclusionTiles[currentSkipIndex++];
-                    nextToSkip = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
-                }
-                else
-                    nextToSkip = end;
-            }
-            includeTile = (nextToSkip != pos);
         }
+
+        // Skip over tiles that have exclusions, since they were already processed.
+
+        while (nextToSkip < pos) {
+            if (currentSkipIndex < NUM_TILES_WITH_EXCLUSIONS) {
+                ushort2 tile = exclusionTiles[currentSkipIndex++];
+                nextToSkip = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
+            }
+            else
+                nextToSkip = end;
+        }
+        includeTile = (nextToSkip != pos);
+#endif
         if (includeTile) {
             // Load the data for this tile.
 
             for (int localAtomIndex = 0; localAtomIndex < TILE_SIZE; localAtomIndex++) {
 #ifdef USE_CUTOFF
-                unsigned int j = (numTiles <= maxTiles ? interactingAtoms[pos*TILE_SIZE+localAtomIndex] : y*TILE_SIZE+localAtomIndex);
+                unsigned int j = interactingAtoms[pos*TILE_SIZE+localAtomIndex];
 #else
                 unsigned int j = y*TILE_SIZE+localAtomIndex;
 #endif
@@ -320,6 +321,7 @@ __kernel void computeNonbonded(
                             bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS);
 #endif
                             real tempEnergy = 0;
+                            const real interactionScale = 1.0f;
                             COMPUTE_INTERACTION
                             energy += tempEnergy;
 #ifdef USE_SYMMETRIC
@@ -384,6 +386,7 @@ __kernel void computeNonbonded(
                             bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS);
 #endif
                             real tempEnergy = 0;
+                            const real interactionScale = 1.0f;
                             COMPUTE_INTERACTION
                             energy += tempEnergy;
 #ifdef USE_SYMMETRIC
@@ -443,4 +446,5 @@ __kernel void computeNonbonded(
         pos++;
     }
     energyBuffer[get_global_id(0)] += energy;
+    SAVE_DERIVATIVES
 }

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -186,6 +186,79 @@ void testIllegalVariable() {
     ASSERT(threwException);
 }
 
+void testPeriodic() {
+    // Create a force that uses periodic boundary conditions.
+    
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.setDefaultPeriodicBoxVectors(Vec3(3, 0, 0), Vec3(0, 3, 0), Vec3(0, 0, 3));
+    VerletIntegrator integrator(0.01);
+    CustomTorsionForce* torsions = new CustomTorsionForce("k*(1+cos(n*theta-theta0))");
+    torsions->addPerTorsionParameter("theta0");
+    torsions->addPerTorsionParameter("n");
+    torsions->addGlobalParameter("k", 1.1);
+    vector<double> parameters(2);
+    parameters[0] = M_PI/3;
+    parameters[1] = 2;
+    torsions->addTorsion(0, 1, 2, 3, parameters);
+    torsions->setUsesPeriodicBoundaryConditions(true);
+    system.addForce(torsions);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(4);
+    positions[0] = Vec3(0, 1, 0);
+    positions[1] = Vec3(0, 0, 0);
+    positions[2] = Vec3(1, 0, 0);
+    positions[3] = Vec3(1, 0, 2);
+    context.setPositions(positions);
+    State state = context.getState(State::Forces | State::Energy);
+    const vector<Vec3>& forces = state.getForces();
+    double torque = -2*1.1*std::sin(2*M_PI/3);
+    ASSERT_EQUAL_VEC(Vec3(0, 0, torque), forces[0], TOL);
+    ASSERT_EQUAL_VEC(Vec3(0, -torque, 0), forces[3], TOL);
+    ASSERT_EQUAL_VEC(Vec3(forces[0][0]+forces[1][0]+forces[2][0]+forces[3][0], forces[0][1]+forces[1][1]+forces[2][1]+forces[3][1], forces[0][2]+forces[1][2]+forces[2][2]+forces[3][2]), Vec3(0, 0, 0), TOL);
+    ASSERT_EQUAL_TOL(1.1*(1+std::cos(2*M_PI/3)), state.getPotentialEnergy(), TOL);
+}
+
+void testEnergyParameterDerivatives() {
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    VerletIntegrator integrator(0.01);
+    CustomTorsionForce* torsions = new CustomTorsionForce("k*(theta-theta0)^2");
+    torsions->addGlobalParameter("theta0", 0.0);
+    torsions->addGlobalParameter("k", 0.0);
+    torsions->addEnergyParameterDerivative("theta0");
+    torsions->addEnergyParameterDerivative("k");
+    vector<double> parameters;
+    torsions->addTorsion(0, 1, 2, 3, parameters);
+    system.addForce(torsions);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(4);
+    positions[0] = Vec3(0, 2, 0);
+    positions[1] = Vec3(0, 0, 0);
+    positions[2] = Vec3(1, 0, 0);
+    positions[3] = Vec3(1, 1, 1);
+    context.setPositions(positions);
+    double theta = M_PI/4;
+    for (int i = 0; i < 10; i++) {
+        double theta0 = 0.1*i;
+        double k = 10-i;
+        context.setParameter("theta0", theta0);
+        context.setParameter("k", k);
+        State state = context.getState(State::ParameterDerivatives);
+        map<string, double> derivs = state.getEnergyParameterDerivatives();
+        double dEdtheta0 = -2*k*(theta-theta0);
+        double dEdk = (theta-theta0)*(theta-theta0);
+        ASSERT_EQUAL_TOL(dEdtheta0, derivs["theta0"], 1e-5);
+        ASSERT_EQUAL_TOL(dEdk, derivs["k"], 1e-5);
+    }
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -194,6 +267,8 @@ int main(int argc, char* argv[]) {
         testTorsions();
         testRange();
         testIllegalVariable();
+        testPeriodic();
+        testEnergyParameterDerivatives();
         runPlatformTests();
     }
     catch(const exception& e) {

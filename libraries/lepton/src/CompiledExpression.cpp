@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013 Stanford University and the Authors.           *
+ * Portions copyright (c) 2013-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -77,9 +77,7 @@ CompiledExpression& CompiledExpression::operator=(const CompiledExpression& expr
     operation.resize(expression.operation.size());
     for (int i = 0; i < (int) operation.size(); i++)
         operation[i] = expression.operation[i]->clone();
-#ifdef LEPTON_USE_JIT
-    generateJitCode();
-#endif
+    setVariableLocations(variablePointers);
     return *this;
 }
 
@@ -137,16 +135,41 @@ const set<string>& CompiledExpression::getVariables() const {
 }
 
 double& CompiledExpression::getVariableReference(const string& name) {
+    map<string, double*>::iterator pointer = variablePointers.find(name);
+    if (pointer != variablePointers.end())
+        return *pointer->second;
     map<string, int>::iterator index = variableIndices.find(name);
     if (index == variableIndices.end())
         throw Exception("getVariableReference: Unknown variable '"+name+"'");
     return workspace[index->second];
 }
 
+void CompiledExpression::setVariableLocations(map<string, double*>& variableLocations) {
+    variablePointers = variableLocations;
+#ifdef LEPTON_USE_JIT
+    // Rebuild the JIT code.
+    
+    if (workspace.size() > 0)
+        generateJitCode();
+#else
+    // Make a list of all variables we will need to copy before evaluating the expression.
+    
+    variablesToCopy.clear();
+    for (map<string, int>::const_iterator iter = variableIndices.begin(); iter != variableIndices.end(); ++iter) {
+        map<string, double*>::iterator pointer = variablePointers.find(iter->first);
+        if (pointer != variablePointers.end())
+            variablesToCopy.push_back(make_pair(&workspace[iter->second], pointer->second));
+    }
+#endif
+}
+
 double CompiledExpression::evaluate() const {
 #ifdef LEPTON_USE_JIT
     return ((double (*)()) jitCode)();
 #else
+    for (int i = 0; i < variablesToCopy.size(); i++)
+        *variablesToCopy[i].first = *variablesToCopy[i].second;
+
     // Loop over the operations and evaluate each one.
     
     for (int step = 0; step < operation.size(); step++) {
@@ -175,16 +198,16 @@ void CompiledExpression::generateJitCode() {
     vector<X86XmmVar> workspaceVar(workspace.size());
     for (int i = 0; i < (int) workspaceVar.size(); i++)
         workspaceVar[i] = c.newXmmVar(kX86VarTypeXmmSd);
-    X86GpVar workspacePointer(c);
     X86GpVar argsPointer(c);
-    c.mov(workspacePointer, imm_ptr(&workspace[0]));
     c.mov(argsPointer, imm_ptr(&argValues[0]));
     
     // Load the arguments into variables.
     
     for (set<string>::const_iterator iter = variableNames.begin(); iter != variableNames.end(); ++iter) {
         map<string, int>::iterator index = variableIndices.find(*iter);
-        c.movsd(workspaceVar[index->second], x86::ptr(workspacePointer, 8*index->second, 0));
+        X86GpVar variablePointer(c);
+        c.mov(variablePointer, imm_ptr(&getVariableReference(index->first)));
+        c.movsd(workspaceVar[index->second], x86::ptr(variablePointer, 0, 0));
     }
 
     // Make a list of all constants that will be needed for evaluation.

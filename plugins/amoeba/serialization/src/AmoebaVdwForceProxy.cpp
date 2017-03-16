@@ -46,13 +46,14 @@ void AmoebaVdwForceProxy::serialize(const void* object, SerializationNode& node)
     node.setIntProperty("version", 1);
     const AmoebaVdwForce& force = *reinterpret_cast<const AmoebaVdwForce*>(object);
 
-    node.setIntProperty("method", (int)force.getNonbondedMethod());
-    node.setDoubleProperty("VdwCutoff", force.getCutoff());
     node.setBoolProperty("useDispersionCorrection", force.getUseDispersionCorrection());
     node.setIntProperty("numVdwprTypes", force.getNumVdwprTypes());
     node.setStringProperty("SigmaCombiningRule", force.getSigmaCombiningRule());
     node.setStringProperty("EpsilonCombiningRule", force.getEpsilonCombiningRule());
     node.setStringProperty("FunctionalForm", force.getFunctionalForm());
+    node.setDoubleProperty("VdwCutoff", force.getCutoffDistance());
+
+    node.setIntProperty("method", (int) force.getNonbondedMethod());
 
     SerializationNode& particles = node.createChildNode("VdwParticles");
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(force.getNumParticles()); ii++) {
@@ -95,13 +96,14 @@ void* AmoebaVdwForceProxy::deserialize(const SerializationNode& node) const {
         throw OpenMMException("Unsupported version number");
     AmoebaVdwForce* force = new AmoebaVdwForce();
     try {
-        force->setNonbondedMethod((AmoebaVdwForce::NonbondedMethod)node.getIntProperty("method"));
-        force->setCutoff(node.getDoubleProperty("VdwCutoff"));
         force->setUseDispersionCorrection(node.getBoolProperty("useDispersionCorrection"));
         force->setNumVdwprTypes(node.getIntProperty("numVdwprTypes"));
         force->setSigmaCombiningRule(node.getStringProperty("SigmaCombiningRule"));
         force->setEpsilonCombiningRule(node.getStringProperty("EpsilonCombiningRule"));
         force->setFunctionalForm(node.getStringProperty("FunctionalForm"));
+        force->setCutoffDistance(node.getDoubleProperty("VdwCutoff"));
+        force->setNonbondedMethod((AmoebaVdwForce::NonbondedMethod) node.getIntProperty("method"));
+
         const SerializationNode& particles = node.getChildNode("VdwParticles");
         for (unsigned int ii = 0; ii < particles.getChildren().size(); ii++) {
             const SerializationNode& particle = particles.getChildren()[ii];

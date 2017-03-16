@@ -77,6 +77,7 @@ class DCDFile(object):
         if is_quantity(dt):
             dt = dt.value_in_unit(picoseconds)
         dt /= 0.04888821
+        self._dt = dt
         boxFlag = 0
         if topology.getUnitCellDimensions() is not None:
             boxFlag = 1
@@ -116,9 +117,19 @@ class DCDFile(object):
             raise ValueError('Particle position is infinite')
         file = self._file
 
+        self._modelCount += 1
+        if self._interval > 1 and self._firstStep+self._modelCount*self._interval > 1<<31:
+            # This will exceed the range of a 32 bit integer.  To avoid crashing or producing a corrupt file,
+            # update the header to say the trajectory consisted of a smaller number of larger steps (so the
+            # total trajectory length remains correct).
+            self._firstStep //= self._interval
+            self._dt *= self._interval
+            self._interval = 1
+            file.seek(0, os.SEEK_SET)
+            file.write(struct.pack('<i4c9if', 84, b'C', b'O', b'R', b'D', 0, self._firstStep, self._interval, 0, 0, 0, 0, 0, 0, self._dt))
+
         # Update the header.
 
-        self._modelCount += 1
         file.seek(8, os.SEEK_SET)
         file.write(struct.pack('<i', self._modelCount))
         file.seek(20, os.SEEK_SET)

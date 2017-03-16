@@ -108,17 +108,9 @@ else(SWIG_EXECUTABLE)
     set(SWIG_VERSION "0.0.0" CACHE STRING "Swig version" FORCE)
 endif(SWIG_EXECUTABLE)
 # Enforce swig version
-if (PYTHON_VERSION_MAJOR EQUAL 3)
-    string(COMPARE LESS "${SWIG_VERSION}" "2.0.4" SWIG_VERSION_ERROR)
-    if(SWIG_VERSION_ERROR)
-        message("Swig version must be 2.0.4 or greater for Python 3! (You have ${SWIG_VERSION})")
-    endif(SWIG_VERSION_ERROR)
-else(PYTHON_VERSION_MAJOR EQUAL 3)
-    string(COMPARE LESS "${SWIG_VERSION}" "1.3.39" SWIG_VERSION_ERROR)
-    if(SWIG_VERSION_ERROR)
-        message("Swig version must be 1.3.39 or greater for Python 2! (You have ${SWIG_VERSION})")
-    endif(SWIG_VERSION_ERROR)
-endif(PYTHON_VERSION_MAJOR EQUAL 3)
+if(SWIG_VERSION VERSION_LESS "3.0.5")
+    message(SEND_ERROR "Swig version must be 3.0.5 or greater! (You have ${SWIG_VERSION})")
+endif(SWIG_VERSION VERSION_LESS "3.0.5")
 
 find_package(Doxygen REQUIRED)
 mark_as_advanced(CLEAR DOXYGEN_EXECUTABLE)
@@ -282,7 +274,7 @@ add_custom_target(PythonSdist
 )
 
 # Install binary module (to system location)
-set(PYTHON_SETUP_COMMAND "install")
+set(PYTHON_SETUP_COMMAND "install --root=\$ENV{DESTDIR}/")
 configure_file(pysetup.cmake.in
     "${CMAKE_CURRENT_BINARY_DIR}/pysetupinstall.cmake" @ONLY)
 add_custom_target(PythonInstall

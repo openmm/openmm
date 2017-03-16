@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -71,15 +71,16 @@ public:
     /**
      * Add a nonbonded interaction to be evaluated by the default interaction kernel.
      *
-     * @param usesCutoff     specifies whether a cutoff should be applied to this interaction
-     * @param usesPeriodic   specifies whether periodic boundary conditions should be applied to this interaction
-     * @param usesExclusions specifies whether this interaction uses exclusions.  If this is true, it must have identical exclusions to every other interaction.
-     * @param cutoffDistance the cutoff distance for this interaction (ignored if usesCutoff is false)
-     * @param exclusionList  for each atom, specifies the list of other atoms whose interactions should be excluded
-     * @param kernel         the code to evaluate the interaction
-     * @param forceGroup     the force group in which the interaction should be calculated
+     * @param usesCutoff       specifies whether a cutoff should be applied to this interaction
+     * @param usesPeriodic     specifies whether periodic boundary conditions should be applied to this interaction
+     * @param usesExclusions   specifies whether this interaction uses exclusions.  If this is true, it must have identical exclusions to every other interaction.
+     * @param cutoffDistance   the cutoff distance for this interaction (ignored if usesCutoff is false)
+     * @param exclusionList    for each atom, specifies the list of other atoms whose interactions should be excluded
+     * @param kernel           the code to evaluate the interaction
+     * @param forceGroup       the force group in which the interaction should be calculated
+     * @param supportsPairList specifies whether this interaction can work with a neighbor list that uses a separate pair list
      */
-    void addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance, const std::vector<std::vector<int> >& exclusionList, const std::string& kernel, int forceGroup);
+    void addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance, const std::vector<std::vector<int> >& exclusionList, const std::string& kernel, int forceGroup, bool supportsPairList=false);
     /**
      * Add a per-atom parameter that the default interaction kernel may depend on.
      */
@@ -88,6 +89,15 @@ public:
      * Add an array (other than a per-atom parameter) that should be passed as an argument to the default interaction kernel.
      */
     void addArgument(const ParameterInfo& parameter);
+    /**
+     * Register that the interaction kernel will be computing the derivative of the potential energy
+     * with respect to a parameter.
+     * 
+     * @param param   the name of the parameter
+     * @return the variable that will be used to accumulate the derivative.  Any code you pass to addInteraction() should
+     * add its contributions to this variable.
+     */
+    std::string addEnergyParameterDerivative(const std::string& param);
     /**
      * Specify the list of exclusions that an interaction outside the default kernel will depend on.
      * 
@@ -181,6 +191,12 @@ public:
         return *interactingAtoms;
     }
     /**
+     * Get the array containing single pairs in the neighbor list.
+     */
+    CudaArray& getSinglePairs() {
+        return *singlePairs;
+    }
+    /**
      * Get the array containing exclusion flags.
      */
     CudaArray& getExclusions() {
@@ -261,6 +277,8 @@ private:
     CudaArray* interactingTiles;
     CudaArray* interactingAtoms;
     CudaArray* interactionCount;
+    CudaArray* singlePairs;
+    CudaArray* singlePairCount;
     CudaArray* blockCenter;
     CudaArray* blockBoundingBox;
     CudaArray* sortedBlocks;
@@ -269,15 +287,18 @@ private:
     CudaArray* oldPositions;
     CudaArray* rebuildNeighborList;
     CudaSort* blockSorter;
+    CUevent downloadCountEvent;
+    int* pinnedCountBuffer;
     std::vector<void*> forceArgs, findBlockBoundsArgs, sortBoxDataArgs, findInteractingBlocksArgs;
     std::vector<std::vector<int> > atomExclusions;
     std::vector<ParameterInfo> parameters;
     std::vector<ParameterInfo> arguments;
+    std::vector<std::string> energyParameterDerivatives;
     std::map<int, double> groupCutoff;
     std::map<int, std::string> groupKernelSource;
     double lastCutoff;
-    bool useCutoff, usePeriodic, anyExclusions, usePadding, forceRebuildNeighborList;
-    int startTileIndex, numTiles, startBlockIndex, numBlocks, maxTiles, maxExclusions, numForceThreadBlocks, forceThreadBlockSize, numAtoms, groupFlags;
+    bool useCutoff, usePeriodic, anyExclusions, usePadding, forceRebuildNeighborList, canUsePairList;
+    int startTileIndex, numTiles, startBlockIndex, numBlocks, maxTiles, maxSinglePairs, maxExclusions, numForceThreadBlocks, forceThreadBlockSize, numAtoms, groupFlags;
 };
 
 /**

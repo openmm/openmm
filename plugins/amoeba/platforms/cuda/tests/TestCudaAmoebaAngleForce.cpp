@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Mark Friedrichs                                                   *
  * Contributors:                                                              *
  *                                                                            *
@@ -33,8 +33,12 @@
  * This tests the CUDA implementation of CudaAmoebaAngleForce.
  */
 
+#ifdef WIN32
+  #define _USE_MATH_DEFINES // Needed to get M_PI
+#endif
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
+#include "openmm/CustomAngleForce.h"
 #include "OpenMMAmoeba.h"
 #include "openmm/System.h"
 #include "openmm/LangevinIntegrator.h"
@@ -273,13 +277,64 @@ void testOneAngle() {
     compareWithExpectedForceAndEnergy(context, *amoebaAngleForce, TOL, "testOneAngle");
 }
 
+void testPeriodic() {
+    // Create a force that uses periodic boundary conditions, then compare to an identical custom force.
+    
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(3, 0, 0), Vec3(0, 3, 0), Vec3(0, 0, 3));
+    int numParticles = 3;
+    for (int ii = 0; ii < numParticles; ii++)
+        system.addParticle(1.0);
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
+    AmoebaAngleForce* amoebaAngleForce = new AmoebaAngleForce();
+    double angle      = 100.0;
+    double quadraticK = 1.0;
+    double cubicK     = 1.0e-01;
+    double quarticK   = 1.0e-02;
+    double penticK    = 1.0e-03;
+    double sexticK    = 1.0e-04;
+    amoebaAngleForce->addAngle(0, 1, 2, angle, quadraticK);
+    amoebaAngleForce->setAmoebaGlobalAngleCubic(cubicK);
+    amoebaAngleForce->setAmoebaGlobalAngleQuartic(quarticK);
+    amoebaAngleForce->setAmoebaGlobalAnglePentic(penticK);
+    amoebaAngleForce->setAmoebaGlobalAngleSextic(sexticK);
+    amoebaAngleForce->setUsesPeriodicBoundaryConditions(true);
+    system.addForce(amoebaAngleForce);
+    CustomAngleForce* customForce = new CustomAngleForce("k2*delta^2 + k3*delta^3 + k4*delta^4 + k5*delta^5 + k6*delta^6; delta=theta-theta0");
+    customForce->addGlobalParameter("theta0", angle*M_PI/180);
+    customForce->addGlobalParameter("k2", quadraticK*pow(180/M_PI, 2.0));
+    customForce->addGlobalParameter("k3", cubicK*pow(180/M_PI, 3.0));
+    customForce->addGlobalParameter("k4", quarticK*pow(180/M_PI, 4.0));
+    customForce->addGlobalParameter("k5", penticK*pow(180/M_PI, 5.0));
+    customForce->addGlobalParameter("k6", sexticK*pow(180/M_PI, 6.0));
+    customForce->addAngle(0, 1, 2);
+    customForce->setUsesPeriodicBoundaryConditions(true);
+    customForce->setForceGroup(1);
+    system.addForce(customForce);
+    Context context(system, integrator, Platform::getPlatformByName("CUDA"));
+
+    std::vector<Vec3> positions(numParticles);
+
+    positions[0] = Vec3(0, 1, 0);
+    positions[1] = Vec3(0, 0, 0);
+    positions[2] = Vec3(0, 0, 2);
+
+    context.setPositions(positions);
+    State s1 = context.getState(State::Forces | State::Energy, true, 1);
+    State s2 = context.getState(State::Forces | State::Energy, true, 2);
+    ASSERT_EQUAL_TOL(s2.getPotentialEnergy(), s1.getPotentialEnergy(), 1e-5);
+    for (int i = 0; i < numParticles; i++)
+        ASSERT_EQUAL_VEC(s2.getForces()[i], s1.getForces()[i], 1e-5);
+}
+
 int main(int argc, char* argv[]) {
     try {
         std::cout << "TestCudaAmoebaAngleForce running test..." << std::endl;
         registerAmoebaCudaKernelFactories();
         if (argc > 1)
-            Platform::getPlatformByName("CUDA").setPropertyDefaultValue("CudaPrecision", std::string(argv[1]));
+            Platform::getPlatformByName("CUDA").setPropertyDefaultValue("Precision", std::string(argv[1]));
         testOneAngle();
+        testPeriodic();
 
     } catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;

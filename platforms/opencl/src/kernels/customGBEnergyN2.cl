@@ -18,7 +18,7 @@ __kernel void computeN2Energy(
 #endif
         __global mixed* restrict energyBuffer, __local real4* restrict local_force,
         __global const real4* restrict posq, __local real4* restrict local_posq, __global const unsigned int* restrict exclusions,
-        __global const ushort2* exclusionTiles,
+        __global const ushort2* exclusionTiles, int needEnergy,
 #ifdef USE_CUTOFF
         __global const int* restrict tiles, __global const unsigned int* restrict interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, __global const real4* restrict blockCenter,
@@ -32,6 +32,7 @@ __kernel void computeN2Energy(
     const unsigned int tgx = get_local_id(0) & (TILE_SIZE-1);
     const unsigned int tbx = get_local_id(0) - tgx;
     mixed energy = 0;
+    INIT_PARAM_DERIVS
 
     // First loop: process tiles that contain exclusions.
     
@@ -73,6 +74,7 @@ __kernel void computeN2Energy(
                     atom2 = y*TILE_SIZE+j;
                     real dEdR = 0;
                     real tempEnergy = 0;
+                    const real interactionScale = 0.5f;
 #ifdef USE_EXCLUSIONS
                     bool isExcluded = !(excl & 0x1);
 #endif
@@ -80,7 +82,8 @@ __kernel void computeN2Energy(
                         COMPUTE_INTERACTION
                         dEdR /= -r;
                     }
-                    energy += 0.5f*tempEnergy;
+                    if (needEnergy)
+                        energy += 0.5f*tempEnergy;
                     delta.xyz *= dEdR;
                     force.xyz -= delta.xyz;
 #ifdef USE_CUTOFF
@@ -123,6 +126,7 @@ __kernel void computeN2Energy(
                     atom2 = y*TILE_SIZE+tj;
                     real dEdR = 0;
                     real tempEnergy = 0;
+                    const real interactionScale = 1.0f;
 #ifdef USE_EXCLUSIONS
                     bool isExcluded = !(excl & 0x1);
 #endif
@@ -130,7 +134,8 @@ __kernel void computeN2Energy(
                         COMPUTE_INTERACTION
                         dEdR /= -r;
                     }
-                    energy += tempEnergy;
+                    if (needEnergy)
+                        energy += tempEnergy;
                     delta.xyz *= dEdR;
                     force.xyz -= delta.xyz;
                     atom2 = tbx+tj;
@@ -181,6 +186,8 @@ __kernel void computeN2Energy(
 
 #ifdef USE_CUTOFF
     unsigned int numTiles = interactionCount[0];
+    if (numTiles > maxTiles)
+        return; // There wasn't enough memory for the neighbor list.
     int pos = (int) (warp*(numTiles > maxTiles ? NUM_BLOCKS*((long)NUM_BLOCKS+1)/2 : (long)numTiles)/totalWarps);
     int end = (int) ((warp+1)*(numTiles > maxTiles ? NUM_BLOCKS*((long)NUM_BLOCKS+1)/2 : (long)numTiles)/totalWarps);
 #else
@@ -204,42 +211,38 @@ __kernel void computeN2Energy(
         int x, y;
         bool singlePeriodicCopy = false;
 #ifdef USE_CUTOFF
-        if (numTiles <= maxTiles) {
-            x = tiles[pos];
-            real4 blockSizeX = blockSize[x];
-            singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= CUTOFF &&
-                                  0.5f*periodicBoxSize.y-blockSizeX.y >= CUTOFF &&
-                                  0.5f*periodicBoxSize.z-blockSizeX.z >= CUTOFF);
-        }
-        else
-#endif
-        {
-            y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+        x = tiles[pos];
+        real4 blockSizeX = blockSize[x];
+        singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= CUTOFF &&
+                              0.5f*periodicBoxSize.y-blockSizeX.y >= CUTOFF &&
+                              0.5f*periodicBoxSize.z-blockSizeX.z >= CUTOFF);
+#else
+        y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+        x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+        if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
+            y += (x < y ? -1 : 1);
             x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
-            if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
-                y += (x < y ? -1 : 1);
-                x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
-            }
-
-            // Skip over tiles that have exclusions, since they were already processed.
-
-            SYNC_WARPS;
-            while (skipTiles[tbx+TILE_SIZE-1] < pos) {
-                SYNC_WARPS;
-                if (skipBase+tgx < NUM_TILES_WITH_EXCLUSIONS) {
-                    ushort2 tile = exclusionTiles[skipBase+tgx];
-                    skipTiles[get_local_id(0)] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
-                }
-                else
-                    skipTiles[get_local_id(0)] = end;
-                skipBase += TILE_SIZE;            
-                currentSkipIndex = tbx;
-                SYNC_WARPS;
-            }
-            while (skipTiles[currentSkipIndex] < pos)
-                currentSkipIndex++;
-            includeTile = (skipTiles[currentSkipIndex] != pos);
         }
+
+        // Skip over tiles that have exclusions, since they were already processed.
+
+        SYNC_WARPS;
+        while (skipTiles[tbx+TILE_SIZE-1] < pos) {
+            SYNC_WARPS;
+            if (skipBase+tgx < NUM_TILES_WITH_EXCLUSIONS) {
+                ushort2 tile = exclusionTiles[skipBase+tgx];
+                skipTiles[get_local_id(0)] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
+            }
+            else
+                skipTiles[get_local_id(0)] = end;
+            skipBase += TILE_SIZE;            
+            currentSkipIndex = tbx;
+            SYNC_WARPS;
+        }
+        while (skipTiles[currentSkipIndex] < pos)
+            currentSkipIndex++;
+        includeTile = (skipTiles[currentSkipIndex] != pos);
+#endif
         if (includeTile) {
             unsigned int atom1 = x*TILE_SIZE + tgx;
 
@@ -249,7 +252,7 @@ __kernel void computeN2Energy(
             LOAD_ATOM1_PARAMETERS
             const unsigned int localAtomIndex = get_local_id(0);
 #ifdef USE_CUTOFF
-            unsigned int j = (numTiles <= maxTiles ? interactingAtoms[pos*TILE_SIZE+tgx] : y*TILE_SIZE + tgx);
+            unsigned int j = interactingAtoms[pos*TILE_SIZE+tgx];
 #else
             unsigned int j = y*TILE_SIZE + tgx;
 #endif
@@ -283,11 +286,13 @@ __kernel void computeN2Energy(
                         atom2 = atomIndices[tbx+tj];
                         real dEdR = 0;
                         real tempEnergy = 0;
+                        const real interactionScale = 1.0f;
                         if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
                             COMPUTE_INTERACTION
                             dEdR /= -r;
                         }
-                        energy += tempEnergy;
+                        if (needEnergy)
+                            energy += tempEnergy;
                         delta.xyz *= dEdR;
                         force.xyz -= delta.xyz;
                         atom2 = tbx+tj;
@@ -321,11 +326,13 @@ __kernel void computeN2Energy(
                         atom2 = atomIndices[tbx+tj];
                         real dEdR = 0;
                         real tempEnergy = 0;
+                        const real interactionScale = 1.0f;
                         if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
                             COMPUTE_INTERACTION
                             dEdR /= -r;
                         }
-                        energy += tempEnergy;
+                        if (needEnergy)
+                            energy += tempEnergy;
                         delta.xyz *= dEdR;
                         force.xyz -= delta.xyz;
                         atom2 = tbx+tj;
@@ -375,4 +382,5 @@ __kernel void computeN2Energy(
         pos++;
     }
     energyBuffer[get_global_id(0)] += energy;
+    SAVE_PARAM_DERIVS
 }

@@ -1,9 +1,11 @@
 extern "C" __global__ void findAtomGridIndex(const real4* __restrict__ posq, int2* __restrict__ pmeAtomGridIndex,
-            real4 periodicBoxSize, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
+            real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
+            real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
     // Compute the index of the grid point each atom is associated with.
     
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
         real4 pos = posq[i];
+        APPLY_PERIODIC_TO_POS(pos)
         real3 t = make_real3(pos.x*recipBoxVecX.x+pos.y*recipBoxVecY.x+pos.z*recipBoxVecZ.x,
                              pos.y*recipBoxVecY.y+pos.z*recipBoxVecZ.y,
                              pos.z*recipBoxVecZ.z);
@@ -18,7 +20,8 @@ extern "C" __global__ void findAtomGridIndex(const real4* __restrict__ posq, int
 }
 
 extern "C" __global__ void gridSpreadCharge(const real4* __restrict__ posq, real* __restrict__ originalPmeGrid,
-        real4 periodicBoxSize, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ, const int2* __restrict__ pmeAtomGridIndex) {
+        real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
+        real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ, const int2* __restrict__ pmeAtomGridIndex) {
     real3 data[PME_ORDER];
     const real scale = RECIP(PME_ORDER-1);
     
@@ -28,9 +31,7 @@ extern "C" __global__ void gridSpreadCharge(const real4* __restrict__ posq, real
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
         int atom = pmeAtomGridIndex[i].x;
         real4 pos = posq[atom];
-        pos.x -= floor(pos.x*recipBoxVecX.x)*periodicBoxSize.x;
-        pos.y -= floor(pos.y*recipBoxVecY.y)*periodicBoxSize.y;
-        pos.z -= floor(pos.z*recipBoxVecZ.z)*periodicBoxSize.z;
+        APPLY_PERIODIC_TO_POS(pos)
         real3 t = make_real3(pos.x*recipBoxVecX.x+pos.y*recipBoxVecY.x+pos.z*recipBoxVecZ.x,
                              pos.y*recipBoxVecY.y+pos.z*recipBoxVecZ.y,
                              pos.z*recipBoxVecZ.z);
@@ -83,7 +84,7 @@ extern "C" __global__ void gridSpreadCharge(const real4* __restrict__ posq, real
 #ifdef USE_DOUBLE_PRECISION
                     unsigned long long * ulonglong_p = (unsigned long long *) originalPmeGrid;
                     atomicAdd(&ulonglong_p[index],  static_cast<unsigned long long>((long long) (add*0x100000000)));
-#elif __CUDA_ARCH__ < 200
+#elif __CUDA_ARCH__ < 200 || defined(USE_DETERMINISTIC_FORCES)
                     unsigned long long * ulonglong_p = (unsigned long long *) originalPmeGrid;
                     int gridIndex = index;
                     gridIndex = (gridIndex%2 == 0 ? gridIndex/2 : (gridIndex+GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z)/2);
@@ -197,7 +198,8 @@ gridEvaluateEnergy(real2* __restrict__ halfcomplex_pmeGrid, mixed* __restrict__ 
 
 extern "C" __global__
 void gridInterpolateForce(const real4* __restrict__ posq, unsigned long long* __restrict__ forceBuffers, const real* __restrict__ originalPmeGrid,
-        real4 periodicBoxSize, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ, const int2* __restrict__ pmeAtomGridIndex) {
+        real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
+        real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ, const int2* __restrict__ pmeAtomGridIndex) {
     real3 data[PME_ORDER];
     real3 ddata[PME_ORDER];
     const real scale = RECIP(PME_ORDER-1);
@@ -209,9 +211,7 @@ void gridInterpolateForce(const real4* __restrict__ posq, unsigned long long* __
         int atom = pmeAtomGridIndex[i].x;
         real3 force = make_real3(0);
         real4 pos = posq[atom];
-        pos.x -= floor(pos.x*recipBoxVecX.x)*periodicBoxSize.x;
-        pos.y -= floor(pos.y*recipBoxVecY.y)*periodicBoxSize.y;
-        pos.z -= floor(pos.z*recipBoxVecZ.z)*periodicBoxSize.z;
+        APPLY_PERIODIC_TO_POS(pos)
         real3 t = make_real3(pos.x*recipBoxVecX.x+pos.y*recipBoxVecY.x+pos.z*recipBoxVecZ.x,
                              pos.y*recipBoxVecY.y+pos.z*recipBoxVecZ.y,
                              pos.z*recipBoxVecZ.z);

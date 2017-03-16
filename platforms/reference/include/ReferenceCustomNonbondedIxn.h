@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2013 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2016 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -27,7 +27,7 @@
 
 #include "ReferencePairIxn.h"
 #include "ReferenceNeighborList.h"
-#include "lepton/CompiledExpression.h"
+#include "openmm/internal/CompiledExpressionSet.h"
 #include <map>
 #include <set>
 #include <utility>
@@ -48,10 +48,10 @@ class ReferenceCustomNonbondedIxn {
       Lepton::CompiledExpression energyExpression;
       Lepton::CompiledExpression forceExpression;
       std::vector<std::string> paramNames;
-      std::vector<double*> energyParticleParams;
-      std::vector<double*> forceParticleParams;
-      double* energyR;
-      double* forceR;
+      std::vector<Lepton::CompiledExpression> energyParamDerivExpressions;
+      CompiledExpressionSet expressionSet;
+      std::vector<int> particleParamIndex;
+      int rIndex;
       std::vector<std::pair<std::set<int>, std::set<int> > > interactionGroups;
 
       /**---------------------------------------------------------------------------------------
@@ -69,7 +69,7 @@ class ReferenceCustomNonbondedIxn {
          --------------------------------------------------------------------------------------- */
 
       void calculateOneIxn(int atom1, int atom2, std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& forces,
-                           RealOpenMM* energyByAtom, RealOpenMM* totalEnergy);
+                           RealOpenMM* energyByAtom, RealOpenMM* totalEnergy, double* energyParamDerivs);
 
 
    public:
@@ -81,7 +81,7 @@ class ReferenceCustomNonbondedIxn {
          --------------------------------------------------------------------------------------- */
 
        ReferenceCustomNonbondedIxn(const Lepton::CompiledExpression& energyExpression, const Lepton::CompiledExpression& forceExpression,
-                                   const std::vector<std::string>& parameterNames);
+                                   const std::vector<std::string>& parameterNames, const std::vector<Lepton::CompiledExpression> energyParamDerivExpressions);
 
       /**---------------------------------------------------------------------------------------
 
@@ -155,7 +155,8 @@ class ReferenceCustomNonbondedIxn {
       void calculatePairIxn(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
                             RealOpenMM** atomParameters, std::vector<std::set<int> >& exclusions,
                             RealOpenMM* fixedParameters, const std::map<std::string, double>& globalParameters,
-                            std::vector<OpenMM::RealVec>& forces, RealOpenMM* energyByAtom, RealOpenMM* totalEnergy);
+                            std::vector<OpenMM::RealVec>& forces, RealOpenMM* energyByAtom, RealOpenMM* totalEnergy,
+                            double* energyParamDerivs);
 
 // ---------------------------------------------------------------------------------------
 

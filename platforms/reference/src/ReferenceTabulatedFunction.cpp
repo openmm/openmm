@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2014 Stanford University and the Authors.           *
+ * Portions copyright (c) 2014-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -80,6 +80,13 @@ ReferenceContinuous1DFunction::ReferenceContinuous1DFunction(const Continuous1DF
     SplineFitter::createNaturalSpline(x, values, derivs);
 }
 
+ReferenceContinuous1DFunction::ReferenceContinuous1DFunction(const ReferenceContinuous1DFunction& other) : function(other.function) {
+    function.getFunctionParameters(values, min, max);
+    x = other.x;
+    values = other.values;
+    derivs = other.derivs;
+}
+
 int ReferenceContinuous1DFunction::getNumArguments() const {
     return 1;
 }
@@ -99,7 +106,7 @@ double ReferenceContinuous1DFunction::evaluateDerivative(const double* arguments
 }
 
 CustomFunction* ReferenceContinuous1DFunction::clone() const {
-    return new ReferenceContinuous1DFunction(function);
+    return new ReferenceContinuous1DFunction(*this);
 }
 
 ReferenceContinuous2DFunction::ReferenceContinuous2DFunction(const Continuous2DFunction& function) : function(function) {
@@ -111,6 +118,14 @@ ReferenceContinuous2DFunction::ReferenceContinuous2DFunction(const Continuous2DF
     for (int i = 0; i < ysize; i++)
         y[i] = ymin+i*(ymax-ymin)/(ysize-1);
     SplineFitter::create2DNaturalSpline(x, y, values, c);
+}
+
+ReferenceContinuous2DFunction::ReferenceContinuous2DFunction(const ReferenceContinuous2DFunction& other) : function(other.function) {
+    function.getFunctionParameters(xsize, ysize, values, xmin, xmax, ymin, ymax);
+    x = other.x;
+    y = other.y;
+    values = other.values;
+    c = other.c;
 }
 
 int ReferenceContinuous2DFunction::getNumArguments() const {
@@ -144,7 +159,7 @@ double ReferenceContinuous2DFunction::evaluateDerivative(const double* arguments
 }
 
 CustomFunction* ReferenceContinuous2DFunction::clone() const {
-    return new ReferenceContinuous2DFunction(function);
+    return new ReferenceContinuous2DFunction(*this);
 }
 
 ReferenceContinuous3DFunction::ReferenceContinuous3DFunction(const Continuous3DFunction& function) : function(function) {
@@ -159,6 +174,15 @@ ReferenceContinuous3DFunction::ReferenceContinuous3DFunction(const Continuous3DF
     for (int i = 0; i < zsize; i++)
         z[i] = zmin+i*(zmax-zmin)/(zsize-1);
     SplineFitter::create3DNaturalSpline(x, y, z, values, c);
+}
+
+ReferenceContinuous3DFunction::ReferenceContinuous3DFunction(const ReferenceContinuous3DFunction& other) : function(other.function) {
+    function.getFunctionParameters(xsize, ysize, zsize, values, xmin, xmax, ymin, ymax, zmin, zmax);
+    x = other.x;
+    y = other.y;
+    z = other.z;
+    values = other.values;
+    c = other.c;
 }
 
 int ReferenceContinuous3DFunction::getNumArguments() const {
@@ -200,7 +224,7 @@ double ReferenceContinuous3DFunction::evaluateDerivative(const double* arguments
 }
 
 CustomFunction* ReferenceContinuous3DFunction::clone() const {
-    return new ReferenceContinuous3DFunction(function);
+    return new ReferenceContinuous3DFunction(*this);
 }
 
 ReferenceDiscrete1DFunction::ReferenceDiscrete1DFunction(const Discrete1DFunction& function) : function(function) {

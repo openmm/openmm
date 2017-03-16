@@ -63,4 +63,5 @@ std::vector<std::string> HarmonicAngleForceImpl::getKernelNames() {
 
 void HarmonicAngleForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcHarmonicAngleForceKernel>().copyParametersToContext(context, owner);
+    context.systemChanged();
 }

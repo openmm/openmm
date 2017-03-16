@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -45,6 +45,7 @@
 #include "openmm/CustomManyParticleForce.h"
 #include "openmm/CustomNonbondedForce.h"
 #include "openmm/CustomTorsionForce.h"
+#include "openmm/GayBerneForce.h"
 #include "openmm/GBSAOBCForce.h"
 #include "openmm/HarmonicAngleForce.h"
 #include "openmm/HarmonicBondForce.h"
@@ -78,6 +79,7 @@
 #include "openmm/serialization/CustomManyParticleForceProxy.h"
 #include "openmm/serialization/CustomNonbondedForceProxy.h"
 #include "openmm/serialization/CustomTorsionForceProxy.h"
+#include "openmm/serialization/GayBerneForceProxy.h"
 #include "openmm/serialization/GBSAOBCForceProxy.h"
 #include "openmm/serialization/HarmonicAngleForceProxy.h"
 #include "openmm/serialization/HarmonicBondForceProxy.h"
@@ -132,6 +134,7 @@ extern "C" void registerSerializationProxies() {
     SerializationProxy::registerProxy(typeid(Discrete1DFunction), new Discrete1DFunctionProxy());
     SerializationProxy::registerProxy(typeid(Discrete2DFunction), new Discrete2DFunctionProxy());
     SerializationProxy::registerProxy(typeid(Discrete3DFunction), new Discrete3DFunctionProxy());
+    SerializationProxy::registerProxy(typeid(GayBerneForce), new GayBerneForceProxy());
     SerializationProxy::registerProxy(typeid(GBSAOBCForce), new GBSAOBCForceProxy());
     SerializationProxy::registerProxy(typeid(HarmonicAngleForce), new HarmonicAngleForceProxy());
     SerializationProxy::registerProxy(typeid(HarmonicBondForce), new HarmonicBondForceProxy());

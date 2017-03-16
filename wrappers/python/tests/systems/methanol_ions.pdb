@@ -1,0 +1,13 @@
+CRYST1   12.009   12.338   11.510  90.00  90.00  90.00 P 1           1
+ATOM      1  CB  MEOHM   1      -0.748  -0.015   0.024  1.00  0.00      METH C
+ATOM      2  OG  MEOHM   1       0.558   0.420  -0.278  1.00  0.00      METH O
+ATOM      3  HG1 MEOHM   1       0.716   1.404   0.137  1.00  0.00      METH H
+ATOM      4  HB1 MEOHM   1      -1.293  -0.202  -0.901  1.00  0.00      METH H
+ATOM      5  HB2 MEOHM   1      -1.263   0.754   0.600  1.00  0.00      METH H
+ATOM      6  HB3 MEOHM   1      -0.699  -0.934   0.609  1.00  0.00      METH H
+ATOM      7  SOD SOD I   2      -5.844   1.432   3.239  1.00  0.00      ION NA
+ATOM      8  CLA CLA I   3      -5.605  -3.153   1.213  1.00  0.00      ION CL
+CONECT 1    2    4     5     6
+CONECT 2    3
+END
+END

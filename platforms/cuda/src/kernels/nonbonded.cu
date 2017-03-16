@@ -103,9 +103,10 @@ extern "C" __global__ void computeNonbonded(
         unsigned long long* __restrict__ forceBuffers, mixed* __restrict__ energyBuffer, const real4* __restrict__ posq, const tileflags* __restrict__ exclusions,
         const ushort2* __restrict__ exclusionTiles, unsigned int startTileIndex, unsigned int numTileIndices
 #ifdef USE_CUTOFF
-        , const int* __restrict__ tiles, const unsigned int* __restrict__ interactionCount,real4 periodicBoxSize, real4 invPeriodicBoxSize, 
+        , const int* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, 
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, const real4* __restrict__ blockCenter,
-        const real4* __restrict__ blockSize, const unsigned int* __restrict__ interactingAtoms
+        const real4* __restrict__ blockSize, const unsigned int* __restrict__ interactingAtoms, unsigned int maxSinglePairs,
+        const int2* __restrict__ singlePairs
 #endif
         PARAMETER_ARGUMENTS) {
     const unsigned int totalWarps = (blockDim.x*gridDim.x)/TILE_SIZE;
@@ -113,11 +114,14 @@ extern "C" __global__ void computeNonbonded(
     const unsigned int tgx = threadIdx.x & (TILE_SIZE-1); // index within the warp
     const unsigned int tbx = threadIdx.x - tgx;           // block warpIndex
     mixed energy = 0;
+    INIT_DERIVATIVES
     // used shared memory if the device cannot shuffle
 #ifndef ENABLE_SHUFFLE
     __shared__ AtomData localData[THREAD_BLOCK_SIZE];
 #endif
+
     // First loop: process tiles that contain exclusions.
+
     const unsigned int firstExclusionTile = FIRST_EXCLUSION_TILE+warp*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
     const unsigned int lastExclusionTile = FIRST_EXCLUSION_TILE+(warp+1)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
     for (int pos = firstExclusionTile; pos < lastExclusionTile; pos++) {
@@ -173,6 +177,7 @@ extern "C" __global__ void computeNonbonded(
                 bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS || !(excl & 0x1));
 #endif
                 real tempEnergy = 0.0f;
+                const real interactionScale = 0.5f;
                 COMPUTE_INTERACTION
                 energy += 0.5f*tempEnergy;
 #ifdef INCLUDE_FORCES
@@ -241,6 +246,7 @@ extern "C" __global__ void computeNonbonded(
                 bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS || !(excl & 0x1));
 #endif
                 real tempEnergy = 0.0f;
+                const real interactionScale = 1.0f;
                 COMPUTE_INTERACTION
                 energy += tempEnergy;
 #ifdef INCLUDE_FORCES
@@ -273,9 +279,9 @@ extern "C" __global__ void computeNonbonded(
                 localData[tbx+tj].fz += dEdR2.z;
 #endif 
 #endif // end USE_SYMMETRIC
+#endif
 #ifdef ENABLE_SHUFFLE
                 SHUFFLE_WARP_DATA
-#endif
 #endif
 #ifdef USE_EXCLUSIONS
                 excl >>= 1;
@@ -309,8 +315,11 @@ extern "C" __global__ void computeNonbonded(
 
     // Second loop: tiles without exclusions, either from the neighbor list (with cutoff) or just enumerating all
     // of them (no cutoff).
+
 #ifdef USE_CUTOFF
     const unsigned int numTiles = interactionCount[0];
+    if (numTiles > maxTiles)
+        return; // There wasn't enough memory for the neighbor list.
     int pos = (int) (numTiles > maxTiles ? startTileIndex+warp*(long long)numTileIndices/totalWarps : warp*(long long)numTiles/totalWarps);
     int end = (int) (numTiles > maxTiles ? startTileIndex+(warp+1)*(long long)numTileIndices/totalWarps : (warp+1)*(long long)numTiles/totalWarps);
 #else
@@ -335,39 +344,35 @@ extern "C" __global__ void computeNonbonded(
         int x, y;
         bool singlePeriodicCopy = false;
 #ifdef USE_CUTOFF
-        if (numTiles <= maxTiles) {
-            x = tiles[pos];
-            real4 blockSizeX = blockSize[x];
-            singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= MAX_CUTOFF &&
-                                  0.5f*periodicBoxSize.y-blockSizeX.y >= MAX_CUTOFF &&
-                                  0.5f*periodicBoxSize.z-blockSizeX.z >= MAX_CUTOFF);
-        }
-        else
-#endif
-        {
-            y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+        x = tiles[pos];
+        real4 blockSizeX = blockSize[x];
+        singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= MAX_CUTOFF &&
+                              0.5f*periodicBoxSize.y-blockSizeX.y >= MAX_CUTOFF &&
+                              0.5f*periodicBoxSize.z-blockSizeX.z >= MAX_CUTOFF);
+#else
+        y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+        x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+        if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
+            y += (x < y ? -1 : 1);
             x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
-            if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
-                y += (x < y ? -1 : 1);
-                x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
-            }
-
-            // Skip over tiles that have exclusions, since they were already processed.
-
-            while (skipTiles[tbx+TILE_SIZE-1] < pos) {
-                if (skipBase+tgx < NUM_TILES_WITH_EXCLUSIONS) {
-                    ushort2 tile = exclusionTiles[skipBase+tgx];
-                    skipTiles[threadIdx.x] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
-                }
-                else
-                    skipTiles[threadIdx.x] = end;
-                skipBase += TILE_SIZE;            
-                currentSkipIndex = tbx;
-            }
-            while (skipTiles[currentSkipIndex] < pos)
-                currentSkipIndex++;
-            includeTile = (skipTiles[currentSkipIndex] != pos);
         }
+
+        // Skip over tiles that have exclusions, since they were already processed.
+
+        while (skipTiles[tbx+TILE_SIZE-1] < pos) {
+            if (skipBase+tgx < NUM_TILES_WITH_EXCLUSIONS) {
+                ushort2 tile = exclusionTiles[skipBase+tgx];
+                skipTiles[threadIdx.x] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
+            }
+            else
+                skipTiles[threadIdx.x] = end;
+            skipBase += TILE_SIZE;            
+            currentSkipIndex = tbx;
+        }
+        while (skipTiles[currentSkipIndex] < pos)
+            currentSkipIndex++;
+        includeTile = (skipTiles[currentSkipIndex] != pos);
+#endif
         if (includeTile) {
             unsigned int atom1 = x*TILE_SIZE + tgx;
             // Load atom data for this tile.
@@ -375,7 +380,7 @@ extern "C" __global__ void computeNonbonded(
             LOAD_ATOM1_PARAMETERS
             //const unsigned int localAtomIndex = threadIdx.x;
 #ifdef USE_CUTOFF
-            unsigned int j = (numTiles <= maxTiles ? interactingAtoms[pos*TILE_SIZE+tgx] : y*TILE_SIZE + tgx);
+            unsigned int j = interactingAtoms[pos*TILE_SIZE+tgx];
 #else
             unsigned int j = y*TILE_SIZE + tgx;
 #endif
@@ -447,6 +452,7 @@ extern "C" __global__ void computeNonbonded(
                     bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS);
 #endif
                     real tempEnergy = 0.0f;
+                    const real interactionScale = 1.0f;
                     COMPUTE_INTERACTION
                     energy += tempEnergy;
 #ifdef INCLUDE_FORCES
@@ -479,9 +485,9 @@ extern "C" __global__ void computeNonbonded(
                     localData[tbx+tj].fz += dEdR2.z;
 #endif 
 #endif // end USE_SYMMETRIC
+#endif
 #ifdef ENABLE_SHUFFLE
                     SHUFFLE_WARP_DATA
-#endif
 #endif
                     tj = (tj + 1) & (TILE_SIZE - 1);
                 }
@@ -517,6 +523,7 @@ extern "C" __global__ void computeNonbonded(
                     bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS);
 #endif
                     real tempEnergy = 0.0f;
+                    const real interactionScale = 1.0f;
                     COMPUTE_INTERACTION
                     energy += tempEnergy;
 #ifdef INCLUDE_FORCES
@@ -549,9 +556,9 @@ extern "C" __global__ void computeNonbonded(
                     localData[tbx+tj].fz += dEdR2.z;
 #endif 
 #endif // end USE_SYMMETRIC
+#endif
 #ifdef ENABLE_SHUFFLE
                     SHUFFLE_WARP_DATA
-#endif
 #endif
                     tj = (tj + 1) & (TILE_SIZE - 1);
                 }
@@ -582,7 +589,61 @@ extern "C" __global__ void computeNonbonded(
         }
         pos++;
     }
+    
+    // Third loop: single pairs that aren't part of a tile.
+    
+#if USE_CUTOFF
+    const unsigned int numPairs = interactionCount[1];
+    if (numPairs > maxSinglePairs)
+        return; // There wasn't enough memory for the neighbor list.
+    for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < numPairs; i += blockDim.x*gridDim.x) {
+        int2 pair = singlePairs[i];
+        int atom1 = pair.x;
+        int atom2 = pair.y;
+        real4 posq1 = posq[atom1];
+        real4 posq2 = posq[atom2];
+        LOAD_ATOM1_PARAMETERS
+        int j = atom2;
+atom2 = threadIdx.x;
+        DECLARE_LOCAL_PARAMETERS
+        LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
+        LOAD_ATOM2_PARAMETERS
+atom2 = pair.y;
+        real3 delta = make_real3(posq2.x-posq1.x, posq2.y-posq1.y, posq2.z-posq1.z);
+#ifdef USE_PERIODIC
+        APPLY_PERIODIC_TO_DELTA(delta)
+#endif
+        real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+        real invR = RSQRT(r2);
+        real r = r2*invR;
+#ifdef USE_SYMMETRIC
+        real dEdR = 0.0f;
+#else
+        real3 dEdR1 = make_real3(0);
+        real3 dEdR2 = make_real3(0);
+#endif
+        bool hasExclusions = false;
+        bool isExcluded = false;
+        real tempEnergy = 0.0f;
+        const real interactionScale = 1.0f;
+        COMPUTE_INTERACTION
+        energy += tempEnergy;
+#ifdef INCLUDE_FORCES
+#ifdef USE_SYMMETRIC
+        real3 dEdR1 = delta*dEdR;
+        real3 dEdR2 = -dEdR1;
+#endif
+        atomicAdd(&forceBuffers[atom1], static_cast<unsigned long long>((long long) (-dEdR1.x*0x100000000)));
+        atomicAdd(&forceBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (-dEdR1.y*0x100000000)));
+        atomicAdd(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (-dEdR1.z*0x100000000)));
+        atomicAdd(&forceBuffers[atom2], static_cast<unsigned long long>((long long) (-dEdR2.x*0x100000000)));
+        atomicAdd(&forceBuffers[atom2+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (-dEdR2.y*0x100000000)));
+        atomicAdd(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (-dEdR2.z*0x100000000)));
+#endif
+    }
+#endif
 #ifdef INCLUDE_ENERGY
     energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += energy;
 #endif
+    SAVE_DERIVATIVES
 }

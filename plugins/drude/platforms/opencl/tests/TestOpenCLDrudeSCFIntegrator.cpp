@@ -110,7 +110,7 @@ void testWater() {
     State state = context.getState(State::Energy);
     double initialEnergy;
     int numSteps = 1000;
-    double maxNorm = (platform.getPropertyValue(context, "OpenCLPrecision") == "double" ? 1.0 : 5.0);
+    double maxNorm = (platform.getPropertyValue(context, "Precision") == "double" ? 1.0 : 5.0);
     for (int i = 0; i < numSteps; i++) {
         integ.step(1);
         state = context.getState(State::Energy | State::Forces);
@@ -131,7 +131,7 @@ int main(int argc, char* argv[]) {
     try {
         registerDrudeOpenCLKernelFactories();
         if (argc > 1)
-            Platform::getPlatformByName("OpenCL").setPropertyDefaultValue("OpenCLPrecision", string(argv[1]));
+            Platform::getPlatformByName("OpenCL").setPropertyDefaultValue("Precision", string(argv[1]));
         testWater();
     }
     catch(const std::exception& e) {

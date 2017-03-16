@@ -29,6 +29,7 @@ install:
 
 # Download OpenCL Headers and build the ICD loader
   - ps: $opencl_registry = "https://www.khronos.org/registry/cl"
+  - ps: $opencl_github = "KhronosGroup/OpenCL-Headers"
   - ps: mkdir C:/opencl > $null
   - ps: cd C:/opencl
   - ps: wget $opencl_registry/specs/opencl-icd-1.2.11.0.tgz -OutFile opencl-icd-1.2.11.0.tgz
@@ -36,7 +37,7 @@ install:
   - ps: 7z x opencl-icd-1.2.11.0.tar > $null
   - ps: mv .\icd\* .
   - ps: mkdir inc/CL > $null
-  - ps: wget $opencl_registry/api/1.2/ | select -ExpandProperty links | where {$_.href -like "*.h*"} | select -ExpandProperty outerText | foreach{ wget $opencl_registry/api/1.2/$_ -OutFile inc/CL/$_ }
+  - ps: wget https://github.com/$opencl_github | select -ExpandProperty links | where {$_.href -like "*.h*"} | select -ExpandProperty outerText | foreach{ wget https://raw.githubusercontent.com/$opencl_github/master/$_ -OutFile inc/CL/$_ }
   - ps: mkdir lib > $null
   - ps: cd lib
   - cmake -G "NMake Makefiles" ..

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -62,6 +62,15 @@ void CustomIntegrator::initialize(ContextImpl& contextRef) {
         variableSet.insert(name);
         if (contextRef.getParameters().find(name) != contextRef.getParameters().end())
             throw OpenMMException("The Integrator defines a variable with the same name as a Context parameter: "+name);
+    }
+    set<std::string> globalTargets;
+    globalTargets.insert(globalNames.begin(), globalNames.end());
+    globalTargets.insert("dt");
+    for (map<string, double>::const_iterator iter = contextRef.getParameters().begin(); iter != contextRef.getParameters().end(); ++iter)
+        globalTargets.insert(iter->first);
+    for (int i = 0; i < computations.size(); i++) {
+        if (computations[i].type == ComputeGlobal && globalTargets.find(computations[i].variable) == globalTargets.end())
+            throw OpenMMException("Unknown global variable: "+computations[i].variable);
     }
     context = &contextRef;
     owner = &contextRef.getOwner();
@@ -248,21 +257,21 @@ int CustomIntegrator::addUpdateContextState() {
 int CustomIntegrator::beginIfBlock(const string& expression) {
     if (owner != NULL)
         throw OpenMMException("The integrator cannot be modified after it is bound to a context");
-    computations.push_back(ComputationInfo(BeginIfBlock, "", expression));
+    computations.push_back(ComputationInfo(IfBlockStart, "", expression));
     return computations.size()-1;
 }
 
 int CustomIntegrator::beginWhileBlock(const string& expression) {
     if (owner != NULL)
         throw OpenMMException("The integrator cannot be modified after it is bound to a context");
-    computations.push_back(ComputationInfo(BeginWhileBlock, "", expression));
+    computations.push_back(ComputationInfo(WhileBlockStart, "", expression));
     return computations.size()-1;
 }
 
 int CustomIntegrator::endBlock() {
     if (owner != NULL)
         throw OpenMMException("The integrator cannot be modified after it is bound to a context");
-    computations.push_back(ComputationInfo(EndBlock, "", ""));
+    computations.push_back(ComputationInfo(BlockEnd, "", ""));
     return computations.size()-1;
 }
 

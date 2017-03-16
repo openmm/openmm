@@ -52,6 +52,7 @@ void testSerialization() {
     force1.addBond(0, 2, 2.0, 2.1);
     force1.addBond(2, 3, 3.0, 2.2);
     force1.addBond(5, 1, 4.0, 2.3);
+    force1.setUsesPeriodicBoundaryConditions(true);
 
     // Serialize and then deserialize it.
 
@@ -62,6 +63,7 @@ void testSerialization() {
     // Compare the two forces to see if they are identical.  
     AmoebaBondForce& force2 = *copy;
     ASSERT_EQUAL(force1.getForceGroup(), force2.getForceGroup());
+    ASSERT_EQUAL(force1.usesPeriodicBoundaryConditions(), force2.usesPeriodicBoundaryConditions());
     ASSERT_EQUAL(force1.getAmoebaGlobalBondCubic(), force2.getAmoebaGlobalBondCubic());
     ASSERT_EQUAL(force1.getAmoebaGlobalBondQuartic(), force2.getAmoebaGlobalBondQuartic());
     ASSERT_EQUAL(force1.getNumBonds(), force2.getNumBonds());

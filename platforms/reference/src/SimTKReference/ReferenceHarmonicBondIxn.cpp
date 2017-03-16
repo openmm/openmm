@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2016 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -38,14 +38,7 @@ using namespace OpenMM;
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceHarmonicBondIxn::ReferenceHarmonicBondIxn() {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceHarmonicBondIxn::ReferenceHarmonicBondIxn";
-
-   // ---------------------------------------------------------------------------------------
-
+ReferenceHarmonicBondIxn::ReferenceHarmonicBondIxn() : usePeriodic(false) {
 }
 
 /**---------------------------------------------------------------------------------------
@@ -55,13 +48,13 @@ ReferenceHarmonicBondIxn::ReferenceHarmonicBondIxn() {
    --------------------------------------------------------------------------------------- */
 
 ReferenceHarmonicBondIxn::~ReferenceHarmonicBondIxn() {
+}
 
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceHarmonicBondIxn::~ReferenceHarmonicBondIxn";
-
-   // ---------------------------------------------------------------------------------------
-
+void ReferenceHarmonicBondIxn::setPeriodic(OpenMM::RealVec* vectors) {
+    usePeriodic = true;
+    boxVectors[0] = vectors[0];
+    boxVectors[1] = vectors[1];
+    boxVectors[2] = vectors[2];
 }
 
 /**---------------------------------------------------------------------------------------
@@ -81,7 +74,7 @@ void ReferenceHarmonicBondIxn::calculateBondIxn(int* atomIndices,
                                                 vector<RealVec>& atomCoordinates,
                                                 RealOpenMM* parameters,
                                                 vector<RealVec>& forces,
-                                                RealOpenMM* totalEnergy) const {
+                                                RealOpenMM* totalEnergy, double* energyParamDerivs) {
 
    static const std::string methodName = "\nReferenceHarmonicBondIxn::calculateBondIxn";
 
@@ -99,7 +92,10 @@ void ReferenceHarmonicBondIxn::calculateBondIxn(int* atomIndices,
 
    int atomAIndex = atomIndices[0];
    int atomBIndex = atomIndices[1];
-   ReferenceForce::getDeltaR(atomCoordinates[atomAIndex], atomCoordinates[atomBIndex], deltaR);  
+   if (usePeriodic)
+       ReferenceForce::getDeltaRPeriodic(atomCoordinates[atomAIndex], atomCoordinates[atomBIndex], boxVectors, deltaR);  
+   else
+       ReferenceForce::getDeltaR(atomCoordinates[atomAIndex], atomCoordinates[atomBIndex], deltaR);  
 
    // deltaIdeal = r - r_0
 

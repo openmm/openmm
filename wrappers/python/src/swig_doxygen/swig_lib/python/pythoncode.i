@@ -63,7 +63,8 @@ class State(_object):
                  velList=None,
                  forceList=None,
                  periodicBoxVectorsList=None,
-                 paramMap=None):
+                 paramMap=None,
+                 paramDerivMap=None):
         self._simTime=simTime
         self._periodicBoxVectorsList=periodicBoxVectorsList
         self._periodicBoxVectorsListNumpy=None
@@ -80,6 +81,7 @@ class State(_object):
         self._forceList=forceList
         self._forceListNumpy=None
         self._paramMap=paramMap
+        self._paramDerivMap=paramDerivMap
 
     def __getstate__(self):
         serializationString = XmlSerializer.serialize(self)
@@ -220,6 +222,18 @@ class State(_object):
         if self._paramMap is None:
             raise TypeError('Parameters were not requested in getState() call, so are not available.')
         return self._paramMap
+
+    def getEnergyParameterDerivatives(self):
+        """Get a map containing derivatives of the potential energy with respect to context parameters.
+
+        In most cases derivatives are only calculated if the corresponding Force objects have been
+        specifically told to compute them.  Otherwise, the values in the map will be zero.  Likewise,
+        if multiple Forces depend on the same parameter but only some have been told to compute
+        derivatives with respect to it, the returned value will include only the contributions from
+        the Forces that were told to compute it."""
+        if self._paramDerivMap is None:
+            raise TypeError('Parameter derivatives were not requested in getState() call, so are not available.')
+        return self._paramDerivMap
 
 %}
 

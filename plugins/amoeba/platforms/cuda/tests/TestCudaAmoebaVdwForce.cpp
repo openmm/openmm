@@ -56,7 +56,7 @@ using namespace std;
 extern "C" OPENMM_EXPORT void registerAmoebaCudaKernelFactories();
 
 const double TOL = 1e-4;
-const double AngstromToNm = 0.1; 
+const double AngstromToNm = 0.1;
 const double CalToJoule = 4.184;
 const double sigOH = 3.121421468053779;
 const double epsOH = 0.029615389502684615;
@@ -66,7 +66,7 @@ void testVdw() {
     System system;
     int numberOfParticles          = 6;
     AmoebaVdwForce* amoebaVdwForce = new AmoebaVdwForce();
-    
+
     std::string sigmaCombiningRule = std::string("CUBIC-MEAN");
     amoebaVdwForce->setSigmaCombiningRule(sigmaCombiningRule);
     std::string epsilonCombiningRule = std::string("HHG");
@@ -1813,11 +1813,13 @@ void testVdwWater(int includeVdwDispersionCorrection) {
     compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
 }
 
-int main(int numberOfArguments, char* argv[]) {
+int main(int argc, char* argv[]) {
 
     try {
         std::cout << "TestCudaAmoebaVdwForce running test..." << std::endl;
         registerAmoebaCudaKernelFactories();
+        if (argc > 1)
+            Platform::getPlatformByName("CUDA").setPropertyDefaultValue("Precision", std::string(argv[1]));
 
         testVdw();
 
@@ -1840,7 +1842,7 @@ int main(int numberOfArguments, char* argv[]) {
 
         // includes tests for various combinations of sigma/epsilon rules
         // when computing vdw dispersion correction
- 
+
         includeVdwDispersionCorrection = 1;
         testVdwWater(includeVdwDispersionCorrection);
     }

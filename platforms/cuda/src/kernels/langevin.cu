@@ -78,7 +78,7 @@ extern "C" __global__ void integrateLangevinPart2(int numAtoms, real4* __restric
  * Select the step size to use for the next step.
  */
 
-extern "C" __global__ void selectLangevinStepSize(int numAtoms, int paddedNumAtoms, mixed maxStepSize, mixed errorTol, mixed tau, mixed kT, mixed2* __restrict__ dt,
+extern "C" __global__ void selectLangevinStepSize(int numAtoms, int paddedNumAtoms, mixed maxStepSize, mixed errorTol, mixed friction, mixed kT, mixed2* __restrict__ dt,
         const mixed4* __restrict__ velm, const long long* __restrict__ force, mixed* __restrict__ paramBuffer) {
     // Calculate the error.
 
@@ -119,9 +119,9 @@ extern "C" __global__ void selectLangevinStepSize(int numAtoms, int paddedNumAto
 
         // Recalculate the integration parameters.
 
-        mixed vscale = EXP(-newStepSize/tau);
-        mixed fscale = (1-vscale)*tau;
-        mixed noisescale = SQRT(2*kT/tau)*SQRT(0.5f*(1-vscale*vscale)*tau);
+        mixed vscale = exp(-newStepSize*friction);
+        mixed fscale = (friction == 0 ? newStepSize : (1-vscale)/friction);
+        mixed noisescale = sqrt(kT*(1-vscale*vscale));
         params[VelScale] = vscale;
         params[ForceScale] = fscale;
         params[NoiseScale] = noisescale;

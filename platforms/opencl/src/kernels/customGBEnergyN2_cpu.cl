@@ -18,7 +18,7 @@ __kernel void computeN2Energy(
 #endif
         __global mixed* restrict energyBuffer, __local real4* restrict local_force,
         __global const real4* restrict posq, __local real4* restrict local_posq, __global const unsigned int* restrict exclusions,
-        __global const ushort2* exclusionTiles,
+        __global const ushort2* exclusionTiles, int needEnergy,
 #ifdef USE_CUTOFF
         __global const int* restrict tiles, __global const unsigned int* restrict interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, __global const real4* restrict blockCenter,
@@ -28,6 +28,7 @@ __kernel void computeN2Energy(
 #endif
         PARAMETER_ARGUMENTS) {
     mixed energy = 0;
+    INIT_PARAM_DERIVS
 
     // First loop: process tiles that contain exclusions.
     
@@ -74,6 +75,7 @@ __kernel void computeN2Energy(
                         atom2 = y*TILE_SIZE+j;
                         real dEdR = 0;
                         real tempEnergy = 0;
+                        const real interactionScale = 0.5f;
 #ifdef USE_EXCLUSIONS
                         bool isExcluded = !(excl & 0x1);
 #endif
@@ -140,6 +142,7 @@ __kernel void computeN2Energy(
                         atom2 = y*TILE_SIZE+j;
                         real dEdR = 0;
                         real tempEnergy = 0;
+                        const real interactionScale = 1.0f;
 #ifdef USE_EXCLUSIONS
                         bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS || !(excl & 0x1));
                         if (!isExcluded) {
@@ -201,6 +204,8 @@ __kernel void computeN2Energy(
 
 #ifdef USE_CUTOFF
     const unsigned int numTiles = interactionCount[0];
+    if (numTiles > maxTiles)
+        return; // There wasn't enough memory for the neighbor list.
     int pos = (int) (get_group_id(0)*(numTiles > maxTiles ? NUM_BLOCKS*((long)NUM_BLOCKS+1)/2 : numTiles)/get_num_groups(0));
     int end = (int) ((get_group_id(0)+1)*(numTiles > maxTiles ? NUM_BLOCKS*((long)NUM_BLOCKS+1)/2 : numTiles)/get_num_groups(0));
 #else
@@ -220,41 +225,37 @@ __kernel void computeN2Energy(
         int x, y;
         bool singlePeriodicCopy = false;
 #ifdef USE_CUTOFF
-        if (numTiles <= maxTiles) {
-            x = tiles[pos];
-            real4 blockSizeX = blockSize[x];
-            singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= CUTOFF &&
-                                  0.5f*periodicBoxSize.y-blockSizeX.y >= CUTOFF &&
-                                  0.5f*periodicBoxSize.z-blockSizeX.z >= CUTOFF);
-        }
-        else
-#endif
-        {
-            y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+        x = tiles[pos];
+        real4 blockSizeX = blockSize[x];
+        singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= CUTOFF &&
+                              0.5f*periodicBoxSize.y-blockSizeX.y >= CUTOFF &&
+                              0.5f*periodicBoxSize.z-blockSizeX.z >= CUTOFF);
+#else
+        y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+        x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+        if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
+            y += (x < y ? -1 : 1);
             x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
-            if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
-                y += (x < y ? -1 : 1);
-                x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
-            }
-
-            // Skip over tiles that have exclusions, since they were already processed.
-
-            while (nextToSkip < pos) {
-                if (currentSkipIndex < NUM_TILES_WITH_EXCLUSIONS) {
-                    ushort2 tile = exclusionTiles[currentSkipIndex++];
-                    nextToSkip = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
-                }
-                else
-                    nextToSkip = end;
-            }
-            includeTile = (nextToSkip != pos);
         }
+
+        // Skip over tiles that have exclusions, since they were already processed.
+
+        while (nextToSkip < pos) {
+            if (currentSkipIndex < NUM_TILES_WITH_EXCLUSIONS) {
+                ushort2 tile = exclusionTiles[currentSkipIndex++];
+                nextToSkip = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
+            }
+            else
+                nextToSkip = end;
+        }
+        includeTile = (nextToSkip != pos);
+#endif
         if (includeTile) {
             // Load the data for this tile.
 
             for (int localAtomIndex = 0; localAtomIndex < TILE_SIZE; localAtomIndex++) {
 #ifdef USE_CUTOFF
-                unsigned int j = (numTiles <= maxTiles ? interactingAtoms[pos*TILE_SIZE+localAtomIndex] : y*TILE_SIZE+localAtomIndex);
+                unsigned int j = interactingAtoms[pos*TILE_SIZE+localAtomIndex];
 #else
                 unsigned int j = y*TILE_SIZE+localAtomIndex;
 #endif
@@ -293,6 +294,7 @@ __kernel void computeN2Energy(
                             atom2 = atomIndices[j];
                             real dEdR = 0;
                             real tempEnergy = 0;
+                            const real interactionScale = 1.0f;
                             COMPUTE_INTERACTION
                             dEdR /= -r;
                             energy += tempEnergy;
@@ -349,6 +351,7 @@ __kernel void computeN2Energy(
                             atom2 = atomIndices[j];
                             real dEdR = 0;
                             real tempEnergy = 0;
+                            const real interactionScale = 1.0f;
                             COMPUTE_INTERACTION
                             dEdR /= -r;
                             energy += tempEnergy;
@@ -402,4 +405,5 @@ __kernel void computeN2Energy(
         pos++;
     }
     energyBuffer[get_global_id(0)] += energy;
+    SAVE_PARAM_DERIVS
 }

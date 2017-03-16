@@ -454,6 +454,8 @@ extern "C" __global__ void computeInducedField(
 
 #ifdef USE_CUTOFF
     const unsigned int numTiles = interactionCount[0];
+    if (numTiles > maxTiles)
+        return; // There wasn't enough memory for the neighbor list.
     int pos = (int) (numTiles > maxTiles ? startTileIndex+warp*(long long)numTileIndices/totalWarps : warp*(long long)numTiles/totalWarps);
     int end = (int) (numTiles > maxTiles ? startTileIndex+(warp+1)*(long long)numTileIndices/totalWarps : (warp+1)*(long long)numTiles/totalWarps);
 #else
@@ -474,34 +476,31 @@ extern "C" __global__ void computeInducedField(
         
         int x, y;
 #ifdef USE_CUTOFF
-        if (numTiles <= maxTiles)
-            x = tiles[pos];
-        else
-#endif
-        {
-            y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+        x = tiles[pos];
+#else
+        y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+        x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+        if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
+            y += (x < y ? -1 : 1);
             x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
-            if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
-                y += (x < y ? -1 : 1);
-                x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
-            }
-
-            // Skip over tiles that have exclusions, since they were already processed.
-
-            while (skipTiles[tbx+TILE_SIZE-1] < pos) {
-                if (skipBase+tgx < NUM_TILES_WITH_EXCLUSIONS) {
-                    ushort2 tile = exclusionTiles[skipBase+tgx];
-                    skipTiles[threadIdx.x] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
-                }
-                else
-                    skipTiles[threadIdx.x] = end;
-                skipBase += TILE_SIZE;            
-                currentSkipIndex = tbx;
-            }
-            while (skipTiles[currentSkipIndex] < pos)
-                currentSkipIndex++;
-            includeTile = (skipTiles[currentSkipIndex] != pos);
         }
+
+        // Skip over tiles that have exclusions, since they were already processed.
+
+        while (skipTiles[tbx+TILE_SIZE-1] < pos) {
+            if (skipBase+tgx < NUM_TILES_WITH_EXCLUSIONS) {
+                ushort2 tile = exclusionTiles[skipBase+tgx];
+                skipTiles[threadIdx.x] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
+            }
+            else
+                skipTiles[threadIdx.x] = end;
+            skipBase += TILE_SIZE;            
+            currentSkipIndex = tbx;
+        }
+        while (skipTiles[currentSkipIndex] < pos)
+            currentSkipIndex++;
+        includeTile = (skipTiles[currentSkipIndex] != pos);
+#endif
         if (includeTile) {
             unsigned int atom1 = x*TILE_SIZE + tgx;
 
@@ -515,7 +514,7 @@ extern "C" __global__ void computeInducedField(
             loadAtomData(data, atom1, posq, inducedDipole, inducedDipolePolar, dampingAndThole);
 #endif
 #ifdef USE_CUTOFF
-            unsigned int j = (numTiles <= maxTiles ? interactingAtoms[pos*TILE_SIZE+tgx] : y*TILE_SIZE + tgx);
+            unsigned int j = interactingAtoms[pos*TILE_SIZE+tgx];
 #else
             unsigned int j = y*TILE_SIZE + tgx;
 #endif
@@ -608,11 +607,6 @@ extern "C" __global__ void recordInducedDipolesForDIIS(const long long* __restri
         const real* __restrict__ inducedDipole, const real* __restrict__ inducedDipolePolar, const float* __restrict__ polarizability, float2* __restrict__ errors,
         real* __restrict__ prevDipoles, real* __restrict__ prevDipolesPolar, real* __restrict__ prevErrors, int iteration, bool recordPrevErrors, real* __restrict__ matrix) {
     extern __shared__ real2 buffer[];
-#ifdef USE_EWALD
-    const real ewaldScale = (4/(real) 3)*(EWALD_ALPHA*EWALD_ALPHA*EWALD_ALPHA)/SQRT_PI;
-#else
-    const real ewaldScale = 0;
-#endif
     const real fieldScale = 1/(real) 0x100000000;
     real sumErrors = 0;
     real sumPolarErrors = 0;
@@ -697,6 +691,126 @@ extern "C" __global__ void computeDIISMatrix(real* __restrict__ prevErrors, int 
             if (i != j)
                 matrix[j+MAX_PREV_DIIS_DIPOLES*i] = sumBuffer[0];
         }
+    }
+}
+
+extern "C" __global__ void solveDIISMatrix(int iteration, const real* __restrict__ matrix, float* __restrict__ coefficients) {
+    __shared__ real b[MAX_PREV_DIIS_DIPOLES+1][MAX_PREV_DIIS_DIPOLES+1];
+    __shared__ real piv[MAX_PREV_DIIS_DIPOLES+1];
+    __shared__ real x[MAX_PREV_DIIS_DIPOLES+1];
+
+    // On the first iteration we don't need to do any calculation.
+    
+    if (iteration == 0) {
+        if (threadIdx.x == 0)
+            coefficients[0] = 1;
+        return;
+    }
+    
+    // Load the matrix.
+    
+    int numPrev = min(iteration+1, MAX_PREV_DIIS_DIPOLES);
+    int rank = numPrev+1;
+    for (int index = threadIdx.x; index < numPrev*numPrev; index += blockDim.x) {
+        int i = index/numPrev;
+        int j = index-i*numPrev;
+        b[i+1][j+1] = matrix[i*MAX_PREV_DIIS_DIPOLES+j];
+    }
+    for (int i = threadIdx.x; i < rank; i += blockDim.x) {
+        b[i][0] = -1;
+        piv[i] = i;
+    }
+    __syncthreads();
+    
+    // Compute the mean absolute value of the values we just loaded.  We use that for preconditioning it,
+    // which is essential for doing the computation in single precision.
+    
+    if (threadIdx.x == 0) {
+        real mean = 0;
+        for (int i = 0; i < numPrev; i++)
+            for (int j = 0; j < numPrev; j++)
+                mean += fabs(b[i+1][j+1]);
+        mean /= numPrev*numPrev;
+        b[0][0] = 0;
+        for (int i = 1; i < rank; i++)
+            b[0][i] = -mean;
+
+        // Compute the LU decomposition of the matrix.  This code is adapted from JAMA.
+    
+        int pivsign = 1;
+        for (int j = 0; j < rank; j++) {
+            // Apply previous transformations.
+
+            for (int i = 0; i < rank; i++) {
+                // Most of the time is spent in the following dot product.
+
+                int kmax = min(i, j);
+                real s = 0;
+                for (int k = 0; k < kmax; k++)
+                    s += b[i][k] * b[k][j];
+                b[i][j] -= s;
+            }
+
+            // Find pivot and exchange if necessary.
+
+            int p = j;
+            for (int i = j+1; i < rank; i++)
+                if (abs(b[i][j]) > abs(b[p][j]))
+                    p = i;
+            if (p != j) {
+                int k = 0;
+                for (k = 0; k < rank; k++) {
+                    real t = b[p][k];
+                    b[p][k] = b[j][k];
+                    b[j][k] = t;
+                }
+                k = piv[p];
+                piv[p] = piv[j];
+                piv[j] = k;
+                pivsign = -pivsign;
+            }
+
+            // Compute multipliers.
+
+            if ((j < rank) && (b[j][j] != 0))
+                for (int i = j+1; i < rank; i++)
+                    b[i][j] /= b[j][j];
+        }
+        for (int i = 0; i < rank; i++)
+            if (b[i][i] == 0) {
+                // The matrix is singular.
+                
+                for (int j = 0; j < rank-1; j++)
+                    coefficients[j] = 0;
+                coefficients[rank-1] = 1;
+                return;
+            }
+
+        // Solve b*Y = X(piv)
+        
+        for (int i = 0; i < rank; i++) 
+            x[i] = (piv[i] == 0 ? -1 : 0);
+        for (int k = 0; k < rank; k++)
+            for (int i = k+1; i < rank; i++)
+                x[i] -= x[k] * b[i][k];
+
+        // Solve U*X = Y;
+        
+        for (int k = rank-1; k >= 0; k--) {
+            x[k] /= b[k][k];
+            for (int i = 0; i < k; i++)
+                x[i] -= x[k] * b[i][k];
+        }
+        
+        // Record the coefficients.
+        
+        real lastCoeff = 1;
+        for (int i = 0; i < rank-1; i++) {
+            real c = x[i+1]*mean;
+            coefficients[i] = c;
+            lastCoeff -= c;
+        }
+        coefficients[rank-1] = lastCoeff;
     }
 }
 

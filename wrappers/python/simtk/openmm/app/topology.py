@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2015 Stanford University and the Authors.
+Portions copyright (c) 2012-2016 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
@@ -32,11 +32,40 @@ from __future__ import absolute_import
 __author__ = "Peter Eastman"
 __version__ = "1.0"
 
+from collections import namedtuple
 import os
 import xml.etree.ElementTree as etree
 from simtk.openmm.vec3 import Vec3
+from simtk.openmm.app.internal.singleton import Singleton
 from simtk.unit import nanometers, sqrt, is_quantity
 from copy import deepcopy
+
+# Enumerated values for bond type
+
+class Single(Singleton):
+    def __repr__(self):
+        return 'Single'
+Single = Single()
+
+class Double(Singleton):
+    def __repr__(self):
+        return 'Double'
+Double = Double()
+
+class Triple(Singleton):
+    def __repr__(self):
+        return 'Triple'
+Triple = Triple()
+
+class Aromatic(Singleton):
+    def __repr__(self):
+        return 'Aromatic'
+Aromatic = Aromatic()
+
+class Amide(Singleton):
+    def __repr__(self):
+        return 'Amide'
+Amide = Amide()
 
 class Topology(object):
     """Topology stores the topological information about a system.
@@ -155,7 +184,7 @@ class Topology(object):
         residue._atoms.append(atom)
         return atom
 
-    def addBond(self, atom1, atom2):
+    def addBond(self, atom1, atom2, type=None, order=None):
         """Create a new bond and add it to the Topology.
 
         Parameters
@@ -164,8 +193,13 @@ class Topology(object):
             The first Atom connected by the bond
         atom2 : Atom
             The second Atom connected by the bond
+        type : object=None
+            The type of bond to add.  Allowed values are None, Single, Double, Triple,
+            Aromatic, or Amide.
+        order : int=None
+            The bond order, or None if it is not specified
         """
-        self._bonds.append((atom1, atom2))
+        self._bonds.append(Bond(atom1, atom2, type, order))
 
     def chains(self):
         """Iterate over all Chains in the Topology."""
@@ -387,7 +421,7 @@ class Residue(object):
         return "<Residue %d (%s) of chain %d>" % (self.index, self.name, self.chain.index)
 
 class Atom(object):
-    """An Atom object represents a residue within a Topology."""
+    """An Atom object represents an atom within a Topology."""
 
     def __init__(self, name, element, index, residue, id):
         """Construct a new Atom.  You should call addAtom() on the Topology instead of calling this directly."""
@@ -404,3 +438,32 @@ class Atom(object):
 
     def __repr__(self):
         return "<Atom %d (%s) of chain %d residue %d (%s)>" % (self.index, self.name, self.residue.chain.index, self.residue.index, self.residue.name)
+
+class Bond(namedtuple('Bond', ['atom1', 'atom2'])):
+    """A Bond object represents a bond between two Atoms within a Topology.
+
+    This class extends tuple, and may be interpreted as a 2 element tuple of Atom objects.
+    It also has fields that can optionally be used to describe the bond order and type of bond."""
+
+    def __new__(cls, atom1, atom2, type=None, order=None):
+        """Create a new Bond.  You should call addBond() on the Topology instead of calling this directly."""
+        bond = super(Bond, cls).__new__(cls, atom1, atom2)
+        bond.type = type
+        bond.order = order
+        return bond
+
+    def __getnewargs__(self):
+        "Support for pickle protocol 2: http://docs.python.org/2/library/pickle.html#pickling-and-unpickling-normal-class-instances"
+        return self[0], self[1], self.type, self.order
+
+    def __deepcopy__(self, memo):
+        return Bond(self[0], self[1], self.type, self.order)
+
+    def __repr__(self):
+        s = "Bond(%s, %s" % (self[0], self[1])
+        if self.type is not None:
+            s = "%s, type=%s" % (s, self.type)
+        if self.order is not None:
+            s = "%s, order=%d" % (s, self.order)
+        s += ")"
+        return s

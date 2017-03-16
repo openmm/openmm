@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2012 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2016 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -36,7 +36,7 @@ class OPENMM_EXPORT ReferenceStochasticDynamics : public ReferenceDynamics {
 
       std::vector<OpenMM::RealVec> xPrime;
       std::vector<RealOpenMM> inverseMasses;
-      RealOpenMM _tau;
+      RealOpenMM friction;
       
    public:
 
@@ -46,12 +46,12 @@ class OPENMM_EXPORT ReferenceStochasticDynamics : public ReferenceDynamics {
 
          @param numberOfAtoms  number of atoms
          @param deltaT         delta t for dynamics
-         @param tau            viscosity
+         @param friction       friction coefficient
          @param temperature    temperature
       
          --------------------------------------------------------------------------------------- */
 
-       ReferenceStochasticDynamics(int numberOfAtoms, RealOpenMM deltaT, RealOpenMM tau, RealOpenMM temperature);
+       ReferenceStochasticDynamics(int numberOfAtoms, RealOpenMM deltaT, RealOpenMM friction, RealOpenMM temperature);
 
       /**---------------------------------------------------------------------------------------
       
@@ -63,13 +63,11 @@ class OPENMM_EXPORT ReferenceStochasticDynamics : public ReferenceDynamics {
 
       /**---------------------------------------------------------------------------------------
       
-         Get tau
-      
-         @return tau
+         Get friction coefficient
       
          --------------------------------------------------------------------------------------- */
       
-      RealOpenMM getTau() const;
+      RealOpenMM getFriction() const;
       
       /**---------------------------------------------------------------------------------------
       

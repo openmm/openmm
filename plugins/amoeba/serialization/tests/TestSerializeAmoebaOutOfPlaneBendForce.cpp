@@ -56,6 +56,7 @@ void testSerialization() {
     force1.addOutOfPlaneBend(0, 2, 3, 5, 2.1);
     force1.addOutOfPlaneBend(2, 3, 5, 6, 2.2);
     force1.addOutOfPlaneBend(5, 1, 8, 8, 2.3);
+    force1.setUsesPeriodicBoundaryConditions(true);
 
     // Serialize and then deserialize it.
 
@@ -67,6 +68,7 @@ void testSerialization() {
     AmoebaOutOfPlaneBendForce& force2 = *copy;
 
     ASSERT_EQUAL(force1.getForceGroup(), force2.getForceGroup());
+    ASSERT_EQUAL(force1.usesPeriodicBoundaryConditions(), force2.usesPeriodicBoundaryConditions());
     ASSERT_EQUAL(force1.getAmoebaGlobalOutOfPlaneBendCubic(), force2.getAmoebaGlobalOutOfPlaneBendCubic());
     ASSERT_EQUAL(force1.getAmoebaGlobalOutOfPlaneBendQuartic(), force2.getAmoebaGlobalOutOfPlaneBendQuartic());
     ASSERT_EQUAL(force1.getAmoebaGlobalOutOfPlaneBendPentic(), force2.getAmoebaGlobalOutOfPlaneBendPentic());

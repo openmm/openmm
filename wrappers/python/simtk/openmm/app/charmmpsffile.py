@@ -8,11 +8,10 @@ Structures at Stanford, funded under the NIH Roadmap for Medical Research,
 grant U54 GM072970. See https://simtk.org.  This code was originally part of
 the ParmEd program and was ported for use with OpenMM.
 
-Copyright (c) 2014-2015 the Authors
+Copyright (c) 2014-2016 the Authors
 
 Author: Jason M. Swails
 Contributors:
-Date: August 19, 2014
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -111,7 +110,7 @@ def _strip_optunit(thing, unit):
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-_resre = re.compile(r'(\d+)([a-zA-Z]*)')
+_resre = re.compile(r'(-?\d+)([a-zA-Z]*)')
 
 class CharmmPsfFile(object):
     """A chemical structure instantiated from CHARMM files.
@@ -179,23 +178,23 @@ class CharmmPsfFile(object):
         if not os.path.exists(psf_name):
             raise IOError('Could not find PSF file %s' % psf_name)
         # Open the PSF and read the first line. It must start with "PSF"
-        psf = open(psf_name, 'r')
-        line = psf.readline()
-        if not line.startswith('PSF'):
-            raise CharmmPSFError('Unrecognized PSF file. First line is %s' %
-                                 line.strip())
-        # Store the flags
-        psf_flags = line.split()[1:]
-        # Now get all of the sections and store them in a dict
-        psf.readline()
-        # Now get all of the sections
-        psfsections = _ZeroDict()
-        while True:
-            try:
-                sec, ptr, data = CharmmPsfFile._parse_psf_section(psf)
-            except CharmmPsfEOF:
-                break
-            psfsections[sec] = (ptr, data)
+        with open(psf_name, 'r') as psf:
+            line = psf.readline()
+            if not line.startswith('PSF'):
+                raise CharmmPSFError('Unrecognized PSF file. First line is %s' %
+                                     line.strip())
+            # Store the flags
+            psf_flags = line.split()[1:]
+            # Now get all of the sections and store them in a dict
+            psf.readline()
+            # Now get all of the sections
+            psfsections = _ZeroDict()
+            while True:
+                try:
+                    sec, ptr, data = CharmmPsfFile._parse_psf_section(psf)
+                except CharmmPsfEOF:
+                    break
+                psfsections[sec] = (ptr, data)
         # store the title
         title = psfsections['NTITLE'][1]
         # Next is the number of atoms
@@ -1218,6 +1217,7 @@ class CharmmPsfFile(object):
             else:
                 raise ValueError('Illegal nonbonded method for use with GBSA')
             gb.setForceGroup(self.GB_FORCE_GROUP)
+            gb.finalize()
             system.addForce(gb)
             force.setReactionFieldDielectric(1.0) # applies to NonbondedForce
 

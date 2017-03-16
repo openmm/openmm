@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -47,6 +47,7 @@
 #include "openmm/CustomNonbondedForce.h"
 #include "openmm/CustomManyParticleForce.h"
 #include "openmm/CustomTorsionForce.h"
+#include "openmm/GayBerneForce.h"
 #include "openmm/GBSAOBCForce.h"
 #include "openmm/HarmonicAngleForce.h"
 #include "openmm/HarmonicBondForce.h"
@@ -173,6 +174,12 @@ public:
      */
     virtual void getForces(ContextImpl& context, std::vector<Vec3>& forces) = 0;
     /**
+     * Get the current derivatives of the energy with respect to context parameters.
+     *
+     * @param derivs  on exit, this contains the derivatives
+     */
+    virtual void getEnergyParameterDerivatives(ContextImpl& context, std::map<std::string, double>& derivs) = 0;
+    /**
      * Get the current periodic box vectors.
      *
      * @param a      on exit, this contains the vector defining the first edge of the periodic box
@@ -187,7 +194,7 @@ public:
      * @param b      the vector defining the second edge of the periodic box
      * @param c      the vector defining the third edge of the periodic box
      */
-    virtual void setPeriodicBoxVectors(ContextImpl& context, const Vec3& a, const Vec3& b, const Vec3& c) const = 0;
+    virtual void setPeriodicBoxVectors(ContextImpl& context, const Vec3& a, const Vec3& b, const Vec3& c) = 0;
     /**
      * Create a checkpoint recording the current state of the Context.
      * 
@@ -889,6 +896,41 @@ public:
      * @param force      the CustomManyParticleForce to copy the parameters from
      */
     virtual void copyParametersToContext(ContextImpl& context, const CustomManyParticleForce& force) = 0;
+};
+
+/**
+ * This kernel is invoked by GayBerneForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CalcGayBerneForceKernel : public KernelImpl {
+public:
+    static std::string Name() {
+        return "CalcGayBerneForce";
+    }
+    CalcGayBerneForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the GayBerneForce this kernel will be used for
+     */
+    virtual void initialize(const System& system, const GayBerneForce& force) = 0;
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the GayBerneForce to copy the parameters from
+     */
+    virtual void copyParametersToContext(ContextImpl& context, const GayBerneForce& force) = 0;
 };
 
 /**

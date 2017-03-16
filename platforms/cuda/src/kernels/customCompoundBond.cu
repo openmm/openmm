@@ -8,8 +8,11 @@ inline __device__ real3 ccb_trim(real4 v) {
 /**
  * Compute the difference between two vectors, setting the fourth component to the squared magnitude.
  */
-inline __device__ real4 ccb_delta(real4 vec1, real4 vec2) {
+inline __device__ real4 ccb_delta(real4 vec1, real4 vec2, bool periodic, real4 periodicBoxSize, real4 invPeriodicBoxSize, 
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ) {
     real4 result = make_real4(vec1.x-vec2.x, vec1.y-vec2.y, vec1.z-vec2.z, 0);
+    if (periodic)
+        APPLY_PERIODIC_TO_DELTA(result);
     result.w = result.x*result.x + result.y*result.y + result.z*result.z;
     return result;
 }

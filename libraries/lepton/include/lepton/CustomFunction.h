@@ -48,7 +48,7 @@ public:
     virtual ~CustomFunction() {
     }
     /**
-     * Get the number of arguments this function exprects.
+     * Get the number of arguments this function expects.
      */
     virtual int getNumArguments() const = 0;
     /**

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -69,7 +69,7 @@ static void CL_CALLBACK errorCallback(const char* errinfo, const void* private_i
 
 OpenCLContext::OpenCLContext(const System& system, int platformIndex, int deviceIndex, const string& precision, OpenCLPlatform::PlatformData& platformData) :
         system(system), time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), stepsSinceReorder(99999), atomsWereReordered(false), posq(NULL),
-        posqCorrection(NULL), velm(NULL), forceBuffers(NULL), longForceBuffer(NULL), energyBuffer(NULL), atomIndexDevice(NULL), integration(NULL),
+        posqCorrection(NULL), velm(NULL), forceBuffers(NULL), longForceBuffer(NULL), energyBuffer(NULL), energyParamDerivBuffer(NULL), atomIndexDevice(NULL), integration(NULL),
         expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
     if (precision == "single") {
         useDoublePrecision = false;
@@ -84,7 +84,7 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
         useMixedPrecision = false;
     }
     else
-        throw OpenMMException("Illegal value for OpenCLPrecision: "+precision);
+        throw OpenMMException("Illegal value for Precision: "+precision);
     try {
         contextIndex = platformData.contexts.size();
         std::vector<cl::Platform> platforms;
@@ -105,7 +105,7 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
             vector<cl::Device> devices;
             platforms[j].getDevices(CL_DEVICE_TYPE_ALL, &devices);
             if (deviceIndex < -1 || deviceIndex >= (int) devices.size())
-                throw OpenMMException("Illegal value for OpenCLDeviceIndex: "+intToString(deviceIndex));
+                throw OpenMMException("Illegal value for DeviceIndex: "+intToString(deviceIndex));
 
             for (int i = 0; i < (int) devices.size(); i++) {
                 // If they supplied a valid deviceIndex, we only look through that one
@@ -113,6 +113,11 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
                     continue;
                 if (platformVendor == "Apple" && (devices[i].getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU))
                     continue; // The CPU device on OS X won't work correctly.
+                if (useMixedPrecision || useDoublePrecision) {
+                    bool supportsDouble = (devices[i].getInfo<CL_DEVICE_EXTENSIONS>().find("cl_khr_fp64") != string::npos);
+                    if (!supportsDouble)
+                        continue; // This device does not support double precision.
+                }
                 int maxSize = devices[i].getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>()[0];
                 int processingElementsPerComputeUnit = 8;
                 if (devices[i].getInfo<CL_DEVICE_TYPE>() != CL_DEVICE_TYPE_GPU) {
@@ -174,10 +179,8 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
         compilationDefines["WORK_GROUP_SIZE"] = intToString(ThreadBlockSize);
         if (platformVendor.size() >= 5 && platformVendor.substr(0, 5) == "Intel")
             defaultOptimizationOptions = "";
-        else if (platformVendor == "Apple")
-            defaultOptimizationOptions = "-cl-mad-enable -cl-no-signed-zeros";
         else
-            defaultOptimizationOptions = "-cl-fast-relaxed-math";
+            defaultOptimizationOptions = "-cl-mad-enable -cl-no-signed-zeros";
         supports64BitGlobalAtomics = (device.getInfo<CL_DEVICE_EXTENSIONS>().find("cl_khr_int64_base_atomics") != string::npos);
         supportsDoublePrecision = (device.getInfo<CL_DEVICE_EXTENSIONS>().find("cl_khr_fp64") != string::npos);
         if ((useDoublePrecision || useMixedPrecision) && !supportsDoublePrecision)
@@ -432,6 +435,8 @@ OpenCLContext::~OpenCLContext() {
         delete longForceBuffer;
     if (energyBuffer != NULL)
         delete energyBuffer;
+    if (energyParamDerivBuffer != NULL)
+        delete energyParamDerivBuffer;
     if (atomIndexDevice != NULL)
         delete atomIndexDevice;
     if (integration != NULL)
@@ -452,15 +457,16 @@ void OpenCLContext::initialize() {
     numForceBuffers = std::max(numForceBuffers, bonded->getNumForceBuffers());
     for (int i = 0; i < (int) forces.size(); i++)
         numForceBuffers = std::max(numForceBuffers, forces[i]->getRequiredForceBuffers());
+    int energyBufferSize = max(numThreadBlocks*ThreadBlockSize, nonbonded->getNumEnergyBuffers());
     if (useDoublePrecision) {
         forceBuffers = OpenCLArray::create<mm_double4>(*this, paddedNumAtoms*numForceBuffers, "forceBuffers");
         force = OpenCLArray::create<mm_double4>(*this, &forceBuffers->getDeviceBuffer(), paddedNumAtoms, "force");
-        energyBuffer = OpenCLArray::create<cl_double>(*this, max(numThreadBlocks*ThreadBlockSize, nonbonded->getNumEnergyBuffers()), "energyBuffer");
+        energyBuffer = OpenCLArray::create<cl_double>(*this, energyBufferSize, "energyBuffer");
     }
     else {
         forceBuffers = OpenCLArray::create<mm_float4>(*this, paddedNumAtoms*numForceBuffers, "forceBuffers");
         force = OpenCLArray::create<mm_float4>(*this, &forceBuffers->getDeviceBuffer(), paddedNumAtoms, "force");
-        energyBuffer = OpenCLArray::create<cl_double>(*this, max(numThreadBlocks*ThreadBlockSize, nonbonded->getNumEnergyBuffers()), "energyBuffer");
+        energyBuffer = OpenCLArray::create<cl_double>(*this, energyBufferSize, "energyBuffer");
     }
     if (supports64BitGlobalAtomics) {
         longForceBuffer = OpenCLArray::create<cl_long>(*this, 3*paddedNumAtoms, "longForceBuffer");
@@ -472,7 +478,15 @@ void OpenCLContext::initialize() {
     }
     addAutoclearBuffer(*forceBuffers);
     addAutoclearBuffer(*energyBuffer);
-    int bufferBytes = max(velm->getSize()*velm->getElementSize(), energyBuffer->getSize()*energyBuffer->getElementSize());
+    int numEnergyParamDerivs = energyParamDerivNames.size();
+    if (numEnergyParamDerivs > 0) {
+        if (useDoublePrecision || useMixedPrecision)
+            energyParamDerivBuffer = OpenCLArray::create<cl_double>(*this, numEnergyParamDerivs*energyBufferSize, "energyParamDerivBuffer");
+        else
+            energyParamDerivBuffer = OpenCLArray::create<cl_float>(*this, numEnergyParamDerivs*energyBufferSize, "energyParamDerivBuffer");
+        addAutoclearBuffer(*energyParamDerivBuffer);
+    }
+    int bufferBytes = max(velm->getSize()*velm->getElementSize(), energyBufferSize*energyBuffer->getElementSize());
     pinnedBuffer = new cl::Buffer(context, CL_MEM_ALLOC_HOST_PTR, bufferBytes);
     pinnedMemory = currentQueue.enqueueMapBuffer(*pinnedBuffer, CL_TRUE, CL_MAP_READ | CL_MAP_WRITE, 0, bufferBytes);
     for (int i = 0; i < numAtoms; i++) {
@@ -1047,7 +1061,6 @@ void OpenCLContext::reorderAtoms() {
         reorderAtomsImpl<cl_float, mm_float4, cl_double, mm_double4>();
     else
         reorderAtomsImpl<cl_float, mm_float4, cl_float, mm_float4>();
-    nonbonded->updateNeighborListSize();
 }
 
 template <class Real, class Real4, class Mixed, class Mixed4>
@@ -1225,6 +1238,15 @@ void OpenCLContext::addPreComputation(ForcePreComputation* computation) {
 
 void OpenCLContext::addPostComputation(ForcePostComputation* computation) {
     postComputations.push_back(computation);
+}
+
+void OpenCLContext::addEnergyParameterDerivative(const string& param) {
+    // See if this parameter has already been registered.
+    
+    for (int i = 0; i < energyParamDerivNames.size(); i++)
+        if (param == energyParamDerivNames[i])
+            return;
+    energyParamDerivNames.push_back(param);
 }
 
 struct OpenCLContext::WorkThread::ThreadData {

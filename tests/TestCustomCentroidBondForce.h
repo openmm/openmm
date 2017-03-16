@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2015 Stanford University and the Authors.           *
+ * Portions copyright (c) 2015-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -277,6 +277,121 @@ void testIllegalVariable() {
     ASSERT(threwException);
 }
 
+void testPeriodic() {
+    // Create a force that uses periodic boundary conditions.
+    
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(2.0);
+    system.addParticle(3.0);
+    system.addParticle(4.0);
+    system.addParticle(5.0);
+    system.setDefaultPeriodicBoxVectors(Vec3(2, 0, 0), Vec3(0, 3, 0), Vec3(0, 0, 3));
+    CustomCentroidBondForce* force = new CustomCentroidBondForce(2, "k*distance(g1,g2)^2");
+    force->addPerBondParameter("k");
+    vector<int> particles1;
+    particles1.push_back(0);
+    particles1.push_back(1);
+    vector<int> particles2;
+    particles2.push_back(2);
+    particles2.push_back(3);
+    particles2.push_back(4);
+    force->addGroup(particles1);
+    force->addGroup(particles2);
+    vector<int> groups;
+    groups.push_back(0);
+    groups.push_back(1);
+    vector<double> parameters;
+    parameters.push_back(1.0);
+    force->addBond(groups, parameters);
+    force->setUsesPeriodicBoundaryConditions(true);
+    system.addForce(force);
+
+    // The center of mass of group 0 is (1.5, 0, 0).
+
+    vector<Vec3> positions(5);
+    positions[0] = Vec3(2.5, 0, 0);
+    positions[1] = Vec3(1, 0, 0);
+
+    // The center of mass of group 1 is (-1, 0, 0).
+
+    positions[2] = Vec3(-6, 0, 0);
+    positions[3] = Vec3(-1, 0, 0);
+    positions[4] = Vec3(2, 0, 0);
+
+    // Check the forces and energy.
+
+    VerletIntegrator integrator(0.01);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    State state = context.getState(State::Forces | State::Energy);
+    ASSERT_EQUAL_TOL(0.5*0.5, state.getPotentialEnergy(), TOL);
+    ASSERT_EQUAL_VEC(Vec3(-2*0.5*(1.0/3.0), 0, 0), state.getForces()[0], TOL);
+    ASSERT_EQUAL_VEC(Vec3(-2*0.5*(2.0/3.0), 0, 0), state.getForces()[1], TOL);
+    ASSERT_EQUAL_VEC(Vec3(2*0.5*(3.0/12.0), 0, 0), state.getForces()[2], TOL);
+    ASSERT_EQUAL_VEC(Vec3(2*0.5*(4.0/12.0), 0, 0), state.getForces()[3], TOL);
+    ASSERT_EQUAL_VEC(Vec3(2*0.5*(5.0/12.0), 0, 0), state.getForces()[4], TOL);
+}
+
+void testEnergyParameterDerivatives() {
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(2.0);
+    system.addParticle(3.0);
+    system.addParticle(4.0);
+    system.addParticle(5.0);
+    CustomCentroidBondForce* force = new CustomCentroidBondForce(2, "k*(distance(g1,g2)-r0)^2");
+    force->addGlobalParameter("r0", 0.0);
+    force->addGlobalParameter("k", 0.0);
+    force->addEnergyParameterDerivative("r0");
+    force->addEnergyParameterDerivative("k");
+    vector<int> particles1;
+    particles1.push_back(0);
+    particles1.push_back(1);
+    vector<int> particles2;
+    particles2.push_back(2);
+    particles2.push_back(3);
+    particles2.push_back(4);
+    force->addGroup(particles1);
+    force->addGroup(particles2);
+    vector<int> groups;
+    groups.push_back(0);
+    groups.push_back(1);
+    vector<double> parameters;
+    force->addBond(groups, parameters);
+    system.addForce(force);
+
+    // The center of mass of group 0 is (1.5, 0, 0).
+
+    vector<Vec3> positions(5);
+    positions[0] = Vec3(2.5, 0, 0);
+    positions[1] = Vec3(1, 0, 0);
+
+    // The center of mass of group 1 is (-1, 0, 0).
+
+    positions[2] = Vec3(-6, 0, 0);
+    positions[3] = Vec3(-1, 0, 0);
+    positions[4] = Vec3(2, 0, 0);
+    
+    // Check the derivatives.
+
+    VerletIntegrator integrator(0.01);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    for (int i = 0; i < 10; i++) {
+        double r0 = 0.1*i;
+        double k = 10-i;
+        context.setParameter("r0", r0);
+        context.setParameter("k", k);
+        State state = context.getState(State::ParameterDerivatives);
+        map<string, double> derivs = state.getEnergyParameterDerivatives();
+        double dEdr0 = -2*k*(2.5-r0);
+        double dEdk = (2.5-r0)*(2.5-r0);
+        ASSERT_EQUAL_TOL(dEdr0, derivs["r0"], 1e-5);
+        ASSERT_EQUAL_TOL(dEdk, derivs["k"], 1e-5);
+    }
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -286,6 +401,8 @@ int main(int argc, char* argv[]) {
         testComplexFunction();
         testCustomWeights();
         testIllegalVariable();
+        testPeriodic();
+        testEnergyParameterDerivatives();
         runPlatformTests();
     }
     catch(const exception& e) {

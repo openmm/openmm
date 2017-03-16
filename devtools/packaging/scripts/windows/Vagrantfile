@@ -1,0 +1,10 @@
+Vagrant.configure("2") do |config|
+  config.vm.box = "gusztavvargadr/windows10ee"
+  config.vm.provision :shell, path: "prepare.ps1"
+
+  config.vm.provider :virtualbox do |vb|
+    vb.customize ["modifyvm", :id, "--memory", "2048"]
+    vb.customize ["modifyvm", :id, "--cpus", "2"]
+    vb.customize ["modifyvm", :id, "--ioapic", "on"]
+  end  
+end

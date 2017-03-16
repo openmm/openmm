@@ -246,6 +246,7 @@ void CustomCentroidBondForceImpl::addBondsBetweenGroups(int group1, int group2, 
 
 void CustomCentroidBondForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcCustomCentroidBondForceKernel>().copyParametersToContext(context, owner);
+    context.systemChanged();
 }
 
 void CustomCentroidBondForceImpl::computeNormalizedWeights(const CustomCentroidBondForce& force, const System& system, vector<vector<double> >& weights) {

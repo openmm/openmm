@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -155,18 +155,14 @@ map<string, double> CustomNonbondedForceImpl::getDefaultParameters() {
 
 void CustomNonbondedForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcCustomNonbondedForceKernel>().copyParametersToContext(context, owner);
+    context.systemChanged();
 }
 
-double CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedForce& force, const Context& context) {
-    if (force.getNonbondedMethod() == CustomNonbondedForce::NoCutoff || force.getNonbondedMethod() == CustomNonbondedForce::CutoffNonPeriodic)
-        return 0.0;
-    
-    // Parse the energy expression.
-    
-    map<string, Lepton::CustomFunction*> functions;
-    for (int i = 0; i < force.getNumFunctions(); i++)
-        functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
-    Lepton::CompiledExpression expression = Lepton::Parser::parse(force.getEnergyFunction(), functions).createCompiledExpression();
+void CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedForce& force, const Context& context, double& coefficient, vector<double>& derivatives) {
+    if (force.getNonbondedMethod() == CustomNonbondedForce::NoCutoff || force.getNonbondedMethod() == CustomNonbondedForce::CutoffNonPeriodic) {
+        coefficient = 0.0;
+        return;
+    }
     
     // Identify all particle classes (defined by parameters), and record the class of each particle.
     
@@ -223,17 +219,35 @@ double CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedFo
                 }
         }
     }
-
-    // Loop over all pairs of classes to compute the coefficient.
-
+    
+    // Compute the coefficient.
+    
+    map<string, Lepton::CustomFunction*> functions;
+    for (int i = 0; i < force.getNumFunctions(); i++)
+        functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
+    double nPart = (double) numParticles;
+    double numInteractions = (nPart*(nPart+1))/2;
+    Lepton::CompiledExpression expression = Lepton::Parser::parse(force.getEnergyFunction(), functions).createCompiledExpression();
     double sum = 0;
     for (int i = 0; i < numClasses; i++)
         for (int j = i; j < numClasses; j++)
             sum += interactionCount[make_pair(i, j)]*integrateInteraction(expression, classes[i], classes[j], force, context);
-    double nPart = (double) numParticles;
-    double numInteractions = (nPart*(nPart+1))/2;
     sum /= numInteractions;
-    return 2*M_PI*nPart*nPart*sum;
+    coefficient = 2*M_PI*nPart*nPart*sum;
+    
+    // Now do the same for parameter derivatives.
+    
+    int numDerivs = force.getNumEnergyParameterDerivatives();
+    derivatives.resize(numDerivs);
+    for (int k = 0; k < numDerivs; k++) {
+        expression = Lepton::Parser::parse(force.getEnergyFunction(), functions).differentiate(force.getEnergyParameterDerivativeName(k)).createCompiledExpression();
+        sum = 0;
+        for (int i = 0; i < numClasses; i++)
+            for (int j = i; j < numClasses; j++)
+                sum += interactionCount[make_pair(i, j)]*integrateInteraction(expression, classes[i], classes[j], force, context);
+        sum /= numInteractions;
+        derivatives[k] = 2*M_PI*nPart*nPart*sum;
+    }
 }
 
 double CustomNonbondedForceImpl::integrateInteraction(Lepton::CompiledExpression& expression, const vector<double>& params1, const vector<double>& params2,
