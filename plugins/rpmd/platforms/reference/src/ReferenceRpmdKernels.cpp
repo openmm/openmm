@@ -55,9 +55,9 @@ static vector<Vec3>& extractForces(ContextImpl& context) {
 ReferenceIntegrateRPMDStepKernel::~ReferenceIntegrateRPMDStepKernel() {
     if (fft != NULL)
         fftpack_destroy(fft);
-    for (map<int, fftpack*>::const_iterator iter = contractionFFT.begin(); iter != contractionFFT.end(); ++iter)
-        if (iter->second != NULL)
-            fftpack_destroy(iter->second);
+    for (auto& c : contractionFFT)
+        if (c.second != NULL)
+            fftpack_destroy(c.second);
 }
 
 void ReferenceIntegrateRPMDStepKernel::initialize(const System& system, const RPMDIntegrator& integrator) {
@@ -79,9 +79,9 @@ void ReferenceIntegrateRPMDStepKernel::initialize(const System& system, const RP
     groupsNotContracted = -1;
     const map<int, int>& contractions = integrator.getContractions();
     int maxContractedCopies = 0;
-    for (map<int, int>::const_iterator iter = contractions.begin(); iter != contractions.end(); ++iter) {
-        int group = iter->first;
-        int copies = iter->second;
+    for (auto& c : contractions) {
+        int group = c.first;
+        int copies = c.second;
         if (group < 0 || group > 31)
             throw OpenMMException("RPMDIntegrator: Force group must be between 0 and 31");
         if (copies < 0 || copies > numCopies)
@@ -290,9 +290,9 @@ void ReferenceIntegrateRPMDStepKernel::computeForces(ContextImpl& context, const
     
     // Now loop over contractions and compute forces from them.
     
-    for (map<int, int>::const_iterator iter = groupsByCopies.begin(); iter != groupsByCopies.end(); ++iter) {
-        int copies = iter->first;
-        int groupFlags = iter->second;
+    for (auto& g : groupsByCopies) {
+        int copies = g.first;
+        int groupFlags = g.second;
         fftpack* shortFFT = contractionFFT[copies];
         
         // Find the contracted positions.
