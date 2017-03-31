@@ -570,6 +570,7 @@ class GromacsTopFile(object):
             The solvent dielectric constant to use in the implicit solvent
             model.
         ewaldErrorTolerance : float=0.0005
+            The error tolerance to use if nonbondedMethod is Ewald, PME or LJPME.
         removeCMMotion : boolean=True
             If true, a CMMotionRemover will be added to the System
         hydrogenMass : mass=None
@@ -918,6 +919,8 @@ class GromacsTopFile(object):
                      ff.LJPME:mm.NonbondedForce.LJPME}
         nb.setNonbondedMethod(methodMap[nonbondedMethod])
         nb.setCutoffDistance(nonbondedCutoff)
+        if self._defaults[1] == '2':
+            nb.setEwaldErrorTolerance(ewaldErrorTolerance)
 
         # Adjust masses.
 
