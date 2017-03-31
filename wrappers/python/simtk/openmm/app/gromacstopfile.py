@@ -262,7 +262,7 @@ class GromacsTopFile(object):
             raise ValueError('Too few fields in [ defaults ] line: '+line)
         if fields[0] != '1':
             raise ValueError('Unsupported nonbonded type: '+fields[0])
-        if fields[1] != '2':
+        if not (fields[1] == '2' or fields[1] == '1'):
             raise ValueError('Unsupported combination rule: '+fields[1])
         if fields[2].lower() == 'no':
             self._genpairs = False
@@ -570,7 +570,6 @@ class GromacsTopFile(object):
             The solvent dielectric constant to use in the implicit solvent
             model.
         ewaldErrorTolerance : float=0.0005
-            The error tolerance to use if nonbondedMethod is Ewald, PME, or LJPME.
         removeCMMotion : boolean=True
             If true, a CMMotionRemover will be added to the System
         hydrogenMass : mass=None
@@ -591,7 +590,14 @@ class GromacsTopFile(object):
             sys.setDefaultPeriodicBoxVectors(*boxVectors)
         elif nonbondedMethod in (ff.CutoffPeriodic, ff.Ewald, ff.PME, ff.LJPME):
             raise ValueError('Illegal nonbonded method for a non-periodic system')
-        nb = mm.NonbondedForce()
+        if self._defaults[1] == '1':
+            #factor of 138.935456 for coulomb taken from tests/TestCustomNonbondedForce.h:574
+            nb = mm.CustomNonbondedForce('138.935456*q1*q2/r-sqrt(C1*C2)/r^6+sqrt(A1*A2)/r^12')
+            nb.addPerParticleParameter('q')
+            nb.addPerParticleParameter('C')
+            nb.addPerParticleParameter('A')
+        elif self._defaults[1] == '2':
+            nb = mm.NonbondedForce()
         sys.addForce(nb)
         if implicitSolvent is OBC2:
             gb = mm.GBSAOBCForce()
@@ -611,7 +617,10 @@ class GromacsTopFile(object):
         bondIndices = []
         topologyAtoms = list(self.topology.atoms())
         exceptions = []
-        fudgeQQ = float(self._defaults[4])
+        if self._defaults[1] == '1':
+            fudgeQQ = 0.0
+        elif self._defaults[1] == '2':
+            fudgeQQ = float(self._defaults[4])
 
         # Build a lookup table to let us process dihedrals more quickly.
 
@@ -748,7 +757,7 @@ class GromacsTopFile(object):
                     dihedralType = fields[4]
                     reversedTypes = types[::-1]+(dihedralType,)
                     types = types+(dihedralType,)
-                    if (dihedralType in ('1', '2', '4', '9') and len(fields) > 7) or (dihedralType == '3' and len(fields) > 10):
+                    if (dihedralType in ('1', '4', '9') and len(fields) > 7) or (dihedralType == '3' and len(fields) > 10) or (dihedralType == '2' and len(fields) > 6):
                         paramsList = [fields]
                     else:
                         # Look for a matching dihedral type.
@@ -778,11 +787,15 @@ class GromacsTopFile(object):
                             k = float(params[6])
                             if k != 0:
                                 if harmonicTorsion is None:
-                                    harmonicTorsion = mm.CustomTorsionForce('0.5*k*(theta-theta0)^2')
+                                    #harmonicTorsion = mm.CustomTorsionForce('k*(theta-theta0)^2')
+                                    harmonicTorsion = mm.CustomTorsionForce('0.5*k*(thetap-theta0)^2; thetap = step(-(theta-theta0+pi))*2*pi+theta+step(theta-theta0-pi)*(-2*pi); pi = 3.14159')
                                     harmonicTorsion.addPerTorsionParameter('theta0')
                                     harmonicTorsion.addPerTorsionParameter('k')
                                     sys.addForce(harmonicTorsion)
-                                harmonicTorsion.addTorsion(baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], baseAtomIndex+atoms[2], baseAtomIndex+atoms[3], (float(params[5])*degToRad, k))
+                                phi0 = float(params[5])
+                                if phi0 > 180:
+                                    phi0 = phi0 - 360
+                                harmonicTorsion.addTorsion(baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], baseAtomIndex+atoms[2], baseAtomIndex+atoms[3], (phi0*degToRad, k))
                         else:
                             # RB Torsion
                             c = [float(x) for x in params[5:11]]
@@ -825,11 +838,17 @@ class GromacsTopFile(object):
 
                 for fields in moleculeType.atoms:
                     params = self._atomTypes[fields[1]]
+                    
                     if len(fields) > 6:
                         q = float(fields[6])
                     else:
                         q = float(params[4])
-                    nb.addParticle(q, float(params[6]), float(params[7]))
+
+                    if self._defaults[1] == '1':
+                        nb.addParticle([q, float(params[6]), float(params[7])])
+                    elif self._defaults[1] == '2':
+                        nb.addParticle(q, float(params[6]), float(params[7]))
+
                     if implicitSolvent is OBC2:
                         if fields[1] not in self._implicitTypes:
                             raise ValueError('No implicit solvent parameters specified for atom type: '+fields[1])
@@ -858,18 +877,36 @@ class GromacsTopFile(object):
                     atom1params = nb.getParticleParameters(baseAtomIndex+atoms[0])
                     atom2params = nb.getParticleParameters(baseAtomIndex+atoms[1])
                     exceptions.append((baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], atom1params[0]*atom2params[0]*fudgeQQ, params[0], params[1]))
-                for fields in moleculeType.exclusions:
-                    atoms = [int(x)-1 for x in fields]
-                    for atom in atoms[1:]:
-                        if atom > atoms[0]:
-                            exceptions.append((baseAtomIndex+atoms[0], baseAtomIndex+atom, 0, 0, 0))
+                if self._defaults[1] == '2':
+                    for fields in moleculeType.exclusions:
+                        atoms = [int(x)-1 for x in fields]
+                        for atom in atoms[1:]:
+                            if atom > atoms[0]:
+                                exceptions.append((baseAtomIndex+atoms[0], baseAtomIndex+atom, 0, 0, 0))
 
 
         # Create nonbonded exceptions.
+        if self._defaults[1] == '1':
+            #no 1-4 scaling for electrostatics or VdW, only VdW exceptions
+            bond_exceptions = mm.CustomBondForce('-C/r^6+A/r^12')
+            bond_exceptions.addPerBondParameter('C')
+            bond_exceptions.addPerBondParameter('A')
+            sys.addForce(bond_exceptions)
 
-        nb.createExceptionsFromBonds(bondIndices, fudgeQQ, float(self._defaults[3]))
-        for exception in exceptions:
-            nb.addException(exception[0], exception[1], exception[2], float(exception[3]), float(exception[4]), True)
+            #generate 1-2 and 1-3 exclusions
+            nb.createExclusionsFromBonds(bondIndices, 3)
+
+            for exception in exceptions:
+                ##debugging info, not needed
+                #print 'excl a1 =', str(exception[0]+1), ' excl a2 =', str(exception[1]+1), ' C =', exception[3], ' A =', exception[4]
+                nb.addExclusion(exception[0], exception[1])
+                bond_exceptions.addBond(exception[0], exception[1], [float(exception[3]), float(exception[4])])
+
+
+        elif self._defaults[1] == '2':
+            nb.createExceptionsFromBonds(bondIndices, fudgeQQ, float(self._defaults[3]))
+            for exception in exceptions:
+                nb.addException(exception[0], exception[1], exception[2], float(exception[3]), float(exception[4]), True)
 
         # Finish configuring the NonbondedForce.
 
@@ -881,7 +918,6 @@ class GromacsTopFile(object):
                      ff.LJPME:mm.NonbondedForce.LJPME}
         nb.setNonbondedMethod(methodMap[nonbondedMethod])
         nb.setCutoffDistance(nonbondedCutoff)
-        nb.setEwaldErrorTolerance(ewaldErrorTolerance)
 
         # Adjust masses.
 
