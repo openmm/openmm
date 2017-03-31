@@ -84,10 +84,10 @@ void CustomManyParticleForceProxy::serialize(const void* object, SerializationNo
         force.getTypeFilter(i, types);
         stringstream list;
         bool first = true;
-        for (set<int>::const_iterator iter = types.begin(); iter != types.end(); ++iter) {
+        for (int type : types) {
             if (!first)
                 list << ",";
-            list << *iter;
+            list << type;
             first = false;
         }
         filters.createChildNode("Filter").setIntProperty("index", i).setStringProperty("types", list.str());
@@ -108,19 +108,14 @@ void* CustomManyParticleForceProxy::deserialize(const SerializationNode& node) c
         force->setPermutationMode((CustomManyParticleForce::PermutationMode) node.getIntProperty("permutationMode"));
         force->setCutoffDistance(node.getDoubleProperty("cutoff"));
         const SerializationNode& perParticleParams = node.getChildNode("PerParticleParameters");
-        for (int i = 0; i < (int) perParticleParams.getChildren().size(); i++) {
-            const SerializationNode& parameter = perParticleParams.getChildren()[i];
+        for (auto& parameter : perParticleParams.getChildren())
             force->addPerParticleParameter(parameter.getStringProperty("name"));
-        }
         const SerializationNode& globalParams = node.getChildNode("GlobalParameters");
-        for (int i = 0; i < (int) globalParams.getChildren().size(); i++) {
-            const SerializationNode& parameter = globalParams.getChildren()[i];
+        for (auto& parameter : globalParams.getChildren())
             force->addGlobalParameter(parameter.getStringProperty("name"), parameter.getDoubleProperty("default"));
-        }
         const SerializationNode& particles = node.getChildNode("Particles");
         vector<double> params(force->getNumPerParticleParameters());
-        for (int i = 0; i < (int) particles.getChildren().size(); i++) {
-            const SerializationNode& particle = particles.getChildren()[i];
+        for (auto& particle : particles.getChildren()) {
             for (int j = 0; j < (int) params.size(); j++) {
                 stringstream key;
                 key << "param";
@@ -130,13 +125,10 @@ void* CustomManyParticleForceProxy::deserialize(const SerializationNode& node) c
             force->addParticle(params, particle.getIntProperty("type"));
         }
         const SerializationNode& exclusions = node.getChildNode("Exclusions");
-        for (int i = 0; i < (int) exclusions.getChildren().size(); i++) {
-            const SerializationNode& exclusion = exclusions.getChildren()[i];
+        for (auto& exclusion : exclusions.getChildren())
             force->addExclusion(exclusion.getIntProperty("p1"), exclusion.getIntProperty("p2"));
-        }
         const SerializationNode& filters = node.getChildNode("TypeFilters");
-        for (int i = 0; i < (int) filters.getChildren().size(); i++) {
-            const SerializationNode& filter = filters.getChildren()[i];
+        for (auto& filter : filters.getChildren()) {
             string typesString = filter.getStringProperty("types");
             vector<string> splitTypes;
             size_t searchPos = 0, nextPos;
@@ -146,20 +138,18 @@ void* CustomManyParticleForceProxy::deserialize(const SerializationNode& node) c
             }
             splitTypes.push_back(typesString.substr(searchPos));
             set<int> types;
-            for (int j = 0; j < (int) splitTypes.size(); j++) {
-                if (splitTypes[j].size() > 0) {
+            for (auto& t : splitTypes) {
+                if (t.size() > 0) {
                     int type;
-                    stringstream(splitTypes[j]) >> type;
+                    stringstream(t) >> type;
                     types.insert(type);
                 }
             }
             force->setTypeFilter(filter.getIntProperty("index"), types);
         }
         const SerializationNode& functions = node.getChildNode("Functions");
-        for (int i = 0; i < (int) functions.getChildren().size(); i++) {
-            const SerializationNode& function = functions.getChildren()[i];
+        for (auto& function : functions.getChildren())
             force->addTabulatedFunction(function.getStringProperty("name"), function.decodeObject<TabulatedFunction>());
-        }
         return force;
     }
     catch (...) {

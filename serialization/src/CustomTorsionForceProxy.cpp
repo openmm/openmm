@@ -85,26 +85,19 @@ void* CustomTorsionForceProxy::deserialize(const SerializationNode& node) const 
         if (version > 1)
             force->setUsesPeriodicBoundaryConditions(node.getBoolProperty("usesPeriodic"));
         const SerializationNode& perTorsionParams = node.getChildNode("PerTorsionParameters");
-        for (int i = 0; i < (int) perTorsionParams.getChildren().size(); i++) {
-            const SerializationNode& parameter = perTorsionParams.getChildren()[i];
+        for (auto& parameter : perTorsionParams.getChildren())
             force->addPerTorsionParameter(parameter.getStringProperty("name"));
-        }
         const SerializationNode& globalParams = node.getChildNode("GlobalParameters");
-        for (int i = 0; i < (int) globalParams.getChildren().size(); i++) {
-            const SerializationNode& parameter = globalParams.getChildren()[i];
+        for (auto& parameter : globalParams.getChildren())
             force->addGlobalParameter(parameter.getStringProperty("name"), parameter.getDoubleProperty("default"));
-        }
         if (version > 2) {
             const SerializationNode& energyDerivs = node.getChildNode("EnergyParameterDerivatives");
-            for (int i = 0; i < (int) energyDerivs.getChildren().size(); i++) {
-                const SerializationNode& parameter = energyDerivs.getChildren()[i];
+            for (auto& parameter : energyDerivs.getChildren())
                 force->addEnergyParameterDerivative(parameter.getStringProperty("name"));
-            }
         }
         const SerializationNode& torsions = node.getChildNode("Torsions");
         vector<double> params(force->getNumPerTorsionParameters());
-        for (int i = 0; i < (int) torsions.getChildren().size(); i++) {
-            const SerializationNode& torsion = torsions.getChildren()[i];
+        for (auto& torsion : torsions.getChildren()) {
             for (int j = 0; j < (int) params.size(); j++) {
                 stringstream key;
                 key << "param";

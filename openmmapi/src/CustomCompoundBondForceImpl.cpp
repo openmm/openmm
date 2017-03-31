@@ -88,11 +88,11 @@ void CustomCompoundBondForceImpl::initialize(ContextImpl& context) {
     int numBondParameters = owner.getNumPerBondParameters();
     for (int i = 0; i < owner.getNumBonds(); i++) {
         owner.getBondParameters(i, particles, parameters);
-        for (int j = 0; j < (int) particles.size(); j++)
-            if (particles[j] < 0 || particles[j] >= system.getNumParticles()) {
+        for (int particle : particles)
+            if (particle < 0 || particle >= system.getNumParticles()) {
                 stringstream msg;
                 msg << "CustomCompoundBondForce: Illegal particle index for a bond: ";
-                msg << particles[j];
+                msg << particle;
                 throw OpenMMException(msg.str());
             }
         if (parameters.size() != numBondParameters) {
@@ -165,8 +165,8 @@ ExpressionTreeNode CustomCompoundBondForceImpl::replaceFunctions(const Expressio
         // This is not an angle or dihedral, so process its children.
 
         vector<ExpressionTreeNode> children;
-        for (int i = 0; i < (int) node.getChildren().size(); i++)
-            children.push_back(replaceFunctions(node.getChildren()[i], atoms, distances, angles, dihedrals, variables));
+        for (auto& child : node.getChildren())
+            children.push_back(replaceFunctions(child, atoms, distances, angles, dihedrals, variables));
         return ExpressionTreeNode(op.clone(), children);
     }
     const Operation::Custom& custom = static_cast<const Operation::Custom&>(op);

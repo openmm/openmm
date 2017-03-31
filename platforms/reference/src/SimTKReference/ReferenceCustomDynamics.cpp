@@ -175,8 +175,8 @@ ExpressionTreeNode ReferenceCustomDynamics::replaceDerivFunctions(const Expressi
     }
     else {
         vector<ExpressionTreeNode> children;
-        for (int i = 0; i < (int) node.getChildren().size(); i++)
-            children.push_back(replaceDerivFunctions(node.getChildren()[i], context));
+        for (auto& child : node.getChildren())
+            children.push_back(replaceDerivFunctions(child, context));
         return ExpressionTreeNode(op.clone(), children);
     }
 }
@@ -204,8 +204,8 @@ void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, ve
         initialize(context, masses, globals);
     int numSteps = stepType.size();
     globals.insert(context.getParameters().begin(), context.getParameters().end());
-    for (map<string, double>::const_iterator iter = globals.begin(); iter != globals.end(); ++iter)
-        expressionSet.setVariable(expressionSet.getVariableIndex(iter->first), iter->second);
+    for (auto& global : globals)
+        expressionSet.setVariable(expressionSet.getVariableIndex(global.first), global.second);
     oldPos = atomCoordinates;
     
     // Loop over steps and execute them.
@@ -276,8 +276,8 @@ void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, ve
                 recordChangedParameters(context, globals);
                 context.updateContextState();
                 globals.insert(context.getParameters().begin(), context.getParameters().end());
-                for (map<string, double>::const_iterator iter = globals.begin(); iter != globals.end(); ++iter)
-                    expressionSet.setVariable(expressionSet.getVariableIndex(iter->first), iter->second);
+                for (auto& global : globals)
+                    expressionSet.setVariable(expressionSet.getVariableIndex(global.first), global.second);
                 break;
             }
             case CustomIntegrator::IfBlockStart: {
@@ -355,10 +355,10 @@ bool ReferenceCustomDynamics::evaluateCondition(int step) {
  * Check which context parameters have changed and register them with the context.
  */
 void ReferenceCustomDynamics::recordChangedParameters(OpenMM::ContextImpl& context, std::map<std::string, double>& globals) {
-    for (map<string, double>::const_iterator iter = context.getParameters().begin(); iter != context.getParameters().end(); ++iter) {
-        string name = iter->first;
+    for (auto& param : context.getParameters()) {
+        string name = param.first;
         double value = globals[name];
-        if (value != iter->second)
+        if (value != param.second)
             context.setParameter(name, globals[name]);
     }
 }
@@ -385,8 +385,8 @@ double ReferenceCustomDynamics::computeKineticEnergy(OpenMM::ContextImpl& contex
     if (invalidatesForces.size() == 0)
         initialize(context, masses, globals);
     globals.insert(context.getParameters().begin(), context.getParameters().end());
-    for (map<string, double>::const_iterator iter = globals.begin(); iter != globals.end(); ++iter)
-        expressionSet.setVariable(expressionSet.getVariableIndex(iter->first), iter->second);
+    for (auto& global : globals)
+        expressionSet.setVariable(expressionSet.getVariableIndex(global.first), global.second);
     if (kineticEnergyNeedsForce) {
         energy = context.calcForcesAndEnergy(true, true, -1);
         forcesAreValid = true;

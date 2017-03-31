@@ -57,17 +57,17 @@ ReferenceCustomExternalIxn::ReferenceCustomExternalIxn(const Lepton::CompiledExp
     forceZY = ReferenceForce::getVariablePointer(this->forceExpressionZ, "y");
     forceZZ = ReferenceForce::getVariablePointer(this->forceExpressionZ, "z");
     numParameters = parameterNames.size();
-    for (int i = 0; i < (int) numParameters; i++) {
-        energyParams.push_back(ReferenceForce::getVariablePointer(this->energyExpression, parameterNames[i]));
-        forceXParams.push_back(ReferenceForce::getVariablePointer(this->forceExpressionX, parameterNames[i]));
-        forceYParams.push_back(ReferenceForce::getVariablePointer(this->forceExpressionY, parameterNames[i]));
-        forceZParams.push_back(ReferenceForce::getVariablePointer(this->forceExpressionZ, parameterNames[i]));
+    for (auto& param : parameterNames) {
+        energyParams.push_back(ReferenceForce::getVariablePointer(this->energyExpression, param));
+        forceXParams.push_back(ReferenceForce::getVariablePointer(this->forceExpressionX, param));
+        forceYParams.push_back(ReferenceForce::getVariablePointer(this->forceExpressionY, param));
+        forceZParams.push_back(ReferenceForce::getVariablePointer(this->forceExpressionZ, param));
     }
-    for (map<string, double>::const_iterator iter = globalParameters.begin(); iter != globalParameters.end(); ++iter) {
-        ReferenceForce::setVariable(ReferenceForce::getVariablePointer(this->energyExpression, iter->first), iter->second);
-        ReferenceForce::setVariable(ReferenceForce::getVariablePointer(this->forceExpressionX, iter->first), iter->second);
-        ReferenceForce::setVariable(ReferenceForce::getVariablePointer(this->forceExpressionY, iter->first), iter->second);
-        ReferenceForce::setVariable(ReferenceForce::getVariablePointer(this->forceExpressionZ, iter->first), iter->second);
+    for (auto& param : globalParameters) {
+        ReferenceForce::setVariable(ReferenceForce::getVariablePointer(this->energyExpression, param.first), param.second);
+        ReferenceForce::setVariable(ReferenceForce::getVariablePointer(this->forceExpressionX, param.first), param.second);
+        ReferenceForce::setVariable(ReferenceForce::getVariablePointer(this->forceExpressionY, param.first), param.second);
+        ReferenceForce::setVariable(ReferenceForce::getVariablePointer(this->forceExpressionZ, param.first), param.second);
     }
 }
 

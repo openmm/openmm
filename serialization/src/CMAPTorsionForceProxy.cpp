@@ -52,8 +52,8 @@ void CMAPTorsionForceProxy::serialize(const void* object, SerializationNode& nod
         vector<double> energy;
         force.getMapParameters(i, size, energy);
         SerializationNode& map = maps.createChildNode("Map").setIntProperty("size", size);
-        for (int i = 0; i < (int) energy.size(); i++)
-            map.createChildNode("Energy").setDoubleProperty("e", energy[i]);
+        for (auto e : energy)
+            map.createChildNode("Energy").setDoubleProperty("e", e);
     }
     SerializationNode& torsions = node.createChildNode("Torsions");
     for (int i = 0; i < force.getNumTorsions(); i++) {
@@ -73,8 +73,7 @@ void* CMAPTorsionForceProxy::deserialize(const SerializationNode& node) const {
         if (version > 1)
             force->setUsesPeriodicBoundaryConditions(node.getBoolProperty("usesPeriodic"));
         const SerializationNode& maps = node.getChildNode("Maps");
-        for (int i = 0; i < (int) maps.getChildren().size(); i++) {
-            const SerializationNode& map = maps.getChildren()[i];
+        for (auto& map : maps.getChildren()) {
             int size = map.getIntProperty("size");
             if (size*size != map.getChildren().size())
                 throw OpenMMException("Wrong number of values specified for CMAP");
@@ -84,11 +83,9 @@ void* CMAPTorsionForceProxy::deserialize(const SerializationNode& node) const {
             force->addMap(size, energy);
         }
         const SerializationNode& torsions = node.getChildNode("Torsions");
-        for (int i = 0; i < (int) torsions.getChildren().size(); i++) {
-            const SerializationNode& torsion = torsions.getChildren()[i];
+        for (auto& torsion : torsions.getChildren())
             force->addTorsion(torsion.getIntProperty("map"), torsion.getIntProperty("a1"), torsion.getIntProperty("a2"), torsion.getIntProperty("a3"), torsion.getIntProperty("a4"),
                     torsion.getIntProperty("b1"), torsion.getIntProperty("b2"), torsion.getIntProperty("b3"), torsion.getIntProperty("b4"));
-        }
     }
     catch (...) {
         delete force;

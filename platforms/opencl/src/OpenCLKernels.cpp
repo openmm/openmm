@@ -100,8 +100,8 @@ static bool usesVariable(const Lepton::ExpressionTreeNode& node, const string& v
     const Lepton::Operation& op = node.getOperation();
     if (op.getId() == Lepton::Operation::VARIABLE && op.getName() == variable)
         return true;
-    for (int i = 0; i < (int) node.getChildren().size(); i++)
-        if (usesVariable(node.getChildren()[i], variable))
+    for (auto& child : node.getChildren())
+        if (usesVariable(child, variable))
             return true;
     return false;
 }
@@ -120,22 +120,22 @@ void OpenCLCalcForcesAndEnergyKernel::initialize(const System& system) {
 void OpenCLCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     cl.setForcesValid(true);
     cl.clearAutoclearBuffers();
-    for (vector<OpenCLContext::ForcePreComputation*>::iterator iter = cl.getPreComputations().begin(); iter != cl.getPreComputations().end(); ++iter)
-        (*iter)->computeForceAndEnergy(includeForces, includeEnergy, groups);
+    for (auto computation : cl.getPreComputations())
+        computation->computeForceAndEnergy(includeForces, includeEnergy, groups);
     OpenCLNonbondedUtilities& nb = cl.getNonbondedUtilities();
     cl.setComputeForceCount(cl.getComputeForceCount()+1);
     nb.prepareInteractions(groups);
     map<string, double>& derivs = cl.getEnergyParamDerivWorkspace();
-    for (map<string, double>::const_iterator iter = context.getParameters().begin(); iter != context.getParameters().end(); ++iter)
-        derivs[iter->first] = 0;
+    for (auto& param : context.getParameters())
+        derivs[param.first] = 0;
 }
 
 double OpenCLCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForces, bool includeEnergy, int groups, bool& valid) {
     cl.getBondedUtilities().computeInteractions(groups);
     cl.getNonbondedUtilities().computeInteractions(groups, includeForces, includeEnergy);
     double sum = 0.0;
-    for (vector<OpenCLContext::ForcePostComputation*>::iterator iter = cl.getPostComputations().begin(); iter != cl.getPostComputations().end(); ++iter)
-        sum += (*iter)->computeForceAndEnergy(includeForces, includeEnergy, groups);
+    for (auto computation : cl.getPostComputations())
+        sum += computation->computeForceAndEnergy(includeForces, includeEnergy, groups);
     cl.reduceForces();
     cl.getIntegrationUtilities().distributeForcesFromVirtualSites();
     if (includeEnergy) {
@@ -167,8 +167,8 @@ double OpenCLUpdateStateDataKernel::getTime(const ContextImpl& context) const {
 
 void OpenCLUpdateStateDataKernel::setTime(ContextImpl& context, double time) {
     vector<OpenCLContext*>& contexts = cl.getPlatformData().contexts;
-    for (int i = 0; i < (int) contexts.size(); i++)
-        contexts[i]->setTime(time);
+    for (auto ctx : contexts)
+        ctx->setTime(time);
 }
 
 void OpenCLUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3>& positions) {
@@ -276,8 +276,8 @@ void OpenCLUpdateStateDataKernel::setPositions(ContextImpl& context, const vecto
             posCorrection[i] = mm_float4(0.0f, 0.0f, 0.0f, 0.0f);
         cl.getPosqCorrection().upload(posCorrection);
     }
-    for (int i = 0; i < (int) cl.getPosCellOffsets().size(); i++)
-        cl.getPosCellOffsets()[i] = mm_int4(0, 0, 0, 0);
+    for (auto& offset : cl.getPosCellOffsets())
+        offset = mm_int4(0, 0, 0, 0);
     cl.reorderAtoms();
 }
 
@@ -398,8 +398,7 @@ void OpenCLUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context, co
     // to avoid changing their positions.
 
     vector<Vec3> positions;
-    for (int i = 0; i < (int) cl.getPosCellOffsets().size(); i++) {
-        mm_int4& offset = cl.getPosCellOffsets()[i];
+    for (auto offset : cl.getPosCellOffsets()) {
         if (offset.x != 0 || offset.y != 0 || offset.z != 0) {
             getPositions(context, positions);
             break;
@@ -408,8 +407,8 @@ void OpenCLUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context, co
     
     // Update the vectors.
 
-    for (int i = 0; i < (int) contexts.size(); i++)
-        contexts[i]->setPeriodicBoxVectors(a, b, c);
+    for (auto ctx : contexts)
+        ctx->setPeriodicBoxVectors(a, b, c);
     if (positions.size() > 0)
         setPositions(context, positions);
 }
@@ -459,10 +458,10 @@ void OpenCLUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& 
     stream.read((char*) &stepCount, sizeof(int));
     stream.read((char*) &stepsSinceReorder, sizeof(int));
     vector<OpenCLContext*>& contexts = cl.getPlatformData().contexts;
-    for (int i = 0; i < (int) contexts.size(); i++) {
-        contexts[i]->setTime(time);
-        contexts[i]->setStepCount(stepCount);
-        contexts[i]->setStepsSinceReorder(stepsSinceReorder);
+    for (auto ctx : contexts) {
+        ctx->setTime(time);
+        ctx->setStepCount(stepCount);
+        ctx->setStepsSinceReorder(stepsSinceReorder);
     }
     char* buffer = (char*) cl.getPinnedBuffer();
     stream.read(buffer, cl.getPosq().getSize()*cl.getPosq().getElementSize());
@@ -478,12 +477,12 @@ void OpenCLUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& 
     stream.read((char*) &cl.getPosCellOffsets()[0], sizeof(mm_int4)*cl.getPosCellOffsets().size());
     Vec3 boxVectors[3];
     stream.read((char*) &boxVectors, 3*sizeof(Vec3));
-    for (int i = 0; i < (int) contexts.size(); i++)
-        contexts[i]->setPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+    for (auto ctx : contexts)
+        ctx->setPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
     cl.getIntegrationUtilities().loadCheckpoint(stream);
     SimTKOpenMMUtilities::loadCheckpoint(stream);
-    for (int i = 0; i < (int) cl.getReorderListeners().size(); i++)
-        cl.getReorderListeners()[i]->execute();
+    for (auto listener : cl.getReorderListeners())
+        listener->execute();
 }
 
 void OpenCLApplyConstraintsKernel::initialize(const System& system) {
@@ -1675,9 +1674,9 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         if (epsilon != 0.0)
             hasLJ = true;
     }
-    for (int i = 0; i < (int) exclusions.size(); i++) {
-        exclusionList[exclusions[i].first].push_back(exclusions[i].second);
-        exclusionList[exclusions[i].second].push_back(exclusions[i].first);
+    for (auto exclusion : exclusions) {
+        exclusionList[exclusion.first].push_back(exclusion.second);
+        exclusionList[exclusion.second].push_back(exclusion.first);
     }
     if (cl.getUseDoublePrecision())
         cl.getPosq().upload(posqd);
@@ -2445,10 +2444,10 @@ public:
             for (int i = 0; i < force.getNumInteractionGroups(); i++) {
                 set<int> set1, set2;
                 force.getInteractionGroupParameters(i, set1, set2);
-                for (set<int>::const_iterator iter = set1.begin(); iter != set1.end(); ++iter)
-                    groupsForParticle[*iter].insert(2*i);
-                for (set<int>::const_iterator iter = set2.begin(); iter != set2.end(); ++iter)
-                    groupsForParticle[*iter].insert(2*i+1);
+                for (int p : set1)
+                    groupsForParticle[p].insert(2*i);
+                for (int p : set2)
+                    groupsForParticle[p].insert(2*i+1);
             }
         }
     }
@@ -2489,8 +2488,8 @@ OpenCLCalcCustomNonbondedForceKernel::~OpenCLCalcCustomNonbondedForceKernel() {
         delete globals;
     if (interactionGroupData != NULL)
         delete interactionGroupData;
-    for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
-        delete tabulatedFunctions[i];
+    for (auto function : tabulatedFunctions)
+        delete function;
     if (forceCopy != NULL)
         delete forceCopy;
 }
@@ -2683,8 +2682,7 @@ void OpenCLCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
         
         // If this group contains duplicate interactions, record that we need to skip them once.
         
-        for (int i = 0; i < (int) atoms1.size(); i++) {
-            int a1 = atoms1[i];
+        for (int a1 : atoms1) {
             if (set2.find(a1) == set2.end())
                 continue;
             for (int j = 0; j < (int) atoms2.size() && atoms2[j] < a1; j++) {
@@ -2910,10 +2908,10 @@ double OpenCLCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
             interactionGroupKernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
             interactionGroupKernel.setArg<cl::Buffer>(index++, interactionGroupData->getDeviceBuffer());
             index += 5;
-            for (int i = 0; i < (int) params->getBuffers().size(); i++)
-                interactionGroupKernel.setArg<cl::Memory>(index++, params->getBuffers()[i].getMemory());
-            for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
-                interactionGroupKernel.setArg<cl::Memory>(index++, tabulatedFunctions[i]->getDeviceBuffer());
+            for (auto& buffer : params->getBuffers())
+                interactionGroupKernel.setArg<cl::Memory>(index++, buffer.getMemory());
+            for (auto function : tabulatedFunctions)
+                interactionGroupKernel.setArg<cl::Memory>(index++, function->getDeviceBuffer());
             if (globals != NULL)
                 interactionGroupKernel.setArg<cl::Buffer>(index++, globals->getDeviceBuffer());
         }
@@ -3238,12 +3236,12 @@ OpenCLCalcCustomGBForceKernel::~OpenCLCalcCustomGBForceKernel() {
         delete valueBuffers;
     if (longValueBuffers != NULL)
         delete longValueBuffers;
-    for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
-        delete tabulatedFunctions[i];
-    for (int i = 0; i < dValue0dParam.size(); i++)
-        delete dValue0dParam[i];
-    for (int i = 0; i < dValuedParam.size(); i++)
-        delete dValuedParam[i];
+    for (auto function : tabulatedFunctions)
+        delete function;
+    for (auto d : dValue0dParam)
+        delete d;
+    for (auto d : dValuedParam)
+        delete d;
 }
 
 void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const CustomGBForce& force) {
@@ -3964,7 +3962,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         gradientChainRuleKernel = cl::Kernel(program, "computeGradientChainRuleTerms");
     }
     {
-        // Create the code to calculate chain rules terms as part of the default nonbonded kernel.
+        // Create the code to calculate chain rule terms as part of the default nonbonded kernel.
 
         vector<pair<ExpressionTreeNode, string> > globalVariables;
         for (int i = 0; i < force.getNumGlobalParameters(); i++) {
@@ -4035,20 +4033,18 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
             arguments.push_back(OpenCLNonbondedUtilities::ParameterInfo(prefix+"globals", "float", 1, sizeof(cl_float), globals->getDeviceBuffer()));
         }
         cl.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, force.getNumExclusions() > 0, cutoff, exclusionList, source, force.getForceGroup());
-        for (int i = 0; i < (int) parameters.size(); i++)
-            cl.getNonbondedUtilities().addParameter(parameters[i]);
-        for (int i = 0; i < (int) arguments.size(); i++)
-            cl.getNonbondedUtilities().addArgument(arguments[i]);
+        for (auto param : parameters)
+            cl.getNonbondedUtilities().addParameter(param);
+        for (auto arg : arguments)
+            cl.getNonbondedUtilities().addArgument(arg);
     }
     info = new ForceInfo(cl.getNonbondedUtilities().getNumForceBuffers(), force);
     cl.addForce(info);
     if (useLong)
         cl.addAutoclearBuffer(*longEnergyDerivs);
     else {
-        for (int i = 0; i < (int) energyDerivs->getBuffers().size(); i++) {
-            const OpenCLNonbondedUtilities::ParameterInfo& buffer = energyDerivs->getBuffers()[i];
+        for (auto& buffer : energyDerivs->getBuffers())
             cl.addAutoclearBuffer(buffer.getMemory(), buffer.getSize()*energyDerivs->getNumObjects());
-        }
     }
 }
 
@@ -4132,12 +4128,12 @@ double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
                 pairValueKernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : nb.getForceThreadBlockSize())*buffer.getSize(), NULL);
             }
         }
-        for (int i = 0; i < dValue0dParam.size(); i++) {
-            pairValueKernel.setArg<cl::Buffer>(index++, dValue0dParam[i]->getDeviceBuffer());
-            pairValueKernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : nb.getForceThreadBlockSize())*dValue0dParam[i]->getElementSize(), NULL);
+        for (auto d : dValue0dParam) {
+            pairValueKernel.setArg<cl::Buffer>(index++, d->getDeviceBuffer());
+            pairValueKernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : nb.getForceThreadBlockSize())*d->getElementSize(), NULL);
         }
-        for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
-            pairValueKernel.setArg<cl::Buffer>(index++, tabulatedFunctions[i]->getDeviceBuffer());
+        for (auto function : tabulatedFunctions)
+            pairValueKernel.setArg<cl::Buffer>(index++, function->getDeviceBuffer());
         index = 0;
         perParticleValueKernel.setArg<cl_int>(index++, cl.getPaddedNumAtoms());
         perParticleValueKernel.setArg<cl_int>(index++, nb.getNumForceBuffers());
@@ -4145,17 +4141,17 @@ double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
         perParticleValueKernel.setArg<cl::Buffer>(index++, useLong ? longValueBuffers->getDeviceBuffer() : valueBuffers->getDeviceBuffer());
         if (globals != NULL)
             perParticleValueKernel.setArg<cl::Buffer>(index++, globals->getDeviceBuffer());
-        for (int i = 0; i < (int) params->getBuffers().size(); i++)
-            perParticleValueKernel.setArg<cl::Memory>(index++, params->getBuffers()[i].getMemory());
-        for (int i = 0; i < (int) computedValues->getBuffers().size(); i++)
-            perParticleValueKernel.setArg<cl::Memory>(index++, computedValues->getBuffers()[i].getMemory());
+        for (auto& buffer : params->getBuffers())
+            perParticleValueKernel.setArg<cl::Memory>(index++, buffer.getMemory());
+        for (auto& buffer : computedValues->getBuffers())
+            perParticleValueKernel.setArg<cl::Memory>(index++, buffer.getMemory());
         for (int i = 0; i < dValuedParam.size(); i++) {
             perParticleValueKernel.setArg<cl::Memory>(index++, dValue0dParam[i]->getDeviceBuffer());
             for (int j = 0; j < dValuedParam[i]->getBuffers().size(); j++)
                 perParticleValueKernel.setArg<cl::Memory>(index++, dValuedParam[i]->getBuffers()[j].getMemory());
         }
-        for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
-            perParticleValueKernel.setArg<cl::Buffer>(index++, tabulatedFunctions[i]->getDeviceBuffer());
+        for (auto function : tabulatedFunctions)
+            perParticleValueKernel.setArg<cl::Buffer>(index++, function->getDeviceBuffer());
         index = 0;
         pairEnergyKernel.setArg<cl::Buffer>(index++, useLong ? cl.getLongForceBuffer().getDeviceBuffer() : cl.getForceBuffers().getDeviceBuffer());
         pairEnergyKernel.setArg<cl::Buffer>(index++, cl.getEnergyBuffer().getDeviceBuffer());
@@ -4198,16 +4194,15 @@ double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
                 pairEnergyKernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : nb.getForceThreadBlockSize())*elementSize, NULL);
         }
         else {
-            for (int i = 0; i < (int) energyDerivs->getBuffers().size(); i++) {
-                const OpenCLNonbondedUtilities::ParameterInfo& buffer = energyDerivs->getBuffers()[i];
+            for (auto& buffer : energyDerivs->getBuffers()) {
                 pairEnergyKernel.setArg<cl::Memory>(index++, buffer.getMemory());
                 pairEnergyKernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : nb.getForceThreadBlockSize())*buffer.getSize(), NULL);
             }
         }
         if (needEnergyParamDerivs)
             pairEnergyKernel.setArg<cl::Memory>(index++, cl.getEnergyParamDerivBuffer().getDeviceBuffer());
-        for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
-            pairEnergyKernel.setArg<cl::Buffer>(index++, tabulatedFunctions[i]->getDeviceBuffer());
+        for (auto function : tabulatedFunctions)
+            pairEnergyKernel.setArg<cl::Buffer>(index++, function->getDeviceBuffer());
         index = 0;
         perParticleEnergyKernel.setArg<cl_int>(index++, cl.getPaddedNumAtoms());
         perParticleEnergyKernel.setArg<cl_int>(index++, nb.getNumForceBuffers());
@@ -4216,37 +4211,37 @@ double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
         perParticleEnergyKernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
         if (globals != NULL)
             perParticleEnergyKernel.setArg<cl::Buffer>(index++, globals->getDeviceBuffer());
-        for (int i = 0; i < (int) params->getBuffers().size(); i++)
-            perParticleEnergyKernel.setArg<cl::Memory>(index++, params->getBuffers()[i].getMemory());
-        for (int i = 0; i < (int) computedValues->getBuffers().size(); i++)
-            perParticleEnergyKernel.setArg<cl::Memory>(index++, computedValues->getBuffers()[i].getMemory());
-        for (int i = 0; i < (int) energyDerivs->getBuffers().size(); i++)
-            perParticleEnergyKernel.setArg<cl::Memory>(index++, energyDerivs->getBuffers()[i].getMemory());
-        for (int i = 0; i < (int) energyDerivChain->getBuffers().size(); i++)
-            perParticleEnergyKernel.setArg<cl::Memory>(index++, energyDerivChain->getBuffers()[i].getMemory());
+        for (auto& buffer : params->getBuffers())
+            perParticleEnergyKernel.setArg<cl::Memory>(index++, buffer.getMemory());
+        for (auto& buffer : computedValues->getBuffers())
+            perParticleEnergyKernel.setArg<cl::Memory>(index++, buffer.getMemory());
+        for (auto& buffer : energyDerivs->getBuffers())
+            perParticleEnergyKernel.setArg<cl::Memory>(index++, buffer.getMemory());
+        for (auto& buffer : energyDerivChain->getBuffers())
+            perParticleEnergyKernel.setArg<cl::Memory>(index++, buffer.getMemory());
         if (useLong)
             perParticleEnergyKernel.setArg<cl::Memory>(index++, longEnergyDerivs->getDeviceBuffer());
         if (needEnergyParamDerivs)
             perParticleEnergyKernel.setArg<cl::Memory>(index++, cl.getEnergyParamDerivBuffer().getDeviceBuffer());
-        for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
-            perParticleEnergyKernel.setArg<cl::Buffer>(index++, tabulatedFunctions[i]->getDeviceBuffer());
+        for (auto function : tabulatedFunctions)
+            perParticleEnergyKernel.setArg<cl::Buffer>(index++, function->getDeviceBuffer());
         if (needParameterGradient || needEnergyParamDerivs) {
             index = 0;
             gradientChainRuleKernel.setArg<cl::Buffer>(index++, cl.getForceBuffers().getDeviceBuffer());
             gradientChainRuleKernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
             if (globals != NULL)
                 gradientChainRuleKernel.setArg<cl::Buffer>(index++, globals->getDeviceBuffer());
-            for (int i = 0; i < (int) params->getBuffers().size(); i++)
-                gradientChainRuleKernel.setArg<cl::Memory>(index++, params->getBuffers()[i].getMemory());
-            for (int i = 0; i < (int) computedValues->getBuffers().size(); i++)
-                gradientChainRuleKernel.setArg<cl::Memory>(index++, computedValues->getBuffers()[i].getMemory());
-            for (int i = 0; i < (int) energyDerivs->getBuffers().size(); i++)
-                gradientChainRuleKernel.setArg<cl::Memory>(index++, energyDerivs->getBuffers()[i].getMemory());
+            for (auto& buffer : params->getBuffers())
+                gradientChainRuleKernel.setArg<cl::Memory>(index++, buffer.getMemory());
+            for (auto& buffer : computedValues->getBuffers())
+                gradientChainRuleKernel.setArg<cl::Memory>(index++, buffer.getMemory());
+            for (auto& buffer : energyDerivs->getBuffers())
+                gradientChainRuleKernel.setArg<cl::Memory>(index++, buffer.getMemory());
             if (needEnergyParamDerivs) {
                 gradientChainRuleKernel.setArg<cl::Buffer>(index++, cl.getEnergyParamDerivBuffer().getDeviceBuffer());
-                for (int i = 0; i < dValuedParam.size(); i++)
-                    for (int j = 0; j < dValuedParam[i]->getBuffers().size(); j++)
-                        gradientChainRuleKernel.setArg<cl::Memory>(index++, dValuedParam[i]->getBuffers()[j].getMemory());
+                for (auto d : dValuedParam)
+                    for (auto& buffer : d->getBuffers())
+                        gradientChainRuleKernel.setArg<cl::Memory>(index++, buffer.getMemory());
             }
         }
     }
@@ -4556,8 +4551,8 @@ OpenCLCalcCustomHbondForceKernel::~OpenCLCalcCustomHbondForceKernel() {
         delete donorExclusions;
     if (acceptorExclusions != NULL)
         delete acceptorExclusions;
-    for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
-        delete tabulatedFunctions[i];
+    for (auto function : tabulatedFunctions)
+        delete function;
 }
 
 static void addDonorAndAcceptorCode(stringstream& computeDonor, stringstream& computeAcceptor, const string& value) {
@@ -4632,10 +4627,10 @@ void OpenCLCalcCustomHbondForceKernel::initialize(const System& system, const Cu
     donorBufferIndices->upload(donorBufferVector);
     acceptorBufferIndices->upload(acceptorBufferVector);
     int maxBuffers = 1;
-    for (int i = 0; i < (int) donorBufferCounter.size(); i++)
-        maxBuffers = max(maxBuffers, donorBufferCounter[i]);
-    for (int i = 0; i < (int) acceptorBufferCounter.size(); i++)
-        maxBuffers = max(maxBuffers, acceptorBufferCounter[i]);
+    for (int i : donorBufferCounter)
+        maxBuffers = max(maxBuffers, i);
+    for (int i : acceptorBufferCounter)
+        maxBuffers = max(maxBuffers, i);
     info = new ForceInfo(maxBuffers, force);
     cl.addForce(info);
 
@@ -4735,20 +4730,21 @@ void OpenCLCalcCustomHbondForceKernel::initialize(const System& system, const Cu
     string atomNamesLower[] = {"a1", "a2", "a3", "d1", "d2", "d3"};
     stringstream computeDonor, computeAcceptor, extraArgs;
     int index = 0;
-    for (map<string, vector<int> >::const_iterator iter = distances.begin(); iter != distances.end(); ++iter, ++index) {
-        const vector<int>& atoms = iter->second;
+    for (auto& distance : distances) {
+        const vector<int>& atoms = distance.second;
         string deltaName = atomNames[atoms[0]]+atomNames[atoms[1]];
         if (computedDeltas.count(deltaName) == 0) {
             addDonorAndAcceptorCode(computeDonor, computeAcceptor, "real4 delta"+deltaName+" = delta("+atomNamesLower[atoms[0]]+", "+atomNamesLower[atoms[1]]+");\n");
             computedDeltas.insert(deltaName);
         }
         addDonorAndAcceptorCode(computeDonor, computeAcceptor, "real r_"+deltaName+" = SQRT(delta"+deltaName+".w);\n");
-        variables[iter->first] = "r_"+deltaName;
-        forceExpressions["real dEdDistance"+cl.intToString(index)+" = "] = energyExpression.differentiate(iter->first).optimize();
+        variables[distance.first] = "r_"+deltaName;
+        forceExpressions["real dEdDistance"+cl.intToString(index)+" = "] = energyExpression.differentiate(distance.first).optimize();
+        index++;
     }
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = angles.begin(); iter != angles.end(); ++iter, ++index) {
-        const vector<int>& atoms = iter->second;
+    for (auto& angle : angles) {
+        const vector<int>& atoms = angle.second;
         string deltaName1 = atomNames[atoms[1]]+atomNames[atoms[0]];
         string deltaName2 = atomNames[atoms[1]]+atomNames[atoms[2]];
         string angleName = "angle_"+atomNames[atoms[0]]+atomNames[atoms[1]]+atomNames[atoms[2]];
@@ -4761,12 +4757,13 @@ void OpenCLCalcCustomHbondForceKernel::initialize(const System& system, const Cu
             computedDeltas.insert(deltaName2);
         }
         addDonorAndAcceptorCode(computeDonor, computeAcceptor, "real "+angleName+" = computeAngle(delta"+deltaName1+", delta"+deltaName2+");\n");
-        variables[iter->first] = angleName;
-        forceExpressions["real dEdAngle"+cl.intToString(index)+" = "] = energyExpression.differentiate(iter->first).optimize();
+        variables[angle.first] = angleName;
+        forceExpressions["real dEdAngle"+cl.intToString(index)+" = "] = energyExpression.differentiate(angle.first).optimize();
+        index++;
     }
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = dihedrals.begin(); iter != dihedrals.end(); ++iter, ++index) {
-        const vector<int>& atoms = iter->second;
+    for (auto& dihedral : dihedrals) {
+        const vector<int>& atoms = dihedral.second;
         string deltaName1 = atomNames[atoms[0]]+atomNames[atoms[1]];
         string deltaName2 = atomNames[atoms[2]]+atomNames[atoms[1]];
         string deltaName3 = atomNames[atoms[2]]+atomNames[atoms[3]];
@@ -4789,8 +4786,9 @@ void OpenCLCalcCustomHbondForceKernel::initialize(const System& system, const Cu
         addDonorAndAcceptorCode(computeDonor, computeAcceptor, "real4 "+crossName2+" = computeCross(delta"+deltaName2+", delta"+deltaName3+");\n");
         addDonorAndAcceptorCode(computeDonor, computeAcceptor, "real "+dihedralName+" = computeAngle("+crossName1+", "+crossName2+");\n");
         addDonorAndAcceptorCode(computeDonor, computeAcceptor, dihedralName+" *= (delta"+deltaName1+".x*"+crossName2+".x + delta"+deltaName1+".y*"+crossName2+".y + delta"+deltaName1+".z*"+crossName2+".z < 0 ? -1 : 1);\n");
-        variables[iter->first] = dihedralName;
-        forceExpressions["real dEdDihedral"+cl.intToString(index)+" = "] = energyExpression.differentiate(iter->first).optimize();
+        variables[dihedral.first] = dihedralName;
+        forceExpressions["real dEdDihedral"+cl.intToString(index)+" = "] = energyExpression.differentiate(dihedral.first).optimize();
+        index++;
     }
 
     // Next it needs to load parameters from global memory.
@@ -4817,16 +4815,17 @@ void OpenCLCalcCustomHbondForceKernel::initialize(const System& system, const Cu
     // Finally, apply forces to atoms.
 
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = distances.begin(); iter != distances.end(); ++iter, ++index) {
-        const vector<int>& atoms = iter->second;
+    for (auto& distance : distances) {
+        const vector<int>& atoms = distance.second;
         string deltaName = atomNames[atoms[0]]+atomNames[atoms[1]];
         string value = "(dEdDistance"+cl.intToString(index)+"/r_"+deltaName+")*delta"+deltaName+".xyz";
         applyDonorAndAcceptorForces(computeDonor, computeAcceptor, atoms[0], "-"+value);
         applyDonorAndAcceptorForces(computeDonor, computeAcceptor, atoms[1], value);
+        index++;
     }
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = angles.begin(); iter != angles.end(); ++iter, ++index) {
-        const vector<int>& atoms = iter->second;
+    for (auto& angle : angles) {
+        const vector<int>& atoms = angle.second;
         string deltaName1 = atomNames[atoms[1]]+atomNames[atoms[0]];
         string deltaName2 = atomNames[atoms[1]]+atomNames[atoms[2]];
         addDonorAndAcceptorCode(computeDonor, computeAcceptor, "{\n");
@@ -4839,10 +4838,11 @@ void OpenCLCalcCustomHbondForceKernel::initialize(const System& system, const Cu
         applyDonorAndAcceptorForces(computeDonor, computeAcceptor, atoms[1], "deltaCross1.xyz");
         applyDonorAndAcceptorForces(computeDonor, computeAcceptor, atoms[2], "deltaCross2.xyz");
         addDonorAndAcceptorCode(computeDonor, computeAcceptor, "}\n");
+        index++;
     }
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = dihedrals.begin(); iter != dihedrals.end(); ++iter, ++index) {
-        const vector<int>& atoms = iter->second;
+    for (auto& dihedral : dihedrals) {
+        const vector<int>& atoms = dihedral.second;
         string deltaName1 = atomNames[atoms[0]]+atomNames[atoms[1]];
         string deltaName2 = atomNames[atoms[2]]+atomNames[atoms[1]];
         string deltaName3 = atomNames[atoms[2]]+atomNames[atoms[3]];
@@ -4863,6 +4863,7 @@ void OpenCLCalcCustomHbondForceKernel::initialize(const System& system, const Cu
         applyDonorAndAcceptorForces(computeDonor, computeAcceptor, atoms[2], "-s.xyz-internalF3.xyz");
         applyDonorAndAcceptorForces(computeDonor, computeAcceptor, atoms[3], "internalF3.xyz");
         addDonorAndAcceptorCode(computeDonor, computeAcceptor, "}\n");
+        index++;
     }
 
     // Generate the kernels.
@@ -4917,16 +4918,12 @@ double OpenCLCalcCustomHbondForceKernel::execute(ContextImpl& context, bool incl
         index += 5; // Periodic box size arguments are set when the kernel is executed.
         if (globals != NULL)
             donorKernel.setArg<cl::Buffer>(index++, globals->getDeviceBuffer());
-        for (int i = 0; i < (int) donorParams->getBuffers().size(); i++) {
-            const OpenCLNonbondedUtilities::ParameterInfo& buffer = donorParams->getBuffers()[i];
+        for (auto& buffer : donorParams->getBuffers())
             donorKernel.setArg<cl::Memory>(index++, buffer.getMemory());
-        }
-        for (int i = 0; i < (int) acceptorParams->getBuffers().size(); i++) {
-            const OpenCLNonbondedUtilities::ParameterInfo& buffer = acceptorParams->getBuffers()[i];
+        for (auto& buffer : acceptorParams->getBuffers())
             donorKernel.setArg<cl::Memory>(index++, buffer.getMemory());
-        }
-        for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
-            donorKernel.setArg<cl::Buffer>(index++, tabulatedFunctions[i]->getDeviceBuffer());
+        for (auto function : tabulatedFunctions)
+            donorKernel.setArg<cl::Buffer>(index++, function->getDeviceBuffer());
         index = 0;
         acceptorKernel.setArg<cl::Buffer>(index++, cl.getForceBuffers().getDeviceBuffer());
         acceptorKernel.setArg<cl::Buffer>(index++, cl.getEnergyBuffer().getDeviceBuffer());
@@ -4939,16 +4936,12 @@ double OpenCLCalcCustomHbondForceKernel::execute(ContextImpl& context, bool incl
         index += 5; // Periodic box size arguments are set when the kernel is executed.
         if (globals != NULL)
             acceptorKernel.setArg<cl::Buffer>(index++, globals->getDeviceBuffer());
-        for (int i = 0; i < (int) donorParams->getBuffers().size(); i++) {
-            const OpenCLNonbondedUtilities::ParameterInfo& buffer = donorParams->getBuffers()[i];
+        for (auto& buffer : donorParams->getBuffers())
             acceptorKernel.setArg<cl::Memory>(index++, buffer.getMemory());
-        }
-        for (int i = 0; i < (int) acceptorParams->getBuffers().size(); i++) {
-            const OpenCLNonbondedUtilities::ParameterInfo& buffer = acceptorParams->getBuffers()[i];
+        for (auto& buffer : acceptorParams->getBuffers())
             acceptorKernel.setArg<cl::Memory>(index++, buffer.getMemory());
-        }
-        for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
-            acceptorKernel.setArg<cl::Buffer>(index++, tabulatedFunctions[i]->getDeviceBuffer());
+        for (auto function : tabulatedFunctions)
+            acceptorKernel.setArg<cl::Buffer>(index++, function->getDeviceBuffer());
     }
     setPeriodicBoxArgs(cl, donorKernel, 8);
     cl.executeKernel(donorKernel, max(numDonors, numAcceptors));
@@ -5012,10 +5005,10 @@ public:
         vector<double> parameters;
         vector<int> groups;
         force.getBondParameters(index, groups, parameters);
-        for (int i = 0; i < groups.size(); i++) {
+        for (int group : groups) {
             vector<int> groupParticles;
             vector<double> weights;
-            force.getGroupParameters(groups[i], groupParticles, weights);
+            force.getGroupParameters(group, groupParticles, weights);
             particles.insert(particles.end(), groupParticles.begin(), groupParticles.end());
         }
     }
@@ -5061,8 +5054,8 @@ OpenCLCalcCustomCentroidBondForceKernel::~OpenCLCalcCustomCentroidBondForceKerne
         delete bondGroups;
     if (centerPositions != NULL)
         delete centerPositions;
-    for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
-        delete tabulatedFunctions[i];
+    for (auto function : tabulatedFunctions)
+        delete function;
 }
 
 void OpenCLCalcCustomCentroidBondForceKernel::initialize(const System& system, const CustomCentroidBondForce& force) {
@@ -5213,20 +5206,21 @@ void OpenCLCalcCustomCentroidBondForceKernel::initialize(const System& system, c
         compute<<"real4 pos"<<(i+1)<<" = centerPositions[group"<<(i+1)<<"];\n";
     }
     int index = 0;
-    for (map<string, vector<int> >::const_iterator iter = distances.begin(); iter != distances.end(); ++iter, ++index) {
-        const vector<int>& groups = iter->second;
+    for (auto& distance : distances) {
+        const vector<int>& groups = distance.second;
         string deltaName = atomNames[groups[0]]+atomNames[groups[1]];
         if (computedDeltas.count(deltaName) == 0) {
             compute<<"real4 delta"<<deltaName<<" = delta("<<posNames[groups[0]]<<", "<<posNames[groups[1]]<<", "<<force.usesPeriodicBoundaryConditions()<<", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
             computedDeltas.insert(deltaName);
         }
         compute<<"real r_"<<deltaName<<" = sqrt(delta"<<deltaName<<".w);\n";
-        variables[iter->first] = "r_"+deltaName;
-        forceExpressions["real dEdDistance"+cl.intToString(index)+" = "] = energyExpression.differentiate(iter->first).optimize();
+        variables[distance.first] = "r_"+deltaName;
+        forceExpressions["real dEdDistance"+cl.intToString(index)+" = "] = energyExpression.differentiate(distance.first).optimize();
+        index++;
     }
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = angles.begin(); iter != angles.end(); ++iter, ++index) {
-        const vector<int>& groups = iter->second;
+    for (auto& angle : angles) {
+        const vector<int>& groups = angle.second;
         string deltaName1 = atomNames[groups[1]]+atomNames[groups[0]];
         string deltaName2 = atomNames[groups[1]]+atomNames[groups[2]];
         string angleName = "angle_"+atomNames[groups[0]]+atomNames[groups[1]]+atomNames[groups[2]];
@@ -5239,12 +5233,13 @@ void OpenCLCalcCustomCentroidBondForceKernel::initialize(const System& system, c
             computedDeltas.insert(deltaName2);
         }
         compute<<"real "<<angleName<<" = computeAngle(delta"<<deltaName1<<", delta"<<deltaName2<<");\n";
-        variables[iter->first] = angleName;
-        forceExpressions["real dEdAngle"+cl.intToString(index)+" = "] = energyExpression.differentiate(iter->first).optimize();
+        variables[angle.first] = angleName;
+        forceExpressions["real dEdAngle"+cl.intToString(index)+" = "] = energyExpression.differentiate(angle.first).optimize();
+        index++;
     }
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = dihedrals.begin(); iter != dihedrals.end(); ++iter, ++index) {
-        const vector<int>& groups = iter->second;
+    for (auto& dihedral : dihedrals) {
+        const vector<int>& groups = dihedral.second;
         string deltaName1 = atomNames[groups[0]]+atomNames[groups[1]];
         string deltaName2 = atomNames[groups[2]]+atomNames[groups[1]];
         string deltaName3 = atomNames[groups[2]]+atomNames[groups[3]];
@@ -5267,8 +5262,9 @@ void OpenCLCalcCustomCentroidBondForceKernel::initialize(const System& system, c
         compute<<"real4 "<<crossName2<<" = computeCross(delta"<<deltaName2<<", delta"<<deltaName3<<");\n";
         compute<<"real "<<dihedralName<<" = computeAngle("<<crossName1<<", "<<crossName2<<");\n";
         compute<<dihedralName<<" *= (delta"<<deltaName1<<".x*"<<crossName2<<".x + delta"<<deltaName1<<".y*"<<crossName2<<".y + delta"<<deltaName1<<".z*"<<crossName2<<".z < 0 ? -1 : 1);\n";
-        variables[iter->first] = dihedralName;
-        forceExpressions["real dEdDihedral"+cl.intToString(index)+" = "] = energyExpression.differentiate(iter->first).optimize();
+        variables[dihedral.first] = dihedralName;
+        forceExpressions["real dEdDihedral"+cl.intToString(index)+" = "] = energyExpression.differentiate(dihedral.first).optimize();
+        index++;
     }
 
     // Now evaluate the expressions.
@@ -5320,16 +5316,17 @@ void OpenCLCalcCustomCentroidBondForceKernel::initialize(const System& system, c
         compute<<"}\n";
     }
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = distances.begin(); iter != distances.end(); ++iter, ++index) {
-        const vector<int>& groups = iter->second;
+    for (auto& distance : distances) {
+        const vector<int>& groups = distance.second;
         string deltaName = atomNames[groups[0]]+atomNames[groups[1]];
         string value = "(dEdDistance"+cl.intToString(index)+"/r_"+deltaName+")*delta"+deltaName+".xyz";
         compute<<forceNames[groups[0]]<<" += "<<"-"<<value<<";\n";
         compute<<forceNames[groups[1]]<<" += "<<value<<";\n";
+        index++;
     }
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = angles.begin(); iter != angles.end(); ++iter, ++index) {
-        const vector<int>& groups = iter->second;
+    for (auto& angle : angles) {
+        const vector<int>& groups = angle.second;
         string deltaName1 = atomNames[groups[1]]+atomNames[groups[0]];
         string deltaName2 = atomNames[groups[1]]+atomNames[groups[2]];
         compute<<"{\n";
@@ -5342,10 +5339,11 @@ void OpenCLCalcCustomCentroidBondForceKernel::initialize(const System& system, c
         compute<<forceNames[groups[1]]<<".xyz += deltaCross1.xyz;\n";
         compute<<forceNames[groups[2]]<<".xyz += deltaCross2.xyz;\n";
         compute<<"}\n";
+        index++;
     }
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = dihedrals.begin(); iter != dihedrals.end(); ++iter, ++index) {
-        const vector<int>& groups = iter->second;
+    for (auto& dihedral : dihedrals) {
+        const vector<int>& groups = dihedral.second;
         string deltaName1 = atomNames[groups[0]]+atomNames[groups[1]];
         string deltaName2 = atomNames[groups[2]]+atomNames[groups[1]];
         string deltaName3 = atomNames[groups[2]]+atomNames[groups[3]];
@@ -5366,6 +5364,7 @@ void OpenCLCalcCustomCentroidBondForceKernel::initialize(const System& system, c
         compute<<forceNames[groups[2]]<<".xyz += -s.xyz-internalF3.xyz;\n";
         compute<<forceNames[groups[3]]<<".xyz += internalF3.xyz;\n";
         compute<<"}\n";
+        index++;
     }
     
     // Save the forces to global memory.
@@ -5401,12 +5400,12 @@ void OpenCLCalcCustomCentroidBondForceKernel::initialize(const System& system, c
     index += 5; // Periodic box information
     if (needEnergyParamDerivs)
         index++; // Deriv buffer hasn't been created yet.
-    for (int i = 0; i < tabulatedFunctions.size(); i++)
-        groupForcesKernel.setArg<cl::Buffer>(index++, tabulatedFunctions[i]->getDeviceBuffer());
+    for (auto function : tabulatedFunctions)
+        groupForcesKernel.setArg<cl::Buffer>(index++, function->getDeviceBuffer());
     if (globals != NULL)
         groupForcesKernel.setArg<cl::Buffer>(index++, globals->getDeviceBuffer());
-    for (int i = 0; i < (int) params->getBuffers().size(); i++)
-        groupForcesKernel.setArg<cl::Memory>(index++, params->getBuffers()[i].getMemory());
+    for (auto& buffer : params->getBuffers())
+        groupForcesKernel.setArg<cl::Memory>(index++, buffer.getMemory());
     index = 0;
     applyForcesKernel = cl::Kernel(program, "applyForcesToAtoms");
     applyForcesKernel.setArg<cl::Buffer>(index++, groupParticles->getDeviceBuffer());
@@ -5494,8 +5493,8 @@ OpenCLCalcCustomCompoundBondForceKernel::~OpenCLCalcCustomCompoundBondForceKerne
         delete params;
     if (globals != NULL)
         delete globals;
-    for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
-        delete tabulatedFunctions[i];
+    for (auto function : tabulatedFunctions)
+        delete function;
 }
 
 void OpenCLCalcCustomCompoundBondForceKernel::initialize(const System& system, const CustomCompoundBondForce& force) {
@@ -5586,20 +5585,21 @@ void OpenCLCalcCustomCompoundBondForceKernel::initialize(const System& system, c
     }
     stringstream compute;
     int index = 0;
-    for (map<string, vector<int> >::const_iterator iter = distances.begin(); iter != distances.end(); ++iter, ++index) {
-        const vector<int>& atoms = iter->second;
+    for (auto& distance : distances) {
+        const vector<int>& atoms = distance.second;
         string deltaName = atomNames[atoms[0]]+atomNames[atoms[1]];
         if (computedDeltas.count(deltaName) == 0) {
             compute<<"real4 delta"<<deltaName<<" = ccb_delta("<<posNames[atoms[0]]<<", "<<posNames[atoms[1]]<<", "<<force.usesPeriodicBoundaryConditions()<<", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
             computedDeltas.insert(deltaName);
         }
         compute<<"real r_"<<deltaName<<" = sqrt(delta"<<deltaName<<".w);\n";
-        variables[iter->first] = "r_"+deltaName;
-        forceExpressions["real dEdDistance"+cl.intToString(index)+" = "] = energyExpression.differentiate(iter->first).optimize();
+        variables[distance.first] = "r_"+deltaName;
+        forceExpressions["real dEdDistance"+cl.intToString(index)+" = "] = energyExpression.differentiate(distance.first).optimize();
+        index++;
     }
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = angles.begin(); iter != angles.end(); ++iter, ++index) {
-        const vector<int>& atoms = iter->second;
+    for (auto& angle : angles) {
+        const vector<int>& atoms = angle.second;
         string deltaName1 = atomNames[atoms[1]]+atomNames[atoms[0]];
         string deltaName2 = atomNames[atoms[1]]+atomNames[atoms[2]];
         string angleName = "angle_"+atomNames[atoms[0]]+atomNames[atoms[1]]+atomNames[atoms[2]];
@@ -5612,12 +5612,13 @@ void OpenCLCalcCustomCompoundBondForceKernel::initialize(const System& system, c
             computedDeltas.insert(deltaName2);
         }
         compute<<"real "<<angleName<<" = ccb_computeAngle(delta"<<deltaName1<<", delta"<<deltaName2<<");\n";
-        variables[iter->first] = angleName;
-        forceExpressions["real dEdAngle"+cl.intToString(index)+" = "] = energyExpression.differentiate(iter->first).optimize();
+        variables[angle.first] = angleName;
+        forceExpressions["real dEdAngle"+cl.intToString(index)+" = "] = energyExpression.differentiate(angle.first).optimize();
+        index++;
     }
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = dihedrals.begin(); iter != dihedrals.end(); ++iter, ++index) {
-        const vector<int>& atoms = iter->second;
+    for (auto& dihedral : dihedrals) {
+        const vector<int>& atoms = dihedral.second;
         string deltaName1 = atomNames[atoms[0]]+atomNames[atoms[1]];
         string deltaName2 = atomNames[atoms[2]]+atomNames[atoms[1]];
         string deltaName3 = atomNames[atoms[2]]+atomNames[atoms[3]];
@@ -5640,8 +5641,9 @@ void OpenCLCalcCustomCompoundBondForceKernel::initialize(const System& system, c
         compute<<"real4 "<<crossName2<<" = ccb_computeCross(delta"<<deltaName2<<", delta"<<deltaName3<<");\n";
         compute<<"real "<<dihedralName<<" = ccb_computeAngle("<<crossName1<<", "<<crossName2<<");\n";
         compute<<dihedralName<<" *= (delta"<<deltaName1<<".x*"<<crossName2<<".x + delta"<<deltaName1<<".y*"<<crossName2<<".y + delta"<<deltaName1<<".z*"<<crossName2<<".z < 0 ? -1 : 1);\n";
-        variables[iter->first] = dihedralName;
-        forceExpressions["real dEdDihedral"+cl.intToString(index)+" = "] = energyExpression.differentiate(iter->first).optimize();
+        variables[dihedral.first] = dihedralName;
+        forceExpressions["real dEdDihedral"+cl.intToString(index)+" = "] = energyExpression.differentiate(dihedral.first).optimize();
+        index++;
     }
 
     // Now evaluate the expressions.
@@ -5684,16 +5686,17 @@ void OpenCLCalcCustomCompoundBondForceKernel::initialize(const System& system, c
         compute<<"}\n";
     }
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = distances.begin(); iter != distances.end(); ++iter, ++index) {
-        const vector<int>& atoms = iter->second;
+    for (auto& distance : distances) {
+        const vector<int>& atoms = distance.second;
         string deltaName = atomNames[atoms[0]]+atomNames[atoms[1]];
         string value = "(dEdDistance"+cl.intToString(index)+"/r_"+deltaName+")*delta"+deltaName+".xyz";
         compute<<forceNames[atoms[0]]<<".xyz += "<<"-"<<value<<";\n";
         compute<<forceNames[atoms[1]]<<".xyz += "<<value<<";\n";
+        index++;
     }
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = angles.begin(); iter != angles.end(); ++iter, ++index) {
-        const vector<int>& atoms = iter->second;
+    for (auto& angle : angles) {
+        const vector<int>& atoms = angle.second;
         string deltaName1 = atomNames[atoms[1]]+atomNames[atoms[0]];
         string deltaName2 = atomNames[atoms[1]]+atomNames[atoms[2]];
         compute<<"{\n";
@@ -5706,10 +5709,11 @@ void OpenCLCalcCustomCompoundBondForceKernel::initialize(const System& system, c
         compute<<forceNames[atoms[1]]<<".xyz += deltaCross1.xyz;\n";
         compute<<forceNames[atoms[2]]<<".xyz += deltaCross2.xyz;\n";
         compute<<"}\n";
+        index++;
     }
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = dihedrals.begin(); iter != dihedrals.end(); ++iter, ++index) {
-        const vector<int>& atoms = iter->second;
+    for (auto& dihedral : dihedrals) {
+        const vector<int>& atoms = dihedral.second;
         string deltaName1 = atomNames[atoms[0]]+atomNames[atoms[1]];
         string deltaName2 = atomNames[atoms[2]]+atomNames[atoms[1]];
         string deltaName3 = atomNames[atoms[2]]+atomNames[atoms[3]];
@@ -5730,6 +5734,7 @@ void OpenCLCalcCustomCompoundBondForceKernel::initialize(const System& system, c
         compute<<forceNames[atoms[2]]<<".xyz += -s.xyz-internalF3.xyz;\n";
         compute<<forceNames[atoms[3]]<<".xyz += internalF3.xyz;\n";
         compute<<"}\n";
+        index++;
     }
     cl.getBondedUtilities().addInteraction(atoms, compute.str(), force.getForceGroup());
     map<string, string> replacements;
@@ -5841,8 +5846,8 @@ OpenCLCalcCustomManyParticleForceKernel::~OpenCLCalcCustomManyParticleForceKerne
         delete neighbors;
     if (numNeighborsForAtom != NULL)
         delete numNeighborsForAtom;
-    for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
-        delete tabulatedFunctions[i];
+    for (auto function : tabulatedFunctions)
+        delete function;
 }
 
 void OpenCLCalcCustomManyParticleForceKernel::initialize(const System& system, const CustomManyParticleForce& force) {
@@ -6006,20 +6011,21 @@ void OpenCLCalcCustomManyParticleForceKernel::initialize(const System& system, c
     }
     stringstream compute;
     int index = 0;
-    for (map<string, vector<int> >::const_iterator iter = distances.begin(); iter != distances.end(); ++iter, ++index) {
-        const vector<int>& atoms = iter->second;
+    for (auto& distance : distances) {
+        const vector<int>& atoms = distance.second;
         string deltaName = atomNames[atoms[0]]+atomNames[atoms[1]];
         if (computedDeltas.count(deltaName) == 0) {
             compute<<"real4 delta"<<deltaName<<" = delta("<<posNames[atoms[0]]<<", "<<posNames[atoms[1]]<<", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
             computedDeltas.insert(deltaName);
         }
         compute<<"real r_"<<deltaName<<" = sqrt(delta"<<deltaName<<".w);\n";
-        variables.push_back(makeVariable(iter->first, "r_"+deltaName));
-        forceExpressions["real dEdDistance"+cl.intToString(index)+" = "] = energyExpression.differentiate(iter->first).optimize();
+        variables.push_back(makeVariable(distance.first, "r_"+deltaName));
+        forceExpressions["real dEdDistance"+cl.intToString(index)+" = "] = energyExpression.differentiate(distance.first).optimize();
+        index++;
     }
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = angles.begin(); iter != angles.end(); ++iter, ++index) {
-        const vector<int>& atoms = iter->second;
+    for (auto& angle : angles) {
+        const vector<int>& atoms = angle.second;
         string deltaName1 = atomNames[atoms[1]]+atomNames[atoms[0]];
         string deltaName2 = atomNames[atoms[1]]+atomNames[atoms[2]];
         string angleName = "angle_"+atomNames[atoms[0]]+atomNames[atoms[1]]+atomNames[atoms[2]];
@@ -6032,12 +6038,13 @@ void OpenCLCalcCustomManyParticleForceKernel::initialize(const System& system, c
             computedDeltas.insert(deltaName2);
         }
         compute<<"real "<<angleName<<" = computeAngle(delta"<<deltaName1<<", delta"<<deltaName2<<");\n";
-        variables.push_back(makeVariable(iter->first, angleName));
-        forceExpressions["real dEdAngle"+cl.intToString(index)+" = "] = energyExpression.differentiate(iter->first).optimize();
+        variables.push_back(makeVariable(angle.first, angleName));
+        forceExpressions["real dEdAngle"+cl.intToString(index)+" = "] = energyExpression.differentiate(angle.first).optimize();
+        index++;
     }
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = dihedrals.begin(); iter != dihedrals.end(); ++iter, ++index) {
-        const vector<int>& atoms = iter->second;
+    for (auto& dihedral : dihedrals) {
+        const vector<int>& atoms = dihedral.second;
         string deltaName1 = atomNames[atoms[0]]+atomNames[atoms[1]];
         string deltaName2 = atomNames[atoms[2]]+atomNames[atoms[1]];
         string deltaName3 = atomNames[atoms[2]]+atomNames[atoms[3]];
@@ -6060,8 +6067,9 @@ void OpenCLCalcCustomManyParticleForceKernel::initialize(const System& system, c
         compute<<"real4 "<<crossName2<<" = computeCross(delta"<<deltaName2<<", delta"<<deltaName3<<");\n";
         compute<<"real "<<dihedralName<<" = computeAngle("<<crossName1<<", "<<crossName2<<");\n";
         compute<<dihedralName<<" *= (delta"<<deltaName1<<".x*"<<crossName2<<".x + delta"<<deltaName1<<".y*"<<crossName2<<".y + delta"<<deltaName1<<".z*"<<crossName2<<".z < 0 ? -1 : 1);\n";
-        variables.push_back(makeVariable(iter->first, dihedralName));
-        forceExpressions["real dEdDihedral"+cl.intToString(index)+" = "] = energyExpression.differentiate(iter->first).optimize();
+        variables.push_back(makeVariable(dihedral.first, dihedralName));
+        forceExpressions["real dEdDihedral"+cl.intToString(index)+" = "] = energyExpression.differentiate(dihedral.first).optimize();
+        index++;
     }
 
     // Now evaluate the expressions.
@@ -6097,16 +6105,17 @@ void OpenCLCalcCustomManyParticleForceKernel::initialize(const System& system, c
         compute<<"}\n";
     }
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = distances.begin(); iter != distances.end(); ++iter, ++index) {
-        const vector<int>& atoms = iter->second;
+    for (auto& distance : distances) {
+        const vector<int>& atoms = distance.second;
         string deltaName = atomNames[atoms[0]]+atomNames[atoms[1]];
         string value = "(dEdDistance"+cl.intToString(index)+"/r_"+deltaName+")*delta"+deltaName+".xyz";
         compute<<forceNames[atoms[0]]<<".xyz += "<<"-"<<value<<";\n";
         compute<<forceNames[atoms[1]]<<".xyz += "<<value<<";\n";
+        index++;
     }
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = angles.begin(); iter != angles.end(); ++iter, ++index) {
-        const vector<int>& atoms = iter->second;
+    for (auto& angle : angles) {
+        const vector<int>& atoms = angle.second;
         string deltaName1 = atomNames[atoms[1]]+atomNames[atoms[0]];
         string deltaName2 = atomNames[atoms[1]]+atomNames[atoms[2]];
         compute<<"{\n";
@@ -6119,10 +6128,11 @@ void OpenCLCalcCustomManyParticleForceKernel::initialize(const System& system, c
         compute<<forceNames[atoms[1]]<<".xyz += deltaCross1.xyz;\n";
         compute<<forceNames[atoms[2]]<<".xyz += deltaCross2.xyz;\n";
         compute<<"}\n";
+        index++;
     }
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = dihedrals.begin(); iter != dihedrals.end(); ++iter, ++index) {
-        const vector<int>& atoms = iter->second;
+    for (auto& dihedral : dihedrals) {
+        const vector<int>& atoms = dihedral.second;
         string deltaName1 = atomNames[atoms[0]]+atomNames[atoms[1]];
         string deltaName2 = atomNames[atoms[2]]+atomNames[atoms[1]];
         string deltaName3 = atomNames[atoms[2]]+atomNames[atoms[3]];
@@ -6143,6 +6153,7 @@ void OpenCLCalcCustomManyParticleForceKernel::initialize(const System& system, c
         compute<<forceNames[atoms[2]]<<".xyz += -s.xyz-internalF3.xyz;\n";
         compute<<forceNames[atoms[3]]<<".xyz += internalF3.xyz;\n";
         compute<<"}\n";
+        index++;
     }
     
     // Store forces to global memory.
@@ -6313,12 +6324,10 @@ double OpenCLCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bo
         }
         if (globals != NULL)
             forceKernel.setArg<cl::Buffer>(index++, globals->getDeviceBuffer());
-        for (int i = 0; i < (int) params->getBuffers().size(); i++) {
-            OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
+        for (auto& buffer : params->getBuffers())
             forceKernel.setArg<cl::Memory>(index++, buffer.getMemory());
-        }
-        for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
-            forceKernel.setArg<cl::Buffer>(index++, tabulatedFunctions[i]->getDeviceBuffer());
+        for (auto function : tabulatedFunctions)
+            forceKernel.setArg<cl::Buffer>(index++, function->getDeviceBuffer());
         
         if (nonbondedMethod != NoCutoff) {
             // Set arguments for the block bounds kernel.
@@ -7399,8 +7408,8 @@ OpenCLIntegrateCustomStepKernel::~OpenCLIntegrateCustomStepKernel() {
         delete perDofEnergyParamDerivs;
     if (perDofValues != NULL)
         delete perDofValues;
-    for (map<int, OpenCLArray*>::iterator iter = savedForces.begin(); iter != savedForces.end(); ++iter)
-        delete iter->second;
+    for (auto& f : savedForces)
+        delete f.second;
 }
 
 void OpenCLIntegrateCustomStepKernel::initialize(const System& system, const CustomIntegrator& integrator) {
@@ -7453,8 +7462,8 @@ string OpenCLIntegrateCustomStepKernel::createPerDofComputation(const string& va
     string tempType = (cl.getSupportsDoublePrecision() ? "double" : "float");
     vector<pair<ExpressionTreeNode, string> > variableNodes;
     findExpressionsForDerivs(expr.getRootNode(), variableNodes);
-    for (map<string, string>::const_iterator iter = variables.begin(); iter != variables.end(); ++iter)
-        variableNodes.push_back(make_pair(ExpressionTreeNode(new Operation::Variable(iter->first)), iter->second));
+    for (auto& var : variables)
+        variableNodes.push_back(make_pair(ExpressionTreeNode(new Operation::Variable(var.first)), var.second));
     return cl.getExpressionUtilities().createExpressions(expressions, variableNodes, functions, functionNames, "temp"+cl.intToString(component)+"_", tempType);
 }
 
@@ -7469,8 +7478,8 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
         // Initialize various data structures.
         
         const map<string, double>& params = context.getParameters();
-        for (map<string, double>::const_iterator iter = params.begin(); iter != params.end(); ++iter)
-            parameterNames.push_back(iter->first);
+        for (auto& param : params)
+            parameterNames.push_back(param.first);
         kernels.resize(integrator.getNumComputations());
         requiredGaussian.resize(integrator.getNumComputations(), 0);
         requiredUniform.resize(integrator.getNumComputations(), 0);
@@ -7496,12 +7505,12 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
             if (stepType[step] == CustomIntegrator::WhileBlockStart)
                 blockEnd[blockEnd[step]] = step; // Record where to branch back to.
             if (stepType[step] == CustomIntegrator::ComputeGlobal || stepType[step] == CustomIntegrator::IfBlockStart || stepType[step] == CustomIntegrator::WhileBlockStart)
-                for (int i = 0; i < (int) expression[step].size(); i++)
-                    globalExpressions[step].push_back(ParsedExpression(replaceDerivFunctions(expression[step][i].getRootNode(), context)).createCompiledExpression());
+                for (auto& expr : expression[step])
+                    globalExpressions[step].push_back(ParsedExpression(replaceDerivFunctions(expr.getRootNode(), context)).createCompiledExpression());
         }
         for (int step = 0; step < numSteps; step++) {
-            for (int i = 0; i < (int) globalExpressions[step].size(); i++)
-                expressionSet.registerExpression(globalExpressions[step][i]);
+            for (auto& expr : globalExpressions[step])
+                expressionSet.registerExpression(expr);
         }
         
         // Record the indices for variables in the CompiledExpressionSet.
@@ -7511,8 +7520,8 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
         dtVariableIndex = expressionSet.getVariableIndex("dt");
         for (int i = 0; i < integrator.getNumGlobalVariables(); i++)
             globalVariableIndex.push_back(expressionSet.getVariableIndex(integrator.getGlobalVariableName(i)));
-        for (int i = 0; i < (int) parameterNames.size(); i++)
-            parameterVariableIndex.push_back(expressionSet.getVariableIndex(parameterNames[i]));
+        for (auto& name : parameterNames)
+            parameterVariableIndex.push_back(expressionSet.getVariableIndex(name));
 
         // Record the variable names and flags for the force and energy in each step.
 
@@ -7574,8 +7583,8 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
                 for (int i = 0; i < integrator.getNumGlobalVariables(); i++)
                     if (variable[step] == integrator.getGlobalVariableName(i))
                         stepTarget[step].type = VARIABLE;
-                for (int i = 0; i < (int) parameterNames.size(); i++)
-                    if (variable[step] == parameterNames[i]) {
+                for (auto& name : parameterNames)
+                    if (variable[step] == name) {
                         stepTarget[step].type = PARAMETER;
                         modifiesParameters = true;
                     }
@@ -7590,8 +7599,8 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
                 for (int i = 0; i < integrator.getNumGlobalVariables(); i++)
                     if (usesVariable(expression[step][0], integrator.getGlobalVariableName(i)))
                         needsGlobals[step] = true;
-                for (int i = 0; i < (int) parameterNames.size(); i++)
-                    if (usesVariable(expression[step][0], parameterNames[i]))
+                for (auto& name : parameterNames)
+                    if (usesVariable(expression[step][0], name))
                         needsGlobals[step] = true;
             }
         }
@@ -7716,8 +7725,8 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
                 kernel.setArg<cl::Buffer>(index++, sumBuffer->getDeviceBuffer());
                 index += 4;
                 kernel.setArg<cl::Buffer>(index++, perDofEnergyParamDerivs->getDeviceBuffer());
-                for (int i = 0; i < (int) perDofValues->getBuffers().size(); i++)
-                    kernel.setArg<cl::Memory>(index++, perDofValues->getBuffers()[i].getMemory());
+                for (auto& buffer : perDofValues->getBuffers())
+                    kernel.setArg<cl::Memory>(index++, buffer.getMemory());
                 if (stepType[step] == CustomIntegrator::ComputeSum) {
                     // Create a second kernel for this step that sums the values.
 
@@ -7746,8 +7755,8 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
         // Initialize the random number generator.
         
         int maxUniformRandoms = 1;
-        for (int i = 0; i < (int) requiredUniform.size(); i++)
-            maxUniformRandoms = max(maxUniformRandoms, requiredUniform[i]);
+        for (int required : requiredUniform)
+            maxUniformRandoms = max(maxUniformRandoms, required);
         uniformRandoms = OpenCLArray::create<mm_float4>(cl, maxUniformRandoms, "uniformRandoms");
         randomSeed = OpenCLArray::create<mm_int4>(cl, cl.getNumThreadBlocks()*OpenCLContext::ThreadBlockSize, "randomSeed");
         vector<mm_int4> seed(randomSeed->getSize());
@@ -7756,11 +7765,11 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
         if (rseed == 0)
             rseed = osrngseed();
         unsigned int r = (unsigned int) (rseed+1);
-        for (int i = 0; i < randomSeed->getSize(); i++) {
-            seed[i].x = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
-            seed[i].y = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
-            seed[i].z = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
-            seed[i].w = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
+        for (auto& s : seed) {
+            s.x = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
+            s.y = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
+            s.z = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
+            s.w = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
         }
         randomSeed->upload(seed);
         cl::Program randomProgram = cl.createProgram(OpenCLKernelSources::customIntegrator, defines);
@@ -7859,8 +7868,8 @@ ExpressionTreeNode OpenCLIntegrateCustomStepKernel::replaceDerivFunctions(const 
     }
     else {
         vector<ExpressionTreeNode> children;
-        for (int i = 0; i < (int) node.getChildren().size(); i++)
-            children.push_back(replaceDerivFunctions(node.getChildren()[i], context));
+        for (auto& child : node.getChildren())
+            children.push_back(replaceDerivFunctions(child, context));
         return ExpressionTreeNode(op.clone(), children);
     }
 }
@@ -7881,8 +7890,8 @@ void OpenCLIntegrateCustomStepKernel::findExpressionsForDerivs(const ExpressionT
         needsEnergyParamDerivs = true;
     }
     else {
-        for (int i = 0; i < (int) node.getChildren().size(); i++)
-            findExpressionsForDerivs(node.getChildren()[i], variableNodes);
+        for (auto& child : node.getChildren())
+            findExpressionsForDerivs(child, variableNodes);
     }
 }
 
@@ -8264,8 +8273,8 @@ void OpenCLApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context,
         int index = 0;
         for (int i = 0; i < numMolecules; i++) {
             startIndex[i] = index;
-            for (int j = 0; j < (int) molecules[i].size(); j++)
-                atoms[index++] = molecules[i][j];
+            for (int molecule : molecules[i])
+                atoms[index++] = molecule;
         }
         startIndex[numMolecules] = index;
         moleculeAtoms->upload(atoms);
@@ -8285,8 +8294,8 @@ void OpenCLApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context,
     kernel.setArg<cl_float>(2, (cl_float) scaleZ);
     setPeriodicBoxArgs(cl, kernel, 4);
     cl.executeKernel(kernel, cl.getNumAtoms());
-    for (int i = 0; i < (int) cl.getPosCellOffsets().size(); i++)
-        cl.getPosCellOffsets()[i] = mm_int4(0, 0, 0, 0);
+    for (auto& offset : cl.getPosCellOffsets())
+        offset = mm_int4(0, 0, 0, 0);
     lastAtomOrder = cl.getAtomIndex();
 }
 

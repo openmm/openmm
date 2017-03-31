@@ -2919,8 +2919,8 @@ static void testNoQuadrupoles(bool usePme) {
         int axisType, atomX, atomY, atomZ;
         vector<double> dipole, quadrupole;
         amoebaMultipoleForce->getMultipoleParameters(i, charge, dipole, quadrupole, axisType, atomZ, atomX, atomY, thole, damping, polarity);
-        for (int j = 0; j < (int) quadrupole.size(); j++)
-            quadrupole[j] = 0;
+        for (auto& q : quadrupole)
+            q = 0;
         amoebaMultipoleForce->setMultipoleParameters(i, charge, dipole, quadrupole, axisType, atomZ, atomX, atomY, thole, damping, polarity);
     }
     amoebaMultipoleForce->updateParametersInContext(context);

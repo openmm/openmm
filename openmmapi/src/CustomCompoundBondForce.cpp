@@ -53,8 +53,8 @@ CustomCompoundBondForce::CustomCompoundBondForce(int numParticles, const string&
 
 
 CustomCompoundBondForce::~CustomCompoundBondForce() {
-    for (int i = 0; i < (int) functions.size(); i++)
-        delete functions[i].function;
+    for (auto function : functions)
+        delete function.function;
 }
 
 const string& CustomCompoundBondForce::getEnergyFunction() const {

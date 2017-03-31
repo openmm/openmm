@@ -98,8 +98,8 @@ static void validateVariables(const Lepton::ExpressionTreeNode& node, const set<
     const Lepton::Operation& op = node.getOperation();
     if (op.getId() == Lepton::Operation::VARIABLE && variables.find(op.getName()) == variables.end())
         throw OpenMMException("Unknown variable in expression: "+op.getName());
-    for (int i = 0; i < (int) node.getChildren().size(); i++)
-        validateVariables(node.getChildren()[i], variables);
+    for (auto& child : node.getChildren())
+        validateVariables(child, variables);
 }
 
 /**
@@ -867,8 +867,8 @@ void CpuCalcCustomNonbondedForceKernel::initialize(const System& system, const C
 
     // Delete the custom functions.
 
-    for (map<string, Lepton::CustomFunction*>::iterator iter = functions.begin(); iter != functions.end(); iter++)
-        delete iter->second;
+    for (auto& function : functions)
+        delete function.second;
     
     // Record information for the long range correction.
     
@@ -909,11 +909,11 @@ double CpuCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool inc
         nonbonded->setPeriodic(boxVectors);
     }
     bool globalParamsChanged = false;
-    for (int i = 0; i < (int) globalParameterNames.size(); i++) {
-        double value = context.getParameter(globalParameterNames[i]);
-        if (globalParamValues[globalParameterNames[i]] != value)
+    for (auto& name : globalParameterNames) {
+        double value = context.getParameter(name);
+        if (globalParamValues[name] != value)
             globalParamsChanged = true;
-        globalParamValues[globalParameterNames[i]] = value;
+        globalParamValues[name] = value;
     }
     if (useSwitchingFunction)
         nonbonded->setUseSwitchingFunction(switchingDistance);
@@ -1155,8 +1155,8 @@ void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGB
 
     // Delete the custom functions.
 
-    for (map<string, Lepton::CustomFunction*>::iterator iter = functions.begin(); iter != functions.end(); iter++)
-        delete iter->second;
+    for (auto& function : functions)
+        delete function.second;
     ixn = new CpuCustomGBForce(numParticles, exclusions, valueExpressions, valueDerivExpressions, valueGradientExpressions, valueParamDerivExpressions,
         valueNames, valueTypes, energyExpressions, energyDerivExpressions, energyGradientExpressions, energyParamDerivExpressions, energyTypes,
         particleParameterNames, data.threads);
@@ -1174,8 +1174,8 @@ double CpuCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFor
         ixn->setUseCutoff(nonbondedCutoff, *data.neighborList);
     }
     map<string, double> globalParameters;
-    for (int i = 0; i < (int) globalParameterNames.size(); i++)
-        globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
+    for (auto& name : globalParameterNames)
+        globalParameters[name] = context.getParameter(name);
     vector<double> energyParamDerivValues(energyParamDerivNames.size()+1, 0.0);
     ixn->calculateIxn(numParticles, &data.posq[0], particleParamArray, globalParameters, data.threadForce, includeForces, includeEnergy, energy, &energyParamDerivValues[0]);
     map<string, double>& energyParamDerivs = extractEnergyParameterDerivatives(context);
@@ -1236,8 +1236,8 @@ void CpuCalcCustomManyParticleForceKernel::initialize(const System& system, cons
 
 double CpuCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     map<string, double> globalParameters;
-    for (int i = 0; i < (int) globalParameterNames.size(); i++)
-        globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
+    for (auto& name : globalParameterNames)
+        globalParameters[name] = context.getParameter(name);
     if (nonbondedMethod == CutoffPeriodic) {
         Vec3* boxVectors = extractBoxVectors(context);
         double minAllowedSize = 2*cutoffDistance;

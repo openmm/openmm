@@ -70,8 +70,8 @@ CustomNonbondedForce::CustomNonbondedForce(const CustomNonbondedForce& rhs) {
 }
 
 CustomNonbondedForce::~CustomNonbondedForce() {
-    for (int i = 0; i < (int) functions.size(); i++)
-        delete functions[i].function;
+    for (auto function : functions)
+        delete function.function;
 }
 
 const string& CustomNonbondedForce::getEnergyFunction() const {
@@ -210,14 +210,14 @@ void CustomNonbondedForce::setExclusionParticles(int index, int particle1, int p
 void CustomNonbondedForce::createExclusionsFromBonds(const vector<pair<int, int> >& bonds, int bondCutoff) {
     if (bondCutoff < 1)
         return;
-    for (int i = 0; i < (int) bonds.size(); ++i)
-        if (bonds[i].first < 0 || bonds[i].second < 0 || bonds[i].first >= particles.size() || bonds[i].second >= particles.size())
+    for (auto& bond : bonds)
+        if (bond.first < 0 || bond.second < 0 || bond.first >= particles.size() || bond.second >= particles.size())
             throw OpenMMException("createExclusionsFromBonds: Illegal particle index in list of bonds");
     vector<set<int> > exclusions(particles.size());
     vector<set<int> > bonded12(exclusions.size());
-    for (int i = 0; i < (int) bonds.size(); ++i) {
-        int p1 = bonds[i].first;
-        int p2 = bonds[i].second;
+    for (auto& bond : bonds) {
+        int p1 = bond.first;
+        int p2 = bond.second;
         exclusions[p1].insert(p2);
         exclusions[p2].insert(p1);
         bonded12[p1].insert(p2);
@@ -225,15 +225,14 @@ void CustomNonbondedForce::createExclusionsFromBonds(const vector<pair<int, int>
     }
     for (int level = 0; level < bondCutoff-1; level++) {
         vector<set<int> > currentExclusions = exclusions;
-        for (int i = 0; i < (int) particles.size(); i++) {
-            for (set<int>::const_iterator iter = currentExclusions[i].begin(); iter != currentExclusions[i].end(); ++iter)
-                exclusions[*iter].insert(bonded12[i].begin(), bonded12[i].end());
-        }
+        for (int i = 0; i < (int) particles.size(); i++)
+            for (int j : currentExclusions[i])
+                exclusions[j].insert(bonded12[i].begin(), bonded12[i].end());
     }
     for (int i = 0; i < (int) exclusions.size(); ++i)
-        for (set<int>::const_iterator iter = exclusions[i].begin(); iter != exclusions[i].end(); ++iter)
-            if (*iter < i)
-                addExclusion(*iter, i);
+        for (int j : exclusions[i])
+            if (j < i)
+                addExclusion(j, i);
 }
 
 int CustomNonbondedForce::addTabulatedFunction(const std::string& name, TabulatedFunction* function) {

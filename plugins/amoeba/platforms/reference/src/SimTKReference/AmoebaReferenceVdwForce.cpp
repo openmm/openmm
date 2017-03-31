@@ -277,9 +277,8 @@ double AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles,
  
         double sigmaI      = sigmas[ii];
         double epsilonI    = epsilons[ii];
-        for (std::set<int>::const_iterator jj = allExclusions[ii].begin(); jj != allExclusions[ii].end(); jj++) {
-            exclusions[*jj] = 1;
-        }
+        for (int jj : allExclusions[ii])
+            exclusions[jj] = 1;
 
         for (unsigned int jj = ii+1; jj < static_cast<unsigned int>(numParticles); jj++) {
             if (exclusions[jj] == 0) {
@@ -310,9 +309,8 @@ double AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles,
             }
         }
 
-        for (std::set<int>::const_iterator jj = allExclusions[ii].begin(); jj != allExclusions[ii].end(); jj++) {
-            exclusions[*jj] = 0;
-        }
+        for (int jj : allExclusions[ii])
+            exclusions[jj] = 0;
     }
 
     return energy;

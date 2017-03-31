@@ -127,8 +127,8 @@ ReferenceCCMAAlgorithm::ReferenceCCMAAlgorithm(int numberOfAtoms,
                     // We didn't find one, so look for an angle force field term.
 
                     const vector<int>& angleCandidates = atomAngles[atomb];
-                    for (vector<int>::const_iterator iter = angleCandidates.begin(); iter != angleCandidates.end(); iter++) {
-                        const AngleInfo& angle = angles[*iter];
+                    for (int candidate : angleCandidates) {
+                        const AngleInfo& angle = angles[candidate];
                         if ((angle.atom1 == atoma && angle.atom3 == atomc) || (angle.atom3 == atoma && angle.atom1 == atomc)) {
                             matrix[j].push_back(pair<int, double>(k, scale*cos(angle.angle)));
                             break;
@@ -145,8 +145,7 @@ ReferenceCCMAAlgorithm::ReferenceCCMAAlgorithm(int numberOfAtoms,
         vector<double> matrixValue;
         for (int i = 0; i < numberOfConstraints; i++) {
             matrixRowStart.push_back(matrixValue.size());
-            for (int j = 0; j < (int) matrix[i].size(); j++) {
-                pair<int, double> element = matrix[i][j];
+            for (auto& element : matrix[i]) {
                 matrixColIndex.push_back(element.first);
                 matrixValue.push_back(element.second);
             }
@@ -292,10 +291,8 @@ void ReferenceCCMAAlgorithm::applyConstraints(vector<Vec3>& atomCoordinates,
         if (_matrix.size() > 0) {
             for (int i = 0; i < _numberOfConstraints; i++) {
                 double sum = 0.0;
-                for (int j = 0; j < (int) _matrix[i].size(); j++) {
-                    pair<int, double> element = _matrix[i][j];
+                for (auto& element : _matrix[i])
                     sum += element.second*constraintDelta[element.first];
-                }
                 tempDelta[i] = sum;
             }
             constraintDelta = tempDelta;

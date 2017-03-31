@@ -49,12 +49,12 @@ ReferenceCustomHbondIxn::ReferenceCustomHbondIxn(const vector<vector<int> >& don
             const map<string, vector<int> >& distances, const map<string, vector<int> >& angles, const map<string, vector<int> >& dihedrals) :
             cutoff(false), periodic(false), donorAtoms(donorAtoms), acceptorAtoms(acceptorAtoms), energyExpression(energyExpression.createProgram()),
             donorParamNames(donorParameterNames), acceptorParamNames(acceptorParameterNames) {
-    for (map<string, vector<int> >::const_iterator iter = distances.begin(); iter != distances.end(); ++iter)
-        distanceTerms.push_back(ReferenceCustomHbondIxn::DistanceTermInfo(iter->first, iter->second, energyExpression.differentiate(iter->first).optimize().createProgram()));
-    for (map<string, vector<int> >::const_iterator iter = angles.begin(); iter != angles.end(); ++iter)
-        angleTerms.push_back(ReferenceCustomHbondIxn::AngleTermInfo(iter->first, iter->second, energyExpression.differentiate(iter->first).optimize().createProgram()));
-    for (map<string, vector<int> >::const_iterator iter = dihedrals.begin(); iter != dihedrals.end(); ++iter)
-        dihedralTerms.push_back(ReferenceCustomHbondIxn::DihedralTermInfo(iter->first, iter->second, energyExpression.differentiate(iter->first).optimize().createProgram()));
+    for (auto& term : distances)
+        distanceTerms.push_back(ReferenceCustomHbondIxn::DistanceTermInfo(term.first, term.second, energyExpression.differentiate(term.first).optimize().createProgram()));
+    for (auto& term : angles)
+        angleTerms.push_back(ReferenceCustomHbondIxn::AngleTermInfo(term.first, term.second, energyExpression.differentiate(term.first).optimize().createProgram()));
+    for (auto& term : dihedrals)
+        dihedralTerms.push_back(ReferenceCustomHbondIxn::DihedralTermInfo(term.first, term.second, energyExpression.differentiate(term.first).optimize().createProgram()));
 }
 
 /**---------------------------------------------------------------------------------------

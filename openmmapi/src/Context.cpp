@@ -97,8 +97,8 @@ State Context::getState(int types, bool enforcePeriodicBox, int groups) const {
     }
     if (types&State::Parameters) {
         map<string, double> params;
-        for (map<string, double>::const_iterator iter = impl->parameters.begin(); iter != impl->parameters.end(); iter++)
-            params[iter->first] = iter->second;
+        for (auto& param : impl->parameters)
+            params[param.first] = param.second;
         builder.setParameters(params);
     }
     if (types&State::ParameterDerivatives) {
@@ -111,13 +111,13 @@ State Context::getState(int types, bool enforcePeriodicBox, int groups) const {
         impl->getPositions(positions);
         if (enforcePeriodicBox) {
             const vector<vector<int> >& molecules = impl->getMolecules();
-            for (int i = 0; i < (int) molecules.size(); i++) {
+            for (auto& mol : molecules) {
                 // Find the molecule center.
 
                 Vec3 center;
-                for (int j = 0; j < (int) molecules[i].size(); j++)
-                    center += positions[molecules[i][j]];
-                center *= 1.0/molecules[i].size();
+                for (int j : mol)
+                    center += positions[j];
+                center *= 1.0/mol.size();
 
                 // Find the displacement to move it into the first periodic box.
                 Vec3 diff;
@@ -126,10 +126,8 @@ State Context::getState(int types, bool enforcePeriodicBox, int groups) const {
                 diff += periodicBoxSize[0]*floor((center[0]-diff[0])/periodicBoxSize[0][0]);
 
                 // Translate all the particles in the molecule.
-                for (int j = 0; j < (int) molecules[i].size(); j++) {
-                    Vec3& pos = positions[molecules[i][j]];
-                    pos -= diff;
-                }
+                for (int j : mol)
+                    positions[j] -= diff;
             }
         }
         builder.setPositions(positions);
@@ -152,8 +150,8 @@ void Context::setState(const State& state) {
     if ((state.getDataTypes()&State::Velocities) != 0)
         setVelocities(state.getVelocities());
     if ((state.getDataTypes()&State::Parameters) != 0)
-        for (map<string, double>::const_iterator iter = state.getParameters().begin(); iter != state.getParameters().end(); ++iter)
-            setParameter(iter->first, iter->second);
+        for (auto& param : state.getParameters())
+            setParameter(param.first, param.second);
 }
 
 void Context::setTime(double time) {

@@ -72,15 +72,15 @@ void ReferenceMonteCarloBarostat::applyBarostat(vector<Vec3>& atomPositions, con
 
     // Loop over molecules.
 
-    for (int i = 0; i < (int) molecules.size(); i++) {
+    for (auto& molecule : molecules) {
         // Find the molecule center.
 
         Vec3 pos(0, 0, 0);
-        for (int j = 0; j < (int) molecules[i].size(); j++) {
-            Vec3& atomPos = atomPositions[molecules[i][j]];
+        for (int atom : molecule) {
+            Vec3& atomPos = atomPositions[atom];
             pos += atomPos;
         }
-        pos /= molecules[i].size();
+        pos /= molecule.size();
 
         // Move it into the first periodic box.
 
@@ -95,8 +95,8 @@ void ReferenceMonteCarloBarostat::applyBarostat(vector<Vec3>& atomPositions, con
         newPos[1] *= scaleY;
         newPos[2] *= scaleZ;
         Vec3 offset = newPos-pos;
-        for (int j = 0; j < (int) molecules[i].size(); j++) {
-            Vec3& atomPos = atomPositions[molecules[i][j]];
+        for (int atom : molecule) {
+            Vec3& atomPos = atomPositions[atom];
             atomPos += offset;
         }
     }

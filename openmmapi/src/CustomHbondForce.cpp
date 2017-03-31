@@ -52,8 +52,8 @@ CustomHbondForce::CustomHbondForce(const string& energy) : energyExpression(ener
 
 
 CustomHbondForce::~CustomHbondForce() {
-    for (int i = 0; i < (int) functions.size(); i++)
-        delete functions[i].function;
+    for (auto function : functions)
+        delete function.function;
 }
 
 const string& CustomHbondForce::getEnergyFunction() const {

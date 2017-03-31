@@ -84,19 +84,19 @@ ReferenceCustomGBIxn::ReferenceCustomGBIxn(const vector<Lepton::CompiledExpressi
     xIndex = expressionSet.getVariableIndex("x");
     yIndex = expressionSet.getVariableIndex("y");
     zIndex = expressionSet.getVariableIndex("z");
-    for (int i = 0; i < (int) parameterNames.size(); i++) {
-        paramIndex.push_back(expressionSet.getVariableIndex(parameterNames[i]));
+    for (auto& param : parameterNames) {
+        paramIndex.push_back(expressionSet.getVariableIndex(param));
         for (int j = 1; j < 3; j++) {
             stringstream name;
-            name << parameterNames[i] << j;
+            name << param << j;
             particleParamIndex.push_back(expressionSet.getVariableIndex(name.str()));
         }
     }
-    for (int i = 0; i < (int) valueNames.size(); i++) {
-        valueIndex.push_back(expressionSet.getVariableIndex(valueNames[i]));
+    for (auto& value : valueNames) {
+        valueIndex.push_back(expressionSet.getVariableIndex(value));
         for (int j = 1; j < 3; j++) {
             stringstream name;
-            name << valueNames[i] << j;
+            name << value << j;
             particleValueIndex.push_back(expressionSet.getVariableIndex(name.str()));
         }
     }
@@ -153,8 +153,8 @@ ReferenceCustomGBIxn::~ReferenceCustomGBIxn() {
 void ReferenceCustomGBIxn::calculateIxn(int numberOfAtoms, vector<Vec3>& atomCoordinates, double** atomParameters,
                                            const vector<set<int> >& exclusions, map<string, double>& globalParameters, vector<Vec3>& forces,
                                            double* totalEnergy, double* energyParamDerivs) {
-    for (map<string, double>::const_iterator iter = globalParameters.begin(); iter != globalParameters.end(); ++iter)
-        expressionSet.setVariable(expressionSet.getVariableIndex(iter->first), iter->second);
+    for (auto& param : globalParameters)
+        expressionSet.setVariable(expressionSet.getVariableIndex(param.first), param.second);
     
     // Initialize arrays for storing values.
     
@@ -225,8 +225,7 @@ void ReferenceCustomGBIxn::calculateParticlePairValue(int index, int numAtoms, v
     if (cutoff) {
         // Loop over all pairs in the neighbor list.
 
-        for (int i = 0; i < (int) neighborList->size(); i++) {
-            OpenMM::AtomPair pair = (*neighborList)[i];
+        for (auto& pair : *neighborList) {
             if (useExclusions && exclusions[pair.first].find(pair.second) != exclusions[pair.first].end())
                 continue;
             calculateOnePairValue(index, pair.first, pair.second, atomCoordinates, atomParameters);
@@ -306,8 +305,7 @@ void ReferenceCustomGBIxn::calculateParticlePairEnergyTerm(int index, int numAto
     if (cutoff) {
         // Loop over all pairs in the neighbor list.
 
-        for (int i = 0; i < (int) neighborList->size(); i++) {
-            OpenMM::AtomPair pair = (*neighborList)[i];
+        for (auto& pair : *neighborList) {
             if (useExclusions && exclusions[pair.first].find(pair.second) != exclusions[pair.first].end())
                 continue;
             calculateOnePairEnergyTerm(index, pair.first, pair.second, atomCoordinates, atomParameters, forces, totalEnergy, energyParamDerivs);
@@ -377,8 +375,7 @@ void ReferenceCustomGBIxn::calculateChainRuleForces(int numAtoms, vector<Vec3>& 
     if (cutoff) {
         // Loop over all pairs in the neighbor list.
 
-        for (int i = 0; i < (int) neighborList->size(); i++) {
-            OpenMM::AtomPair pair = (*neighborList)[i];
+        for (auto& pair : *neighborList) {
             bool isExcluded = (exclusions[pair.first].find(pair.second) != exclusions[pair.first].end());
             calculateOnePairChainRule(pair.first, pair.second, atomCoordinates, atomParameters, forces, isExcluded);
             calculateOnePairChainRule(pair.second, pair.first, atomCoordinates, atomParameters, forces, isExcluded);

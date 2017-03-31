@@ -577,10 +577,10 @@ void CpuNeighborList::threadComputeNeighborList(ThreadPool& threads, int threadI
         for (int j = 0; j < atomsInBlock; j++) {
             const set<int>& atomExclusions = (*exclusions)[sortedAtoms[firstIndex+j]];
             char mask = 1<<j;
-            for (set<int>::const_iterator iter = atomExclusions.begin(); iter != atomExclusions.end(); ++iter) {
-                map<int, char>::iterator thisAtomFlags = atomFlags.find(*iter);
+            for (int exclusion : atomExclusions) {
+                map<int, char>::iterator thisAtomFlags = atomFlags.find(exclusion);
                 if (thisAtomFlags == atomFlags.end())
-                    atomFlags[*iter] = mask;
+                    atomFlags[exclusion] = mask;
                 else
                     thisAtomFlags->second |= mask;
             }

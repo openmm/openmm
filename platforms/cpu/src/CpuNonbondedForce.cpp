@@ -447,9 +447,9 @@ void CpuNonbondedForce::threadComputeDirect(ThreadPool& threads, int threadIndex
             for (int i = start; i < end; i++) {
                 fvec4 posI((float) atomCoordinates[i][0], (float) atomCoordinates[i][1], (float) atomCoordinates[i][2], 0.0f);
                 float scaledChargeI = (float) (ONE_4PI_EPS0*posq[4*i+3]);
-                for (set<int>::const_iterator iter = exclusions[i].begin(); iter != exclusions[i].end(); ++iter) {
-                    if (*iter > i) {
-                        int j = *iter;
+                for (int excluded : exclusions[i]) {
+                    if (excluded > i) {
+                        int j = excluded;
                         fvec4 deltaR;
                         fvec4 posJ((float) atomCoordinates[j][0], (float) atomCoordinates[j][1], (float) atomCoordinates[j][2], 0.0f);
                         float r2;
