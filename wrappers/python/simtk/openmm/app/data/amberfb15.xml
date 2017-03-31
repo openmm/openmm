@@ -8019,7 +8019,7 @@
   <Atom type="33" charge="0.6462" sigma="0.339966950842" epsilon="0.359824"/>
   <Atom type="34" charge="-0.5554" sigma="0.295992190115" epsilon="0.87864"/>
   <Atom type="35" charge="-0.6376" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="36" charge="0.4747" sigma="0.0" epsilon="0.0"/>
+  <Atom type="36" charge="0.4747" sigma="1.0" epsilon="0.0"/>
   <Atom type="37" charge="0.5973" sigma="0.339966950842" epsilon="0.359824"/>
   <Atom type="38" charge="-0.5679" sigma="0.295992190115" epsilon="0.87864"/>
   <Atom type="39" charge="-0.4157" sigma="0.324999852378" epsilon="0.71128"/>
@@ -8084,7 +8084,7 @@
   <Atom type="98" charge="0.6801" sigma="0.339966950842" epsilon="0.359824"/>
   <Atom type="99" charge="-0.5838" sigma="0.295992190115" epsilon="0.87864"/>
   <Atom type="100" charge="-0.6511" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="101" charge="0.4641" sigma="0.0" epsilon="0.0"/>
+  <Atom type="101" charge="0.4641" sigma="1.0" epsilon="0.0"/>
   <Atom type="102" charge="0.5973" sigma="0.339966950842" epsilon="0.359824"/>
   <Atom type="103" charge="-0.5679" sigma="0.295992190115" epsilon="0.87864"/>
   <Atom type="104" charge="-0.4157" sigma="0.324999852378" epsilon="0.71128"/>
@@ -8279,7 +8279,7 @@
   <Atom type="293" charge="0.2117" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="294" charge="0.0352" sigma="0.247135304412" epsilon="0.0656888"/>
   <Atom type="295" charge="-0.6546" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="296" charge="0.4275" sigma="0.0" epsilon="0.0"/>
+  <Atom type="296" charge="0.4275" sigma="1.0" epsilon="0.0"/>
   <Atom type="297" charge="0.5973" sigma="0.339966950842" epsilon="0.359824"/>
   <Atom type="298" charge="-0.5679" sigma="0.295992190115" epsilon="0.87864"/>
   <Atom type="299" charge="-0.4157" sigma="0.324999852378" epsilon="0.71128"/>
@@ -8291,7 +8291,7 @@
   <Atom type="305" charge="-0.2438" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="306" charge="0.0642" sigma="0.264953278775" epsilon="0.0656888"/>
   <Atom type="307" charge="-0.6761" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="308" charge="0.4102" sigma="0.0" epsilon="0.0"/>
+  <Atom type="308" charge="0.4102" sigma="1.0" epsilon="0.0"/>
   <Atom type="309" charge="0.5973" sigma="0.339966950842" epsilon="0.359824"/>
   <Atom type="310" charge="-0.5679" sigma="0.295992190115" epsilon="0.87864"/>
   <Atom type="311" charge="-0.4157" sigma="0.324999852378" epsilon="0.71128"/>
@@ -8330,7 +8330,7 @@
   <Atom type="344" charge="0.1656" sigma="0.259964245953" epsilon="0.06276"/>
   <Atom type="345" charge="0.3226" sigma="0.339966950842" epsilon="0.359824"/>
   <Atom type="346" charge="-0.5579" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="347" charge="0.3992" sigma="0.0" epsilon="0.0"/>
+  <Atom type="347" charge="0.3992" sigma="1.0" epsilon="0.0"/>
   <Atom type="348" charge="-0.2341" sigma="0.339966950842" epsilon="0.359824"/>
   <Atom type="349" charge="0.1656" sigma="0.259964245953" epsilon="0.06276"/>
   <Atom type="350" charge="-0.1906" sigma="0.339966950842" epsilon="0.359824"/>
@@ -8612,7 +8612,7 @@
   <Atom type="626" charge="0.1123" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="627" charge="0.0813" sigma="0.247135304412" epsilon="0.0656888"/>
   <Atom type="628" charge="-0.6514" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="629" charge="0.4474" sigma="0.0" epsilon="0.0"/>
+  <Atom type="629" charge="0.4474" sigma="1.0" epsilon="0.0"/>
   <Atom type="630" charge="0.8113" sigma="0.339966950842" epsilon="0.359824"/>
   <Atom type="631" charge="-0.8132" sigma="0.295992190115" epsilon="0.87864"/>
   <Atom type="632" charge="-0.8132" sigma="0.295992190115" epsilon="0.87864"/>
@@ -8625,7 +8625,7 @@
   <Atom type="639" charge="-0.1853" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="640" charge="0.0586" sigma="0.264953278775" epsilon="0.0656888"/>
   <Atom type="641" charge="-0.6496" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="642" charge="0.4119" sigma="0.0" epsilon="0.0"/>
+  <Atom type="642" charge="0.4119" sigma="1.0" epsilon="0.0"/>
   <Atom type="643" charge="0.781" sigma="0.339966950842" epsilon="0.359824"/>
   <Atom type="644" charge="-0.8044" sigma="0.295992190115" epsilon="0.87864"/>
   <Atom type="645" charge="-0.8044" sigma="0.295992190115" epsilon="0.87864"/>
@@ -8666,7 +8666,7 @@
   <Atom type="680" charge="0.1673" sigma="0.259964245953" epsilon="0.06276"/>
   <Atom type="681" charge="0.3395" sigma="0.339966950842" epsilon="0.359824"/>
   <Atom type="682" charge="-0.5643" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="683" charge="0.4017" sigma="0.0" epsilon="0.0"/>
+  <Atom type="683" charge="0.4017" sigma="1.0" epsilon="0.0"/>
   <Atom type="684" charge="-0.2458" sigma="0.339966950842" epsilon="0.359824"/>
   <Atom type="685" charge="0.1673" sigma="0.259964245953" epsilon="0.06276"/>
   <Atom type="686" charge="-0.1922" sigma="0.339966950842" epsilon="0.359824"/>
@@ -8943,7 +8943,7 @@
   <Atom type="957" charge="0.2596" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="958" charge="0.0273" sigma="0.247135304412" epsilon="0.0656888"/>
   <Atom type="959" charge="-0.6714" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="960" charge="0.4239" sigma="0.0" epsilon="0.0"/>
+  <Atom type="960" charge="0.4239" sigma="1.0" epsilon="0.0"/>
   <Atom type="961" charge="0.6163" sigma="0.339966950842" epsilon="0.359824"/>
   <Atom type="962" charge="-0.5722" sigma="0.295992190115" epsilon="0.87864"/>
   <Atom type="963" charge="0.1812" sigma="0.324999852378" epsilon="0.71128"/>
@@ -8955,7 +8955,7 @@
   <Atom type="969" charge="-0.2554" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="970" charge="0.0627" sigma="0.264953278775" epsilon="0.0656888"/>
   <Atom type="971" charge="-0.6764" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="972" charge="0.407" sigma="0.0" epsilon="0.0"/>
+  <Atom type="972" charge="0.407" sigma="1.0" epsilon="0.0"/>
   <Atom type="973" charge="0.6163" sigma="0.339966950842" epsilon="0.359824"/>
   <Atom type="974" charge="-0.5722" sigma="0.295992190115" epsilon="0.87864"/>
   <Atom type="975" charge="0.1913" sigma="0.324999852378" epsilon="0.71128"/>
@@ -8994,7 +8994,7 @@
   <Atom type="1008" charge="0.165" sigma="0.259964245953" epsilon="0.06276"/>
   <Atom type="1009" charge="0.3139" sigma="0.339966950842" epsilon="0.359824"/>
   <Atom type="1010" charge="-0.5578" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="1011" charge="0.4001" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1011" charge="0.4001" sigma="1.0" epsilon="0.0"/>
   <Atom type="1012" charge="-0.2239" sigma="0.339966950842" epsilon="0.359824"/>
   <Atom type="1013" charge="0.165" sigma="0.259964245953" epsilon="0.06276"/>
   <Atom type="1014" charge="-0.2002" sigma="0.339966950842" epsilon="0.359824"/>
@@ -9071,8 +9071,8 @@
   <Atom type="1085" charge="-0.0854" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1086" charge="0.0718" sigma="0.264953278775" epsilon="0.0656888"/>
   <Atom type="1087" charge="-0.6549" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="1088" charge="0.4396" sigma="0.0" epsilon="0.0"/>
-  <Atom type="1089" charge="0.4422" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1088" charge="0.4396" sigma="1.0" epsilon="0.0"/>
+  <Atom type="1089" charge="0.4422" sigma="1.0" epsilon="0.0"/>
   <Atom type="1090" charge="-0.6318" sigma="0.306647338784" epsilon="0.8803136"/>
   <Atom type="1091" charge="-0.0069" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1092" charge="0.0754" sigma="0.247135304412" epsilon="0.0656888"/>
@@ -9099,7 +9099,7 @@
   <Atom type="1113" charge="-0.0854" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1114" charge="0.0718" sigma="0.264953278775" epsilon="0.0656888"/>
   <Atom type="1115" charge="-0.5232" sigma="0.300001234347" epsilon="0.71128"/>
-  <Atom type="1116" charge="0.4422" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1116" charge="0.4422" sigma="1.0" epsilon="0.0"/>
   <Atom type="1117" charge="-0.6318" sigma="0.306647338784" epsilon="0.8803136"/>
   <Atom type="1118" charge="-0.0069" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1119" charge="0.0754" sigma="0.247135304412" epsilon="0.0656888"/>
@@ -9126,7 +9126,7 @@
   <Atom type="1140" charge="-0.0854" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1141" charge="0.0718" sigma="0.264953278775" epsilon="0.0656888"/>
   <Atom type="1142" charge="-0.6549" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="1143" charge="0.4396" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1143" charge="0.4396" sigma="1.0" epsilon="0.0"/>
   <Atom type="1144" charge="1.1659" sigma="0.374177461619" epsilon="0.8368"/>
   <Atom type="1145" charge="-0.7761" sigma="0.295992190115" epsilon="0.87864"/>
   <Atom type="1146" charge="-0.7761" sigma="0.295992190115" epsilon="0.87864"/>
@@ -9181,8 +9181,8 @@
   <Atom type="1195" charge="-0.0854" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1196" charge="0.0718" sigma="0.264953278775" epsilon="0.0656888"/>
   <Atom type="1197" charge="-0.6549" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="1198" charge="0.4396" sigma="0.0" epsilon="0.0"/>
-  <Atom type="1199" charge="0.4422" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1198" charge="0.4396" sigma="1.0" epsilon="0.0"/>
+  <Atom type="1199" charge="0.4422" sigma="1.0" epsilon="0.0"/>
   <Atom type="1200" charge="-0.6318" sigma="0.306647338784" epsilon="0.8803136"/>
   <Atom type="1201" charge="-0.0069" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1202" charge="0.0754" sigma="0.247135304412" epsilon="0.0656888"/>
@@ -9207,7 +9207,7 @@
   <Atom type="1221" charge="-0.0854" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1222" charge="0.0718" sigma="0.264953278775" epsilon="0.0656888"/>
   <Atom type="1223" charge="-0.5232" sigma="0.300001234347" epsilon="0.71128"/>
-  <Atom type="1224" charge="0.4422" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1224" charge="0.4422" sigma="1.0" epsilon="0.0"/>
   <Atom type="1225" charge="-0.6318" sigma="0.306647338784" epsilon="0.8803136"/>
   <Atom type="1226" charge="-0.0069" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1227" charge="0.0754" sigma="0.247135304412" epsilon="0.0656888"/>
@@ -9232,7 +9232,7 @@
   <Atom type="1246" charge="-0.0854" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1247" charge="0.0718" sigma="0.264953278775" epsilon="0.0656888"/>
   <Atom type="1248" charge="-0.6549" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="1249" charge="0.4396" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1249" charge="0.4396" sigma="1.0" epsilon="0.0"/>
   <Atom type="1250" charge="1.1659" sigma="0.374177461619" epsilon="0.8368"/>
   <Atom type="1251" charge="-0.7761" sigma="0.295992190115" epsilon="0.87864"/>
   <Atom type="1252" charge="-0.7761" sigma="0.295992190115" epsilon="0.87864"/>
@@ -9293,8 +9293,8 @@
   <Atom type="1307" charge="-0.0854" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1308" charge="0.0718" sigma="0.264953278775" epsilon="0.0656888"/>
   <Atom type="1309" charge="-0.6549" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="1310" charge="0.4396" sigma="0.0" epsilon="0.0"/>
-  <Atom type="1311" charge="0.4422" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1310" charge="0.4396" sigma="1.0" epsilon="0.0"/>
+  <Atom type="1311" charge="0.4422" sigma="1.0" epsilon="0.0"/>
   <Atom type="1312" charge="-0.6318" sigma="0.306647338784" epsilon="0.8803136"/>
   <Atom type="1313" charge="-0.0069" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1314" charge="0.0754" sigma="0.247135304412" epsilon="0.0656888"/>
@@ -9322,7 +9322,7 @@
   <Atom type="1336" charge="-0.0854" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1337" charge="0.0718" sigma="0.264953278775" epsilon="0.0656888"/>
   <Atom type="1338" charge="-0.5232" sigma="0.300001234347" epsilon="0.71128"/>
-  <Atom type="1339" charge="0.4422" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1339" charge="0.4422" sigma="1.0" epsilon="0.0"/>
   <Atom type="1340" charge="-0.6318" sigma="0.306647338784" epsilon="0.8803136"/>
   <Atom type="1341" charge="-0.0069" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1342" charge="0.0754" sigma="0.247135304412" epsilon="0.0656888"/>
@@ -9350,7 +9350,7 @@
   <Atom type="1364" charge="-0.0854" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1365" charge="0.0718" sigma="0.264953278775" epsilon="0.0656888"/>
   <Atom type="1366" charge="-0.6549" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="1367" charge="0.4396" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1367" charge="0.4396" sigma="1.0" epsilon="0.0"/>
   <Atom type="1368" charge="1.1659" sigma="0.374177461619" epsilon="0.8368"/>
   <Atom type="1369" charge="-0.7761" sigma="0.295992190115" epsilon="0.87864"/>
   <Atom type="1370" charge="-0.7761" sigma="0.295992190115" epsilon="0.87864"/>
@@ -9407,8 +9407,8 @@
   <Atom type="1421" charge="-0.0854" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1422" charge="0.0718" sigma="0.264953278775" epsilon="0.0656888"/>
   <Atom type="1423" charge="-0.6549" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="1424" charge="0.4396" sigma="0.0" epsilon="0.0"/>
-  <Atom type="1425" charge="0.4422" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1424" charge="0.4396" sigma="1.0" epsilon="0.0"/>
+  <Atom type="1425" charge="0.4422" sigma="1.0" epsilon="0.0"/>
   <Atom type="1426" charge="-0.6318" sigma="0.306647338784" epsilon="0.8803136"/>
   <Atom type="1427" charge="-0.0069" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1428" charge="0.0754" sigma="0.247135304412" epsilon="0.0656888"/>
@@ -9434,7 +9434,7 @@
   <Atom type="1448" charge="-0.0854" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1449" charge="0.0718" sigma="0.264953278775" epsilon="0.0656888"/>
   <Atom type="1450" charge="-0.5232" sigma="0.300001234347" epsilon="0.71128"/>
-  <Atom type="1451" charge="0.4422" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1451" charge="0.4422" sigma="1.0" epsilon="0.0"/>
   <Atom type="1452" charge="-0.6318" sigma="0.306647338784" epsilon="0.8803136"/>
   <Atom type="1453" charge="-0.0069" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1454" charge="0.0754" sigma="0.247135304412" epsilon="0.0656888"/>
@@ -9460,7 +9460,7 @@
   <Atom type="1474" charge="-0.0854" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1475" charge="0.0718" sigma="0.264953278775" epsilon="0.0656888"/>
   <Atom type="1476" charge="-0.6549" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="1477" charge="0.4396" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1477" charge="0.4396" sigma="1.0" epsilon="0.0"/>
   <Atom type="1478" charge="1.1662" sigma="0.374177461619" epsilon="0.8368"/>
   <Atom type="1479" charge="-0.776" sigma="0.295992190115" epsilon="0.87864"/>
   <Atom type="1480" charge="-0.776" sigma="0.295992190115" epsilon="0.87864"/>
@@ -9490,7 +9490,7 @@
   <Atom type="1504" charge="0.067" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1505" charge="0.0972" sigma="0.247135304412" epsilon="0.0656888"/>
   <Atom type="1506" charge="-0.6139" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="1507" charge="0.4186" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1507" charge="0.4186" sigma="1.0" epsilon="0.0"/>
   <Atom type="1508" charge="-0.5246" sigma="0.300001234347" epsilon="0.71128"/>
   <Atom type="1509" charge="1.1662" sigma="0.374177461619" epsilon="0.8368"/>
   <Atom type="1510" charge="-0.776" sigma="0.295992190115" epsilon="0.87864"/>
@@ -9521,10 +9521,10 @@
   <Atom type="1535" charge="0.067" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1536" charge="0.0972" sigma="0.247135304412" epsilon="0.0656888"/>
   <Atom type="1537" charge="-0.6139" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="1538" charge="0.4186" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1538" charge="0.4186" sigma="1.0" epsilon="0.0"/>
   <Atom type="1539" charge="-0.6541" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="1540" charge="0.4376" sigma="0.0" epsilon="0.0"/>
-  <Atom type="1541" charge="0.4295" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1540" charge="0.4376" sigma="1.0" epsilon="0.0"/>
+  <Atom type="1541" charge="0.4295" sigma="1.0" epsilon="0.0"/>
   <Atom type="1542" charge="-0.6223" sigma="0.306647338784" epsilon="0.8803136"/>
   <Atom type="1543" charge="0.0558" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1544" charge="0.0679" sigma="0.247135304412" epsilon="0.0656888"/>
@@ -9551,9 +9551,9 @@
   <Atom type="1565" charge="0.067" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1566" charge="0.0972" sigma="0.247135304412" epsilon="0.0656888"/>
   <Atom type="1567" charge="-0.6139" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="1568" charge="0.4186" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1568" charge="0.4186" sigma="1.0" epsilon="0.0"/>
   <Atom type="1569" charge="-0.5246" sigma="0.300001234347" epsilon="0.71128"/>
-  <Atom type="1570" charge="0.4295" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1570" charge="0.4295" sigma="1.0" epsilon="0.0"/>
   <Atom type="1571" charge="-0.6223" sigma="0.306647338784" epsilon="0.8803136"/>
   <Atom type="1572" charge="0.0558" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1573" charge="0.0679" sigma="0.247135304412" epsilon="0.0656888"/>
@@ -9580,9 +9580,9 @@
   <Atom type="1594" charge="0.067" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1595" charge="0.0972" sigma="0.247135304412" epsilon="0.0656888"/>
   <Atom type="1596" charge="-0.6139" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="1597" charge="0.4186" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1597" charge="0.4186" sigma="1.0" epsilon="0.0"/>
   <Atom type="1598" charge="-0.6541" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="1599" charge="0.4376" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1599" charge="0.4376" sigma="1.0" epsilon="0.0"/>
   <Atom type="1600" charge="1.1662" sigma="0.374177461619" epsilon="0.8368"/>
   <Atom type="1601" charge="-0.776" sigma="0.295992190115" epsilon="0.87864"/>
   <Atom type="1602" charge="-0.776" sigma="0.295992190115" epsilon="0.87864"/>
@@ -9610,7 +9610,7 @@
   <Atom type="1624" charge="0.067" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1625" charge="0.0972" sigma="0.247135304412" epsilon="0.0656888"/>
   <Atom type="1626" charge="-0.6139" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="1627" charge="0.4186" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1627" charge="0.4186" sigma="1.0" epsilon="0.0"/>
   <Atom type="1628" charge="-0.5246" sigma="0.300001234347" epsilon="0.71128"/>
   <Atom type="1629" charge="1.1662" sigma="0.374177461619" epsilon="0.8368"/>
   <Atom type="1630" charge="-0.776" sigma="0.295992190115" epsilon="0.87864"/>
@@ -9639,10 +9639,10 @@
   <Atom type="1653" charge="0.067" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1654" charge="0.0972" sigma="0.247135304412" epsilon="0.0656888"/>
   <Atom type="1655" charge="-0.6139" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="1656" charge="0.4186" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1656" charge="0.4186" sigma="1.0" epsilon="0.0"/>
   <Atom type="1657" charge="-0.6541" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="1658" charge="0.4376" sigma="0.0" epsilon="0.0"/>
-  <Atom type="1659" charge="0.4295" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1658" charge="0.4376" sigma="1.0" epsilon="0.0"/>
+  <Atom type="1659" charge="0.4295" sigma="1.0" epsilon="0.0"/>
   <Atom type="1660" charge="-0.6223" sigma="0.306647338784" epsilon="0.8803136"/>
   <Atom type="1661" charge="0.0558" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1662" charge="0.0679" sigma="0.247135304412" epsilon="0.0656888"/>
@@ -9667,9 +9667,9 @@
   <Atom type="1681" charge="0.067" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1682" charge="0.0972" sigma="0.247135304412" epsilon="0.0656888"/>
   <Atom type="1683" charge="-0.6139" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="1684" charge="0.4186" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1684" charge="0.4186" sigma="1.0" epsilon="0.0"/>
   <Atom type="1685" charge="-0.5246" sigma="0.300001234347" epsilon="0.71128"/>
-  <Atom type="1686" charge="0.4295" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1686" charge="0.4295" sigma="1.0" epsilon="0.0"/>
   <Atom type="1687" charge="-0.6223" sigma="0.306647338784" epsilon="0.8803136"/>
   <Atom type="1688" charge="0.0558" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1689" charge="0.0679" sigma="0.247135304412" epsilon="0.0656888"/>
@@ -9694,9 +9694,9 @@
   <Atom type="1708" charge="0.067" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1709" charge="0.0972" sigma="0.247135304412" epsilon="0.0656888"/>
   <Atom type="1710" charge="-0.6139" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="1711" charge="0.4186" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1711" charge="0.4186" sigma="1.0" epsilon="0.0"/>
   <Atom type="1712" charge="-0.6541" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="1713" charge="0.4376" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1713" charge="0.4376" sigma="1.0" epsilon="0.0"/>
   <Atom type="1714" charge="1.1662" sigma="0.374177461619" epsilon="0.8368"/>
   <Atom type="1715" charge="-0.776" sigma="0.295992190115" epsilon="0.87864"/>
   <Atom type="1716" charge="-0.776" sigma="0.295992190115" epsilon="0.87864"/>
@@ -9727,7 +9727,7 @@
   <Atom type="1741" charge="0.067" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1742" charge="0.0972" sigma="0.247135304412" epsilon="0.0656888"/>
   <Atom type="1743" charge="-0.6139" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="1744" charge="0.4186" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1744" charge="0.4186" sigma="1.0" epsilon="0.0"/>
   <Atom type="1745" charge="-0.5246" sigma="0.300001234347" epsilon="0.71128"/>
   <Atom type="1746" charge="1.1662" sigma="0.374177461619" epsilon="0.8368"/>
   <Atom type="1747" charge="-0.776" sigma="0.295992190115" epsilon="0.87864"/>
@@ -9759,10 +9759,10 @@
   <Atom type="1773" charge="0.067" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1774" charge="0.0972" sigma="0.247135304412" epsilon="0.0656888"/>
   <Atom type="1775" charge="-0.6139" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="1776" charge="0.4186" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1776" charge="0.4186" sigma="1.0" epsilon="0.0"/>
   <Atom type="1777" charge="-0.6541" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="1778" charge="0.4376" sigma="0.0" epsilon="0.0"/>
-  <Atom type="1779" charge="0.4295" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1778" charge="0.4376" sigma="1.0" epsilon="0.0"/>
+  <Atom type="1779" charge="0.4295" sigma="1.0" epsilon="0.0"/>
   <Atom type="1780" charge="-0.6223" sigma="0.306647338784" epsilon="0.8803136"/>
   <Atom type="1781" charge="0.0558" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1782" charge="0.0679" sigma="0.247135304412" epsilon="0.0656888"/>
@@ -9790,9 +9790,9 @@
   <Atom type="1804" charge="0.067" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1805" charge="0.0972" sigma="0.247135304412" epsilon="0.0656888"/>
   <Atom type="1806" charge="-0.6139" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="1807" charge="0.4186" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1807" charge="0.4186" sigma="1.0" epsilon="0.0"/>
   <Atom type="1808" charge="-0.5246" sigma="0.300001234347" epsilon="0.71128"/>
-  <Atom type="1809" charge="0.4295" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1809" charge="0.4295" sigma="1.0" epsilon="0.0"/>
   <Atom type="1810" charge="-0.6223" sigma="0.306647338784" epsilon="0.8803136"/>
   <Atom type="1811" charge="0.0558" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1812" charge="0.0679" sigma="0.247135304412" epsilon="0.0656888"/>
@@ -9820,9 +9820,9 @@
   <Atom type="1834" charge="0.067" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1835" charge="0.0972" sigma="0.247135304412" epsilon="0.0656888"/>
   <Atom type="1836" charge="-0.6139" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="1837" charge="0.4186" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1837" charge="0.4186" sigma="1.0" epsilon="0.0"/>
   <Atom type="1838" charge="-0.6541" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="1839" charge="0.4376" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1839" charge="0.4376" sigma="1.0" epsilon="0.0"/>
   <Atom type="1840" charge="1.1662" sigma="0.374177461619" epsilon="0.8368"/>
   <Atom type="1841" charge="-0.776" sigma="0.295992190115" epsilon="0.87864"/>
   <Atom type="1842" charge="-0.776" sigma="0.295992190115" epsilon="0.87864"/>
@@ -9850,7 +9850,7 @@
   <Atom type="1864" charge="0.067" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1865" charge="0.0972" sigma="0.247135304412" epsilon="0.0656888"/>
   <Atom type="1866" charge="-0.6139" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="1867" charge="0.4186" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1867" charge="0.4186" sigma="1.0" epsilon="0.0"/>
   <Atom type="1868" charge="-0.5246" sigma="0.300001234347" epsilon="0.71128"/>
   <Atom type="1869" charge="1.1662" sigma="0.374177461619" epsilon="0.8368"/>
   <Atom type="1870" charge="-0.776" sigma="0.295992190115" epsilon="0.87864"/>
@@ -9879,10 +9879,10 @@
   <Atom type="1893" charge="0.067" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1894" charge="0.0972" sigma="0.247135304412" epsilon="0.0656888"/>
   <Atom type="1895" charge="-0.6139" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="1896" charge="0.4186" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1896" charge="0.4186" sigma="1.0" epsilon="0.0"/>
   <Atom type="1897" charge="-0.6541" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="1898" charge="0.4376" sigma="0.0" epsilon="0.0"/>
-  <Atom type="1899" charge="0.4295" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1898" charge="0.4376" sigma="1.0" epsilon="0.0"/>
+  <Atom type="1899" charge="0.4295" sigma="1.0" epsilon="0.0"/>
   <Atom type="1900" charge="-0.6223" sigma="0.306647338784" epsilon="0.8803136"/>
   <Atom type="1901" charge="0.0558" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1902" charge="0.0679" sigma="0.247135304412" epsilon="0.0656888"/>
@@ -9907,9 +9907,9 @@
   <Atom type="1921" charge="0.067" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1922" charge="0.0972" sigma="0.247135304412" epsilon="0.0656888"/>
   <Atom type="1923" charge="-0.6139" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="1924" charge="0.4186" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1924" charge="0.4186" sigma="1.0" epsilon="0.0"/>
   <Atom type="1925" charge="-0.5246" sigma="0.300001234347" epsilon="0.71128"/>
-  <Atom type="1926" charge="0.4295" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1926" charge="0.4295" sigma="1.0" epsilon="0.0"/>
   <Atom type="1927" charge="-0.6223" sigma="0.306647338784" epsilon="0.8803136"/>
   <Atom type="1928" charge="0.0558" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1929" charge="0.0679" sigma="0.247135304412" epsilon="0.0656888"/>
@@ -9934,9 +9934,9 @@
   <Atom type="1948" charge="0.067" sigma="0.339966950842" epsilon="0.4577296"/>
   <Atom type="1949" charge="0.0972" sigma="0.247135304412" epsilon="0.0656888"/>
   <Atom type="1950" charge="-0.6139" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="1951" charge="0.4186" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1951" charge="0.4186" sigma="1.0" epsilon="0.0"/>
   <Atom type="1952" charge="-0.6541" sigma="0.306647338784" epsilon="0.8803136"/>
-  <Atom type="1953" charge="0.4376" sigma="0.0" epsilon="0.0"/>
+  <Atom type="1953" charge="0.4376" sigma="1.0" epsilon="0.0"/>
   <Atom type="1954" charge="-1.0" sigma="0.440103966761" epsilon="0.4184"/>
   <Atom type="1955" charge="1.0" sigma="0.604920229617" epsilon="0.0003372304"/>
   <Atom type="1956" charge="1.0" sigma="0.473601758563" epsilon="0.001372352"/>
