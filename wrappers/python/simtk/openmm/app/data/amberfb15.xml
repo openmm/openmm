@@ -1,8 +1,8 @@
 <ForceField>
  <Info>
-  <Source>Release 1.0 of AMBER-FB15 parameters: https://github.com/pandegroup/AMBER-FB15/releases/tag/1.0 and converted from Input/a99sc-v2-r1.itp</Source>
-  <DateGenerated>2015-07-04</DateGenerated>
-  <Reference>Lee-Ping Wang, Kyle A. Beauchamp, Teresa Head-Gordon, William C. Swope, Julia E. Rice, David A. Case, Todd J. Martinez and Vijay S. Pande. "Systematic optimization of intramolecular parameters in a protein force field", in preparation.</Reference>
+  <Source>Release 1.01 of AMBER-FB15 parameters: https://github.com/pandegroup/AMBER-FB15/releases/tag/1.0 and converted from Input/a99sc-v2-r1.itp</Source>
+  <DateGenerated>2017-03-31</DateGenerated>
+  <Reference>Lee-Ping Wang, Keri A. McKiernan, Joseph Gomes, Kyle A. Beauchamp, Teresa Head-Gordon, Julia E. Rice, William C. Swope, Todd J. Martínez, and Vijay S. Pande. Building a More Predictive Protein Force Field: A Systematic and Reproducible Route to AMBER-FB15. (2017) J. Phys. Chem. B, DOI: 10.1021/acs.jpcb.7b02320 </Reference>
  </Info>
  <AtomTypes>
   <Type name="0" class="N" element="N" mass="14.00672"/>
