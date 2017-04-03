@@ -73,6 +73,7 @@ matrix:
       addons: {apt: {packages: []}}
 
     - sudo: false
+      dist: trusty
       python: 2.7_with_system_site_packages
       env: ==STATIC_LIB==
            OPENCL=false
@@ -82,6 +83,7 @@ matrix:
            CMAKE_FLAGS="-DOPENMM_BUILD_STATIC_LIB=ON"
 
     - sudo: false
+      dist: trusty
       python: 2.7_with_system_site_packages
       env: ==PYTHON_2==
            OPENCL=false
@@ -92,6 +94,7 @@ matrix:
            CMAKE_FLAGS="-DOPENMM_GENERATE_API_DOCS=ON"
 
     - sudo: false
+      dist: trusty
       python: 3.4
       env: ==PYTHON_3==
            OPENCL=false
