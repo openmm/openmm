@@ -725,6 +725,8 @@ File                           Force Field
 :code:`amber99sbnmr.xml`       Amber99SB with modifications to fit NMR data\ :cite:`Li2010`
 :code:`amber03.xml`            Amber03\ :cite:`Duan2003`
 :code:`amber10.xml`            Amber10 (documented in the AmberTools_ manual as `ff10`)
+:code:`amberfb15.xml`          AMBER-FB15\ :cite:`Wang2017`. Intramolecular parameters optimized with
+                               ForceBalance using high-level ab initio data.
 :code:`amoeba2009.xml`         AMOEBA 2009\ :cite:`Ren2002`.  This force field is deprecated.  It is 
                                recommended to use AMOEBA 2013 instead.
 :code:`amoeba2013.xml`         AMOEBA 2013\ :cite:`Shi2013`
