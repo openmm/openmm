@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -29,6 +29,7 @@
 
 #include "openmm/Platform.h"
 #include "openmm/System.h"
+#include "openmm/internal/ThreadPool.h"
 #include "windowsExportCuda.h"
 
 namespace OpenMM {
@@ -57,35 +58,35 @@ public:
      * This is the name of the parameter for selecting which CUDA device or devices to use.
      */
     static const std::string& CudaDeviceIndex() {
-        static const std::string key = "CudaDeviceIndex";
+        static const std::string key = "DeviceIndex";
         return key;
     }
     /**
      * This is the name of the parameter that reports the CUDA device or devices being used.
      */
     static const std::string& CudaDeviceName() {
-        static const std::string key = "CudaDeviceName";
+        static const std::string key = "DeviceName";
         return key;
     }
     /**
      * This is the name of the parameter for selecting whether CUDA should sync or spin loop while waiting for results.
      */
     static const std::string& CudaUseBlockingSync() {
-        static const std::string key = "CudaUseBlockingSync";
+        static const std::string key = "UseBlockingSync";
         return key;
     }
     /**
      * This is the name of the parameter for selecting what numerical precision to use.
      */
     static const std::string& CudaPrecision() {
-        static const std::string key = "CudaPrecision";
+        static const std::string key = "Precision";
         return key;
     }
     /**
      * This is the name of the parameter for selecting whether to use the CPU based PME calculation.
      */
     static const std::string& CudaUseCpuPme() {
-        static const std::string key = "CudaUseCpuPme";
+        static const std::string key = "UseCpuPme";
         return key;
     }
     /**
@@ -106,7 +107,21 @@ public:
      * This is the name of the parameter for specifying the path to the directory for creating temporary files.
      */
     static const std::string& CudaTempDirectory() {
-        static const std::string key = "CudaTempDirectory";
+        static const std::string key = "TempDirectory";
+        return key;
+    }
+    /**
+     * This is the name of the parameter for selecting whether to disable use of a separate stream for PME.
+     */
+    static const std::string& CudaDisablePmeStream() {
+        static const std::string key = "DisablePmeStream";
+        return key;
+    }
+    /**
+     * This is the name of the parameter for requesting that force computations be fully deterministic.
+     */
+    static const std::string& CudaDeterministicForces() {
+        static const std::string key = "DeterministicForces";
         return key;
     }
 };
@@ -114,18 +129,20 @@ public:
 class OPENMM_EXPORT_CUDA CudaPlatform::PlatformData {
 public:
     PlatformData(ContextImpl* context, const System& system, const std::string& deviceIndexProperty, const std::string& blockingProperty, const std::string& precisionProperty,
-            const std::string& cpuPmeProperty, const std::string& compilerProperty, const std::string& tempProperty, const std::string& hostCompilerProperty);
+            const std::string& cpuPmeProperty, const std::string& compilerProperty, const std::string& tempProperty, const std::string& hostCompilerProperty,
+            const std::string& pmeStreamProperty, const std::string& deterministicForcesProperty, int numThreads);
     ~PlatformData();
     void initializeContexts(const System& system);
     void syncContexts();
     ContextImpl* context;
     std::vector<CudaContext*> contexts;
     std::vector<double> contextEnergy;
-    bool removeCM, peerAccessSupported, useCpuPme;
+    bool hasInitializedContexts, removeCM, peerAccessSupported, useCpuPme, disablePmeStream, deterministicForces;
     int cmMotionFrequency;
     int stepCount, computeForceCount;
     double time;
     std::map<std::string, std::string> propertyValues;
+    ThreadPool threads;
 };
 
 } // namespace OpenMM

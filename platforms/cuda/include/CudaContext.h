@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2017 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -30,6 +30,7 @@
 #include <map>
 #include <queue>
 #include <string>
+#include <utility>
 #define __CL_ENABLE_EXCEPTIONS
 #ifdef _MSC_VER
     // Prevent Windows from defining macros that interfere with other code.
@@ -175,6 +176,12 @@ public:
      */
     CudaArray& getEnergyBuffer() {
         return *energyBuffer;
+    }
+    /**
+     * Get the array which contains the buffer in which derivatives of the energy with respect to parameters are computed.
+     */
+    CudaArray& getEnergyParamDerivBuffer() {
+        return *energyParamDerivBuffer;
     }
     /**
      * Get a pointer to a block of pinned memory that can be used for efficient transfers between host and device.
@@ -324,6 +331,18 @@ public:
      */
     void setStepsSinceReorder(int steps) {
         stepsSinceReorder = steps;
+    }
+    /**
+     * Get the flag that marks whether the current force evaluation is valid.
+     */
+    bool getForcesValid() const {
+        return forcesValid;
+    }
+    /**
+     * Get the flag that marks whether the current force evaluation is valid.
+     */
+    void setForcesValid(bool valid) {
+        forcesValid = valid;
     }
     /**
      * Get the number of atoms.
@@ -476,6 +495,10 @@ public:
         return *nonbonded;
     }
     /**
+     * Set the particle charges.  These are packed into the fourth element of the posq array.
+     */
+    void setCharges(const std::vector<double>& charges);
+    /**
      * Get the thread used by this context for executing parallel computations.
      */
     WorkThread& getWorkThread() {
@@ -532,12 +555,44 @@ public:
         return postComputations;
     }
     /**
+     * Get the names of all parameters with respect to which energy derivatives are computed.
+     */
+    const std::vector<std::string>& getEnergyParamDerivNames() const {
+        return energyParamDerivNames;
+    }
+    /**
+     * Get a workspace data structure used for accumulating the values of derivatives of the energy
+     * with respect to parameters.
+     */
+    std::map<std::string, double>& getEnergyParamDerivWorkspace() {
+        return energyParamDerivWorkspace;
+    }
+    /**
+     * Register that the derivative of potential energy with respect to a context parameter
+     * will need to be calculated.  If this is called multiple times for a single parameter,
+     * it is only added to the list once.
+     * 
+     * @param param    the name of the parameter to add
+     */
+    void addEnergyParameterDerivative(const std::string& param);
+    /**
      * Mark that the current molecule definitions (and hence the atom order) may be invalid.
      * This should be called whenever force field parameters change.  It will cause the definitions
      * and order to be revalidated.
      */
     void invalidateMolecules();
+    /**
+     * Mark that the current molecule definitions from one particular force (and hence the atom order)
+     * may be invalid.  This should be called whenever force field parameters change.  It will cause the
+     * definitions and order to be revalidated.
+     */
+    bool invalidateMolecules(CudaForceInfo* force);
 private:
+    /**
+     * Compute a sorted list of device indices in decreasing order of desirability
+     */
+    std::vector<int> getDevicePrecedence();
+
     struct Molecule;
     struct MoleculeGroup;
     class VirtualSiteInfo;
@@ -566,7 +621,7 @@ private:
     int paddedNumAtoms;
     int numAtomBlocks;
     int numThreadBlocks;
-    bool useBlockingSync, useDoublePrecision, useMixedPrecision, contextIsValid, atomsWereReordered, boxIsTriclinic, hasCompilerKernel;
+    bool useBlockingSync, useDoublePrecision, useMixedPrecision, contextIsValid, atomsWereReordered, boxIsTriclinic, hasCompilerKernel, isNvccAvailable, forcesValid;
     std::string compiler, tempDir, cacheDir, gpuArchitecture;
     float4 periodicBoxVecXFloat, periodicBoxVecYFloat, periodicBoxVecZFloat, periodicBoxSizeFloat, invPeriodicBoxSizeFloat;
     double4 periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ, periodicBoxSize, invPeriodicBoxSize;
@@ -581,6 +636,7 @@ private:
     CUfunction clearFourBuffersKernel;
     CUfunction clearFiveBuffersKernel;
     CUfunction clearSixBuffersKernel;
+    CUfunction setChargesKernel;
     std::vector<CudaForceInfo*> forces;
     std::vector<Molecule> molecules;
     std::vector<MoleculeGroup> moleculeGroups;
@@ -591,7 +647,11 @@ private:
     CudaArray* velm;
     CudaArray* force;
     CudaArray* energyBuffer;
+    CudaArray* energyParamDerivBuffer;
     CudaArray* atomIndexDevice;
+    CudaArray* chargeBuffer;
+    std::vector<std::string> energyParamDerivNames;
+    std::map<std::string, double> energyParamDerivWorkspace;
     std::vector<int> atomIndex;
     std::vector<CUdeviceptr> autoclearBuffers;
     std::vector<int> autoclearBufferSizes;

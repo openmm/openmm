@@ -37,23 +37,23 @@ class OPENMM_EXPORT ReferenceCCMAAlgorithm : public ReferenceConstraintAlgorithm
 protected:
 
     int _maximumNumberOfIterations;
-    RealOpenMM _elementCutoff;
+    double _elementCutoff;
 
     int _numberOfConstraints;
     std::vector<std::pair<int, int> > _atomIndices;
-    std::vector<RealOpenMM> _distance;
+    std::vector<double> _distance;
 
-    std::vector<OpenMM::RealVec> _r_ij;
-    RealOpenMM* _d_ij2;
-    RealOpenMM* _distanceTolerance;
-    RealOpenMM* _reducedMasses;
+    std::vector<OpenMM::Vec3> _r_ij;
+    double* _d_ij2;
+    double* _distanceTolerance;
+    double* _reducedMasses;
     bool _hasInitializedMasses;
-    std::vector<std::vector<std::pair<int, RealOpenMM> > > _matrix;
+    std::vector<std::vector<std::pair<int, double> > > _matrix;
 
 private:
 
-    void applyConstraints(std::vector<OpenMM::RealVec>& atomCoordinates,
-                       std::vector<OpenMM::RealVec>& atomCoordinatesP, std::vector<RealOpenMM>& inverseMasses, bool constrainingVelocities, RealOpenMM tolerance);
+    void applyConstraints(std::vector<OpenMM::Vec3>& atomCoordinates,
+                       std::vector<OpenMM::Vec3>& atomCoordinatesP, std::vector<double>& inverseMasses, bool constrainingVelocities, double tolerance);
           
 public:
     class AngleInfo;
@@ -69,7 +69,7 @@ public:
      * @param angles                   angle force field terms
      * @param elementCutoff            the cutoff for which elements of the inverse matrix to keep
      */
-    ReferenceCCMAAlgorithm(int numberOfAtoms, int numberOfConstraints, const std::vector<std::pair<int, int> >& atomIndices, const std::vector<RealOpenMM>& distance, std::vector<RealOpenMM>& masses, std::vector<AngleInfo>& angles, RealOpenMM elementCutoff);
+    ReferenceCCMAAlgorithm(int numberOfAtoms, int numberOfConstraints, const std::vector<std::pair<int, int> >& atomIndices, const std::vector<double>& distance, std::vector<double>& masses, std::vector<AngleInfo>& angles, double elementCutoff);
 
     ~ReferenceCCMAAlgorithm();
 
@@ -96,8 +96,8 @@ public:
      * @param inverseMasses    1/mass
      * @param tolerance        the constraint tolerance
      */
-    void apply(std::vector<OpenMM::RealVec>& atomCoordinates,
-                       std::vector<OpenMM::RealVec>& atomCoordinatesP, std::vector<RealOpenMM>& inverseMasses, RealOpenMM tolerance);
+    void apply(std::vector<OpenMM::Vec3>& atomCoordinates,
+                       std::vector<OpenMM::Vec3>& atomCoordinatesP, std::vector<double>& inverseMasses, double tolerance);
 
     /**
      * Apply the constraint algorithm to velocities.
@@ -107,14 +107,14 @@ public:
      * @param inverseMasses    1/mass
      * @param tolerance        the constraint tolerance
      */
-    void applyToVelocities(std::vector<OpenMM::RealVec>& atomCoordinates,
-                     std::vector<OpenMM::RealVec>& velocities, std::vector<RealOpenMM>& inverseMasses, RealOpenMM tolerance);
+    void applyToVelocities(std::vector<OpenMM::Vec3>& atomCoordinates,
+                     std::vector<OpenMM::Vec3>& velocities, std::vector<double>& inverseMasses, double tolerance);
 
     /**
      * Get the inverse constraint matrix.  Each element represents one column, and contains a list
      * of all non-zero elements in the form (index, value).
      */
-    const std::vector<std::vector<std::pair<int, RealOpenMM> > >& getMatrix() const;
+    const std::vector<std::vector<std::pair<int, double> > >& getMatrix() const;
 
 };
 
@@ -122,8 +122,8 @@ class ReferenceCCMAAlgorithm::AngleInfo
 {
 public:
     int atom1, atom2, atom3;
-    RealOpenMM angle;
-    AngleInfo(int atom1, int atom2, int atom3, RealOpenMM angle) :
+    double angle;
+    AngleInfo(int atom1, int atom2, int atom3, double angle) :
         atom1(atom1), atom2(atom2), atom3(atom3), angle(angle)
     {
     }

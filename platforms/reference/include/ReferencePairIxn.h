@@ -25,7 +25,7 @@
 #ifndef __ReferencePairIxn_H__
 #define __ReferencePairIxn_H__
 
-#include "RealVec.h"
+#include "openmm/Vec3.h"
 #include "openmm/internal/windowsExport.h"
 #include <vector>
 
@@ -68,10 +68,10 @@ class OPENMM_EXPORT ReferencePairIxn {
             
          --------------------------------------------------------------------------------------- */
           
-      virtual void calculatePairIxn(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
-                            RealOpenMM** atomParameters, int** exclusions,
-                            RealOpenMM* fixedParameters, std::vector<OpenMM::RealVec>& forces,
-                            RealOpenMM* energyByAtom, RealOpenMM* totalEnergy) const = 0;
+      virtual void calculatePairIxn(int numberOfAtoms, std::vector<OpenMM::Vec3>& atomCoordinates,
+                            double** atomParameters, int** exclusions,
+                            double* fixedParameters, std::vector<OpenMM::Vec3>& forces,
+                            double* energyByAtom, double* totalEnergy) const = 0;
       
 };
 

@@ -25,7 +25,6 @@
 #ifndef __AmoebaReferenceForce_H__
 #define __AmoebaReferenceForce_H__
 
-#include "RealVec.h"
 #include "openmm/Vec3.h"
 #include <vector>
 
@@ -62,8 +61,20 @@ public:
     
        --------------------------------------------------------------------------------------- */
     
-    static void loadDeltaR(const OpenMM::RealVec& xVector, const OpenMM::RealVec& yVector,
-                           std::vector<RealOpenMM>& deltaR);
+    static void loadDeltaR(const OpenMM::Vec3& xVector, const OpenMM::Vec3& yVector,
+                           std::vector<double>& deltaR);
+    /**---------------------------------------------------------------------------------------
+
+       Load delta of two vectors, applying periodic boundary conditions
+
+       @param xVector      first vector
+       @param yVector      second vector
+       @param deltaR       output vector: y - x
+       @param boxVectors   periodic box vectors
+
+       --------------------------------------------------------------------------------------- */
+
+    static void loadDeltaRPeriodic(const Vec3& xVector, const Vec3& yVector, std::vector<double>& deltaR, const Vec3* boxVectors);
     
     /**---------------------------------------------------------------------------------------
     
@@ -75,8 +86,8 @@ public:
     
        --------------------------------------------------------------------------------------- */
     
-    static RealOpenMM getNormSquared3(const std::vector<RealOpenMM>& inputVector);
-    static RealOpenMM getNormSquared3(const RealOpenMM* inputVector);
+    static double getNormSquared3(const std::vector<double>& inputVector);
+    static double getNormSquared3(const double* inputVector);
     
     /**---------------------------------------------------------------------------------------
     
@@ -88,8 +99,8 @@ public:
     
        --------------------------------------------------------------------------------------- */
     
-    static RealOpenMM getNorm3(const std::vector<RealOpenMM>& inputVector);
-    static RealOpenMM getNorm3(const RealOpenMM* inputVector);
+    static double getNorm3(const std::vector<double>& inputVector);
+    static double getNorm3(const double* inputVector);
     
     /**---------------------------------------------------------------------------------------
     
@@ -101,7 +112,7 @@ public:
     
        --------------------------------------------------------------------------------------- */
     
-    static RealOpenMM normalizeVector3(RealOpenMM* inputVector);
+    static double normalizeVector3(double* inputVector);
     
     /**---------------------------------------------------------------------------------------
     
@@ -114,10 +125,10 @@ public:
     
        --------------------------------------------------------------------------------------- */
     
-    static RealOpenMM getDotProduct3(const std::vector<RealOpenMM>& xVector, const std::vector<RealOpenMM>& yVector);
-    static RealOpenMM getDotProduct3(const RealOpenMM* xVector,              const RealOpenMM* yVector);
-    static RealOpenMM getDotProduct3(const RealOpenMM* xVector,              const OpenMM::Vec3& yVector);
-    static RealOpenMM getDotProduct3(unsigned int vectorOffset, const std::vector<RealOpenMM>& xVector, const RealOpenMM* yVector);
+    static double getDotProduct3(const std::vector<double>& xVector, const std::vector<double>& yVector);
+    static double getDotProduct3(const double* xVector,              const double* yVector);
+    static double getDotProduct3(const double* xVector,              const OpenMM::Vec3& yVector);
+    static double getDotProduct3(unsigned int vectorOffset, const std::vector<double>& xVector, const double* yVector);
     
     /**---------------------------------------------------------------------------------------
     
@@ -129,10 +140,10 @@ public:
     
        --------------------------------------------------------------------------------------- */
     
-    static void getCrossProduct(const std::vector<RealOpenMM>& xVector, const std::vector<RealOpenMM>& yVector,
-                                std::vector<RealOpenMM>& zVector);
+    static void getCrossProduct(const std::vector<double>& xVector, const std::vector<double>& yVector,
+                                std::vector<double>& zVector);
     
-    static void getCrossProduct(const RealOpenMM* xVector, const RealOpenMM* yVector, RealOpenMM* zVector);
+    static void getCrossProduct(const double* xVector, const double* yVector, double* zVector);
 
 
 };

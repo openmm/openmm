@@ -97,4 +97,5 @@ map<string, double> CustomExternalForceImpl::getDefaultParameters() {
 
 void CustomExternalForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcCustomExternalForceKernel>().copyParametersToContext(context, owner);
+    context.systemChanged();
 }

@@ -25,6 +25,7 @@
 #ifndef __ReferenceMonteCarloBarostat_H__
 #define __ReferenceMonteCarloBarostat_H__
 
+#include "openmm/Vec3.h"
 #include <utility>
 #include <vector>
 
@@ -34,7 +35,7 @@ class ReferenceMonteCarloBarostat {
 
    private:
 
-       std::vector<RealOpenMM> savedAtomPositions[3];
+       std::vector<double> savedAtomPositions[3];
        std::vector<std::vector<int> > molecules;
 
    public:
@@ -67,7 +68,7 @@ class ReferenceMonteCarloBarostat {
 
          --------------------------------------------------------------------------------------- */
 
-      void applyBarostat(std::vector<OpenMM::RealVec>& atomPositions, const OpenMM::RealVec* boxVectors, RealOpenMM scaleX, RealOpenMM scaleY, RealOpenMM scaleZ);
+      void applyBarostat(std::vector<OpenMM::Vec3>& atomPositions, const OpenMM::Vec3* boxVectors, double scaleX, double scaleY, double scaleZ);
 
       /**---------------------------------------------------------------------------------------
 
@@ -77,7 +78,7 @@ class ReferenceMonteCarloBarostat {
 
          --------------------------------------------------------------------------------------- */
 
-      void restorePositions(std::vector<OpenMM::RealVec>& atomPositions);
+      void restorePositions(std::vector<OpenMM::Vec3>& atomPositions);
 
 };
 

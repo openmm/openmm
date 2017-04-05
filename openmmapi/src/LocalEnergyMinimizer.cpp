@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -36,6 +36,7 @@
 #include <cmath>
 #include <sstream>
 #include <vector>
+#include <algorithm>
 
 using namespace OpenMM;
 using namespace std;
@@ -104,82 +105,95 @@ static lbfgsfloatval_t evaluate(void *instance, const lbfgsfloatval_t *x, lbfgsf
 void LocalEnergyMinimizer::minimize(Context& context, double tolerance, int maxIterations) {
     const System& system = context.getSystem();
     int numParticles = system.getNumParticles();
+    double constraintTol = context.getIntegrator().getConstraintTolerance();
+    double workingConstraintTol = std::max(1e-4, constraintTol);
+    double k = tolerance/workingConstraintTol;
     lbfgsfloatval_t *x = lbfgs_malloc(numParticles*3);
     if (x == NULL)
         throw OpenMMException("LocalEnergyMinimizer: Failed to allocate memory");
-    double constraintTol = context.getIntegrator().getConstraintTolerance();
-    double k = tolerance/constraintTol;
+    try {
 
-    // Initialize the minimizer.
+        // Initialize the minimizer.
 
-    lbfgs_parameter_t param;
-    lbfgs_parameter_init(&param);
-    if (!context.getPlatform().supportsDoublePrecision())
-        param.xtol = 1e-7;
-    param.max_iterations = maxIterations;
-    param.linesearch = LBFGS_LINESEARCH_BACKTRACKING_STRONG_WOLFE;
+        lbfgs_parameter_t param;
+        lbfgs_parameter_init(&param);
+        if (!context.getPlatform().supportsDoublePrecision())
+            param.xtol = 1e-7;
+        param.max_iterations = maxIterations;
+        param.linesearch = LBFGS_LINESEARCH_BACKTRACKING_STRONG_WOLFE;
 
-    // Make sure the initial configuration satisfies all constraints.
+        // Make sure the initial configuration satisfies all constraints.
 
-    context.applyConstraints(constraintTol);
+        context.applyConstraints(workingConstraintTol);
 
-    // Record the initial positions and determine a normalization constant for scaling the tolerance.
+        // Record the initial positions and determine a normalization constant for scaling the tolerance.
 
-    vector<Vec3> initialPos = context.getState(State::Positions).getPositions();
-    double norm = 0.0;
-    for (int i = 0; i < numParticles; i++) {
-        x[3*i] = initialPos[i][0];
-        x[3*i+1] = initialPos[i][1];
-        x[3*i+2] = initialPos[i][2];
-        norm += initialPos[i].dot(initialPos[i]);
-    }
-    norm /= numParticles;
-    norm = (norm < 1 ? 1 : sqrt(norm));
-    param.epsilon = tolerance/norm;
-
-    // Repeatedly minimize, steadily increasing the strength of the springs until all constraints are satisfied.
-
-    double prevMaxError = 1e10;
-    while (true) {
-        // Perform the minimization.
-
-        lbfgsfloatval_t fx;
-        MinimizerData data(context, k);
-        lbfgs(numParticles*3, x, &fx, evaluate, NULL, &data, &param);
-
-        // Check whether all constraints are satisfied.
-
-        vector<Vec3> positions = context.getState(State::Positions).getPositions();
-        int numConstraints = system.getNumConstraints();
-        double maxError = 0.0;
-        for (int i = 0; i < numConstraints; i++) {
-            int particle1, particle2;
-            double distance;
-            system.getConstraintParameters(i, particle1, particle2, distance);
-            Vec3 delta = positions[particle2]-positions[particle1];
-            double r = sqrt(delta.dot(delta));
-            double error = fabs(r-distance);
-            if (error > maxError)
-                maxError = error;
+        vector<Vec3> initialPos = context.getState(State::Positions).getPositions();
+        double norm = 0.0;
+        for (int i = 0; i < numParticles; i++) {
+            x[3*i] = initialPos[i][0];
+            x[3*i+1] = initialPos[i][1];
+            x[3*i+2] = initialPos[i][2];
+            norm += initialPos[i].dot(initialPos[i]);
         }
-        if (maxError <= constraintTol)
-            break; // All constraints are satisfied.
-        context.setPositions(initialPos);
-        if (maxError >= prevMaxError)
-            break; // Further tightening the springs doesn't seem to be helping, so just give up.
-        prevMaxError = maxError;
-        k *= 10;
-        if (maxError > 100*constraintTol) {
-            // We've gotten far enough from a valid state that we might have trouble getting
-            // back, so reset to the original positions.
-            
-            for (int i = 0; i < numParticles; i++) {
-                x[3*i] = initialPos[i][0];
-                x[3*i+1] = initialPos[i][1];
-                x[3*i+2] = initialPos[i][2];
+        norm /= numParticles;
+        norm = (norm < 1 ? 1 : sqrt(norm));
+        param.epsilon = tolerance/norm;
+
+        // Repeatedly minimize, steadily increasing the strength of the springs until all constraints are satisfied.
+
+        double prevMaxError = 1e10;
+        while (true) {
+            // Perform the minimization.
+
+            lbfgsfloatval_t fx;
+            MinimizerData data(context, k);
+            lbfgs(numParticles*3, x, &fx, evaluate, NULL, &data, &param);
+
+            // Check whether all constraints are satisfied.
+
+            vector<Vec3> positions = context.getState(State::Positions).getPositions();
+            int numConstraints = system.getNumConstraints();
+            double maxError = 0.0;
+            for (int i = 0; i < numConstraints; i++) {
+                int particle1, particle2;
+                double distance;
+                system.getConstraintParameters(i, particle1, particle2, distance);
+                Vec3 delta = positions[particle2]-positions[particle1];
+                double r = sqrt(delta.dot(delta));
+                double error = fabs(r-distance);
+                if (error > maxError)
+                    maxError = error;
+            }
+            if (maxError <= workingConstraintTol)
+                break; // All constraints are satisfied.
+            context.setPositions(initialPos);
+            if (maxError >= prevMaxError)
+                break; // Further tightening the springs doesn't seem to be helping, so just give up.
+            prevMaxError = maxError;
+            k *= 10;
+            if (maxError > 100*workingConstraintTol) {
+                // We've gotten far enough from a valid state that we might have trouble getting
+                // back, so reset to the original positions.
+
+                for (int i = 0; i < numParticles; i++) {
+                    x[3*i] = initialPos[i][0];
+                    x[3*i+1] = initialPos[i][1];
+                    x[3*i+2] = initialPos[i][2];
+                }
             }
         }
     }
+    catch (...) {
+        lbfgs_free(x);
+        throw;
+    }
     lbfgs_free(x);
+    
+    // If necessary, do a final constraint projection to make sure they are satisfied
+    // to the full precision requested by the user.
+    
+    if (constraintTol < workingConstraintTol)
+        context.applyConstraints(workingConstraintTol);
 }
 

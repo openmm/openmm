@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -104,10 +104,14 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
         return new CudaCalcCustomExternalForceKernel(name, platform, cu, context.getSystem());
     if (name == CalcCustomHbondForceKernel::Name())
         return new CudaCalcCustomHbondForceKernel(name, platform, cu, context.getSystem());
+    if (name == CalcCustomCentroidBondForceKernel::Name())
+        return new CudaCalcCustomCentroidBondForceKernel(name, platform, cu, context.getSystem());
     if (name == CalcCustomCompoundBondForceKernel::Name())
         return new CudaCalcCustomCompoundBondForceKernel(name, platform, cu, context.getSystem());
     if (name == CalcCustomManyParticleForceKernel::Name())
         return new CudaCalcCustomManyParticleForceKernel(name, platform, cu, context.getSystem());
+    if (name == CalcGayBerneForceKernel::Name())
+        return new CudaCalcGayBerneForceKernel(name, platform, cu);
     if (name == IntegrateVerletStepKernel::Name())
         return new CudaIntegrateVerletStepKernel(name, platform, cu);
     if (name == IntegrateLangevinStepKernel::Name())

@@ -38,20 +38,64 @@ Follow these instructions to install OpenMM.  There also is an online
 troubleshooting guide that describes common problems and how to fix them
 (http://wiki.simtk.org/openmm/FAQApp).
 
+There are two ways to install OpenMM: using the Conda package manager (http://conda.pydata.org),
+or with standalone installers.  (A third option is to compile it from source, which is
+discussed in Chapter :ref:`compiling-openmm-from-source-code`.)  Using Conda is
+the easier method, and is recommended for most users.  It is described first,
+and then the following sections describe how to use the standalone installers
+for various platforms.
+
+
+Installing with Conda
+*********************
+
+Conda is included as part of the Anaconda Python distribution, which you can
+download from http://docs.continuum.io/anaconda/install.  This is a Python
+distribution specifically designed for scientific applications, with many of the
+most popular mathematical and scientific packages preinstalled.  Alternatively
+you can use Miniconda (available from http://conda.pydata.org/miniconda.html),
+which includes only Python itself, plus the Conda package manager.  That offers
+a much smaller initial download, with the ability to then install only the
+packages you want.
+
+1. Begin by installing the most recent 64 bit, Python 3.x version of either
+Anaconda or Miniconda.
+
+2. (Optional) If you want to run OpenMM on a GPU, install CUDA and/or OpenCL.
+
+  * If you have an Nvidia GPU, download CUDA 8.0 from
+    https://developer.nvidia.com/cuda-downloads.  Be sure to install both the
+    drivers and toolkit.  OpenCL is included with the CUDA drivers.
+  * If you have an AMD GPU and are using Linux or Windows, download the latest
+    version of the Catalyst driver from http://support.amd.com.  On OS X, OpenCL
+    is included with the operating system and is supported on OS X 10.10.3 or
+    later.
+
+3. Open a command line terminal and type the following command
+::
+
+    conda install -c omnia openmm
+
+4. Verify your installation by typing the following command:
+::
+
+    python -m simtk.testInstallation
+
+This command confirms that OpenMM is installed, checks whether GPU acceleration
+is available (via the OpenCL and/or CUDA platforms), and verifies that all
+platforms produce consistent results.
+
+
 .. _installing-on-mac-os-x:
 
 Installing on Mac OS X
 **********************
 
-OpenMM works on Mac OS X 10.7 or later.
+OpenMM works on Mac OS X 10.7 or later.  OpenCL is supported on OS X 10.10.3 or
+later.
 
-.. note::
-   The OpenCL implementations on all recent versions of Mac OS X contain serious
-   bugs that make them unsuitable for use with OpenMM.  GPU acceleration is
-   therefore only supported with the CUDA platform.  This limits it to only Nvidia
-   GPUs, not AMD or Intel GPUs.
-
-1. Download the pre-compiled binary of OpenMM for Mac OS X, then double click
+1. Download the pre-compiled binary of OpenMM for Mac OS X from
+https://simtk.org/project/xml/downloads.xml?group_id=161, then double click
 the .zip file to expand it.
 
 2. If you have not already done so, install Apple’s Xcode developer tools from
@@ -61,7 +105,7 @@ and tell it to install the command line tools.  With Xcode 4.2 and earlier, the
 command line tools are automatically installed when you install Xcode.)
 
 3. (Optional) If you have an Nvidia GPU and want to use the CUDA platform,
-download CUDA 7.0 from https://developer.nvidia.com/cuda-downloads.  Be sure to
+download CUDA 8.0 from https://developer.nvidia.com/cuda-downloads.  Be sure to
 install both the drivers and toolkit.
 
 4. (Optional) If you plan to use the CPU platform, it is recommended that you
@@ -116,17 +160,18 @@ produce an error.  You will only see this option if your laptop has two GPUs
 Installing on Linux
 *******************
 
-1. Download the pre-compiled binary of OpenMM for Linux, then double click the
+1. Download the pre-compiled binary of OpenMM for Linux from
+https://simtk.org/project/xml/downloads.xml?group_id=161, then double click the
 .zip file to expand it.
 
-2. Make sure you have Python 2.6 or higher (earlier versions will not work) and
+2. Make sure you have Python 2.7 or higher (earlier versions will not work) and
 a C++ compiler (typically :program:`gcc` or :program:`clang`) installed on your computer.  You can
 check what version of Python is installed by typing :code:`python` |--|\ :code:`version`
 into a console window.
 
 3. (Optional) If you want to run OpenMM on a GPU, install CUDA and/or OpenCL.
 
-  * If you have an Nvidia GPU, download CUDA 7.0 from
+  * If you have an Nvidia GPU, download CUDA 8.0 from
     https://developer.nvidia.com/cuda-downloads.  Be sure to install both the
     drivers and toolkit.  OpenCL is included with the CUDA drivers.
   * If you have an AMD GPU, download the latest version of the Catalyst driver
@@ -180,7 +225,8 @@ platforms produce consistent results.
 Installing on Windows
 *********************
 
-1. Download the pre-compiled binary of OpenMM for Windows, then double click the
+1. Download the pre-compiled binary of OpenMM for Windows from
+https://simtk.org/project/xml/downloads.xml?group_id=161, then double click the
 .zip file to expand it.  Move the files to :file:`C:\\Program Files\\OpenMM`.
 
 2. Make sure you have the 64-bit version of Python 3.3 or 3.4 (other versions will not
@@ -197,7 +243,7 @@ and ignore it.)
 
 4. (Optional) If you want to run OpenMM on a GPU, install CUDA and/or OpenCL.
 
-  * If you have an Nvidia GPU, download CUDA 7.0 from
+  * If you have an Nvidia GPU, download CUDA 8.0 from
     https://developer.nvidia.com/cuda-downloads.  Be sure to install both the
     drivers and toolkit.  OpenCL is included with the CUDA drivers.
   * If you have an AMD GPU, download the latest version of the Catalyst driver
@@ -349,7 +395,7 @@ files in the newer PDBx/mmCIF format: just change :class:`PDBFile` to :class:`PD
 This line specifies the force field to use for the simulation.  Force fields are
 defined by XML files.  OpenMM includes XML files defining lots of standard force fields (see Section :ref:`force-fields`).
 If you find you need to extend the repertoire of force fields available,
-you can find more information on how to create these XML files in Section :ref:`creating-force-fields`.
+you can find more information on how to create these XML files in Chapter :ref:`creating-force-fields`.
 In this case we load two of those files: :file:`amber99sb.xml`, which contains the
 Amber99SB force field, and :file:`tip3p.xml`, which contains the TIP3P water model.  The
 :class:`ForceField` object is assigned to a variable called :code:`forcefield`\ .
@@ -371,10 +417,8 @@ Note the way we specified the cutoff distance 1 nm using :code:`1*nanometer`:
 This is an example of the powerful units tracking and automatic conversion facility
 built into the OpenMM Python API that makes specifying unit-bearing quantities
 convenient and less error-prone.  We could have equivalently specified
-:code:`10*angstrom` instead of :code:`1*nanometer` and achieved the same result,
-but had we specified the wrong dimensions, such as :code:`1*(nanometer**2)` or
-:code:`1*picoseconds`, OpenMM would have thrown an exception. The units system
-will be described in more detail later, in Section :ref:`units-and-dimensional-analysis`.
+:code:`10*angstrom` instead of :code:`1*nanometer` and achieved the same result.
+The units system will be described in more detail later, in Section :ref:`units-and-dimensional-analysis`.
 ::
 
     integrator = LangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
@@ -587,7 +631,7 @@ application.  OpenMM needs to know where to find these files, so the
 :code:`includeDir` parameter specifies the directory containing them.  If you
 omit this parameter, OpenMM will assume the default location :file:`/usr/local/gromacs/share/gromacs/top`,
 which is often where they are installed on
-Unix-like operating systems.  So in :numref:`Example,Gromacs example` we actually could have omitted
+Unix-like operating systems.  So in :autonumref:`Example,Gromacs example` we actually could have omitted
 this parameter, but if the Gromacs files were installed in any other location,
 we would need to include it.
 
@@ -675,11 +719,17 @@ Platforms
 
 When creating a :class:`Simulation`, you can optionally tell it what :class:`Platform` to use.
 OpenMM includes four platforms: :class:`Reference`, :class:`CPU`, :class:`CUDA`, and :class:`OpenCL`.  For a
-description of the differences between them, see Section :ref:`platforms`.  If you do not
-specify a :class:`Platform`, it will select one automatically.  Usually its choice will
-be reasonable, but you may want to change it.
+description of the differences between them, see Section :ref:`platforms`.  There are three ways in which
+the :class:`Platform` can be chosen:
 
-The following lines specify to use the :class:`CUDA` platform:
+1. By default, OpenMM will try to select the fastest available :class:`Platform`.  Usually its choice will
+be reasonable, but sometimes you may want to change it.
+
+2. Alternatively, you can set the :envvar:`OPENMM_DEFAULT_PLATFORM` environment variable to the name
+of the :class:`Platform` to use.  This overrides the default logic.
+
+3. Finally, you can explicitly specify a :class:`Platform` object in your script when you create the
+:class:`Simulation`.  The following lines specify to use the :class:`CUDA` platform:
 ::
 
     platform = Platform.getPlatformByName('CUDA')
@@ -696,7 +746,7 @@ double precision:
 ::
 
     platform = Platform.getPlatformByName('CUDA')
-    properties = {'CudaDeviceIndex': '0,1', 'CudaPrecision': 'double'}
+    properties = {'DeviceIndex': '0,1', 'Precision': 'double'}
     simulation = Simulation(prmtop.topology, system, integrator, platform, properties)
 
 .. _force-fields:
@@ -717,7 +767,7 @@ For the main force field, OpenMM provides the following options:
 .. tabularcolumns:: |l|L|
 
 =============================  ================================================================================
-File                           Force Field                                                                     
+File                           Force Field
 =============================  ================================================================================
 :code:`amber96.xml`            Amber96\ :cite:`Kollman1997`
 :code:`amber99sb.xml`          Amber99\ :cite:`Wang2000` with modified backbone torsions\ :cite:`Hornak2006`
@@ -742,14 +792,14 @@ files:
 .. tabularcolumns:: |l|L|
 
 ===================  ============================================
-File                 Water Model                                 
+File                 Water Model
 ===================  ============================================
-:code:`tip3p.xml`    TIP3P water model\ :cite:`Jorgensen1983`  
-:code:`tip3pfb.xml`  TIP3P-FB water model\ :cite:`Wang2014`    
-:code:`tip4pew.xml`  TIP4P-Ew water model\ :cite:`Horn2004`    
-:code:`tip4pfb.xml`  TIP4P-FB water model\ :cite:`Wang2014`    
-:code:`tip5p.xml`    TIP5P water model\ :cite:`Mahoney2000`    
-:code:`spce.xml`     SPC/E water model\ :cite:`Berendsen1987`  
+:code:`tip3p.xml`    TIP3P water model\ :cite:`Jorgensen1983`
+:code:`tip3pfb.xml`  TIP3P-FB water model\ :cite:`Wang2014`
+:code:`tip4pew.xml`  TIP4P-Ew water model\ :cite:`Horn2004`
+:code:`tip4pfb.xml`  TIP4P-FB water model\ :cite:`Wang2014`
+:code:`tip5p.xml`    TIP5P water model\ :cite:`Mahoney2000`
+:code:`spce.xml`     SPC/E water model\ :cite:`Berendsen1987`
 :code:`swm4ndp.xml`  SWM4-NDP water model\ :cite:`Lamoureux2006`
 ===================  ============================================
 
@@ -765,7 +815,7 @@ the following files:
 .. tabularcolumns:: |l|L|
 
 =========================  =================================================================================================
-File                       Implicit Solvation Model                                                                      
+File                       Implicit Solvation Model
 =========================  =================================================================================================
 :code:`amber96_obc.xml`    GBSA-OBC solvation model\ :cite:`Onufriev2004` for use with Amber96 force field
 :code:`amber99_obc.xml`    GBSA-OBC solvation model for use with Amber99 force fields
@@ -817,15 +867,15 @@ allowed values for :code:`implicitSolvent`\ :
 .. tabularcolumns:: |l|L|
 
 =============  ==================================================================================================================================
-Value          Meaning                                                                                                                                                                                                          
+Value          Meaning
 =============  ==================================================================================================================================
-:code:`None`   No implicit solvent is used.                                                                                                                                                                                     
-:code:`HCT`    Hawkins-Cramer-Truhlar GBSA model\ :cite:`Hawkins1995` (corresponds to igb=1 in AMBER)                                                                                                                         
-:code:`OBC1`   Onufriev-Bashford-Case GBSA model\ :cite:`Onufriev2004` using the GB\ :sup:`OBC`\ I parameters (corresponds to igb=2 in AMBER).                                                                                
+:code:`None`   No implicit solvent is used.
+:code:`HCT`    Hawkins-Cramer-Truhlar GBSA model\ :cite:`Hawkins1995` (corresponds to igb=1 in AMBER)
+:code:`OBC1`   Onufriev-Bashford-Case GBSA model\ :cite:`Onufriev2004` using the GB\ :sup:`OBC`\ I parameters (corresponds to igb=2 in AMBER).
 :code:`OBC2`   Onufriev-Bashford-Case GBSA model\ :cite:`Onufriev2004` using the GB\ :sup:`OBC`\ II parameters (corresponds to igb=5 in AMBER).
                This is the same model used by the GBSA-OBC files described in Section :ref:`force-fields`.
-:code:`GBn`    GBn solvation model\ :cite:`Mongan2007` (corresponds to igb=7 in AMBER).                                                                                                                                       
-:code:`GBn2`   GBn2 solvation model\ :cite:`Nguyen2013` (corresponds to igb=8 in AMBER).                                                                                                                                      
+:code:`GBn`    GBn solvation model\ :cite:`Mongan2007` (corresponds to igb=7 in AMBER).
+:code:`GBn2`   GBn2 solvation model\ :cite:`Nguyen2013` (corresponds to igb=8 in AMBER).
 =============  ==================================================================================================================================
 
 
@@ -863,13 +913,14 @@ The :code:`nonbondedMethod` parameter can have any of the following values:
 .. tabularcolumns:: |l|L|
 
 =========================  ===========================================================================================================================================================================================================================================
-Value                      Meaning                                                                                                                                                                                                                                    
+Value                      Meaning
 =========================  ===========================================================================================================================================================================================================================================
-:code:`NoCutoff`           No cutoff is applied.                                                                                                                                                                                                                      
-:code:`CutoffNonPeriodic`  The reaction field method is used to eliminate all interactions beyond a cutoff distance.  Not valid for AMOEBA.                                                                                                                           
+:code:`NoCutoff`           No cutoff is applied.
+:code:`CutoffNonPeriodic`  The reaction field method is used to eliminate all interactions beyond a cutoff distance.  Not valid for AMOEBA.
 :code:`CutoffPeriodic`     The reaction field method is used to eliminate all interactions beyond a cutoff distance.  Periodic boundary conditions are applied, so each atom interacts only with the nearest periodic copy of every other atom.  Not valid for AMOEBA.
-:code:`Ewald`              Periodic boundary conditions are applied.  Ewald summation is used to compute long range interactions.  (This option is rarely used, since PME is much faster for all but the smallest systems.)  Not valid for AMOEBA.                    
-:code:`PME`                Periodic boundary conditions are applied.  The Particle Mesh Ewald method is used to compute long range interactions.                                                                                                                      
+:code:`Ewald`              Periodic boundary conditions are applied.  Ewald summation is used to compute long range Coulomb interactions.  (This option is rarely used, since PME is much faster for all but the smallest systems.)  Not valid for AMOEBA.
+:code:`PME`                Periodic boundary conditions are applied.  The Particle Mesh Ewald method is used to compute long range Coulomb interactions.
+:code:`LJPME`              Periodic boundary conditions are applied.  The Particle Mesh Ewald method is used to compute long range interactions for both Coulomb and Lennard-Jones.
 =========================  ===========================================================================================================================================================================================================================================
 
 
@@ -878,7 +929,7 @@ cutoff distance.  Be sure to specify units, as shown in the examples above. For
 example, :code:`nonbondedCutoff=1.5*nanometers` or
 :code:`nonbondedCutoff=12*angstroms` are legal values.
 
-When using :code:`Ewald` or :code:`PME`\ , you can optionally specify an
+When using :code:`Ewald`, :code:`PME`, or :code:`LJPME`\ , you can optionally specify an
 error tolerance for the force computation.  For example:
 ::
 
@@ -918,29 +969,33 @@ If :code:`vdwCutoff` is not specified, then the value of
 Specifying the Polarization Method
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-OpenMM allows the setting of several other parameters particular to the AMOEBA
-force field.  The :code:`mutualInducedTargetEpsilon` option allows you to
-specify the accuracy to which the induced dipoles are calculated at each time
-step; the default value is 0.01.  The :code:`polarization` setting
-determines whether the calculation of the induced dipoles is continued until the
-dipoles are self-consistent to within the tolerance specified by
-:code:`mutualInducedTargetEpsilon` or whether a quick estimate of the induced
-dipoles is used instead.  The first option corresponds to the
-:code:`polarization='mutual'` setting and is the default; the quick estimate
-option is given by :code:`polarization='direct'` and in this case,
-:code:`mutualInducedTargetEpsilon` is ignored, if provided.  Simulations using
-:code:`polarization='direct'` will be significantly faster than those with
-:code:`polarization='mutual'`\ , but less accurate.  Examples using the two
-options are given below:
+When using the AMOEBA force field, OpenMM allows the induced dipoles to be
+calculated in any of three different ways.  The slowest but potentially most
+accurate method is to iterate the calculation until the dipoles converge to a
+specified tolerance.  To select this, specify :code:`polarization='mutual'`.
+Use the :code:`mutualInducedTargetEpsilon` option to select the tolerance; for
+most situations, a value of 0.00001 works well.  Alternatively you can specify
+:code:`polarization='extrapolated'`.  This uses an analytic approximation
+:cite:`Simmonett2015` to estimate what the fully converged dipoles will be without
+actually continuing the calculation to convergence.  In many cases this can be
+significantly faster with only a small loss in accuracy.  Finally, you can
+specify :code:`polarization='direct'` to use the direct polarization
+approximation, in which induced dipoles depend only on the fixed multipoles, not
+on other induced dipoles.  This is even faster, but it produces very different
+forces from mutual polarization, so it should only be used with force fields
+that have been specifically parameterized for use with this approximation.
+
+Here are examples of using each method:
 ::
 
-    system = forcefield.createSystem(nonbondedMethod=PME,
-        nonbondedCutoff=1*nanometer,ewaldErrorTolerance=0.00001,
-        vdwCutoff=1.2*nanometer, mutualInducedTargetEpsilon=0.01)
+    system = forcefield.createSystem(nonbondedMethod=PME, nonbondedCutoff=1*nanometer,
+        vdwCutoff=1.2*nanometer, polarization='mutual', mutualInducedTargetEpsilon=0.00001)
 
-    system = forcefield.createSystem(nonbondedMethod=PME,
-        nonbondedCutoff=1*nanometer,ewaldErrorTolerance=0.00001,
-        vdwCutoff=1.2*nanometer, polarization ='direct')
+    system = forcefield.createSystem(nonbondedMethod=PME, nonbondedCutoff=1*nanometer,
+        vdwCutoff=1.2*nanometer, polarization='extrapolated')
+
+    system = forcefield.createSystem(nonbondedMethod=PME, nonbondedCutoff=1*nanometer,
+        vdwCutoff=1.2*nanometer, polarization='direct')
 
 
 Implicit Solvent and Solute Dielectrics
@@ -980,11 +1035,11 @@ The :code:`constraints` parameter can have any of the following values:
 .. tabularcolumns:: |l|L|
 
 ================  =============================================================================================================================================
-Value             Meaning                                                                                                                                      
+Value             Meaning
 ================  =============================================================================================================================================
-:code:`None`      No constraints are applied.  This is the default value.                                                                                      
-:code:`HBonds`    The lengths of all bonds that involve a hydrogen atom are constrained.                                                                       
-:code:`AllBonds`  The lengths of all bonds are constrained.                                                                                                    
+:code:`None`      No constraints are applied.  This is the default value.
+:code:`HBonds`    The lengths of all bonds that involve a hydrogen atom are constrained.
+:code:`AllBonds`  The lengths of all bonds are constrained.
 :code:`HAngles`   The lengths of all bonds are constrained.  In addition, all angles of the form H-X-H or H-O-X (where X is an arbitrary atom) are constrained.
 ================  =============================================================================================================================================
 
@@ -1121,6 +1176,13 @@ perform integration on a modified potential energy surface to allow much faster
 sampling of conformations.  For details on how to use them, consult the API
 documentation.
 
+Compound Integrator
+-------------------
+
+The :class:`CompoundIntegrator` class is useful for cases where you want to use
+multiple integration algorithms within a single simulation.  It allows you to
+create multiple integrators, then switch back and forth between them.  For
+details on how to use it, consult the API documentation.
 
 Temperature Coupling
 ====================
@@ -1261,11 +1323,12 @@ Writing Trajectories
 ====================
 
 
-OpenMM can save simulation trajectories to disk in two formats: PDB_ and DCD_.
-Both of these are widely supported formats, so you should be able to read them
-into most analysis and visualization programs.
+OpenMM can save simulation trajectories to disk in three formats: PDB_,
+`PDBx/mmCIF`_, and DCD_.  All of these are widely supported formats, so you
+should be able to read them into most analysis and visualization programs.
 
 .. _PDB: http://www.wwpdb.org/documentation/format33/v3.3.html
+.. _PDBx/mmCIF: http://mmcif.wwpdb.org
 .. _DCD: http://www.ks.uiuc.edu/Research/vmd/plugins/molfile/dcdplugin.html
 
 To save a trajectory, just add a “reporter” to the simulation, as shown in the
@@ -1275,9 +1338,9 @@ example scripts above:
     simulation.reporters.append(PDBReporter('output.pdb', 1000))
 
 The two parameters of the :class:`PDBReporter` are the output filename and how often (in
-number of time steps) output structures should be written.  To use DCD format,
-just replace :class:`PDBReporter` with :class:`DCDReporter`.  The parameters represent the
-same values:
+number of time steps) output structures should be written.  To use PDBx/mmCIF or
+DCD format, just replace :class:`PDBReporter` with :class:`PDBxReporter` or
+:class:`DCDReporter`.  The parameters represent the same values:
 ::
 
     simulation.reporters.append(DCDReporter('output.dcd', 1000))
@@ -1317,6 +1380,61 @@ separated by spaces instead of commas:
 
     simulation.reporters.append(StateDataReporter('data.txt', 1000, progress=True,
             temperature=True, totalSteps=10000, separator=' '))
+
+
+Saving Simulation Progress and Results
+==========================================
+
+There are three built-in ways to save the results of your simulation in OpenMM
+(additional methods can be written yourself or imported through other packages
+like mdtraj or parmed). If you are simply interested in saving the structure,
+you can write it out as a PDB file using :code:`PDBFile.writeFile()`.  You can
+see an example of this in the modeller section :ref:`saving-the-results`.
+
+If you are hoping to save more information than just positions, you can use
+:code:`simulation.saveState()`. This will save the entire state of the
+simulation, including positions, velocities, box dimensions and much more in an
+XML file. This same file can be loaded back into OpenMM and used to continue
+the simulation. Importantly, because this file is a text file, it can be
+transfered between different platforms and different versions of OpenMM. A
+potential downside to this approach is that state files are often quite large,
+and may not fit all use cases. Here's an example of how to use it:
+::
+
+    simulation.saveState('output.xml')
+
+To load the simulation back in:
+::
+
+    simulation.loadState('output.xml')
+
+There is a third way to save your simulation, known as a checkpoint file, which
+will save the entire simulation as a binary file. It will allow you to exactly
+continue a simulation if the need arises (though whether the simulation is
+deterministic depends on platform and methods, see
+:ref:`platform-specific-properties-determinism`). There are important caveats
+to this approach, however. This binary can only be used to restart simulations
+on machines with the same hardware and the same OpenMM version as the one that
+saved it. Therefore, it should only be used when it's clear that won't be an
+issue.
+::
+
+    simulation.saveCheckpoint('state.chk')
+
+And can be loaded back in like this:
+::
+
+    simulation.loadCheckpoint('state.chk')
+
+Finally, OpenMM comes with a built-in reporter for saving checkpoints, the
+:class:`CheckpointReporter`, which can be helpful in restarting simulations
+that failed unexpectedly or due to outside reasons (e.g. server crash). To save
+a checkpoint file every 5,000 steps, for example:
+::
+
+    simulation.reporters.append(CheckpointReporter('checkpnt.chk', 5000))
+
+Note that the checkpoint reporter will overwrite the last checkpoint file.
 
 .. _model-building-and-editing:
 
@@ -1493,6 +1611,8 @@ This is useful, for example, if you want to simulate it with implicit solvent.
 Be aware, though, that this only removes water molecules, not ions or other
 small molecules that might be considered “solvent”.
 
+.. _saving-the-results:
+
 Saving The Results
 ******************
 
@@ -1653,8 +1773,8 @@ not an arbitrary choice.
 Extracting and Reporting Forces (and other data)
 ************************************************
 
-OpenMM provides reporters for two output formats: PDB_ and DCD_.  Both of those
-formats store only positions, not velocities, forces, or other data.  In this
+OpenMM provides reporters for three output formats: PDB_, `PDBx/mmCIF`_ and DCD_.
+All of those formats store only positions, not velocities, forces, or other data.  In this
 section, we create a new reporter that outputs forces.  This illustrates two
 important things: how to write a reporter, and how to query the simulation for
 forces or other data.
@@ -1663,19 +1783,19 @@ Here is the definition of the :class:`ForceReporter` class:
 
 .. samepage::
     ::
-    
+
         class ForceReporter(object):
             def __init__(self, file, reportInterval):
                 self._out = open(file, 'w')
                 self._reportInterval = reportInterval
-        
+
             def __del__(self):
                 self._out.close()
-            
+
             def describeNextReport(self, simulation):
                 steps = self._reportInterval - simulation.currentStep%self._reportInterval
                 return (steps, False, False, True, False)
-            
+
             def report(self, simulation, state):
                 forces = state.getForces().value_in_unit(kilojoules/mole/nanometer)
                 for f in forces:
@@ -1744,7 +1864,7 @@ the potential energy of each one.  Assume we have already created our :class:`Sy
             pdb = PDBFile(os.path.join('structures', file))
             simulation.context.setPositions(pdb.positions)
             state = simulation.context.getState(getEnergy=True)
-            print file, state.getPotentialEnergy()
+            print(file, state.getPotentialEnergy())
 
     .. caption::
 
@@ -1839,7 +1959,7 @@ The :code:`<ForceField>` tag contains the following children:
 * Zero or more tags defining specific forces
 
 
-The order of these tags does not matter.  They are described in details below.
+The order of these tags does not matter.  They are described in detail below.
 
 <AtomTypes>
 ===========
@@ -1878,12 +1998,12 @@ The residue template definitions look like this:
       <Atom name="HH33" type="710"/>
       <Atom name="C" type="712"/>
       <Atom name="O" type="713"/>
-      <Bond from="0" to="1"/>
-      <Bond from="1" to="2"/>
-      <Bond from="1" to="3"/>
-      <Bond from="1" to="4"/>
-      <Bond from="4" to="5"/>
-      <ExternalBond from="4"/>
+      <Bond atomName1="HH31" atomName2="CH3"/>
+      <Bond atomName1="CH3" atomName2="HH32"/>
+      <Bond atomName1="CH3" atomName2="HH33"/>
+      <Bond atomName1="CH3" atomName2="C"/>
+      <Bond atomName1="C" atomName2="O"/>
+      <ExternalBond atomName="C"/>
      </Residue>
      <Residue name="ALA">
       ...
@@ -1897,12 +2017,16 @@ contains the following tags:
 * An :code:`<Atom>` tag for each atom in the residue.  This specifies the
   name of the atom and its atom type.
 * A :code:`<Bond>` tag for each pair of atoms that are bonded to each
-  other.  The :code:`to` and :code:`from` attributes are the indices of
-  the two bonded atoms (starting from 0) in the order they were listed.  For
-  example, :code:`<Bond from="1" to="3"/>` describes a bond between atom CH3
-  and atom HH33.
+  other.  The :code:`atomName1` and :code:`atomName2` attributes are the names
+  of the two bonded atoms.  (Some older force fields use the alternate tags
+  :code:`to` and :code:`from` to specify the atoms by index instead of name.
+  This is still supported for backward compatibility, but specifying atoms by
+  name is recommended, since it makes the residue definition much easier to
+  understand.)
 * An :code:`<ExternalBond>` tag for each atom that will be bonded to an
-  atom of a different residue.
+  atom of a different residue.  :code:`atomName` is the name of the atom.
+  (Alternatively, the deprecated :code:`from` tag may indicate the atom by
+  index instead of name.)
 
 
 The :code:`<Residue>` tag may also contain :code:`<VirtualSite>` tags,
@@ -1915,27 +2039,177 @@ as in the following example:
      <Atom name="H1" type="tip4pew-H"/>
      <Atom name="H2" type="tip4pew-H"/>
      <Atom name="M" type="tip4pew-M"/>
-     <VirtualSite type="average3" index="3" atom1="0" atom2="1" atom3="2"
+     <VirtualSite type="average3" siteName="M" atomName1="O" atomName2="H1" atomName3="H2"
          weight1="0.786646558" weight2="0.106676721" weight3="0.106676721"/>
-     <Bond from="0" to="1"/>
-     <Bond from="0" to="2"/>
+     <Bond atomName1="O" atomName2="H1"/>
+     <Bond atomName1="O" atomName2="H2"/>
     </Residue>
 
 Each :code:`<VirtualSite>` tag indicates an atom in the residue that should
 be represented with a virtual site.  The :code:`type` attribute may equal
-:code:`"average2"`\ , :code:`"average3"`\ , or :code:`"outOfPlane"`\ , which
-correspond to the TwoParticleAverageSite, ThreeParticleAverageSite, and
-OutOfPlaneSite classes respectively.  The :code:`index` attribute gives the
-index (starting from 0) of the atom to represent with a virtual site.  The atoms
-it is calculated based on are specified by :code:`atom1`\ , :code:`atom2`\ ,
-and (for virtual site classes that involve three atoms) :code:`atom3`\ .  The
-remaining attributes are specific to the virtual site class, and specify the
+:code:`"average2"`\ , :code:`"average3"`\ , :code:`"outOfPlane"`\ , or
+:code:`"localCoords"`\ , which correspond to the TwoParticleAverageSite, ThreeParticleAverageSite,
+OutOfPlaneSite, and LocalCoordinatesSite classes respectively.  The :code:`siteName`
+attribute gives the name of the atom to represent with a virtual site.  The atoms
+it is calculated based on are specified by :code:`atomName1`\ , :code:`atomName2`\ ,
+and (for virtual site classes that involve three atoms) :code:`atomName3`\ .
+(Some old force fields use the deprecated tags :code:`index`, :code:`atom1`,
+:code:`atom2`, and :code:`atom3` to refer to them by index instead of name.)
+
+The remaining attributes are specific to the virtual site class, and specify the
 parameters for calculating the site position.  For a TwoParticleAverageSite,
 they are :code:`weight1` and :code:`weight2`\ .  For a
 ThreeParticleAverageSite, they are :code:`weight1`\ , :code:`weight2`\ , and
 \ :code:`weight3`\ . For an OutOfPlaneSite, they are :code:`weight12`\ ,
-:code:`weight13`\ , and :code:`weightCross`\ .
+:code:`weight13`\ , and :code:`weightCross`\ . For a LocalCoordinatesSite, they
+are :code:`wo1`\ , :code:`wo2`\ , :code:`wo3`\ , :code:`wx1`\ , :code:`wx2`\ ,
+:code:`wx3`\ , :code:`wy1`\ , :code:`wy2`\ , :code:`wy3`\ , :code:`p1`\ ,
+:code:`p2`\ , and :code:`p3`\ .
 
+<Patches>
+=========
+
+A "patch" is a set of rules for modifying a residue template (or possibly multiple
+templates at once).  For example a terminal amino acid is slightly different from
+one in the middle of a chain.  A force field could of course define multiple
+templates for each amino acid (standard, N-terminal, C-terminal, and monomer),
+but since the modifications are the same for nearly all amino acids, it is simpler
+to include only the "standard" templates, along with a set of patches for
+modifying terminal residues.
+
+Here is an example of a patch definition:
+
+.. code-block:: xml
+
+    <Patch name="NTER">
+     <RemoveAtom name="H"/>
+     <RemoveBond atomName1="N" atomName2="H"/>
+     <AddAtom name="H1" type="H"/>
+     <AddAtom name="H2" type="H"/>
+     <AddAtom name="H3" type="H"/>
+     <AddBond atomName1="N" atomName2="H1"/>
+     <AddBond atomName1="N" atomName2="H2"/>
+     <AddBond atomName1="N" atomName2="H3"/>
+     <RemoveExternalBond atomName="N"/>
+     <ChangeAtom name="N" type="N3"/>
+    </Patch>
+
+There is one :code:`<Patch>` tag for each patch definition.  That in turn may
+contain any of the following tags:
+
+ * An :code:`<AddAtom>` tag indicates that an atom should be added to the
+   template.  It specifies the name of the atom and its atom type.
+ * A :code:`<ChangeAtom>` tag indicates that the type of an atom already present
+   in the template should be altered.  It specifies the name of the atom and its
+   new atom type.
+ * A :code:`<RemoveAtom>` tag indicates that an atom should be removed from the
+   template.  It specifies the name of the atom to remove.
+ * An :code:`<AddBond>` tag indicates that a bond should be added to the
+   template.  It specifies the names of the two bonded atoms.
+ * A :code:`<RemoveBond>` tag indicates that a bond already present in the
+   template should be removed.  It specifies the names of the two bonded atoms.
+ * An :code:`<AddExternalBond>` tag indicates that a new external bond should be
+   added to the template.  It specifies the name of the bonded atom.
+ * A :code:`<RemoveExternalBond>` tag indicates that an external bond aleady
+   present in the template should be removed.  It specifies the name of the
+   bonded atom.
+
+In addition to defining the patches, you also must identify which residue
+templates each patch can be applied to.  This can be done in two ways.  The more
+common one is to have each template identify the patches that can be applied to
+it.  This is done with an :code:`<AllowPatch>` tag:
+
+.. code-block:: xml
+
+    <Residue name="ALA">
+     <AllowPatch name="CTER"/>
+     <AllowPatch name="NTER"/>
+     ...
+    </Residue>
+
+Alternatively, the patch can indicate which residues it may be applied to.  This
+is done with an :code:`<ApplyToResidue>` tag:
+
+.. code-block:: xml
+
+    <Patch name="NTER">
+     <ApplyToResidue name="ALA"/>
+     <ApplyToResidue name="ARG"/>
+     ...
+    </Patch>
+
+A patch can alter multiple templates at once.  This is useful for creating bonds
+between molecules, and allows the atom types in one residue to depend on the
+identity of the other residue it is bonded to.  To create a multi-residue patch,
+added a :code:`residues` attribute to the :code:`<Patch>` tag specifying how many
+residues that patch covers.  Then whenever you refer to an atom, prefix its name
+with the index of the residue it belongs to:
+
+.. code-block:: xml
+
+  <Patch name="Disulfide" residues="2">
+    <RemoveAtom name="1:HG"/>
+    <RemoveAtom name="2:HG"/>
+    <AddBond atomName1="1:SG" atomName2="2:SG"/>
+    <ApplyToResidue name="1:CYS"/>
+    <ApplyToResidue name="2:CYS"/>
+  </Patch>
+
+In this example, the patch modifies two residues of the same type, but that need
+not always be true.  Each :code:`<ApplyToResidue>` tag therefore indicates which
+one of the residue templates it modifies may be of the specified type.  Similarly,
+if a residue template includes an :code:`<AcceptPatch>` tag for a multi-residue
+patch, it must specify the name of the patch, followed by the index of the residue
+within that patch:
+
+.. code-block:: xml
+
+    <AllowPatch name="Disulfide:1"/>
+
+
+Missing residue templates
+=========================
+
+.. CAUTION::
+   These features are experimental, and their API is subject to change.
+
+You can use the :meth:`getUnmatchedResidues()` method to get a list of residues
+in the provided :code:`topology` object that do not currently have a matching
+residue template defined in the :class:`ForceField`.
+::
+
+    pdb = PDBFile('input.pdb')
+    forcefield = ForceField('amber99sb.xml', 'tip3p.xml')
+    unmatched_residues = forcefield.getUnmatchedResidues(topology)
+
+This is useful for identifying issues with prepared systems, debugging issues
+with residue template definitions, or identifying which additional residues need
+to be parameterized.
+
+As a convenience for parameterizing new residues, you can also get a list of
+residues and empty residue templates using :meth:`generateTemplatesForUnmatchedResidues`
+::
+
+    pdb = PDBFile('input.pdb')
+    forcefield = ForceField('amber99sb.xml', 'tip3p.xml')
+    [templates, residues] = forcefield.generateTemplatesForUnmatchedResidues(topology)
+    # Se the atom types
+    for template in templates:
+        for atom in template.atoms:
+            atom.type = ... # set the atom types here
+        # Register the template with the forcefield.
+        forcefield.registerResidueTemplate(template)
+
+If you find that templates seem to be incorrectly matched, another useful
+function :meth:`getMatchingTemplates()` can help you identify which templates
+are being matched:
+::
+
+    pdb = PDBFile('input.pdb')
+    forcefield = ForceField('amber99sb.xml', 'tip3p.xml')
+    templates = forcefield.getMatchingTemplates(topology)
+    for (residue, template) in zip(pdb.topology.residues(), templates):
+        print("Residue %d %s matched template %s" % (residue.id, residue.name, template.name))
 
 <HarmonicBondForce>
 ===================
@@ -2425,6 +2699,62 @@ must include an attribute called :code:`radius`\ .
 CustomGBForce also allows you to define tabulated functions.  See section
 :ref:`tabulated-functions` for details.
 
+<CustomHbondForce>
+=========================
+
+To add a CustomHbondForce to the System, include a tag that looks like this:
+
+.. code-block:: xml
+
+    <CustomHbondForce particlesPerDonor="3" particlesPerAcceptor="2" bondCutoff="2"
+        energy="scale*k*(distance(a1,d1)-r0)^2*(angle(a1,d1,d2)-theta0)^2">
+     <GlobalParameter name="scale" defaultValue="1"/>
+     <PerDonorParameter name="theta0"/>
+     <PerAcceptorParameter name="k"/>
+     <PerAcceptorParameter name="r0"/>
+     <Donor class1="H" class2="N" class3="C" theta0="2.1"/>
+     <Acceptor class1="O" class2="C" k="115.0" r0="0.2"/>
+     ...
+    </CustomHbondForce>
+
+The energy expression for the CustomHbondForce is specified by the
+:code:`energy` attribute.  This is a mathematical expression that gives the
+energy of each donor-acceptor interaction as a function of various particle coordinates,
+distances, and angles.  See the API documentation for details.  :code:`particlesPerDonor`
+specifies the number of particles that make up a donor group, and :code:`particlesPerAcceptor`
+specifies the number of particles that make up an acceptor group.
+
+The expression may depend on an arbitrary list of global, per-donor, or
+per-acceptor parameters.  Use a :code:`<GlobalParameter>` tag to define a global
+parameter, a :code:`<PerDonorParameter>` tag to define a per-donor parameter,
+and a :code:`<PerAcceptorParameter>` tag to define a per-acceptor parameter.
+
+Exclusions are created automatically based on the :code:`bondCutoff` attribute.
+If any atom of a donor is within the specified distance (measured in bonds) of
+any atom of an acceptor, an exclusion is added to prevent them from interacting
+with each other.  If a donor and an acceptor share any atom in common, that is a
+bond distance of 0, so they are always excluded.
+
+Every :code:`<Donor>` or :code:`<Acceptor>` tag defines a rule for creating donor
+or acceptor groups.  The number of atoms specified in each one must match the
+value of :code:`particlesPerDonor` or :code:`particlesPerAcceptor` specified in the
+parent tag. Each tag may identify the atoms either by type (using the attributes
+:code:`type1`\ , :code:`type2`\ , ...) or by class (using the attributes
+:code:`class1`\ , :code:`class2`\ , ...).  The force field considers every atom
+in the system (if the number of atoms is 1), every pair of bonded atoms (if the number
+of atoms is 2), or every set of three atoms where the first is bonded to the second
+and the second to the third (if the number of atoms is 3).  For each one, it searches
+for a rule whose atom types or atom classes match the atoms.  If it finds one,
+it calls :code:`addDonor()` or :code:`addAcceptor()` on the CustomHbondForce.
+Otherwise, it ignores that set and continues. The remaining attributes are the
+values to use for the per-donor and per-acceptor parameters. All parameters must
+be specified for every tag, and the attribute name must match the name of the
+parameter.  For instance, if there is a per-donor parameter with the name “k”,
+then every :code:`<Donor>` tag must include an attribute called :code:`k`\ .
+
+CustomHbondForce also allows you to define tabulated functions.  See section
+:ref:`tabulated-functions` for details.
+
 <CustomManyParticleForce>
 =========================
 
@@ -2445,7 +2775,7 @@ To add a CustomManyParticleForce to the System, include a tag that looks like th
 
 The energy expression for the CustomManyParticleForce is specified by the
 :code:`energy` attribute.  This is a mathematical expression that gives the
-energy of each pairwise interaction as a function of various particle coordinates,
+energy of each interaction as a function of various particle coordinates,
 distances, and angles.  See the API documentation for details.  :code:`particlesPerSet`
 specifies the number of particles involved in the interaction and
 :code:`permutationMode` specifies the permutation mode.
@@ -2492,8 +2822,9 @@ The following operators are supported: + (add), - (subtract), * (multiply), /
 
 The following standard functions are supported: sqrt, exp, log, sin, cos, sec,
 csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs,
-step. step(x) = 0 if x < 0, 1 otherwise.  Some custom forces allow additional
-functions to be defined from tabulated values.
+floor, ceil, step, delta, select. step(x) = 0 if x < 0, 1 otherwise.
+delta(x) = 1 if x is 0, 0 otherwise.  select(x,y,z) = z if x = 0, y otherwise.
+Some custom forces allow additional functions to be defined from tabulated values.
 
 Numbers may be given in either decimal or exponential form.  All of the
 following are valid numbers: 5, -3.1, 1e6, and 3.12e-2.
@@ -2517,8 +2848,8 @@ values.  All uses of a value must appear *before* that value’s definition.
 
 .. _tabulated-functions:
 
-TabulatedFunctions
-==================
+Tabulated Functions
+===================
 
 Some forces, such as CustomNonbondedForce and CustomGBForce, allow you to define
 tabulated functions.  To define a function, include a :code:`<Function>` tag inside the
@@ -2565,6 +2896,47 @@ successive values separated by white space.  See the API documentation for more
 details.
 
 
+Residue Template Parameters
+===========================
+
+In forces that use an :code:`<Atom>` tag to define parameters for atom types or
+classes, there is an alternate mechanism you can also use: defining those
+parameter values in the residue template.  This is useful for situations that
+come up in certain force fields.  For example, :code:`NonbondedForce` and
+:code:`GBSAOBCForce` each have a :code:`charge` attribute.  If you only have to
+define the charge of each atom type once, that is more convenient and avoids
+potential bugs.  Also, many force fields have a different charge for each atom
+type, but Lennard-Jones parameters that are the same for all types in a class.
+It would be preferable not to have to repeat those parameter values many times
+over.
+
+When writing a residue template, you can add arbitrary additional attributes
+to each :code:`<Atom>` tag.  For example, you might include a :code:`charge`
+attribute as follows:
+
+.. code-block:: xml
+
+   <Atom name="CA" type="53" charge="0.0381"/>
+
+When writing the tag for a force, you can then include a
+:code:`<UseAttributeFromResidue>` tag inside it.  This indicates that a
+specified attribute should be taken from the residue template.  Finally, you
+simply omit that attribute in the force's own :code:`<Atom>` tags.  For example:
+
+.. code-block:: xml
+
+    <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5">
+     <UseAttributeFromResidue name="charge"/>
+     <Atom class="CX" sigma="0.339966950842" epsilon="0.4577296"/>
+     ...
+    </NonbondedForce>
+
+Notice that the :code:`charge` attribute is missing, and that the parameters
+are specified by class, not by type.  This means that sigma and epsilon only
+need to be specified once for each class.  The atom charges, which are different
+for each type, are taken from the residue template instead.
+
+
 Using Multiple Files
 ********************
 
@@ -2595,6 +2967,9 @@ Extending ForceField
 The ForceField class is designed to be modular and extensible.  This means you
 can add support for entirely new force types, such as ones implemented with
 plugins.
+
+Adding new force types
+======================
 
 For every force class, there is a “generator” class that parses the
 corresponding XML tag, then creates Force objects and adds them to the System.
@@ -2659,3 +3034,60 @@ parsing it.
 Now you can simply create a ForceField object as usual.  If an XML file contains
 a :code:`<MyForce>` tag, it will be recognized and processed correctly.
 
+Adding residue template generators
+==================================
+
+.. CAUTION::
+   This feature is experimental, and its API is subject to change.
+
+Typically, when :class:`ForceField` encounters a residue it does not have a template for,
+it simply raises an :code:`Exception`, since it does not know how to assign atom types for
+the unknown residue.
+
+However, :class:`ForceField` has an API for registering *residue template generators* that are
+called when a residue without an existing template is encountered.  These generators
+may create new residue templates that match existing atom types and parameters, or can
+even create new atom types and new parameters that are added to :class:`ForceField`. This
+functionality can be useful for adding residue template generators that are able to
+parameterize small molecules that are not represented in a protein or nucleic acid
+forcefield, for example, or for creating new residue templates for post-translationally
+modified residues, covalently-bound ligands, or unnatural amino acids or bases.
+
+To register a new residue template generator named :code:`generator`, simply call the
+:meth:`registerTemplateGenerator` method on an existing :class:`ForceField` object:
+::
+
+    forcefield.registerTemplateGenerator(generator)
+
+This :code:`generator` function must conform to the following API:
+::
+
+    def generator(forcefield, residue):
+        """
+        Parameters
+        ----------
+        forcefield : simtk.openmm.app.ForceField
+            The ForceField object to which residue templates and/or parameters are to be added.
+        residue : simtk.openmm.app.Topology.Residue
+            The residue topology for which a template is to be generated.
+
+        Returns
+        -------
+        success : bool
+            If the generator is able to successfully parameterize the residue, `True` is returned.
+            If the generator cannot parameterize the residue, it should return `False` and not
+            modify `forcefield`.
+
+        The generator should either register a residue template directly with
+        `forcefield.registerResidueTemplate(template)` or it should call `forcefield.loadFile(file)`
+        to load residue definitions from an ffxml file.
+
+        It can also use the `ForceField` programmatic API to add additional atom types (via
+        `forcefield.registerAtomType(parameters)`) or additional parameters.
+
+        """
+
+The :class:`ForceField` object will be modified by the residue template generator as residues without previously
+defined templates are encountered.  Because these templates are added to the :class:`ForceField` as new residue
+types are encountered, subsequent residues will be parameterized using the same residue templates without
+calling the :code:`generator` again.

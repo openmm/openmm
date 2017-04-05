@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -42,9 +42,10 @@ CustomBondForceProxy::CustomBondForceProxy() : SerializationProxy("CustomBondFor
 }
 
 void CustomBondForceProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 1);
+    node.setIntProperty("version", 3);
     const CustomBondForce& force = *reinterpret_cast<const CustomBondForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setBoolProperty("usesPeriodic", force.usesPeriodicBoundaryConditions());
     node.setStringProperty("energy", force.getEnergyFunction());
     SerializationNode& perBondParams = node.createChildNode("PerBondParameters");
     for (int i = 0; i < force.getNumPerBondParameters(); i++) {
@@ -53,6 +54,10 @@ void CustomBondForceProxy::serialize(const void* object, SerializationNode& node
     SerializationNode& globalParams = node.createChildNode("GlobalParameters");
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {
         globalParams.createChildNode("Parameter").setStringProperty("name", force.getGlobalParameterName(i)).setDoubleProperty("default", force.getGlobalParameterDefaultValue(i));
+    }
+    SerializationNode& energyDerivs = node.createChildNode("EnergyParameterDerivatives");
+    for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
+        energyDerivs.createChildNode("Parameter").setStringProperty("name", force.getEnergyParameterDerivativeName(i));
     }
     SerializationNode& bonds = node.createChildNode("Bonds");
     for (int i = 0; i < force.getNumBonds(); i++) {
@@ -70,26 +75,29 @@ void CustomBondForceProxy::serialize(const void* object, SerializationNode& node
 }
 
 void* CustomBondForceProxy::deserialize(const SerializationNode& node) const {
-    if (node.getIntProperty("version") != 1)
+    int version = node.getIntProperty("version");
+    if (version < 1 || version > 3)
         throw OpenMMException("Unsupported version number");
     CustomBondForce* force = NULL;
     try {
         CustomBondForce* force = new CustomBondForce(node.getStringProperty("energy"));
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        if (version > 1)
+            force->setUsesPeriodicBoundaryConditions(node.getBoolProperty("usesPeriodic"));
         const SerializationNode& perBondParams = node.getChildNode("PerBondParameters");
-        for (int i = 0; i < (int) perBondParams.getChildren().size(); i++) {
-            const SerializationNode& parameter = perBondParams.getChildren()[i];
+        for (auto& parameter : perBondParams.getChildren())
             force->addPerBondParameter(parameter.getStringProperty("name"));
-        }
         const SerializationNode& globalParams = node.getChildNode("GlobalParameters");
-        for (int i = 0; i < (int) globalParams.getChildren().size(); i++) {
-            const SerializationNode& parameter = globalParams.getChildren()[i];
+        for (auto& parameter : globalParams.getChildren())
             force->addGlobalParameter(parameter.getStringProperty("name"), parameter.getDoubleProperty("default"));
+        if (version > 2) {
+            const SerializationNode& energyDerivs = node.getChildNode("EnergyParameterDerivatives");
+            for (auto& parameter : energyDerivs.getChildren())
+                force->addEnergyParameterDerivative(parameter.getStringProperty("name"));
         }
         const SerializationNode& bonds = node.getChildNode("Bonds");
         vector<double> params(force->getNumPerBondParameters());
-        for (int i = 0; i < (int) bonds.getChildren().size(); i++) {
-            const SerializationNode& bond = bonds.getChildren()[i];
+        for (auto& bond : bonds.getChildren()) {
             for (int j = 0; j < (int) params.size(); j++) {
                 stringstream key;
                 key << "param";

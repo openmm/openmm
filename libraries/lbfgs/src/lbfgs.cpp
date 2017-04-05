@@ -408,210 +408,231 @@ int lbfgs(
         pf = (lbfgsfloatval_t*)vecalloc(param.past * sizeof(lbfgsfloatval_t));
     }
 
-    /* Evaluate the function value and its gradient. */
-    fx = cd.proc_evaluate(cd.instance, x, g, cd.n, 0);
-    if (0. != param.orthantwise_c) {
-        /* Compute the L1 norm of the variable and add it to the object value. */
-        xnorm = owlqn_x1norm(x, param.orthantwise_start, param.orthantwise_end);
-        fx += xnorm * param.orthantwise_c;
-        owlqn_pseudo_gradient(
-            pg, x, g, n,
-            param.orthantwise_c, param.orthantwise_start, param.orthantwise_end
-            );
-    }
-
-    /* Store the initial value of the objective function. */
-    if (pf != NULL) {
-        pf[0] = fx;
-    }
-
-    /*
-        Compute the direction;
-        we assume the initial hessian matrix H_0 as the identity matrix.
-     */
-    if (param.orthantwise_c == 0.) {
-        vecncpy(d, g, n);
-    } else {
-        vecncpy(d, pg, n);
-    }
-
-    /*
-       Make sure that the initial variables are not a minimizer.
-     */
-    vec2norm(&xnorm, x, n);
-    if (param.orthantwise_c == 0.) {
-        vec2norm(&gnorm, g, n);
-    } else {
-        vec2norm(&gnorm, pg, n);
-    }
-    if (xnorm < 1.0) xnorm = 1.0;
-    if (gnorm / xnorm <= param.epsilon) {
-        ret = LBFGS_ALREADY_MINIMIZED;
-        goto lbfgs_exit;
-    }
-
-    /* Compute the initial step:
-        step = 1.0 / sqrt(vecdot(d, d, n))
-     */
-    vec2norminv(&step, d, n);
-
-    k = 1;
-    end = 0;
-    for (;;) {
-        /* Store the current position and gradient vectors. */
-        veccpy(xp, x, n);
-        veccpy(gp, g, n);
-
-        /* Search for an optimal step. */
-        if (param.orthantwise_c == 0.) {
-            ls = linesearch(n, x, &fx, g, d, &step, xp, gp, w, &cd, &param);
-        } else {
-            ls = linesearch(n, x, &fx, g, d, &step, xp, pg, w, &cd, &param);
+    try {
+        /* Evaluate the function value and its gradient. */
+        fx = cd.proc_evaluate(cd.instance, x, g, cd.n, 0);
+        if (0. != param.orthantwise_c) {
+            /* Compute the L1 norm of the variable and add it to the object value. */
+            xnorm = owlqn_x1norm(x, param.orthantwise_start, param.orthantwise_end);
+            fx += xnorm * param.orthantwise_c;
             owlqn_pseudo_gradient(
                 pg, x, g, n,
                 param.orthantwise_c, param.orthantwise_start, param.orthantwise_end
                 );
         }
-        if (ls < 0) {
-            /* Revert to the previous point. */
-            veccpy(x, xp, n);
-            veccpy(g, gp, n);
-            ret = ls;
-            goto lbfgs_exit;
+
+        /* Store the initial value of the objective function. */
+        if (pf != NULL) {
+            pf[0] = fx;
         }
 
-        /* Compute x and g norms. */
+        /*
+            Compute the direction;
+            we assume the initial hessian matrix H_0 as the identity matrix.
+         */
+        if (param.orthantwise_c == 0.) {
+            vecncpy(d, g, n);
+        } else {
+            vecncpy(d, pg, n);
+        }
+
+        /*
+           Make sure that the initial variables are not a minimizer.
+         */
         vec2norm(&xnorm, x, n);
         if (param.orthantwise_c == 0.) {
             vec2norm(&gnorm, g, n);
         } else {
             vec2norm(&gnorm, pg, n);
         }
-
-        /* Report the progress. */
-        if (cd.proc_progress) {
-            if (ret = cd.proc_progress(cd.instance, x, g, fx, xnorm, gnorm, step, cd.n, k, ls)) {
-                goto lbfgs_exit;
-            }
-        }
-
-        /*
-            Convergence test.
-            The criterion is given by the following formula:
-                |g(x)| / \max(1, |x|) < \epsilon
-         */
         if (xnorm < 1.0) xnorm = 1.0;
         if (gnorm / xnorm <= param.epsilon) {
-            /* Convergence. */
-            ret = LBFGS_SUCCESS;
-            break;
+            ret = LBFGS_ALREADY_MINIMIZED;
+            goto lbfgs_exit;
         }
 
-        /*
-            Test for stopping criterion.
-            The criterion is given by the following formula:
-                (f(past_x) - f(x)) / f(x) < \delta
+        /* Compute the initial step:
+            step = 1.0 / sqrt(vecdot(d, d, n))
          */
-        if (pf != NULL) {
-            /* We don't test the stopping criterion while k < past. */
-            if (param.past <= k) {
-                /* Compute the relative improvement from the past. */
-                rate = (pf[k % param.past] - fx) / fx;
+        vec2norminv(&step, d, n);
 
-                /* The stopping criterion. */
-                if (rate < param.delta) {
-                    ret = LBFGS_STOP;
-                    break;
+        k = 1;
+        end = 0;
+        for (;;) {
+            /* Store the current position and gradient vectors. */
+            veccpy(xp, x, n);
+            veccpy(gp, g, n);
+
+            /* Search for an optimal step. */
+            if (param.orthantwise_c == 0.) {
+                ls = linesearch(n, x, &fx, g, d, &step, xp, gp, w, &cd, &param);
+            } else {
+                ls = linesearch(n, x, &fx, g, d, &step, xp, pg, w, &cd, &param);
+                owlqn_pseudo_gradient(
+                    pg, x, g, n,
+                    param.orthantwise_c, param.orthantwise_start, param.orthantwise_end
+                    );
+            }
+            if (ls < 0) {
+                /* Revert to the previous point. */
+                veccpy(x, xp, n);
+                veccpy(g, gp, n);
+                ret = ls;
+                goto lbfgs_exit;
+            }
+
+            /* Compute x and g norms. */
+            vec2norm(&xnorm, x, n);
+            if (param.orthantwise_c == 0.) {
+                vec2norm(&gnorm, g, n);
+            } else {
+                vec2norm(&gnorm, pg, n);
+            }
+
+            /* Report the progress. */
+            if (cd.proc_progress) {
+                if (ret = cd.proc_progress(cd.instance, x, g, fx, xnorm, gnorm, step, cd.n, k, ls)) {
+                    goto lbfgs_exit;
                 }
             }
 
-            /* Store the current value of the objective function. */
-            pf[k % param.past] = fx;
-        }
+            /*
+                Convergence test.
+                The criterion is given by the following formula:
+                    |g(x)| / \max(1, |x|) < \epsilon
+             */
+            if (xnorm < 1.0) xnorm = 1.0;
+            if (gnorm / xnorm <= param.epsilon) {
+                /* Convergence. */
+                ret = LBFGS_SUCCESS;
+                break;
+            }
 
-        if (param.max_iterations != 0 && param.max_iterations < k+1) {
-            /* Maximum number of iterations. */
-            ret = LBFGSERR_MAXIMUMITERATION;
-            break;
-        }
+            /*
+                Test for stopping criterion.
+                The criterion is given by the following formula:
+                    (f(past_x) - f(x)) / f(x) < \delta
+             */
+            if (pf != NULL) {
+                /* We don't test the stopping criterion while k < past. */
+                if (param.past <= k) {
+                    /* Compute the relative improvement from the past. */
+                    rate = (pf[k % param.past] - fx) / fx;
 
-        /*
-            Update vectors s and y:
-                s_{k+1} = x_{k+1} - x_{k} = \step * d_{k}.
-                y_{k+1} = g_{k+1} - g_{k}.
-         */
-        it = &lm[end];
-        vecdiff(it->s, x, xp, n);
-        vecdiff(it->y, g, gp, n);
+                    /* The stopping criterion. */
+                    if (rate < param.delta) {
+                        ret = LBFGS_STOP;
+                        break;
+                    }
+                }
 
-        /*
-            Compute scalars ys and yy:
-                ys = y^t \cdot s = 1 / \rho.
-                yy = y^t \cdot y.
-            Notice that yy is used for scaling the hessian matrix H_0 (Cholesky factor).
-         */
-        vecdot(&ys, it->y, it->s, n);
-        vecdot(&yy, it->y, it->y, n);
-        it->ys = ys;
+                /* Store the current value of the objective function. */
+                pf[k % param.past] = fx;
+            }
 
-        /*
-            Recursive formula to compute dir = -(H \cdot g).
-                This is described in page 779 of:
-                Jorge Nocedal.
-                Updating Quasi-Newton Matrices with Limited Storage.
-                Mathematics of Computation, Vol. 35, No. 151,
-                pp. 773--782, 1980.
-         */
-        bound = (m <= k) ? m : k;
-        ++k;
-        end = (end + 1) % m;
+            if (param.max_iterations != 0 && param.max_iterations < k+1) {
+                /* Maximum number of iterations. */
+                ret = LBFGSERR_MAXIMUMITERATION;
+                break;
+            }
 
-        /* Compute the steepest direction. */
-        if (param.orthantwise_c == 0.) {
-            /* Compute the negative of gradients. */
-            vecncpy(d, g, n);
-        } else {
-            vecncpy(d, pg, n);
-        }
+            /*
+                Update vectors s and y:
+                    s_{k+1} = x_{k+1} - x_{k} = \step * d_{k}.
+                    y_{k+1} = g_{k+1} - g_{k}.
+             */
+            it = &lm[end];
+            vecdiff(it->s, x, xp, n);
+            vecdiff(it->y, g, gp, n);
 
-        j = end;
-        for (i = 0;i < bound;++i) {
-            j = (j + m - 1) % m;    /* if (--j == -1) j = m-1; */
-            it = &lm[j];
-            /* \alpha_{j} = \rho_{j} s^{t}_{j} \cdot q_{k+1}. */
-            vecdot(&it->alpha, it->s, d, n);
-            it->alpha /= it->ys;
-            /* q_{i} = q_{i+1} - \alpha_{i} y_{i}. */
-            vecadd(d, it->y, -it->alpha, n);
-        }
+            /*
+                Compute scalars ys and yy:
+                    ys = y^t \cdot s = 1 / \rho.
+                    yy = y^t \cdot y.
+                Notice that yy is used for scaling the hessian matrix H_0 (Cholesky factor).
+             */
+            vecdot(&ys, it->y, it->s, n);
+            vecdot(&yy, it->y, it->y, n);
+            it->ys = ys;
 
-        vecscale(d, ys / yy, n);
+            /*
+                Recursive formula to compute dir = -(H \cdot g).
+                    This is described in page 779 of:
+                    Jorge Nocedal.
+                    Updating Quasi-Newton Matrices with Limited Storage.
+                    Mathematics of Computation, Vol. 35, No. 151,
+                    pp. 773--782, 1980.
+             */
+            bound = (m <= k) ? m : k;
+            ++k;
+            end = (end + 1) % m;
 
-        for (i = 0;i < bound;++i) {
-            it = &lm[j];
-            /* \beta_{j} = \rho_{j} y^t_{j} \cdot \gamma_{i}. */
-            vecdot(&beta, it->y, d, n);
-            beta /= it->ys;
-            /* \gamma_{i+1} = \gamma_{i} + (\alpha_{j} - \beta_{j}) s_{j}. */
-            vecadd(d, it->s, it->alpha - beta, n);
-            j = (j + 1) % m;        /* if (++j == m) j = 0; */
-        }
+            /* Compute the steepest direction. */
+            if (param.orthantwise_c == 0.) {
+                /* Compute the negative of gradients. */
+                vecncpy(d, g, n);
+            } else {
+                vecncpy(d, pg, n);
+            }
 
-        /*
-            Constrain the search direction for orthant-wise updates.
-         */
-        if (param.orthantwise_c != 0.) {
-            for (i = param.orthantwise_start;i < param.orthantwise_end;++i) {
-                if (d[i] * pg[i] >= 0) {
-                    d[i] = 0;
+            j = end;
+            for (i = 0;i < bound;++i) {
+                j = (j + m - 1) % m;    /* if (--j == -1) j = m-1; */
+                it = &lm[j];
+                /* \alpha_{j} = \rho_{j} s^{t}_{j} \cdot q_{k+1}. */
+                vecdot(&it->alpha, it->s, d, n);
+                it->alpha /= it->ys;
+                /* q_{i} = q_{i+1} - \alpha_{i} y_{i}. */
+                vecadd(d, it->y, -it->alpha, n);
+            }
+
+            vecscale(d, ys / yy, n);
+
+            for (i = 0;i < bound;++i) {
+                it = &lm[j];
+                /* \beta_{j} = \rho_{j} y^t_{j} \cdot \gamma_{i}. */
+                vecdot(&beta, it->y, d, n);
+                beta /= it->ys;
+                /* \gamma_{i+1} = \gamma_{i} + (\alpha_{j} - \beta_{j}) s_{j}. */
+                vecadd(d, it->s, it->alpha - beta, n);
+                j = (j + 1) % m;        /* if (++j == m) j = 0; */
+            }
+
+            /*
+                Constrain the search direction for orthant-wise updates.
+             */
+            if (param.orthantwise_c != 0.) {
+                for (i = param.orthantwise_start;i < param.orthantwise_end;++i) {
+                    if (d[i] * pg[i] >= 0) {
+                        d[i] = 0;
+                    }
                 }
             }
-        }
 
-        /*
-            Now the search direction d is ready. We try step = 1 first.
-         */
-        step = 1.0;
+            /*
+                Now the search direction d is ready. We try step = 1 first.
+             */
+            step = 1.0;
+        }
+    }
+    catch (...) {
+        vecfree(pf);
+
+        /* Free memory blocks used by this function. */
+        if (lm != NULL) {
+            for (i = 0;i < m;++i) {
+                vecfree(lm[i].s);
+                vecfree(lm[i].y);
+            }
+            vecfree(lm);
+        }
+        vecfree(pg);
+        vecfree(w);
+        vecfree(d);
+        vecfree(gp);
+        vecfree(g);
+        vecfree(xp);
+        throw;
     }
 
 lbfgs_exit:

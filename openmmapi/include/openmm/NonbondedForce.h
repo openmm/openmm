@@ -65,13 +65,13 @@ namespace OpenMM {
  * This class provides a convenience method for this case called createExceptionsFromBonds().  You pass to it
  * a list of bonds and the scale factors to use for 1-4 interactions.  It identifies all pairs of particles which
  * are separated by 1, 2, or 3 bonds, then automatically creates exceptions for them.
- * 
+ *
  * When using a cutoff, by default Lennard-Jones interactions are sharply truncated at the cutoff distance.
  * Optionally you can instead use a switching function to make the interaction smoothly go to zero over a finite
  * distance range.  To enable this, call setUseSwitchingFunction().  You must also call setSwitchingDistance()
  * to specify the distance at which the interaction should begin to decrease.  The switching distance must be
  * less than the cutoff distance.
- * 
+ *
  * Another optional feature of this class (enabled by default) is to add a contribution to the energy which approximates
  * the effect of all Lennard-Jones interactions beyond the cutoff in a periodic system.  When running a simulation
  * at constant pressure, this can improve the quality of the result.  Call setUseDispersionCorrection() to set whether
@@ -101,15 +101,20 @@ public:
          */
         CutoffPeriodic = 2,
         /**
-         * Periodic boundary conditions are used, and Ewald summation is used to compute the interaction of each particle
+         * Periodic boundary conditions are used, and Ewald summation is used to compute the Coulomb interaction of each particle
          * with all periodic copies of every other particle.
          */
         Ewald = 3,
         /**
-         * Periodic boundary conditions are used, and Particle-Mesh Ewald (PME) summation is used to compute the interaction of each particle
+         * Periodic boundary conditions are used, and Particle-Mesh Ewald (PME) summation is used to compute the Coulomb interaction of each particle
          * with all periodic copies of every other particle.
          */
-        PME = 4
+        PME = 4,
+        /**
+         * Periodic boundary conditions are used, and Particle-Mesh Ewald (PME) summation is used to compute the interaction of each particle
+         * with all periodic copies of every other particle for both Coulomb and Lennard-Jones.  No switching is used for either interaction.
+         */
+        LJPME = 5
     };
     /**
      * Create a NonbondedForce.
@@ -182,7 +187,7 @@ public:
      * which is acceptable.  This value is used to select the reciprocal space cutoff and separation
      * parameter so that the average error level will be less than the tolerance.  There is not a
      * rigorous guarantee that all forces on all atoms will be less than the tolerance, however.
-     * 
+     *
      * For PME calculations, if setPMEParameters() is used to set alpha to something other than 0,
      * this value is ignored.
      */
@@ -192,7 +197,7 @@ public:
      * which is acceptable.  This value is used to select the reciprocal space cutoff and separation
      * parameter so that the average error level will be less than the tolerance.  There is not a
      * rigorous guarantee that all forces on all atoms will be less than the tolerance, however.
-     * 
+     *
      * For PME calculations, if setPMEParameters() is used to set alpha to something other than 0,
      * this value is ignored.
      */
@@ -200,23 +205,69 @@ public:
     /**
      * Get the parameters to use for PME calculations.  If alpha is 0 (the default), these parameters are
      * ignored and instead their values are chosen based on the Ewald error tolerance.
-     * 
-     * @param alpha   the separation parameter
-     * @param nx      the number of grid points along the X axis
-     * @param ny      the number of grid points along the Y axis
-     * @param nz      the number of grid points along the Z axis
+     *
+     * @param[out] alpha   the separation parameter
+     * @param[out] nx      the number of grid points along the X axis
+     * @param[out] ny      the number of grid points along the Y axis
+     * @param[out] nz      the number of grid points along the Z axis
      */
     void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
     /**
+     * Get the parameters to use for dispersion term in LJ-PME calculations.  If alpha is 0 (the default),
+     * these parameters are ignored and instead their values are chosen based on the Ewald error tolerance.
+     *
+     * @param[out] alpha   the separation parameter
+     * @param[out] nx      the number of dispersion grid points along the X axis
+     * @param[out] ny      the number of dispersion grid points along the Y axis
+     * @param[out] nz      the number of dispersion grid points along the Z axis
+     */
+    void getLJPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
+    /**
      * Set the parameters to use for PME calculations.  If alpha is 0 (the default), these parameters are
      * ignored and instead their values are chosen based on the Ewald error tolerance.
-     * 
+     *
      * @param alpha   the separation parameter
      * @param nx      the number of grid points along the X axis
      * @param ny      the number of grid points along the Y axis
      * @param nz      the number of grid points along the Z axis
      */
     void setPMEParameters(double alpha, int nx, int ny, int nz);
+    /**
+     * Set the parameters to use for the dispersion term in LJPME calculations.  If alpha is 0 (the default),
+     * these parameters are ignored and instead their values are chosen based on the Ewald error tolerance.
+     *
+     * @param alpha   the separation parameter
+     * @param nx      the number of grid points along the X axis
+     * @param ny      the number of grid points along the Y axis
+     * @param nz      the number of grid points along the Z axis
+     */
+    void setLJPMEParameters(double alpha, int nx, int ny, int nz);
+    /**
+     * Get the parameters being used for PME in a particular Context.  Because some platforms have restrictions
+     * on the allowed grid sizes, the values that are actually used may be slightly different from those
+     * specified with setPMEParameters(), or the standard values calculated based on the Ewald error tolerance.
+     * See the manual for details.
+     *
+     * @param context      the Context for which to get the parameters
+     * @param[out] alpha   the separation parameter
+     * @param[out] nx      the number of grid points along the X axis
+     * @param[out] ny      the number of grid points along the Y axis
+     * @param[out] nz      the number of grid points along the Z axis
+     */
+    void getPMEParametersInContext(const Context& context, double& alpha, int& nx, int& ny, int& nz) const;
+    /**
+     * Get the PME parameters being used for the dispersion term for LJPME in a particular Context.  Because some
+     * platforms have restrictions on the allowed grid sizes, the values that are actually used may be slightly different
+     * from those specified with setPMEParameters(), or the standard values calculated based on the Ewald error tolerance.
+     * See the manual for details.
+     *
+     * @param context      the Context for which to get the parameters
+     * @param[out] alpha   the separation parameter
+     * @param[out] nx      the number of grid points along the X axis
+     * @param[out] ny      the number of grid points along the Y axis
+     * @param[out] nz      the number of grid points along the Z axis
+     */
+    void getLJPMEParametersInContext(const Context& context, double& alpha, int& nx, int& ny, int& nz) const;
     /**
      * Add the nonbonded force parameters for a particle.  This should be called once for each particle
      * in the System.  When it is called for the i'th time, it specifies the parameters for the i'th particle.
@@ -233,10 +284,10 @@ public:
     /**
      * Get the nonbonded force parameters for a particle.
      *
-     * @param index     the index of the particle for which to get parameters
-     * @param charge    the charge of the particle, measured in units of the proton charge
-     * @param sigma     the sigma parameter of the Lennard-Jones potential (corresponding to the van der Waals radius of the particle), measured in nm
-     * @param epsilon   the epsilon parameter of the Lennard-Jones potential (corresponding to the well depth of the van der Waals interaction), measured in kJ/mol
+     * @param index          the index of the particle for which to get parameters
+     * @param[out] charge    the charge of the particle, measured in units of the proton charge
+     * @param[out] sigma     the sigma parameter of the Lennard-Jones potential (corresponding to the van der Waals radius of the particle), measured in nm
+     * @param[out] epsilon   the epsilon parameter of the Lennard-Jones potential (corresponding to the well depth of the van der Waals interaction), measured in kJ/mol
      */
     void getParticleParameters(int index, double& charge, double& sigma, double& epsilon) const;
     /**
@@ -269,20 +320,20 @@ public:
     int addException(int particle1, int particle2, double chargeProd, double sigma, double epsilon, bool replace = false);
     /**
      * Get the force field parameters for an interaction that should be calculated differently from others.
-     * 
-     * @param index      the index of the interaction for which to get parameters
-     * @param particle1  the index of the first particle involved in the interaction
-     * @param particle2  the index of the second particle involved in the interaction
-     * @param chargeProd the scaled product of the atomic charges (i.e. the strength of the Coulomb interaction), measured in units of the proton charge squared
-     * @param sigma      the sigma parameter of the Lennard-Jones potential (corresponding to the van der Waals radius of the particle), measured in nm
-     * @param epsilon    the epsilon parameter of the Lennard-Jones potential (corresponding to the well depth of the van der Waals interaction), measured in kJ/mol
+     *
+     * @param index           the index of the interaction for which to get parameters
+     * @param[out] particle1  the index of the first particle involved in the interaction
+     * @param[out] particle2  the index of the second particle involved in the interaction
+     * @param[out] chargeProd the scaled product of the atomic charges (i.e. the strength of the Coulomb interaction), measured in units of the proton charge squared
+     * @param[out] sigma      the sigma parameter of the Lennard-Jones potential (corresponding to the van der Waals radius of the particle), measured in nm
+     * @param[out] epsilon    the epsilon parameter of the Lennard-Jones potential (corresponding to the well depth of the van der Waals interaction), measured in kJ/mol
      */
     void getExceptionParameters(int index, int& particle1, int& particle2, double& chargeProd, double& sigma, double& epsilon) const;
     /**
      * Set the force field parameters for an interaction that should be calculated differently from others.
      * If chargeProd and epsilon are both equal to 0, this will cause the interaction to be completely omitted from
      * force and energy calculations.
-     * 
+     *
      * @param index      the index of the interaction for which to get parameters
      * @param particle1  the index of the first particle involved in the interaction
      * @param particle2  the index of the second particle involved in the interaction
@@ -334,7 +385,7 @@ public:
      * time step integrators to evaluate direct and reciprocal space interactions at different intervals: setForceGroup()
      * specifies the group for direct space, and setReciprocalSpaceForceGroup() specifies the group for reciprocal space.
      * If this is -1 (the default value), the same force group is used for reciprocal space as for direct space.
-     * 
+     *
      * @param group    the group index.  Legal values are between 0 and 31 (inclusive), or -1 to use the same force group
      *                 that is specified for direct space.
      */
@@ -344,7 +395,7 @@ public:
      * provides an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
      * Simply call setParticleParameters() and setExceptionParameters() to modify this object's parameters, then call
      * updateParametersInContext() to copy them over to the Context.
-     * 
+     *
      * This method has several limitations.  The only information it updates is the parameters of particles and exceptions.
      * All other aspects of the Force (the nonbonded method, the cutoff distance, etc.) are unaffected and can only be
      * changed by reinitializing the Context.  Furthermore, only the chargeProd, sigma, and epsilon values of an exception
@@ -361,7 +412,8 @@ public:
     bool usesPeriodicBoundaryConditions() const {
         return nonbondedMethod == NonbondedForce::CutoffPeriodic ||
                nonbondedMethod == NonbondedForce::Ewald ||
-               nonbondedMethod == NonbondedForce::PME;
+               nonbondedMethod == NonbondedForce::PME ||
+               nonbondedMethod == NonbondedForce::LJPME;
     }
 protected:
     ForceImpl* createImpl() const;
@@ -369,9 +421,9 @@ private:
     class ParticleInfo;
     class ExceptionInfo;
     NonbondedMethod nonbondedMethod;
-    double cutoffDistance, switchingDistance, rfDielectric, ewaldErrorTol, alpha;
+    double cutoffDistance, switchingDistance, rfDielectric, ewaldErrorTol, alpha, dalpha;
     bool useSwitchingFunction, useDispersionCorrection;
-    int recipForceGroup, nx, ny, nz;
+    int recipForceGroup, nx, ny, nz, dnx, dny, dnz;
     void addExclusionsToSet(const std::vector<std::set<int> >& bonded12, std::set<int>& exclusions, int baseParticle, int fromParticle, int currentLevel) const;
     std::vector<ParticleInfo> particles;
     std::vector<ExceptionInfo> exceptions;

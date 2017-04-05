@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2012 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2016 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -26,7 +26,7 @@
 #define __ReferenceCustomCompoundBondIxn_H__
 
 #include "ReferenceBondIxn.h"
-#include "lepton/ExpressionProgram.h"
+#include "openmm/internal/CompiledExpressionSet.h"
 #include "lepton/ParsedExpression.h"
 #include <map>
 #include <vector>
@@ -42,12 +42,17 @@ class ReferenceCustomCompoundBondIxn : public ReferenceBondIxn {
       class AngleTermInfo;
       class DihedralTermInfo;
       std::vector<std::vector<int> > bondAtoms;
-      Lepton::ExpressionProgram energyExpression;
-      std::vector<std::string> bondParamNames;
+      CompiledExpressionSet expressionSet;
+      Lepton::CompiledExpression energyExpression;
+      std::vector<Lepton::CompiledExpression> energyParamDerivExpressions;
+      std::vector<int> bondParamIndex;
       std::vector<ParticleTermInfo> particleTerms;
       std::vector<DistanceTermInfo> distanceTerms;
       std::vector<AngleTermInfo> angleTerms;
       std::vector<DihedralTermInfo> dihedralTerms;
+      int numParameters;
+      bool usePeriodic;
+      Vec3 boxVectors[3];
 
 
       /**---------------------------------------------------------------------------------------
@@ -56,19 +61,17 @@ class ReferenceCustomCompoundBondIxn : public ReferenceBondIxn {
 
          @param bond             the index of the bond
          @param atomCoordinates  atom coordinates
-         @param variables        the values of variables that may appear in expressions
          @param forces           force array (forces added)
          @param totalEnergy      total energy
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateOneIxn(int bond, std::vector<OpenMM::RealVec>& atomCoordinates,
-                           std::map<std::string, double>& variables, std::vector<OpenMM::RealVec>& forces,
-                           RealOpenMM* totalEnergy) const;
+      void calculateOneIxn(int bond, std::vector<OpenMM::Vec3>& atomCoordinates,
+                           std::vector<OpenMM::Vec3>& forces, double* totalEnergy, double* energyParamDerivs);
 
-      void computeDelta(int atom1, int atom2, RealOpenMM* delta, std::vector<OpenMM::RealVec>& atomCoordinates) const;
+      void computeDelta(int atom1, int atom2, double* delta, std::vector<OpenMM::Vec3>& atomCoordinates) const;
 
-      static RealOpenMM computeAngle(RealOpenMM* vec1, RealOpenMM* vec2);
+      static double computeAngle(double* vec1, double* vec2);
 
 
    public:
@@ -81,7 +84,8 @@ class ReferenceCustomCompoundBondIxn : public ReferenceBondIxn {
 
        ReferenceCustomCompoundBondIxn(int numParticlesPerBond, const std::vector<std::vector<int> >& bondAtoms, const Lepton::ParsedExpression& energyExpression,
                                const std::vector<std::string>& bondParameterNames, const std::map<std::string, std::vector<int> >& distances,
-                               const std::map<std::string, std::vector<int> >& angles, const std::map<std::string, std::vector<int> >& dihedrals);
+                               const std::map<std::string, std::vector<int> >& angles, const std::map<std::string, std::vector<int> >& dihedrals,
+                               const std::vector<Lepton::CompiledExpression> energyParamDerivExpressions);
 
       /**---------------------------------------------------------------------------------------
 
@@ -90,6 +94,16 @@ class ReferenceCustomCompoundBondIxn : public ReferenceBondIxn {
          --------------------------------------------------------------------------------------- */
 
        ~ReferenceCustomCompoundBondIxn();
+
+       /**---------------------------------------------------------------------------------------
+      
+         Set the force to use periodic boundary conditions.
+      
+         @param vectors    the vectors defining the periodic box
+      
+         --------------------------------------------------------------------------------------- */
+      
+       void setPeriodic(OpenMM::Vec3* vectors);
 
       /**---------------------------------------------------------------------------------------
 
@@ -113,9 +127,9 @@ class ReferenceCustomCompoundBondIxn : public ReferenceBondIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculatePairIxn(std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** bondParameters,
+      void calculatePairIxn(std::vector<OpenMM::Vec3>& atomCoordinates, double** bondParameters,
                             const std::map<std::string, double>& globalParameters,
-                            std::vector<OpenMM::RealVec>& forces, RealOpenMM* totalEnergy) const;
+                            std::vector<OpenMM::Vec3>& forces, double* totalEnergy, double* energyParamDerivs);
 
 // ---------------------------------------------------------------------------------------
 
@@ -124,9 +138,9 @@ class ReferenceCustomCompoundBondIxn : public ReferenceBondIxn {
 class ReferenceCustomCompoundBondIxn::ParticleTermInfo {
 public:
     std::string name;
-    int atom, component;
-    Lepton::ExpressionProgram forceExpression;
-    ParticleTermInfo(const std::string& name, int atom, int component, const Lepton::ExpressionProgram& forceExpression) :
+    int atom, component, index;
+    Lepton::CompiledExpression forceExpression;
+    ParticleTermInfo(const std::string& name, int atom, int component, const Lepton::CompiledExpression& forceExpression) :
             name(name), atom(atom), component(component), forceExpression(forceExpression) {
     }
 };
@@ -134,10 +148,10 @@ public:
 class ReferenceCustomCompoundBondIxn::DistanceTermInfo {
 public:
     std::string name;
-    int p1, p2;
-    Lepton::ExpressionProgram forceExpression;
-    mutable RealOpenMM delta[ReferenceForce::LastDeltaRIndex];
-    DistanceTermInfo(const std::string& name, const std::vector<int>& atoms, const Lepton::ExpressionProgram& forceExpression) :
+    int p1, p2, index;
+    Lepton::CompiledExpression forceExpression;
+    mutable double delta[ReferenceForce::LastDeltaRIndex];
+    DistanceTermInfo(const std::string& name, const std::vector<int>& atoms, const Lepton::CompiledExpression& forceExpression) :
             name(name), p1(atoms[0]), p2(atoms[1]), forceExpression(forceExpression) {
     }
 };
@@ -145,11 +159,11 @@ public:
 class ReferenceCustomCompoundBondIxn::AngleTermInfo {
 public:
     std::string name;
-    int p1, p2, p3;
-    Lepton::ExpressionProgram forceExpression;
-    mutable RealOpenMM delta1[ReferenceForce::LastDeltaRIndex];
-    mutable RealOpenMM delta2[ReferenceForce::LastDeltaRIndex];
-    AngleTermInfo(const std::string& name, const std::vector<int>& atoms, const Lepton::ExpressionProgram& forceExpression) :
+    int p1, p2, p3, index;
+    Lepton::CompiledExpression forceExpression;
+    mutable double delta1[ReferenceForce::LastDeltaRIndex];
+    mutable double delta2[ReferenceForce::LastDeltaRIndex];
+    AngleTermInfo(const std::string& name, const std::vector<int>& atoms, const Lepton::CompiledExpression& forceExpression) :
             name(name), p1(atoms[0]), p2(atoms[1]), p3(atoms[2]), forceExpression(forceExpression) {
     }
 };
@@ -157,14 +171,14 @@ public:
 class ReferenceCustomCompoundBondIxn::DihedralTermInfo {
 public:
     std::string name;
-    int p1, p2, p3, p4;
-    Lepton::ExpressionProgram forceExpression;
-    mutable RealOpenMM delta1[ReferenceForce::LastDeltaRIndex];
-    mutable RealOpenMM delta2[ReferenceForce::LastDeltaRIndex];
-    mutable RealOpenMM delta3[ReferenceForce::LastDeltaRIndex];
-    mutable RealOpenMM cross1[3];
-    mutable RealOpenMM cross2[3];
-    DihedralTermInfo(const std::string& name, const std::vector<int>& atoms, const Lepton::ExpressionProgram& forceExpression) :
+    int p1, p2, p3, p4, index;
+    Lepton::CompiledExpression forceExpression;
+    mutable double delta1[ReferenceForce::LastDeltaRIndex];
+    mutable double delta2[ReferenceForce::LastDeltaRIndex];
+    mutable double delta3[ReferenceForce::LastDeltaRIndex];
+    mutable double cross1[3];
+    mutable double cross2[3];
+    DihedralTermInfo(const std::string& name, const std::vector<int>& atoms, const Lepton::CompiledExpression& forceExpression) :
             name(name), p1(atoms[0]), p2(atoms[1]), p3(atoms[2]), p4(atoms[3]), forceExpression(forceExpression) {
     }
 };

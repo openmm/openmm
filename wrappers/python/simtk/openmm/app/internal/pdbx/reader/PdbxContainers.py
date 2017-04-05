@@ -36,6 +36,7 @@ The DataCategory class provides base storage container for instance
 data and definition meta data.
 
 """
+from __future__ import absolute_import
 
 __docformat__ = "restructuredtext en"
 __author__    = "John Westbrook"
@@ -99,13 +100,13 @@ class ContainerBase(object):
         self.__name=name
 
     def exists(self,name):
-        if self.__objCatalog.has_key(name):
+        if name in self.__objCatalog:
             return True
         else:
             return False
         
     def getObj(self,name):
-        if self.__objCatalog.has_key(name):
+        if name in self.__objCatalog:
             return self.__objCatalog[name]
         else:
             return None
@@ -118,7 +119,7 @@ class ContainerBase(object):
             of the same name will be overwritten.
         """
         if obj.getName() is not None:
-            if not self.__objCatalog.has_key(obj.getName()):
+            if obj.getName() not in self.__objCatalog:
                 # self.__objNameList is keeping track of object order here -- 
                 self.__objNameList.append(obj.getName())
             self.__objCatalog[obj.getName()]=obj
@@ -126,7 +127,7 @@ class ContainerBase(object):
     def replace(self,obj):
         """ Replace an existing object with the input object
         """
-        if ((obj.getName() is not None) and (self.__objCatalog.has_key(obj.getName())) ):
+        if ((obj.getName() is not None) and (obj.getName() in self.__objCatalog) ):
             self.__objCatalog[obj.getName()]=obj
         
 
@@ -158,7 +159,7 @@ class ContainerBase(object):
         """ Revmove object by name.  Return True on success or False otherwise.
         """
         try:
-            if self.__objCatalog.has_key(curName):
+            if curName in self.__objCatalog:
                 del self.__objCatalog[curName]
                 i=self.__objNameList.index(curName)
                 del self.__objNameList[i]
@@ -217,7 +218,7 @@ class DataContainer(ContainerBase):
         
     def invokeDataBlockMethod(self,type,method,db):
         self.__currentRow = 1
-        exec method.getInline()
+        exec(method.getInline())
 
     def setGlobal(self):
         self.__globalFlag=True
@@ -328,7 +329,7 @@ class DataCategory(DataCategoryBase):
                 return self._rowList[0][ii]
             except (IndexError, KeyError):
                 raise KeyError
-        raise TypeError, x
+        raise TypeError(x)
         
     
     def getCurrentAttribute(self):
@@ -464,7 +465,7 @@ class DataCategory(DataCategoryBase):
                 return self._rowList[rowI][self._attributeNameList.index(attribute)]
             except (IndexError):
                 raise IndexError        
-        raise IndexError, attribute
+        raise IndexError(attribute)
 
     def setValue(self,value,attributeName=None,rowIndex=None):
         if attributeName is None:
@@ -544,13 +545,13 @@ class DataCategory(DataCategoryBase):
             if (ind >= ll):
                 row.extend([None for ii in xrange(2*ind-ll)])
                 row[ind]=None
-            exec method.getInline()
+            exec(method.getInline())
             self.__currentRowIndex+=1
             currentRowIndex=self.__currentRowIndex
 
     def invokeCategoryMethod(self,type,method,db):
         self.__currentRowIndex = 0
-        exec method.getInline()
+        exec(method.getInline())
 
     def getAttributeLengthMaximumList(self):
         mList=[0 for i in len(self._attributeNameList)]
@@ -750,7 +751,7 @@ class DataCategory(DataCategoryBase):
             except (IndexError):
                 self.__lfh.write("attributeName %s rowI %r rowdata %r\n" % (attributeName,rowI,self._rowList[rowI]))
                 raise IndexError        
-        raise TypeError, attribute
+        raise TypeError(attribute)
         
 
     def getValueFormattedByIndex(self,attributeIndex,rowIndex):

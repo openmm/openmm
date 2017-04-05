@@ -21,6 +21,7 @@ __kernel void computePerParticleValues(int bufferSize, int numBuffers, __global 
         for (int i = index+bufferSize; i < totalSize; i += bufferSize)
             sum += valueBuffers[i];
 #endif
+        REDUCE_PARAM0_DERIV
         
         // Now calculate other values
 

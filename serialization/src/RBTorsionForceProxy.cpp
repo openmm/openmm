@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -42,9 +42,10 @@ RBTorsionForceProxy::RBTorsionForceProxy() : SerializationProxy("RBTorsionForce"
 }
 
 void RBTorsionForceProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 1);
+    node.setIntProperty("version", 2);
     const RBTorsionForce& force = *reinterpret_cast<const RBTorsionForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setBoolProperty("usesPeriodic", force.usesPeriodicBoundaryConditions());
     SerializationNode& torsions = node.createChildNode("Torsions");
     for (int i = 0; i < force.getNumTorsions(); i++) {
         int particle1, particle2, particle3, particle4;
@@ -55,18 +56,19 @@ void RBTorsionForceProxy::serialize(const void* object, SerializationNode& node)
 }
 
 void* RBTorsionForceProxy::deserialize(const SerializationNode& node) const {
-    if (node.getIntProperty("version") != 1)
+    int version = node.getIntProperty("version");
+    if (version < 1 || version > 2)
         throw OpenMMException("Unsupported version number");
     RBTorsionForce* force = new RBTorsionForce();
     try {
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        if (version > 1)
+            force->setUsesPeriodicBoundaryConditions(node.getBoolProperty("usesPeriodic"));
         const SerializationNode& torsions = node.getChildNode("Torsions");
-        for (int i = 0; i < (int) torsions.getChildren().size(); i++) {
-            const SerializationNode& torsion = torsions.getChildren()[i];
+        for (auto& torsion : torsions.getChildren())
             force->addTorsion(torsion.getIntProperty("p1"), torsion.getIntProperty("p2"), torsion.getIntProperty("p3"), torsion.getIntProperty("p4"),
                     torsion.getDoubleProperty("c0"), torsion.getDoubleProperty("c1"), torsion.getDoubleProperty("c2"),
                     torsion.getDoubleProperty("c3"), torsion.getDoubleProperty("c4"), torsion.getDoubleProperty("c5"));
-        }
     }
     catch (...) {
         delete force;

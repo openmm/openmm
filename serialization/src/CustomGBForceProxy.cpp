@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -42,7 +42,7 @@ CustomGBForceProxy::CustomGBForceProxy() : SerializationProxy("CustomGBForce") {
 }
 
 void CustomGBForceProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 1);
+    node.setIntProperty("version", 2);
     const CustomGBForce& force = *reinterpret_cast<const CustomGBForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
     node.setIntProperty("method", (int) force.getNonbondedMethod());
@@ -54,6 +54,10 @@ void CustomGBForceProxy::serialize(const void* object, SerializationNode& node) 
     SerializationNode& globalParams = node.createChildNode("GlobalParameters");
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {
         globalParams.createChildNode("Parameter").setStringProperty("name", force.getGlobalParameterName(i)).setDoubleProperty("default", force.getGlobalParameterDefaultValue(i));
+    }
+    SerializationNode& energyDerivs = node.createChildNode("EnergyParameterDerivatives");
+    for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
+        energyDerivs.createChildNode("Parameter").setStringProperty("name", force.getEnergyParameterDerivativeName(i));
     }
     SerializationNode& computedValues = node.createChildNode("ComputedValues");
     for (int i = 0; i < force.getNumComputedValues(); i++) {
@@ -93,7 +97,8 @@ void CustomGBForceProxy::serialize(const void* object, SerializationNode& node) 
 }
 
 void* CustomGBForceProxy::deserialize(const SerializationNode& node) const {
-    if (node.getIntProperty("version") != 1)
+    int version = node.getIntProperty("version");
+    if (version < 1 || version > 2)
         throw OpenMMException("Unsupported version number");
     CustomGBForce* force = NULL;
     try {
@@ -102,29 +107,25 @@ void* CustomGBForceProxy::deserialize(const SerializationNode& node) const {
         force->setNonbondedMethod((CustomGBForce::NonbondedMethod) node.getIntProperty("method"));
         force->setCutoffDistance(node.getDoubleProperty("cutoff"));
         const SerializationNode& perParticleParams = node.getChildNode("PerParticleParameters");
-        for (int i = 0; i < (int) perParticleParams.getChildren().size(); i++) {
-            const SerializationNode& parameter = perParticleParams.getChildren()[i];
+        for (auto& parameter : perParticleParams.getChildren())
             force->addPerParticleParameter(parameter.getStringProperty("name"));
-        }
         const SerializationNode& globalParams = node.getChildNode("GlobalParameters");
-        for (int i = 0; i < (int) globalParams.getChildren().size(); i++) {
-            const SerializationNode& parameter = globalParams.getChildren()[i];
+        for (auto& parameter : globalParams.getChildren())
             force->addGlobalParameter(parameter.getStringProperty("name"), parameter.getDoubleProperty("default"));
+        if (version > 1) {
+            const SerializationNode& energyDerivs = node.getChildNode("EnergyParameterDerivatives");
+            for (auto& parameter : energyDerivs.getChildren())
+                force->addEnergyParameterDerivative(parameter.getStringProperty("name"));
         }
         const SerializationNode& computedValues = node.getChildNode("ComputedValues");
-        for (int i = 0; i < (int) computedValues.getChildren().size(); i++) {
-            const SerializationNode& value = computedValues.getChildren()[i];
+        for (auto& value : computedValues.getChildren())
             force->addComputedValue(value.getStringProperty("name"), value.getStringProperty("expression"), (CustomGBForce::ComputationType) value.getIntProperty("type"));
-        }
         const SerializationNode& energyTerms = node.getChildNode("EnergyTerms");
-        for (int i = 0; i < (int) energyTerms.getChildren().size(); i++) {
-            const SerializationNode& term = energyTerms.getChildren()[i];
+        for (auto& term : energyTerms.getChildren())
             force->addEnergyTerm(term.getStringProperty("expression"), (CustomGBForce::ComputationType) term.getIntProperty("type"));
-        }
         const SerializationNode& particles = node.getChildNode("Particles");
         vector<double> params(force->getNumPerParticleParameters());
-        for (int i = 0; i < (int) particles.getChildren().size(); i++) {
-            const SerializationNode& particle = particles.getChildren()[i];
+        for (auto& particle : particles.getChildren()) {
             for (int j = 0; j < (int) params.size(); j++) {
                 stringstream key;
                 key << "param";
@@ -134,13 +135,10 @@ void* CustomGBForceProxy::deserialize(const SerializationNode& node) const {
             force->addParticle(params);
         }
         const SerializationNode& exclusions = node.getChildNode("Exclusions");
-        for (int i = 0; i < (int) exclusions.getChildren().size(); i++) {
-            const SerializationNode& exclusion = exclusions.getChildren()[i];
+        for (auto& exclusion : exclusions.getChildren())
             force->addExclusion(exclusion.getIntProperty("p1"), exclusion.getIntProperty("p2"));
-        }
         const SerializationNode& functions = node.getChildNode("Functions");
-        for (int i = 0; i < (int) functions.getChildren().size(); i++) {
-            const SerializationNode& function = functions.getChildren()[i];
+        for (auto& function : functions.getChildren()) {
             if (function.hasProperty("type")) {
                 force->addTabulatedFunction(function.getStringProperty("name"), function.decodeObject<TabulatedFunction>());
             }
@@ -149,8 +147,8 @@ void* CustomGBForceProxy::deserialize(const SerializationNode& node) const {
                 
                 const SerializationNode& valuesNode = function.getChildNode("Values");
                 vector<double> values;
-                for (int j = 0; j < (int) valuesNode.getChildren().size(); j++)
-                    values.push_back(valuesNode.getChildren()[j].getDoubleProperty("v"));
+                for (auto& child : valuesNode.getChildren())
+                    values.push_back(child.getDoubleProperty("v"));
                 force->addTabulatedFunction(function.getStringProperty("name"), new Continuous1DFunction(values, function.getDoubleProperty("min"), function.getDoubleProperty("max")));
             }
         }

@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2015 Stanford University and the Authors.
+Portions copyright (c) 2012-2016 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
@@ -28,14 +28,44 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
+from __future__ import absolute_import
 __author__ = "Peter Eastman"
 __version__ = "1.0"
 
+from collections import namedtuple
 import os
 import xml.etree.ElementTree as etree
 from simtk.openmm.vec3 import Vec3
+from simtk.openmm.app.internal.singleton import Singleton
 from simtk.unit import nanometers, sqrt, is_quantity
 from copy import deepcopy
+
+# Enumerated values for bond type
+
+class Single(Singleton):
+    def __repr__(self):
+        return 'Single'
+Single = Single()
+
+class Double(Singleton):
+    def __repr__(self):
+        return 'Double'
+Double = Double()
+
+class Triple(Singleton):
+    def __repr__(self):
+        return 'Triple'
+Triple = Triple()
+
+class Aromatic(Singleton):
+    def __repr__(self):
+        return 'Aromatic'
+Aromatic = Aromatic()
+
+class Amide(Singleton):
+    def __repr__(self):
+        return 'Amide'
+Amide = Amide()
 
 class Topology(object):
     """Topology stores the topological information about a system.
@@ -61,19 +91,40 @@ class Topology(object):
 
     def __repr__(self):
         nchains = len(self._chains)
-        nres = sum(1 for r in self.residues())
-        natom = sum(1 for a in self.atoms())
+        nres = self._numResidues
+        natom = self._numAtoms
         nbond = len(self._bonds)
         return '<%s; %d chains, %d residues, %d atoms, %d bonds>' % (
                 type(self).__name__, nchains, nres, natom, nbond)
 
+    def getNumAtoms(self):
+        """Return the number of atoms in the Topology.
+        """
+        return self._numAtoms
+
+    def getNumResidues(self):
+        """Return the number of residues in the Topology.
+        """
+        return self._numResidues
+
+    def getNumChains(self):
+        """Return the number of chains in the Topology.
+        """
+        return len(self._chains)
+
     def addChain(self, id=None):
         """Create a new Chain and add it to the Topology.
 
-        Parameters:
-         - id (string=None) An optional identifier for the chain.  If this is omitted, an id
-           is generated based on the chain index.
-        Returns: the newly created Chain
+        Parameters
+        ----------
+        id : string=None
+            An optional identifier for the chain.  If this is omitted, an id is
+            generated based on the chain index.
+
+        Returns
+        -------
+        Chain
+             the newly created Chain
         """
         if id is None:
             id = str(len(self._chains)+1)
@@ -84,12 +135,20 @@ class Topology(object):
     def addResidue(self, name, chain, id=None):
         """Create a new Residue and add it to the Topology.
 
-        Parameters:
-         - name (string) The name of the residue to add
-         - chain (Chain) The Chain to add it to
-         - id (string=None) An optional identifier for the residue.  If this is omitted, an id
-           is generated based on the residue index.
-        Returns: the newly created Residue
+        Parameters
+        ----------
+        name : string
+            The name of the residue to add
+        chain : Chain
+            The Chain to add it to
+        id : string=None
+            An optional identifier for the residue.  If this is omitted, an id
+            is generated based on the residue index.
+
+        Returns
+        -------
+        Residue
+             the newly created Residue
         """
         if id is None:
             id = str(self._numResidues+1)
@@ -101,13 +160,22 @@ class Topology(object):
     def addAtom(self, name, element, residue, id=None):
         """Create a new Atom and add it to the Topology.
 
-        Parameters:
-         - name (string) The name of the atom to add
-         - element (Element) The element of the atom to add
-         - residue (Residue) The Residue to add it to
-         - id (string=None) An optional identifier for the atom.  If this is omitted, an id
-           is generated based on the atom index.
-        Returns: the newly created Atom
+        Parameters
+        ----------
+        name : string
+            The name of the atom to add
+        element : Element
+            The element of the atom to add
+        residue : Residue
+            The Residue to add it to
+        id : string=None
+            An optional identifier for the atom.  If this is omitted, an id is
+            generated based on the atom index.
+
+        Returns
+        -------
+        Atom
+             the newly created Atom
         """
         if id is None:
             id = str(self._numAtoms+1)
@@ -116,14 +184,22 @@ class Topology(object):
         residue._atoms.append(atom)
         return atom
 
-    def addBond(self, atom1, atom2):
+    def addBond(self, atom1, atom2, type=None, order=None):
         """Create a new bond and add it to the Topology.
 
-        Parameters:
-         - atom1 (Atom) The first Atom connected by the bond
-         - atom2 (Atom) The second Atom connected by the bond
+        Parameters
+        ----------
+        atom1 : Atom
+            The first Atom connected by the bond
+        atom2 : Atom
+            The second Atom connected by the bond
+        type : object=None
+            The type of bond to add.  Allowed values are None, Single, Double, Triple,
+            Aromatic, or Amide.
+        order : int=None
+            The bond order, or None if it is not specified
         """
-        self._bonds.append((atom1, atom2))
+        self._bonds.append(Bond(atom1, atom2, type, order))
 
     def chains(self):
         """Iterate over all Chains in the Topology."""
@@ -255,10 +331,13 @@ class Topology(object):
                             self.addBond(atomMaps[fromResidue][fromAtom], atomMaps[toResidue][toAtom])
 
     def createDisulfideBonds(self, positions):
-        """Identify disulfide bonds based on proximity and add them to the Topology.
+        """Identify disulfide bonds based on proximity and add them to the
+        Topology.
 
-        Parameters:
-         - positions (list) The list of atomic positions based on which to identify bonded atoms
+        Parameters
+        ----------
+        positions : list
+            The list of atomic positions based on which to identify bonded atoms
         """
         def isCyx(res):
             names = [atom.name for atom in res._atoms]
@@ -302,6 +381,9 @@ class Chain(object):
     def __len__(self):
         return len(self._residues)
 
+    def __repr__(self):
+        return "<Chain %d>" % self.index
+
 class Residue(object):
     """A Residue object represents a residue within a Topology."""
     def __init__(self, name, index, chain, id):
@@ -320,11 +402,26 @@ class Residue(object):
         """Iterate over all Atoms in the Residue."""
         return iter(self._atoms)
 
+    def bonds(self):
+        """Iterate over all Bonds involving any atom in this residue."""
+        return ( bond for bond in self.chain.topology.bonds() if ((bond[0] in self._atoms) or (bond[1] in self._atoms)) )
+
+    def internal_bonds(self):
+        """Iterate over all internal Bonds."""
+        return ( bond for bond in self.chain.topology.bonds() if ((bond[0] in self._atoms) and (bond[1] in self._atoms)) )
+
+    def external_bonds(self):
+        """Iterate over all Bonds to external atoms."""
+        return ( bond for bond in self.chain.topology.bonds() if ((bond[0] in self._atoms) != (bond[1] in self._atoms)) )
+
     def __len__(self):
         return len(self._atoms)
 
+    def __repr__(self):
+        return "<Residue %d (%s) of chain %d>" % (self.index, self.name, self.chain.index)
+
 class Atom(object):
-    """An Atom object represents a residue within a Topology."""
+    """An Atom object represents an atom within a Topology."""
 
     def __init__(self, name, element, index, residue, id):
         """Construct a new Atom.  You should call addAtom() on the Topology instead of calling this directly."""
@@ -339,3 +436,34 @@ class Atom(object):
         ## A user defined identifier for this Atom
         self.id = id
 
+    def __repr__(self):
+        return "<Atom %d (%s) of chain %d residue %d (%s)>" % (self.index, self.name, self.residue.chain.index, self.residue.index, self.residue.name)
+
+class Bond(namedtuple('Bond', ['atom1', 'atom2'])):
+    """A Bond object represents a bond between two Atoms within a Topology.
+
+    This class extends tuple, and may be interpreted as a 2 element tuple of Atom objects.
+    It also has fields that can optionally be used to describe the bond order and type of bond."""
+
+    def __new__(cls, atom1, atom2, type=None, order=None):
+        """Create a new Bond.  You should call addBond() on the Topology instead of calling this directly."""
+        bond = super(Bond, cls).__new__(cls, atom1, atom2)
+        bond.type = type
+        bond.order = order
+        return bond
+
+    def __getnewargs__(self):
+        "Support for pickle protocol 2: http://docs.python.org/2/library/pickle.html#pickling-and-unpickling-normal-class-instances"
+        return self[0], self[1], self.type, self.order
+
+    def __deepcopy__(self, memo):
+        return Bond(self[0], self[1], self.type, self.order)
+
+    def __repr__(self):
+        s = "Bond(%s, %s" % (self[0], self[1])
+        if self.type is not None:
+            s = "%s, type=%s" % (s, self.type)
+        if self.order is not None:
+            s = "%s, order=%d" % (s, self.order)
+        s += ")"
+        return s

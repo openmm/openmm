@@ -22,6 +22,7 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include <cmath>
 #include <string.h>
 #include <sstream>
 
@@ -61,19 +62,18 @@ using namespace OpenMM;
                   
          --------------------------------------------------------------------------------------- */
           
-      void ReferenceAndersenThermostat::applyThermostat(const vector<vector<int> >& atomGroups, vector<RealVec>& atomVelocities, vector<RealOpenMM>& atomMasses,
-              RealOpenMM temperature, RealOpenMM collisionFrequency, RealOpenMM stepSize) const {
+      void ReferenceAndersenThermostat::applyThermostat(const vector<vector<int> >& atomGroups, vector<Vec3>& atomVelocities, vector<double>& atomMasses,
+              double temperature, double collisionFrequency, double stepSize) const {
           
-          const RealOpenMM collisionProbability = 1.0f - EXP(-collisionFrequency*stepSize);
-          for (int i = 0; i < (int) atomGroups.size(); ++i) {
+          const double collisionProbability = 1.0f - exp(-collisionFrequency*stepSize);
+          for (auto& group : atomGroups) {
               if (SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber() < collisionProbability) {
                   
                   // A collision occurred, so set the velocities to new values chosen from a Boltzmann distribution.
 
-                  for (int j = 0; j < (int) atomGroups[i].size(); j++) {
-                      int atom = atomGroups[i][j];
+                  for (int atom : group) {
                       if (atomMasses[atom] != 0) {
-                          const RealOpenMM velocityScale = static_cast<RealOpenMM>(sqrt(BOLTZ*temperature/atomMasses[atom]));
+                          const double velocityScale = static_cast<double>(sqrt(BOLTZ*temperature/atomMasses[atom]));
                           atomVelocities[atom][0] = velocityScale*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
                           atomVelocities[atom][1] = velocityScale*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
                           atomVelocities[atom][2] = velocityScale*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();

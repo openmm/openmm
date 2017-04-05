@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Mark Friedrichs, Peter Eastman                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -81,15 +81,15 @@ public:
     /**
      * Get the force field parameters for a stretch-bend term.
      * 
-     * @param index         the index of the stretch-bend for which to get parameters
-     * @param particle1     the index of the first particle connected by the stretch-bend
-     * @param particle2     the index of the second particle connected by the stretch-bend
-     * @param particle3     the index of the third particle connected by the stretch-bend
-     * @param lengthAB      the equilibrium length of the stretch-bend in bond ab [particle1, particle2], measured in nm
-     * @param lengthCB      the equilibrium length of the stretch-bend in bond cb [particle3, particle2], measured in nm
-     * @param angle         the equilibrium angle in radians
-     * @param k1            the force constant of the product of bond ab and angle a-b-c
-     * @param k2            the force constant of the product of bond bc and angle a-b-c
+     * @param index              the index of the stretch-bend for which to get parameters
+     * @param[out] particle1     the index of the first particle connected by the stretch-bend
+     * @param[out] particle2     the index of the second particle connected by the stretch-bend
+     * @param[out] particle3     the index of the third particle connected by the stretch-bend
+     * @param[out] lengthAB      the equilibrium length of the stretch-bend in bond ab [particle1, particle2], measured in nm
+     * @param[out] lengthCB      the equilibrium length of the stretch-bend in bond cb [particle3, particle2], measured in nm
+     * @param[out] angle         the equilibrium angle in radians
+     * @param[out] k1            the force constant of the product of bond ab and angle a-b-c
+     * @param[out] k2            the force constant of the product of bond bc and angle a-b-c
      */
     void getStretchBendParameters(int index, int& particle1, int& particle2, int& particle3, double& lengthAB,
                                   double& lengthCB, double& angle, double& k1, double& k2) const;
@@ -120,19 +120,23 @@ public:
      */
     void updateParametersInContext(Context& context);
     /**
+     * Set whether this force should apply periodic boundary conditions when calculating displacements.
+     * Usually this is not appropriate for bonded forces, but there are situations when it can be useful.
+     */
+    void setUsesPeriodicBoundaryConditions(bool periodic);
+    /**
      * Returns whether or not this force makes use of periodic boundary
      * conditions.
      *
-     * @returns true if nonbondedMethod uses PBC and false otherwise
+     * @returns true if force uses PBC and false otherwise
      */
-    bool usesPeriodicBoundaryConditions() const {
-        return false;
-    }
+    bool usesPeriodicBoundaryConditions() const;
 protected:
     ForceImpl* createImpl() const;
 private:
     class StretchBendInfo;
     std::vector<StretchBendInfo> stretchBends;
+    bool usePeriodic;
 };
 
 /**

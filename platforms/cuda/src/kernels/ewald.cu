@@ -6,7 +6,7 @@ __device__ real2 multofReal2(real2 a, real2 b) {
  * Precompute the cosine and sine sums which appear in each force term.
  */
 
-extern "C" __global__ void calculateEwaldCosSinSums(real* __restrict__ energyBuffer, const real4* __restrict__ posq, real2* __restrict__ cosSinSum, real4 periodicBoxSize) {
+extern "C" __global__ void calculateEwaldCosSinSums(mixed* __restrict__ energyBuffer, const real4* __restrict__ posq, real2* __restrict__ cosSinSum, real4 periodicBoxSize) {
     const unsigned int ksizex = 2*KMAX_X-1;
     const unsigned int ksizey = 2*KMAX_Y-1;
     const unsigned int ksizez = 2*KMAX_Z-1;
@@ -14,7 +14,7 @@ extern "C" __global__ void calculateEwaldCosSinSums(real* __restrict__ energyBuf
     real3 reciprocalBoxSize = make_real3(2*M_PI/periodicBoxSize.x, 2*M_PI/periodicBoxSize.y, 2*M_PI/periodicBoxSize.z);
     real reciprocalCoefficient = ONE_4PI_EPS0*4*M_PI/(periodicBoxSize.x*periodicBoxSize.y*periodicBoxSize.z);
     unsigned int index = blockIdx.x*blockDim.x+threadIdx.x;
-    real energy = 0;
+    mixed energy = 0;
     while (index < (KMAX_Y-1)*ksizez+KMAX_Z)
         index += blockDim.x*gridDim.x;
     while (index < totalK) {

@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2015 Stanford University and the Authors.
+Portions copyright (c) 2012-2016 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors: Jason Swails
 
@@ -28,14 +28,15 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
+from __future__ import absolute_import
 __author__ = "Peter Eastman"
 __version__ = "1.0"
 
 from simtk.openmm.app import Topology
 from simtk.openmm.app import PDBFile
-import forcefield as ff
-import element as elem
-import amberprmtopfile as prmtop
+from . import forcefield as ff
+from . import element as elem
+from . import amberprmtopfile as prmtop
 import simtk.unit as unit
 import simtk.openmm as mm
 import math
@@ -258,7 +259,7 @@ class GromacsTopFile(object):
         """Process the [ defaults ] line."""
         fields = line.split()
         if len(fields) < 4:
-            raise ValueError('Too few fields in [ defaults ] line: '+line);
+            raise ValueError('Too few fields in [ defaults ] line: '+line)
         if fields[0] != '1':
             raise ValueError('Unsupported nonbonded type: '+fields[0])
         if fields[1] != '2':
@@ -271,7 +272,7 @@ class GromacsTopFile(object):
         """Process a line in the [ moleculetypes ] category."""
         fields = line.split()
         if len(fields) < 1:
-            raise ValueError('Too few fields in [ moleculetypes ] line: '+line);
+            raise ValueError('Too few fields in [ moleculetypes ] line: '+line)
         type = GromacsTopFile._MoleculeType()
         self._moleculeTypes[fields[0]] = type
         self._currentMoleculeType = type
@@ -280,7 +281,7 @@ class GromacsTopFile(object):
         """Process a line in the [ molecules ] category."""
         fields = line.split()
         if len(fields) < 2:
-            raise ValueError('Too few fields in [ molecules ] line: '+line);
+            raise ValueError('Too few fields in [ molecules ] line: '+line)
         self._molecules.append((fields[0], int(fields[1])))
 
     def _processAtom(self, line):
@@ -289,7 +290,7 @@ class GromacsTopFile(object):
             raise ValueError('Found [ atoms ] section before [ moleculetype ]')
         fields = line.split()
         if len(fields) < 5:
-            raise ValueError('Too few fields in [ atoms ] line: '+line);
+            raise ValueError('Too few fields in [ atoms ] line: '+line)
         self._currentMoleculeType.atoms.append(fields)
 
     def _processBond(self, line):
@@ -298,9 +299,9 @@ class GromacsTopFile(object):
             raise ValueError('Found [ bonds ] section before [ moleculetype ]')
         fields = line.split()
         if len(fields) < 3:
-            raise ValueError('Too few fields in [ bonds ] line: '+line);
+            raise ValueError('Too few fields in [ bonds ] line: '+line)
         if fields[2] != '1':
-            raise ValueError('Unsupported function type in [ bonds ] line: '+line);
+            raise ValueError('Unsupported function type in [ bonds ] line: '+line)
         self._currentMoleculeType.bonds.append(fields)
 
     def _processAngle(self, line):
@@ -309,9 +310,9 @@ class GromacsTopFile(object):
             raise ValueError('Found [ angles ] section before [ moleculetype ]')
         fields = line.split()
         if len(fields) < 4:
-            raise ValueError('Too few fields in [ angles ] line: '+line);
+            raise ValueError('Too few fields in [ angles ] line: '+line)
         if fields[3] not in ('1', '5'):
-            raise ValueError('Unsupported function type in [ angles ] line: '+line);
+            raise ValueError('Unsupported function type in [ angles ] line: '+line)
         self._currentMoleculeType.angles.append(fields)
 
     def _processDihedral(self, line):
@@ -320,9 +321,9 @@ class GromacsTopFile(object):
             raise ValueError('Found [ dihedrals ] section before [ moleculetype ]')
         fields = line.split()
         if len(fields) < 5:
-            raise ValueError('Too few fields in [ dihedrals ] line: '+line);
+            raise ValueError('Too few fields in [ dihedrals ] line: '+line)
         if fields[4] not in ('1', '2', '3', '4', '9'):
-            raise ValueError('Unsupported function type in [ dihedrals ] line: '+line);
+            raise ValueError('Unsupported function type in [ dihedrals ] line: '+line)
         self._currentMoleculeType.dihedrals.append(fields)
 
     def _processExclusion(self, line):
@@ -331,7 +332,7 @@ class GromacsTopFile(object):
             raise ValueError('Found [ exclusions ] section before [ moleculetype ]')
         fields = line.split()
         if len(fields) < 2:
-            raise ValueError('Too few fields in [ exclusions ] line: '+line);
+            raise ValueError('Too few fields in [ exclusions ] line: '+line)
         self._currentMoleculeType.exclusions.append(fields)
 
     def _processPair(self, line):
@@ -340,9 +341,9 @@ class GromacsTopFile(object):
             raise ValueError('Found [ pairs ] section before [ moleculetype ]')
         fields = line.split()
         if len(fields) < 3:
-            raise ValueError('Too few fields in [ pairs ] line: '+line);
+            raise ValueError('Too few fields in [ pairs ] line: '+line)
         if fields[2] != '1':
-            raise ValueError('Unsupported function type in [ pairs ] line: '+line);
+            raise ValueError('Unsupported function type in [ pairs ] line: '+line)
         self._currentMoleculeType.pairs.append(fields)
 
     def _processCmap(self, line):
@@ -351,19 +352,19 @@ class GromacsTopFile(object):
             raise ValueError('Found [ cmap ] section before [ moleculetype ]')
         fields = line.split()
         if len(fields) < 6:
-            raise ValueError('Too few fields in [ cmap ] line: '+line);
+            raise ValueError('Too few fields in [ cmap ] line: '+line)
         self._currentMoleculeType.cmaps.append(fields)
 
     def _processAtomType(self, line):
         """Process a line in the [ atomtypes ] category."""
         fields = line.split()
         if len(fields) < 6:
-            raise ValueError('Too few fields in [ atomtypes ] line: '+line);
+            raise ValueError('Too few fields in [ atomtypes ] line: '+line)
         if len(fields[3]) == 1:
             # Bonded type and atomic number are both missing.
             fields.insert(1, None)
             fields.insert(1, None)
-        elif len(fields[4]) == 1 and len(fields[5]) > 1:
+        elif len(fields[4]) == 1 and fields[4].isalpha():
             if fields[1][0].isalpha():
                 # Atomic number is missing.
                 fields.insert(2, None)
@@ -376,27 +377,27 @@ class GromacsTopFile(object):
         """Process a line in the [ bondtypes ] category."""
         fields = line.split()
         if len(fields) < 5:
-            raise ValueError('Too few fields in [ bondtypes ] line: '+line);
+            raise ValueError('Too few fields in [ bondtypes ] line: '+line)
         if fields[2] != '1':
-            raise ValueError('Unsupported function type in [ bondtypes ] line: '+line);
+            raise ValueError('Unsupported function type in [ bondtypes ] line: '+line)
         self._bondTypes[tuple(fields[:2])] = fields
 
     def _processAngleType(self, line):
         """Process a line in the [ angletypes ] category."""
         fields = line.split()
         if len(fields) < 6:
-            raise ValueError('Too few fields in [ angletypes ] line: '+line);
+            raise ValueError('Too few fields in [ angletypes ] line: '+line)
         if fields[3] not in ('1', '5'):
-            raise ValueError('Unsupported function type in [ angletypes ] line: '+line);
+            raise ValueError('Unsupported function type in [ angletypes ] line: '+line)
         self._angleTypes[tuple(fields[:3])] = fields
 
     def _processDihedralType(self, line):
         """Process a line in the [ dihedraltypes ] category."""
         fields = line.split()
         if len(fields) < 7:
-            raise ValueError('Too few fields in [ dihedraltypes ] line: '+line);
+            raise ValueError('Too few fields in [ dihedraltypes ] line: '+line)
         if fields[4] not in ('1', '2', '3', '4', '9'):
-            raise ValueError('Unsupported function type in [ dihedraltypes ] line: '+line);
+            raise ValueError('Unsupported function type in [ dihedraltypes ] line: '+line)
         key = tuple(fields[:5])
         if fields[4] == '9' and key in self._dihedralTypes:
             # There are multiple dihedrals defined for these atom types.
@@ -408,40 +409,46 @@ class GromacsTopFile(object):
         """Process a line in the [ implicit_genborn_params ] category."""
         fields = line.split()
         if len(fields) < 6:
-            raise ValueError('Too few fields in [ implicit_genborn_params ] line: '+line);
+            raise ValueError('Too few fields in [ implicit_genborn_params ] line: '+line)
         self._implicitTypes[fields[0]] = fields
 
     def _processPairType(self, line):
         """Process a line in the [ pairtypes ] category."""
         fields = line.split()
         if len(fields) < 5:
-            raise ValueError('Too few fields in [ pairtypes] line: '+line);
+            raise ValueError('Too few fields in [ pairtypes] line: '+line)
         if fields[2] != '1':
-            raise ValueError('Unsupported function type in [ pairtypes ] line: '+line);
+            raise ValueError('Unsupported function type in [ pairtypes ] line: '+line)
         self._pairTypes[tuple(fields[:2])] = fields
 
     def _processCmapType(self, line):
         """Process a line in the [ cmaptypes ] category."""
         fields = line.split()
         if len(fields) < 8 or len(fields) < 8+int(fields[6])*int(fields[7]):
-            raise ValueError('Too few fields in [ cmaptypes ] line: '+line);
+            raise ValueError('Too few fields in [ cmaptypes ] line: '+line)
         if fields[5] != '1':
-            raise ValueError('Unsupported function type in [ cmaptypes ] line: '+line);
+            raise ValueError('Unsupported function type in [ cmaptypes ] line: '+line)
         self._cmapTypes[tuple(fields[:5])] = fields
 
     def __init__(self, file, periodicBoxVectors=None, unitCellDimensions=None, includeDir=None, defines=None):
         """Load a top file.
 
-        Parameters:
-         - file (string) the name of the file to load
-         - periodicBoxVectors (tuple of Vec3=None) the vectors defining the periodic box
-         - unitCellDimensions (Vec3=None) the dimensions of the crystallographic unit cell.  For
-           non-rectangular unit cells, specify periodicBoxVectors instead.
-         - includeDir (string=None) A directory in which to look for other files
-           included from the top file. If not specified, we will attempt to locate a gromacs
-           installation on your system. When gromacs is installed in /usr/local, this will resolve
-           to  /usr/local/gromacs/share/gromacs/top
-         - defines (dict={}) preprocessor definitions that should be predefined when parsing the file
+        Parameters
+        ----------
+        file : str
+            the name of the file to load
+        periodicBoxVectors : tuple of Vec3=None
+            the vectors defining the periodic box
+        unitCellDimensions : Vec3=None
+            the dimensions of the crystallographic unit cell.  For
+            non-rectangular unit cells, specify periodicBoxVectors instead.
+        includeDir : string=None
+            A directory in which to look for other files included from the
+            top file. If not specified, we will attempt to locate a gromacs
+            installation on your system. When gromacs is installed in
+            /usr/local, this will resolve to /usr/local/gromacs/share/gromacs/top
+        defines : dict={}
+            preprocessor definitions that should be predefined when parsing the file
          """
         if includeDir is None:
             includeDir = _defaultGromacsIncludeDir()
@@ -538,31 +545,51 @@ class GromacsTopFile(object):
 
     def createSystem(self, nonbondedMethod=ff.NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
                      constraints=None, rigidWater=True, implicitSolvent=None, soluteDielectric=1.0, solventDielectric=78.5, ewaldErrorTolerance=0.0005, removeCMMotion=True, hydrogenMass=None):
-        """Construct an OpenMM System representing the topology described by this prmtop file.
+        """Construct an OpenMM System representing the topology described by this
+        prmtop file.
 
-        Parameters:
-         - nonbondedMethod (object=NoCutoff) The method to use for nonbonded interactions.  Allowed values are
-           NoCutoff, CutoffNonPeriodic, CutoffPeriodic, Ewald, or PME.
-         - nonbondedCutoff (distance=1*nanometer) The cutoff distance to use for nonbonded interactions
-         - constraints (object=None) Specifies which bonds and angles should be implemented with constraints.
-           Allowed values are None, HBonds, AllBonds, or HAngles.
-         - rigidWater (boolean=True) If true, water molecules will be fully rigid regardless of the value passed for the constraints argument
-         - implicitSolvent (object=None) If not None, the implicit solvent model to use.  The only allowed value is OBC2.
-         - soluteDielectric (float=1.0) The solute dielectric constant to use in the implicit solvent model.
-         - solventDielectric (float=78.5) The solvent dielectric constant to use in the implicit solvent model.
-         - ewaldErrorTolerance (float=0.0005) The error tolerance to use if nonbondedMethod is Ewald or PME.
-         - removeCMMotion (boolean=True) If true, a CMMotionRemover will be added to the System
-         - hydrogenMass (mass=None) The mass to use for hydrogen atoms bound to heavy atoms.  Any mass added to a hydrogen is
-           subtracted from the heavy atom to keep their total mass the same.
-        Returns: the newly created System
+        Parameters
+        ----------
+        nonbondedMethod : object=NoCutoff
+            The method to use for nonbonded interactions.  Allowed values are
+            NoCutoff, CutoffNonPeriodic, CutoffPeriodic, Ewald, PME, or LJPME.
+        nonbondedCutoff : distance=1*nanometer
+            The cutoff distance to use for nonbonded interactions
+        constraints : object=None
+            Specifies which bonds and angles should be implemented with
+            constraints. Allowed values are None, HBonds, AllBonds, or HAngles.
+        rigidWater : boolean=True
+            If true, water molecules will be fully rigid regardless of the value
+            passed for the constraints argument
+        implicitSolvent : object=None
+            If not None, the implicit solvent model to use.  The only allowed
+            value is OBC2.
+        soluteDielectric : float=1.0
+            The solute dielectric constant to use in the implicit solvent model.
+        solventDielectric : float=78.5
+            The solvent dielectric constant to use in the implicit solvent
+            model.
+        ewaldErrorTolerance : float=0.0005
+            The error tolerance to use if nonbondedMethod is Ewald, PME, or LJPME.
+        removeCMMotion : boolean=True
+            If true, a CMMotionRemover will be added to the System
+        hydrogenMass : mass=None
+            The mass to use for hydrogen atoms bound to heavy atoms.  Any mass
+            added to a hydrogen is subtracted from the heavy atom to keep their
+            total mass the same.
+
+        Returns
+        -------
+        System
+             the newly created System
         """
         # Create the System.
 
         sys = mm.System()
-        boxSize = self.topology.getUnitCellDimensions()
-        if boxSize is not None:
-            sys.setDefaultPeriodicBoxVectors((boxSize[0], 0, 0), (0, boxSize[1], 0), (0, 0, boxSize[2]))
-        elif nonbondedMethod in (ff.CutoffPeriodic, ff.Ewald, ff.PME):
+        boxVectors = self.topology.getPeriodicBoxVectors()
+        if boxVectors is not None:
+            sys.setDefaultPeriodicBoxVectors(*boxVectors)
+        elif nonbondedMethod in (ff.CutoffPeriodic, ff.Ewald, ff.PME, ff.LJPME):
             raise ValueError('Illegal nonbonded method for a non-periodic system')
         nb = mm.NonbondedForce()
         sys.addForce(nb)
@@ -585,9 +612,9 @@ class GromacsTopFile(object):
         topologyAtoms = list(self.topology.atoms())
         exceptions = []
         fudgeQQ = float(self._defaults[4])
-        
+
         # Build a lookup table to let us process dihedrals more quickly.
-        
+
         dihedralTypeTable = {}
         for key in self._dihedralTypes:
             if key[1] != 'X' and key[2] != 'X':
@@ -601,7 +628,7 @@ class GromacsTopFile(object):
         for key in self._dihedralTypes:
             if key[1] == 'X' or key[2] == 'X':
                 wildcardDihedralTypes.append(key)
-                for types in dihedralTypeTable.itervalues():
+                for types in dihedralTypeTable.values():
                     types.append(key)
 
         # Loop over molecules and create the specified number of each type.
@@ -617,7 +644,7 @@ class GromacsTopFile(object):
                 try:
                     bondedTypes = [self._atomTypes[t][1] for t in atomTypes]
                 except KeyError as e:
-                    raise ValueError('Unknown atom type: '+e.message)
+                    raise ValueError('Unknown atom type: ' + e.message)
                 bondedTypes = [b if b is not None else a for a, b in zip(atomTypes, bondedTypes)]
 
                 # Add atoms.
@@ -745,7 +772,7 @@ class GromacsTopFile(object):
                                 if periodic is None:
                                     periodic = mm.PeriodicTorsionForce()
                                     sys.addForce(periodic)
-                                periodic.addTorsion(baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], baseAtomIndex+atoms[2], baseAtomIndex+atoms[3], int(params[7]), float(params[5])*degToRad, k)
+                                periodic.addTorsion(baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], baseAtomIndex+atoms[2], baseAtomIndex+atoms[3], int(float(params[7])), float(params[5])*degToRad, k)
                         elif dihedralType == '2':
                             # Harmonic torsion
                             k = float(params[6])
@@ -787,7 +814,7 @@ class GromacsTopFile(object):
                     map = []
                     for i in range(mapSize):
                         for j in range(mapSize):
-                            map.append(float(params[8+mapSize*((j+mapSize/2)%mapSize)+((i+mapSize/2)%mapSize)]))
+                            map.append(float(params[8+mapSize*((j+mapSize//2)%mapSize)+((i+mapSize//2)%mapSize)]))
                     map = tuple(map)
                     if map not in mapIndices:
                         mapIndices[map] = cmap.addMap(mapSize, map)
@@ -836,7 +863,7 @@ class GromacsTopFile(object):
                     for atom in atoms[1:]:
                         if atom > atoms[0]:
                             exceptions.append((baseAtomIndex+atoms[0], baseAtomIndex+atom, 0, 0, 0))
-                    
+
 
         # Create nonbonded exceptions.
 
@@ -850,13 +877,14 @@ class GromacsTopFile(object):
                      ff.CutoffNonPeriodic:mm.NonbondedForce.CutoffNonPeriodic,
                      ff.CutoffPeriodic:mm.NonbondedForce.CutoffPeriodic,
                      ff.Ewald:mm.NonbondedForce.Ewald,
-                     ff.PME:mm.NonbondedForce.PME}
+                     ff.PME:mm.NonbondedForce.PME,
+                     ff.LJPME:mm.NonbondedForce.LJPME}
         nb.setNonbondedMethod(methodMap[nonbondedMethod])
         nb.setCutoffDistance(nonbondedCutoff)
         nb.setEwaldErrorTolerance(ewaldErrorTolerance)
-        
+
         # Adjust masses.
-        
+
         if hydrogenMass is not None:
             for atom1, atom2 in self.topology.bonds():
                 if atom1.element == elem.hydrogen:

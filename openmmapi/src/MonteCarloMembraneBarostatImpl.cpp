@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman, Lee-Ping Wang                                      *
  * Contributors:                                                              *
  *                                                                            *
@@ -34,6 +34,7 @@
 #include "openmm/internal/OSRngSeed.h"
 #include "openmm/Context.h"
 #include "openmm/kernels.h"
+#include "openmm/OpenMMException.h"
 #include <cmath>
 #include <vector>
 #include <algorithm>
@@ -51,6 +52,8 @@ MonteCarloMembraneBarostatImpl::MonteCarloMembraneBarostatImpl(const MonteCarloM
 }
 
 void MonteCarloMembraneBarostatImpl::initialize(ContextImpl& context) {
+    if (!context.getSystem().usesPeriodicBoundaryConditions())
+        throw OpenMMException("A barostat cannot be used with a non-periodic system");
     kernel = context.getPlatform().createKernel(ApplyMonteCarloBarostatKernel::Name(), context);
     kernel.getAs<ApplyMonteCarloBarostatKernel>().initialize(context.getSystem(), owner);
     Vec3 box[3];
@@ -120,7 +123,7 @@ void MonteCarloMembraneBarostatImpl::updateContextState(ContextImpl& context) {
     // Compute the energy of the modified system.
     
     double finalEnergy = context.getOwner().getState(State::Energy).getPotentialEnergy();
-    double kT = BOLTZ*owner.getTemperature();
+    double kT = BOLTZ*context.getParameter(MonteCarloMembraneBarostat::Temperature());
     double w = finalEnergy-initialEnergy + pressure*deltaVolume - tension*deltaArea - context.getMolecules().size()*kT*std::log(newVolume/volume);
     if (w > 0 && genrand_real2(random) > std::exp(-w/kT)) {
         // Reject the step.
@@ -150,6 +153,7 @@ std::map<std::string, double> MonteCarloMembraneBarostatImpl::getDefaultParamete
     std::map<std::string, double> parameters;
     parameters[MonteCarloMembraneBarostat::Pressure()] = getOwner().getDefaultPressure();
     parameters[MonteCarloMembraneBarostat::SurfaceTension()] = getOwner().getDefaultSurfaceTension();
+    parameters[MonteCarloMembraneBarostat::Temperature()] = getOwner().getDefaultTemperature();
     return parameters;
 }
 

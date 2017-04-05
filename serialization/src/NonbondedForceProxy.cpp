@@ -42,7 +42,7 @@ NonbondedForceProxy::NonbondedForceProxy() : SerializationProxy("NonbondedForce"
 }
 
 void NonbondedForceProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 1);
+    node.setIntProperty("version", 2);
     const NonbondedForce& force = *reinterpret_cast<const NonbondedForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
     node.setIntProperty("method", (int) force.getNonbondedMethod());
@@ -59,6 +59,11 @@ void NonbondedForceProxy::serialize(const void* object, SerializationNode& node)
     node.setIntProperty("nx", nx);
     node.setIntProperty("ny", ny);
     node.setIntProperty("nz", nz);
+    force.getLJPMEParameters(alpha, nx, ny, nz);
+    node.setDoubleProperty("ljAlpha", alpha);
+    node.setIntProperty("ljnx", nx);
+    node.setIntProperty("ljny", ny);
+    node.setIntProperty("ljnz", nz);
     node.setIntProperty("recipForceGroup", force.getReciprocalSpaceForceGroup());
     SerializationNode& particles = node.createChildNode("Particles");
     for (int i = 0; i < force.getNumParticles(); i++) {
@@ -76,7 +81,8 @@ void NonbondedForceProxy::serialize(const void* object, SerializationNode& node)
 }
 
 void* NonbondedForceProxy::deserialize(const SerializationNode& node) const {
-    if (node.getIntProperty("version") != 1)
+    int version = node.getIntProperty("version");
+    if (version < 1 || version > 2)
         throw OpenMMException("Unsupported version number");
     NonbondedForce* force = new NonbondedForce();
     try {
@@ -93,17 +99,20 @@ void* NonbondedForceProxy::deserialize(const SerializationNode& node) const {
         int ny = node.getIntProperty("ny", 0);
         int nz = node.getIntProperty("nz", 0);
         force->setPMEParameters(alpha, nx, ny, nz);
+        if (version >= 2) {
+            alpha = node.getDoubleProperty("ljAlpha", 0.0);
+            nx = node.getIntProperty("ljnx", 0);
+            ny = node.getIntProperty("ljny", 0);
+            nz = node.getIntProperty("ljnz", 0);
+            force->setLJPMEParameters(alpha, nx, ny, nz);
+        }
         force->setReciprocalSpaceForceGroup(node.getIntProperty("recipForceGroup", -1));
         const SerializationNode& particles = node.getChildNode("Particles");
-        for (int i = 0; i < (int) particles.getChildren().size(); i++) {
-            const SerializationNode& particle = particles.getChildren()[i];
+        for (auto& particle : particles.getChildren())
             force->addParticle(particle.getDoubleProperty("q"), particle.getDoubleProperty("sig"), particle.getDoubleProperty("eps"));
-        }
         const SerializationNode& exceptions = node.getChildNode("Exceptions");
-        for (int i = 0; i < (int) exceptions.getChildren().size(); i++) {
-            const SerializationNode& exception = exceptions.getChildren()[i];
+        for (auto& exception : exceptions.getChildren())
             force->addException(exception.getIntProperty("p1"), exception.getIntProperty("p2"), exception.getDoubleProperty("q"), exception.getDoubleProperty("sig"), exception.getDoubleProperty("eps"));
-        }
     }
     catch (...) {
         delete force;

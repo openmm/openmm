@@ -1,0 +1,69 @@
+.. _app :
+
+Application Layer
+=================
+
+Loaders and Setup
+~~~~~~~~~~~~~~~~~
+.. autosummary::
+    :toctree: generated/
+    :template: class.rst
+
+{% for fileclass in fileclasses %}
+    ~{{ fileclass }}
+{% endfor %}
+
+
+Representation and Manipulation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autosummary::
+    :toctree: generated/
+    :template: class.rst
+
+    ~simtk.openmm.app.topology.Topology
+    ~simtk.openmm.app.topology.Chain
+    ~simtk.openmm.app.topology.Residue
+    ~simtk.openmm.app.topology.Atom
+    ~simtk.openmm.app.modeller.Modeller
+
+Simulation
+~~~~~~~~~~
+.. autosummary::
+    :toctree: generated/
+    :template: class.rst
+
+    ~simtk.openmm.app.forcefield.ForceField
+    ~simtk.openmm.app.simulation.Simulation
+
+
+Reporting Output
+~~~~~~~~~~~~~~~~
+.. autosummary::
+    :toctree: generated/
+    :template: class.rst
+
+{% for reporter in reporters %}
+    ~{{ reporter }}
+{% endfor %}
+
+
+Extras
+~~~~~~
+.. autosummary::
+    :toctree: generated/
+    :template: class.rst
+
+    {% for extra in app_extras %}
+    ~{{ extra }}
+    {% endfor %}
+
+Units
+~~~~~~
+.. autosummary::
+    :toctree: generated/
+    :template: class.rst
+    :nosignatures:
+
+    {% for unit in units %}
+    ~{{ unit }}
+    {% endfor %}

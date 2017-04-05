@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2017 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -27,46 +27,6 @@
 #define __RealSimTk_H__
 
 #include <cmath>
-
-// Set RealOpenMMType to 2 for double precision, 1 for float
-
-#ifndef RealOpenMMType
-#define RealOpenMMType 2
-#endif 
-
-#if RealOpenMMType == 1 
-
-#define RealOpenMM     float
-#define SQRT           sqrtf
-#define POW            powf
-#define SIN            sinf
-#define COS            cosf
-#define TAN            tanf
-
-// LOG is used in Vishal's gpu code; modifying LOG -> LN 
-#define LN             logf
-
-#define EXP            expf
-#define FABS           fabsf
-#define ACOS           acosf
-#define ASIN           asinf
-#define ATAN           atanf
-#define TANH           tanhf
-
-#define FLOOR          floorf
-
-#define ATOF           atoff
-
-#define PI_M               3.141592653589f
-#define TWO_SIX            1.122462048309372981f
-#define RADIAN            57.29577951308f
-#define RADIAN_TO_DEGREE  57.29577951308f
-#define LOG_TEN            2.302585092994045684f
-#define SQRT_TWO           1.41421356237309504f
-#define DEGREE_TO_RADIAN   0.01745329252f
-#define RADIAN_INVERSE     0.01745329252f
-
-#else
 
 #define RealOpenMM     double
 #define SQRT           sqrt
@@ -97,8 +57,6 @@
 #define SQRT_TWO           1.41421356237309504
 #define DEGREE_TO_RADIAN   0.01745329252
 #define RADIAN_INVERSE     0.01745329252
-
-#endif
 
 #define DOT3(u,v) ((u[0])*(v[0]) + (u[1])*(v[1]) + (u[2])*(v[2]))
 

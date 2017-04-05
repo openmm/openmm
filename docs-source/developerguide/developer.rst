@@ -66,7 +66,7 @@ information related to a particular simulation, and define methods for
 performing calculations.
 
 Note that, whereas a Force is logically “part of” a System, a ForceImpl is
-logically “part of” a Context.  (See :numref:`Figure,API Relationships`\ .)  If you create many Contexts
+logically “part of” a Context.  (See :autonumref:`Figure,API Relationships`\ .)  If you create many Contexts
 for simulating the same System, there is still only one System and only one copy
 of each Force in it.  But there will be separate ForceImpls for each Context,
 and those ForceImpls store information related to their particular Contexts.
@@ -316,16 +316,6 @@ performance.  (It is still not always as simple or clear as one might hope, but
 that is the goal.)  When implementing a new feature, it is recommended to create
 the reference implementation first, then use that as a model for the versions in
 other Platforms.
-
-The reference Platform represents all floating point numbers with the type
-RealOpenMM, which is defined in SimTKOpenMMRealType.h.  This allows the entire
-platform to be compiled in either single or double precision.  By default it is
-double precision, but it can be changed by modifying one flag at the top of that
-file.  The same file also defines lots of numerical constants and mathematical
-functions, so the correct precision version will always be used.  Vector
-quantities (positions, velocities, etc.) are represented by RealVec objects.
-This class is identical to Vec3, except that its components are of type
-RealOpenMM instead of double.
 
 When using the reference Platform, the “platform-specific data” stored in
 ContextImpl is of type ReferencePlatform::PlatformData, which is declared in

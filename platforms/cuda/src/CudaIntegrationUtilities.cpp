@@ -106,21 +106,21 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
         vsiteOutOfPlaneAtoms(NULL), vsiteOutOfPlaneWeights(NULL), vsiteLocalCoordsAtoms(NULL), vsiteLocalCoordsParams(NULL) {
     // Create workspace arrays.
 
+    lastStepSize = make_double2(0.0, 0.0);
     if (context.getUseDoublePrecision() || context.getUseMixedPrecision()) {
         posDelta = CudaArray::create<double4>(context, context.getPaddedNumAtoms(), "posDelta");
         vector<double4> deltas(posDelta->getSize(), make_double4(0.0, 0.0, 0.0, 0.0));
         posDelta->upload(deltas);
         stepSize = CudaArray::create<double2>(context, 1, "stepSize");
-        vector<double2> step(1, make_double2(0.0, 0.0));
-        stepSize->upload(step);
+        stepSize->upload(&lastStepSize);
     }
     else {
         posDelta = CudaArray::create<float4>(context, context.getPaddedNumAtoms(), "posDelta");
         vector<float4> deltas(posDelta->getSize(), make_float4(0.0f, 0.0f, 0.0f, 0.0f));
         posDelta->upload(deltas);
         stepSize = CudaArray::create<float2>(context, 1, "stepSize");
-        vector<float2> step(1, make_float2(0.0f, 0.0f));
-        stepSize->upload(step);
+        float2 lastStepSizeFloat = make_float2(0.0f, 0.0f);
+        stepSize->upload(&lastStepSizeFloat);
     }
 
     // Record the set of constraints and how many constraints each atom is involved in.
@@ -201,15 +201,17 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
                 params.push_back(make_float2(dist13, dist12));
             }
             else
-                throw OpenMMException("Two of the three distances constrained with SETTLE must be the same.");
+                continue; // We can't handle this with SETTLE
             isShakeAtom[atom1] = true;
             isShakeAtom[atom2] = true;
             isShakeAtom[atom3] = true;
         }
-        settleAtoms = CudaArray::create<int4>(context, atoms.size(), "settleAtoms");
-        settleParams = CudaArray::create<float2>(context, params.size(), "settleParams");
-        settleAtoms->upload(atoms);
-        settleParams->upload(params);
+        if (atoms.size() > 0) {
+            settleAtoms = CudaArray::create<int4>(context, atoms.size(), "settleAtoms");
+            settleParams = CudaArray::create<float2>(context, params.size(), "settleParams");
+            settleAtoms->upload(atoms);
+            settleParams->upload(params);
+        }
     }
 
     // Find clusters consisting of a central atom with up to three peripheral atoms.
@@ -308,15 +310,15 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
         // Record information needed by ReferenceCCMAAlgorithm.
         
         vector<pair<int, int> > refIndices(numCCMA);
-        vector<RealOpenMM> refDistance(numCCMA);
+        vector<double> refDistance(numCCMA);
         for (int i = 0; i < numCCMA; i++) {
             int index = ccmaConstraints[i];
             refIndices[i] = make_pair(atom1[index], atom2[index]);
             refDistance[i] = distance[index];
         }
-        vector<RealOpenMM> refMasses(numAtoms);
+        vector<double> refMasses(numAtoms);
         for (int i = 0; i < numAtoms; ++i)
-            refMasses[i] = (RealOpenMM) system.getParticleMass(i);
+            refMasses[i] = system.getParticleMass(i);
 
         // Look up angles for CCMA.
         
@@ -328,7 +330,7 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
                     int atom1, atom2, atom3;
                     double angle, k;
                     force->getAngleParameters(j, atom1, atom2, atom3, angle, k);
-                    angles.push_back(ReferenceCCMAAlgorithm::AngleInfo(atom1, atom2, atom3, (RealOpenMM) angle));
+                    angles.push_back(ReferenceCCMAAlgorithm::AngleInfo(atom1, atom2, atom3, angle));
                 }
             }
         }
@@ -646,6 +648,29 @@ CudaIntegrationUtilities::~CudaIntegrationUtilities() {
         delete vsiteLocalCoordsAtoms;
     if (vsiteLocalCoordsParams != NULL)
         delete vsiteLocalCoordsParams;
+}
+
+void CudaIntegrationUtilities::setNextStepSize(double size) {
+    if (size != lastStepSize.x || size != lastStepSize.y) {
+        lastStepSize = make_double2(size, size);
+        if (context.getUseDoublePrecision() || context.getUseMixedPrecision())
+            stepSize->upload(&lastStepSize);
+        else {
+            float2 lastStepSizeFloat = make_float2((float) size, (float) size);
+            stepSize->upload(&lastStepSizeFloat);
+        }
+    }
+}
+
+double CudaIntegrationUtilities::getLastStepSize() {
+    if (context.getUseDoublePrecision() || context.getUseMixedPrecision())
+        stepSize->download(&lastStepSize);
+    else {
+        float2 lastStepSizeFloat;
+        stepSize->download(&lastStepSizeFloat);
+        lastStepSize = make_double2(lastStepSizeFloat.x, lastStepSizeFloat.y);
+    }
+    return lastStepSize.y;
 }
 
 void CudaIntegrationUtilities::applyConstraints(double tol) {

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -45,6 +45,7 @@
 #include <cstdlib>
 #endif
 #include <set>
+#include <algorithm>
 
 #include "ReferencePlatform.h"
 
@@ -52,6 +53,9 @@ using namespace OpenMM;
 using namespace std;
 
 std::vector<std::string> Platform::pluginLoadFailures;
+static bool stringLengthComparator(string i, string j) {
+  return (i.size() < j.size());
+}
 
 static int registerPlatforms() {
 
@@ -66,10 +70,10 @@ static int platformInitializer = registerPlatforms();
 
 Platform::~Platform() {
     set<KernelFactory*> uniqueKernelFactories;
-    for (map<string, KernelFactory*>::const_iterator iter = kernelFactories.begin(); iter != kernelFactories.end(); ++iter)
-        uniqueKernelFactories.insert(iter->second);
-    for (set<KernelFactory*>::const_iterator iter = uniqueKernelFactories.begin(); iter != uniqueKernelFactories.end(); ++iter)
-        delete *iter;
+    for (auto& factory : kernelFactories)
+        uniqueKernelFactories.insert(factory.second);
+    for (auto factory : uniqueKernelFactories)
+        delete factory;
 }
 
 const vector<string>& Platform::getPropertyNames() const {
@@ -85,16 +89,22 @@ void Platform::setPropertyValue(Context& context, const string& property, const 
 }
 
 const string& Platform::getPropertyDefaultValue(const string& property) const {
-    map<string, string>::const_iterator value = defaultProperties.find(property);
+    string propertyName = property;
+    if (deprecatedPropertyReplacements.find(property) != deprecatedPropertyReplacements.end())
+        propertyName = deprecatedPropertyReplacements.find(property)->second;
+    map<string, string>::const_iterator value = defaultProperties.find(propertyName);
     if (value == defaultProperties.end())
         throw OpenMMException("getPropertyDefaultValue: Illegal property name");
     return value->second;
 }
 
 void Platform::setPropertyDefaultValue(const string& property, const string& value) {
-    for (int i = 0; i < (int) platformProperties.size(); i++)
-        if (platformProperties[i] == property) {
-            defaultProperties[property] = value;
+    string propertyName = property;
+    if (deprecatedPropertyReplacements.find(property) != deprecatedPropertyReplacements.end())
+        propertyName = deprecatedPropertyReplacements.find(property)->second;
+    for (auto& prop : platformProperties)
+        if (prop == propertyName) {
+            defaultProperties[propertyName] = value;
             return;
         }
     throw OpenMMException("setPropertyDefaultValue: Illegal property name");
@@ -111,8 +121,8 @@ void Platform::registerKernelFactory(const string& name, KernelFactory* factory)
 }
 
 bool Platform::supportsKernels(const vector<string>& kernelNames) const {
-    for (int i = 0; i < (int) kernelNames.size(); ++i)
-        if (kernelFactories.find(kernelNames[i]) == kernelFactories.end())
+    for (auto& name : kernelNames)
+        if (kernelFactories.find(name) == kernelFactories.end())
             return false;
     return true;
 }
@@ -157,9 +167,9 @@ Platform& Platform::findPlatform(const vector<string>& kernelNames) {
     Platform* best = 0;
     vector<Platform*>& platforms = getPlatforms();
     double speed = 0.0;
-    for (int i = 0; i < (int) platforms.size(); ++i) {
-        if (platforms[i]->supportsKernels(kernelNames) && platforms[i]->getSpeed() > speed) {
-            best = platforms[i];
+    for (auto platform : platforms) {
+        if (platform->supportsKernels(kernelNames) && platform->getSpeed() > speed) {
+            best = platform;
             speed = best->getSpeed();
         }
     }
@@ -183,15 +193,15 @@ static HMODULE loadOneLibrary(const string& file) {
 }
 
 static void initializePlugins(vector<HMODULE>& plugins) {
-    for (int i = 0; i < (int) plugins.size(); i++) {
+    for (auto plugin : plugins) {
         void (*init)();
-        *(void **)(&init) = (void *) GetProcAddress(plugins[i], "registerPlatforms");
+        *(void **)(&init) = (void *) GetProcAddress(plugin, "registerPlatforms");
         if (init != NULL)
             (*init)();
     }
-    for (int i = 0; i < (int) plugins.size(); i++) {
+    for (auto plugin : plugins) {
         void (*init)();
-        *(void **)(&init) = (void *) GetProcAddress(plugins[i], "registerKernelFactories");
+        *(void **)(&init) = (void *) GetProcAddress(plugin, "registerKernelFactories");
         if (init != NULL)
             (*init)();
     }
@@ -211,15 +221,15 @@ static void* loadOneLibrary(const string& file) {
 
 static void initializePlugins(vector<void*>& plugins) {
 #ifndef __PNACL__
-    for (int i = 0; i < (int) plugins.size(); i++) {
+    for (auto plugin : plugins) {
         void (*init)();
-        *(void **)(&init) = dlsym(plugins[i], "registerPlatforms");
+        *(void **)(&init) = dlsym(plugin, "registerPlatforms");
         if (init != NULL)
             (*init)();
     }
-    for (int i = 0; i < (int) plugins.size(); i++) {
+    for (auto plugin : plugins) {
         void (*init)();
-        *(void **)(&init) = dlsym(plugins[i], "registerKernelFactories");
+        *(void **)(&init) = dlsym(plugin, "registerKernelFactories");
         if (init != NULL)
             (*init)();
     }
@@ -269,6 +279,7 @@ vector<string> Platform::loadPluginsFromDirectory(const string& directory) {
 #endif
     vector<string> loadedLibraries;
     pluginLoadFailures.resize(0);
+    std::sort (files.begin(), files.end(), stringLengthComparator);
 
     for (unsigned int i = 0; i < files.size(); ++i) {
         try {
@@ -309,7 +320,11 @@ const string& Platform::getDefaultPluginsDirectory() {
 #define STRING(x) STRING1(x)
 
 const string& Platform::getOpenMMVersion() {
+#if OPENMM_BUILD_VERSION == 0
     static const string version = STRING(OPENMM_MAJOR_VERSION) "." STRING(OPENMM_MINOR_VERSION);
+#else
+    static const string version = STRING(OPENMM_MAJOR_VERSION) "." STRING(OPENMM_MINOR_VERSION) "." STRING(OPENMM_BUILD_VERSION);
+#endif
     return version;
 }
 

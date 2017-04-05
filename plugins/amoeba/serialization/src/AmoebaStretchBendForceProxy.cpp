@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -42,8 +42,10 @@ AmoebaStretchBendForceProxy::AmoebaStretchBendForceProxy() : SerializationProxy(
 }
 
 void AmoebaStretchBendForceProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 1);
+    node.setIntProperty("version", 4);
     const AmoebaStretchBendForce& force = *reinterpret_cast<const AmoebaStretchBendForce*>(object);
+    node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setBoolProperty("usesPeriodic", force.usesPeriodicBoundaryConditions());
     SerializationNode& bonds = node.createChildNode("StretchBendAngles");
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(force.getNumStretchBends()); ii++) {
         int particle1, particle2, particle3;
@@ -55,14 +57,25 @@ void AmoebaStretchBendForceProxy::serialize(const void* object, SerializationNod
 }
 
 void* AmoebaStretchBendForceProxy::deserialize(const SerializationNode& node) const {
-    if (node.getIntProperty("version") != 1)
+    int version = node.getIntProperty("version");
+    if (version < 1 || version > 4)
         throw OpenMMException("Unsupported version number");
     AmoebaStretchBendForce* force = new AmoebaStretchBendForce();
     try {
+        if (version > 2)
+            force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        if (version > 3)
+            force->setUsesPeriodicBoundaryConditions(node.getBoolProperty("usesPeriodic"));
         const SerializationNode& bonds = node.getChildNode("StretchBendAngles");
-        for (unsigned int ii = 0; ii < (int) bonds.getChildren().size(); ii++) {
-            const SerializationNode& bond = bonds.getChildren()[ii];
-            force->addStretchBend(bond.getIntProperty("p1"), bond.getIntProperty("p2"), bond.getIntProperty("p3"),  bond.getDoubleProperty("dAB"), bond.getDoubleProperty("dCB"), bond.getDoubleProperty("angle"), bond.getDoubleProperty("k1"), bond.getDoubleProperty("k2"));
+        for (auto& bond : bonds.getChildren()) {
+            double k1, k2;
+            if (version == 1)
+                k1 = k2 = bond.getDoubleProperty("k");
+            else {
+                k1 = bond.getDoubleProperty("k1");
+                k2 = bond.getDoubleProperty("k2");
+            }
+            force->addStretchBend(bond.getIntProperty("p1"), bond.getIntProperty("p2"), bond.getIntProperty("p3"),  bond.getDoubleProperty("dAB"), bond.getDoubleProperty("dCB"), bond.getDoubleProperty("angle"), k1, k2);
 
         }
     }

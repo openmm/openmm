@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2016 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -62,9 +62,9 @@ class OPENMM_EXPORT ReferenceLJCoulomb14 : public ReferenceBondIxn {
             
          --------------------------------------------------------------------------------------- */
       
-      void calculateBondIxn(int* atomIndices, std::vector<OpenMM::RealVec>& atomCoordinates,
-                            RealOpenMM* parameters, std::vector<OpenMM::RealVec>& forces,
-                            RealOpenMM* totalEnergy) const;
+      void calculateBondIxn(int* atomIndices, std::vector<OpenMM::Vec3>& atomCoordinates,
+                            double* parameters, std::vector<OpenMM::Vec3>& forces,
+                            double* totalEnergy, double* energyParamDerivs);
 
 };
 

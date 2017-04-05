@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -45,12 +45,14 @@ void testSerialization() {
     // Create a Force.
 
     AmoebaBondForce force1;
+    force1.setForceGroup(3);
     force1.setAmoebaGlobalBondCubic(12.3);
     force1.setAmoebaGlobalBondQuartic(98.7);
     force1.addBond(0, 1, 1.0, 2.0);
     force1.addBond(0, 2, 2.0, 2.1);
     force1.addBond(2, 3, 3.0, 2.2);
     force1.addBond(5, 1, 4.0, 2.3);
+    force1.setUsesPeriodicBoundaryConditions(true);
 
     // Serialize and then deserialize it.
 
@@ -60,6 +62,8 @@ void testSerialization() {
 
     // Compare the two forces to see if they are identical.  
     AmoebaBondForce& force2 = *copy;
+    ASSERT_EQUAL(force1.getForceGroup(), force2.getForceGroup());
+    ASSERT_EQUAL(force1.usesPeriodicBoundaryConditions(), force2.usesPeriodicBoundaryConditions());
     ASSERT_EQUAL(force1.getAmoebaGlobalBondCubic(), force2.getAmoebaGlobalBondCubic());
     ASSERT_EQUAL(force1.getAmoebaGlobalBondQuartic(), force2.getAmoebaGlobalBondQuartic());
     ASSERT_EQUAL(force1.getNumBonds(), force2.getNumBonds());

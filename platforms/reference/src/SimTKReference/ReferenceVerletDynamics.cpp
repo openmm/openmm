@@ -45,18 +45,8 @@ using namespace OpenMM;
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceVerletDynamics::ReferenceVerletDynamics(int numberOfAtoms, RealOpenMM deltaT) :
+ReferenceVerletDynamics::ReferenceVerletDynamics(int numberOfAtoms, double deltaT) :
            ReferenceDynamics(numberOfAtoms, deltaT, 0.0) {
-
-   // ---------------------------------------------------------------------------------------
-
-   static const char* methodName      = "\nReferenceVerletDynamics::ReferenceVerletDynamics";
-
-   static const RealOpenMM zero       =  0.0;
-   static const RealOpenMM one        =  1.0;
-
-   // ---------------------------------------------------------------------------------------
-
    xPrime.resize(numberOfAtoms);
    inverseMasses.resize(numberOfAtoms);
 }
@@ -68,13 +58,6 @@ ReferenceVerletDynamics::ReferenceVerletDynamics(int numberOfAtoms, RealOpenMM d
    --------------------------------------------------------------------------------------- */
 
 ReferenceVerletDynamics::~ReferenceVerletDynamics() {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceVerletDynamics::~ReferenceVerletDynamics";
-
-   // ---------------------------------------------------------------------------------------
-
 }
 
 /**---------------------------------------------------------------------------------------
@@ -90,19 +73,9 @@ ReferenceVerletDynamics::~ReferenceVerletDynamics() {
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceVerletDynamics::update(const OpenMM::System& system, vector<RealVec>& atomCoordinates,
-                                          vector<RealVec>& velocities,
-                                          vector<RealVec>& forces, vector<RealOpenMM>& masses, RealOpenMM tolerance) {
-
-   // ---------------------------------------------------------------------------------------
-
-   static const char* methodName      = "\nReferenceVerletDynamics::update";
-
-   static const RealOpenMM zero       =  0.0;
-   static const RealOpenMM one        =  1.0;
-
-   // ---------------------------------------------------------------------------------------
-
+void ReferenceVerletDynamics::update(const OpenMM::System& system, vector<Vec3>& atomCoordinates,
+                                          vector<Vec3>& velocities,
+                                          vector<Vec3>& forces, vector<double>& masses, double tolerance) {
    // first-time-through initialization
 
    int numberOfAtoms = system.getNumParticles();
@@ -110,17 +83,17 @@ void ReferenceVerletDynamics::update(const OpenMM::System& system, vector<RealVe
       // invert masses
 
       for (int ii = 0; ii < numberOfAtoms; ii++) {
-         if (masses[ii] == zero)
-             inverseMasses[ii] = zero;
+         if (masses[ii] == 0.0)
+             inverseMasses[ii] = 0.0;
          else
-             inverseMasses[ii] = one/masses[ii];
+             inverseMasses[ii] = 1.0/masses[ii];
       }
    }
    
    // Perform the integration.
    
    for (int i = 0; i < numberOfAtoms; ++i) {
-       if (masses[i] != zero)
+       if (masses[i] != 0.0)
            for (int j = 0; j < 3; ++j) {
                velocities[i][j] += inverseMasses[i]*forces[i][j]*getDeltaT();
                xPrime[i][j] = atomCoordinates[i][j] + velocities[i][j]*getDeltaT();
@@ -132,9 +105,9 @@ void ReferenceVerletDynamics::update(const OpenMM::System& system, vector<RealVe
    
    // Update the positions and velocities.
    
-   RealOpenMM velocityScale = static_cast<RealOpenMM>(1.0/getDeltaT());
+   double velocityScale = static_cast<double>(1.0/getDeltaT());
    for (int i = 0; i < numberOfAtoms; ++i) {
-       if (masses[i] != zero)
+       if (masses[i] != 0.0)
            for (int j = 0; j < 3; ++j) {
                velocities[i][j] = velocityScale*(xPrime[i][j] - atomCoordinates[i][j]);
                atomCoordinates[i][j] = xPrime[i][j];

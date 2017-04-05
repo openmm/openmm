@@ -22,6 +22,26 @@
     const real erfcAlphaR = (0.254829592f+(-0.284496736f+(1.421413741f+(-1.453152027f+1.061405429f*t)*t)*t)*t)*t*expAlphaRSqr;
 #endif
     real tempForce = 0;
+#if HAS_LENNARD_JONES
+    // The multiplicative term to correct for the multiplicative terms that are always
+    // present in reciprocal space.  The real terms have an additive contribution
+    // added in, but for excluded terms the multiplicative term is just subtracted.
+    // These factors are needed in both clauses of the needCorrection statement, so
+    // I declare them up here.
+    #if DO_LJPME
+        const real dispersionAlphaR = EWALD_DISPERSION_ALPHA*r;
+        const real dar2 = dispersionAlphaR*dispersionAlphaR;
+        const real dar4 = dar2*dar2;
+        const real dar6 = dar4*dar2;
+        const real invR2 = invR*invR;
+        const real expDar2 = EXP(-dar2);
+        const float2 sigExpProd = sigmaEpsilon1*sigmaEpsilon2;
+        const real c6 = 64*sigExpProd.x*sigExpProd.x*sigExpProd.x*sigExpProd.y;
+        const real coef = invR2*invR2*invR2*c6;
+        const real eprefac = 1.0f + dar2 + 0.5f*dar4;
+        const real dprefac = eprefac + dar6/6.0f;
+    #endif
+#endif
     if (needCorrection) {
         // Subtract off the part of this interaction that was included in the reciprocal space contribution.
 
@@ -30,6 +50,17 @@
             tempForce = -prefactor*(erfAlphaR-alphaR*expAlphaRSqr*TWO_OVER_SQRT_PI);
             tempEnergy += -prefactor*erfAlphaR;
         }
+        else {
+            includeInteraction = false;
+            tempEnergy -= TWO_OVER_SQRT_PI*EWALD_ALPHA*138.935456f*posq1.w*posq2.w;
+        }
+#if HAS_LENNARD_JONES
+        #if DO_LJPME
+            // The multiplicative grid term
+            tempEnergy += coef*(1.0f - expDar2*eprefac);
+            tempForce += 6.0f*coef*(1.0f - expDar2*dprefac);
+        #endif
+#endif
     }
     else {
 #if HAS_LENNARD_JONES
@@ -37,7 +68,8 @@
         real sig2 = invR*sig;
         sig2 *= sig2;
         real sig6 = sig2*sig2*sig2;
-        real epssig6 = sig6*(sigmaEpsilon1.y*sigmaEpsilon2.y);
+        real eps = sigmaEpsilon1.y*sigmaEpsilon2.y;
+        real epssig6 = sig6*eps;
         tempForce = epssig6*(12.0f*sig6 - 6.0f);
         real ljEnergy = epssig6*(sig6 - 1.0f);
         #if USE_LJ_SWITCH
@@ -49,6 +81,22 @@
             ljEnergy *= switchValue;
         }
         #endif
+#if DO_LJPME
+        // The multiplicative grid term
+        ljEnergy += coef*(1.0f - expDar2*eprefac);
+        tempForce += 6.0f*coef*(1.0f - expDar2*dprefac);
+        // The potential shift accounts for the step at the cutoff introduced by the
+        // transition from additive to multiplicative combintion rules and is only
+        // needed for the real (not excluded) terms.  By addin these terms to ljEnergy
+        // instead of tempEnergy here, the includeInteraction mask is correctly applied.
+        sig2 = sig*sig;
+        sig6 = sig2*sig2*sig2*INVCUT6;
+        epssig6 = eps*sig6;
+        // The additive part of the potential shift
+        ljEnergy += epssig6*(1.0f - sig6);
+        // The multiplicative part of the potential shift
+        ljEnergy += MULTSHIFT6*c6;
+#endif
         tempForce += prefactor*(erfcAlphaR+alphaR*expAlphaRSqr*TWO_OVER_SQRT_PI);
         tempEnergy += select((real) 0, ljEnergy + prefactor*erfcAlphaR, includeInteraction);
 #else

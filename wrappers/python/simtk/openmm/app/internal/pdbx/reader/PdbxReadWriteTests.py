@@ -10,6 +10,7 @@
 ##
 """  Various tests caess for PDBx/mmCIF data file and dictionary reader and writer. 
 """
+from __future__ import absolute_import
 
 __docformat__ = "restructuredtext en"
 __author__    = "John Westbrook"

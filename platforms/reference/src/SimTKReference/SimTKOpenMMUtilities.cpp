@@ -40,12 +40,12 @@ using namespace OpenMM;
 uint32_t SimTKOpenMMUtilities::_randomNumberSeed = 0;
 bool SimTKOpenMMUtilities::_randomInitialized = false;
 bool SimTKOpenMMUtilities::nextGaussianIsValid = false;
-RealOpenMM SimTKOpenMMUtilities::nextGaussian = 0;
+double SimTKOpenMMUtilities::nextGaussian = 0;
 OpenMM_SFMT::SFMT SimTKOpenMMUtilities::sfmt;
 
 /* ---------------------------------------------------------------------------------------
 
-   Allocate 1D RealOpenMM array (Simbios)
+   Allocate 1D double array (Simbios)
 
    array[i]
 
@@ -59,27 +59,18 @@ OpenMM_SFMT::SFMT SimTKOpenMMUtilities::sfmt;
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM* SimTKOpenMMUtilities::allocateOneDRealOpenMMArray(int iSize, RealOpenMM* array1D, 
-                                                              int initialize, RealOpenMM initialValue,
+double* SimTKOpenMMUtilities::allocateOneDRealOpenMMArray(int iSize, double* array1D, 
+                                                              int initialize, double initialValue,
                                                               const std::string& idString) {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nSimTKOpenMMUtilities::allocate1DRealOpenMMArray";
-
-   static const RealOpenMM zero       =  0.0;
-
-   // ---------------------------------------------------------------------------------------
-
    if (array1D == NULL) {
 
-      array1D = new RealOpenMM[iSize];
+      array1D = new double[iSize];
 
    }
 
    if (initialize) {
-      if (initialValue == zero) {
-         memset(array1D, 0, iSize*sizeof(RealOpenMM));
+      if (initialValue == 0.0) {
+         memset(array1D, 0, iSize*sizeof(double));
       } else {
          for (int ii = 0; ii < iSize; ii++) {
             array1D[ii] = initialValue;
@@ -92,7 +83,7 @@ RealOpenMM* SimTKOpenMMUtilities::allocateOneDRealOpenMMArray(int iSize, RealOpe
 
 /* ---------------------------------------------------------------------------------------
 
-   Allocate 2D RealOpenMM array (Simbios)
+   Allocate 2D double array (Simbios)
 
    array[i][j]
 
@@ -107,23 +98,16 @@ RealOpenMM* SimTKOpenMMUtilities::allocateOneDRealOpenMMArray(int iSize, RealOpe
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM** SimTKOpenMMUtilities::allocateTwoDRealOpenMMArray(int iSize, int jSize, RealOpenMM** array2D, 
-                                                               int initialize, RealOpenMM initialValue,
+double** SimTKOpenMMUtilities::allocateTwoDRealOpenMMArray(int iSize, int jSize, double** array2D, 
+                                                               int initialize, double initialValue,
                                                                const std::string& idString) {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nSimTKOpenMMUtilities::allocate2DRealOpenMMArray";
-
-   // ---------------------------------------------------------------------------------------
-
    if (array2D == NULL) {
 
-      array2D = new RealOpenMM*[iSize];
+      array2D = new double*[iSize];
       std::string blockString = idString;
       blockString.append("Block");
 
-      RealOpenMM* block = new RealOpenMM[jSize*iSize];
+      double* block = new double[jSize*iSize];
 
       for (int ii = 0; ii < iSize; ii++) {
          array2D[ii]  = block;
@@ -140,7 +124,7 @@ RealOpenMM** SimTKOpenMMUtilities::allocateTwoDRealOpenMMArray(int iSize, int jS
 
 /* ---------------------------------------------------------------------------------------
 
-   Free 2D RealOpenMM array (Simbios)
+   Free 2D double array (Simbios)
 
    array[i][j]
 
@@ -149,14 +133,7 @@ RealOpenMM** SimTKOpenMMUtilities::allocateTwoDRealOpenMMArray(int iSize, int jS
 
    --------------------------------------------------------------------------------------- */
 
-void SimTKOpenMMUtilities::freeTwoDRealOpenMMArray(RealOpenMM** array2D, const std::string& idString) {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nSimTKOpenMMUtilities::freeTwoDRealOpenMMArray";
-
-   // ---------------------------------------------------------------------------------------
-
+void SimTKOpenMMUtilities::freeTwoDRealOpenMMArray(double** array2D, const std::string& idString) {
    if (array2D != NULL) {
 
       std::string blockString = idString;
@@ -169,7 +146,7 @@ void SimTKOpenMMUtilities::freeTwoDRealOpenMMArray(RealOpenMM** array2D, const s
 
 /* ---------------------------------------------------------------------------------------
 
-   Free 1D RealOpenMM array (Simbios)
+   Free 1D double array (Simbios)
 
    array[i]
 
@@ -178,14 +155,7 @@ void SimTKOpenMMUtilities::freeTwoDRealOpenMMArray(RealOpenMM** array2D, const s
 
    --------------------------------------------------------------------------------------- */
 
-void SimTKOpenMMUtilities::freeOneDRealOpenMMArray(RealOpenMM* array1D, const std::string& idString) {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nSimTKOpenMMUtilities::freeOneDRealOpenMMArray";
-
-   // ---------------------------------------------------------------------------------------
-
+void SimTKOpenMMUtilities::freeOneDRealOpenMMArray(double* array1D, const std::string& idString) {
    if (array1D != NULL) {
       delete[] array1D;
    }
@@ -193,7 +163,7 @@ void SimTKOpenMMUtilities::freeOneDRealOpenMMArray(RealOpenMM* array1D, const st
 
 /* ---------------------------------------------------------------------------------------
 
-   Initialize 2D RealOpenMM array (Simbios)
+   Initialize 2D double array (Simbios)
 
    array[i][j]
 
@@ -205,15 +175,8 @@ void SimTKOpenMMUtilities::freeOneDRealOpenMMArray(RealOpenMM* array1D, const st
    --------------------------------------------------------------------------------------- */
 
 void SimTKOpenMMUtilities::initialize2DRealOpenMMArray(int iSize, int jSize,
-                                                       RealOpenMM** array2D,
-                                                       RealOpenMM initialValue) {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nSimTKOpenMMUtilities::initialize2DRealOpenMMArray";
-
-   // ---------------------------------------------------------------------------------------
-
+                                                       double** array2D,
+                                                       double initialValue) {
    bool useMemset;
    bool useMemsetSingleBlock;
 
@@ -231,10 +194,10 @@ void SimTKOpenMMUtilities::initialize2DRealOpenMMArray(int iSize, int jSize,
 
    if (useMemset) {
       if (useMemsetSingleBlock) {
-         memset(array2D[0], 0, iSize*jSize*sizeof(RealOpenMM));
+         memset(array2D[0], 0, iSize*jSize*sizeof(double));
       } else {
          for (int ii = 0; ii < iSize; ii++) {
-            memset(array2D[ii], 0, jSize*sizeof(RealOpenMM));
+            memset(array2D[ii], 0, jSize*sizeof(double));
          }
       }
    } else {
@@ -260,16 +223,9 @@ void SimTKOpenMMUtilities::initialize2DRealOpenMMArray(int iSize, int jSize,
 
    --------------------------------------------------------------------------------------- */
      
-void SimTKOpenMMUtilities::crossProductVector3(RealOpenMM* vectorX,
-                                               RealOpenMM* vectorY,
-                                               RealOpenMM* vectorZ) {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nSimTKOpenMMUtilities::crossProductVector3";
-
-   // ---------------------------------------------------------------------------------------
-
+void SimTKOpenMMUtilities::crossProductVector3(double* vectorX,
+                                               double* vectorY,
+                                               double* vectorZ) {
    vectorZ[0]  = vectorX[1]*vectorY[2] - vectorX[2]*vectorY[1];
    vectorZ[1]  = vectorX[2]*vectorY[0] - vectorX[0]*vectorY[2];
    vectorZ[2]  = vectorX[0]*vectorY[1] - vectorX[1]*vectorY[0];
@@ -285,7 +241,7 @@ void SimTKOpenMMUtilities::crossProductVector3(RealOpenMM* vectorX,
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM SimTKOpenMMUtilities::getNormallyDistributedRandomNumber() {
+double SimTKOpenMMUtilities::getNormallyDistributedRandomNumber() {
     if (nextGaussianIsValid) {
         nextGaussianIsValid = false;
         return nextGaussian;
@@ -298,13 +254,13 @@ RealOpenMM SimTKOpenMMUtilities::getNormallyDistributedRandomNumber() {
     
     // Use the polar form of the Box-Muller transformation to generate two Gaussian random numbers.
     
-    RealOpenMM x, y, r2;
+    double x, y, r2;
     do {
-        x = static_cast<RealOpenMM>(2.0 * genrand_real2(sfmt) - 1.0);
-        y = static_cast<RealOpenMM>(2.0 * genrand_real2(sfmt) - 1.0);
+        x = 2.0 * genrand_real2(sfmt) - 1.0;
+        y = 2.0 * genrand_real2(sfmt) - 1.0;
         r2 = x*x + y*y;
     } while (r2 >= 1.0 || r2 == 0.0);
-    RealOpenMM multiplier = static_cast<RealOpenMM>(sqrt((-2.0*log(r2))/r2));
+    double multiplier = sqrt((-2.0*log(r2))/r2);
     nextGaussian = y*multiplier;
     nextGaussianIsValid = true;
     return x*multiplier;
@@ -318,13 +274,13 @@ RealOpenMM SimTKOpenMMUtilities::getNormallyDistributedRandomNumber() {
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber() {
+double SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber() {
     if (!_randomInitialized) {
         init_gen_rand(_randomNumberSeed, sfmt);
         _randomInitialized = true;
         nextGaussianIsValid = false;
     }
-    RealOpenMM value = static_cast<RealOpenMM>(genrand_real2(sfmt));
+    double value = genrand_real2(sfmt);
     return value;
 }
 
@@ -337,13 +293,6 @@ RealOpenMM SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber() {
    --------------------------------------------------------------------------------------- */
 
 uint32_t SimTKOpenMMUtilities::getRandomNumberSeed() {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName  = "\nReferenceDynamics::getRandomNumberSeed";
-
-   // ---------------------------------------------------------------------------------------
-
    return _randomNumberSeed;
 }
 
@@ -356,13 +305,6 @@ uint32_t SimTKOpenMMUtilities::getRandomNumberSeed() {
    --------------------------------------------------------------------------------------- */
 
 void SimTKOpenMMUtilities::setRandomNumberSeed(uint32_t seed) {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName  = "\nReferenceDynamics::setRandomNumberSeed";
-
-   // ---------------------------------------------------------------------------------------
-
     // If the seed is 0, use a unique seed
     if (seed == 0)
         _randomNumberSeed = (uint32_t) osrngseed();
@@ -376,17 +318,20 @@ void SimTKOpenMMUtilities::createCheckpoint(std::ostream& stream) {
     stream.write((char*) &_randomInitialized, sizeof(bool));
     if (_randomInitialized) {
         stream.write((char*) &nextGaussianIsValid, sizeof(bool));
-        stream.write((char*) &nextGaussian, sizeof(RealOpenMM));
+        stream.write((char*) &nextGaussian, sizeof(double));
         sfmt.createCheckpoint(stream);
     }
 }
 
 void SimTKOpenMMUtilities::loadCheckpoint(std::istream& stream) {
     stream.read((char*) &_randomNumberSeed, sizeof(uint32_t));
+    bool prevInitialized = _randomInitialized;
     stream.read((char*) &_randomInitialized, sizeof(bool));
     if (_randomInitialized) {
+        if (!prevInitialized)
+            init_gen_rand(0, sfmt);
         stream.read((char*) &nextGaussianIsValid, sizeof(bool));
-        stream.read((char*) &nextGaussian, sizeof(RealOpenMM));
+        stream.read((char*) &nextGaussian, sizeof(double));
         sfmt.loadCheckpoint(stream);
     }
 }

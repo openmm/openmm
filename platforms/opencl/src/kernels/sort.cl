@@ -8,7 +8,7 @@ KEY_TYPE getValue(DATA_TYPE value) {
  * Sort a list that is short enough to entirely fit in local memory.  This is executed as
  * a single thread block.
  */
-__kernel void sortShortList(__global DATA_TYPE* __restrict__ data, uint length, __local DATA_TYPE* dataBuffer) {
+__kernel void sortShortList(__global DATA_TYPE* restrict data, uint length, __local DATA_TYPE* dataBuffer) {
     // Load the data into local memory.
     
     for (int index = get_local_id(0); index < length; index += get_local_size(0))
@@ -49,8 +49,8 @@ __kernel void sortShortList(__global DATA_TYPE* __restrict__ data, uint length, 
  * Calculate the minimum and maximum value in the array to be sorted.  This kernel
  * is executed as a single work group.
  */
-__kernel void computeRange(__global const DATA_TYPE* restrict data, uint length, __global KEY_TYPE* restrict range, __local KEY_TYPE* restrict buffer,
-        uint numBuckets, __global uint* restrict bucketOffset) {
+__kernel void computeRange(__global const DATA_TYPE* restrict data, uint length, __global KEY_TYPE* restrict range, __local KEY_TYPE* restrict minBuffer,
+        __local KEY_TYPE* restrict maxBuffer, uint numBuckets, __global uint* restrict bucketOffset) {
     KEY_TYPE minimum = MAX_KEY;
     KEY_TYPE maximum = MIN_KEY;
 
@@ -64,23 +64,18 @@ __kernel void computeRange(__global const DATA_TYPE* restrict data, uint length,
 
     // Now reduce them.
 
-    buffer[get_local_id(0)] = minimum;
+    minBuffer[get_local_id(0)] = minimum;
+    maxBuffer[get_local_id(0)] = maximum;
     barrier(CLK_LOCAL_MEM_FENCE);
     for (uint step = 1; step < get_local_size(0); step *= 2) {
-        if (get_local_id(0)+step < get_local_size(0) && get_local_id(0)%(2*step) == 0)
-            buffer[get_local_id(0)] = min(buffer[get_local_id(0)], buffer[get_local_id(0)+step]);
+        if (get_local_id(0)+step < get_local_size(0) && get_local_id(0)%(2*step) == 0) {
+            minBuffer[get_local_id(0)] = min(minBuffer[get_local_id(0)], minBuffer[get_local_id(0)+step]);
+            maxBuffer[get_local_id(0)] = max(maxBuffer[get_local_id(0)], maxBuffer[get_local_id(0)+step]);
+        }
         barrier(CLK_LOCAL_MEM_FENCE);
     }
-    minimum = buffer[0];
-    barrier(CLK_LOCAL_MEM_FENCE);
-    buffer[get_local_id(0)] = maximum;
-    barrier(CLK_LOCAL_MEM_FENCE);
-    for (uint step = 1; step < get_local_size(0); step *= 2) {
-        if (get_local_id(0)+step < get_local_size(0) && get_local_id(0)%(2*step) == 0)
-            buffer[get_local_id(0)] = max(buffer[get_local_id(0)], buffer[get_local_id(0)+step]);
-        barrier(CLK_LOCAL_MEM_FENCE);
-    }
-    maximum = buffer[0];
+    minimum = minBuffer[0];
+    maximum = maxBuffer[0];
     if (get_local_id(0) == 0) {
         range[0] = minimum;
         range[1] = maximum;
@@ -96,7 +91,7 @@ __kernel void computeRange(__global const DATA_TYPE* restrict data, uint length,
  * Assign elements to buckets.
  */
 __kernel void assignElementsToBuckets(__global const DATA_TYPE* restrict data, uint length, uint numBuckets, __global const KEY_TYPE* restrict range,
-        __global uint* bucketOffset, __global uint* restrict bucketOfElement, __global uint* restrict offsetInBucket) {
+        __global uint* restrict bucketOffset, __global uint* restrict bucketOfElement, __global uint* restrict offsetInBucket) {
 #ifdef AMD_ATOMIC_WORK_AROUND
     // Do a byte write to force all memory accesses to interactionCount to use the complete path.
     // This avoids the atomic access from causing all word accesses to other buffers from using the slow complete path.

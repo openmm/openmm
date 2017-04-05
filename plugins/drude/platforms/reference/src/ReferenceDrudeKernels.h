@@ -34,7 +34,7 @@
 
 #include "ReferencePlatform.h"
 #include "openmm/DrudeKernels.h"
-#include "RealVec.h"
+#include "openmm/Vec3.h"
 #include "lbfgs.h"
 #include <utility>
 #include <vector>
@@ -115,6 +115,7 @@ private:
     ReferencePlatform::PlatformData& data;
     std::vector<int> normalParticles;
     std::vector<std::pair<int, int> > pairParticles;
+    std::vector<double> particleMass;
     std::vector<double> particleInvMass;
     std::vector<double> pairInvTotalMass;
     std::vector<double> pairInvReducedMass;
@@ -158,6 +159,7 @@ private:
     std::vector<double> particleInvMass;
     lbfgsfloatval_t *minimizerPos;
     lbfgs_parameter_t minimizerParams;
+    double maxDrudeDistance;
 };
 
 } // namespace OpenMM

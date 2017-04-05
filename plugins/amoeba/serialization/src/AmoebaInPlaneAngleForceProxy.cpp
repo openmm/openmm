@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -43,9 +43,11 @@ AmoebaInPlaneAngleForceProxy::AmoebaInPlaneAngleForceProxy() : SerializationProx
 
 void AmoebaInPlaneAngleForceProxy::serialize(const void* object, SerializationNode& node) const {
 
-    node.setIntProperty("version", 1);
+    node.setIntProperty("version", 3);
     const AmoebaInPlaneAngleForce& force = *reinterpret_cast<const AmoebaInPlaneAngleForce*>(object);
 
+    node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setBoolProperty("usesPeriodic", force.usesPeriodicBoundaryConditions());
     node.setDoubleProperty("cubic",      force.getAmoebaGlobalInPlaneAngleCubic());
     node.setDoubleProperty("quartic",    force.getAmoebaGlobalInPlaneAngleQuartic());
     node.setDoubleProperty("pentic",     force.getAmoebaGlobalInPlaneAnglePentic());
@@ -61,11 +63,15 @@ void AmoebaInPlaneAngleForceProxy::serialize(const void* object, SerializationNo
 }
 
 void* AmoebaInPlaneAngleForceProxy::deserialize(const SerializationNode& node) const {
-    if (node.getIntProperty("version") != 1)
+    int version = node.getIntProperty("version");
+    if (version < 1 || version > 3)
         throw OpenMMException("Unsupported version number");
     AmoebaInPlaneAngleForce* force = new AmoebaInPlaneAngleForce();
     try {
-
+        if (version > 1)
+            force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        if (version > 2)
+            force->setUsesPeriodicBoundaryConditions(node.getBoolProperty("usesPeriodic"));
         force->setAmoebaGlobalInPlaneAngleCubic( node.getDoubleProperty("cubic"));
         force->setAmoebaGlobalInPlaneAngleQuartic(node.getDoubleProperty("quartic"));
         force->setAmoebaGlobalInPlaneAnglePentic(node.getDoubleProperty("pentic"));

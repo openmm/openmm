@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -102,10 +102,14 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
         return new OpenCLCalcCustomExternalForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcCustomHbondForceKernel::Name())
         return new OpenCLCalcCustomHbondForceKernel(name, platform, cl, context.getSystem());
+    if (name == CalcCustomCentroidBondForceKernel::Name())
+        return new OpenCLCalcCustomCentroidBondForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcCustomCompoundBondForceKernel::Name())
         return new OpenCLCalcCustomCompoundBondForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcCustomManyParticleForceKernel::Name())
         return new OpenCLCalcCustomManyParticleForceKernel(name, platform, cl, context.getSystem());
+    if (name == CalcGayBerneForceKernel::Name())
+        return new OpenCLCalcGayBerneForceKernel(name, platform, cl);
     if (name == IntegrateVerletStepKernel::Name())
         return new OpenCLIntegrateVerletStepKernel(name, platform, cl);
     if (name == IntegrateLangevinStepKernel::Name())

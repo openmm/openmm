@@ -224,7 +224,6 @@ extern "C" __global__ void applyShakeToVelocities(int numClusters, mixed tol, co
         mixed4 xpj2 = make_mixed4(0);
         float invMassCentral = params.x;
         float avgMass = params.y;
-        float d2 = params.z;
         float invMassPeripheral = params.w;
         if (atoms.z != -1) {
             pos2 = loadPos(oldPos, posCorrection, atoms.z);
@@ -245,9 +244,6 @@ extern "C" __global__ void applyShakeToVelocities(int numClusters, mixed tol, co
         mixed rij1sq = rij1.x*rij1.x + rij1.y*rij1.y + rij1.z*rij1.z;
         mixed rij2sq = rij2.x*rij2.x + rij2.y*rij2.y + rij2.z*rij2.z;
         mixed rij3sq = rij3.x*rij3.x + rij3.y*rij3.y + rij3.z*rij3.z;
-        mixed ld1 = d2-rij1sq;
-        mixed ld2 = d2-rij2sq;
-        mixed ld3 = d2-rij3sq;
 
         // Iterate until convergence.
 
@@ -605,8 +601,6 @@ extern "C" __global__ void computeCCMAVelocityConstraintForce(const int2* __rest
     if (threadIdx.x == 0)
         groupConverged = 1;
     __syncthreads();
-    mixed lowerTol = 1-2*tol+tol*tol;
-    mixed upperTol = 1+2*tol+tol*tol;
     for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_CCMA_CONSTRAINTS; index += blockDim.x*gridDim.x) {
         // Compute the force due to this constraint.
 

@@ -49,8 +49,8 @@ void Continuous1DFunctionProxy::serialize(const void* object, SerializationNode&
     node.setDoubleProperty("min", min);
     node.setDoubleProperty("max", max);
     SerializationNode& valuesNode = node.createChildNode("Values");
-    for (int j = 0; j < (int) values.size(); j++)
-        valuesNode.createChildNode("Value").setDoubleProperty("v", values[j]);
+    for (auto v : values)
+        valuesNode.createChildNode("Value").setDoubleProperty("v", v);
 }
 
 void* Continuous1DFunctionProxy::deserialize(const SerializationNode& node) const {
@@ -58,8 +58,8 @@ void* Continuous1DFunctionProxy::deserialize(const SerializationNode& node) cons
         throw OpenMMException("Unsupported version number");
     const SerializationNode& valuesNode = node.getChildNode("Values");
     vector<double> values;
-    for (int j = 0; j < (int) valuesNode.getChildren().size(); j++)
-        values.push_back(valuesNode.getChildren()[j].getDoubleProperty("v"));
+    for (auto& child : valuesNode.getChildren())
+        values.push_back(child.getDoubleProperty("v"));
     return new Continuous1DFunction(values, node.getDoubleProperty("min"), node.getDoubleProperty("max"));
 }
 
@@ -80,8 +80,8 @@ void Continuous2DFunctionProxy::serialize(const void* object, SerializationNode&
     node.setDoubleProperty("ymin", ymin);
     node.setDoubleProperty("ymax", ymax);
     SerializationNode& valuesNode = node.createChildNode("Values");
-    for (int j = 0; j < (int) values.size(); j++)
-        valuesNode.createChildNode("Value").setDoubleProperty("v", values[j]);
+    for (auto v : values)
+        valuesNode.createChildNode("Value").setDoubleProperty("v", v);
 }
 
 void* Continuous2DFunctionProxy::deserialize(const SerializationNode& node) const {
@@ -89,8 +89,8 @@ void* Continuous2DFunctionProxy::deserialize(const SerializationNode& node) cons
         throw OpenMMException("Unsupported version number");
     const SerializationNode& valuesNode = node.getChildNode("Values");
     vector<double> values;
-    for (int j = 0; j < (int) valuesNode.getChildren().size(); j++)
-        values.push_back(valuesNode.getChildren()[j].getDoubleProperty("v"));
+    for (auto& child : valuesNode.getChildren())
+        values.push_back(child.getDoubleProperty("v"));
     return new Continuous2DFunction(node.getIntProperty("xsize"), node.getIntProperty("ysize"), values,
             node.getDoubleProperty("xmin"), node.getDoubleProperty("xmax"), node.getDoubleProperty("ymin"), node.getDoubleProperty("ymax"));
 }
@@ -115,8 +115,8 @@ void Continuous3DFunctionProxy::serialize(const void* object, SerializationNode&
     node.setDoubleProperty("zmin", zmin);
     node.setDoubleProperty("zmax", zmax);
     SerializationNode& valuesNode = node.createChildNode("Values");
-    for (int j = 0; j < (int) values.size(); j++)
-        valuesNode.createChildNode("Value").setDoubleProperty("v", values[j]);
+    for (auto v : values)
+        valuesNode.createChildNode("Value").setDoubleProperty("v", v);
 }
 
 void* Continuous3DFunctionProxy::deserialize(const SerializationNode& node) const {
@@ -124,8 +124,8 @@ void* Continuous3DFunctionProxy::deserialize(const SerializationNode& node) cons
         throw OpenMMException("Unsupported version number");
     const SerializationNode& valuesNode = node.getChildNode("Values");
     vector<double> values;
-    for (int j = 0; j < (int) valuesNode.getChildren().size(); j++)
-        values.push_back(valuesNode.getChildren()[j].getDoubleProperty("v"));
+    for (auto& child : valuesNode.getChildren())
+        values.push_back(child.getDoubleProperty("v"));
     return new Continuous3DFunction(node.getIntProperty("xsize"), node.getIntProperty("ysize"), node.getIntProperty("zsize"), values,
             node.getDoubleProperty("xmin"), node.getDoubleProperty("xmax"), node.getDoubleProperty("ymin"), node.getDoubleProperty("ymax"),
             node.getDoubleProperty("zmin"), node.getDoubleProperty("zmax"));
@@ -140,8 +140,8 @@ void Discrete1DFunctionProxy::serialize(const void* object, SerializationNode& n
     vector<double> values;
     function.getFunctionParameters(values);
     SerializationNode& valuesNode = node.createChildNode("Values");
-    for (int j = 0; j < (int) values.size(); j++)
-        valuesNode.createChildNode("Value").setDoubleProperty("v", values[j]);
+    for (auto v : values)
+        valuesNode.createChildNode("Value").setDoubleProperty("v", v);
 }
 
 void* Discrete1DFunctionProxy::deserialize(const SerializationNode& node) const {
@@ -149,8 +149,8 @@ void* Discrete1DFunctionProxy::deserialize(const SerializationNode& node) const 
         throw OpenMMException("Unsupported version number");
     const SerializationNode& valuesNode = node.getChildNode("Values");
     vector<double> values;
-    for (int j = 0; j < (int) valuesNode.getChildren().size(); j++)
-        values.push_back(valuesNode.getChildren()[j].getDoubleProperty("v"));
+    for (auto& child : valuesNode.getChildren())
+        values.push_back(child.getDoubleProperty("v"));
     return new Discrete1DFunction(values);
 }
 
@@ -166,8 +166,8 @@ void Discrete2DFunctionProxy::serialize(const void* object, SerializationNode& n
     node.setDoubleProperty("xsize", xsize);
     node.setDoubleProperty("ysize", ysize);
     SerializationNode& valuesNode = node.createChildNode("Values");
-    for (int j = 0; j < (int) values.size(); j++)
-        valuesNode.createChildNode("Value").setDoubleProperty("v", values[j]);
+    for (auto v : values)
+        valuesNode.createChildNode("Value").setDoubleProperty("v", v);
 }
 
 void* Discrete2DFunctionProxy::deserialize(const SerializationNode& node) const {
@@ -175,8 +175,8 @@ void* Discrete2DFunctionProxy::deserialize(const SerializationNode& node) const 
         throw OpenMMException("Unsupported version number");
     const SerializationNode& valuesNode = node.getChildNode("Values");
     vector<double> values;
-    for (int j = 0; j < (int) valuesNode.getChildren().size(); j++)
-        values.push_back(valuesNode.getChildren()[j].getDoubleProperty("v"));
+    for (auto& child : valuesNode.getChildren())
+        values.push_back(child.getDoubleProperty("v"));
     return new Discrete2DFunction(node.getIntProperty("xsize"), node.getIntProperty("ysize"), values);
 }
 
@@ -193,8 +193,8 @@ void Discrete3DFunctionProxy::serialize(const void* object, SerializationNode& n
     node.setDoubleProperty("ysize", ysize);
     node.setDoubleProperty("zsize", zsize);
     SerializationNode& valuesNode = node.createChildNode("Values");
-    for (int j = 0; j < (int) values.size(); j++)
-        valuesNode.createChildNode("Value").setDoubleProperty("v", values[j]);
+    for (auto v : values)
+        valuesNode.createChildNode("Value").setDoubleProperty("v", v);
 }
 
 void* Discrete3DFunctionProxy::deserialize(const SerializationNode& node) const {
@@ -202,7 +202,7 @@ void* Discrete3DFunctionProxy::deserialize(const SerializationNode& node) const 
         throw OpenMMException("Unsupported version number");
     const SerializationNode& valuesNode = node.getChildNode("Values");
     vector<double> values;
-    for (int j = 0; j < (int) valuesNode.getChildren().size(); j++)
-        values.push_back(valuesNode.getChildren()[j].getDoubleProperty("v"));
+    for (auto& child : valuesNode.getChildren())
+        values.push_back(child.getDoubleProperty("v"));
     return new Discrete3DFunction(node.getIntProperty("xsize"), node.getIntProperty("ysize"), node.getIntProperty("zsize"), values);
 }

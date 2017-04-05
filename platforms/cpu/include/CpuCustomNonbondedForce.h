@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2014 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2017 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -27,9 +27,9 @@
 
 #include "AlignedArray.h"
 #include "CpuNeighborList.h"
+#include "openmm/internal/CompiledExpressionSet.h"
 #include "openmm/internal/ThreadPool.h"
 #include "openmm/internal/vectorize.h"
-#include "lepton/CompiledExpression.h"
 #include <map>
 #include <set>
 #include <utility>
@@ -47,7 +47,8 @@ class CpuCustomNonbondedForce {
          --------------------------------------------------------------------------------------- */
 
        CpuCustomNonbondedForce(const Lepton::CompiledExpression& energyExpression, const Lepton::CompiledExpression& forceExpression,
-                                   const std::vector<std::string>& parameterNames, const std::vector<std::set<int> >& exclusions, ThreadPool& threads);
+                               const std::vector<std::string>& parameterNames, const std::vector<std::set<int> >& exclusions,
+                               const std::vector<Lepton::CompiledExpression> energyParamDerivExpressions, ThreadPool& threads);
 
       /**---------------------------------------------------------------------------------------
 
@@ -66,7 +67,7 @@ class CpuCustomNonbondedForce {
 
          --------------------------------------------------------------------------------------- */
 
-      void setUseCutoff(RealOpenMM distance, const CpuNeighborList& neighbors);
+      void setUseCutoff(double distance, const CpuNeighborList& neighbors);
 
       /**---------------------------------------------------------------------------------------
 
@@ -87,7 +88,7 @@ class CpuCustomNonbondedForce {
       
          --------------------------------------------------------------------------------------- */
       
-      void setUseSwitchingFunction(RealOpenMM distance);
+      void setUseSwitchingFunction(double distance);
 
       /**---------------------------------------------------------------------------------------
 
@@ -99,7 +100,7 @@ class CpuCustomNonbondedForce {
 
          --------------------------------------------------------------------------------------- */
 
-      void setPeriodic(RealVec* periodicBoxVectors);
+      void setPeriodic(Vec3* periodicBoxVectors);
 
       /**---------------------------------------------------------------------------------------
 
@@ -117,22 +118,22 @@ class CpuCustomNonbondedForce {
 
          --------------------------------------------------------------------------------------- */
 
-    void calculatePairIxn(int numberOfAtoms, float* posq, std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** atomParameters,
-                          RealOpenMM* fixedParameters, const std::map<std::string, double>& globalParameters,
-                          std::vector<AlignedArray<float> >& threadForce, bool includeForce, bool includeEnergy, double& totalEnergy);
+    void calculatePairIxn(int numberOfAtoms, float* posq, std::vector<OpenMM::Vec3>& atomCoordinates, double** atomParameters,
+                          double* fixedParameters, const std::map<std::string, double>& globalParameters,
+                          std::vector<AlignedArray<float> >& threadForce, bool includeForce, bool includeEnergy, double& totalEnergy, double* energyParamDerivs);
 private:
-    class ComputeForceTask;
     class ThreadData;
 
     bool cutoff;
     bool useSwitch;
     bool periodic;
     bool triclinic;
+    bool useInteractionGroups;
     const CpuNeighborList* neighborList;
     float recipBoxSize[3];
-    RealVec periodicBoxVectors[3];
+    Vec3 periodicBoxVectors[3];
     AlignedArray<fvec4> periodicBoxVec4;
-    RealOpenMM cutoffDistance, switchingDistance;
+    double cutoffDistance, switchingDistance;
     ThreadPool& threads;
     const std::vector<std::set<int> > exclusions;
     std::vector<ThreadData*> threadData;
@@ -142,8 +143,8 @@ private:
     // The following variables are used to make information accessible to the individual threads.
     int numberOfAtoms;
     float* posq;
-    RealVec const* atomCoordinates;
-    RealOpenMM** atomParameters;        
+    Vec3 const* atomCoordinates;
+    double** atomParameters;        
     const std::map<std::string, double>* globalParameters;
     std::vector<AlignedArray<float> >* threadForce;
     bool includeForce, includeEnergy;
@@ -176,13 +177,15 @@ private:
 
 class CpuCustomNonbondedForce::ThreadData {
 public:
-    ThreadData(const Lepton::CompiledExpression& energyExpression, const Lepton::CompiledExpression& forceExpression, const std::vector<std::string>& parameterNames);
+    ThreadData(const Lepton::CompiledExpression& energyExpression, const Lepton::CompiledExpression& forceExpression, const std::vector<std::string>& parameterNames,
+            const std::vector<Lepton::CompiledExpression> energyParamDerivExpressions);
     Lepton::CompiledExpression energyExpression;
     Lepton::CompiledExpression forceExpression;
-    std::vector<double*> energyParticleParams;
-    std::vector<double*> forceParticleParams;
-    double* energyR;
-    double* forceR;
+    std::vector<Lepton::CompiledExpression> energyParamDerivExpressions;
+    CompiledExpressionSet expressionSet;
+    std::vector<double> particleParam;
+    double r;
+    std::vector<double> energyParamDerivs; 
 };
 
 } // namespace OpenMM

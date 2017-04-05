@@ -1,9 +1,11 @@
 extern "C" __global__ void findAtomGridIndex(const real4* __restrict__ posq, int2* __restrict__ pmeAtomGridIndex,
-            real4 periodicBoxSize, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
+            real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
+            real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
     // Compute the index of the grid point each atom is associated with.
     
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
         real4 pos = posq[i];
+        APPLY_PERIODIC_TO_POS(pos)
         real3 t = make_real3(pos.x*recipBoxVecX.x+pos.y*recipBoxVecY.x+pos.z*recipBoxVecZ.x,
                              pos.y*recipBoxVecY.y+pos.z*recipBoxVecZ.y,
                              pos.z*recipBoxVecZ.z);
@@ -18,7 +20,12 @@ extern "C" __global__ void findAtomGridIndex(const real4* __restrict__ posq, int
 }
 
 extern "C" __global__ void gridSpreadCharge(const real4* __restrict__ posq, real* __restrict__ originalPmeGrid,
-        real4 periodicBoxSize, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ, const int2* __restrict__ pmeAtomGridIndex) {
+        real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
+        real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ, const int2* __restrict__ pmeAtomGridIndex
+#ifdef USE_LJPME
+        , const float2* __restrict__ sigmaEpsilon
+#endif
+        ) {
     real3 data[PME_ORDER];
     const real scale = RECIP(PME_ORDER-1);
     
@@ -28,9 +35,7 @@ extern "C" __global__ void gridSpreadCharge(const real4* __restrict__ posq, real
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
         int atom = pmeAtomGridIndex[i].x;
         real4 pos = posq[atom];
-        pos.x -= floor(pos.x*recipBoxVecX.x)*periodicBoxSize.x;
-        pos.y -= floor(pos.y*recipBoxVecY.y)*periodicBoxSize.y;
-        pos.z -= floor(pos.z*recipBoxVecZ.z)*periodicBoxSize.z;
+        APPLY_PERIODIC_TO_POS(pos)
         real3 t = make_real3(pos.x*recipBoxVecX.x+pos.y*recipBoxVecY.x+pos.z*recipBoxVecZ.x,
                              pos.y*recipBoxVecY.y+pos.z*recipBoxVecZ.y,
                              pos.z*recipBoxVecZ.z);
@@ -61,7 +66,13 @@ extern "C" __global__ void gridSpreadCharge(const real4* __restrict__ posq, real
         data[0] = scale*(make_real3(1)-dr)*data[0];
         
         // Spread the charge from this atom onto each grid point.
-         
+        
+#ifdef USE_LJPME
+        const float2 sigEps = sigmaEpsilon[atom];
+        const real charge = 8*sigEps.x*sigEps.x*sigEps.x*sigEps.y;
+#else
+        const real charge = pos.w;
+#endif
         for (int ix = 0; ix < PME_ORDER; ix++) {
             int xbase = gridIndex.x+ix;
             xbase -= (xbase >= GRID_SIZE_X ? GRID_SIZE_X : 0);
@@ -79,11 +90,11 @@ extern "C" __global__ void gridSpreadCharge(const real4* __restrict__ posq, real
                     zindex -= (zindex >= GRID_SIZE_Z ? GRID_SIZE_Z : 0);
                     int index = ybase + zindex;
 
-                    real add = pos.w*dx*dy*data[iz].z;
+                    real add = charge*dx*dy*data[iz].z;
 #ifdef USE_DOUBLE_PRECISION
                     unsigned long long * ulonglong_p = (unsigned long long *) originalPmeGrid;
                     atomicAdd(&ulonglong_p[index],  static_cast<unsigned long long>((long long) (add*0x100000000)));
-#elif __CUDA_ARCH__ < 200
+#elif __CUDA_ARCH__ < 200 || defined(USE_DETERMINISTIC_FORCES)
                     unsigned long long * ulonglong_p = (unsigned long long *) originalPmeGrid;
                     int gridIndex = index;
                     gridIndex = (gridIndex%2 == 0 ? gridIndex/2 : (gridIndex+GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z)/2);
@@ -115,12 +126,20 @@ extern "C" __global__ void finishSpreadCharge(long long* __restrict__ originalPm
 
 // convolutes on the halfcomplex_pmeGrid, which is of size NX*NY*(NZ/2+1) as F(Q) is conjugate symmetric
 extern "C" __global__ void 
-reciprocalConvolution(real2* __restrict__ halfcomplex_pmeGrid, real* __restrict__ energyBuffer, 
+reciprocalConvolution(real2* __restrict__ halfcomplex_pmeGrid, mixed* __restrict__ energyBuffer, 
                       const real* __restrict__ pmeBsplineModuliX, const real* __restrict__ pmeBsplineModuliY, const real* __restrict__ pmeBsplineModuliZ, 
                       real4 periodicBoxSize, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
     // R2C stores into a half complex matrix where the last dimension is cut by half
     const unsigned int gridSize = GRID_SIZE_X*GRID_SIZE_Y*(GRID_SIZE_Z/2+1);
+#ifdef USE_LJPME
+    const real recipScaleFactor = -2*M_PI*SQRT(M_PI)*RECIP(6*periodicBoxSize.x*periodicBoxSize.y*periodicBoxSize.z);
+    real bfac = M_PI / EWALD_ALPHA;
+    real fac1 = 2*M_PI*M_PI*M_PI*SQRT(M_PI);
+    real fac2 = EWALD_ALPHA*EWALD_ALPHA*EWALD_ALPHA;
+    real fac3 = -2*EWALD_ALPHA*M_PI*M_PI;
+#else
     const real recipScaleFactor = RECIP(M_PI*periodicBoxSize.x*periodicBoxSize.y*periodicBoxSize.z);
+#endif
 
     for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < gridSize; index += blockDim.x*gridDim.x) {
         // real indices
@@ -139,25 +158,44 @@ reciprocalConvolution(real2* __restrict__ halfcomplex_pmeGrid, real* __restrict_
         real bz = pmeBsplineModuliZ[kz];
         real2 grid = halfcomplex_pmeGrid[index];
         real m2 = mhx*mhx+mhy*mhy+mhz*mhz;
+#ifdef USE_LJPME
+        real denom = recipScaleFactor/(bx*by*bz);
+        real m = SQRT(m2);
+        real m3 = m*m2;
+        real b = bfac*m;
+        real expfac = -b*b;
+        real expterm = EXP(expfac);
+        real erfcterm = ERFC(b);
+        real eterm = (fac1*erfcterm*m3 + expterm*(fac2 + fac3*m2)) * denom;
+        halfcomplex_pmeGrid[index] = make_real2(grid.x*eterm, grid.y*eterm);
+#else
         real denom = m2*bx*by*bz;
         real eterm = recipScaleFactor*EXP(-RECIP_EXP_FACTOR*m2)/denom;
-
         if (kx != 0 || ky != 0 || kz != 0) {
             halfcomplex_pmeGrid[index] = make_real2(grid.x*eterm, grid.y*eterm);
         }
+#endif
     }
 }
 
 
 extern "C" __global__ void
-gridEvaluateEnergy(real2* __restrict__ halfcomplex_pmeGrid, real* __restrict__ energyBuffer,
+gridEvaluateEnergy(real2* __restrict__ halfcomplex_pmeGrid, mixed* __restrict__ energyBuffer,
                       const real* __restrict__ pmeBsplineModuliX, const real* __restrict__ pmeBsplineModuliY, const real* __restrict__ pmeBsplineModuliZ,
                       real4 periodicBoxSize, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
     // R2C stores into a half complex matrix where the last dimension is cut by half
     const unsigned int gridSize = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
+ #ifdef USE_LJPME
+    const real recipScaleFactor = -2*M_PI*SQRT(M_PI)*RECIP(6*periodicBoxSize.x*periodicBoxSize.y*periodicBoxSize.z);
+    real bfac = M_PI / EWALD_ALPHA;
+    real fac1 = 2*M_PI*M_PI*M_PI*SQRT(M_PI);
+    real fac2 = EWALD_ALPHA*EWALD_ALPHA*EWALD_ALPHA;
+    real fac3 = -2*EWALD_ALPHA*M_PI*M_PI;
+#else
     const real recipScaleFactor = RECIP(M_PI*periodicBoxSize.x*periodicBoxSize.y*periodicBoxSize.z);
- 
-    real energy = 0;
+#endif
+
+    mixed energy = 0;
     for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < gridSize; index += blockDim.x*gridDim.x) {
         // real indices
         int kx = index/(GRID_SIZE_Y*(GRID_SIZE_Z));
@@ -174,8 +212,19 @@ gridEvaluateEnergy(real2* __restrict__ halfcomplex_pmeGrid, real* __restrict__ e
         real bx = pmeBsplineModuliX[kx];
         real by = pmeBsplineModuliY[ky];
         real bz = pmeBsplineModuliZ[kz];
+#ifdef USE_LJPME
+        real denom = recipScaleFactor/(bx*by*bz);
+        real m = SQRT(m2);
+        real m3 = m*m2;
+        real b = bfac*m;
+        real expfac = -b*b;
+        real expterm = EXP(expfac);
+        real erfcterm = ERFC(b);
+        real eterm = (fac1*erfcterm*m3 + expterm*(fac2 + fac3*m2)) * denom;
+#else
         real denom = m2*bx*by*bz;
         real eterm = recipScaleFactor*EXP(-RECIP_EXP_FACTOR*m2)/denom;
+#endif
 
         if (kz >= (GRID_SIZE_Z/2+1)) {
             kx = ((kx == 0) ? kx : GRID_SIZE_X-kx);
@@ -184,16 +233,26 @@ gridEvaluateEnergy(real2* __restrict__ halfcomplex_pmeGrid, real* __restrict__ e
         } 
         int indexInHalfComplexGrid = kz + ky*(GRID_SIZE_Z/2+1)+kx*(GRID_SIZE_Y*(GRID_SIZE_Z/2+1));
         real2 grid = halfcomplex_pmeGrid[indexInHalfComplexGrid];
-        if (kx != 0 || ky != 0 || kz != 0) {
+#ifndef USE_LJPME
+        if (kx != 0 || ky != 0 || kz != 0)
+#endif
             energy += eterm*(grid.x*grid.x + grid.y*grid.y);
-        }
     }
+#if defined(USE_PME_STREAM) && !defined(USE_LJPME)
+    energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] = 0.5f*energy;
+#else
     energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += 0.5f*energy;
+#endif
 }
 
 extern "C" __global__
 void gridInterpolateForce(const real4* __restrict__ posq, unsigned long long* __restrict__ forceBuffers, const real* __restrict__ originalPmeGrid,
-        real4 periodicBoxSize, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ, const int2* __restrict__ pmeAtomGridIndex) {
+        real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
+        real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ, const int2* __restrict__ pmeAtomGridIndex
+#ifdef USE_LJPME
+        , const float2* __restrict__ sigmaEpsilon
+#endif
+        ) {
     real3 data[PME_ORDER];
     real3 ddata[PME_ORDER];
     const real scale = RECIP(PME_ORDER-1);
@@ -205,9 +264,7 @@ void gridInterpolateForce(const real4* __restrict__ posq, unsigned long long* __
         int atom = pmeAtomGridIndex[i].x;
         real3 force = make_real3(0);
         real4 pos = posq[atom];
-        pos.x -= floor(pos.x*recipBoxVecX.x)*periodicBoxSize.x;
-        pos.y -= floor(pos.y*recipBoxVecY.y)*periodicBoxSize.y;
-        pos.z -= floor(pos.z*recipBoxVecZ.z)*periodicBoxSize.z;
+        APPLY_PERIODIC_TO_POS(pos)
         real3 t = make_real3(pos.x*recipBoxVecX.x+pos.y*recipBoxVecY.x+pos.z*recipBoxVecZ.x,
                              pos.y*recipBoxVecY.y+pos.z*recipBoxVecZ.y,
                              pos.z*recipBoxVecZ.z);
@@ -267,7 +324,12 @@ void gridInterpolateForce(const real4* __restrict__ posq, unsigned long long* __
                 }
             }
         }
+#ifdef USE_LJPME
+        const float2 sigEps = sigmaEpsilon[atom];
+        real q = 8*sigEps.x*sigEps.x*sigEps.x*sigEps.y;
+#else
         real q = pos.w*EPSILON_FACTOR;
+#endif
         real forceX = -q*(force.x*GRID_SIZE_X*recipBoxVecX.x);
         real forceY = -q*(force.x*GRID_SIZE_X*recipBoxVecY.x+force.y*GRID_SIZE_Y*recipBoxVecY.y);
         real forceZ = -q*(force.x*GRID_SIZE_X*recipBoxVecZ.x+force.y*GRID_SIZE_Y*recipBoxVecZ.y+force.z*GRID_SIZE_Z*recipBoxVecZ.z);
@@ -285,4 +347,10 @@ void addForces(const real4* __restrict__ forces, unsigned long long* __restrict_
         forceBuffers[atom+PADDED_NUM_ATOMS] += static_cast<unsigned long long>((long long) (f.y*0x100000000));
         forceBuffers[atom+2*PADDED_NUM_ATOMS] += static_cast<unsigned long long>((long long) (f.z*0x100000000));
     }
+}
+
+extern "C" __global__
+void addEnergy(const mixed* __restrict__ pmeEnergyBuffer, mixed* __restrict__ energyBuffer, int bufferSize) {
+    for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < bufferSize; i += blockDim.x*gridDim.x)
+        energyBuffer[i] += pmeEnergyBuffer[i];
 }

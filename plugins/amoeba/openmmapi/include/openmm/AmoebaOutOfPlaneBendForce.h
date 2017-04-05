@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Mark Friedrichs, Peter Eastman                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -74,7 +74,7 @@ public:
      * 
      * @return global cubicK term
      */
-    double getAmoebaGlobalOutOfPlaneBendCubic(void) const;
+    double getAmoebaGlobalOutOfPlaneBendCubic() const;
 
     /** 
      * Set the global cubic term
@@ -88,7 +88,7 @@ public:
      * 
      * @return global  quartic term
      */
-    double getAmoebaGlobalOutOfPlaneBendQuartic(void) const;
+    double getAmoebaGlobalOutOfPlaneBendQuartic() const;
 
     /** 
      * Set the global pentic term
@@ -102,7 +102,7 @@ public:
      * 
      * @return global penticK term
      */
-    double getAmoebaGlobalOutOfPlaneBendPentic(void) const;
+    double getAmoebaGlobalOutOfPlaneBendPentic() const;
 
     /** 
      * Set the global sextic term
@@ -116,7 +116,7 @@ public:
      * 
      * @return global sexticK term
      */
-    double getAmoebaGlobalOutOfPlaneBendSextic(void) const;
+    double getAmoebaGlobalOutOfPlaneBendSextic() const;
 
     /**
      * Add an out-of-plane bend term to the force field.
@@ -133,12 +133,12 @@ public:
     /**
      * Get the force field parameters for an out-of-plane bend term.
      * 
-     * @param index         the index of the outOfPlaneBend for which to get parameters
-     * @param particle1     the index of the first particle connected by the outOfPlaneBend
-     * @param particle2     the index of the second particle connected by the outOfPlaneBend
-     * @param particle3     the index of the third particle connected by the outOfPlaneBend
-     * @param particle4     the index of the fourth particle connected by the outOfPlaneBend
-     * @param k             the force constant for the out-of-plane bend
+     * @param index              the index of the outOfPlaneBend for which to get parameters
+     * @param[out] particle1     the index of the first particle connected by the outOfPlaneBend
+     * @param[out] particle2     the index of the second particle connected by the outOfPlaneBend
+     * @param[out] particle3     the index of the third particle connected by the outOfPlaneBend
+     * @param[out] particle4     the index of the fourth particle connected by the outOfPlaneBend
+     * @param[out] k             the force constant for the out-of-plane bend
      */
     void getOutOfPlaneBendParameters(int index, int& particle1, int& particle2, int& particle3, int& particle4, double& k) const;
 
@@ -164,20 +164,24 @@ public:
      */
     void updateParametersInContext(Context& context);
     /**
+     * Set whether this force should apply periodic boundary conditions when calculating displacements.
+     * Usually this is not appropriate for bonded forces, but there are situations when it can be useful.
+     */
+    void setUsesPeriodicBoundaryConditions(bool periodic);
+    /**
      * Returns whether or not this force makes use of periodic boundary
      * conditions.
      *
-     * @returns true if nonbondedMethod uses PBC and false otherwise
+     * @returns true if force uses PBC and false otherwise
      */
-    bool usesPeriodicBoundaryConditions() const {
-        return false;
-    }
+    bool usesPeriodicBoundaryConditions() const;
 protected:
     ForceImpl* createImpl() const;
     double _globalCubicK, _globalQuarticK, _globalPenticK, _globalSexticK;
 private:
     class OutOfPlaneBendInfo;
     std::vector<OutOfPlaneBendInfo> outOfPlaneBends;
+    bool usePeriodic;
 };
 
 /**

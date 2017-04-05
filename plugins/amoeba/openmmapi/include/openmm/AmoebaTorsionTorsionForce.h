@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Mark Friedrichs, Peter Eastman                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -89,14 +89,14 @@ public:
     /**
      * Get the force field parameters for a torsion-torsion term.
      *
-     * @param index                     the index of the torsion-torsion for which to get parameters
-     * @param particle1                 the index of the first particle connected by the torsion-torsion
-     * @param particle2                 the index of the second particle connected by the torsion-torsion
-     * @param particle3                 the index of the third particle connected by the torsion-torsion
-     * @param particle4                 the index of the fourth particle connected by the torsion-torsion
-     * @param particle5                 the index of the fifth particle connected by the torsion-torsion
-     * @param chiralCheckAtomIndex      the index of the particle connected to particle3, but not particle2 or particle4 to be used in chirality check
-     * @param gridIndex                 the grid index
+     * @param index                          the index of the torsion-torsion for which to get parameters
+     * @param[out] particle1                 the index of the first particle connected by the torsion-torsion
+     * @param[out] particle2                 the index of the second particle connected by the torsion-torsion
+     * @param[out] particle3                 the index of the third particle connected by the torsion-torsion
+     * @param[out] particle4                 the index of the fourth particle connected by the torsion-torsion
+     * @param[out] particle5                 the index of the fifth particle connected by the torsion-torsion
+     * @param[out] chiralCheckAtomIndex      the index of the particle connected to particle3, but not particle2 or particle4 to be used in chirality check
+     * @param[out] gridIndex                 the grid index
      */
     void getTorsionTorsionParameters(int index, int& particle1, int& particle2, int& particle3, int& particle4, int& particle5, int& chiralCheckAtomIndex, int& gridIndex) const;
 
@@ -117,7 +117,7 @@ public:
     /**
      * Get the torsion-torsion grid at the specified index
      *
-     * @param gridIndex     the grid index
+     * @param  index        the grid index
      * @return grid         return grid reference
      */
     const std::vector<std::vector<std::vector<double> > >& getTorsionTorsionGrid(int index) const;
@@ -138,14 +138,17 @@ public:
      */
     void setTorsionTorsionGrid(int index, const std::vector<std::vector<std::vector<double> > >& grid);
     /**
+     * Set whether this force should apply periodic boundary conditions when calculating displacements.
+     * Usually this is not appropriate for bonded forces, but there are situations when it can be useful.
+     */
+    void setUsesPeriodicBoundaryConditions(bool periodic);
+    /**
      * Returns whether or not this force makes use of periodic boundary
      * conditions.
      *
-     * @returns true if nonbondedMethod uses PBC and false otherwise
+     * @returns true if force uses PBC and false otherwise
      */
-    bool usesPeriodicBoundaryConditions() const {
-        return false;
-    }
+    bool usesPeriodicBoundaryConditions() const;
 protected:
     ForceImpl* createImpl() const;
 private:
@@ -153,6 +156,7 @@ private:
     class TorsionTorsionGridInfo;
     std::vector<TorsionTorsionInfo> torsionTorsions;
     std::vector<TorsionTorsionGridInfo> torsionTorsionGrids;
+    bool usePeriodic;
 };
 
 /**
@@ -172,7 +176,7 @@ public:
     }
     TorsionTorsionInfo(int particle1, int particle2, int particle3, int particle4, int particle5, int chiralCheckAtomIndex, int gridIndex) :
                        particle1(particle1), particle2(particle2), particle3(particle3),
-                       particle4(particle4), particle5(particle5), gridIndex(gridIndex), chiralCheckAtomIndex(chiralCheckAtomIndex) {
+                       particle4(particle4), particle5(particle5), chiralCheckAtomIndex(chiralCheckAtomIndex), gridIndex(gridIndex) {
 
     }
 };

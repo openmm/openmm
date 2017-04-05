@@ -49,8 +49,8 @@ class OPENMM_EXPORT ReferenceDynamics {
       int _numberOfAtoms;
       int _timeStep;
 
-      RealOpenMM _deltaT;
-      RealOpenMM _temperature;
+      double _deltaT;
+      double _temperature;
 
       int _ownReferenceConstraint;
       ReferenceConstraintAlgorithm* _referenceConstraint;
@@ -67,7 +67,7 @@ class OPENMM_EXPORT ReferenceDynamics {
 
          --------------------------------------------------------------------------------------- */
 
-       ReferenceDynamics(int numberOfAtoms, RealOpenMM _deltaT, RealOpenMM temperature);
+       ReferenceDynamics(int numberOfAtoms, double _deltaT, double temperature);
 
       /**---------------------------------------------------------------------------------------
       
@@ -115,7 +115,7 @@ class OPENMM_EXPORT ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
       
-      RealOpenMM getDeltaT() const;
+      double getDeltaT() const;
 
       /**---------------------------------------------------------------------------------------
 
@@ -123,7 +123,7 @@ class OPENMM_EXPORT ReferenceDynamics {
 
          --------------------------------------------------------------------------------------- */
 
-      void setDeltaT(RealOpenMM deltaT);
+      void setDeltaT(double deltaT);
 
       /**---------------------------------------------------------------------------------------
       
@@ -133,7 +133,7 @@ class OPENMM_EXPORT ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
     
-      RealOpenMM getTemperature() const;
+      double getTemperature() const;
 
       /**---------------------------------------------------------------------------------------
       
@@ -148,8 +148,8 @@ class OPENMM_EXPORT ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
       
-      virtual void update(const OpenMM::System& system, std::vector<OpenMM::RealVec>& atomCoordinates,
-                          std::vector<OpenMM::RealVec>& velocities, std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& masses, RealOpenMM tolerance);
+      virtual void update(const OpenMM::System& system, std::vector<OpenMM::Vec3>& atomCoordinates,
+                          std::vector<OpenMM::Vec3>& velocities, std::vector<OpenMM::Vec3>& forces, std::vector<double>& masses, double tolerance);
 
       /**---------------------------------------------------------------------------------------
       

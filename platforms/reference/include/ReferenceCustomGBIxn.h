@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2016 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -26,7 +26,7 @@
 #define __ReferenceCustomGBIxn_H__
 
 #include "ReferenceNeighborList.h"
-#include "lepton/ExpressionProgram.h"
+#include "openmm/internal/CompiledExpressionSet.h"
 #include "openmm/CustomGBForce.h"
 #include <map>
 #include <set>
@@ -41,20 +41,26 @@ class ReferenceCustomGBIxn {
       bool cutoff;
       bool periodic;
       const OpenMM::NeighborList* neighborList;
-      OpenMM::RealVec periodicBoxVectors[3];
-      RealOpenMM cutoffDistance;
-      std::vector<Lepton::ExpressionProgram> valueExpressions;
-      std::vector<std::vector<Lepton::ExpressionProgram> > valueDerivExpressions;
-      std::vector<std::vector<Lepton::ExpressionProgram> > valueGradientExpressions;
-      std::vector<std::string> valueNames;
+      OpenMM::Vec3 periodicBoxVectors[3];
+      double cutoffDistance;
+      CompiledExpressionSet expressionSet;
+      std::vector<Lepton::CompiledExpression> valueExpressions;
+      std::vector<std::vector<Lepton::CompiledExpression> > valueDerivExpressions;
+      std::vector<std::vector<Lepton::CompiledExpression> > valueGradientExpressions;
+      std::vector<std::vector<Lepton::CompiledExpression> > valueParamDerivExpressions;
       std::vector<OpenMM::CustomGBForce::ComputationType> valueTypes;
-      std::vector<Lepton::ExpressionProgram> energyExpressions;
-      std::vector<std::vector<Lepton::ExpressionProgram> > energyDerivExpressions;
-      std::vector<std::vector<Lepton::ExpressionProgram> > energyGradientExpressions;
-      std::vector<std::string> paramNames;
+      std::vector<Lepton::CompiledExpression> energyExpressions;
+      std::vector<std::vector<Lepton::CompiledExpression> > energyDerivExpressions;
+      std::vector<std::vector<Lepton::CompiledExpression> > energyGradientExpressions;
+      std::vector<std::vector<Lepton::CompiledExpression> > energyParamDerivExpressions;
       std::vector<OpenMM::CustomGBForce::ComputationType> energyTypes;
-      std::vector<std::string> particleParamNames;
-      std::vector<std::string> particleValueNames;
+      std::vector<int> paramIndex;
+      std::vector<int> valueIndex;
+      std::vector<int> particleParamIndex;
+      std::vector<int> particleValueIndex;
+      int rIndex, xIndex, yIndex, zIndex;
+      std::vector<std::vector<double> > values, dEdV;
+      std::vector<std::vector<std::vector<double> > > dValuedParam;
 
       /**---------------------------------------------------------------------------------------
 
@@ -63,14 +69,11 @@ class ReferenceCustomGBIxn {
          @param index            the index of the value to compute
          @param numAtoms         number of atoms
          @param atomCoordinates  atom coordinates
-         @param values           the vector to store computed values into
-         @param globalParameters the values of global parameters
          @param atomParameters   atomParameters[atomIndex][paramterIndex]
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateSingleParticleValue(int index, int numAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<std::vector<RealOpenMM> >& values,
-                                        const std::map<std::string, double>& globalParameters, RealOpenMM** atomParameters) const;
+      void calculateSingleParticleValue(int index, int numAtoms, std::vector<OpenMM::Vec3>& atomCoordinates, double** atomParameters);
 
       /**---------------------------------------------------------------------------------------
 
@@ -80,17 +83,13 @@ class ReferenceCustomGBIxn {
          @param numAtoms         number of atoms
          @param atomCoordinates  atom coordinates
          @param atomParameters   atomParameters[atomIndex][paramterIndex]
-         @param values           the vector to store computed values into
-         @param globalParameters the values of global parameters
          @param exclusions       exclusions[i] is the set of excluded indices for atom i
          @param useExclusions    specifies whether to use exclusions
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateParticlePairValue(int index, int numAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** atomParameters,
-                                      std::vector<std::vector<RealOpenMM> >& values,
-                                      const std::map<std::string, double>& globalParameters,
-                                      const std::vector<std::set<int> >& exclusions, bool useExclusions) const;
+      void calculateParticlePairValue(int index, int numAtoms, std::vector<OpenMM::Vec3>& atomCoordinates, double** atomParameters,
+                                      const std::vector<std::set<int> >& exclusions, bool useExclusions);
 
       /**---------------------------------------------------------------------------------------
 
@@ -101,14 +100,10 @@ class ReferenceCustomGBIxn {
          @param atom2            the index of the second atom in the pair
          @param atomCoordinates  atom coordinates
          @param atomParameters   atomParameters[atomIndex][paramterIndex]
-         @param globalParameters the values of global parameters
-         @param values           the vector to store computed values into
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateOnePairValue(int index, int atom1, int atom2, std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** atomParameters,
-                                 const std::map<std::string, double>& globalParameters,
-                                 std::vector<std::vector<RealOpenMM> >& values) const;
+      void calculateOnePairValue(int index, int atom1, int atom2, std::vector<OpenMM::Vec3>& atomCoordinates, double** atomParameters);
 
       /**---------------------------------------------------------------------------------------
 
@@ -117,18 +112,14 @@ class ReferenceCustomGBIxn {
          @param index            the index of the value to compute
          @param numAtoms         number of atoms
          @param atomCoordinates  atom coordinates
-         @param values           the vector containing computed values
-         @param globalParameters the values of global parameters
          @param atomParameters   atomParameters[atomIndex][paramterIndex]
          @param forces           forces on atoms are added to this
          @param totalEnergy      the energy contribution is added to this
-         @param dEdV             the derivative of energy with respect to computed values is stored in this
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateSingleParticleEnergyTerm(int index, int numAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, const std::vector<std::vector<RealOpenMM> >& values,
-                                        const std::map<std::string, double>& globalParameters, RealOpenMM** atomParameters, std::vector<OpenMM::RealVec>& forces,
-                                        RealOpenMM* totalEnergy, std::vector<std::vector<RealOpenMM> >& dEdV) const;
+      void calculateSingleParticleEnergyTerm(int index, int numAtoms, std::vector<OpenMM::Vec3>& atomCoordinates,
+                        double** atomParameters, std::vector<OpenMM::Vec3>& forces, double* totalEnergy, double* energyParamDerivs);
 
       /**---------------------------------------------------------------------------------------
 
@@ -138,21 +129,16 @@ class ReferenceCustomGBIxn {
          @param numAtoms         number of atoms
          @param atomCoordinates  atom coordinates
          @param atomParameters   atomParameters[atomIndex][paramterIndex]
-         @param values           the vector containing computed values
-         @param globalParameters the values of global parameters
          @param exclusions       exclusions[i] is the set of excluded indices for atom i
          @param useExclusions    specifies whether to use exclusions
          @param forces           forces on atoms are added to this
          @param totalEnergy      the energy contribution is added to this
-         @param dEdV             the derivative of energy with respect to computed values is stored in this
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateParticlePairEnergyTerm(int index, int numAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** atomParameters,
-                                      const std::vector<std::vector<RealOpenMM> >& values,
-                                      const std::map<std::string, double>& globalParameters,
+      void calculateParticlePairEnergyTerm(int index, int numAtoms, std::vector<OpenMM::Vec3>& atomCoordinates, double** atomParameters,
                                       const std::vector<std::set<int> >& exclusions, bool useExclusions,
-                                      std::vector<OpenMM::RealVec>& forces, RealOpenMM* totalEnergy, std::vector<std::vector<RealOpenMM> >& dEdV) const;
+                                      std::vector<OpenMM::Vec3>& forces, double* totalEnergy, double* energyParamDerivs);
 
       /**---------------------------------------------------------------------------------------
 
@@ -163,18 +149,13 @@ class ReferenceCustomGBIxn {
          @param atom2            the index of the second atom in the pair
          @param atomCoordinates  atom coordinates
          @param atomParameters   atomParameters[atomIndex][paramterIndex]
-         @param globalParameters the values of global parameters
-         @param values           the vector containing computed values
          @param forces           forces on atoms are added to this
          @param totalEnergy      the energy contribution is added to this
-         @param dEdV             the derivative of energy with respect to computed values is stored in this
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateOnePairEnergyTerm(int index, int atom1, int atom2, std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** atomParameters,
-                                 const std::map<std::string, double>& globalParameters,
-                                 const std::vector<std::vector<RealOpenMM> >& values,
-                                 std::vector<OpenMM::RealVec>& forces, RealOpenMM* totalEnergy, std::vector<std::vector<RealOpenMM> >& dEdV) const;
+      void calculateOnePairEnergyTerm(int index, int atom1, int atom2, std::vector<OpenMM::Vec3>& atomCoordinates, double** atomParameters,
+                                 std::vector<OpenMM::Vec3>& forces, double* totalEnergy, double* energyParamDerivs);
 
       /**---------------------------------------------------------------------------------------
 
@@ -183,19 +164,13 @@ class ReferenceCustomGBIxn {
          @param numAtoms         number of atoms
          @param atomCoordinates  atom coordinates
          @param atomParameters   atomParameters[atomIndex][paramterIndex]
-         @param values           the vector containing computed values
-         @param globalParameters the values of global parameters
          @param exclusions       exclusions[i] is the set of excluded indices for atom i
          @param forces           forces on atoms are added to this
-         @param dEdV             the derivative of energy with respect to computed values is stored in this
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateChainRuleForces(int numAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** atomParameters,
-                                      const std::vector<std::vector<RealOpenMM> >& values,
-                                      const std::map<std::string, double>& globalParameters,
-                                      const std::vector<std::set<int> >& exclusions,
-                                      std::vector<OpenMM::RealVec>& forces, std::vector<std::vector<RealOpenMM> >& dEdV) const;
+      void calculateChainRuleForces(int numAtoms, std::vector<OpenMM::Vec3>& atomCoordinates, double** atomParameters,
+                                      const std::vector<std::set<int> >& exclusions, std::vector<OpenMM::Vec3>& forces, double* energyParamDerivs);
 
       /**---------------------------------------------------------------------------------------
 
@@ -205,19 +180,13 @@ class ReferenceCustomGBIxn {
          @param atom2            the index of the second atom in the pair
          @param atomCoordinates  atom coordinates
          @param atomParameters   atomParameters[atomIndex][paramterIndex]
-         @param globalParameters the values of global parameters
-         @param values           the vector containing computed values
          @param forces           forces on atoms are added to this
-         @param dEdV             the derivative of energy with respect to computed values is stored in this
          @param isExcluded       specifies whether this is an excluded pair
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateOnePairChainRule(int atom1, int atom2, std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** atomParameters,
-                                 const std::map<std::string, double>& globalParameters,
-                                 const std::vector<std::vector<RealOpenMM> >& values,
-                                 std::vector<OpenMM::RealVec>& forces, std::vector<std::vector<RealOpenMM> >& dEdV,
-                                 bool isExcluded) const;
+      void calculateOnePairChainRule(int atom1, int atom2, std::vector<OpenMM::Vec3>& atomCoordinates, double** atomParameters,
+                                 std::vector<OpenMM::Vec3>& forces, bool isExcluded);
 
    public:
 
@@ -227,14 +196,16 @@ class ReferenceCustomGBIxn {
 
          --------------------------------------------------------------------------------------- */
 
-       ReferenceCustomGBIxn(const std::vector<Lepton::ExpressionProgram>& valueExpressions,
-                            const std::vector<std::vector<Lepton::ExpressionProgram> > valueDerivExpressions,
-                            const std::vector<std::vector<Lepton::ExpressionProgram> > valueGradientExpressions,
+       ReferenceCustomGBIxn(const std::vector<Lepton::CompiledExpression>& valueExpressions,
+                            const std::vector<std::vector<Lepton::CompiledExpression> > valueDerivExpressions,
+                            const std::vector<std::vector<Lepton::CompiledExpression> > valueGradientExpressions,
+                            const std::vector<std::vector<Lepton::CompiledExpression> > valueParamDerivExpressions,
                             const std::vector<std::string>& valueNames,
                             const std::vector<OpenMM::CustomGBForce::ComputationType>& valueTypes,
-                            const std::vector<Lepton::ExpressionProgram>& energyExpressions,
-                            const std::vector<std::vector<Lepton::ExpressionProgram> > energyDerivExpressions,
-                            const std::vector<std::vector<Lepton::ExpressionProgram> > energyGradientExpressions,
+                            const std::vector<Lepton::CompiledExpression>& energyExpressions,
+                            const std::vector<std::vector<Lepton::CompiledExpression> > energyDerivExpressions,
+                            const std::vector<std::vector<Lepton::CompiledExpression> > energyGradientExpressions,
+                            const std::vector<std::vector<Lepton::CompiledExpression> > energyParamDerivExpressions,
                             const std::vector<OpenMM::CustomGBForce::ComputationType>& energyTypes,
                             const std::vector<std::string>& parameterNames);
 
@@ -255,7 +226,7 @@ class ReferenceCustomGBIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void setUseCutoff(RealOpenMM distance, const OpenMM::NeighborList& neighbors);
+      void setUseCutoff(double distance, const OpenMM::NeighborList& neighbors);
 
       /**---------------------------------------------------------------------------------------
 
@@ -267,7 +238,7 @@ class ReferenceCustomGBIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void setPeriodic(OpenMM::RealVec* vectors);
+      void setPeriodic(OpenMM::Vec3* vectors);
 
       /**---------------------------------------------------------------------------------------
 
@@ -283,8 +254,8 @@ class ReferenceCustomGBIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateIxn(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** atomParameters, const std::vector<std::set<int> >& exclusions,
-                       std::map<std::string, double>& globalParameters, std::vector<OpenMM::RealVec>& forces, RealOpenMM* totalEnergy) const;
+      void calculateIxn(int numberOfAtoms, std::vector<OpenMM::Vec3>& atomCoordinates, double** atomParameters, const std::vector<std::set<int> >& exclusions,
+                       std::map<std::string, double>& globalParameters, std::vector<OpenMM::Vec3>& forces, double* totalEnergy, double* energyParamDerivs);
 
 // ---------------------------------------------------------------------------------------
 

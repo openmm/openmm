@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2013 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2016 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -42,21 +42,16 @@ using namespace OpenMM;
 
    @param numberOfAtoms  number of atoms
    @param deltaT         delta t for dynamics
-   @param tau            viscosity(?)
+   @param friction       friction coefficient
    @param temperature    temperature
    @param accuracy       required accuracy
 
    --------------------------------------------------------------------------------------- */
 
 ReferenceVariableStochasticDynamics::ReferenceVariableStochasticDynamics(int numberOfAtoms,
-                                                          RealOpenMM tau, RealOpenMM temperature,
-                                                          RealOpenMM accuracy) :
-           ReferenceDynamics(numberOfAtoms, 0.0f, temperature), _tau(tau), _accuracy(accuracy) {
-   if (tau <= 0) {
-      std::stringstream message;
-      message << "illegal tau value: " << tau;
-      throw OpenMMException(message.str());
-   }
+                                                          double friction, double temperature,
+                                                          double accuracy) :
+           ReferenceDynamics(numberOfAtoms, 0.0f, temperature), friction(friction), _accuracy(accuracy) {
    xPrime.resize(numberOfAtoms);
    inverseMasses.resize(numberOfAtoms);
 }
@@ -68,13 +63,6 @@ ReferenceVariableStochasticDynamics::ReferenceVariableStochasticDynamics(int num
    --------------------------------------------------------------------------------------- */
 
 ReferenceVariableStochasticDynamics::~ReferenceVariableStochasticDynamics() {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceVariableStochasticDynamics::~ReferenceVariableStochasticDynamics";
-
-   // ---------------------------------------------------------------------------------------
-
 }
 
 /**---------------------------------------------------------------------------------------
@@ -85,7 +73,7 @@ ReferenceVariableStochasticDynamics::~ReferenceVariableStochasticDynamics() {
 
  --------------------------------------------------------------------------------------- */
 
-RealOpenMM ReferenceVariableStochasticDynamics::getAccuracy() const {
+double ReferenceVariableStochasticDynamics::getAccuracy() const {
     return _accuracy;
 }
 
@@ -95,27 +83,18 @@ RealOpenMM ReferenceVariableStochasticDynamics::getAccuracy() const {
 
  --------------------------------------------------------------------------------------- */
 
-void ReferenceVariableStochasticDynamics::setAccuracy(RealOpenMM accuracy) {
+void ReferenceVariableStochasticDynamics::setAccuracy(double accuracy) {
     _accuracy = accuracy;
 }
 
 /**---------------------------------------------------------------------------------------
 
-   Get tau
-
-   @return tau
+   Get friction coefficient
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM ReferenceVariableStochasticDynamics::getTau() const {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName  = "\nReferenceVariableStochasticDynamics::getTau";
-
-   // ---------------------------------------------------------------------------------------
-
-   return _tau;
+double ReferenceVariableStochasticDynamics::getFriction() const {
+   return friction;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -133,18 +112,10 @@ RealOpenMM ReferenceVariableStochasticDynamics::getTau() const {
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceVariableStochasticDynamics::updatePart1(int numberOfAtoms, vector<RealVec>& atomCoordinates,
-                                              vector<RealVec>& velocities,
-                                              vector<RealVec>& forces, vector<RealOpenMM>& masses, vector<RealOpenMM>& inverseMasses,
-                                              vector<RealVec>& xPrime, RealOpenMM maxStepSize) {
-
-   // ---------------------------------------------------------------------------------------
-
-   static const char* methodName  = "\nReferenceVariableStochasticDynamics::updatePart1";
-
-   // ---------------------------------------------------------------------------------------
-
-
+void ReferenceVariableStochasticDynamics::updatePart1(int numberOfAtoms, vector<Vec3>& atomCoordinates,
+                                              vector<Vec3>& velocities,
+                                              vector<Vec3>& forces, vector<double>& masses, vector<double>& inverseMasses,
+                                              vector<Vec3>& xPrime, double maxStepSize) {
    // first-time-through initialization
 
    if (getTimeStep() == 0) {
@@ -159,15 +130,15 @@ void ReferenceVariableStochasticDynamics::updatePart1(int numberOfAtoms, vector<
    }
 
    // Select the step size to use
-    RealOpenMM error = 0;
+    double error = 0;
     for (int i = 0; i < numberOfAtoms; ++i) {
         for (int j = 0; j < 3; ++j) {
-            RealOpenMM xerror = inverseMasses[i]*forces[i][j];
+            double xerror = inverseMasses[i]*forces[i][j];
             error += xerror*xerror;
         }
     }
-    error = SQRT(error/(numberOfAtoms*3));
-    RealOpenMM newStepSize = SQRT(getAccuracy()/error);
+    error = sqrt(error/(numberOfAtoms*3));
+    double newStepSize = sqrt(getAccuracy()/error);
     if (getDeltaT() > 0.0f)
         newStepSize = std::min(newStepSize, getDeltaT()*2.0f); // For safety, limit how quickly dt can increase.
     if (newStepSize > getDeltaT() && newStepSize < 1.2f*getDeltaT())
@@ -178,15 +149,16 @@ void ReferenceVariableStochasticDynamics::updatePart1(int numberOfAtoms, vector<
  
     // perform first update
 
-   RealOpenMM tau = getTau();
-   const RealOpenMM vscale = EXP(-getDeltaT()/tau);
-   const RealOpenMM fscale = (1-vscale)*tau;
-   const RealOpenMM kT = BOLTZ*getTemperature();
-   const RealOpenMM noisescale = SQRT(2*kT/tau)*SQRT(0.5*(1-vscale*vscale)*tau);
+   double dt = getDeltaT();
+   double friction = getFriction();
+   const double vscale = exp(-dt*friction);
+   const double fscale = (friction == 0 ? dt : (1-vscale)/friction);
+   const double kT = BOLTZ*getTemperature();
+   const double noisescale = sqrt(kT*(1-vscale*vscale));
 
    for (int ii = 0; ii < numberOfAtoms; ii++) {
        if (masses[ii] != 0) {
-           RealOpenMM sqrtInvMass = SQRT(inverseMasses[ii]);
+           double sqrtInvMass = sqrt(inverseMasses[ii]);
            for (int jj = 0; jj < 3; jj++) {
                velocities[ii][jj]  = vscale*velocities[ii][jj] + fscale*inverseMasses[ii]*forces[ii][jj] + noisescale*sqrtInvMass*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
            }
@@ -207,17 +179,10 @@ void ReferenceVariableStochasticDynamics::updatePart1(int numberOfAtoms, vector<
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceVariableStochasticDynamics::updatePart2(int numberOfAtoms, vector<RealVec>& atomCoordinates,
-                                              vector<RealVec>& velocities,
-                                              vector<RealVec>& forces, vector<RealOpenMM>& inverseMasses,
-                                              vector<RealVec>& xPrime) {
-
-   // ---------------------------------------------------------------------------------------
-
-   //static const char* methodName  = "\nReferenceVariableStochasticDynamics::updatePart2";
-
-   // ---------------------------------------------------------------------------------------
-
+void ReferenceVariableStochasticDynamics::updatePart2(int numberOfAtoms, vector<Vec3>& atomCoordinates,
+                                              vector<Vec3>& velocities,
+                                              vector<Vec3>& forces, vector<double>& inverseMasses,
+                                              vector<Vec3>& xPrime) {
    // perform second update
 
    for (int ii = 0; ii < numberOfAtoms; ii++) {
@@ -241,15 +206,9 @@ void ReferenceVariableStochasticDynamics::updatePart2(int numberOfAtoms, vector<
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceVariableStochasticDynamics::update(const OpenMM::System& system, vector<RealVec>& atomCoordinates,
-                                          vector<RealVec>& velocities,
-                                          vector<RealVec>& forces, vector<RealOpenMM>& masses, RealOpenMM maxStepSize, RealOpenMM tolerance) {
-
-   // ---------------------------------------------------------------------------------------
-
-   //static const char* methodName      = "\nReferenceVariableStochasticDynamics::update";
-
-   // ---------------------------------------------------------------------------------------
+void ReferenceVariableStochasticDynamics::update(const OpenMM::System& system, vector<Vec3>& atomCoordinates,
+                                          vector<Vec3>& velocities,
+                                          vector<Vec3>& forces, vector<double>& masses, double maxStepSize, double tolerance) {
 
    // 1st update
 
@@ -266,11 +225,11 @@ void ReferenceVariableStochasticDynamics::update(const OpenMM::System& system, v
 
    // copy xPrime -> atomCoordinates
 
+   double invStepSize = 1.0/getDeltaT();
    for (int ii = 0; ii < numberOfAtoms; ii++) {
        if (masses[ii] != 0.0) {
-           atomCoordinates[ii][0] = xPrime[ii][0];
-           atomCoordinates[ii][1] = xPrime[ii][1];
-           atomCoordinates[ii][2] = xPrime[ii][2];
+           velocities[ii] = (xPrime[ii]-atomCoordinates[ii])*invStepSize;
+           atomCoordinates[ii] = xPrime[ii];
        }
    }
 

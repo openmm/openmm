@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2016 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -25,7 +25,7 @@
 #ifndef __ReferenceBondIxn_H__
 #define __ReferenceBondIxn_H__
 
-#include "RealVec.h"
+#include "openmm/Vec3.h"
 #include "openmm/internal/windowsExport.h"
 #include <vector>
 
@@ -65,9 +65,9 @@ class OPENMM_EXPORT ReferenceBondIxn {
       
          --------------------------------------------------------------------------------------- */
       
-      virtual void calculateBondIxn(int* atomIndices, std::vector<OpenMM::RealVec>& atomCoordinates,
-                                    RealOpenMM* parameters, std::vector<OpenMM::RealVec>& forces,
-                                    RealOpenMM* totalEnergy) const;
+      virtual void calculateBondIxn(int* atomIndices, std::vector<OpenMM::Vec3>& atomCoordinates,
+                                    double* parameters, std::vector<OpenMM::Vec3>& forces,
+                                    double* totalEnergy, double* energyParamDerivs);
       
       /**---------------------------------------------------------------------------------------
       
@@ -82,7 +82,7 @@ class OPENMM_EXPORT ReferenceBondIxn {
       
          --------------------------------------------------------------------------------------- */
       
-      static RealOpenMM getNormedDotProduct(RealOpenMM* vector1, RealOpenMM* vector2, int hasREntry);
+      static double getNormedDotProduct(double* vector1, double* vector2, int hasREntry);
       
       /**---------------------------------------------------------------------------------------
       
@@ -98,8 +98,8 @@ class OPENMM_EXPORT ReferenceBondIxn {
       
          --------------------------------------------------------------------------------------- */
       
-      static RealOpenMM getAngleBetweenTwoVectors(RealOpenMM* vector1, RealOpenMM* vector2, 
-                                                   RealOpenMM* outputDotProduct, int hasREntry);
+      static double getAngleBetweenTwoVectors(double* vector1, double* vector2, 
+                                              double* outputDotProduct, int hasREntry);
       
       /**---------------------------------------------------------------------------------------
       
@@ -119,10 +119,10 @@ class OPENMM_EXPORT ReferenceBondIxn {
       
          --------------------------------------------------------------------------------------- */
       
-      static RealOpenMM getDihedralAngleBetweenThreeVectors(RealOpenMM* vector1, RealOpenMM* vector2, 
-                                                            RealOpenMM* vector3, RealOpenMM** outputCrossProduct, 
-                                                            RealOpenMM* cosineOfAngle, RealOpenMM* signVector, 
-                                                            RealOpenMM* signOfAngle, int hasREntry);
+      static double getDihedralAngleBetweenThreeVectors(double* vector1, double* vector2, 
+                                                        double* vector3, double** outputCrossProduct, 
+                                                        double* cosineOfAngle, double* signVector, 
+                                                        double* signOfAngle, int hasREntry);
       
 };
 

@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2015 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2017 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -39,7 +39,6 @@ namespace OpenMM {
 
 class CpuNonbondedForce {
     public:
-        class ComputeDirectTask;
 
       /**---------------------------------------------------------------------------------------
       
@@ -87,7 +86,7 @@ class CpuNonbondedForce {
       
          --------------------------------------------------------------------------------------- */
       
-      void setPeriodic(RealVec* periodicBoxVectors);
+      void setPeriodic(Vec3* periodicBoxVectors);
        
       /**---------------------------------------------------------------------------------------
       
@@ -104,15 +103,26 @@ class CpuNonbondedForce {
 
      
       /**---------------------------------------------------------------------------------------
-      
+
          Set the force to use Particle-Mesh Ewald (PME) summation.
-      
+
          @param alpha    the Ewald separation parameter
          @param gridSize the dimensions of the mesh
-      
+
          --------------------------------------------------------------------------------------- */
-      
+
       void setUsePME(float alpha, int meshSize[3]);
+
+      /**---------------------------------------------------------------------------------------
+
+         Set the force to use Particle-Mesh Ewald (PME) summation for dispersion.
+
+         @param alpha    the Ewald separation parameter
+         @param gridSize the dimensions of the mesh
+
+         --------------------------------------------------------------------------------------- */
+
+      void setUseLJPME(float alpha, int meshSize[3]);
 
       /**---------------------------------------------------------------------------------------
       
@@ -122,16 +132,17 @@ class CpuNonbondedForce {
          @param posq             atom coordinates and charges
          @param atomCoordinates  atom coordinates (in format needed by PME)
          @param atomParameters   atom parameters (sigma/2, 2*sqrt(epsilon))
+         @param C6Paramrs        C6 parameters for multiplicative representation of dispersion
          @param exclusions       atom exclusion indices
                                  exclusions[atomIndex] contains the list of exclusions for that atom
          @param forces           force array (forces added)
          @param totalEnergy      total energy
             
          --------------------------------------------------------------------------------------- */
-          
-      void calculateReciprocalIxn(int numberOfAtoms, float* posq, const std::vector<RealVec>& atomCoordinates,
-                            const std::vector<std::pair<float, float> >& atomParameters, const std::vector<std::set<int> >& exclusions,
-                            std::vector<RealVec>& forces, double* totalEnergy) const;
+
+      void calculateReciprocalIxn(int numberOfAtoms, float* posq, const std::vector<Vec3>& atomCoordinates,
+                                  const std::vector<std::pair<float, float> >& atomParameters, const std::vector<float> &C6params,
+                                  const std::vector<std::set<int> >& exclusions, std::vector<Vec3>& forces, double* totalEnergy) const;
       
       /**---------------------------------------------------------------------------------------
       
@@ -149,8 +160,8 @@ class CpuNonbondedForce {
       
          --------------------------------------------------------------------------------------- */
           
-      void calculateDirectIxn(int numberOfAtoms, float* posq, const std::vector<RealVec>& atomCoordinates, const std::vector<std::pair<float, float> >& atomParameters,
-            const std::vector<std::set<int> >& exclusions, std::vector<AlignedArray<float> >& threadForce, double* totalEnergy, ThreadPool& threads);
+      void calculateDirectIxn(int numberOfAtoms, float* posq, const std::vector<Vec3>& atomCoordinates, const std::vector<std::pair<float, float> >& atomParameters,
+            const std::vector<float>& C6params, const std::vector<std::set<int> >& exclusions, std::vector<AlignedArray<float> >& threadForce, double* totalEnergy, ThreadPool& threads);
 
     /**
      * This routine contains the code executed by each thread.
@@ -163,28 +174,32 @@ protected:
         bool periodic;
         bool triclinic;
         bool ewald;
-        bool pme;
-        bool tableIsValid;
+        bool ljpme, pme;
+        bool tableIsValid, expTableIsValid;
         const CpuNeighborList* neighborList;
         float recipBoxSize[3];
-        RealVec periodicBoxVectors[3];
+        Vec3 periodicBoxVectors[3];
         AlignedArray<fvec4> periodicBoxVec4;
         float cutoffDistance, switchingDistance;
         float krf, crf;
-        float alphaEwald;
+        float alphaEwald, alphaDispersionEwald;
         int numRx, numRy, numRz;
-        int meshDim[3];
+        int meshDim[3], dispersionMeshDim[3];
         std::vector<float> erfcTable, ewaldScaleTable;
-        float ewaldDX, ewaldDXInv, erfcDXInv;
+        std::vector<float> exptermsTable, dExptermsTable;
+        float ewaldDX, ewaldDXInv, erfcDXInv, exptermsDX, exptermsDXInv;
         std::vector<double> threadEnergy;
         // The following variables are used to make information accessible to the individual threads.
         int numberOfAtoms;
         float* posq;
-        RealVec const* atomCoordinates;
+        Vec3 const* atomCoordinates;
         std::pair<float, float> const* atomParameters;        
+        float const *C6params;
         std::set<int> const* exclusions;
         std::vector<AlignedArray<float> >* threadForce;
         bool includeEnergy;
+        float inverseRcut6;
+        float inverseRcut6Expterm;
         void* atomicCounter;
 
         static const float TWO_OVER_SQRT_PI;
@@ -239,9 +254,28 @@ protected:
       void tabulateEwaldScaleFactor();
 
       /**
+       * Create a lookup table for the scale factor used with dispersion PME.
+       */
+      void tabulateExpTerms();
+
+      /**
        * Compute a fast approximation to erfc(x).
        */
       float erfcApprox(float x);
+
+      /**
+       * Compute a fast approximation to (1.0 - EXP(-dar^2) * (1.0 + dar^2 + 0.5*dar^4))
+       * where dar = (dispersionAlpha * R)
+       * needed for LJPME energies.
+       */
+      float exptermsApprox(float R);
+
+      /**
+       * Compute a fast approximation to (1.0 - EXP(-dar^2) * (1.0 + dar^2 + 0.5*dar^4 + dar^6/6.0))
+       * where dar = (dispersionAlpha * R)
+       * needed for LJPME forces.
+       */
+      float dExptermsApprox(float R);
 };
 
 } // namespace OpenMM

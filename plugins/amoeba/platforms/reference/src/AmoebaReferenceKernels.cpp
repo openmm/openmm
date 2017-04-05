@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors:                                                                   *
  * Contributors:                                                              *
  *                                                                            *
@@ -54,29 +54,29 @@
 using namespace OpenMM;
 using namespace std;
 
-static vector<RealVec>& extractPositions(ContextImpl& context) {
+static vector<Vec3>& extractPositions(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-    return *((vector<RealVec>*) data->positions);
+    return *((vector<Vec3>*) data->positions);
 }
 
-static vector<RealVec>& extractVelocities(ContextImpl& context) {
+static vector<Vec3>& extractVelocities(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-    return *((vector<RealVec>*) data->velocities);
+    return *((vector<Vec3>*) data->velocities);
 }
 
-static vector<RealVec>& extractForces(ContextImpl& context) {
+static vector<Vec3>& extractForces(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-    return *((vector<RealVec>*) data->forces);
+    return *((vector<Vec3>*) data->forces);
 }
 
-static RealVec& extractBoxSize(ContextImpl& context) {
+static Vec3& extractBoxSize(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-    return *(RealVec*) data->periodicBoxSize;
+    return *(Vec3*) data->periodicBoxSize;
 }
 
-static RealVec* extractBoxVectors(ContextImpl& context) {
+static Vec3* extractBoxVectors(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-    return (RealVec*) data->periodicBoxVectors;
+    return (Vec3*) data->periodicBoxVectors;
 }
 
 // ***************************************************************************
@@ -99,20 +99,23 @@ void ReferenceCalcAmoebaBondForceKernel::initialize(const System& system, const 
 
         particle1.push_back(particle1Index); 
         particle2.push_back(particle2Index); 
-        length.push_back(static_cast<RealOpenMM>(lengthValue));
-        kQuadratic.push_back(static_cast<RealOpenMM>(kValue));
+        length.push_back(static_cast<double>(lengthValue));
+        kQuadratic.push_back(kValue);
     } 
-    globalBondCubic   = static_cast<RealOpenMM>(force.getAmoebaGlobalBondCubic());
-    globalBondQuartic = static_cast<RealOpenMM>(force.getAmoebaGlobalBondQuartic());
+    globalBondCubic   = force.getAmoebaGlobalBondCubic();
+    globalBondQuartic = force.getAmoebaGlobalBondQuartic();
+    usePeriodic = force.usesPeriodicBoundaryConditions();
 }
 
 double ReferenceCalcAmoebaBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    vector<RealVec>& posData   = extractPositions(context);
-    vector<RealVec>& forceData = extractForces(context);
+    vector<Vec3>& posData = extractPositions(context);
+    vector<Vec3>& forceData = extractForces(context);
     AmoebaReferenceBondForce amoebaReferenceBondForce;
-    RealOpenMM energy      = amoebaReferenceBondForce.calculateForceAndEnergy(numBonds, posData, particle1, particle2, length, kQuadratic,
-                                                                                       globalBondCubic, globalBondQuartic,
-                                                                                       forceData);
+    if (usePeriodic)
+        amoebaReferenceBondForce.setPeriodic(extractBoxVectors(context));
+    double energy = amoebaReferenceBondForce.calculateForceAndEnergy(numBonds, posData, particle1, particle2, length, kQuadratic,
+                                                                     globalBondCubic, globalBondQuartic,
+                                                                     forceData);
     return static_cast<double>(energy);
 }
 
@@ -128,8 +131,8 @@ void ReferenceCalcAmoebaBondForceKernel::copyParametersToContext(ContextImpl& co
         force.getBondParameters(i, particle1Index, particle2Index, lengthValue, kValue);
         if (particle1Index != particle1[i] || particle2Index != particle2[i])
             throw OpenMMException("updateParametersInContext: The set of particles in a bond has changed");
-        length[i] = (RealOpenMM) lengthValue;
-        kQuadratic[i] = (RealOpenMM) kValue;
+        length[i] = lengthValue;
+        kQuadratic[i] = kValue;
     }
 }
 
@@ -153,20 +156,23 @@ void ReferenceCalcAmoebaAngleForceKernel::initialize(const System& system, const
         particle1.push_back(particle1Index); 
         particle2.push_back(particle2Index); 
         particle3.push_back(particle3Index); 
-        angle.push_back(static_cast<RealOpenMM>(angleValue));
-        kQuadratic.push_back(static_cast<RealOpenMM>(k));
+        angle.push_back(angleValue);
+        kQuadratic.push_back(k);
     }
-    globalAngleCubic    = static_cast<RealOpenMM>(force.getAmoebaGlobalAngleCubic());
-    globalAngleQuartic  = static_cast<RealOpenMM>(force.getAmoebaGlobalAngleQuartic());
-    globalAnglePentic   = static_cast<RealOpenMM>(force.getAmoebaGlobalAnglePentic());
-    globalAngleSextic   = static_cast<RealOpenMM>(force.getAmoebaGlobalAngleSextic());
+    globalAngleCubic    = force.getAmoebaGlobalAngleCubic();
+    globalAngleQuartic  = force.getAmoebaGlobalAngleQuartic();
+    globalAnglePentic   = force.getAmoebaGlobalAnglePentic();
+    globalAngleSextic   = force.getAmoebaGlobalAngleSextic();
+    usePeriodic = force.usesPeriodicBoundaryConditions();
 }
 
 double ReferenceCalcAmoebaAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    vector<RealVec>& posData   = extractPositions(context);
-    vector<RealVec>& forceData = extractForces(context);
+    vector<Vec3>& posData = extractPositions(context);
+    vector<Vec3>& forceData = extractForces(context);
     AmoebaReferenceAngleForce amoebaReferenceAngleForce;
-    RealOpenMM energy      = amoebaReferenceAngleForce.calculateForceAndEnergy(numAngles, 
+    if (usePeriodic)
+        amoebaReferenceAngleForce.setPeriodic(extractBoxVectors(context));
+    double energy = amoebaReferenceAngleForce.calculateForceAndEnergy(numAngles, 
                                        posData, particle1, particle2, particle3, angle, kQuadratic, globalAngleCubic, globalAngleQuartic, globalAnglePentic, globalAngleSextic, forceData);
     return static_cast<double>(energy);
 }
@@ -183,8 +189,8 @@ void ReferenceCalcAmoebaAngleForceKernel::copyParametersToContext(ContextImpl& c
         force.getAngleParameters(i, particle1Index, particle2Index, particle3Index, angleValue, k);
         if (particle1Index != particle1[i] || particle2Index != particle2[i] || particle3Index != particle3[i])
             throw OpenMMException("updateParametersInContext: The set of particles in an angle has changed");
-        angle[i] = (RealOpenMM) angleValue;
-        kQuadratic[i] = (RealOpenMM) k;
+        angle[i] = angleValue;
+        kQuadratic[i] = k;
     }
 }
 
@@ -206,23 +212,26 @@ void ReferenceCalcAmoebaInPlaneAngleForceKernel::initialize(const System& system
         particle2.push_back(particle2Index); 
         particle3.push_back(particle3Index); 
         particle4.push_back(particle4Index); 
-        angle.push_back(static_cast<RealOpenMM>(angleValue));
-        kQuadratic.push_back(static_cast<RealOpenMM>(k));
+        angle.push_back(angleValue);
+        kQuadratic.push_back(k);
     }
-    globalInPlaneAngleCubic    = static_cast<RealOpenMM>(force.getAmoebaGlobalInPlaneAngleCubic());
-    globalInPlaneAngleQuartic  = static_cast<RealOpenMM>(force.getAmoebaGlobalInPlaneAngleQuartic());
-    globalInPlaneAnglePentic   = static_cast<RealOpenMM>(force.getAmoebaGlobalInPlaneAnglePentic());
-    globalInPlaneAngleSextic   = static_cast<RealOpenMM>(force.getAmoebaGlobalInPlaneAngleSextic());
+    globalInPlaneAngleCubic    = force.getAmoebaGlobalInPlaneAngleCubic();
+    globalInPlaneAngleQuartic  = force.getAmoebaGlobalInPlaneAngleQuartic();
+    globalInPlaneAnglePentic   = force.getAmoebaGlobalInPlaneAnglePentic();
+    globalInPlaneAngleSextic   = force.getAmoebaGlobalInPlaneAngleSextic();
+    usePeriodic = force.usesPeriodicBoundaryConditions();
 }
 
 double ReferenceCalcAmoebaInPlaneAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
 
-    vector<RealVec>& posData   = extractPositions(context);
-    vector<RealVec>& forceData = extractForces(context);
+    vector<Vec3>& posData = extractPositions(context);
+    vector<Vec3>& forceData = extractForces(context);
     AmoebaReferenceInPlaneAngleForce amoebaReferenceInPlaneAngleForce;
-    RealOpenMM energy      = amoebaReferenceInPlaneAngleForce.calculateForceAndEnergy(numAngles, posData, particle1, particle2, particle3, particle4, 
-                                                                                               angle, kQuadratic, globalInPlaneAngleCubic, globalInPlaneAngleQuartic,
-                                                                                               globalInPlaneAnglePentic, globalInPlaneAngleSextic, forceData);
+    if (usePeriodic)
+        amoebaReferenceInPlaneAngleForce.setPeriodic(extractBoxVectors(context));
+    double energy = amoebaReferenceInPlaneAngleForce.calculateForceAndEnergy(numAngles, posData, particle1, particle2, particle3, particle4, 
+                                                                             angle, kQuadratic, globalInPlaneAngleCubic, globalInPlaneAngleQuartic,
+                                                                             globalInPlaneAnglePentic, globalInPlaneAngleSextic, forceData);
     return static_cast<double>(energy);
 }
 
@@ -238,8 +247,8 @@ void ReferenceCalcAmoebaInPlaneAngleForceKernel::copyParametersToContext(Context
         force.getAngleParameters(i, particle1Index, particle2Index, particle3Index, particle4Index, angleValue, k);
         if (particle1Index != particle1[i] || particle2Index != particle2[i] || particle3Index != particle3[i] || particle4Index != particle4[i])
             throw OpenMMException("updateParametersInContext: The set of particles in an angle has changed");
-        angle[i] = (RealOpenMM) angleValue;
-        kQuadratic[i] = (RealOpenMM) k;
+        angle[i] = angleValue;
+        kQuadratic[i] = k;
     }
 }
 
@@ -264,15 +273,18 @@ void ReferenceCalcAmoebaPiTorsionForceKernel::initialize(const System& system, c
         particle4.push_back(particle4Index); 
         particle5.push_back(particle5Index); 
         particle6.push_back(particle6Index); 
-        kTorsion.push_back(static_cast<RealOpenMM>(kTorsionParameter));
+        kTorsion.push_back(kTorsionParameter);
     }
+    usePeriodic = force.usesPeriodicBoundaryConditions();
 }
 
 double ReferenceCalcAmoebaPiTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    vector<RealVec>& posData   = extractPositions(context);
-    vector<RealVec>& forceData = extractForces(context);
+    vector<Vec3>& posData = extractPositions(context);
+    vector<Vec3>& forceData = extractForces(context);
     AmoebaReferencePiTorsionForce amoebaReferencePiTorsionForce;
-    RealOpenMM energy      = amoebaReferencePiTorsionForce.calculateForceAndEnergy(numPiTorsions, posData, particle1, particle2,
+    if (usePeriodic)
+        amoebaReferencePiTorsionForce.setPeriodic(extractBoxVectors(context));
+    double energy = amoebaReferencePiTorsionForce.calculateForceAndEnergy(numPiTorsions, posData, particle1, particle2,
                                                                                     particle3, particle4, particle5, particle6,
                                                                                     kTorsion, forceData);
     return static_cast<double>(energy);
@@ -291,7 +303,7 @@ void ReferenceCalcAmoebaPiTorsionForceKernel::copyParametersToContext(ContextImp
         if (particle1Index != particle1[i] || particle2Index != particle2[i] || particle3Index != particle3[i] ||
             particle4Index != particle4[i] || particle5Index != particle5[i] || particle6Index != particle6[i])
             throw OpenMMException("updateParametersInContext: The set of particles in a torsion has changed");
-        kTorsion[i] = (RealOpenMM) kTorsionParameter;
+        kTorsion[i] = kTorsionParameter;
     }
 }
 
@@ -312,19 +324,22 @@ void ReferenceCalcAmoebaStretchBendForceKernel::initialize(const System& system,
         particle1.push_back(particle1Index); 
         particle2.push_back(particle2Index); 
         particle3.push_back(particle3Index); 
-        lengthABParameters.push_back(static_cast<RealOpenMM>(lengthAB));
-        lengthCBParameters.push_back(static_cast<RealOpenMM>(lengthCB));
-        angleParameters.push_back(static_cast<RealOpenMM>(angle));
-        k1Parameters.push_back(static_cast<RealOpenMM>(k1));
-        k2Parameters.push_back(static_cast<RealOpenMM>(k2));
+        lengthABParameters.push_back(lengthAB);
+        lengthCBParameters.push_back(lengthCB);
+        angleParameters.push_back(angle);
+        k1Parameters.push_back(k1);
+        k2Parameters.push_back(k2);
     }
+    usePeriodic = force.usesPeriodicBoundaryConditions();
 }
 
 double ReferenceCalcAmoebaStretchBendForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    vector<RealVec>& posData   = extractPositions(context);
-    vector<RealVec>& forceData = extractForces(context);
+    vector<Vec3>& posData = extractPositions(context);
+    vector<Vec3>& forceData = extractForces(context);
     AmoebaReferenceStretchBendForce amoebaReferenceStretchBendForce;
-    RealOpenMM energy      = amoebaReferenceStretchBendForce.calculateForceAndEnergy(numStretchBends, posData, particle1, particle2, particle3,
+    if (usePeriodic)
+        amoebaReferenceStretchBendForce.setPeriodic(extractBoxVectors(context));
+    double energy = amoebaReferenceStretchBendForce.calculateForceAndEnergy(numStretchBends, posData, particle1, particle2, particle3,
                                                                                       lengthABParameters, lengthCBParameters, angleParameters, k1Parameters,
                                                                                       k2Parameters, forceData);
     return static_cast<double>(energy);
@@ -342,11 +357,11 @@ void ReferenceCalcAmoebaStretchBendForceKernel::copyParametersToContext(ContextI
         force.getStretchBendParameters(i, particle1Index, particle2Index, particle3Index, lengthAB, lengthCB, angle, k1, k2);
         if (particle1Index != particle1[i] || particle2Index != particle2[i] || particle3Index != particle3[i])
             throw OpenMMException("updateParametersInContext: The set of particles in a stretch-bend has changed");
-        lengthABParameters[i] = (RealOpenMM) lengthAB;
-        lengthCBParameters[i] = (RealOpenMM) lengthCB;
-        angleParameters[i] = (RealOpenMM) angle;
-        k1Parameters[i] = (RealOpenMM) k1;
-        k2Parameters[i] = (RealOpenMM) k2;
+        lengthABParameters[i] = lengthAB;
+        lengthCBParameters[i] = lengthCB;
+        angleParameters[i] = angle;
+        k1Parameters[i] = k1;
+        k2Parameters[i] = k2;
     }
 }
 
@@ -370,26 +385,28 @@ void ReferenceCalcAmoebaOutOfPlaneBendForceKernel::initialize(const System& syst
         particle2.push_back(particle2Index); 
         particle3.push_back(particle3Index); 
         particle4.push_back(particle4Index); 
-        kParameters.push_back(static_cast<RealOpenMM>(k));
+        kParameters.push_back(k);
     }
-    globalOutOfPlaneBendAngleCubic      = static_cast<RealOpenMM>(force.getAmoebaGlobalOutOfPlaneBendCubic());
-    globalOutOfPlaneBendAngleQuartic    = static_cast<RealOpenMM>(force.getAmoebaGlobalOutOfPlaneBendQuartic());
-    globalOutOfPlaneBendAnglePentic     = static_cast<RealOpenMM>(force.getAmoebaGlobalOutOfPlaneBendPentic());
-    globalOutOfPlaneBendAngleSextic     = static_cast<RealOpenMM>(force.getAmoebaGlobalOutOfPlaneBendSextic());
-
+    globalOutOfPlaneBendAngleCubic   = force.getAmoebaGlobalOutOfPlaneBendCubic();
+    globalOutOfPlaneBendAngleQuartic = force.getAmoebaGlobalOutOfPlaneBendQuartic();
+    globalOutOfPlaneBendAnglePentic  = force.getAmoebaGlobalOutOfPlaneBendPentic();
+    globalOutOfPlaneBendAngleSextic  = force.getAmoebaGlobalOutOfPlaneBendSextic();
+    usePeriodic = force.usesPeriodicBoundaryConditions();
 }
 
 double ReferenceCalcAmoebaOutOfPlaneBendForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    vector<RealVec>& posData   = extractPositions(context);
-    vector<RealVec>& forceData = extractForces(context);
+    vector<Vec3>& posData = extractPositions(context);
+    vector<Vec3>& forceData = extractForces(context);
     AmoebaReferenceOutOfPlaneBendForce amoebaReferenceOutOfPlaneBendForce;
-    RealOpenMM energy      = amoebaReferenceOutOfPlaneBendForce.calculateForceAndEnergy(numOutOfPlaneBends, posData,
-                                                                                         particle1, particle2, particle3, particle4,
-                                                                                         kParameters, 
-                                                                                         globalOutOfPlaneBendAngleCubic,
-                                                                                         globalOutOfPlaneBendAngleQuartic,
-                                                                                         globalOutOfPlaneBendAnglePentic,
-                                                                                         globalOutOfPlaneBendAngleSextic, forceData); 
+    if (usePeriodic)
+        amoebaReferenceOutOfPlaneBendForce.setPeriodic(extractBoxVectors(context));
+    double energy = amoebaReferenceOutOfPlaneBendForce.calculateForceAndEnergy(numOutOfPlaneBends, posData,
+                                                                               particle1, particle2, particle3, particle4,
+                                                                               kParameters, 
+                                                                               globalOutOfPlaneBendAngleCubic,
+                                                                               globalOutOfPlaneBendAngleQuartic,
+                                                                               globalOutOfPlaneBendAnglePentic,
+                                                                               globalOutOfPlaneBendAngleSextic, forceData); 
     return static_cast<double>(energy);
 }
 
@@ -405,7 +422,7 @@ void ReferenceCalcAmoebaOutOfPlaneBendForceKernel::copyParametersToContext(Conte
         force.getOutOfPlaneBendParameters(i, particle1Index, particle2Index, particle3Index, particle4Index, k);
         if (particle1Index != particle1[i] || particle2Index != particle2[i] || particle3Index != particle3[i] || particle4Index != particle4[i])
             throw OpenMMException("updateParametersInContext: The set of particles in an out-of-plane bend has changed");
-        kParameters[i] = (RealOpenMM) k;
+        kParameters[i] = k;
     }
 }
 
@@ -434,6 +451,7 @@ void ReferenceCalcAmoebaTorsionTorsionForceKernel::initialize(const System& syst
         chiralCheckAtom.push_back(chiralCheckAtomIndex); 
         gridIndices.push_back(gridIndex); 
     }
+    usePeriodic = force.usesPeriodicBoundaryConditions();
 
     // torsion-torsion grids
 
@@ -461,11 +479,11 @@ void ReferenceCalcAmoebaTorsionTorsionForceKernel::initialize(const System& syst
                 torsionTorsionGrids[ii][kk][jj].resize(grid[kk][jj].size());
                 if (reorder) {
                     for (unsigned int ll = 0; ll < grid[ll][jj].size(); ll++) {
-                        torsionTorsionGrids[ii][kk][jj][ll] = static_cast<RealOpenMM>(reorderedGrid[kk][jj][ll]);
+                        torsionTorsionGrids[ii][kk][jj][ll] = reorderedGrid[kk][jj][ll];
                     }
                 } else {
                     for (unsigned int ll = 0; ll < grid[ll][jj].size(); ll++) {
-                        torsionTorsionGrids[ii][kk][jj][ll] = static_cast<RealOpenMM>(grid[kk][jj][ll]);
+                        torsionTorsionGrids[ii][kk][jj][ll] = grid[kk][jj][ll];
                     }
                 }
             }
@@ -475,10 +493,12 @@ void ReferenceCalcAmoebaTorsionTorsionForceKernel::initialize(const System& syst
 
 double ReferenceCalcAmoebaTorsionTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
 
-    vector<RealVec>& posData   = extractPositions(context);
-    vector<RealVec>& forceData = extractForces(context);
+    vector<Vec3>& posData   = extractPositions(context);
+    vector<Vec3>& forceData = extractForces(context);
     AmoebaReferenceTorsionTorsionForce amoebaReferenceTorsionTorsionForce;
-    RealOpenMM energy      = amoebaReferenceTorsionTorsionForce.calculateForceAndEnergy(numTorsionTorsions, posData,
+    if (usePeriodic)
+        amoebaReferenceTorsionTorsionForce.setPeriodic(extractBoxVectors(context));
+    double energy = amoebaReferenceTorsionTorsionForce.calculateForceAndEnergy(numTorsionTorsions, posData,
                                                                                          particle1, particle2, particle3, particle4, particle5,
                                                                                          chiralCheckAtom, gridIndices, torsionTorsionGrids, forceData);
     return static_cast<double>(energy);
@@ -515,7 +535,6 @@ void ReferenceCalcAmoebaMultipoleForceKernel::initialize(const System& system, c
 
     int dipoleIndex      = 0;
     int quadrupoleIndex  = 0;
-    int maxCovalentRange = 0;
     double totalCharge   = 0.0;
     for (int ii = 0; ii < numMultipoles; ii++) {
 
@@ -534,24 +553,24 @@ void ReferenceCalcAmoebaMultipoleForceKernel::initialize(const System& system, c
         multipoleAtomXs[ii]                = multipoleAtomX;
         multipoleAtomYs[ii]                = multipoleAtomY;
 
-        charges[ii]                        = static_cast<RealOpenMM>(charge);
-        tholes[ii]                         = static_cast<RealOpenMM>(tholeD);
-        dampingFactors[ii]                 = static_cast<RealOpenMM>(dampingFactorD);
-        polarity[ii]                       = static_cast<RealOpenMM>(polarityD);
+        charges[ii]                        = charge;
+        tholes[ii]                         = tholeD;
+        dampingFactors[ii]                 = dampingFactorD;
+        polarity[ii]                       = polarityD;
 
-        dipoles[dipoleIndex++]             = static_cast<RealOpenMM>(dipolesD[0]);
-        dipoles[dipoleIndex++]             = static_cast<RealOpenMM>(dipolesD[1]);
-        dipoles[dipoleIndex++]             = static_cast<RealOpenMM>(dipolesD[2]);
+        dipoles[dipoleIndex++]             = dipolesD[0];
+        dipoles[dipoleIndex++]             = dipolesD[1];
+        dipoles[dipoleIndex++]             = dipolesD[2];
         
-        quadrupoles[quadrupoleIndex++]     = static_cast<RealOpenMM>(quadrupolesD[0]);
-        quadrupoles[quadrupoleIndex++]     = static_cast<RealOpenMM>(quadrupolesD[1]);
-        quadrupoles[quadrupoleIndex++]     = static_cast<RealOpenMM>(quadrupolesD[2]);
-        quadrupoles[quadrupoleIndex++]     = static_cast<RealOpenMM>(quadrupolesD[3]);
-        quadrupoles[quadrupoleIndex++]     = static_cast<RealOpenMM>(quadrupolesD[4]);
-        quadrupoles[quadrupoleIndex++]     = static_cast<RealOpenMM>(quadrupolesD[5]);
-        quadrupoles[quadrupoleIndex++]     = static_cast<RealOpenMM>(quadrupolesD[6]);
-        quadrupoles[quadrupoleIndex++]     = static_cast<RealOpenMM>(quadrupolesD[7]);
-        quadrupoles[quadrupoleIndex++]     = static_cast<RealOpenMM>(quadrupolesD[8]);
+        quadrupoles[quadrupoleIndex++]     = quadrupolesD[0];
+        quadrupoles[quadrupoleIndex++]     = quadrupolesD[1];
+        quadrupoles[quadrupoleIndex++]     = quadrupolesD[2];
+        quadrupoles[quadrupoleIndex++]     = quadrupolesD[3];
+        quadrupoles[quadrupoleIndex++]     = quadrupolesD[4];
+        quadrupoles[quadrupoleIndex++]     = quadrupolesD[5];
+        quadrupoles[quadrupoleIndex++]     = quadrupolesD[6];
+        quadrupoles[quadrupoleIndex++]     = quadrupolesD[7];
+        quadrupoles[quadrupoleIndex++]     = quadrupolesD[8];
 
         // covalent info
 
@@ -565,6 +584,8 @@ void ReferenceCalcAmoebaMultipoleForceKernel::initialize(const System& system, c
     if (polarizationType == AmoebaMultipoleForce::Mutual) {
         mutualInducedMaxIterations = force.getMutualInducedMaxIterations();
         mutualInducedTargetEpsilon = force.getMutualInducedTargetEpsilon();
+    } else if (polarizationType == AmoebaMultipoleForce::Extrapolated) {
+        extrapolationCoefficients = force.getExtrapolationCoefficients();
     }
 
     // PME
@@ -572,15 +593,15 @@ void ReferenceCalcAmoebaMultipoleForceKernel::initialize(const System& system, c
     nonbondedMethod  = force.getNonbondedMethod();
     if (nonbondedMethod == AmoebaMultipoleForce::PME) {
         usePme     = true;
-        alphaEwald = force.getAEwald();
+        pmeGridDimension.resize(3);
+        force.getPMEParameters(alphaEwald, pmeGridDimension[0], pmeGridDimension[1], pmeGridDimension[2]);
         cutoffDistance = force.getCutoffDistance();
-        force.getPmeGridDimensions(pmeGridDimension);
         if (pmeGridDimension[0] == 0 || alphaEwald == 0.0) {
             NonbondedForce nb;
             nb.setEwaldErrorTolerance(force.getEwaldErrorTolerance());
             nb.setCutoffDistance(force.getCutoffDistance());
             int gridSizeX, gridSizeY, gridSizeZ;
-            NonbondedForceImpl::calcPMEParameters(system, nb, alphaEwald, gridSizeX, gridSizeY, gridSizeZ);
+            NonbondedForceImpl::calcPMEParameters(system, nb, alphaEwald, gridSizeX, gridSizeY, gridSizeZ, false);
             pmeGridDimension[0] = gridSizeX;
             pmeGridDimension[1] = gridSizeY;
             pmeGridDimension[2] = gridSizeZ;
@@ -624,7 +645,7 @@ AmoebaReferenceMultipoleForce* ReferenceCalcAmoebaMultipoleForceKernel::setupAmo
         amoebaReferenceGeneralizedKirkwoodForce->setIncludeCavityTerm(gkKernel->getIncludeCavityTerm());
         amoebaReferenceGeneralizedKirkwoodForce->setDirectPolarization(gkKernel->getDirectPolarization());
 
-        vector<RealOpenMM> parameters; 
+        vector<double> parameters; 
         gkKernel->getAtomicRadii(parameters);
         amoebaReferenceGeneralizedKirkwoodForce->setAtomicRadii(parameters);
 
@@ -636,7 +657,7 @@ AmoebaReferenceMultipoleForce* ReferenceCalcAmoebaMultipoleForceKernel::setupAmo
 
         // calculate Grycuk Born radii
 
-        vector<RealVec>& posData   = extractPositions(context);
+        vector<Vec3>& posData   = extractPositions(context);
         amoebaReferenceGeneralizedKirkwoodForce->calculateGrycukBornRadii(posData);
 
         amoebaReferenceMultipoleForce = new AmoebaReferenceGeneralizedKirkwoodMultipoleForce(amoebaReferenceGeneralizedKirkwoodForce);
@@ -647,7 +668,7 @@ AmoebaReferenceMultipoleForce* ReferenceCalcAmoebaMultipoleForceKernel::setupAmo
         amoebaReferencePmeMultipoleForce->setAlphaEwald(alphaEwald);
         amoebaReferencePmeMultipoleForce->setCutoffDistance(cutoffDistance);
         amoebaReferencePmeMultipoleForce->setPmeGridDimensions(pmeGridDimension);
-        RealVec* boxVectors = extractBoxVectors(context);
+        Vec3* boxVectors = extractBoxVectors(context);
         double minAllowedSize = 1.999999*cutoffDistance;
         if (boxVectors[0][0] < minAllowedSize || boxVectors[1][1] < minAllowedSize || boxVectors[2][2] < minAllowedSize) {
             throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
@@ -667,6 +688,9 @@ AmoebaReferenceMultipoleForce* ReferenceCalcAmoebaMultipoleForceKernel::setupAmo
         amoebaReferenceMultipoleForce->setMaximumMutualInducedDipoleIterations(mutualInducedMaxIterations);
     } else if (polarizationType == AmoebaMultipoleForce::Direct) {
         amoebaReferenceMultipoleForce->setPolarizationType(AmoebaReferenceMultipoleForce::Direct);
+    } else if (polarizationType == AmoebaMultipoleForce::Extrapolated) {
+        amoebaReferenceMultipoleForce->setPolarizationType(AmoebaReferenceMultipoleForce::Extrapolated);
+        amoebaReferenceMultipoleForce->setExtrapolationCoefficients(extrapolationCoefficients);
     } else {
         throw OpenMMException("Polarization type not recognzied.");
     }
@@ -679,12 +703,12 @@ double ReferenceCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bo
 
     AmoebaReferenceMultipoleForce* amoebaReferenceMultipoleForce = setupAmoebaReferenceMultipoleForce(context);
 
-    vector<RealVec>& posData   = extractPositions(context);
-    vector<RealVec>& forceData = extractForces(context);
-    RealOpenMM energy          = amoebaReferenceMultipoleForce->calculateForceAndEnergy(posData, charges, dipoles, quadrupoles, tholes,
-                                                                                         dampingFactors, polarity, axisTypes, 
-                                                                                         multipoleAtomZs, multipoleAtomXs, multipoleAtomYs,
-                                                                                         multipoleAtomCovalentInfo, forceData);
+    vector<Vec3>& posData = extractPositions(context);
+    vector<Vec3>& forceData = extractForces(context);
+    double energy = amoebaReferenceMultipoleForce->calculateForceAndEnergy(posData, charges, dipoles, quadrupoles, tholes,
+                                                                           dampingFactors, polarity, axisTypes, 
+                                                                           multipoleAtomZs, multipoleAtomXs, multipoleAtomYs,
+                                                                           multipoleAtomCovalentInfo, forceData);
 
     delete amoebaReferenceMultipoleForce;
 
@@ -698,11 +722,11 @@ void ReferenceCalcAmoebaMultipoleForceKernel::getInducedDipoles(ContextImpl& con
     // Create an AmoebaReferenceMultipoleForce to do the calculation.
     
     AmoebaReferenceMultipoleForce* amoebaReferenceMultipoleForce = setupAmoebaReferenceMultipoleForce(context);
-    vector<RealVec>& posData = extractPositions(context);
+    vector<Vec3>& posData = extractPositions(context);
     
     // Retrieve the induced dipoles.
     
-    vector<RealVec> inducedDipoles;
+    vector<Vec3> inducedDipoles;
     amoebaReferenceMultipoleForce->calculateInducedDipoles(posData, charges, dipoles, quadrupoles, tholes,
             dampingFactors, polarity, axisTypes, multipoleAtomZs, multipoleAtomXs, multipoleAtomYs, multipoleAtomCovalentInfo, inducedDipoles);
     for (int i = 0; i < numParticles; i++)
@@ -710,13 +734,55 @@ void ReferenceCalcAmoebaMultipoleForceKernel::getInducedDipoles(ContextImpl& con
     delete amoebaReferenceMultipoleForce;
 }
 
+void ReferenceCalcAmoebaMultipoleForceKernel::getLabFramePermanentDipoles(ContextImpl& context, vector<Vec3>& outputDipoles) {
+    int numParticles = context.getSystem().getNumParticles();
+    outputDipoles.resize(numParticles);
+
+    // Create an AmoebaReferenceMultipoleForce to do the calculation.
+    
+    AmoebaReferenceMultipoleForce* amoebaReferenceMultipoleForce = setupAmoebaReferenceMultipoleForce(context);
+    vector<Vec3>& posData = extractPositions(context);
+    
+    // Retrieve the permanent dipoles in the lab frame.
+    
+    vector<Vec3> labFramePermanentDipoles;
+    amoebaReferenceMultipoleForce->calculateLabFramePermanentDipoles(posData, charges, dipoles, quadrupoles, tholes, 
+            dampingFactors, polarity, axisTypes, multipoleAtomZs, multipoleAtomXs, multipoleAtomYs, multipoleAtomCovalentInfo, labFramePermanentDipoles);
+    for (int i = 0; i < numParticles; i++)
+        outputDipoles[i] = labFramePermanentDipoles[i];
+    delete amoebaReferenceMultipoleForce;
+}
+
+
+void ReferenceCalcAmoebaMultipoleForceKernel::getTotalDipoles(ContextImpl& context, vector<Vec3>& outputDipoles) {
+    int numParticles = context.getSystem().getNumParticles();
+    outputDipoles.resize(numParticles);
+
+    // Create an AmoebaReferenceMultipoleForce to do the calculation.
+    
+    AmoebaReferenceMultipoleForce* amoebaReferenceMultipoleForce = setupAmoebaReferenceMultipoleForce(context);
+    vector<Vec3>& posData = extractPositions(context);
+    
+    // Retrieve the permanent dipoles in the lab frame.
+    
+    vector<Vec3> totalDipoles;
+    amoebaReferenceMultipoleForce->calculateTotalDipoles(posData, charges, dipoles, quadrupoles, tholes,
+            dampingFactors, polarity, axisTypes, multipoleAtomZs, multipoleAtomXs, multipoleAtomYs, multipoleAtomCovalentInfo, totalDipoles);
+
+    for (int i = 0; i < numParticles; i++)
+        outputDipoles[i] = totalDipoles[i];
+    delete amoebaReferenceMultipoleForce;
+}
+
+
+
 void ReferenceCalcAmoebaMultipoleForceKernel::getElectrostaticPotential(ContextImpl& context, const std::vector< Vec3 >& inputGrid,
                                                                         std::vector< double >& outputElectrostaticPotential) {
 
     AmoebaReferenceMultipoleForce* amoebaReferenceMultipoleForce = setupAmoebaReferenceMultipoleForce(context);
-    vector<RealVec>& posData                                     = extractPositions(context);
-    vector<RealVec> grid(inputGrid.size());
-    vector<RealOpenMM> potential(inputGrid.size());
+    vector<Vec3>& posData                                     = extractPositions(context);
+    vector<Vec3> grid(inputGrid.size());
+    vector<double> potential(inputGrid.size());
     for (unsigned int ii = 0; ii < inputGrid.size(); ii++) {
         grid[ii] = inputGrid[ii];
     }
@@ -738,13 +804,13 @@ void ReferenceCalcAmoebaMultipoleForceKernel::getSystemMultipoleMoments(ContextI
     // retrieve masses
 
     const System& system             = context.getSystem();
-    vector<RealOpenMM> masses;
+    vector<double> masses;
     for (int i = 0; i <  system.getNumParticles(); ++i) {
-        masses.push_back(static_cast<RealOpenMM>(system.getParticleMass(i)));
+        masses.push_back(system.getParticleMass(i));
     }    
 
     AmoebaReferenceMultipoleForce* amoebaReferenceMultipoleForce = setupAmoebaReferenceMultipoleForce(context);
-    vector<RealVec>& posData                                     = extractPositions(context);
+    vector<Vec3>& posData                                     = extractPositions(context);
     amoebaReferenceMultipoleForce->calculateAmoebaSystemMultipoleMoments(masses, posData, charges, dipoles, quadrupoles, tholes,
                                                                          dampingFactors, polarity, axisTypes, 
                                                                          multipoleAtomZs, multipoleAtomXs, multipoleAtomYs,
@@ -771,23 +837,32 @@ void ReferenceCalcAmoebaMultipoleForceKernel::copyParametersToContext(ContextImp
         multipoleAtomZs[i] = multipoleAtomZ;
         multipoleAtomXs[i] = multipoleAtomX;
         multipoleAtomYs[i] = multipoleAtomY;
-        charges[i] = (RealOpenMM) charge;
-        tholes[i] = (RealOpenMM) tholeD;
-        dampingFactors[i] = (RealOpenMM) dampingFactorD;
-        polarity[i] = (RealOpenMM) polarityD;
-        dipoles[dipoleIndex++] = (RealOpenMM) dipolesD[0];
-        dipoles[dipoleIndex++] = (RealOpenMM) dipolesD[1];
-        dipoles[dipoleIndex++] = (RealOpenMM) dipolesD[2];
-        quadrupoles[quadrupoleIndex++] = (RealOpenMM) quadrupolesD[0];
-        quadrupoles[quadrupoleIndex++] = (RealOpenMM) quadrupolesD[1];
-        quadrupoles[quadrupoleIndex++] = (RealOpenMM) quadrupolesD[2];
-        quadrupoles[quadrupoleIndex++] = (RealOpenMM) quadrupolesD[3];
-        quadrupoles[quadrupoleIndex++] = (RealOpenMM) quadrupolesD[4];
-        quadrupoles[quadrupoleIndex++] = (RealOpenMM) quadrupolesD[5];
-        quadrupoles[quadrupoleIndex++] = (RealOpenMM) quadrupolesD[6];
-        quadrupoles[quadrupoleIndex++] = (RealOpenMM) quadrupolesD[7];
-        quadrupoles[quadrupoleIndex++] = (RealOpenMM) quadrupolesD[8];
+        charges[i] = charge;
+        tholes[i] = tholeD;
+        dampingFactors[i] = dampingFactorD;
+        polarity[i] = polarityD;
+        dipoles[dipoleIndex++] = dipolesD[0];
+        dipoles[dipoleIndex++] = dipolesD[1];
+        dipoles[dipoleIndex++] = dipolesD[2];
+        quadrupoles[quadrupoleIndex++] = quadrupolesD[0];
+        quadrupoles[quadrupoleIndex++] = quadrupolesD[1];
+        quadrupoles[quadrupoleIndex++] = quadrupolesD[2];
+        quadrupoles[quadrupoleIndex++] = quadrupolesD[3];
+        quadrupoles[quadrupoleIndex++] = quadrupolesD[4];
+        quadrupoles[quadrupoleIndex++] = quadrupolesD[5];
+        quadrupoles[quadrupoleIndex++] = quadrupolesD[6];
+        quadrupoles[quadrupoleIndex++] = quadrupolesD[7];
+        quadrupoles[quadrupoleIndex++] = quadrupolesD[8];
     }
+}
+
+void ReferenceCalcAmoebaMultipoleForceKernel::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
+    if (!usePme)
+        throw OpenMMException("getPMEParametersInContext: This Context is not using PME");
+    alpha = alphaEwald;
+    nx = pmeGridDimension[0];
+    ny = pmeGridDimension[1];
+    nz = pmeGridDimension[2];
 }
 
 /* -------------------------------------------------------------------------- *
@@ -813,37 +888,37 @@ int ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getDirectPolarization() c
     return directPolarization;
 }
 
-RealOpenMM ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getSoluteDielectric() const {
+double ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getSoluteDielectric() const {
     return soluteDielectric;
 }
 
-RealOpenMM ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getSolventDielectric() const {
+double ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getSolventDielectric() const {
     return solventDielectric;
 }
 
-RealOpenMM ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getDielectricOffset() const {
+double ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getDielectricOffset() const {
     return dielectricOffset;
 }
 
-RealOpenMM ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getProbeRadius() const {
+double ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getProbeRadius() const {
     return probeRadius;
 }
 
-RealOpenMM ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getSurfaceAreaFactor() const {
+double ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getSurfaceAreaFactor() const {
     return surfaceAreaFactor;
 }
 
-void ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getAtomicRadii(vector<RealOpenMM>& outputAtomicRadii) const {
+void ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getAtomicRadii(vector<double>& outputAtomicRadii) const {
     outputAtomicRadii.resize(atomicRadii.size());
     copy(atomicRadii.begin(), atomicRadii.end(), outputAtomicRadii.begin());
 }
 
-void ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getScaleFactors(vector<RealOpenMM>& outputScaleFactors) const {
+void ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getScaleFactors(vector<double>& outputScaleFactors) const {
     outputScaleFactors.resize(scaleFactors.size());
     copy(scaleFactors.begin(), scaleFactors.end(), outputScaleFactors.begin());
 }
 
-void ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getCharges(vector<RealOpenMM>& outputCharges) const {
+void ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getCharges(vector<double>& outputCharges) const {
     outputCharges.resize(charges.size());
     copy(charges.begin(), charges.end(), outputCharges.begin());
 }
@@ -871,9 +946,9 @@ void ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System&
 
         double particleCharge, particleRadius, scalingFactor;
         force.getParticleParameters(ii, particleCharge, particleRadius, scalingFactor);
-        atomicRadii.push_back(static_cast<RealOpenMM>(particleRadius));
-        scaleFactors.push_back(static_cast<RealOpenMM>(scalingFactor));
-        charges.push_back(static_cast<RealOpenMM>(particleCharge));
+        atomicRadii.push_back(particleRadius);
+        scaleFactors.push_back(scalingFactor);
+        charges.push_back(particleCharge);
 
         // Make sure the charge matches the one specified by the AmoebaMultipoleForce.
 
@@ -887,11 +962,11 @@ void ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System&
 
     }   
     includeCavityTerm  = force.getIncludeCavityTerm();
-    soluteDielectric   = static_cast<RealOpenMM>(force.getSoluteDielectric());
-    solventDielectric  = static_cast<RealOpenMM>(force.getSolventDielectric());
-    dielectricOffset   = static_cast<RealOpenMM>(0.009);
-    probeRadius        = static_cast<RealOpenMM>(force.getProbeRadius()), 
-    surfaceAreaFactor  = static_cast<RealOpenMM>(force.getSurfaceAreaFactor()); 
+    soluteDielectric   = force.getSoluteDielectric();
+    solventDielectric  = force.getSolventDielectric();
+    dielectricOffset   = 0.009;
+    probeRadius        = force.getProbeRadius(), 
+    surfaceAreaFactor  = force.getSurfaceAreaFactor(); 
     directPolarization = amoebaMultipoleForce->getPolarizationType() == AmoebaMultipoleForce::Direct ? 1 : 0;
 }
 
@@ -954,15 +1029,15 @@ void ReferenceCalcAmoebaVdwForceKernel::initialize(const System& system, const A
         }
 
         indexIVs[ii]      = indexIV;
-        sigmas[ii]        = static_cast<RealOpenMM>(sigma);
-        epsilons[ii]      = static_cast<RealOpenMM>(epsilon);
-        reductions[ii]    = static_cast<RealOpenMM>(reduction);
+        sigmas[ii]        = sigma;
+        epsilons[ii]      = epsilon;
+        reductions[ii]    = reduction;
     }   
     sigmaCombiningRule     = force.getSigmaCombiningRule();
     epsilonCombiningRule   = force.getEpsilonCombiningRule();
     useCutoff              = (force.getNonbondedMethod() != AmoebaVdwForce::NoCutoff);
     usePBC                 = (force.getNonbondedMethod() == AmoebaVdwForce::CutoffPeriodic);
-    cutoff                 = force.getCutoff();
+    cutoff                 = force.getCutoffDistance();
     neighborList           = useCutoff ? new NeighborList() : NULL;
     dispersionCoefficient  = force.getUseDispersionCorrection() ?  AmoebaVdwForceImpl::calcDispersionCorrection(system, force) : 0.0;
 
@@ -970,16 +1045,16 @@ void ReferenceCalcAmoebaVdwForceKernel::initialize(const System& system, const A
 
 double ReferenceCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
 
-    vector<RealVec>& posData   = extractPositions(context);
-    vector<RealVec>& forceData = extractForces(context);
+    vector<Vec3>& posData   = extractPositions(context);
+    vector<Vec3>& forceData = extractForces(context);
     AmoebaReferenceVdwForce vdwForce(sigmaCombiningRule, epsilonCombiningRule);
-    RealOpenMM energy;
+    double energy;
     if (useCutoff) {
         vdwForce.setCutoff(cutoff);
         computeNeighborListVoxelHash(*neighborList, numParticles, posData, allExclusions, extractBoxVectors(context), usePBC, cutoff, 0.0);
         if (usePBC) {
             vdwForce.setNonbondedMethod(AmoebaReferenceVdwForce::CutoffPeriodic);
-            RealVec* boxVectors = extractBoxVectors(context);
+            Vec3* boxVectors = extractBoxVectors(context);
             double minAllowedSize = 1.999999*cutoff;
             if (boxVectors[0][0] < minAllowedSize || boxVectors[1][1] < minAllowedSize || boxVectors[2][2] < minAllowedSize) {
                 throw OpenMMException("The periodic box size has decreased to less than twice the cutoff.");
@@ -1008,9 +1083,9 @@ void ReferenceCalcAmoebaVdwForceKernel::copyParametersToContext(ContextImpl& con
         double sigma, epsilon, reduction;
         force.getParticleParameters(i, indexIV, sigma, epsilon, reduction);
         indexIVs[i] = indexIV;
-        sigmas[i] = (RealOpenMM) sigma;
-        epsilons[i] = (RealOpenMM) epsilon;
-        reductions[i]= (RealOpenMM) reduction;
+        sigmas[i] = sigma;
+        epsilons[i] = epsilon;
+        reductions[i]= reduction;
     }
 }
 
@@ -1037,27 +1112,27 @@ void ReferenceCalcAmoebaWcaDispersionForceKernel::initialize(const System& syste
         double radius, epsilon;
         force.getParticleParameters(ii, radius, epsilon);
 
-        radii[ii]         = static_cast<RealOpenMM>(radius);
-        epsilons[ii]      = static_cast<RealOpenMM>(epsilon);
+        radii[ii] = radius;
+        epsilons[ii] = epsilon;
     }   
 
-    totalMaximumDispersionEnergy = static_cast<RealOpenMM>(AmoebaWcaDispersionForceImpl::getTotalMaximumDispersionEnergy(force));
+    totalMaximumDispersionEnergy = AmoebaWcaDispersionForceImpl::getTotalMaximumDispersionEnergy(force);
 
-    epso                         = static_cast<RealOpenMM>(force.getEpso());
-    epsh                         = static_cast<RealOpenMM>(force.getEpsh());
-    rmino                        = static_cast<RealOpenMM>(force.getRmino());
-    rminh                        = static_cast<RealOpenMM>(force.getRminh());
-    awater                       = static_cast<RealOpenMM>(force.getAwater());
-    shctd                        = static_cast<RealOpenMM>(force.getShctd());
-    dispoff                      = static_cast<RealOpenMM>(force.getDispoff());
-    slevy                        = static_cast<RealOpenMM>(force.getSlevy());
+    epso    = force.getEpso();
+    epsh    = force.getEpsh();
+    rmino   = force.getRmino();
+    rminh   = force.getRminh();
+    awater  = force.getAwater();
+    shctd   = force.getShctd();
+    dispoff = force.getDispoff();
+    slevy   = force.getSlevy();
 }
 
 double ReferenceCalcAmoebaWcaDispersionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    vector<RealVec>& posData   = extractPositions(context);
-    vector<RealVec>& forceData = extractForces(context);
+    vector<Vec3>& posData = extractPositions(context);
+    vector<Vec3>& forceData = extractForces(context);
     AmoebaReferenceWcaDispersionForce amoebaReferenceWcaDispersionForce(epso, epsh, rmino, rminh, awater, shctd, dispoff, slevy);
-    RealOpenMM energy      = amoebaReferenceWcaDispersionForce.calculateForceAndEnergy(numParticles, posData, radii, epsilons, totalMaximumDispersionEnergy, forceData);
+    double energy = amoebaReferenceWcaDispersionForce.calculateForceAndEnergy(numParticles, posData, radii, epsilons, totalMaximumDispersionEnergy, forceData);
     return static_cast<double>(energy);
 }
 
@@ -1070,8 +1145,8 @@ void ReferenceCalcAmoebaWcaDispersionForceKernel::copyParametersToContext(Contex
     for (int i = 0; i < numParticles; ++i) {
         double radius, epsilon;
         force.getParticleParameters(i, radius, epsilon);
-        radii[i] = (RealOpenMM) radius;
-        epsilons[i] = (RealOpenMM) epsilon;
+        radii[i] = radius;
+        epsilons[i] = epsilon;
     }
-    totalMaximumDispersionEnergy = (RealOpenMM) AmoebaWcaDispersionForceImpl::getTotalMaximumDispersionEnergy(force);
+    totalMaximumDispersionEnergy = AmoebaWcaDispersionForceImpl::getTotalMaximumDispersionEnergy(force);
 }

@@ -116,9 +116,9 @@ void CudaIntegrateRPMDStepKernel::initialize(const System& system, const RPMDInt
     groupsNotContracted = -1;
     const map<int, int>& contractions = integrator.getContractions();
     int maxContractedCopies = 0;
-    for (map<int, int>::const_iterator iter = contractions.begin(); iter != contractions.end(); ++iter) {
-        int group = iter->first;
-        int copies = iter->second;
+    for (auto& c : contractions) {
+        int group = c.first;
+        int copies = c.second;
         if (group < 0 || group > 31)
             throw OpenMMException("RPMDIntegrator: Force group must be between 0 and 31");
         if (copies < 0 || copies > numCopies)
@@ -166,8 +166,8 @@ void CudaIntegrateRPMDStepKernel::initialize(const System& system, const RPMDInt
     
     // Create kernels for doing contractions.
     
-    for (map<int, int>::const_iterator iter = groupsByCopies.begin(); iter != groupsByCopies.end(); ++iter) {
-        int copies = iter->first;
+    for (auto& g : groupsByCopies) {
+        int copies = g.first;
         replacements.clear();
         replacements["NUM_CONTRACTED_COPIES"] = cu.intToString(copies);
         replacements["POS_SCALE"] = cu.doubleToString(1.0/numCopies);
@@ -267,9 +267,9 @@ void CudaIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
     
     // Now loop over contractions and compute forces from them.
     
-    for (map<int, int>::const_iterator iter = groupsByCopies.begin(); iter != groupsByCopies.end(); ++iter) {
-        int copies = iter->first;
-        int groupFlags = iter->second;
+    for (auto& g : groupsByCopies) {
+        int copies = g.first;
+        int groupFlags = g.second;
         
         // Find the contracted positions.
         

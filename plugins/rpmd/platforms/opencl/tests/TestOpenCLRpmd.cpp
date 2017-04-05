@@ -78,7 +78,7 @@ void testFreeParticles() {
     integ.step(1000);
     vector<double> ke(numCopies, 0.0);
     vector<double> rg(numParticles, 0.0);
-    const RealOpenMM hbar = 1.054571628e-34*AVOGADRO/(1000*1e-12);
+    const double hbar = 1.054571628e-34*AVOGADRO/(1000*1e-12);
     for (int i = 0; i < numSteps; i++) {
         integ.step(1);
         vector<State> state(numCopies);
@@ -171,7 +171,7 @@ void testParaHydrogen() {
     vector<int> counts(numBins, 0);
     const double invBoxSize = 1.0/boxSize;
     double meanKE = 0.0;
-    const RealOpenMM hbar = 1.054571628e-34*AVOGADRO/(1000*1e-12);
+    const double hbar = 1.054571628e-34*AVOGADRO/(1000*1e-12);
     for (int step = 0; step < numSteps; step++) {
         integ.step(20);
         vector<State> states(numCopies);
@@ -555,7 +555,7 @@ int main(int argc, char* argv[]) {
     try {
         registerRPMDOpenCLKernelFactories();
         if (argc > 1)
-            Platform::getPlatformByName("OpenCL").setPropertyDefaultValue("OpenCLPrecision", string(argv[1]));
+            Platform::getPlatformByName("OpenCL").setPropertyDefaultValue("Precision", string(argv[1]));
         testFreeParticles();
         testParaHydrogen();
         testCMMotionRemoval();

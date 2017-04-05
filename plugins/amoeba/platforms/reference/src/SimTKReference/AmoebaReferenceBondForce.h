@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2016 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -25,7 +25,7 @@
 #ifndef __AmoebaReferenceBondForce_H__
 #define __AmoebaReferenceBondForce_H__
 
-#include "RealVec.h"
+#include "openmm/Vec3.h"
 #include <vector>
 
 namespace OpenMM {
@@ -40,7 +40,7 @@ public:
        
         --------------------------------------------------------------------------------------- */
  
-    AmoebaReferenceBondForce() {};
+    AmoebaReferenceBondForce() : usePeriodic(false) {};
  
     /**---------------------------------------------------------------------------------------
        
@@ -49,7 +49,16 @@ public:
         --------------------------------------------------------------------------------------- */
  
     ~AmoebaReferenceBondForce() {};
- 
+
+    /**---------------------------------------------------------------------------------------
+
+       Set the force to use periodic boundary conditions.
+      
+       @param vectors    the vectors defining the periodic box
+      
+       --------------------------------------------------------------------------------------- */
+      
+    void setPeriodic(OpenMM::Vec3* vectors);
  
      /**---------------------------------------------------------------------------------------
      
@@ -69,15 +78,18 @@ public:
      
         --------------------------------------------------------------------------------------- */
      
-    RealOpenMM calculateForceAndEnergy(int numBonds, std::vector<OpenMM::RealVec>& posData,
-                                       const std::vector<int>& particle1,
-                                       const std::vector<int>&  particle2,
-                                       const std::vector<RealOpenMM>& bondLength,
-                                       const std::vector<RealOpenMM>& bondK,
-                                       RealOpenMM bondCubic, RealOpenMM bondQuartic,
-                                       std::vector<OpenMM::RealVec>& forceData) const;
+    double calculateForceAndEnergy(int numBonds, std::vector<OpenMM::Vec3>& posData,
+                                   const std::vector<int>& particle1,
+                                   const std::vector<int>&  particle2,
+                                   const std::vector<double>& bondLength,
+                                   const std::vector<double>& bondK,
+                                   double bondCubic, double bondQuartic,
+                                   std::vector<OpenMM::Vec3>& forceData) const;
 
 private:
+
+    bool usePeriodic;
+    Vec3 boxVectors[3];
 
      /**---------------------------------------------------------------------------------------
      
@@ -95,10 +107,10 @@ private:
      
         --------------------------------------------------------------------------------------- */
      
-    RealOpenMM calculateBondIxn(const OpenMM::RealVec& positionAtomA, const OpenMM::RealVec& positionAtomB,
-                                RealOpenMM bondLength, RealOpenMM bondK,
-                                RealOpenMM bondCubic, RealOpenMM bondQuartic,
-                                OpenMM::RealVec* forces) const;
+    double calculateBondIxn(const OpenMM::Vec3& positionAtomA, const OpenMM::Vec3& positionAtomB,
+                            double bondLength, double bondK,
+                            double bondCubic, double bondQuartic,
+                            OpenMM::Vec3* forces) const;
      
 };
 

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -76,6 +76,11 @@ const map<string, double>& State::getParameters() const {
         throw OpenMMException("Invoked getParameters() on a State which does not contain parameters.");
     return parameters;
 }
+const map<string, double>& State::getEnergyParameterDerivatives() const {
+    if ((types&ParameterDerivatives) == 0)
+        throw OpenMMException("Invoked getEnergyParameterDerivatives() on a State which does not contain parameter derivatives.");
+    return energyParameterDerivatives;
+}
 int State::getDataTypes() const {
     return types;
 }
@@ -101,6 +106,11 @@ void State::setForces(const std::vector<Vec3>& force) {
 void State::setParameters(const std::map<std::string, double>& params) {
     parameters = params;
     types |= Parameters;
+}
+
+void State::setEnergyParameterDerivatives(const std::map<std::string, double>& derivs) {
+    energyParameterDerivatives = derivs;
+    types |= ParameterDerivatives;
 }
 
 void State::setEnergy(double kinetic, double potential) {
@@ -136,6 +146,10 @@ void State::StateBuilder::setForces(const std::vector<Vec3>& force) {
 
 void State::StateBuilder::setParameters(const std::map<std::string, double>& params) {
     state.setParameters(params);
+}
+
+void State::StateBuilder::setEnergyParameterDerivatives(const std::map<std::string, double>& derivs) {
+    state.setEnergyParameterDerivatives(derivs);
 }
 
 void State::StateBuilder::setEnergy(double ke, double pe) {

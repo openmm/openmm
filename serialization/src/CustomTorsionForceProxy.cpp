@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -42,9 +42,10 @@ CustomTorsionForceProxy::CustomTorsionForceProxy() : SerializationProxy("CustomT
 }
 
 void CustomTorsionForceProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 1);
+    node.setIntProperty("version", 3);
     const CustomTorsionForce& force = *reinterpret_cast<const CustomTorsionForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setBoolProperty("usesPeriodic", force.usesPeriodicBoundaryConditions());
     node.setStringProperty("energy", force.getEnergyFunction());
     SerializationNode& perTorsionParams = node.createChildNode("PerTorsionParameters");
     for (int i = 0; i < force.getNumPerTorsionParameters(); i++) {
@@ -53,6 +54,10 @@ void CustomTorsionForceProxy::serialize(const void* object, SerializationNode& n
     SerializationNode& globalParams = node.createChildNode("GlobalParameters");
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {
         globalParams.createChildNode("Parameter").setStringProperty("name", force.getGlobalParameterName(i)).setDoubleProperty("default", force.getGlobalParameterDefaultValue(i));
+    }
+    SerializationNode& energyDerivs = node.createChildNode("EnergyParameterDerivatives");
+    for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
+        energyDerivs.createChildNode("Parameter").setStringProperty("name", force.getEnergyParameterDerivativeName(i));
     }
     SerializationNode& torsions = node.createChildNode("Torsions");
     for (int i = 0; i < force.getNumTorsions(); i++) {
@@ -70,26 +75,29 @@ void CustomTorsionForceProxy::serialize(const void* object, SerializationNode& n
 }
 
 void* CustomTorsionForceProxy::deserialize(const SerializationNode& node) const {
-    if (node.getIntProperty("version") != 1)
+    int version = node.getIntProperty("version");
+    if (version < 1 || version > 3)
         throw OpenMMException("Unsupported version number");
     CustomTorsionForce* force = NULL;
     try {
         CustomTorsionForce* force = new CustomTorsionForce(node.getStringProperty("energy"));
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        if (version > 1)
+            force->setUsesPeriodicBoundaryConditions(node.getBoolProperty("usesPeriodic"));
         const SerializationNode& perTorsionParams = node.getChildNode("PerTorsionParameters");
-        for (int i = 0; i < (int) perTorsionParams.getChildren().size(); i++) {
-            const SerializationNode& parameter = perTorsionParams.getChildren()[i];
+        for (auto& parameter : perTorsionParams.getChildren())
             force->addPerTorsionParameter(parameter.getStringProperty("name"));
-        }
         const SerializationNode& globalParams = node.getChildNode("GlobalParameters");
-        for (int i = 0; i < (int) globalParams.getChildren().size(); i++) {
-            const SerializationNode& parameter = globalParams.getChildren()[i];
+        for (auto& parameter : globalParams.getChildren())
             force->addGlobalParameter(parameter.getStringProperty("name"), parameter.getDoubleProperty("default"));
+        if (version > 2) {
+            const SerializationNode& energyDerivs = node.getChildNode("EnergyParameterDerivatives");
+            for (auto& parameter : energyDerivs.getChildren())
+                force->addEnergyParameterDerivative(parameter.getStringProperty("name"));
         }
         const SerializationNode& torsions = node.getChildNode("Torsions");
         vector<double> params(force->getNumPerTorsionParameters());
-        for (int i = 0; i < (int) torsions.getChildren().size(); i++) {
-            const SerializationNode& torsion = torsions.getChildren()[i];
+        for (auto& torsion : torsions.getChildren()) {
             for (int j = 0; j < (int) params.size(); j++) {
                 stringstream key;
                 key << "param";

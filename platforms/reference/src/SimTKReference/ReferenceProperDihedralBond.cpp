@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2016 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -38,14 +38,7 @@ using namespace OpenMM;
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceProperDihedralBond::ReferenceProperDihedralBond() {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceProperDihedralBond::ReferenceProperDihedralBond";
-
-   // ---------------------------------------------------------------------------------------
-
+ReferenceProperDihedralBond::ReferenceProperDihedralBond() : usePeriodic(false) {
 }
 
 /**---------------------------------------------------------------------------------------
@@ -55,13 +48,13 @@ ReferenceProperDihedralBond::ReferenceProperDihedralBond() {
    --------------------------------------------------------------------------------------- */
 
 ReferenceProperDihedralBond::~ReferenceProperDihedralBond() {
+}
 
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceProperDihedralBond::~ReferenceProperDihedralBond";
-
-   // ---------------------------------------------------------------------------------------
-
+void ReferenceProperDihedralBond::setPeriodic(OpenMM::Vec3* vectors) {
+    usePeriodic = true;
+    boxVectors[0] = vectors[0];
+    boxVectors[1] = vectors[1];
+    boxVectors[2] = vectors[2];
 }
 
 /**---------------------------------------------------------------------------------------
@@ -79,28 +72,13 @@ ReferenceProperDihedralBond::~ReferenceProperDihedralBond() {
    --------------------------------------------------------------------------------------- */
 
 void ReferenceProperDihedralBond::calculateBondIxn(int* atomIndices,
-                                                   vector<RealVec>& atomCoordinates,
-                                                   RealOpenMM* parameters,
-                                                   vector<RealVec>& forces,
-                                                   RealOpenMM* totalEnergy) const {
+                                                   vector<Vec3>& atomCoordinates,
+                                                   double* parameters,
+                                                   vector<Vec3>& forces,
+                                                   double* totalEnergy, double* energyParamDerivs) {
+   double deltaR[3][ReferenceForce::LastDeltaRIndex];
 
-   static const std::string methodName = "\nReferenceProperDihedralBond::calculateBondIxn";
-
-   // constants -- reduce Visual Studio warnings regarding conversions between float & double
-
-   static const RealOpenMM zero        =  0.0;
-   static const RealOpenMM one         =  1.0;
-   static const RealOpenMM two         =  2.0;
-   static const RealOpenMM three       =  3.0;
-   static const RealOpenMM oneM        = -1.0;
-
-   static const int threeI             = 3;
-
-   static const int LastAtomIndex      = 4;
-
-   RealOpenMM deltaR[3][ReferenceForce::LastDeltaRIndex];
-
-   RealOpenMM crossProductMemory[6];
+   double crossProductMemory[6];
 
    // ---------------------------------------------------------------------------------------
 
@@ -110,59 +88,66 @@ void ReferenceProperDihedralBond::calculateBondIxn(int* atomIndices,
    int atomBIndex = atomIndices[1];
    int atomCIndex = atomIndices[2];
    int atomDIndex = atomIndices[3];
-   ReferenceForce::getDeltaR(atomCoordinates[atomBIndex], atomCoordinates[atomAIndex], deltaR[0]);  
-   ReferenceForce::getDeltaR(atomCoordinates[atomBIndex], atomCoordinates[atomCIndex], deltaR[1]);  
-   ReferenceForce::getDeltaR(atomCoordinates[atomDIndex], atomCoordinates[atomCIndex], deltaR[2]);  
+   if (usePeriodic) {
+      ReferenceForce::getDeltaRPeriodic(atomCoordinates[atomBIndex], atomCoordinates[atomAIndex], boxVectors, deltaR[0]);  
+      ReferenceForce::getDeltaRPeriodic(atomCoordinates[atomBIndex], atomCoordinates[atomCIndex], boxVectors, deltaR[1]);  
+      ReferenceForce::getDeltaRPeriodic(atomCoordinates[atomDIndex], atomCoordinates[atomCIndex], boxVectors, deltaR[2]);  
+   }
+   else {
+      ReferenceForce::getDeltaR(atomCoordinates[atomBIndex], atomCoordinates[atomAIndex], deltaR[0]);  
+      ReferenceForce::getDeltaR(atomCoordinates[atomBIndex], atomCoordinates[atomCIndex], deltaR[1]);  
+      ReferenceForce::getDeltaR(atomCoordinates[atomDIndex], atomCoordinates[atomCIndex], deltaR[2]);  
+   }
 
-   RealOpenMM dotDihedral;
-   RealOpenMM signOfAngle;
-   int hasREntry             = 1;
+   double dotDihedral;
+   double signOfAngle;
+   int hasREntry = 1;
 
    // Visual Studio complains if crossProduct declared as 'crossProduct[2][3]'
 
-   RealOpenMM* crossProduct[2];
+   double* crossProduct[2];
    crossProduct[0]           = crossProductMemory;
    crossProduct[1]           = crossProductMemory + 3;
 
    // get dihedral angle
 
-   RealOpenMM dihedralAngle  =  getDihedralAngleBetweenThreeVectors(deltaR[0], deltaR[1], deltaR[2],
+   double dihedralAngle  =  getDihedralAngleBetweenThreeVectors(deltaR[0], deltaR[1], deltaR[2],
                                                                     crossProduct, &dotDihedral, deltaR[0], 
                                                                     &signOfAngle, hasREntry);
 
    // evaluate delta angle, dE/d(angle) 
 
-   RealOpenMM deltaAngle     = parameters[2]*dihedralAngle - parameters[1]; 
-   RealOpenMM sinDeltaAngle  = SIN(deltaAngle);
-   RealOpenMM dEdAngle       = -parameters[0]*parameters[2]*sinDeltaAngle;
-   RealOpenMM energy         =  parameters[0]*(one + COS(deltaAngle));
+   double deltaAngle     = parameters[2]*dihedralAngle - parameters[1]; 
+   double sinDeltaAngle  = SIN(deltaAngle);
+   double dEdAngle       = -parameters[0]*parameters[2]*sinDeltaAngle;
+   double energy         =  parameters[0]*(1.0 + cos(deltaAngle));
    
    // compute force
 
-   RealOpenMM internalF[4][3];
-   RealOpenMM forceFactors[4];
-   RealOpenMM normCross1         = DOT3(crossProduct[0], crossProduct[0]);
-   RealOpenMM normBC             = deltaR[1][ReferenceForce::RIndex];
-              forceFactors[0]    = (-dEdAngle*normBC)/normCross1;
+   double internalF[4][3];
+   double forceFactors[4];
+   double normCross1         = DOT3(crossProduct[0], crossProduct[0]);
+   double normBC             = deltaR[1][ReferenceForce::RIndex];
+          forceFactors[0]    = (-dEdAngle*normBC)/normCross1;
 
-   RealOpenMM normCross2         = DOT3(crossProduct[1], crossProduct[1]);
-              forceFactors[3]    = (dEdAngle*normBC)/normCross2;
-  
-              forceFactors[1]    = DOT3(deltaR[0], deltaR[1]);
-              forceFactors[1]   /= deltaR[1][ReferenceForce::R2Index];
+   double normCross2         = DOT3(crossProduct[1], crossProduct[1]);
+          forceFactors[3]    = (dEdAngle*normBC)/normCross2;
 
-              forceFactors[2]    = DOT3(deltaR[2], deltaR[1]);
-              forceFactors[2]   /= deltaR[1][ReferenceForce::R2Index];
+          forceFactors[1]    = DOT3(deltaR[0], deltaR[1]);
+          forceFactors[1]   /= deltaR[1][ReferenceForce::R2Index];
+
+          forceFactors[2]    = DOT3(deltaR[2], deltaR[1]);
+          forceFactors[2]   /= deltaR[1][ReferenceForce::R2Index];
 
    for (int ii = 0; ii < 3; ii++) {
 
-      internalF[0][ii]  = forceFactors[0]*crossProduct[0][ii];
-      internalF[3][ii]  = forceFactors[3]*crossProduct[1][ii];
+      internalF[0][ii] = forceFactors[0]*crossProduct[0][ii];
+      internalF[3][ii] = forceFactors[3]*crossProduct[1][ii];
 
-      RealOpenMM s      = forceFactors[1]*internalF[0][ii] - forceFactors[2]*internalF[3][ii];
+      double s  = forceFactors[1]*internalF[0][ii] - forceFactors[2]*internalF[3][ii];
 
-      internalF[1][ii]  = internalF[0][ii] - s;
-      internalF[2][ii]  = internalF[3][ii] + s;
+      internalF[1][ii] = internalF[0][ii] - s;
+      internalF[2][ii] = internalF[3][ii] + s;
    }
   
    // accumulate forces

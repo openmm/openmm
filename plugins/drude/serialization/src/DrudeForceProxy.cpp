@@ -67,16 +67,12 @@ void* DrudeForceProxy::deserialize(const SerializationNode& node) const {
     DrudeForce* force = new DrudeForce();
     try {
         const SerializationNode& particles = node.getChildNode("Particles");
-        for (int i = 0; i < (int) particles.getChildren().size(); i++) {
-            const SerializationNode& particle = particles.getChildren()[i];
+        for (auto& particle : particles.getChildren())
             force->addParticle(particle.getIntProperty("p"), particle.getIntProperty("p1"), particle.getIntProperty("p2"), particle.getIntProperty("p3"), particle.getIntProperty("p4"),
                     particle.getDoubleProperty("charge"), particle.getDoubleProperty("polarizability"), particle.getDoubleProperty("a12"), particle.getDoubleProperty("a34"));
-        }
         const SerializationNode& pairs = node.getChildNode("ScreenedPairs");
-        for (int i = 0; i < (int) pairs.getChildren().size(); i++) {
-            const SerializationNode& pair = pairs.getChildren()[i];
+        for (auto& pair : pairs.getChildren())
             force->addScreenedPair(pair.getIntProperty("p1"), pair.getIntProperty("p2"), pair.getDoubleProperty("thole"));
-        }
     }
     catch (...) {
         delete force;

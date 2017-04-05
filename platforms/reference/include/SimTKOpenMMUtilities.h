@@ -27,7 +27,7 @@
 
 // class of shared, static utility methods
 
-#include "RealVec.h"
+#include "SimTKOpenMMRealType.h"
 #include "sfmt/SFMT.h"
 #include "openmm/internal/windowsExport.h"
 
@@ -49,7 +49,7 @@ class OPENMM_EXPORT SimTKOpenMMUtilities {
        static uint32_t _randomNumberSeed;
        static bool _randomInitialized;
        static bool nextGaussianIsValid;
-       static RealOpenMM nextGaussian;
+       static double nextGaussian;
        static OpenMM_SFMT::SFMT sfmt;
 
    public:
@@ -61,7 +61,7 @@ class OPENMM_EXPORT SimTKOpenMMUtilities {
       
       /**---------------------------------------------------------------------------------------
       
-         Allocate 1D RealOpenMM array (Simbios)
+         Allocate 1D double array (Simbios)
       
          array[i]
       
@@ -75,13 +75,13 @@ class OPENMM_EXPORT SimTKOpenMMUtilities {
       
          --------------------------------------------------------------------------------------- */
       
-      static RealOpenMM* allocateOneDRealOpenMMArray(int iSize, RealOpenMM* array1D, int initialize,
-                                                      RealOpenMM initialValue,
+      static double* allocateOneDRealOpenMMArray(int iSize, double* array1D, int initialize,
+                                                      double initialValue,
                                                       const std::string& idString = std::string("1DArray"));
       
       /**---------------------------------------------------------------------------------------
       
-         Allocate 2D RealOpenMM array (Simbios)
+         Allocate 2D double array (Simbios)
       
          array[i][j]
       
@@ -96,14 +96,14 @@ class OPENMM_EXPORT SimTKOpenMMUtilities {
       
          --------------------------------------------------------------------------------------- */
       
-      static RealOpenMM** allocateTwoDRealOpenMMArray(int iSize, int jSize,
-                                                       RealOpenMM** array2D, int initialize,
-                                                       RealOpenMM initialValue,
+      static double** allocateTwoDRealOpenMMArray(int iSize, int jSize,
+                                                       double** array2D, int initialize,
+                                                       double initialValue,
                                                        const std::string& idString = std::string("2DArray"));
       
       /* ---------------------------------------------------------------------------------------
       
-         Free 2D RealOpenMM array (Simbios)
+         Free 2D double array (Simbios)
       
          array[i][j]
       
@@ -112,12 +112,12 @@ class OPENMM_EXPORT SimTKOpenMMUtilities {
       
          --------------------------------------------------------------------------------------- */
       
-      static void freeOneDRealOpenMMArray(RealOpenMM* array1D,
+      static void freeOneDRealOpenMMArray(double* array1D,
                                           const std::string& idString = std::string("1DArray"));
       
       /* ---------------------------------------------------------------------------------------
       
-         Free 2D RealOpenMM array (Simbios)
+         Free 2D double array (Simbios)
       
          array[i][j]
       
@@ -126,12 +126,12 @@ class OPENMM_EXPORT SimTKOpenMMUtilities {
       
          --------------------------------------------------------------------------------------- */
       
-      static void freeTwoDRealOpenMMArray(RealOpenMM** array2D,
+      static void freeTwoDRealOpenMMArray(double** array2D,
                                           const std::string& idString = std::string("2DArray"));
       
       /**---------------------------------------------------------------------------------------
       
-         Initialize 2D RealOpenMM array (Simbios)
+         Initialize 2D double array (Simbios)
       
          array[i][j]
       
@@ -143,7 +143,7 @@ class OPENMM_EXPORT SimTKOpenMMUtilities {
          --------------------------------------------------------------------------------------- */
       
       static void initialize2DRealOpenMMArray(int iSize, int jSize,
-                                              RealOpenMM** array2D, RealOpenMM initialValue);
+                                              double** array2D, double initialValue);
 
       /**---------------------------------------------------------------------------------------
       
@@ -159,7 +159,7 @@ class OPENMM_EXPORT SimTKOpenMMUtilities {
       
          --------------------------------------------------------------------------------------- */
       
-      static void crossProductVector3(RealOpenMM* vectorX, RealOpenMM* vectorY, RealOpenMM* vectorZ);
+      static void crossProductVector3(double* vectorX, double* vectorY, double* vectorZ);
       
       /**---------------------------------------------------------------------------------------
       
@@ -169,7 +169,7 @@ class OPENMM_EXPORT SimTKOpenMMUtilities {
       
          --------------------------------------------------------------------------------------- */
       
-      static RealOpenMM getNormallyDistributedRandomNumber();
+      static double getNormallyDistributedRandomNumber();
       
       /**---------------------------------------------------------------------------------------
       
@@ -179,7 +179,7 @@ class OPENMM_EXPORT SimTKOpenMMUtilities {
       
          --------------------------------------------------------------------------------------- */
       
-      static RealOpenMM getUniformlyDistributedRandomNumber();
+      static double getUniformlyDistributedRandomNumber();
 
       /**---------------------------------------------------------------------------------------
       

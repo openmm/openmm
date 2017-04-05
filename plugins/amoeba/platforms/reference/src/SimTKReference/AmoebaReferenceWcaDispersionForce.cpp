@@ -22,223 +22,212 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#ifdef WIN32
+  #define _USE_MATH_DEFINES // Needed to get M_PI
+#endif
 #include "AmoebaReferenceForce.h"
 #include "AmoebaReferenceWcaDispersionForce.h"
+#include <cmath>
 
 using std::vector;
 using namespace OpenMM;
 
-AmoebaReferenceWcaDispersionForce::AmoebaReferenceWcaDispersionForce(RealOpenMM epso, RealOpenMM epsh, RealOpenMM rmino, RealOpenMM rminh, 
-                                                                     RealOpenMM awater, RealOpenMM shctd, RealOpenMM dispoff, RealOpenMM slevy) :
+AmoebaReferenceWcaDispersionForce::AmoebaReferenceWcaDispersionForce(double epso, double epsh, double rmino, double rminh, 
+                                                                     double awater, double shctd, double dispoff, double slevy) :
                                _epso(epso), _epsh(epsh), _rmino(rmino), _rminh(rminh), _awater(awater), _shctd(shctd), _dispoff(dispoff), _slevy(slevy) {
 }   
 
 
-RealOpenMM AmoebaReferenceWcaDispersionForce::calculatePairIxn(RealOpenMM radiusI, RealOpenMM radiusK, 
-                                                               const RealVec& particleIPosition,
-                                                               const RealVec& particleJPosition,
-                                                               const RealOpenMM* const intermediateValues,
-                                                               Vec3& force) const {
+double AmoebaReferenceWcaDispersionForce::calculatePairIxn(double radiusI, double radiusK, 
+                                                           const Vec3& particleIPosition,
+                                                           const Vec3& particleJPosition,
+                                                           const double* const intermediateValues,
+                                                           Vec3& force) const {
 
-   // ---------------------------------------------------------------------------------------
+    static const double PI = M_PI;
 
-    static const RealOpenMM zero          =  0.0;
-    static const RealOpenMM one           =  1.0;
-    static const RealOpenMM two           =  2.0;
-    static const RealOpenMM three         =  3.0;
-    static const RealOpenMM four          =  4.0;
-    static const RealOpenMM five          =  5.0;
-    static const RealOpenMM six           =  6.0;
-    static const RealOpenMM seven         =  7.0;
-    static const RealOpenMM eight         =  8.0;
-    static const RealOpenMM ten           = 10.0;
-    static const RealOpenMM fortyEight    = 48.0;
-    static const RealOpenMM PI            = 3.1415926535897932384;
+    double xr           = particleIPosition[0] - particleJPosition[0];
+    double yr           = particleIPosition[1] - particleJPosition[1];
+    double zr           = particleIPosition[2] - particleJPosition[2];
 
-   // ---------------------------------------------------------------------------------------
+    double r2           = xr*xr + yr*yr + zr*zr;
+    double r            = sqrt(r2);
+    double r3           = r2*r;
 
-    RealOpenMM xr           = particleIPosition[0] - particleJPosition[0];
-    RealOpenMM yr           = particleIPosition[1] - particleJPosition[1];
-    RealOpenMM zr           = particleIPosition[2] - particleJPosition[2];
+    double sK           = radiusK*_shctd;
+    double sK2          = sK*sK;
 
-    RealOpenMM r2           = xr*xr + yr*yr + zr*zr;
-    RealOpenMM r            = SQRT(r2);
-    RealOpenMM r3           = r2*r;
+    double rmixo        = intermediateValues[RMIXO];
+    double rmixo7       = intermediateValues[RMIXO7];
 
-    RealOpenMM sK           = radiusK*_shctd;
-    RealOpenMM sK2          = sK*sK;
+    double emixo        = intermediateValues[EMIXO];
 
-    RealOpenMM rmixo        = intermediateValues[RMIXO];
-    RealOpenMM rmixo7       = intermediateValues[RMIXO7];
+    double rmixh        = intermediateValues[RMIXH];
+    double rmixh7       = intermediateValues[RMIXH7];
 
-    RealOpenMM emixo        = intermediateValues[EMIXO];
+    double emixh        = intermediateValues[EMIXH];
 
-    RealOpenMM rmixh        = intermediateValues[RMIXH];
-    RealOpenMM rmixh7       = intermediateValues[RMIXH7];
+    double ao           = intermediateValues[AO];
+    double ah           = intermediateValues[AH];
 
-    RealOpenMM emixh        = intermediateValues[EMIXH];
-
-    RealOpenMM ao           = intermediateValues[AO];
-    RealOpenMM ah           = intermediateValues[AH];
-
-    RealOpenMM sum          = zero;
-    RealOpenMM de           = zero;
+    double sum          = 0.0;
+    double de           = 0.0;
 
     if (radiusI < (r + sK)) {
 
-        RealOpenMM rmax     = (radiusI > (r - sK)) ? radiusI : (r - sK);
+        double rmax     = (radiusI > (r - sK)) ? radiusI : (r - sK);
 
-        RealOpenMM lik      = rmax;
-        RealOpenMM lik2     = lik*lik;
-        RealOpenMM lik3     = lik2*lik;
-        RealOpenMM lik4     = lik2*lik2;
+        double lik      = rmax;
+        double lik2     = lik*lik;
+        double lik3     = lik2*lik;
+        double lik4     = lik2*lik2;
 
         if (lik < rmixo) { 
 
-            RealOpenMM uik  = (r + sK) < rmixo ? (r + sK) : rmixo;
-            RealOpenMM uik2 = uik*uik;
-            RealOpenMM uik3 = uik2*uik;
-            RealOpenMM uik4 = uik2*uik2;
+            double uik  = (r + sK) < rmixo ? (r + sK) : rmixo;
+            double uik2 = uik*uik;
+            double uik3 = uik2*uik;
+            double uik4 = uik2*uik2;
 
-            RealOpenMM term = four*PI/(fortyEight*r)* (three*(lik4-uik4) - eight*r*(lik3-uik3) + six*(r2-sK2)*(lik2-uik2));
+            double term = 4.0*PI/(48.0*r)* (3.0*(lik4-uik4) - 8.0*r*(lik3-uik3) + 6.0*(r2-sK2)*(lik2-uik2));
 
-            RealOpenMM dl;
+            double dl;
             if (radiusI >  (r - sK)) {
-                dl  = -lik2 + two*(r2 + sK2);
+                dl  = -lik2 + 2.0*(r2 + sK2);
                 dl *= lik2;
             } else {
-                dl  = -lik3 + four*lik2*r - six*lik*r2 + two*lik*sK2 + four*r*(r2 - sK2);
+                dl  = -lik3 + 4.0*lik2*r - 6.0*lik*r2 + 2.0*lik*sK2 + 4.0*r*(r2 - sK2);
                 dl *= lik;
             }
 
-            RealOpenMM du;
+            double du;
             if ((r+sK) > rmixo) {
-                du  = -uik2 + two*(r2 + sK2);
+                du  = -uik2 + 2.0*(r2 + sK2);
                 du *= -uik2;
             } else {
-                du  = -uik3 + four*uik2*r - six*uik*r2 + two*uik*sK2 + four*r*(r2 - sK2);
+                du  = -uik3 + 4.0*uik2*r - 6.0*uik*r2 + 2.0*uik*sK2 + 4.0*r*(r2 - sK2);
                 du *= -uik;
             }
-            de     = -emixo*PI*(dl+du)/(four*r2);
+            de     = -emixo*PI*(dl+du)/(4.0*r2);
             sum   += -emixo*term;
         }
 
         if (lik < rmixh) {
 
-            RealOpenMM uik  = (r + sK) < rmixh ? (r + sK) : rmixh;
-            RealOpenMM uik2 = uik*uik;
-            RealOpenMM uik3 = uik2*uik;
-            RealOpenMM uik4 = uik2*uik2;
-            RealOpenMM term = four*PI / (fortyEight*r)*(three*(lik4-uik4) - eight*r*(lik3-uik3) + six*(r2-sK2)*(lik2-uik2));
-            RealOpenMM dl;
+            double uik  = (r + sK) < rmixh ? (r + sK) : rmixh;
+            double uik2 = uik*uik;
+            double uik3 = uik2*uik;
+            double uik4 = uik2*uik2;
+            double term = 4.0*PI / (48.0*r)*(3.0*(lik4-uik4) - 8.0*r*(lik3-uik3) + 6.0*(r2-sK2)*(lik2-uik2));
+            double dl;
             if (radiusI > (r-sK)) {
-                dl  = -lik2 + two*(r2 + sK2);
+                dl  = -lik2 + 2.0*(r2 + sK2);
                 dl *= lik2;
             } else {
-                dl  = -lik3 + four*lik2*r - six*lik*r2 + two*lik*sK2 + four*r*(r2 -sK2);
+                dl  = -lik3 + 4.0*lik2*r - 6.0*lik*r2 + 2.0*lik*sK2 + 4.0*r*(r2 -sK2);
                 dl *= lik;
             }
       
-            RealOpenMM du;
+            double du;
             if (r+sK > rmixh) {
-                du  = -uik2 + two*(r2 + sK2);
+                du  = -uik2 + 2.0*(r2 + sK2);
                 du *= -uik2;
             } else {
-                du  = -uik3 +four*uik2*r - six*uik*r2 + two*uik*sK2 +four*r*(r2 - sK2);
+                du  = -uik3 +4.0*uik2*r - 6.0*uik*r2 + 2.0*uik*sK2 +4.0*r*(r2 - sK2);
                 du *= -uik;
             }
-            de   -= two*emixh*PI*(dl+du)/(four*r2);
-            sum  -= two*emixh*term;
+            de   -= 2.0*emixh*PI*(dl+du)/(4.0*r2);
+            sum  -= 2.0*emixh*term;
         }
 
-        RealOpenMM uik   = r + sK;
-        RealOpenMM uik2  = uik   * uik;
-        RealOpenMM uik3  = uik2  * uik;
-        RealOpenMM uik4  = uik2  * uik2;
-        RealOpenMM uik5  = uik3  * uik2;
-        RealOpenMM uik6  = uik3  * uik3;
-        RealOpenMM uik10 = uik5  * uik5;
-        RealOpenMM uik11 = uik5  * uik6;
-        RealOpenMM uik12 = uik6  * uik6;
-        RealOpenMM uik13 = uik10 * uik3;
+        double uik   = r + sK;
+        double uik2  = uik   * uik;
+        double uik3  = uik2  * uik;
+        double uik4  = uik2  * uik2;
+        double uik5  = uik3  * uik2;
+        double uik6  = uik3  * uik3;
+        double uik10 = uik5  * uik5;
+        double uik11 = uik5  * uik6;
+        double uik12 = uik6  * uik6;
+        double uik13 = uik10 * uik3;
 
         if (uik > rmixo) {
 
-            RealOpenMM lik   = rmax > rmixo ? rmax : rmixo;
-            RealOpenMM lik2  = lik   * lik;
-            RealOpenMM lik3  = lik2  * lik;
-            RealOpenMM lik4  = lik2  * lik2;
-            RealOpenMM lik5  = lik2  * lik3;
-            RealOpenMM lik6  = lik3  * lik3;
-            RealOpenMM lik10 = lik5  * lik5;
-            RealOpenMM lik11 = lik5  * lik6;
-            RealOpenMM lik12 = lik6  * lik6;
-            RealOpenMM lik13 = lik10 * lik3;
+            double lik   = rmax > rmixo ? rmax : rmixo;
+            double lik2  = lik   * lik;
+            double lik3  = lik2  * lik;
+            double lik4  = lik2  * lik2;
+            double lik5  = lik2  * lik3;
+            double lik6  = lik3  * lik3;
+            double lik10 = lik5  * lik5;
+            double lik11 = lik5  * lik6;
+            double lik12 = lik6  * lik6;
+            double lik13 = lik10 * lik3;
 
-            RealOpenMM term  = four*PI/(120.0*r*lik5*uik5)*(15.0*uik*lik*r*(uik4-lik4) - ten*uik2*lik2*(uik3-lik3) + six*(sK2-r2)*(uik5-lik5));
-            RealOpenMM dl;
+            double term  = 4.0*PI/(120.0*r*lik5*uik5)*(15.0*uik*lik*r*(uik4-lik4) - 10.0*uik2*lik2*(uik3-lik3) + 6.0*(sK2-r2)*(uik5-lik5));
+            double dl;
             if (radiusI > (r-sK) || rmax < rmixo) {
-                dl  = -five*lik2 + three*(r2 + sK2);
+                dl  = -5.0*lik2 + 3.0*(r2 + sK2);
                 dl /= -lik5;
             } else {
-                dl  = five*lik3 - 33.0*lik*r2 - three*lik*sK2 + 15.0*(lik2*r+r3-r*sK2);
+                dl  = 5.0*lik3 - 33.0*lik*r2 - 3.0*lik*sK2 + 15.0*(lik2*r+r3-r*sK2);
                 dl /= lik6;
             }
-            RealOpenMM du     = five*uik3 - 33.0*uik*r2 - three*uik*sK2 + 15.0*(uik2*r+r3-r*sK2);
-                       du    /= -uik6;
-            RealOpenMM idisp  = -two*ao*term;
-                       de    -= two*ao*PI*(dl + du)/(15.0*r2);
-                       term   = four*PI/(2640.0*r*lik12*uik12) * (120.0*uik*lik*r*(uik11-lik11) - 66.0*uik2*lik2*(uik10-lik10) + 55.0*(sK2-r2)*(uik12-lik12));
+            double du     = 5.0*uik3 - 33.0*uik*r2 - 3.0*uik*sK2 + 15.0*(uik2*r+r3-r*sK2);
+                   du    /= -uik6;
+            double idisp  = -2.0*ao*term;
+                   de    -= 2.0*ao*PI*(dl + du)/(15.0*r2);
+                   term   = 4.0*PI/(2640.0*r*lik12*uik12) * (120.0*uik*lik*r*(uik11-lik11) - 66.0*uik2*lik2*(uik10-lik10) + 55.0*(sK2-r2)*(uik12-lik12));
             if (radiusI > (r-sK) || rmax < rmixo) {
-                dl  = -six*lik2 + five*r2 + five*sK2;
+                dl  = -6.0*lik2 + 5.0*r2 + 5.0*sK2;
                 dl /= -lik12;
             } else {
-                dl  = six*lik3 - 125.0*lik*r2 - five*lik*sK2 + 60.0*(lik2*r+r3-r*sK2);
+                dl  = 6.0*lik3 - 125.0*lik*r2 - 5.0*lik*sK2 + 60.0*(lik2*r+r3-r*sK2);
                 dl /= lik13;
             }
-            du               = six*uik3 - 125.0*uik*r2 - five*uik*sK2 + 60.0*(uik2*r+r3-r*sK2);
+            du               = 6.0*uik3 - 125.0*uik*r2 - 5.0*uik*sK2 + 60.0*(uik2*r+r3-r*sK2);
             du              /= -uik13;
             de              += ao*rmixo7*PI*(dl + du)/(60.0*r2);
             sum             += ao*rmixo7*term + idisp;
         }
         if (uik > rmixh) {
-                       lik   = rmax > rmixh ? rmax : rmixh;
-                       lik2  = lik  * lik;
-                       lik3  = lik2 * lik;
-                       lik4  = lik2 * lik2;
-            RealOpenMM lik5  = lik2 * lik3;
-            RealOpenMM lik6  = lik3 * lik3;
-            RealOpenMM lik10 = lik5 * lik5;
-            RealOpenMM lik11 = lik5 * lik6;
-            RealOpenMM lik12 = lik6 * lik6;
-            RealOpenMM lik13 = lik3 * lik10;
+                   lik   = rmax > rmixh ? rmax : rmixh;
+                   lik2  = lik  * lik;
+                   lik3  = lik2 * lik;
+                   lik4  = lik2 * lik2;
+            double lik5  = lik2 * lik3;
+            double lik6  = lik3 * lik3;
+            double lik10 = lik5 * lik5;
+            double lik11 = lik5 * lik6;
+            double lik12 = lik6 * lik6;
+            double lik13 = lik3 * lik10;
 
-            RealOpenMM term  = four*PI / (120.0*r*lik5*uik5)*(15.0*uik*lik*r*(uik4-lik4) - ten*uik2*lik2*(uik3-lik3) + six*(sK2-r2)*(uik5-lik5));
-            RealOpenMM dl;
+            double term  = 4.0*PI / (120.0*r*lik5*uik5)*(15.0*uik*lik*r*(uik4-lik4) - 10.0*uik2*lik2*(uik3-lik3) + 6.0*(sK2-r2)*(uik5-lik5));
+            double dl;
             if (radiusI > (r-sK) || rmax < rmixh) {
-                dl  = -five*lik2 + three*(r2 + sK2);
+                dl  = -5.0*lik2 + 3.0*(r2 + sK2);
                 dl /= -lik5;
             } else {
-                dl  = five*lik3 - 33.0*lik*r2 - three*lik*sK2 + 15.0*(lik2*r+r3-r*sK2);
+                dl  = 5.0*lik3 - 33.0*lik*r2 - 3.0*lik*sK2 + 15.0*(lik2*r+r3-r*sK2);
                 dl /= lik6;
             }
-            RealOpenMM du     = five*uik3 - 33.0*uik*r2 - 3.0*uik*sK2 + 15.0*(uik2*r+r3-r*sK2);
-                       du    /= -uik6;
-            RealOpenMM idisp  = -four*ah*term;
-            de                = de - four*ah*PI*(dl + du)/(15.0*r2);
-            term              = four*PI / (2640.0*r*lik12*uik12)* (120.0*uik*lik*r*(uik11-lik11)- 66.0*uik2*lik2*(uik10-lik10)+ 55.0*(sK2-r2)*(uik12-lik12));
+            double du     = 5.0*uik3 - 33.0*uik*r2 - 3.0*uik*sK2 + 15.0*(uik2*r+r3-r*sK2);
+                   du    /= -uik6;
+            double idisp  = -4.0*ah*term;
+            de                = de - 4.0*ah*PI*(dl + du)/(15.0*r2);
+            term              = 4.0*PI / (2640.0*r*lik12*uik12)* (120.0*uik*lik*r*(uik11-lik11)- 66.0*uik2*lik2*(uik10-lik10)+ 55.0*(sK2-r2)*(uik12-lik12));
             if (radiusI > (r-sK) || rmax < rmixh) {
-                dl = -six*lik2 + five*r2 + five*sK2;
+                dl = -6.0*lik2 + 5.0*r2 + 5.0*sK2;
                 dl = -dl / lik12;
             } else {;
-                dl = six*lik3 - 125.0*lik*r2 - five*lik*sK2 + 60.0*(lik2*r+r3-r*sK2);
+                dl = 6.0*lik3 - 125.0*lik*r2 - 5.0*lik*sK2 + 60.0*(lik2*r+r3-r*sK2);
                 dl = dl / lik13;
             }
-            du                = six*uik3 - 125.0*uik*r2 - five*uik*sK2 + 60.0*(uik2*r+r3-r*sK2);
-            du               /= -uik13;
-            RealOpenMM irep   = two*ah*rmixh7*term;
-            de               += ah*rmixh7*PI*(dl+du)/(30.0*r2);
-            sum              += irep + idisp;
+            du            = 6.0*uik3 - 125.0*uik*r2 - 5.0*uik*sK2 + 60.0*(uik2*r+r3-r*sK2);
+            du           /= -uik13;
+            double irep   = 2.0*ah*rmixh7*term;
+            de           += ah*rmixh7*PI*(dl+du)/(30.0*r2);
+            sum          += irep + idisp;
         }
     }
 
@@ -254,70 +243,59 @@ RealOpenMM AmoebaReferenceWcaDispersionForce::calculatePairIxn(RealOpenMM radius
 
 }
 
-RealOpenMM AmoebaReferenceWcaDispersionForce::calculateForceAndEnergy(int numParticles,
-                                                                      const vector<RealVec>& particlePositions,
-                                                                      const std::vector<RealOpenMM>& radii,
-                                                                      const std::vector<RealOpenMM>& epsilons,
-                                                                      RealOpenMM totalMaximumDispersionEnergy,
-                                                                      vector<RealVec>& forces) const {
-
-    // ---------------------------------------------------------------------------------------
-
-    //static const std::string methodName = "AmoebaReferenceWcaDispersionForce::calculateForceAndEnergy";
-
-    static const RealOpenMM zero          = 0.0;
-    static const RealOpenMM one           = 1.0;
-    static const RealOpenMM two           = 2.0;
-    static const RealOpenMM four          = 4.0;
-
-    // ---------------------------------------------------------------------------------------
+double AmoebaReferenceWcaDispersionForce::calculateForceAndEnergy(int numParticles,
+                                                                  const vector<Vec3>& particlePositions,
+                                                                  const std::vector<double>& radii,
+                                                                  const std::vector<double>& epsilons,
+                                                                  double totalMaximumDispersionEnergy,
+                                                                  vector<Vec3>& forces) const {
 
     // loop over all ixns
 
-    RealOpenMM energy     = zero;
+    double energy     = 0.0;
 
-    RealOpenMM rmino2     = _rmino*_rmino;
-    RealOpenMM rmino3     = rmino2*_rmino;
+    double rmino2     = _rmino*_rmino;
+    double rmino3     = rmino2*_rmino;
 
-    RealOpenMM rminh2     = _rminh*_rminh;
-    RealOpenMM rminh3     = rminh2*_rminh;
+    double rminh2     = _rminh*_rminh;
+    double rminh3     = rminh2*_rminh;
 
-    RealOpenMM intermediateValues[LastIntermediateValueIndex];
+    double intermediateValues[LastIntermediateValueIndex];
 
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(numParticles); ii++) {
  
-        RealOpenMM epsi              = epsilons[ii];
-        RealOpenMM rmini             = radii[ii];
+        double epsi              = epsilons[ii];
+        double rmini             = radii[ii];
 
-        RealOpenMM denominator       = SQRT(_epso) + SQRT(epsi);
-        RealOpenMM emixo             = four*_epso*epsi/(denominator*denominator);
+        double denominator       = sqrt(_epso) + sqrt(epsi);
+        double emixo             = 4.0*_epso*epsi/(denominator*denominator);
         intermediateValues[EMIXO]    = emixo;
 
-        RealOpenMM rminI2            = rmini*rmini;
-        RealOpenMM rminI3            = rminI2*rmini;
+        double rminI2            = rmini*rmini;
+        double rminI3            = rminI2*rmini;
  
-        RealOpenMM rmixo             = two*(rmino3 + rminI3) / (rmino2 + rminI2);
-        intermediateValues[RMIXO]    = rmixo;
+        double rmixo             = 2.0*(rmino3 + rminI3) / (rmino2 + rminI2);
+        intermediateValues[RMIXO] = rmixo;
 
-        RealOpenMM rmixo7            = rmixo*rmixo*rmixo;
-                   rmixo7            = rmixo7*rmixo7*rmixo;
-        intermediateValues[RMIXO7]   = rmixo7;
+        double rmixo7            = rmixo*rmixo*rmixo;
+               rmixo7            = rmixo7*rmixo7*rmixo;
+        intermediateValues[RMIXO7] = rmixo7;
 
-        intermediateValues[AO]       = emixo*rmixo7;
+        intermediateValues[AO]     = emixo*rmixo7;
 
-                   denominator       = SQRT(_epsh) + SQRT(epsi);
+                   denominator     = sqrt(_epsh) + sqrt(epsi);
 
-        RealOpenMM emixh             = four*_epsh*epsi/ (denominator*denominator);
-        intermediateValues[EMIXH]    = emixh;
+        double emixh              = 4.0*_epsh*epsi/ (denominator*denominator);
+        intermediateValues[EMIXH] = emixh;
 
-        RealOpenMM rmixh             = two * (rminh3 + rminI3) / (rminh2 + rminI2);
-        intermediateValues[RMIXH]    = rmixh;
+        double rmixh              = 2.0 * (rminh3 + rminI3) / (rminh2 + rminI2);
+        intermediateValues[RMIXH] = rmixh;
 
-        RealOpenMM rmixh7            = rmixh*rmixh*rmixh;
-                   rmixh7            = rmixh7*rmixh7*rmixh;
-        intermediateValues[RMIXH7]   = rmixh7;
+        double rmixh7              = rmixh*rmixh*rmixh;
+                   rmixh7          = rmixh7*rmixh7*rmixh;
+        intermediateValues[RMIXH7] = rmixh7;
 
-        intermediateValues[AH]       = emixh*rmixh7;
+        intermediateValues[AH]     = emixh*rmixh7;
 
         for (unsigned int jj = 0; jj < static_cast<unsigned int>(numParticles); jj++) {
 

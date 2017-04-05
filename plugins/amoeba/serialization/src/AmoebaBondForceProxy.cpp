@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -42,9 +42,11 @@ AmoebaBondForceProxy::AmoebaBondForceProxy() : SerializationProxy("AmoebaBondFor
 }
 
 void AmoebaBondForceProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 1);
+    node.setIntProperty("version", 3);
     const AmoebaBondForce& force = *reinterpret_cast<const AmoebaBondForce*>(object);
 
+    node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setBoolProperty("usesPeriodic", force.usesPeriodicBoundaryConditions());
     node.setDoubleProperty("cubic",   force.getAmoebaGlobalBondCubic());
     node.setDoubleProperty("quartic", force.getAmoebaGlobalBondQuartic());
 
@@ -58,17 +60,20 @@ void AmoebaBondForceProxy::serialize(const void* object, SerializationNode& node
 }
 
 void* AmoebaBondForceProxy::deserialize(const SerializationNode& node) const {
-    if (node.getIntProperty("version") != 1)
+    int version = node.getIntProperty("version");
+    if (version < 1 || version > 3)
         throw OpenMMException("Unsupported version number");
     AmoebaBondForce* force = new AmoebaBondForce();
     try {
+        if (version > 1)
+            force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        if (version > 2)
+            force->setUsesPeriodicBoundaryConditions(node.getBoolProperty("usesPeriodic"));
         force->setAmoebaGlobalBondCubic(node.getDoubleProperty("cubic"));
         force->setAmoebaGlobalBondQuartic(node.getDoubleProperty("quartic"));
         const SerializationNode& bonds = node.getChildNode("Bonds");
-        for (unsigned int ii = 0; ii < (int) bonds.getChildren().size(); ii++) {
-            const SerializationNode& bond = bonds.getChildren()[ii];
+        for (auto& bond : bonds.getChildren())
             force->addBond(bond.getIntProperty("p1"), bond.getIntProperty("p2"), bond.getDoubleProperty("d"), bond.getDoubleProperty("k"));
-        }
     }
     catch (...) {
         delete force;

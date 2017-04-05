@@ -1864,7 +1864,16 @@ static void setupAndGetForcesEnergyMultipoleLargeWater(AmoebaMultipoleForce::Non
         energy                    = state.getPotentialEnergy();
     }
 
-    return;
+    if (nonbondedMethod == AmoebaMultipoleForce::PME) {
+        double actualAlpha;
+        int actualSize[3];
+        amoebaMultipoleForce->getPMEParametersInContext(context, actualAlpha, actualSize[0], actualSize[1], actualSize[2]);
+        ASSERT_EQUAL_TOL(amoebaMultipoleForce->getAEwald(), actualAlpha, 1e-5);
+        for (int i = 0; i < 3; i++) {
+            ASSERT(actualSize[i] >= inputPmeGridDimension);
+            ASSERT(actualSize[i] < inputPmeGridDimension+10);
+        }
+    }
 }
 
 // test multipole mutual polarization using PME for box of water
@@ -2578,6 +2587,76 @@ static void testParticleInducedDipoles() {
         ASSERT_EQUAL_VEC(expectedDipole[i], dipole[i], 1e-4);
 }
 
+// test querying particle lab frame permanent dipoles
+
+static void testParticleLabFramePermanentDipoles() {
+    int numberOfParticles     = 8;
+    int inputPmeGridDimension = 0;
+    double cutoff             = 9000000.0;
+    std::vector<Vec3> forces;
+    double energy;
+
+    System system;
+    AmoebaMultipoleForce* amoebaMultipoleForce = new AmoebaMultipoleForce();;
+    setupMultipoleAmmonia(system, amoebaMultipoleForce, AmoebaMultipoleForce::NoCutoff, AmoebaMultipoleForce::Mutual, 
+                                             cutoff, inputPmeGridDimension);
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
+    Context context(system, integrator, Platform::getPlatformByName("Reference"));
+    getForcesEnergyMultipoleAmmonia(context, forces, energy);
+    std::vector<Vec3> dipole;
+    amoebaMultipoleForce->getLabFramePermanentDipoles(context, dipole);
+    
+    // Compare to values calculated by TINKER.
+    
+    std::vector<Vec3> expectedDipole(numberOfParticles);
+    expectedDipole[0] = Vec3(0.00876454250, -2.04310718E-06, -0.00227593519);
+    expectedDipole[1] = Vec3(0.000780382180, -0.00432882849, 0.00236926761);
+    expectedDipole[2] = Vec3(0.000801345883, 0.00431830946, 0.00238143437);
+    expectedDipole[3] = Vec3(-0.00109746996, 1.16087953e-5, -0.00487407492);
+    expectedDipole[4] = Vec3(0.00203814102, -2.26554196e-5, 0.00882284298);
+    expectedDipole[5] = Vec3(-0.00239443187, 0.00432388648, 0.000729303209);
+    expectedDipole[6] = Vec3(0.00491086743, 2.86430963e-6, -0.000918996348);
+    expectedDipole[7] = Vec3(-0.00239301946, -0.00432743976, 0.000712674115);
+    for (int i = 0; i < numberOfParticles; i++)
+        ASSERT_EQUAL_VEC(expectedDipole[i], dipole[i], 1e-4);
+}
+
+
+// test querying particle total dipoles (fixed + induced)
+
+static void testParticleTotalDipoles() {
+    int numberOfParticles     = 8;
+    int inputPmeGridDimension = 0;
+    double cutoff             = 9000000.0;
+    std::vector<Vec3> forces;
+    double energy;
+
+    System system;
+    AmoebaMultipoleForce* amoebaMultipoleForce = new AmoebaMultipoleForce();;
+    setupMultipoleAmmonia(system, amoebaMultipoleForce, AmoebaMultipoleForce::NoCutoff, AmoebaMultipoleForce::Mutual, 
+                                             cutoff, inputPmeGridDimension);
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
+    Context context(system, integrator, Platform::getPlatformByName("Reference"));
+    getForcesEnergyMultipoleAmmonia(context, forces, energy);
+    std::vector<Vec3> dipole;
+    amoebaMultipoleForce->getTotalDipoles(context, dipole);
+    
+    // Compare to values calculated by TINKER.
+    
+    std::vector<Vec3> expectedDipole(numberOfParticles);
+    expectedDipole[0] = Vec3(0.0119356307, -1.11302433e-6, -0.00296793872);
+    expectedDipole[1] = Vec3(8.60636211e-4, -0.00460821816, 0.00241705344);
+    expectedDipole[2] = Vec3(8.80646403e-4, 0.00459728769, 0.00243013245);
+    expectedDipole[3] = Vec3(-0.00123822377, 1.31555550e-5, -0.00558185336);
+    expectedDipole[4] = Vec3(0.00399455556, -2.27511931e-5, 0.00955607952);
+    expectedDipole[5] = Vec3(-0.00157302682, 0.00354892386, 3.40921137e-4);
+    expectedDipole[6] = Vec3(0.00952428069, 2.14171505e-6, -6.68945865e-4);
+    expectedDipole[7] = Vec3(-0.00157252460, -0.00355015528, 3.27055162e-4);
+    for (int i = 0; i < numberOfParticles; i++)
+        ASSERT_EQUAL_VEC(expectedDipole[i], dipole[i], 1e-4);
+}
+
+
 // test computation of system multipole moments
 
 static void testSystemMultipoleMoments() {
@@ -2859,6 +2938,146 @@ void testTriclinic() {
     ASSERT_EQUAL_TOL(expectedEnergy, state.getPotentialEnergy(), 1e-2);
 }
 
+void testZBisect() {
+    System system;
+    for (int i = 0; i < 7; i++)
+        system.addParticle(1.0);
+    system.setDefaultPeriodicBoxVectors(Vec3(4, 0, 0), Vec3(0, 4, 0), Vec3(0, 0, 4));
+    AmoebaMultipoleForce* force = new AmoebaMultipoleForce();
+    system.addForce(force);
+    force->setNonbondedMethod(AmoebaMultipoleForce::PME);
+    force->setCutoffDistance(1.2);
+    double charge[] = {-1.01875, 0, 0, 0, -0.51966, 0.25983, 0.25983};
+    double dipole[7][3] = {
+        {0.06620218576365969, 0.056934176095985306, 0.06298584667720743},
+        {0, 0, 0},
+        {0, 0, 0},
+        {0, 0, 0},
+        {0, 0, 0.007556121391156931},
+        {-0.05495981592297553, 0, -0.0030787530116780605},
+        {-0.05495981592297553, 0, -0.0030787530116780605}};
+    double quadrupole[7][9] = {
+        {-0.0004042865090302655, 0.0010450291005955025, -0.0010871640586155112, 0.0010450291005955025, 0.0002512789255424535, -0.0009504541350087216, -0.0010871640586155112, -0.0009504541350087216, 0.00015300758348781198},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0.00035403072392177476, 0.009334284009749387, 0, 0.009334284009749387, -0.00039025708016361216, 0, 0, 0, 3.622635624183737e-05},
+        {-3.42848251678095e-05, 0.07374084367702016, -1.894859653979126e-06, 0.07374084367702016, -0.00010024087598069868, 0, -1.894859653979126e-06, 0, 0.00013452570114850818},
+        {-3.42848251678095e-05, 0.07374084367702016, -1.894859653979126e-06, 0.07374084367702016, -0.00010024087598069868, 0, -1.894859653979126e-06, 0, 0.00013452570114850818}
+    };
+    int axis[7][4] = {
+        {2, 2, 1, 3},
+        {5, -1, -1, -1},
+        {5, -1, -1, -1},
+        {5, -1, -1, -1},
+        {1, 5, 6, -1},
+        {0, 4, 6, -1},
+        {0, 4, 5, -1}
+    };
+    double thole = 0.39;
+    double damping[] = {0.33178695365189015, 0.33178695365189015, 0.33178695365189015, 0.33178695365189015, 0.306987653777382, 0.2813500172269554, 0.2813500172269554};
+    double polarity[] = {0.001334, 0.001334, 0.001334, 0.001334, 0.000837, 0.000496, 0.000496};
+    for (int i = 0; i < 7; i++) {
+        vector<double> d, q;
+        for (int j = 0; j < 3; j++)
+            d.push_back(dipole[i][j]);
+        for (int j = 0; j < 9; j++)
+            q.push_back(quadrupole[i][j]);
+        force->addMultipole(charge[i], d, q, axis[i][0], axis[i][1], axis[i][2], axis[i][3], thole, damping[i], polarity[i]);
+    }
+    for (int i = 0; i < 4; i++) {
+        vector<int> map;
+        if (i != 0) map.push_back(0);
+        force->setCovalentMap(i, AmoebaMultipoleForce::Covalent12, map);
+        map.clear();
+        if (i != 1) map.push_back(1);
+        if (i != 2) map.push_back(2);
+        if (i != 3) map.push_back(3);
+        force->setCovalentMap(i, AmoebaMultipoleForce::Covalent13, map);
+        map.clear();
+        map.push_back(0);
+        map.push_back(1);
+        map.push_back(2);
+        map.push_back(3);
+        force->setCovalentMap(i, AmoebaMultipoleForce::PolarizationCovalent11, map);
+    }
+    for (int i = 4; i < 7; i++) {
+        vector<int> map;
+        if (i != 4) map.push_back(4);
+        force->setCovalentMap(i, AmoebaMultipoleForce::Covalent12, map);
+        map.clear();
+        if (i != 5) map.push_back(5);
+        if (i != 6) map.push_back(6);
+        force->setCovalentMap(i, AmoebaMultipoleForce::Covalent13, map);
+        map.clear();
+        map.push_back(4);
+        map.push_back(5);
+        map.push_back(6);
+        force->setCovalentMap(i, AmoebaMultipoleForce::PolarizationCovalent11, map);
+    }
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
+    Context context(system, integrator, Platform::getPlatformByName("Reference"));
+    vector<Vec3> positions;
+    positions.push_back(Vec3(-0.06317711175870899, -0.04905009196658128, 0.0767217));
+    positions.push_back(Vec3(-0.049166918626451395, -0.20747614470348363, 0.03979849999999996));
+    positions.push_back(Vec3(-0.19317150000000005, -0.05811762921948427, 0.1632788999999999));
+    positions.push_back(Vec3(0.04465103038516016, -0.018345116763806235, 0.18531239999999993));
+    positions.push_back(Vec3(0.005630299999999998, 0.40965770000000035, 0.5731495));
+    positions.push_back(Vec3(0.036148100000000016, 0.3627041999999996, 0.49299430000000033));
+    positions.push_back(Vec3(0.07781149999999992, 0.4178183000000004, 0.6355703000000004));
+    context.setPositions(positions);
+    State state = context.getState(State::Energy);
+    ASSERT_EQUAL_TOL(-84.1532, state.getPotentialEnergy(), 0.01);
+}
+
+void testZOnly() {
+    int numParticles = 3;
+    System system;
+    for (int i = 0; i < numParticles; i++)
+        system.addParticle(1.0);
+    AmoebaMultipoleForce* force = new AmoebaMultipoleForce();
+    system.addForce(force);
+    vector<double> d(3), q(9, 0.0);
+    d[0] = 0.05;
+    d[1] = -0.05;
+    d[2] = 0.1;
+    force->addMultipole(0.0, d, q, AmoebaMultipoleForce::ZOnly, 1, 0, 0, 0.39, 0.33, 0.001);
+    force->addMultipole(0.0, d, q, AmoebaMultipoleForce::Bisector, 0, 2, 0, 0.39, 0.33, 0.001);
+    force->addMultipole(0.0, d, q, AmoebaMultipoleForce::ZOnly, 1, 0, 0, 0.39, 0.33, 0.001);
+    vector<Vec3> positions(3);
+    positions[0] = Vec3(0, 0, 0);
+    positions[1] = Vec3(0.2, 0, 0);
+    positions[2] = Vec3(0.2, 0.2, -0.05);
+    
+    // Evaluate the forces.
+    
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
+    Context context(system, integrator, Platform::getPlatformByName("Reference"));
+    context.setPositions(positions);
+    State state = context.getState(State::Forces);
+    double norm = 0.0;
+    for (Vec3 f : state.getForces())
+        norm += f[0]*f[0] + f[1]*f[1] + f[2]*f[2];
+    norm = std::sqrt(norm);
+
+    // Take a small step in the direction of the energy gradient and see whether the potential energy changes by the expected amount.
+
+    const double delta = 1e-3;
+    double step = 0.5*delta/norm;
+    vector<Vec3> positions2(numParticles), positions3(numParticles);
+    for (int i = 0; i < numParticles; ++i) {
+        Vec3 p = positions[i];
+        Vec3 f = state.getForces()[i];
+        positions2[i] = Vec3(p[0]-f[0]*step, p[1]-f[1]*step, p[2]-f[2]*step);
+        positions3[i] = Vec3(p[0]+f[0]*step, p[1]+f[1]*step, p[2]+f[2]*step);
+    }
+    context.setPositions(positions2);
+    State state2 = context.getState(State::Energy);
+    context.setPositions(positions3);
+    State state3 = context.getState(State::Energy);
+    ASSERT_EQUAL_TOL(state2.getPotentialEnergy(), state3.getPotentialEnergy()+norm*delta, 1e-3)
+}
+
 int main(int numberOfArguments, char* argv[]) {
 
     try {
@@ -2908,7 +3127,14 @@ int main(int numberOfArguments, char* argv[]) {
         // triclinic box of water
         
         testTriclinic();
-
+        
+        // test the ZBisect axis type.
+        
+        testZBisect();
+        
+        // test the ZOnly axis type.
+        
+        testZOnly();
     }
     catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;

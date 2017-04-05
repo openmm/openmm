@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013 Stanford University and the Authors.           *
+ * Portions copyright (c) 2013-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -41,6 +41,8 @@ KernelImpl* CpuKernelFactory::createKernelImpl(std::string name, const Platform&
     CpuPlatform::PlatformData& data = CpuPlatform::getPlatformData(context);
     if (name == CalcForcesAndEnergyKernel::Name())
         return new CpuCalcForcesAndEnergyKernel(name, platform, data, context);
+    if (name == CalcHarmonicAngleForceKernel::Name())
+        return new CpuCalcHarmonicAngleForceKernel(name, platform, data);
     if (name == CalcPeriodicTorsionForceKernel::Name())
         return new CpuCalcPeriodicTorsionForceKernel(name, platform, data);
     if (name == CalcRBTorsionForceKernel::Name())
@@ -55,6 +57,8 @@ KernelImpl* CpuKernelFactory::createKernelImpl(std::string name, const Platform&
         return new CpuCalcGBSAOBCForceKernel(name, platform, data);
     if (name == CalcCustomGBForceKernel::Name())
         return new CpuCalcCustomGBForceKernel(name, platform, data);
+    if (name == CalcGayBerneForceKernel::Name())
+        return new CpuCalcGayBerneForceKernel(name, platform, data);
     if (name == IntegrateLangevinStepKernel::Name())
         return new CpuIntegrateLangevinStepKernel(name, platform, data);
     throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '") + name + "'").c_str());

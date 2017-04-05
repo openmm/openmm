@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2014 Stanford University and the Authors.           *
+ * Portions copyright (c) 2014-2017 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -46,7 +46,6 @@ namespace OpenMM {
  */
 class OPENMM_EXPORT_CPU CpuBondForce {
 public:
-    class ComputeForceTask;
     CpuBondForce();
     /**
      * Analyze the set of bonds and decide which to compute with each thread.
@@ -55,13 +54,13 @@ public:
     /**
      * Compute the forces from all bonds.
      */
-    void calculateForce(std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** parameters, std::vector<OpenMM::RealVec>& forces, 
-            RealOpenMM* totalEnergy, ReferenceBondIxn& referenceBondIxn);
+    void calculateForce(std::vector<OpenMM::Vec3>& atomCoordinates, double** parameters, std::vector<OpenMM::Vec3>& forces, 
+            double* totalEnergy, ReferenceBondIxn& referenceBondIxn);
     /**
      * This routine contains the code executed by each thread.
      */
-    void threadComputeForce(ThreadPool& threads, int threadIndex, std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** parameters,
-            std::vector<OpenMM::RealVec>& forces, RealOpenMM* totalEnergy, ReferenceBondIxn& referenceBondIxn);
+    void threadComputeForce(ThreadPool& threads, int threadIndex, std::vector<OpenMM::Vec3>& atomCoordinates, double** parameters,
+            std::vector<OpenMM::Vec3>& forces, double* totalEnergy, ReferenceBondIxn& referenceBondIxn);
 private:
     bool canAssignBond(int bond, int thread, std::vector<int>& atomThread);
     void assignBond(int bond, int thread, std::vector<int>& atomThread, std::vector<int>& bondThread, std::vector<std::set<int> >& atomBonds, std::list<int>& candidateBonds);

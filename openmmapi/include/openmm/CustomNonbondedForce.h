@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -54,7 +54,7 @@ namespace OpenMM {
  * between the particles, as well as on any parameters you choose.  Then call addPerParticleParameter() to define per-particle
  * parameters, and addGlobalParameter() to define global parameters.  The values of per-particle parameters are specified as
  * part of the system definition, while values of global parameters may be modified during a simulation by calling Context::setParameter().
- * 
+ *
  * Next, call addParticle() once for each particle in the System to set the values of its per-particle parameters.
  * The number of particles for which you set parameters must be exactly equal to the number of particles in the
  * System, or else an exception will be thrown when you try to create a Context.  After a particle has been added,
@@ -80,17 +80,17 @@ namespace OpenMM {
  * above example, the energy only depends on the products sigma1*sigma2 and epsilon1*epsilon2, both of which are unchanged
  * if the labels 1 and 2 are reversed.  In contrast, if it depended on the difference sigma1-sigma2, the results would
  * be undefined, because reversing the labels 1 and 2 would change the energy.
- * 
+ *
  * CustomNonbondedForce can operate in two modes.  By default, it computes the interaction of every particle in the System
  * with every other particle.  Alternatively, you can restrict it to only a subset of particle pairs.  To do this, specify
  * one or more "interaction groups".  An interaction group consists of two sets of particles that should interact with
  * each other.  Every particle in the first set interacts with every particle in the second set.  For example, you might use
  * this feature to compute a solute-solvent interaction energy, while omitting all interactions between two solute atoms
  * or two solvent atoms.
- * 
+ *
  * To create an interaction group, call addInteractionGroup().  You may add as many interaction groups as you want.
  * Be aware of the following:
- * 
+ *
  * <ul>
  * <li>Exclusions are still taken into account, so the interactions between excluded pairs are omitted.</li>
  * <li>Likewise, a particle will never interact with itself, even if it appears in both sets of an interaction group.</li>
@@ -99,7 +99,7 @@ namespace OpenMM {
  * <li>If you do not add any interaction groups to a CustomNonbondedForce, it operates in the default mode where every
  * particle interacts with every other particle.</li>
  * </ul>
- * 
+ *
  * When using a cutoff, by default the interaction is sharply truncated at the cutoff distance.
  * Optionally you can instead use a switching function to make the interaction smoothly go to zero over a finite
  * distance range.  To enable this, call setUseSwitchingFunction().  You must also call setSwitchingDistance()
@@ -109,16 +109,20 @@ namespace OpenMM {
  * to write and understand.  It allows you to use the same energy expression with or without a cutoff.  Also, when using
  * a long range correction (see below), separating out the switching function allows the correction to be calculated
  * more accurately.
- * 
+ *
  * Another optional feature of this class is to add a contribution to the energy which approximates the effect of all
  * interactions beyond the cutoff in a periodic system.  When running a simulation at constant pressure, this can improve
  * the quality of the result.  Call setUseLongRangeCorrection() to enable it.
- * 
+ *
  * Computing the long range correction takes negligible work in each time step, but it does require an expensive precomputation
  * at the start of the simulation.  Furthermore, that precomputation must be repeated every time a global parameter changes
  * (or when you modify per-particle parameters by calling updateParametersInContext()).  This means that if parameters change
  * frequently, the long range correction can be very slow.  For this reason, it is disabled by default.
  * 
+ * This class also has the ability to compute derivatives of the potential energy with respect to global parameters.
+ * Call addEnergyParameterDerivative() to request that the derivative with respect to a particular parameter be
+ * computed.  You can then query its value in a Context by calling getState() on it.
+ *
  * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
  * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs, floor, ceil, step, delta, select.  All trigonometric functions
  * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  delta(x) = 1 if x is 0, 0 otherwise.
@@ -192,7 +196,7 @@ public:
     }
     /**
      * Get the number of tabulated functions that have been defined.
-     * 
+     *
      * @deprecated This method exists only for backward compatibility.  Use getNumTabulatedFunctions() instead.
      */
     int getNumFunctions() const {
@@ -203,6 +207,13 @@ public:
      */
     int getNumInteractionGroups() const {
         return interactionGroups.size();
+    }
+    /**
+     * Get the number of global parameters with respect to which the derivative of the energy
+     * should be computed.
+     */
+    int getNumEnergyParameterDerivatives() const {
+        return energyParameterDerivatives.size();
     }
     /**
      * Get the algebraic expression that gives the interaction energy between two particles
@@ -318,9 +329,24 @@ public:
      * Set the default value of a global parameter.
      *
      * @param index          the index of the parameter for which to set the default value
-     * @param name           the default value of the parameter
+     * @param defaultValue   the default value of the parameter
      */
     void setGlobalParameterDefaultValue(int index, double defaultValue);
+    /**
+     * Request that this Force compute the derivative of its energy with respect to a global parameter.
+     * The parameter must have already been added with addGlobalParameter().
+     *
+     * @param name             the name of the parameter
+     */
+    void addEnergyParameterDerivative(const std::string& name);
+    /**
+     * Get the name of a global parameter with respect to which this Force should compute the
+     * derivative of the energy.
+     *
+     * @param index     the index of the parameter derivative, between 0 and getNumEnergyParameterDerivatives()
+     * @return the parameter name
+     */
+    const std::string& getEnergyParameterDerivativeName(int index) const;
     /**
      * Add the nonbonded force parameters for a particle.  This should be called once for each particle
      * in the System.  When it is called for the i'th time, it specifies the parameters for the i'th particle.
@@ -328,12 +354,12 @@ public:
      * @param parameters    the list of parameters for the new particle
      * @return the index of the particle that was added
      */
-    int addParticle(const std::vector<double>& parameters);
+    int addParticle(const std::vector<double>& parameters=std::vector<double>());
     /**
      * Get the nonbonded force parameters for a particle.
      *
-     * @param index       the index of the particle for which to get parameters
-     * @param parameters  the list of parameters for the specified particle
+     * @param index            the index of the particle for which to get parameters
+     * @param[out] parameters  the list of parameters for the specified particle
      */
     void getParticleParameters(int index, std::vector<double>& parameters) const;
     /**
@@ -345,7 +371,7 @@ public:
     void setParticleParameters(int index, const std::vector<double>& parameters);
     /**
      * Add a particle pair to the list of interactions that should be excluded.
-     * 
+     *
      * In many cases, you can use createExclusionsFromBonds() rather than adding each exclusion explicitly.
      *
      * @param particle1  the index of the first particle in the pair
@@ -356,9 +382,9 @@ public:
     /**
      * Get the particles in a pair whose interaction should be excluded.
      *
-     * @param index      the index of the exclusion for which to get particle indices
-     * @param particle1  the index of the first particle in the pair
-     * @param particle2  the index of the second particle in the pair
+     * @param index           the index of the exclusion for which to get particle indices
+     * @param[out] particle1  the index of the first particle in the pair
+     * @param[out] particle2  the index of the second particle in the pair
      */
     void getExclusionParticles(int index, int& particle1, int& particle2) const;
     /**
@@ -431,7 +457,7 @@ public:
     void setFunctionParameters(int index, const std::string& name, const std::vector<double>& values, double min, double max);
     /**
      * Add an interaction group.  An interaction will be computed between every particle in set1 and every particle in set2.
-     * 
+     *
      * @param set1    the first set of particles forming the interaction group
      * @param set2    the second set of particles forming the interaction group
      * @return the index of the interaction group that was added
@@ -439,15 +465,15 @@ public:
     int addInteractionGroup(const std::set<int>& set1, const std::set<int>& set2);
     /**
      * Get the parameters for an interaction group.
-     * 
-     * @param index   the index of the interaction group for which to get parameters
-     * @param set1    the first set of particles forming the interaction group
-     * @param set2    the second set of particles forming the interaction group
+     *
+     * @param index        the index of the interaction group for which to get parameters
+     * @param[out] set1    the first set of particles forming the interaction group
+     * @param[out] set2    the second set of particles forming the interaction group
      */
     void getInteractionGroupParameters(int index, std::set<int>& set1, std::set<int>& set2) const;
     /**
      * Set the parameters for an interaction group.
-     * 
+     *
      * @param index   the index of the interaction group for which to set parameters
      * @param set1    the first set of particles forming the interaction group
      * @param set2    the second set of particles forming the interaction group
@@ -458,7 +484,7 @@ public:
      * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
      * Simply call setParticleParameters() to modify this object's parameters, then call updateParametersInContext()
      * to copy them over to the Context.
-     * 
+     *
      * This method has several limitations.  The only information it updates is the values of per-particle parameters.
      * All other aspects of the Force (the energy function, nonbonded method, cutoff distance, etc.) are unaffected and can
      * only be changed by reinitializing the Context.  Also, this method cannot be used to add new particles, only to change
@@ -494,6 +520,7 @@ private:
     std::vector<ExclusionInfo> exclusions;
     std::vector<FunctionInfo> functions;
     std::vector<InteractionGroupInfo> interactionGroups;
+    std::vector<int> energyParameterDerivatives;
 };
 
 /**

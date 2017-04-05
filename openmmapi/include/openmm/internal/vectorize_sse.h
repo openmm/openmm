@@ -37,6 +37,10 @@
 
 // This file defines classes and functions to simplify vectorizing code with SSE.
 
+// These two functions are defined in the vecmath library, which is linked into OpenMM.
+__m128 exp_ps(__m128);
+__m128 log_ps(__m128);
+
 /**
  * Determine whether ivec4 and fvec4 are supported on this processor.
  */
@@ -251,6 +255,14 @@ static inline fvec4 rsqrt(const fvec4& v) {
     fvec4 x2 = v*0.5f;
     y *= fvec4(1.5f)-x2*y*y;
     return y;
+}
+
+static inline fvec4 exp(const fvec4& v) {
+    return fvec4(exp_ps(v.val));
+}
+
+static inline fvec4 log(const fvec4& v) {
+    return fvec4(log_ps(v.val));
 }
 
 static inline float dot3(const fvec4& v1, const fvec4& v2) {

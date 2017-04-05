@@ -34,6 +34,7 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
+from __future__ import absolute_import, print_function
 
 #=============================================================================================
 # GLOBAL IMPORTS
@@ -54,7 +55,7 @@ import simtk.openmm
 from simtk.openmm.app import element as elem
 from simtk.openmm.app.internal.unitcell import computePeriodicBoxVectors
 from simtk.openmm.vec3 import Vec3
-import customgbforces as customgb
+from . import customgbforces as customgb
 
 #=============================================================================================
 # AMBER parmtop loader (from 'zander', by Randall J. Radmer)
@@ -551,87 +552,6 @@ class PrmtopLoader(object):
             self._excludedAtoms.append(atomList)
         return self._excludedAtoms
 
-    def getGBParms(self, gbmodel, elements):
-        """Return list giving GB params, Radius and screening factor"""
-        gb_List=[]
-        radii=[float(r) for r in self._raw_data["RADII"]]
-        screen=[float(s) for s in self._raw_data["SCREEN"]]
-        if gbmodel == 'GBn2':
-            alpha = [0 for i in self._raw_data['RADII']]
-            beta = [0 for i in self._raw_data['RADII']]
-            gamma = [0 for i in self._raw_data['RADII']]
-        # Update screening parameters for GBn if specified
-        if gbmodel == 'GBn':
-            if elements is None:
-                raise Exception('GBn model requires element information')
-            for i, element in enumerate(elements):
-                if element is elem.carbon:
-                    screen[i] = 0.48435382330
-                elif element is elem.hydrogen:
-                    screen[i] = 1.09085413633
-                elif element is elem.nitrogen:
-                    screen[i] = 0.700147318409
-                elif element is elem.oxygen:
-                    screen[i] = 1.06557401132
-                elif element is elem.sulfur:
-                    screen[i] = 0.602256336067
-                else:
-                    screen[i] = 0.5
-                # radii is currently in Angstroms right now. GBn lookup tables
-                # only support radii between 1.0 and 2.0
-                if radii[i] < 1.0 or radii[i] > 2.0:
-                    raise ValueError('GBn requires intrinsic radii between 1 and '
-                                     '2 Angstroms (%.3f found for atom %d)' %
-                                     (radii[i], i))
-        if gbmodel == 'GBn2':
-            if elements is None:
-                raise Exception('GBn2 model requires element information')
-            for i, element in enumerate(elements):
-                if element is elem.carbon:
-                    screen[i] = 1.058554
-                    alpha[i] = 0.733756
-                    beta[i] = 0.506378
-                    gamma[i] = 0.205844
-                elif element is elem.hydrogen:
-                    screen[i] = 1.425952
-                    alpha[i] = 0.788440
-                    beta[i] = 0.798699
-                    gamma[i] = 0.437334
-                elif element is elem.nitrogen:
-                    screen[i] = 0.733599
-                    alpha[i] = 0.503364
-                    beta[i] = 0.316828
-                    gamma[i] = 0.192915
-                elif element is elem.oxygen:
-                    screen[i] = 1.061039
-                    alpha[i] = 0.867814
-                    beta[i] = 0.876635
-                    gamma[i] = 0.387882
-                elif element is elem.sulfur:
-                    screen[i] = -0.703469
-                    alpha[i] = 0.867814
-                    beta[i] = 0.876635
-                    gamma[i] = 0.387882
-                else: # not optimized
-                    screen[i] = 0.5
-                    alpha[i] = 1.0
-                    beta[i] = 0.8
-                    gamma[i] = 4.85
-                # radii is currently in Angstroms right now. GBn lookup tables
-                # only support radii between 1.0 and 2.0
-                if radii[i] < 1.0 or radii[i] > 2.0:
-                    raise ValueError('GBn2 requires intrinsic radii between 1 and '
-                                     '2 Angstroms (%.3f found for atom %d)' %
-                                     (radii[i], i))
-        lengthConversionFactor = units.angstrom.conversion_factor_to(units.nanometer)
-        if gbmodel == 'GBn2':
-            for rad, scr, alp, bet, gam in zip(radii, screen, alpha, beta, gamma):
-                gb_List.append((rad*lengthConversionFactor, scr, alp, bet, gam))
-        else:
-            for rad, scr in zip(radii, screen):
-                gb_List.append((rad*lengthConversionFactor, scr))
-        return gb_List
-
     def getBoxBetaAndDimensions(self):
         """Return periodic boundary box beta angle and dimensions"""
         beta=float(self._raw_data["BOX_DIMENSIONS"][0])
@@ -672,7 +592,7 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
 
     OPTIONAL ARGUMENTS
       shake (String) - if 'h-bonds', will SHAKE all bonds to hydrogen and water; if 'all-bonds', will SHAKE all bonds and water (default: None)
-      gbmodel (String) - if 'OBC', OBC GBSA will be used; if 'GBVI', GB/VI will be used (default: None)
+      gbmodel (String) - if 'OBC', OBC GBSA will be used (default: None)
       soluteDielectric (float) - The solute dielectric constant to use in the implicit solvent model (default: 1.0)
       solventDielectric (float) - The solvent dielectric constant to use in the implicit solvent model (default: 78.5)
       implicitSolventKappa (float) - The Debye screening parameter corresponding to implicit solvent ionic strength
@@ -713,7 +633,7 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
         raise Exception("Cannot specify both a filename and a loader")
     if prmtop_filename is not None:
         # Load prmtop file.
-        if verbose: print "Reading prmtop file '%s'..." % prmtop_filename
+        if verbose: print("Reading prmtop file '%s'..." % prmtop_filename)
         prmtop = PrmtopLoader(prmtop_filename)
     else:
         prmtop = prmtop_loader
@@ -737,11 +657,11 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
         mm = simtk.openmm
 
     # Create OpenMM System.
-    if verbose: print "Creating OpenMM system..."
+    if verbose: print("Creating OpenMM system...")
     system = mm.System()
 
     # Populate system with atomic masses.
-    if verbose: print "Adding particles..."
+    if verbose: print("Adding particles...")
     for mass in prmtop.getMasses():
         system.addParticle(mass)
 
@@ -759,7 +679,7 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
                 system.addConstraint(iAtom, jAtom, rMin)
 
     # Add harmonic bonds.
-    if verbose: print "Adding bonds..."
+    if verbose: print("Adding bonds...")
     force = mm.HarmonicBondForce()
     if flexibleConstraints or (shake not in ('h-bonds', 'all-bonds', 'h-angles')):
         for (iAtom, jAtom, k, rMin) in prmtop.getBondsWithH():
@@ -771,7 +691,7 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
     system.addForce(force)
 
     # Add harmonic angles.
-    if verbose: print "Adding angles..."
+    if verbose: print("Adding angles...")
     force = mm.HarmonicAngleForce()
     if shake == 'h-angles':
         numConstrainedBonds = system.getNumConstraints()
@@ -809,14 +729,14 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
     system.addForce(force)
 
     # Add torsions.
-    if verbose: print "Adding torsions..."
+    if verbose: print("Adding torsions...")
     force = mm.PeriodicTorsionForce()
     for (iAtom, jAtom, kAtom, lAtom, forceConstant, phase, periodicity) in prmtop.getDihedrals():
         force.addTorsion(iAtom, jAtom, kAtom, lAtom, periodicity, phase, forceConstant)
     system.addForce(force)
 
     # Add nonbonded interactions.
-    if verbose: print "Adding nonbonded interactions..."
+    if verbose: print("Adding nonbonded interactions...")
     force = mm.NonbondedForce()
     if (prmtop.getIfBox() == 0):
         # System is non-periodic.
@@ -856,6 +776,8 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
             force.setNonbondedMethod(mm.NonbondedForce.Ewald)
         elif nonbondedMethod == 'PME':
             force.setNonbondedMethod(mm.NonbondedForce.PME)
+        elif nonbondedMethod == 'LJPME':
+            force.setNonbondedMethod(mm.NonbondedForce.LJPME)
         else:
             raise Exception("Cutoff method not understood.")
 
@@ -965,7 +887,7 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
             ii, jj, chg, sig, eps = force.getExceptionParameters(i)
             cforce.addExclusion(ii, jj)
         # Now set the various properties based on the NonbondedForce object
-        if nonbondedMethod in ('PME', 'Ewald', 'CutoffPeriodic'):
+        if nonbondedMethod in ('PME', 'LJPME', 'Ewald', 'CutoffPeriodic'):
             cforce.setNonbondedMethod(cforce.CutoffPeriodic)
             cforce.setCutoffDistance(nonbondedCutoff)
             cforce.setUseLongRangeCorrection(True)
@@ -1044,16 +966,13 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
         # Convert implicitSolventKappa to nanometers if it is a unit.
         if units.is_quantity(implicitSolventKappa):
             implicitSolventKappa = implicitSolventKappa.value_in_unit((1/units.nanometers).unit)
-        if verbose: print "Adding GB parameters..."
+        if verbose: print("Adding GB parameters...")
         charges = prmtop.getCharges()
         cutoff = None
         if nonbondedMethod != 'NoCutoff':
             cutoff = nonbondedCutoff
             if units.is_quantity(cutoff):
                 cutoff = cutoff.value_in_unit(units.nanometers)
-        gb_parms = prmtop.getGBParms(gbmodel, elements)
-        if gbmodel != 'OBC2' or implicitSolventKappa != 0:
-            gb_parms = customgb.convertParameters(gb_parms, gbmodel)
         if gbmodel == 'HCT':
             gb = customgb.GBSAHCTForce(solventDielectric, soluteDielectric, 'ACE', cutoff, implicitSolventKappa)
         elif gbmodel == 'OBC1':
@@ -1070,16 +989,45 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
         elif gbmodel == 'GBn2':
             gb = customgb.GBSAGBn2Force(solventDielectric, soluteDielectric, 'ACE', cutoff, implicitSolventKappa)
         else:
-            raise Exception("Illegal value specified for implicit solvent model")
-        for iAtom in range(prmtop.getNumAtoms()):
+            raise ValueError("Illegal value specified for implicit solvent model")
+        if isinstance(gb, mm.GBSAOBCForce):
+            # Built-in GBSAOBCForce does not have getStandardParameters, so use
+            # the one from the equivalent CustomGBForce
+            gb_parms = customgb.GBSAOBC2Force.getStandardParameters(topology)
+        else:
+            gb_parms = type(gb).getStandardParameters(topology)
+        # Replace radii and screen, but screen *only* gets replaced by the
+        # prmtop contents for HCT, OBC1, and OBC2. GBn and GBn2 both override
+        # the prmtop screen factors from LEaP in sander and pmemd
+        if gbmodel in ('HCT', 'OBC1', 'OBC2'):
+            screen = [float(s) for s in prmtop._raw_data['SCREEN']]
+        else:
+            screen = [gb_parm[1] for gb_parm in gb_parms]
+        radii = [float(r)/10 for r in prmtop._raw_data['RADII']]
+        warned = False
+        for i, (r, s) in enumerate(zip(radii, screen)):
+            if abs(r - gb_parms[i][0]) > 1e-4 or abs(s - gb_parms[i][1]) > 1e-4:
+                if not warned:
+                    warnings.warn(
+                        'Non-optimal GB parameters detected for GB model %s' % gbmodel)
+                    warned = True
+            gb_parms[i][0], gb_parms[i][1] = r, s
+
+        for charge, gb_parm in zip(charges, gb_parms):
             if gbmodel == 'OBC2' and implicitSolventKappa == 0:
-                gb.addParticle(charges[iAtom], gb_parms[iAtom][0], gb_parms[iAtom][1])
+                gb.addParticle(charge, gb_parm[0], gb_parm[1])
             elif gbmodel == 'GBn2':
-                gb.addParticle([charges[iAtom], gb_parms[iAtom][0], gb_parms[iAtom][1],
-                                gb_parms[iAtom][2], gb_parms[iAtom][3], gb_parms[iAtom][4]])
+                gb.addParticle([charge, gb_parm[0], gb_parm[1],
+                                gb_parm[2], gb_parm[3], gb_parm[4]])
             else:
-                gb.addParticle([charges[iAtom], gb_parms[iAtom][0], gb_parms[iAtom][1]])
+                gb.addParticle([charge, gb_parm[0], gb_parm[1]])
+
+        # OBC2 with kappa == 0 uses mm.GBSAOBC2Force, which doesn't have
+        # a finalize method
+        if not (gbmodel == 'OBC2' and implicitSolventKappa == 0.):
+            gb.finalize()
         system.addForce(gb)
+
         if nonbondedMethod == 'NoCutoff':
             gb.setNonbondedMethod(mm.NonbondedForce.NoCutoff)
         elif nonbondedMethod == 'CutoffNonPeriodic':
@@ -1093,8 +1041,6 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
         # This applies the reaction field dielectric to the NonbondedForce
         # created above. Do not bind force to another name before this!
         force.setReactionFieldDielectric(1.0)
-
-    # TODO: Add GBVI terms?
 
     return system
 

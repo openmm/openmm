@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Mark Friedrichs, Peter Eastman                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -100,7 +100,7 @@ public:
      * @param particle1     the index of the first particle connected by the bond
      * @param particle2     the index of the second particle connected by the bond
      * @param length        the equilibrium length of the bond, measured in nm
-     * @param k             the quadratic force constant for the bond
+     * @param quadraticK    the quadratic force constant for the bond
      * @return the index of the bond that was added
      */
 
@@ -109,11 +109,11 @@ public:
     /**
      * Get the force field parameters for a bond term.
      * 
-     * @param index         the index of the bond for which to get parameters
-     * @param particle1     the index of the first particle connected by the bond
-     * @param particle2     the index of the second particle connected by the bond
-     * @param length        the equilibrium length of the bond, measured in nm
-     * @param quadratic k   the quadratic force constant for the bond
+     * @param index              the index of the bond for which to get parameters
+     * @param[out] particle1     the index of the first particle connected by the bond
+     * @param[out] particle2     the index of the second particle connected by the bond
+     * @param[out] length        the equilibrium length of the bond, measured in nm
+     * @param[out] quadraticK    the quadratic force constant for the bond
      */
 
     void getBondParameters(int index, int& particle1, int& particle2, double& length, double& quadraticK) const;
@@ -121,11 +121,11 @@ public:
     /**
      * Set the force field parameters for a bond term.
      * 
-     * @param index     the index of the bond for which to set parameters
-     * @param particle1 the index of the first particle connected by the bond
-     * @param particle2 the index of the second particle connected by the bond
-     * @param length    the equilibrium length of the bond, measured in nm
-     * @param k         the quadratic force constant for the bond
+     * @param index       the index of the bond for which to set parameters
+     * @param particle1   the index of the first particle connected by the bond
+     * @param particle2   the index of the second particle connected by the bond
+     * @param length      the equilibrium length of the bond, measured in nm
+     * @param quadraticK  the quadratic force constant for the bond
      */
     void setBondParameters(int index, int particle1, int particle2, double length, double quadraticK);
     /**
@@ -139,20 +139,24 @@ public:
      */
     void updateParametersInContext(Context& context);
     /**
+     * Set whether this force should apply periodic boundary conditions when calculating displacements.
+     * Usually this is not appropriate for bonded forces, but there are situations when it can be useful.
+     */
+    void setUsesPeriodicBoundaryConditions(bool periodic);
+    /**
      * Returns whether or not this force makes use of periodic boundary
      * conditions.
      *
-     * @returns true if nonbondedMethod uses PBC and false otherwise
+     * @returns true if force uses PBC and false otherwise
      */
-    bool usesPeriodicBoundaryConditions() const {
-        return false;
-    }
+    bool usesPeriodicBoundaryConditions() const;
 protected:
     double _globalQuarticK, _globalCubicK;
     ForceImpl* createImpl() const;
 private:
     class BondInfo;
     std::vector<BondInfo> bonds;
+    bool usePeriodic;
 };
 
 /**

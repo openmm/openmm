@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2016 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -26,12 +26,16 @@
 #define __ReferenceAngleBondIxn_H__
 
 #include "ReferenceBondIxn.h"
+#include "openmm/Vec3.h"
 
 namespace OpenMM {
 
-class ReferenceAngleBondIxn : public ReferenceBondIxn {
+class OPENMM_EXPORT ReferenceAngleBondIxn : public ReferenceBondIxn {
 
    private:
+
+        bool usePeriodic;
+        Vec3 boxVectors[3];
 
    public:
 
@@ -51,6 +55,16 @@ class ReferenceAngleBondIxn : public ReferenceBondIxn {
 
        ~ReferenceAngleBondIxn();
 
+       /**---------------------------------------------------------------------------------------
+      
+         Set the force to use periodic boundary conditions.
+      
+         @param vectors    the vectors defining the periodic box
+      
+         --------------------------------------------------------------------------------------- */
+      
+      void setPeriodic(OpenMM::Vec3* vectors);
+
       /**---------------------------------------------------------------------------------------
 
          Get dEdR and energy term for angle bond
@@ -63,8 +77,8 @@ class ReferenceAngleBondIxn : public ReferenceBondIxn {
       
          --------------------------------------------------------------------------------------- */
       
-      void getPrefactorsGivenAngleCosine(RealOpenMM cosine, RealOpenMM* angleParameters,
-                                         RealOpenMM* dEdR, RealOpenMM* energyTerm) const;
+      void getPrefactorsGivenAngleCosine(double cosine, double* angleParameters,
+                                         double* dEdR, double* energyTerm) const;
       
       /**---------------------------------------------------------------------------------------
 
@@ -79,9 +93,9 @@ class ReferenceAngleBondIxn : public ReferenceBondIxn {
       
          --------------------------------------------------------------------------------------- */
       
-      void calculateBondIxn(int* atomIndices, std::vector<OpenMM::RealVec>& atomCoordinates,
-                            RealOpenMM* parameters, std::vector<OpenMM::RealVec>& forces,
-                            RealOpenMM* totalEnergy) const;
+      void calculateBondIxn(int* atomIndices, std::vector<OpenMM::Vec3>& atomCoordinates,
+                            double* parameters, std::vector<OpenMM::Vec3>& forces,
+                            double* totalEnergy, double* energyParamDerivs);
       
 
 };

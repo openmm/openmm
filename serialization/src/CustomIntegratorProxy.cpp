@@ -74,39 +74,40 @@ void* CustomIntegratorProxy::deserialize(const SerializationNode& node) const {
         throw OpenMMException("Unsupported version number");
     CustomIntegrator* integrator = new CustomIntegrator(node.getDoubleProperty("stepSize"));
     const SerializationNode& globalVariablesNode = node.getChildNode("GlobalVariables");
-    const map<string, string> &globalVariableProp = globalVariablesNode.getProperties();
-    for(map<string, string>::const_iterator cit = globalVariableProp.begin(); cit != globalVariableProp.end(); cit++) {
-        integrator->addGlobalVariable(cit->first, globalVariablesNode.getDoubleProperty(cit->first));
-    }
+    for (auto& prop : globalVariablesNode.getProperties())
+        integrator->addGlobalVariable(prop.first, globalVariablesNode.getDoubleProperty(prop.first));
     const SerializationNode& perDofVariablesNode = node.getChildNode("PerDofVariables");
-    const vector<SerializationNode>& perDofVariableList = perDofVariablesNode.getChildren();
     int count = 0;
-    for(vector<SerializationNode>::const_iterator cit=perDofVariableList.begin(); cit != perDofVariableList.end(); cit++, count++) {
-        const vector<SerializationNode>& perDofVariableVector = cit->getChildren();
-        integrator->addPerDofVariable(cit->getName(),0);
+    for (auto& var : perDofVariablesNode.getChildren()) {
+        integrator->addPerDofVariable(var.getName(), 0);
         vector<Vec3> perDofValues;
-        for(vector<SerializationNode>::const_iterator dit=perDofVariableVector.begin(); dit!=perDofVariableVector.end(); dit++) {
-            perDofValues.push_back(Vec3(dit->getDoubleProperty("x"),dit->getDoubleProperty("y"),dit->getDoubleProperty("z")));
-        }
+        for (auto& child : var.getChildren())
+            perDofValues.push_back(Vec3(child.getDoubleProperty("x"), child.getDoubleProperty("y"), child.getDoubleProperty("z")));
         integrator->setPerDofVariable(count, perDofValues);
+        count++;
     }
     const SerializationNode& computationsNode = node.getChildNode("Computations");
-    const vector<SerializationNode>& computationsList = computationsNode.getChildren();
-    for(vector<SerializationNode>::const_iterator cit = computationsList.begin(); cit != computationsList.end(); cit++) {
-        CustomIntegrator::ComputationType computationType = static_cast<CustomIntegrator::ComputationType>(cit->getIntProperty("computationType"));
+    for (auto& comp : computationsNode.getChildren()) {
+        CustomIntegrator::ComputationType computationType = static_cast<CustomIntegrator::ComputationType>(comp.getIntProperty("computationType"));
         // make sure that the int casts to a valid enum
-        if(computationType == CustomIntegrator::ComputeGlobal) {
-            integrator->addComputeGlobal(cit->getStringProperty("computationVariable"), cit->getStringProperty("computationExpression"));
-        } else if(computationType == CustomIntegrator::ComputePerDof) {
-            integrator->addComputePerDof(cit->getStringProperty("computationVariable"), cit->getStringProperty("computationExpression"));
-        } else if(computationType == CustomIntegrator::ComputeSum) {
-            integrator->addComputeSum(cit->getStringProperty("computationVariable"), cit->getStringProperty("computationExpression"));
-        } else if(computationType == CustomIntegrator::ConstrainPositions) {
+        if (computationType == CustomIntegrator::ComputeGlobal) {
+            integrator->addComputeGlobal(comp.getStringProperty("computationVariable"), comp.getStringProperty("computationExpression"));
+        } else if (computationType == CustomIntegrator::ComputePerDof) {
+            integrator->addComputePerDof(comp.getStringProperty("computationVariable"), comp.getStringProperty("computationExpression"));
+        } else if (computationType == CustomIntegrator::ComputeSum) {
+            integrator->addComputeSum(comp.getStringProperty("computationVariable"), comp.getStringProperty("computationExpression"));
+        } else if (computationType == CustomIntegrator::ConstrainPositions) {
             integrator->addConstrainPositions();
-        } else if(computationType == CustomIntegrator::ConstrainVelocities) {
+        } else if (computationType == CustomIntegrator::ConstrainVelocities) {
             integrator->addConstrainVelocities();
-        } else if(computationType == CustomIntegrator::UpdateContextState) {
+        } else if (computationType == CustomIntegrator::UpdateContextState) {
             integrator->addUpdateContextState();
+        } else if (computationType == CustomIntegrator::IfBlockStart) {
+            integrator->beginIfBlock(comp.getStringProperty("computationExpression"));
+        } else if (computationType == CustomIntegrator::WhileBlockStart) {
+            integrator->beginWhileBlock(comp.getStringProperty("computationExpression"));
+        } else if (computationType == CustomIntegrator::BlockEnd) {
+            integrator->endBlock();
         } else {
             throw(OpenMMException("Custom Integrator Deserialization: Unknown computation type"));
         }

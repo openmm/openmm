@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2016 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -25,7 +25,7 @@
 #ifndef __AmoebaReferencePiTorsionForce_H__
 #define __AmoebaReferencePiTorsionForce_H__
 
-#include "RealVec.h"
+#include "openmm/Vec3.h"
 #include <vector>
 
 namespace OpenMM {
@@ -40,7 +40,7 @@ public:
        
        --------------------------------------------------------------------------------------- */
  
-    AmoebaReferencePiTorsionForce() {};
+    AmoebaReferencePiTorsionForce() : usePeriodic(false) {};
  
     /**---------------------------------------------------------------------------------------
        
@@ -50,6 +50,16 @@ public:
  
     ~AmoebaReferencePiTorsionForce() {};
  
+    /**---------------------------------------------------------------------------------------
+
+       Set the force to use periodic boundary conditions.
+      
+       @param vectors    the vectors defining the periodic box
+      
+       --------------------------------------------------------------------------------------- */
+      
+    void setPeriodic(OpenMM::Vec3* vectors);
+
      /**---------------------------------------------------------------------------------------
      
         Calculate Amoeba torsion ixns (force and energy)
@@ -72,18 +82,21 @@ public:
      
         --------------------------------------------------------------------------------------- */
 
-    RealOpenMM calculateForceAndEnergy(int numPiTorsions, std::vector<OpenMM::RealVec>& posData,
-                                       const std::vector<int>&  particle1,
-                                       const std::vector<int>&  particle2,
-                                       const std::vector<int>&  particle3,
-                                       const std::vector<int>&  particle4,
-                                       const std::vector<int>&  particle5,
-                                       const std::vector<int>&  particle6,
-                                       const std::vector<RealOpenMM>& kTorsion,
-                                       std::vector<OpenMM::RealVec>& forceData) const;
+    double calculateForceAndEnergy(int numPiTorsions, std::vector<OpenMM::Vec3>& posData,
+                                   const std::vector<int>&  particle1,
+                                   const std::vector<int>&  particle2,
+                                   const std::vector<int>&  particle3,
+                                   const std::vector<int>&  particle4,
+                                   const std::vector<int>&  particle5,
+                                   const std::vector<int>&  particle6,
+                                   const std::vector<double>& kTorsion,
+                                   std::vector<OpenMM::Vec3>& forceData) const;
 
 
 private:
+
+    bool usePeriodic;
+    Vec3 boxVectors[3];
 
     /**---------------------------------------------------------------------------------------
     
@@ -102,10 +115,10 @@ private:
     
        --------------------------------------------------------------------------------------- */
     
-    RealOpenMM calculatePiTorsionIxn(const OpenMM::RealVec& positionAtomA, const OpenMM::RealVec& positionAtomB,
-                                     const OpenMM::RealVec& positionAtomC, const OpenMM::RealVec& positionAtomD,
-                                     const OpenMM::RealVec& positionAtomE, const OpenMM::RealVec& positionAtomF,
-                                     RealOpenMM kTorsion, OpenMM::RealVec* forces) const;
+    double calculatePiTorsionIxn(const OpenMM::Vec3& positionAtomA, const OpenMM::Vec3& positionAtomB,
+                                 const OpenMM::Vec3& positionAtomC, const OpenMM::Vec3& positionAtomD,
+                                 const OpenMM::Vec3& positionAtomE, const OpenMM::Vec3& positionAtomF,
+                                 double kTorsion, OpenMM::Vec3* forces) const;
          
 };
 

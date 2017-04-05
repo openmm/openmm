@@ -25,7 +25,7 @@
 #ifndef __ObcParameters_H__
 #define __ObcParameters_H__
 
-#include "RealVec.h"
+#include "openmm/Vec3.h"
 #include <vector>
 
 namespace OpenMM {
@@ -44,29 +44,29 @@ class ObcParameters {
    
       int _numberOfAtoms;
 
-      RealOpenMM _solventDielectric;
-      RealOpenMM _soluteDielectric;
-      RealOpenMM _electricConstant;
-      RealOpenMM _probeRadius;
-      RealOpenMM _pi4Asolv;
+      double _solventDielectric;
+      double _soluteDielectric;
+      double _electricConstant;
+      double _probeRadius;
+      double _pi4Asolv;
 
-      RealOpenMM _dielectricOffset;
-      RealOpenMM _alphaObc;
-      RealOpenMM _betaObc;
-      RealOpenMM _gammaObc;
+      double _dielectricOffset;
+      double _alphaObc;
+      double _betaObc;
+      double _gammaObc;
       ObcType _obcType;
 
       // scaled radius factors (S_kk in HCT paper)
 
-      std::vector<RealOpenMM> _atomicRadii;
-      std::vector<RealOpenMM> _scaledRadiusFactors;
+      std::vector<double> _atomicRadii;
+      std::vector<double> _scaledRadiusFactors;
 
       // cutoff and periodic boundary conditions
       
       bool _cutoff;
       bool _periodic;
-      OpenMM::RealVec _periodicBoxVectors[3];
-      RealOpenMM _cutoffDistance;
+      OpenMM::Vec3 _periodicBoxVectors[3];
+      double _cutoffDistance;
 
       /**---------------------------------------------------------------------------------------
       
@@ -76,7 +76,7 @@ class ObcParameters {
 
          --------------------------------------------------------------------------------------- */
       
-      void setDielectricOffset(RealOpenMM dielectricOffset);
+      void setDielectricOffset(double dielectricOffset);
 
    public:
 
@@ -116,7 +116,7 @@ class ObcParameters {
       
          --------------------------------------------------------------------------------------- */
 
-      RealOpenMM getElectricConstant() const;
+      double getElectricConstant() const;
 
       /**---------------------------------------------------------------------------------------
       
@@ -126,7 +126,7 @@ class ObcParameters {
       
          --------------------------------------------------------------------------------------- */
 
-      RealOpenMM getProbeRadius() const;
+      double getProbeRadius() const;
 
       /**---------------------------------------------------------------------------------------
       
@@ -136,18 +136,18 @@ class ObcParameters {
       
          --------------------------------------------------------------------------------------- */
 
-      void setProbeRadius(RealOpenMM probeRadius);
+      void setProbeRadius(double probeRadius);
 
       /**---------------------------------------------------------------------------------------
       
          Get pi4Asolv:  used in ACE approximation for nonpolar term  
-            ((RealOpenMM) M_PI)*4.0f*0.0049f*1000.0f; (Simbios) 
+            M_PI*4.0f*0.0049f*1000.0f; (Simbios) 
       
          @return pi4Asolv
       
          --------------------------------------------------------------------------------------- */
 
-      RealOpenMM getPi4Asolv() const;
+      double getPi4Asolv() const;
 
       /**---------------------------------------------------------------------------------------
       
@@ -155,7 +155,7 @@ class ObcParameters {
       
          --------------------------------------------------------------------------------------- */
 
-      void setPi4Asolv(RealOpenMM pi4Asolv);
+      void setPi4Asolv(double pi4Asolv);
 
       /**---------------------------------------------------------------------------------------
       
@@ -165,7 +165,7 @@ class ObcParameters {
       
          --------------------------------------------------------------------------------------- */
 
-      RealOpenMM getSolventDielectric() const;
+      double getSolventDielectric() const;
 
       /**---------------------------------------------------------------------------------------
       
@@ -175,7 +175,7 @@ class ObcParameters {
       
          --------------------------------------------------------------------------------------- */
 
-      void setSolventDielectric(RealOpenMM solventDielectric);
+      void setSolventDielectric(double solventDielectric);
 
       /**---------------------------------------------------------------------------------------
       
@@ -185,7 +185,7 @@ class ObcParameters {
       
          --------------------------------------------------------------------------------------- */
 
-      RealOpenMM getSoluteDielectric() const;
+      double getSoluteDielectric() const;
 
       /**---------------------------------------------------------------------------------------
       
@@ -195,7 +195,7 @@ class ObcParameters {
       
          --------------------------------------------------------------------------------------- */
 
-      void setSoluteDielectric(RealOpenMM soluteDielectric);
+      void setSoluteDielectric(double soluteDielectric);
 
       /**---------------------------------------------------------------------------------------
       
@@ -225,7 +225,7 @@ class ObcParameters {
       
          --------------------------------------------------------------------------------------- */
       
-      RealOpenMM getAlphaObc() const;
+      double getAlphaObc() const;
       
       /**---------------------------------------------------------------------------------------
       
@@ -235,7 +235,7 @@ class ObcParameters {
       
          --------------------------------------------------------------------------------------- */
       
-      RealOpenMM getBetaObc() const;
+      double getBetaObc() const;
       
       /**---------------------------------------------------------------------------------------
       
@@ -245,7 +245,7 @@ class ObcParameters {
       
          --------------------------------------------------------------------------------------- */
       
-      RealOpenMM getGammaObc() const;
+      double getGammaObc() const;
       
       /**---------------------------------------------------------------------------------------
       
@@ -255,7 +255,7 @@ class ObcParameters {
       
          --------------------------------------------------------------------------------------- */
       
-      RealOpenMM getDielectricOffset() const;
+      double getDielectricOffset() const;
 
       /**---------------------------------------------------------------------------------------
       
@@ -265,7 +265,7 @@ class ObcParameters {
       
          --------------------------------------------------------------------------------------- */
       
-      const std::vector<RealOpenMM>& getScaledRadiusFactors() const;
+      const std::vector<double>& getScaledRadiusFactors() const;
         
       /**---------------------------------------------------------------------------------------
       
@@ -275,7 +275,7 @@ class ObcParameters {
       
          --------------------------------------------------------------------------------------- */
       
-      void setScaledRadiusFactors(const std::vector<RealOpenMM>& scaledRadiusFactors);
+      void setScaledRadiusFactors(const std::vector<double>& scaledRadiusFactors);
         
       /**---------------------------------------------------------------------------------------
       
@@ -285,7 +285,7 @@ class ObcParameters {
       
          --------------------------------------------------------------------------------------- */
 
-      const std::vector<RealOpenMM>& getAtomicRadii() const;
+      const std::vector<double>& getAtomicRadii() const;
 
       /**---------------------------------------------------------------------------------------
       
@@ -295,7 +295,7 @@ class ObcParameters {
       
          --------------------------------------------------------------------------------------- */
 
-      void setAtomicRadii(const std::vector<RealOpenMM>& atomicRadii);
+      void setAtomicRadii(const std::vector<double>& atomicRadii);
 
 
       /**---------------------------------------------------------------------------------------
@@ -306,7 +306,7 @@ class ObcParameters {
 
          --------------------------------------------------------------------------------------- */
 
-      void setUseCutoff(RealOpenMM distance);
+      void setUseCutoff(double distance);
 
       /**---------------------------------------------------------------------------------------
 
@@ -322,7 +322,7 @@ class ObcParameters {
 
          --------------------------------------------------------------------------------------- */
 
-      RealOpenMM getCutoffDistance() const;
+      double getCutoffDistance() const;
 
       /**---------------------------------------------------------------------------------------
 
@@ -334,7 +334,7 @@ class ObcParameters {
 
          --------------------------------------------------------------------------------------- */
 
-      void setPeriodic(OpenMM::RealVec* vectors);
+      void setPeriodic(OpenMM::Vec3* vectors);
 
       /**---------------------------------------------------------------------------------------
 
@@ -350,7 +350,7 @@ class ObcParameters {
 
          --------------------------------------------------------------------------------------- */
 
-      const OpenMM::RealVec* getPeriodicBox();
+      const OpenMM::Vec3* getPeriodicBox();
 
 };
 

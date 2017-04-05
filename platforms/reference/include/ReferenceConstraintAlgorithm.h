@@ -25,8 +25,9 @@
 #ifndef __ReferenceConstraintAlgorithm_H__
 #define __ReferenceConstraintAlgorithm_H__
 
-#include "RealVec.h"
+#include "openmm/Vec3.h"
 #include "openmm/internal/windowsExport.h"
+#include "SimTKOpenMMRealType.h"
 #include <vector>
 
 namespace OpenMM {
@@ -47,8 +48,8 @@ public:
      * @param inverseMasses    1/mass
      * @param tolerance        the constraint tolerance
      */
-    virtual void apply(std::vector<OpenMM::RealVec>& atomCoordinates,
-                     std::vector<OpenMM::RealVec>& atomCoordinatesP, std::vector<RealOpenMM>& inverseMasses, RealOpenMM tolerance) = 0;
+    virtual void apply(std::vector<OpenMM::Vec3>& atomCoordinates,
+                     std::vector<OpenMM::Vec3>& atomCoordinatesP, std::vector<double>& inverseMasses, double tolerance) = 0;
 
     /**
      * Apply the constraint algorithm to velocities.
@@ -58,8 +59,8 @@ public:
      * @param inverseMasses    1/mass
      * @param tolerance        the constraint tolerance
      */
-    virtual void applyToVelocities(std::vector<OpenMM::RealVec>& atomCoordinates,
-                     std::vector<OpenMM::RealVec>& velocities, std::vector<RealOpenMM>& inverseMasses, RealOpenMM tolerance) = 0;
+    virtual void applyToVelocities(std::vector<OpenMM::Vec3>& atomCoordinates,
+                     std::vector<OpenMM::Vec3>& velocities, std::vector<double>& inverseMasses, double tolerance) = 0;
 };
 
 } // namespace OpenMM

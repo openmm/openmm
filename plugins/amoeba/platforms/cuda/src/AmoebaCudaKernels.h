@@ -328,6 +328,13 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+     /**
+     * Get the LabFrame dipole moments of all particles.
+     * 
+     * @param context    the Context for which to get the induced dipoles
+     * @param dipoles    the induced dipole moment of particle i is stored into the i'th element
+     */
+    void getLabFramePermanentDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
     /**
      * Get the induced dipole moments of all particles.
      * 
@@ -335,6 +342,13 @@ public:
      * @param dipoles    the induced dipole moment of particle i is stored into the i'th element
      */
     void getInducedDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
+    /**
+     * Get the total dipole moments of all particles.
+     * 
+     * @param context    the Context for which to get the induced dipoles
+     * @param dipoles    the induced dipole moment of particle i is stored into the i'th element
+     */
+    void getTotalDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
     /**
      * Execute the kernel to calculate the electrostatic potential
      *
@@ -363,6 +377,15 @@ public:
      * @param force      the AmoebaMultipoleForce to copy the parameters from
      */
     void copyParametersToContext(ContextImpl& context, const AmoebaMultipoleForce& force);
+    /**
+     * Get the parameters being used for PME.
+     * 
+     * @param alpha   the separation parameter
+     * @param nx      the number of grid points along the X axis
+     * @param ny      the number of grid points along the Y axis
+     * @param nz      the number of grid points along the Z axis
+     */
+    void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
 private:
     class ForceInfo;
     class SortTrait : public CudaSort::SortTrait {
@@ -370,19 +393,23 @@ private:
         int getKeySize() const {return 4;}
         const char* getDataType() const {return "int2";}
         const char* getKeyType() const {return "int";}
-        const char* getMinKey() const {return "INT_MIN";}
-        const char* getMaxKey() const {return "INT_MAX";}
-        const char* getMaxValue() const {return "make_int2(INT_MAX, INT_MAX)";}
+        const char* getMinKey() const {return "(-2147483647 - 1)";}
+        const char* getMaxKey() const {return "2147483647";}
+        const char* getMaxValue() const {return "make_int2(2147483647, 2147483647)";}
         const char* getSortKey() const {return "value.y";}
     };
     void initializeScaleFactors();
+    void computeInducedField(void** recipBoxVectorPointer);
     bool iterateDipolesByDIIS(int iteration);
+    void computeExtrapolatedDipoles(void** recipBoxVectorPointer);
     void ensureMultipolesValid(ContextImpl& context);
     template <class T, class T4, class M4> void computeSystemMultipoleMoments(ContextImpl& context, std::vector<double>& outputMultipoleMoments);
-    int numMultipoles, maxInducedIterations;
+    int numMultipoles, maxInducedIterations, maxExtrapolationOrder;
     int fixedFieldThreads, inducedFieldThreads, electrostaticsThreads;
-    double inducedEpsilon;
-    bool hasQuadrupoles, hasInitializedScaleFactors, hasInitializedFFT, multipolesAreValid;
+    int gridSizeX, gridSizeY, gridSizeZ;
+    double alpha, inducedEpsilon;
+    bool usePME, hasQuadrupoles, hasInitializedScaleFactors, hasInitializedFFT, multipolesAreValid, hasCreatedEvent;
+    AmoebaMultipoleForce::PolarizationType polarizationType;
     CudaContext& cu;
     const System& system;
     std::vector<int3> covalentFlagValues;
@@ -392,6 +419,8 @@ private:
     CudaArray* molecularQuadrupoles;
     CudaArray* labFrameDipoles;
     CudaArray* labFrameQuadrupoles;
+    CudaArray* sphericalDipoles;
+    CudaArray* sphericalQuadrupoles;
     CudaArray* fracDipoles;
     CudaArray* fracQuadrupoles;
     CudaArray* field;
@@ -410,6 +439,18 @@ private:
     CudaArray* prevErrors;
     CudaArray* diisMatrix;
     CudaArray* diisCoefficients;
+    CudaArray* extrapolatedDipole;
+    CudaArray* extrapolatedDipolePolar;
+    CudaArray* extrapolatedDipoleGk;
+    CudaArray* extrapolatedDipoleGkPolar;
+    CudaArray* inducedDipoleFieldGradient;
+    CudaArray* inducedDipoleFieldGradientPolar;
+    CudaArray* inducedDipoleFieldGradientGk;
+    CudaArray* inducedDipoleFieldGradientGkPolar;
+    CudaArray* extrapolatedDipoleFieldGradient;
+    CudaArray* extrapolatedDipoleFieldGradientPolar;
+    CudaArray* extrapolatedDipoleFieldGradientGk;
+    CudaArray* extrapolatedDipoleFieldGradientGkPolar;
     CudaArray* polarizability;
     CudaArray* covalentFlags;
     CudaArray* polarizationGroupFlags;
@@ -424,15 +465,16 @@ private:
     CudaArray* pmePhidp;
     CudaArray* pmeCphi;
     CudaArray* pmeAtomRange;
-    CudaArray* pmeAtomGridIndex;
     CudaArray* lastPositions;
     CudaSort* sort;
     cufftHandle fft;
     CUfunction computeMomentsKernel, recordInducedDipolesKernel, computeFixedFieldKernel, computeInducedFieldKernel, updateInducedFieldKernel, electrostaticsKernel, mapTorqueKernel;
-    CUfunction pmeGridIndexKernel, pmeSpreadFixedMultipolesKernel, pmeSpreadInducedDipolesKernel, pmeFinishSpreadChargeKernel, pmeConvolutionKernel;
+    CUfunction pmeSpreadFixedMultipolesKernel, pmeSpreadInducedDipolesKernel, pmeFinishSpreadChargeKernel, pmeConvolutionKernel;
     CUfunction pmeFixedPotentialKernel, pmeInducedPotentialKernel, pmeFixedForceKernel, pmeInducedForceKernel, pmeRecordInducedFieldDipolesKernel, computePotentialKernel;
-    CUfunction recordDIISDipolesKernel, buildMatrixKernel;
+    CUfunction recordDIISDipolesKernel, buildMatrixKernel, solveMatrixKernel;
+    CUfunction initExtrapolatedKernel, iterateExtrapolatedKernel, computeExtrapolatedKernel, addExtrapolatedGradientKernel;
     CUfunction pmeTransformMultipolesKernel, pmeTransformPotentialKernel;
+    CUevent syncEvent;
     CudaCalcAmoebaGeneralizedKirkwoodForceKernel* gkKernel;
     static const int PmeOrder = 5;
     static const int MaxPrevDIISDipoles = 20;
@@ -500,6 +542,7 @@ private:
     const System& system;
     bool includeSurfaceArea, hasInitializedKernels;
     int computeBornSumThreads, gkForceThreads, chainRuleThreads, ediffThreads;
+    AmoebaMultipoleForce::PolarizationType polarizationType;
     std::map<std::string, std::string> defines;
     CudaArray* params;
     CudaArray* bornSum;

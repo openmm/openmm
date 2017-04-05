@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -56,7 +56,7 @@ public:
     void contextDestroyed(ContextImpl& context) const;
 };
 
-class ReferencePlatform::PlatformData {
+class OPENMM_EXPORT ReferencePlatform::PlatformData {
 public:
     PlatformData(const System& system);
     ~PlatformData();
@@ -68,6 +68,7 @@ public:
     void* periodicBoxSize;
     void* periodicBoxVectors;
     void* constraints;
+    void* energyParameterDerivatives;
 };
 } // namespace OpenMM
 

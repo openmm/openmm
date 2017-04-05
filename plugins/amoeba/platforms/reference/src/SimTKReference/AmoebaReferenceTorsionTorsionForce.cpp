@@ -1,5 +1,4 @@
-
-/* Portions copyright (c) 2006 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2016 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -24,9 +23,17 @@
 
 #include "AmoebaReferenceForce.h"
 #include "AmoebaReferenceTorsionTorsionForce.h"
+#include "SimTKOpenMMRealType.h"
 
 using std::vector;
 using namespace OpenMM;
+
+void AmoebaReferenceTorsionTorsionForce::setPeriodic(OpenMM::Vec3* vectors) {
+    usePeriodic = true;
+    boxVectors[0] = vectors[0];
+    boxVectors[1] = vectors[1];
+    boxVectors[2] = vectors[2];
+}
 
 /**---------------------------------------------------------------------------------------
 
@@ -48,15 +55,9 @@ using namespace OpenMM;
    --------------------------------------------------------------------------------------- */
 
 void AmoebaReferenceTorsionTorsionForce::loadGridValuesFromEnclosingRectangle(
-           const std::vector< std::vector< std::vector<RealOpenMM> > >& grid,
-           RealOpenMM angle1, RealOpenMM angle2, RealOpenMM corners[2][2],
-           RealOpenMM* fValues, RealOpenMM* fValues1, RealOpenMM* fValues2, RealOpenMM* fValues12) const {
- 
-    // ---------------------------------------------------------------------------------------
- 
-    // static const std::string methodName = "loadGridValuesFromEnclosingRectangle";
- 
-    // ---------------------------------------------------------------------------------------
+           const std::vector< std::vector< std::vector<double> > >& grid,
+           double angle1, double angle2, double corners[2][2],
+           double* fValues, double* fValues1, double* fValues2, double* fValues12) const {
 
     // get 2 opposing grid indices for rectangle
 
@@ -117,50 +118,37 @@ void AmoebaReferenceTorsionTorsionForce::loadGridValuesFromEnclosingRectangle(
 
    --------------------------------------------------------------------------------------- */
 
-void AmoebaReferenceTorsionTorsionForce::getBicubicCoefficientMatrix(const RealOpenMM* y,
-        const RealOpenMM* y1, const RealOpenMM* y2, const RealOpenMM* y12, const RealOpenMM d1, const RealOpenMM d2,
-        RealOpenMM c[4][4]) const {
+void AmoebaReferenceTorsionTorsionForce::getBicubicCoefficientMatrix(const double* y,
+        const double* y1, const double* y2, const double* y12, const double d1, const double d2,
+        double c[4][4]) const {
 
-   // ---------------------------------------------------------------------------------------
-
-    //static const std::string methodName   = "AmoebaReferenceTorsionTorsionForce::getBicubicCoefficientMatrix";
-
-    static const RealOpenMM zero          = 0.0;
-    static const RealOpenMM one           = 1.0;
-    static const RealOpenMM two           = 2.0;
-    static const RealOpenMM three         = 3.0;
-    static const RealOpenMM four          = 4.0;
-    static const RealOpenMM five          = 5.0;
-    static const RealOpenMM six           = 6.0;
-    static const RealOpenMM nine          = 9.0;
- 
     // transpose of matrix in Tinker due to difference in C/Fotran row/column major
     // change indices when multiplying by weightMatrix
   
-    static const RealOpenMM weightMatrix[16][16] = {
-      {  one,  zero, -three,  two, zero, zero, zero,   zero, -three,   zero,   nine,   -six,  two, zero,   -six,  four },
-      { zero,  zero, zero,   zero, zero, zero, zero,   zero,  three,   zero,  -nine,    six, -two, zero,    six, -four },
-      { zero,  zero, zero,   zero, zero, zero, zero,   zero,   zero,   zero,   nine,   -six, zero, zero,   -six,  four },
-      { zero,  zero, three,  -two, zero, zero, zero,   zero,   zero,   zero,  -nine,    six, zero, zero,    six, -four },
-      { zero,  zero, zero,  zero,   one, zero, -three, two,    -two,   zero,    six,  -four,  one, zero, -three,   two },
-      { zero,  zero, zero,  zero,  zero, zero, zero,   zero,   -one,   zero,  three,   -two,  one, zero, -three,   two },
-      { zero,  zero, zero,  zero,  zero, zero, zero,   zero,   zero,   zero, -three,    two, zero, zero,  three,  -two },
-      { zero,  zero, zero,  zero,  zero, zero, three,  -two,   zero,   zero,   -six,   four, zero, zero,  three,  -two },
-      { zero,   one, -two,   one,  zero, zero, zero,   zero,   zero, -three,    six, -three, zero,  two,  -four,   two },
-      { zero,  zero, zero,  zero,  zero, zero, zero,   zero,   zero,  three,   -six,  three, zero, -two,   four,  -two },
-      { zero,  zero, zero,  zero,  zero, zero, zero,   zero,   zero,   zero, -three,  three, zero, zero,    two,  -two },
-      { zero,  zero, -one,   one,  zero, zero, zero,   zero,   zero,   zero,  three, -three, zero, zero,   -two,   two },
-      { zero,  zero, zero,  zero,  zero, one,  -two,    one,   zero,   -two,   four,   -two, zero,  one,   -two,   one },
-      { zero,  zero, zero,  zero,  zero, zero, zero,   zero,   zero,   -one,    two,   -one, zero,  one,   -two,   one },
-      { zero,  zero, zero,  zero,  zero, zero, zero,   zero,   zero,   zero,    one,   -one, zero, zero,   -one,   one },
-      { zero,  zero, zero,  zero,  zero, zero, -one,    one,   zero,   zero,    two,   -two, zero, zero,   -one,   one } };
+    static const double weightMatrix[16][16] = {
+      { 1.0,  0.0, -3.0,  2.0,  0.0,  0.0,  0.0,  0.0, -3.0,  0.0,  9.0, -6.0,  2.0,  0.0, -6.0,  4.0 },
+      { 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  3.0,  0.0, -9.0,  6.0, -2.0,  0.0,  6.0, -4.0 },
+      { 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  9.0, -6.0,  0.0,  0.0, -6.0,  4.0 },
+      { 0.0,  0.0,  3.0, -2.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -9.0,  6.0,  0.0,  0.0,  6.0, -4.0 },
+      { 0.0,  0.0,  0.0,  0.0,  1.0,  0.0, -3.0,  2.0, -2.0,  0.0,  6.0, -4.0,  1.0,  0.0, -3.0,  2.0 },
+      { 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -1.0,  0.0,  3.0, -2.0,  1.0,  0.0, -3.0,  2.0 },
+      { 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -3.0,  2.0,  0.0,  0.0,  3.0, -2.0 },
+      { 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  3.0, -2.0,  0.0,  0.0, -6.0,  4.0,  0.0,  0.0,  3.0, -2.0 },
+      { 0.0,  1.0, -2.0,  1.0,  0.0,  0.0,  0.0,  0.0,  0.0, -3.0,  6.0, -3.0,  0.0,  2.0, -4.0,  2.0 },
+      { 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  3.0, -6.0,  3.0,  0.0, -2.0,  4.0, -2.0 },
+      { 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -3.0,  3.0,  0.0,  0.0,  2.0, -2.0 },
+      { 0.0,  0.0, -1.0,  1.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  3.0, -3.0,  0.0,  0.0, -2.0,  2.0 },
+      { 0.0,  0.0,  0.0,  0.0,  0.0,  1.0, -2.0,  1.0,  0.0, -2.0,  4.0, -2.0,  0.0,  1.0, -2.0,  1.0 },
+      { 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -1.0,  2.0, -1.0,  0.0,  1.0, -2.0,  1.0 },
+      { 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  1.0, -1.0,  0.0,  0.0, -1.0,  1.0 },
+      { 0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -1.0,  1.0,  0.0,  0.0,  2.0, -2.0,  0.0,  0.0, -1.0,  1.0 } };
  
     // ---------------------------------------------------------------------------------------
  
     // pack y, y1, y2, y12 into single vector of dimension 16
  
-    std::vector<RealOpenMM> x(16);
-    RealOpenMM d1d2 = d1*d2;
+    std::vector<double> x(16);
+    double d1d2 = d1*d2;
     for (int ii = 0; ii < 4; ii++) {
        x[ii]     =   y[ii];
        x[ii+4]   =  y1[ii]*d1;
@@ -173,7 +161,7 @@ void AmoebaReferenceTorsionTorsionForce::getBicubicCoefficientMatrix(const RealO
     int rowIndex = 0;
     int colIndex = 0;
     for (int ii = 0; ii < 16; ii++) {
-       RealOpenMM sum = weightMatrix[0][ii]*x[0];
+       double sum = weightMatrix[0][ii]*x[0];
        for (int jj = 1; jj < 16; jj++) {
           sum += weightMatrix[jj][ii]*x[jj];
        }
@@ -217,40 +205,30 @@ void AmoebaReferenceTorsionTorsionForce::getBicubicCoefficientMatrix(const RealO
     --------------------------------------------------------------------------------------- */
  
 void AmoebaReferenceTorsionTorsionForce::getBicubicValues(
-         const RealOpenMM* y, const RealOpenMM* y1, const RealOpenMM* y2, const RealOpenMM* y12,
-         const RealOpenMM x1Lower, const RealOpenMM x1Upper,
-         const RealOpenMM x2Lower, const RealOpenMM x2Upper, 
-         const RealOpenMM gridValue1, const RealOpenMM gridValue2,
-         RealOpenMM* functionValue, RealOpenMM* functionValue1, RealOpenMM* functionValue2) const { 
- 
-    // ---------------------------------------------------------------------------------------
- 
-    // static const std::string methodName = "getBicubicValues";
+         const double* y, const double* y1, const double* y2, const double* y12,
+         const double x1Lower, const double x1Upper,
+         const double x2Lower, const double x2Upper, 
+         const double gridValue1, const double gridValue2,
+         double* functionValue, double* functionValue1, double* functionValue2) const { 
 
-    static const RealOpenMM zero          = 0.0;
-    static const RealOpenMM two           = 2.0;
-    static const RealOpenMM three         = 3.0;
- 
-    // ---------------------------------------------------------------------------------------
- 
     // get coefficent matrix
  
-    RealOpenMM coefficientMatrix[4][4];
+    double coefficientMatrix[4][4];
     getBicubicCoefficientMatrix(y, y1, y2, y12, x1Upper-x1Lower, x2Upper-x2Lower, coefficientMatrix);
  
     // apply coefficent matrix
  
-    RealOpenMM t = (gridValue1 - x1Lower)/(x1Upper - x1Lower);
-    RealOpenMM u = (gridValue2 - x2Lower)/(x2Upper - x2Lower);
+    double t = (gridValue1 - x1Lower)/(x1Upper - x1Lower);
+    double u = (gridValue2 - x2Lower)/(x2Upper - x2Lower);
  
-    *functionValue  = zero;
-    *functionValue1 = zero;
-    *functionValue2 = zero;
+    *functionValue  = 0.0;
+    *functionValue1 = 0.0;
+    *functionValue2 = 0.0;
  
     for (int ii = 3; ii >= 0; ii--) {
-       *functionValue   = t*(*functionValue)   + (     (coefficientMatrix[ii][3]*u +     coefficientMatrix[ii][2])*u + coefficientMatrix[ii][1])*u + coefficientMatrix[ii][0];
-       *functionValue1  = u*(*functionValue1)  + (three*coefficientMatrix[3][ii]*t + two*coefficientMatrix[2][ii])*t + coefficientMatrix[1][ii];
-       *functionValue2  = t*(*functionValue2)  + (three*coefficientMatrix[ii][3]*u + two*coefficientMatrix[ii][2])*u + coefficientMatrix[ii][1];
+       *functionValue   = t*(*functionValue)   + (   (coefficientMatrix[ii][3]*u +     coefficientMatrix[ii][2])*u + coefficientMatrix[ii][1])*u + coefficientMatrix[ii][0];
+       *functionValue1  = u*(*functionValue1)  + (3.0*coefficientMatrix[3][ii]*t + 2.0*coefficientMatrix[2][ii])*t + coefficientMatrix[1][ii];
+       *functionValue2  = t*(*functionValue2)  + (3.0*coefficientMatrix[ii][3]*u + 2.0*coefficientMatrix[ii][2])*u + coefficientMatrix[ii][1];
     }
  
     *functionValue1 /= (x1Upper - x1Lower);
@@ -274,35 +252,33 @@ void AmoebaReferenceTorsionTorsionForce::getBicubicValues(
     --------------------------------------------------------------------------------------- */
  
 int AmoebaReferenceTorsionTorsionForce::checkTorsionSign(
-         const RealVec& positionAtomA, const RealVec& positionAtomB,
-         const RealVec& positionAtomC, const RealVec& positionAtomD) const {
- 
-    // ---------------------------------------------------------------------------------------
- 
-    // static const std::string methodName = "AmoebaReferenceTorsionTorsionForce::checkTorsionSign";
- 
-    static const RealOpenMM zero          = 0.0;
-    static const int one                  = 1;
-
-    // ---------------------------------------------------------------------------------------
+         const Vec3& positionAtomA, const Vec3& positionAtomB,
+         const Vec3& positionAtomC, const Vec3& positionAtomD) const {
  
     // compute parallelpiped volume at atomC and return sign based on sign of volume
   
     enum { CA, CB, CD, LastDeltaIndex };
-    std::vector<RealOpenMM> deltaR[LastDeltaIndex];
+    std::vector<double> deltaR[LastDeltaIndex];
     for (unsigned int ii = 0; ii < LastDeltaIndex; ii++) {
         deltaR[ii].resize(3);
     }   
 
-    AmoebaReferenceForce::loadDeltaR(positionAtomC, positionAtomA, deltaR[CA]);
-    AmoebaReferenceForce::loadDeltaR(positionAtomC, positionAtomB, deltaR[CB]);
-    AmoebaReferenceForce::loadDeltaR(positionAtomC, positionAtomD, deltaR[CD]);
+    if (usePeriodic) {
+        AmoebaReferenceForce::loadDeltaRPeriodic(positionAtomC, positionAtomA, deltaR[CA], boxVectors);
+        AmoebaReferenceForce::loadDeltaRPeriodic(positionAtomC, positionAtomB, deltaR[CB], boxVectors);
+        AmoebaReferenceForce::loadDeltaRPeriodic(positionAtomC, positionAtomD, deltaR[CD], boxVectors);
+    }
+    else {
+        AmoebaReferenceForce::loadDeltaR(positionAtomC, positionAtomA, deltaR[CA]);
+        AmoebaReferenceForce::loadDeltaR(positionAtomC, positionAtomB, deltaR[CB]);
+        AmoebaReferenceForce::loadDeltaR(positionAtomC, positionAtomD, deltaR[CD]);
+    }
 
-    RealOpenMM volume = deltaR[CA][0]*(deltaR[CB][1]*deltaR[CD][2] - deltaR[CB][2]*deltaR[CD][1]) +
-                        deltaR[CB][0]*(deltaR[CD][1]*deltaR[CA][2] - deltaR[CD][2]*deltaR[CA][1]) +
-                        deltaR[CD][0]*(deltaR[CA][1]*deltaR[CB][2] - deltaR[CA][2]*deltaR[CB][1]);
+    double volume = deltaR[CA][0]*(deltaR[CB][1]*deltaR[CD][2] - deltaR[CB][2]*deltaR[CD][1]) +
+                    deltaR[CB][0]*(deltaR[CD][1]*deltaR[CA][2] - deltaR[CD][2]*deltaR[CA][1]) +
+                    deltaR[CD][0]*(deltaR[CA][1]*deltaR[CB][2] - deltaR[CA][2]*deltaR[CB][1]);
 
-    return (volume >= zero ? one : -one);
+    return (volume >= 0.0 ? 1.0 : -1.0);
  
  }
  
@@ -324,21 +300,12 @@ int AmoebaReferenceTorsionTorsionForce::checkTorsionSign(
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateTorsionTorsionIxn(const RealVec& positionAtomA, const RealVec& positionAtomB,
-                                                                          const RealVec& positionAtomC, const RealVec& positionAtomD,
-                                                                          const RealVec& positionAtomE, const RealVec* positionChiralCheckAtom,
-                                                                          const std::vector< std::vector< std::vector<RealOpenMM> > >& grid,
-                                                                          RealVec* forces) const {
- 
-   // ---------------------------------------------------------------------------------------
+double AmoebaReferenceTorsionTorsionForce::calculateTorsionTorsionIxn(const Vec3& positionAtomA, const Vec3& positionAtomB,
+                                                                      const Vec3& positionAtomC, const Vec3& positionAtomD,
+                                                                      const Vec3& positionAtomE, const Vec3* positionChiralCheckAtom,
+                                                                      const std::vector< std::vector< std::vector<double> > >& grid,
+                                                                      Vec3* forces) const {
 
-    //static const std::string methodName = "AmoebaReferenceTorsionTorsionForce::calculateForceAndEnergy";
- 
-    static const RealOpenMM zero          = 0.0;
-    static const RealOpenMM one           = 1.0;
-
-    // ---------------------------------------------------------------------------------------
- 
     enum { A, B, C, D, E, LastAtomIndex };
  
     // get deltaR between various combinations of the 4 atoms
@@ -346,20 +313,31 @@ RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateTorsionTorsionIxn(const 
 
     enum { BA, CB, DC, ED, T, U, V, UxV, CA, DB, EC, dT, dU, dU2, dV2, LastDeltaIndex };
  
-    std::vector<RealOpenMM> deltaR[LastDeltaIndex];
+    std::vector<double> deltaR[LastDeltaIndex];
     for (unsigned int ii = 0; ii < LastDeltaIndex; ii++) {
         deltaR[ii].resize(3);
     }   
 
-    AmoebaReferenceForce::loadDeltaR(positionAtomA, positionAtomB, deltaR[BA]);
-    AmoebaReferenceForce::loadDeltaR(positionAtomB, positionAtomC, deltaR[CB]);
-    AmoebaReferenceForce::loadDeltaR(positionAtomC, positionAtomD, deltaR[DC]);
-    AmoebaReferenceForce::loadDeltaR(positionAtomD, positionAtomE, deltaR[ED]);
-    AmoebaReferenceForce::loadDeltaR(positionAtomA, positionAtomC, deltaR[CA]);
-    AmoebaReferenceForce::loadDeltaR(positionAtomB, positionAtomD, deltaR[DB]);
-    AmoebaReferenceForce::loadDeltaR(positionAtomC, positionAtomE, deltaR[EC]);
+    if (usePeriodic) {
+        AmoebaReferenceForce::loadDeltaRPeriodic(positionAtomA, positionAtomB, deltaR[BA], boxVectors);
+        AmoebaReferenceForce::loadDeltaRPeriodic(positionAtomB, positionAtomC, deltaR[CB], boxVectors);
+        AmoebaReferenceForce::loadDeltaRPeriodic(positionAtomC, positionAtomD, deltaR[DC], boxVectors);
+        AmoebaReferenceForce::loadDeltaRPeriodic(positionAtomD, positionAtomE, deltaR[ED], boxVectors);
+        AmoebaReferenceForce::loadDeltaRPeriodic(positionAtomA, positionAtomC, deltaR[CA], boxVectors);
+        AmoebaReferenceForce::loadDeltaRPeriodic(positionAtomB, positionAtomD, deltaR[DB], boxVectors);
+        AmoebaReferenceForce::loadDeltaRPeriodic(positionAtomC, positionAtomE, deltaR[EC], boxVectors);
+    }
+    else {
+        AmoebaReferenceForce::loadDeltaR(positionAtomA, positionAtomB, deltaR[BA]);
+        AmoebaReferenceForce::loadDeltaR(positionAtomB, positionAtomC, deltaR[CB]);
+        AmoebaReferenceForce::loadDeltaR(positionAtomC, positionAtomD, deltaR[DC]);
+        AmoebaReferenceForce::loadDeltaR(positionAtomD, positionAtomE, deltaR[ED]);
+        AmoebaReferenceForce::loadDeltaR(positionAtomA, positionAtomC, deltaR[CA]);
+        AmoebaReferenceForce::loadDeltaR(positionAtomB, positionAtomD, deltaR[DB]);
+        AmoebaReferenceForce::loadDeltaR(positionAtomC, positionAtomE, deltaR[EC]);
+    }
 
-    std::vector<RealOpenMM> d[LastAtomIndex];
+    std::vector<double> d[LastAtomIndex];
     for (unsigned int ii = 0; ii < LastAtomIndex; ii++) {
         d[ii].resize(3);
     }   
@@ -370,51 +348,51 @@ RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateTorsionTorsionIxn(const 
  
     AmoebaReferenceForce::getCrossProduct(deltaR[U],  deltaR[V],  deltaR[UxV]);
  
-    RealOpenMM rT2  = AmoebaReferenceForce::getNormSquared3(deltaR[T]);
-    RealOpenMM rU2  = AmoebaReferenceForce::getNormSquared3(deltaR[U]);
-    RealOpenMM rV2  = AmoebaReferenceForce::getNormSquared3(deltaR[V]);
-    RealOpenMM rUrV = SQRT(rU2*rV2);
+    double rT2  = AmoebaReferenceForce::getNormSquared3(deltaR[T]);
+    double rU2  = AmoebaReferenceForce::getNormSquared3(deltaR[U]);
+    double rV2  = AmoebaReferenceForce::getNormSquared3(deltaR[V]);
+    double rUrV = sqrt(rU2*rV2);
  
-    RealOpenMM rTrU = SQRT(rT2*rU2);
+    double rTrU = sqrt(rT2*rU2);
  
-    if (rTrU <= zero || rUrV <= zero) {
-       return zero;
+    if (rTrU <= 0.0 || rUrV <= 0.0) {
+       return 0.0;
     }
-    RealOpenMM rCB         = AmoebaReferenceForce::getNorm3(deltaR[CB]);
-    RealOpenMM cosine1     = AmoebaReferenceForce::getDotProduct3(deltaR[T], deltaR[U]);
-               cosine1    /= rTrU;
+    double rCB         = AmoebaReferenceForce::getNorm3(deltaR[CB]);
+    double cosine1     = AmoebaReferenceForce::getDotProduct3(deltaR[T], deltaR[U]);
+           cosine1    /= rTrU;
  
-    RealOpenMM angle1;
-    if (cosine1 <= -one) {
-       angle1 = PI_M*RADIAN;
-    } else if (cosine1 >= one) {
-       angle1 = zero;
+    double angle1;
+    if (cosine1 <= -1.0) {
+       angle1 = M_PI*RADIAN;
+    } else if (cosine1 >= 1.0) {
+       angle1 = 0.0;
     } else {
-       angle1 = RADIAN*ACOS(cosine1);
+       angle1 = RADIAN*acos(cosine1);
     }
  
-    RealOpenMM sign = AmoebaReferenceForce::getDotProduct3(deltaR[BA], deltaR[U]);
-    if (sign < zero) {
+    double sign = AmoebaReferenceForce::getDotProduct3(deltaR[BA], deltaR[U]);
+    if (sign < 0.0) {
        angle1 = -angle1; 
     }
  
     // value1 = angle1;
  
-    RealOpenMM rDC         = AmoebaReferenceForce::getNorm3(deltaR[DC]);
-    RealOpenMM cosine2     = AmoebaReferenceForce::getDotProduct3(deltaR[U], deltaR[V]);
-               cosine2    /= rUrV;
+    double rDC         = AmoebaReferenceForce::getNorm3(deltaR[DC]);
+    double cosine2     = AmoebaReferenceForce::getDotProduct3(deltaR[U], deltaR[V]);
+           cosine2    /= rUrV;
  
-    RealOpenMM angle2;
-    if (cosine2 <= -one) {
-       angle2 = PI_M*RADIAN;
-    } else if (cosine1 >= one) {
-       angle2 = zero;
+    double angle2;
+    if (cosine2 <= -1.0) {
+       angle2 = M_PI*RADIAN;
+    } else if (cosine1 >= 1.0) {
+       angle2 = 0.0;
     } else {
-       angle2 = RADIAN*ACOS(cosine2);
+       angle2 = RADIAN*acos(cosine2);
     }
  
     sign = AmoebaReferenceForce::getDotProduct3(deltaR[CB], deltaR[V]);
-    if (sign < zero) {
+    if (sign < 0.0) {
        angle2 = -angle2; 
     }
  
@@ -423,18 +401,18 @@ RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateTorsionTorsionIxn(const 
   
     if (positionChiralCheckAtom) {
         sign = checkTorsionSign(*positionChiralCheckAtom, positionAtomB, positionAtomC, positionAtomD);
-        if (sign < zero) {
+        if (sign < 0.0) {
            angle1 = -angle1;
            angle2 = -angle2;
         }
     } else {
-        sign = one;
+        sign = 1.0;
     }
 
     // bicubic interpolation
  
-    RealOpenMM corners[2][2];
-    RealOpenMM eValues[4][4];
+    double corners[2][2];
+    double eValues[4][4];
     enum { E0, E1, E2, E12, LastEIndex };
     loadGridValuesFromEnclosingRectangle(grid, angle1, angle2, corners, eValues[E0], eValues[E1], eValues[E2], eValues[E12]);
     
@@ -443,9 +421,9 @@ RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateTorsionTorsionIxn(const 
     // get corners of grid encompassing point
     // get width/height of encompassing rectangle
  
-    RealOpenMM gridEnergy;
-    RealOpenMM dEdAngle1;
-    RealOpenMM dEdAngle2;
+    double gridEnergy;
+    double dEdAngle1;
+    double dEdAngle2;
     AmoebaReferenceTorsionTorsionForce::getBicubicValues(
           eValues[E0], eValues[E1], eValues[E2], eValues[E12],
           corners[0][0], corners[0][1], corners[1][0], corners[1][1],
@@ -457,8 +435,8 @@ RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateTorsionTorsionIxn(const 
     AmoebaReferenceForce::getCrossProduct(deltaR[T], deltaR[CB], deltaR[dT]);
     AmoebaReferenceForce::getCrossProduct(deltaR[U], deltaR[CB], deltaR[dU]);
  
-    RealOpenMM factorT =  dEdAngle1/(rCB*rT2);
-    RealOpenMM factorU = -dEdAngle1/(rCB*rU2);
+    double factorT =  dEdAngle1/(rCB*rT2);
+    double factorU = -dEdAngle1/(rCB*rU2);
  
     deltaR[dT][0] *= factorT;
     deltaR[dT][1] *= factorT;
@@ -471,7 +449,7 @@ RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateTorsionTorsionIxn(const 
     AmoebaReferenceForce::getCrossProduct(deltaR[dT], deltaR[CB], d[A]);
     AmoebaReferenceForce::getCrossProduct(deltaR[dU], deltaR[CB], d[D]);
  
-    std::vector<RealOpenMM> tmp[3];
+    std::vector<double> tmp[3];
     for (unsigned int ii = 0; ii < 3; ii++) {
         tmp[ii].resize(3);
     }   
@@ -494,8 +472,8 @@ RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateTorsionTorsionIxn(const 
     AmoebaReferenceForce::getCrossProduct(deltaR[U], deltaR[DC], deltaR[dU2]);
     AmoebaReferenceForce::getCrossProduct(deltaR[V], deltaR[DC], deltaR[dV2]);
  
-    RealOpenMM factorU2 =  dEdAngle2/(rDC*rU2);
-    RealOpenMM factorV2 = -dEdAngle2/(rDC*rV2);
+    double factorU2 =  dEdAngle2/(rDC*rU2);
+    double factorV2 = -dEdAngle2/(rDC*rV2);
  
     deltaR[dU2][0] *= factorU2;
     deltaR[dU2][1] *= factorU2;
@@ -550,17 +528,17 @@ RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateTorsionTorsionIxn(const 
     return gridEnergy;
 }
 
-RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateForceAndEnergy(int numTorsionTorsions, vector<RealVec>& posData,
-                                                                       const std::vector<int>&  particle1,
-                                                                       const std::vector<int>&  particle2,
-                                                                       const std::vector<int>&  particle3,
-                                                                       const std::vector<int>&  particle4,
-                                                                       const std::vector<int>&  particle5,
-                                                                       const std::vector<int>&  chiralCheckAtom,
-                                                                       const std::vector<int>&  gridIndices,
-                                                                       const std::vector< std::vector< std::vector< std::vector<RealOpenMM> > > >& torsionTorsionGrids,
-                                                                       vector<RealVec>& forceData) const {
-    RealOpenMM energy  = 0.0; 
+double AmoebaReferenceTorsionTorsionForce::calculateForceAndEnergy(int numTorsionTorsions, vector<Vec3>& posData,
+                                                                   const std::vector<int>&  particle1,
+                                                                   const std::vector<int>&  particle2,
+                                                                   const std::vector<int>&  particle3,
+                                                                   const std::vector<int>&  particle4,
+                                                                   const std::vector<int>&  particle5,
+                                                                   const std::vector<int>&  chiralCheckAtom,
+                                                                   const std::vector<int>&  gridIndices,
+                                                                   const std::vector< std::vector< std::vector< std::vector<double> > > >& torsionTorsionGrids,
+                                                                   vector<Vec3>& forceData) const {
+    double energy  = 0.0; 
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(numTorsionTorsions); ii++) {
 
         int particle1Index       = particle1[ii];
@@ -573,8 +551,8 @@ RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateForceAndEnergy(int numTo
 
         int gridIndex            = gridIndices[ii];
 
-        RealVec forces[5];
-        RealVec* chiralCheckAtom;
+        Vec3 forces[5];
+        Vec3* chiralCheckAtom;
         if (chiralCheckAtomIndex > -1) {
             chiralCheckAtom = &posData[chiralCheckAtomIndex];
         } else {

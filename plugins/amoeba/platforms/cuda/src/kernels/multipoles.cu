@@ -1,22 +1,46 @@
 extern "C" __global__ void computeLabFrameMoments(real4* __restrict__ posq, int4* __restrict__ multipoleParticles, float* __restrict__ molecularDipoles,
-        float* __restrict__ molecularQuadrupoles, real* __restrict__ labFrameDipoles, real* __restrict__ labFrameQuadrupoles) {
-    // get coordinates of this atom and the z & x axis atoms
-    // compute the vector between the atoms and 1/sqrt(d2), d2 is distance between
-    // this atom and the axis atom
- 
-    // this atom is referred to as the k-atom in notes below
- 
-    // code common to ZThenX and Bisector
-    
+        float* __restrict__ molecularQuadrupoles, real* __restrict__ labFrameDipoles, real* __restrict__ labFrameQuadrupoles,
+        real* __restrict__ sphericalDipoles, real* __restrict__ sphericalQuadrupoles) {
     for (int atom = blockIdx.x*blockDim.x+threadIdx.x; atom < NUM_ATOMS; atom += gridDim.x*blockDim.x) {
+        // Load the spherical multipoles.
+        
+        int offset = 3*atom;
+        sphericalDipoles[offset+0] = molecularDipoles[offset+2]; // z -> Q_10
+        sphericalDipoles[offset+1] = molecularDipoles[offset+0]; // x -> Q_11c
+        sphericalDipoles[offset+2] = molecularDipoles[offset+1]; // y -> Q_11s
+        offset = 5*atom;
+        sphericalQuadrupoles[offset+0] = -3.0f*(molecularQuadrupoles[offset+0]+molecularQuadrupoles[offset+3]); // zz -> Q_20
+        sphericalQuadrupoles[offset+1] = (2*SQRT((real) 3))*molecularQuadrupoles[offset+2]; // xz -> Q_21c
+        sphericalQuadrupoles[offset+2] = (2*SQRT((real) 3))*molecularQuadrupoles[offset+4]; // yz -> Q_21s
+        sphericalQuadrupoles[offset+3] = SQRT((real) 3)*(molecularQuadrupoles[offset+0]-molecularQuadrupoles[offset+3]); // xx-yy -> Q_22c
+        sphericalQuadrupoles[offset+4] = (2*SQRT((real) 3))*molecularQuadrupoles[offset+1]; // xy -> Q_22s
+        
+        // get coordinates of this atom and the z & x axis atoms
+        // compute the vector between the atoms and 1/sqrt(d2), d2 is distance between
+        // this atom and the axis atom
+
+        // this atom is referred to as the k-atom in notes below
+
+        // code common to ZThenX and Bisector
+        
         int4 particles = multipoleParticles[atom];
-        if (particles.x >= 0 && particles.z >= 0) {
+        if (particles.z >= 0) {
             real4 thisParticlePos = posq[atom];
             real4 posZ = posq[particles.z];
-            real3 vectorZ = make_real3(posZ.x-thisParticlePos.x, posZ.y-thisParticlePos.y, posZ.z-thisParticlePos.z);
-            real4 posX = posq[particles.x];
-            real3 vectorX = make_real3(posX.x-thisParticlePos.x, posX.y-thisParticlePos.y, posX.z-thisParticlePos.z);
+            real3 vectorZ = normalize(make_real3(posZ.x-thisParticlePos.x, posZ.y-thisParticlePos.y, posZ.z-thisParticlePos.z));
             int axisType = particles.w; 
+            real4 posX;
+            real3 vectorX;
+            if (axisType >= 4) {
+                if (fabs(vectorZ.x) < 0.866)
+                    vectorX = make_real3(1, 0, 0);
+                else
+                    vectorX = make_real3(0, 1, 0);
+            }
+            else {
+                posX = posq[particles.x];
+                vectorX = make_real3(posX.x-thisParticlePos.x, posX.y-thisParticlePos.y, posX.z-thisParticlePos.z);
+            }
     
             /*
                 z-only
@@ -60,9 +84,7 @@ extern "C" __global__ void computeLabFrameMoments(real4* __restrict__ posq, int4
             */
         
             // branch based on axis type
-             
-            vectorZ = normalize(vectorZ);
-        
+                    
             if (axisType == 1) {
         
                 // bisector
@@ -94,8 +116,6 @@ extern "C" __global__ void computeLabFrameMoments(real4* __restrict__ posq, int4
                 }
          
             }
-            else if (axisType >= 4)
-                vectorX = make_real3((real) 0.1f);
             
             // x = x - (x.z)z
         
@@ -123,7 +143,7 @@ extern "C" __global__ void computeLabFrameMoments(real4* __restrict__ posq, int4
             // Check the chirality and see whether it needs to be reversed
             
             bool reverse = false;
-            if (axisType != 0 && particles.x >= 0 && particles.y >=0 && particles.z >= 0) {
+            if (axisType == 0 && particles.x >= 0 && particles.y >=0 && particles.z >= 0) {
                 real4 posY = posq[particles.y];
                 real delta[4][3];
 
@@ -149,7 +169,7 @@ extern "C" __global__ void computeLabFrameMoments(real4* __restrict__ posq, int4
         
             // Transform the dipole
             
-            unsigned int offset = 3*atom;
+            offset = 3*atom;
             real molDipole[3];
             molDipole[0] = molecularDipoles[offset];
             molDipole[1] = molecularDipoles[offset+1];
@@ -192,6 +212,67 @@ extern "C" __global__ void computeLabFrameMoments(real4* __restrict__ posq, int4
             labFrameQuadrupoles[offset+4] = vectorX.y*(vectorX.z*mPoleXX + vectorY.z*mPoleXY + vectorZ.z*mPoleXZ)
                                         + vectorY.y*(vectorX.z*mPoleXY + vectorY.z*mPoleYY + vectorZ.z*mPoleYZ)
                                         + vectorZ.y*(vectorX.z*mPoleXZ + vectorY.z*mPoleYZ + vectorZ.z*mPoleZZ);
+            
+            // ---------------------------------------------------------------------------------------
+            
+            // Now transform the spherical multipoles.  First do the dipoles.
+
+            offset = 3*atom;
+            real sphericalDipole[3];
+            sphericalDipole[0] = sphericalDipoles[offset];
+            sphericalDipole[1] = sphericalDipoles[offset+1];
+            sphericalDipole[2] = sphericalDipoles[offset+2];
+            if (reverse)
+                sphericalDipole[2] *= -1;
+            sphericalDipoles[offset] = sphericalDipole[0]*vectorZ.z + sphericalDipole[1]*vectorX.z + sphericalDipole[2]*vectorY.z;
+            sphericalDipoles[offset+1] = sphericalDipole[0]*vectorZ.x + sphericalDipole[1]*vectorX.x + sphericalDipole[2]*vectorY.x;
+            sphericalDipoles[offset+2] = sphericalDipole[0]*vectorZ.y + sphericalDipole[1]*vectorX.y + sphericalDipole[2]*vectorY.y;
+            
+            // Now the quadrupoles.
+
+            offset = 5*atom;
+            real sphericalQuadrupole[5];
+            sphericalQuadrupole[0] = sphericalQuadrupoles[offset];
+            sphericalQuadrupole[1] = sphericalQuadrupoles[offset+1];
+            sphericalQuadrupole[2] = sphericalQuadrupoles[offset+2];
+            sphericalQuadrupole[3] = sphericalQuadrupoles[offset+3];
+            sphericalQuadrupole[4] = sphericalQuadrupoles[offset+4];
+            if (reverse) {
+                sphericalQuadrupole[2] *= -1;
+                sphericalQuadrupole[4] *= -1;
+            }
+            real rotatedQuadrupole[5] = {0, 0, 0, 0, 0};
+            real sqrtThree = SQRT((real) 3);
+            rotatedQuadrupole[0] += sphericalQuadrupole[0]*0.5f*(3.0f*vectorZ.z*vectorZ.z - 1.0f) +
+                                    sphericalQuadrupole[1]*sqrtThree*vectorZ.z*vectorX.z +
+                                    sphericalQuadrupole[2]*sqrtThree*vectorZ.z*vectorY.z +
+                                    sphericalQuadrupole[3]*0.5f*sqrtThree*(vectorX.z*vectorX.z - vectorY.z*vectorY.z) +
+                                    sphericalQuadrupole[4]*sqrtThree*vectorX.z*vectorY.z;
+            rotatedQuadrupole[1] += sphericalQuadrupole[0]*sqrtThree*vectorZ.z*vectorZ.x +
+                                    sphericalQuadrupole[1]*(vectorZ.x*vectorX.z + vectorZ.z*vectorX.x) +
+                                    sphericalQuadrupole[2]*(vectorZ.x*vectorY.z + vectorZ.z*vectorY.x) +
+                                    sphericalQuadrupole[3]*(vectorX.z*vectorX.x - vectorY.z*vectorY.x) +
+                                    sphericalQuadrupole[4]*(vectorX.x*vectorY.z + vectorX.z*vectorY.x);
+            rotatedQuadrupole[2] += sphericalQuadrupole[0]*sqrtThree*vectorZ.z*vectorZ.y +
+                                    sphericalQuadrupole[1]*(vectorZ.y*vectorX.z + vectorZ.z*vectorX.y) +
+                                    sphericalQuadrupole[2]*(vectorZ.y*vectorY.z + vectorZ.z*vectorY.y) +
+                                    sphericalQuadrupole[3]*(vectorX.z*vectorX.y - vectorY.z*vectorY.y) +
+                                    sphericalQuadrupole[4]*(vectorX.y*vectorY.z + vectorX.z*vectorY.y);
+            rotatedQuadrupole[3] += sphericalQuadrupole[0]*0.5f*sqrtThree*(vectorZ.x*vectorZ.x - vectorZ.y*vectorZ.y) +
+                                    sphericalQuadrupole[1]*(vectorZ.x*vectorX.x - vectorZ.y*vectorX.y) +
+                                    sphericalQuadrupole[2]*(vectorZ.x*vectorY.x - vectorZ.y*vectorY.y) +
+                                    sphericalQuadrupole[3]*0.5f*(vectorX.x*vectorX.x - vectorX.y*vectorX.y - vectorY.x*vectorY.x + vectorY.y*vectorY.y) +
+                                    sphericalQuadrupole[4]*(vectorX.x*vectorY.x - vectorX.y*vectorY.y);
+            rotatedQuadrupole[4] += sphericalQuadrupole[0]*sqrtThree*vectorZ.x*vectorZ.y +
+                                    sphericalQuadrupole[1]*(vectorZ.y*vectorX.x + vectorZ.x*vectorX.y) +
+                                    sphericalQuadrupole[2]*(vectorZ.y*vectorY.x + vectorZ.x*vectorY.y) +
+                                    sphericalQuadrupole[3]*(vectorX.x*vectorX.y - vectorY.x*vectorY.y) +
+                                    sphericalQuadrupole[4]*(vectorX.y*vectorY.x + vectorX.x*vectorY.y);
+            sphericalQuadrupoles[offset] = rotatedQuadrupole[0];
+            sphericalQuadrupoles[offset+1] = rotatedQuadrupole[1];
+            sphericalQuadrupoles[offset+2] = rotatedQuadrupole[2];
+            sphericalQuadrupoles[offset+3] = rotatedQuadrupole[3];
+            sphericalQuadrupoles[offset+4] = rotatedQuadrupole[4];
         }
         else {
             labFrameDipoles[3*atom] = molecularDipoles[3*atom];
@@ -283,8 +364,12 @@ extern "C" __global__ void mapTorqueToForce(unsigned long long* __restrict__ for
             norms[U] = normVector(vector[U]);
             if (axisType != 4 && particles.x >= 0)
                 vector[V] = atomPos - trimTo3(posq[particles.x]);
-            else
-                vector[V] = make_real3(0.1f);
+            else {
+                if (fabs(vector[U].x/norms[U]) < 0.866)
+                    vector[V] = make_real3(1, 0, 0);
+                else
+                    vector[V] = make_real3(0, 1, 0);
+            }
             norms[V] = normVector(vector[V]);
         
             // W = UxV
@@ -409,7 +494,7 @@ extern "C" __global__ void mapTorqueToForce(unsigned long long* __restrict__ for
             else if (axisType == 4) {
                 // z-only
         
-                forces[Z] = vector[UV]*dphi[V]/(norms[U]*angles[UV][1]);
+                forces[Z] = vector[UV]*dphi[V]/(norms[U]*angles[UV][1]) + vector[UW]*dphi[W]/norms[U];
                 forces[X] = make_real3(0);
                 forces[Y] = make_real3(0);
                 forces[I] = -forces[Z];

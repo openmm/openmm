@@ -78,7 +78,7 @@ void testFreeParticles() {
     integ.step(1000);
     vector<double> ke(numCopies, 0.0);
     vector<double> rg(numParticles, 0.0);
-    const RealOpenMM hbar = 1.054571628e-34*AVOGADRO/(1000*1e-12);
+    const double hbar = 1.054571628e-34*AVOGADRO/(1000*1e-12);
     for (int i = 0; i < numSteps; i++) {
         integ.step(1);
         vector<State> state(numCopies);
@@ -554,7 +554,7 @@ int main(int argc, char* argv[]) {
     try {
         registerRPMDCudaKernelFactories();
         if (argc > 1)
-            Platform::getPlatformByName("CUDA").setPropertyDefaultValue("CudaPrecision", string(argv[1]));
+            Platform::getPlatformByName("CUDA").setPropertyDefaultValue("Precision", string(argv[1]));
         testFreeParticles();
         testParaHydrogen();
         testCMMotionRemoval();

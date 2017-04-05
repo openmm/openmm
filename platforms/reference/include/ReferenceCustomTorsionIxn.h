@@ -1,4 +1,4 @@
-/* Portions copyright (c) 2010-2013 Stanford University and Simbios.
+/* Portions copyright (c) 2010-2016 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -25,7 +25,7 @@
 #define __ReferenceCustomTorsionIxn_H__
 
 #include "ReferenceBondIxn.h"
-#include "lepton/CompiledExpression.h"
+#include "openmm/internal/CompiledExpressionSet.h"
 
 namespace OpenMM {
 
@@ -34,11 +34,13 @@ class ReferenceCustomTorsionIxn : public ReferenceBondIxn {
    private:
       Lepton::CompiledExpression energyExpression;
       Lepton::CompiledExpression forceExpression;
-      std::vector<double*> energyParams;
-      std::vector<double*> forceParams;
-      double* energyTheta;
-      double* forceTheta;
+      std::vector<Lepton::CompiledExpression> energyParamDerivExpressions;
+      CompiledExpressionSet expressionSet;
+      std::vector<int> torsionParamIndex;
+      int thetaIndex;
       int numParameters;
+      bool usePeriodic;
+      Vec3 boxVectors[3];
 
    public:
 
@@ -49,7 +51,8 @@ class ReferenceCustomTorsionIxn : public ReferenceBondIxn {
          --------------------------------------------------------------------------------------- */
 
        ReferenceCustomTorsionIxn(const Lepton::CompiledExpression& energyExpression, const Lepton::CompiledExpression& forceExpression,
-                              const std::vector<std::string>& parameterNames, std::map<std::string, double> globalParameters);
+                              const std::vector<std::string>& parameterNames, std::map<std::string, double> globalParameters,
+                              const std::vector<Lepton::CompiledExpression> energyParamDerivExpressions);
 
       /**---------------------------------------------------------------------------------------
 
@@ -58,6 +61,16 @@ class ReferenceCustomTorsionIxn : public ReferenceBondIxn {
          --------------------------------------------------------------------------------------- */
 
        ~ReferenceCustomTorsionIxn();
+
+       /**---------------------------------------------------------------------------------------
+      
+         Set the force to use periodic boundary conditions.
+      
+         @param vectors    the vectors defining the periodic box
+      
+         --------------------------------------------------------------------------------------- */
+      
+       void setPeriodic(OpenMM::Vec3* vectors);
 
       /**---------------------------------------------------------------------------------------
 
@@ -71,9 +84,9 @@ class ReferenceCustomTorsionIxn : public ReferenceBondIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateBondIxn(int* atomIndices, std::vector<OpenMM::RealVec>& atomCoordinates,
-                            RealOpenMM* parameters, std::vector<OpenMM::RealVec>& forces,
-                            RealOpenMM* totalEnergy) const;
+      void calculateBondIxn(int* atomIndices, std::vector<OpenMM::Vec3>& atomCoordinates,
+                            double* parameters, std::vector<OpenMM::Vec3>& forces,
+                            double* totalEnergy, double* energyParamDerivs);
 
 
 };

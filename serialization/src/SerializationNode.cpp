@@ -56,16 +56,16 @@ vector<SerializationNode>& SerializationNode::getChildren() {
 }
 
 const SerializationNode& SerializationNode::getChildNode(const std::string& name) const {
-    for (int i = 0; i < (int) children.size(); i++)
-        if (children[i].name == name)
-            return children[i];
+    for (auto& child : children)
+        if (child.name == name)
+            return child;
         throw OpenMMException("Unknown child '"+name+"' for node '"+getName()+"'");
 }
 
 SerializationNode& SerializationNode::getChildNode(const std::string& name) {
-    for (int i = 0; i < (int) children.size(); i++)
-        if (children[i].name == name)
-            return children[i];
+    for (auto& child : children)
+        if (child.name == name)
+            return child;
         throw OpenMMException("Unknown child '"+name+"' for node '"+getName()+"'");
 }
 

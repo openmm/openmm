@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -44,7 +44,7 @@ using std::string;
 using std::stringstream;
 using std::vector;
 
-CustomTorsionForce::CustomTorsionForce(const string& energy) : energyExpression(energy) {
+CustomTorsionForce::CustomTorsionForce(const string& energy) : energyExpression(energy), usePeriodic(false) {
 }
 
 const string& CustomTorsionForce::getEnergyFunction() const {
@@ -95,6 +95,20 @@ void CustomTorsionForce::setGlobalParameterDefaultValue(int index, double defaul
     globalParameters[index].defaultValue = defaultValue;
 }
 
+void CustomTorsionForce::addEnergyParameterDerivative(const string& name) {
+    for (int i = 0; i < globalParameters.size(); i++)
+        if (name == globalParameters[i].name) {
+            energyParameterDerivatives.push_back(i);
+            return;
+        }
+    throw OpenMMException(string("addEnergyParameterDerivative: Unknown global parameter '"+name+"'"));
+}
+
+const string& CustomTorsionForce::getEnergyParameterDerivativeName(int index) const {
+    ASSERT_VALID_INDEX(index, energyParameterDerivatives);
+    return globalParameters[energyParameterDerivatives[index]].name;
+}
+
 int CustomTorsionForce::addTorsion(int particle1, int particle2, int particle3, int particle4, const vector<double>& parameters) {
     torsions.push_back(TorsionInfo(particle1, particle2, particle3, particle4, parameters));
     return torsions.size()-1;
@@ -124,4 +138,12 @@ ForceImpl* CustomTorsionForce::createImpl() const {
 
 void CustomTorsionForce::updateParametersInContext(Context& context) {
     dynamic_cast<CustomTorsionForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
+}
+
+void CustomTorsionForce::setUsesPeriodicBoundaryConditions(bool periodic) {
+    usePeriodic = periodic;
+}
+
+bool CustomTorsionForce::usesPeriodicBoundaryConditions() const {
+    return usePeriodic;
 }

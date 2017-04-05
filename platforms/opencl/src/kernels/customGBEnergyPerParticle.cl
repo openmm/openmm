@@ -9,9 +9,10 @@
  * Reduce the derivatives computed in the N^2 energy kernel, and compute all per-particle energy terms.
  */
 
-__kernel void computePerParticleEnergy(int bufferSize, int numBuffers, __global real4* restrict forceBuffers, __global real* restrict energyBuffer, __global const real4* restrict posq
+__kernel void computePerParticleEnergy(int bufferSize, int numBuffers, __global real4* restrict forceBuffers, __global mixed* restrict energyBuffer, __global const real4* restrict posq
         PARAMETER_ARGUMENTS) {
-    real energy = 0;
+    mixed energy = 0;
+    INIT_PARAM_DERIVS
     unsigned int index = get_global_id(0);
     while (index < NUM_ATOMS) {
         // Reduce the derivatives
@@ -27,4 +28,5 @@ __kernel void computePerParticleEnergy(int bufferSize, int numBuffers, __global 
         index += get_global_size(0);
     }
     energyBuffer[get_global_id(0)] += energy;
+    SAVE_PARAM_DERIVS
 }

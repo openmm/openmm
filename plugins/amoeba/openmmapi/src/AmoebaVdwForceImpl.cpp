@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors:                                                                   *
  * Contributors:                                                              *
  *                                                                            *
@@ -62,7 +62,7 @@ void AmoebaVdwForceImpl::initialize(ContextImpl& context) {
     if (owner.getNonbondedMethod() == AmoebaVdwForce::CutoffPeriodic) {
         Vec3 boxVectors[3];
         system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-        double cutoff = owner.getCutoff();
+        double cutoff = owner.getCutoffDistance();
         if (cutoff > 0.5*boxVectors[0][0] || cutoff > 0.5*boxVectors[1][1] || cutoff > 0.5*boxVectors[2][2])
             throw OpenMMException("AmoebaVdwForce: The cutoff distance cannot be greater than half the periodic box size.");
     }   
@@ -103,7 +103,7 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
     }
 
     // Compute the VdW tapering coefficients.  Mostly copied from amoebaCudaGpu.cpp.
-    double cutoff = force.getCutoff();
+    double cutoff = force.getCutoffDistance();
     double vdwTaper = 0.90; // vdwTaper is a scaling factor, it is not a distance.
     double c0 = 0.0;
     double c1 = 0.0;
@@ -161,14 +161,14 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
     // Double loop over different atom types.
     std::string sigmaCombiningRule = force.getSigmaCombiningRule();
     std::string epsilonCombiningRule = force.getEpsilonCombiningRule();
-    for (map<pair<double, double>, int>::const_iterator class1 = classCounts.begin(); class1 != classCounts.end(); ++class1) {
+    for (auto& class1 : classCounts) {
         k = 0;
-        for (map<pair<double, double>, int>::const_iterator class2 = classCounts.begin(); class2 != classCounts.end(); ++class2) { 
+        for (auto& class2 : classCounts) { 
             // AMOEBA combining rules, copied over from the CUDA code.
-            double iSigma = class1->first.first;
-            double jSigma = class2->first.first;
-            double iEpsilon = class1->first.second;
-            double jEpsilon = class2->first.second;
+            double iSigma = class1.first.first;
+            double jSigma = class2.first.first;
+            double iEpsilon = class1.first.second;
+            double jEpsilon = class2.first.second;
             // ARITHMETIC = 1
             // GEOMETRIC  = 2
             // CUBIC-MEAN = 3
@@ -207,7 +207,7 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
                 epsilon = 0.0;
               }
             }
-            int count = class1->second * class2->second;
+            int count = class1.second * class2.second;
             // Below is an exact copy of stuff from the previous block.
             double rv = sigma;
             double termik = 2.0 * M_PI * count; // termik is equivalent to 2 * pi * count.

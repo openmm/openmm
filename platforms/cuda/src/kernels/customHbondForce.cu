@@ -66,12 +66,12 @@ inline __device__ real4 computeCross(real4 vec1, real4 vec2) {
 /**
  * Compute forces on donors.
  */
-extern "C" __global__ void computeDonorForces(unsigned long long* __restrict__ force, real* __restrict__ energyBuffer, const real4* __restrict__ posq,
+extern "C" __global__ void computeDonorForces(unsigned long long* __restrict__ force, mixed* __restrict__ energyBuffer, const real4* __restrict__ posq,
         const int4* __restrict__ exclusions, const int4* __restrict__ donorAtoms, const int4* __restrict__ acceptorAtoms, real4 periodicBoxSize, real4 invPeriodicBoxSize,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ
         PARAMETER_ARGUMENTS) {
     extern __shared__ real4 posBuffer[];
-    real energy = 0;
+    mixed energy = 0;
     real3 f1 = make_real3(0);
     real3 f2 = make_real3(0);
     real3 f3 = make_real3(0);
@@ -155,7 +155,7 @@ extern "C" __global__ void computeDonorForces(unsigned long long* __restrict__ f
 /**
  * Compute forces on acceptors.
  */
-extern "C" __global__ void computeAcceptorForces(unsigned long long* __restrict__ force, real* __restrict__ energyBuffer, const real4* __restrict__ posq,
+extern "C" __global__ void computeAcceptorForces(unsigned long long* __restrict__ force, mixed* __restrict__ energyBuffer, const real4* __restrict__ posq,
         const int4* __restrict__ exclusions, const int4* __restrict__ donorAtoms, const int4* __restrict__ acceptorAtoms, real4 periodicBoxSize, real4 invPeriodicBoxSize,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ
         PARAMETER_ARGUMENTS) {

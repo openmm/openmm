@@ -20,7 +20,6 @@ set(STAGING_OUTPUT_FILES "") # Will contain all required package files
 file(GLOB STAGING_INPUT_FILES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
     "${CMAKE_CURRENT_SOURCE_DIR}/MANIFEST.in"
     "${CMAKE_CURRENT_SOURCE_DIR}/README.txt"
-    "${CMAKE_CURRENT_SOURCE_DIR}/filterPythonFiles.py"
 )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/setup.py ${OPENMM_PYTHON_STAGING_DIR}/setup.py)
 
@@ -51,6 +50,7 @@ foreach(SUBDIR ${SUBDIRS})
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*README.txt"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.py"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.i"
+        "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.ini"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.sh"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.xml"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.pdb"
@@ -69,6 +69,7 @@ foreach(SUBDIR ${SUBDIRS})
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.str"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*psf"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/charmm22.*"
+        "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/par*.inp"
     )
     foreach(file ${STAGING_INPUT_FILES1})
         set(STAGING_INPUT_FILES ${STAGING_INPUT_FILES} "${file}")
@@ -96,6 +97,7 @@ find_program(SWIG_EXECUTABLE swig PATHS
     "$ENV{HOME}/bin" "/Users/builder/bin" "/home/builder/bin"
     NO_DEFAULT_PATH)
 find_program(SWIG_EXECUTABLE swig)
+MARK_AS_ADVANCED(SWIG_VERSION)
 if(SWIG_EXECUTABLE)
     execute_process(COMMAND ${SWIG_EXECUTABLE} -version
         OUTPUT_VARIABLE SWIG_VERSION_output ERROR_VARIABLE SWIG_VERSION_output)
@@ -106,10 +108,9 @@ else(SWIG_EXECUTABLE)
     set(SWIG_VERSION "0.0.0" CACHE STRING "Swig version" FORCE)
 endif(SWIG_EXECUTABLE)
 # Enforce swig version
-string(COMPARE LESS "${SWIG_VERSION}" "1.3.39" SWIG_VERSION_ERROR)
-if(SWIG_VERSION_ERROR)
-    message("Swig version must be 1.3.39 or greater! (You have ${SWIG_VERSION})")
-endif(SWIG_VERSION_ERROR)
+if(SWIG_VERSION VERSION_LESS "3.0.5")
+    message(SEND_ERROR "Swig version must be 3.0.5 or greater! (You have ${SWIG_VERSION})")
+endif(SWIG_VERSION VERSION_LESS "3.0.5")
 
 find_package(Doxygen REQUIRED)
 mark_as_advanced(CLEAR DOXYGEN_EXECUTABLE)
@@ -155,7 +156,6 @@ set(SWIG_INPUT_FILES2
     "${SWIG_OPENMM_DIR}/swig_lib/python/header.i"
     "${SWIG_OPENMM_DIR}/swig_lib/python/pythoncode.i"
     "${SWIG_OPENMM_DIR}/swig_lib/python/typemaps.i"
-    "${SWIG_OPENMM_DIR}/swig_lib/python/pythonprepend_all.i"
 )
 
 # Create input files for swig
@@ -168,6 +168,7 @@ add_custom_command(
         -o OpenMMSwigHeaders.i
         -a swig_lib/python/pythonprepend.i
         -z swig_lib/python/pythonappend.i
+        -v "${SWIG_VERSION}"
     WORKING_DIRECTORY "${SWIG_OPENMM_DIR}"
     DEPENDS
         "${SWIG_OPENMM_DIR}/swigInputConfig.py"
@@ -176,7 +177,7 @@ add_custom_command(
     COMMENT "Creating OpenMM Python swig input files..."
 )
 
-INSTALL_FILES(/include FILES "${SWIG_OPENMM_DIR}/OpenMMSwigHeaders.i")
+INSTALL_FILES(/include/swig FILES "${SWIG_OPENMM_DIR}/OpenMMSwigHeaders.i" "${SWIG_OPENMM_DIR}/swig_lib/python/typemaps.i")
 
 #~ swig -python -c++ \
 #~      -outdir $PYTHON_PACKAGE_DIR \
@@ -198,7 +199,7 @@ add_custom_command(
         ${SWIG_INPUT_FILES2}
     COMMENT "Creating OpenMM Python module sources with swig..."
 )
-add_custom_target(RunSwig DEPENDS 
+add_custom_target(RunSwig DEPENDS
     "${SWIG_OPENMM_DIR}/OpenMMSwig.cxx"
     "${OPENMM_PYTHON_STAGING_DIR}/simtk/openmm/openmm.py")
 
@@ -234,7 +235,7 @@ add_custom_command(
     OUTPUT ${OPENMM_PYTHON_STAGING_DIR}/build
     COMMAND ${CMAKE_COMMAND}
     ARGS -P "${CMAKE_CURRENT_BINARY_DIR}/pysetupbuild.cmake"
-    DEPENDS 
+    DEPENDS
         ${OPENMM_PYTHON_STAGING_DIR}/setup.py
         "${CMAKE_CURRENT_BINARY_DIR}/pysetupbuild.cmake"
         ${SHARED_TARGET}
@@ -273,7 +274,7 @@ add_custom_target(PythonSdist
 )
 
 # Install binary module (to system location)
-set(PYTHON_SETUP_COMMAND "install")
+set(PYTHON_SETUP_COMMAND "install --root=\$ENV{DESTDIR}/")
 configure_file(pysetup.cmake.in
     "${CMAKE_CURRENT_BINARY_DIR}/pysetupinstall.cmake" @ONLY)
 add_custom_target(PythonInstall
@@ -283,4 +284,3 @@ add_custom_target(PythonInstall
     WORKING_DIRECTORY ${OPENMM_PYTHON_STAGING_DIR}
     COMMENT "Installing OpenMM Python binary module..."
 )
-

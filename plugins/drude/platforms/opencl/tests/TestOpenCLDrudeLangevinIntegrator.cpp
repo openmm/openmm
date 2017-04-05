@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013 Stanford University and the Authors.           *
+ * Portions copyright (c) 2013-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -60,6 +60,7 @@ void testSinglePair() {
     const double mass2 = 0.1;
     const double totalMass = mass1+mass2;
     const double reducedMass = (mass1*mass2)/(mass1+mass2);
+    const double maxDistance = 0.05;
     System system;
     system.addParticle(mass1);
     system.addParticle(mass2);
@@ -70,6 +71,7 @@ void testSinglePair() {
     positions[0] = Vec3(0, 0, 0);
     positions[1] = Vec3(0, 0, 0);
     DrudeLangevinIntegrator integ(temperature, 20.0, temperatureDrude, 20.0, 0.003);
+    integ.setMaxDrudeDistance(maxDistance);
     Platform& platform = Platform::getPlatformByName("OpenCL");
     Context context(system, integ, platform);
     context.setPositions(positions);
@@ -84,12 +86,15 @@ void testSinglePair() {
     int numSteps = 10000;
     for (int i = 0; i < numSteps; i++) {
         integ.step(10);
-        State state = context.getState(State::Velocities);
+        State state = context.getState(State::Velocities | State::Positions);
         const vector<Vec3>& vel = state.getVelocities();
         Vec3 velCM = vel[0]*(mass1/totalMass) + vel[1]*(mass2/totalMass);
         keCM += 0.5*totalMass*velCM.dot(velCM);
         Vec3 velInternal = vel[0]-vel[1];
         keInternal += 0.5*reducedMass*velInternal.dot(velInternal);
+        Vec3 delta = state.getPositions()[0]-state.getPositions()[1];
+        double distance = sqrt(delta.dot(delta));
+        ASSERT(distance <= maxDistance*(1+1e-6));
     }
     ASSERT_USUALLY_EQUAL_TOL(3*0.5*BOLTZ*temperature, keCM/numSteps, 0.1);
     ASSERT_USUALLY_EQUAL_TOL(3*0.5*BOLTZ*temperatureDrude, keInternal/numSteps, 0.01);
@@ -174,13 +179,74 @@ void testWater() {
     ASSERT_USUALLY_EQUAL_TOL(expectedTemp, ke/(0.5*numDof*BOLTZ), 0.02);
 }
 
+void testForceEnergyConsistency() {
+    // Create a box of polarizable particles.
+    
+    const int gridSize = 3;
+    const int numAtoms = gridSize*gridSize*gridSize;
+    const double spacing = 0.6;
+    const double boxSize = spacing*(gridSize+1);
+    const double temperature = 300.0;
+    const double temperatureDrude = 10.0;
+    System system;
+    vector<Vec3> positions;
+    NonbondedForce* nonbonded = new NonbondedForce();
+    DrudeForce* drude = new DrudeForce();
+    system.addForce(nonbonded);
+    system.addForce(drude);
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    nonbonded->setNonbondedMethod(NonbondedForce::PME);
+    nonbonded->setCutoffDistance(1.0);
+    nonbonded->setUseSwitchingFunction(true);
+    nonbonded->setSwitchingDistance(0.9);
+    nonbonded->setEwaldErrorTolerance(5e-5);
+    for (int i = 0; i < numAtoms; i++) {
+        int startIndex = system.getNumParticles();
+        system.addParticle(1.0);
+        system.addParticle(1.0);
+        nonbonded->addParticle(1.0, 0.3, 1.0);
+        nonbonded->addParticle(-1.0, 0.3, 1.0);
+        nonbonded->addException(startIndex, startIndex+1, 0, 1, 0);
+        drude->addParticle(startIndex+1, startIndex, -1, -1, -1, -1.0, 0.001, 1, 1);
+    }
+    for (int i = 0; i < gridSize; i++)
+        for (int j = 0; j < gridSize; j++)
+            for (int k = 0; k < gridSize; k++) {
+                Vec3 pos(i*spacing, j*spacing, k*spacing);
+                positions.push_back(pos);
+                positions.push_back(pos);
+            }
+    
+    // Simulate it and check that force and energy remain consistent.
+    
+    DrudeLangevinIntegrator integ(temperature, 50.0, temperatureDrude, 50.0, 0.001);
+    Platform& platform = Platform::getPlatformByName("OpenCL");
+    Context context(system, integ, platform);
+    context.setPositions(positions);
+    State prevState;
+    for (int i = 0; i < 100; i++) {
+        State state = context.getState(State::Energy | State::Forces | State::Positions);
+        if (i > 0) {
+            double expectedEnergyChange = 0;
+            for (int j = 0; j < system.getNumParticles(); j++) {
+                Vec3 delta = state.getPositions()[j]-prevState.getPositions()[j];
+                expectedEnergyChange -= 0.5*(state.getForces()[j]+prevState.getForces()[j]).dot(delta);
+            }
+            ASSERT_EQUAL_TOL(expectedEnergyChange, state.getPotentialEnergy()-prevState.getPotentialEnergy(), 0.05);
+        }
+        prevState = state;
+        integ.step(1);
+    }
+}
+
 int main(int argc, char* argv[]) {
     try {
         registerDrudeOpenCLKernelFactories();
         if (argc > 1)
-            Platform::getPlatformByName("OpenCL").setPropertyDefaultValue("OpenCLPrecision", string(argv[1]));
+            Platform::getPlatformByName("OpenCL").setPropertyDefaultValue("Precision", string(argv[1]));
         testSinglePair();
         testWater();
+        testForceEnergyConsistency();
     }
     catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;

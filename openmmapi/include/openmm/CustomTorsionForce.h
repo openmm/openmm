@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -52,6 +52,7 @@ namespace OpenMM {
  * part of the system definition, while values of global parameters may be modified during a simulation by calling Context::setParameter().
  * Finally, call addTorsion() once for each torsion.  After an torsion has been added, you can modify its parameters by calling setTorsionParameters().
  * This will have no effect on Contexts that already exist unless you call updateParametersInContext().
+ * theta is guaranteed to be in the range [-pi,+pi]
  *
  * As an example, the following code creates a CustomTorsionForce that implements a harmonic potential:
  *
@@ -63,6 +64,10 @@ namespace OpenMM {
  * force->addPerTorsionParameter("k");
  * force->addPerTorsionParameter("theta0");
  * </pre></tt>
+ *
+ * This class also has the ability to compute derivatives of the potential energy with respect to global parameters.
+ * Call addEnergyParameterDerivative() to request that the derivative with respect to a particular parameter be
+ * computed.  You can then query its value in a Context by calling getState() on it.
  *
  * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
  * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs, floor, ceil, step, delta, select.  All trigonometric functions
@@ -96,6 +101,13 @@ public:
      */
     int getNumGlobalParameters() const {
         return globalParameters.size();
+    }
+    /**
+     * Get the number of global parameters with respect to which the derivative of the energy
+     * should be computed.
+     */
+    int getNumEnergyParameterDerivatives() const {
+        return energyParameterDerivatives.size();
     }
     /**
      * Get the algebraic expression that gives the interaction energy for each torsion
@@ -159,9 +171,24 @@ public:
      * Set the default value of a global parameter.
      *
      * @param index          the index of the parameter for which to set the default value
-     * @param name           the default value of the parameter
+     * @param defaultValue   the default value of the parameter
      */
     void setGlobalParameterDefaultValue(int index, double defaultValue);
+    /**
+     * Request that this Force compute the derivative of its energy with respect to a global parameter.
+     * The parameter must have already been added with addGlobalParameter().
+     *
+     * @param name             the name of the parameter
+     */
+    void addEnergyParameterDerivative(const std::string& name);
+    /**
+     * Get the name of a global parameter with respect to which this Force should compute the
+     * derivative of the energy.
+     *
+     * @param index     the index of the parameter derivative, between 0 and getNumEnergyParameterDerivatives()
+     * @return the parameter name
+     */
+    const std::string& getEnergyParameterDerivativeName(int index) const;
     /**
      * Add a torsion term to the force field.
      *
@@ -172,16 +199,16 @@ public:
      * @param parameters    the list of parameters for the new torsion
      * @return the index of the torsion that was added
      */
-    int addTorsion(int particle1, int particle2, int particle3, int particle4, const std::vector<double>& parameters);
+    int addTorsion(int particle1, int particle2, int particle3, int particle4, const std::vector<double>& parameters=std::vector<double>());
     /**
      * Get the force field parameters for a torsion term.
      *
-     * @param index         the index of the torsion for which to get parameters
-     * @param particle1     the index of the first particle connected by the torsion
-     * @param particle2     the index of the second particle connected by the torsion
-     * @param particle3     the index of the third particle connected by the torsion
-     * @param particle4     the index of the fourth particle connected by the torsion
-     * @param parameters    the list of parameters for the torsion
+     * @param index              the index of the torsion for which to get parameters
+     * @param[out] particle1     the index of the first particle connected by the torsion
+     * @param[out] particle2     the index of the second particle connected by the torsion
+     * @param[out] particle3     the index of the third particle connected by the torsion
+     * @param[out] particle4     the index of the fourth particle connected by the torsion
+     * @param[out] parameters    the list of parameters for the torsion
      */
     void getTorsionParameters(int index, int& particle1, int& particle2, int& particle3, int& particle4, std::vector<double>& parameters) const;
     /**
@@ -194,27 +221,30 @@ public:
      * @param particle4     the index of the fourth particle connected by the torsion
      * @param parameters    the list of parameters for the torsion
      */
-    void setTorsionParameters(int index, int particle1, int particle2, int particle3, int particle4, const std::vector<double>& parameters);
+    void setTorsionParameters(int index, int particle1, int particle2, int particle3, int particle4, const std::vector<double>& parameters=std::vector<double>());
     /**
      * Update the per-torsion parameters in a Context to match those stored in this Force object.  This method provides
      * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
      * Simply call setTorsionParameters() to modify this object's parameters, then call updateParametersInContext()
      * to copy them over to the Context.
-     * 
+     *
      * This method has several limitations.  The only information it updates is the values of per-torsion parameters.
      * All other aspects of the Force (such as the energy function) are unaffected and can only be changed by reinitializing
      * the Context.  The set of particles involved in a torsion cannot be changed, nor can new torsions be added.
      */
     void updateParametersInContext(Context& context);
     /**
+     * Set whether this force should apply periodic boundary conditions when calculating displacements.
+     * Usually this is not appropriate for bonded forces, but there are situations when it can be useful.
+     */
+    void setUsesPeriodicBoundaryConditions(bool periodic);
+    /**
      * Returns whether or not this force makes use of periodic boundary
      * conditions.
      *
      * @returns true if force uses PBC and false otherwise
      */
-    bool usesPeriodicBoundaryConditions() const {
-        return false;
-    }
+    bool usesPeriodicBoundaryConditions() const;
 protected:
     ForceImpl* createImpl() const;
 private:
@@ -225,6 +255,8 @@ private:
     std::vector<TorsionParameterInfo> parameters;
     std::vector<GlobalParameterInfo> globalParameters;
     std::vector<TorsionInfo> torsions;
+    std::vector<int> energyParameterDerivatives;
+    bool usePeriodic;
 };
 
 /**

@@ -1,0 +1,55 @@
+.. _core-objects:
+Core Objects
+~~~~~~~~~~~~
+
+.. autodoxysummary::
+    :toctree: generated/
+
+{% for obj in core %}
+    ~{{obj}}
+{% endfor %}
+
+|
+|
+
+.. _forces:
+Forces
+~~~~~~
+
+.. autodoxysummary::
+    :toctree: generated/
+
+{% for force in forces %}
+    ~{{force}}
+{% endfor %}
+
+|
+|
+
+.. _integrators:
+Integrators
+~~~~~~~~~~~
+
+These integrators implement an algorithm for advancing the simulation
+through time.
+
+.. autodoxysummary::
+    :toctree: generated/
+
+{% for integrator in integrators %}
+    ~{{integrator}}
+{% endfor %}
+
+|
+|
+
+.. _extras:
+Extras
+~~~~~~
+
+.. autodoxysummary::
+    :toctree: generated/
+
+{% for extra in extras %}
+    ~{{extra}}
+{% endfor %}

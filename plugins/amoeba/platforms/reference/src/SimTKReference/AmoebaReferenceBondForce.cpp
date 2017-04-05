@@ -28,6 +28,13 @@
 using std::vector;
 using namespace OpenMM;
 
+void AmoebaReferenceBondForce::setPeriodic(OpenMM::Vec3* vectors) {
+    usePeriodic = true;
+    boxVectors[0] = vectors[0];
+    boxVectors[1] = vectors[1];
+    boxVectors[2] = vectors[2];
+}
+
 /**---------------------------------------------------------------------------------------
 
    Calculate Amoeba bond ixn (force and energy)
@@ -44,70 +51,61 @@ using namespace OpenMM;
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM AmoebaReferenceBondForce::calculateBondIxn(const RealVec& positionAtomA, const RealVec& positionAtomB,
-                                                               RealOpenMM bondLength, RealOpenMM bondK,
-                                                               RealOpenMM bondCubic, RealOpenMM bondQuartic,
-                                                               RealVec* forces) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   //static const std::string methodName = "AmoebaReferenceBondForce::calculateBondIxn";
-
-   static const RealOpenMM zero          = 0.0;
-   static const RealOpenMM one           = 1.0;
-   static const RealOpenMM onePt5        = 1.5;
-   static const RealOpenMM two           = 2.0;
-
-   // ---------------------------------------------------------------------------------------
-
+double AmoebaReferenceBondForce::calculateBondIxn(const Vec3& positionAtomA, const Vec3& positionAtomB,
+                                                  double bondLength, double bondK,
+                                                  double bondCubic, double bondQuartic,
+                                                  Vec3* forces) const {
    // get deltaR, R2, and R between 2 atoms
 
-   std::vector<RealOpenMM> deltaR;
-   AmoebaReferenceForce::loadDeltaR(positionAtomA, positionAtomB, deltaR);
-   RealOpenMM r               = AmoebaReferenceForce::getNorm3(deltaR);
+   std::vector<double> deltaR;
+   if (usePeriodic)
+       AmoebaReferenceForce::loadDeltaRPeriodic(positionAtomA, positionAtomB, deltaR, boxVectors);
+   else
+       AmoebaReferenceForce::loadDeltaR(positionAtomA, positionAtomB, deltaR);
+   double r = AmoebaReferenceForce::getNorm3(deltaR);
 
    // deltaIdeal = r - r_0
 
-   RealOpenMM deltaIdeal      = r - bondLength;
-   RealOpenMM deltaIdeal2     = deltaIdeal*deltaIdeal;
+   double deltaIdeal      = r - bondLength;
+   double deltaIdeal2     = deltaIdeal*deltaIdeal;
 
-   RealOpenMM dEdR            = (one + onePt5*bondCubic*deltaIdeal + two*bondQuartic*deltaIdeal2);
-   dEdR                      *= two*bondK*deltaIdeal;
-   dEdR                       = r > zero ? (dEdR/r) : zero;
+   double dEdR            = (1.0 + 1.5*bondCubic*deltaIdeal + 2.0*bondQuartic*deltaIdeal2);
+   dEdR                  *= 2.0*bondK*deltaIdeal;
+   dEdR                   = r > 0.0 ? (dEdR/r) : 0.0;
 
-   forces[0][0]               = dEdR*deltaR[0];
-   forces[0][1]               = dEdR*deltaR[1];
-   forces[0][2]               = dEdR*deltaR[2];
+   forces[0][0]           = dEdR*deltaR[0];
+   forces[0][1]           = dEdR*deltaR[1];
+   forces[0][2]           = dEdR*deltaR[2];
 
-   dEdR                      *= -1.0;
-   forces[1][0]               = dEdR*deltaR[0];
-   forces[1][1]               = dEdR*deltaR[1];
-   forces[1][2]               = dEdR*deltaR[2];
+   dEdR                  *= -1.0;
+   forces[1][0]           = dEdR*deltaR[0];
+   forces[1][1]           = dEdR*deltaR[1];
+   forces[1][2]           = dEdR*deltaR[2];
 
-   RealOpenMM energy          = bondK*deltaIdeal2*(one + bondCubic*deltaIdeal + bondQuartic*deltaIdeal2);
+   double energy          = bondK*deltaIdeal2*(1.0 + bondCubic*deltaIdeal + bondQuartic*deltaIdeal2);
    return energy;
 }
 
-RealOpenMM AmoebaReferenceBondForce::calculateForceAndEnergy(int numBonds,
-                                                                      vector<RealVec>& particlePositions,
-                                                                      const std::vector<int>&   particle1,
-                                                                      const std::vector<int>&   particle2,
-                                                                      const std::vector<RealOpenMM>& length,
-                                                                      const std::vector<RealOpenMM>& kQuadratic,
-                                                                      RealOpenMM globalBondCubic,
-                                                                      RealOpenMM globalBondQuartic,
-                                                                      vector<RealVec>& forceData) const {
-    RealOpenMM energy      = 0.0; 
+double AmoebaReferenceBondForce::calculateForceAndEnergy(int numBonds,
+                                                         vector<Vec3>& particlePositions,
+                                                         const std::vector<int>&   particle1,
+                                                         const std::vector<int>&   particle2,
+                                                         const std::vector<double>& length,
+                                                         const std::vector<double>& kQuadratic,
+                                                         double globalBondCubic,
+                                                         double globalBondQuartic,
+                                                         vector<Vec3>& forceData) const {
+    double energy = 0.0; 
     for (int ii = 0; ii < numBonds; ii++) {
-        int particle1Index      = particle1[ii];
-        int particle2Index      = particle2[ii];
-        RealOpenMM bondLength   = length[ii];
-        RealOpenMM bondK        = kQuadratic[ii];
-        RealVec forces[2];
+        int particle1Index = particle1[ii];
+        int particle2Index = particle2[ii];
+        double bondLength = length[ii];
+        double bondK = kQuadratic[ii];
+        Vec3 forces[2];
 
-        energy                 += calculateBondIxn(particlePositions[particle1Index], particlePositions[particle2Index],
-                                                    bondLength, bondK, globalBondCubic, globalBondQuartic,
-                                                    forces);
+        energy += calculateBondIxn(particlePositions[particle1Index], particlePositions[particle2Index],
+                                   bondLength, bondK, globalBondCubic, globalBondQuartic,
+                                   forces);
 
         for (int jj = 0; jj < 3; jj++) {
             forceData[particle1Index][jj] += forces[0][jj];

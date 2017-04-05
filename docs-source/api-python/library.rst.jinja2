@@ -1,0 +1,52 @@
+.. _library :
+
+Library Layer
+=============
+
+
+Core Objects
+~~~~~~~~~~~~
+.. autosummary::
+    :toctree: generated/
+    :template: class.rst
+    :nosignatures:
+
+    ~simtk.openmm.openmm.System
+    ~simtk.openmm.openmm.Context
+    ~simtk.openmm.openmm.Platform
+    ~simtk.openmm.openmm.State
+
+
+Forces
+~~~~~~
+.. autosummary::
+    :toctree: generated/
+    :template: class.rst
+    :nosignatures:
+
+    {% for force in forces %}
+    ~{{ force }}
+    {% endfor %}
+
+
+Integrators
+~~~~~~~~~~~
+.. autosummary::
+    :toctree: generated/
+    :template: class.rst
+    :nosignatures:
+
+    {% for integrator in integrators %}
+    ~{{ integrator }}
+    {% endfor %}
+
+Extras
+~~~~~~
+.. autosummary::
+    :toctree: generated/
+    :template: class.rst
+    :nosignatures:
+
+    {% for extra in library_extras %}
+    ~{{ extra }}
+    {% endfor %}

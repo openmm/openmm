@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman, Yutong Zhao                                        *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,6 +32,7 @@
 #include "openmm/internal/AssertionUtilities.h"
 
 #include "openmm/BrownianIntegrator.h"
+#include "openmm/CompoundIntegrator.h"
 #include "openmm/CustomIntegrator.h"
 #include "openmm/LangevinIntegrator.h"
 #include "openmm/VariableLangevinIntegrator.h"
@@ -136,12 +137,20 @@ void testSerializeCustomIntegrator() {
     intg->addGlobalVariable("oute", 0);
     intg->addGlobalVariable("oute1", 0);
     intg->addGlobalVariable("oute2", 0);
+    intg->addGlobalVariable("oute3_conditional_v1", 0);// HACK: need addGlobals to be alphabetical to work around bug
+    intg->addGlobalVariable("oute3_conditional_v2", 0);
     intg->addComputePerDof("outf", "f");
     intg->addComputePerDof("outf1", "f1");
     intg->addComputePerDof("outf2", "f2");
     intg->addComputeGlobal("oute", "energy");
     intg->addComputeGlobal("oute1", "energy1");
     intg->addComputeGlobal("oute2", "energy2");
+    intg->beginIfBlock("1 > 0");
+    intg->addComputeGlobal("oute3_conditional_v1", "energy");
+    intg->endBlock();
+    intg->beginWhileBlock("0 > 1");
+    intg->addComputeGlobal("oute3_conditional_v2", "energy");
+    intg->endBlock();
     intg->addUpdateContextState();
     intg->addConstrainVelocities();
     intg->addComputeSum("summand2", "v*v+f*f");
@@ -185,6 +194,29 @@ void testSerializeCustomIntegrator() {
     delete intg2;
 }
 
+void testSerializeCompoundIntegrator() {
+    CompoundIntegrator integ;
+    integ.addIntegrator(new LangevinIntegrator(372.4, 1.234, 0.0018));
+    integ.addIntegrator(new VerletIntegrator(0.002));
+    integ.setCurrentIntegrator(1);
+    stringstream ss;
+    XmlSerializer::serialize<Integrator>(&integ, "CompoundIntegrator", ss);
+    CompoundIntegrator *integ2 = dynamic_cast<CompoundIntegrator*>(XmlSerializer::deserialize<Integrator>(ss));
+    ASSERT_EQUAL(integ.getCurrentIntegrator(), integ2->getCurrentIntegrator());
+    LangevinIntegrator& langevin1 = dynamic_cast<LangevinIntegrator&>(integ.getIntegrator(0));
+    LangevinIntegrator& langevin2 = dynamic_cast<LangevinIntegrator&>(integ2->getIntegrator(0));
+    ASSERT_EQUAL(langevin1.getConstraintTolerance(), langevin2.getConstraintTolerance());
+    ASSERT_EQUAL(langevin1.getStepSize(), langevin2.getStepSize());
+    ASSERT_EQUAL(langevin1.getTemperature(), langevin2.getTemperature());
+    ASSERT_EQUAL(langevin1.getFriction(), langevin2.getFriction());
+    ASSERT_EQUAL(langevin1.getRandomNumberSeed(), langevin2.getRandomNumberSeed());
+    VerletIntegrator& verlet1 = dynamic_cast<VerletIntegrator&>(integ.getIntegrator(1));
+    VerletIntegrator& verlet2 = dynamic_cast<VerletIntegrator&>(integ2->getIntegrator(1));
+    ASSERT_EQUAL(verlet1.getConstraintTolerance(), verlet2.getConstraintTolerance());
+    ASSERT_EQUAL(verlet1.getStepSize(), verlet2.getStepSize());
+    delete integ2;
+}
+
 int main() {
     try {
         testSerializeBrownianIntegrator();
@@ -192,12 +224,13 @@ int main() {
         testSerializeVerletIntegrator();
         testSerializeVariableLangevinIntegrator();
         testSerializeVariableVerletIntegrator();
-        testSerializeLangevinIntegrator(); 
+        testSerializeLangevinIntegrator();
+        testSerializeCompoundIntegrator();
     }
     catch(const exception& e) {
-		return 1;
+        cout << "exception: " << e.what() << endl;
+        return 1;
     }
+    cout << "Done" << endl;
     return 0;
 }
-
-

@@ -33,7 +33,7 @@
 #define __ReferenceVirtualSites_H__
 
 #include "openmm/System.h"
-#include "RealVec.h"
+#include "openmm/Vec3.h"
 #include <vector>
 
 namespace OpenMM {
@@ -43,11 +43,11 @@ public:
     /**
      * Compute the positions of all virtual sites.
      */
-    static void computePositions(const OpenMM::System& system, std::vector<OpenMM::RealVec>& atomCoordinates);
+    static void computePositions(const OpenMM::System& system, std::vector<OpenMM::Vec3>& atomCoordinates);
     /**
      * Distribute forces from virtual sites to the atoms they are based on.
      */
-    static void distributeForces(const OpenMM::System& system, const std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& forces);
+    static void distributeForces(const OpenMM::System& system, const std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<OpenMM::Vec3>& forces);
 };
 
 } // namespace OpenMM

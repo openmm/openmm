@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2010 Stanford University and Simbios.
+/* Portions copyright (c) 2010-2016 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -34,9 +34,16 @@ using namespace OpenMM;
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceCMAPTorsionIxn::ReferenceCMAPTorsionIxn(const vector<vector<vector<RealOpenMM> > >& coeff,
+ReferenceCMAPTorsionIxn::ReferenceCMAPTorsionIxn(const vector<vector<vector<double> > >& coeff,
         const vector<int>& torsionMaps, const vector<vector<int> >& torsionIndices) :
-        coeff(coeff), torsionMaps(torsionMaps), torsionIndices(torsionIndices) {
+        coeff(coeff), torsionMaps(torsionMaps), torsionIndices(torsionIndices), usePeriodic(false) {
+}
+
+void ReferenceCMAPTorsionIxn::setPeriodic(OpenMM::Vec3* vectors) {
+    usePeriodic = true;
+    boxVectors[0] = vectors[0];
+    boxVectors[1] = vectors[1];
+    boxVectors[2] = vectors[2];
 }
 
 /**---------------------------------------------------------------------------------------
@@ -52,7 +59,7 @@ ReferenceCMAPTorsionIxn::ReferenceCMAPTorsionIxn(const vector<vector<vector<Real
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceCMAPTorsionIxn::calculateIxn(vector<RealVec>& atomCoordinates, vector<RealVec>& forces, RealOpenMM* totalEnergy) const {
+void ReferenceCMAPTorsionIxn::calculateIxn(vector<Vec3>& atomCoordinates, vector<Vec3>& forces, double* totalEnergy) const {
     for (unsigned int i = 0; i < torsionMaps.size(); i++)
         calculateOneIxn(i, atomCoordinates, forces, totalEnergy);
 }
@@ -68,8 +75,8 @@ void ReferenceCMAPTorsionIxn::calculateIxn(vector<RealVec>& atomCoordinates, vec
 
      --------------------------------------------------------------------------------------- */
 
-void ReferenceCMAPTorsionIxn::calculateOneIxn(int index, vector<RealVec>& atomCoordinates, vector<RealVec>& forces,
-                     RealOpenMM* totalEnergy) const {
+void ReferenceCMAPTorsionIxn::calculateOneIxn(int index, vector<Vec3>& atomCoordinates, vector<Vec3>& forces,
+                     double* totalEnergy) const {
     int map = torsionMaps[index];
     int a1 = torsionIndices[index][0];
     int a2 = torsionIndices[index][1];
@@ -82,51 +89,61 @@ void ReferenceCMAPTorsionIxn::calculateOneIxn(int index, vector<RealVec>& atomCo
 
     // Compute deltas between the various atoms involved.
 
-    RealOpenMM deltaA[3][ReferenceForce::LastDeltaRIndex];
-    ReferenceForce::getDeltaR(atomCoordinates[a2], atomCoordinates[a1], deltaA[0]);
-    ReferenceForce::getDeltaR(atomCoordinates[a2], atomCoordinates[a3], deltaA[1]);
-    ReferenceForce::getDeltaR(atomCoordinates[a4], atomCoordinates[a3], deltaA[2]);
-    RealOpenMM deltaB[3][ReferenceForce::LastDeltaRIndex];
-    ReferenceForce::getDeltaR(atomCoordinates[b2], atomCoordinates[b1], deltaB[0]);
-    ReferenceForce::getDeltaR(atomCoordinates[b2], atomCoordinates[b3], deltaB[1]);
-    ReferenceForce::getDeltaR(atomCoordinates[b4], atomCoordinates[b3], deltaB[2]);
+    double deltaA[3][ReferenceForce::LastDeltaRIndex];
+    double deltaB[3][ReferenceForce::LastDeltaRIndex];
+    if (usePeriodic) {
+        ReferenceForce::getDeltaRPeriodic(atomCoordinates[a2], atomCoordinates[a1], boxVectors, deltaA[0]);
+        ReferenceForce::getDeltaRPeriodic(atomCoordinates[a2], atomCoordinates[a3], boxVectors, deltaA[1]);
+        ReferenceForce::getDeltaRPeriodic(atomCoordinates[a4], atomCoordinates[a3], boxVectors, deltaA[2]);
+        ReferenceForce::getDeltaRPeriodic(atomCoordinates[b2], atomCoordinates[b1], boxVectors, deltaB[0]);
+        ReferenceForce::getDeltaRPeriodic(atomCoordinates[b2], atomCoordinates[b3], boxVectors, deltaB[1]);
+        ReferenceForce::getDeltaRPeriodic(atomCoordinates[b4], atomCoordinates[b3], boxVectors, deltaB[2]);
+    }
+    else {
+        ReferenceForce::getDeltaR(atomCoordinates[a2], atomCoordinates[a1], deltaA[0]);
+        ReferenceForce::getDeltaR(atomCoordinates[a2], atomCoordinates[a3], deltaA[1]);
+        ReferenceForce::getDeltaR(atomCoordinates[a4], atomCoordinates[a3], deltaA[2]);
+        ReferenceForce::getDeltaR(atomCoordinates[b2], atomCoordinates[b1], deltaB[0]);
+        ReferenceForce::getDeltaR(atomCoordinates[b2], atomCoordinates[b3], deltaB[1]);
+        ReferenceForce::getDeltaR(atomCoordinates[b4], atomCoordinates[b3], deltaB[2]);
+    }
 
     // Visual Studio complains if crossProduct declared as 'crossProduct[2][3]'
 
-    RealOpenMM crossProductMemory[12];
-    RealOpenMM* cpA[2];
+    double crossProductMemory[12];
+    double* cpA[2];
     cpA[0] = crossProductMemory;
     cpA[1] = crossProductMemory + 3;
-    RealOpenMM* cpB[2];
+    double* cpB[2];
     cpB[0] = crossProductMemory + 6;
     cpB[1] = crossProductMemory + 9;
 
    // Compute the dihedral angles.
 
-    RealOpenMM dotDihedral;
-    RealOpenMM signOfAngle;
-    RealOpenMM angleA =  getDihedralAngleBetweenThreeVectors(deltaA[0], deltaA[1], deltaA[2],
+    double dotDihedral;
+    double signOfAngle;
+    double angleA =  getDihedralAngleBetweenThreeVectors(deltaA[0], deltaA[1], deltaA[2],
          cpA, &dotDihedral, deltaA[0], &signOfAngle, 1);
-    RealOpenMM angleB =  getDihedralAngleBetweenThreeVectors(deltaB[0], deltaB[1], deltaB[2],
+    double angleB =  getDihedralAngleBetweenThreeVectors(deltaB[0], deltaB[1], deltaB[2],
          cpB, &dotDihedral, deltaB[0], &signOfAngle, 1);
     angleA = fmod(angleA+2.0*M_PI, 2.0*M_PI);
     angleB = fmod(angleB+2.0*M_PI, 2.0*M_PI);
 
     // Identify which patch this is in.
 
-    int size = (int) SQRT((RealOpenMM) coeff[map].size());
-    RealOpenMM delta = 2*M_PI/size;
+    int size = (int) sqrt(coeff[map].size());
+    double delta = 2*M_PI/size;
     int s = (int) (angleA/delta);
     int t = (int) (angleB/delta);
-    const vector<RealOpenMM>& c = coeff[map][s+size*t];
-    RealOpenMM da = angleA/delta-s;
-    RealOpenMM db = angleB/delta-t;
+    const vector<double>& c = coeff[map][s+size*t];
+    double da = angleA/delta-s;
+    double db = angleB/delta-t;
 
     // Evaluate the spline to determine the energy and gradients.
 
-    RealOpenMM energy = 0;
-    RealOpenMM dEdA = 0;
-    RealOpenMM dEdB = 0;
+    double energy = 0;
+    double dEdA = 0;
+    double dEdB = 0;
     for (int i = 3; i >= 0; i--) {
         energy = da*energy + ((c[i*4+3]*db + c[i*4+2])*db + c[i*4+1])*db + c[i*4+0];
         dEdA = db*dEdA + (3.0*c[i+3*4]*da + 2.0*c[i+2*4])*da + c[i+1*4];
@@ -139,20 +156,20 @@ void ReferenceCMAPTorsionIxn::calculateOneIxn(int index, vector<RealVec>& atomCo
 
     // Apply the force to the first torsion.
 
-    RealOpenMM forceFactors[4];
-    RealOpenMM normCross1 = DOT3(cpA[0], cpA[0]);
-    RealOpenMM normBC = deltaA[1][ReferenceForce::RIndex];
+    double forceFactors[4];
+    double normCross1 = DOT3(cpA[0], cpA[0]);
+    double normBC = deltaA[1][ReferenceForce::RIndex];
     forceFactors[0] = (-dEdA*normBC)/normCross1;
-    RealOpenMM normCross2 = DOT3(cpA[1], cpA[1]);
+    double normCross2 = DOT3(cpA[1], cpA[1]);
     forceFactors[3] = (dEdA*normBC)/normCross2;
     forceFactors[1] = DOT3(deltaA[0], deltaA[1]);
     forceFactors[1] /= deltaA[1][ReferenceForce::R2Index];
     forceFactors[2] = DOT3(deltaA[2], deltaA[1]);
     forceFactors[2] /= deltaA[1][ReferenceForce::R2Index];
     for (int i = 0; i < 3; i++) {
-        RealOpenMM f0 = forceFactors[0]*cpA[0][i];
-        RealOpenMM f3 = forceFactors[3]*cpA[1][i];
-        RealOpenMM s = forceFactors[1]*f0 - forceFactors[2]*f3;
+        double f0 = forceFactors[0]*cpA[0][i];
+        double f3 = forceFactors[3]*cpA[1][i];
+        double s = forceFactors[1]*f0 - forceFactors[2]*f3;
         forces[a1][i] += f0;
         forces[a2][i] -= f0-s;
         forces[a3][i] -= f3+s;
@@ -171,9 +188,9 @@ void ReferenceCMAPTorsionIxn::calculateOneIxn(int index, vector<RealVec>& atomCo
     forceFactors[2] = DOT3(deltaB[2], deltaB[1]);
     forceFactors[2] /= deltaB[1][ReferenceForce::R2Index];
     for (int i = 0; i < 3; i++) {
-        RealOpenMM f0 = forceFactors[0]*cpB[0][i];
-        RealOpenMM f3 = forceFactors[3]*cpB[1][i];
-        RealOpenMM s = forceFactors[1]*f0 - forceFactors[2]*f3;
+        double f0 = forceFactors[0]*cpB[0][i];
+        double f3 = forceFactors[3]*cpB[1][i];
+        double s = forceFactors[1]*f0 - forceFactors[2]*f3;
         forces[b1][i] += f0;
         forces[b2][i] -= f0-s;
         forces[b3][i] -= f3+s;
@@ -189,6 +206,6 @@ void ReferenceCMAPTorsionIxn::calculateOneIxn(int index, vector<RealVec>& atomCo
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceCMAPTorsionIxn::calculateBondIxn(int* atomIndices, vector<RealVec>& atomCoordinates,
-        RealOpenMM* parameters, vector<RealVec>& forces, RealOpenMM* totalEnergy) const {
+void ReferenceCMAPTorsionIxn::calculateBondIxn(int* atomIndices, vector<Vec3>& atomCoordinates,
+        double* parameters, vector<Vec3>& forces, double* totalEnergy, double* energyParamDerivs) {
 }

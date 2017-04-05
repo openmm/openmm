@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2016 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -39,13 +39,6 @@ using namespace OpenMM;
    --------------------------------------------------------------------------------------- */
 
 ReferenceLJCoulomb14::ReferenceLJCoulomb14() {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceLJCoulomb14::ReferenceLJCoulomb14";
-
-   // ---------------------------------------------------------------------------------------
-
 }
 
 /**---------------------------------------------------------------------------------------
@@ -55,13 +48,6 @@ ReferenceLJCoulomb14::ReferenceLJCoulomb14() {
    --------------------------------------------------------------------------------------- */
 
 ReferenceLJCoulomb14::~ReferenceLJCoulomb14() {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceLJCoulomb14::~ReferenceLJCoulomb14";
-
-   // ---------------------------------------------------------------------------------------
-
 }
 
 /**---------------------------------------------------------------------------------------
@@ -79,33 +65,10 @@ ReferenceLJCoulomb14::~ReferenceLJCoulomb14() {
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceLJCoulomb14::calculateBondIxn(int* atomIndices, vector<RealVec>& atomCoordinates,
-                                     RealOpenMM* parameters, vector<RealVec>& forces,
-                                     RealOpenMM* totalEnergy) const {
-
-   static const std::string methodName = "\nReferenceLJCoulomb14::calculateBondIxn";
-
-   // constants -- reduce Visual Studio warnings regarding conversions between float & double
-
-   static const RealOpenMM zero        =  0.0;
-   static const RealOpenMM one         =  1.0;
-   static const RealOpenMM two         =  2.0;
-   static const RealOpenMM three       =  3.0;
-   static const RealOpenMM six         =  6.0;
-   static const RealOpenMM twelve      = 12.0;
-   static const RealOpenMM oneM        = -1.0;
-
-   static const int threeI             = 3;
-
-   // number of parameters
-
-   static const int numberOfParameters = 3;
-
-   static const int LastAtomIndex      = 2;
-
-   RealOpenMM deltaR[2][ReferenceForce::LastDeltaRIndex];
-
-   // ---------------------------------------------------------------------------------------
+void ReferenceLJCoulomb14::calculateBondIxn(int* atomIndices, vector<Vec3>& atomCoordinates,
+                                     double* parameters, vector<Vec3>& forces,
+                                     double* totalEnergy, double* energyParamDerivs) {
+   double deltaR[2][ReferenceForce::LastDeltaRIndex];
 
    // get deltaR, R2, and R between 2 atoms
 
@@ -113,20 +76,19 @@ void ReferenceLJCoulomb14::calculateBondIxn(int* atomIndices, vector<RealVec>& a
    int atomBIndex = atomIndices[1];
    ReferenceForce::getDeltaR(atomCoordinates[atomBIndex], atomCoordinates[atomAIndex], deltaR[0]);  
 
-   RealOpenMM r2        = deltaR[0][ReferenceForce::R2Index];
-   RealOpenMM inverseR  = one/(deltaR[0][ReferenceForce::RIndex]);
-   RealOpenMM sig2      = inverseR*parameters[0];
-              sig2     *= sig2;
-   RealOpenMM sig6      = sig2*sig2*sig2;
+   double inverseR  = 1.0/(deltaR[0][ReferenceForce::RIndex]);
+   double sig2      = inverseR*parameters[0];
+          sig2     *= sig2;
+   double sig6      = sig2*sig2*sig2;
 
-   RealOpenMM dEdR      = parameters[1]*(twelve*sig6 - six)*sig6;
-              dEdR     += (RealOpenMM) (ONE_4PI_EPS0*parameters[2]*inverseR);
-              dEdR     *= inverseR*inverseR;
+   double dEdR      = parameters[1]*(12.0*sig6 - 6.0)*sig6;
+          dEdR     += ONE_4PI_EPS0*parameters[2]*inverseR;
+          dEdR     *= inverseR*inverseR;
 
    // accumulate forces
 
    for (int ii = 0; ii < 3; ii++) {
-      RealOpenMM force        = dEdR*deltaR[0][ii];
+      double force        = dEdR*deltaR[0][ii];
       forces[atomAIndex][ii] += force;
       forces[atomBIndex][ii] -= force;
    }
@@ -134,5 +96,5 @@ void ReferenceLJCoulomb14::calculateBondIxn(int* atomIndices, vector<RealVec>& a
    // accumulate energies
 
    if (totalEnergy != NULL)
-       *totalEnergy += parameters[1]*(sig6 - one)*sig6 + (ONE_4PI_EPS0*parameters[2]*inverseR);
+       *totalEnergy += parameters[1]*(sig6 - 1.0)*sig6 + (ONE_4PI_EPS0*parameters[2]*inverseR);
 }

@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2016 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -38,13 +38,6 @@ using namespace OpenMM;
    --------------------------------------------------------------------------------------- */
 
 ReferenceBondForce::ReferenceBondForce() {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceBondForce::ReferenceBondForce";
-
-   // ---------------------------------------------------------------------------------------
-
 }
 
 /**---------------------------------------------------------------------------------------
@@ -54,13 +47,6 @@ ReferenceBondForce::ReferenceBondForce() {
    --------------------------------------------------------------------------------------- */
 
 ReferenceBondForce::~ReferenceBondForce() {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceBondForce::~ReferenceBondForce";
-
-   // ---------------------------------------------------------------------------------------
-
 }
 
 /**---------------------------------------------------------------------------------------
@@ -79,25 +65,18 @@ ReferenceBondForce::~ReferenceBondForce() {
    --------------------------------------------------------------------------------------- */
 
 void ReferenceBondForce::calculateForce(int numberOfBonds, int** atomIndices,
-                                        vector<RealVec>& atomCoordinates,
-                                        RealOpenMM** parameters,
-                                        vector<RealVec>& forces, 
-                                        RealOpenMM *totalEnergy, 
+                                        vector<Vec3>& atomCoordinates,
+                                        double** parameters,
+                                        vector<Vec3>& forces, 
+                                        double *totalEnergy, 
                                         ReferenceBondIxn& referenceBondIxn) {
-
-
-   // ---------------------------------------------------------------------------------------
-
-   static const char* methodName = "\nReferenceBondForce::calculateForce";
-
-   // ---------------------------------------------------------------------------------------
 
    for (int ii = 0; ii < numberOfBonds; ii++) {
 
       // calculate bond ixn
 
       referenceBondIxn.calculateBondIxn(atomIndices[ii], atomCoordinates, parameters[ii], 
-                                        forces, totalEnergy);
+                                        forces, totalEnergy, NULL);
    }
 }
 

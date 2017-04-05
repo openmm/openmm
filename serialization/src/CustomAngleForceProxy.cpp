@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -42,9 +42,10 @@ CustomAngleForceProxy::CustomAngleForceProxy() : SerializationProxy("CustomAngle
 }
 
 void CustomAngleForceProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 1);
+    node.setIntProperty("version", 3);
     const CustomAngleForce& force = *reinterpret_cast<const CustomAngleForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setBoolProperty("usesPeriodic", force.usesPeriodicBoundaryConditions());
     node.setStringProperty("energy", force.getEnergyFunction());
     SerializationNode& perAngleParams = node.createChildNode("PerAngleParameters");
     for (int i = 0; i < force.getNumPerAngleParameters(); i++) {
@@ -53,6 +54,10 @@ void CustomAngleForceProxy::serialize(const void* object, SerializationNode& nod
     SerializationNode& globalParams = node.createChildNode("GlobalParameters");
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {
         globalParams.createChildNode("Parameter").setStringProperty("name", force.getGlobalParameterName(i)).setDoubleProperty("default", force.getGlobalParameterDefaultValue(i));
+    }
+    SerializationNode& energyDerivs = node.createChildNode("EnergyParameterDerivatives");
+    for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
+        energyDerivs.createChildNode("Parameter").setStringProperty("name", force.getEnergyParameterDerivativeName(i));
     }
     SerializationNode& angles = node.createChildNode("Angles");
     for (int i = 0; i < force.getNumAngles(); i++) {
@@ -70,26 +75,29 @@ void CustomAngleForceProxy::serialize(const void* object, SerializationNode& nod
 }
 
 void* CustomAngleForceProxy::deserialize(const SerializationNode& node) const {
-    if (node.getIntProperty("version") != 1)
+    int version = node.getIntProperty("version");
+    if (version < 1 || version > 3)
         throw OpenMMException("Unsupported version number");
     CustomAngleForce* force = NULL;
     try {
         CustomAngleForce* force = new CustomAngleForce(node.getStringProperty("energy"));
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        if (version > 1)
+            force->setUsesPeriodicBoundaryConditions(node.getBoolProperty("usesPeriodic"));
         const SerializationNode& perAngleParams = node.getChildNode("PerAngleParameters");
-        for (int i = 0; i < (int) perAngleParams.getChildren().size(); i++) {
-            const SerializationNode& parameter = perAngleParams.getChildren()[i];
+        for (auto& parameter : perAngleParams.getChildren())
             force->addPerAngleParameter(parameter.getStringProperty("name"));
-        }
         const SerializationNode& globalParams = node.getChildNode("GlobalParameters");
-        for (int i = 0; i < (int) globalParams.getChildren().size(); i++) {
-            const SerializationNode& parameter = globalParams.getChildren()[i];
+        for (auto& parameter : globalParams.getChildren())
             force->addGlobalParameter(parameter.getStringProperty("name"), parameter.getDoubleProperty("default"));
+        if (version > 2) {
+            const SerializationNode& energyDerivs = node.getChildNode("EnergyParameterDerivatives");
+            for (auto& parameter : energyDerivs.getChildren())
+                force->addEnergyParameterDerivative(parameter.getStringProperty("name"));
         }
         const SerializationNode& angles = node.getChildNode("Angles");
         vector<double> params(force->getNumPerAngleParameters());
-        for (int i = 0; i < (int) angles.getChildren().size(); i++) {
-            const SerializationNode& angle = angles.getChildren()[i];
+        for (auto& angle : angles.getChildren()) {
             for (int j = 0; j < (int) params.size(); j++) {
                 stringstream key;
                 key << "param";

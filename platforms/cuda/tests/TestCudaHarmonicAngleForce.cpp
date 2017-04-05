@@ -7,7 +7,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -30,74 +30,9 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-/**
- * This tests the CUDA implementation of HarmonicAngleForce.
- */
-
-#include "openmm/internal/AssertionUtilities.h"
-#include "openmm/Context.h"
-#include "CudaPlatform.h"
-#include "openmm/HarmonicAngleForce.h"
-#include "openmm/System.h"
-#include "openmm/VerletIntegrator.h"
-#include "SimTKOpenMMRealType.h"
-#include <iostream>
-#include <vector>
-
-using namespace OpenMM;
-using namespace std;
-
-CudaPlatform platform;
-
-const double TOL = 1e-5;
-
-void testAngles() {
-    System system;
-    system.addParticle(1.0);
-    system.addParticle(1.0);
-    system.addParticle(1.0);
-    system.addParticle(1.0);
-    VerletIntegrator integrator(0.01);
-    HarmonicAngleForce* forceField = new HarmonicAngleForce();
-    forceField->addAngle(0, 1, 2, PI_M/3, 1.1);
-    forceField->addAngle(1, 2, 3, PI_M/2, 1.2);
-    system.addForce(forceField);
-    Context context(system, integrator, platform);
-    vector<Vec3> positions(4);
-    positions[0] = Vec3(0, 1, 0);
-    positions[1] = Vec3(0, 0, 0);
-    positions[2] = Vec3(1, 0, 0);
-    positions[3] = Vec3(2, 1, 0);
-    context.setPositions(positions);
-    State state = context.getState(State::Forces | State::Energy);
-    {
-        const vector<Vec3>& forces = state.getForces();
-        double torque1 = 1.1*PI_M/6;
-        double torque2 = 1.2*PI_M/4;
-        ASSERT_EQUAL_VEC(Vec3(torque1, 0, 0), forces[0], TOL);
-        ASSERT_EQUAL_VEC(Vec3(-0.5*torque2, 0.5*torque2, 0), forces[3], TOL); // reduced by sqrt(2) due to the bond length, another sqrt(2) due to the angle
-        ASSERT_EQUAL_VEC(Vec3(forces[0][0]+forces[1][0]+forces[2][0]+forces[3][0], forces[0][1]+forces[1][1]+forces[2][1]+forces[3][1], forces[0][2]+forces[1][2]+forces[2][2]+forces[3][2]), Vec3(0, 0, 0), TOL);
-        ASSERT_EQUAL_TOL(0.5*1.1*(PI_M/6)*(PI_M/6) + 0.5*1.2*(PI_M/4)*(PI_M/4), state.getPotentialEnergy(), TOL);
-    }
-    
-    // Try changing the angle parameters and make sure it's still correct.
-    
-    forceField->setAngleParameters(0, 0, 1, 2, PI_M/3.1, 1.3);
-    forceField->setAngleParameters(1, 1, 2, 3, PI_M/2.1, 1.4);
-    forceField->updateParametersInContext(context);
-    state = context.getState(State::Forces | State::Energy);
-    {
-        const vector<Vec3>& forces = state.getForces();
-        double dtheta1 = (PI_M/2)-(PI_M/3.1);
-        double dtheta2 = (3*PI_M/4)-(PI_M/2.1);
-        double torque1 = 1.3*dtheta1;
-        double torque2 = 1.4*dtheta2;
-        ASSERT_EQUAL_VEC(Vec3(torque1, 0, 0), forces[0], TOL);
-        ASSERT_EQUAL_VEC(Vec3(-0.5*torque2, 0.5*torque2, 0), forces[3], TOL); // reduced by sqrt(2) due to the bond length, another sqrt(2) due to the angle
-        ASSERT_EQUAL_VEC(Vec3(forces[0][0]+forces[1][0]+forces[2][0]+forces[3][0], forces[0][1]+forces[1][1]+forces[2][1]+forces[3][1], forces[0][2]+forces[1][2]+forces[2][2]+forces[3][2]), Vec3(0, 0, 0), TOL);
-        ASSERT_EQUAL_TOL(0.5*1.3*dtheta1*dtheta1 + 0.5*1.4*dtheta2*dtheta2, state.getPotentialEnergy(), TOL);
-    }
-}
+#include "CudaTests.h"
+#include "TestHarmonicAngleForce.h"
+#include <map>
 
 void testParallelComputation() {
     System system;
@@ -127,17 +62,6 @@ void testParallelComputation() {
         ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], 1e-5);
 }
 
-int main(int argc, char* argv[]) {
-    try {
-        if (argc > 1)
-            platform.setPropertyDefaultValue("CudaPrecision", string(argv[1]));
-        testAngles();
-        testParallelComputation();
-    }
-    catch(const exception& e) {
-        cout << "exception: " << e.what() << endl;
-        return 1;
-    }
-    cout << "Done" << endl;
-    return 0;
+void runPlatformTests() {
+    testParallelComputation();
 }

@@ -12,6 +12,7 @@
 Test implementing PDBx/mmCIF write and formatting operations.
 
 """
+from __future__ import absolute_import
 __docformat__ = "restructuredtext en"
 __author__    = "John Westbrook"
 __email__     = "jwest@rcsb.rutgers.edu"

@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2014 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2017 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -25,10 +25,10 @@
 #ifndef OPENMM_CPU_CUSTOM_GB_FORCE_H__
 #define OPENMM_CPU_CUSTOM_GB_FORCE_H__
 
-#include "CompiledExpressionSet.h"
 #include "CpuNeighborList.h"
 #include "lepton/CompiledExpression.h"
 #include "openmm/CustomGBForce.h"
+#include "openmm/internal/CompiledExpressionSet.h"
 #include "openmm/internal/ThreadPool.h"
 #include "openmm/internal/vectorize.h"
 #include <map>
@@ -39,7 +39,6 @@ namespace OpenMM {
 
 class CpuCustomGBForce {
 private:
-    class ComputeForceTask;
     class ThreadData;
 
     bool cutoff;
@@ -47,20 +46,20 @@ private:
     const CpuNeighborList* neighborList;
     float periodicBoxSize[3];
     float cutoffDistance, cutoffDistance2;
+    int numValues, numParams;
     const std::vector<std::set<int> > exclusions;
-    std::vector<std::string> valueNames;
     std::vector<CustomGBForce::ComputationType> valueTypes;
-    std::vector<std::string> paramNames;
     std::vector<CustomGBForce::ComputationType> energyTypes;
     ThreadPool& threads;
     std::vector<ThreadData*> threadData;
     std::vector<double> threadEnergy;
+    std::vector<std::vector<std::vector<float> > > dValuedParam;
     // Workspace vectors
     std::vector<std::vector<float> > values, dEdV;
     // The following variables are used to make information accessible to the individual threads.
     int numberOfAtoms;
     float* posq;
-    RealOpenMM** atomParameters;
+    double** atomParameters;
     const std::map<std::string, double>* globalParameters;
     std::vector<AlignedArray<float> >* threadForce;
     bool includeForce, includeEnergy;
@@ -82,7 +81,7 @@ private:
      * @param useExclusions    specifies whether to use exclusions
      */
 
-    void calculateParticlePairValue(int index, ThreadData& data, int numAtoms, float* posq, RealOpenMM** atomParameters,
+    void calculateParticlePairValue(int index, ThreadData& data, int numAtoms, float* posq, double** atomParameters,
                                     bool useExclusions, const fvec4& boxSize, const fvec4& invBoxSize);
 
     /**
@@ -96,7 +95,7 @@ private:
      * @param atomParameters   atomParameters[atomIndex][paramterIndex]
      */
 
-    void calculateOnePairValue(int index, int atom1, int atom2, ThreadData& data, float* posq, RealOpenMM** atomParameters,
+    void calculateOnePairValue(int index, int atom1, int atom2, ThreadData& data, float* posq, double** atomParameters,
                                std::vector<float>& valueArray, const fvec4& boxSize, const fvec4& invBoxSize);
 
     /**
@@ -111,7 +110,7 @@ private:
      * @param totalEnergy      the energy contribution is added to this
      */
 
-    void calculateSingleParticleEnergyTerm(int index, ThreadData& data, int numAtoms, float* posq, RealOpenMM** atomParameters, float* forces, double& totalEnergy);
+    void calculateSingleParticleEnergyTerm(int index, ThreadData& data, int numAtoms, float* posq, double** atomParameters, float* forces, double& totalEnergy);
 
     /**
      * Calculate an energy term that is based on particle pairs
@@ -126,7 +125,7 @@ private:
      * @param totalEnergy      the energy contribution is added to this
      */
 
-    void calculateParticlePairEnergyTerm(int index, ThreadData& data, int numAtoms, float* posq, RealOpenMM** atomParameters,
+    void calculateParticlePairEnergyTerm(int index, ThreadData& data, int numAtoms, float* posq, double** atomParameters,
                                     bool useExclusions, float* forces, double& totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize);
 
     /**
@@ -142,7 +141,7 @@ private:
      * @param totalEnergy      the energy contribution is added to this
      */
 
-    void calculateOnePairEnergyTerm(int index, int atom1, int atom2, ThreadData& data, float* posq, RealOpenMM** atomParameters,
+    void calculateOnePairEnergyTerm(int index, int atom1, int atom2, ThreadData& data, float* posq, double** atomParameters,
                                float* forces, double& totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize);
 
     /**
@@ -155,7 +154,7 @@ private:
      * @param forces           forces on atoms are added to this
      */
 
-    void calculateChainRuleForces(ThreadData& data, int numAtoms, float* posq, RealOpenMM** atomParameters,
+    void calculateChainRuleForces(ThreadData& data, int numAtoms, float* posq, double** atomParameters,
                                     float* forces, const fvec4& boxSize, const fvec4& invBoxSize);
 
     /**
@@ -170,7 +169,7 @@ private:
      * @param isExcluded       specifies whether this is an excluded pair
      */
 
-    void calculateOnePairChainRule(int atom1, int atom2, ThreadData& data, float* posq, RealOpenMM** atomParameters,
+    void calculateOnePairChainRule(int atom1, int atom2, ThreadData& data, float* posq, double** atomParameters,
                                float* forces, bool isExcluded, const fvec4& boxSize, const fvec4& invBoxSize);
 
     /**
@@ -189,11 +188,13 @@ public:
                         const std::vector<Lepton::CompiledExpression>& valueExpressions,
                         const std::vector<std::vector<Lepton::CompiledExpression> >& valueDerivExpressions,
                         const std::vector<std::vector<Lepton::CompiledExpression> >& valueGradientExpressions,
+                        const std::vector<std::vector<Lepton::CompiledExpression> >& valueParamDerivExpressions,
                         const std::vector<std::string>& valueNames,
                         const std::vector<CustomGBForce::ComputationType>& valueTypes,
                         const std::vector<Lepton::CompiledExpression>& energyExpressions,
                         const std::vector<std::vector<Lepton::CompiledExpression> >& energyDerivExpressions,
                         const std::vector<std::vector<Lepton::CompiledExpression> >& energyGradientExpressions,
+                        const std::vector<std::vector<Lepton::CompiledExpression> >& energyParamDerivExpressions,
                         const std::vector<CustomGBForce::ComputationType>& energyTypes,
                         const std::vector<std::string>& parameterNames, ThreadPool& threads);
 
@@ -216,21 +217,22 @@ public:
      * @param boxSize             the X, Y, and Z widths of the periodic box
      */
 
-    void setPeriodic(RealVec& boxSize);
+    void setPeriodic(Vec3& boxSize);
 
     /**
      * Calculate custom GB ixn
      * 
-     * @param numberOfAtoms    number of atoms
-     * @param posq             atom coordinates
-     * @param atomParameters   atomParameters[atomIndex][paramterIndex]
-     * @param globalParameters the values of global parameters
-     * @param forces           force array (forces added)
-     * @param totalEnergy      total energy
+     * @param numberOfAtoms      number of atoms
+     * @param posq               atom coordinates
+     * @param atomParameters     atomParameters[atomIndex][paramterIndex]
+     * @param globalParameters   the values of global parameters
+     * @param forces             force array (forces added)
+     * @param totalEnergy        total energy
+     * @param energyParamDerivs  derivatives of the energy with respect to global parameters
      */
 
-    void calculateIxn(int numberOfAtoms, float* posq, RealOpenMM** atomParameters,
-                     std::map<std::string, double>& globalParameters, std::vector<AlignedArray<float> >& threadForce, bool includeForce, bool includeEnergy, double& totalEnergy);
+    void calculateIxn(int numberOfAtoms, float* posq, double** atomParameters, std::map<std::string, double>& globalParameters,
+            std::vector<AlignedArray<float> >& threadForce, bool includeForce, bool includeEnergy, double& totalEnergy, double* energyParamDerivs);
 };
 
 class CpuCustomGBForce::ThreadData {
@@ -239,27 +241,33 @@ public:
                const std::vector<Lepton::CompiledExpression>& valueExpressions,
                const std::vector<std::vector<Lepton::CompiledExpression> >& valueDerivExpressions,
                const std::vector<std::vector<Lepton::CompiledExpression> >& valueGradientExpressions,
+               const std::vector<std::vector<Lepton::CompiledExpression> >& valueParamDerivExpressions,
                const std::vector<std::string>& valueNames,
                const std::vector<Lepton::CompiledExpression>& energyExpressions,
                const std::vector<std::vector<Lepton::CompiledExpression> >& energyDerivExpressions,
                const std::vector<std::vector<Lepton::CompiledExpression> >& energyGradientExpressions,
+               const std::vector<std::vector<Lepton::CompiledExpression> >& energyParamDerivExpressions,
                const std::vector<std::string>& parameterNames);
     CompiledExpressionSet expressionSet;
     std::vector<Lepton::CompiledExpression> valueExpressions;
     std::vector<std::vector<Lepton::CompiledExpression> > valueDerivExpressions;
     std::vector<std::vector<Lepton::CompiledExpression> > valueGradientExpressions;
-    std::vector<int> valueIndex;
+    std::vector<std::vector<Lepton::CompiledExpression> > valueParamDerivExpressions;
+    std::vector<double> value;
     std::vector<Lepton::CompiledExpression> energyExpressions;
     std::vector<std::vector<Lepton::CompiledExpression> > energyDerivExpressions;
     std::vector<std::vector<Lepton::CompiledExpression> > energyGradientExpressions;
-    std::vector<int> paramIndex;
-    std::vector<int> particleParamIndex;
-    std::vector<int> particleValueIndex;
-    int xindex, yindex, zindex, rindex;
+    std::vector<std::vector<Lepton::CompiledExpression> > energyParamDerivExpressions;
+    std::vector<double> param;
+    std::vector<double> particleParam;
+    std::vector<double> particleValue;
+    double x, y, z, r;
     int firstAtom, lastAtom;
     // Workspace vectors
     std::vector<float> value0, dVdR1, dVdR2, dVdX, dVdY, dVdZ;
     std::vector<std::vector<float> > dEdV;
+    std::vector<std::vector<float> > dValue0dParam;
+    std::vector<float> energyParamDerivs;
 };
 
 } // namespace OpenMM

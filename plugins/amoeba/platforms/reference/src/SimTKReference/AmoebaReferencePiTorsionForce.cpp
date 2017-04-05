@@ -1,5 +1,4 @@
-
-/* Portions copyright (c) 2006 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2016 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -24,10 +23,18 @@
 
 #include "AmoebaReferenceForce.h"
 #include "AmoebaReferencePiTorsionForce.h"
+#include <cmath>
 #include <vector>
 
 using std::vector;
 using namespace OpenMM;
+
+void AmoebaReferencePiTorsionForce::setPeriodic(OpenMM::Vec3* vectors) {
+    usePeriodic = true;
+    boxVectors[0] = vectors[0];
+    boxVectors[1] = vectors[1];
+    boxVectors[2] = vectors[2];
+}
 
 /**---------------------------------------------------------------------------------------
 
@@ -46,34 +53,32 @@ using namespace OpenMM;
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM AmoebaReferencePiTorsionForce::calculatePiTorsionIxn(const RealVec& positionAtomA, const RealVec& positionAtomB,
-                                                                const RealVec& positionAtomC, const RealVec& positionAtomD,
-                                                                const RealVec& positionAtomE, const RealVec& positionAtomF,
-                                                                RealOpenMM piTorsionK, RealVec* forces) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   //static const std::string methodName = "AmoebaReferencePiTorsionForce::calculatePiTorsionIxn";
-
-   static const RealOpenMM zero          = 0.0;
-   static const RealOpenMM one           = 1.0;
-   static const RealOpenMM two           = 2.0;
-
-   // ---------------------------------------------------------------------------------------
+double AmoebaReferencePiTorsionForce::calculatePiTorsionIxn(const Vec3& positionAtomA, const Vec3& positionAtomB,
+                                                            const Vec3& positionAtomC, const Vec3& positionAtomD,
+                                                            const Vec3& positionAtomE, const Vec3& positionAtomF,
+                                                            double piTorsionK, Vec3* forces) const {
 
     enum { AD, BD, EC, FC, P, Q, CP, DC, QD, T, U, TU, DP, QC, dT, dU, dP, dQ, dC1, dC2, dD1, dD2, LastDeltaIndex };
  
-    std::vector<RealOpenMM> deltaR[LastDeltaIndex];
+    std::vector<double> deltaR[LastDeltaIndex];
     for (unsigned int ii = 0; ii < LastDeltaIndex; ii++) {
         deltaR[ii].resize(3);
-    }   
-    AmoebaReferenceForce::loadDeltaR(positionAtomD, positionAtomA, deltaR[AD]);
-    AmoebaReferenceForce::loadDeltaR(positionAtomD, positionAtomB, deltaR[BD]);
-    AmoebaReferenceForce::loadDeltaR(positionAtomC, positionAtomE, deltaR[EC]);
-    AmoebaReferenceForce::loadDeltaR(positionAtomC, positionAtomF, deltaR[FC]);
+    }
+    if (usePeriodic) {
+        AmoebaReferenceForce::loadDeltaRPeriodic(positionAtomD, positionAtomA, deltaR[AD], boxVectors);
+        AmoebaReferenceForce::loadDeltaRPeriodic(positionAtomD, positionAtomB, deltaR[BD], boxVectors);
+        AmoebaReferenceForce::loadDeltaRPeriodic(positionAtomC, positionAtomE, deltaR[EC], boxVectors);
+        AmoebaReferenceForce::loadDeltaRPeriodic(positionAtomC, positionAtomF, deltaR[FC], boxVectors);
+    }
+    else {
+        AmoebaReferenceForce::loadDeltaR(positionAtomD, positionAtomA, deltaR[AD]);
+        AmoebaReferenceForce::loadDeltaR(positionAtomD, positionAtomB, deltaR[BD]);
+        AmoebaReferenceForce::loadDeltaR(positionAtomC, positionAtomE, deltaR[EC]);
+        AmoebaReferenceForce::loadDeltaR(positionAtomC, positionAtomF, deltaR[FC]);
+    }
 
     enum { A, B, C, D, E, F, LastAtomIndex };
-    std::vector<RealOpenMM> d[LastAtomIndex];
+    std::vector<double> d[LastAtomIndex];
     for (unsigned int ii = 0; ii < LastAtomIndex; ii++) {
         d[ii].resize(3);
     }   
@@ -92,36 +97,36 @@ RealOpenMM AmoebaReferencePiTorsionForce::calculatePiTorsionIxn(const RealVec& p
     AmoebaReferenceForce::getCrossProduct(deltaR[DC], deltaR[QD], deltaR[U]);
     AmoebaReferenceForce::getCrossProduct(deltaR[T],  deltaR[U],  deltaR[TU]);
  
-    RealOpenMM rT2  = AmoebaReferenceForce::getNormSquared3(deltaR[T]);
-    RealOpenMM rU2  = AmoebaReferenceForce::getNormSquared3(deltaR[U]);
-    RealOpenMM rTrU = SQRT(rT2*rU2);
-    if (rTrU <= zero) {
-       return zero;
+    double rT2  = AmoebaReferenceForce::getNormSquared3(deltaR[T]);
+    double rU2  = AmoebaReferenceForce::getNormSquared3(deltaR[U]);
+    double rTrU = sqrt(rT2*rU2);
+    if (rTrU <= 0.0) {
+       return 0.0;
     }
  
-    RealOpenMM rDC     = AmoebaReferenceForce::getNorm3(deltaR[DC]);
+    double rDC     = AmoebaReferenceForce::getNorm3(deltaR[DC]);
   
-    RealOpenMM cosine  = AmoebaReferenceForce::getDotProduct3(deltaR[T], deltaR[U]);
-               cosine /= rTrU;
+    double cosine  = AmoebaReferenceForce::getDotProduct3(deltaR[T], deltaR[U]);
+           cosine /= rTrU;
  
-    RealOpenMM sine    = AmoebaReferenceForce::getDotProduct3(deltaR[DC], deltaR[TU]);
-                sine  /= (rDC*rTrU);
+    double sine    = AmoebaReferenceForce::getDotProduct3(deltaR[DC], deltaR[TU]);
+           sine   /= (rDC*rTrU);
  
-    RealOpenMM cosine2 = cosine*cosine - sine*sine;
-    RealOpenMM sine2   = two*cosine*sine;
+    double cosine2 = cosine*cosine - sine*sine;
+    double sine2   = 2.0*cosine*sine;
  
-    RealOpenMM phi2    = one - cosine2;
-    RealOpenMM dphi2   = two*sine2;
+    double phi2    = 1.0 - cosine2;
+    double dphi2   = 2.0*sine2;
  
-    RealOpenMM dedphi  = piTorsionK*dphi2; 
+    double dedphi  = piTorsionK*dphi2; 
  
     for (unsigned int ii = 0; ii < 3; ii++) {
        deltaR[DP][ii] = positionAtomD[ii] - deltaR[P][ii];
        deltaR[QC][ii] = deltaR[Q][ii]     - positionAtomC[ii];
     }
  
-    RealOpenMM factorT =  dedphi/(rDC*rT2);
-    RealOpenMM factorU = -dedphi/(rDC*rU2);
+    double factorT =  dedphi/(rDC*rT2);
+    double factorU = -dedphi/(rDC*rU2);
  
     AmoebaReferenceForce::getCrossProduct(deltaR[T], deltaR[DC], deltaR[dT]);
     AmoebaReferenceForce::getCrossProduct(deltaR[U], deltaR[DC], deltaR[dU]);
@@ -186,16 +191,16 @@ RealOpenMM AmoebaReferencePiTorsionForce::calculatePiTorsionIxn(const RealVec& p
  
 }
 
-RealOpenMM AmoebaReferencePiTorsionForce::calculateForceAndEnergy(int numPiTorsions, vector<RealVec>& posData,
-                                                                  const std::vector<int>&  particle1,
-                                                                  const std::vector<int>&  particle2,
-                                                                  const std::vector<int>&  particle3,
-                                                                  const std::vector<int>&  particle4,
-                                                                  const std::vector<int>&  particle5,
-                                                                  const std::vector<int>&  particle6,
-                                                                  const std::vector<RealOpenMM>& kTorsion,
-                                                                  vector<RealVec>& forceData) const {
-    RealOpenMM energy  = 0.0; 
+double AmoebaReferencePiTorsionForce::calculateForceAndEnergy(int numPiTorsions, vector<Vec3>& posData,
+                                                              const std::vector<int>&  particle1,
+                                                              const std::vector<int>&  particle2,
+                                                              const std::vector<int>&  particle3,
+                                                              const std::vector<int>&  particle4,
+                                                              const std::vector<int>&  particle5,
+                                                              const std::vector<int>&  particle6,
+                                                              const std::vector<double>& kTorsion,
+                                                              vector<Vec3>& forceData) const {
+    double energy  = 0.0; 
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(numPiTorsions); ii++) {
 
         int particle1Index      = particle1[ii];
@@ -205,7 +210,7 @@ RealOpenMM AmoebaReferencePiTorsionForce::calculateForceAndEnergy(int numPiTorsi
         int particle5Index      = particle5[ii];
         int particle6Index      = particle6[ii];
 
-        RealVec forces[6];
+        Vec3 forces[6];
         energy                 += calculatePiTorsionIxn(posData[particle1Index], posData[particle2Index],
                                                         posData[particle3Index], posData[particle4Index],
                                                         posData[particle5Index], posData[particle6Index],

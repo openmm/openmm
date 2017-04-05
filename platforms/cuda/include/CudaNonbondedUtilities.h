@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -71,15 +71,16 @@ public:
     /**
      * Add a nonbonded interaction to be evaluated by the default interaction kernel.
      *
-     * @param usesCutoff     specifies whether a cutoff should be applied to this interaction
-     * @param usesPeriodic   specifies whether periodic boundary conditions should be applied to this interaction
-     * @param usesExclusions specifies whether this interaction uses exclusions.  If this is true, it must have identical exclusions to every other interaction.
-     * @param cutoffDistance the cutoff distance for this interaction (ignored if usesCutoff is false)
-     * @param exclusionList  for each atom, specifies the list of other atoms whose interactions should be excluded
-     * @param kernel         the code to evaluate the interaction
-     * @param forceGroup     the force group in which the interaction should be calculated
+     * @param usesCutoff       specifies whether a cutoff should be applied to this interaction
+     * @param usesPeriodic     specifies whether periodic boundary conditions should be applied to this interaction
+     * @param usesExclusions   specifies whether this interaction uses exclusions.  If this is true, it must have identical exclusions to every other interaction.
+     * @param cutoffDistance   the cutoff distance for this interaction (ignored if usesCutoff is false)
+     * @param exclusionList    for each atom, specifies the list of other atoms whose interactions should be excluded
+     * @param kernel           the code to evaluate the interaction
+     * @param forceGroup       the force group in which the interaction should be calculated
+     * @param supportsPairList specifies whether this interaction can work with a neighbor list that uses a separate pair list
      */
-    void addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance, const std::vector<std::vector<int> >& exclusionList, const std::string& kernel, int forceGroup);
+    void addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance, const std::vector<std::vector<int> >& exclusionList, const std::string& kernel, int forceGroup, bool supportsPairList=false);
     /**
      * Add a per-atom parameter that the default interaction kernel may depend on.
      */
@@ -88,6 +89,15 @@ public:
      * Add an array (other than a per-atom parameter) that should be passed as an argument to the default interaction kernel.
      */
     void addArgument(const ParameterInfo& parameter);
+    /**
+     * Register that the interaction kernel will be computing the derivative of the potential energy
+     * with respect to a parameter.
+     * 
+     * @param param   the name of the parameter
+     * @return the variable that will be used to accumulate the derivative.  Any code you pass to addInteraction() should
+     * add its contributions to this variable.
+     */
+    std::string addEnergyParameterDerivative(const std::string& param);
     /**
      * Specify the list of exclusions that an interaction outside the default kernel will depend on.
      * 
@@ -129,35 +139,27 @@ public:
         return forceThreadBlockSize;
     }
     /**
-     * Get the cutoff distance.
+     * Get the maximum cutoff distance used by any force group.
      */
-    double getCutoffDistance() {
-        return cutoff;
-    }
-    /**
-     * Get whether any interactions have been added.
-     */
-    bool getHasInteractions() {
-        return cutoff != -1.0;
-    }
-    /**
-     * Get the force group in which nonbonded interactions should be computed.
-     */
-    int getForceGroup() {
-        return nonbondedForceGroup;
-    }
+    double getMaxCutoffDistance();
     /**
      * Prepare to compute interactions.  This updates the neighbor list.
      */
-    void prepareInteractions();
+    void prepareInteractions(int forceGroups);
     /**
      * Compute the nonbonded interactions.
+     * 
+     * @param forceGroups    the flags specifying which force groups to include
+     * @param includeForces  whether to compute forces
+     * @param includeEnergy  whether to compute the potential energy
      */
-    void computeInteractions();
+    void computeInteractions(int forceGroups, bool includeForces, bool includeEnergy);
     /**
      * Check to see if the neighbor list arrays are large enough, and make them bigger if necessary.
+     *
+     * @return true if the neighbor list needed to be enlarged.
      */
-    void updateNeighborListSize();
+    bool updateNeighborListSize();
     /**
      * Get the array containing the center of each atom block.
      */
@@ -187,6 +189,12 @@ public:
      */
     CudaArray& getInteractingAtoms() {
         return *interactingAtoms;
+    }
+    /**
+     * Get the array containing single pairs in the neighbor list.
+     */
+    CudaArray& getSinglePairs() {
+        return *singlePairs;
     }
     /**
      * Get the array containing exclusion flags.
@@ -246,16 +254,22 @@ public:
      * @param arguments     arrays (other than per-atom parameters) that should be passed as arguments to the kernel
      * @param useExclusions specifies whether exclusions are applied to this interaction
      * @param isSymmetric   specifies whether the interaction is symmetric
+     * @param groups        the set of force groups this kernel is for
+     * @param includeForces whether this kernel should compute forces
+     * @param includeEnergy whether this kernel should compute potential energy
      */
-    CUfunction createInteractionKernel(const std::string& source, std::vector<ParameterInfo>& params, std::vector<ParameterInfo>& arguments, bool useExclusions, bool isSymmetric);
+    CUfunction createInteractionKernel(const std::string& source, std::vector<ParameterInfo>& params, std::vector<ParameterInfo>& arguments, bool useExclusions, bool isSymmetric, int groups, bool includeForces, bool includeEnergy);
+    /**
+     * Create the set of kernels that will be needed for a particular combination of force groups.
+     * 
+     * @param groups    the set of force groups
+     */
+    void createKernelsForGroups(int groups);
 private:
+    class KernelSet;
     class BlockSortTrait;
     CudaContext& context;
-    CUfunction forceKernel;
-    CUfunction findBlockBoundsKernel;
-    CUfunction sortBoxDataKernel;
-    CUfunction findInteractingBlocksKernel;
-    CUfunction findInteractionsWithinBlocksKernel;
+    std::map<int, KernelSet> groupKernels;
     CudaArray* exclusionTiles;
     CudaArray* exclusions;
     CudaArray* exclusionIndices;
@@ -263,6 +277,8 @@ private:
     CudaArray* interactingTiles;
     CudaArray* interactingAtoms;
     CudaArray* interactionCount;
+    CudaArray* singlePairs;
+    CudaArray* singlePairCount;
     CudaArray* blockCenter;
     CudaArray* blockBoundingBox;
     CudaArray* sortedBlocks;
@@ -271,15 +287,34 @@ private:
     CudaArray* oldPositions;
     CudaArray* rebuildNeighborList;
     CudaSort* blockSorter;
+    CUevent downloadCountEvent;
+    int* pinnedCountBuffer;
     std::vector<void*> forceArgs, findBlockBoundsArgs, sortBoxDataArgs, findInteractingBlocksArgs;
     std::vector<std::vector<int> > atomExclusions;
     std::vector<ParameterInfo> parameters;
     std::vector<ParameterInfo> arguments;
-    std::string kernelSource;
-    std::map<std::string, std::string> kernelDefines;
-    double cutoff;
-    bool useCutoff, usePeriodic, anyExclusions, usePadding, forceRebuildNeighborList;
-    int startTileIndex, numTiles, startBlockIndex, numBlocks, maxTiles, numForceThreadBlocks, forceThreadBlockSize, nonbondedForceGroup, numAtoms;
+    std::vector<std::string> energyParameterDerivatives;
+    std::map<int, double> groupCutoff;
+    std::map<int, std::string> groupKernelSource;
+    double lastCutoff;
+    bool useCutoff, usePeriodic, anyExclusions, usePadding, forceRebuildNeighborList, canUsePairList;
+    int startTileIndex, numTiles, startBlockIndex, numBlocks, maxTiles, maxSinglePairs, maxExclusions, numForceThreadBlocks, forceThreadBlockSize, numAtoms, groupFlags;
+};
+
+/**
+ * This class stores the kernels to execute for a set of force groups.
+ */
+
+class CudaNonbondedUtilities::KernelSet {
+public:
+    bool hasForces;
+    double cutoffDistance;
+    std::string source;
+    CUfunction forceKernel, energyKernel, forceEnergyKernel;
+    CUfunction findBlockBoundsKernel;
+    CUfunction sortBoxDataKernel;
+    CUfunction findInteractingBlocksKernel;
+    CUfunction findInteractionsWithinBlocksKernel;
 };
 
 /**

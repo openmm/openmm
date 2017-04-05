@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
  * Authors:                                                                   *
  * Contributors:                                                              *
  *                                                                            *
@@ -59,7 +59,7 @@ public:
 
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaBondForce this kernel will be used for
      */
@@ -99,7 +99,7 @@ public:
 
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaAngleForce this kernel will be used for
      */
@@ -139,7 +139,7 @@ public:
 
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaInPlaneAngleForce this kernel will be used for
      */
@@ -179,7 +179,7 @@ public:
 
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the PiTorsionForce this kernel will be used for
      */
@@ -219,7 +219,7 @@ public:
 
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the StretchBendForce this kernel will be used for
      */
@@ -259,7 +259,7 @@ public:
 
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the OutOfPlaneBendForce this kernel will be used for
      */
@@ -299,7 +299,7 @@ public:
 
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the TorsionTorsionForce this kernel will be used for
      */
@@ -332,7 +332,7 @@ public:
 
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the MultipoleForce this kernel will be used for
      */
@@ -348,7 +348,9 @@ public:
      */
     virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
 
+    virtual void getLabFramePermanentDipoles(ContextImpl& context, std::vector<Vec3>& dipoles) = 0;
     virtual void getInducedDipoles(ContextImpl& context, std::vector<Vec3>& dipoles) = 0;
+    virtual void getTotalDipoles(ContextImpl& context, std::vector<Vec3>& dipoles) = 0;
 
     virtual void getElectrostaticPotential(ContextImpl& context, const std::vector< Vec3 >& inputGrid,
                                            std::vector< double >& outputElectrostaticPotential) = 0;
@@ -361,6 +363,16 @@ public:
      * @param force      the AmoebaMultipoleForce to copy the parameters from
      */
     virtual void copyParametersToContext(ContextImpl& context, const AmoebaMultipoleForce& force) = 0;
+
+    /**
+     * Get the parameters being used for PME.
+     *
+     * @param alpha   the separation parameter
+     * @param nx      the number of grid points along the X axis
+     * @param ny      the number of grid points along the Y axis
+     * @param nz      the number of grid points along the Z axis
+     */
+    virtual void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const = 0;
 };
 
 /**
@@ -379,7 +391,7 @@ public:
 
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the GBSAOBCForce this kernel will be used for
      */
@@ -419,7 +431,7 @@ public:
 
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the GBSAOBCForce this kernel will be used for
      */
@@ -459,7 +471,7 @@ public:
 
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the GBSAOBCForce this kernel will be used for
      */

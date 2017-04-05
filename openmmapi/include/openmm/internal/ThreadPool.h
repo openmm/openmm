@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013 Stanford University and the Authors.           *
+ * Portions copyright (c) 2013-2017 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -34,6 +34,7 @@
 
 #define NOMINMAX
 #include "windowsExport.h"
+#include <functional>
 #include <pthread.h>
 #include <vector>
 
@@ -70,6 +71,10 @@ public:
      */
     void execute(Task& task);
     /**
+     * Execute a function in parallel on the worker threads.
+     */
+    void execute(std::function<void (ThreadPool&, int)> task);
+    /**
      * This is called by the worker threads to block until all threads have reached the same point
      * and the master thread instructs them to continue by calling resumeThreads().
      */
@@ -90,6 +95,8 @@ private:
     std::vector<ThreadData*> threadData;
     pthread_cond_t startCondition, endCondition;
     pthread_mutex_t lock;
+    Task* currentTask;
+    std::function<void (ThreadPool& pool, int)> currentFunction;
 };
 
 /**

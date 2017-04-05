@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -265,6 +265,12 @@ public:
         return *energyBuffer;
     }
     /**
+     * Get the array which contains the buffer in which derivatives of the energy with respect to parameters are computed.
+     */
+    OpenCLArray& getEnergyParamDerivBuffer() {
+        return *energyParamDerivBuffer;
+    }
+    /**
      * Get a pointer to a block of pinned memory that can be used for efficient transfers between host and device.
      * This is guaranteed to be at least as large as any of the arrays returned by methods of this class.
      */
@@ -407,6 +413,18 @@ public:
      */
     void setStepsSinceReorder(int steps) {
         stepsSinceReorder = steps;
+    }
+    /**
+     * Get the flag that marks whether the current force evaluation is valid.
+     */
+    bool getForcesValid() const {
+        return forcesValid;
+    }
+    /**
+     * Get the flag that marks whether the current force evaluation is valid.
+     */
+    void setForcesValid(bool valid) {
+        forcesValid = valid;
     }
     /**
      * Get the number of atoms.
@@ -592,6 +610,10 @@ public:
         return *nonbonded;
     }
     /**
+     * Set the particle charges.  These are packed into the fourth element of the posq array.
+     */
+    void setCharges(const std::vector<double>& charges);
+    /**
      * Get the thread used by this context for executing parallel computations.
      */
     WorkThread& getWorkThread() {
@@ -648,11 +670,38 @@ public:
         return postComputations;
     }
     /**
+     * Get the names of all parameters with respect to which energy derivatives are computed.
+     */
+    const std::vector<std::string>& getEnergyParamDerivNames() const {
+        return energyParamDerivNames;
+    }
+    /**
+     * Get a workspace data structure used for accumulating the values of derivatives of the energy
+     * with respect to parameters.
+     */
+    std::map<std::string, double>& getEnergyParamDerivWorkspace() {
+        return energyParamDerivWorkspace;
+    }
+    /**
+     * Register that the derivative of potential energy with respect to a context parameter
+     * will need to be calculated.  If this is called multiple times for a single parameter,
+     * it is only added to the list once.
+     * 
+     * @param param    the name of the parameter to add
+     */
+    void addEnergyParameterDerivative(const std::string& param);
+    /**
      * Mark that the current molecule definitions (and hence the atom order) may be invalid.
      * This should be called whenever force field parameters change.  It will cause the definitions
      * and order to be revalidated.
      */
     void invalidateMolecules();
+    /**
+     * Mark that the current molecule definitions from one particular force (and hence the atom order)
+     * may be invalid.  This should be called whenever force field parameters change.  It will cause the
+     * definitions and order to be revalidated.
+     */
+    bool invalidateMolecules(OpenCLForceInfo* force);
 private:
     struct Molecule;
     struct MoleculeGroup;
@@ -684,7 +733,7 @@ private:
     int numThreadBlocks;
     int numForceBuffers;
     int simdWidth;
-    bool supports64BitGlobalAtomics, supportsDoublePrecision, useDoublePrecision, useMixedPrecision, atomsWereReordered, boxIsTriclinic;
+    bool supports64BitGlobalAtomics, supportsDoublePrecision, useDoublePrecision, useMixedPrecision, atomsWereReordered, boxIsTriclinic, forcesValid;
     mm_float4 periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ;
     mm_double4 periodicBoxSizeDouble, invPeriodicBoxSizeDouble, periodicBoxVecXDouble, periodicBoxVecYDouble, periodicBoxVecZDouble;
     std::string defaultOptimizationOptions;
@@ -700,6 +749,7 @@ private:
     cl::Kernel clearSixBuffersKernel;
     cl::Kernel reduceReal4Kernel;
     cl::Kernel reduceForcesKernel;
+    cl::Kernel setChargesKernel;
     std::vector<OpenCLForceInfo*> forces;
     std::vector<Molecule> molecules;
     std::vector<MoleculeGroup> moleculeGroups;
@@ -713,7 +763,11 @@ private:
     OpenCLArray* forceBuffers;
     OpenCLArray* longForceBuffer;
     OpenCLArray* energyBuffer;
+    OpenCLArray* energyParamDerivBuffer;
     OpenCLArray* atomIndexDevice;
+    OpenCLArray* chargeBuffer;
+    std::vector<std::string> energyParamDerivNames;
+    std::map<std::string, double> energyParamDerivWorkspace;
     std::vector<int> atomIndex;
     std::vector<cl::Memory*> autoclearBuffers;
     std::vector<int> autoclearBufferSizes;

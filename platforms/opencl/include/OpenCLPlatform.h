@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -29,6 +29,7 @@
 
 #include "openmm/Platform.h"
 #include "openmm/System.h"
+#include "openmm/internal/ThreadPool.h"
 #include "windowsExportOpenCL.h"
 namespace OpenMM {
     
@@ -57,14 +58,14 @@ public:
      * This is the name of the parameter for selecting which OpenCL device or devices to use.
      */
     static const std::string& OpenCLDeviceIndex() {
-        static const std::string key = "OpenCLDeviceIndex";
+        static const std::string key = "DeviceIndex";
         return key;
     }
     /**
      * This is the name of the parameter that reports the OpenCL device or devices being used.
      */
     static const std::string& OpenCLDeviceName() {
-        static const std::string key = "OpenCLDeviceName";
+        static const std::string key = "DeviceName";
         return key;
     }
     /**
@@ -85,32 +86,41 @@ public:
      * This is the name of the parameter for selecting what numerical precision to use.
      */
     static const std::string& OpenCLPrecision() {
-        static const std::string key = "OpenCLPrecision";
+        static const std::string key = "Precision";
         return key;
     }
     /**
      * This is the name of the parameter for selecting whether to use the CPU based PME calculation.
      */
     static const std::string& OpenCLUseCpuPme() {
-        static const std::string key = "OpenCLUseCpuPme";
+        static const std::string key = "UseCpuPme";
+        return key;
+    }
+    /**
+     * This is the name of the parameter for selecting whether to disable use of a separate stream for PME.
+     */
+    static const std::string& OpenCLDisablePmeStream() {
+        static const std::string key = "DisablePmeStream";
         return key;
     }
 };
 
 class OPENMM_EXPORT_OPENCL OpenCLPlatform::PlatformData {
 public:
-    PlatformData(const System& system, const std::string& platformPropValue, const std::string& deviceIndexProperty, const std::string& precisionProperty, const std::string& cpuPmeProperty);
+    PlatformData(const System& system, const std::string& platformPropValue, const std::string& deviceIndexProperty, const std::string& precisionProperty,
+            const std::string& cpuPmeProperty, const std::string& pmeStreamProperty, int numThreads);
     ~PlatformData();
     void initializeContexts(const System& system);
     void syncContexts();
     ContextImpl* context;
     std::vector<OpenCLContext*> contexts;
     std::vector<double> contextEnergy;
-    bool removeCM, useCpuPme;
+    bool hasInitializedContexts, removeCM, useCpuPme, disablePmeStream;
     int cmMotionFrequency;
     int stepCount, computeForceCount;
     double time;
     std::map<std::string, std::string> propertyValues;
+    ThreadPool threads;
 };
 
 } // namespace OpenMM

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2014 Stanford University and the Authors.           *
+ * Portions copyright (c) 2014-2017 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -34,25 +34,6 @@
 
 using namespace OpenMM;
 using namespace std;
-
-class CpuBondForce::ComputeForceTask : public ThreadPool::Task {
-public:
-    ComputeForceTask(CpuBondForce& owner, vector<RealVec>& atomCoordinates, RealOpenMM** parameters, vector<RealVec>& forces, 
-        vector<RealOpenMM>& threadEnergy, RealOpenMM* totalEnergy, ReferenceBondIxn& referenceBondIxn) : owner(owner), atomCoordinates(atomCoordinates),
-        parameters(parameters), forces(forces), threadEnergy(threadEnergy), totalEnergy(totalEnergy), referenceBondIxn(referenceBondIxn) {
-    }
-    void execute(ThreadPool& threads, int threadIndex) {
-        RealOpenMM* energy = (totalEnergy == NULL ? NULL : &threadEnergy[threadIndex]);
-        owner.threadComputeForce(threads, threadIndex, atomCoordinates, parameters, forces, energy, referenceBondIxn);
-    }
-    CpuBondForce& owner;
-    vector<RealVec>& atomCoordinates;
-    RealOpenMM** parameters;
-    vector<RealVec>& forces;
-    vector<RealOpenMM>& threadEnergy;
-    RealOpenMM* totalEnergy;
-    ReferenceBondIxn& referenceBondIxn;
-};
 
 CpuBondForce::CpuBondForce() {
 }
@@ -178,25 +159,27 @@ void CpuBondForce::assignBond(int bond, int thread, vector<int>& atomThread, vec
         if (atom != -1)
             throw OpenMMException("CpuBondForce: Internal error: atoms assigned to threads incorrectly");
         atom = thread;
-        for (set<int>::const_iterator iter = atomBonds[atom].begin(); iter != atomBonds[atom].end(); ++iter)
-            candidateBonds.push_back(*iter);
+        for (int bond : atomBonds[atom])
+            candidateBonds.push_back(bond);
     }
 }
 
-void CpuBondForce::calculateForce(vector<RealVec>& atomCoordinates, RealOpenMM** parameters, vector<RealVec>& forces, 
-        RealOpenMM* totalEnergy, ReferenceBondIxn& referenceBondIxn) {
+void CpuBondForce::calculateForce(vector<Vec3>& atomCoordinates, double** parameters, vector<Vec3>& forces, 
+        double* totalEnergy, ReferenceBondIxn& referenceBondIxn) {
     // Have the worker threads compute their forces.
     
-    vector<RealOpenMM> threadEnergy(threads->getNumThreads(), 0);
-    ComputeForceTask task(*this, atomCoordinates, parameters, forces, threadEnergy, totalEnergy, referenceBondIxn);
-    threads->execute(task);
+    vector<double> threadEnergy(threads->getNumThreads(), 0);
+    threads->execute([&] (ThreadPool& threads, int threadIndex) {
+        double* energy = (totalEnergy == NULL ? NULL : &threadEnergy[threadIndex]);
+        threadComputeForce(threads, threadIndex, atomCoordinates, parameters, forces, energy, referenceBondIxn);
+    });
     threads->waitForThreads();
     
     // Compute any "extra" bonds.
     
     for (int i = 0; i < extraBonds.size(); i++) {
         int bond = extraBonds[i];
-        referenceBondIxn.calculateBondIxn(bondAtoms[bond], atomCoordinates, parameters[bond], forces, totalEnergy);
+        referenceBondIxn.calculateBondIxn(bondAtoms[bond], atomCoordinates, parameters[bond], forces, totalEnergy, NULL);
     }
 
     // Compute the total energy.
@@ -206,12 +189,12 @@ void CpuBondForce::calculateForce(vector<RealVec>& atomCoordinates, RealOpenMM**
             *totalEnergy += threadEnergy[i];
 }
 
-void CpuBondForce::threadComputeForce(ThreadPool& threads, int threadIndex, vector<RealVec>& atomCoordinates, RealOpenMM** parameters, vector<RealVec>& forces, 
-            RealOpenMM* totalEnergy, ReferenceBondIxn& referenceBondIxn) {
+void CpuBondForce::threadComputeForce(ThreadPool& threads, int threadIndex, vector<Vec3>& atomCoordinates, double** parameters, vector<Vec3>& forces, 
+            double* totalEnergy, ReferenceBondIxn& referenceBondIxn) {
     vector<int>& bonds = threadBonds[threadIndex];
     int numBonds = bonds.size();
     for (int i = 0; i < numBonds; i++) {
         int bond = bonds[i];
-        referenceBondIxn.calculateBondIxn(bondAtoms[bond], atomCoordinates, parameters[bond], forces, totalEnergy);
+        referenceBondIxn.calculateBondIxn(bondAtoms[bond], atomCoordinates, parameters[bond], forces, totalEnergy, NULL);
     }
 }

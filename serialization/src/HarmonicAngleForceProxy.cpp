@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -42,9 +42,10 @@ HarmonicAngleForceProxy::HarmonicAngleForceProxy() : SerializationProxy("Harmoni
 }
 
 void HarmonicAngleForceProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 1);
+    node.setIntProperty("version", 2);
     const HarmonicAngleForce& force = *reinterpret_cast<const HarmonicAngleForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setBoolProperty("usesPeriodic", force.usesPeriodicBoundaryConditions());
     SerializationNode& bonds = node.createChildNode("Angles");
     for (int i = 0; i < force.getNumAngles(); i++) {
         int particle1, particle2, particle3;
@@ -55,16 +56,17 @@ void HarmonicAngleForceProxy::serialize(const void* object, SerializationNode& n
 }
 
 void* HarmonicAngleForceProxy::deserialize(const SerializationNode& node) const {
-    if (node.getIntProperty("version") != 1)
+    int version = node.getIntProperty("version");
+    if (version < 1 || version > 2)
         throw OpenMMException("Unsupported version number");
     HarmonicAngleForce* force = new HarmonicAngleForce();
     try {
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        if (version > 1)
+            force->setUsesPeriodicBoundaryConditions(node.getBoolProperty("usesPeriodic"));
         const SerializationNode& angles = node.getChildNode("Angles");
-        for (int i = 0; i < (int) angles.getChildren().size(); i++) {
-            const SerializationNode& angle = angles.getChildren()[i];
+        for (auto& angle : angles.getChildren())
             force->addAngle(angle.getIntProperty("p1"), angle.getIntProperty("p2"), angle.getIntProperty("p3"), angle.getDoubleProperty("a"), angle.getDoubleProperty("k"));
-        }
     }
     catch (...) {
         delete force;

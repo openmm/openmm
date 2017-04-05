@@ -169,7 +169,7 @@ static int getSmallestRadix(int size) {
 }
 
 CUfunction CudaFFT3D::createKernel(int xsize, int ysize, int zsize, int& threads, int axis, bool forward, bool inputIsReal) {
-    int maxThreads = 256;
+    int maxThreads = (context.getUseDoublePrecision() ? 128 : 256);
 //    while (maxThreads > 128 && maxThreads-64 >= zsize)
 //        maxThreads -= 64;
     int threadsPerBlock = zsize/getSmallestRadix(zsize);

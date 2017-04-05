@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2009 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2016 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -39,13 +39,6 @@ using namespace OpenMM;
    --------------------------------------------------------------------------------------- */
 
 ReferenceBondIxn::ReferenceBondIxn() {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceBondIxn::ReferenceBondIxn";
-
-   // ---------------------------------------------------------------------------------------
-
 }
 
 /**---------------------------------------------------------------------------------------
@@ -55,13 +48,6 @@ ReferenceBondIxn::ReferenceBondIxn() {
    --------------------------------------------------------------------------------------- */
 
 ReferenceBondIxn::~ReferenceBondIxn() {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceBondIxn::~ReferenceBondIxn";
-
-   // ---------------------------------------------------------------------------------------
-
 }
 
 /**---------------------------------------------------------------------------------------
@@ -76,15 +62,9 @@ ReferenceBondIxn::~ReferenceBondIxn() {
       
    --------------------------------------------------------------------------------------- */
      
-   void ReferenceBondIxn::calculateBondIxn(int* atomIndices, vector<RealVec>& atomCoordinates,
-                                           RealOpenMM* parameters, vector<RealVec>& forces,
-                                           RealOpenMM* totalEnergy) const {
-   // ---------------------------------------------------------------------------------------
-
-   // static const std::string methodName = "\nReferenceBondIxn::calculateBondIxn";
-
-   // ---------------------------------------------------------------------------------------
-
+   void ReferenceBondIxn::calculateBondIxn(int* atomIndices, vector<Vec3>& atomCoordinates,
+                                           double* parameters, vector<Vec3>& forces,
+                                           double* totalEnergy, double* energyParamDerivs) {
 }
  
 /**---------------------------------------------------------------------------------------
@@ -102,67 +82,26 @@ ReferenceBondIxn::~ReferenceBondIxn() {
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM ReferenceBondIxn::getNormedDotProduct(RealOpenMM* vector1, RealOpenMM* vector2,
-                                                 int hasREntry = 0) {
+double ReferenceBondIxn::getNormedDotProduct(double* vector1, double* vector2,
+                                             int hasREntry = 0) {
 
-   // ---------------------------------------------------------------------------------------
-
-   // static const std::string methodName = "\nReferenceBondIxn::getNormedDotProduct";
-
-   static const RealOpenMM zero        = 0.0;
-   static const RealOpenMM one         = 1.0;
-
-   // ---------------------------------------------------------------------------------------
-
-// for angles near pi, double is required due to the 'steepness' of acos()
-// in this regime.
-  
-//#define USE_DOUBLE_FOR_NORMED_DOT_PRODUCT
-
-#if defined USE_DOUBLE_FOR_NORMED_DOT_PRODUCT
-   double v1D[3];
-   double v2D[3];
-   v1D[0]                = static_cast<double>(vector1[0]);
-   v1D[1]                = static_cast<double>(vector1[1]);
-   v1D[2]                = static_cast<double>(vector1[2]);
-
-   v2D[0]                = static_cast<double>(vector2[0]);
-   v2D[1]                = static_cast<double>(vector2[1]);
-   v2D[2]                = static_cast<double>(vector2[2]);
-   double dotProductD    = DOT3(v1D, v2D);
-   if (dotProductD != 0.0) {
-      if (hasREntry) {
-         dotProductD    /= (static_cast<double>(vector1[ReferenceForce::RIndex])*static_cast<double>(vector2[ReferenceForce::RIndex]));
-      } else {
-         double norm1    = DOT3(v1D, v1D);
-         double norm2    = DOT3(v2D, v2D);
-         dotProductD    /= sqrt(norm1*norm2);
-      }
-   }
-   RealOpenMM dotProduct = static_cast<RealOpenMM>(dotProductD);
-
-#else      
-
-   RealOpenMM dotProduct = DOT3(vector1, vector2);
-   if (dotProduct != zero) {
+   double dotProduct = DOT3(vector1, vector2);
+   if (dotProduct != 0.0) {
       if (hasREntry) {
          dotProduct       /= (vector1[ReferenceForce::RIndex]*vector2[ReferenceForce::RIndex]);
       } else {
-         RealOpenMM norm1  = DOT3(vector1, vector1);
-         RealOpenMM norm2  = DOT3(vector2, vector2);
-         dotProduct       /= SQRT(norm1*norm2);
+         double norm1  = DOT3(vector1, vector1);
+         double norm2  = DOT3(vector2, vector2);
+         dotProduct   /= sqrt(norm1*norm2);
       }
    }
-
-#endif
-#undef USE_DOUBLE_FOR_NORMED_DOT_PRODUCT
       
    // clamp dot product to [-1,1]
 
-   if (dotProduct > one) {
-      dotProduct = one;
-   } else if (dotProduct < -one) {
-      dotProduct = -one;
+   if (dotProduct > 1.0) {
+      dotProduct = 1.0;
+   } else if (dotProduct < -1.0) {
+      dotProduct = -1.0;
    }
 
    return dotProduct;
@@ -183,35 +122,26 @@ RealOpenMM ReferenceBondIxn::getNormedDotProduct(RealOpenMM* vector1, RealOpenMM
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM ReferenceBondIxn::getAngleBetweenTwoVectors(RealOpenMM* vector1, RealOpenMM* vector2, 
-                                                       RealOpenMM* outputDotProduct = NULL,
-                                                       int hasREntry = 0) {
+double ReferenceBondIxn::getAngleBetweenTwoVectors(double* vector1, double* vector2, 
+                                                   double* outputDotProduct = NULL,
+                                                   int hasREntry = 0) {
 
-   // ---------------------------------------------------------------------------------------
+    // get dot product betweenn vectors and then angle
 
-   // static const std::string methodName = "\nReferenceBondIxn::getAngle";
+   double dotProduct = getNormedDotProduct(vector1, vector2, hasREntry);
 
-   static const RealOpenMM zero        = 0.0;
-   static const RealOpenMM one         = 1.0;
-
-   // ---------------------------------------------------------------------------------------
-
-   // get dot product betweenn vectors and then angle
-
-   RealOpenMM dotProduct = getNormedDotProduct(vector1, vector2, hasREntry);
-
-   RealOpenMM angle;
-   if (dotProduct > (RealOpenMM) 0.99 || dotProduct < (RealOpenMM) -0.99) {
+   double angle;
+   if (dotProduct > 0.99 || dotProduct < -0.99) {
        // We're close to the singularity in acos(), so take the cross product and use asin() instead.
 
-       RealOpenMM cross[3];
+       double cross[3];
        SimTKOpenMMUtilities::crossProductVector3(vector1, vector2, cross);
-       RealOpenMM scale = DOT3(vector1, vector1)*DOT3(vector2, vector2);
-       angle = ASIN(SQRT(DOT3(cross, cross)/scale));
-       if (dotProduct < zero)
-           angle = (RealOpenMM) (M_PI-angle);
+       double scale = DOT3(vector1, vector1)*DOT3(vector2, vector2);
+       angle = asin(sqrt(DOT3(cross, cross)/scale));
+       if (dotProduct < 0.0)
+           angle = M_PI-angle;
    } else {
-      angle = ACOS(dotProduct);
+      angle = acos(dotProduct);
    }
 
    if (outputDotProduct) {
@@ -240,29 +170,20 @@ RealOpenMM ReferenceBondIxn::getAngleBetweenTwoVectors(RealOpenMM* vector1, Real
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM ReferenceBondIxn::getDihedralAngleBetweenThreeVectors(RealOpenMM*  vector1,
-                                                                 RealOpenMM*  vector2, 
-                                                                 RealOpenMM*  vector3, 
-                                                                 RealOpenMM** outputCrossProduct  = NULL, 
-                                                                 RealOpenMM*  cosineOfAngle       = NULL, 
-                                                                 RealOpenMM*  signVector          = NULL, 
-                                                                 RealOpenMM*  signOfAngle         = NULL, 
-                                                                 int          hasREntry = 0) {
+double ReferenceBondIxn::getDihedralAngleBetweenThreeVectors(double*  vector1,
+                                                             double*  vector2, 
+                                                             double*  vector3, 
+                                                             double** outputCrossProduct  = NULL, 
+                                                             double*  cosineOfAngle       = NULL, 
+                                                             double*  signVector          = NULL, 
+                                                             double*  signOfAngle         = NULL, 
+                                                             int          hasREntry = 0) {
 
-   // ---------------------------------------------------------------------------------------
-
-   // static const std::string methodName = "\nReferenceBondIxn::getDihedralAngleBetweenThreeVectors";
-
-   static const RealOpenMM zero        = 0.0;
-   static const RealOpenMM one         = 1.0;
-
-   RealOpenMM   tempVectors[6]         = { zero, zero, zero, zero, zero, zero };
-
-   // ---------------------------------------------------------------------------------------
+   double   tempVectors[6]         = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
 
    // get cross products between vectors and then angle between cross product vectors
 
-   RealOpenMM* crossProduct[2];
+   double* crossProduct[2];
    if (outputCrossProduct) {
       crossProduct[0] = outputCrossProduct[0];
       crossProduct[1] = outputCrossProduct[1];
@@ -274,13 +195,13 @@ RealOpenMM ReferenceBondIxn::getDihedralAngleBetweenThreeVectors(RealOpenMM*  ve
    SimTKOpenMMUtilities::crossProductVector3(vector1, vector2, crossProduct[0]);
    SimTKOpenMMUtilities::crossProductVector3(vector2, vector3, crossProduct[1]);
 
-   RealOpenMM angle         = getAngleBetweenTwoVectors(crossProduct[0], crossProduct[1], cosineOfAngle, 0);
+   double angle = getAngleBetweenTwoVectors(crossProduct[0], crossProduct[1], cosineOfAngle, 0);
 
    // take care of sign of angle
 
    if (signVector) {
-      RealOpenMM dotProduct = DOT3(signVector, crossProduct[1]);
-      RealOpenMM sign       = dotProduct < zero ? -one : one; 
+      double dotProduct = DOT3(signVector, crossProduct[1]);
+      double sign       = dotProduct < 0.0 ? -1.0 : 1.0; 
       if (signOfAngle) {
          *signOfAngle = sign;
       }

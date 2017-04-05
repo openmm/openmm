@@ -45,10 +45,10 @@ System::System() {
 }
 
 System::~System() {
-    for (int i = 0; i < (int) forces.size(); ++i)
-        delete forces[i];
-    for (int i = 0; i < (int) virtualSites.size(); ++i)
-        delete virtualSites[i];
+    for (auto force : forces)
+        delete force;
+    for (auto site : virtualSites)
+        delete site;
 }
 
 double System::getParticleMass(int index) const {
@@ -133,7 +133,7 @@ void System::setDefaultPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Ve
     periodicBoxVectors[2] = c;
 }
 
-bool System::usesPeriodicBoundaryConditions() {
+bool System::usesPeriodicBoundaryConditions() const {
 
     bool uses_pbc = false;
     bool all_forces_implement = true;

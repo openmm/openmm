@@ -33,16 +33,17 @@ class TestElement(unittest.TestCase):
             """
             min_diff = mass
             closest_element = None
-            for symbol, elem in element.Element._elements_by_symbol.items():
+            for elem in sorted(element.Element._elements_by_symbol.values(),
+                               key=lambda x:x.mass):
                 diff = abs(elem.mass._value - mass)
                 if diff < min_diff:
                     min_diff = diff
                     closest_element = elem
             return closest_element
 
-        # Check 5000 random numbers between 0 and 300
-        for i in range(5000):
-            mass = random.random() * 300
+        # Check 500 random numbers between 0 and 200
+        for i in range(500):
+            mass = random.random() * 200
             elem = element.Element.getByMass(mass)
             self.assertTrue(elem is exhaustive_search(mass))
 

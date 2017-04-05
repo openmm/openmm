@@ -66,4 +66,5 @@ std::vector<std::string> AmoebaGeneralizedKirkwoodForceImpl::getKernelNames() {
 
 void AmoebaGeneralizedKirkwoodForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcAmoebaGeneralizedKirkwoodForceKernel>().copyParametersToContext(context, owner);
+    context.systemChanged();
 }

@@ -51,16 +51,16 @@ using namespace std;
 void testNeighborList(bool periodic, bool triclinic) {
     const int numParticles = 500;
     const float cutoff = 2.0f;
-    RealVec boxVectors[3];
+    Vec3 boxVectors[3];
     if (triclinic) {
-        boxVectors[0] = RealVec(20, 0, 0);
-        boxVectors[1] = RealVec(5, 15, 0);
-        boxVectors[2] = RealVec(-3, -7, 22);
+        boxVectors[0] = Vec3(10, 0, 0);
+        boxVectors[1] = Vec3(4, 9, 0);
+        boxVectors[2] = Vec3(-3, -3.5, 11);
     }
     else {
-        boxVectors[0] = RealVec(20, 0, 0);
-        boxVectors[1] = RealVec(0, 15, 0);
-        boxVectors[2] = RealVec(0, 0, 22);
+        boxVectors[0] = Vec3(10, 0, 0);
+        boxVectors[1] = Vec3(0, 9, 0);
+        boxVectors[2] = Vec3(0, 0, 11);
     }
     const float boxSize[3] = {(float) boxVectors[0][0], (float) boxVectors[1][1], (float) boxVectors[2][2]};
     const int blockSize = 8;

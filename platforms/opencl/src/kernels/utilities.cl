@@ -107,3 +107,11 @@ __kernel void determineNativeAccuracy(__global float8* restrict values, int numV
         values[i] = (float8) (v, native_sqrt(v), native_rsqrt(v), native_recip(v), native_exp(v), native_log(v), 0.0f, 0.0f);
     }
 }
+
+/**
+ * Record the atomic charges into the posq array.
+ */
+__kernel void setCharges(__global real* restrict charges, __global real4* restrict posq, __global int* restrict atomOrder, int numAtoms) {
+    for (int i = get_global_id(0); i < numAtoms; i += get_global_size(0))
+        posq[i].w = charges[atomOrder[i]];
+}

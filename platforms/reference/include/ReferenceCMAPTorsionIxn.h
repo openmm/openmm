@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2010 Stanford University and Simbios.
+/* Portions copyright (c) 2010-2016 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -35,9 +35,11 @@ class ReferenceCMAPTorsionIxn : public ReferenceBondIxn {
 
 private:
 
-    std::vector<std::vector<std::vector<RealOpenMM> > > coeff;
+    std::vector<std::vector<std::vector<double> > > coeff;
     std::vector<int> torsionMaps;
     std::vector<std::vector<int> > torsionIndices;
+    bool usePeriodic;
+    Vec3 boxVectors[3];
 
     /**---------------------------------------------------------------------------------------
 
@@ -50,8 +52,8 @@ private:
 
          --------------------------------------------------------------------------------------- */
 
-    void calculateOneIxn(int index, std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& forces,
-                         RealOpenMM* totalEnergy) const;
+    void calculateOneIxn(int index, std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<OpenMM::Vec3>& forces,
+                         double* totalEnergy) const;
 
 public:
 
@@ -61,9 +63,19 @@ public:
 
        --------------------------------------------------------------------------------------- */
 
-    ReferenceCMAPTorsionIxn(const std::vector<std::vector<std::vector<RealOpenMM> > >& coeff,
+    ReferenceCMAPTorsionIxn(const std::vector<std::vector<std::vector<double> > >& coeff,
                             const std::vector<int>& torsionMaps,
                             const std::vector<std::vector<int> >& torsionIndices);
+
+       /**---------------------------------------------------------------------------------------
+      
+         Set the force to use periodic boundary conditions.
+      
+         @param vectors    the vectors defining the periodic box
+      
+         --------------------------------------------------------------------------------------- */
+      
+       void setPeriodic(OpenMM::Vec3* vectors);
 
     /**---------------------------------------------------------------------------------------
 
@@ -75,7 +87,7 @@ public:
 
          --------------------------------------------------------------------------------------- */
 
-    void calculateIxn(std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& forces, RealOpenMM* totalEnergy) const;
+    void calculateIxn(std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<OpenMM::Vec3>& forces, double* totalEnergy) const;
 
     /**---------------------------------------------------------------------------------------
 
@@ -83,9 +95,9 @@ public:
 
        --------------------------------------------------------------------------------------- */
 
-    void calculateBondIxn(int* atomIndices, std::vector<OpenMM::RealVec>& atomCoordinates,
-                         RealOpenMM* parameters, std::vector<OpenMM::RealVec>& forces,
-                         RealOpenMM* totalEnergy) const;
+    void calculateBondIxn(int* atomIndices, std::vector<OpenMM::Vec3>& atomCoordinates,
+                         double* parameters, std::vector<OpenMM::Vec3>& forces,
+                         double* totalEnergy, double* energyParamDerivs);
 
 // ---------------------------------------------------------------------------------------
 

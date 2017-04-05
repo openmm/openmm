@@ -36,23 +36,23 @@ def runOneTest(testName, options):
     if amoeba:
         constraints = None
         epsilon = float(options.epsilon)
-        if epsilon == 0:
-            polarization = 'direct'
-        else:
-            polarization = 'mutual'
         if explicit:
             ff = app.ForceField('amoeba2009.xml')
             pdb = app.PDBFile('5dfr_solv-cube_equil.pdb')
             cutoff = 0.7*unit.nanometers
             vdwCutoff = 0.9*unit.nanometers
-            system = ff.createSystem(pdb.topology, nonbondedMethod=app.PME, nonbondedCutoff=cutoff, vdwCutoff=vdwCutoff, constraints=constraints, ewaldErrorTolerance=0.00075, mutualInducedTargetEpsilon=epsilon, polarization=polarization)
+            system = ff.createSystem(pdb.topology, nonbondedMethod=app.PME, nonbondedCutoff=cutoff, vdwCutoff=vdwCutoff, constraints=constraints, ewaldErrorTolerance=0.00075, mutualInducedTargetEpsilon=epsilon, polarization=options.polarization)
         else:
             ff = app.ForceField('amoeba2009.xml', 'amoeba2009_gk.xml')
             pdb = app.PDBFile('5dfr_minimized.pdb')
             cutoff = 2.0*unit.nanometers
             vdwCutoff = 1.2*unit.nanometers
-            system = ff.createSystem(pdb.topology, nonbondedMethod=app.NoCutoff, constraints=constraints, mutualInducedTargetEpsilon=epsilon, polarization=polarization)
-        dt = 0.001*unit.picoseconds
+            system = ff.createSystem(pdb.topology, nonbondedMethod=app.NoCutoff, constraints=constraints, mutualInducedTargetEpsilon=epsilon, polarization=options.polarization)
+        for f in system.getForces():
+            if isinstance(f, mm.AmoebaMultipoleForce) or isinstance(f, mm.AmoebaVdwForce) or isinstance(f, mm.AmoebaGeneralizedKirkwoodForce) or isinstance(f, mm.AmoebaWcaDispersionForce):
+                f.setForceGroup(1)
+        dt = 0.002*unit.picoseconds
+        integ = mm.MTSIntegrator(dt, [(0,2), (1,1)])
     else:
         if explicit:
             ff = app.ForceField('amber99sb.xml', 'tip3p.xml')
@@ -63,11 +63,13 @@ def runOneTest(testName, options):
             else:
                 method = app.CutoffPeriodic
                 cutoff = 1*unit.nanometers
+            friction = 1*(1/unit.picoseconds)
         else:
             ff = app.ForceField('amber99sb.xml', 'amber99_obc.xml')
             pdb = app.PDBFile('5dfr_minimized.pdb')
             method = app.CutoffNonPeriodic
             cutoff = 2*unit.nanometers
+            friction = 91*(1/unit.picoseconds)
         if options.heavy:
             dt = 0.005*unit.picoseconds
             constraints = app.AllBonds
@@ -77,25 +79,19 @@ def runOneTest(testName, options):
             constraints = app.HBonds
             hydrogenMass = None
         system = ff.createSystem(pdb.topology, nonbondedMethod=method, nonbondedCutoff=cutoff, constraints=constraints, hydrogenMass=hydrogenMass)
+        integ = mm.LangevinIntegrator(300*unit.kelvin, friction, dt)
     print('Step Size: %g fs' % dt.value_in_unit(unit.femtoseconds))
     properties = {}
     initialSteps = 5
-    if options.device is not None:
-        if platform.getName() == 'CUDA':
-            properties['CudaDeviceIndex'] = options.device
-        elif platform.getName() == 'OpenCL':
-            properties['OpenCLDeviceIndex'] = options.device
+    if options.device is not None and platform.getName() in ('CUDA', 'OpenCL'):
+        properties['DeviceIndex'] = options.device
         if ',' in options.device or ' ' in options.device:
             initialSteps = 250
-    if options.precision is not None:
-        if platform.getName() == 'CUDA':
-            properties['CudaPrecision'] = options.precision
-        elif platform.getName() == 'OpenCL':
-            properties['OpenCLPrecision'] = options.precision
+    if options.precision is not None and platform.getName() in ('CUDA', 'OpenCL'):
+        properties['Precision'] = options.precision
     
     # Run the simulation.
     
-    integ = mm.LangevinIntegrator(300*unit.kelvin, 91*(1/unit.picoseconds), dt)
     integ.setConstraintTolerance(1e-5)
     if len(properties) > 0:
         context = mm.Context(system, integ, platform, properties)
@@ -123,7 +119,8 @@ parser.add_option('--platform', dest='platform', choices=platformNames, help='na
 parser.add_option('--test', dest='test', choices=('gbsa', 'rf', 'pme', 'amoebagk', 'amoebapme'), help='the test to perform: gbsa, rf, pme, amoebagk, or amoebapme [default: all]')
 parser.add_option('--pme-cutoff', default='0.9', dest='cutoff', type='float', help='direct space cutoff for PME in nm [default: 0.9]')
 parser.add_option('--seconds', default='60', dest='seconds', type='float', help='target simulation length in seconds [default: 60]')
-parser.add_option('--mutual-epsilon', default='1e-4', dest='epsilon', type='float', help='mutual induced epsilon for AMOEBA [default: 1e-4]')
+parser.add_option('--polarization', default='mutual', dest='polarization', choices=('direct', 'extrapolated', 'mutual'), help='the polarization method for AMOEBA: direct, extrapolated, or mutual [default: mutual]')
+parser.add_option('--mutual-epsilon', default='1e-5', dest='epsilon', type='float', help='mutual induced epsilon for AMOEBA [default: 1e-5]')
 parser.add_option('--heavy-hydrogens', action='store_true', default=False, dest='heavy', help='repartition mass to allow a larger time step')
 parser.add_option('--device', default=None, dest='device', help='device index for CUDA or OpenCL')
 parser.add_option('--precision', default='single', dest='precision', choices=('single', 'mixed', 'double'), help='precision mode for CUDA or OpenCL: single, mixed, or double [default: single]')

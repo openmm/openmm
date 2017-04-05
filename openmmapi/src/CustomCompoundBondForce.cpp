@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -48,13 +48,13 @@ using std::string;
 using std::stringstream;
 using std::vector;
 
-CustomCompoundBondForce::CustomCompoundBondForce(int numParticles, const string& energy) : particlesPerBond(numParticles), energyExpression(energy) {
+CustomCompoundBondForce::CustomCompoundBondForce(int numParticles, const string& energy) : particlesPerBond(numParticles), energyExpression(energy), usePeriodic(false) {
 }
 
 
 CustomCompoundBondForce::~CustomCompoundBondForce() {
-    for (int i = 0; i < (int) functions.size(); i++)
-        delete functions[i].function;
+    for (auto function : functions)
+        delete function.function;
 }
 
 const string& CustomCompoundBondForce::getEnergyFunction() const {
@@ -103,6 +103,20 @@ double CustomCompoundBondForce::getGlobalParameterDefaultValue(int index) const 
 void CustomCompoundBondForce::setGlobalParameterDefaultValue(int index, double defaultValue) {
     ASSERT_VALID_INDEX(index, globalParameters);
     globalParameters[index].defaultValue = defaultValue;
+}
+
+void CustomCompoundBondForce::addEnergyParameterDerivative(const string& name) {
+    for (int i = 0; i < globalParameters.size(); i++)
+        if (name == globalParameters[i].name) {
+            energyParameterDerivatives.push_back(i);
+            return;
+        }
+    throw OpenMMException(string("addEnergyParameterDerivative: Unknown global parameter '"+name+"'"));
+}
+
+const string& CustomCompoundBondForce::getEnergyParameterDerivativeName(int index) const {
+    ASSERT_VALID_INDEX(index, energyParameterDerivatives);
+    return globalParameters[energyParameterDerivatives[index]].name;
 }
 
 int CustomCompoundBondForce::addBond(const vector<int>& particles, const vector<double>& parameters) {
@@ -175,4 +189,12 @@ ForceImpl* CustomCompoundBondForce::createImpl() const {
 
 void CustomCompoundBondForce::updateParametersInContext(Context& context) {
     dynamic_cast<CustomCompoundBondForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
+}
+
+void CustomCompoundBondForce::setUsesPeriodicBoundaryConditions(bool periodic) {
+    usePeriodic = periodic;
+}
+
+bool CustomCompoundBondForce::usesPeriodicBoundaryConditions() const {
+    return usePeriodic;
 }

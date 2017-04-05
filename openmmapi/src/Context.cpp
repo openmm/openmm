@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -84,8 +84,9 @@ State Context::getState(int types, bool enforcePeriodicBox, int groups) const {
     builder.setPeriodicBoxVectors(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2]);
     bool includeForces = types&State::Forces;
     bool includeEnergy = types&State::Energy;
-    if (includeForces || includeEnergy) {
-        double energy = impl->calcForcesAndEnergy(includeForces || includeEnergy, includeEnergy, groups);
+    bool includeParameterDerivs = types&State::ParameterDerivatives;
+    if (includeForces || includeEnergy || includeParameterDerivs) {
+        double energy = impl->calcForcesAndEnergy(includeForces || includeEnergy || includeParameterDerivs, includeEnergy, groups);
         if (includeEnergy)
             builder.setEnergy(impl->calcKineticEnergy(), energy);
         if (includeForces) {
@@ -96,40 +97,37 @@ State Context::getState(int types, bool enforcePeriodicBox, int groups) const {
     }
     if (types&State::Parameters) {
         map<string, double> params;
-        for (map<string, double>::const_iterator iter = impl->parameters.begin(); iter != impl->parameters.end(); iter++)
-            params[iter->first] = iter->second;
+        for (auto& param : impl->parameters)
+            params[param.first] = param.second;
         builder.setParameters(params);
+    }
+    if (types&State::ParameterDerivatives) {
+        map<string, double> derivs;
+        impl->getEnergyParameterDerivatives(derivs);
+        builder.setEnergyParameterDerivatives(derivs);
     }
     if (types&State::Positions) {
         vector<Vec3> positions;
         impl->getPositions(positions);
         if (enforcePeriodicBox) {
             const vector<vector<int> >& molecules = impl->getMolecules();
-            for (int i = 0; i < (int) molecules.size(); i++) {
+            for (auto& mol : molecules) {
                 // Find the molecule center.
 
                 Vec3 center;
-                for (int j = 0; j < (int) molecules[i].size(); j++)
-                    center += positions[molecules[i][j]];
-                center *= 1.0/molecules[i].size();
+                for (int j : mol)
+                    center += positions[j];
+                center *= 1.0/mol.size();
 
                 // Find the displacement to move it into the first periodic box.
-
-                int xcell = (int) floor(center[0]/periodicBoxSize[0][0]);
-                int ycell = (int) floor(center[1]/periodicBoxSize[1][1]);
-                int zcell = (int) floor(center[2]/periodicBoxSize[2][2]);
-                double dx = xcell*periodicBoxSize[0][0];
-                double dy = ycell*periodicBoxSize[1][1];
-                double dz = zcell*periodicBoxSize[2][2];
+                Vec3 diff;
+                diff += periodicBoxSize[2]*floor(center[2]/periodicBoxSize[2][2]);
+                diff += periodicBoxSize[1]*floor((center[1]-diff[1])/periodicBoxSize[1][1]);
+                diff += periodicBoxSize[0]*floor((center[0]-diff[0])/periodicBoxSize[0][0]);
 
                 // Translate all the particles in the molecule.
-                
-                for (int j = 0; j < (int) molecules[i].size(); j++) {
-                    Vec3& pos = positions[molecules[i][j]];
-                    pos[0] -= dx;
-                    pos[1] -= dy;
-                    pos[2] -= dz;
-                }
+                for (int j : mol)
+                    positions[j] -= diff;
             }
         }
         builder.setPositions(positions);
@@ -152,8 +150,8 @@ void Context::setState(const State& state) {
     if ((state.getDataTypes()&State::Velocities) != 0)
         setVelocities(state.getVelocities());
     if ((state.getDataTypes()&State::Parameters) != 0)
-        for (map<string, double>::const_iterator iter = state.getParameters().begin(); iter != state.getParameters().end(); ++iter)
-            setParameter(iter->first, iter->second);
+        for (auto& param : state.getParameters())
+            setParameter(param.first, param.second);
 }
 
 void Context::setTime(double time) {
@@ -207,6 +205,10 @@ void Context::setVelocitiesToTemperature(double temperature, int randomSeed) {
     impl->applyVelocityConstraints(1e-5);
 }
 
+const map<string, double>& Context::getParameters() const {
+    return impl->getParameters();
+}
+
 double Context::getParameter(const string& name) const {
     return impl->getParameter(name);
 }
@@ -249,6 +251,10 @@ void Context::loadCheckpoint(istream& stream) {
 }
 
 ContextImpl& Context::getImpl() {
+    return *impl;
+}
+
+const ContextImpl& Context::getImpl() const {
     return *impl;
 }
 

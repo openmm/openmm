@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -61,6 +61,7 @@ CustomNonbondedForce::CustomNonbondedForce(const CustomNonbondedForce& rhs) {
     useLongRangeCorrection = rhs.useLongRangeCorrection;
     parameters = rhs.parameters;
     globalParameters = rhs.globalParameters;
+    energyParameterDerivatives = rhs.energyParameterDerivatives;
     particles = rhs.particles;
     exclusions = rhs.exclusions;
     interactionGroups = rhs.interactionGroups;
@@ -69,8 +70,8 @@ CustomNonbondedForce::CustomNonbondedForce(const CustomNonbondedForce& rhs) {
 }
 
 CustomNonbondedForce::~CustomNonbondedForce() {
-    for (int i = 0; i < (int) functions.size(); i++)
-        delete functions[i].function;
+    for (auto function : functions)
+        delete function.function;
 }
 
 const string& CustomNonbondedForce::getEnergyFunction() const {
@@ -161,6 +162,20 @@ void CustomNonbondedForce::setGlobalParameterDefaultValue(int index, double defa
     globalParameters[index].defaultValue = defaultValue;
 }
 
+void CustomNonbondedForce::addEnergyParameterDerivative(const string& name) {
+    for (int i = 0; i < globalParameters.size(); i++)
+        if (name == globalParameters[i].name) {
+            energyParameterDerivatives.push_back(i);
+            return;
+        }
+    throw OpenMMException(string("addEnergyParameterDerivative: Unknown global parameter '"+name+"'"));
+}
+
+const string& CustomNonbondedForce::getEnergyParameterDerivativeName(int index) const {
+    ASSERT_VALID_INDEX(index, energyParameterDerivatives);
+    return globalParameters[energyParameterDerivatives[index]].name;
+}
+
 int CustomNonbondedForce::addParticle(const vector<double>& parameters) {
     particles.push_back(ParticleInfo(parameters));
     return particles.size()-1;
@@ -195,11 +210,14 @@ void CustomNonbondedForce::setExclusionParticles(int index, int particle1, int p
 void CustomNonbondedForce::createExclusionsFromBonds(const vector<pair<int, int> >& bonds, int bondCutoff) {
     if (bondCutoff < 1)
         return;
+    for (auto& bond : bonds)
+        if (bond.first < 0 || bond.second < 0 || bond.first >= particles.size() || bond.second >= particles.size())
+            throw OpenMMException("createExclusionsFromBonds: Illegal particle index in list of bonds");
     vector<set<int> > exclusions(particles.size());
     vector<set<int> > bonded12(exclusions.size());
-    for (int i = 0; i < (int) bonds.size(); ++i) {
-        int p1 = bonds[i].first;
-        int p2 = bonds[i].second;
+    for (auto& bond : bonds) {
+        int p1 = bond.first;
+        int p2 = bond.second;
         exclusions[p1].insert(p2);
         exclusions[p2].insert(p1);
         bonded12[p1].insert(p2);
@@ -207,15 +225,14 @@ void CustomNonbondedForce::createExclusionsFromBonds(const vector<pair<int, int>
     }
     for (int level = 0; level < bondCutoff-1; level++) {
         vector<set<int> > currentExclusions = exclusions;
-        for (int i = 0; i < (int) particles.size(); i++) {
-            for (set<int>::const_iterator iter = currentExclusions[i].begin(); iter != currentExclusions[i].end(); ++iter)
-                exclusions[*iter].insert(bonded12[i].begin(), bonded12[i].end());
-        }
+        for (int i = 0; i < (int) particles.size(); i++)
+            for (int j : currentExclusions[i])
+                exclusions[j].insert(bonded12[i].begin(), bonded12[i].end());
     }
     for (int i = 0; i < (int) exclusions.size(); ++i)
-        for (set<int>::const_iterator iter = exclusions[i].begin(); iter != exclusions[i].end(); ++iter)
-            if (*iter < i)
-                addExclusion(*iter, i);
+        for (int j : exclusions[i])
+            if (j < i)
+                addExclusion(j, i);
 }
 
 int CustomNonbondedForce::addTabulatedFunction(const std::string& name, TabulatedFunction* function) {
@@ -262,6 +279,10 @@ void CustomNonbondedForce::setFunctionParameters(int index, const std::string& n
 }
 
 int CustomNonbondedForce::addInteractionGroup(const std::set<int>& set1, const std::set<int>& set2) {
+    for (set<int>::iterator it = set1.begin(); it != set1.end(); ++it)
+        ASSERT(*it >= 0);
+    for (set<int>::iterator it = set2.begin(); it != set2.end(); ++it)
+        ASSERT(*it >= 0);
     interactionGroups.push_back(InteractionGroupInfo(set1, set2));
     return interactionGroups.size()-1;
 }
@@ -274,6 +295,10 @@ void CustomNonbondedForce::getInteractionGroupParameters(int index, std::set<int
 
 void CustomNonbondedForce::setInteractionGroupParameters(int index, const std::set<int>& set1, const std::set<int>& set2) {
     ASSERT_VALID_INDEX(index, interactionGroups);
+    for (set<int>::iterator it = set1.begin(); it != set1.end(); ++it)
+        ASSERT_VALID_INDEX(*it, particles);
+    for (set<int>::iterator it = set2.begin(); it != set2.end(); ++it)
+        ASSERT_VALID_INDEX(*it, particles);
     interactionGroups[index].set1 = set1;
     interactionGroups[index].set2 = set2;
 }

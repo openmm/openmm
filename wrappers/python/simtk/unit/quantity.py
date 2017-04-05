@@ -807,8 +807,8 @@ def _is_string(x):
      if isinstance(x, str):
          return True
      try:
-         first_item = iter(x).next()
-         inner_item = iter(first_item).next()
+         first_item = next(iter(x))
+         inner_item = next(iter(first_item))
          if first_item is inner_item:
              return True
          else:

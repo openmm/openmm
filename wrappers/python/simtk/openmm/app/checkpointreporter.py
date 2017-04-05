@@ -6,9 +6,9 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2014 Stanford University and the Authors.
+Portions copyright (c) 2014-2016 Stanford University and the Authors.
 Authors: Robert McGibbon
-Contributors: 
+Contributors:
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -28,10 +28,14 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
+from __future__ import absolute_import
 __author__ = "Robert McGibbon"
 __version__ = "1.0"
 
 import simtk.openmm as mm
+import os
+import os.path
+
 __all__ = ['CheckpointReporter']
 
 
@@ -70,29 +74,32 @@ class CheckpointReporter(object):
     def __init__(self, file, reportInterval):
         """Create a CheckpointReporter.
 
-        Parameters:
-         - file (string or open file object) The file to write to. Any current
-           contents will be overwritten.
-         - reportInterval (int) The interval (in time steps) at which to write checkpoints
+        Parameters
+        ----------
+        file : string or open file object
+            The file to write to. Any current contents will be overwritten.
+        reportInterval : int
+            The interval (in time steps) at which to write checkpoints.
         """
 
         self._reportInterval = reportInterval
-        if isinstance(file, basestring):
-            self._own_handle = True
-            self._out = open(file, 'w+b', 0)
-        else:
-            self._out = file
-            self._own_handle = False
+        self._file = file
 
     def describeNextReport(self, simulation):
         """Get information about the next report this object will generate.
 
-        Parameters:
-         - simulation (Simulation) The Simulation to generate a report for
+        Parameters
+        ----------
+        simulation : Simulation
+            The Simulation to generate a report for
 
-        Returns: A five element tuple.  The first element is the number of steps until the
-        next report.  The remaining elements specify whether that report will require
-        positions, velocities, forces, and energies respectively.
+        Returns
+        -------
+        tuple
+            A five element tuple. The first element is the number of steps
+            until the next report. The remaining elements specify whether
+            that report will require positions, velocities, forces, and
+            energies respectively.
         """
         steps = self._reportInterval - simulation.currentStep%self._reportInterval
         return (steps, False, False, False, False)
@@ -100,17 +107,31 @@ class CheckpointReporter(object):
     def report(self, simulation, state):
         """Generate a report.
 
-        Parameters:
-         - simulation (Simulation) The Simulation to generate a report for
-         - state (State) The current state of the simulation
+        Parameters
+        ----------
+        simulation : Simulation
+            The Simulation to generate a report for
+        state : State
+            The current state of the simulation
         """
-        self._out.seek(0)
-        chk = simulation.context.createCheckpoint()
-        self._out.write(chk)
-        self._out.truncate()
-        self._out.flush()
+        if isinstance(self._file, str):
+            # Do a safe save.
 
-    def __del__(self):
-        if self._own_handle:
-            self._out.close()
+            tempFilename1 = self._file+".backup1"
+            tempFilename2 = self._file+".backup2"
+            with open(tempFilename1, 'w+b', 0) as out:
+                out.write(simulation.context.createCheckpoint())
+            exists = os.path.exists(self._file)
+            if exists:
+                os.rename(self._file, tempFilename2)
+            os.rename(tempFilename1, self._file)
+            if exists:
+                os.remove(tempFilename2)
+        else:
+            # Replace the contents of the file.
 
+            self._file.seek(0)
+            chk = simulation.context.createCheckpoint()
+            self._file.write(chk)
+            self._file.truncate()
+            self._file.flush()
