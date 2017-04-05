@@ -258,8 +258,14 @@ class GromacsTopFile(object):
     def _processDefaults(self, line):
         """Process the [ defaults ] line."""
         fields = line.split()
-        if len(fields) < 4:
-            raise ValueError('Too few fields in [ defaults ] line: '+line)
+        if len(fields) < 5:
+            # fudgeLJ and fudgeQQ not specified, assumed 1.0 by default
+            if len(fields) == 3:
+                fields.append(1.0)
+                fields.append(1.0)
+            else:
+                print len(fields)
+                raise ValueError('Too few fields in [ defaults ] line: '+len(fields))
         if fields[0] != '1':
             raise ValueError('Unsupported nonbonded type: '+fields[0])
         if not (fields[1] == '2' or fields[1] == '1'):
@@ -592,7 +598,7 @@ class GromacsTopFile(object):
         elif nonbondedMethod in (ff.CutoffPeriodic, ff.Ewald, ff.PME, ff.LJPME):
             raise ValueError('Illegal nonbonded method for a non-periodic system')
         if self._defaults[1] == '1':
-            #factor of 138.935456 for coulomb taken from tests/TestCustomNonbondedForce.h:574
+            # factor of 138.935456 for coulomb taken from tests/TestCustomNonbondedForce.h:574
             nb = mm.CustomNonbondedForce('138.935456*q1*q2/r-sqrt(C1*C2)/r^6+sqrt(A1*A2)/r^12')
             nb.addPerParticleParameter('q')
             nb.addPerParticleParameter('C')
@@ -618,10 +624,9 @@ class GromacsTopFile(object):
         bondIndices = []
         topologyAtoms = list(self.topology.atoms())
         exceptions = []
-        if self._defaults[1] == '1':
-            fudgeQQ = 0.0
-        elif self._defaults[1] == '2':
-            fudgeQQ = float(self._defaults[4])
+        pairs = []
+        fudgeQQ = float(self._defaults[4])
+        fudgeLJ = float(self._defaults[3])
 
         # Build a lookup table to let us process dihedrals more quickly.
 
@@ -786,16 +791,15 @@ class GromacsTopFile(object):
                         elif dihedralType == '2':
                             # Harmonic torsion
                             k = float(params[6])
+                            phi0 = float(params[5])
                             if k != 0:
                                 if harmonicTorsion is None:
-                                    #harmonicTorsion = mm.CustomTorsionForce('k*(theta-theta0)^2')
                                     harmonicTorsion = mm.CustomTorsionForce('0.5*k*(thetap-theta0)^2; thetap = step(-(theta-theta0+pi))*2*pi+theta+step(theta-theta0-pi)*(-2*pi); pi = 3.14159')
                                     harmonicTorsion.addPerTorsionParameter('theta0')
                                     harmonicTorsion.addPerTorsionParameter('k')
                                     sys.addForce(harmonicTorsion)
-                                phi0 = float(params[5])
-                                if phi0 > 180:
-                                    phi0 = phi0 - 360
+                                # map phi0 into correct space
+                                phi0 = phi0 - 360 if phi0 > 180 else phi0
                                 harmonicTorsion.addTorsion(baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], baseAtomIndex+atoms[2], baseAtomIndex+atoms[3], (phi0*degToRad, k))
                         else:
                             # RB Torsion
@@ -877,37 +881,44 @@ class GromacsTopFile(object):
                         continue # We'll use the automatically generated parameters
                     atom1params = nb.getParticleParameters(baseAtomIndex+atoms[0])
                     atom2params = nb.getParticleParameters(baseAtomIndex+atoms[1])
-                    exceptions.append((baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], atom1params[0]*atom2params[0]*fudgeQQ, params[0], params[1]))
-                if self._defaults[1] == '2':
-                    for fields in moleculeType.exclusions:
-                        atoms = [int(x)-1 for x in fields]
-                        for atom in atoms[1:]:
-                            if atom > atoms[0]:
+                    # enable tracking pairs and exceptions separately
+                    if self._defaults[1] == '1':
+                        pairs.append((baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], atom1params[0]*atom2params[0]*fudgeQQ, params[0], params[1]))
+                    elif self._defaults[1] == '2':
+                        exceptions.append((baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], atom1params[0]*atom2params[0]*fudgeQQ, params[0], params[1]))
+                for fields in moleculeType.exclusions:
+                    atoms = [int(x)-1 for x in fields]
+                    for atom in atoms[1:]:
+                        if atom > atoms[0]:
+                            if self._defaults[1] == '1':
+                                exceptions.append((baseAtomIndex+atoms[0], baseAtomIndex+atom))
+                            elif self._defaults[1] == '2':
                                 exceptions.append((baseAtomIndex+atoms[0], baseAtomIndex+atom, 0, 0, 0))
 
 
         # Create nonbonded exceptions.
         if self._defaults[1] == '1':
-            #no 1-4 scaling for electrostatics or VdW, only VdW exceptions
-            bond_exceptions = mm.CustomBondForce('-C/r^6+A/r^12')
-            bond_exceptions.addPerBondParameter('C')
-            bond_exceptions.addPerBondParameter('A')
-            sys.addForce(bond_exceptions)
+            # implement named exceptions (generally used for 1-4 interactions)
+            pair_bond = mm.CustomBondForce('138.935456*q/r-C/r^6+A/r^12')
+            pair_bond.addPerBondParameter('q')
+            pair_bond.addPerBondParameter('C')
+            pair_bond.addPerBondParameter('A')
+            sys.addForce(pair_bond)
 
-            #generate 1-2 and 1-3 exclusions
+            # generate 1-2, 1-3, and 1-4 exclusions
             nb.createExclusionsFromBonds(bondIndices, 3)
 
-            for exception in exceptions:
-                ##debugging info, not needed
-                #print 'excl a1 =', str(exception[0]+1), ' excl a2 =', str(exception[1]+1), ' C =', exception[3], ' A =', exception[4]
-                nb.addExclusion(exception[0], exception[1])
-                bond_exceptions.addBond(exception[0], exception[1], [float(exception[3]), float(exception[4])])
+            for pair in pairs:
+                pair_bond.addBond(pair[0], pair[1], [pair[2],float(pair[3])*fudgeLJ, float(pair[4])*fudgeLJ])
 
+            # create requested exclusions
+            for exception in exceptions:
+                nb.addExclusion(exception[0], exception[1])
 
         elif self._defaults[1] == '2':
-            nb.createExceptionsFromBonds(bondIndices, fudgeQQ, float(self._defaults[3]))
+            nb.createExceptionsFromBonds(bondIndices, fudgeQQ, fudgeLJ)
             for exception in exceptions:
-                nb.addException(exception[0], exception[1], exception[2], float(exception[3]), float(exception[4]), True)
+                nb.addException(exception[0], exception[1], exception[2], float(exception[3])*fudgeLJ, float(exception[4]), True)
 
         # Finish configuring the NonbondedForce.
 

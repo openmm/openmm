@@ -72,6 +72,9 @@ def _is_gro_coord(line):
     sline = line.split()
     if len(sline) == 6 or len(sline) == 9:
         return all([_isint(sline[2]), _isfloat(sline[3]), _isfloat(sline[4]), _isfloat(sline[5])])
+    #handles case when first entry is split
+    elif len(sline) == 7:
+        return all([_isint(sline[3]), _isfloat(sline[4]), _isfloat(sline[5]), _isfloat(sline[6])])
     elif len(sline) == 5 or len(sline) == 8:
         return all([_isint(line[15:20]), _isfloat(sline[2]), _isfloat(sline[3]), _isfloat(sline[4])])
     else:
