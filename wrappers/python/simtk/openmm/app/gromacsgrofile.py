@@ -34,6 +34,7 @@ __version__ = "1.0"
 
 import os
 import sys
+from string import strip
 from simtk.openmm import Vec3
 from simtk.openmm.app.internal.unitcell import reducePeriodicBoxVectors
 from re import sub, match
@@ -69,14 +70,14 @@ def _is_gro_coord(line):
     @param[in] line The line to be tested
 
     """
-    sline = line.split()
-    if len(sline) == 6 or len(sline) == 9:
-        return all([_isint(sline[2]), _isfloat(sline[3]), _isfloat(sline[4]), _isfloat(sline[5])])
-    #handles case when first entry is split
-    elif len(sline) == 7:
-        return all([_isint(sline[3]), _isfloat(sline[4]), _isfloat(sline[5]), _isfloat(sline[6])])
-    elif len(sline) == 5 or len(sline) == 8:
-        return all([_isint(line[15:20]), _isfloat(sline[2]), _isfloat(sline[3]), _isfloat(sline[4])])
+    # data lines are fixed field
+    fields = []
+    fields.append(strip(line[16:20])) # atom number
+    fields.append(strip(line[21:28])) # x coord
+    fields.append(strip(line[29:36])) # y coord
+    fields.append(strip(line[37:44])) # z coord
+    if (all([f != '' for f in fields])): # check for empty fields
+        return all([_isint(fields[0]), _isfloat(fields[1]), _isfloat(fields[2]), _isfloat(fields[3])])
     else:
         return 0
 
