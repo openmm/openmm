@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2012-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2012-2017 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -379,6 +379,14 @@ void testConservationLaws() {
     int numParticles = system.getNumParticles();
     double initialEnergy;
     Vec3 initialMomentum, initialAngularMomentum;
+    double tol = 1e-4;
+    try {
+        if (context.getPlatform().getPropertyValue(context, "Precision") == "single")
+            tol = 0.05;
+    }
+    catch (...) {
+        // This platform doesn't have adjustable precision.
+    }
     for (int i = 0; i < 1000; i++) {
         State state = context.getState(State::Positions | State::Velocities | State::Forces | State::Energy);
         const vector<Vec3>& pos = state.getPositions();
@@ -399,14 +407,14 @@ void testConservationLaws() {
         if (i == 0)
             initialMomentum = momentum;
         else
-            ASSERT_EQUAL_VEC(initialMomentum, momentum, 0.02);
+            ASSERT_EQUAL_VEC(initialMomentum, momentum, tol);
         Vec3 angularMomentum;
         for (int j = 0; j < numParticles; j++)
             angularMomentum += pos[j].cross(vel[j])*system.getParticleMass(j);
         if (i == 0)
             initialAngularMomentum = angularMomentum;
         else
-            ASSERT_EQUAL_VEC(initialAngularMomentum, angularMomentum, 0.05);
+            ASSERT_EQUAL_VEC(initialAngularMomentum, angularMomentum, tol);
         integrator.step(1);
     }
 }
