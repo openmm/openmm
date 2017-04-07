@@ -51,6 +51,18 @@ class TestGromacsTopFile(unittest.TestCase):
         ene = context.getState(getEnergy=True, groups=2**1).getPotentialEnergy()
         self.assertAlmostEqual(ene.value_in_unit(kilojoules_per_mole), 341.6905133582857)
 
+    def test_SMOG(self):
+        """ Test Gromacs topology #define replacement as used in ff99SB-ILDN """
+        top = GromacsTopFile('systems/2ci2.pdb.top')
+        gro = GromacsGroFile('systems/2ci2.pdb.gro')
+        system = top.createSystem()
+
+        context = Context(system, VerletIntegrator(1*femtosecond),
+                          Platform.getPlatformByName('Reference'))
+        context.setPositions(gro.positions)
+        ene = context.getState(getEnergy=True).getPotentialEnergy()
+        self.assertAlmostEqual(ene.value_in_unit(kilojoules_per_mole), -346.940915296)
+
     def test_Cutoff(self):
         """Test to make sure the nonbondedCutoff parameter is passed correctly."""
 
