@@ -69,6 +69,8 @@ CustomHbondForce::NonbondedMethod CustomHbondForce::getNonbondedMethod() const {
 }
 
 void CustomHbondForce::setNonbondedMethod(NonbondedMethod method) {
+    if (method < 0 || method > 2)
+        throw OpenMMException("CustomHbondForce: Illegal value for nonbonded method");
     nonbondedMethod = method;
 }
 

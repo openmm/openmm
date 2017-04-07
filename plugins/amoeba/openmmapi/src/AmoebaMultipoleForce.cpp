@@ -52,6 +52,8 @@ AmoebaMultipoleForce::NonbondedMethod AmoebaMultipoleForce::getNonbondedMethod()
 }
 
 void AmoebaMultipoleForce::setNonbondedMethod(AmoebaMultipoleForce::NonbondedMethod method) {
+    if (method < 0 || method > 1)
+        throw OpenMMException("AmoebaMultipoleForce: Illegal value for nonbonded method");
     nonbondedMethod = method;
 }
 

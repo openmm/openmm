@@ -60,6 +60,8 @@ CustomGBForce::NonbondedMethod CustomGBForce::getNonbondedMethod() const {
 }
 
 void CustomGBForce::setNonbondedMethod(NonbondedMethod method) {
+    if (method < 0 || method > 2)
+        throw OpenMMException("CustomGBForce: Illegal value for nonbonded method");
     nonbondedMethod = method;
 }
 
