@@ -264,8 +264,7 @@ class GromacsTopFile(object):
                 fields.append(1.0)
                 fields.append(1.0)
             else:
-                print len(fields)
-                raise ValueError('Too few fields in [ defaults ] line: '+len(fields))
+                raise ValueError('Too few fields in [ defaults ] line: '+line)
         if fields[0] != '1':
             raise ValueError('Unsupported nonbonded type: '+fields[0])
         if not (fields[1] == '2' or fields[1] == '1'):
