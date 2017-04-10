@@ -52,7 +52,7 @@ class TestGromacsTopFile(unittest.TestCase):
         self.assertAlmostEqual(ene.value_in_unit(kilojoules_per_mole), 341.6905133582857)
 
     def test_SMOG(self):
-        """ Test Gromacs topology #define replacement as used in ff99SB-ILDN """
+        """ Test to ensure that SMOG models can be run without problems """
         top = GromacsTopFile('systems/2ci2.pdb.top')
         gro = GromacsGroFile('systems/2ci2.pdb.gro')
         system = top.createSystem()
