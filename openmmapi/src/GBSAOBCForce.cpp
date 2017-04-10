@@ -64,6 +64,8 @@ GBSAOBCForce::NonbondedMethod GBSAOBCForce::getNonbondedMethod() const {
 }
 
 void GBSAOBCForce::setNonbondedMethod(NonbondedMethod method) {
+    if (method < 0 || method > 2)
+        throw OpenMMException("GBSAOBCForce: Illegal value for nonbonded method");
     nonbondedMethod = method;
 }
 

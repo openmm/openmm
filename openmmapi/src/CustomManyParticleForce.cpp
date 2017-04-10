@@ -65,6 +65,8 @@ CustomManyParticleForce::NonbondedMethod CustomManyParticleForce::getNonbondedMe
 }
 
 void CustomManyParticleForce::setNonbondedMethod(NonbondedMethod method) {
+    if (method < 0 || method > 2)
+        throw OpenMMException("CustomManyParticleForce: Illegal value for nonbonded method");
     nonbondedMethod = method;
 }
 

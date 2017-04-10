@@ -87,6 +87,8 @@ CustomNonbondedForce::NonbondedMethod CustomNonbondedForce::getNonbondedMethod()
 }
 
 void CustomNonbondedForce::setNonbondedMethod(NonbondedMethod method) {
+    if (method < 0 || method > 2)
+        throw OpenMMException("CustomNonbondedForce: Illegal value for nonbonded method");
     nonbondedMethod = method;
 }
 

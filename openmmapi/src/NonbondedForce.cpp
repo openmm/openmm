@@ -57,6 +57,8 @@ NonbondedForce::NonbondedMethod NonbondedForce::getNonbondedMethod() const {
 }
 
 void NonbondedForce::setNonbondedMethod(NonbondedMethod method) {
+    if (method < 0 || method > 5)
+        throw OpenMMException("NonbondedForce: Illegal value for nonbonded method");
     nonbondedMethod = method;
 }
 
