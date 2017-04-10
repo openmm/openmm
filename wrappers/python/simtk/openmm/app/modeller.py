@@ -35,10 +35,10 @@ __author__ = "Peter Eastman"
 __version__ = "1.0"
 
 from simtk.openmm.app import Topology, PDBFile, ForceField
-from simtk.openmm.app.forcefield import HAngles, AllBonds, CutoffNonPeriodic, _createResidueSignature, _matchResidue, DrudeGenerator
+from simtk.openmm.app.forcefield import HAngles, AllBonds, CutoffNonPeriodic, CutoffPeriodic, _createResidueSignature, _matchResidue, DrudeGenerator
 from simtk.openmm.app.topology import Residue
 from simtk.openmm.vec3 import Vec3
-from simtk.openmm import System, Context, NonbondedForce, CustomNonbondedForce, HarmonicBondForce, HarmonicAngleForce, VerletIntegrator, LocalEnergyMinimizer
+from simtk.openmm import System, Context, NonbondedForce, CustomNonbondedForce, HarmonicBondForce, HarmonicAngleForce, VerletIntegrator, LangevinIntegrator, LocalEnergyMinimizer
 from simtk.unit import nanometer, molar, elementary_charge, amu, gram, liter, degree, sqrt, acos, is_quantity, dot, norm
 import simtk.unit as unit
 from . import element as elem
@@ -47,6 +47,7 @@ import random
 import xml.etree.ElementTree as etree
 from copy import deepcopy
 from math import ceil, floor
+from collections import defaultdict
 
 class Modeller(object):
     """Modeller provides tools for editing molecular models, such as adding water or missing hydrogens.
@@ -1148,3 +1149,198 @@ class Modeller(object):
 
         self.topology = newTopology
         self.positions = newPositions
+
+    def addMembrane(self, forcefield, minimumPadding=1*nanometer):
+        patchPdb = PDBFile(os.path.join(os.path.dirname(__file__), 'data', 'POPC.pdb'))
+        
+        # Figure out how many copies of the membrane patch we need in each direction. 
+
+        proteinPos = self.positions.value_in_unit(nanometer)
+        proteinMinPos = min(proteinPos)
+        proteinMaxPos = max(proteinPos)
+        proteinSize = proteinMaxPos-proteinMinPos
+        proteinCenterPos = (proteinMinPos+proteinMaxPos)/2
+        patchPos = patchPdb.positions.value_in_unit(nanometer)
+        patchSize = patchPdb.topology.getUnitCellDimensions().value_in_unit(nanometer)
+        patchCenterPos = (min(patchPos)+max(patchPos))/2
+        padding = minimumPadding.value_in_unit(nanometer)
+        nx = ceil((proteinSize[0]+2*padding)/patchSize[0])
+        ny = ceil((proteinSize[1]+2*padding)/patchSize[1])
+        
+        # Record the bonds for each residue.
+        
+        resBonds = defaultdict(list)
+        for bond in patchPdb.topology.bonds():
+            resBonds[bond[0].residue].append(bond)
+        
+        # Identify which leaf of the membrane each lipid is in.
+        
+        numLipidAtoms = 0
+        resMeanZ = {}
+        membraneMeanZ = 0.0
+        for res in patchPdb.topology.residues():
+            if res.name != 'HOH':
+                numResAtoms = 0
+                sumZ = 0.0
+                for atom in res.atoms():
+                    numResAtoms += 1
+                    sumZ += patchPos[atom.index][2]
+                numLipidAtoms += numResAtoms
+                membraneMeanZ += sumZ
+                resMeanZ[res] = sumZ/numResAtoms
+        membraneMeanZ /= numLipidAtoms
+        lipidLeaf = dict((res, 0 if resMeanZ[res] < membraneMeanZ else 1) for res in resMeanZ)
+        
+        # Compute scaled positions for the protein.
+        
+        scaledProteinPos = [None]*len(proteinPos)
+        for i, p in enumerate(proteinPos):
+            p = p-proteinCenterPos
+            p = Vec3(0.5*p[0], 0.5*p[1], p[2])
+            scaledProteinPos[i] = p+proteinCenterPos
+        
+        # Create a new Topology for the membrane.
+        
+        membraneTopology = Topology()
+        membranePos = []
+        boxSizeZ = patchSize[2]
+        if self.topology.getUnitCellDimensions() is not None:
+            boxSizeZ = max(boxSizeZ, self.topology.getUnitCellDimensions()[2].value_in_unit(nanometer))
+        membraneTopology.setUnitCellDimensions((nx*patchSize[0], ny*patchSize[1], boxSizeZ))
+        
+        # Add membrane patches.  DESCRIBE HOW.
+        
+        overlapCutoff = 0.22
+        chain = membraneTopology.addChain()
+        addedWater = []
+        addedLipids = []
+        removedFromLeaf = [0, 0]
+        vectors = membraneTopology.getPeriodicBoxVectors().value_in_unit(nanometer)
+        proteinCells = _CellList(proteinPos, overlapCutoff, vectors, False)
+        scaledProteinCells = _CellList(scaledProteinPos, overlapCutoff, vectors, False)
+        for x in range(nx):
+            for y in range(ny):
+                offset = proteinCenterPos - patchCenterPos + Vec3((x-0.5*(nx-1))*patchSize[0], (y-0.5*(ny-1))*patchSize[1], 0)
+                for res in patchPdb.topology.residues():
+                    resPos = [patchPos[atom.index]+offset for atom in res.atoms()]
+                    if res.name == 'HOH':
+                        referencePos = proteinPos
+                        cells = proteinCells
+                    else:
+                        referencePos = scaledProteinPos
+                        cells = scaledProteinCells
+                    overlap = False
+                    nearest = nx*patchSize[0]
+                    for index, atom in enumerate(res.atoms()):
+                        pos = resPos[index]
+                        for atom in cells.neighbors(pos):
+                            distance = norm(pos-referencePos[atom])
+                            if distance < overlapCutoff:
+                                overlap = True
+                                break
+                            nearest = min(nearest, distance)
+                        if overlap:
+                            break
+                    if res.name == 'HOH':
+                        if not overlap:
+                            addedWater.append((res, resPos))
+                    else:
+                        if overlap:
+                            removedFromLeaf[lipidLeaf[res]] += 1
+                        else:
+                            addedLipids.append((nearest, res, resPos))
+        
+        # Add the solvent.
+        
+        newAtoms = {}
+        solventChain = membraneTopology.addChain()
+        for (residue, pos) in addedWater:
+            newResidue = membraneTopology.addResidue(residue.name, solventChain, residue.id)
+            for atom in residue.atoms():
+                newAtom = membraneTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
+                newAtoms[atom] = newAtom
+            membranePos += pos
+            for bond in resBonds[residue]:
+                membraneTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]], bond.type, bond.order)
+        
+        # Add the lipids.
+        
+        lipidChain = membraneTopology.addChain()
+        for (nearest, residue, pos) in addedLipids:
+            newResidue = membraneTopology.addResidue(residue.name, lipidChain, residue.id)
+            for atom in residue.atoms():
+                newAtom = membraneTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
+                newAtoms[atom] = newAtom
+            membranePos += pos
+            for bond in resBonds[residue]:
+                membraneTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]], bond.type, bond.order)
+
+        # Create a System for the lipids, then add in the protein as stationary particles.
+        
+        system = forcefield.createSystem(membraneTopology, nonbondedMethod=CutoffPeriodic)
+        proteinSystem = forcefield.createSystem(self.topology, nonbondedMethod=CutoffPeriodic)
+        numMembraneParticles = system.getNumParticles()
+        numProteinParticles = proteinSystem.getNumParticles()
+        for i in range(numProteinParticles):
+            system.addParticle(0.0)
+        for f1, f2 in zip(system.getForces(), proteinSystem.getForces()):
+            if isinstance(f1, NonbondedForce):
+                for i in range(numProteinParticles):
+                    f1.addParticle(*f2.getParticleParameters(i))
+                    for j in range(i):
+                        f1.addException(i+numMembraneParticles, j+numMembraneParticles, 0.0, 1.0, 0.0)
+        mergedPositions = membranePos+scaledProteinPos
+        
+        # Run a simulation while slowly scaling up the protein so membrane can relax.
+        
+        integrator = LangevinIntegrator(10.0, 50.0, 0.001)
+        context = Context(system, integrator)
+        context.setPositions(mergedPositions)
+        LocalEnergyMinimizer.minimize(context, 10.0, 30)
+        for i in range(50):
+            print(i, context.getState(getEnergy=True).getPotentialEnergy(), context.getState().getTime())
+            weight1 = i/49.0
+            weight2 = 1.0-weight1
+            mergedPositions = context.getState(getPositions=True).getPositions().value_in_unit(nanometer)
+            for j in range(len(proteinPos)):
+                mergedPositions[j+numMembraneParticles] = (weight1*proteinPos[j] + weight2*scaledProteinPos[j])
+            context.setPositions(mergedPositions)
+            integrator.step(20)
+        
+        # Add the membrane to the protein.
+        
+        self.add(membraneTopology, context.getState(getPositions=True).getPositions()[:numMembraneParticles])
+
+
+class _CellList(object):
+    """This class organizes atom positions into cells, so the neighbors of a point can be quickly retrieved"""
+    
+    def __init__(self, positions, maxCutoff, vectors, periodic):
+        self.positions = positions[:]
+        self.cells = {}
+        self.numCells = tuple((max(1, int(floor(vectors[i][i]/maxCutoff))) for i in range(3)))
+        self.cellSize = tuple((vectors[i][i]/self.numCells[i] for i in range(3)))
+        invBox = Vec3(1.0/vectors[0][0], 1.0/vectors[1][1], 1.0/vectors[2][2])
+        for i in range(len(self.positions)):
+            pos = self.positions[i]
+            if periodic:
+                pos = pos - floor(pos[2]*invBox[2])*vectors[2]
+                pos -= floor(pos[1]*invBox[1])*vectors[1]
+                pos -= floor(pos[0]*invBox[0])*vectors[0]
+                self.positions[i] = pos
+            cell = tuple((int(floor(pos[j]/self.cellSize[j]))%self.numCells[j] for j in range(3)))
+            if cell in self.cells:
+                self.cells[cell].append(i)
+            else:
+                self.cells[cell] = [i]
+
+    def neighbors(self, pos):
+        centralCell = tuple((int(floor(pos[i]/self.cellSize[i])) for i in range(3)))
+        offsets = (-1, 0, 1)
+        for i in offsets:
+            for j in offsets:
+                for k in offsets:
+                    cell = ((centralCell[0]+i+self.numCells[0])%self.numCells[0], (centralCell[1]+j+self.numCells[1])%self.numCells[1], (centralCell[2]+k+self.numCells[2])%self.numCells[2])
+                    if cell in self.cells:
+                        for atom in self.cells[cell]:
+                            yield atom

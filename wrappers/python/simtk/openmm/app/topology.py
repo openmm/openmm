@@ -112,6 +112,11 @@ class Topology(object):
         """
         return len(self._chains)
 
+    def getNumBonds(self):
+        """Return the number of bonds in the Topology.
+        """
+        return len(self._bonds)
+
     def addChain(self, id=None):
         """Create a new Chain and add it to the Topology.
 
@@ -329,6 +334,8 @@ class Topology(object):
                             toAtom = bond[1]
                         if fromAtom in atomMaps[fromResidue] and toAtom in atomMaps[toResidue]:
                             self.addBond(atomMaps[fromResidue][fromAtom], atomMaps[toResidue][toAtom])
+                        elif name == 'POP':
+                            print(fromAtom, toAtom)
 
     def createDisulfideBonds(self, positions):
         """Identify disulfide bonds based on proximity and add them to the
