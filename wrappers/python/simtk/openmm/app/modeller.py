@@ -1150,8 +1150,12 @@ class Modeller(object):
         self.topology = newTopology
         self.positions = newPositions
 
-    def addMembrane(self, forcefield, minimumPadding=1*nanometer):
+    def addMembrane(self, forcefield, membraneCenterZ=0*nanometer, minimumPadding=1*nanometer):
         patchPdb = PDBFile(os.path.join(os.path.dirname(__file__), 'data', 'POPC.pdb'))
+        if is_quantity(membraneCenterZ):
+            membraneCenterZ = membraneCenterZ.value_in_unit(nanometer)
+        if is_quantity(minimumPadding):
+            minimumPadding = minimumPadding.value_in_unit(nanometer)
         
         # Figure out how many copies of the membrane patch we need in each direction. 
 
@@ -1160,12 +1164,12 @@ class Modeller(object):
         proteinMaxPos = max(proteinPos)
         proteinSize = proteinMaxPos-proteinMinPos
         proteinCenterPos = (proteinMinPos+proteinMaxPos)/2
+        proteinCenterPos = Vec3(proteinCenterPos[0], proteinCenterPos[1], membraneCenterZ)
         patchPos = patchPdb.positions.value_in_unit(nanometer)
         patchSize = patchPdb.topology.getUnitCellDimensions().value_in_unit(nanometer)
         patchCenterPos = (min(patchPos)+max(patchPos))/2
-        padding = minimumPadding.value_in_unit(nanometer)
-        nx = ceil((proteinSize[0]+2*padding)/patchSize[0])
-        ny = ceil((proteinSize[1]+2*padding)/patchSize[1])
+        nx = ceil((proteinSize[0]+2*minimumPadding)/patchSize[0])
+        ny = ceil((proteinSize[1]+2*minimumPadding)/patchSize[1])
         
         # Record the bonds for each residue.
         
@@ -1208,7 +1212,10 @@ class Modeller(object):
             boxSizeZ = max(boxSizeZ, self.topology.getUnitCellDimensions()[2].value_in_unit(nanometer))
         membraneTopology.setUnitCellDimensions((nx*patchSize[0], ny*patchSize[1], boxSizeZ))
         
-        # Add membrane patches.  DESCRIBE HOW.
+        # Add membrane patches.  We exclude any water that is within a cutoff distance of the *actual* protein,
+        # and any lipid that is within a cutoff distance of the *scaled* protein.  We also keep track of how
+        # many lipids have been excluded from each leaf of the membrane, so we can make sure exactly the same
+        # number get removed from each leaf.
         
         overlapCutoff = 0.22
         chain = membraneTopology.addChain()
@@ -1249,6 +1256,7 @@ class Modeller(object):
                             removedFromLeaf[lipidLeaf[res]] += 1
                         else:
                             addedLipids.append((nearest, res, resPos))
+        skipFromLeaf = [max(removedFromLeaf)-removedFromLeaf[i] for i in (0,1)]
         
         # Add the solvent.
         
@@ -1267,13 +1275,17 @@ class Modeller(object):
         
         lipidChain = membraneTopology.addChain()
         for (nearest, residue, pos) in addedLipids:
-            newResidue = membraneTopology.addResidue(residue.name, lipidChain, residue.id)
-            for atom in residue.atoms():
-                newAtom = membraneTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
-                newAtoms[atom] = newAtom
-            membranePos += pos
-            for bond in resBonds[residue]:
-                membraneTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]], bond.type, bond.order)
+            if skipFromLeaf[lipidLeaf[residue]] > 0:
+                # Remove the same number of residues from each leaf.
+                skipFromLeaf[lipidLeaf[residue]] -= 1
+            else:
+                newResidue = membraneTopology.addResidue(residue.name, lipidChain, residue.id)
+                for atom in residue.atoms():
+                    newAtom = membraneTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
+                    newAtoms[atom] = newAtom
+                membranePos += pos
+                for bond in resBonds[residue]:
+                    membraneTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]], bond.type, bond.order)
 
         # Create a System for the lipids, then add in the protein as stationary particles.
         
@@ -1291,7 +1303,7 @@ class Modeller(object):
                         f1.addException(i+numMembraneParticles, j+numMembraneParticles, 0.0, 1.0, 0.0)
         mergedPositions = membranePos+scaledProteinPos
         
-        # Run a simulation while slowly scaling up the protein so membrane can relax.
+        # Run a simulation while slowly scaling up the protein so the membrane can relax.
         
         integrator = LangevinIntegrator(10.0, 50.0, 0.001)
         context = Context(system, integrator)
