@@ -123,7 +123,7 @@ class PDBFile(object):
                         # Try to guess the element.
 
                         upper = atomName.upper()
-                        while len(upper) > 1 and upper[0].isnumeric():
+                        while len(upper) > 1 and upper[0].isdigit():
                             upper = upper[1:]
                         if upper.startswith('CL'):
                             element = elem.chlorine
