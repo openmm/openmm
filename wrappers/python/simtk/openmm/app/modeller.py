@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2016 Stanford University and the Authors.
+Portions copyright (c) 2012-2017 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
@@ -409,33 +409,7 @@ class Modeller(object):
             positions = []
         else:
             positions = self.positions.value_in_unit(nanometer)[:]
-        cells = {}
-        numCells = tuple((max(1, int(floor(box[i]/maxCutoff))) for i in range(3)))
-        cellSize = tuple((box[i]/numCells[i] for i in range(3)))
-        for i in range(len(positions)):
-            pos = positions[i]
-            pos = pos - floor(pos[2]*invBox[2])*vectors[2]
-            pos -= floor(pos[1]*invBox[1])*vectors[1]
-            pos -= floor(pos[0]*invBox[0])*vectors[0]
-            positions[i] = pos
-            cell = tuple((int(floor(pos[j]/cellSize[j]))%numCells[j] for j in range(3)))
-            if cell in cells:
-                cells[cell].append(i)
-            else:
-                cells[cell] = [i]
-
-        # Create a generator that loops over atoms close to a position.
-
-        def neighbors(pos):
-            centralCell = tuple((int(floor(pos[i]/cellSize[i])) for i in range(3)))
-            offsets = (-1, 0, 1)
-            for i in offsets:
-                for j in offsets:
-                    for k in offsets:
-                        cell = ((centralCell[0]+i+numCells[0])%numCells[0], (centralCell[1]+j+numCells[1])%numCells[1], (centralCell[2]+k+numCells[2])%numCells[2])
-                        if cell in cells:
-                            for atom in cells[cell]:
-                                yield atom
+        cells = _CellList(positions, maxCutoff, vectors, True)
 
         # Define a function to compute the distance between two points, taking periodic boundary conditions into account.
 
@@ -467,7 +441,7 @@ class Modeller(object):
                             # This molecule is inside the box, so see how close to it is to the solute.
 
                             atomPos += center-box/2
-                            for i in neighbors(atomPos):
+                            for i in cells.neighbors(atomPos):
                                 if periodicDistance(atomPos, positions[i]) < cutoff[i]:
                                     break
                             else:
@@ -496,19 +470,19 @@ class Modeller(object):
             lowerCutoff = center-box/2+Vec3(waterCutoff, waterCutoff, waterCutoff)
             lowerSkinPositions = [pos for index, pos in addedWaters if pos[0] < lowerCutoff[0] or pos[1] < lowerCutoff[1] or pos[2] < lowerCutoff[2]]
             filteredWaters = []
-            cells = {}
+            cells.cells = {}
             for i in range(len(lowerSkinPositions)):
-                cell = tuple((int(floor(lowerSkinPositions[i][j]/cellSize[j]))%numCells[j] for j in range(3)))
-                if cell in cells:
-                    cells[cell].append(i)
+                cell = tuple((int(floor(lowerSkinPositions[i][j]/cells.cellSize[j]))%cells.numCells[j] for j in range(3)))
+                if cell in cells.cells:
+                    cells.cells[cell].append(i)
                 else:
-                    cells[cell] = [i]
+                    cells.cells[cell] = [i]
             for entry in addedWaters:
                 pos = entry[1]
                 if pos[0] < upperCutoff[0] and pos[1] < upperCutoff[1] and pos[2] < upperCutoff[2]:
                     filteredWaters.append(entry)
                 else:
-                    if not any((periodicDistance(lowerSkinPositions[i], pos) < waterCutoff and norm(lowerSkinPositions[i]-pos) > waterCutoff for i in neighbors(pos))):
+                    if not any((periodicDistance(lowerSkinPositions[i], pos) < waterCutoff and norm(lowerSkinPositions[i]-pos) > waterCutoff for i in cells.neighbors(pos))):
                         filteredWaters.append(entry)
             addedWaters = filteredWaters
 
@@ -1150,7 +1124,7 @@ class Modeller(object):
         self.topology = newTopology
         self.positions = newPositions
 
-    def addMembrane(self, forcefield, membraneCenterZ=0*nanometer, minimumPadding=1*nanometer):
+    def addMembrane(self, forcefield, membraneCenterZ=0*nanometer, minimumPadding=1*nanometer, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar, neutralize=True):
         patchPdb = PDBFile(os.path.join(os.path.dirname(__file__), 'data', 'POPC.pdb'))
         if is_quantity(membraneCenterZ):
             membraneCenterZ = membraneCenterZ.value_in_unit(nanometer)
@@ -1170,6 +1144,17 @@ class Modeller(object):
         patchCenterPos = (min(patchPos)+max(patchPos))/2
         nx = ceil((proteinSize[0]+2*minimumPadding)/patchSize[0])
         ny = ceil((proteinSize[1]+2*minimumPadding)/patchSize[1])
+
+        # Identify the ion types.
+
+        posIonElements = {'Cs+':elem.cesium, 'K+':elem.potassium, 'Li+':elem.lithium, 'Na+':elem.sodium, 'Rb+':elem.rubidium}
+        negIonElements = {'Cl-':elem.chlorine, 'Br-':elem.bromine, 'F-':elem.fluorine, 'I-':elem.iodine}
+        if positiveIon not in posIonElements:
+            raise ValueError('Illegal value for positive ion: %s' % positiveIon)
+        if negativeIon not in negIonElements:
+            raise ValueError('Illegal value for negative ion: %s' % negativeIon)
+        positiveElement = posIonElements[positiveIon]
+        negativeElement = negIonElements[negativeIon]
         
         # Record the bonds for each residue.
         
@@ -1209,7 +1194,7 @@ class Modeller(object):
         membranePos = []
         boxSizeZ = patchSize[2]
         if self.topology.getUnitCellDimensions() is not None:
-            boxSizeZ = max(boxSizeZ, self.topology.getUnitCellDimensions()[2].value_in_unit(nanometer))
+            boxSizeZ = max(boxSizeZ, self.topology.getUnitCellDimensions()[2].value_in_unit(nanometer)+2*minimumPadding)
         membraneTopology.setUnitCellDimensions((nx*patchSize[0], ny*patchSize[1], boxSizeZ))
         
         # Add membrane patches.  We exclude any water that is within a cutoff distance of the *actual* protein,
@@ -1258,21 +1243,9 @@ class Modeller(object):
                             addedLipids.append((nearest, res, resPos))
         skipFromLeaf = [max(removedFromLeaf)-removedFromLeaf[i] for i in (0,1)]
         
-        # Add the solvent.
-        
-        newAtoms = {}
-        solventChain = membraneTopology.addChain()
-        for (residue, pos) in addedWater:
-            newResidue = membraneTopology.addResidue(residue.name, solventChain, residue.id)
-            for atom in residue.atoms():
-                newAtom = membraneTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
-                newAtoms[atom] = newAtom
-            membranePos += pos
-            for bond in resBonds[residue]:
-                membraneTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]], bond.type, bond.order)
-        
         # Add the lipids.
         
+        newAtoms = {}
         lipidChain = membraneTopology.addChain()
         for (nearest, residue, pos) in addedLipids:
             if skipFromLeaf[lipidLeaf[residue]] > 0:
@@ -1286,6 +1259,18 @@ class Modeller(object):
                 membranePos += pos
                 for bond in resBonds[residue]:
                     membraneTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]], bond.type, bond.order)
+        
+        # Add the solvent.
+        
+        solventChain = membraneTopology.addChain()
+        for (residue, pos) in addedWater:
+            newResidue = membraneTopology.addResidue(residue.name, solventChain, residue.id)
+            for atom in residue.atoms():
+                newAtom = membraneTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
+                newAtoms[atom] = newAtom
+            membranePos += pos
+            for bond in resBonds[residue]:
+                membraneTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]], bond.type, bond.order)
 
         # Create a System for the lipids, then add in the protein as stationary particles.
         
@@ -1295,12 +1280,16 @@ class Modeller(object):
         numProteinParticles = proteinSystem.getNumParticles()
         for i in range(numProteinParticles):
             system.addParticle(0.0)
+        nonbonded = None
         for f1, f2 in zip(system.getForces(), proteinSystem.getForces()):
             if isinstance(f1, NonbondedForce):
+                nonbonded = f2
                 for i in range(numProteinParticles):
                     f1.addParticle(*f2.getParticleParameters(i))
                     for j in range(i):
                         f1.addException(i+numMembraneParticles, j+numMembraneParticles, 0.0, 1.0, 0.0)
+        if nonbonded is None:
+            raise ValueError('The ForceField does not specify a NonbondedForce')
         mergedPositions = membranePos+scaledProteinPos
         
         # Run a simulation while slowly scaling up the protein so the membrane can relax.
@@ -1321,7 +1310,73 @@ class Modeller(object):
         
         # Add the membrane to the protein.
         
-        self.add(membraneTopology, context.getState(getPositions=True).getPositions()[:numMembraneParticles])
+        modeller = Modeller(self.topology, self.positions)
+        modeller.add(membraneTopology, context.getState(getPositions=True).getPositions()[:numMembraneParticles])
+        modeller.topology.setPeriodicBoxVectors(membraneTopology.getPeriodicBoxVectors())
+        
+        # Depending on the box size, we may need to add more water beyond what was included with the membrane patch.
+        
+        needExtraWater = (boxSizeZ > patchSize[2])
+        if needExtraWater:
+            modeller.addSolvent(forcefield, neutralize=False)
+        
+        # Record the positions of all waters that have been added.
+        
+        waterPos = {}
+        for chain in list(modeller.topology.chains())[-2:]:
+            for residue in chain.residues():
+                if residue.name == 'HOH':
+                    for atom in residue.atoms():
+                        if atom.element == elem.oxygen:
+                            waterPos[residue] = modeller.positions[atom.index].value_in_unit(nanometer)
+        
+        # We may have added extra water molecules inside the membrane.  We really only wanted to extend the box
+        # without adding more water in the existing box, so remove the unwanted ones.
+        
+        if needExtraWater:
+            toDelete = []
+            addedChain = list(modeller.topology.chains())[-1]
+            for residue in addedChain.residues():
+                if abs(waterPos[residue][2]-membraneCenterZ) > patchSize[2]/2:
+                    toDelete.append(residue)
+                    del waterPos[residue]
+            if len(toDelete) > 0:
+                modeller.delete(toDelete)
+        
+        # Determine how many positive and negative ions to add.
+        
+        numPositive = 0
+        numNegative = 0
+        if neutralize:
+            totalCharge = int(floor(0.5+sum((nonbonded.getParticleParameters(i)[0].value_in_unit(elementary_charge) for i in range(nonbonded.getNumParticles())))))
+            if abs(totalCharge) > len(waterPos):
+                raise Exception('Cannot neutralize the system because the charge is greater than the number of available positions for ions')
+            if totalCharge > 0:
+                numNegative += totalCharge
+            else:
+                numPositive -= totalCharge
+        if ionicStrength > 0*molar:
+            numIons = (len(waterPos)-numPositive-numNegative)*ionicStrength/(55.4*molar) # Pure water is about 55.4 molar (depending on temperature)
+            numPairs = int(floor(numIons+0.5))
+            numPositive += numPairs
+            numNegative += numPairs
+        totalIons = numPositive+numNegative
+        
+        # Now add the ions.  We do this by randomly selecting a set of waters that were just added and replacing
+        # them with ions.
+
+        if totalIons > 0:
+            toReplace = random.sample(list(waterPos), totalIons)
+            modeller.delete(toReplace)
+            ionChain = modeller.topology.addChain()
+            for i, water in enumerate(toReplace):
+                element = (positiveElement if i < numPositive else negativeElement)
+                newResidue = modeller.topology.addResidue(element.symbol.upper(), ionChain)
+                modeller.topology.addAtom(element.symbol, element, newResidue)
+                modeller.positions.append(waterPos[water]*nanometer)
+            
+        self.topology = modeller.topology
+        self.positions = modeller.positions
 
 
 class _CellList(object):
