@@ -1124,8 +1124,58 @@ class Modeller(object):
         self.topology = newTopology
         self.positions = newPositions
 
-    def addMembrane(self, forcefield, membraneCenterZ=0*nanometer, minimumPadding=1*nanometer, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar, neutralize=True):
-        patchPdb = PDBFile(os.path.join(os.path.dirname(__file__), 'data', 'POPC.pdb'))
+
+    def addMembrane(self, forcefield, lipidType='POPC', membraneCenterZ=0*nanometer, minimumPadding=1*nanometer, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar, neutralize=True):
+        """Add a lipid membrane to the model.
+        
+        This method actually adds both a membrane and a water box.  It is best to build them together,
+        both to avoid adding waters inside the membrane and to ensure that lipid head groups are properly
+        solvated.  For that reason, this method includes many of the same arguments as addSolvent().
+        
+        The membrane is added in the XY plane, and the existing protein is assumed to already be oriented
+        and positioned correctly.  When possible, it is recommended to start with a model from the
+        Orientations of Proteins in Membranes (OPM) database at http://opm.phar.umich.edu.  Otherwise, it
+        is up to you to select the protein position yourself.
+        
+        The algorithm is based on the one described in Wolf et al., J. Comp. Chem. 31, pp. 2169-2174 (2010).
+        It begins by tiling copies of a pre-equilibrated membrane patch to create a membrane of the desired
+        size.  Next it scales down the protein by 50% along the X and Y axes.  Any lipid within a cutoff
+        distance of the scaled protein is removed.  It also ensures that equal numbers of lipids are removed
+        from each leaf of the membrane.  Finally, 1000 steps of molecular dynamics are performed to let
+        the membrane relax while the protein is gradually scaled back up to its original size.
+        
+        The size of the membrane and water box are determined by the minimumPadding argument.  All
+        pre-existing atoms are guaranteed to be at least this far from any edge of the periodic box.  It
+        is also possible for the periodic box to have more padding than requested.  In particular, it only
+        adds whole copies of the pre-equilibrated membrane patch, so the box dimensions will always be
+        integer multiples of the patch size.  That may lead to a larger membrane than what you requested.
+        
+        Parameters
+        ----------
+        forcefield : ForceField
+            the ForceField to use for determining atomic charges and for relaxing the membrane
+        lipidType : string='POPC'
+            the type of lipid to use.  Supported values are 'POPC' and 'POPE'.
+        membraneCenterZ: distance=0*nanometer
+            the position along the Z axis of the center of the membrane
+        minimumPadding : distance=1*nanometer
+            the padding distance to use
+        positiveIon : string='Na+'
+            the type of positive ion to add.  Allowed values are 'Cs+', 'K+', 'Li+', 'Na+', and 'Rb+'
+        negativeIon : string='Cl-'
+            the type of negative ion to add.  Allowed values are 'Cl-', 'Br-', 'F-', and 'I-'. Be aware
+            that not all force fields support all ion types.
+        ionicStrength : concentration=0*molar
+            the total concentration of ions (both positive and negative) to add.  This
+            does not include ions that are added to neutralize the system.
+            Note that only monovalent ions are currently supported.
+        neutralize : bool=True
+            whether to add ions to neutralize the system
+        """
+        lipidType = lipidType.upper()
+        if lipidType not in ('POPC', 'POPE'):
+            raise ValueError('Unsupported lipid type: '+lipidType)
+        patchPdb = PDBFile(os.path.join(os.path.dirname(__file__), 'data', lipidType+'.pdb'))
         if is_quantity(membraneCenterZ):
             membraneCenterZ = membraneCenterZ.value_in_unit(nanometer)
         if is_quantity(minimumPadding):
@@ -1299,7 +1349,6 @@ class Modeller(object):
         context.setPositions(mergedPositions)
         LocalEnergyMinimizer.minimize(context, 10.0, 30)
         for i in range(50):
-            print(i, context.getState(getEnergy=True).getPotentialEnergy(), context.getState().getTime())
             weight1 = i/49.0
             weight2 = 1.0-weight1
             mergedPositions = context.getState(getPositions=True).getPositions().value_in_unit(nanometer)
