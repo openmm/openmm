@@ -4521,12 +4521,12 @@ void CudaCalcCustomHbondForceKernel::initialize(const System& system, const Cust
     for (int i = 0; i < (int) donorParams->getBuffers().size(); i++) {
         CudaNonbondedUtilities::ParameterInfo& buffer = donorParams->getBuffers()[i];
         extraArgs << ", const "+buffer.getType()+"* __restrict__ donor"+buffer.getName();
-        addDonorAndAcceptorCode(computeDonor, computeAcceptor, buffer.getType()+" donorParams"+cu.intToString(i+1)+" = donor"+buffer.getName()+"[index];\n");
+        addDonorAndAcceptorCode(computeDonor, computeAcceptor, buffer.getType()+" donorParams"+cu.intToString(i+1)+" = donor"+buffer.getName()+"[donorIndex];\n");
     }
     for (int i = 0; i < (int) acceptorParams->getBuffers().size(); i++) {
         CudaNonbondedUtilities::ParameterInfo& buffer = acceptorParams->getBuffers()[i];
         extraArgs << ", const "+buffer.getType()+"* __restrict__ acceptor"+buffer.getName();
-        addDonorAndAcceptorCode(computeDonor, computeAcceptor, buffer.getType()+" acceptorParams"+cu.intToString(i+1)+" = acceptor"+buffer.getName()+"[index];\n");
+        addDonorAndAcceptorCode(computeDonor, computeAcceptor, buffer.getType()+" acceptorParams"+cu.intToString(i+1)+" = acceptor"+buffer.getName()+"[acceptorIndex];\n");
     }
 
     // Now evaluate the expressions.
