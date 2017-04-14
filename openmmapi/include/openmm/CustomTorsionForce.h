@@ -65,6 +65,10 @@ namespace OpenMM {
  * force->addPerTorsionParameter("theta0");
  * </pre></tt>
  *
+ * If a harmonic restraint is desired, it is important to be careful of the domain for theta, using an idiom like this:
+ *
+ * <tt>CustomTorsionForce* force = new CustomTorsionForce("0.5*k*min(dtheta, 2*pi-dtheta)^2; dtheta = abs(theta-theta0); pi = 3.1415926535");</tt>
+ *
  * This class also has the ability to compute derivatives of the potential energy with respect to global parameters.
  * Call addEnergyParameterDerivative() to request that the derivative with respect to a particular parameter be
  * computed.  You can then query its value in a Context by calling getState() on it.
