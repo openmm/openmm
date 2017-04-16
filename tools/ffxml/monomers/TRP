@@ -1,0 +1,32 @@
+RESIDUE   TRP     27
+CONECT      N      3 CA   H    H2  
+CONECT      CA     4 N    C    CB   HA  
+CONECT      C      3 CA   O    OXT 
+CONECT      O      1 C   
+CONECT      CB     4 CA   CG   HB2  HB3 
+CONECT      CG     3 CB   CD1  CD2 
+CONECT      CD1    3 CG   NE1  HD1 
+CONECT      CD2    3 CG   CE2  CE3 
+CONECT      NE1    3 CD1  CE2  HE1 
+CONECT      CE2    3 CD2  NE1  CZ2 
+CONECT      CE3    3 CD2  CZ3  HE3 
+CONECT      CZ2    3 CE2  CH2  HZ2 
+CONECT      CZ3    3 CE3  CH2  HZ3 
+CONECT      CH2    3 CZ2  CZ3  HH2 
+CONECT      OXT    2 C    HXT 
+CONECT      H      1 N   
+CONECT      H2     1 N   
+CONECT      HA     1 CA  
+CONECT      HB2    1 CB  
+CONECT      HB3    1 CB  
+CONECT      HD1    1 CD1 
+CONECT      HE1    1 NE1 
+CONECT      HE3    1 CE3 
+CONECT      HZ2    1 CZ2 
+CONECT      HZ3    1 CZ3 
+CONECT      HH2    1 CH2 
+CONECT      HXT    1 OXT 
+END   
+HET    TRP             27
+HETNAM     TRP TRYPTOPHAN
+FORMUL      TRP    C11 H12 N2 O2

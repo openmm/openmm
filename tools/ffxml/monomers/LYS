@@ -1,0 +1,30 @@
+RESIDUE   LYS     25
+CONECT      N      3 CA   H    H2  
+CONECT      CA     4 N    C    CB   HA  
+CONECT      C      3 CA   O    OXT 
+CONECT      O      1 C   
+CONECT      CB     4 CA   CG   HB2  HB3 
+CONECT      CG     4 CB   CD   HG2  HG3 
+CONECT      CD     4 CG   CE   HD2  HD3 
+CONECT      CE     4 CD   NZ   HE2  HE3 
+CONECT      NZ     4 CE   HZ1  HZ2  HZ3 
+CONECT      OXT    2 C    HXT 
+CONECT      H      1 N   
+CONECT      H2     1 N   
+CONECT      HA     1 CA  
+CONECT      HB2    1 CB  
+CONECT      HB3    1 CB  
+CONECT      HG2    1 CG  
+CONECT      HG3    1 CG  
+CONECT      HD2    1 CD  
+CONECT      HD3    1 CD  
+CONECT      HE2    1 CE  
+CONECT      HE3    1 CE  
+CONECT      HZ1    1 NZ  
+CONECT      HZ2    1 NZ  
+CONECT      HZ3    1 NZ  
+CONECT      HXT    1 OXT 
+END   
+HET    LYS             25
+HETNAM     LYS LYSINE
+FORMUL      LYS    C6 H15 N2 O2 1+

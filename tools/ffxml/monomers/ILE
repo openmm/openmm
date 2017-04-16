@@ -1,0 +1,27 @@
+RESIDUE   ILE     22
+CONECT      N      3 CA   H    H2  
+CONECT      CA     4 N    C    CB   HA  
+CONECT      C      3 CA   O    OXT 
+CONECT      O      1 C   
+CONECT      CB     4 CA   CG1  CG2  HB  
+CONECT      CG1    4 CB   CD1  HG12 HG13
+CONECT      CG2    4 CB   HG21 HG22 HG23
+CONECT      CD1    4 CG1  HD11 HD12 HD13
+CONECT      OXT    2 C    HXT 
+CONECT      H      1 N   
+CONECT      H2     1 N   
+CONECT      HA     1 CA  
+CONECT      HB     1 CB  
+CONECT      HG12   1 CG1 
+CONECT      HG13   1 CG1 
+CONECT      HG21   1 CG2 
+CONECT      HG22   1 CG2 
+CONECT      HG23   1 CG2 
+CONECT      HD11   1 CD1 
+CONECT      HD12   1 CD1 
+CONECT      HD13   1 CD1 
+CONECT      HXT    1 OXT 
+END   
+HET    ILE             22
+HETNAM     ILE ISOLEUCINE
+FORMUL      ILE    C6 H13 N1 O2

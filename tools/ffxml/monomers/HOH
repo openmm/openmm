@@ -1,0 +1,8 @@
+RESIDUE   HOH      3
+CONECT      O      2 H1   H2  
+CONECT      H1     1 O   
+CONECT      H2     1 O   
+END   
+HET    HOH              3
+HETNAM     HOH WATER
+FORMUL      HOH    H2 O1

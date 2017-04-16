@@ -1,0 +1,12 @@
+RESIDUE   NME      7
+CONECT      N      3 C    H  HN2 
+CONECT      C      4 N    H1   H2   H3  
+CONECT      H      1 N   
+CONECT      HN2    1 N   
+CONECT      H1     1 C   
+CONECT      H2     1 C   
+CONECT      H3     1 C   
+END   
+HET    NME              7
+HETNAM     NME METHYLAMINE
+FORMUL      NME    C1 H5 N1

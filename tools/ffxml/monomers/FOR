@@ -1,0 +1,9 @@
+RESIDUE   FOR      4
+CONECT      C      3 O    H1   H2  
+CONECT      O      1 C   
+CONECT      H1     1 C   
+CONECT      H2     1 C   
+END   
+HET    FOR              4
+HETNAM     FOR FORMYL GROUP
+FORMUL      FOR    C1 H2 O1

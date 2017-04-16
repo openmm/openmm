@@ -1,0 +1,35 @@
+integrator          =  md		
+dt                  =  0.00000001
+nsteps              =  100; 50 ns
+nstcomm             =  20		
+nstxtcout           =  100	
+nstxout             =  100000
+nstvout             =  500		
+nstfout             =  0		
+nstlog              =  1		
+nstenergy           =  1		
+nstlist             =  1
+ns_type             =  grid		
+rlist               =  10
+rcoulomb            =  100.
+rvdw                =  100.
+rgbradii            =  0
+pbc                 =  no
+comm_mode           =  linear
+
+constraints         = none
+
+Tcoupl              =  no 		
+tc-grps		    =  Protein		
+tau_t               =  .01
+ref_t               =  300		
+
+energygrps          =  Protein		
+
+; Generate velocites is off at 300 K.
+gen_vel             =  yes		
+gen_temp            =  300.0		
+gen_seed            =  -1		
+ld_seed             =  -1		
+coulombtype         = cutoff
+

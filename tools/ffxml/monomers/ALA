@@ -1,0 +1,18 @@
+RESIDUE   ALA     13
+CONECT      N      3 CA   H    H2  
+CONECT      CA     4 N    C    CB   HA  
+CONECT      C      3 CA   O    OXT 
+CONECT      O      1 C   
+CONECT      CB     4 CA   HB1  HB2  HB3 
+CONECT      OXT    2 C    HXT 
+CONECT      H      1 N   
+CONECT      H2     1 N   
+CONECT      HA     1 CA  
+CONECT      HB1    1 CB  
+CONECT      HB2    1 CB  
+CONECT      HB3    1 CB  
+CONECT      HXT    1 OXT 
+END   
+HET    ALA             13
+HETNAM     ALA ALANINE
+FORMUL      ALA    C3 H7 N1 O2

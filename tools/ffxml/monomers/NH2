@@ -1,0 +1,8 @@
+RESIDUE   NH2      3
+CONECT      N      2 HN1  HN2 
+CONECT      HN1    1 N   
+CONECT      HN2    1 N   
+END   
+HET    NH2              3
+HETNAM     NH2 AMINO GROUP
+FORMUL      NH2    H2 N1

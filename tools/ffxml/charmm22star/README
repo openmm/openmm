@@ -1,0 +1,25 @@
+Here are files for generating and validating the Charmm22* force field.  
+
+1.  We generate the force field files from Vipar3 files.  
+
+2.  We validate the energies as well as the individual parameters in each force in the system.  Validation is performed on vacuum calculations of Trp-cage (2JOF) and hp35.  
+
+The files are as follows:
+
+CompareEnergies.py: validate OpenMM energies against Desmond and Gromacs.
+
+CompareForceParameters: validate OpenMM force parameters against Desmond DMS file.
+
+Comparison.py: A library for comparing DMS and OpenMM force parameters.
+
+DesmondCommands.sh: commands necessary for preparing DMS files.
+
+DMSReader.py: Reads force parameters from DMS file.
+
+forcefield.py: Modifications to forcefield.py necessary for Charmm22*.
+
+force_groups.py: Set force groups to divide energy terms.
+
+OpenMM_Data.py: Construct an object containing the individual force terms in OpenMM system.
+
+Viparr3Parser.py: Create XML file for Charm22* force field.  
