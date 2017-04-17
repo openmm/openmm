@@ -46,13 +46,16 @@ import simtk.unit as unit
 from . import element as elem
 from simtk.openmm.app import Topology
 from simtk.openmm.app.internal.singleton import Singleton
-from pkg_resources import iter_entry_points
 
 # Directories from which to load built in force fields.
 
 _dataDirectories = [os.path.join(os.path.dirname(__file__), 'data')]
-for entry in iter_entry_points(group='openmm.forcefielddir'):
-    _dataDirectories.append(entry.load()())
+try:
+    from pkg_resources import iter_entry_points
+    for entry in iter_entry_points(group='openmm.forcefielddir'):
+        _dataDirectories.append(entry.load()())
+except:
+    pass # pkg_resources is not installed
 
 def _convertParameterToNumber(param):
     if unit.is_quantity(param):
