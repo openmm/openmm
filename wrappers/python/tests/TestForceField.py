@@ -762,6 +762,13 @@ class TestForceField(unittest.TestCase):
         self.assertEqual('ALA', templates[0].name)
         self.assertEqual('NME', templates[1].name)
 
+    def test_Includes(self):
+        """Test using a ForceField that includes other files."""
+        forcefield = ForceField(os.path.join('systems', 'ff_with_includes.xml'))
+        self.assertTrue(len(forcefield._atomTypes) > 10)
+        self.assertTrue('spce-O' in forcefield._atomTypes)
+        self.assertTrue('HOH' in forcefield._templates)
+
 
 class AmoebaTestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method with the AMOEBA forcefield."""

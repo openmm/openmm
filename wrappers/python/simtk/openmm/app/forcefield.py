@@ -205,6 +205,19 @@ class ForceField(object):
 
             trees.append(tree)
 
+        # Process includes.
+        
+        for parentFile, tree in zip(files, trees):
+            if isinstance(parentFile, str):
+                parentDir = os.path.dirname(parentFile)
+            else:
+                parentDir = ''
+            for include in tree.getroot().findall('Include'):
+                includeFile = include.attrib['file']
+                joined = os.path.join(parentDir, includeFile)
+                if os.path.isfile(joined):
+                    includeFile = joined
+                self.loadFile(includeFile)
 
         # Load the atom types.
 
