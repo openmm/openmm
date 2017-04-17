@@ -40,6 +40,7 @@
 #include "CpuPlatform.h"
 #include "sfmt/SFMT.h"
 #include <iostream>
+#include <cstdio>
 #include <set>
 #include <utility>
 #include <vector>
@@ -70,9 +71,17 @@ void testNeighborList(bool periodic, bool triclinic) {
     for (int i = 0; i < 4*numParticles; i++)
         if (i%4 < 3)
             positions[i] = boxSize[i%4]*genrand_real2(sfmt);
+
+    positions[0] = 15.853786;
+    positions[1] = 9.955606;
+    positions[2] = 1.799127;
+    positions[4] = 17.792002;
+    positions[5] = 9.927888;
+    positions[6] = 2.222511;
+
     vector<set<int> > exclusions(numParticles);
     for (int i = 0; i < numParticles; i++) {
-        int num = min(i+1, 10);
+        int num = min(i+1, 1);  // only self exclusion
         for (int j = 0; j < num; j++) {
             exclusions[i].insert(i-j);
             exclusions[i-j].insert(i);
@@ -81,9 +90,9 @@ void testNeighborList(bool periodic, bool triclinic) {
     ThreadPool threads;
     CpuNeighborList neighborList(blockSize);
     neighborList.computeNeighborList(numParticles, positions, exclusions, boxVectors, periodic, cutoff, threads);
-    
+
     // Convert the neighbor list to a set for faster lookup.
-    
+
     set<pair<int, int> > neighbors;
     for (int i = 0; i < (int) neighborList.getSortedAtoms().size(); i++) {
         int blockIndex = i/blockSize;
@@ -99,9 +108,9 @@ void testNeighborList(bool periodic, bool triclinic) {
             }
         }
     }
-    
-    // Check each particle pair and figure out whether they should be in the neighbor list.
 
+
+    // Check each particle pair and figure out whether they should be in the neighbor list.
     for (int i = 0; i < numParticles; i++)
         for (int j = 0; j <= i; j++) {
             bool shouldInclude = (exclusions[i].find(j) == exclusions[i].end());
