@@ -123,6 +123,8 @@ class PDBFile(object):
                         # Try to guess the element.
 
                         upper = atomName.upper()
+                        while len(upper) > 1 and upper[0].isdigit():
+                            upper = upper[1:]
                         if upper.startswith('CL'):
                             element = elem.chlorine
                         elif upper.startswith('NA'):
@@ -141,7 +143,7 @@ class PDBFile(object):
                             element = elem.calcium
                         else:
                             try:
-                                element = elem.get_by_symbol(atomName[0])
+                                element = elem.get_by_symbol(upper[0])
                             except KeyError:
                                 pass
                     newAtom = top.addAtom(atomName, element, r, str(atom.serial_number))

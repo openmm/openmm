@@ -206,18 +206,18 @@ void AmoebaReferenceMultipoleForce::setupScaleMaps(const vector< vector< vector<
         // pScale & mScale
 
         for (unsigned jj = 0; jj < AmoebaMultipoleForce::PolarizationCovalent11; jj++) {
-            const vector<int> covalentList    = covalentInfo[jj];
-            for (unsigned int kk = 0; kk < covalentList.size(); kk++) {
-                unsigned int covalentIndex             = static_cast<unsigned int>(covalentList[kk]);
-                if (covalentIndex < ii)continue;
+            for (int covalentIndex : covalentInfo[jj]) {
+                if (covalentIndex < ii)
+                    continue;
 
                 // handle 0.5 factor for p14
 
                 int hit = 0;
                 if (jj == AmoebaMultipoleForce::Covalent14) {
-                    for (unsigned int mm = 0; mm < covalentListP11.size() && hit == 0; mm++) {
-                        if (covalentListP11[mm]  == covalentIndex) {
+                    for (int mm : covalentListP11) {
+                        if (mm == covalentIndex) {
                             hit = 1;
+                            break;
                         }
                     }
                 }
@@ -231,9 +231,7 @@ void AmoebaReferenceMultipoleForce::setupScaleMaps(const vector< vector< vector<
         // dScale & uScale
 
         for (unsigned jj = AmoebaMultipoleForce::PolarizationCovalent11; jj < covalentInfo.size(); jj++) {
-            const vector<int> covalentList = covalentInfo[jj];
-            for (unsigned int kk = 0; kk < covalentList.size(); kk++) {
-                unsigned int covalentIndex             = static_cast<unsigned int>(covalentList[kk]);
+            for (int covalentIndex : covalentInfo[jj]) {
                 if (covalentIndex < ii)continue;
                 _scaleMaps[ii][D_SCALE][covalentIndex] = _dScale[jj-4];
                 _scaleMaps[ii][U_SCALE][covalentIndex] = _uScale[jj-4];
@@ -420,7 +418,10 @@ void AmoebaReferenceMultipoleForce::applyRotationMatrixToParticle(      Multipol
 
         // z-only
 
-        vectorX = Vec3(0.1, 0.1, 0.1);
+        if (fabs(vectorZ[0]) < 0.866)
+            vectorX = Vec3(1.0, 0.0, 0.0);
+        else
+            vectorX = Vec3(0.0, 1.0, 0.0);
     }
     else {
         vectorX = particleX->position - particleI.position;
@@ -824,16 +825,16 @@ void AmoebaReferenceMultipoleForce::calculateInducedDipolePairIxns(const Multipo
     double rr3       = -rrI[0];
     double rr5       =  rrI[1];
 
-    for (unsigned int ii = 0; ii < updateInducedDipoleFields.size(); ii++) {
+    for (auto& field : updateInducedDipoleFields) {
         calculateInducedDipolePairIxn(particleI.particleIndex, particleJ.particleIndex, rr3, rr5, deltaR,
-                                       *updateInducedDipoleFields[ii].inducedDipoles, updateInducedDipoleFields[ii].inducedDipoleField);
+                                       *field.inducedDipoles, field.inducedDipoleField);
         if (getPolarizationType() == AmoebaReferenceMultipoleForce::Extrapolated) {
             // Compute and store the field gradient for later use.
             double dx = deltaR[0];
             double dy = deltaR[1];
             double dz = deltaR[2];
 
-            OpenMM::Vec3 &dipolesI = (*updateInducedDipoleFields[ii].inducedDipoles)[particleI.particleIndex];
+            OpenMM::Vec3 &dipolesI = (*field.inducedDipoles)[particleI.particleIndex];
             double xDipole = dipolesI[0];
             double yDipole = dipolesI[1];
             double zDipole = dipolesI[2];
@@ -845,14 +846,14 @@ void AmoebaReferenceMultipoleForce::calculateInducedDipolePairIxns(const Multipo
             double Exz = muDotR*dx*dz*rrI[2] - (xDipole*dz + zDipole*dx)*rrI[1];
             double Eyz = muDotR*dy*dz*rrI[2] - (yDipole*dz + zDipole*dy)*rrI[1];
 
-            updateInducedDipoleFields[ii].inducedDipoleFieldGradient[particleJ.particleIndex][0] -= Exx;
-            updateInducedDipoleFields[ii].inducedDipoleFieldGradient[particleJ.particleIndex][1] -= Eyy;
-            updateInducedDipoleFields[ii].inducedDipoleFieldGradient[particleJ.particleIndex][2] -= Ezz;
-            updateInducedDipoleFields[ii].inducedDipoleFieldGradient[particleJ.particleIndex][3] -= Exy;
-            updateInducedDipoleFields[ii].inducedDipoleFieldGradient[particleJ.particleIndex][4] -= Exz;
-            updateInducedDipoleFields[ii].inducedDipoleFieldGradient[particleJ.particleIndex][5] -= Eyz;
+            field.inducedDipoleFieldGradient[particleJ.particleIndex][0] -= Exx;
+            field.inducedDipoleFieldGradient[particleJ.particleIndex][1] -= Eyy;
+            field.inducedDipoleFieldGradient[particleJ.particleIndex][2] -= Ezz;
+            field.inducedDipoleFieldGradient[particleJ.particleIndex][3] -= Exy;
+            field.inducedDipoleFieldGradient[particleJ.particleIndex][4] -= Exz;
+            field.inducedDipoleFieldGradient[particleJ.particleIndex][5] -= Eyz;
 
-            OpenMM::Vec3 &dipolesJ = (*updateInducedDipoleFields[ii].inducedDipoles)[particleJ.particleIndex];
+            OpenMM::Vec3 &dipolesJ = (*field.inducedDipoles)[particleJ.particleIndex];
             xDipole = dipolesJ[0];
             yDipole = dipolesJ[1];
             zDipole = dipolesJ[2];
@@ -864,12 +865,12 @@ void AmoebaReferenceMultipoleForce::calculateInducedDipolePairIxns(const Multipo
             Exz = muDotR*dx*dz*rrI[2] - (xDipole*dz + zDipole*dx)*rrI[1];
             Eyz = muDotR*dy*dz*rrI[2] - (yDipole*dz + zDipole*dy)*rrI[1];
 
-            updateInducedDipoleFields[ii].inducedDipoleFieldGradient[particleI.particleIndex][0] += Exx;
-            updateInducedDipoleFields[ii].inducedDipoleFieldGradient[particleI.particleIndex][1] += Eyy;
-            updateInducedDipoleFields[ii].inducedDipoleFieldGradient[particleI.particleIndex][2] += Ezz;
-            updateInducedDipoleFields[ii].inducedDipoleFieldGradient[particleI.particleIndex][3] += Exy;
-            updateInducedDipoleFields[ii].inducedDipoleFieldGradient[particleI.particleIndex][4] += Exz;
-            updateInducedDipoleFields[ii].inducedDipoleFieldGradient[particleI.particleIndex][5] += Eyz;
+            field.inducedDipoleFieldGradient[particleI.particleIndex][0] += Exx;
+            field.inducedDipoleFieldGradient[particleI.particleIndex][1] += Eyy;
+            field.inducedDipoleFieldGradient[particleI.particleIndex][2] += Ezz;
+            field.inducedDipoleFieldGradient[particleI.particleIndex][3] += Exy;
+            field.inducedDipoleFieldGradient[particleI.particleIndex][4] += Exz;
+            field.inducedDipoleFieldGradient[particleI.particleIndex][5] += Eyz;
         }
     }
 }
@@ -878,8 +879,8 @@ void AmoebaReferenceMultipoleForce::calculateInducedDipoleFields(const vector<Mu
     // Initialize the fields to zero.
 
     Vec3 zeroVec(0.0, 0.0, 0.0);
-    for (unsigned int ii = 0; ii < updateInducedDipoleFields.size(); ii++)
-        std::fill(updateInducedDipoleFields[ii].inducedDipoleField.begin(), updateInducedDipoleFields[ii].inducedDipoleField.end(), zeroVec);
+    for (auto& field : updateInducedDipoleFields)
+        std::fill(field.inducedDipoleField.begin(), field.inducedDipoleField.end(), zeroVec);
 
     // Add fields from all induced dipoles.
 
@@ -898,11 +899,11 @@ double AmoebaReferenceMultipoleForce::updateInducedDipoleFields(const vector<Mul
     // Update the induced dipoles and calculate the convergence factor, maxEpsilon
 
     double maxEpsilon = 0.0;
-    for (unsigned int kk = 0; kk < updateInducedDipoleFields.size(); kk++) {
+    for (auto& field : updateInducedDipoleFields) {
         double epsilon = updateInducedDipole(particleData,
-                                             *updateInducedDipoleFields[kk].fixedMultipoleField,
-                                             updateInducedDipoleFields[kk].inducedDipoleField,
-                                             *updateInducedDipoleFields[kk].inducedDipoles);
+                                             *field.fixedMultipoleField,
+                                             field.inducedDipoleField,
+                                             *field.inducedDipoles);
 
         maxEpsilon = epsilon > maxEpsilon ? epsilon : maxEpsilon;
     }
@@ -1755,7 +1756,7 @@ void AmoebaReferenceMultipoleForce::mapTorqueToForceForParticle(const MultipoleP
         // z-only
 
         for (int ii = 0; ii < 3; ii++) {
-            double du                            = vectorUV[ii]*dphi[V]/(norms[U]*angles[UV][1]);
+            double du                            = vectorUV[ii]*dphi[V]/(norms[U]*angles[UV][1]) + vectorUW[ii]*dphi[W]/norms[U];
             forces[particleU.particleIndex][ii] -= du;
             forces[particleI.particleIndex][ii] += du;
         }
@@ -1789,9 +1790,8 @@ double AmoebaReferenceMultipoleForce::calculateElectrostatic(const vector<Multip
 {
     double energy = 0.0;
     vector<double> scaleFactors(LAST_SCALE_TYPE_INDEX);
-    for (unsigned int kk = 0; kk < scaleFactors.size(); kk++) {
-        scaleFactors[kk] = 1.0;
-    }
+    for (auto& s : scaleFactors)
+        s = 1.0;
 
     // main loop over particle pairs
 
@@ -1968,9 +1968,7 @@ void AmoebaReferenceMultipoleForce::calculateLabFramePermanentDipoles(const vect
            multipoleAtomCovalentInfo, particleData);
     outputRotatedPermanentDipoles.resize(_numParticles);
     for (int i = 0; i < _numParticles; i++)
-      {
-      outputRotatedPermanentDipoles[i] = particleData[i].dipole;
-      }
+        outputRotatedPermanentDipoles[i] = particleData[i].dipole;
 }
 
 void AmoebaReferenceMultipoleForce::calculateTotalDipoles(const vector<Vec3>& particlePositions,
@@ -1994,12 +1992,8 @@ void AmoebaReferenceMultipoleForce::calculateTotalDipoles(const vector<Vec3>& pa
            multipoleAtomCovalentInfo, particleData);
     outputTotalDipoles.resize(_numParticles);
     for (int i = 0; i < _numParticles; i++)
-      {
-      for (int j = 0; j < 3; j++)
-        {
-        outputTotalDipoles[i][j] = particleData[i].dipole[j] + _inducedDipole[i][j];
-        }
-      }
+        for (int j = 0; j < 3; j++)
+            outputTotalDipoles[i][j] = particleData[i].dipole[j] + _inducedDipole[i][j];
 }
 
 void AmoebaReferenceMultipoleForce::calculateAmoebaSystemMultipoleMoments(const vector<double>& masses,
@@ -2170,9 +2164,8 @@ void AmoebaReferenceMultipoleForce::calculateElectrostaticPotential(const vector
            multipoleAtomCovalentInfo, particleData);
 
     potential.resize(grid.size());
-    for (unsigned int ii = 0; ii < grid.size(); ii++) {
-        potential[ii] = 0.0;
-    }
+    for (auto& p : potential)
+        p = 0.0;
 
     for (unsigned int ii = 0; ii < _numParticles; ii++) {
         for (unsigned int jj = 0; jj < grid.size(); jj++) {
@@ -2181,9 +2174,8 @@ void AmoebaReferenceMultipoleForce::calculateElectrostaticPotential(const vector
     }
 
     double term = _electric/_dielectric;
-    for (unsigned int ii = 0; ii < grid.size(); ii++) {
-        potential[ii] *= term;
-    }
+    for (auto& p : potential)
+        p *= term;
 }
 
 AmoebaReferenceMultipoleForce::UpdateInducedDipoleFieldStruct::UpdateInducedDipoleFieldStruct(vector<OpenMM::Vec3>& inputFixed_E_Field, vector<OpenMM::Vec3>& inputInducedDipoles, vector<vector<Vec3> >& extrapolatedDipoles, vector<vector<double> >& extrapolatedDipoleFieldGradient) :
@@ -4063,9 +4055,8 @@ double AmoebaReferenceGeneralizedKirkwoodMultipoleForce::calculateElectrostatic(
     // correct vacuum to SCRF derivatives (ediff1 in TINKER)
 
     vector<double> scaleFactors(LAST_SCALE_TYPE_INDEX);
-    for (unsigned int kk = 0; kk < scaleFactors.size(); kk++) {
-        scaleFactors[kk] = 1.0;
-    }
+    for (auto& s : scaleFactors)
+        s = 1.0;
 
     double eDiffEnergy = 0.0;
     for (unsigned int ii = 0; ii < particleData.size(); ii++) {
@@ -4079,9 +4070,8 @@ double AmoebaReferenceGeneralizedKirkwoodMultipoleForce::calculateElectrostatic(
                                                          scaleFactors[P_SCALE], scaleFactors[D_SCALE], forces, torques);
 
             if (jj <= _maxScaleIndex[ii]) {
-                for (unsigned int kk = 0; kk < LAST_SCALE_TYPE_INDEX; kk++) {
-                    scaleFactors[kk] = 1.0;
-                }
+                for (auto& s : scaleFactors)
+                    s = 1.0;
             }
         }
     }
@@ -5009,9 +4999,8 @@ void AmoebaReferencePmeMultipoleForce::initializePmeGrid()
     if (_pmeGrid == NULL)
         return;
 
-    for (int jj = 0; jj < _totalGridSize; jj++) {
+    for (int jj = 0; jj < _totalGridSize; jj++)
         _pmeGrid[jj].re = _pmeGrid[jj].im = 0.0;
-    }
 }
 
 void AmoebaReferencePmeMultipoleForce::getPeriodicDelta(Vec3& deltaR) const
@@ -5134,9 +5123,9 @@ void AmoebaReferencePmeMultipoleForce::initializeBSplineModuli()
             if (i > size/2)
                 k = k - size;
             double zeta;
-            if (k == 0) {
+            if (k == 0)
                 zeta = 1.0;
-            } else {
+            else {
                 double sum1 = 1.0;
                 double sum2 = 1.0;
                 factor = M_PI*k/size;
@@ -5267,9 +5256,9 @@ void AmoebaReferencePmeMultipoleForce::calculateFixedMultipoleField(const vector
 
     double term = (4.0/3.0)*(_alphaEwald*_alphaEwald*_alphaEwald)/SQRT_PI;
     for (unsigned int jj = 0; jj < _numParticles; jj++) {
-        Vec3 selfEnergy             = particleData[jj].dipole*term;
-        _fixedMultipoleField[jj]      += selfEnergy;
-        _fixedMultipoleFieldPolar[jj]  = _fixedMultipoleField[jj];
+        Vec3 selfEnergy = particleData[jj].dipole*term;
+        _fixedMultipoleField[jj] += selfEnergy;
+        _fixedMultipoleFieldPolar[jj] = _fixedMultipoleField[jj];
     }
 
     // include direct space fixed multipole fields
@@ -5304,9 +5293,8 @@ void AmoebaReferencePmeMultipoleForce::computeBSplinePoint(vector<double4>& thet
         int k = i - 1;
         double denom = 1.0 / k;
         ARRAY(i,i) = denom * w * ARRAY(k,k);
-        for (int j = 1; j <= i-2; j++) {
+        for (int j = 1; j <= i-2; j++)
             ARRAY(i,i-j) = denom * ((w+j)*ARRAY(k,i-j-1)+(i-j-w)*ARRAY(k,i-j));
-        }
         ARRAY(i,1) = denom * (1.0-w) * ARRAY(k,1);
     }
 
@@ -5348,9 +5336,8 @@ void AmoebaReferencePmeMultipoleForce::computeBSplinePoint(vector<double4>& thet
 
     // copy coefficients from temporary to permanent storage
 
-    for (int i = 1; i <= AMOEBA_PME_ORDER; i++) {
+    for (int i = 1; i <= AMOEBA_PME_ORDER; i++)
         thetai[i-1] = double4(ARRAY(AMOEBA_PME_ORDER,i), ARRAY(AMOEBA_PME_ORDER-1,i), ARRAY(AMOEBA_PME_ORDER-2,i), ARRAY(AMOEBA_PME_ORDER-3,i));
-    }
 }
 
 /**
@@ -5374,9 +5361,8 @@ void AmoebaReferencePmeMultipoleForce::computeAmoebaBsplines(const vector<Multip
             igrid[jj] += igrid[jj] < 0 ? _pmeGridDimensions[jj] : 0;
             vector<double4> thetaiTemp(AMOEBA_PME_ORDER);
             computeBSplinePoint(thetaiTemp, w);
-            for (unsigned int kk = 0; kk < AMOEBA_PME_ORDER; kk++) {
+            for (unsigned int kk = 0; kk < AMOEBA_PME_ORDER; kk++)
                 _thetai[jj][ii*AMOEBA_PME_ORDER+kk] = thetaiTemp[kk];
-            }
         }
 
         // Record the grid point.
@@ -6149,8 +6135,8 @@ void AmoebaReferencePmeMultipoleForce::calculateInducedDipoleFields(const vector
     // Initialize the fields to zero.
 
     Vec3 zeroVec(0.0, 0.0, 0.0);
-    for (unsigned int ii = 0; ii < updateInducedDipoleFields.size(); ii++)
-        std::fill(updateInducedDipoleFields[ii].inducedDipoleField.begin(), updateInducedDipoleFields[ii].inducedDipoleField.end(), zeroVec);
+    for (auto& field : updateInducedDipoleFields)
+        std::fill(field.inducedDipoleField.begin(), field.inducedDipoleField.end(), zeroVec);
 
     // Add fields from direct space interactions.
 
@@ -6229,11 +6215,11 @@ void AmoebaReferencePmeMultipoleForce::calculateInducedDipoleFields(const vector
     // self ixn
 
     double term = (4.0/3.0)*(_alphaEwald*_alphaEwald*_alphaEwald)/SQRT_PI;
-    for (unsigned int ii = 0; ii < updateInducedDipoleFields.size(); ii++) {
-        vector<Vec3>& inducedDipoles = *updateInducedDipoleFields[ii].inducedDipoles;
-        vector<Vec3>& field          = updateInducedDipoleFields[ii].inducedDipoleField;
+    for (auto& field : updateInducedDipoleFields) {
+        vector<Vec3>& inducedDipoles = *field.inducedDipoles;
+        vector<Vec3>& inducedDipoleField = field.inducedDipoleField;
         for (unsigned int jj = 0; jj < particleData.size(); jj++) {
-            field[jj] += inducedDipoles[jj]*term;
+            inducedDipoleField[jj] += inducedDipoles[jj]*term;
         }
     }
 }
@@ -6328,17 +6314,16 @@ void AmoebaReferencePmeMultipoleForce::calculateDirectInducedDipolePairIxns(cons
     double preFactor2  = bn2 - rr5;
     double preFactor3  = bn3 - rr7;
 
-    for (unsigned int ii = 0; ii < updateInducedDipoleFields.size(); ii++) {
+    for (auto& field : updateInducedDipoleFields) {
         calculateDirectInducedDipolePairIxn(particleI.particleIndex, particleJ.particleIndex, preFactor1, preFactor2, deltaR,
-                                            *updateInducedDipoleFields[ii].inducedDipoles,
-                                            updateInducedDipoleFields[ii].inducedDipoleField);
+                                            *field.inducedDipoles, field.inducedDipoleField);
         if (getPolarizationType() == AmoebaReferenceMultipoleForce::Extrapolated) {
             // Compute and store the field gradient for later use.
             double dx = deltaR[0];
             double dy = deltaR[1];
             double dz = deltaR[2];
 
-            OpenMM::Vec3 &dipolesI = (*updateInducedDipoleFields[ii].inducedDipoles)[particleI.particleIndex];
+            OpenMM::Vec3 &dipolesI = (*field.inducedDipoles)[particleI.particleIndex];
             double xDipole = dipolesI[0];
             double yDipole = dipolesI[1];
             double zDipole = dipolesI[2];
@@ -6350,14 +6335,14 @@ void AmoebaReferencePmeMultipoleForce::calculateDirectInducedDipolePairIxns(cons
             double Exz = muDotR*dx*dz*preFactor3 - (xDipole*dz + zDipole*dx)*preFactor2;
             double Eyz = muDotR*dy*dz*preFactor3 - (yDipole*dz + zDipole*dy)*preFactor2;
 
-            updateInducedDipoleFields[ii].inducedDipoleFieldGradient[particleJ.particleIndex][0] -= Exx;
-            updateInducedDipoleFields[ii].inducedDipoleFieldGradient[particleJ.particleIndex][1] -= Eyy;
-            updateInducedDipoleFields[ii].inducedDipoleFieldGradient[particleJ.particleIndex][2] -= Ezz;
-            updateInducedDipoleFields[ii].inducedDipoleFieldGradient[particleJ.particleIndex][3] -= Exy;
-            updateInducedDipoleFields[ii].inducedDipoleFieldGradient[particleJ.particleIndex][4] -= Exz;
-            updateInducedDipoleFields[ii].inducedDipoleFieldGradient[particleJ.particleIndex][5] -= Eyz;
+            field.inducedDipoleFieldGradient[particleJ.particleIndex][0] -= Exx;
+            field.inducedDipoleFieldGradient[particleJ.particleIndex][1] -= Eyy;
+            field.inducedDipoleFieldGradient[particleJ.particleIndex][2] -= Ezz;
+            field.inducedDipoleFieldGradient[particleJ.particleIndex][3] -= Exy;
+            field.inducedDipoleFieldGradient[particleJ.particleIndex][4] -= Exz;
+            field.inducedDipoleFieldGradient[particleJ.particleIndex][5] -= Eyz;
 
-            OpenMM::Vec3 &dipolesJ = (*updateInducedDipoleFields[ii].inducedDipoles)[particleJ.particleIndex];
+            OpenMM::Vec3 &dipolesJ = (*field.inducedDipoles)[particleJ.particleIndex];
             xDipole = dipolesJ[0];
             yDipole = dipolesJ[1];
             zDipole = dipolesJ[2];
@@ -6369,12 +6354,12 @@ void AmoebaReferencePmeMultipoleForce::calculateDirectInducedDipolePairIxns(cons
             Exz = muDotR*dx*dz*preFactor3 - (xDipole*dz + zDipole*dx)*preFactor2;
             Eyz = muDotR*dy*dz*preFactor3 - (yDipole*dz + zDipole*dy)*preFactor2;
 
-            updateInducedDipoleFields[ii].inducedDipoleFieldGradient[particleI.particleIndex][0] += Exx;
-            updateInducedDipoleFields[ii].inducedDipoleFieldGradient[particleI.particleIndex][1] += Eyy;
-            updateInducedDipoleFields[ii].inducedDipoleFieldGradient[particleI.particleIndex][2] += Ezz;
-            updateInducedDipoleFields[ii].inducedDipoleFieldGradient[particleI.particleIndex][3] += Exy;
-            updateInducedDipoleFields[ii].inducedDipoleFieldGradient[particleI.particleIndex][4] += Exz;
-            updateInducedDipoleFields[ii].inducedDipoleFieldGradient[particleI.particleIndex][5] += Eyz;
+            field.inducedDipoleFieldGradient[particleI.particleIndex][0] += Exx;
+            field.inducedDipoleFieldGradient[particleI.particleIndex][1] += Eyy;
+            field.inducedDipoleFieldGradient[particleI.particleIndex][2] += Ezz;
+            field.inducedDipoleFieldGradient[particleI.particleIndex][3] += Exy;
+            field.inducedDipoleFieldGradient[particleI.particleIndex][4] += Exz;
+            field.inducedDipoleFieldGradient[particleI.particleIndex][5] += Eyz;
         }
     }
 }
@@ -6843,9 +6828,8 @@ double AmoebaReferencePmeMultipoleForce::calculateElectrostatic(const vector<Mul
 {
     double energy = 0.0;
     vector<double> scaleFactors(LAST_SCALE_TYPE_INDEX);
-    for (unsigned int kk = 0; kk < scaleFactors.size(); kk++) {
-        scaleFactors[kk] = 1.0;
-    }
+    for (auto& s : scaleFactors)
+        s = 1.0;
 
     // loop over particle pairs for direct space interactions
 
@@ -6859,9 +6843,8 @@ double AmoebaReferencePmeMultipoleForce::calculateElectrostatic(const vector<Mul
             energy += calculatePmeDirectElectrostaticPairIxn(particleData[ii], particleData[jj], scaleFactors, forces, torques);
 
             if (jj <= _maxScaleIndex[ii]) {
-                for (unsigned int kk = 0; kk < LAST_SCALE_TYPE_INDEX; kk++) {
-                    scaleFactors[kk] = 1.0;
-                }
+                for (auto& s : scaleFactors)
+                    s = 1.0;
             }
         }
     }

@@ -119,13 +119,13 @@ State RPMDIntegrator::getState(int copy, int types, bool enforcePeriodicBox, int
         const vector<vector<int> >& molecules = context->getMolecules();
         Vec3 periodicBoxSize[3];
         state2.getPeriodicBoxVectors(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2]);
-        for (int i = 0; i < (int) molecules.size(); i++) {
+        for (auto& mol : molecules) {
             // Find the molecule center.
 
             Vec3 center;
-            for (int j = 0; j < (int) molecules[i].size(); j++)
-                center += refPos[molecules[i][j]];
-            center *= 1.0/molecules[i].size();
+            for (int j : mol)
+                center += refPos[j];
+            center *= 1.0/mol.size();
 
             // Find the displacement to move it into the first periodic box.
             Vec3 diff;
@@ -134,8 +134,8 @@ State RPMDIntegrator::getState(int copy, int types, bool enforcePeriodicBox, int
             diff += periodicBoxSize[0]*floor((center[0]-diff[0])/periodicBoxSize[0][0]);
 
             // Translate all the particles in the molecule.
-            for (int j = 0; j < (int) molecules[i].size(); j++) {
-                Vec3& pos = positions[molecules[i][j]];
+            for (int j : mol) {
+                Vec3& pos = positions[j];
                 pos -= diff;
             }
         }
@@ -188,9 +188,8 @@ void RPMDIntegrator::step(int steps) {
         context->getOwner().setPositions(p);
         isFirstStep = false;
     }
-    vector<ForceImpl*>& forceImpls = context->getForceImpls();
-    for (int i = 0; i < (int) forceImpls.size(); i++) {
-        RPMDUpdater* updater = dynamic_cast<RPMDUpdater*>(forceImpls[i]);
+    for (auto impl : context->getForceImpls()) {
+        RPMDUpdater* updater = dynamic_cast<RPMDUpdater*>(impl);
         if (updater != NULL)
             updater->updateRPMDState(*context);
     }

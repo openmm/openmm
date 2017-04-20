@@ -184,8 +184,7 @@ void OpenCLBondedUtilities::initialize(const System& system) {
 
     // Create the kernels.
 
-    for (vector<vector<int> >::const_iterator iter = forceSets.begin(); iter != forceSets.end(); ++iter) {
-        const vector<int>& set = *iter;
+    for (auto& set : forceSets) {
         int setSize = set.size();
         stringstream s;
         s<<"#ifdef SUPPORTS_64_BIT_ATOMICS\n";

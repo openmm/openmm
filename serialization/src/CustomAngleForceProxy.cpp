@@ -85,26 +85,19 @@ void* CustomAngleForceProxy::deserialize(const SerializationNode& node) const {
         if (version > 1)
             force->setUsesPeriodicBoundaryConditions(node.getBoolProperty("usesPeriodic"));
         const SerializationNode& perAngleParams = node.getChildNode("PerAngleParameters");
-        for (int i = 0; i < (int) perAngleParams.getChildren().size(); i++) {
-            const SerializationNode& parameter = perAngleParams.getChildren()[i];
+        for (auto& parameter : perAngleParams.getChildren())
             force->addPerAngleParameter(parameter.getStringProperty("name"));
-        }
         const SerializationNode& globalParams = node.getChildNode("GlobalParameters");
-        for (int i = 0; i < (int) globalParams.getChildren().size(); i++) {
-            const SerializationNode& parameter = globalParams.getChildren()[i];
+        for (auto& parameter : globalParams.getChildren())
             force->addGlobalParameter(parameter.getStringProperty("name"), parameter.getDoubleProperty("default"));
-        }
         if (version > 2) {
             const SerializationNode& energyDerivs = node.getChildNode("EnergyParameterDerivatives");
-            for (int i = 0; i < (int) energyDerivs.getChildren().size(); i++) {
-                const SerializationNode& parameter = energyDerivs.getChildren()[i];
+            for (auto& parameter : energyDerivs.getChildren())
                 force->addEnergyParameterDerivative(parameter.getStringProperty("name"));
-            }
         }
         const SerializationNode& angles = node.getChildNode("Angles");
         vector<double> params(force->getNumPerAngleParameters());
-        for (int i = 0; i < (int) angles.getChildren().size(); i++) {
-            const SerializationNode& angle = angles.getChildren()[i];
+        for (auto& angle : angles.getChildren()) {
             for (int j = 0; j < (int) params.size(); j++) {
                 stringstream key;
                 key << "param";

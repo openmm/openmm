@@ -73,6 +73,7 @@ matrix:
       addons: {apt: {packages: []}}
 
     - sudo: false
+      dist: trusty
       python: 2.7_with_system_site_packages
       env: ==STATIC_LIB==
            OPENCL=false
@@ -82,6 +83,7 @@ matrix:
            CMAKE_FLAGS="-DOPENMM_BUILD_STATIC_LIB=ON"
 
     - sudo: false
+      dist: trusty
       python: 2.7_with_system_site_packages
       env: ==PYTHON_2==
            OPENCL=false
@@ -92,6 +94,7 @@ matrix:
            CMAKE_FLAGS="-DOPENMM_GENERATE_API_DOCS=ON"
 
     - sudo: false
+      dist: trusty
       python: 3.4
       env: ==PYTHON_3==
            OPENCL=false
@@ -102,7 +105,7 @@ matrix:
 
 before_install:
   - START_TIME=$(date +%s)
-  - wget https://anaconda.org/omnia/ccache/3.2.4/download/${TRAVIS_OS_NAME}-64/ccache-3.2.4-0.tar.bz2
+  - wget http://anaconda.org/omnia/ccache/3.2.4/download/${TRAVIS_OS_NAME}-64/ccache-3.2.4-0.tar.bz2
   - mkdir -p $HOME/ccache && tar xf ccache-3.2.4-0.tar.bz2 -C $HOME/ccache
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
       brew install fftw;
@@ -110,7 +113,7 @@ before_install:
       sudo easy_install pytest;
     fi
   - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
-      CMAKE_URL="https://cmake.org/files/v3.7/cmake-3.7.2-Linux-x86_64.tar.gz";
+      CMAKE_URL="http://cmake.org/files/v3.7/cmake-3.7.2-Linux-x86_64.tar.gz";
       mkdir $HOME/cmake && travis_retry wget --no-check-certificate --quiet -O - ${CMAKE_URL} | tar --strip-components=1 -xz -C $HOME/cmake;
       export PATH=${HOME}/cmake/bin:${PATH};
     fi
@@ -131,14 +134,14 @@ before_install:
   # but this is a fast way to get an apparently functional precompiled
   # build of swig that's more modern than what's in apt.
   - if [[ "$OPENCL" == "false" && "$CUDA" == "false" && "$TRAVIS_OS_NAME" == "linux" ]]; then
-      wget https://anaconda.org/omnia/swig/3.0.7/download/linux-64/swig-3.0.7-0.tar.bz2;
+      wget http://anaconda.org/omnia/swig/3.0.7/download/linux-64/swig-3.0.7-0.tar.bz2;
       mkdir $HOME/swig;
       tar -xjvf swig-3.0.7-0.tar.bz2 -C $HOME/swig;
       export PATH=$HOME/swig/bin:$PATH;
       export SWIG_LIB=$HOME/swig/share/swig/3.0.7;
     fi
   - if [[ "$OPENCL" == "false" && "$CUDA" == "false" && "$TRAVIS_OS_NAME" == "osx" ]]; then
-      wget https://anaconda.org/omnia/swig/3.0.7/download/osx-64/swig-3.0.7-0.tar.bz2;
+      wget http://anaconda.org/omnia/swig/3.0.7/download/osx-64/swig-3.0.7-0.tar.bz2;
       mkdir $HOME/swig;
       tar -xjvf swig-3.0.7-0.tar.bz2 -C $HOME/swig;
       export PATH=$HOME/swig/bin:$PATH;

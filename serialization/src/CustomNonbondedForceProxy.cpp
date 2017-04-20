@@ -92,11 +92,11 @@ void CustomNonbondedForceProxy::serialize(const void* object, SerializationNode&
         std::set<int> set2;
         force.getInteractionGroupParameters(i, set1, set2);
         SerializationNode& set1node = interactionGroup.createChildNode("Set1");
-        for (std::set<int>::iterator it = set1.begin(); it != set1.end(); ++it)
-            set1node.createChildNode("Particle").setIntProperty("index", *it);
+        for (int p : set1)
+            set1node.createChildNode("Particle").setIntProperty("index", p);
         SerializationNode& set2node = interactionGroup.createChildNode("Set2");
-        for (std::set<int>::iterator it = set2.begin(); it != set2.end(); ++it)
-            set2node.createChildNode("Particle").setIntProperty("index", *it);
+        for (int p : set2)
+            set2node.createChildNode("Particle").setIntProperty("index", p);
     }
 }
 
@@ -114,26 +114,19 @@ void* CustomNonbondedForceProxy::deserialize(const SerializationNode& node) cons
         force->setSwitchingDistance(node.getDoubleProperty("switchingDistance", -1.0));
         force->setUseLongRangeCorrection(node.getBoolProperty("useLongRangeCorrection", false));
         const SerializationNode& perParticleParams = node.getChildNode("PerParticleParameters");
-        for (int i = 0; i < (int) perParticleParams.getChildren().size(); i++) {
-            const SerializationNode& parameter = perParticleParams.getChildren()[i];
+        for (auto& parameter : perParticleParams.getChildren())
             force->addPerParticleParameter(parameter.getStringProperty("name"));
-        }
         const SerializationNode& globalParams = node.getChildNode("GlobalParameters");
-        for (int i = 0; i < (int) globalParams.getChildren().size(); i++) {
-            const SerializationNode& parameter = globalParams.getChildren()[i];
+        for (auto& parameter : globalParams.getChildren())
             force->addGlobalParameter(parameter.getStringProperty("name"), parameter.getDoubleProperty("default"));
-        }
         if (version > 1) {
             const SerializationNode& energyDerivs = node.getChildNode("EnergyParameterDerivatives");
-            for (int i = 0; i < (int) energyDerivs.getChildren().size(); i++) {
-                const SerializationNode& parameter = energyDerivs.getChildren()[i];
+            for (auto& parameter : energyDerivs.getChildren())
                 force->addEnergyParameterDerivative(parameter.getStringProperty("name"));
-            }
         }
         const SerializationNode& particles = node.getChildNode("Particles");
         vector<double> params(force->getNumPerParticleParameters());
-        for (int i = 0; i < (int) particles.getChildren().size(); i++) {
-            const SerializationNode& particle = particles.getChildren()[i];
+        for (auto& particle : particles.getChildren()) {
             for (int j = 0; j < (int) params.size(); j++) {
                 stringstream key;
                 key << "param";
@@ -143,13 +136,10 @@ void* CustomNonbondedForceProxy::deserialize(const SerializationNode& node) cons
             force->addParticle(params);
         }
         const SerializationNode& exclusions = node.getChildNode("Exclusions");
-        for (int i = 0; i < (int) exclusions.getChildren().size(); i++) {
-            const SerializationNode& exclusion = exclusions.getChildren()[i];
+        for (auto& exclusion : exclusions.getChildren())
             force->addExclusion(exclusion.getIntProperty("p1"), exclusion.getIntProperty("p2"));
-        }
         const SerializationNode& functions = node.getChildNode("Functions");
-        for (int i = 0; i < (int) functions.getChildren().size(); i++) {
-            const SerializationNode& function = functions.getChildren()[i];
+        for (auto& function : functions.getChildren()) {
             if (function.hasProperty("type")) {
                 force->addTabulatedFunction(function.getStringProperty("name"), function.decodeObject<TabulatedFunction>());
             }
@@ -158,30 +148,28 @@ void* CustomNonbondedForceProxy::deserialize(const SerializationNode& node) cons
 
                 const SerializationNode& valuesNode = function.getChildNode("Values");
                 vector<double> values;
-                for (int j = 0; j < (int) valuesNode.getChildren().size(); j++)
-                    values.push_back(valuesNode.getChildren()[j].getDoubleProperty("v"));
+                for (auto& child : valuesNode.getChildren())
+                    values.push_back(child.getDoubleProperty("v"));
                 force->addTabulatedFunction(function.getStringProperty("name"), new Continuous1DFunction(values, function.getDoubleProperty("min"), function.getDoubleProperty("max")));
             }
         }
         bool hasInteractionGroups = false; // Older files will be missing this block.
-        for (int i = 0; i < (int) node.getChildren().size(); i++) {
-            if (node.getChildren()[i].getName() == "InteractionGroups")
+        for (auto& child : node.getChildren())
+            if (child.getName() == "InteractionGroups")
                 hasInteractionGroups = true;
-        }
         if (hasInteractionGroups) {
             const SerializationNode& interactionGroups = node.getChildNode("InteractionGroups");
-            for (int i = 0; i < (int) interactionGroups.getChildren().size(); i++) {
-                const SerializationNode& interactionGroup = interactionGroups.getChildren()[i];
+            for (auto& interactionGroup : interactionGroups.getChildren()) {
                 // Get set 1.
                 const SerializationNode& set1node = interactionGroup.getChildNode("Set1");
                 std::set<int> set1;
-                for (int j = 0; j < (int) set1node.getChildren().size(); j++)
-                    set1.insert(set1node.getChildren()[j].getIntProperty("index"));
+                for (auto& child : set1node.getChildren())
+                    set1.insert(child.getIntProperty("index"));
                 // Get set 2.
                 const SerializationNode& set2node = interactionGroup.getChildNode("Set2");
                 std::set<int> set2;
-                for (int j = 0; j < (int) set2node.getChildren().size(); j++)
-                    set2.insert(set2node.getChildren()[j].getIntProperty("index"));
+                for (auto& child : set2node.getChildren())
+                    set2.insert(child.getIntProperty("index"));
                 force->addInteractionGroup(set1, set2);
             }
         }

@@ -244,6 +244,33 @@ void testIllegalVariable() {
     ASSERT(threwException);
 }
 
+void testParameters() {
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    VerletIntegrator integrator(0.01);
+    CustomHbondForce* custom = new CustomHbondForce("(2*d+a)*distance(d1,a1)");
+    custom->addPerDonorParameter("d");
+    custom->addPerAcceptorParameter("a");
+    custom->addDonor(1, 0, -1, vector<double>({1.5}));
+    custom->addDonor(2, 0, -1, vector<double>({1.8}));
+    custom->addAcceptor(0, 1, -1, vector<double>({2.1}));
+    system.addForce(custom);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(3);
+    positions[0] = Vec3(0, 0, 0);
+    positions[1] = Vec3(0, 2, 0);
+    positions[2] = Vec3(2, 0, 0);
+    context.setPositions(positions);
+    State state = context.getState(State::Forces | State::Energy);
+    const vector<Vec3>& forces = state.getForces();
+    ASSERT_EQUAL_VEC(Vec3((2*1.8+2.1), (2*1.5+2.1), 0), forces[0], TOL);
+    ASSERT_EQUAL_VEC(Vec3(0, -(2*1.5+2.1), 0), forces[1], TOL);
+    ASSERT_EQUAL_VEC(Vec3(-(2*1.8+2.1), 0, 0), forces[2], TOL);
+    ASSERT_EQUAL_TOL(2*(2*1.8+2.1)+2*(2*1.5+2.1), state.getPotentialEnergy(), TOL);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -254,6 +281,7 @@ int main(int argc, char* argv[]) {
         testCutoff();
         testCustomFunctions();
         testIllegalVariable();
+        testParameters();
         runPlatformTests();
     }
     catch(const exception& e) {

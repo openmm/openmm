@@ -83,11 +83,11 @@ void CustomCentroidBondForceImpl::initialize(ContextImpl& context) {
     vector<double> weights;
     for (int i = 0; i < owner.getNumGroups(); i++) {
         owner.getGroupParameters(i, particles, weights);
-        for (int j = 0; j < (int) particles.size(); j++)
-            if (particles[j] < 0 || particles[j] >= system.getNumParticles()) {
+        for (int particle : particles)
+            if (particle < 0 || particle >= system.getNumParticles()) {
                 stringstream msg;
                 msg << "CustomCentroidBondForce: Illegal particle index for a group: ";
-                msg << particles[j];
+                msg << particle;
                 throw OpenMMException(msg.str());
             }
         if (weights.size() != particles.size() && weights.size() > 0) {
@@ -102,11 +102,11 @@ void CustomCentroidBondForceImpl::initialize(ContextImpl& context) {
     int numBondParameters = owner.getNumPerBondParameters();
     for (int i = 0; i < owner.getNumBonds(); i++) {
         owner.getBondParameters(i, groups, parameters);
-        for (int j = 0; j < (int) groups.size(); j++)
-            if (groups[j] < 0 || groups[j] >= owner.getNumGroups()) {
+        for (int group : groups)
+            if (group < 0 || group >= owner.getNumGroups()) {
                 stringstream msg;
                 msg << "CustomCentroidBondForce: Illegal group index for a bond: ";
-                msg << groups[j];
+                msg << group;
                 throw OpenMMException(msg.str());
             }
         if (parameters.size() != numBondParameters) {
@@ -179,8 +179,8 @@ ExpressionTreeNode CustomCentroidBondForceImpl::replaceFunctions(const Expressio
         // This is not an angle or dihedral, so process its children.
 
         vector<ExpressionTreeNode> children;
-        for (int i = 0; i < (int) node.getChildren().size(); i++)
-            children.push_back(replaceFunctions(node.getChildren()[i], groups, distances, angles, dihedrals, variables));
+        for (auto& child : node.getChildren())
+            children.push_back(replaceFunctions(child, groups, distances, angles, dihedrals, variables));
         return ExpressionTreeNode(op.clone(), children);
     }
     const Operation::Custom& custom = static_cast<const Operation::Custom&>(op);

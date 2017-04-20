@@ -105,8 +105,8 @@ extern "C" __global__ void computeDonorForces(unsigned long long* __restrict__ f
             __syncthreads();
             if (donorIndex < NUM_DONORS) {
                 for (int index = 0; index < blockSize; index++) {
-#ifdef USE_EXCLUSIONS
                     int acceptorIndex = acceptorStart+index;
+#ifdef USE_EXCLUSIONS
                     if (acceptorIndex == exclusionIndices.x || acceptorIndex == exclusionIndices.y || acceptorIndex == exclusionIndices.z || acceptorIndex == exclusionIndices.w)
                         continue;
 #endif
@@ -193,8 +193,8 @@ extern "C" __global__ void computeAcceptorForces(unsigned long long* __restrict_
             __syncthreads();
             if (acceptorIndex < NUM_ACCEPTORS) {
                 for (int index = 0; index < blockSize; index++) {
-#ifdef USE_EXCLUSIONS
                     int donorIndex = donorStart+index;
+#ifdef USE_EXCLUSIONS
                     if (donorIndex == exclusionIndices.x || donorIndex == exclusionIndices.y || donorIndex == exclusionIndices.z || donorIndex == exclusionIndices.w)
                         continue;
 #endif

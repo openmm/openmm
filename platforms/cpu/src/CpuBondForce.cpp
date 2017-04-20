@@ -159,8 +159,8 @@ void CpuBondForce::assignBond(int bond, int thread, vector<int>& atomThread, vec
         if (atom != -1)
             throw OpenMMException("CpuBondForce: Internal error: atoms assigned to threads incorrectly");
         atom = thread;
-        for (set<int>::const_iterator iter = atomBonds[atom].begin(); iter != atomBonds[atom].end(); ++iter)
-            candidateBonds.push_back(*iter);
+        for (int bond : atomBonds[atom])
+            candidateBonds.push_back(bond);
     }
 }
 

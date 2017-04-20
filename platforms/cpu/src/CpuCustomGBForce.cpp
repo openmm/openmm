@@ -74,48 +74,48 @@ CpuCustomGBForce::ThreadData::ThreadData(int numAtoms, int numThreads, int threa
             variableLocations[name.str()] = &particleValue[2*i+j];
         }
     }
-    for (int i = 0; i < (int) valueExpressions.size(); i++) {
-        this->valueExpressions[i].setVariableLocations(variableLocations);
-        expressionSet.registerExpression(this->valueExpressions[i]);
+    for (auto& expression : this->valueExpressions) {
+        expression.setVariableLocations(variableLocations);
+        expressionSet.registerExpression(expression);
     }
-    for (int i = 0; i < (int) valueDerivExpressions.size(); i++)
-        for (int j = 0; j < (int) valueDerivExpressions[i].size(); j++) {
-            this->valueDerivExpressions[i][j].setVariableLocations(variableLocations);
-            expressionSet.registerExpression(this->valueDerivExpressions[i][j]);
+    for (auto& expressions : this->valueDerivExpressions)
+        for (auto& expression : expressions) {
+            expression.setVariableLocations(variableLocations);
+            expressionSet.registerExpression(expression);
         }
-    for (int i = 0; i < (int) valueGradientExpressions.size(); i++)
-        for (int j = 0; j < (int) valueGradientExpressions[i].size(); j++) {
-            this->valueGradientExpressions[i][j].setVariableLocations(variableLocations);
-            expressionSet.registerExpression(this->valueGradientExpressions[i][j]);
+    for (auto& expressions : this->valueGradientExpressions)
+        for (auto& expression : expressions) {
+            expression.setVariableLocations(variableLocations);
+            expressionSet.registerExpression(expression);
         }
-    for (int i = 0; i < (int) valueParamDerivExpressions.size(); i++)
-        for (int j = 0; j < (int) valueParamDerivExpressions[i].size(); j++) {
-            this->valueParamDerivExpressions[i][j].setVariableLocations(variableLocations);
-            expressionSet.registerExpression(this->valueParamDerivExpressions[i][j]);
+    for (auto& expressions : this->valueParamDerivExpressions)
+        for (auto& expression : expressions) {
+            expression.setVariableLocations(variableLocations);
+            expressionSet.registerExpression(expression);
         }
-    for (int i = 0; i < (int) energyExpressions.size(); i++) {
-        this->energyExpressions[i].setVariableLocations(variableLocations);
-        expressionSet.registerExpression(this->energyExpressions[i]);
+    for (auto& expression : this->energyExpressions) {
+        expression.setVariableLocations(variableLocations);
+        expressionSet.registerExpression(expression);
     }
-    for (int i = 0; i < (int) energyDerivExpressions.size(); i++)
-        for (int j = 0; j < (int) energyDerivExpressions[i].size(); j++) {
-            this->energyDerivExpressions[i][j].setVariableLocations(variableLocations);
-            expressionSet.registerExpression(this->energyDerivExpressions[i][j]);
+    for (auto& expressions : this->energyDerivExpressions)
+        for (auto& expression : expressions) {
+            expression.setVariableLocations(variableLocations);
+            expressionSet.registerExpression(expression);
         }
-    for (int i = 0; i < (int) energyGradientExpressions.size(); i++)
-        for (int j = 0; j < (int) energyGradientExpressions[i].size(); j++) {
-            this->energyGradientExpressions[i][j].setVariableLocations(variableLocations);
-            expressionSet.registerExpression(this->energyGradientExpressions[i][j]);
+    for (auto& expressions : this->energyGradientExpressions)
+        for (auto& expression : expressions) {
+            expression.setVariableLocations(variableLocations);
+            expressionSet.registerExpression(expression);
         }
-    for (int i = 0; i < (int) energyParamDerivExpressions.size(); i++)
-        for (int j = 0; j < (int) energyParamDerivExpressions[i].size(); j++) {
-            this->energyParamDerivExpressions[i][j].setVariableLocations(variableLocations);
-            expressionSet.registerExpression(this->energyParamDerivExpressions[i][j]);
+    for (auto& expressions : this->energyParamDerivExpressions)
+        for (auto& expression : expressions) {
+            expression.setVariableLocations(variableLocations);
+            expressionSet.registerExpression(expression);
         }
     value0.resize(numAtoms);
     dEdV.resize(valueNames.size());
-    for (int i = 0; i < (int) dEdV.size(); i++)
-        dEdV[i].resize(numAtoms);
+    for (auto& v : dEdV)
+        v.resize(numAtoms);
     dVdX.resize(valueDerivExpressions.size());
     dVdY.resize(valueDerivExpressions.size());
     dVdZ.resize(valueDerivExpressions.size());
@@ -155,8 +155,8 @@ CpuCustomGBForce::CpuCustomGBForce(int numAtoms, const std::vector<std::set<int>
 }
 
 CpuCustomGBForce::~CpuCustomGBForce() {
-    for (int i = 0; i < (int) threadData.size(); i++)
-        delete threadData[i];
+    for (auto data : threadData)
+        delete data;
 }
 
 void CpuCustomGBForce::setUseCutoff(float distance, const CpuNeighborList& neighbors) {
@@ -256,16 +256,16 @@ void CpuCustomGBForce::threadComputeForce(ThreadPool& threads, int threadIndex) 
     ThreadData& data = *threadData[threadIndex];
     fvec4 boxSize(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2], 0);
     fvec4 invBoxSize((1/periodicBoxSize[0]), (1/periodicBoxSize[1]), (1/periodicBoxSize[2]), 0);
-    for (map<string, double>::const_iterator iter = globalParameters->begin(); iter != globalParameters->end(); ++iter)
-        data.expressionSet.setVariable(data.expressionSet.getVariableIndex(iter->first), iter->second);
+    for (auto& param : *globalParameters)
+        data.expressionSet.setVariable(data.expressionSet.getVariableIndex(param.first), param.second);
 
     // Calculate the first computed value.
 
-    for (int i = 0; i < (int) data.value0.size(); i++)
-        data.value0[i] = 0.0f;
-    for (int i = 0; i < (int) data.dValue0dParam.size(); i++)
-        for (int j = 0; j < (int) data.dValue0dParam[i].size(); j++)
-            data.dValue0dParam[i][j] = 0.0;
+    for (auto& v : data.value0)
+        v = 0.0f;
+    for (auto& vals : data.dValue0dParam)
+        for (auto& v : vals)
+            v = 0.0f;
     if (valueTypes[0] == CustomGBForce::ParticlePair)
         calculateParticlePairValue(0, data, numberOfAtoms, posq, atomParameters, true, boxSize, invBoxSize);
     else
@@ -291,8 +291,8 @@ void CpuCustomGBForce::threadComputeForce(ThreadPool& threads, int threadIndex) 
     int numValues = valueTypes.size();
     for (int atom = data.firstAtom; atom < data.lastAtom; atom++) {
         float sum = 0.0f;
-        for (int j = 0; j < (int) threadData.size(); j++)
-            sum += threadData[j]->value0[atom];
+        for (auto& data : threadData)
+            sum += data->value0[atom];
         values[0][atom] = sum;
         data.x = posq[4*atom];
         data.y = posq[4*atom+1];
@@ -320,11 +320,11 @@ void CpuCustomGBForce::threadComputeForce(ThreadPool& threads, int threadIndex) 
 
     // Now calculate the energy and its derivatives.
 
-    for (int i = 0; i < (int) data.dEdV.size(); i++)
-        for (int j = 0; j < (int) data.dEdV[i].size(); j++)
-            data.dEdV[i][j] = 0.0f;
-    for (int i = 0; i < (int) data.energyParamDerivs.size(); i++)
-        data.energyParamDerivs[i] = 0.0f;
+    for (auto& vals : data.dEdV)
+        for (auto& v : vals)
+            v = 0.0f;
+    for (auto& v : data.energyParamDerivs)
+        v = 0.0f;
     for (int termIndex = 0; termIndex < (int) data.energyExpressions.size(); termIndex++) {
         if (energyTypes[termIndex] == CustomGBForce::SingleParticle)
             calculateSingleParticleEnergyTerm(termIndex, data, numberOfAtoms, posq, atomParameters, forces, energy);
@@ -340,8 +340,8 @@ void CpuCustomGBForce::threadComputeForce(ThreadPool& threads, int threadIndex) 
     for (int atom = data.firstAtom; atom < data.lastAtom; atom++) {
         for (int i = 0; i < (int) dEdV.size(); i++) {
             float sum = 0.0f;
-            for (int j = 0; j < (int) threadData.size(); j++)
-                sum += threadData[j]->dEdV[i][atom];
+            for (auto& data : threadData)
+                sum += data->dEdV[i][atom];
             dEdV[i][atom] = sum;
         }
     }

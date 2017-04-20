@@ -973,8 +973,8 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         molecularQuadrupolesVec.push_back((float) quadrupole[5]);
     }
     hasQuadrupoles = false;
-    for (int i = 0; i < (int) molecularQuadrupolesVec.size(); i++)
-        if (molecularQuadrupolesVec[i] != 0.0)
+    for (auto q : molecularQuadrupolesVec)
+        if (q != 0.0)
             hasQuadrupoles = true;
     int paddedNumAtoms = cu.getPaddedNumAtoms();
     for (int i = numMultipoles; i < paddedNumAtoms; i++) {
@@ -1049,15 +1049,15 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         allAtoms.insert(atoms.begin(), atoms.end());
         force.getCovalentMap(i, AmoebaMultipoleForce::Covalent13, atoms);
         allAtoms.insert(atoms.begin(), atoms.end());
-        for (set<int>::const_iterator iter = allAtoms.begin(); iter != allAtoms.end(); ++iter)
-            covalentFlagValues.push_back(make_int3(i, *iter, 0));
+        for (int atom : allAtoms)
+            covalentFlagValues.push_back(make_int3(i, atom, 0));
         force.getCovalentMap(i, AmoebaMultipoleForce::Covalent14, atoms);
         allAtoms.insert(atoms.begin(), atoms.end());
-        for (int j = 0; j < (int) atoms.size(); j++)
-            covalentFlagValues.push_back(make_int3(i, atoms[j], 1));
+        for (int atom : atoms)
+            covalentFlagValues.push_back(make_int3(i, atom, 1));
         force.getCovalentMap(i, AmoebaMultipoleForce::Covalent15, atoms);
-        for (int j = 0; j < (int) atoms.size(); j++)
-            covalentFlagValues.push_back(make_int3(i, atoms[j], 2));
+        for (int atom : atoms)
+            covalentFlagValues.push_back(make_int3(i, atom, 2));
         allAtoms.insert(atoms.begin(), atoms.end());
         force.getCovalentMap(i, AmoebaMultipoleForce::PolarizationCovalent11, atoms);
         allAtoms.insert(atoms.begin(), atoms.end());
@@ -1068,15 +1068,14 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
 
         vector<int> atoms12;
         force.getCovalentMap(i, AmoebaMultipoleForce::PolarizationCovalent12, atoms12);
-        for (int j = 0; j < (int) atoms.size(); j++)
-            if (find(atoms12.begin(), atoms12.end(), atoms[j]) == atoms12.end())
-                polarizationFlagValues.push_back(make_int2(i, atoms[j]));
+        for (int atom : atoms)
+            if (find(atoms12.begin(), atoms12.end(), atom) == atoms12.end())
+                polarizationFlagValues.push_back(make_int2(i, atom));
     }
     set<pair<int, int> > tilesWithExclusions;
     for (int atom1 = 0; atom1 < (int) exclusions.size(); ++atom1) {
         int x = atom1/CudaContext::TileSize;
-        for (int j = 0; j < (int) exclusions[atom1].size(); ++j) {
-            int atom2 = exclusions[atom1][j];
+        for (int atom2 : exclusions[atom1]) {
             int y = atom2/CudaContext::TileSize;
             tilesWithExclusions.insert(make_pair(max(x, y), min(x, y)));
         }
@@ -1412,10 +1411,10 @@ void CudaCalcAmoebaMultipoleForceKernel::initializeScaleFactors() {
     }
     covalentFlags = CudaArray::create<uint2>(cu, nb.getExclusions().getSize(), "covalentFlags");
     vector<uint2> covalentFlagsVec(nb.getExclusions().getSize(), make_uint2(0, 0));
-    for (int i = 0; i < (int) covalentFlagValues.size(); i++) {
-        int atom1 = covalentFlagValues[i].x;
-        int atom2 = covalentFlagValues[i].y;
-        int value = covalentFlagValues[i].z;
+    for (int3 values : covalentFlagValues) {
+        int atom1 = values.x;
+        int atom2 = values.y;
+        int value = values.z;
         int x = atom1/CudaContext::TileSize;
         int offset1 = atom1-x*CudaContext::TileSize;
         int y = atom2/CudaContext::TileSize;
@@ -1446,9 +1445,9 @@ void CudaCalcAmoebaMultipoleForceKernel::initializeScaleFactors() {
     
     polarizationGroupFlags = CudaArray::create<unsigned int>(cu, nb.getExclusions().getSize(), "polarizationGroupFlags");
     vector<unsigned int> polarizationGroupFlagsVec(nb.getExclusions().getSize(), 0);
-    for (int i = 0; i < (int) polarizationFlagValues.size(); i++) {
-        int atom1 = polarizationFlagValues[i].x;
-        int atom2 = polarizationFlagValues[i].y;
+    for (int2 values : polarizationFlagValues) {
+        int atom1 = values.x;
+        int atom2 = values.y;
         int x = atom1/CudaContext::TileSize;
         int offset1 = atom1-x*CudaContext::TileSize;
         int y = atom2/CudaContext::TileSize;
@@ -1473,10 +1472,12 @@ void CudaCalcAmoebaMultipoleForceKernel::initializeScaleFactors() {
 double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     if (!hasInitializedScaleFactors) {
         initializeScaleFactors();
-        for (int i = 0; i < (int) context.getForceImpls().size() && gkKernel == NULL; i++) {
-            AmoebaGeneralizedKirkwoodForceImpl* gkImpl = dynamic_cast<AmoebaGeneralizedKirkwoodForceImpl*>(context.getForceImpls()[i]);
-            if (gkImpl != NULL)
+        for (auto impl : context.getForceImpls()) {
+            AmoebaGeneralizedKirkwoodForceImpl* gkImpl = dynamic_cast<AmoebaGeneralizedKirkwoodForceImpl*>(impl);
+            if (gkImpl != NULL) {
                 gkKernel = dynamic_cast<CudaCalcAmoebaGeneralizedKirkwoodForceKernel*>(&gkImpl->getKernel().getImpl());
+                break;
+            }
         }
     }
     CudaNonbondedUtilities& nb = cu.getNonbondedUtilities();
@@ -2232,8 +2233,8 @@ void CudaCalcAmoebaMultipoleForceKernel::copyParametersToContext(ContextImpl& co
         molecularQuadrupolesVec.push_back((float) quadrupole[5]);
     }
     if (!hasQuadrupoles) {
-        for (int i = 0; i < (int) molecularQuadrupolesVec.size(); i++)
-            if (molecularQuadrupolesVec[i] != 0.0)
+        for (auto q : molecularQuadrupolesVec)
+            if (q != 0.0)
                 throw OpenMMException("updateParametersInContext: Cannot set a non-zero quadrupole moment, because quadrupoles were excluded from the kernel");
     }
     for (int i = force.getNumMultipoles(); i < cu.getPaddedNumAtoms(); i++) {

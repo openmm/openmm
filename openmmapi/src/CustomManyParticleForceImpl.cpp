@@ -197,8 +197,8 @@ ExpressionTreeNode CustomManyParticleForceImpl::replaceFunctions(const Expressio
         // This is not an angle or dihedral, so process its children.
 
         vector<ExpressionTreeNode> children;
-        for (int i = 0; i < (int) node.getChildren().size(); i++)
-            children.push_back(replaceFunctions(node.getChildren()[i], atoms, distances, angles, dihedrals, variables));
+        for (auto& child : node.getChildren())
+            children.push_back(replaceFunctions(child, atoms, distances, angles, dihedrals, variables));
         return ExpressionTreeNode(op.clone(), children);
     }
     const Operation::Custom& custom = static_cast<const Operation::Custom&>(op);
@@ -280,9 +280,9 @@ void CustomManyParticleForceImpl::buildFilterArrays(const CustomManyParticleForc
             for (int j = 0; j < numTypes; j++)
                 allowedTypes[i].insert(j);
         else {
-            for (set<int>::const_iterator iter = types.begin(); iter != types.end(); ++iter)
-                if (typeMap.find(*iter) != typeMap.end())
-                    allowedTypes[i].insert(typeMap[*iter]);
+            for (int type : types)
+                if (typeMap.find(type) != typeMap.end())
+                    allowedTypes[i].insert(typeMap[type]);
             if (allowedTypes[i].size() < numTypes)
                 anyFilters = true;
         }

@@ -185,10 +185,16 @@ latex_elements = {
     \\usepackage{caption}
     \\setcounter{tocdepth}{3}
     \\captionsetup[figure]{labelformat=empty}
+    % Backwards compatibility for sphinx < 1.5
+    \\let\\DUspan\\null % force DUspan to be defined
     \\renewcommand{\DUspan}[2]{%
         \\IfEqCase{#1}{%
-            {code}{\\small{}\\texttt{#2}\\normalsize{}}%
+            {code}{\\small{}\\texttt{#2}\\normalsize{}}
         }[\\PackageError{DUspan}{Unrecognized option passed to DUspan: #1}{}]%
+    }%
+    % Sphinx > 1.5 compatibility (github.com/sphinx-doc/sphinx/issues/2231)
+    \\newcommand{\\DUrolecode}[1]{%
+        \\small{}\\texttt{#1}\\normalsize{}%
     }%""",
 }
 

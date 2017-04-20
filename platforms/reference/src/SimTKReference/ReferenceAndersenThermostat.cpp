@@ -66,13 +66,12 @@ using namespace OpenMM;
               double temperature, double collisionFrequency, double stepSize) const {
           
           const double collisionProbability = 1.0f - exp(-collisionFrequency*stepSize);
-          for (int i = 0; i < (int) atomGroups.size(); ++i) {
+          for (auto& group : atomGroups) {
               if (SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber() < collisionProbability) {
                   
                   // A collision occurred, so set the velocities to new values chosen from a Boltzmann distribution.
 
-                  for (int j = 0; j < (int) atomGroups[i].size(); j++) {
-                      int atom = atomGroups[i][j];
+                  for (int atom : group) {
                       if (atomMasses[atom] != 0) {
                           const double velocityScale = static_cast<double>(sqrt(BOLTZ*temperature/atomMasses[atom]));
                           atomVelocities[atom][0] = velocityScale*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();

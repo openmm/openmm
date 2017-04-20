@@ -51,9 +51,9 @@ CpuCustomNonbondedForce::ThreadData::ThreadData(const Lepton::CompiledExpression
     this->forceExpression.setVariableLocations(variableLocations);
     expressionSet.registerExpression(this->energyExpression);
     expressionSet.registerExpression(this->forceExpression);
-    for (int i = 0; i < this->energyParamDerivExpressions.size(); i++) {
-        this->energyParamDerivExpressions[i].setVariableLocations(variableLocations);
-        expressionSet.registerExpression(this->energyParamDerivExpressions[i]);
+    for (auto& expression : this->energyParamDerivExpressions) {
+        expression.setVariableLocations(variableLocations);
+        expressionSet.registerExpression(expression);
     }
 }
 
@@ -66,8 +66,8 @@ CpuCustomNonbondedForce::CpuCustomNonbondedForce(const Lepton::CompiledExpressio
 }
 
 CpuCustomNonbondedForce::~CpuCustomNonbondedForce() {
-    for (int i = 0; i < (int) threadData.size(); i++)
-        delete threadData[i];
+    for (auto data : threadData)
+        delete data;
 }
 
 void CpuCustomNonbondedForce::setUseCutoff(double distance, const CpuNeighborList& neighbors) {
@@ -78,9 +78,9 @@ void CpuCustomNonbondedForce::setUseCutoff(double distance, const CpuNeighborLis
 
 void CpuCustomNonbondedForce::setInteractionGroups(const vector<pair<set<int>, set<int> > >& groups) {
     useInteractionGroups = true;
-    for (int group = 0; group < (int) groups.size(); group++) {
-        const set<int>& set1 = groups[group].first;
-        const set<int>& set2 = groups[group].second;
+    for (auto& group : groups) {
+        const set<int>& set1 = group.first;
+        const set<int>& set2 = group.second;
         for (set<int>::const_iterator atom1 = set1.begin(); atom1 != set1.end(); ++atom1) {
             for (set<int>::const_iterator atom2 = set2.begin(); atom2 != set2.end(); ++atom2) {
                 if (*atom1 == *atom2 || exclusions[*atom1].find(*atom2) != exclusions[*atom1].end())
@@ -167,10 +167,10 @@ void CpuCustomNonbondedForce::threadComputeForce(ThreadPool& threads, int thread
     double& energy = threadEnergy[threadIndex];
     float* forces = &(*threadForce)[threadIndex][0];
     ThreadData& data = *threadData[threadIndex];
-    for (map<string, double>::const_iterator iter = globalParameters->begin(); iter != globalParameters->end(); ++iter)
-        data.expressionSet.setVariable(data.expressionSet.getVariableIndex(iter->first), iter->second);
-    for (int i = 0; i < data.energyParamDerivs.size(); i++)
-        data.energyParamDerivs[i] = 0.0;
+    for (auto& param : *globalParameters)
+        data.expressionSet.setVariable(data.expressionSet.getVariableIndex(param.first), param.second);
+    for (auto& deriv : data.energyParamDerivs)
+        deriv = 0.0;
     fvec4 boxSize(periodicBoxVectors[0][0], periodicBoxVectors[1][1], periodicBoxVectors[2][2], 0);
     fvec4 invBoxSize(recipBoxSize[0], recipBoxSize[1], recipBoxSize[2], 0);
     if (useInteractionGroups) {

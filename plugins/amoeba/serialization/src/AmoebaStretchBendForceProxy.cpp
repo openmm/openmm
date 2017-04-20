@@ -67,8 +67,7 @@ void* AmoebaStretchBendForceProxy::deserialize(const SerializationNode& node) co
         if (version > 3)
             force->setUsesPeriodicBoundaryConditions(node.getBoolProperty("usesPeriodic"));
         const SerializationNode& bonds = node.getChildNode("StretchBendAngles");
-        for (unsigned int ii = 0; ii < (int) bonds.getChildren().size(); ii++) {
-            const SerializationNode& bond = bonds.getChildren()[ii];
+        for (auto& bond : bonds.getChildren()) {
             double k1, k2;
             if (version == 1)
                 k1 = k2 = bond.getDoubleProperty("k");

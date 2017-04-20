@@ -72,10 +72,8 @@ void* AmoebaBondForceProxy::deserialize(const SerializationNode& node) const {
         force->setAmoebaGlobalBondCubic(node.getDoubleProperty("cubic"));
         force->setAmoebaGlobalBondQuartic(node.getDoubleProperty("quartic"));
         const SerializationNode& bonds = node.getChildNode("Bonds");
-        for (unsigned int ii = 0; ii < (int) bonds.getChildren().size(); ii++) {
-            const SerializationNode& bond = bonds.getChildren()[ii];
+        for (auto& bond : bonds.getChildren())
             force->addBond(bond.getIntProperty("p1"), bond.getIntProperty("p2"), bond.getDoubleProperty("d"), bond.getDoubleProperty("k"));
-        }
     }
     catch (...) {
         delete force;

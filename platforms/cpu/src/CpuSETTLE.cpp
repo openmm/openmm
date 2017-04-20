@@ -56,8 +56,8 @@ CpuSETTLE::CpuSETTLE(const System& system, const ReferenceSETTLEAlgorithm& settl
 }
 
 CpuSETTLE::~CpuSETTLE() {
-    for (int i = 0; i < (int) threadSettle.size(); i++)
-        delete threadSettle[i];
+    for (auto settle : threadSettle)
+        delete settle;
 }
 
 void CpuSETTLE::apply(vector<OpenMM::Vec3>& atomCoordinates, vector<OpenMM::Vec3>& atomCoordinatesP, vector<double>& inverseMasses, double tolerance) {

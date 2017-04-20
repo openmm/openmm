@@ -76,8 +76,8 @@ static bool usesVariable(const Lepton::ExpressionTreeNode& node, const string& v
     const Lepton::Operation& op = node.getOperation();
     if (op.getId() == Lepton::Operation::VARIABLE && op.getName() == variable)
         return true;
-    for (int i = 0; i < (int) node.getChildren().size(); i++)
-        if (usesVariable(node.getChildren()[i], variable))
+    for (auto& child : node.getChildren())
+        if (usesVariable(child, variable))
             return true;
     return false;
 }
@@ -97,22 +97,22 @@ void CudaCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool 
     cu.setForcesValid(true);
     cu.setAsCurrent();
     cu.clearAutoclearBuffers();
-    for (vector<CudaContext::ForcePreComputation*>::iterator iter = cu.getPreComputations().begin(); iter != cu.getPreComputations().end(); ++iter)
-        (*iter)->computeForceAndEnergy(includeForces, includeEnergy, groups);
+    for (auto computation : cu.getPreComputations())
+        computation->computeForceAndEnergy(includeForces, includeEnergy, groups);
     CudaNonbondedUtilities& nb = cu.getNonbondedUtilities();
     cu.setComputeForceCount(cu.getComputeForceCount()+1);
     nb.prepareInteractions(groups);
     map<string, double>& derivs = cu.getEnergyParamDerivWorkspace();
-    for (map<string, double>::const_iterator iter = context.getParameters().begin(); iter != context.getParameters().end(); ++iter)
-        derivs[iter->first] = 0;
+    for (auto& param : context.getParameters())
+        derivs[param.first] = 0;
 }
 
 double CudaCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForces, bool includeEnergy, int groups, bool& valid) {
     cu.getBondedUtilities().computeInteractions(groups);
     cu.getNonbondedUtilities().computeInteractions(groups, includeForces, includeEnergy);
     double sum = 0.0;
-    for (vector<CudaContext::ForcePostComputation*>::iterator iter = cu.getPostComputations().begin(); iter != cu.getPostComputations().end(); ++iter)
-        sum += (*iter)->computeForceAndEnergy(includeForces, includeEnergy, groups);
+    for (auto computation : cu.getPostComputations())
+        sum += computation->computeForceAndEnergy(includeForces, includeEnergy, groups);
     cu.getIntegrationUtilities().distributeForcesFromVirtualSites();
     if (includeEnergy) {
         CudaArray& energyArray = cu.getEnergyBuffer();
@@ -143,8 +143,8 @@ double CudaUpdateStateDataKernel::getTime(const ContextImpl& context) const {
 
 void CudaUpdateStateDataKernel::setTime(ContextImpl& context, double time) {
     vector<CudaContext*>& contexts = cu.getPlatformData().contexts;
-    for (int i = 0; i < (int) contexts.size(); i++)
-        contexts[i]->setTime(time);
+    for (auto ctx : contexts)
+        ctx->setTime(time);
 }
 
 void CudaUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3>& positions) {
@@ -254,8 +254,8 @@ void CudaUpdateStateDataKernel::setPositions(ContextImpl& context, const vector<
             posCorrection[i] = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
         cu.getPosqCorrection().upload(posCorrection);
     }
-    for (int i = 0; i < (int) cu.getPosCellOffsets().size(); i++)
-        cu.getPosCellOffsets()[i] = make_int4(0, 0, 0, 0);
+    for (auto& offset : cu.getPosCellOffsets())
+        offset = make_int4(0, 0, 0, 0);
     cu.reorderAtoms();
 }
 
@@ -369,8 +369,7 @@ void CudaUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context, cons
     // to avoid changing their positions.
 
     vector<Vec3> positions;
-    for (int i = 0; i < (int) cu.getPosCellOffsets().size(); i++) {
-        int4& offset = cu.getPosCellOffsets()[i];
+    for (auto& offset : cu.getPosCellOffsets()) {
         if (offset.x != 0 || offset.y != 0 || offset.z != 0) {
             getPositions(context, positions);
             break;
@@ -379,8 +378,8 @@ void CudaUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context, cons
     
     // Update the vectors.
 
-    for (int i = 0; i < (int) contexts.size(); i++)
-        contexts[i]->setPeriodicBoxVectors(a, b, c);
+    for (auto ctx : contexts)
+        ctx->setPeriodicBoxVectors(a, b, c);
     if (positions.size() > 0)
         setPositions(context, positions);
 }
@@ -432,10 +431,10 @@ void CudaUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& st
     stream.read((char*) &stepCount, sizeof(int));
     stream.read((char*) &stepsSinceReorder, sizeof(int));
     vector<CudaContext*>& contexts = cu.getPlatformData().contexts;
-    for (int i = 0; i < (int) contexts.size(); i++) {
-        contexts[i]->setTime(time);
-        contexts[i]->setStepCount(stepCount);
-        contexts[i]->setStepsSinceReorder(stepsSinceReorder);
+    for (auto ctx : contexts) {
+        ctx->setTime(time);
+        ctx->setStepCount(stepCount);
+        ctx->setStepsSinceReorder(stepsSinceReorder);
     }
     char* buffer = (char*) cu.getPinnedBuffer();
     stream.read(buffer, cu.getPosq().getSize()*cu.getPosq().getElementSize());
@@ -451,12 +450,12 @@ void CudaUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& st
     stream.read((char*) &cu.getPosCellOffsets()[0], sizeof(int4)*cu.getPosCellOffsets().size());
     Vec3 boxVectors[3];
     stream.read((char*) &boxVectors, 3*sizeof(Vec3));
-    for (int i = 0; i < (int) contexts.size(); i++)
-        contexts[i]->setPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+    for (auto ctx : contexts)
+        ctx->setPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
     cu.getIntegrationUtilities().loadCheckpoint(stream);
     SimTKOpenMMUtilities::loadCheckpoint(stream);
-    for (int i = 0; i < cu.getReorderListeners().size(); i++)
-        cu.getReorderListeners()[i]->execute();
+    for (auto listener : cu.getReorderListeners())
+        listener->execute();
 }
 
 void CudaApplyConstraintsKernel::initialize(const System& system) {
@@ -1689,9 +1688,9 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         if (epsilon != 0.0)
             hasLJ = true;
     }
-    for (int i = 0; i < (int) exclusions.size(); i++) {
-        exclusionList[exclusions[i].first].push_back(exclusions[i].second);
-        exclusionList[exclusions[i].second].push_back(exclusions[i].first);
+    for (auto exclusion : exclusions) {
+        exclusionList[exclusion.first].push_back(exclusion.second);
+        exclusionList[exclusion.second].push_back(exclusion.first);
     }
     posq.upload(&temp[0]);
     sigmaEpsilon->upload(sigmaEpsilonVector);
@@ -2326,10 +2325,10 @@ public:
             for (int i = 0; i < force.getNumInteractionGroups(); i++) {
                 set<int> set1, set2;
                 force.getInteractionGroupParameters(i, set1, set2);
-                for (set<int>::const_iterator iter = set1.begin(); iter != set1.end(); ++iter)
-                    groupsForParticle[*iter].insert(2*i);
-                for (set<int>::const_iterator iter = set2.begin(); iter != set2.end(); ++iter)
-                    groupsForParticle[*iter].insert(2*i+1);
+                for (int p : set1)
+                    groupsForParticle[p].insert(2*i);
+                for (int p : set2)
+                    groupsForParticle[p].insert(2*i+1);
             }
         }
     }
@@ -2371,8 +2370,8 @@ CudaCalcCustomNonbondedForceKernel::~CudaCalcCustomNonbondedForceKernel() {
         delete globals;
     if (interactionGroupData != NULL)
         delete interactionGroupData;
-    for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
-        delete tabulatedFunctions[i];
+    for (auto function : tabulatedFunctions)
+        delete function;
     if (forceCopy != NULL)
         delete forceCopy;
 }
@@ -2566,8 +2565,7 @@ void CudaCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNonbo
         
         // If this group contains duplicate interactions, record that we need to skip them once.
         
-        for (int i = 0; i < (int) atoms1.size(); i++) {
-            int a1 = atoms1[i];
+        for (int a1 : atoms1) {
             if (set2.find(a1) == set2.end())
                 continue;
             for (int j = 0; j < (int) atoms2.size() && atoms2[j] < a1; j++) {
@@ -2787,10 +2785,10 @@ double CudaCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool in
             interactionGroupArgs.push_back(cu.getPeriodicBoxVecXPointer());
             interactionGroupArgs.push_back(cu.getPeriodicBoxVecYPointer());
             interactionGroupArgs.push_back(cu.getPeriodicBoxVecZPointer());
-            for (int i = 0; i < (int) params->getBuffers().size(); i++)
-                interactionGroupArgs.push_back(&params->getBuffers()[i].getMemory());
-            for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
-                interactionGroupArgs.push_back(&tabulatedFunctions[i]->getDevicePointer());
+            for (auto& buffer : params->getBuffers())
+                interactionGroupArgs.push_back(&buffer.getMemory());
+            for (auto function : tabulatedFunctions)
+                interactionGroupArgs.push_back(&function->getDevicePointer());
             if (globals != NULL)
                 interactionGroupArgs.push_back(&globals->getDevicePointer());
         }
@@ -3088,12 +3086,12 @@ CudaCalcCustomGBForceKernel::~CudaCalcCustomGBForceKernel() {
         delete globals;
     if (valueBuffers != NULL)
         delete valueBuffers;
-    for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
-        delete tabulatedFunctions[i];
-    for (int i = 0; i < dValue0dParam.size(); i++)
-        delete dValue0dParam[i];
-    for (int i = 0; i < dValuedParam.size(); i++)
-        delete dValuedParam[i];
+    for (auto function : tabulatedFunctions)
+        delete function;
+    for (auto d : dValue0dParam)
+        delete d;
+    for (auto d : dValuedParam)
+        delete d;
 }
 
 void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomGBForce& force) {
@@ -3755,7 +3753,7 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
         gradientChainRuleKernel = cu.getKernel(module, "computeGradientChainRuleTerms");
     }
     {
-        // Create the code to calculate chain rules terms as part of the default nonbonded kernel.
+        // Create the code to calculate chain rule terms as part of the default nonbonded kernel.
 
         vector<pair<ExpressionTreeNode, string> > globalVariables;
         for (int i = 0; i < force.getNumGlobalParameters(); i++) {
@@ -3826,10 +3824,10 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
             arguments.push_back(CudaNonbondedUtilities::ParameterInfo(prefix+"globals", "float", 1, sizeof(float), globals->getDevicePointer()));
         }
         cu.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, force.getNumExclusions() > 0, cutoff, exclusionList, source, force.getForceGroup());
-        for (int i = 0; i < (int) parameters.size(); i++)
-            cu.getNonbondedUtilities().addParameter(parameters[i]);
-        for (int i = 0; i < (int) arguments.size(); i++)
-            cu.getNonbondedUtilities().addArgument(arguments[i]);
+        for (auto param : parameters)
+            cu.getNonbondedUtilities().addParameter(param);
+        for (auto arg : arguments)
+            cu.getNonbondedUtilities().addArgument(arg);
     }
     info = new ForceInfo(force);
     cu.addForce(info);
@@ -3904,25 +3902,25 @@ double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFo
             if (pairValueUsesParam[i])
                 pairValueArgs.push_back(&params->getBuffers()[i].getMemory());
         }
-        for (int i = 0; i < dValue0dParam.size(); i++)
-            pairValueArgs.push_back(&dValue0dParam[i]->getDevicePointer());
-        for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
-            pairValueArgs.push_back(&tabulatedFunctions[i]->getDevicePointer());
+        for (auto d : dValue0dParam)
+            pairValueArgs.push_back(&d->getDevicePointer());
+        for (auto function : tabulatedFunctions)
+            pairValueArgs.push_back(&function->getDevicePointer());
         perParticleValueArgs.push_back(&cu.getPosq().getDevicePointer());
         perParticleValueArgs.push_back(&valueBuffers->getDevicePointer());
         if (globals != NULL)
             perParticleValueArgs.push_back(&globals->getDevicePointer());
-        for (int i = 0; i < (int) params->getBuffers().size(); i++)
-            perParticleValueArgs.push_back(&params->getBuffers()[i].getMemory());
-        for (int i = 0; i < (int) computedValues->getBuffers().size(); i++)
-            perParticleValueArgs.push_back(&computedValues->getBuffers()[i].getMemory());
+        for (auto& buffer : params->getBuffers())
+            perParticleValueArgs.push_back(&buffer.getMemory());
+        for (auto& buffer : computedValues->getBuffers())
+            perParticleValueArgs.push_back(&buffer.getMemory());
         for (int i = 0; i < dValuedParam.size(); i++) {
             perParticleValueArgs.push_back(&dValue0dParam[i]->getDevicePointer());
             for (int j = 0; j < dValuedParam[i]->getBuffers().size(); j++)
                 perParticleValueArgs.push_back(&dValuedParam[i]->getBuffers()[j].getMemory());
         }
-        for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
-            perParticleValueArgs.push_back(&tabulatedFunctions[i]->getDevicePointer());
+        for (auto function : tabulatedFunctions)
+            perParticleValueArgs.push_back(&function->getDevicePointer());
         pairEnergyArgs.push_back(&cu.getForce().getDevicePointer());
         pairEnergyArgs.push_back(&cu.getEnergyBuffer().getDevicePointer());
         pairEnergyArgs.push_back(&cu.getPosq().getDevicePointer());
@@ -3957,42 +3955,42 @@ double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFo
         pairEnergyArgs.push_back(&longEnergyDerivs->getDevicePointer());
         if (needEnergyParamDerivs)
             pairEnergyArgs.push_back(&cu.getEnergyParamDerivBuffer().getDevicePointer());
-        for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
-            pairEnergyArgs.push_back(&tabulatedFunctions[i]->getDevicePointer());
+        for (auto function : tabulatedFunctions)
+            pairEnergyArgs.push_back(&function->getDevicePointer());
         perParticleEnergyArgs.push_back(&cu.getForce().getDevicePointer());
         perParticleEnergyArgs.push_back(&cu.getEnergyBuffer().getDevicePointer());
         perParticleEnergyArgs.push_back(&cu.getPosq().getDevicePointer());
         if (globals != NULL)
             perParticleEnergyArgs.push_back(&globals->getDevicePointer());
-        for (int i = 0; i < (int) params->getBuffers().size(); i++)
-            perParticleEnergyArgs.push_back(&params->getBuffers()[i].getMemory());
-        for (int i = 0; i < (int) computedValues->getBuffers().size(); i++)
-            perParticleEnergyArgs.push_back(&computedValues->getBuffers()[i].getMemory());
-        for (int i = 0; i < (int) energyDerivs->getBuffers().size(); i++)
-            perParticleEnergyArgs.push_back(&energyDerivs->getBuffers()[i].getMemory());
-        for (int i = 0; i < (int) energyDerivChain->getBuffers().size(); i++)
-            perParticleEnergyArgs.push_back(&energyDerivChain->getBuffers()[i].getMemory());
+        for (auto& buffer : params->getBuffers())
+            perParticleEnergyArgs.push_back(&buffer.getMemory());
+        for (auto& buffer : computedValues->getBuffers())
+            perParticleEnergyArgs.push_back(&buffer.getMemory());
+        for (auto& buffer : energyDerivs->getBuffers())
+            perParticleEnergyArgs.push_back(&buffer.getMemory());
+        for (auto& buffer : energyDerivChain->getBuffers())
+            perParticleEnergyArgs.push_back(&buffer.getMemory());
         perParticleEnergyArgs.push_back(&longEnergyDerivs->getDevicePointer());
         if (needEnergyParamDerivs)
             perParticleEnergyArgs.push_back(&cu.getEnergyParamDerivBuffer().getDevicePointer());
-        for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
-            perParticleEnergyArgs.push_back(&tabulatedFunctions[i]->getDevicePointer());
+        for (auto function : tabulatedFunctions)
+            perParticleEnergyArgs.push_back(&function->getDevicePointer());
         if (needParameterGradient || needEnergyParamDerivs) {
             gradientChainRuleArgs.push_back(&cu.getForce().getDevicePointer());
             gradientChainRuleArgs.push_back(&cu.getPosq().getDevicePointer());
             if (globals != NULL)
                 gradientChainRuleArgs.push_back(&globals->getDevicePointer());
-            for (int i = 0; i < (int) params->getBuffers().size(); i++)
-                gradientChainRuleArgs.push_back(&params->getBuffers()[i].getMemory());
-            for (int i = 0; i < (int) computedValues->getBuffers().size(); i++)
-                gradientChainRuleArgs.push_back(&computedValues->getBuffers()[i].getMemory());
-            for (int i = 0; i < (int) energyDerivs->getBuffers().size(); i++)
-                gradientChainRuleArgs.push_back(&energyDerivs->getBuffers()[i].getMemory());
+            for (auto& buffer : params->getBuffers())
+                gradientChainRuleArgs.push_back(&buffer.getMemory());
+            for (auto& buffer : computedValues->getBuffers())
+                gradientChainRuleArgs.push_back(&buffer.getMemory());
+            for (auto& buffer : energyDerivs->getBuffers())
+                gradientChainRuleArgs.push_back(&buffer.getMemory());
             if (needEnergyParamDerivs) {
                 gradientChainRuleArgs.push_back(&cu.getEnergyParamDerivBuffer().getDevicePointer());
-                for (int i = 0; i < dValuedParam.size(); i++)
-                    for (int j = 0; j < dValuedParam[i]->getBuffers().size(); j++)
-                        gradientChainRuleArgs.push_back(&dValuedParam[i]->getBuffers()[j].getMemory());
+                for (auto d : dValuedParam)
+                    for (auto& buffer : d->getBuffers())
+                        gradientChainRuleArgs.push_back(&buffer.getMemory());
             }
         }
     }
@@ -4299,8 +4297,8 @@ CudaCalcCustomHbondForceKernel::~CudaCalcCustomHbondForceKernel() {
         delete donorExclusions;
     if (acceptorExclusions != NULL)
         delete acceptorExclusions;
-    for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
-        delete tabulatedFunctions[i];
+    for (auto function : tabulatedFunctions)
+        delete function;
 }
 
 static void addDonorAndAcceptorCode(stringstream& computeDonor, stringstream& computeAcceptor, const string& value) {
@@ -4455,20 +4453,21 @@ void CudaCalcCustomHbondForceKernel::initialize(const System& system, const Cust
     string atomNamesLower[] = {"a1", "a2", "a3", "d1", "d2", "d3"};
     stringstream computeDonor, computeAcceptor, extraArgs;
     int index = 0;
-    for (map<string, vector<int> >::const_iterator iter = distances.begin(); iter != distances.end(); ++iter, ++index) {
-        const vector<int>& atoms = iter->second;
+    for (auto& distance : distances) {
+        const vector<int>& atoms = distance.second;
         string deltaName = atomNames[atoms[0]]+atomNames[atoms[1]];
         if (computedDeltas.count(deltaName) == 0) {
             addDonorAndAcceptorCode(computeDonor, computeAcceptor, "real4 delta"+deltaName+" = delta("+atomNamesLower[atoms[0]]+", "+atomNamesLower[atoms[1]]+");\n");
             computedDeltas.insert(deltaName);
         }
         addDonorAndAcceptorCode(computeDonor, computeAcceptor, "real r_"+deltaName+" = SQRT(delta"+deltaName+".w);\n");
-        variables[iter->first] = "r_"+deltaName;
-        forceExpressions["real dEdDistance"+cu.intToString(index)+" = "] = energyExpression.differentiate(iter->first).optimize();
+        variables[distance.first] = "r_"+deltaName;
+        forceExpressions["real dEdDistance"+cu.intToString(index)+" = "] = energyExpression.differentiate(distance.first).optimize();
+        index++;
     }
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = angles.begin(); iter != angles.end(); ++iter, ++index) {
-        const vector<int>& atoms = iter->second;
+    for (auto& angle : angles) {
+        const vector<int>& atoms = angle.second;
         string deltaName1 = atomNames[atoms[1]]+atomNames[atoms[0]];
         string deltaName2 = atomNames[atoms[1]]+atomNames[atoms[2]];
         string angleName = "angle_"+atomNames[atoms[0]]+atomNames[atoms[1]]+atomNames[atoms[2]];
@@ -4481,12 +4480,13 @@ void CudaCalcCustomHbondForceKernel::initialize(const System& system, const Cust
             computedDeltas.insert(deltaName2);
         }
         addDonorAndAcceptorCode(computeDonor, computeAcceptor, "real "+angleName+" = computeAngle(delta"+deltaName1+", delta"+deltaName2+");\n");
-        variables[iter->first] = angleName;
-        forceExpressions["real dEdAngle"+cu.intToString(index)+" = "] = energyExpression.differentiate(iter->first).optimize();
+        variables[angle.first] = angleName;
+        forceExpressions["real dEdAngle"+cu.intToString(index)+" = "] = energyExpression.differentiate(angle.first).optimize();
+        index++;
     }
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = dihedrals.begin(); iter != dihedrals.end(); ++iter, ++index) {
-        const vector<int>& atoms = iter->second;
+    for (auto& dihedral : dihedrals) {
+        const vector<int>& atoms = dihedral.second;
         string deltaName1 = atomNames[atoms[0]]+atomNames[atoms[1]];
         string deltaName2 = atomNames[atoms[2]]+atomNames[atoms[1]];
         string deltaName3 = atomNames[atoms[2]]+atomNames[atoms[3]];
@@ -4509,8 +4509,9 @@ void CudaCalcCustomHbondForceKernel::initialize(const System& system, const Cust
         addDonorAndAcceptorCode(computeDonor, computeAcceptor, "real4 "+crossName2+" = computeCross(delta"+deltaName2+", delta"+deltaName3+");\n");
         addDonorAndAcceptorCode(computeDonor, computeAcceptor, "real "+dihedralName+" = computeAngle("+crossName1+", "+crossName2+");\n");
         addDonorAndAcceptorCode(computeDonor, computeAcceptor, dihedralName+" *= (delta"+deltaName1+".x*"+crossName2+".x + delta"+deltaName1+".y*"+crossName2+".y + delta"+deltaName1+".z*"+crossName2+".z < 0 ? -1 : 1);\n");
-        variables[iter->first] = dihedralName;
-        forceExpressions["real dEdDihedral"+cu.intToString(index)+" = "] = energyExpression.differentiate(iter->first).optimize();
+        variables[dihedral.first] = dihedralName;
+        forceExpressions["real dEdDihedral"+cu.intToString(index)+" = "] = energyExpression.differentiate(dihedral.first).optimize();
+        index++;
     }
 
     // Next it needs to load parameters from global memory.
@@ -4520,12 +4521,12 @@ void CudaCalcCustomHbondForceKernel::initialize(const System& system, const Cust
     for (int i = 0; i < (int) donorParams->getBuffers().size(); i++) {
         CudaNonbondedUtilities::ParameterInfo& buffer = donorParams->getBuffers()[i];
         extraArgs << ", const "+buffer.getType()+"* __restrict__ donor"+buffer.getName();
-        addDonorAndAcceptorCode(computeDonor, computeAcceptor, buffer.getType()+" donorParams"+cu.intToString(i+1)+" = donor"+buffer.getName()+"[index];\n");
+        addDonorAndAcceptorCode(computeDonor, computeAcceptor, buffer.getType()+" donorParams"+cu.intToString(i+1)+" = donor"+buffer.getName()+"[donorIndex];\n");
     }
     for (int i = 0; i < (int) acceptorParams->getBuffers().size(); i++) {
         CudaNonbondedUtilities::ParameterInfo& buffer = acceptorParams->getBuffers()[i];
         extraArgs << ", const "+buffer.getType()+"* __restrict__ acceptor"+buffer.getName();
-        addDonorAndAcceptorCode(computeDonor, computeAcceptor, buffer.getType()+" acceptorParams"+cu.intToString(i+1)+" = acceptor"+buffer.getName()+"[index];\n");
+        addDonorAndAcceptorCode(computeDonor, computeAcceptor, buffer.getType()+" acceptorParams"+cu.intToString(i+1)+" = acceptor"+buffer.getName()+"[acceptorIndex];\n");
     }
 
     // Now evaluate the expressions.
@@ -4537,16 +4538,17 @@ void CudaCalcCustomHbondForceKernel::initialize(const System& system, const Cust
     // Finally, apply forces to atoms.
 
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = distances.begin(); iter != distances.end(); ++iter, ++index) {
-        const vector<int>& atoms = iter->second;
+    for (auto& distance : distances) {
+        const vector<int>& atoms = distance.second;
         string deltaName = atomNames[atoms[0]]+atomNames[atoms[1]];
         string value = "(dEdDistance"+cu.intToString(index)+"/r_"+deltaName+")*delta"+deltaName;
         applyDonorAndAcceptorForces(computeDonor, computeAcceptor, atoms[0], "-"+value);
         applyDonorAndAcceptorForces(computeDonor, computeAcceptor, atoms[1], value);
+        index++;
     }
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = angles.begin(); iter != angles.end(); ++iter, ++index) {
-        const vector<int>& atoms = iter->second;
+    for (auto& angle : angles) {
+        const vector<int>& atoms = angle.second;
         string deltaName1 = atomNames[atoms[1]]+atomNames[atoms[0]];
         string deltaName2 = atomNames[atoms[1]]+atomNames[atoms[2]];
         addDonorAndAcceptorCode(computeDonor, computeAcceptor, "{\n");
@@ -4559,10 +4561,11 @@ void CudaCalcCustomHbondForceKernel::initialize(const System& system, const Cust
         applyDonorAndAcceptorForces(computeDonor, computeAcceptor, atoms[1], "deltaCross1");
         applyDonorAndAcceptorForces(computeDonor, computeAcceptor, atoms[2], "deltaCross2");
         addDonorAndAcceptorCode(computeDonor, computeAcceptor, "}\n");
+        index++;
     }
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = dihedrals.begin(); iter != dihedrals.end(); ++iter, ++index) {
-        const vector<int>& atoms = iter->second;
+    for (auto& dihedral : dihedrals) {
+        const vector<int>& atoms = dihedral.second;
         string deltaName1 = atomNames[atoms[0]]+atomNames[atoms[1]];
         string deltaName2 = atomNames[atoms[2]]+atomNames[atoms[1]];
         string deltaName3 = atomNames[atoms[2]]+atomNames[atoms[3]];
@@ -4583,6 +4586,7 @@ void CudaCalcCustomHbondForceKernel::initialize(const System& system, const Cust
         applyDonorAndAcceptorForces(computeDonor, computeAcceptor, atoms[2], "-s-internalF3");
         applyDonorAndAcceptorForces(computeDonor, computeAcceptor, atoms[3], "internalF3");
         addDonorAndAcceptorCode(computeDonor, computeAcceptor, "}\n");
+        index++;
     }
 
     // Generate the kernels.
@@ -4639,16 +4643,12 @@ double CudaCalcCustomHbondForceKernel::execute(ContextImpl& context, bool includ
         donorArgs.push_back(cu.getPeriodicBoxVecZPointer());
         if (globals != NULL)
             donorArgs.push_back(&globals->getDevicePointer());
-        for (int i = 0; i < (int) donorParams->getBuffers().size(); i++) {
-            CudaNonbondedUtilities::ParameterInfo& buffer = donorParams->getBuffers()[i];
+        for (auto& buffer : donorParams->getBuffers())
             donorArgs.push_back(&buffer.getMemory());
-        }
-        for (int i = 0; i < (int) acceptorParams->getBuffers().size(); i++) {
-            CudaNonbondedUtilities::ParameterInfo& buffer = acceptorParams->getBuffers()[i];
+        for (auto& buffer : acceptorParams->getBuffers())
             donorArgs.push_back(&buffer.getMemory());
-        }
-        for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
-            donorArgs.push_back(&tabulatedFunctions[i]->getDevicePointer());
+        for (auto function : tabulatedFunctions)
+            donorArgs.push_back(&function->getDevicePointer());
         index = 0;
         acceptorArgs.push_back(&cu.getForce().getDevicePointer());
         acceptorArgs.push_back(&cu.getEnergyBuffer().getDevicePointer());
@@ -4663,16 +4663,12 @@ double CudaCalcCustomHbondForceKernel::execute(ContextImpl& context, bool includ
         acceptorArgs.push_back(cu.getPeriodicBoxVecZPointer());
         if (globals != NULL)
             acceptorArgs.push_back(&globals->getDevicePointer());
-        for (int i = 0; i < (int) donorParams->getBuffers().size(); i++) {
-            CudaNonbondedUtilities::ParameterInfo& buffer = donorParams->getBuffers()[i];
+        for (auto& buffer : donorParams->getBuffers())
             acceptorArgs.push_back(&buffer.getMemory());
-        }
-        for (int i = 0; i < (int) acceptorParams->getBuffers().size(); i++) {
-            CudaNonbondedUtilities::ParameterInfo& buffer = acceptorParams->getBuffers()[i];
+        for (auto& buffer : acceptorParams->getBuffers())
             acceptorArgs.push_back(&buffer.getMemory());
-        }
-        for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
-            acceptorArgs.push_back(&tabulatedFunctions[i]->getDevicePointer());
+        for (auto function : tabulatedFunctions)
+            acceptorArgs.push_back(&function->getDevicePointer());
     }
     int sharedMemorySize = 3*CudaContext::ThreadBlockSize*sizeof(float4);
     cu.executeKernel(donorKernel, &donorArgs[0], max(numDonors, numAcceptors), CudaContext::ThreadBlockSize, sharedMemorySize);
@@ -4736,10 +4732,10 @@ public:
         vector<double> parameters;
         vector<int> groups;
         force.getBondParameters(index, groups, parameters);
-        for (int i = 0; i < groups.size(); i++) {
+        for (int group : groups) {
             vector<int> groupParticles;
             vector<double> weights;
-            force.getGroupParameters(groups[i], groupParticles, weights);
+            force.getGroupParameters(group, groupParticles, weights);
             particles.insert(particles.end(), groupParticles.begin(), groupParticles.end());
         }
     }
@@ -4786,8 +4782,8 @@ CudaCalcCustomCentroidBondForceKernel::~CudaCalcCustomCentroidBondForceKernel() 
         delete bondGroups;
     if (centerPositions != NULL)
         delete centerPositions;
-    for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
-        delete tabulatedFunctions[i];
+    for (auto function : tabulatedFunctions)
+        delete function;
 }
 
 void CudaCalcCustomCentroidBondForceKernel::initialize(const System& system, const CustomCentroidBondForce& force) {
@@ -4953,20 +4949,21 @@ void CudaCalcCustomCentroidBondForceKernel::initialize(const System& system, con
         compute<<"real4 pos"<<(i+1)<<" = centerPositions[group"<<(i+1)<<"];\n";
     }
     int index = 0;
-    for (map<string, vector<int> >::const_iterator iter = distances.begin(); iter != distances.end(); ++iter, ++index) {
-        const vector<int>& groups = iter->second;
+    for (auto& distance : distances) {
+        const vector<int>& groups = distance.second;
         string deltaName = atomNames[groups[0]]+atomNames[groups[1]];
         if (computedDeltas.count(deltaName) == 0) {
             compute<<"real4 delta"<<deltaName<<" = delta("<<posNames[groups[0]]<<", "<<posNames[groups[1]]<<", "<<force.usesPeriodicBoundaryConditions()<<", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
             computedDeltas.insert(deltaName);
         }
         compute<<"real r_"<<deltaName<<" = sqrt(delta"<<deltaName<<".w);\n";
-        variables[iter->first] = "r_"+deltaName;
-        forceExpressions["real dEdDistance"+cu.intToString(index)+" = "] = energyExpression.differentiate(iter->first).optimize();
+        variables[distance.first] = "r_"+deltaName;
+        forceExpressions["real dEdDistance"+cu.intToString(index)+" = "] = energyExpression.differentiate(distance.first).optimize();
+        index++;
     }
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = angles.begin(); iter != angles.end(); ++iter, ++index) {
-        const vector<int>& groups = iter->second;
+    for (auto& angle : angles) {
+        const vector<int>& groups = angle.second;
         string deltaName1 = atomNames[groups[1]]+atomNames[groups[0]];
         string deltaName2 = atomNames[groups[1]]+atomNames[groups[2]];
         string angleName = "angle_"+atomNames[groups[0]]+atomNames[groups[1]]+atomNames[groups[2]];
@@ -4979,12 +4976,13 @@ void CudaCalcCustomCentroidBondForceKernel::initialize(const System& system, con
             computedDeltas.insert(deltaName2);
         }
         compute<<"real "<<angleName<<" = computeAngle(delta"<<deltaName1<<", delta"<<deltaName2<<");\n";
-        variables[iter->first] = angleName;
-        forceExpressions["real dEdAngle"+cu.intToString(index)+" = "] = energyExpression.differentiate(iter->first).optimize();
+        variables[angle.first] = angleName;
+        forceExpressions["real dEdAngle"+cu.intToString(index)+" = "] = energyExpression.differentiate(angle.first).optimize();
+        index++;
     }
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = dihedrals.begin(); iter != dihedrals.end(); ++iter, ++index) {
-        const vector<int>& groups = iter->second;
+    for (auto& dihedral : dihedrals) {
+        const vector<int>& groups = dihedral.second;
         string deltaName1 = atomNames[groups[0]]+atomNames[groups[1]];
         string deltaName2 = atomNames[groups[2]]+atomNames[groups[1]];
         string deltaName3 = atomNames[groups[2]]+atomNames[groups[3]];
@@ -5007,8 +5005,9 @@ void CudaCalcCustomCentroidBondForceKernel::initialize(const System& system, con
         compute<<"real4 "<<crossName2<<" = computeCross(delta"<<deltaName2<<", delta"<<deltaName3<<");\n";
         compute<<"real "<<dihedralName<<" = computeAngle("<<crossName1<<", "<<crossName2<<");\n";
         compute<<dihedralName<<" *= (delta"<<deltaName1<<".x*"<<crossName2<<".x + delta"<<deltaName1<<".y*"<<crossName2<<".y + delta"<<deltaName1<<".z*"<<crossName2<<".z < 0 ? -1 : 1);\n";
-        variables[iter->first] = dihedralName;
-        forceExpressions["real dEdDihedral"+cu.intToString(index)+" = "] = energyExpression.differentiate(iter->first).optimize();
+        variables[dihedral.first] = dihedralName;
+        forceExpressions["real dEdDihedral"+cu.intToString(index)+" = "] = energyExpression.differentiate(dihedral.first).optimize();
+        index++;
     }
 
     // Now evaluate the expressions.
@@ -5061,16 +5060,17 @@ void CudaCalcCustomCentroidBondForceKernel::initialize(const System& system, con
         compute<<"}\n";
     }
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = distances.begin(); iter != distances.end(); ++iter, ++index) {
-        const vector<int>& groups = iter->second;
+    for (auto& distance : distances) {
+        const vector<int>& groups = distance.second;
         string deltaName = atomNames[groups[0]]+atomNames[groups[1]];
         string value = "(dEdDistance"+cu.intToString(index)+"/r_"+deltaName+")*trim(delta"+deltaName+")";
         compute<<forceNames[groups[0]]<<" += "<<"-"<<value<<";\n";
         compute<<forceNames[groups[1]]<<" += "<<value<<";\n";
+        index++;
     }
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = angles.begin(); iter != angles.end(); ++iter, ++index) {
-        const vector<int>& groups = iter->second;
+    for (auto& angle : angles) {
+        const vector<int>& groups = angle.second;
         string deltaName1 = atomNames[groups[1]]+atomNames[groups[0]];
         string deltaName2 = atomNames[groups[1]]+atomNames[groups[2]];
         compute<<"{\n";
@@ -5083,10 +5083,11 @@ void CudaCalcCustomCentroidBondForceKernel::initialize(const System& system, con
         compute<<forceNames[groups[1]]<<" += deltaCross1;\n";
         compute<<forceNames[groups[2]]<<" += deltaCross2;\n";
         compute<<"}\n";
+        index++;
     }
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = dihedrals.begin(); iter != dihedrals.end(); ++iter, ++index) {
-        const vector<int>& groups = iter->second;
+    for (auto& dihedral : dihedrals) {
+        const vector<int>& groups = dihedral.second;
         string deltaName1 = atomNames[groups[0]]+atomNames[groups[1]];
         string deltaName2 = atomNames[groups[2]]+atomNames[groups[1]];
         string deltaName3 = atomNames[groups[2]]+atomNames[groups[3]];
@@ -5107,6 +5108,7 @@ void CudaCalcCustomCentroidBondForceKernel::initialize(const System& system, con
         compute<<forceNames[groups[2]]<<" += -s-internalF3;\n";
         compute<<forceNames[groups[3]]<<" += internalF3;\n";
         compute<<"}\n";
+        index++;
     }
     
     // Save the forces to global memory.
@@ -5215,8 +5217,8 @@ CudaCalcCustomCompoundBondForceKernel::~CudaCalcCustomCompoundBondForceKernel() 
         delete params;
     if (globals != NULL)
         delete globals;
-    for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
-        delete tabulatedFunctions[i];
+    for (auto function : tabulatedFunctions)
+        delete function;
 }
 
 void CudaCalcCustomCompoundBondForceKernel::initialize(const System& system, const CustomCompoundBondForce& force) {
@@ -5307,20 +5309,21 @@ void CudaCalcCustomCompoundBondForceKernel::initialize(const System& system, con
     }
     stringstream compute;
     int index = 0;
-    for (map<string, vector<int> >::const_iterator iter = distances.begin(); iter != distances.end(); ++iter, ++index) {
-        const vector<int>& atoms = iter->second;
+    for (auto& distance : distances) {
+        const vector<int>& atoms = distance.second;
         string deltaName = atomNames[atoms[0]]+atomNames[atoms[1]];
         if (computedDeltas.count(deltaName) == 0) {
             compute<<"real4 delta"<<deltaName<<" = ccb_delta("<<posNames[atoms[0]]<<", "<<posNames[atoms[1]]<<", "<<force.usesPeriodicBoundaryConditions()<<", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
             computedDeltas.insert(deltaName);
         }
         compute<<"real r_"<<deltaName<<" = sqrt(delta"<<deltaName<<".w);\n";
-        variables[iter->first] = "r_"+deltaName;
-        forceExpressions["real dEdDistance"+cu.intToString(index)+" = "] = energyExpression.differentiate(iter->first).optimize();
+        variables[distance.first] = "r_"+deltaName;
+        forceExpressions["real dEdDistance"+cu.intToString(index)+" = "] = energyExpression.differentiate(distance.first).optimize();
+        index++;
     }
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = angles.begin(); iter != angles.end(); ++iter, ++index) {
-        const vector<int>& atoms = iter->second;
+    for (auto& angle : angles) {
+        const vector<int>& atoms = angle.second;
         string deltaName1 = atomNames[atoms[1]]+atomNames[atoms[0]];
         string deltaName2 = atomNames[atoms[1]]+atomNames[atoms[2]];
         string angleName = "angle_"+atomNames[atoms[0]]+atomNames[atoms[1]]+atomNames[atoms[2]];
@@ -5333,12 +5336,13 @@ void CudaCalcCustomCompoundBondForceKernel::initialize(const System& system, con
             computedDeltas.insert(deltaName2);
         }
         compute<<"real "<<angleName<<" = ccb_computeAngle(delta"<<deltaName1<<", delta"<<deltaName2<<");\n";
-        variables[iter->first] = angleName;
-        forceExpressions["real dEdAngle"+cu.intToString(index)+" = "] = energyExpression.differentiate(iter->first).optimize();
+        variables[angle.first] = angleName;
+        forceExpressions["real dEdAngle"+cu.intToString(index)+" = "] = energyExpression.differentiate(angle.first).optimize();
+        index++;
     }
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = dihedrals.begin(); iter != dihedrals.end(); ++iter, ++index) {
-        const vector<int>& atoms = iter->second;
+    for (auto& dihedral : dihedrals) {
+        const vector<int>& atoms = dihedral.second;
         string deltaName1 = atomNames[atoms[0]]+atomNames[atoms[1]];
         string deltaName2 = atomNames[atoms[2]]+atomNames[atoms[1]];
         string deltaName3 = atomNames[atoms[2]]+atomNames[atoms[3]];
@@ -5361,8 +5365,9 @@ void CudaCalcCustomCompoundBondForceKernel::initialize(const System& system, con
         compute<<"real4 "<<crossName2<<" = ccb_computeCross(delta"<<deltaName2<<", delta"<<deltaName3<<");\n";
         compute<<"real "<<dihedralName<<" = ccb_computeAngle("<<crossName1<<", "<<crossName2<<");\n";
         compute<<dihedralName<<" *= (delta"<<deltaName1<<".x*"<<crossName2<<".x + delta"<<deltaName1<<".y*"<<crossName2<<".y + delta"<<deltaName1<<".z*"<<crossName2<<".z < 0 ? -1 : 1);\n";
-        variables[iter->first] = dihedralName;
-        forceExpressions["real dEdDihedral"+cu.intToString(index)+" = "] = energyExpression.differentiate(iter->first).optimize();
+        variables[dihedral.first] = dihedralName;
+        forceExpressions["real dEdDihedral"+cu.intToString(index)+" = "] = energyExpression.differentiate(dihedral.first).optimize();
+        index++;
     }
 
     // Now evaluate the expressions.
@@ -5405,16 +5410,17 @@ void CudaCalcCustomCompoundBondForceKernel::initialize(const System& system, con
         compute<<"}\n";
     }
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = distances.begin(); iter != distances.end(); ++iter, ++index) {
-        const vector<int>& atoms = iter->second;
+    for (auto& distance : distances) {
+        const vector<int>& atoms = distance.second;
         string deltaName = atomNames[atoms[0]]+atomNames[atoms[1]];
         string value = "(dEdDistance"+cu.intToString(index)+"/r_"+deltaName+")*ccb_trim(delta"+deltaName+")";
         compute<<forceNames[atoms[0]]<<" += "<<"-"<<value<<";\n";
         compute<<forceNames[atoms[1]]<<" += "<<value<<";\n";
+        index++;
     }
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = angles.begin(); iter != angles.end(); ++iter, ++index) {
-        const vector<int>& atoms = iter->second;
+    for (auto& angle : angles) {
+        const vector<int>& atoms = angle.second;
         string deltaName1 = atomNames[atoms[1]]+atomNames[atoms[0]];
         string deltaName2 = atomNames[atoms[1]]+atomNames[atoms[2]];
         compute<<"{\n";
@@ -5427,10 +5433,11 @@ void CudaCalcCustomCompoundBondForceKernel::initialize(const System& system, con
         compute<<forceNames[atoms[1]]<<" += deltaCross1;\n";
         compute<<forceNames[atoms[2]]<<" += deltaCross2;\n";
         compute<<"}\n";
+        index++;
     }
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = dihedrals.begin(); iter != dihedrals.end(); ++iter, ++index) {
-        const vector<int>& atoms = iter->second;
+    for (auto& dihedral : dihedrals) {
+        const vector<int>& atoms = dihedral.second;
         string deltaName1 = atomNames[atoms[0]]+atomNames[atoms[1]];
         string deltaName2 = atomNames[atoms[2]]+atomNames[atoms[1]];
         string deltaName3 = atomNames[atoms[2]]+atomNames[atoms[3]];
@@ -5451,6 +5458,7 @@ void CudaCalcCustomCompoundBondForceKernel::initialize(const System& system, con
         compute<<forceNames[atoms[2]]<<" += -s-internalF3;\n";
         compute<<forceNames[atoms[3]]<<" += internalF3;\n";
         compute<<"}\n";
+        index++;
     }
     cu.getBondedUtilities().addInteraction(atoms, compute.str(), force.getForceGroup());
     map<string, string> replacements;
@@ -5562,8 +5570,8 @@ CudaCalcCustomManyParticleForceKernel::~CudaCalcCustomManyParticleForceKernel() 
         delete neighbors;
     if (numNeighborsForAtom != NULL)
         delete numNeighborsForAtom;
-    for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
-        delete tabulatedFunctions[i];
+    for (auto function : tabulatedFunctions)
+        delete function;
 }
 
 void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, const CustomManyParticleForce& force) {
@@ -5725,20 +5733,21 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
     }
     stringstream compute;
     int index = 0;
-    for (map<string, vector<int> >::const_iterator iter = distances.begin(); iter != distances.end(); ++iter, ++index) {
-        const vector<int>& atoms = iter->second;
+    for (auto& distance : distances) {
+        const vector<int>& atoms = distance.second;
         string deltaName = atomNames[atoms[0]]+atomNames[atoms[1]];
         if (computedDeltas.count(deltaName) == 0) {
             compute<<"real4 delta"<<deltaName<<" = delta("<<posNames[atoms[0]]<<", "<<posNames[atoms[1]]<<", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
             computedDeltas.insert(deltaName);
         }
         compute<<"real r_"<<deltaName<<" = sqrt(delta"<<deltaName<<".w);\n";
-        variables.push_back(makeVariable(iter->first, "r_"+deltaName));
-        forceExpressions["real dEdDistance"+cu.intToString(index)+" = "] = energyExpression.differentiate(iter->first).optimize();
+        variables.push_back(makeVariable(distance.first, "r_"+deltaName));
+        forceExpressions["real dEdDistance"+cu.intToString(index)+" = "] = energyExpression.differentiate(distance.first).optimize();
+        index++;
     }
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = angles.begin(); iter != angles.end(); ++iter, ++index) {
-        const vector<int>& atoms = iter->second;
+    for (auto& angle : angles) {
+        const vector<int>& atoms = angle.second;
         string deltaName1 = atomNames[atoms[1]]+atomNames[atoms[0]];
         string deltaName2 = atomNames[atoms[1]]+atomNames[atoms[2]];
         string angleName = "angle_"+atomNames[atoms[0]]+atomNames[atoms[1]]+atomNames[atoms[2]];
@@ -5751,12 +5760,13 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
             computedDeltas.insert(deltaName2);
         }
         compute<<"real "<<angleName<<" = computeAngle(delta"<<deltaName1<<", delta"<<deltaName2<<");\n";
-        variables.push_back(makeVariable(iter->first, angleName));
-        forceExpressions["real dEdAngle"+cu.intToString(index)+" = "] = energyExpression.differentiate(iter->first).optimize();
+        variables.push_back(makeVariable(angle.first, angleName));
+        forceExpressions["real dEdAngle"+cu.intToString(index)+" = "] = energyExpression.differentiate(angle.first).optimize();
+        index++;
     }
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = dihedrals.begin(); iter != dihedrals.end(); ++iter, ++index) {
-        const vector<int>& atoms = iter->second;
+    for (auto& dihedral : dihedrals) {
+        const vector<int>& atoms = dihedral.second;
         string deltaName1 = atomNames[atoms[0]]+atomNames[atoms[1]];
         string deltaName2 = atomNames[atoms[2]]+atomNames[atoms[1]];
         string deltaName3 = atomNames[atoms[2]]+atomNames[atoms[3]];
@@ -5779,8 +5789,9 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
         compute<<"real4 "<<crossName2<<" = computeCross(delta"<<deltaName2<<", delta"<<deltaName3<<");\n";
         compute<<"real "<<dihedralName<<" = computeAngle("<<crossName1<<", "<<crossName2<<");\n";
         compute<<dihedralName<<" *= (delta"<<deltaName1<<".x*"<<crossName2<<".x + delta"<<deltaName1<<".y*"<<crossName2<<".y + delta"<<deltaName1<<".z*"<<crossName2<<".z < 0 ? -1 : 1);\n";
-        variables.push_back(makeVariable(iter->first, dihedralName));
-        forceExpressions["real dEdDihedral"+cu.intToString(index)+" = "] = energyExpression.differentiate(iter->first).optimize();
+        variables.push_back(makeVariable(dihedral.first, dihedralName));
+        forceExpressions["real dEdDihedral"+cu.intToString(index)+" = "] = energyExpression.differentiate(dihedral.first).optimize();
+        index++;
     }
 
     // Now evaluate the expressions.
@@ -5816,16 +5827,17 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
         compute<<"}\n";
     }
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = distances.begin(); iter != distances.end(); ++iter, ++index) {
-        const vector<int>& atoms = iter->second;
+    for (auto& distance : distances) {
+        const vector<int>& atoms = distance.second;
         string deltaName = atomNames[atoms[0]]+atomNames[atoms[1]];
         string value = "(dEdDistance"+cu.intToString(index)+"/r_"+deltaName+")*trim(delta"+deltaName+")";
         compute<<forceNames[atoms[0]]<<" += "<<"-"<<value<<";\n";
         compute<<forceNames[atoms[1]]<<" += "<<value<<";\n";
+        index++;
     }
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = angles.begin(); iter != angles.end(); ++iter, ++index) {
-        const vector<int>& atoms = iter->second;
+    for (auto& angle : angles) {
+        const vector<int>& atoms = angle.second;
         string deltaName1 = atomNames[atoms[1]]+atomNames[atoms[0]];
         string deltaName2 = atomNames[atoms[1]]+atomNames[atoms[2]];
         compute<<"{\n";
@@ -5838,10 +5850,11 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
         compute<<forceNames[atoms[1]]<<" += deltaCross1;\n";
         compute<<forceNames[atoms[2]]<<" += deltaCross2;\n";
         compute<<"}\n";
+        index++;
     }
     index = 0;
-    for (map<string, vector<int> >::const_iterator iter = dihedrals.begin(); iter != dihedrals.end(); ++iter, ++index) {
-        const vector<int>& atoms = iter->second;
+    for (auto& dihedral : dihedrals) {
+        const vector<int>& atoms = dihedral.second;
         string deltaName1 = atomNames[atoms[0]]+atomNames[atoms[1]];
         string deltaName2 = atomNames[atoms[2]]+atomNames[atoms[1]];
         string deltaName3 = atomNames[atoms[2]]+atomNames[atoms[3]];
@@ -5862,6 +5875,7 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
         compute<<forceNames[atoms[2]]<<" += -s-internalF3;\n";
         compute<<forceNames[atoms[3]]<<" += internalF3;\n";
         compute<<"}\n";
+        index++;
     }
     
     // Store forces to global memory.
@@ -6036,12 +6050,10 @@ double CudaCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool
             forceArgs.push_back(&exclusions->getDevicePointer());
             forceArgs.push_back(&exclusionStartIndex->getDevicePointer());
         }
-        for (int i = 0; i < (int) params->getBuffers().size(); i++) {
-            CudaNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
+        for (auto& buffer : params->getBuffers())
             forceArgs.push_back(&buffer.getMemory());
-        }
-        for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
-            forceArgs.push_back(&tabulatedFunctions[i]->getDevicePointer());
+        for (auto function : tabulatedFunctions)
+            forceArgs.push_back(&function->getDevicePointer());
         
         if (nonbondedMethod != NoCutoff) {
             // Set arguments for the block bounds kernel.
@@ -7049,8 +7061,8 @@ CudaIntegrateCustomStepKernel::~CudaIntegrateCustomStepKernel() {
         delete perDofEnergyParamDerivs;
     if (perDofValues != NULL)
         delete perDofValues;
-    for (map<int, CudaArray*>::iterator iter = savedForces.begin(); iter != savedForces.end(); ++iter)
-        delete iter->second;
+    for (auto& f : savedForces)
+        delete f.second;
 }
 
 void CudaIntegrateCustomStepKernel::initialize(const System& system, const CustomIntegrator& integrator) {
@@ -7103,8 +7115,8 @@ string CudaIntegrateCustomStepKernel::createPerDofComputation(const string& vari
     vector<pair<string, string> > functionNames;
     vector<pair<ExpressionTreeNode, string> > variableNodes;
     findExpressionsForDerivs(expr.getRootNode(), variableNodes);
-    for (map<string, string>::const_iterator iter = variables.begin(); iter != variables.end(); ++iter)
-        variableNodes.push_back(make_pair(ExpressionTreeNode(new Operation::Variable(iter->first)), iter->second));
+    for (auto& var : variables)
+        variableNodes.push_back(make_pair(ExpressionTreeNode(new Operation::Variable(var.first)), var.second));
     return cu.getExpressionUtilities().createExpressions(expressions, variableNodes, functions, functionNames, "temp"+cu.intToString(component)+"_", "double");
 }
 
@@ -7120,8 +7132,8 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
         // Initialize various data structures.
         
         const map<string, double>& params = context.getParameters();
-        for (map<string, double>::const_iterator iter = params.begin(); iter != params.end(); ++iter)
-            parameterNames.push_back(iter->first);
+        for (auto& param : params)
+            parameterNames.push_back(param.first);
         kernels.resize(integrator.getNumComputations());
         kernelArgs.resize(integrator.getNumComputations());
         requiredGaussian.resize(integrator.getNumComputations(), 0);
@@ -7150,12 +7162,12 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
             if (stepType[step] == CustomIntegrator::WhileBlockStart)
                 blockEnd[blockEnd[step]] = step; // Record where to branch back to.
             if (stepType[step] == CustomIntegrator::ComputeGlobal || stepType[step] == CustomIntegrator::IfBlockStart || stepType[step] == CustomIntegrator::WhileBlockStart)
-                for (int i = 0; i < (int) expression[step].size(); i++)
-                    globalExpressions[step].push_back(ParsedExpression(replaceDerivFunctions(expression[step][i].getRootNode(), context)).createCompiledExpression());
+                for (auto& expr : expression[step])
+                    globalExpressions[step].push_back(ParsedExpression(replaceDerivFunctions(expr.getRootNode(), context)).createCompiledExpression());
         }
         for (int step = 0; step < numSteps; step++) {
-            for (int i = 0; i < (int) globalExpressions[step].size(); i++)
-                expressionSet.registerExpression(globalExpressions[step][i]);
+            for (auto& expr : globalExpressions[step])
+                expressionSet.registerExpression(expr);
         }
         
         // Record the indices for variables in the CompiledExpressionSet.
@@ -7165,8 +7177,8 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
         dtVariableIndex = expressionSet.getVariableIndex("dt");
         for (int i = 0; i < integrator.getNumGlobalVariables(); i++)
             globalVariableIndex.push_back(expressionSet.getVariableIndex(integrator.getGlobalVariableName(i)));
-        for (int i = 0; i < (int) parameterNames.size(); i++)
-            parameterVariableIndex.push_back(expressionSet.getVariableIndex(parameterNames[i]));
+        for (auto& name : parameterNames)
+            parameterVariableIndex.push_back(expressionSet.getVariableIndex(name));
 
         // Record the variable names and flags for the force and energy in each step.
 
@@ -7228,8 +7240,8 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
                 for (int i = 0; i < integrator.getNumGlobalVariables(); i++)
                     if (variable[step] == integrator.getGlobalVariableName(i))
                         stepTarget[step].type = VARIABLE;
-                for (int i = 0; i < (int) parameterNames.size(); i++)
-                    if (variable[step] == parameterNames[i]) {
+                for (auto& name : parameterNames)
+                    if (variable[step] == name) {
                         stepTarget[step].type = PARAMETER;
                         modifiesParameters = true;
                     }
@@ -7244,8 +7256,8 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
                 for (int i = 0; i < integrator.getNumGlobalVariables(); i++)
                     if (usesVariable(expression[step][0], integrator.getGlobalVariableName(i)))
                         needsGlobals[step] = true;
-                for (int i = 0; i < (int) parameterNames.size(); i++)
-                    if (usesVariable(expression[step][0], parameterNames[i]))
+                for (auto& name : parameterNames)
+                    if (usesVariable(expression[step][0], name))
                         needsGlobals[step] = true;
             }
         }
@@ -7372,8 +7384,8 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
                 else
                     args1.push_back(&energyFloat);
                 args1.push_back(&perDofEnergyParamDerivs->getDevicePointer());
-                for (int i = 0; i < (int) perDofValues->getBuffers().size(); i++)
-                    args1.push_back(&perDofValues->getBuffers()[i].getMemory());
+                for (auto& buffer : perDofValues->getBuffers())
+                    args1.push_back(&buffer.getMemory());
                 kernelArgs[step].push_back(args1);
                 if (stepType[step] == CustomIntegrator::ComputeSum) {
                     // Create a second kernel for this step that sums the values.
@@ -7405,8 +7417,8 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
         // Initialize the random number generator.
         
         int maxUniformRandoms = 1;
-        for (int i = 0; i < (int) requiredUniform.size(); i++)
-            maxUniformRandoms = max(maxUniformRandoms, requiredUniform[i]);
+        for (int required : requiredUniform)
+            maxUniformRandoms = max(maxUniformRandoms, required);
         uniformRandoms = CudaArray::create<float4>(cu, maxUniformRandoms, "uniformRandoms");
         randomSeed = CudaArray::create<int4>(cu, cu.getNumThreadBlocks()*CudaContext::ThreadBlockSize, "randomSeed");
         vector<int4> seed(randomSeed->getSize());
@@ -7415,11 +7427,11 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
         if (rseed == 0)
             rseed = osrngseed();
         unsigned int r = (unsigned int) (rseed+1);
-        for (int i = 0; i < randomSeed->getSize(); i++) {
-            seed[i].x = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
-            seed[i].y = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
-            seed[i].z = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
-            seed[i].w = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
+        for (auto& s : seed) {
+            s.x = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
+            s.y = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
+            s.z = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
+            s.w = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
         }
         randomSeed->upload(seed);
         CUmodule randomProgram = cu.createModule(CudaKernelSources::customIntegrator, defines);
@@ -7513,8 +7525,8 @@ ExpressionTreeNode CudaIntegrateCustomStepKernel::replaceDerivFunctions(const Ex
     }
     else {
         vector<ExpressionTreeNode> children;
-        for (int i = 0; i < (int) node.getChildren().size(); i++)
-            children.push_back(replaceDerivFunctions(node.getChildren()[i], context));
+        for (auto& child : node.getChildren())
+            children.push_back(replaceDerivFunctions(child, context));
         return ExpressionTreeNode(op.clone(), children);
     }
 }
@@ -7535,8 +7547,8 @@ void CudaIntegrateCustomStepKernel::findExpressionsForDerivs(const ExpressionTre
         needsEnergyParamDerivs = true;
     }
     else {
-        for (int i = 0; i < (int) node.getChildren().size(); i++)
-            findExpressionsForDerivs(node.getChildren()[i], variableNodes);
+        for (auto& child : node.getChildren())
+            findExpressionsForDerivs(child, variableNodes);
     }
 }
 
@@ -7919,8 +7931,8 @@ void CudaApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, d
         int index = 0;
         for (int i = 0; i < numMolecules; i++) {
             startIndex[i] = index;
-            for (int j = 0; j < (int) molecules[i].size(); j++)
-                atoms[index++] = molecules[i][j];
+            for (int molecule : molecules[i])
+                atoms[index++] = molecule;
         }
         startIndex[numMolecules] = index;
         moleculeAtoms->upload(atoms);
@@ -7943,8 +7955,8 @@ void CudaApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, d
                     cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
 		    &cu.getPosq().getDevicePointer(), &moleculeAtoms->getDevicePointer(), &moleculeStartIndex->getDevicePointer()};
     cu.executeKernel(kernel, args, cu.getNumAtoms());
-    for (int i = 0; i < (int) cu.getPosCellOffsets().size(); i++)
-        cu.getPosCellOffsets()[i] = make_int4(0, 0, 0, 0);
+    for (auto& offset : cu.getPosCellOffsets())
+        offset = make_int4(0, 0, 0, 0);
     lastAtomOrder = cu.getAtomIndex();
 }
 

@@ -78,17 +78,13 @@ void* GayBerneForceProxy::deserialize(const SerializationNode& node) const {
         force->setUseSwitchingFunction(node.getBoolProperty("useSwitchingFunction", false));
         force->setSwitchingDistance(node.getDoubleProperty("switchingDistance", -1.0));
         const SerializationNode& particles = node.getChildNode("Particles");
-        for (int i = 0; i < (int) particles.getChildren().size(); i++) {
-            const SerializationNode& particle = particles.getChildren()[i];
+        for (auto& particle : particles.getChildren())
             force->addParticle(particle.getDoubleProperty("sig"), particle.getDoubleProperty("eps"), particle.getIntProperty("xparticle"),
                     particle.getIntProperty("yparticle"), particle.getDoubleProperty("sx"), particle.getDoubleProperty("sy"), particle.getDoubleProperty("sz"),
                     particle.getDoubleProperty("ex"), particle.getDoubleProperty("ey"), particle.getDoubleProperty("ez"));
-        }
         const SerializationNode& exceptions = node.getChildNode("Exceptions");
-        for (int i = 0; i < (int) exceptions.getChildren().size(); i++) {
-            const SerializationNode& exception = exceptions.getChildren()[i];
+        for (auto& exception : exceptions.getChildren())
             force->addException(exception.getIntProperty("p1"), exception.getIntProperty("p2"), exception.getDoubleProperty("sig"), exception.getDoubleProperty("eps"));
-        }
     }
     catch (...) {
         delete force;

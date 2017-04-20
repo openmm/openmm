@@ -115,11 +115,10 @@ void XmlSerializer::encodeNode(const SerializationNode& node, std::ostream& stre
     for (int i = 0; i < depth; i++)
         stream << '\t';
     stream << '<' << node.getName();
-    const map<string, string>& properties = node.getProperties();
-    for (map<string, string>::const_iterator iter = properties.begin(); iter != properties.end(); ++iter) {
+    for (auto& prop : node.getProperties()) {
         string name, value;
-        encodeString(iter->first, &name);
-        encodeString(iter->second, &value);
+        encodeString(prop.first, &name);
+        encodeString(prop.second, &value);
         stream << ' ' << name << "=\"" << value << '\"';
     }
     const vector<SerializationNode>& children = node.getChildren();
@@ -127,8 +126,8 @@ void XmlSerializer::encodeNode(const SerializationNode& node, std::ostream& stre
         stream << "/>\n";
     else {
         stream << ">\n";
-        for (int i = 0; i < (int) children.size(); i++)
-            encodeNode(children[i], stream, depth+1);
+        for (auto& child : children)
+            encodeNode(child, stream, depth+1);
         for (int i = 0; i < depth; i++)
             stream << '\t';
         stream << "</" << node.getName() << ">\n";

@@ -267,8 +267,7 @@ void ReferenceIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, co
     const double fscale = (1-vscale)/integrator.getFriction();
     const double kT = BOLTZ*integrator.getTemperature();
     const double noisescale = sqrt(2*kT*integrator.getFriction())*sqrt(0.5*(1-vscale*vscale)/integrator.getFriction());
-    for (int i = 0; i < (int) normalParticles.size(); i++) {
-        int index = normalParticles[i];
+    for (int index : normalParticles) {
         double invMass = particleInvMass[index];
         if (invMass != 0.0) {
             double sqrtInvMass = sqrt(invMass);

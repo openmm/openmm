@@ -55,8 +55,7 @@ void CustomIntegrator::initialize(ContextImpl& contextRef) {
     set<std::string> variableSet;
     variableList.insert(variableList.end(), globalNames.begin(), globalNames.end());
     variableList.insert(variableList.end(), perDofNames.begin(), perDofNames.end());
-    for (int i = 0; i < (int) variableList.size(); i++) {
-        string& name = variableList[i];
+    for (auto& name : variableList) {
         if (variableSet.find(name) != variableSet.end())
             throw OpenMMException("The Integrator defines two variables with the same name: "+name);
         variableSet.insert(name);
@@ -66,8 +65,8 @@ void CustomIntegrator::initialize(ContextImpl& contextRef) {
     set<std::string> globalTargets;
     globalTargets.insert(globalNames.begin(), globalNames.end());
     globalTargets.insert("dt");
-    for (map<string, double>::const_iterator iter = contextRef.getParameters().begin(); iter != contextRef.getParameters().end(); ++iter)
-        globalTargets.insert(iter->first);
+    for (auto& param : contextRef.getParameters())
+        globalTargets.insert(param.first);
     for (int i = 0; i < computations.size(); i++) {
         if (computations[i].type == ComputeGlobal && globalTargets.find(computations[i].variable) == globalTargets.end())
             throw OpenMMException("Unknown global variable: "+computations[i].variable);

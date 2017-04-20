@@ -56,12 +56,12 @@ ReferenceCustomCentroidBondIxn::ReferenceCustomCentroidBondIxn(int numGroupsPerB
         positionTerms.push_back(ReferenceCustomCentroidBondIxn::PositionTermInfo(yname.str(), i, 1, energyExpression.differentiate(yname.str()).createCompiledExpression()));
         positionTerms.push_back(ReferenceCustomCentroidBondIxn::PositionTermInfo(zname.str(), i, 2, energyExpression.differentiate(zname.str()).createCompiledExpression()));
     }
-    for (map<string, vector<int> >::const_iterator iter = distances.begin(); iter != distances.end(); ++iter)
-        distanceTerms.push_back(ReferenceCustomCentroidBondIxn::DistanceTermInfo(iter->first, iter->second, energyExpression.differentiate(iter->first).createCompiledExpression()));
-    for (map<string, vector<int> >::const_iterator iter = angles.begin(); iter != angles.end(); ++iter)
-        angleTerms.push_back(ReferenceCustomCentroidBondIxn::AngleTermInfo(iter->first, iter->second, energyExpression.differentiate(iter->first).createCompiledExpression()));
-    for (map<string, vector<int> >::const_iterator iter = dihedrals.begin(); iter != dihedrals.end(); ++iter)
-        dihedralTerms.push_back(ReferenceCustomCentroidBondIxn::DihedralTermInfo(iter->first, iter->second, energyExpression.differentiate(iter->first).createCompiledExpression()));
+    for (auto& term : distances)
+        distanceTerms.push_back(ReferenceCustomCentroidBondIxn::DistanceTermInfo(term.first, term.second, energyExpression.differentiate(term.first).createCompiledExpression()));
+    for (auto& term : angles)
+        angleTerms.push_back(ReferenceCustomCentroidBondIxn::AngleTermInfo(term.first, term.second, energyExpression.differentiate(term.first).createCompiledExpression()));
+    for (auto& term : dihedrals)
+        dihedralTerms.push_back(ReferenceCustomCentroidBondIxn::DihedralTermInfo(term.first, term.second, energyExpression.differentiate(term.first).createCompiledExpression()));
     for (int i = 0; i < positionTerms.size(); i++) {
         expressionSet.registerExpression(positionTerms[i].forceExpression);
         positionTerms[i].index = expressionSet.getVariableIndex(positionTerms[i].name);
@@ -108,8 +108,8 @@ void ReferenceCustomCentroidBondIxn::calculatePairIxn(vector<Vec3>& atomCoordina
 
     // Compute the forces on groups.
 
-    for (map<string, double>::const_iterator iter = globalParameters.begin(); iter != globalParameters.end(); ++iter)
-        expressionSet.setVariable(expressionSet.getVariableIndex(iter->first), iter->second);
+    for (auto& param : globalParameters)
+        expressionSet.setVariable(expressionSet.getVariableIndex(param.first), param.second);
     vector<Vec3> groupForces(numGroups);
     int numBonds = bondGroups.size();
     for (int bond = 0; bond < numBonds; bond++) {
@@ -131,23 +131,18 @@ void ReferenceCustomCentroidBondIxn::calculateOneIxn(int bond, vector<Vec3>& gro
     // Compute all of the variables the energy can depend on.
 
     const vector<int>& groups = bondGroups[bond];
-    for (int i = 0; i < (int) positionTerms.size(); i++) {
-        const PositionTermInfo& term = positionTerms[i];
+    for (auto& term : positionTerms)
         expressionSet.setVariable(term.index, groupCenters[groups[term.group]][term.component]);
-    }
-    for (int i = 0; i < (int) distanceTerms.size(); i++) {
-        const DistanceTermInfo& term = distanceTerms[i];
+    for (auto& term : distanceTerms) {
         computeDelta(groups[term.g1], groups[term.g2], term.delta, groupCenters);
         expressionSet.setVariable(term.index, term.delta[ReferenceForce::RIndex]);
     }
-    for (int i = 0; i < (int) angleTerms.size(); i++) {
-        const AngleTermInfo& term = angleTerms[i];
+    for (auto& term : angleTerms) {
         computeDelta(groups[term.g1], groups[term.g2], term.delta1, groupCenters);
         computeDelta(groups[term.g3], groups[term.g2], term.delta2, groupCenters);
         expressionSet.setVariable(term.index, computeAngle(term.delta1, term.delta2));
     }
-    for (int i = 0; i < (int) dihedralTerms.size(); i++) {
-        const DihedralTermInfo& term = dihedralTerms[i];
+    for (auto& term : dihedralTerms) {
         computeDelta(groups[term.g2], groups[term.g1], term.delta1, groupCenters);
         computeDelta(groups[term.g2], groups[term.g3], term.delta2, groupCenters);
         computeDelta(groups[term.g4], groups[term.g3], term.delta3, groupCenters);
@@ -158,15 +153,12 @@ void ReferenceCustomCentroidBondIxn::calculateOneIxn(int bond, vector<Vec3>& gro
 
     // Apply forces based on individual particle coordinates.
 
-    for (int i = 0; i < (int) positionTerms.size(); i++) {
-        const PositionTermInfo& term = positionTerms[i];
+    for (auto& term : positionTerms)
         forces[groups[term.group]][term.component] -= term.forceExpression.evaluate();
-    }
 
     // Apply forces based on distances.
 
-    for (int i = 0; i < (int) distanceTerms.size(); i++) {
-        const DistanceTermInfo& term = distanceTerms[i];
+    for (auto& term : distanceTerms) {
         double dEdR = term.forceExpression.evaluate()/(term.delta[ReferenceForce::RIndex]);
         for (int i = 0; i < 3; i++) {
            double force  = -dEdR*term.delta[i];
@@ -177,8 +169,7 @@ void ReferenceCustomCentroidBondIxn::calculateOneIxn(int bond, vector<Vec3>& gro
 
     // Apply forces based on angles.
 
-    for (int i = 0; i < (int) angleTerms.size(); i++) {
-        const AngleTermInfo& term = angleTerms[i];
+    for (auto& term : angleTerms) {
         double dEdTheta = term.forceExpression.evaluate();
         double thetaCross[ReferenceForce::LastDeltaRIndex];
         SimTKOpenMMUtilities::crossProductVector3(term.delta1, term.delta2, thetaCross);
@@ -204,8 +195,7 @@ void ReferenceCustomCentroidBondIxn::calculateOneIxn(int bond, vector<Vec3>& gro
 
     // Apply forces based on dihedrals.
 
-    for (int i = 0; i < (int) dihedralTerms.size(); i++) {
-        const DihedralTermInfo& term = dihedralTerms[i];
+    for (auto& term : dihedralTerms) {
         double dEdTheta = term.forceExpression.evaluate();
         double internalF[4][3];
         double forceFactors[4];

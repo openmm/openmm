@@ -123,6 +123,8 @@ AmoebaVdwForce::NonbondedMethod AmoebaVdwForce::getNonbondedMethod() const {
 }
 
 void AmoebaVdwForce::setNonbondedMethod(NonbondedMethod method) {
+    if (method < 0 || method > 1)
+        throw OpenMMException("AmoebaVdwForce: Illegal value for nonbonded method");
     nonbondedMethod = method;
 }
 
