@@ -761,7 +761,7 @@ class TestForceField(unittest.TestCase):
         self.assertEqual(2, len(templates))
         self.assertEqual('ALA', templates[0].name)
         self.assertEqual('NME', templates[1].name)
-    
+
     def test_Includes(self):
         """Test using a ForceField that includes other files."""
         forcefield = ForceField(os.path.join('systems', 'ff_with_includes.xml'))
