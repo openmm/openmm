@@ -1980,10 +1980,6 @@ class PeriodicTorsionGenerator(object):
                 types3 = tordef.types3
                 types4 = tordef.types4
                 hasWildcard = (wildcard in (types1, types2, types3, types4))
-                if (types1, types2, types3, types4).count(wildcard) == 2:
-                    hasTwoWildcards = True
-                else:
-                    hasTwoWildcards = False
                 if match is not None and hasWildcard:
                     # Prefer specific definitions over ones with wildcards
                     continue
