@@ -385,14 +385,14 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
 
 CudaContext::~CudaContext() {
     setAsCurrent();
-    for (int i = 0; i < (int) forces.size(); i++)
-        delete forces[i];
-    for (int i = 0; i < (int) reorderListeners.size(); i++)
-        delete reorderListeners[i];
-    for (int i = 0; i < (int) preComputations.size(); i++)
-        delete preComputations[i];
-    for (int i = 0; i < (int) postComputations.size(); i++)
-        delete postComputations[i];
+    for (auto force : forces)
+        delete force;
+    for (auto listener : reorderListeners)
+        delete listener;
+    for (auto computation : preComputations)
+        delete computation;
+    for (auto computation : postComputations)
+        delete computation;
     if (pinnedBuffer != NULL)
         cuMemFreeHost(pinnedBuffer);
     if (posq != NULL)
@@ -498,17 +498,17 @@ string CudaContext::replaceStrings(const string& input, const std::map<std::stri
             symbolChars.insert(c);
     }
     string result = input;
-    for (map<string, string>::const_iterator iter = replacements.begin(); iter != replacements.end(); iter++) {
+    for (auto& pair : replacements) {
         int index = 0;
-        int size = iter->first.size();
+        int size = pair.first.size();
         do {
-            index = result.find(iter->first, index);
+            index = result.find(pair.first, index);
             if (index != result.npos) {
                 if ((index == 0 || symbolChars.find(result[index-1]) == symbolChars.end()) && (index == result.size()-size || symbolChars.find(result[index+size]) == symbolChars.end())) {
                     // We have found a complete symbol, not part of a longer symbol.
 
-                    result.replace(index, size, iter->second);
-                    index += iter->second.size();
+                    result.replace(index, size, pair.second);
+                    index += pair.second.size();
                 }
                 else
                     index++;
@@ -528,10 +528,10 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
     stringstream src;
     if (!options.empty())
         src << "// Compilation Options: " << options << endl << endl;
-    for (map<string, string>::const_iterator iter = compilationDefines.begin(); iter != compilationDefines.end(); ++iter) {
-        src << "#define " << iter->first;
-        if (!iter->second.empty())
-            src << " " << iter->second;
+    for (auto& pair : compilationDefines) {
+        src << "#define " << pair.first;
+        if (!pair.second.empty())
+            src << " " << pair.second;
         src << endl;
     }
     if (!compilationDefines.empty())
@@ -561,10 +561,10 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
         src << "typedef float4 mixed4;\n";
     }
     src << "typedef unsigned int tileflags;\n";
-    for (map<string, string>::const_iterator iter = defines.begin(); iter != defines.end(); ++iter) {
-        src << "#define " << iter->first;
-        if (!iter->second.empty())
-            src << " " << iter->second;
+    for (auto& pair : defines) {
+        src << "#define " << pair.first;
+        if (!pair.second.empty())
+            src << " " << pair.second;
         src << endl;
     }
     if (!defines.empty())
@@ -966,10 +966,10 @@ void CudaContext::findMoleculeGroups() {
             atomBonds[particle1].push_back(particle2);
             atomBonds[particle2].push_back(particle1);
         }
-        for (int i = 0; i < (int) forces.size(); i++) {
-            for (int j = 0; j < forces[i]->getNumParticleGroups(); j++) {
+        for (auto force : forces) {
+            for (int j = 0; j < force->getNumParticleGroups(); j++) {
                 vector<int> particles;
-                forces[i]->getParticlesInGroup(j, particles);
+                force->getParticlesInGroup(j, particles);
                 for (int k = 0; k < (int) particles.size(); k++)
                     for (int m = 0; m < (int) particles.size(); m++)
                         if (k != m)
@@ -1187,8 +1187,8 @@ bool CudaContext::invalidateMolecules(CudaForceInfo* force) {
     }
     atomIndexDevice->upload(atomIndex);
     findMoleculeGroups();
-    for (int i = 0; i < (int) reorderListeners.size(); i++)
-        reorderListeners[i]->execute();
+    for (auto listener : reorderListeners)
+        listener->execute();
     reorderAtoms();
     return true;
 }
@@ -1250,10 +1250,9 @@ void CudaContext::reorderAtomsImpl() {
     vector<Real4> newPosqCorrection(paddedNumAtoms);
     vector<Mixed4> newVelm(paddedNumAtoms);
     vector<int4> newCellOffsets(numAtoms);
-    for (int group = 0; group < (int) moleculeGroups.size(); group++) {
+    for (auto& mol : moleculeGroups) {
         // Find the center of each molecule.
 
-        MoleculeGroup& mol = moleculeGroups[group];
         int numMolecules = mol.offsets.size();
         vector<int>& atoms = mol.atoms;
         vector<Real4> molPos(numMolecules);
@@ -1347,9 +1346,9 @@ void CudaContext::reorderAtomsImpl() {
         // Reorder the atoms.
 
         for (int i = 0; i < numMolecules; i++) {
-            for (int j = 0; j < (int)atoms.size(); j++) {
-                int oldIndex = mol.offsets[molBins[i].second]+atoms[j];
-                int newIndex = mol.offsets[i]+atoms[j];
+            for (int atom : atoms) {
+                int oldIndex = mol.offsets[molBins[i].second]+atom;
+                int newIndex = mol.offsets[i]+atom;
                 originalIndex[newIndex] = atomIndex[oldIndex];
                 newPosq[newIndex] = oldPosq[oldIndex];
                 if (useMixedPrecision)
@@ -1371,8 +1370,8 @@ void CudaContext::reorderAtomsImpl() {
         posqCorrection->upload(newPosqCorrection);
     velm->upload(newVelm);
     atomIndexDevice->upload(atomIndex);
-    for (int i = 0; i < (int) reorderListeners.size(); i++)
-        reorderListeners[i]->execute();
+    for (auto listener : reorderListeners)
+        listener->execute();
 }
 
 void CudaContext::addReorderListener(ReorderListener* listener) {

@@ -515,8 +515,8 @@ CpuCalcPmeReciprocalForceKernel::~CpuCalcPmeReciprocalForceKernel() {
     pthread_mutex_destroy(&lock);
     pthread_cond_destroy(&startCondition);
     pthread_cond_destroy(&endCondition);
-    for (int i = 0; i < (int) tempGrid.size(); i++)
-        fftwf_free(tempGrid[i]);
+    for (auto grid : tempGrid)
+        fftwf_free(grid);
     if (complexGrid != NULL)
         fftwf_free(complexGrid);
     if (hasCreatedPlan) {
@@ -552,8 +552,8 @@ void CpuCalcPmeReciprocalForceKernel::runMainThread() {
         if (includeEnergy) {
             threads.resumeThreads(); // Signal threads to compute energy.
             threads.waitForThreads();
-            for (int i = 0; i < (int) threadEnergy.size(); i++)
-                energy += threadEnergy[i];
+            for (auto e : threadEnergy)
+                energy += e;
         }
         threads.resumeThreads(); // Signal threads to perform reciprocal convolution.
         threads.waitForThreads();
@@ -805,8 +805,8 @@ CpuCalcDispersionPmeReciprocalForceKernel::~CpuCalcDispersionPmeReciprocalForceK
     pthread_mutex_destroy(&lock);
     pthread_cond_destroy(&startCondition);
     pthread_cond_destroy(&endCondition);
-    for (int i = 0; i < (int) tempGrid.size(); i++)
-        fftwf_free(tempGrid[i]);
+    for (auto grid : tempGrid)
+        fftwf_free(grid);
     if (complexGrid != NULL)
         fftwf_free(complexGrid);
     if (hasCreatedPlan) {
@@ -843,8 +843,8 @@ void CpuCalcDispersionPmeReciprocalForceKernel::runMainThread() {
         if (includeEnergy) {
             threads.resumeThreads(); // Signal threads to compute energy.
             threads.waitForThreads();
-            for (int i = 0; i < (int) threadEnergy.size(); i++)
-                energy += threadEnergy[i];
+            for (auto e : threadEnergy)
+                energy += e;
         }
         threads.resumeThreads(); // Signal threads to perform reciprocal convolution.
         threads.waitForThreads();

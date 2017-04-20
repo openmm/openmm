@@ -44,15 +44,15 @@ int CompiledExpressionSet::getVariableIndex(const std::string& name) {
     int index = variables.size();
     variables.push_back(name);
     variableReferences.push_back(vector<double*>());
-    for (int i = 0; i < (int) expressions.size(); i++)
-        if (expressions[i]->getVariables().find(name) != expressions[i]->getVariables().end())
-            variableReferences[index].push_back(&expressions[i]->getVariableReference(name));
+    for (auto expression : expressions)
+        if (expression->getVariables().find(name) != expression->getVariables().end())
+            variableReferences[index].push_back(&expression->getVariableReference(name));
     return index;
 }
 
 void CompiledExpressionSet::setVariable(int index, double value) {
-    for (int i = 0; i < (int) variableReferences[index].size(); i++)
-        *variableReferences[index][i] = value;
+    for (auto ref : variableReferences[index])
+        *ref = value;
 }
 
 int CompiledExpressionSet::getNumVariables() const {

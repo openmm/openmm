@@ -52,8 +52,8 @@ CustomCentroidBondForce::CustomCentroidBondForce(int numGroups, const string& en
 }
 
 CustomCentroidBondForce::~CustomCentroidBondForce() {
-    for (int i = 0; i < (int) functions.size(); i++)
-        delete functions[i].function;
+    for (auto function : functions)
+        delete function.function;
 }
 
 const string& CustomCentroidBondForce::getEnergyFunction() const {

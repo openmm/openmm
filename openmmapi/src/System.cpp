@@ -45,10 +45,10 @@ System::System() {
 }
 
 System::~System() {
-    for (int i = 0; i < (int) forces.size(); ++i)
-        delete forces[i];
-    for (int i = 0; i < (int) virtualSites.size(); ++i)
-        delete virtualSites[i];
+    for (auto force : forces)
+        delete force;
+    for (auto site : virtualSites)
+        delete site;
 }
 
 double System::getParticleMass(int index) const {

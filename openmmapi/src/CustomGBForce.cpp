@@ -51,8 +51,8 @@ CustomGBForce::CustomGBForce() : nonbondedMethod(NoCutoff), cutoffDistance(1.0) 
 }
 
 CustomGBForce::~CustomGBForce() {
-    for (int i = 0; i < (int) functions.size(); i++)
-        delete functions[i].function;
+    for (auto function : functions)
+        delete function.function;
 }
 
 CustomGBForce::NonbondedMethod CustomGBForce::getNonbondedMethod() const {
@@ -60,6 +60,8 @@ CustomGBForce::NonbondedMethod CustomGBForce::getNonbondedMethod() const {
 }
 
 void CustomGBForce::setNonbondedMethod(NonbondedMethod method) {
+    if (method < 0 || method > 2)
+        throw OpenMMException("CustomGBForce: Illegal value for nonbonded method");
     nonbondedMethod = method;
 }
 

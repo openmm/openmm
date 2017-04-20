@@ -77,19 +77,14 @@ void* CustomExternalForceProxy::deserialize(const SerializationNode& node) const
         CustomExternalForce* force = new CustomExternalForce(node.getStringProperty("energy"));
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
         const SerializationNode& perParticleParams = node.getChildNode("PerParticleParameters");
-        for (int i = 0; i < (int) perParticleParams.getChildren().size(); i++) {
-            const SerializationNode& parameter = perParticleParams.getChildren()[i];
+        for (auto& parameter : perParticleParams.getChildren())
             force->addPerParticleParameter(parameter.getStringProperty("name"));
-        }
         const SerializationNode& globalParams = node.getChildNode("GlobalParameters");
-        for (int i = 0; i < (int) globalParams.getChildren().size(); i++) {
-            const SerializationNode& parameter = globalParams.getChildren()[i];
+        for (auto& parameter : globalParams.getChildren())
             force->addGlobalParameter(parameter.getStringProperty("name"), parameter.getDoubleProperty("default"));
-        }
         const SerializationNode& particles = node.getChildNode("Particles");
         vector<double> params(force->getNumPerParticleParameters());
-        for (int i = 0; i < (int) particles.getChildren().size(); i++) {
-            const SerializationNode& particle = particles.getChildren()[i];
+        for (auto& particle : particles.getChildren()) {
             for (int j = 0; j < (int) params.size(); j++) {
                 stringstream key;
                 key << "param";

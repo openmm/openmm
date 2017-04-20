@@ -95,19 +95,19 @@ ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integ
 
     const vector<string>& platformProperties = platform->getPropertyNames();
     map<string, string> validatedProperties;
-    for (map<string, string>::const_iterator iter = properties.begin(); iter != properties.end(); ++iter) {
-        string property = iter->first;
+    for (auto& prop : properties) {
+        string property = prop.first;
         if (platform->deprecatedPropertyReplacements.find(property) != platform->deprecatedPropertyReplacements.end())
             property = platform->deprecatedPropertyReplacements[property];
         bool valid = false;
-        for (int i = 0; i < (int) platformProperties.size(); i++)
-            if (platformProperties[i] == property) {
+        for (auto& p : platformProperties)
+            if (p == property) {
                 valid = true;
                 break;
             }
         if (!valid)
-            throw OpenMMException("Illegal property name: "+iter->first);
-        validatedProperties[property] = iter->second;
+            throw OpenMMException("Illegal property name: "+prop.first);
+        validatedProperties[property] = prop.second;
     }
     
     // Find the list of kernels required.
@@ -184,8 +184,8 @@ ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integ
 }
 
 ContextImpl::~ContextImpl() {
-    for (int i = 0; i < (int) forceImpls.size(); ++i)
-        delete forceImpls[i];
+    for (auto force : forceImpls)
+        delete force;
     
     // Make sure all kernels get properly deleted before contextDestroyed() is called.
     
@@ -292,8 +292,8 @@ double ContextImpl::calcForcesAndEnergy(bool includeForces, bool includeEnergy, 
     while (true) {
         double energy = 0.0;
         kernel.beginComputation(*this, includeForces, includeEnergy, groups);
-        for (int i = 0; i < (int) forceImpls.size(); ++i)
-            energy += forceImpls[i]->calcForcesAndEnergy(*this, includeForces, includeEnergy, groups);
+        for (auto force : forceImpls)
+            energy += force->calcForcesAndEnergy(*this, includeForces, includeEnergy, groups);
         bool valid = true;
         energy += kernel.finishComputation(*this, includeForces, includeEnergy, groups, valid);
         if (valid)
@@ -310,8 +310,8 @@ double ContextImpl::calcKineticEnergy() {
 }
 
 void ContextImpl::updateContextState() {
-    for (int i = 0; i < (int) forceImpls.size(); ++i)
-        forceImpls[i]->updateContextState(*this);
+    for (auto force : forceImpls)
+        force->updateContextState(*this);
 }
 
 const vector<ForceImpl*>& ContextImpl::getForceImpls() const {
@@ -349,8 +349,8 @@ const vector<vector<int> >& ContextImpl::getMolecules() const {
         system.getConstraintParameters(i, particle1, particle2, distance);
         bonds.push_back(std::make_pair(particle1, particle2));
     }
-    for (int i = 0; i < (int) forceImpls.size(); i++) {
-        vector<pair<int, int> > forceBonds = forceImpls[i]->getBondedParticles();
+    for (auto force : forceImpls) {
+        vector<pair<int, int> > forceBonds = force->getBondedParticles();
         bonds.insert(bonds.end(), forceBonds.begin(), forceBonds.end());
     }
     for (int i = 0; i < system.getNumParticles(); i++) {
@@ -365,9 +365,9 @@ const vector<vector<int> >& ContextImpl::getMolecules() const {
 
     int numParticles = system.getNumParticles();
     vector<vector<int> > particleBonds(numParticles);
-    for (int i = 0; i < (int) bonds.size(); i++) {
-        particleBonds[bonds[i].first].push_back(bonds[i].second);
-        particleBonds[bonds[i].second].push_back(bonds[i].first);
+    for (auto& bond : bonds) {
+        particleBonds[bond.first].push_back(bond.second);
+        particleBonds[bond.second].push_back(bond.first);
     }
 
     // Now identify particles by which molecule they belong to.
@@ -441,9 +441,9 @@ void ContextImpl::createCheckpoint(ostream& stream) {
     stream.write((char*) &numParticles, sizeof(int));
     int numParameters = parameters.size();
     stream.write((char*) &numParameters, sizeof(int));
-    for (map<string, double>::const_iterator iter = parameters.begin(); iter != parameters.end(); ++iter) {
-        writeString(stream, iter->first);
-        stream.write((char*) &iter->second, sizeof(double));
+    for (auto& param : parameters) {
+        writeString(stream, param.first);
+        stream.write((char*) &param.second, sizeof(double));
     }
     updateStateDataKernel.getAs<UpdateStateDataKernel>().createCheckpoint(*this, stream);
     stream.flush();

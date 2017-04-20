@@ -47,6 +47,16 @@ from . import element as elem
 from simtk.openmm.app import Topology
 from simtk.openmm.app.internal.singleton import Singleton
 
+# Directories from which to load built in force fields.
+
+_dataDirectories = [os.path.join(os.path.dirname(__file__), 'data')]
+try:
+    from pkg_resources import iter_entry_points
+    for entry in iter_entry_points(group='openmm.forcefielddir'):
+        _dataDirectories.append(entry.load()())
+except:
+    pass # pkg_resources is not installed
+
 def _convertParameterToNumber(param):
     if unit.is_quantity(param):
         if param.unit.is_compatible(unit.bar):
@@ -186,11 +196,16 @@ class ForceField(object):
         trees = []
 
         for file in files:
+            tree = None
             try:
                 # this handles either filenames or open file-like objects
                 tree = etree.parse(file)
             except IOError:
-                tree = etree.parse(os.path.join(os.path.dirname(__file__), 'data', file))
+                for dataDir in _dataDirectories:
+                    f = os.path.join(dataDir, file)
+                    if os.path.isfile(f):
+                        tree = etree.parse(f)
+                        break
             except Exception as e:
                 # Fail with an error message about which file could not be read.
                 # TODO: Also handle case where fallback to 'data' directory encounters problems,
@@ -202,9 +217,24 @@ class ForceField(object):
                     filename = str(file)
                 msg += "ForceField.loadFile() encountered an error reading file '%s'\n" % filename
                 raise Exception(msg)
+            if tree is None:
+                raise ValueError('Could not locate file "%s"' % file)
 
             trees.append(tree)
 
+        # Process includes.
+        
+        for parentFile, tree in zip(files, trees):
+            if isinstance(parentFile, str):
+                parentDir = os.path.dirname(parentFile)
+            else:
+                parentDir = ''
+            for include in tree.getroot().findall('Include'):
+                includeFile = include.attrib['file']
+                joined = os.path.join(parentDir, includeFile)
+                if os.path.isfile(joined):
+                    includeFile = joined
+                self.loadFile(includeFile)
 
         # Load the atom types.
 
@@ -1273,6 +1303,9 @@ def _findBondsForExclusions(data, sys):
                 bondIndices.append((child1, child2))
         for child2 in data.excludeAtomWith[atom2]:
             bondIndices.append((atom1, child2))
+    for atom in data.atoms:
+        for child in data.excludeAtomWith[atom.index]:
+            bondIndices.append((child, atom.index))
     return bondIndices
 
 def _countResidueAtoms(elements):

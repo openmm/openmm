@@ -61,12 +61,12 @@ ReferenceCustomCompoundBondIxn::ReferenceCustomCompoundBondIxn(int numParticlesP
         particleTerms.push_back(ReferenceCustomCompoundBondIxn::ParticleTermInfo(yname.str(), i, 1, energyExpression.differentiate(yname.str()).createCompiledExpression()));
         particleTerms.push_back(ReferenceCustomCompoundBondIxn::ParticleTermInfo(zname.str(), i, 2, energyExpression.differentiate(zname.str()).createCompiledExpression()));
     }
-    for (map<string, vector<int> >::const_iterator iter = distances.begin(); iter != distances.end(); ++iter)
-        distanceTerms.push_back(ReferenceCustomCompoundBondIxn::DistanceTermInfo(iter->first, iter->second, energyExpression.differentiate(iter->first).createCompiledExpression()));
-    for (map<string, vector<int> >::const_iterator iter = angles.begin(); iter != angles.end(); ++iter)
-        angleTerms.push_back(ReferenceCustomCompoundBondIxn::AngleTermInfo(iter->first, iter->second, energyExpression.differentiate(iter->first).createCompiledExpression()));
-    for (map<string, vector<int> >::const_iterator iter = dihedrals.begin(); iter != dihedrals.end(); ++iter)
-        dihedralTerms.push_back(ReferenceCustomCompoundBondIxn::DihedralTermInfo(iter->first, iter->second, energyExpression.differentiate(iter->first).createCompiledExpression()));
+    for (auto& term : distances)
+        distanceTerms.push_back(ReferenceCustomCompoundBondIxn::DistanceTermInfo(term.first, term.second, energyExpression.differentiate(term.first).createCompiledExpression()));
+    for (auto& term : angles)
+        angleTerms.push_back(ReferenceCustomCompoundBondIxn::AngleTermInfo(term.first, term.second, energyExpression.differentiate(term.first).createCompiledExpression()));
+    for (auto& term : dihedrals)
+        dihedralTerms.push_back(ReferenceCustomCompoundBondIxn::DihedralTermInfo(term.first, term.second, energyExpression.differentiate(term.first).createCompiledExpression()));
     for (int i = 0; i < particleTerms.size(); i++) {
         expressionSet.registerExpression(particleTerms[i].forceExpression);
         particleTerms[i].index = expressionSet.getVariableIndex(particleTerms[i].name);
@@ -119,8 +119,8 @@ void ReferenceCustomCompoundBondIxn::setPeriodic(OpenMM::Vec3* vectors) {
 void ReferenceCustomCompoundBondIxn::calculatePairIxn(vector<Vec3>& atomCoordinates, double** bondParameters,
                                              const map<string, double>& globalParameters, vector<Vec3>& forces,
                                              double* totalEnergy, double* energyParamDerivs) {
-    for (map<string, double>::const_iterator iter = globalParameters.begin(); iter != globalParameters.end(); ++iter)
-        expressionSet.setVariable(expressionSet.getVariableIndex(iter->first), iter->second);
+    for (auto& param : globalParameters)
+        expressionSet.setVariable(expressionSet.getVariableIndex(param.first), param.second);
     int numBonds = bondAtoms.size();
     for (int bond = 0; bond < numBonds; bond++) {
         for (int i = 0; i < numParameters; i++)
@@ -146,23 +146,18 @@ void ReferenceCustomCompoundBondIxn::calculateOneIxn(int bond, vector<Vec3>& ato
     // Compute all of the variables the energy can depend on.
 
     const vector<int>& atoms = bondAtoms[bond];
-    for (int i = 0; i < (int) particleTerms.size(); i++) {
-        const ParticleTermInfo& term = particleTerms[i];
+    for (auto& term : particleTerms)
         expressionSet.setVariable(term.index, atomCoordinates[atoms[term.atom]][term.component]);
-    }
-    for (int i = 0; i < (int) distanceTerms.size(); i++) {
-        const DistanceTermInfo& term = distanceTerms[i];
+    for (auto& term : distanceTerms) {
         computeDelta(atoms[term.p1], atoms[term.p2], term.delta, atomCoordinates);
         expressionSet.setVariable(term.index, term.delta[ReferenceForce::RIndex]);
     }
-    for (int i = 0; i < (int) angleTerms.size(); i++) {
-        const AngleTermInfo& term = angleTerms[i];
+    for (auto& term : angleTerms) {
         computeDelta(atoms[term.p1], atoms[term.p2], term.delta1, atomCoordinates);
         computeDelta(atoms[term.p3], atoms[term.p2], term.delta2, atomCoordinates);
         expressionSet.setVariable(term.index, computeAngle(term.delta1, term.delta2));
     }
-    for (int i = 0; i < (int) dihedralTerms.size(); i++) {
-        const DihedralTermInfo& term = dihedralTerms[i];
+    for (auto& term : dihedralTerms) {
         computeDelta(atoms[term.p2], atoms[term.p1], term.delta1, atomCoordinates);
         computeDelta(atoms[term.p2], atoms[term.p3], term.delta2, atomCoordinates);
         computeDelta(atoms[term.p4], atoms[term.p3], term.delta3, atomCoordinates);
@@ -173,15 +168,12 @@ void ReferenceCustomCompoundBondIxn::calculateOneIxn(int bond, vector<Vec3>& ato
     
     // Apply forces based on individual particle coordinates.
     
-    for (int i = 0; i < (int) particleTerms.size(); i++) {
-        const ParticleTermInfo& term = particleTerms[i];
+    for (auto& term : particleTerms)
         forces[atoms[term.atom]][term.component] -= term.forceExpression.evaluate();
-    }
 
     // Apply forces based on distances.
 
-    for (int i = 0; i < (int) distanceTerms.size(); i++) {
-        const DistanceTermInfo& term = distanceTerms[i];
+    for (auto& term : distanceTerms) {
         double dEdR = term.forceExpression.evaluate()/(term.delta[ReferenceForce::RIndex]);
         for (int i = 0; i < 3; i++) {
            double force  = -dEdR*term.delta[i];
@@ -192,8 +184,7 @@ void ReferenceCustomCompoundBondIxn::calculateOneIxn(int bond, vector<Vec3>& ato
 
     // Apply forces based on angles.
 
-    for (int i = 0; i < (int) angleTerms.size(); i++) {
-        const AngleTermInfo& term = angleTerms[i];
+    for (auto& term : angleTerms) {
         double dEdTheta = term.forceExpression.evaluate();
         double thetaCross[ReferenceForce::LastDeltaRIndex];
         SimTKOpenMMUtilities::crossProductVector3(term.delta1, term.delta2, thetaCross);
@@ -219,8 +210,7 @@ void ReferenceCustomCompoundBondIxn::calculateOneIxn(int bond, vector<Vec3>& ato
 
     // Apply forces based on dihedrals.
 
-    for (int i = 0; i < (int) dihedralTerms.size(); i++) {
-        const DihedralTermInfo& term = dihedralTerms[i];
+    for (auto& term : dihedralTerms) {
         double dEdTheta = term.forceExpression.evaluate();
         double internalF[4][3];
         double forceFactors[4];

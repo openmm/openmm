@@ -184,10 +184,10 @@ public:
                     const map<VoxelIndex, Voxel>::const_iterator voxelEntry = voxelMap.find(voxelIndex);
                     if (voxelEntry == voxelMap.end()) continue; // no such voxel; skip
                     const Voxel& voxel = voxelEntry->second;
-                    for (Voxel::const_iterator itemIter = voxel.begin(); itemIter != voxel.end(); ++itemIter)
+                    for (auto& item : voxel)
                     {
-                        const AtomIndex atomJ = itemIter->second;
-                        const Vec3& locationJ = *itemIter->first;
+                        const AtomIndex atomJ = item.second;
+                        const Vec3& locationJ = *item.first;
                         
                         // Ignore self hits
                         if (atomI == atomJ) continue;

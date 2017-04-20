@@ -775,7 +775,9 @@ File                           Force Field
 :code:`amber99sbnmr.xml`       Amber99SB with modifications to fit NMR data\ :cite:`Li2010`
 :code:`amber03.xml`            Amber03\ :cite:`Duan2003`
 :code:`amber10.xml`            Amber10 (documented in the AmberTools_ manual as `ff10`)
-:code:`amoeba2009.xml`         AMOEBA 2009\ :cite:`Ren2002`.  This force field is deprecated.  It is
+:code:`amberfb15.xml`          AMBER-FB15\ :cite:`Wang2017`. Intramolecular parameters optimized with
+                               ForceBalance using high-level ab initio data.
+:code:`amoeba2009.xml`         AMOEBA 2009\ :cite:`Ren2002`.  This force field is deprecated.  It is 
                                recommended to use AMOEBA 2013 instead.
 :code:`amoeba2013.xml`         AMOEBA 2013\ :cite:`Shi2013`
 :code:`charmm_polar_2013.xml`  CHARMM 2013 polarizable force field\ :cite:`Lopes2013`
@@ -2933,6 +2935,32 @@ Notice that the :code:`charge` attribute is missing, and that the parameters
 are specified by class, not by type.  This means that sigma and epsilon only
 need to be specified once for each class.  The atom charges, which are different
 for each type, are taken from the residue template instead.
+
+
+Including Other Files
+=====================
+
+Sometimes it is useful to split a force field definition into multiple files,
+but still be able to use the force field by specifying only a single file.  You
+can accomplish this with the :code:`<Include>` tag.  For example:
+
+.. code-block:: xml
+
+    <ForceField>
+     <Include file="definitions.xml"/>
+     ...
+    </ForceField>
+
+The :code:`file` attribute gives the path of the file to include.  It may be
+relative either to the directory containing the parent XML file (the one with
+the :code:`<Include>` tag) or the OpenMM data directory (the one containing
+built in force fields).
+
+The included file is fully processed before any other tags in the parent file
+are processed, and its definitions are added to the force field.  This means the
+parent file can refer to atom types defined in the included file, but not the
+other way around.  If there are multiple :code:`<Include>` tags, they are processed
+in the order they appear in the file.
 
 
 Using Multiple Files

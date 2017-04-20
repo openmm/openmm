@@ -456,12 +456,12 @@ void CudaExpressionUtilities::processExpression(stringstream& out, const Express
                 vector<bool> hasAssigned(powers.size(), false);
                 exponents.push_back((int) fabs(exponent));
                 names.push_back(name);
-                for (map<int, const ExpressionTreeNode*>::const_iterator iter = powers.begin(); iter != powers.end(); ++iter) {
-                    if (iter->first != exponent) {
-                        exponents.push_back(iter->first >= 0 ? iter->first : -iter->first);
+                for (auto& power : powers) {
+                    if (power.first != exponent) {
+                        exponents.push_back(power.first >= 0 ? power.first : -power.first);
                         string name2 = prefix+context.intToString(temps.size());
                         names.push_back(name2);
-                        temps.push_back(make_pair(*iter->second, name2));
+                        temps.push_back(make_pair(*power.second, name2));
                         out << tempType << " " << name2 << " = 0.0f;\n";
                     }
                 }

@@ -60,8 +60,8 @@ ReferenceCustomManyParticleIxn::ReferenceCustomManyParticleIxn(const CustomManyP
 
     // Delete the custom functions.
 
-    for (map<string, Lepton::CustomFunction*>::iterator iter = functions.begin(); iter != functions.end(); iter++)
-        delete iter->second;
+    for (auto& function : functions)
+        delete function.second;
 
     // Differentiate the energy to get expressions for the force.
 
@@ -80,12 +80,12 @@ ReferenceCustomManyParticleIxn::ReferenceCustomManyParticleIxn(const CustomManyP
             particleParamNames[i].push_back(paramname.str());
         }
     }
-    for (map<string, vector<int> >::const_iterator iter = distances.begin(); iter != distances.end(); ++iter)
-        distanceTerms.push_back(ReferenceCustomManyParticleIxn::DistanceTermInfo(iter->first, iter->second, energyExpr.differentiate(iter->first).optimize().createProgram()));
-    for (map<string, vector<int> >::const_iterator iter = angles.begin(); iter != angles.end(); ++iter)
-        angleTerms.push_back(ReferenceCustomManyParticleIxn::AngleTermInfo(iter->first, iter->second, energyExpr.differentiate(iter->first).optimize().createProgram()));
-    for (map<string, vector<int> >::const_iterator iter = dihedrals.begin(); iter != dihedrals.end(); ++iter)
-        dihedralTerms.push_back(ReferenceCustomManyParticleIxn::DihedralTermInfo(iter->first, iter->second, energyExpr.differentiate(iter->first).optimize().createProgram()));
+    for (auto& term : distances)
+        distanceTerms.push_back(ReferenceCustomManyParticleIxn::DistanceTermInfo(term.first, term.second, energyExpr.differentiate(term.first).optimize().createProgram()));
+    for (auto& term : angles)
+        angleTerms.push_back(ReferenceCustomManyParticleIxn::AngleTermInfo(term.first, term.second, energyExpr.differentiate(term.first).optimize().createProgram()));
+    for (auto& term : dihedrals)
+        dihedralTerms.push_back(ReferenceCustomManyParticleIxn::DihedralTermInfo(term.first, term.second, energyExpr.differentiate(term.first).optimize().createProgram()));
     
     // Record exclusions.
     
@@ -192,23 +192,18 @@ void ReferenceCustomManyParticleIxn::calculateOneIxn(const vector<int>& particle
     
     // Compute all of the variables the energy can depend on.
 
-    for (int i = 0; i < (int) particleTerms.size(); i++) {
-        const ParticleTermInfo& term = particleTerms[i];
+    for (auto& term : particleTerms)
         variables[term.name] = atomCoordinates[permutedParticles[term.atom]][term.component];
-    }
-    for (int i = 0; i < (int) distanceTerms.size(); i++) {
-        const DistanceTermInfo& term = distanceTerms[i];
+    for (auto& term : distanceTerms) {
         computeDelta(permutedParticles[term.p1], permutedParticles[term.p2], term.delta, atomCoordinates);
         variables[term.name] = term.delta[ReferenceForce::RIndex];
     }
-    for (int i = 0; i < (int) angleTerms.size(); i++) {
-        const AngleTermInfo& term = angleTerms[i];
+    for (auto& term : angleTerms) {
         computeDelta(permutedParticles[term.p1], permutedParticles[term.p2], term.delta1, atomCoordinates);
         computeDelta(permutedParticles[term.p3], permutedParticles[term.p2], term.delta2, atomCoordinates);
         variables[term.name] = computeAngle(term.delta1, term.delta2);
     }
-    for (int i = 0; i < (int) dihedralTerms.size(); i++) {
-        const DihedralTermInfo& term = dihedralTerms[i];
+    for (auto& term : dihedralTerms) {
         computeDelta(permutedParticles[term.p2], permutedParticles[term.p1], term.delta1, atomCoordinates);
         computeDelta(permutedParticles[term.p2], permutedParticles[term.p3], term.delta2, atomCoordinates);
         computeDelta(permutedParticles[term.p4], permutedParticles[term.p3], term.delta3, atomCoordinates);
@@ -219,15 +214,12 @@ void ReferenceCustomManyParticleIxn::calculateOneIxn(const vector<int>& particle
     
     // Apply forces based on individual particle coordinates.
     
-    for (int i = 0; i < (int) particleTerms.size(); i++) {
-        const ParticleTermInfo& term = particleTerms[i];
+    for (auto& term : particleTerms)
         forces[permutedParticles[term.atom]][term.component] -= term.forceExpression.evaluate(variables);
-    }
 
     // Apply forces based on distances.
 
-    for (int i = 0; i < (int) distanceTerms.size(); i++) {
-        const DistanceTermInfo& term = distanceTerms[i];
+    for (auto& term : distanceTerms) {
         double dEdR = term.forceExpression.evaluate(variables)/(term.delta[ReferenceForce::RIndex]);
         for (int i = 0; i < 3; i++) {
            double force  = -dEdR*term.delta[i];
@@ -238,8 +230,7 @@ void ReferenceCustomManyParticleIxn::calculateOneIxn(const vector<int>& particle
 
     // Apply forces based on angles.
 
-    for (int i = 0; i < (int) angleTerms.size(); i++) {
-        const AngleTermInfo& term = angleTerms[i];
+    for (auto& term : angleTerms) {
         double dEdTheta = term.forceExpression.evaluate(variables);
         double thetaCross[ReferenceForce::LastDeltaRIndex];
         SimTKOpenMMUtilities::crossProductVector3(term.delta1, term.delta2, thetaCross);
@@ -265,8 +256,7 @@ void ReferenceCustomManyParticleIxn::calculateOneIxn(const vector<int>& particle
 
     // Apply forces based on dihedrals.
 
-    for (int i = 0; i < (int) dihedralTerms.size(); i++) {
-        const DihedralTermInfo& term = dihedralTerms[i];
+    for (auto& term : dihedralTerms) {
         double dEdTheta = term.forceExpression.evaluate(variables);
         double internalF[4][3];
         double forceFactors[4];

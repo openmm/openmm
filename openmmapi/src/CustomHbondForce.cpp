@@ -52,8 +52,8 @@ CustomHbondForce::CustomHbondForce(const string& energy) : energyExpression(ener
 
 
 CustomHbondForce::~CustomHbondForce() {
-    for (int i = 0; i < (int) functions.size(); i++)
-        delete functions[i].function;
+    for (auto function : functions)
+        delete function.function;
 }
 
 const string& CustomHbondForce::getEnergyFunction() const {
@@ -69,6 +69,8 @@ CustomHbondForce::NonbondedMethod CustomHbondForce::getNonbondedMethod() const {
 }
 
 void CustomHbondForce::setNonbondedMethod(NonbondedMethod method) {
+    if (method < 0 || method > 2)
+        throw OpenMMException("CustomHbondForce: Illegal value for nonbonded method");
     nonbondedMethod = method;
 }
 

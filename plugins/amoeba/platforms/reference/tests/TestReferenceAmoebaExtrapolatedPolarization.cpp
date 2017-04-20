@@ -287,8 +287,8 @@ static void check_finite_differences(vector<Vec3> analytic_forces, Context &cont
     // Take a small step in the direction of the energy gradient and see whether the potential energy changes by the expected amount.
 
     double norm = 0.0;
-    for (int i = 0; i < (int) analytic_forces.size(); ++i)
-        norm += analytic_forces[i].dot(analytic_forces[i]);
+    for (auto& f : analytic_forces)
+        norm += f.dot(f);
     norm = std::sqrt(norm);
     const double stepSize = 1e-3;
     double step = 0.5*stepSize/norm;

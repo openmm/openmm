@@ -53,10 +53,10 @@ ReferenceCustomNonbondedIxn::ReferenceCustomNonbondedIxn(const Lepton::CompiledE
     for (int i = 0; i < this->energyParamDerivExpressions.size(); i++)
         expressionSet.registerExpression(this->energyParamDerivExpressions[i]);
     rIndex = expressionSet.getVariableIndex("r");
-    for (int i = 0; i < (int) paramNames.size(); i++) {
+    for (auto& param : paramNames) {
         for (int j = 1; j < 3; j++) {
             stringstream name;
-            name << paramNames[i] << j;
+            name << param << j;
             particleParamIndex.push_back(expressionSet.getVariableIndex(name.str()));
         }
     }
@@ -159,14 +159,14 @@ void ReferenceCustomNonbondedIxn::calculatePairIxn(int numberOfAtoms, vector<Vec
                                              double* fixedParameters, const map<string, double>& globalParameters, vector<Vec3>& forces,
                                              double* energyByAtom, double* totalEnergy, double* energyParamDerivs) {
 
-    for (map<string, double>::const_iterator iter = globalParameters.begin(); iter != globalParameters.end(); ++iter)
-        expressionSet.setVariable(expressionSet.getVariableIndex(iter->first), iter->second);
-    if (interactionGroups.size() > 0) {
+    for (auto& param : globalParameters)
+        expressionSet.setVariable(expressionSet.getVariableIndex(param.first), param.second);
+    if (interactionGroups.size() > 0) { 
         // The user has specified interaction groups, so compute only the requested interactions.
         
-        for (int group = 0; group < (int) interactionGroups.size(); group++) {
-            const set<int>& set1 = interactionGroups[group].first;
-            const set<int>& set2 = interactionGroups[group].second;
+        for (auto& group : interactionGroups) {
+            const set<int>& set1 = group.first;
+            const set<int>& set2 = group.second;
             for (set<int>::const_iterator atom1 = set1.begin(); atom1 != set1.end(); ++atom1) {
                 for (set<int>::const_iterator atom2 = set2.begin(); atom2 != set2.end(); ++atom2) {
                     if (*atom1 == *atom2 || exclusions[*atom1].find(*atom2) != exclusions[*atom1].end())
@@ -185,8 +185,7 @@ void ReferenceCustomNonbondedIxn::calculatePairIxn(int numberOfAtoms, vector<Vec
     else if (cutoff) {
         // We are using a cutoff, so get the interactions from the neighbor list.
         
-        for (int i = 0; i < (int) neighborList->size(); i++) {
-            OpenMM::AtomPair pair = (*neighborList)[i];
+        for (auto& pair : *neighborList) {
             for (int j = 0; j < (int) paramNames.size(); j++) {
                 expressionSet.setVariable(particleParamIndex[j*2], atomParameters[pair.first][j]);
                 expressionSet.setVariable(particleParamIndex[j*2+1], atomParameters[pair.second][j]);
