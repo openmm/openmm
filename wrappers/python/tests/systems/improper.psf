@@ -1,0 +1,38 @@
+PSF CMAP CHEQ
+
+       2 !NTITLE
+**                                                                              
+*  Minimal file defining a single improper torsion                     
+
+       4 !NATOM
+       1 AAL  3    ALA  C      32   0.340000       12.0110           0   0.00000     -0.301140E-02
+       2 AAL  3    ALA  CA     22   0.700000E-01   12.0110           0   0.00000     -0.301140E-02
+       3 AAL  3    ALA  OT2    72  -0.670000       15.9990           0   0.00000     -0.301140E-02
+       4 AAL  3    ALA  OT1    72  -0.670000       15.9990           0   0.00000     -0.301140E-02
+
+       0 !NBOND: bonds
+
+       0 !NTHETA: angles
+
+       0 !NPHI: dihedrals
+
+       1 !NIMPHI: impropers
+       1       2       3       4
+
+       0 !NDON: donors
+
+       0 !NACC: acceptors
+
+       0 !NNB
+
+       0       0       0       0
+
+       1       0 !NGRP NST2
+       0       0       0
+
+       1 !MOLNT
+       1       1       1       1
+
+       0       0 !NUMLP NUMLPH
+
+       0 !NCRTERM: cross-terms
