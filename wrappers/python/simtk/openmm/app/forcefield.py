@@ -1736,7 +1736,6 @@ def _createResidueTemplate(residue):
             template.addExternalBondByName(atom2.name)
     return template
 
-
 # The following classes are generators that know how to create Force subclasses and add them to a System that is being
 # created.  Each generator class must define two methods: 1) a static method that takes an etree Element and a ForceField,
 # and returns the corresponding generator object; 2) a createForce() method that constructs the Force object and adds it
