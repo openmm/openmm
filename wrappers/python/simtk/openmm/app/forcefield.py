@@ -1736,6 +1736,7 @@ def _createResidueTemplate(residue):
             template.addExternalBondByName(atom2.name)
     return template
 
+
 # The following classes are generators that know how to create Force subclasses and add them to a System that is being
 # created.  Each generator class must define two methods: 1) a static method that takes an etree Element and a ForceField,
 # and returns the corresponding generator object; 2) a createForce() method that constructs the Force object and adds it
@@ -2062,12 +2063,16 @@ parsers["PeriodicTorsionForce"] = PeriodicTorsionGenerator.parseElement
 class RBTorsion(object):
     """An RBTorsion records the information for a Ryckaert-Bellemans torsion definition."""
 
-    def __init__(self, types, c):
+    def __init__(self, types, c, ordering='default'):
         self.types1 = types[0]
         self.types2 = types[1]
         self.types3 = types[2]
         self.types4 = types[3]
         self.c = c
+        if ordering == 'default' or ordering == 'amber':
+            self.ordering = ordering
+        else:
+            raise ValueError('Illegal ordering type for RBTorsion (%s,%s,%s,%s)' % (types[0], types[1], types[2], types[3]))
 
 ## @private
 class RBTorsionGenerator(object):
@@ -2093,7 +2098,10 @@ class RBTorsionGenerator(object):
         for torsion in element.findall('Improper'):
             types = ff._findAtomTypes(torsion.attrib, 4)
             if None not in types:
-                generator.improper.append(RBTorsion(types, [float(torsion.attrib['c'+str(i)]) for i in range(6)]))
+                if 'ordering' in element.attrib:
+                    generator.improper.append(RBTorsion(types, [float(torsion.attrib['c'+str(i)]) for i in range(6)], element.attrib['ordering']))
+                else:
+                    generator.improper.append(RBTorsion(types, [float(torsion.attrib['c'+str(i)]) for i in range(6)]))
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         existing = [sys.getForce(i) for i in range(sys.getNumForces())]
@@ -2141,23 +2149,73 @@ class RBTorsionGenerator(object):
                 if type1 in types1:
                     for (t2, t3, t4) in itertools.permutations(((type2, 1), (type3, 2), (type4, 3))):
                         if t2[0] in types2 and t3[0] in types3 and t4[0] in types4:
-                            if hasWildcard:
-                                # Workaround to be more consistent with AMBER.  It uses wildcards to define most of its
-                                # impropers, which leaves the ordering ambiguous.  It then follows some bizarre rules
-                                # to pick the order.
-                                a1 = torsion[t2[1]]
-                                a2 = torsion[t3[1]]
-                                e1 = data.atoms[a1].element
+                            if tordef.ordering == 'default':
+                                if hasWildcard:
+                                    # Workaround to be more consistent with AMBER.  It uses wildcards to define most of its
+                                    # impropers, which leaves the ordering ambiguous.  It then follows some bizarre rules
+                                    # to pick the order.
+                                    a1 = torsion[t2[1]]
+                                    a2 = torsion[t3[1]]
+                                    e1 = data.atoms[a1].element
+                                    e2 = data.atoms[a2].element
+                                    if e1 == e2 and a1 > a2:
+                                        (a1, a2) = (a2, a1)
+                                    elif e1 != elem.carbon and (e2 == elem.carbon or e1.mass < e2.mass):
+                                        (a1, a2) = (a2, a1)
+                                    match = (a1, a2, torsion[0], torsion[t4[1]], tordef)
+                                else:
+-                                    # There are no wildcards, so the order is unambiguous.
+-                                    match = (torsion[0], torsion[t2[1]], torsion[t3[1]], torsion[t4[1]], tordef)
+                                break
+                            elif tordef.ordering == 'amber':
+                                # topology atom indexes
+                                a2 = torsion[t2[1]]
+                                a3 = torsion[t3[1]]
+                                a4 = torsion[t4[1]]
+                                # residue indexes
+                                r2 = data.atoms[a2].residue.index
+                                r3 = data.atoms[a3].residue.index
+                                r4 = data.atoms[a4].residue.index
+                                # template atom indexes
+                                ta2 = data.atomTemplateIndexes[data.atoms[a2]]
+                                ta3 = data.atomTemplateIndexes[data.atoms[a3]]
+                                ta4 = data.atomTemplateIndexes[data.atoms[a4]]
+                                # elements
                                 e2 = data.atoms[a2].element
-                                if e1 == e2 and a1 > a2:
-                                    (a1, a2) = (a2, a1)
-                                elif e1 != elem.carbon and (e2 == elem.carbon or e1.mass < e2.mass):
-                                    (a1, a2) = (a2, a1)
-                                match = (a1, a2, torsion[0], torsion[t4[1]], tordef)
-                            else:
-                                # There are no wildcards, so the order is unambiguous.
-                                match = (torsion[0], torsion[t2[1]], torsion[t3[1]], torsion[t4[1]], tordef)
-                            break
+                                e3 = data.atoms[a3].element
+                                e4 = data.atoms[a4].element
+                                if not hasWildcard:
+                                    if t2[0] == t4[0] and (r2 > r4 or (r2 == r4 and ta2 > ta4)):
+                                        (a2, a4) = (a4, a2)
+                                        r2 = data.atoms[a2].residue.index
+                                        r4 = data.atoms[a4].residue.index
+                                        ta2 = data.atomTemplateIndexes[data.atoms[a2]]
+                                        ta4 = data.atomTemplateIndexes[data.atoms[a4]]
+                                    if t3[0] == t4[0] and (r3 > r4 or (r3 == r4 and ta3 > ta4)):
+                                        (a3, a4) = (a4, a3)
+                                        r3 = data.atoms[a3].residue.index
+                                        r4 = data.atoms[a4].residue.index
+                                        ta3 = data.atomTemplateIndexes[data.atoms[a3]]
+                                        ta4 = data.atomTemplateIndexes[data.atoms[a4]]
+                                    if t2[0] == t3[0] and (r2 > r3 or (r2 == r3 and ta2 > ta3)):
+                                        (a2, a3) = (a3, a2)
+                                else:
+                                    if e2 == e4 and (r2 > r4 or (r2 == r4 and ta2 > ta4)):
+                                        (a2, a4) = (a4, a2)
+                                        r2 = data.atoms[a2].residue.index
+                                        r4 = data.atoms[a4].residue.index
+                                        ta2 = data.atomTemplateIndexes[data.atoms[a2]]
+                                        ta4 = data.atomTemplateIndexes[data.atoms[a4]]
+                                    if e3 == e4 and (r3 > r4 or (r3 == r4 and ta3 > ta4)):
+                                        (a3, a4) = (a4, a3)
+                                        r3 = data.atoms[a3].residue.index
+                                        r4 = data.atoms[a4].residue.index
+                                        ta3 = data.atomTemplateIndexes[data.atoms[a3]]
+                                        ta4 = data.atomTemplateIndexes[data.atoms[a4]]
+                                    if r2 > r3 or (r2 == r3 and ta2 > ta3):
+                                        (a2, a3) = (a3, a2)
+                                match = (a2, a3, torsion[0], a4, tordef)
+                                break
             if match is not None:
                 (a1, a2, a3, a4, tordef) = match
                 force.addTorsion(a1, a2, a3, a4, tordef.c[0], tordef.c[1], tordef.c[2], tordef.c[3], tordef.c[4], tordef.c[5])
@@ -2618,12 +2676,16 @@ parsers["CustomAngleForce"] = CustomAngleGenerator.parseElement
 class CustomTorsion(object):
     """A CustomTorsion records the information for a custom torsion definition."""
 
-    def __init__(self, types, paramValues):
+    def __init__(self, types, paramValues, ordering='default'):
         self.types1 = types[0]
         self.types2 = types[1]
         self.types3 = types[2]
         self.types4 = types[3]
         self.paramValues = paramValues
+        if ordering == 'default' or ordering == 'amber':
+            self.ordering = ordering
+        else:
+            raise ValueError('Illegal ordering type for CustomTorsion (%s,%s,%s,%s)' % (types[0], types[1], types[2], types[3]))
 
 ## @private
 class CustomTorsionGenerator(object):
@@ -2652,7 +2714,10 @@ class CustomTorsionGenerator(object):
         for torsion in element.findall('Improper'):
             types = ff._findAtomTypes(torsion.attrib, 4)
             if None not in types:
-                generator.improper.append(CustomTorsion(types, [float(torsion.attrib[param]) for param in generator.perTorsionParams]))
+                if 'ordering' in element.attrib:
+                    generator.improper.append(CustomTorsion(types, [float(torsion.attrib[param]) for param in generator.perTorsionParams], element.attrib['ordering']))
+                else:
+                    generator.improper.append(CustomTorsion(types, [float(torsion.attrib[param]) for param in generator.perTorsionParams]))
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         force = mm.CustomTorsionForce(self.energy)
@@ -2699,23 +2764,73 @@ class CustomTorsionGenerator(object):
                 if type1 in types1:
                     for (t2, t3, t4) in itertools.permutations(((type2, 1), (type3, 2), (type4, 3))):
                         if t2[0] in types2 and t3[0] in types3 and t4[0] in types4:
-                            if hasWildcard:
-                                # Workaround to be more consistent with AMBER.  It uses wildcards to define most of its
-                                # impropers, which leaves the ordering ambiguous.  It then follows some bizarre rules
-                                # to pick the order.
-                                a1 = torsion[t2[1]]
-                                a2 = torsion[t3[1]]
-                                e1 = data.atoms[a1].element
+                            if tordef.ordering == 'default':
+                                if hasWildcard:
+                                    # Workaround to be more consistent with AMBER.  It uses wildcards to define most of its
+                                    # impropers, which leaves the ordering ambiguous.  It then follows some bizarre rules
+                                    # to pick the order.
+                                    a1 = torsion[t2[1]]
+                                    a2 = torsion[t3[1]]
+                                    e1 = data.atoms[a1].element
+                                    e2 = data.atoms[a2].element
+                                    if e1 == e2 and a1 > a2:
+                                        (a1, a2) = (a2, a1)
+                                    elif e1 != elem.carbon and (e2 == elem.carbon or e1.mass < e2.mass):
+                                        (a1, a2) = (a2, a1)
+                                    match = (a1, a2, torsion[0], torsion[t4[1]], tordef)
+                                else:
+-                                    # There are no wildcards, so the order is unambiguous.
+-                                    match = (torsion[0], torsion[t2[1]], torsion[t3[1]], torsion[t4[1]], tordef)
+                                break
+                            elif tordef.ordering == 'amber':
+                                # topology atom indexes
+                                a2 = torsion[t2[1]]
+                                a3 = torsion[t3[1]]
+                                a4 = torsion[t4[1]]
+                                # residue indexes
+                                r2 = data.atoms[a2].residue.index
+                                r3 = data.atoms[a3].residue.index
+                                r4 = data.atoms[a4].residue.index
+                                # template atom indexes
+                                ta2 = data.atomTemplateIndexes[data.atoms[a2]]
+                                ta3 = data.atomTemplateIndexes[data.atoms[a3]]
+                                ta4 = data.atomTemplateIndexes[data.atoms[a4]]
+                                # elements
                                 e2 = data.atoms[a2].element
-                                if e1 == e2 and a1 > a2:
-                                    (a1, a2) = (a2, a1)
-                                elif e1 != elem.carbon and (e2 == elem.carbon or e1.mass < e2.mass):
-                                    (a1, a2) = (a2, a1)
-                                match = (a1, a2, torsion[0], torsion[t4[1]], tordef)
-                            else:
-                                # There are no wildcards, so the order is unambiguous.
-                                match = (torsion[0], torsion[t2[1]], torsion[t3[1]], torsion[t4[1]], tordef)
-                            break
+                                e3 = data.atoms[a3].element
+                                e4 = data.atoms[a4].element
+                                if not hasWildcard:
+                                    if t2[0] == t4[0] and (r2 > r4 or (r2 == r4 and ta2 > ta4)):
+                                        (a2, a4) = (a4, a2)
+                                        r2 = data.atoms[a2].residue.index
+                                        r4 = data.atoms[a4].residue.index
+                                        ta2 = data.atomTemplateIndexes[data.atoms[a2]]
+                                        ta4 = data.atomTemplateIndexes[data.atoms[a4]]
+                                    if t3[0] == t4[0] and (r3 > r4 or (r3 == r4 and ta3 > ta4)):
+                                        (a3, a4) = (a4, a3)
+                                        r3 = data.atoms[a3].residue.index
+                                        r4 = data.atoms[a4].residue.index
+                                        ta3 = data.atomTemplateIndexes[data.atoms[a3]]
+                                        ta4 = data.atomTemplateIndexes[data.atoms[a4]]
+                                    if t2[0] == t3[0] and (r2 > r3 or (r2 == r3 and ta2 > ta3)):
+                                        (a2, a3) = (a3, a2)
+                                else:
+                                    if e2 == e4 and (r2 > r4 or (r2 == r4 and ta2 > ta4)):
+                                        (a2, a4) = (a4, a2)
+                                        r2 = data.atoms[a2].residue.index
+                                        r4 = data.atoms[a4].residue.index
+                                        ta2 = data.atomTemplateIndexes[data.atoms[a2]]
+                                        ta4 = data.atomTemplateIndexes[data.atoms[a4]]
+                                    if e3 == e4 and (r3 > r4 or (r3 == r4 and ta3 > ta4)):
+                                        (a3, a4) = (a4, a3)
+                                        r3 = data.atoms[a3].residue.index
+                                        r4 = data.atoms[a4].residue.index
+                                        ta3 = data.atomTemplateIndexes[data.atoms[a3]]
+                                        ta4 = data.atomTemplateIndexes[data.atoms[a4]]
+                                    if r2 > r3 or (r2 == r3 and ta2 > ta3):
+                                        (a2, a3) = (a3, a2)
+                                match = (a2, a3, torsion[0], a4, tordef)
+                                break
             if match is not None:
                 (a1, a2, a3, a4, tordef) = match
                 force.addTorsion(a1, a2, a3, a4, tordef.paramValues)
