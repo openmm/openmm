@@ -2778,8 +2778,8 @@ class CustomTorsionGenerator(object):
                                         (a1, a2) = (a2, a1)
                                     match = (a1, a2, torsion[0], torsion[t4[1]], tordef)
                                 else:
--                                    # There are no wildcards, so the order is unambiguous.
--                                    match = (torsion[0], torsion[t2[1]], torsion[t3[1]], torsion[t4[1]], tordef)
+                                    # There are no wildcards, so the order is unambiguous.
+                                    match = (torsion[0], torsion[t2[1]], torsion[t3[1]], torsion[t4[1]], tordef)
                                 break
                             elif tordef.ordering == 'amber':
                                 # topology atom indexes
