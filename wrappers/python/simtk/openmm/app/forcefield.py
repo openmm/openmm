@@ -1784,6 +1784,7 @@ def _matchAmberImproper(torsion, data, hasWildcard):
         if r2 > r3 or (r2 == r3 and ta2 > ta3):
             (a2, a3) = (a3, a2)
     match = (a2, a3, torsion[0], a4, tordef)
+    return match
 
 # The following classes are generators that know how to create Force subclasses and add them to a System that is being
 # created.  Each generator class must define two methods: 1) a static method that takes an etree Element and a ForceField,
