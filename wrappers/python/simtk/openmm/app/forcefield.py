@@ -1736,7 +1736,10 @@ def _createResidueTemplate(residue):
             template.addExternalBondByName(atom2.name)
     return template
 
-def _matchAmberImproper(torsion, data, hasWildcard):
+def _matchAmberImproper(types, torsion, data, hasWildcard):
+    t2 = types[0]
+    t3 = types[1]
+    t4 = types[2]
     # topology atom indexes
     a2 = torsion[t2[1]]
     a3 = torsion[t3[1]]
@@ -2051,7 +2054,7 @@ class PeriodicTorsionGenerator(object):
                                 match = (a1, a2, torsion[0], torsion[t4[1]], tordef)
                                 break
                             elif tordef.ordering == 'amber':
-                                match = _matchAmberImproper(torsion, data, hasWildcard)
+                                match = _matchAmberImproper((t2, t3, t4), torsion, data, hasWildcard)
                                 break
             if match is not None:
                 (a1, a2, a3, a4, tordef) = match
@@ -2171,7 +2174,7 @@ class RBTorsionGenerator(object):
                                     match = (torsion[0], torsion[t2[1]], torsion[t3[1]], torsion[t4[1]], tordef)
                                 break
                             elif tordef.ordering == 'amber':
-                                match = _matchAmberImproper(torsion, data, hasWildcard)
+                                match = _matchAmberImproper((t2, t3, t4), torsion, data, hasWildcard)
                                 break
             if match is not None:
                 (a1, a2, a3, a4, tordef) = match
@@ -2740,7 +2743,7 @@ class CustomTorsionGenerator(object):
                                     match = (torsion[0], torsion[t2[1]], torsion[t3[1]], torsion[t4[1]], tordef)
                                 break
                             elif tordef.ordering == 'amber':
-                                match = _matchAmberImproper(torsion, data, hasWildcard)
+                                match = _matchAmberImproper((t2, t3, t4), torsion, data, hasWildcard)
                                 break
             if match is not None:
                 (a1, a2, a3, a4, tordef) = match
