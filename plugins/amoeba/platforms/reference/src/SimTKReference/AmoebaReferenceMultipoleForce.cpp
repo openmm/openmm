@@ -420,7 +420,10 @@ void AmoebaReferenceMultipoleForce::applyRotationMatrixToParticle(      Multipol
 
         // z-only
 
-        vectorX = RealVec(0.1, 0.1, 0.1);
+        if (fabs(vectorZ[0]) < 0.866)
+            vectorX = Vec3(1.0, 0.0, 0.0);
+        else
+            vectorX = Vec3(0.0, 1.0, 0.0);
     }
     else {
         vectorX = particleX->position - particleI.position;
@@ -1755,7 +1758,7 @@ void AmoebaReferenceMultipoleForce::mapTorqueToForceForParticle(const MultipoleP
         // z-only
 
         for (int ii = 0; ii < 3; ii++) {
-            RealOpenMM du                               = vectorUV[ii]*dphi[V]/(norms[U]*angles[UV][1]);
+            RealOpenMM du                               = vectorUV[ii]*dphi[V]/(norms[U]*angles[UV][1]) + vectorUW[ii]*dphi[W]/norms[U];
             forces[particleU.particleIndex][ii]        -= du;
             forces[particleI.particleIndex][ii]        += du;
         }

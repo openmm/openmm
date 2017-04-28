@@ -1266,6 +1266,9 @@ def _findBondsForExclusions(data, sys):
                 bondIndices.append((child1, child2))
         for child2 in data.excludeAtomWith[atom2]:
             bondIndices.append((atom1, child2))
+    for atom in data.atoms:
+        for child in data.excludeAtomWith[atom.index]:
+            bondIndices.append((child, atom.index))
     return bondIndices
 
 def _countResidueAtoms(elements):

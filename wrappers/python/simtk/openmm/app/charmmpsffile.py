@@ -906,8 +906,10 @@ class CharmmPsfFile(object):
 
         if verbose: print('Adding impropers...')
         # Ick. OpenMM does not have an improper torsion class. Need to
-        # construct one from CustomTorsionForce
-        force = mm.CustomTorsionForce('k*(theta-theta0)^2')
+        # construct one from CustomTorsionForce that respects toroidal boundaries
+        energy_function = 'k*min(dtheta, 2*pi-dtheta)^2; dtheta = abs(theta-theta0);'
+        energy_function += 'pi = %f;' % pi
+        force = mm.CustomTorsionForce(energy_function)
         force.addPerTorsionParameter('k')
         force.addPerTorsionParameter('theta0')
         force.setForceGroup(self.IMPROPER_FORCE_GROUP)
