@@ -407,12 +407,17 @@ class Modeller(object):
         if len(self.positions) == 0:
             positions = []
         else:
-            positions = self.positions.value_in_unit(nanometer)
+            positions = self.positions.value_in_unit(nanometer)[:]
         cells = {}
         numCells = tuple((max(1, int(floor(box[i]/maxCutoff))) for i in range(3)))
         cellSize = tuple((box[i]/numCells[i] for i in range(3)))
         for i in range(len(positions)):
-            cell = tuple((int(floor(positions[i][j]/cellSize[j]))%numCells[j] for j in range(3)))
+            pos = positions[i]
+            pos = pos - floor(pos[2]*invBox[2])*vectors[2]
+            pos -= floor(pos[1]*invBox[1])*vectors[1]
+            pos -= floor(pos[0]*invBox[0])*vectors[0]
+            positions[i] = pos
+            cell = tuple((int(floor(pos[j]/cellSize[j]))%numCells[j] for j in range(3)))
             if cell in cells:
                 cells[cell].append(i)
             else:

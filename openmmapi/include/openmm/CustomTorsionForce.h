@@ -52,11 +52,11 @@ namespace OpenMM {
  * part of the system definition, while values of global parameters may be modified during a simulation by calling Context::setParameter().
  * Finally, call addTorsion() once for each torsion.  After an torsion has been added, you can modify its parameters by calling setTorsionParameters().
  * This will have no effect on Contexts that already exist unless you call updateParametersInContext().
- * theta is guaranteed to be in the range [-pi,+pi]
+ * Note that theta is guaranteed to be in the range [-pi,+pi], which may cause issues with force discontinuities if the energy function does not respect this domain.
  *
- * As an example, the following code creates a CustomTorsionForce that implements a harmonic potential:
+ * As an example, the following code creates a CustomTorsionForce that implements a periodic potential:
  *
- * <tt>CustomTorsionForce* force = new CustomTorsionForce("0.5*k*(theta-theta0)^2");</tt>
+ * <tt>CustomTorsionForce* force = new CustomTorsionForce("0.5*k*(1-cos(theta-theta0))");</tt>
  *
  * This force depends on two parameters: the spring constant k and equilibrium angle theta0.  The following code defines these parameters:
  *
@@ -64,6 +64,10 @@ namespace OpenMM {
  * force->addPerTorsionParameter("k");
  * force->addPerTorsionParameter("theta0");
  * </pre></tt>
+ *
+ * If a harmonic restraint is desired, it is important to be careful of the domain for theta, using an idiom like this:
+ *
+ * <tt>CustomTorsionForce* force = new CustomTorsionForce("0.5*k*min(dtheta, 2*pi-dtheta)^2; dtheta = abs(theta-theta0); pi = 3.1415926535");</tt>
  *
  * This class also has the ability to compute derivatives of the potential energy with respect to global parameters.
  * Call addEnergyParameterDerivative() to request that the derivative with respect to a particular parameter be
