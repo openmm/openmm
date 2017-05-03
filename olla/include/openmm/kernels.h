@@ -1295,8 +1295,9 @@ public:
      * @param gridz        the z size of the PME grid
      * @param numParticles the number of particles in the system
      * @param alpha        the Ewald blending parameter
+     * @param deterministic whether it should attempt to make the resulting forces deterministic
      */
-    virtual void initialize(int gridx, int gridy, int gridz, int numParticles, double alpha) = 0;
+    virtual void initialize(int gridx, int gridy, int gridz, int numParticles, double alpha, bool deterministic) = 0;
     /**
      * Begin computing the force and energy.
      *
@@ -1368,8 +1369,9 @@ public:
      * @param gridz        the z size of the PME grid
      * @param numParticles the number of particles in the system
      * @param alpha        the Ewald blending parameter
+     * @param deterministic whether it should attempt to make the resulting forces deterministic
      */
-    virtual void initialize(int gridx, int gridy, int gridz, int numParticles, double alpha) = 0;
+    virtual void initialize(int gridx, int gridy, int gridz, int numParticles, double alpha, bool deterministic) = 0;
     /**
      * Begin computing the force and energy.
      *

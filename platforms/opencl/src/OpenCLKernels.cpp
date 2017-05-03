@@ -1780,7 +1780,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
 
                 try {
                     cpuPme = getPlatform().createKernel(CalcPmeReciprocalForceKernel::Name(), *cl.getPlatformData().context);
-                    cpuPme.getAs<CalcPmeReciprocalForceKernel>().initialize(gridSizeX, gridSizeY, gridSizeZ, numParticles, alpha);
+                    cpuPme.getAs<CalcPmeReciprocalForceKernel>().initialize(gridSizeX, gridSizeY, gridSizeZ, numParticles, alpha, false);
                     cl::Program program = cl.createProgram(OpenCLKernelSources::pme, pmeDefines);
                     cl::Kernel addForcesKernel = cl::Kernel(program, "addForces");
                     pmeio = new PmeIO(cl, addForcesKernel);

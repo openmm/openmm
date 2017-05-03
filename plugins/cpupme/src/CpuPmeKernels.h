@@ -62,8 +62,9 @@ public:
      * @param gridz        the z size of the PME grid
      * @param numParticles the number of particles in the system
      * @param alpha        the Ewald blending parameter
+     * @param deterministic whether it should attempt to make the resulting forces deterministic
      */
-    void initialize(int xsize, int ysize, int zsize, int numParticles, double alpha);
+    void initialize(int xsize, int ysize, int zsize, int numParticles, double alpha, bool deterministic);
     ~CpuCalcPmeReciprocalForceKernel();
     /**
      * Begin computing the force and energy.
@@ -110,6 +111,7 @@ private:
     static int numThreads;
     int gridx, gridy, gridz, numParticles;
     double alpha;
+    bool deterministic;
     bool hasCreatedPlan, isFinished, isDeleted;
     std::vector<float> force;
     std::vector<float> bsplineModuli[3];
@@ -153,8 +155,9 @@ public:
      * @param gridz        the z size of the PME grid
      * @param numParticles the number of particles in the system
      * @param alpha        the Ewald blending parameter
+     * @param deterministic whether it should attempt to make the resulting forces deterministic
      */
-    void initialize(int xsize, int ysize, int zsize, int numParticles, double alpha);
+    void initialize(int xsize, int ysize, int zsize, int numParticles, double alpha, bool deterministic);
     ~CpuCalcDispersionPmeReciprocalForceKernel();
     /**
      * Begin computing the force and energy.
@@ -202,6 +205,7 @@ private:
     static int numThreads;
     int gridx, gridy, gridz, numParticles;
     double alpha;
+    bool deterministic;
     bool hasCreatedPlan, isFinished, isDeleted;
     std::vector<float> force;
     std::vector<float> bsplineModuli[3];
