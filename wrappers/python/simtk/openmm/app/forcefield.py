@@ -2015,12 +2015,10 @@ class PeriodicTorsionGenerator(object):
     def registerImproperTorsion(self, parameters, ordering='default'):
         torsion = self.ff._parseTorsion(parameters)
         if torsion is not None:
-            if ordering == 'default':
-                pass
-            elif ordering == 'amber':
+            if ordering in ['default', 'charmm', 'amber']:
                 torsion.ordering = ordering
             else:
-                raise ValueError('Illegal ordering type for improper torsion %s' % torsion)
+                raise ValueError('Illegal ordering type %s for improper torsion %s' % (ordering, torsion))
             self.improper.append(torsion)
 
     @staticmethod
@@ -2093,7 +2091,7 @@ class RBTorsion(object):
         if ordering in ['default', 'charmm', 'amber']:
             self.ordering = ordering
         else:
-            raise ValueError('Illegal ordering type for RBTorsion (%s,%s,%s,%s)' % (types[0], types[1], types[2], types[3]))
+            raise ValueError('Illegal ordering type %s for RBTorsion (%s,%s,%s,%s)' % (ordering, types[0], types[1], types[2], types[3]))
 
 ## @private
 class RBTorsionGenerator(object):
@@ -2623,7 +2621,7 @@ class CustomTorsion(object):
         if ordering in ['default', 'charmm', 'amber']:
             self.ordering = ordering
         else:
-            raise ValueError('Illegal ordering type for CustomTorsion (%s,%s,%s,%s)' % (types[0], types[1], types[2], types[3]))
+            raise ValueError('Illegal ordering type %s for CustomTorsion (%s,%s,%s,%s)' % (ordering, types[0], types[1], types[2], types[3]))
 
 ## @private
 class CustomTorsionGenerator(object):
