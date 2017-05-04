@@ -1741,6 +1741,7 @@ def _matchImproper(data, torsion, generator):
     type2 = data.atomType[data.atoms[torsion[1]]]
     type3 = data.atomType[data.atoms[torsion[2]]]
     type4 = data.atomType[data.atoms[torsion[3]]]
+    wildcard = generator.ff._atomClasses['']
     match = None
     for tordef in generator.improper:
         types1 = tordef.types1
