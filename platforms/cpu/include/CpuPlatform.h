@@ -69,6 +69,15 @@ public:
         return key;
     }
     /**
+     * This is the name of the parameter for requesting that force computations be deterministic.  Setting
+     * this to "true" DOES NOT GUARANTEE that the forces will actually be fully deterministic, but it does
+     * try to reduce the variation in them at the cost of a small loss in performance.
+     */
+    static const std::string& CpuDeterministicForces() {
+        static const std::string key = "DeterministicForces";
+        return key;
+    }
+    /**
      * We cannot use the standard mechanism for platform data, because that is already used by the superclass.
      * Instead, we maintain a table of ContextImpls to PlatformDatas.
      */
@@ -80,7 +89,7 @@ private:
 
 class CpuPlatform::PlatformData {
 public:
-    PlatformData(int numParticles, int numThreads);
+    PlatformData(int numParticles, int numThreads, bool deterministicForces);
     ~PlatformData();
     void requestNeighborList(double cutoffDistance, double padding, bool useExclusions, const std::vector<std::set<int> >& exclusionList);
     AlignedArray<float> posq;
@@ -91,7 +100,7 @@ public:
     std::map<std::string, std::string> propertyValues;
     CpuNeighborList* neighborList;
     double cutoff, paddedCutoff;
-    bool anyExclusions;
+    bool anyExclusions, deterministicForces;
     std::vector<std::set<int> > exclusions;
 };
 

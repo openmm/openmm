@@ -535,7 +535,7 @@ void test_water2_dpme_energies_forces_no_exclusions() {
         io.posq.push_back(c6);
         selfEwaldEnergy += dalpha6 * c6 * c6 / 12.0;
     }
-    pme.initialize(grid, grid, grid, NATOMS, dalpha);
+    pme.initialize(grid, grid, grid, NATOMS, dalpha, false);
     Vec3 boxVectors[3];
     system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
     pme.beginComputation(io, boxVectors, true);
@@ -626,7 +626,7 @@ void testPME(bool triclinic) {
         sumSquaredCharges += charge*charge;
     }
     double ewaldSelfEnergy = -ONE_4PI_EPS0*alpha*sumSquaredCharges/sqrt(M_PI);
-    pme.initialize(gridx, gridy, gridz, numParticles, alpha);
+    pme.initialize(gridx, gridy, gridz, numParticles, alpha, true);
     pme.beginComputation(io, boxVectors, true);
     double energy = pme.finishComputation(io);
 

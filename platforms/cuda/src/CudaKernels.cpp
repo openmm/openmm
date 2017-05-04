@@ -1805,7 +1805,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
 
                 try {
                     cpuPme = getPlatform().createKernel(CalcPmeReciprocalForceKernel::Name(), *cu.getPlatformData().context);
-                    cpuPme.getAs<CalcPmeReciprocalForceKernel>().initialize(gridSizeX, gridSizeY, gridSizeZ, numParticles, alpha);
+                    cpuPme.getAs<CalcPmeReciprocalForceKernel>().initialize(gridSizeX, gridSizeY, gridSizeZ, numParticles, alpha, cu.getPlatformData().deterministicForces);
                     CUfunction addForcesKernel = cu.getKernel(module, "addForces");
                     pmeio = new PmeIO(cu, addForcesKernel);
                     cu.addPreComputation(new PmePreComputation(cu, cpuPme, *pmeio));

@@ -642,7 +642,7 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
             useOptimizedPme = getPlatform().supportsKernels(kernelNames);
             if (useOptimizedPme) {
                 optimizedPme = getPlatform().createKernel(CalcPmeReciprocalForceKernel::Name(), context);
-                optimizedPme.getAs<CalcPmeReciprocalForceKernel>().initialize(gridSize[0], gridSize[1], gridSize[2], numParticles, ewaldAlpha);
+                optimizedPme.getAs<CalcPmeReciprocalForceKernel>().initialize(gridSize[0], gridSize[1], gridSize[2], numParticles, ewaldAlpha, data.deterministicForces);
             }
         }
         if (nonbondedMethod == LJPME) {
@@ -653,10 +653,10 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
             useOptimizedPme = getPlatform().supportsKernels(kernelNames);
             if (useOptimizedPme) {
                 optimizedPme = getPlatform().createKernel(CalcPmeReciprocalForceKernel::Name(), context);
-                optimizedPme.getAs<CalcPmeReciprocalForceKernel>().initialize(gridSize[0], gridSize[1], gridSize[2], numParticles, ewaldAlpha);
+                optimizedPme.getAs<CalcPmeReciprocalForceKernel>().initialize(gridSize[0], gridSize[1], gridSize[2], numParticles, ewaldAlpha, data.deterministicForces);
                 optimizedDispersionPme = getPlatform().createKernel(CalcDispersionPmeReciprocalForceKernel::Name(), context);
                 optimizedDispersionPme.getAs<CalcDispersionPmeReciprocalForceKernel>().initialize(dispersionGridSize[0], dispersionGridSize[1],
-                                                                                                  dispersionGridSize[2], numParticles, ewaldDispersionAlpha);
+                                                                                                  dispersionGridSize[2], numParticles, ewaldDispersionAlpha, data.deterministicForces);
             }
         }
     }
