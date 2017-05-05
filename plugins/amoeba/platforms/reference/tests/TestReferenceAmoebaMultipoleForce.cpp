@@ -3056,8 +3056,10 @@ void testZOnly() {
     context.setPositions(positions);
     State state = context.getState(State::Forces);
     double norm = 0.0;
-    for (Vec3 f : state.getForces())
+    for (int i = 0; i < numParticles; ++i) {
+        Vec3 f = state.getForces()[i];
         norm += f[0]*f[0] + f[1]*f[1] + f[2]*f[2];
+    }
     norm = std::sqrt(norm);
 
     // Take a small step in the direction of the energy gradient and see whether the potential energy changes by the expected amount.
