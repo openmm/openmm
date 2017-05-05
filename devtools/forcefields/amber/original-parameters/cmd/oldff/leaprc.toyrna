@@ -1,0 +1,64 @@
+logFile leap.log
+#
+# ----- leaprc for loading the toyrna libraries
+#
+#	load atom type hybridizations
+#
+addAtomTypes {
+	{ "P"    "P" "sp3" }
+	{ "G6"   "O" "sp2" }
+	{ "U4"   "O" "sp2" }
+	{ "U2"   "O" "sp2" }
+	{ "C2"   "O" "sp2" }
+	{ "G9"   "N" "sp2" }
+	{ "G7"   "N" "sp2" }
+	{ "G1"   "N" "sp2" }
+	{ "G2"   "N" "sp2" }
+	{ "G3"   "N" "sp2" }
+	{ "A9"   "N" "sp2" }
+	{ "A7"   "N" "sp2" }
+	{ "A6"   "N" "sp2" }
+	{ "A1"   "N" "sp2" }
+	{ "A3"   "N" "sp2" }
+	{ "U1"   "N" "sp2" }
+	{ "U3"   "N" "sp2" }
+	{ "C1"   "N" "sp2" }
+	{ "C3"   "N" "sp2" }
+	{ "C4"   "N" "sp2" }
+	{ "CB"   "C" "sp3" }
+	{ "CS"   "C" "sp3" }
+}
+#
+#
+#	Load the main parameter set.
+#
+toyrna = loadamberparams toyrna.dat
+
+#
+#	Load RNA libraries
+#
+loadAmberPrep toyrna.in
+
+addPdbResMap {
+  { 0 "GUA" "RG5"  } { 1 "GUA" "RG3"  } { "GUA" "RG" }
+  { 0 "ADE" "RA5"  } { 1 "ADE" "RA3"  } { "ADE" "RA" }
+  { 0 "CYT" "RC5"  } { 1 "CYT" "RC3"  } { "CYT" "RC" }
+  { 0 "URA" "RU5"  } { 1 "URA" "RU3"  } { "URA" "RU" }
+  { 0 "G" "RG5"  } { 1 "G" "RG3"  } { "G" "RG" } { "GN" "RGN" }
+  { 0 "A" "RA5"  } { 1 "A" "RA3"  } { "A" "RA" } { "AN" "RAN" }
+  { 0 "C" "RC5"  } { 1 "C" "RC3"  } { "C" "RC" } { "CN" "RCN" }
+  { 0 "U" "RU5"  } { 1 "U" "RU3"  } { "U" "RU" } { "UN" "RUN" }
+  { 0 "C5" "RC5" }
+  { 0 "G5" "RG5" }
+  { 0 "A5" "RA5" }
+  { 0 "U5" "RU5" }
+  { 1 "C3" "RC3" }
+  { 1 "G3" "RG3" }
+  { 1 "A3" "RA3" }
+  { 1 "U3" "RU3" }
+}
+
+addPdbAtomMap {
+  { "C4*" "C4'" }
+  { "C1*" "C1'" }
+}

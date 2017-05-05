@@ -1,0 +1,3165 @@
+!!index array str
+ "CALA"
+ "CARG"
+ "CASN"
+ "CASP"
+ "CCYS"
+ "CCYX"
+ "CGLN"
+ "CGLU"
+ "CGLY"
+ "CHID"
+ "CHIE"
+ "CHIP"
+ "CILE"
+ "CLEU"
+ "CLYS"
+ "CMET"
+ "CPHE"
+ "CPRO"
+ "CSER"
+ "CTHR"
+ "CTRP"
+ "CTYR"
+ "CVAL"
+ "NME"
+!entry.CALA.unit.atoms table  str name  str type  int typex  int resx  int flags  int seq  int elmnt  dbl chg
+ "N" "N" 0 1 131072 1 7 -0.442000
+ "H" "H" 0 1 131072 2 1 0.295200
+ "CA" "CT" 0 1 131072 3 6 -0.067900
+ "HA" "H1" 0 1 131072 4 1 0.070800
+ "CB" "CT" 0 1 131072 5 6 -0.122600
+ "HB1" "HC" 0 1 131072 6 1 0.058600
+ "HB2" "HC" 0 1 131072 7 1 0.058600
+ "HB3" "HC" 0 1 131072 8 1 0.058600
+ "C" "C" 0 1 131072 9 6 0.577100
+ "O" "O2" 0 1 131072 10 8 -0.743200
+ "OXT" "O2" 0 1 131072 11 8 -0.743200
+!entry.CALA.unit.atomspertinfo table  str pname  str ptype  int ptypex  int pelmnt  dbl pchg
+ "N" "N" 0 -1 0.0
+ "H" "H" 0 -1 0.0
+ "CA" "CT" 0 -1 0.0
+ "HA" "H1" 0 -1 0.0
+ "CB" "CT" 0 -1 0.0
+ "HB1" "HC" 0 -1 0.0
+ "HB2" "HC" 0 -1 0.0
+ "HB3" "HC" 0 -1 0.0
+ "C" "C" 0 -1 0.0
+ "O" "O2" 0 -1 0.0
+ "OXT" "O2" 0 -1 0.0
+!entry.CALA.unit.boundbox array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CALA.unit.childsequence single int
+ 2
+!entry.CALA.unit.connect array int
+ 1
+ 0
+!entry.CALA.unit.connectivity table  int atom1x  int atom2x  int flags
+ 1 2 1
+ 1 3 1
+ 3 4 1
+ 3 5 1
+ 3 9 1
+ 5 6 1
+ 5 7 1
+ 5 8 1
+ 9 10 1
+ 9 11 1
+!entry.CALA.unit.hierarchy table  str abovetype  int abovex  str belowtype  int belowx
+ "U" 0 "R" 1
+ "R" 1 "A" 1
+ "R" 1 "A" 2
+ "R" 1 "A" 3
+ "R" 1 "A" 4
+ "R" 1 "A" 5
+ "R" 1 "A" 6
+ "R" 1 "A" 7
+ "R" 1 "A" 8
+ "R" 1 "A" 9
+ "R" 1 "A" 10
+ "R" 1 "A" 11
+!entry.CALA.unit.name single str
+ "CALA"
+!entry.CALA.unit.positions table  dbl x  dbl y  dbl z
+ 3.325770 1.547909 -1.607204E-06
+ 3.909407 0.723611 -2.739882E-06
+ 3.970048 2.845795 -1.311163E-07
+ 3.671663 3.400129 -0.889820
+ 3.576965 3.653838 1.232143
+ 3.877484 3.115795 2.131197
+ 4.075059 4.623017 1.205786
+ 2.496995 3.801075 1.241379
+ 5.485541 2.705207 -4.398755E-06
+ 6.008824 1.593175 -8.449768E-06
+ 6.204455 3.702003 -2.420005E-06
+!entry.CALA.unit.residueconnect table  int c1x  int c2x  int c3x  int c4x  int c5x  int c6x
+ 1 0 0 0 0 0
+!entry.CALA.unit.residues table  str name  int seq  int childseq  int startatomx  str restype  int imagingx
+ "CALA" 1 12 1 "p" 0
+!entry.CALA.unit.residuesPdbSequenceNumber array int
+ 0
+!entry.CALA.unit.solventcap array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CALA.unit.velocities table  dbl x  dbl y  dbl z
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+!entry.CARG.unit.atoms table  str name  str type  int typex  int resx  int flags  int seq  int elmnt  dbl chg
+ "N" "N" 0 1 131072 1 7 -0.442000
+ "H" "H" 0 1 131072 2 1 0.295200
+ "CA" "CT" 0 1 131072 3 6 -0.106200
+ "HA" "H1" 0 1 131072 4 1 0.104500
+ "CB" "CT" 0 1 131072 5 6 0.013300
+ "HB2" "HC" 0 1 131072 6 1 0.034800
+ "HB3" "HC" 0 1 131072 7 1 0.034800
+ "CG" "CT" 0 1 131072 8 6 0.008800
+ "HG2" "HC" 0 1 131072 9 1 0.027600
+ "HG3" "HC" 0 1 131072 10 1 0.027600
+ "CD" "CT" 0 1 131072 11 6 0.116700
+ "HD2" "H1" 0 1 131072 12 1 0.054000
+ "HD3" "H1" 0 1 131072 13 1 0.054000
+ "NE" "N2" 0 1 131072 14 7 -0.528900
+ "HE" "H" 0 1 131072 15 1 0.328400
+ "CZ" "CA" 0 1 131072 16 6 0.879300
+ "NH1" "N2" 0 1 131072 17 7 -0.836700
+ "HH11" "H" 0 1 131072 18 1 0.420200
+ "HH12" "H" 0 1 131072 19 1 0.420200
+ "NH2" "N2" 0 1 131072 20 7 -0.836700
+ "HH21" "H" 0 1 131072 21 1 0.420200
+ "HH22" "H" 0 1 131072 22 1 0.420200
+ "C" "C" 0 1 131072 23 6 0.577100
+ "O" "O2" 0 1 131072 24 8 -0.743200
+ "OXT" "O2" 0 1 131072 25 8 -0.743200
+!entry.CARG.unit.atomspertinfo table  str pname  str ptype  int ptypex  int pelmnt  dbl pchg
+ "N" "N" 0 -1 0.0
+ "H" "H" 0 -1 0.0
+ "CA" "CT" 0 -1 0.0
+ "HA" "H1" 0 -1 0.0
+ "CB" "CT" 0 -1 0.0
+ "HB2" "HC" 0 -1 0.0
+ "HB3" "HC" 0 -1 0.0
+ "CG" "CT" 0 -1 0.0
+ "HG2" "HC" 0 -1 0.0
+ "HG3" "HC" 0 -1 0.0
+ "CD" "CT" 0 -1 0.0
+ "HD2" "H1" 0 -1 0.0
+ "HD3" "H1" 0 -1 0.0
+ "NE" "N2" 0 -1 0.0
+ "HE" "H" 0 -1 0.0
+ "CZ" "CA" 0 -1 0.0
+ "NH1" "N2" 0 -1 0.0
+ "HH11" "H" 0 -1 0.0
+ "HH12" "H" 0 -1 0.0
+ "NH2" "N2" 0 -1 0.0
+ "HH21" "H" 0 -1 0.0
+ "HH22" "H" 0 -1 0.0
+ "C" "C" 0 -1 0.0
+ "O" "O2" 0 -1 0.0
+ "OXT" "O2" 0 -1 0.0
+!entry.CARG.unit.boundbox array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CARG.unit.childsequence single int
+ 2
+!entry.CARG.unit.connect array int
+ 1
+ 0
+!entry.CARG.unit.connectivity table  int atom1x  int atom2x  int flags
+ 1 2 1
+ 1 3 1
+ 3 4 1
+ 3 5 1
+ 3 23 1
+ 5 6 1
+ 5 7 1
+ 5 8 1
+ 8 9 1
+ 8 10 1
+ 8 11 1
+ 11 12 1
+ 11 13 1
+ 11 14 1
+ 14 15 1
+ 14 16 1
+ 16 17 1
+ 16 20 1
+ 17 18 1
+ 17 19 1
+ 20 21 1
+ 20 22 1
+ 23 24 1
+ 23 25 1
+!entry.CARG.unit.hierarchy table  str abovetype  int abovex  str belowtype  int belowx
+ "U" 0 "R" 1
+ "R" 1 "A" 1
+ "R" 1 "A" 2
+ "R" 1 "A" 3
+ "R" 1 "A" 4
+ "R" 1 "A" 5
+ "R" 1 "A" 6
+ "R" 1 "A" 7
+ "R" 1 "A" 8
+ "R" 1 "A" 9
+ "R" 1 "A" 10
+ "R" 1 "A" 11
+ "R" 1 "A" 12
+ "R" 1 "A" 13
+ "R" 1 "A" 14
+ "R" 1 "A" 15
+ "R" 1 "A" 16
+ "R" 1 "A" 17
+ "R" 1 "A" 18
+ "R" 1 "A" 19
+ "R" 1 "A" 20
+ "R" 1 "A" 21
+ "R" 1 "A" 22
+ "R" 1 "A" 23
+ "R" 1 "A" 24
+ "R" 1 "A" 25
+!entry.CARG.unit.name single str
+ "CARG"
+!entry.CARG.unit.positions table  dbl x  dbl y  dbl z
+ 3.325770 1.547909 -1.607204E-06
+ 3.909407 0.723611 -2.739882E-06
+ 3.970048 2.845795 -1.311163E-07
+ 3.671663 3.400129 -0.889820
+ 3.576965 3.653838 1.232143
+ 2.496995 3.801075 1.241379
+ 3.877484 3.115795 2.131197
+ 4.274186 5.009602 1.194577
+ 5.354271 4.863178 1.185788
+ 3.973781 5.548460 0.295972
+ 3.881105 5.817645 2.426721
+ 2.801135 5.964881 2.435959
+ 4.181626 5.279602 3.325774
+ 4.540320 7.142723 2.424483
+ 5.151805 7.375492 1.655065
+ 4.364284 8.040989 3.389382
+ 3.575026 7.807606 4.434133
+ 3.088949 6.925423 4.508848
+ 3.465367 8.513631 5.147998
+ 5.006254 9.201287 3.286991
+ 5.604855 9.375325 2.492329
+ 4.892216 9.903045 4.004368
+ 5.485541 2.705207 -4.398755E-06
+ 6.008824 1.593175 -8.449768E-06
+ 6.204455 3.702003 -2.420005E-06
+!entry.CARG.unit.residueconnect table  int c1x  int c2x  int c3x  int c4x  int c5x  int c6x
+ 1 0 0 0 0 0
+!entry.CARG.unit.residues table  str name  int seq  int childseq  int startatomx  str restype  int imagingx
+ "CARG" 1 26 1 "p" 0
+!entry.CARG.unit.residuesPdbSequenceNumber array int
+ 0
+!entry.CARG.unit.solventcap array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CARG.unit.velocities table  dbl x  dbl y  dbl z
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+!entry.CASN.unit.atoms table  str name  str type  int typex  int resx  int flags  int seq  int elmnt  dbl chg
+ "N" "N" 0 1 131072 1 7 -0.442000
+ "H" "H" 0 1 131072 2 1 0.295200
+ "CA" "CT" 0 1 131072 3 6 -0.051000
+ "HA" "H1" 0 1 131072 4 1 0.081000
+ "CB" "CT" 0 1 131072 5 6 -0.218400
+ "HB2" "HC" 0 1 131072 6 1 0.100500
+ "HB3" "HC" 0 1 131072 7 1 0.100500
+ "CG" "C" 0 1 131072 8 6 0.683800
+ "OD1" "O" 0 1 131072 9 8 -0.575100
+ "ND2" "N" 0 1 131072 10 7 -0.787000
+ "HD21" "H" 0 1 131072 11 1 0.360900
+ "HD22" "H" 0 1 131072 12 1 0.360900
+ "C" "C" 0 1 131072 13 6 0.577100
+ "O" "O2" 0 1 131072 14 8 -0.743200
+ "OXT" "O2" 0 1 131072 15 8 -0.743200
+!entry.CASN.unit.atomspertinfo table  str pname  str ptype  int ptypex  int pelmnt  dbl pchg
+ "N" "N" 0 -1 0.0
+ "H" "H" 0 -1 0.0
+ "CA" "CT" 0 -1 0.0
+ "HA" "H1" 0 -1 0.0
+ "CB" "CT" 0 -1 0.0
+ "HB2" "HC" 0 -1 0.0
+ "HB3" "HC" 0 -1 0.0
+ "CG" "C" 0 -1 0.0
+ "OD1" "O" 0 -1 0.0
+ "ND2" "N" 0 -1 0.0
+ "HD21" "H" 0 -1 0.0
+ "HD22" "H" 0 -1 0.0
+ "C" "C" 0 -1 0.0
+ "O" "O2" 0 -1 0.0
+ "OXT" "O2" 0 -1 0.0
+!entry.CASN.unit.boundbox array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CASN.unit.childsequence single int
+ 2
+!entry.CASN.unit.connect array int
+ 1
+ 0
+!entry.CASN.unit.connectivity table  int atom1x  int atom2x  int flags
+ 1 2 1
+ 1 3 1
+ 3 4 1
+ 3 5 1
+ 3 13 1
+ 5 6 1
+ 5 7 1
+ 5 8 1
+ 8 9 1
+ 8 10 1
+ 10 11 1
+ 10 12 1
+ 13 14 1
+ 13 15 1
+!entry.CASN.unit.hierarchy table  str abovetype  int abovex  str belowtype  int belowx
+ "U" 0 "R" 1
+ "R" 1 "A" 1
+ "R" 1 "A" 2
+ "R" 1 "A" 3
+ "R" 1 "A" 4
+ "R" 1 "A" 5
+ "R" 1 "A" 6
+ "R" 1 "A" 7
+ "R" 1 "A" 8
+ "R" 1 "A" 9
+ "R" 1 "A" 10
+ "R" 1 "A" 11
+ "R" 1 "A" 12
+ "R" 1 "A" 13
+ "R" 1 "A" 14
+ "R" 1 "A" 15
+!entry.CASN.unit.name single str
+ "CASN"
+!entry.CASN.unit.positions table  dbl x  dbl y  dbl z
+ 3.325770 1.547909 -1.607204E-06
+ 3.909407 0.723611 -2.739882E-06
+ 3.970048 2.845795 -1.311163E-07
+ 3.671663 3.400129 -0.889820
+ 3.576965 3.653838 1.232143
+ 2.496995 3.801075 1.241379
+ 3.877484 3.115795 2.131197
+ 4.253700 5.017112 1.232144
+ 5.005299 5.340406 0.315072
+ 3.984885 5.817909 2.265917
+ 4.408015 6.733702 2.314743
+ 3.359611 5.504297 2.994464
+ 5.485541 2.705207 -4.398755E-06
+ 6.008824 1.593175 -8.449768E-06
+ 6.204455 3.702003 -2.420005E-06
+!entry.CASN.unit.residueconnect table  int c1x  int c2x  int c3x  int c4x  int c5x  int c6x
+ 1 0 0 0 0 0
+!entry.CASN.unit.residues table  str name  int seq  int childseq  int startatomx  str restype  int imagingx
+ "CASN" 1 16 1 "p" 0
+!entry.CASN.unit.residuesPdbSequenceNumber array int
+ 0
+!entry.CASN.unit.solventcap array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CASN.unit.velocities table  dbl x  dbl y  dbl z
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+!entry.CASP.unit.atoms table  str name  str type  int typex  int resx  int flags  int seq  int elmnt  dbl chg
+ "N" "N" 0 1 131072 1 7 -0.442000
+ "H" "H" 0 1 131072 2 1 0.295200
+ "CA" "CT" 0 1 131072 3 6 -0.242200
+ "HA" "H1" 0 1 131072 4 1 0.093400
+ "CB" "CT" 0 1 131072 5 6 -0.023400
+ "HB2" "HC" 0 1 131072 6 1 -0.010400
+ "HB3" "HC" 0 1 131072 7 1 -0.010400
+ "CG" "C" 0 1 131072 8 6 0.763300
+ "OD1" "O2" 0 1 131072 9 8 -0.757100
+ "OD2" "O2" 0 1 131072 10 8 -0.757100
+ "C" "C" 0 1 131072 11 6 0.577100
+ "O" "O2" 0 1 131072 12 8 -0.743200
+ "OXT" "O2" 0 1 131072 13 8 -0.743200
+!entry.CASP.unit.atomspertinfo table  str pname  str ptype  int ptypex  int pelmnt  dbl pchg
+ "N" "N" 0 -1 0.0
+ "H" "H" 0 -1 0.0
+ "CA" "CT" 0 -1 0.0
+ "HA" "H1" 0 -1 0.0
+ "CB" "CT" 0 -1 0.0
+ "HB2" "HC" 0 -1 0.0
+ "HB3" "HC" 0 -1 0.0
+ "CG" "C" 0 -1 0.0
+ "OD1" "O2" 0 -1 0.0
+ "OD2" "O2" 0 -1 0.0
+ "C" "C" 0 -1 0.0
+ "O" "O2" 0 -1 0.0
+ "OXT" "O2" 0 -1 0.0
+!entry.CASP.unit.boundbox array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CASP.unit.childsequence single int
+ 2
+!entry.CASP.unit.connect array int
+ 1
+ 0
+!entry.CASP.unit.connectivity table  int atom1x  int atom2x  int flags
+ 1 2 1
+ 1 3 1
+ 3 4 1
+ 3 5 1
+ 3 11 1
+ 5 6 1
+ 5 7 1
+ 5 8 1
+ 8 9 1
+ 8 10 1
+ 11 12 1
+ 11 13 1
+!entry.CASP.unit.hierarchy table  str abovetype  int abovex  str belowtype  int belowx
+ "U" 0 "R" 1
+ "R" 1 "A" 1
+ "R" 1 "A" 2
+ "R" 1 "A" 3
+ "R" 1 "A" 4
+ "R" 1 "A" 5
+ "R" 1 "A" 6
+ "R" 1 "A" 7
+ "R" 1 "A" 8
+ "R" 1 "A" 9
+ "R" 1 "A" 10
+ "R" 1 "A" 11
+ "R" 1 "A" 12
+ "R" 1 "A" 13
+!entry.CASP.unit.name single str
+ "CASP"
+!entry.CASP.unit.positions table  dbl x  dbl y  dbl z
+ 3.325770 1.547909 -1.607204E-06
+ 3.909407 0.723611 -2.739882E-06
+ 3.970048 2.845795 -1.311163E-07
+ 3.671663 3.400129 -0.889820
+ 3.576965 3.653838 1.232143
+ 2.496995 3.801075 1.241379
+ 3.877484 3.115795 2.131197
+ 4.275101 5.011380 1.194527
+ 3.669108 5.954940 0.620011
+ 5.407731 5.091879 1.740667
+ 5.485541 2.705207 -4.398755E-06
+ 6.008824 1.593175 -8.449768E-06
+ 6.204455 3.702003 -2.420005E-06
+!entry.CASP.unit.residueconnect table  int c1x  int c2x  int c3x  int c4x  int c5x  int c6x
+ 1 0 0 0 0 0
+!entry.CASP.unit.residues table  str name  int seq  int childseq  int startatomx  str restype  int imagingx
+ "CASP" 1 14 1 "p" 0
+!entry.CASP.unit.residuesPdbSequenceNumber array int
+ 0
+!entry.CASP.unit.solventcap array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CASP.unit.velocities table  dbl x  dbl y  dbl z
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+!entry.CCYS.unit.atoms table  str name  str type  int typex  int resx  int flags  int seq  int elmnt  dbl chg
+ "N" "N" 0 1 131072 1 7 -0.442000
+ "H" "H" 0 1 131072 2 1 0.295200
+ "CA" "CT" 0 1 131072 3 6 -0.018900
+ "HA" "H1" 0 1 131072 4 1 0.063700
+ "CB" "CT" 0 1 131072 5 6 -0.043600
+ "HB2" "H1" 0 1 131072 6 1 0.070900
+ "HB3" "H1" 0 1 131072 7 1 0.070900
+ "SG" "SH" 0 1 131072 8 16 -0.244600
+ "HG" "HS" 0 1 131072 9 1 0.157700
+ "C" "C" 0 1 131072 10 6 0.577100
+ "O" "O2" 0 1 131072 11 8 -0.743200
+ "OXT" "O2" 0 1 131072 12 8 -0.743200
+!entry.CCYS.unit.atomspertinfo table  str pname  str ptype  int ptypex  int pelmnt  dbl pchg
+ "N" "N" 0 -1 0.0
+ "H" "H" 0 -1 0.0
+ "CA" "CT" 0 -1 0.0
+ "HA" "H1" 0 -1 0.0
+ "CB" "CT" 0 -1 0.0
+ "HB2" "H1" 0 -1 0.0
+ "HB3" "H1" 0 -1 0.0
+ "SG" "SH" 0 -1 0.0
+ "HG" "HS" 0 -1 0.0
+ "C" "C" 0 -1 0.0
+ "O" "O2" 0 -1 0.0
+ "OXT" "O2" 0 -1 0.0
+!entry.CCYS.unit.boundbox array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CCYS.unit.childsequence single int
+ 2
+!entry.CCYS.unit.connect array int
+ 1
+ 0
+!entry.CCYS.unit.connectivity table  int atom1x  int atom2x  int flags
+ 1 2 1
+ 1 3 1
+ 3 4 1
+ 3 5 1
+ 3 10 1
+ 5 6 1
+ 5 7 1
+ 5 8 1
+ 8 9 1
+ 10 11 1
+ 10 12 1
+!entry.CCYS.unit.hierarchy table  str abovetype  int abovex  str belowtype  int belowx
+ "U" 0 "R" 1
+ "R" 1 "A" 1
+ "R" 1 "A" 2
+ "R" 1 "A" 3
+ "R" 1 "A" 4
+ "R" 1 "A" 5
+ "R" 1 "A" 6
+ "R" 1 "A" 7
+ "R" 1 "A" 8
+ "R" 1 "A" 9
+ "R" 1 "A" 10
+ "R" 1 "A" 11
+ "R" 1 "A" 12
+!entry.CCYS.unit.name single str
+ "CCYS"
+!entry.CCYS.unit.positions table  dbl x  dbl y  dbl z
+ 3.325770 1.547909 -1.607204E-06
+ 3.909407 0.723611 -2.739882E-06
+ 3.970048 2.845795 -1.311163E-07
+ 3.671663 3.400129 -0.889820
+ 3.576965 3.653838 1.232143
+ 2.496995 3.801075 1.241379
+ 3.877484 3.115795 2.131197
+ 4.309573 5.303523 1.366036
+ 3.725392 5.622018 2.517640
+ 5.485541 2.705207 -4.398755E-06
+ 6.008824 1.593175 -8.449768E-06
+ 6.204455 3.702003 -2.420005E-06
+!entry.CCYS.unit.residueconnect table  int c1x  int c2x  int c3x  int c4x  int c5x  int c6x
+ 1 0 0 0 0 0
+!entry.CCYS.unit.residues table  str name  int seq  int childseq  int startatomx  str restype  int imagingx
+ "CCYS" 1 13 1 "p" 0
+!entry.CCYS.unit.residuesPdbSequenceNumber array int
+ 0
+!entry.CCYS.unit.solventcap array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CCYS.unit.velocities table  dbl x  dbl y  dbl z
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+!entry.CCYX.unit.atoms table  str name  str type  int typex  int resx  int flags  int seq  int elmnt  dbl chg
+ "N" "N" 0 1 131072 1 7 -0.442000
+ "H" "H" 0 1 131072 2 1 0.295200
+ "CA" "CT" 0 1 131072 3 6 -0.053400
+ "HA" "H1" 0 1 131072 4 1 0.079400
+ "CB" "CT" 0 1 131072 5 6 -0.023900
+ "HB2" "H1" 0 1 131072 6 1 0.072300
+ "HB3" "H1" 0 1 131072 7 1 0.072300
+ "SG" "S" 0 1 131072 8 16 -0.090600
+ "C" "C" 0 1 131072 9 6 0.577100
+ "O" "O2" 0 1 131072 10 8 -0.743200
+ "OXT" "O2" 0 1 131072 11 8 -0.743200
+!entry.CCYX.unit.atomspertinfo table  str pname  str ptype  int ptypex  int pelmnt  dbl pchg
+ "N" "N" 0 -1 0.0
+ "H" "H" 0 -1 0.0
+ "CA" "CT" 0 -1 0.0
+ "HA" "H1" 0 -1 0.0
+ "CB" "CT" 0 -1 0.0
+ "HB2" "H1" 0 -1 0.0
+ "HB3" "H1" 0 -1 0.0
+ "SG" "S" 0 -1 0.0
+ "C" "C" 0 -1 0.0
+ "O" "O2" 0 -1 0.0
+ "OXT" "O2" 0 -1 0.0
+!entry.CCYX.unit.boundbox array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CCYX.unit.childsequence single int
+ 2
+!entry.CCYX.unit.connect array int
+ 1
+ 0
+!entry.CCYX.unit.connectivity table  int atom1x  int atom2x  int flags
+ 1 2 1
+ 1 3 1
+ 3 4 1
+ 3 5 1
+ 3 9 1
+ 5 6 1
+ 5 7 1
+ 5 8 1
+ 9 10 1
+ 9 11 1
+!entry.CCYX.unit.hierarchy table  str abovetype  int abovex  str belowtype  int belowx
+ "U" 0 "R" 1
+ "R" 1 "A" 1
+ "R" 1 "A" 2
+ "R" 1 "A" 3
+ "R" 1 "A" 4
+ "R" 1 "A" 5
+ "R" 1 "A" 6
+ "R" 1 "A" 7
+ "R" 1 "A" 8
+ "R" 1 "A" 9
+ "R" 1 "A" 10
+ "R" 1 "A" 11
+!entry.CCYX.unit.name single str
+ "CCYX"
+!entry.CCYX.unit.positions table  dbl x  dbl y  dbl z
+ 3.325770 1.547909 -1.607204E-06
+ 3.909407 0.723611 -2.739882E-06
+ 3.970048 2.845795 -1.311163E-07
+ 3.671663 3.400129 -0.889820
+ 3.576965 3.653838 1.232143
+ 2.496995 3.801075 1.241379
+ 3.877484 3.115795 2.131197
+ 4.309573 5.303523 1.366036
+ 5.485541 2.705207 -4.398755E-06
+ 6.008824 1.593175 -8.449768E-06
+ 6.204455 3.702003 -2.420005E-06
+!entry.CCYX.unit.residueconnect table  int c1x  int c2x  int c3x  int c4x  int c5x  int c6x
+ 1 0 8 0 0 0
+!entry.CCYX.unit.residues table  str name  int seq  int childseq  int startatomx  str restype  int imagingx
+ "CCYX" 1 12 1 "p" 0
+!entry.CCYX.unit.residuesPdbSequenceNumber array int
+ 0
+!entry.CCYX.unit.solventcap array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CCYX.unit.velocities table  dbl x  dbl y  dbl z
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+!entry.CGLN.unit.atoms table  str name  str type  int typex  int resx  int flags  int seq  int elmnt  dbl chg
+ "N" "N" 0 1 131072 1 7 -0.442000
+ "H" "H" 0 1 131072 2 1 0.295200
+ "CA" "CT" 0 1 131072 3 6 -0.122200
+ "HA" "H1" 0 1 131072 4 1 0.071900
+ "CB" "CT" 0 1 131072 5 6 0.100600
+ "HB2" "HC" 0 1 131072 6 1 0.015000
+ "HB3" "HC" 0 1 131072 7 1 0.015000
+ "CG" "CT" 0 1 131072 8 6 -0.229000
+ "HG2" "HC" 0 1 131072 9 1 0.097400
+ "HG3" "HC" 0 1 131072 10 1 0.097400
+ "CD" "C" 0 1 131072 11 6 0.695200
+ "OE1" "O" 0 1 131072 12 8 -0.616900
+ "NE2" "N" 0 1 131072 13 7 -0.785100
+ "HE21" "H" 0 1 131072 14 1 0.358400
+ "HE22" "H" 0 1 131072 15 1 0.358400
+ "C" "C" 0 1 131072 16 6 0.577100
+ "O" "O2" 0 1 131072 17 8 -0.743200
+ "OXT" "O2" 0 1 131072 18 8 -0.743200
+!entry.CGLN.unit.atomspertinfo table  str pname  str ptype  int ptypex  int pelmnt  dbl pchg
+ "N" "N" 0 -1 0.0
+ "H" "H" 0 -1 0.0
+ "CA" "CT" 0 -1 0.0
+ "HA" "H1" 0 -1 0.0
+ "CB" "CT" 0 -1 0.0
+ "HB2" "HC" 0 -1 0.0
+ "HB3" "HC" 0 -1 0.0
+ "CG" "CT" 0 -1 0.0
+ "HG2" "HC" 0 -1 0.0
+ "HG3" "HC" 0 -1 0.0
+ "CD" "C" 0 -1 0.0
+ "OE1" "O" 0 -1 0.0
+ "NE2" "N" 0 -1 0.0
+ "HE21" "H" 0 -1 0.0
+ "HE22" "H" 0 -1 0.0
+ "C" "C" 0 -1 0.0
+ "O" "O2" 0 -1 0.0
+ "OXT" "O2" 0 -1 0.0
+!entry.CGLN.unit.boundbox array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CGLN.unit.childsequence single int
+ 2
+!entry.CGLN.unit.connect array int
+ 1
+ 0
+!entry.CGLN.unit.connectivity table  int atom1x  int atom2x  int flags
+ 1 2 1
+ 1 3 1
+ 3 4 1
+ 3 5 1
+ 3 16 1
+ 5 6 1
+ 5 7 1
+ 5 8 1
+ 8 9 1
+ 8 10 1
+ 8 11 1
+ 11 12 1
+ 11 13 1
+ 13 14 1
+ 13 15 1
+ 16 17 1
+ 16 18 1
+!entry.CGLN.unit.hierarchy table  str abovetype  int abovex  str belowtype  int belowx
+ "U" 0 "R" 1
+ "R" 1 "A" 1
+ "R" 1 "A" 2
+ "R" 1 "A" 3
+ "R" 1 "A" 4
+ "R" 1 "A" 5
+ "R" 1 "A" 6
+ "R" 1 "A" 7
+ "R" 1 "A" 8
+ "R" 1 "A" 9
+ "R" 1 "A" 10
+ "R" 1 "A" 11
+ "R" 1 "A" 12
+ "R" 1 "A" 13
+ "R" 1 "A" 14
+ "R" 1 "A" 15
+ "R" 1 "A" 16
+ "R" 1 "A" 17
+ "R" 1 "A" 18
+!entry.CGLN.unit.name single str
+ "CGLN"
+!entry.CGLN.unit.positions table  dbl x  dbl y  dbl z
+ 3.325770 1.547909 -1.607204E-06
+ 3.909407 0.723611 -2.739882E-06
+ 3.970048 2.845795 -1.311163E-07
+ 3.671663 3.400129 -0.889820
+ 3.576965 3.653838 1.232143
+ 2.496995 3.801075 1.241379
+ 3.877484 3.115795 2.131197
+ 4.274186 5.009602 1.194577
+ 5.354271 4.863178 1.185788
+ 3.973781 5.548460 0.295972
+ 3.906976 5.848443 2.410302
+ 3.138962 5.408349 3.262893
+ 4.458856 7.061523 2.488333
+ 4.248434 7.659045 3.274966
+ 5.084281 7.376210 1.760379
+ 5.485541 2.705207 -4.398755E-06
+ 6.008824 1.593175 -8.449768E-06
+ 6.204455 3.702003 -2.420005E-06
+!entry.CGLN.unit.residueconnect table  int c1x  int c2x  int c3x  int c4x  int c5x  int c6x
+ 1 0 0 0 0 0
+!entry.CGLN.unit.residues table  str name  int seq  int childseq  int startatomx  str restype  int imagingx
+ "CGLN" 1 19 1 "p" 0
+!entry.CGLN.unit.residuesPdbSequenceNumber array int
+ 0
+!entry.CGLN.unit.solventcap array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CGLN.unit.velocities table  dbl x  dbl y  dbl z
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+!entry.CGLU.unit.atoms table  str name  str type  int typex  int resx  int flags  int seq  int elmnt  dbl chg
+ "N" "N" 0 1 131072 1 7 -0.442000
+ "H" "H" 0 1 131072 2 1 0.295200
+ "CA" "CT" 0 1 131072 3 6 -0.306500
+ "HA" "H1" 0 1 131072 4 1 0.125400
+ "CB" "CT" 0 1 131072 5 6 0.228200
+ "HB2" "HC" 0 1 131072 6 1 -0.035100
+ "HB3" "HC" 0 1 131072 7 1 -0.035100
+ "CG" "CT" 0 1 131072 8 6 -0.215000
+ "HG2" "HC" 0 1 131072 9 1 0.045200
+ "HG3" "HC" 0 1 131072 10 1 0.045200
+ "CD" "C" 0 1 131072 11 6 0.689600
+ "OE1" "O2" 0 1 131072 12 8 -0.742900
+ "OE2" "O2" 0 1 131072 13 8 -0.742900
+ "C" "C" 0 1 131072 14 6 0.577100
+ "O" "O2" 0 1 131072 15 8 -0.743200
+ "OXT" "O2" 0 1 131072 16 8 -0.743200
+!entry.CGLU.unit.atomspertinfo table  str pname  str ptype  int ptypex  int pelmnt  dbl pchg
+ "N" "N" 0 -1 0.0
+ "H" "H" 0 -1 0.0
+ "CA" "CT" 0 -1 0.0
+ "HA" "H1" 0 -1 0.0
+ "CB" "CT" 0 -1 0.0
+ "HB2" "HC" 0 -1 0.0
+ "HB3" "HC" 0 -1 0.0
+ "CG" "CT" 0 -1 0.0
+ "HG2" "HC" 0 -1 0.0
+ "HG3" "HC" 0 -1 0.0
+ "CD" "C" 0 -1 0.0
+ "OE1" "O2" 0 -1 0.0
+ "OE2" "O2" 0 -1 0.0
+ "C" "C" 0 -1 0.0
+ "O" "O2" 0 -1 0.0
+ "OXT" "O2" 0 -1 0.0
+!entry.CGLU.unit.boundbox array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CGLU.unit.childsequence single int
+ 2
+!entry.CGLU.unit.connect array int
+ 1
+ 0
+!entry.CGLU.unit.connectivity table  int atom1x  int atom2x  int flags
+ 1 2 1
+ 1 3 1
+ 3 4 1
+ 3 5 1
+ 3 14 1
+ 5 6 1
+ 5 7 1
+ 5 8 1
+ 8 9 1
+ 8 10 1
+ 8 11 1
+ 11 12 1
+ 11 13 1
+ 14 15 1
+ 14 16 1
+!entry.CGLU.unit.hierarchy table  str abovetype  int abovex  str belowtype  int belowx
+ "U" 0 "R" 1
+ "R" 1 "A" 1
+ "R" 1 "A" 2
+ "R" 1 "A" 3
+ "R" 1 "A" 4
+ "R" 1 "A" 5
+ "R" 1 "A" 6
+ "R" 1 "A" 7
+ "R" 1 "A" 8
+ "R" 1 "A" 9
+ "R" 1 "A" 10
+ "R" 1 "A" 11
+ "R" 1 "A" 12
+ "R" 1 "A" 13
+ "R" 1 "A" 14
+ "R" 1 "A" 15
+ "R" 1 "A" 16
+!entry.CGLU.unit.name single str
+ "CGLU"
+!entry.CGLU.unit.positions table  dbl x  dbl y  dbl z
+ 3.325770 1.547909 -1.607204E-06
+ 3.909407 0.723611 -2.739882E-06
+ 3.970048 2.845795 -1.311163E-07
+ 3.671663 3.400129 -0.889820
+ 3.576965 3.653838 1.232143
+ 2.496995 3.801075 1.241379
+ 3.877484 3.115795 2.131197
+ 4.267328 4.996267 1.194946
+ 5.347413 4.849843 1.186158
+ 3.966923 5.535124 0.296342
+ 3.873732 5.805369 2.428706
+ 4.594590 5.679012 3.454376
+ 2.855965 6.542070 2.333721
+ 5.485541 2.705207 -4.398755E-06
+ 6.008824 1.593175 -8.449768E-06
+ 6.204455 3.702003 -2.420005E-06
+!entry.CGLU.unit.residueconnect table  int c1x  int c2x  int c3x  int c4x  int c5x  int c6x
+ 1 0 0 0 0 0
+!entry.CGLU.unit.residues table  str name  int seq  int childseq  int startatomx  str restype  int imagingx
+ "CGLU" 1 17 1 "p" 0
+!entry.CGLU.unit.residuesPdbSequenceNumber array int
+ 0
+!entry.CGLU.unit.solventcap array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CGLU.unit.velocities table  dbl x  dbl y  dbl z
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+!entry.CGLY.unit.atoms table  str name  str type  int typex  int resx  int flags  int seq  int elmnt  dbl chg
+ "N" "N" 0 1 131072 1 7 -0.442000
+ "H" "H" 0 1 131072 2 1 0.295200
+ "CA" "CT" 0 1 131072 3 6 -0.150900
+ "HA2" "H1" 0 1 131072 4 1 0.103500
+ "HA3" "H1" 0 1 131072 5 1 0.103500
+ "C" "C" 0 1 131072 6 6 0.577100
+ "O" "O2" 0 1 131072 7 8 -0.743200
+ "OXT" "O2" 0 1 131072 8 8 -0.743200
+!entry.CGLY.unit.atomspertinfo table  str pname  str ptype  int ptypex  int pelmnt  dbl pchg
+ "N" "N" 0 -1 0.0
+ "H" "H" 0 -1 0.0
+ "CA" "CT" 0 -1 0.0
+ "HA2" "H1" 0 -1 0.0
+ "HA3" "H1" 0 -1 0.0
+ "C" "C" 0 -1 0.0
+ "O" "O2" 0 -1 0.0
+ "OXT" "O2" 0 -1 0.0
+!entry.CGLY.unit.boundbox array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CGLY.unit.childsequence single int
+ 2
+!entry.CGLY.unit.connect array int
+ 1
+ 0
+!entry.CGLY.unit.connectivity table  int atom1x  int atom2x  int flags
+ 1 2 1
+ 1 3 1
+ 3 4 1
+ 3 5 1
+ 3 6 1
+ 6 7 1
+ 6 8 1
+!entry.CGLY.unit.hierarchy table  str abovetype  int abovex  str belowtype  int belowx
+ "U" 0 "R" 1
+ "R" 1 "A" 1
+ "R" 1 "A" 2
+ "R" 1 "A" 3
+ "R" 1 "A" 4
+ "R" 1 "A" 5
+ "R" 1 "A" 6
+ "R" 1 "A" 7
+ "R" 1 "A" 8
+!entry.CGLY.unit.name single str
+ "CGLY"
+!entry.CGLY.unit.positions table  dbl x  dbl y  dbl z
+ 3.325770 1.547909 -1.607204E-06
+ 3.909407 0.723611 -2.739882E-06
+ 3.970048 2.845795 -1.311163E-07
+ 3.671663 3.400129 -0.889820
+ 3.671668 3.400125 0.889824
+ 5.483710 2.686702 -4.438857E-06
+ 5.993369 1.568360 -8.469843E-06
+ 6.214748 3.674642 -2.512987E-06
+!entry.CGLY.unit.residueconnect table  int c1x  int c2x  int c3x  int c4x  int c5x  int c6x
+ 1 0 0 0 0 0
+!entry.CGLY.unit.residues table  str name  int seq  int childseq  int startatomx  str restype  int imagingx
+ "CGLY" 1 9 1 "p" 0
+!entry.CGLY.unit.residuesPdbSequenceNumber array int
+ 0
+!entry.CGLY.unit.solventcap array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CGLY.unit.velocities table  dbl x  dbl y  dbl z
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+!entry.CHID.unit.atoms table  str name  str type  int typex  int resx  int flags  int seq  int elmnt  dbl chg
+ "N" "N" 0 1 131072 1 7 -0.442000
+ "H" "H" 0 1 131072 2 1 0.295200
+ "CA" "CT" 0 1 131072 3 6 -0.036100
+ "HA" "H1" 0 1 131072 4 1 0.049100
+ "CB" "CT" 0 1 131072 5 6 -0.039700
+ "HB2" "HC" 0 1 131072 6 1 0.043600
+ "HB3" "HC" 0 1 131072 7 1 0.043600
+ "CG" "CC" 0 1 131072 8 6 0.049400
+ "ND1" "NA" 0 1 131072 9 7 -0.164400
+ "HD1" "H" 0 1 131072 10 1 0.272700
+ "CE1" "CR" 0 1 131072 11 6 0.103800
+ "HE1" "H5" 0 1 131072 12 1 0.100200
+ "NE2" "NB" 0 1 131072 13 7 -0.474900
+ "CD2" "CV" 0 1 131072 14 6 0.018800
+ "HD2" "H4" 0 1 131072 15 1 0.090000
+ "C" "C" 0 1 131072 16 6 0.577100
+ "O" "O2" 0 1 131072 17 8 -0.743200
+ "OXT" "O2" 0 1 131072 18 8 -0.743200
+!entry.CHID.unit.atomspertinfo table  str pname  str ptype  int ptypex  int pelmnt  dbl pchg
+ "N" "N" 0 -1 0.0
+ "H" "H" 0 -1 0.0
+ "CA" "CT" 0 -1 0.0
+ "HA" "H1" 0 -1 0.0
+ "CB" "CT" 0 -1 0.0
+ "HB2" "HC" 0 -1 0.0
+ "HB3" "HC" 0 -1 0.0
+ "CG" "CC" 0 -1 0.0
+ "ND1" "NA" 0 -1 0.0
+ "HD1" "H" 0 -1 0.0
+ "CE1" "CR" 0 -1 0.0
+ "HE1" "H5" 0 -1 0.0
+ "NE2" "NB" 0 -1 0.0
+ "CD2" "CV" 0 -1 0.0
+ "HD2" "H4" 0 -1 0.0
+ "C" "C" 0 -1 0.0
+ "O" "O2" 0 -1 0.0
+ "OXT" "O2" 0 -1 0.0
+!entry.CHID.unit.boundbox array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CHID.unit.childsequence single int
+ 2
+!entry.CHID.unit.connect array int
+ 1
+ 0
+!entry.CHID.unit.connectivity table  int atom1x  int atom2x  int flags
+ 1 2 1
+ 1 3 1
+ 3 4 1
+ 3 5 1
+ 3 16 1
+ 5 6 1
+ 5 7 1
+ 5 8 1
+ 8 9 1
+ 8 14 1
+ 9 10 1
+ 9 11 1
+ 11 12 1
+ 11 13 1
+ 13 14 1
+ 14 15 1
+ 16 17 1
+ 16 18 1
+!entry.CHID.unit.hierarchy table  str abovetype  int abovex  str belowtype  int belowx
+ "U" 0 "R" 1
+ "R" 1 "A" 1
+ "R" 1 "A" 2
+ "R" 1 "A" 3
+ "R" 1 "A" 4
+ "R" 1 "A" 5
+ "R" 1 "A" 6
+ "R" 1 "A" 7
+ "R" 1 "A" 8
+ "R" 1 "A" 9
+ "R" 1 "A" 10
+ "R" 1 "A" 11
+ "R" 1 "A" 12
+ "R" 1 "A" 13
+ "R" 1 "A" 14
+ "R" 1 "A" 15
+ "R" 1 "A" 16
+ "R" 1 "A" 17
+ "R" 1 "A" 18
+!entry.CHID.unit.name single str
+ "CHID"
+!entry.CHID.unit.positions table  dbl x  dbl y  dbl z
+ 3.325770 1.547909 -1.607204E-06
+ 3.909407 0.723611 -2.739882E-06
+ 3.970048 2.845795 -1.311163E-07
+ 3.671663 3.400129 -0.889820
+ 3.576965 3.653838 1.232143
+ 2.496995 3.801075 1.241379
+ 3.877484 3.115795 2.131197
+ 4.200813 5.026064 1.321087
+ 3.942782 5.885086 2.382972
+ 3.339725 5.691913 3.169805
+ 4.624274 6.997642 2.182500
+ 4.563048 7.811875 2.904563
+ 5.294011 6.891451 1.061663
+ 5.058974 5.678868 0.492453
+ 5.537741 5.417846 -0.451343
+ 5.485541 2.705207 -4.398755E-06
+ 6.008824 1.593175 -8.449768E-06
+ 6.204455 3.702003 -2.420005E-06
+!entry.CHID.unit.residueconnect table  int c1x  int c2x  int c3x  int c4x  int c5x  int c6x
+ 1 0 0 0 0 0
+!entry.CHID.unit.residues table  str name  int seq  int childseq  int startatomx  str restype  int imagingx
+ "CHID" 1 19 1 "p" 0
+!entry.CHID.unit.residuesPdbSequenceNumber array int
+ 0
+!entry.CHID.unit.solventcap array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CHID.unit.velocities table  dbl x  dbl y  dbl z
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+!entry.CHIE.unit.atoms table  str name  str type  int typex  int resx  int flags  int seq  int elmnt  dbl chg
+ "N" "N" 0 1 131072 1 7 -0.442000
+ "H" "H" 0 1 131072 2 1 0.295200
+ "CA" "CT" 0 1 131072 3 6 -0.078100
+ "HA" "H1" 0 1 131072 4 1 0.062000
+ "CB" "CT" 0 1 131072 5 6 -0.042100
+ "HB2" "HC" 0 1 131072 6 1 0.060400
+ "HB3" "HC" 0 1 131072 7 1 0.060400
+ "CG" "CC" 0 1 131072 8 6 0.245200
+ "ND1" "NB" 0 1 131072 9 7 -0.575300
+ "CE1" "CR" 0 1 131072 10 6 0.248000
+ "HE1" "H5" 0 1 131072 11 1 0.064600
+ "NE2" "NA" 0 1 131072 12 7 -0.234300
+ "HE2" "H" 0 1 131072 13 1 0.294900
+ "CD2" "CW" 0 1 131072 14 6 -0.193600
+ "HD2" "H4" 0 1 131072 15 1 0.144000
+ "C" "C" 0 1 131072 16 6 0.577100
+ "O" "O2" 0 1 131072 17 8 -0.743200
+ "OXT" "O2" 0 1 131072 18 8 -0.743200
+!entry.CHIE.unit.atomspertinfo table  str pname  str ptype  int ptypex  int pelmnt  dbl pchg
+ "N" "N" 0 -1 0.0
+ "H" "H" 0 -1 0.0
+ "CA" "CT" 0 -1 0.0
+ "HA" "H1" 0 -1 0.0
+ "CB" "CT" 0 -1 0.0
+ "HB2" "HC" 0 -1 0.0
+ "HB3" "HC" 0 -1 0.0
+ "CG" "CC" 0 -1 0.0
+ "ND1" "NB" 0 -1 0.0
+ "CE1" "CR" 0 -1 0.0
+ "HE1" "H5" 0 -1 0.0
+ "NE2" "NA" 0 -1 0.0
+ "HE2" "H" 0 -1 0.0
+ "CD2" "CW" 0 -1 0.0
+ "HD2" "H4" 0 -1 0.0
+ "C" "C" 0 -1 0.0
+ "O" "O2" 0 -1 0.0
+ "OXT" "O2" 0 -1 0.0
+!entry.CHIE.unit.boundbox array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CHIE.unit.childsequence single int
+ 2
+!entry.CHIE.unit.connect array int
+ 1
+ 0
+!entry.CHIE.unit.connectivity table  int atom1x  int atom2x  int flags
+ 1 2 1
+ 1 3 1
+ 3 4 1
+ 3 5 1
+ 3 16 1
+ 5 6 1
+ 5 7 1
+ 5 8 1
+ 8 9 1
+ 8 14 1
+ 9 10 1
+ 10 11 1
+ 10 12 1
+ 12 13 1
+ 12 14 1
+ 14 15 1
+ 16 17 1
+ 16 18 1
+!entry.CHIE.unit.hierarchy table  str abovetype  int abovex  str belowtype  int belowx
+ "U" 0 "R" 1
+ "R" 1 "A" 1
+ "R" 1 "A" 2
+ "R" 1 "A" 3
+ "R" 1 "A" 4
+ "R" 1 "A" 5
+ "R" 1 "A" 6
+ "R" 1 "A" 7
+ "R" 1 "A" 8
+ "R" 1 "A" 9
+ "R" 1 "A" 10
+ "R" 1 "A" 11
+ "R" 1 "A" 12
+ "R" 1 "A" 13
+ "R" 1 "A" 14
+ "R" 1 "A" 15
+ "R" 1 "A" 16
+ "R" 1 "A" 17
+ "R" 1 "A" 18
+!entry.CHIE.unit.name single str
+ "CHIE"
+!entry.CHIE.unit.positions table  dbl x  dbl y  dbl z
+ 3.325770 1.547909 -1.607204E-06
+ 3.909407 0.723611 -2.739882E-06
+ 3.970048 2.845795 -1.311163E-07
+ 3.671663 3.400129 -0.889820
+ 3.576965 3.653838 1.232143
+ 2.496995 3.801075 1.241379
+ 3.877484 3.115795 2.131197
+ 4.200813 5.026064 1.321087
+ 3.942782 5.885086 2.382972
+ 4.624274 6.997642 2.182500
+ 4.563048 7.811875 2.904563
+ 5.294011 6.891451 1.061663
+ 5.896297 7.605085 0.676854
+ 5.058974 5.678868 0.492453
+ 5.537741 5.417846 -0.451343
+ 5.485541 2.705207 -4.398755E-06
+ 6.008824 1.593175 -8.449768E-06
+ 6.204455 3.702003 -2.420005E-06
+!entry.CHIE.unit.residueconnect table  int c1x  int c2x  int c3x  int c4x  int c5x  int c6x
+ 1 0 0 0 0 0
+!entry.CHIE.unit.residues table  str name  int seq  int childseq  int startatomx  str restype  int imagingx
+ "CHIE" 1 19 1 "p" 0
+!entry.CHIE.unit.residuesPdbSequenceNumber array int
+ 0
+!entry.CHIE.unit.solventcap array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CHIE.unit.velocities table  dbl x  dbl y  dbl z
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+!entry.CHIP.unit.atoms table  str name  str type  int typex  int resx  int flags  int seq  int elmnt  dbl chg
+ "N" "N" 0 1 131072 1 7 -0.442000
+ "H" "H" 0 1 131072 2 1 0.295200
+ "CA" "CT" 0 1 131072 3 6 0.064200
+ "HA" "H1" 0 1 131072 4 1 0.045300
+ "CB" "CT" 0 1 131072 5 6 -0.005500
+ "HB2" "HC" 0 1 131072 6 1 0.055600
+ "HB3" "HC" 0 1 131072 7 1 0.055600
+ "CG" "CC" 0 1 131072 8 6 0.094800
+ "ND1" "NA" 0 1 131072 9 7 -0.007700
+ "HD1" "H" 0 1 131072 10 1 0.287200
+ "CE1" "CR" 0 1 131072 11 6 -0.074000
+ "HE1" "H5" 0 1 131072 12 1 0.213300
+ "NE2" "NA" 0 1 131072 13 7 -0.043200
+ "HE2" "H" 0 1 131072 14 1 0.319200
+ "CD2" "CW" 0 1 131072 15 6 -0.122400
+ "HD2" "H4" 0 1 131072 16 1 0.173700
+ "C" "C" 0 1 131072 17 6 0.577100
+ "O" "O2" 0 1 131072 18 8 -0.743200
+ "OXT" "O2" 0 1 131072 19 8 -0.743200
+!entry.CHIP.unit.atomspertinfo table  str pname  str ptype  int ptypex  int pelmnt  dbl pchg
+ "N" "N" 0 -1 0.0
+ "H" "H" 0 -1 0.0
+ "CA" "CT" 0 -1 0.0
+ "HA" "H1" 0 -1 0.0
+ "CB" "CT" 0 -1 0.0
+ "HB2" "HC" 0 -1 0.0
+ "HB3" "HC" 0 -1 0.0
+ "CG" "CC" 0 -1 0.0
+ "ND1" "NA" 0 -1 0.0
+ "HD1" "H" 0 -1 0.0
+ "CE1" "CR" 0 -1 0.0
+ "HE1" "H5" 0 -1 0.0
+ "NE2" "NA" 0 -1 0.0
+ "HE2" "H" 0 -1 0.0
+ "CD2" "CW" 0 -1 0.0
+ "HD2" "H4" 0 -1 0.0
+ "C" "C" 0 -1 0.0
+ "O" "O2" 0 -1 0.0
+ "OXT" "O2" 0 -1 0.0
+!entry.CHIP.unit.boundbox array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CHIP.unit.childsequence single int
+ 2
+!entry.CHIP.unit.connect array int
+ 1
+ 0
+!entry.CHIP.unit.connectivity table  int atom1x  int atom2x  int flags
+ 1 2 1
+ 1 3 1
+ 3 4 1
+ 3 5 1
+ 3 17 1
+ 5 6 1
+ 5 7 1
+ 5 8 1
+ 8 9 1
+ 8 15 1
+ 9 10 1
+ 9 11 1
+ 11 12 1
+ 11 13 1
+ 13 14 1
+ 13 15 1
+ 15 16 1
+ 17 18 1
+ 17 19 1
+!entry.CHIP.unit.hierarchy table  str abovetype  int abovex  str belowtype  int belowx
+ "U" 0 "R" 1
+ "R" 1 "A" 1
+ "R" 1 "A" 2
+ "R" 1 "A" 3
+ "R" 1 "A" 4
+ "R" 1 "A" 5
+ "R" 1 "A" 6
+ "R" 1 "A" 7
+ "R" 1 "A" 8
+ "R" 1 "A" 9
+ "R" 1 "A" 10
+ "R" 1 "A" 11
+ "R" 1 "A" 12
+ "R" 1 "A" 13
+ "R" 1 "A" 14
+ "R" 1 "A" 15
+ "R" 1 "A" 16
+ "R" 1 "A" 17
+ "R" 1 "A" 18
+ "R" 1 "A" 19
+!entry.CHIP.unit.name single str
+ "CHIP"
+!entry.CHIP.unit.positions table  dbl x  dbl y  dbl z
+ 3.325770 1.547909 -1.607204E-06
+ 3.909407 0.723611 -2.739882E-06
+ 3.970048 2.845795 -1.311163E-07
+ 3.671663 3.400129 -0.889820
+ 3.576965 3.653838 1.232143
+ 2.496995 3.801075 1.241379
+ 3.877484 3.115795 2.131197
+ 4.200813 5.026064 1.321087
+ 3.942782 5.885086 2.382972
+ 3.339725 5.691913 3.169805
+ 4.624274 6.997642 2.182500
+ 4.563048 7.811875 2.904563
+ 5.294011 6.891451 1.061663
+ 5.896297 7.605085 0.676854
+ 5.058974 5.678868 0.492453
+ 5.537741 5.417846 -0.451343
+ 5.485541 2.705207 -4.398755E-06
+ 6.008824 1.593175 -8.449768E-06
+ 6.204455 3.702003 -2.420005E-06
+!entry.CHIP.unit.residueconnect table  int c1x  int c2x  int c3x  int c4x  int c5x  int c6x
+ 1 0 0 0 0 0
+!entry.CHIP.unit.residues table  str name  int seq  int childseq  int startatomx  str restype  int imagingx
+ "CHIP" 1 20 1 "p" 0
+!entry.CHIP.unit.residuesPdbSequenceNumber array int
+ 0
+!entry.CHIP.unit.solventcap array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CHIP.unit.velocities table  dbl x  dbl y  dbl z
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+!entry.CILE.unit.atoms table  str name  str type  int typex  int resx  int flags  int seq  int elmnt  dbl chg
+ "N" "N" 0 1 131072 1 7 -0.442000
+ "H" "H" 0 1 131072 2 1 0.295200
+ "CA" "CT" 0 1 131072 3 6 -0.162200
+ "HA" "H1" 0 1 131072 4 1 0.102800
+ "CB" "CT" 0 1 131072 5 6 0.129600
+ "HB" "HC" 0 1 131072 6 1 0.020700
+ "CG2" "CT" 0 1 131072 7 6 -0.302100
+ "HG21" "HC" 0 1 131072 8 1 0.082500
+ "HG22" "HC" 0 1 131072 9 1 0.082500
+ "HG23" "HC" 0 1 131072 10 1 0.082500
+ "CG1" "CT" 0 1 131072 11 6 -0.033500
+ "HG12" "HC" 0 1 131072 12 1 0.028900
+ "HG13" "HC" 0 1 131072 13 1 0.028900
+ "CD1" "CT" 0 1 131072 14 6 -0.099300
+ "HD11" "HC" 0 1 131072 15 1 0.031600
+ "HD12" "HC" 0 1 131072 16 1 0.031600
+ "HD13" "HC" 0 1 131072 17 1 0.031600
+ "C" "C" 0 1 131072 18 6 0.577100
+ "O" "O2" 0 1 131072 19 8 -0.743200
+ "OXT" "O2" 0 1 131072 20 8 -0.743200
+!entry.CILE.unit.atomspertinfo table  str pname  str ptype  int ptypex  int pelmnt  dbl pchg
+ "N" "N" 0 -1 0.0
+ "H" "H" 0 -1 0.0
+ "CA" "CT" 0 -1 0.0
+ "HA" "H1" 0 -1 0.0
+ "CB" "CT" 0 -1 0.0
+ "HB" "HC" 0 -1 0.0
+ "CG2" "CT" 0 -1 0.0
+ "HG21" "HC" 0 -1 0.0
+ "HG22" "HC" 0 -1 0.0
+ "HG23" "HC" 0 -1 0.0
+ "CG1" "CT" 0 -1 0.0
+ "HG12" "HC" 0 -1 0.0
+ "HG13" "HC" 0 -1 0.0
+ "CD1" "CT" 0 -1 0.0
+ "HD11" "HC" 0 -1 0.0
+ "HD12" "HC" 0 -1 0.0
+ "HD13" "HC" 0 -1 0.0
+ "C" "C" 0 -1 0.0
+ "O" "O2" 0 -1 0.0
+ "OXT" "O2" 0 -1 0.0
+!entry.CILE.unit.boundbox array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CILE.unit.childsequence single int
+ 2
+!entry.CILE.unit.connect array int
+ 1
+ 0
+!entry.CILE.unit.connectivity table  int atom1x  int atom2x  int flags
+ 1 2 1
+ 1 3 1
+ 3 4 1
+ 3 5 1
+ 3 18 1
+ 5 6 1
+ 5 7 1
+ 5 11 1
+ 7 8 1
+ 7 9 1
+ 7 10 1
+ 11 12 1
+ 11 13 1
+ 11 14 1
+ 14 15 1
+ 14 16 1
+ 14 17 1
+ 18 19 1
+ 18 20 1
+!entry.CILE.unit.hierarchy table  str abovetype  int abovex  str belowtype  int belowx
+ "U" 0 "R" 1
+ "R" 1 "A" 1
+ "R" 1 "A" 2
+ "R" 1 "A" 3
+ "R" 1 "A" 4
+ "R" 1 "A" 5
+ "R" 1 "A" 6
+ "R" 1 "A" 7
+ "R" 1 "A" 8
+ "R" 1 "A" 9
+ "R" 1 "A" 10
+ "R" 1 "A" 11
+ "R" 1 "A" 12
+ "R" 1 "A" 13
+ "R" 1 "A" 14
+ "R" 1 "A" 15
+ "R" 1 "A" 16
+ "R" 1 "A" 17
+ "R" 1 "A" 18
+ "R" 1 "A" 19
+ "R" 1 "A" 20
+!entry.CILE.unit.name single str
+ "CILE"
+!entry.CILE.unit.positions table  dbl x  dbl y  dbl z
+ 3.325770 1.547909 -1.607204E-06
+ 3.909407 0.723611 -2.739882E-06
+ 3.970048 2.845795 -1.311163E-07
+ 3.671663 3.400129 -0.889820
+ 3.552136 3.620733 1.245168
+ 2.470128 3.752486 1.245640
+ 3.970045 2.845728 2.490296
+ 5.052053 2.713974 2.490763
+ 3.671561 3.399208 3.380615
+ 3.485650 1.869275 2.490737
+ 4.230204 4.986694 1.245169
+ 5.312310 4.855746 1.245164
+ 3.931820 5.541027 0.355348
+ 3.812294 5.761632 2.490339
+ 4.110777 5.208104 3.380628
+ 4.296689 6.738085 2.490833
+ 2.730286 5.893383 2.490813
+ 5.485541 2.705207 -4.398755E-06
+ 6.008824 1.593175 -8.449768E-06
+ 6.204455 3.702003 -2.420005E-06
+!entry.CILE.unit.residueconnect table  int c1x  int c2x  int c3x  int c4x  int c5x  int c6x
+ 1 0 0 0 0 0
+!entry.CILE.unit.residues table  str name  int seq  int childseq  int startatomx  str restype  int imagingx
+ "CILE" 1 21 1 "p" 0
+!entry.CILE.unit.residuesPdbSequenceNumber array int
+ 0
+!entry.CILE.unit.solventcap array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CILE.unit.velocities table  dbl x  dbl y  dbl z
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+!entry.CLEU.unit.atoms table  str name  str type  int typex  int resx  int flags  int seq  int elmnt  dbl chg
+ "N" "N" 0 1 131072 1 7 -0.442000
+ "H" "H" 0 1 131072 2 1 0.295200
+ "CA" "CT" 0 1 131072 3 6 -0.113800
+ "HA" "H1" 0 1 131072 4 1 0.077600
+ "CB" "CT" 0 1 131072 5 6 -0.139800
+ "HB2" "HC" 0 1 131072 6 1 0.048000
+ "HB3" "HC" 0 1 131072 7 1 0.048000
+ "CG" "CT" 0 1 131072 8 6 0.417900
+ "HG" "HC" 0 1 131072 9 1 -0.054000
+ "CD1" "CT" 0 1 131072 10 6 -0.409100
+ "HD11" "HC" 0 1 131072 11 1 0.098400
+ "HD12" "HC" 0 1 131072 12 1 0.098400
+ "HD13" "HC" 0 1 131072 13 1 0.098400
+ "CD2" "CT" 0 1 131072 14 6 -0.409100
+ "HD21" "HC" 0 1 131072 15 1 0.098400
+ "HD22" "HC" 0 1 131072 16 1 0.098400
+ "HD23" "HC" 0 1 131072 17 1 0.098400
+ "C" "C" 0 1 131072 18 6 0.577100
+ "O" "O2" 0 1 131072 19 8 -0.743200
+ "OXT" "O2" 0 1 131072 20 8 -0.743200
+!entry.CLEU.unit.atomspertinfo table  str pname  str ptype  int ptypex  int pelmnt  dbl pchg
+ "N" "N" 0 -1 0.0
+ "H" "H" 0 -1 0.0
+ "CA" "CT" 0 -1 0.0
+ "HA" "H1" 0 -1 0.0
+ "CB" "CT" 0 -1 0.0
+ "HB2" "HC" 0 -1 0.0
+ "HB3" "HC" 0 -1 0.0
+ "CG" "CT" 0 -1 0.0
+ "HG" "HC" 0 -1 0.0
+ "CD1" "CT" 0 -1 0.0
+ "HD11" "HC" 0 -1 0.0
+ "HD12" "HC" 0 -1 0.0
+ "HD13" "HC" 0 -1 0.0
+ "CD2" "CT" 0 -1 0.0
+ "HD21" "HC" 0 -1 0.0
+ "HD22" "HC" 0 -1 0.0
+ "HD23" "HC" 0 -1 0.0
+ "C" "C" 0 -1 0.0
+ "O" "O2" 0 -1 0.0
+ "OXT" "O2" 0 -1 0.0
+!entry.CLEU.unit.boundbox array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CLEU.unit.childsequence single int
+ 2
+!entry.CLEU.unit.connect array int
+ 1
+ 0
+!entry.CLEU.unit.connectivity table  int atom1x  int atom2x  int flags
+ 1 2 1
+ 1 3 1
+ 3 4 1
+ 3 5 1
+ 3 18 1
+ 5 6 1
+ 5 7 1
+ 5 8 1
+ 8 9 1
+ 8 10 1
+ 8 14 1
+ 10 11 1
+ 10 12 1
+ 10 13 1
+ 14 15 1
+ 14 16 1
+ 14 17 1
+ 18 19 1
+ 18 20 1
+!entry.CLEU.unit.hierarchy table  str abovetype  int abovex  str belowtype  int belowx
+ "U" 0 "R" 1
+ "R" 1 "A" 1
+ "R" 1 "A" 2
+ "R" 1 "A" 3
+ "R" 1 "A" 4
+ "R" 1 "A" 5
+ "R" 1 "A" 6
+ "R" 1 "A" 7
+ "R" 1 "A" 8
+ "R" 1 "A" 9
+ "R" 1 "A" 10
+ "R" 1 "A" 11
+ "R" 1 "A" 12
+ "R" 1 "A" 13
+ "R" 1 "A" 14
+ "R" 1 "A" 15
+ "R" 1 "A" 16
+ "R" 1 "A" 17
+ "R" 1 "A" 18
+ "R" 1 "A" 19
+ "R" 1 "A" 20
+!entry.CLEU.unit.name single str
+ "CLEU"
+!entry.CLEU.unit.positions table  dbl x  dbl y  dbl z
+ 3.325770 1.547909 -1.607204E-06
+ 3.909407 0.723611 -2.739882E-06
+ 3.970048 2.845795 -1.311163E-07
+ 3.671663 3.400129 -0.889820
+ 3.576965 3.653838 1.232143
+ 2.496995 3.801075 1.241379
+ 3.877484 3.115795 2.131197
+ 4.274186 5.009602 1.194577
+ 5.354271 4.863178 1.185788
+ 3.853429 5.762895 -0.062857
+ 2.773449 5.910113 -0.054557
+ 4.351513 6.732052 -0.090203
+ 4.134159 5.185704 -0.943846
+ 3.881105 5.817645 2.426721
+ 4.181626 5.279602 3.325774
+ 4.379198 6.786825 2.400363
+ 2.801135 5.964881 2.435959
+ 5.485541 2.705207 -4.398755E-06
+ 6.008824 1.593175 -8.449768E-06
+ 6.204455 3.702003 -2.420005E-06
+!entry.CLEU.unit.residueconnect table  int c1x  int c2x  int c3x  int c4x  int c5x  int c6x
+ 1 0 0 0 0 0
+!entry.CLEU.unit.residues table  str name  int seq  int childseq  int startatomx  str restype  int imagingx
+ "CLEU" 1 21 1 "p" 0
+!entry.CLEU.unit.residuesPdbSequenceNumber array int
+ 0
+!entry.CLEU.unit.solventcap array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CLEU.unit.velocities table  dbl x  dbl y  dbl z
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+!entry.CLYS.unit.atoms table  str name  str type  int typex  int resx  int flags  int seq  int elmnt  dbl chg
+ "N" "N" 0 1 131072 1 7 -0.442000
+ "H" "H" 0 1 131072 2 1 0.295200
+ "CA" "CT" 0 1 131072 3 6 -0.088200
+ "HA" "H1" 0 1 131072 4 1 0.095200
+ "CB" "CT" 0 1 131072 5 6 -0.027700
+ "HB2" "HC" 0 1 131072 6 1 0.029300
+ "HB3" "HC" 0 1 131072 7 1 0.029300
+ "CG" "CT" 0 1 131072 8 6 -0.013400
+ "HG2" "HC" 0 1 131072 9 1 0.038700
+ "HG3" "HC" 0 1 131072 10 1 0.038700
+ "CD" "CT" 0 1 131072 11 6 -0.035900
+ "HD2" "HC" 0 1 131072 12 1 0.053900
+ "HD3" "HC" 0 1 131072 13 1 0.053900
+ "CE" "CT" 0 1 131072 14 6 0.142000
+ "HE2" "HP" 0 1 131072 15 1 0.046100
+ "HE3" "HP" 0 1 131072 16 1 0.046100
+ "NZ" "N3" 0 1 131072 17 7 -0.209900
+ "HZ1" "H" 0 1 131072 18 1 0.286000
+ "HZ2" "H" 0 1 131072 19 1 0.286000
+ "HZ3" "H" 0 1 131072 20 1 0.286000
+ "C" "C" 0 1 131072 21 6 0.577100
+ "O" "O2" 0 1 131072 22 8 -0.743200
+ "OXT" "O2" 0 1 131072 23 8 -0.743200
+!entry.CLYS.unit.atomspertinfo table  str pname  str ptype  int ptypex  int pelmnt  dbl pchg
+ "N" "N" 0 -1 0.0
+ "H" "H" 0 -1 0.0
+ "CA" "CT" 0 -1 0.0
+ "HA" "H1" 0 -1 0.0
+ "CB" "CT" 0 -1 0.0
+ "HB2" "HC" 0 -1 0.0
+ "HB3" "HC" 0 -1 0.0
+ "CG" "CT" 0 -1 0.0
+ "HG2" "HC" 0 -1 0.0
+ "HG3" "HC" 0 -1 0.0
+ "CD" "CT" 0 -1 0.0
+ "HD2" "HC" 0 -1 0.0
+ "HD3" "HC" 0 -1 0.0
+ "CE" "CT" 0 -1 0.0
+ "HE2" "HP" 0 -1 0.0
+ "HE3" "HP" 0 -1 0.0
+ "NZ" "N3" 0 -1 0.0
+ "HZ1" "H" 0 -1 0.0
+ "HZ2" "H" 0 -1 0.0
+ "HZ3" "H" 0 -1 0.0
+ "C" "C" 0 -1 0.0
+ "O" "O2" 0 -1 0.0
+ "OXT" "O2" 0 -1 0.0
+!entry.CLYS.unit.boundbox array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CLYS.unit.childsequence single int
+ 2
+!entry.CLYS.unit.connect array int
+ 1
+ 0
+!entry.CLYS.unit.connectivity table  int atom1x  int atom2x  int flags
+ 1 2 1
+ 1 3 1
+ 3 4 1
+ 3 5 1
+ 3 21 1
+ 5 6 1
+ 5 7 1
+ 5 8 1
+ 8 9 1
+ 8 10 1
+ 8 11 1
+ 11 12 1
+ 11 13 1
+ 11 14 1
+ 14 15 1
+ 14 16 1
+ 14 17 1
+ 17 18 1
+ 17 19 1
+ 17 20 1
+ 21 22 1
+ 21 23 1
+!entry.CLYS.unit.hierarchy table  str abovetype  int abovex  str belowtype  int belowx
+ "U" 0 "R" 1
+ "R" 1 "A" 1
+ "R" 1 "A" 2
+ "R" 1 "A" 3
+ "R" 1 "A" 4
+ "R" 1 "A" 5
+ "R" 1 "A" 6
+ "R" 1 "A" 7
+ "R" 1 "A" 8
+ "R" 1 "A" 9
+ "R" 1 "A" 10
+ "R" 1 "A" 11
+ "R" 1 "A" 12
+ "R" 1 "A" 13
+ "R" 1 "A" 14
+ "R" 1 "A" 15
+ "R" 1 "A" 16
+ "R" 1 "A" 17
+ "R" 1 "A" 18
+ "R" 1 "A" 19
+ "R" 1 "A" 20
+ "R" 1 "A" 21
+ "R" 1 "A" 22
+ "R" 1 "A" 23
+!entry.CLYS.unit.name single str
+ "CLYS"
+!entry.CLYS.unit.positions table  dbl x  dbl y  dbl z
+ 3.325770 1.547909 -1.607204E-06
+ 3.909407 0.723611 -2.739882E-06
+ 3.970048 2.845795 -1.311163E-07
+ 3.671663 3.400129 -0.889820
+ 3.576965 3.653838 1.232143
+ 2.496995 3.801075 1.241379
+ 3.877484 3.115795 2.131197
+ 4.274186 5.009602 1.194577
+ 5.354271 4.863178 1.185788
+ 3.973781 5.548460 0.295972
+ 3.881105 5.817645 2.426721
+ 2.801135 5.964881 2.435959
+ 4.181626 5.279602 3.325774
+ 4.578325 7.173410 2.389153
+ 5.658410 7.026987 2.380363
+ 4.277917 7.712267 1.490550
+ 4.199422 7.952309 3.576860
+ 4.478085 7.453366 4.409628
+ 4.661186 8.850226 3.551979
+ 3.198675 8.088466 3.584971
+ 5.485541 2.705207 -4.398755E-06
+ 6.008824 1.593175 -8.449768E-06
+ 6.204455 3.702003 -2.420005E-06
+!entry.CLYS.unit.residueconnect table  int c1x  int c2x  int c3x  int c4x  int c5x  int c6x
+ 1 0 0 0 0 0
+!entry.CLYS.unit.residues table  str name  int seq  int childseq  int startatomx  str restype  int imagingx
+ "CLYS" 1 24 1 "p" 0
+!entry.CLYS.unit.residuesPdbSequenceNumber array int
+ 0
+!entry.CLYS.unit.solventcap array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CLYS.unit.velocities table  dbl x  dbl y  dbl z
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+!entry.CMET.unit.atoms table  str name  str type  int typex  int resx  int flags  int seq  int elmnt  dbl chg
+ "N" "N" 0 1 131072 1 7 -0.442000
+ "H" "H" 0 1 131072 2 1 0.295200
+ "CA" "CT" 0 1 131072 3 6 -0.079800
+ "HA" "H1" 0 1 131072 4 1 0.061400
+ "CB" "CT" 0 1 131072 5 6 0.058500
+ "HB2" "HC" 0 1 131072 6 1 0.004200
+ "HB3" "HC" 0 1 131072 7 1 0.004200
+ "CG" "CT" 0 1 131072 8 6 -0.022700
+ "HG2" "H1" 0 1 131072 9 1 0.072300
+ "HG3" "H1" 0 1 131072 10 1 0.072300
+ "SD" "S" 0 1 131072 11 16 -0.236700
+ "CE" "CT" 0 1 131072 12 6 -0.048300
+ "HE1" "H1" 0 1 131072 13 1 0.056900
+ "HE2" "H1" 0 1 131072 14 1 0.056900
+ "HE3" "H1" 0 1 131072 15 1 0.056900
+ "C" "C" 0 1 131072 16 6 0.577100
+ "O" "O2" 0 1 131072 17 8 -0.743200
+ "OXT" "O2" 0 1 131072 18 8 -0.743200
+!entry.CMET.unit.atomspertinfo table  str pname  str ptype  int ptypex  int pelmnt  dbl pchg
+ "N" "N" 0 -1 0.0
+ "H" "H" 0 -1 0.0
+ "CA" "CT" 0 -1 0.0
+ "HA" "H1" 0 -1 0.0
+ "CB" "CT" 0 -1 0.0
+ "HB2" "HC" 0 -1 0.0
+ "HB3" "HC" 0 -1 0.0
+ "CG" "CT" 0 -1 0.0
+ "HG2" "H1" 0 -1 0.0
+ "HG3" "H1" 0 -1 0.0
+ "SD" "S" 0 -1 0.0
+ "CE" "CT" 0 -1 0.0
+ "HE1" "H1" 0 -1 0.0
+ "HE2" "H1" 0 -1 0.0
+ "HE3" "H1" 0 -1 0.0
+ "C" "C" 0 -1 0.0
+ "O" "O2" 0 -1 0.0
+ "OXT" "O2" 0 -1 0.0
+!entry.CMET.unit.boundbox array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CMET.unit.childsequence single int
+ 2
+!entry.CMET.unit.connect array int
+ 1
+ 0
+!entry.CMET.unit.connectivity table  int atom1x  int atom2x  int flags
+ 1 2 1
+ 1 3 1
+ 3 4 1
+ 3 5 1
+ 3 16 1
+ 5 6 1
+ 5 7 1
+ 5 8 1
+ 8 9 1
+ 8 10 1
+ 8 11 1
+ 11 12 1
+ 12 13 1
+ 12 14 1
+ 12 15 1
+ 16 17 1
+ 16 18 1
+!entry.CMET.unit.hierarchy table  str abovetype  int abovex  str belowtype  int belowx
+ "U" 0 "R" 1
+ "R" 1 "A" 1
+ "R" 1 "A" 2
+ "R" 1 "A" 3
+ "R" 1 "A" 4
+ "R" 1 "A" 5
+ "R" 1 "A" 6
+ "R" 1 "A" 7
+ "R" 1 "A" 8
+ "R" 1 "A" 9
+ "R" 1 "A" 10
+ "R" 1 "A" 11
+ "R" 1 "A" 12
+ "R" 1 "A" 13
+ "R" 1 "A" 14
+ "R" 1 "A" 15
+ "R" 1 "A" 16
+ "R" 1 "A" 17
+ "R" 1 "A" 18
+!entry.CMET.unit.name single str
+ "CMET"
+!entry.CMET.unit.positions table  dbl x  dbl y  dbl z
+ 3.325770 1.547909 -1.607204E-06
+ 3.909407 0.723611 -2.739882E-06
+ 3.970048 2.845795 -1.311163E-07
+ 3.671663 3.400129 -0.889820
+ 3.576965 3.653838 1.232143
+ 2.496995 3.801075 1.241379
+ 3.877484 3.115795 2.131197
+ 4.274186 5.009602 1.194577
+ 5.354271 4.863178 1.185788
+ 3.973781 5.548460 0.295972
+ 3.817309 5.981266 2.651708
+ 4.753212 7.463128 2.340949
+ 4.433582 7.904044 1.396741
+ 4.585907 8.175299 3.148985
+ 5.814074 7.218763 2.286554
+ 5.485541 2.705207 -4.398755E-06
+ 6.008824 1.593175 -8.449768E-06
+ 6.204455 3.702003 -2.420005E-06
+!entry.CMET.unit.residueconnect table  int c1x  int c2x  int c3x  int c4x  int c5x  int c6x
+ 1 0 0 0 0 0
+!entry.CMET.unit.residues table  str name  int seq  int childseq  int startatomx  str restype  int imagingx
+ "CMET" 1 19 1 "p" 0
+!entry.CMET.unit.residuesPdbSequenceNumber array int
+ 0
+!entry.CMET.unit.solventcap array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CMET.unit.velocities table  dbl x  dbl y  dbl z
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+!entry.CPHE.unit.atoms table  str name  str type  int typex  int resx  int flags  int seq  int elmnt  dbl chg
+ "N" "N" 0 1 131072 1 7 -0.442000
+ "H" "H" 0 1 131072 2 1 0.295200
+ "CA" "CT" 0 1 131072 3 6 -0.053700
+ "HA" "H1" 0 1 131072 4 1 0.046700
+ "CB" "CT" 0 1 131072 5 6 -0.006500
+ "HB2" "HC" 0 1 131072 6 1 0.034000
+ "HB3" "HC" 0 1 131072 7 1 0.034000
+ "CG" "CA" 0 1 131072 8 6 0.028300
+ "CD1" "CA" 0 1 131072 9 6 -0.105700
+ "HD1" "HA" 0 1 131072 10 1 0.114200
+ "CE1" "CA" 0 1 131072 11 6 -0.148400
+ "HE1" "HA" 0 1 131072 12 1 0.114600
+ "CZ" "CA" 0 1 131072 13 6 -0.075000
+ "HZ" "HA" 0 1 131072 14 1 0.098900
+ "CE2" "CA" 0 1 131072 15 6 -0.148400
+ "HE2" "HA" 0 1 131072 16 1 0.114600
+ "CD2" "CA" 0 1 131072 17 6 -0.105700
+ "HD2" "HA" 0 1 131072 18 1 0.114200
+ "C" "C" 0 1 131072 19 6 0.577100
+ "O" "O2" 0 1 131072 20 8 -0.743200
+ "OXT" "O2" 0 1 131072 21 8 -0.743200
+!entry.CPHE.unit.atomspertinfo table  str pname  str ptype  int ptypex  int pelmnt  dbl pchg
+ "N" "N" 0 -1 0.0
+ "H" "H" 0 -1 0.0
+ "CA" "CT" 0 -1 0.0
+ "HA" "H1" 0 -1 0.0
+ "CB" "CT" 0 -1 0.0
+ "HB2" "HC" 0 -1 0.0
+ "HB3" "HC" 0 -1 0.0
+ "CG" "CA" 0 -1 0.0
+ "CD1" "CA" 0 -1 0.0
+ "HD1" "HA" 0 -1 0.0
+ "CE1" "CA" 0 -1 0.0
+ "HE1" "HA" 0 -1 0.0
+ "CZ" "CA" 0 -1 0.0
+ "HZ" "HA" 0 -1 0.0
+ "CE2" "CA" 0 -1 0.0
+ "HE2" "HA" 0 -1 0.0
+ "CD2" "CA" 0 -1 0.0
+ "HD2" "HA" 0 -1 0.0
+ "C" "C" 0 -1 0.0
+ "O" "O2" 0 -1 0.0
+ "OXT" "O2" 0 -1 0.0
+!entry.CPHE.unit.boundbox array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CPHE.unit.childsequence single int
+ 2
+!entry.CPHE.unit.connect array int
+ 1
+ 0
+!entry.CPHE.unit.connectivity table  int atom1x  int atom2x  int flags
+ 1 2 1
+ 1 3 1
+ 3 4 1
+ 3 5 1
+ 3 19 1
+ 5 6 1
+ 5 7 1
+ 5 8 1
+ 8 9 1
+ 8 17 1
+ 9 10 1
+ 9 11 1
+ 11 12 1
+ 11 13 1
+ 13 14 1
+ 13 15 1
+ 15 16 1
+ 15 17 1
+ 17 18 1
+ 19 20 1
+ 19 21 1
+!entry.CPHE.unit.hierarchy table  str abovetype  int abovex  str belowtype  int belowx
+ "U" 0 "R" 1
+ "R" 1 "A" 1
+ "R" 1 "A" 2
+ "R" 1 "A" 3
+ "R" 1 "A" 4
+ "R" 1 "A" 5
+ "R" 1 "A" 6
+ "R" 1 "A" 7
+ "R" 1 "A" 8
+ "R" 1 "A" 9
+ "R" 1 "A" 10
+ "R" 1 "A" 11
+ "R" 1 "A" 12
+ "R" 1 "A" 13
+ "R" 1 "A" 14
+ "R" 1 "A" 15
+ "R" 1 "A" 16
+ "R" 1 "A" 17
+ "R" 1 "A" 18
+ "R" 1 "A" 19
+ "R" 1 "A" 20
+ "R" 1 "A" 21
+!entry.CPHE.unit.name single str
+ "CPHE"
+!entry.CPHE.unit.positions table  dbl x  dbl y  dbl z
+ 3.325770 1.547909 -1.607204E-06
+ 3.909407 0.723611 -2.739882E-06
+ 3.970048 2.845795 -1.311163E-07
+ 3.671663 3.400129 -0.889820
+ 3.576965 3.653838 1.232143
+ 2.496995 3.801075 1.241379
+ 3.877484 3.115795 2.131197
+ 4.200813 5.026064 1.321087
+ 3.911613 5.857250 2.409890
+ 3.236123 5.513843 3.193398
+ 4.490014 7.129513 2.492354
+ 4.264853 7.776651 3.340066
+ 5.357616 7.570591 1.486016
+ 5.807943 8.561138 1.550220
+ 5.646818 6.739407 0.397211
+ 6.322309 7.082817 -0.386295
+ 5.068419 5.467143 0.314744
+ 5.293584 4.820007 -0.532968
+ 5.485541 2.705207 -4.398755E-06
+ 6.008824 1.593175 -8.449768E-06
+ 6.204455 3.702003 -2.420005E-06
+!entry.CPHE.unit.residueconnect table  int c1x  int c2x  int c3x  int c4x  int c5x  int c6x
+ 1 0 0 0 0 0
+!entry.CPHE.unit.residues table  str name  int seq  int childseq  int startatomx  str restype  int imagingx
+ "CPHE" 1 22 1 "p" 0
+!entry.CPHE.unit.residuesPdbSequenceNumber array int
+ 0
+!entry.CPHE.unit.solventcap array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CPHE.unit.velocities table  dbl x  dbl y  dbl z
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+!entry.CPRO.unit.atoms table  str name  str type  int typex  int resx  int flags  int seq  int elmnt  dbl chg
+ "N" "N" 0 1 131072 1 7 -0.266700
+ "CD" "CT" 0 1 131072 2 6 0.074000
+ "HD2" "H1" 0 1 131072 3 1 0.025800
+ "HD3" "H1" 0 1 131072 4 1 0.025800
+ "CG" "CT" 0 1 131072 5 6 0.057200
+ "HG2" "HC" 0 1 131072 6 1 0.006800
+ "HG3" "HC" 0 1 131072 7 1 0.006800
+ "CB" "CT" 0 1 131072 8 6 0.043900
+ "HB2" "HC" 0 1 131072 9 1 0.023300
+ "HB3" "HC" 0 1 131072 10 1 0.023300
+ "CA" "CT" 0 1 131072 11 6 -0.216000
+ "HA" "H1" 0 1 131072 12 1 0.105100
+ "C" "C" 0 1 131072 13 6 0.577100
+ "O" "O2" 0 1 131072 14 8 -0.743200
+ "OXT" "O2" 0 1 131072 15 8 -0.743200
+!entry.CPRO.unit.atomspertinfo table  str pname  str ptype  int ptypex  int pelmnt  dbl pchg
+ "N" "N" 0 -1 0.0
+ "CD" "CT" 0 -1 0.0
+ "HD2" "H1" 0 -1 0.0
+ "HD3" "H1" 0 -1 0.0
+ "CG" "CT" 0 -1 0.0
+ "HG2" "HC" 0 -1 0.0
+ "HG3" "HC" 0 -1 0.0
+ "CB" "CT" 0 -1 0.0
+ "HB2" "HC" 0 -1 0.0
+ "HB3" "HC" 0 -1 0.0
+ "CA" "CT" 0 -1 0.0
+ "HA" "H1" 0 -1 0.0
+ "C" "C" 0 -1 0.0
+ "O" "O2" 0 -1 0.0
+ "OXT" "O2" 0 -1 0.0
+!entry.CPRO.unit.boundbox array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CPRO.unit.childsequence single int
+ 2
+!entry.CPRO.unit.connect array int
+ 1
+ 0
+!entry.CPRO.unit.connectivity table  int atom1x  int atom2x  int flags
+ 1 2 1
+ 1 11 1
+ 2 3 1
+ 2 4 1
+ 2 5 1
+ 5 6 1
+ 5 7 1
+ 5 8 1
+ 8 9 1
+ 8 10 1
+ 8 11 1
+ 11 12 1
+ 11 13 1
+ 13 14 1
+ 13 15 1
+!entry.CPRO.unit.hierarchy table  str abovetype  int abovex  str belowtype  int belowx
+ "U" 0 "R" 1
+ "R" 1 "A" 1
+ "R" 1 "A" 2
+ "R" 1 "A" 3
+ "R" 1 "A" 4
+ "R" 1 "A" 5
+ "R" 1 "A" 6
+ "R" 1 "A" 7
+ "R" 1 "A" 8
+ "R" 1 "A" 9
+ "R" 1 "A" 10
+ "R" 1 "A" 11
+ "R" 1 "A" 12
+ "R" 1 "A" 13
+ "R" 1 "A" 14
+ "R" 1 "A" 15
+!entry.CPRO.unit.name single str
+ "CPRO"
+!entry.CPRO.unit.positions table  dbl x  dbl y  dbl z
+ 3.326834 1.557389 -1.603945E-06
+ 4.302147 0.476598 0.080119
+ 4.419998 0.019283 -0.902263
+ 3.955888 -0.274040 0.790574
+ 5.547126 1.172441 0.544693
+ 6.413549 0.741636 0.042879
+ 5.652950 1.047934 1.622376
+ 5.369091 2.628184 0.185227
+ 5.969289 2.861861 -0.694123
+ 5.690642 3.251038 1.019947
+ 3.933610 2.871277 -0.104508
+ 3.611470 3.488570 0.734106
+ 3.505164 3.526392 -1.409783
+ 2.754240 2.939065 -2.185412
+ 3.904907 4.650696 -1.704043
+!entry.CPRO.unit.residueconnect table  int c1x  int c2x  int c3x  int c4x  int c5x  int c6x
+ 1 0 0 0 0 0
+!entry.CPRO.unit.residues table  str name  int seq  int childseq  int startatomx  str restype  int imagingx
+ "CPRO" 1 16 1 "p" 0
+!entry.CPRO.unit.residuesPdbSequenceNumber array int
+ 0
+!entry.CPRO.unit.solventcap array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CPRO.unit.velocities table  dbl x  dbl y  dbl z
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+!entry.CSER.unit.atoms table  str name  str type  int typex  int resx  int flags  int seq  int elmnt  dbl chg
+ "N" "N" 0 1 131072 1 7 -0.442000
+ "H" "H" 0 1 131072 2 1 0.295200
+ "CA" "CT" 0 1 131072 3 6 -0.035600
+ "HA" "H1" 0 1 131072 4 1 0.066600
+ "CB" "CT" 0 1 131072 5 6 0.074800
+ "HB2" "H1" 0 1 131072 6 1 0.060200
+ "HB3" "H1" 0 1 131072 7 1 0.060200
+ "OG" "OH" 0 1 131072 8 8 -0.541900
+ "HG" "HO" 0 1 131072 9 1 0.371800
+ "C" "C" 0 1 131072 10 6 0.577100
+ "O" "O2" 0 1 131072 11 8 -0.743200
+ "OXT" "O2" 0 1 131072 12 8 -0.743200
+!entry.CSER.unit.atomspertinfo table  str pname  str ptype  int ptypex  int pelmnt  dbl pchg
+ "N" "N" 0 -1 0.0
+ "H" "H" 0 -1 0.0
+ "CA" "CT" 0 -1 0.0
+ "HA" "H1" 0 -1 0.0
+ "CB" "CT" 0 -1 0.0
+ "HB2" "H1" 0 -1 0.0
+ "HB3" "H1" 0 -1 0.0
+ "OG" "OH" 0 -1 0.0
+ "HG" "HO" 0 -1 0.0
+ "C" "C" 0 -1 0.0
+ "O" "O2" 0 -1 0.0
+ "OXT" "O2" 0 -1 0.0
+!entry.CSER.unit.boundbox array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CSER.unit.childsequence single int
+ 2
+!entry.CSER.unit.connect array int
+ 1
+ 0
+!entry.CSER.unit.connectivity table  int atom1x  int atom2x  int flags
+ 1 2 1
+ 1 3 1
+ 3 4 1
+ 3 5 1
+ 3 10 1
+ 5 6 1
+ 5 7 1
+ 5 8 1
+ 8 9 1
+ 10 11 1
+ 10 12 1
+!entry.CSER.unit.hierarchy table  str abovetype  int abovex  str belowtype  int belowx
+ "U" 0 "R" 1
+ "R" 1 "A" 1
+ "R" 1 "A" 2
+ "R" 1 "A" 3
+ "R" 1 "A" 4
+ "R" 1 "A" 5
+ "R" 1 "A" 6
+ "R" 1 "A" 7
+ "R" 1 "A" 8
+ "R" 1 "A" 9
+ "R" 1 "A" 10
+ "R" 1 "A" 11
+ "R" 1 "A" 12
+!entry.CSER.unit.name single str
+ "CSER"
+!entry.CSER.unit.positions table  dbl x  dbl y  dbl z
+ 3.325770 1.547909 -1.607204E-06
+ 3.909407 0.723611 -2.739882E-06
+ 3.970048 2.845795 -1.311163E-07
+ 3.671663 3.400129 -0.889820
+ 3.576965 3.653838 1.232143
+ 2.496995 3.801075 1.241379
+ 3.877484 3.115795 2.131197
+ 4.230753 4.925145 1.196917
+ 3.983305 5.433814 1.972562
+ 5.485541 2.705207 -4.398755E-06
+ 6.008824 1.593175 -8.449768E-06
+ 6.204455 3.702003 -2.420005E-06
+!entry.CSER.unit.residueconnect table  int c1x  int c2x  int c3x  int c4x  int c5x  int c6x
+ 1 0 0 0 0 0
+!entry.CSER.unit.residues table  str name  int seq  int childseq  int startatomx  str restype  int imagingx
+ "CSER" 1 13 1 "p" 0
+!entry.CSER.unit.residuesPdbSequenceNumber array int
+ 0
+!entry.CSER.unit.solventcap array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CSER.unit.velocities table  dbl x  dbl y  dbl z
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+!entry.CTHR.unit.atoms table  str name  str type  int typex  int resx  int flags  int seq  int elmnt  dbl chg
+ "N" "N" 0 1 131072 1 7 -0.442000
+ "H" "H" 0 1 131072 2 1 0.295200
+ "CA" "CT" 0 1 131072 3 6 -0.013800
+ "HA" "H1" 0 1 131072 4 1 0.047400
+ "CB" "CT" 0 1 131072 5 6 0.351400
+ "HB" "H1" 0 1 131072 6 1 -0.060800
+ "CG2" "CT" 0 1 131072 7 6 -0.188800
+ "HG21" "HC" 0 1 131072 8 1 0.045100
+ "HG22" "HC" 0 1 131072 9 1 0.045100
+ "HG23" "HC" 0 1 131072 10 1 0.045100
+ "OG1" "OH" 0 1 131072 11 8 -0.617600
+ "HG1" "HO" 0 1 131072 12 1 0.403000
+ "C" "C" 0 1 131072 13 6 0.577100
+ "O" "O2" 0 1 131072 14 8 -0.743200
+ "OXT" "O2" 0 1 131072 15 8 -0.743200
+!entry.CTHR.unit.atomspertinfo table  str pname  str ptype  int ptypex  int pelmnt  dbl pchg
+ "N" "N" 0 -1 0.0
+ "H" "H" 0 -1 0.0
+ "CA" "CT" 0 -1 0.0
+ "HA" "H1" 0 -1 0.0
+ "CB" "CT" 0 -1 0.0
+ "HB" "H1" 0 -1 0.0
+ "CG2" "CT" 0 -1 0.0
+ "HG21" "HC" 0 -1 0.0
+ "HG22" "HC" 0 -1 0.0
+ "HG23" "HC" 0 -1 0.0
+ "OG1" "OH" 0 -1 0.0
+ "HG1" "HO" 0 -1 0.0
+ "C" "C" 0 -1 0.0
+ "O" "O2" 0 -1 0.0
+ "OXT" "O2" 0 -1 0.0
+!entry.CTHR.unit.boundbox array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CTHR.unit.childsequence single int
+ 2
+!entry.CTHR.unit.connect array int
+ 1
+ 0
+!entry.CTHR.unit.connectivity table  int atom1x  int atom2x  int flags
+ 1 2 1
+ 1 3 1
+ 3 4 1
+ 3 5 1
+ 3 13 1
+ 5 6 1
+ 5 7 1
+ 5 11 1
+ 7 8 1
+ 7 9 1
+ 7 10 1
+ 11 12 1
+ 13 14 1
+ 13 15 1
+!entry.CTHR.unit.hierarchy table  str abovetype  int abovex  str belowtype  int belowx
+ "U" 0 "R" 1
+ "R" 1 "A" 1
+ "R" 1 "A" 2
+ "R" 1 "A" 3
+ "R" 1 "A" 4
+ "R" 1 "A" 5
+ "R" 1 "A" 6
+ "R" 1 "A" 7
+ "R" 1 "A" 8
+ "R" 1 "A" 9
+ "R" 1 "A" 10
+ "R" 1 "A" 11
+ "R" 1 "A" 12
+ "R" 1 "A" 13
+ "R" 1 "A" 14
+ "R" 1 "A" 15
+!entry.CTHR.unit.name single str
+ "CTHR"
+!entry.CTHR.unit.positions table  dbl x  dbl y  dbl z
+ 3.325770 1.547909 -1.607204E-06
+ 3.909407 0.723611 -2.739882E-06
+ 3.970048 2.845795 -1.311163E-07
+ 3.671663 3.400129 -0.889820
+ 3.576965 3.653838 1.232143
+ 4.075059 4.623017 1.205786
+ 2.065936 3.859425 1.244383
+ 1.567127 2.890627 1.271209
+ 1.784431 4.436953 2.124903
+ 1.764699 4.397847 0.345796
+ 3.971501 2.947413 2.411212
+ 3.724052 3.456082 3.186857
+ 5.485541 2.705207 -4.398755E-06
+ 6.008824 1.593175 -8.449768E-06
+ 6.204455 3.702003 -2.420005E-06
+!entry.CTHR.unit.residueconnect table  int c1x  int c2x  int c3x  int c4x  int c5x  int c6x
+ 1 0 0 0 0 0
+!entry.CTHR.unit.residues table  str name  int seq  int childseq  int startatomx  str restype  int imagingx
+ "CTHR" 1 16 1 "p" 0
+!entry.CTHR.unit.residuesPdbSequenceNumber array int
+ 0
+!entry.CTHR.unit.solventcap array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CTHR.unit.velocities table  dbl x  dbl y  dbl z
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+!entry.CTRP.unit.atoms table  str name  str type  int typex  int resx  int flags  int seq  int elmnt  dbl chg
+ "N" "N" 0 1 131072 1 7 -0.442000
+ "H" "H" 0 1 131072 2 1 0.295200
+ "CA" "CT" 0 1 131072 3 6 -0.071300
+ "HA" "H1" 0 1 131072 4 1 0.065000
+ "CB" "CT" 0 1 131072 5 6 -0.014900
+ "HB2" "HC" 0 1 131072 6 1 0.038200
+ "HB3" "HC" 0 1 131072 7 1 0.038200
+ "CG" "C*" 0 1 131072 8 6 -0.099400
+ "CD1" "CW" 0 1 131072 9 6 -0.076200
+ "HD1" "H4" 0 1 131072 10 1 0.144600
+ "NE1" "NA" 0 1 131072 11 7 -0.364100
+ "HE1" "H" 0 1 131072 12 1 0.342600
+ "CE2" "CN" 0 1 131072 13 6 0.174800
+ "CZ2" "CA" 0 1 131072 14 6 -0.231100
+ "HZ2" "HA" 0 1 131072 15 1 0.138900
+ "CH2" "CA" 0 1 131072 16 6 -0.111200
+ "HH2" "HA" 0 1 131072 17 1 0.107700
+ "CZ3" "CA" 0 1 131072 18 6 -0.147900
+ "HZ3" "HA" 0 1 131072 19 1 0.108300
+ "CE3" "CA" 0 1 131072 20 6 -0.217300
+ "HE3" "HA" 0 1 131072 21 1 0.155600
+ "CD2" "CB" 0 1 131072 22 6 0.075600
+ "C" "C" 0 1 131072 23 6 0.577100
+ "O" "O2" 0 1 131072 24 8 -0.743200
+ "OXT" "O2" 0 1 131072 25 8 -0.743200
+!entry.CTRP.unit.atomspertinfo table  str pname  str ptype  int ptypex  int pelmnt  dbl pchg
+ "N" "N" 0 -1 0.0
+ "H" "H" 0 -1 0.0
+ "CA" "CT" 0 -1 0.0
+ "HA" "H1" 0 -1 0.0
+ "CB" "CT" 0 -1 0.0
+ "HB2" "HC" 0 -1 0.0
+ "HB3" "HC" 0 -1 0.0
+ "CG" "C*" 0 -1 0.0
+ "CD1" "CW" 0 -1 0.0
+ "HD1" "H4" 0 -1 0.0
+ "NE1" "NA" 0 -1 0.0
+ "HE1" "H" 0 -1 0.0
+ "CE2" "CN" 0 -1 0.0
+ "CZ2" "CA" 0 -1 0.0
+ "HZ2" "HA" 0 -1 0.0
+ "CH2" "CA" 0 -1 0.0
+ "HH2" "HA" 0 -1 0.0
+ "CZ3" "CA" 0 -1 0.0
+ "HZ3" "HA" 0 -1 0.0
+ "CE3" "CA" 0 -1 0.0
+ "HE3" "HA" 0 -1 0.0
+ "CD2" "CB" 0 -1 0.0
+ "C" "C" 0 -1 0.0
+ "O" "O2" 0 -1 0.0
+ "OXT" "O2" 0 -1 0.0
+!entry.CTRP.unit.boundbox array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CTRP.unit.childsequence single int
+ 2
+!entry.CTRP.unit.connect array int
+ 1
+ 0
+!entry.CTRP.unit.connectivity table  int atom1x  int atom2x  int flags
+ 1 2 1
+ 1 3 1
+ 3 4 1
+ 3 5 1
+ 3 23 1
+ 5 6 1
+ 5 7 1
+ 5 8 1
+ 8 9 1
+ 8 22 1
+ 9 10 1
+ 9 11 1
+ 11 12 1
+ 11 13 1
+ 13 14 1
+ 13 22 1
+ 14 15 1
+ 14 16 1
+ 16 17 1
+ 16 18 1
+ 18 19 1
+ 18 20 1
+ 20 21 1
+ 20 22 1
+ 23 24 1
+ 23 25 1
+!entry.CTRP.unit.hierarchy table  str abovetype  int abovex  str belowtype  int belowx
+ "U" 0 "R" 1
+ "R" 1 "A" 1
+ "R" 1 "A" 2
+ "R" 1 "A" 3
+ "R" 1 "A" 4
+ "R" 1 "A" 5
+ "R" 1 "A" 6
+ "R" 1 "A" 7
+ "R" 1 "A" 8
+ "R" 1 "A" 9
+ "R" 1 "A" 10
+ "R" 1 "A" 11
+ "R" 1 "A" 12
+ "R" 1 "A" 13
+ "R" 1 "A" 14
+ "R" 1 "A" 15
+ "R" 1 "A" 16
+ "R" 1 "A" 17
+ "R" 1 "A" 18
+ "R" 1 "A" 19
+ "R" 1 "A" 20
+ "R" 1 "A" 21
+ "R" 1 "A" 22
+ "R" 1 "A" 23
+ "R" 1 "A" 24
+ "R" 1 "A" 25
+!entry.CTRP.unit.name single str
+ "CTRP"
+!entry.CTRP.unit.positions table  dbl x  dbl y  dbl z
+ 3.325770 1.547909 -1.607204E-06
+ 3.909407 0.723611 -2.739882E-06
+ 3.970048 2.845795 -1.311163E-07
+ 3.671663 3.400129 -0.889820
+ 3.576965 3.653838 1.232143
+ 2.496995 3.801075 1.241379
+ 3.877484 3.115795 2.131197
+ 4.200813 5.026064 1.321087
+ 4.023453 5.931084 2.293240
+ 3.368841 5.705466 3.135071
+ 4.811943 7.073555 1.949808
+ 4.882921 7.922010 2.493118
+ 5.427347 6.842060 0.816764
+ 6.297161 7.689052 0.119605
+ 6.531230 8.676649 0.517050
+ 6.814091 7.187011 -1.069023
+ 7.498074 7.791857 -1.664362
+ 6.482659 5.953119 -1.505101
+ 6.897660 5.575648 -2.439654
+ 5.604041 5.117355 -0.785636
+ 5.358720 4.126570 -1.168080
+ 5.083390 5.623004 0.411545
+ 5.485541 2.705207 -4.398755E-06
+ 6.008824 1.593175 -8.449768E-06
+ 6.204455 3.702003 -2.420005E-06
+!entry.CTRP.unit.residueconnect table  int c1x  int c2x  int c3x  int c4x  int c5x  int c6x
+ 1 0 0 0 0 0
+!entry.CTRP.unit.residues table  str name  int seq  int childseq  int startatomx  str restype  int imagingx
+ "CTRP" 1 26 1 "p" 0
+!entry.CTRP.unit.residuesPdbSequenceNumber array int
+ 0
+!entry.CTRP.unit.solventcap array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CTRP.unit.velocities table  dbl x  dbl y  dbl z
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+!entry.CTYR.unit.atoms table  str name  str type  int typex  int resx  int flags  int seq  int elmnt  dbl chg
+ "N" "N" 0 1 131072 1 7 -0.442000
+ "H" "H" 0 1 131072 2 1 0.295200
+ "CA" "CT" 0 1 131072 3 6 -0.102800
+ "HA" "H1" 0 1 131072 4 1 0.090500
+ "CB" "CT" 0 1 131072 5 6 -0.002000
+ "HB2" "HC" 0 1 131072 6 1 0.039600
+ "HB3" "HC" 0 1 131072 7 1 0.039600
+ "CG" "CA" 0 1 131072 8 6 -0.000200
+ "CD1" "CA" 0 1 131072 9 6 -0.142100
+ "HD1" "HA" 0 1 131072 10 1 0.119400
+ "CE1" "CA" 0 1 131072 11 6 -0.184900
+ "HE1" "HA" 0 1 131072 12 1 0.135800
+ "CZ" "CA" 0 1 131072 13 6 0.253400
+ "OH" "OH" 0 1 131072 14 8 -0.476800
+ "HH" "HO" 0 1 131072 15 1 0.358400
+ "CE2" "CA" 0 1 131072 16 6 -0.184900
+ "HE2" "HA" 0 1 131072 17 1 0.135800
+ "CD2" "CA" 0 1 131072 18 6 -0.142100
+ "HD2" "HA" 0 1 131072 19 1 0.119400
+ "C" "C" 0 1 131072 20 6 0.577100
+ "O" "O2" 0 1 131072 21 8 -0.743200
+ "OXT" "O2" 0 1 131072 22 8 -0.743200
+!entry.CTYR.unit.atomspertinfo table  str pname  str ptype  int ptypex  int pelmnt  dbl pchg
+ "N" "N" 0 -1 0.0
+ "H" "H" 0 -1 0.0
+ "CA" "CT" 0 -1 0.0
+ "HA" "H1" 0 -1 0.0
+ "CB" "CT" 0 -1 0.0
+ "HB2" "HC" 0 -1 0.0
+ "HB3" "HC" 0 -1 0.0
+ "CG" "CA" 0 -1 0.0
+ "CD1" "CA" 0 -1 0.0
+ "HD1" "HA" 0 -1 0.0
+ "CE1" "CA" 0 -1 0.0
+ "HE1" "HA" 0 -1 0.0
+ "CZ" "CA" 0 -1 0.0
+ "OH" "OH" 0 -1 0.0
+ "HH" "HO" 0 -1 0.0
+ "CE2" "CA" 0 -1 0.0
+ "HE2" "HA" 0 -1 0.0
+ "CD2" "CA" 0 -1 0.0
+ "HD2" "HA" 0 -1 0.0
+ "C" "C" 0 -1 0.0
+ "O" "O2" 0 -1 0.0
+ "OXT" "O2" 0 -1 0.0
+!entry.CTYR.unit.boundbox array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CTYR.unit.childsequence single int
+ 2
+!entry.CTYR.unit.connect array int
+ 1
+ 0
+!entry.CTYR.unit.connectivity table  int atom1x  int atom2x  int flags
+ 1 2 1
+ 1 3 1
+ 3 4 1
+ 3 5 1
+ 3 20 1
+ 5 6 1
+ 5 7 1
+ 5 8 1
+ 8 9 1
+ 8 18 1
+ 9 10 1
+ 9 11 1
+ 11 12 1
+ 11 13 1
+ 13 14 1
+ 13 16 1
+ 14 15 1
+ 16 17 1
+ 16 18 1
+ 18 19 1
+ 20 21 1
+ 20 22 1
+!entry.CTYR.unit.hierarchy table  str abovetype  int abovex  str belowtype  int belowx
+ "U" 0 "R" 1
+ "R" 1 "A" 1
+ "R" 1 "A" 2
+ "R" 1 "A" 3
+ "R" 1 "A" 4
+ "R" 1 "A" 5
+ "R" 1 "A" 6
+ "R" 1 "A" 7
+ "R" 1 "A" 8
+ "R" 1 "A" 9
+ "R" 1 "A" 10
+ "R" 1 "A" 11
+ "R" 1 "A" 12
+ "R" 1 "A" 13
+ "R" 1 "A" 14
+ "R" 1 "A" 15
+ "R" 1 "A" 16
+ "R" 1 "A" 17
+ "R" 1 "A" 18
+ "R" 1 "A" 19
+ "R" 1 "A" 20
+ "R" 1 "A" 21
+ "R" 1 "A" 22
+!entry.CTYR.unit.name single str
+ "CTYR"
+!entry.CTYR.unit.positions table  dbl x  dbl y  dbl z
+ 3.325770 1.547909 -1.607204E-06
+ 3.909407 0.723611 -2.739882E-06
+ 3.970048 2.845795 -1.311163E-07
+ 3.671663 3.400129 -0.889820
+ 3.576965 3.653838 1.232143
+ 2.496995 3.801075 1.241379
+ 3.877484 3.115795 2.131197
+ 4.267328 4.996267 1.194946
+ 4.059927 5.918911 2.227280
+ 3.400108 5.668218 3.057877
+ 4.699998 7.163547 2.192791
+ 4.538522 7.881891 2.996538
+ 5.547471 7.485542 1.125970
+ 6.169255 8.694617 1.092468
+ 5.956327 9.246984 1.848214
+ 5.754875 6.562900 0.093635
+ 6.414694 6.813595 -0.736962
+ 5.114806 5.318263 0.128119
+ 5.276286 4.599920 -0.675627
+ 5.485541 2.705207 -4.398755E-06
+ 6.008824 1.593175 -8.449768E-06
+ 6.204455 3.702003 -2.420005E-06
+!entry.CTYR.unit.residueconnect table  int c1x  int c2x  int c3x  int c4x  int c5x  int c6x
+ 1 0 0 0 0 0
+!entry.CTYR.unit.residues table  str name  int seq  int childseq  int startatomx  str restype  int imagingx
+ "CTYR" 1 23 1 "p" 0
+!entry.CTYR.unit.residuesPdbSequenceNumber array int
+ 0
+!entry.CTYR.unit.solventcap array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CTYR.unit.velocities table  dbl x  dbl y  dbl z
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+!entry.CVAL.unit.atoms table  str name  str type  int typex  int resx  int flags  int seq  int elmnt  dbl chg
+ "N" "N" 0 1 131072 1 7 -0.442000
+ "H" "H" 0 1 131072 2 1 0.295200
+ "CA" "CT" 0 1 131072 3 6 -0.153100
+ "HA" "H1" 0 1 131072 4 1 0.092000
+ "CB" "CT" 0 1 131072 5 6 0.289600
+ "HB" "HC" 0 1 131072 6 1 0.011400
+ "CG1" "CT" 0 1 131072 7 6 -0.290200
+ "HG11" "HC" 0 1 131072 8 1 0.066100
+ "HG12" "HC" 0 1 131072 9 1 0.066100
+ "HG13" "HC" 0 1 131072 10 1 0.066100
+ "CG2" "CT" 0 1 131072 11 6 -0.290200
+ "HG21" "HC" 0 1 131072 12 1 0.066100
+ "HG22" "HC" 0 1 131072 13 1 0.066100
+ "HG23" "HC" 0 1 131072 14 1 0.066100
+ "C" "C" 0 1 131072 15 6 0.577100
+ "O" "O2" 0 1 131072 16 8 -0.743200
+ "OXT" "O2" 0 1 131072 17 8 -0.743200
+!entry.CVAL.unit.atomspertinfo table  str pname  str ptype  int ptypex  int pelmnt  dbl pchg
+ "N" "N" 0 -1 0.0
+ "H" "H" 0 -1 0.0
+ "CA" "CT" 0 -1 0.0
+ "HA" "H1" 0 -1 0.0
+ "CB" "CT" 0 -1 0.0
+ "HB" "HC" 0 -1 0.0
+ "CG1" "CT" 0 -1 0.0
+ "HG11" "HC" 0 -1 0.0
+ "HG12" "HC" 0 -1 0.0
+ "HG13" "HC" 0 -1 0.0
+ "CG2" "CT" 0 -1 0.0
+ "HG21" "HC" 0 -1 0.0
+ "HG22" "HC" 0 -1 0.0
+ "HG23" "HC" 0 -1 0.0
+ "C" "C" 0 -1 0.0
+ "O" "O2" 0 -1 0.0
+ "OXT" "O2" 0 -1 0.0
+!entry.CVAL.unit.boundbox array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CVAL.unit.childsequence single int
+ 2
+!entry.CVAL.unit.connect array int
+ 1
+ 0
+!entry.CVAL.unit.connectivity table  int atom1x  int atom2x  int flags
+ 1 2 1
+ 1 3 1
+ 3 4 1
+ 3 5 1
+ 3 15 1
+ 5 6 1
+ 5 7 1
+ 5 11 1
+ 7 8 1
+ 7 9 1
+ 7 10 1
+ 11 12 1
+ 11 13 1
+ 11 14 1
+ 15 16 1
+ 15 17 1
+!entry.CVAL.unit.hierarchy table  str abovetype  int abovex  str belowtype  int belowx
+ "U" 0 "R" 1
+ "R" 1 "A" 1
+ "R" 1 "A" 2
+ "R" 1 "A" 3
+ "R" 1 "A" 4
+ "R" 1 "A" 5
+ "R" 1 "A" 6
+ "R" 1 "A" 7
+ "R" 1 "A" 8
+ "R" 1 "A" 9
+ "R" 1 "A" 10
+ "R" 1 "A" 11
+ "R" 1 "A" 12
+ "R" 1 "A" 13
+ "R" 1 "A" 14
+ "R" 1 "A" 15
+ "R" 1 "A" 16
+ "R" 1 "A" 17
+!entry.CVAL.unit.name single str
+ "CVAL"
+!entry.CVAL.unit.positions table  dbl x  dbl y  dbl z
+ 3.325770 1.547909 -1.607204E-06
+ 3.909407 0.723611 -2.739882E-06
+ 3.970048 2.845795 -1.311163E-07
+ 3.671663 3.400129 -0.889820
+ 3.576965 3.653838 1.232143
+ 2.496995 3.801075 1.241379
+ 3.997712 2.900483 2.489542
+ 5.077693 2.753265 2.481244
+ 3.716972 3.477628 3.370558
+ 3.499630 1.931323 2.516834
+ 4.274186 5.009602 1.194577
+ 3.973781 5.548460 0.295972
+ 3.993559 5.587585 2.075079
+ 5.354271 4.863178 1.185788
+ 5.485541 2.705207 -4.398755E-06
+ 6.008824 1.593175 -8.449768E-06
+ 6.204455 3.702003 -2.420005E-06
+!entry.CVAL.unit.residueconnect table  int c1x  int c2x  int c3x  int c4x  int c5x  int c6x
+ 1 0 0 0 0 0
+!entry.CVAL.unit.residues table  str name  int seq  int childseq  int startatomx  str restype  int imagingx
+ "CVAL" 1 18 1 "p" 0
+!entry.CVAL.unit.residuesPdbSequenceNumber array int
+ 0
+!entry.CVAL.unit.solventcap array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.CVAL.unit.velocities table  dbl x  dbl y  dbl z
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+!entry.NME.unit.atoms table  str name  str type  int typex  int resx  int flags  int seq  int elmnt  dbl chg
+ "N" "N" 0 1 131072 1 7 -0.493700
+ "H" "H" 0 1 131072 2 1 0.301800
+ "CH3" "CT" 0 1 131072 3 6 -0.007600
+ "HH31" "H1" 0 1 131072 4 1 0.066500
+ "HH32" "H1" 0 1 131072 5 1 0.066500
+ "HH33" "H1" 0 1 131072 6 1 0.066500
+!entry.NME.unit.atomspertinfo table  str pname  str ptype  int ptypex  int pelmnt  dbl pchg
+ "N" "N" 0 -1 0.0
+ "H" "H" 0 -1 0.0
+ "CH3" "CT" 0 -1 0.0
+ "HH31" "H1" 0 -1 0.0
+ "HH32" "H1" 0 -1 0.0
+ "HH33" "H1" 0 -1 0.0
+!entry.NME.unit.boundbox array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.NME.unit.childsequence single int
+ 2
+!entry.NME.unit.connect array int
+ 1
+ 0
+!entry.NME.unit.connectivity table  int atom1x  int atom2x  int flags
+ 1 2 1
+ 1 3 1
+ 3 4 1
+ 3 5 1
+ 3 6 1
+!entry.NME.unit.hierarchy table  str abovetype  int abovex  str belowtype  int belowx
+ "U" 0 "R" 1
+ "R" 1 "A" 1
+ "R" 1 "A" 2
+ "R" 1 "A" 3
+ "R" 1 "A" 4
+ "R" 1 "A" 5
+ "R" 1 "A" 6
+!entry.NME.unit.name single str
+ "NME"
+!entry.NME.unit.positions table  dbl x  dbl y  dbl z
+ 3.325770 1.547909 -1.607204E-06
+ 3.909407 0.723611 -2.739882E-06
+ 3.970048 2.845795 -1.311163E-07
+ 3.211504 3.628554 2.348065E-06
+ 4.591993 2.943271 0.889822
+ 4.591988 2.943275 -0.889825
+!entry.NME.unit.residueconnect table  int c1x  int c2x  int c3x  int c4x  int c5x  int c6x
+ 1 3 0 0 0 0
+!entry.NME.unit.residues table  str name  int seq  int childseq  int startatomx  str restype  int imagingx
+ "NME" 1 7 1 "p" 0
+!entry.NME.unit.residuesPdbSequenceNumber array int
+ 0
+!entry.NME.unit.solventcap array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.NME.unit.velocities table  dbl x  dbl y  dbl z
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0

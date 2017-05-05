@@ -1,0 +1,149 @@
+logFile leap.log
+#
+# ----- leaprc for loading the Cornell et al. 1994 force field.
+#       assumes that any unspecified nucleic acids are RNA 
+#       uses reduced charges for nucleic acid phosphates and amino
+#          acid side chains (e.g. for nmr refinement)
+#
+#	load atom type hybridizations
+#
+addAtomTypes {
+	{ "H"   "H" "sp3" }
+	{ "HO"  "H" "sp3" }
+	{ "HS"  "H" "sp3" }
+	{ "H1"  "H" "sp3" }
+	{ "H2"  "H" "sp3" }
+	{ "H3"  "H" "sp3" }
+	{ "H4"  "H" "sp3" }
+	{ "H5"  "H" "sp3" }
+	{ "HW"  "H" "sp3" }
+	{ "HC"  "H" "sp3" }
+	{ "HA"  "H" "sp3" }
+	{ "HP"  "H" "sp3" }
+	{ "OH"  "O" "sp3" }
+	{ "OS"  "O" "sp3" }
+	{ "O"   "O" "sp2" }
+	{ "O2"  "O" "sp2" }
+	{ "OW"  "O" "sp3" }
+	{ "CT"  "C" "sp3" }
+	{ "CH"  "C" "sp3" }
+	{ "C2"  "C" "sp3" }
+	{ "C3"  "C" "sp3" }
+	{ "C"   "C" "sp2" }
+	{ "C*"  "C" "sp2" }
+	{ "CA"  "C" "sp2" }
+	{ "CB"  "C" "sp2" }
+	{ "CC"  "C" "sp2" }
+	{ "CN"  "C" "sp2" }
+	{ "CM"  "C" "sp2" }
+	{ "CK"  "C" "sp2" }
+	{ "CQ"  "C" "sp2" }
+	{ "CD"  "C" "sp2" }
+	{ "CE"  "C" "sp2" }
+	{ "CF"  "C" "sp2" }
+	{ "CG"  "C" "sp2" }
+	{ "CP"  "C" "sp2" }
+	{ "CI"  "C" "sp2" }
+	{ "CJ"  "C" "sp2" }
+	{ "CW"  "C" "sp2" }
+	{ "CV"  "C" "sp2" }
+	{ "CR"  "C" "sp2" }
+	{ "CA"  "C" "sp2" }
+	{ "CY"  "C" "sp2" }
+	{ "C0"  "C" "sp2" }
+	{ "MG"  "Mg" "sp3" }
+	{ "N"   "N" "sp2" }
+	{ "NA"  "N" "sp2" }
+	{ "N2"  "N" "sp2" }
+	{ "N*"  "N" "sp2" }
+	{ "NP"  "N" "sp2" }
+	{ "NQ"  "N" "sp2" }
+	{ "NB"  "N" "sp2" }
+	{ "NC"  "N" "sp2" }
+	{ "NT"  "N" "sp3" }
+	{ "N3"  "N" "sp3" }
+	{ "S"   "S" "sp3" }
+	{ "SH"  "S" "sp3" }
+	{ "P"   "P" "sp3" }
+	{ "LP"  ""  "sp3" }
+	{ "F"   "F" "sp3" }
+	{ "CL"  "Cl" "sp3" }
+	{ "BR"  "Br" "sp3" }
+	{ "I"   "I"  "sp3" }
+	{ "FE"  "Fe" "sp3" }
+# glycam
+	{ "OG"  "O" "sp3" }
+	{ "OL"  "O" "sp3" }
+	{ "AC"  "C" "sp3" }
+	{ "EC"  "C" "sp3" }
+}
+#
+#	Load the main parameter set.
+#
+parm94 = loadamberparams parm94.dat
+#
+#	Load DNA/RNA libraries
+#
+loadOff all_nucleic94.nmr.lib
+#
+#	Load main chain and terminating 
+#	amino acid libraries.
+#
+loadOff all_amino94.nmr.lib
+
+loadOff ions94.lib
+loadOff solvents.lib
+HOH = TP3
+WAT = TP3
+
+#
+#	Define the PDB name map for the amino acids and DNA.
+#
+addPdbResMap {
+  { 0 "GUA" "RG5"  } { 1 "GUA" "RG3"  } { "GUA" "RG" }
+  { 0 "ADE" "RA5"  } { 1 "ADE" "RA3"  } { "ADE" "RA" }
+  { 0 "CYT" "RC5"  } { 1 "CYT" "RC3"  } { "CYT" "RC" }
+  { 0 "URA" "RU5"  } { 1 "URA" "RU3"  } { "URA" "RU" }
+  { 0 "G" "RG5"  } { 1 "G" "RG3"  } { "G" "RG" } { "GN" "RGN" }
+  { 0 "A" "RA5"  } { 1 "A" "RA3"  } { "A" "RA" } { "AN" "RAN" }
+  { 0 "C" "RC5"  } { 1 "C" "RC3"  } { "C" "RC" } { "CN" "RCN" }
+  { 0 "U" "RU5"  } { 1 "U" "RU3"  } { "U" "RU" } { "UN" "RUN" }
+  { 0 "C5" "RC5" }
+  { 0 "G5" "RG5" }
+  { 0 "A5" "RA5" }
+  { 0 "U5" "RU5" }
+  { 1 "C3" "RC3" }
+  { 1 "G3" "RG3" }
+  { 1 "A3" "RA3" }
+  { 1 "U3" "RU3" }
+
+}
+
+addPdbAtomMap {
+  { "O5*" "O5'" }
+  { "C5*" "C5'" }
+  { "C4*" "C4'" }
+  { "O4*" "O4'" }
+  { "C3*" "C3'" }
+  { "O3*" "O3'" }
+  { "C2*" "C2'" }
+  { "C1*" "C1'" }
+  { "C5M" "C7"  }
+  { "H1*" "H1'" }
+  { "H2*1" "H2'1" }
+  { "H2*2" "H2'2" }
+  { "H3*" "H3'" }
+  { "H4*" "H4'" }
+  { "H5*1" "H5'1" }
+  { "H5*2" "H5'2" }
+# old ff atom names -> new
+  { "O1'" "O4'" }
+  { "OA"  "O1P" }
+  { "OB"  "O2P" }
+}
+
+
+#
+# assumed that most often proteins use HIE
+#
+HIS = HIE

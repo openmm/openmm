@@ -1,0 +1,135 @@
+!!index array str
+ "TPO"
+!entry.TPO.unit.atoms table  str name  str type  int typex  int resx  int flags  int seq  int elmnt  dbl chg
+ "N" "N" 0 1 131072 1 7 -0.516300
+ "H" "H" 0 1 131072 2 1 0.293600
+ "CA" "CT" 0 1 131072 3 6 -0.313510
+ "HA" "H1" 0 1 131072 4 1 0.215772
+ "CB" "CT" 0 1 131072 5 6 0.623861
+ "HB" "H1" 0 1 131072 6 1 0.009989
+ "CG2" "CT" 0 1 131072 7 6 -0.406805
+ "HG21" "HC" 0 1 131072 8 1 0.071662
+ "HG22" "HC" 0 1 131072 9 1 0.071662
+ "HG23" "HC" 0 1 131072 10 1 0.071662
+ "OG1" "OZ" 0 1 131072 11 8 -0.545230
+ "P" "P" 0 1 131072 12 15 1.366055
+ "O1P" "OX" 0 1 131072 13 8 -0.965706
+ "O2P" "OX" 0 1 131072 14 8 -0.965706
+ "O3P" "OX" 0 1 131072 15 8 -0.965706
+ "C" "C" 0 1 131072 16 6 0.536600
+ "O" "O" 0 1 131072 17 8 -0.581900
+!entry.TPO.unit.atomspertinfo table  str pname  str ptype  int ptypex  int pelmnt  dbl pchg
+ "N" "N" 0 -1 0.0
+ "H" "H" 0 -1 0.0
+ "CA" "CT" 0 -1 0.0
+ "HA" "H1" 0 -1 0.0
+ "CB" "CT" 0 -1 0.0
+ "HB" "H1" 0 -1 0.0
+ "CG2" "CT" 0 -1 0.0
+ "HG21" "HC" 0 -1 0.0
+ "HG22" "HC" 0 -1 0.0
+ "HG23" "HC" 0 -1 0.0
+ "OG1" "OZ" 0 -1 0.0
+ "P" "P" 0 -1 0.0
+ "O1P" "OX" 0 -1 0.0
+ "O2P" "OX" 0 -1 0.0
+ "O3P" "OX" 0 -1 0.0
+ "C" "C" 0 -1 0.0
+ "O" "O" 0 -1 0.0
+!entry.TPO.unit.boundbox array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.TPO.unit.childsequence single int
+ 2
+!entry.TPO.unit.connect array int
+ 1
+ 16
+!entry.TPO.unit.connectivity table  int atom1x  int atom2x  int flags
+ 1 2 17
+ 1 3 17
+ 3 4 17
+ 3 16 17
+ 3 5 17
+ 5 6 17
+ 5 11 17
+ 5 7 17
+ 7 9 17
+ 7 8 17
+ 7 10 17
+ 11 12 17
+ 12 14 17
+ 12 13 17
+ 12 15 17
+ 16 17 17
+!entry.TPO.unit.hierarchy table  str abovetype  int abovex  str belowtype  int belowx
+ "U" 0 "R" 1
+ "R" 1 "A" 1
+ "R" 1 "A" 2
+ "R" 1 "A" 3
+ "R" 1 "A" 4
+ "R" 1 "A" 5
+ "R" 1 "A" 6
+ "R" 1 "A" 7
+ "R" 1 "A" 8
+ "R" 1 "A" 9
+ "R" 1 "A" 10
+ "R" 1 "A" 11
+ "R" 1 "A" 12
+ "R" 1 "A" 13
+ "R" 1 "A" 14
+ "R" 1 "A" 15
+ "R" 1 "A" 16
+ "R" 1 "A" 17
+!entry.TPO.unit.name single str
+ "TPO"
+!entry.TPO.unit.positions table  dbl x  dbl y  dbl z
+ -1.396000 1.149000 0.402000
+ -0.939000 1.757000 1.045000
+ -0.544000 0.108000 -0.178000
+ -0.157000 0.432000 -1.133000
+ 0.681000 -0.069000 0.753000
+ 1.015000 0.943000 0.962000
+ 0.415000 -0.777000 2.078000
+ 1.335000 -0.760000 2.649000
+ 0.131000 -1.809000 1.915000
+ -0.369000 -0.290000 2.655000
+ 1.671000 -0.743000 0.051000
+ 2.987000 0.218000 -0.259000
+ 3.431000 0.614000 1.137000
+ 3.899000 -0.698000 -1.018000
+ 2.362000 1.363000 -1.037000
+ -1.321000 -1.177000 -0.470000
+ -1.087000 -1.840000 -1.440000
+!entry.TPO.unit.residueconnect table  int c1x  int c2x  int c3x  int c4x  int c5x  int c6x
+ 1 16 0 0 0 0
+!entry.TPO.unit.residues table  str name  int seq  int childseq  int startatomx  str restype  int imagingx
+ "TPO" 1 18 1 "p" 0
+!entry.TPO.unit.residuesPdbSequenceNumber array int
+ 1
+!entry.TPO.unit.solventcap array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.TPO.unit.velocities table  dbl x  dbl y  dbl z
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0

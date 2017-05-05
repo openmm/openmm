@@ -1,0 +1,117 @@
+!!index array str
+ "SEP"
+!entry.SEP.unit.atoms table  str name  str type  int typex  int resx  int flags  int seq  int elmnt  dbl chg
+ "N" "N" 0 1 131072 1 7 -0.516300
+ "H" "H" 0 1 131072 2 1 0.293600
+ "CA" "CT" 0 1 131072 3 6 -0.278702
+ "HA" "H1" 0 1 131072 4 1 0.198553
+ "CB" "CT" 0 1 131072 5 6 0.253803
+ "HB2" "H1" 0 1 131072 6 1 0.043230
+ "HB3" "H1" 0 1 131072 7 1 0.043230
+ "OG" "OZ" 0 1 131072 8 8 -0.430343
+ "P" "P" 0 1 131072 9 15 1.387088
+ "O1P" "OX" 0 1 131072 10 8 -0.982953
+ "O2P" "OX" 0 1 131072 11 8 -0.982953
+ "O3P" "OX" 0 1 131072 12 8 -0.982953
+ "C" "C" 0 1 131072 13 6 0.536600
+ "O" "O" 0 1 131072 14 8 -0.581900
+!entry.SEP.unit.atomspertinfo table  str pname  str ptype  int ptypex  int pelmnt  dbl pchg
+ "N" "N" 0 -1 0.0
+ "H" "H" 0 -1 0.0
+ "CA" "CT" 0 -1 0.0
+ "HA" "H1" 0 -1 0.0
+ "CB" "CT" 0 -1 0.0
+ "HB2" "H1" 0 -1 0.0
+ "HB3" "H1" 0 -1 0.0
+ "OG" "OZ" 0 -1 0.0
+ "P" "P" 0 -1 0.0
+ "O1P" "O2" 0 -1 0.0
+ "O2P" "O2" 0 -1 0.0
+ "O3P" "O2" 0 -1 0.0
+ "C" "C" 0 -1 0.0
+ "O" "O" 0 -1 0.0
+!entry.SEP.unit.boundbox array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.SEP.unit.childsequence single int
+ 3
+!entry.SEP.unit.connect array int
+ 1
+ 13
+!entry.SEP.unit.connectivity table  int atom1x  int atom2x  int flags
+ 1 2 17
+ 1 3 17
+ 3 4 17
+ 3 13 17
+ 3 5 17
+ 5 7 17
+ 5 6 17
+ 5 8 17
+ 8 9 17
+ 9 10 17
+ 9 12 17
+ 9 11 17
+ 13 14 17
+!entry.SEP.unit.hierarchy table  str abovetype  int abovex  str belowtype  int belowx
+ "U" 0 "R" 1
+ "R" 1 "A" 1
+ "R" 1 "A" 2
+ "R" 1 "A" 3
+ "R" 1 "A" 4
+ "R" 1 "A" 5
+ "R" 1 "A" 6
+ "R" 1 "A" 7
+ "R" 1 "A" 8
+ "R" 1 "A" 9
+ "R" 1 "A" 10
+ "R" 1 "A" 11
+ "R" 1 "A" 12
+ "R" 1 "A" 13
+ "R" 1 "A" 14
+!entry.SEP.unit.name single str
+ "SEP"
+!entry.SEP.unit.positions table  dbl x  dbl y  dbl z
+ -0.968000 1.088000 0.099000
+ -0.121000 1.517000 0.406000
+ -0.742000 -0.159000 -0.614000
+ -0.678000 0.024000 -1.679000
+ 0.591000 -0.736000 -0.119000
+ 0.497000 -1.098000 0.898000
+ 0.870000 -1.568000 -0.753000
+ 1.525000 0.295000 -0.181000
+ 3.111000 -0.100000 0.095000
+ 3.756000 1.258000 0.039000
+ 3.041000 -0.752000 1.459000
+ 3.426000 -1.046000 -1.039000
+ -1.859000 -1.182000 -0.435000
+ -2.161000 -1.927000 -1.327000
+!entry.SEP.unit.residueconnect table  int c1x  int c2x  int c3x  int c4x  int c5x  int c6x
+ 1 13 0 0 0 0
+!entry.SEP.unit.residues table  str name  int seq  int childseq  int startatomx  str restype  int imagingx
+ "SEP" 1 15 1 "p" 0
+!entry.SEP.unit.residuesPdbSequenceNumber array int
+ 1
+!entry.SEP.unit.solventcap array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.SEP.unit.velocities table  dbl x  dbl y  dbl z
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
