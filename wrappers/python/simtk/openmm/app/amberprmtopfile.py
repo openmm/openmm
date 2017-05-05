@@ -161,7 +161,7 @@ class AmberPrmtopFile(object):
                      implicitSolventKappa=None, temperature=298.15*u.kelvin,
                      soluteDielectric=1.0, solventDielectric=78.5,
                      removeCMMotion=True, hydrogenMass=None, ewaldErrorTolerance=0.0005,
-                     switchDistance=0.0*u.nanometer):
+                     switchDistance=0.0*u.nanometer, gbsaModel='ACE'):
         """Construct an OpenMM System representing the topology described by this
         prmtop file.
 
@@ -208,6 +208,11 @@ class AmberPrmtopFile(object):
             turned on for Lennard-Jones interactions. If the switchDistance is 0
             or evaluates to boolean False, no switching function will be used.
             Values greater than nonbondedCutoff or less than 0 raise ValueError
+        gbsaModel : str='ACE'
+            The SA model used to model the nonpolar solvation component of GB
+            implicit solvent models. If GB is active, this must be 'ACE' or None
+            (the latter indicates no SA model will be used). Other values will
+            result in a ValueError
 
         Returns
         -------
@@ -273,7 +278,7 @@ class AmberPrmtopFile(object):
                         nonbondedCutoff=nonbondedCutoff, nonbondedMethod=methodMap[nonbondedMethod],
                         flexibleConstraints=False, gbmodel=implicitString, soluteDielectric=soluteDielectric,
                         solventDielectric=solventDielectric, implicitSolventKappa=implicitSolventKappa,
-                        rigidWater=rigidWater, elements=self.elements)
+                        rigidWater=rigidWater, elements=self.elements, gbsaModel=gbsaModel)
 
         if hydrogenMass is not None:
             for atom1, atom2 in self.topology.bonds():
