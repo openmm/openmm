@@ -678,7 +678,8 @@ class CharmmPsfFile(object):
                      hydrogenMass=None,
                      ewaldErrorTolerance=0.0005,
                      flexibleConstraints=True,
-                     verbose=False):
+                     verbose=False,
+                     gbsaModel=None):
         """Construct an OpenMM System representing the topology described by the
         prmtop file. You MUST have loaded a parameter set into this PSF before
         calling createSystem. If not, AttributeError will be raised. ValueError
@@ -733,10 +734,16 @@ class CharmmPsfFile(object):
             Are our constraints flexible or not?
         verbose : bool=False
             Optionally prints out a running progress report
+        gbsaModel : str=None
+            Can be ACE (to use the ACE solvation model) or None. Other values
+            raise a ValueError
         """
         # Load the parameter set
         self.loadParameters(params.condense())
         hasbox = self.topology.getUnitCellDimensions() is not None
+        # Check GB input parameters
+        if implicitSolvent is not None and gbsaModel not in ('ACE', None):
+            raise ValueError('gbsaModel must be ACE or None')
         # Set the cutoff distance in nanometers
         cutoff = None
         if nonbondedMethod is not ff.NoCutoff:
@@ -1191,19 +1198,19 @@ class CharmmPsfFile(object):
                 implicitSolventKappa = implicitSolventKappa.value_in_unit(
                                             (1.0/u.nanometer).unit)
             if implicitSolvent is HCT:
-                gb = GBSAHCTForce(solventDielectric, soluteDielectric, None,
+                gb = GBSAHCTForce(solventDielectric, soluteDielectric, gbsaModel,
                                   cutoff, kappa=implicitSolventKappa)
             elif implicitSolvent is OBC1:
-                gb = GBSAOBC1Force(solventDielectric, soluteDielectric, None,
+                gb = GBSAOBC1Force(solventDielectric, soluteDielectric, gbsaModel,
                                    cutoff, kappa=implicitSolventKappa)
             elif implicitSolvent is OBC2:
-                gb = GBSAOBC2Force(solventDielectric, soluteDielectric, None,
+                gb = GBSAOBC2Force(solventDielectric, soluteDielectric, gbsaModel,
                                    cutoff, kappa=implicitSolventKappa)
             elif implicitSolvent is GBn:
-                gb = GBSAGBnForce(solventDielectric, soluteDielectric, None,
+                gb = GBSAGBnForce(solventDielectric, soluteDielectric, gbsaModel,
                                   cutoff, kappa=implicitSolventKappa)
             elif implicitSolvent is GBn2:
-                gb = GBSAGBn2Force(solventDielectric, soluteDielectric, None,
+                gb = GBSAGBn2Force(solventDielectric, soluteDielectric, gbsaModel,
                                    cutoff, kappa=implicitSolventKappa)
             gb_parms = gb.getStandardParameters(self.topology)
             for atom, gb_parm in zip(self.atom_list, gb_parms):
