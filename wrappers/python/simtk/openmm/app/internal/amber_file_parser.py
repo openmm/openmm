@@ -979,20 +979,20 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
             if units.is_quantity(cutoff):
                 cutoff = cutoff.value_in_unit(units.nanometers)
         if gbmodel == 'HCT':
-            gb = customgb.GBSAHCTForce(solventDielectric, soluteDielectric, 'ACE', cutoff, implicitSolventKappa)
+            gb = customgb.GBSAHCTForce(solventDielectric, soluteDielectric, gbsaModel, cutoff, implicitSolventKappa)
         elif gbmodel == 'OBC1':
-            gb = customgb.GBSAOBC1Force(solventDielectric, soluteDielectric, 'ACE', cutoff, implicitSolventKappa)
+            gb = customgb.GBSAOBC1Force(solventDielectric, soluteDielectric, gbsaModel, cutoff, implicitSolventKappa)
         elif gbmodel == 'OBC2':
             if implicitSolventKappa > 0:
-                gb = customgb.GBSAOBC2Force(solventDielectric, soluteDielectric, 'ACE', cutoff, implicitSolventKappa)
+                gb = customgb.GBSAOBC2Force(solventDielectric, soluteDielectric, gbsaModel, cutoff, implicitSolventKappa)
             else:
                 gb = mm.GBSAOBCForce()
                 gb.setSoluteDielectric(soluteDielectric)
                 gb.setSolventDielectric(solventDielectric)
         elif gbmodel == 'GBn':
-            gb = customgb.GBSAGBnForce(solventDielectric, soluteDielectric, 'ACE', cutoff, implicitSolventKappa)
+            gb = customgb.GBSAGBnForce(solventDielectric, soluteDielectric, gbsaModel, cutoff, implicitSolventKappa)
         elif gbmodel == 'GBn2':
-            gb = customgb.GBSAGBn2Force(solventDielectric, soluteDielectric, 'ACE', cutoff, implicitSolventKappa)
+            gb = customgb.GBSAGBn2Force(solventDielectric, soluteDielectric, gbsaModel, cutoff, implicitSolventKappa)
         else:
             raise ValueError("Illegal value specified for implicit solvent model")
         if isinstance(gb, mm.GBSAOBCForce):
