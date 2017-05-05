@@ -769,6 +769,35 @@ class TestForceField(unittest.TestCase):
         self.assertTrue('spce-O' in forcefield._atomTypes)
         self.assertTrue('HOH' in forcefield._templates)
 
+    def test_ImpropersOrdering(self):
+        """Test correctness of the ordering of atom indexes in improper torsions
+        and the torsion.ordering parameter.
+        """
+
+        xml = """
+<ForceField>
+ <PeriodicTorsionForce ordering="amber">
+  <Improper class1="C" class2="" class3="O2" class4="O2" periodicity1="2" phase1="3.14159265359" k1="43.932"/>
+ </PeriodicTorsionForce>
+</ForceField>
+"""
+        pdb = PDBFile('systems/impropers_ordering_tetrapeptide.pdb')
+        # ff1 uses default ordering of impropers, ff2 uses "amber" for the one
+        # problematic improper
+        ff1 = ForceField('amber99sbildn.xml')
+        ff2 = ForceField(StringIO(xml), 'amber99sbildn.xml')
+
+        system1 = ff1.createSystem(pdb.topology)
+        system2 = ff2.createSystem(pdb.topology)
+
+        imp1 = system1.getForce(2).getTorsionParameters(158)
+        imp2 = system2.getForce(0).getTorsionParameters(158)
+
+        system1_indexes = [imp1[0], imp1[1], imp1[2], imp1[3]]
+        system2_indexes = [imp2[0], imp2[1], imp2[2], imp2[3]]
+
+        self.assertEqual(system1_indexes, [51, 56, 54, 55])
+        self.assertEqual(system2_indexes, [51, 55, 54, 56])
 
 class AmoebaTestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method with the AMOEBA forcefield."""
