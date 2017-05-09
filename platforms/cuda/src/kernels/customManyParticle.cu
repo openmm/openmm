@@ -60,6 +60,11 @@ inline __device__ real4 computeCross(real4 vec1, real4 vec2) {
  * Determine whether a particular interaction is in the list of exclusions.
  */
 inline __device__ bool isInteractionExcluded(int atom1, int atom2, const int* __restrict__ exclusions, const int* __restrict__ exclusionStartIndex) {
+    if (atom1 > atom2) {
+        int temp = atom1;
+        atom1 = atom2;
+        atom2 = temp;
+    }
     int first = exclusionStartIndex[atom1];
     int last = exclusionStartIndex[atom1+1];
     for (int i = last-1; i >= first; i--) {
