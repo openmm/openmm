@@ -1,0 +1,2602 @@
+* CHARMM36 All-Hydrogen Nucleic Acid Force Toppar Stream File
+* NAD+, NADH, ADP, ATP, PPI and related analogs
+* A.D. MacKerell, Jr., July 2001
+* stream following RTF and PARAM read of
+*
+
+!Update, 2015/1, nomenclature for NAD+ etc. consistent with PDB
+
+!Parent files that have to be read prior to streaming this file
+!top_all36_na.rtf
+!par_all36_na.prm
+
+!Testcase
+!test_all36_na_nad_ppi.inp
+
+!Reference
+!Pavelites, J.J., Bash, P.A., Gao, J., and MacKerell, Jr.,
+!A.D. A Molecular Mechanics Force Field for NAD+, NADH and the
+!Pyrophosphate Groups of Nucleotides, Journal of Computational
+!Chemistry, 1997, 18: 221-239.
+
+read rtf card append
+* NAD, PPI topology
+*
+31  1
+
+MASS 459  HN3B  1.008000 H ! NAD+ aromatic hydrogen
+MASS 460  CN1A 12.011000 C ! NAD+/NADH amide carbonyl carbon
+MASS 461  CN3A 12.011000 C ! NAD+ aromatic carbon
+MASS 462  CN3B 12.011000 C ! NAD+ aromatic carbon
+MASS 463  CN3C 12.011000 C ! NADH aromatic carbon
+MASS 464  P3   30.974000 P ! pyrophosphate phosphorus
+MASS 465  P4   30.974000 P ! protonated pyrophosphate phosphorus
+
+RESI NIC         1.00  ! oxidized nicotinamide, jjp1/adm jr.
+                       ! checked for consistency with new NA params, adm jr., 9/98
+                       ! note that differences with respect to published results exist
+                       ! due to new NA params
+                       !
+                       !       H15
+GROUP                  !         \
+ATOM H1   HN2     0.45 !     H16-N14     H8
+ATOM N2   NN2    -0.52 !           \     |
+ATOM C3   CN3B    0.16 !            C12  C7
+ATOM H4   HN3B    0.19 !           // \ /  \\
+ATOM C5   CN3    -0.10 !         O13   C9   C5-H6
+ATOM H6   HN3B    0.16 !               ||   |
+ATOM C7   CN3A   -0.05 !           H11-C10  C3-H4
+ATOM H8   HN3B    0.16 !                \+ //
+ATOM C9   CN3     0.05 !                 N2
+ATOM C10  CN3B    0.18 !                 |
+ATOM H11  HN3B    0.16 !                 H1
+ATOM C12  CN1A    0.68 !
+ATOM O13  ON1    -0.40 !
+ATOM N14  NN1    -0.82 !
+ATOM H15  HN1     0.34 ! trans to O13
+ATOM H16  HN1     0.36 ! cis to O13
+BOND N2  H1   C3  H4   C3  C5   C5  H6
+BOND C7 H8   C7  C9   N2  C10
+BOND C10 H11  C9 C12  C12 N14  N14 H15  N14 H16
+DOUBLE C12 O13  C9 C10  C5 C7  N2 C3
+! amide impropers
+IMPR C12 N14 C9 O13   C12 C9  N14 O13
+IMPR N14 C12 H16 H15  N14 C12 H15 H16
+! ring hydrogen impropers
+IMPR N2   C10  C3   H1    C3   N2   C5   H4    C5   C3   C7   H6
+IMPR C7   C5   C9   H8    C10  C9   N2   H11
+! ic table for analysis
+IC N2   C3   C5   C7    0.0000  000.00  000.00  000.00  0.000
+IC C3   C5   C7   C9    0.0000  000.00  000.00  000.00  0.000
+IC C5   C7   C9   C10   0.0000  000.00  000.00  000.00  0.000
+IC C7   C9   C10  N2    0.0000  000.00  000.00  000.00  0.000
+IC C9   C10  N2   C3    0.0000  000.00  000.00  000.00  0.000
+IC C10  N2   C3   C5    0.0000  000.00  000.00  000.00  0.000
+IC C9   C10  N2   H1    0.0000  000.00  000.00  000.00  0.000
+IC C10  N2   C3   H4    0.0000  000.00  000.00  000.00  0.000
+IC N2   C3   C5   H6    0.0000  000.00  000.00  000.00  0.000
+IC C3   C5   C7   H8    0.0000  000.00  000.00  000.00  0.000
+IC C5   C7   C9   C12   0.0000  000.00  000.00  000.00  0.000
+IC N2   C10  C9   C12   0.0000  000.00  000.00  000.00  0.000
+IC C7   C9   C12  O13   0.0000  000.00  000.00  000.00  0.000
+IC C7   C9   C12  N14   0.0000  000.00  000.00  000.00  0.000
+IC O13  C12  N14  H15   0.0000  000.00  000.00  000.00  0.000
+IC O13  C12  N14  H16   0.0000  000.00  000.00  000.00  0.000
+patch first none last none
+
+RESI NICH         0.00 ! reduced nicotinamide, jjp1/adm jr.
+                       ! checked for consistency with new NA params, adm jr., 9/98
+                       ! note that differences with respect to published results exist
+                       ! due to new NA params
+                       ! HN3 to HN6 atom type switch to maintain proper vdw params, 9/98
+                       !
+                       !       H15
+GROUP                  !         \
+ATOM H1   HN2     0.42 !     H16-N14   H8  H17
+ATOM N2   NN2    -0.69 !           \    \  /
+ATOM C3   CN3C   -0.06 !            C12  C7
+ATOM H4   HN6     0.17 !           /  \ /  \
+ATOM C5   CN3    -0.18 !         O13   C9   C5-H6
+ATOM H6   HN6     0.14 !               ||   ||
+ATOM C7   CN8    -0.28 !           H11-C10  C3-H4
+ATOM H8   HN8     0.09 !                \  /
+ATOM H17  HN8     0.09 !                 N2
+ATOM C10  CN3C   -0.10 !                 |
+ATOM H11  HN6     0.14 !                 H1
+ATOM C9   CN3     0.36 !
+ATOM C12  CN1A    0.55 !
+ATOM O13  ON1    -0.51 !
+ATOM N14  NN1    -0.72 !
+ATOM H15  HN1     0.26 ! trans to O13
+ATOM H16  HN1     0.32 ! cis to O13
+
+BOND N2  H1   N2 C3   C3  H4   C5  H6
+BOND C5  C7   C7 H8   C7  H17  C7  C9   N2  C10
+BOND C10 H11  C9 C12  C12 N14  N14 H15  N14 H16
+DOUBLE C12 O13   C9 C10   C3  C5
+! amide impropers
+IMPR C12 N14 C9 O13   C12 C9  N14 O13
+IMPR N14 C12 H16 H15  N14 C12 H15 H16
+! ring hydrogen impropers
+IMPR N2   C10  C3   H1    C3   N2   C5   H4    C5   C3   C7   H6
+IMPR C10  C9   N2   H11
+! ic table for analysis
+IC N2   C3   C5   C7    0.0000  000.00  000.00  000.00  0.000
+IC C3   C5   C7   C9    0.0000  000.00  000.00  000.00  0.000
+IC C5   C7   C9   C10   0.0000  000.00  000.00  000.00  0.000
+IC C7   C9   C10  N2    0.0000  000.00  000.00  000.00  0.000
+IC C9   C10  N2   C3    0.0000  000.00  000.00  000.00  0.000
+IC C10  N2   C3   C5    0.0000  000.00  000.00  000.00  0.000
+IC C9   C10  N2   H1    0.0000  000.00  000.00  000.00  0.000
+IC C10  N2   C3   H4    0.0000  000.00  000.00  000.00  0.000
+IC N2   C3   C5   H6    0.0000  000.00  000.00  000.00  0.000
+IC C3   C5   C7   H8    0.0000  000.00  000.00  000.00  0.000
+IC C3   C5   C7   H17   0.0000  000.00  000.00  000.00  0.000
+IC C5   C7   C9   C12   0.0000  000.00  000.00  000.00  0.000
+IC N2   C10  C9   C12   0.0000  000.00  000.00  000.00  0.000
+IC C7   C9   C12  O13   0.0000  000.00  000.00  000.00  0.000
+IC C7   C9   C12  N14   0.0000  000.00  000.00  000.00  0.000
+IC O13  C12  N14  H15   0.0000  000.00  000.00  000.00  0.000
+IC O13  C12  N14  H16   0.0000  000.00  000.00  000.00  0.000
+patch first none last none
+
+RESI PPI1        -3.00   ! Inorganic phosphate, jjp1/adm jr.
+GROUP                    !
+ATOM C1   CN9    -0.17   !
+ATOM O11  ON2    -0.62   !
+ATOM P1   P       1.50   !                 H11
+ATOM O12  ON2    -0.74   !                  |
+ATOM O13  ON3    -0.82   !            H13--C1--H12
+ATOM O14  ON3    -0.82   !                  |
+                         !                 O11
+ATOM P2   P3      1.10   !                  |
+ATOM O22  ON3    -0.90   !            O14==P1==O13  (-)
+ATOM O23  ON3    -0.90   !                 |
+ATOM O24  ON3    -0.90   !                 O12
+                         !                 |
+ATOM H11  HN9     0.09   !        (-) O24==P2==O23  (-)
+ATOM H12  HN9     0.09   !                 ||
+ATOM H13  HN9     0.09   !                 O22
+
+BOND P1  O11   P1  O12   P1  O13   P1  O14   O11  C1
+BOND C1  H11   C1  H12   C1  H13
+BOND O12 P2    P2  O22   P2  O23   P2  O24
+! IC Table
+IC C1   O11  P1   O12  0.0000    000.00    180.0     000.00    0.0000
+IC O11  P1   O12  P2   0.0000    000.00    180.0     000.00    0.0000
+IC P1   O12  P2   O22  0.0000    000.00    180.0     000.00    0.0000
+IC C1   O11  P1   O13  0.0000    000.00     60.0     000.00    0.0000
+IC C1   O11  P1   O14  0.0000    000.00    -60.0     000.00    0.0000
+IC P1   O12  P2   O23  0.0000    000.00     60.0     000.00    0.0000
+IC P1   O12  P2   O24  0.0000    000.00    -60.0     000.00    0.0000
+IC P1   O11  C1   H11  0.0000    000.00    180.0     000.00    0.0000
+IC P1   O11  C1   H12  0.0000    000.00     60.0     000.00    0.0000
+IC P1   O11  C1   H13  0.0000    000.00    -60.0     000.00    0.0000
+PATC  FIRS NONE LAST NONE
+
+RESI PPI2        -2.00   ! Inorganic phosphate, protonated, adm jr.
+                         ! terminal P charges based on neutral  
+GROUP                    ! methylphosphate
+ATOM C1   CN9    -0.17   !
+ATOM O11  ON2    -0.62   !
+ATOM P1   P       1.46   !                 H11
+ATOM O12  ON2    -0.63   !                  |
+ATOM O13  ON3    -0.83   !            H13--C1--H12
+ATOM O14  ON3    -0.83   !                  |
+                         !                 O11
+ATOM P2   P4      1.34   !                  |
+ATOM O22  ON4    -0.72   !            O14==P1==O13  (-)
+ATOM H22  HN4     0.45   !                 |
+ATOM O23  ON3    -0.86   !                 |
+ATOM O24  ON3    -0.86   !                 O12
+                         !                 |
+ATOM H11  HN9     0.09   !        (-) O24==P2==O23  (-)
+ATOM H12  HN9     0.09   !                 | 
+ATOM H13  HN9     0.09   !                 O22
+                         !                   \
+                         !                   H22
+
+BOND P1  O11   P1  O12   P1  O13   P1  O14   O11  C1
+BOND C1  H11   C1  H12   C1  H13
+BOND O12 P2    P2  O22   P2  O23   P2  O24   O22  H22
+! IC Table
+IC C1   O11  P1   O12  0.0000    000.00    180.0     000.00    0.0000
+IC O11  P1   O12  P2   0.0000    000.00    180.0     000.00    0.0000
+IC P1   O12  P2   O22  0.0000    000.00    180.0     000.00    0.0000
+IC C1   O11  P1   O13  0.0000    000.00     60.0     000.00    0.0000
+IC C1   O11  P1   O14  0.0000    000.00    -60.0     000.00    0.0000
+IC P1   O12  P2   O23  0.0000    000.00     60.0     000.00    0.0000
+IC P1   O12  P2   O24  0.0000    000.00    -60.0     000.00    0.0000
+IC P1   O11  C1   H11  0.0000    000.00    180.0     000.00    0.0000
+IC P1   O11  C1   H12  0.0000    000.00     60.0     000.00    0.0000
+IC P1   O11  C1   H13  0.0000    000.00    -60.0     000.00    0.0000
+IC O12  P2   O22  H22  0.0000    000.00    180.0     000.00    0.0000
+PATC  FIRS NONE LAST NONE
+
+RESI AMP         -2.00  ! adenosine monophosphate, jjp1/adm jr.
+                        ! atom names correspond to pdb nomenclature
+GROUP
+ATOM C4'  CN7     0.16  !                       H61  H62
+ATOM H4'  HN7     0.09  !                         \  /
+ATOM O4'  ON6B   -0.50  !                          N6
+ATOM C1'  CN7B    0.16  !                          |
+ATOM H1'  HN7     0.09  !                          C6
+GROUP                   !                        //  \
+ATOM C5   CN5     0.28  !                        N1   C5--N7\\
+ATOM N7   NN4    -0.71  !                        |    ||     C8-H8
+ATOM C8   CN4     0.34  !                        C2   C4--N9/
+ATOM H8   HN3     0.12  !                       / \\ /     \
+ATOM N9   NN2    -0.05  !                     H2   N3       \
+                        !                                    \
+ATOM N1   NN3A   -0.74  !                                     \
+ATOM C2   CN4     0.50  !                                      \
+ATOM H2   HN3     0.13  !                  O1A    H5' H4'  O4'  \
+ATOM N3   NN3A   -0.75  !                   |      |    \ /   \  \
+ATOM C4   CN5     0.43  !              O3A=PA-O5'-C5'---C4'    C1'
+ATOM C6   CN2     0.46  !                   |      |     \     / \
+                        !                  O2A    H5''   C3'--C2' H1'
+ATOM N6   NN1    -0.77  !                               / \   / \
+ATOM H61  HN1     0.38  !                            O3' H3' O2' H2''
+ATOM H62  HN1     0.38  !                             |       |
+GROUP                   !                            H3T     H2'
+ATOM C2'  CN7B    0.14  !
+ATOM H2'' HN7     0.09
+ATOM O2'  ON5    -0.66
+ATOM H2'  HN5     0.43
+GROUP
+ATOM C3'  CN7     0.14
+ATOM H3'  HN7     0.09
+ATOM O3'  ON5    -0.66
+ATOM H3T  HN5     0.43
+GROUP
+ATOM C5'  CN8B   -0.18
+ATOM H5'  HN8     0.09
+ATOM H5'' HN8     0.09
+GROUP
+ATOM O5'  ON2    -0.40
+ATOM PA   P       1.10
+ATOM O1A  ON3    -0.90
+ATOM O2A  ON3    -0.90
+ATOM O3A  ON3    -0.90
+
+BOND PA   O1A       PA   O2A       PA   O3A       PA    O5'      O3'  H3T
+BOND O5'  C5'       C5'  C4'       C4'  O4'       C4'  C3'       O4'  C1'
+BOND C1'  N9        C1'  C2'       N9   C4        N9   C8        C4   N3
+BOND C2   N1        C6   N6
+BOND N6   H61       N6   H62       C6   C5        C5   N7
+BOND C2'  C3'       C2'  O2'       O2'  H2'       C3'  O3'
+BOND C1'  H1'       C2'  H2''      C3'  H3'       C4'  H4'       C5'  H5'
+BOND C5'  H5''      C8   H8        C2   H2
+DOUBLE N1   C6    N3   C2    C4   C5        N7   C8
+IMPR N6   C6   H61  H62       C6   N1   C5   N6        
+DONO H61  N6
+DONO H62  N6
+DONO H2'  O2'
+ACCE N3
+ACCE N7
+ACCE N1
+ACCE O1A  PA
+ACCE O2A  PA
+ACCE O3A  PA
+ACCE O2'
+ACCE O3'
+ACCE O4'
+ACCE O5'
+IC C5'  O5'  PA   O1A    0.0000  000.00   60.0   000.00   0.0000
+IC C5'  O5'  PA   O2A    0.0000  000.00  -60.0   000.00   0.0000
+IC O1A  O2A  *PA  O3A    0.0000  000.00  120.0   000.00   0.0000
+IC PA   O5'  C5'  C4'    1.5996  119.00 -151.39  110.04   1.5160
+IC O5'  C5'  C4'  C3'    1.4401  108.83 -179.85  116.10   1.5284
+IC C5'  C4'  C3'  O3'    1.5160  116.10   76.70  115.12   1.4212
+IC H3T  O3'  C3'  C4'    0.9650  105.47   38.18  111.98   1.5386
+IC O4'  C3'  *C4' C5'    1.4572  104.06 -120.04  116.10   1.5160
+IC C2'  C4'  *C3' O3'    1.5284  100.16 -124.08  115.12   1.4212
+IC C4'  C3'  C2'  C1'    1.5284  100.16   39.58  102.04   1.5251
+IC C3'  C2'  C1'  N9     1.5284  101.97  144.39  113.71   1.4896
+IC O4'  C1'  N9   C4     1.5251  113.71  -96.00  125.97   1.3703
+IC C1'  C4   *N9  C8     1.4896  125.97 -179.94  106.0    1.367
+IC C4   N9   C8   N7     1.376   106.0     0.0   113.6    1.312
+IC C8   N9   C4   C5     1.367   106.0     0.0   105.6    1.382
+IC C8   N7   C5   C6     0.0       0.0   180.0     0.0    0.0
+IC N7   C5   C6   N1     0.0       0.0   180.0     0.0    0.0
+IC C5   C6   N1   C2     0.0       0.0     0.0     0.0    0.0
+IC N9   C5   *C4  N3     1.376   105.6  -180.0   126.9    1.342
+IC C5   N1   *C6  N6     1.409   117.6  -180.0   121.2    1.337
+IC N1   C6   N6   H61    1.337   121.2     0.0   119.0    1.01
+IC H61  C6   *N6  H62    1.01    119.0   180.0   119.00   1.01
+IC C5   N1   *C6  N6     1.409   117.6  -180.0   119.0    1.337
+IC N1   C6   N6   H61    1.337   119.0     0.0   119.0    1.01
+IC H61  C6   *N6  H62    1.01    119.0   180.0   121.00   1.01
+IC N9   N7   *C8   H8    0.0       0.0   180.0     0.0    0.0
+IC N1   N3   *C2   H2    0.0       0.0   180.0     0.0    0.0
+IC C1'  C3'  *C2' O2'    1.5284  102.04 -114.67  110.81   1.4212
+IC H2'  O2'  C2'  C3'    0.9600  114.97  148.63  111.92   1.5284
+IC O4'  C2'  *C1' H1'    0.0       0.0  -115.0     0.0    0.0
+IC C1'  C3'  *C2' H2''   0.0       0.0   115.0     0.0    0.0
+IC C2'  C4'  *C3' H3'    0.0       0.0   115.0     0.0    0.0
+IC C3'  O4'  *C4' H4'    0.0       0.0  -115.0     0.0    0.0
+IC C4'  O5'  *C5' H5'    0.0       0.0  -115.0     0.0    0.0
+IC C4'  O5'  *C5' H5''   0.0       0.0   115.0     0.0    0.0
+PATC  FIRS NONE LAST NONE
+
+
+RESI ADP         -3.00  ! adenosine diphosphate, jjp1/adm jr.
+                        ! atom names correspond to pdb nomenclature
+GROUP
+ATOM C4'  CN7     0.16  !                       H61  H62
+ATOM H4'  HN7     0.09  !                         \  /
+ATOM O4'  ON6B   -0.50  !                          N6
+ATOM C1'  CN7B    0.16  !                          |
+ATOM H1'  HN7     0.09  !                          C6
+GROUP                   !                        //  \
+ATOM C5   CN5     0.28  !                        N1   C5--N7\\
+ATOM N7   NN4    -0.71  !                        |    ||     C8-H8
+ATOM C8   CN4     0.34  !                        C2   C4--N9/
+ATOM H8   HN3     0.12  !                       / \\ /     \
+ATOM N9   NN2    -0.05  !                     H2   N3       \
+                        !                                    \
+ATOM N1   NN3A   -0.74  !                                     \
+ATOM C2   CN4     0.50  !                                      \
+ATOM H2   HN3     0.13  !           O3B    O1A    H5' H4'  O4'  \
+ATOM N3   NN3A   -0.75  !           |       |      |    \ /   \  \
+ATOM C4   CN5     0.43  !      O1B=PB-O3A--PA-O5'-C5'---C4'    C1'
+ATOM C6   CN2     0.46  !           |       |      |     \     / \
+                        !           O2B    O2A    H5''   C3'--C2' H1'
+ATOM N6   NN1    -0.77  !                               / \   / \
+ATOM H61  HN1     0.38  !                            O3' H3' O2' H2''
+ATOM H62  HN1     0.38  !                             |       |
+GROUP                   !                            H3T     H2'
+ATOM C2'  CN7B    0.14  !
+ATOM H2'' HN7     0.09
+ATOM O2'  ON5    -0.66
+ATOM H2'  HN5     0.43
+GROUP
+ATOM C3'  CN7     0.14
+ATOM H3'  HN7     0.09
+ATOM O3'  ON5    -0.66
+ATOM H3T  HN5     0.43
+GROUP
+ATOM C5'  CN8B   -0.08
+ATOM H5'  HN8     0.09
+ATOM H5'' HN8     0.09
+ATOM O5'  ON2    -0.62
+ATOM PA   P       1.50
+ATOM O1A  ON3    -0.82
+ATOM O2A  ON3    -0.82
+ATOM O3A  ON2    -0.74
+ATOM PB   P3      1.10
+ATOM O1B  ON3    -0.90
+ATOM O2B  ON3    -0.90
+ATOM O3B  ON3    -0.90
+
+BOND PB   O3A       PB   O1B       PB    O2B      PB   O3B       O3A  PA
+BOND PA   O1A       PA   O2A       PA    O5'      O3'  H3T
+BOND O5'  C5'       C5'  C4'       C4'  O4'       C4'  C3'       O4'  C1'
+BOND C1'  N9        C1'  C2'       N9   C4        N9   C8        C4   N3
+BOND C2   N1        C6   N6
+BOND N6   H61       N6   H62       C6   C5        C5   N7
+BOND C2'  C3'       C2'  O2'       O2'  H2'       C3'  O3'
+BOND C1'  H1'       C2'  H2''      C3'  H3'       C4'  H4'       C5'  H5'
+BOND C5'  H5''      C8   H8        C2   H2
+DOUBLE N1   C6    N3   C2    C4   C5        N7   C8
+IMPR N6   C6   H61  H62       C6   N1   C5   N6        
+DONO H61  N6
+DONO H62  N6
+DONO H2'  O2'
+ACCE N3
+ACCE N7
+ACCE N1
+ACCE O1A  PA
+ACCE O2A  PA
+ACCE O2'
+ACCE O3'
+ACCE O4'
+ACCE O5'
+ACCE O3A
+ACCE O3B
+ACCE O2B
+ACCE O1B
+IC PA   O3A  PB   O1B    0.0000  000.00  180.0   000.00   0.0000
+IC C5'  O5'  PA   O1A    0.0000  000.00   60.0   000.00   0.0000
+IC C5'  O5'  PA   O2A    0.0000  000.00  -60.0   000.00   0.0000
+IC PA   O3A  PB   O2B    0.0000  000.00   60.0   000.00   0.0000
+IC PA   O3A  PB   O3B    0.0000  000.00  -60.0   000.00   0.0000
+IC PA   O5'  C5'  C4'    1.5996  119.00 -151.39  110.04   1.5160
+IC O5'  C5'  C4'  C3'    1.4401  108.83 -179.85  116.10   1.5284
+IC C5'  C4'  C3'  O3'    1.5160  116.10   76.70  115.12   1.4212
+IC H3T  O3'  C3'  C4'    0.9650  105.47   38.18  111.98   1.5386
+IC O4'  C3'  *C4' C5'    1.4572  104.06 -120.04  116.10   1.5160
+IC C2'  C4'  *C3' O3'    1.5284  100.16 -124.08  115.12   1.4212
+IC C4'  C3'  C2'  C1'    1.5284  100.16   39.58  102.04   1.5251
+IC C3'  C2'  C1'  N9     1.5284  101.97  144.39  113.71   1.4896
+IC O4'  C1'  N9   C4     1.5251  113.71  -96.00  125.97   1.3703
+IC C1'  C4   *N9  C8     1.4896  125.97 -179.94  106.0    1.367
+IC C4   N9   C8   N7     1.376   106.0     0.0   113.6    1.312
+IC C8   N9   C4   C5     1.367   106.0     0.0   105.6    1.382
+IC C8   N7   C5   C6     0.0       0.0   180.0     0.0    0.0
+IC N7   C5   C6   N1     0.0       0.0   180.0     0.0    0.0
+IC C5   C6   N1   C2     0.0       0.0     0.0     0.0    0.0
+IC N9   C5   *C4  N3     1.376   105.6  -180.0   126.9    1.342
+IC C5   N1   *C6  N6     1.409   117.6  -180.0   121.2    1.337
+IC N1   C6   N6   H61    1.337   121.2     0.0   119.0    1.01
+IC H61  C6   *N6  H62    1.01    119.0   180.0   119.00   1.01
+IC C5   N1   *C6  N6     1.409   117.6  -180.0   119.0    1.337
+IC N1   C6   N6   H61    1.337   119.0     0.0   119.0    1.01
+IC H61  C6   *N6  H62    1.01    119.0   180.0   121.00   1.01
+IC N9   N7   *C8   H8    0.0       0.0   180.0     0.0    0.0
+IC N1   N3   *C2   H2    0.0       0.0   180.0     0.0    0.0
+IC C1'  C3'  *C2' O2'    1.5284  102.04 -114.67  110.81   1.4212
+IC H2'  O2'  C2'  C3'    0.9600  114.97  148.63  111.92   1.5284
+IC O4'  C2'  *C1' H1'    0.0       0.0  -115.0     0.0    0.0
+IC C1'  C3'  *C2' H2''   0.0       0.0   115.0     0.0    0.0
+IC C2'  C4'  *C3' H3'    0.0       0.0   115.0     0.0    0.0
+IC C3'  O4'  *C4' H4'    0.0       0.0  -115.0     0.0    0.0
+IC C4'  O5'  *C5' H5'    0.0       0.0  -115.0     0.0    0.0
+IC C4'  O5'  *C5' H5''   0.0       0.0   115.0     0.0    0.0
+PATC  FIRS NONE LAST NONE
+
+RESI ATP         -4.00  !adenosine triphosphate , jjp1/adm jr.
+                        !atom names correspond to pdb nomenclature
+                        !
+GROUP
+ATOM C4'  CN7     0.16  !                       H61  H62
+ATOM H4'  HN7     0.09  !                         \  /
+ATOM O4'  ON6B   -0.50  !                          N6
+ATOM C1'  CN7B    0.16  !                          |
+ATOM H1'  HN7     0.09  !                          C6
+GROUP                   !                        //  \
+ATOM C5   CN5     0.28  !                        N1   C5--N7\\
+ATOM N7   NN4    -0.71  !                        |    ||     C8-H8
+ATOM C8   CN4     0.34  !                        C2   C4--N9/
+ATOM H8   HN3     0.12  !                       / \\ /     \
+ATOM N9   NN2    -0.05  !                     H2   N3       \
+                        !                                    \
+ATOM N1   NN3A   -0.74  !                                     \
+ATOM C2   CN4     0.50  !                                      \
+ATOM H2   HN3     0.13  ! (-)O3G   O2B     O1A    H5' H4'  O4'  \
+ATOM N3   NN3A   -0.75  !    |      |       |      |    \ /   \  \
+ATOM C4   CN5     0.43  !O1G=PG-O3B-PB-O3A-PA-O5'-C5'---C4'    C1'
+ATOM C6   CN2     0.46  !    |      |       |      |     \     / \
+                        ! (-)O2G (-)O1B (-)O2A    H5''   C3'--C2' H1'
+ATOM N6   NN1    -0.77  !                               / \   / \
+ATOM H61  HN1     0.38  !                            O3' H3' O2' H2''
+ATOM H62  HN1     0.38  !                             |       |
+GROUP                   !                            H3T     H2'
+ATOM C2'  CN7B    0.14  !
+ATOM H2'' HN7     0.09
+ATOM O2'  ON5    -0.66
+ATOM H2'  HN5     0.43
+GROUP
+ATOM C3'  CN7     0.14
+ATOM H3'  HN7     0.09
+ATOM O3'  ON5    -0.66
+ATOM H3T  HN5     0.43
+GROUP
+ATOM C5'  CN8B   -0.08
+ATOM H5'  HN8     0.09
+ATOM H5'' HN8     0.09
+ATOM O5'  ON2    -0.62
+ATOM PA   P       1.50
+ATOM O1A  ON3    -0.82
+ATOM O2A  ON3    -0.82
+ATOM O3A  ON2    -0.74
+ATOM PB   P3      1.50
+ATOM O1B  ON3    -0.82
+ATOM O2B  ON3    -0.82
+ATOM O3B  ON2    -0.86 ! charge adjusted to yield total triP of -4.0
+ATOM PG   P3      1.10
+ATOM O1G  ON3    -0.90
+ATOM O2G  ON3    -0.90
+ATOM O3G  ON3    -0.90
+
+BOND O5'  C5'       O5'  PA        PA   O1A       PA   O2A       PA   O3A
+BOND O3A  PB        PB   O1B       PB   O2B       PB   O3B       O3B  PG
+BOND PG   O1G       PG   O2G       PG   O3G
+BOND C5'  C4'       C4'  O4'       C4'  C3'       O4'  C1'
+BOND C1'  N9        C1'  C2'       N9   C4        N9   C8        C4   N3
+BOND C2   N1        C6   N6
+BOND N6   H61       N6   H62       C6   C5        C5   N7
+BOND C2'  C3'       C2'  O2'       O2'  H2'       C3'  O3'       O3'  H3T
+BOND C1'  H1'       C2'  H2''      C3'  H3'       C4'  H4'       C5'  H5'
+BOND C5'  H5''      C8   H8        C2   H2
+DOUBLE N1   C6    N3   C2    C4   C5        N7   C8
+IMPR N6   C6   H61  H62       C6   N1   C5   N6       
+DONO H61  N6
+DONO H62  N6
+DONO H2'  O2'
+ACCE N3
+ACCE N7
+ACCE N1
+ACCE O1A  PA
+ACCE O2A  PA
+ACCE O2'
+ACCE O3'
+ACCE O4'
+ACCE O5'
+ACCE O3A
+ACCE O2B
+ACCE O1B
+ACCE O3B
+ACCE O3G
+ACCE O2G
+ACCE O2G
+IC PA   O3A  PB   O3B    0.0000  000.00  180.0   000.00   0.0000
+IC O3A  PB   O3B  PG     0.0000  000.00  180.0   000.00   0.0000
+IC PB   O3B  PG   O1G    0.0000  000.00  180.0   000.00   0.0000
+IC C5'  O5'  PA   O1A    0.0000  000.00   60.0   000.00   0.0000
+IC C5'  O5'  PA   O2A    0.0000  000.00  -60.0   000.00   0.0000
+IC PA   O3A  PB   O1B    0.0000  000.00   60.0   000.00   0.0000
+IC PA   O3A  PB   O2B    0.0000  000.00  -60.0   000.00   0.0000
+IC PB   O3B  PG   O2G    0.0000  000.00   60.0   000.00   0.0000
+IC PB   O3B  PG   O3G    0.0000  000.00  -60.0   000.00   0.0000
+IC PA   O5'  C5'  C4'    1.5996  119.00 -151.39  110.04   1.5160
+IC O5'  C5'  C4'  C3'    1.4401  108.83 -179.85  116.10   1.5284
+IC C5'  C4'  C3'  O3'    1.5160  116.10   76.70  115.12   1.4212
+IC H3T  O3'  C3'  C4'    0.9650  105.47   38.18  111.98   1.5386
+IC O4'  C3'  *C4' C5'    1.4572  104.06 -120.04  116.10   1.5160
+IC C2'  C4'  *C3' O3'    1.5284  100.16 -124.08  115.12   1.4212
+IC C4'  C3'  C2'  C1'    1.5284  100.16   39.58  102.04   1.5251
+IC C3'  C2'  C1'  N9     1.5284  101.97  144.39  113.71   1.4896
+IC O4'  C1'  N9   C4     1.5251  113.71  -96.00  125.97   1.3703
+IC C1'  C4   *N9  C8     1.4896  125.97 -179.94  106.0    1.367
+IC C4   N9   C8   N7     1.376   106.0     0.0   113.6    1.312
+IC C8   N9   C4   C5     1.367   106.0     0.0   105.6    1.382
+IC C8   N7   C5   C6     0.0       0.0   180.0     0.0    0.0
+IC N7   C5   C6   N1     0.0       0.0   180.0     0.0    0.0
+IC C5   C6   N1   C2     0.0       0.0     0.0     0.0    0.0
+IC N9   C5   *C4  N3     1.376   105.6  -180.0   126.9    1.342
+IC C5   N1   *C6  N6     1.409   117.6  -180.0   121.2    1.337
+IC N1   C6   N6   H61    1.337   121.2     0.0   119.0    1.01
+IC H61  C6   *N6  H62    1.01    119.0   180.0   119.00   1.01
+IC C5   N1   *C6  N6     1.409   117.6  -180.0   119.0    1.337
+IC N1   C6   N6   H61    1.337   119.0     0.0   119.0    1.01
+IC H61  C6   *N6  H62    1.01    119.0   180.0   121.00   1.01
+IC N9   N7   *C8   H8    0.0       0.0   180.0     0.0    0.0
+IC N1   N3   *C2   H2    0.0       0.0   180.0     0.0    0.0
+IC C1'  C3'  *C2' O2'    1.5284  102.04 -114.67  110.81   1.4212
+IC H2'  O2'  C2'  C3'    0.9600  114.97  148.63  111.92   1.5284
+IC O4'  C2'  *C1' H1'    0.0       0.0  -115.0     0.0    0.0
+IC C1'  C3'  *C2' H2''   0.0       0.0   115.0     0.0    0.0
+IC C2'  C4'  *C3' H3'    0.0       0.0   115.0     0.0    0.0
+IC C3'  O4'  *C4' H4'    0.0       0.0  -115.0     0.0    0.0
+IC C4'  O5'  *C5' H5'    0.0       0.0  -115.0     0.0    0.0
+IC C4'  O5'  *C5' H5''   0.0       0.0   115.0     0.0    0.0
+PATC  FIRS NONE LAST NONE
+
+PRES 5DP         -3.00  ! patch to create 5' diphosphate on nucleotides, jjp1/adm jr.
+                        ! as in ADP, use in generate statement
+GROUP
+ATOM C5'  CN8    -0.08
+ATOM H5'  HN8     0.09
+ATOM H5'' HN8     0.09
+ATOM O5'  ON2    -0.62
+ATOM P    P       1.50
+ATOM O1P  ON3    -0.82
+ATOM O2P  ON3    -0.82
+ATOM O13  ON2    -0.74
+ATOM P2   P3      1.10
+ATOM O21  ON3    -0.90
+ATOM O22  ON3    -0.90
+ATOM O23  ON3    -0.90
+
+BOND P    O13       O13   P2       
+BOND P2   O21       P2    O22      P2   O23
+ACCE O13
+ACCE O21
+ACCE O22
+ACCE O23
+IC C5'  O5'  P    O13    0.0000  000.00  180.0   000.00   0.0000
+IC O5'  P    O13  P2     0.0000  000.00  180.0   000.00   0.0000
+IC P    O13  P2   O21    0.0000  000.00  180.0   000.00   0.0000
+IC P    O13  P2   O22    0.0000  000.00   60.0   000.00   0.0000
+IC P    O13  P2   O23    0.0000  000.00  -60.0   000.00   0.0000
+PATC  FIRS NONE LAST NONE
+
+!atom nomenclature consisent with PDB, 2015
+
+RESI NAD         -1.00  ! oxidized nicotinamide adenine dinucleotide, jjp1/adm jr.
+                        ! atom names correspond to pdb nomenclature
+                        ! checked for consistency with new NA params, adm jr., 9/98
+                        ! note that differences with respect to published results exist
+                        ! due to new NA params
+GROUP                   !
+ATOM C4B  CN7     0.16  !                H61A  H62A
+ATOM H4B  HN7     0.09  !                   \  /
+ATOM O4B  ON6B   -0.50  !                   N6A
+ATOM C1B  CN7B    0.16  !                    |
+ATOM H1B  HN7     0.09  !                   C6A
+GROUP                   !                  //  \
+ATOM C5A  CN5     0.28  !                 N1A  C5A--N7A\\
+ATOM N7A  NN4    -0.71  !                  |    ||     C8A-H8A
+ATOM C8A  CN4     0.34  !                 C2A  C4A--N9A/
+ATOM H8A  HN3     0.12  !                 / \\ /     \
+ATOM N9A  NN2    -0.05  !              H2A  N3A       \
+                        !                              \
+ATOM N1A  NN3A   -0.74  !                               \
+ATOM C2A  CN4     0.50  !                                \
+ATOM H2A  HN3     0.13  !    O1N     O1A    H52AH4B  O4B  \
+ATOM N3A  NN3A   -0.75  !     |       |      |    \ /   \  \
+ATOM C4A  CN5     0.43  ! O5D PN-O3--PA-O5B -C5B -C4B    C1B 
+ATOM C6A  CN2     0.46  ! \   |       |      |     \     / \
+                        !  \ O2N     O2A    H51A C3B -C2B  H1B 
+ATOM N6A  NN1    -0.77  !   \                     / \   / \
+ATOM H61A HN1     0.38  !    \                O3B  H3B O2B H2B 
+ATOM H62A HN1     0.38  !     \                 |       |
+GROUP                   !      \              HO3A     HO2A
+ATOM C2B  CN7B    0.14  !       \                        N71N
+ATOM H2B  HN7     0.09  !        \                          \ 
+ATOM O2B  ON5    -0.66  !         \                    H72N-N7N    N41N
+ATOM HO2A HN5     0.43  !          \                          \     |
+GROUP                   !           \                         C7N  C4N
+ATOM C3B  CN7     0.14  !            \                        / \  /  \
+ATOM H3B  HN7     0.09  !             \                    O7N  C3N  C5N-H5N
+ATOM O3B  ON5    -0.66  !              \                          |    |
+ATOM HO3A HN5     0.43  !               \ H51N H4D O4D       H2N-C2N C6N-HN6
+GROUP                   !                \ |    \ /   \            \+ /   
+ATOM C5B  CN8B   -0.08  !                 C5D --C4D    C1D ---------N1N
+ATOM H51A HN8     0.09  !                  |     \     / \
+ATOM H52A HN8     0.09  !                 H52N   C3D -C2D H1D 
+ATOM PA   P       1.50  !                       / \   / \
+ATOM O1A  ON3    -0.82  !                   O3D  H3D O2D H2D 
+ATOM O2A  ON3    -0.82  !                    |       |
+ATOM O5B  ON2    -0.62  !                   HO3N    HO2N
+ATOM O3   ON2    -0.68
+ATOM PN   P       1.50
+ATOM O1N  ON3    -0.82
+ATOM O2N  ON3    -0.82
+ATOM O5D  ON2    -0.62
+ATOM C5D  CN8B   -0.08
+ATOM H51N HN8     0.09
+ATOM H52N HN8     0.09 
+GROUP                  
+ATOM C2D  CN7B    0.14 
+ATOM H2D  HN7     0.09 
+ATOM O2D  ON5    -0.66
+ATOM HO2N HN5     0.43
+GROUP
+ATOM C3D  CN7     0.14
+ATOM H3D  HN7     0.09
+ATOM O3D  ON5    -0.66
+ATOM HO3N HN5     0.43
+GROUP
+ATOM C1D  CN7B    0.16
+ATOM H1D  HN7     0.09
+ATOM C4D  CN7     0.16
+ATOM H4D  HN7     0.09
+ATOM O4D  ON6B   -0.50
+GROUP                  
+ATOM N1N  NN2    -0.07
+ATOM C6N  CN3B    0.16
+ATOM HN6  HN3B    0.19
+ATOM C5N  CN3    -0.10
+ATOM H5N  HN3B    0.16
+ATOM C4N  CN3A   -0.05
+ATOM H41N HN3B    0.16 !H4N in official nomenclature
+ATOM C3N  CN3     0.05 
+ATOM C2N  CN3B    0.18
+ATOM H2N  HN3B    0.16
+ATOM C7N  CN1A    0.68 
+ATOM O7N  ON1    -0.40 
+ATOM N7N  NN1    -0.82
+ATOM N71N HN1     0.34  ! trans to amide O
+ATOM H72N HN1     0.36  ! cis to amide O
+
+BOND N1A  C2A       N3A  C4A       C5A  C6A
+BOND C6A  N6A       C5A  N7A       C8A  N9A
+BOND N9A  C4A       C2A  H2A       N6A  H61A      N6A  H62A      C8A  H8A
+DOUBLE C6A  N1A       C2A  N3A       C4A  C5A      N7A  C8A
+BOND N9A  C1B       C1B  C2B       C2B  C3B       C3B  C4B       C4B  O4B 
+BOND O4B  C1B       C1B  H1B       C2B  O2B       O2B  HO2A      C2B  H2B 
+BOND C3B  H3B       C3B  O3B       O3B  HO3A      C4B  H4B       C4B  C5B 
+BOND C5B  H52A      C5B  H51A      C5B  O5B       O5B  PA        PA   O1A
+BOND PA   O2A       PA   O3        O3   PN        PN   O1N       PN   O2N
+BOND PN   O5D       O5D  C5D       C5D  H51N      C5D  H52N      C5D  C4D 
+BOND C4D  O4D       O4D  C1D       C1D  C2D       C2D  C3D       C3D  C4D 
+BOND C1D  H1D       C2D  H2D       C2D  O2D       O2D  HO2N      C3D  H3D 
+BOND C3D  O3D       O3D  HO3N      C4D  H4D       C1D  N1N       N1N  C2N
+BOND C3N  C4N       C5N  C6N
+BOND C2N  H2N       C3N  C7N       C7N  O7N       C7N  N7N       N7N  N71N
+BOND N7N  H72N      C4N  H41N      C5N  H5N       C6N  HN6
+DOUBLE C2N  C3N       C4N  C5N       C6N  N1N
+! adenine impropers
+IMPR N6A  C6A  H61A H62A     C6A   N1A   C5A  N6A       
+! amide impropers
+IMPR C7N   N7N   C3N  O7N    C7N   C3N   N7N   O7N 
+IMPR N7N   C7N   N71N H72N   N7N   C7N   H72N  N71N
+! ring hydrogen impropers
+IMPR C6N   N1N   C5N  HN6    C5N   C6N   C4N   H5N
+IMPR C4N   C5N   C3N  H41N   C2N   C3N   N1N   H2N
+DONO H61A N6A
+DONO H62A N6A
+DONO HO2A O2B 
+DONO HO3A O3B 
+ACCE N1A
+ACCE N3A
+ACCE N7A
+ACCE O4B 
+ACCE O2B 
+ACCE O3B 
+ACCE O5B 
+ACCE O1A  PA
+ACCE O2A  PA
+ACCE O3
+ACCE O1N  PN
+ACCE O2N  PN
+ACCE O5D 
+ACCE O4D 
+ACCE O3D 
+ACCE O2D 
+ACCE O7N
+DONO HO2N O2D 
+DONO HO3N O3D 
+DONO N71N N7N
+DONO H72N N7N
+
+IC O4B   C4B   C5B   O5B    1.4602  109.06  141.71  112.09   1.4439
+IC O4B   C5B   *C4B  C3B    1.4602  109.06 -116.95  116.13   1.5393
+IC C3B   C5B   *C4B  H4B    1.5393  116.13 -123.66  110.37   1.1118
+IC C5B   C4B   O4B   C1B    1.5373  109.06 -136.33  109.65   1.4148
+IC C4B   O4B   C1B   N9A    1.4602  109.65 -135.81  111.11   1.4598
+IC N9A   O4B   *C1B  C2B    1.4598  111.11  122.68  107.19   1.5091
+IC N9A   O4B   *C1B  H1B    1.4598  111.11 -120.43  106.09   1.1157
+IC O4B   C1B   N9A   C4A    1.4148  111.11 -132.21  126.91   1.3718
+IC C4A   C1B   *N9A  C8A    1.3718  126.91 -179.77  127.02   1.3735
+IC C1B   N9A   C4A   C5A    1.4598  126.91 -179.47  105.60   1.3834
+IC C5A   N9A   *C4A  N3A    1.3834  105.60 -179.98  127.70   1.3425
+IC N9A   C4A   C5A   C6A    1.3718  105.60  179.90  116.93   1.4100
+IC C6A   C4A   *C5A  N7A    1.4100  116.93 -179.96  110.88   1.3888
+IC N7A   N9A   *C8A  H8A    1.3106  113.69  179.35  121.11   1.0928
+IC C4A   C5A   C6A   N1A    1.3834  116.93   -0.07  117.90   1.3546
+IC N1A   C5A   *C6A  N6A    1.3546  117.90  179.83  123.29   1.3450
+IC C5A   C6A   N1A   C2A    1.4100  117.90    0.12  118.20   1.3359
+IC N3A   N1A   *C2A  H2A    1.3354  129.50  179.91  115.36   1.0937
+IC C5A   C6A   N6A   H61A   1.4100  123.29 -178.42  117.49   0.9946
+IC H61A  C6A   *N6A  H62A   0.9946  117.49  176.18  120.81   0.9965
+IC C3B   C1B   *C2B  O2B    1.5071  101.20  117.08  111.89   1.4144
+IC C3B   C1B   *C2B  H2B    1.5071  101.20 -117.38  111.86   1.1141
+IC C1B   C2B   O2B   HO2A   1.5091  111.89  178.91  108.27   0.9632
+IC C2B   C4B   *C3B  O3B    1.5071  102.42  118.21  111.98   1.4364
+IC C2B   C4B   *C3B  H3B    1.5071  102.42 -117.88  107.58   1.1121
+IC C4B   C3B   O3B   HO3A   1.5393  111.98   53.77  108.82   0.9987
+IC C3B   C4B   C5B   O5B    1.5393  116.13   24.76  112.09   1.4439
+IC O5B   C4B   *C5B  H52A   1.4439  112.09 -118.16  109.00   1.1133
+IC H52A  C4B   *C5B  H51A   1.1133  109.00 -114.98  109.51   1.1161
+IC C4B   C5B   O5B   PA     1.5373  112.09   94.39  121.28   1.5826
+IC C5B   O5B   PA    O3     1.4439  121.28  148.70   94.54   1.4969
+IC O3    O5B   *PA   O1A    1.4969   94.54 -121.80  106.23   1.4772
+IC O1A   O5B   *PA   O2A    1.4772  106.23 -125.48  100.49   1.4822
+IC O5B   PA    O3    PN     1.5826   94.54 -171.26  103.25   1.5079
+IC PA    O3    PN    O5D    1.4969  103.25 -156.08   92.59   1.5791
+IC O5D   O3    *PN   O1N    1.5791   92.59 -108.10  112.08   1.4709
+IC O1N   O3    *PN   O2N    1.4709  112.08 -147.35  119.96   1.4872
+IC O3    PN    O5D   C5D    1.5079   92.59  169.85  121.25   1.4424
+IC PN    O5D   C5D   C4D    1.5791  121.25 -120.85  113.63   1.5461
+IC C4D   O5D   *C5D  H51N   1.5461  113.63 -118.98  107.36   1.1130
+IC H51N  O5D   *C5D  H52N   1.1130  107.36 -116.76  113.02   1.1173
+IC O5D   C5D   C4D   O4D    1.4424  113.63  -49.73  112.77   1.4709
+IC O4D   C5D   *C4D  C3D    1.4709  112.77  124.54  119.31   1.5563
+IC O4D   C5D   *C4D  H4D    1.4709  112.77 -115.70  107.56   1.1116
+IC C5D   C4D   C3D   C2D    1.5461  119.31 -156.53   99.76   1.5184
+IC C2D   C4D   *C3D  O3D    1.5184   99.76  119.65  119.67   1.4380
+IC C2D   C4D   *C3D  H3D    1.5184   99.76 -115.32  107.95   1.1119
+IC C4D   C3D   C2D   C1D    1.5563   99.76   43.53  100.45   1.5351
+IC C1D   C3D   *C2D  O2D    1.5351  100.45  123.80  111.51   1.4145
+IC C1D   C3D   *C2D  H2D    1.5351  100.45 -114.84  109.59   1.1136
+IC C3D   C2D   O2D   HO2N   1.5184  111.51  -13.38  103.51   0.9747
+IC C4D   C3D   O3D   HO3N   1.5563  119.67   42.59  111.67   0.9972
+IC O4D   C2D   *C1D  N1N    1.4197  103.46  122.07  115.99   1.5110
+IC O4D   C2D   *C1D  H1D    1.4197  103.46 -113.32  108.74   1.1122
+IC C2D   C1D   N1N   C2N    1.5351  115.99   48.31  121.57   1.3422
+IC C2N   C1D   *N1N  C6N    1.3422  121.57 -175.31  121.05   1.3474
+IC C1D   N1N   C6N   C5N    1.5110  121.05  177.97  122.74   1.3691
+IC C5N   N1N   *C6N  HN6    1.3691  122.74 -171.45  116.89   1.0961
+IC N1N   C6N   C5N   C4N    1.3474  122.74   -3.94  119.48   1.3753
+IC C4N   C6N   *C5N  H5N    1.3753  119.48 -170.98  120.63   1.0956
+IC C6N   C5N   C4N   C3N    1.3691  119.48    1.56  118.55   1.3864
+IC C3N   C5N   *C4N  H41N   1.3864  118.55 -175.37  120.26   1.0910
+IC C3N   N1N   *C2N  H2N    1.3745  123.21  178.08  117.05   1.0911
+IC C2N   C4N   *C3N  C7N    1.3745  118.63 -178.85  118.88   1.5091
+IC C4N   C3N   C7N   N7N    1.3864  118.88   23.83  117.95   1.3519
+IC N7N   C3N   *C7N  O7N    1.3519  117.95  175.54  118.43   1.2254
+IC C3N   C7N   N7N   N71N   1.5091  117.95  160.64  114.22   0.9962
+IC N71N  C7N   *N7N  H72N   0.9962  114.22 -140.75  118.52   1.0129
+PATCH FIRST NONE LAST NONE   
+
+RESI NAI         -2.00  ! reduced nicotinamide adenine dinucleotide, NADH, jjp1/adm jr.
+                        ! some PDB files use NAD for NADH
+                        ! atom names correspond to pdb nomenclature
+                        ! checked for consistency with new NA params, adm jr., 9/98
+                        ! note that differences with respect to published results exist
+                        ! due to new NA params
+                        !
+GROUP                   !
+ATOM C4B  CN7     0.16  !                H61A  H62A
+ATOM H4B  HN7     0.09  !                   \  /
+ATOM O4B  ON6B   -0.50  !                   N6A
+ATOM C1B  CN7B    0.16  !                    |
+ATOM H1B  HN7     0.09  !                   C6A
+GROUP                   !                  //  \
+ATOM C5A  CN5     0.28  !                 N1A  C5A--N7A\\
+ATOM N7A  NN4    -0.71  !                  |    ||     C8A-H8A
+ATOM C8A  CN4     0.34  !                 C2A  C4A--N9A/
+ATOM H8A  HN3     0.12  !                 / \\ /     \
+ATOM N9A  NN2    -0.05  !              H2A  N3A       \
+                        !                              \
+ATOM N1A  NN3A   -0.74  !                               \
+ATOM C2A  CN4     0.50  !                                \
+ATOM H2A  HN3     0.13  !    O1N     O1A    H52AH4B  O4B  \
+ATOM N3A  NN3A   -0.75  !     |       |      |    \ /   \  \
+ATOM C4A  CN5     0.43  ! O5D PN-O3--PA-O5B -C5B -C4B    C1B 
+ATOM C6A  CN2     0.46  ! \   |       |      |     \     / \
+                        !  \ O2N     O2A    H51A C3B -C2B  H1B 
+ATOM N6A  NN1    -0.77  !   \                     / \   / \
+ATOM H61A HN1     0.38  !    \                O3B  H3B O2B H2B 
+ATOM H62A HN1     0.38  !     \                 |       |
+GROUP                   !      \              HO3A     HO2A
+ATOM C2B  CN7B    0.14  !       \                        N71N
+ATOM H2B  HN7     0.09  !        \                          \
+ATOM O2B  ON5    -0.66  !         \                    H72N-N7N  H41NH42N
+ATOM HO2A HN5     0.43  !          \                          \    \ /
+GROUP                   !           \                         C7N  C4N
+ATOM C3B  CN7     0.14  !            \                        / \  /  \
+ATOM H3B  HN7     0.09  !             \                    O7N  C3N  C5N-H5N
+ATOM O3B  ON5    -0.66  !              \                          |    |
+ATOM HO3A HN5     0.43  !               \ H51N H4D O4D       H2N-C2N C6N-HN6
+GROUP                   !                \ |    \ /   \            \  /
+ATOM C5B  CN8B   -0.08  !                 C5D --C4D    C1D ---------N1N
+ATOM H51A HN8     0.09  !                  |     \     / \
+ATOM H52A HN8     0.09  !                 H52N   C3D -C2D H1D 
+ATOM PA   P       1.50  !                       / \   / \
+ATOM O1A  ON3    -0.82  !                   O3D  H3D O2D H2D 
+ATOM O2A  ON3    -0.82  !                    |       |
+ATOM O5B  ON2    -0.62  !                   HO3N    HO2N
+ATOM O3   ON2    -0.68
+ATOM PN   P       1.50
+ATOM O1N  ON3    -0.82
+ATOM O2N  ON3    -0.82
+ATOM O5D  ON2    -0.62
+ATOM C5D  CN8B   -0.08
+ATOM H51N HN8     0.09
+ATOM H52N HN8     0.09
+GROUP
+ATOM C2D  CN7B    0.14
+ATOM H2D  HN7     0.09
+ATOM O2D  ON5    -0.66
+ATOM HO2N HN5     0.43
+GROUP
+ATOM C3D  CN7     0.14
+ATOM H3D  HN7     0.09
+ATOM O3D  ON5    -0.66
+ATOM HO3N HN5     0.43
+GROUP
+ATOM C1D  CN7B    0.16
+ATOM H1D  HN7     0.09
+ATOM C4D  CN7     0.16
+ATOM H4D  HN7     0.09
+ATOM O4D  ON6B   -0.50
+GROUP
+ATOM N1N  NN2    -0.27 !N2
+ATOM C6N  CN3C   -0.06 !C3
+ATOM HN6  HN6     0.17 !H4
+ATOM C5N  CN3    -0.18 !C5
+ATOM H5N  HN6     0.14 !H6
+ATOM C4N  CN8    -0.28 !C7
+ATOM H41N HN8     0.09 !H8
+ATOM H42N HN8     0.09 !H17
+ATOM C3N  CN3     0.36 !C9
+ATOM C2N  CN3C   -0.10 !C10
+ATOM H2N  HN6     0.14 !H11
+ATOM C7N  CN1A    0.55 !C12
+ATOM O7N  ON1    -0.51 !O13
+ATOM N7N  NN1    -0.72 !N14
+ATOM N71N HN1     0.26 !H15  ! trans to amide O
+ATOM H72N HN1     0.32 !H16  ! cis to amide O
+
+BOND N1A  C2A       N3A  C4A       C5A  C6A
+BOND C6A  N6A       C5A  N7A       C8A  N9A
+BOND N9A  C4A       C2A  H2A       N6A  H61A      N6A  H62A      C8A  H8A
+DOUBLE  C6A  N1A      C2A  N3A      C4A  C5A      N7A  C8A
+BOND N9A  C1B       C1B  C2B       C2B  C3B       C3B  C4B       C4B  O4B 
+BOND O4B  C1B       C1B  H1B       C2B  O2B       O2B  HO2A      C2B  H2B 
+BOND C3B  H3B       C3B  O3B       O3B  HO3A      C4B  H4B       C4B  C5B 
+BOND C5B  H52A      C5B  H51A      C5B  O5B       O5B  PA        PA   O1A
+BOND PA   O2A       PA   O3        O3   PN        PN   O1N       PN   O2N
+BOND PN   O5D       O5D  C5D       C5D  H51N      C5D  H52N      C5D  C4D 
+BOND C4D  O4D       O4D  C1D       C1D  C2D       C2D  C3D       C3D  C4D 
+BOND C1D  H1D       C2D  H2D       C2D  O2D       O2D  HO2N      C3D  H3D 
+BOND C3D  O3D       O3D  HO3N      C4D  H4D       C1D  N1N       N1N  C2N
+BOND C3N  C4N       C4N  C5N       C6N  N1N
+BOND C2N  H2N       C3N  C7N       C7N  O7N       C7N  N7N       N7N  N71N
+BOND N7N  H72N      C4N  H41N      C4N  H42N      C5N  H5N       C6N  HN6
+DOUBLE  C2N  C3N      C5N  C6N
+! adenine impropers
+IMPR N6A  C6A  H61A H62A     C6A  N1A  C5A  N6A       
+! amide impropers
+IMPR C7N   N7N   C3N  O7N    C7N   C3N   N7N   O7N
+IMPR N7N   C7N   N71N H72N   N7N   C7N   H72N  N71N
+! ring hydrogen impropers
+IMPR C6N   N1N   C5N  HN6    C5N   C6N   C4N   H5N
+IMPR C4N   C5N   C3N  H41N   C2N   C3N   N1N   H2N
+DONO H61A N6A
+DONO H62A N6A
+DONO HO2A O2B 
+DONO HO3A O3B 
+ACCE N1A
+ACCE N3A
+ACCE N7A
+ACCE O4B 
+ACCE O2B 
+ACCE O3B 
+ACCE O5B 
+ACCE O1A  PA
+ACCE O2A  PA
+ACCE O3
+ACCE O1N  PN
+ACCE O2N  PN
+ACCE O5D 
+ACCE O4D 
+ACCE O3D 
+ACCE O2D 
+ACCE O7N
+DONO HO2N O2D 
+DONO HO3N O3D 
+DONO N71N N7N
+DONO H72N N7N
+
+IC O4B   C4B   C5B   O5B    1.4592  109.88  127.15  112.06   1.4436
+IC O4B   C5B   *C4B  C3B    1.4592  109.88 -119.04  118.31   1.5383
+IC C3B   C5B   *C4B  H4B    1.5383  118.31 -123.09  109.39   1.1113
+IC C5B   C4B   O4B   C1B    1.5404  109.88 -146.22  109.49   1.4139
+IC C4B   O4B   C1B   N9A    1.4592  109.49 -127.93  110.13   1.4603
+IC N9A   O4B   *C1B  C2B    1.4603  110.13  122.48  107.68   1.5154
+IC N9A   O4B   *C1B  H1B    1.4603  110.13 -120.39  106.05   1.1153
+IC O4B   C1B   N9A   C4A    1.4139  110.13 -117.96  127.68   1.3725
+IC C4A   C1B   *N9A  C8A    1.3725  127.68  177.86  126.28   1.3734
+IC C1B   N9A   C4A   C5A    1.4603  127.68  178.99  105.54   1.3840
+IC C5A   N9A   *C4A  N3A    1.3840  105.54  179.70  127.97   1.3431
+IC N9A   C4A   C5A   C6A    1.3725  105.54 -179.81  117.00   1.4096
+IC C6A   C4A   *C5A  N7A    1.4096  117.00  179.47  111.00   1.3884
+IC N7A   N9A   *C8A  H8A    1.3113  113.83  179.81  121.02   1.0926
+IC C4A   C5A   C6A   N1A    1.3840  117.00   -0.40  118.02   1.3545
+IC N1A   C5A   *C6A  N6A    1.3545  118.02  179.70  123.12   1.3454
+IC C5A   C6A   N1A   C2A    1.4096  118.02    0.07  118.03   1.3365
+IC N3A   N1A   *C2A  H2A    1.3345  129.58  179.79  115.39   1.0936
+IC C5A   C6A   N6A   H61A   1.4096  123.12 -178.46  117.57   0.9939
+IC H61A  C6A   *N6A  H62A   0.9939  117.57  176.57  120.42   0.9965
+IC C3B   C1B   *C2B  O2B    1.5103  102.02  117.99  111.67   1.4134
+IC C3B   C1B   *C2B  H2B    1.5103  102.02 -117.32  112.17   1.1132
+IC C1B   C2B   O2B   HO2A   1.5154  111.67 -163.97  107.58   0.9678
+IC C2B   C4B   *C3B  O3B    1.5103  101.80  116.77  110.83   1.4344
+IC C2B   C4B   *C3B  H3B    1.5103  101.80 -119.13  108.74   1.1128
+IC C4B   C3B   O3B   HO3A   1.5383  110.83   54.91  107.95   0.9983
+IC C3B   C4B   C5B   O5B    1.5383  118.31    8.12  112.06   1.4436
+IC O5B   C4B   *C5B  H52A   1.4436  112.06 -118.83  109.45   1.1125
+IC H52A  C4B   *C5B  H51A   1.1125  109.45 -115.45  109.09   1.1167
+IC C4B   C5B   O5B   PA     1.5404  112.06  103.36  120.31   1.5832
+IC C5B   O5B   PA    O3     1.4436  120.31  176.42   94.39   1.5047
+IC O3    O5B   *PA   O1A    1.5047   94.39 -120.03  104.05   1.4804
+IC O1A   O5B   *PA   O2A    1.4804  104.05 -123.95  100.78   1.4839
+IC O5B   PA    O3    PN     1.5832   94.39 -178.56  100.47   1.5104
+IC PA    O3    PN    O5D    1.5047  100.47 -170.27   94.47   1.5770
+IC O5D   O3    *PN   O1N    1.5770   94.47 -107.91  114.74   1.4790
+IC O1N   O3    *PN   O2N    1.4790  114.74 -147.43  117.97   1.4863
+IC O3    PN    O5D   C5D    1.5104   94.47 -177.92  120.58   1.4431
+IC PN    O5D   C5D   C4D    1.5770  120.58 -122.07  113.80   1.5459
+IC C4D   O5D   *C5D  H51N   1.5459  113.80 -119.75  107.60   1.1121
+IC H51N  O5D   *C5D  H52N   1.1121  107.60 -117.14  112.75   1.1171
+IC O5D   C5D   C4D   O4D    1.4431  113.80  -64.50  112.96   1.4660
+IC O4D   C5D   *C4D  C3D    1.4660  112.96  127.07  120.95   1.5529
+IC O4D   C5D   *C4D  H4D    1.4660  112.96 -113.76  106.56   1.1112
+IC C5D   C4D   C3D   C2D    1.5459  120.95 -160.75   99.47   1.5206
+IC C2D   C4D   *C3D  O3D    1.5206   99.47  121.69  119.59   1.4385
+IC C2D   C4D   *C3D  H3D    1.5206   99.47 -114.49  107.55   1.1109
+IC C4D   C3D   C2D   C1D    1.5529   99.47   42.83  101.15   1.5416
+IC C1D   C3D   *C2D  O2D    1.5416  101.15  126.12  112.03   1.4127
+IC C1D   C3D   *C2D  H2D    1.5416  101.15 -113.62  108.86   1.1129
+IC C3D   C2D   O2D   HO2N   1.5206  112.03  -33.33  102.61   0.9714
+IC C4D   C3D   O3D   HO3N   1.5529  119.59   46.10  109.78   0.9937
+IC O4D   C2D   *C1D  N1N    1.4246  103.98  123.05  117.48   1.5125
+IC O4D   C2D   *C1D  H1D    1.4246  103.98 -113.06  108.45   1.1101
+IC C2D   C1D   N1N   C2N    1.5416  117.48   21.65  124.87   1.3754
+IC C2N   C1D   *N1N  C6N    1.3754  124.87 -167.67  121.17   1.3759
+IC C1D   N1N   C6N   C5N    1.5125  121.17  126.10  120.49   1.3282
+IC C5N   N1N   *C6N  HN6    1.3282  120.49 -173.51  119.76   1.0882
+IC N1N   C6N   C5N   C4N    1.3759  120.49   26.68  121.42   1.5170
+IC C4N   C6N   *C5N  H5N    1.5170  121.42 -140.43  114.25   1.0930
+IC C6N   C5N   C4N   C3N    1.3282  121.42   -4.55  109.89   1.5374
+IC C3N   C5N   *C4N  H41N   1.5374  109.89  127.11  113.12   1.1052
+IC C3N   C5N   *C4N  H42N   1.5374  109.89 -116.77  106.76   1.1126
+IC C3N   N1N   *C2N  H2N    1.3514  121.98 -179.23  117.66   1.0902
+IC C2N   C4N   *C3N  C7N    1.3514  119.70  156.64  121.99   1.5300
+IC C4N   C3N   C7N   N7N    1.5374  121.99   23.57  115.90   1.3567
+IC N7N   C3N   *C7N  O7N    1.3567  115.90  178.78  122.04   1.2305
+IC C3N   C7N   N7N   N71N   1.5300  115.90  162.43  114.68   0.9962
+IC N71N  C7N   *N7N  H72N   0.9962  114.68 -141.25  117.82   1.0104
+PATCH FIRST NONE LAST NONE
+
+RESI NAP         -2.00  ! oxidized nicotinamide adenine dinucleotide, NADP+, adm jr.
+                        ! atom names correspond to pdb nomenclature
+                        ! checked for consistency with new NA params, adm jr., 9/98
+                        ! note that differences with respect to published results exist
+                        ! due to new NA params
+                        !
+GROUP                   !
+ATOM C4B  CN7     0.16  !                H61A  H62A
+ATOM H4B  HN7     0.09  !                   \  /
+ATOM O4B  ON6B   -0.50  !                   N6A
+ATOM C1B  CN7B    0.16  !                    |
+ATOM H1B  HN7     0.09  !                   C6A
+GROUP                   !                  //  \
+ATOM C5A  CN5     0.28  !                 N1A  C5A--N7A\\
+ATOM N7A  NN4    -0.71  !                  |    ||     C8A-H8A
+ATOM C8A  CN4     0.34  !                 C2A  C4A--N9A/
+ATOM H8A  HN3     0.12  !                 / \\ /     \
+ATOM N9A  NN2    -0.05  !              H2A  N3A       \
+                        !                              \
+ATOM N1A  NN3A   -0.74  !                               \
+ATOM C2A  CN4     0.50  !                                \
+ATOM H2A  HN3     0.13  !    O1N     O1A    H52AH4B  O4B  \
+ATOM N3A  NN3A   -0.75  !     |       |      |    \ /   \  \
+ATOM C4A  CN5     0.43  !O5D PN-O3--PA-O5B -C5B -C4B    C1B
+ATOM C6A  CN2     0.46  ! \   |       |      |     \     / \
+                        !  \ O2N     O2A    H51A C3B -C2B  H1B
+ATOM N6A  NN1    -0.77  !   \                     / \   / \
+ATOM H61A HN1     0.38  !    \                O3B  H3B O2B H2B
+ATOM H62A HN1     0.38  !     \                |        |
+GROUP                   !      \             HO3A O1X =P2B==O2X  (-)
+ATOM C2B  CN7B    0.01  !       \                       |    N71N
+ATOM H2B  HN7     0.09  !        \                HO2A-O3X    /
+ATOM O2B  ON2    -0.62  !         \                    H72N-N7N    H41N
+ATOM P2B  P       1.50  !          \                          \     |
+ATOM O1X  ON3    -0.82  !           \                         C7N  C4N
+ATOM O2X  ON3    -0.82  !            \                        / \  /  \
+ATOM O3X  ON4    -0.68  !             \                    O7N  C3N  C5N-H5N
+ATOM HO2A HN4     0.34  !              \                          |    |
+GROUP                   !               \                         |    |
+ATOM C3B  CN7     0.14  !                \ H51N H4D O4D       H2N-C2N C6N-HN6
+ATOM H3B  HN7     0.09  !                 \ |    \ /   \           \   /
+ATOM O3B  ON5    -0.66  !                  C5D --C4D    C1D --------N1N
+ATOM HO3A HN5     0.43  !                   |     \     / \
+GROUP                   !                 H52N   C3D--C2D H1D 
+ATOM C5B  CN8B   -0.08  !                        / \   / \  
+ATOM H51A HN8     0.09  !                    O3D  H3D O2D H2D   
+ATOM H52A HN8     0.09  !                     |       |
+ATOM PA   P       1.50  !                    HO3N    HO2N   
+ATOM O1A  ON3    -0.82  !
+ATOM O2A  ON3    -0.82  !
+ATOM O5B  ON2    -0.62  !
+ATOM O3   ON2    -0.68
+ATOM PN   P       1.50
+ATOM O1N  ON3    -0.82
+ATOM O2N  ON3    -0.82
+ATOM O5D  ON2    -0.62
+ATOM C5D  CN8B   -0.08
+ATOM H51N HN8     0.09
+ATOM H52N HN8     0.09 
+GROUP                  
+ATOM C2D  CN7B    0.14 
+ATOM H2D  HN7     0.09 
+ATOM O2D  ON5    -0.66
+ATOM HO2N HN5     0.43
+GROUP
+ATOM C3D  CN7     0.14
+ATOM H3D  HN7     0.09
+ATOM O3D  ON5    -0.66
+ATOM HO3N HN5     0.43
+GROUP
+ATOM C1D  CN7B    0.16
+ATOM H1D  HN7     0.09
+ATOM C4D  CN7     0.16
+ATOM H4D  HN7     0.09
+ATOM O4D  ON6B   -0.50
+GROUP                  
+ATOM N1N  NN2    -0.07
+ATOM C6N  CN3B    0.16
+ATOM HN6  HN3B    0.19
+ATOM C5N  CN3    -0.10
+ATOM H5N  HN3B    0.16
+ATOM C4N  CN3A   -0.05
+ATOM H41N HN3B    0.16 !H4N in official nomenclature
+ATOM C3N  CN3     0.05 
+ATOM C2N  CN3B    0.18
+ATOM H2N  HN3B    0.16
+ATOM C7N  CN1A    0.68 
+ATOM O7N  ON1    -0.40 
+ATOM N7N  NN1    -0.82
+ATOM N71N HN1     0.34  ! trans to amide O
+ATOM H72N HN1     0.36  ! cis to amide O
+
+BOND N1A  C2A       N3A  C4A       C5A  C6A
+BOND C6A  N6A       C5A  N7A       C8A  N9A
+BOND N9A  C4A       C2A  H2A       N6A  H61A      N6A  H62A      C8A  H8A
+DOUBLE C6A  N1A       C2A  N3A       C4A  C5A      N7A  C8A
+BOND N9A  C1B       C1B  C2B       C2B  C3B       C3B  C4B       C4B  O4B 
+BOND O4B  C1B       C1B  H1B       C2B  O2B       O2B  P2B      C2B  H2B 
+BOND C3B  H3B       C3B  O3B       O3B  HO3A      C4B  H4B       C4B  C5B 
+BOND C5B  H52A      C5B  H51A      C5B  O5B       O5B  PA        PA   O1A
+BOND PA   O2A       PA   O3        O3   PN        PN   O1N       PN   O2N
+BOND PN   O5D       O5D  C5D       C5D  H51N      C5D  H52N      C5D  C4D 
+BOND C4D  O4D       O4D  C1D       C1D  C2D       C2D  C3D       C3D  C4D 
+BOND C1D  H1D       C2D  H2D       C2D  O2D       O2D  HO2N      C3D  H3D 
+BOND C3D  O3D       O3D  HO3N      C4D  H4D       C1D  N1N       N1N  C2N
+BOND C3N  C4N       C5N  C6N
+BOND C2N  H2N       C3N  C7N       C7N  O7N       C7N  N7N       N7N  N71N
+BOND N7N  H72N      C4N  H41N      C5N  H5N       C6N  HN6
+BOND P2B  O1X       P2B  O2X       P2B  O3X       O3X  HO2A
+DOUBLE C2N  C3N       C4N  C5N       C6N  N1N
+! adenine impropers
+IMPR N6A  C6A  H61A H62A     C6A  N1A  C5A  N6A
+! amide impropers
+IMPR C7N   N7N   C3N  O7N    C7N   C3N   N7N   O7N 
+IMPR N7N   C7N   N71N H72N   N7N   C7N   H72N  N71N
+! ring hydrogen impropers
+IMPR C6N   N1N   C5N  HN6    C5N   C6N   C4N   H5N
+IMPR C4N   C5N   C3N  H41N   C2N   C3N   N1N   H2N
+DONO H61A N6A
+DONO H62A N6A
+DONO HO2A O2B 
+DONO HO3A O3B 
+ACCE N1A
+ACCE N3A
+ACCE N7A
+ACCE O4B 
+ACCE O2B 
+ACCE O3B 
+ACCE O5B 
+ACCE O1A  PA
+ACCE O2A  PA
+ACCE O3
+ACCE O1N  PN
+ACCE O2N  PN
+ACCE O5D 
+ACCE O4D 
+ACCE O3D 
+ACCE O2D 
+ACCE O7N
+DONO HO2N O2D 
+DONO HO3N O3D 
+DONO N71N N7N
+DONO H72N N7N
+DONO HO2A O3X 
+ACCE O3X 
+ACCE O1X 
+ACCE O2X 
+ACCE O2B 
+
+IC O4B   C4B   C5B   O5B    1.4585  109.71  159.30  112.46   1.4473
+IC O4B   C5B   *C4B  C3B    1.4585  109.71 -116.16  111.85   1.5464
+IC C3B   C5B   *C4B  H4B    1.5464  111.85 -123.40  110.92   1.1115
+IC C5B   C4B   O4B   C1B    1.5376  109.71 -108.48  108.78   1.4075
+IC C4B   O4B   C1B   N9A    1.4585  108.78 -152.38  111.04   1.4568
+IC N9A   O4B   *C1B  C2B    1.4568  111.04  121.73  107.16   1.5067
+IC N9A   O4B   *C1B  H1B    1.4568  111.04 -121.01  106.15   1.1159
+IC O4B   C1B   N9A   C4A    1.4075  111.04 -116.40  127.62   1.3704
+IC C4A   C1B   *N9A  C8A    1.3704  127.62 -179.20  126.23   1.3719
+IC C1B   N9A   C4A   C5A    1.4568  127.62 -179.21  105.46   1.3840
+IC C5A   N9A   *C4A  N3A    1.3840  105.46 -179.98  128.09   1.3448
+IC N9A   C4A   C5A   C6A    1.3704  105.46  179.01  116.94   1.4094
+IC C6A   C4A   *C5A  N7A    1.4094  116.94 -179.45  111.14   1.3881
+IC N7A   N9A   *C8A  H8A    1.3133  113.83  179.37  120.83   1.0924
+IC C4A   C5A   C6A   N1A    1.3840  116.94   -0.02  118.16   1.3545
+IC N1A   C5A   *C6A  N6A    1.3545  118.16 -179.37  122.98   1.3453
+IC C5A   C6A   N1A   C2A    1.4094  118.16   -0.02  117.86   1.3367
+IC N3A   N1A   *C2A  H2A    1.3332  129.71  178.74  115.38   1.0931
+IC C5A   C6A   N6A   H61A   1.4094  122.98  174.65  117.36   0.9937
+IC H61A  C6A   *N6A  H62A   0.9937  117.36 -169.69  119.66   0.9963
+IC C3B   C1B   *C2B  O2B    1.5188  101.16  119.53  108.66   1.4398
+IC C3B   C1B   *C2B  H2B    1.5188  101.16 -116.17  111.47   1.1163
+IC C1B   C2B   O2B   P2B    1.5067  108.66  164.95  121.64   1.5624
+IC C2B   O2B   P2B   O3X    1.4398  121.64 -145.91  106.75   1.5575
+IC O3X   O2B   *P2B  O1X    1.5575  106.75  112.52  112.63   1.4723
+IC O1X   O2B   *P2B  O2X    1.4723  112.63  135.09  111.70   1.4730
+IC O2B   P2B   O3X   HO2A   1.5624  106.75  179.79  107.64   0.9606
+IC C1B   C2B   O2B   HO2A   1.5067  108.66  140.65  141.83   3.3318
+IC C2B   C4B   *C3B  O3B    1.5188  105.43  121.35  109.34   1.4348
+IC C2B   C4B   *C3B  H3B    1.5188  105.43 -117.32  108.06   1.1126
+IC C4B   C3B   O3B   HO3A   1.5464  109.34   51.56  106.53   0.9936
+IC C3B   C4B   C5B   O5B    1.5464  111.85   43.14  112.46   1.4473
+IC O5B   C4B   *C5B  H52A   1.4473  112.46 -119.04  108.58   1.1125
+IC H52A  C4B   *C5B  H51A   1.1125  108.58 -116.00  109.43   1.1155
+IC C4B   C5B   O5B   PA     1.5376  112.46   78.42  120.97   1.5816
+IC C5B   O5B   PA    O3     1.4473  120.97  163.89   94.51   1.5036
+IC O3    O5B   *PA   O1A    1.5036   94.51 -121.21  105.58   1.4802
+IC O1A   O5B   *PA   O2A    1.4802  105.58 -126.12  102.35   1.4824
+IC O5B   PA    O3    PN     1.5816   94.51 -169.65  103.13   1.5074
+IC PA    O3    PN    O5D    1.5036  103.13 -158.88   92.67   1.5783
+IC O5D   O3    *PN   O1N    1.5783   92.67 -107.59  112.84   1.4735
+IC O1N   O3    *PN   O2N    1.4735  112.84 -147.96  119.72   1.4863
+IC O3    PN    O5D   C5D    1.5074   92.67  167.85  121.64   1.4408
+IC PN    O5D   C5D   C4D    1.5783  121.64 -119.99  113.59   1.5457
+IC C4D   O5D   *C5D  H51N   1.5457  113.59 -118.85  107.20   1.1125
+IC H51N  O5D   *C5D  H52N   1.1125  107.20 -116.81  112.97   1.1169
+IC O5D   C5D   C4D   O4D    1.4408  113.59  -47.57  113.01   1.4697
+IC O4D   C5D   *C4D  C3D    1.4697  113.01  124.91  119.42   1.5538
+IC O4D   C5D   *C4D  H4D    1.4697  113.01 -115.69  107.46   1.1114
+IC C5D   C4D   C3D   C2D    1.5457  119.42 -158.23   99.73   1.5185
+IC C2D   C4D   *C3D  O3D    1.5185   99.73  119.79  119.52   1.4371
+IC C2D   C4D   *C3D  H3D    1.5185   99.73 -115.26  108.09   1.1115
+IC C4D   C3D   C2D   C1D    1.5538   99.73   43.62  100.48   1.5339
+IC C1D   C3D   *C2D  O2D    1.5339  100.48  123.65  111.48   1.4144
+IC C1D   C3D   *C2D  H2D    1.5339  100.48 -114.85  109.66   1.1132
+IC C3D   C2D   O2D   HO2N   1.5185  111.48  -19.41  103.55   0.9759
+IC C4D   C3D   O3D   HO3N   1.5538  119.52   41.07  112.08   0.9969
+IC O4D   C2D   *C1D  N1N    1.4209  103.89  122.79  115.51   1.5069
+IC O4D   C2D   *C1D  H1D    1.4209  103.89 -113.36  108.85   1.1120
+IC C2D   C1D   N1N   C2N    1.5339  115.51   54.88  121.01   1.3424
+IC C2N   C1D   *N1N  C6N    1.3424  121.01 -177.68  121.58   1.3487
+IC C1D   N1N   C6N   C5N    1.5069  121.58 -178.88  122.67   1.3689
+IC C5N   N1N   *C6N  HN6    1.3689  122.67 -174.63  117.18   1.0940
+IC N1N   C6N   C5N   C4N    1.3487  122.67   -2.95  119.09   1.3746
+IC C4N   C6N   *C5N  H5N    1.3746  119.09 -173.56  121.44   1.0955
+IC C6N   C5N   C4N   C3N    1.3689  119.09   -1.00  119.02   1.3830
+IC C3N   C5N   *C4N  H41N   1.3830  119.02 -178.05  120.48   1.0937
+IC C3N   N1N   *C2N  H2N    1.3696  123.10  177.36  117.15   1.0905
+IC C2N   C4N   *C3N  C7N    1.3696  118.55 -179.48  116.96   1.5065
+IC C4N   C3N   C7N   N7N    1.3830  116.96   49.86  116.48   1.3522
+IC N7N   C3N   *C7N  O7N    1.3522  116.48  169.66  118.17   1.2276
+IC C3N   C7N   N7N   N71N   1.5065  116.48 -148.55  113.04   1.0028
+IC N71N  C7N   *N7N  H72N   1.0028  113.04  127.16  116.64   1.0104
+PATCH FIRST NONE LAST NONE   
+
+RESI NDP         -3.00  ! reduced nicotinamide adenine dinucleotide, NADPH, VARNAI/adm jr.
+                        ! from NADH and 3PHO
+                        ! checked for consistency with new NA params, adm jr., 9/98
+                        ! note that differences with respect to published results exist
+                        ! due to new NA params
+                        !
+GROUP                   !
+ATOM C4B  CN7     0.16  !                H61A  H62A
+ATOM H4B  HN7     0.09  !                   \  /
+ATOM O4B  ON6B   -0.50  !                   N6A
+ATOM C1B  CN7B    0.16  !                    |
+ATOM H1B  HN7     0.09  !                   C6A
+GROUP                   !                  //  \
+ATOM C5A  CN5     0.28  !                 N1A  C5A--N7A\\
+ATOM N7A  NN4    -0.71  !                  |    ||     C8A-H8A
+ATOM C8A  CN4     0.34  !                 C2A  C4A--N9A/
+ATOM H8A  HN3     0.12  !                 / \\ /     \
+ATOM N9A  NN2    -0.05  !              H2A  N3A       \
+                        !                              \
+ATOM N1A  NN3A   -0.74  !                               \
+ATOM C2A  CN4     0.50  !                                \
+ATOM H2A  HN3     0.13  !    O1N     O1A    H52AH4B  O4B  \
+ATOM N3A  NN3A   -0.75  !     |       |      |    \ /   \  \
+ATOM C4A  CN5     0.43  ! O5D PN-O3--PA-O5B -C5B -C4B    C1B 
+ATOM C6A  CN2     0.46  ! \   |       |      |     \     / \
+                        !  \ O2N     O2A    H51A C3B -C2B  H1B 
+ATOM N6A  NN1    -0.77  !   \                     / \   / \
+ATOM H61A HN1     0.38  !    \                O3B  H3B O2B H2B 
+ATOM H62A HN1     0.38  !     \                |        |
+GROUP                   !      \             HO3A O1X =P2B==O2X  (-)
+ATOM C2B  CN7B    0.01  !       \                       |    N71N
+ATOM H2B  HN7     0.09  !        \                HO2A-O3X    /
+ATOM O2B  ON2    -0.62  !         \                    H72N-N7N  H41NH42N
+ATOM P2B  P       1.50  !          \                          \    \ /
+ATOM O1X  ON3    -0.82  !           \                         C7N  C4N
+ATOM O2X  ON3    -0.82  !            \                        / \  /  \
+ATOM O3X  ON4    -0.68  !             \                    O7N  C3N  C5N-H5N
+ATOM HO2A HN4     0.34  !              \                          |    |
+GROUP                   !               \                         |    |
+ATOM C3B  CN7     0.14  !                \ H51N H4D O4D       H2N-C2N C6N-HN6
+ATOM H3B  HN7     0.09  !                 \ |    \ /   \           \   /
+ATOM O3B  ON5    -0.66  !                  C5D --C4D    C1D --------N1N
+ATOM HO3A HN5     0.43  !                   |     \     / \
+GROUP                   !                 H52N   C3D -C2D  H1D 
+ATOM C5B  CN8B   -0.08  !                        / \   / \  
+ATOM H51A HN8     0.09  !                    O3D  H3D O2D H2D   
+ATOM H52A HN8     0.09  !                     |       |
+ATOM PA   P       1.50  !                    HO3N    HO2N   
+ATOM O1A  ON3    -0.82  !                   
+ATOM O2A  ON3    -0.82  !                    
+ATOM O5B  ON2    -0.62  !                   
+ATOM O3   ON2    -0.68
+ATOM PN   P       1.50
+ATOM O1N  ON3    -0.82
+ATOM O2N  ON3    -0.82
+ATOM O5D  ON2    -0.62
+ATOM C5D  CN8B   -0.08
+ATOM H51N HN8     0.09
+ATOM H52N HN8     0.09
+GROUP
+ATOM C2D  CN7B    0.14
+ATOM H2D  HN7     0.09
+ATOM O2D  ON5    -0.66
+ATOM HO2N HN5     0.43
+GROUP
+ATOM C3D  CN7     0.14
+ATOM H3D  HN7     0.09
+ATOM O3D  ON5    -0.66
+ATOM HO3N HN5     0.43
+GROUP
+ATOM C1D  CN7B    0.16
+ATOM H1D  HN7     0.09
+ATOM C4D  CN7     0.16
+ATOM H4D  HN7     0.09
+ATOM O4D  ON6B   -0.50
+GROUP
+ATOM N1N  NN2    -0.27 !N2
+ATOM C6N  CN3C   -0.06 !C3
+ATOM HN6  HN6     0.17 !H4
+ATOM C5N  CN3    -0.18 !C5
+ATOM H5N  HN6     0.14 !H6
+ATOM C4N  CN8    -0.28 !C7
+ATOM H41N HN8     0.09 !H8
+ATOM H42N HN8     0.09 !H17
+ATOM C3N  CN3     0.36 !C9
+ATOM C2N  CN3C   -0.10 !C10
+ATOM H2N  HN6     0.14 !H11
+ATOM C7N  CN1A    0.55 !C12
+ATOM O7N  ON1    -0.51 !O13
+ATOM N7N  NN1    -0.72 !N14
+ATOM N71N HN1     0.26 !H15  ! trans to amide O
+ATOM H72N HN1     0.32 !H16  ! cis to amide O
+BOND N1A  C2A       N3A  C4A       C5A  C6A
+BOND C6A  N6A       C5A  N7A       C8A  N9A
+BOND N9A  C4A       C2A  H2A       N6A  H61A      N6A  H62A      C8A  H8A
+DOUBLE C6A  N1A       C2A  N3A       C4A  C5A      N7A  C8A
+BOND N9A  C1B       C1B  C2B       C2B  C3B       C3B  C4B       C4B  O4B 
+BOND O4B  C1B       C1B  H1B       C2B  O2B       O2B  P2B       C2B  H2B 
+BOND C3B  H3B       C3B  O3B       O3B  HO3A      C4B  H4B       C4B  C5B 
+BOND C5B  H52A      C5B  H51A      C5B  O5B       O5B  PA        PA   O1A
+BOND PA   O2A       PA   O3        O3   PN        PN   O1N       PN   O1N
+BOND PN   O5D       O5D  C5D       C5D  H51N      C5D  H52N      C5D  C4D 
+BOND C4D  O4D       O4D  C1D       C1D  C2D       C2D  C3D       C3D  C4D 
+BOND C1D  H1D       C2D  H2D       C2D  O2D       O2D  HO2N      C3D  H3D 
+BOND C3D  O3D       O3D  HO3N      C4D  H4D       C1D  N1N       N1N  C2N
+BOND C3N  C4N       C5N  C6N       
+BOND C2N  H2N       C3N  C7N       C7N  O7N       C7N  N7N       N7N  N71N
+BOND N7N  H72N      C4N  H41N      C4N  H42N      C5N  H5N       C6N  HN6
+BOND P2B  O1X       P2B  O2X       P2B  O3X       O3X  HO2A
+DOUBLE C2N  C3N       C4N  C5N       C6N  N1N
+! adenine impropers
+IMPR N6A  C6A    H61A H62A   C6A   N1A   C5A   N6A
+! amide impropers
+IMPR C7N   N7N   C3N  O7N    C7N   C3N   N7N   O7N
+IMPR N7N   C7N   N71N H72N   N7N   C7N   H72N  N71N
+! ring hydrogen impropers
+IMPR C6N   N1N   C5N  HN6    C5N   C6N   C4N   H5N
+IMPR C4N   C5N   C3N  H41N   C2N   C3N   N1N   H2N
+DONO H61A N6A
+DONO H62A N6A
+DONO HO3A O3B 
+ACCE N1A
+ACCE N3A
+ACCE N7A
+ACCE O4B 
+ACCE O3B 
+ACCE O5B 
+ACCE O1A  PA
+ACCE O2A  PA
+ACCE O3
+ACCE O1N  PN
+ACCE O2N  PN
+ACCE O5D 
+ACCE O4D 
+ACCE O3D 
+ACCE O2D 
+ACCE O7N
+DONO HO2N O2D 
+DONO HO3N O3D 
+DONO N71N N7N
+DONO H72N N7N
+DONO HO2A O3X 
+ACCE O3X 
+ACCE O1X 
+ACCE O2X 
+ACCE O2B  
+
+IC O4B   C4B   C5B   O5B    1.4582  108.69  147.29  113.38   1.4416
+IC O4B   C5B   *C4B  C3B    1.4582  108.69 -118.37  116.42   1.5453
+IC C3B   C5B   *C4B  H4B    1.5453  116.42 -123.26  110.26   1.1108
+IC C5B   C4B   O4B   C1B    1.5423  108.69 -124.93  109.48   1.4122
+IC C4B   O4B   C1B   N9A    1.4582  109.48 -147.01  110.04   1.4652
+IC N9A   O4B   *C1B  C2B    1.4652  110.04  124.33  107.34   1.5182
+IC N9A   O4B   *C1B  H1B    1.4652  110.04 -119.42  105.83   1.1152
+IC O4B   C1B   N9A   C4A    1.4122  110.04  -86.61  125.65   1.3733
+IC C4A   C1B   *N9A  C8A    1.3733  125.65  178.34  128.52   1.3773
+IC C1B   N9A   C4A   C5A    1.4652  125.65  178.57  105.62   1.3829
+IC C5A   N9A   *C4A  N3A    1.3829  105.62  179.51  128.22   1.3485
+IC N9A   C4A   C5A   C6A    1.3733  105.62  178.87  117.03   1.4089
+IC C6A   C4A   *C5A  N7A    1.4089  117.03 -179.61  111.33   1.3844
+IC N7A   N9A   *C8A  H8A    1.3165  113.76 -178.62  121.49   1.0929
+IC C4A   C5A   C6A   N1A    1.3829  117.03    0.17  118.37   1.3553
+IC N1A   C5A   *C6A  N6A    1.3553  118.37 -179.13  122.76   1.3455
+IC C5A   C6A   N1A   C2A    1.4089  118.37   -0.08  117.58   1.3367
+IC N3A   N1A   *C2A  H2A    1.3316  129.88  179.50  115.45   1.0928
+IC C5A   C6A   N6A   H61A   1.4089  122.76  172.71  117.17   0.9924
+IC H61A  C6A   *N6A  H62A   0.9924  117.17 -165.83  118.92   0.9969
+IC C3B   C1B   *C2B  O2B    1.5172  100.70  117.95  111.52   1.4469
+IC C3B   C1B   *C2B  H2B    1.5172  100.70 -114.49  112.15   1.1158
+IC C1B   C2B   O2B   P2B    1.5182  111.52   88.87  120.26   1.5695
+IC C2B   O2B   P2B   O3X    1.4469  120.26  -89.09  105.16   1.5592
+IC O3X   O2B   *P2B  O1X    1.5592  105.16  112.49  112.19   1.4735
+IC O1X   O2B   *P2B  O2X    1.4735  112.19  138.98  113.24   1.4714
+IC O2B   P2B   O3X   HO2A   1.5695  105.16 -143.03  105.24   0.9629
+IC C1B   C2B   O2B   HO2A   1.5182  111.52   52.38  125.15   3.2167
+IC C2B   C4B   *C3B  O3B    1.5172  104.21  119.99  110.36   1.4348
+IC C2B   C4B   *C3B  H3B    1.5172  104.21 -117.77  107.81   1.1123
+IC C4B   C3B   O3B   HO3A   1.5453  110.36   61.04  107.59   0.9899
+IC C3B   C4B   C5B   O5B    1.5453  116.42   28.91  113.38   1.4416
+IC O5B   C4B   *C5B  H52A   1.4416  113.38 -118.10  108.23   1.1129
+IC H52A  C4B   *C5B  H51A   1.1129  108.23 -115.04  109.34   1.1144
+IC C4B   C5B   O5B   PA     1.5423  113.38   90.70  124.02   1.5733
+IC C5B   O5B   PA    O3     1.4416  124.02  151.99   89.67   1.5604
+IC O3    O5B   *PA   O1A    1.5604   89.67 -118.40  102.31   1.4957
+IC O1A   O5B   *PA   O2A    1.4957  102.31 -121.55   98.60   1.4978
+IC O5B   PA    O3    PN     1.5733   89.67  175.92   82.07   1.5171
+IC PA    O3    PN    O5D    1.5604   82.07 -130.29  100.52   1.5806
+IC O5D   O3    *PN   O1N    1.5806  100.52 -112.12  108.73   1.4864
+IC O1N   O3    *PN   O2N    1.4864  108.73  147.44  159.68   5.2397
+IC O3    PN    O5D   C5D    1.5171  100.52 -156.02  122.16   1.4407
+IC PN    O5D   C5D   C4D    1.5806  122.16 -155.55  113.98   1.5556
+IC C4D   O5D   *C5D  H51N   1.5556  113.98 -119.58  108.24   1.1127
+IC H51N  O5D   *C5D  H52N   1.1127  108.24 -117.86  112.23   1.1172
+IC O5D   C5D   C4D   O4D    1.4407  113.98  -39.97  113.27   1.4728
+IC O4D   C5D   *C4D  C3D    1.4728  113.27  123.24  116.41   1.5466
+IC O4D   C5D   *C4D  H4D    1.4728  113.27 -117.97  108.11   1.1097
+IC C5D   C4D   C3D   C2D    1.5556  116.41 -137.48  104.59   1.5300
+IC C2D   C4D   *C3D  O3D    1.5300  104.59  128.04  115.55   1.4371
+IC C2D   C4D   *C3D  H3D    1.5300  104.59 -114.00  106.10   1.1131
+IC C4D   C3D   C2D   C1D    1.5466  104.59   26.25  103.50   1.5376
+IC C1D   C3D   *C2D  O2D    1.5376  103.50  127.18  111.43   1.4128
+IC C1D   C3D   *C2D  H2D    1.5376  103.50 -113.70  107.89   1.1128
+IC C3D   C2D   O2D   HO2N   1.5300  111.43  -33.45  103.13   0.9733
+IC C4D   C3D   O3D   HO3N   1.5466  115.55   84.57  105.43   0.9941
+IC O4D   C2D   *C1D  N1N    1.4276  105.00  128.25  117.48   1.5144
+IC O4D   C2D   *C1D  H1D    1.4276  105.00 -111.04  107.28   1.1120
+IC C2D   C1D   N1N   C2N    1.5376  117.48   57.37  120.71   1.3843
+IC C2N   C1D   *N1N  C6N    1.3843  120.71  160.76  120.55   1.3815
+IC C1D   N1N   C6N   C5N    1.5144  120.55 -170.31  124.26   1.3287
+IC C5N   N1N   *C6N  HN6    1.3287  124.26 -178.43  118.52   1.0918
+IC N1N   C6N   C5N   C4N    1.3815  124.26    9.43  123.21   1.5077
+IC C4N   C6N   *C5N  H5N    1.5077  123.21 -145.56  114.70   1.0925
+IC C6N   C5N   C4N   C3N    1.3287  123.21   -9.51  109.08   1.5286
+IC C3N   C5N   *C4N  H41N   1.5286  109.08  123.86  111.86   1.1053
+IC C3N   C5N   *C4N  H42N   1.5286  109.08 -119.79  109.00   1.1069
+IC C3N   N1N   *C2N  H2N    1.3470  124.38 -176.93  117.74   1.0900
+IC C2N   C4N   *C3N  C7N    1.3470  121.40 -164.55  123.17   1.5301
+IC C4N   C3N   C7N   N7N    1.5286  123.17   17.57  116.23   1.3547
+IC N7N   C3N   *C7N  O7N    1.3547  116.23 -179.04  120.83   1.2310
+IC C3N   C7N   N7N   N71N   1.5301  116.23  173.93  118.74   0.9953
+IC N71N  C7N   *N7N  H72N   0.9953  118.74 -160.46  121.30   1.0065
+
+PATCH FIRST NONE LAST NONE
+
+!old NAD/NADP nomenclature for both residue and atom names.  maintained
+!for back compatibility.  residue names differ from current nomenclature
+
+!following was NAD in old nomenclature; change to NAD1 to avoid conflict with
+!new nomenclature
+!
+RESI NAD1        -1.00  ! oxidized nicotinamide adenine dinucleotide, jjp1/adm jr.
+                        ! atom names correspond to pdb nomenclature
+                        ! checked for consistency with new NA params, adm jr., 9/98
+                        ! note that differences with respect to published results exist
+                        ! due to new NA params
+GROUP                   !
+ATOM AC4' CN7     0.16  !                AH61  AH62
+ATOM AH4' HN7     0.09  !                   \  /
+ATOM AO4' ON6B   -0.50  !                   AN6
+ATOM AC1' CN7B    0.16  !                    |
+ATOM AH1' HN7     0.09  !                   AC6
+GROUP                   !                  //  \
+ATOM AC5  CN5     0.28  !                 AN1  AC5--AN7\\
+ATOM AN7  NN4    -0.71  !                  |    ||     AC8-AH8
+ATOM AC8  CN4     0.34  !                 AC2  AC4--AN9/
+ATOM AH8  HN3     0.12  !                 / \\ /     \
+ATOM AN9  NN2    -0.05  !              AH2  AN3       \
+                        !                              \
+ATOM AN1  NN3A   -0.74  !                               \
+ATOM AC2  CN4     0.50  !                                \
+ATOM AH2  HN3     0.13  !    NO1     AO1    AH5sAH4' AO4' \
+ATOM AN3  NN3A   -0.75  !     |       |      |    \ /   \  \
+ATOM AC4  CN5     0.43  ! NO5'NP-O3--AP-AO5'-AC5'-AC4'   AC1'
+ATOM AC6  CN2     0.46  ! \   |       |      |     \     / \
+                        !  \ NO2     AO2    AH5' AC3'-AC2' AH1'
+ATOM AN6  NN1    -0.77  !   \                     / \   / \
+ATOM AH61 HN1     0.38  !    \                AO3' AH3'AO2'AH2'
+ATOM AH62 HN1     0.38  !     \                 |       |
+GROUP                   !      \              AH3T     AH2T
+ATOM AC2' CN7B    0.14  !       \                        NH71
+ATOM AH2' HN7     0.09  !        \                          \ 
+ATOM AO2' ON5    -0.66  !         \                    NH72-NN7    NH4
+ATOM AH2T HN5     0.43  !          \                          \     |
+GROUP                   !           \                         NC7  NC4
+ATOM AC3' CN7     0.14  !            \                        / \  /  \
+ATOM AH3' HN7     0.09  !             \                    NO7  NC3  NC5-NH5
+ATOM AO3' ON5    -0.66  !              \                          |    |
+ATOM AH3T HN5     0.43  !               \ NH5s NH4'NO4'      NH2-NC2 NC6-NH6
+GROUP                   !                \ |    \ /   \            \+ /   
+ATOM AC5' CN8B   -0.08  !                 NC5'--NC4'   NC1'---------NN1
+ATOM AH5' HN8     0.09  !                  |     \     / \
+ATOM AH5s HN8     0.09  !                 NH5'   NC3'-NC2'NH1'
+ATOM AP   P       1.50  !                       / \   / \
+ATOM AO1  ON3    -0.82  !                   NO3' NH3'NO2'NH2'
+ATOM AO2  ON3    -0.82  !                    |       |
+ATOM AO5' ON2    -0.62  !                   NH3T    NH2T
+ATOM O3   ON2    -0.68
+ATOM NP   P       1.50
+ATOM NO1  ON3    -0.82
+ATOM NO2  ON3    -0.82
+ATOM NO5' ON2    -0.62
+ATOM NC5' CN8B   -0.08
+ATOM NH5s HN8     0.09
+ATOM NH5' HN8     0.09 
+GROUP                  
+ATOM NC2' CN7B    0.14 
+ATOM NH2' HN7     0.09 
+ATOM NO2' ON5    -0.66
+ATOM NH2T HN5     0.43
+GROUP
+ATOM NC3' CN7     0.14
+ATOM NH3' HN7     0.09
+ATOM NO3' ON5    -0.66
+ATOM NH3T HN5     0.43
+GROUP
+ATOM NC1' CN7B    0.16
+ATOM NH1' HN7     0.09
+ATOM NC4' CN7     0.16
+ATOM NH4' HN7     0.09
+ATOM NO4' ON6B   -0.50
+GROUP                  
+ATOM NN1  NN2    -0.07
+ATOM NC6  CN3B    0.16
+ATOM NH6  HN3B    0.19
+ATOM NC5  CN3    -0.10
+ATOM NH5  HN3B    0.16
+ATOM NC4  CN3A   -0.05
+ATOM NH4  HN3B    0.16
+ATOM NC3  CN3     0.05 
+ATOM NC2  CN3B    0.18
+ATOM NH2  HN3B    0.16
+ATOM NC7  CN1A    0.68 
+ATOM NO7  ON1    -0.40 
+ATOM NN7  NN1    -0.82
+ATOM NH71 HN1     0.34  ! trans to amide O
+ATOM NH72 HN1     0.36  ! cis to amide O
+
+BOND AN1  AC2       AN3  AC4       AC5  AC6
+BOND AC6  AN6       AC5  AN7       AC8  AN9
+BOND AN9  AC4       AC2  AH2       AN6  AH61      AN6  AH62      AC8  AH8
+DOUBLE AC6  AN1       AC2  AN3       AC4  AC5      AN7  AC8
+BOND AN9  AC1'      AC1' AC2'      AC2' AC3'      AC3' AC4'      AC4' AO4'
+BOND AO4' AC1'      AC1' AH1'      AC2' AO2'      AO2' AH2T      AC2' AH2'
+BOND AC3' AH3'      AC3' AO3'      AO3' AH3T      AC4' AH4'      AC4' AC5'
+BOND AC5' AH5s      AC5' AH5'      AC5' AO5'      AO5' AP        AP   AO1
+BOND AP   AO2       AP   O3        O3   NP        NP   NO1       NP   NO2
+BOND NP   NO5'      NO5' NC5'      NC5' NH5s      NC5' NH5'      NC5' NC4'
+BOND NC4' NO4'      NO4' NC1'      NC1' NC2'      NC2' NC3'      NC3' NC4'
+BOND NC1' NH1'      NC2' NH2'      NC2' NO2'      NO2' NH2T      NC3' NH3'
+BOND NC3' NO3'      NO3' NH3T      NC4' NH4'      NC1' NN1       NN1  NC2
+BOND NC3  NC4       NC5  NC6
+BOND NC2  NH2       NC3  NC7       NC7  NO7       NC7  NN7       NN7  NH71
+BOND NN7  NH72      NC4  NH4       NC5  NH5       NC6  NH6
+DOUBLE NC2  NC3       NC4  NC5       NC6  NN1
+! adenine impropers
+IMPR AN6  AC6  AH61 AH62     AC6   AN1   AC5  AN6       
+! amide impropers
+IMPR NC7   NN7   NC3  NO7    NC7   NC3   NN7   NO7 
+IMPR NN7   NC7   NH71 NH72   NN7   NC7   NH72  NH71
+! ring hydrogen impropers
+IMPR NC6   NN1   NC5  NH6    NC5   NC6   NC4   NH5
+IMPR NC4   NC5   NC3  NH4    NC2   NC3   NN1   NH2
+DONO AH61 AN6
+DONO AH62 AN6
+DONO AH2T AO2'
+DONO AH3T AO3'
+ACCE AN1
+ACCE AN3
+ACCE AN7
+ACCE AO4'
+ACCE AO2'
+ACCE AO3'
+ACCE AO5'
+ACCE AO1  AP
+ACCE AO2  AP
+ACCE O3
+ACCE NO1  NP
+ACCE NO2  NP
+ACCE NO5'
+ACCE NO4'
+ACCE NO3'
+ACCE NO2'
+ACCE NO7
+DONO NH2T NO2'
+DONO NH3T NO3'
+DONO NH71 NN7
+DONO NH72 NN7
+IC AP     O3     NP     NO5'   1.4863   65.28 -169.00   98.59   1.5977
+IC AC5'   AO5'   AP     O3     1.4232  127.31 -165.10  103.27   1.4863
+IC AC5'   AO5'   AP     AO2    1.4232  127.31   73.33  111.48   1.4836
+IC AH5S   AC5'   AC4'   AC3'   0.9935  120.00  -58.20  111.58   1.6942
+IC AP     O3     NP     NO1    1.4863   65.28   78.51  108.97   1.4756
+IC AP     O3     NP     NO2    1.4863   65.28  -54.29  112.88   1.4636
+IC AP     AO5'   AC5'   AC4'   1.5901  127.31  121.29  111.63   1.5491
+IC AO1    AP     AO5'   AC5'   1.5901  127.31  121.29  127.31   1.4232
+IC AO5'   AC5'   AC4'   AC3'   1.4232  111.63  -58.20  111.58   1.6942
+IC AC5'   AC4'   AC3'   AO3'   1.5491  111.58  128.42  114.19   1.4337
+IC AH3T   AO3'   AC3'   AC4'   0.9671   98.77  147.40  114.19   1.6942
+IC AO4'   AC3'   *AC4   AC5'   1.8868  112.95 -118.10  111.58   1.5491
+IC AC2'   AC4'   *AC3'  AO3'   1.5097   93.22 -117.72  114.19   1.4337
+IC AC4'   AC3'   AC2'   AC1'   1.6942   93.22  -12.93  117.82   1.5415
+IC AC3'   AC2'   AC1'   AN9    1.5097  117.82  135.56  115.01   1.4847
+IC AO4'   AC1'   AN9    AC4    1.3646   95.44  -90.72  125.96   1.4013
+IC AC1'   AC4    *AN9   AC8    1.4847  125.96 -176.52  105.34   1.3777
+IC AC4    AN9    AC8    AN7    1.4013  105.34   -0.07  114.01   1.3282
+IC AC8    AN9    AC4    AC5    1.3777  105.34    0.11  105.06   1.3782
+IC AC8    AN7    AC5    AC6    1.3282  103.21 -179.92  130.78   1.4146
+IC AN7    AC5    AC6    AN1    1.3814  130.78 -179.94  117.85   1.3482
+IC AC5    AC6    AN1    AC2    1.4146  117.85   -0.14  118.87   1.3300
+IC AN9    AC5    *AC4   AN3    1.4013  105.06 -179.67  126.14   1.3648
+IC AC5    AN1    *AC6   AN6    1.4146  117.85  179.89  119.69   1.3419
+IC AN1    AC6    AN6    AH61   1.3482  119.69   -0.39  116.60   0.9912
+IC AH61   AC6    *AN6   AH62   0.9912  116.60 -179.02  116.94   0.9978
+IC AC5    AN1    *AC6   AN6    1.4146  117.85  179.89  119.69   1.3419
+IC AN1    AC6    AN6    AH61   1.3482  119.69   -0.39  116.60   0.9912
+IC AH61   AC6    *AN6   AH62   0.9912  116.60 -179.02  116.94   0.9978
+IC AN9    AN7    *AC8   AH8    1.3777  114.01 -179.37  126.34   1.0962
+IC AN1    AN3    *AC2   AH2    1.3300  129.42  179.97  114.82   1.0928
+IC AC1'   AC3'   *AC2   AO2'   1.5415  117.82 -145.06  114.13   1.4294
+IC AH2'   AO2'   AC2'   AC3'   2.0386   31.12  -93.63  114.13   1.5097
+IC AH2T   AO2'   AC2'   AC3'   0.9953   99.36  -93.63  114.13   1.5097
+IC AO4'   AC2'   *AC1'  AH1'   1.3646  120.77 -114.99  109.65   1.1105
+IC AC1'   AC3'   *AC2   AH2'   1.5415  117.82  108.23   86.44   1.0999
+IC AC2'   AC4'   *AC3'  AH3'   1.5097   93.22  117.28  111.94   1.1110
+IC AC3'   AO4'   *AC4   AH4'   1.6942  112.95 -140.26   57.99   1.0000
+IC AC4'   AO5'   *AC5   AH5'   1.5491  111.63 -123.75  111.23   1.1111
+IC AC4'   AO5'   *AC5   AH5'   1.5491  111.63 -123.75  111.23   1.1111
+IC NC5'   NO5'   NP     NO2    1.4451  128.40  -49.72  108.83   1.4636
+IC NH5S   NC5'   NO5'   NP     1.1110  109.50  115.00  128.40   1.5977
+IC NH5'   NC5'   NO5'   NP     1.1110  109.50 -115.00  128.40   1.5977
+IC NP     NO5'   NC5'   NC4'   1.5977  128.40    0.00  110.10   1.5160
+IC NO5'   NC5'   NC4'   NC3'   1.4451  110.10    0.00  108.50   1.5160
+IC NC5'   NC4'   NC3'   NC2'   1.5160  108.50    0.00  111.00   1.5160
+IC NC4'   NC3'   NC2'   NC1'   1.5160  111.00    0.00  105.50   1.5270
+IC NC3'   NC2'   NC1'   NO4'   1.5160  105.50    0.00  105.00   1.4100
+IC NC2'   NC1'   NO4'   NC4'   1.5270  105.00    0.00  117.86   1.4712
+IC NO2'   NC2'   NC1'   NO4'   1.4200  110.10  180.00  105.00   1.4100
+IC NH2T   NO2'   NC2'   NC1'   0.9600  106.00  180.00  110.10   1.5270
+IC NO4'   NC2'   *NC1'  NH1'   1.4100  105.00 -115.00  110.10   1.1110
+IC NC1'   NC3'   *NC2   NH2'   1.5270  105.50  115.00  110.10   1.1110
+IC NC2'   NC4'   *NC3   NH3'   1.5160  111.00  115.00  110.10   1.1110
+IC NC3'   NO4'   *NC4   NH4'   1.5160  100.64 -115.00  107.24   1.1110
+IC NC4'   NO5'   *NC5   NH5'   1.5160  110.10 -115.00  109.50   1.1110
+IC NC4'   NO5'   *NC5   NH5S   1.5160  110.10  115.00  109.50   1.1110
+IC NC3'   NC2'   NC1'   NN1    1.5160  105.50    0.00  113.70   1.4800
+IC NO3'   NC3'   NC2'   NC1'   1.4200  110.10  180.00  105.50   1.5270
+IC NH3T   NO3'   NC3'   NC2'   0.9600  106.00  180.00  110.10   1.5160
+IC NC2'   NC1'   NN1    NC2    1.5270  113.70    0.00  121.70   1.3150
+IC NC1'   NN1    NC2    NC3    1.4800  121.70    0.00  122.00   1.3500
+IC NN1    NC2    NC3    NC4    1.3150  122.00    0.00  118.00   1.3600
+IC NC2    NC3    NC4    NC5    1.3500  118.00    0.00  118.00   1.3600
+IC NC3    NC4    NC5    NC6    1.3600  118.00    0.00  118.00   1.3500
+IC NC4    NC5    NC6    NN1    1.3600  118.00    0.00  124.51   1.2199
+IC NC5    NC6    NN1    NC2    1.3500  124.51    0.00  119.49   1.3150
+IC NN1    NC2    NC3    NC7    1.3150  122.00    0.00  131.80   1.4800
+IC NC2    NC3    NC7    NO7    1.3500  131.80    0.00  118.50   1.2300
+IC NC2    NC3    NC7    NN7    1.3500  131.80    0.00  113.00   1.3600
+IC NO7    NC7    NN7    NH71   1.2300    0.00  180.00  120.00   1.0000
+IC NO7    NC7    NN7    NH72   1.2300    0.00    0.00  120.00   1.0000
+IC NC2    NC3    NC4    NH4    1.3500  118.00    0.00  121.00   1.0900
+IC NC3    NC4    NC5    NH5    1.3600  118.00    0.00  119.00   1.0900
+IC NC4    NC5    NC6    NH6    1.3600  118.00    0.00  120.50   1.0900
+IC NC6    NN1    NC2    NH2    1.2199  119.49    0.00  117.50   1.0900
+PATCH FIRST NONE LAST NONE   
+
+RESI NADH        -2.00  ! reduced nicotinamide adenine dinucleotide, jjp1/adm jr.
+                        ! atom names correspond to pdb nomenclature
+                        ! checked for consistency with new NA params, adm jr., 9/98
+                        ! note that differences with respect to published results exist
+                        ! due to new NA params
+                        !
+GROUP                   !
+ATOM AC4' CN7     0.16  !                AH61  AH62
+ATOM AH4' HN7     0.09  !                   \  /
+ATOM AO4' ON6B   -0.50  !                   AN6
+ATOM AC1' CN7B    0.16  !                    |
+ATOM AH1' HN7     0.09  !                   AC6
+GROUP                   !                  //  \
+ATOM AC5  CN5     0.28  !                 AN1  AC5--AN7\\
+ATOM AN7  NN4    -0.71  !                  |    ||     AC8-AH8
+ATOM AC8  CN4     0.34  !                 AC2  AC4--AN9/
+ATOM AH8  HN3     0.12  !                 / \\ /     \
+ATOM AN9  NN2    -0.05  !              AH2  AN3       \
+                        !                              \
+ATOM AN1  NN3A   -0.74  !                               \
+ATOM AC2  CN4     0.50  !                                \
+ATOM AH2  HN3     0.13  !    NO1     AO1    AH5sAH4' AO4' \
+ATOM AN3  NN3A   -0.75  !     |       |      |    \ /   \  \
+ATOM AC4  CN5     0.43  ! NO5'NP-O3--AP-AO5'-AC5'-AC4'   AC1'
+ATOM AC6  CN2     0.46  ! \   |       |      |     \     / \
+                        !  \ NO2     AO2    AH5' AC3'-AC2' AH1'
+ATOM AN6  NN1    -0.77  !   \                     / \   / \
+ATOM AH61 HN1     0.38  !    \                AO3' AH3'AO2'AH2'
+ATOM AH62 HN1     0.38  !     \                 |       |
+GROUP                   !      \              AH3T     AH2T
+ATOM AC2' CN7B    0.14  !       \                        NH71
+ATOM AH2' HN7     0.09  !        \                          \
+ATOM AO2' ON5    -0.66  !         \                    NH72-NN7  NH4 NH42
+ATOM AH2T HN5     0.43  !          \                          \    \ /
+GROUP                   !           \                         NC7  NC4
+ATOM AC3' CN7     0.14  !            \                        / \  /  \
+ATOM AH3' HN7     0.09  !             \                    NO7  NC3  NC5-NH5
+ATOM AO3' ON5    -0.66  !              \                          |    |
+ATOM AH3T HN5     0.43  !               \ NH5s NH4'NO4'      NH2-NC2 NC6-NH6
+GROUP                   !                \ |    \ /   \            \  /
+ATOM AC5' CN8B   -0.08  !                 NC5'--NC4'   NC1'---------NN1
+ATOM AH5' HN8     0.09  !                  |     \     / \
+ATOM AH5s HN8     0.09  !                 NH5'   NC3'-NC2'NH1'
+ATOM AP   P       1.50  !                       / \   / \
+ATOM AO1  ON3    -0.82  !                   NO3' NH3'NO2'NH2'
+ATOM AO2  ON3    -0.82  !                    |       |
+ATOM AO5' ON2    -0.62  !                   NH3T    NH2T
+ATOM O3   ON2    -0.68
+ATOM NP   P       1.50
+ATOM NO1  ON3    -0.82
+ATOM NO2  ON3    -0.82
+ATOM NO5' ON2    -0.62
+ATOM NC5' CN8B   -0.08
+ATOM NH5s HN8     0.09
+ATOM NH5' HN8     0.09
+GROUP
+ATOM NC2' CN7B    0.14
+ATOM NH2' HN7     0.09
+ATOM NO2' ON5    -0.66
+ATOM NH2T HN5     0.43
+GROUP
+ATOM NC3' CN7     0.14
+ATOM NH3' HN7     0.09
+ATOM NO3' ON5    -0.66
+ATOM NH3T HN5     0.43
+GROUP
+ATOM NC1' CN7B    0.16
+ATOM NH1' HN7     0.09
+ATOM NC4' CN7     0.16
+ATOM NH4' HN7     0.09
+ATOM NO4' ON6B   -0.50
+GROUP
+ATOM NN1  NN2    -0.27 !N2
+ATOM NC6  CN3C   -0.06 !C3
+ATOM NH6  HN6     0.17 !H4
+ATOM NC5  CN3    -0.18 !C5
+ATOM NH5  HN6     0.14 !H6
+ATOM NC4  CN8    -0.28 !C7
+ATOM NH4  HN8     0.09 !H8
+ATOM NH42 HN8     0.09 !H17
+ATOM NC3  CN3     0.36 !C9
+ATOM NC2  CN3C   -0.10 !C10
+ATOM NH2  HN6     0.14 !H11
+ATOM NC7  CN1A    0.55 !C12
+ATOM NO7  ON1    -0.51 !O13
+ATOM NN7  NN1    -0.72 !N14
+ATOM NH71 HN1     0.26 !H15  ! trans to amide O
+ATOM NH72 HN1     0.32 !H16  ! cis to amide O
+
+BOND AN1  AC2       AN3  AC4       AC5  AC6
+BOND AC6  AN6       AC5  AN7       AC8  AN9
+BOND AN9  AC4       AC2  AH2       AN6  AH61      AN6  AH62      AC8  AH8
+DOUBLE  AC6  AN1      AC2  AN3      AC4  AC5      AN7  AC8
+BOND AN9  AC1'      AC1' AC2'      AC2' AC3'      AC3' AC4'      AC4' AO4'
+BOND AO4' AC1'      AC1' AH1'      AC2' AO2'      AO2' AH2T      AC2' AH2'
+BOND AC3' AH3'      AC3' AO3'      AO3' AH3T      AC4' AH4'      AC4' AC5'
+BOND AC5' AH5s      AC5' AH5'      AC5' AO5'      AO5' AP        AP   AO1
+BOND AP   AO2       AP   O3        O3   NP        NP   NO1       NP   NO2
+BOND NP   NO5'      NO5' NC5'      NC5' NH5s      NC5' NH5'      NC5' NC4'
+BOND NC4' NO4'      NO4' NC1'      NC1' NC2'      NC2' NC3'      NC3' NC4'
+BOND NC1' NH1'      NC2' NH2'      NC2' NO2'      NO2' NH2T      NC3' NH3'
+BOND NC3' NO3'      NO3' NH3T      NC4' NH4'      NC1' NN1       NN1  NC2
+BOND NC3  NC4       NC4  NC5       NC6  NN1
+BOND NC2  NH2       NC3  NC7       NC7  NO7       NC7  NN7       NN7  NH71
+BOND NN7  NH72      NC4  NH4       NC4  NH42      NC5  NH5       NC6  NH6
+DOUBLE  NC2  NC3      NC5  NC6
+! adenine impropers
+IMPR AN6  AC6  AH61 AH62     AC6  AN1  AC5  AN6       
+! amide impropers
+IMPR NC7   NN7   NC3  NO7    NC7   NC3   NN7   NO7
+IMPR NN7   NC7   NH71 NH72   NN7   NC7   NH72  NH71
+! ring hydrogen impropers
+IMPR NC6   NN1   NC5  NH6    NC5   NC6   NC4   NH5
+IMPR NC4   NC5   NC3  NH4    NC2   NC3   NN1   NH2
+DONO AH61 AN6
+DONO AH62 AN6
+DONO AH2T AO2'
+DONO AH3T AO3'
+ACCE AN1
+ACCE AN3
+ACCE AN7
+ACCE AO4'
+ACCE AO2'
+ACCE AO3'
+ACCE AO5'
+ACCE AO1  AP
+ACCE AO2  AP
+ACCE O3
+ACCE NO1  NP
+ACCE NO2  NP
+ACCE NO5'
+ACCE NO4'
+ACCE NO3'
+ACCE NO2'
+ACCE NO7
+DONO NH2T NO2'
+DONO NH3T NO3'
+DONO NH71 NN7
+DONO NH72 NN7
+IC AP     O3     NP     NO5'   1.5477  110.11  175.47   98.59   1.5945
+IC AC5'   AO5'   AP     O3     1.4379  124.23 -120.69   96.29   1.5477
+IC AC5'   AO5'   AP     AO2    1.4379  124.23   -4.20  104.25   1.4838
+IC AH5S   AC5'   AC4'   AC3'   1.1127  107.45 -172.00  111.64   1.5309
+IC AP     O3     NP     NO1    1.5477  110.11   63.14  114.14   1.4739
+IC AP     O3     NP     NO2    1.5477  110.11  -73.96  111.08   1.4835
+IC AP     AO5'   AC5'   AC4'   1.5968  124.23  104.17  111.45   1.5366
+IC AO1    AP     AO5'   AC5'   1.4736  106.06  122.59  124.23   1.4379
+IC AO5'   AC5'   AC4'   AC3'   1.4379  111.45  -54.02  111.64   1.5309
+IC AC5'   AC4'   AC3'   AO3'   1.5366  111.64  117.91  108.23   1.4176
+IC AH3T   AO3'   AC3'   AC4'   0.9780  101.86  -77.83  108.23   1.5309
+IC AO4'   AC3'   *AC4   AC5'   3.7210   30.68   12.44   22.46   6.0953
+IC AC2'   AC4'   *AC3'  AO3'   1.5171  107.22 -123.00  108.23   1.4176
+IC AC4'   AC3'   AC2'   AC1'   1.5309  107.22  -27.93   98.01   1.5397
+IC AC3'   AC2'   AC1'   AN9    1.5171   98.01  168.03  114.25   1.4756
+IC AO4'   AC1'   AN9    AC4    1.4308  112.85 -160.05  123.87   1.3958
+IC AC1'   AC4    *AN9   AC8    1.4756  123.87  160.62  105.30   1.3614
+IC AC4    AN9    AC8    AN7    1.3958  105.30    2.73  114.72   1.3222
+IC AC8    AN9    AC4    AC5    1.3614  105.30   -0.85  105.33   1.3777
+IC AC8    AN7    AC5    AC6    1.3222  102.89 -175.73  131.43   1.4163
+IC AN7    AC5    AC6    AN1    1.3877  131.43  177.76  117.35   1.3499
+IC AC5    AC6    AN1    AC2    1.4163  117.35    0.19  119.36   1.3330
+IC AN9    AC5    *AC4   AN3    1.3958  105.33 -177.76  126.56   1.3567
+IC AC5    AN1    *AC6   AN6    1.4163  117.35  178.91  119.82   1.3439
+IC AN1    AC6    AN6    AH61   1.3499  119.82   -2.82  115.89   0.9932
+IC AH61   AC6    *AN6   AH62   0.9932  115.89 -173.48  118.52   0.9961
+IC AC5    AN1    *AC6   AN6    1.4163  117.35  178.91  119.82   1.3439
+IC AN1    AC6    AN6    AH61   1.3499  119.82   -2.82  115.89   0.9932
+IC AH61   AC6    *AN6   AH62   0.9932  115.89 -173.48  118.52   0.9961
+IC AN9    AN7    *AC8   AH8    1.3614  114.72  173.63  127.58   1.0942
+IC AN1    AN3    *AC2   AH2    1.3330  128.86  179.26  114.95   1.0940
+IC AC1'   AC3'   *AC2   AO2'   4.3577   16.73   79.16   23.49   5.5426
+IC AH2'   AO2'   AC2'   AC3'   2.0992   29.77  125.89  110.79   1.5171
+IC AH2T   AO2'   AC2'   AC3'   0.9759  105.90    7.59  110.79   1.5171
+IC AO4'   AC2'   *AC1'  AH1'   1.4308  104.32 -114.05  107.95   1.1153
+IC AC1'   AC3'   *AC2   AH2'   4.3577   16.73  138.52   14.56   4.3331
+IC AC2'   AC4'   *AC3'  AH3'   1.5171  107.22  118.77  114.33   1.1023
+IC AC3'   AO4'   *AC4   AH4'   4.6236   30.68   55.38   18.92   5.2267
+IC AC4'   AO5'   *AC5   AH5'   5.8410    8.40  125.34   12.50   6.6777
+IC AC4'   AO5'   *AC5   AH5'   5.8410    8.40  125.34   12.50   6.6777
+IC NC5'   NO5'   NP     NO2    1.4351  125.31   34.31  105.69   1.4835
+IC NH5S   NC5'   NO5'   NP     1.1087  111.20   -6.79  125.31   1.5945
+IC NH5'   NC5'   NO5'   NP     1.1115  107.95  108.24  125.31   1.5945
+IC NP     NO5'   NC5'   NC4'   1.5945  125.31 -133.06  113.61   1.5644
+IC NO5'   NC5'   NC4'   NC3'   1.4351  113.61   37.01  114.92   1.5111
+IC NC5'   NC4'   NC3'   NC2'   1.5644  114.92   71.49   99.06   1.5369
+IC NC4'   NC3'   NC2'   NC1'   1.5111   99.06   54.76   97.08   1.5500
+IC NC3'   NC2'   NC1'   NO4'   1.5369   97.08  -39.12  103.14   1.4628
+IC NC2'   NC1'   NO4'   NC4'   1.5500  103.14    9.47  109.09   1.4960
+IC NO2'   NC2'   NC1'   NO4'   1.4207  114.02 -166.39  103.14   1.4628
+IC NH2T   NO2'   NC2'   NC1'   0.9638  100.52  -89.37  114.02   1.5500
+IC NO4'   NC2'   *NC1'  NH1'   1.4628  103.14 -111.22  105.40   1.1096
+IC NC1'   NC3'   *NC2   NH2'   2.4663   46.96  -41.97   34.01   3.9460
+IC NC2'   NC4'   *NC3   NH3'   3.9136   23.54 -115.76   16.12   3.6674
+IC NC3'   NO4'   *NC4   NH4'   5.4003   24.61  -39.21   14.97   6.7904
+IC NC4'   NO5'   *NC5   NH5'   5.9665   13.65  -41.47   15.17   7.7670
+IC NC4'   NO5'   *NC5   NH5S   5.9665   13.65  -87.41   13.92   6.7251
+IC NC3'   NC2'   NC1'   NN1    1.5369   97.08   88.64  116.58   1.5502
+IC NO3'   NC3'   NC2'   NC1'   1.4176  119.76 -172.52   97.08   1.5500
+IC NH3T   NO3'   NC3'   NC2'   0.9717  103.61   17.81  119.76   1.5369
+IC NC2'   NC1'   NN1    NC2    1.5500  116.58  -19.65  116.34   1.3499
+IC NC1'   NN1    NC2    NC3    1.5502  116.34  134.66  130.57   1.3607
+IC NN1    NC2    NC3    NC4    1.3499  130.57    5.82  111.74   1.5356
+IC NC2    NC3    NC4    NC5    1.3607  111.74   -1.05  119.26   1.5319
+IC NC3    NC4    NC5    NC6    1.5356  119.26   -1.26  113.69   1.3745
+IC NC4    NC5    NC6    NN1    1.5319  113.69   -0.29  128.15   1.3388
+IC NC5    NC6    NN1    NC2    1.3745  128.15    4.14  116.26   1.3499
+IC NN1    NC2    NC3    NC7    1.3499  130.57 -147.46  122.72   1.5282
+IC NC2    NC3    NC7    NO7    1.3607  122.72 -140.47  119.41   1.2169
+IC NC2    NC3    NC7    NN7    1.3607  122.72   46.61  116.68   1.3621
+IC NO7    NC7    NN7    NH71   1.2169  123.49 -177.07  120.21   1.0093
+IC NO7    NC7    NN7    NH72   1.2169  123.49   -4.94  119.16   1.0014
+IC NC2    NC3    NC4    NH4    1.3607  111.74 -135.39  112.16   1.1099
+IC NC2    NC3    NC4    NH42   1.3607  111.74  114.48  103.52   1.1129
+IC NC3    NC4    NC5    NH5    1.5356  119.26 -171.18  122.65   1.0912
+IC NC4    NC5    NC6    NH6    1.5319  113.69  179.92  118.00   1.0878
+IC NC6    NN1    NC2    NH2    1.3388  116.26  162.03  117.47   1.0731
+PATCH FIRST NONE LAST NONE
+
+RESI NADP        -2.00  ! oxidized nicotinamide adenine dinucleotide,
+                        ! NADP+, adm jr.
+                        ! atom names correspond to pdb nomenclature
+                        ! checked for consistency with new NA params, adm jr., 9/98
+                        ! note that differences with respect to published results exist
+                        ! due to new NA params
+                        !
+GROUP                   !
+ATOM AC4' CN7     0.16  !                AH61  AH62
+ATOM AH4' HN7     0.09  !                   \  /
+ATOM AO4' ON6B   -0.50  !                   AN6
+ATOM AC1' CN7B    0.16  !                    |
+ATOM AH1' HN7     0.09  !                   AC6
+GROUP                   !                  //  \
+ATOM AC5  CN5     0.28  !                 AN1  AC5--AN7\\
+ATOM AN7  NN4    -0.71  !                  |    ||     AC8-AH8
+ATOM AC8  CN4     0.34  !                 AC2  AC4--AN9/
+ATOM AH8  HN3     0.12  !                 / \\ /     \
+ATOM AN9  NN2    -0.05  !              AH2  AN3       \
+                        !                              \
+ATOM AN1  NN3A   -0.74  !                               \
+ATOM AC2  CN4     0.50  !                                \
+ATOM AH2  HN3     0.13  !    NO1     AO1    AH5sAH4' AO4' \
+ATOM AN3  NN3A   -0.75  !     |       |      |    \ /   \  \
+ATOM AC4  CN5     0.43  ! NO5'NP-O3--AP-AO5'-AC5'-AC4'   AC1'
+ATOM AC6  CN2     0.46  ! \   |       |      |     \     / \
+                        !  \ NO2     AO2    AH5' AC3'-AC2' AH1'
+ATOM AN6  NN1    -0.77  !   \                     / \   / \
+ATOM AH61 HN1     0.38  !    \                AO3' AH3'AO2'AH2'
+ATOM AH62 HN1     0.38  !     \                |        |
+GROUP                   !      \             AH3T AO1P=AP2==AO2P (-)
+ATOM AC2' CN7B    0.01  !       \                       |    NH71
+ATOM AH2' HN7     0.09  !        \                AH2T-AO2T   /
+ATOM AO2' ON2    -0.62  !         \                    NH72-NN7  NH4 NH42
+ATOM AP2  P       1.50  !          \                          \    \ /
+ATOM AO1P ON3    -0.82  !           \                         NC7  NC4
+ATOM AO2P ON3    -0.82  !            \                        / \  /  \
+ATOM AO2T ON4    -0.68  !             \                    NO7  NC3  NC5-NH5
+ATOM AH2T HN4     0.34  !              \                          |    |
+GROUP                   !               \                         |    |
+ATOM AC3' CN7     0.14  !                \ NH5s NH4'NO4'      NH2-NC2 NC6-NH6
+ATOM AH3' HN7     0.09  !                 \ |    \ /   \           \   /
+ATOM AO3' ON5    -0.66  !                  NC5'--NC4'   NC1'--------NN1
+ATOM AH3T HN5     0.43  !                   |     \     / \
+GROUP                   !                 NH5'   NC3'-NC2'NH1'
+ATOM AC5' CN8B   -0.08  !                        / \   / \  
+ATOM AH5' HN8     0.09  !                    NO3' NH3'NO2'NH2'  
+ATOM AH5s HN8     0.09  !                     |       |
+ATOM AP   P       1.50  !                    NH3T    NH2T   
+ATOM AO1  ON3    -0.82  !
+ATOM AO2  ON3    -0.82  !
+ATOM AO5' ON2    -0.62  !
+ATOM O3   ON2    -0.68
+ATOM NP   P       1.50
+ATOM NO1  ON3    -0.82
+ATOM NO2  ON3    -0.82
+ATOM NO5' ON2    -0.62
+ATOM NC5' CN8B   -0.08
+ATOM NH5s HN8     0.09
+ATOM NH5' HN8     0.09 
+GROUP                  
+ATOM NC2' CN7B    0.14 
+ATOM NH2' HN7     0.09 
+ATOM NO2' ON5    -0.66
+ATOM NH2T HN5     0.43
+GROUP
+ATOM NC3' CN7     0.14
+ATOM NH3' HN7     0.09
+ATOM NO3' ON5    -0.66
+ATOM NH3T HN5     0.43
+GROUP
+ATOM NC1' CN7B    0.16
+ATOM NH1' HN7     0.09
+ATOM NC4' CN7     0.16
+ATOM NH4' HN7     0.09
+ATOM NO4' ON6B   -0.50
+GROUP                  
+ATOM NN1  NN2    -0.07
+ATOM NC6  CN3B    0.16
+ATOM NH6  HN3B    0.19
+ATOM NC5  CN3    -0.10
+ATOM NH5  HN3B    0.16
+ATOM NC4  CN3A   -0.05
+ATOM NH4  HN3B    0.16
+ATOM NC3  CN3     0.05 
+ATOM NC2  CN3B    0.18
+ATOM NH2  HN3B    0.16
+ATOM NC7  CN1A    0.68 
+ATOM NO7  ON1    -0.40 
+ATOM NN7  NN1    -0.82
+ATOM NH71 HN1     0.34  ! trans to amide O
+ATOM NH72 HN1     0.36  ! cis to amide O
+
+BOND AN1  AC2       AN3  AC4       AC5  AC6
+BOND AC6  AN6       AC5  AN7       AC8  AN9
+BOND AN9  AC4       AC2  AH2       AN6  AH61      AN6  AH62      AC8  AH8
+DOUBLE AC6  AN1       AC2  AN3       AC4  AC5      AN7  AC8
+BOND AN9  AC1'      AC1' AC2'      AC2' AC3'      AC3' AC4'      AC4' AO4'
+BOND AO4' AC1'      AC1' AH1'      AC2' AO2'      AO2' AP2      AC2' AH2'
+BOND AC3' AH3'      AC3' AO3'      AO3' AH3T      AC4' AH4'      AC4' AC5'
+BOND AC5' AH5s      AC5' AH5'      AC5' AO5'      AO5' AP        AP   AO1
+BOND AP   AO2       AP   O3        O3   NP        NP   NO1       NP   NO2
+BOND NP   NO5'      NO5' NC5'      NC5' NH5s      NC5' NH5'      NC5' NC4'
+BOND NC4' NO4'      NO4' NC1'      NC1' NC2'      NC2' NC3'      NC3' NC4'
+BOND NC1' NH1'      NC2' NH2'      NC2' NO2'      NO2' NH2T      NC3' NH3'
+BOND NC3' NO3'      NO3' NH3T      NC4' NH4'      NC1' NN1       NN1  NC2
+BOND NC3  NC4       NC5  NC6
+BOND NC2  NH2       NC3  NC7       NC7  NO7       NC7  NN7       NN7  NH71
+BOND NN7  NH72      NC4  NH4       NC5  NH5       NC6  NH6
+BOND AP2  AO1P      AP2  AO2P      AP2  AO2T      AO2T AH2T
+DOUBLE NC2  NC3       NC4  NC5       NC6  NN1
+! adenine impropers
+IMPR AN6  AC6  AH61 AH62     AC6  AN1  AC5  AN6
+! amide impropers
+IMPR NC7   NN7   NC3  NO7    NC7   NC3   NN7   NO7 
+IMPR NN7   NC7   NH71 NH72   NN7   NC7   NH72  NH71
+! ring hydrogen impropers
+IMPR NC6   NN1   NC5  NH6    NC5   NC6   NC4   NH5
+IMPR NC4   NC5   NC3  NH4    NC2   NC3   NN1   NH2
+DONO AH61 AN6
+DONO AH62 AN6
+DONO AH2T AO2'
+DONO AH3T AO3'
+ACCE AN1
+ACCE AN3
+ACCE AN7
+ACCE AO4'
+ACCE AO2'
+ACCE AO3'
+ACCE AO5'
+ACCE AO1  AP
+ACCE AO2  AP
+ACCE O3
+ACCE NO1  NP
+ACCE NO2  NP
+ACCE NO5'
+ACCE NO4'
+ACCE NO3'
+ACCE NO2'
+ACCE NO7
+DONO NH2T NO2'
+DONO NH3T NO3'
+DONO NH71 NN7
+DONO NH72 NN7
+DONO AH2T AO2T
+ACCE AO2T
+ACCE AO1P
+ACCE AO2P
+ACCE AO2'
+IC AP     O3     NP     NO5'   1.4863   65.28 -169.00   98.59   1.5977
+IC AC5'   AO5'   AP     O3     1.4232  127.31 -165.10  103.27   1.4863
+IC AC5'   AO5'   AP     AO2    1.4232  127.31   73.33  111.48   1.4836
+IC AH5S   AC5'   AC4'   AC3'   0.9935  120.00  -58.20  111.58   1.6942
+IC AP     O3     NP     NO1    1.4863   65.28   78.51  108.97   1.4756
+IC AP     O3     NP     NO2    1.4863   65.28  -54.29  112.88   1.4636
+IC AP     AO5'   AC5'   AC4'   1.5901  127.31  121.29  111.63   1.5491
+IC AO1    AP     AO5'   AC5'   1.5901  127.31  121.29  127.31   1.4232
+IC AO5'   AC5'   AC4'   AC3'   1.4232  111.63  -58.20  111.58   1.6942
+IC AC5'   AC4'   AC3'   AO3'   1.5491  111.58  128.42  114.19   1.4337
+IC AH3T   AO3'   AC3'   AC4'   0.9671   98.77  147.40  114.19   1.6942
+IC AO4'   AC3'   *AC4   AC5'   1.8868  112.95 -118.10  111.58   1.5491
+IC AC2'   AC4'   *AC3'  AO3'   1.5097   93.22 -117.72  114.19   1.4337
+IC AC4'   AC3'   AC2'   AC1'   1.6942   93.22  -12.93  117.82   1.5415
+IC AC3'   AC2'   AC1'   AN9    1.5097  117.82  135.56  115.01   1.4847
+IC AO4'   AC1'   AN9    AC4    1.3646   95.44  -90.72  125.96   1.4013
+IC AC1'   AC4    *AN9   AC8    1.4847  125.96 -176.52  105.34   1.3777
+IC AC4    AN9    AC8    AN7    1.4013  105.34   -0.07  114.01   1.3282
+IC AC8    AN9    AC4    AC5    1.3777  105.34    0.11  105.06   1.3782
+IC AC8    AN7    AC5    AC6    1.3282  103.21 -179.92  130.78   1.4146
+IC AN7    AC5    AC6    AN1    1.3814  130.78 -179.94  117.85   1.3482
+IC AC5    AC6    AN1    AC2    1.4146  117.85   -0.14  118.87   1.3300
+IC AN9    AC5    *AC4   AN3    1.4013  105.06 -179.67  126.14   1.3648
+IC AC5    AN1    *AC6   AN6    1.4146  117.85  179.89  119.69   1.3419
+IC AN1    AC6    AN6    AH61   1.3482  119.69   -0.39  116.60   0.9912
+IC AH61   AC6    *AN6   AH62   0.9912  116.60 -179.02  116.94   0.9978
+IC AC5    AN1    *AC6   AN6    1.4146  117.85  179.89  119.69   1.3419
+IC AN1    AC6    AN6    AH61   1.3482  119.69   -0.39  116.60   0.9912
+IC AH61   AC6    *AN6   AH62   0.9912  116.60 -179.02  116.94   0.9978
+IC AN9    AN7    *AC8   AH8    1.3777  114.01 -179.37  126.34   1.0962
+IC AN1    AN3    *AC2   AH2    1.3300  129.42  179.97  114.82   1.0928
+IC AC1'   AC3'   *AC2   AO2'   1.5415  117.82 -145.06  114.13   1.4294
+IC AH2'   AO2'   AC2'   AC3'   2.0386   31.12  -93.63  114.13   1.5097
+IC AH2T   AO2'   AC2'   AC3'   0.9953   99.36  -93.63  114.13   1.5097
+IC AO4'   AC2'   *AC1'  AH1'   1.3646  120.77 -114.99  109.65   1.1105
+IC AC1'   AC3'   *AC2   AH2'   1.5415  117.82  108.23   86.44   1.0999
+IC AC2'   AC4'   *AC3'  AH3'   1.5097   93.22  117.28  111.94   1.1110
+IC AC3'   AO4'   *AC4   AH4'   1.6942  112.95 -140.26   57.99   1.0000
+IC AC4'   AO5'   *AC5   AH5'   1.5491  111.63 -123.75  111.23   1.1111
+IC AC4'   AO5'   *AC5   AH5'   1.5491  111.63 -123.75  111.23   1.1111
+IC NC5'   NO5'   NP     NO2    1.4451  128.40  -49.72  108.83   1.4636
+IC NH5S   NC5'   NO5'   NP     1.1110  109.50  115.00  128.40   1.5977
+IC NH5'   NC5'   NO5'   NP     1.1110  109.50 -115.00  128.40   1.5977
+IC NP     NO5'   NC5'   NC4'   1.5977  128.40    0.00  110.10   1.5160
+IC NO5'   NC5'   NC4'   NC3'   1.4451  110.10    0.00  108.50   1.5160
+IC NC5'   NC4'   NC3'   NC2'   1.5160  108.50    0.00  111.00   1.5160
+IC NC4'   NC3'   NC2'   NC1'   1.5160  111.00    0.00  105.50   1.5270
+IC NC3'   NC2'   NC1'   NO4'   1.5160  105.50    0.00  105.00   1.4100
+IC NC2'   NC1'   NO4'   NC4'   1.5270  105.00    0.00  117.86   1.4712
+IC NO2'   NC2'   NC1'   NO4'   1.4200  110.10  180.00  105.00   1.4100
+IC NH2T   NO2'   NC2'   NC1'   0.9600  106.00  180.00  110.10   1.5270
+IC NO4'   NC2'   *NC1'  NH1'   1.4100  105.00 -115.00  110.10   1.1110
+IC NC1'   NC3'   *NC2   NH2'   1.5270  105.50  115.00  110.10   1.1110
+IC NC2'   NC4'   *NC3   NH3'   1.5160  111.00  115.00  110.10   1.1110
+IC NC3'   NO4'   *NC4   NH4'   1.5160  100.64 -115.00  107.24   1.1110
+IC NC4'   NO5'   *NC5   NH5'   1.5160  110.10 -115.00  109.50   1.1110
+IC NC4'   NO5'   *NC5   NH5S   1.5160  110.10  115.00  109.50   1.1110
+IC NC3'   NC2'   NC1'   NN1    1.5160  105.50    0.00  113.70   1.4800
+IC NO3'   NC3'   NC2'   NC1'   1.4200  110.10  180.00  105.50   1.5270
+IC NH3T   NO3'   NC3'   NC2'   0.9600  106.00  180.00  110.10   1.5160
+IC NC2'   NC1'   NN1    NC2    1.5270  113.70    0.00  121.70   1.3150
+IC NC1'   NN1    NC2    NC3    1.4800  121.70    0.00  122.00   1.3500
+IC NN1    NC2    NC3    NC4    1.3150  122.00    0.00  118.00   1.3600
+IC NC2    NC3    NC4    NC5    1.3500  118.00    0.00  118.00   1.3600
+IC NC3    NC4    NC5    NC6    1.3600  118.00    0.00  118.00   1.3500
+IC NC4    NC5    NC6    NN1    1.3600  118.00    0.00  124.51   1.2199
+IC NC5    NC6    NN1    NC2    1.3500  124.51    0.00  119.49   1.3150
+IC NN1    NC2    NC3    NC7    1.3150  122.00    0.00  131.80   1.4800
+IC NC2    NC3    NC7    NO7    1.3500  131.80    0.00  118.50   1.2300
+IC NC2    NC3    NC7    NN7    1.3500  131.80    0.00  113.00   1.3600
+IC NO7    NC7    NN7    NH71   1.2300    0.00  180.00  120.00   1.0000
+IC NO7    NC7    NN7    NH72   1.2300    0.00    0.00  120.00   1.0000
+IC NC2    NC3    NC4    NH4    1.3500  118.00    0.00  121.00   1.0900
+IC NC3    NC4    NC5    NH5    1.3600  118.00    0.00  119.00   1.0900
+IC NC4    NC5    NC6    NH6    1.3600  118.00    0.00  120.50   1.0900
+IC NC6    NN1    NC2    NH2    1.2199  119.49    0.00  117.50   1.0900
+IC AC3'   AC2'   AO2'   AP2    0.0000  000.00  180.00  000.00   0.0000
+IC AC2'   AO2'   AP2    AO2T   0.0000  000.00  -39.52  000.00   0.0000
+IC AO2T   AO2'   *AP2   AO1P   0.0000  000.00 -115.82  000.00   0.0000
+IC AO2T   AO2'   *AP2   AO2P   0.0000  000.00  115.90  000.00   0.0000
+IC AH2T   AO2T   AP2    AO2'   0.0000  000.00  180.00  000.00   0.0000
+PATCH FIRST NONE LAST NONE   
+
+RESI NDPH        -3.00  ! reduced nicotinamide adenine dinucleotide
+                        ! NADPH, VARNAI/adm jr.
+                        ! from NADH and 3PHO
+                        ! checked for consistency with new NA params, adm jr., 9/98
+                        ! note that differences with respect to published results exist
+                        ! due to new NA params
+                        !
+GROUP                   !
+ATOM AC4' CN7     0.16  !                AH61  AH62
+ATOM AH4' HN7     0.09  !                   \  /
+ATOM AO4' ON6B   -0.50  !                   AN6
+ATOM AC1' CN7B    0.16  !                    |
+ATOM AH1' HN7     0.09  !                   AC6
+GROUP                   !                  //  \
+ATOM AC5  CN5     0.28  !                 AN1  AC5--AN7\\
+ATOM AN7  NN4    -0.71  !                  |    ||     AC8-AH8
+ATOM AC8  CN4     0.34  !                 AC2  AC4--AN9/
+ATOM AH8  HN3     0.12  !                 / \\ /     \
+ATOM AN9  NN2    -0.05  !              AH2  AN3       \
+                        !                              \
+ATOM AN1  NN3A   -0.74  !                               \
+ATOM AC2  CN4     0.50  !                                \
+ATOM AH2  HN3     0.13  !    NO1     AO1    AH5sAH4' AO4' \
+ATOM AN3  NN3A   -0.75  !     |       |      |    \ /   \  \
+ATOM AC4  CN5     0.43  ! NO5'NP-O3--AP-AO5'-AC5'-AC4'   AC1'
+ATOM AC6  CN2     0.46  ! \   |       |      |     \     / \
+                        !  \ NO2     AO2    AH5' AC3'-AC2' AH1'
+ATOM AN6  NN1    -0.77  !   \                     / \   / \
+ATOM AH61 HN1     0.38  !    \                AO3' AH3'AO2'AH2'
+ATOM AH62 HN1     0.38  !     \                |        |
+GROUP                   !      \             AH3T AO1P=AP2==AO2P (-)
+ATOM AC2' CN7B    0.01  !       \                       |    NH71
+ATOM AH2' HN7     0.09  !        \                AH2T-AO2T   /
+ATOM AO2' ON2    -0.62  !         \                    NH72-NN7  NH4 NH42
+ATOM AP2  P       1.50  !          \                          \    \ /
+ATOM AO1P ON3    -0.82  !           \                         NC7  NC4
+ATOM AO2P ON3    -0.82  !            \                        / \  /  \
+ATOM AO2T ON4    -0.68  !             \                    NO7  NC3  NC5-NH5
+ATOM AH2T HN4     0.34  !              \                          |    |
+GROUP                   !               \                         |    |
+ATOM AC3' CN7     0.14  !                \ NH5s NH4'NO4'      NH2-NC2 NC6-NH6
+ATOM AH3' HN7     0.09  !                 \ |    \ /   \           \   /
+ATOM AO3' ON5    -0.66  !                  NC5'--NC4'   NC1'--------NN1
+ATOM AH3T HN5     0.43  !                   |     \     / \
+GROUP                   !                 NH5'   NC3'-NC2'NH1'
+ATOM AC5' CN8B   -0.08  !                        / \   / \  
+ATOM AH5' HN8     0.09  !                    NO3' NH3'NO2'NH2'  
+ATOM AH5s HN8     0.09  !                     |       |
+ATOM AP   P       1.50  !                    NH3T    NH2T   
+ATOM AO1  ON3    -0.82  !                   
+ATOM AO2  ON3    -0.82  !                    
+ATOM AO5' ON2    -0.62  !                   
+ATOM O3   ON2    -0.68
+ATOM NP   P       1.50
+ATOM NO1  ON3    -0.82
+ATOM NO2  ON3    -0.82
+ATOM NO5' ON2    -0.62
+ATOM NC5' CN8B   -0.08
+ATOM NH5s HN8     0.09
+ATOM NH5' HN8     0.09
+GROUP
+ATOM NC2' CN7B    0.14
+ATOM NH2' HN7     0.09
+ATOM NO2' ON5    -0.66
+ATOM NH2T HN5     0.43
+GROUP
+ATOM NC3' CN7     0.14
+ATOM NH3' HN7     0.09
+ATOM NO3' ON5    -0.66
+ATOM NH3T HN5     0.43
+GROUP
+ATOM NC1' CN7B    0.16
+ATOM NH1' HN7     0.09
+ATOM NC4' CN7     0.16
+ATOM NH4' HN7     0.09
+ATOM NO4' ON6B   -0.50
+GROUP
+ATOM NN1  NN2    -0.27 !N2
+ATOM NC6  CN3C   -0.06 !C3
+ATOM NH6  HN6     0.17 !H4
+ATOM NC5  CN3    -0.18 !C5
+ATOM NH5  HN6     0.14 !H6
+ATOM NC4  CN8    -0.28 !C7
+ATOM NH4  HN8     0.09 !H8
+ATOM NH42 HN8     0.09 !H17
+ATOM NC3  CN3     0.36 !C9
+ATOM NC2  CN3C   -0.10 !C10
+ATOM NH2  HN6     0.14 !H11
+ATOM NC7  CN1A    0.55 !C12
+ATOM NO7  ON1    -0.51 !O13
+ATOM NN7  NN1    -0.72 !N14
+ATOM NH71 HN1     0.26 !H15  ! trans to amide O
+ATOM NH72 HN1     0.32 !H16  ! cis to amide O
+BOND AN1  AC2       AN3  AC4       AC5  AC6
+BOND AC6  AN6       AC5  AN7       AC8  AN9
+BOND AN9  AC4       AC2  AH2       AN6  AH61      AN6  AH62      AC8  AH8
+DOUBLE AC6  AN1       AC2  AN3       AC4  AC5      AN7  AC8
+BOND AN9  AC1'      AC1' AC2'      AC2' AC3'      AC3' AC4'      AC4' AO4'
+BOND AO4' AC1'      AC1' AH1'      AC2' AO2'      AO2' AP2       AC2' AH2'
+BOND AC3' AH3'      AC3' AO3'      AO3' AH3T      AC4' AH4'      AC4' AC5'
+BOND AC5' AH5s      AC5' AH5'      AC5' AO5'      AO5' AP        AP   AO1
+BOND AP   AO2       AP   O3        O3   NP        NP   NO1       NP   NO2
+BOND NP   NO5'      NO5' NC5'      NC5' NH5s      NC5' NH5'      NC5' NC4'
+BOND NC4' NO4'      NO4' NC1'      NC1' NC2'      NC2' NC3'      NC3' NC4'
+BOND NC1' NH1'      NC2' NH2'      NC2' NO2'      NO2' NH2T      NC3' NH3'
+BOND NC3' NO3'      NO3' NH3T      NC4' NH4'      NC1' NN1       NN1  NC2
+BOND NC3  NC4       NC5  NC6       
+BOND NC2  NH2       NC3  NC7       NC7  NO7       NC7  NN7       NN7  NH71
+BOND NN7  NH72      NC4  NH4       NC4  NH42      NC5  NH5       NC6  NH6
+BOND AP2  AO1P      AP2  AO2P      AP2  AO2T      AO2T AH2T
+DOUBLE NC2  NC3       NC4  NC5       NC6  NN1
+! adenine impropers
+IMPR AN6  AC6    AH61 AH62   AC6   AN1   AC5   AN6
+! amide impropers
+IMPR NC7   NN7   NC3  NO7    NC7   NC3   NN7   NO7
+IMPR NN7   NC7   NH71 NH72   NN7   NC7   NH72  NH71
+! ring hydrogen impropers
+IMPR NC6   NN1   NC5  NH6    NC5   NC6   NC4   NH5
+IMPR NC4   NC5   NC3  NH4    NC2   NC3   NN1   NH2
+DONO AH61 AN6
+DONO AH62 AN6
+DONO AH3T AO3'
+ACCE AN1
+ACCE AN3
+ACCE AN7
+ACCE AO4'
+ACCE AO3'
+ACCE AO5'
+ACCE AO1  AP
+ACCE AO2  AP
+ACCE O3
+ACCE NO1  NP
+ACCE NO2  NP
+ACCE NO5'
+ACCE NO4'
+ACCE NO3'
+ACCE NO2'
+ACCE NO7
+DONO NH2T NO2'
+DONO NH3T NO3'
+DONO NH71 NN7
+DONO NH72 NN7
+DONO AH2T AO2T
+ACCE AO2T
+ACCE AO1P
+ACCE AO2P
+ACCE AO2' 
+! the following ICs will not totally IC BUILD NADPH
+IC AP     O3     NP     NO5'   1.5477  110.11  175.47   98.59   1.5945
+IC AC5'   AO5'   AP     O3     1.4379  124.23 -120.69   96.29   1.5477
+IC AC5'   AO5'   AP     AO2    1.4379  124.23   -4.20  104.25   1.4838
+IC AH5S   AC5'   AC4'   AC3'   1.1127  107.45 -172.00  111.64   1.5309
+IC AP     O3     NP     NO1    1.5477  110.11   63.14  114.14   1.4739
+IC AP     O3     NP     NO2    1.5477  110.11  -73.96  111.08   1.4835
+IC AP     AO5'   AC5'   AC4'   1.5968  124.23  104.17  111.45   1.5366
+IC AO1    AP     AO5'   AC5'   1.4736  106.06  122.59  124.23   1.4379
+IC AO5'   AC5'   AC4'   AC3'   1.4379  111.45  -54.02  111.64   1.5309
+IC AC5'   AC4'   AC3'   AO3'   1.5366  111.64  117.91  108.23   1.4176
+IC AH3T   AO3'   AC3'   AC4'   0.9780  101.86  -77.83  108.23   1.5309
+IC AO4'   AC3'   *AC4   AC5'   3.7210   30.68   12.44   22.46   6.0953
+IC AC2'   AC4'   *AC3'  AO3'   1.5171  107.22 -123.00  108.23   1.4176
+IC AC4'   AC3'   AC2'   AC1'   1.5309  107.22  -27.93   98.01   1.5397
+IC AC3'   AC2'   AC1'   AN9    1.5171   98.01  168.03  114.25   1.4756
+IC AO4'   AC1'   AN9    AC4    1.4308  112.85 -160.05  123.87   1.3958
+IC AC1'   AC4    *AN9   AC8    1.4756  123.87  160.62  105.30   1.3614
+IC AC4    AN9    AC8    AN7    1.3958  105.30    2.73  114.72   1.3222
+IC AC8    AN9    AC4    AC5    1.3614  105.30   -0.85  105.33   1.3777
+IC AC8    AN7    AC5    AC6    1.3222  102.89 -175.73  131.43   1.4163
+IC AN7    AC5    AC6    AN1    1.3877  131.43  177.76  117.35   1.3499
+IC AC5    AC6    AN1    AC2    1.4163  117.35    0.19  119.36   1.3330
+IC AN9    AC5    *AC4   AN3    1.3958  105.33 -177.76  126.56   1.3567
+IC AC5    AN1    *AC6   AN6    1.4163  117.35  178.91  119.82   1.3439
+IC AN1    AC6    AN6    AH61   1.3499  119.82   -2.82  115.89   0.9932
+IC AH61   AC6    *AN6   AH62   0.9932  115.89 -173.48  118.52   0.9961
+IC AC5    AN1    *AC6   AN6    1.4163  117.35  178.91  119.82   1.3439
+IC AN1    AC6    AN6    AH61   1.3499  119.82   -2.82  115.89   0.9932
+IC AH61   AC6    *AN6   AH62   0.9932  115.89 -173.48  118.52   0.9961
+IC AN9    AN7    *AC8   AH8    1.3614  114.72  173.63  127.58   1.0942
+IC AN1    AN3    *AC2   AH2    1.3330  128.86  179.26  114.95   1.0940
+IC AO4'   AC2'   *AC1'  AH1'   1.4308  104.32 -114.05  107.95   1.1153
+IC AC1'   AC3'   *AC2   AH2'   4.3577   16.73  138.52   14.56   4.3331
+IC AC2'   AC4'   *AC3'  AH3'   1.5171  107.22  118.77  114.33   1.1023
+IC AC3'   AO4'   *AC4   AH4'   4.6236   30.68   55.38   18.92   5.2267
+IC AC4'   AO5'   *AC5   AH5'   5.8410    8.40  125.34   12.50   6.6777
+IC AC4'   AO5'   *AC5   AH5'   5.8410    8.40  125.34   12.50   6.6777
+IC NC5'   NO5'   NP     NO2    1.4351  125.31   34.31  105.69   1.4835
+IC NH5S   NC5'   NO5'   NP     1.1087  111.20   -6.79  125.31   1.5945
+IC NH5'   NC5'   NO5'   NP     1.1115  107.95  108.24  125.31   1.5945
+IC NP     NO5'   NC5'   NC4'   1.5945  125.31 -133.06  113.61   1.5644
+IC NO5'   NC5'   NC4'   NC3'   1.4351  113.61   37.01  114.92   1.5111
+IC NC5'   NC4'   NC3'   NC2'   1.5644  114.92   71.49   99.06   1.5369
+IC NC4'   NC3'   NC2'   NC1'   1.5111   99.06   54.76   97.08   1.5500
+IC NC3'   NC2'   NC1'   NO4'   1.5369   97.08  -39.12  103.14   1.4628
+IC NC2'   NC1'   NO4'   NC4'   1.5500  103.14    9.47  109.09   1.4960
+IC NO2'   NC2'   NC1'   NO4'   1.4207  114.02 -166.39  103.14   1.4628
+IC NH2T   NO2'   NC2'   NC1'   0.9638  100.52  -89.37  114.02   1.5500
+IC NO4'   NC2'   *NC1'  NH1'   1.4628  103.14 -111.22  105.40   1.1096
+IC NC1'   NC3'   *NC2   NH2'   2.4663   46.96  -41.97   34.01   3.9460
+IC NC2'   NC4'   *NC3   NH3'   3.9136   23.54 -115.76   16.12   3.6674
+IC NC3'   NO4'   *NC4   NH4'   5.4003   24.61  -39.21   14.97   6.7904
+IC NC4'   NO5'   *NC5   NH5'   5.9665   13.65  -41.47   15.17   7.7670
+IC NC4'   NO5'   *NC5   NH5S   5.9665   13.65  -87.41   13.92   6.7251
+IC NC3'   NC2'   NC1'   NN1    1.5369   97.08   88.64  116.58   1.5502
+IC NO3'   NC3'   NC2'   NC1'   1.4176  119.76 -172.52   97.08   1.5500
+IC NH3T   NO3'   NC3'   NC2'   0.9717  103.61   17.81  119.76   1.5369
+IC NC2'   NC1'   NN1    NC2    1.5500  116.58  -19.65  116.34   1.3499
+IC NC1'   NN1    NC2    NC3    1.5502  116.34  134.66  130.57   1.3607
+IC NN1    NC2    NC3    NC4    1.3499  130.57    5.82  111.74   1.5356
+IC NC2    NC3    NC4    NC5    1.3607  111.74   -1.05  119.26   1.5319
+IC NC3    NC4    NC5    NC6    1.5356  119.26   -1.26  113.69   1.3745
+IC NC4    NC5    NC6    NN1    1.5319  113.69   -0.29  128.15   1.3388
+IC NC5    NC6    NN1    NC2    1.3745  128.15    4.14  116.26   1.3499
+IC NN1    NC2    NC3    NC7    1.3499  130.57 -147.46  122.72   1.5282
+IC NC2    NC3    NC7    NO7    1.3607  122.72 -140.47  119.41   1.2169
+IC NC2    NC3    NC7    NN7    1.3607  122.72   46.61  116.68   1.3621
+IC NO7    NC7    NN7    NH71   1.2169  123.49 -177.07  120.21   1.0093
+IC NO7    NC7    NN7    NH72   1.2169  123.49   -4.94  119.16   1.0014
+IC NC2    NC3    NC4    NH4    1.3607  111.74 -135.39  112.16   1.1099
+IC NC2    NC3    NC4    NH42   1.3607  111.74  114.48  103.52   1.1129
+IC NC3    NC4    NC5    NH5    1.5356  119.26 -171.18  122.65   1.0912
+IC NC4    NC5    NC6    NH6    1.5319  113.69  179.92  118.00   1.0878
+IC NC6    NN1    NC2    NH2    1.3388  116.26  162.03  117.47   1.0731
+IC AC3'   AC2'   AO2'   AP2    0.0000  000.00  180.00  000.00   0.0000
+IC AC2'   AO2'   AP2    AO2T   0.0000  000.00  -39.52  000.00   0.0000
+IC AO2T   AO2'   *AP2   AO1P   0.0000  000.00 -115.82  000.00   0.0000
+IC AO2T   AO2'   *AP2   AO2P   0.0000  000.00  115.90  000.00   0.0000
+IC AH2T   AO2T   AP2    AO2'   0.0000  000.00  180.00  000.00   0.0000
+PATCH FIRST NONE LAST NONE
+
+end
+
+read para card flex append
+* NAD, PPI parameters
+*
+
+ATOMS
+MASS 459  HN3B  1.008000 ! NAD+ aromatic hydrogen
+MASS 460  CN1A 12.011000 ! NAD+/NADH amide carbonyl carbon
+MASS 461  CN3A 12.011000 ! NAD+ aromatic carbon
+MASS 462  CN3B 12.011000 ! NAD+ aromatic carbon
+MASS 463  CN3C 12.011000 ! NADH aromatic carbon
+MASS 464  P3   30.974000 ! pyrophosphate phosphorus
+MASS 465  P4   30.974000 ! protonated pyrophosphate phosphorus
+
+BONDS
+!
+!atom types  Kb          b0
+!
+!NICH parameters to maintain back compatibility following
+!atom type switch from HN3 to HN6
+CN3C HN6    374.0       1.09    !nadh/ppi, jjp1/adm jr. 7/95
+CN3  HN6    350.0       1.09    !nadh, adm jr., 8/98
+!
+CN1A CN3    302.0       1.480   !nad/ppi, jjp1/adm jr. 7/95
+CN1A NN1    560.0       1.360   !nad/ppi, jjp1/adm jr. 7/95
+CN1A ON1    860.0       1.230   !nad/ppi, jjp1/adm jr. 7/95
+CN3A CN3    450.0       1.360   !nad/ppi, jjp1/adm jr. 7/95
+CN3B CN3    420.0       1.350   !nad/ppi, jjp1/adm jr. 7/95
+CN3C CN3    420.0       1.320   !nadh/ppi, jjp1/adm jr. 7/95
+CN3  CN8    222.5       1.490   !nadh/ppi, jjp1/adm jr. 7/95
+CN3  HN3B   350.0       1.09    !nad/ppi, jjp1/adm jr. 7/95
+CN3A HN3B   350.0       1.09    !nad/ppi, jjp1/adm jr. 7/95
+CN3B HN3B   350.0       1.09    !nad/ppi, jjp1/adm jr. 7/95
+CN3C HN3    374.0       1.09    !nadh/ppi, jjp1/adm jr. 7/95
+CN3B NN2    420.0       1.315   !nad/ppi, jjp1/adm jr. 7/95
+CN3C NN2    420.0       1.355   !nadh/ppi, jjp1/adm jr. 7/95
+ON2  P3     300.0       1.68    !nad/ppi, jjp1/adm jr. 7/95
+ON3  P3     480.0       1.53    !nad/ppi, jjp1/adm jr. 7/95
+ON2  P4     300.0       1.68    !PPI2, from nad/ppi, adm jr. 7/01
+ON3  P4     480.0       1.53    !PPI2, from nad/ppi, adm jr. 7/01
+ON4  P4     237.0       1.58    !PPI2, from MP_1, ADM Jr.
+
+ANGLES
+!
+!atom types     Ktheta    Theta0   Kub     S0
+!
+!NICH parameters to maintain back compatibility following
+!atom type switch from HN3 to HN6
+CN3  CN1A NN1     85.0     113.0  80.0  2.46 !nad/ppi, jjp1/adm jr. 7/95
+CN3  CN1A ON1     85.0     118.5  20.0  2.43 !nad/ppi, jjp1/adm jr. 7/95
+NN1  CN1A ON1     85.0     128.5  20.0  2.17 !nad/ppi, jjp1/adm jr. 7/95
+NN2  CN3C HN6     42.0     119.0  !nad/ppi, jjp1/adm jr. 7/95
+HN6  CN3C CN3     42.0     119.0  !nadh/ppi, jjp1/adm jr. 7/95
+HN6  CN3  CN8     30.0     116.0  !nadh/ppi, jjp1/adm jr. 7/95
+CN3C CN3  HN6     42.0     119.0  !nadh/ppi, jjp1/adm jr. 7/95
+CN1A CN3  CN3C     5.0     107.8  !nad/ppi, jjp1/adm jr. 7/95
+CN1A CN3  CN8    125.0     124.2  !nadh/ppi, jjp1/adm jr. 7/95
+CN3A CN3  CN1A    40.0     110.2  !nad/ppi, jjp1/adm jr. 7/95
+CN3B CN3  CN1A    10.0     131.8  !nad/ppi, jjp1/adm jr. 7/95
+CN3  CN3A CN3     50.0     118.0  !nad/ppi, jjp1/adm jr. 7/95
+CN3A CN3  CN3B    40.0     118.0  !nad/ppi, jjp1/adm jr. 7/95
+CN3  CN3  CN8     53.5     108.5  !nadh/ppi, jjp1/adm jr. 7/95
+CN3B CN3  CN8     53.5     108.5  !nad/ppi, jjp1/adm jr. 7/95
+CN3C CN3  CN8     43.5     128.0  !nad/ppi, jjp1/adm jr. 7/95
+CN3B CN3  HN3B    30.0     122.0  !nad/ppi, jjp1/adm jr. 7/95
+CN3A CN3  HN3B    30.0     119.0  !nad/ppi, jjp1/adm jr. 7/95
+CN3  CN3C HN3     42.0     119.0  !nadh/ppi, jjp1/adm jr. 7/95
+CN3C CN3  HN3     42.0     116.0  !nad/ppi, jjp1/adm jr. 7/95
+CN3  CN3A HN3B    80.0     121.0  !nad/ppi, jjp1/adm jr. 7/95
+CN3  CN3B HN3B    80.0     120.5  !nad/ppi, jjp1/adm jr. 7/95
+CN3  CN3B NN2    120.0     122.0  !nad/ppi, jjp1/adm jr. 7/95
+CN3  CN3C NN2     60.0     122.0  !nadh/ppi, jjp1/adm jr. 7/95
+CN8  CN3  HN3     30.0     116.0  !nadh/ppi, jjp1/adm jr. 7/95
+HN3B CN3B NN2     80.0     117.5  !nad/ppi, jjp1/adm jr. 7/95
+HN3  CN3C NN2     42.0     119.0  !nad/ppi, jjp1/adm jr. 7/95
+CN3  CN8  CN3    125.0     108.0  !nadh/ppi, jjp1/adm jr. 7/95
+CN3  CN8  HN8     55.0     110.10 !nadh/ppi, jjp1/adm jr. 7/95
+CN1A NN1  HN1     35.0     120.0  !nad/ppi, jjp1/adm jr. 7/95
+CN3B NN2  CN3B    30.0     120.0  !nad/ppi, jjp1/adm jr. 7/95
+CN3C NN2  CN3C    20.0     114.0  !nadh/ppi, jjp1/adm jr. 7/95
+CN3B NN2  CN7B    70.0     121.7  !nad/ppi, jjp1/adm jr. 7/95
+CN3C NN2  CN7B    70.0     121.7  !nad/ppi, jjp1/adm jr. 7/95
+CN3B NN2  HN2     32.0     117.4  !nad/ppi, jjp1/adm jr. 7/95
+CN3C NN2  HN2     39.0     123.0  !nad/ppi, jjp1/adm jr. 7/95
+CN9  ON2  P3      20.0     120.0  35.   2.33 !nad/ppi, jjp1/adm jr. 7/95
+P    ON2  P       15.0     140.0 -40.0  2.80 !nad/ppi, jjp1/adm jr. 7/95
+P3   ON2  P       15.0     140.0 -40.0  2.80 !nad/ppi, jjp1/adm jr. 7/95
+P4   ON2  P       45.0     140.0  40.0  3.15 !PPI2, from nad/ppi, adm jr., 7/01
+P3   ON2  P3      15.0     140.0 -40.0  2.80 !nad/ppi, jjp1/adm jr. 7/95
+HN4  ON4  P4      30.0     120.0  40.0  2.35 !PPI2, from MP_1, adm jr., 7/01
+CN7  CN7B ON2     115.0    109.7  !NF, 11/97, C4'C3'O3' for NADPH
+ON2  P4   ON4     48.1     100.0  !PPI2, from MP_1, adm jr., 7/01
+ON3  P4   ON4     98.9     108.23 !PPI2, from MP_1, adm jr., 7/01
+ON2  P3   ON2     80.0     104.3  !nad/ppi, jjp1/adm jr. 7/95
+ON2  P3   ON3     88.9     111.6  !nad/ppi, jjp1/adm jr. 7/95
+ON2  P4   ON3     88.9     105.0  !PPI2, from nad/ppi, adm jr., 7/01
+ON3  P3   ON3    104.0     120.0  !nad/ppi, jjp1/adm jr. 7/95
+ON3  P4   ON3    104.0     120.0  !PPI2, from nad/ppi, adm jr., 7/01
+
+DIHEDRALS
+!
+!atom types             Kchi    n   delta
+!
+ON4  P    ON2  CN7B     0.95    2     0.0  !for NADPH
+ON4  P    ON2  CN7B     0.50    3     0.0  !for NADPH
+! nicotinamide adenine dinucleotide
+CN3  NN2  CN3B HN3B     7.0     2   180.0  !nad/ppi, jjp1/adm jr. 7/95
+HN2  NN2  CN3B HN3B     3.0     2   180.0  !nad/ppi, jjp1/adm jr. 7/95
+HN3B CN3  CN3A HN3B     2.0     2   180.0  !nad/ppi, jjp1/adm jr. 7/95
+HN3B CN3  CN3B HN3B     1.0     2   180.0  !nad/ppi, jjp1/adm jr. 7/95
+NN2  CN3B CN3  HN3B     7.0     2   180.0  !nad/ppi, jjp1/adm jr. 7/95
+CN3  CN1A CN3  HN3B     7.0     2   180.0  !nad/ppi, jjp1/adm jr. 7/95
+CN1A CN3  CN3B HN3B     1.0     2   180.0  !nad/ppi, jjp1/adm jr. 7/95
+CN1A CN3  CN3A HN3B     5.0     2   180.0  !nad/ppi, jjp1/adm jr. 7/95
+CN3  CN1A CN3  HN3      7.0     2   180.0  !nad/ppi, jjp1/adm jr. 7/95
+CN1A CN3  CN3  HN3      1.0     2   180.0  !nad/ppi, jjp1/adm jr. 7/95
+CN3A CN3  CN1A ON1      2.38    2   180.0  !nad/ppi, jjp1/adm jr. 7/95
+CN3B CN3  CN1A ON1      2.38    2   180.0  !nad/ppi, jjp1/adm jr. 7/95
+CN3A CN3  CN1A NN1      0.35    1   180.0  !nad/ppi, jjp1/adm jr. 7/95
+CN3A CN3  CN1A NN1      0.62    2     0.0  !nad/ppi, jjp1/adm jr. 7/95
+CN3B CN3  CN1A NN1      0.35    1     0.0  !nad/ppi, jjp1/adm jr. 7/95
+CN3B CN3  CN1A NN1      0.62    2     0.0  !nad/ppi, jjp1/adm jr. 7/95
+CN3  CN3A CN3  CN1A     3.0     2   180.0  !nad/ppi, jjp1/adm jr. 7/95
+CN3  CN3A CN3  CN3B     6.0     2   180.0  !nad/ppi, jjp1/adm jr. 7/95
+NN2  CN3B CN3  CN3A     7.0     2   180.0  !nad/ppi, jjp1/adm jr. 7/95
+CN3B NN2  CN3B CN3      4.0     2   180.0  !nad/ppi, jjp1/adm jr. 7/95
+X    CN3  CN3A X        1.0     2   180.0  !nad/ppi, jjp1/adm jr. 7/95
+X    CN3  CN3B X        1.0     2   180.0  !nad/ppi, jjp1/adm jr. 7/95
+X    CN3  CN8  X        1.0     3   180.0  !nad/ppi, jjp1/adm jr. 7/95
+X    NN1  CN1A X        2.5     2   180.0  !nad/ppi, jjp1/adm jr. 7/95
+X    NN2  CN3B X        1.0     2   180.0  !nad/ppi, jjp1/adm jr. 7/95
+! nicotinamide adenine dinucleotide hydride, nadh
+CN8  CN3  CN1A ON1      1.00    2   180.0  !nadh, jjp1,adm jr. 4/95
+CN8  CN3  CN1A ON1      1.00    3     0.0  !nadh, jjp1,adm jr. 4/95
+CN8  CN3  CN1A ON1      0.40    6     0.0  !nadh, jjp1,adm jr. 4/95
+CN8  CN3  CN1A NN1      0.50    2   180.0  !nadh, jjp1,adm jr. 4/95
+CN8  CN3  CN1A NN1      0.35    3   180.0  !nadh, jjp1,adm jr. 4/95
+CN8  CN3  CN1A NN1      0.40    6     0.0  !nadh, jjp1,adm jr. 4/95
+CN3C CN3  CN1A ON1      0.30    1     0.0  !nadh, jjp1,adm jr. 4/95
+CN3C CN3  CN1A ON1      1.95    2   180.0  !nadh, jjp1,adm jr. 4/95
+CN3C CN3  CN1A NN1      1.10    1   180.0  !nadh, jjp1,adm jr. 4/95
+CN3C CN3  CN1A NN1      1.95    2   180.0  !nadh, jjp1,adm jr. 4/95
+HN2  NN2  CN3C HN3      4.0     2   180.0  !nad/ppi, jjp1/adm jr. 7/95
+CN3  NN2  CN3C HN3      7.0     2   180.0  !nad/ppi, jjp1/adm jr. 7/95
+NN2  CN3C CN3  HN3      7.0     2   180.0  !nad/ppi, jjp1/adm jr. 7/95
+CN8  CN3  CN3C NN2      0.1     2   180.0  !nad/ppi, jjp1/adm jr. 7/95
+CN3C CN3  CN8  CN3      4.0     3   180.0  !nad/ppi, jjp1/adm jr. 7/95
+CN1A CN3  CN3C NN2      2.5     2   180.0  !nad/ppi, jjp1/adm jr. 7/95
+X    CN3  CN3C X        0.1     2   180.0  !nad/ppi, jjp1/adm jr. 7/95
+X    NN2  CN3C X        0.1     2   180.0  !nad/ppi, jjp1/adm jr. 7/95
+CN3C NN2  CN3C CN3      0.1     2   180.0  !nad/ppi, jjp1/adm jr. 7/95
+! pyrophosphate (ppi)
+P3   ON2  P    ON2      0.03    2     0.0  !nad/ppi, jjp1/adm jr. 7/95
+P3   ON2  P    ON2      0.03    3     0.0  !nad/ppi, jjp1/adm jr. 7/95
+P    ON2  P3   ON2      0.03    2     0.0  !nad/ppi, jjp1/adm jr. 7/95
+P    ON2  P3   ON2      0.03    3     0.0  !nad/ppi, jjp1/adm jr. 7/95
+P3   ON2  P3   ON2      0.03    2     0.0  !nad/ppi, jjp1/adm jr. 7/95
+P3   ON2  P3   ON2      0.03    3     0.0  !nad/ppi, jjp1/adm jr. 7/95
+P    ON2  P    ON2      0.03    2     0.0  !nad/ppi, jjp1/adm jr. 7/95
+P    ON2  P    ON2      0.03    3     0.0  !nad/ppi, jjp1/adm jr. 7/95
+P    ON2  P    ON3      0.10    2     0.0  !nad/ppi, jjp1/adm jr. 7/95
+P    ON2  P    ON3      0.03    3     0.0  !nad/ppi, jjp1/adm jr. 7/95
+P    ON2  P3   ON3      0.10    2     0.0  !nad/ppi, jjp1/adm jr. 7/95
+P    ON2  P3   ON3      0.03    3     0.0  !nad/ppi, jjp1/adm jr. 7/95
+P3   ON2  P    ON3      0.10    2     0.0  !nad/ppi, jjp1/adm jr. 7/95
+P3   ON2  P    ON3      0.03    3     0.0  !nad/ppi, jjp1/adm jr. 7/95
+P3   ON2  P3   ON3      0.10    2     0.0  !nad/ppi, jjp1/adm jr. 7/95
+P3   ON2  P3   ON3      0.03    3     0.0  !nad/ppi, jjp1/adm jr. 7/95
+! protonated pyrophosphate (ppi2)
+P    ON2  P4   ON2      0.03    2     0.0  !from P ON2 P2 ON2, adm jr. 7/01
+P    ON2  P4   ON2      0.03    3     0.0  !from P ON2 P2 ON2, adm jr. 7/01
+P4   ON2  P    ON2      0.03    2     0.0  !from P ON2 P2 ON2, adm jr. 7/01
+P4   ON2  P    ON2      0.03    3     0.0  !from P ON2 P2 ON2, adm jr. 7/01
+P    ON2  P4   ON3      0.10    2     0.0  !from P ON2 P2 ON3, adm jr. 7/01
+P    ON2  P4   ON3      0.03    3     0.0  !from P ON2 P2 ON3, adm jr. 7/01
+P4   ON2  P    ON3      0.10    2     0.0  !from P ON2 P2 ON3, adm jr. 7/01
+P4   ON2  P    ON3      0.03    3     0.0  !from P ON2 P2 ON3, adm jr. 7/01
+P    ON2  P4   ON4      0.10    2     0.0  !from P ON2 P2 ON4, adm jr. 7/01
+P    ON2  P4   ON4      0.03    3     0.0  !from P ON2 P2 ON4, adm jr. 7/01
+X    ON4  P4   X        0.30    3     0.0  !from MP_1, adm jr.
+!for nadp/nadph (?), adm jr.
+HN7  CN7  CN7  CN7       0.195   3         0.0
+HN7  CN7B NN2  CN3B      0.195   3         0.0
+HN7  CN7B NN2  CN3C      0.195   3         0.0
+HN7  CN7  CN7B ON6       0.195   3         0.0
+HN7  CN7  CN7B ON2       0.195   3         0.0
+HN7  CN7  CN7B NN2       0.195   3         0.0
+!
+ON6  CN7B CN7  ON5       3.4     1       180.0 !gam
+CN7  CN7B NN2  CN3B      0.0     3         0.0
+CN8  CN7B NN2  CN3B      0.0     3         0.0 ! 25P1
+CN7B CN7B NN2  CN3B      0.0     3         0.0 ! for NADPH
+ON6  CN7B NN2  CN3B      0.0     3         0.0 !
+ON6B CN7B NN2  CN3B      0.0     3         0.0 ! for NADPH
+CN7  CN7B NN2  CN3C      0.0     3         0.0
+CN7B CN7B NN2  CN3C      0.0     3         0.0 ! for NADPH
+ON6  CN7B NN2  CN3C      0.0     3         0.0 !
+ON6B CN7B NN2  CN3C      0.0     3         0.0 ! for NADPH
+CN7  CN7  CN7B NN2       0.0     3         0.0
+CN8  CN7  CN7B NN2       0.0     3         0.0 ! 25P1
+CN7  CN7B NN2  CN5       0.3     3         0.0 ! NF
+CN7  CN7B NN2  CN4       0.0     3       180.0 ! NF
+ON2  CN7  CN7B NN2       0.0     3         0.0
+ON5  CN7  CN7B NN2       0.0     3         0.0
+
+IMPROPER
+!
+!atom types           Kpsi                   psi0
+!
+! nicotinamide adenine dinucleotide                                             
+CN3  CN3C CN8  HN6     15.0     0     0.0  !nich, jjp1/adm jr.
+HN3B X    X    CN3     15.0     0     0.0  !nad/ppi, jjp1/adm jr.
+HN3B X    X    CN3A    13.0     0     0.0  !nad/ppi, jjp1/adm jr.
+HN3B X    X    CN3B    13.0     0     0.0  !nad/ppi, jjp1/adm jr.
+HN2  CN3  CN3B NN2     50.0     0     0.0  !nad/ppi, jjp1/adm jr.
+HN1  HN1  CN1A NN1     -5.0     0     0.0  !nad/ppi, jjp1/adm jr.
+ON1  X    X    CN1A    40.0     0     0.0  !nad/ppi, jjp1/adm jr.
+HN3  X    X    CN3C    53.0     0     0.0  !nad/ppi, jjp1/adm jr.
+HN6  X    X    CN3C    53.0     0     0.0  !nich, adm jr.
+HN8  CN3  CN3  CN8     18.0     0     0.0  !nad/ppi, jjp1/adm jr.
+
+NONBONDED  NBXMOD 5  ATOM CDIEL FSHIFT VATOM VDISTANCE VFSWITCH -
+     CUTNB 14.0  CTOFNB 12.0  CTONNB 10.0  EPS 1.0  E14FAC 1.0  WMIN 1.5
+!
+!atom  ignored    epsilon      Rmin/2   ignored   eps,1-4       Rmin/2,1-4
+!
+HN3B     0.0       -0.046     0.9000 !nad/ppi, jjp1/adm jr.
+CN1A     0.0       -0.07      2.0000 ! nad/ppi, jjp1/adm jr. (protein CC)
+CN3A     0.0       -0.18      1.8000 ! nad/ppi, jjp1/adm jr.
+CN3B     0.0       -0.18      1.8000 ! nad/ppi, jjp1/adm jr.
+CN3C     0.0       -0.18      1.8000 ! nad/ppi, jjp1/adm jr.
+P3       0.0       -0.585     2.15  ! nad/ppi, jjp1/adm jr.
+P4       0.0       -0.585     2.15  ! for PPI2, adm jr.
+
+end
+
+

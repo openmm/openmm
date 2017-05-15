@@ -1,0 +1,2252 @@
+* $Id: toppar_allxx_sugar_model.str,v 1.45 2010-06-21 23:31:00 oguvench Exp $
+read rtf card append
+* Topology for sugar related model compounds
+* Geometry for all compounds is after dyna leap nstep 1000 ihtfrq 10
+* to allow for testing of all energetic terms (i.e. we dont want any 
+* degrees of freedom to be at their equilibrium values)
+* todo:
+* og: THP needs a picture
+* 
+32 1
+
+!reset default patches
+DEFA FIRS NONE LAST NONE
+! model compounds
+
+RESI MEOH         0.00 ! methanol, adm jr.; new OH charges og 1/20/06
+GROUP
+ATOM CB   CC331  -0.04 !  H11
+ATOM OG   OC311M -0.65 !     \
+ATOM HG1  HCP1    0.42 ! H12--C1--O1
+ATOM HB1  HCA3    0.09 !     /      \
+ATOM HB2  HCA3    0.09 !  H13       HO1
+ATOM HB3  HCA3    0.09 !
+BOND CB  OG  OG HG1
+BOND CB HB1  CB HB2  CB  HB3
+DONO HG1 OG
+ACCE OG
+IC HG1  OG  CB    HB1   0.9545  108.11   48.03  106.95   1.1187
+IC HG1  OG  CB    HB2   0.9545  108.11  168.15  114.07   1.1104
+IC HG1  OG  CB    HB3   0.9545  108.11  -71.70  115.01   1.1744
+IC OG   CB  HB3   BLNK  1.3957  115.01    0.00    0.00   0.0000
+
+
+RESI ETOH         0.00 ! Ethanol, adm jr.; new OH charges og 1/23/06
+GROUP
+ATOM C1   CC321   0.05 !  H21  H11 H12
+ATOM O1   OC311M -0.65 !     \   \  /
+ATOM HO1  HCP1    0.42 ! H22--C2--C1
+ATOM H11  HCA2    0.09 !     /      \
+ATOM H12  HCA2    0.09 !  H23        O1--HO1
+GROUP
+ATOM C2   CC331  -0.27
+ATOM H21  HCA3    0.09
+ATOM H22  HCA3    0.09
+ATOM H23  HCA3    0.09
+BOND C1  C2   C1  O1   C1  H11  C1  H12  O1  HO1
+BOND C2  H21  C2  H22  C2  H23
+DONO HO1 O1
+ACCE O1
+IC  O1    C1  C2   H21        1.4449  108.58 -167.34  108.13   1.1172
+IC  O1    C1  C2   H22        1.4449  108.58   71.26  112.88   1.0611
+IC  O1    C1  C2   H23        1.4449  108.58  -53.49  123.68   1.1048
+IC  H21   C2  C1   H11        1.1172  108.13   66.57  107.85   1.0962
+IC  H21   C2  C1   H12        1.1172  108.13  -57.24  108.08   1.1278
+IC  C2    C1  O1   HO1        1.5482  108.58   53.32  103.07   0.9621
+
+
+RESI PRO2         0.00 ! 2-propanol, adm jr.; new OH charges og 1/24/06
+GROUP                 
+ATOM C2   CC311   0.14 !  H12  H13  H33 H32
+ATOM O2   OC311M -0.65 !     \ /      \ /
+ATOM HO2  HCP1    0.42 ! H11--C1      C3--H31
+ATOM H21  HCA1    0.09 !        \    /  
+GROUP                  !          C2   
+ATOM C1   CC331  -0.27 !        /    \
+ATOM H11  HCA3    0.09 !      O2     H21
+ATOM H12  HCA3    0.09 !       |
+ATOM H13  HCA3    0.09 !      HO2
+GROUP                  !
+ATOM C3   CC331  -0.27 !
+ATOM H31  HCA3    0.09
+ATOM H32  HCA3    0.09
+ATOM H33  HCA3    0.09
+BOND C1  C2   C2  C3   C2  O2   C2  H21  O2  HO2
+BOND C1  H11  C1  H12  C1  H13  C3  H31  C3  H32  C3  H33
+DONO HO2 O2
+ACCE O2
+! for ic build
+IC C1   C2  C3   H31        1.5806  114.31  -47.47  110.03   1.0829
+IC C1   C2  C3   H32        1.5806  114.31   67.60  110.52   1.1521
+IC C1   C2  C3   H33        1.5806  114.31 -169.14  108.82   1.1991
+IC C3   C2  C1   H11        1.5327  114.31 -179.28  102.41   1.1274
+IC C3   C2  C1   H12        1.5327  114.31   64.01  117.68   1.1021
+IC C3   C2  C1   H13        1.5327  114.31  -64.02  111.82   1.1420
+IC H31  C3  C2   O2         1.0829  110.03   73.17  100.87   1.4030
+IC H31  C3  C2   H21        1.0829  110.03 -171.47  113.09   1.1612
+IC C3   C2  O2   HO2        1.5327  100.87  178.34  106.99   0.9874
+! only for analysis
+!IC HO1  O1   C1   H11   0.0000  0.0000 180.0000  0.0000  0.0000
+!IC HO1  O1   C1   H12   0.0000  0.0000 180.0000  0.0000  0.0000
+!IC HO1  O1   C1   H13   0.0000  0.0000 180.0000  0.0000  0.0000
+!IC O1   C1   H11  H12   0.0000  0.0000 180.0000  0.0000  0.0000
+
+
+RESI EGLY          0.00  ! ethylene glycol, og
+GROUP
+ATOM C1   CC321    0.05  ! HO1--O1             O2--HO2
+ATOM H11  HCA2     0.09  !        \           /
+ATOM H12  HCA2     0.09  !         C1-------C2
+ATOM O1   OC311M  -0.65  !        / \       / \
+ATOM HO1  HCP1M    0.42  !     H11  H12   H21 H22
+GROUP
+ATOM C2   CC321    0.05  !
+ATOM H21  HCA2     0.09  !
+ATOM H22  HCA2     0.09  !
+ATOM O2   OC311M  -0.65  !
+ATOM HO2  HCP1M    0.42  !
+BOND C1   O1   C1   H11   C1   H12
+BOND O1   HO1  C1   C2
+BOND C2   O2   C2   H21   C2   H22
+BOND O2   HO2
+IC O1    C1  C2    O2         1.4049  111.18   75.89  106.30   1.4246
+IC O1    C2  *C1   H11        1.4049  111.18  128.43  116.00   1.0458
+IC O1    C2  *C1   H12        1.4049  111.18 -111.56  109.09   1.0837
+IC C2    C1  O1    HO1        1.5188  111.18  148.98  103.82   0.9491
+IC O2    C1  *C2   H21        1.4246  106.30  111.73  108.49   1.1258
+IC O2    C1  *C2   H22        1.4246  106.30 -125.60  108.10   1.1425
+IC C1    C2  O2    HO2        1.5188  106.30  -54.72  106.27   0.9709
+
+
+RESI CYHX          0.00 ! cyclohexane viv; og optimized dihedrals
+GROUP
+ATOM C1   CC321C  -0.18 !                     H1A H1B H2A  H2B
+ATOM H1A  HCA2     0.09 !                       \  /    \  /
+ATOM H1B  HCA2     0.09 !                        C1------C2
+GROUP                   !                  H6A  /          \   H3A
+ATOM C2   CC321C  -0.18 !                    \ /            \ /
+ATOM H2A  HCA2     0.09 !                     C6            C3
+ATOM H2B  HCA2     0.09 !                    / \            / \
+GROUP                   !                  H6B  \          /   H3B
+ATOM C3   CC321C  -0.18 !                        C5------C4
+ATOM H3A  HCA2     0.09 !                       /  \    /  \
+ATOM H3B  HCA2     0.09 !                     H5A  H5B H4A H4B
+GROUP
+ATOM C4   CC321C  -0.18
+ATOM H4A  HCA2     0.09
+ATOM H4B  HCA2     0.09
+GROUP
+ATOM C5   CC321C  -0.18
+ATOM H5A  HCA2     0.09
+ATOM H5B  HCA2     0.09
+GROUP
+ATOM C6   CC321C  -0.18
+ATOM H6A  HCA2     0.09
+ATOM H6B  HCA2     0.09
+BOND C1 H1A  C1 H1B  C1 C2
+BOND C2 H2A  C2 H2B  C2 C3
+BOND C3 H3A  C3 H3B  C3 C4
+BOND C4 H4A  C4 H4B  C4 C5
+BOND C5 H5A  C5 H5B  C5 C6
+BOND C6 H6A  C6 H6B  C6 C1
+! og ic table
+IC C2     C6    *C1    H1A        1.5577  109.50  116.67  118.32   1.1443
+IC H1A    C6    *C1    H1B        1.1443  118.32  124.65  107.86   1.1345
+IC C6     C1    C2     C3         1.5158  109.50  -59.08  110.22   1.5977
+IC C3     C1    *C2    H2A        1.5977  110.22  124.22  105.15   1.1217
+IC H2A    C1    *C2    H2B        1.1217  105.15  111.74  108.71   1.1035
+IC C1     C2    C3     C4         1.5577  110.22   47.64  115.10   1.5469
+IC C4     C2    *C3    H3A        1.5469  115.10  129.92  106.77   1.1292
+IC H3A    C2    *C3    H3B        1.1292  106.77  111.27  106.42   1.1158
+IC C2     C3    C4     C5         1.5977  115.10  -43.10  111.15   1.5735
+IC C5     C3    *C4    H4A        1.5735  111.15  121.37  109.21   1.1871
+IC H4A    C3    *C4    H4B        1.1871  109.21  115.43  112.13   1.0395
+IC C6     C4    *C5    H5A        1.5631  112.23  135.64  115.89   1.1188
+IC H5A    C4    *C5    H5B        1.1188  115.89  107.70  107.68   1.1603
+IC C5     C1    *C6    H6A        1.5631  107.66 -115.78  108.70   1.1108
+IC C5     C1    *C6    H6B        1.5631  107.66  124.95  110.76   1.1187
+patc firs none last none
+
+
+RESI ACO 0.0  ! Acetone, adm, Oct 08
+GROUP
+ATOM O1  OC2D3   -0.48 !              H22  O1  H32 
+ATOM C1  CC2O3    0.40 !               |   ||   |
+ATOM C2  CC331   -0.23 !           H21-C2--C1--C3-H31
+ATOM C3  CC331   -0.23 !               |        |
+ATOM H21 HCA3     0.09 !              H23      H33 
+ATOM H22 HCA3     0.09 !
+ATOM H23 HCA3     0.09 !
+ATOM H31 HCA3     0.09 !
+ATOM H32 HCA3     0.09 !
+ATOM H33 HCA3     0.09 !
+BOND    C1 C2   C1 C3   
+BOND    C2 H21  C2 H22   C2 H23
+BOND    C3 H31  C3 H32   C3 H33
+DOUBLE  O1 C1
+IMPR    C1 C2 C3 O1 
+ACCE    O1
+IC C2   C1   C3  H31        1.5366  110.58  135.22  109.51   1.1328
+IC O1   C1   C3  H31        1.2237  122.95  -42.47  109.51   1.1328
+IC O1   C1   C3  H32        1.2237  122.95   77.28  104.63   1.1325
+IC O1   C1   C3  H33        1.2237  122.95 -161.85  105.76   1.0732
+IC C3   C1   C2  H21        1.5233  110.58 -153.74  111.52   1.1204
+IC O1   C1   C2  H21        1.2237  126.42   23.85  111.52   1.1204
+IC O1   C1   C2  H22        1.2237  126.42  148.26  114.11   1.1296
+IC O1   C1   C2  H23        1.2237  126.42  -90.21  101.67   1.1375
+
+!og DHA is not fit for use
+!og PATCH FIRST NONE LAST NONE
+!og RESI DHA 0.0  ! DiHydroxyAcetone
+!og GROUP
+!og ATOM O1  OC2D3  -0.28  !
+!og ATOM C1  CC2O3   0.28  !
+!og ATOM C2  CC325   0.05  !                                       
+!og ATOM C3  CC325   0.05  !          H22  O1  H32 
+!og ATOM H23 HCA2    0.09  !           |   ||   |     
+!og ATOM H22 HCA2    0.09  !    HO2-O2-C2--C1--C3-O3-HO3
+!og ATOM O2  OC311  -0.65  !           |        | 
+!og ATOM HO2 HCP1    0.42  !          H23      H33 
+!og ATOM H33 HCA2    0.09  !
+!og ATOM H32 HCA2    0.09  !
+!og ATOM O3  OC311  -0.65  !
+!og ATOM HO3 HCP1    0.42  !
+!og BOND    C1 C2   C1 C3   
+!og BOND    C2 H23  C2 H22   C2 O2  
+!og BOND    O2 HO2   
+!og BOND    C3 H33  C3 H32   C3 O3  
+!og BOND    O3 HO3
+!og DOUBLE  O1 C1
+!og IMPR    C2 C1 O1 C3
+!og ACCE    O1
+!og ACCE    O2
+!og ACCE    O3
+!og IC C2   C1   C3  O3         1.5753  104.65 -142.60  114.18   1.3826
+!og IC O1   C1   C3  O3         1.2044  129.46   35.16  114.18   1.3826
+!og IC O1   C1   C3  H32        1.2044  129.46  156.19  109.33   1.1226
+!og IC O1   C1   C3  H33        1.2044  129.46  -87.35  100.41   1.0682
+!og IC C3   C1   C2  O2         1.5724  104.65 -148.30  119.57   1.4192
+!og IC O1   C1   C2  O2         1.2044  125.86   33.83  119.57   1.4192
+!og IC O1   C1   C2  H22        1.2044  125.86  158.40  107.83   1.1409
+!og IC O1   C1   C2  H23        1.2044  125.86  -92.15  104.50   1.0275
+!og IC C1   C2   O2  HO2        1.5753  119.57 -147.48  106.96   0.9437
+!og IC C1   C3   O3  HO3        1.5724  114.18  164.66  116.28   0.9640
+!og PATCH FIRST NONE LAST NONE
+
+
+RESI AALD        0.00 ! Acetaldehyde, adm, Oct 2008
+GROUP                 !
+ATOM HA  HCR1    0.09 !   HB3
+ATOM C   CC2O4   0.20 !    |
+ATOM O   OC2D4  -0.40 !HB1-CB-HB2
+ATOM CB  CC331  -0.16 !    |
+ATOM HB1 HCA3    0.09 !  O=C
+ATOM HB2 HCA3    0.09 !    |
+ATOM HB3 HCA3    0.09 !    HA
+
+BOND HA C  C CB  CB HB1  CB HB2  CB HB3
+DOUB C O
+IMPH C CB O HA
+ACCE O
+
+IC O   C   CB   HB1        1.2074  123.73   -0.46  108.58   1.1053
+IC HB2 CB  C    O          1.0625  110.65  118.23  123.73   1.2074
+IC HB3 CB  C    O          1.0898  105.98 -126.83  123.73   1.2074
+IC HA  O   *C   CB         1.1347  126.86 -176.51  123.73   1.5462
+PATCHING FIRST NONE LAST NONE
+
+
+RESI THP           0.00   ! cyclic ether, tetrahydropyran sng; og dihedrals
+GROUP
+ATOM O1   OC3C61  -0.40
+ATOM C1   CC321C   0.02
+ATOM H1A  HCA2     0.09
+ATOM H1B  HCA2     0.09
+ATOM C5   CC321C   0.02
+ATOM H5A  HCA2     0.09
+ATOM H5B  HCA2     0.09
+GROUP
+ATOM C2   CC321C  -0.18
+ATOM H2A  HCA2     0.09
+ATOM H2B  HCA2     0.09
+GROUP
+ATOM C3   CC321C  -0.18
+ATOM H3A  HCA2     0.09
+ATOM H3B  HCA2     0.09
+GROUP
+ATOM C4   CC321C  -0.18
+ATOM H4A  HCA2     0.09
+ATOM H4B  HCA2     0.09
+BOND O1 C1   C1 H1A  C1 H1B  C1 C2
+BOND C2 H2A  C2 H2B  C2 C3
+BOND C3 H3A  C3 H3B  C3 C4
+BOND C4 H4A  C4 H4B  C4 C5
+BOND C5 H5A  C5 H5B  C5 O1
+ACCE O1
+! og ic table
+IC  C5   O1   C1    C2         1.4904  108.31   72.27  107.28   1.5434
+IC  C2   O1   *C1   H1A        1.5434  107.28  107.92  103.81   1.1412
+IC  H1A  O1   *C1   H1B        1.1412  103.81  120.92  119.22   1.0624
+IC  C1   O1   C5    C4         1.4311  108.31  -67.46  109.85   1.5276
+IC  C4   O1   *C5   H5A        1.5276  109.85 -120.99  108.92   1.1306
+IC  C4   O1   *C5   H5B        1.5276  109.85  122.89  111.76   1.1083
+IC  O1   C1   C2    C3         1.4311  107.28  -65.14  109.39   1.5277
+IC  C3   C1   *C2   H2A        1.5277  109.39  117.82  109.98   1.1491
+IC  H2A  C1   *C2   H2B        1.1491  109.98  124.17  105.47   1.0938
+IC  C4   C2   *C3   H3A        1.6111  110.58  117.60  108.00   1.0977
+IC  H3A  C2   *C3   H3B        1.0977  108.00  113.88  116.20   1.0489
+IC  C3   C5   *C4   H4A        1.6111  110.34 -125.17  106.02   1.1192
+IC  C3   C5   *C4   H4B        1.6111  110.34  124.54  119.02   1.0688
+
+
+RESI NMA            0.00 ! og NOT FOR USE from par22 for parameter transfer only
+GROUP
+ATOM CL   CC331    -0.27  ! CT3  
+ATOM HL1  HCA3      0.09  ! HA   
+ATOM HL2  HCA3      0.09  ! HA   
+ATOM HL3  HCA3      0.09  ! HA   
+ATOM C    CC2O1     0.51  ! C    
+ATOM O    OC2D1    -0.51  ! O    
+ATOM N    NC2D1    -0.47  ! NH1  
+ATOM H    HCP1      0.31  ! H    
+ATOM CR   CC331    -0.11  ! CT3  
+ATOM HR1  HCA3      0.09  ! HA   
+ATOM HR2  HCA3      0.09  ! HA   
+ATOM HR3  HCA3      0.09  ! HA   
+BOND  HL1 CL   HL2 CL   HL3 CL  !          N-Methylacetamide:
+BOND  CL  C    C   N    N   CR  !      HL1\       O            /HR1
+BOND  N   H                     !    HL2-- CL  -- C -- N -- CR --HR2
+BOND  HR1 CR   HR2 CR   HR3 CR  !      HL3/            H       \HR3
+DOUBLE C  O
+IMPR  N  C  CR H
+IMPR  C  CL N  O
+IC O   C   N    H          1.2170  122.19 -172.63  117.71   1.0174
+IC H   N   C    CL         1.0174  117.71   10.44  116.80   1.4705
+IC O   C   N    CR         1.2170  122.19   -1.67  127.03   1.4271
+IC N   C   CL   HL1        1.3649  116.80  145.76  103.37   1.1542
+IC N   C   CL   HL2        1.3649  116.80   23.93  112.45   1.1269
+IC N   C   CL   HL3        1.3649  116.80  -97.81  110.31   1.0862
+IC C   N   CR   HR1        1.3649  127.03 -173.51  106.23   1.0877
+IC C   N   CR   HR2        1.3649  127.03   63.92  119.80   1.1663
+IC C   N   CR   HR3        1.3649  127.03  -68.31  110.26   1.0837
+
+
+RESI IPAA           0.00  ! og isopropyl acetamide
+GROUP                     !
+ATOM CL   CC331    -0.27  !
+ATOM HL1  HCA3      0.09  !                             
+ATOM HL2  HCA3      0.09  !                           H211 H212 H213
+ATOM HL3  HCA3      0.09  !                               \ | /    
+GROUP                     !                                C21       
+ATOM C    CC2O1     0.51  ! C       HL1\       O           /        
+ATOM O    OC2D1    -0.51  ! O     HL2-- CL  -- C -- N -- CR --HR     
+ATOM N    NC2D1    -0.47  ! NH1     HL3/            H      \        
+ATOM H    HCP1      0.31  ! H                              C22      
+ATOM CR   CC311     0.07  ! CT1                           / | \     
+ATOM HR   HCA1      0.09  !                           H221 H222 H223
+GROUP                     !         
+ATOM C21  CC331    -0.27  ! 
+ATOM H211 HCA3      0.09  !
+ATOM H212 HCA3      0.09  !
+ATOM H213 HCA3      0.09  !
+GROUP                               
+ATOM C22  CC331    -0.27  ! 
+ATOM H221 HCA3      0.09  !
+ATOM H222 HCA3      0.09  !
+ATOM H223 HCA3      0.09  !
+BOND  HL1 CL   HL2 CL   HL3 CL  !
+BOND  CL  C    C   N    N   CR  !
+BOND  N   H                     !
+BOND  HR  CR   C21 CR   C22 CR  !
+BOND  C21 H211 C21 H212 C21 H213
+BOND  C22 H221 C22 H222 C22 H223
+DOUBLE C  O
+IMPR  N  C  CR H
+IMPR  C  CL N  O
+!    I    J    K    L      R(IK)   T(IKJ)    PHI   T(JKL)   R(KL) 
+IC O   C   N      H          1.2155  122.35 -164.87  110.88   1.0016
+IC H   N   C      CL         1.0016  110.88   17.10  117.67   1.3978
+IC O   C   N      CR         1.2155  122.35   -4.65  130.13   1.4829
+IC N   C   CL     HL1        1.2940  117.67 -165.10  107.63   1.0780
+IC N   C   CL     HL2        1.2940  117.67   75.06  110.90   1.1098
+IC N   C   CL     HL3        1.2940  117.67  -47.51  110.65   1.1556
+IC C   N   CR     HR         1.2940  130.13  171.27  103.75   1.1568
+IC C   N   CR     C21        1.2940  130.13   48.14  115.66   1.5028
+IC C   N   CR     C22        1.2940  130.13  -78.47  108.40   1.5882
+IC N   CR  C21    H211       1.4829  115.66   62.05  107.27   1.1345
+IC N   CR  C21    H212       1.4829  115.66  -59.32  109.83   1.1523
+IC N   CR  C21    H213       1.4829  115.66 -175.32  115.02   1.0858
+IC N   CR  C22    H221       1.4829  108.40   61.94  112.51   1.1415
+IC N   CR  C22    H222       1.4829  108.40  -59.32  113.98   1.0642
+IC N   CR  C22    H223       1.4829  108.40 -175.46  104.61   1.0857
+
+
+RESI PROA         -1.00 ! og NOT FOR USE from par22 for parameter transfer only
+GROUP               
+ATOM  C1  CC321   -0.28 ! CT2
+ATOM  C2  CC2O2    0.62 ! CC        H1    O1 (-)
+ATOM  H1  HCA2     0.09 ! HA        |    /     
+ATOM  H2  HCA2     0.09 ! HA    H2--C1--C2     
+                        !           |    \\     
+ATOM  O1  OC2D2   -0.76 ! OC        |    O2     
+ATOM  O2  OC2D2   -0.76 ! OC   H01--C0          
+GROUP                   !           | \         
+ATOM  C0  CC331   -0.27 ! CT3     H02 H03       
+ATOM  H01 HCA3     0.09 ! HA 
+ATOM  H02 HCA3     0.09 ! HA 
+ATOM  H03 HCA3     0.09 ! HA 
+Bond c1 h1  c1 h2  c1 c0
+Bond c1 c2  c2 o1
+Bond c0 h01 c0 h02 c0 h03
+Double  c2 o2
+impr c2 c1 o2 o1
+IC H1   C1   C2    O1         1.1253  109.12 -137.07  128.49   1.2966
+IC H2   C1   C2    O1         1.1036  108.72  108.43  128.49   1.2966
+IC H1   C1   C2    O2         1.1253  109.12   44.26  110.77   1.2526
+IC H2   C1   C2    O2         1.1036  108.72  -70.24  110.77   1.2526
+IC O1   O2   *C2   C1         1.2966  120.73  178.79  110.77   1.4700
+IC O2   C2   C1    C0         1.2526  110.77  163.40  111.67   1.5339
+IC C2   C1   C0    H01        1.4700  111.67   66.43  112.03   1.1071
+IC C2   C1   C0    H02        1.4700  111.67  -45.94  110.20   1.1306
+IC C2   C1   C0    H03        1.4700  111.67 -176.01  119.82   1.1022
+patc firs none last none
+
+
+RESI AMOP         -1.00 ! alpha-methoxy-propionic acid, og
+GROUP               
+ATOM  C1  CC311   -0.02 ! CT1   HM1 HM2 HM3
+ATOM  C2  CC2O2    0.62 ! CC      \ |  /
+ATOM  H1  HCA1     0.09 ! HA        CM
+ATOM  OM  OC301   -0.34 ! ethers    |
+ATOM  CM  CC331   -0.10 ! CT3       OM    O1 (-)
+ATOM  HM1 HCA3     0.09 ! HA        |    / 
+ATOM  HM2 HCA3     0.09 ! HA    H1--C1--C2 
+ATOM  HM3 HCA3     0.09 ! HA        |    \\
+ATOM  O1  OC2D2   -0.76 ! OC        |    O2    
+ATOM  O2  OC2D2   -0.76 ! OC   H01--C0         
+GROUP                   !           | \         
+ATOM  C0  CC331   -0.27 ! CT3     H02 H03       
+ATOM  H01 HCA3     0.09 ! HA     
+ATOM  H02 HCA3     0.09 ! HA     
+ATOM  H03 HCA3     0.09 ! HA     
+BOND C1 H1  C1 OM  C1 C0
+BOND C1 C2  C2 O1
+BOND C0 H01 C0 H02 C0 H03
+BOND OM CM
+BOND CM HM1 CM HM2 CM HM3
+DOUBLE  C2 O2
+IMPR C2 C1 O2 O1
+IC C2   C1   OM     CM         1.5252  115.91 -163.98  110.47   1.4137
+IC OM   C2   *C1    C0         1.4518  115.91  127.11  106.96   1.5476
+IC OM   C2   *C1    H1         1.4518  115.91 -115.97  105.08   1.0909
+IC C1   OM   CM     HM1        1.4518  110.47   45.69  109.01   1.0989
+IC HM1  OM   *CM    HM2        1.0989  109.01 -131.94  114.65   1.0712
+IC HM1  OM   *CM    HM3        1.0989  109.01  114.35  108.56   1.1268
+IC H1   C1   C2     O1         1.0909  105.08  177.07  118.55   1.2873
+IC O1   C1   *C2    O2         1.2873  118.55 -179.93  117.50   1.2467
+IC H1   C1   C0     H01        1.0909  110.01  -49.49  109.27   1.0665
+IC H01  C1   *C0    H02        1.0665  109.27 -122.70  108.49   1.0942
+IC H01  C1   *C0    H03        1.0665  109.27  120.34  108.58   1.0708
+patc firs none last none
+
+
+RESI AMOL         -1.00 ! alpha-methoxy-lactic acid, og
+GROUP               
+ATOM  C1  CC301    0.30 ! CT1   HM1 HM2 HM3
+ATOM  C2  CC2O2    0.30 ! CC      \ |  /
+ATOM  OH  OC311   -0.65 ! OH1       CM
+ATOM  HO  HCP1     0.42 ! H         |
+ATOM  OM  OC301   -0.34 ! ethers    OM    O1 (-)
+ATOM  CM  CC331   -0.10 ! CT3       |    / 
+ATOM  HM1 HCA3     0.09 ! HA    OH--C1--C2 
+ATOM  HM2 HCA3     0.09 ! HA   /    |    \\
+ATOM  HM3 HCA3     0.09 ! HA  HO    |    O2    
+ATOM  O1  OC2D2   -0.60 ! OC   H01--C0         
+ATOM  O2  OC2D2   -0.60 ! OC        | \         
+GROUP                   !         H02 H03       
+ATOM  C0  CC331   -0.27 ! CT3
+ATOM  H01 HCA3     0.09 ! HA     
+ATOM  H02 HCA3     0.09 ! HA     
+ATOM  H03 HCA3     0.09 ! HA     
+BOND C1 OH  OH HO  C1 OM  C1 C0
+BOND C1 C2  C2 O1
+BOND C0 H01 C0 H02 C0 H03
+BOND OM CM
+BOND CM HM1 CM HM2 CM HM3
+DOUBLE  C2 O2
+IMPR C2 C1 O2 O1
+IC C2   C1  OM    CM         1.6681  105.74 -166.75  112.34   1.4412
+IC OM   C2  *C1   C0         1.3543  105.74  122.28  111.78   1.5273
+IC OM   C2  *C1   OH         1.3543  105.74 -119.79  108.83   1.4185
+IC C2   C1  OH    HO         1.6681  108.83    1.59   91.98   0.9590
+IC C1   OM  CM    HM1        1.3543  112.34   64.47  115.10   1.1624
+IC HM1  OM  *CM   HM2        1.1624  115.10 -125.06  110.12   1.1195
+IC HM1  OM  *CM   HM3        1.1624  115.10  121.32  109.80   1.1277
+IC OH   C1  C2    O1         1.4185  108.83  155.75  117.95   1.2344
+IC O1   C1  *C2   O2         1.2344  117.95 -172.28  112.81   1.2801
+IC OH   C1  C0    H01        1.4185  106.97  -71.89  103.07   1.1263
+IC H01  C1  *C0   H02        1.1263  103.07 -114.48  109.08   1.0786
+IC H01  C1  *C0   H03        1.1263  103.07  118.43  113.39   1.1086
+patc firs none last none
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!! Cyclic ethers from top_all27_carb_jul2o.inp!!!!!!!!!!!!!!!
+!! - written by viv; added erh                !!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+RESI THF         0.00   ! cyclic ether, Tetra-Hydro-Furan
+GROUP
+ATOM O1   OC3C5M -0.40  !
+ATOM C1   CC322C  0.02  !
+ATOM H1A  HCA2C2  0.09  !                   O1
+ATOM H1B  HCA2C2  0.09  !           H4A   /    \    H1A
+ATOM C2   CC322C -0.18  !             \  /      \  /   
+ATOM H2A  HCA2C2  0.09  !              C4        C1    
+ATOM H2B  HCA2C2  0.09  !             / \        / \   
+ATOM C3   CC322C -0.18  !           H4B  \      /   H1B
+ATOM H3A  HCA2C2  0.09  !                C3----C2      
+ATOM H3B  HCA2C2  0.09  !               /  \   / \     
+ATOM C4   CC322C  0.02  !            H3A  H3B H2A H2B  
+ATOM H4A  HCA2C2  0.09  !
+ATOM H4B  HCA2C2  0.09  !
+BOND O1 C1  C1 H1A  C1 H1B  C1 C2
+BOND C2 H2A  C2 H2B  C2 C3      
+BOND C3 H3A  C3 H3B  C3 C4     
+BOND C4 H4A  C4 H4B  C4 O1    
+!! 
+IC O1   C1   C2     C3         1.4360  101.32   37.98  103.21   1.5433
+IC C1   C2   C3     C4         1.5237  103.21  -41.00   99.36   1.5882
+IC C2   C3   C4     O1         1.5433   99.36   28.95  103.42   1.4134
+IC C3   C4   O1     C1         1.5882  103.42   -6.17  114.90   1.4360
+IC C4   O1   C1     C2         1.4134  114.90  -19.85  101.32   1.5237
+IC O1   C2   *C1    H1A        1.4360  101.32  112.58  114.19   1.1457
+IC O1   C2   *C1    H1B        1.4360  101.32 -113.28  118.93   1.0941
+IC C1   C3   *C2    H2A        1.5237  103.21  118.50  110.42   1.0754
+IC C1   C3   *C2    H2B        1.5237  103.21 -124.27  110.08   1.1915
+IC C2   C4   *C3    H3A        1.5433   99.36  124.21  112.48   1.1275
+IC C2   C4   *C3    H3B        1.5433   99.36 -113.45  108.07   1.1155
+IC C3   O1   *C4    H4A        1.5882  103.42  115.42  113.34   1.1051
+IC C3   O1   *C4    H4B        1.5882  103.42 -119.16  106.17   1.0807
+patc firs none last none  
+
+
+RESI TF2M        0.00   ! cyclic ether, 2-Methyl-Tetra-Hydro-Furan 
+GROUP
+ATOM O1   OC3C5M -0.40  !
+ATOM C1   CC312C  0.11  !                           H5A    
+ATOM H1   HCA1C2  0.09  !                   O1      |      
+ATOM C2   CC322C -0.18  !           H4A   /    \    C5-H5B 
+ATOM H2A  HCA2C2  0.09  !             \  /      \  /  \    
+ATOM H2B  HCA2C2  0.09  !              C4        C1    H5C 
+ATOM C3   CC322C -0.18  !             / \        / \       
+ATOM H3A  HCA2C2  0.09  !           H4B  \      /   H1     
+ATOM H3B  HCA2C2  0.09  !                C3----C2          
+ATOM C4   CC322C  0.02  !               /  \   / \         
+ATOM H4A  HCA2C2  0.09  !            H3A  H3B H2A H2B      
+ATOM H4B  HCA2C2  0.09  !
+ATOM C5   CC331  -0.27  !
+ATOM H5A  HCA3    0.09  !
+ATOM H5B  HCA3    0.09  !
+ATOM H5C  HCA3    0.09  !
+BOND O1 C1  C1 H1  C1 C2  C1 C5
+BOND C5 H5A  C5 H5B  C5 H5C    
+BOND C2 H2A  C2 H2B  C2 C3     
+BOND C3 H3A  C3 H3B  C3 C4     
+BOND C4 H4A  C4 H4B  C4 O1     
+IC O1   C1   C2    C3         1.4040   99.92  -23.40  101.04   1.5499
+IC C4   O1   C1    C2         1.4038  110.12   47.12   99.92   1.6003
+IC O1   C1   C5    H5A        1.4040  115.16   72.23  115.84   1.1039
+IC C2   O1   *C1   C5         1.6003   99.92  127.51  115.16   1.4891
+IC C2   O1   *C1   H1         1.6003   99.92 -111.47  106.70   1.1317
+IC C3   C1   *C2   H2A        1.5499  101.04  120.73  112.60   1.1356
+IC H2A  C1   *C2   H2B        1.1356  112.60  123.04  114.57   1.0401
+IC C4   C2   *C3   H3A        1.5176  106.88  125.54  106.84   1.0941
+IC H3A  C2   *C3   H3B        1.0941  106.84  122.26  113.57   1.0368
+IC C3   O1   *C4   H4A        1.5176   98.99 -115.57  106.84   1.1102
+IC C3   O1   *C4   H4B        1.5176   98.99  119.80  114.56   1.1058
+IC H5A  C1   *C5   H5B        1.1039  115.84  125.85  119.74   1.1039
+IC H5A  C1   *C5   H5C        1.1039  115.84 -119.92  109.77   1.1311
+patc firs none last none                                                                                                   
+                               
+!!model compounds and patches for disaccharide analogs !!!!!!!!
+!!! These compounds were used for determing the dihedral parameters for the 
+!!! glycosidic linkage, partial charge and LJ on the glycosidic oxygen and 
+!!! the bonded terms.
+!!! Reference:
+!!!  pending
+!!!
+
+RESI CYHX2         0.0  ! og CYHX with different atom names for use in 
+GROUP                   !  disaccharide model compounds;
+ATOM C1   CC321C  -0.18 !  C5O corresponds to the position of hexopyranose O5;
+ATOM H1A  HCA2     0.09 !  compatible with PRES A1A2M etc;
+ATOM H1B  HCA2     0.09 !  H?A are axial, H?B are equatorial
+GROUP                   !
+ATOM C2   CC321C  -0.18 !
+ATOM H2A  HCA2     0.09 !      H5A  H5B  H5OA H5OB
+ATOM H2B  HCA2     0.09 !         \ /       \/
+GROUP                   !          C5-------C5O
+ATOM C3   CC321C  -0.18 !     H4A  /         \   H1B 
+ATOM H3A  HCA2     0.09 !        \/           \ /
+ATOM H3B  HCA2     0.09 !        C4           C1
+GROUP                   !       / \           / \
+ATOM C4   CC321C  -0.18 !     H4B  \         /   H1A 
+ATOM H4A  HCA2     0.09 !           C3------C2 
+ATOM H4B  HCA2     0.09 !           /\      /\
+GROUP                   !         H3A H3B H2A H2B
+ATOM C5   CC321C  -0.18 !
+ATOM H5A  HCA2     0.09 !
+ATOM H5B  HCA2     0.09 !
+GROUP
+ATOM C5O  CC321C  -0.18 !
+ATOM H5OA HCA2     0.09 !
+ATOM H5OB HCA2     0.09 !
+BOND C1  H1B    C1  H1A    C1  C2   
+BOND C2  H2A    C2  H2B    C2  C3  
+BOND C3  H3A    C3  H3B    C3  C4
+BOND C4  H4A    C4  H4B    C4  C5
+BOND C5  H5A    C5  H5B    C5  C5O
+BOND C5O H5OA   C5O H5OB   C5O C1
+!    I    J    K    L      R(IK)   T(IKJ)    PHI   T(JKL)   R(KL)
+IC H1A   C2   *C1   H1B    1.0819  113.09 -112.79  110.23   1.1580
+IC H1A   C5O  *C1   C2     1.0819  113.40 -128.57  110.98   1.4734
+IC H2B   C3   *C2   H2A    1.1122  119.93 -113.35  114.30   1.0471
+IC H2B   C1   *C2   C3     1.1122  109.47 -133.64  109.85   1.5102
+IC H3B   C4   *C3   H3A    1.0583  107.43  113.71  111.34   1.0962
+IC H3B   C2   *C3   C4     1.0583  113.73  118.21  106.61   1.5310
+IC H4B   C5   *C4   H4A    1.1481  103.95 -122.84  108.77   1.1271
+IC H4B   C3   *C4   C5     1.1481  109.54 -115.03  112.42   1.5413
+IC H5A   C5O  *C5   H5B    1.0812  108.12 -122.12  108.01   1.1656
+IC H5A   C4   *C5   C5O    1.0812  106.22 -116.61  109.67   1.3746
+IC H5OA  C1   *C5O  H5OB   1.0812  108.12  122.12  108.01   1.1656
+IC H5OA  C5   *C5O  C1     1.0812  106.22  116.61  109.67   1.3746
+IC C5O   C1    C2   C3     1.4247  110.98   63.25  109.85   1.5102
+IC C1    C2    C3   C4     1.4734  109.85  -53.97  106.61   1.5310
+IC C2    C3    C4   C5     1.5102  106.61   50.83  112.42   1.5413
+IC C3    C4    C5   C5O    1.5310  112.42  -55.85  109.67   1.3746
+IC C4    C5    C5O  C1     1.5413  109.67   61.26  109.77   1.4247
+IC C5    C5O   C1   C2     1.3746  109.77  -67.11  110.98   1.4734
+
+RESI THP2           0.00 ! og THP with different atom names for use in   
+GROUP                    !  disaccharide model compounds ;
+ATOM C1   CC321D    0.02 !  O5 corresponds to the position of hexopyranose O5 ;
+ATOM H1A  HCA2      0.09 !  compatible with PRES 11ABM etc;
+ATOM H1B  HCA2      0.09 !  H?A are axial and H?B are equatorial
+ATOM O5   OC3C61   -0.40 !
+ATOM C5   CC321C    0.02 !
+ATOM H5A  HCA2      0.09 !         H5A H5B
+ATOM H5B  HCA2      0.09 !           \/
+GROUP                    !           C5-------O5
+ATOM C2   CC321C   -0.18 !      H4A  /         \   H1B 
+ATOM H2A  HCA2      0.09 !         \/           \ /
+ATOM H2B  HCA2      0.09 !         C4           C1
+GROUP                    !        / \           / \
+ATOM C3   CC321C   -0.18 !      H4B  \         /   H1A 
+ATOM H3A  HCA2      0.09 !            C3------C2 
+ATOM H3B  HCA2      0.09 !            /\      /\
+GROUP                    !          H3A H3B H2A H2B
+ATOM C4   CC321C   -0.18 !
+ATOM H4A  HCA2      0.09 !
+ATOM H4B  HCA2      0.09 !
+BOND C1 H1B  C1 H1A  C1 C2   O5 C5
+BOND C2 H2A  C2 H2B  C2 C3   C3 H3A
+BOND C3 H3B  C3 C4   C4 H4A  C4 H4B
+BOND C4 C5   C5 H5A  C5 H5B  C1 O5
+ACCE O5
+!    I    J    K    L      R(IK)   T(IKJ)    PHI   T(JKL)   R(KL)
+IC   H1A  C2  *C1   H1B    1.0819  113.09 -112.79  110.23   1.1580
+IC   H1A  O5  *C1   C2     1.0819  113.40 -128.57  110.98   1.4734
+IC   H2B  C3  *C2   H2A    1.1122  119.93 -113.35  114.30   1.0471
+IC   H2B  C1  *C2   C3     1.1122  109.47 -133.64  109.85   1.5102
+IC   H3B  C4  *C3   H3A    1.0583  107.43  113.71  111.34   1.0962
+IC   H3B  C2  *C3   C4     1.0583  113.73  118.21  106.61   1.5310
+IC   H4B  C5  *C4   H4A    1.1481  103.95 -122.84  108.77   1.1271
+IC   H4B  C3  *C4   C5     1.1481  109.54 -115.03  112.42   1.5413
+IC   H5A  O5  *C5   H5B    1.0812  108.12 -122.12  108.01   1.1656
+IC   H5A  C4  *C5   O5     1.0812  106.22 -116.61  109.67   1.3746
+IC   O5   C1   C2   C3     1.4247  110.98   63.25  109.85   1.5102
+IC   C1   C2   C3   C4     1.4734  109.85  -53.97  106.61   1.5310
+IC   C2   C3   C4   C5     1.5102  106.61   50.83  112.42   1.5413
+IC   C3   C4   C5   O5     1.5310  112.42  -55.85  109.67   1.3746
+IC   C4   C5   O5   C1     1.5413  109.67   61.26  109.77   1.4247
+IC   C5   O5   C1   C2     1.3746  109.77  -67.11  110.98   1.4734
+
+RESI THF2         0.00  ! pram; copied from THF with Fructose IUPAC naming
+GROUP
+ATOM O5   OC3C5M -0.40  !
+ATOM C2   CC322C  0.02  !
+ATOM H2A  HCA2C2  0.09  !                   O5
+ATOM H2B  HCA2C2  0.09  !           H5B   /    \    H2B
+ATOM C3   CC322C -0.18  !             \  /      \  /   
+ATOM H3A  HCA2C2  0.09  !              C5        C2    
+ATOM H3B  HCA2C2  0.09  !             / \        / \   
+ATOM C4   CC322C -0.18  !           H5A  \      /   H2A
+ATOM H4A  HCA2C2  0.09  !                C4----C3      
+ATOM H4B  HCA2C2  0.09  !               /  \   / \     
+ATOM C5   CC322C  0.02  !            H4B  H4A H3B H3A  
+ATOM H5A  HCA2C2  0.09  !
+ATOM H5B  HCA2C2  0.09  !
+BOND O5 C2  C2 H2A  C2 H2B  C2 C3
+BOND C3 H3A  C3 H3B  C3 C4      
+BOND C4 H4A  C4 H4B  C4 C5     
+BOND C5 H5A  C5 H5B  C5 O5    
+!    I    J    K    L      R(IK)   T(IKJ)    PHI   T(JKL)   R(KL)
+IC O5   C2   C3     C4         1.4360  101.32   37.98  103.21   1.5433
+IC C2   C3   C4     C5         1.5237  103.21  -41.00   99.36   1.5882
+IC C3   C4   C5     O5         1.5433   99.36   28.95  103.42   1.4134
+IC C4   C5   O5     C2         1.5882  103.42   -6.17  114.90   1.4360
+IC C5   O5   C2     C3         1.4134  114.90  -19.85  101.32   1.5237
+IC O5   C3   *C2    H2B        1.4360  101.32  112.58  114.19   1.1457
+IC O5   C3   *C2    H2A        1.4360  101.32 -113.28  118.93   1.0941
+IC C2   C4   *C3    H3B        1.5237  103.21  118.50  110.42   1.0754
+IC C2   C4   *C3    H3A        1.5237  103.21 -124.27  110.08   1.1915
+IC C3   C5   *C4    H4B        1.5433   99.36  124.21  112.48   1.1275
+IC C3   C5   *C4    H4A        1.5433   99.36 -113.45  108.07   1.1155
+IC C4   O5   *C5    H5B        1.5882  103.42  115.42  113.34   1.1051
+IC C4   O5   *C5    H5A        1.5882  103.42 -119.16  106.17   1.0807
+patc firs none last none  
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! disaccharide model compound patches !
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+PRES OMEAM          0.00 ! og make model compound 2 by adding axial 
+dele atom H1A            !  O-methyl to C1; apply to THP2
+GROUP
+ATOM C1   CC311D    0.29 !
+ATOM H1B  HCA1      0.09 !
+ATOM OM   OC301    -0.36 !
+ATOM CM   CC331    -0.09 ! 
+ATOM HM1  HCA3      0.09 !
+ATOM HM2  HCA3      0.09 !
+ATOM HM3  HCA3      0.09 !
+ATOM C5   CC321C    0.02 !
+ATOM H5A  HCA2      0.09 !
+ATOM H5B  HCA2      0.09 !
+ATOM O5   OC3C61   -0.40 !
+BOND OM C1  OM CM  
+BOND CM HM1  CM HM2  CM HM3
+!    I    J    K    L      R(IK)   T(IKJ)    PHI   T(JKL)   R(KL)
+IC   OM   C1   O5   C5     1.4552  103.73   70.41  111.65   1.4477
+IC   O5   C1   OM   CM     1.4735  103.73   71.27  114.58   1.4525
+IC   C1   OM   CM   HM1    1.4552  114.58   47.22  110.08   1.1158
+IC   C5   O5   C1   H1B    1.4477  111.65 -168.02  112.12   1.1401
+IC   HM1  OM  *CM   HM2    1.1158  110.08  119.89  110.78   1.1344
+IC   HM3  OM  *CM   HM2    1.1501  109.28 -117.02  110.78   1.1344
+
+PRES OMEBM          0.00 ! og make model compound 3 by adding equat 
+dele atom H1B            !  O-methyl to C1; apply to THP2
+GROUP
+ATOM C1   CC311D    0.29 !
+ATOM H1A  HCA1      0.09 !
+ATOM OM   OC301    -0.36 !
+ATOM CM   CC331    -0.09 ! 
+ATOM HM1  HCA3      0.09 !
+ATOM HM2  HCA3      0.09 !
+ATOM HM3  HCA3      0.09 !
+ATOM C5   CC321C    0.02 !
+ATOM H5A  HCA2      0.09 !
+ATOM H5B  HCA2      0.09 !
+ATOM O5   OC3C61   -0.40 !
+BOND OM C1   OM CM  
+BOND CM HM1  CM HM2  CM HM3
+!    I    J    K    L      R(IK)   T(IKJ)    PHI   T(JKL)   R(KL)
+IC   OM   C1   O5   C5     1.4076  115.06  177.85  112.70   1.4132
+IC   O5   C1   OM   CM     1.3742  115.06   41.63  111.09   1.4240
+IC   C1   OM   CM   HM1    1.4076  111.09   46.35  109.37   1.1094
+IC   O5   OM  *C1   H1A    1.3742  115.06  118.51  107.07   1.1324
+IC   HM1  OM  *CM   HM2    1.1094  109.37  124.73  105.27   1.1288
+IC   HM3  OM  *CM   HM2    1.0920  106.02 -112.54  105.27   1.1288
+
+! patches for disaccharide model compounds 5 through 10:
+!   first 4 letters indicate type of linkage as in the main topology file
+!   letter 5 "m" indicates that this is a model compound patch
+!   for all patches, first residue must be THP2
+!   for 11??mo patches only:
+!    letter 6 "o" indicates that residue 2 must be THP2
+!    i.e. 11aamo is a C1_axial - C1_axial linkage for res1=THP2 and res2=THP2
+!   for 12??m patches:
+!    lack of letter 6 "o" indicates that residue 2 must be CYHX2
+!
+PRES 11aamo         0.40 ! og disac model compound 5 C1_axial -> C1_axial
+dele atom 1H1A
+dele atom 2H1A  
+GROUP
+ATOM 1H1B HCA1      0.09 ! atom type change
+ATOM 1C1  CC311D    0.29 ! atom type and charge change
+ATOM 1O11 OC302    -0.36 ! new atom
+ATOM 2C1  CC311D    0.29 ! atom type and charge change
+ATOM 2H1B HCA1      0.09 ! atom type change
+BOND 1O11 1C1  1O11 2C1  
+ACCE 1O11
+!    I    J    K    L      R(IK)   T(IKJ)    PHI   T(JKL)   R(KL)
+IC   1C5  1O5  1C1  1O11   1.4381  110.11   64.51  109.50   1.3767
+IC   1O5  1C1  1O11 2C1    1.4355  109.50   63.09  119.52   1.3634 ! PHI  
+IC   1C1  1O11 2C1  2O5    1.3767  119.52   70.86  111.74   1.4224 ! PSI  
+IC   1O11 2C1  2O5  2C5    1.3634  111.74   57.99  110.76   1.4474   
+IC   1H1B 1O5 *1C1  1C2    1.1061  111.88  120.00  112.57   1.5609
+IC   2H1B 2O5 *2C1  1O11   1.1122  119.93 -120.35  114.30   1.0471
+
+PRES 11abmo         0.40 ! og disac model compound 4 C1_axial -> C1_equat
+dele atom 1H1A
+dele atom 2H1B 
+ATOM 1H1B HCA1      0.09 ! atom type change            
+ATOM 1C1  CC311D    0.29 ! atom type and charge change
+ATOM 1O11 OC302    -0.36 ! new atom
+ATOM 2C1  CC311D    0.29 ! atom type and charge change
+ATOM 2H1A HCA1      0.09 ! atom type change
+BOND 1O11 1C1  1O11 2C1  
+ACCE 1O11
+!    I    J    K    L      R(IK)   T(IKJ)    PHI   T(JKL)   R(KL)
+IC   1C5  1O5  1C1  1O11   1.4457  108.86   55.88  110.23   1.3751
+IC   1O5  1C1  1O11 2C1    1.4581  110.23   75.76  123.58   1.3651 ! PHI
+IC   1C1  1O11 2C1  2O5    1.3751  123.58  124.09  106.90   1.4243 ! PSI
+IC   1O11 2C1  2O5  2C5    1.3651  106.90  174.55  113.60   1.4121
+IC   1H1B 1O5 *1C1  1C2    1.1061  111.88  120.00  112.57   1.5609
+IC   2H1A 2O5 *2C1  1O11   1.1122  119.93  120.35  114.30   1.0471
+
+PRES 11bamo         0.40 ! og disac model compound 4 C1_equat -> C1_axial
+dele atom 1H1B
+dele atom 2H1A 
+ATOM 1H1A HCA1      0.09 ! atom type change            
+ATOM 1C1  CC311D    0.29 ! atom type and charge change
+ATOM 1O11 OC302    -0.36 ! new atom
+ATOM 2C1  CC311D    0.29 ! atom type and charge change
+ATOM 2H1B HCA1      0.09 ! atom type change
+BOND 1O11 1C1  1O11 2C1  
+ACCE 1O11
+!    I    J    K    L      R(IK)   T(IKJ)    PHI   T(JKL)   R(KL)
+IC   1C5  1O5  1C1  1O11   1.4457  108.86 -180.00  110.23   1.3751
+IC   1O5  1C1  1O11 2C1    1.4581  110.23   75.76  123.58   1.3651 ! PHI
+IC   1C1  1O11 2C1  2O5    1.3751  123.58  124.09  106.90   1.4243 ! PSI
+IC   1O11 2C1  2O5  2C5    1.3651  106.90   60.55  113.60   1.4121
+IC   1H1A 1O5 *1C1  1C2    1.1061  111.88 -120.00  112.57   1.5609
+IC   2H1B 2O5 *2C1  1O11   1.1122  119.93 -120.35  114.30   1.0471
+
+PRES 11bbmo         0.40 ! og disac model compound 6 C1_equat -> C1_equat
+dele atom 1H1B
+dele atom 2H1B
+GROUP
+ATOM 1H1A HCA1      0.09 ! atom type change            
+ATOM 1C1  CC311D    0.29 ! atom type and charge change
+ATOM 1O11 OC302    -0.36 ! new atom
+ATOM 2C1  CC311D    0.29 ! atom type and charge change
+ATOM 2H1A HCA1      0.09 ! atom type change
+BOND 1O11 1C1  1O11 2C1  
+ACCE 1O11
+!    I    J    K    L      R(IK)   T(IKJ)    PHI   T(JKL)   R(KL)
+IC   1C5  1O5  1C1  1O11   1.4890  115.18 -167.87  105.32   1.3850
+IC   1O5  1C1  1O11 2C1    1.4085  105.32  -52.34  114.84   1.3651 ! PHI
+IC   1C1  1O11 2C1  2O5    1.3850  114.84  -60.01  112.27   1.4608 ! PSI
+IC   1O11 2C1  2O5  2C5    1.3651  112.27  172.44  109.51   1.4158
+IC   1H1A 1O5 *1C1  1C2    1.1061  111.88 -120.00  112.57   1.5609
+IC   2H1A 2O5 *2C1  1O11   1.1122  119.93  120.35  114.30   1.0471
+
+PRES 12aam          0.20 ! og disac model compound 7 C1_axial -> C2_axial
+dele atom 1H1A
+dele atom 2H2A  
+ATOM 1C1  CC311D    0.29 ! atom type and charge change
+ATOM 1H1B HCA1      0.09 ! atom type change
+ATOM 1O12 OC301    -0.36 ! new atom
+ATOM 2C2  CC311C    0.09 ! atom type and charge change
+ATOM 2H2B HCA1      0.09 ! atom type change
+BOND 1C1  1O12 1O12 2C2   
+!    I    J    K    L      R(IK)   T(IKJ)    PHI   T(JKL)   R(KL)
+IC   1O12 1C1  1O5  1C5    1.3623  108.15   64.23  113.01   1.4139
+IC   1O5  1C1  1O12 2C2    1.4386  108.15   60.13  116.04   1.4913 ! PHI
+IC   1C1  1O12 2C2  2C1    1.3623  116.04 -150.33  114.55   1.5295 ! PSI
+IC   1H1B 1O5 *1C1  1C2    1.1061  111.88  120.00  112.57   1.5609
+IC   2H2B 2C1 *2C2  1O12   1.1122  119.93  120.35  114.30   1.0471
+
+PRES 12abm          0.20 ! og disac model compound 8 C1_axial -> C2_equat
+dele atom 1H1A
+dele atom 2H2B  
+ATOM 1C1  CC311D    0.29 ! atom type and charge change
+ATOM 1H1B HCA1      0.09 ! atom type change
+ATOM 1O12 OC301    -0.36 ! new atom
+ATOM 2C2  CC311C    0.09 ! atom type and charge change
+ATOM 2H2A HCA1      0.09 ! atom type change
+BOND 1C1  1O12 1O12 2C2   
+!    I    J    K    L      R(IK)   T(IKJ)    PHI   T(JKL)   R(KL)
+IC   1O12 1C1  1O5  1C5    1.3623  108.15   64.23  113.01   1.4139
+IC   1O5  1C1  1O12 2C2    1.4386  108.15   90.13  116.04   1.4913  ! PHI
+IC   1C1  1O12 2C2  2C1    1.3623  116.04   90.33  114.55   1.5295  ! PSI
+IC   1H1B 1O5 *1C1  1C2    1.1061  111.88  120.00  112.57   1.5609
+IC   2H2A 2C1 *2C2  1O12   1.1122  119.93 -120.35  114.30   1.0471
+IC   2H2A 2C1 *2C2  2C3    1.1122  109.47  120.64  109.85   1.5102
+
+PRES 12bam          0.20 ! og disac model compound 9 C1_equat -> C2_axial
+dele atom 1H1B
+dele atom 2H2A  
+ATOM 1C1  CC311D    0.29 ! atom type and charge change
+ATOM 1H1A HCA1      0.09 ! atom type change
+ATOM 1O12 OC301    -0.36 ! new atom
+ATOM 2C2  CC311C    0.09 ! atom type and charge change
+ATOM 2H2B HCA1      0.09 ! atom type change
+BOND 1C1  1O12 1O12 2C2   
+!    I    J    K    L      R(IK)   T(IKJ)    PHI   T(JKL)   R(KL)
+IC   1O12 1C1  1O5  1C5    1.3623  108.15  180.23  113.01   1.4139
+IC   1O5  1C1  1O12 2C2    1.4386  108.15  -60.00  116.04   1.4913  ! PHI
+IC   1C1  1O12 2C2  2C1    1.3623  116.04  -60.00  114.55   1.5295  ! PSI
+IC   1H1A 1O5 *1C1  1C2    1.1061  111.88 -120.00  112.57   1.5609
+IC   2H2B 2C1 *2C2  1O12   1.1122  119.93  120.35  114.30   1.0471
+
+PRES 12bbm          0.20 ! og disac model compound 10 C1_equat -> C2_equat
+dele atom 1H1B
+dele atom 2H2B  
+ATOM 1C1  CC311D    0.29 ! atom type and charge change
+ATOM 1H1A HCA1      0.09 ! atom type change
+ATOM 1O12 OC301    -0.36 ! new atom
+ATOM 2C2  CC311C    0.09 ! atom type and charge change
+ATOM 2H2A HCA1      0.09 ! atom type change
+BOND 1C1  1O12 1O12 2C2
+!    I    J    K    L      R(IK)   T(IKJ)    PHI   T(JKL)   R(KL)
+IC   1O12 1C1  1O5  1C5    1.3623  108.15  180.23  113.01   1.4139
+IC   1O5  1C1  1O12 2C2    1.4386  108.15  -60.00  116.04   1.4913  ! PHI
+IC   1C1  1O12 2C2  2C1    1.3623  116.04  150.00  114.55   1.5295  ! PSI
+IC   1H1A 1O5 *1C1  1C2    1.1061  111.88 -120.00  112.57   1.5609
+IC   2H2A 2C1 *2C2  1O12   1.1122  119.93 -120.35  114.30   1.0471
+IC   2H2A 2C1 *2C2  2C3    1.1122  109.47  120.64  109.85   1.5102
+
+PRES COCA           0.20 ! og make disaccharide model compound 11 by adding 
+dele atom H5A            !  axial -CH2-O-CH3 to C5; apply to THP2
+ATOM C5   CC311C    0.11 !
+ATOM H5B  HCA1      0.09 !
+ATOM C6   CC321     0.00 ! 
+ATOM H61  HCA2      0.09 !
+ATOM H62  HCA2      0.09 !
+ATOM O1P  OC301    -0.36 !
+ATOM C1P  CC331    -0.09 ! 
+ATOM H11P HCA3      0.09 !
+ATOM H12P HCA3      0.09 !
+ATOM H13P HCA3      0.09 !
+BOND C5  C6
+BOND C6  H61  C6 H62  C6 O1P
+BOND O1P C1P
+BOND C1P H11P  C1P H12P  C1P H13P
+!    I    J    K    L      R(IK)   T(IKJ)    PHI   T(JKL)   R(KL)
+IC   C1P  O1P  C6   C5     1.4194  111.22  179.14  111.34   1.5489
+IC   O1P  C6   C5   O5     1.4232  111.34 -169.45  110.62   1.4282
+IC   C6   C4  *C5   O5     1.5489  113.77 -126.20  111.80   1.4282
+IC   C6   O5  *C5   H5B    1.5489  110.62 -115.09  106.68   1.1152
+IC   O1P  C5  *C6   H61    1.4232  111.34  120.30  108.27   1.1119
+IC   H61  C5  *C6   H62    1.1119  108.27  118.30  110.00   1.1087
+IC   C6   O1P  C1P  H11P   1.4232  111.22   60.60  110.47   1.1115
+IC   H11P O1P *C1P  H12P   1.1115  110.47  119.52  109.62   1.1114
+IC   H13P O1P *C1P  H12P   1.1116  110.46 -119.50  109.62   1.1114
+
+PRES COCB           0.20 ! og make disaccharide model compound 12 by adding
+dele atom H5B            !  equatorial -CH2-O-CH3 to C5; apply to THP2
+ATOM C5   CC311C    0.11 !
+ATOM H5A  HCA1      0.09 !
+ATOM C6   CC321     0.00 ! 
+ATOM H61  HCA2      0.09 !
+ATOM H62  HCA2      0.09 !
+ATOM O1P  OC301    -0.36 !
+ATOM C1P  CC331    -0.09 ! 
+ATOM H11P HCA3      0.09 !
+ATOM H12P HCA3      0.09 !
+ATOM H13P HCA3      0.09 !
+BOND C5  C6
+BOND C6  H61  C6 H62  C6 O1P
+BOND O1P C1P
+BOND C1P H11P  C1P H12P  C1P H13P
+!    I    J    K    L      R(IK)   T(IKJ)    PHI   T(JKL)   R(KL)
+IC   C1P  O1P  C6   C5     1.4194  111.22  179.14  111.34   1.5489
+IC   O1P  C6   C5   O5     1.4232  111.34 -169.45  110.62   1.4282
+IC   C6   C4  *C5   O5     1.5489  113.77  126.20  111.80   1.4282
+IC   C6   O5  *C5   H5A    1.5489  110.62 -115.09  106.68   1.1152
+IC   O1P  C5  *C6   H61    1.4232  111.34  120.30  108.27   1.1119
+IC   H61  C5  *C6   H62    1.1119  108.27  118.30  110.00   1.1087
+IC   C6   O1P  C1P  H11P   1.4232  111.22   60.60  110.47   1.1115
+IC   H11P O1P *C1P  H12P   1.1115  110.47  119.52  109.62   1.1114
+IC   H13P O1P *C1P  H12P   1.1116  110.46 -119.50  109.62   1.1114
+
+!RESI DUM 0.0
+!GROUP
+!ATOM DUM DUM      0.0
+
+!RESI MP_1        -1.00 ! Methylphosphate, anionic
+!GROUP                  !
+! atom order for molvib
+!ATOM C1   CTL3   -0.17  !
+!ATOM O1   OSL    -0.62  !                 H11
+!ATOM P1   PL      1.50  !                  |
+!ATOM O2   OHL    -0.68  !            H13--C1--H12
+!ATOM O3   O2L    -0.82  !                  |
+!ATOM O4   O2L    -0.82  !                 O1
+!ATOM H11  HAL3    0.09  !                  |
+!ATOM H12  HAL3    0.09  !             O4==P1==O3 (-)
+!ATOM H13  HAL3    0.09  !                  |
+!ATOM H2   HOL     0.34  !                 O2
+                        !                   \
+                        !                    H2
+
+!BOND P1   O1     P1   O2    P1   O3    P1   O4    O1   C1
+!BOND C1   H11    C1   H12   C1   H13   O2   H2
+
+!IC O3   P1   O1   C1   0.0000    000.00    000.0     000.00    0.0000
+!IC O4   P1   O1   C1   0.0000    000.00    000.0     000.00    0.0000
+!IC O2   P1   O1   C1   0.0000    000.00    000.0     000.00    0.0000
+!IC H11  C1   O1   P1   0.0000    000.00    000.0     000.00    0.0000
+!IC H12  C1   O1   P1   0.0000    000.00    000.0     000.00    0.0000
+!IC H13  C1   O1   P1   0.0000    000.00    000.0     000.00    0.0000
+!IC H2   O2   P1   O1   0.0000    000.00    000.0     000.00    0.0000
+
+!*********************
+!Added by sai for modelling phosphate
+!Patch Residue for attaching phosphate
+!In this patch we are adding the phosphate at the axial position of C1
+!*********************
+
+PRES PH_A          -1.00 ! The phsophate is added to the axial group
+dele atom H1A            !  O-PO3H is added to C1; apply to THP2
+GROUP
+ATOM C1   CC311D    0.21 ! 
+ATOM H1B  HCA1      0.09 ! Equitorial Hydrogen
+ATOM O1   OC30P    -0.62 ! All the phosphate atom types have been borrowed from the 
+ATOM P1   PC        1.50 ! top_all27_lipid.rtf topology file
+ATOM O2   OC312    -0.68 ! 
+ATOM O3   OC2DP    -0.82 !	     H5A H5B
+ATOM O4   OC2DP    -0.82 !	       \/
+ATOM H2   HCP1      0.34 !	       C5-------O5
+ATOM C5   CC321C    0.02 !	  H4A  /	 \   H1B
+ATOM H5A  HCA2      0.09 !	     \/ 	  \ /
+ATOM H5B  HCA2      0.09 !	     C4 	  C1
+ATOM O5   OC3C61   -0.40 !	    / \ 	  /   \ 
+			 !	  H4B  \	 /      O1
+			 !		C3------C2  	 |
+			 !		/\	/\   O4==P1==O3 (-)
+			 !	      H3A H3B H2A H2B	 |
+			 !				O2
+			 !				  \
+			 !				   H2
+BOND C1 O1
+BOND O1 P1 O2 P1 O3 P1 O4 P1
+BOND O2 H2
+
+!Thermalized IC
+IC  C5   O5   C1   O1         1.4251  113.39   64.42  111.42   1.4611
+IC  O5   O1   *C1  H1B        1.4053  111.42 -123.36  114.66   1.1221
+IC  O5   C1   O1   P1         1.4053  111.42   66.60  112.24   1.6183
+IC  C1   O1   P1   O2         1.4611  112.24  163.11   83.39   1.5985
+IC  O1   O2   *P1  O3         1.6183   83.39  106.51  113.61   1.5067
+IC  O1   O2   *P1  O4         1.6183   83.39 -110.58  108.15   1.5473
+IC  O1   P1   O2   H2         1.6183   83.39   29.06   99.90   0.9669
+
+!*********************
+!Patch Residue for attaching phosphate
+!In this patch we are adding the phosphate at the equitorial position of C1
+!*********************
+
+PRES PH_B          -1.00 ! The phsophate is added to the equitorial group
+dele atom H1B            !  O-PO3H is added to C1; apply to THP2
+GROUP
+ATOM C1   CC311D    0.21 ! 
+ATOM H1A  HCA1      0.09 ! Axial Hydrogen
+ATOM O1   OC30P    -0.62 ! All the phosphate atom types have been borrowed from the 
+ATOM P1   PC        1.50 ! top_all27_lipid.rtf topology file
+ATOM O2   OC312    -0.68 !      
+ATOM O3   OC2DP    -0.82 !	                        H2
+ATOM O4   OC2DP    -0.82 !	                       /
+ATOM H2   HCP1      0.34 !	                      O2
+ATOM C5   CC321C    0.02 !	     H5A H5B          | 
+ATOM H5A  HCA2      0.09 !	       \/          O3=P1=O4(-)
+ATOM H5B  HCA2      0.09 !	       C5-------O5    |
+ATOM O5   OC3C61   -0.40 !	  H4A  /	 \    O1
+			 !	     \/ 	  \  /
+			 !	     C4 	  C1
+			 !	    / \ 	  / \ 
+			 !	  H4B  \	 /   H1A  
+			 !		C3------C2  	   			   
+			 !		/\	/\   	   			    
+			 !	      H3A H3B H2A H2B	   			    
+BOND C1 O1
+BOND O1 P1 O2 P1 O3 P1 O4 P1
+BOND O2 H2
+
+!Thermalized IC
+IC  C5   O5   C1   O1         1.4283  117.17  172.83  114.29   1.4190
+IC  O5   O1   *C1  H1A        1.3757  114.29  111.68  100.52   1.1176
+IC  O5   C1   O1   P1         1.3757  114.29   83.65  117.50   1.6236
+IC  C1   O1   P1   O2         1.4190  117.50 -157.34   82.18   1.5598
+IC  O1   O2   *P1  O3         1.6236   82.18  102.65  111.48   1.5066
+IC  O1   O2   *P1  O4         1.6236   82.18 -112.23  110.54   1.5464
+IC  O1   P1   O2   H2         1.6236   82.18    7.21  102.26   0.9628
+
+!************************
+!dianionic methylphosphate
+!************************
+!RESI MP_2        -2.00 ! Methylphosphate, dianionic
+!GROUP                  !
+!ATOM P1   PL      1.10 !
+!ATOM O1   OSL    -0.40 !                 H11
+!ATOM O2   O2L    -0.90 !                  |
+!ATOM O3   O2L    -0.90 !            H13--C1--H12
+!ATOM O4   O2L    -0.90 !                  |
+!GROUP                  !                  O1
+!ATOM C1   CTL3   -0.27 !                  |
+!ATOM H11  HAL3    0.09 !          (-) O4--P1(+)--O3 (-)
+!ATOM H12  HAL3    0.09 !                  |
+!ATOM H13  HAL3    0.09 !                  O2 (-)
+!                       !
+!BOND P1   O1     P1   O2    P1   O3    P1   O4    O1   C1
+!BOND C1   H11    C1   H12   C1   H13
+!
+!IC O3   P1   O1   C1   0.0000    000.00    000.0     000.00    0.0000
+!IC O4   P1   O1   C1   0.0000    000.00    000.0     000.00    0.0000
+!IC O2   P1   O1   C1   0.0000    000.00    000.0     000.00    0.0000
+!IC H11  C1   O1   P1   0.0000    000.00    000.0     000.00    0.0000
+!IC H12  C1   O1   P1   0.0000    000.00    000.0     000.00    0.0000
+!IC H13  C1   O1   P1   0.0000    000.00    000.0     000.00    0.0000
+! dummy to analyze cetain angles
+!IC O3   P1   O4   O1   0.0         0.0       0.0       0.0     0.0
+
+!*********************
+!Patch Residue for attaching dianionic phosphate
+!In this patch we are adding the phosphate at the axial position of C1
+!*********************
+
+PRES DPH_A         -2.00 ! The phsophate is added to the axial group
+dele atom H1A            !  O-PO3 is added to C1; apply to THP2
+GROUP
+ATOM C1   CC311D    0.11 ! 
+ATOM H1B  HCA1      0.09 ! Equitorial Hydrogen
+ATOM O1   OC30P    -0.40 ! All the phosphate atom types have been borrowed from the 
+ATOM P1   PC        1.10 ! top_all27_lipid.rtf topology file
+ATOM O2   OC2DP    -0.90 ! 
+ATOM O3   OC2DP    -0.90 !	     H5A H5B
+ATOM O4   OC2DP    -0.90 !	       \/
+ATOM C5   CC321C    0.02 !	       C5-------O5
+ATOM H5A  HCA2      0.09 !	  H4A  /	 \   H1B
+ATOM H5B  HCA2      0.09 !	     \/ 	  \ /
+ATOM O5   OC3C61   -0.40 !	     C4 	  C1
+			 !	    / \ 	  /   \ 
+			 !	  H4B  \	 /      O1
+			 !		C3------C2  (-)	 |
+			 !		/\	/\   O4--P1--O3 (-)
+			 !	      H3A H3B H2A H2B	 |
+			 !				O2 (-)
+!                        !
+BOND C1 O1
+BOND O1 P1 O2 P1 O3 P1 O4 P1
+
+!Thermalized IC
+IC  C5   O5   C1   O1         1.4560  110.91   68.94  115.15   1.3655
+IC  O5   O1   *C1  H1B        1.4599  115.15 -120.56  109.91   1.1324
+IC  O5   C1   O1   P1         1.4599  115.15   97.33  121.23   1.6405
+IC  C1   O1   P1   O2         1.3655  121.23  153.36  102.74   1.5058
+IC  O1   O2   *P1  O3         1.6405  102.74  111.69  114.50   1.5585
+IC  O1   O2   *P1  O4         1.6405  102.74 -111.64  112.24   1.5030
+
+!*********************
+!Patch Residue for attaching dianionic phosphate
+!In this patch we are adding the phosphate at the equitorial position of C1
+!*********************
+
+PRES DPH_B         -2.00 ! The phsophate is added to the equitorial group
+dele atom H1B            !  O-PO3 is added to C1; apply to THP2
+GROUP
+ATOM C1   CC311D    0.11 ! 
+ATOM H1A  HCA1      0.09 ! axial Hydrogen
+ATOM O1   OC30P    -0.40 ! All the phosphate atom types have been borrowed from the 
+ATOM P1   PC        1.10 ! top_all27_lipid.rtf topology file
+ATOM O2   OC2DP    -0.90 ! 
+ATOM O3   OC2DP    -0.90 !			    O2(-)
+ATOM O4   OC2DP    -0.90 !	   H5A H5B     (-)  | 
+ATOM C5   CC321C    0.02 !	     \/ 	 O3-P1-O4(-)
+ATOM H5A  HCA2      0.09 !	     C5-------O5    |
+ATOM H5B  HCA2      0.09 !	H4A  /         \    O1
+ATOM O5   OC3C61   -0.40 !	   \/		\  /
+			 !	   C4		C1
+			 !	  / \		/ \ 
+			 !	H4B  \         /   H1A  
+			 !	      C3------C2	 
+			 !	      /\      /\	 
+			 !	    H3A H3B H2A H2B	 
+                         !
+BOND C1 O1
+BOND O1 P1 O2 P1 O3 P1 O4 P1
+
+!Thermalized IC
+IC  C5   O5   C1   O1         1.4281  112.18  172.29  110.68   1.4066
+IC  O5   O1   *C1  H1A        1.4357  110.68  109.11   99.38   1.1519
+IC  O5   C1   O1   P1         1.4357  110.68  108.53  128.86   1.6405
+IC  C1   O1   P1   O2         1.4066  128.86 -173.99   99.00   1.5251
+IC  O1   O2   *P1  O3         1.6405   99.00  110.81  112.21   1.5323
+IC  O1   O2   *P1  O4         1.6405   99.00 -112.66  112.82   1.5482
+
+!*********************
+! Adding the phosphates to cyclohexane, the phosphates are added 
+! to the C2 carbon and not to the C1 carbon as in the case of THP. 
+! In this patch phosphate is added to the axial position.
+!*********************
+
+PRES CHPHA          -1.00 ! The phsophate is added to the axial group
+dele atom H2A            !  O-PO3H is added to C2; apply to CYHX2
+GROUP
+ATOM C2   CC311D    0.01 ! 
+ATOM H2B  HCA1      0.09 ! Equitorial Hydrogen
+ATOM O1   OC30P    -0.62 ! All the phosphate atom types have been borrowed from the 
+ATOM P1   PC        1.50 ! top_all27_lipid.rtf topology file
+ATOM O2   OC312    -0.68 ! 
+ATOM O3   OC2DP    -0.82 !	   H5A  H5B  H5OA H5OB	  |    H5A H5B
+ATOM O4   OC2DP    -0.82 !	      \ /	\/	  |      \/
+ATOM H2   HCP1      0.34 !	       C5-------C5O	  |	C5-------O5
+                         !	  H4A  /	 \   H1B  | H4A  /	  \   H1B
+                         !	     \/ 	  \ /	  |    \/	   \ /
+                         !	     C4 	  C1	  |    C4	   C1
+                         !	    / \ 	  / \	  |   / \	   /   \ 
+			 !	  H4B  \	 /   H1A  | H4B  \	  /	 O1
+			 !		C3------C2 	  |	 C3------C2	  |
+			 !		/\	/\	  |	 /\	 /\   O4==P1==O3 (-)
+			 !	      H3A H3B  O1 H2B	  |    H3A H3B H2A H2B    |
+			 !		       |	  |			  O2
+			 !		   O4==P1==O3(-)  |			   \
+			 !		       |	  | 			    H2
+  			 !		       O2	
+			 !		        \	
+			 !			 H2
+BOND C2 O1
+BOND O1 P1 O2 P1 O3 P1 O4 P1
+BOND O2 H2
+
+!Thermalized IC
+IC  C5O  C1   C2   O1         1.5416  112.35  -78.20  109.11   1.3987
+IC  C1   O1   *C2  H2B        1.5568  109.11  120.34  110.30   1.1057
+IC  C1   C2   O1   P1         1.5568  109.11  -87.89  118.45   1.6239
+IC  C2   O1   P1   O2         1.3987  118.45 -176.89   90.38   1.5567
+IC  O1   O2   *P1  O3         1.6239   90.38  114.28  105.52   1.5304
+IC  O1   O2   *P1  O4         1.6239   90.38 -111.43  110.08   1.5252
+IC  O1   P1   O2   H2         1.6239   90.38   27.23  100.22   0.9790
+
+!*********************
+! Adding the phosphates to cyclohexane, the phosphates are added 
+! to the C2 carbon and not to the C1 carbon as in the case of THP. 
+! In this patch phosphate is added to the equitorial position.
+!*********************
+
+PRES CHPHB          -1.00 ! The phsophate is added to the equitorial group
+dele atom H2B            !  O-PO3H is added to C2; apply to CYHX2
+GROUP
+ATOM C2   CC311D    0.01 ! 
+ATOM H2A  HCA1      0.09 ! axial Hydrogen
+ATOM O1   OC30P    -0.62 ! All the phosphate atom types have been borrowed from the 
+ATOM P1   PC        1.50 ! top_all27_lipid.rtf topology file
+ATOM O2   OC312    -0.68 ! 
+ATOM O3   OC2DP    -0.82 !	   H5A  H5B  H5OA H5OB	  
+ATOM O4   OC2DP    -0.82 !	      \ /	\/	  
+ATOM H2   HCP1      0.34 !	       C5-------C5O	  
+                         !	  H4A  /	 \   H1B  
+                         !	     \/ 	  \ /	  
+                         !	     C4 	  C1	  
+                         !	    / \ 	  / \	  
+			 !	  H4B  \	 /   H1A  
+			 !		C3------C2 	  
+			 !		/\	/\	  
+			 !	      H3A H3B H1A O1 	  
+			 !		          |	  
+			 !		      O4==P1==O3(-)  
+			 !		          |	  
+  			 !		          O2	
+			 !		           \	
+			 !			    H2
+BOND C2 O1
+BOND O1 P1 O2 P1 O3 P1 O4 P1
+BOND O2 H2
+
+!Thermalized IC
+IC  C5O  C1   C2   O1         1.5681  108.70 -177.62  105.41   1.4032
+IC  C1   O1   *C2  H2A        1.5490  105.41 -116.28  107.56   1.1543
+IC  C1   C2   O1   P1         1.5490  105.41  -70.04  127.83   1.6634
+IC  C2   O1   P1   O2         1.4032  127.83  175.35   92.04   1.5992
+IC  O1   O2   *P1  O3         1.6634   92.04  108.70  112.55   1.5284
+IC  O1   O2   *P1  O4         1.6634   92.04 -108.48  113.68   1.5672
+IC  O1   P1   O2   H2         1.6634   92.04   17.38  110.00   0.9486
+
+!*********************
+! dianionic phosphate patch to cyclohexane, the phosphates are added 
+! to the C2 carbon and not to the C1 carbon as in the case of THP. 
+! In this patch the phosphate group is added to the axial position.
+!*********************
+
+PRES CHDPA         -2.00 ! The phsophate is added to the axial group
+dele atom H2A            !  O-PO3 is added to C2; apply to CYHX2
+GROUP
+ATOM C2   CC311D   -0.09 ! 
+ATOM H2B  HCA1      0.09 ! Equitorial Hydrogen
+ATOM O1   OC30P    -0.40 ! All the phosphate atom types have been borrowed from the 
+ATOM P1   PC        1.10 ! top_all27_lipid.rtf topology file
+ATOM O2   OC2DP    -0.90 ! 
+ATOM O3   OC2DP    -0.90 !	   H5A  H5B  H5OA H5OB	  |    H5A H5B
+ATOM O4   OC2DP    -0.90 !	      \ /	\/	  |      \/
+			 !	       C5-------C5O	  |	C5-------O5
+                         !	  H4A  /	 \   H1B  | H4A  /	  \   H1B
+                         !	     \/ 	  \ /	  |    \/	   \ /
+                         !	     C4 	  C1	  |    C4	   C1
+                         !	    / \ 	  / \	  |   / \	   /   \ 
+			 !	  H4B  \	 /   H1A  | H4B  \	  /	 O1
+			 !		C3------C2 	  |	 C3------C2  (-)  |
+			 !		/\	/\	  |	 /\	 /\   O4--P1--O3 (-)
+			 !	      H3A H3B  O1 H2B	  |    H3A H3B H2A H2B    |
+			 !		       |	  |			  O2(-)
+			 !		(-)O4--P1--O3(-)  |			   
+			 !		       |	  | 			   
+  			 !		       O2(-)
+			 !		        	
+BOND C2 O1
+BOND O1 P1 O2 P1 O3 P1 O4 P1
+
+!Thermalized IC
+IC  C5O  C1   C2   O1         1.5498  116.69  -69.52  108.10   1.3887
+IC  C1   O1   *C2  H2B        1.5506  108.10  116.34  109.76   1.0909
+IC  C1   C2   O1   P1         1.5506  108.10 -111.50  122.41   1.6642
+IC  C2   O1   P1   O2         1.3887  122.41 -172.81  106.99   1.5327
+IC  O1   O2   *P1  O3         1.6642  106.99  114.35  116.44   1.5605
+IC  O1   O2   *P1  O4         1.6642  106.99 -115.54  112.29   1.5247
+
+!*********************
+! dianionic phosphate patch to cyclohexane, the phosphates are added 
+! to the C2 carbon and not to the C1 carbon as in the case of THP. 
+! In this patch the phosphate group is added to the equitorial position.
+!*********************
+
+PRES CHDPB          -2.00 ! The phsophate is added to the equitorial group
+dele atom H2B            !  O-PO3 is added to C2; apply to CYHX2
+GROUP
+ATOM C2   CC311D   -0.09 ! 
+ATOM H2A  HCA1      0.09 ! axial Hydrogen
+ATOM O1   OC30P    -0.40 ! All the phosphate atom types have been borrowed from the 
+ATOM P1   PC        1.10 ! top_all27_lipid.rtf topology file
+ATOM O2   OC2DP    -0.90 ! 
+ATOM O3   OC2DP    -0.90 !	   H5A  H5B  H5OA H5OB	  
+ATOM O4   OC2DP    -0.90 !	      \ /	\/	  
+			 !	       C5-------C5O	  
+                         !	  H4A  /	 \   H1B  
+                         !	     \/ 	  \ /	  
+                         !	     C4 	  C1	  
+                         !	    / \ 	  / \	  
+			 !	  H4B  \	 /   H1A  
+			 !		C3------C2 	  
+			 !		/\	/\	  
+			 !	      H3A H3B H1A O1 	  
+			 !		          |	  
+			 !		   (-)O4--P1--O3(-)  
+			 !		          |	  
+  			 !		          O2(-)	
+			 !		          	
+			 !			   
+BOND C2 O1
+BOND O1 P1 O2 P1 O3 P1 O4 P1
+
+!Thermalized IC
+IC  C5O  C1   C2   O1         1.5364  112.47 -174.92  109.44   1.4102
+IC  C1   O1   *C2  H2A        1.5323  109.44 -120.96  109.46   1.1223
+IC  C1   C2   O1   P1         1.5323  109.44  -84.54  127.66   1.5968
+IC  C2   O1   P1   O2         1.4102  127.66 -174.21  102.94   1.5071
+IC  O1   O2   *P1  O3         1.5968  102.94  113.03  118.81   1.5471
+IC  O1   O2   *P1  O4         1.5968  102.94 -113.60  109.37   1.4811
+
+!******************
+!  Di phosphates
+!******************
+
+PRES P2HAA          -2.00 ! 
+dele atom H1A             
+dele atom H2A
+GROUP
+ATOM C1   CC311D    0.21 ! 
+ATOM H1B  HCA1      0.09 ! 
+ATOM O1   OC30P    -0.62 ! 
+ATOM P1   PC        1.50 !
+ATOM O2   OC312    -0.68 ! 
+ATOM O3   OC2DP    -0.82 !	     H5A H5B
+ATOM O4   OC2DP    -0.82 !	       \/
+ATOM H2   HCP1      0.34 !	       C5-------O5
+ATOM C5   CC321C    0.02 !	  H4A  /	 \   H1B
+ATOM H5A  HCA2      0.09 !	     \/ 	  \ /
+ATOM H5B  HCA2      0.09 !	     C4 	  C1
+ATOM O5   OC3C61   -0.40 !	    / \ 	  /   \ 
+			 !	  H4B  \	 /      O1
+                         !		C3------C2  	 |
+GROUP                    !		/\	/\   O4==P1==O3(-)
+ATOM C2	  CC311D    0.01 !	      H3A H3B O1A H2B	 |
+ATOM H2B  HCA1      0.09 !		       |      	O2
+ATOM O1A  OC30P    -0.62 !		  O4A==P2==O3A(-) \
+ATOM P2   PC        1.50 !		       |  	   H2
+ATOM O2A  OC312    -0.68 !                     O2A
+ATOM O3A  OC2DP    -0.82 !                      \
+ATOM O4A  OC2DP    -0.82 !                       H3
+ATOM H3   HCP1      0.34 !
+
+BOND C1 O1
+BOND O1 P1 O2 P1 O3 P1 O4 P1
+BOND O2 H2
+
+BOND C2 O1A
+BOND O1A P2 O2A P2 O3A P2 O4A P2
+BOND O2A H3
+
+!Thermalized IC
+IC  C5   O5   C1   O1         1.4282  115.23   62.90  110.07   1.4195
+IC  O5   O1   *C1  H1B        1.4271  110.07 -115.42  105.97   1.1319
+IC  O5   C1   O1   P1         1.4271  110.07   57.27  117.04   1.6373
+IC  C1   O1   P1   O2         1.4195  117.04 -178.66   78.79   1.5370
+IC  O1   O2   *P1  O3         1.6373   78.79  107.09  112.80   1.5582
+IC  O1   O2   *P1  O4         1.6373   78.79 -112.88  107.93   1.5166
+IC  O1   P1   O2   H2         1.6373   78.79   -0.06   97.73   0.9887
+IC  O1   C1   C2   O1A        1.4195  101.59  172.29  107.09   1.4581
+IC  C1   O1A  *C2  H2B        1.5620  107.09  124.33  116.74   1.1261
+IC  C1   C2   O1A  P2         1.5620  107.09 -114.48  111.86   1.6490
+IC  C2   O1A  P2   O2A        1.4581  111.86 -142.10   76.47   1.6332
+IC  O1A  O2A  *P2  O3A        1.6490   76.47  110.49  112.74   1.5305
+IC  O1A  O2A  *P2  O4A        1.6490   76.47 -113.06  108.88   1.4937
+IC  O1A  P2   O2A  H3         1.6490   76.47   17.07   99.28   0.9665
+
+!*********************
+
+PRES P2HAB          -2.00 ! 
+dele atom H1A             
+dele atom H2B             
+GROUP
+ATOM C1   CC311D    0.21 ! 
+ATOM H1B  HCA1      0.09 ! 
+ATOM O1   OC30P    -0.62 ! 
+ATOM P1   PC        1.50 ! 
+ATOM O2   OC312    -0.68 ! 
+ATOM O3   OC2DP    -0.82 !	     H5A H5B
+ATOM O4   OC2DP    -0.82 !	       \/
+ATOM H2   HCP1      0.34 !	       C5-------O5
+ATOM C5   CC321C    0.02 !	  H4A  /	 \   H1B
+ATOM H5A  HCA2      0.09 !	     \/ 	  \ /
+ATOM H5B  HCA2      0.09 !	     C4 	  C1
+ATOM O5   OC3C61   -0.40 !	    / \ 	  /   \ 
+			 !	  H4B  \	 /      O1
+                         !		C3------C2  	 |
+GROUP                    !		/\	/\   O4==P1==O3(-)
+ATOM C2	  CC311D    0.01 !	      H3A H3B O1A H2A	 |
+ATOM H2A  HCA1      0.09 !		       |      	O2
+ATOM O1A  OC30P    -0.62 !		  O4A==P1==O3A(-) \
+ATOM P2   PC        1.50 !		       |  	   H2
+ATOM O2A  OC312    -0.68 !                     O2A
+ATOM O3A  OC2DP    -0.82 !                      \
+ATOM O4A  OC2DP    -0.82 !                       H3
+ATOM H3   HCP1      0.34 !
+
+BOND C1 O1
+BOND O1 P1 O2 P1 O3 P1 O4 P1
+BOND O2 H2
+
+BOND C2 O1A
+BOND O1A P2 O2A P2 O3A P2 O4A P2
+BOND O2A H3
+
+!Thermalized IC
+IC  C5   O5   C1   O1         1.4123  111.30   56.44  112.83   1.3833
+IC  O5   O1   *C1  H1B        1.4305  112.83 -116.12  106.77   1.1639
+IC  O5   C1   O1   P1         1.4305  112.83   61.75  112.64   1.6157
+IC  C1   O1   P1   O2         1.3833  112.64  162.73   78.67   1.6270
+IC  O1   O2   *P1  O3         1.6157   78.67  110.11  111.56   1.5434
+IC  O1   O2   *P1  O4         1.6157   78.67 -108.49  113.38   1.5158
+IC  O1   P1   O2   H2         1.6157   78.67   -4.63   95.96   0.9275
+IC  O1   C1   C2   O1A        1.3833  113.03   49.13  119.38   1.4302
+IC  C1   O1A  *C2  H2A        1.6104  119.38 -127.92  116.43   1.1748
+IC  C1   C2   O1A  P2         1.6104  119.38  109.82  118.84   1.6437
+IC  C2   O1A  P2   O2A        1.4302  118.84  151.65   79.32   1.6151
+IC  O1A  O2A  *P2  O3A        1.6437   79.32  111.04  111.60   1.5482
+IC  O1A  O2A  *P2  O4A        1.6437   79.32 -110.83  111.70   1.5064
+IC  O1A  P2   O2A  H3         1.6437   79.32    0.86   99.84   0.9402
+
+!*********************
+
+PRES P2HBB          -2.00 ! 
+dele atom H1B             
+dele atom H2B             
+GROUP
+ATOM C1   CC311D    0.21 ! 
+ATOM H1A  HCA1      0.09 ! 
+ATOM O1   OC30P    -0.62 ! 
+ATOM P1   PC        1.50 ! 
+ATOM O2   OC312    -0.68 ! 
+ATOM O3   OC2DP    -0.82 !	     H5A H5B
+ATOM O4   OC2DP    -0.82 !	       \/
+ATOM H2   HCP1      0.34 !	       C5-------O5
+ATOM C5   CC321C    0.02 !	  H4A  /	 \   H1A
+ATOM H5A  HCA2      0.09 !	     \/ 	  \ /
+ATOM H5B  HCA2      0.09 !	     C4 	  C1
+ATOM O5   OC3C61   -0.40 !	    / \ 	  /   \ 
+			 !	  H4B  \	 /      O1
+                         !		C3------C2  	 |
+GROUP                    !		/\	/\   O4==P1==O3(-)
+ATOM C2	  CC311D    0.01 !	      H3A H3B O1A H2A	 |
+ATOM H2A  HCA1      0.09 !		       |      	O2
+ATOM O1A  OC30P    -0.62 !		  O4A==P1==O3A(-) \
+ATOM P2   PC        1.50 !		       |  	   H2
+ATOM O2A  OC312    -0.68 !                     O2A
+ATOM O3A  OC2DP    -0.82 !                      \
+ATOM O4A  OC2DP    -0.82 !                       H3
+ATOM H3   HCP1      0.34 !
+
+BOND C1 O1
+BOND O1 P1 O2 P1 O3 P1 O4 P1
+BOND O2 H2
+
+BOND C2 O1A
+BOND O1A P2 O2A P2 O3A P2 O4A P2
+BOND O2A H3
+
+!Thermalized IC
+IC  C5   O5   C1   O1         1.4437  115.80  167.55  107.74   1.4184
+IC  O5   O1   *C1  H1A        1.4723  107.74  112.27  106.11   1.1493
+IC  O5   C1   O1   P1         1.4723  107.74   84.92  113.86   1.6128
+IC  C1   O1   P1   O2         1.4184  113.86   90.78   91.30   1.6764
+IC  O1   O2   *P1  O3         1.6128   91.30  119.13  112.41   1.5141
+IC  O1   O2   *P1  O4         1.6128   91.30 -113.34  110.46   1.5144
+IC  O1   P1   O2   H2         1.6128   91.30  -35.67  106.61   0.9464
+IC  O1   C1   C2   O1A        1.4184  120.73  -57.27  109.92   1.3939
+IC  C1   O1A  *C2  H2A        1.5553  109.92 -113.45  111.07   1.1407
+IC  C1   C2   O1A  P2         1.5553  109.92  174.68  128.19   1.6454
+IC  C2   O1A  P2   O2A        1.3939  128.19  110.92   88.39   1.6055
+IC  O1A  O2A  *P2  O3A        1.6454   88.39  110.02  113.52   1.5245
+IC  O1A  O2A  *P2  O4A        1.6454   88.39 -113.23  111.25   1.5397
+IC  O1A  P2   O2A  H3         1.6454   88.39    7.99  106.81   0.9527
+
+!*********************
+
+PRES P2HBA          -2.00 !
+dele atom H1B
+dele atom H2A
+GROUP
+ATOM C1   CC311D    0.21 !
+ATOM H1A  HCA1      0.09 !
+ATOM O1   OC30P    -0.62 !
+ATOM P1   PC        1.50 !
+ATOM O2   OC312    -0.68 !
+ATOM O3   OC2DP    -0.82 !           H5A H5B
+ATOM O4   OC2DP    -0.82 !             \/
+ATOM H2   HCP1      0.34 !             C5-------O5
+ATOM C5   CC321C    0.02 !        H4A  /         \   H1A
+ATOM H5A  HCA2      0.09 !           \/           \ /
+ATOM H5B  HCA2      0.09 !           C4           C1
+ATOM O5   OC3C61   -0.40 !          / \           /   \
+                         !        H4B  \         /      O1
+                         !              C3------C2       |
+GROUP                    !              /\      /\   O4==P1==O3(-)
+ATOM C2   CC311D    0.01 !            H3A H3B O1A H2B    |
+ATOM H2B  HCA1      0.09 !                     |        O2
+ATOM O1A  OC30P    -0.62 !                O4A==P1==O3A(-) \
+ATOM P2   PC        1.50 !                     |           H2
+ATOM O2A  OC312    -0.68 !                     O2A
+ATOM O3A  OC2DP    -0.82 !                      \
+ATOM O4A  OC2DP    -0.82 !                       H3
+ATOM H3   HCP1      0.34 !
+
+BOND C1 O1
+BOND O1 P1 O2 P1 O3 P1 O4 P1
+BOND O2 H2
+
+BOND C2 O1A
+BOND O1A P2 O2A P2 O3A P2 O4A P2
+BOND O2A H3
+
+!Thermalized IC
+IC  C5   O5   C1   O1         1.4168  109.99  160.88  110.83   1.4214
+IC  O5   O1   *C1  H1A        1.4275  110.83  120.32  109.13   1.1208
+IC  O5   C1   O1   P1         1.4275  110.83  -69.97  115.66   1.6410
+IC  C1   O1   P1   O2         1.4214  115.66   80.54   91.08   1.5848
+IC  O1   O2   *P1  O3         1.6410   91.08  112.26  110.34   1.5219
+IC  O1   O2   *P1  O4         1.6410   91.08 -113.80  111.08   1.5199
+IC  O1   P1   O2   H2         1.6410   91.08  -28.53  102.00   0.9730
+IC  O1   C1   C2   O1A        1.4214  115.12   64.86  115.16   1.4317
+IC  C1   O1A  *C2  H2B        1.5832  115.16  119.48  109.95   1.1155
+IC  C1   C2   O1A  P2         1.5832  115.16 -168.70  120.38   1.6420
+IC  C2   O1A  P2   O2A        1.4317  120.38 -108.17   82.18   1.5834
+IC  O1A  O2A  *P2  O3A        1.6420   82.18  111.54  110.62   1.5188
+IC  O1A  O2A  *P2  O4A        1.6420   82.18 -111.53  111.20   1.5212
+IC  O1A  P2   O2A  H3         1.6420   82.18   -3.46   99.00   0.9711
+
+!*********************
+
+PRES PH2A          -1.00 ! 
+dele atom H2A            !            H5A H5B
+GROUP                    !              \/
+ATOM C2   CC311D    0.01 !              C5-------O5
+ATOM H2B  HCA1      0.09 !         H4A  /         \   H1B
+ATOM O1   OC30P    -0.62 !            \/           \ /
+ATOM P1   PC        1.50 !            C4           C1
+ATOM O2   OC312    -0.68 !           / \           / \
+ATOM O3   OC2DP    -0.82 !         H4B  \         /   H1A
+ATOM O4   OC2DP    -0.82 !               C3------C2   
+ATOM H2   HCP1      0.34 !               /\      /\   
+			 !             H3A H3B  O1 H2B
+			 !                       |            
+			 !                   O4==P1==O3(-)        
+			 !                       |            
+                         !                       O2
+                         !                        \
+                         !                         H2
+                         !  
+
+BOND C2 O1
+BOND O1 P1 O2 P1 O3 P1 O4 P1
+BOND O2 H2
+
+!Thermalized IC
+IC  O5   C1   C2   O1         1.4466  115.81  -68.25  112.45   1.4565
+IC  C1   O1   *C2  H2B        1.5413  112.45  122.90  110.29   1.0934
+IC  C1   C2   O1   P1         1.5413  112.45  -88.90  115.31   1.6176
+IC  C2   O1   P1   O2         1.4565  115.31  140.43   87.18   1.6056
+IC  O1   O2   *P1  O3         1.6176   87.18  111.89  108.49   1.5075
+IC  O1   O2   *P1  O4         1.6176   87.18 -110.46  116.26   1.5340
+IC  O1   P1   O2   H2         1.6176   87.18  -27.94  107.23   0.9329
+
+!*********************
+
+PRES PH2B          -1.00 !
+dele atom H2B            !       H5A H5B
+GROUP                    !         \/
+ATOM C2   CC311D    0.01 !         C5-------O5
+ATOM H2A  HCA1      0.09 !    H4A  /         \   H1B
+ATOM O1   OC30P    -0.62 !       \/           \ /
+ATOM P1   PC        1.50 !       C4           C1
+ATOM O2   OC312    -0.68 !      / \           / \
+ATOM O3   OC2DP    -0.82 !    H4B  \         /   H1A     
+ATOM O4   OC2DP    -0.82 !          C3------C2           
+ATOM H2   HCP1      0.34 !          /\      /\           
+                         !        H3A H3B  O1 H2B        
+                         !                  |            
+                         !              O4==P1==O3(-)    
+                         !                  |            
+                         !                  O2           
+                         !                   \           
+                         !                    H2         
+                         !      
+
+BOND C2 O1
+BOND O1 P1 O2 P1 O3 P1 O4 P1
+BOND O2 H2
+
+!Thermalized IC
+IC  O5   C1   C2   O1         1.4069  113.21 -179.48  115.05   1.4246
+IC  C1   O1   *C2  H2A        1.5523  115.05 -112.84  107.69   1.1244
+IC  C1   C2   O1   P1         1.5523  115.05  -60.42  126.59   1.5831
+IC  C2   O1   P1   O2         1.4246  126.59  178.54   87.53   1.5648
+IC  O1   O2   *P1  O3         1.5831   87.53  109.66  112.66   1.5278
+IC  O1   O2   *P1  O4         1.5831   87.53 -111.18  109.18   1.5039
+IC  O1   P1   O2   H2         1.5831   87.53    2.03  102.84   0.9870
+
+!*********************
+!Added by sai for modelling sulfate 
+!Patch Residue for attaching sulfate
+!In this patch we are adding the sulfate at the axial position of C1
+!*********************
+
+PRES SH_A         -1.00  ! 
+dele atom H1A            ! 
+GROUP
+ATOM C1   CC311D    0.01 ! 
+ATOM H1B  HCA1      0.09 !
+ATOM O1   OC30P    -0.28 ! 
+ATOM S1   SC        1.33 ! 
+ATOM O2   OC2DP    -0.65 ! 
+ATOM O3   OC2DP    -0.65 !	     H5A H5B
+ATOM O4   OC2DP    -0.65 !	       \/
+			 !	       C5-------O5
+ATOM C5   CC321C    0.02 !	  H4A  /	 \   H1B
+ATOM H5A  HCA2      0.09 !	     \/ 	  \ /
+ATOM H5B  HCA2      0.09 !	     C4 	  C1
+ATOM O5   OC3C61   -0.40 !	    / \ 	  /   \ 
+			 !	  H4B  \	 /      O1
+			 !		C3------C2  (-)	 |(+2)
+			 !		/\	/\   O4--S1--O3 (-)
+			 !	      H3A H3B H2A H2B	 |
+			 !				O2 (-)
+!                        !
+BOND C1 O1
+BOND O1 S1 O2 S1 O3 S1 O4 S1
+
+!Thermalized IC
+IC  C5  O5  C1   O1         1.4310  116.99   78.97  115.55   1.3813
+IC  O5  O1  *C1  H1B        1.4311  115.55 -119.64  114.20   1.1304
+IC  O5  C1  O1   S1         1.4311  115.55   79.86  115.54   1.5969
+IC  C1  O1  S1   O2         1.3813  115.54  168.67  102.54   1.4562
+IC  O1  O2  *S1  O3         1.5969  102.54  118.16  113.46   1.5020
+IC  O1  O2  *S1  O4         1.5969  102.54 -110.63  108.22   1.4480
+
+!*********************
+!Patch Residue for attaching sulfate
+!In this patch we are adding the sulfate at the axial position of C1
+!*********************
+
+PRES SH_B         -1.00  ! 
+dele atom H1B            ! 
+GROUP
+ATOM C1   CC311D    0.01 ! 
+ATOM H1A  HCA1      0.09 ! 
+ATOM O1   OC30P    -0.28 ! 
+ATOM S1   SC        1.33 ! 
+ATOM O2   OC2DP    -0.65 ! 
+ATOM O3   OC2DP    -0.65 !                          O2(-)       
+ATOM O4   OC2DP    -0.65 !			    |
+			 !	   H5A H5B     (-)  |(+2)   	   
+ATOM C5   CC321C    0.02 !	     \/ 	 O3-S1-O4(-)
+ATOM H5A  HCA2      0.09 !	     C5-------O5    |   	
+ATOM H5B  HCA2      0.09 !	H4A  /         \    O1  
+ATOM O5   OC3C61   -0.40 !	   \/		\  /
+			 !	   C4		C1 
+			 !	  / \		/ \ 	
+			 !	H4B  \         /   H1A 
+			 !	      C3------C2
+			 !	      /\      /\
+!                        !	    H3A H3B H2A H2B	 
+BOND C1 O1
+BOND O1 S1 O2 S1 O3 S1 O4 S1
+
+!Thermalized IC
+IC  C5  O5  C1   O1         1.4406  109.78  152.17  115.69   1.4053
+IC  O5  O1  *C1  H1A        1.4332  115.69  102.69   93.50   1.1611
+IC  O5  C1  O1   S1         1.4332  115.69   88.20  109.04   1.6159
+IC  C1  O1  S1   O2         1.4053  109.04 -158.88  104.33   1.4389
+IC  O1  O2  *S1  O3         1.6159  104.33  108.64  112.19   1.4409
+IC  O1  O2  *S1  O4         1.6159  104.33 -120.67  114.72   1.4475
+
+!*********************
+! Sulfate patch to cyclohexane, the sulfate is added to the 
+! C2 carbon and not to the C1 carbon as in the case of THP2. 
+!*********************
+
+PRES CHSHA         -1.00 ! 
+dele atom H2A            ! 
+GROUP
+ATOM C2   CC311D   -0.19 ! 
+ATOM H2B  HCA1      0.09 ! Equitorial Hydrogen
+ATOM O1   OC30P    -0.28 !
+ATOM S1   SC        1.33 ! 
+ATOM O2   OC2DP    -0.65 ! 
+ATOM O3   OC2DP    -0.65 !	   H5A  H5B  H5OA H5OB	  |    H5A H5B
+ATOM O4   OC2DP    -0.65 !	      \ /	\/	  |      \/
+			 !	       C5-------C5O	  |	C5-------O5
+                         !	  H4A  /	 \   H1B  | H4A  /	  \   H1B
+                         !	     \/ 	  \ /	  |    \/	   \ /
+                         !	     C4 	  C1	  |    C4	   C1
+                         !	    / \ 	  / \	  |   / \	   /   \ 
+			 !	  H4B  \	 /   H1A  | H4B  \	  /	 O1
+			 !		C3------C2 	  |	 C3------C2  (-)  |(+2)
+			 !		/\	/\	  |	 /\	 /\   O4--S1--O3 (-)
+			 !	      H3A H3B  O1 H2B	  |    H3A H3B H2A H2B    |
+			 !		       |(+2)	  |			  O2(-)
+			 !		(-)O4--S1--O3(-)  |			   
+			 !		       |	  | 			   
+  			 !		       O2(-)
+			 !		        	
+BOND C2 O1
+BOND O1 S1 O2 S1 O3 S1 O4 S1
+
+!Thermalized IC
+IC  C5O  C1   C2   O1         1.5440  109.55  -61.18  109.61   1.3756
+IC  C1   O1   *C2  H2B        1.5823  109.61  119.48  110.25   1.0740
+IC  C1   C2   O1   S1         1.5823  109.61 -108.10  124.06   1.5412
+IC  C2   O1   S1   O2         1.3756  124.06 -170.79  110.18   1.4689
+IC  O1   O2   *S1  O3         1.5412  110.18  115.90  110.99   1.4191
+IC  O1   O2   *S1  O4         1.5412  110.18 -113.88  109.72   1.4534
+
+
+!*********************
+! sulfate group is added to the equitorial position.
+!*********************
+
+PRES CHSHB          -1.00 ! 
+dele atom H2B            !  
+GROUP
+ATOM C2   CC311D   -0.19 ! 
+ATOM H2A  HCA1      0.09 ! 
+ATOM O1   OC30P    -0.28 ! 
+ATOM S1   SC        1.33 ! 
+ATOM O2   OC2DP    -0.65 ! 
+ATOM O3   OC2DP    -0.65 !	   H5A  H5B  H5OA H5OB	  
+ATOM O4   OC2DP    -0.65 !	      \ /	\/	  
+			 !	       C5-------C5O	  
+                         !	  H4A  /	 \   H1B  
+                         !	     \/ 	  \ /	  
+                         !	     C4 	  C1	  
+                         !	    / \ 	  / \	  
+			 !	  H4B  \	 /   H1A  
+			 !		C3------C2 	  
+			 !		/\	/\	  
+			 !	      H3A H3B H1A O1 	  
+			 !		          |(+2)	  
+			 !		   (-)O4--S1--O3(-)  
+			 !		          |	  
+  			 !		          O2(-)	
+			 !		          	
+			 !			   
+BOND C2 O1
+BOND O1 S1 O2 S1 O3 S1 O4 S1
+
+!Thermalized IC
+IC  C5O  C1   C2   O1         1.5681  109.22 -168.30  110.37   1.4193
+IC  C1   O1   *C2  H2A        1.5679  110.37 -118.19  108.04   1.1500
+IC  C1   C2   O1   S1         1.5679  110.37  -79.13  125.57   1.5912
+IC  C2   O1   S1   O2         1.4193  125.57 -173.80   98.45   1.4760
+IC  O1   O2   *S1  O3         1.5912   98.45  104.93  115.42   1.4071
+IC  O1   O2   *S1  O4         1.5912   98.45 -109.45  116.89   1.4224
+
+!*********************
+
+PRES SHOM          -0.80 ! The sulfate is added to C6   
+dele atom H5B               !                  OS2                                           
+                            !                  |                                             
+GROUP                       !              OS3-S1-OS4                                        
+ATOM C5   CC311C    0.110   !                  |                                             
+ATOM H5A  HCA1      0.09    !                  OS1                                           
+ATOM C6   CC321    -0.28    !                  |                                             
+ATOM H61  HCA2      0.090   !              H61-C6-H62                                        
+ATOM H62  HCA2      0.090   !                  |                                             
+ATOM OS1  OC30P    -0.28    !              H5A-C5------O5                                    
+ATOM S1   SC        1.33    !           H4A   /          \    H1B                            
+ATOM OS2  OC2DP    -0.65    !              \ /            \  /                               
+ATOM OS3  OC2DP    -0.65    !               C4             C1                                
+ATOM OS4  OC2DP    -0.65    !              / \            /  \                               
+                            !            H4B  \          /    H1A                            
+			    !                  C3------C2                                    
+			    !                  /\      /\                                    
+			    !                H3A H3B H2A H2B         	                
+			    !                                                	        
+                            !                                                                
+BOND C5 C6                       
+BOND C6 H61 C6 H62               
+BOND C6 OS1                      
+BOND OS1 S1 OS2 S1 OS3 S1 OS4 S1 
+
+!Thermalized IC
+IC   C2   C3  C4    C5         1.4900  110.86   51.81  111.20   1.5199
+IC   C6   O5  *C5   H5A        1.5514  109.15  114.44  106.87   1.0951
+IC   C6   C4  *C5   O5         1.5514  112.49  124.74  113.74   1.4277
+IC   OS1  H62 *C6   H61        1.4265  113.86  112.96  109.28   1.1586
+IC   OS1  C5  *C6   H62        1.4265  112.10  127.71  109.94   1.0972
+IC   C4   C5  C6    OS1        1.5199  112.49   52.86  112.10   1.4265
+IC   C5   OS1 *C6   H61        1.5514  112.10  116.99  101.72   1.1586
+IC   C5   OS1 *C6   H62        1.5514  112.10 -125.59  113.86   1.0972
+IC   C5   C6  OS1   S1         1.5514  112.10 -179.74  111.93   1.6431
+IC   C6   OS1 S1    OS2        1.4265  111.93  172.41  104.68   1.4202
+IC   OS1  OS2 *S1   OS3        1.6431  104.68  116.86  113.70   1.4534
+IC   OS1  OS2 *S1   OS4        1.6431  104.68 -110.72  111.01   1.4884
+
+
+PRES POEA           0.20 ! pram, make model compound 1-ethoxy-THP by adding axial 
+dele atom H1A            !  O-ethyl to C1; apply to THP2
+GROUP
+ATOM C1   CC311D    0.29 !
+ATOM H1B  HCA1      0.09 !
+ATOM OE   OC301    -0.36 !
+ATOM C6   CC321     0.00 !
+ATOM H61  HCA2      0.09 !
+ATOM H62  HCA2      0.09 !
+ATOM C7   CC331    -0.27 ! 
+ATOM H71  HCA3      0.09 !
+ATOM H72  HCA3      0.09 !
+ATOM H73  HCA3      0.09 !
+BOND OE C1  OE C6  C6 C7
+BOND C6 H61  C6 H62 
+BOND C7 H71  C7 H72  C7 H73
+!    I    J    K    L      R(IK)   T(IKJ)    PHI   T(JKL)   R(KL) (Thermalized IC)
+IC   OE   C1   O5   C5     1.3697  108.86   68.68  116.37   1.4397
+IC   O5   C1   OE   C6     1.4279  108.86   60.91  116.74   1.4512
+IC   C1   OE   C6   H61    1.3697  116.74   53.97  105.24   1.1186
+IC   C5   O5   C1   H1B    1.4397  116.37 -171.79  105.66   1.0872
+IC   H61  OE  *C6   H62    1.1186  105.24 -115.79  110.34   1.1048
+IC   C1   OE   C6   C7     1.3697  116.74  175.08  112.08   1.4895
+IC   OE   C6   C7   H71    1.4512  112.08   81.73  106.78   1.1072
+IC   H71  C6  *C7   H72    1.1072  106.78  116.68  109.17   1.1407
+IC   H73  C6  *C7   H72    1.1791  110.11 -123.76  109.17   1.1407
+
+
+PRES POEB           0.20 ! pram, make model compound 1-ethoxy-THP by adding equatorial 
+dele atom H1B            !  O-ethyl to C1; apply to THP2
+GROUP
+ATOM C1   CC311D    0.29 !
+ATOM H1A  HCA1      0.09 !
+ATOM OE   OC301    -0.36 !
+ATOM C6   CC321     0.00 !
+ATOM H61  HCA2      0.09 !
+ATOM H62  HCA2      0.09 !
+ATOM C7   CC331    -0.27 ! 
+ATOM H71  HCA3      0.09 !
+ATOM H72  HCA3      0.09 !
+ATOM H73  HCA3      0.09 !
+
+BOND OE C1  OE C6  C6 C7
+BOND C6 H61  C6 H62 
+BOND C7 H71  C7 H72  C7 H73
+!    I    J    K    L      R(IK)   T(IKJ)    PHI   T(JKL)   R(KL) (Thermalized IC)
+IC   OE   C1   O5   C5     1.3877  109.94  179.05  111.49   1.4773
+IC   O5   C1   OE   C6     1.4000  109.94   50.09  114.51   1.4195
+IC   C1   OE   C6   H61    1.3877  114.51   64.37  109.77   1.1110
+IC   C5   O5   C1   H1A    1.4773  111.49   60.14  108.74   1.0555
+IC   H61  OE  *C6   H62    1.1110  109.77 -116.22  114.54   1.1610
+IC   C1   OE   C6   C7     1.3877  114.51 -171.94  105.76   1.5887
+IC   OE   C6   C7   H71    1.4195  105.76   47.18  107.35   1.0932
+IC   H71  C6  *C7   H72    1.0932  107.35  122.35  108.56   1.0788
+IC   H73  C6  *C7   H72    1.0693  106.58 -115.60  108.56   1.0788
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! pyranose-furanose disaccharide model compound patches !
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+PRES OMEFB          0.00 ! pram; model compound 5b (raman et al.), OMe-THF add beta-O-methyl to C2; apply to THF2
+dele atom H2B            !
+GROUP
+ATOM C2   CC312D    0.29 !
+ATOM H2A  HCA1      0.09 !
+ATOM OM   OC301    -0.36 !
+ATOM CM   CC331    -0.09 ! 
+ATOM HM1  HCA3      0.09 !
+ATOM HM2  HCA3      0.09 !
+ATOM HM3  HCA3      0.09 !
+ATOM C5   CC322C    0.02 !
+ATOM H5A  HCA2C2    0.09 !
+ATOM H5B  HCA2C2    0.09 !
+ATOM O5   OC3C5M   -0.40 !
+BOND OM C2   OM CM  
+BOND CM HM1  CM HM2  CM HM3
+!    I    J    K    L      R(IK)   T(IKJ)    PHI   T(JKL)   R(KL)
+IC   OM   C2   O5   C5     1.4262  110.39 -132.64  111.11   1.4440
+IC   O5   C2   OM   CM     1.4608  110.39   37.67  111.87   1.4590
+IC   O5   C3  *C2   OM     1.4608  104.27  118.06  109.37   1.4262
+IC   C2   OM   CM   HM1    1.4262  111.87   75.44  111.66   1.1146
+IC   O5   OM  *C2   H2A    1.4608  110.39  120.87  110.17   1.0756
+IC   HM1  OM  *CM   HM2    1.1146  111.66  116.60  112.36   1.1028
+IC   HM3  OM  *CM   HM2    1.1382  106.78 -113.45  112.36   1.1028
+
+PRES OMEFA          0.00 ! pram; model compound 5a (raman et al.) OMe-THF add alpha-O-methyl to C2; apply to THF2
+dele atom H2A            !
+GROUP
+ATOM C2   CC312D    0.29 !
+ATOM H2B  HCA1      0.09 !
+ATOM OM   OC301    -0.36 !
+ATOM CM   CC331    -0.09 ! 
+ATOM HM1  HCA3      0.09 !
+ATOM HM2  HCA3      0.09 !
+ATOM HM3  HCA3      0.09 !
+ATOM C5   CC322C    0.02 !
+ATOM H5A  HCA2C2    0.09 !
+ATOM H5B  HCA2C2    0.09 !
+ATOM O5   OC3C5M   -0.40 !
+BOND OM C2  OM CM  
+BOND CM HM1  CM HM2  CM HM3
+!    I    J    K    L      R(IK)   T(IKJ)    PHI   T(JKL)   R(KL)
+IC   OM   C2   O5   C5     1.3890  117.62   96.68  108.36   1.4125
+IC   O5   C2   OM   CM     1.4182  117.62   72.05  117.33   1.4176 !phi
+IC   O5   C3   *C2  OM     1.4182  104.62 -126.40  108.61   1.3890
+IC   C2   OM   CM   HM1    1.3890  117.33   74.42  112.96   1.1873
+IC   C5   O5   C2   H2B    1.4125  108.36 -146.31  102.20   1.1158
+IC   HM1  OM  *CM   HM2    1.1873  112.96  123.66  111.70   1.0904
+IC   HM3  OM  *CM   HM2    1.0743  116.43 -115.60  111.70   1.0904
+
+PRES OM3FA          0.00 ! pram; make model compound 6 (raman et al.) (3-OMe-THF) by adding O-methyl to C3; apply to THF2
+dele atom H3A            !
+GROUP
+ATOM C3   CC312C    0.09 !
+ATOM H3B  HCA1      0.09 !
+ATOM OM   OC303    -0.36 !
+ATOM CM   CC331    -0.09 ! 
+ATOM HM1  HCA3      0.09 !
+ATOM HM2  HCA3      0.09 !
+ATOM HM3  HCA3      0.09 !
+BOND OM C3  OM CM  
+BOND CM HM1  CM HM2  CM HM3
+!    I    J    K    L      R(IK)   T(IKJ)    PHI   T(JKL)   R(KL)
+IC   OM   C3   C2   O5     1.4423  111.50  145.16  110.09   1.3943
+IC   C2   C3   OM   CM     1.4615  111.50   67.07  111.78   1.4313
+IC   C2   C4   *C3  OM     1.4615  101.47 -120.02  114.08   1.4423
+IC   C3   OM   CM   HM1    1.4423  111.78   80.41  110.06   1.0756
+IC   O5   C2   C3   H3B    1.3943  110.09  -89.94  112.82   1.0824
+IC   HM1  OM  *CM   HM2    1.0756  110.06  123.52  113.51   1.1208
+IC   HM3  OM  *CM   HM2    1.2034  115.51 -118.76  113.51   1.1208
+
+PRES PFAA           0.40 ! pram; model compound 1aa (raman et al.) THP2-O-THF2 apply to THP2,THF2
+dele atom 1H1A
+dele atom 2H2A
+GROUP
+ATOM 2C2  CC312D    0.29 !
+ATOM 1O11 OC302    -0.36 !
+ATOM 1C1  CC311D    0.29 !
+ATOM 1H1B HCA1      0.09 !
+ATOM 2H2B HCA1      0.09 !
+BOND 1O11 1C1  1O11 2C2  
+ACCE 1O11
+!    I    J    K    L      R(IK)   T(IKJ)    PHI   T(JKL)   R(KL) THERMALIZED
+IC   1C2  1O5 *1C1  1O11   1.5510  112.63  119.66  106.38   1.3630  
+IC   1O5  1C1  1O11 2C2    1.4439  106.38   71.59  113.52   1.4364 !phi
+IC   1C1  1O11 2C2  2O5    1.3630  113.52   61.37  107.48   1.4378 !psi
+IC   1O11 2C2  2O5  2C5    1.4364  107.48   89.10  111.56   1.5134  
+IC   1H1B 1O5 *1C1  1C2    1.0878  105.31  123.05  112.63   1.5510
+IC   2H2B 2O5 *2C2  1O11   1.0740  112.55 -116.05  107.48   1.4364
+
+PRES PFBA           0.40 ! pram; model compound 1ba (raman et al.) THP2-O-THF2 apply to THP2,THF2
+dele atom 1H1B
+dele atom 2H2A
+GROUP
+ATOM 2C2  CC312D    0.29 !
+ATOM 1O11 OC302    -0.36 !
+ATOM 1C1  CC311D    0.29 !
+ATOM 1H1A HCA1      0.09 !
+ATOM 2H2B HCA1      0.09 !
+BOND 1O11 1C1  1O11 2C2  
+ACCE 1O11
+!    I    J    K    L      R(IK)   T(IKJ)    PHI   T(JKL)   R(KL)
+IC   1C2  1O5 *1C1  1O11   1.5360  111.33 -122.30  108.74   1.4121
+IC   1O5  1C1  1O11 2C2    1.4501  108.74   56.96  113.69   1.4241 !phi
+IC   1C1  1O11 2C2  2O5    1.4121  113.69  108.56  109.48   1.4474 !psi
+IC   1O11 2C2  2O5  2C5    1.4241  109.48   81.20  113.97   1.4756
+IC   1H1A 1O5 *1C1  1C2    1.1622  100.94 -121.84  111.33   1.5360
+IC   2H2B  2O5 *2C2  1O11  1.1203  106.41 -120.94  109.48   1.4241
+
+PRES PFAB           0.40 ! pram; model compound 1ab (raman et al.) THP2-O-THF2 apply to THP2,THF2
+dele atom 1H1A
+dele atom 2H2B
+GROUP
+ATOM 2C2  CC312D    0.29 !
+ATOM 1O11 OC302    -0.36 !
+ATOM 1C1  CC311D    0.29 !
+ATOM 1H1B HCA1      0.09 !
+ATOM 2H2A HCA1      0.09 !
+BOND 1O11 1C1  1O11 2C2  
+ACCE 1O11
+!    I    J    K    L      R(IK)   T(IKJ)    PHI   T(JKL)   R(KL)
+IC   1C2  1O5 *1C1  1O11   1.5500  104.88  112.39  119.22   1.4034
+IC   1O5  1C1  1O11 2C2    1.4723  119.22   86.14  119.83   1.4283 !phi
+IC   1C1  1O11 2C2  2O5    1.4034  119.83   66.28  114.05   1.4624 !psi
+IC   1O11 2C2  2O5  2C5    1.4283  114.05 -143.91  110.27   1.4121
+IC   1H1B 1O5 *1C1  1C2    1.0673  113.85  121.01  104.88   1.5500
+IC   2H2A  2O5 *2C2  1O11  1.0471  111.86  125.94  114.05   1.4283
+
+PRES PFBB           0.40 ! pram; model compound 1bb (raman et al.) THP2-O-THF2 apply to THP2,THF2
+dele atom 1H1B
+dele atom 2H2B
+GROUP
+ATOM 2C2  CC312D    0.29 !
+ATOM 1O11 OC302    -0.36 !
+ATOM 1C1  CC311D    0.29 !
+ATOM 1H1A HCA1      0.09 !
+ATOM 2H2A HCA1      0.09 !
+BOND 1O11 1C1  1O11 2C2  
+ACCE 1O11
+!    I    J    K    L      R(IK)   T(IKJ)    PHI   T(JKL)   R(KL)
+IC   1C2  1O5 *1C1  1O11   1.5446  113.68 -132.00  111.60   1.4189
+IC   1O5  1C1  1O11 2C2    1.4232  111.60   89.26  123.35   1.4838 !phi 
+IC   1C1  1O11 2C2  2O5    1.4189  123.35   72.10  115.09   1.4352 !psi 
+IC   1O11 2C2  2O5  2C5    1.4838  115.09 -139.72  112.23   1.4335 
+IC   1H1A 1O5 *1C1  1C2    1.1282  107.59 -117.94  113.31   1.5517
+IC   2H2A 2O5 *2C2  1O11   1.1012  105.03  114.76  117.59   1.4175
+
+
+PRES COCFA          0.20 ! pram; model compound 2b (raman et al.), add -CH2-O-CH3 to C5; apply to THF2
+dele atom H5A            !
+ATOM C5   CC312C    0.11 !
+ATOM H5B  HCA1      0.09 !
+ATOM C6   CC321     0.00 ! 
+ATOM H61  HCA2      0.09 !
+ATOM H62  HCA2      0.09 !
+ATOM O1P  OC301    -0.36 !
+ATOM C1P  CC331    -0.09 ! 
+ATOM H11P HCA3      0.09 !
+ATOM H12P HCA3      0.09 !
+ATOM H13P HCA3      0.09 !
+BOND C5  C6
+BOND C6  H61  C6 H62  C6 O1P
+BOND O1P C1P
+BOND C1P H11P  C1P H12P  C1P H13P
+!    I    J    K    L      R(IK)   T(IKJ)    PHI   T(JKL)   R(KL)
+IC   C1P  O1P  C6   C5     1.3888  112.13 -175.22  105.16   1.4586
+IC   O1P  C6   C5   O5     1.4148  105.16 -163.59  108.02   1.4619
+IC   C6   C4  *C5   O5     1.4586  115.45 -119.50  105.95   1.4619
+IC   C6   O5  *C5   H5B    1.4586  108.02 -119.47  105.97   1.1555
+IC   O1P  C5  *C6   H61    1.4148  105.16  113.31  111.22   1.1326
+IC   H61  C5  *C6   H62    1.1326  111.22  123.63  106.71   1.1801
+IC   C6   O1P  C1P  H11P   1.4148  112.13   65.17  110.74   1.1107
+IC   H11P O1P *C1P  H12P   1.1107  110.74  113.46  105.59   1.1220
+IC   H13P O1P *C1P  H12P   1.0950  113.13 -117.42  105.59   1.1220
+
+PRES COCFB          0.20 ! pram; model compound 2a (raman et al.), add -CH2-O-CH3 to C5; apply to THF2
+dele atom H5B            !
+ATOM C5   CC312C    0.11 !
+ATOM H5A  HCA1      0.09 !
+ATOM C6   CC321     0.00 ! 
+ATOM H61  HCA2      0.09 !
+ATOM H62  HCA2      0.09 !
+ATOM O1P  OC301    -0.36 !
+ATOM C1P  CC331    -0.09 ! 
+ATOM H11P HCA3      0.09 !
+ATOM H12P HCA3      0.09 !
+ATOM H13P HCA3      0.09 !
+BOND C5  C6
+BOND C6  H61  C6 H62  C6 O1P
+BOND O1P C1P
+BOND C1P H11P  C1P H12P  C1P H13P
+!    I    J    K    L      R(IK)   T(IKJ)    PHI   T(JKL)   R(KL)
+IC   C1P  O1P  C6   C5     1.4328  110.66  175.35  106.09   1.5903 
+IC   O1P  C6   C5   O5     1.3578  106.09  157.99  110.58   1.4483
+IC   C6   C4  *C5   O5     1.5903  108.99  119.30  106.48   1.4483
+IC   C6   H5A  *C5  O5     1.5903  109.40 -121.74  110.13   1.4483
+IC   O1P  C5  *C6   H61    1.3578  106.09  118.03  119.23   1.117
+IC   H61  C5  *C6   H62    1.1170  119.23  124.31  105.47   1.1501
+IC   C6   O1P  C1P  H11P   1.3578  110.66   41.15  103.52   1.1297
+IC   H11P O1P *C1P  H12P   1.1297  103.52  123.44  113.67   1.0505
+IC   H13P O1P *C1P  H12P   1.1142  109.41 -117.61  113.67   1.0505
+
+PRES CHFAA          0.20 ! pram; model compound 4aa (raman et. al.), CYHX2-O-THF2, apply to CYHX2,THF2
+dele atom 1H2A
+dele atom 2H2A
+GROUP
+ATOM 2C2  CC312D    0.29 !
+ATOM 2H2B HCA1      0.09 !
+ATOM 1O11 OC301    -0.36 !
+ATOM 1C2  CC311C    0.09 !
+ATOM 1H2B HCA1      0.09 !
+BOND 1O11 1C2  1O11 2C2  
+ACCE 1O11
+IC   2O5  2C2  1O11 1C2    1.4540  110.47   56.72  116.77   1.4445 !psi
+IC   2C2  1O11 1C2  1C1    1.4270  116.77 -128.42  109.24   1.5358 !phi
+IC   1H2B 1C1 *1C2  1O11   1.1348  112.89  127.18  109.24   1.4445
+IC   1O11 2C2  2O5  2C5    1.4270  110.47   78.09  107.07   1.4761
+IC   2H2B 2O5 *2C2  1O11   1.1337  103.17 -116.99  110.47   1.4270
+
+
+PRES CHFBA          0.20 ! pram; model compound 4ba (raman et. al.), CYHX2-O-THF2, apply to CYHX2,THF2
+dele atom 1H2B
+dele atom 2H2A
+GROUP
+ATOM 2C2  CC312D    0.29 !
+ATOM 2H2B HCA1      0.09 !
+ATOM 1O11 OC301    -0.36 !
+ATOM 1C2  CC311C    0.09 !
+ATOM 1H2A HCA1      0.09 !
+BOND 1O11 1C2  1O11 2C2  
+ACCE 1O11
+IC   2O5  2C2  1O11 1C2    1.4602  117.40   75.76  116.64   1.4020 !psi
+IC   2C2  1O11 1C2  1C1    1.4042  116.64  166.98  106.23   1.5646 !phi
+IC   1H2A 1C1 *1C2  1C3    1.1396  105.05  114.39  113.20   1.5443
+IC   1H2A 1C1 *1C2  1O11   1.1396  105.05 -119.63  106.23   1.4020
+IC   1O11 2C2  2O5  2C5    1.4042  117.40   81.81  108.37   1.3613
+IC   2H2B 2O5 *2C2  1O11   1.1290  103.96 -118.53  117.40   1.4042
+
+PRES CHFAB          0.20 ! pram; model compound 4ab (raman et. al.), CYHX2-O-THF2, apply to CYHX2,THF2
+dele atom 1H2A
+dele atom 2H2B
+GROUP
+ATOM 2C2  CC312D    0.29 !
+ATOM 2H2A HCA1      0.09 !
+ATOM 1O11 OC301    -0.36 !
+ATOM 1C2  CC311C    0.09 !
+ATOM 1H2B HCA1      0.09 !
+BOND 1O11 1C2  1O11 2C2  
+ACCE 1O11
+IC   2O5  2C2  1O11 1C2    1.3721  117.42   54.65  116.24   1.4701 !psi
+IC   2C2  1O11 1C2  1C1    1.3640  116.24 -112.21  114.93   1.5708 !phi
+IC   1H2B 1C1 *1C2  1O11   1.1056  108.77  124.20  114.93   1.4701
+IC   1O11 2C2  2O5  2C5    1.3640  117.42 -145.86  111.37   1.4398
+IC   2H2A 2O5 *2C2  1O11   1.1253  105.07  111.93  117.42   1.3640
+
+
+PRES CHFBB          0.20 ! pram; model compound 4bb (raman et. al.), CYHX2-O-THF2, apply to CYHX2,THF2
+dele atom 1H2B
+dele atom 2H2B
+GROUP
+ATOM 2C2  CC312D    0.29 !
+ATOM 2H2A HCA1      0.09 !
+ATOM 1O11 OC301    -0.36 !
+ATOM 1C2  CC311C    0.09 !
+ATOM 1H2A HCA1      0.09 !
+BOND 1O11 1C2  1O11 2C2  
+ACCE 1O11
+IC   2O5  2C2  1O11 1C2    1.4211  121.43   73.18  118.14   1.4491 !psi
+IC   2C2  1O11 1C2  1C1    1.4038  118.14 -175.58  103.30   1.4881 !phi
+IC   1H2A 1C1 *1C2  1C3    1.1251  111.63  120.53  108.83   1.5483
+IC   1H2A 1C1 *1C2  1O11   1.1251  111.63 -119.95  103.30   1.4491
+IC   1O11 2C2  2O5  2C5    1.4038  121.43 -160.71  114.91   1.4268
+IC   2H2A 2O5 *2C2  1O11   1.1021  103.74  124.46  121.43   1.4038
+
+PRES PF3AA          0.20 ! pram; model compound 3aa (raman et. al.), apply to THP2,THF2
+dele atom 1H1A
+dele atom 2H3A
+GROUP
+ATOM 2C3  CC312C    0.09 !
+ATOM 2H3B HCA1      0.09 !
+ATOM 1O11 OC303    -0.36 !
+ATOM 1C1  CC311D    0.29 !
+ATOM 1H1B HCA1      0.09 !
+BOND 1O11 1C1  1O11 2C3  
+ACCE 1O11
+!    I    J    K    L      R(IK)   T(IKJ)    PHI   T(JKL)   R(KL)
+IC   1C2  1O5 *1C1  1O11   1.5189  107.98  124.05  106.47   1.4144
+IC   1O5  1C1  1O11 2C3    1.4263  106.47 -179.33  114.87   1.4273 !phi 
+IC   1C1  1O11 2C3  2C2    1.4144  114.87 -172.32  111.75   1.5129 !psi  
+IC   1O11 2C3  2C2  2O5    1.4273  111.75  158.04  100.93   1.4547
+IC   1H1B 1O5 *1C1  1C2    1.0524  107.99  118.20  107.98   1.5189
+IC   2H3B 2C2 *2C3  1O11   1.0863  110.11 -121.74  111.75   1.4273
+
+PRES PF3BA          0.20 ! pram; model compound 3ba (raman et. al.), apply to THP2,THF2
+dele atom 1H1B
+dele atom 2H3A
+GROUP
+ATOM 2C3  CC312C    0.09 !
+ATOM 2H3B HCA1      0.09 !
+ATOM 1O11 OC303    -0.36 !
+ATOM 1C1  CC311D    0.29 !
+ATOM 1H1A HCA1      0.09 !
+BOND 1O11 1C1  1O11 2C3
+ACCE 1O11
+!    I    J    K    L      R(IK)   T(IKJ)    PHI   T(JKL)   R(KL)
+IC   1C2  1O5 *1C1  1O11   1.4646  108.11 -116.50  106.68   1.4000
+IC   1O5  1C1  1O11 2C3    1.3967  106.68 -142.16  115.25   1.3990 !phi
+IC   1C1  1O11 2C3  2C2    1.4000  115.25  162.99  107.58   1.4712 !psi
+IC   1O11 2C3  2C2  2O5    1.3990  107.58  155.06  107.17   1.4128
+IC   1H1A 1O5 *1C1  1C2    1.1088  113.75 -125.78  108.11   1.4646
+IC   2H3B 2C2 *2C3  1O11   1.0656  111.58 -118.99  107.58   1.3990
+
+
+PRES PF3AB           0.20 ! pram; model compound 3ab (raman et. al.), apply to THP2,THF2
+dele atom 1H1A
+dele atom 2H3B
+GROUP
+ATOM 2C3  CC312C    0.09 !
+ATOM 2H3A HCA1      0.09 !
+ATOM 1O11 OC303    -0.36 !
+ATOM 1C1  CC311D    0.29 !
+ATOM 1H1B HCA1      0.09 !
+BOND 1O11 1C1  1O11 2C3  
+ACCE 1O11
+!    I    J    K    L      R(IK)   T(IKJ)    PHI   T(JKL)   R(KL)
+IC   1C2  1O5 *1C1  1O11   1.5725  109.62  127.88  110.48   1.4083
+IC   1O5  1C1  1O11 2C3    1.3789  110.48  150.28  120.77   1.4287 !phi
+IC   1C1  1O11 2C3  2C2    1.4083  120.77 -156.72  103.85   1.4845 !psi
+IC   1O11 2C3  2C2  2O5    1.4287  103.85  -75.61  110.28   1.3796
+IC   1H1B 1O5 *1C1  1C2    1.1026  103.31  116.57  109.62   1.5725
+IC   2H3A 2C2 *2C3  1O11   1.0941  116.55  125.04  103.85   1.4287
+
+PRES PF3BB          0.20 ! pram; model compound 3bb (raman et. al.), apply to THP2,THF2
+dele atom 1H1B
+dele atom 2H3B
+GROUP
+ATOM 2C3  CC312C    0.09 !
+ATOM 2H3A HCA1      0.09 !
+ATOM 1O11 OC303    -0.36 !
+ATOM 1C1  CC311D    0.29 !
+ATOM 1H1A HCA1      0.09 !
+BOND 1O11 1C1  1O11 2C3
+ACCE 1O11
+!    I    J    K    L      R(IK)   T(IKJ)    PHI   T(JKL)   R(KL)
+IC   1C2  1O5 *1C1  1O11   1.5729  105.20 -120.55  103.06   1.4073
+IC   1O5  1C1  1O11 2C3    1.4232  103.06  179.91  116.61   1.4537 !phi
+IC   1C1  1O11 2C3  2C2    1.4073  116.61 -174.40  107.06   1.4398 !psi
+IC   1O11 2C3  2C2  2O5    1.4537  107.06  -82.05  108.78   1.4051
+IC   1H1A 1O5 *1C1  1C2    1.1211  116.09 -125.13  105.20   1.5729
+IC   2H3A 2C2 *2C3  1O11   1.0361  111.98  125.34  107.06   1.4537
+
+
+END
+
+
+return

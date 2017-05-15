@@ -1,0 +1,259 @@
+* $Id: 00readme 34 2015-08-04 21:09:45Z alex $
+
+Toppar files for polarizable model based on the classical Drude
+oscillator.
+
+August 2015 release
+adm jr.
+
+Included are the toppar stream files to perform calculations with the
+classical Drude oscillator polarizable force field.  Each stream file
+includes both the topology and parameters for that class of compounds.
+In ALL cases the master file, toppar_drude_master_protein_2013c.str,
+must initally be streamed, followed by any additional files that are
+required.  The master file contains the water model, all ions and the
+proteins.
+
+See the test subdirectory for test cases.
+
+drude_may13b.doc contains the CHARMM Drude documentation
+
+Note: This is a force field in development and the coverage is limited.  For
+example, at this time only the lipids DPPC and DMPC are available.
+
+toppar_drude_master_protein_2013c.str: master file with water, ions
+and protein.  Must be read first in all cases.
+
+toppar_drude_carbohydrate_2013c.str: carbohydrates including polyols,
+hexapyranoses and furanoses.  No glycosidic linkages are currently
+available.
+
+toppar_drude_lipid_2013c.str: lipids (DPPC and DMPC only)
+
+toppar_drude_model_2013c.str: model compounds used for development of
+the majority of the nonbond parameters.  Note that model compounds
+specific for the indvidual classes molecules are included in the
+respective toppar stream files.
+
+toppar_drude_nucleic_acid_2013c.str: DNA only
+
+NOTE: These parameters are developmental and may change in future
+release of the Drude polarizabile force field.
+
+References
+
+Water
+
+SWM4-NDP, negative Drude (this will be the default model): Lamoureux,
+G., Harder, E., Vorobyov, I.V., Deng, Y., Roux, B. MacKerell, A.D.,
+Jr., A polarizable model of water for molecular dynamics simulations
+of biomolecules, Chemical Physics Letters, 2006, 418: 245-249.
+
+SWM6: Wenbo Yu, Pedro E. M. Lopes, Benoît Roux and Alexander
+D. MacKerell, Jr.  "Six-site Polarizable Model of Water Based on the
+Classical Drude Oscillator" Journal of Chemical Physics, 138: 034508,
+2013
+
+Proteins 
+
+Lopes, P.E.M., Huang, J., Shim, J., Luo, Y., Li, H., Roux, B., and
+MacKerell, A.D., Jr., “Polarizable Force Field for Peptides and
+Proteins based on the Classical Drude Oscillator,” Journal of
+Chemical Theory and Computation, 9: 5430–5449, 2013 DOI:
+10.1021/ct400781b, NIHMS53671
+
+Atomic ions
+
+Yu, H., Whitfield, T.W., Harder, E., Lamoureux, G., Vorobyov, I.,
+Anisimov, V. M., MacKerell, A.D., Jr., and Roux, B. “Simulating
+Monovalent and Divalent Ions in Aqueous Solution Using a Drude
+Polarizable Force Field, “Journal of Chemical Theory and Computation,
+6: 774–786, 2010
+
+Luo, Y., Jiang, W., Yu, H., MacKerell, A.D., Jr., and Roux, B.,
+“Simulation study of ion pairing in concentrated aqueous salt
+solutions with a polarizable force field,” Faraday Discussions, 160,
+135–149, 2013, PMC3695446
+
+Lipids
+
+Chowdhary, J., Harder, E., Lopes, P.E.M., MacKerell, Jr., A.D, and
+Roux, B., “A Polarizable Model for Phosphatidylcholine-Containing
+Biological Membranes,” Journal of Physical Chemistry, B.,117:
+9142-9160, 2013.
+
+Nucleic Acids
+
+Savelyev, A. and MacKerell, A.D., Jr., “All-Atom Polarizable Force
+Field for DNA Based on the Classical Drude Oscillator Model,” Journal
+of Computational Chemistry, 35: 1219-1239, 2014, DOI: 10.1002/jcc.23611
+
+Parameters for Monovaletn Ions-DNA Interactions
+Savelyev, A. and MacKerell, A.D., Jr., “Balancing the Interactions of Ions,
+Water, and DNA in the Drude Polarizable Force Field,” Journal
+of Physical Chemistry B, 118: 6742−6757, 2014, DOI: 10.1021/jp503469s
+
+Savelyev, A. and MacKerell, A.D., Jr., “Competition among Li+, Na+, K+, and Rb+
+Monovalent Ions for DNA in Molecular Dynamics Simulations Using the Additive CHARMM36
+and Drude Polarizable Force Fields,” Journal of Physical Chemistry B, 119: 4428−4440, 2015,
+DOI: 10.1021/acs.jpcb.5b00683
+
+Carbohydrates
+
+Hexapyranoses: Note that revisions to the hexapyranoses are ongoing
+
+Patel, D.S., He, X., and MacKerell, A.D., Jr.,
+“Polarizable Empirical Force Field for Hexopyranose Monosaccharides
+based on the Classical Drude Oscillator,” Journal of Physical
+Chemistry B., ASAP article, 2014, 10.1021/jp412696m, NIHMSID #566721
+
+polyalcohols
+
+He, X., Lopes, P.E.M., and MacKerell, A.D., Jr., “Polarizable
+Empirical Force Field for Acyclic Poly-Alcohols Based on the Classical
+Drude Oscillator,” Biopolymers, 99: 724-738 2013, DOI:
+10.1002/bip.22286
+
+furanoses
+
+Jana, M. and MacKerell, A.D., Jr., “CHARMM Drude Polarizable Force
+Field for Aldopentofuranoses and Methyl-aldopentofuranosides,” Journal
+of Physical Chemistry B, 119: 7846-7859, 2015, doi:
+10.1021/acs.jpcb.5b01767, PMC4483154
+
+Review
+
+Lopes, P.E.M., B. Roux, R., MacKerell, A.D., Jr. “Molecular modeling
+and dynamics studies with explicit inclusion of electronic
+polarizability. Theory and applications.” Theoretical Chemistry
+Accounts, 124:11-28, 2009, PMC2888514
+
+General method
+
+Anisimov, V.M., Lamoureux, G., Vorobyov, I.V., Huang, N.,
+Roux, B. and MacKerell, A.D., Jr. :Determination of Electrostatic
+Parameters for a Polarizable Force Field Based on the Classical Drude
+Oscillator," Journal of Chemical Theory and Computing, 1:153-168,
+2005.
+
+Water model (see POSTIVE DRUDE REFERENCES below)
+
+SWM4-NDP, negative Drude (this will be the default model): Lamoureux,
+G., Harder, E., Vorobyov, I.V., Deng, Y., Roux, B. MacKerell, A.D.,
+Jr., A polarizable model of water for molecular dynamics simulations
+of biomolecules, Chemical Physics Letters, 2006, 418: 245-249.
+
+SWM6: Wenbo Yu, Pedro E. M. Lopes, Benoît Roux and Alexander
+D. MacKerell, Jr.  "Six-site Polarizable Model of Water Based on the
+Classical Drude Oscillator" Journal of Chemical Physics, 138: 034508,
+2013
+
+Alkanes: 
+
+Igor V. Vorobyov, Victor M. Anisimov and Alexander D. MacKerell,
+Jr. "Polarizable Empirical Force Field for Alkanes Based on the
+Classical Drude Oscillator Model," Journal of Physical Chemistry B,
+109: 18988-18999, 2005.
+
+Anisotropic polarizability model:
+
+Harder, E., Anisimov, V.M., Vorobyov, I.V., Lopes, P.E., Noskov, S.,
+MacKerell, A.D., Jr.  and Roux, B. Atomic Level Anisotropy in the
+Electrostatic Modeling of Lone Pairs for a Polarizable Force Field
+based on the Classical Drude Oscillator, Journal of Chemical Theory
+and Computation, 2: 1587-1597, 2006
+
+Ethers:
+
+Vorobyov, I.V., Anisimov, V.M., Greene, S., Venable, R.M., Moser, A.,
+Pastor, R.W. and MacKerell, A.D., Jr., Additive and Classical Drude
+Polarizable Force Fields for Linear and Cyclic Ethers, Journal of
+Chemical Theory and Computation, 3: 1120-1133, 2007.
+
+Baker, C. and MacKerell, Jr. A.D., “Polarizability Rescaling and
+atom-based Thole Scaling in the CHARMM Drude Polarizable Force Field
+for Ethers” Journal of Molecular Modeling, 16: 567-576, 2010,
+PMC2818097
+
+Sulfur containing compounds
+
+Zhu, X. and MacKerell, A.D., Jr. “Polarizable Empirical Force Field
+for Sulfur-Containing Compounds Based on the Classical Drude
+Oscillator Model,” Journal of Computational Chemistry, 12: 2330-2341,
+2010. PMC2923574
+
+Alcohols:
+
+Anisimov, V.M., Vorobyov, I.V., Roux, B., and MacKerell, A.D., Jr.
+Polarizable empirical force field for the primary and secondary
+alcohol series based on the classical Drude model. Journal of Chemical
+Theory and Computation, 3, 1927-1946, 2007.
+
+Amides:
+
+Harder, E., Anisimov, V.M., Whitfield, T., MacKerell, A.D., Jr., Roux,
+B. "Understanding the Dielectric Properties of Liquid Amides from a
+Polarizable Force Field," Journal of Physical Chemistry,
+112:3509-3521. 2008, PMID: 18302362
+
+Amide model used in 2013 protein FF
+
+Lin, B., Lopes, P.E.M., Roux, B., and MacKerell, A.D., Jr.,
+“Kirkwood-Buff Analysis of Aqueous N-Methylacetamide and Acetamide
+Solutions Modeled by the CHARMM Additive and Drude Polarizable Force
+Fields,” Journal of Chemical Physics, 139: 084509, 2013, PMC3772949
+
+Aromatics:
+
+Lopes, P., Lamoureux, G., Roux, B., MacKerell, A.D., Jr., "Polarizable
+Empirical Force Field for Aromatic Compounds Based on the Classical
+Drude Oscillator," Journal of Physical Chemistry, B. 111:2873-2885,
+2007
+
+Heterocycles
+
+Lopes, P.E.M., Lamoureux, G., MacKerell, A.D., Jr., “Polarizable
+Empirical Force Field for Nitrogen-containing Heteroaromatic Compounds
+Based on the Classical Drude Oscillator” Journal of Computational
+Chemistry, 30: 1821-1838, 2009, PMC251901
+
+Nucleic Acid Bases
+
+Baker, C.M., Anisimov, V.M., and MacKerell, A.D., Jr., “Development of
+CHARMM Polarizable Force Field for Nucleic Acid Bases Based on the
+Classical Drude Oscillator Model,” Journal of Physical Chemistry,
+B. 115; 580–596, 2011, PMC3166616
+
+Polyalcohols
+
+He, X., Lopes, P.E.M., and MacKerell, A.D., Jr., “Polarizable
+Empirical Force Field for Acyclic Poly-Alcohols Based on the Classical
+Drude Oscillator,” Biopolymers, 99: 724-738 2013, DOI:
+10.1002/bip.22286
+
+Atomic Ions
+
+Yu, H., Whitfield, T.W., Harder, E., Lamoureux, G., Vorobyov, I.,
+Anisimov, V. M., MacKerell, A.D., Jr., and Roux, B. “Simulating
+Monovalent and Divalent Ions in Aqueous Solution Using a Drude
+Polarizable Force Field, “Journal of Chemical Theory and Computation,
+6: 774–786, 2010
+
+Luo, Y., Jiang, W., Yu, H., MacKerell, A.D., Jr., and Roux, B.,
+“Simulation study of ion pairing in concentrated aqueous salt
+solutions with a polarizable force field,” Faraday Discussions, 160,
+135–149, 2013,PMC3695446
+
+POSTIVE DRUDE REFERENCES
+
+SWM4-DP, positive Drude (works with ions of Lamoureux and Roux):
+Lamoureux, G., MacKerell, A.D., Jr., Roux, B. "A simple polarizable
+model of water based on classical Drude oscillators," Journal of
+Chemical Physics, 119: 5185-5197, 2003
+
+Ions
+
+Lamoureux, G.; Roux, B. Absolute Hydration Free Energy Scale for
+Alkali and Halide Ions Established from Simulations with a Polarizable
+Force Field, J. Phys. Chem. B 2006, 110, 3308
+

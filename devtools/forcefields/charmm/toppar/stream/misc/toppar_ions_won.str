@@ -1,0 +1,575 @@
+* top_ions_won.str: general model for mono-, di-, and trivalent cations
+*
+
+!This is a comprehensive set of ions developed using stochastic boundary
+!conditions. It is strongly recommended that ion parameters in 
+!toppar_water_ions.str be used if available, as they are more highly
+!optimized.  Accordingly, those ions have been commented in this
+!file.
+!
+!reference
+!Won, Y., "Force Field for Monovalent, Divalent, and Trivalent Cations
+!Developed under the Solvent Boundary Potential," Journal of Physical 
+!Chemistry A., 116: 11763-11767, 2012.
+
+
+!test "append" to determine if previous toppar files have been read and
+!add append to "read rtf card" if true
+set nat ?NATC
+set app
+!We're exploiting what is arguably a bug in the parser. On the left hand side,
+!the quotes have priority, so NAT is correctly substituted. On the right hand
+!side, the ? has priority and NATC" (sic) is not a valid substitution...
+if "@NAT" ne "?NATC" if @nat ne 0 set app append
+
+read rtf card @app
+* Topology for water and ions
+*
+37 1
+
+! J. Phys. Chem. B Supporting Information, October 12, 2012
+!Mass 301 Li1p   6.940  Li ! Lithium
+!Mass 302 Na1p  22.990  Na ! Sodium
+!Mass 303 K1p   39.098  K  ! Potassium
+!Mass 304 Rb1p  85.468  Rb ! Rubidium
+!Mass 305 Cs1p 132.91   Cs ! Cesium
+Mass 306 Cu1p  63.546  Cu ! Copper
+Mass 307 Ag1p 107.87   Ag ! Silver
+Mass 308 Au1p 196.97   Au ! Gold
+Mass 309 Ti1p  47.867  Ti ! Titanium
+Mass 321 Be2p   9.0122 Be ! Beryllium
+!Mass 322 Mg2p  24.305  Mg ! Magnesium
+!Mass 323 Ca2p  40.078  Ca ! Calcium
+Mass 324 Sr2p  87.62   Sr ! Strontium
+!Mass 325 Ba2p 137.33   Ba ! Barium
+Mass 326 Ra2p 226.03   Ra ! Radium
+Mass 327 V2p   50.942  V  ! Vanadium
+Mass 328 Cr2p  51.996  Cr ! Chromium
+Mass 329 Mn2p  54.938  Mn ! Manganese
+Mass 330 Fe2p  55.854  Fe ! Iron
+Mass 331 Co2p  58.933  Co ! Cobalt
+Mass 332 Ni2p  58.693  Ni ! Nickel
+Mass 333 Cu2p  63.546  Cu ! Copper
+!Mass 334 Zn2p  65.38   Zn ! Zinc
+Mass 335 Pd2p 106.42   Pd ! Palladium
+Mass 336 Ag2p 107.87   Ag ! Silver
+!Mass 337 Cd2p 112.41   Cd ! Cadmium
+Mass 338 Sn2p 118.71   Sn ! Tin
+Mass 339 Pt2p 195.08   Pt ! Platinum
+Mass 340 Hg2p 200.59   Hg ! Mercury
+Mass 341 Pb2p 207.20   Pb ! Lead
+Mass 342 Sm2p 150.36   Sm ! Samarium
+Mass 343 Eu2p 151.96   Eu ! Europium
+Mass 344 Yb2p 173.05   Yb ! Ytterbium
+Mass 351 Al3p 26.982   Al ! Aluminum
+Mass 352 Sc3p 44.956   Sc ! Scandium
+Mass 353 Y3p  88.906   Y  ! Yttrium
+Mass 354 La3p 138.91   La ! Lanthanum
+Mass 355 Ce3p 140.12   Ce ! Cerium
+Mass 356 Pr3p 140.91   Pr ! Praseodynium
+Mass 357 Nd3p 144.24   Nd ! Neodynium
+Mass 358 Pm3p 144.91   Pm ! Promethium
+Mass 359 Sm3p 150.36   Sm ! Samarium
+Mass 360 Eu3p 151.96   Eu ! Europium
+Mass 361 Gd3p 157.25   Gd ! Gadolinium
+Mass 362 Tb3p 158.93   Tb ! Terbium
+Mass 363 Dy3p 162.50   Dy ! Dysprosium
+Mass 364 Ho3p 164.93   Ho ! Holmium
+Mass 365 Er3p 167.28   Er ! Erbium
+Mass 366 Tm3p 168.93   Tm ! Thulium
+Mass 367 Yb3p 173.05   Yb ! Ytterbium
+Mass 368 Lu3p 174.97   Lu ! Lutetium
+Mass 369 U3p  238.03   U  ! Uranium
+Mass 370 Pu3p 244.06   Pu ! Plutonium
+Mass 371 Ti3p  47.867  Ti ! Titanium
+Mass 372 V3p   50.942  V  ! Vanadium
+Mass 373 Cr3p  51.996  Cr ! Chromium
+Mass 374 Mn3p  54.938  Mn ! Manganese
+Mass 375 Fe3p  55.854  Fe ! Iron
+Mass 376 Co3p  58.933  Co ! Cobalt
+Mass 377 Ga3p  69.723  Ga ! Gallium
+Mass 378 Rh3p 102.91   Rh ! Rhodium
+Mass 379 In3p 114.82   In ! Indium
+Mass 380 Au3p 196.97   Au ! Gold
+Mass 381 Tl3p 204.38   Tl ! Thallium
+Mass 382 Bi3p 208.98   Bi ! Bismuth
+
+default first none last none
+
+!RESI Li1p 1.00 ! Lithium +1 ion
+!GROUP
+!ATOM Li1p Li1p 1.00
+!PATCH FIRST NONE LAST NONE
+
+!RESI Na1p 1.00 ! Sodium +1 ion
+!GROUP
+!ATOM Na1p Na1p 1.00
+!PATCH FIRST NONE LAST NONE
+
+!RESI K1p 1.00 ! Potassium +1 ion
+!GROUP
+!ATOM K1p K1p 1.00
+!PATCH FIRST NONE LAST NONE
+
+!RESI Rb1p 1.00 ! Rubidium +1 ion
+!GROUP
+!ATOM Rb1p Rb1p 1.00
+!PATCH FIRST NONE LAST NONE
+
+!RESI Cs1p 1.00 ! Cesium +1 ion
+!GROUP
+!ATOM Cs1p Cs1p 1.00
+!PATCH FIRST NONE LAST NONE
+
+RESI Cu1p 1.00 ! Copper +1 ion
+GROUP
+ATOM Cu1p Cu1p 1.00
+PATCH FIRST NONE LAST NONE
+
+RESI Ag1p 1.00 ! Silver +1 ion
+GROUP
+ATOM Ag1p Ag1p 1.00
+PATCH FIRST NONE LAST NONE
+
+RESI Au1p 1.00 ! Gold +1 ion
+GROUP
+ATOM Au1p Au1p 1.00
+PATCH FIRST NONE LAST NONE
+
+RESI Ti1p 1.00 ! Titanium +1 ion
+GROUP
+ATOM Ti1p Ti1p 1.00
+PATCH FIRST NONE LAST NONE
+
+RESI Be2P 2.00 ! Beryllium +2 ion
+GROUP
+ATOM Be2p Be2p 2.00
+PATCH FIRST NONE LAST NONE
+
+!RESI Mg2P 2.00 ! Magnesium +2 ion
+!GROUP
+!ATOM Mg2p Mg2p 2.00
+!PATCH FIRST NONE LAST NONE
+
+!RESI Ca2p 2.00 ! Calcium +2 ion
+!GROUP
+!ATOM Ca2p Ca2p 2.00
+!PATCH FIRST NONE LAST NONE
+
+RESI Sr2p 2.00 ! Strontium +2 ion
+GROUP
+ATOM Sr2p Sr2p 2.00
+PATCH FIRST NONE LAST NONE
+
+!RESI Ba2p 2.00 ! Barium +2 ion
+!GROUP
+!ATOM Ba2p Ba2p 2.00
+!PATCH FIRST NONE LAST NONE
+
+RESI Ra2p 2.00 ! Radium +2 ion
+GROUP
+ATOM Ra2p Ra2p 2.00
+PATCH FIRST NONE LAST NONE
+
+RESI V2p 2.00 ! Vanadium +2 ion
+GROUP
+ATOM V2p V2p 2.00
+PATCH FIRST NONE LAST NONE
+
+RESI Cr2p 2.00 ! Chromium +2 ion
+GROUP
+ATOM Cr2p Cr2p 2.00
+PATCH FIRST NONE LAST NONE
+
+RESI Mn2p 2.00 ! Manganese +2 ion
+GROUP
+ATOM Mn2p Mn2p 2.00
+PATCH FIRST NONE LAST NONE
+
+RESI Fe2p 2.00 ! Iron +2 ion
+GROUP
+ATOM Fe2p Fe2p 2.00
+PATCH FIRST NONE LAST NONE
+
+RESI Co2p 2.00 ! Cobalt +2 ion
+GROUP
+ATOM Co2p Co2p 2.00
+PATCH FIRST NONE LAST NONE
+
+RESI Ni2p 2.00 ! Nickel +2 ion
+GROUP
+ATOM Ni2p Ni2p 2.00
+PATCH FIRST NONE LAST NONE
+
+RESI Cu2p 2.00 ! Copper +2 ion
+GROUP
+ATOM Cu2p Cu2p 2.00
+PATCH FIRST NONE LAST NONE
+
+!RESI Zn2p 2.00 ! Zinc +2 ion
+!GROUP
+!ATOM Zn2p Zn2p 2.00
+!PATCH FIRST NONE LAST NONE
+
+RESI Pd2p 2.00 ! Palladium +2 ion
+GROUP
+ATOM Pd2p Pd2p 2.00
+PATCH FIRST NONE LAST NONE
+
+RESI Ag2p 2.00 ! Silver +2 ion
+GROUP
+ATOM Ag2p Ag2p 2.00
+PATCH FIRST NONE LAST NONE
+
+!RESI Cd2p 2.00 ! Cadmium +2 ion
+!GROUP
+!ATOM Cd2p Cd2p 2.00
+!PATCH FIRST NONE LAST NONE
+
+RESI Sn2p 2.00 ! Tin +2 ion
+GROUP
+ATOM Sn2p Sn2p 2.00
+PATCH FIRST NONE LAST NONE
+
+RESI Pt2p 2.00 ! Platinum +2 ion
+GROUP
+ATOM Pt2p Pt2p 2.00
+PATCH FIRST NONE LAST NONE
+
+RESI Hg2p 2.00 ! Mercury +2 ion
+GROUP
+ATOM Hg2p Hg2p 2.00
+PATCH FIRST NONE LAST NONE
+
+RESI Pb2p 2.00 ! Lead +2 ion
+GROUP
+ATOM Pb2p Pb2p 2.00
+PATCH FIRST NONE LAST NONE
+
+RESI Sm2p 2.00 ! Samarium +2 ion
+GROUP
+ATOM Sm2p Sm2p 2.00
+PATCH FIRST NONE LAST NONE
+
+RESI Eu2p 2.00 ! Europium +2 ion
+GROUP
+ATOM Eu2p Eu2p 2.00
+PATCH FIRST NONE LAST NONE
+
+RESI Yb2p 2.00 ! Ytterbium +2 ion
+GROUP
+ATOM Yb2p Yb2p 2.00
+PATCH FIRST NONE LAST NONE
+
+RESI Al3p 3.00 ! Aluminum +3 ion
+GROUP
+ATOM Al3p Al3p 3.00
+PATCH FIRST NONE LAST NONE
+
+RESI Sc3p 3.00 ! Scandium +3 ion
+GROUP
+ATOM Sc3p Sc3p 3.00
+PATCH FIRST NONE LAST NONE
+
+RESI Y3p 3.00 ! Yttrium +3 ion
+GROUP
+ATOM Y3p Y3p 3.00
+PATCH FIRST NONE LAST NONE
+
+RESI La3p 3.00 ! Lanthanum +3 ion
+GROUP
+ATOM La3p La3p 3.00
+PATCH FIRST NONE LAST NONE
+
+RESI Ce3p 3.00 ! Cerium +3 ion
+GROUP
+ATOM Ce3p Ce3p 3.00
+PATCH FIRST NONE LAST NONE
+
+RESI Pr3p 3.00 ! Praseodynium +3 ion
+GROUP
+ATOM Pr3p Pr3p 3.00
+PATCH FIRST NONE LAST NONE
+
+RESI Nd3p 3.00 ! Neodynium +3 ion
+GROUP
+ATOM Nd3p Nd3p 3.00
+PATCH FIRST NONE LAST NONE
+
+RESI Pm3p 3.00 ! Promethium +3 ion
+GROUP
+ATOM Pm3p Pm3p 3.00
+PATCH FIRST NONE LAST NONE
+
+RESI Sm3p 3.00 ! Samarium +3 ion
+GROUP
+ATOM Sm3p Sm3p 3.00
+PATCH FIRST NONE LAST NONE
+
+RESI Eu3p 3.00 ! Europium +3 ion
+GROUP
+ATOM Eu3p Eu3p 3.00
+PATCH FIRST NONE LAST NONE
+
+RESI Gd3p 3.00 ! Gadolinium +3 ion
+GROUP
+ATOM Gd3p Gd3p 3.00
+PATCH FIRST NONE LAST NONE
+
+RESI Tb3p 3.00 ! Terbium +3 ion
+GROUP
+ATOM Tb3p Tb3p 3.00
+PATCH FIRST NONE LAST NONE
+
+RESI Dy3p 3.00 ! Dysprosium +3 ion
+GROUP
+ATOM Dy3p Dy3p 3.00
+PATCH FIRST NONE LAST NONE
+
+RESI Ho3p 3.00 ! Holmium +3 ion
+GROUP
+ATOM Ho3p Ho3p 3.00
+PATCH FIRST NONE LAST NONE
+
+RESI Er3p 3.00 ! Erbium +3 ion
+GROUP
+ATOM Er3p Er3p 3.00
+PATCH FIRST NONE LAST NONE
+
+RESI Tm3p 3.00 ! Thulium +3 ion
+GROUP
+ATOM Tm3p Tm3p 3.00
+PATCH FIRST NONE LAST NONE
+
+RESI Yb3p 3.00 ! Ytterbium +3 ion
+GROUP
+ATOM Yb3p Yb3p 3.00
+PATCH FIRST NONE LAST NONE
+
+RESI Lu3p 3.00 ! Lutetium +3 ion
+GROUP
+ATOM Lu3p Lu3p 3.00
+PATCH FIRST NONE LAST NONE
+
+RESI U3p 3.00 ! Uranium +3 ion
+GROUP
+ATOM U3p U3p 3.00
+PATCH FIRST NONE LAST NONE
+
+RESI Pu3p 3.00 ! Plutonium +3 ion
+GROUP
+ATOM Pu3p Pu3p 3.00
+PATCH FIRST NONE LAST NONE
+
+RESI Ti3p 3.00 ! Titanium +3 ion
+GROUP
+ATOM Ti3p Ti3p 3.00
+PATCH FIRST NONE LAST NONE
+
+RESI V3p 3.00 ! Vanadium +3 ion
+GROUP
+ATOM V3p V3p 3.00
+PATCH FIRST NONE LAST NONE
+
+RESI Cr3p 3.00 ! Chromium +3 ion
+GROUP
+ATOM Cr3p Cr3p 3.00
+PATCH FIRST NONE LAST NONE
+
+RESI Mn3p 3.00 ! Manganese +3 ion
+GROUP
+ATOM Mn3p Mn3p 3.00
+PATCH FIRST NONE LAST NONE
+
+RESI Fe3p 3.00 ! Iron +3 ion
+GROUP
+ATOM Fe3p Fe3p 3.00
+PATCH FIRST NONE LAST NONE
+
+RESI Co3p 3.00 ! Cobalt +3 ion
+GROUP
+ATOM Co3p Co3p 3.00
+PATCH FIRST NONE LAST NONE
+
+RESI Ga3p 3.00 ! Gallium +3 ion
+GROUP
+ATOM Ga3p Ga3p 3.00
+PATCH FIRST NONE LAST NONE
+
+RESI Rh3p 3.00 ! Rhodium +3 ion
+GROUP
+ATOM Rh3p Rh3p 3.00
+PATCH FIRST NONE LAST NONE
+
+RESI In3p 3.00 ! Indium +3 ion
+GROUP
+ATOM In3p In3p 3.00
+PATCH FIRST NONE LAST NONE
+
+RESI Au3p 3.00 ! Gold +3 ion
+GROUP
+ATOM Au3p Au3p 3.00
+PATCH FIRST NONE LAST NONE
+
+RESI Tl3p 3.00 ! Thallium +3 ion
+GROUP
+ATOM Tl3p Tl3p 3.00
+PATCH FIRST NONE LAST NONE
+
+RESI Bi3p 3.00 ! Bismuth +3 ion
+GROUP
+ATOM Bi3p Bi3p 3.00
+PATCH FIRST NONE LAST NONE
+
+END
+
+read para card flex @app
+* par_cation.prm for mono-, di-, and trivalent cations
+*
+
+ATOMS
+!Mass 301 Li1p   6.940  ! Lithium
+!Mass 302 Na1p  22.990  ! Sodium
+!Mass 303 K1p   39.098  ! Potassium
+!Mass 304 Rb1p  85.468  ! Rubidium
+!Mass 305 Cs1p 132.91   ! Cesium
+Mass 306 Cu1p  63.546  ! Copper
+Mass 307 Ag1p 107.87   ! Silver
+Mass 308 Au1p 196.97   ! Gold
+Mass 309 Ti1p  47.867  ! Titanium
+Mass 321 Be2p   9.0122 ! Beryllium
+!Mass 322 Mg2p  24.305  ! Magnesium
+!Mass 323 Ca2p  40.078  ! Calcium
+Mass 324 Sr2p  87.62   ! Strontium
+!Mass 325 Ba2p 137.33   ! Barium
+Mass 326 Ra2p 226.03   ! Radium
+Mass 327 V2p   50.942  ! Vanadium
+Mass 328 Cr2p  51.996  ! Chromium
+Mass 329 Mn2p  54.938  ! Manganese
+Mass 330 Fe2p  55.854  ! Iron
+Mass 331 Co2p  58.933  ! Cobalt
+Mass 332 Ni2p  58.693  ! Nickel
+Mass 333 Cu2p  63.546  ! Copper
+!Mass 334 Zn2p  65.38   ! Zinc
+Mass 335 Pd2p 106.42   ! Palladium
+Mass 336 Ag2p 107.87   ! Silver
+!Mass 337 Cd2p 112.41   ! Cadmium
+Mass 338 Sn2p 118.71   ! Tin
+Mass 339 Pt2p 195.08   ! Platinum
+Mass 340 Hg2p 200.59   ! Mercury
+Mass 341 Pb2p 207.20   ! Lead
+Mass 342 Sm2p 150.36   ! Samarium
+Mass 343 Eu2p 151.96   ! Europium
+Mass 344 Yb2p 173.05   ! Ytterbium
+Mass 351 Al3p 26.982   ! Aluminum
+Mass 352 Sc3p 44.956   ! Scandium
+Mass 353 Y3p  88.906   ! Yttrium
+Mass 354 La3p 138.91   ! Lanthanum
+Mass 355 Ce3p 140.12   ! Cerium
+Mass 356 Pr3p 140.91   ! Praseodynium
+Mass 357 Nd3p 144.24   ! Neodynium
+Mass 358 Pm3p 144.91   ! Promethium
+Mass 359 Sm3p 150.36   ! Samarium
+Mass 360 Eu3p 151.96   ! Europium
+Mass 361 Gd3p 157.25   ! Gadolinium
+Mass 362 Tb3p 158.93   ! Terbium
+Mass 363 Dy3p 162.50   ! Dysprosium
+Mass 364 Ho3p 164.93   ! Holmium
+Mass 365 Er3p 167.28   ! Erbium
+Mass 366 Tm3p 168.93   ! Thulium
+Mass 367 Yb3p 173.05   ! Ytterbium
+Mass 368 Lu3p 174.97   ! Lutetium
+Mass 369 U3p  238.03   ! Uranium
+Mass 370 Pu3p 244.06   ! Plutonium
+Mass 371 Ti3p  47.867  ! Titanium
+Mass 372 V3p   50.942  ! Vanadium
+Mass 373 Cr3p  51.996  ! Chromium
+Mass 374 Mn3p  54.938  ! Manganese
+Mass 375 Fe3p  55.854  ! Iron
+Mass 376 Co3p  58.933  ! Cobalt
+Mass 377 Ga3p  69.723  ! Gallium
+Mass 378 Rh3p 102.91   ! Rhodium
+Mass 379 In3p 114.82   ! Indium
+Mass 380 Au3p 196.97   ! Gold
+Mass 381 Tl3p 204.38   ! Thallium
+Mass 382 Bi3p 208.98   ! Bismuth
+
+!standard C36 additive truncation
+NONBONDED nbxmod  5 atom cdiel fshift vatom vdistance vfswitch -
+cutnb 14.0 ctofnb 12.0 ctonnb 10.0 eps 1.0 e14fac 1.0 wmin 1.5
+
+!truncation scheme used in JPCA 2012 paper under stochastic
+!boundary conditions.
+!NONBONDED nbxmod 5 atom cdiel switch vatom vdistance vswitch -
+!cutnb 22.0 ctofnb 20.0 ctonnb 18.0 eps 1.0 e14fac 1.0 wmin 1.5
+
+!---- Monovalent cations
+!Li1p 0.0 -0.1670 1.0767 ! dA = -475 kJ/mol
+!Na1p 0.0 -0.2007 1.6076 ! dA = -365 kJ/mol
+!K1p  0.0 -0.3600 1.9881 ! dA = -295 kJ/mol
+!Rb1p 0.0 -0.4022 2.1315 ! dA = -275 kJ/mol
+!Cs1p 0.0 -0.4910 2.3324 ! dA = -250 kJ/mol
+Cu1p 0.0 -0.1852 0.8620 ! dA = -525 kJ/mol
+Ag1p 0.0 -0.2870 1.2143 ! dA = -430 kJ/mol
+Au1p 0.0 -0.3563 0.6314 ! dA = -575 kJ/mol
+Ti1p 0.0 -0.4067 1.9307 ! dA = -300 kJ/mol
+!---- Divalent cations
+Be2p 0.0 -0.1016 0.04   ! dA = -2395 kJ/mol
+!Mg2p 0.0 -0.1485 1.1050 ! dA = -1830 kJ/mol
+!Ca2p 0.0 -0.2016 1.6206 ! dA = -1505 kJ/mol
+Sr2p 0.0 -0.2288 1.8559 ! dA = -1380 kJ/mol
+!Ba2p 0.0 -0.2830 2.0986 ! dA = -1250 kJ/mol
+Ra2p 0.0 -0.3019 2.0899 ! dA = -1250 kJ/mol
+V2p  0.0 -0.1609 1.1037 ! dA = -1825 kJ/mol
+Cr2p 0.0 -0.1667 1.0592 ! dA = -1850 kJ/mol
+Mn2p 0.0 -0.1685 1.2037 ! dA = -1760 kJ/mol
+Fe2p 0.0 -0.1595 1.0801 ! dA = -1840 kJ/mol
+Co2p 0.0 -0.1539 0.9276 ! dA = -1915 kJ/mol
+Ni2p 0.0 -0.1434 0.7803 ! dA = -1980 kJ/mol
+Cu2p 0.0 -0.1505 0.7251 ! dA = -2010 kJ/mol
+!Zn2p 0.0 -0.1539 0.8144 ! dA = -1955 kJ/mol
+Pd2p 0.0 -0.1742 0.9271 ! dA = -1910 kJ/mol
+Ag2p 0.0 -0.1853 1.0490 ! dA = -1850 kJ/mol
+!Cd2p 0.0 -0.1926 1.1962 ! dA = -1755 kJ/mol
+Sn2p 0.0 -0.1879 1.6580 ! dA = -1490 kJ/mol
+Pt2p 0.0 -0.1631 0.7971 ! dA = -1960 kJ/mol
+Hg2p 0.0 -0.2054 1.1818 ! dA = -1760 kJ/mol
+Pb2p 0.0 -0.2394 1.7580 ! dA = -1425 kJ/mol
+Sm2p 0.0 -0.2448 1.8565 ! dA = -1375 kJ/mol
+Eu2p 0.0 -0.2368 1.8404 ! dA = -1385 kJ/mol
+Yb2p 0.0 -0.2054 1.6090 ! dA = -1510 kJ/mol
+!---- Trivalent cations
+Al3p 0.0 -0.1066 0.2210 ! dA = -4525 kJ/mol
+Sc3p 0.0 -0.1410 1.0969 ! dA = -3795 kJ/mol
+Y3p  0.0 -0.1656 1.4134 ! dA = -3450 kJ/mol
+La3p 0.0 -0.1896 1.7727 ! dA = -3145 kJ/mol
+Ce3p 0.0 -0.1841 1.7115 ! dA = -3200 kJ/mol
+Pr3p 0.0 -0.1823 1.6591 ! dA = -3245 kJ/mol
+Nd3p 0.0 -0.1792 1.6199 ! dA = -3280 kJ/mol
+Pm3p 0.0 -0.1775 1.6572 ! dA = -3250 kJ/mol
+Sm3p 0.0 -0.1757 1.5667 ! dA = -3325 kJ/mol
+Eu3p 0.0 -0.1740 1.5230 ! dA = -3360 kJ/mol
+Gd3p 0.0 -0.1723 1.5050 ! dA = -3375 kJ/mol
+Tb3p 0.0 -0.1693 1.4750 ! dA = -3400 kJ/mol
+Dy3p 0.0 -0.1673 1.4444 ! dA = -3425 kJ/mol
+Ho3p 0.0 -0.1656 1.3907 ! dA = -3470 kJ/mol
+Er3p 0.0 -0.1636 1.3673 ! dA = -3495 kJ/mol
+Tm3p 0.0 -0.1620 1.3486 ! dA = -3515 kJ/mol
+Yb3p 0.0 -0.1604 1.2952 ! dA = -3570 kJ/mol
+Lu3p 0.0 -0.1588 1.3512 ! dA = -3515 kJ/mol
+U3p  0.0 -0.1896 1.7012 ! dA = -3205 kJ/mol
+Pu3p 0.0 -0.1841 1.6697 ! dA = -3235 kJ/mol
+Ti3p 0.0 -0.1285 0.8289 ! dA = -4015 kJ/mol
+V3p  0.0 -0.1236 0.6142 ! dA = -4220 kJ/mol
+Cr3p 0.0 -0.1206 0.8431 ! dA = -4010 kJ/mol
+Mn3p 0.0 -0.1252 0.3844 ! dA = -4410 kJ/mol
+Fe3p 0.0 -0.1252 0.5663 ! dA = -4265 kJ/mol
+Co3p 0.0 -0.1191 0.2581 ! dA = -4495 kJ/mol
+Ga3p 0.0 -0.1206 0.2269 ! dA = -4515 kJ/mol
+Rh3p 0.0 -0.1285 0.4613 ! dA = -4350 kJ/mol
+In3p 0.0 -0.1473 0.8663 ! dA = -3980 kJ/mol
+Au3p 0.0 -0.1330 0.3654 ! dA = -4420 kJ/mol
+Tl3p 0.0 -0.1629 0.8693 ! dA = -3970 kJ/mol
+Bi3p 0.0 -0.1850 1.3682 ! dA = -3480 kJ/mol
+
+END

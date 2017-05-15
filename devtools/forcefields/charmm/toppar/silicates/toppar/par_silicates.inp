@@ -1,0 +1,153 @@
+*     <<<<<<Charmm parameter file for Silicates>>>>>>
+*  Alexander D. MacKerell Jr., Pedro Lopes and Mouhsine Tazi
+*                       July 2005
+*All comments to adm jr.  charmm forum: www.charmm.org
+*
+
+BONDS
+!
+!V(bond) = Kb(b - b0)**2
+!
+!Kb: kcal/mole/A**2
+!b0: A
+!
+!   atom type    Kb          b0
+!
+Si    OSiE     302.000     1.698
+AL    OSIE     302.000     1.698
+Si    OSiA     302.000     1.698
+Si    OSiH     325.000     1.68
+Al    OAl      302.000     2.00
+Sih3  OSiE     304.000     1.682
+HSiO  OSiH     566.000     0.975
+HAl   OAl      566.000     0.9600
+Al    HAl      450.000     0.9572 
+SI    HSIA     204.0       1.489
+HSiA  Sih3     204.0       1.489
+Si    OAl      304.000     1.682
+HT    HT         0.0       1.5139  ! from TIPS3P geometry (for SHAKE w/PARAM)
+HT    OT       450.0       0.9572  ! from TIPS3P geometry
+
+ANGLES
+!
+!V(angle) = Ktheta(Theta - Theta0)**2
+!
+!V(Urey-Bradley) = Kub(S - S0)**2
+!
+!Ktheta: kcal/mole/rad**2
+!Theta0: degrees
+!Kub: kcal/mole/A**2 (Urey-Bradley)
+!S0: A
+!
+!atom types       Ktheta   Theta0   Kub     S0
+!
+OSiE Si   OSiE    30.000   117.00 !quartz, from sim1
+OSiE Sih3 OSiE    30.000   121.50 !quartz, from sim1
+Si   OSiE Sih3    34.000   150.50 !quartz, from sim1
+Si   OSiE Si      34.000   150.00 !quartz, from sim1
+Si   OSiA Si      34.000   150.00 !quartz, from sim1
+OSIA SI   OSIH    32.000   126.00 !quartz, from sim1
+OSIA SI   OSIA    30.000   121.50 !quartz, from sim1
+OSIA SI   OSIE    30.000   121.50 !quartz, from sim1
+Sih3 OSiE Sih3    34.000   159.00 !quartz, from sim1
+HSiA Sih3 HSiA    30.00    119.00 !quartz, from sim1
+HSiA Sih3 OSiE    44.000   118.00 !quartz, from sim1
+Si   OSiH HSiO    34.00    122.50 !122 quartz, from sim2
+OSiE Si   OSiH    32.000   126.00 !quartz, from sim2
+OSiH Si   OSiH    30.000   117.00 !quartz, from sim2
+Al   OAl  Al      30.000    98.00
+Al   OAl  Si      30.000   117.00
+OAl  Si   OSiE    30.000   117.00
+HAl  OAl  Al      35.000    93.40
+OAl  Al   HAl     35.000    93.40
+OAl  Al   OAl     30.000    90.00
+OSIE AL   OSIE    30.000   117.00
+OSIE AL   OAL     30.000   117.00
+OSIE AL   HAL     30.00    119.00
+AL   OSIE SI      30.000   117.00
+AL   OSIE AL      30.000   117.00
+OSIE SI   HSIA    44.000   118.00
+HT   OT   HT      55.0     104.52   ! FROM TIPS3P GEOMETRY
+ 
+DIHEDRALS
+!
+!V(dihedral) = Kchi(1 + cos(n(chi) - delta))
+!
+!Kchi: kcal/mole
+!n: multiplicity
+!delta: degrees
+!
+!atom types             Kchi    n     delta
+!
+OSiE Si   OSIE Sih3     0.18000 5     0.00 ! quartz, from sim1
+OSIE SI   OSIE SI       0.18000 5     0.00 ! quartz, from sim1
+OSIA SI   OSIA SI       0.18000 5     0.00 ! quartz, from sim1
+OSIE SI   OSIA SI       0.18000 5     0.00 ! quartz, from sim1
+OSIE SIH3 OSIE SI       0.18000 5     0.00 ! quartz, from sim1
+OSiH Si   OSIE Sih3     0.12000 5     0.00 ! quartz, from sim1
+SI   OSIE SI   OSIA     0.12000 5     0.00 ! quartz, from sim1
+HSiA Sih3 OSiE Si       0.20000 3     0.00 ! quartz, from sim1
+HSiA Sih3 OSiE Sih3     0.20000 3     0.00 ! quartz, from sim1
+OSiE Si   OSiH HSiO     0.30000 3     0.00 ! quartz, from sim2
+OSiH Si   OSiH HSiO     0.35000 3     0.00 ! quartz, from sim2
+SI   OSIA SI   OSIH     0.12000 5     0.00 ! quartz, from sim1
+SIH3 OSIE SIH3 OSIE     0.18000 5     0.00 ! quartz, from sim1
+SI   OSIE SI   HSIA     0.20000 3     0.00 
+SI   OSIE SI   OSIH     0.18000 5     0.00
+SIH3 OSIE SI   OSIA     0.18000 5     0.00
+OSIA SI   OSIH HSIO     0.35000 3     0.00 ! quartz, from sim2
+OAl  Al   OAl  HAl      0.10000 3     0.00
+Al   OAl  Si   OSIE     0.10000 3     0.00
+Al   OAl  Al   OAl      0.10000 3     0.00
+AL   OAL  AL   HAL      0.30000 3     0.00
+SI   OAL  AL   OAL      0.10000 3     0.00
+SI   OSIE SI   OAL      0.10000 3     0.00
+SI   OAL  AL   HAL      0.30000 3     0.00
+HAL  OAL  AL   HAL      0.30000 3     0.00
+AL   OSIE SI   OSIE     0.10000 3     0.00
+AL   OSIE AL   OSIE     0.10000 3     0.00
+AL   OSIE AL   OAL      0.10000 3     0.00
+AL   OAL  AL   OSIE     0.10000 3     0.00
+AL   OSIE AL   HAL      0.30000 3     0.00
+SI   OSIE AL   OSIE     0.30000 3     0.00
+SI   OSIE AL   OAL      0.30000 3     0.00
+SI   OSIE AL   HAL      0.10000 3     0.00
+OSIE AL   OAL  HAL      0.10000 3     0.00
+IMPROPER
+!
+!V(improper) = Kpsi(psi - psi0)**2
+!
+!Kpsi: kcal/mole/rad**2
+!psi0: degrees
+!note that the second column of numbers (0) is ignored
+!
+!atom types           Kpsi                   psi0
+!
+
+NONBONDED nbxmod  5 atom cdiel fswitch vatom vdistance vfswitch -
+cutnb 14.0 ctofnb 12.0 ctonnb 10.0 eps 1.0 e14fac 1.0 wmin 1.5 
+!
+!V(Lennard-Jones) = Eps,i,j[(Rmin,i,j/ri,j)**12 - 2(Rmin,i,j/ri,j)**6]
+!
+!epsilon: kcal/mole, Eps,i,j = sqrt(eps,i * eps,j)
+!Rmin/2: A, Rmin,i,j = Rmin/2,i + Rmin/2,j
+!
+!atom    ignored    epsilon   Rmin/2   ignored   eps,1-4       Rmin/2,1-4
+!
+HSiO     0.000000  -0.0460    0.2245   ! from proteins
+HSiA     0.000000  -0.022     1.3200   ! from alkane
+HAl      0.000000  -0.022     1.3200   ! from alkane
+AL       0.000000  -0.650     2.2000   ! relative to Phos
+Si       0.000000  -0.600     2.2000   ! relative to Phos
+Sih3     0.000000  -0.600     2.2000   ! relative to Phos
+OSiH     0.000000  -0.1521    1.7700   ! from proteins
+OSiE     0.000000  -0.1521    1.7700   ! from nucleic acids
+OSiA     0.000000  -0.1521    1.7700   ! from nucleic acids
+OAl      0.000000  -0.1521    1.7700   ! from proteins
+!
+HT       0.0       -0.046     0.2245   ! TIP3P water
+OT       0.0       -0.1521    1.7682   ! TIP3P water
+DUM      0.0       -0.0000    0.0000   ! dummy atom
+
+
+END

@@ -1,0 +1,1280 @@
+*  \\\\\\\ All-Hydrogen Nucleic Acid Topology File ////////
+*  \\\\\\\\\\\\\\\\\\ Developmental ///////////////////////
+*                    David R. Langley
+*                Version 1.00, August 1995
+*                Version 1.05, June 1999
+*                Version 1.10, November 2000
+*                Version 1.15, April 2003  
+*..................................................................
+*..................................................................
+* David R. Langley, Molecular Dynamic Simulations of Environment
+* and Sequence Dependent DNA Conformations: The Development of
+* the BMS Nucleic Acid Force Field and Comparison with Experimental
+* Results.  J. Biomol. Struct. Dyn., 1998, 16, 487-509.
+*..................................................................
+*..................................................................
+* Parameters for 2'-deoxy-6-thioguanine (patch residue id: TG) were added 11-22-00.
+* -
+* The modeified TIPS3P WATER MODEL with 5% reduced charges (residue id: T95)
+* provides stable (4M NaCl) A-DNA simulations by balancing the 
+* Na-H2O, Cl-H2O, DNA-Na, DNA-Cl, DNA-H2O interactions.
+*
+ 
+22 1
+MASS  1   CA   12.011000 ! Nucleic acid aromatic carbon to amide
+MASS  2   CB   12.011000 ! Nucleic acid purine C4 and C5
+MASS  3   CE   12.011000 ! Nucleic acid purine C8 and ADE C2
+MASS  4   CF   12.011000 ! Nucleic acid aromatic carbon
+MASS  5   CK   12.011000 ! Nucleic acid carbonyl carbon
+MASS  6   CT5  12.011000 ! Nucleic acid sp3 ribose ring carbon
+MASS  7   CTT  12.011000 ! Nucleic acid carbon (equivalent to protein CT3)
+MASS  8   CT   12.011000 ! ethanol
+MASS  9   CF3  12.011000 ! trifloroethanol 
+
+MASS 10   HA    1.008000 ! ethanol and trifloroethanol
+MASS 11   HA5   1.008000 ! Nucleic acid ribose aliphatic proton
+MASS 12   HAR   1.008000 ! Nucleic acid aromatic carbon proton
+MASS 13   HAT   1.008000 ! Nucleic acid proton (equivalent to protein HA)
+MASS 14   HB    1.008000 ! Nucleic acid ring nitrogen proton
+MASS 15   HNA   1.008000 ! Nucleic acid amine proton
+MASS 16   HO    1.008000 ! Nucleic acid ribose hydroxyl proton
+MASS 17   HOP   1.008000 ! Nucleic acid phosphate hydroxyl proton
+MASS 18   HT    1.008000 ! TIPS3P WATER HYDROGEN
+
+MASS 19   NAN  14.007000 ! Nucleic acid amide nitrogen
+MASS 20   NAG  14.007000 ! Nucleic acid protonated ring nitrogen, gua N1
+MASS 21   NAT  14.007000 ! Nucleic acid protonated ring nitrogen, ura N3
+MASS 22   NB   14.007000 ! Nucleic acid purine ADE N7
+MASS 23   NBG  14.007000 ! Nucleic acid purine GUA N7
+MASS 24   NC   14.007000 ! Nucleic acid unprotonated ring nitrogen
+MASS 25   NCA  14.007000 ! Nucleic acid unprotonated ring nitrogen, ade N1 and N3
+MASS 26   NS   14.007000 ! Nucleic acid protonated ring nitrogen (N9 of ADE,GUA)
+MASS 27   NSP  14.007000 ! Nucleic acid protonated ring nitrogen (N1 of THY,CYT)
+MASS 28   NSR  14.007000 ! RNA Nucleic acid protonated ring nitrogen (N1 of URA,CYT or N9 of ADE, GUA)
+
+MASS 29   OCP  15.999400 ! Nucleic acid =O in phosphate
+MASS 30   OE   15.999400 ! Nucleic acid ribose ring oxygen
+MASS 31   OH   15.999400 ! Nucleic acid ribose hydroxyl oxygen
+MASS 32   OHP  15.999400 ! Nucleic acid phosphate hydroxyl oxygen
+MASS 33   OK   15.999400 ! Nucleic acid carbonyl oxygen
+MASS 34   OKC  15.999400 ! Nucleic acid carbonyl oxygen, CYT O2
+MASS 35   OKG  15.999400 ! Nucleic acid carbonyl oxygen, GUA O6
+MASS 36   OS   15.999400 ! Nucleic acid phosphate ester oxygen
+MASS 37   OT   15.999400 ! TIPS3P WATER OXYGEN
+
+MASS 38   S    32.06     ! Nucleic acid sulphur in 6-thioguanine
+
+MASS 39   P    30.974000 ! phosphorus
+MASS 40   MG   24.305000 ! Magnesium Ion
+MASS 41   SOD  22.989770 ! Sodium Ion
+MASS 42   XCL  35.45300  ! Chlorine Ion
+MASS 43   XF   18.998403 ! Fluorine, trifloroethanol
+MASS 44   K    39.0983   ! potassium
+MASS 45   HE    4.0026   ! Helium
+MASS 46   NE   20.179    ! Neon
+MASS 47   AR   39.948    ! Argon
+MASS 100  DUM   0.001    ! dummy atom
+
+MASS 101  OW   15.999400 ! TIP3P water model, J. Chem. Phys., 79, 926, 1983.
+MASS 102  HW    1.008000 ! TIP3P water model, J. Chem. Phys., 79, 926, 1983.
+
+DECL  +P
+DECL  +O1P
+DECL  +O2P
+DECL  +O5'
+DECL  -O3'
+
+DEFA FIRS 5TER LAST 3TER
+AUTOGENERATE ANGLES DIHEDRALS
+
+RESI A           -1.00 
+ATOM P    P       1.1659 ! 1.36
+ATOM O1P  OCP    -0.7761 !-0.72
+ATOM O2P  OCP    -0.7761 !-0.72
+ATOM O5'  OS     -0.4954 !-0.46
+GROUP
+ATOM C5'  CTT    -0.0069 !-0.070
+ATOM H5'  HAT     0.0754 ! 0.070
+ATOM H5'' HAT     0.0754 ! 0.070
+GROUP
+ATOM C4'  CT5     0.1629 ! 0.065
+ATOM H4'  HA5     0.1176 ! 0.035
+ATOM O4'  OE     -0.3691 !-0.37
+ATOM C1'  CT5     0.0431 ! 0.165
+ATOM H1'  HA5     0.1838 ! 0.035
+GROUP
+ATOM N9   NS     -0.0268 !-0.35 
+ATOM C4   CB      0.3800 ! 0.55  
+GROUP
+ATOM N3   NCA    -0.7417 !-0.73    
+ATOM C2   CE      0.5716 ! 0.66   
+ATOM H2   HAR     0.0598 ! 0.13 
+GROUP
+ATOM N1   NCA    -0.7624 !-0.77 
+ATOM C6   CA      0.6897 ! 0.77 
+GROUP
+ATOM N6   NAN    -0.9123 !-0.77 
+ATOM H61  HNA     0.4167 ! 0.33 trans to N1
+ATOM H62  HNA     0.4167 ! 0.33 cis to N1 (involved in BP h-bond)
+GROUP
+ATOM C5   CB      0.0725 !-0.10 
+ATOM N7   NB     -0.6175 !-0.54 
+ATOM C8   CE      0.1607 ! 0.26
+ATOM H8   HAR     0.1877 ! 0.16
+GROUP
+ATOM C2'  CT5    -0.0854 !-0.070
+ATOM H2'' HA5     0.0718 ! 0.07
+ATOM H2'  HA5     0.0718 ! 0.07
+GROUP
+ATOM C3'  CT5     0.0713 !-0.035
+ATOM H3'  HA5     0.0985 ! 0.035
+GROUP
+ATOM O3'  OS     -0.5232 !-0.46
+BOND P    O1P       P    O2P       P     O5'
+BOND O5'  C5'       C5'  C4'       C4'  O4'       C4'  C3'       O4'  C1' 
+BOND C1'  N9        C1'  C2'       N9   C4        N9   C8        C4   N3  
+BOND C4   C5        N3   C2        C2   N1        N1   C6        C6   N6  
+BOND N6   H61       N6   H62       C6   C5        C5   N7        N7   C8  
+BOND C2'  C3'       C2'  H2'       C3'  O3'       O3'  +P  
+BOND C1'  H1'       C2'  H2''      C3'  H3'       C4'  H4'       C5'  H5'
+BOND C5'  H5''      C8   H8        C2   H2
+IMPH H62  C6   H61  N6        N6   N1   C5   C6        H2   N1   N3   C2
+IMPH H8   N7   N9   C8
+DONO H61 N6
+DONO H62 N6
+ACCE N3
+ACCE N7
+ACCE N1
+ACCE O1P  P
+ACCE O2P  P
+ACCE O3'
+ACCE O4'
+ACCE O5'
+IC     -O3'   P     O5'   C5'    1.6100  101.45  -39.00  119.00   1.4401!alpha
+IC     -O3'   O5'   *P    O1P    1.6100  101.45 -115.82  109.74   1.4802
+IC     -O3'   O5'   *P    O2P    1.6100  101.45  115.90  109.80   1.4801
+IC      P     O5'   C5'   C4'    1.6100  119.00 -151.00  110.04   1.5400!beta
+IC      O5'   C5'   C4'   C3'    1.4201  111.04   31.00  114.78   1.5284!gamma
+IC      C5'   C4'   C3'   O3'    1.5400  114.78  156.00  109.42   1.421!delta
+IC      C4'   C3'   O3'   +P     1.5284  109.42  159.00  119.05   1.6100!epsil
+IC      C3'   O3'   +P   +O5'    1.4212  119.05  -98.00  101.45   1.610!eta
+IC      C5'   C3'   *C4'  O4'    1.5400  113.37  119.62  105.78   1.4500 
+IC      C5'   C3'   *C4'  H4'    1.5400  113.37 -119.62  105.78   1.0900 
+IC      C4'   C3'   C2'   C1'    1.5284  102.38  -34.00  101.97   1.5251!nu2
+IC      C4'   O3'   *C3'  C2'    1.5284  109.48 -120.16  110.92   1.5412
+IC      C4'   O3'   *C3'  H3'    1.5284  109.48  120.16  110.92   1.0900
+!IC      C3'   C2'   C1'   N9     1.5284  101.97  93.39  113.71   1.4897
+IC      O4'   C1'   N9    C4     1.4197  108.06  -95.42  125.97   1.3703!chi
+IC      C1'   C4    *N9   C8     1.4897  125.97 -179.94  105.00   1.3768
+IC      C4    N9    C8    N7     1.3703  105.00   -0.07  113.93   1.2970
+IC      C8    N9    C4    C5     1.3768  105.00    0.06  106.60   1.3650
+IC      N9    C5    *C4   N3     1.3703  106.60 -179.93  126.69   1.3486
+IC      C5    C4    N3    C2     1.3650  126.69   -0.04  111.18   1.3130
+IC      C4    N3    C2    N1     1.3486  111.18   -0.02  128.64   1.3399
+IC      N3    C2    N1    C6     1.3130  128.64    0.06  118.95   1.3456
+IC      C5    N1    *C6   N6     1.4034  117.43 -179.96  119.06   1.3410
+IC      N1    C6    N6    H61    1.3456  119.06  179.96  120.00   1.0100
+IC      H61   C6    *N6   H62    1.0100  120.00 -180.00  120.00   1.0100
+IC      C1'   C3'   *C2'  H2'    1.5251  101.97  114.67  114.31   1.0912
+IC      C1'   C3'   *C2'  H2''   1.5251  101.97 -114.67  114.31   1.0912
+IC      O4'   C2'   *C1'  H1'    1.4197  105.77 -115.00  109.47   1.0900
+IC      O4'   C2'   *C1'  N9     0.0000  105.77  120.00  114.5    0.0000
+IC      C5'   C3'   *C4'  H4'    1.5400  114.37 -115.00  109.47   1.0900
+IC      C4'   O5'   *C5'  H5'    1.4500  111.84  115.00  109.47   1.0900
+IC      C4'   O5'   *C5'  H5''   1.4500  111.84 -115.00  109.47   1.0900
+IC      N9    N7    *C8   H8     1.3768  113.93  180.00  122.00   1.0800
+IC      N1    N3    *C2   H2     1.3399  128.64  180.00  120.00   1.0800
+
+RESI C           -1.000
+ATOM P    P       1.1659 ! 1.36
+ATOM O1P  OCP    -0.7761 !-0.72
+ATOM O2P  OCP    -0.7761 !-0.72
+ATOM O5'  OS     -0.4954 !-0.46
+GROUP
+ATOM C5'  CTT    -0.0069 !-0.070
+ATOM H5'  HAT     0.0754 ! 0.070
+ATOM H5'' HAT     0.0754 ! 0.070
+GROUP
+ATOM C4'  CT5     0.1629 ! 0.065
+ATOM H4'  HA5     0.1176 ! 0.035
+ATOM O4'  OE     -0.3691 !-0.37
+ATOM C1'  CT5    -0.0116 ! 0.165
+ATOM H1'  HA5     0.1963 ! 0.035
+GROUP
+ATOM N1   NSP    -0.0339 !-0.21
+ATOM C6   CF     -0.0183 ! 0.23
+ATOM H6   HAR     0.2293 ! 0.12
+GROUP
+ATOM C2   CK      0.7959 ! 0.86
+ATOM O2   OKC    -0.6548 !-0.55
+GROUP
+ATOM N3   NC     -0.7748 !-0.86
+ATOM C4   CA      0.8439 ! 0.94
+GROUP
+ATOM N4   NAN    -0.9773 !-0.83
+ATOM H41  HNA     0.4314 ! 0.33 trans to N3
+ATOM H42  HNA     0.4314 ! 0.33 cis to N3 (involved in BP h-bond)
+GROUP
+ATOM C5   CF     -0.5222 !-0.58
+ATOM H5   HAR     0.1863 ! 0.15
+GROUP
+ATOM C2'  CT5    -0.0854 !-0.070
+ATOM H2'' HA5     0.0718 ! 0.07
+ATOM H2'  HA5     0.0718 ! 0.07
+GROUP
+ATOM C3'  CT5     0.0713 !-0.035
+ATOM H3'  HA5     0.0985 ! 0.035
+GROUP
+ATOM O3'  OS     -0.5232 !-0.46
+BOND P    O1P       P    O2P       P     O5'
+BOND O5'  C5'       C5'  C4'       C4'  O4'       C4'  C3'       O4'  C1' 
+BOND C1'  N1        C1'  C2'       N1   C2        N1   C6        C2   O2  
+BOND C2   N3        N3   C4        C4   N4        N4   H41       N4   H42 
+BOND C4   C5        C5   C6        C2'  C3'       C3'  O3'       O3'  +P  
+BOND C2'  H2'      
+BOND C1'  H1'       C2'  H2''      C3'  H3'       C4'  H4'       C5'  H5'
+BOND C5'  H5''      C5   H5        C6   H6
+IMPH O2   N1   N3   C2        N4   N3   C5   C4
+IMPH H5   C4   C6   C5        H6   C5   N1   C6
+IMPH H42  C4   H41  N4
+DONO H42  N4
+DONO H41  N4
+ACCE O2   C2
+ACCE N3
+ACCE O1P  P
+ACCE O2P  P
+ACCE O3'
+ACCE O4'
+ACCE O5'
+IC      -O3'  P     O5'   C5'    1.6100  101.45  -39.00  119.00   1.4401!alpha
+IC      -O3'  O5'   *P    O1P    1.6100  101.45 -115.82  109.74   1.4802
+IC      -O3'  O5'   *P    O2P    1.6100  101.45  115.90  109.80   1.4801
+IC      P     O5'   C5'   C4'    1.6100  119.00 -151.00  110.04   1.5400!beta
+IC      O5'   C5'   C4'   C3'    1.4201  111.04   31.00  115.78   1.5284!gamma
+IC      C5'   C4'   C3'   O3'    1.5400  114.78  156.0   111.92   1.4212!delta
+IC      C4'   C3'   O3'   +P     1.5284  109.42  159.00  119.05   1.600!epsilon
+IC      C3'   O3'   +P    +O5'   1.4212  119.05  -98.00  101.45   1.6100!eta
+IC      C5'   C3'   *C4'  O4'    1.5400  113.37  119.62  106.78   1.4560
+IC      C5'   C3'   *C4'  H4'    1.5400  113.37 -119.62  101.78   1.0900
+IC      C4'   O3'   *C3'  C2'    1.528   109.47 -120.00  110.00   1.5400
+IC      C4'   O3'   *C3'  H3'    1.528   109.47  120.00  109.47   1.0900
+IC      C4'   C3'   C2'   C1'    1.5284  102.78  -34.00  101.97   1.5251!nu2
+!IC      C3'   C2'   C1'   N1     1.5284  101.97   93.39  113.71   1.4896
+IC      O4'   C1'   N1    C2     1.4197  108.06  -95.44  117.79   1.3923!chi
+IC      C1'   C2    *N1   C6     1.4896  117.79 -179.99  121.13   1.3595
+IC      C2    N1    C6    C5     1.3923  121.13    0.02  121.13   1.3570
+IC      C6    N1    C2    N3     1.3595  121.13    0.01  118.71   1.3578
+IC      N1    N3    *C2   O2     1.3923  118.71  179.98  122.46   1.2378
+IC      N1    C2    N3    C4     1.3923  118.71   -0.03  120.61   1.3386
+IC      C5    N3    *C4   N4     1.4331  121.58  180.00  118.32   1.3246
+IC      N3    C4    N4    H41    1.3386  118.32 -180.00  117.70   1.0100
+IC      H41   C4    *N4   H42    1.0100  117.70 -180.00  120.27   1.0100
+IC      O4'   C2'   *C1'  H1'    1.4197  105.77 -115.00  109.47   1.0900
+IC      O4'   C2'   *C1'  N1     1.4197  105.77  115.00  0.0000   0.0000
+IC      C1'   C3'   *C2'  H2'    1.5251  101.97  114.67  110.81   1.0912
+IC      C1'   C3'   *C2'  H2''   1.5251  101.97 -114.67  110.81   1.0912
+IC      C4'   O5'   *C5'  H5'    1.4500  111.84  115.00  109.47   1.0900
+IC      C4'   O5'   *C5'  H5''   1.4500  111.84 -115.00  109.47   1.0900
+IC      C6    C4    *C5   H5     1.3570  116.83  180.00  120.00   1.0800
+IC      N1    C5    *C6   H6     1.3595  121.13  180.00  120.00   1.0800
+
+RESI G           -1.00
+ATOM P    P       1.1659 ! 1.36
+ATOM O1P  OCP    -0.7761 !-0.72
+ATOM O2P  OCP    -0.7761 !-0.72
+ATOM O5'  OS     -0.4954 !-0.46
+GROUP
+ATOM C5'  CTT    -0.0069 !-0.070
+ATOM H5'  HAT     0.0754 ! 0.070
+ATOM H5'' HAT     0.0754 ! 0.070
+GROUP
+ATOM C4'  CT5     0.1629 ! 0.065
+ATOM H4'  HA5     0.1176 ! 0.035
+ATOM O4'  OE     -0.3691 !-0.37
+ATOM C1'  CT5     0.0358 ! 0.165
+ATOM H1'  HA5     0.1746 ! 0.035
+GROUP
+ATOM N9   NS      0.0577 !-0.11 
+ATOM C4   CB      0.1814 ! 0.39  
+ATOM N3   NCA    -0.6636 !-0.71  
+ATOM C2   CA      0.7432 ! 0.87  
+ATOM N2   NAN    -0.9230 !-0.78 
+ATOM H21  HNA     0.4235 ! 0.33 cis to N1 (involved in BP h-bond)
+ATOM H22  HNA     0.4235 ! 0.33 trans to N1
+GROUP
+ATOM N1   NAG    -0.5053 !-0.59 
+ATOM H1   HB      0.3520 ! 0.34 
+GROUP
+ATOM C6   CK      0.4918 ! 0.69 
+ATOM O6   OKG    -0.5699 !-0.55 
+GROUP
+ATOM C5   CB      0.1991 !-0.06 
+ATOM N7   NBG    -0.5725 !-0.54 
+ATOM C8   CE      0.0736 ! 0.27
+ATOM H8   HAR     0.1997 ! 0.05 
+GROUP
+ATOM C2'  CT5    -0.0854 !-0.070
+ATOM H2'' HA5     0.0718 ! 0.07
+ATOM H2'  HA5     0.0718 ! 0.07
+GROUP
+ATOM C3'  CT5     0.0713 !-0.035
+ATOM H3'  HA5     0.0985 ! 0.035
+GROUP
+ATOM O3'  OS     -0.5232 !-0.46
+BOND P    O1P       P    O2P       P    O5'
+BOND O5'  C5'       C5'  C4'       C4'  O4'       C4'  C3'       O4'  C1' 
+BOND C1'  N9        C1'  C2'       N9   C4        N9   C8        C4   N3  
+BOND C4   C5        N3   C2        C2   N2        C2   N1        N2   H21 
+BOND N2   H22       N1   H1        N1   C6        C6   O6        C6   C5  
+BOND C5   N7        N7   C8        C2'  C3'       C3'  O3'       O3'  +P  
+BOND C2'  H2'      
+BOND C1'  H1'       C2'  H2''      C3'  H3'       C4'  H4'       C5'  H5'
+BOND C5'  H5''      C8   H8
+IMPH N2   N3   N1   C2        H1   C2   C6   N1        O6   N1   C5   C6
+IMPH H8   N7   N9   C8        H22  H21  C2   N2
+DONO H21  N2
+DONO H22  N2
+DONO H1   N1
+ACCE O6   C6
+ACCE N3
+ACCE N7
+ACCE O1P  P
+ACCE O2P  P
+ACCE O3'
+ACCE O4'
+ACCE O5'
+IC       -O3'   P     O5'   C5'    1.6100  102.60 -039.00  120.50   1.4401!alpha
+IC       -O3'   O5'   *P    O1P    1.6100  102.60 -115.82  109.74   1.4802
+IC       -O3'   O5'   *P    O2P    1.6100  101.45  115.90  109.80   1.4801
+IC        P     O5'   C5'   C4'    1.6100  120.50 -151.00  111.84   1.5400!beta
+IC        O5'   C5'   C4'   C3'    1.4401  108.04   31.00  113.78   1.5400!gamma
+IC        C5'   C4'   C3'   O3'    1.5400  113.78  156.00  109.20   1.4212!delta
+IC        C4'   C3'   O3'   +P     1.5400  111.92  159.00  119.05   1.6100!epsil
+IC        C3'   O3'   +P    +O5'   1.4212  119.05  -98.00  101.45   1.6100!eta
+IC        C5'   C3'   *C4'  O4'    1.5400  113.37  120.00  106.48   1.4560
+IC        C5'   C3'   *C4'  H4'    1.5400  113.37 -120.00  109.47   1.090
+IC        C4'   C3'   C2'   C1'    1.5400  100.78  -34.00  101.97   1.5400!nu2
+IC        C4'   O3'   *C3'  C2'    1.5284  109.48 -115.00  110.000  1.54 
+IC        C4'   O3'   *C3'  H3'    1.5284  109.48  120.00  109.47   1.0900
+IC        O4'   C1'   N9    C4     1.4597  108.06 -095.00  125.59   1.3783!chi
+IC        C1'   C4    *N9   C8     1.4896  125.59 -179.99  105.19   1.3777
+IC        C4    N9    C8    N7     1.3783  105.19    0.02  114.02   1.3107
+IC        C8    N9    C4    C5     1.3777  105.19   -0.01  106.45   1.3750
+IC        N9    C5    *C4   N3     1.3783  106.45  179.96  128.52   1.3591
+IC        C5    C4    N3    C2     1.3750  128.52    0.04  112.23   1.3310
+IC        C4    N3    C2    N1     1.3591  112.23    0.00  123.30   1.3813
+IC        N1    N3    *C2   N2     1.3813  123.30  179.93  120.68   1.3349
+IC        N3    C2    N2    H21    1.3310  120.68  179.25  127.00   1.0100
+IC        H21   C2    *N2   H22    1.0100  127.00 -178.62  116.53   1.0100
+IC        N3    C2    N1    C6     1.3310  123.30   -0.04  125.24   1.4021
+IC        C6    C2    *N1   H1     1.4021  125.24 -180.00  117.40   1.0000
+IC        C5    N1    *C6   O6     1.4188  111.38  179.92  119.80   1.2276
+IC        C1'   C3'   *C2'  H2'    1.5251  101.97  114.67  110.81   1.0912 
+IC        C1'   C3'   *C2'  H2''   1.5251  101.97 -114.67  110.81   1.0912
+IC        O4'   C2'   *C1'  H1'    1.4197  105.77 -115.00  109.47   1.0900
+IC        O4'   C2'   *C1'  N9     1.4197  105.77  115.00   0.00    0.000
+IC        C4'   O5'   *C5'  H5'    1.4500  111.04  115.00  109.47   1.0900
+IC        C4'   O5'   *C5'  H5''   1.4500  111.04 -115.00  109.47   1.0900
+IC        N9    N7    *C8   H8     1.3777  114.02  180.00  122.00   1.0800
+
+RESI T           -1.000
+ATOM P    P       1.1659 ! 1.36
+ATOM O1P  OCP    -0.7761 !-0.72
+ATOM O2P  OCP    -0.7761 !-0.72
+ATOM O5'  OS     -0.4954 !-0.46
+GROUP
+ATOM C5'  CTT    -0.0069 !-0.070
+ATOM H5'  HAT     0.0754 ! 0.070
+ATOM H5'' HAT     0.0754 ! 0.070
+GROUP
+ATOM C4'  CT5     0.1629 ! 0.065
+ATOM H4'  HA5     0.1176 ! 0.035
+ATOM O4'  OE     -0.3691 !-0.37
+ATOM C1'  CT5     0.0680 ! 0.165
+ATOM H1'  HA5     0.1804 ! 0.035
+GROUP
+ATOM N1   NSP    -0.0239 !-0.18  
+ATOM C6   CF     -0.2209 ! 0.03  
+ATOM H6   HAR     0.2607 ! 0.13 
+GROUP
+ATOM C2   CK      0.5677 ! 0.80   
+ATOM O2   OK     -0.5881 !-0.55 
+GROUP
+ATOM N3   NAT    -0.4340 ! 0.85 
+ATOM H3   HB      0.3420 ! 0.45 
+GROUP
+ATOM C4   CK      0.5194 ! 0.87 
+ATOM O4   OK     -0.5563 !-0.55 
+GROUP
+ATOM C5   CF      0.0025 !-0.17 
+ATOM C5A  CTT    -0.2269 !-0.38 
+ATOM H51  HAT     0.0770 ! 0.11 
+ATOM H52  HAT     0.0770 ! 0.11 
+ATOM H53  HAT     0.0770 ! 0.11 
+GROUP
+ATOM C2'  CT5    -0.0854 !-0.070
+ATOM H2'' HA5     0.0718 ! 0.07
+ATOM H2'  HA5     0.0718 ! 0.07
+GROUP
+ATOM C3'  CT5     0.0713 !-0.035
+ATOM H3'  HA5     0.0985 ! 0.035
+GROUP
+ATOM O3'  OS     -0.5232 !-0.46
+BOND P    O1P       P    O2P       P     O5'
+BOND O5'  C5'       C5'  C4'       C4'  O4'       C4'  C3'       O4'  C1' 
+BOND C1'  N1        C1'  C2'       N1   C2        N1   C6        C2   O2  
+BOND C2   N3        N3   H3        N3   C4        C4   O4        C4   C5  
+BOND C5   C5A       C5   C6        C2'  C3'       C3'  O3'       O3'  +P  
+BOND C2'  H2'       
+BOND C1'  H1'       C2'  H2''      C3'  H3'       C4'  H4'       C5'  H5'
+BOND C5'  H5''      C6   H6        C5A  H51       C5A  H52       C5A  H53
+IMPH O2   N1   N3   C2        H3   C2   C4   N3
+IMPH O4   N3   C5   C4        H6   N1   C5   C6
+IMPH C5A  C4   C6   C5
+DONO H3   N3
+ACCE O2   C2
+ACCE O4   C4
+ACCE O1P  P
+ACCE O2P  P
+ACCE O3'
+ACCE O4'
+ACCE O5'
+IC       -O3'   P     O5'   C5'    1.6100  101.45  -39.00  119.00   1.4401!alpha
+IC       -O3'   O5'   *P    O1P    1.6100  101.45 -115.82  109.74   1.4802
+IC       -O3'   O5'   *P    O2P    1.6100  101.45  115.00  109.80   1.4801
+IC        P     O5'   C5'   C4'    1.6100  119.00 -151.00  111.04   1.5400!beta
+IC        O5'   C5'   C4'   C3'    1.4401  111.84   31.00  115.78   1.5284!gamma
+IC        C5'   C4'   C3'   O3'    1.5400  114.78  156.00  111.92   1.4212!delta
+IC        C4'   C3'   O3'   +P     1.5284  109.42  159.00  119.05   1.6100!epsil
+IC        C3'   O3'   +P    +O5'   1.4212  119.05  -98.00  101.45   1.6100!eta
+IC        C5'   C3'   *C4'  O4'    1.5400  113.37  119.62  106.48   1.4500 
+IC        C5'   C3'   *C4'  H4'    1.5400  113.37 -119.62  106.48   1.0900 
+IC        C4'   C3'   C2'   C1'    1.5284  102.78  -34.00  101.97   1.5251!nu2
+IC        C4'   O3'   *C3'  C2'    1.5284  109.78 -120.16  110.42   1.5412
+IC        C4'   O3'   *C3'  H3'    1.5284  109.78  120.16  110.42   1.0912
+!IC        C3'   C2'   C1'   N1     1.5284  101.97   93.39  113.71   1.4896
+IC        O4'   C1'   N1    C2     1.4197  108.06  -95.43  117.06   1.3746!chi
+IC        C1'   C2    *N1   C6     1.4896  117.06 -179.96  122.08   1.3704
+IC        C2    N1    C6    C5     1.3746  122.08   -0.02  121.23   1.3431
+IC        C6    N1    C2    N3     1.3704  122.08    0.06  115.38   1.3813
+IC        N1    N3    *C2   O2     1.3746  115.38 -179.95  121.70   1.2191
+IC        N1    C2    N3    C4     1.3746  115.38   -0.07  126.46   1.3795
+IC        C5    N3    *C4   O4     1.4440  114.07  179.98  120.59   1.2327
+IC        C2    C4    *N3   H3     1.3813  126.46 -180.00  116.77   1.0900
+IC        C4    C6    *C5   C5A    1.4440  120.78 -179.94  121.63   1.5000
+IC        C1'   C3'   *C2'  H2'    1.5251  101.97  114.67  114.81   1.0912
+IC        C1'   C3'   *C2'  H2''   1.5251  101.97 -114.67  114.81   1.0912
+IC        O4'   C2'   *C1'  H1'    1.4197  106.77 -115.00  109.47   1.0900
+IC        O4'   C2'   *C1'  N1     1.4197  106.77  115.00  000.00   0.0000
+IC        C4'   O5'   *C5'  H5'    1.4500  111.84  115.00  109.47   1.0900
+IC        C4'   O5'   *C5'  H5''   1.4500  111.84 -115.00  109.47   1.0900
+IC        N1    C5    *C6   H6     1.3704  121.23  180.00  120.00   1.0800
+IC        C6    C5    C5A   H51    1.3431  121.63   90.00  109.47   1.0900
+IC        C6    C5    C5A   H52    1.3431  121.63  -30.00  109.47   1.0900
+IC        C6    C5    C5A   H53    1.3431  121.63 -150.00  109.47   1.0900
+
+!
+!RNA residues
+!
+
+RESI RA          -1.00
+ATOM P    P       1.1662
+ATOM O1P  OCP    -0.7760
+ATOM O2P  OCP    -0.7760
+ATOM O5'  OS     -0.4989
+GROUP
+ATOM C5'  CTT     0.0558
+ATOM H5'  HAT     0.0679
+ATOM H5'' HAT     0.0679
+GROUP
+ATOM C4'  CT5     0.1065
+ATOM H4'  HA5     0.1174
+ATOM O4'  OE     -0.3548
+ATOM C1'  CT5     0.0394
+ATOM H1'  HA5     0.2007
+GROUP
+ATOM N9   NSR    -0.0251
+ATOM C4   CB      0.3053
+GROUP
+ATOM N3   NCA    -0.6997
+ATOM C2   CE      0.5875
+ATOM H2   HAR     0.0473
+GROUP
+ATOM N1   NCA    -0.7615
+ATOM C6   CA      0.7009
+GROUP
+ATOM N6   NAN    -0.9019
+ATOM H61  HNA     0.4115
+ATOM H62  HNA     0.4115
+GROUP
+ATOM C5   CB      0.0515
+ATOM N7   NB     -0.6073
+ATOM C8   CE      0.2006
+ATOM H8   HAR     0.1553
+GROUP
+ATOM C2'  CT5     0.0670
+ATOM H2'' HA5     0.0972
+ATOM O2'  OH     -0.6139
+ATOM H2'  HO      0.4186
+GROUP
+ATOM C3'  CT5     0.2022
+ATOM H3'  HA5     0.0615
+GROUP
+ATOM O3'  OS     -0.5246
+BOND P    O1P       P    O2P       P     O5'
+BOND O5'  C5'       C5'  C4'       C4'  O4'       C4'  C3'       O4'  C1' 
+BOND C1'  N9        C1'  C2'       N9   C4        N9   C8        C4   N3  
+BOND C4   C5        N3   C2        C2   N1        N1   C6        C6   N6  
+BOND N6   H61       N6   H62       C6   C5        C5   N7        N7   C8  
+BOND C2'  C3'       C2'  O2'       O2'  H2'       C3'  O3'       O3'  +P  
+BOND C1'  H1'       C2'  H2''      C3'  H3'       C4'  H4'       C5'  H5'
+BOND C5'  H5''      C8   H8        C2   H2
+IMPH H62  C6   H61  N6        N6   N1   C5   C6        H2   N1   N3   C2
+IMPH H8   N7   N9   C8
+DONO H61  N6
+DONO H62  N6
+DONO H2'  O2'
+ACCE N3
+ACCE N7
+ACCE N1
+ACCE O1P  P
+ACCE O2P  P
+ACCE O2'
+ACCE O3'
+ACCE O4'
+ACCE O5'
+IC     -O3'   P     O5'   C5'    1.6100  101.45  -88.00  119.00   1.4401!alpha
+IC     -O3'   O5'   *P    O1P    1.6100  101.45 -115.82  109.74   1.4802
+IC     -O3'   O5'   *P    O2P    1.6100  101.45  115.90  109.80   1.4801
+IC      P     O5'   C5'   C4'    1.6100  119.00 -153.00  110.04   1.5400!beta
+IC      O5'   C5'   C4'   C3'    1.4201  111.04   47.00  114.78   1.5284!gamma
+IC      C5'   C4'   C3'   O3'    1.5400  114.78   83.00  109.42   1.421!delta
+IC      C4'   C3'   O3'   +P     1.5284  109.42  171.00  119.05   1.6100!epsil
+IC      C3'   O3'   +P   +O5'    1.4212  119.05  -44.00  101.45   1.610!eta
+IC      C5'   C3'   *C4'  O4'    1.5400  113.37  119.62  105.78   1.4500 
+IC      C5'   C3'   *C4'  H4'    1.5400  113.37 -119.62  105.78   1.0900 
+IC      C4'   C3'   C2'   C1'    1.5284  102.38   37.00  101.97   1.5251!nu2
+IC      C4'   O3'   *C3'  C2'    1.5284  109.48 -120.16  110.92   1.5412
+IC      C4'   O3'   *C3'  H3'    1.5284  109.48  120.16  110.92   1.0900
+!IC      C3'   C2'   C1'   N9     1.5284  101.97  93.39  113.71   1.4897
+IC      O4'   C1'   N9    C4     1.4197  108.06 -153.42  125.97   1.3703!chi
+IC      C1'   C4    *N9   C8     1.4897  125.97 -179.94  105.00   1.3768
+IC      C4    N9    C8    N7     1.3703  105.00   -0.07  113.93   1.2970
+IC      C8    N9    C4    C5     1.3768  105.00    0.06  106.60   1.3650
+IC      N9    C5    *C4   N3     1.3703  106.60 -179.93  126.69   1.3486
+IC      C5    C4    N3    C2     1.3650  126.69   -0.04  111.18   1.3130
+IC      C4    N3    C2    N1     1.3486  111.18   -0.02  128.64   1.3399
+IC      N3    C2    N1    C6     1.3130  128.64    0.06  118.95   1.3456
+IC      C5    N1    *C6   N6     1.4034  117.43 -179.96  119.06   1.3410
+IC      N1    C6    N6    H61    1.3456  119.06  179.96  120.00   1.0100
+IC      H61   C6    *N6   H62    1.0100  120.00 -180.00  120.00   1.0100
+IC      C1'   C3'   *C2'  O2'    1.5251  101.97 -114.67  114.31   1.4212
+IC      H2'   O2'   C2'   C3'    0.9600  114.97  148.63  114.31   1.5284
+IC      O4'   C2'   *C1'  H1'    1.4197  105.77 -115.00  109.47   1.0900
+IC      O4'   C2'   *C1'  N9     0.0000  105.77  120.00  114.5    0.0000
+IC      C1'   C3'   *C2'  H2''   1.5400  101.97  115.00  109.47   1.0900
+IC      C5'   C3'   *C4'  H4'    1.5400  114.37 -115.00  109.47   1.0900
+IC      C4'   O5'   *C5'  H5'    1.4500  111.84 -115.00  109.47   1.0900
+IC      C4'   O5'   *C5'  H5''   1.4500  111.84  115.00  109.47   1.0900
+IC      N9    N7    *C8   H8     1.3768  113.93  180.00  122.00   1.0800
+IC      N1    N3    *C2   H2     1.3399  128.64  180.00  120.00   1.0800
+
+RESI RC          -1.00 
+ATOM P    P       1.1662
+ATOM O1P  OCP    -0.7760
+ATOM O2P  OCP    -0.7760
+ATOM O5'  OS     -0.4989
+GROUP 
+ATOM C5'  CTT     0.0558
+ATOM H5'  HAT     0.0679
+ATOM H5'' HAT     0.0679
+GROUP 
+ATOM C4'  CT5     0.1065
+ATOM H4'  HA5     0.1174
+ATOM O4'  OE     -0.3548
+ATOM C1'  CT5     0.0066
+ATOM H1'  HA5     0.2029
+GROUP 
+ATOM N1   NSR    -0.0484 
+ATOM C6   CF      0.0053 
+ATOM H6   HAR     0.1958
+GROUP 
+ATOM C2   CK      0.7538 
+ATOM O2   OKC    -0.6252
+GROUP 
+ATOM N3   NC     -0.7584
+ATOM C4   CA      0.8185
+GROUP 
+ATOM N4   NAN    -0.9530
+ATOM H41  HNA     0.4234
+ATOM H42  HNA     0.4234
+GROUP 
+ATOM C5   CF     -0.5215
+ATOM H5   HAR     0.1928
+GROUP 
+ATOM C2'  CT5     0.0670
+ATOM H2'' HA5     0.0972
+ATOM O2'  OH     -0.6139
+ATOM H2'  HO      0.4186
+GROUP 
+ATOM C3'  CT5     0.2022 
+ATOM H3'  HA5     0.0615
+GROUP
+ATOM O3'  OS     -0.5246
+BOND P    O1P       P    O2P       P     O5'
+BOND O5'  C5'       C5'  C4'       C4'  O4'       C4'  C3'       O4'  C1' 
+BOND C1'  N1        C1'  C2'       N1   C2        N1   C6        C2   O2  
+BOND C2   N3        N3   C4        C4   N4        N4   H41       N4   H42 
+BOND C4   C5        C5   C6        C2'  C3'       C3'  O3'       O3'  +P  
+BOND C2'  O2'       O2'  H2'
+BOND C1'  H1'       C2'  H2''      C3'  H3'       C4'  H4'       C5'  H5'
+BOND C5'  H5''      C5   H5        C6   H6
+IMPH O2   N1   N3   C2        N4   N3   C5   C4
+IMPH H5   C4   C6   C5        H6   C5   N1   C6
+IMPH H42  C4   H41  N4
+DONO H42  N4
+DONO H2'  O2'
+DONO H41  N4
+ACCE O2   C2
+ACCE N3
+ACCE O1P  P
+ACCE O2P  P
+ACCE O2'
+ACCE O3'
+ACCE O4'
+ACCE O5'
+IC      -O3'  P     O5'   C5'    1.6100  101.45  -88.00  119.00   1.4401!alpha
+IC      -O3'  O5'   *P    O1P    1.6100  101.45 -115.82  109.74   1.4802
+IC      -O3'  O5'   *P    O2P    1.6100  101.45  115.90  109.80   1.4801
+IC      P     O5'   C5'   C4'    1.6100  119.00 -153.00  110.04   1.5400!beta
+IC      O5'   C5'   C4'   C3'    1.4201  111.04   47.00  115.78   1.5284!gamma
+IC      C5'   C4'   C3'   O3'    1.5400  114.78  83.00   111.92   1.4212!delta
+IC      C4'   C3'   O3'   +P     1.5284  109.42  171.00  119.05   1.600!epsilon
+IC      C3'   O3'   +P    +O5'   1.4212  119.05  -44.00  101.45   1.6100!eta
+IC      C5'   C3'   *C4'  O4'    1.5400  113.37  119.62  106.78   1.4560
+IC      C5'   C3'   *C4'  H4'    1.5400  113.37 -119.62  101.78   1.0900
+IC      C4'   O3'   *C3'  C2'    1.528   109.47 -120.00  110.00   1.5400
+IC      C4'   O3'   *C3'  H3'    1.528   109.47  120.00  109.47   1.0900
+IC      C4'   C3'   C2'   C1'    1.5284  102.78   37.00  101.97   1.5251!nu2
+!IC      C3'   C2'   C1'   N1     1.5284  101.97   93.39  113.71   1.4896
+IC      O4'   C1'   N1    C2     1.4197  108.06 -155.44  117.79   1.3923!chi
+IC      C1'   C2    *N1   C6     1.4896  117.79 -179.99  121.13   1.3595
+IC      C2    N1    C6    C5     1.3923  121.13    0.02  121.13   1.3570
+IC      C6    N1    C2    N3     1.3595  121.13    0.01  118.71   1.3578
+IC      N1    N3    *C2   O2     1.3923  118.71  179.98  122.46   1.2378
+IC      N1    C2    N3    C4     1.3923  118.71   -0.03  120.61   1.3386
+IC      C5    N3    *C4   N4     1.4331  121.58  180.00  118.32   1.3246
+IC      N3    C4    N4    H41    1.3386  118.32 -180.00  117.70   1.0100
+IC      H41   C4    *N4   H42    1.0100  117.70 -180.00  120.27   1.0100
+IC      C1'   C3'   *C2'  O2'    1.5251  101.97 -114.67  110.81   1.4212
+IC      H2'   O2'   C2'   C3'    0.9600  114.97  148.63  111.92   1.5284
+IC      C1'   C3'   *C2'  H2''   1.5251  101.97  115.00  109.47   1.0900
+IC      O4'   C2'   *C1'  H1'    1.4197  105.77 -115.00  109.47   1.0900
+IC      O4'   C2'   *C1'  N1     1.4197  105.77  115.00  0.0000   0.0000
+IC      C4'   O5'   *C5'  H5'    1.4500  111.84 -115.00  109.47   1.0900
+IC      C4'   O5'   *C5'  H5''   1.4500  111.84  115.00  109.47   1.0900
+IC      C6    C4    *C5   H5     1.3570  116.83  180.00  120.00   1.0800
+IC      N1    C5    *C6   H6     1.3595  121.13  180.00  120.00   1.0800
+
+RESI RG          -1.00
+ATOM P    P       1.1662
+ATOM O1P  OCP    -0.7760
+ATOM O2P  OCP    -0.7760
+ATOM O5'  OS     -0.4989
+GROUP
+ATOM C5'  CTT     0.0558
+ATOM H5'  HAT     0.0679
+ATOM H5'' HAT     0.0679
+GROUP
+ATOM C4'  CT5     0.1065
+ATOM H4'  HA5     0.1174
+ATOM O4'  OE     -0.3548
+GROUP 
+ATOM C1'  CT5     0.0191
+ATOM H1'  HA5     0.2006
+GROUP
+ATOM N9   NSR     0.0492
+ATOM C4   CB      0.1222
+GROUP  
+ATOM N3   NCA    -0.6323 
+ATOM C2   CA      0.7657 
+GROUP
+ATOM N2   NAN    -0.9672
+ATOM H21  HNA     0.4364 
+ATOM H22  HNA     0.4364
+GROUP
+ATOM N1   NAG    -0.4787
+ATOM H1   HB      0.3424
+GROUP
+ATOM C6   CK      0.4770
+ATOM O6   OKG    -0.5597
+GROUP
+ATOM C5   CB      0.1744
+ATOM N7   NBG    -0.5709
+ATOM C8   CE      0.1374
+ATOM H8   HAR     0.1640
+GROUP
+ATOM C2'  CT5     0.0670
+ATOM H2'' HA5     0.0972
+ATOM O2'  OH     -0.6139
+ATOM H2'  HO      0.4186
+GROUP
+ATOM C3'  CT5     0.2022
+ATOM H3'  HA5     0.0615
+GROUP
+ATOM O3'  OS     -0.5246
+BOND P    O1P       P    O2P       P    O5'
+BOND O5'  C5'       C5'  C4'       C4'  O4'       C4'  C3'       O4'  C1' 
+BOND C1'  N9        C1'  C2'       N9   C4        N9   C8        C4   N3  
+BOND C4   C5        N3   C2        C2   N2        C2   N1        N2   H21 
+BOND N2   H22       N1   H1        N1   C6        C6   O6        C6   C5  
+BOND C5   N7        N7   C8        C2'  C3'       C3'  O3'       O3'  +P  
+BOND C2'  O2'       O2'  H2'
+BOND C1'  H1'       C2'  H2''      C3'  H3'       C4'  H4'       C5'  H5'
+BOND C5'  H5''      C8   H8
+IMPH N2   N3   N1   C2        H1   C2   C6   N1        O6   N1   C5   C6
+IMPH H8   N7   N9   C8        H22  H21  C2   N2
+DONO H21  N2
+DONO H22  N2
+DONO H1   N1
+DONO H2'  O2'
+ACCE O6   C6
+ACCE N3
+ACCE N7
+ACCE O1P  P
+ACCE O2P  P
+ACCE O2'
+ACCE O3'
+ACCE O4'
+ACCE O5'
+IC       -O3'   P     O5'   C5'    1.6100  102.60 -088.00  120.50   1.4401!alpha
+IC       -O3'   O5'   *P    O1P    1.6100  102.60 -115.82  109.74   1.4802
+IC       -O3'   O5'   *P    O2P    1.6100  101.45  115.90  109.80   1.4801
+IC        P     O5'   C5'   C4'    1.6100  120.50 -153.00  111.84   1.5400!beta
+IC        O5'   C5'   C4'   C3'    1.4401  108.04   47.00  113.78   1.5400!gamma
+IC        C5'   C4'   C3'   O3'    1.5400  113.78   83.00  109.20   1.4212!delta
+IC        C4'   C3'   O3'   +P     1.5400  111.92  171.00  119.05   1.6100!epsil
+IC        C3'   O3'   +P    +O5'   1.4212  119.05  -44.00  101.45   1.6100!eta
+IC        C5'   C3'   *C4'  O4'    1.5400  113.37  120.00  106.48   1.4560
+IC        C5'   C3'   *C4'  H4'    1.5400  113.37 -120.00  109.47   1.090
+IC        C4'   C3'   C2'   C1'    1.5400  100.78   37.00  101.97   1.5400!nu2
+IC        C4'   O3'   *C3'  C2'    1.5284  109.48 -115.00  110.000  1.54 
+IC        C4'   O3'   *C3'  H3'    1.5284  109.48  120.00  109.47   1.0900
+IC        O4'   C1'   N9    C4     1.4597  108.06 -153.00  125.59   1.3783!chi
+IC        C1'   C4    *N9   C8     1.4896  125.59 -179.99  105.19   1.3777
+IC        C4    N9    C8    N7     1.3783  105.19    0.02  114.02   1.3107
+IC        C8    N9    C4    C5     1.3777  105.19   -0.01  106.45   1.3750
+IC        N9    C5    *C4   N3     1.3783  106.45  179.96  128.52   1.3591
+IC        C5    C4    N3    C2     1.3750  128.52    0.04  112.23   1.3310
+IC        C4    N3    C2    N1     1.3591  112.23    0.00  123.30   1.3813
+IC        N1    N3    *C2   N2     1.3813  123.30  179.93  120.68   1.3349
+IC        N3    C2    N2    H21    1.3310  120.68  179.25  127.00   1.0100
+IC        H21   C2    *N2   H22    1.0100  127.00 -178.62  116.53   1.0100
+IC        N3    C2    N1    C6     1.3310  123.30   -0.04  125.24   1.4021
+IC        C6    C2    *N1   H1     1.4021  125.24 -180.00  117.40   1.0000
+IC        C5    N1    *C6   O6     1.4188  111.38  179.92  119.80   1.2276
+IC        C1'   C3'   *C2'  O2'    1.5251  101.97 -114.67  110.81   1.4212
+IC        H2'   O2'   C2'   C3'    0.9600  114.97  148.63  111.92   1.5400
+IC        O4'   C2'   *C1'  H1'    1.4197  105.77 -115.00  109.47   1.0900
+IC        O4'   C2'   *C1'  N9     1.4197  105.77  115.00   0.00    0.0000
+IC        C1'   C3'   *C2'  H2''   1.5251  101.97  115.00  109.47   1.0900
+IC        C4'   O5'   *C5'  H5'    1.4500  111.04 -115.00  109.47   1.0900
+IC        C4'   O5'   *C5'  H5''   1.4500  111.04  115.00  109.47   1.0900
+IC        N9    N7    *C8   H8     1.3777  114.02  180.00  122.00   1.0800
+
+RESI RU          -1.00 
+ATOM P    P       1.1662
+ATOM O1P  OCP    -0.7760
+ATOM O2P  OCP    -0.7760
+ATOM O5'  OS     -0.4989
+GROUP
+ATOM C5'  CTT     0.0558
+ATOM H5'  HAT     0.0679
+ATOM H5'' HAT     0.0679
+GROUP
+ATOM C4'  CT5     0.1065
+ATOM H4'  HA5     0.1174
+ATOM O4'  OE     -0.3548
+ATOM C1'  CT5     0.0674
+ATOM H1'  HA5     0.1824
+GROUP
+ATOM N1   NSR     0.0418  
+ATOM C6   CF     -0.1126 
+ATOM H6   HAR     0.2188
+GROUP
+ATOM C2   CK      0.4687 
+ATOM O2   OK     -0.5477
+GROUP
+ATOM N3   NAT    -0.3549
+ATOM H3   HB      0.3154
+GROUP
+ATOM C4   CK      0.5952
+ATOM O4   OK     -0.5761
+GROUP
+ATOM C5   CF     -0.3635
+ATOM H5   HAR     0.1811
+GROUP
+ATOM C2'  CT5     0.0670
+ATOM H2'' HA5     0.0972
+ATOM O2'  OH     -0.6139
+ATOM H2'  HO      0.4186
+GROUP
+ATOM C3'  CT5     0.2022
+ATOM H3'  HA5     0.0615
+GROUP
+ATOM O3'  OS     -0.5246
+BOND P    O1P       P    O2P       P     O5'
+BOND O5'  C5'       C5'  C4'       C4'  O4'       C4'  C3'       O4'  C1' 
+BOND C1'  N1        C1'  C2'       N1   C2        N1   C6        C2   O2  
+BOND C2   N3        N3   H3        N3   C4        C4   O4        C4   C5  
+BOND C5   C6        C2'  C3'       C3'  O3'       O3'  +P  
+BOND C2'  O2'       O2'  H2'
+BOND C1'  H1'       C2'  H2''      C3'  H3'       C4'  H4'       C5'  H5'
+BOND C5'  H5''      C5   H5        C6   H6
+IMPH O2   N1   N3   C2        H3   C2   C4   N3     H5   C4   C6   C5
+IMPH O4   N3   C5   C4        H6   N1   C5   C6
+DONO H3   N3
+DONO H2'  O2'
+ACCE O2   C2
+ACCE O4   C4
+ACCE O1P  P
+ACCE O2P  P
+ACCE O2'
+ACCE O3'
+ACCE O4'
+ACCE O5'
+IC -O3' P     O5'  C5'   1.6100  101.45  -88.00  119.00   1.4401!alpha
+IC -O3'  O5' *P   O1P    1.6100  101.45 -115.82  109.74   1.4802
+IC -O3'  O5' *P   O2P    1.6100  101.45  115.90  109.80   1.4801
+IC  P   O5'  C5'  C4'    1.6100  119.00 -153.00  110.04   1.5400!beta
+IC O5'  C5'  C4'  C3'    1.4401  111.83  047.00  116.10   1.5284!gamma
+IC C5'  C4'  C3'  O3'    1.5400  115.10   83.00  115.12   1.4212!delta
+IC C4'  C3'  O3'  +P     1.5284  109.92  171.00  119.05   1.6000!epsilon
+IC C3'  O3'  +P   +O5'   1.4212  119.05  -44.00  101.45   1.6100!eta
+IC C5'  C3'  *C4' O4'    1.5472  113.36  119.04  106.10   1.4500 
+IC C5'  C3'  *C4' H4'    1.5472  113.36 -119.04  109.10   1.0900 
+IC C4'  C3'  C2'  C1'    1.5400  100.00   37.00  101.97   1.5400! nu2
+IC C4'  O3'  *C3' C2'    1.5284  109.47 -120.00  110.00   1.5400
+IC C4'  O3'  *C3' H3'    1.5284  109.47  120.00  109.47   1.0900
+!IC C3'  C2'   C1' N1     1.5284  101.97   93.39  113.71   1.4896
+IC O4'  C1'   N1  C2     1.5251  108.71 -153.00  117.06   1.3746
+IC C1'  C2    *N1 C6     1.4896  117.06 -179.00  122.08   1.3704
+IC C2   N1   C6   C5     1.3746  122.08    0.00  121.23   1.3432
+IC C6   N1   C2   N3     1.3704  122.08    0.00  115.38   1.3813
+IC N1   N3   *C2  O2     1.3746  115.38 -179.95  121.70   1.2191
+IC N1   C2   N3   C4     1.3746  115.38   -0.07  126.46   1.3795
+IC C5   N3   *C4  O4     1.4439  114.07  179.98  120.59   1.2327
+IC C2   C4   *N3  H3     1.3813  126.46  180.00  116.77   1.0900
+IC C1'  C3'  *C2' O2'    1.5284  101.04 -114.67  110.81   1.4212 
+IC H2'  O2'  C2'  C3'    0.9600  114.97  148.63  111.92   1.5284 
+IC O4'  C2'  *C1' H1'    0.0     105.6  -115.0  0.0      0.0
+IC C1'  C3'  *C2' H2''   0.0     101.0   115.0  0.0      0.0
+IC O4'  C2'  *C1' N1     0.0     105.6   115.0  0.0      0.0
+IC C4'  O5'  *C5' H5'    0.0     0.0     -115.0  0.0      0.0
+IC C4'  O5'  *C5' H5''   0.0     0.0      115.0  0.0      0.0
+IC C6   C4   *C5  H5     0.0     0.0      180.0  0.0      0.0
+IC N1   C5   *C6  H6     0.0     0.0      180.0  0.0      0.0
+
+RESI PSU         -1.00 
+ATOM P    P       1.1662
+ATOM O1P  OCP    -0.7760
+ATOM O2P  OCP    -0.7760
+ATOM O5'  OS     -0.4989
+GROUP
+ATOM C5'  CTT     0.0558
+ATOM H5'  HAT     0.0679
+ATOM H5'' HAT     0.0679
+GROUP
+ATOM C4'  CT5     0.1065
+ATOM H4'  HA5     0.1174
+ATOM O4'  OE     -0.3548
+ATOM C1'  CT5     0.0674
+ATOM H1'  HA5     0.1824
+GROUP                    !SP/EPS rhf/6-31g*
+ATOM C5   CF     -0.3635 !C   -0.452815
+ATOM N1   NSR    -0.3082 !N   -0.664803
+ATOM H1   HB      0.3811 !H    0.386406
+ATOM C6   CF      0.0374 !-0.0126 !C    0.284660
+ATOM H6   HAR     0.2188 !H    0.140854
+GROUP
+ATOM C2   CK      0.5687 ! 0.4687 !C    0.941655
+ATOM O2   OK     -0.6477 !-0.5477 !O   -0.656752
+GROUP
+ATOM N3   NAT    -0.3549 !N   -0.733468
+ATOM H3   HB      0.3154 !H    0.385064
+GROUP
+ATOM C4   CK      0.6952 ! 0.5952 !C    0.886158
+ATOM O4   OK     -0.6761 !-0.5761 !O   -0.642212
+GROUP
+ATOM C2'  CT5     0.0670
+ATOM H2'' HA5     0.0972
+ATOM O2'  OH     -0.6139
+ATOM H2'  HO      0.4186
+GROUP
+ATOM C3'  CT5     0.2022
+ATOM H3'  HA5     0.0615
+GROUP
+ATOM O3'  OS     -0.5246
+BOND P    O1P       P    O2P       P     O5'
+BOND O5'  C5'       C5'  C4'       C4'  O4'       C4'  C3'       O4'  C1' 
+BOND C1'  C5        C1'  C2'       N1   C2        N1   C6        C2   O2  
+BOND C2   N3        N3   H3        N3   C4        C4   O4        C4   C5  
+BOND C5   C6        C2'  C3'       C3'  O3'       O3'  +P  
+BOND C2'  O2'       O2'  H2'
+BOND C1'  H1'       C2'  H2''      C3'  H3'       C4'  H4'       C5'  H5'
+BOND C5'  H5''      N1   H1        C6   H6
+IMPH O2   N1   N3   C2        H3   C2   C4   N3     !H5   C4   C6   C5
+IMPH O4   N3   C5   C4        H6   N1   C5   C6
+DONO H3   N3
+DONO H2'  O2'
+ACCE O2   C2
+ACCE O4   C4
+ACCE O1P  P
+ACCE O2P  P
+ACCE O2'
+ACCE O3'
+ACCE O4'
+ACCE O5'
+IC -O3' P     O5'  C5'   1.6100  101.45  -88.00  119.00   1.4401!alpha
+IC -O3'  O5' *P   O1P    1.6100  101.45 -115.82  109.74   1.4802
+IC -O3'  O5' *P   O2P    1.6100  101.45  115.90  109.80   1.4801
+IC  P   O5'  C5'  C4'    1.6100  119.00 -153.00  110.04   1.5400!beta
+IC O5'  C5'  C4'  C3'    1.4401  111.83  047.00  116.10   1.5284!gamma
+IC C5'  C4'  C3'  O3'    1.5400  115.10   83.00  115.12   1.4212!delta
+IC C4'  C3'  O3'  +P     1.5284  109.92  171.00  119.05   1.6000!epsilon
+IC C3'  O3'  +P   +O5'   1.4212  119.05  -44.00  101.45   1.6100!eta
+IC C5'  C3'  *C4' O4'    1.5472  113.36  119.04  106.10   1.4500 
+IC C5'  C3'  *C4' H4'    1.5472  113.36 -119.04  109.10   1.0900 
+IC C4'  C3'  C2'  C1'    1.5400  100.00   37.00  101.97   1.5400! nu2
+IC C4'  O3'  *C3' C2'    1.5284  109.47 -120.00  110.00   1.5400
+IC C4'  O3'  *C3' H3'    1.5284  109.47  120.00  109.47   1.0900
+!IC C3'  C2'   C1' N1     1.5284  101.97   93.39  113.71   1.4896
+IC O4'  C1'   N1  C2     1.5251  108.71 -153.00  117.06   1.3746
+IC C1'  C2    *N1 C6     1.4896  117.06 -179.00  122.08   1.3704
+IC C2   N1   C6   C5     1.3746  122.08    0.00  121.23   1.3432
+IC C6   N1   C2   N3     1.3704  122.08    0.00  115.38   1.3813
+IC N1   N3   *C2  O2     1.3746  115.38 -179.95  121.70   1.2191
+IC N1   C2   N3   C4     1.3746  115.38   -0.07  126.46   1.3795
+IC C5   N3   *C4  O4     1.4439  114.07  179.98  120.59   1.2327
+IC C2   C4   *N3  H3     1.3813  126.46  180.00  116.77   1.0900
+IC C1'  C3'  *C2' O2'    1.5284  101.04 -114.67  110.81   1.4212 
+IC H2'  O2'  C2'  C3'    0.9600  114.97  148.63  111.92   1.5284 
+IC O4'  C2'  *C1' H1'    0.0     105.6  -115.0  0.0      0.0
+IC C1'  C3'  *C2' H2''   0.0     101.0   115.0  0.0      0.0
+IC O4'  C2'  *C1' N1     0.0     105.6   115.0  0.0      0.0
+IC C4'  O5'  *C5' H5'    0.0     0.0     -115.0  0.0      0.0
+IC C4'  O5'  *C5' H5''   0.0     0.0      115.0  0.0      0.0
+!IC C6   C4   *C5  H5     0.0     0.0      180.0  0.0      0.0
+IC N1   C5   *C6  H6     0.0     0.0      180.0  0.0      0.0
+
+
+PATC FIRS NONE LAST NONE
+RESI DIME   -1.00   !dimethylphosphate
+GROUP
+ATOM P1 P    1.1656
+ATOM O2 OCP -0.7761
+ATOM O3 OCP -0.7761
+ATOM O4 OS  -0.4954
+ATOM O5 OS  -0.4954
+ATOM C6 CTT -0.0069
+ATOM C7 CTT -0.0069
+ATOM H8 HAT  0.0652
+ATOM H9 HAT  0.0652
+ATOM H10 HAT 0.0652
+ATOM H11 HAT 0.0652
+ATOM H12 HAT 0.0652
+ATOM H13 HAT 0.0652
+BOND P1 O4
+BOND P1 O5
+BOND P1 O3
+BOND P1 O2
+BOND O4 C7
+BOND O5 C6
+BOND C6 H11
+BOND C6 H12
+BOND C6 H13
+BOND C7 H8
+BOND C7 H9
+BOND C7 H10
+IC O5 P1  O4 C7   1.56 109.47 180.00 118.01   1.42
+IC O3 P1  O4 C7   1.50 113.00  53.10 118.01   1.42
+IC O2 P1  O4
+
+
+!
+!SOLVENTS
+!
+PATC FIRS NONE LAST NONE
+RESI ETHA  0.000 !ETHANOL
+GROUP
+ATOM C2 CT  0.165
+ATOM H6 HA  0.034
+ATOM H5 HA  0.034
+ATOM C3 CT -0.105
+ATOM H9 HA  0.044
+ATOM H8 HA  0.044
+ATOM H7 HA  0.044
+ATOM O1 OT -0.655
+ATOM H4 HO  0.395
+BOND C2 H6
+BOND C2 H5
+BOND C2 C3
+BOND C2 O1
+BOND C3 H9
+BOND C3 H8
+BOND C3 H7
+BOND O1 H4
+IC H6 C2  C3 H9   1.10 110.25 -60.05 110.35   1.10
+IC H5 C2  C3 H9   1.10 109.39 -178.96 110.35   1.10
+IC O1 C2  C3 H9   1.44 111.19  62.54 110.35   1.10
+IC H6 C2  C3 H8   1.10 110.25  60.00 110.29   1.10
+IC H6 C2  C3 H7   1.10 110.25 -179.99 109.92   1.10
+IC H6 C2  O1 H4   1.10 110.25 -52.31 112.52   0.95
+IC H5 C2  O1 H4   1.10 107.44  65.42 112.52   0.95
+IC C3 C2  O1 H4   1.55 111.19 -174.91 112.52   0.95
+
+PATC FIRS NONE LAST NONE
+
+RESI TRIF  0.000 !TRIFLOROETHANOL
+GROUP
+ATOM C2 CT -0.083
+ATOM H6 HA  0.116
+ATOM H5 HA  0.117
+ATOM C3 CF3  1.000
+ATOM F2 XF -0.300
+ATOM F3 XF -0.300
+ATOM F1 XF -0.300
+ATOM O1 OT -0.650
+ATOM H4 HO  0.400
+BOND C2 H6
+BOND C2 H5
+BOND C2 C3
+BOND C2 O1
+BOND C3 F2
+BOND C3 F3
+BOND C3 F1
+BOND O1 H4
+IC H6 C2  C3 F2   1.09 109.24 -65.62 110.97   1.09
+IC H5 C2  C3 F2   1.09 109.49 175.95 110.97   1.09
+IC O1 C2  C3 F2   1.42 109.48  55.25 110.97   1.09
+IC H6 C2  C3 F3   1.09 109.24  54.22 110.87   1.09
+IC H6 C2  C3 F1   1.09 109.24 174.26 111.14   1.09
+IC H6 C2  O1 H4   1.09 110.29 -56.82 111.01   0.95
+IC H5 C2  O1 H4   1.09 110.03  62.58 111.01   0.95
+IC C3 C2  O1 H4   1.53 109.48 -177.04 111.01   0.95
+
+!
+! Water models
+!
+PATC  FIRS NONE LAST NONE
+RESI TIP3         0.000   ! TIPS3P WATER MODEL 
+GROUP
+ATOM OH2  OT     -0.834         
+ATOM H1   HT      0.417         
+ATOM H2   HT      0.417         
+BOND OH2  H1        OH2  H2        H1   H2  ! THE LAST BOND IS NEEDED FOR SHAKE
+ANGL  H1 OH2 H2
+!ACCE OH2
+
+PATC  FIRS NONE LAST NONE
+RESI T95          0.000   ! TIPS3P WATER MODEL with 5% reduced charge 
+GROUP                     ! This model provides stable A-DNA simulations by balancing the 
+ATOM OH2  OT     -0.7923  ! Na-H2O, Cl-H2O, DNA-Na, DNA-Cl, DNA-H2O interactions.
+ATOM H1   HT      0.39615 !
+ATOM H2   HT      0.39615 !
+BOND OH2  H1        OH2  H2        H1   H2  ! THE LAST BOND IS NEEDED FOR SHAKE
+ANGL  H1 OH2 H2
+!ACCE OH2
+
+PATC  FIRS NONE LAST NONE
+RESI TIPS         0.000   !!TIP3P water model, J. Chem. Phys., 79, 926, 1983.
+GROUP
+ATOM OH2  OW     -0.834
+ATOM H1   HW      0.417
+ATOM H2   HW      0.417
+BOND OH2  H1        OH2  H2        H1   H2  ! THE LAST BOND IS NEEDED FOR SHAKE
+ANGL  H1 OH2 H2
+!ACCE OH2
+
+!
+!Noble Gases
+!
+PATC  FIRS NONE LAST NONE
+RESI HE           0.00   !Helium
+GROUP
+ATOM HE  HE       0.00
+
+PATC  FIRS NONE LAST NONE
+RESI NE           0.00   !Neon
+GROUP
+ATOM NE  NE       0.00
+
+PATC  FIRS NONE LAST NONE
+RESI AR           0.00   !Argon
+GROUP
+ATOM AR  AR       0.00
+
+!
+!IONS
+!
+PATC  FIRS NONE LAST NONE
+RESI NA           1.00
+GROUP
+ATOM NA  SOD      1.00
+
+PATC  FIRS NONE LAST NONE
+GROUP
+RESI K            1.00
+ATOM K   K        1.00
+
+PATC FIRS NONE LAST NONE
+RESI CL          -1.00
+GROUP
+ATOM CL  XCL     -1.00
+
+PATC FIRS NONE LAST NONE
+
+
+PRES 5MU         -0.1824 !Patch to make 5-methyluridine from uridine
+DELETE ATOM H5
+ATOM C5   CF     -0.3635 
+ATOM C5A  CTT    -0.0499 
+ATOM H51  HAT     0.0770 
+ATOM H52  HAT     0.0770 
+ATOM H53  HAT     0.0770 
+BOND C5 C5A  C5A H51  C5A H52  C5A H53
+ANGL C4 C5 C5A  C6 C5 C5A  C5 C5A H51  C5 C5A H52  C5 C5A H53
+ANGL H51 C5A H52  H51 C5A H53  H52 C5A H53
+DIHE N3 C4 C5 C5A  O4 C4 C5 C5A  N1 C6 C5 C5A  H6 C6 C5 C5A
+DIHE C4 C5 C5A H51  C4 C5 C5A H52  C4 C5 C5A H53
+DIHE C6 C5 C5A H51  C6 C5 C5A H52  C6 C5 C5A H53
+IMPH C5A  C4   C6   C5 
+IC        C4    C6    *C5   C5A    1.4440  120.78 -179.94  121.63   1.5000
+IC        C6    C5    C5A   H51    1.3431  121.63   90.00  109.47   1.0900
+IC        C6    C5    C5A   H52    1.3431  121.63  -30.00  109.47   1.0900
+IC        C6    C5    C5A   H53    1.3431  121.63 -150.00  109.47   1.0900
+
+PRES 1MG         -0.1363 !Patch to make 1-methylguanine from guanine
+DELETE ATOM H1
+ATOM N1   NAG    -0.3635
+ATOM C1A  CTT    -0.0038
+ATOM H11  HAT     0.0770
+ATOM H12  HAT     0.0770
+ATOM H13  HAT     0.0770
+BOND N1 C1A  C1A H11  C1A H12  C1A H13
+ANGL C2 N1 C1A  C6 N1 C1A  N1 C1A H11  N1 C1A H12  N1 C1A H13
+ANGL H11 C1A H12  H11 C1A H13  H12 C1A H13
+DIHE N2 C2 N1 C1A  N3 C2 N1 C1A  C5 C6 N1 C1A  O6 C6 N1 C1A
+DIHE C2 N1 C1A H11  C2 N1 C1A H12  C2 N1 C1A H13
+DIHE C6 N1 C1A H11  C6 N1 C1A H12  C6 N1 C1A H13
+IMPH C1A  C2   C6   N1
+ IC C6 C1A *N1 C2   1.37 118.74 -178.88 118.62   1.36
+ IC C5 C6  N1 C1A   1.42 114.51 -179.37 118.74   1.44
+ IC O6 C6  N1 C1A   1.24 119.19   0.52 118.74   1.44
+ IC C6 N1  C1A H11   1.37 118.74 180.00 109.47   1.09
+ IC C6 N1  C1A H12   1.37 118.74  60.00 109.47   1.09
+ IC C6 N1  C1A H13   1.37 118.74 -59.98 109.55   1.09
+ IC C2 N1  C1A H13   1.36 118.62 121.14 109.55   1.09
+
+PRES TG          -0.0888           ! Patch to make 2'-deoxy-6-ThioGuanine
+DELETE ATOM O6                     ! Charges were obtained by normalizing the
+ATOM N9   NS      0.0616 ! 0.0577  ! DFT/6-31+G** charges between B-Form deoxygua,
+ATOM C4   CB      0.1402 ! 0.1814  ! deoxythiogua and amber RESP charges.
+ATOM N3   NCA    -0.6051 !-0.6636  ! The sugar charges were retained from the RESP charges.
+ATOM C2   CA      0.5343 ! 0.7432  ! (deoxythiogua/deoxygua)*RESP charges = new charges.
+ATOM N2   NAN    -0.8500 !-0.9230 
+ATOM H21  HNA     0.4160 ! 0.4235  ! cis to N1 (involved in BP h-bond)
+ATOM H22  HNA     0.4160 ! 0.4235  ! trans to N1
+GROUP
+ATOM N1   NAG    -0.1325 !-0.5053
+ATOM H1   HB      0.1975 ! 0.3520
+GROUP
+ATOM C6   CK     -0.2531 ! 0.4918
+ATOM S6   S      -0.2917 !-0.5699
+GROUP
+ATOM C5   CB      0.5781 ! 0.1991
+ATOM N7   NBG    -0.6538 !-0.5725
+ATOM C8   CE      0.0723 ! 0.0736
+ATOM H8   HAR     0.2814 ! 0.1997
+BOND C6   S6
+ANGL C5   C6   S6     N1   C6   S6
+DIHE H1   N1   C6   S6     C2   N1   C6   S6     C4   C5   C6   S6     N7   C5   C6   S6     
+IMPH S6   N1   C5   C6
+ACCE S6   C6
+IC        C5    N1    *C6   S6     1.4188  111.38  179.92  119.80   1.2276
+
+PRES 5PHO      -0.54 ! places a phosphate at the 5' end of DNA after generation of psf
+ATOM O5T  OHP  -0.60
+ATOM H5T  HOP   0.40
+ATOM P    P     0.90
+ATOM O1P  OCP  -0.62
+ATOM O2P  OCP  -0.62
+BOND H5T   O5T      O5T  P
+DONO H5T    O5T
+IC   H5T    O5T   P  O5'    1.0000  115.00  180.00   101.45   1.6100
+IC   C5'   O5'   P  O5T    1.4461  119.00  -39.52   101.45   1.6100
+IC   O5T   O5' *P   O1P    1.6100  101.45 -115.82  109.74   1.4802
+IC   O5T   O5' *P   O2P    1.6100  101.45  115.90  109.80   1.4801
+
+PRES 5TER        -0.0457 ! 0.070 ! Places hydroxyl at 5' end of DNA (default)
+ATOM H5T  HO      0.4422 ! 0.40 
+ATOM O5'  OH     -0.6318 !-0.65 
+ATOM C5'  CTT    -0.0069 ! 0.250
+ATOM H5'  HAT     0.0754 ! 0.035
+ATOM H5'' HAT     0.0754 ! 0.035
+!
+DELETE ATOM P
+DELETE ATOM O1P
+DELETE ATOM O2P
+DELETE ATOM O5T
+!
+BOND H5T    O5'
+!ANGL H5T  O5'  C5'
+!DIHE H5T  O5'  C5'  C4'    H5T  O5'  C5'  H5'    H5T  O5'  C5'  H5''
+DONO H5T    O5'
+IC  H5T   O5'   C5'  C4'   1.0000  110.00  180.00  110.04   1.5400
+
+PRES 3TER        -0.0455 ! 0.00 ! Places hydroxyl at 3' end of DNA (default)
+ATOM C3'  CT5     0.0713 ! 0.25 
+ATOM H3'  HA5     0.0985 ! 0.00 
+ATOM O3'  OH     -0.6549 !-0.65 
+ATOM H3T  HO      0.4396 ! 0.40 
+BOND O3'  H3T
+!ANGL C3'  O3'  H3T
+!DIHE H3'  C3'  O3'  H3T    C4'  C3'  O3'  H3T    C5'  C3'  O3'  H3T
+DONO H3T  O3'
+IC  H3T  O3'   C3'  C4'   0.9600  114.97  148.63  111.92   1.5284
+
+PRES 5RTE       -0.0012 ! Places hydroxyl at 5' end of RNA after generation of psf
+ATOM  H5T   HO   0.4295
+ATOM  O5'   OH  -0.6223
+ATOM  C5'   CTT  0.0558
+ATOM  H5'   HAT  0.0679
+ATOM  H5''  HAT  0.0679
+!
+DELETE ATOM P
+DELETE ATOM O1P
+DELETE ATOM O2P
+DELETE ATOM O5T
+!
+BOND H5T    O5'
+DONO H5T    O5'
+IC  H5T   O5'   C5'  C4'   1.0000  110.00  180.00  110.04   1.5400
+
+PRES 3RTE        0.0472 ! Places hydroxyl at 3' end of DNA (default)
+ATOM  C3'   CT5  0.2022
+ATOM  H3'   HA5  0.0615
+ATOM  O3'   OH  -0.6541
+ATOM  H3T   HO   0.4376
+BOND O3'  H3T
+DONO H3T  O3'
+IC  H3T  O3'   C3'  C4'   0.9600  114.97  148.63  111.92   1.5284
+
+PRES 2END         0.00 ! Patch to put ribose in 2*endo conformation 
+IC C5'  C4'  C3'  O3'    1.5400  116.10  150.88  115.12   1.4212
+IC O4'  C3'  *C4' C5'    1.4572  104.06 -121.24  116.10   1.5400
+IC C2'  C4'  *C3' O3'    1.5284  101.91 -114.59  110.88   1.4212
+IC C4'  C3'  C2'  C1'    1.5284  101.78  -39.92  101.97   1.5251
+IC C1'  C3'  *C2' O2'    1.5284  100.04 -124.67  115.81   1.4212 !INFERENCE
+
+END

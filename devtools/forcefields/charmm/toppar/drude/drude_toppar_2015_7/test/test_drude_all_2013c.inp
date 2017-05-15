@@ -1,0 +1,49 @@
+* $Id: test_drude_all.inp 28 2015-07-29 23:54:15Z alex $
+* Master test case for drude
+*
+
+! OPTIONAL variables to be set from the command-line:
+!  pdbdir : directory to write structures to. No structures written if not set.
+!  mindr  : set to 1 to minimize drude particles.
+!  mini   : set to 1 to minimize structures.
+
+set testcases 6
+set test1 test_drude_master_protein.str
+set test2 test_drude_model.str
+set test3 test_drude_lipid.str
+set test4 test_drude_carbohydrate.str
+set test5 test_drude_nucleic_acids_no_rna.str
+set test6 test_drude_ions.str
+
+ioformat extend
+
+set toppar ..
+stream @toppar/toppar_defs_2013c.str
+
+!Not using ENVI because lowercase strings still cannot be set from the cmdline
+if @?pdbdir eq 1 then ! cannot use 1-line syntax because substitution will fail
+  system "`echo mkdir @PDBDIR | awk '{print tolower($0)}'`"
+ endif
+if @?mini eq 0 set mini 0
+if @mini eq 0 then
+  if @?mindr eq 0 set mindr 0
+  if @mindr eq 0 then
+    set ins
+   else
+    set ins _mindr
+   endif
+ else
+  set mindr 1
+  set ins _mini
+ endif
+
+open unit 90 write form name test_drude_all@ins.ene
+echu 90
+echo $Id: test_drude_all.inp 28 2015-07-29 23:54:15Z alex $
+echo residue names and energies
+
+set testcasei 1
+label loop_tests
+stream @test@@testcasei
+incr testcasei
+if @testcasei le @testcases goto loop_tests

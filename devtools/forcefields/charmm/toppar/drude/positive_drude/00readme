@@ -1,0 +1,9 @@
+
+Temporary test case for the postitive drude models is
+positive_drude_test_temp.inp due to bug related to "drude reset" and
+"dele atom" that only effects energies etc. following deletion of all
+atoms and drudes and generation of new atoms with drudes.  To run the
+test case edit run_test.cmd to point to the charmm executable and then
+source run_test.cmd.  Files in the data subdirectory will have the
+energies for each complex.
+

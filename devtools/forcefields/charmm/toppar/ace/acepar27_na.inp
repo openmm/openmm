@@ -1,0 +1,53 @@
+* ACE2 parameter file (under construction, Jan 2002)
+*        >>>> for use with par_all27_na <<<<
+* Author: Michael Schaefer ! (schaefer@piaf.u-strasbg.fr)
+* Reserved (4-letter) keywords: VOLU, SIGM, A012, RMIN, EQUI, END.
+* The file MUST end with the END keyword.
+*
+
+VOLUMES
+! Effective Voronoi atom volumes, use with smoothing parameter alpha=1.1
+! Reference: M. Schaefer, C. Bartels, F. Leclerc, and M. Karplus,
+!            J. Comp. Chem. 22 (2001), 1857-1879.
+HN1      0.0000
+HN2      0.0000
+HN3      0.0000
+HN5      0.0000
+HN7      0.0000
+HN8      0.0000
+HN9      0.0000
+CN1      8.3670
+CN1T     8.4060
+CN2      8.5500
+CN3     17.3170
+CN3T     9.8890
+CN4     17.1250
+CN5      8.9150
+CN5G     9.1600
+CN7     12.7100
+CN7B    12.2210
+CN8     20.2050
+CN8B    20.6310
+CN9     30.7750
+NN1     21.7910
+NN2      9.2230
+NN2B     9.2630
+NN2U    14.2200
+NN2G    14.0690
+NN3     13.9170
+NN3A    14.1390
+NN3G    16.3950
+NN4     16.7840
+NN3B    16.9620
+ON1     20.2730
+ON1C    20.3190
+ON2     15.7230
+ON3     19.4700
+ON5     20.8370
+ON6     16.4680
+ON6B    15.8860
+P        6.2230
+MG       7.0000
+SOD     10.6241 ! van der Waals volume
+
+END

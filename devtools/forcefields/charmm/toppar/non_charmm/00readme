@@ -1,0 +1,72 @@
+
+This directory contains topology and parameter files that are
+compatible with CHARMM but are not part of the CHARMM force field
+development efforts.  The parameters have been approved by the
+original developers, or individuals closely associated with those
+developers.  However, they have not been exhaustively tested in the
+context of CHARMM and are not supported.  Please carefully read the
+header sections of the respective files to obtain information on their
+proper use along with the appropriate references.
+
+BMS nucleic acid force field
+
+par_bms_dec03.prm
+top_bms_dec03.rtf
+
+AMBER Cornell 94 force field for proteins and nucleic acids and the
+1998 variant of the nucleic acid parameters. Requires CHARMM compiled
+with AMBER keyword in pref.dat.  Note that such versions of CHARMM can
+NOT be used with the CHARMM force field.
+
+top_amber_cornell.inp
+par_amber_cornell.inp
+par_amber_98.inp
+
+parm14sb_all.rtf, parm14sb_all.prm: added July 2015
+
+Additional versions of CHARMM compatible AMBER files may be obtained
+from Jeff Klauda's website:
+
+http://www.glue.umd.edu/~jbklauda/research/download.html
+or
+http://terpconnect.umd.edu/~jbklauda/research/download.html
+
+OPLS AA protein force field along with ligand parameters. Requires
+CHARMM compiled with OPLS keyword in pref.dat.
+
+top_opls_aa.inp
+par_opls_aa.inp
+par_opls_ligand.inp
+
+top_opls_aam.inp
+par_opls_aam.inp: added July 2015
+
+Version of Amber FF99SB* from Robert Best (not
+tested). e_corr_ff99sb.pdf contains the energy correction that
+converts the FFSB99 backbone potential to FFSB99*
+
+charmm_ff99sbstar.tgz
+
+Stream files containing various water models.  Note that the water
+atom types are the same as in the TIP3P model such that the following
+files can NOT be used simultaneously with the TIP3P model in the
+default toppar_water_ions.str file.  This can be overcome by changing
+the water atom types in the following files.
+
+Caution: The models with LPs fail with late versions of C36
+(post-fortran 90 conversion) and early versions of C37
+
+toppar_water_ions_spc.str
+toppar_water_ions_spc_e.str
+toppar_water_ions_tip3p_pme_b.str
+toppar_water_ions_tip3p_pme_f.str
+toppar_water_ions_tip4p.str
+toppar_water_ions_tip4p_2005.str
+toppar_water_ions_tip4p_ew.str
+toppar_water_ions_tip5p.str
+toppar_water_ions_tip5p_ew.str
+
+GROMACS
+
+A full representation of the charmm36 FFs is in the gromacs
+subdirectory.  See mackerell lab web page for additional information.

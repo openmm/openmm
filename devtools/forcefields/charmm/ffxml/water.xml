@@ -1,0 +1,39 @@
+<ForceField>
+ <Info>
+   <DateGenerated>2016-02-19</DateGenerated>
+ </Info>
+ <AtomTypes>
+  <Type name="OT" class="OT" element="O" mass="15.9994"/>
+  <Type name="HT" class="HT" element="H" mass="1.008"/>
+ </AtomTypes>      
+ <Residues>
+  <Residue name="TIP3">
+   <Atom name="OH2" type="OT" charge="-0.834"/>
+   <Atom name="H1" type="HT" charge="0.417"/>
+   <Atom name="H2" type="HT" charge="0.417"/>
+   <Bond atomName1="OH2" atomName2="H1"/>
+   <Bond atomName1="OH2" atomName2="H2"/>
+   <Bond atomName1="H1" atomName2="H2"/>
+  </Residue>
+  <Residue name="TP3M">
+   <Atom name="OH2" type="OT" charge="-0.834"/>
+   <Atom name="H1" type="HT" charge="0.417"/>
+   <Atom name="H2" type="HT" charge="0.417"/>
+   <Bond atomName1="OH2" atomName2="H1"/>
+   <Bond atomName1="OH2" atomName2="H2"/>
+  </Residue>
+ </Residues>
+  <HarmonicBondForce>
+   <Bond type1="HT" type2="OT" length="0.09572" k="376560.0"/>
+   <Bond type1="HT" type2="HT" length="0.15139" k="0.0"/>
+  </HarmonicBondForce>
+  <HarmonicAngleForce>
+   <Angle type1="HT" type2="OT" type3="HT" angle="1.82421813418" k="460.24"/>
+  </HarmonicAngleForce>
+  <NonbondedForce coulomb14scale="1.0" lj14scale="1.0">
+   <UseAttributeFromResidue name="charge"/>
+   <Atom type="OT" sigma="0.315057422683" epsilon="0.6363864"/>
+   <Atom type="HT" sigma="0.0400013524445" epsilon="0.192464"/>
+ </NonbondedForce>
+</ForceField>
+

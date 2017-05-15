@@ -1,0 +1,58 @@
+* ACE2 parameter file (under construction, Jan 2002)
+*        >>>> for use with par_all22_prot <<<<
+* Author: Michael Schaefer ! (schaefer@piaf.u-strasbg.fr)
+* Reserved (4-letter) keywords: VOLU, SIGM, A012, RMIN, EQUI, END.
+* The file MUST end with the END keyword.
+*
+
+VOLUMES
+! Effective Voronoi atom volumes, use with smoothing parameter alpha=1.3
+! Reference: M. Schaefer, C. Bartels, F. Leclerc, and M. Karplus,
+!            J. Comp. Chem. 22 (2001), 1857-1879.
+H        0.0000
+HC       0.0000
+HA       0.0000
+HP       0.0000
+HB       0.0000
+HR1      0.0000
+HR3      0.0000
+HS       0.0000
+HT       0.0000 ! TIP3
+C        8.5590
+CA      21.2450
+CT1     12.3350
+CT2     21.9090
+CT3     34.1160
+CPH1    15.2480
+CPH2    17.8930
+CPT     10.4070
+CY      10.5050
+CP1     12.9160
+CP2     24.3960
+CP3     22.3300
+CC       9.2150
+CPA     10.7540
+CPB     11.1880
+CPM     19.9980
+CA3     10.2130
+N        9.4180
+NR1     18.0190
+NR2     17.8970
+NH1     14.7980
+NH2     25.0010
+NH3     24.5440
+NC2     24.5090
+NY      18.8470
+NP      17.6250
+NPH     11.5350
+NC2E    17.2860
+O       22.7090
+OC      21.6170
+OH1     24.4730
+OT      23.1570 ! TIP3, OT van der Waals volume
+S       29.8490
+SM      26.3250
+SSO4     5.0260 ! SO4 sulfate S volume, from results on param19
+FE      10.4580
+
+END

@@ -1,0 +1,88 @@
+* This parameter append file is for Hydrogen bond analysis ONLY.
+* Use the command:  READ PARAM APPEND CARD ...
+* It WILL change your energy function (not for the better)
+* by adding an HBOND energy term.  Use at your own risk.
+* NOTE: The charmm potential energy function is designed NOT
+* to include an explicit hydrogen bond term.  Therefore, use
+* of the following hydrogen bond parameters will lead to incorrect
+* results.
+*
+
+HBOND AEXP 4 REXP 6 HAEX 2 AAEX 2 NOACCEPTORS HBNOEXCLUSIONS ALL -
+CUTHB 6.0 CTOFHB 5.0 CTONHB 4.0 CUTHA 100.0 CTOFHA 90.0 CTONHA 90.0
+N    N      -5.000     3.0000
+N    N%     -5.000     3.0000
+N    N%%    -5.000     3.0000
+N    N%%%   -5.000     3.0000
+N%   N      -5.000     3.0000
+N%   N%     -5.000     3.0000
+N%   N%%    -5.000     3.0000
+N%   N%%%   -5.000     3.0000
+N%%  N      -5.000     3.0000
+N%%  N%     -5.000     3.0000
+N%%  N%%    -5.000     3.0000
+N%%  N%%%   -5.000     3.0000
+N%%% N      -5.000     3.0000
+N%%% N%     -5.000     3.0000
+N%%% N%%    -5.000     3.0000
+N%%% N%%%   -5.000     3.0000
+N    O      -4.900     2.9000
+N    O%     -4.900     2.9000
+N    O%%    -4.900     2.9000
+N    O%%%   -4.900     2.9000
+N%   O      -4.900     2.9000
+N%   O%     -4.900     2.9000
+N%   O%%    -4.900     2.9000
+N%   O%%%   -4.900     2.9000
+N%%  O      -4.900     2.9000
+N%%  O%     -4.900     2.9000
+N%%  O%%    -4.900     2.9000
+N%%  O%%%   -4.900     2.9000
+N%%% O      -4.900     2.9000
+N%%% O%     -4.900     2.9000
+N%%% O%%    -4.900     2.9000
+N%%% O%%%   -4.900     2.9000
+O    N      -4.850     2.8500
+O    N%     -4.850     2.8500
+O    N%%    -4.850     2.8500
+O    N%%%   -4.850     2.8500
+O%   N      -4.850     2.8500
+O%   N%     -4.850     2.8500
+O%   N%%    -4.850     2.8500
+O%   N%%%   -4.850     2.8500
+O%%  N      -4.850     2.8500
+O%%  N%     -4.850     2.8500
+O%%  N%%    -4.850     2.8500
+O%%  N%%%   -4.850     2.8500
+O%%% N      -4.850     2.8500
+O%%% N%     -4.850     2.8500
+O%%% N%%    -4.850     2.8500
+O%%% N%%%   -4.850     2.8500
+O    O      -4.750     2.7500
+O    O%     -4.750     2.7500
+O    O%%    -4.750     2.7500
+O    O%%%   -4.750     2.7500
+O%   O      -4.750     2.7500
+O%   O%     -4.750     2.7500
+O%   O%%    -4.750     2.7500
+O%   O%%%   -4.750     2.7500
+O%%  O      -4.750     2.7500
+O%%  O%     -4.750     2.7500
+O%%  O%%    -4.750     2.7500
+O%%  O%%%   -4.750     2.7500
+O%%% O      -4.750     2.7500
+O%%% O%     -4.750     2.7500
+O%%% O%%    -4.750     2.7500
+O%%% O%%%   -4.750     2.7500
+S    N      -3.500     3.0000
+S    N%     -3.500     3.0000
+S    N%%    -3.500     3.0000
+S    N%%%   -3.500     3.0000
+S    O      -3.500     2.9000
+S    O%     -3.500     2.9000
+S    O%%    -3.500     2.9000
+S    O%%%   -3.500     2.9000
+
+END
+
+

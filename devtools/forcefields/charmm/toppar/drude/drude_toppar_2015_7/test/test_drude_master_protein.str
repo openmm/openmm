@@ -1,0 +1,420 @@
+* $Id: test_drude_master_protein.str 30 2015-07-30 13:50:30Z alex $
+* Test case, Drude master_protein toppar file
+*
+
+! goto skip_to_ions_noble
+! goto skip_to_master_prot_model
+! goto skip_to_monopept
+
+set boml 0 ! set to -1 if the series contains 3-membered rings
+
+set nres 1 ! skip swm6 water due to bug
+set resi1  swm4
+! set resi2  swm6
+set seed1  1 H1  1 OH2 1 H2
+! set seed2  1 H1  1 OH2 1 H2
+
+set count 1
+label loop_master_water
+
+set residue @resi@@count
+read sequence @residue 1
+
+bomlev @boml
+generate @residue noangle nodihedral first none last none setup warn drude dmass 0.4 !show
+bomlev 0
+
+ic param
+ic seed @seed@@count
+ic build 
+coor sdrude
+coor shake
+
+update inbfrq -1 ihbfrq 0 switch atom vatom vswitch cutnb 999.0 ctofnb 997.0 ctonnb 995.0
+
+if @mindr eq 0 then
+  energy
+ else
+  cons harm force 100000. sele .not. type D* end
+  mini ABNR nstep 200 nprint 20
+  cons harm clear
+ endif
+echo @residue starting E: ?ener
+
+if @?pdbdir eq 1 then
+  write psf card name @pdbdir/@residue.psf
+  write coor pdb name @pdbdir/@residue_start.pdb
+ endif
+
+if @mini ne 0 then
+  mini sd nstep 1000 tolgrd 0.0001 nprint 100
+  if ?grms gt 0.0001 mini abnr nstep 1000 tolgrd 0.0001
+  if ?grms gt 0.0001 then
+    echo FATAL ERROR: MINIMIZATION NOT CONVERGED
+    echu
+    echo FATAL ERROR: MINIMIZATION NOT CONVERGED
+    stop
+   endif
+  echo @residue minimized E: ?ener
+  if @?pdbdir eq 1 then ! cannot use 1-line syntax because substitution will fail
+    write coor pdb name @pdbdir/@residue_min.pdb
+   endif
+ endif
+
+coor orient
+coor dipole oxyz select all end 
+echo @residue dipole: ?rdip
+!! Check molecular polarizability
+!VIBRAN
+!diag dscf fini step 0.001
+!END
+
+shake off
+drude reset
+lone clear
+delete atom sele all end
+
+incr count
+if count le @nres goto loop_master_water
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+label skip_to_ions_noble
+
+set boml 0 ! set to -1 if the series contains 3-membered rings
+
+set nres 18
+
+set resi1  li
+set resi2  sod
+set resi3  pot
+set resi4  rb
+set resi5  cs
+set resi6  f
+set resi7  cla
+set resi8  br
+set resi9  i
+set resi10 zn
+set resi11 mag
+set resi12 cal
+set resi13 sr
+set resi14 ba
+set resi15 he
+set resi16 ne
+set resi17 he1
+set resi18 ne1
+
+set count 1
+label loop_master_ions_noble
+
+set residue @resi@@count
+read sequence @residue 1
+
+bomlev @boml
+generate @residue first none last none setup warn drude dmass 0.4 !show
+bomlev 0
+
+coor sdrude
+coor shake
+
+update inbfrq -1 ihbfrq 0 switch atom vatom vswitch cutnb 999.0 ctofnb 997.0 ctonnb 995.0
+
+if @mindr eq 0 then
+  energy
+ else
+  cons harm force 100000. sele .not. type D* end
+  mini ABNR nstep 200 nprint 20
+  cons harm clear
+ endif
+echo @residue starting E: ?ener
+
+if @?pdbdir eq 1 then
+  write psf card name @pdbdir/@residue.psf
+  write coor pdb name @pdbdir/@residue_start.pdb
+ endif
+
+if @mini ne 0 then
+  mini sd nstep 1000 tolgrd 0.0001 nprint 100
+  if ?grms gt 0.0001 mini abnr nstep 1000 tolgrd 0.0001
+  if ?grms gt 0.0001 then
+    echo FATAL ERROR: MINIMIZATION NOT CONVERGED
+    echu
+    echo FATAL ERROR: MINIMIZATION NOT CONVERGED
+    stop
+   endif
+  echo @residue minimized E: ?ener
+  if @?pdbdir eq 1 then ! cannot use 1-line syntax because substitution will fail
+    write coor pdb name @pdbdir/@residue_min.pdb
+   endif
+ endif
+
+coor orient
+coor dipole oxyz select all end 
+echo @residue dipole: ?rdip
+!! Check molecular polarizability
+!VIBRAN
+!diag dscf fini step 0.001
+!END
+
+shake off
+drude reset
+lone clear
+delete atom sele all end
+
+incr count
+if count le @nres goto loop_master_ions_noble
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+label skip_to_master_prot_model
+
+set boml 0 ! set to -1 if the series contains 3-membered rings
+
+set nres 1
+
+set resi1  alad
+set seed1  1 N  1 CA 1 C
+
+set count 1
+label loop_master_prot_model
+
+set residue @resi@@count
+read sequence @residue 1
+
+bomlev @boml
+generate @residue first none last none setup warn drude dmass 0.4 !show
+bomlev 0
+
+ic param
+ic seed @seed@@count
+ic build 
+coor sdrude
+coor shake
+
+update inbfrq -1 ihbfrq 0 switch atom vatom vswitch cutnb 999.0 ctofnb 997.0 ctonnb 995.0
+
+if @mindr eq 0 then
+  energy
+ else
+  cons harm force 100000. sele .not. type D* end
+  mini ABNR nstep 200 nprint 20
+  cons harm clear
+ endif
+echo @residue starting E: ?ener
+
+if @?pdbdir eq 1 then
+  write psf card name @pdbdir/@residue.psf
+  write coor pdb name @pdbdir/@residue_start.pdb
+ endif
+
+if @mini ne 0 then
+  mini sd nstep 1000 tolgrd 0.0001 nprint 100
+  if ?grms gt 0.0001 mini abnr nstep 1000 tolgrd 0.0001
+  if ?grms gt 0.0001 then
+    echo FATAL ERROR: MINIMIZATION NOT CONVERGED
+    echu
+    echo FATAL ERROR: MINIMIZATION NOT CONVERGED
+    stop
+   endif
+  echo @residue minimized E: ?ener
+  if @?pdbdir eq 1 then ! cannot use 1-line syntax because substitution will fail
+    write coor pdb name @pdbdir/@residue_min.pdb
+   endif
+ endif
+
+coor orient
+coor dipole oxyz select all end 
+echo @residue dipole: ?rdip
+!! Check molecular polarizability
+!VIBRAN
+!diag dscf fini step 0.001
+!END
+
+shake off
+drude reset
+lone clear
+delete atom sele all end
+
+incr count
+if count le @nres goto loop_master_prot_model
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+label skip_to_monopept
+
+set boml 0
+
+!20 AA + 2 (His -> (HSD,HDE,HSP)) + 1 (patchable)
+set naa 25
+set patched 25 ! 23 and higher are patched AA
+set aa1  GLY
+set aa2  PRO
+set aa3  ALA
+set aa4  ARG
+set aa5  ASN
+set aa6  ASP
+set aa7  CYS
+set aa8  GLN
+set aa9  GLU
+set aa10 HSD
+set aa11 HSE
+set aa12 HSP
+set aa13 ILE
+set aa14 LEU
+set aa15 LYS
+set aa16 MET
+set aa17 PHE
+set aa18 SER
+set aa19 TRP
+set aa20 THR
+set aa21 TYR
+set aa22 VAL
+set aa23 HSD
+set pa23 HS2
+set aa24 ASP
+set pa24 ASPP
+set aa25 GLU
+set pa25 GLUP
+! the following patches are not yet created
+!set aa26 LYS
+!set pa26 LSN
+!set aa27 CYS
+!set pa27 CYSM
+!set aa28 CYS
+!set pa28 CSSM
+!set aa29 ARG
+!set pa29 RNE
+!set aa30 ARG
+!set pa30 RNH
+
+set npn 2
+set pn1 NTER
+set pn2 ACE
+
+set npc 5
+set pc1 CTER
+set pc2 CNEU
+set pc3 CT1
+set pc4 CT2
+set pc5 CT3
+
+set special 2 ! 1 and 2 should be treated special when termini
+set s1npn 2
+set s1pn1 GNTE
+set s1pn2 ACE
+
+set s1npc 5
+set s1pc1 CTEG
+set s1pc2 CNEG
+set s1pc3 CT1G
+set s1pc4 CT2G
+set s1pc5 CT3
+
+set s2npn 2
+set s2pn1 PROP
+set s2pn2 ACP
+
+set s2npc 2
+set s2pc1 CTEP
+set s2pc2 CT3
+
+set countaa 1
+label loop_aa
+
+set residue @aa@@countaa
+if @countaa le @special then
+  set varp s@countaa
+ else
+  set varp
+ endif
+set maxnt @@@{varp}npn
+set maxct @@@{varp}npc
+if @countaa ge @patched then
+  set patch @pa@@countaa
+ else
+  set patch @residue ! for variable "nam" below
+ endif
+
+set countnt 1
+label loop_nt
+
+set first @@@{varp}pn@@countnt
+
+set countct 1
+label loop_ct
+
+set last @@@{varp}pc@@countct
+
+set nam @{first}-@{patch}-ala-@{patch}-@last
+
+read sequence card
+* @nam
+*
+3
+@RESIDUE ALA @RESIDUE
+
+bomlev @boml
+generate @residue first @first last @last setup warn drude dmass 0.4 !show
+if @countaa ge @patched then
+  patch @patch @residue 1 setup warn drude dmass 0.4 !show
+  patch @patch @residue 3 setup warn drude dmass 0.4 !show
+ endif
+bomlev 0
+
+ic param
+ic seed 1 N 1 CA 1 C
+ic build 
+coor sdrude
+coor shake
+
+update inbfrq -1 ihbfrq 0 switch atom vatom vswitch cutnb 999.0 ctofnb 997.0 ctonnb 995.0
+
+if @mindr eq 0 then
+  energy
+ else
+  cons harm force 100000. sele .not. type D* end
+  mini ABNR nstep 200 nprint 20
+  cons harm clear
+ endif
+echo @nam starting E: ?ener
+
+if @?pdbdir eq 1 then
+  write psf card name @pdbdir/@nam.psf
+  write coor pdb name @pdbdir/@nam_start.pdb
+ endif
+
+if @mini ne 0 then
+  mini sd nstep 1000 tolgrd 0.0001 nprint 100
+  if ?grms gt 0.0001 mini abnr nstep 1000 tolgrd 0.0001
+  if ?grms gt 0.0001 then
+    write coor pdb name error.pdb
+    echo FATAL ERROR: MINIMIZATION NOT CONVERGED
+    echu
+    echo FATAL ERROR: MINIMIZATION NOT CONVERGED
+    stop
+   endif
+  echo @nam minimized E: ?ener
+  if @?pdbdir eq 1 then ! cannot use 1-line syntax because substitution will fail
+    write coor pdb name @pdbdir/@nam_min.pdb
+   endif
+ endif
+
+coor orient
+coor dipole oxyz select all end 
+echo @nam dipole: ?rdip
+!! Check molecular polarizability
+!VIBRAN
+!diag dscf fini step 0.001
+!END
+
+shake off
+drude reset
+lone clear
+delete atom sele all end
+
+incr countct
+if countct le @maxct goto loop_ct
+
+incr countnt
+if countnt le @maxnt goto loop_nt
+
+incr countaa
+if countaa le @naa goto loop_aa
+

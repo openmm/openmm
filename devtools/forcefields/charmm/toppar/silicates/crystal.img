@@ -1,0 +1,106 @@
+! Description of periodic boundary conditions
+!
+! Images
+!
+! z = 0
+!
+! 8  3   5
+! 2 prim 1
+! 6  4   7
+!
+! z = +(w1,w2,w3)
+!
+! 21 15 19
+! 13 9  11
+! 23 17 25
+! 
+! z = -(w1,w2,w3)
+!
+! 26 18 24
+! 12 10 14
+! 20 16 22
+!
+* Image generation
+*
+scale 1 1 1
+
+IMAGE qi1
+TRANslate @bigu1 @bigu2 @bigu3
+
+IMAGE qi2
+DEFIne  INVErse qi1
+
+IMAGE qi3
+TRANslate @bigv1 @bigv2 @bigv3
+
+IMAGE qi4
+DEFIne  INVErse qi3
+
+IMAGE qi5
+DEFIne qi1 qi3
+
+IMAGE qi6
+DEFIne  INVErse qi5
+
+IMAGE qi7
+DEFIne qi1 qi4
+
+IMAGE qi8
+DEFIne  INVErse qi7
+
+IMAGE qi9
+TRANslate @bigw1 @bigw2 @bigw3
+
+IMAGE qi10
+DEFIne  INVErse qi9
+
+IMAGE qi11
+DEFIne qi1 qi9
+
+IMAGE qi12
+DEFIne  INVErse qi11
+
+IMAGE qi13
+DEFIne qi2 qi9
+
+IMAGE qi14
+DEFIne  INVErse qi13
+
+IMAGE qi15
+DEFIne qi3 qi9
+
+IMAGE qi16
+DEFIne  INVErse qi15
+
+IMAGE qi17
+DEFIne qi4 qi9
+
+IMAGE qi18
+DEFIne  INVErse qi17
+
+IMAGE qi19
+DEFIne qi5 qi9
+
+IMAGE qi20
+DEFIne  INVErse qi19
+
+IMAGE qi21
+DEFIne qi8 qi9
+
+IMAGE qi22
+DEFIne  INVErse qi21
+
+IMAGE qi23
+DEFIne qi6 qi9
+
+IMAGE qi24
+DEFIne  INVErse qi23
+
+IMAGE qi25
+DEFIne qi7 qi9
+
+IMAGE qi26
+DEFIne  INVErse qi25
+
+end
+

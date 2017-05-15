@@ -1,0 +1,371 @@
+*     <<<<<<Charmm topology file for Silicates>>>>>>
+*  Alexander D. MacKerell Jr., Pedro Lopes and Mouhsine Tazi
+*                       July 2005
+*All comments to adm jr.  charmm forum: www.charmm.org
+*
+27 1
+
+! 
+!topology for development of quartz and kaolinite parameters
+!
+MASS   1  HT      1.008000 H ! TIPS3P WATER HYDROGEN
+MASS   2  OT      15.99940 O ! TIPS3P WATER OXYGEN
+MASS   3  DUM     1.008000 H ! dummy atom
+MASS 100  HSiO    1.008000 H ! Si hydroxyl hydrogen; 
+MASS 101  HSiA    1.008000 H ! Si aliphatic hydrogen; 
+MASS 102  HAl     1.008000 H ! Si aliphatic hydrogen; 
+MASS 103  OSiH   15.999000 O ! Si Hydroxyl Oxygen; 
+MASS 104  OSiE   15.999000 O ! Si Ester Oxygen; 
+MASS 105  OSiA   15.999000 O ! Si Ester Oxygen; 
+MASS 106  OAl    15.999000 O ! Si Hydroxyl Oxygen; 
+MASS 107  Si     28.085500 Si ! Si Atom; 
+MASS 108  Sih3   28.085500 Si ! Si Atom; 
+MASS 110  Al     26.981540 AL ! Aluminum Atom;
+
+AUTO ANGLES DIHE   
+
+RESI SiO4         0.00
+GROUP
+ATOM Si2  Si      0.76  !      OH  
+ATOM O1   OSiH   -0.51  !      | 
+ATOM O3   OSiH   -0.51  !      | 
+ATOM O4   OSiH   -0.51  !      Si 
+ATOM O5   OSiH   -0.51  !     /|\
+ATOM H6   HSiO    0.32  !    / | \
+ATOM H7   HSiO    0.32  !  OH  OH OH
+ATOM H8   HSiO    0.32  !
+ATOM H9   HSiO    0.32  !
+BOND Si2 O1 Si2 O3 Si2 O5 Si2 O4
+BOND O1 H6 O3 H9 O5 H8 O4 H7 
+
+RESI SiM1        0.00
+GROUP
+ATOM Si2  Si     1.00  !
+ATOM Si6  Si     0.80  !
+ATOM Si7  Si     0.80  !       H1  H3
+ATOM O5   OSiE  -0.70  !        \  / 
+ATOM O4   OSiE  -0.70  !  H3Si7 Si2   Si6H3:8,9,10
+ATOM H1   HSiA  -0.15  !      \ /  \ / 
+ATOM H3   HSiA  -0.15  !      O5    O4
+ATOM H8   HSiA  -0.15  !
+ATOM H9   HSiA  -0.15  !H:11,12,13
+ATOM H10  HSiA  -0.15  !
+ATOM H11  HSiA  -0.15  !
+ATOM H12  HSiA  -0.15  !
+ATOM H13  HSiA  -0.15  !       
+BOND Si2 H1 Si2 H3 Si2 O4 Si2 O5
+BOND Si6 O4 Si6 H8 Si6 H9 Si6 H10
+BOND Si7 O5 Si7 H11 Si7 H12 Si7 H13
+
+RESI SiM2        0.00
+GROUP
+ATOM Si2  Si     1.08  !
+ATOM O1   OSiE  -0.70  !  
+ATOM O3   OSiE  -0.70  !
+ATOM O4   OSiH  -0.51  !       H14 H15
+ATOM H14  HSiO   0.32  !        |   |
+ATOM O5   OSiH  -0.51  !       O4  O5
+ATOM H15  HSiO   0.32  !        \  /
+ATOM Si6  Sih3   0.80  ! H3-Si10 Si2  Si6-H7,8,9
+ATOM H7   HSiA  -0.15  !      \ /  \ /
+ATOM H8   HSiA  -0.15  !       O1   O3
+ATOM H9   HSiA  -0.15  !
+ATOM Si10 Sih3   0.80  ! H3:11,12,13          
+ATOM H11  HSiA  -0.15  !
+ATOM H12  HSiA  -0.15  !   
+ATOM H13  HSiA  -0.15  !     
+BOND Si2 O1   Si2  O3  Si2  O4  Si2  O5
+BOND O3  Si6  Si6  H7  Si6  H8  Si6  H9 
+BOND O1  Si10 Si10 H11 Si10 H12 Si10 H13 
+BOND O4  H14  O5 H15
+
+RESI TIP3         0.000 ! tip3p water model, generate using noangle nodihedral
+GROUP   
+ATOM OH2  OT     -0.834
+ATOM H1   HT      0.417
+ATOM H2   HT      0.417
+BOND OH2 H1 OH2 H2 H1 H2    ! the last bond is needed for shake
+ANGLE H1 OH2 H2             ! required
+ACCEPTOR OH2   
+PATCHING FIRS NONE LAST NONE 
+
+RESI DUM       0.00 ! DUMMY ATOM
+GROUP
+ATOM DUM DUM   0.00
+PATCHING FIRST NONE LAST NONE
+
+RESI Q011        0.0
+
+ATOM SI1   Sih3   0.80
+ATOM SI2   Si     1.08
+ATOM SI3   Si     1.08
+ATOM SI4   Si     1.08
+ATOM O5    OSiE  -0.53
+ATOM O6    OSiE  -0.53
+ATOM O7    OSiE  -0.53
+ATOM O8    OSiE  -0.53
+ATOM O9    OSiE  -0.53
+ATOM O10   OSiE  -0.53
+ATOM O11   OSiE  -0.53
+ATOM O12   OSiE  -0.53
+ATOM O13   OSiE  -0.53
+ATOM O14   OSiE  -0.53
+ATOM O15   OSiE  -0.53
+ATOM O16   OSiH  -0.54  
+ATOM O17   OSiE  -0.53
+ATOM O18   OSiE  -0.53
+ATOM O19   OSiE  -0.53
+ATOM O20   OSiE  -0.53
+ATOM SI21  Si     1.08
+ATOM SI22  Si     1.08
+ATOM SI23  Si     1.08
+ATOM SI24  Si     1.08
+ATOM SI25  Sih3   0.80
+ATOM SI26  Si     1.08
+ATOM SI27  Si     1.08
+ATOM SI28  Si     1.08
+ATOM O29   OSiE  -0.53
+ATOM O30   OSiE  -0.53
+ATOM O31   OSiE  -0.53
+ATOM O32   OSiH  -0.54
+ATOM O33   OSiE  -0.53
+ATOM O34   OSiE  -0.53
+ATOM O35   OSiE  -0.53
+ATOM O36   OSiE  -0.53
+ATOM H37   HSiA  -0.15
+ATOM H38   HSiO   0.32
+ATOM H39   HSiA  -0.15
+ATOM H40   HSiO   0.32
+
+BOND O5    SI1
+BOND O9    SI1
+BOND H37   SI1
+BOND O6    SI2
+BOND O10   SI2
+BOND O13   SI2
+BOND O18   SI2
+BOND O7    SI3
+BOND O11   SI3
+BOND O14   SI3
+BOND O19   SI3
+BOND O15   SI4
+BOND O20   SI4
+BOND SI21   O5
+BOND SI24   O8
+BOND SI26   O10
+BOND SI27   O11
+BOND SI28   O12
+BOND SI25   O13
+BOND SI26   O14
+BOND SI27   O15
+BOND SI28   O16
+BOND SI21   O17
+BOND SI23   O19
+BOND SI24   O20
+BOND O29   SI21
+BOND O33   SI21
+BOND O30   SI22
+BOND O34   SI22
+BOND O31   SI23
+BOND O35   SI23
+BOND O32   SI24
+BOND O36   SI24
+BOND H39   SI25
+BOND O29   SI26
+BOND O34   SI26
+BOND O36   SI28
+BOND H40  O32
+BOND O16  H38
+
+! Patches to finish Quartz surface
+
+! Patch 011A between |_1||_2| along U
+
+PRES 011A    0.00
+BOND 1SI4  2O12 
+BOND 1SI27 2O35 
+BOND 1SI22 2O18 
+BOND 1O9   2SI25
+
+! Angles along XX
+ANGLE  1O15  1SI4   2O12
+ANGLE  1O20  1SI4   2O12
+ANGLE  1SI1   1O9   2SI25
+ANGLE  2SI28  2O12  1SI4
+ANGLE  2SI2   2O18  1SI22
+ANGLE  1O30  1SI22  2O18
+ANGLE  1O34  1SI22  2O18
+ANGLE  2O13  2SI25  1O9
+ANGLE  2H39  2SI25  1O9
+ANGLE  1O11  1SI27  2O35
+ANGLE  1O15  1SI27  2O35
+ANGLE  2SI23  2O35  1SI27
+
+! Dihedrals along XX
+DIHEDRAL  1O5   1SI1   1O9   2SI25
+DIHEDRAL  1H37  1SI1   1O9   2SI25
+DIHEDRAL  2O6   2SI2   2O18  1SI22
+DIHEDRAL  2O10  2SI2   2O18  1SI22
+DIHEDRAL  2O13  2SI2   2O18  1SI22
+DIHEDRAL  2O12  1SI4   1O15  1SI27
+DIHEDRAL  2O12  1SI4   1O20  1SI24
+DIHEDRAL  1SI3   1O11  1SI27  2O35
+DIHEDRAL  1SI4   2O12  2SI28  2O16
+DIHEDRAL  1SI4   2O12  2SI28  2O36
+DIHEDRAL  2SI2   2O13  2SI25  1O9
+DIHEDRAL  1SI4   1O15  1SI27  2O35
+DIHEDRAL  2O18  1SI22  1O34  1SI26
+DIHEDRAL  2O19  2SI23  2O35  1SI27
+DIHEDRAL  2O31  2SI23  2O35  1SI27
+DIHEDRAL  1O15  1SI4   2O12  2SI28
+DIHEDRAL  1O20  1SI4   2O12  2SI28
+DIHEDRAL  1SI1   1O9   2SI25  2O13
+DIHEDRAL  1SI1   1O9   2SI25  2H39
+DIHEDRAL  1O30  1SI22  2O18  2SI2
+DIHEDRAL  1O34  1SI22  2O18  2SI2
+DIHEDRAL  1O11  1SI27  2O35  2SI23
+DIHEDRAL  1O15  1SI27  2O35  2SI23
+
+
+! Patch 011B between |_2| along V
+!                    |_1|
+
+PRES 011B    0.00
+BOND 1SI1  2O17
+BOND 1SI25 2O33 
+BOND 1O30  2SI27
+BOND 1O8   2SI4
+BOND 1SI23 2O7 
+BOND 1O31  2SI28
+
+! Angles along YY
+ANGLE  1O5   1SI1   2O17
+ANGLE  1O9   1SI1   2O17
+ANGLE  1H37  1SI1   2O17
+ANGLE  2O15  2SI4   1O8
+ANGLE  2O20  2SI4   1O8
+ANGLE  2SI3   2O7   1SI23
+ANGLE  1SI24  1O8   2SI4
+ANGLE  2SI21  2O17  1SI1
+ANGLE  1O19  1SI23  2O7
+ANGLE  1O31  1SI23  2O7
+ANGLE  1O35  1SI23  2O7
+ANGLE  1O13  1SI25  2O33
+ANGLE  1H39  1SI25  2O33
+ANGLE  2O11  2SI27  1O30
+ANGLE  2O15  2SI27  1O30
+ANGLE  2O12  2SI28  1O31
+ANGLE  2O16  2SI28  1O31
+ANGLE  2O36  2SI28  1O31
+ANGLE  1SI22  1O30  2SI27
+ANGLE  1SI23  1O31  2SI28
+ANGLE  2SI21  2O33  1SI25
+
+! Dihedrals along YY
+DIHEDRAL  2O17  1SI1   1O5   1SI21
+DIHEDRAL  2O11  2SI3   2O7   1SI23
+DIHEDRAL  2O14  2SI3   2O7   1SI23
+DIHEDRAL  2O19  2SI3   2O7   1SI23
+DIHEDRAL  1O8   2SI4   2O15  2SI27
+DIHEDRAL  1O8   2SI4   2O20  2SI24
+DIHEDRAL  2SI4   1O8   1SI24  1O20
+DIHEDRAL  2SI4   1O8   1SI24  1O32
+DIHEDRAL  2SI4   1O8   1SI24  1O36
+DIHEDRAL  2SI3   2O11  2SI27  1O30
+DIHEDRAL  1SI2   1O13  1SI25  2O33
+DIHEDRAL  2SI4   2O15  2SI27  1O30
+DIHEDRAL  1SI1   2O17  2SI21  2O5
+DIHEDRAL  1SI1   2O17  2SI21  2O29
+DIHEDRAL  1SI1   2O17  2SI21  2O33
+DIHEDRAL  1SI3   1O19  1SI23  2O7
+DIHEDRAL  2O5   2SI21  2O33  1SI25
+DIHEDRAL  2O17  2SI21  2O33  1SI25
+DIHEDRAL  2O29  2SI21  2O33  1SI25
+DIHEDRAL  1O34  1SI22  1O30  2SI27
+DIHEDRAL  1O19  1SI23  1O31  2SI28
+DIHEDRAL  1O35  1SI23  1O31  2SI28
+DIHEDRAL  2O7   1SI23  1O31  2SI28
+DIHEDRAL  1O31  2SI28  2O36  2SI24
+DIHEDRAL  1O5   1SI1   2O17  2SI21
+DIHEDRAL  1O9   1SI1   2O17  2SI21
+DIHEDRAL  1H37  1SI1   2O17  2SI21
+DIHEDRAL  1SI24  1O8   2SI4   2O15
+DIHEDRAL  1SI24  1O8   2SI4   2O20
+DIHEDRAL  1O19  1SI23  2O7   2SI3
+DIHEDRAL  1O31  1SI23  2O7   2SI3
+DIHEDRAL  1O35  1SI23  2O7   2SI3
+DIHEDRAL  1O13  1SI25  2O33  2SI21
+DIHEDRAL  1H39  1SI25  2O33  2SI21
+DIHEDRAL  1SI22  1O30  2SI27  2O11
+DIHEDRAL  1SI22  1O30  2SI27  2O15
+DIHEDRAL  1SI23  1O31  2SI28  2O12
+DIHEDRAL  1SI23  1O31  2SI28  2O16
+DIHEDRAL  1SI23  1O31  2SI28  2O36
+
+! Patch 011C between |_2| along UV
+!                 |_1|
+
+PRES 011C    0.00
+BOND 1SI22 2O6 
+
+! Angles along XY
+ANGLE  2O12  2SI4   1O8
+ANGLE  2SI2   2O6   1SI22
+ANGLE  1O30  1SI22  2O6
+ANGLE  1O34  1SI22  2O6
+ANGLE  1O18  1SI22  2O6
+ANGLE  1O9   1SI25  2O33
+ANGLE  2O35  2SI27  1O30
+
+! Dihedrals along XY
+DIHEDRAL  2O10  2SI2   2O6   1SI22
+DIHEDRAL  2O13  2SI2   2O6   1SI22
+DIHEDRAL  2O18  2SI2   2O6   1SI22
+DIHEDRAL  2O6   1SI22  1O34  1SI26
+DIHEDRAL  1O30  1SI22  2O6   2SI2
+DIHEDRAL  1O34  1SI22  2O6   2SI2
+
+!***************************************************
+
+! Patch 011D between |_3||_2| 
+!                    |_1|
+                                                                                                                                                             
+PRES 011D    0.00
+                                                                                                                                                             
+                                                                                                                                                             
+                                                                                                                                                             
+! Patch 011E between |_3|
+!                    |_1||_2|
+                                                                                                                                                             
+PRES 011E    0.00
+                                                                                                                                                             
+DIHEDRAL 3O17 1SI1  1O9  2SI25
+DIHEDRAL 2O18 1SI22 1O30 3SI27 
+
+                                                                                                                                                             
+! Patch 011F between     |_3|
+!                    |_1||_2|
+                                                                                                                                                             
+PRES 011F    0.00
+                                                                                                                                                            
+ANGLE 2O18 1SI22 3O6  
+ANGLE 1O9  2SI25 3O33 
+                                                                                                                                                             
+DIHEDRAL 3O7  2SI23 2O35 1SI27
+DIHEDRAL 1SI1  1O9  2SI25 3O33 
+DIHEDRAL 3O6  1SI22 2O18 2SI2
+DIHEDRAL 1O9  2SI25 3O33 3SI21 
+DIHEDRAL 2O18 1SI22 3O6  3SI2  
+                                                                                                                                                             
+! Patch 011G between |_2||_3|
+!                    |_1|
+
+PRES 011G    0.00
+                                                                                                                                                             
+DIHEDRAL 3O6  1SI22 1O30 2SI27 
+DIHEDRAL 1O8  2SI4  3O12 3SI28 
+DIHEDRAL 1O30 2SI27 3O35 3SI23 
+DIHEDRAL 1SI24 1O8  2SI4  3O12 
+DIHEDRAL 1SI22 1O30 2SI27 3O35 
+
+END

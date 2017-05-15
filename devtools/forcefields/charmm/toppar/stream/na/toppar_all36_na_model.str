@@ -1,0 +1,3438 @@
+* CHARMM27 All-Hydrogen Nucleic Acid Force Toppar Stream File
+* Collection of residues and patches for model compounds used
+* in the optimization the Charmm27 all-atom nucleic acid
+* force field.
+* N. Foloppe and A.D. MacKerell, Jr., July 2001
+*
+
+!new residues: 
+!RESI TBP1        -2.00 ! 3',5'-bis-methylphosphate-tetrahydrofuran
+!RESI RBP1        -2.00 ! 3',5'-bis-methylphosphate-tetrahydrofuran RNA alalog
+!RESI T3PS        -1.00 ! 3'phosphate-tetrahydrofuran (phosphate -1)
+!RESI R3PS        -1.00 ! 3'phosphate-tetrahydrofuran (phosphate -1): ribo ana< RESI NUTA        -1.00 ! deoxy-nucleotide with adenine 
+!RESI NUTC         0.00 ! nucleotide with cytosine 
+
+!Parent files that have to be read prior to streaming this file
+!top_all36_na.rtf
+!par_all36_na.prm
+
+!Testcase
+!test_all36_na_model.inp
+
+read rtf card append
+* c36 na model compounds
+*
+31  1
+
+MASS 466  CN7C 12.011000 C ! C2' in arabinose 
+MASS 467  CN7D 12.011000 C ! C2' in nucleic acids fluorine derivatives 
+MASS 468  FN1  18.998400 F ! Fluorine for sugar derivatives (NF) 
+
+RESI TBP1        -2.00 ! 3',5'-bis-methylphosphate-tetrahydrofuran
+                       ! capped with a methyl groups on 3' and 5' phosphates
+                       ! C3T is defined as CN8B to mimick DNA
+GROUP                  !   
+ATOM C5M  CN9    -0.17 !
+ATOM H5M1 HN9     0.09 !
+ATOM H5M2 HN9     0.09 !
+ATOM H5M3 HN9     0.09 !       H5M2
+ATOM O3A  ON2    -0.57 !         |
+ATOM PA   P       1.50 !  H5M1--C5M--H5M3
+ATOM O1PA ON3    -0.78 !        /
+ATOM O2PA ON3    -0.78 !       O3A
+ATOM O5'  ON2    -0.57 !       |
+ATOM C5'  CN8B   -0.08 ! O1PA==PA==O2PA (-1)
+ATOM H51' HN8     0.09 !       |
+ATOM H52' HN8     0.09 !       O5'
+GROUP                  ! H52'  |
+ATOM O4'  ON6    -0.50 !     \ |
+ATOM C1'  CN7B    0.07 !  H51'-C5'   O4'  H11'
+ATOM H11' HN7     0.09 !        \  /  \  /
+ATOM H12' HN7     0.09 !   H41'--C4'  C1'--H12'
+ATOM C4'  CN7     0.16 !          |    |
+ATOM H41' HN7     0.09 !   H31'--C3'--C2'--H21'
+GROUP                  !        /       \
+ATOM C2'  CN8    -0.18 !      O3'       H22'
+ATOM H21' HN8     0.09 !       |
+ATOM H22' HN8     0.09 !  O1P==P==O2P
+GROUP                  !       |
+ATOM C3'  CN7     0.01 !      O5b (-1)
+ATOM H31' HN7     0.09 !        \    
+                       !        C5b--H5b3
+ATOM O3'  ON2    -0.57 !       /  \  
+ATOM P    P       1.50 !    H5b1 H5b2
+ATOM O1P  ON3    -0.78 !
+ATOM O2P  ON3    -0.78
+ATOM O5b  ON2    -0.57
+ATOM C5b  CN9    -0.17
+ATOM H5b1 HN9     0.09
+ATOM H5b2 HN9     0.09
+ATOM H5b3 HN9     0.09
+
+BOND C5M  O3A  O3A  PA   PA   O1PA PA   O2PA PA   O5'  O5'  C5'
+BOND C5M  H5M1 C5M  H5M2 C5M  H5M3 C5'  H51' C5'  H52'
+BOND C5'  C4'  C4'  C3'  C4'  O4'  C3'  C2'  C2'  C1'  C1'  O4'  C3'  O3'
+BOND C1'  H11' C1'  H12' C2'  H21' C2'  H22' C3'  H31'  C4'  H41'
+BOND O3'  P    P    O1P  P    O2P  P    O5b  O5b  C5b
+BOND C5B  H5B1 C5B  H5B2 C5B  H5B3
+
+IC  C5M   O3A  PA    O5'    0.0000    0.00  -90.00    0.00   0.0000 !zeta-1,A:287,bi:-89.68,bii:159.19,Z:74/296,RNA:287(-73)
+IC  O3A   PA   O5'   C5'    0.0000    0.00  180.00    0.00   0.0000 !alpha,A:291, B:298, Z:70/200, RNA:291
+IC  PA    O3A  C5M   h5M1   0.0000    0.00  180.00    0.00   0.0000 
+IC  H5M1  O3A  *C5M  H5M2   0.0000    0.00  120.00    0.00   0.0000
+IC  H5M1  O3A  *C5M  H5M3   0.0000    0.00 -120.00    0.00   0.0000
+IC  O5'   O3A  *PA   O1PA   0.0000    0.00  120.00    0.00   0.0000
+IC  O5'   O3A  *PA   O2PA   0.0000    0.00 -120.00    0.00   0.0000
+IC  PA    O5'  C5'   C4'    0.0000    0.00  180.00    0.00   0.0000 !beta,A:175, B:168, Z:185, RNA:174
+IC  C4'   O5'  *C5'  H51'   0.0000    0.00  120.00    0.00   0.0000
+IC  C4'   O5'  *C5'  H52'   0.0000    0.00 -120.00    0.00   0.0000
+IC  O5'   C5'  C4'   C3'    0.0000    0.00  180.00    0.00   0.0000 !gamma,A:57, B:51, Z:54/179, RNA:57
+!IC  C5'   C4'   C3'  O3'   0.0000    0.00  180.00    0.00   0.0000 !delta (not used, sugar defined below)
+IC  C5'   C4'   C3'  C2'    0.0000    0.00 -108.00    0.00   0.0000 !-155:c3'endo(north) -108:c2'endo(south)
+IC  C4'   C3'   C2'  C1'    0.0000    0.00  -40.00    0.00   0.0000 !40:c3'endo(north) -40:c2'endo(south)
+IC  C3'   C2'   C1'  O4'    0.0000    0.00   40.00    0.00   0.0000 !-40:c3'endo(north) 40:c2'endo(south)
+IC  C3'   C4'   O4'  C1'    0.0000    0.00    0.00    0.00   0.0000 ! define c2'endo = 0
+IC  C4'   O4'   C1'  C2'    0.0000    0.00    0.00    0.00   0.0000 ! define c3'endo = 0
+IC  O3'   C3'   C4'  O4'    1.4028  110.98  -77.39  103.15   1.4055
+IC  C3'   C5'  *C4'  H41'   0.0000    0.00  120.00    0.00   0.0000
+IC  C2'   O4'  *C1'  H11'   0.0000    0.00  120.00    0.00   0.0000
+IC  C2'   O4'  *C1'  H12'   0.0000    0.00 -120.00    0.00   0.0000
+IC  C3'   C1'  *C2'  H21'   0.0000    0.00  120.00    0.00   0.0000
+IC  C3'   C1'  *C2'  H22'   0.0000    0.00 -120.00    0.00   0.0000
+IC  C2'   C4'  *C3'  H31'   0.0000    0.00  120.00    0.00   0.0000
+IC  C4'   C3'  O3'   P      0.0000    0.00  180.00    0.00   0.0000 !epsilon,A:205,bi:-164.29,bii:-92.78,Z:265,RNA:211(-149)
+IC  C3'   O3'  P     O5B    0.0000    0.00  180.00    0.00   0.0000 !zeta,A:287,bi:-89.68,bii:159.19,Z:74/296,RNA:287(-73)
+IC  O5B   O3'  *P    O1P    0.0000    0.00  120.00    0.00   0.0000
+IC  O5B   O3'  *P    O2P    0.0000    0.00 -120.00    0.00   0.0000
+IC  O3'   P    O5B   C5B    0.0000    0.00  180.00    0.00   0.0000 !alpha+1,A:291, B:298, Z:70/200, RNA:291
+IC  P     O5B  C5B   H5B1   0.0000    0.00  180.00    0.00   0.0000
+IC  H5B1  O5B  *C5B  H5B2   0.0000    0.00  120.00    0.00   0.0000
+IC  H5B1  O5B  *C5B  H5B3   0.0000    0.00 -120.00    0.00   0.0000
+
+RESI RBP1        -2.00 ! 3',5'-bis-methylphosphate-tetrahydrofuran RNA alalog
+                       ! capped with a methyl groups on 3' and 5' phosphates
+                       ! C3T is defined as CN8B to mimick DNA
+GROUP                  !   
+ATOM C5M  CN9    -0.17 !
+ATOM H5M1 HN9     0.09 !
+ATOM H5M2 HN9     0.09 !
+ATOM H5M3 HN9     0.09 !       H5M2
+ATOM O3A  ON2    -0.57 !         |
+ATOM PA   P       1.50 !  H5M1--C5M--H5M3
+ATOM O1PA ON3    -0.78 !        /
+ATOM O2PA ON3    -0.78 !       O3A
+ATOM O5'  ON2    -0.57 !       |
+ATOM C5'  CN8B   -0.08 ! O1PA==PA==O2PA (-1)
+ATOM H51' HN8     0.09 !       |
+ATOM H52' HN8     0.09 !       O5'
+GROUP                  ! H52'  |
+ATOM O4'  ON6B   -0.50 !     \ |
+ATOM C1'  CN7B    0.07 !  H51'-C5'   O4'  H11'
+ATOM H11' HN7     0.09 !        \  /  \  /
+ATOM H12' HN7     0.09 !   H41'--C4'  C1'--H12'
+ATOM C4'  CN7     0.16 !          |    |
+ATOM H41' HN7     0.09 !   H31'--C3'--C2'--H21'
+GROUP                  !        /       \
+ATOM C2'  CN7B    0.14 !      O3'       O2T-H2T
+ATOM H21' HN7     0.09 !       |
+ATOM O2T  ON5    -0.66 !  O1P==P==O2P
+ATOM H2T  HN5     0.43 !
+GROUP                  !       |
+ATOM C3'  CN7     0.01 !      O5b (-1)
+ATOM H31' HN7     0.09 !        \    
+                       !        C5b--H5b3
+ATOM O3'  ON2    -0.57 !       /  \  
+ATOM P    P       1.50 !    H5b1 H5b2
+ATOM O1P  ON3    -0.78 !
+ATOM O2P  ON3    -0.78
+ATOM O5b  ON2    -0.57
+ATOM C5b  CN9    -0.17
+ATOM H5b1 HN9     0.09
+ATOM H5b2 HN9     0.09
+ATOM H5b3 HN9     0.09
+
+BOND C5M  O3A  O3A  PA   PA   O1PA PA   O2PA PA   O5'  O5'  C5'
+BOND C5M  H5M1 C5M  H5M2 C5M  H5M3 C5'  H51' C5'  H52'
+BOND C5'  C4'  C4'  C3'  C4'  O4'  C3'  C2'  C2'  C1'  C1'  O4'  C3'  O3'
+BOND C1'  H11' C1'  H12' C2'  H21' C2'  O2T  O2T  H2T  C3'  H31'  C4'  H41'
+BOND O3'  P    P    O1P  P    O2P  P    O5b  O5b  C5b
+BOND C5B  H5B1 C5B  H5B2 C5B  H5B3
+
+IC  C5M   O3A  PA    O5'    0.0000    0.00  -90.00    0.00   0.0000 !zeta-1,A:287,bi:-89.68,bii:159.19,Z:74/296,RNA:287(-73)
+IC  O3A   PA   O5'   C5'    0.0000    0.00  180.00    0.00   0.0000 !alpha,A:291, B:298, Z:70/200, RNA:291
+IC  PA    O3A  C5M   h5M1   0.0000    0.00  180.00    0.00   0.0000 
+IC  H5M1  O3A  *C5M  H5M2   0.0000    0.00  120.00    0.00   0.0000
+IC  H5M1  O3A  *C5M  H5M3   0.0000    0.00 -120.00    0.00   0.0000
+IC  O5'   O3A  *PA   O1PA   0.0000    0.00  120.00    0.00   0.0000
+IC  O5'   O3A  *PA   O2PA   0.0000    0.00 -120.00    0.00   0.0000
+IC  PA    O5'  C5'   C4'    0.0000    0.00  180.00    0.00   0.0000 !beta,A:175, B:168, Z:185, RNA:174
+IC  C4'   O5'  *C5'  H51'   0.0000    0.00  120.00    0.00   0.0000
+IC  C4'   O5'  *C5'  H52'   0.0000    0.00 -120.00    0.00   0.0000
+IC  O5'   C5'  C4'   C3'    0.0000    0.00  180.00    0.00   0.0000 !gamma,A:57, B:51, Z:54/179, RNA:57
+!IC  C5'   C4'   C3'  O3'   0.0000    0.00  180.00    0.00   0.0000 !delta (not used, sugar defined below)
+IC  C5'   C4'   C3'  C2'    0.0000    0.00 -108.00    0.00   0.0000 !-155:c3'endo(north) -108:c2'endo(south)
+IC  C4'   C3'   C2'  C1'    0.0000    0.00  -40.00    0.00   0.0000 !40:c3'endo(north) -40:c2'endo(south)
+IC  C3'   C2'   C1'  O4'    0.0000    0.00   40.00    0.00   0.0000 !-40:c3'endo(north) 40:c2'endo(south)
+IC  C3'   C4'   O4'  C1'    0.0000    0.00    0.00    0.00   0.0000 ! define c2'endo = 0
+IC  C4'   O4'   C1'  C2'    0.0000    0.00    0.00    0.00   0.0000 ! define c3'endo = 0
+IC  O3'   C3'   C4'  O4'    1.4028  110.98  -77.39  103.15   1.4055
+IC  C3'   C5'  *C4'  H41'   0.0000    0.00  120.00    0.00   0.0000
+IC  C2'   O4'  *C1'  H11'   0.0000    0.00  120.00    0.00   0.0000
+IC  C2'   O4'  *C1'  H12'   0.0000    0.00 -120.00    0.00   0.0000
+IC  C3'   C1'  *C2'  H21'   0.0000    0.00 -120.00    0.00   0.0000
+IC  C3'   C1'  *C2'  O2T    0.0000    0.00  120.00    0.00   0.0000
+IC  C1'   C2'  O2T   H2T    0.0000    0.00  180.00    0.00   0.0000
+IC  C2'   C4'  *C3'  H31'   0.0000    0.00  120.00    0.00   0.0000
+IC  C4'   C3'  O3'   P      0.0000    0.00  180.00    0.00   0.0000 !epsilon,A:205,bi:-164.29,bii:-92.78,Z:265,RNA:211(-149)
+IC  C3'   O3'  P     O5B    0.0000    0.00  180.00    0.00   0.0000 !zeta,A:287,bi:-89.68,bii:159.19,Z:74/296,RNA:287(-73)
+IC  O5B   O3'  *P    O1P    0.0000    0.00  120.00    0.00   0.0000
+IC  O5B   O3'  *P    O2P    0.0000    0.00 -120.00    0.00   0.0000
+IC  O3'   P    O5B   C5B    0.0000    0.00  180.00    0.00   0.0000 !alpha+1,A:291, B:298, Z:70/200, RNA:291
+IC  P     O5B  C5B   H5B1   0.0000    0.00  180.00    0.00   0.0000
+IC  H5B1  O5B  *C5B  H5B2   0.0000    0.00  120.00    0.00   0.0000
+IC  H5B1  O5B  *C5B  H5B3   0.0000    0.00 -120.00    0.00   0.0000
+
+RESI T3PS        -1.00 ! 3'phosphate-tetrahydrofuran (phosphate -1)
+                       ! capped with a 5' methyl furan
+                       ! This is to investigate the differences
+                       ! between BI and BII forms of DNA
+                       ! C3T is defined as CN8B to mimick DNA
+GROUP
+ATOM O4'  ON6    -0.50 !
+ATOM C1'  CN7B    0.07 !     H41'   O4'  H11'
+ATOM H11' HN7     0.09 !        \  /  \  /
+ATOM H12' HN7     0.09 !   H42'--C4'  C1'--H12'
+ATOM C4'  CN7     0.07 !          |    |
+ATOM H41' HN7     0.09 !   H31'--C3'--C2'--H21'
+ATOM H42' HN7     0.09 !        /       \
+GROUP                  !      O3'       H22'
+ATOM C2'  CN8    -0.18 !       |
+ATOM H21' HN8     0.09 !  O1P==P==O2P
+ATOM H22' HN8     0.09 !       |
+GROUP                  !      O5b (-1) H4b1   O4b   H1b1
+ATOM C3'  CN7     0.01 !        \         \  /   \  /
+ATOM H31' HN7     0.09 !        C5b-------C4b    C1b-H1b2
+                       !       /  \        |      |
+ATOM O3'  ON2    -0.57 !    H5b1 H5b2     C3b----C2b-H2b2
+ATOM P    P2      1.50 !                 / |       \
+ATOM O1P  ON3    -0.78               H3b1 H3b2     H2b1
+ATOM O2P  ON3    -0.78
+ATOM O5b  ON2    -0.57
+ATOM C5b  CN8B   -0.08
+ATOM H5b1 HN8     0.09
+ATOM H5b2 HN8     0.09
+GROUP
+ATOM C4B  CN7     0.16
+ATOM H4b1 HN7     0.09
+ATOM O4b  ON6    -0.50
+ATOM C1b  CN7B    0.07
+ATOM H1b1 HN7     0.09
+ATOM H1b2 HN7     0.09
+GROUP
+ATOM C2b  CN8    -0.18
+ATOM H2b1 HN8     0.09
+ATOM H2b2 HN8     0.09
+GROUP                 
+ATOM C3b  CN7    -0.18 ! use CN7 atom type for consistancy with full DNA
+ATOM H3b1 HN7     0.09
+ATOM H3b2 HN7     0.09
+
+BOND C1'  O4'  C1'  C2'  C2'  C3'  C3'  C4'  C4'  O4'  C3'  O3'
+BOND C1'  H11' C1'  H12' C2'  H21' C2'  H22' C3'  H31' C4'  H41'
+BOND C4'  H42' O3'  P    P    O1P  P    O2P  P    O5b  O5b  C5b
+BOND C5b  H5b1 C5b  H5b2 C5b  C4b  C4b  O4b  O4b  C1b  C1b  C2b
+BOND C2b  C3b  C3b  C4b  C4b  H4b1 C1b  H1b1 C1b  H1b2 C2b  H2b1
+BOND C2b  H2b2 C3b  H3b1 C3b  H3b2
+
+IC   C4'     O4'     C1'     C2'    1.4055  108.09  -21.00  106.18   1.5457 !0.0 for c3'endo (north) pucker
+IC   O4'     C1'     C2'     C3'    1.4127  106.18   30.00  103.11   1.5346 !
+IC   C1'     C2'     C3'     C4'    1.5457  103.11  -30.00  100.86   1.5211 !0.0 for o4'endo barrier
+IC   C2'     C3'     C4'     O4'    1.5346  100.86   20.00  103.15   1.4055
+IC   C3'     C4'     O4'     C1'    1.5211  103.15    0.00  108.09   1.4127
+IC   H11'    C1'     C2'     C3'    1.0856  111.62  123.53  103.11   1.5346
+IC   H12'    C1'     C2'     C3'    1.0818  113.32 -114.11  103.11   1.5346
+IC   H21'    C2'     C3'     C4'    1.0846  110.65   91.68  100.86   1.5211
+IC   H22'    C2'     C3'     C4'    1.0822  110.88 -148.45  100.86   1.5211
+IC   H31'    C3'     C4'     O4'    1.0806  113.53  162.89  103.15   1.4055
+IC   H41'    C4'     O4'     C1'    1.0891  110.89   77.76  108.09   1.4127
+IC   H42'    C4'     O4'     C1'    1.0808  108.72 -162.12  108.09   1.4127
+IC   O3'     C3'     C4'     O4'    1.4028  110.98  -77.39  103.15   1.4055
+IC   C4'     C3'     O3'     P      0.0000  000.00 -164.29  000.00   0.0000 !epsilon bi:-164.29,bii:-92.78
+IC   C3'     O3'     P       O5b    0.0000  000.00  -89.68  000.00   0.0000 !zeta bi:-89.68,bii:159.19
+IC   O5b     O3'     *P      O1P    0.0000  000.00 -115.82  000.00   0.0000
+IC   O5b     O3'     *P      O2P    0.0000  000.00  115.90  000.00   0.0000
+IC   O3'     P       O5b     C5b    0.0000  000.00  -46.90  000.00   0.0000 !alpha+1:A:291, B:298
+IC   P       O5B     C5B     C4B    0.0000    0.00  180.00    0.00   0.0000 !beta+1:A:175, B:168
+IC   H5b1    C5b     O5b     P      0.0000  000.00  180.00  000.00   0.0000
+IC   H5b2    C5b     O5b     P      0.0000  000.00   60.00  000.00   0.0000
+IC   O3'     P       O5B     C5B    0.0000    0.00  180.00    0.00   0.0000
+IC   C4B     O5B     *C5B    H5B1   0.0000    0.00  120.00    0.00   0.0000
+IC   H5B1    O5B     *C5B    H5B2   0.0000    0.00 -120.00    0.00   0.0000
+IC   O5B     C5B     C4B     C3B    0.0000    0.00  180.00    0.00   0.0000 !gamma+1,A:57, B:51
+!IC   C3B     C5B     *C4B    O4B    0.0000    0.00 -120.00    0.00   0.0000
+!IC   C5B     C4B     O4B     C1B    0.0000    0.00  180.00    0.00   0.0000
+IC   C5B     C4B     C3B     C2B    0.0000    0.00 -108.00    0.00   0.0000 !-155:c3'endo(north) -108:c2'endo(south)
+IC   C4B     C3B     C2B     C1B    0.0000    0.00  -40.00    0.00   0.0000 !40:c3'endo(north) -40:c2'endo(south)
+IC   C3B     C2B     C1B     O4B    0.0000    0.00   40.00    0.00   0.0000 !-40:c3'endo(north) 40:c2'endo(south)
+!following IC is used to define C3'endo in surfaces, but commented due to redundancy
+!IC   C4B     O4B     C1B     C2B    0.0000    0.00   25.00    0.00   0.0000 !0.0: c3'endo(north) 25:c2'endo(south)
+IC   O4B     C5B     *C4B    H4B1   0.0000    0.00 -120.00    0.00   0.0000
+IC   C2B     O4B     *C1B    H1B1   0.0000    0.00  120.00    0.00   0.0000
+IC   C2B     O4B     *C1B    H1B2   0.0000    0.00 -120.00    0.00   0.0000
+IC   C3B     C1B     *C2B    H2B1   0.0000    0.00 -120.00    0.00   0.0000
+IC   C3B     C1B     *C2B    H2B2   0.0000    0.00  120.00    0.00   0.0000
+IC   C2B     C4B     *C3B    H3B1   0.0000    0.00  120.00    0.00   0.0000
+IC   C2B     C4B     *C3B    H3B2   0.0000    0.00 -120.00    0.00   0.0000
+
+PATC  FIRS NONE LAST NONE
+
+RESI R3PS        -1.00 ! 3'phosphate-tetrahydrofuran (phosphate -1): ribo analog
+                       ! capped with a 5' methyl furan
+                       ! This is to investigate the differences
+                       ! between BI and BII forms of DNA
+                       ! C3T is defined as CN8B to mimick DNA
+GROUP
+ATOM O4'  ON6B   -0.50 !
+ATOM C1'  CN7B    0.07 !     H41'   O4'  H11'
+ATOM H11' HN7     0.09 !        \  /  \  /
+ATOM H12' HN7     0.09 !   H42'--C4'  C1'--H12'
+ATOM C4'  CN7     0.07 !          |    |
+ATOM H41' HN7     0.09 !   H31'--C3'--C2'--H21'
+ATOM H42' HN7     0.09 !        /       \
+GROUP                  !      O3'       O2T-H2T
+ATOM C2'  CN7B    0.14 !       |
+ATOM H21' HN7     0.09 !  O1P==P==O2P
+ATOM O2T  ON5    -0.66 !       |
+ATOM H2T  HN5     0.43 !       |
+GROUP                  !      O5b (-1) H4b1   O4b   H1b1
+ATOM C3'  CN7     0.01 !        \         \  /   \  /
+ATOM H31' HN7     0.09 !        C5b-------C4b    C1b-H1b2
+                       !       /  \        |      |
+ATOM O3'  ON2    -0.57 !    H5b1 H5b2     C3b----C2b-H2b1
+ATOM P    P       1.50 !                 / |       \
+ATOM O1P  ON3    -0.78 !              H3b1 H3b2     O2Tb-H2Tb
+ATOM O2P  ON3    -0.78
+ATOM O5b  ON2    -0.57
+ATOM C5b  CN8B   -0.08
+ATOM H5b1 HN8     0.09
+ATOM H5b2 HN8     0.09
+GROUP
+ATOM C4B  CN7     0.16
+ATOM H4b1 HN7     0.09
+ATOM O4b  ON6B   -0.50
+ATOM C1b  CN7B    0.07
+ATOM H1b1 HN7     0.09
+ATOM H1b2 HN7     0.09
+GROUP
+ATOM C2b  CN7B    0.14
+ATOM H2b1 HN7     0.09
+ATOM O2Tb ON5    -0.66
+ATOM H2Tb HN5     0.43
+GROUP                 
+ATOM C3b  CN7    -0.18 ! use CN7 atom type for consistancy with full DNA
+ATOM H3b1 HN7     0.09
+ATOM H3b2 HN7     0.09
+
+BOND C1'  O4'  C1'  C2'  C2'  C3'  C3'  C4'  C4'  O4'  C3'  O3'
+BOND C1'  H11' C1'  H12' C2'  H21' C2'  O2T  C3'  H31' C4'  H41'
+BOND C4'  H42' O3'  P    P    O1P  P    O2P  P    O5b  O5b  C5b
+BOND C5b  H5b1 C5b  H5b2 C5b  C4b  C4b  O4b  O4b  C1b  C1b  C2b
+BOND C2b  C3b  C3b  C4b  C4b  H4b1 C1b  H1b1 C1b  H1b2 C2b  H2b1
+BOND C2b  O2Tb C3b  H3b1 C3b  H3b2
+BOND O2T  H2T  O2Tb H2Tb
+
+IC   C4'     O4'     C1'     C2'    1.4055  108.09    0.00  106.18   1.5457 !0.0 for c3'endo (south) pucker
+IC   O4'     C1'     C2'     C3'    1.4127  106.18  -30.00  103.11   1.5346 
+IC   C1'     C2'     C3'     C4'    1.5457  103.11   45.00  100.86   1.5211
+IC   C2'     C3'     C4'     O4'    1.5346  100.86  -45.00  103.15   1.4055
+IC   C3'     C4'     O4'     C1'    1.5211  103.15   30.00  108.09   1.4127
+IC   H11'    C1'     C2'     C3'    1.0856  111.62  123.53  103.11   1.5346
+IC   H12'    C1'     C2'     C3'    1.0818  113.32 -114.11  103.11   1.5346
+IC   H21'    C2'     C3'     C4'    1.0846  110.65   91.68  100.86   1.5211
+IC   O2T     C2'     C3'     C4'    1.0822  110.88 -148.45  100.86   1.5211
+IC   C1'     C2'     O2T     H2T    0.0000    0.00  180.00    0.00   0.0000
+IC   H31'    C3'     C4'     O4'    1.0806  113.53  162.89  103.15   1.4055
+IC   H41'    C4'     O4'     C1'    1.0891  110.89   77.76  108.09   1.4127
+IC   H42'    C4'     O4'     C1'    1.0808  108.72 -162.12  108.09   1.4127
+IC   O3'     C3'     C4'     O4'    1.4028  110.98  -77.39  103.15   1.4055
+IC   C4'     C3'     O3'     P      0.0000  000.00 -164.29  000.00   0.0000 !epsilon bi:-164.29,bii:-92.78
+IC   C3'     O3'     P       O5b    0.0000  000.00  -89.68  000.00   0.0000 !zeta bi:-89.68,bii:159.19
+IC   O5b     O3'     *P      O1P    0.0000  000.00 -115.82  000.00   0.0000
+IC   O5b     O3'     *P      O2P    0.0000  000.00  115.90  000.00   0.0000
+IC   O3'     P       O5b     C5b    0.0000  000.00  -46.90  000.00   0.0000 !alpha+1:A:291, B:298
+IC   P       O5B     C5B     C4B    0.0000    0.00  180.00    0.00   0.0000 !beta+1:A:175, B:168
+IC   H5b1    C5b     O5b     P      0.0000  000.00  180.00  000.00   0.0000
+IC   H5b2    C5b     O5b     P      0.0000  000.00   60.00  000.00   0.0000
+IC   O3'     P       O5B     C5B    0.0000    0.00  180.00    0.00   0.0000
+IC   C4B     O5B     *C5B    H5B1   0.0000    0.00  120.00    0.00   0.0000
+IC   H5B1    O5B     *C5B    H5B2   0.0000    0.00 -120.00    0.00   0.0000
+IC   O5B     C5B     C4B     C3B    0.0000    0.00  180.00    0.00   0.0000 !gamma+1,A:57, B:51
+!IC   C3B     C5B     *C4B    O4B    0.0000    0.00 -120.00    0.00   0.0000
+!IC   C5B     C4B     O4B     C1B    0.0000    0.00  180.00    0.00   0.0000
+IC   C5B     C4B     C3B     C2B    0.0000    0.00 -155.00    0.00   0.0000 !-155:c3'endo(north) -108:c2'endo(south)
+IC   C4B     C3B     C2B     C1B    0.0000    0.00   40.00    0.00   0.0000 !40:c3'endo(north) -40:c2'endo(south)
+IC   C3B     C2B     C1B     O4B    0.0000    0.00  -40.00    0.00   0.0000 !-40:c3'endo(north) 40:c2'endo(south)
+!following IC is used to define C3'endo in surfaces, but commented due to redundancy
+!IC   C4B     O4B     C1B     C2B    0.0000    0.00   25.00    0.00   0.0000 !0.0: c3'endo(north) 25:c2'endo(south)
+IC   O4B     C5B     *C4B    H4B1   0.0000    0.00 -120.00    0.00   0.0000
+IC   C2B     O4B     *C1B    H1B1   0.0000    0.00  120.00    0.00   0.0000
+IC   C2B     O4B     *C1B    H1B2   0.0000    0.00 -120.00    0.00   0.0000
+IC   C3B     C1B     *C2B    H2B1   0.0000    0.00 -120.00    0.00   0.0000
+IC   C3B     C1B     *C2B    O2Tb   0.0000    0.00  120.00    0.00   0.0000
+IC   C1B     C2B     O2Tb    H2Tb   0.0000    0.00  180.00    0.00   0.0000
+IC   C2B     C4B     *C3B    H3B1   0.0000    0.00  120.00    0.00   0.0000
+IC   C2B     C4B     *C3B    H3B2   0.0000    0.00 -120.00    0.00   0.0000
+
+PATC  FIRS NONE LAST NONE
+
+RESI NUTA        -1.00 ! deoxy-nucleotide with adenine 
+GROUP
+ATOM O4'  ON6    -0.50 !          H5T
+ATOM C4'  CN7     0.16 !         /
+ATOM H42' HN7     0.09 !  H51' O5'
+ATOM C1'  CN7B    0.16 !     \ |
+ATOM H12' HN7     0.09 !H52'--C5'   O4'  Adenine
+GROUP                  !        \  /  \  /
+ATOM C2'  CN8    -0.18 !   H42'--C4'  C1'--H12'
+ATOM H21' HN8     0.09 !          |    |
+ATOM H22' HN8     0.09 !   H31'--C3'--C2'--H21'
+! Adenine atoms        !        /       \
+GROUP                  !      O3'       H22'
+ATOM C5   CN5     0.28 !       |
+ATOM N7   NN4    -0.71 !  O1P==P==O2P
+ATOM C8   CN4     0.34 !       |
+ATOM H8   HN3     0.12 !      O5b
+ATOM N9   NN2    -0.05 !        \
+ATOM N1   NN3A   -0.74 !        C5b--H5b3
+ATOM C2   CN4     0.50 !       /  \
+ATOM H2   HN3     0.13 !    H5b1 H5b2
+ATOM N3   NN3A   -0.75
+ATOM C4   CN5     0.43
+ATOM C6   CN2     0.46
+ATOM N6   NN1    -0.77
+ATOM H61  HN1     0.38
+ATOM H62  HN1     0.38
+GROUP
+ATOM C3'  CN7     0.01
+ATOM H31' HN7     0.09
+ATOM O3'  ON2    -0.57 !
+ATOM P    P       1.50 !
+ATOM O1P  ON3    -0.78 !
+ATOM O2P  ON3    -0.78
+ATOM O5b  ON2    -0.57
+ATOM C5b  CN9    -0.17
+ATOM H5b1 HN9     0.09
+ATOM H5b2 HN9     0.09
+ATOM H5b3 HN9     0.09
+GROUP ! Methyl group on C4'
+ATOM C5'  CN8B    0.05
+ATOM H51' HN8     0.09
+ATOM H52' HN8     0.09
+ATOM O5'  ON5    -0.66
+ATOM H5T  HN5     0.43
+
+BOND C1'  O4'  C1'  C2'  C2'  C3'  C3'  C4'  C4'  O4'  C4'  C5'
+BOND C3'  O3'  C1'  H12' C2'  H21' C2'  H22' C3'  H31' C4'  H42'
+BOND C5'  H51' C5'  H52' C5'  O5'  O5'  H5T
+BOND O3'  P    P    O1P  P    O2P  P    O5b  O5b  C5b
+BOND C5B  H5B1 C5B  H5B2 C5B  H5B3
+BOND C1'  N9
+BOND N9   C4    N9   C8   C4   N3    C2   N1    C6   N6
+BOND N6   H61   N6   H62  C6   C5    C5   N7    C8   H8    C2   H2
+DOUBLE  N1  C6    C2   N3     C4   C5     N7   C8
+IMPR N6   C6   H61  H62       C6   N1   C5   N6       
+
+IC  C4'   O4'   C1'   C2'    1.4055  108.09  -21.00  106.18   1.5457 !0.0 for c3'endo (north) pucker
+IC  O4'   C1'   C2'   C3'    1.4127  106.18   30.00  103.11   1.5346 !
+IC  C1'   C2'   C3'   C4'    1.5457  103.11  -30.00  100.86   1.5211 !0.0 for o4'endo barrier
+IC  C2'   C3'   C4'   O4'    1.5346  100.86   20.00  103.15   1.4055
+IC  C3'   C4'   O4'   C1'    1.5211  103.15    0.00  108.09   1.4127
+IC  C3'   O4'   *C4'  C5'    0.0000    0.00  120.00    0.00   0.0000
+IC  C3'   O4'   *C4'  H42'   0.0000    0.00 -120.00    0.00   0.0000
+IC  C3'   C1'   *C2'  H21'   0.0000    0.00  120.00    0.00   0.0000
+IC  C3'   C1'   *C2'  H22'   0.0000    0.00 -120.00    0.00   0.0000
+IC  C2'   O4'   *C1'  N9     0.0000    0.00 -120.00    0.00   0.0000
+IC  C2'   O4'   *C1'  H12'   0.0000    0.00  120.00    0.00   0.0000
+IC  O4'   C1'   N9    C4     0.0000    0.00  180.00    0.00   0.0000
+IC  C1'  C4     *N9   C8     0.0000    0.00 -180.00    0.00   0.0000
+IC  C1'   N9    C4    C5     0.0000    0.00  180.00    0.00   0.0000
+IC  C5    N9    *C4   N3     0.0000    0.00  180.00    0.00   0.0000
+IC  N9    C4    C5    C6     0.0000    0.00  180.00    0.00   0.0000
+IC  C6    C4    *C5   N7     0.0000    0.00  180.00    0.00   0.0000
+IC  N7    N9    *C8   H8     0.0000    0.00  180.00    0.00   0.0000
+IC  C4    C5    C6    N1     0.0000    0.00    0.00    0.00   0.0000
+IC  N1    C5    *C6   N6     0.0000    0.00  180.00    0.00   0.0000
+IC  C5    C6    N1    C2     0.0000    0.00    0.00    0.00   0.0000
+IC  N3    N1    *C2   H2     0.0000    0.00  180.00    0.00   0.0000
+IC  C5    C6    N6    H61    0.0000    0.00  180.00    0.00   0.0000
+IC  H61   C6    *N6   H62    0.0000    0.00  180.00    0.00   0.0000
+IC  C2'   C4'   *C3'  O3'    0.0000    0.00 -120.00    0.00   0.0000
+IC  C2'   C4'   *C3'  H31'   0.0000    0.00  120.00    0.00   0.0000
+IC  C4'   C3'   O3'   P      0.0000    0.00  180.00    0.00   0.0000 !epsilon
+IC  C3'   O3'   P     O5B    0.0000    0.00  180.00    0.00   0.0000 !zeta
+IC  O5B   O3'   *P    O1P    0.0000    0.00  120.00    0.00   0.0000
+IC  O5B   O3'   *P    O2P    0.0000    0.00 -120.00    0.00   0.0000
+IC  O3'   P     O5B   C5B    0.0000    0.00  180.00    0.00   0.0000 !alpha
+IC  P     O5B   C5B   H5B1   0.0000    0.00  180.00    0.00   0.0000
+IC  H5B1  O5B   *C5B  H5B2   0.0000    0.00  120.00    0.00   0.0000
+IC  H5B1  O5B   *C5B  H5B3   0.0000    0.00 -120.00    0.00   0.0000
+IC  C3'   C4'   C5'   O5'    0.0000    0.00   60.00    0.00   0.0000 !gamma
+IC  C4'   C5'   O5'   H5T    0.0000    0.00  180.00    0.00   0.0000 !beta
+IC  H5T   C4'   *C5'  H51'   1.9450  142.80  120.00    0.00   0.0000
+IC  H5T  C4'    *C5'  H52'   1.9450  142.80 -120.00    0.00   0.0000
+PATC  FIRS NONE LAST NONE
+
+RESI NUTC        -1.00 ! nucleotide with cytosine 
+GROUP
+ATOM O4'  ON6    -0.50 !          H5T
+ATOM C4'  CN7     0.16 !         /
+ATOM H42' HN7     0.09 !  H51' O5'
+ATOM C1'  CN7B    0.16 !     \ |
+ATOM H12' HN7     0.09 !H52'--C5'   O4'  Cytosine
+GROUP                  !        \  /  \  /
+ATOM C2'  CN8    -0.18 !   H42'--C4'  C1'--H12'
+ATOM H21' HN8     0.09 !          |    |
+ATOM H22' HN8     0.09 !   H31'--C3'--C2'--H21'
+! Cytosine atoms       !        /       \
+GROUP                  !      O3'       H22'
+ATOM N1   NN2    -0.13 !       |
+ATOM C6   CN3     0.05 !  O1P==P==O2P
+ATOM H6   HN3     0.17 !       |
+ATOM C2   CN1     0.52 !      O5b
+ATOM O2   ON1C   -0.49 !        \
+ATOM N3   NN3    -0.66 !        C5b--H5b3  
+ATOM C4   CN2     0.65 !       /  \
+ATOM N4   NN1    -0.75 !    H5b1 H5b2
+ATOM H41  HN1     0.37  
+ATOM H42  HN1     0.33  
+ATOM C5   CN3    -0.13  
+ATOM H5   HN3     0.07  
+GROUP
+ATOM C3'  CN7     0.01
+ATOM H31' HN7     0.09
+ATOM O3'  ON2    -0.57 !
+ATOM P    P       1.50 !
+ATOM O1P  ON3    -0.78 !
+ATOM O2P  ON3    -0.78
+ATOM O5b  ON2    -0.57
+ATOM C5b  CN9    -0.17
+ATOM H5b1 HN9     0.09
+ATOM H5b2 HN9     0.09
+ATOM H5b3 HN9     0.09
+GROUP ! Methyl group on C4'
+ATOM C5'  CN8B    0.05
+ATOM H51' HN8     0.09
+ATOM H52' HN8     0.09
+ATOM O5'  ON5    -0.66
+ATOM H5T  HN5     0.43
+
+BOND C1'  O4'  C1'  C2'  C2'  C3'  C3'  C4'  C4'  O4'  C4'  C5'
+BOND C3'  O3'  C1'  H12' C2'  H21' C2'  H22' C3'  H31' C4'  H42'
+BOND C5'  H51' C5'  H52' C5'  O5'  O5'  H5T
+BOND O3'  P    P    O1P  P    O2P  P    O5b  O5b  C5b
+BOND C5B  H5B1 C5B  H5B2 C5B  H5B3
+BOND C1'  N1
+BOND N1   C2    N1   C6    C4   N4    N4   H41   N4   H42
+BOND C2   N3    C4   C5    C5   H5    C6   H6
+DOUB C2   O2    C5   C6    N3   C4
+IMPR N4   C4   H41  H42       C2   N1   N3   O2        C4   N3   C5   N4
+
+! This IC table is only an initial guess:
+!IC 	C1'	C2'	C3'	C4' 	0.0 0.0 324.92 0.0 0.0
+IC  C4'   O4'   C1'   C2'    1.4055  108.09  -21.00  106.18   1.5457 !0.0 for c3'endo (north) pucker
+IC  O4'   C1'   C2'   C3'    1.4127  106.18   30.00  103.11   1.5346 !
+IC  C1'   C2'   C3'   C4'    1.5457  103.11  -30.00  100.86   1.5211 !0.0 for o4'endo barrier
+IC  C2'   C3'   C4'   O4'    1.5346  100.86   20.00  103.15   1.4055
+IC  C3'   C4'   O4'   C1'    1.5211  103.15    0.00  108.09   1.4127
+IC  C3'   O4'   *C4'  C5'    0.0000    0.00  120.00    0.00   0.0000
+IC  C3'   O4'   *C4'  H42'   0.0000    0.00 -120.00    0.00   0.0000
+IC  C3'   C1'   *C2'  H21'   0.0000    0.00  120.00    0.00   0.0000
+IC  C3'   C1'   *C2'  H22'   0.0000    0.00 -120.00    0.00   0.0000
+IC  C2'   O4'   *C1'  N1     0.0000    0.00 -120.00    0.00   0.0000
+IC  C2'   O4'   *C1'  H12'   0.0000    0.00  120.00    0.00   0.0000
+IC  O4'   C1'   N1    C2     0.0000    0.00  180.00    0.00   0.0000
+IC  C1'   C2    *N1   C6     0.0000    0.00  180.00    0.00   0.0000
+IC  C1'   N1    C6    C5     0.0000    0.00  180.00    0.00   0.0000
+IC  N1    C6    C5    C4     0.0000    0.00    0.00    0.00   0.0000
+IC  C5    N1    *C6   H6     0.0000    0.00  180.00    0.00   0.0000
+IC  C1'   N1    C2    N3     0.0000    0.00  180.00    0.00   0.0000
+IC  N3    N1    *C2   O2     0.0000    0.00  180.00    0.00   0.0000
+IC  C4    C6    *C5   H5     0.0000    0.00  180.00    0.00   0.0000
+IC  N3    C5    *C4   N4     0.0000    0.00  180.00    0.00   0.0000
+IC  C5    C4    N4    H41    0.0000    0.00  180.00    0.00   0.0000
+IC  H41   C4    *N4   H42    0.0000    0.00  180.00    0.00   0.0000
+IC  C2'   C4'   *C3'  O3'    0.0000    0.00 -120.00    0.00   0.0000
+IC  C2'   C4'   *C3'  H31'   0.0000    0.00  120.00    0.00   0.0000
+IC  C4'   C3'   O3'   P      0.0000    0.00  180.00    0.00   0.0000 !epsilon
+IC  C3'   O3'   P     O5B    0.0000    0.00  180.00    0.00   0.0000 !zeta
+IC  O5B   O3'   *P    O1P    0.0000    0.00  120.00    0.00   0.0000
+IC  O5B   O3'   *P    O2P    0.0000    0.00 -120.00    0.00   0.0000
+IC  O3'   P     O5B   C5B    0.0000    0.00  180.00    0.00   0.0000 !alpha
+IC  P     O5B   C5B   H5B1   0.0000    0.00  180.00    0.00   0.0000
+IC  H5B1  O5B   *C5B  H5B2   0.0000    0.00  120.00    0.00   0.0000
+IC  H5B1  O5B   *C5B  H5B3   0.0000    0.00 -120.00    0.00   0.0000
+IC  C3'   C4'   C5'   O5'    0.0000    0.00   60.00    0.00   0.0000 !gamma
+IC  C4'   C5'   O5'   H5T    0.0000    0.00  180.00    0.00   0.0000 !beta
+IC  H5T   C4'   *C5'  H51'   1.9450  142.80  120.00    0.00   0.0000
+IC  H5T  C4'    *C5'  H52'   1.9450  142.80 -120.00    0.00   0.0000
+PATC  FIRS NONE LAST NONE
+
+
+PRES PYRC         0.00 ! Patch to generate CYTOSINE (pyrimidine)
+                       ! use in generate statement
+! DELETE PHOSPHATE AND RIBOSE ATOMS   
+DELE ATOM P
+DELE ATOM O1P
+DELE ATOM O2P
+DELE ATOM O5'
+DELE ATOM C5'
+DELE ATOM H5'
+DELE ATOM H5''
+DELE ATOM C4'
+DELE ATOM H4'
+DELE ATOM O4'
+DELE ATOM C1'
+DELE ATOM H1'
+DELE ATOM C2'
+DELE ATOM H2''
+DELE ATOM O2'
+DELE ATOM H2'
+DELE ATOM C3'
+DELE ATOM O3'
+DELE ATOM H3'
+! following atom order to maintain
+! compatibility with previous topology files
+GROUP
+ATOM N1   NN2    -0.50  !charge changed by patch
+ATOM H1   HN2     0.37  !charge changed by patch
+ATOM C6   CN3     0.05  !charge changed by patch
+ATOM H6   HN3     0.17  !charge changed by patch
+ATOM C2   CN1     0.52  !unchanged
+ATOM O2   ON1C   -0.49  !unchanged
+ATOM N3   NN3    -0.66  !unchanged
+ATOM C4   CN2     0.65  !unchanged
+ATOM N4   NN1    -0.75  !unchanged
+ATOM H41  HN1     0.37  !unchanged
+ATOM H42  HN1     0.33  !unchanged
+ATOM C5   CN3    -0.13  !charge changed by patch
+ATOM H5   HN3     0.07  !charge changed by patch
+BOND N1   H1
+IMPR N1   C6   C2   H1
+BILD C5   C6   N1   H1   0.0 0.0 180.0 0.0 0.0  
+ 
+PRES PYRU      0.00  ! Patch to generate URACIL (pyrimidine)
+                     ! use in generate statement
+! DELETE PHOSPHATE AND RIBOSE ATOMS   
+DELE ATOM P
+DELE ATOM O1P
+DELE ATOM O2P
+DELE ATOM O5'
+DELE ATOM C5'
+DELE ATOM H5'
+DELE ATOM H5''
+DELE ATOM C4'
+DELE ATOM H4'
+DELE ATOM O4'
+DELE ATOM C1'
+DELE ATOM H1'
+DELE ATOM C2'
+DELE ATOM H2''
+DELE ATOM O2'
+DELE ATOM H2'
+DELE ATOM C3'
+DELE ATOM O3'
+DELE ATOM H3'
+GROUP
+ATOM N1   NN2B   -0.82  !
+ATOM H1   HN2     0.48  !
+ATOM C6   CN3     0.20  !
+ATOM H6   HN3     0.14  !
+BOND N1   H1
+BILD C5   C6   N1   H1   0.0 0.0 180.0 0.0 0.0  
+ 
+PRES PYRT      0.00  ! Patch to generate THYMINE (pyrimidine)
+                     ! use in generate statement
+! DELETE PHOSPHATE AND RIBOSE ATOMS   
+DELE ATOM P
+DELE ATOM O1P
+DELE ATOM O2P
+DELE ATOM O5'
+DELE ATOM C5'
+DELE ATOM H5'
+DELE ATOM H5''
+DELE ATOM C4'
+DELE ATOM H4'
+DELE ATOM O4'
+DELE ATOM C1'
+DELE ATOM H1'
+DELE ATOM C2'
+DELE ATOM H2''
+DELE ATOM O2'
+DELE ATOM H2'
+DELE ATOM C3'
+DELE ATOM O3'
+DELE ATOM H3'
+GROUP
+ATOM N1   NN2B   -0.80  !
+ATOM H1   HN2     0.46  !
+ATOM C6   CN3     0.17  !
+ATOM H6   HN3     0.17  !
+BOND N1   H1
+BILD C5   C6   N1   H1   0.0 0.0 180.0 0.0 0.0  
+ 
+PRES PURG         0.00 ! Patch to generate GUANINE (purine)         
+                       ! use in generate statement
+! DELETE PHOSPHATE AND RIBOSE ATOMS   
+DELE ATOM P
+DELE ATOM O1P
+DELE ATOM O2P
+DELE ATOM O5'
+DELE ATOM C5'
+DELE ATOM H5'
+DELE ATOM H5''
+DELE ATOM C4'
+DELE ATOM H4'
+DELE ATOM O4'
+DELE ATOM C1'
+DELE ATOM H1'
+DELE ATOM C2'
+DELE ATOM H2''
+DELE ATOM O2'
+DELE ATOM H2'
+DELE ATOM C3'
+DELE ATOM O3'
+DELE ATOM H3'
+! following atom order to maintain
+! compatibility with previous topology files
+GROUP
+ATOM N9   NN2B   -0.38  !charge changed by patch
+ATOM C4   CN5     0.26  !charge changed by patch
+ATOM H9   HN2     0.36  !charge changed by patch
+ATOM N3   NN3G   -0.74  !unchanged
+ATOM C2   CN2     0.75  !unchanged
+ATOM N1   NN2G   -0.34  !unchanged
+ATOM H1   HN2     0.26  !unchanged
+ATOM N2   NN1    -0.68  !unchanged
+ATOM H21  HN1     0.32  !unchanged
+ATOM H22  HN1     0.35  !unchanged
+ATOM C6   CN1     0.54  !unchanged
+ATOM O6   ON1    -0.51  !unchanged
+ATOM C5   CN5G    0.00  !unchanged
+ATOM N7   NN4    -0.60  !charge changed by patch
+ATOM C8   CN4     0.25  !charge changed by patch
+ATOM H8   HN3     0.16  !charge changed by patch
+BOND N9   H9
+IMPR N9  C8  C4  H9
+BILD  C5  C4  N9  H9  0.0  0.0  180.0 0.0 0.0  
+                     
+PRES PURA         0.00 ! Patch to generate ADENINE (purine)         
+                       ! use in generate statement
+! DELETE PHOSPHATE AND RIBOSE ATOMS   
+DELE ATOM P
+DELE ATOM O1P
+DELE ATOM O2P
+DELE ATOM O5'
+DELE ATOM C5'
+DELE ATOM H5'
+DELE ATOM H5''
+DELE ATOM C4'
+DELE ATOM H4'
+DELE ATOM O4'
+DELE ATOM C1'
+DELE ATOM H1'
+DELE ATOM C2'
+DELE ATOM H2''
+DELE ATOM O2'
+DELE ATOM H2'
+DELE ATOM C3'
+DELE ATOM O3'
+DELE ATOM H3'
+GROUP
+ATOM C5   CN5     0.28 
+ATOM N7   NN4    -0.71
+ATOM C8   CN4     0.34 
+ATOM H8   HN3     0.12
+ATOM N9   NN2    -0.37
+ATOM H9   HN2     0.32
+ATOM N1   NN3A   -0.74 
+ATOM C2   CN4     0.50 
+ATOM H2   HN3     0.13
+ATOM N3   NN3A   -0.75
+ATOM C4   CN5     0.43
+ATOM C6   CN2     0.46
+ATOM N6   NN1    -0.77
+ATOM H61  HN1     0.38
+ATOM H62  HN1     0.38
+BOND N9   H9
+BILD  C5  C4  N9  H9  0.0  0.0  180.0 0.0 0.0  
+
+PRES 9MG        0.000  ! 9-Methyl guanine patch
+                       ! use in generate statement
+! DELETE PHOSPHATE AND RIBOSE ATOMS   
+DELE ATOM P
+DELE ATOM O1P
+DELE ATOM O2P
+DELE ATOM O5'              
+DELE ATOM C5'
+DELE ATOM H5'
+DELE ATOM H5''
+DELE ATOM C4'
+DELE ATOM H4'
+DELE ATOM O4'
+DELE ATOM C1'
+DELE ATOM H1'
+DELE ATOM C2'
+DELE ATOM H2''
+DELE ATOM O2'
+DELE ATOM H2'                    
+DELE ATOM C3'
+DELE ATOM O3'
+DELE ATOM H3'
+GROUP
+ATOM N9   NN2B   -0.02  !unchanged
+ATOM C4   CN5     0.26  !unchanged
+ATOM C9   CN9    -0.27  !replaces H9 in pres purg
+ATOM N3   NN3G   -0.74  !unchanged
+ATOM C2   CN2     0.75  !unchanged
+ATOM N1   NN2G   -0.34  !unchanged
+ATOM H1   HN2     0.26  !unchanged
+ATOM N2   NN1    -0.68  !unchanged
+ATOM H21  HN1     0.32  !unchanged
+ATOM H22  HN1     0.35  !unchanged
+ATOM C6   CN1     0.54  !unchanged
+ATOM O6   ON1    -0.51  !unchanged
+ATOM C5   CN5G    0.00  !unchanged
+ATOM N7   NN4    -0.60  !charge changed by patch
+ATOM C8   CN4     0.25  !charge changed by patch
+ATOM H8   HN3     0.16  !charge changed by patch
+ATOM H91  HN9     0.09
+ATOM H92  HN9     0.09 
+ATOM H93  HN9     0.09 
+BOND N9   C9    C9   H91   C9  H92   C9   H93
+BILD C8   C4   *N9  C9     0.0       0.0   180.0     0.0    0.0
+BILD C8   N9   C9   H91    0.0       0.0   180.0     0.0    0.0
+BILD N9   H91  *C9  H92    0.0       0.0  -115.0     0.0    0.0
+BILD H91  H92  *C9  H93    0.0       0.0   115.0     0.0    0.0
+                       
+PRES 9EG        0.000  ! 9-Ethyl guanine patch
+                       ! use in generate statement
+! DELETE PHOSPHATE AND RIBOSE ATOMS   
+DELE ATOM P
+DELE ATOM O1P
+DELE ATOM O2P
+DELE ATOM O5'              
+DELE ATOM C5'
+DELE ATOM H5'
+DELE ATOM H5''
+DELE ATOM C4'
+DELE ATOM H4'
+DELE ATOM O4'
+DELE ATOM C1'
+DELE ATOM H1'
+DELE ATOM C2'
+DELE ATOM H2''
+DELE ATOM O2'
+DELE ATOM H2'                    
+DELE ATOM C3'
+DELE ATOM O3'
+DELE ATOM H3'
+GROUP
+ATOM C9   CN8  -0.18
+ATOM H91  HN8   0.09
+ATOM H92  HN8   0.09
+GROUP
+ATOM C9B  CN9  -0.27 
+ATOM H9B1 HN9   0.09 
+ATOM H9B2 HN9   0.09 
+ATOM H9B3 HN9   0.09 
+BOND N9   C9    C9   H91   C9  H92   C9   H93
+BOND C9   C9B   C9B  H9B1  C9B H9B2  C9B  H9B3
+BILD C8   C4   *N9  C9     0.0       0.0   180.0     0.0    0.0
+BILD C8   N9   C9   C9B    0.0       0.0     0.0     0.0    0.0
+BILD N9   C9B  *C9  H91    0.0       0.0  -115.0     0.0    0.0
+BILD C9B  H91  *C9  H92    0.0       0.0   115.0     0.0    0.0
+BILD N9   C9   C9B  H9B1   0.0       0.0   180.0     0.0    0.0
+BILD C9   H9B1 *C9B H9B2   0.0       0.0  -115.0     0.0    0.0
+BILD H9B1 H9B2 *C9B H9B3   0.0       0.0   115.0     0.0    0.0
+                       
+PRES 9MA        0.00  ! 9-Methyl adenine patch
+                      ! use in generate statement
+! DELETE PHOSPHATE AND RIBOSE ATOMS
+DELE ATOM P
+DELE ATOM O1P
+DELE ATOM O2P
+DELE ATOM O5'              
+DELE ATOM C5'
+DELE ATOM H5'
+DELE ATOM H5''
+DELE ATOM C4'
+DELE ATOM H4'
+DELE ATOM O4'
+DELE ATOM C1'
+DELE ATOM H1'
+DELE ATOM C2'
+DELE ATOM H2''
+DELE ATOM O2'
+DELE ATOM H2'                    
+DELE ATOM C3'
+DELE ATOM O3'
+DELE ATOM H3'
+! all atoms included in patch to get correct atom
+! order to simplify analysis
+GROUP
+ATOM C5   CN5   0.28  !no change
+ATOM N7   NN4  -0.71  !no change
+ATOM C8   CN4   0.34  !no change
+ATOM H8   HN3   0.12  !no change
+ATOM N9   NN2  -0.05  !no change
+ATOM C9   CN9  -0.27  !new charge, replaces h9
+ATOM N1   NN3A -0.74  !no change
+ATOM C2   CN4   0.50  !no change
+ATOM H2   HN3   0.13  !no change
+ATOM N3   NN3A -0.75  !no change
+ATOM C4   CN5   0.43  !no change
+ATOM C6   CN2   0.46  !no change
+ATOM N6   NN1  -0.77  !no change
+ATOM H61  HN1   0.38  !no change
+ATOM H62  HN1   0.38  !no change
+ATOM H91  HN9   0.09  !new charge
+ATOM H92  HN9   0.09  !new charge
+ATOM H93  HN9   0.09  !new charge
+BOND N9   C9    C9   H91   C9  H92   C9   H93
+BILD C8   C4   *N9  C9     0.0       0.0   180.0     0.0    0.0
+BILD C4   N9   C9   H91    0.0       0.0   180.0     0.0    0.0
+BILD N9   H91  *C9  H92    0.0       0.0  -115.0     0.0    0.0
+BILD H91  H92  *C9  H93    0.0       0.0   115.0     0.0    0.0
+
+PRES 1MC        0.000  ! 1-Methyl Cytosine patch
+                       ! use in generate statement
+! DELETE PHOSPHATE AND RIBOSE ATOMS   
+DELE ATOM P
+DELE ATOM O1P
+DELE ATOM O2P
+DELE ATOM O5'
+DELE ATOM C5'
+DELE ATOM H5'
+DELE ATOM H5''
+DELE ATOM C4'
+DELE ATOM H4'
+DELE ATOM O4'
+DELE ATOM C1'
+DELE ATOM H1'
+DELE ATOM C2'
+DELE ATOM H2''
+DELE ATOM O2'
+DELE ATOM H2'
+DELE ATOM C3'
+DELE ATOM O3'
+DELE ATOM H3'
+GROUP
+ATOM N1   NN2    -0.13  !no change
+ATOM C1   CN9    -0.27  !replaces h1 in pres pyrc
+ATOM C6   CN3     0.05  !no change
+ATOM H6   HN3     0.17  !no change
+ATOM C2   CN1     0.52  !no change
+ATOM O2   ON1C   -0.49  !no change
+ATOM N3   NN3    -0.66  !no change
+ATOM C4   CN2     0.65  !no change
+ATOM N4   NN1    -0.75  !no change
+ATOM H41  HN1     0.37  !no change
+ATOM H42  HN1     0.33  !no change
+ATOM C5   CN3    -0.13  !no change
+ATOM H5   HN3     0.07  !no change
+ATOM H11  HN9     0.09
+ATOM H12  HN9     0.09 
+ATOM H13  HN9     0.09
+BOND N1   C1    C1   H11   C1  H12   C1   H13
+BILD C6   C2   *N1  C1     0.0       0.0   180.0     0.0    0.0
+BILD C2   N1   C1   H11    0.0       0.0   180.0     0.0    0.0
+BILD N1   H11  *C1  H12    0.0       0.0  -115.0     0.0    0.0
+BILD H11  H12  *C1  H13    0.0       0.0   115.0     0.0    0.0
+
+PRES 1MT        0.00  ! 1-Methyl Thymine patch
+                      ! use in generate statement
+! DELETE PHOSPHATE AND RIBOSE ATOMS   
+DELE ATOM P
+DELE ATOM O1P
+DELE ATOM O2P
+DELE ATOM O5'
+DELE ATOM C5'
+DELE ATOM H5'
+DELE ATOM H5''
+DELE ATOM C4'
+DELE ATOM H4'
+DELE ATOM O4'
+DELE ATOM C1'
+DELE ATOM H1'
+DELE ATOM C2'
+DELE ATOM H2''
+DELE ATOM O2'
+DELE ATOM H2'
+DELE ATOM C3'
+DELE ATOM O3'
+DELE ATOM H3'
+GROUP
+ATOM N1   NN2B   -0.34  !no change
+ATOM C1   CN9    -0.27  !replaces h1 in pres pyrt
+ATOM C6   CN3     0.17  !no change
+ATOM H6   HN3     0.17  !no change
+ATOM C2   CN1T    0.51  !no change
+ATOM O2   ON1    -0.41  !no change
+ATOM N3   NN2U   -0.46  !no change
+ATOM H3   HN2     0.36  !no change
+ATOM C4   CN1     0.50  !no change
+ATOM O4   ON1    -0.45  !no change
+ATOM C5   CN3T   -0.15  !no change
+ATOM C5M  CN9    -0.11  !no change
+ATOM H51  HN9     0.07  !no change
+ATOM H52  HN9     0.07  !no change
+ATOM H53  HN9     0.07  !no change
+ATOM H11  HN9     0.09 
+ATOM H12  HN9     0.09 
+ATOM H13  HN9     0.09 
+BOND N1   C1    C1   H11   C1  H12   C1   H13
+BILD C6   C2   *N1  C1     0.0       0.0   180.0     0.0    0.0
+BILD C2   N1   C1   H11    0.0       0.0   180.0     0.0    0.0
+BILD N1   H11  *C1  H12    0.0       0.0  -115.0     0.0    0.0
+BILD H11  H12  *C1  H13    0.0       0.0   115.0     0.0    0.0
+ 
+PRES 1MU        0.00  ! 1-Methyl Uracil patch
+                      ! use in generate statement
+! DELETE PHOSPHATE AND RIBOSE ATOMS   
+DELE ATOM P
+DELE ATOM O1P
+DELE ATOM O2P
+DELE ATOM O5'
+DELE ATOM C5'
+DELE ATOM H5'
+DELE ATOM H5''
+DELE ATOM C4'
+DELE ATOM H4'
+DELE ATOM O4'
+DELE ATOM C1'
+DELE ATOM H1'
+DELE ATOM C2'
+DELE ATOM H2''
+DELE ATOM O2'
+DELE ATOM H2'
+DELE ATOM C3'
+DELE ATOM O3'
+DELE ATOM H3'
+GROUP
+ATOM N1   NN2B   -0.34  !unchanged
+ATOM C1   CN9    -0.27  !replaces H1 in pres pyru
+ATOM C6   CN3     0.20  !unchanged
+ATOM H6   HN3     0.14  !unchanged
+ATOM C2   CN1T    0.55  !unchanged
+ATOM O2   ON1    -0.45  !unchanged
+ATOM N3   NN2U   -0.46  !unchanged
+ATOM H3   HN2     0.36  !unchanged
+ATOM C4   CN1     0.53  !unchanged
+ATOM O4   ON1    -0.48  !unchanged
+ATOM C5   CN3    -0.15  !unchanged
+ATOM H5   HN3     0.10  !unchanged
+ATOM H11  HN9     0.09 
+ATOM H12  HN9     0.09 
+ATOM H13  HN9     0.09 
+BOND N1   C1    C1   H11   C1  H12   C1   H13
+BILD C6   C2   *N1  C1     0.0       0.0   180.0     0.0    0.0
+BILD C2   N1   C1   H11    0.0       0.0   180.0     0.0    0.0
+BILD N1   H11  *C1  H12    0.0       0.0  -115.0     0.0    0.0
+BILD H11  H12  *C1  H13    0.0       0.0   115.0     0.0    0.0
+
+RESI DMP         -1.00   ! Dimethylphosphate
+GROUP                    !
+ATOM P1   P       1.500  !           H11! 
+ATOM O3   ON3    -0.780  !            |
+ATOM O4   ON3    -0.780  !       H13- C1-H12
+ATOM O1   ON2    -0.570  !             \
+ATOM O2   ON2    -0.570  !         O3   O1
+ATOM C1   CN9    -0.170  !          \\ /
+ATOM H11  HN9     0.090  !      (-)   P1
+ATOM H12  HN9     0.090  !          // \
+ATOM H13  HN9     0.090  !         O4   O2
+ATOM C2   CN9    -0.170  !             /
+ATOM H21  HN9     0.090  !        H23-C2-H22
+ATOM H22  HN9     0.090  !            |
+ATOM H23  HN9     0.090  !           H21
+                         !
+BOND P1   O1     P1   O2    P1   O3    P1   O4    O1   C1    O2   C2 
+BOND C1   H11    C1   H12   C1   H13   C2   H21   C2   H22   C2   H23
+! IC FOR THE g,g conformation (3-21G* opt. structure)
+IC O3   P1   O1   C1   1.4723    107.31    000.0     117.79    1.4356
+IC O4   P1   O2   C2   1.4722    000.0     000.0     117.79    1.4357
+IC O1   P1   O2   C2   1.6343    000.0      73.8     117.79    1.4357
+IC O2   P1   O1   C1   1.6344    000.0      73.7     117.79    1.4356
+IC H11  C1   O1   P1   1.0827    107.8     174.8     117.79    1.6343
+IC H12  C1   O1   P1   1.0800    110.4      54.1     117.79    1.6343
+IC H13  C1   O1   P1   1.0848    110.7     294.3     117.79    1.6343
+IC H21  C2   O2   P1   1.0827    107.9     174.7     117.79    1.6344
+IC H22  C2   O2   P1   1.0800    110.4      54.1     117.79    1.6344
+IC H23  C2   O2   P1   1.0848    110.7     294.2     117.79    1.6344
+ 
+RESI MP_0         0.00   ! Methylphosphate, neutral
+GROUP                    !
+! atom order for molvib
+ATOM C1   CN9    -0.17   !
+ATOM O1   ON2    -0.56   !                 H11
+ATOM P1   P       1.50   !                  |
+ATOM O2   ON4    -0.63   !            H13--C1--H12
+ATOM O3   ON4    -0.63   !                  |
+ATOM O4   ON3    -0.64   !                 O1
+ATOM H11  HN9     0.09   !                  |
+ATOM H12  HN9     0.09   !             O4==P1--O3
+ATOM H13  HN9     0.09   !                  |    \
+ATOM H2   HN4     0.43   !                 O2     H3
+ATOM H3   HN4     0.43   !                   \
+                         !                    H2
+                         !
+BOND P1   O1     P1   O2    P1   O3    P1   O4    O1   C1
+BOND C1   H11    C1   H12   C1   H13   O2   H2    O3   H3
+IC O3   P1   O1   C1   0.0000    000.00    000.0     000.00    0.0000
+IC O4   P1   O1   C1   0.0000    000.00    000.0     000.00    0.0000
+IC O2   P1   O1   C1   0.0000    000.00    000.0     000.00    0.0000
+IC H11  C1   O1   P1   0.0000    000.00    000.0     000.00    0.0000
+IC H12  C1   O1   P1   0.0000    000.00    000.0     000.00    0.0000
+IC H13  C1   O1   P1   0.0000    000.00    000.0     000.00    0.0000
+IC H2   O2   P1   O1   0.0000    000.00    180.0     000.00    0.0000
+IC H3   O3   P1   O1   0.0000    000.00    180.0     000.00    0.0000
+! dummies to analyze cetain angles
+IC O3   P1   O4   O1   0.0         0.0       0.0       0.0     0.0
+
+RESI MP_1        -1.00   ! Methylphosphate, anionic
+GROUP                    ! 
+! atom order for molvib
+ATOM C1   CN9    -0.170  !
+ATOM O1   ON2    -0.620  !                 H11
+ATOM P1   P       1.500  !                  |
+ATOM O2   ON4    -0.680  !            H13--C1--H12
+ATOM O3   ON3    -0.820  !                  |
+ATOM O4   ON3    -0.820  !                 O1
+ATOM H11  HN9     0.090  !                  |
+ATOM H12  HN9     0.090  !             O4==P1==O3 (-)
+ATOM H13  HN9     0.090  !                  |
+ATOM H2   HN4     0.340  !                 O2
+                         !                   \
+                         !                    H2
+                         !                       
+BOND P1   O1     P1   O2    P1   O3    P1   O4    O1   C1    
+BOND C1   H11    C1   H12   C1   H13   O2   H2
+! IC 
+IC O3   P1   O1   C1   0.0000    000.00    000.0     000.00    0.0000
+IC O4   P1   O1   C1   0.0000    000.00    000.0     000.00    0.0000
+IC O2   P1   O1   C1   0.0000    000.00    000.0     000.00    0.0000
+IC H11  C1   O1   P1   0.0000    000.00    000.0     000.00    0.0000
+IC H12  C1   O1   P1   0.0000    000.00    000.0     000.00    0.0000
+IC H13  C1   O1   P1   0.0000    000.00    000.0     000.00    0.0000
+IC H2   O2   P1   O1   0.0000    000.00    000.0     000.00    0.0000
+! dummies to analyze cetain angles
+IC O3   P1   O4   O1   0.0         0.0       0.0       0.0     0.0
+ 
+RESI MP_2        -2.00   ! Methylphosphate, dianionic 
+GROUP                    ! 
+ATOM P1   P       1.100  ! 
+ATOM O1   ON2    -0.400  !                 H11       
+ATOM O2   ON3    -0.900  !                  |        
+ATOM O3   ON3    -0.900  !            H13--C1--H12
+ATOM O4   ON3    -0.900  !                  | 
+GROUP                    !                 O1
+ATOM C1   CN9    -0.270  !                  |
+ATOM H11  HN9     0.090  !        (-)  O4==P1==O3  (-)
+ATOM H12  HN9     0.090  !                 ||
+ATOM H13  HN9     0.090  !                 O2
+                         !
+BOND P1   O1     P1   O2    P1   O3    P1   O4    O1   C1    
+BOND C1   H11    C1   H12   C1   H13  
+! IC 
+IC O3   P1   O1   C1   0.0000    000.00    000.0     000.00    0.0000
+IC O4   P1   O1   C1   0.0000    000.00    000.0     000.00    0.0000
+IC O2   P1   O1   C1   0.0000    000.00    000.0     000.00    0.0000
+IC H11  C1   O1   P1   0.0000    000.00    000.0     000.00    0.0000
+IC H12  C1   O1   P1   0.0000    000.00    000.0     000.00    0.0000
+IC H13  C1   O1   P1   0.0000    000.00    000.0     000.00    0.0000
+! dummies to analyze cetain angles
+IC O3   P1   O4   O1   0.0         0.0       0.0       0.0     0.0
+
+! below are residues and patches added for the 97/98 optimization
+! and extension of the na all-atom parameters
+
+RESI THF          0.00  ! tetrahydrofuran, for MOLVIB
+!
+GROUP
+ATOM O4'  ON6    -0.50  !      H41'  O4'  H11'
+ATOM C4'  CN8     0.07  !        \  /  \  /
+ATOM C3'  CN8    -0.18  !   H42'--C4'  C1'--H12'
+ATOM C2'  CN8    -0.18  !          |    |
+ATOM C1'  CN8     0.07  !   H31'--C3'--C2'--H21'
+ATOM H11' HN8     0.09  !        /       \
+ATOM H12' HN8     0.09  !      H32'      H22'
+ATOM H21' HN8     0.09  !
+ATOM H22' HN8     0.09  !
+ATOM H31' HN8     0.09  !
+ATOM H32' HN8     0.09  !
+ATOM H41' HN8     0.09  !
+ATOM H42' HN8     0.09  !
+
+BOND C1'  O4'  C1'  C2'  C2'  C3'  C3'  C4'  C4'  O4'
+BOND C1'  H11' 	C1'  H12' C2' H21' C2'  H22' C3'  H31' C3'  H32'
+BOND C4'  H41'  C4'  H42'
+PATC  FIRS NONE LAST NONE
+
+RESI THFO       0.00  ! 3'-hydroxyl-tetrahydrofuran
+                      ! Atom types for aliphatic hydrogens based on nucleotide
+GROUP
+ATOM O4'  ON6    -0.50 !      H41'  O4'  H11'
+ATOM C1'  CN7B    0.07 !        \  /  \  /
+ATOM C2'  CN8    -0.18 !   H42'--C4'  C1'--H12'
+ATOM C4'  CN7     0.07 !          |    |
+ATOM H11' HN7     0.09 !   H31'--C3'--C2'--H21'
+ATOM H12' HN7     0.09 !        /       \
+ATOM H21' HN8     0.09 !      O3'       H22'
+ATOM H22' HN8     0.09 !       |
+ATOM H41' HN7     0.09 !      H32'
+ATOM H42' HN7     0.09
+GROUP
+ATOM C3'  CN7     0.14
+ATOM H31' HN7     0.09
+ATOM O3'  ON5    -0.66 
+ATOM H32' HN5     0.43
+
+BOND C1'  O4'  C1'  C2'  C2'  C3'  C3'  C4'  C4'  O4'  C3'  O3'
+BOND C1'  H11' C1'  H12' C2'  H21' C2'  H22' C3'  H31' C4'  H41'  
+BOND C4'  H42' O3'  H32'
+!Nicolas: the following IC are for thf-oh as optimized via ab initio calculations
+IC   C4'     O4'     C1'     C2'    1.4055  108.09   23.45  106.18   1.5457
+IC   O4'     C1'     C2'     C3'    1.4127  106.18    3.96  103.11   1.5346
+IC   C1'     C2'     C3'     C4'    1.5457  103.11  -26.93  100.86   1.5211
+IC   C2'     C3'     C4'     O4'    1.5346  100.86   41.73  103.15   1.4055
+IC   C3'     C4'     O4'     C1'    1.5211  103.15  -41.62  108.09   1.4127
+IC   H11'    C1'     C2'     C3'    1.0856  111.62  123.53  103.11   1.5346
+IC   H12'    C1'     C2'     C3'    1.0818  113.32 -114.11  103.11   1.5346
+IC   H21'    C2'     C3'     C4'    1.0846  110.65   91.68  100.86   1.5211
+IC   H22'    C2'     C3'     C4'    1.0822  110.88 -148.45  100.86   1.5211
+IC   H31'    C3'     C4'     O4'    1.0806  113.53  162.89  103.15   1.4055
+IC   H41'    C4'     O4'     C1'    1.0891  110.89   77.76  108.09   1.4127
+IC   H42'    C4'     O4'     C1'    1.0808  108.72 -162.12  108.09   1.4127
+IC   O3'     C3'     C4'     O4'    1.4028  110.98  -77.39  103.15   1.4055
+IC   H32'    O3'     C3'     C4'    0.9492  108.72   44.80  110.98   1.5211
+PATC  FIRS NONE LAST NONE
+
+RESI THFC        0.00  ! THF-3'-OH-4'-CH3  
+
+! Atom types for aliphatic hydrogens based on nucleotide
+
+GROUP
+ATOM O4'  ON6    -0.50 !    H52' H53'
+ATOM C1'  CN8     0.07 !      \  /
+ATOM H11' HN8     0.09 !  H51'-C5'  O4'  H11'
+ATOM H12' HN8     0.09 !        \  /  \  /
+ATOM C4'  CN7     0.16 !   H42'--C4'  C1'--H12'
+ATOM H42' HN7     0.09 !          |    |
+GROUP                  !   H31'--C3'--C2'--H21'
+ATOM C2'  CN8    -0.18 !        /       \
+ATOM H21' HN8     0.09 !      O3'       H22'
+ATOM H22' HN8     0.09 !       |
+GROUP                  !      H32'
+ATOM H31' HN7     0.09
+ATOM C3'  CN7     0.14 
+ATOM O3'  ON5    -0.66
+ATOM H32' HN5     0.43 
+GROUP 
+ATOM C5'  CN9    -0.27
+ATOM H51' HN9     0.09
+ATOM H52' HN9     0.09
+ATOM H53' HN9     0.09
+BOND C1'  O4'  C1'  C2'  C2'  C3'  C3'  C4'  C4'  O4'  C4'  C5'
+BOND C3'  O3'
+BOND C1'  H11'      C1'  H12'
+BOND C2'  H21'      C2'  H22'
+BOND C3'  H31'
+BOND C4'  H42'
+BOND C5'  H51'      C5'  H52'      C5'  H53'
+BOND O3'  H32'
+PATC  FIRS NONE LAST NONE
+
+RESI TH5P      -2.00 ! 5'-phosphate-methyl-tetrahydrofuran (phosphate -2)
+
+! Atom types for aliphatic hydrogens based on nucleotide
+
+GROUP                  !      O1P  (-2)
+ATOM O4'  ON6    -0.50 !       ||
+ATOM C1'  CN7B    0.07 !  O2P==P==O2P
+ATOM H1'  HN7     0.09 !       |
+ATOM H1'' HN7     0.09 !  H5'' |
+ATOM C4'  CN7     0.16 !     \ |
+ATOM H4'' HN7     0.09 ! H5'--C5'   O4'  H1'
+GROUP                  !        \  /  \  /
+ATOM C2'  CN8    -0.18 !    H4'--C4'  C1'--H1''
+ATOM H2'  HN8     0.09 !          |    |
+ATOM H2'' HN8     0.09 !    H3'--C3'--C2'--H2'
+GROUP                  !        /       \
+ATOM C3'  CN7    -0.18 !      H3''      H2''
+ATOM H3'  HN7     0.09 !
+ATOM H3'' HN7     0.09
+GROUP
+ATOM C5'  CN8B   -0.18
+ATOM H5'  HN8     0.09
+ATOM H5'' HN8     0.09
+GROUP
+ATOM O5'  ON2    -0.40
+ATOM P    P       1.10
+ATOM O1P  ON3    -0.90
+ATOM O2P  ON3    -0.90
+ATOM O3P  ON3    -0.90
+
+BOND C1'  O4'  C1'  C2'  C2'  C3'  C3'  C4'  C4'  O4'  C4'  C5'
+BOND C1'  H1'  C1'  H1'' C2'  H2'  C2'  H2'' C3'  H3'  C3'  H3'' 
+BOND C4'  H4'' C5'  H5'  C5'  H5'' C5'  O5'  O5'  P    P    O1P
+BOND P    O2P  P    O3P
+IC   C4'     O4'     C1'     C2'    1.4416  109.61    0.45  106.74   1.5328
+IC   O4'     C1'     C2'     C3'    1.4471  106.74  -21.92  103.38   1.5200
+IC   C1'     C2'     C3'     C4'    1.5328  103.38   33.49  102.18   1.5321
+IC   C2'     C3'     C4'     O4'    1.5200  102.18  -34.11  105.43   1.4416
+IC   C3'     C4'     O4'     C1'    1.5321  105.43   21.23  109.61   1.4471
+IC   H1'     C1'     C2'     C3'    1.1099  113.03 -141.96  103.38   1.5200
+IC   H1''    C1'     C2'     C3'    1.1111  111.16   93.50  103.38   1.5200
+IC   H2'     C2'     C3'     C4'    1.1135  109.13  -81.76  102.18   1.5321
+IC   H2''    C2'     C3'     C4'    1.1076  113.49  155.97  102.18   1.5321
+IC   H3'     C3'     C4'     O4'    1.1127  108.68   81.68  105.43   1.4416
+IC   H3''    C3'     C4'     O4'    1.1069  112.41 -156.66  105.43   1.4416
+IC   H4''    C4'     O4'     C1'    1.1127  106.71  -95.75  109.61   1.4471
+IC   C5'     C4'     O4'     C1'    1.5325  108.43  144.82  109.61   1.4471
+IC   H51'    C5'     C4'     O4'    1.1092  110.48  180.00  108.43   1.4416
+IC   H52'    C5'     C4'     O4'    1.1104  110.01  -60.00  108.43   1.4416
+IC   O4'     C4'     C5'     O5'    0.0       0.0    60.00    0.0    0.0   
+IC   C4'     C5'     O5'     P      0.0       0.0   180.0     0.0    0.0 	
+IC   C5'     O5'     P       O1P    0.0       0.0   -60.0     0.0    0.0
+IC   C5'     O5'     P       O2P    0.0       0.0   180.0     0.0    0.0
+IC   C5'     O5'     P       O3P    0.0       0.0   60.0      0.0    0.0 
+PATC  FIRS NONE LAST NONE
+
+RESI TH5H         0.00 ! 5'-hydroxy-methyl-tetrahydrofuran (phosphate -2)
+
+! Atom types for aliphatic hydrogens based on nucleotide
+
+                       !          H5T
+GROUP                  !         /
+ATOM O4'  ON6    -0.50 !  H5'' O5'
+ATOM C1'  CN7B    0.07 !     \ |
+ATOM H1'  HN7     0.09 ! H5'--C5'   O4'  H1'
+ATOM H1'' HN7     0.09 !        \  /  \  /
+ATOM C4'  CN7     0.16 !    H4'--C4'  C1'--H1''
+ATOM H4'' HN7     0.09 !          |    |
+GROUP                  !    H3'--C3'--C2'--H2'
+ATOM C2'  CN8    -0.18 !        /       \
+ATOM H2'  HN8     0.09 !      H3''      H2''
+ATOM H2'' HN8     0.09 
+GROUP
+ATOM C3'  CN7    -0.18
+ATOM H3'  HN7     0.09
+ATOM H3'' HN7     0.09
+GROUP
+ATOM C5'  CN8B    0.05
+ATOM H5'  HN8     0.09
+ATOM H5'' HN8     0.09
+ATOM O5'  ON5    -0.66
+ATOM H5T  HN5     0.43
+
+BOND C1'  O4'  C1'  C2'  C2'  C3'  C3'  C4'  C4'  O4'  C4'  C5'
+BOND C1'  H1'  C1'  H1'' C2'  H2'  C2'  H2'' C3'  H3'  C3'  H3'' 
+BOND C4'  H4'' C5'  H5'  C5'  H5'' C5'  O5'  O5'  H5T  
+
+IC   C4'     O4'     C1'     C2'    1.4416  109.61    0.45  106.74   1.5328
+IC   O4'     C1'     C2'     C3'    1.4471  106.74  -21.92  103.38   1.5200
+IC   C1'     C2'     C3'     C4'    1.5328  103.38   33.49  102.18   1.5321
+IC   C2'     C3'     C4'     O4'    1.5200  102.18  -34.11  105.43   1.4416
+IC   C3'     C4'     O4'     C1'    1.5321  105.43   21.23  109.61   1.4471
+IC   H1'     C1'     C2'     C3'    1.1099  113.03 -141.96  103.38   1.5200
+IC   H1''    C1'     C2'     C3'    1.1111  111.16   93.50  103.38   1.5200
+IC   H2'     C2'     C3'     C4'    1.1135  109.13  -81.76  102.18   1.5321
+IC   H2''    C2'     C3'     C4'    1.1076  113.49  155.97  102.18   1.5321
+IC   H3'     C3'     C4'     O4'    1.1127  108.68   81.68  105.43   1.4416
+IC   H3''    C3'     C4'     O4'    1.1069  112.41 -156.66  105.43   1.4416
+IC   H4''    C4'     O4'     C1'    1.1127  106.71  -95.75  109.61   1.4471
+IC   C5'     C4'     O4'     C1'    1.5325  108.43  144.82  109.61   1.4471
+IC   H5'     C5'     C4'     O4'    1.1092  110.48  180.00  108.43   1.4416
+IC   H5''    C5'     C4'     O4'    1.1104  110.01  -60.00  108.43   1.4416
+IC   O4'     C4'     C5'     O5'    0.0       0.0    60.00    0.0    0.0   
+IC   C4'     C5'     O5'     H5T    0.0       0.0   180.0     0.0    0.0 	
+PATC  FIRS NONE LAST NONE
+
+RESI T5PH        -1.00 ! 5'-phosphate-methyl-tetrahydrofuran (phosphate -1)
+
+! Atom types for aliphatic hydrogens based on nucleotide
+
+GROUP
+ATOM C5'  CN8B   -0.08 !
+ATOM H5'  HN8     0.09 !      O1P    H5T
+ATOM H5'' HN8     0.09 !      ||     /
+ATOM O5'  ON2    -0.62 !  O2P==P==O3P
+ATOM P    P       1.50 !       |
+ATOM O1P  ON3    -0.82 !      O5'
+ATOM O2P  ON3    -0.82 !       |
+ATOM O3P  ON4    -0.68 !  H5'' |
+ATOM H5T  HN4     0.34 !     \ |
+GROUP                  ! H5'--C5'   O4'  H1'
+ATOM O4'  ON6    -0.50 !        \  /  \  /
+ATOM C1'  CN7B    0.07 !    H4'--C4'  C1'--H1''
+ATOM H1'  HN7     0.09 !          |    |
+ATOM H1'' HN7     0.09 !    H3'--C3'--C2'--H2'
+ATOM C4'  CN7     0.16 !        /       \
+ATOM H4'' HN7     0.09 !      H3''      H2''
+GROUP                  !
+ATOM C2'  CN8    -0.18
+ATOM H2'  HN8     0.09
+ATOM H2'' HN8     0.09 
+GROUP
+ATOM C3'  CN7    -0.18
+ATOM H3'  HN7     0.09
+ATOM H3'' HN7     0.09
+
+BOND C1'  O4'  C1'  C2'  C2'  C3'  C3'  C4'  C4'  O4'  C4'  C5'
+BOND C1'  H1'  C1'  H1'' C2'  H2'  C2'  H2'' C3'  H3'  C3'  H3'' 
+BOND C4'  H4'' C5'  H5'  C5'  H5'' C5'  O5'  O5'  P    P    O1P
+BOND P    O2P  P    O3P  O3P  H5T
+IC   C4'     O4'     C1'     C2'    1.4416  109.61    0.45  106.74   1.5328
+IC   O4'     C1'     C2'     C3'    1.4471  106.74  -21.92  103.38   1.5200
+IC   C1'     C2'     C3'     C4'    1.5328  103.38   33.49  102.18   1.5321
+IC   C2'     C3'     C4'     O4'    1.5200  102.18  -34.11  105.43   1.4416
+IC   C3'     C4'     O4'     C1'    1.5321  105.43   21.23  109.61   1.4471
+IC   H1'     C1'     C2'     C3'    1.1099  113.03 -141.96  103.38   1.5200
+IC   H1''    C1'     C2'     C3'    1.1111  111.16   93.50  103.38   1.5200
+IC   H2'     C2'     C3'     C4'    1.1135  109.13  -81.76  102.18   1.5321
+IC   H2''    C2'     C3'     C4'    1.1076  113.49  155.97  102.18   1.5321
+IC   H3'     C3'     C4'     O4'    1.1127  108.68   81.68  105.43   1.4416
+IC   H3''    C3'     C4'     O4'    1.1069  112.41 -156.66  105.43   1.4416
+IC   H4''    C4'     O4'     C1'    1.1127  106.71  -95.75  109.61   1.4471
+IC   C5'     C4'     O4'     C1'    1.5325  108.43  144.82  109.61   1.4471
+IC   H51'    C5'     C4'     O4'    1.1092  110.48  180.00  108.43   1.4416
+IC   H52'    C5'     C4'     O4'    1.1104  110.01  -60.00  108.43   1.4416
+IC   O4'     C4'     C5'     O5'    0.0       0.0    60.0     0.0    0.0   
+IC   O4'     C4'     C5'     H5'    0.0       0.0   180.0     0.0    0.0   
+IC   O4'     C4'     C5'     H5''   0.0       0.0   -60.0     0.0    0.0   
+IC   C4'     C5'     O5'     P      0.0       0.0   180.0     0.0    0.0 	
+IC   C5'     O5'     P       O1P    0.0       0.0   -60.0     0.0    0.0
+IC   C5'     O5'     P       O2P    0.0       0.0   180.0     0.0    0.0
+IC   C5'     O5'     P       O3P    0.0       0.0    60.0     0.0    0.0 
+IC   O5'     P       O3P     H5T    0.0       0.0   180.0     0.0    0.0 
+PATC  FIRS NONE LAST NONE
+
+RESI TH3P        -2.00  ! 3'phosphate-hydroxyl-tetrahydrofuran (phosphate -2)
+                        ! used to fit epsilon
+
+! Atom types for aliphatic hydrogens based on nucleotide
+
+GROUP
+ATOM O4'  ON6    -0.50 !    H52' H53'
+ATOM C1'  CN7B    0.07 !      \  /
+ATOM H11' HN7     0.09 !  H51'-C5'  O4'  H11'
+ATOM H12' HN7     0.09 !        \  /  \  /
+ATOM C4'  CN7     0.07 !   H42'--C4'  C1'--H12'
+ATOM H41' HN7     0.09 !          |    |
+ATOM H42' HN7     0.09 !   H31'--C3'--C2'--H21'
+GROUP                  !        /       \
+ATOM C2'  CN8    -0.18 !      O3'       H22'
+ATOM H21' HN8     0.09 !       |
+ATOM H22' HN8     0.09 !  O1P==P==O2P
+GROUP                  !       ||
+ATOM C3'  CN7    -0.09 !      O3P (-2)
+ATOM H31' HN7     0.09 !
+GROUP
+ATOM O3'  ON2    -0.40
+ATOM P    P       1.10
+ATOM O1P  ON3    -0.90
+ATOM O2P  ON3    -0.90
+ATOM O3P  ON3    -0.90
+
+BOND C1'  O4'  C1'  C2'  C2'  C3'  C3'  C4'  C4'  O4'  C3'  O3'
+BOND C1'  H11' C1'  H12' C2'  H21' C2'  H22' C3'  H31' C4'  H41'
+BOND C4'  H42' O3'  P    P    O1P  P    O2P  P    O3P
+IC   C4'     O4'     C1'     C2'    1.4055  108.09   23.45  106.18   1.5457
+IC   O4'     C1'     C2'     C3'    1.4127  106.18    3.96  103.11   1.5346
+IC   C1'     C2'     C3'     C4'    1.5457  103.11  -26.93  100.86   1.5211
+IC   C2'     C3'     C4'     O4'    1.5346  100.86   41.73  103.15   1.4055
+IC   C3'     C4'     O4'     C1'    1.5211  103.15  -41.62  108.09   1.4127
+IC   H11'    C1'     C2'     C3'    1.0856  111.62  123.53  103.11   1.5346
+IC   H12'    C1'     C2'     C3'    1.0818  113.32 -114.11  103.11   1.5346
+IC   H21'    C2'     C3'     C4'    1.0846  110.65   91.68  100.86   1.5211
+IC   H22'    C2'     C3'     C4'    1.0822  110.88 -148.45  100.86   1.5211
+IC   H31'    C3'     C4'     O4'    1.0806  113.53  162.89  103.15   1.4055
+IC   H41'    C4'     O4'     C1'    1.0891  110.89   77.76  108.09   1.4127
+IC   H42'    C4'     O4'     C1'    1.0808  108.72 -162.12  108.09   1.4127
+IC   O3'     C3'     C4'     O4'    1.4028  110.98  -77.39  103.15   1.4055
+IC   P       O3'     C3'     C4'    0.0       0.0   180.00    0.0    0.0 
+IC   O1P     P       O3'     C3'    0.0       0.0   -60.0     0.0    0.0
+IC   O2P     P       O3'     C3'    0.0       0.0   180.0     0.0    0.0
+IC   O3P     P       O3'     C3'    0.0       0.0    60.0     0.0    0.0
+PATC  FIRS NONE LAST NONE
+
+RESI T3PH        -1.00 ! monoanionic 3'phosphate-tetrahydrofuran 
+                       ! used to fit epsilon
+
+! Atom types for aliphatic hydrogens based on nucleotide
+
+GROUP
+ATOM O4'  ON6    -0.50 !
+ATOM C1'  CN7B    0.07 !
+ATOM H11' HN7     0.09 !      H41'  O4'  H11'
+ATOM H12' HN7     0.09 !        \  /  \  /
+ATOM C4'  CN7     0.07 !   H42'--C4'  C1'--H12'
+ATOM H41' HN7     0.09 !          |    |
+ATOM H42' HN7     0.09 !   H31'--C3'--C2'--H21'
+GROUP                  !        /       \
+ATOM C2'  CN8    -0.18 !      O3'       H22'
+ATOM H21' HN8     0.09 !       |
+ATOM H22' HN8     0.09 !  O1P==P==O2P
+GROUP                  !       |
+ATOM C3'  CN7     0.01 !      O3T  (-1)
+ATOM H31' HN7     0.09 !        \
+ATOM O3'  ON2    -0.62 !        H3T
+ATOM P    P       1.50 !
+ATOM O1P  ON3    -0.82
+ATOM O2P  ON3    -0.82
+ATOM O3T  ON4    -0.68
+ATOM H3T  HN4     0.34
+
+BOND C1'  O4'  C1'  C2'  C2'  C3'  C3'  C4'  C4'  O4'  C3'  O3'
+BOND C1'  H11' C1'  H12' C2'  H21' C2'  H22' C3'  H31' C4'  H41'
+BOND C4'  H42' O3'  P    P    O1P  P    O2P  P    O3T  O3T  H3T
+IC   C4'     O4'     C1'     C2'    1.4055  108.09   23.45  106.18   1.5457
+IC   O4'     C1'     C2'     C3'    1.4127  106.18    3.96  103.11   1.5346
+IC   C1'     C2'     C3'     C4'    1.5457  103.11  -26.93  100.86   1.5211
+IC   C2'     C3'     C4'     O4'    1.5346  100.86   41.73  103.15   1.4055
+IC   C3'     C4'     O4'     C1'    1.5211  103.15  -41.62  108.09   1.4127
+IC   H11'    C1'     C2'     C3'    1.0856  111.62  123.53  103.11   1.5346
+IC   H12'    C1'     C2'     C3'    1.0818  113.32 -114.11  103.11   1.5346
+IC   H21'    C2'     C3'     C4'    1.0846  110.65   91.68  100.86   1.5211
+IC   H22'    C2'     C3'     C4'    1.0822  110.88 -148.45  100.86   1.5211
+IC   H31'    C3'     C4'     O4'    1.0806  113.53  162.89  103.15   1.4055
+IC   H41'    C4'     O4'     C1'    1.0891  110.89   77.76  108.09   1.4127
+IC   H42'    C4'     O4'     C1'    1.0808  108.72 -162.12  108.09   1.4127
+IC   O3'     C3'     C4'     O4'    1.4028  110.98  -77.39  103.15   1.4055
+IC   P       O3'     C3'     C4'    0.0       0.0   180.00    0.0    0.0 
+IC   O1P     P       O3'     C3'    0.0       0.0   -60.0     0.0    0.0
+IC   O2P     P       O3'     C3'    0.0       0.0    60.0     0.0    0.0
+IC   O3T     P       O3'     C3'    0.0       0.0   180.0     0.0    0.0
+IC   H3T     O3T     P       O3'    0.0       0.0   180.0     0.0    0.0
+
+PATC  FIRS NONE LAST NONE
+
+RESI R3PH        -1.00 ! monoanionic 3'phosphate-tetrahydrofuran
+                       ! with O2' hydroxyl. Used to fit C2'-O2' torsion in RNA
+
+! Atom types for aliphatic hydrogens based on RNA nucleotide
+
+GROUP
+ATOM O4'  ON6B   -0.50 !
+ATOM C1'  CN7B    0.07 !
+ATOM H11' HN7     0.09 !      H41'  O4'  H11'
+ATOM H12' HN7     0.09 !        \  /  \  /
+ATOM C4'  CN7     0.07 !   H42'--C4'  C1'--H12'
+ATOM H41' HN7     0.09 !          |    |
+ATOM H42' HN7     0.09 !   H31'--C3'--C2'--H21'
+GROUP                  !        /       \
+ATOM C2'  CN7B    0.14 !      O3'       O2'
+ATOM H21' HN7     0.09 !       |         |
+ATOM O2'  ON5    -0.66 !  O1P==P==O2P   H22'
+ATOM H22' HN5     0.43 !       |
+GROUP                  !      O3T  (-1)
+ATOM C3'  CN7     0.01 !        \
+ATOM H31' HN7     0.09 !        H3T
+ATOM O3'  ON2    -0.62 !
+ATOM P    P       1.50
+ATOM O1P  ON3    -0.82
+ATOM O2P  ON3    -0.82
+ATOM O3T  ON4    -0.68
+ATOM H3T  HN4     0.34
+
+BOND C1'  O4'  C1'  C2'  C2'  C3'  C3'  C4'  C4'  O4'  C3'  O3'
+BOND C1'  H11' C1'  H12' C2'  H21' C2'  O2'  O2'  H22' C3'  H31' C4'  H41'
+BOND C4'  H42' O3'  P    P    O1P  P    O2P  P    O3T  O3T  H3T
+IC   C4'     O4'     C1'     C2'    1.4055  108.09   23.45  106.18   1.5457
+IC   O4'     C1'     C2'     C3'    1.4127  106.18    3.96  103.11   1.5346
+IC   C1'     C2'     C3'     C4'    1.5457  103.11  -26.93  100.86   1.5211
+IC   C2'     C3'     C4'     O4'    1.5346  100.86   41.73  103.15   1.4055
+IC   C3'     C4'     O4'     C1'    1.5211  103.15  -41.62  108.09   1.4127
+IC   H11'    C1'     C2'     C3'    1.0856  111.62  123.53  103.11   1.5346
+IC   H12'    C1'     C2'     C3'    1.0818  113.32 -114.11  103.11   1.5346
+IC   H21'    C2'     C3'     C4'    1.0846  110.65   91.68  100.86   1.5211
+IC   O2'     C2'     C3'     C4'    1.0822  110.88  283.41  100.86   1.5211
+IC   H22'    O2'     C2'     C3'    1.0822  110.88    0.00  100.86   1.5211
+IC   H31'    C3'     C4'     O4'    1.0806  113.53  162.89  103.15   1.4055
+IC   H41'    C4'     O4'     C1'    1.0891  110.89   77.76  108.09   1.4127
+IC   H42'    C4'     O4'     C1'    1.0808  108.72 -162.12  108.09   1.4127
+IC   O3'     C3'     C4'     O4'    1.4028  110.98  -77.39  103.15   1.4055
+IC   P       O3'     C3'     C4'    0.0       0.0   180.00    0.0    0.0
+IC   O1P     P       O3'     C3'    0.0       0.0   -60.0     0.0    0.0
+IC   O2P     P       O3'     C3'    0.0       0.0    60.0     0.0    0.0
+IC   O3T     P       O3'     C3'    0.0       0.0   180.0     0.0    0.0
+IC   H3T     O3T     P       O3'    0.0       0.0   180.0     0.0    0.0
+
+PATC  FIRS NONE LAST NONE
+
+RESI A3PH        -1.00 ! monoanionic 3'phosphate-tetrahydrofuran
+                       ! with O2' hydroxyl in an arabinose (beta) conformation. 
+
+! The furanose ring contains atom type CN7C, specific of arabinose 
+
+GROUP
+ATOM O4'  ON6    -0.50 !
+ATOM C1'  CN7B    0.07 !
+ATOM H11' HN7     0.09 !      H41'  O4'  H11'
+ATOM H12' HN7     0.09 !        \  /  \  /
+ATOM C4'  CN7     0.07 !   H42'--C4'  C1'--H12'
+ATOM H41' HN7     0.09 !          |    |
+ATOM H42' HN7     0.09 !   H31'--C3'--C2'--H21'
+GROUP                  !        /       \
+ATOM C2'  CN7C    0.14 !      O3'       O2'  O2' is beta
+ATOM H22' HN7     0.09 !       |         |
+ATOM O2'  ON5    -0.66 !  O1P==P==O2P   H22'
+ATOM H21' HN5     0.43 !       |
+GROUP                  !      O3T  (-1)
+ATOM C3'  CN7     0.01 !        \
+ATOM H31' HN7     0.09 !        H3T
+ATOM O3'  ON2    -0.62 !
+ATOM P    P       1.50
+ATOM O1P  ON3    -0.82
+ATOM O2P  ON3    -0.82
+ATOM O3T  ON4    -0.68
+ATOM H3T  HN4     0.34
+
+BOND C1'  O4'  C1'  C2'  C2'  C3'  C3'  C4'  C4'  O4'  C3'  O3'
+BOND C1'  H11' C1'  H12' C2'  H22' C2'  O2'  O2'  H21' C3'  H31' C4'  H41'
+BOND C4'  H42' O3'  P    P    O1P  P    O2P  P    O3T  O3T  H3T
+IC   C4'     O4'     C1'     C2'    1.4055  108.09   23.45  106.18   1.5457
+IC   O4'     C1'     C2'     C3'    1.4127  106.18    3.96  103.11   1.5346
+IC   C1'     C2'     C3'     C4'    1.5457  103.11  -26.93  100.86   1.5211
+IC   C2'     C3'     C4'     O4'    1.5346  100.86   41.73  103.15   1.4055
+IC   C3'     C4'     O4'     C1'    1.5211  103.15  -41.62  108.09   1.4127
+IC   H11'    C1'     C2'     C3'    1.0856  111.62  123.53  103.11   1.5346
+IC   H12'    C1'     C2'     C3'    1.0818  113.32 -114.11  103.11   1.5346
+IC   H22'    C2'     C3'     C4'    1.0822  110.88  283.41  100.86   1.5211
+IC   O2'     C2'     C3'     C4'    1.0846  110.65  120.00  100.86   1.5211
+IC   H21'    O2'     C2'     C3'    1.0822  110.88  120.00  100.86   1.5211
+IC   H31'    C3'     C4'     O4'    1.0806  113.53  162.89  103.15   1.4055
+IC   H41'    C4'     O4'     C1'    1.0891  110.89   77.76  108.09   1.4127
+IC   H42'    C4'     O4'     C1'    1.0808  108.72 -162.12  108.09   1.4127
+IC   O3'     C3'     C4'     O4'    1.4028  110.98  -77.39  103.15   1.4055
+IC   P       O3'     C3'     C4'    0.0       0.0   180.00    0.0    0.0
+IC   O1P     P       O3'     C3'    0.0       0.0   -60.0     0.0    0.0
+IC   O2P     P       O3'     C3'    0.0       0.0    60.0     0.0    0.0
+IC   O3T     P       O3'     C3'    0.0       0.0   180.0     0.0    0.0
+IC   H3T     O3T     P       O3'    0.0       0.0   180.0     0.0    0.0
+PATC  FIRS NONE LAST NONE
+
+RESI T3PM        -1.00 ! 3'phosphate-hydroxyl-tetrahydrofuran (phosphate -1)
+                       ! capped with a methyl group. This is to investigate the differences
+                       ! between BI and BII forms of DNA
+                       ! C3T is defined as CN8B to miminck DNA
+GROUP
+ATOM O4'  ON6    -0.50 !
+ATOM C1'  CN7B    0.07 !     H41'   O4'  H11'
+ATOM H11' HN7     0.09 !        \  /  \  /
+ATOM H12' HN7     0.09 !   H42'--C4'  C1'--H12'
+ATOM C4'  CN7     0.07 !          |    |
+ATOM H41' HN7     0.09 !   H31'--C3'--C2'--H21'
+ATOM H42' HN7     0.09 !        /       \
+GROUP                  !      O3'       H22'
+ATOM C2'  CN8    -0.18 !       |
+ATOM H21' HN8     0.09 !  O1P==P==O2P
+ATOM H22' HN8     0.09 !       |
+GROUP                  !      O3T  (-1)
+ATOM C3'  CN7     0.01 !        \
+ATOM H31' HN7     0.09 !        C3T--H3T3
+GROUP                  !       /  \
+ATOM O3'  ON2    -0.57 !    H3T1 H3T2
+ATOM P    P       1.50 !
+ATOM O1P  ON3    -0.78
+ATOM O2P  ON3    -0.78
+ATOM O3T  ON2    -0.57
+ATOM C3T  CN8B   -0.17
+ATOM H3T1 HN8     0.09
+ATOM H3T2 HN8     0.09
+ATOM H3T3 HN8     0.09
+
+BOND C1'  O4'  C1'  C2'  C2'  C3'  C3'  C4'  C4'  O4'  C3'  O3'
+BOND C1'  H11' C1'  H12' C2'  H21' C2'  H22' C3'  H31' C4'  H41'
+BOND C4'  H42' O3'  P    P    O1P  P    O2P  P    O3T  O3T  C3T
+BOND C3T  H3T1   C3T  H3T2  C3T  H3T3
+IC   C4'     O4'     C1'     C2'    1.4055  108.09   23.45  106.18   1.5457
+IC   O4'     C1'     C2'     C3'    1.4127  106.18    3.96  103.11   1.5346
+IC   C1'     C2'     C3'     C4'    1.5457  103.11  -26.93  100.86   1.5211
+IC   C2'     C3'     C4'     O4'    1.5346  100.86   41.73  103.15   1.4055
+IC   C3'     C4'     O4'     C1'    1.5211  103.15  -41.62  108.09   1.4127
+IC   H11'    C1'     C2'     C3'    1.0856  111.62  123.53  103.11   1.5346
+IC   H12'    C1'     C2'     C3'    1.0818  113.32 -114.11  103.11   1.5346
+IC   H21'    C2'     C3'     C4'    1.0846  110.65   91.68  100.86   1.5211
+IC   H22'    C2'     C3'     C4'    1.0822  110.88 -148.45  100.86   1.5211
+IC   H31'    C3'     C4'     O4'    1.0806  113.53  162.89  103.15   1.4055
+IC   H41'    C4'     O4'     C1'    1.0891  110.89   77.76  108.09   1.4127
+IC   H42'    C4'     O4'     C1'    1.0808  108.72 -162.12  108.09   1.4127
+IC   O3'     C3'     C4'     O4'    1.4028  110.98  -77.39  103.15   1.4055
+IC   P       O3'     C3'     C4'    0.0000  000.00  180.00  000.00   0.0000
+IC   C3'     O3'     P       O3T    0.0000  000.00  -95.22  000.00   0.0000
+IC   O3T     O3'     *P      O1P    0.0000  000.00 -115.82  000.00   0.0000
+IC   O3T     O3'     *P      O2P    0.0000  000.00  115.90  000.00   0.0000
+IC   C3T     O3T     P       O3'    0.0000  000.00  -46.90  000.00   0.0000
+IC   H3T1    C3T     O3T     P      0.0000  000.00  180.00  000.00   0.0000
+IC   H3T2    C3T     O3T     P      0.0000  000.00   60.00  000.00   0.0000
+IC   H3T3    C3T     O3T     P      0.0000  000.00  -60.00  000.00   0.0000
+PATC  FIRS NONE LAST NONE
+
+RESI TM3P        -2.00 ! 4'-methyl,3'-phosphate tetrahydrofuran (phosphate -2)
+
+! This is the DNA version (the RNA version is RM3P, see below)
+
+GROUP
+ATOM O4'  ON6    -0.50 !    H52' H53'
+ATOM C1'  CN7B    0.07 !      \  /
+ATOM H11' HN7     0.09 !  H51'-C5'  O4'  H11'
+ATOM H12' HN7     0.09 !        \  /  \  /
+ATOM C4'  CN7     0.16 !   H42'--C4'  C1'--H12'
+ATOM H42' HN7     0.09 !          |    |
+GROUP                  !   H31'--C3'--C2'--H21'
+ATOM C2'  CN8    -0.18 !        /       \
+ATOM H21' HN8     0.09 !      O3'       H22'
+ATOM H22' HN8     0.09 !       |
+GROUP                  !  O1P==P==O2P
+ATOM C3'  CN7    -0.09 !       ||
+ATOM H31' HN7     0.09 !      O3P (-2)
+GROUP                  !
+ATOM O3'  ON2    -0.40
+ATOM P    P       1.10
+ATOM O1P  ON3    -0.90
+ATOM O2P  ON3    -0.90
+ATOM O3P  ON3    -0.90
+GROUP                 
+ATOM C5'  CN8B   -0.27
+ATOM H51' HN8     0.09
+ATOM H52' HN8     0.09
+ATOM H53' HN8     0.09
+
+BOND C1'  O4'  C1'  C2'  C2'  C3'  C3'  C4'  C4'  O4'  C3'  O3'
+BOND C1'  H11' C1'  H12' C2'  H21' C2'  H22' C3'  H31' C4'  H42' 
+BOND O3'  P    P    O1P  P    O2P  P    O3P
+BOND C4'  C5'  C5'  H51' C5'  H52' C5'  H53'
+IC   C4'     O4'     C1'     C2'    1.4055  108.09   23.45  106.18   1.5457
+IC   O4'     C1'     C2'     C3'    1.4127  106.18    3.96  103.11   1.5346
+IC   C1'     C2'     C3'     C4'    1.5457  103.11  -26.93  100.86   1.5211
+IC   C2'     C3'     C4'     O4'    1.5346  100.86   41.73  103.15   1.4055
+IC   C3'     C4'     O4'     C1'    1.5211  103.15  -41.62  108.09   1.4127
+IC   H11'    C1'     C2'     C3'    1.0856  111.62  123.53  103.11   1.5346
+IC   H12'    C1'     C2'     C3'    1.0818  113.32 -114.11  103.11   1.5346
+IC   H21'    C2'     C3'     C4'    1.0846  110.65   91.68  100.86   1.5211
+IC   H22'    C2'     C3'     C4'    1.0822  110.88 -148.45  100.86   1.5211
+IC   H31'    C3'     C4'     O4'    1.0806  113.53  162.89  103.15   1.4055
+IC   C5'     C4'     O4'     C1'    0.0000  000.00   77.76  108.09   1.4127
+IC   H51'    C5'     C4'     O4'    0.0       0.0   180.0     0.0    0.0
+IC   H52'    C5'     C4'     O4'    0.0       0.0   -60.0     0.0    0.0
+IC   H53'    C5'     C4'     O4'    0.0       0.0    60.0     0.0    0.0
+IC   H42'    C4'     O4'     C1'    1.0808  108.72 -162.12  108.09   1.4127
+IC   O3'     C3'     C4'     O4'    1.4028  110.98  -77.39  103.15   1.4055
+IC   P       O3'     C3'     C4'    0.0       0.0   180.00    0.0    0.0
+IC   O1P     P       O3'     C3'    0.0       0.0   -60.0     0.0    0.0
+IC   O2P     P       O3'     C3'    0.0       0.0   180.0     0.0    0.0
+IC   O3P     P       O3'     C3'    0.0       0.0    60.0     0.0    0.0
+PATC  FIRS NONE LAST NONE
+
+RESI RM3P        -2.00 ! 4'-methyl,3'-phosphate tetrahydrofuran (phosphate -2)
+
+! This is the RNA version of TM3P: NOTE that it does NOT have a 2'hydroxyl to
+! allow for the determination of the influence of the ring dihedrals on the
+! sugar puckering energetics in the absence of the 2' hydroxyl
+
+GROUP
+ATOM O4'  ON6B   -0.50
+ATOM C1'  CN7B    0.07
+ATOM H11' HN7     0.09
+ATOM H12' HN7     0.09
+ATOM C4'  CN7     0.16
+ATOM H42' HN7     0.09
+GROUP                 
+ATOM C2'  CN7B   -0.18
+ATOM H21' HN7     0.09
+ATOM H22' HN7     0.09
+GROUP                 
+ATOM C3'  CN7    -0.09
+ATOM H31' HN7     0.09
+GROUP                 
+ATOM O3'  ON2    -0.40
+ATOM P    P       1.10
+ATOM O1P  ON3    -0.90
+ATOM O2P  ON3    -0.90
+ATOM O3P  ON3    -0.90
+GROUP                 
+ATOM C5'  CN8B   -0.27
+ATOM H51' HN8     0.09
+ATOM H52' HN8     0.09
+ATOM H53' HN8     0.09
+
+BOND C1'  O4'  C1'  C2'  C2'  C3'  C3'  C4'  C4'  O4'  C3'  O3'
+BOND C1'  H11' C1'  H12' C2'  H21' C2'  H22' C3'  H31' C4'  H42' 
+BOND O3'  P    P    O1P  P    O2P  P    O3P
+BOND C4'  C5'  C5'  H51' C5'  H52' C5'  H53'
+IC   C4'     O4'     C1'     C2'    1.4055  108.09   23.45  106.18   1.5457
+IC   O4'     C1'     C2'     C3'    1.4127  106.18    3.96  103.11   1.5346
+IC   C1'     C2'     C3'     C4'    1.5457  103.11  -26.93  100.86   1.5211
+IC   C2'     C3'     C4'     O4'    1.5346  100.86   41.73  103.15   1.4055
+IC   C3'     C4'     O4'     C1'    1.5211  103.15  -41.62  108.09   1.4127
+IC   H11'    C1'     C2'     C3'    1.0856  111.62  123.53  103.11   1.5346
+IC   H12'    C1'     C2'     C3'    1.0818  113.32 -114.11  103.11   1.5346
+IC   H21'    C2'     C3'     C4'    1.0846  110.65   91.68  100.86   1.5211
+IC   H22'    C2'     C3'     C4'    1.0822  110.88 -148.45  100.86   1.5211
+IC   H31'    C3'     C4'     O4'    1.0806  113.53  162.89  103.15   1.4055
+IC   C5'     C4'     O4'     C1'    0.0000  000.00   77.76  108.09   1.4127
+IC   H51'    C5'     C4'     O4'    0.0     0.0     180.0     0.0    0.0
+IC   H52'    C5'     C4'     O4'    0.0     0.0      -60.0    0.0    0.0
+IC   H53'    C5'     C4'     O4'    0.0     0.0       60.0    0.0    0.0
+IC   H42'    C4'     O4'     C1'    1.0808  108.72 -162.12  108.09   1.4127
+IC   O3'     C3'     C4'     O4'    1.4028  110.98  -77.39  103.15   1.4055
+IC   P       O3'     C3'     C4'    0.0       0.0   180.00    0.0    0.0
+IC   O1P     P       O3'     C3'    0.0       0.0   -60.0     0.0    0.0
+IC   O2P     P       O3'     C3'    0.0       0.0   180.0     0.0    0.0
+IC   O3P     P       O3'     C3'    0.0       0.0    60.0     0.0    0.0
+PATC  FIRS NONE LAST NONE
+
+RESI T35P        -4.00 ! 5'-phosphate-3'-phosphate-
+                       ! methyl-tetrahydrofuran (phosphate -2)
+GROUP                 
+ATOM O4'  ON6    -0.50 !
+ATOM C1'  CN7B    0.07 !      O1P (-2)
+ATOM H1'  HN7     0.09 !      ||
+ATOM H1'' HN7     0.09 !  O2P==P==O2P
+ATOM C4'  CN7     0.16 !       |
+ATOM H4'' HN7     0.09 ! H5'' O5'
+GROUP                  !     \ |
+ATOM C2'  CN8    -0.18 ! H5'--C5'   O4'  H1'
+ATOM H2'  HN8     0.09 !        \  /  \  /
+ATOM H2'' HN8     0.09 !    H4'--C4'  C1'--H1''
+GROUP                  !          |    |
+ATOM C3'  CN7    -0.09 !    H3'--C3'--C2'--H2'
+ATOM H3'  HN7     0.09 !        /       \
+GROUP                  !      O3'       H22'
+ATOM O3'  ON2    -0.40 !       |
+ATOM P3   P       1.10 ! O31P==P==O32P
+ATOM O31P ON3    -0.90 !       ||
+ATOM O32P ON3    -0.90 !      O33P (-2)
+ATOM O33P ON3    -0.90
+GROUP                 
+ATOM C5'  CN8B   -0.18
+ATOM H5'  HN8     0.09
+ATOM H5'' HN8     0.09
+GROUP                 
+ATOM O5'  ON2    -0.40
+ATOM P    P       1.10
+ATOM O1P  ON3    -0.90
+ATOM O2P  ON3    -0.90
+ATOM O3P  ON3    -0.90
+
+BOND C1'  O4'  C1'  C2'  C2'  C3'  C3'  C4'  C4'  O4'  C4'  C5'
+BOND C1'  H1'  C1'  H1'' C2'  H2'  C2'  H2'' C3'  H3'  C3'  O3'
+BOND C4'  H4'' C5'  H5'  C5'  H5'' C5'  O5'  O5'  P    P    O1P
+BOND P    O2P  P    O3P  O3'  P3   P3   O31P P3   O32P P3   O33P 
+IC   C4'     O4'     C1'     C2'    1.4416  109.61    0.45  106.74   1.5328
+IC   O4'     C1'     C2'     C3'    1.4471  106.74  -21.92  103.38   1.5200
+IC   C1'     C2'     C3'     C4'    1.5328  103.38   33.49  102.18   1.5321
+IC   C2'     C3'     C4'     O4'    1.5200  102.18  -34.11  105.43   1.4416
+IC   C3'     C4'     O4'     C1'    1.5321  105.43   21.23  109.61   1.4471
+IC   H1'     C1'     C2'     C3'    1.1099  113.03 -141.96  103.38   1.5200
+IC   H1''    C1'     C2'     C3'    1.1111  111.16   93.50  103.38   1.5200
+IC   H2'     C2'     C3'     C4'    1.1135  109.13  -81.76  102.18   1.5321
+IC   H2''    C2'     C3'     C4'    1.1076  113.49  155.97  102.18   1.5321
+IC   H3'     C3'     C4'     O4'    1.1127  108.68   81.68  105.43   1.4416
+IC   H4''    C4'     O4'     C1'    1.1127  106.71  -95.75  109.61   1.4471
+IC   C5'     C4'     O4'     C1'    1.5325  108.43  144.82  109.61   1.4471
+IC   H51'    C5'     C4'     O4'    1.1092  110.48  180.00  108.43   1.4416
+IC   H52'    C5'     C4'     O4'    1.1104  110.01  -60.00  108.43   1.4416
+IC   O4'     C4'     C5'     O5'    0.0       0.0    60.00    0.0    0.0   
+IC   C4'     C5'     O5'     P      0.0       0.0   180.0     0.0    0.0 	
+IC   C5'     O5'     P       O1P    0.0       0.0   -60.0     0.0    0.0
+IC   C5'     O5'     P       O2P    0.0       0.0   180.0     0.0    0.0
+IC   C5'     O5'     P       O3P    0.0       0.0   60.0      0.0    0.0 
+IC   P3      C3'     C4'     O4'    1.5     112.41 -156.66  105.43   1.4416
+IC   C5'     C4'     C3'     O3'    0.0       0.0   180.0     0.0    0.0
+IC   C4'     C3'     O3'     P3     0.0       0.0   180.0     0.0    0.0
+IC   C3'     O3'     P3      O31P   0.0       0.0   -60.0     0.0    0.0
+IC   C3'     O3'     P3      O32P   0.0       0.0   180.0     0.0    0.0
+IC   C3'     O3'     P3      O33P   0.0       0.0   60.0      0.0    0.0
+PATC  FIRS NONE LAST NONE
+
+RESI TMPM        -1.00 ! 4'-methyl,3'-methylphosphate tetrahydrofuran (phosphate -1)
+                       !charges corrected by adm jr. 9/98
+
+GROUP
+ATOM O4'  ON6    -0.50 !    H52' H53'
+ATOM C1'  CN7B    0.07 !      \  /             !c1' atom type to match full nucleotide
+ATOM H11' HN7     0.09 !  H51'-C5'  O4'  H11'  !h11' ""
+ATOM H12' HN7     0.09 !        \  /  \  /     !h12' ""
+ATOM C4'  CN7     0.16 !   H42'--C4'  C1'--H12'
+ATOM H42' HN7     0.09 !          |    |
+GROUP                  !   H31'--C3'--C2'--H21'
+ATOM C2'  CN8    -0.18 !        /       \
+ATOM H21' HN8     0.09 !      O3'       H22'
+ATOM H22' HN8     0.09 !       |
+GROUP                  !  O1P==P==O2P
+ATOM C3'  CN7     0.01 !       |
+ATOM H31' HN7     0.09 !      O3P  (-1)
+GROUP                  !        \
+ATOM O3'  ON2    -0.57 !        C3T--H3T3
+ATOM P    P       1.50 !       /  \
+ATOM O1P  ON3    -0.78 !    H3T1 H3T2
+ATOM O2P  ON3    -0.78 !
+ATOM O3P  ON2    -0.57
+ATOM C3T  CN9    -0.17
+ATOM H3T1 HN9     0.09
+ATOM H3T2 HN9     0.09
+ATOM H3T3 HN9     0.09
+GROUP
+ATOM C5'  CN8B   -0.27
+ATOM H51' HN8     0.09
+ATOM H52' HN8     0.09
+ATOM H53' HN8     0.09
+
+BOND C1'  O4'  C1'  C2'  C2'  C3'  C3'  C4'  C4'  O4'  C3'  O3'
+BOND C1'  H11' C1'  H12' C2'  H21' C2'  H22' C3'  H31' C4'  H42' 
+BOND O3'  P    P    O1P  P    O2P  P    O3P  
+BOND O3P  C3T  C3T  H3T1 C3T  H3T2 C3T  H3T3
+BOND C4'  C5'  C5'  H51' C5'  H52' C5'  H53'
+IC   C4'     O4'     C1'     C2'    1.4055  108.09   23.45  106.18   1.5457
+IC   O4'     C1'     C2'     C3'    1.4127  106.18    3.96  103.11   1.5346
+IC   C1'     C2'     C3'     C4'    1.5457  103.11  -26.93  100.86   1.5211
+IC   C2'     C3'     C4'     O4'    1.5346  100.86   41.73  103.15   1.4055
+IC   C3'     C4'     O4'     C1'    1.5211  103.15  -41.62  108.09   1.4127
+IC   H11'    C1'     C2'     C3'    1.0856  111.62  123.53  103.11   1.5346
+IC   H12'    C1'     C2'     C3'    1.0818  113.32 -114.11  103.11   1.5346
+IC   H21'    C2'     C3'     C4'    1.0846  110.65   91.68  100.86   1.5211
+IC   H22'    C2'     C3'     C4'    1.0822  110.88 -148.45  100.86   1.5211
+IC   H31'    C3'     C4'     O4'    1.0806  113.53  162.89  103.15   1.4055
+IC   C5'     C4'     O4'     C1'    0.0000  000.00   77.76  108.09   1.4127
+IC   H51'    C5'     C4'     O4'    0.0     0.0     180.0     0.0    0.0
+IC   H52'    C5'     C4'     O4'    0.0     0.0      -60.0    0.0    0.0
+IC   H53'    C5'     C4'     O4'    0.0     0.0       60.0    0.0    0.0
+IC   H42'    C4'     O4'     C1'    1.0808  108.72 -162.12  108.09   1.4127
+IC   O3'     C3'     C4'     O4'    1.4028  110.98  -77.39  103.15   1.4055
+IC   P       O3'     C3'     C4'    0.0       0.0   180.00    0.0    0.0
+IC   O1P     P       O3'     C3'    0.0       0.0   -60.0     0.0    0.0
+IC   O2P     P       O3'     C3'    0.0       0.0    60.0     0.0    0.0
+IC   O3P     P       O3'     C3'    0.0       0.0   180.0     0.0    0.0
+IC   C3T     O3P     P       O3'    0.0       0.0   180.0     0.0    0.0 
+IC   H3T1    C3T     O3P     P	    0.0       0.0    60.0     0.0    0.0
+IC   H3T2    C3T     O3P     P	    0.0       0.0   -60.0     0.0    0.0
+IC   H3T3    C3T     O3P     P	    0.0       0.0   180.0     0.0    0.0
+PATC  FIRS NONE LAST NONE
+
+RESI TADE         0.00 ! thf with adenine
+                       ! Atom types for aliphatic atoms based on nucleotide
+                       ! atom order consistent with 9-m-ade
+GROUP                  
+ATOM C5   CN5     0.28 !             H61  H62!
+ATOM N7   NN4    -0.71 !               \  /
+ATOM C8   CN4     0.34 !                N6
+ATOM H8   HN3     0.12 !                |
+ATOM N9   NN2    -0.05 !                C6
+ATOM C1'  CN7B    0.16 !              //  \
+ATOM N1   NN3A   -0.74 !              N1   C5--N7\\
+ATOM C2   CN4     0.50 !              |    ||     C8-H8
+ATOM H2   HN3     0.13 !              C2   C4--N9/
+ATOM N3   NN3A   -0.75 !             / \\ /     \
+ATOM C4   CN5     0.43 !           H2   N3       \
+ATOM C6   CN2     0.46 !                          \
+ATOM N6   NN1    -0.77 !                           \
+ATOM H61  HN1     0.38 !                            \
+ATOM H62  HN1     0.38 !                  H42'  O4'  \
+ATOM O4'  ON6    -0.50 !                     \ /   \  \
+ATOM H12' HN7     0.09 !                H41'-C4'    C1'
+ATOM C4'  CN7     0.07 !                      \     / \
+ATOM H41' HN7     0.09 !                H31'--C3'--C2' H12'
+ATOM H42' HN7     0.09 !                     /    /  \
+GROUP                  !                 H32'   H21' H22'
+ATOM C2'  CN8    -0.18 !
+ATOM H21' HN8     0.09
+ATOM H22' HN8     0.09
+GROUP
+ATOM C3'  CN7    -0.18
+ATOM H31' HN7     0.09
+ATOM H32' HN7     0.09
+
+BOND C1'  O4'  C1'  C2'  C2'  C3'  C3'  C4'  C4'  O4' 
+BOND C1'  H12' C2'  H21' C2'  H22' C3'  H31' C3'  H32'
+BOND C4'  H41' C4'  H42'
+BOND C1'  N9   
+BOND N9   C4    N9   C8   C4   N3    C2   N1    C6   N6
+BOND N6   H61   N6   H62  C6   C5    C5   N7    C8   H8    C2   H2
+DOUBLE  N1  C6    C2   N3     C4   C5     N7   C8
+IMPR N6   C6   H61  H62       C6   N1   C5   N6
+! ic table for thfim, from Nicolas:
+IC 	C1'	C2'	C3'	C4' 	0.0 0.0 324.92 0.0 0.0
+IC	C2'	C3'	C4' 	O4' 	0.0 0.0 33.390 0.0 0.0
+IC 	H12'	C1'	C2'	C3' 	0.0 0.0 268.35 0.0 0.0
+IC 	H21'	C2'	C3'	C4' 	0.0 0.0 82.530 0.0 0.0
+IC 	H22'	C2'	C3'	C4' 	0.0 0.0 204.06 0.0 0.0
+IC 	H31'	C3'	C4'	O4' 	0.0 0.0 155.99 0.0 0.0
+IC 	H32'	C3'	C4'	O4' 	0.0 0.0 276.70 0.0 0.0
+IC	H41'	C4'	O4'	C1' 	0.0 0.0 132.30 0.0 0.0
+IC 	H42'	C4'	O4'	C1' 	0.0 0.0 220.70 0.0 0.0
+IC C3'  C2'  C1'  N9     1.5284  101.97  147.80  113.71   1.4896
+IC O4'  C1'  N9   C4     1.5251  113.71  180.2   125.59   1.3783 !chi
+IC C1'  C4   *N9  C8     1.4896  125.97 -180.00  106.0    1.367
+IC C4   N9   C8   N7     1.376   106.0     0.0   113.6    1.312
+IC C8   N9   C4   C5     1.367   106.0     0.0   105.6    1.382
+IC C8   N7   C5   C6     0.0       0.0   180.0     0.0    0.0
+IC N7   C5   C6   N1     0.0       0.0   180.0     0.0    0.0
+IC C5   C6   N1   C2     0.0       0.0     0.0     0.0    0.0
+IC N9   C5   *C4  N3     1.376   105.6  -180.0   126.9    1.342
+IC C5   N1   *C6  N6     1.409   117.6  -180.0   121.2    1.337
+IC N1   C6   N6   H61    1.337   121.2     0.0   119.0    1.01
+IC H61  C6   *N6  H62    1.01    119.0   180.0   119.00   1.01
+IC C5   N1   *C6  N6     1.409   117.6  -180.0   119.0    1.337
+IC N1   C6   N6   H61    1.337   119.0     0.0   119.0    1.01
+IC H61  C6   *N6  H62    1.01    119.0   180.0   121.00   1.01
+IC N9   N7   *C8   H8    0.0       0.0   180.0     0.0    0.0
+IC N1   N3   *C2   H2    0.0       0.0   180.0     0.0    0.0
+PATC  FIRS NONE LAST NONE
+
+RESI TCYT         0.00  ! THF with cytosine
+                        ! Atom types for aliphatic atoms based on nucleotide
+                        !atom order to be consistent with 1-m-cyt
+GROUP                   
+ATOM N1   NN2    -0.13  !
+ATOM C1'  CN7B    0.16  !                      H42  H41
+ATOM C6   CN3     0.05  !                        \  /    
+ATOM H6   HN3     0.17  !                         N4
+ATOM C2   CN1     0.52  !                         |
+ATOM O2   ON1C   -0.49  !                         C4
+ATOM N3   NN3    -0.66  !                        /  \\
+ATOM C4   CN2     0.65  !                    H5-C5   N3
+ATOM N4   NN1    -0.75  !                       ||   |
+ATOM H41  HN1     0.37  !                    H6-C6   C2
+ATOM H42  HN1     0.33  !                        \  / \\
+ATOM C5   CN3    -0.13  !                         N1   O2
+ATOM H5   HN3     0.07  !                          \
+ATOM O4'  ON6    -0.50  !                           \
+ATOM H12' HN7     0.09  !                            \ 
+ATOM C4'  CN7     0.07  !                  H42'  O4'  \
+ATOM H41' HN7     0.09  !                     \ /   \  \
+ATOM H42' HN7     0.09  !                H41'-C4'    C1'
+GROUP                   !                      \     / \
+ATOM C2'  CN8    -0.18  !                H31'--C3'--C2' H12'
+ATOM H21' HN8     0.09  !                     /    /  \
+ATOM H22' HN8     0.09  !                 H32'   H21' H22'
+GROUP                 
+ATOM C3'  CN7    -0.18
+ATOM H31' HN7     0.09
+ATOM H32' HN7     0.09
+
+BOND C1'  O4'  C1'  C2'  C2'  C3'  C3'  C4'  C4'  O4' 
+BOND C1'  H12' C2'  H21' C2'  H22' C3'  H31' C3'  H32'
+BOND C4'  H41' C4'  H42'
+BOND C1'  N1        
+BOND N1   C2    N1   C6    C4   N4    N4   H41   N4   H42
+BOND C2   N3    C4   C5    C5   H5    C6   H6
+DOUBLE   C2   O2    C5   C6       N3   C4
+IMPR C2   N1   N3   O2        C4   N3   C5   N4
+IMPR N4   C4   H41  H42
+BILD C3'  C2'  C1'  N1     1.5284  101.97  147.89  113.71   1.4896
+BILD O4'  C1'  N1   C2     1.5251  113.71  -97.2   125.59   1.3783 !chi
+BILD C1'  C2   *N1  C6     1.4896  117.79 -180.00  120.6    1.364   
+BILD C2   N1   C6   C5     1.399   120.6     0.0   121.0    1.337   
+BILD C6   N1   C2   N3     1.364   120.6     0.0   118.9    1.356   
+BILD N1   N3   *C2  O2     1.399   118.9   180.0   121.9    1.237   
+BILD N1   C2   N3   C4     1.399   118.9     0.0   120.0    1.334   
+BILD C5   N3   *C4  N4     1.426   121.8   180.00  118.9    1.337   
+BILD N3   C4   N4   H41    1.337   117.9     0.00  118.9    1.01    
+BILD H41  C4   *N4  H42    1.01    118.9   180.00  120.7    1.01    
+BILD C6   C4   *C5  H5     0.0       0.0   180.0     0.0    0.0
+BILD N1   C5   *C6  H6     0.0       0.0   180.0     0.0    0.0
+! ic table for thfim, from Nicolas:
+IC 	C1'	C2'	C3'	C4' 	0.0 0.0 324.92 0.0 0.0
+IC	C2'	C3'	C4' 	O4' 	0.0 0.0 33.390 0.0 0.0
+IC 	H12'	C1'	C2'	C3' 	0.0 0.0 268.35 0.0 0.0
+IC 	H21'	C2'	C3'	C4' 	0.0 0.0 82.530 0.0 0.0
+IC 	H22'	C2'	C3'	C4' 	0.0 0.0 204.06 0.0 0.0
+IC 	H31'	C3'	C4'	O4' 	0.0 0.0 155.99 0.0 0.0
+IC 	H32'	C3'	C4'	O4' 	0.0 0.0 276.70 0.0 0.0
+IC	H41'	C4'	O4'	C1' 	0.0 0.0 132.30 0.0 0.0
+IC 	H42'	C4'	O4'	C1' 	0.0 0.0 220.70 0.0 0.0
+IC C3'  C2'  C1'  N1     1.5284  101.97  147.89  113.71   1.4896
+IC O4'  C1'  N1   C2     1.5251  113.71  -97.2   125.59   1.3783 !chi
+IC C1'  C2   *N1  C6     1.4896  117.79 -180.00  120.6    1.364
+IC C2   N1   C6   C5     1.399   120.6     0.0   121.0    1.337
+IC C6   N1   C2   N3     1.364   120.6     0.0   118.9    1.356
+IC N1   N3   *C2  O2     1.399   118.9   180.0   121.9    1.237
+IC N1   C2   N3   C4     1.399   118.9     0.0   120.0    1.334
+IC C5   N3   *C4  N4     1.426   121.8   180.00  118.9    1.337
+IC N3   C4   N4   H41    1.337   117.9     0.00  118.9    1.01
+IC H41  C4   *N4  H42    1.01    118.9   180.00  120.7    1.01
+IC C6   C4   *C5  H5     0.0       0.0   180.0     0.0    0.0
+IC N1   C5   *C6  H6     0.0       0.0   180.0     0.0    0.0
+PATC  FIRS NONE LAST NONE
+
+RESI TGUA         0.00  ! thf with guanine 
+                        ! Atom types for aliphatic atoms based on nucleotide
+                        ! atom order consistent with 9-m-gua
+GROUP                   
+ATOM N9   NN2B   -0.02  !               O6                
+ATOM C4   CN5     0.26  !               ||   
+ATOM C1'  CN7B    0.16  !               C6    
+ATOM N3   NN3G   -0.74  !              /  \  
+ATOM C2   CN2     0.75  !          H1-N1   C5--N7\\
+ATOM N1   NN2G   -0.34  !             |    ||     C8-H8
+ATOM H1   HN2     0.26  !             C2   C4--N9/
+ATOM N2   NN1    -0.68  !            / \\ /      \
+ATOM H21  HN1     0.32  !      H21-N2   N3        \
+ATOM H22  HN1     0.35  !          |               \
+ATOM C6   CN1     0.54  !         H22               \
+ATOM O6   ON1    -0.51  !                            \
+ATOM C5   CN5G    0.00  !                  H42'  O4'  \
+ATOM N7   NN4    -0.60  !                     \ /   \  \
+ATOM C8   CN4     0.25  !                H41'-C4'    C1'
+ATOM H8   HN3     0.16  !                      \     / \
+ATOM O4'  ON6    -0.50  !                H31'--C3'--C2' H12'
+ATOM H12' HN7     0.09  !                     /    /  \
+ATOM C4'  CN7     0.07  !                 H32'   H21' H22'
+ATOM H41' HN7     0.09
+ATOM H42' HN7     0.09
+GROUP                 
+ATOM C2'  CN8    -0.18
+ATOM H21' HN8     0.09
+ATOM H22' HN8     0.09
+GROUP
+ATOM C3'  CN7    -0.18
+ATOM H31' HN7     0.09
+ATOM H32' HN7     0.09
+
+BOND C1'  O4'  C1'  C2'  C2'  C3'  C3'  C4'  C4'  O4' 
+BOND C1'  H12' C2'  H21' C2'  H22' C3'  H31' C3'  H32'
+BOND C4'  H41' C4'  H42'
+BOND C1'  N9
+BOND N9   C4     N9   C8    C4   N3    C2   N2   C2   N1    N2   H21
+BOND N2   H22    N1   H1    N1   C6    C6   C5   C5   N7    C8   H8
+DOUBLE  C2   N3    C4   C5    N7   C8   C6   O6
+IMPR C2   N3   N1   N2        C6   N1   C5   O6        N2   H21  C2   H22
+! ic table for thfim, from Nicolas:
+IC 	C1'	C2'	C3'	C4' 	0.0 0.0 324.92 0.0 0.0
+IC	C2'	C3'	C4' 	O4' 	0.0 0.0 33.390 0.0 0.0
+IC 	H12'	C1'	C2'	C3' 	0.0 0.0 268.35 0.0 0.0
+IC 	H21'	C2'	C3'	C4' 	0.0 0.0 82.530 0.0 0.0
+IC 	H22'	C2'	C3'	C4' 	0.0 0.0 204.06 0.0 0.0
+IC 	H31'	C3'	C4'	O4' 	0.0 0.0 155.99 0.0 0.0
+IC 	H32'	C3'	C4'	O4' 	0.0 0.0 276.70 0.0 0.0
+IC	H41'	C4'	O4'	C1' 	0.0 0.0 132.30 0.0 0.0
+IC 	H42'	C4'	O4'	C1' 	0.0 0.0 220.70 0.0 0.0
+IC C3'  C2'  C1'  N9     1.5284  101.97  147.80  113.71   1.4896
+IC O4'  C1'  N9   C4     1.5251  113.71  -97.2   125.59   1.3783 !chi
+IC C1'  C4   *N9  C8     1.4896  125.59 -179.99  106.0    1.374
+IC C4   N9   C8   N7     1.377   106.0     0.0   113.5    1.304
+IC C8   N9   C4   C5     1.374   106.0     0.0   105.6    1.377
+IC N9   C5   *C4  N3     1.377   105.6   180.0   128.4    1.355
+IC C5   C4   N3   C2     1.377   128.4     0.0   111.8    1.327
+IC C4   N3   C2   N1     1.355   111.8     0.0   124.0    1.375
+IC N1   N3   *C2  N2     1.375   124.0   180.0   119.7    1.341
+IC N3   C2   N2   H21    1.327   119.7   180.0   127.0    1.01
+IC H21  C2   *N2  H22    1.01    127.0  -180.0   116.5    1.01
+IC N3   C2   N1   C6     1.327   124.0     0.0   124.9    1.393
+IC C6   C2   *N1  H1     1.393   124.9  180.00   117.4    1.03
+IC C5   N1   *C6  O6     1.415   111.7  180.0    120.0    1.239
+IC N9   N7   *C8  H8     0.0       0.0   180.0     0.0    0.0
+PATC  FIRS NONE LAST NONE
+
+RESI TTHY         0.00  ! THF with thymine on C1' 
+                        ! Atom type for N1 changed from NN2 to NN2B, to adjust
+                        ! chi in thymine independantly of cytosine.
+                        ! Atom types for aliphatic atoms based on nucleotide
+                        ! atom order consistent with 1-m-thy
+GROUP                 
+ATOM N1   NN2B   -0.34  !                  H51    O4                               
+ATOM C1'  CN7B    0.16  !                   |     ||
+ATOM C6   CN3     0.17  !               H52-C5M   C4    H3
+ATOM H6   HN3     0.17  !                   |  \ /  \  /
+ATOM C2   CN1T    0.51  !                  H53  C5   N3
+ATOM O2   ON1    -0.41  !                       ||   |
+ATOM N3   NN2U   -0.46  !                    H6-C6   C2
+ATOM H3   HN2     0.36  !                        \  / \\  
+ATOM C4   CN1     0.50  !                         N1   O2
+ATOM O4   ON1    -0.45  !                          \
+ATOM C5   CN3T   -0.15  !                           \
+ATOM C5M  CN9    -0.11  !                            \ 
+ATOM H51  HN9     0.07  !                  H42'  O4'  \
+ATOM H52  HN9     0.07  !                     \ /   \  \
+ATOM H53  HN9     0.07  !                H41'-C4'    C1'
+ATOM O4'  ON6    -0.50  !                      \     / \
+ATOM H12' HN7     0.09  !                H31'--C3'--C2' H12'
+ATOM C4'  CN7     0.07  !                     /    /  \
+ATOM H41' HN7     0.09  !                 H32'   H21' H22'
+ATOM H42' HN7     0.09
+GROUP                 
+ATOM C2'  CN8    -0.18
+ATOM H21' HN8     0.09
+ATOM H22' HN8     0.09
+GROUP                 
+ATOM C3'  CN7    -0.18
+ATOM H31' HN7     0.09
+ATOM H32' HN7     0.09
+
+BOND C1'  O4'  C1'  C2'  C2'  C3'  C3'  C4'  C4'  O4' 
+BOND C1'  H12' C2'  H21' C2'  H22' C3'  H31' C3'  H32'
+BOND C4'  H41' C4'  H42'
+BOND C1'  N1   
+BOND N1   C2   N1   C6   C2   N3   N3   H3   N3   C4   C4   C5
+BOND C5   C5M  C6   H6   C5M  H51  C5M  H52  C5M  H53
+DOUBLE  C2   O2    C4   O4     C5   C6
+IMPR C2   N1   N3   O2        C4   N3   C5   O4        C5   C4   C6   C5M
+! ic table for thfim, from Nicolas:
+IC 	C1'	C2'	C3'	C4' 	0.0 0.0 324.92 0.0 0.0
+IC	C2'	C3'	C4' 	O4' 	0.0 0.0 33.390 0.0 0.0
+IC 	H12'	C1'	C2'	C3' 	0.0 0.0 268.35 0.0 0.0
+IC 	H21'	C2'	C3'	C4' 	0.0 0.0 82.530 0.0 0.0
+IC 	H22'	C2'	C3'	C4' 	0.0 0.0 204.06 0.0 0.0
+IC 	H31'	C3'	C4'	O4' 	0.0 0.0 155.99 0.0 0.0
+IC 	H32'	C3'	C4'	O4' 	0.0 0.0 276.70 0.0 0.0
+IC	H41'	C4'	O4'	C1' 	0.0 0.0 132.30 0.0 0.0
+IC 	H42'	C4'	O4'	C1' 	0.0 0.0 220.70 0.0 0.0
+IC C3'  C2'  C1'  N1     1.5284  101.97  147.89  113.71   1.4896
+IC C3'  C2'  C1'  N1     1.5284  101.97  147.89  113.71   1.4896
+IC O4'  C1'  N1   C2     1.5251  113.71  180.0   125.59   1.3783 !chi
+IC C1'  C2   *N1  C6     1.4896  117.06 -179.96  122.08   1.3704
+IC C2   N1   C6   C5     1.3746  122.08   -0.02  121.23   1.3432
+IC C6   N1   C2   N3     1.3704  122.08    0.06  115.38   1.3813
+IC N1   N3   *C2  O2     1.3746  115.38 -179.95  121.70   1.2191
+IC N1   C2   N3   C4     1.3746  115.38   -0.07  126.46   1.3795
+IC C5   N3   *C4  O4     1.4439  114.07  179.98  120.59   1.2327
+IC C2   C4   *N3  H3     1.3813  126.46  180.00  116.77   1.0900
+IC C4   C6   *C5  C5M    1.4439  120.78 -179.94  121.63   1.5000
+IC N1   C5   *C6  H6     0.0       0.0   180.0     0.0    0.0
+IC C6   C5   C5M  H51    0.0       0.0     0.0     0.0    0.0
+IC C5   H51  *C5M H52    0.0       0.0   115.0     0.0    0.0
+IC H51  H52  *C5M H53    0.0       0.0  -115.0     0.0    0.0
+PATC  FIRS NONE LAST NONE
+
+RESI TURA         0.00  ! THF with uracil on C1' 
+                        ! Atom type for N1 changed from NN2 to NN2B, in order to adjust
+                        ! chi in uracil/thymine independantly of cytosine.
+                        ! Atom types for aliphatic atoms based on nucleotide
+                        ! atom order consistent with 1-m-thy
+GROUP                 
+ATOM N1   NN2B   -0.34  !                         O4                               
+ATOM C1'  CN7B    0.16  !                         ||
+ATOM C6   CN3     0.20  !                         C4    H3
+ATOM H6   HN3     0.14  !                        /  \  /
+ATOM C2   CN1T    0.55  !                    H5-C5   N3
+ATOM O2   ON1    -0.45  !                       ||   |
+ATOM N3   NN2U   -0.46  !                    H6-C6   C2
+ATOM H3   HN2     0.36  !                        \  / \\    
+ATOM C4   CN1     0.53  !                         N1   O2
+ATOM O4   ON1    -0.48  !                          \
+ATOM C5   CN3    -0.15  !                           \
+ATOM H5   HN3     0.10  !                            \ 
+ATOM O4'  ON6    -0.50  !                  H42'  O4'  \
+ATOM H12' HN7     0.09  !                     \ /   \  \
+ATOM C4'  CN7     0.07  !                H41'-C4'    C1'
+ATOM H41' HN7     0.09  !                      \     / \
+ATOM H42' HN7     0.09  !                H31'--C3'--C2' H12'
+GROUP                   !                     /    /  \
+ATOM C2'  CN8    -0.18  !                 H32'   H21' H22'
+ATOM H21' HN8     0.09
+ATOM H22' HN8     0.09
+GROUP                 
+ATOM C3'  CN7    -0.18
+ATOM H31' HN7     0.09
+ATOM H32' HN7     0.09
+
+BOND C1'  O4'  C1'  C2'  C2'  C3'  C3'  C4'  C4'  O4' 
+BOND C1'  H12' C2'  H21' C2'  H22' C3'  H31' C3'  H32'
+BOND C4'  H41' C4'  H42'
+BOND C1'  N1   
+BOND N1   C2   N1   C6 
+BOND C2   N3   N3   H3   N3   C4    C4   C5
+BOND C5   H5   C6   H6
+DOUBLE  C2   O2     C4   O4      C5   C6
+IMPR C2   N1   N3   O2        C4   N3   C5   O4
+! ic table for thfim, from Nicolas:
+IC 	C1'	C2'	C3'	C4' 	0.0 0.0 324.92 0.0 0.0
+IC	C2'	C3'	C4' 	O4' 	0.0 0.0 33.390 0.0 0.0
+IC 	H12'	C1'	C2'	C3' 	0.0 0.0 268.35 0.0 0.0
+IC 	H21'	C2'	C3'	C4' 	0.0 0.0 82.530 0.0 0.0
+IC 	H22'	C2'	C3'	C4' 	0.0 0.0 204.06 0.0 0.0
+IC 	H31'	C3'	C4'	O4' 	0.0 0.0 155.99 0.0 0.0
+IC 	H32'	C3'	C4'	O4' 	0.0 0.0 276.70 0.0 0.0
+IC	H41'	C4'	O4'	C1' 	0.0 0.0 132.30 0.0 0.0
+IC 	H42'	C4'	O4'	C1' 	0.0 0.0 220.70 0.0 0.0
+IC C3'  C2'  C1'  N1     1.5284  101.97  147.89  113.71   1.4896
+IC C3'  C2'  C1'  N1     1.5284  101.97  147.89  113.71   1.4896
+IC O4'  C1'  N1   C2     1.5251  113.71  180.0   125.59   1.3783 !chi
+IC C1'  C2   *N1  C6     1.4896  117.06 -179.96  122.08   1.3704
+IC C2   N1   C6   C5     1.3746  122.08   -0.02  121.23   1.3432
+IC C6   N1   C2   N3     1.3704  122.08    0.06  115.38   1.3813
+IC N1   N3   *C2  O2     1.3746  115.38 -179.95  121.70   1.2191
+IC N1   C2   N3   C4     1.3746  115.38   -0.07  126.46   1.3795
+IC C5   N3   *C4  O4     1.4439  114.07  179.98  120.59   1.2327
+IC C2   C4   *N3  H3     1.3813  126.46  180.00  116.77   1.0900
+IC C4   C6   *C5  C5M    1.4439  120.78 -179.94  121.63   1.5000
+IC N1   C5   *C6  H6     0.0       0.0   180.0     0.0    0.0
+IC C6   C5   C5M  H51    0.0       0.0     0.0     0.0    0.0
+IC C5   H51  *C5M H52    0.0       0.0   115.0     0.0    0.0
+IC H51  H52  *C5M H53    0.0       0.0  -115.0     0.0    0.0
+PATC  FIRS NONE LAST NONE
+
+RESI NUSA         0.00 ! deoxy-nucleoside with adenine 
+GROUP
+ATOM O4'  ON6    -0.50 !          H5T
+ATOM C4'  CN7     0.16 !         /
+ATOM H42' HN7     0.09 !  H51' O5'
+ATOM C1'  CN7B    0.16 !     \ |
+ATOM H12' HN7     0.09 !H52'--C5'   O4'  Adenine
+GROUP                  !        \  /  \  /
+ATOM C2'  CN8    -0.18 !   H42'--C4'  C1'--H12'
+ATOM H21' HN8     0.09 !          |    |
+ATOM H22' HN8     0.09 !   H31'--C3'--C2'--H21'
+! Adenine atoms        !        /       \
+GROUP                  !      O3'       H22'
+ATOM C5   CN5     0.28 !       |
+ATOM N7   NN4    -0.71 !     H32'
+ATOM C8   CN4     0.34  
+ATOM H8   HN3     0.12  
+ATOM N9   NN2    -0.05  
+ATOM N1   NN3A   -0.74  
+ATOM C2   CN4     0.50  
+ATOM H2   HN3     0.13  
+ATOM N3   NN3A   -0.75
+ATOM C4   CN5     0.43
+ATOM C6   CN2     0.46
+ATOM N6   NN1    -0.77
+ATOM H61  HN1     0.38
+ATOM H62  HN1     0.38
+GROUP ! Hydroxyl group on C3'
+ATOM H31' HN7     0.09
+ATOM C3'  CN7     0.14
+ATOM O3'  ON5    -0.66
+ATOM H32' HN5     0.43
+GROUP ! Methyl group on C4'
+ATOM C5'  CN8B    0.05
+ATOM H51' HN8     0.09
+ATOM H52' HN8     0.09
+ATOM O5'  ON5    -0.66
+ATOM H5T  HN5     0.43
+
+BOND C1'  O4'  C1'  C2'  C2'  C3'  C3'  C4'  C4'  O4'  C4'  C5'
+BOND C3'  O3'  C1'  H12' C2'  H21' C2'  H22' C3'  H31' C4'  H42'
+BOND C5'  H51' C5'  H52' C5'  O5'  O5'  H5T
+BOND O3'  H32'
+BOND C1'  N9
+BOND N9   C4    N9   C8   C4   N3    C2   N1    C6   N6
+BOND N6   H61   N6   H62  C6   C5    C5   N7    C8   H8    C2   H2
+DOUBLE  N1  C6    C2   N3     C4   C5     N7   C8
+IMPR N6   C6   H61  H62       C6   N1   C5   N6       
+! This IC table is only an initial guess:
+IC  C4'   O4'   C1'   C2'    1.4055  108.09  -21.00  106.18   1.5457 !0.0 for c3'endo (north) pucker
+IC  O4'   C1'   C2'   C3'    1.4127  106.18   30.00  103.11   1.5346 !
+IC  C1'   C2'   C3'   C4'    1.5457  103.11  -30.00  100.86   1.5211 !0.0 for o4'endo barrier
+IC  C2'   C3'   C4'   O4'    1.5346  100.86   20.00  103.15   1.4055
+IC  C3'   C4'   O4'   C1'    1.5211  103.15    0.00  108.09   1.4127
+IC  C3'   O4'   *C4'  C5'    0.0000    0.00  120.00    0.00   0.0000
+IC  C3'   O4'   *C4'  H42'   0.0000    0.00 -120.00    0.00   0.0000
+IC  C3'   C1'   *C2'  H21'   0.0000    0.00  120.00    0.00   0.0000
+IC  C3'   C1'   *C2'  H22'   0.0000    0.00 -120.00    0.00   0.0000
+IC  C2'   O4'   *C1'  N9     0.0000    0.00 -120.00    0.00   0.0000
+IC  C2'   O4'   *C1'  H12'   0.0000    0.00  120.00    0.00   0.0000
+IC  O4'   C1'   N9    C4     0.0000    0.00  180.00    0.00   0.0000
+IC  C1'  C4     *N9   C8     0.0000    0.00 -180.00    0.00   0.0000
+IC  C1'   N9    C4    C5     0.0000    0.00  180.00    0.00   0.0000
+IC  C5    N9    *C4   N3     0.0000    0.00  180.00    0.00   0.0000
+IC  N9    C4    C5    C6     0.0000    0.00  180.00    0.00   0.0000
+IC  C6    C4    *C5   N7     0.0000    0.00  180.00    0.00   0.0000
+IC  N7    N9    *C8   H8     0.0000    0.00  180.00    0.00   0.0000
+IC  C4    C5    C6    N1     0.0000    0.00    0.00    0.00   0.0000
+IC  N1    C5    *C6   N6     0.0000    0.00  180.00    0.00   0.0000
+IC  C5    C6    N1    C2     0.0000    0.00    0.00    0.00   0.0000
+IC  N3    N1    *C2   H2     0.0000    0.00  180.00    0.00   0.0000
+IC  C5    C6    N6    H61    0.0000    0.00  180.00    0.00   0.0000
+IC  H61   C6    *N6   H62    0.0000    0.00  180.00    0.00   0.0000
+IC  C2'   C4'   *C3'  O3'    0.0000    0.00 -120.00    0.00   0.0000
+IC  C2'   C4'   *C3'  H31'   0.0000    0.00  120.00    0.00   0.0000
+IC  C4'   C3'   O3'   H32'   0.0000    0.00  180.00    0.00   0.0000 !epsilon
+IC  C3'   C4'   C5'   O5'    0.0000    0.00   60.00    0.00   0.0000 !gamma
+IC  C4'   C5'   O5'   H5T    0.0000    0.00  180.00    0.00   0.0000 !beta
+IC  H5T   C4'   *C5'  H51'   1.9450  142.80  120.00    0.00   0.0000
+IC  H5T  C4'    *C5'  H52'   1.9450  142.80 -120.00    0.00   0.0000
+PATC  FIRS NONE LAST NONE
+
+RESI NUSG         0.00 ! nucleoside with guanine 
+GROUP
+ATOM O4'  ON6    -0.50 !          H5T
+ATOM C4'  CN7     0.16 !         /
+ATOM H42' HN7     0.09 !  H51' O5'
+ATOM C1'  CN7B    0.16 !     \ |
+ATOM H12' HN7     0.09 !H52'--C5'   O4'  Guanine
+GROUP                  !        \  /  \  /
+ATOM C2'  CN8    -0.18 !   H42'--C4'  C1'--H12'
+ATOM H21' HN8     0.09 !          |    |
+ATOM H22' HN8     0.09 !   H31'--C3'--C2'--H21'
+! Guanine atoms        !        /       \
+GROUP                  !      O3'       H22'
+ATOM N9   NN2B   -0.02 !       |
+ATOM C4   CN5     0.26 !     H32'
+ATOM N3   NN3G   -0.74  
+ATOM C2   CN2     0.75  
+ATOM N1   NN2G   -0.34  
+ATOM H1   HN2     0.26  
+ATOM N2   NN1    -0.68
+ATOM H21  HN1     0.32
+ATOM H22  HN1     0.35
+ATOM C6   CN1     0.54
+ATOM O6   ON1    -0.51
+ATOM C5   CN5G    0.00
+ATOM N7   NN4    -0.60
+ATOM C8   CN4     0.25
+ATOM H8   HN3     0.16
+GROUP ! Hydroxyl group on C3'
+ATOM H31' HN7     0.09
+ATOM C3'  CN7     0.14
+ATOM O3'  ON5    -0.66
+ATOM H32' HN5     0.43
+GROUP ! C5' hydroxyl
+ATOM C5'  CN8B    0.05
+ATOM H51' HN8     0.09
+ATOM H52' HN8     0.09
+ATOM O5'  ON5    -0.66
+ATOM H5T  HN5     0.43
+
+BOND C1'  O4'  C1'  C2'  C2'  C3'  C3'  C4'  C4'  O4'  C4'  C5'
+BOND C3'  O3'  C1'  H12' C2'  H21' C2'  H22' C3'  H31' C4'  H42'
+BOND C5'  H51' C5'  H52' C5'  O5'  O5'  H5T
+BOND O3'  H32'
+BOND C1'  N9
+BOND N9   C4     N9   C8    C4   N3    C2   N2   C2   N1    N2   H21
+BOND N2   H22    N1   H1    N1   C6    C6   C5   C5   N7    C8   H8
+DOUBLE  C2   N3    C4   C5    N7   C8   C6   O6
+IMPR C2   N3   N1   N2        C6   N1   C5   O6        N2  H21  C2   H22
+! This IC table is only an initial guess:
+IC 	C1'	C2'	C3'	C4' 	0.0 0.0 324.92 0.0 0.0
+IC	C2'	C3'	C4' 	O4' 	0.0 0.0 33.390 0.0 0.0
+IC 	H12'	C1'	C2'	C3' 	0.0 0.0 268.35 0.0 0.0
+IC 	H21'	C2'	C3'	C4' 	0.0 0.0 82.530 0.0 0.0
+IC 	H22'	C2'	C3'	C4' 	0.0 0.0 204.06 0.0 0.0
+IC 	O3' 	C3'	C4'	O4' 	0.0 0.0 -93.14 0.0 0.0
+IC	H32'	O3'	C3'	C2'	0.0 0.0 -60.00 0.0 0.0
+IC 	H31'	C3'	C4'	O4' 	0.0 0.0 147.80 0.0 0.0
+IC	H41'	C4'	O4'	C1' 	0.0 0.0 132.30 0.0 0.0
+IC 	H42'	C4'	O4'	C1' 	0.0 0.0 220.70 0.0 0.0
+IC C3'  C2'  C1'  N9     1.5284  101.97  147.80  113.71   1.4896
+IC O4'  C1'  N9   C4     1.5251  113.71  180.0   125.59   1.3783 !chi
+IC C1'  C4   *N9  C8     1.4896  125.59 -179.99  106.0    1.374
+IC C4   N9   C8   N7     1.377   106.0     0.0   113.5    1.304
+IC C8   N9   C4   C5     1.374   106.0     0.0   105.6    1.377
+IC N9   C5   *C4  N3     1.377   105.6   180.0   128.4    1.355
+IC C5   C4   N3   C2     1.377   128.4     0.0   111.8    1.327
+IC C4   N3   C2   N1     1.355   111.8     0.0   124.0    1.375
+IC N1   N3   *C2  N2     1.375   124.0   180.0   119.7    1.341
+IC N3   C2   N2   H21    1.327   119.7   180.0   127.0    1.01
+IC H21  C2   *N2  H22    1.01    127.0  -180.0   116.5    1.01
+IC N3   C2   N1   C6     1.327   124.0     0.0   124.9    1.393
+IC C6   C2   *N1  H1     1.393   124.9  180.00   117.4    1.03
+IC C5   N1   *C6  O6     1.415   111.7  180.0    120.0    1.239
+IC N9   N7   *C8  H8     0.0       0.0   180.0     0.0    0.0
+IC      C5'     C4'     O4'     C1'     0.0 0.0 144.82 0.0 0.0   
+IC      H51'    C5'     C4'     O4'     0.0 0.0 -179.98 0.0 0.0 
+IC      H52'    C5'     C4'     O4'     0.0 0.0   59.66 0.0 0.0
+IC      O5'     C5'     C4'     O4'     0.0 0.0  -59.68 0.0 0.0
+IC      H5T     O5'     C5'     C4'     0.0 0.0  180.0 0.0 0.0
+PATC  FIRS NONE LAST NONE
+
+RESI NUSC         0.00 ! nucleoside with cytosine 
+GROUP
+ATOM O4'  ON6    -0.50 !          H5T
+ATOM C4'  CN7     0.16 !         /
+ATOM H42' HN7     0.09 !  H51' O5'
+ATOM C1'  CN7B    0.16 !     \ |
+ATOM H12' HN7     0.09 !H52'--C5'   O4'  Cytosine
+GROUP                  !        \  /  \  /
+ATOM C2'  CN8    -0.18 !   H42'--C4'  C1'--H12'
+ATOM H21' HN8     0.09 !          |    |
+ATOM H22' HN8     0.09 !   H31'--C3'--C2'--H21'
+! Cytosine atoms       !        /       \
+GROUP                  !      O3'       H22'
+ATOM N1   NN2    -0.13 !       |
+ATOM C6   CN3     0.05 !     H32'
+ATOM H6   HN3     0.17  
+ATOM C2   CN1     0.52  
+ATOM O2   ON1C   -0.49  
+ATOM N3   NN3    -0.66  
+ATOM C4   CN2     0.65  
+ATOM N4   NN1    -0.75  
+ATOM H41  HN1     0.37  
+ATOM H42  HN1     0.33  
+ATOM C5   CN3    -0.13  
+ATOM H5   HN3     0.07  
+GROUP ! Hydroxyl group on C3'
+ATOM H31' HN7     0.09
+ATOM C3'  CN7     0.14
+ATOM O3'  ON5    -0.66
+ATOM H32' HN5     0.43
+GROUP ! C5' hydroxyl
+ATOM C5'  CN8B    0.05
+ATOM H51' HN8     0.09
+ATOM H52' HN8     0.09
+ATOM O5'  ON5    -0.66
+ATOM H5T  HN5     0.43
+
+BOND C1'  O4'  C1'  C2'  C2'  C3'  C3'  C4'  C4'  O4'  C4'  C5'
+BOND C3'  O3'  C1'  H12' C2'  H21' C2'  H22' C3'  H31' C4'  H42'
+BOND C5'  H51' C5'  H52' C5'  O5'  O5'  H5T
+BOND O3'  H32'
+BOND C1'  N1
+BOND N1   C2    N1   C6    C4   N4    N4   H41   N4   H42
+BOND C2   N3    C4   C5    C5   H5    C6   H6
+DOUBLE   C2   O2    C5   C6       N3   C4
+IMPR N4   C4   H41  H42       C2   N1   N3   O2        C4   N3   C5   N4
+! 
+IC  C4'   O4'   C1'   C2'    1.4055  108.09  -21.00  106.18   1.5457 !0.0 for c3'endo (north) pucker
+IC  O4'   C1'   C2'   C3'    1.4127  106.18   30.00  103.11   1.5346 !
+IC  C1'   C2'   C3'   C4'    1.5457  103.11  -30.00  100.86   1.5211 !0.0 for o4'endo barrier
+IC  C2'   C3'   C4'   O4'    1.5346  100.86   20.00  103.15   1.4055
+IC  C3'   C4'   O4'   C1'    1.5211  103.15    0.00  108.09   1.4127
+IC  C3'   O4'   *C4'  C5'    0.0000    0.00  120.00    0.00   0.0000
+IC  C3'   O4'   *C4'  H42'   0.0000    0.00 -120.00    0.00   0.0000
+IC  C3'   C1'   *C2'  H21'   0.0000    0.00  120.00    0.00   0.0000
+IC  C3'   C1'   *C2'  H22'   0.0000    0.00 -120.00    0.00   0.0000
+IC  C2'   O4'   *C1'  N1     0.0000    0.00 -120.00    0.00   0.0000
+IC  C2'   O4'   *C1'  H12'   0.0000    0.00  120.00    0.00   0.0000
+IC  O4'   C1'   N1    C2     0.0000    0.00  180.00    0.00   0.0000
+IC  C1'   C2    *N1   C6     0.0000    0.00  180.00    0.00   0.0000
+IC  C1'   N1    C6    C5     0.0000    0.00  180.00    0.00   0.0000
+IC  N1    C6    C5    C4     0.0000    0.00    0.00    0.00   0.0000
+IC  C5    N1    *C6   H6     0.0000    0.00  180.00    0.00   0.0000
+IC  C1'   N1    C2    N3     0.0000    0.00  180.00    0.00   0.0000
+IC  N3    N1    *C2   O2     0.0000    0.00  180.00    0.00   0.0000
+IC  C4    C6    *C5   H5     0.0000    0.00  180.00    0.00   0.0000
+IC  N3    C5    *C4   N4     0.0000    0.00  180.00    0.00   0.0000
+IC  C5    C4    N4    H41    0.0000    0.00  180.00    0.00   0.0000
+IC  H41   C4    *N4   H42    0.0000    0.00  180.00    0.00   0.0000
+IC  C2'   C4'   *C3'  O3'    0.0000    0.00 -120.00    0.00   0.0000
+IC  C2'   C4'   *C3'  H31'   0.0000    0.00  120.00    0.00   0.0000
+IC  C4'   C3'   O3'   H32'   0.0000    0.00  180.00    0.00   0.0000 !epsilon
+IC  C3'   C4'   C5'   O5'    0.0000    0.00   60.00    0.00   0.0000 !gamma
+IC  C4'   C5'   O5'   H5T    0.0000    0.00  180.00    0.00   0.0000 !beta
+IC  H5T   C4'   *C5'  H51'   1.9450  142.80  120.00    0.00   0.0000
+IC  H5T  C4'    *C5'  H52'   1.9450  142.80 -120.00    0.00   0.0000
+PATC  FIRS NONE LAST NONE
+
+RESI NUST         0.00 ! nucleoside with thymine
+GROUP
+ATOM O4'  ON6    -0.50 !          H5T
+ATOM C4'  CN7     0.16 !         /
+ATOM H42' HN7     0.09 !  H51' O5'
+ATOM C1'  CN7B    0.16 !     \ |
+ATOM H12' HN7     0.09 !H52'--C5'   O4'  Thymine
+GROUP                  !        \  /  \  /
+ATOM C2'  CN8    -0.18 !   H42'--C4'  C1'--H12'
+ATOM H21' HN8     0.09 !          |    |
+ATOM H22' HN8     0.09 !   H31'--C3'--C2'--H21'
+! Atoms for thymine    !        /       \
+GROUP                  !      O3'       H22'
+ATOM N1   NN2B   -0.34 !       |
+ATOM C6   CN3     0.17 !     H32'
+ATOM H6   HN3     0.17
+ATOM C2   CN1T    0.51 
+ATOM O2   ON1    -0.41
+ATOM N3   NN2U   -0.46 
+ATOM H3   HN2     0.36 
+ATOM C4   CN1     0.50
+ATOM O4   ON1    -0.45
+ATOM C5   CN3T   -0.15
+ATOM C5M  CN9    -0.11
+ATOM H51  HN9     0.07
+ATOM H52  HN9     0.07
+ATOM H53  HN9     0.07
+GROUP ! Hydroxyl group on C3'
+ATOM H31' HN7     0.09
+ATOM C3'  CN7     0.14
+ATOM O3'  ON5    -0.66
+ATOM H32' HN5     0.43
+GROUP ! C5' hydroxyl
+ATOM C5'  CN8B    0.05
+ATOM H51' HN8     0.09
+ATOM H52' HN8     0.09
+ATOM O5'  ON5    -0.66
+ATOM H5T  HN5     0.43
+
+BOND C1'  O4'  C1'  C2'  C2'  C3'  C3'  C4'  C4'  O4'  C4'  C5'
+BOND C3'  O3'  C1'  H12' C2'  H21' C2'  H22' C3'  H31' C4'  H42'
+BOND C5'  H51' C5'  H52' C5'  O5'  O5'  H5T
+BOND O3'  H32'
+BOND C1'  N1
+BOND N1   C2   N1   C6   C2   N3   N3   H3   N3   C4   C4   C5
+BOND C5   C5M  C6   H6   C5M  H51  C5M  H52  C5M  H53
+DOUBLE  C2   O2    C4   O4     C5   C6
+IMPR C2   N1   N3   O2        C4   N3   C5   O4        C5   C4   C6   C5M
+! This IC table is only an initial guess:
+IC 	C1'	C2'	C3'	C4' 	0.0 0.0 324.92 0.0 0.0
+IC	C2'	C3'	C4' 	O4' 	0.0 0.0 33.390 0.0 0.0
+IC 	H12'	C1'	C2'	C3' 	0.0 0.0 268.35 0.0 0.0
+IC 	H21'	C2'	C3'	C4' 	0.0 0.0 82.530 0.0 0.0
+IC 	H22'	C2'	C3'	C4' 	0.0 0.0 204.06 0.0 0.0
+IC 	O3' 	C3'	C4'	O4' 	0.0 0.0 -93.14 0.0 0.0
+IC	H32'	O3'	C3'	C2'	0.0 0.0 -60.00 0.0 0.0
+IC 	H31'	C3'	C4'	O4' 	0.0 0.0 147.80 0.0 0.0
+IC	H41'	C4'	O4'	C1' 	0.0 0.0 132.30 0.0 0.0
+IC 	H42'	C4'	O4'	C1' 	0.0 0.0 220.70 0.0 0.0
+IC C3'  C2'  C1'  N1     1.5284  101.97  147.89  113.71   1.4896
+IC O4'  C1'  N1   C2     1.5251  113.71  180.0   125.59   1.3783 !chi
+IC C1'  C2   *N1  C6     1.4896  117.06 -179.96  122.08   1.3704
+IC C2   N1   C6   C5     1.3746  122.08   -0.02  121.23   1.3432
+IC C6   N1   C2   N3     1.3704  122.08    0.06  115.38   1.3813
+IC N1   N3   *C2  O2     1.3746  115.38 -179.95  121.70   1.2191
+IC N1   C2   N3   C4     1.3746  115.38   -0.07  126.46   1.3795
+IC C5   N3   *C4  O4     1.4439  114.07  179.98  120.59   1.2327
+IC C2   C4   *N3  H3     1.3813  126.46  180.00  116.77   1.0900
+IC C4   C6   *C5  C5M    1.4439  120.78 -179.94  121.63   1.5000
+IC N1   C5   *C6  H6     0.0       0.0   180.0     0.0    0.0
+IC C6   C5   C5M  H51    0.0       0.0     0.0     0.0    0.0
+IC C5   H51  *C5M H52    0.0       0.0   115.0     0.0    0.0
+IC H51  H52  *C5M H53    0.0       0.0  -115.0     0.0    0.0
+IC      C5'     C4'     O4'     C1'     0.0 0.0 144.82 0.0 0.0   
+IC      H51'    C5'     C4'     O4'     0.0 0.0 -179.98 0.0 0.0 
+IC      H52'    C5'     C4'     O4'     0.0 0.0   59.66 0.0 0.0
+IC      O5'     C5'     C4'     O4'     0.0 0.0  -59.68 0.0 0.0
+IC      H5T     O5'     C5'     C4'     0.0 0.0  180.0 0.0 0.0
+PATC  FIRS NONE LAST NONE
+
+RESI NUSU         0.00  ! nucleoside with uracil
+GROUP
+ATOM O4'  ON6    -0.50 !          H5T
+ATOM C4'  CN7     0.16 !         /
+ATOM H42' HN7     0.09 !  H51' O5'
+ATOM C1'  CN7B    0.16 !     \ |
+ATOM H12' HN7     0.09 !H52'--C5'   O4'  Uracil
+GROUP                  !        \  /  \  /
+ATOM C2'  CN8    -0.18 !   H42'--C4'  C1'--H12'
+ATOM H21' HN8     0.09 !          |    |
+ATOM H22' HN8     0.09 !   H31'--C3'--C2'--H21'
+! Atoms for uracil     !        /       \
+GROUP                  !      O3'       H22'
+ATOM N1   NN2B   -0.34 !       |
+ATOM C6   CN3     0.20 !     H32'
+ATOM H6   HN3     0.14
+ATOM C2   CN1T    0.55
+ATOM O2   ON1    -0.45
+ATOM N3   NN2U   -0.46
+ATOM H3   HN2     0.36
+ATOM C4   CN1     0.53
+ATOM O4   ON1    -0.48
+ATOM C5   CN3    -0.15 
+ATOM H5   HN3     0.10  
+GROUP ! Hydroxyl group on C3'
+ATOM H31' HN7     0.09
+ATOM C3'  CN7     0.14
+ATOM O3'  ON5    -0.66
+ATOM H32' HN5     0.43
+GROUP ! C5' hydroxyl
+ATOM C5'  CN8B    0.05
+ATOM H51' HN8     0.09
+ATOM H52' HN8     0.09
+ATOM O5'  ON5    -0.66
+ATOM H5T  HN5     0.43
+
+BOND C1'  O4'  C1'  C2'  C2'  C3'  C3'  C4'  C4'  O4'  C4'  C5'
+BOND C3'  O3'  C1'  H12' C2'  H21' C2'  H22' C3'  H31' C4'  H42'
+BOND C5'  H51' C5'  H52' C5'  O5'  O5'  H5T
+BOND O3'  H32'
+BOND C1'  N1        N1   C2        N1   C6        C2   O2
+BOND C2   N3        N3   H3        N3   C4        C4   O4        C4   C5
+BOND C5   C6        C5   H5        C6   H6
+IMPR C2   N1   N3   O2        C4   N3   C5   O4
+! This IC table is only an initial guess:
+IC 	C1'	C2'	C3'	C4' 	0.0 0.0 324.92 0.0 0.0
+IC	C2'	C3'	C4' 	O4' 	0.0 0.0 33.390 0.0 0.0
+IC 	H12'	C1'	C2'	C3' 	0.0 0.0 268.35 0.0 0.0
+IC 	H21'	C2'	C3'	C4' 	0.0 0.0 82.530 0.0 0.0
+IC 	H22'	C2'	C3'	C4' 	0.0 0.0 204.06 0.0 0.0
+IC 	O3' 	C3'	C4'	O4' 	0.0 0.0 -93.14 0.0 0.0
+IC	H32'	O3'	C3'	C2'	0.0 0.0 -60.00 0.0 0.0
+IC 	H31'	C3'	C4'	O4' 	0.0 0.0 147.80 0.0 0.0
+IC	H41'	C4'	O4'	C1' 	0.0 0.0 132.30 0.0 0.0
+IC 	H42'	C4'	O4'	C1' 	0.0 0.0 220.70 0.0 0.0
+BILD C3'  C2'  C1'  N1     1.5284  101.97  144.39  113.71   1.4896
+BILD O4'  C1'  N1   C2     1.5251  113.71  180.0   117.06   1.3746
+BILD C1'  C2   *N1  C6     1.4896  117.06 -180.0   121.3    1.379
+BILD C2   N1   C6   C5     1.379   121.3     0.0   122.8    1.338
+BILD C6   N1   C2   N3     1.380   121.3     0.0   114.8    1.373
+BILD N1   N3   *C2  O2     1.379   114.8  -180.0   122.0    1.218
+BILD N1   C2   N3   C4     1.379   114.8     0.0   127.0    1.383
+BILD C5   N3   *C4  O4     1.440   114.7   180.0   119.8    1.227
+BILD C2   C4   *N3  H3     1.373   127.0   180.0   116.5    1.03
+BILD C6   C4   *C5  H5     0.0       0.0   180.0     0.0    0.0
+BILD N1   C5   *C6  H6     0.0       0.0   180.0     0.0    0.0
+IC      C5'     C4'     O4'     C1'     0.0 0.0 144.82 0.0 0.0   
+IC      H51'    C5'     C4'     O4'     0.0 0.0 -179.98 0.0 0.0 
+IC      H52'    C5'     C4'     O4'     0.0 0.0   59.66 0.0 0.0
+IC      O5'     C5'     C4'     O4'     0.0 0.0  -59.68 0.0 0.0
+IC      H5T     O5'     C5'     C4'     0.0 0.0  180.0 0.0 0.0
+PATC  FIRS NONE LAST NONE
+
+RESI RNUA         0.00 ! ribo-nucleoside with adenine 
+GROUP
+ATOM O4'  ON6B   -0.50 !          H5T
+ATOM C4'  CN7     0.16 !         /
+ATOM H42' HN7     0.09 !  H51' O5'
+ATOM C1'  CN7B    0.16 !     \ |
+ATOM H12' HN7     0.09 !H52'--C5'   O4'  Adenine
+GROUP                  !        \  /  \  /
+ATOM H21' HN7     0.09 !   H42'--C4'  C1'--H12'
+ATOM C2'  CN7B    0.14 !          |    |
+ATOM O2'  ON5    -0.66 !   H31'--C3'--C2'--H21'
+ATOM H22' HN5     0.43 !        /       \
+! Adenine atoms        !      O3'       O2'
+GROUP                  !       |         |
+ATOM C5   CN5     0.28 !      H32'      H22'
+ATOM N7   NN4    -0.71  
+ATOM C8   CN4     0.34  
+ATOM H8   HN3     0.12  
+ATOM N9   NN2    -0.05  
+ATOM N1   NN3A   -0.74  
+ATOM C2   CN4     0.50  
+ATOM H2   HN3     0.13  
+ATOM N3   NN3A   -0.75
+ATOM C4   CN5     0.43
+ATOM C6   CN2     0.46
+ATOM N6   NN1    -0.77
+ATOM H61  HN1     0.38
+ATOM H62  HN1     0.38
+GROUP ! Hydroxyl group on C3'
+ATOM H31' HN7     0.09
+ATOM C3'  CN7     0.14
+ATOM O3'  ON5    -0.66
+ATOM H32' HN5     0.43
+GROUP ! C5' hydroxyl
+ATOM C5'  CN8B    0.05
+ATOM H51' HN8     0.09
+ATOM H52' HN8     0.09
+ATOM O5'  ON5    -0.66
+ATOM H5T  HN5     0.43
+
+BOND C1'  O4'  C1'  C2'  C2'  C3'  C3'  C4'  C4'  O4'  C4'  C5'
+BOND C3'  O3'  C1'  H12' C2'  H21' C2'  O2'  C3'  H31' C4'  H42'
+BOND C5'  H51' C5'  H52' C5'  O5'  O5'  H5T
+BOND O2'  H22' O3'  H32'
+BOND C1'  N9
+BOND N9   C4    N9   C8   C4   N3    C2   N1    C6   N6
+BOND N6   H61   N6   H62  C6   C5    C5   N7    C8   H8    C2   H2
+DOUBLE  N1  C6    C2   N3     C4   C5     N7   C8
+IMPR N6   C6   H61  H62       C6   N1   C5   N6       
+! This IC table is only an initial guess:
+IC 	C1'	C2'	C3'	C4' 	0.0 0.0 324.92 0.0 0.0
+IC	C2'	C3'	C4' 	O4' 	0.0 0.0 33.390 0.0 0.0
+IC 	H12'	C1'	C2'	C3' 	0.0 0.0 268.35 0.0 0.0
+IC 	H21'	C2'	C3'	C4' 	0.0 0.0 82.530 0.0 0.0
+IC 	O2' 	C2'	C3'	C4' 	1.42 109.06 283.42 0.0 0.0
+IC      H22'    O2'     C2'     C3'     0.98 109.05 283.42 0.0 0.0
+IC 	O3' 	C3'	C4'	O4' 	0.0 0.0 324.95 0.0 0.0
+IC	H32'	O3'	C3'	C2'	0.0 0.0 -60.00 0.0 0.0
+IC 	H31'	C3'	C4'	O4' 	0.0 0.0 147.80 0.0 0.0
+IC	H41'	C4'	O4'	C1' 	0.0 0.0 132.30 0.0 0.0
+IC 	H42'	C4'	O4'	C1' 	0.0 0.0 220.70 0.0 0.0
+IC C3'  C2'  C1'  N9     1.5284  101.97  150.8   113.71   1.4896
+IC O4'  C1'  N9   C4     1.5251  108.6   180.0   125.5    1.3783 !chi
+IC C1'  C4   *N9  C8     1.4896  125.97 -179.94  106.0    1.367
+IC C4   N9   C8   N7     1.376   106.0     0.0   113.6    1.312
+IC C8   N9   C4   C5     1.367   106.0     0.0   105.6    1.382
+IC C8   N7   C5   C6     0.0       0.0   180.0     0.0    0.0
+IC N7   C5   C6   N1     0.0       0.0   180.0     0.0    0.0
+IC C5   C6   N1   C2     0.0       0.0     0.0     0.0    0.0
+IC N9   C5   *C4  N3     1.376   105.6  -180.0   126.9    1.342
+IC C5   N1   *C6  N6     1.409   117.6  -180.0   121.2    1.337
+IC N1   C6   N6   H61    1.337   121.2     0.0   119.0    1.01
+IC H61  C6   *N6  H62    1.01    119.0   180.0   119.00   1.01
+IC C5   N1   *C6  N6     1.409   117.6  -180.0   119.0    1.337
+IC N1   C6   N6   H61    1.337   119.0     0.0   119.0    1.01
+IC H61  C6   *N6  H62    1.01    119.0   180.0   121.00   1.01
+IC N9   N7   *C8   H8    0.0       0.0   180.0     0.0    0.0
+IC N1   N3   *C2   H2    0.0       0.0   180.0     0.0    0.0
+IC      C5'     C4'     O4'     C1'     0.0 0.0 144.82 0.0 0.0   
+IC      H51'    C5'     C4'     O4'     0.0 0.0 -179.98 0.0 0.0 
+IC      H52'    C5'     C4'     O4'     0.0 0.0   59.66 0.0 0.0
+IC      O5'     C5'     C4'     O4'     0.0 0.0  -59.68 0.0 0.0
+IC      H5T     O5'     C5'     C4'     0.0 0.0  180.0 0.0 0.0
+PATC  FIRS NONE LAST NONE
+
+RESI RNUG         0.00 ! ribo-nucleoside with guanine
+GROUP
+ATOM O4'  ON6B   -0.50 !          H5T
+ATOM C4'  CN7     0.16 !         /
+ATOM H42' HN7     0.09 !  H51' O5'
+ATOM C1'  CN7B    0.16 !     \ |
+ATOM H12' HN7     0.09 !H52'--C5'   O4'  Guanine
+GROUP                  !        \  /  \  /
+ATOM H21' HN7     0.09 !   H42'--C4'  C1'--H12'
+ATOM C2'  CN7B    0.14 !          |    |
+ATOM O2'  ON5    -0.66 !   H31'--C3'--C2'--H21'
+ATOM H22' HN5     0.43 !        /       \
+! Guanine atoms        !      O3'       O2'
+GROUP                  !       |         |
+ATOM N9   NN2B   -0.02 !      H32'      H22'
+ATOM C4   CN5     0.26 
+ATOM N3   NN3G   -0.74 
+ATOM C2   CN2     0.75
+ATOM N1   NN2G   -0.34 
+ATOM H1   HN2     0.26
+ATOM N2   NN1    -0.68
+ATOM H21  HN1     0.32
+ATOM H22  HN1     0.35
+ATOM C6   CN1     0.54 
+ATOM O6   ON1    -0.51
+ATOM C5   CN5G    0.00
+ATOM N7   NN4    -0.60
+ATOM C8   CN4     0.25
+ATOM H8   HN3     0.16
+GROUP ! Hydroxyl group on C3'
+ATOM H31' HN7     0.09
+ATOM C3'  CN7     0.14
+ATOM O3'  ON5    -0.66
+ATOM H32' HN5     0.43
+GROUP ! C5' hydroxyl
+ATOM C5'  CN8B    0.05
+ATOM H51' HN8     0.09
+ATOM H52' HN8     0.09
+ATOM O5'  ON5    -0.66
+ATOM H5T  HN5     0.43
+
+BOND C1'  O4'  C1'  C2'  C2'  C3'  C3'  C4'  C4'  O4'  C4'  C5'
+BOND C3'  O3'  C1'  H12' C2'  H21' C2'  O2'  C3'  H31' C4'  H42'
+BOND C5'  H51' C5'  H52' C5'  O5'  O5'  H5T
+BOND O2'  H22' O3'  H32'
+BOND C1'  N9
+BOND N9   C4     N9   C8    C4   N3    C2   N2   C2   N1    N2   H21
+BOND N2   H22    N1   H1    N1   C6    C6   C5   C5   N7    C8   H8
+DOUBLE  C2   N3    C4   C5    N7   C8   C6   O6
+IMPR C2   N3   N1   N2        C6   N1   C5   O6        N2   H21  C2   H22
+! This IC table is only an initial guess:
+IC 	C1'	C2'	C3'	C4' 	0.0 0.0 324.92 0.0 0.0
+IC	C2'	C3'	C4' 	O4' 	0.0 0.0 33.390 0.0 0.0
+IC 	H12'	C1'	C2'	C3' 	0.0 0.0 268.35 0.0 0.0
+IC 	H21'	C2'	C3'	C4' 	0.0 0.0 82.530 0.0 0.0
+IC 	O2' 	C2'	C3'	C4' 	1.42 109.06 283.42 0.0 0.0
+IC      H22'    O2'     C2'     C3'     0.98 109.05 283.42 0.0 0.0
+IC 	O3' 	C3'	C4'	O4' 	0.0 0.0 324.95 0.0 0.0
+IC	H32'	O3'	C3'	C2'	0.0 0.0 -60.00 0.0 0.0
+IC 	H31'	C3'	C4'	O4' 	0.0 0.0 147.80 0.0 0.0
+IC	H41'	C4'	O4'	C1' 	0.0 0.0 132.30 0.0 0.0
+IC 	H42'	C4'	O4'	C1' 	0.0 0.0 220.70 0.0 0.0
+BILD C3'  C2'  C1'  N9     1.5284  101.97  147.80  113.71   1.4896
+BILD O4'  C1'  N9   C4     1.5251  113.71  180.0   125.59   1.3783 !chi
+BILD C1'  C4   *N9  C8     1.4896  125.59 -179.99  106.0    1.374
+BILD C4   N9   C8   N7     1.377   106.0     0.0   113.5    1.304
+BILD C8   N9   C4   C5     1.374   106.0     0.0   105.6    1.377
+BILD N9   C5   *C4  N3     1.377   105.6   180.0   128.4    1.355
+BILD C5   C4   N3   C2     1.377   128.4     0.0   111.8    1.327
+BILD C4   N3   C2   N1     1.355   111.8     0.0   124.0    1.375
+BILD N1   N3   *C2  N2     1.375   124.0   180.0   119.7    1.341
+BILD N3   C2   N2   H21    1.327   119.7   180.0   127.0    1.01
+BILD H21  C2   *N2  H22    1.01    127.0  -180.0   116.5    1.01
+BILD N3   C2   N1   C6     1.327   124.0     0.0   124.9    1.393
+BILD C6   C2   *N1  H1     1.393   124.9   180.0   117.4    1.03
+BILD C5   N1   *C6  O6     1.415   111.7   180.0   120.0    1.239
+BILD N9   N7   *C8  H8     0.0       0.0   180.0     0.0    0.0
+IC      C5'     C4'     O4'     C1'     0.0 0.0 144.82 0.0 0.0   
+IC      H51'    C5'     C4'     O4'     0.0 0.0 -179.98 0.0 0.0 
+IC      H52'    C5'     C4'     O4'     0.0 0.0   59.66 0.0 0.0
+IC      O5'     C5'     C4'     O4'     0.0 0.0  -59.68 0.0 0.0
+IC      H5T     O5'     C5'     C4'     0.0 0.0  180.0 0.0 0.0
+PATC  FIRS NONE LAST NONE
+
+RESI RNUC        0.00  ! ribo-nucleoside with cytosine
+GROUP
+ATOM O4'  ON6B   -0.50 !          H5T
+ATOM C4'  CN7     0.16 !         /
+ATOM H42' HN7     0.09 !  H51' O5'
+ATOM C1'  CN7B    0.16 !     \ |
+ATOM H12' HN7     0.09 !H52'--C5'   O4'  Cytosine
+GROUP                  !        \  /  \  /
+ATOM H21' HN7     0.09 !   H42'--C4'  C1'--H12'
+ATOM C2'  CN7B    0.14 !          |    |
+ATOM O2'  ON5    -0.66 !   H31'--C3'--C2'--H21'
+ATOM H22' HN5     0.43 !        /       \
+! Cytosine atoms       !      O3'       O2'
+GROUP                  !       |         |
+ATOM N1   NN2    -0.13 !      H32'      H22'
+ATOM C6   CN3     0.05  
+ATOM H6   HN3     0.17  
+ATOM C2   CN1     0.52  
+ATOM O2   ON1C   -0.49  
+ATOM N3   NN3    -0.66  
+ATOM C4   CN2     0.65  
+ATOM N4   NN1    -0.75  
+ATOM H41  HN1     0.37  
+ATOM H42  HN1     0.33  
+ATOM C5   CN3    -0.13  
+ATOM H5   HN3     0.07  
+GROUP ! Hydroxyl group on C3'
+ATOM H31' HN7     0.09
+ATOM C3'  CN7     0.14
+ATOM O3'  ON5    -0.66
+ATOM H32' HN5     0.43
+GROUP ! Methyl group on C4'
+ATOM C5'  CN8B    0.05
+ATOM H51' HN8     0.09
+ATOM H52' HN8     0.09
+ATOM O5'  ON5    -0.66
+ATOM H5T  HN5     0.43
+
+BOND C1'  O4'  C1'  C2'  C2'  C3'  C3'  C4'  C4'  O4'  C4'  C5'
+BOND C3'  O3'  C1'  H12' C2'  H21' C2'  O2'  C3'  H31' C4'  H42'
+BOND C5'  H51' C5'  H52' C5'  O5'  O5'  H5T
+BOND O2'  H22' O3'  H32'
+BOND C1'  N1        
+BOND N1   C2        N1   C6
+BOND C2   N3        C4   N4        N4   H41       N4   H42
+BOND C4   C5        C5   H5        C6   H6
+DOUBLE   C2   O2    C5   C6        N3   C4
+IMPR N4   C4   H41  H42       C2   N1   N3   O2        C4   N3   C5   N4
+! This IC table is only an initial guess:
+IC 	C1'	C2'	C3'	C4' 	0.0 0.0 324.92 0.0 0.0
+IC	C2'	C3'	C4' 	O4' 	0.0 0.0 33.390 0.0 0.0
+IC 	H12'	C1'	C2'	C3' 	0.0 0.0 268.35 0.0 0.0
+IC 	H21'	C2'	C3'	C4' 	0.0 0.0 82.530 0.0 0.0
+IC 	O2' 	C2'	C3'	C4' 	1.42 109.06 283.42 0.0 0.0
+IC      H22'    O2'     C2'     C3'     0.98 109.05 283.42 0.0 0.0
+IC 	O3' 	C3'	C4'	O4' 	0.0 0.0 324.95 0.0 0.0
+IC	H32'	O3'	C3'	C2'	0.0 0.0 -60.00 0.0 0.0
+IC 	H31'	C3'	C4'	O4' 	0.0 0.0 147.80 0.0 0.0
+IC	H41'	C4'	O4'	C1' 	0.0 0.0 132.30 0.0 0.0
+IC 	H42'	C4'	O4'	C1' 	0.0 0.0 220.70 0.0 0.0
+IC C3'  C2'  C1'  N1     1.5284  101.97  147.89  113.71   1.4896
+IC O4'  C1'  N1   C2     1.5251  113.71  180.0   125.59   1.3783 !chi
+IC C1'  C2   *N1  C6     1.4896  117.79 -180.00  120.6    1.364   
+IC C2   N1   C6   C5     1.399   120.6     0.0   121.0    1.337   
+IC C6   N1   C2   N3     1.364   120.6     0.0   118.9    1.356   
+IC N1   N3   *C2  O2     1.399   118.9   180.0   121.9    1.237   
+IC N1   C2   N3   C4     1.399   118.9     0.0   120.0    1.334   
+IC C5   N3   *C4  N4     1.426   121.8   180.00  118.9    1.337   
+IC N3   C4   N4   H41    1.337   117.9     0.00  118.9    1.01    
+IC H41  C4   *N4  H42    1.01    118.9   180.00  120.7    1.01    
+IC C6   C4   *C5  H5     0.0       0.0   180.0     0.0    0.0
+IC N1   C5   *C6  H6     0.0       0.0   180.0     0.0    0.0
+IC      C5'     C4'     O4'     C1'     0.0 0.0 144.82 0.0 0.0   
+IC      H51'    C5'     C4'     O4'     0.0 0.0 -179.98 0.0 0.0 
+IC      H52'    C5'     C4'     O4'     0.0 0.0   59.66 0.0 0.0
+IC      O5'     C5'     C4'     O4'     0.0 0.0  -59.68 0.0 0.0
+IC      H5T     O5'     C5'     C4'     0.0 0.0  180.0 0.0 0.0
+PATC  FIRS NONE LAST NONE
+
+RESI RNUU        0.00  ! ribo-nucleoside with uracil
+GROUP
+ATOM O4'  ON6B   -0.50 !          H5T
+ATOM C4'  CN7     0.16 !         /
+ATOM H42' HN7     0.09 !  H51' O5'
+ATOM C1'  CN7B    0.16 !     \ |
+ATOM H12' HN7     0.09 !H52'--C5'   O4'  Uracil
+GROUP                  !        \  /  \  /
+ATOM H21' HN7     0.09 !   H42'--C4'  C1'--H12'
+ATOM C2'  CN7B    0.14 !          |    |
+ATOM O2'  ON5    -0.66 !   H31'--C3'--C2'--H21'
+ATOM H22' HN5     0.43 !        /       \
+! Uracil atoms         !      O3'       O2'
+GROUP                  !       |         |
+ATOM N1   NN2B   -0.34 !     H32'      H22'
+ATOM C6   CN3     0.20
+ATOM H6   HN3     0.14
+ATOM C2   CN1T    0.55
+ATOM O2   ON1    -0.45
+ATOM N3   NN2U   -0.46
+ATOM H3   HN2     0.36
+ATOM C4   CN1     0.53
+ATOM O4   ON1    -0.48
+ATOM C5   CN3    -0.15
+ATOM H5   HN3     0.10
+
+GROUP ! Hydroxyl group on C3'
+ATOM H31' HN7     0.09
+ATOM C3'  CN7     0.14
+ATOM O3'  ON5    -0.66
+ATOM H32' HN5     0.43
+GROUP ! Methyl group on C4'
+ATOM C5'  CN8B    0.05
+ATOM H51' HN8     0.09
+ATOM H52' HN8     0.09
+ATOM O5'  ON5    -0.66
+ATOM H5T  HN5     0.43
+
+BOND C1'  O4'  C1'  C2'  C2'  C3'  C3'  C4'  C4'  O4'  C4'  C5'
+BOND C3'  O3'  C1'  H12' C2'  H21' C2'  O2'  C3'  H31' C4'  H42'
+BOND C5'  H51' C5'  H52' C5'  O5'  O5'  H5T
+BOND O2'  H22' O3'  H32'
+BOND C1'  N1        N1   C2        N1   C6        C2   O2
+BOND C2   N3        N3   H3        N3   C4        C4   O4        C4   C5
+BOND C5   C6        C5   H5        C6   H6
+IMPR C2   N1   N3   O2        C4   N3   C5   O4
+! This IC table is only an initial guess:
+IC 	C1'	C2'	C3'	C4' 	0.0 0.0 324.92 0.0 0.0
+IC	C2'	C3'	C4' 	O4' 	0.0 0.0 33.390 0.0 0.0
+IC 	H12'	C1'	C2'	C3' 	0.0 0.0 268.35 0.0 0.0
+IC 	H21'	C2'	C3'	C4' 	0.0 0.0 82.530 0.0 0.0
+IC 	O2' 	C2'	C3'	C4' 	1.42 109.06 283.42 0.0 0.0
+IC      H22'    O2'     C2'     C3'     0.98 109.05 283.42 0.0 0.0
+IC 	O3' 	C3'	C4'	O4' 	0.0 0.0 324.95 0.0 0.0
+IC	H32'	O3'	C3'	C2'	0.0 0.0 -60.00 0.0 0.0
+IC 	H31'	C3'	C4'	O4' 	0.0 0.0 147.80 0.0 0.0
+IC	H41'	C4'	O4'	C1' 	0.0 0.0 132.30 0.0 0.0
+IC 	H42'	C4'	O4'	C1' 	0.0 0.0 220.70 0.0 0.0
+IC C3'  C2'  C1'  N1     1.5284  101.97  147.89  113.71   1.4896
+IC O4'  C1'  N1   C2     1.5251  113.71  180.0   125.59   1.3783 !chi
+IC C3'  C2'  C1'  N1     1.5284  101.97  144.39  113.71   1.4896
+IC O4'  C1'  N1   C2     1.5251  113.71  180.0   117.06   1.3746
+IC C1'  C2   *N1  C6     1.4896  117.06 -180.0   121.3    1.379
+IC C2   N1   C6   C5     1.379   121.3     0.0   122.8    1.338
+IC C6   N1   C2   N3     1.380   121.3     0.0   114.8    1.373
+IC N1   N3   *C2  O2     1.379   114.8  -180.0   122.0    1.218
+IC N1   C2   N3   C4     1.379   114.8     0.0   127.0    1.383
+IC C5   N3   *C4  O4     1.440   114.7   180.0   119.8    1.227
+IC C2   C4   *N3  H3     1.373   127.0   180.0   116.5    1.03
+IC C6   C4   *C5  H5     0.0       0.0   180.0     0.0    0.0
+IC N1   C5   *C6  H6     0.0       0.0   180.0     0.0    0.0
+IC      C5'     C4'     O4'     C1'     0.0 0.0 144.82 0.0 0.0   
+IC      H51'    C5'     C4'     O4'     0.0 0.0 -179.98 0.0 0.0 
+IC      H52'    C5'     C4'     O4'     0.0 0.0   59.66 0.0 0.0
+IC      O5'     C5'     C4'     O4'     0.0 0.0  -59.68 0.0 0.0
+IC      H5T     O5'     C5'     C4'     0.0 0.0  180.0 0.0 0.0
+PATC  FIRS NONE LAST NONE
+
+RESI RNUT        0.00  ! ribo-nucleoside with thymine
+GROUP
+ATOM O4'  ON6B   -0.50 !          H5T
+ATOM C4'  CN7     0.16 !         /
+ATOM H42' HN7     0.09 !  H51' O5'
+ATOM C1'  CN7B    0.16 !     \ |
+ATOM H12' HN7     0.09 !H52'--C5'   O4'  Thymine
+GROUP                  !        \  /  \  /
+ATOM H21' HN7     0.09 !   H42'--C4'  C1'--H12'
+ATOM C2'  CN7B    0.14 !          |    |
+ATOM O2'  ON5    -0.66 !   H31'--C3'--C2'--H21'
+ATOM H22' HN5     0.43 !        /       \
+! Thymine  atoms       !      O3'       O2'
+GROUP                  !       |         |
+ATOM N1   NN2B   -0.34 !     H32'      H22'
+ATOM C6   CN3     0.17 
+ATOM H6   HN3     0.17
+ATOM C2   CN1T    0.51 
+ATOM O2   ON1    -0.41
+ATOM N3   NN2U   -0.46 
+ATOM H3   HN2     0.36 
+ATOM C4   CN1     0.50
+ATOM O4   ON1    -0.45
+ATOM C5   CN3T   -0.15
+ATOM C5M  CN9    -0.11
+ATOM H51  HN9     0.07
+ATOM H52  HN9     0.07
+ATOM H53  HN9     0.07
+GROUP ! Hydroxyl group on C3'
+ATOM H31' HN7     0.09
+ATOM C3'  CN7     0.14
+ATOM O3'  ON5    -0.66
+ATOM H32' HN5     0.43
+GROUP ! Methyl group on C4'
+ATOM C5'  CN8B    0.05
+ATOM H51' HN8     0.09
+ATOM H52' HN8     0.09
+ATOM O5'  ON5    -0.66
+ATOM H5T  HN5     0.43
+
+BOND C1'  O4'  C1'  C2'  C2'  C3'  C3'  C4'  C4'  O4'  C4'  C5'
+BOND C3'  O3'  C1'  H12' C2'  H21' C2'  O2'  C3'  H31' C4'  H42'
+BOND C5'  H51' C5'  H52' C5'  O5'  O5'  H5T
+BOND O2'  H22' O3'  H32'
+BOND C1'  N1
+BOND N1   C2   N1   C6   C2   N3   N3   H3   N3   C4   C4   C5
+BOND C5   C5M  C6   H6   C5M  H51  C5M  H52  C5M  H53
+DOUBLE  C2   O2    C4   O4     C5   C6
+IMPR C2   N1   N3   O2        C4   N3   C5   O4        C5   C4   C6   C5M
+! This IC table is only an initial guess:
+IC 	C1'	C2'	C3'	C4' 	0.0 0.0 324.92 0.0 0.0
+IC	C2'	C3'	C4' 	O4' 	0.0 0.0 33.390 0.0 0.0
+IC 	H12'	C1'	C2'	C3' 	0.0 0.0 268.35 0.0 0.0
+IC 	H21'	C2'	C3'	C4' 	0.0 0.0 82.530 0.0 0.0
+IC 	O2' 	C2'	C3'	C4' 	1.42 109.06 283.42 0.0 0.0
+IC      H22'    O2'     C2'     C3'     0.98 109.05 283.42 0.0 0.0
+IC 	O3' 	C3'	C4'	O4' 	0.0 0.0 324.95 0.0 0.0
+IC	H32'	O3'	C3'	C2'	0.0 0.0 -60.00 0.0 0.0
+IC 	H31'	C3'	C4'	O4' 	0.0 0.0 147.80 0.0 0.0
+IC	H41'	C4'	O4'	C1' 	0.0 0.0 132.30 0.0 0.0
+IC 	H42'	C4'	O4'	C1' 	0.0 0.0 220.70 0.0 0.0
+IC C3'  C2'  C1'  N1     1.5284  101.97  147.89  113.71   1.4896
+IC O4'  C1'  N1   C2     1.5251  113.71  180.0   125.59   1.3783 !chi
+IC C1'  C2   *N1  C6     1.4896  117.06 -179.96  122.08   1.3704
+IC C2   N1   C6   C5     1.3746  122.08   -0.02  121.23   1.3432
+IC C6   N1   C2   N3     1.3704  122.08    0.06  115.38   1.3813
+IC N1   N3   *C2  O2     1.3746  115.38 -179.95  121.70   1.2191
+IC N1   C2   N3   C4     1.3746  115.38   -0.07  126.46   1.3795
+IC C5   N3   *C4  O4     1.4439  114.07  179.98  120.59   1.2327
+IC C2   C4   *N3  H3     1.3813  126.46  180.00  116.77   1.0900
+IC C4   C6   *C5  C5M    1.4439  120.78 -179.94  121.63   1.5000
+IC N1   C5   *C6  H6     0.0       0.0   180.0     0.0    0.0
+IC C6   C5   C5M  H51    0.0       0.0     0.0     0.0    0.0
+IC C5   H51  *C5M H52    0.0       0.0   115.0     0.0    0.0
+IC H51  H52  *C5M H53    0.0       0.0  -115.0     0.0    0.0
+IC      C5'     C4'     O4'     C1'     0.0 0.0 144.82 0.0 0.0   
+IC      H51'    C5'     C4'     O4'     0.0 0.0 -179.98 0.0 0.0 
+IC      H52'    C5'     C4'     O4'     0.0 0.0   59.66 0.0 0.0
+IC      O5'     C5'     C4'     O4'     0.0 0.0  -59.68 0.0 0.0
+IC      H5T     O5'     C5'     C4'     0.0 0.0  180.0 0.0 0.0
+PATC  FIRS NONE LAST NONE
+
+RESI NADE        -1.00 ! 
+! NADE is a nucleotide analogue similar to NUCL, except that the imidazole
+! has been replaced by an adenine
+!	- The charge distribution on the sugar is identical to what 
+! it is in the DNA.
+!	- The charge' on the 3' end of the "backbone" is identical to
+! what it is in the DNA, except for the terminal methyl group for which
+! there is no DNA equivalent.
+! 	- The charges on the 5' extremity of the backbone is as in the 
+! 5TER patch used for the DNA. An alternative to that would be to use
+! charges more similar to what is actuallly in non-terminal residues in the 
+! DNA.
+GROUP
+ATOM O4'  ON6    -0.50 !         H5T
+ATOM C1'  CN7B    0.16 !          |
+ATOM H12' HN7     0.09 !    H52' O5'
+ATOM C4'  CN7     0.16 !      \ / 
+ATOM H42' HN7     0.09 !  H51'-C5'  O4'  Adenine
+GROUP                  !        \  /  \  /
+ATOM C5   CN5     0.30 !   H42'--C4'  C1'--H12'
+ATOM N7   NN4    -0.69 !          |    |
+ATOM C8   CN4     0.34 !   H31'--C3'--C2'--H21'
+ATOM H8   HN3     0.10 !        /       \
+ATOM N9   NN2    -0.06 !      O3'       H22'
+ATOM N1   NN3A   -0.74 !       |
+ATOM C2   CN4     0.50 !  O1P==P==O2P
+ATOM H2   HN3     0.13 !       |
+ATOM N3   NN3A   -0.75 !      O3P  (-1)
+ATOM C4   CN5     0.43 !        \
+ATOM C6   CN2     0.44 !        C3T--H3T3
+ATOM N6   NN1    -0.75 !       /  \
+ATOM H61  HN1     0.38 !    H3T1 H3T2
+ATOM H62  HN1     0.37
+GROUP                 
+ATOM C2'  CN8    -0.18
+ATOM H21' HN8     0.09
+ATOM H22' HN8     0.09
+GROUP                 
+ATOM C3'  CN7     0.01
+ATOM H31' HN7     0.09
+ATOM O3'  ON2    -0.57
+ATOM P    P       1.50
+ATOM O1P  ON3    -0.78
+ATOM O2P  ON3    -0.78
+ATOM O3P  ON2    -0.57
+ATOM C3T  CN8B   -0.17
+ATOM H3T1 HN8     0.09
+ATOM H3T2 HN8     0.09
+ATOM H3T3 HN8     0.09
+GROUP
+ATOM C5'  CN8B    0.05
+ATOM H51' HN8     0.09
+ATOM H52' HN8     0.09
+ATOM H5T  HN5     0.43
+ATOM O5'  ON5    -0.66
+
+BOND C1'  O4'  C1'  C2'  C2'  C3'  C3'  C4'  C4'  O4'  C3'  O3'
+BOND C1'  H12' C2'  H21' C2'  H22' C3'  H31' C4'  H42' 
+BOND O3'  P    P    O1P  P    O2P  P    O3P  
+BOND O3P  C3T  C3T  H3T1 C3T  H3T2 C3T  H3T3
+BOND C4'  C5'  C5'  H51' C5'  H52' 
+BOND C5'  O5'  O5'  H5T
+BOND C1'  N9
+BOND N9   C4    N9   C8   C4   N3    C2   N1    C6   N6
+BOND N6   H61   N6   H62  C6   C5    C5   N7    C8   H8    C2   H2
+DOUBLE  N1  C6    C2   N3     C4   C5     N7   C8
+IMPR N6   C6   H61  H62        C6   N1   C5   N6        
+IC   C4'     O4'     C1'     C2'    1.4055  108.09   23.45  106.18   1.5457
+IC   O4'     C1'     C2'     C3'    1.4127  106.18    3.96  103.11   1.5346
+IC   C1'     C2'     C3'     C4'    1.5457  103.11  -26.93  100.86   1.5211
+IC   C2'     C3'     C4'     O4'    1.5346  100.86   41.73  103.15   1.4055
+IC   C3'     C4'     O4'     C1'    1.5211  103.15  -41.62  108.09   1.4127
+IC   H12'    C1'     C2'     C3'    1.0818  113.32 -114.11  103.11   1.5346
+IC   H21'    C2'     C3'     C4'    1.0846  110.65   91.68  100.86   1.5211
+IC   H22'    C2'     C3'     C4'    1.0822  110.88 -148.45  100.86   1.5211
+IC   H31'    C3'     C4'     O4'    1.0806  113.53  162.89  103.15   1.4055
+IC   C5'     C4'     O4'     C1'    0.0000  000.00   77.76  108.09   1.4127
+IC   H51'    C5'     C4'     O4'    0.0     0.0     180.0     0.0    0.0
+IC   H52'    C5'     C4'     O4'    0.0     0.0      -60.0    0.0    0.0
+IC   H42'    C4'     O4'     C1'    1.0808  108.72 -162.12  108.09   1.4127
+IC   O3'     C3'     C4'     O4'    1.4028  110.98  -77.39  103.15   1.4055
+IC   P       O3'     C3'     C4'    0.0       0.0   180.00    0.0    0.0
+IC   O1P     P       O3'     C3'    0.0       0.0   -60.0     0.0    0.0
+IC   O2P     P       O3'     C3'    0.0       0.0    60.0     0.0    0.0
+IC   O3P     P       O3'     C3'    0.0       0.0   180.0     0.0    0.0
+IC   C3T     O3P     P       O3'    0.0       0.0   180.0     0.0    0.0 
+IC   H3T1    C3T     O3P     P	    0.0       0.0    60.0     0.0    0.0
+IC   H3T2    C3T     O3P     P	    0.0       0.0   -60.0     0.0    0.0
+IC   H3T3    C3T     O3P     P	    0.0       0.0   180.0     0.0    0.0
+IC C3'  C2'  C1'  N9     1.5284  101.97  147.80  113.71   1.4896
+IC O4'  C1'  N9   C4     1.5251  113.71  180.2   125.59   1.3783 !chi
+IC C1'  C4   *N9  C8     1.4896  125.97 -180.00  106.0    1.367
+IC C4   N9   C8   N7     1.376   106.0     0.0   113.6    1.312
+IC C8   N9   C4   C5     1.367   106.0     0.0   105.6    1.382
+IC C8   N7   C5   C6     0.0       0.0   180.0     0.0    0.0
+IC N7   C5   C6   N1     0.0       0.0   180.0     0.0    0.0
+IC C5   C6   N1   C2     0.0       0.0     0.0     0.0    0.0
+IC N9   C5   *C4  N3     1.376   105.6  -180.0   126.9    1.342
+IC C5   N1   *C6  N6     1.409   117.6  -180.0   121.2    1.337
+IC N1   C6   N6   H61    1.337   121.2     0.0   119.0    1.01
+IC H61  C6   *N6  H62    1.01    119.0   180.0   119.00   1.01
+IC C5   N1   *C6  N6     1.409   117.6  -180.0   119.0    1.337
+IC N1   C6   N6   H61    1.337   119.0     0.0   119.0    1.01
+IC H61  C6   *N6  H62    1.01    119.0   180.0   121.00   1.01
+IC N9   N7   *C8  H8     0.0       0.0   180.0     0.0    0.0
+IC N1   N3   *C2  H2     0.0       0.0   180.0     0.0    0.0
+IC C3'  C4'   C5' O5'    0.0       0.0    60.0     0.0    0.0
+IC H5T  O5'   C5' C4'    0.0       0.0   180.0     0.0    0.0
+PATC  FIRS NONE LAST NONE
+
+RESI NTHY        -1.00 ! 
+! NTHY is a nucleotide analogue similar to NUCL, except that the imidazole
+! has been replaced by a thymine
+!	- The charge distribution on the sugar is identical to what 
+! it is in the DNA.
+!	- The charge' on the 3' end of the "backbone" is identical to
+! what it is in the DNA, except for the terminal methyl group for which
+! there is no DNA equivalent.
+! 	- The charges on the 5' extremity of the backbone is as in the 
+! 5TER patch used for the DNA. An alternative to that would be to use
+! charges more similar to what is actuallly in non-terminal residues in the 
+! DNA.
+GROUP
+ATOM O4'  ON6    -0.50 !         H5T
+ATOM C1'  CN7B    0.16 !          |
+ATOM H12' HN7     0.09 !    H52' O5'
+ATOM C4'  CN7     0.16 !      \ / 
+ATOM H42' HN7     0.09 !  H51'-C5'  O4'  Thymine
+GROUP                  !        \  /  \  /
+ATOM N1   NN2B   -0.34 !   H42'--C4'  C1'--H12'
+ATOM C6   CN3     0.17 !          |    |
+ATOM H6   HN3     0.17 !   H31'--C3'--C2'--H21'
+ATOM C2   CN1T    0.51 !        /       \
+ATOM O2   ON1    -0.41 !      O3'       H22'
+ATOM N3   NN2U   -0.46 !       |
+ATOM H3   HN2     0.36 !  O1P==P==O2P
+ATOM C4   CN1     0.50 !       |
+ATOM O4   ON1    -0.45 !      O3P  (-1)
+ATOM C5   CN3T   -0.15 !        \
+ATOM C5M  CN9    -0.11 !        C3T--H3T3
+ATOM H51  HN9     0.07 !       /  \
+ATOM H52  HN9     0.07 !    H3T1 H3T2
+ATOM H53  HN9     0.07
+GROUP                 
+ATOM C2'  CN8    -0.18
+ATOM H21' HN8     0.09
+ATOM H22' HN8     0.09
+GROUP                 
+ATOM C3'  CN7     0.01
+ATOM H31' HN7     0.09
+ATOM O3'  ON2    -0.57
+ATOM P    P       1.50
+ATOM O1P  ON3    -0.78
+ATOM O2P  ON3    -0.78
+ATOM O3P  ON2    -0.57
+ATOM C3T  CN8B   -0.17
+ATOM H3T1 HN8     0.09
+ATOM H3T2 HN8     0.09
+ATOM H3T3 HN8     0.09
+GROUP
+ATOM C5'  CN8B    0.05
+ATOM H51' HN8     0.09
+ATOM H52' HN8     0.09
+ATOM H5T  HN5     0.43
+ATOM O5'  ON5    -0.66
+BOND C1'  O4'  C1'  C2'  C2'  C3'  C3'  C4'  C4'  O4'  C3'  O3'
+BOND C1'  H12' C2'  H21' C2'  H22' C3'  H31' C4'  H42' 
+BOND O3'  P    P    O1P  P    O2P  P    O3P  
+BOND O3P  C3T  C3T  H3T1 C3T  H3T2 C3T  H3T3
+BOND C4'  C5'  C5'  H51' C5'  H52' 
+BOND C5'  O5'  O5'  H5T
+BOND C1'  N1
+BOND N1   C2   N1   C6   C2   N3   N3   H3   N3   C4   C4   C5
+BOND C5   C5M  C6   H6   C5M  H51  C5M  H52  C5M  H53
+DOUBLE  C2   O2    C4   O4     C5   C6
+IMPR C2   N1   N3   O2        C4   N3   C5   O4        C5   C4   C6   C5M
+IC   C4'     O4'     C1'     C2'    1.4055  108.09   23.45  106.18   1.5457
+IC   O4'     C1'     C2'     C3'    1.4127  106.18    3.96  103.11   1.5346
+IC   C1'     C2'     C3'     C4'    1.5457  103.11  -26.93  100.86   1.5211
+IC   C2'     C3'     C4'     O4'    1.5346  100.86   41.73  103.15   1.4055
+IC   C3'     C4'     O4'     C1'    1.5211  103.15  -41.62  108.09   1.4127
+IC   H12'    C1'     C2'     C3'    1.0818  113.32 -114.11  103.11   1.5346
+IC   H21'    C2'     C3'     C4'    1.0846  110.65   91.68  100.86   1.5211
+IC   H22'    C2'     C3'     C4'    1.0822  110.88 -148.45  100.86   1.5211
+IC   H31'    C3'     C4'     O4'    1.0806  113.53  162.89  103.15   1.4055
+IC   C5'     C4'     O4'     C1'    0.0000  000.00   77.76  108.09   1.4127
+IC   H51'    C5'     C4'     O4'    0.0     0.0     180.0     0.0    0.0
+IC   H52'    C5'     C4'     O4'    0.0     0.0      -60.0    0.0    0.0
+IC   H42'    C4'     O4'     C1'    1.0808  108.72 -162.12  108.09   1.4127
+IC   O3'     C3'     C4'     O4'    1.4028  110.98  -77.39  103.15   1.4055
+IC   P       O3'     C3'     C4'    0.0       0.0   180.00    0.0    0.0
+IC   O1P     P       O3'     C3'    0.0       0.0   -60.0     0.0    0.0
+IC   O2P     P       O3'     C3'    0.0       0.0    60.0     0.0    0.0
+IC   O3P     P       O3'     C3'    0.0       0.0   180.0     0.0    0.0
+IC   C3T     O3P     P       O3'    0.0       0.0   180.0     0.0    0.0 
+IC   H3T1    C3T     O3P     P	    0.0       0.0    60.0     0.0    0.0
+IC   H3T2    C3T     O3P     P	    0.0       0.0   -60.0     0.0    0.0
+IC   H3T3    C3T     O3P     P	    0.0       0.0   180.0     0.0    0.0
+IC      C3'     C4'     C5'     O5'     0.0 0.0 60.0   0.0 0.0
+IC      H5T     O5'     C5'     C4'   0.0000    0.00  180.00    0.00   0.0000
+IC C3'  C2'  C1'  N1     1.5284  101.97  147.89  113.71   1.4896
+IC C3'  C2'  C1'  N1     1.5284  101.97  147.89  113.71   1.4896
+IC O4'  C1'  N1   C2     1.5251  113.71  180.0   125.59   1.3783 !chi
+IC C1'  C2   *N1  C6     1.4896  117.06 -179.96  122.08   1.3704
+IC C2   N1   C6   C5     1.3746  122.08   -0.02  121.23   1.3432
+IC C6   N1   C2   N3     1.3704  122.08    0.06  115.38   1.3813
+IC N1   N3   *C2  O2     1.3746  115.38 -179.95  121.70   1.2191
+IC N1   C2   N3   C4     1.3746  115.38   -0.07  126.46   1.3795
+IC C5   N3   *C4  O4     1.4439  114.07  179.98  120.59   1.2327
+IC C2   C4   *N3  H3     1.3813  126.46  180.00  116.77   1.0900
+IC C4   C6   *C5  C5M    1.4439  120.78 -179.94  121.63   1.5000
+IC N1   C5   *C6  H6     0.0       0.0   180.0     0.0    0.0
+IC C6   C5   C5M  H51    0.0       0.0     0.0     0.0    0.0
+IC C5   H51  *C5M H52    0.0       0.0   115.0     0.0    0.0
+IC H51  H52  *C5M H53    0.0       0.0  -115.0     0.0    0.0
+PATC  FIRS NONE LAST NONE
+
+PRES FEX1         0.000 ! Patch to make C2'-fluoro 
+DELETE ATOM O2'         ! with fluorine cis to O3' (EXo or alpha). 
+DELETE ATOM H2'		! follow with AUTOgenerate ANGLes DIHEdrals command
+                        ! 
+GROUP
+ATOM C2'  CN7D    0.19
+ATOM F2'  FN1    -0.28
+ATOM H2'' HN7     0.09
+BOND C2'  F2'
+BILD C1'  C3'  *C2' F2' 0.0 0.0 -115.0 0.0 0.0
+
+PRES FEN1         0.000 ! Patch to make C2'-fluoro
+                        ! with fluorine trans to O3' (ENdo or beta).
+                        ! follow with AUTOgenerate ANGLes DIHEdrals command
+DELETE ATOM O2'         
+DELETE ATOM H2''        
+GROUP
+ATOM C2'  CN7D    0.19
+ATOM F2'  FN1    -0.28
+ATOM H2'  HN7     0.09
+BOND C2'  F 	C2'   H2'
+BILD C1'  C3'  *C2' H2' 0.0 0.0 -115.0 0.0 0.0
+BILD C3'  C1'  *C2' F2' 0.0 0.0 -115.0 0.0 0.0
+
+end
+
+read para card flex append
+* c27 na parameters
+*
+
+ATOMS
+MASS 466  CN7C 12.011000 ! C2' in arabinose 
+MASS 467  CN7D 12.011000 ! C2' in nucleic acids fluorine derivatives 
+MASS 468  FN1  18.998400 ! Fluorine for sugar derivatives (NF) 
+
+!Bonded parameters for FN1 seem to be missing...
+BONDS
+!@@@@@@@@@ Begining of endocyclic bonds for arabinose @@@@@@@@@
+! Transfered from DNA
+CN7B CN7C   200.0       1.518   ! For arabinose, from CN7B CN8
+CN7  CN7C   222.5       1.516   ! For arabinose, from CN7  CN8
+CN7C HN7    309.0       1.111   ! From CN8  HN7
+!@@@@@@@@@ End of endocyclic bonds for arabinose @@@@@@@@@
+
+!@@@@@@@@@ Begining of exocyclic bonds for arabinose @@@@@@@@@
+!CN7C ON5    250.0       1.400   ! From CN7  ON5
+CN7C ON5    428.0       1.400   ! check adm jr.,
+!FC should be 428.000 based on Meoh
+!@@@@@@@@@ End of exocyclic bonds for arabinose @@@@@@@@@
+
+ANGLES
+CN7C CN7B NN2    110.0     111.0  !C/A, Arabinose (NF)
+CN7C CN7B NN2B   110.0     111.0  !T/U/G, Arabinose (NF)
+
+!@@@@@@@@@ Beginning of endocyclic valence angles for arabinose @@@@@@@
+ON6  CN7B CN7C     90.0    102.0   ! NF, 11/97, C4'O4'C1'
+CN7B CN7C CN7      80.00   100.0   ! NF, 11/97, C1'C2'C3'
+CN7C CN7  CN7      60.00   102.0    8.00   2.561  !NF, 11/97, C2'C3'C4'
+CN7B CN7C HN7      33.4    110.10  22.53   2.179 ! following terms directly
+CN7C CN7B HN7      33.4    110.10  22.53   2.179 ! from alkanes
+HN7  CN7  CN7C     34.5    110.1   22.53   2.179 !
+HN7  CN7C CN7      34.53   110.10  22.53   2.179 !
+HN7  CN7C HN7      35.5    109.00   5.40   1.802 !
+!@@@@@@@@@ End of endocyclic valence angles for arabinose @@@@@@@
+
+!@@@@@@@@@ Beginning of exocyclic valence angles for arabinose @@@@@@@
+CN7C CN7  ON2     115.0    109.7  !NF, 11/97, C2'C3'O3'
+!===== For 3ter patch:
+!From DNA:
+ON5  CN7  CN7C     75.7    110.0  ! from CHARMM22
+!From RNA:
+ON5  CN7C CN7B     80.0    108.4  ! From ON5  CN7B CN7B 
+!O2'-C2'-C3'
+ON5  CN7C CN7      90.0    108.0  ! From ON5  CN7B CN7
+HN7  CN7C ON5      60.0    109.5  !
+HN5  ON5  CN7C     57.5    109.0  ! 032598
+!@@@@@@@@@ End of exocyclic valence angles for arabinose @@@@@@@
+
+DIHEDRALS
+	!Arabinose:
+CN7C CN7B NN2  CN5       0.3     3         0.0 ! 
+CN7C CN7B NN2  CN4       0.0     3       180.0 !
+	!Arabinose:
+CN7C CN7B NN2  CN1       1.0     3         0.0 !
+CN7C CN7B NN2  CN3       0.0     3       180.0 !
+	!Arabinose:
+CN7C CN7B NN2B CN1T      0.2     3       180.0 !
+CN7C CN7B NN2B CN3       0.0     3       180.0 !
+	!Arabinose:
+CN7C CN7B NN2B CN5       0.0     3         0.0 !
+CN7C CN7B NN2B CN4       0.0     3       180.0 !
+	!Arabinose:
+CN7  CN7C CN7B NN2       0.0     3         0.0
+CN7  CN7C CN7B NN2B      0.0     3         0.0
+	!Arabinose:
+HN7  CN7C CN7B NN2       0.0     3         0.0
+HN7  CN7C CN7B NN2B      0.0     3         0.0
+
+CN7C CN7  CN7  CN8B     0.5     4       180.0 !del, arabinose
+ON2  CN7  CN7C CN7B      0.8     6         0.0 ! Arabinose (from DNA)
+ON2  CN7  CN7C CN7B      0.4     5         0.0 ! 
+ON2  CN7  CN7C CN7B      2.0     3       180.0 !
+ON5  CN7  CN7C CN7B      0.8     6         0.0 ! Arabinose (from DNA)
+ON5  CN7  CN7C CN7B      0.4     5         0.0 ! Arabinose (from DNA)
+ON5  CN7  CN7C CN7B      2.0     3       180.0 ! Arabinose (from DNA)
+ON2  CN7  CN7C HN7       0.195   3         0.0 ! Arabinose (from DNA)
+ON5  CN7  CN7C HN7       0.195   3       180.0 ! Arabinose (from DNA)
+CN7C CN7  ON2  P         2.5     1       180.0 !eps, Arabinose (from DNA)
+CN7C CN7  ON5  HN5       0.8     3         0.0 ! Arabinose (from DNA)
+CN7C CN7  ON5  HN5       0.5     1         0.0 ! Arabinose (from DNA)
+CN7C CN7B ON6  CN7       0.6     6       180.0 ! Arabinose (from DNA)
+CN7C CN7  CN7  ON6       0.0     3         0.0 ! Arabinose (from DNA)
+CN7  CN7C CN7B ON6       0.6     6         0.0 ! Arabinose (from DNA)
+CN7B CN7C CN7  CN7       0.4      6        0.0 ! Arabinose (from DNA)
+HN7  CN7  CN7  CN7C      0.0      3        0.0 ! Arabinose (from DNA)
+HN7  CN7  CN7C CN7B      0.195    3       0.0 !Arabinose (from DNA), H-C3'-C2'-C1'
+HN7  CN7B CN7C CN7       0.195    3       0.0 !Arabinose (from DNA), H-C1'-C2'-C3'
+HN7  CN7C CN7B ON6       0.195    3       0.0 !Arabinose (from DNA), H-C2'-C1'-O4'
+HN7  CN7B CN7C HN7       0.195    3       0.0 !Arabinose (from DNA), H-C1'-C2'-H
+HN7  CN7  CN7C HN7       0.195    3       0.0 !Arabinose (from DNA), H-C3'-C2'-H
+HN7  CN7C CN7  CN7       0.195    3       0.0 !Arabinose (from DNA), useful *cccc*
+
+!@@@@@@ Begining of torsions specifically defined for arabinose @@@@@@
+ON6  CN7B CN7C ON5       0.000   3       0.0
+! the following differ significantly from the protein based
+! alcohol parameters (based on ethanol, see above)
+CN7B CN7C ON5  HN5       0.000   3       0.0
+CN7  CN7C ON5  HN5       0.000   3       0.0
+HN7  CN7B CN7C ON5       0.000   3       0.0
+CN7  CN7  CN7C ON5       0.000   3       0.0
+HN7  CN7C ON5  HN5       0.000   3       0.0
+ON5  CN7C CN7  HN7       0.000   3       0.0
+ON5  CN7C CN7  ON2       0.000   3       0.0
+!@@@@@@ End of torsions specifically defined for arabinose @@@@@@
+
+NONBONDED  NBXMOD 5  ATOM CDIEL FSHIFT VATOM VDISTANCE VFSWITCH -
+     CUTNB 14.0  CTOFNB 12.0  CTONNB 10.0  EPS 1.0  E14FAC 1.0  WMIN 1.5
+CN7C     0.0       -0.02      2.275  0.0   -0.01 1.90 !equivalent to protein CT1
+CN7D     0.0       -0.02      2.275  0.0   -0.01 1.90 !equivalent to protein CT1
+FN1      0.0       -0.09      1.70  !aliphatic F preliminary from Yin Thesis
+                                    !see toppar_all22_prot_fluoro_alkane.str for better parameters
+END

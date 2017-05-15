@@ -1,0 +1,38 @@
+* This stream file is for hydrogen bond analysis ONLY.
+* It WILL change your energy function (not for the better)
+* by adding an HBOND energy term.  Use at your own risk.
+* NOTE: The charmm potential energy function is designed NOT
+* to include an explicit hydrogen bond term.  Therefore, use
+* of the following hydrogen bond parameters will lead to incorrect
+* results.
+*
+
+!Parent files that have to be read prior to streaming this file
+!top_all36_na.rtf or the protein or lipid top file
+!par_all36_na.prm or the protein or lipid par file
+
+!Testcase
+!test_hbond.inp
+
+read para card flex append
+* hbond parameters for analysis only
+*
+
+EQUIVALENCE
+NALL 10 N*
+OALL 10 O*
+SALL 10 S*
+
+HBOND AEXP 4 REXP 6 HAEX 2 AAEX 2 NOACCEPTORS HBNOEXCLUSIONS ALL -
+CUTHB 6.0 CTOFHB 5.0 CTONHB 4.0 CUTHA 100.0 CTOFHA 90.0 CTONHA 90.0
+NALL NALL   -5.000     3.0000
+NALL OALL   -4.900     2.9000
+OALL NALL   -4.850     2.8500
+OALL OALL   -4.750     2.7500
+SALL NALL   -3.500     3.0000
+SALL OALL   -3.500     2.9000
+
+END
+
+return
+

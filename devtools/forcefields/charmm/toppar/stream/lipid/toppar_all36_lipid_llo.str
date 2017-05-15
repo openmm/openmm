@@ -1,0 +1,2148 @@
+* Topology and parameters for lipid tail linkers to cysteine and glycine,
+* for example, palmitoylation, maristoylation, fernasylation, geranylation
+*
+
+read rtf card append
+* Topology for LLO related compounds
+*
+36 1
+
+RESI ABAC           0.000  ! 2,4-diacetamido-2,4,6-trideoxyglucose
+                           ! (beta bacillosamine or Bac)
+GROU                       !
+ATOM C1   CC3162    0.340  !                       H63
+ATOM H1   HCA1      0.090  !                       |
+ATOM O1   OC311    -0.650  !                   H61-C6-H62
+ATOM HO1  HCP1      0.420  !                       |
+ATOM C5   CC3163    0.110  !                    H5-C5---O5
+ATOM H5   HCA1      0.090  !                 H4   /       \    H1
+ATOM O5   OC3C61   -0.400  !                   \ / HO3     \  /
+GROU                       !        HT41 ON4    C4 |        C1
+ATOM C2   CC3161    0.070  !        |    ||    / \ O3   H2 /  \
+ATOM H2   HCA1      0.090  !   HT41-CT4--CN4--N4  \|    | /    O1-HO1
+ATOM N    NC2D1    -0.470  !        |         |    C3---C2
+ATOM HN   HCP1      0.310  !        HT43      HN4  |    |
+GROU                       !                       H3   N-HN
+ATOM C    CC2O1     0.510  !                           /
+ATOM O    OC2D1    -0.510  !                        O=C   HT1
+GROU                       !                           \ /
+ATOM CT   CC331    -0.270  !                        HT2-CT
+ATOM HT1  HCA3      0.090  !                             \
+ATOM HT2  HCA3      0.090  !                              HT3
+ATOM HT3  HCA3      0.090  !
+GROU                       !
+ATOM C3   CC3161    0.140  !
+ATOM H3   HCA1      0.090  !
+ATOM O3   OC311    -0.650  !
+ATOM HO3  HCP1      0.420  !
+GROU                       !
+ATOM C4   CC3161    0.070  !
+ATOM H4   HCA1      0.090  !
+ATOM N4   NC2D1    -0.470  !
+ATOM HN4  HCP1      0.310  !
+GROU                       !
+ATOM CN4  CC2O1     0.510  !
+ATOM ON4  OC2D1    -0.510  !
+GROU                       !
+ATOM CT4  CC331    -0.270  !
+ATOM HT41 HCA3      0.090  !
+ATOM HT42 HCA3      0.090  !
+ATOM HT43 HCA3      0.090  !
+GROU
+ATOM C6   CC331    -0.270
+ATOM H61  HCA3      0.090
+ATOM H62  HCA3      0.090
+ATOM H63  HCA3      0.090
+!
+BOND C1   O1        C1   H1        O1   HO1       C1   O5        C1   C2
+BOND C2   H2        C2   N         N    HN        C2   C3        
+BOND C3   H3        C3   O3        O3   HO3       C3   C4        
+BOND C4   H4        C4   N4        N4   HN4       C4   C5        
+BOND C5   H5        C5   C6        C5   O5        
+BOND C6   H61       C6   H62       C6   H63
+BOND N    C         C    O         C    CT        
+BOND CT   HT1       CT   HT2       CT   HT3
+BOND N4   CN4       CN4  ON4       CN4  CT4
+BOND CT4  HT41      CT4  HT42      CT4  HT43
+IMPR C   CT   N   O
+IMPR N   C    C2  HN
+IMPR CN4 CT4  N4  ON4
+IMPR N4  CN4  C4  HN4
+!    I    J    K    L      R(IK)   T(IKJ)    PHI   T(JKL)   R(KL)
+IC      O1   C2  *C1   H1  1.0000  120.00 -120.00  120.00   1.0000
+IC      O1   O5  *C1   C2  1.3949  110.13  120.34  109.32   1.5156
+IC       N   C3  *C2   H2  1.4607  113.70 -119.19  107.08   1.1227
+IC       N   C1  *C2   C3  1.4607  112.62 -127.32  109.20   1.5149
+IC      O3   C4  *C3   H3  1.4246  110.45  117.60  108.58   1.1171
+IC      O3   C2  *C3   C4  1.4246  111.13  123.24  110.86   1.5168
+IC      N4   C5  *C4   H4  1.4204  110.47 -117.94  108.07   1.1172
+IC      N4   C3  *C4   C5  1.4204  110.88 -123.03  110.79   1.5206
+IC      C6   O5  *C5   H5  1.5134  108.06  117.57  109.86   1.1171
+IC      C6   C4  *C5   O5  1.5134  113.35  119.99  108.45   1.4386
+IC      H63 H62  *C6  H61  1.4280  109.26 -117.58  107.87   1.1141
+IC      H63  C5  *C6  H62  1.4280  111.18 -121.26  110.14   1.1132
+IC      O5   C1   C2   C3  1.4220  109.32   58.90  109.20   1.5149
+IC      C1   C2   C3   C4  1.5156  109.20  -52.68  110.86   1.5168
+IC      C2   C3   C4   C5  1.5149  110.86   52.13  110.79   1.5206
+IC      C3   C4   C5   O5  1.5168  110.79  -56.10  108.45   1.4386
+IC      C4   C5   O5   C1  1.5206  108.45   64.09  111.47   1.4220
+IC      C5   O5   C1   C2  1.4386  111.47  -66.18  109.32   1.5156
+IC      C4   C5   C6   H63 1.5206  113.35 -179.21  111.18   1.4280
+IC      O5   C1   O1  HO1  1.4220  110.13   53.79  107.03   0.9601
+IC      C1   C2    N   HN  1.5156  112.62  -21.73  117.18   0.9940
+IC      C2   C3   O3  HO3  1.5149  111.13    0.20  109.43   0.9762
+IC      C3   C4   N4  HN4  1.5156  112.62  -21.73  117.18   0.9940
+IC       C    N   C2   C3  1.3365  123.04  -84.98  113.70   1.5149
+IC       C   C2   *N   HN  1.3365  123.04 -171.85  117.18   0.9940
+IC      CT    C    N   C2  1.4798  117.02 -173.18  123.04   1.4607
+IC       N   CT   *C    O  1.3365  117.02  178.97  121.63   1.2235
+IC       O    C   CT  HT1  1.2235  121.63  116.39  110.28   1.1105
+IC       O    C   CT  HT2  1.2235  121.63   -3.06  109.29   1.1121
+IC       O    C   CT  HT3  1.2235  121.63 -122.59  110.33   1.1105
+IC     CN4   N4   C4   C5  1.3365  123.04  -84.98  113.70   1.5149
+IC     CN4   C2  *N4  HN4  1.3365  123.04 -171.85  117.18   0.9940
+IC     CT4   CN4  N4   C4  1.4798  117.02 -173.18  123.04   1.4607
+IC      N4   CT4 *CN4 ON4  1.3365  117.02  178.97  121.63   1.2235
+IC     ON4   CN4  CT4 HT41 1.2235  121.63  116.39  110.28   1.1105
+IC     ON4   CN4  CT4 HT42 1.2235  121.63   -3.06  109.29   1.1121
+IC     ON4   CN4  CT4 HT43 1.2235  121.63 -122.59  110.33   1.1105
+PATC FIRS NONE LAST NONE
+
+RESI BBAC           0.000  ! 2,4-diacetamido-2,4,6-trideoxyglucose
+                           ! (beta bacillosamine or Bac)
+GROU                       !
+ATOM C1   CC3162    0.340  !                       H63
+ATOM H1   HCA1      0.090  !                       |
+ATOM O1   OC311    -0.650  !                   H61-C6-H62
+ATOM HO1  HCP1      0.420  !                       |
+ATOM C5   CC3163    0.110  !                    H5-C5---O5
+ATOM H5   HCA1      0.090  !                 H4   /       \    O1-HO1
+ATOM O5   OC3C61   -0.400  !                   \ / HO3     \  /
+GROU                       !        HT41 ON4    C4 |        C1
+ATOM C2   CC3161    0.070  !        |    ||    / \ O3   H2 /  \
+ATOM H2   HCA1      0.090  !   HT41-CT4--CN4--N4  \|    | /    H1
+ATOM N    NC2D1    -0.470  !        |         |    C3---C2
+ATOM HN   HCP1      0.310  !        HT43      HN4  |    |
+GROU                       !                       H3   N-HN
+ATOM C    CC2O1     0.510  !                           /
+ATOM O    OC2D1    -0.510  !                        O=C   HT1
+GROU                       !                           \ /
+ATOM CT   CC331    -0.270  !                        HT2-CT
+ATOM HT1  HCA3      0.090  !                             \
+ATOM HT2  HCA3      0.090  !                              HT3
+ATOM HT3  HCA3      0.090  !
+GROU                       !
+ATOM C3   CC3161    0.140  !
+ATOM H3   HCA1      0.090  !
+ATOM O3   OC311    -0.650  !
+ATOM HO3  HCP1      0.420  !
+GROU                       !
+ATOM C4   CC3161    0.070  !
+ATOM H4   HCA1      0.090  !
+ATOM N4   NC2D1    -0.470  !
+ATOM HN4  HCP1      0.310  !
+GROU                       !
+ATOM CN4  CC2O1     0.510  !
+ATOM ON4  OC2D1    -0.510  !
+GROU                       !
+ATOM CT4  CC331    -0.270  !
+ATOM HT41 HCA3      0.090  !
+ATOM HT42 HCA3      0.090  !
+ATOM HT43 HCA3      0.090  !
+GROU
+ATOM C6   CC331    -0.270
+ATOM H61  HCA3      0.090
+ATOM H62  HCA3      0.090
+ATOM H63  HCA3      0.090
+!
+BOND C1   O1        C1   H1        O1   HO1       C1   O5        C1   C2
+BOND C2   H2        C2   N         N    HN        C2   C3        
+BOND C3   H3        C3   O3        O3   HO3       C3   C4        
+BOND C4   H4        C4   N4        N4   HN4       C4   C5        
+BOND C5   H5        C5   C6        C5   O5        
+BOND C6   H61       C6   H62       C6   H63
+BOND N    C         C    O         C    CT        
+BOND CT   HT1       CT   HT2       CT   HT3
+BOND N4   CN4       CN4  ON4       CN4  CT4
+BOND CT4  HT41      CT4  HT42      CT4  HT43
+IMPR C   CT   N   O
+IMPR N   C    C2  HN
+IMPR CN4 CT4  N4  ON4
+IMPR N4  CN4  C4  HN4
+!    I    J    K    L      R(IK)   T(IKJ)    PHI   T(JKL)   R(KL)
+IC      O1   C2  *C1   H1  1.4115  105.82 -120.26  110.81   1.0905
+IC      O1   O5  *C1   C2  1.4115  113.00 -118.92  111.32   1.5218
+IC       N   C3  *C2   H2  1.4607  113.70 -119.19  107.08   1.1227
+IC       N   C1  *C2   C3  1.4607  112.62 -127.32  109.20   1.5149
+IC      O3   C4  *C3   H3  1.4246  110.45  117.60  108.58   1.1171
+IC      O3   C2  *C3   C4  1.4246  111.13  123.24  110.86   1.5168
+IC      N4   C5  *C4   H4  1.4204  110.47 -117.94  108.07   1.1172
+IC      N4   C3  *C4   C5  1.4204  110.88 -123.03  110.79   1.5206
+IC      C6   O5  *C5   H5  1.5134  108.06  117.57  109.86   1.1171
+IC      C6   C4  *C5   O5  1.5134  113.35  119.99  108.45   1.4386
+IC      H63 H62  *C6  H61  1.4280  109.26 -117.58  107.87   1.1141
+IC      H63  C5  *C6  H62  1.4280  111.18 -121.26  110.14   1.1132
+IC      O5   C1   C2   C3  1.4220  109.32   58.90  109.20   1.5149
+IC      C1   C2   C3   C4  1.5156  109.20  -52.68  110.86   1.5168
+IC      C2   C3   C4   C5  1.5149  110.86   52.13  110.79   1.5206
+IC      C3   C4   C5   O5  1.5168  110.79  -56.10  108.45   1.4386
+IC      C4   C5   O5   C1  1.5206  108.45   64.09  111.47   1.4220
+IC      C5   O5   C1   C2  1.4386  111.47  -66.18  109.32   1.5156
+IC      C4   C5   C6   H63 1.5206  113.35 -179.21  111.18   1.4280
+IC      O5   C1   O1  HO1  1.4220  110.13   53.79  107.03   0.9601
+IC      C1   C2    N   HN  1.5156  112.62  -21.73  117.18   0.9940
+IC      C2   C3   O3  HO3  1.5149  111.13    0.20  109.43   0.9762
+IC      C3   C4   N4  HN4  1.5156  112.62  -21.73  117.18   0.9940
+IC       C    N   C2   C3  1.3365  123.04  -84.98  113.70   1.5149
+IC       C   C2   *N   HN  1.3365  123.04 -171.85  117.18   0.9940
+IC      CT    C    N   C2  1.4798  117.02 -173.18  123.04   1.4607
+IC       N   CT   *C    O  1.3365  117.02  178.97  121.63   1.2235
+IC       O    C   CT  HT1  1.2235  121.63  116.39  110.28   1.1105
+IC       O    C   CT  HT2  1.2235  121.63   -3.06  109.29   1.1121
+IC       O    C   CT  HT3  1.2235  121.63 -122.59  110.33   1.1105
+IC     CN4   N4   C4   C5  1.3365  123.04  -84.98  113.70   1.5149
+IC     CN4   C2  *N4  HN4  1.3365  123.04 -171.85  117.18   0.9940
+IC     CT4   CN4  N4   C4  1.4798  117.02 -173.18  123.04   1.4607
+IC      N4   CT4 *CN4 ON4  1.3365  117.02  178.97  121.63   1.2235
+IC     ON4   CN4  CT4 HT41 1.2235  121.63  116.39  110.28   1.1105
+IC     ON4   CN4  CT4 HT42 1.2235  121.63   -3.06  109.29   1.1121
+IC     ON4   CN4  CT4 HT43 1.2235  121.63 -122.59  110.33   1.1105
+PATC FIRS NONE LAST NONE
+
+RESI DL16PP        -2.00 !  [name]
+GROUP
+ATOM P2    PG1      1.34 !        HO22
+ATOM O22   OG311   -0.71 !        |
+ATOM HO22  HGP1     0.44 !        O22            !! based on PPI2
+ATOM O23   OG2P1   -0.86 !        |          
+ATOM O24   OG2P1   -0.86 !   O23==P2==O24 (-) 
+                         !        |          
+ATOM P1    PG1      1.46 !        O12         
+ATOM O12   OG304   -0.63 !        |          
+ATOM O13   OG2P1   -0.83 !   O13==P1==O14 (-) 
+ATOM O14   OG2P1   -0.83 !        |          
+ATOM O11   OG303   -0.62 !        O11         
+                         !        |
+ATOM C1    CG321   -0.08 !   H11--C1--H12
+ATOM H11   HGA2     0.09 !        |
+ATOM H12   HGA2     0.09 !        |
+GROUP               0.00 !        |
+ATOM C2    CG321   -0.18 !   H21--C2--H12
+ATOM H21   HGA2     0.09 !        !
+ATOM H22   HGA2     0.09 !        |    H41
+GROUP               0.00 !        !    |
+ATOM C3    CG311   -0.09 !    H3--C3---C4--H42
+ATOM H3    HGA1     0.09 !        |    |
+GROUP               0.00 !        |    H43
+ATOM C4    CG331   -0.27 !        |
+ATOM H41   HGA3     0.09 !        |
+ATOM H42   HGA3     0.09 !        |
+ATOM H43   HGA3     0.09 !        |
+GROUP               0.00 !        |                
+ATOM C5    CG321   -0.18 !   H51--C5--H52
+ATOM H51   HGA2     0.09 !        |
+ATOM H52   HGA2     0.09 !        |
+GROUP               0.00 !        |
+ATOM C1A   CG321   -0.18 !  H1A1--C1A--H1A2         
+ATOM H1A1  HGA2     0.09 !        |
+ATOM H1A2  HGA2     0.09 !        |
+GROUP               0.00 !        |
+ATOM C1B   CG2D1   -0.15 !        C1B--H1B         (cis)
+ATOM H1B   HGA4     0.15 !        ||
+GROUP               0.00 !        ||   H1D1        
+ATOM C1C   CG2D1    0.00 !        ||   |
+GROUP               0.00 !        C1C--C1D--H1D2    
+ATOM C1D   CG331   -0.27 !        |    |
+ATOM H1D1  HGA3     0.09 !        |    H1D3        
+ATOM H1D2  HGA3     0.09 !        !
+ATOM H1D3  HGA3     0.09 !        !
+GROUP               0.00 !        !
+ATOM C1E   CG321   -0.18 !  H1E1--C1E--H1E2         
+ATOM H1E1  HGA2     0.09 !        ! 
+ATOM H1E2  HGA2     0.09 !        !
+GROUP               0.00 !        |
+ATOM C2A   CG321   -0.18 !  H2A1--C2A--H2A2         
+ATOM H2A1  HGA2     0.09 !        |
+ATOM H2A2  HGA2     0.09 !        |
+GROUP               0.00 !        |
+ATOM C2B   CG2D1   -0.15 !        C2B--H2B         (cis)
+ATOM H2B   HGA4     0.15 !        ||
+GROUP               0.00 !        ||   H2D1        
+ATOM C2C   CG2D1    0.00 !        ||   |
+GROUP               0.00 !        C2C--C2D--H2D2    
+ATOM C2D   CG331   -0.27 !        |    |
+ATOM H2D1  HGA3     0.09 !        |    H2D3        
+ATOM H2D2  HGA3     0.09 !        !
+ATOM H2D3  HGA3     0.09 !        !
+GROUP               0.00 !        !
+ATOM C2E   CG321   -0.18 !  H2E1--C2E--H2E2         
+ATOM H2E1  HGA2     0.09 !        ! 
+ATOM H2E2  HGA2     0.09 !        !
+GROUP               0.00 !        |
+ATOM C3A   CG321   -0.18 !  H3A1--C3A--H3A2         
+ATOM H3A1  HGA2     0.09 !        |
+ATOM H3A2  HGA2     0.09 !        |
+GROUP               0.00 !        |
+ATOM C3B   CG2D1   -0.15 !        C3B--H3B         (cis)
+ATOM H3B   HGA4     0.15 !        ||
+GROUP               0.00 !        ||   H3D1        
+ATOM C3C   CG2D1    0.00 !        ||   |
+GROUP               0.00 !        C3C--C3D--H3D2    
+ATOM C3D   CG331   -0.27 !        |    |
+ATOM H3D1  HGA3     0.09 !        |    H3D3        
+ATOM H3D2  HGA3     0.09 !        !
+ATOM H3D3  HGA3     0.09 !        !
+GROUP               0.00 !        !
+ATOM C3E   CG321   -0.18 !  H3E1--C3E--H3E2         
+ATOM H3E1  HGA2     0.09 !        ! 
+ATOM H3E2  HGA2     0.09 !        !
+GROUP               0.00 !        |
+ATOM C4A   CG321   -0.18 !  H4A1--C4A--H4A2         
+ATOM H4A1  HGA2     0.09 !        |
+ATOM H4A2  HGA2     0.09 !        |
+GROUP               0.00 !        |
+ATOM C4B   CG2D1   -0.15 !        C4B--H4B         (cis)
+ATOM H4B   HGA4     0.15 !        ||
+GROUP               0.00 !        ||   H4D1        
+ATOM C4C   CG2D1    0.00 !        ||   |
+GROUP               0.00 !        C4C--C4D--H4D2    
+ATOM C4D   CG331   -0.27 !        |    |
+ATOM H4D1  HGA3     0.09 !        |    H4D3        
+ATOM H4D2  HGA3     0.09 !        !
+ATOM H4D3  HGA3     0.09 !        !
+GROUP               0.00 !        !
+ATOM C4E   CG321   -0.18 !  H4E1--C4E--H4E2         
+ATOM H4E1  HGA2     0.09 !        ! 
+ATOM H4E2  HGA2     0.09 !        !
+GROUP               0.00 !        |
+ATOM C5A   CG321   -0.18 !  H5A1--C5A--H5A2         
+ATOM H5A1  HGA2     0.09 !        |
+ATOM H5A2  HGA2     0.09 !        |
+GROUP               0.00 !        |
+ATOM C5B   CG2D1   -0.15 !        C5B--H5B         (cis)
+ATOM H5B   HGA4     0.15 !        ||
+GROUP               0.00 !        ||   H5D1        
+ATOM C5C   CG2D1    0.00 !        ||   |
+GROUP               0.00 !        C5C--C5D--H5D2    
+ATOM C5D   CG331   -0.27 !        |    |
+ATOM H5D1  HGA3     0.09 !        |    H5D3        
+ATOM H5D2  HGA3     0.09 !        !
+ATOM H5D3  HGA3     0.09 !        !
+GROUP               0.00 !        !
+ATOM C5E   CG321   -0.18 !  H5E1--C5E--H5E2         
+ATOM H5E1  HGA2     0.09 !        ! 
+ATOM H5E2  HGA2     0.09 !        !
+GROUP               0.00 !        |
+ATOM C6A   CG321   -0.18 !  H6A1--C6A--H6A2         
+ATOM H6A1  HGA2     0.09 !        |
+ATOM H6A2  HGA2     0.09 !        |
+GROUP               0.00 !        |
+ATOM C6B   CG2D1   -0.15 !        C6B--H6B         (cis)
+ATOM H6B   HGA4     0.15 !        ||
+GROUP               0.00 !        ||   H6D1        
+ATOM C6C   CG2D1    0.00 !        ||   |
+GROUP               0.00 !        C6C--C6D--H6D2    
+ATOM C6D   CG331   -0.27 !        |    |
+ATOM H6D1  HGA3     0.09 !        |    H6D3        
+ATOM H6D2  HGA3     0.09 !        !
+ATOM H6D3  HGA3     0.09 !        !
+GROUP               0.00 !        !
+ATOM C6E   CG321   -0.18 !  H6E1-C6E--H6E2         
+ATOM H6E1  HGA2     0.09 !        ! 
+ATOM H6E2  HGA2     0.09 !        !
+GROUP               0.00 !        |
+ATOM C7A   CG321   -0.18 !  H7A1--C7A--H7A2         
+ATOM H7A1  HGA2     0.09 !        |
+ATOM H7A2  HGA2     0.09 !        |
+GROUP               0.00 !        |
+ATOM C7B   CG2D1   -0.15 !        C7B--H7B         (cis)
+ATOM H7B   HGA4     0.15 !        ||
+GROUP               0.00 !        ||   H7D1        
+ATOM C7C   CG2D1    0.00 !        ||   |
+GROUP               0.00 !        C7C--C7D--H7D2    
+ATOM C7D   CG331   -0.27 !        |    |
+ATOM H7D1  HGA3     0.09 !        |    H7D3        
+ATOM H7D2  HGA3     0.09 !        !
+ATOM H7D3  HGA3     0.09 !        !
+GROUP               0.00 !        !
+ATOM C7E   CG321   -0.18 !  H7E1-C7E--H7E2         
+ATOM H7E1  HGA2     0.09 !        ! 
+ATOM H7E2  HGA2     0.09 !        !
+GROUP               0.00 !        |
+ATOM C8A   CG321   -0.18 !  H8A1--C8A--H8A2         
+ATOM H8A1  HGA2     0.09 !        |
+ATOM H8A2  HGA2     0.09 !        |
+GROUP               0.00 !        |
+ATOM C8B   CG2D1   -0.15 !        C8B--H8B         (cis)
+ATOM H8B   HGA4     0.15 !        ||
+GROUP               0.00 !        ||   H8D1        
+ATOM C8C   CG2D1    0.00 !        ||   |
+GROUP               0.00 !        C8C--C8D--H8D2    
+ATOM C8D   CG331   -0.27 !        |    |
+ATOM H8D1  HGA3     0.09 !        |    H8D3        
+ATOM H8D2  HGA3     0.09 !        !
+ATOM H8D3  HGA3     0.09 !        !
+GROUP               0.00 !        !
+ATOM C8E   CG321   -0.18 !  H8E1-C8E--H8E2         
+ATOM H8E1  HGA2     0.09 !        ! 
+ATOM H8E2  HGA2     0.09 !        !
+GROUP               0.00 !        |
+ATOM C9A   CG321   -0.18 !  H9A1--C9A--H9A2         
+ATOM H9A1  HGA2     0.09 !        |
+ATOM H9A2  HGA2     0.09 !        |
+GROUP               0.00 !        |
+ATOM C9B   CG2D1   -0.15 !        C9B--H9B         (cis)
+ATOM H9B   HGA4     0.15 !        ||
+GROUP               0.00 !        ||   H9D1        
+ATOM C9C   CG2D1    0.00 !        ||   |
+GROUP               0.00 !        C9C--C9D--H9D2    
+ATOM C9D   CG331   -0.27 !        |    |
+ATOM H9D1  HGA3     0.09 !        |    H9D3        
+ATOM H9D2  HGA3     0.09 !        !
+ATOM H9D3  HGA3     0.09 !        !
+GROUP               0.00 !        !
+ATOM C9E   CG321   -0.18 !  H9E1-C9E--H9E2         
+ATOM H9E1  HGA2     0.09 !        ! 
+ATOM H9E2  HGA2     0.09 !        !
+GROUP               0.00 !        |
+ATOM C10A  CG321   -0.18 ! H10A1--C10A--H10A2         
+ATOM H10A1 HGA2     0.09 !        |
+ATOM H10A2 HGA2     0.09 !        |
+GROUP               0.00 !        |
+ATOM C10B  CG2D1   -0.15 !        C10B--H110B         (cis)
+ATOM H10B  HGA4     0.15 !        ||
+GROUP               0.00 !        ||   H10D1        
+ATOM C10C  CG2D1    0.00 !        ||   |
+GROUP               0.00 !        C10C-C10D--H10D2    
+ATOM C10D  CG331   -0.27 !        |    |
+ATOM H10D1 HGA3     0.09 !        |    H10D3        
+ATOM H10D2 HGA3     0.09 !        !
+ATOM H10D3 HGA3     0.09 !        !
+GROUP               0.00 !        !
+ATOM C10E  CG321   -0.18 ! H10E1-C10E--H10E2         
+ATOM H10E1 HGA2     0.09 !        ! 
+ATOM H10E2 HGA2     0.09 !        !
+GROUP               0.00 !        |
+ATOM C11A  CG321   -0.18 ! H11A1--C11A--H11A2         
+ATOM H11A1 HGA2     0.09 !        |
+ATOM H11A2 HGA2     0.09 !        |
+GROUP               0.00 !        |
+ATOM C11B  CG2D1   -0.15 !        C11B--H11B         (cis)
+ATOM H11B  HGA4     0.15 !        ||
+GROUP               0.00 !        ||   H11D1        
+ATOM C11C  CG2D1    0.00 !        ||   |
+GROUP               0.00 !        C11C-C11D--H11D2    
+ATOM C11D  CG331   -0.27 !        |    |
+ATOM H11D1 HGA3     0.09 !        |    H11D3        
+ATOM H11D2 HGA3     0.09 !        !
+ATOM H11D3 HGA3     0.09 !        !
+GROUP               0.00 !        !
+ATOM C11E  CG321   -0.18 ! H11E1-C11E--H11E2         
+ATOM H11E1 HGA2     0.09 !        ! 
+ATOM H11E2 HGA2     0.09 !        !
+GROUP               0.00 !        |
+ATOM C12A  CG321   -0.18 ! H12A1--C12A--H12A2         
+ATOM H12A1 HGA2     0.09 !        |
+ATOM H12A2 HGA2     0.09 !        |
+GROUP               0.00 !        |
+ATOM C12B  CG2D1   -0.15 !        C12B--H12B         (cis)
+ATOM H12B  HGA4     0.15 !        ||
+GROUP               0.00 !        ||   H12D1        
+ATOM C12C  CG2D1    0.00 !        ||   |
+GROUP               0.00 !        C12C-C12D--H12D2    
+ATOM C12D  CG331   -0.27 !        |    |
+ATOM H12D1 HGA3     0.09 !        |    H12D3        
+ATOM H12D2 HGA3     0.09 !        !
+ATOM H12D3 HGA3     0.09 !        !
+GROUP               0.00 !        !
+ATOM C12E  CG321   -0.18 ! H1E12-C12E--H12E2         
+ATOM H12E1 HGA2     0.09 !        ! 
+ATOM H12E2 HGA2     0.09 !        !
+GROUP               0.00 !        |
+ATOM C13A  CG321   -0.18 ! H13A1--C13A--H13A2         
+ATOM H13A1 HGA2     0.09 !        |
+ATOM H13A2 HGA2     0.09 !        |
+GROUP               0.00 !        |
+ATOM C13B  CG2D1   -0.15 !        C13B--H13B         (trans)
+ATOM H13B  HGA4     0.15 !        ||
+GROUP               0.00 !        ||   H13D1        
+ATOM C13C  CG2D1    0.00 !        ||   |
+GROUP               0.00 !        C13C-C13D--H13D2    
+ATOM C13D  CG331   -0.27 !        |    |
+ATOM H13D1 HGA3     0.09 !        |    H13D3        
+ATOM H13D2 HGA3     0.09 !        !
+ATOM H13D3 HGA3     0.09 !        !
+GROUP               0.00 !        !
+ATOM C13E  CG321   -0.18 ! H13E1-C13E--H13E2         
+ATOM H13E1 HGA2     0.09 !        ! 
+ATOM H13E2 HGA2     0.09 !        !
+GROUP               0.00 !        |
+ATOM C14A  CG321   -0.18 ! H14A1--C14A--H14A2         
+ATOM H14A1 HGA2     0.09 !        |
+ATOM H14A2 HGA2     0.09 !        |
+GROUP               0.00 !        |
+ATOM C14B  CG2D1   -0.15 !        C14B--H14B         (trans)
+ATOM H14B  HGA4     0.15 !        ||
+GROUP               0.00 !        ||   H14D1        
+ATOM C14C  CG2D1    0.00 !        ||   |
+GROUP               0.00 !        C14C-C14D--H14D2    
+ATOM C14D  CG331   -0.27 !        |    |
+ATOM H14D1 HGA3     0.09 !        |    H14D3        
+ATOM H14D2 HGA3     0.09 !        !
+ATOM H14D3 HGA3     0.09 !        !
+GROUP               0.00 !        !
+ATOM C14E  CG321   -0.18 ! H14E1-C14E--H14E2         
+ATOM H14E1 HGA2     0.09 !        ! 
+ATOM H14E2 HGA2     0.09 !        !
+GROUP               0.00 !        |
+ATOM C15A  CG321   -0.18 ! H15A1--C15A--H15A2         
+ATOM H15A1 HGA2     0.09 !        |
+ATOM H15A2 HGA2     0.09 !        |
+GROUP               0.00 !        |
+ATOM C15B  CG2D1   -0.15 !        C15B--H15B
+ATOM H15B  HGA4     0.15 !        ||
+GROUP               0.00 !        ||   H15D1        
+ATOM C15C  CG2D1    0.00 !        ||   |
+GROUP               0.00 !        C15C-C15D--H15D2    
+ATOM C15D  CG331   -0.27 !        |    |
+ATOM H15D1 HGA3     0.09 !        |    H15D3        
+ATOM H15D2 HGA3     0.09 !        !
+ATOM H15D3 HGA3     0.09 !        !
+GROUP               0.00 !        !
+ATOM C15E  CG331   -0.27 ! H15E1-C15E--H15E2         
+ATOM H15E1 HGA3     0.09 !        ! 
+ATOM H15E2 HGA3     0.09 !       H15E3
+ATOM H15E3 HGA3     0.09 !
+
+BOND O22 HO22 P2 O22  P2 O23  P2 O24  P2  O12 ! Phosphate group 2
+BOND P1  O12  P1 O13  P1 O14  P1 O11  O11 C1  ! Phosphate group 1
+BOND C1 C2   C2 C3   C3 C4   C3 C5      ! Alpha isoprene backbone carbons
+BOND C1 H11  C1 H12                     ! C1 hydrogens
+BOND C2 H21  C2 H22                     ! C2 hydrogens
+BOND C3 H3                              ! C3 hydrogen
+BOND C4 H41  C4 H42  C4 H43             ! C4 hydrogens
+BOND C5 H51  C5 H52                     ! C5 hydrogens
+BOND C5 C1A                             ! isoprene linking bond
+BOND C1A C1B   C1C C1D   C1C C1E        ! cis isoprene backbone carbons
+DOUBLE C1B C1C                          ! cis double bond
+BOND C1A H1A1  C1A H1A2                 ! C1A hydrogens
+BOND C1B H1B                            ! C1B hydrogen
+BOND C1D H1D1  C1D H1D2  C1D H1D3       ! C1D hydrogens
+BOND C1E H1E1  C1E H1E2                 ! C1E hydrogens
+BOND C1E C2A                            ! isoprene linking bond
+BOND C2A C2B   C2C C2D   C2C C2E        ! cis isoprene backbone carbons
+DOUBLE C2B C2C                          ! cis double bond
+BOND C2A H2A1  C2A H2A2                 ! C2A hydrogens
+BOND C2B H2B                            ! C2B hydrogen
+BOND C2D H2D1  C2D H2D2  C2D H2D3       ! C2D hydrogens
+BOND C2E H2E1  C2E H2E2                 ! C2E hydrogens
+BOND C2E C3A                            ! isoprene linking bond
+BOND C3A C3B   C3C C3D   C3C C3E        ! cis isoprene backbone carbons
+DOUBLE C3B C3C                          ! cis double bond
+BOND C3A H3A1  C3A H3A2                 ! C3A hydrogens
+BOND C3B H3B                            ! C3B hydrogen
+BOND C3D H3D1  C3D H3D2  C3D H3D3       ! C3D hydrogens
+BOND C3E H3E1  C3E H3E2                 ! C3E hydrogens
+BOND C3E C4A                            ! isoprene linking bond
+BOND C4A C4B   C4C C4D   C4C C4E        ! cis isoprene backbone carbons
+DOUBLE C4B C4C                          ! cis double bond
+BOND C4A H4A1  C4A H4A2                 ! C4A hydrogens
+BOND C4B H4B                            ! C4B hydrogen
+BOND C4D H4D1  C4D H4D2  C4D H4D3       ! C4D hydrogens
+BOND C4E H4E1  C4E H4E2                 ! C4E hydrogens
+BOND C4E C5A                            ! isoprene linking bond
+BOND C5A C5B   C5C C5D   C5C C5E        ! cis isoprene backbone carbons
+DOUBLE C5B C5C                          ! cis double bond
+BOND C5A H5A1  C5A H5A2                 ! C5A hydrogens
+BOND C5B H5B                            ! C5B hydrogen
+BOND C5D H5D1  C5D H5D2  C5D H5D3       ! C5D hydrogens
+BOND C5E H5E1  C5E H5E2                 ! C5E hydrogens
+BOND C5E C6A                            ! isoprene linking bond
+BOND C6A C6B   C6C C6D   C6C C6E        ! cis isoprene backbone carbons
+DOUBLE C6B C6C                          ! cis double bond
+BOND C6A H6A1  C6A H6A2                 ! C6A hydrogens
+BOND C6B H6B                            ! C6B hydrogen
+BOND C6D H6D1  C6D H6D2  C6D H6D3       ! C6D hydrogens
+BOND C6E H6E1  C6E H6E2                 ! C6E hydrogens
+BOND C6E C7A                            ! isoprene linking bond
+BOND C7A C7B   C7C C7D   C7C C7E        ! cis isoprene backbone carbons
+DOUBLE C7B C7C                          ! cis double bond
+BOND C7A H7A1  C7A H7A2                 ! C7A hydrogens
+BOND C7B H7B                            ! C7B hydrogen
+BOND C7D H7D1  C7D H7D2  C7D H7D3       ! C7D hydrogens
+BOND C7E H7E1  C7E H7E2                 ! C7E hydrogens
+BOND C7E C8A                            ! isoprene linking bond
+BOND C8A C8B   C8C C8D   C8C C8E        ! cis isoprene backbone carbons
+DOUBLE C8B C8C                          ! cis double bond
+BOND C8A H8A1  C8A H8A2                 ! C8A hydrogens
+BOND C8B H8B                            ! C8B hydrogen
+BOND C8D H8D1  C8D H8D2  C8D H8D3       ! C8D hydrogens
+BOND C8E H8E1  C8E H8E2                 ! C8E hydrogens
+BOND C8E C9A                            ! isoprene linking bond
+BOND C9A C9B   C9C C9D   C9C C9E        ! cis isoprene backbone carbons
+DOUBLE C9B C9C                          ! cis double bond
+BOND C9A H9A1  C9A H9A2                 ! C9A hydrogens
+BOND C9B H9B                            ! C9B hydrogen
+BOND C9D H9D1  C9D H9D2  C9D H9D3       ! C9D hydrogens
+BOND C9E H9E1  C9E H9E2                 ! C9E hydrogens
+BOND C9E C10A                            ! isoprene linking bond
+BOND C10A C10B   C10C C10D   C10C C10E  ! cis isoprene backbone carbons
+DOUBLE C10B C10C                        ! cis double bond
+BOND C10A H10A1  C10A H10A2             ! C10A hydrogens
+BOND C10B H10B                          ! C10B hydrogen
+BOND C10D H10D1  C10D H10D2  C10D H10D3 ! C10D hydrogens
+BOND C10E H10E1  C10E H10E2             ! C10E hydrogens
+BOND C10E C11A                          ! isoprene linking bond
+BOND C11A C11B   C11C C11D   C11C C11E  ! cis isoprene backbone carbons
+DOUBLE C11B C11C                        ! cis double bond
+BOND C11A H11A1  C11A H11A2             ! C11A hydrogens
+BOND C11B H11B                          ! C11B hydrogen
+BOND C11D H11D1  C11D H11D2  C11D H11D3 ! C11D hydrogens
+BOND C11E H11E1  C11E H11E2             ! C11E hydrogens
+BOND C11E C12A                          ! isoprene linking bond
+BOND C12A C12B   C12C C12D   C12C C12E  ! cis isoprene backbone carbons
+DOUBLE C12B C12C                        ! cis double bond
+BOND C12A H12A1  C12A H12A2             ! C12A hydrogens
+BOND C12B H12B                          ! C12B hydrogen
+BOND C12D H12D1  C12D H12D2  C12D H12D3 ! C12D hydrogens
+BOND C12E H12E1  C12E H12E2             ! C12E hydrogens
+BOND C12E C13A                          ! isoprene linking bond
+BOND C13A C13B   C13C C13D   C13C C13E  ! cis isoprene backbone carbons
+DOUBLE C13B C13C                        ! cis double bond
+BOND C13A H13A1  C13A H13A2             ! C13A hydrogens
+BOND C13B H13B                          ! C13B hydrogen
+BOND C13D H13D1  C13D H13D2  C13D H13D3 ! C13D hydrogens
+BOND C13E H13E1  C13E H13E2             ! C13E hydrogens
+BOND C13E C14A                          ! isoprene linking bond
+BOND C14A C14B   C14C C14D   C14C C14E  ! cis isoprene backbone carbons
+DOUBLE C14B C14C                        ! cis double bond
+BOND C14A H14A1  C14A H14A2             ! C14A hydrogens
+BOND C14B H14B                          ! C14B hydrogen
+BOND C14D H14D1  C14D H14D2  C14D H14D3 ! C14D hydrogens
+BOND C14E H14E1  C14E H14E2             ! C14E hydrogens
+BOND C14E C15A                          ! isoprene linking bond
+BOND C15A C15B   C15C C15D   C15C C15E  ! cis isoprene backbone carbons
+DOUBLE C15B C15C                        ! cis double bond
+BOND C15A H15A1  C15A H15A2             ! C15A hydrogens
+BOND C15B H15B                          ! C15B hydrogen
+BOND C15D H15D1  C15D H15D2  C15D H15D3 ! C15D hydrogens
+BOND C15E H15E1  C15E H15E2  C15E H15E3 ! C15E hydrogens
+IC O22    O12   *P2    O23        1.6100  111.00  120.00  111.60   1.5100
+IC O22    O12   *P2    O24        1.6100  111.00 -120.00  111.60   1.5100 
+IC O12    P2    O22    HO22       1.6750  111.00  180.00  115.00   0.9600 
+IC O22    P2    O12    P1         1.6100  111.00  180.00  143.00   1.6750 
+IC P2     O12   P1     O11        1.6750  143.00  180.00  105.00   1.6500 
+IC O11    O12   *P1    O13        1.6500  105.00  120.00  111.60   1.5100 
+IC O11    O12   *P1    O14        1.5100  111.60 -120.00  111.60   1.5100 
+IC O12    P1    O11    C1         1.6750  105.00  180.00  120.00   1.4400 
+IC P1     O11   C1     C2         1.6500  120.00  180.00  110.10   1.5300 
+IC C2     O11   *C1    H11        1.5300  110.10  120.00  109.50   1.1110 
+IC C2     O11   *C1    H12        1.5300  110.10 -120.00  109.50   1.1110 
+IC O11    C1    C2     C3         1.4400  110.10  180.00  113.50   1.5380 
+IC C3     C1    *C2    H21        1.5380  113.50  120.00  110.10   1.1110 
+IC C3     C1    *C2    H22        1.5380  113.50 -120.00  110.10   1.1110 
+IC C1     C2    C3     C5         1.5280  113.50  180.00  113.50   1.5380 
+IC C5     C2    *C3    C4         1.5380  113.50  120.00  114.00   1.5380 
+IC C5     C2    *C3    H3         1.5380  114.00 -120.00  110.10   1.1110 
+IC C2     C3    C4     H41        1.5380  114.00  180.00  110.10   1.1110 
+IC H41    C3    *C4    H42        1.1110  110.10  120.00  110.10   1.1110
+IC H41    C3    *C4    H43        1.1110  110.10 -120.00  110.10   1.1110
+IC C2     C3    C5     C1A        1.5380  113.50  180.00  113.50   1.5300
+IC C1A    C3    *C5    H51        1.5300  113.50  120.00  110.10   1.1110
+IC C1A    C3    *C5    H52        1.1110  110.10 -120.00  110.10   1.1110
+IC C3     C5    C1A    C1B        1.5380  113.50  180.00  112.20   1.5020
+IC C1B    C5    *C1A   H1A1       1.5020  112.20  120.00  110.10   1.1110
+IC C1B    C5    *C1A   H1A2       1.5020  112.20 -120.00  110.10   1.1110
+IC C5     C1A   C1B    C1C        1.5300  112.20  180.00  123.50   1.3400
+IC C1C    C1A   *C1B   H1B        1.3400  123.50  180.00  116.00   1.1000
+IC C1A    C1B   C1C    C1D        1.5020  123.50  180.00  123.50   1.5020
+IC C1E    C1B   *C1C   C1D        1.5020  123.50  180.00  123.50   1.5040
+IC C1B    C1C   C1D    H1D1       1.3400  123.50  180.00  111.50   1.1110
+IC H1D1   C1C   *C1D   H1D2       1.1110  111.50  120.00  111.50   1.1110
+IC H1D1   C1C   *C1D   H1D3       1.1110  111.50 -120.00  111.50   1.1110
+IC C1B    C1C   C1E    C2A        1.3400  123.50  180.00  112.20   1.5300
+IC C2A    C1C   *C1E   H1E1       1.5300  112.20  120.00  111.50   1.1110
+IC C2A    C1C   *C1E   H1E2       1.1110  111.50 -120.00  111.50   1.1110
+IC C1C    C1E   C2A    C2B        1.5020  112.20  180.00  112.20   1.5020
+IC C2B    C1E   *C2A   H2A1       1.5020  112.20  120.00  110.10   1.1110
+IC C2B    C1E   *C2A   H2A2       1.5020  112.20 -120.00  110.10   1.1110
+IC C1E    C2A   C2B    C2C        1.5300  112.20  180.00  123.50   1.3400
+IC C2C    C2A   *C2B   H2B        1.3400  123.50  180.00  116.00   1.1000
+IC C2A    C2B   C2C    C2D        1.5020  123.50  180.00  123.50   1.5020
+IC C2E    C2B   *C2C   C2D        1.5020  123.50  180.00  123.50   1.5040
+IC C2B    C2C   C2D    H2D1       1.3400  123.50  180.00  111.50   1.1110
+IC H2D1   C2C   *C2D   H2D2       1.1110  111.50  120.00  111.50   1.1110
+IC H2D1   C2C   *C2D   H2D3       1.1110  111.50 -120.00  111.50   1.1110
+IC C2B    C2C   C2E    C3A        1.3400  123.50  180.00  112.20   1.5300
+IC C3A    C2C   *C2E   H2E1       1.5300  112.20  120.00  111.50   1.1110
+IC C3A    C2C   *C2E   H2E2       1.1110  111.50 -120.00  111.50   1.1110
+IC C2C    C2E   C3A    C3B        1.5020  112.20  180.00  112.20   1.5020
+IC C3B    C2E   *C3A   H3A1       1.5020  112.20  120.00  110.10   1.1110
+IC C3B    C2E   *C3A   H3A2       1.5020  112.20 -120.00  110.10   1.1110
+IC C2E    C3A   C3B    C3C        1.5300  112.20  180.00  123.50   1.3400
+IC C3C    C3A   *C3B   H3B        1.3400  123.50  180.00  116.00   1.1000
+IC C3A    C3B   C3C    C3D        1.5020  123.50  180.00  123.50   1.5020
+IC C3E    C3B   *C3C   C3D        1.5020  123.50  180.00  123.50   1.5040
+IC C3B    C3C   C3D    H3D1       1.3400  123.50  180.00  111.50   1.1110
+IC H3D1   C3C   *C3D   H3D2       1.1110  111.50  120.00  111.50   1.1110
+IC H3D1   C3C   *C3D   H3D3       1.1110  111.50 -120.00  111.50   1.1110
+IC C3B    C3C   C3E    C4A        1.3400  123.50  180.00  112.20   1.5300
+IC C4A    C3C   *C3E   H3E1       1.5300  112.20  120.00  111.50   1.1110
+IC C4A    C3C   *C3E   H3E2       1.1110  111.50 -120.00  111.50   1.1110
+IC C3C    C3E   C4A    C4B        1.5020  112.20  180.00  112.20   1.5020
+IC C4B    C3E   *C4A   H4A1       1.5020  112.20  120.00  110.10   1.1110
+IC C4B    C3E   *C4A   H4A2       1.5020  112.20 -120.00  110.10   1.1110
+IC C3E    C4A   C4B    C4C        1.5300  112.20  180.00  123.50   1.3400
+IC C4C    C4A   *C4B   H4B        1.3400  123.50  180.00  116.00   1.1000
+IC C4A    C4B   C4C    C4D        1.5020  123.50  180.00  123.50   1.5020
+IC C4E    C4B   *C4C   C4D        1.5020  123.50  180.00  123.50   1.5040
+IC C4B    C4C   C4D    H4D1       1.3400  123.50  180.00  111.50   1.1110
+IC H4D1   C4C   *C4D   H4D2       1.1110  111.50  120.00  111.50   1.1110
+IC H4D1   C4C   *C4D   H4D3       1.1110  111.50 -120.00  111.50   1.1110
+IC C4B    C4C   C4E    C5A        1.3400  123.50  180.00  112.20   1.5300
+IC C5A    C4C   *C4E   H4E1       1.5300  112.20  120.00  111.50   1.1110
+IC C5A    C4C   *C4E   H4E2       1.1110  111.50 -120.00  111.50   1.1110
+IC C4C    C4E   C5A    C5B        1.5020  112.20  180.00  112.20   1.5020
+IC C5B    C4E   *C5A   H5A1       1.5020  112.20  120.00  110.10   1.1110
+IC C5B    C4E   *C5A   H5A2       1.5020  112.20 -120.00  110.10   1.1110
+IC C4E    C5A   C5B    C5C        1.5300  112.20  180.00  123.50   1.3400
+IC C5C    C5A   *C5B   H5B        1.3400  123.50  180.00  116.00   1.1000
+IC C5A    C5B   C5C    C5D        1.5020  123.50  180.00  123.50   1.5020
+IC C5E    C5B   *C5C   C5D        1.5020  123.50  180.00  123.50   1.5040
+IC C5B    C5C   C5D    H5D1       1.3400  123.50  180.00  111.50   1.1110
+IC H5D1   C5C   *C5D   H5D2       1.1110  111.50  120.00  111.50   1.1110
+IC H5D1   C5C   *C5D   H5D3       1.1110  111.50 -120.00  111.50   1.1110
+IC C5B    C5C   C5E    C6A        1.3400  123.50  180.00  112.20   1.5300
+IC C6A    C5C   *C5E   H5E1       1.5300  112.20  120.00  111.50   1.1110
+IC C6A    C5C   *C5E   H5E2       1.1110  111.50 -120.00  111.50   1.1110
+IC C5C    C5E   C6A    C6B        1.5020  112.20  180.00  112.20   1.5020
+IC C6B    C5E   *C6A   H6A1       1.5020  112.20  120.00  110.10   1.1110
+IC C6B    C5E   *C6A   H6A2       1.5020  112.20 -120.00  110.10   1.1110
+IC C5E    C6A   C6B    C6C        1.5300  112.20  180.00  123.50   1.3400
+IC C6C    C6A   *C6B   H6B        1.3400  123.50  180.00  116.00   1.1000
+IC C6A    C6B   C6C    C6D        1.5020  123.50  180.00  123.50   1.5020
+IC C6E    C6B   *C6C   C6D        1.5020  123.50  180.00  123.50   1.5040
+IC C6B    C6C   C6D    H6D1       1.3400  123.50  180.00  111.50   1.1110
+IC H6D1   C6C   *C6D   H6D2       1.1110  111.50  120.00  111.50   1.1110
+IC H6D1   C6C   *C6D   H6D3       1.1110  111.50 -120.00  111.50   1.1110
+IC C6B    C6C   C6E    C7A        1.3400  123.50  180.00  112.20   1.5300
+IC C7A    C6C   *C6E   H6E1       1.5300  112.20  120.00  111.50   1.1110
+IC C7A    C6C   *C6E   H6E2       1.1110  111.50 -120.00  111.50   1.1110
+IC C6C    C6E   C7A    C7B        1.5020  112.20  180.00  112.20   1.5020
+IC C7B    C6E   *C7A   H7A1       1.5020  112.20  120.00  110.10   1.1110
+IC C7B    C6E   *C7A   H7A2       1.5020  112.20 -120.00  110.10   1.1110
+IC C6E    C7A   C7B    C7C        1.5300  112.20  180.00  123.50   1.3400
+IC C7C    C7A   *C7B   H7B        1.3400  123.50  180.00  116.00   1.1000
+IC C7A    C7B   C7C    C7D        1.5020  123.50  180.00  123.50   1.5020
+IC C7E    C7B   *C7C   C7D        1.5020  123.50  180.00  123.50   1.5040
+IC C7B    C7C   C7D    H7D1       1.3400  123.50  180.00  111.50   1.1110
+IC H7D1   C7C   *C7D   H7D2       1.1110  111.50  120.00  111.50   1.1110
+IC H7D1   C7C   *C7D   H7D3       1.1110  111.50 -120.00  111.50   1.1110
+IC C7B    C7C   C7E    C8A        1.3400  123.50  180.00  112.20   1.5300
+IC C8A    C7C   *C7E   H7E1       1.5300  112.20  120.00  111.50   1.1110
+IC C8A    C7C   *C7E   H7E2       1.1110  111.50 -120.00  111.50   1.1110
+IC C7C    C7E   C8A    C8B        1.5020  112.20  180.00  112.20   1.5020
+IC C8B    C7E   *C8A   H8A1       1.5020  112.20  120.00  110.10   1.1110
+IC C8B    C7E   *C8A   H8A2       1.5020  112.20 -120.00  110.10   1.1110
+IC C7E    C8A   C8B    C8C        1.5300  112.20  180.00  123.50   1.3400
+IC C8C    C8A   *C8B   H8B        1.3400  123.50  180.00  116.00   1.1000
+IC C8A    C8B   C8C    C8D        1.5020  123.50  180.00  123.50   1.5020
+IC C8E    C8B   *C8C   C8D        1.5020  123.50  180.00  123.50   1.5040
+IC C8B    C8C   C8D    H8D1       1.3400  123.50  180.00  111.50   1.1110
+IC H8D1   C8C   *C8D   H8D2       1.1110  111.50  120.00  111.50   1.1110
+IC H8D1   C8C   *C8D   H8D3       1.1110  111.50 -120.00  111.50   1.1110
+IC C8B    C8C   C8E    C9A        1.3400  123.50  180.00  112.20   1.5300
+IC C9A    C8C   *C8E   H8E1       1.5300  112.20  120.00  111.50   1.1110
+IC C9A    C8C   *C8E   H8E2       1.1110  111.50 -120.00  111.50   1.1110
+IC C8C    C8E   C9A    C9B        1.5020  112.20  180.00  112.20   1.5020
+IC C9B    C8E   *C9A   H9A1       1.5020  112.20  120.00  110.10   1.1110
+IC C9B    C8E   *C9A   H9A2       1.5020  112.20 -120.00  110.10   1.1110
+IC C8E    C9A   C9B    C9C        1.5300  112.20  180.00  123.50   1.3400
+IC C9C    C9A   *C9B   H9B        1.3400  123.50  180.00  116.00   1.1000
+IC C9A    C9B   C9C    C9D        1.5020  123.50  180.00  123.50   1.5020
+IC C9E    C9B   *C9C   C9D        1.5020  123.50  180.00  123.50   1.5040
+IC C9B    C9C   C9D    H9D1       1.3400  123.50  180.00  111.50   1.1110
+IC H9D1   C9C   *C9D   H9D2       1.1110  111.50  120.00  111.50   1.1110
+IC H9D1   C9C   *C9D   H9D3       1.1110  111.50 -120.00  111.50   1.1110
+IC C9B    C9C   C9E    C10A       1.3400  123.50  180.00  112.20   1.5300
+IC C10A   C9C   *C9E   H9E1       1.5300  112.20  120.00  111.50   1.1110
+IC C10A   C9C   *C9E   H9E2       1.1110  111.50 -120.00  111.50   1.1110
+IC C9C    C9E   C10A   C10B       1.5020  112.20  180.00  112.20   1.5020
+IC C10B   C9E   *C10A  H10A1      1.5020  112.20  120.00  110.10   1.1110
+IC C10B   C9E   *C10A  H10A2      1.5020  112.20 -120.00  110.10   1.1110
+IC C9E    C10A  C10B   C10C       1.5300  112.20  180.00  123.50   1.3400
+IC C10C   C10A  *C10B  H10B       1.3400  123.50  180.00  116.00   1.1000
+IC C10A   C10B  C10C   C10D       1.5020  123.50  180.00  123.50   1.5020
+IC C10E   C10B  *C10C  C10D       1.5020  123.50  180.00  123.50   1.5040
+IC C10B   C10C  C10D   H10D1      1.3400  123.50  180.00  111.50   1.1110
+IC H10D1  C10C  *C10D  H10D2      1.1110  111.50  120.00  111.50   1.1110
+IC H10D1  C10C  *C10D  H10D3      1.1110  111.50 -120.00  111.50   1.1110
+IC C10B   C10C  C10E   C11A       1.3400  123.50  180.00  112.20   1.5300
+IC C11A   C10C  *C10E  H10E1      1.5300  112.20  120.00  111.50   1.1110
+IC C11A   C10C  *C10E  H10E2      1.1110  111.50 -120.00  111.50   1.1110
+IC C10C   C10E  C11A   C11B       1.5020  112.20  180.00  112.20   1.5020
+IC C11B   C10E  *C11A  H11A1      1.5020  112.20  120.00  110.10   1.1110
+IC C11B   C10E  *C11A  H11A2      1.5020  112.20 -120.00  110.10   1.1110
+IC C10E   C11A  C11B   C11C       1.5300  112.20  180.00  123.50   1.3400
+IC C11C   C11A  *C11B  H11B       1.3400  123.50  180.00  116.00   1.1000
+IC C11A   C11B  C11C   C11D       1.5020  123.50  180.00  123.50   1.5020
+IC C11E   C11B  *C11C  C11D       1.5020  123.50  180.00  123.50   1.5040
+IC C11B   C11C  C11D   H11D1      1.3400  123.50  180.00  111.50   1.1110
+IC H11D1  C11C  *C11D  H11D2      1.1110  111.50  120.00  111.50   1.1110
+IC H11D1  C11C  *C11D  H11D3      1.1110  111.50 -120.00  111.50   1.1110
+IC C11B   C11C  C11E   C12A       1.3400  123.50  180.00  112.20   1.5300
+IC C12A   C11C  *C11E  H11E1      1.5300  112.20  120.00  111.50   1.1110
+IC C12A   C11C  *C11E  H11E2      1.1110  111.50 -120.00  111.50   1.1110
+IC C11C   C11E  C12A   C12B       1.5020  112.20  180.00  112.20   1.5020
+IC C12B   C11E  *C12A  H12A1      1.5020  112.20  120.00  110.10   1.1110
+IC C12B   C11E  *C12A  H12A2      1.5020  112.20 -120.00  110.10   1.1110
+IC C11E   C12A  C12B   C12C       1.5300  112.20  180.00  123.50   1.3400
+IC C12C   C12A  *C12B  H12B       1.3400  123.50  180.00  116.00   1.1000
+IC C12A   C12B  C12C   C12D       1.5020  123.50  180.00  123.50   1.5020
+IC C12E   C12B  *C12C  C12D       1.5020  123.50  180.00  123.50   1.5040
+IC C12B   C12C  C12D   H12D1      1.3400  123.50  180.00  111.50   1.1110
+IC H12D1  C12C  *C12D  H12D2      1.1110  111.50  120.00  111.50   1.1110
+IC H12D1  C12C  *C12D  H12D3      1.1110  111.50 -120.00  111.50   1.1110
+IC C12B   C12C  C12E   C13A       1.3400  123.50  180.00  112.20   1.5300
+IC C13A   C12C  *C12E  H12E1      1.5300  112.20  120.00  111.50   1.1110
+IC C13A   C12C  *C12E  H12E2      1.1110  111.50 -120.00  111.50   1.1110
+IC C12C   C12E  C13A   C13B       1.5020  112.20  180.00  112.20   1.5020
+IC C13B   C12E  *C13A  H13A1      1.5020  112.20  120.00  110.10   1.1110
+IC C13B   C12E  *C13A  H13A2      1.5020  112.20 -120.00  110.10   1.1110
+IC C12E   C13A  C13B   C13C       1.5300  112.20  180.00  123.50   1.3400
+IC C13C   C13A  *C13B  H13B       1.3400  123.50  180.00  116.00   1.1000
+IC C13A   C13B  C13C   C13E       1.5020  123.50  180.00  123.50   1.5040
+IC C13D   C13B  *C13C  C13E       1.5040  123.50  180.00  123.50   1.5020
+IC C13B   C13C  C13D   H13D1      1.3400  123.50  180.00  111.50   1.1110
+IC H13D1  C13C  *C13D  H13D2      1.1110  111.50  120.00  111.50   1.1110
+IC H13D1  C13C  *C13D  H13D3      1.1110  111.50 -120.00  111.50   1.1110
+IC C13C   C14A  *C13E  H13E1      1.3400  123.50  120.00  111.50   1.1110
+IC C13C   C14A  *C13E  H13E2      1.1110  111.50 -120.00  111.50   1.1110
+IC C13B   C13C  C13E   C14A       1.3400  123.50  180.00  112.20   1.5300
+IC C13C   C13E  C14A   C14B       1.5020  112.20  180.00  112.20   1.5020
+IC C14B   C13E  *C14A  H14A1      1.5020  112.20  120.00  110.10   1.1110
+IC C14B   C13E  *C14A  H14A2      1.5020  112.20 -120.00  110.10   1.1110
+IC C13E   C14A  C14B   C14C       1.5300  112.20  180.00  123.50   1.3400
+IC C14C   C14A  *C14B  H14B       1.3400  123.50  180.00  116.00   1.1000
+IC C14A   C14B  C14C   C14E       1.5020  123.50  180.00  123.50   1.5020
+IC C14E   C14B  *C14C  C14D       1.5020  123.50  180.00  123.50   1.5040
+IC C14B   C14C  C14D   H14D1      1.3400  123.50  180.00  111.50   1.1110
+IC H14D1  C14C  *C14D  H14D2      1.1110  111.50  120.00  111.50   1.1110
+IC H14D1  C14C  *C14D  H14D3      1.1110  111.50 -120.00  111.50   1.1110
+IC C14B   C14C  C14E   C15A       1.3400  123.50  180.00  112.20   1.5300
+IC C15A   C14C  *C14E  H14E1      1.5300  112.20  120.00  111.50   1.1110
+IC C15A   C14C  *C14E  H14E2      1.1110  111.50 -120.00  111.50   1.1110
+IC C14C   C14E  C15A   C15B       1.5020  112.20  180.00  112.20   1.5020
+IC C15B   C14E  *C15A  H15A1      1.5020  112.20  120.00  110.10   1.1110
+IC C15B   C14E  *C15A  H15A2      1.5020  112.20 -120.00  110.10   1.1110
+IC C14E   C15A  C15B   C15C       1.5300  112.20  180.00  123.50   1.3400
+IC C15C   C15A  *C15B  H15B       1.3400  123.50  180.00  116.00   1.1000
+IC C15A   C15B  C15C   C15E       1.5020  123.50  180.00  123.50   1.5040
+IC C15D   C15B  *C15C  C15E       1.5040  123.50  180.00  123.50   1.5040
+IC C15B   C15C  C15D   H15D1      1.3400  123.50  180.00  111.50   1.1110
+IC H15D1  C15C  *C15D  H15D2      1.1110  111.50  120.00  111.50   1.1110
+IC H15D1  C15C  *C15D  H15D3      1.1110  111.50 -120.00  111.50   1.1110
+IC C15B   C15C  C15E   H15E1      1.3400  123.50  180.00  111.50   1.1110
+IC H15E1  C15C  *C15E  H15E2      1.1110  111.50  120.00  111.50   1.1110
+IC H15E1  C15C  *C15E  H15E3      1.1110  111.50 -120.00  111.50   1.1110
+
+RESI DL19PP        -2.00 !  [name]
+GROUP
+ATOM P2    PG1      1.34 !        HO22
+ATOM O22   OG311   -0.71 !        |
+ATOM HO22  HGP1     0.44 !        O22            !! based on PPI2
+ATOM O23   OG2P1   -0.86 !        |          
+ATOM O24   OG2P1   -0.86 !   O23==P2==O24 (-) 
+                         !        |          
+ATOM P1    PG1      1.46 !        O12         
+ATOM O12   OG304   -0.63 !        |          
+ATOM O13   OG2P1   -0.83 !   O13==P1==O14 (-) 
+ATOM O14   OG2P1   -0.83 !        |          
+ATOM O11   OG303   -0.62 !        O11         
+                         !        |
+ATOM C1A   CG321   -0.08 !  H1A1--C1A--H1A2         
+ATOM H1A1  HGA2     0.09 !        |
+ATOM H1A2  HGA2     0.09 !        |
+GROUP               0.00 !        |
+ATOM C1B   CG321   -0.18 !  H1B1--C1B--H1B2
+ATOM H1B1  HGA2     0.09 !        | 
+ATOM H1B2  HGA2     0.09 !        |    H1D1        
+GROUP               0.00 !        |    |
+ATOM C1C   CG311   -0.09 !   H1C--C1C--C1D--H1D2    
+ATOM H1C   HGA1     0.09 !        |    |
+GROUP               0.00 !        |    H1D3        
+ATOM C1D   CG331   -0.27 !        |
+ATOM H1D1  HGA3     0.09 !        |
+ATOM H1D2  HGA3     0.09 !        |
+ATOM H1D3  HGA3     0.09 !  H1E1--C1E--H1E2         
+GROUP               0.00 !        | 
+ATOM C1E   CG321   -0.18 !        |
+ATOM H1E1  HGA2     0.09 !        |
+ATOM H1E2  HGA2     0.09 !  H2A1--C2A--H2A2         
+GROUP               0.00 !        |
+ATOM C2A   CG321   -0.18 !        |
+ATOM H2A1  HGA2     0.09 !        |
+ATOM H2A2  HGA2     0.09 !        C2B--H2B         (cis)
+GROUP               0.00 !        ||
+ATOM C2B   CG2D1   -0.15 !        ||   H2D1        
+ATOM H2B   HGA4     0.15 !        ||   |
+GROUP               0.00 !        C2C--C2D--H2D2    
+ATOM C2C   CG2D1    0.00 !        |    |
+GROUP               0.00 !        |    H2D3        
+ATOM C2D   CG331   -0.27 !        !
+ATOM H2D1  HGA3     0.09 !        !
+ATOM H2D2  HGA3     0.09 !        !
+ATOM H2D3  HGA3     0.09 !  H2E1--C2E--H2E2         
+GROUP               0.00 !        ! 
+ATOM C2E   CG321   -0.18 !        !
+ATOM H2E1  HGA2     0.09 !        |
+ATOM H2E2  HGA2     0.09 !  H3A1--C3A--H3A2         
+GROUP               0.00 !        |
+ATOM C3A   CG321   -0.18 !        |
+ATOM H3A1  HGA2     0.09 !        |
+ATOM H3A2  HGA2     0.09 !        C3B--H3B         (cis)
+GROUP               0.00 !        ||
+ATOM C3B   CG2D1   -0.15 !        ||   H3D1        
+ATOM H3B   HGA4     0.15 !        ||   |
+GROUP               0.00 !        C3C--C3D--H3D2    
+ATOM C3C   CG2D1    0.00 !        |    |
+GROUP               0.00 !        |    H3D3        
+ATOM C3D   CG331   -0.27 !        !
+ATOM H3D1  HGA3     0.09 !        !
+ATOM H3D2  HGA3     0.09 !        !
+ATOM H3D3  HGA3     0.09 !  H3E1--C3E--H3E2         
+GROUP               0.00 !        ! 
+ATOM C3E   CG321   -0.18 !        !
+ATOM H3E1  HGA2     0.09 !        |
+ATOM H3E2  HGA2     0.09 !  H4A1--C4A--H4A2         
+GROUP               0.00 !        |
+ATOM C4A   CG321   -0.18 !        |
+ATOM H4A1  HGA2     0.09 !        |
+ATOM H4A2  HGA2     0.09 !        C4B--H4B         (cis)
+GROUP               0.00 !        ||
+ATOM C4B   CG2D1   -0.15 !        ||   H4D1        
+ATOM H4B   HGA4     0.15 !        ||   |
+GROUP               0.00 !        C4C--C4D--H4D2    
+ATOM C4C   CG2D1    0.00 !        |    |
+GROUP               0.00 !        |    H4D3        
+ATOM C4D   CG331   -0.27 !        !
+ATOM H4D1  HGA3     0.09 !        !
+ATOM H4D2  HGA3     0.09 !        !
+ATOM H4D3  HGA3     0.09 !  H4E1--C4E--H4E2         
+GROUP               0.00 !        ! 
+ATOM C4E   CG321   -0.18 !        !
+ATOM H4E1  HGA2     0.09 !        |
+ATOM H4E2  HGA2     0.09 !  H5A1--C5A--H5A2         
+GROUP               0.00 !        |
+ATOM C5A   CG321   -0.18 !        |
+ATOM H5A1  HGA2     0.09 !        |
+ATOM H5A2  HGA2     0.09 !        C5B--H5B         (cis)
+GROUP               0.00 !        ||
+ATOM C5B   CG2D1   -0.15 !        ||   H5D1        
+ATOM H5B   HGA4     0.15 !        ||   |
+GROUP               0.00 !        C5C--C5D--H5D2    
+ATOM C5C   CG2D1    0.00 !        |    |
+GROUP               0.00 !        |    H5D3        
+ATOM C5D   CG331   -0.27 !        !
+ATOM H5D1  HGA3     0.09 !        !
+ATOM H5D2  HGA3     0.09 !        !
+ATOM H5D3  HGA3     0.09 !  H5E1--C5E--H5E2         
+GROUP               0.00 !        ! 
+ATOM C5E   CG321   -0.18 !        !
+ATOM H5E1  HGA2     0.09 !        |
+ATOM H5E2  HGA2     0.09 !  H6A1--C6A--H6A2         
+GROUP               0.00 !        |
+ATOM C6A   CG321   -0.18 !        |
+ATOM H6A1  HGA2     0.09 !        |
+ATOM H6A2  HGA2     0.09 !        C6B--H6B         (cis)
+GROUP               0.00 !        ||
+ATOM C6B   CG2D1   -0.15 !        ||   H6D1        
+ATOM H6B   HGA4     0.15 !        ||   |
+GROUP               0.00 !        C6C--C6D--H6D2    
+ATOM C6C   CG2D1    0.00 !        |    |
+GROUP               0.00 !        |    H6D3        
+ATOM C6D   CG331   -0.27 !        !
+ATOM H6D1  HGA3     0.09 !        !
+ATOM H6D2  HGA3     0.09 !        !
+ATOM H6D3  HGA3     0.09 !  H6E1-C6E--H6E2         
+GROUP               0.00 !        ! 
+ATOM C6E   CG321   -0.18 !        !
+ATOM H6E1  HGA2     0.09 !        |
+ATOM H6E2  HGA2     0.09 !  H7A1--C7A--H7A2         
+GROUP               0.00 !        |
+ATOM C7A   CG321   -0.18 !        |
+ATOM H7A1  HGA2     0.09 !        |
+ATOM H7A2  HGA2     0.09 !        C7B--H7B         (cis)
+GROUP               0.00 !        ||
+ATOM C7B   CG2D1   -0.15 !        ||   H7D1        
+ATOM H7B   HGA4     0.15 !        ||   |
+GROUP               0.00 !        C7C--C7D--H7D2    
+ATOM C7C   CG2D1    0.00 !        |    |
+GROUP               0.00 !        |    H7D3        
+ATOM C7D   CG331   -0.27 !        !
+ATOM H7D1  HGA3     0.09 !        !
+ATOM H7D2  HGA3     0.09 !        !
+ATOM H7D3  HGA3     0.09 !  H7E1-C7E--H7E2         
+GROUP               0.00 !        ! 
+ATOM C7E   CG321   -0.18 !        !
+ATOM H7E1  HGA2     0.09 !        |
+ATOM H7E2  HGA2     0.09 !  H8A1--C8A--H8A2         
+GROUP               0.00 !        |
+ATOM C8A   CG321   -0.18 !        |
+ATOM H8A1  HGA2     0.09 !        |
+ATOM H8A2  HGA2     0.09 !        C8B--H8B         (cis)
+GROUP               0.00 !        ||
+ATOM C8B   CG2D1   -0.15 !        ||   H8D1        
+ATOM H8B   HGA4     0.15 !        ||   |
+GROUP               0.00 !        C8C--C8D--H8D2    
+ATOM C8C   CG2D1    0.00 !        |    |
+GROUP               0.00 !        |    H8D3        
+ATOM C8D   CG331   -0.27 !        !
+ATOM H8D1  HGA3     0.09 !        !
+ATOM H8D2  HGA3     0.09 !        !
+ATOM H8D3  HGA3     0.09 !  H8E1-C8E--H8E2         
+GROUP               0.00 !        ! 
+ATOM C8E   CG321   -0.18 !        !
+ATOM H8E1  HGA2     0.09 !        |
+ATOM H8E2  HGA2     0.09 !  H9A1--C9A--H9A2         
+GROUP               0.00 !        |
+ATOM C9A   CG321   -0.18 !        |
+ATOM H9A1  HGA2     0.09 !        |
+ATOM H9A2  HGA2     0.09 !        C9B--H9B         (cis)
+GROUP               0.00 !        ||
+ATOM C9B   CG2D1   -0.15 !        ||   H9D1        
+ATOM H9B   HGA4     0.15 !        ||   |
+GROUP               0.00 !        C9C--C9D--H9D2    
+ATOM C9C   CG2D1    0.00 !        |    |
+GROUP               0.00 !        |    H9D3        
+ATOM C9D   CG331   -0.27 !        !
+ATOM H9D1  HGA3     0.09 !        !
+ATOM H9D2  HGA3     0.09 !        !
+ATOM H9D3  HGA3     0.09 !  H9E1-C9E--H9E2         
+GROUP               0.00 !        ! 
+ATOM C9E   CG321   -0.18 !        !
+ATOM H9E1  HGA2     0.09 !        |
+ATOM H9E2  HGA2     0.09 ! H10A1--C10A--H10A2         
+GROUP               0.00 !        |
+ATOM C10A  CG321   -0.18 !        |
+ATOM H10A1 HGA2     0.09 !        |
+ATOM H10A2 HGA2     0.09 !        C10B--H110B         (cis)
+GROUP               0.00 !        ||
+ATOM C10B  CG2D1   -0.15 !        ||   H10D1        
+ATOM H10B  HGA4     0.15 !        ||   |
+GROUP               0.00 !        C10C-C10D--H10D2    
+ATOM C10C  CG2D1    0.00 !        |    |
+GROUP               0.00 !        |    H10D3        
+ATOM C10D  CG331   -0.27 !        !
+ATOM H10D1 HGA3     0.09 !        !
+ATOM H10D2 HGA3     0.09 !        !
+ATOM H10D3 HGA3     0.09 ! H10E1-C10E--H10E2         
+GROUP               0.00 !        ! 
+ATOM C10E  CG321   -0.18 !        !
+ATOM H10E1 HGA2     0.09 !        |
+ATOM H10E2 HGA2     0.09 ! H11A1--C11A--H11A2         
+GROUP               0.00 !        |
+ATOM C11A  CG321   -0.18 !        |
+ATOM H11A1 HGA2     0.09 !        |
+ATOM H11A2 HGA2     0.09 !        C11B--H11B         (cis)
+GROUP               0.00 !        ||
+ATOM C11B  CG2D1   -0.15 !        ||   H11D1        
+ATOM H11B  HGA4     0.15 !        ||   |
+GROUP               0.00 !        C11C-C11D--H11D2    
+ATOM C11C  CG2D1    0.00 !        |    |
+GROUP               0.00 !        |    H11D3        
+ATOM C11D  CG331   -0.27 !        !
+ATOM H11D1 HGA3     0.09 !        !
+ATOM H11D2 HGA3     0.09 !        !
+ATOM H11D3 HGA3     0.09 ! H11E1-C11E--H11E2         
+GROUP               0.00 !        ! 
+ATOM C11E  CG321   -0.18 !        !
+ATOM H11E1 HGA2     0.09 !        |
+ATOM H11E2 HGA2     0.09 ! H12A1--C12A--H12A2         
+GROUP               0.00 !        |
+ATOM C12A  CG321   -0.18 !        |
+ATOM H12A1 HGA2     0.09 !        |
+ATOM H12A2 HGA2     0.09 !        C12B--H12B         (cis)
+GROUP               0.00 !        ||
+ATOM C12B  CG2D1   -0.15 !        ||   H12D1        
+ATOM H12B  HGA4     0.15 !        ||   |
+GROUP               0.00 !        C12C-C12D--H12D2    
+ATOM C12C  CG2D1    0.00 !        |    |
+GROUP               0.00 !        |    H12D3        
+ATOM C12D  CG331   -0.27 !        !
+ATOM H12D1 HGA3     0.09 !        !
+ATOM H12D2 HGA3     0.09 !        !
+ATOM H12D3 HGA3     0.09 ! H1E12-C12E--H12E2         
+GROUP               0.00 !        ! 
+ATOM C12E  CG321   -0.18 !        !
+ATOM H12E1 HGA2     0.09 !        |
+ATOM H12E2 HGA2     0.09 ! H13A1--C13A--H13A2         
+GROUP               0.00 !        |
+ATOM C13A  CG321   -0.18 !        |
+ATOM H13A1 HGA2     0.09 !        |
+ATOM H13A2 HGA2     0.09 !        C13B--H13B         (cis)
+GROUP               0.00 !        ||
+ATOM C13B  CG2D1   -0.15 !        ||   H13D1        
+ATOM H13B  HGA4     0.15 !        ||   |
+GROUP               0.00 !        C13C-C13D--H13D2    
+ATOM C13C  CG2D1    0.00 !        |    |
+GROUP               0.00 !        |    H13D3        
+ATOM C13D  CG331   -0.27 !        !
+ATOM H13D1 HGA3     0.09 !        !
+ATOM H13D2 HGA3     0.09 !        !
+ATOM H13D3 HGA3     0.09 ! H13E1-C13E--H13E2         
+GROUP               0.00 !        ! 
+ATOM C13E  CG321   -0.18 !        !
+ATOM H13E1 HGA2     0.09 !        |
+ATOM H13E2 HGA2     0.09 ! H14A1--C14A--H14A2         
+GROUP               0.00 !        |
+ATOM C14A  CG321   -0.18 !        |
+ATOM H14A1 HGA2     0.09 !        |
+ATOM H14A2 HGA2     0.09 !        C14B--H14B         (cis)
+GROUP               0.00 !        ||
+ATOM C14B  CG2D1   -0.15 !        ||   H14D1        
+ATOM H14B  HGA4     0.15 !        ||   |
+GROUP               0.00 !        C14C-C14D--H14D2    
+ATOM C14C  CG2D1    0.00 !        |    |
+GROUP               0.00 !        |    H14D3        
+ATOM C14D  CG331   -0.27 !        !
+ATOM H14D1 HGA3     0.09 !        !
+ATOM H14D2 HGA3     0.09 !        !
+ATOM H14D3 HGA3     0.09 ! H14E1-C14E--H14E2         
+GROUP               0.00 !        | 
+ATOM C14E  CG321   -0.18 !        |
+ATOM H14E1 HGA2     0.09 !        |
+ATOM H14E2 HGA2     0.09 ! H15A1--C15A--H15A2         
+GROUP               0.00 !        |
+ATOM C15A  CG321   -0.18 !        |
+ATOM H15A1 HGA2     0.09 !        |
+ATOM H15A2 HGA2     0.09 !        C15B--H15B         (cis)
+GROUP               0.00 !        ||
+ATOM C15B  CG2D1   -0.15 !        ||   H15D1        
+ATOM H15B  HGA4     0.15 !        ||   |
+GROUP               0.00 !        C15C-C15D--H15D2    
+ATOM C15C  CG2D1    0.00 !        |    |
+GROUP               0.00 !        |    H15D3        
+ATOM C15D  CG331   -0.27 !        |
+ATOM H15D1 HGA3     0.09 !        |
+ATOM H15D2 HGA3     0.09 !        |
+ATOM H15D3 HGA3     0.09 ! H15E1-C15E--H15E2         
+GROUP               0.00 !        |                                  
+ATOM C15E  CG321   -0.18 !        |                                
+ATOM H15E1 HGA2     0.09 !        |
+ATOM H15E2 HGA2     0.09 ! H16A1--C16A--H16A2         
+GROUP               0.00 !        |
+ATOM C16A  CG321   -0.18 !        |
+ATOM H16A1 HGA2     0.09 !        |
+ATOM H16A2 HGA2     0.09 !        C16B--H16B         (cis)
+GROUP               0.00 !        ||
+ATOM C16B  CG2D1   -0.15 !        ||   H16D1        
+ATOM H16B  HGA4     0.15 !        ||   |
+GROUP               0.00 !        C16C-C16D--H16D2    
+ATOM C16C  CG2D1    0.00 !        |    |
+GROUP               0.00 !        |    H16D3        
+ATOM C16D  CG331   -0.27 !        |
+ATOM H16D1 HGA3     0.09 !        |
+ATOM H16D2 HGA3     0.09 !        |
+ATOM H16D3 HGA3     0.09 ! H16E1-C16E--H16E2         
+GROUP               0.00 !        | 
+ATOM C16E  CG321   -0.18 !        |
+ATOM H16E1 HGA2     0.09 !        |
+ATOM H16E2 HGA2     0.09 ! H17A1--C17A--H17A2         
+GROUP               0.00 !        |
+ATOM C17A  CG321   -0.18 !        |
+ATOM H17A1 HGA2     0.09 !        |
+ATOM H17A2 HGA2     0.09 !        C17B--H17B         (trans)
+GROUP               0.00 !        ||
+ATOM C17B  CG2D1   -0.15 !        ||   H17D1        
+ATOM H17B  HGA4     0.15 !        ||   |
+GROUP               0.00 !        C17C-C17D--H17D2    
+ATOM C17C  CG2D1    0.00 !        |    |
+GROUP               0.00 !        |    H17D3        
+ATOM C17D  CG331   -0.27 !        |
+ATOM H17D1 HGA3     0.09 !        |
+ATOM H17D2 HGA3     0.09 !        |
+ATOM H17D3 HGA3     0.09 ! H17E1-C17E--H17E2         
+GROUP               0.00 !        | 
+ATOM C17E  CG321   -0.18 !        |
+ATOM H17E1 HGA2     0.09 !        |
+ATOM H17E2 HGA2     0.09 ! H18A1--C18A--H18A2         
+GROUP               0.00 !        |
+ATOM C18A  CG321   -0.18 !        |
+ATOM H18A1 HGA2     0.09 !        |
+ATOM H18A2 HGA2     0.09 !        C18B--H18B         (trans)
+GROUP               0.00 !        ||
+ATOM C18B  CG2D1   -0.15 !        ||   H18D1        
+ATOM H18B  HGA4     0.15 !        ||   |
+GROUP               0.00 !        C18C-C18D--H18D2    
+ATOM C18C  CG2D1    0.00 !        |    |
+GROUP               0.00 !        |    H18D3        
+ATOM C18D  CG331   -0.27 !        |
+ATOM H18D1 HGA3     0.09 !        |
+ATOM H18D2 HGA3     0.09 !        |
+ATOM H18D3 HGA3     0.09 ! H18E1-C18E--H18E2         
+GROUP               0.00 !        | 
+ATOM C18E  CG321   -0.18 !        |
+ATOM H18E1 HGA2     0.09 !        |
+ATOM H18E2 HGA2     0.09 ! H19A1--C19A--H19A2         
+GROUP               0.00 !        |
+ATOM C19A  CG321   -0.18 !        |
+ATOM H19A1 HGA2     0.09 !        |
+ATOM H19A2 HGA2     0.09 !        C19B--H19B
+GROUP               0.00 !        ||
+ATOM C19B  CG2D1   -0.15 !        ||   H19D1        
+ATOM H19B  HGA4     0.15 !        ||   |
+GROUP               0.00 !        C19C-C19D--H19D2    
+ATOM C19C  CG2D1    0.00 !        |    |
+GROUP               0.00 !        |    H19D3        
+ATOM C19D  CG331   -0.27 !        |
+ATOM H19D1 HGA3     0.09 !        |
+ATOM H19D2 HGA3     0.09 !        |
+ATOM H19D3 HGA3     0.09 ! H19E1-C19E--H19E2         
+GROUP               0.00 !
+ATOM C19E  CG331   -0.27 !
+ATOM H19E1 HGA3     0.09 !
+ATOM H19E2 HGA3     0.09 !
+ATOM H19E3 HGA3     0.09 !
+
+BOND O22 HO22 P2 O22  P2 O23  P2 O24  P2  O12 ! Phosphate group 2
+BOND P1  O12  P1 O13  P1 O14  P1 O11  O11 C1A ! Phosphate group 1
+BOND C1A C1B  C1B C1C  C1C C1D  C1C C1E ! alpha isoprene backbone carbons
+BOND C1A H1A1  C1A H1A2                 ! C1A hydrogens
+BOND C1B H1B1  C1B H1B2                 ! C1B hydrogens
+BOND C1C H1C                            ! C1C hydrogen
+BOND C1D H1D1  C1D H1D2  C1D H1D3       ! C1D hydrogens
+BOND C1E H1E1  C1E H1E2                 ! C1E hydrogens
+BOND C1E C2A                            ! isoprene linking bond
+BOND C2A C2B   C2C C2D   C2C C2E        ! cis isoprene backbone carbons
+DOUBLE C2B C2C                          ! cis double bond
+BOND C2A H2A1  C2A H2A2                 ! C2A hydrogens
+BOND C2B H2B                            ! C2B hydrogen
+BOND C2D H2D1  C2D H2D2  C2D H2D3       ! C2D hydrogens
+BOND C2E H2E1  C2E H2E2                 ! C2E hydrogens
+BOND C2E C3A                            ! isoprene linking bond
+BOND C3A C3B   C3C C3D   C3C C3E        ! cis isoprene backbone carbons
+DOUBLE C3B C3C                          ! cis double bond
+BOND C3A H3A1  C3A H3A2                 ! C3A hydrogens
+BOND C3B H3B                            ! C3B hydrogen
+BOND C3D H3D1  C3D H3D2  C3D H3D3       ! C3D hydrogens
+BOND C3E H3E1  C3E H3E2                 ! C3E hydrogens
+BOND C3E C4A                            ! isoprene linking bond
+BOND C4A C4B   C4C C4D   C4C C4E        ! cis isoprene backbone carbons
+DOUBLE C4B C4C                          ! cis double bond
+BOND C4A H4A1  C4A H4A2                 ! C4A hydrogens
+BOND C4B H4B                            ! C4B hydrogen
+BOND C4D H4D1  C4D H4D2  C4D H4D3       ! C4D hydrogens
+BOND C4E H4E1  C4E H4E2                 ! C4E hydrogens
+BOND C4E C5A                            ! isoprene linking bond
+BOND C5A C5B   C5C C5D   C5C C5E        ! cis isoprene backbone carbons
+DOUBLE C5B C5C                          ! cis double bond
+BOND C5A H5A1  C5A H5A2                 ! C5A hydrogens
+BOND C5B H5B                            ! C5B hydrogen
+BOND C5D H5D1  C5D H5D2  C5D H5D3       ! C5D hydrogens
+BOND C5E H5E1  C5E H5E2                 ! C5E hydrogens
+BOND C5E C6A                            ! isoprene linking bond
+BOND C6A C6B   C6C C6D   C6C C6E        ! cis isoprene backbone carbons
+DOUBLE C6B C6C                          ! cis double bond
+BOND C6A H6A1  C6A H6A2                 ! C6A hydrogens
+BOND C6B H6B                            ! C6B hydrogen
+BOND C6D H6D1  C6D H6D2  C6D H6D3       ! C6D hydrogens
+BOND C6E H6E1  C6E H6E2                 ! C6E hydrogens
+BOND C6E C7A                            ! isoprene linking bond
+BOND C7A C7B   C7C C7D   C7C C7E        ! cis isoprene backbone carbons
+DOUBLE C7B C7C                          ! cis double bond
+BOND C7A H7A1  C7A H7A2                 ! C7A hydrogens
+BOND C7B H7B                            ! C7B hydrogen
+BOND C7D H7D1  C7D H7D2  C7D H7D3       ! C7D hydrogens
+BOND C7E H7E1  C7E H7E2                 ! C7E hydrogens
+BOND C7E C8A                            ! isoprene linking bond
+BOND C8A C8B   C8C C8D   C8C C8E        ! cis isoprene backbone carbons
+DOUBLE C8B C8C                          ! cis double bond
+BOND C8A H8A1  C8A H8A2                 ! C8A hydrogens
+BOND C8B H8B                            ! C8B hydrogen
+BOND C8D H8D1  C8D H8D2  C8D H8D3       ! C8D hydrogens
+BOND C8E H8E1  C8E H8E2                 ! C8E hydrogens
+BOND C8E C9A                            ! isoprene linking bond
+BOND C9A C9B   C9C C9D   C9C C9E        ! cis isoprene backbone carbons
+DOUBLE C9B C9C                          ! cis double bond
+BOND C9A H9A1  C9A H9A2                 ! C9A hydrogens
+BOND C9B H9B                            ! C9B hydrogen
+BOND C9D H9D1  C9D H9D2  C9D H9D3       ! C9D hydrogens
+BOND C9E H9E1  C9E H9E2                 ! C9E hydrogens
+BOND C9E C10A                            ! isoprene linking bond
+BOND C10A C10B   C10C C10D   C10C C10E  ! cis isoprene backbone carbons
+DOUBLE C10B C10C                        ! cis double bond
+BOND C10A H10A1  C10A H10A2             ! C10A hydrogens
+BOND C10B H10B                          ! C10B hydrogen
+BOND C10D H10D1  C10D H10D2  C10D H10D3 ! C10D hydrogens
+BOND C10E H10E1  C10E H10E2             ! C10E hydrogens
+BOND C10E C11A                          ! isoprene linking bond
+BOND C11A C11B   C11C C11D   C11C C11E  ! cis isoprene backbone carbons
+DOUBLE C11B C11C                        ! cis double bond
+BOND C11A H11A1  C11A H11A2             ! C11A hydrogens
+BOND C11B H11B                          ! C11B hydrogen
+BOND C11D H11D1  C11D H11D2  C11D H11D3 ! C11D hydrogens
+BOND C11E H11E1  C11E H11E2             ! C11E hydrogens
+BOND C11E C12A                          ! isoprene linking bond
+BOND C12A C12B   C12C C12D   C12C C12E  ! cis isoprene backbone carbons
+DOUBLE C12B C12C                        ! cis double bond
+BOND C12A H12A1  C12A H12A2             ! C12A hydrogens
+BOND C12B H12B                          ! C12B hydrogen
+BOND C12D H12D1  C12D H12D2  C12D H12D3 ! C12D hydrogens
+BOND C12E H12E1  C12E H12E2             ! C12E hydrogens
+BOND C12E C13A                          ! isoprene linking bond
+BOND C13A C13B   C13C C13D   C13C C13E  ! cis isoprene backbone carbons
+DOUBLE C13B C13C                        ! cis double bond
+BOND C13A H13A1  C13A H13A2             ! C13A hydrogens
+BOND C13B H13B                          ! C13B hydrogen
+BOND C13D H13D1  C13D H13D2  C13D H13D3 ! C13D hydrogens
+BOND C13E H13E1  C13E H13E2             ! C13E hydrogens
+BOND C13E C14A                          ! isoprene linking bond
+BOND C14A C14B   C14C C14D   C14C C14E  ! cis isoprene backbone carbons
+DOUBLE C14B C14C                        ! cis double bond
+BOND C14A H14A1  C14A H14A2             ! C14A hydrogens
+BOND C14B H14B                          ! C14B hydrogen
+BOND C14D H14D1  C14D H14D2  C14D H14D3 ! C14D hydrogens
+BOND C14E H14E1  C14E H14E2             ! C14E hydrogens
+BOND C14E C15A                          ! isoprene linking bond
+BOND C15A C15B   C15C C15D   C15C C15E  ! cis isoprene backbone carbons
+DOUBLE C15B C15C                        ! cis double bond
+BOND C15A H15A1  C15A H15A2             ! C15A hydrogens
+BOND C15B H15B                          ! C15B hydrogen
+BOND C15D H15D1  C15D H15D2  C15D H15D3 ! C15D hydrogens
+BOND C15E H15E1  C15E H15E2             ! C15E hydrogens
+BOND C15E C16A                          ! isoprene linking bond
+BOND C16A C16B   C16C C16D   C16C C16E  ! cis isoprene backbone carbons
+DOUBLE C16B C16C                        ! cis double bond
+BOND C16A H16A1  C16A H16A2             ! C16A hydrogens
+BOND C16B H16B                          ! C16B hydrogen
+BOND C16D H16D1  C16D H16D2  C16D H16D3 ! C16D hydrogens
+BOND C16E H16E1  C16E H16E2             ! C16E hydrogens
+BOND C16E C17A                          ! isoprene linking bond
+BOND C17A C17B   C17C C17D   C17C C17E  ! trans isoprene backbone carbons
+DOUBLE C17B C17C                        ! trans double bond
+BOND C17A H17A1  C17A H17A2             ! C17A hydrogens
+BOND C17B H17B                          ! C17B hydrogen
+BOND C17D H17D1  C17D H17D2  C17D H17D3 ! C17D hydrogens
+BOND C17E H17E1  C17E H17E2             ! C17E hydrogens
+BOND C17E C18A                          ! isoprene linking bond
+BOND C18A C18B   C18C C18D   C18C C18E  ! trans isoprene backbone carbons
+DOUBLE C18B C18C                        ! trans double bond
+BOND C18A H18A1  C18A H18A2             ! C18A hydrogens
+BOND C18B H18B                          ! C18B hydrogen
+BOND C18D H18D1  C18D H18D2  C18D H18D3 ! C18D hydrogens
+BOND C18E H18E1  C18E H18E2             ! C18E hydrogens
+BOND C18E C19A                          ! isoprene linking bond
+BOND C19A C19B   C19C C19D   C19C C19E  ! omega isoprene backbone carbons
+DOUBLE C19B C19C                        ! omega double bond
+BOND C19A H19A1  C19A H19A2             ! C19A hydrogens
+BOND C19B H19B                          ! C19B hydrogen
+BOND C19D H19D1  C19D H19D2  C19D H19D3 ! C19D hydrogens
+BOND C19E H19E1  C19E H19E2  C19E H19E3 ! C19E hydrogens
+IC O22   O12  *P2   O23        1.6100  111.00  120.00  111.60   1.5100
+IC O22   O12  *P2   O24        1.6100  111.00 -120.00  111.60   1.5100
+IC O12   P2   O22   HO22       1.6750  111.00  180.00  115.00   0.9600
+IC O22   P2   O12   P1         1.6100  111.00  180.00  143.00   1.6750
+IC P2    O12  P1    O11        1.6750  143.00  180.00  105.00   1.6500
+IC O11   O12  *P1   O13        1.6500  105.00  120.00  111.60   1.5100
+IC O11   O12  *P1   O14        1.5100  111.60 -120.00  111.60   1.5100
+IC O12   P1   O11   C1A        1.6750  105.00  180.00  120.00   1.4400
+IC P1    O11  C1A   C1B        1.6500  120.00  180.00  110.10   1.5300
+IC C1B   O11  *C1A  H1A1       1.5300  110.10  120.00  109.50   1.1110
+IC C1B   O11  *C1A  H1A2       1.5300  110.10 -120.00  109.50   1.1110
+IC O11   C1A  C1B   C1C        1.4400  110.10  180.00  113.50   1.5380
+IC C1C   C1A  *C1B  H1B1       1.5380  113.50  120.00  110.10   1.1110
+IC C1C   C1A  *C1B  H1B2       1.5380  113.50 -120.00  110.10   1.1110
+IC C1A   C1B  C1C   C1E        1.5300  113.50  180.00  113.50   1.5380
+IC C1E   C1B  *C1C  C1D        1.5380  113.50 -120.00  114.00   1.5380
+IC C1E   C1B  *C1C  H1C        1.5380  114.00  120.00  110.10   1.1110
+IC C1B   C1C  C1D   H1D1       1.5380  114.00  180.00  110.10   1.1110
+IC H1D1  C1C  *C1D  H1D2       1.1110  110.10  120.00  110.10   1.1110
+IC H1D1  C1C  *C1D  H1D3       1.1110  110.10 -120.00  110.10   1.1110
+IC C1B   C1C  C1E   C2A        1.5380  113.50  180.00  113.50   1.5300
+IC C2A   C1C  *C1E  H1E1       1.5300  113.50  120.00  110.10   1.1110
+IC C2A   C1C  *C1E  H1E2       1.1110  110.10 -120.00  110.10   1.1110
+IC C1C   C1E  C2A   C2B        1.5380  113.50  180.00  112.20   1.5020
+IC C2B   C1E  *C2A  H2A1       1.5020  112.20  120.00  110.10   1.1110
+IC C2B   C1E  *C2A  H2A2       1.5020  112.20 -120.00  110.10   1.1110
+IC C1E   C2A  C2B   C2C        1.5300  112.20  180.00  123.50   1.3400
+IC C2C   C2A  *C2B  H2B        1.3400  123.50  180.00  116.00   1.1000
+IC C2A   C2B  C2C   C2D        1.5020  123.50  180.00  123.50   1.5020
+IC C2E   C2B  *C2C  C2D        1.5020  123.50  180.00  123.50   1.5040
+IC C2B   C2C  C2D   H2D1       1.3400  123.50  180.00  111.50   1.1110
+IC H2D1  C2C  *C2D  H2D2       1.1110  111.50  120.00  111.50   1.1110
+IC H2D1  C2C  *C2D  H2D3       1.1110  111.50 -120.00  111.50   1.1110
+IC C2B   C2C  C2E   C3A        1.3400  123.50  180.00  112.20   1.5300
+IC C3A   C2C  *C2E  H2E1       1.5300  112.20  120.00  111.50   1.1110
+IC C3A   C2C  *C2E  H2E2       1.1110  111.50 -120.00  111.50   1.1110
+IC C2C   C2E  C3A   C3B        1.5020  112.20  180.00  112.20   1.5020
+IC C3B   C2E  *C3A  H3A1       1.5020  112.20  120.00  110.10   1.1110
+IC C3B   C2E  *C3A  H3A2       1.5020  112.20 -120.00  110.10   1.1110
+IC C2E   C3A  C3B   C3C        1.5300  112.20  180.00  123.50   1.3400
+IC C3C   C3A  *C3B  H3B        1.3400  123.50  180.00  116.00   1.1000
+IC C3A   C3B  C3C   C3D        1.5020  123.50  180.00  123.50   1.5020
+IC C3E   C3B  *C3C  C3D        1.5020  123.50  180.00  123.50   1.5040
+IC C3B   C3C  C3D   H3D1       1.3400  123.50  180.00  111.50   1.1110
+IC H3D1  C3C  *C3D  H3D2       1.1110  111.50  120.00  111.50   1.1110
+IC H3D1  C3C  *C3D  H3D3       1.1110  111.50 -120.00  111.50   1.1110
+IC C3B   C3C  C3E   C4A        1.3400  123.50  180.00  112.20   1.5300
+IC C4A   C3C  *C3E  H3E1       1.5300  112.20  120.00  111.50   1.1110
+IC C4A   C3C  *C3E  H3E2       1.1110  111.50 -120.00  111.50   1.1110
+IC C3C   C3E  C4A   C4B        1.5020  112.20  180.00  112.20   1.5020
+IC C4B   C3E  *C4A  H4A1       1.5020  112.20  120.00  110.10   1.1110
+IC C4B   C3E  *C4A  H4A2       1.5020  112.20 -120.00  110.10   1.1110
+IC C3E   C4A  C4B   C4C        1.5300  112.20  180.00  123.50   1.3400
+IC C4C   C4A  *C4B  H4B        1.3400  123.50  180.00  116.00   1.1000
+IC C4A   C4B  C4C   C4D        1.5020  123.50  180.00  123.50   1.5020
+IC C4E   C4B  *C4C  C4D        1.5020  123.50  180.00  123.50   1.5040
+IC C4B   C4C  C4D   H4D1       1.3400  123.50  180.00  111.50   1.1110
+IC H4D1  C4C  *C4D  H4D2       1.1110  111.50  120.00  111.50   1.1110
+IC H4D1  C4C  *C4D  H4D3       1.1110  111.50 -120.00  111.50   1.1110
+IC C4B   C4C  C4E   C5A        1.3400  123.50  180.00  112.20   1.5300
+IC C5A   C4C  *C4E  H4E1       1.5300  112.20  120.00  111.50   1.1110
+IC C5A   C4C  *C4E  H4E2       1.1110  111.50 -120.00  111.50   1.1110
+IC C4C   C4E  C5A   C5B        1.5020  112.20  180.00  112.20   1.5020
+IC C5B   C4E  *C5A  H5A1       1.5020  112.20  120.00  110.10   1.1110
+IC C5B   C4E  *C5A  H5A2       1.5020  112.20 -120.00  110.10   1.1110
+IC C4E   C5A  C5B   C5C        1.5300  112.20  180.00  123.50   1.3400
+IC C5C   C5A  *C5B  H5B        1.3400  123.50  180.00  116.00   1.1000
+IC C5A   C5B  C5C   C5D        1.5020  123.50  180.00  123.50   1.5020
+IC C5E   C5B  *C5C  C5D        1.5020  123.50  180.00  123.50   1.5040
+IC C5B   C5C  C5D   H5D1       1.3400  123.50  180.00  111.50   1.1110
+IC H5D1  C5C  *C5D  H5D2       1.1110  111.50  120.00  111.50   1.1110
+IC H5D1  C5C  *C5D  H5D3       1.1110  111.50 -120.00  111.50   1.1110
+IC C5B   C5C  C5E   C6A        1.3400  123.50  180.00  112.20   1.5300
+IC C6A   C5C  *C5E  H5E1       1.5300  112.20  120.00  111.50   1.1110
+IC C6A   C5C  *C5E  H5E2       1.1110  111.50 -120.00  111.50   1.1110
+IC C5C   C5E  C6A   C6B        1.5020  112.20  180.00  112.20   1.5020
+IC C6B   C5E  *C6A  H6A1       1.5020  112.20  120.00  110.10   1.1110
+IC C6B   C5E  *C6A  H6A2       1.5020  112.20 -120.00  110.10   1.1110
+IC C5E   C6A  C6B   C6C        1.5300  112.20  180.00  123.50   1.3400
+IC C6C   C6A  *C6B  H6B        1.3400  123.50  180.00  116.00   1.1000
+IC C6A   C6B  C6C   C6D        1.5020  123.50  180.00  123.50   1.5020
+IC C6E   C6B  *C6C  C6D        1.5020  123.50  180.00  123.50   1.5040
+IC C6B   C6C  C6D   H6D1       1.3400  123.50  180.00  111.50   1.1110
+IC H6D1  C6C  *C6D  H6D2       1.1110  111.50  120.00  111.50   1.1110
+IC H6D1  C6C  *C6D  H6D3       1.1110  111.50 -120.00  111.50   1.1110
+IC C6B   C6C  C6E   C7A        1.3400  123.50  180.00  112.20   1.5300
+IC C7A   C6C  *C6E  H6E1       1.5300  112.20  120.00  111.50   1.1110
+IC C7A   C6C  *C6E  H6E2       1.1110  111.50 -120.00  111.50   1.1110
+IC C6C   C6E  C7A   C7B        1.5020  112.20  180.00  112.20   1.5020
+IC C7B   C6E  *C7A  H7A1       1.5020  112.20  120.00  110.10   1.1110
+IC C7B   C6E  *C7A  H7A2       1.5020  112.20 -120.00  110.10   1.1110
+IC C6E   C7A  C7B   C7C        1.5300  112.20  180.00  123.50   1.3400
+IC C7C   C7A  *C7B  H7B        1.3400  123.50  180.00  116.00   1.1000
+IC C7A   C7B  C7C   C7D        1.5020  123.50  180.00  123.50   1.5020
+IC C7E   C7B  *C7C  C7D        1.5020  123.50  180.00  123.50   1.5040
+IC C7B   C7C  C7D   H7D1       1.3400  123.50  180.00  111.50   1.1110
+IC H7D1  C7C  *C7D  H7D2       1.1110  111.50  120.00  111.50   1.1110
+IC H7D1  C7C  *C7D  H7D3       1.1110  111.50 -120.00  111.50   1.1110
+IC C7B   C7C  C7E   C8A        1.3400  123.50  180.00  112.20   1.5300
+IC C8A   C7C  *C7E  H7E1       1.5300  112.20  120.00  111.50   1.1110
+IC C8A   C7C  *C7E  H7E2       1.1110  111.50 -120.00  111.50   1.1110
+IC C7C   C7E  C8A   C8B        1.5020  112.20  180.00  112.20   1.5020
+IC C8B   C7E  *C8A  H8A1       1.5020  112.20  120.00  110.10   1.1110
+IC C8B   C7E  *C8A  H8A2       1.5020  112.20 -120.00  110.10   1.1110
+IC C7E   C8A  C8B   C8C        1.5300  112.20  180.00  123.50   1.3400
+IC C8C   C8A  *C8B  H8B        1.3400  123.50  180.00  116.00   1.1000
+IC C8A   C8B  C8C   C8D        1.5020  123.50  180.00  123.50   1.5020
+IC C8E   C8B  *C8C  C8D        1.5020  123.50  180.00  123.50   1.5040
+IC C8B   C8C  C8D   H8D1       1.3400  123.50  180.00  111.50   1.1110
+IC H8D1  C8C  *C8D  H8D2       1.1110  111.50  120.00  111.50   1.1110
+IC H8D1  C8C  *C8D  H8D3       1.1110  111.50 -120.00  111.50   1.1110
+IC C8B   C8C  C8E   C9A        1.3400  123.50  180.00  112.20   1.5300
+IC C9A   C8C  *C8E  H8E1       1.5300  112.20  120.00  111.50   1.1110
+IC C9A   C8C  *C8E  H8E2       1.1110  111.50 -120.00  111.50   1.1110
+IC C8C   C8E  C9A   C9B        1.5020  112.20  180.00  112.20   1.5020
+IC C9B   C8E  *C9A  H9A1       1.5020  112.20  120.00  110.10   1.1110
+IC C9B   C8E  *C9A  H9A2       1.5020  112.20 -120.00  110.10   1.1110
+IC C8E   C9A  C9B   C9C        1.5300  112.20  180.00  123.50   1.3400
+IC C9C   C9A  *C9B  H9B        1.3400  123.50  180.00  116.00   1.1000
+IC C9A   C9B  C9C   C9D        1.5020  123.50  180.00  123.50   1.5020
+IC C9E   C9B  *C9C  C9D        1.5020  123.50  180.00  123.50   1.5040
+IC C9B   C9C  C9D   H9D1       1.3400  123.50  180.00  111.50   1.1110
+IC H9D1  C9C  *C9D  H9D2       1.1110  111.50  120.00  111.50   1.1110
+IC H9D1  C9C  *C9D  H9D3       1.1110  111.50 -120.00  111.50   1.1110
+IC C9B   C9C  C9E   C10A       1.3400  123.50  180.00  112.20   1.5300
+IC C10A  C9C  *C9E  H9E1       1.5300  112.20  120.00  111.50   1.1110
+IC C10A  C9C  *C9E  H9E2       1.1110  111.50 -120.00  111.50   1.1110
+IC C9C   C9E  C10A  C10B       1.5020  112.20  180.00  112.20   1.5020
+IC C10B  C9E  *C10A H10A1      1.5020  112.20  120.00  110.10   1.1110
+IC C10B  C9E  *C10A H10A2      1.5020  112.20 -120.00  110.10   1.1110
+IC C9E   C10A C10B  C10C       1.5300  112.20  180.00  123.50   1.3400
+IC C10C  C10A *C10B H10B       1.3400  123.50  180.00  116.00   1.1000
+IC C10A  C10B C10C  C10D       1.5020  123.50  180.00  123.50   1.5020
+IC C10E  C10B *C10C C10D       1.5020  123.50  180.00  123.50   1.5040
+IC C10B  C10C C10D  H10D1      1.3400  123.50  180.00  111.50   1.1110
+IC H10D1 C10C *C10D H10D2      1.1110  111.50  120.00  111.50   1.1110
+IC H10D1 C10C *C10D H10D3      1.1110  111.50 -120.00  111.50   1.1110
+IC C10B  C10C C10E  C11A       1.3400  123.50  180.00  112.20   1.5300
+IC C11A  C10C *C10E H10E1      1.5300  112.20  120.00  111.50   1.1110
+IC C11A  C10C *C10E H10E2      1.1110  111.50 -120.00  111.50   1.1110
+IC C10C  C10E C11A  C11B       1.5020  112.20  180.00  112.20   1.5020
+IC C11B  C10E *C11A H11A1      1.5020  112.20  120.00  110.10   1.1110
+IC C11B  C10E *C11A H11A2      1.5020  112.20 -120.00  110.10   1.1110
+IC C10E  C11A C11B  C11C       1.5300  112.20  180.00  123.50   1.3400
+IC C11C  C11A *C11B H11B       1.3400  123.50  180.00  116.00   1.1000
+IC C11A  C11B C11C  C11D       1.5020  123.50  180.00  123.50   1.5020
+IC C11E  C11B *C11C C11D       1.5020  123.50  180.00  123.50   1.5040
+IC C11B  C11C C11D  H11D1      1.3400  123.50  180.00  111.50   1.1110
+IC H11D1 C11C *C11D H11D2      1.1110  111.50  120.00  111.50   1.1110
+IC H11D1 C11C *C11D H11D3      1.1110  111.50 -120.00  111.50   1.1110
+IC C11B  C11C C11E  C12A       1.3400  123.50  180.00  112.20   1.5300
+IC C12A  C11C *C11E H11E1      1.5300  112.20  120.00  111.50   1.1110
+IC C12A  C11C *C11E H11E2      1.1110  111.50 -120.00  111.50   1.1110
+IC C11C  C11E C12A  C12B       1.5020  112.20  180.00  112.20   1.5020
+IC C12B  C11E *C12A H12A1      1.5020  112.20  120.00  110.10   1.1110
+IC C12B  C11E *C12A H12A2      1.5020  112.20 -120.00  110.10   1.1110
+IC C11E  C12A C12B  C12C       1.5300  112.20  180.00  123.50   1.3400
+IC C12C  C12A *C12B H12B       1.3400  123.50  180.00  116.00   1.1000
+IC C12A  C12B C12C  C12D       1.5020  123.50  180.00  123.50   1.5020
+IC C12E  C12B *C12C C12D       1.5020  123.50  180.00  123.50   1.5040
+IC C12B  C12C C12D  H12D1      1.3400  123.50  180.00  111.50   1.1110
+IC H12D1 C12C *C12D H12D2      1.1110  111.50  120.00  111.50   1.1110
+IC H12D1 C12C *C12D H12D3      1.1110  111.50 -120.00  111.50   1.1110
+IC C12B  C12C C12E  C13A       1.3400  123.50  180.00  112.20   1.5300
+IC C13A  C12C *C12E H12E1      1.5300  112.20  120.00  111.50   1.1110
+IC C13A  C12C *C12E H12E2      1.1110  111.50 -120.00  111.50   1.1110
+IC C12C  C12E C13A  C13B       1.5020  112.20  180.00  112.20   1.5020
+IC C13B  C12E *C13A H13A1      1.5020  112.20  120.00  110.10   1.1110
+IC C13B  C12E *C13A H13A2      1.5020  112.20 -120.00  110.10   1.1110
+IC C12E  C13A C13B  C13C       1.5300  112.20  180.00  123.50   1.3400
+IC C13C  C13A *C13B H13B       1.3400  123.50  180.00  116.00   1.1000
+IC C13A  C13B C13C  C13D       1.5020  123.50  180.00  123.50   1.5020
+IC C13E  C13B *C13C C13D       1.5020  123.50  180.00  123.50   1.5040
+IC C13B  C13C C13D  H13D1      1.3400  123.50  180.00  111.50   1.1110
+IC H13D1 C13C *C13D H13D2      1.1110  111.50  120.00  111.50   1.1110
+IC H13D1 C13C *C13D H13D3      1.1110  111.50 -120.00  111.50   1.1110
+IC C13B  C13C C13E  C14A       1.3400  123.50  180.00  112.20   1.5300
+IC C14A  C13C *C13E H13E1      1.5300  112.20  120.00  111.50   1.1110
+IC C14A  C13C *C13E H13E2      1.1110  111.50 -120.00  111.50   1.1110
+IC C13C  C13E C14A  C14B       1.5020  112.20  180.00  112.20   1.5020
+IC C14B  C13E *C14A H14A1      1.5020  112.20  120.00  110.10   1.1110
+IC C14B  C13E *C14A H14A2      1.5020  112.20 -120.00  110.10   1.1110
+IC C13E  C14A C14B  C14C       1.5300  112.20  180.00  123.50   1.3400
+IC C14C  C14A *C14B H14B       1.3400  123.50  180.00  116.00   1.1000
+IC C14A  C14B C14C  C14D       1.5020  123.50  180.00  123.50   1.5020
+IC C14E  C14B *C14C C14D       1.5020  123.50  180.00  123.50   1.5040
+IC C14B  C14C C14D  H14D1      1.3400  123.50  180.00  111.50   1.1110
+IC H14D1 C14C *C14D H14D2      1.1110  111.50  120.00  111.50   1.1110
+IC H14D1 C14C *C14D H14D3      1.1110  111.50 -120.00  111.50   1.1110
+IC C14B  C14C C14E  C15A       1.3400  123.50  180.00  112.20   1.5300
+IC C15A  C14C *C14E H14E1      1.5300  112.20  120.00  111.50   1.1110
+IC C15A  C14C *C14E H14E2      1.1110  111.50 -120.00  111.50   1.1110
+IC C14C  C14E C15A  C15B       1.5020  112.20  180.00  112.20   1.5020
+IC C15B  C14E *C15A H15A1      1.5020  112.20  120.00  110.10   1.1110
+IC C15B  C14E *C15A H15A2      1.5020  112.20 -120.00  110.10   1.1110
+IC C14E  C15A C15B  C15C       1.5300  112.20  180.00  123.50   1.3400
+IC C15C  C15A *C15B H15B       1.3400  123.50  180.00  116.00   1.1000
+IC C15A  C15B C15C  C15D       1.5020  123.50  180.00  123.50   1.5020
+IC C15E  C15B *C15C C15D       1.5020  123.50  180.00  123.50   1.5040
+IC C15B  C15C C15D  H15D1      1.3400  123.50  180.00  111.50   1.1110
+IC H15D1 C15C *C15D H15D2      1.1110  111.50  120.00  111.50   1.1110
+IC H15D1 C15C *C15D H15D3      1.1110  111.50 -120.00  111.50   1.1110
+IC C15B  C15C C15E  C16A       1.3400  123.50  180.00  112.20   1.5300
+IC C16A  C15C *C15E H15E1      1.5300  112.20  120.00  111.50   1.1110
+IC C16A  C15C *C15E H15E2      1.1110  111.50 -120.00  111.50   1.1110
+IC C15C  C15E C16A  C16B       1.5020  112.20  180.00  112.20   1.5020
+IC C16B  C15E *C16A H16A1      1.5020  112.20  120.00  110.10   1.1110
+IC C16B  C15E *C16A H16A2      1.5020  112.20 -120.00  110.10   1.1110
+IC C15E  C16A C16B  C16C       1.5300  112.20  180.00  123.50   1.3400
+IC C16C  C16A *C16B H16B       1.3400  123.50  180.00  116.00   1.1000
+IC C16A  C16B C16C  C16D       1.5020  123.50  180.00  123.50   1.5020
+IC C16E  C16B *C16C C16D       1.5020  123.50  180.00  123.50   1.5040
+IC C16B  C16C C16D  H16D1      1.3400  123.50  180.00  111.50   1.1110
+IC H16D1 C16C *C16D H16D2      1.1110  111.50  120.00  111.50   1.1110
+IC H16D1 C16C *C16D H16D3      1.1110  111.50 -120.00  111.50   1.1110
+IC C16B  C16C C16E  C17A       1.3400  123.50  180.00  112.20   1.5300
+IC C17A  C16C *C16E H16E1      1.5300  112.20  120.00  111.50   1.1110
+IC C17A  C16C *C16E H16E2      1.1110  111.50 -120.00  111.50   1.1110
+IC C16C  C16E C17A  C17B       1.5020  112.20  180.00  112.20   1.5020
+IC C17B  C16E *C17A H17A1      1.5020  112.20  120.00  110.10   1.1110
+IC C17B  C16E *C17A H17A2      1.5020  112.20 -120.00  110.10   1.1110
+IC C16E  C17A C17B  C17C       1.5300  112.20  180.00  123.50   1.3400
+IC C17C  C17A *C17B H17B       1.3400  123.50  180.00  116.00   1.1000
+IC C17A  C17B C17C  C17E       1.5020  123.50  180.00  123.50   1.5020
+IC C17E  C17B *C17C C17D       1.5020  123.50  180.00  123.50   1.5040
+IC C17B  C17C C17D  H17D1      1.3400  123.50  180.00  111.50   1.1110
+IC H17D1 C17C *C17D H17D2      1.1110  111.50  120.00  111.50   1.1110
+IC H17D1 C17C *C17D H17D3      1.1110  111.50 -120.00  111.50   1.1110
+IC C17B  C17C C17E  C18A       1.3400  123.50  180.00  112.20   1.5300
+IC C18A  C17C *C17E H17E1      1.5300  112.20  120.00  111.50   1.1110
+IC C18A  C17C *C17E H17E2      1.1110  111.50 -120.00  111.50   1.1110
+IC C17C  C17E C18A  C18B       1.5020  112.20  180.00  112.20   1.5020
+IC C18B  C17E *C18A H18A1      1.5020  112.20  120.00  110.10   1.1110
+IC C18B  C17E *C18A H18A2      1.5020  112.20 -120.00  110.10   1.1110
+IC C17E  C18A C18B  C18C       1.5300  112.20  180.00  123.50   1.3400
+IC C18C  C18A *C18B H18B       1.3400  123.50  180.00  116.00   1.1000
+IC C18A  C18B C18C  C18E       1.5020  123.50  180.00  123.50   1.5020
+IC C18E  C18B *C18C C18D       1.5020  123.50  180.00  123.50   1.5040
+IC C18B  C18C C18D  H18D1      1.3400  123.50  180.00  111.50   1.1110
+IC H18D1 C18C *C18D H18D2      1.1110  111.50  120.00  111.50   1.1110
+IC H18D1 C18C *C18D H18D3      1.1110  111.50 -120.00  111.50   1.1110
+IC C18B  C18C C18E  C19A       1.3400  123.50  180.00  112.20   1.5300
+IC C19A  C18C *C18E H18E1      1.5300  112.20  120.00  111.50   1.1110
+IC C19A  C18C *C18E H18E2      1.1110  111.50 -120.00  111.50   1.1110
+IC C18C  C18E C19A  C19B       1.5020  112.20  180.00  112.20   1.5020
+IC C19B  C18E *C19A H19A1      1.5020  112.20  120.00  110.10   1.1110
+IC C19B  C18E *C19A H19A2      1.5020  112.20 -120.00  110.10   1.1110
+IC C18E  C19A C19B  C19C       1.5300  112.20  180.00  123.50   1.3400
+IC C19C  C19A *C19B H19B       1.3400  123.50  180.00  116.00   1.1000
+IC C19A  C19B C19C  C19D       1.5020  123.50  180.00  123.50   1.5040
+IC C19D  C19B *C19C C19E       1.5040  123.50  180.00  123.50   1.5040
+IC C19B  C19C C19D  H19D1      1.3400  123.50  180.00  111.50   1.1110
+IC H19D1 C19C *C19D H19D2      1.1110  111.50  120.00  111.50   1.1110
+IC H19D1 C19C *C19D H19D3      1.1110  111.50 -120.00  111.50   1.1110
+IC C19B  C19C C19E  H19E1      1.3400  123.50  180.00  111.50   1.1110
+IC H19E1 C19C *C19E H19E2      1.1110  111.50  120.00  111.50   1.1110
+IC H19E1 C19C *C19E H19E3      1.1110  111.50 -120.00  111.50   1.1110
+
+RESI UNDPP         -2.00 !  [name]
+GROUP
+ATOM P2    PG1      1.34 !        HO22
+ATOM O22   OG311   -0.71 !        |
+ATOM HO22  HGP1     0.44 !        O22            !! based on PPI2
+ATOM O23   OG2P1   -0.86 !        |          
+ATOM O24   OG2P1   -0.86 !   O23==P2==O24 (-) 
+                         !        |          
+ATOM P1    PG1      1.46 !        O12         
+ATOM O12   OG304   -0.63 !        |          
+ATOM O13   OG2P1   -0.83 !   O13==P1==O14 (-) 
+ATOM O14   OG2P1   -0.83 !        |          
+ATOM O11   OG303   -0.62 !        O11         
+                         !        |
+ATOM C1A   CG321   -0.08 !  H1A1--C1A--H1A2         
+ATOM H1A1  HGA2     0.09 !        |
+ATOM H1A2  HGA2     0.09 !        |
+GROUP               0.00 !        |
+ATOM C1B   CG2D1   -0.15 !        C1B--H1B         (cis)
+ATOM H1B   HGA4     0.15 !        ||
+GROUP               0.00 !        ||   H1D1        
+ATOM C1C   CG2D1    0.00 !        ||   |
+GROUP               0.00 !        C1C--C1D--H1D2    
+ATOM C1D   CG331   -0.27 !        |    |
+ATOM H1D1  HGA3     0.09 !        |    H1D3        
+ATOM H1D2  HGA3     0.09 !        !
+ATOM H1D3  HGA3     0.09 !        !
+GROUP               0.00 !        !
+ATOM C1E   CG321   -0.18 !  H1E1--C1E--H1E2         
+ATOM H1E1  HGA2     0.09 !        ! 
+ATOM H1E2  HGA2     0.09 !        !
+GROUP               0.00 !        |
+ATOM C2A   CG321   -0.18 !  H2A1--C2A--H2A2         
+ATOM H2A1  HGA2     0.09 !        |
+ATOM H2A2  HGA2     0.09 !        |
+GROUP               0.00 !        |
+ATOM C2B   CG2D1   -0.15 !        C2B--H2B         (cis)
+ATOM H2B   HGA4     0.15 !        ||
+GROUP               0.00 !        ||   H2D1        
+ATOM C2C   CG2D1    0.00 !        ||   |
+GROUP               0.00 !        C2C--C2D--H2D2    
+ATOM C2D   CG331   -0.27 !        |    |
+ATOM H2D1  HGA3     0.09 !        |    H2D3        
+ATOM H2D2  HGA3     0.09 !        !
+ATOM H2D3  HGA3     0.09 !        !
+GROUP               0.00 !        !
+ATOM C2E   CG321   -0.18 !  H2E1--C2E--H2E2         
+ATOM H2E1  HGA2     0.09 !        ! 
+ATOM H2E2  HGA2     0.09 !        !
+GROUP               0.00 !        |
+ATOM C3A   CG321   -0.18 !  H3A1--C3A--H3A2         
+ATOM H3A1  HGA2     0.09 !        |
+ATOM H3A2  HGA2     0.09 !        |
+GROUP               0.00 !        |
+ATOM C3B   CG2D1   -0.15 !        C3B--H3B         (cis)
+ATOM H3B   HGA4     0.15 !        ||
+GROUP               0.00 !        ||   H3D1        
+ATOM C3C   CG2D1    0.00 !        ||   |
+GROUP               0.00 !        C3C--C3D--H3D2    
+ATOM C3D   CG331   -0.27 !        |    |
+ATOM H3D1  HGA3     0.09 !        |    H3D3        
+ATOM H3D2  HGA3     0.09 !        !
+ATOM H3D3  HGA3     0.09 !        !
+GROUP               0.00 !        !
+ATOM C3E   CG321   -0.18 !  H3E1--C3E--H3E2         
+ATOM H3E1  HGA2     0.09 !        ! 
+ATOM H3E2  HGA2     0.09 !        !
+GROUP               0.00 !        |
+ATOM C4A   CG321   -0.18 !  H4A1--C4A--H4A2         
+ATOM H4A1  HGA2     0.09 !        |
+ATOM H4A2  HGA2     0.09 !        |
+GROUP               0.00 !        |
+ATOM C4B   CG2D1   -0.15 !        C4B--H4B         (cis)
+ATOM H4B   HGA4     0.15 !        ||
+GROUP               0.00 !        ||   H4D1        
+ATOM C4C   CG2D1    0.00 !        ||   |
+GROUP               0.00 !        C4C--C4D--H4D2    
+ATOM C4D   CG331   -0.27 !        |    |
+ATOM H4D1  HGA3     0.09 !        |    H4D3        
+ATOM H4D2  HGA3     0.09 !        !
+ATOM H4D3  HGA3     0.09 !        !
+GROUP               0.00 !        !
+ATOM C4E   CG321   -0.18 !  H4E1--C4E--H4E2         
+ATOM H4E1  HGA2     0.09 !        ! 
+ATOM H4E2  HGA2     0.09 !        !
+GROUP               0.00 !        |
+ATOM C5A   CG321   -0.18 !  H5A1--C5A--H5A2         
+ATOM H5A1  HGA2     0.09 !        |
+ATOM H5A2  HGA2     0.09 !        |
+GROUP               0.00 !        |
+ATOM C5B   CG2D1   -0.15 !        C5B--H5B         (cis)
+ATOM H5B   HGA4     0.15 !        ||
+GROUP               0.00 !        ||   H5D1        
+ATOM C5C   CG2D1    0.00 !        ||   |
+GROUP               0.00 !        C5C--C5D--H5D2    
+ATOM C5D   CG331   -0.27 !        |    |
+ATOM H5D1  HGA3     0.09 !        |    H5D3        
+ATOM H5D2  HGA3     0.09 !        !
+ATOM H5D3  HGA3     0.09 !        !
+GROUP               0.00 !        !
+ATOM C5E   CG321   -0.18 !  H5E1--C5E--H5E2         
+ATOM H5E1  HGA2     0.09 !        ! 
+ATOM H5E2  HGA2     0.09 !        !
+GROUP               0.00 !        |
+ATOM C6A   CG321   -0.18 !  H6A1--C6A--H6A2         
+ATOM H6A1  HGA2     0.09 !        |
+ATOM H6A2  HGA2     0.09 !        |
+GROUP               0.00 !        |
+ATOM C6B   CG2D1   -0.15 !        C6B--H6B         (cis)
+ATOM H6B   HGA4     0.15 !        ||
+GROUP               0.00 !        ||   H6D1        
+ATOM C6C   CG2D1    0.00 !        ||   |
+GROUP               0.00 !        C6C--C6D--H6D2    
+ATOM C6D   CG331   -0.27 !        |    |
+ATOM H6D1  HGA3     0.09 !        |    H6D3        
+ATOM H6D2  HGA3     0.09 !        !
+ATOM H6D3  HGA3     0.09 !        !
+GROUP               0.00 !        !
+ATOM C6E   CG321   -0.18 !  H6E1-C6E--H6E2         
+ATOM H6E1  HGA2     0.09 !        ! 
+ATOM H6E2  HGA2     0.09 !        !
+GROUP               0.00 !        |
+ATOM C7A   CG321   -0.18 !  H7A1--C7A--H7A2         
+ATOM H7A1  HGA2     0.09 !        |
+ATOM H7A2  HGA2     0.09 !        |
+GROUP               0.00 !        |
+ATOM C7B   CG2D1   -0.15 !        C7B--H7B         (cis)
+ATOM H7B   HGA4     0.15 !        ||
+GROUP               0.00 !        ||   H7D1        
+ATOM C7C   CG2D1    0.00 !        ||   |
+GROUP               0.00 !        C7C--C7D--H7D2    
+ATOM C7D   CG331   -0.27 !        |    |
+ATOM H7D1  HGA3     0.09 !        |    H7D3        
+ATOM H7D2  HGA3     0.09 !        !
+ATOM H7D3  HGA3     0.09 !        !
+GROUP               0.00 !        !
+ATOM C7E   CG321   -0.18 !  H7E1-C7E--H7E2         
+ATOM H7E1  HGA2     0.09 !        ! 
+ATOM H7E2  HGA2     0.09 !        !
+GROUP               0.00 !        |
+ATOM C8A   CG321   -0.18 !  H8A1--C8A--H8A2         
+ATOM H8A1  HGA2     0.09 !        |
+ATOM H8A2  HGA2     0.09 !        |
+GROUP               0.00 !        |
+ATOM C8B   CG2D1   -0.15 !        C8B--H8B         (trans)
+ATOM H8B   HGA4     0.15 !        ||
+GROUP               0.00 !        ||   H8D1        
+ATOM C8C   CG2D1    0.00 !        ||   |
+GROUP               0.00 !        C8C--C8D--H8D2    
+ATOM C8D   CG331   -0.27 !        |    |
+ATOM H8D1  HGA3     0.09 !        |    H8D3        
+ATOM H8D2  HGA3     0.09 !        !
+ATOM H8D3  HGA3     0.09 !        !
+GROUP               0.00 !        !
+ATOM C8E   CG321   -0.18 !  H8E1-C8E--H8E2         
+ATOM H8E1  HGA2     0.09 !        ! 
+ATOM H8E2  HGA2     0.09 !        !
+GROUP               0.00 !        |
+ATOM C9A   CG321   -0.18 !  H9A1--C9A--H9A2         
+ATOM H9A1  HGA2     0.09 !        |
+ATOM H9A2  HGA2     0.09 !        |
+GROUP               0.00 !        |
+ATOM C9B   CG2D1   -0.15 !        C9B--H9B         (trans)
+ATOM H9B   HGA4     0.15 !        ||
+GROUP               0.00 !        ||   H9D1        
+ATOM C9C   CG2D1    0.00 !        ||   |
+GROUP               0.00 !        C9C--C9D--H9D2    
+ATOM C9D   CG331   -0.27 !        |    |
+ATOM H9D1  HGA3     0.09 !        |    H9D3        
+ATOM H9D2  HGA3     0.09 !        !
+ATOM H9D3  HGA3     0.09 !        !
+GROUP               0.00 !        !
+ATOM C9E   CG321   -0.18 !  H9E1-C9E--H9E2         
+ATOM H9E1  HGA2     0.09 !        ! 
+ATOM H9E2  HGA2     0.09 !        !
+GROUP               0.00 !        |
+ATOM C10A  CG321   -0.18 ! H10A1--C10A--H10A2         
+ATOM H10A1 HGA2     0.09 !        |
+ATOM H10A2 HGA2     0.09 !        |
+GROUP               0.00 !        |
+ATOM C10B  CG2D1   -0.15 !        C10B--H110B      (trans)
+ATOM H10B  HGA4     0.15 !        ||
+GROUP               0.00 !        ||   H10D1        
+ATOM C10C  CG2D1    0.00 !        ||   |
+GROUP               0.00 !        C10C-C10D--H10D2    
+ATOM C10D  CG331   -0.27 !        |    |
+ATOM H10D1 HGA3     0.09 !        |    H10D3        
+ATOM H10D2 HGA3     0.09 !        !
+ATOM H10D3 HGA3     0.09 !        !
+GROUP               0.00 !        !
+ATOM C10E  CG321   -0.18 ! H10E1-C10E--H10E2         
+ATOM H10E1 HGA2     0.09 !        ! 
+ATOM H10E2 HGA2     0.09 !        !
+GROUP               0.00 !        |
+ATOM C11A  CG321   -0.18 ! H11A1--C11A--H11A2         
+ATOM H11A1 HGA2     0.09 !        |
+ATOM H11A2 HGA2     0.09 !        |
+GROUP               0.00 !        |
+ATOM C11B  CG2D1   -0.15 !        C11B--H11B
+ATOM H11B  HGA4     0.15 !        ||
+GROUP               0.00 !        ||   H11D1        
+ATOM C11C  CG2D1    0.00 !        ||   |
+GROUP               0.00 !        C11C-C11D--H11D2    
+ATOM C11D  CG331   -0.27 !        |    |
+ATOM H11D1 HGA3     0.09 !        |    H11D3        
+ATOM H11D2 HGA3     0.09 !        !
+ATOM H11D3 HGA3     0.09 !        !
+GROUP               0.00 !        !
+ATOM C11E  CG331   -0.27 ! H11E1-C11E--H11E2         
+ATOM H11E1 HGA3     0.09 !        ! 
+ATOM H11E2 HGA3     0.09 !        !
+ATOM H11E3 HGA3     0.09 !       H11E3
+
+BOND O22 HO22 P2 O22  P2 O23  P2 O24  P2  O12 ! Phosphate group 2
+BOND P1  O12  P1 O13  P1 O14  P1 O11  O11 C1A ! Phosphate group 1
+BOND C1A C1B   C1C C1D   C1C C1E        ! cis isoprene backbone carbons
+DOUBLE C1B C1C                          ! cis double bond
+BOND C1A H1A1  C1A H1A2                 ! C1A hydrogens
+BOND C1B H1B                            ! C1B hydrogen
+BOND C1D H1D1  C1D H1D2  C1D H1D3       ! C1D hydrogens
+BOND C1E H1E1  C1E H1E2                 ! C1E hydrogens
+BOND C1E C2A                            ! isoprene linking bond
+BOND C2A C2B   C2C C2D   C2C C2E        ! cis isoprene backbone carbons
+DOUBLE C2B C2C                          ! cis double bond
+BOND C2A H2A1  C2A H2A2                 ! C2A hydrogens
+BOND C2B H2B                            ! C2B hydrogen
+BOND C2D H2D1  C2D H2D2  C2D H2D3       ! C2D hydrogens
+BOND C2E H2E1  C2E H2E2                 ! C2E hydrogens
+BOND C2E C3A                            ! isoprene linking bond
+BOND C3A C3B   C3C C3D   C3C C3E        ! cis isoprene backbone carbons
+DOUBLE C3B C3C                          ! cis double bond
+BOND C3A H3A1  C3A H3A2                 ! C3A hydrogens
+BOND C3B H3B                            ! C3B hydrogen
+BOND C3D H3D1  C3D H3D2  C3D H3D3       ! C3D hydrogens
+BOND C3E H3E1  C3E H3E2                 ! C3E hydrogens
+BOND C3E C4A                            ! isoprene linking bond
+BOND C4A C4B   C4C C4D   C4C C4E        ! cis isoprene backbone carbons
+DOUBLE C4B C4C                          ! cis double bond
+BOND C4A H4A1  C4A H4A2                 ! C4A hydrogens
+BOND C4B H4B                            ! C4B hydrogen
+BOND C4D H4D1  C4D H4D2  C4D H4D3       ! C4D hydrogens
+BOND C4E H4E1  C4E H4E2                 ! C4E hydrogens
+BOND C4E C5A                            ! isoprene linking bond
+BOND C5A C5B   C5C C5D   C5C C5E        ! cis isoprene backbone carbons
+DOUBLE C5B C5C                          ! cis double bond
+BOND C5A H5A1  C5A H5A2                 ! C5A hydrogens
+BOND C5B H5B                            ! C5B hydrogen
+BOND C5D H5D1  C5D H5D2  C5D H5D3       ! C5D hydrogens
+BOND C5E H5E1  C5E H5E2                 ! C5E hydrogens
+BOND C5E C6A                            ! isoprene linking bond
+BOND C6A C6B   C6C C6D   C6C C6E        ! cis isoprene backbone carbons
+DOUBLE C6B C6C                          ! cis double bond
+BOND C6A H6A1  C6A H6A2                 ! C6A hydrogens
+BOND C6B H6B                            ! C6B hydrogen
+BOND C6D H6D1  C6D H6D2  C6D H6D3       ! C6D hydrogens
+BOND C6E H6E1  C6E H6E2                 ! C6E hydrogens
+BOND C6E C7A                            ! isoprene linking bond
+BOND C7A C7B   C7C C7D   C7C C7E        ! cis isoprene backbone carbons
+DOUBLE C7B C7C                          ! cis double bond
+BOND C7A H7A1  C7A H7A2                 ! C7A hydrogens
+BOND C7B H7B                            ! C7B hydrogen
+BOND C7D H7D1  C7D H7D2  C7D H7D3       ! C7D hydrogens
+BOND C7E H7E1  C7E H7E2                 ! C7E hydrogens
+BOND C7E C8A                            ! isoprene linking bond
+BOND C8A C8B   C8C C8D   C8C C8E        ! trans isoprene backbone carbons
+DOUBLE C8B C8C                          ! trans double bond
+BOND C8A H8A1  C8A H8A2                 ! C8A hydrogens
+BOND C8B H8B                            ! C8B hydrogen
+BOND C8D H8D1  C8D H8D2  C8D H8D3       ! C8D hydrogens
+BOND C8E H8E1  C8E H8E2                 ! C8E hydrogens
+BOND C8E C9A                            ! isoprene linking bond
+BOND C9A C9B   C9C C9D   C9C C9E        ! trans isoprene backbone carbons
+DOUBLE C9B C9C                          ! trans double bond
+BOND C9A H9A1  C9A H9A2                 ! C9A hydrogens
+BOND C9B H9B                            ! C9B hydrogen
+BOND C9D H9D1  C9D H9D2  C9D H9D3       ! C9D hydrogens
+BOND C9E H9E1  C9E H9E2                 ! C9E hydrogens
+BOND C9E C10A                           ! isoprene linking bond
+BOND C10A C10B   C10C C10D   C10C C10E  ! trans isoprene backbone carbons
+DOUBLE C10B C10C                        ! trans double bond
+BOND C10A H10A1  C10A H10A2             ! C10A hydrogens
+BOND C10B H10B                          ! C10B hydrogen
+BOND C10D H10D1  C10D H10D2  C10D H10D3 ! C10D hydrogens
+BOND C10E H10E1  C10E H10E2             ! C10E hydrogens
+BOND C10E C11A                          ! isoprene linking bond
+BOND C11A C11B   C11C C11D   C11C C11E  ! isoprene backbone carbons
+DOUBLE C11B C11C                        ! double bond
+BOND C11A H11A1  C11A H11A2             ! C11A hydrogens
+BOND C11B H11B                          ! C11B hydrogen
+BOND C11D H11D1  C11D H11D2  C11D H11D3 ! C11D hydrogens
+BOND C11E H11E1  C11E H11E2  C11E H11E3 ! C11E hydrogens
+IC O22    O12   *P2    O23        1.6100  111.00  120.00  111.60   1.5100
+IC O22    O12   *P2    O24        1.6100  111.00 -120.00  111.60   1.5100 
+IC O12    P2    O22    HO22       1.6750  111.00  180.00  115.00   0.9600 
+IC O22    P2    O12    P1         1.6100  111.00  180.00  143.00   1.6750 
+IC P2     O12   P1     O11        1.6750  143.00  180.00  105.00   1.6500 
+IC O11    O12   *P1    O13        1.6500  105.00  120.00  111.60   1.5100 
+IC O11    O12   *P1    O14        1.5100  111.60 -120.00  111.60   1.5100 
+IC O12    P1    O11    C1A        1.6750  105.00  180.00  120.00   1.4400 
+IC P1     O11   C1A    C1B        1.6500  120.00  180.00  110.10   1.5300 
+IC C1B    O11   *C1A   H1A1       1.5300  110.10  120.00  109.50   1.1110 
+IC C1B    O11   *C1A   H1A2       1.5300  110.10 -120.00  109.50   1.1110 
+IC O11    C1A   C1B    C1C        1.4400  110.10  180.00  113.50   1.5380 
+IC C1C    C1A   *C1B   H1B        1.3400  123.50  180.00  116.00   1.1000
+IC C1A    C1B   C1C    C1D        1.5020  123.50  180.00  123.50   1.5020
+IC C1E    C1B   *C1C   C1D        1.5020  123.50  180.00  123.50   1.5040
+IC C1B    C1C   C1D    H1D1       1.3400  123.50  180.00  111.50   1.1110
+IC H1D1   C1C   *C1D   H1D2       1.1110  111.50  120.00  111.50   1.1110
+IC H1D1   C1C   *C1D   H1D3       1.1110  111.50 -120.00  111.50   1.1110
+IC C1B    C1C   C1E    C2A        1.3400  123.50  180.00  112.20   1.5300
+IC C2A    C1C   *C1E   H1E1       1.5300  112.20  120.00  111.50   1.1110
+IC C2A    C1C   *C1E   H1E2       1.1110  111.50 -120.00  111.50   1.1110
+IC C1C    C1E   C2A    C2B        1.5020  112.20  180.00  112.20   1.5020
+IC C2B    C1E   *C2A   H2A1       1.5020  112.20  120.00  110.10   1.1110
+IC C2B    C1E   *C2A   H2A2       1.5020  112.20 -120.00  110.10   1.1110
+IC C1E    C2A   C2B    C2C        1.5300  112.20  180.00  123.50   1.3400
+IC C2C    C2A   *C2B   H2B        1.3400  123.50  180.00  116.00   1.1000
+IC C2A    C2B   C2C    C2D        1.5020  123.50  180.00  123.50   1.5020
+IC C2E    C2B   *C2C   C2D        1.5020  123.50  180.00  123.50   1.5040
+IC C2B    C2C   C2D    H2D1       1.3400  123.50  180.00  111.50   1.1110
+IC H2D1   C2C   *C2D   H2D2       1.1110  111.50  120.00  111.50   1.1110
+IC H2D1   C2C   *C2D   H2D3       1.1110  111.50 -120.00  111.50   1.1110
+IC C2B    C2C   C2E    C3A        1.3400  123.50  180.00  112.20   1.5300
+IC C3A    C2C   *C2E   H2E1       1.5300  112.20  120.00  111.50   1.1110
+IC C3A    C2C   *C2E   H2E2       1.1110  111.50 -120.00  111.50   1.1110
+IC C2C    C2E   C3A    C3B        1.5020  112.20  180.00  112.20   1.5020
+IC C3B    C2E   *C3A   H3A1       1.5020  112.20  120.00  110.10   1.1110
+IC C3B    C2E   *C3A   H3A2       1.5020  112.20 -120.00  110.10   1.1110
+IC C2E    C3A   C3B    C3C        1.5300  112.20  180.00  123.50   1.3400
+IC C3C    C3A   *C3B   H3B        1.3400  123.50  180.00  116.00   1.1000
+IC C3A    C3B   C3C    C3D        1.5020  123.50  180.00  123.50   1.5020
+IC C3E    C3B   *C3C   C3D        1.5020  123.50  180.00  123.50   1.5040
+IC C3B    C3C   C3D    H3D1       1.3400  123.50  180.00  111.50   1.1110
+IC H3D1   C3C   *C3D   H3D2       1.1110  111.50  120.00  111.50   1.1110
+IC H3D1   C3C   *C3D   H3D3       1.1110  111.50 -120.00  111.50   1.1110
+IC C3B    C3C   C3E    C4A        1.3400  123.50  180.00  112.20   1.5300
+IC C4A    C3C   *C3E   H3E1       1.5300  112.20  120.00  111.50   1.1110
+IC C4A    C3C   *C3E   H3E2       1.1110  111.50 -120.00  111.50   1.1110
+IC C3C    C3E   C4A    C4B        1.5020  112.20  180.00  112.20   1.5020
+IC C4B    C3E   *C4A   H4A1       1.5020  112.20  120.00  110.10   1.1110
+IC C4B    C3E   *C4A   H4A2       1.5020  112.20 -120.00  110.10   1.1110
+IC C3E    C4A   C4B    C4C        1.5300  112.20  180.00  123.50   1.3400
+IC C4C    C4A   *C4B   H4B        1.3400  123.50  180.00  116.00   1.1000
+IC C4A    C4B   C4C    C4D        1.5020  123.50  180.00  123.50   1.5020
+IC C4E    C4B   *C4C   C4D        1.5020  123.50  180.00  123.50   1.5040
+IC C4B    C4C   C4D    H4D1       1.3400  123.50  180.00  111.50   1.1110
+IC H4D1   C4C   *C4D   H4D2       1.1110  111.50  120.00  111.50   1.1110
+IC H4D1   C4C   *C4D   H4D3       1.1110  111.50 -120.00  111.50   1.1110
+IC C4B    C4C   C4E    C5A        1.3400  123.50  180.00  112.20   1.5300
+IC C5A    C4C   *C4E   H4E1       1.5300  112.20  120.00  111.50   1.1110
+IC C5A    C4C   *C4E   H4E2       1.1110  111.50 -120.00  111.50   1.1110
+IC C4C    C4E   C5A    C5B        1.5020  112.20  180.00  112.20   1.5020
+IC C5B    C4E   *C5A   H5A1       1.5020  112.20  120.00  110.10   1.1110
+IC C5B    C4E   *C5A   H5A2       1.5020  112.20 -120.00  110.10   1.1110
+IC C4E    C5A   C5B    C5C        1.5300  112.20  180.00  123.50   1.3400
+IC C5C    C5A   *C5B   H5B        1.3400  123.50  180.00  116.00   1.1000
+IC C5A    C5B   C5C    C5D        1.5020  123.50  180.00  123.50   1.5020
+IC C5E    C5B   *C5C   C5D        1.5020  123.50  180.00  123.50   1.5040
+IC C5B    C5C   C5D    H5D1       1.3400  123.50  180.00  111.50   1.1110
+IC H5D1   C5C   *C5D   H5D2       1.1110  111.50  120.00  111.50   1.1110
+IC H5D1   C5C   *C5D   H5D3       1.1110  111.50 -120.00  111.50   1.1110
+IC C5B    C5C   C5E    C6A        1.3400  123.50  180.00  112.20   1.5300
+IC C6A    C5C   *C5E   H5E1       1.5300  112.20  120.00  111.50   1.1110
+IC C6A    C5C   *C5E   H5E2       1.1110  111.50 -120.00  111.50   1.1110
+IC C5C    C5E   C6A    C6B        1.5020  112.20  180.00  112.20   1.5020
+IC C6B    C5E   *C6A   H6A1       1.5020  112.20  120.00  110.10   1.1110
+IC C6B    C5E   *C6A   H6A2       1.5020  112.20 -120.00  110.10   1.1110
+IC C5E    C6A   C6B    C6C        1.5300  112.20  180.00  123.50   1.3400
+IC C6C    C6A   *C6B   H6B        1.3400  123.50  180.00  116.00   1.1000
+IC C6A    C6B   C6C    C6D        1.5020  123.50  180.00  123.50   1.5020
+IC C6E    C6B   *C6C   C6D        1.5020  123.50  180.00  123.50   1.5040
+IC C6B    C6C   C6D    H6D1       1.3400  123.50  180.00  111.50   1.1110
+IC H6D1   C6C   *C6D   H6D2       1.1110  111.50  120.00  111.50   1.1110
+IC H6D1   C6C   *C6D   H6D3       1.1110  111.50 -120.00  111.50   1.1110
+IC C6B    C6C   C6E    C7A        1.3400  123.50  180.00  112.20   1.5300
+IC C7A    C6C   *C6E   H6E1       1.5300  112.20  120.00  111.50   1.1110
+IC C7A    C6C   *C6E   H6E2       1.1110  111.50 -120.00  111.50   1.1110
+IC C6C    C6E   C7A    C7B        1.5020  112.20  180.00  112.20   1.5020
+IC C7B    C6E   *C7A   H7A1       1.5020  112.20  120.00  110.10   1.1110
+IC C7B    C6E   *C7A   H7A2       1.5020  112.20 -120.00  110.10   1.1110
+IC C6E    C7A   C7B    C7C        1.5300  112.20  180.00  123.50   1.3400
+IC C7C    C7A   *C7B   H7B        1.3400  123.50  180.00  116.00   1.1000
+IC C7A    C7B   C7C    C7D        1.5020  123.50  180.00  123.50   1.5020
+IC C7E    C7B   *C7C   C7D        1.5020  123.50  180.00  123.50   1.5040
+IC C7B    C7C   C7D    H7D1       1.3400  123.50  180.00  111.50   1.1110
+IC H7D1   C7C   *C7D   H7D2       1.1110  111.50  120.00  111.50   1.1110
+IC H7D1   C7C   *C7D   H7D3       1.1110  111.50 -120.00  111.50   1.1110
+IC C7B    C7C   C7E    C8A        1.3400  123.50  180.00  112.20   1.5300
+IC C8A    C7C   *C7E   H7E1       1.5300  112.20  120.00  111.50   1.1110
+IC C8A    C7C   *C7E   H7E2       1.1110  111.50 -120.00  111.50   1.1110
+IC C7C    C7E   C8A    C8B        1.5020  112.20  180.00  112.20   1.5020
+IC C8B    C7E   *C8A   H8A1       1.5020  112.20  120.00  110.10   1.1110
+IC C8B    C7E   *C8A   H8A2       1.5020  112.20 -120.00  110.10   1.1110
+IC C7E    C8A   C8B    C8C        1.5300  112.20  180.00  123.50   1.3400
+IC C8C    C8A   *C8B   H8B        1.3400  123.50  180.00  116.00   1.1000
+IC C8A    C8B   C8C    C8D        1.5020  123.50    0.00  123.50   1.5020
+IC C8E    C8B   *C8C   C8D        1.5020  123.50  180.00  123.50   1.5040
+IC C8B    C8C   C8D    H8D1       1.3400  123.50  180.00  111.50   1.1110
+IC H8D1   C8C   *C8D   H8D2       1.1110  111.50  120.00  111.50   1.1110
+IC H8D1   C8C   *C8D   H8D3       1.1110  111.50 -120.00  111.50   1.1110
+IC C8B    C8C   C8E    C9A        1.3400  123.50  180.00  112.20   1.5300
+IC C9A    C8C   *C8E   H8E1       1.5300  112.20  120.00  111.50   1.1110
+IC C9A    C8C   *C8E   H8E2       1.1110  111.50 -120.00  111.50   1.1110
+IC C8C    C8E   C9A    C9B        1.5020  112.20  180.00  112.20   1.5020
+IC C9B    C8E   *C9A   H9A1       1.5020  112.20  120.00  110.10   1.1110
+IC C9B    C8E   *C9A   H9A2       1.5020  112.20 -120.00  110.10   1.1110
+IC C8E    C9A   C9B    C9C        1.5300  112.20  180.00  123.50   1.3400
+IC C9C    C9A   *C9B   H9B        1.3400  123.50  180.00  116.00   1.1000
+IC C9A    C9B   C9C    C9D        1.5020  123.50    0.00  123.50   1.5020
+IC C9E    C9B   *C9C   C9D        1.5020  123.50  180.00  123.50   1.5040
+IC C9B    C9C   C9D    H9D1       1.3400  123.50  180.00  111.50   1.1110
+IC H9D1   C9C   *C9D   H9D2       1.1110  111.50  120.00  111.50   1.1110
+IC H9D1   C9C   *C9D   H9D3       1.1110  111.50 -120.00  111.50   1.1110
+IC C9B    C9C   C9E    C10A       1.3400  123.50  180.00  112.20   1.5300
+IC C10A   C9C   *C9E   H9E1       1.5300  112.20  120.00  111.50   1.1110
+IC C10A   C9C   *C9E   H9E2       1.1110  111.50 -120.00  111.50   1.1110
+IC C9C    C9E   C10A   C10B       1.5020  112.20  180.00  112.20   1.5020
+IC C10B   C9E   *C10A  H10A1      1.5020  112.20  120.00  110.10   1.1110
+IC C10B   C9E   *C10A  H10A2      1.5020  112.20 -120.00  110.10   1.1110
+IC C9E    C10A  C10B   C10C       1.5300  112.20  180.00  123.50   1.3400
+IC C10C   C10A  *C10B  H10B       1.3400  123.50  180.00  116.00   1.1000
+IC C10A   C10B  C10C   C10D       1.5020  123.50    0.00  123.50   1.5020
+IC C10E   C10B  *C10C  C10D       1.5020  123.50  180.00  123.50   1.5040
+IC C10B   C10C  C10D   H10D1      1.3400  123.50  180.00  111.50   1.1110
+IC H10D1  C10C  *C10D  H10D2      1.1110  111.50  120.00  111.50   1.1110
+IC H10D1  C10C  *C10D  H10D3      1.1110  111.50 -120.00  111.50   1.1110
+IC C10B   C10C  C10E   C11A       1.3400  123.50  180.00  112.20   1.5300
+IC C11A   C10C  *C10E  H10E1      1.5300  112.20  120.00  111.50   1.1110
+IC C11A   C10C  *C10E  H10E2      1.1110  111.50 -120.00  111.50   1.1110
+IC C10C   C10E  C11A   C11B       1.5020  112.20  180.00  112.20   1.5020
+IC C11B   C10E  *C11A  H11A1      1.5020  112.20  120.00  110.10   1.1110
+IC C11B   C10E  *C11A  H11A2      1.5020  112.20 -120.00  110.10   1.1110
+IC C10E   C11A  C11B   C11C       1.5300  112.20  180.00  123.50   1.3400
+IC C11C   C11A  *C11B  H11B       1.3400  123.50  180.00  116.00   1.1000
+IC C11A   C11B  C11C   C11D       1.5020  123.50  180.00  123.50   1.5020
+IC C11E   C11B  *C11C  C11D       1.5020  123.50  180.00  123.50   1.5040
+IC C11B   C11C  C11D   H11D1      1.3400  123.50  180.00  111.50   1.1110
+IC H11D1  C11C  *C11D  H11D2      1.1110  111.50  120.00  111.50   1.1110
+IC H11D1  C11C  *C11D  H11D3      1.1110  111.50 -120.00  111.50   1.1110
+IC C11B   C11C  C11E   H11E1      1.5300  112.20  180.00  111.50   1.1110
+IC C11B   C11C  *C11E  H11E2      1.1110  111.50  120.00  111.50   1.1110
+IC C11B   C11C  *C11E  H11E3      1.1110  111.50 -120.00  111.50   1.1110
+
+PRES LLLO           -2.10 ! linkage for dol-P-P and sugar
+dele atom 1HO1            !
+dele atom 1O1             !
+dele atom 2HO22           !
+GROUP                     !
+ATOM 1C1   CC3162    0.30 ! adjust to make this section charge 0.1 (same as the dol part)
+ATOM 1H1   HCA1      0.09 !
+ATOM 1C5   CC3163    0.02 !           H5
+ATOM 1H5   HCA1      0.09 !             \
+ATOM 1O5   OC3C61   -0.40 !             C5-------O5
+                          !             /         \   H1
+                          !            /           \ /
+                          !           C4           C1
+                          !            \           / \
+                          !             \         /   \ 
+                          !              C3------C2    \
+                          !                             \
+                          !                              \
+                          !                               \
+ATOM 2P2    PG1      1.50 !                                \
+ATOM 2O22   OG303   -0.62 !                                 O22
+ATOM 2O23   OG2P1   -0.82 !                                 |          
+ATOM 2O24   OG2P1   -0.82 !                            O23==P2==O24 (-) 
+                          !                                 |          
+ATOM 2O12   OG304   -0.68 !                                 O12         
+ATOM 2P1    PG1      1.50 !                                 |          
+ATOM 2O13   OG2P1   -0.82 !                            O13==P1==O14 (-) 
+ATOM 2O14   OG2P1   -0.82 !                                 |          
+ATOM 2O11   OG303   -0.62 !                                 O11         
+                          !                                 |
+!ATOM 2C1    CG321   -0.08!                            H11--C1--H12
+!ATOM 2H11   HGA2     0.09!                                 |
+!ATOM 2H12   HGA2     0.09!                                 |
+
+BOND 1C1 2O22
+
+!Thermalized IC
+!IC  1C3  1C2   1C1   2O22     1.5364  112.47 -174.92  109.44   1.4102
+!IC  1C2  2O22  *1C1  1H1      1.5323  109.44 -120.96  109.46   1.1223
+IC  1C3  1C2   1C1   1H1      1.5364  112.47  180.00  109.44   1.4102
+IC  1C2  1H1   *1C1  2O22     1.5323  109.44 -120.00  109.46   1.1223
+IC  1C2  1C1   2O22  2P2      1.5323  109.44  -84.54  127.66   1.5968
+IC  1C1  2O22  2P2   2O12     1.4102  127.66 -174.21  102.94   1.5071
+IC  2O22 2O12  *2P2  2O23     1.5968  102.94  113.03  118.81   1.5471
+IC  2O22 2O12  *2P2  2O24     1.5968  102.94 -113.60  109.37   1.4811
+
+END
+
+read param card flex append
+* LLO related parameters
+*
+
+BONDS
+!LLLO
+CC3162  OG303    360.00  1.425 !! from CC3162  OC30P    360.00  1.425   !
+
+ANGLES
+!DOL-PP
+CG331  CG2D1   CG331    48.00    123.50 !! from CG321  CG2D1  CG331    48.00    123.50 ! RETINOL TMCH
+!LLLO
+OG303  CC3162  HCA1     60.00    109.50 !! from OC30P   CC3162  HCA1      60.00    109.50                  ! par35 HCA2 CC32A OC30A
+OG303  CC3162  OC3C61   90.00    110.00 !! from OC30P   CC3162  OC3C61    90.00    110.00
+OG303  CC3162  CC3161   45.00    109.00 !! from OC30P   CC3162  CC3161    45.00    109.00
+CC3162 OG303   PG1      20.00    120.00   35.0    2.33 !! from CC3162  OC30P      PC     20.0     120.0    35.0    2.33   ! same in CGenFF (CG311 OG303 PG1 from CG321 OG303 PG1)
+!UND-PP
+CG2D1  CG321   OG303    75.70    110.10 !! from CG2D1  CG321  OG311    75.70    110.10 ! RETINOL PROL
+
+DIHEDRALS
+!DOL-PP
+CG311  CG321  CG321  OG303      0.1950  3     0.00 !! from CG321  CG321  CG321  OG303      0.1950  3     0.00 ! PROT alkane update, adm jr., 3/2/92
+CG2D1  CG321  CG321  CG311      0.1400  1    180.0 !! from CG2D1  CG321  CG321  CG321      0.1400  1    180.0 ! 2-hexene, adm jr., 11/09
+CG2D1  CG321  CG321  CG311      0.1700  2      0.0 !! from CG2D1  CG321  CG321  CG321      0.1700  2      0.0 ! 2-hexene, adm jr., 11/09
+CG2D1  CG321  CG321  CG311      0.0500  3    180.0 !! from CG2D1  CG321  CG321  CG321      0.0500  3    180.0 ! 2-hexene, adm jr., 11/09
+CG2D1  CG321  CG321  CG2D1      0.1400  1    180.0 !! from CG2D1  CG321  CG321  CG321      0.1400  1    180.0 ! 2-hexene, adm jr., 11/09 ; potential candidate for optimization -- kevo
+CG2D1  CG321  CG321  CG2D1      0.1700  2      0.0 !! from CG2D1  CG321  CG321  CG321      0.1700  2      0.0 ! 2-hexene, adm jr., 11/09 ; potential candidate for optimization -- kevo
+CG2D1  CG321  CG321  CG2D1      0.0500  3    180.0 !! from CG2D1  CG321  CG321  CG321      0.0500  3    180.0 ! 2-hexene, adm jr., 11/09 ; potential candidate for optimization -- kevo
+CG331  CG2D1  CG331  HGA3       0.3000  3     0.00 !! from CG331  CG2DC1 CG331  HGA3       0.3000  3     0.00 ! RETINOL DMP1, 4-methyl-1,3-pentadiene ; alternative CG321 CG2D1 CG331 HGA3, RETINOL TMCH is cyclic so probably worse -- kevo
+!LLLO
+CC3162 OG303  PG1    OG2P1      0.33    3     0.0  !! from CC3162   OC30P     PC        OC2DP    0.33   3      0.0 ! probably better with the old phosphate charges in the topology (and the L-J haven't changed) -- kevo
+CC3162 OG303  PG1    OG304      1.45    2     0.0  !! from CC3162   OC30P     PC        OC312    1.45   2      0.0 ! probably better with the old phosphate charges in the topology (and the L-J haven't changed) -- kevo
+HCA1   CC3162 OG303  PG1        0.284   3     0.0  !! from HCA1     CC3162    OC30P     PC       0.284  3      0.0  ! dmp,eps, H-C3'-O3'-P || from the par_all27_na.prm
+OC3C61 CC3162 OG303  PG1        0.38    2     0.0  !! from OC3C61   CC3162    OC30P     PC       0.38   2      0.0
+OC3C61 CC3162 OG303  PG1        0.41    3    180.0 !! from OC3C61   CC3162    OC30P     PC       0.41   3    180.0
+CC3161 CC3162 OG303  PG1        0.02    3    180.0 !! from CC3161   CC3162    OC30P     PC       0.02   3    180.0
+CC3163 OC3C61 CC3162 OG303      2.44    3    180.0 !! from CC3163   OC3C61    CC3162    OC30P    2.44   3    180.0
+HCA1   CC3161 CC3162 OG303      0.20    3      0.0 !! from HCA1     CC3161    CC3162    OC30P    0.20   3      0.0  ! par27 X CTL1 CTL2 X
+CC3161 CC3161 CC3162 OG303      1.76    1      0.0 !! from CC3161   CC3161    CC3162    OC30P    1.76   1      0.0
+CC3161 CC3161 CC3162 OG303      2.56    2      0.0 !! from CC3161   CC3161    CC3162    OC30P    2.56   2      0.0
+CC3161 CC3161 CC3162 OG303      0.01    3      0.0 !! from CC3161   CC3161    CC3162    OC30P    0.01   3      0.0
+OG303  CC3162 CC3161 NC2D1      0.20    3      0.0 !! from OC301   CC3162  CC3161  NC2D1    0.20  3    0.0 ! par27 X CTL1 CTL1 X
+!BBAC
+CC331   CC3163  CC3161  NC2D1    0.20  3       0.0 !! from CC312   CC3163  CC3161  NC2D1    0.20  3    0.0 ! par27 X CTL1 CTL1 X
+!UND-PP
+CG2D1  CG2D1  CG321  OG303      1.9000  1   180.00 !! from CG2D2 CG2D1 CG321 OG311 and CG2DC1 CG2DC1 CG321 OG311 , RETINOL PROL
+CG2D1  CG2D1  CG321  OG303      0.4000  2   180.00 !! from CG2D2 CG2D1 CG321 OG311 and CG2DC1 CG2DC1 CG321 OG311 , RETINOL PROL
+CG2D1  CG2D1  CG321  OG303      0.6000  3   180.00 !! from CG2D2 CG2D1 CG321 OG311 and CG2DC1 CG2DC1 CG321 OG311 , RETINOL PROL
+HGA4   CG2D1  CG321  OG303      0.2000  3     0.00 !! from HGA4  CG2D1 CG321 OG311 and HGA4   CG2DC1 CG321 OG311 , RETINOL PROL
+CG2D1  CG321  OG303  PG1        0.6000  1   180.00 !! from CG321  CG321  OG303  PG1        0.6000  1   180.00 ! EP_2 phospho-ser/thr !Reorganization: BPET and others ; potential candidate for optimization  -- kevo
+CG2D1  CG321  OG303  PG1        0.6500  2     0.00 !! from CG321  CG321  OG303  PG1        0.6500  2     0.00 ! EP_2 phospho-ser/thr !Reorganization: BPET and others ; potential candidate for optimization  -- kevo
+CG2D1  CG321  OG303  PG1        0.0500  3     0.00 !! from CG321  CG321  OG303  PG1        0.0500  3     0.00 ! EP_2 phospho-ser/thr !Reorganization: BPET and others ; potential candidate for optimization  -- kevo
+
+
+END
+
+RETURN
+

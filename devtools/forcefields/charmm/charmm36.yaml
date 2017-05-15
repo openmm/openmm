@@ -1,0 +1,192 @@
+# for CharMM36 --> OpenMM ffxml conversion
+# Author: Chaya D. Stern, choderalab
+# The include files structure is based on the file structure of unzipped toppar_c36_aug15.tgz
+# excluded files include files that need to be excluded from the conversion because of duplicate parameters with different
+# values. In addition, toppar_hbond.str and toppar_all36_lipid_list.str are not standard stream files.
+
+- sourcePackage: charmm36
+  sourcePackageVersion: toppar_c36_aug15.tgz
+- Source:
+    include:
+     - toppar/top_all36_carb.rtf
+     - toppar/par_all36_carb.prm
+     - toppar/top_all36_cgenff.rtf
+     - toppar/par_all36_cgenff.prm
+     - toppar/top_all36_lipid.rtf
+     - toppar/par_all36_lipid.prm
+     - toppar/top_all36_na.rtf
+     - toppar/par_all36_na.prm
+     - toppar/top_all36_prot.rtf
+     - toppar/par_all36_prot.prm
+    stream:
+     - toppar/toppar_water_ions.str
+     - toppar/stream/carb/*.str
+     - toppar/stream/lipid/*.str
+     - toppar/stream/prot/*.str
+     - toppar/stream/na/*.str
+     - toppar/stream/misc/*.str
+    exclude:
+     - toppar/stream/lipid/toppar_all36_lipid_list.str
+     - toppar/stream/lipid/toppar_all36_lipid_glycolipid.str
+     - toppar/stream/prot/toppar_all36_prot_aldehydes.str
+     - toppar/stream/na/toppar_all36_na_modifications.str
+     - toppar/stream/misc/toppar_hbond.str
+  References:
+   protein:
+     - >-
+       Robert B. Best, R.B., Xiao Zhu, X., Shim, J., Lopes, P. Mittal, J., Feig, M. and MacKerell, A.D., Jr. Optimization
+       of the additive CHARMM all-atom protein force field targeting improved sampling of the backbone phi, psi and
+       sidechain chi1 and chi2 dihedral angles. JCTC, 8: 3257-3273, 2013, PMC3549273
+     - >-
+       MacKerell, A.D., Jr., Feig, M. and Brooks, III, C.L. "Improved treatment of the protein backbone in empirical
+       force fields," Journal of the American Chemical Society, 126: 698-699, 2004
+     - >-
+       MacKerell, Jr., A. D.; Bashford, D.; Bellott, M.; Dunbrack Jr., R.L.; Evanseck, J.D.; Field, M.J.; Fischer, S.;
+       Gao, J.; Guo, H.; Ha, S.; Joseph-McCarthy, D.; Kuchnir, L.; Kuczera, K.; Lau, F.T.K.; Mattos, C.; Michnick, S.;
+       Ngo, T.; Nguyen, D.T.; Prodhom, B.; Reiher, III, W.E.; Roux, B.; Schlenkrich, M.; Smith, J.C.; Stote, R.; Straub,
+       J.; Watanabe, M.; Wiorkiewicz-Kuczera, J.; Yin, D.; Karplus, M.  All-atom empirical potential for molecular
+       modeling and dynamics Studies of proteins.  Journal of Physical Chemistry B, 1998, 102, 3586-3616.
+     - arginine:
+       - >-
+         Li, L., Vorobyov, I.V., MacKerell, Jr., A.D., Allen, T.W., "Is arginine charged in a membrane?" Biophysical
+         Journal, 94: L11-L13, 2008, PMCID: PMC2157258
+     - fluoroalkanes:
+       - >-
+         Chen, I.-J., Yin, D. and MacKerell, Jr., A.D., "Combined Ab initio/Empirical Approach for Optimization of
+         Lennard-Jones Parameters for Polar-Neutral Compounds," Journal of Computational Chemistry, 2002, 23:199-213.
+     - phosphotyorosine:
+       - >-
+         Feng, M.-H., Philippopoulos, M., MacKerell, Jr., A.D. and Lim, C. Structural Characterization of the
+         Phosphotyrosine Binding Region of a High-Affinity aSH2 Domain-Phosphopeptide Complex by Molecular Dynamics
+         Simulation and Chemical Shift Calculations. Journal of the American Chemical Society, 1996, 118: 11265-11277.
+     - pyridines:
+       - >-
+         Yin, D., Ph.D. Thesis, "Parameterization for Empirical Force Field Calculations and A Theoretical Study of
+         Membrane Permeability of Pyridine Derivative," Department of Pharmaceutical Sciences, School of Pharmacy,
+         University of Maryland, 1997
+   carbohydrates:
+     - pyranose monosaccharides:
+       - >-
+         Guvench, O., Greene, S.N., Kamath, G., Brady, J.W., Venable, R.M., Pastor, R.W., MacKerell, Jr., A.D.
+         "Additive empirical force field for hexopyranose monosaccharides," Journal of Computational Chemistry, 29:
+         2543-2564, 2008. PMID: 18470966
+     - linear sugars inositol sugar alcohols:
+       - >-
+         Hatcher, E., Guvench, O., and MacKerell, Jr., A.D., "CHARMM Additive All-Atom Force Field for Acyclic
+         Polyalcohols, Acyclic Carbohydrates and Inositol," Journal of Chemical Theory and Computation, 5: 1315-1327,
+         2009, DOI: 10.1021/ct9000608.
+     - hexopyranose glycosidic linkages:
+       - >-
+         Guvench, O., Hatcher, E. R., Venable, R. M., Pastor, R. W., MacKerell, Jr., A. D. "Additive Empirical CHARMM
+         Force Field for glycosyl linked hexopyranoses," Journal of Chemical Theory and Computation, 5, 2353-2370, 2009,
+         DOI: 10.1021/ct900242e
+     - furanose monosaccharides:
+       - >-
+         Hatcher, E. R.; Guvench, O. and MacKerell, Jr., A.D. "CHARMM Additive All-Atom Force Field for
+         Aldopentofuranose Carbohydrates and Fructofuranose." Journal of Physical Chemistry B. 113:12466-76, 2009,
+         PMID: 19694450
+     - glycosidic linkages involving furanoses:
+       - >-
+         Raman, E. P., Guvench, O., MacKerell, Jr., A.D., "CHARMM Additive All-Atom Force Field for Glycosidic Linkages
+         in Carbohydrates Involving Furanoses," Journal of Physical Chemistry B, 114: 12981-12994, 2010, PMID: 20845956
+     - carbohydrate derivatives and glycosidic linkages for glycoproteins:
+       - >-
+         Guvench, O.; Mallajosyula, S. S.; Raman, E. P.; Hatcher, E. R.; Vanommeslaeghe, K.; Foster, T. J.; Jamison,
+         F. W. and MacKerell, Jr., A.D., "CHARMM additive all-atom force field for carbohydrate derivatives and its
+         utility in polysaccharide and carbohydrate-protein modeling," Journal of Chemical Theory and Computation 2011
+         7 (10), 3162-3180
+     - O-glycan linkages:
+       - >-
+         Mallajosyula, S. S. and MacKerell, Jr., A.D., "Influence of Solvent and Intramolecular Hydrogen Bonding on the
+         Conformational Properties of O-Linked Glycopeptides," The Journal of Physical Chemistry B 2011 115 (38),
+         11215-11229.
+     - phosphates and sulfates:
+       - >-
+         Mallajosyula, S. S.; Guvench, O; Hatcher E. R. and MacKerell, Jr., A.D., "CHARMM Additive All-Atom Force Field
+         for Phosphate and Sulfate Linked to Carbohydrates" Journal of Chemical Theory and Computation 2012 8 (2),
+         759-776.
+     - glycolipids:
+       - >-
+         Kern, N. R., Lee, H. S., Wu, E. L., Park, S., Vanommeslaeghe, K., MacKerell, A. D., ... Im, W. (2014). Lipid-
+         Linked Oligosaccharides in Membrane Sample Conformations That Faciliate Binding to Oligosaccharyltransferase.
+         Biophysical Journal, 107(8), 1885-1895.
+   lipids:
+     - >-
+       Jeffery B. Klauda, Richard M. Venable, J. Alfredo Freites, Joseph W. O'Connor, Douglas J. Tobias, Carlos
+       Mondragon-Ramirez, Igor Vorobyov, Alexander D. MacKerell, Jr. and Richard W. Pastor "Update of the CHARMM
+       All-Atom Additive Force Field for Lipids: Validation on Six Lipid Types" J. Phys. Chem. B 2010, 114, 7830-7843
+     - PUFA modifications:
+       - >-
+         Jeffery B. Klauda, Viviana Monje, Taehoon Kim, and Wonpil Im. "Improving the CHARMM Force Field for
+         Polyunsaturated Fatty Acid Chains" J. Phys. Chem. B. 2012 ASAP http://dx.doi.org/10.1021/jp304056p
+     - atom nomenclature:
+       - >-
+         Sundaralingan, M., Ann. N.Y. Acad. Sci. USA, 195:324-355, 1972
+     - bacterial:
+       - >-
+         Lim, J.B. and Klauda, J.B. Branching at the Iso- and Anteiso- Positions in Complex Chlamydia Membranes: A
+         Molecular Dynamics Study. Biochimica et Biophysica Acta (BBA) - Biomembranes 1808:323-331 (2011).
+       - >-
+         Pandit, K.R. and Klauda, J.B. Membrane models of E. coli containing cyclic moieties in the aliphatic lipid
+         chain. Biochimica et Biophysica Acta (BBA) - Biomembranes 1818:1205-1210 (2012).
+     - cholesterol:
+       - >-
+         Lim, J.B., Rogaski, B. and Klauda, J.B.. "Update of the Cholesterol Force Field Parameters in CHARMM" 116:
+         203-210 (2012).
+       - >-
+         Suits, F., Pitman, M., MacKerell, A.D., Jr., Feller, S.E. "Molecular Level Organization of Saturated and
+         Polyunsaturated Fatty Acids in a Phosphatidylcholine Bilayer Containing Cholesterol" Biochemistry, 43(49):
+         15318-28, 2004
+     - sphingomyelin:
+       - >-
+         Venable, R.M., B. Rogaski, H. Rui, A.D. MacKerell, Jr., R.W. Pastor, and J.B. Klauda. An Experimentally Validated
+         All-atom Force Field for Sphingomyelin. In prep. (2013).
+   nucleic acids:
+     - >-
+       Denning, E.J., Priyakumar, U.D., Nilsson, L., and MacKerell Jr., A.D., "Impact of 2'-hydroxyl sampling on the
+       conformational properties of RNA: Update of the CHARMM all-atom additive force field for RNA," JCC, 32:
+       1929-1943, 2011, PMC3082605
+     - >-
+       Hart, K. Foloppe, N., Baker, C.M, Denning, E.J., Nilsson, L. and MacKerell Jr., A.D. "Optimization of the CHARMM
+       additive force field for DNA: Improved of the BI/BII conformational equilibrium," JCTC, 8:348-362, 2012,
+       PMC3285246
+     - >-
+       Foloppe, N. and MacKerell, Jr., A.D. "All-Atom Empirical Force Field for Nucleic Acids: 1) Parameter Optimization
+       Based on Small Molecule and Condensed Phase Macromolecular Target Data. JCC, 2000, 21: 86-104.
+     - >-
+       MacKerell, Jr., A.D. and Banavali, N. "All-Atom Empirical Force Field for Nucleic Acids: 2) Application to
+       Molecular Dynamics Simulations of DNA and RNA in Solution. JCC, 2000, 21: 105-120.
+     - atp adp nad+ nadh ppi:
+        - >-
+          Pavelites, J.J., Bash, P.A., Gao, J., and MacKerell, Jr., A.D. A Molecular Mechanics Force Field for NAD+,
+          NADH and the Pyrophosphate Groups of Nucleotides, Journal of Computational Chemistry, 1997, 18: 221-239.
+     - reactive RNA:
+        - >-
+          Mayaan E, Moser A, MacKerell AD Jr, York DM. "CHARMM force field parameters for simulation of reactive
+          intermediates in native and thio-substituted ribozymes." J Comput Chem. 2007 Jan 30;28(2):495-507.
+   cgenff:
+     - >-
+       K. Vanommeslaeghe, E. Hatcher, C. Acharya, S. Kundu, S. Zhong, J. Shim, E. Darian, O. Guvench, P. Lopes, I.
+       Vorobyov and A. D. Mackerell Jr., J. Comput. Chem. 2010, 31, 671-690.
+     - >-
+       W. Yu, X. He, K. Vanommeslaeghe, A. D. MacKerell Jr., J. Comput. Chem. 2012, 33, 2451-2468.
+   tip3p:
+     - >-
+       W.L. Jorgensen; J.Chandrasekhar; J.D. Madura; R.W. Impey; M.L. Klein; "Comparison of simple potential functions for
+       simulating liquid water", J. Chem. Phys. 79 926-935 (1983).
+   ions:
+     - >-
+       Beglov, D. and Roux, B., Finite Representation of an Infinite Bulk System: Solvent Boundary Potential for
+       Computer Simulations, Journal of Chemical Physics, 1994, 100: 9050-9063
+     - zinc:
+       - >-
+         Stote, R.H. and Karplus, M. Zinc Binding in Proteins and Solution: A Simple but Accurate Nonbonded
+         Representation, PROTEINS: Structure, Function, and Genetics 23:12-31 (1995)
+     - cations:
+       - >-
+         Won, Y., "Force Field for Monovalent, Divalent, and Trivalent Cations Developed under the Solvent Boundary
+         Potential," Journal of Physical Chemistry A., 116: 11763-11767, 2012.
+   amines:
+     - >-
+       Chen, I.-J., Yin, D. and MacKerell, Jr., A.D., "Combined Ab initio/Empirical Approach for Optimization of
+       Lennard-Jones Parameters for Polar-Neutral Compounds," Journal of Computational Chemistry, 2002, 23:199-213.

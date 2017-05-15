@@ -1,0 +1,438 @@
+* - parameter file PARAM19 -
+* PEPTIDE GEOMETRY FROM RAMACHANDRAN ET AL BBA 359:298 (1974)
+* TORSIONS FROM HAGLER ET AL JACS 98:4600 (1976)
+* JORGENSEN NONBOND PARAMETERS JACS 103:3976-3985 WITH 1-4 RC=1.80/0.1
+*
+
+!* - PEPTIDE GEOMETRY TO GIVE RAMACHANDRAN ET AL BBA 359:298 (1974)
+!* - PEPTIDE TORSIONS FROM HAGLER ET AL JACS 98:4600 (1976)
+!* - NONBONDED TERMS JORGENSEN JACS 103:3976 W/ RC1-4 = 1.80 EC1-4 = 0.1
+!*  The default h-bond exponents are now 6-repul 4-attr
+!* ++++++++ ATOMTYPE OS (IN METHYL ESTER) ADDED FOR CHARMM COURSE /LN ++++
+!* SOLVENT PARAMETERS: SUPPORTING ST2 AND MODIFIED TIP3P MODEL
+!* Switched from Slater-Kirkwood to simple mixing rules - AB
+!* Hbond parameters based on comparisons of dimer results with
+!*   ab initio calculations. - WER  12/19/84
+!* Grouping of atom types for VDW parameters - BRB 1/3/85
+!*
+
+!references
+!Reiher, III., W.E. Theoretical Studies of Hydrogen Bonding, Ph.D.
+!Thesis, Department of Chemistry, Harvard University, Cambridge, MA,
+!USA, 1985
+!
+!and
+!
+!Neria, E., Fischer, S., and Karplus, M.  Simulation of Activation Free
+!Energies in Molecular Systems, Journal of Chemical Physics, 1996, 105:
+!1902-21.
+
+BOND
+C    C      450.0       1.38!  FROM B. R. GELIN THESIS AMIDE AND DIPEPTIDES
+C    CH1E   405.0       1.52!  EXCEPT WHERE NOTED.  CH1E,CH2E,CH3E, AND CT
+C    CH2E   405.0       1.52!  ALL TREATED THE SAME. UREY BRADLEY TERMS ADDED
+C    CH3E   405.0       1.52
+C    CR1E   450.0       1.38
+C    CT     405.0       1.53
+C    N      471.0       1.33
+C    NC2    400.0       1.33!  BOND LENGTH FROM PARMFIX9 FORCE K APROXIMATE
+C    NH1    471.0       1.33
+C    NH2    471.0       1.33
+C    NP     471.0       1.33
+C    NR     471.0       1.33
+C    O      580.0       1.23
+C    OC     580.0       1.23!  FORCE DECREASE AND LENGTH INCREASE FROM C O
+C    OH1    450.0       1.38!  FROM PARMFIX9 (NO VALUE IN GELIN THESIS)
+C    OS     292.0       1.43!  FROM DEP NORMAL MODE FIT
+CH1E CH1E   225.0       1.53
+CH1E CH2E   225.0       1.52
+CH1E CH3E   225.0       1.52
+CH1E N      422.0       1.45
+CH1E NH1    422.0       1.45
+CH1E NH2    422.0       1.45
+CH1E NH3    422.0       1.45
+CH1E OH1    400.0       1.42!  FROM PARMFIX9 (NO VALUE IN GELIN THESIS)
+CH2E CH2E   225.0       1.52
+CH2E CH3E   225.0       1.54
+CH2E CR1E   250.0       1.45!  FROM WARSHEL AND KARPLUS 1972 JACS 96:5612
+CH2E N      422.0       1.45
+CH2E NH1    422.0       1.45
+CH2E NH2    422.0       1.45
+CH2E NH3    422.0       1.45
+CH2E OH1    400.0       1.42
+CH2E S      450.0       1.81!  FROM PARMFIX9
+CH2E SH1E   450.0       1.81
+CH3E NH1    422.0       1.49
+CH3E NR     422.0       1.49 ! FOR NETROPSIN
+CH3E S      450.0       1.77!  FROM PARMFIX9
+CH3E OS     292.0       1.38!  FROM DEP NORMAL MODE FIT
+CM   OM    1115.0       1.128!  FROM CAUGHEY ET AL(1978),CARBON MONOXIDE
+CR1E CR1E   450.0       1.38
+CR1E NH1    450.0       1.305
+CR1E NR     450.0       1.305
+CT   CT     200.0       1.53
+CT   N      422.0       1.45
+CT   NC2    422.0       1.45
+CT   NH1    422.0       1.45
+CT   NH2    422.0       1.45
+CT   NH3    422.0       1.45
+CT   OH1    400.0       1.42
+CT   S      450.0       1.81
+FE   CM     258.0       1.79!   FROM KROEKER ET AL(JCP:72:4846)
+FE   NP     500.0       2.09
+FE   NR      65.0       1.98!   FROM NAGAI ET AL(1980)
+FE   OM     250.0       1.8!    JUST A GUESS.
+H    NH1    405.0       0.98!  GELIN AND IR STRETCH 3200 CM 1
+H    NH2    405.0       0.98
+H    OH1    450.0       0.96!  FROM IR STRETCH 3400 CM 1
+H    OH2    450.0       1.00 ! from ST2 geometry
+LP   OH2    450.0       0.80 ! ditto
+H    H        0.0       1.6329931 ! from ST2 geometry (for SHAKE w/PARAM)
+HT   OT     450.0       0.9572 ! from TIPS3P geometry
+HT   HT       0.0       1.5139 ! from TIPS3P geometry (for SHAKE w/PARAM)
+HA   C      350.0       1.08
+HA   CT     300.0       1.08
+HC   NC2    405.0       1.00
+HC   NH1    405.0       0.98
+HC   NH3    405.0       1.04
+OC   S      400.0       1.43
+OM   OM     600.0       1.23!   STRETCHING CONSTANT JUST A GUESS.
+S    S      500.0       2.02
+THETAS
+C    C    C       70.0     106.5!  FROM B. R. GELIN THESIS WITH HARMONIC
+C    C    CH2E    65.0     126.5!  PART OF F TERMS INCORPORATED. ATOMS
+C    C    CH3E    65.0     126.5!  WITH EXTENDED H COMPENSATED FOR LACK
+C    C    CR1E    70.0     122.5!  OF H ANGLES.
+C    C    CT      70.0     126.5
+C    C    HA      40.0     120.0!  AMIDE PARAMETERS FIT BY LEAST SQUARES
+C    C    NH1     65.0     109.0!  TO N-METHYL ACETAMIDE VIBRATIONS.
+C    C    NP      65.0     112.5!  MINIMIZATION OF N-METHYL ACETAMIDE.
+C    C    NR      65.0     112.5
+C    C    OH1     65.0     119.0
+C    C    O       65.0     119.0 ! FOR NETROPSIN
+CH1E C    N       20.0     117.5
+CH1E C    NH1     20.0     117.5
+CH1E C    O       85.0     121.5
+CH1E C    OC      85.0     117.5
+CH1E C    OH1     85.0     120.0
+CH2E C    CR1E    70.0     121.5
+CH2E C    N       20.0     117.5
+CH2E C    NH1     20.0     117.5
+CH2E C    NH2     20.0     117.5
+CH2E C    NC2     20.0     117.5 ! FOR NETROPSIN
+CH2E C    NR      60.0     116.0
+CH2E C    O       85.0     121.6
+CH2E C    OC      85.0     118.5
+CH2E C    OH1     85.0     120.0
+CH3E C    N       20.0     117.5
+CH3E C    NH1     20.0     117.5
+CH3E C    O       85.0     121.5
+CR1E C    CR1E    65.0     120.5
+CR1E C    NH1     65.0     110.5! USED ONLY IN HIS, NOT IT TRP
+CR1E C    NP      65.0     122.5
+CR1E C    NR      65.0     122.5
+CR1E C    OH1     65.0     119.0
+CT   C    N       20.0     117.5
+CT   C    NH1     20.0     117.5
+CT   C    NH2     20.0     117.5
+CT   C    O       85.0     121.5
+CT   C    OC      85.0     118.5
+CT   C    OH1     85.0     120.0
+HA   C    NH1     40.0     120.0
+HA   C    NH2     40.0     120.0
+HA   C    NR      40.0     120.0
+HA   C    O       85.0     121.5
+N    C    O       85.0     121.0
+NC2  C    NC2     70.0     120.0
+NC2  C    NH1     70.0     120.0
+NH1  C    NR      70.0     120.0
+NH1  C    O       65.0     121.0
+NH2  C    O       65.0     121.0
+O    C    OH1     85.0     120.0
+OC   C    OC      85.0     122.5
+OS   C    CH1E    70.0     125.3! FROM PARDNA10
+OS   C    CH2E    70.0     125.3!   - " -
+OS   C    O       70.0     120.0!   - " -
+C    CH1E CH1E    70.0     110.0
+C    CH1E CH2E    70.0     109.5
+C    CH1E CH3E    70.0     106.5
+C    CH1E N       45.0     111.6
+C    CH1E NH1     45.0     111.6
+C    CH1E NH2     45.0     111.6
+C    CH1E NH3     45.0     111.6
+CH1E CH1E CH2E    45.0     112.5
+CH1E CH1E CH3E    45.0     111.0
+CH1E CH1E NH1     50.0     110.0
+CH1E CH1E NH2     50.0     109.5
+CH1E CH1E NH3     50.0     107.5
+CH1E CH1E OH1     50.0     104.5
+CH2E CH1E CH3E    50.0     111.5
+CH2E CH1E N       65.0     104.0
+CH2E CH1E NH1     65.0     110.0
+CH2E CH1E NH2     65.0     110.0
+CH2E CH1E NH3     65.0     110.0
+CH3E CH1E CH3E    50.0     111.0
+CH3E CH1E NH1     65.0     108.5
+CH3E CH1E NH2     65.0     109.5
+CH3E CH1E NH3     65.0     109.5
+CH3E CH1E OH1     60.0     110.5
+C    CH2E CH1E    70.0     112.5
+C    CH2E CH2E    70.0     113.0
+C    CH2E NH1     70.0     111.6
+C    CH2E NH2     70.0     111.6
+C    CH2E NH3     70.0     111.6
+CH1E CH2E CH1E    45.0     117.0
+CH1E CH2E CH2E    45.0     112.5
+CH1E CH2E CH3E    45.0     113.0
+CH1E CH2E OH1     45.0     111.0
+CH3E CH2E OH1     45.0     111.0
+CH1E CH2E S       50.0     112.5
+CH1E CH2E SH1E    50.0     112.5
+CH2E CH2E CH2E    45.0     110.0
+CH2E CH2E CH3E    45.0     111.0
+CH2E CH2E N       65.0     105.0
+CH2E CH2E NH1     65.0     111.0
+CH2E CH2E NH2     65.0     109.5
+CH2E CH2E NH3     65.0     110.5
+CH2E CH2E S       50.0     112.5
+C    CR1E C       90.0     126.5
+C    CR1E CH2E    90.0     122.0
+C    CR1E CR1E    90.0     119.0
+C    CR1E NH1     90.0     109.5
+C    CR1E NR      90.0     106.5
+CR1E CR1E CR1E    90.0     120.5
+NH1  CR1E NH1     70.0     109.0
+NH1  CR1E NR      70.0     109.0
+C    CT   CT      70.0     109.5
+C    CT   HA      70.0     109.5
+C    CT   N       70.0     111.6
+C    CT   NH1     70.0     111.6
+C    CT   NH2     70.0     111.6
+C    CT   NH3     70.0     111.6
+CT   CT   CT      45.0     111.00
+CT   CT   HA      40.0     109.50
+CT   CT   N       65.0     105.00
+CT   CT   NC2     65.0     110.00
+CT   CT   NH1     65.0     110.00
+CT   CT   NH2     65.0     110.00
+CT   CT   NH3     65.0     110.00
+CT   CT   OH1     50.0     109.50
+CT   CT   S       50.0     112.50
+HA   CT   HA      40.0     109.5
+HA   CT   N       50.0     109.5
+HA   CT   NC2     50.0     109.5
+HA   CT   NH1     50.0     109.5
+HA   CT   NH3     50.0     109.5
+HA   CT   OH1     50.0     109.5
+HA   CT   S       40.0     109.5
+FE   CM   OM       5.0      90.0!       FROM KROEKER ET AL(1980)
+C    N    CH1E    80.0     120.0
+C    N    CH2E    80.0     120.0
+C    N    CT      80.0     120.0
+CH1E N    CH2E    60.0     110.0
+CH1E N    CH3E    60.0     110.0
+CH2E N    CH3E    60.0     109.5
+CT   N    CT      60.0     110.0
+C    NC2  CT      80.0     120.0
+C    NC2  HC      35.0     120.0
+CT   NC2  HC      35.0     120.0
+HC   NC2  HC      40.0     120.0
+C    NH1  C       60.0     102.5  ! UNUSED (AND PROBABLY WRONG)
+C    NH1  CH1E    77.5     120.0
+C    NH1  CH2E    77.5     120.0
+C    NH1  CH3E    77.5     120.0
+C    NH1  CR1E    60.0     108.0
+C    NH1  CT      80.0     120.0
+C    NH1  H       30.0     120.0
+CH1E NH1  CH3E    60.0     120.0
+CH1E NH1  H       35.0     120.0
+CH2E NH1  CH3E    60.0     120.0
+CH2E NH1  H       35.0     120.0
+CH3E NH1  H       35.0     120.0
+CR1E NH1  CR1E    65.0     110.0
+CR1E NH1  H       35.0     120.0
+CT   NH1  H       35.0     120.0
+C    NH2  H       30.0     120.0
+CH1E NH2  CH2E    60.0     120.0
+CH1E NH2  H       35.0     120.0
+CH2E NH2  H       35.0     120.0
+CT   NH2  H       35.0     120.0
+H    NH2  H       40.0     125.0
+C    NP   C       70.0     102.5
+C    NP   FE      50.0     128.0!  FORCE CONSTANT FROM PARMFIX9
+C    NR   C       70.0     102.5
+C    NR   CR1E    70.0     109.5
+CH3E NR   CR1E    70.0     109.5 ! FOR NETROPSIN
+CH3E NR   C       70.0     109.5 ! FOR NETROPSIN
+CR1E NR   CR1E    65.0     110.0
+CR1E NR   FE      30.0     124.8!  FORCE CONSTANT FROM PARMFIX9
+CH1E NH3  HC      35.0     109.5
+CH1E NH3  CH2E    35.0     109.5
+CH2E NH3  HC      35.0     109.5
+CT   NH3  HC      35.0     109.5
+HC   NH3  HC      40.0     109.5
+C    OH1  H       50.0     109.5
+CH1E OH1  H       35.0     109.5
+CH2E OH1  H       35.0     109.5
+CT   OH1  H       35.0     109.5
+H    OH2  H       55.0     109.47122 ! TETRAHEDRAL FOR ST2'S
+H    OH2  LP      55.0     109.47122 ! TETRAHEDRAL FOR ST2'S
+LP   OH2  LP      55.0     109.47122 ! TETRAHEDRAL FOR ST2'S
+FE   OM   OM       0.0     180.0!  DUMMY PARAMETER FOR PATCH AND ANALYSIS.
+C    OS   CH3E    46.5     120.5!   FROM PARDNA10
+HT   OT   HT      55.0     104.52    ! FROM TIPS3P GEOMETRY
+CH2E S    CH3E    50.0      99.5! FROM PARMFIX9, CHECK WITH IR
+CH2E S    S       50.0     104.2
+CT   S    CT      50.0      99.5!  FORCE CONSTANTS FROM PARMFIX9
+CT   S    S       50.0     104.2
+OC   S    OC      85.0     109.5! FORCE CONSTANT JST A GUESS.
+NP   FE   CM      5.0       90.0
+NP   FE   NP      50.0      90.0
+NP   FE   NR      5.0      115.0
+NP   FE   OM      5.0       90.0! JUST A GUESS FROM EXISTING FE CM DATA
+!NR   FE   CM      5.0      180.0
+!NR   FE   OM      5.0      180.0! JUST A GUESS FROM EXISTING FE CM DATA
+PHI
+CH1E C    N    CH1E    10.0       2     180.0! PRO ISOM. BARRIER 20 KCAL/MOL.
+CH2E C    N    CH1E    10.0       2     180.0
+CR1E C    C    CR1E     5.0       2     180.0! => TRP OOP. VIB 170CM 1
+CR1E C    C    C        2.5       2     180.0! SEE BEHLEN ET AL JCP 75:5685 81
+CR1E C    C    NH1      2.5       2     180.0
+X    C    CH1E X        0.0       3       0.0! FROM GELIN THESIS AMIDES
+X    C    CH2E X        0.0       3       0.0! USING A SINGLE
+X    C    CR1E X       10.0       2     180.0! DIHEDRAL PER BOND RATHER
+X    C    CT   X        0.0       3       0.0! THAN MULTIPLE TORSIONS.
+X    C    N    X        8.2       2     180.0! ALKANE TORSION REDUCED TO
+X    C    NC2  X        8.2       2     180.0! 1.6 FROM 1.8 TO COINCIDE WITH
+X    C    NH1  X        8.2       2     180.0! THE EXPERIMENTAL BARRIER.
+X    C    NH2  X        8.2       2     180.0
+X    C    OH1  X        1.8       2     180.0
+X    C    OS   X        1.8       2     180.0 ! INFERRED FROM C-OH1
+X    CH1E CH1E X        1.6       3       0.0
+X    CH1E CH2E X        1.6       3       0.0
+X    CH1E N    X        0.3       3       0.0! FROM HAGLER ET AL TABULATION OF
+X    CH1E NH1  X        0.3       3       0.0! EXP. DATA AND 6 31G CALC.
+X    CH1E NH2  X        1.8       3       0.0! PROTONATED SECONDARY AMINE
+X    CH1E NH3  X        0.6       3       0.0! 1/PROTON SO 3 FOR THE BOND
+X    CH1E OH1  X        0.5       3       0.0! CHANGED TO ROUGHLY MEOH
+X    CH2E CH2E X        1.6       3       0.0
+X    CH2E N    X        0.3       3       0.0! SEE CH1E COMMENTS
+X    CH2E NH1  X        0.3       3       0.0
+X    CH2E NH2  X        0.6       3       0.0
+X    CH2E NH3  X        0.6       3       0.0
+X    CH2E OH1  X        0.5       3       0.0
+X    CH2E S    X        1.2       2       0.0
+X    CT   CT   X        1.6       3       0.0
+X    CT   N    X        0.3       3       0.0! SEE CH1E COMMENTS
+X    CT   NC2  X        0.3       3       0.0
+X    CT   NH1  X        0.3       3       0.0
+X    CT   NH2  X        0.6       3       0.0
+X    CT   NH3  X        0.6       3       0.0
+X    CT   OH1  X        0.5       3       0.0
+X    CT   S    X        1.2       2       0.0
+X    FE   NR   X        0.05      4       0.0
+X    FE   CM   X        0.05      4       0.0
+X    FE   OM   X        0.00      4       0.0
+X    S    S    X        4.0       2       0.0! FROM EXP. NMR BARRIER
+IMPHI
+C    C    CR1E CH2E    90.0    0     0.0! GIVE 220 CM 1 METHYL OOP FOR TOLUENE.
+C    CR1E C    CH2E    90.0    0     0.0! USED HERE FOR TRP CG OUT OF PLANE
+C    CR1E CR1E CH2E    90.0    0     0.0!               PHE, AND TYR CG OOP
+C    CR1E NH1  CH2E    90.0    0     0.0!               HIS CG RING OOP
+C    NH1  CR1E CH2E    90.0    0     0.0!
+C    CR1E CR1E OH1    150.0    0     0.0! GIVE 249 CM 1 PHENOL OH OOP.
+C    H    H    NH2     45.0    0     0.0! PRIMARY AMIDES (ASN AND GLN) OOP
+C    OC   OC   CH1E   100.0    0     0.0! CARBOXYL OUT OF PLANE.
+C    OC   OC   CH2E   100.0    0     0.0!
+C    X    X    C       25.0    0     0.0! FROM BENZENE NORMAL MODE ANALYSIS
+C    X    X    CH2E    90.0    0     0.0! FROM TOLUENE METHYL OOP. 217 CM 1
+C    X    X    CH3E    90.0    0     0.0
+C    X    X    CR1E    25.0    0     0.0
+C    X    X    H       75.0    0     0.0! FROM BENZENE NORMAL MODE ANALYSIS
+C    X    X    HA      75.0    0     0.0!
+C    X    X    NH1    100.0    0     0.0! AMIDES FIT TO N METHYL ACETAMIDE.
+C    X    X    O      100.0    0     0.0
+C    X    X    OC     100.0    0     0.0
+C    X    X    OH1    150.0    0     0.0! USED FOR TYR HYDROXYL OOP
+CH1E X    X    CH1E    55.0    0   35.26439! CALCULATED TO  BE THE SAME AS THE 3
+CH1E X    X    CH2E    55.0    0   35.26439! H CH1E X ANGLES WITH K=40
+CH1E X    X    CH3E    55.0    0   35.26439
+CR1E X    X    CR1E    25.0    0     0.0! EXTENDED ATOM VERSION OF BENZENE
+CR1E X    X    NH1     25.0    0     0.0! SAME AS ABOVE FOR LACK OF VALUES
+FE   X    X    NP      20.0    0     0.0! FROM PARMFIX9
+H    X    X    O       45.0    0     0.0
+N    CH1E CH2E C       45.0    0     0.0! PROLINE NITROGENS
+N    X    X    CH2E    45.0    0     0.0
+N    X    X    CT      45.0    0     0.0
+NC2  X    X    CT      45.0    0     0.0
+NC2  X    X    HC      45.0    0     0.0
+NH1  X    X    CH1E    45.0    0     0.0
+NH1  X    X    CH2E    45.0    0     0.0
+NH1  X    X    CH3E    45.0    0     0.0
+NH1  X    X    CT      45.0    0     0.0
+NH1  X    X    H       45.0    0     0.0! AMIDES PROTON OOP
+NH1  X    X    NH1     25.0    0     0.0! 
+NH1  X    X    NR      25.0    0     0.0
+NH2  X    X    H       45.0    0     0.0
+NR   X    X    C       25.0    0     0.0
+NR   X    X    CR1E    25.0    0     0.0
+NR   X    X    CT      25.0    0     0.0
+NR   X    X    CH3E    25.0    0     0.0 ! FOR NETROPSIN
+!
+NONBONDED  NBXMOD 5  ATOM CDIEL SHIFT VATOM VDISTANCE VSHIFT -
+     CUTNB 8.0  CTOFNB 7.5  CTONNB 6.5  EPS 1.0  E14FAC 0.4  WMIN 1.5
+!
+!                  Emin       Rmin
+!                  (kcal/mol) (A)
+H        0.0440    -0.0498    0.8000 
+HC       0.0440    -0.0498    0.6000 ! charged group. Reduced vdw radius
+HA       0.1000    -0.0450    1.4680
+HT       0.0440    -0.0498    0.8000 !TIP3P water hydrogen, see NBFIX below
+!
+C        1.65    -0.1200       2.100 1.65 -0.1 1.9 ! carbonyl carbon
+CH1E     1.35    -0.0486       2.365 1.35 -0.1 1.9 ! \
+CH2E     1.77    -0.1142       2.235 1.77 -0.1 1.9 !  extended carbons
+CH3E     2.17    -0.1811       2.165 1.77 -0.1 1.9 ! /
+CR1E     1.35    -0.1200       2.100 1.35 -0.1 1.9 !  ring carbons
+C%       1.65    -0.0262       2.490 1.65 -0.1 1.9 ! includes CT and CM
+!
+N*       1.1000    -0.2384    1.6000   ! includes N,NC2,NH1,NH2,NH3,NP,and NR
+!
+O*       0.8400    -0.1591    1.6000   ! includes O, OH1, OM, and OS
+OC       2.1400    -0.6469    1.6000  
+OT       0.8400    -0.1591    1.6000 !TIP3P water oxygen,   see NBFIX below
+OH2      0.0000    -0.0758    1.7398 !ST2   water oxygen
+!
+LP       0.0000    -0.04598   0.2245 !ST2   lone pair
+FE       0.0100    0.000    0.6500
+S*       0.3400    -0.0430       1.890 ! includes S and SH1E
+!
+!CM     0.000000  -0.0262     2.150  ! CO 3-point model.
+!OM     0.000000  -0.1591     1.750  ! CO 3-point model.
+
+NBFIX
+!                  Emin       Rmin
+!                  (kcal/mol) (A)
+!
+!	We're gonna NBFIX the TIP3P water-water interactions
+!	here to make them more like Jorgensen's.  The vdW parameters
+!	specified above will be in effect, therefore, for ONLY
+!	protein (read, protein OR nucleic acid)-water interactions.
+!	OT-OT is exactly Jorgensen's; HT interactions are added
+!	here.
+!
+OT   OT      -0.152073  3.5365  ! TIPS3P VDW INTERACTION
+HT   HT      -0.04598   0.4490
+HT   OT      -0.08363   1.9927
+!
+!	All protein-protein NBFIXes removed
+
+!
+HBOND AEXP 4 REXP 6 HAEX 0 AAEX 0   NOACCEPTORS  HBNOEXCLUSIONS  ALL  -
+   CUTHB 0.5 CTOFHB 5.0 CTONHB 4.0  CUTHA 90.0  CTOFHA 90.0  CTONHA 90.0
+!
+N*+* N%      -0.0 3.0   ! dummy parameters
+N*+* O*      -0.00 2.9  !  
+OH*  N%      -0.00 2.85
+OH*  O*      -0.00 2.75
+END

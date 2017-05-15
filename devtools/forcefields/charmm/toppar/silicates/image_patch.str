@@ -1,0 +1,94 @@
+
+update inbf 0 ihbf 0 imgfrq 011 cutim @3
+
+! Now apply patches around the perimeter
+!
+
+!In x direction
+!
+!       py | iy
+! prim  px | ix  image
+!
+
+set counn 1
+label loop2
+calc px = @counn * @n
+calc ix = @px - @n + 1
+calc py = @px + @n
+calc iy = @py - @n + 1
+impa 011A  prim q@px 1 qi1 q@ix 1 setup warn
+
+impa 011C prim q@px 1 qi1 q@iy 1 setup warn
+
+impa 011D prim q@py 1 qi1 q@iy 1 prim q@px 1 setup warn
+
+impa 011E prim q@py 1 prim q@px 1 qi1 q@ix 1  setup warn
+
+impa 011F prim q@px 1 qi1 q@ix 1 qi1 q@iy 1  setup warn
+
+impa 011G prim q@px 1 prim q@py 1 qi1 q@iy 1  setup warn
+
+
+
+calc counn = @counn + 1
+if counn lt @m goto loop2
+! corner cells will be treated later
+
+! In y direction
+!
+!      image
+!      iy ix
+! ---------------
+!      py px
+!      prim
+
+set counm 1
+label loop3
+calc py = (@m - 1) * @n + @counm
+calc iy = @counm
+calc px = @py + 1
+calc ix = @iy + 1
+impa 011B prim q@py 1 qi3 q@iy 1 setup warn
+impa 011C prim q@py 1 qi3 q@ix 1 setup warn
+
+impa 011D prim q@py 1 qi3 q@ix 1 qi3 q@iy 1 setup warn
+
+impa 011E qi3  q@iy 1 prim q@py 1 prim q@px 1  setup warn
+
+impa 011F prim q@py 1 prim q@px 1 qi3 q@ix 1  setup warn
+
+impa 011G prim q@py 1 qi3 q@iy 1 qi3 q@ix 1  setup warn
+
+
+
+calc counm = @counm +1
+if counm lt @n goto loop3
+
+! Now corner cells 
+calc py = (@m - 1) * @n + 1
+calc iy = 1
+calc ix = @n
+
+calc py = @m*@n
+calc ix = (@m - 1) * @n + 1
+calc iy = @n
+set ixy 1
+impa 011A  prim q@py 1 qi1 q@ix 1 setup warn
+
+impa 011B prim q@py 1 qi3 q@iy 1 setup warn
+
+impa 011C prim q@py 1 qi5 q@ixy 1 setup warn
+
+impa 011D prim q@py 1 qi5 q@ixy 1 qi3 q@iy 1 setup warn
+
+impa 011E qi3 q@iy 1 prim q@py 1 qi1 q@ix 1 setup warn
+
+impa 011F prim q@py 1 qi1 q@ix 1 qi5 q@ixy 1  setup warn
+
+impa 011G prim q@py 1 qi3 q@iy 1 qi5 q@ixy 1  setup warn
+
+
+
+! Below info for testing only
+! PRINT IMAG PSF
+

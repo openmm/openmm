@@ -1,0 +1,285 @@
+* Topology and parameters for fluorinated alkanes.
+*
+
+!Parent files that have to be read prior to streaming this file
+!top_all36_prot.rtf
+!par_all36_prot.prm
+
+!Testcase
+!test_all36_prot_fluoro_alkanes.inp
+
+!Reference
+!Chen, I.-J., Yin, D. and MacKerell, Jr., A.D., "Combined Ab
+!initio/Empirical Approach for Optimization of Lennard-Jones Parameters
+!for Polar-Neutral Compounds," Journal of Computational Chemistry,
+!2002, 23:199-213.
+!
+!Note that these parameters are higly optimized to reproduce the
+!corresponding condensed phase properties and have not been incorporated
+!into the CHARMM22 or CHARMM27 biomolecular force fields
+
+read rtf card append
+* topology for fluoroalkanes
+*
+31  1
+
+MASS   430  HF1   1.00800 H ! Aliphatic H on fluorinated C
+MASS   431  HF2   1.00800 H ! Aliphatic H on fluorinated C
+MASS   432  CF1  12.01100 C ! monofluoromethyl
+MASS   433  CF2  12.01100 C ! difluoromethyl
+MASS   434  CF3  12.01100 C ! trifluoromethyl
+MASS   435  F1   18.99800 F ! Fluorine, monofluoro
+MASS   436  F2   18.99800 F ! Fluorine, difluoro
+MASS   437  F3   18.99800 F ! Fluorine, trifluoro
+
+Auto angle dihedral
+Default First None Last None ! ### No default patching.
+
+Resi ETHA  0.0 ! ethane
+Group 
+ Atom h13 ha3   0.09
+ Atom c1  ct3  -0.27
+ Atom c2  ct3  -0.27
+ Atom h21 ha3   0.09
+ Atom h22 ha3   0.09
+ Atom h23 ha3   0.09
+ Atom h11 ha3   0.09
+ Atom h12 ha3   0.09
+Bond c1 h11  c1 h12   c1 h13
+Bond c1 c2
+Bond c2 h21  c2 h22   c2 h23
+ic h21 c2 c1  h13  0.00 0.00  180.0 0.0  0.0
+ic h22 c2 c1  h13  0.00 0.00   60.0 0.0  0.0
+ic h23 c2 c1  h13  0.00 0.00  -60.0 0.0  0.0
+ic h11 c1 c2  h21  0.00 0.00   60.0 0.0  0.0
+ic h12 c1 c2  h21  0.00 0.00  -60.0 0.0  0.0
+ic c1  c2 h21 h22  0.00 0.00    0.0 0.0  0.0
+patc firs none last none
+
+Resi FETH  0.0 ! fluoroethane, adm jr., 4/99
+Group
+ Atom h13 ha3   0.09
+ Atom c1  ct3  -0.21
+ Atom c2  cf1  -0.06
+ Atom f21 f1   -0.22
+ Atom h22 hf1   0.11
+ Atom h23 hf1   0.11    
+ Atom h11 ha3   0.09
+ Atom h12 ha3   0.09
+Bond c1 h11  c1 h12   c1 h13
+Bond c1 c2
+Bond c2 f21  c2 h22   c2 h23
+ic h13 c1 c2  f21  1.1111  110.55  180.00  109.78   1.3721
+ic h13 c1 c2  h22  1.1111  110.55   60.02  111.56   1.0839
+ic h13 c1 c2  h23  1.1111  110.55  -60.02  111.56   1.0839
+ic c1  c2 h22 h23  1.5188  111.56 -122.50   36.33   1.7464
+ic h13 c2 *c1 h11  1.1111  110.55 -120.29  110.55   1.1111
+ic h13 c2 *c1 h12  1.1111  110.55  120.29  110.55   1.1111
+patc firs none last none
+
+Resi DFET 0.0 ! difluoroethane, adm jr., 4/99
+Group
+ Atom h13 ha3   0.09
+ Atom c1  ct3  -0.23
+ Atom c2  cf2   0.24
+ Atom h21 hf2   0.10
+ Atom f22 f2   -0.19
+ Atom f23 f2   -0.19
+ Atom h11 ha3   0.09
+ Atom h12 ha3   0.09
+Bond c1 h11  c1 h12   c1 h13
+Bond c1 c2
+Bond c2 f23  c2 f22   c2 h21
+ic  h13  c1 c2  h21  0.00 0.00  180.0 0.0  0.0
+ic  c1   c2 f23 f22  0.00 0.00    0.0 0.0  0.0
+ic  h13  c1 c2  f22  0.00 0.00   60.0 0.0  0.0
+ic  h13  c1 c2  f23  0.00 0.00  -60.0 0.0  0.0
+ic  h12  c1 c2  h21  0.00 0.00  -60.0 0.0  0.0
+ic  h11  c1 c2  h21  0.00 0.00   60.0 0.0  0.0
+patc firs none last none
+
+Resi TFET  0.0 ! trifluoroethane 
+Group
+ Atom h11 ha3   0.09
+ Atom h12 ha3   0.09
+ Atom h13 ha3   0.09
+ Atom c1  ct3  -0.20
+ Atom f21 f3   -0.15
+ Atom f22 f3   -0.15 
+ Atom f23 f3   -0.15
+ Atom c2  cf3   0.38
+Bond c1 h11  c1 h12  c1 h13
+Bond c1 c2   c2 f21  c2 f22  c2 f23
+ic  h13  c1 c2 f21  0.00 0.00  180.0 0.0  0.0
+ic  c1   c2 f22 f23 0.00 0.00    0.0 0.0  0.0
+ic  h13  c1 c2 f22  0.00 0.00   60.0 0.0  0.0
+ic  h13  c1 c2 f23  0.00 0.00  -60.0 0.0  0.0
+ic  h11  c1 c2 f21  0.00 0.00   60.0 0.0  0.0
+ic  h12  c1 c2 f21  0.00 0.00  -60.0 0.0  0.0
+patc firs none last none
+
+Resi TFE   0.0 ! trifluoroethanol, adm jr., 1/04
+Group          ! 
+ Atom o1  oh1  -0.60
+ Atom ho1 H     0.42
+ Atom h11 HA2   0.09
+ Atom h12 HA2   0.09
+ Atom c1  CT2   0.08
+ Atom f21 f3   -0.14
+ Atom f22 f3   -0.14
+ Atom f23 f3   -0.14
+ Atom c2  cf3   0.34
+
+Bond c1 h11  c1 h12  c1 o1   o1 ho1
+Bond c1 c2   c2 f21  c2 f22  c2 f23
+
+IC  HO1   O1  C1  C2     0.0000    0.00  180.00    0.00   0.0000
+IC  C2    O1  *C1 H11    0.0000    0.00  120.00    0.00   0.0000
+IC  H11   O1  *C1 H12    0.0000    0.00 -120.00    0.00   0.0000
+IC  O1    C1  C2  F21    0.0000    0.00  180.00    0.00   0.0000
+IC  F21   C1  *C2 F22    0.0000    0.00  120.00    0.00   0.0000
+IC  F21   C1  *C2 F23    0.0000    0.00 -120.00    0.00   0.0000
+patc firs none last none
+
+resi fe1a       -0.27   ! residue for fluoroethane to ethane
+                        ! perturbation. use with PATCH fe1b
+atom c1   ct3   -0.27
+group
+atom c2   ct3   -0.27
+atom h21  ha3    0.09
+atom h22  ha3    0.09
+atom h23  ha3    0.09
+bond c1 c2 c2 h21 c2 h22 c2 h23
+
+pres fe1b        0.00  ! connect fe1a to fluoroethane
+                       ! 1 fluoroethane
+                       ! 2 fe1a
+bond 1h11  2c1         
+bond 1h12  2c1
+bond 1h13  2c1
+ic 1h11 2c1  2c2  2h21  0.0 0.0 0.0 0.0 0.0
+ic 1h11 2c1  2c2  2h22  0.0 0.0 0.0 0.0 0.0
+ic 2c1  2c2  2h21 2h22  0.0 0.0 0.0 0.0 0.0
+
+end
+
+read para card flex append
+* fluoroalkane parameters
+*
+
+ATOMS
+MASS   430  HF1   1.00800 ! Aliphatic H on fluorinated C
+MASS   431  HF2   1.00800 ! Aliphatic H on fluorinated C
+MASS   432  CF1  12.01100 ! monofluoromethyl
+MASS   433  CF2  12.01100 ! difluoromethyl
+MASS   434  CF3  12.01100 ! trifluoromethyl
+MASS   435  F1   18.99800 ! Fluorine, monofluoro
+MASS   436  F2   18.99800 ! Fluorine, difluoro
+MASS   437  F3   18.99800 ! Fluorine, trifluoro
+
+BONDS
+
+CF3  CT2   250.00      1.5200 !from CF3  CT3  for TFE
+!stanard alkane/hydroxyl parameters
+!CT2  CT1   222.500     1.5380
+!CT3  CT1   222.500     1.5380
+!CT3  CT2   222.500     1.5280
+!HA1  CT1   309.000     1.1110
+!HA2  CT2   309.000     1.1110
+!HA3  CT3   322.000     1.1110
+!OH1  CT1x  428.000     1.4200
+!OH1  CT3x  428.000     1.4200
+!OH1  H     545.000     0.9600
+! new fluoroalkane parameters
+F1   CF1   420.000     1.3740
+F2   CF2   349.000     1.3530
+F3   CF3   265.000     1.3400
+CF1  CT3   170.00      1.5200
+CF2  CT3   198.00      1.5200
+CF3  CT3   250.00      1.5200
+CF1  HF1   342.000     1.0828     ! from: HA   CT3x!From CF1  HA 
+CF2  HF2   346.000     1.0828     ! from: HA   CT3x!From CF2  HA 
+
+ANGLES
+HA2  CT2  CF3   34.600    110.10   22.53   2.179 !from HA2  CT2  CT3  for TFE
+F3   CF3  CT2    42.0     112.00   30.00   2.357 !from F3 CF3 CT3  for TFE
+!stanard alkane/hydroxyl parameters
+!CT2x CT3x CT1x  58.350    113.50   11.16   2.561
+!CT3x CT1x CT2x  53.350    114.00    8.00   2.561
+!CT3x CT1x CT3x  53.350    114.00    8.00   2.561
+!CT3x CT2x CT3x  53.350    114.00    8.00   2.561
+!H    OH1  CT1x   57.500   106.00
+!H    OH1  CT3x   57.500   106.00
+!HA1  CT1x HA1   35.500    109.00    5.40   1.802
+!OH1  CT1x CT1x   75.700   110.10
+!OH1  CT1x CT3x   75.700   110.10
+!OH1  CT1x HA1    45.900   108.89
+!OH1  CT2x CT1x   75.700   110.10
+!OH1  CT2x CT3x   75.700   110.10
+!OH1  CT3x HA3    45.900   108.89
+! new fluoroalkane parameters
+F2   CF2  F2    150.0     107.00   10.00   2.170
+F3   CF3  F3    118.0     107.00   30.00   2.155
+F1   CF1  CT3    44.0     112.00   30.00   2.369
+F2   CF2  CT3    50.0     112.00   30.00   2.357
+F3   CF3  CT3    42.0     112.00   30.00   2.357
+HA3  CT3  CF1    33.00    110.50   38.00   2.181
+HA3  CT3  CF2    33.000   110.50   37.00   2.168
+HA3  CT3  CF3    33.000   110.50   39.00   2.155
+CT3  CF1  HF1    31.000   112.00    3.00   2.168 !from: CT3  CF1  HA
+CT3  CF2  HF2    32.000   112.00    3.00   2.168 !from: CT3  CF2  HA
+F1   CF1  HF1    57.500   108.89    5.00   1.997 !from: F1   CF1  HA 
+F2   CF2  HF2    41.900   108.89    5.00   1.980 !from: F1   CF2  HA
+HF1  CF1  HF1    35.500   108.40   10.40   1.746 !from: HA   CF1  HA
+! FOR FLUOROMETHANE AND FLUORO
+!OH1  CT2  CF1    75.700   110.10
+!OH1  CT2  CF2    75.700   110.10
+OH1  CT2  CF3    75.700   110.10 !for TFE
+F1   CF3  HA     45.900   108.89 !for TFE
+!HA   CF2  HA     37.500   108.40    5.40   1.802 !from: HA   CT3  HA FOR CH2F2
+
+DIHEDRALS
+!TFE
+H    OH1  CT2  CF3      0.4000  1     0.00 !triflouroethanol
+H    OH1  CT2  CF3      0.9000  2     0.00 !
+H    OH1  CT2  CF3      0.7000  3     0.00 !
+H    OH1  CT2  CF3      0.1200  4     0.00 !
+!H    OH1  CT2  HA2      0.0000  3     0.00 ! DIFFERENT COPY OF SAME PARAMETER IN toppar_all22_prot_pyridines.str
+!HA2  CT2  OH1  H        0.1400  3     0.00 ! From X    CT2  OH1  X; equivalent to parameter in protein set
+HA2  CT2  CF3  F3       0.1580  3     0.00 !
+OH1  CT2  CF3  F3       0.2500  3     0.00 !
+!standard alkane/hydroxyl terms
+!H    OH1  CT1x CT1x     1.3300  1     0.00 ! triflouroethanol parameters
+!H    OH1  CT1x CT1x     0.1800  2     0.00 ! not available
+!H    OH1  CT1x CT1x     0.3200  3     0.00 !
+!H    OH1  CT1x CT3x     1.3300  1     0.00 !
+!H    OH1  CT1x CT3x     0.1800  2     0.00 !
+!H    OH1  CT2x CT1x     1.3000  1     0.00 !
+!H    OH1  CT2x CT1x     0.3000  2     0.00 !
+!H    OH1  CT2x CT1x     0.4200  3     0.00 !
+!H    OH1  CT2x CT3x     1.3000  1     0.00 !
+!H    OH1  CT2x CT3x     0.3000  2     0.00 !
+!H    OH1  CT2x CT3x     0.4200  3     0.00 !
+! new fluoroalkane parameters
+X    CT3  CF1  X        0.1850  3     0.00
+X    CT3  CF2  X        0.1780  3     0.00
+X    CT3  CF3  X        0.1580  3     0.00
+
+IMPROPER
+
+NONBONDED nbxmod  5 atom cdiel fshift vatom vdistance vfswitch -
+cutnb 14.0 ctofnb 12.0 ctonnb 10.0 eps 1.0 e14fac 1.0 wmin 1.5 
+
+CF1    0.000000  -0.060000     1.900000
+CF2    0.000000  -0.042000     2.050000
+CF3    0.000000  -0.020000     2.300000
+HF1    0.000000  -0.028000     1.3200 
+HF2    0.000000  -0.030000     1.3000 
+F1     0.0       -0.135        1.63
+F2     0.0       -0.105        1.63
+F3     0.0       -0.097        1.60
+
+END
+
+return
+

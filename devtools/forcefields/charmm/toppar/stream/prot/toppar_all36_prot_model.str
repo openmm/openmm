@@ -1,0 +1,2338 @@
+*>> All-hydrogen topology for small model compounds used in the <<
+*>> development of the CHARMM22 protein all-hydrogen parameters <<
+*>>>>>>>>>>>>>>>>>>>>>>> July 1997 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+*>>>>>>>> Direct comments to Alexander D. MacKerell Jr. <<<<<<<<<<
+*>>>>>>>>>>>>>>> Parameter forum, www.charmm.org <<<<<<<<<<<<<<<<<
+*Converted to stream format, December 2003
+*Converted to CHARMM36 protein atom types, May 2011
+*
+
+!Parent files that have to be read prior to streaming this file
+!top_all36_prot.rtf
+!par_all36_prot.prm
+!
+!Testcase
+!test_all36_prot_model.inp
+
+!changes after 9/98
+!
+!change alkene HA1 and HA2 to HE1 and HE2
+!
+!improper atom ordering corrected
+!
+!version b5i to be consistent with protein toppar files
+!
+!Heme vinyl groups upgraded based on new butene parameters
+!
+
+! references
+!
+!PROTEINS
+!
+!MacKerell, Jr., A. D.; Bashford, D.; Bellott, M.; Dunbrack Jr., R.L.;
+!Evanseck, J.D.; Field, M.J.; Fischer, S.; Gao, J.; Guo, H.; Ha, S.;
+!Joseph-McCarthy, D.; Kuchnir, L.; Kuczera, K.; Lau, F.T.K.; Mattos,
+!C.; Michnick, S.; Ngo, T.; Nguyen, D.T.; Prodhom, B.; Reiher, III,
+!W.E.; Roux, B.; Schlenkrich, M.; Smith, J.C.; Stote, R.; Straub, J.;
+!Watanabe, M.; Wiorkiewicz-Kuczera, J.; Yin, D.; Karplus, M.  All-atom
+!empirical potential for molecular modeling and dynamics Studies of
+!proteins.  Journal of Physical Chemistry B, 1998, 102, 3586-3616.
+
+read rtf card append
+* Topology for protein related model compounds
+*
+31  1
+MASS  445 C3    12.01100 ! cyclopropane carbon
+
+DECL -CA
+DECL -C
+DECL -O
+DECL +N
+DECL +HN
+DECL +CA
+!reset default patches
+DEFA FIRS NONE LAST NONE
+AUTO ANGLES DIHE
+
+
+RESI ACET       -1.00 ! acetate, K. Kuczera
+GROUP
+ATOM  C1  CT3   -0.37 ! 
+ATOM  C2  CC     0.62 !     H1    O1 (-)
+ATOM  H1  HA3    0.09 !     |    /
+ATOM  H2  HA3    0.09 ! H2--C1--C2
+ATOM  H3  HA3    0.09 !     |    \\
+ATOM  O1  OC    -0.76 !     H3    O2
+ATOM  O2  OC    -0.76 !
+Bond c1 h1  c1 h2  c1 h3
+Bond c1 c2  c2 o1
+Double  c2 o2
+impr c2 c1 o2 o1
+IC  O1  C2 C1  H1  0.00 0.00    0.0  0.00 0.00
+IC  C2  H1 *C1 H2  0.00 0.00  120.0  0.00 0.00
+IC  C2  H1 *C1 H3  0.00 0.00 -120.0  0.00 0.00
+IC  C1  O1 *C2 O2  0.00 0.00  180.0  0.00 0.00 
+patc firs none last none
+
+RESI PROA       -1.00 ! propionic acid
+GROUP
+ATOM  C1  CT2   -0.28 ! 
+ATOM  C2  CC     0.62 !     H1    O1 (-)
+ATOM  H1  HA2    0.09 !     |    /
+ATOM  H2  HA2    0.09 ! H2--C1--C2
+                      !     |    \\
+ATOM  O1  OC    -0.76 !     |    O2
+ATOM  O2  OC    -0.76 !H01--C0
+GROUP                 !     | \
+ATOM  C0  CT3   -0.27 !   H02 H03
+ATOM  H01 HA3    0.09
+ATOM  H02 HA3    0.09
+ATOM  H03 HA3    0.09
+Bond c1 h1  c1 h2  c1 c0
+Bond c1 c2  c2 o1
+Bond c0 h01 c0 h02 c0 h03
+Double  c2 o2
+impr c2 c1 o2 o1
+ic  h1  c1 c2 o1   0.00 0.00    0.0 0.0  0.0
+ic  h2  c1 c2 o1   0.00 0.00    0.0 0.0  0.0
+ic  h3  c1 c2 o1   0.00 0.00    0.0 0.0  0.0
+ic  h1  c1 c2 o2   0.00 0.00    0.0 0.0  0.0
+ic  h2  c1 c2 o2   0.00 0.00    0.0 0.0  0.0
+ic  h3  c1 c2 o2   0.00 0.00    0.0 0.0  0.0
+ic  h1  c1 h2 h3   0.00 0.00    0.0  0.00 0.00
+ic  h2  c1 h3 h1   0.00 0.00    0.0  0.00 0.00
+ic  h3  c1 h1 h2   0.00 0.00    0.0  0.00 0.00
+ic  o1  o2 *c2 c1  0.00 0.00    0.0  0.00 0.00
+!proa ics
+ic  c2  c1 c0 h01  0.00 0.00  180.0  0.00 0.00
+ic  c2  c1 c0 h02  0.00 0.00   60.0  0.00 0.00
+ic  c2  c1 c0 h03  0.00 0.00  300.0  0.00 0.00
+patc firs none last none
+
+RESI GUAN        1.00 ! guandinium, K. Kuczera
+GROUP
+ATOM  C   C      0.64 !      H11  H12
+ATOM  N1  NC2   -0.80 !        \  /
+ATOM  H11 HC     0.46 !         N1 (+)
+ATOM  H12 HC     0.46 !         ||
+ATOM  N2  NC2   -0.80 !         C
+ATOM  H21 HC     0.46 !        / \
+ATOM  H22 HC     0.46 !  H21-N2   N3-H31
+ATOM  N3  NC2   -0.80 !       |   |
+ATOM  H31 HC     0.46 !     H22   H32
+ATOM  H32 HC     0.46 !
+BOND    C N2   C N3
+DOUBLE C N1
+BOND   N1 H11  N1 H12  N2 H21   N2 H22  N3 H31  N3 H32
+IMPH   C N2 N1 N3
+IC  H11 N1  C  N2    0.00 0.00   0.0   0.00 0.00
+IC  H11 N1  C  N3    0.00 0.00 180.0   0.00 0.00
+IC  H12 N1  C  N3    0.00 0.00   0.0   0.00 0.00
+IC  H21 N2  C  N1    0.00 0.00   0.0   0.00 0.00
+IC  H22 N2  C  N3    0.00 0.00   0.0   0.00 0.00
+IC  H31 N3  C  N1    0.00 0.00   0.0   0.00 0.00
+IC  H32 N3  C  N2    0.00 0.00   0.0   0.00 0.00
+patc firs none last none
+
+RESI MGUA        1.00 ! methyl-guanidinium
+GROUP
+ATOM  C   C      0.64 !      H11  H12
+ATOM  N1  NC2   -0.80 !        \  /
+ATOM  H11 HC     0.46 !         N1 (+)
+ATOM  H12 HC     0.46 !         ||
+ATOM  N2  NC2   -0.80 !         C       HC1
+ATOM  H21 HC     0.46 !        / \     /
+ATOM  H22 HC     0.46 !  H21-N2   N3--C2-HC2
+ATOM  N3  NC2   -0.70 !       |   |    \
+ATOM  H31 HC     0.44 !     H22   H31   HC3
+ATOM  C2  CT3    0.11 !
+ATOM  HC1 HA3    0.09
+ATOM  HC2 HA3    0.09
+ATOM  HC3 HA3    0.09
+BOND   C N2   C N3
+DOUBLE C N1
+BOND   N1 H11  N1 H12  N2 H21   N2 H22  N3 H31  N3 C2
+BOND   C2 HC1 C2 HC2 C2 HC3
+IMPH   C N2 N1 N3 
+IC  H11 N1  C  N2    0.00 0.00   0.0   0.00 0.00
+IC  H11 N1  C  N3    0.00 0.00 180.0   0.00 0.00
+IC  H12 N1  C  N3    0.00 0.00   0.0   0.00 0.00
+IC  H21 N2  C  N1    0.00 0.00   0.0   0.00 0.00
+IC  H22 N2  C  N3    0.00 0.00   0.0   0.00 0.00
+IC  H31 N3  C  N1    0.00 0.00   0.0   0.00 0.00
+IC  C2  N3  C  N1    0.00 0.00 180.0   0.00 0.00
+IC  C   N3  C2 HC1   0.00 0.00   0.0   0.00 0.00
+IC  C   N3  C2 HC2   0.00 0.00 120.0   0.00 0.00
+IC  C   N3  C2 HC3   0.00 0.00 240.0   0.00 0.00
+patc firs none last none
+
+RESI GLYN         0.00  ! neutral glycine
+GROUP                   !
+ATOM N    NH2    -0.96  !
+ATOM HT1  HC      0.34  !  HT1  HT2
+ATOM HT2  HC      0.34  !    \ /
+ATOM CA   CT2     0.18  !     N
+ATOM HA1  HB2     0.05  !     |     
+ATOM HA2  HB2     0.05  ! HA1-CA-HA2
+GROUP                   !     |  
+ATOM C    CD      0.75  !     C
+ATOM OT1  OB     -0.55  !   // \
+ATOM OT2  OH1    -0.64  !  OT1 OT2
+ATOM HO2  H       0.44  !       |
+                        !      HO2
+                        !   
+BOND N   CA   CA  C   C   OT2   OT2  HO2
+BOND N   HT1  N   HT2 CA  HA1   CA   HA2
+DOUBLE OT1 C 
+DONO HT1 N
+DONO HT2 N
+DONO HO2 OT2
+IC N    CA   C    OT1   1.5010  119.00   88.76  126.10   1.2218
+IC N    CA   C    OT2   1.5010  119.00 -111.57  113.44   1.3958
+IC OT1  OT2  *C   CA    1.2218  117.44 -161.57  113.44   1.5780
+IC CA   C    OT2  HO2   1.5780  113.44 -168.97  107.16   0.9565
+IC C    CA   N    HT1   1.5780  119.00  164.86  110.99   1.0023
+IC C    CA   N    HT2   1.5780  119.00  -77.98  111.22   1.0030
+IC N    C    *CA  HA1   1.5010  119.00  120.0   110.0    1.1
+IC N    C    *CA  HA2   1.5010  119.00 -120.0   110.0    1.1
+PATCHING FIRS NONE LAST NONE
+
+RESI MAMM        1.00 ! methylammonium, K. Kuczera
+GROUP
+Atom ce ct3      0.16 !
+Atom nz nh3     -0.30 ! HE1     HZ1
+Atom he1 ha3     0.05 !    \ (+) |
+Atom he2 ha3     0.05 !HE2-CE---NZ--HZ2
+Atom he3 ha3     0.05 !    /     |
+Atom hz1 hc      0.33 ! HE3     HZ3
+Atom hz2 hc      0.33 !
+Atom hz3 hc      0.33 !
+Bond ce he1  ce he2  ce he3
+Bond ce nz  nz hz1  nz hz2  nz hz3 
+ic  he1  ce nz hz1   0.00 0.00    0.0 0.0  0.0
+ic  he1  ce nz hz2   0.00 0.00  120.0 0.0  0.0
+ic  he1  ce nz hz3   0.00 0.00  240.0 0.0  0.0
+ic  he2  ce nz hz1   0.00 0.00  120.0 0.0  0.0
+ic  he2  ce nz hz2   0.00 0.00    0.0 0.0  0.0
+ic  he2  ce nz hz3   0.00 0.00  240.0 0.0  0.0
+ic  he3  ce nz hz1   0.00 0.00  240.0 0.0  0.0
+ic  he3  ce nz hz2   0.00 0.00  120.0 0.0  0.0
+ic  he3  ce nz hz3   0.00 0.00    0.0 0.0  0.0
+ic  ce  nz hz1 hz3   0.00 0.00    0.0 0.0  0.0
+patc firs none last none
+
+RESI EAMM        1.00 ! ethylammonium, adm jr.
+GROUP
+Atom ce  ct2     0.21 !
+Atom nz  nh3    -0.30 ! HE1     HZ1
+Atom he1 ha2     0.05 !    \ (+) |
+Atom he2 ha2     0.05 !HE2-CE---NZ--HZ2
+                      !    /     |
+Atom hz1 hc      0.33 !   /     HZ3
+Atom hz2 hc      0.33 !  C1-H13
+Atom hz3 hc      0.33 ! /  \
+Group                 !H11  H12
+atom c1  ct3    -0.27 !
+atom h11 ha3     0.09 !
+atom h12 ha3     0.09 !
+atom h13 ha3     0.09 !
+Bond ce he1  ce he2  ce c1
+Bond ce nz  nz hz1  nz hz2  nz hz3 
+Bond c1 h11 c1 h12  c1 h13
+ic  he1  ce nz hz1   0.00 0.00    0.0 0.0  0.0
+ic  he1  ce nz hz2   0.00 0.00  120.0 0.0  0.0
+ic  he1  ce nz hz3   0.00 0.00  240.0 0.0  0.0
+ic  he2  ce nz hz1   0.00 0.00  120.0 0.0  0.0
+ic  he2  ce nz hz2   0.00 0.00    0.0 0.0  0.0
+ic  he2  ce nz hz3   0.00 0.00  240.0 0.0  0.0
+ic  he3  ce nz hz1   0.00 0.00  240.0 0.0  0.0
+ic  he3  ce nz hz2   0.00 0.00  120.0 0.0  0.0
+ic  he3  ce nz hz3   0.00 0.00    0.0 0.0  0.0
+ic  ce  nz hz1 hz3   0.00 0.00    0.0 0.0  0.0
+!ics for eamm
+ic  nz   ce c1 h11   0.00 0.00  180.0 0.0  0.0
+ic  nz   ce c1 h12   0.00 0.00   60.0 0.0  0.0
+ic  nz   ce c1 h13   0.00 0.00  300.0 0.0  0.0
+
+patc firs none last none
+
+RESI MAMI        0.00 ! methylamine, adm jr.
+GROUP
+ATOM N1   NH2   -0.96 !
+ATOM C1   CT3    0.13 !  HC1       HN1
+ATOM HN1  HC     0.34 !     \      /
+ATOM HC1  HA3    0.05 ! HC2-C1---NZ
+ATOM HC2  HA3    0.05 !     /      \
+ATOM HC3  HA3    0.05 !  HC3       HN2
+ATOM HN2  HC     0.34 !
+BOND N1  C1  N1  HN1  N1  HN2
+BOND C1 HC1  C1  HC2  C1  HC3
+IC  BLNK HN1 N1  C1    0.0   0.0   180.   0.0  0.0
+IC  HN1  N1  C1  HC1   0.0   0.0   180.   0.0  0.0
+IC  HN1  N1  C1  HC2   0.0   0.0    60.   0.0  0.0
+IC  HN1  N1  C1  HC3   0.0   0.0   300.   0.0  0.0
+IC  HC1  C1  N1  HN2   0.0   0.0     0.   0.0  0.0
+
+RESI ACEH        0.00 ! acetic acid, ADM jr.
+GROUP
+ATOM C2   CT3   -0.30 !
+ATOM C1   CD     0.75 !   H21      O2
+ATOM H21  HA3    0.09 !      \    //
+ATOM H22  HA3    0.09 !  H22-C2--C1
+ATOM H23  HA3    0.09 !      /     \ 
+ATOM O2   OB    -0.55 !   H23       O1-HO1
+ATOM O1   OH1   -0.61 !
+ATOM HO1  H      0.44 !
+BOND C1 O1  O1 HO1  C1 C2  C2 H21  C2 H22  C2 H23
+DOUBLE C1 O2
+IMPR C1 C2  O1 O2
+DONO BLNK HO1 ! O1
+ACCE O1
+ACCE O2
+IC O2   C1   C2   H21   0.0000  0.0000   0.0000  0.0000  0.0000
+IC HO1  O1   C1   O2    0.0000  0.0000   0.0000  0.0000  0.0000
+IC HO1  O1   C1   C2    0.0000  0.0000 180.0000  0.0000  0.0000
+IC O1   C1   C2   H21   0.0000  0.0000 180.0000  0.0000  0.0000
+IC O1   C1   C2   H22   0.0000  0.0000  60.0000  0.0000  0.0000
+IC O1   C1   C2   H23   0.0000  0.0000 -60.0000  0.0000  0.0000
+
+RESI MAS         0.00 ! methylacetate
+GROUP                 !
+ATOM C1   CT3   -0.17 !           H22
+ATOM C    CD     0.63 !           |
+ATOM OM   OS    -0.34 !       H21-C2-H23
+ATOM C2   CT3   -0.14 !             \
+ATOM O    OB    -0.52 !             OM
+ATOM H11  HA3    0.09 !            /
+ATOM H12  HA3    0.09 !         O=C
+ATOM H13  HA3    0.09 !           |
+ATOM H21  HA3    0.09 !       H11-C1-H13
+ATOM H22  HA3    0.09 !           |
+ATOM H23  HA3    0.09 !           H12
+ 
+BOND C1   C       C    OM      OM    C2
+DOUBLE C   O
+BOND C1   H11     C1   H12     C1   H13
+BOND C2   H21     C2   H22     C2   H23
+IMPR C C1 OM O
+! internal coordinates from experiment for heavy atoms
+IC C1   C    OM   C2   1.520     109.0     180.0     114.8     1.437
+IC O    C    OM   C2   1.200     125.9       0.0     114.8     1.437
+IC H11  C1   C    OM   1.1       108.9     180.0     109.0     1.334
+IC H12  C1   C    OM   1.1       109.75     60.4     109.0     1.334
+IC H13  C1   C    OM   1.1       109.75    -60.4     109.0     1.334
+IC H21  C2   OM   C    1.0788    109.94    180.0     114.8     1.334
+IC H22  C2   OM   C    1.0802    110.50     60.5     114.8     1.334
+IC H23  C2   OM   C    1.0802    110.50    -60.5     114.8     1.334
+
+RESI MEOH        0.00 ! methanol, adm jr.
+GROUP  ! order of atoms to match that used in ab initio
+ATOM CB   CT3   -0.04 !  H11
+ATOM OG   OH1   -0.66 !     \
+ATOM HG1  H      0.43 ! H12--C1--O1
+ATOM HB1  HA3    0.09 !     /      \
+ATOM HB2  HA3    0.09 !  H13       HO1
+ATOM HB3  HA3    0.09 !
+BOND CB  OG  OG HG1  
+BOND CB HB1  CB HB2  CB  HB3
+DONO HG1 OG
+ACCE OG
+! only for analysis
+IC HG1  OG   CB   HB1   0.0000  0.0000 180.0000  0.0000  0.0000
+IC HG1  OG   CB   HB2   0.0000  0.0000 180.0000  0.0000  0.0000
+IC HG1  OG   CB   HB3   0.0000  0.0000 180.0000  0.0000  0.0000
+IC OG   CB   HB1  HB2   0.0000  0.0000 180.0000  0.0000  0.0000
+IC HG1  OG   CB   HB1   0.0000  0.0000 180.0000  0.0000  0.0000
+
+RESI METO       -1.00 ! methoxide, adm jr. 
+GROUP  ! order of atoms to match that used in ab initio
+ATOM CB   CT3   -0.41 !  HB1
+ATOM OG   OC    -0.92 !     \
+                      ! HB2--CB--OG (-)
+ATOM HB1  HA3    0.11 !     /     
+ATOM HB2  HA3    0.11 !  HB3      
+ATOM HB3  HA3    0.11 !
+BOND CB  OG 
+BOND CB HB1  CB HB2  CB  HB3
+ACCE OG
+! only for analysis
+IC HB2  OG   CB   HB1   0.0000  0.0000 180.0000  0.0000  0.0000
+IC OG   HB2  *CB  HB1   0.0000  0.0000 180.0000  0.0000  0.0000
+IC OG   CB   HB1  HB2   0.0000  0.0000 180.0000  0.0000  0.0000
+
+RESI ETOH        0.00 ! Ethanol, adm jr.
+GROUP 
+ATOM C1   CT2    0.05 !  H21  H11 H12
+ATOM O1   OH1   -0.66 !     \   \  /
+ATOM HO1  H      0.43 ! H22--C2--C1
+ATOM H11  HA2    0.09 !     /      \
+ATOM H12  HA2    0.09 !  H23        O1--HO1
+GROUP
+ATOM C2   CT3   -0.27 
+ATOM H21  HA3    0.09
+ATOM H22  HA3    0.09
+ATOM H23  HA3    0.09
+BOND C1  C2   C1  O1   C1  H11  C1  H12  O1  HO1
+BOND C2  H21  C2  H22  C2  H23 
+DONO HO1 O1
+ACCE O1
+! for ic build
+IC O1   C1   C2   H21   0.0000  0.0000 180.0000  0.0000  0.0000
+IC O1   C1   C2   H22   0.0000  0.0000  60.0000  0.0000  0.0000
+IC O1   C1   C2   H23   0.0000  0.0000 300.0000  0.0000  0.0000
+IC H21  C2   C1   H11   0.0000  0.0000 120.0000  0.0000  0.0000
+IC H21  C2   C1   H12   0.0000  0.0000 240.0000  0.0000  0.0000
+IC C2   C1   O1   HO1   0.0000  0.0000 180.0000  0.0000  0.0000
+! only for analysis
+!IC HO1  O1   C1   H11   0.0000  0.0000 180.0000  0.0000  0.0000
+!IC HO1  O1   C1   H12   0.0000  0.0000 180.0000  0.0000  0.0000
+!IC HO1  O1   C1   H13   0.0000  0.0000 180.0000  0.0000  0.0000
+!IC O1   C1   H11  H12   0.0000  0.0000 180.0000  0.0000  0.0000
+
+RESI ETO        -1.00 ! Ethoxide, adm jr.
+GROUP 
+ATOM OG   OC    -0.92 !  HA1  HB1 HB2
+ATOM CB   CT2   -0.30 !     \   \  /
+ATOM CA   CT3   -0.27 ! HA2--CA--CB
+ATOM HB1  HA2    0.11 !     /      \
+ATOM HB2  HA2    0.11 !  HA3        OG (-)
+!GROUP
+ATOM HA1  HA3    0.09
+ATOM HA2  HA3    0.09
+ATOM HA3  HA3    0.09
+BOND CA  CB   CB  OG   CB  HB1  CB  HB2
+BOND CA  HA1  CA  HA2  CA  HA3 
+ACCE OG
+! for ic build
+ic cb   ca   Ha1  ha2   0.0000  0.0000 180.0000  0.0000  0.0000
+ic ca   og   cb   hb1   0.0000  0.0000 180.0000  0.0000  0.0000
+ic ca   og   cb   hb2   0.0000  0.0000 180.0000  0.0000  0.0000
+ic ca   og   cb   hb3   0.0000  0.0000 180.0000  0.0000  0.0000
+IC OG   CB   CA   HA1   0.0000  0.0000 180.0000  0.0000  0.0000
+IC OG   CB   CA   HA2   0.0000  0.0000  60.0000  0.0000  0.0000
+IC OG   CB   CA   HA3   0.0000  0.0000 300.0000  0.0000  0.0000
+IC HA1  CA   CB   HB1   0.0000  0.0000 120.0000  0.0000  0.0000
+IC HA1  CA   CB   HB2   0.0000  0.0000 240.0000  0.0000  0.0000
+
+RESI PRO2        0.00 ! 2-propanol, adm jr.
+GROUP 
+ATOM C2   CT1    0.14 !  H12  H13  H33 H32
+ATOM O2   OH1   -0.66 !     \ /      \ /
+ATOM HO2  H      0.43 ! H11--C1      C3--H31
+ATOM H21  HA1    0.09 !        \    /
+GROUP                 !          C2
+ATOM C1   CT3   -0.27 !        /    \
+ATOM H11  HA3    0.09 !      O2     H21
+ATOM H12  HA3    0.09 !       |  
+ATOM H13  HA3    0.09 !      HO2
+GROUP                 !
+ATOM C3   CT3   -0.27 !
+ATOM H31  HA3    0.09
+ATOM H32  HA3    0.09
+ATOM H33  HA3    0.09
+BOND C1  C2   C2  C3   C2  O2   C2  H21  O2  HO2
+BOND C1  H11  C1  H12  C1  H13  C3  H31  C3  H32  C3  H33
+DONO HO2 O2
+ACCE O2
+! for ic build
+IC C1   C2   C3   H31   0.0000  0.0000   0.0000  0.0000  0.0000
+IC C1   C2   C3   H32   0.0000  0.0000 120.0000  0.0000  0.0000
+IC C1   C2   C3   H33   0.0000  0.0000 240.0000  0.0000  0.0000
+IC C3   C2   C1   H11   0.0000  0.0000 180.0000  0.0000  0.0000
+IC C3   C2   C1   H12   0.0000  0.0000  60.0000  0.0000  0.0000
+IC C3   C2   C1   H13   0.0000  0.0000 300.0000  0.0000  0.0000
+IC H31  C3   C2   O2    0.0000  0.0000 120.0000  0.0000  0.0000
+IC H31  C3   C2   H21   0.0000  0.0000 240.0000  0.0000  0.0000
+IC C3   C2   O2   HO2   0.0000  0.0000 180.0000  0.0000  0.0000
+! only for analysis
+!IC HO1  O1   C1   H11   0.0000  0.0000 180.0000  0.0000  0.0000
+!IC HO1  O1   C1   H12   0.0000  0.0000 180.0000  0.0000  0.0000
+!IC HO1  O1   C1   H13   0.0000  0.0000 180.0000  0.0000  0.0000
+!IC O1   C1   H11  H12   0.0000  0.0000 180.0000  0.0000  0.0000
+
+RESI FORM        0.00 ! formamide, adm jr.
+ATOM HA   HA1    0.08 ! 	
+ATOM C    CC     0.42 !  O     Hc
+ATOM N    NH2   -0.69 !  \\   /
+ATOM Hc   H      0.35 !   C--N
+ATOM Ht   H      0.35 !  /    \
+ATOM O    O     -0.51 ! HA     Ht
+                      !
+BOND  C   HA   C   N   N   Hc   N   Ht
+DOUBLE  C   O
+!BOND  O   DUM
+IMPR  C  HA N  O   c  n  ha  o
+! GAS PHASE GEOMETRY
+!IC  DUM O   C   N      1.00    90.0     0. 124.70 1.352  
+IC  O   C   N   HC     1.2190 124.70    0. 118.50 1.0016 ! variable 1
+IC  HC  N   C   HA     1.0016 118.50  180. 112.70 1.0980 ! variable 2
+IC  O   C   N   HT     1.2190 124.70  180. 120.00 1.0015 ! variable 3
+
+RESI ACEM        0.00 ! acetamide, adm jr.
+! the amide charges listed below are used in asparagine and glutamine
+! if Hc and Ht are made equivalent use N = -0.64, Hc = Ht = 0.32
+GROUP
+ATOM CC   CT3   -0.27 !
+ATOM C    CC     0.55 !  HC1           Ht
+ATOM N    NH2   -0.62 !     \         /
+ATOM Hc   H      0.32 ! HC2--CC--C---N
+ATOM Ht   H      0.30 !     /    ||   \
+ATOM O    O     -0.55 !  HC3     O     Hc
+ATOM HC1  HA3    0.09 !
+ATOM HC2  HA3    0.09 !
+ATOM HC3  HA3    0.09 !
+!atom dum  dum    0.0  ! dummy for ic build
+BOND  C   N   N   Hc   N   Ht
+DOUBLE  C   O
+BOND  C   CC  CC  HC1 CC  HC2  CC  HC3
+!BOND  O   DUM
+IMPR  C  CC N  O   C  N  CC  O
+IMPR  N  C  HC HT  N  C  HT  HC
+! GAS PHASE GEOMETRY
+IC  HC1 CC  C   N      1.0832 113.80  180. 124.70 1.3523  
+IC  O   C   N   HC     1.2012 124.70    0. 118.63 0.9929 ! variable 1
+IC  O   C   N   HT     1.2012 124.70  180. 120.92 0.9960 ! variable 3
+IC  HC  N   C   CC     1.0016 118.63  180. 115.65 1.5150 ! variable 2
+IC  O   C   CC  HC1    1.2012 123.27    0. 113.80 1.0832
+IC  O   C   CC  HC2    1.2012 123.27  120. 108.52 1.0836
+IC  O   C   CC  HC3    1.2012 123.27  300. 108.52 1.0836
+
+RESI MACE        0.00 ! methyl-acetamide, adm jr.
+! the amide charges listed below are used in asparagine and glutamine
+! if Hc and Ht are made equivalent use N = -0.64, Hc = Ht = 0.32
+GROUP
+ATOM CC   CT2   -0.18 !
+ATOM C    CC     0.55 !  HC1           Ht
+ATOM N    NH2   -0.62 !     \         /
+ATOM Hc   H      0.32 ! HC2--CC--C---N
+ATOM Ht   H      0.30 !     /    ||   \
+ATOM O    O     -0.55 !    /     O     Hc
+ATOM HC1  HA2    0.09 !   C1-H13
+ATOM HC2  HA2    0.09 !  / \
+GROUP                 !H11  H12
+ATOM C1   CT3   -0.27
+ATOM H11  HA3    0.09
+ATOM H12  HA3    0.09
+ATOM H13  HA3    0.09
+!atom dum  dum    0.0  ! dummy for ic build
+BOND  C   N   N   Hc   N   Ht
+DOUBLE  C   O
+BOND  C   CC  CC  HC1 CC  HC2  CC  C1
+BOND  C1  H11 C1  H12 C1  H13
+!BOND  O   DUM
+IMPR  C  CC N  O   C  N  CC  O
+IMPR  N  C  HC HT  N  C  HT  HC
+! GAS PHASE GEOMETRY
+IC  HC1 CC  C   N      1.0832 113.80  180. 124.70 1.3523  
+IC  O   C   N   HC     1.2012 124.70    0. 118.63 0.9929 ! variable 1
+IC  O   C   N   HT     1.2012 124.70  180. 120.92 0.9960 ! variable 3
+IC  HC  N   C   CC     1.0016 118.63  180. 115.65 1.5150 ! variable 2
+IC  O   C   CC  HC1    1.2012 123.27   60. 113.80 1.0832
+IC  O   C   CC  HC2    1.2012 123.27  300. 108.52 1.0836
+IC  O   C   CC  C1     1.2012 123.27  180. 108.52 1.5000
+IC  C   CC  C1  H11    0.0      0.0   180.   0.0  0.0
+IC  C   CC  C1  H12    0.0      0.0    60.   0.0  0.0
+IC  C   CC  C1  H13    0.0      0.0   300.   0.0  0.0
+
+RESI NMA         0.00 ! N-methylacetamide, Louis Kuchnir
+GROUP
+ATOM CL   CT3   -0.27
+ATOM HL1  HA3    0.09
+ATOM HL2  HA3    0.09
+ATOM HL3  HA3    0.09
+ATOM C    C      0.51
+ATOM O    O     -0.51
+ATOM N    NH1   -0.47
+ATOM H    H      0.31
+ATOM CR   CT3   -0.11
+ATOM HR1  HA3    0.09
+ATOM HR2  HA3    0.09
+ATOM HR3  HA3    0.09
+BOND  HL1 CL   HL2 CL   HL3 CL	!          N-Methylacetamide:
+BOND  CL  C    C   N    N   CR	!      HL1\       O            /HR1
+BOND  N   H			!    HL2-- CL  -- C -- N -- CR --HR2
+BOND  HR1 CR   HR2 CR   HR3 CR	!      HL3/            H       \HR3
+DOUBLE C  O
+IMPR  N  C  CR H
+IMPR  C  CL N  O   
+
+ic  o   c   n   h      1.2233 122.84  180. 119.23 0.9933 ! variable 1
+ic  h   n   c   cl     0.9933 119.23    0. 116.25 1.5118 ! variable 8
+ic  o   c   n   cr     1.2233 122.84    0. 122.57 1.4488 ! variable 8
+ic  n   c   cl  hl1    1.3418 116.25  180. 109.3  1.109  ! variable 2
+ic  n   c   cl  hl2    1.3418 116.25   60. 109.3  1.109  ! variable 3
+ic  n   c   cl  hl3    1.3418 116.25  300. 109.3  1.109  ! variable 4
+ic  c   n   cr  hr1    1.3418 122.57  180. 110.7  1.113  ! variable 5
+ic  c   n   cr  hr2    1.3418 122.57   60. 110.7  1.113  ! variable 6
+ic  c   n   cr  hr3    1.3418 122.57  300. 110.7  1.113  ! variable 7
+
+RESI ALAD        0.00 ! Alanine dipeptide, Louis Kuchnir
+GROUP                 ! NO Cross term! see following residue, ALAC
+ATOM CL   CT3   -0.27
+ATOM HL1  HA3    0.09
+ATOM HL2  HA3    0.09
+ATOM HL3  HA3    0.09
+GROUP
+ATOM CLP  C      0.51
+ATOM OL   O     -0.51
+GROUP
+ATOM NL   NH1   -0.47
+ATOM HL   H      0.31
+ATOM CA   CT1    0.07
+ATOM HA   HB1    0.09
+GROUP
+ATOM CB   CT3   -0.27  !     HL1     OL           OR           HR1    
+ATOM HB1  HA3    0.09  !       \     ||   HL  HA3 ||   HR      /      
+ATOM HB2  HA3    0.09  !        \    ||   |   |   ||   |      /       
+ATOM HB3  HA3    0.09  !   HL2---CL--CLP--NL--CA--CRP--NR---CR---HR2  
+GROUP                  !        /             |               \       
+ATOM CRP  C      0.51  !       /         HB1--CB--HB3          \      
+ATOM OR   O     -0.51  !     HL3              |                HR3    
+GROUP                  !                     HB2  
+ATOM NR   NH1   -0.47
+ATOM HR   H      0.31
+ATOM CR   CT3   -0.11
+ATOM HR1  HA3    0.09
+ATOM HR2  HA3    0.09
+ATOM HR3  HA3    0.09
+
+BOND CL  CLP   CLP NL    NL  CA   
+BOND CA  CRP   CRP NR    NR  CR   
+DOUBLE  CLP OL    CRP OR             
+BOND NL  HL    NR  HR             
+BOND CA  HA    CA  CB             
+BOND CL  HL1   CL  HL2   CL  HL3  
+BOND CB  HB1   CB  HB2   CB  HB3  
+BOND CR  HR1   CR  HR2   CR  HR3  
+IMPR CLP CL NL OL    NL CLP CA HL
+IMPR CRP CA NR OR    NR CRP CR HR
+
+ic clp nl  ca  crp  0.0 0.0  180.0  0.0 0.0 ! Phi
+ic ca  clp *nl hl   0.0 0.0  180.0  0.0 0.0
+ic hl  nl  ca  crp  0.0 0.0    0.0  0.0 0.0
+ic nl  ca  crp nr   0.0 0.0  180.0  0.0 0.0 ! Psi
+ic ca  nr  *crp or  0.0 0.0  180.0  0.0 0.0
+ic nl  ca  crp or   0.0 0.0    0.0  0.0 0.0
+ic cl  clp nl  ca   0.0 0.0  180.0  0.0 0.0 ! Omega Left
+ic nl  cl  *clp ol  0.0 0.0  180.0  0.0 0.0
+ic ol  clp nl  ca   0.0 0.0    0.0  0.0 0.0
+ic ca  crp nr  cr   0.0 0.0  180.0  0.0 0.0 ! Omega Right
+ic crp cr  *nr hr   0.0 0.0  180.0  0.0 0.0
+ic ca  crp nr  hr   0.0 0.0  180.0  0.0 0.0
+ic nl  crp *ca ha   0.0 0.0  240.0  0.0 0.0
+ic nl  crp *ca cb   0.0 0.0  120.0  0.0 0.0
+ic hl1 cl  clp nl   0.0 0.0  180.0  0.0 0.0
+ic hl2 cl  clp nl   0.0 0.0   60.0  0.0 0.0
+ic hl3 cl  clp ol   0.0 0.0  120.0  0.0 0.0
+ic ha  ca  cb  hb1  0.0 0.0  180.0  0.0 0.0
+ic nl  ca  cb  hb2  0.0 0.0  180.0  0.0 0.0
+ic crp ca  cb  hb3  0.0 0.0  180.0  0.0 0.0
+ic crp nr  cr  hr1  0.0 0.0  180.0  0.0 0.0
+ic crp nr  cr  hr2  0.0 0.0   60.0  0.0 0.0
+ic hr  nr  cr  hr3  0.0 0.0  120.0  0.0 0.0
+ic ca  clp *nl hl   0.0 0.0  180.0  0.0 0.0
+ic ca  nr  *crp or  0.0 0.0  180.0  0.0 0.0
+ic hb1 hb2 *cb hb3  0.0 0.0  120.0  0.0 0.0
+ic hl1 hl2 *cl hl3  0.0 0.0  240.0  0.0 0.0
+ic hr1 hr2 *cr hr3  0.0 0.0  240.0  0.0 0.0
+ic ha  ca  nl  hl   0.0 0.0  240.0  0.0 0.0
+
+RESI ALAC        0.00 ! Alanine dipeptide, with CMAP term
+GROUP
+ATOM CL   CT3   -0.27
+ATOM HL1  HA3    0.09
+ATOM HL2  HA3    0.09
+ATOM HL3  HA3    0.09
+GROUP
+ATOM CLP  C      0.51
+ATOM OL   O     -0.51
+GROUP
+ATOM NL   NH1   -0.47
+ATOM HL   H      0.31
+ATOM CA   CT1    0.07
+ATOM HA   HB1    0.09
+GROUP
+ATOM CB   CT3   -0.27  !     HL1     OL           OR           HR1
+ATOM HB1  HA3    0.09  !       \     ||   HL  HA3 ||   HR      /
+ATOM HB2  HA3    0.09  !        \    ||   |   |   ||   |      /
+ATOM HB3  HA3    0.09  !   HL2---CL--CLP--NL--CA--CRP--NR---CR---HR2
+GROUP                  !        /             |               \
+ATOM CRP  C      0.51  !       /         HB1--CB--HB3          \
+ATOM OR   O     -0.51  !     HL3              |                HR3
+GROUP                  !                     HB2
+ATOM NR   NH1   -0.47
+ATOM HR   H      0.31
+ATOM CR   CT3   -0.11
+ATOM HR1  HA3    0.09
+ATOM HR2  HA3    0.09
+ATOM HR3  HA3    0.09
+
+BOND CL  CLP   CLP NL    NL  CA
+BOND CA  CRP   CRP NR    NR  CR
+DOUBLE  CLP OL    CRP OR
+BOND NL  HL    NR  HR
+BOND CA  HA    CA  CB
+BOND CL  HL1   CL  HL2   CL  HL3
+BOND CB  HB1   CB  HB2   CB  HB3
+BOND CR  HR1   CR  HR2   CR  HR3
+IMPR CLP CL NL OL    NL CLP CA HL
+IMPR CRP CA NR OR    NR CRP CR HR
+
+CMAP CLP NL CA CRP NL CA CRP NR
+
+ic clp nl  ca  crp  0.0 0.0  180.0  0.0 0.0 ! Phi
+ic ca  clp *nl hl   0.0 0.0  180.0  0.0 0.0
+ic hl  nl  ca  crp  0.0 0.0    0.0  0.0 0.0
+ic nl  ca  crp nr   0.0 0.0  180.0  0.0 0.0 ! Psi
+ic ca  nr  *crp or  0.0 0.0  180.0  0.0 0.0
+ic nl  ca  crp or   0.0 0.0    0.0  0.0 0.0
+ic cl  clp nl  ca   0.0 0.0  180.0  0.0 0.0 ! Omega Left
+ic nl  cl  *clp ol  0.0 0.0  180.0  0.0 0.0
+ic ol  clp nl  ca   0.0 0.0    0.0  0.0 0.0
+ic ca  crp nr  cr   0.0 0.0  180.0  0.0 0.0 ! Omega Right
+ic crp cr  *nr hr   0.0 0.0  180.0  0.0 0.0
+ic ca  crp nr  hr   0.0 0.0  180.0  0.0 0.0
+ic nl  crp *ca ha   0.0 0.0  240.0  0.0 0.0
+ic nl  crp *ca cb   0.0 0.0  120.0  0.0 0.0
+ic hl1 cl  clp nl   0.0 0.0  180.0  0.0 0.0
+ic hl2 cl  clp nl   0.0 0.0   60.0  0.0 0.0
+ic hl3 cl  clp ol   0.0 0.0  120.0  0.0 0.0
+ic ha  ca  cb  hb1  0.0 0.0  180.0  0.0 0.0
+ic nl  ca  cb  hb2  0.0 0.0  180.0  0.0 0.0
+ic crp ca  cb  hb3  0.0 0.0  180.0  0.0 0.0
+ic crp nr  cr  hr1  0.0 0.0  180.0  0.0 0.0
+ic crp nr  cr  hr2  0.0 0.0   60.0  0.0 0.0
+ic hr  nr  cr  hr3  0.0 0.0  120.0  0.0 0.0
+ic ca  clp *nl hl   0.0 0.0  180.0  0.0 0.0
+ic ca  nr  *crp or  0.0 0.0  180.0  0.0 0.0
+ic hb1 hb2 *cb hb3  0.0 0.0  120.0  0.0 0.0
+ic hl1 hl2 *cl hl3  0.0 0.0  240.0  0.0 0.0
+ic hr1 hr2 *cr hr3  0.0 0.0  240.0  0.0 0.0
+ic ha  ca  nl  hl   0.0 0.0  240.0  0.0 0.0
+patch first none last none
+
+RESI MESH        0.00 ! methanethiol, DZUNG NGUYEN
+GROUP
+ATOM H1 HA3      0.09 !   H1
+ATOM H2 HA3      0.09 !     \
+ATOM H3 HA3      0.09 ! H2--CM--S
+ATOM CM CT3     -0.20 !     /    \
+ATOM S  S       -0.23 !   H3     H4
+ATOM H4 HS       0.16 !
+Bond cm h1  cm h2  cm h3
+Bond cm s  s h4
+ic h1 cm s h4 0.00 0.00    0.0 0.00 0.00
+ic h2 cm s h4 0.00 0.00  120.0 0.00 0.00
+ic h3 cm s h4 0.00 0.00  240.0 0.00 0.00
+ic cm s h4 h1 0.00 0.00    0.0 0.00 0.00
+patc firs none last none
+
+RESI MES1       -1.00 ! methylthiolate, adm jr.
+GROUP
+ATOM S    SS    -0.80 !  H11
+ATOM C1   CS    -0.47 !     \
+ATOM H11  HA3    0.09 ! H12--C1--S (-)
+ATOM H12  HA3    0.09 !     /      
+ATOM H13  HA3    0.09 !  H13      
+                      !
+BOND  S  C1  C1 H11 C1 H12 C1 H13
+IC BLNK H11  C1   S     0.0000  0.0000  60.0000  0.0000  0.0000
+IC S    H11 *C1   H12   0.0000  0.0000 120.0000  0.0000  0.0000
+IC S    H11 *C1   H13   0.0000  0.0000 -120.0000  0.0000  0.0000
+IC H12  H13 *C1   H11   0.0000  0.0000  120.0000  0.0000  0.0000
+patch first none last none
+
+RESI ETSH        0.00 ! ethanethiol, Dzung Nguyen
+GROUP
+Atom h1   ha3    0.09 !   H1  H4   H5
+Atom h2   ha3    0.09 !     \   \  /
+Atom h3   ha3    0.09 !  H2-CM1--CM2
+Atom cm1  ct3   -0.27 !     /      \
+GROUP                 !   H3        S3--H6
+Atom h4   ha2    0.09
+Atom h5   ha2    0.09
+Atom cm2  ct2   -0.11
+Atom s3   s     -0.23
+Atom h6   hs     0.16
+Bond cm1 h1  cm1 h2  cm1 h3
+Bond cm1 cm2 cm2 h4  cm2 h5
+bond cm2 s3  s3  h6
+ic  h1  cm1 cm2 s3   0.00 0.00   60.0 0.0  0.0
+ic  h2  cm1 cm2 s3   0.00 0.00  180.0 0.0  0.0
+ic  h3  cm1 cm2 s3   0.00 0.00  300.0 0.0  0.0
+ic  h1  cm1 cm2 h4   0.00 0.00  180.0 0.0  0.0
+ic  h2  cm1 cm2 h4   0.00 0.00  300.0 0.0  0.0
+ic  h3  cm1 cm2 h4   0.00 0.00   60.0 0.0  0.0
+ic  h1  cm1 cm2 h5   0.00 0.00  300.0 0.0  0.0
+ic  h2  cm1 cm2 h5   0.00 0.00   60.0 0.0  0.0
+ic  h3  cm1 cm2 h5   0.00 0.00  180.0 0.0  0.0
+ic  cm1 cm2 s3  h6   0.00 0.00   60.0 0.0  0.0
+ic  h4  cm2 s3  h6   0.00 0.00  180.0 0.0  0.0
+ic  h5  cm2 s3  h6   0.00 0.00  300.0 0.0  0.0
+
+RESI ES1        -1.00 ! ethylthiolate, adm jr.
+GROUP
+ATOM S    SS    -0.80 !  H21  H11 H12
+ATOM C1   CS    -0.38 !     \   \  /
+ATOM C2   CT3   -0.27 ! H22--C2--C1
+ATOM H21  HA3    0.09 !     /      \
+ATOM H22  HA3    0.09 !  H23        S (-)
+ATOM H23  HA3    0.09
+ATOM H11  HA2    0.09
+ATOM H12  HA2    0.09
+BOND  S  C1  C1 H11 C1 H12 C1 C2
+BOND  C2 H21 C2 H22 C2 H23
+IC BLNK H11  C1   S     0.0000  0.0000   60.0000  0.0000  0.0000
+IC S    H11 *C1   H12   0.0000  0.0000  120.0000  0.0000  0.0000
+IC S    H11 *C1   C2    0.0000  0.0000 -120.0000  0.0000  0.0000
+IC H12  C2  *C1   H11   0.0000  0.0000  120.0000  0.0000  0.0000
+IC S    C1   C2   H21   0.0000  0.0000  180.0000  0.0000  0.0000
+IC S    C1   C2   H22   0.0000  0.0000   60.0000  0.0000  0.0000
+IC S    C1   C2   H23   0.0000  0.0000  -60.0000  0.0000  0.0000
+patch first none last none
+
+RESI DMDS        0.00 ! dimethyldisulfide, Dzung Nguyen
+GROUP
+atom   h1   ha3  0.09 !
+atom   h2   ha3  0.09 !   H1
+atom   h3   ha3  0.09 !    \
+atom   cm1  ct3 -0.19 ! H2-CM1
+atom   s2   sm  -0.08 !    /  \
+GROUP                 !   H3   S2--S3    H4
+atom   s3   sm  -0.08 !              \  /
+atom   cm4  ct3 -0.19 !               CM4-H5
+atom   h4   ha3  0.09 !                 \
+atom   h5   ha3  0.09 !                  H6
+atom   h6   ha3  0.09 !
+bond   h1   cm1     h2   cm1      h3   cm1      cm1  s2
+bond   s2   s3      s3   cm4      cm4  h4       cm4  h5
+bond   cm4  h6
+ic   h1  cm1 s2  s3   0.00   0.00    60.0   0.0   0.0
+ic   h2  cm1 s2  s3   0.00   0.00   180.0   0.0   0.0
+ic   h3  cm1 s2  s3   0.00   0.00   300.0   0.0   0.0
+ic   cm1 s2  s3  cm4  0.00   0.00    90.0   0.0   0.0
+ic   s2  s3  cm4 h4   0.00   0.00    60.0   0.0   0.0
+ic   s2  s3  cm4 h5   0.00   0.00   180.0   0.0   0.0
+ic   s2  s3  cm4 h6   0.00   0.00   300.0   0.0   0.0
+patc firs none last none
+
+RESI DEDS        0.00 ! diethyldisulfide, adm jr.
+GROUP
+atom   h1   ha2  0.09 !
+atom   h2   ha2  0.09 !   H1
+                      !    \
+atom   cm1  ct2 -0.10 ! H2-CM1
+atom   s2   sm  -0.08 !    /  \
+GROUP                 !  CM0   S2--S3    H4
+atom   s3   sm  -0.08 ! / | \        \  /
+atom   cm4  ct2 -0.10 !H01| H03       CM4-H5
+atom   h4   ha2  0.09 !  H02            \
+atom   h5   ha2  0.09 !                 CM5-H53
+GROUP                 !                /  \
+atom   CM0  ct3 -0.27 !              H51  H52
+atom   h01  ha3  0.09 !
+atom   h02  ha3  0.09
+atom   h03  ha3  0.09
+GROUP
+atom   CM5  ct3 -0.27
+atom   h51  ha3  0.09
+atom   h52  ha3  0.09
+atom   h53  ha3  0.09
+
+bond   h1   cm1     h2   cm1      cm1  cm0      cm1  s2
+bond   s2   s3      s3   cm4      cm4  h4       cm4  h5
+bond   cm4  cm5
+bond   cm0  h01     cm0  h02      cm0  h03
+bond   cm5  h51     cm5  h52      cm5  h53
+
+ic   h1  cm1 s2  s3   0.00   0.00    60.0   0.0   0.0
+ic   h2  cm1 s2  s3   0.00   0.00   300.0   0.0   0.0
+ic   cm0 cm1 s2  s3   0.00   0.00   180.0   0.0   0.0
+ic   s2  cm1 cm0 h01  0.00   0.00   180.0   0.0   0.0
+ic   s2  cm1 cm0 h02  0.00   0.00    60.0   0.0   0.0
+ic   s2  cm1 cm0 h03  0.00   0.00   300.0   0.0   0.0
+ic   cm1 s2  s3  cm4  0.00   0.00    90.0   0.0   0.0
+ic   s2  s3  cm4 h4   0.00   0.00    60.0   0.0   0.0
+ic   s2  s3  cm4 h5   0.00   0.00   300.0   0.0   0.0
+ic   s2  s3  cm4 cm5  0.00   0.00   180.0   0.0   0.0
+ic   s3  cm4 cm5 h51  0.00   0.00   180.0   0.0   0.0
+ic   s3  cm4 cm5 h52  0.00   0.00    60.0   0.0   0.0
+ic   s3  cm4 cm5 h53  0.00   0.00   300.0   0.0   0.0
+patc firs none last none
+     
+RESI EMS         0.00 ! ethylmethylsulfide, Dzung Nguyen
+group
+Atom h1   ha3    0.09 !
+Atom h2   ha3    0.09 !   H1   H4 H5
+Atom h3   ha3    0.09 !    \    \ /
+Atom cm1  ct3   -0.27 ! H2-CM1--CM2        H6
+group                 !            \      /
+Atom h4   ha2    0.09 !             S3--CM4-H7
+Atom h5   ha2    0.09 !                   \
+Atom cm2  ct2   -0.14 !                    H8
+Atom s3   s     -0.09 !
+atom cm4  ct3   -0.22 !
+atom h6   ha3    0.09 !
+atom h7   ha3    0.09 !
+atom h8   ha3    0.09 !
+Bond cm1 h1  cm1 h2  cm1 h3
+Bond cm1 cm2 cm2 h4  cm2 h5
+bond cm2 s3  s3  cm4 
+bond cm4 h6  cm4 h7  cm4 h8
+ic  h1  cm1 cm2 s3   0.00 0.00   60.0 0.0  0.0
+ic  h2  cm1 cm2 s3   0.00 0.00  180.0 0.0  0.0
+ic  h3  cm1 cm2 s3   0.00 0.00  300.0 0.0  0.0
+ic  h1  cm1 cm2 h4   0.00 0.00  180.0 0.0  0.0
+ic  h2  cm1 cm2 h4   0.00 0.00  300.0 0.0  0.0
+ic  h3  cm1 cm2 h4   0.00 0.00   60.0 0.0  0.0
+ic  h1  cm1 cm2 h5   0.00 0.00  300.0 0.0  0.0
+ic  h2  cm1 cm2 h5   0.00 0.00   60.0 0.0  0.0
+ic  h3  cm1 cm2 h5   0.00 0.00  180.0 0.0  0.0
+ic  cm1 cm2 s3  cm4  0.00 0.00   60.0 0.0  0.0
+ic  h4  cm2 s3  cm4  0.00 0.00  180.0 0.0  0.0
+ic  h5  cm2 s3  cm4  0.00 0.00  300.0 0.0  0.0
+ic  cm2 s3  cm4 h6   0.00 0.00   60.0 0.0  0.0
+ic  cm2 s3  cm4 h7   0.00 0.00  180.0 0.0  0.0
+ic  cm2 s3  cm4 h8   0.00 0.00  300.0 0.0  0.0 
+patch first none last none
+
+RESI IMIA        0.00 ! Imidazole, adm jr.
+GROUP 
+ATOM CG   CPH1  -0.05 !       HD1    HE1
+ATOM HG   HR3    0.09 !        |     /
+ATOM CD2  CPH1   0.22 !       ND1--CE1
+ATOM HD2  HR3    0.10 !      /     ||
+ATOM ND1  NR1   -0.36 ! HG-CG      ||
+ATOM HD1  H      0.32 !     \\     ||
+ATOM CE1  CPH2   0.25 !      CD2--NE2
+ATOM HE1  HR1    0.13 !       |
+ATOM NE2  NR2   -0.70 !      HD2
+                      !
+BOND NE2  CD2       ND1  CG        CE1  ND1       
+BOND CG   HG
+DOUBLE NE2  CE1     CD2  CG
+BOND ND1  HD1       CD2  HD2       CE1  HE1
+! KEEPS HYDROGENS IN RING PLANE
+IMPH ND1  CG   CE1  HD1       ND1  CE1  CG   HD1
+IMPH CD2  CG   NE2  HD2       CD2  NE2  CG   HD2
+IMPH CE1  ND1  NE2  HE1       CE1  NE2  ND1  HE1
+IMPH CG   CD2  ND1  HG        CG   ND1  CD2  HG
+DONO HD1  ND1
+ACCE NE2
+! for analysis
+dono he1 ce1
+dono hg  cg
+acce ce1
+acce nd1
+acce cd2
+IC   HG    CG    ND1   CE1    1.5421  122.67 -173.67  109.79   1.2987
+IC   CG    ND1   CE1   NE2    1.2854  109.79    0.21  110.31   1.3071
+IC   ND1   CE1   NE2   CD2    1.2987  110.31    0.03  105.82   1.3165
+IC   CE1   NE2   CD2   CG     1.3071  105.82   -0.23  108.68   1.3758
+IC   NE2   CD2   CG    ND1    1.3165  108.68    0.35  105.39   1.2854
+IC   NE2   CD2   CG    HG     1.3165  108.68  172.86  131.52   1.5421
+IC   CD2   CG    ND1   CE1    1.3758  105.39   -0.34  109.79   1.2987
+IC   CD2   NE2   CE1   HE1    1.3165  105.82  149.51  119.57   1.0879
+IC   NE2   CE1   ND1   HD1    1.3071  110.31  157.04  123.39   0.9770
+IC   HG    CG    CD2   HD2    1.5421  131.52  -48.16  118.30   1.0902
+
+RESI MIMI        0.00 ! 4-methylimidazole, adm jr.
+GROUP                         
+ATOM ND1  NR1   -0.36 !           HD1    HE1
+ATOM HD1  H      0.32 !            |     /
+ATOM CG   CPH1  -0.05 !    HB1    ND1--CE1
+ATOM CB   CT3   -0.18 !     |    /     ||
+ATOM HB1  HA3    0.09 ! HB2-CB-CG      ||
+ATOM HB2  HA3    0.09 !     |    \\    ||
+ATOM HB3  HA3    0.09 !    HB3    CD2--NE2
+GROUP                 !            |
+ATOM NE2  NR2   -0.70 !           HD2
+ATOM CD2  CPH1   0.22 !
+ATOM HD2  HR3    0.10 !
+ATOM CE1  CPH2   0.25 !
+ATOM HE1  HR1    0.13 !
+BOND NE2  CD2       ND1  CG        CE1  ND1       
+BOND CG   CB           
+DOUBLE NE2  CE1     CD2  CG
+BOND ND1  HD1       CD2  HD2       CE1  HE1
+BOND CB   HB1       CB   HB2       CB   HB3
+! KEEPS HYDROGENS IN RING PLANE
+IMPH ND1  CG   CE1  HD1       CD2  CG   NE2  HD2       CE1  ND1  NE2  HE1
+DONO HD1  ND1
+ACCE NE2
+IC   CB    CG    ND1   CE1    1.5421  122.67 -173.67  109.79   1.2987
+IC   CG    ND1   CE1   NE2    1.2854  109.79    0.21  110.31   1.3071
+IC   ND1   CE1   NE2   CD2    1.2987  110.31    0.03  105.82   1.3165
+IC   CE1   NE2   CD2   CG     1.3071  105.82   -0.23  108.68   1.3758
+IC   NE2   CD2   CG    ND1    1.3165  108.68    0.35  105.39   1.2854
+IC   NE2   CD2   CG    HG     1.3165  108.68  172.86  131.52   1.5421
+IC   CD2   CG    ND1   CE1    1.3758  105.39   -0.34  109.79   1.2987
+IC   CD2   NE2   CE1   HE1    1.3165  105.82  149.51  119.57   1.0879
+IC   NE2   CE1   ND1   HD1    1.3071  110.31  157.04  123.39   0.9770
+IC   CB    CG    CD2   HD2    1.5421  131.52  -48.16  118.30   1.0902
+IC   CD2   CG    CB    HB1    0.0       0.0     0.0     0.0    0.0
+IC   CD2   CG    CB    HB2    0.0       0.0   120.0     0.0    0.0
+IC   CD2   CG    CB    HB3    0.0       0.0   240.0     0.0    0.0
+
+RESI EIMI        0.00 ! 4-ethylimidazole, adm jr.
+GROUP
+ATOM CA   CT3   -0.27 ! Optimized charges to minimize group size
+ATOM HA1  HA3    0.09
+ATOM HA2  HA3    0.09
+ATOM HA3  HA3    0.09
+GROUP                         
+ATOM ND1  NR1   -0.36 !               HD1    HE1
+ATOM HD1  H      0.32 !                |     /
+ATOM CG   CPH1  -0.05 !  HA1   HB1    ND1--CE1
+ATOM CB   CT2   -0.09 !    \    |    /     ||
+ATOM HB1  HA2    0.09 ! HA2-CA--CB-CG      ||
+ATOM HB2  HA2    0.09 !    /    |   \\     ||
+GROUP                 !  HA3   HB2    CD2--NE2
+ATOM NE2  NR2   -0.70 !                |
+ATOM CD2  CPH1   0.22 !               HD2
+ATOM HD2  HR3    0.10 !
+ATOM CE1  CPH2   0.25 !
+ATOM HE1  HR1    0.13 !
+BOND NE2  CD2       ND1  CG        CE1  ND1       
+BOND CG   CB           
+DOUBLE NE2  CE1     CD2  CG
+BOND ND1  HD1       CD2  HD2       CE1  HE1
+BOND CB   HB1       CB   HB2       CB   CA
+BOND CA   HA1       CA   HA2       CA   HA3
+! KEEPS HYDROGENS IN RING PLANE
+IMPH ND1  CG   CE1  HD1       CD2  CG   NE2  HD2       CE1  ND1  NE2  HE1
+DONO HD1  ND1
+ACCE NE2
+IC   CB    CG    ND1   CE1    1.5421  122.67 -173.67  109.79   1.2987
+IC   CG    ND1   CE1   NE2    1.2854  109.79    0.21  110.31   1.3071
+IC   ND1   CE1   NE2   CD2    1.2987  110.31    0.03  105.82   1.3165
+IC   CE1   NE2   CD2   CG     1.3071  105.82   -0.23  108.68   1.3758
+IC   NE2   CD2   CG    ND1    1.3165  108.68    0.35  105.39   1.2854
+IC   NE2   CD2   CG    HG     1.3165  108.68  172.86  131.52   1.5421
+IC   CD2   CG    ND1   CE1    1.3758  105.39   -0.34  109.79   1.2987
+IC   CD2   NE2   CE1   HE1    1.3165  105.82  149.51  119.57   1.0879
+IC   NE2   CE1   ND1   HD1    1.3071  110.31  157.04  123.39   0.9770
+IC   CB    CG    CD2   HD2    1.5421  131.52  -48.16  118.30   1.0902
+IC   CD2   CG    CB    HB1    0.0       0.0     0.0     0.0    0.0
+IC   CD2   CG    CB    HB2    0.0       0.0   120.0     0.0    0.0
+IC   CD2   CG    CB    CA     0.0       0.0   240.0     0.0    0.0
+IC   CG    CB    CA    HA1    0.0       0.0  -180.0     0.0    0.0   
+IC   CG    CB    CA    HA2    0.0       0.0   -60.0     0.0    0.0   
+IC   CG    CB    CA    HA3    0.0       0.0    60.0     0.0    0.0   
+           
+RESI IMIM        1.00 ! Imidazolium, adm jr.
+GROUP
+ATOM CG   CPH1   0.19 !       HD1    HE1
+ATOM HG   HR1    0.13 !        |     /
+ATOM CD2  CPH1   0.19 !       ND1--CE1
+ATOM HD2  HR1    0.13 !      /     ||
+GROUP                 ! HG-CG      ||
+ATOM ND1  NR3   -0.51 !     \\     ||
+ATOM HD1  H      0.44 !      CD2--NE2 (+)
+ATOM NE2  NR3   -0.51 !       |      \
+ATOM HE2  H      0.44 !      HD2     HE2
+ATOM CE1  CPH2   0.32
+ATOM HE1  HR2    0.18
+BOND NE2  CD2       ND1  CG        CE1  ND1       
+BOND CG   HG
+DOUBLE NE2  CE1     CD2  CG
+BOND ND1  HD1       CD2  HD2       CE1  HE1       NE2  HE2
+! KEEPS HYDROGENS IN RING PLANE
+IMPH ND1  CG   CE1  HD1       NE2  CD2  CE1  HE2
+IMPH ND1  CE1  CG   HD1       NE2  CE1  CD2  HE2
+DONO HD1  ND1
+DONO HE2  NE2
+IC   HG    CG    ND1   CE1    1.5421  122.67 -173.67  109.79   1.2987
+IC   CG    ND1   CE1   NE2    1.2854  109.79    0.21  110.31   1.3071
+IC   ND1   CE1   NE2   CD2    1.2987  110.31    0.03  105.82   1.3165
+IC   CE1   NE2   CD2   CG     1.3071  105.82   -0.23  108.68   1.3758
+IC   NE2   CD2   CG    ND1    1.3165  108.68    0.35  105.39   1.2854
+IC   NE2   CD2   CG    HG     1.3165  108.68  172.86  131.52   1.5421
+IC   CD2   CG    ND1   CE1    1.3758  105.39   -0.34  109.79   1.2987
+IC   CD2   NE2   CE1   HE1    1.3165  105.82  149.51  119.57   1.0879
+IC   NE2   CE1   ND1   HD1    1.3071  110.31  157.04  123.39   0.9770
+IC   HG    CG    CD2   HD2    1.5421  131.52  -48.16  118.30   1.0902
+IC   HE1   CE1   NE2   HE2    1.0879  125.00    0.00  125.00   1.0000
+
+RESI EIMM        1.00 ! Ethyl-Imidazolium, adm jr.
+GROUP
+ATOM CA   CT3   -0.27
+ATOM HA1  HA3    0.09
+ATOM HA2  HA3    0.09
+ATOM HA3  HA3    0.09
+GROUP                 !       
+ATOM CB   CT2   -0.05 !               HD1    HE1
+ATOM HB1  HA2    0.09 !                |     /
+ATOM HB2  HA2    0.09 !  HA1   HB1    ND1--CE1
+ATOM CG   CPH1   0.19 !    \    |    /     ||
+ATOM CD2  CPH1   0.19 ! HA2-CA--CB-CG      ||
+ATOM HD2  HR1    0.13 !    /    |   \\     ||
+GROUP                 !  HA3   HB2    CD2--NE2(+)
+ATOM ND1  NR3   -0.51 !                |     \
+ATOM HD1  H      0.44 !               HD2    HE2
+ATOM NE2  NR3   -0.51 !
+ATOM HE2  H      0.44
+ATOM CE1  CPH2   0.32
+ATOM HE1  HR2    0.18
+BOND NE2  CD2       ND1  CG        CE1  ND1       
+BOND CG   CB        NE2  HE2
+DOUBLE CD2  CG      NE2  CE1        
+BOND ND1  HD1       CD2  HD2       CE1  HE1
+BOND CB   HB1       CB   HB2       CB   CA
+BOND CA   HA1       CA   HA2       CA   HA3
+! KEEPS HYDROGENS IN RING PLANE
+IMPH ND1  CG   CE1  HD1       NE2  CD2  CE1  HE2
+IMPH ND1  CE1  CG   HD1       NE2  CE1  CD2  HE2
+DONO HD1  ND1
+ACCE NE2
+IC   HG    CG    ND1   CE1    1.5421  122.67 -173.67  109.79   1.2987
+IC   CG    ND1   CE1   NE2    1.2854  109.79    0.21  110.31   1.3071
+IC   ND1   CE1   NE2   CD2    1.2987  110.31    0.03  105.82   1.3165
+IC   CE1   NE2   CD2   CG     1.3071  105.82   -0.23  108.68   1.3758
+IC   NE2   CD2   CG    ND1    1.3165  108.68    0.35  105.39   1.2854
+IC   NE2   CD2   CG    HG     1.3165  108.68  172.86  131.52   1.5421
+IC   CD2   CG    ND1   CE1    1.3758  105.39   -0.34  109.79   1.2987
+IC   CD2   NE2   CE1   HE1    1.3165  105.82  149.51  119.57   1.0879
+IC   NE2   CE1   ND1   HD1    1.3071  110.31  157.04  123.39   0.9770
+IC   HG    CG    CD2   HD2    1.5421  131.52  -48.16  118.30   1.0902
+IC   CD2   CG    CB    HB1    0.0       0.0     0.0     0.0    0.0
+IC   CD2   CG    CB    HB2    0.0       0.0   120.0     0.0    0.0
+IC   CD2   CG    CB    CA     0.0       0.0   240.0     0.0    0.0
+IC   CG    CB    CA    HA1    0.0       0.0  -180.0     0.0    0.0   
+IC   CG    CB    CA    HA2    0.0       0.0   -60.0     0.0    0.0   
+IC   CG    CB    CA    HA3    0.0       0.0    60.0     0.0    0.0   
+
+RESI BENZ        0.00 ! benzene, adm jr.
+GROUP   
+ATOM CG   CA    -0.115 !
+ATOM HG   HP     0.115 !      HD1  HE1
+GROUP                  !       |    |
+ATOM CD1  CA    -0.115 !      CD1--CE1
+ATOM HD1  HP     0.115 !      /      \
+GROUP                  ! HG--CG      CZ--HZ
+ATOM CD2  CA    -0.115 !      \      /
+ATOM HD2  HP     0.115 !      CD2--CE2
+GROUP                  !       |    |
+ATOM CE1  CA    -0.115 !      HD2  HE2
+ATOM HE1  HP     0.115 !
+GROUP   
+ATOM CE2  CA    -0.115
+ATOM HE2  HP     0.115
+GROUP   
+ATOM CZ   CA    -0.115
+ATOM HZ   HP     0.115
+BOND CD1 CG CD2 CG CE1 CD1   
+BOND CE2 CD2 CZ CE1 CZ CE2 
+BOND CG HG CD1 HD1 CD2 HD2 CE1 HE1   
+BOND CE2 HE2 CZ HZ  
+IC CG   CD1  CE1  CZ    0.0000  0.0000   0.0000  0.0000  0.0000 
+IC CD1  CE1  CZ   CE2   0.0000  0.0000   0.0000  0.0000  0.0000 
+IC CE1  CZ   CE2  CD2   0.0000  0.0000   0.0000  0.0000  0.0000 
+IC CD1  CD2  *CG  HG    0.0000  0.0000 180.0000  0.0000  0.0000
+IC CE1  CG   *CD1 HD1   0.0000  0.0000 180.0000  0.0000  0.0000
+IC CE2  CG   *CD2 HD2   0.0000  0.0000 180.0000  0.0000  0.0000
+IC CZ   CD1  *CE1 HE1   0.0000  0.0000 180.0000  0.0000  0.0000
+IC CZ   CD2  *CE2 HE2   0.0000  0.0000 180.0000  0.0000  0.0000
+IC CE1  CE2  *CZ  HZ    0.0000  0.0000 180.0000  0.0000  0.0000
+
+RESI EBEN         0.00 ! ethylbenzene, adm jr.
+GROUP   
+ATOM CG   CA     0.000 !
+                       !             HD1  HE1
+GROUP                  !              |    |
+ATOM CD1  CA    -0.115 !HA1    HB1   CD1--CE1
+ATOM HD1  HP     0.115 !   \    |    /      \
+GROUP                  !HA2-CA--CB--CG      CZ--HZ
+ATOM CD2  CA    -0.115 !   /    |    \      /
+ATOM HD2  HP     0.115 !HA3    HB2   CD2--CE2
+GROUP                  !              |    |
+ATOM CE1  CA    -0.115 !             HD2  HE2
+ATOM HE1  HP     0.115 !
+GROUP   
+ATOM CE2  CA    -0.115
+ATOM HE2  HP     0.115
+GROUP   
+ATOM CZ   CA    -0.115
+ATOM HZ   HP     0.115
+GROUP 
+ATOM CB   CT2   -0.18
+ATOM HB1  HA2    0.09
+ATOM HB2  HA2    0.09
+GROUP 
+ATOM CA   CT3   -0.27
+ATOM HA1  HA3    0.09
+ATOM HA2  HA3    0.09
+ATOM HA3  HA3    0.09
+
+BOND CD1 CG  CD2 CG  CE1 CD1   
+BOND CE2 CD2 CZ  CE1 CZ CE2 
+BOND CG  CB  CD1 HD1 CD2 HD2 CE1 HE1   
+BOND CE2 HE2 CZ  HZ  
+BOND CB  HB1 CB  HB2 CB  CA
+BOND CA  HA1 CA  HA2 CA  HA3
+
+IC CG   CD1  CE1  CZ    0.0000  0.0000   0.0000  0.0000  0.0000 
+IC CD1  CE1  CZ   CE2   0.0000  0.0000   0.0000  0.0000  0.0000 
+IC CE1  CZ   CE2  CD2   0.0000  0.0000   0.0000  0.0000  0.0000 
+IC CD1  CD2  *CG  CB    0.0000  0.0000 180.0000  0.0000  0.0000
+IC CE1  CG   *CD1 HD1   0.0000  0.0000 180.0000  0.0000  0.0000
+IC CE2  CG   *CD2 HD2   0.0000  0.0000 180.0000  0.0000  0.0000
+IC CZ   CD1  *CE1 HE1   0.0000  0.0000 180.0000  0.0000  0.0000
+IC CZ   CD2  *CE2 HE2   0.0000  0.0000 180.0000  0.0000  0.0000
+IC CE1  CE2  *CZ  HZ    0.0000  0.0000 180.0000  0.0000  0.0000
+IC CD2  CG   CB   HB1   0.0000  0.0000 120.0000  0.0000  0.0000
+IC CD2  CG   CB   HB2   0.0000  0.0000 240.0000  0.0000  0.0000
+IC CD2  CG   CB   CA    0.0000  0.0000   0.0000  0.0000  0.0000
+IC CG   CB   CA   HA1   0.0000  0.0000 180.0000  0.0000  0.0000
+IC CG   CB   CA   HA2   0.0000  0.0000  60.0000  0.0000  0.0000
+IC CG   CB   CA   HA3   0.0000  0.0000 300.0000  0.0000  0.0000
+
+RESI PHEN        0.00 ! phenol, adm jr.
+GROUP   
+ATOM CG   CA    -0.115 !
+ATOM HG   HP     0.115 !      HD1  HE1
+GROUP                  !       |    |
+ATOM CD1  CA    -0.115 !      CD1--CE1
+ATOM HD1  HP     0.115 !     //     \\
+GROUP                  ! HG--CG      CZ--OH
+ATOM CD2  CA    -0.115 !      \      /     \
+ATOM HD2  HP     0.115 !      CD2==CE2      HH
+GROUP                  !       |    |
+ATOM CE1  CA    -0.115 !      HD2  HE2
+ATOM HE1  HP     0.115
+GROUP                 
+ATOM CE2  CA    -0.115
+ATOM HE2  HP     0.115
+GROUP                 
+ATOM CZ   CA     0.11
+ATOM OH   OH1   -0.54
+ATOM HH   H      0.43
+BOND CD2 CG CE1 CD1   
+BOND CZ CE2 
+BOND CG HG CD1 HD1 CD2 HD2 CE1 HE1   
+BOND CE2 HE2 CZ OH OH HH 
+DOUBLE CD1 CG CE2 CD2  CZ CE1 
+IC CG   CD1  CE1  CZ    0.0000  0.0000   0.0000  0.0000  0.0000 
+IC CD1  CE1  CZ   CE2   0.0000  0.0000   0.0000  0.0000  0.0000 
+IC CE1  CZ   CE2  CD2   0.0000  0.0000   0.0000  0.0000  0.0000 
+IC CD1  CD2  *CG  HG    0.0000  0.0000 180.0000  0.0000  0.0000
+IC CE1  CG   *CD1 HD1   0.0000  0.0000 180.0000  0.0000  0.0000
+IC CE2  CG   *CD2 HD2   0.0000  0.0000 180.0000  0.0000  0.0000
+IC CZ   CD1  *CE1 HE1   0.0000  0.0000 180.0000  0.0000  0.0000
+IC CZ   CD2  *CE2 HE2   0.0000  0.0000 180.0000  0.0000  0.0000
+IC CE1  CE2  *CZ  OH    0.0000  0.0000 180.0000  0.0000  0.0000
+IC CE1  CZ   OH   HH    0.0000  0.0000 180.0000  0.0000  0.0000
+
+RESI EPHE        0.00  ! p-ethylphenol, adm jr.
+GROUP   
+ATOM CG   CA     0.00  !
+                       !             HD1  HE1
+GROUP                  !              |    |
+ATOM CD1  CA    -0.115 !HA1    HB1   CD1--CE1
+ATOM HD1  HP     0.115 !   \    |    /      \
+GROUP                  !HA2-CA--CB--CG      CZ--OH
+ATOM CD2  CA    -0.115 !   /    |    \      /     \
+ATOM HD2  HP     0.115 !HA3    HB2   CD2--CE2      HH
+GROUP                  !              |    |
+ATOM CE1  CA    -0.115 !             HD2  HE2
+ATOM HE1  HP     0.115 !
+GROUP                  !
+ATOM CE2  CA    -0.115 !
+ATOM HE2  HP     0.115 !
+GROUP                 
+ATOM CZ   CA     0.11
+ATOM OH   OH1   -0.54
+ATOM HH   H      0.43
+GROUP
+ATOM CB   CT2   -0.18
+ATOM HB1  HA2    0.09
+ATOM HB2  HA2    0.09
+GROUP
+ATOM CA   CT3   -0.27
+ATOM HA1  HA3    0.09
+ATOM HA2  HA3    0.09
+ATOM HA3  HA3    0.09
+
+BOND CD2 CG  CE1 CD1   
+BOND CZ  CE2 
+BOND CG  CB  CD1 HD1 CD2 HD2 CE1 HE1   
+BOND CE2 HE2 CZ  OH  OH  HH 
+BOND CB  HB1 CB  HB2 CB  CA
+BOND CA  HA1 CA  HA2 CA  HA3
+DOUBLE CD1 CG CE2 CD2  CZ CE1 
+
+IC CG   CD1  CE1  CZ    0.0000  0.0000   0.0000  0.0000  0.0000 
+IC CD1  CE1  CZ   CE2   0.0000  0.0000   0.0000  0.0000  0.0000 
+IC CE1  CZ   CE2  CD2   0.0000  0.0000   0.0000  0.0000  0.0000 
+IC CD1  CD2  *CG  CB    0.0000  0.0000 180.0000  0.0000  0.0000
+IC CE1  CG   *CD1 HD1   0.0000  0.0000 180.0000  0.0000  0.0000
+IC CE2  CG   *CD2 HD2   0.0000  0.0000 180.0000  0.0000  0.0000
+IC CZ   CD1  *CE1 HE1   0.0000  0.0000 180.0000  0.0000  0.0000
+IC CZ   CD2  *CE2 HE2   0.0000  0.0000 180.0000  0.0000  0.0000
+IC CE1  CE2  *CZ  OH    0.0000  0.0000 180.0000  0.0000  0.0000
+IC CE1  CZ   OH   HH    0.0000  0.0000 180.0000  0.0000  0.0000
+IC CD2  CG   CB   HB1   0.0000  0.0000 120.0000  0.0000  0.0000
+IC CD2  CG   CB   HB2   0.0000  0.0000 240.0000  0.0000  0.0000
+IC CD2  CG   CB   CA    0.0000  0.0000   0.0000  0.0000  0.0000
+IC CG   CB   CA   HA1   0.0000  0.0000 180.0000  0.0000  0.0000
+IC CG   CB   CA   HA2   0.0000  0.0000  60.0000  0.0000  0.0000
+IC CG   CB   CA   HA3   0.0000  0.0000 300.0000  0.0000  0.0000
+
+RESI PHEO       -1.00 ! phenoxide, adm jr.
+GROUP   
+ATOM CG   CA    -0.115 !
+ATOM HG   HP     0.115 !      HD1  HE1
+GROUP                  !       |    |
+ATOM CD1  CA    -0.115 !      CD1--CE1
+ATOM HD1  HP     0.115 !      /      \
+GROUP                  ! HG--CG      CZ--OH
+ATOM CD2  CA    -0.115 !      \      /    
+ATOM HD2  HP     0.115 !      CD2--CE2    
+GROUP                  !       |    |
+ATOM CE1  CA    -0.60  !      HD2  HE2
+ATOM HE1  HP     0.28
+ATOM CE2  CA    -0.60
+ATOM HE2  HP     0.28
+ATOM CZ   CA     0.40
+ATOM OH   OC    -0.76
+BOND CD1 CG CD2 CG CE1 CD1   
+BOND CE2 CD2 CZ CE1 CZ CE2 
+BOND CG HG CD1 HD1 CD2 HD2 CE1 HE1   
+BOND CE2 HE2 CZ OH
+IC CG   CD1  CE1  CZ    0.0000  0.0000   0.0000  0.0000  0.0000 
+IC CD1  CE1  CZ   CE2   0.0000  0.0000   0.0000  0.0000  0.0000 
+IC CE1  CZ   CE2  CD2   0.0000  0.0000   0.0000  0.0000  0.0000 
+IC CD1  CD2  *CG  HG    0.0000  0.0000 180.0000  0.0000  0.0000
+IC CE1  CG   *CD1 HD1   0.0000  0.0000 180.0000  0.0000  0.0000
+IC CE2  CG   *CD2 HD2   0.0000  0.0000 180.0000  0.0000  0.0000
+IC CZ   CD1  *CE1 HE1   0.0000  0.0000 180.0000  0.0000  0.0000
+IC CZ   CD2  *CE2 HE2   0.0000  0.0000 180.0000  0.0000  0.0000
+IC CE1  CE2  *CZ  OH    0.0000  0.0000 180.0000  0.0000  0.0000
+
+RESI INDO        0.00 ! indole, adm jr.
+GROUP   
+ATOM HG   HP     0.115 !                   HE3
+ATOM CG   CY    -0.145 !                    |
+ATOM CD2  CPT   -0.020 !      HG           CE3
+ATOM CD1  CA     0.035 !        \         /  \\
+ATOM HD1  HP     0.115 !         CG-----CD2   CZ3-HZ3
+ATOM NE1  NY    -0.610 !         ||     ||     |
+ATOM HE1  H      0.380 !         CD1    CE2   CH2-HH2
+ATOM CE2  CPT    0.130 !        /   \   / \  //
+GROUP                  !      HD1    NE1   CZ2
+ATOM CE3  CA    -0.115 !              |     |
+ATOM HE3  HP     0.115 !             HE1   HZ2
+GROUP                 
+ATOM CZ2  CA    -0.115
+ATOM HZ2  HP     0.115
+GROUP                 
+ATOM CZ3  CA    -0.115
+ATOM HZ3  HP     0.115
+GROUP                 
+ATOM CH2  CA    -0.115
+ATOM HH2  HP     0.115
+BOND CG HG CD2 CG NE1 CD1   
+BOND CZ2 CE2   
+BOND CZ3 CH2 CD2 CE3 NE1 CE2 
+BOND CD1 HD1 NE1 HE1 CE3 HE3   
+BOND CZ3 HZ3 CH2 HH2 CZ2 HZ2
+DOUBLE CD1 CG CE2 CD2 CH2 CZ2 CZ3 CE3 
+DONOR HE1 NE1   
+IC CG   CD1  NE1  CE2   0.0000  0.0000  0.0000  0.0000  0.0000
+IC CD2  CB   *CG  CD1   0.0000  0.0000 180.0000  0.0000  0.0000
+IC CD1  CG   CD2  CE2   0.0000  0.0000  0.0000  0.0000  0.0000
+IC CD2  CG   CD1  NE1   0.0000  0.0000  0.0000  0.0000  0.0000
+IC CE2  CG   *CD2 CE3   0.0000  0.0000 180.0000  0.0000  0.0000
+IC CE2  CD2  CE3  CZ3   0.0000  0.0000  0.0000  0.0000  0.0000
+IC CD2  CE3  CZ3  CH2   0.0000  0.0000  0.0000  0.0000  0.0000
+IC CE3  CZ3  CH2  CZ2   0.0000  0.0000  0.0000  0.0000  0.0000
+IC CZ3  CD2  *CE3 HE3   0.0000  0.0000 180.0000  0.0000  0.0000
+IC CH2  CE3  *CZ3 HZ3   0.0000  0.0000 180.0000  0.0000  0.0000
+IC CZ2  CZ3  *CH2 HH2   0.0000  0.0000 180.0000  0.0000  0.0000
+IC CE2  CH2  *CZ2 HZ2   0.0000  0.0000 180.0000  0.0000  0.0000
+IC CD1  CE2  *NE1 HE1   0.0000  0.0000 180.0000  0.0000  0.0000
+IC CG   NE1  *CD1 HD1   0.0000  0.0000 180.0000  0.0000  0.0000
+IC CD1  CD2  *CG  HG    0.0000  0.0000 180.0000  0.0000  0.0000
+
+RESI EIND        0.00  ! ethylindole, adm jr.
+          
+                       !      HA2
+                       !       |
+GROUP                  !   HA1-CA-HA3      HE3
+ATOM CG   CY    -0.030 !       |            |
+ATOM CD2  CPT   -0.020 !   HB1-CB-HB2      CE3
+ATOM CD1  CA     0.035 !        \         /  \\
+ATOM HD1  HP     0.115 !         CG-----CD2   CZ3-HZ3
+ATOM NE1  NY    -0.610 !         ||     ||     |
+ATOM HE1  H      0.380 !         CD1    CE2   CH2-HH2
+ATOM CE2  CPT    0.130 !        /   \   / \  //
+GROUP                  !      HD1    NE1   CZ2
+ATOM CE3  CA    -0.115 !              |     |
+ATOM HE3  HP     0.115 !             HE1   HZ2
+GROUP                 
+ATOM CZ2  CA    -0.115
+ATOM HZ2  HP     0.115
+GROUP                 
+ATOM CZ3  CA    -0.115
+ATOM HZ3  HP     0.115
+GROUP                 
+ATOM CH2  CA    -0.115
+ATOM HH2  HP     0.115
+GROUP
+ATOM CB   CT2   -0.18
+ATOM HB1  HA2    0.09
+ATOM HB2  HA2    0.09
+GROUP
+ATOM CA   CT3   -0.27
+ATOM HA1  HA3    0.09
+ATOM HA2  HA3    0.09
+ATOM HA3  HA3    0.09
+
+BOND CG  CB  CD2 CG NE1 CD1   
+BOND CZ2 CE2   
+BOND CZ3 CH2 CD2 CE3 NE1 CE2 
+BOND CD1 HD1 NE1 HE1 CE3 HE3   
+BOND CZ3 HZ3 CH2 HH2 CZ2 HZ2
+BOND CB  HB1 CB  HB2 CB  CA
+BOND CA  HA1 CA  HA2 CA  HA3
+DOUBLE CD1 CG CE2 CD2 CH2 CZ2 CZ3 CE3 
+DONOR HE1 NE1   
+
+IC CG   CD1  NE1  CE2   0.0000  0.0000  0.0000  0.0000  0.0000
+IC CD2  CB   *CG  CD1   0.0000  0.0000 180.0000  0.0000  0.0000
+IC CD1  CG   CD2  CE2   0.0000  0.0000  0.0000  0.0000  0.0000
+IC CD2  CG   CD1  NE1   0.0000  0.0000  0.0000  0.0000  0.0000
+IC CE2  CG   *CD2 CE3   0.0000  0.0000 180.0000  0.0000  0.0000
+IC CE2  CD2  CE3  CZ3   0.0000  0.0000  0.0000  0.0000  0.0000
+IC CD2  CE3  CZ3  CH2   0.0000  0.0000  0.0000  0.0000  0.0000
+IC CE3  CZ3  CH2  CZ2   0.0000  0.0000  0.0000  0.0000  0.0000
+IC CZ3  CD2  *CE3 HE3   0.0000  0.0000 180.0000  0.0000  0.0000
+IC CH2  CE3  *CZ3 HZ3   0.0000  0.0000 180.0000  0.0000  0.0000
+IC CZ2  CZ3  *CH2 HH2   0.0000  0.0000 180.0000  0.0000  0.0000
+IC CE2  CH2  *CZ2 HZ2   0.0000  0.0000 180.0000  0.0000  0.0000
+IC CD1  CE2  *NE1 HE1   0.0000  0.0000 180.0000  0.0000  0.0000
+IC CG   NE1  *CD1 HD1   0.0000  0.0000 180.0000  0.0000  0.0000
+IC CD1  CD2  *CG  CB    0.0000  0.0000 180.0000  0.0000  0.0000
+IC CD2  CG   CB   HB1   0.0000  0.0000 120.0000  0.0000  0.0000
+IC CD2  CG   CB   HB2   0.0000  0.0000 240.0000  0.0000  0.0000
+IC CD2  CG   CB   CA    0.0000  0.0000   0.0000  0.0000  0.0000
+IC CG   CB   CA   HA1   0.0000  0.0000 180.0000  0.0000  0.0000
+IC CG   CB   CA   HA2   0.0000  0.0000  60.0000  0.0000  0.0000
+IC CG   CB   CA   HA3   0.0000  0.0000 300.0000  0.0000  0.0000
+
+RESI AP2         0.00 ! acetyl-prolineamide, R. Dunbrack
+                      ! No Cross Term
+                      !
+                      !HY1 HY2 HY3
+ATOM N    N     -0.29 !   \ | /
+ATOM CA   CP1    0.02 !    CAY
+ATOM CB   CP2   -0.18 !     |
+ATOM CG   CP2   -0.18 !  OY=CY  HD1 HD2
+ATOM CD   CP3    0.00 !      \    \ /              
+ATOM CY   C      0.51 !       N---CD   HG1               
+ATOM OY   O     -0.51 !       |     \  /
+ATOM C    CC     0.51 !       |      CG
+ATOM HA   HB1    0.09 !       |     /  \
+ATOM HB1  HA2    0.09 !    HA-CA--CB   HG2
+ATOM HB2  HA2    0.09 !       |   / \
+ATOM HG1  HA2    0.09 !       | HB1 HB2
+ATOM HG2  HA2    0.09 !     O=C
+ATOM HD1  HA2    0.09 !       |
+ATOM HD2  HA2    0.09 !       NT
+ATOM CAY  CT3   -0.27 !      / \
+ATOM HY1  HA3    0.09 !   HT1   HT2
+ATOM HY2  HA3    0.09
+ATOM HY3  HA3    0.09
+ATOM O    O     -0.51
+ATOM NT   NH2   -0.62
+ATOM HT1  H      0.31
+ATOM HT2  H      0.31
+BOND CY N CAY HY1 CAY HY2 CAY HY3 
+BOND CY CAY N CA   CA CB  CB CG  CG CD  CD N
+BOND HA  CA HG1 CG HG2 CG HD1 CD HD2 CD HB1 CB HB2 CB
+BOND C CA  C NT NT HT1 NT HT2 
+DOUBLE C O  CY OY 
+IMPR CY CAY N OY   
+IMPR C CA  NT O 
+IMPR C NT CA O 
+IMPR N CY CA CD  
+IMPR NT C HT2 HT1   
+DONOR HT1 NT   
+DONOR HT2 NT   
+ACCEPTOR OY CY
+ACCEPTOR O C   
+! Improper ICs
+IC CY CA *N CD      0.00   0.00  180.00   0.00 0.00 
+IC N C *CA CB       0.00   0.00  120.00   0.00 0.00 
+IC N C *CA HA       0.00   0.00 -120.00   0.00 0.00 
+IC N CAY *CY OY     0.00   0.00  180.00   0.00 0.00 
+! Backbone + Peptide bond IC's 
+IC OY CY N  CA      0.00   0.00    0.00   0.00 0.00 !Omega  
+IC CAY CY N  CA     0.00   0.00  180.00   0.00 0.00 !Omega  
+IC CY  N  CA C      0.00 120.64  -60.00   0.00 0.00 !Psi 
+IC N  CA C  NT      0.00   0.00  180.0    0.00 0.00 !Phi
+IC CAY CY N CD      0.00   0.00    0.00 120.64 0.00 
+IC CY N CD CG       0.00   0.00  168.60 103.28 0.00 
+IC CY N CA CB       0.00   0.00  168.64 103.34 0.00 
+! Ring IC's 
+IC N  CA CB CG      0.00 103.34   29.25 103.67 0.00 
+IC CA CB CG CD      0.00 103.67  -36.72 103.63 0.00 
+IC CB CG CD N       0.00 103.63   29.50 103.28 0.00 
+IC CG CD N  CA      0.00 103.28  -11.61 112.90 0.00 
+IC CD N  CA CB      0.00 112.90  -11.17 103.34 0.00 
+! Carbonyl IC's 
+IC CD N CA C        0.00 112.90  120.00 108.00 0.00 
+! Hydrogen IC's 
+IC CD N CA HA       0.00   0.00 -120.00 108.00 0.00 
+IC N CA CB HB1      0.00   0.00  120.00 108.00 0.00 
+IC N CA CB HB2      0.00   0.00 -120.00 108.00 0.00 
+IC CA CB CG HG1     0.00   0.00  120.00 108.00 0.00 
+IC CA CB CG HG2     0.00   0.00 -120.00 108.00 0.00 
+IC CB CG CD HD1     0.00   0.00  120.00 108.00 0.00 
+IC CB CG CD HD2     0.00   0.00 -120.00 108.00 0.00 
+IC NT CA *C O       0.00   0.00  180.00   0.00 0.00
+IC CA C NT HT2      0.00   0.00  180.00   0.00 0.00
+IC C HT2 *NT HT1    0.00   0.00  180.00   0.00 0.00
+
+RESI PDIP        0.00 ! proline dipeptide
+                      ! No Cross Term 
+                      !
+                      !HY1 HY2 HY3
+ATOM N    N     -0.29 !   \ | /
+ATOM CA   CP1    0.02 !    CAY
+ATOM CB   CP2   -0.18 !     |
+ATOM CG   CP2   -0.18 !  OY=CY  HD1 HD2
+ATOM CD   CP3    0.00 !      \    \ /              
+ATOM CY   C      0.51 !       N---CD   HG1               
+ATOM OY   O     -0.51 !       |     \  /
+ATOM C    C      0.51 !       |      CG
+ATOM HA   HB1    0.09 !       |     /  \
+ATOM HB1  HA2    0.09 !    HA-CA--CB   HG2
+ATOM HB2  HA2    0.09 !       |   / \
+ATOM HG1  HA2    0.09 !       | HB1 HB2
+ATOM HG2  HA2    0.09 !     O=C
+ATOM HD1  HA2    0.09 !       |
+ATOM HD2  HA2    0.09 !       NT
+ATOM CAY  CT3   -0.27 !      / \
+ATOM HY1  HA3    0.09 !   HT1   CR-HR3
+ATOM HY2  HA3    0.09 !        /  \  
+ATOM HY3  HA3    0.09 !      HR1  HR2
+ATOM O    O     -0.51
+ATOM NT   NH1   -0.47
+ATOM HT1  H      0.31
+ATOM CR   CT3   -0.11
+ATOM HR1  HA3    0.09
+ATOM HR2  HA3    0.09
+ATOM HR3  HA3    0.09
+
+BOND CY N   CAY HY1 CAY HY2 CAY HY3 
+BOND CY CAY N   CA  CA  CB  CB  CG  CG  CD  CD  N
+BOND HA CA  HG1 CG  HG2 CG  HD1 CD  HD2 CD  HB1 CB HB2 CB
+BOND C CA   C   NT  NT  HT1 NT  CR
+BOND CR HR1 CR  HR2 CR  HR3
+DOUBLE C O  CY OY 
+IMPR CY CAY N OY   
+IMPR C CA  NT O 
+IMPR C NT CA O 
+IMPR N CY CA CD  
+DONOR HT1 NT   
+ACCEPTOR OY CY
+ACCEPTOR O C   
+! Improper ICs
+IC CY CA *N CD      0.00   0.00  180.00   0.00 0.00 
+IC N C *CA CB       0.00   0.00  120.00   0.00 0.00 
+IC N C *CA HA       0.00   0.00 -120.00   0.00 0.00 
+IC N CAY *CY OY     0.00   0.00  180.00   0.00 0.00 
+! Backbone + Peptide bond IC's 
+IC OY CY N  CA      0.00   0.00    0.00   0.00 0.00 !Omega  
+IC CAY CY N  CA     0.00   0.00  180.00   0.00 0.00 !Omega  
+IC CY  N  CA C      0.00 120.64  -60.00   0.00 0.00 !Psi 
+IC N  CA C  NT      0.00   0.00  180.0    0.00 0.00 !Phi
+IC CAY CY N CD      0.00   0.00    0.00 120.64 0.00 
+IC CY N CD CG       0.00   0.00  168.60 103.28 0.00 
+IC CY N CA CB       0.00   0.00  168.64 103.34 0.00 
+! Ring IC's 
+IC N  CA CB CG      0.00 103.34   29.25 103.67 0.00 
+IC CA CB CG CD      0.00 103.67  -36.72 103.63 0.00 
+IC CB CG CD N       0.00 103.63   29.50 103.28 0.00 
+IC CG CD N  CA      0.00 103.28  -11.61 112.90 0.00 
+IC CD N  CA CB      0.00 112.90  -11.17 103.34 0.00 
+! Carbonyl IC's 
+IC CD N CA C        0.00 112.90  120.00 108.00 0.00 
+! Hydrogen IC's 
+IC CD N CA HA       0.00   0.00 -120.00 108.00 0.00 
+IC N CA CB HB1      0.00   0.00  120.00 108.00 0.00 
+IC N CA CB HB2      0.00   0.00 -120.00 108.00 0.00 
+IC CA CB CG HG1     0.00   0.00  120.00 108.00 0.00 
+IC CA CB CG HG2     0.00   0.00 -120.00 108.00 0.00 
+IC CB CG CD HD1     0.00   0.00  120.00 108.00 0.00 
+IC CB CG CD HD2     0.00   0.00 -120.00 108.00 0.00 
+IC NT CA *C O       0.00   0.00  180.00   0.00 0.00
+IC CA C NT HT1      0.00   0.00  180.00   0.00 0.00
+!C-terminal methyl
+IC C HT1 *NT CR     0.00   0.00  180.00   0.00 0.00
+IC C NT  CR  HR1    0.00   0.00  180.00   0.00 0.00
+IC C NT  CR  HR2    0.00   0.00   60.00   0.00 0.00
+IC C NT  CR  HR3    0.00   0.00  300.00   0.00 0.00
+
+RESI TP2         1.00 ! prolineamide, R. Dunbrack
+ATOM N    NP    -0.07 !
+ATOM HN1  HC     0.24 !
+ATOM HN2  HC     0.24 !
+ATOM CD   CP3    0.16 !
+ATOM CB   CP2   -0.18 !    HN1   HD1 HD2
+ATOM CG   CP2   -0.18 !      \    \ /              
+ATOM CA   CP1    0.16 !  HN2--N---CD   HG1               
+ATOM C    CC     0.51 !       |     \  /
+ATOM O    O     -0.51 !       |      CG
+ATOM HA   HB1    0.09 !       |     /  \
+ATOM HB1  HA2    0.09 !    HA-CA--CB   HG2
+ATOM HB2  HA2    0.09 !       |   / \
+ATOM HG1  HA2    0.09 !       | HB1 HB2
+ATOM HG2  HA2    0.09 !     O=C
+ATOM HD1  HA2    0.09 !       |
+ATOM HD2  HA2    0.09 !       NT
+ATOM NT   NH2   -0.62 !      / \
+ATOM HT1  H      0.31 !   HT1   HT2
+ATOM HT2  H      0.31 ! 
+BOND HN1 N HN2 N N CA  CA CB  CB CG  CG CD  CD N 
+BOND HA  CA HG1 CG HG2 CG HD1 CD HD2 CD HB1 CB HB2 CB  
+BOND C CA  C NT NT HT1 NT HT2 
+DOUBLE C O  
+IMPR C CA  NT O 
+IMPR C NT CA O 
+IMPR NT C HT2 HT1   
+DONOR HT1 NT   
+DONOR HT2 NT   
+DONOR HN1 N   
+DONOR HN2 N   
+ACCEPTOR O C   
+! Improper ICs 
+IC HN1 CA *N CD     0.00   0.00  120.00   0.00 0.00
+IC HN2 CA *N HN1    0.00   0.00  120.00   0.00 0.00
+IC N C *CA CB       0.00   0.00  120.00   0.00 0.00 
+IC N C *CA HA       0.00   0.00 -120.00   0.00 0.00 
+! Backbone + Peptide bond IC's 
+IC N  CA C  NT      0.00   0.00  180.0    0.00 0.00   !Phi
+! Ring IC's 
+IC N  CA CB CG      0.00 103.34   29.25 103.67 0.00 
+IC CA CB CG CD      0.00 103.67  -36.72 103.63 0.00 
+IC CB CG CD N       0.00 103.63   29.50 103.28 0.00 
+IC CG CD N  CA      0.00 103.28  -11.61 112.90 0.00 
+IC CD N  CA CB      0.00 112.90  -11.17 103.34 0.00 
+! Carbonyl IC's 
+IC CD N CA C        0.00 112.90  120.00 108.00 0.00 
+! Hydrogen IC's 
+IC CD N CA HA       0.00   0.00 -120.00 108.00 0.00 
+IC N CA CB HB1      0.00   0.00  120.00 108.00 0.00 
+IC N CA CB HB2      0.00   0.00 -120.00 108.00 0.00 
+IC CA CB CG HG1     0.00   0.00  120.00 108.00 0.00 
+IC CA CB CG HG2     0.00   0.00 -120.00 108.00 0.00 
+IC CB CG CD HD1     0.00   0.00  120.00 108.00 0.00 
+IC CB CG CD HD2     0.00   0.00 -120.00 108.00 0.00 
+IC NT CA *C O       0.00   0.00  180.00   0.00 0.00
+IC CA C NT HT2      0.00   0.00  180.00   0.00 0.00
+IC C HT2 *NT HT1    0.00   0.00  180.00   0.00 0.00
+
+Resi ETHA        0.00 ! ethane, S. Fischer
+Group
+Group
+ Atom h11 ha3     0.09 !  H11      H21
+ Atom h12 ha3     0.09 !    \      /
+ Atom h13 ha3     0.09 ! H12-C1--C2-H22
+ Atom c1  ct3    -0.27 !    /      \
+Group                 !   H13       H23
+ Atom h21 ha3     0.09
+ Atom h22 ha3     0.09
+ Atom h23 ha3     0.09
+ Atom c2  ct3    -0.27
+Bond c1 h11  c1 h12  c1 h13
+Bond c1 c2   c2 h21  c2 h22  c2 h23
+ic  h11 c1 c2  h21  0.00 0.00    0.0 0.0  0.0
+ic  h11 c1 c2  h22  0.00 0.00  120.0 0.0  0.0
+ic  h11 c1 c2  h23  0.00 0.00  240.0 0.0  0.0
+ic  h12 c1 c2  h23  0.00 0.00  120.0 0.0  0.0
+ic  h13 c1 c2  h23  0.00 0.00  240.0 0.0  0.0
+
+Resi PRPA        0.00 ! propane, adm jr.
+Group                 !
+ Atom h11 ha3    0.09 !  H11   H21    H31
+ Atom h12 ha3    0.09 !    \    |     /
+ Atom h13 ha3    0.09 ! H12-C1--C2--C3-H32
+ Atom c1  ct3   -0.27 !    /    |     \
+Group                 !  H13   H22    H33
+ Atom c2  ct2   -0.18 !
+ Atom h21 ha2    0.09 !
+ Atom H22 ha2    0.09
+Group
+ Atom h31 ha3    0.09
+ Atom h32 ha3    0.09
+ Atom h33 ha3    0.09
+ Atom c3  ct3   -0.27
+Bond c1 h11  c1 h12  c1 h13
+Bond c1 c2  c2 h21  c2 h22
+bond c2 c3  c3 h31  c3 h32  c3 h33
+ic  h11 c1 c2 c3   0.00 0.00    0.0 0.0  0.0
+ic  h11 c1 c2 h21  0.00 0.00  120.0 0.0  0.0
+ic  h11 c1 c2 h22  0.00 0.00  240.0 0.0  0.0
+ic  c1  c2 c3 h31  0.00 0.00    0.0 0.0  0.0
+ic  c1  c2 c3 h32  0.00 0.00  120.0 0.0  0.0
+ic  c1  c2 c3 h33  0.00 0.00  240.0 0.0  0.0
+ic  c3  c2 c1 h12  0.00 0.00  120.0 0.0  0.0
+ic  c3  c2 c1 h13  0.00 0.00  120.0 0.0  0.0
+
+Resi BUTA        0.00 ! butane, S. Fischer
+Group
+Atom  h11 ha3    0.09 !  H11   H21 H31    H41
+Atom  h12 ha3    0.09 !    \    |   |     /
+Atom  h13 ha3    0.09 ! H12-C1--C2--C3--C4-H42
+Atom  c1  ct3   -0.27 !    /    |   |     \
+Group                 !  H13   H22 H33    H43
+Atom  h21 ha2    0.09
+Atom  h22 ha2    0.09
+Atom  c2  ct2   -0.18
+Group                
+Atom  h31 ha2    0.09
+Atom  h32 ha2    0.09
+atom  c3  ct2   -0.18
+Group
+atom  h41 ha3    0.09
+atom  h42 ha3    0.09
+atom  h43 ha3    0.09
+atom  c4  ct3   -0.27
+Bond h11 c1  h12 c1  h13 c1  c1 c2
+Bond h21 c2  h22 c2  c2  c3
+Bond h31 c3  h32 c3  c3  c4
+Bond h41 c4  h42 c4  h43 c4
+ic  h11 c1 c2 c3  0.00  0.00    0.0  0.00 0.00
+ic  h11 c1 c2 h21 0.00  0.00  120.0  0.00 0.00
+ic  h11 c1 c2 h22 0.00  0.00  240.0  0.00 0.00
+ic  h12 c1 c2 c3  0.00  0.00  120.0  0.00 0.00
+ic  h13 c1 c2 c3  0.00  0.00  240.0  0.00 0.00
+ic  c1  c2 c3 c4  0.00  0.00    0.0  0.00 0.00
+ic  c1  c2 c3 h31 0.00  0.00  120.0  0.00 0.00
+ic  c1  c2 c3 h32 0.00  0.00  240.0  0.00 0.00
+ic  h21 c2 c3 c4  0.00  0.00  120.0  0.00 0.00
+ic  h22 c2 c3 c4  0.00  0.00  240.0  0.00 0.00
+ic  c2  c3 c4 h41 0.00  0.00    0.0  0.00 0.00
+ic  c2  c3 c4 h42 0.00  0.00  120.0  0.00 0.00
+ic  c2  c3 c4 h43 0.00  0.00  240.0  0.00 0.00
+ic  h31 c3 c4 h43 0.00  0.00  120.0  0.00 0.00
+ic  h32 c3 c4 h43 0.00  0.00  240.0  0.00 0.00
+
+Resi IBUT        0.00 ! Iso-butane, S. Fischer
+Group
+atom  ct  ct1   -0.09 !          H12
+atom  ht  ha1    0.09 !           | 
+Group                 !       H11-C1-H13
+Atom  c1  ct3   -0.27 !           |
+Atom  h11 ha3    0.09 !           CT-HT
+Atom  h12 ha3    0.09 !          / \
+Atom  h13 ha3    0.09 !         /   \
+Group                 !   H21-C2     C3-H31
+Atom  c2  ct3   -0.27 !      / |     | \
+Atom  h21 ha3    0.09 !   H22 H23   H33 H32
+Atom  h22 ha3    0.09 !
+Atom  h23 ha3    0.09 !
+Group
+atom  c3  ct3   -0.27
+Atom  h31 ha3    0.09
+atom  h32 ha3    0.09
+atom  h33 ha3    0.09
+Bond ct  c1  ct  c2  ct c3 ct  ht
+Bond c1 h11 c1 h12 c1 h13
+Bond c2 h21 c2 h22 c2 h23
+Bond c3 h31 c3 h32 c3 h33
+ic  ht   ct  c1  h11  0.00  0.00   60.0  0.00 0.00
+ic  ct   c1  h11 h12  0.00  0.00    0.0  0.00 0.00
+ic  ht   ct  c1  h12  0.00  0.00  180.0  0.00 0.00
+ic  ht   ct  c1  h13  0.00  0.00  300.0  0.00 0.00
+ic  h12  c1  ct  c2   0.00  0.00   60.0  0.00 0.00
+ic  h12  c1  ct  c3   0.00  0.00  -60.0  0.00 0.00
+ic  ht   ct  c2  h21  0.00  0.00   60.0  0.00 0.00
+ic  ht   ct  c2  h22  0.00  0.00  180.0  0.00 0.00
+ic  ht   ct  c2  h23  0.00  0.00  300.0  0.00 0.00
+ic  ht   ct  c3  h31  0.00  0.00   60.0  0.00 0.00
+ic  ht   ct  c3  h32  0.00  0.00  180.0  0.00 0.00
+ic  ht   ct  c3  h33  0.00  0.00  300.0  0.00 0.00
+
+Resi PENT        0.00 ! pentane, adm jr.
+Group                
+ Atom C1   CT3  -0.27 !  H11   H21 H31 H41    H51
+ Atom H11  HA3   0.09 !    \    |   |   |     /
+ Atom H12  HA3   0.09 ! H12-C1--C2--C3--C4--C5-H52
+ Atom H13  HA3   0.09 !    /    |   |   |     \
+Group                 !  H13   H22 H33 H42    H53
+ Atom C2   CT2  -0.18
+ Atom H21  HA2   0.09
+ Atom H22  HA2   0.09
+Group                
+ Atom C3   CT2  -0.18
+ Atom H31  HA2   0.09
+ Atom H32  HA2   0.09
+Group
+ Atom C4   CT2  -0.18
+ Atom H41  HA2   0.09
+ Atom H42  HA2   0.09
+Group
+ Atom C5   CT3  -0.27
+ Atom H51  HA3   0.09
+ Atom H52  HA3   0.09
+ Atom H53  HA3   0.09
+
+Bond  C1   C2     C2   C3     C3   C4     C4   C5
+Bond  C1   H11    C1   H12    C1   H13    C2   H21    C2   H22
+Bond  C3   H31    C3   H32    C4   H41    C4   H42    C5   H51
+Bond  C5   H52    C5   H53
+
+Ic   H11  C1   C2   C3   0.0000    0.00  180.00    0.00   0.0000
+Ic   C1   C2   C3   C4   0.0000    0.00  180.00    0.00   0.0000
+Ic   C2   C3   C4   C5   0.0000    0.00  180.00    0.00   0.0000
+Ic   C3   C4   C5   H51  0.0000    0.00  180.00    0.00   0.0000
+
+Ic   H11  C2  *C1   H12  0.0000    0.00  120.00    0.00   0.0000
+Ic   H11  C2  *C1   H13  0.0000    0.00 -120.00    0.00   0.0000
+Ic   C1   C3  *C2   H21  0.0000    0.00  120.00    0.00   0.0000
+Ic   C1   C3  *C2   H22  0.0000    0.00 -120.00    0.00   0.0000
+Ic   C2   C4  *C3   H31  0.0000    0.00  120.00    0.00   0.0000
+Ic   C2   C4  *C3   H32  0.0000    0.00 -120.00    0.00   0.0000
+Ic   C3   C5  *C4   H41  0.0000    0.00  120.00    0.00   0.0000
+Ic   C3   C5  *C4   H42  0.0000    0.00 -120.00    0.00   0.0000
+Ic   C4   H51 *C5   H52  0.0000    0.00  120.00    0.00   0.0000
+Ic   C4   H51 *C5   H53  0.0000    0.00 -120.00    0.00   0.0000
+patc firs none last none
+
+!RESI TIP3        0.00 ! TIPS3P WATER MODEL, adm jr.
+!GROUP                 ! Generate noangle nodihedral
+!ATOM OH2  OT    -0.834
+!ATOM H1   HT     0.417
+!ATOM H2   HT     0.417
+!BOND OH2  H1   OH2  H2   H1   H2  ! THE LAST BOND IS NEEDED FOR SHAKE
+!ANGLE  H1 OH2 H2
+!ACCE OH2
+
+!RESI TP3M         0.000 ! "mmff" water model, as an analog of tip3p
+!GROUP   
+!ATOM OH2  OT     -0.834  ! these charges are replaced by the mmff setup
+!ATOM H1   HT      0.417  ! these charges are replaced by the mmff setup
+!ATOM H2   HT      0.417  ! these charges are replaced by the mmff setup
+!BOND OH2 H1 OH2 H2          ! omits the H1-H2 bond, which is needed for shake with tip3p
+!ANGLE H1 OH2 H2             ! required
+!ACCEPTOR OH2   
+!PATCHING FIRS NONE LAST NONE     
+
+RESI OCOH    0.0    ! OCTANOL
+GROUP
+ ATOM C1   CT2     0.05
+ ATOM H11  HA2     0.09
+ ATOM H12  HA2     0.09
+ ATOM O1   OH1    -0.66
+ ATOM HO1  H       0.43
+GROUP
+ ATOM C2   CT2    -0.180
+ ATOM H21  HA2     0.090
+ ATOM H22  HA2     0.090
+GROUP
+ ATOM C3   CT2    -0.180
+ ATOM H31  HA2     0.090
+ ATOM H32  HA2     0.090
+GROUP
+ ATOM C4   CT2    -0.180
+ ATOM H41  HA2     0.090
+ ATOM H42  HA2     0.090
+GROUP
+ ATOM C5   CT2    -0.180
+ ATOM H51  HA2     0.090
+ ATOM H52  HA2     0.090
+GROUP
+ ATOM C6   CT2    -0.180
+ ATOM H61  HA2     0.090
+ ATOM H62  HA2     0.090
+GROUP
+ ATOM C7   CT2    -0.180
+ ATOM H71  HA2     0.090
+ ATOM H72  HA2     0.090
+GROUP
+ ATOM C8   CT3    -0.270
+ ATOM H81  HA3     0.090
+ ATOM H82  HA3     0.090
+ ATOM H83  HA3     0.090
+
+BOND  C1   C2     C2   C3     C3   C4     C4   C5
+BOND  C5   C6     C6   C7     C7   C8     C1   O1     O1   HO1
+BOND  C1   H11    C1   H12    C2   H21    C2   H22
+BOND  C3   H31    C3   H32    C4   H41    C4   H42    C5   H51
+BOND  C5   H52    C6   H61    C6   H62    C7   H71    C7   H72
+BOND  C8   H81    C8   H82    C8   H83
+
+IC   H11  C1   C2   C3   0.0000    0.00  180.00    0.00   0.0000
+IC   C1   C2   C3   C4   0.0000    0.00  180.00    0.00   0.0000
+IC   C2   C3   C4   C5   0.0000    0.00  180.00    0.00   0.0000
+IC   C3   C4   C5   C6   0.0000    0.00  180.00    0.00   0.0000
+IC   C4   C5   C6   C7   0.0000    0.00  180.00    0.00   0.0000
+IC   C5   C6   C7   C8   0.0000    0.00  180.00    0.00   0.0000
+IC   C6   C7   C8   H83  0.0000    0.00  180.00    0.00   0.0000
+
+IC   H11  C2  *C1   H12  0.0000    0.00  120.00    0.00   0.0000
+IC   H11  C2  *C1   O1   0.0000    0.00 -120.00    0.00   0.0000
+IC   C2   C1   O1   HO1  0.0000    0.00  180.00    0.00   0.0000
+IC   C1   C3  *C2   H21  0.0000    0.00  120.00    0.00   0.0000
+IC   C1   C3  *C2   H22  0.0000    0.00 -120.00    0.00   0.0000
+IC   C2   C4  *C3   H31  0.0000    0.00  120.00    0.00   0.0000
+IC   C2   C4  *C3   H32  0.0000    0.00 -120.00    0.00   0.0000
+IC   C3   C5  *C4   H41  0.0000    0.00  120.00    0.00   0.0000
+IC   C3   C5  *C4   H42  0.0000    0.00 -120.00    0.00   0.0000
+IC   C4   C6  *C5   H51  0.0000    0.00  120.00    0.00   0.0000
+IC   C4   C6  *C5   H51  0.0000    0.00 -120.00    0.00   0.0000
+IC   C5   C7  *C6   H61  0.0000    0.00  120.00    0.00   0.0000
+IC   C5   C7  *C6   H62  0.0000    0.00 -120.00    0.00   0.0000
+IC   C6   C8  *C7   H71  0.0000    0.00  120.00    0.00   0.0000
+IC   C6   C8  *C7   H72  0.0000    0.00 -120.00    0.00   0.0000
+IC   C7   H83 *C8   H81  0.0000    0.00  120.00    0.00   0.0000
+IC   C7   H83 *C8   H82  0.0000    0.00 -120.00    0.00   0.0000
+PATC FIRS NONE LAST NONE
+
+Resi ETHE      0.00 ! ethylene, yin/adm jr.
+Group 
+ Atom c1  ce2 -0.42
+ Atom h11 HE2  0.21
+ Atom h12 HE2  0.21
+Group
+ Atom c2  ce2 -0.42
+ Atom h21 HE2  0.21
+ Atom h22 HE2  0.21
+Bond c1 h11  c1 h12
+Double c1 c2
+Bond c2 h21  c2 h22
+IMPR c1  c2  h12 h11
+IMPR c1  c2  h11 h12
+IMPR c2  c1  h22 h21
+IMPR c2  c1  h21 h22
+ic h11 c1 c2  h21  0.00 0.00  180.0 0.0  0.0
+ic h12 c2 *c1 h11  0.00 0.00  180.0 0.0  0.0
+ic h22 c1 *c2 h21  0.00 0.00  180.0 0.0  0.0
+ic c1  c2 h21 h22  0.00 0.00  180.0 0.0  0.0
+patc firs none last none
+
+Resi PRPE      0.00 ! propene, yin/adm jr.
+Group 
+ Atom c1  ce2 -0.42
+ Atom h11 HE2  0.21
+ Atom h12 HE2  0.21
+Group
+ Atom c2  ce1 -0.15
+ Atom h21 HE1  0.15
+Group
+ Atom c3  ct3 -0.27
+ Atom h31 ha3  0.09
+ Atom h32 ha3  0.09
+ Atom h33 ha3  0.09
+Bond c1 h11  c1 h12
+Double c1 c2
+Bond c2 h21
+Bond c2 c3
+bond c3 h31  c3 h32  c3 h33
+ic h11 c1 c2  h21  0.00 0.00  180.0 0.0  0.0
+ic h12 c2 *c1 h11  0.00 0.00  180.0 0.0  0.0
+ic c3  c1 *c2 h21  0.00 0.00  180.0 0.0  0.0
+ic h31 c3 c2  c1   0.00 0.00    0.0 0.0  0.0
+ic h32 c3 c2  c1   0.00 0.00  120.0 0.0  0.0
+ic h33 c3 c2  c1   0.00 0.00 -120.0 0.0  0.0
+patc firs none last none
+
+Resi BTE1      0.00 ! 1-Butene, yin/adm jr.
+Group        
+ Atom c1  ce2 -0.42
+ Atom h11 HE2  0.21
+ Atom h12 HE2  0.21
+Group
+ Atom c2  ce1 -0.15
+ Atom h21 HE1  0.15
+Group
+ Atom c3  ct2 -0.18
+ Atom h31 ha2  0.09
+ Atom h32 ha2  0.09
+Group
+ Atom c4  ct3 -0.27
+ Atom h41 ha3  0.09
+ Atom h42 ha3  0.09
+ Atom h43 ha3  0.09
+BOND c1 h11  c1 h12
+DOUBLE c1 c2
+BOND c2 h21
+BOND c2 c3
+BOND c3 h31  c3 h32
+BOND c3 c4
+BOND c4 h41  c4 h42  c4 h43
+ic  c1   c2 c3  c4   0.00 0.00    0.0 0.00 0.00
+ic  h11  c1 c2  c3   0.00 0.00  180.0 0.00 0.00
+ic  h12  c1 c2  c3   0.00 0.00    0.0 0.00 0.00
+ic  h21  c1 *c2 c3   0.00 0.00  180.0 0.00 0.00
+ic  h31  c2 *c3 c4   0.00 0.00  120.0 0.00 0.00
+ic  h32  c2 *c3 c4   0.00 0.00 -120.0 0.00 0.00
+ic  h41  c4 c3  c2   0.00 0.00  180.0 0.00 0.00
+ic  h42  c4 c3  c2   0.00 0.00   60.0 0.00 0.00
+ic  h43  c4 c3  c2   0.00 0.00  -60.0 0.00 0.00
+patc firs none last none
+
+Resi BTE2      0.00 ! 2-Butene, yin/adm jr.
+Group
+ Atom c1  ct3 -0.27
+ Atom h11 ha3  0.09
+ Atom h12 ha3  0.09
+ Atom h13 ha3  0.09
+Group
+ Atom c2  ce1 -0.15
+ Atom h21 HE1  0.15
+Group
+ Atom c3  ce1 -0.15
+ Atom h31 HE1  0.15
+Group
+ Atom c4  ct3 -0.27
+ Atom h41 ha3  0.09
+ Atom h42 ha3  0.09
+ Atom h43 ha3  0.09
+BOND c1 h11  c1 h12  c1 h13
+BOND c1 c2
+BOND c2 h21
+DOUBLE c2 c3
+BOND c3 h31
+BOND c3 c4
+BOND c4 h41  c4 h42  c4 h43
+ic  c1   c2 c3  c4   0.00 0.00  180.0 0.00 0.00
+ic  h11  c1 c2  c3   0.00 0.00    0.0 0.00 0.00
+ic  h12  c1 c2  c3   0.00 0.00  120.0 0.00 0.00
+ic  h13  c1 c2  c3   0.00 0.00 -120.0 0.00 0.00
+ic  h21  c1 *c2 c3   0.00 0.00  180.0 0.00 0.00
+ic  h31  c4 *c3 c2   0.00 0.00  180.0 0.00 0.00
+ic  h41  c4 c3  c2   0.00 0.00    0.0 0.00 0.00
+ic  h42  c4 c3  c2   0.00 0.00  120.0 0.00 0.00
+ic  h43  c4 c3  c2   0.00 0.00 -120.0 0.00 0.00
+patc firs none last none
+
+resi co3  -2.0  !ionized carbonate, adm jr., aug 2001
+group
+ATOM C1   CD      1.42
+ATOM O1   OC     -1.14
+ATOM O2   OC     -1.14
+ATOM O3   OC     -1.14
+
+bond c1  o1  c1  o2  c1  o3
+! required for out-of-plane vibrations
+impr c1 o1 o2 o3
+IC O2   O1   *C1  O3     0.0000    0.00  180.00    0.00   0.0000
+
+RESI C3    0.00         ! Cyclopropane Model Compound
+GROUP                   !  JMW and CBP 16 April 2004
+ATOM C1   C3    -0.18   !
+ATOM H11  HB2    0.09   !       H11  H12
+ATOM H12  HB2    0.09   !         \  /
+GROUP                   !          C1
+ATOM C2   C3    -0.18   !         /  \
+ATOM H21  HB2    0.09   !  H21--C2----C3--H31
+ATOM H22  HB2    0.09   !        |    |
+GROUP                   !       H22   H32
+ATOM C3   C3    -0.18   !
+ATOM H31  HB2    0.09   !
+ATOM H32  HB2    0.09   !
+BOND C1 C2  C2 C3  C3 C1  
+BOND C1 H11 C1 H12
+BOND C2 H21 C2 H22  
+BOND C3 H31 C3 H32
+
+IC  C1   C2  C3   H31    0.0000    0.00 -120.00    0.00   0.0000
+IC  C3   C2  *C1  H11    0.0000    0.00  120.00    0.00   0.0000
+IC  C3   C2  *C1  H12    0.0000    0.00 -120.00    0.00   0.0000
+IC  C3   C1  *C2  H21    0.0000    0.00 -120.00    0.00   0.0000
+IC  C3   C1  *C2  H22    0.0000    0.00  120.00    0.00   0.0000
+IC  C2   C1  *C3  H31    0.0000    0.00  120.00    0.00   0.0000
+IC  C2   C1  *C3  H32    0.0000    0.00 -120.00    0.00   0.0000
+
+PATCHING FIRST NONE LAST NONE
+
+RESI MLYS         1.00  !methylated lysine, C.Varna and adm jr.
+GROUP  
+ATOM N    NH1    -0.47  !     |                  
+ATOM HN   H       0.31  !  HN-N                  
+ATOM CA   CT1     0.07  !     |   HB1 HG1 HD1 HE1    HZ1
+ATOM HA   HB1     0.09  !     |   |   |   |   |     /  
+GROUP                   !  HA-CA--CB--CG--CD--CE--NZ--HZ2
+ATOM CB   CT2    -0.18  !     |   |   |   |   |     \
+ATOM HB1  HA2     0.09  !     |   HB2 HG2 HD2 HE2    HZ3
+ATOM HB2  HA2     0.09  !   O=C                 
+GROUP                   !     |               
+ATOM CG   CT2    -0.18
+ATOM HG1  HA2     0.09
+ATOM HG2  HA2     0.09
+GROUP  
+ATOM CD   CT2    -0.18
+ATOM HD1  HA2     0.09
+ATOM HD2  HA2     0.09
+GROUP  
+ATOM CE   CT2     0.21
+ATOM HE1  HA2     0.05
+ATOM HE2  HA2     0.05
+ATOM NZ   NH3    -0.40
+ATOM HZ1  HC      0.32
+ATOM HZ2  HC      0.32
+ATOM CZ   CT3     0.18
+ATOM HC1  HA3     0.09
+ATOM HC2  HA3     0.09
+ATOM HC3  HA3     0.09
+GROUP  
+ATOM C    C       0.51
+ATOM O    O      -0.51
+BOND CB CA   CG CB   CD CG   CE CD   NZ CE  
+BOND N  HN   N  CA   C  CA  
+BOND C  +N   CA HA   CB HB1  CB HB2  CG HG1  
+BOND CG HG2  CD HD1  CD HD2  CE HE1  CE HE2
+BOND NZ HZ1  NZ HZ2 
+BOND NZ CZ   CZ HC1  CZ HC2  CZ HC3
+DOUBLE   O  C  
+IMPR N -C CA HN  C CA +N O  
+CMAP -C  N  CA  C   N  CA  C  +N
+DONOR HN N  
+DONOR HZ1 NZ  
+DONOR HZ2 NZ  
+ACCEPTOR O C  
+IC -C   CA   *N   HN    1.3482 123.5700  180.0000 115.1100  0.9988
+IC -C   N    CA   C     1.3482 123.5700  180.0000 107.2900  1.5187
+IC N    CA   C    +N    1.4504 107.2900  180.0000 117.2700  1.3478
+IC +N   CA   *C   O     1.3478 117.2700  180.0000 120.7900  1.2277
+IC CA   C    +N   +CA   1.5187 117.2700  180.0000 124.9100  1.4487
+IC N    C    *CA  CB    1.4504 107.2900  122.2300 111.3600  1.5568
+IC N    C    *CA  HA    1.4504 107.2900 -116.8800 107.3600  1.0833
+IC N    CA   CB   CG    1.4504 111.4700  180.0000 115.7600  1.5435
+IC CG   CA   *CB  HB1   1.5435 115.7600  120.9000 107.1100  1.1146
+IC CG   CA   *CB  HB2   1.5435 115.7600 -124.4800 108.9900  1.1131
+IC CA   CB   CG   CD    1.5568 115.7600  180.0000 113.2800  1.5397
+IC CD   CB   *CG  HG1   1.5397 113.2800  120.7400 109.1000  1.1138
+IC CD   CB   *CG  HG2   1.5397 113.2800 -122.3400 108.9900  1.1143
+IC CB   CG   CD   CE    1.5435 113.2800  180.0000 112.3300  1.5350
+IC CE   CG   *CD  HD1   1.5350 112.3300  122.2500 108.4100  1.1141
+IC CE   CG   *CD  HD2   1.5350 112.3300 -121.5900 108.1300  1.1146
+IC CG   CD   CE   NZ    1.5397 112.3300  180.0000 110.4600  1.4604
+IC NZ   CD   *CE  HE1   1.4604 110.4600  119.9100 110.5100  1.1128
+IC NZ   CD   *CE  HE2   1.4604 110.4600 -120.0200 110.5700  1.1123
+IC CD   CE   NZ   HZ1   1.5350 110.4600  179.9200 110.0200  1.0404
+IC HZ1  CE   *NZ  HZ2   1.0404 110.0200  120.2700 109.5000  1.0402
+IC  HE1  CE  NZ  CZ    0.0   0.0   180.   0.0  0.0
+IC  HZ1  N1  CZ  HZ1   0.0   0.0   180.   0.0  0.0
+IC  HZ1  N1  CZ  HZ2   0.0   0.0    60.   0.0  0.0
+IC  HZ1  N1  CZ  HZ3   0.0   0.0   300.   0.0  0.0
+
+RESI CME          0.00	! S-methyl cysteine
+GROUP   
+ATOM N    NH1    -0.47  !     |       
+ATOM HN   H       0.31  !  HN-N       
+ATOM CA   CT1     0.07  !     |   HB1     HD1
+ATOM HA   HB1     0.09  !     |   |       | 
+GROUP                   !  HA-CA--CB--SG--CD-HD2
+ATOM CB   CT2    -0.11  !     |   |       | 
+ATOM HB1  HA2     0.09  !     |   HB2     HD3 
+ATOM HB2  HA2     0.09  !   O=C         
+ATOM SG   S      -0.23  !     |   
+ATOM CD   CT3    -0.11  !   
+ATOM HD1  HA3     0.09  !   
+ATOM HD2  HA3     0.09  !   
+ATOM HD3  HA3     0.09  !   
+GROUP   
+ATOM C    C       0.51
+ATOM O    O      -0.51
+BOND CB CA   SG CB   N HN  N  CA   
+BOND C  CA   C +N  CA HA  CB HB1   
+BOND CB HB2  SG CD CD HD1 CD HD2
+BOND CD HD3
+DOUBLE O  C   
+IMPR N -C CA HN  C CA +N O   
+CMAP -C  N  CA  C   N  CA  C  +N
+DONOR HN N   
+ACCEPTOR O C   
+IC -C   CA   *N   HN    1.3479 123.9300  180.0000 114.7700  0.9982
+IC -C   N    CA   C     1.3479 123.9300  180.0000 105.8900  1.5202
+IC N    CA   C    +N    1.4533 105.8900  180.0000 118.3000  1.3498
+IC +N   CA   *C   O     1.3498 118.3000  180.0000 120.5900  1.2306
+IC CA   C    +N   +CA   1.5202 118.3000  180.0000 124.5000  1.4548
+IC N    C    *CA  CB    1.4533 105.8900  121.7900 111.9800  1.5584
+IC N    C    *CA  HA    1.4533 105.8900 -116.3400 107.7100  1.0837
+IC N    CA   CB   SG    1.4533 111.5600  180.0000 113.8700  1.8359
+IC SG   CA   *CB  HB1   1.8359 113.8700  119.9100 107.2400  1.1134
+IC SG   CA   *CB  HB2   1.8359 113.8700 -125.3200 109.8200  1.1124
+IC CA   CB   SG   CD    0.0000   0.0000  180.0000   0.0000  0.0000
+IC CB   SG   CD   HD1   0.0000   0.0000  180.0000   0.0000  0.0000
+IC HD1  SG   *CD  HD2   0.0000   0.0000  120.0000   0.0000  0.0000
+IC HD1  SG   *CD  HD3   0.0000   0.0000 -120.0000   0.0000  0.0000
+
+RESI CGU         -2.00  !gamma carboxyglutamic aicd
+GROUP   
+ATOM N    NH1    -0.47  !     |          
+ATOM HN   H       0.31  !  HN-N          
+ATOM CA   CT1     0.07  !     |   HB1      OE11
+ATOM HA   HB1     0.09  !     |   |       //
+GROUP                   !  HA-CA--CB--CG--CD1
+ATOM CB   CT2A   -0.18  !     |   |   ||    \
+ATOM HB1  HA2     0.09  !     |   HB2 CD2   OE12(-)
+ATOM HB2  HA2     0.09  !   O=C       || \ 
+GROUP                   !     |     OE21 OE22(-)  
+ATOM CG   CT1    -0.29  !
+ATOM HG   HA1     0.09  !
+GROUP
+ATOM CD1  CC      0.62
+ATOM OE11 OC     -0.76
+ATOM OE12 OC     -0.76
+GROUP
+ATOM CD2  CC      0.62
+ATOM OE21 OC     -0.76
+ATOM OE22 OC     -0.76
+GROUP   
+ATOM C    C       0.51
+ATOM O    O      -0.51
+BOND CB CA  CG CB  CD1 CG  CD2 CG CG HG
+BOND OE11 CD1 OE12 CD1 OE21 CD2 OE22 CD2   
+BOND N  HN  N  CA C   CA   
+BOND C  +N  CA HA  CB HB1 CB  HB2    
+DOUBLE O  C   CD1  OE11  CD2 OE21 CG CD2 
+IMPR N   -C CA  HN  C CA +N O   
+IMPR CD1 CG OE11 OE12 CD2 CG OE21 OE22
+CMAP -C  N  CA  C   N  CA  C  +N
+DONOR HN N   
+ACCEPTOR OE11 CD1   
+ACCEPTOR OE21 CD2   
+ACCEPTOR O C   
+IC -C   CA   *N   HN    1.3471 124.4500  180.0000 113.9900  0.9961
+IC -C   N    CA   C     1.3471 124.4500  180.0000 107.2700  1.5216
+IC N    CA   C    +N    1.4512 107.2700  180.0000 117.2500  1.3501
+IC +N   CA   *C   O     1.3501 117.2500  180.0000 121.0700  1.2306
+IC CA   C    +N   +CA   1.5216 117.2500  180.0000 124.3000  1.4530
+IC N    C    *CA  CB    1.4512 107.2700  121.9000 111.7100  1.5516
+IC N    C    *CA  HA    1.4512 107.2700 -118.0600 107.2600  1.0828
+IC N    CA   CB   CG    1.4512 111.0400   60.0000 115.6900  1.5557
+IC CG   CA   *CB  HB1   1.5557 115.6900  121.2200 108.1600  1.1145
+IC CG   CA   *CB  HB2   1.5557 115.6900 -123.6500 109.8100  1.1131
+IC CA   CB   CG   CD1   1.5516 120.0000  120.0000 115.7300  1.5307
+IC CD1  CB   *CG  CD2   0.0000   0.0000  120.0000   0.0000  0.0000
+IC CD1  CB   *CG  HG    1.5307 115.7300 -121.9600 111.0000  1.1081
+IC CB   CG   CD1  OE11  1.5557 120.0000  -60.0000 120.0000  1.2590
+IC CB   CG   CD2  OE21  1.5557 120.0000  -60.0000 120.0000  1.2590
+IC OE11 CG   *CD1 OE12  1.2590 114.9900 -179.1000 120.0800  1.2532
+IC OE21 CG   *CD2 OE22  1.2590 114.9900 -179.1000 120.0800  1.2532
+
+RESI CGUP        -1.00  !gamma carboxyglutamic acid, with one acid group protonated
+GROUP   
+ATOM N    NH1    -0.47  !     |          
+ATOM HN   H       0.31  !  HN-N          
+ATOM CA   CT1     0.07  !     |   HB1       OE11
+ATOM HA   HB1     0.09  !     |   |        //
+GROUP                   !  HA-CA--CB--CG--CD1
+ATOM CB   CT2A   -0.18  !     |   |   ||    \
+ATOM HB1  HA2     0.09  !     |   HB2 CD2   OE12-HE12
+ATOM HB2  HA2     0.09  !   O=C       || \ 
+GROUP                   !     |     OE21 OE22(-)  
+ATOM CG   CT1    -0.22  !
+ATOM HG   HA1     0.09  !
+GROUP
+ATOM CD1  CD      0.75
+ATOM OE11 OB     -0.55
+ATOM OE12 OH1    -0.61
+ATOM HE12 H       0.44
+GROUP
+ATOM CD2  CC      0.62
+ATOM OE21 OC     -0.76
+ATOM OE22 OC     -0.76
+GROUP   
+ATOM C    C       0.51
+ATOM O    O      -0.51
+BOND CB CA  CG CB  CD1 CG  CD2 CG CG HG
+BOND OE11 CD1 OE12 CD1 OE21 CD2 OE22 CD2   
+BOND OE12 HE12
+BOND N  HN  N  CA C   CA   
+BOND C  +N  CA HA  CB HB1 CB  HB2    
+DOUBLE O  C   CD1  OE11  CD2 OE21 CG CD2 
+IMPR N   -C CA  HN  C CA +N O   
+IMPR CD1 CG OE12 OE11 CD2 CG OE21 OE22
+CMAP -C  N  CA  C   N  CA  C  +N
+DONOR HN N   
+ACCEPTOR OE11 CD1   
+ACCEPTOR OE21 CD2   
+ACCEPTOR O C   
+IC -C   CA   *N   HN    1.3471 124.4500  180.0000 113.9900  0.9961
+IC -C   N    CA   C     1.3471 124.4500  180.0000 107.2700  1.5216
+IC N    CA   C    +N    1.4512 107.2700  180.0000 117.2500  1.3501
+IC +N   CA   *C   O     1.3501 117.2500  180.0000 121.0700  1.2306
+IC CA   C    +N   +CA   1.5216 117.2500  180.0000 124.3000  1.4530
+IC N    C    *CA  CB    1.4512 107.2700  121.9000 111.7100  1.5516
+IC N    C    *CA  HA    1.4512 107.2700 -118.0600 107.2600  1.0828
+IC N    CA   CB   CG    1.4512 111.0400   60.0000 115.6900  1.5557
+IC CG   CA   *CB  HB1   1.5557 115.6900  121.2200 108.1600  1.1145
+IC CG   CA   *CB  HB2   1.5557 115.6900 -123.6500 109.8100  1.1131
+IC CA   CB   CG   CD1   1.5516 120.0000  120.0000 115.7300  1.5307
+IC CD1  CB   *CG  CD2   0.0000   0.0000  120.0000   0.0000  0.0000
+IC CD1  CB   *CG  HG    1.5307 115.7300 -121.9600 111.0000  1.1081
+IC CB   CG   CD1  OE11  1.5557 120.0000  -60.0000 120.0000  1.2590
+IC CB   CG   CD2  OE21  1.5557 120.0000  -60.0000 120.0000  1.2590
+IC OE11 CG   *CD1 OE12  1.2590 114.9900 -179.1000 120.0800  1.2532
+IC OE21 CG   *CD2 OE22  1.2590 114.9900 -179.1000 120.0800  1.2532
+IC CG   CD1  OE12 HE12  0.0000   0.0000  180.0000  0.00000  0.0000
+
+END
+
+read para card flex append
+
+ATOMS
+MASS  445 C3    12.01100 ! cyclopropane carbon
+
+BONDS
+!atom type Kb          b0
+OC   CD    314.500     1.2940 ! carbonate
+C3   C3    240.000     1.5010 ! cyclopropane
+C3   HB2   340.000     1.0830 ! cyclopropane
+
+ANGLES
+!atom types     Ktheta    Theta0   Kub     S0
+OC   CD   OC    40.000    120.00    99.5   2.24127 ! carbonate
+C3   C3   C3    77.350    111.00    8.00   2.56100 ! cyclopropane
+C3   C3   HB2   23.000    117.10   22.53   2.17900 ! cyclopropane
+HB2  C3   HB2   23.000    117.00    5.40   1.80200 ! cyclopropane
+!gamma carboxy glutamic acid (CGU)
+CC   CT1  CC     52.000   108.0000 ! from CT3  CT1  CC, for CGU
+HA1  CT1  CC     33.000   109.5000   30.00   2.16300 ! from HA2  CT2  CC, for CGU
+CT1  CT2A CT1    58.350   113.5000   11.16   2.56100 ! from CT2  CT2  CT1, for CGU
+HA1  CT1  CT2A   34.500   110.1000   22.53   2.17900 ! from HA1  CT1  CT2, for CGU
+CC   CT1  CD     52.000   108.0000 ! from CT3  CT1  CC, for CGUP
+
+DIHEDRALS
+!atom types             Kchi    n   delta
+!
+C3   C3   C3   HB2      0.1000  6     0.00 ! hf/6-31g* cyclopropane
+HB2  C3   C3   HB2      0.2000  5   180.00 ! hf/6-31g* cyclopropane
+!
+CT3  S    CT2  CT1      0.2400  1   180.00 ! ALOW    ALI SUL ION
+CT3  S    CT2  CT1      0.3700  3     0.00 ! ALOW    ALI SUL ION
+                ! For S-methylated Cysteine (RB) 2012
+!gamma carboxy glutamic acid (CGU)
+CT1  CT2A  CT1  NH3     0.1900  3     0.00 ! From X    CT2  CT2  X  !temporary RJP
+HA1  CT1  CT2A  CT1     0.2000  3     0.00 ! From X    CT1  CT2  X  !temporary RJP
+CC   CT1  CT2A  CT1     0.2000  3     0.00 ! From X    CT1  CT2  X  !temporary RJP
+CD   CT1  CT2A  CT1     0.2000  3     0.00 ! From X    CT1  CT2  X  !temporary RJP
+HB1  CT1  CT2A  CT1     0.2000  3     0.00 ! From X    CT1  CT2  X  !temporary RJP
+HA1  CT1  CT2A  HA2     0.2000  3     0.00 ! From X    CT1  CT2  X  !temporary RJP
+C    CT1  CT2A CT1      0.1100  1     0.00 ! from fitted GLU   !temporary RJP
+C    CT1  CT2A CT1      0.9800  2   180.00 ! from fitted GLU   !temporary RJP
+C    CT1  CT2A CT1      1.6000  3   180.00 ! from fitted GLU   !temporary RJP
+CT1  CT2A CT1  NH1      0.8800  1   180.00 ! from fitted GLU   !temporary RJP
+CT1  CT2A CT1  NH1      0.0000  2   180.00 ! from fitted GLU   !temporary RJP
+CT1  CT2A CT1  NH1      1.9000  3     0.00 ! from fitted GLU   !temporary RJP
+
+IMPROPER
+!atom types           Kpsi                   psi0
+!
+CD  OC  OC  OC     107.00         0        0.0000 ! carbonate
+
+NONBONDED nbxmod  5 atom cdiel fshift vatom vdistance vfswitch -
+cutnb 14.0 ctofnb 12.0 ctonnb 10.0 eps 1.0 e14fac 1.0 wmin 1.5
+                !adm jr., 5/08/91, suggested cutoff scheme
+C3     0.000000  -0.020000     2.275000 ! cyclopropane JMW  16 april 04
+
+end
+
+return

@@ -1,0 +1,50 @@
+REMARK original generated coordinate pdb file
+ATOM      1  C1  DMAN  900       1.168   0.273   0.122  1.00  0.00      DMAN C
+ATOM      2  H1  DMAN  900       2.126  -0.224   0.130  1.00  0.00      DMAN H
+ATOM      3  C2  DMAN  900       1.164   1.682   0.133  1.00  0.00      DMAN C
+ATOM      4  H2  DMAN  900       2.099   2.223   0.149  1.00  0.00      DMAN H
+ATOM      5  C3  DMAN  900      -0.053   2.385   0.122  1.00  0.00      DMAN C
+ATOM      6  H3  DMAN  900      -0.056   3.465   0.131  1.00  0.00      DMAN H
+ATOM      7  C4  DMAN  900      -1.266   1.675   0.101  1.00  0.00      DMAN C
+ATOM      8  H4  DMAN  900      -2.204   2.210   0.093  1.00  0.00      DMAN H
+ATOM      9  C5  DMAN  900      -1.262   0.266   0.090  1.00  0.00      DMAN C
+ATOM     10  H5  DMAN  900      -2.217  -0.236   0.073  1.00  0.00      DMAN H
+ATOM     11  C6  DMAN  900      -0.045  -0.463   0.100  1.00  0.00      DMAN C
+ATOM     12  N1  DMAN  900      -0.040  -1.878   0.089  1.00  0.00      DMAN N
+ATOM     13  C7  DMAN  900       1.221  -2.610   0.101  1.00  0.00      DMAN C
+ATOM     14  H71 DMAN  900       1.057  -3.688   0.090  1.00  0.00      DMAN H
+ATOM     15  H72 DMAN  900       1.819  -2.359  -0.776  1.00  0.00      DMAN H
+ATOM     16  H73 DMAN  900       1.795  -2.372   0.997  1.00  0.00      DMAN H
+ATOM     17  C8  DMAN  900      -1.298  -2.617   0.066  1.00  0.00      DMAN C
+ATOM     18  H81 DMAN  900      -1.128  -3.694   0.060  1.00  0.00      DMAN H
+ATOM     19  H82 DMAN  900      -1.897  -2.383   0.947  1.00  0.00      DMAN H
+ATOM     20  H83 DMAN  900      -1.873  -2.369  -0.826  1.00  0.00      DMAN H
+CONECT    1    3   11    2
+CONECT    1    3
+CONECT    2    1
+CONECT    3    1    5    4
+CONECT    3    1
+CONECT    4    3
+CONECT    5    3    7    6
+CONECT    5    7
+CONECT    6    5
+CONECT    7    5    9    8
+CONECT    7    5
+CONECT    8    7
+CONECT    9    7   11   10
+CONECT    9   11
+CONECT   10    9
+CONECT   11    9    1   12
+CONECT   11    9
+CONECT   12   11   13   17
+CONECT   13   12   14   15   16
+CONECT   14   13
+CONECT   15   13
+CONECT   16   13
+CONECT   17   12   18   19   20
+CONECT   18   17
+CONECT   19   17
+CONECT   20   17
+ENDMDL
+END
+END

@@ -1,0 +1,1066 @@
+* CHARMM36 All-Hydrogen Nucleic Acid Toppar Stream File
+* Reactive RNA residues and patches
+* All comments to the CHARMM web site: www.charmm.org
+*               parameter set discussion forum
+*
+
+!Note: This stream file included atom type PC, which is also present
+!in the parent carbohydrate toppar files.  Thus, if the carbohydrate
+!files are read prior to this stream file an repeated atom error will
+!be returned. Alternatively, the toppar carbohydrate files could be
+!read prior to this stream, but this has not been implemented.
+
+!parent toppar files
+!top_all36_na.rtf
+!par_all36_na.prm
+!
+
+!Reference
+!Mayaan E, Moser A, MacKerell AD Jr, York DM. "CHARMM force field
+!parameters for simulation of reactive intermediates in native and
+!thio-substituted ribozymes." J Comput Chem. 2007 Jan 30;28(2):495-507.
+!
+
+read rtf card append
+* residues and patches associated with reactive RNA FF
+*
+31  1
+
+!note that these mass numbers overlap with those in
+! toppar_all36_na_modifications.str, such that the two toppar files
+! cannot be used simultaneously without changing the mass numbers in
+! one of the files (and also below in the parameter section.
+
+MASS 510   OW   15.999400 O ! HDRX OXYGEN
+MASS 511   PX   30.974000 P ! TS PHOSPHOROUS
+MASS 512   PC   30.974000 P ! CYCP PHOSPHOROUS
+MASS 513   ONX  15.999400 O ! TS 2' OXYGEN
+MASS 514   ONY  15.999400 O ! TS 5' OXYGEN
+MASS 515   SO   32.064000 S ! mono-thio phosphate sulfur
+MASS 516   SS1  32.064000 S ! di-thio phosphate sulfur
+MASS 517   SX   32.064000 S ! phosphorane sulfur
+MASS 518   ONS  15.999400 O ! mono-thio phosphate oxygen
+MASS 519   ONC  15.999400 O ! DEPROTONATED OXYGEN
+MASS 520   OX1  15.999400 O ! TS non-bridging OXYGEN
+MASS 521   CN2D 12.011000 C ! for DAP?
+
+RESI TMPP        -1.00 ! Modified for RNA from T3PM
+
+GROUP
+ATOM O4'  ON6    -0.50 !
+ATOM C1'  CN7     0.07 !   
+ATOM H11' HN7     0.09 !      
+ATOM H12' HN7     0.09 !      H41'  O4'  H11'
+ATOM C4'  CN7     0.07 !        \  /  \  /
+ATOM H41' HN7     0.09 !   H42'--C4'  C1'--H12'
+ATOM H42' HN7     0.09 !          |    |
+GROUP                  !   H31'--C3'--C2'--H21'
+ATOM C2'  CN7     0.14 !        /       \
+ATOM H21' HN7     0.09 !      O3'       O2'--H22'
+ATOM H22' HN5     0.43 !       |
+ATOM O2'  ON5    -0.66 !  O1P==P==O2P (-1)
+GROUP                  !       |
+ATOM C3'  CN7     0.01 !      O3P  
+ATOM H31' HN7     0.09 !        \
+GROUP                  !        C3T--H3T3
+ATOM O3'  ON2    -0.57 !       /  \
+ATOM P    P       1.50 !    H3T1 H3T2
+ATOM O1P  ON3    -0.78 !
+ATOM O2P  ON3    -0.78 !
+ATOM O3P  ON2    -0.57 !
+ATOM C3T  CN9    -0.17 !
+ATOM H3T1 HN9     0.09 !
+ATOM H3T2 HN9     0.09 !
+ATOM H3T3 HN9     0.09 !
+
+BOND C1'  O4'  C1'  C2'  C2'  C3'  C3'  C4'  C4'  O4'  C3'  O3'
+BOND C1'  H11' C1'  H12' C2'  H21' C2'  O2'  C3'  H31' C4'  H42' 
+BOND O3'  P    P    O1P  P    O2P  P    O3P  O2'  H22'
+BOND O3P  C3T  C3T  H3T1 C3T  H3T2 C3T  H3T3
+BOND C4'  H41' 
+DONO H22' O2'
+ACCE O1P       
+ACCE O2P  
+ACCE O2'
+ACCE O3'
+ACCE O4'
+ACCE O3P     
+IC   C4'     O4'     C1'     C2'    1.4055  108.09   23.45  106.18   1.5457
+IC   O4'     C1'     C2'     C3'    1.4127  106.18    3.96  103.11   1.5346
+IC   C1'     C2'     C3'     C4'    1.5457  103.11  -26.93  100.86   1.5211
+IC   C2'     C3'     C4'     O4'    1.5346  100.86   41.73  103.15   1.4055
+IC   C3'     C4'     O4'     C1'    1.5211  103.15  -41.62  108.09   1.4127
+IC   H11'    C1'     C2'     C3'    1.0856  111.62  123.53  103.11   1.5346
+IC   H12'    C1'     C2'     C3'    1.0818  113.32 -114.11  103.11   1.5346
+IC   H21'    C2'     C3'     C4'    1.0846  110.65   91.68  100.86   1.5211
+IC   H22'    O2'     C2'     C3'    1.7846  110.65  180.00  100.88   1.5211
+IC    O2'    C2'     C3'     C4'    1.0822  110.88 -148.45  100.86   1.5211
+IC   H31'    C3'     C4'     O4'    1.0806  113.53  162.89  103.15   1.4055
+IC   H41'    C4'     O4'     C1'    0.0000  000.00   77.76  108.09   1.4127
+IC   H42'    C4'     O4'     C1'    1.0808  108.72 -162.12  108.09   1.4127
+IC   O3'     C3'     C4'     O4'    1.4028  110.98  -77.39  103.15   1.4055
+IC   P       O3'     C3'     C4'    0.0       0.0   180.00    0.0    0.0
+IC   O1P     P       O3'     C3'    0.0       0.0   -60.0     0.0    0.0
+IC   O2P     P       O3'     C3'    0.0       0.0    60.0     0.0    0.0
+IC   O3P     P       O3'     C3'    0.0       0.0   180.0     0.0    0.0
+IC   C3T     O3P     P       O3'    0.0       0.0   180.0     0.0    0.0 
+IC   H3T1    C3T     O3P     P	    0.0       0.0    60.0     0.0    0.0
+IC   H3T2    C3T     O3P     P	    0.0       0.0   -60.0     0.0    0.0
+IC   H3T3    C3T     O3P     P	    0.0       0.0   180.0     0.0    0.0
+PATC  FIRS NONE LAST NONE
+
+
+RESI TMPD        -2.00 !
+
+GROUP
+ATOM O4'  ON6    -0.53 !
+ATOM C1'  CN7    -0.12 !   
+ATOM H11' HN7     0.09 !      
+ATOM H12' HN7     0.09 !      H41'  O4'  H11'
+ATOM C4'  CN7    -0.11 !        \  /  \  /
+ATOM H41' HN7     0.09 !   H42'--C4'  C1'--H12'
+ATOM H42' HN7     0.09 !          |    |
+GROUP                  !   H31'--C3'--C2'--H21'
+ATOM C2'  CN7     0.23 !        /       \
+ATOM H21' HN7     0.09 !      O3'       O2' (-1)
+ATOM O2'  ONC    -0.91 !       |
+GROUP                  !  O1P==P==O2P
+ATOM C3'  CN7     0.18 !       |
+ATOM H31' HN7     0.09 !      O3P  (-1)
+GROUP                  !        \
+ATOM O3'  ON2    -0.63 !        C3T--H3T3
+ATOM P    P       1.64 !       /  \
+ATOM O1P  ON3    -0.84 !    H3T1 H3T2
+ATOM O2P  ON3    -0.84 !
+ATOM O3P  ON2    -0.65 !
+ATOM C3T  CN9    -0.23 !
+ATOM H3T1 HN9     0.09 !
+ATOM H3T2 HN9     0.09 !
+ATOM H3T3 HN9     0.09 !
+ACCE O1P       
+ACCE O2P  
+ACCE O2'
+ACCE O3'
+ACCE O4'
+ACCE O3P     
+BOND C1'  O4'  C1'  C2'  C2'  C3'  C3'  C4'  C4'  O4'  C3'  O3'
+BOND C1'  H11' C1'  H12' C2'  H21' C2'  O2'  C3'  H31' C4'  H42' 
+BOND O3'  P    P    O1P  P    O2P  P    O3P  
+BOND O3P  C3T  C3T  H3T1 C3T  H3T2 C3T  H3T3
+BOND C4'  H41' 
+IC   C4'     O4'     C1'     C2'    1.4055  108.09   23.45  106.18   1.5457
+IC   O4'     C1'     C2'     C3'    1.4127  106.18    3.96  103.11   1.5346
+IC   C1'     C2'     C3'     C4'    1.5457  103.11  -26.93  100.86   1.5211
+IC   C2'     C3'     C4'     O4'    1.5346  100.86   41.73  103.15   1.4055
+IC   C3'     C4'     O4'     C1'    1.5211  103.15  -41.62  108.09   1.4127
+IC   H11'    C1'     C2'     C3'    1.0856  111.62  123.53  103.11   1.5346
+IC   H12'    C1'     C2'     C3'    1.0818  113.32 -114.11  103.11   1.5346
+IC   H21'    C2'     C3'     C4'    1.0846  110.65   91.68  100.86   1.5211
+IC    O2'    C2'     C3'     C4'    1.0822  110.88 -148.45  100.86   1.5211
+IC   H31'    C3'     C4'     O4'    1.0806  113.53  162.89  103.15   1.4055
+IC   H41'    C4'     O4'     C1'    0.0000  000.00   77.76  108.09   1.4127
+IC   H42'    C4'     O4'     C1'    1.0808  108.72 -162.12  108.09   1.4127
+IC   O3'     C3'     C4'     O4'    1.4028  110.98  -77.39  103.15   1.4055
+IC   P       O3'     C3'     C4'    0.0       0.0   180.00    0.0    0.0
+IC   O1P     P       O3'     C3'    0.0       0.0   -60.0     0.0    0.0
+IC   O2P     P       O3'     C3'    0.0       0.0    60.0     0.0    0.0
+IC   O3P     P       O3'     C3'    0.0       0.0   180.0     0.0    0.0
+IC   C3T     O3P     P       O3'    0.0       0.0   180.0     0.0    0.0 
+IC   H3T1    C3T     O3P     P	    0.0       0.0    60.0     0.0    0.0
+IC   H3T2    C3T     O3P     P	    0.0       0.0   -60.0     0.0    0.0
+IC   H3T3    C3T     O3P     P	    0.0       0.0   180.0     0.0    0.0
+PATC  FIRS NONE LAST NONE
+
+
+PRES DEPR         -2.46 ! Patch to deprotonate 2'O in an RNA sugar
+GROUP
+ATOM 1O4'  ON6B   -0.53 !
+ATOM 1C1'  CN7B   -0.12 !
+ATOM 1C4'  CN7    -0.11 !
+ATOM 1C2'  CN7B    0.23 !   
+ATOM 1O2'  ONC    -0.91 !  
+ATOM 1C3'  CN7     0.18 !
+ATOM 1O3'  ON2    -0.63 !
+ATOM 2P    P       1.64 !
+ATOM 2O1P  ON3    -0.84 !
+ATOM 2O2P  ON3    -0.84 !
+ATOM 2O5'  ON2    -0.53 !
+  
+DELETE ATOM 1H2'
+
+
+RESI PTS         -2.00 ! phosphorane transition state residue
+GROUP
+ATOM O4'  ON6    -0.51 !      H41'  O4'  H11'
+ATOM C1'  CN7    -0.02 !        \  /  \  /
+ATOM H11' HN7     0.09 !   H42'--C4'  C1'--H12'
+ATOM H12' HN7     0.09 !          |    |
+ATOM C4'  CN7    -0.13 !   H31'--C3'--C2'--H21'
+ATOM H41' HN7     0.09 !         /     \
+ATOM H42' HN7     0.09 !        O3'    O2' 
+ATOM C2'  CN7     0.10 !          \   /   
+ATOM H21' HN7     0.09 !       O1X--PX--O2X  (-2)
+ATOM O2'  ONX    -0.68 !            | 
+ATOM C3'  CN7     0.10 !           O3X
+ATOM H31' HN7     0.09 !            |
+!GROUP     	       !            C3T--H3T3
+ATOM O3'  ON2    -0.62 !           /  \
+ATOM PX   PX      1.81 !          H3T1 H3T2  
+ATOM O1X  OX1    -0.915!
+ATOM O2X  OX1    -0.915! 
+ATOM O3X  ONY    -0.75 !  
+ATOM C3T  CN9    -0.28 !
+ATOM H3T1 HN9     0.09 !
+ATOM H3T2 HN9     0.09 !
+ATOM H3T3 HN9     0.09 !
+      
+BOND C1'  O4'   C1'  C2'   C2'  C3'  C3'  C4'  C4'  O4'  C3'  O3'
+BOND C1'  H11'  C1'  H12'  C2'  H21' C2'  O2'  C3'  H31' C4'  H41' 
+BOND O3'  PX    PX   O1X   PX   O2X  PX   O3X  O2'  PX   C4'  H42'
+BOND O3X  C3T  C3T  H3T1 C3T  H3T2 C3T  H3T3 
+IMPR PX  O1X O2X  O3'
+ACCE O1X  PX
+ACCE O2X  PX       
+IC   C4'     C3'     O3'     PX     1.5284  115.12  147.89  110.68   1.7500
+IC   C1'     C2'     O2'     PX     1.5284  115.12 -147.89  110.68   1.7500
+IC   C4'     O4'     C1'     C2'    1.4055  108.09   23.45  106.18   1.5457
+IC   O4'     C1'     C2'     C3'    1.4127  106.18    3.96  103.11   1.5346
+IC   C1'     C2'     C3'     C4'    1.5457  103.11  -26.93  100.86   1.5211
+IC   C2'     C3'     C4'     O4'    1.5346  100.86   41.73  103.15   1.4055
+IC   C3'     C4'     O4'     C1'    1.5211  103.15  -41.62  108.09   1.4127
+IC   H11'    C1'     C2'     C3'    1.0856  111.62  123.53  103.11   1.5346
+IC   H12'    C1'     C2'     C3'    1.0818  113.32 -114.11  103.11   1.5346
+IC   H21'    C2'     C3'     C4'    1.0846  110.65   91.68  100.86   1.5211
+IC    O2'    C2'     C3'     C4'    1.0822  110.88 -148.45  100.86   1.5211
+IC   H31'    C3'     C4'     O4'    1.0806  113.53  162.89  103.15   1.4055
+IC   H41'    C4'     O4'     C1'    0.0000  000.00   77.76  108.09   1.4127
+IC   H42'    C4'     O4'     C1'    1.0808  108.72 -162.12  108.09   1.4127
+IC   O3'     C3'     C4'     O4'    1.4028  110.98  -77.39  103.15   1.4055
+IC   PX      O3'     C3'     C4'    0.0       0.0   180.00    0.0    0.0
+IC   C3'     O3'     PX      O1X    1.4212  108.00  105.00  109.74   1.4802
+IC   C2'     O2'     PX      O2X    1.4212  108.00  105.00  109.74   1.4802
+IC   O3X     PX      O3'     C3'    0.0       0.0   180.0     0.0    0.0
+IC   C3T     O3X     PX      O3'    0.0       0.0   180.0     0.0    0.0 
+IC   H3T1    C3T     O3X     PX	    0.0       0.0    60.0     0.0    0.0
+IC   H3T2    C3T     O3X     PX	    0.0       0.0   -60.0     0.0    0.0
+IC   H3T3    C3T     O3X     PX	    0.0       0.0   180.0     0.0    0.0
+!PATC  FIRS NONE LAST NONE
+     
+
+PRES PXTS         -2.46 ! Patch to create a phosphorane from phosphate backbone
+		        !
+GROUP
+ATOM 1O4'  ON6B   -0.51 !
+ATOM 1C1'  CN7B   -0.02 !
+ATOM 1C4'  CN7    -0.13 !
+ATOM 1C2'  CN7B    0.10 !   
+ATOM 1O2'  ONX    -0.68 ! 
+ATOM 1C3'  CN7     0.10 !
+ATOM 1O3'  ON2    -0.62 ! 
+ATOM 1PX   PX      1.81	!
+ATOM 1O1X  OX1    -0.915! 
+ATOM 1O2X  OX1    -0.915! 
+ATOM 2O5'  ONY    -0.68 !  
+
+DELETE ATOM 1H2'
+DELETE ATOM 2P
+DELETE ATOM 2O1P
+DELETE ATOM 2O2P
+
+BOND 1O3'  1PX   1O2'  1PX     1PX   1O1X      1PX   1O2X   
+BOND 1PX   2O5'  1O2' 2O5'
+ANGLE 1C3' 1O3' 1PX   1O3' 1PX 1O1X   1O1X 1PX 1O2X   1O2X 1PX 1O2'
+ANGLE 1PX  1O2' 1C2'  1O3' 1PX 1O2X   1O2' 1PX 1O1X   1O2' 1PX 1O3'
+ANGLE 2O5' 1PX  1O1X  2O5' 1PX 1O2X   2O5' 1PX 1O3'   1O2' 1PX  2O5'  
+ANGLE 2C5' 2O5' 1PX
+DIHE  1C3' 1O3' 1PX  1O1X   1C3'  1O3' 1PX  1O2X   1C3' 1O3' 1PX  1O2'
+DIHE  1C3' 1O3' 1PX  2O5'
+DIHE  1C2' 1O2' 1PX  1O1X   1C2'  1O2' 1PX  1O2X   1C2' 1O2' 1PX  1O3'
+DIHE  1C2' 1O2' 1PX  2O5'
+DIHE  2C5' 2O5' 1PX  1O1X   2C5'  2O5' 1PX  1O2X   2C5' 2O5' 1PX  1O3'
+DIHE  2C5' 2O5' 1PX  1O2'
+DIHE  2O5' 1PX  1O2' 1C2'   2O5'  1PX  1O3' 1C3' 
+DIHE  1O2' 1PX  2O5' 2C5'   1O2'  1PX  1O3' 1C3' 
+DIHE  1C2' 1C3' 1O3' 1PX    1C3'  1C2' 1O2' 1PX
+DIHE  1H3' 1C3' 1O3' 1PX    1H2'' 1C2' 1O2' 1PX
+DIHE  1C4' 1C3' 1O3' 1PX    1C1'  1C2' 1O2' 1PX
+IMPR  1PX  1O1X 1O2X  1O3'
+ACCE 1O1X  1PX
+ACCE 1O2X  1PX       
+BILD 1C3'  1O3'  1PX   1O1X    1.3890  117.50   63.50  115.30   1.5210
+BILD 1C2'  1O2'  1PX   1O2X    1.3610  109.30  157.70   91.40   1.5210
+BILD 1C4'  1C3'  1O3'  1PX     1.5374  113.06  123.61  117.49   1.7859
+BILD 1C1'  1C2'  1O2'  1PX     1.5534  113.51 -151.84  109.33   1.9860
+     
+
+RESI CCC         -1.00  !
+GROUP                   !                  
+ATOM C4'  CN7     0.00  !                   H4'   O4'    H1'                  
+ATOM H41' HN7     0.09  !                     \  /  \  /                   
+ATOM H42' HN7     0.09  !                H4''--C4'   C1'--H1''               
+ATOM O4'  ON6    -0.50  !                       |    |                      
+ATOM C1'  CN7     0.00  !                 H3'--C3'--C2'--H2'                 
+ATOM H11' HN7     0.09  !                       /    \                       
+ATOM H12' HN7     0.09  !                      O3'   O2'                   
+GROUP                   !                        \  /                       
+ATOM C2'  CN7     0.20  !                         PC    
+ATOM H21' HN7     0.09  !                        /  \
+ATOM O2'  ON2    -0.61  !                      O1C  O2C(1-)   
+ATOM C3'  CN7     0.20
+ATOM H31' HN7     0.09
+ATOM O3'  ON2    -0.61 
+ATOM PC   PC      1.40  
+ATOM O1C  ON3    -0.81  
+ATOM O2C  ON3    -0.81  
+BOND C4'  O4'       O4'  C1'
+BOND C4'  C3'       C1'  C2'       C2'  C3'       
+BOND C3'  O3'       O3'  PC        PC   O1C
+BOND C2'  O2'       O2'  PC        PC   O2C       
+BOND C1'  H11'      C2'  H21'      C3'  H31'      C4'  H41'
+BOND C1'  H12'      C4'  H42'      
+ACCE O1C  PC
+ACCE O2C  PC       
+ACCE O2'
+ACCE O3'
+ACCE O4'
+
+BILD C2'  C4'  *C3' O3'    1.5284  100.16 -124.08  115.12   1.4212
+BILD C4'  C3'  C2'  C1'    1.5284  100.16  -30.00  102.04   1.5251
+BILD C1'  C3'  *C2' O2'    1.5284  102.04 -114.67  110.81   1.4212 
+BILD H21' C2'  O2'  PC     1.1200  107.73 -134.70  110.68   1.7500 
+BILD H31' C3'  O3'  PC     1.1200  107.73  134.70  110.68   1.7500 
+BILD O4'  C2'  *C1' H11'   0.0       0.0  -115.0     0.0    0.0
+BILD C2'  C4'  *C3' H31'   0.0       0.0   115.0     0.0    0.0
+BILD C3'  O4'  *C4' H41'   0.0       0.0  -115.0     0.0    0.0
+BILD C3'  C1'  *C2' H31'   0.0       0.0  -115.0     0.0    0.0
+BILD C3'  O3'  PC   O1C    1.4212  108.00  105.00  109.74   1.4802
+BILD C2'  O2'  PC   O2C    1.4212  108.00  105.00  109.74   1.4802
+BILD C4'  C3'  O3'  PC     1.5284  115.12  147.89  110.68   1.7500
+BILD C1'  C2'  O2'  PC     1.5284  115.12 -147.89  110.68   1.7500
+
+
+PRES CYCP         -1.18  !Patch to create 2',3'-cyclic phosphate from RNA sugar
+			 !     H5' H5''
+GROUP			 !       \ /
+ATOM 1O2'  ON2    -0.61  !   -O5'-C5'  O4'   base
+ATOM 1C3'  CN7     0.20  !         \  /  \  /
+ATOM 1O3'  ON2    -0.61  !     H4'--C4'  C1'--H1'
+ATOM 1PC   PC      1.40  !           |    |
+ATOM 1O1C  ON3    -0.81  !     H3'--C3'--C2'--H2''    H5'
+ATOM 1O2C  ON3    -0.81  !           /    \            |
+ATOM 1C2'  CN7B    0.20	 !          O3'   O2'   +     -C5'-O5'-H5T (1-)
+GROUP                    !            \  /             | 
+ATOM 2H5T  HN5     0.43	 !             PC             H5''
+ATOM 2O5'  ON5    -0.67	 !           //  \
+ATOM 2C5'  CN8B   -0.08	 !          O1C  O2C(1-)
+ATOM 2H5'  HN8     0.09	 !
+ATOM 2H5'' HN8     0.09	 !
+
+DELETE ATOM 1H2'
+DELETE ATOM 2P
+DELETE ATOM 2O1P
+DELETE ATOM 2O2P
+
+BOND 1O3'  1PC     1O2'  1PC     1PC   1O1C      1PC   1O2C   
+BOND 2H5T  2O5'       
+ANGLE 1C3' 1O3' 1PC   1O3' 1PC 1O1C   1O1C 1PC 1O2C   1O2C 1PC 1O2'
+ANGLE 1PC  1O2' 1C2'  1O3' 1PC 1O2C   1O2' 1PC 1O1C   1O2' 1PC 1O3'
+ANGLE 2H5T 2O5' 2C5'  
+DIHE  1C3' 1O3' 1PC  1O1C   1C3'  1O3' 1PC  1O2C   1C3' 1O3' 1PC  1O2'
+DIHE  1C2' 1O2' 1PC  1O1C   1C2'  1O2' 1PC  1O2C   1C2' 1O2' 1PC  1O3'
+DIHE  1C2' 1C3' 1O3' 1PC    1C3'  1C2' 1O2' 1PC
+DIHE  1H3' 1C3' 1O3' 1PC    1H2'' 1C2' 1O2' 1PC
+DIHE  1C4' 1C3' 1O3' 1PC    1C1'  1C2' 1O2' 1PC
+ACCE 1O1C  1PC
+ACCE 1O2C  1PC       
+DONO 2H5T  2O5'
+BILD 1C3'  1O3'  1PC   1O1C    1.4212  108.00  105.00  109.74   1.4802
+BILD 1C2'  1O2'  1PC   1O2C    1.4212  108.00  105.00  109.74   1.4802
+BILD 1C4'  1C3'  1O3'  1PC     1.5284  115.12  147.89  110.68   1.7500
+BILD 1C1'  1C2'  1O2'  1PC     1.5284  115.12 -147.89  110.68   1.7500
+BILD 2H5T  2O5'  2C5'  2C4'    0.0000    0.00  180.00    0.00   0.0000
+
+
+PRES DMPR      -1.54               ! thio substitution of DMPA
+GROUP
+
+ATOM C1  CN9   -0.20 !
+ATOM O1  ON2   -0.49 !
+ATOM P1  P      1.41 ! 
+ATOM S1  SO    -0.80 !
+ATOM O3  ONS   -0.80 !
+ATOM O2  ON2   -0.54 !
+ATOM C2  CN9   -0.12 !
+
+DELETE ATOM O4
+
+BOND P1 S1 
+ANGLE S1 P1 O1  S1 P1 O3  S1 P1 O2
+DIHE  S1 P1 O1 C1   S1 P1 O2 C2 
+ACCE S1     
+BILD S1   P1   O1   C1     2.0     109.6    69.0   120.0    1.5
+
+PRES DMPD      -1.54               ! di-thio substitution of DMPA
+GROUP
+
+ATOM C1  CN9   -0.14 !
+ATOM O1  ON2   -0.48 !
+ATOM P1  P      1.30 ! 
+ATOM S1  SS1   -0.80 !
+ATOM S2  SS1   -0.80 !
+ATOM O2  ON2   -0.48 !
+ATOM C2  CN9   -0.14 !
+
+DELETE ATOM O4
+DELETE ATOM O3
+
+BOND P1 S2  P1 S1
+ANGLE S2 P1 S1  S1 P1 O1  S2 P1 O1  S1 P1 O2  S2 P1 O2
+DIHE  S1 P1 O1 C1   S1 P1 O2 C2   S2 P1 O1 C1   S2 P1 O2 C2 
+ACCE S2  
+ACCE S1	   
+BILD S2 P1 O1 C1  0.0 109.0  180.0  0.0  0.0
+BILD S1 P1 O1 C1  0.0 109.0    0.0  0.0  0.0
+
+
+PRES PROR       -1.27        ! O2P thio substitution of DNA/RNA phosphate
+GROUP
+
+ATOM 1C3'  CN7   -0.065!
+ATOM 1O3'  ON2   -0.49 !
+ATOM 2P    P      1.41 !
+ATOM 2O1P  ONS   -0.80 !
+ATOM 2S2   SO    -0.80 !
+ATOM 2O5'  ON2   -0.54 !
+ATOM 2C5'  CN8B   0.015!
+
+DELETE ATOM 2O2P
+
+BOND 2P 2S2  
+ANGLE 2S2 2P 2O5'  1O3' 2P 2S2  2S2 2P 2O1P 
+DIHE  2S2 2P 2O5' 2C5'  2S2 2P 1O3' 1C3'  
+ACCE 2S2     
+BILD 2S2 2P 2O5' 2C5'  0.0 109.0  120.0  0.0  0.0
+
+PRES PROS       -1.27       ! O1P thio substitution of DNA/RNA phosphate
+GROUP
+
+ATOM 1C3' CN7   -0.065!
+ATOM 1O3' ON2   -0.54 !
+ATOM 2P   P      1.41 ! 
+ATOM 2O2P ONS   -0.80 !
+ATOM 2S1  SO    -0.80 !
+ATOM 2O5' ON2   -0.49 !
+ATOM 2C5' CN8B   0.015!
+
+DELETE ATOM 2O1P
+
+BOND 2P 2S1 
+ANGLE 2S1 2P 2O5'  1O3' 2P 2S1  2S1 2P 2O2P 
+DIHE  2S1 2P 2O5' 2C5' 2S1 2P 1O3' 1C3'  
+ACCE 2S1     
+BILD 2S1 2P 2O5' 2C5'  0.0 109.0 120.0  0.0  0.0
+
+
+PRES PROD       -1.27       ! Di-thio substitution of DNA/RNA phosphate
+GROUP
+
+ATOM 1C3' CN7   -0.005!
+ATOM 1O3' ON2   -0.48 !
+ATOM 2P   P      1.30 ! 
+ATOM 2S1  SS1   -0.80 !
+ATOM 2S2  SS1   -0.80 !
+ATOM 2O5' ON2   -0.48 !
+ATOM 2C5' CN8B  -0.005!
+
+DELETE ATOM 2O1P
+DELETE ATOM 2O2P
+
+BOND 2P 2S1 
+BOND 2P 2S2  
+ANGLE 2S1 2P 2O5'  1O3' 2P 2S1   
+ANGLE 2S2 2P 2O5'  1O3' 2P 2S2  2S1 2P 2S2 
+DIHE  2S1 2P 2O5' 2C5'  2S1 2P 1O3' 1C3'  
+DIHE  2S2 2P 2O5' 2C5'  2S2 2P 1O3' 1C3'  
+ACCE 2S1     
+ACCE 2S2     
+BILD 2S1 2P 2O5' 2C5'  0.0 109.0  120.0  0.0  0.0
+BILD 2S2 2P 2O5' 2C5'  0.0 109.0    0.0  0.0  0.0
+
+
+PRES PTSR       -2.81        ! O2P thio substitution of PTS phosphorane
+GROUP
+
+ATOM O4'  ON6   -0.51 !
+ATOM C4'  CN7   -0.10 !
+ATOM C1'  CN7    0.02 !
+ATOM C3'  CN7    0.06 !
+ATOM O3'  ON2   -0.59 !
+ATOM C2'  CN7    0.09 !
+ATOM O2'  ONX   -0.63 !
+ATOM PX   PX     1.73 !
+ATOM O1X  OX1   -0.935!
+ATOM S2X  SX    -0.955!
+ATOM O3X  ONY   -0.72 !
+ATOM C3T  CN9   -0.27 !
+
+DELETE ATOM O2X
+
+BOND PX S2X
+ANGLE S2X PX O3X  O3' PX S2X  S2X PX O1X  S2X PX O2'
+DIHE  S2X PX O3X C3T  S2X PX O3' C3'  S2X PX O2' C2'
+IMPR PX  O1X S2X  O3'
+ACCE S2X
+BILD S2X PX O3X C3T  0.0 95.4 54.4  0.0  0.0
+
+
+PRES PTSS       -2.81        ! O1P thio substitution of PTS phosphorane
+GROUP
+
+ATOM O4'  ON6   -0.51 !
+ATOM C4'  CN7   -0.10 !
+ATOM C1'  CN7    0.02 !
+ATOM C3'  CN7    0.06 !
+ATOM O3'  ON2   -0.59 !
+ATOM C2'  CN7    0.09 !
+ATOM O2'  ONX   -0.63 !
+ATOM PX   PX     1.73 !
+ATOM O2X  OX1   -0.935!
+ATOM S1X  SX    -0.955!
+ATOM O3X  ONY   -0.72 !
+ATOM C3T  CN9   -0.27 !
+
+DELETE ATOM O1X
+
+BOND PX S1X
+ANGLE S1X PX O3X  O3' PX S1X  S1X PX O1X  S1X PX O2'
+DIHE  S1X PX O3X C3T  S1X PX O3' C3'  S1X PX O2' C2'
+IMPR PX  S1X O2X  O3'
+ACCE S1X
+BILD S1X PX O3TX C3T  0.0  94.5 -179.8  0.0  0.0
+
+
+PRES PTSD       -2.81        ! Di-thio substitution of PTS phosphorane
+GROUP
+
+ATOM O4'  ON6   -0.54 !
+ATOM C4'  CN7   -0.05 !
+ATOM C1'  CN7    0.05 !
+ATOM C3'  CN7   -0.01 !
+ATOM O3'  ON2   -0.53 !
+ATOM C2'  CN7    0.09 !
+ATOM O2'  ONX   -0.58 !
+ATOM PX   PX     1.51 !
+ATOM S1X  SX    -0.915!
+ATOM S2X  SX    -0.915!
+ATOM O3X  ONY   -0.68 !
+ATOM C3T  CN9   -0.24 !
+
+DELETE ATOM O1X
+DELETE ATOM O2X
+
+BOND PX S1X
+BOND PX S2X
+ANGLE S1X PX O3X  O3' PX S1X  S1X PX O2'
+ANGLE S2X PX O3X  O3' PX S2X  S2X PX O2'  S1X PX S2X
+DIHE  S1X PX O3X C3T  S1X PX O3' C3'  S1X PX O2' C2'
+DIHE  S2X PX O3X C3T  S2X PX O3' C3'  S2X PX O2' C2'
+IMPR PX  S1X  S2X  O3'
+ACCE S1X
+ACCE S2X
+BILD S2X PX O3X C3T  0.0  94.5   54.4  0.0  0.0
+BILD S1X PX O3X C3T  0.0  94.5 -179.8  0.0  0.0
+
+
+PRES PXR       -2.54        ! O2P thio substitution of RNA phosphorane
+GROUP                        ! must be used after the PXTS patch
+ATOM 1O4'  ON6B  -0.51 !
+ATOM 1C4'  CN7   -0.10 !
+ATOM 1C1'  CN7B   0.02 !
+ATOM 1C2'  CN7B   0.09 !
+ATOM 1O2'  ONX   -0.63 !
+ATOM 1C3'  CN7    0.06 !
+ATOM 1O3'  ON2   -0.59 !
+GROUP
+ATOM 1PX   PX     1.73 !
+ATOM 1O1X  OX1   -0.935!
+ATOM 1S2X  SX    -0.955!
+ATOM 2O5'  ONY   -0.72 !
+ATOM 2C5'  CN8B  -0.00 !
+
+DELETE ATOM 1O2X
+
+BOND 1PX 1S2X  
+ANGLE 1S2X 1PX 2O5'  1O3' 1PX 1S2X  1S2X 1PX 1O1X  1S2X 1PX 1O2'
+DIHE  1S2X 1PX 2O5' 2C5'  1S2X 1PX 1O3' 1C3'  1S2X 1PX 1O2' 1C2' 
+IMPR 1PX  1O1X 1S2X  1O3'
+ACCE 1S2X     
+BILD 1S2X 1PX 2O5' 1C5'  0.0 94.5  40.0  0.0  0.0
+
+PRES PXS       -2.54        ! O1P thio substitution of RNA phosphorane
+GROUP                        ! must be used after the PXTS patch
+ATOM 1O4'  ON6B  -0.51 !
+ATOM 1C4'  CN7   -0.10 !
+ATOM 1C1'  CN7B   0.02 !
+ATOM 1C2'  CN7B   0.09 !
+ATOM 1O2'  ONX   -0.63 !
+ATOM 1C3'  CN7    0.06 !
+ATOM 1O3'  ON2   -0.59 !
+GROUP
+ATOM 1PX   PX     1.73 !
+ATOM 1O2X  OX1   -0.935!
+ATOM 1S1X  SX    -0.955!
+ATOM 2O5'  ONY   -0.72 !
+ATOM 2C5'  CN8B  -0.00 !
+
+DELETE ATOM 1O1X
+
+BOND 1PX 1S1X  
+ANGLE 1S1X 1PX 2O5'  1O3' 1PX 1S1X  1S1X 1PX 1O2X  1S1X 1PX 1O2'
+DIHE  1S1X 1PX 2O5' 2C5'  1S1X 1PX 1O3' 1C3'  1S1X 1PX 1O2' 1C2'
+IMPR 1PX  1S1X 1O2X  1O3'
+ACCE 1S1X     
+BILD 1S1X 1PX 2O5' 1C5'  0.0 94.5  100.0  0.0  0.0
+
+PRES PXD       -2.54        ! Di-thio substitution of RNA phosphorane
+GROUP                        ! must be used after the PXTS patch
+ATOM 1O4'  ON6B  -0.54 !
+ATOM 1C4'  CN7   -0.05 !
+ATOM 1C1'  CN7B   0.05 !
+ATOM 1C2'  CN7B   0.09 !
+ATOM 1O2'  ONX   -0.58 !
+ATOM 1C3'  CN7    0.01 !
+ATOM 1O3'  ON2   -0.53 !
+GROUP
+ATOM 1PX   PX     1.51 !
+ATOM 1S1X  SX    -0.915!
+ATOM 1S2X  SX    -0.915!
+ATOM 2O5'  ONY   -0.68 !
+ATOM 2C5'  CN8B   0.01 !
+
+DELETE ATOM 1O1X
+DELETE ATOM 1O2X
+
+BOND 1PX 1S1X  
+BOND 1PX 1S2X  
+ANGLE 1S1X 1PX 2O5'  1O3' 1PX 1S1X  1S1X 1PX 1O2'
+ANGLE 1S2X 1PX 2O5'  1O3' 1PX 1S2X  1S2X 1PX 1O2'  1S1X 1PX 1S2X  
+DIHE  1S1X 1PX 2O5' 2C5'  1S1X 1PX 1O3' 1C3'  1S1X 1PX 1O2' 1C2'
+DIHE  1S2X 1PX 2O5' 2C5'  1S2X 1PX 1O3' 1C3'  1S2X 1PX 1O2' 1C2'
+IMPR 1PX  1S1X 1S2X 1O3'
+ACCE 1S1X     
+ACCE 1S2X     
+BILD 1S1X 1PX 2O5' 1C5'  0.0  94.5   40.0  0.0  0.0
+BILD 1S2X 1PX 2O5' 1C5'  0.0  94.0  100.0  0.0  0.0
+
+end
+
+read para card flex append
+* reactive RNA parameters
+*
+
+!>>>>>>>>>>>>>>> Additional Parameter File for <<<<<<<<<<<<<<<<<
+!>>>>>>>>>>>>>>>>>>>>>> RNA Catalysis <<<<<<<<<<<<<<<<<<<<<<<<<<
+!>>>>>>>>>>>>>>>>> Using All Hydrogens (ALLH) <<<<<<<<<<<<<<<<<<
+!>>>>>>>>>>>>>>>>>>>>>>> Sept 2005 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+!>>>>>>>>>>>>>>>>>>>>>Evelyn A. Mayaan <<<<<<<<<<<<<<<<<<<<<<<<<
+!>>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+ATOM
+MASS 510   OW   15.999400 ! HDRX OXYGEN
+MASS 511   PX   30.974000 ! TS PHOSPHOROUS
+MASS 512   PC   30.974000 ! CYCP PHOSPHOROUS
+MASS 513   ONX  15.999400 ! TS 2' OXYGEN
+MASS 514   ONY  15.999400 ! TS 5' OXYGEN
+MASS 515   SO   32.064000 ! mono-thio phosphate sulfur
+MASS 516   SS1  32.064000 ! di-thio phosphate sulfur
+MASS 517   SX   32.064000 ! phosphorane sulfur
+MASS 518   ONS  15.999400 ! mono-thio phosphate oxygen
+MASS 519   ONC  15.999400 ! DEPROTONATED OXYGEN
+MASS 520   OX1  15.999400 ! TS non-bridging OXYGEN
+MASS 521   CN2D 12.011000 ! for DAP?
+
+BONDS
+! For HDRX
+HT   OW      663.2       0.9575  !   
+
+! For DEPR/TMPD
+CN7B ONC     488.0       1.310   !
+CN7  ONC     488.0       1.320   ! 
+
+!For PTS
+CN7  ONX     387.2       1.3475  ! 
+CN9  ONY     398.3       1.364   ! 
+
+! For PXTS/PTS
+ON2  PX      183.9       1.81    !   
+! Early TS
+!ONX  PX      142.9       2.01    ! 
+!ONY  PX      130.1       1.85    ! 
+! late TS
+ONX  PX      130.1       1.856   ! 
+ONY  PX      142.9       2.382   ! 
+OX1  PX      637.9       1.53    ! 
+ONX  ONY      77.3       3.75    ! 
+
+! For PXTS
+CN7B ONX     387.2       1.342   !   
+CN8B ONY     320.0       1.44    !From ON2 CN8B   
+
+!For CCC/CYCP
+ON2  PC      229.5       1.71    ! 
+ON3  PC      720.0       1.51    !
+
+! For PROR/PROS/DMPR/DMPD
+ONS   P       578.0       1.4770  ! 
+SO    P       260.4       1.9953  ! 
+SS1   P       258.9       1.9953  ! 
+
+! For PTSR/PTSS
+SX  PX       225.1       2.11    !
+
+! for DAP
+CN2D  NN1    360.0       1.366   !C,A,G JWK, adm jr. 10/2/91
+CN2D  NN3A   400.0       1.342   !A, adm jr. 11/97
+
+!for TAP 
+HN3    CN2   500.0       1.090 
+
+!===============================================
+
+ANGLES
+
+! For DEPR/TMPD                     
+HN7  CN7B ONC       73.6     125.0  ! 
+HN7  CN7  ONC       73.6     121.3  !  
+ONC  CN7B CN7B      91.2     120.2  ! 
+ONC  CN7B CN7       82.4     116.7  !  
+ONC  CN7  CN7       86.8     118.45 ! 
+
+! For PTS
+HN9  CN9  ONY       66.2     111.5  ! 
+HN7  CN7  ONX       70.6     111.6  !
+CN7  ON6  CN7       99.0     113.1  !  
+CN7  ONX  PX        73.6     107.2  !
+CN9  ONY  PX        63.3     105.9  !
+CN7  CN7  ONX       95.6     106.1  ! 
+
+! For PTS/PXTS
+CN7  ON2  PX       107.4     121.6  ! 
+
+OX1  PX   OX1      251.5     127.4  !
+ON2  PX   ONX      219.2      82.0  ! 
+ON2  PX   ONY      136.8      85.2  ! 
+
+ON2  PX   OX1       55.9     115.0  !
+ONX  PX   OX1       89.8      89.3  !
+ONY  PX   OX1       70.0      97.6  ! 
+
+ONY  PX   ONX       61.8     159.4  ! 
+
+! For PXTS
+HN7  CN7B ONX       70.6     114.9  ! 
+HN8  CN8B ONY       60.0     109.5  !From HN8 CN8B ON2 
+
+CN7B CN7B ONX       95.6     110.4  ! 
+CN7  CN7B ONX      119.2     104.8  ! 
+CN7B ONX  PX        73.6     107.0  !  
+CN8B ONY  PX        20.0     120.0   35.00   2.33  !From CN8B ON2 P
+CN7  CN8B ONY       70.0     109.7  !From CN7  CN8B ON2
+
+!For CYCP
+CN7B ON2  PC        70.6     120.0  ! 
+CN7  ON2  PC        70.6     112.85 !
+ON2  PC   ON2      194.2      90.1  ! 
+ON2  PC   ON3       91.2     111.7  ! 
+ON3  PC   ON3      100.1     124.6  !  
+
+!For CCC
+CN7  CN7  CN7       60.0    100.0   !From CN7B CN7  CN7
+
+! For DMPR/DMPS/DMPD/PROR/PROS/PROD
+ON3  P    SO      75.0    131.03  !
+ONS  P    SO      75.0    131.03  !
+ON2  P    SO      96.8    112.84  !
+ON2  P    SS1     96.8    112.84  !
+ON2  P    ONS     96.8    112.84  !
+SS1  P    SS1     92.4    128.47  !
+
+! For PTSR/PTSS
+OX1  PX   SX      35.8    113.4  !
+ON2  PX   SX      43.4    105.3  !
+ONX  PX   SX      99.2     87.7  !
+ONY  PX   SX      82.9     97.5  !
+
+SX   PX   SX      35.8    110.0  !
+
+! For DAP
+CN2  NN3A CN2D     90.0     117.8  !6R) adm jr. 11/97
+NN3A CN2D  NN3A    60.0     133.0  !6R)
+CN2D  NN3A CN5     90.0     110.1  !6R)
+CN2D  NN1  HN1     40.0     121.5  !h61,h62, C,A,G
+NN3A  CN2D  NN1     50.0     130.7  !n6
+
+!For TAP
+NN3A CN2  HN3      50.0   120.0
+CN5  CN2  HN3      50.0   120.0
+
+!============================================
+
+DIHEDRALS
+
+! For DEPR/TMPD
+ONC  CN7  CN7  CN7      0.6     6     0.0  !From ON2  CN7  CN7B CN7B
+ONC  CN7  CN7  CN7      0.0     5     0.0  ! 
+ONC  CN7  CN7  CN7      1.6     3   180.0  !
+!
+ONC  CN7  CN7  ON6      0.5     6      0.0 !From ON2  CN7  CN7  ON6
+ONC  CN7  CN7  ON6      0.3     5      0.0 !
+ONC  CN7  CN7  ON6      0.6     4    180.0 !
+ONC  CN7  CN7  ON6      0.2     3      0.0 !
+!
+HN7  CN7  CN7B ONC      0.195   3     0.0  !From HN7  CN7  CN7B ON2
+HN7  CN7  CN7  ONC      0.195   3     0.0  !
+ONC  CN7B CN7B HN7      0.000   3     0.0  ! 
+ON6B CN7B CN7B ONC      0.000   3     0.0  !
+NN2  CN7B CN7B ONC      0.000   3     0.0  !
+NN2B CN7B CN7B ONC      0.000   3     0.0  !
+ONC  CN7B CN7  ON2      0.000   3     0.0  !
+ONC  CN7  CN7  ON2      0.000   3     0.0  !
+CN7  CN7  CN7B ONC      0.000   3     0.0  !
+
+! For CYCP sugar
+ON2  CN7  CN7B  ON2     0.0     3     0.0  !
+!CYCP phosphate
+ON2  PC   ON2  CN7      0.0     6   180.0  !
+!
+ON2  PC   ON2  CN7B     0.0     3   180.0  !
+!
+CN7B CN7B ON2  PC       0.6     5      0.0 !From CN7  CN7  ON2  P
+CN7B CN7B ON2  PC       0.2     4      0.0 !
+CN7B CN7B ON2  PC       0.4     2      0.0 !
+CN7B CN7B ON2  PC       1.9     1    180.0 !
+!
+CN7B CN7  ON2  PC       0.0     6   180.0  ! 
+!
+PC   ON2  CN7  HN7      0.000   3     0.0  !From P    ON2  CN7  HN7 
+PC   ON2  CN7B HN7      0.000   3     0.0  !From P    ON2  CN7  HN7 
+ON3  PC   ON2  CN7      0.0     3     0.0  !
+ON3  PC   ON2  CN7B     0.0     3     0.0  !
+CN7  CN7  ON2  PC       2.5     1   180.0  !From CN7B CN7  ON2  P 
+CN7  CN7B ON2  PC       2.5     1   180.0  !From CN7B CN7  ON2  P 
+
+! For CCC sugar
+ON2  CN7  CN7  ON2      0.0     3     0.0  !From ON5  CN7  CN7B ON2?  
+
+!PXTS
+!base terms
+ONX  CN7B CN7B NN2      0.0     3     0.0  ! 
+ONX  CN7B CN7B NN2B     0.0     3     0.0  ! 
+!sugar terms
+HN7  CN7  CN7B ONX      0.195   3     0.0  !From HN7  CN7  CN7B ON2 
+HN7  CN7B CN7B ONX      0.195   3     0.0  !From HN7  CN7  CN7  ON2 
+HN7  CN7  CN8B ONY      0.195	3     0.0  !From HN7  CN7  CN8B ON2 
+!
+ON6B CN7  CN8B ONY      3.4     1   180.0  !From ON6B CN7  CN8B ON2 
+
+ONX  CN7B CN7B ON6B     0.4     6      0.0 !From ON2  CN7  CN7  ON6B
+ONX  CN7B CN7B ON6B     0.0     5      0.0 !
+ONX  CN7B CN7B ON6B     0.0     4    180.0 !
+ONX  CN7B CN7B ON6B     1.6     3      0.0 !
+!
+ONX  CN7B CN7  CN7      0.6     6      0.0 !From ON2  CN7  CN7B CN7B
+ONX  CN7B CN7  CN7      0.0     5      0.0 !
+ONX  CN7B CN7  CN7      1.6     3    180.0 !
+!
+CN7  CN7  CN8B ONY      0.2     4    180.0 !From CN7  CN7  CN8B ON  
+CN7  CN7  CN8B ONY      0.8     3    180.0 !  
+CN7  CN7  CN8B ONY      0.4     2      0.0 ! 
+CN7  CN7  CN8B ONY      2.5     1    180.0 !  
+!
+ONX  CN7B CN7  ON2      0.0     3     0.0  !  
+!
+!phosphorane terms
+PX   ONY  CN8B HN8      0.000   3     0.0  !From P    ON2  CN8B HN8  
+PX   ON2  CN7  HN7      0.000   3     0.0  !From P    ON2  CN7  HN7 
+PX   ONX  CN7B HN7      0.000   3     0.0  !From P    ON2  CN7B HN7 
+!
+CN7  CN7  ON2  PX       0.6     5     0.0  !From CN7  CN7  ON2  P 
+CN7  CN7  ON2  PX       0.2     4     0.0  !  
+CN7  CN7  ON2  PX       0.4     2     0.0  !   
+CN7  CN7  ON2  PX       1.9     1   180.0  !  
+!
+CN7B CN7B ONX  PX       0.6     5     0.0  !From CN7  CN7  ON2  P    
+CN7B CN7B ONX  PX       0.2     4     0.0  !   
+CN7B CN7B ONX  PX       0.4     2     0.0  !   
+CN7B CN7B ONX  PX       1.9     1   180.0  !  
+!
+CN7  CN7  ONX  PX       0.6     5     0.0  !From CN7  CN7  ON2  P  
+CN7  CN7  ONX  PX       0.2     4     0.0  !   
+CN7  CN7  ONX  PX       0.4     2     0.0  !    
+CN7  CN7  ONX  PX       1.9     1   180.0  !  
+!
+CN7B CN7  ON2  PX       2.5     1   180.0  !From CN7B CN7  ON2  P 
+CN7  CN7B ONX  PX       2.5     1   180.0  !From CN7B CN7  ON2  P  
+!
+CN7  CN8B ONY  PX       0.2     1   120.0  !From CN7  CN8B ON2  P   
+!
+ON2  PX   ONX  CN7B     1.20    1   180.0  !From ON2  P    ON2  CN7  
+ON2  PX   ONX  CN7B     0.10    2   180.0  !   
+ON2  PX   ONX  CN7B     0.10    3   180.0  !  
+ON2  PX   ONX  CN7B     0.00    6     0.0  !
+!
+ONY  PX   ONX  CN7B     1.20    1   180.0  !From ON2  P    ON2  CN7
+ONY  PX   ONX  CN7B     0.10    2   180.0  !
+ONY  PX   ONX  CN7B     0.10    3   180.0  !
+ONY  PX   ONX  CN7B     0.00    6     0.0  !
+!
+!ON2  PX   ONY  CN8B     1.20    1   180.0  !From ON2  P    ON2  CN8B   
+!ON2  PX   ONY  CN8B     0.10    2   180.0  !  
+!ON2  PX   ONY  CN8B     0.10    3   180.0  !  
+!ON2  PX   ONY  CN8B     0.00    6     0.0  !
+!
+!OX1  PX   ON2  CN7      0.10    3     0.0  !From ON3  P    ON2  CN7   
+!OX1  PX   ONX  CN7B     0.10    3     0.0  !From ON3  P    ON2  CN7 
+!OX1  PX   ONY  CN8B     0.10    3     0.0  !From ON3  P    ON2  CN8B 
+!
+ONX  PX   ONY  CN8B     1.20    1   180.0  !From ON2  P    ON2  CN8B
+ONX  PX   ONY  CN8B     0.10    2   180.0  !
+ONX  PX   ONY  CN8B     0.10    3   180.0  !
+ONX  PX   ONY  CN8B     0.00    6     0.0  !
+!
+ONX  PX   ON2  CN7      1.20    1     0.0  !  
+ONX  PX   ON2  CN7      0.10    2     0.0  !  
+ONX  PX   ON2  CN7      0.10    3     0.0  !   
+!
+ONY  PX   ON2  CN7      1.20    1   180.0  !From ON2  P    ON2  CN7   
+ONY  PX   ON2  CN7      0.10    2   180.0  !   
+ONY  PX   ON2  CN7      0.10    3   180.0  !   
+ONY  PX   ON2  CN7      0.00    6     0.0  !
+
+
+!For PTS
+HN7  CN7  CN7  ONX      0.195   3     0.0  !From HN7  CN7  CN7  ON2
+!
+HN7  CN7  ON6  CN7      0.000   3     0.0  !From HN7  CN7B ON6  CN7
+!
+CN7  CN7  ON6 CN7      0.0      6    180.0 !From CN7  CN7  ON6B CN7B
+!
+CN7  CN7  CN7 CN7      0.0      6      0.0 !From CN7B CN7B CN7  CN7
+!
+PX   ONX  CN7  HN7      0.000   3     0.0  !From P    ON2  CN7  HN7 
+!
+PX   ONY  CN9  HN9      0.000   3     0.0  !From P    ON2  CN8B HN8 
+!
+!OX1  PX   ONX  CN7      0.10    3     0.0  !From ON3  P    ON2  CN7 
+!OX1  PX   ONY  CN9      0.10    3     0.0  !From ON3  P    ON2  CN8B
+!
+ONY  PX   ONX  CN7      1.20    1   180.0  !From ON2  P    ON2  CN7
+ONY  PX   ONX  CN7      0.10    2   180.0  !
+ONY  PX   ONX  CN7      0.10    3   180.0  !
+ONY  PX   ONX  CN7      0.00    6     0.0  !
+!
+ONX  CN7  CN7  ON2      0.0     3     0.0  !  
+!
+ON2  PX   ONX  CN7      1.20    1   180.0  !From ON2  P    ON2  CN7 
+ON2  PX   ONX  CN7      0.10    2   180.0  !   
+ON2  PX   ONX  CN7      0.10    3   180.0  !  
+ON2  PX   ONX  CN7      0.00    6     0.0  !
+!
+ONX  CN7  CN7  CN7      0.6     6     0.0  !From ON2  CN7  CN7B CN7B
+ONX  CN7  CN7  CN7      0.0     5     0.0  ! 
+ONX  CN7  CN7  CN7      1.6     3   180.0  !
+!
+ONX  PX   ONY  CN9      1.20    1   180.0  !From ON2  P    ON2  CN8B
+ONX  PX   ONY  CN9      0.10    2   180.0  !
+ONX  PX   ONY  CN9      0.10    3   180.0  !
+ONX  PX   ONY  CN9      0.00    6     0.0  !
+!
+ON2  PX   ONY  CN9      1.20    1   180.0  !From ON2  P    ON2  CN8B
+ON2  PX   ONY  CN9      0.10    2   180.0  !
+ON2  PX   ONY  CN9      0.10    3   180.0  !
+ON2  PX   ONY  CN9      0.00    6     0.0  !
+!
+ONX  CN7  CN7  ON6      0.5     6      0.0 !From ON2  CN7  CN7  ON6
+ONX  CN7  CN7  ON6      0.3     5      0.0 !
+ONX  CN7  CN7  ON6      0.6     4    180.0 !
+ONX  CN7  CN7  ON6      0.2     3      0.0 !
+
+!For DMPR/DMPS/DMPD
+CN9  ON2  P    SO       0.40    1     0.0  !
+CN9  ON2  P    SO       0.10    3     0.0  !
+!
+CN9  ON2  P    SS1      0.45    1   180.0  !
+CN9  ON2  P    SS1      0.20    2     0.0  !
+CN9  ON2  P    SS1      0.10    3     0.0  !
+!
+CN9  ON2  P    ONS      0.20    2     0.0  !
+CN9  ON2  P    ONS      0.20    3     0.0  !
+!For PROR/PROS/PROD
+CN8B  ON2  P   SO       0.40    1     0.0  !
+CN8B  ON2  P   SO       0.10    3     0.0  !
+!
+CN8B  ON2  P   SS1      0.45    1   180.0  !
+CN8B  ON2  P   SS1      0.20    2     0.0  !
+CN8B  ON2  P   SS1      0.10    3     0.0  !
+!
+CN8B  ON2  P   ONS      0.20    2     0.0  !
+CN8B  ON2  P   ONS      0.20    3     0.0  !
+!
+CN7   ON2  P   ONS      0.10    3     0.0  !From ON3  P    ON2  CN7
+CN7   ON2  P   SO       0.10    3     0.0  !From ON3  P    ON2  CN7
+CN7   ON2  P   SS1      0.10    3     0.0  !From ON3  P    ON2  CN7
+!  For PTSR/PTSS
+CN9  ONY  PX   SX       0.10    3     0.0  !
+CN7  ONY  PX   SX       0.10    3     0.0  !
+CN7  ON2  PX   SX       0.10    3     0.0  !
+SX   PX   ONX  CN7      0.10    3     0.0  !From ON3  P    ON2  CN7 
+SX   PX   ONY  CN8B     0.10    3     0.0  !From ON3  P    ON2  CN8B 
+SX   PX   ONX  CN7B     0.10    3     0.0  !From ON3  P    ON2  CN7 
+!DAP
+NN1  NN3A  NN3A  CN2D      8.5     2   180.0  !
+CN2  NN3A CN2D  NN3A     1.8     2   180.0  ! adm jr. 11/97, 6-mem
+NN3A  CN2D  NN3A  CN5      2.0     2   180.0  !
+CN2D  NN3A CN5  CN5      1.8     2   180.0  !
+CN5  CN2  NN3A  CN2D     10.0     2   180.0  !
+CN5  CN5  NN4   CN2D      6.0     2   180.0  ! 5-mem
+CN2D  NN2  CN5  CN5      6.0     2   180.0  !
+CN2  NN3A CN2D  NN1      8.5     2   180.0  ! H2
+CN5  NN3A  CN2D  NN1      8.5     2   180.0  ! H2
+NN3A  CN2D  NN1  HN1   2.0     2   180.0  !
+
+!================================================================
+
+IMPROPER
+PX   OX1 OX1  ON2     80.0    0   0.0000 ! Keep non-bridging O's planar 
+PX   OX1 SX   ON2     80.0    0   0.0000 ! Keep non-bridging S/O's planar 
+PX   SX  OX1  ON2     80.0    0   0.0000 ! Keep non-bridging S/O's planar 
+PX   SX  SX   ON2     80.0    0   0.0000 ! Keep non-bridging S's planar 
+!DAP
+NN3A CN2D  NN3A CN2  80.0 0 0.000
+NN3A CN2D  NN3A CN5  80.0 0 0.000
+CN5 CN2  NN3A CN2D  80.0 0 0.000
+
+NONBONDED
+!MG            0.0         -0.0140      1.4647   !
+OW            0.0         -0.2385      1.7513   !
+PC            0.0         -0.585       2.15     ! 
+PX            0.0         -0.585       2.15     ! 
+ONC           0.0         -0.3236      1.7513   ! 
+ONS           0.0         -0.1423      1.6796   ! 
+ONX           0.0         -0.2378      1.76     ! 
+ONY           0.0         -0.2378      1.76     ! 
+SO            0.0         -0.6308      2.0937   ! 
+SS1           0.0         -0.6199      2.0546   ! 
+SX            0.0         -0.6540      2.2872   ! 
+OX1           0.0         -0.1407      1.7430   ! 
+CN2D      0.0       -0.10      1.9000
+
+NBFIX
+MG  SO   -0.2063   2.8213  
+MG  SS1  -0.2011   2.8308  
+
+END
+
+return
+
