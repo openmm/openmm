@@ -1472,7 +1472,9 @@ private:
     class ReorderListener;
     class GlobalTarget;
     class DerivFunction;
-    std::string createPerDofComputation(const std::string& variable, const Lepton::ParsedExpression& expr, int component, CustomIntegrator& integrator, const std::string& forceName, const std::string& energyName);
+    std::string createPerDofComputation(const std::string& variable, const Lepton::ParsedExpression& expr, int component, CustomIntegrator& integrator,
+        const std::string& forceName, const std::string& energyName, std::vector<const TabulatedFunction*>& functions,
+        std::vector<std::pair<std::string, std::string> >& functionNames);
     void prepareForComputation(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid);
     Lepton::ExpressionTreeNode replaceDerivFunctions(const Lepton::ExpressionTreeNode& node, OpenMM::ContextImpl& context);
     void findExpressionsForDerivs(const Lepton::ExpressionTreeNode& node, std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& variableNodes);
@@ -1491,6 +1493,7 @@ private:
     OpenCLArray* uniformRandoms;
     OpenCLArray* randomSeed;
     OpenCLArray* perDofEnergyParamDerivs;
+    std::vector<OpenCLArray*> tabulatedFunctions;
     std::map<int, OpenCLArray*> savedForces;
     std::set<int> validSavedForces;
     OpenCLParameterSet* perDofValues;
