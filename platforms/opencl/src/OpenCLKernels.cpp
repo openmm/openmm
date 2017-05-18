@@ -7753,7 +7753,7 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
                 kernel.setArg<cl::Buffer>(index++, perDofEnergyParamDerivs->getDeviceBuffer());
                 for (auto& buffer : perDofValues->getBuffers())
                     kernel.setArg<cl::Memory>(index++, buffer.getMemory());
-                for (auto* array : tabulatedFunctions)
+                for (auto array : tabulatedFunctions)
                     kernel.setArg<cl::Buffer>(index++, array->getDeviceBuffer());
                 if (stepType[step] == CustomIntegrator::ComputeSum) {
                     // Create a second kernel for this step that sums the values.
@@ -7851,7 +7851,7 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
         kineticEnergyKernel.setArg<cl::Buffer>(index++, perDofEnergyParamDerivs->getDeviceBuffer());
         for (int i = 0; i < (int) perDofValues->getBuffers().size(); i++)
             kineticEnergyKernel.setArg<cl::Memory>(index++, perDofValues->getBuffers()[i].getMemory());
-        for (auto* array : tabulatedFunctions)
+        for (auto array : tabulatedFunctions)
             kineticEnergyKernel.setArg<cl::Buffer>(index++, array->getDeviceBuffer());
         keNeedsForce = usesVariable(keExpression, "f");
 
