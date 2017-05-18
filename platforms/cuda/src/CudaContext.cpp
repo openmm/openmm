@@ -227,6 +227,12 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
             minor = 3;
         }
     }
+    if (major == 7) {
+        // Don't generate Volta-specific code until we've made the changes needed
+        // to support it properly.
+        major = 6;
+        minor = 2;
+    }
     gpuArchitecture = intToString(major)+intToString(minor);
     computeCapability = major+0.1*minor;
 
