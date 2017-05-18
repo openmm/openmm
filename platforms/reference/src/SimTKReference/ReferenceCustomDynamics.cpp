@@ -25,6 +25,7 @@
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceVirtualSites.h"
 #include "ReferenceCustomDynamics.h"
+#include "ReferenceTabulatedFunction.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/ForceImpl.h"
@@ -113,12 +114,18 @@ void ReferenceCustomDynamics::initialize(ContextImpl& context, vector<double>& m
         variableLocations[ename.str()] = &energy;
     }
     
+    // Create custom functions for the tabulated functions.
+
+    map<string, Lepton::CustomFunction*> functions;
+    for (int i = 0; i < integrator.getNumTabulatedFunctions(); i++)
+        functions[integrator.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(integrator.getTabulatedFunction(i));
+    
     // Parse the expressions.
     
     int numSteps = stepType.size();
     vector<int> forceGroup;
     vector<vector<ParsedExpression> > expressions;
-    CustomIntegratorUtilities::analyzeComputations(context, integrator, expressions, comparisons, blockEnd, invalidatesForces, needsForces, needsEnergy, computeBothForceAndEnergy, forceGroup);
+    CustomIntegratorUtilities::analyzeComputations(context, integrator, expressions, comparisons, blockEnd, invalidatesForces, needsForces, needsEnergy, computeBothForceAndEnergy, forceGroup, functions);
     stepExpressions.resize(expressions.size());
     for (int i = 0; i < numSteps; i++) {
         stepExpressions[i].resize(expressions[i].size());
@@ -136,6 +143,11 @@ void ReferenceCustomDynamics::initialize(ContextImpl& context, vector<double>& m
     kineticEnergyNeedsForce = false;
     if (kineticEnergyExpression.getVariables().find("f") != kineticEnergyExpression.getVariables().end())
         kineticEnergyNeedsForce = true;
+
+    // Delete the custom functions.
+
+    for (auto& function : functions)
+        delete function.second;
 
     // Record the force group flags for each step.
 

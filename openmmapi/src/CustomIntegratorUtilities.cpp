@@ -71,7 +71,7 @@ bool CustomIntegratorUtilities::usesVariable(const Lepton::ParsedExpression& exp
 
 void CustomIntegratorUtilities::analyzeComputations(const ContextImpl& context, const CustomIntegrator& integrator, vector<vector<Lepton::ParsedExpression> >& expressions,
             vector<Comparison>& comparisons, vector<int>& blockEnd, vector<bool>& invalidatesForces, vector<bool>& needsForces, vector<bool>& needsEnergy,
-            vector<bool>& computeBoth, vector<int>& forceGroup) {
+            vector<bool>& computeBoth, vector<int>& forceGroup, const map<string, Lepton::CustomFunction*>& functions) {
     int numSteps = integrator.getNumComputations();
     expressions.resize(numSteps);
     comparisons.resize(numSteps);
@@ -82,7 +82,7 @@ void CustomIntegratorUtilities::analyzeComputations(const ContextImpl& context, 
     forceGroup.resize(numSteps, -2);
     vector<CustomIntegrator::ComputationType> stepType(numSteps);
     vector<string> stepVariable(numSteps);
-    map<string, Lepton::CustomFunction*> customFunctions;
+    map<string, Lepton::CustomFunction*> customFunctions = functions;
     DerivFunction derivFunction;
     customFunctions["deriv"] = &derivFunction;
 

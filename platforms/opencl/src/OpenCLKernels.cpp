@@ -7498,7 +7498,8 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
         vector<string> variable(numSteps);
         vector<int> forceGroup;
         vector<vector<Lepton::ParsedExpression> > expression;
-        CustomIntegratorUtilities::analyzeComputations(context, integrator, expression, comparisons, blockEnd, invalidatesForces, needsForces, needsEnergy, computeBothForceAndEnergy, forceGroup);
+        map<string, Lepton::CustomFunction*> functions;
+        CustomIntegratorUtilities::analyzeComputations(context, integrator, expression, comparisons, blockEnd, invalidatesForces, needsForces, needsEnergy, computeBothForceAndEnergy, forceGroup, functions);
         for (int step = 0; step < numSteps; step++) {
             string expr;
             integrator.getComputationStep(step, stepType[step], variable[step], expr);
