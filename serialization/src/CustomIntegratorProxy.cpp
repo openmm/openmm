@@ -40,22 +40,22 @@ CustomIntegratorProxy::CustomIntegratorProxy() : SerializationProxy("CustomInteg
 }
 
 void CustomIntegratorProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 1);
+    node.setIntProperty("version", 2);
     const CustomIntegrator& integrator = *reinterpret_cast<const CustomIntegrator*>(object);
     SerializationNode& globalVariablesNode = node.createChildNode("GlobalVariables");
-    for(int i=0; i<integrator.getNumGlobalVariables(); i++) {
+    for (int i = 0; i < integrator.getNumGlobalVariables(); i++) {
         globalVariablesNode.setDoubleProperty(integrator.getGlobalVariableName(i), integrator.getGlobalVariable(i));
     }
     SerializationNode& perDofVariablesNode = node.createChildNode("PerDofVariables");
-    for(int i=0; i<integrator.getNumPerDofVariables(); i++) {
+    for (int i = 0; i < integrator.getNumPerDofVariables(); i++) {
         SerializationNode& perDofValuesNode = perDofVariablesNode.createChildNode(integrator.getPerDofVariableName(i));
         vector<Vec3> perDofValues; integrator.getPerDofVariable(i, perDofValues);
-        for(int j=0; j<perDofValues.size(); j++) {
+        for (int j = 0; j < perDofValues.size(); j++) {
             perDofValuesNode.createChildNode("Value").setDoubleProperty("x",perDofValues[j][0]).setDoubleProperty("y",perDofValues[j][1]).setDoubleProperty("z",perDofValues[j][2]);
         }
     }
     SerializationNode& computationsNode = node.createChildNode("Computations");
-    for(int i=0; i<integrator.getNumComputations(); i++) {
+    for (int i = 0; i < integrator.getNumComputations(); i++) {
         CustomIntegrator::ComputationType computationType;
         string computationVariable;
         string computationExpression;
@@ -63,6 +63,9 @@ void CustomIntegratorProxy::serialize(const void* object, SerializationNode& nod
         computationsNode.createChildNode("Computation").setIntProperty("computationType",static_cast<int>(computationType))
             .setStringProperty("computationVariable",computationVariable).setStringProperty("computationExpression",computationExpression);
     }
+    SerializationNode& functions = node.createChildNode("Functions");
+    for (int i = 0; i < integrator.getNumTabulatedFunctions(); i++)
+        functions.createChildNode("Function", &integrator.getTabulatedFunction(i)).setStringProperty("name", integrator.getTabulatedFunctionName(i));
     node.setStringProperty("kineticEnergyExpression",integrator.getKineticEnergyExpression());
     node.setIntProperty("randomSeed",integrator.getRandomNumberSeed());
     node.setDoubleProperty("stepSize",integrator.getStepSize());
@@ -70,7 +73,8 @@ void CustomIntegratorProxy::serialize(const void* object, SerializationNode& nod
 }
 
 void* CustomIntegratorProxy::deserialize(const SerializationNode& node) const {
-    if (node.getIntProperty("version") != 1)
+    int version = node.getIntProperty("version");
+    if (version < 1 || version > 2)
         throw OpenMMException("Unsupported version number");
     CustomIntegrator* integrator = new CustomIntegrator(node.getDoubleProperty("stepSize"));
     const SerializationNode& globalVariablesNode = node.getChildNode("GlobalVariables");
@@ -111,6 +115,11 @@ void* CustomIntegratorProxy::deserialize(const SerializationNode& node) const {
         } else {
             throw(OpenMMException("Custom Integrator Deserialization: Unknown computation type"));
         }
+    }
+    if (version > 1) {
+        const SerializationNode& functions = node.getChildNode("Functions");
+        for (auto& function : functions.getChildren())
+            integrator->addTabulatedFunction(function.getStringProperty("name"), function.decodeObject<TabulatedFunction>());
     }
     integrator->setKineticEnergyExpression(node.getStringProperty("kineticEnergyExpression"));
     integrator->setRandomNumberSeed(node.getIntProperty("randomSeed"));

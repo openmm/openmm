@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2017 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -895,6 +895,32 @@ void testChangeDT() {
     }
 }
 
+/**
+ * Test an integrator that uses a tabulated function.
+ */
+void testTabulatedFunction() {
+    System system;
+    system.addParticle(1.0);
+    CustomIntegrator integrator(1.0);
+    integrator.addGlobalVariable("global", 1.5);
+    integrator.addPerDofVariable("dof", 0.0);
+    integrator.addComputeGlobal("global", "fn(global)");
+    integrator.addComputePerDof("dof", "fn(x)");
+    vector<double> table;
+    table.push_back(10.0);
+    table.push_back(20.0);
+    integrator.addTabulatedFunction("fn", new Continuous1DFunction(table, 1.0, 2.0));
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(1);
+    positions[0] = Vec3(1.2, 1.3, 1.4);
+    context.setPositions(positions);
+    integrator.step(1);
+    ASSERT_EQUAL_TOL(15.0, integrator.getGlobalVariable(0), 1e-5);
+    vector<Vec3> values;
+    integrator.getPerDofVariable(0, values);
+    ASSERT_EQUAL_VEC(Vec3(12.0, 13.0, 14.0), values[0], 1e-5);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -917,6 +943,7 @@ int main(int argc, char* argv[]) {
         testChangingGlobal();
         testEnergyParameterDerivatives();
         testChangeDT();
+        testTabulatedFunction();
         runPlatformTests();
     }
     catch(const exception& e) {

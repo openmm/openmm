@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2017 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -46,6 +46,11 @@ CustomIntegrator::CustomIntegrator(double stepSize) : globalsAreCurrent(true), f
     setConstraintTolerance(1e-5);
     setRandomNumberSeed(0);
     kineticEnergy = "m*v*v/2";
+}
+
+CustomIntegrator::~CustomIntegrator() {
+    for (auto function : functions)
+        delete function.function;
 }
 
 void CustomIntegrator::initialize(ContextImpl& contextRef) {
@@ -279,6 +284,26 @@ void CustomIntegrator::getComputationStep(int index, ComputationType& type, stri
     type = computations[index].type;
     variable = computations[index].variable;
     expression = computations[index].expression;
+}
+
+int CustomIntegrator::addTabulatedFunction(const std::string& name, TabulatedFunction* function) {
+    functions.push_back(FunctionInfo(name, function));
+    return functions.size()-1;
+}
+
+const TabulatedFunction& CustomIntegrator::getTabulatedFunction(int index) const {
+    ASSERT_VALID_INDEX(index, functions);
+    return *functions[index].function;
+}
+
+TabulatedFunction& CustomIntegrator::getTabulatedFunction(int index) {
+    ASSERT_VALID_INDEX(index, functions);
+    return *functions[index].function;
+}
+
+const string& CustomIntegrator::getTabulatedFunctionName(int index) const {
+    ASSERT_VALID_INDEX(index, functions);
+    return functions[index].name;
 }
 
 const string& CustomIntegrator::getKineticEnergyExpression() const {

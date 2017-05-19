@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2017 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -33,6 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "Integrator.h"
+#include "TabulatedFunction.h"
 #include "Vec3.h"
 #include "openmm/Kernel.h"
 #include "internal/windowsExport.h"
@@ -241,6 +242,9 @@ namespace OpenMM {
  * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs, floor, ceil, step, delta, select.  All trigonometric functions
  * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  delta(x) = 1 if x is 0, 0 otherwise.
  * select(x,y,z) = z if x = 0, y otherwise.  An expression may also involve intermediate quantities that are defined following the main expression, using ";" as a separator.
+ *
+ * In addition, you can call addTabulatedFunction() to define a new function based on tabulated values.  You specify the function by
+ * creating a TabulatedFunction object.  That function can then appear in expressions.
  */
 
 class OPENMM_EXPORT CustomIntegrator : public Integrator {
@@ -292,6 +296,7 @@ public:
      * @param stepSize       the step size with which to integrate the system (in picoseconds)
      */
     CustomIntegrator(double stepSize);
+    ~CustomIntegrator();
     /**
      * Get the number of global variables that have been defined.
      */
@@ -309,6 +314,12 @@ public:
      */
     int getNumComputations() const {
         return computations.size();
+    }
+    /**
+     * Get the number of tabulated functions that have been defined.
+     */
+    int getNumTabulatedFunctions() const {
+        return functions.size();
     }
     /**
      * Define a new global variable.
@@ -496,6 +507,37 @@ public:
      */
     void getComputationStep(int index, ComputationType& type, std::string& variable, std::string& expression) const;
     /**
+     * Add a tabulated function that may appear in expressions.
+     *
+     * @param name           the name of the function as it appears in expressions
+     * @param function       a TabulatedFunction object defining the function.  The TabulatedFunction
+     *                       should have been created on the heap with the "new" operator.  The
+     *                       integrator takes over ownership of it, and deletes it when the integrator itself is deleted.
+     * @return the index of the function that was added
+     */
+    int addTabulatedFunction(const std::string& name, TabulatedFunction* function);
+    /**
+     * Get a const reference to a tabulated function that may appear in expressions.
+     *
+     * @param index     the index of the function to get
+     * @return the TabulatedFunction object defining the function
+     */
+    const TabulatedFunction& getTabulatedFunction(int index) const;
+    /**
+     * Get a reference to a tabulated function that may appear in expressions.
+     *
+     * @param index     the index of the function to get
+     * @return the TabulatedFunction object defining the function
+     */
+    TabulatedFunction& getTabulatedFunction(int index);
+    /**
+     * Get the name of a tabulated function that may appear in expressions.
+     *
+     * @param index     the index of the function to get
+     * @return the name of the function as it appears in expressions
+     */
+    const std::string& getTabulatedFunctionName(int index) const;
+    /**
      * Get the expression to use for computing the kinetic energy.  The expression is evaluated
      * for every degree of freedom.  Those values are then added together, and the sum
      * is reported as the current kinetic energy.
@@ -560,11 +602,13 @@ protected:
     double computeKineticEnergy();
 private:
     class ComputationInfo;
+    class FunctionInfo;
     std::vector<std::string> globalNames;
     std::vector<std::string> perDofNames;
     mutable std::vector<double> globalValues;
     std::vector<std::vector<Vec3> > perDofValues;
     std::vector<ComputationInfo> computations;
+    std::vector<FunctionInfo> functions;
     std::string kineticEnergy;
     mutable bool globalsAreCurrent;
     int randomNumberSeed;
@@ -584,6 +628,20 @@ public:
     }
     ComputationInfo(ComputationType type, const std::string& variable, const std::string& expression) :
         type(type), variable(variable), expression(expression) {
+    }
+};
+
+/**
+ * This is an internal class used to record information about a tabulated function.
+ * @private
+ */
+class CustomIntegrator::FunctionInfo {
+public:
+    std::string name;
+    TabulatedFunction* function;
+    FunctionInfo() {
+    }
+    FunctionInfo(const std::string& name, TabulatedFunction* function) : name(name), function(function) {
     }
 };
 
