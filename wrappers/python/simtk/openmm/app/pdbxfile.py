@@ -39,7 +39,7 @@ from simtk.openmm import Vec3, Platform
 from datetime import date
 from simtk.openmm.app.internal.pdbx.reader.PdbxReader import PdbxReader
 from simtk.openmm.app.internal.unitcell import computePeriodicBoxVectors, computeLengthsAndAngles
-from simtk.openmm.app import Topology
+from simtk.openmm.app import Topology, PDBFile
 from simtk.unit import nanometers, angstroms, is_quantity, norm, Quantity, dot
 from . import element as elem
 try:
@@ -234,11 +234,11 @@ class PDBxFile(object):
         entry : str=None
             The entry ID to assign to the CIF file
         """
-        PDBxFile.writeHeader(topology, file, entry)
+        PDBxFile.writeHeader(topology, file, entry, keepIds)
         PDBxFile.writeModel(topology, positions, file, keepIds=keepIds)
 
     @staticmethod
-    def writeHeader(topology, file=sys.stdout, entry=None):
+    def writeHeader(topology, file=sys.stdout, entry=None, keepIds=False):
         """Write out the header for a PDBx/mmCIF file.
 
         Parameters
@@ -249,6 +249,11 @@ class PDBxFile(object):
             A file to write the file to
         entry : str=None
             The entry ID to assign to the CIF file
+        keepIds : bool=False
+            If True, keep the residue and chain IDs specified in the Topology
+            rather than generating new ones.  Warning: It is up to the caller to
+            make sure these are valid IDs that satisfy the requirements of the
+            PDBx/mmCIF format.  Otherwise, the output file will be invalid.
         """
         if entry is not None:
             print('data_%s' % entry, file=file)
@@ -266,7 +271,55 @@ class PDBxFile(object):
             print('_cell.angle_alpha  %10.4f' % (alpha*RAD_TO_DEG), file=file)
             print('_cell.angle_beta   %10.4f' % (beta*RAD_TO_DEG), file=file)
             print('_cell.angle_gamma  %10.4f' % (gamma*RAD_TO_DEG), file=file)
-            print('##', file=file)
+            print('#', file=file)
+
+        # Identify bonds that should be listed in the file.
+
+        bonds = []
+        for atom1, atom2 in topology.bonds():
+            if atom1.residue.name not in PDBFile._standardResidues or atom2.residue.name not in PDBFile._standardResidues:
+                bonds.append((atom1, atom2))
+            elif atom1.name == 'SG' and atom2.name == 'SG' and atom1.residue.name == 'CYS' and atom2.residue.name == 'CYS':
+                bonds.append((atom1, atom2))
+        if len(bonds) > 0:
+
+            # Write the bond information.
+
+            print('loop_', file=file)
+            print('_struct_conn.id', file=file)
+            print('_struct_conn.conn_type_id', file=file)
+            print('_struct_conn.ptnr1_label_asym_id', file=file)
+            print('_struct_conn.ptnr1_label_comp_id', file=file)
+            print('_struct_conn.ptnr1_label_seq_id', file=file)
+            print('_struct_conn.ptnr1_label_atom_id', file=file)
+            print('_struct_conn.ptnr2_label_asym_id', file=file)
+            print('_struct_conn.ptnr2_label_comp_id', file=file)
+            print('_struct_conn.ptnr2_label_seq_id', file=file)
+            print('_struct_conn.ptnr2_label_atom_id', file=file)
+            chainIds = {}
+            resIds = {}
+            if keepIds:
+                for chain in topology.chains():
+                    chainIds[chain] = chain.id
+                for res in topology.residues():
+                    resIds[res] = res.id
+            else:
+                for (chainIndex, chain) in enumerate(topology.chains()):
+                    chainIds[chain] = chr(ord('A')+chainIndex%26)
+                    for (resIndex, res) in enumerate(chain.residues()):
+                        resIds[res] = resIndex+1
+            for i, (atom1, atom2) in enumerate(bonds):
+                if atom1.residue.name == 'CYS' and atom2.residue.name == 'CYS':
+                    bondType = 'disulf'
+                else:
+                    bondType = 'covale'
+                line = "bond%d %s %s %-4s %5s %-4s %s %-4s %5s %-4s"
+                print(line % (i+1, bondType, chainIds[atom1.residue.chain], atom1.residue.name, resIds[atom1.residue], atom1.name,
+                              chainIds[atom2.residue.chain], atom2.residue.name, resIds[atom2.residue], atom2.name), file=file)
+            print('#', file=file)
+
+        # Write the header for the atom coordinates.
+
         print('loop_', file=file)
         print('_atom_site.group_PDB', file=file)
         print('_atom_site.id', file=file)

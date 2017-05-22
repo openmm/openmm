@@ -112,6 +112,10 @@ class Topology(object):
         """
         return len(self._chains)
 
+    def getNumBonds(self):
+        """Return the number of bonds in the Topology."""
+        return len(self._bonds)
+
     def addChain(self, id=None):
         """Create a new Chain and add it to the Topology.
 
