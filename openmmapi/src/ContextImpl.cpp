@@ -301,7 +301,7 @@ double ContextImpl::calcForcesAndEnergy(bool includeForces, bool includeEnergy, 
     }
 }
 
-int ContextImpl::getLastForceGroups() const {
+int& ContextImpl::getLastForceGroups() {
     return lastForceGroups;
 }
 
