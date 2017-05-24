@@ -95,6 +95,29 @@ class TestForceField(unittest.TestCase):
                 validateConstraints(self, topology, system,
                                     constraints_value, rigidWater_value)
 
+    def test_flexibleConstraints(self):
+        """ Test the flexibleConstraints keyword """
+        topology = self.pdb1.topology
+        system1 = self.forcefield1.createSystem(topology, constraints=HAngles,
+                                                rigidWater=True)
+        system2 = self.forcefield1.createSystem(topology, constraints=HAngles,
+                                                rigidWater=True, flexibleConstraints=True)
+        validateConstraints(self, topology, system1, HAngles, True)
+        validateConstraints(self, topology, system2, HAngles, True)
+        for force in system1.getForces():
+            if isinstance(force, HarmonicBondForce):
+                bf1 = force
+            elif isinstance(force, HarmonicAngleForce):
+                af1 = force
+        for force in system2.getForces():
+            if isinstance(force, HarmonicBondForce):
+                bf2 = force
+            elif isinstance(force, HarmonicAngleForce):
+                af2 = force
+        # Make sure we picked up extra terms with flexibleConstraints
+        self.assertGreater(bf2.getNumBonds(), bf1.getNumBonds())
+        self.assertGreater(af2.getNumAngles(), af2.getNumAngles())
+
     def test_ImplicitSolvent(self):
         """Test the four types of implicit solvents using the implicitSolvent
         parameter.
@@ -687,7 +710,7 @@ class TestForceField(unittest.TestCase):
     def test_NBFix(self):
         """Test using LennardJonesGenerator to implement NBFix terms."""
         # Create a chain of five atoms.
-        
+
         top = Topology()
         chain = top.addChain()
         res = top.addResidue('RES', chain)
@@ -701,9 +724,9 @@ class TestForceField(unittest.TestCase):
         top.addBond(atoms[1], atoms[2])
         top.addBond(atoms[2], atoms[3])
         top.addBond(atoms[3], atoms[4])
-        
+
         # Create the force field and system.
-        
+
         xml = """
 <ForceField>
  <AtomTypes>
@@ -738,9 +761,9 @@ class TestForceField(unittest.TestCase):
 </ForceField> """
         ff = ForceField(StringIO(xml))
         system = ff.createSystem(top)
-        
+
         # Check that it produces the correct energy.
-        
+
         integrator = VerletIntegrator(0.001)
         context = Context(system, integrator, Platform.getPlatform(0))
         positions = [Vec3(i, 0, 0) for i in range(5)]*nanometers
