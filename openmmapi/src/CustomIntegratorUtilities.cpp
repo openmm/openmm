@@ -111,7 +111,8 @@ void CustomIntegratorUtilities::analyzeComputations(const ContextImpl& context, 
         for (auto& param : force->getDefaultParameters())
             affectsForce.insert(param.first);
     for (int i = 0; i < numSteps; i++)
-        invalidatesForces[i] = (stepType[i] == CustomIntegrator::ConstrainPositions || affectsForce.find(stepVariable[i]) != affectsForce.end());
+        invalidatesForces[i] = (stepType[i] == CustomIntegrator::ConstrainPositions || stepType[i] == CustomIntegrator::UpdateContextState ||
+                affectsForce.find(stepVariable[i]) != affectsForce.end());
 
     // Make a list of which steps require valid forces or energy to be known.
 

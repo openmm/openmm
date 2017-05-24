@@ -7604,12 +7604,14 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
         int nextStep = step+1;
         int lastForceGroups = context.getLastForceGroups();
         if ((needsForces[step] || needsEnergy[step]) && (!forcesAreValid || lastForceGroups != forceGroupFlags[step])) {
-            if (forcesAreValid && savedForces.find(lastForceGroups) != savedForces.end()) {
-                // The forces are still valid.  We just need a different force group right now.  Save the old
-                // forces in case we need them again.
-                
-                cu.getForce().copyTo(*savedForces[lastForceGroups]);
-                validSavedForces.insert(lastForceGroups);
+            if (forcesAreValid) {
+                if (savedForces.find(lastForceGroups) != savedForces.end() && validSavedForces.find(lastForceGroups) == validSavedForces.end()) {
+                    // The forces are still valid.  We just need a different force group right now.  Save the old
+                    // forces in case we need them again.
+
+                    cu.getForce().copyTo(*savedForces[lastForceGroups]);
+                    validSavedForces.insert(lastForceGroups);
+                }
             }
             else
                 validSavedForces.clear();
@@ -7623,6 +7625,7 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
                 // We can just restore the forces we saved earlier.
                 
                 savedForces[forceGroupFlags[step]]->copyTo(cu.getForce());
+                context.getLastForceGroups() = forceGroupFlags[step];
             }
             else {
                 recordChangedParameters(context);
