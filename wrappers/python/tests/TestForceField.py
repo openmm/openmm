@@ -103,7 +103,10 @@ class TestForceField(unittest.TestCase):
         system2 = self.forcefield1.createSystem(topology, constraints=HAngles,
                                                 rigidWater=True, flexibleConstraints=True)
         validateConstraints(self, topology, system1, HAngles, True)
-        validateConstraints(self, topology, system2, HAngles, True)
+        # validateConstraints fails for system2 since by definition atom pairs can be in both bond
+        # and constraint lists. So just check that the number of constraints is the same for both
+        # system1 and system2
+        self.assertEqual(system1.getNumConstraints(), system2.getNumConstraints())
         for force in system1.getForces():
             if isinstance(force, HarmonicBondForce):
                 bf1 = force
