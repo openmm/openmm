@@ -102,6 +102,7 @@ class TestForceField(unittest.TestCase):
                                                 rigidWater=True)
         system2 = self.forcefield1.createSystem(topology, constraints=HAngles,
                                                 rigidWater=True, flexibleConstraints=True)
+        system3 = self.forcefield1.createSystem(topology, constraints=None, rigidWater=False)
         validateConstraints(self, topology, system1, HAngles, True)
         # validateConstraints fails for system2 since by definition atom pairs can be in both bond
         # and constraint lists. So just check that the number of constraints is the same for both
@@ -117,9 +118,13 @@ class TestForceField(unittest.TestCase):
                 bf2 = force
             elif isinstance(force, HarmonicAngleForce):
                 af2 = force
-        # Make sure we picked up extra terms with flexibleConstraints
+        for force in system3.getForces():
+            if isinstance(force, HarmonicAngleForce):
+                af3 = force
+        # Make sure we picked up extra bond terms with flexibleConstraints
         self.assertGreater(bf2.getNumBonds(), bf1.getNumBonds())
-        self.assertGreater(af2.getNumAngles(), af2.getNumAngles())
+        # Make sure flexibleConstraints yields just as many angles as no constraints
+        self.assertEqual(af2.getNumAngles(), af3.getNumAngles())
 
     def test_ImplicitSolvent(self):
         """Test the four types of implicit solvents using the implicitSolvent
