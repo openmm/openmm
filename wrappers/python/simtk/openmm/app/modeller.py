@@ -254,7 +254,7 @@ class Modeller(object):
         self.topology = newTopology
         self.positions = newPositions
 
-    def addSolvent(self, forcefield, model='tip3p', boxSize=None, boxVectors=None, padding=None, numAdded=None, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar, neutralize=True):
+    def addSolvent(self, forcefield, model='tip3p', boxSize=None, boxVectors=None, padding=None, numAdded=None, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar, neutralize=True, atomTypes=None, atomCharges=None):
         """Add solvent (both water and ions) to the model to fill a rectangular box.
 
         The algorithm works as follows:
@@ -300,6 +300,15 @@ class Modeller(object):
             Note that only monovalent ions are currently supported.
         neutralize : bool=True
             whether to add ions to neutralize the system
+        atomTypes : dict
+            A dictionary of atom type strings (e.g. 'ca') where the key is the index of an
+            atom in the input geometry. This allows atom types to be assigned by an external 
+            program rather than relying on template matching. Further, it can allow simulations
+            to be made on the fly with residues that do not have templates.
+        atomCharges : dict
+            A dictionary of point charge values where the key is the index of an atom in the
+            input geometry. This is necessary when a residue does not have a template and thus does
+            not have charges.
         """
         if len([x for x in (boxSize, boxVectors, padding, numAdded) if x is not None]) > 1:
             raise ValueError('At most one of the following arguments may be specified: boxSize, boxVectors, padding, numAdded')
@@ -370,8 +379,13 @@ class Modeller(object):
         negativeElement = negIonElements[negativeIon]
 
         # Have the ForceField build a System for the solute from which we can determine van der Waals radii.
+        if (bool(atomTypes) ^ bool(atomCharges)):
+            raise Exception('If atomTypes or atomCharges are provided, both need to be provided')
+        if atomTypes is None:
+            system = forcefield.createSystem(self.topology)
+        else:
+            system = forcefield.createSystem(self.topology, atomTypes=atomTypes, atomCharges=atomCharges) 
 
-        system = forcefield.createSystem(self.topology)
         nonbonded = None
         for i in range(system.getNumForces()):
             if isinstance(system.getForce(i), NonbondedForce):
@@ -863,7 +877,6 @@ class Modeller(object):
 
         if forcefield is not None:
             # Use the ForceField the user specified.
-
             system = forcefield.createSystem(newTopology, rigidWater=False, nonbondedMethod=CutoffNonPeriodic)
             atoms = list(newTopology.atoms())
             for i in range(system.getNumParticles()):
@@ -1121,7 +1134,7 @@ class Modeller(object):
         if len(missingPositions) > 0:
             # There were particles whose position we couldn't identify before, since they were neither virtual sites nor Drude particles.
             # Try to figure them out based on bonds.  First, use the ForceField to create a list of every bond involving one of them.
-
+    
             system = forcefield.createSystem(newTopology, constraints=AllBonds)
             bonds = []
             for i in range(system.getNumConstraints()):

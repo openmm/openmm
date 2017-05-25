@@ -999,7 +999,7 @@ class ForceField(object):
 
     def createSystem(self, topology, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
                      constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, residueTemplates=dict(),
-                     ignoreExternalBonds=False, **args):
+                     ignoreExternalBonds=False, atomTypes=None, atomCharges=None, **args):
         """Construct an OpenMM System representing a Topology with this force field.
 
         Parameters
@@ -1035,6 +1035,15 @@ class ForceField(object):
             not terminated properly.  This option can create ambiguities where multiple
             templates match the same residue.  If that happens, use the residueTemplates
             argument to specify which one to use.
+        atomTypes : dict
+            A dictionary of atom type strings (e.g. 'ca') where the key is the index of an
+            atom in the input geometry. This allows atom types to be assigned by an external 
+            program rather than relying on template matching. Further, it can allow simulations
+            to be made on the fly with residues that do not have templates.
+        atomCharges : dict
+            A dictionary of point charge values where the key is the index of an atom in the
+            input geometry. This is necessary when a residue does not have a template and thus does
+            not have charges.
         args
             Arbitrary additional keyword arguments may also be specified.
             This allows extra parameters to be specified that are specific to
@@ -1068,52 +1077,64 @@ class ForceField(object):
             data.atomBonds[bond.atom1].append(i)
             data.atomBonds[bond.atom2].append(i)
 
-        # Find the template matching each residue and assign atom types.
+        # Check that if atomTypes or atomCharges are passed in, both are passed in or neither is passed in
+        if (bool(atomTypes) ^ bool(atomCharges)):
+            raise Exception('Need to provide both atomTypes and atomCharges')
 
-        unmatchedResidues = []
-        for chain in topology.chains():
-            for res in chain.residues():
-                if res in residueTemplates:
-                    tname = residueTemplates[res]
-                    template = self._templates[tname]
-                    matches = _matchResidue(res, template, bondedToAtom, ignoreExternalBonds)
+        if atomTypes is None:
+
+            # Find the template matching each residue and assign atom types.
+
+            unmatchedResidues = []
+            for chain in topology.chains():
+                for res in chain.residues():
+                    if res in residueTemplates:
+                        tname = residueTemplates[res]
+                        template = self._templates[tname]
+                        matches = _matchResidue(res, template, bondedToAtom, ignoreExternalBonds)
+                        if matches is None:
+                            raise Exception('User-supplied template %s does not match the residue %d (%s)' % (tname, res.index+1, res.name))
+                    else:
+                        # Attempt to match one of the existing templates.
+                        [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom, ignoreExternalBonds=ignoreExternalBonds)
                     if matches is None:
-                        raise Exception('User-supplied template %s does not match the residue %d (%s)' % (tname, res.index+1, res.name))
-                else:
-                    # Attempt to match one of the existing templates.
-                    [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom, ignoreExternalBonds=ignoreExternalBonds)
+                        unmatchedResidues.append(res)
+                    else:
+                        data.recordMatchedAtomParameters(res, template, matches)
+
+            # Try to apply patches to find matches for any unmatched residues.
+
+            if len(unmatchedResidues) > 0:
+                unmatchedResidues = _applyPatchesToMatchResidues(self, data, unmatchedResidues, bondedToAtom, ignoreExternalBonds)
+
+            # If we still haven't found a match for a residue, attempt to use residue template generators to create
+            # new templates (and potentially atom types/parameters).
+
+            for res in unmatchedResidues:
+                # A template might have been generated on an earlier iteration of this loop.
+                [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom, ignoreExternalBonds=ignoreExternalBonds)
                 if matches is None:
-                    unmatchedResidues.append(res)
+                    # Try all generators.
+                    for generator in self._templateGenerators:
+                        if generator(self, res):
+                            # This generator has registered a new residue template that should match.
+                            [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom, ignoreExternalBonds=ignoreExternalBonds)
+                            if matches is None:
+                                # Something went wrong because the generated template does not match the residue signature.
+                                raise Exception('The residue handler %s indicated it had correctly parameterized residue %s, but the generated template did not match the residue signature.' % (generator.__class__.__name__, str(res)))
+                            else:
+                                # We successfully generated a residue template.  Break out of the for loop.
+                                break
+                if matches is None:
+                    raise ValueError('No template found for residue %d (%s).  %s' % (res.index+1, res.name, _findMatchErrors(self, res)))
                 else:
                     data.recordMatchedAtomParameters(res, template, matches)
 
-        # Try to apply patches to find matches for any unmatched residues.
-
-        if len(unmatchedResidues) > 0:
-            unmatchedResidues = _applyPatchesToMatchResidues(self, data, unmatchedResidues, bondedToAtom, ignoreExternalBonds)
-
-        # If we still haven't found a match for a residue, attempt to use residue template generators to create
-        # new templates (and potentially atom types/parameters).
-
-        for res in unmatchedResidues:
-            # A template might have been generated on an earlier iteration of this loop.
-            [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom, ignoreExternalBonds=ignoreExternalBonds)
-            if matches is None:
-                # Try all generators.
-                for generator in self._templateGenerators:
-                    if generator(self, res):
-                        # This generator has registered a new residue template that should match.
-                        [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom, ignoreExternalBonds=ignoreExternalBonds)
-                        if matches is None:
-                            # Something went wrong because the generated template does not match the residue signature.
-                            raise Exception('The residue handler %s indicated it had correctly parameterized residue %s, but the generated template did not match the residue signature.' % (generator.__class__.__name__, str(res)))
-                        else:
-                            # We successfully generated a residue template.  Break out of the for loop.
-                            break
-            if matches is None:
-                raise ValueError('No template found for residue %d (%s).  %s' % (res.index+1, res.name, _findMatchErrors(self, res)))
-            else:
-                data.recordMatchedAtomParameters(res, template, matches)
+        else:
+            # Assign user provided atom types and charges to atoms
+            for atom in topology.atoms():
+                data.atomType[atom] = atomTypes[atom.index]
+                data.atomParameters[atom] = {'charge':atomCharges[atom.index]}
 
         # Create the System and add atoms
 
