@@ -38,6 +38,7 @@ matrix:
            -DOPENCL_INCLUDE_DIR=$HOME/AMDAPPSDK/include
            -DOPENCL_LIBRARY=$HOME/AMDAPPSDK/lib/x86_64/libOpenCL.so"
       addons: {apt: {packages: []}}
+      allow_failures: on
 
     - sudo: required
       dist: trusty
