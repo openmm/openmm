@@ -223,7 +223,7 @@ class ForceField(object):
             trees.append(tree)
 
         # Process includes.
-        
+
         for parentFile, tree in zip(files, trees):
             if isinstance(parentFile, str):
                 parentDir = os.path.dirname(parentFile)
@@ -1035,6 +1035,8 @@ class ForceField(object):
             not terminated properly.  This option can create ambiguities where multiple
             templates match the same residue.  If that happens, use the residueTemplates
             argument to specify which one to use.
+        flexibleConstraints : boolean=False
+            If True, parameters for constrained degrees of freedom will be added to the System
         args
             Arbitrary additional keyword arguments may also be specified.
             This allows extra parameters to be specified that are specific to
@@ -1140,9 +1142,9 @@ class ForceField(object):
             if not unit.is_quantity(hydrogenMass):
                 hydrogenMass *= unit.dalton
             for atom1, atom2 in topology.bonds():
-                if atom1.element == elem.hydrogen:
+                if atom1.element is elem.hydrogen:
                     (atom1, atom2) = (atom2, atom1)
-                if atom2.element == elem.hydrogen and atom1.element not in (elem.hydrogen, None):
+                if atom2.element is elem.hydrogen and atom1.element not in (elem.hydrogen, None):
                     transferMass = hydrogenMass-sys.getParticleMass(atom2.index)
                     sys.setParticleMass(atom2.index, hydrogenMass)
                     sys.setParticleMass(atom1.index, sys.getParticleMass(atom1.index)-transferMass)
@@ -1208,7 +1210,7 @@ class ForceField(object):
             for bond in data.bonds:
                 atom1 = data.atoms[bond.atom1]
                 atom2 = data.atoms[bond.atom2]
-                bond.isConstrained = atom1.name.startswith('H') or atom2.name.startswith('H')
+                bond.isConstrained = atom1.element is elem.hydrogen or atom2.element is elem.hydrogen
         if rigidWater:
             for bond in data.bonds:
                 atom1 = data.atoms[bond.atom1]
@@ -1224,11 +1226,11 @@ class ForceField(object):
                 atom2 = data.atoms[angle[1]]
                 atom3 = data.atoms[angle[2]]
                 numH = 0
-                if atom1.name.startswith('H'):
+                if atom1.element is elem.hydrogen:
                     numH += 1
-                if atom3.name.startswith('H'):
+                if atom3.element is elem.hydrogen:
                     numH += 1
-                data.isAngleConstrained.append(numH == 2 or (numH == 1 and atom2.name.startswith('O')))
+                data.isAngleConstrained.append(numH == 2 or (numH == 1 and atom2.element is elem.oxygen))
         else:
             data.isAngleConstrained = len(data.angles)*[False]
         if rigidWater:
@@ -1897,8 +1899,11 @@ class HarmonicBondGenerator(object):
                     bond.length = self.length[i]
                     if bond.isConstrained:
                         data.addConstraint(sys, bond.atom1, bond.atom2, self.length[i])
-                    elif self.k[i] != 0:
-                        force.addBond(bond.atom1, bond.atom2, self.length[i], self.k[i])
+                    if self.k[i] != 0:
+                        # flexibleConstraints allows us to add parameters even if the DOF is
+                        # constrained
+                        if not bond.isConstrained or args.get('flexibleConstraints', False):
+                            force.addBond(bond.atom1, bond.atom2, self.length[i], self.k[i])
                     break
 
 parsers["HarmonicBondForce"] = HarmonicBondGenerator.parseElement
@@ -1978,8 +1983,9 @@ class HarmonicAngleGenerator(object):
                             if l1 is not None and l2 is not None:
                                 length = sqrt(l1*l1 + l2*l2 - 2*l1*l2*cos(self.angle[i]))
                                 data.addConstraint(sys, angle[0], angle[2], length)
-                    elif self.k[i] != 0:
-                        force.addAngle(angle[0], angle[1], angle[2], self.angle[i], self.k[i])
+                    if self.k[i] != 0:
+                        if not isConstrained or args.get('flexibleConstraints', False):
+                            force.addAngle(angle[0], angle[1], angle[2], self.angle[i], self.k[i])
                     break
 
 parsers["HarmonicAngleForce"] = HarmonicAngleGenerator.parseElement
@@ -3160,8 +3166,9 @@ class AmoebaBondGenerator(object):
                     bond.length = self.length[i]
                     if bond.isConstrained:
                         data.addConstraint(sys, bond.atom1, bond.atom2, self.length[i])
-                    elif self.k[i] != 0:
-                        force.addBond(bond.atom1, bond.atom2, self.length[i], self.k[i])
+                    if self.k[i] != 0:
+                        if not bond.isConstrained or args.get('flexibleConstraints', False):
+                            force.addBond(bond.atom1, bond.atom2, self.length[i], self.k[i])
                     break
 
 parsers["AmoebaBondForce"] = AmoebaBondGenerator.parseElement
@@ -3288,6 +3295,8 @@ class AmoebaAngleGenerator(object):
         force.setAmoebaGlobalAnglePentic(self.pentic)
         force.setAmoebaGlobalAngleSextic(self.sextic)
 
+        DEG_TO_RAD = math.pi / 180
+
         for angleDict in angleList:
             angle = angleDict['angle']
             isConstrained = angleDict['isConstrained']
@@ -3302,8 +3311,8 @@ class AmoebaAngleGenerator(object):
                 if (type1 in types1 and type2 in types2 and type3 in types3) or (type1 in types3 and type2 in types2 and type3 in types1):
                     if isConstrained and self.k[i] != 0.0:
                         angleDict['idealAngle'] = self.angle[i][0]
-                        addAngleConstraint(angle, self.angle[i][0]*math.pi/180.0, data, sys)
-                    elif self.k[i] != 0:
+                        addAngleConstraint(angle, self.angle[i][0]*DEG_TO_RAD, data, sys)
+                    if self.k[i] != 0 and (not isConstrained or args.get('flexibleConstraints', False)):
                         lenAngle = len(self.angle[i])
                         if (lenAngle > 1):
                             # get k-index by counting number of non-angle hydrogens on the central atom
@@ -3372,7 +3381,7 @@ class AmoebaAngleGenerator(object):
                     angleDict['idealAngle'] = self.angle[i][0]
                     if (isConstrained and self.k[i] != 0.0):
                         addAngleConstraint(angle, self.angle[i][0]*math.pi/180.0, data, sys)
-                    else:
+                    if self.k[i] != 0.0 and (not isConstrained or args.get('flexibleConstraints', False)):
                         force.addAngle(angle[0], angle[1], angle[2], angle[3], self.angle[i][0], self.k[i])
                     break
 
@@ -5431,7 +5440,7 @@ class AmoebaUreyBradleyGenerator(object):
             force = existing[0]
 
         for (angle, isConstrained) in zip(data.angles, data.isAngleConstrained):
-            if (isConstrained):
+            if (isConstrained and not args.get('flexibleConstraints', False)):
                 continue
             type1 = data.atomType[data.atoms[angle[0]]]
             type2 = data.atomType[data.atoms[angle[1]]]
