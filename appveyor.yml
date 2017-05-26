@@ -39,7 +39,7 @@ install:
   - ps: 7z x opencl-icd-1.2.11.0.tar > $null
   - ps: mv .\icd\* .
   - ps: mkdir inc/CL > $null
-  - ps: wget https://github.com/$opencl_github | select -ExpandProperty links | where {$_.href -like "*.h*"} | select -ExpandProperty outerText | foreach{ wget https://raw.githubusercontent.com/$opencl_github/master/$_ -OutFile inc/CL/$_ }
+  - ps: wget https://github.com/$opencl_github/tree/master/opencl20/CL | select -ExpandProperty links | where {$_.href -like "*.h*"} | select -ExpandProperty outerText | foreach{ wget https://raw.githubusercontent.com/$opencl_github/master/opencl20/CL/$_ -OutFile inc/CL/$_ }
   - ps: mkdir lib > $null
   - ps: cd lib
   - cmake -G "NMake Makefiles" ..
