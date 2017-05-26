@@ -1494,6 +1494,7 @@ private:
     OpenCLArray* randomSeed;
     OpenCLArray* perDofEnergyParamDerivs;
     std::vector<OpenCLArray*> tabulatedFunctions;
+    std::map<int, double> savedEnergy;
     std::map<int, OpenCLArray*> savedForces;
     std::set<int> validSavedForces;
     OpenCLParameterSet* perDofValues;
