@@ -1507,6 +1507,7 @@ private:
     CudaArray* randomSeed;
     CudaArray* perDofEnergyParamDerivs;
     std::vector<CudaArray*> tabulatedFunctions;
+    std::map<int, double> savedEnergy;
     std::map<int, CudaArray*> savedForces;
     std::set<int> validSavedForces;
     CudaParameterSet* perDofValues;

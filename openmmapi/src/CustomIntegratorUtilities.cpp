@@ -37,6 +37,7 @@
 #include <algorithm>
 #include <set>
 #include <sstream>
+#include <utility>
 
 using namespace OpenMM;
 using namespace std;
@@ -250,26 +251,23 @@ void CustomIntegratorUtilities::enumeratePaths(int firstStep, vector<int> steps,
 
 void CustomIntegratorUtilities::analyzeForceComputationsForPath(vector<int>& steps, const vector<bool>& needsForces, const vector<bool>& needsEnergy,
             const vector<bool>& invalidatesForces, const vector<int>& forceGroup, vector<bool>& computeBoth) {
-    vector<int> candidatePoints;
-    int currentGroup = -1;
+    vector<pair<int, int> > candidatePoints;
     for (int step : steps) {
-        if (invalidatesForces[step] || ((needsForces[step] || needsEnergy[step]) && forceGroup[step] != currentGroup)) {
-            // Forces and energies are invalidated at this step, or it changes to a different force group,
-            // so anything from this point on won't affect what we do at earlier steps.
+        if (invalidatesForces[step]) {
+            // Forces and energies are invalidated at this step, so anything from this point on won't affect what we do at earlier steps.
 
             candidatePoints.clear();
         }
         if (needsForces[step] || needsEnergy[step]) {
             // See if this step affects what we do at earlier points.
 
-            for (int candidate : candidatePoints)
-                if ((needsForces[candidate] && needsEnergy[step]) || (needsEnergy[candidate] && needsForces[step]))
-                    computeBoth[candidate] = true;
+            for (auto candidate : candidatePoints)
+                if (candidate.second == forceGroup[step] && ((needsForces[candidate.first] && needsEnergy[step]) || (needsEnergy[candidate.first] && needsForces[step])))
+                    computeBoth[candidate.first] = true;
 
             // Add this to the list of candidates that might be affected by later steps.
 
-            candidatePoints.push_back(step);
-            currentGroup = forceGroup[step];
+            candidatePoints.push_back(make_pair(step, forceGroup[step]));
         }
     }
 }

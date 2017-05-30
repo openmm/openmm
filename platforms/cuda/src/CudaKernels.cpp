@@ -7594,6 +7594,8 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
     CudaIntegrationUtilities& integration = cu.getIntegrationUtilities();
     int numAtoms = cu.getNumAtoms();
     int numSteps = integrator.getNumComputations();
+    if (!forcesAreValid)
+        savedEnergy.clear();
 
     // Loop over computation steps in the integrator and execute them.
 
@@ -7602,8 +7604,11 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
     CUdeviceptr posCorrection = (cu.getUseMixedPrecision() ? cu.getPosqCorrection().getDevicePointer() : 0);
     for (int step = 0; step < numSteps; ) {
         int nextStep = step+1;
+        int forceGroups = forceGroupFlags[step];
         int lastForceGroups = context.getLastForceGroups();
-        if ((needsForces[step] || needsEnergy[step]) && (!forcesAreValid || lastForceGroups != forceGroupFlags[step])) {
+        bool haveForces = (!needsForces[step] || (forcesAreValid && lastForceGroups == forceGroups));
+        bool haveEnergy = (!needsEnergy[step] || savedEnergy.find(forceGroups) != savedEnergy.end());
+        if (!haveForces || !haveEnergy) {
             if (forcesAreValid) {
                 if (savedForces.find(lastForceGroups) != savedForces.end() && validSavedForces.find(lastForceGroups) == validSavedForces.end()) {
                     // The forces are still valid.  We just need a different force group right now.  Save the old
@@ -7621,16 +7626,16 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
             
             bool computeForce = (needsForces[step] || computeBothForceAndEnergy[step]);
             bool computeEnergy = (needsEnergy[step] || computeBothForceAndEnergy[step]);
-            if (!computeEnergy && validSavedForces.find(forceGroupFlags[step]) != validSavedForces.end()) {
+            if (!computeEnergy && validSavedForces.find(forceGroups) != validSavedForces.end()) {
                 // We can just restore the forces we saved earlier.
                 
-                savedForces[forceGroupFlags[step]]->copyTo(cu.getForce());
-                context.getLastForceGroups() = forceGroupFlags[step];
+                savedForces[forceGroups]->copyTo(cu.getForce());
+                context.getLastForceGroups() = forceGroups;
             }
             else {
                 recordChangedParameters(context);
-                energy = context.calcForcesAndEnergy(computeForce, computeEnergy, forceGroupFlags[step]);
-                energyFloat = (float) energy;
+                energy = context.calcForcesAndEnergy(computeForce, computeEnergy, forceGroups);
+                savedEnergy[forceGroups] = energy;
                 if (needsEnergyParamDerivs) {
                     context.getEnergyParameterDerivatives(energyParamDerivs);
                     if (perDofEnergyParamDerivNames.size() > 0) {
@@ -7648,6 +7653,10 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
                 }
             }
             forcesAreValid = true;
+        }
+        if (needsEnergy[step]) {
+            energy = savedEnergy[forceGroups];
+            energyFloat = (float) energy;
         }
         if (needsGlobals[step] && !deviceGlobalsAreCurrent) {
             // Upload the global values to the device.
@@ -7725,8 +7734,10 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
             if (blockEnd[step] != -1)
                 nextStep = blockEnd[step]; // Return to the start of a while block.
         }
-        if (invalidatesForces[step])
+        if (invalidatesForces[step]) {
             forcesAreValid = false;
+            savedEnergy.clear();
+        }
         step = nextStep;
     }
     recordChangedParameters(context);
