@@ -119,8 +119,6 @@ ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integ
     kernelNames.push_back(VirtualSitesKernel::Name());
     for (int i = 0; i < system.getNumForces(); ++i) {
         forceImpls.push_back(system.getForce(i).createImpl());
-        map<string, double> forceParameters = forceImpls[forceImpls.size()-1]->getDefaultParameters();
-        parameters.insert(forceParameters.begin(), forceParameters.end());
         vector<string> forceKernels = forceImpls[forceImpls.size()-1]->getKernelNames();
         kernelNames.insert(kernelNames.begin(), forceKernels.begin(), forceKernels.end());
     }
@@ -177,8 +175,11 @@ ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integ
     Vec3 periodicBoxVectors[3];
     system.getDefaultPeriodicBoxVectors(periodicBoxVectors[0], periodicBoxVectors[1], periodicBoxVectors[2]);
     updateStateDataKernel.getAs<UpdateStateDataKernel>().setPeriodicBoxVectors(*this, periodicBoxVectors[0], periodicBoxVectors[1], periodicBoxVectors[2]);
-    for (size_t i = 0; i < forceImpls.size(); ++i)
+    for (size_t i = 0; i < forceImpls.size(); ++i) {
         forceImpls[i]->initialize(*this);
+        map<string, double> forceParameters = forceImpls[i]->getDefaultParameters();
+        parameters.insert(forceParameters.begin(), forceParameters.end());
+    }
     integrator.initialize(*this);
     updateStateDataKernel.getAs<UpdateStateDataKernel>().setVelocities(*this, vector<Vec3>(numParticles));
 }

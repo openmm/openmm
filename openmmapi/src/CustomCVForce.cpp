@@ -148,6 +148,10 @@ ForceImpl* CustomCVForce::createImpl() const {
     return new CustomCVForceImpl(*this);
 }
 
+Context& CustomCVForce::getInnerContext(Context& context) {
+    return dynamic_cast<CustomCVForceImpl&>(getImplInContext(context)).getInnerContext();
+}
+
 bool CustomCVForce::usesPeriodicBoundaryConditions() const {
     for (auto& variable : variables)
         if (variable.variable->usesPeriodicBoundaryConditions())

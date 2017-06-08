@@ -78,6 +78,8 @@ KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Pla
         return new ReferenceCalcCustomCentroidBondForceKernel(name, platform);
     if (name == CalcCustomCompoundBondForceKernel::Name())
         return new ReferenceCalcCustomCompoundBondForceKernel(name, platform);
+    if (name == CalcCustomCVForceKernel::Name())
+        return new ReferenceCalcCustomCVForceKernel(name, platform);
     if (name == CalcCustomManyParticleForceKernel::Name())
         return new ReferenceCalcCustomManyParticleForceKernel(name, platform);
     if (name == CalcGayBerneForceKernel::Name())

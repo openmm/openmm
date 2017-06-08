@@ -71,6 +71,8 @@ void CustomCVForceImpl::initialize(ContextImpl& context) {
     for (auto& name : platform.getPropertyNames())
         properties[name] = platform.getPropertyValue(context.getOwner(), name);
     innerContext = new Context(innerSystem, innerIntegrator, platform, properties);
+    vector<Vec3> positions(system.getNumParticles(), Vec3());
+    innerContext->setPositions(positions);
     
     // Create the kernel.
     
@@ -92,6 +94,7 @@ vector<string> CustomCVForceImpl::getKernelNames() {
 
 map<string, double> CustomCVForceImpl::getDefaultParameters() {
     map<string, double> parameters;
+    parameters.insert(innerContext->getParameters().begin(), innerContext->getParameters().end());
     for (int i = 0; i < owner.getNumGlobalParameters(); i++)
         parameters[owner.getGlobalParameterName(i)] = owner.getGlobalParameterDefaultValue(i);
     return parameters;
@@ -101,7 +104,11 @@ void CustomCVForceImpl::getCollectiveVariableValues(ContextImpl& context, vector
     kernel.getAs<CalcCustomCVForceKernel>().copyState(context, getContextImpl(*innerContext));
     values.clear();
     for (int i = 0; i < innerSystem.getNumForces(); i++) {
-        double value = innerContext->getState(State::Energy).getPotentialEnergy();
+        double value = innerContext->getState(State::Energy, false, 1<<i).getPotentialEnergy();
         values.push_back(value);
     }
+}
+
+Context& CustomCVForceImpl::getInnerContext() {
+    return *innerContext;
 }

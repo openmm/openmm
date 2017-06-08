@@ -32,10 +32,11 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "TabulatedFunction.h"
 #include "Force.h"
-#include <vector>
+#include "TabulatedFunction.h"
 #include "internal/windowsExport.h"
+#include <string>
+#include <vector>
 
 namespace OpenMM {
 
@@ -236,6 +237,22 @@ public:
      *                       stored into this
      */
     void getCollectiveVariableValues(Context& context, std::vector<double>& values);
+    /**
+     * Get the inner Context used for evaluating collective variables.
+     * 
+     * When you create a Context for a System that contains a CustomCVForce, internally
+     * it creates a new System, adds the Forces that define the CVs to it, creates a new
+     * Context for that System, and uses it to evaluate the variables.  In most cases you
+     * can ignore all of this.  It is just an implementation detail.  However, there are
+     * a few cases where you need to directly access that internal Context.  For example,
+     * if you want to modify one of the Forces that defines a collective variable and
+     * call updateParametersInContext() on it, you need to pass that inner Context to it.
+     * This method returns a reference to it.
+     * 
+     * @param context    the Context containing the CustomCVForce
+     * @return the inner Context used to evaluate the collective variables
+     */
+    Context& getInnerContext(Context& context);
     /**
      * Returns whether or not this force makes use of periodic boundary
      * conditions.
