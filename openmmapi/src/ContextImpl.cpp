@@ -161,7 +161,9 @@ ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integ
             throw;
         }
     }
-    
+}
+
+void ContextImpl::initialize() {
     // Create and initialize kernels and other objects.
     
     initializeForcesKernel = platform->createKernel(CalcForcesAndEnergyKernel::Name(), *this);
@@ -181,7 +183,7 @@ ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integ
         parameters.insert(forceParameters.begin(), forceParameters.end());
     }
     integrator.initialize(*this);
-    updateStateDataKernel.getAs<UpdateStateDataKernel>().setVelocities(*this, vector<Vec3>(numParticles));
+    updateStateDataKernel.getAs<UpdateStateDataKernel>().setVelocities(*this, vector<Vec3>(system.getNumParticles()));
 }
 
 ContextImpl::~ContextImpl() {

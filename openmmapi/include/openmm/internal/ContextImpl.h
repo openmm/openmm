@@ -266,6 +266,7 @@ public:
     static std::vector<std::vector<int> > findMolecules(int numParticles, std::vector<std::vector<int> >& particleBonds);
 private:
     friend class Context;
+    void initialize();
     Context& owner;
     const System& system;
     Integrator& integrator;

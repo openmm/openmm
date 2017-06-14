@@ -2045,10 +2045,10 @@ double ReferenceCalcCustomCVForceKernel::execute(ContextImpl& context, ContextIm
 void ReferenceCalcCustomCVForceKernel::copyState(ContextImpl& context, ContextImpl& innerContext) {
     extractPositions(innerContext) = extractPositions(context);
     extractVelocities(innerContext) = extractVelocities(context);
-    extractBoxSize(innerContext) = extractBoxSize(context);
-    for (int i = 0; i < 3; i++)
-        extractBoxVectors(innerContext)[i] = extractBoxVectors(context)[i];
-    reinterpret_cast<ReferencePlatform::PlatformData*>(innerContext.getPlatformData())->time = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData())->time;
+    Vec3 a, b, c;
+    context.getPeriodicBoxVectors(a, b, c);
+    innerContext.setPeriodicBoxVectors(a, b, c);
+    innerContext.setTime(context.getTime());
     map<string, double> innerParameters = innerContext.getParameters();
     for (auto& param : innerParameters)
         innerContext.setParameter(param.first, context.getParameter(param.first));
