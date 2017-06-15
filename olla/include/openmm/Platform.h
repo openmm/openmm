@@ -128,6 +128,14 @@ public:
      */
     virtual void contextCreated(ContextImpl& context, const std::map<std::string, std::string>& properties) const;
     /**
+     * This is called whenever a new Context is created using ContextImpl::createLinkedContext().  It gives the
+     * Platform a chance to initialize the context and store platform-specific data in it.
+     *
+     * @param context          the newly created context
+     * @param originalContext  the original context it is linked to
+     */
+    virtual void linkedContextCreated(ContextImpl& context, ContextImpl& originalContext) const;
+    /**
      * This is called whenever a Context is deleted.  It gives the Platform a chance to clean up
      * any platform-specific data that was stored in it.
      */

@@ -2021,7 +2021,7 @@ ReferenceCalcCustomCVForceKernel::~ReferenceCalcCustomCVForceKernel() {
         delete ixn;
 }
 
-void ReferenceCalcCustomCVForceKernel::initialize(const System& system, const CustomCVForce& force) {
+void ReferenceCalcCustomCVForceKernel::initialize(const System& system, const CustomCVForce& force, ContextImpl& innerContext) {
     for (int i = 0; i < force.getNumGlobalParameters(); i++)
         globalParameterNames.push_back(force.getGlobalParameterName(i));
     for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++)

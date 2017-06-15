@@ -66,18 +66,14 @@ void CustomCVForceImpl::initialize(ContextImpl& context) {
     
     // Create the inner context.
     
-    Platform& platform = context.getPlatform();
-    map<string, string> properties;
-    for (auto& name : platform.getPropertyNames())
-        properties[name] = platform.getPropertyValue(context.getOwner(), name);
-    innerContext = new Context(innerSystem, innerIntegrator, platform, properties);
+    innerContext = context.createLinkedContext(innerSystem, innerIntegrator);
     vector<Vec3> positions(system.getNumParticles(), Vec3());
     innerContext->setPositions(positions);
     
     // Create the kernel.
     
     kernel = context.getPlatform().createKernel(CalcCustomCVForceKernel::Name(), context);
-    kernel.getAs<CalcCustomCVForceKernel>().initialize(context.getSystem(), owner);
+    kernel.getAs<CalcCustomCVForceKernel>().initialize(context.getSystem(), owner, getContextImpl(*innerContext));
 }
 
 double CustomCVForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {

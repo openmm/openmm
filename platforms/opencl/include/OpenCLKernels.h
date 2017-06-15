@@ -1222,8 +1222,9 @@ public:
      *
      * @param system     the System this kernel will be applied to
      * @param force      the CustomCVForce this kernel will be used for
+     * @param innerContext   the context created by the CustomCVForce for computing collective variables
      */
-    void initialize(const System& system, const CustomCVForce& force);
+    void initialize(const System& system, const CustomCVForce& force, ContextImpl& innerContext);
     /**
      * Execute the kernel to calculate the forces and/or energy.
      *

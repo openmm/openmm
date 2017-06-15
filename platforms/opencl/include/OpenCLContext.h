@@ -163,7 +163,8 @@ public:
     class ForcePostComputation;
     static const int ThreadBlockSize;
     static const int TileSize;
-    OpenCLContext(const System& system, int platformIndex, int deviceIndex, const std::string& precision, OpenCLPlatform::PlatformData& platformData);
+    OpenCLContext(const System& system, int platformIndex, int deviceIndex, const std::string& precision, OpenCLPlatform::PlatformData& platformData,
+        OpenCLContext* originalContext);
     ~OpenCLContext();
     /**
      * This is called to initialize internal data structures after all Forces in the system

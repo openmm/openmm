@@ -6879,12 +6879,11 @@ public:
     ReorderListener(OpenCLContext& cl, OpenCLArray& invAtomOrder) : cl(cl), invAtomOrder(invAtomOrder) {
     }
     void execute() {
-        vector<cl_int> invOrder(cl.getNumAtoms());
+        vector<cl_int> invOrder(cl.getPaddedNumAtoms());
         const vector<int>& order = cl.getAtomIndex();
         for (int i = 0; i < order.size(); i++)
             invOrder[order[i]] = i;
         invAtomOrder.upload(invOrder);
-        cl.getQueue().finish();
     }
 private:
     OpenCLContext& cl;
@@ -6900,7 +6899,7 @@ OpenCLCalcCustomCVForceKernel::~OpenCLCalcCustomCVForceKernel() {
         delete innerInvAtomOrder;
 }
 
-void OpenCLCalcCustomCVForceKernel::initialize(const System& system, const CustomCVForce& force) {
+void OpenCLCalcCustomCVForceKernel::initialize(const System& system, const CustomCVForce& force, ContextImpl& innerContext) {
     int numCVs = force.getNumCollectiveVariables();
     cl.addForce(new OpenCLForceInfo(1));
     for (int i = 0; i < force.getNumGlobalParameters(); i++)
@@ -6925,20 +6924,27 @@ void OpenCLCalcCustomCVForceKernel::initialize(const System& system, const Custo
         string name = force.getEnergyParameterDerivativeName(i);
         paramDerivNames.push_back(name);
         paramDerivExpressions.push_back(energyExpr.differentiate(name).optimize().createProgram());
+        cl.addEnergyParameterDerivative(name);
     }
 
     // Delete the custom functions.
 
     for (auto& function : functions)
         delete function.second;
+        
+    // Copy parameter derivatives from the inner context.
+
+    OpenCLContext& cl2 = *reinterpret_cast<OpenCLPlatform::PlatformData*>(innerContext.getPlatformData())->contexts[0];
+    for (auto& param : cl2.getEnergyParamDerivNames())
+        cl.addEnergyParameterDerivative(param);
     
     // Create arrays for storing information.
     
     int elementSize = (cl.getUseDoublePrecision() || cl.getUseMixedPrecision() ? sizeof(double) : sizeof(float));
     for (int i = 0; i < numCVs; i++)
-        cvForces.push_back(new OpenCLArray(cl, cl.getNumAtoms(), elementSize, "cvForce"));
-    invAtomOrder = OpenCLArray::create<cl_int>(cl, cl.getNumAtoms(), "invAtomOrder");
-    innerInvAtomOrder = OpenCLArray::create<cl_int>(cl, cl.getNumAtoms(), "innerInvAtomOrder");
+        cvForces.push_back(new OpenCLArray(cl, cl.getNumAtoms(), 4*elementSize, "cvForce"));
+    invAtomOrder = OpenCLArray::create<cl_int>(cl, cl.getPaddedNumAtoms(), "invAtomOrder");
+    innerInvAtomOrder = OpenCLArray::create<cl_int>(cl, cl.getPaddedNumAtoms(), "innerInvAtomOrder");
     
     // Create the kernels.
     
@@ -6984,8 +6990,8 @@ double OpenCLCalcCustomCVForceKernel::execute(ContextImpl& context, ContextImpl&
             addForcesKernel.setArg<cl_double>(2*i+3, dEdV);
         else
             addForcesKernel.setArg<cl_float>(2*i+3, dEdV);
-        cl.executeKernel(addForcesKernel, numAtoms);
     }
+    cl.executeKernel(addForcesKernel, numAtoms);
     
     // Compute the energy parameter derivatives.
     
@@ -7002,12 +7008,12 @@ double OpenCLCalcCustomCVForceKernel::execute(ContextImpl& context, ContextImpl&
 
 void OpenCLCalcCustomCVForceKernel::copyState(ContextImpl& context, ContextImpl& innerContext) {
     int numAtoms = cl.getNumAtoms();
+    OpenCLContext& cl2 = *reinterpret_cast<OpenCLPlatform::PlatformData*>(innerContext.getPlatformData())->contexts[0];
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;
         
         // Initialize the listeners.
         
-        OpenCLContext& cl2 = *reinterpret_cast<OpenCLPlatform::PlatformData*>(innerContext.getPlatformData())->contexts[0];
         ReorderListener* listener1 = new ReorderListener(cl, *invAtomOrder);
         ReorderListener* listener2 = new ReorderListener(cl2, *innerInvAtomOrder);
         cl.addReorderListener(listener1);

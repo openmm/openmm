@@ -53,7 +53,7 @@ using namespace std;
 const static char CHECKPOINT_MAGIC_BYTES[] = "OpenMM Binary Checkpoint\n";
 
 
-ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integrator, Platform* platform, const map<string, string>& properties) :
+ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integrator, Platform* platform, const map<string, string>& properties, ContextImpl* originalContext) :
         owner(owner), system(system), integrator(integrator), hasInitializedForces(false), hasSetPositions(false), integratorIsDeleted(false),
         lastForceGroups(-1), platform(platform), platformData(NULL) {
     int numParticles = system.getNumParticles();
@@ -152,7 +152,10 @@ ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integ
     for (int i = candidatePlatforms.size()-1; i >= 0; i--) {
         try {
             this->platform = platform = candidatePlatforms[i].second;
-            platform->contextCreated(*this, validatedProperties);
+            if (originalContext == NULL)
+                platform->contextCreated(*this, validatedProperties);
+            else
+                platform->linkedContextCreated(*this, *originalContext);
             break;
         }
         catch (...) {
@@ -480,4 +483,8 @@ void ContextImpl::loadCheckpoint(istream& stream) {
 
 void ContextImpl::systemChanged() {
     integrator.stateChanged(State::Energy);
+}
+
+Context* ContextImpl::createLinkedContext(const System& system, Integrator& integrator) {
+    return new Context(system, integrator, *this);
 }

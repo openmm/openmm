@@ -67,7 +67,7 @@ static void CL_CALLBACK errorCallback(const char* errinfo, const void* private_i
     std::cerr << "OpenCL internal error: " << errinfo << std::endl;
 }
 
-OpenCLContext::OpenCLContext(const System& system, int platformIndex, int deviceIndex, const string& precision, OpenCLPlatform::PlatformData& platformData) :
+OpenCLContext::OpenCLContext(const System& system, int platformIndex, int deviceIndex, const string& precision, OpenCLPlatform::PlatformData& platformData, OpenCLContext* originalContext) :
         system(system), time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), stepsSinceReorder(99999), atomsWereReordered(false), posq(NULL),
         posqCorrection(NULL), velm(NULL), forceBuffers(NULL), longForceBuffer(NULL), energyBuffer(NULL), energyParamDerivBuffer(NULL), atomIndexDevice(NULL),
         chargeBuffer(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
@@ -261,8 +261,14 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
         vector<cl::Device> contextDevices;
         contextDevices.push_back(device);
         cl_context_properties cprops[] = {CL_CONTEXT_PLATFORM, (cl_context_properties) platforms[bestPlatform](), 0};
-        context = cl::Context(contextDevices, cprops, errorCallback);
-        defaultQueue = cl::CommandQueue(context, device);
+        if (originalContext == NULL) {
+            context = cl::Context(contextDevices, cprops, errorCallback);
+            defaultQueue = cl::CommandQueue(context, device);
+        }
+        else {
+            context = originalContext->context;
+            defaultQueue = originalContext->defaultQueue;
+        }
         currentQueue = defaultQueue;
         numAtoms = system.getNumParticles();
         paddedNumAtoms = TileSize*((numAtoms+TileSize-1)/TileSize);

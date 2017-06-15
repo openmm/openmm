@@ -28,7 +28,7 @@ __kernel void copyForces(__global real4* forces, __global int* restrict invAtomO
 /**
  * Add all the forces from the CVs.
  */
-__kernel void addForces(__global real4* forces, int numAtoms, int numCVs
+__kernel void addForces(__global real4* forces, int numAtoms
     PARAMETER_ARGUMENTS) {
     for (int i = get_global_id(0); i < numAtoms; i += get_global_size(0)) {
         real4 f = forces[i];
