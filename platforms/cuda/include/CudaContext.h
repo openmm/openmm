@@ -77,7 +77,8 @@ public:
     static const int ThreadBlockSize;
     static const int TileSize;
     CudaContext(const System& system, int deviceIndex, bool useBlockingSync, const std::string& precision,
-            const std::string& compiler, const std::string& tempDir, const std::string& hostCompiler, CudaPlatform::PlatformData& platformData);
+            const std::string& compiler, const std::string& tempDir, const std::string& hostCompiler, CudaPlatform::PlatformData& platformData,
+            CudaContext* originalContext);
     ~CudaContext();
     /**
      * This is called to initialize internal data structures after all Forces in the system
@@ -622,6 +623,7 @@ private:
     int numAtomBlocks;
     int numThreadBlocks;
     bool useBlockingSync, useDoublePrecision, useMixedPrecision, contextIsValid, atomsWereReordered, boxIsTriclinic, hasCompilerKernel, isNvccAvailable, forcesValid;
+    bool isLinkedContext;
     std::string compiler, tempDir, cacheDir, gpuArchitecture;
     float4 periodicBoxVecXFloat, periodicBoxVecYFloat, periodicBoxVecZFloat, periodicBoxSizeFloat, invPeriodicBoxSizeFloat;
     double4 periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ, periodicBoxSize, invPeriodicBoxSize;

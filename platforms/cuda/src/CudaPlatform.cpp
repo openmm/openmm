@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2017 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -91,6 +91,7 @@ CudaPlatform::CudaPlatform() {
     registerKernelFactory(CalcCustomHbondForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomCentroidBondForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomCompoundBondForceKernel::Name(), factory);
+    registerKernelFactory(CalcCustomCVForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomManyParticleForceKernel::Name(), factory);
     registerKernelFactory(CalcGayBerneForceKernel::Name(), factory);
     registerKernelFactory(IntegrateVerletStepKernel::Name(), factory);
@@ -198,7 +199,23 @@ void CudaPlatform::contextCreated(ContextImpl& context, const map<string, string
     if (threadsEnv != NULL)
         stringstream(threadsEnv) >> threads;
     context.setPlatformData(new PlatformData(&context, context.getSystem(), devicePropValue, blockingPropValue, precisionPropValue, cpuPmePropValue, compilerPropValue, tempPropValue,
-            hostCompilerPropValue, pmeStreamPropValue, deterministicForcesValue, threads));
+            hostCompilerPropValue, pmeStreamPropValue, deterministicForcesValue, threads, NULL));
+}
+
+void CudaPlatform::linkedContextCreated(ContextImpl& context, ContextImpl& originalContext) const {
+    Platform& platform = originalContext.getPlatform();
+    string devicePropValue = platform.getPropertyValue(originalContext.getOwner(), CudaDeviceIndex());
+    string blockingPropValue = platform.getPropertyValue(originalContext.getOwner(), CudaUseBlockingSync());
+    string precisionPropValue = platform.getPropertyValue(originalContext.getOwner(), CudaPrecision());
+    string cpuPmePropValue = platform.getPropertyValue(originalContext.getOwner(), CudaUseCpuPme());
+    string compilerPropValue = platform.getPropertyValue(originalContext.getOwner(), CudaCompiler());
+    string tempPropValue = platform.getPropertyValue(originalContext.getOwner(), CudaTempDirectory());
+    string hostCompilerPropValue = platform.getPropertyValue(originalContext.getOwner(), CudaHostCompiler());
+    string pmeStreamPropValue = platform.getPropertyValue(originalContext.getOwner(), CudaDisablePmeStream());
+    string deterministicForcesValue = platform.getPropertyValue(originalContext.getOwner(), CudaDeterministicForces());
+    int threads = reinterpret_cast<PlatformData*>(originalContext.getPlatformData())->threads.getNumThreads();
+    context.setPlatformData(new PlatformData(&context, context.getSystem(), devicePropValue, blockingPropValue, precisionPropValue, cpuPmePropValue, compilerPropValue, tempPropValue,
+            hostCompilerPropValue, pmeStreamPropValue, deterministicForcesValue, threads, &originalContext));
 }
 
 void CudaPlatform::contextDestroyed(ContextImpl& context) const {
@@ -208,7 +225,7 @@ void CudaPlatform::contextDestroyed(ContextImpl& context) const {
 
 CudaPlatform::PlatformData::PlatformData(ContextImpl* context, const System& system, const string& deviceIndexProperty, const string& blockingProperty, const string& precisionProperty,
             const string& cpuPmeProperty, const string& compilerProperty, const string& tempProperty, const string& hostCompilerProperty, const string& pmeStreamProperty,
-            const string& deterministicForcesProperty, int numThreads) :
+            const string& deterministicForcesProperty, int numThreads, ContextImpl* originalContext) :
                 context(context), removeCM(false), stepCount(0), computeForceCount(0), time(0.0), hasInitializedContexts(false), threads(numThreads) {
     bool blocking = (blockingProperty == "true");
     vector<string> devices;
@@ -218,16 +235,19 @@ CudaPlatform::PlatformData::PlatformData(ContextImpl* context, const System& sys
         searchPos = nextPos+1;
     }
     devices.push_back(deviceIndexProperty.substr(searchPos));
+    PlatformData* originalData = NULL;
+    if (originalContext != NULL)
+        originalData = reinterpret_cast<PlatformData*>(originalContext->getPlatformData());
     try {
         for (int i = 0; i < (int) devices.size(); i++) {
             if (devices[i].length() > 0) {
                 int deviceIndex;
                 stringstream(devices[i]) >> deviceIndex;
-                contexts.push_back(new CudaContext(system, deviceIndex, blocking, precisionProperty, compilerProperty, tempProperty, hostCompilerProperty, *this));
+                contexts.push_back(new CudaContext(system, deviceIndex, blocking, precisionProperty, compilerProperty, tempProperty, hostCompilerProperty, *this, (originalData == NULL ? NULL : originalData->contexts[i])));
             }
         }
         if (contexts.size() == 0)
-            contexts.push_back(new CudaContext(system, -1, blocking, precisionProperty, compilerProperty, tempProperty, hostCompilerProperty, *this));
+            contexts.push_back(new CudaContext(system, -1, blocking, precisionProperty, compilerProperty, tempProperty, hostCompilerProperty, *this, (originalData == NULL ? NULL : originalData->contexts[0])));
     }
     catch (...) {
         // If an exception was thrown, do our best to clean up memory.

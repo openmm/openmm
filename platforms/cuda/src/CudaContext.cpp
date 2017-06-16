@@ -106,7 +106,7 @@ static int executeInWindows(const string &command) {
 #endif
 
 CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlockingSync, const string& precision, const string& compiler,
-        const string& tempDir, const std::string& hostCompiler, CudaPlatform::PlatformData& platformData) : system(system), currentStream(0),
+        const string& tempDir, const std::string& hostCompiler, CudaPlatform::PlatformData& platformData, CudaContext* originalContext) : system(system), currentStream(0),
         time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), stepsSinceReorder(99999), contextIsValid(false), atomsWereReordered(false), hasCompilerKernel(false), isNvccAvailable(false),
         pinnedBuffer(NULL), posq(NULL), posqCorrection(NULL), velm(NULL), force(NULL), energyBuffer(NULL), energyParamDerivBuffer(NULL), atomIndexDevice(NULL), chargeBuffer(NULL),
         integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
@@ -173,40 +173,49 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     cacheDir = cacheDir+"/";
 #endif
     contextIndex = platformData.contexts.size();
-    int numDevices;
     string errorMessage = "Error initializing Context";
-    CHECK_RESULT(cuDeviceGetCount(&numDevices));
-    if (deviceIndex < -1 || deviceIndex >= numDevices)
-        throw OpenMMException("Illegal value for DeviceIndex: "+intToString(deviceIndex));
+    if (originalContext == NULL) {
+        isLinkedContext = false;
+        int numDevices;
+        CHECK_RESULT(cuDeviceGetCount(&numDevices));
+        if (deviceIndex < -1 || deviceIndex >= numDevices)
+            throw OpenMMException("Illegal value for DeviceIndex: "+intToString(deviceIndex));
 
-    vector<int> devicePrecedence;
-    if (deviceIndex == -1) {
-        devicePrecedence = getDevicePrecedence();
-    } else {
-        devicePrecedence.push_back(deviceIndex);
-    }
-
-    this->deviceIndex = -1;
-    for (int i = 0; i < static_cast<int>(devicePrecedence.size()); i++) {
-        int trialDeviceIndex = devicePrecedence[i];
-        CHECK_RESULT(cuDeviceGet(&device, trialDeviceIndex));
-        defaultOptimizationOptions = "--use_fast_math";
-        unsigned int flags = CU_CTX_MAP_HOST;
-        if (useBlockingSync)
-            flags += CU_CTX_SCHED_BLOCKING_SYNC;
-        else
-            flags += CU_CTX_SCHED_SPIN;
-
-        if (cuCtxCreate(&context, flags, device) == CUDA_SUCCESS) {
-            this->deviceIndex = trialDeviceIndex;
-            break;
+        vector<int> devicePrecedence;
+        if (deviceIndex == -1) {
+            devicePrecedence = getDevicePrecedence();
+        } else {
+            devicePrecedence.push_back(deviceIndex);
         }
+
+        this->deviceIndex = -1;
+        for (int i = 0; i < static_cast<int>(devicePrecedence.size()); i++) {
+            int trialDeviceIndex = devicePrecedence[i];
+            CHECK_RESULT(cuDeviceGet(&device, trialDeviceIndex));
+            defaultOptimizationOptions = "--use_fast_math";
+            unsigned int flags = CU_CTX_MAP_HOST;
+            if (useBlockingSync)
+                flags += CU_CTX_SCHED_BLOCKING_SYNC;
+            else
+                flags += CU_CTX_SCHED_SPIN;
+
+            if (cuCtxCreate(&context, flags, device) == CUDA_SUCCESS) {
+                this->deviceIndex = trialDeviceIndex;
+                break;
+            }
+        }
+        if (this->deviceIndex == -1)
+            if (deviceIndex != -1)
+                throw OpenMMException("The requested CUDA device could not be loaded");
+            else
+                throw OpenMMException("No compatible CUDA device is available");
     }
-    if (this->deviceIndex == -1)
-        if (deviceIndex != -1)
-            throw OpenMMException("The requested CUDA device could not be loaded");
-        else
-            throw OpenMMException("No compatible CUDA device is available");
+    else {
+        isLinkedContext = true;
+        context = originalContext->context;
+        this->deviceIndex = originalContext->deviceIndex;
+        this->device = originalContext->device;
+    }
 
     int major, minor;
     CHECK_RESULT(cuDeviceComputeCapability(&major, &minor, device));
@@ -428,7 +437,7 @@ CudaContext::~CudaContext() {
     if (thread != NULL)
         delete thread;
     string errorMessage = "Error deleting Context";
-    if (contextIsValid) {
+    if (contextIsValid && !isLinkedContext) {
         cuProfilerStop();
         CHECK_RESULT(cuCtxDestroy(context));
     }

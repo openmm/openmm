@@ -37,8 +37,10 @@
 #include "openmm/CustomBondForce.h"
 #include "openmm/CustomCVForce.h"
 #include "openmm/CustomExternalForce.h"
+#include "openmm/CustomNonbondedForce.h"
 #include "openmm/System.h"
 #include "openmm/VerletIntegrator.h"
+#include "sfmt/SFMT.h"
 #include <iostream>
 #include <vector>
 
@@ -176,6 +178,50 @@ void testTabulatedFunction() {
     }
 }
 
+void testReordering() {
+    // Create a larger system with a nonbonded force, since that will trigger atom
+    // reordering on the GPU.
+    
+    const int numParticles = 100;
+    System system;
+    CustomCVForce* cv = new CustomCVForce("2*v2");
+    CustomNonbondedForce* v1 = new CustomNonbondedForce("r");
+    v1->addPerParticleParameter("a");
+    CustomBondForce* v2 = new CustomBondForce("r+1");
+    v2->addBond(5, 10);
+    cv->addCollectiveVariable("v1", v1);
+    cv->addCollectiveVariable("v2", v2);
+    cv->setForceGroup(2);
+    system.addForce(cv);
+    CustomNonbondedForce* nb = new CustomNonbondedForce("r^2");
+    nb->addPerParticleParameter("a");
+    system.addForce(nb);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    vector<Vec3> positions;
+    vector<double> params(1);
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(1.0);
+        params[0] = i%2;
+        v1->addParticle(params);
+        params[0] = (i < numParticles/2 ? 2.0 : 3.0);
+        nb->addParticle(params);
+        positions.push_back(Vec3(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt))*10);
+    }
+    
+    // Make sure it works correctly.
+    
+    VerletIntegrator integrator(0.01);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    State state = context.getState(State::Energy | State::Forces, false, 1<<2);
+    Vec3 delta = positions[5]-positions[10];
+    double r = sqrt(delta.dot(delta));
+    ASSERT_EQUAL_TOL(2*(r+1), state.getPotentialEnergy(), 1e-5);
+    ASSERT_EQUAL_VEC(-delta*2/r, state.getForces()[5], 1e-5);
+    ASSERT_EQUAL_VEC(delta*2/r, state.getForces()[10], 1e-5);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -184,6 +230,7 @@ int main(int argc, char* argv[]) {
         testCVs();
         testEnergyParameterDerivatives();
         testTabulatedFunction();
+        testReordering();
         runPlatformTests();
     }
     catch(const exception& e) {
