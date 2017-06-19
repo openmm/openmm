@@ -286,6 +286,10 @@ public:
      */
     void clearAutoclearBuffers();
     /**
+     * Sum the buffer containing energy.
+     */
+    double reduceEnergy();
+    /**
      * Get the current simulation time.
      */
     double getTime() {
@@ -638,6 +642,7 @@ private:
     CUfunction clearFourBuffersKernel;
     CUfunction clearFiveBuffersKernel;
     CUfunction clearSixBuffersKernel;
+    CUfunction reduceEnergyKernel;
     CUfunction setChargesKernel;
     std::vector<CudaForceInfo*> forces;
     std::vector<Molecule> molecules;
@@ -649,6 +654,7 @@ private:
     CudaArray* velm;
     CudaArray* force;
     CudaArray* energyBuffer;
+    CudaArray* energySum;
     CudaArray* energyParamDerivBuffer;
     CudaArray* atomIndexDevice;
     CudaArray* chargeBuffer;

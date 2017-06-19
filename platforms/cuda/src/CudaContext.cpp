@@ -108,7 +108,7 @@ static int executeInWindows(const string &command) {
 CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlockingSync, const string& precision, const string& compiler,
         const string& tempDir, const std::string& hostCompiler, CudaPlatform::PlatformData& platformData, CudaContext* originalContext) : system(system), currentStream(0),
         time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), stepsSinceReorder(99999), contextIsValid(false), atomsWereReordered(false), hasCompilerKernel(false), isNvccAvailable(false),
-        pinnedBuffer(NULL), posq(NULL), posqCorrection(NULL), velm(NULL), force(NULL), energyBuffer(NULL), energyParamDerivBuffer(NULL), atomIndexDevice(NULL), chargeBuffer(NULL),
+        pinnedBuffer(NULL), posq(NULL), posqCorrection(NULL), velm(NULL), force(NULL), energyBuffer(NULL), energySum(NULL), energyParamDerivBuffer(NULL), atomIndexDevice(NULL), chargeBuffer(NULL),
         integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
     // Determine what compiler to use.
     
@@ -307,6 +307,7 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     clearFourBuffersKernel = getKernel(utilities, "clearFourBuffers");
     clearFiveBuffersKernel = getKernel(utilities, "clearFiveBuffers");
     clearSixBuffersKernel = getKernel(utilities, "clearSixBuffers");
+    reduceEnergyKernel = getKernel(utilities, "reduceEnergy");
     setChargesKernel = getKernel(utilities, "setCharges");
 
     // Set defines based on the requested precision.
@@ -420,6 +421,8 @@ CudaContext::~CudaContext() {
         delete force;
     if (energyBuffer != NULL)
         delete energyBuffer;
+    if (energySum != NULL)
+        delete energySum;
     if (energyParamDerivBuffer != NULL)
         delete energyParamDerivBuffer;
     if (atomIndexDevice != NULL)
@@ -450,16 +453,19 @@ void CudaContext::initialize() {
     int numEnergyBuffers = max(numThreadBlocks*ThreadBlockSize, nonbonded->getNumEnergyBuffers());
     if (useDoublePrecision) {
         energyBuffer = CudaArray::create<double>(*this, numEnergyBuffers, "energyBuffer");
+        energySum = CudaArray::create<double>(*this, 1, "energySum");
         int pinnedBufferSize = max(paddedNumAtoms*4, numEnergyBuffers);
         CHECK_RESULT(cuMemHostAlloc(&pinnedBuffer, pinnedBufferSize*sizeof(double), 0));
     }
     else if (useMixedPrecision) {
         energyBuffer = CudaArray::create<double>(*this, numEnergyBuffers, "energyBuffer");
+        energySum = CudaArray::create<double>(*this, 1, "energySum");
         int pinnedBufferSize = max(paddedNumAtoms*4, numEnergyBuffers);
         CHECK_RESULT(cuMemHostAlloc(&pinnedBuffer, pinnedBufferSize*sizeof(double), 0));
     }
     else {
         energyBuffer = CudaArray::create<float>(*this, numEnergyBuffers, "energyBuffer");
+        energySum = CudaArray::create<float>(*this, 1, "energySum");
         int pinnedBufferSize = max(paddedNumAtoms*6, numEnergyBuffers);
         CHECK_RESULT(cuMemHostAlloc(&pinnedBuffer, pinnedBufferSize*sizeof(float), 0));
     }
@@ -877,6 +883,18 @@ void CudaContext::clearAutoclearBuffers() {
     else if (total-base == 1) {
         clearBuffer(autoclearBuffers[base], autoclearBufferSizes[base]*4);
     }
+}
+
+double CudaContext::reduceEnergy() {
+    int bufferSize = energyBuffer->getSize();
+    int workGroupSize  = 512;
+    void* args[] = {&energyBuffer->getDevicePointer(), &energySum->getDevicePointer(), &bufferSize, &workGroupSize};
+    executeKernel(reduceEnergyKernel, args, workGroupSize, workGroupSize, workGroupSize*energyBuffer->getElementSize());
+    energySum->download(pinnedBuffer);
+    if (getUseDoublePrecision() || getUseMixedPrecision())
+        return *((double*) pinnedBuffer);
+    else
+        return *((float*) pinnedBuffer);
 }
 
 void CudaContext::setCharges(const vector<double>& charges) {

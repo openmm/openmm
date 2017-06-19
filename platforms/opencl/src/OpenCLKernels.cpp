@@ -139,21 +139,8 @@ double OpenCLCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, 
         sum += computation->computeForceAndEnergy(includeForces, includeEnergy, groups);
     cl.reduceForces();
     cl.getIntegrationUtilities().distributeForcesFromVirtualSites();
-    if (includeEnergy) {
-        OpenCLArray& energyArray = cl.getEnergyBuffer();
-        if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {
-            double* energy = (double*) cl.getPinnedBuffer();
-            energyArray.download(energy);
-            for (int i = 0; i < energyArray.getSize(); i++)
-                sum += energy[i];
-        }
-        else {
-            float* energy = (float*) cl.getPinnedBuffer();
-            energyArray.download(energy);
-            for (int i = 0; i < energyArray.getSize(); i++)
-                sum += energy[i];
-        }
-    }
+    if (includeEnergy)
+        sum += cl.reduceEnergy();
     if (!cl.getForcesValid())
         valid = false;
     return sum;

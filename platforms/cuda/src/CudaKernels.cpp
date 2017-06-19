@@ -115,21 +115,8 @@ double CudaCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bo
     for (auto computation : cu.getPostComputations())
         sum += computation->computeForceAndEnergy(includeForces, includeEnergy, groups);
     cu.getIntegrationUtilities().distributeForcesFromVirtualSites();
-    if (includeEnergy) {
-        CudaArray& energyArray = cu.getEnergyBuffer();
-        if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
-            double* energy = (double*) cu.getPinnedBuffer();
-            energyArray.download(energy);
-            for (int i = 0; i < energyArray.getSize(); i++)
-                sum += energy[i];
-        }
-        else {
-            float* energy = (float*) cu.getPinnedBuffer();
-            energyArray.download(energy);
-            for (int i = 0; i < energyArray.getSize(); i++)
-                sum += energy[i];
-        }
-    }
+    if (includeEnergy)
+        sum += cu.reduceEnergy();
     if (!cu.getForcesValid())
         valid = false;
     return sum;

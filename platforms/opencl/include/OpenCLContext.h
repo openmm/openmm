@@ -364,9 +364,13 @@ public:
      */
     void reduceBuffer(OpenCLArray& array, int numBuffers);
     /**
-     * Sum the buffesr containing forces.
+     * Sum the buffers containing forces.
      */
     void reduceForces();
+    /**
+     * Sum the buffer containing energy.
+     */
+    double reduceEnergy();
     /**
      * Get the current simulation time.
      */
@@ -750,6 +754,7 @@ private:
     cl::Kernel clearSixBuffersKernel;
     cl::Kernel reduceReal4Kernel;
     cl::Kernel reduceForcesKernel;
+    cl::Kernel reduceEnergyKernel;
     cl::Kernel setChargesKernel;
     std::vector<OpenCLForceInfo*> forces;
     std::vector<Molecule> molecules;
@@ -764,6 +769,7 @@ private:
     OpenCLArray* forceBuffers;
     OpenCLArray* longForceBuffer;
     OpenCLArray* energyBuffer;
+    OpenCLArray* energySum;
     OpenCLArray* energyParamDerivBuffer;
     OpenCLArray* atomIndexDevice;
     OpenCLArray* chargeBuffer;

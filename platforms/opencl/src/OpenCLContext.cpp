@@ -69,7 +69,7 @@ static void CL_CALLBACK errorCallback(const char* errinfo, const void* private_i
 
 OpenCLContext::OpenCLContext(const System& system, int platformIndex, int deviceIndex, const string& precision, OpenCLPlatform::PlatformData& platformData, OpenCLContext* originalContext) :
         system(system), time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), stepsSinceReorder(99999), atomsWereReordered(false), posq(NULL),
-        posqCorrection(NULL), velm(NULL), forceBuffers(NULL), longForceBuffer(NULL), energyBuffer(NULL), energyParamDerivBuffer(NULL), atomIndexDevice(NULL),
+        posqCorrection(NULL), velm(NULL), forceBuffers(NULL), longForceBuffer(NULL), energyBuffer(NULL), energySum(NULL), energyParamDerivBuffer(NULL), atomIndexDevice(NULL),
         chargeBuffer(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
     if (precision == "single") {
         useDoublePrecision = false;
@@ -315,6 +315,7 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
     reduceReal4Kernel = cl::Kernel(utilities, "reduceReal4Buffer");
     if (supports64BitGlobalAtomics)
         reduceForcesKernel = cl::Kernel(utilities, "reduceForces");
+    reduceEnergyKernel = cl::Kernel(utilities, "reduceEnergy");
     setChargesKernel = cl::Kernel(utilities, "setCharges");
 
     // Decide whether native_sqrt(), native_rsqrt(), and native_recip() are sufficiently accurate to use.
@@ -442,6 +443,8 @@ OpenCLContext::~OpenCLContext() {
         delete longForceBuffer;
     if (energyBuffer != NULL)
         delete energyBuffer;
+    if (energySum != NULL)
+        delete energySum;
     if (energyParamDerivBuffer != NULL)
         delete energyParamDerivBuffer;
     if (atomIndexDevice != NULL)
@@ -471,11 +474,19 @@ void OpenCLContext::initialize() {
         forceBuffers = OpenCLArray::create<mm_double4>(*this, paddedNumAtoms*numForceBuffers, "forceBuffers");
         force = OpenCLArray::create<mm_double4>(*this, &forceBuffers->getDeviceBuffer(), paddedNumAtoms, "force");
         energyBuffer = OpenCLArray::create<cl_double>(*this, energyBufferSize, "energyBuffer");
+        energySum = OpenCLArray::create<cl_double>(*this, 1, "energySum");
+    }
+    else if (useMixedPrecision) {
+        forceBuffers = OpenCLArray::create<mm_float4>(*this, paddedNumAtoms*numForceBuffers, "forceBuffers");
+        force = OpenCLArray::create<mm_float4>(*this, &forceBuffers->getDeviceBuffer(), paddedNumAtoms, "force");
+        energyBuffer = OpenCLArray::create<cl_double>(*this, energyBufferSize, "energyBuffer");
+        energySum = OpenCLArray::create<cl_double>(*this, 1, "energySum");
     }
     else {
         forceBuffers = OpenCLArray::create<mm_float4>(*this, paddedNumAtoms*numForceBuffers, "forceBuffers");
         force = OpenCLArray::create<mm_float4>(*this, &forceBuffers->getDeviceBuffer(), paddedNumAtoms, "force");
-        energyBuffer = OpenCLArray::create<cl_double>(*this, energyBufferSize, "energyBuffer");
+        energyBuffer = OpenCLArray::create<cl_float>(*this, energyBufferSize, "energyBuffer");
+        energySum = OpenCLArray::create<cl_float>(*this, 1, "energySum");
     }
     if (supports64BitGlobalAtomics) {
         longForceBuffer = OpenCLArray::create<cl_long>(*this, 3*paddedNumAtoms, "longForceBuffer");
@@ -754,6 +765,28 @@ void OpenCLContext::reduceBuffer(OpenCLArray& array, int numBuffers) {
     reduceReal4Kernel.setArg<cl_int>(1, bufferSize);
     reduceReal4Kernel.setArg<cl_int>(2, numBuffers);
     executeKernel(reduceReal4Kernel, bufferSize, 128);
+}
+
+double OpenCLContext::reduceEnergy() {
+    int workGroupSize  = device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>();
+    if (workGroupSize > 512)
+        workGroupSize = 512;
+    reduceEnergyKernel.setArg<cl::Buffer>(0, energyBuffer->getDeviceBuffer());
+    reduceEnergyKernel.setArg<cl::Buffer>(1, energySum->getDeviceBuffer());
+    reduceEnergyKernel.setArg<cl_int>(2, energyBuffer->getSize());
+    reduceEnergyKernel.setArg<cl_int>(3, workGroupSize);
+    reduceEnergyKernel.setArg(4, workGroupSize*energyBuffer->getElementSize(), NULL);
+    executeKernel(reduceEnergyKernel, workGroupSize, workGroupSize);
+    if (getUseDoublePrecision() || getUseMixedPrecision()) {
+        double energy;
+        energySum->download(&energy);
+        return energy;
+    }
+    else {
+        float energy;
+        energySum->download(&energy);
+        return energy;
+    }
 }
 
 void OpenCLContext::setCharges(const vector<double>& charges) {
