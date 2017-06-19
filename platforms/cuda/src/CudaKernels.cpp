@@ -7146,10 +7146,11 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
         stepTarget.resize(numSteps);
         merged.resize(numSteps, false);
         modifiesParameters = false;
+        sumWorkGroupSize = 512;
         map<string, string> defines;
         defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
         defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
-        defines["WORK_GROUP_SIZE"] = cu.intToString(CudaContext::ThreadBlockSize);
+        defines["WORK_GROUP_SIZE"] = cu.intToString(sumWorkGroupSize);
         defines["SUM_BUFFER_SIZE"] = "0";
 
         // Record the tabulated functions.
@@ -7695,7 +7696,7 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
                 cu.executeKernel(randomKernel, &randomArgs[0], numAtoms);
             cu.clearBuffer(*sumBuffer);
             cu.executeKernel(kernels[step][0], &kernelArgs[step][0][0], numAtoms, 128);
-            cu.executeKernel(kernels[step][1], &kernelArgs[step][1][0], CudaContext::ThreadBlockSize, CudaContext::ThreadBlockSize);
+            cu.executeKernel(kernels[step][1], &kernelArgs[step][1][0], sumWorkGroupSize, sumWorkGroupSize);
             if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
                 double value;
                 summedValue->download(&value);
@@ -7797,7 +7798,7 @@ double CudaIntegrateCustomStepKernel::computeKineticEnergy(ContextImpl& context,
     cu.clearBuffer(*sumBuffer);
     cu.executeKernel(kineticEnergyKernel, &kineticEnergyArgs[0], cu.getNumAtoms());
     void* args[] = {&sumBuffer->getDevicePointer(), &summedValue->getDevicePointer()};
-    cu.executeKernel(sumKineticEnergyKernel, args, CudaContext::ThreadBlockSize, CudaContext::ThreadBlockSize);
+    cu.executeKernel(sumKineticEnergyKernel, args, sumWorkGroupSize, sumWorkGroupSize);
     if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
         double ke;
         summedValue->download(&ke);

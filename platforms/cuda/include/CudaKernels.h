@@ -1497,7 +1497,7 @@ private:
     CudaContext& cu;
     double energy;
     float energyFloat;
-    int numGlobalVariables;
+    int numGlobalVariables, sumWorkGroupSize;
     bool hasInitializedKernels, deviceValuesAreCurrent, deviceGlobalsAreCurrent, modifiesParameters, keNeedsForce, hasAnyConstraints, needsEnergyParamDerivs;
     mutable bool localValuesAreCurrent;
     CudaArray* globalValues;
