@@ -4033,7 +4033,7 @@ class AmoebaTorsionTorsionGenerator(object):
             # raise error if atoms E or F not found
 
             if (atomE == -1 or atomF == -1):
-                outputString = "getChiralAtomIndex: error getting bonded partners of atomC=%s %d %s" % (atomC.name, atomC.resiude.index, atomC.resiude.name,)
+                outputString = "getChiralAtomIndex: error getting bonded partners of atomC=%s %d %s" % (atomC.name, atomC.residue.index, atomC.residue.name,)
                 raise ValueError(outputString)
 
             # check for different type/mass between atoms E & F
