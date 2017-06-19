@@ -142,6 +142,8 @@ STEAL_OWNERSHIP = {("Platform", "registerPlatform") : [0],
                    ("CustomHbondForce", "addTabulatedFunction") : [1],
                    ("CustomCompoundBondForce", "addTabulatedFunction") : [1],
                    ("CustomManyParticleForce", "addTabulatedFunction") : [1],
+                   ("CustomCVForce", "addTabulatedFunction") : [1],
+                   ("CustomCVForce", "addCollectiveVariable") : [1],
                    ("CompoundIntegrator", "addIntegrator") : [0],
 }
 
