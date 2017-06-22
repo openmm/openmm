@@ -128,6 +128,7 @@ before_install:
       export LD_LIBRARY_PATH=${AMDAPPSDK}/lib/x86_64:${LD_LIBRARY_PATH};
       chmod +x ${AMDAPPSDK}/bin/x86_64/clinfo;
       ${AMDAPPSDK}/bin/x86_64/clinfo;
+      sudo apt-get install -y libgl1-mesa-dev;
     fi
   # Install swig for Python wrappers. However, testing CUDA and OpenCL, we
   # skip the Python wrapper for speed. We're not using anaconda python,
@@ -159,6 +160,7 @@ before_install:
       export CUDA_HOME=/usr/local/cuda-${CUDA_VERSION%%-*};
       export LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH};
       export PATH=${CUDA_HOME}/bin:${PATH};
+      sudo apt-get install -y libgl1-mesa-dev;
     fi
 
 script:
