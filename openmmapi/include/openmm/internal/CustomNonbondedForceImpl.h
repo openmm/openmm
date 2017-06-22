@@ -69,7 +69,7 @@ public:
     static void calcLongRangeCorrection(const CustomNonbondedForce& force, const Context& context, double& coefficient, std::vector<double>& derivatives);
 private:
     static double integrateInteraction(Lepton::CompiledExpression& expression, const std::vector<double>& params1, const std::vector<double>& params2,
-            const CustomNonbondedForce& force, const Context& context);
+            const CustomNonbondedForce& force, const Context& context, const std::vector<std::string>& paramNames);
     const CustomNonbondedForce& owner;
     Kernel kernel;
 };
