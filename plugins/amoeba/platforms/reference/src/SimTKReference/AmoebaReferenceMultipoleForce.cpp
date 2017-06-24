@@ -359,7 +359,7 @@ void AmoebaReferenceMultipoleForce::checkChiralCenterAtParticle(MultipoleParticl
                                                                 MultipoleParticleData& particleY) const
 {
 
-    if (axisType != AmoebaMultipoleForce::ZThenX || particleY.particleIndex == -1) {
+    if (axisType == AmoebaMultipoleForce::ZThenX || particleY.particleIndex == -1) {
         return;
     }
 
@@ -397,8 +397,8 @@ void AmoebaReferenceMultipoleForce::checkChiral(vector<MultipoleParticleData>& p
 }
 
 void AmoebaReferenceMultipoleForce::applyRotationMatrixToParticle(      MultipoleParticleData& particleI,
-                                                                  const MultipoleParticleData* particleZ,
-                                                                  const MultipoleParticleData* particleX,
+                                                                  const MultipoleParticleData& particleZ,
+                                                                  const MultipoleParticleData& particleX,
                                                                         MultipoleParticleData* particleY,
                                                                         int axisType) const
 {
@@ -410,58 +410,58 @@ void AmoebaReferenceMultipoleForce::applyRotationMatrixToParticle(      Multipol
     // this atom and the axis atom
 
 
-    RealVec vectorX, vectorY;
-    RealVec vectorZ = particleZ->position - particleI.position;
+    RealVec vectorY;
+    RealVec vectorZ = particleZ.position - particleI.position;
+    RealVec vectorX = particleX.position - particleI.position;
+
     normalizeRealVec(vectorZ);
 
     // branch based on axis type
 
-    if (axisType == AmoebaMultipoleForce::ZOnly) {
+    if (axisType == AmoebaMultipoleForce::Bisector) {
+
+        // bisector
+
+        // dx = dx1 + dx2 (in TINKER code)
+
+        normalizeRealVec(vectorX);
+        vectorZ      += vectorX;
+        normalizeRealVec(vectorZ);
+
+    } else if (axisType == AmoebaMultipoleForce::ZBisect) {
+
+        // z-bisect
+
+        // dx = dx1 + dx2 (in TINKER code)
+
+        normalizeRealVec(vectorX);
+
+        vectorY  = particleY->position - particleI.position;
+        normalizeRealVec(vectorY);
+
+        vectorX += vectorY;
+        normalizeRealVec(vectorX);
+
+    } else if (axisType == AmoebaMultipoleForce::ThreeFold) {
+
+        // 3-fold
+
+        // dx = dx1 + dx2 + dx3 (in TINKER code)
+
+        normalizeRealVec(vectorX);
+
+        vectorY   = particleY->position - particleI.position;
+        normalizeRealVec(vectorY);
+
+        vectorZ  += vectorX +  vectorY;
+        normalizeRealVec(vectorZ);
+
+    } else if (axisType == AmoebaMultipoleForce::ZOnly) {
 
         // z-only
 
         vectorX = RealVec(0.1, 0.1, 0.1);
-    }
-    else {
-        vectorX = particleX->position - particleI.position;
-        if (axisType == AmoebaMultipoleForce::Bisector) {
 
-            // bisector
-
-            // dx = dx1 + dx2 (in TINKER code)
-
-            normalizeRealVec(vectorX);
-            vectorZ      += vectorX;
-            normalizeRealVec(vectorZ);
-        }
-        else if (axisType == AmoebaMultipoleForce::ZBisect) {
-
-            // z-bisect
-
-            // dx = dx1 + dx2 (in TINKER code)
-
-            normalizeRealVec(vectorX);
-
-            vectorY  = particleY->position - particleI.position;
-            normalizeRealVec(vectorY);
-
-            vectorX += vectorY;
-            normalizeRealVec(vectorX);
-        }
-        else if (axisType == AmoebaMultipoleForce::ThreeFold) {
-
-            // 3-fold
-
-            // dx = dx1 + dx2 + dx3 (in TINKER code)
-
-            normalizeRealVec(vectorX);
-
-            vectorY   = particleY->position - particleI.position;
-            normalizeRealVec(vectorY);
-
-            vectorZ  += vectorX +  vectorY;
-            normalizeRealVec(vectorZ);
-        }
     }
 
     RealOpenMM dot      = vectorZ.dot(vectorX);
@@ -652,10 +652,9 @@ void AmoebaReferenceMultipoleForce::applyRotationMatrix(vector<MultipoleParticle
 {
 
     for (unsigned int ii = 0; ii < _numParticles; ii++) {
-        if (multipoleAtomZs[ii] >= 0) {
-            applyRotationMatrixToParticle(particleData[ii], &particleData[multipoleAtomZs[ii]],
-                                          multipoleAtomXs[ii] > -1 ? &particleData[multipoleAtomXs[ii]] : NULL,
-                                          multipoleAtomYs[ii] > -1 ? &particleData[multipoleAtomYs[ii]] : NULL, axisTypes[ii]);
+        if (multipoleAtomZs[ii] >= 0 && multipoleAtomXs[ii] >= 0) {
+            applyRotationMatrixToParticle(particleData[ii], particleData[multipoleAtomZs[ii]], particleData[multipoleAtomXs[ii]],
+                                           multipoleAtomYs[ii] > -1 ? &particleData[multipoleAtomYs[ii]] : NULL, axisTypes[ii]);
         }
     }
 }
@@ -817,7 +816,7 @@ void AmoebaReferenceMultipoleForce::calculateInducedDipolePairIxns(const Multipo
     // If we're using the extrapolation algorithm, we need to compute the field gradient, so ask for one more rrI value.
     if (getPolarizationType() == AmoebaReferenceMultipoleForce::Extrapolated)
         rrI.push_back(0.0);
-
+  
     getAndScaleInverseRs(particleI.dampingFactor, particleJ.dampingFactor,
                           particleI.thole, particleJ.thole, r, rrI);
 
@@ -996,7 +995,7 @@ void AmoebaReferenceMultipoleForce::convergeInduceDipolesByExtrapolation(const v
     }
 
     // Take a linear combination of the µ_(n) components to form the total dipole
-
+    
     for (int i = 0; i < numFields; i++) {
         UpdateInducedDipoleFieldStruct& field = updateInducedDipoleField[i];
         *field.inducedDipoles = vector<RealVec>(_numParticles, RealVec());
@@ -1755,7 +1754,7 @@ void AmoebaReferenceMultipoleForce::mapTorqueToForceForParticle(const MultipoleP
         // z-only
 
         for (int ii = 0; ii < 3; ii++) {
-            RealOpenMM du                               = vectorUV[ii]*dphi[V]/(norms[U]*angles[UV][1]) + vectorUW[ii]*dphi[W]/norms[U];
+            RealOpenMM du                               = vectorUV[ii]*dphi[V]/(norms[U]*angles[UV][1]);
             forces[particleU.particleIndex][ii]        -= du;
             forces[particleI.particleIndex][ii]        += du;
         }
@@ -2187,7 +2186,7 @@ void AmoebaReferenceMultipoleForce::calculateElectrostaticPotential(const vector
 }
 
 AmoebaReferenceMultipoleForce::UpdateInducedDipoleFieldStruct::UpdateInducedDipoleFieldStruct(vector<OpenMM::RealVec>& inputFixed_E_Field, vector<OpenMM::RealVec>& inputInducedDipoles, vector<vector<RealVec> >& extrapolatedDipoles, vector<vector<RealOpenMM> >& extrapolatedDipoleFieldGradient) :
-        fixedMultipoleField(&inputFixed_E_Field), inducedDipoles(&inputInducedDipoles), extrapolatedDipoles(&extrapolatedDipoles), extrapolatedDipoleFieldGradient(&extrapolatedDipoleFieldGradient) {
+        fixedMultipoleField(&inputFixed_E_Field), inducedDipoles(&inputInducedDipoles), extrapolatedDipoles(&extrapolatedDipoles), extrapolatedDipoleFieldGradient(&extrapolatedDipoleFieldGradient) { 
     inducedDipoleField.resize(fixedMultipoleField->size());
 }
 
@@ -6071,7 +6070,7 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::computeReciprocalSpaceInducedDipole
             f[0] += (inducedDipole[k]+inducedDipolePolar[k])*_phi[20*i+j1];
             f[1] += (inducedDipole[k]+inducedDipolePolar[k])*_phi[20*i+j2];
             f[2] += (inducedDipole[k]+inducedDipolePolar[k])*_phi[20*i+j3];
-
+ 
             if (polarizationType == AmoebaReferenceMultipoleForce::Mutual) {
                 f[0] += (inducedDipole[k]*_phip[10*i+j1] + inducedDipolePolar[k]*_phid[10*i+j1]);
                 f[1] += (inducedDipole[k]*_phip[10*i+j2] + inducedDipolePolar[k]*_phid[10*i+j2]);
