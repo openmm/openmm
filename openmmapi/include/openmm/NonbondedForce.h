@@ -101,15 +101,20 @@ public:
          */
         CutoffPeriodic = 2,
         /**
-         * Periodic boundary conditions are used, and Ewald summation is used to compute the interaction of each particle
+         * Periodic boundary conditions are used, and Ewald summation is used to compute the Coulomb interaction of each particle
          * with all periodic copies of every other particle.
          */
         Ewald = 3,
         /**
-         * Periodic boundary conditions are used, and Particle-Mesh Ewald (PME) summation is used to compute the interaction of each particle
+         * Periodic boundary conditions are used, and Particle-Mesh Ewald (PME) summation is used to compute the Coulomb interaction of each particle
          * with all periodic copies of every other particle.
          */
-        PME = 4
+        PME = 4,
+        /**
+         * Periodic boundary conditions are used, and Particle-Mesh Ewald (PME) summation is used to compute the interaction of each particle
+         * with all periodic copies of every other particle for both Coulomb and Lennard-Jones.  No switching is used for either interaction.
+         */
+        LJPME = 5
     };
     /**
      * Create a NonbondedForce.
@@ -208,6 +213,16 @@ public:
      */
     void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
     /**
+     * Get the parameters to use for dispersion term in LJ-PME calculations.  If alpha is 0 (the default),
+     * these parameters are ignored and instead their values are chosen based on the Ewald error tolerance.
+     *
+     * @param[out] alpha   the separation parameter
+     * @param[out] nx      the number of dispersion grid points along the X axis
+     * @param[out] ny      the number of dispersion grid points along the Y axis
+     * @param[out] nz      the number of dispersion grid points along the Z axis
+     */
+    void getLJPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
+    /**
      * Set the parameters to use for PME calculations.  If alpha is 0 (the default), these parameters are
      * ignored and instead their values are chosen based on the Ewald error tolerance.
      *
@@ -217,6 +232,16 @@ public:
      * @param nz      the number of grid points along the Z axis
      */
     void setPMEParameters(double alpha, int nx, int ny, int nz);
+    /**
+     * Set the parameters to use for the dispersion term in LJPME calculations.  If alpha is 0 (the default),
+     * these parameters are ignored and instead their values are chosen based on the Ewald error tolerance.
+     *
+     * @param alpha   the separation parameter
+     * @param nx      the number of grid points along the X axis
+     * @param ny      the number of grid points along the Y axis
+     * @param nz      the number of grid points along the Z axis
+     */
+    void setLJPMEParameters(double alpha, int nx, int ny, int nz);
     /**
      * Get the parameters being used for PME in a particular Context.  Because some platforms have restrictions
      * on the allowed grid sizes, the values that are actually used may be slightly different from those
@@ -230,6 +255,19 @@ public:
      * @param[out] nz      the number of grid points along the Z axis
      */
     void getPMEParametersInContext(const Context& context, double& alpha, int& nx, int& ny, int& nz) const;
+    /**
+     * Get the PME parameters being used for the dispersion term for LJPME in a particular Context.  Because some
+     * platforms have restrictions on the allowed grid sizes, the values that are actually used may be slightly different
+     * from those specified with setPMEParameters(), or the standard values calculated based on the Ewald error tolerance.
+     * See the manual for details.
+     *
+     * @param context      the Context for which to get the parameters
+     * @param[out] alpha   the separation parameter
+     * @param[out] nx      the number of grid points along the X axis
+     * @param[out] ny      the number of grid points along the Y axis
+     * @param[out] nz      the number of grid points along the Z axis
+     */
+    void getLJPMEParametersInContext(const Context& context, double& alpha, int& nx, int& ny, int& nz) const;
     /**
      * Add the nonbonded force parameters for a particle.  This should be called once for each particle
      * in the System.  When it is called for the i'th time, it specifies the parameters for the i'th particle.
@@ -374,7 +412,8 @@ public:
     bool usesPeriodicBoundaryConditions() const {
         return nonbondedMethod == NonbondedForce::CutoffPeriodic ||
                nonbondedMethod == NonbondedForce::Ewald ||
-               nonbondedMethod == NonbondedForce::PME;
+               nonbondedMethod == NonbondedForce::PME ||
+               nonbondedMethod == NonbondedForce::LJPME;
     }
 protected:
     ForceImpl* createImpl() const;
@@ -382,9 +421,9 @@ private:
     class ParticleInfo;
     class ExceptionInfo;
     NonbondedMethod nonbondedMethod;
-    double cutoffDistance, switchingDistance, rfDielectric, ewaldErrorTol, alpha;
+    double cutoffDistance, switchingDistance, rfDielectric, ewaldErrorTol, alpha, dalpha;
     bool useSwitchingFunction, useDispersionCorrection;
-    int recipForceGroup, nx, ny, nz;
+    int recipForceGroup, nx, ny, nz, dnx, dny, dnz;
     void addExclusionsToSet(const std::vector<std::set<int> >& bonded12, std::set<int>& exclusions, int baseParticle, int fromParticle, int currentLevel) const;
     std::vector<ParticleInfo> particles;
     std::vector<ExceptionInfo> exceptions;

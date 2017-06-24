@@ -37,7 +37,7 @@ struct fftpack
     int                    n;        /**< Number of points in this dimension.       */
     int                    ifac[15]; /**< 15 bytes needed for cfft and rfft         */
     struct fftpack *       next;     /**< Pointer to next dimension, or NULL.       */
-    RealOpenMM *               work;     /**< 1st 4n reserved for cfft, 1st 2n for rfft */
+    double *               work;     /**< 1st 4n reserved for cfft, 1st 2n for rfft */
 };
 
 
@@ -48,15 +48,15 @@ struct fftpack
 
 
 static void
-fftpack_passf2(int         ido,
-               int         l1,
-               RealOpenMM     cc[],
-               RealOpenMM     ch[],
-               RealOpenMM     wa1[],
-               int         isign)
+fftpack_passf2(int    ido,
+               int    l1,
+               double cc[],
+               double ch[],
+               double wa1[],
+               int    isign)
 {
     int i, k, ah, ac;
-    RealOpenMM ti2, tr2;
+    double ti2, tr2;
 
     if (ido <= 2)
     {
@@ -92,19 +92,19 @@ fftpack_passf2(int         ido,
 
 
 static void
-fftpack_passf3(int         ido,
-               int         l1,
-               RealOpenMM     cc[],
-               RealOpenMM     ch[],
-               RealOpenMM     wa1[],
-               RealOpenMM     wa2[],
-               int         isign)
+fftpack_passf3(int    ido,
+               int    l1,
+               double cc[],
+               double ch[],
+               double wa1[],
+               double wa2[],
+               int    isign)
 {
-    const RealOpenMM taur = (RealOpenMM)-0.5;
-    const RealOpenMM taui = (RealOpenMM)0.866025403784439;
+    const double taur = -0.5;
+    const double taui = 0.866025403784439;
 
     int i, k, ac, ah;
-    RealOpenMM ci2, ci3, di2, di3, cr2, cr3, dr2, dr3, ti2, tr2;
+    double ci2, ci3, di2, di3, cr2, cr3, dr2, dr3, ti2, tr2;
 
     if (ido == 2)
     {
@@ -159,17 +159,17 @@ fftpack_passf3(int         ido,
 
 
 static void
-fftpack_passf4(int          ido,
-               int          l1,
-               RealOpenMM      cc[],
-               RealOpenMM      ch[],
-               RealOpenMM      wa1[],
-               RealOpenMM      wa2[],
-               RealOpenMM      wa3[],
-               int          isign)
+fftpack_passf4(int    ido,
+               int    l1,
+               double cc[],
+               double ch[],
+               double wa1[],
+               double wa2[],
+               double wa3[],
+               int    isign)
 {
     int i, k, ac, ah;
-    RealOpenMM ci2, ci3, ci4, cr2, cr3, cr4, ti1, ti2, ti3, ti4, tr1, tr2, tr3, tr4;
+    double ci2, ci3, ci4, cr2, cr3, cr4, ti1, ti2, ti3, ti4, tr1, tr2, tr3, tr4;
 
     if (ido == 2)
     {
@@ -232,23 +232,23 @@ fftpack_passf4(int          ido,
 
 
 static void
-fftpack_passf5(int          ido,
-               int          l1,
-               RealOpenMM      cc[],
-               RealOpenMM      ch[],
-               RealOpenMM      wa1[],
-               RealOpenMM      wa2[],
-               RealOpenMM      wa3[],
-               RealOpenMM      wa4[],
-               int          isign)
+fftpack_passf5(int    ido,
+               int    l1,
+               double cc[],
+               double ch[],
+               double wa1[],
+               double wa2[],
+               double wa3[],
+               double wa4[],
+               int    isign)
 {
-    const RealOpenMM tr11 = (RealOpenMM)0.309016994374947;
-    const RealOpenMM ti11 = (RealOpenMM)0.951056516295154;
-    const RealOpenMM tr12 = (RealOpenMM)-0.809016994374947;
-    const RealOpenMM ti12 = (RealOpenMM)0.587785252292473;
+    const double tr11 = 0.309016994374947;
+    const double ti11 = 0.951056516295154;
+    const double tr12 = -0.809016994374947;
+    const double ti12 = 0.587785252292473;
 
     int i, k, ac, ah;
-    RealOpenMM ci2, ci3, ci4, ci5, di3, di4, di5, di2, cr2, cr3, cr5, cr4, ti2, ti3,
+    double ci2, ci3, ci4, ci5, di3, di4, di5, di2, cr2, cr3, cr5, cr4, ti2, ti3,
         ti4, ti5, dr3, dr4, dr5, dr2, tr2, tr3, tr4, tr5;
 
     if (ido == 2)
@@ -334,18 +334,18 @@ fftpack_passf5(int          ido,
 
 
 static void
-fftpack_passf(int *        nac,
-              int          ido,
-              int          ip,
-              int          l1,
-              int          idl1,
-              RealOpenMM      cc[],
-              RealOpenMM      ch[],
-              RealOpenMM      wa[],
-              int          isign)
+fftpack_passf(int*   nac,
+              int    ido,
+              int    ip,
+              int    l1,
+              int    idl1,
+              double cc[],
+              double ch[],
+              double wa[],
+              int    isign)
 {
     int idij, idlj, idot, ipph, i, j, k, l, jc, lc, ik, nt, idj, idl, inc,idp;
-    RealOpenMM wai, war;
+    double wai, war;
 
     idot = ido / 2;
     nt = ip*idl1;
@@ -495,17 +495,17 @@ fftpack_passf(int *        nac,
 
 
 static void
-fftpack_cfftf1(int          n,
-               RealOpenMM      c[],
-               RealOpenMM      ch[],
-               RealOpenMM      wa[],
-               int          ifac[15],
-               int          isign)
+fftpack_cfftf1(int    n,
+               double c[],
+               double ch[],
+               double wa[],
+               int    ifac[15],
+               int    isign)
 {
     int idot, i;
     int k1, l1, l2;
     int na, nf, ip, iw, ix2, ix3, ix4, nac, ido, idl1;
-    RealOpenMM *cinput, *coutput;
+    double *cinput, *coutput;
     nf = ifac[1];
     na = 0;
     l1 = 1;
@@ -606,12 +606,12 @@ startloop:
 
 
 static void
-fftpack_cffti1(int          n,
-               RealOpenMM      wa[],
-               int          ifac[15])
+fftpack_cffti1(int    n,
+               double wa[],
+               int    ifac[15])
 {
-    const RealOpenMM twopi = (RealOpenMM)6.28318530717959;
-    RealOpenMM arg, argh, argld, fi;
+    const double twopi = 6.28318530717959;
+    double arg, argh, argld, fi;
     int idot, i, j;
     int i1, k1, l1, l2;
     int ld, ii, nf, ip;
@@ -619,7 +619,7 @@ fftpack_cffti1(int          n,
 
     fftpack_factorize(n,ifac);
     nf = ifac[1];
-    argh = twopi/(RealOpenMM)n;
+    argh = twopi/n;
     i = 1;
     l1 = 1;
     for (k1=1; k1<=nf; k1++)
@@ -783,7 +783,7 @@ fftpack_init_1d(fftpack_t *        pfft,
     fft->n    = nx;
 
     /* Need 4*n storage for 1D complex FFT */
-    if ((fft->work = (RealOpenMM *)malloc(sizeof(RealOpenMM)*(4*nx))) == NULL)
+    if ((fft->work = (double *)malloc(sizeof(double)*(4*nx))) == NULL)
     {
         free(fft);
         return ENOMEM;
@@ -860,7 +860,7 @@ fftpack_init_3d(fftpack_t *        pfft,
 
     /* Need 4*nx storage for 1D complex FFT.
      */
-    if ((fft->work = (RealOpenMM *)malloc(sizeof(RealOpenMM)*(4*nx))) == NULL)
+    if ((fft->work = (double *)malloc(sizeof(double)*(4*nx))) == NULL)
     {
         free(fft);
         return ENOMEM;
@@ -887,16 +887,16 @@ fftpack_exec_1d          (fftpack_t                  fft,
                           t_complex *                in_data,
                           t_complex *                out_data)
 {
-    int             i,n;
-    RealOpenMM *    p1;
-    RealOpenMM *    p2;
+    int i, n;
+    double* p1;
+    double* p2;
 
     n=fft->n;
 
     if (n==1)
     {
-        p1 = (RealOpenMM *)in_data;
-        p2 = (RealOpenMM *)out_data;
+        p1 = (double *)in_data;
+        p2 = (double *)out_data;
         p2[0] = p1[0];
         p2[1] = p1[1];
     }
@@ -906,10 +906,10 @@ fftpack_exec_1d          (fftpack_t                  fft,
      */
     if (in_data != out_data)
     {
-        p1 = (RealOpenMM *)in_data;
-        p2 = (RealOpenMM *)out_data;
+        p1 = (double *)in_data;
+        p2 = (double *)out_data;
 
-        /* n complex = 2*n RealOpenMM elements */
+        /* n complex = 2*n double elements */
         for (i=0;i<2*n;i++)
         {
             p2[i] = p1[i];
@@ -922,11 +922,11 @@ fftpack_exec_1d          (fftpack_t                  fft,
 
     if (dir == FFTPACK_FORWARD)
     {
-        fftpack_cfftf1(n,(RealOpenMM *)out_data,fft->work+2*n,fft->work,fft->ifac, -1);
+        fftpack_cfftf1(n,(double *)out_data,fft->work+2*n,fft->work,fft->ifac, -1);
     }
     else if (dir == FFTPACK_BACKWARD)
     {
-        fftpack_cfftf1(n,(RealOpenMM *)out_data,fft->work+2*n,fft->work,fft->ifac, 1);
+        fftpack_cfftf1(n,(double *)out_data,fft->work+2*n,fft->work,fft->ifac, 1);
     }
     else
     {

@@ -73,7 +73,7 @@ public:
      */
     static void analyzeComputations(const ContextImpl& context, const CustomIntegrator& integrator, std::vector<std::vector<Lepton::ParsedExpression> >& expressions,
             std::vector<Comparison>& comparisons, std::vector<int>& blockEnd, std::vector<bool>& invalidatesForces, std::vector<bool>& needsForces,
-            std::vector<bool>& needsEnergy, std::vector<bool>& computeBoth, std::vector<int>& forceGroup);
+            std::vector<bool>& needsEnergy, std::vector<bool>& computeBoth, std::vector<int>& forceGroup, const std::map<std::string, Lepton::CustomFunction*>& functions);
     /**
      * Determine whether an expression involves a particular variable.
      */

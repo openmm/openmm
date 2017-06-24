@@ -55,7 +55,7 @@ public:
      * @param inverseMasses    1/mass
      * @param tolerance        the constraint tolerance
      */
-    void apply(std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& atomCoordinatesP, std::vector<RealOpenMM>& inverseMasses, RealOpenMM tolerance);
+    void apply(std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<OpenMM::Vec3>& atomCoordinatesP, std::vector<double>& inverseMasses, double tolerance);
 
     /**
      * Apply the constraint algorithm to velocities.
@@ -65,7 +65,7 @@ public:
      * @param inverseMasses    1/mass
      * @param tolerance        the constraint tolerance
      */
-    void applyToVelocities(std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& velocities, std::vector<RealOpenMM>& inverseMasses, RealOpenMM tolerance);
+    void applyToVelocities(std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<OpenMM::Vec3>& velocities, std::vector<double>& inverseMasses, double tolerance);
     ReferenceConstraintAlgorithm* ccma;
     ReferenceConstraintAlgorithm* settle;
 };

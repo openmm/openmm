@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2015 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2017 Stanford University and Simbios.
  * Contributors: Peter Eastman, Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -38,49 +38,13 @@
 using namespace OpenMM;
 using namespace std;
 
-// This class extracts columns from the inverse matrix one at a time.  It is done in parallel,
-// since this can be very slow.
-
-class ExtractMatrixTask : public ThreadPool::Task {
-public:
-    ExtractMatrixTask(int numConstraints, vector<vector<pair<int, RealOpenMM> > >& transposedMatrix, const vector<RealOpenMM>& distance, RealOpenMM elementCutoff,
-                      const int* qRowStart, const int* qColIndex, const int* rRowStart, const int* rColIndex, const double* qValue, const double* rValue) :
-                numConstraints(numConstraints), transposedMatrix(transposedMatrix), distance(distance), elementCutoff(elementCutoff), qRowStart(qRowStart), qColIndex(qColIndex),
-                rRowStart(rRowStart), rColIndex(rColIndex), qValue(qValue), rValue(rValue) {
-    }
-
-    void execute(ThreadPool& pool, int threadIndex) {
-        vector<double> rhs(numConstraints);
-        for (int i = threadIndex; i < numConstraints; i += pool.getNumThreads()) {
-            // Extract column i of the inverse matrix.
-
-            for (int j = 0; j < numConstraints; j++)
-                rhs[j] = (i == j ? 1.0 : 0.0);
-            QUERN_multiply_with_q_transpose(numConstraints, qRowStart, qColIndex, qValue, &rhs[0]);
-            QUERN_solve_with_r(numConstraints, rRowStart, rColIndex, rValue, &rhs[0], &rhs[0]);
-            for (int j = 0; j < numConstraints; j++) {
-                double value = rhs[j]*distance[i]/distance[j];
-                if (FABS((RealOpenMM) value) > elementCutoff)
-                    transposedMatrix[i].push_back(pair<int, RealOpenMM>(j, (RealOpenMM) value));
-            }
-        }
-    }
-private:
-    int numConstraints;
-    vector<vector<pair<int, RealOpenMM> > >& transposedMatrix;
-    const vector<RealOpenMM>& distance;
-    RealOpenMM elementCutoff;
-    const int *qRowStart, *qColIndex, *rRowStart, *rColIndex;
-    const double *qValue, *rValue;
-};
-
 ReferenceCCMAAlgorithm::ReferenceCCMAAlgorithm(int numberOfAtoms,
                                                int numberOfConstraints,
                                                const vector<pair<int, int> >& atomIndices,
-                                               const vector<RealOpenMM>& distance,
-                                               vector<RealOpenMM>& masses,
+                                               const vector<double>& distance,
+                                               vector<double>& masses,
                                                vector<AngleInfo>& angles,
-                                               RealOpenMM elementCutoff) {
+                                               double elementCutoff) {
     _numberOfConstraints = numberOfConstraints;
     _elementCutoff = elementCutoff;
     _atomIndices = atomIndices;
@@ -116,8 +80,8 @@ ReferenceCCMAAlgorithm::ReferenceCCMAAlgorithm(int numberOfAtoms,
                 int atomj1 = _atomIndices[j].second;
                 int atomk0 = _atomIndices[k].first;
                 int atomk1 = _atomIndices[k].second;
-                RealOpenMM invMass0 = 1/masses[atomj0];
-                RealOpenMM invMass1 = 1/masses[atomj1];
+                double invMass0 = 1/masses[atomj0];
+                double invMass1 = 1/masses[atomj1];
                 int atoma, atomb, atomc;
                 if (atomj0 == atomk0) {
                     atoma = atomj1;
@@ -163,8 +127,8 @@ ReferenceCCMAAlgorithm::ReferenceCCMAAlgorithm(int numberOfAtoms,
                     // We didn't find one, so look for an angle force field term.
 
                     const vector<int>& angleCandidates = atomAngles[atomb];
-                    for (vector<int>::const_iterator iter = angleCandidates.begin(); iter != angleCandidates.end(); iter++) {
-                        const AngleInfo& angle = angles[*iter];
+                    for (int candidate : angleCandidates) {
+                        const AngleInfo& angle = angles[candidate];
                         if ((angle.atom1 == atoma && angle.atom3 == atomc) || (angle.atom3 == atoma && angle.atom1 == atomc)) {
                             matrix[j].push_back(pair<int, double>(k, scale*cos(angle.angle)));
                             break;
@@ -181,8 +145,7 @@ ReferenceCCMAAlgorithm::ReferenceCCMAAlgorithm(int numberOfAtoms,
         vector<double> matrixValue;
         for (int i = 0; i < numberOfConstraints; i++) {
             matrixRowStart.push_back(matrixValue.size());
-            for (int j = 0; j < (int) matrix[i].size(); j++) {
-                pair<int, double> element = matrix[i][j];
+            for (auto& element : matrix[i]) {
                 matrixColIndex.push_back(element.first);
                 matrixValue.push_back(element.second);
             }
@@ -192,18 +155,36 @@ ReferenceCCMAAlgorithm::ReferenceCCMAAlgorithm(int numberOfAtoms,
         double *qValue, *rValue;
         QUERN_compute_qr(numberOfConstraints, numberOfConstraints, &matrixRowStart[0], &matrixColIndex[0], &matrixValue[0], NULL,
                 &qRowStart, &qColIndex, &qValue, &rRowStart, &rColIndex, &rValue);
-        vector<vector<pair<int, RealOpenMM> > > transposedMatrix(numberOfConstraints);
+        vector<vector<pair<int, double> > > transposedMatrix(numberOfConstraints);
         _matrix.resize(numberOfConstraints);
+
+        // Extract columns from the inverse matrix one at a time.  It is done in parallel,
+        // since this can be very slow.
+        
         ThreadPool threads;
-        ExtractMatrixTask task(numberOfConstraints, transposedMatrix, _distance, _elementCutoff, qRowStart, qColIndex, rRowStart, rColIndex, qValue, rValue);
-        threads.execute(task);
+        threads.execute([&] (ThreadPool& pool, int threadIndex) {
+            vector<double> rhs(numberOfConstraints);
+            for (int i = threadIndex; i < numberOfConstraints; i += pool.getNumThreads()) {
+                // Extract column i of the inverse matrix.
+
+                for (int j = 0; j < numberOfConstraints; j++)
+                    rhs[j] = (i == j ? 1.0 : 0.0);
+                QUERN_multiply_with_q_transpose(numberOfConstraints, qRowStart, qColIndex, qValue, &rhs[0]);
+                QUERN_solve_with_r(numberOfConstraints, rRowStart, rColIndex, rValue, &rhs[0], &rhs[0]);
+                for (int j = 0; j < numberOfConstraints; j++) {
+                    double value = rhs[j]*distance[i]/distance[j];
+                    if (fabs(value) > elementCutoff)
+                        transposedMatrix[i].push_back(pair<int, double>(j, value));
+                }
+            }
+        });
         threads.waitForThreads();
 
         // For purposes of thread safety we extracted the matrix in transposed form, so we need to transpose it again.
 
         for (int i = 0; i < numberOfConstraints; i++) {
             for (int j = 0; j < transposedMatrix[i].size(); j++) {
-                pair<int, RealOpenMM> value = transposedMatrix[i][j];
+                pair<int, double> value = transposedMatrix[i][j];
                 _matrix[value.first].push_back(make_pair(i, value.second));
             }
         }
@@ -232,25 +213,25 @@ void ReferenceCCMAAlgorithm::setMaximumNumberOfIterations(int maximumNumberOfIte
     _maximumNumberOfIterations = maximumNumberOfIterations;
 }
 
-void ReferenceCCMAAlgorithm::apply(vector<RealVec>& atomCoordinates,
-                                         vector<RealVec>& atomCoordinatesP,
-                                         vector<RealOpenMM>& inverseMasses, RealOpenMM tolerance) {
+void ReferenceCCMAAlgorithm::apply(vector<Vec3>& atomCoordinates,
+                                         vector<Vec3>& atomCoordinatesP,
+                                         vector<double>& inverseMasses, double tolerance) {
     applyConstraints(atomCoordinates, atomCoordinatesP, inverseMasses, false, tolerance);
 }
 
-void ReferenceCCMAAlgorithm::applyToVelocities(std::vector<OpenMM::RealVec>& atomCoordinates,
-               std::vector<OpenMM::RealVec>& velocities, std::vector<RealOpenMM>& inverseMasses, RealOpenMM tolerance) {
+void ReferenceCCMAAlgorithm::applyToVelocities(std::vector<OpenMM::Vec3>& atomCoordinates,
+               std::vector<OpenMM::Vec3>& velocities, std::vector<double>& inverseMasses, double tolerance) {
     applyConstraints(atomCoordinates, velocities, inverseMasses, true, tolerance);
 }
 
-void ReferenceCCMAAlgorithm::applyConstraints(vector<RealVec>& atomCoordinates,
-                                         vector<RealVec>& atomCoordinatesP,
-                                         vector<RealOpenMM>& inverseMasses, bool constrainingVelocities, RealOpenMM tolerance) {
+void ReferenceCCMAAlgorithm::applyConstraints(vector<Vec3>& atomCoordinates,
+                                         vector<Vec3>& atomCoordinatesP,
+                                         vector<double>& inverseMasses, bool constrainingVelocities, double tolerance) {
     // temp arrays
 
-    vector<RealVec>& r_ij = _r_ij;
-    RealOpenMM* d_ij2 = _d_ij2;
-    RealOpenMM* reducedMasses = _reducedMasses;
+    vector<Vec3>& r_ij = _r_ij;
+    double* d_ij2 = _d_ij2;
+    double* reducedMasses = _reducedMasses;
 
     // calculate reduced masses on 1st pass
 
@@ -271,33 +252,33 @@ void ReferenceCCMAAlgorithm::applyConstraints(vector<RealVec>& atomCoordinates,
         r_ij[ii] = atomCoordinates[atomI] - atomCoordinates[atomJ];
         d_ij2[ii] = r_ij[ii].dot(r_ij[ii]);
     }
-    RealOpenMM lowerTol = 1-2*tolerance+tolerance*tolerance;
-    RealOpenMM upperTol = 1+2*tolerance+tolerance*tolerance;
+    double lowerTol = 1-2*tolerance+tolerance*tolerance;
+    double upperTol = 1+2*tolerance+tolerance*tolerance;
 
     // main loop
 
     int iterations = 0;
     int numberConverged = 0;
-    vector<RealOpenMM> constraintDelta(_numberOfConstraints);
-    vector<RealOpenMM> tempDelta(_numberOfConstraints);
+    vector<double> constraintDelta(_numberOfConstraints);
+    vector<double> tempDelta(_numberOfConstraints);
     while (iterations < getMaximumNumberOfIterations()) {
         numberConverged  = 0;
         for (int ii = 0; ii < _numberOfConstraints; ii++) {
             int atomI = _atomIndices[ii].first;
             int atomJ = _atomIndices[ii].second;
-            RealVec rp_ij = atomCoordinatesP[atomI] - atomCoordinatesP[atomJ];
+            Vec3 rp_ij = atomCoordinatesP[atomI] - atomCoordinatesP[atomJ];
             if (constrainingVelocities) {
-                RealOpenMM rrpr = rp_ij.dot(r_ij[ii]);
+                double rrpr = rp_ij.dot(r_ij[ii]);
                 constraintDelta[ii] = -2*reducedMasses[ii]*rrpr/d_ij2[ii];
                 if (fabs(constraintDelta[ii]) <= tolerance)
                     numberConverged++;
             }
             else {
-                RealOpenMM rp2  = rp_ij.dot(rp_ij);
-                RealOpenMM dist2 = _distance[ii]*_distance[ii];
-                RealOpenMM diff = dist2 - rp2;
+                double rp2  = rp_ij.dot(rp_ij);
+                double dist2 = _distance[ii]*_distance[ii];
+                double diff = dist2 - rp2;
                 constraintDelta[ii] = 0;
-                RealOpenMM rrpr = DOT3(rp_ij, r_ij[ii]);
+                double rrpr = DOT3(rp_ij, r_ij[ii]);
                 constraintDelta[ii] = reducedMasses[ii]*diff/rrpr;
                 if (rp2 >= lowerTol*dist2 && rp2 <= upperTol*dist2)
                     numberConverged++;
@@ -309,11 +290,9 @@ void ReferenceCCMAAlgorithm::applyConstraints(vector<RealVec>& atomCoordinates,
 
         if (_matrix.size() > 0) {
             for (int i = 0; i < _numberOfConstraints; i++) {
-                RealOpenMM sum = 0.0;
-                for (int j = 0; j < (int) _matrix[i].size(); j++) {
-                    pair<int, RealOpenMM> element = _matrix[i][j];
+                double sum = 0.0;
+                for (auto& element : _matrix[i])
                     sum += element.second*constraintDelta[element.first];
-                }
                 tempDelta[i] = sum;
             }
             constraintDelta = tempDelta;
@@ -321,13 +300,13 @@ void ReferenceCCMAAlgorithm::applyConstraints(vector<RealVec>& atomCoordinates,
         for (int ii = 0; ii < _numberOfConstraints; ii++) {
             int atomI = _atomIndices[ii].first;
             int atomJ = _atomIndices[ii].second;
-            RealVec dr = r_ij[ii]*constraintDelta[ii];
+            Vec3 dr = r_ij[ii]*constraintDelta[ii];
             atomCoordinatesP[atomI] += dr*inverseMasses[atomI];
             atomCoordinatesP[atomJ] -= dr*inverseMasses[atomJ];
         }
     }
 }
 
-const vector<vector<pair<int, RealOpenMM> > >& ReferenceCCMAAlgorithm::getMatrix() const {
+const vector<vector<pair<int, double> > >& ReferenceCCMAAlgorithm::getMatrix() const {
     return _matrix;
 }

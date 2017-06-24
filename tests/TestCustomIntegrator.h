@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2017 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -37,6 +37,7 @@
 #include "openmm/AndersenThermostat.h"
 #include "openmm/CustomAngleForce.h"
 #include "openmm/CustomBondForce.h"
+#include "openmm/CustomExternalForce.h"
 #include "openmm/CustomIntegrator.h"
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/NonbondedForce.h"
@@ -895,6 +896,78 @@ void testChangeDT() {
     }
 }
 
+/**
+ * Test an integrator that uses a tabulated function.
+ */
+void testTabulatedFunction() {
+    System system;
+    system.addParticle(1.0);
+    CustomIntegrator integrator(1.0);
+    integrator.addGlobalVariable("global", 1.5);
+    integrator.addPerDofVariable("dof", 0.0);
+    integrator.addComputeGlobal("global", "fn(global)");
+    integrator.addComputePerDof("dof", "fn(x)");
+    vector<double> table;
+    table.push_back(10.0);
+    table.push_back(20.0);
+    integrator.addTabulatedFunction("fn", new Continuous1DFunction(table, 1.0, 2.0));
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(1);
+    positions[0] = Vec3(1.2, 1.3, 1.4);
+    context.setPositions(positions);
+    integrator.step(1);
+    ASSERT_EQUAL_TOL(15.0, integrator.getGlobalVariable(0), 1e-5);
+    vector<Vec3> values;
+    integrator.getPerDofVariable(0, values);
+    ASSERT_EQUAL_VEC(Vec3(12.0, 13.0, 14.0), values[0], 1e-5);
+}
+
+/**
+ * Test an integrator that alternates repeatedly between force groups.
+ */
+void testAlternatingGroups() {
+    System system;
+    system.addParticle(1.0);
+    CustomExternalForce* force1 = new CustomExternalForce("-0.5*x");
+    force1->addParticle(0);
+    system.addForce(force1);
+    CustomExternalForce* force2 = new CustomExternalForce("-0.8*y");
+    force2->addParticle(0);
+    force2->setForceGroup(1);
+    system.addForce(force2);
+    CustomIntegrator integrator(0.5);
+    integrator.addGlobalVariable("savede1", 0.0);
+    integrator.addGlobalVariable("savede2", 0.0);
+    integrator.addGlobalVariable("savede3", 0.0);
+    integrator.addGlobalVariable("savede4", 0.0);
+    integrator.addPerDofVariable("savedf1", 0.0);
+    integrator.addPerDofVariable("savedf2", 0.0);
+    integrator.addPerDofVariable("savedf3", 0.0);
+    integrator.addPerDofVariable("savedf4", 0.0);
+    integrator.addComputeGlobal("savede1", "energy0");
+    integrator.addComputeGlobal("savede2", "energy1");
+    integrator.addComputePerDof("savedf1", "f0");
+    integrator.addComputePerDof("savedf2", "f1");
+    integrator.addComputeGlobal("savede3", "energy0");
+    integrator.addComputeGlobal("savede4", "energy1");
+    integrator.addComputePerDof("savedf3", "f0");
+    integrator.addComputePerDof("savedf4", "f1");
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(1);
+    positions[0] = Vec3(1, 2, 3);
+    context.setPositions(positions);
+    integrator.step(1);
+    vector<Vec3> f;
+    for (int i = 0; i < 2; i++) {
+        ASSERT_EQUAL_TOL(-0.5*1, integrator.getGlobalVariable(2*i), 1e-5);
+        ASSERT_EQUAL_TOL(-0.8*2, integrator.getGlobalVariable(2*i+1), 1e-5);
+        integrator.getPerDofVariable(2*i, f);
+        ASSERT_EQUAL_VEC(Vec3(0.5, 0, 0), f[0], 1e-5);
+        integrator.getPerDofVariable(2*i+1, f);
+        ASSERT_EQUAL_VEC(Vec3(0, 0.8, 0), f[0], 1e-5);
+    }
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -917,6 +990,8 @@ int main(int argc, char* argv[]) {
         testChangingGlobal();
         testEnergyParameterDerivatives();
         testChangeDT();
+        testTabulatedFunction();
+        testAlternatingGroups();
         runPlatformTests();
     }
     catch(const exception& e) {

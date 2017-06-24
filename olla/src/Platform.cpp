@@ -70,10 +70,10 @@ static int platformInitializer = registerPlatforms();
 
 Platform::~Platform() {
     set<KernelFactory*> uniqueKernelFactories;
-    for (map<string, KernelFactory*>::const_iterator iter = kernelFactories.begin(); iter != kernelFactories.end(); ++iter)
-        uniqueKernelFactories.insert(iter->second);
-    for (set<KernelFactory*>::const_iterator iter = uniqueKernelFactories.begin(); iter != uniqueKernelFactories.end(); ++iter)
-        delete *iter;
+    for (auto& factory : kernelFactories)
+        uniqueKernelFactories.insert(factory.second);
+    for (auto factory : uniqueKernelFactories)
+        delete factory;
 }
 
 const vector<string>& Platform::getPropertyNames() const {
@@ -102,8 +102,8 @@ void Platform::setPropertyDefaultValue(const string& property, const string& val
     string propertyName = property;
     if (deprecatedPropertyReplacements.find(property) != deprecatedPropertyReplacements.end())
         propertyName = deprecatedPropertyReplacements.find(property)->second;
-    for (int i = 0; i < (int) platformProperties.size(); i++)
-        if (platformProperties[i] == propertyName) {
+    for (auto& prop : platformProperties)
+        if (prop == propertyName) {
             defaultProperties[propertyName] = value;
             return;
         }
@@ -121,8 +121,8 @@ void Platform::registerKernelFactory(const string& name, KernelFactory* factory)
 }
 
 bool Platform::supportsKernels(const vector<string>& kernelNames) const {
-    for (int i = 0; i < (int) kernelNames.size(); ++i)
-        if (kernelFactories.find(kernelNames[i]) == kernelFactories.end())
+    for (auto& name : kernelNames)
+        if (kernelFactories.find(name) == kernelFactories.end())
             return false;
     return true;
 }
@@ -167,9 +167,9 @@ Platform& Platform::findPlatform(const vector<string>& kernelNames) {
     Platform* best = 0;
     vector<Platform*>& platforms = getPlatforms();
     double speed = 0.0;
-    for (int i = 0; i < (int) platforms.size(); ++i) {
-        if (platforms[i]->supportsKernels(kernelNames) && platforms[i]->getSpeed() > speed) {
-            best = platforms[i];
+    for (auto platform : platforms) {
+        if (platform->supportsKernels(kernelNames) && platform->getSpeed() > speed) {
+            best = platform;
             speed = best->getSpeed();
         }
     }
@@ -193,15 +193,15 @@ static HMODULE loadOneLibrary(const string& file) {
 }
 
 static void initializePlugins(vector<HMODULE>& plugins) {
-    for (int i = 0; i < (int) plugins.size(); i++) {
+    for (auto plugin : plugins) {
         void (*init)();
-        *(void **)(&init) = (void *) GetProcAddress(plugins[i], "registerPlatforms");
+        *(void **)(&init) = (void *) GetProcAddress(plugin, "registerPlatforms");
         if (init != NULL)
             (*init)();
     }
-    for (int i = 0; i < (int) plugins.size(); i++) {
+    for (auto plugin : plugins) {
         void (*init)();
-        *(void **)(&init) = (void *) GetProcAddress(plugins[i], "registerKernelFactories");
+        *(void **)(&init) = (void *) GetProcAddress(plugin, "registerKernelFactories");
         if (init != NULL)
             (*init)();
     }
@@ -221,15 +221,15 @@ static void* loadOneLibrary(const string& file) {
 
 static void initializePlugins(vector<void*>& plugins) {
 #ifndef __PNACL__
-    for (int i = 0; i < (int) plugins.size(); i++) {
+    for (auto plugin : plugins) {
         void (*init)();
-        *(void **)(&init) = dlsym(plugins[i], "registerPlatforms");
+        *(void **)(&init) = dlsym(plugin, "registerPlatforms");
         if (init != NULL)
             (*init)();
     }
-    for (int i = 0; i < (int) plugins.size(); i++) {
+    for (auto plugin : plugins) {
         void (*init)();
-        *(void **)(&init) = dlsym(plugins[i], "registerKernelFactories");
+        *(void **)(&init) = dlsym(plugin, "registerKernelFactories");
         if (init != NULL)
             (*init)();
     }

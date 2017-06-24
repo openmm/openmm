@@ -37,16 +37,16 @@ class ReferenceLincsAlgorithm : public ReferenceConstraintAlgorithm {
       int _numTerms;
       int _numberOfConstraints;
       int** _atomIndices;
-      RealOpenMM* _distance;
+      double* _distance;
 
       bool _hasInitialized;
       std::vector<std::vector<int> > _linkedConstraints;
-      std::vector<RealOpenMM> _sMatrix;
-      std::vector<RealOpenMM> _rhs1;
-      std::vector<RealOpenMM> _rhs2;
-      std::vector<RealOpenMM> _solution;
-      std::vector<std::vector<RealOpenMM> > _couplingMatrix;
-      std::vector<OpenMM::RealVec> _constraintDir;
+      std::vector<double> _sMatrix;
+      std::vector<double> _rhs1;
+      std::vector<double> _rhs2;
+      std::vector<double> _solution;
+      std::vector<std::vector<double> > _couplingMatrix;
+      std::vector<OpenMM::Vec3> _constraintDir;
 
 
       /**---------------------------------------------------------------------------------------
@@ -58,7 +58,7 @@ class ReferenceLincsAlgorithm : public ReferenceConstraintAlgorithm {
 
          --------------------------------------------------------------------------------------- */
 
-      void initialize(int numberOfAtoms, std::vector<RealOpenMM>& inverseMasses);
+      void initialize(int numberOfAtoms, std::vector<double>& inverseMasses);
 
       /**---------------------------------------------------------------------------------------
 
@@ -78,7 +78,7 @@ class ReferenceLincsAlgorithm : public ReferenceConstraintAlgorithm {
 
          --------------------------------------------------------------------------------------- */
 
-      void updateAtomPositions(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<RealOpenMM>& inverseMasses);
+      void updateAtomPositions(int numberOfAtoms, std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<double>& inverseMasses);
 
    public:
 
@@ -92,7 +92,7 @@ class ReferenceLincsAlgorithm : public ReferenceConstraintAlgorithm {
 
          --------------------------------------------------------------------------------------- */
 
-      ReferenceLincsAlgorithm(int numberOfConstraints, int** atomIndices, RealOpenMM* distance);
+      ReferenceLincsAlgorithm(int numberOfConstraints, int** atomIndices, double* distance);
 
       /**---------------------------------------------------------------------------------------
 
@@ -133,8 +133,8 @@ class ReferenceLincsAlgorithm : public ReferenceConstraintAlgorithm {
 
          --------------------------------------------------------------------------------------- */
 
-      void apply(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
-                       std::vector<OpenMM::RealVec>& atomCoordinatesP, std::vector<RealOpenMM>& inverseMasses);
+      void apply(int numberOfAtoms, std::vector<OpenMM::Vec3>& atomCoordinates,
+                       std::vector<OpenMM::Vec3>& atomCoordinatesP, std::vector<double>& inverseMasses);
 
       /**---------------------------------------------------------------------------------------
 
@@ -147,8 +147,8 @@ class ReferenceLincsAlgorithm : public ReferenceConstraintAlgorithm {
 
          --------------------------------------------------------------------------------------- */
 
-      void applyToVelocities(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
-                     std::vector<OpenMM::RealVec>& velocities, std::vector<RealOpenMM>& inverseMasses);
+      void applyToVelocities(int numberOfAtoms, std::vector<OpenMM::Vec3>& atomCoordinates,
+                     std::vector<OpenMM::Vec3>& velocities, std::vector<double>& inverseMasses);
 };
 
 } // namespace OpenMM

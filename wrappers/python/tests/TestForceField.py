@@ -33,12 +33,14 @@ class TestForceField(unittest.TestCase):
 
 
     def test_NonbondedMethod(self):
-        """Test all five options for the nonbondedMethod parameter."""
+        """Test all six options for the nonbondedMethod parameter."""
 
         methodMap = {NoCutoff:NonbondedForce.NoCutoff,
                      CutoffNonPeriodic:NonbondedForce.CutoffNonPeriodic,
                      CutoffPeriodic:NonbondedForce.CutoffPeriodic,
-                     Ewald:NonbondedForce.Ewald, PME: NonbondedForce.PME}
+                     Ewald:NonbondedForce.Ewald,
+                     PME:NonbondedForce.PME,
+                     LJPME:NonbondedForce.LJPME}
         for method in methodMap:
             system = self.forcefield1.createSystem(self.pdb1.topology,
                                                   nonbondedMethod=method)
@@ -62,7 +64,7 @@ class TestForceField(unittest.TestCase):
     def test_Cutoff(self):
         """Test to make sure the nonbondedCutoff parameter is passed correctly."""
 
-        for method in [CutoffNonPeriodic, CutoffPeriodic, Ewald, PME]:
+        for method in [CutoffNonPeriodic, CutoffPeriodic, Ewald, PME, LJPME]:
             system = self.forcefield1.createSystem(self.pdb1.topology,
                                                    nonbondedMethod=method,
                                                    nonbondedCutoff=2*nanometer,
@@ -92,6 +94,37 @@ class TestForceField(unittest.TestCase):
                                                        rigidWater=rigidWater_value)
                 validateConstraints(self, topology, system,
                                     constraints_value, rigidWater_value)
+
+    def test_flexibleConstraints(self):
+        """ Test the flexibleConstraints keyword """
+        topology = self.pdb1.topology
+        system1 = self.forcefield1.createSystem(topology, constraints=HAngles,
+                                                rigidWater=True)
+        system2 = self.forcefield1.createSystem(topology, constraints=HAngles,
+                                                rigidWater=True, flexibleConstraints=True)
+        system3 = self.forcefield1.createSystem(topology, constraints=None, rigidWater=False)
+        validateConstraints(self, topology, system1, HAngles, True)
+        # validateConstraints fails for system2 since by definition atom pairs can be in both bond
+        # and constraint lists. So just check that the number of constraints is the same for both
+        # system1 and system2
+        self.assertEqual(system1.getNumConstraints(), system2.getNumConstraints())
+        for force in system1.getForces():
+            if isinstance(force, HarmonicBondForce):
+                bf1 = force
+            elif isinstance(force, HarmonicAngleForce):
+                af1 = force
+        for force in system2.getForces():
+            if isinstance(force, HarmonicBondForce):
+                bf2 = force
+            elif isinstance(force, HarmonicAngleForce):
+                af2 = force
+        for force in system3.getForces():
+            if isinstance(force, HarmonicAngleForce):
+                af3 = force
+        # Make sure we picked up extra bond terms with flexibleConstraints
+        self.assertGreater(bf2.getNumBonds(), bf1.getNumBonds())
+        # Make sure flexibleConstraints yields just as many angles as no constraints
+        self.assertEqual(af2.getNumAngles(), af3.getNumAngles())
 
     def test_ImplicitSolvent(self):
         """Test the four types of implicit solvents using the implicitSolvent
@@ -685,7 +718,7 @@ class TestForceField(unittest.TestCase):
     def test_NBFix(self):
         """Test using LennardJonesGenerator to implement NBFix terms."""
         # Create a chain of five atoms.
-        
+
         top = Topology()
         chain = top.addChain()
         res = top.addResidue('RES', chain)
@@ -699,9 +732,9 @@ class TestForceField(unittest.TestCase):
         top.addBond(atoms[1], atoms[2])
         top.addBond(atoms[2], atoms[3])
         top.addBond(atoms[3], atoms[4])
-        
+
         # Create the force field and system.
-        
+
         xml = """
 <ForceField>
  <AtomTypes>
@@ -736,9 +769,9 @@ class TestForceField(unittest.TestCase):
 </ForceField> """
         ff = ForceField(StringIO(xml))
         system = ff.createSystem(top)
-        
+
         # Check that it produces the correct energy.
-        
+
         integrator = VerletIntegrator(0.001)
         context = Context(system, integrator, Platform.getPlatform(0))
         positions = [Vec3(i, 0, 0) for i in range(5)]*nanometers
@@ -760,6 +793,42 @@ class TestForceField(unittest.TestCase):
         self.assertEqual('ALA', templates[0].name)
         self.assertEqual('NME', templates[1].name)
 
+    def test_Includes(self):
+        """Test using a ForceField that includes other files."""
+        forcefield = ForceField(os.path.join('systems', 'ff_with_includes.xml'))
+        self.assertTrue(len(forcefield._atomTypes) > 10)
+        self.assertTrue('spce-O' in forcefield._atomTypes)
+        self.assertTrue('HOH' in forcefield._templates)
+
+    def test_ImpropersOrdering(self):
+        """Test correctness of the ordering of atom indexes in improper torsions
+        and the torsion.ordering parameter.
+        """
+
+        xml = """
+<ForceField>
+ <PeriodicTorsionForce ordering="amber">
+  <Improper class1="C" class2="" class3="O2" class4="O2" periodicity1="2" phase1="3.14159265359" k1="43.932"/>
+ </PeriodicTorsionForce>
+</ForceField>
+"""
+        pdb = PDBFile('systems/impropers_ordering_tetrapeptide.pdb')
+        # ff1 uses default ordering of impropers, ff2 uses "amber" for the one
+        # problematic improper
+        ff1 = ForceField('amber99sbildn.xml')
+        ff2 = ForceField(StringIO(xml), 'amber99sbildn.xml')
+
+        system1 = ff1.createSystem(pdb.topology)
+        system2 = ff2.createSystem(pdb.topology)
+
+        imp1 = system1.getForce(2).getTorsionParameters(158)
+        imp2 = system2.getForce(0).getTorsionParameters(158)
+
+        system1_indexes = [imp1[0], imp1[1], imp1[2], imp1[3]]
+        system2_indexes = [imp2[0], imp2[1], imp2[2], imp2[3]]
+
+        self.assertEqual(system1_indexes, [51, 56, 54, 55])
+        self.assertEqual(system2_indexes, [51, 55, 54, 56])
 
 class AmoebaTestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method with the AMOEBA forcefield."""
@@ -776,7 +845,7 @@ class AmoebaTestForceField(unittest.TestCase):
 
 
     def test_NonbondedMethod(self):
-        """Test all five options for the nonbondedMethod parameter."""
+        """Test both options for the nonbondedMethod parameter."""
 
         methodMap = {NoCutoff:AmoebaMultipoleForce.NoCutoff,
                      PME:AmoebaMultipoleForce.PME}

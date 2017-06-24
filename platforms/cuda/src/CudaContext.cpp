@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2017 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -108,7 +108,8 @@ static int executeInWindows(const string &command) {
 CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlockingSync, const string& precision, const string& compiler,
         const string& tempDir, const std::string& hostCompiler, CudaPlatform::PlatformData& platformData) : system(system), currentStream(0),
         time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), stepsSinceReorder(99999), contextIsValid(false), atomsWereReordered(false), hasCompilerKernel(false), isNvccAvailable(false),
-        pinnedBuffer(NULL), posq(NULL), posqCorrection(NULL), velm(NULL), force(NULL), energyBuffer(NULL), energyParamDerivBuffer(NULL), atomIndexDevice(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
+        pinnedBuffer(NULL), posq(NULL), posqCorrection(NULL), velm(NULL), force(NULL), energyBuffer(NULL), energyParamDerivBuffer(NULL), atomIndexDevice(NULL), chargeBuffer(NULL),
+        integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
     // Determine what compiler to use.
     
     this->compiler = "\""+compiler+"\"";
@@ -226,6 +227,12 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
             minor = 3;
         }
     }
+    if (major == 7) {
+        // Don't generate Volta-specific code until we've made the changes needed
+        // to support it properly.
+        major = 6;
+        minor = 2;
+    }
     gpuArchitecture = intToString(major)+intToString(minor);
     computeCapability = major+0.1*minor;
 
@@ -291,6 +298,7 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     clearFourBuffersKernel = getKernel(utilities, "clearFourBuffers");
     clearFiveBuffersKernel = getKernel(utilities, "clearFiveBuffers");
     clearSixBuffersKernel = getKernel(utilities, "clearSixBuffers");
+    setChargesKernel = getKernel(utilities, "setCharges");
 
     // Set defines based on the requested precision.
 
@@ -383,14 +391,14 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
 
 CudaContext::~CudaContext() {
     setAsCurrent();
-    for (int i = 0; i < (int) forces.size(); i++)
-        delete forces[i];
-    for (int i = 0; i < (int) reorderListeners.size(); i++)
-        delete reorderListeners[i];
-    for (int i = 0; i < (int) preComputations.size(); i++)
-        delete preComputations[i];
-    for (int i = 0; i < (int) postComputations.size(); i++)
-        delete postComputations[i];
+    for (auto force : forces)
+        delete force;
+    for (auto listener : reorderListeners)
+        delete listener;
+    for (auto computation : preComputations)
+        delete computation;
+    for (auto computation : postComputations)
+        delete computation;
     if (pinnedBuffer != NULL)
         cuMemFreeHost(pinnedBuffer);
     if (posq != NULL)
@@ -407,6 +415,8 @@ CudaContext::~CudaContext() {
         delete energyParamDerivBuffer;
     if (atomIndexDevice != NULL)
         delete atomIndexDevice;
+    if (chargeBuffer != NULL)
+        delete chargeBuffer;
     if (integration != NULL)
         delete integration;
     if (expression != NULL)
@@ -494,17 +504,17 @@ string CudaContext::replaceStrings(const string& input, const std::map<std::stri
             symbolChars.insert(c);
     }
     string result = input;
-    for (map<string, string>::const_iterator iter = replacements.begin(); iter != replacements.end(); iter++) {
+    for (auto& pair : replacements) {
         int index = 0;
-        int size = iter->first.size();
+        int size = pair.first.size();
         do {
-            index = result.find(iter->first, index);
+            index = result.find(pair.first, index);
             if (index != result.npos) {
                 if ((index == 0 || symbolChars.find(result[index-1]) == symbolChars.end()) && (index == result.size()-size || symbolChars.find(result[index+size]) == symbolChars.end())) {
                     // We have found a complete symbol, not part of a longer symbol.
 
-                    result.replace(index, size, iter->second);
-                    index += iter->second.size();
+                    result.replace(index, size, pair.second);
+                    index += pair.second.size();
                 }
                 else
                     index++;
@@ -524,10 +534,10 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
     stringstream src;
     if (!options.empty())
         src << "// Compilation Options: " << options << endl << endl;
-    for (map<string, string>::const_iterator iter = compilationDefines.begin(); iter != compilationDefines.end(); ++iter) {
-        src << "#define " << iter->first;
-        if (!iter->second.empty())
-            src << " " << iter->second;
+    for (auto& pair : compilationDefines) {
+        src << "#define " << pair.first;
+        if (!pair.second.empty())
+            src << " " << pair.second;
         src << endl;
     }
     if (!compilationDefines.empty())
@@ -557,10 +567,10 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
         src << "typedef float4 mixed4;\n";
     }
     src << "typedef unsigned int tileflags;\n";
-    for (map<string, string>::const_iterator iter = defines.begin(); iter != defines.end(); ++iter) {
-        src << "#define " << iter->first;
-        if (!iter->second.empty())
-            src << " " << iter->second;
+    for (auto& pair : defines) {
+        src << "#define " << pair.first;
+        if (!pair.second.empty())
+            src << " " << pair.second;
         src << endl;
     }
     if (!defines.empty())
@@ -860,6 +870,25 @@ void CudaContext::clearAutoclearBuffers() {
     }
 }
 
+void CudaContext::setCharges(const vector<double>& charges) {
+    if (chargeBuffer == NULL)
+        chargeBuffer = new CudaArray(*this, numAtoms, useDoublePrecision ? sizeof(double) : sizeof(float), "chargeBuffer");
+    if (getUseDoublePrecision()) {
+        double* c = (double*) getPinnedBuffer();
+        for (int i = 0; i < charges.size(); i++)
+            c[i] = charges[i];
+        chargeBuffer->upload(c);
+    }
+    else {
+        float* c = (float*) getPinnedBuffer();
+        for (int i = 0; i < charges.size(); i++)
+            c[i] = (float) charges[i];
+        chargeBuffer->upload(c);
+    }
+    void* args[] = {&chargeBuffer->getDevicePointer(), &posq->getDevicePointer(), &atomIndexDevice->getDevicePointer(), &numAtoms};
+    executeKernel(setChargesKernel, args, numAtoms);
+}
+
 /**
  * This class ensures that atom reordering doesn't break virtual sites.
  */
@@ -943,10 +972,10 @@ void CudaContext::findMoleculeGroups() {
             atomBonds[particle1].push_back(particle2);
             atomBonds[particle2].push_back(particle1);
         }
-        for (int i = 0; i < (int) forces.size(); i++) {
-            for (int j = 0; j < forces[i]->getNumParticleGroups(); j++) {
+        for (auto force : forces) {
+            for (int j = 0; j < force->getNumParticleGroups(); j++) {
                 vector<int> particles;
-                forces[i]->getParticlesInGroup(j, particles);
+                force->getParticlesInGroup(j, particles);
                 for (int k = 0; k < (int) particles.size(); k++)
                     for (int m = 0; m < (int) particles.size(); m++)
                         if (k != m)
@@ -1058,9 +1087,19 @@ void CudaContext::findMoleculeGroups() {
 }
 
 void CudaContext::invalidateMolecules() {
+    for (int i = 0; i < forces.size(); i++)
+        if (invalidateMolecules(forces[i]))
+            return;
+}
+
+bool CudaContext::invalidateMolecules(CudaForceInfo* force) {
     if (numAtoms == 0 || nonbonded == NULL || !nonbonded->getUseCutoff())
-        return;
+        return false;
     bool valid = true;
+    int forceIndex = -1;
+    for (int i = 0; i < forces.size(); i++)
+        if (forces[i] == force)
+            forceIndex = i;
     for (int group = 0; valid && group < (int) moleculeGroups.size(); group++) {
         MoleculeGroup& mol = moleculeGroups[group];
         vector<int>& instances = mol.instances;
@@ -1075,22 +1114,21 @@ void CudaContext::invalidateMolecules() {
             Molecule& m2 = molecules[instances[j]];
             int offset2 = offsets[j];
             for (int i = 0; i < (int) atoms.size() && valid; i++) {
-                for (int k = 0; k < (int) forces.size(); k++)
-                    if (!forces[k]->areParticlesIdentical(atoms[i]+offset1, atoms[i]+offset2))
-                        valid = false;
+                if (!force->areParticlesIdentical(atoms[i]+offset1, atoms[i]+offset2))
+                    valid = false;
             }
 
             // See if the force groups are identical.
 
-            for (int i = 0; i < (int) forces.size() && valid; i++) {
-                for (int k = 0; k < (int) m1.groups[i].size() && valid; k++)
-                    if (!forces[i]->areGroupsIdentical(m1.groups[i][k], m2.groups[i][k]))
+            if (valid && forceIndex > -1) {
+                for (int k = 0; k < (int) m1.groups[forceIndex].size() && valid; k++)
+                    if (!force->areGroupsIdentical(m1.groups[forceIndex][k], m2.groups[forceIndex][k]))
                         valid = false;
             }
         }
     }
     if (valid)
-        return;
+        return false;
 
     // The list of which molecules are identical is no longer valid.  We need to restore the
     // atoms to their original order, rebuild the list of identical molecules, and sort them
@@ -1155,9 +1193,10 @@ void CudaContext::invalidateMolecules() {
     }
     atomIndexDevice->upload(atomIndex);
     findMoleculeGroups();
-    for (int i = 0; i < (int) reorderListeners.size(); i++)
-        reorderListeners[i]->execute();
+    for (auto listener : reorderListeners)
+        listener->execute();
     reorderAtoms();
+    return true;
 }
 
 void CudaContext::reorderAtoms() {
@@ -1217,10 +1256,9 @@ void CudaContext::reorderAtomsImpl() {
     vector<Real4> newPosqCorrection(paddedNumAtoms);
     vector<Mixed4> newVelm(paddedNumAtoms);
     vector<int4> newCellOffsets(numAtoms);
-    for (int group = 0; group < (int) moleculeGroups.size(); group++) {
+    for (auto& mol : moleculeGroups) {
         // Find the center of each molecule.
 
-        MoleculeGroup& mol = moleculeGroups[group];
         int numMolecules = mol.offsets.size();
         vector<int>& atoms = mol.atoms;
         vector<Real4> molPos(numMolecules);
@@ -1314,9 +1352,9 @@ void CudaContext::reorderAtomsImpl() {
         // Reorder the atoms.
 
         for (int i = 0; i < numMolecules; i++) {
-            for (int j = 0; j < (int)atoms.size(); j++) {
-                int oldIndex = mol.offsets[molBins[i].second]+atoms[j];
-                int newIndex = mol.offsets[i]+atoms[j];
+            for (int atom : atoms) {
+                int oldIndex = mol.offsets[molBins[i].second]+atom;
+                int newIndex = mol.offsets[i]+atom;
                 originalIndex[newIndex] = atomIndex[oldIndex];
                 newPosq[newIndex] = oldPosq[oldIndex];
                 if (useMixedPrecision)
@@ -1338,8 +1376,8 @@ void CudaContext::reorderAtomsImpl() {
         posqCorrection->upload(newPosqCorrection);
     velm->upload(newVelm);
     atomIndexDevice->upload(atomIndex);
-    for (int i = 0; i < (int) reorderListeners.size(); i++)
-        reorderListeners[i]->execute();
+    for (auto listener : reorderListeners)
+        listener->execute();
 }
 
 void CudaContext::addReorderListener(ReorderListener* listener) {

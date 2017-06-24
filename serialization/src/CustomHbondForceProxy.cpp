@@ -107,24 +107,17 @@ void* CustomHbondForceProxy::deserialize(const SerializationNode& node) const {
         force->setNonbondedMethod((CustomHbondForce::NonbondedMethod) node.getIntProperty("method"));
         force->setCutoffDistance(node.getDoubleProperty("cutoff"));
         const SerializationNode& perDonorParams = node.getChildNode("PerDonorParameters");
-        for (int i = 0; i < (int) perDonorParams.getChildren().size(); i++) {
-            const SerializationNode& parameter = perDonorParams.getChildren()[i];
+        for (auto& parameter : perDonorParams.getChildren())
             force->addPerDonorParameter(parameter.getStringProperty("name"));
-        }
         const SerializationNode& perAcceptorParams = node.getChildNode("PerAcceptorParameters");
-        for (int i = 0; i < (int) perAcceptorParams.getChildren().size(); i++) {
-            const SerializationNode& parameter = perAcceptorParams.getChildren()[i];
+        for (auto& parameter : perAcceptorParams.getChildren())
             force->addPerAcceptorParameter(parameter.getStringProperty("name"));
-        }
         const SerializationNode& globalParams = node.getChildNode("GlobalParameters");
-        for (int i = 0; i < (int) globalParams.getChildren().size(); i++) {
-            const SerializationNode& parameter = globalParams.getChildren()[i];
+        for (auto& parameter : globalParams.getChildren())
             force->addGlobalParameter(parameter.getStringProperty("name"), parameter.getDoubleProperty("default"));
-        }
         const SerializationNode& donors = node.getChildNode("Donors");
         vector<double> params(force->getNumPerDonorParameters());
-        for (int i = 0; i < (int) donors.getChildren().size(); i++) {
-            const SerializationNode& donor = donors.getChildren()[i];
+        for (auto& donor : donors.getChildren()) {
             for (int j = 0; j < (int) params.size(); j++) {
                 stringstream key;
                 key << "param";
@@ -135,8 +128,7 @@ void* CustomHbondForceProxy::deserialize(const SerializationNode& node) const {
         }
         const SerializationNode& acceptors = node.getChildNode("Acceptors");
         params.resize(force->getNumPerAcceptorParameters());
-        for (int i = 0; i < (int) acceptors.getChildren().size(); i++) {
-            const SerializationNode& acceptor = acceptors.getChildren()[i];
+        for (auto& acceptor : acceptors.getChildren()) {
             for (int j = 0; j < (int) params.size(); j++) {
                 stringstream key;
                 key << "param";
@@ -146,13 +138,10 @@ void* CustomHbondForceProxy::deserialize(const SerializationNode& node) const {
             force->addAcceptor(acceptor.getIntProperty("p1"), acceptor.getIntProperty("p2"), acceptor.getIntProperty("p3"), params);
         }
         const SerializationNode& exclusions = node.getChildNode("Exclusions");
-        for (int i = 0; i < (int) exclusions.getChildren().size(); i++) {
-            const SerializationNode& exclusion = exclusions.getChildren()[i];
+        for (auto& exclusion : exclusions.getChildren())
             force->addExclusion(exclusion.getIntProperty("donor"), exclusion.getIntProperty("acceptor"));
-        }
         const SerializationNode& functions = node.getChildNode("Functions");
-        for (int i = 0; i < (int) functions.getChildren().size(); i++) {
-            const SerializationNode& function = functions.getChildren()[i];
+        for (auto& function : functions.getChildren()) {
             if (function.hasProperty("type")) {
                 force->addTabulatedFunction(function.getStringProperty("name"), function.decodeObject<TabulatedFunction>());
             }
@@ -161,8 +150,8 @@ void* CustomHbondForceProxy::deserialize(const SerializationNode& node) const {
                 
                 const SerializationNode& valuesNode = function.getChildNode("Values");
                 vector<double> values;
-                for (int j = 0; j < (int) valuesNode.getChildren().size(); j++)
-                    values.push_back(valuesNode.getChildren()[j].getDoubleProperty("v"));
+                for (auto& child : valuesNode.getChildren())
+                    values.push_back(child.getDoubleProperty("v"));
                 force->addTabulatedFunction(function.getStringProperty("name"), new Continuous1DFunction(values, function.getDoubleProperty("min"), function.getDoubleProperty("max")));
             }
         }

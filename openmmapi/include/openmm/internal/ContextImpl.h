@@ -197,8 +197,11 @@ public:
     double calcForcesAndEnergy(bool includeForces, bool includeEnergy, int groups=0xFFFFFFFF);
     /**
      * Get the set of force group flags that were passed to the most recent call to calcForcesAndEnergy().
+     * 
+     * Note that this returns a reference, so it's possible to modify it.  Be very very cautious about
+     * doing that!  Only do it if you're also modifying forces stored inside the context.
      */
-    int getLastForceGroups() const;
+    int& getLastForceGroups();
     /**
      * Calculate the kinetic energy of the system (in kJ/mol).
      */

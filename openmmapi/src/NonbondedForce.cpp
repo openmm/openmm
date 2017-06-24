@@ -48,7 +48,8 @@ using std::stringstream;
 using std::vector;
 
 NonbondedForce::NonbondedForce() : nonbondedMethod(NoCutoff), cutoffDistance(1.0), switchingDistance(-1.0), rfDielectric(78.3),
-        ewaldErrorTol(5e-4), alpha(0.0), useSwitchingFunction(false), useDispersionCorrection(true), recipForceGroup(-1), nx(0), ny(0), nz(0) {
+        ewaldErrorTol(5e-4), alpha(0.0), dalpha(0.0), useSwitchingFunction(false), useDispersionCorrection(true), recipForceGroup(-1),
+        nx(0), ny(0), nz(0), dnx(0), dny(0), dnz(0) {
 }
 
 NonbondedForce::NonbondedMethod NonbondedForce::getNonbondedMethod() const {
@@ -56,6 +57,8 @@ NonbondedForce::NonbondedMethod NonbondedForce::getNonbondedMethod() const {
 }
 
 void NonbondedForce::setNonbondedMethod(NonbondedMethod method) {
+    if (method < 0 || method > 5)
+        throw OpenMMException("NonbondedForce: Illegal value for nonbonded method");
     nonbondedMethod = method;
 }
 
@@ -106,6 +109,13 @@ void NonbondedForce::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) 
     nz = this->nz;
 }
 
+void NonbondedForce::getLJPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
+    alpha = this->dalpha;
+    nx = this->dnx;
+    ny = this->dny;
+    nz = this->dnz;
+}
+
 void NonbondedForce::setPMEParameters(double alpha, int nx, int ny, int nz) {
     this->alpha = alpha;
     this->nx = nx;
@@ -113,8 +123,19 @@ void NonbondedForce::setPMEParameters(double alpha, int nx, int ny, int nz) {
     this->nz = nz;
 }
 
+void NonbondedForce::setLJPMEParameters(double alpha, int nx, int ny, int nz) {
+    this->dalpha = alpha;
+    this->dnx = nx;
+    this->dny = ny;
+    this->dnz = nz;
+}
+
 void NonbondedForce::getPMEParametersInContext(const Context& context, double& alpha, int& nx, int& ny, int& nz) const {
     dynamic_cast<const NonbondedForceImpl&>(getImplInContext(context)).getPMEParameters(alpha, nx, ny, nz);
+}
+
+void NonbondedForce::getLJPMEParametersInContext(const Context& context, double& alpha, int& nx, int& ny, int& nz) const {
+    dynamic_cast<const NonbondedForceImpl&>(getImplInContext(context)).getLJPMEParameters(alpha, nx, ny, nz);
 }
 
 int NonbondedForce::addParticle(double charge, double sigma, double epsilon) {
@@ -184,17 +205,17 @@ ForceImpl* NonbondedForce::createImpl() const {
 }
 
 void NonbondedForce::createExceptionsFromBonds(const vector<pair<int, int> >& bonds, double coulomb14Scale, double lj14Scale) {
-    for (int i = 0; i < (int) bonds.size(); ++i)
-        if (bonds[i].first < 0 || bonds[i].second < 0 || bonds[i].first >= particles.size() || bonds[i].second >= particles.size())
+    for (auto& bond : bonds)
+        if (bond.first < 0 || bond.second < 0 || bond.first >= particles.size() || bond.second >= particles.size())
             throw OpenMMException("createExceptionsFromBonds: Illegal particle index in list of bonds");
 
     // Find particles separated by 1, 2, or 3 bonds.
 
     vector<set<int> > exclusions(particles.size());
     vector<set<int> > bonded12(exclusions.size());
-    for (int i = 0; i < (int) bonds.size(); ++i) {
-        bonded12[bonds[i].first].insert(bonds[i].second);
-        bonded12[bonds[i].second].insert(bonds[i].first);
+    for (auto& bond : bonds) {
+        bonded12[bond.first].insert(bond.second);
+        bonded12[bond.second].insert(bond.first);
     }
     for (int i = 0; i < (int) exclusions.size(); ++i)
         addExclusionsToSet(bonded12, exclusions[i], i, i, 2);
@@ -204,33 +225,34 @@ void NonbondedForce::createExceptionsFromBonds(const vector<pair<int, int> >& bo
     for (int i = 0; i < (int) exclusions.size(); ++i) {
         set<int> bonded13;
         addExclusionsToSet(bonded12, bonded13, i, i, 1);
-        for (set<int>::const_iterator iter = exclusions[i].begin(); iter != exclusions[i].end(); ++iter)
-            if (*iter < i) {
-                if (bonded13.find(*iter) == bonded13.end()) {
+        for (int j : exclusions[i]) {
+            if (j < i) {
+                if (bonded13.find(j) == bonded13.end()) {
                     // This is a 1-4 interaction.
 
-                    const ParticleInfo& particle1 = particles[*iter];
+                    const ParticleInfo& particle1 = particles[j];
                     const ParticleInfo& particle2 = particles[i];
                     const double chargeProd = coulomb14Scale*particle1.charge*particle2.charge;
                     const double sigma = 0.5*(particle1.sigma+particle2.sigma);
                     const double epsilon = lj14Scale*std::sqrt(particle1.epsilon*particle2.epsilon);
-                    addException(*iter, i, chargeProd, sigma, epsilon);
+                    addException(j, i, chargeProd, sigma, epsilon);
                 }
                 else {
                     // This interaction should be completely excluded.
 
-                    addException(*iter, i, 0.0, 1.0, 0.0);
+                    addException(j, i, 0.0, 1.0, 0.0);
                 }
             }
+        }
     }
 }
 
 void NonbondedForce::addExclusionsToSet(const vector<set<int> >& bonded12, set<int>& exclusions, int baseParticle, int fromParticle, int currentLevel) const {
-    for (set<int>::const_iterator iter = bonded12[fromParticle].begin(); iter != bonded12[fromParticle].end(); ++iter) {
-        if (*iter != baseParticle)
-            exclusions.insert(*iter);
+    for (int i : bonded12[fromParticle]) {
+        if (i != baseParticle)
+            exclusions.insert(i);
         if (currentLevel > 0)
-            addExclusionsToSet(bonded12, exclusions, baseParticle, *iter, currentLevel-1);
+            addExclusionsToSet(bonded12, exclusions, baseParticle, i, currentLevel-1);
     }
 }
 

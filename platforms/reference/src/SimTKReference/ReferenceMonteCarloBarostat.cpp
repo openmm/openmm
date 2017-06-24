@@ -64,7 +64,7 @@ ReferenceMonteCarloBarostat::~ReferenceMonteCarloBarostat() {
 
   --------------------------------------------------------------------------------------- */
 
-void ReferenceMonteCarloBarostat::applyBarostat(vector<RealVec>& atomPositions, const RealVec* boxVectors, RealOpenMM scaleX, RealOpenMM scaleY, RealOpenMM scaleZ) {
+void ReferenceMonteCarloBarostat::applyBarostat(vector<Vec3>& atomPositions, const Vec3* boxVectors, double scaleX, double scaleY, double scaleZ) {
     int numAtoms = savedAtomPositions[0].size();
     for (int i = 0; i < numAtoms; i++)
         for (int j = 0; j < 3; j++)
@@ -72,19 +72,19 @@ void ReferenceMonteCarloBarostat::applyBarostat(vector<RealVec>& atomPositions, 
 
     // Loop over molecules.
 
-    for (int i = 0; i < (int) molecules.size(); i++) {
+    for (auto& molecule : molecules) {
         // Find the molecule center.
 
-        RealVec pos(0, 0, 0);
-        for (int j = 0; j < (int) molecules[i].size(); j++) {
-            RealVec& atomPos = atomPositions[molecules[i][j]];
+        Vec3 pos(0, 0, 0);
+        for (int atom : molecule) {
+            Vec3& atomPos = atomPositions[atom];
             pos += atomPos;
         }
-        pos /= molecules[i].size();
+        pos /= molecule.size();
 
         // Move it into the first periodic box.
 
-        RealVec newPos = pos;
+        Vec3 newPos = pos;
         newPos -= boxVectors[2]*floor(newPos[2]/boxVectors[2][2]);
         newPos -= boxVectors[1]*floor(newPos[1]/boxVectors[1][1]);
         newPos -= boxVectors[0]*floor(newPos[0]/boxVectors[0][0]);
@@ -94,9 +94,9 @@ void ReferenceMonteCarloBarostat::applyBarostat(vector<RealVec>& atomPositions, 
         newPos[0] *= scaleX;
         newPos[1] *= scaleY;
         newPos[2] *= scaleZ;
-        RealVec offset = newPos-pos;
-        for (int j = 0; j < (int) molecules[i].size(); j++) {
-            RealVec& atomPos = atomPositions[molecules[i][j]];
+        Vec3 offset = newPos-pos;
+        for (int atom : molecule) {
+            Vec3& atomPos = atomPositions[atom];
             atomPos += offset;
         }
     }
@@ -110,7 +110,7 @@ void ReferenceMonteCarloBarostat::applyBarostat(vector<RealVec>& atomPositions, 
 
   --------------------------------------------------------------------------------------- */
 
-void ReferenceMonteCarloBarostat::restorePositions(vector<RealVec>& atomPositions) {
+void ReferenceMonteCarloBarostat::restorePositions(vector<Vec3>& atomPositions) {
     int numAtoms = savedAtomPositions[0].size();
     for (int i = 0; i < numAtoms; i++)
         for (int j = 0; j < 3; j++)

@@ -404,7 +404,7 @@ version of Visual Studio.
 Install CMake
 =============
 
-CMake is the build system used for OpenMM.  You must install CMake version 2.8
+CMake is the build system used for OpenMM.  You must install CMake version 3.1
 or higher before attempting to build OpenMM from source.  You can get CMake from
 http://www.cmake.org/.  If you choose to build CMake from source on Linux, make
 sure you have the curses library installed beforehand, so that you will be able
@@ -509,7 +509,7 @@ Windows
 
 On Windows, perform the following steps:
 
-#. Click Start->All Programs->CMake 2.8->CMake
+#. Click Start->All Programs->CMake 3.1->CMake
 #. In the box labeled "Where is the source code:" browse to OpenMM src directory
    (containing top CMakeLists.txt)
 #. In the box labeled "Where to build the binaries" browse to your build_openmm

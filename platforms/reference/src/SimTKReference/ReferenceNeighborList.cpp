@@ -13,8 +13,8 @@ namespace OpenMM {
 typedef std::vector<AtomIndex> AtomList;
 
 // squared distance between two points
-static double compPairDistanceSquared(const RealVec& pos1, const RealVec& pos2, const RealVec* periodicBoxVectors, bool usePeriodic) {
-    RealVec diff = pos2-pos1;
+static double compPairDistanceSquared(const Vec3& pos1, const Vec3& pos2, const Vec3* periodicBoxVectors, bool usePeriodic) {
+    Vec3 diff = pos2-pos1;
     if (usePeriodic) {
         diff -= periodicBoxVectors[2]*floor(diff[2]/periodicBoxVectors[2][2]+0.5);
         diff -= periodicBoxVectors[1]*floor(diff[1]/periodicBoxVectors[1][1]+0.5);
@@ -30,7 +30,7 @@ void OPENMM_EXPORT computeNeighborListNaive(
                               int nAtoms,
                               const AtomLocationList& atomLocations, 
                               const vector<set<int> >& exclusions,
-                              const RealVec* periodicBoxVectors,
+                              const Vec3* periodicBoxVectors,
                               bool usePeriodic,
                               double maxDistance,
                               double minDistance,
@@ -78,13 +78,13 @@ public:
 };
 
 
-typedef std::pair<const RealVec*, AtomIndex> VoxelItem;
+typedef std::pair<const Vec3*, AtomIndex> VoxelItem;
 typedef std::vector< VoxelItem > Voxel;
 
 class VoxelHash
 {
 public:
-    VoxelHash(double vsx, double vsy, double vsz, const RealVec* periodicBoxVectors, bool usePeriodic) :
+    VoxelHash(double vsx, double vsy, double vsz, const Vec3* periodicBoxVectors, bool usePeriodic) :
             voxelSizeX(vsx), voxelSizeY(vsy), voxelSizeZ(vsz), periodicBoxVectors(periodicBoxVectors), usePeriodic(usePeriodic) {
         if (usePeriodic) {
             nx = (int) floor(periodicBoxVectors[0][0]/voxelSizeX+0.5);
@@ -96,7 +96,7 @@ public:
         }
     }
 
-    void insert(const AtomIndex& item, const RealVec& location)
+    void insert(const AtomIndex& item, const Vec3& location)
     {
         VoxelIndex voxelIndex = getVoxelIndex(location);
         if (voxelMap.find(voxelIndex) == voxelMap.end())
@@ -106,8 +106,8 @@ public:
     }
 
 
-    VoxelIndex getVoxelIndex(const RealVec& location) const {
-        RealVec r = location;
+    VoxelIndex getVoxelIndex(const Vec3& location) const {
+        Vec3 r = location;
         if (usePeriodic) {
             r -= periodicBoxVectors[2]*floor(r[2]/periodicBoxVectors[2][2]);
             r -= periodicBoxVectors[1]*floor(r[1]/periodicBoxVectors[1][1]);
@@ -138,7 +138,7 @@ public:
         assert(voxelSizeZ > 0);
 
         const AtomIndex atomI = referencePoint.second;
-        const RealVec& locationI = *referencePoint.first;
+        const Vec3& locationI = *referencePoint.first;
         
         double maxDistanceSquared = maxDistance * maxDistance;
         double minDistanceSquared = minDistance * minDistance;
@@ -184,10 +184,10 @@ public:
                     const map<VoxelIndex, Voxel>::const_iterator voxelEntry = voxelMap.find(voxelIndex);
                     if (voxelEntry == voxelMap.end()) continue; // no such voxel; skip
                     const Voxel& voxel = voxelEntry->second;
-                    for (Voxel::const_iterator itemIter = voxel.begin(); itemIter != voxel.end(); ++itemIter)
+                    for (auto& item : voxel)
                     {
-                        const AtomIndex atomJ = itemIter->second;
-                        const RealVec& locationJ = *itemIter->first;
+                        const AtomIndex atomJ = item.second;
+                        const Vec3& locationJ = *item.first;
                         
                         // Ignore self hits
                         if (atomI == atomJ) continue;
@@ -211,7 +211,7 @@ public:
 private:
     double voxelSizeX, voxelSizeY, voxelSizeZ;
     int nx, ny, nz;
-    const RealVec* periodicBoxVectors;
+    const Vec3* periodicBoxVectors;
     const bool usePeriodic;
     std::map<VoxelIndex, Voxel> voxelMap;
 };
@@ -223,7 +223,7 @@ void OPENMM_EXPORT computeNeighborListVoxelHash(
                               int nAtoms,
                               const AtomLocationList& atomLocations,
                               const vector<set<int> >& exclusions,
-                              const RealVec* periodicBoxVectors,
+                              const Vec3* periodicBoxVectors,
                               bool usePeriodic,
                               double maxDistance,
                               double minDistance,
@@ -244,7 +244,7 @@ void OPENMM_EXPORT computeNeighborListVoxelHash(
     for (AtomIndex atomJ = 0; atomJ < (AtomIndex) nAtoms; ++atomJ) // use "j", because j > i for pairs
     {
         // 1) Find other atoms that are close to this one
-        const RealVec& location = atomLocations[atomJ];
+        const Vec3& location = atomLocations[atomJ];
         voxelHash.getNeighbors(
             neighborList, 
             VoxelItem(&location, atomJ),

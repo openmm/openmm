@@ -47,10 +47,10 @@ ReferenceCustomAngleIxn::ReferenceCustomAngleIxn(const Lepton::CompiledExpressio
         expressionSet.registerExpression(this->energyParamDerivExpressions[i]);
     thetaIndex = expressionSet.getVariableIndex("theta");
     numParameters = parameterNames.size();
-    for (int i = 0; i < (int) numParameters; i++)
-        angleParamIndex.push_back(expressionSet.getVariableIndex(parameterNames[i]));
-    for (map<string, double>::const_iterator iter = globalParameters.begin(); iter != globalParameters.end(); ++iter)
-        expressionSet.setVariable(expressionSet.getVariableIndex(iter->first), iter->second);
+    for (auto& param : parameterNames)
+        angleParamIndex.push_back(expressionSet.getVariableIndex(param));
+    for (auto& param : globalParameters)
+        expressionSet.setVariable(expressionSet.getVariableIndex(param.first), param.second);
 }
 
 /**---------------------------------------------------------------------------------------
@@ -62,7 +62,7 @@ ReferenceCustomAngleIxn::ReferenceCustomAngleIxn(const Lepton::CompiledExpressio
 ReferenceCustomAngleIxn::~ReferenceCustomAngleIxn() {
 }
 
-void ReferenceCustomAngleIxn::setPeriodic(OpenMM::RealVec* vectors) {
+void ReferenceCustomAngleIxn::setPeriodic(OpenMM::Vec3* vectors) {
     usePeriodic = true;
     boxVectors[0] = vectors[0];
     boxVectors[1] = vectors[1];
@@ -82,11 +82,11 @@ void ReferenceCustomAngleIxn::setPeriodic(OpenMM::RealVec* vectors) {
    --------------------------------------------------------------------------------------- */
 
 void ReferenceCustomAngleIxn::calculateBondIxn(int* atomIndices,
-                                               vector<RealVec>& atomCoordinates,
-                                               RealOpenMM* parameters,
-                                               vector<RealVec>& forces,
-                                               RealOpenMM* totalEnergy, double* energyParamDerivs) {
-   RealOpenMM deltaR[2][ReferenceForce::LastDeltaRIndex];
+                                               vector<Vec3>& atomCoordinates,
+                                               double* parameters,
+                                               vector<Vec3>& forces,
+                                               double* totalEnergy, double* energyParamDerivs) {
+   double deltaR[2][ReferenceForce::LastDeltaRIndex];
    for (int i = 0; i < numParameters; i++)
        expressionSet.setVariable(angleParamIndex[i], parameters[i]);
 
@@ -105,30 +105,30 @@ void ReferenceCustomAngleIxn::calculateBondIxn(int* atomIndices,
       ReferenceForce::getDeltaR(atomCoordinates[atomAIndex], atomCoordinates[atomBIndex], deltaR[0]);
       ReferenceForce::getDeltaR(atomCoordinates[atomCIndex], atomCoordinates[atomBIndex], deltaR[1]);
    }
-   RealOpenMM pVector[3];
+   double pVector[3];
    SimTKOpenMMUtilities::crossProductVector3(deltaR[0], deltaR[1], pVector);
-   RealOpenMM rp = SQRT(DOT3(pVector, pVector));
+   double rp = sqrt(DOT3(pVector, pVector));
    if (rp < 1.0e-06)
-      rp = (RealOpenMM) 1.0e-06;
-   RealOpenMM dot = DOT3(deltaR[0], deltaR[1]);
-   RealOpenMM cosine = dot/SQRT((deltaR[0][ReferenceForce::R2Index]*deltaR[1][ReferenceForce::R2Index]));
-   RealOpenMM angle;
+      rp = 1.0e-06;
+   double dot = DOT3(deltaR[0], deltaR[1]);
+   double cosine = dot/sqrt((deltaR[0][ReferenceForce::R2Index]*deltaR[1][ReferenceForce::R2Index]));
+   double angle;
    if (cosine >= 1.0)
       angle = 0.0;
    else if (cosine <= -1.0)
       angle = PI_M;
    else
-      angle = ACOS(cosine);
+      angle = acos(cosine);
    expressionSet.setVariable(thetaIndex, angle);
 
    // Compute the force and energy, and apply them to the atoms.
    
-   RealOpenMM energy = (RealOpenMM) energyExpression.evaluate();
-   RealOpenMM dEdR = (RealOpenMM) forceExpression.evaluate();
-   RealOpenMM termA =  dEdR/(deltaR[0][ReferenceForce::R2Index]*rp);
-   RealOpenMM termC = -dEdR/(deltaR[1][ReferenceForce::R2Index]*rp);
+   double energy = energyExpression.evaluate();
+   double dEdR = forceExpression.evaluate();
+   double termA =  dEdR/(deltaR[0][ReferenceForce::R2Index]*rp);
+   double termC = -dEdR/(deltaR[1][ReferenceForce::R2Index]*rp);
 
-   RealOpenMM deltaCrossP[3][3];
+   double deltaCrossP[3][3];
    SimTKOpenMMUtilities::crossProductVector3(deltaR[0], pVector, deltaCrossP[0]);
    SimTKOpenMMUtilities::crossProductVector3(deltaR[1], pVector, deltaCrossP[2]);
 

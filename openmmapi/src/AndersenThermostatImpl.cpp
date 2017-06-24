@@ -94,7 +94,7 @@ void AndersenThermostatImpl::tagParticlesInGroup(int particle, int group, vector
     // Recursively tag particles as belonging to a particular group.
 
     particleGroup[particle] = group;
-    for (int i = 0; i < (int) particleConstraints[particle].size(); i++)
-        if (particleGroup[particleConstraints[particle][i]] == -1)
-            tagParticlesInGroup(particleConstraints[particle][i], group, particleGroup, particleConstraints);
+    for (int constrained : particleConstraints[particle])
+        if (particleGroup[constrained] == -1)
+            tagParticlesInGroup(constrained, group, particleGroup, particleConstraints);
 }

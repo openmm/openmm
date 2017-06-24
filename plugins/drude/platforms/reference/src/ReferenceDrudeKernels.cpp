@@ -41,19 +41,19 @@
 using namespace OpenMM;
 using namespace std;
 
-static vector<RealVec>& extractPositions(ContextImpl& context) {
+static vector<Vec3>& extractPositions(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-    return *((vector<RealVec>*) data->positions);
+    return *((vector<Vec3>*) data->positions);
 }
 
-static vector<RealVec>& extractVelocities(ContextImpl& context) {
+static vector<Vec3>& extractVelocities(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-    return *((vector<RealVec>*) data->velocities);
+    return *((vector<Vec3>*) data->velocities);
 }
 
-static vector<RealVec>& extractForces(ContextImpl& context) {
+static vector<Vec3>& extractForces(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-    return *((vector<RealVec>*) data->forces);
+    return *((vector<Vec3>*) data->forces);
 }
 
 static ReferenceConstraints& extractConstraints(ContextImpl& context) {
@@ -64,13 +64,13 @@ static ReferenceConstraints& extractConstraints(ContextImpl& context) {
 static double computeShiftedKineticEnergy(ContextImpl& context, vector<double>& inverseMasses, double timeShift) {
     const System& system = context.getSystem();
     int numParticles = system.getNumParticles();
-    vector<RealVec>& posData = extractPositions(context);
-    vector<RealVec>& velData = extractVelocities(context);
-    vector<RealVec>& forceData = extractForces(context);
+    vector<Vec3>& posData = extractPositions(context);
+    vector<Vec3>& velData = extractVelocities(context);
+    vector<Vec3>& forceData = extractForces(context);
     
     // Compute the shifted velocities.
     
-    vector<RealVec> shiftedVel(numParticles);
+    vector<Vec3> shiftedVel(numParticles);
     for (int i = 0; i < numParticles; ++i) {
         if (inverseMasses[i] > 0)
             shiftedVel[i] = velData[i]+forceData[i]*(timeShift*inverseMasses[i]);
@@ -119,8 +119,8 @@ void ReferenceCalcDrudeForceKernel::initialize(const System& system, const Drude
 }
 
 double ReferenceCalcDrudeForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    vector<RealVec>& pos = extractPositions(context);
-    vector<RealVec>& force = extractForces(context);
+    vector<Vec3>& pos = extractPositions(context);
+    vector<Vec3>& force = extractForces(context);
     int numParticles = particle.size();
     double energy = 0;
     
@@ -133,17 +133,17 @@ double ReferenceCalcDrudeForceKernel::execute(ContextImpl& context, bool include
         int p3 = particle3[i];
         int p4 = particle4[i];
         
-        RealOpenMM a1 = (p2 == -1 ? 1 : aniso12[i]);
-        RealOpenMM a2 = (p3 == -1 || p4 == -1 ? 1 : aniso34[i]);
-        RealOpenMM a3 = 3-a1-a2;
-        RealOpenMM k3 = ONE_4PI_EPS0*charge[i]*charge[i]/(polarizability[i]*a3);
-        RealOpenMM k1 = ONE_4PI_EPS0*charge[i]*charge[i]/(polarizability[i]*a1) - k3;
-        RealOpenMM k2 = ONE_4PI_EPS0*charge[i]*charge[i]/(polarizability[i]*a2) - k3;
+        double a1 = (p2 == -1 ? 1 : aniso12[i]);
+        double a2 = (p3 == -1 || p4 == -1 ? 1 : aniso34[i]);
+        double a3 = 3-a1-a2;
+        double k3 = ONE_4PI_EPS0*charge[i]*charge[i]/(polarizability[i]*a3);
+        double k1 = ONE_4PI_EPS0*charge[i]*charge[i]/(polarizability[i]*a1) - k3;
+        double k2 = ONE_4PI_EPS0*charge[i]*charge[i]/(polarizability[i]*a2) - k3;
         
         // Compute the isotropic force.
         
-        RealVec delta = pos[p]-pos[p1];
-        RealOpenMM r2 = delta.dot(delta);
+        Vec3 delta = pos[p]-pos[p1];
+        double r2 = delta.dot(delta);
         energy += 0.5*k3*r2;
         force[p] -= delta*k3;
         force[p1] += delta*k3;
@@ -151,13 +151,13 @@ double ReferenceCalcDrudeForceKernel::execute(ContextImpl& context, bool include
         // Compute the first anisotropic force.
         
         if (p2 != -1) {
-            RealVec dir = pos[p1]-pos[p2];
-            RealOpenMM invDist = 1.0/sqrt(dir.dot(dir));
+            Vec3 dir = pos[p1]-pos[p2];
+            double invDist = 1.0/sqrt(dir.dot(dir));
             dir *= invDist;
-            RealOpenMM rprime = dir.dot(delta);
+            double rprime = dir.dot(delta);
             energy += 0.5*k1*rprime*rprime;
-            RealVec f1 = dir*(k1*rprime); 
-            RealVec f2 = (delta-dir*rprime)*(k1*rprime*invDist);
+            Vec3 f1 = dir*(k1*rprime); 
+            Vec3 f2 = (delta-dir*rprime)*(k1*rprime*invDist);
             force[p] -= f1;
             force[p1] += f1-f2;
             force[p2] += f2;
@@ -166,13 +166,13 @@ double ReferenceCalcDrudeForceKernel::execute(ContextImpl& context, bool include
         // Compute the second anisotropic force.
         
         if (p3 != -1 && p4 != -1) {
-            RealVec dir = pos[p3]-pos[p4];
-            RealOpenMM invDist = 1.0/sqrt(dir.dot(dir));
+            Vec3 dir = pos[p3]-pos[p4];
+            double invDist = 1.0/sqrt(dir.dot(dir));
             dir *= invDist;
-            RealOpenMM rprime = dir.dot(delta);
+            double rprime = dir.dot(delta);
             energy += 0.5*k2*rprime*rprime;
-            RealVec f1 = dir*(k2*rprime);
-            RealVec f2 = (delta-dir*rprime)*(k2*rprime*invDist);
+            Vec3 f1 = dir*(k2*rprime);
+            Vec3 f2 = (delta-dir*rprime)*(k2*rprime*invDist);
             force[p] -= f1;
             force[p1] += f1;
             force[p3] -= f2;
@@ -188,18 +188,18 @@ double ReferenceCalcDrudeForceKernel::execute(ContextImpl& context, bool include
         int dipole2 = pair2[i];
         int dipole1Particles[] = {particle[dipole1], particle1[dipole1]};
         int dipole2Particles[] = {particle[dipole2], particle1[dipole2]};
-        RealOpenMM uscale = pairThole[i]/pow(polarizability[dipole1]*polarizability[dipole2], 1.0/6.0);
+        double uscale = pairThole[i]/pow(polarizability[dipole1]*polarizability[dipole2], 1.0/6.0);
         for (int j = 0; j < 2; j++)
             for (int k = 0; k < 2; k++) {
                 int p1 = dipole1Particles[j];
                 int p2 = dipole2Particles[k];
-                RealOpenMM chargeProduct = charge[dipole1]*charge[dipole2]*(j == k ? 1 : -1);
-                RealVec delta = pos[p1]-pos[p2];
-                RealOpenMM r = sqrt(delta.dot(delta));
-                RealOpenMM u = r*uscale;
-                RealOpenMM screening = 1.0 - (1.0+0.5*u)*exp(-u);
+                double chargeProduct = charge[dipole1]*charge[dipole2]*(j == k ? 1 : -1);
+                Vec3 delta = pos[p1]-pos[p2];
+                double r = sqrt(delta.dot(delta));
+                double u = r*uscale;
+                double screening = 1.0 - (1.0+0.5*u)*exp(-u);
                 energy += ONE_4PI_EPS0*chargeProduct*screening/r;
-                RealVec f = delta*(ONE_4PI_EPS0*chargeProduct/(r*r))*(screening/r-0.5*(1+u)*exp(-u)*uscale);
+                Vec3 f = delta*(ONE_4PI_EPS0*chargeProduct/(r*r))*(screening/r-0.5*(1+u)*exp(-u)*uscale);
                 force[p1] += f;
                 force[p2] -= f;
             }
@@ -257,21 +257,20 @@ void ReferenceIntegrateDrudeLangevinStepKernel::initialize(const System& system,
 }
 
 void ReferenceIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, const DrudeLangevinIntegrator& integrator) {
-    vector<RealVec>& pos = extractPositions(context);
-    vector<RealVec>& vel = extractVelocities(context);
-    vector<RealVec>& force = extractForces(context);
+    vector<Vec3>& pos = extractPositions(context);
+    vector<Vec3>& vel = extractVelocities(context);
+    vector<Vec3>& force = extractForces(context);
     
     // Update velocities of ordinary particles.
     
-    const RealOpenMM vscale = exp(-integrator.getStepSize()*integrator.getFriction());
-    const RealOpenMM fscale = (1-vscale)/integrator.getFriction();
-    const RealOpenMM kT = BOLTZ*integrator.getTemperature();
-    const RealOpenMM noisescale = sqrt(2*kT*integrator.getFriction())*sqrt(0.5*(1-vscale*vscale)/integrator.getFriction());
-    for (int i = 0; i < (int) normalParticles.size(); i++) {
-        int index = normalParticles[i];
-        RealOpenMM invMass = particleInvMass[index];
+    const double vscale = exp(-integrator.getStepSize()*integrator.getFriction());
+    const double fscale = (1-vscale)/integrator.getFriction();
+    const double kT = BOLTZ*integrator.getTemperature();
+    const double noisescale = sqrt(2*kT*integrator.getFriction())*sqrt(0.5*(1-vscale*vscale)/integrator.getFriction());
+    for (int index : normalParticles) {
+        double invMass = particleInvMass[index];
         if (invMass != 0.0) {
-            RealOpenMM sqrtInvMass = sqrt(invMass);
+            double sqrtInvMass = sqrt(invMass);
             for (int j = 0; j < 3; j++)
                 vel[index][j] = vscale*vel[index][j] + fscale*invMass*force[index][j] + noisescale*sqrtInvMass*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
         }
@@ -279,21 +278,21 @@ void ReferenceIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, co
     
     // Update velocities of Drude particle pairs.
     
-    const RealOpenMM vscaleDrude = exp(-integrator.getStepSize()*integrator.getDrudeFriction());
-    const RealOpenMM fscaleDrude = (1-vscaleDrude)/integrator.getDrudeFriction();
-    const RealOpenMM kTDrude = BOLTZ*integrator.getDrudeTemperature();
-    const RealOpenMM noisescaleDrude = sqrt(2*kTDrude*integrator.getDrudeFriction())*sqrt(0.5*(1-vscaleDrude*vscaleDrude)/integrator.getDrudeFriction());
+    const double vscaleDrude = exp(-integrator.getStepSize()*integrator.getDrudeFriction());
+    const double fscaleDrude = (1-vscaleDrude)/integrator.getDrudeFriction();
+    const double kTDrude = BOLTZ*integrator.getDrudeTemperature();
+    const double noisescaleDrude = sqrt(2*kTDrude*integrator.getDrudeFriction())*sqrt(0.5*(1-vscaleDrude*vscaleDrude)/integrator.getDrudeFriction());
     for (int i = 0; i < (int) pairParticles.size(); i++) {
         int p1 = pairParticles[i].first;
         int p2 = pairParticles[i].second;
-        RealOpenMM mass1fract = pairInvTotalMass[i]/particleInvMass[p1];
-        RealOpenMM mass2fract = pairInvTotalMass[i]/particleInvMass[p2];
-        RealOpenMM sqrtInvTotalMass = sqrt(pairInvTotalMass[i]);
-        RealOpenMM sqrtInvReducedMass = sqrt(pairInvReducedMass[i]);
-        RealVec cmVel = vel[p1]*mass1fract+vel[p2]*mass2fract;
-        RealVec relVel = vel[p2]-vel[p1];
-        RealVec cmForce = force[p1]+force[p2];
-        RealVec relForce = force[p2]*mass1fract - force[p1]*mass2fract;
+        double mass1fract = pairInvTotalMass[i]/particleInvMass[p1];
+        double mass2fract = pairInvTotalMass[i]/particleInvMass[p2];
+        double sqrtInvTotalMass = sqrt(pairInvTotalMass[i]);
+        double sqrtInvReducedMass = sqrt(pairInvReducedMass[i]);
+        Vec3 cmVel = vel[p1]*mass1fract+vel[p2]*mass2fract;
+        Vec3 relVel = vel[p2]-vel[p1];
+        Vec3 cmForce = force[p1]+force[p2];
+        Vec3 relForce = force[p2]*mass1fract - force[p1]*mass2fract;
         for (int j = 0; j < 3; j++) {
             cmVel[j] = vscale*cmVel[j] + fscale*pairInvTotalMass[i]*cmForce[j] + noisescale*sqrtInvTotalMass*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
             relVel[j] = vscaleDrude*relVel[j] + fscaleDrude*pairInvReducedMass[i]*relForce[j] + noisescaleDrude*sqrtInvReducedMass*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
@@ -305,8 +304,8 @@ void ReferenceIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, co
     // Update the particle positions.
     
     int numParticles = particleInvMass.size();
-    vector<RealVec> xPrime(numParticles);
-    RealOpenMM dt = integrator.getStepSize();
+    vector<Vec3> xPrime(numParticles);
+    double dt = integrator.getStepSize();
     for (int i = 0; i < numParticles; i++)
         if (particleInvMass[i] != 0.0)
             xPrime[i] = pos[i]+vel[i]*dt;
@@ -317,7 +316,7 @@ void ReferenceIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, co
     
     // Record the constrained positions and velocities.
     
-    RealOpenMM dtInv = 1.0/dt;
+    double dtInv = 1.0/dt;
     for (int i = 0; i < numParticles; i++) {
         if (particleInvMass[i] != 0.0) {
             vel[i] = (xPrime[i]-pos[i])*dtInv;
@@ -327,31 +326,31 @@ void ReferenceIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, co
 
     // Apply hard wall constraints.
 
-    const RealOpenMM maxDrudeDistance = integrator.getMaxDrudeDistance();
+    const double maxDrudeDistance = integrator.getMaxDrudeDistance();
     if (maxDrudeDistance > 0) {
-        const RealOpenMM hardwallscaleDrude = sqrt(kTDrude);
+        const double hardwallscaleDrude = sqrt(kTDrude);
         for (int i = 0; i < (int) pairParticles.size(); i++) {
             int p1 = pairParticles[i].first;
             int p2 = pairParticles[i].second;
-            RealVec delta = pos[p1]-pos[p2];
-            RealOpenMM r = sqrt(delta.dot(delta));
-            RealOpenMM rInv = 1/r;
+            Vec3 delta = pos[p1]-pos[p2];
+            double r = sqrt(delta.dot(delta));
+            double rInv = 1/r;
             if (rInv*maxDrudeDistance < 1.0) {
                 // The constraint has been violated, so make the inter-particle distance "bounce"
                 // off the hard wall.
                 
                 if (rInv*maxDrudeDistance < 0.5)
                     throw OpenMMException("Drude particle moved too far beyond hard wall constraint");
-                RealVec bondDir = delta*rInv;
-                RealVec vel1 = vel[p1];
-                RealVec vel2 = vel[p2];
-                RealOpenMM mass1 = particleMass[p1];
-                RealOpenMM mass2 = particleMass[p2];
-                RealOpenMM deltaR = r-maxDrudeDistance;
-                RealOpenMM deltaT = dt;
-                RealOpenMM dotvr1 = vel1.dot(bondDir);
-                RealVec vb1 = bondDir*dotvr1;
-                RealVec vp1 = vel1-vb1;
+                Vec3 bondDir = delta*rInv;
+                Vec3 vel1 = vel[p1];
+                Vec3 vel2 = vel[p2];
+                double mass1 = particleMass[p1];
+                double mass2 = particleMass[p2];
+                double deltaR = r-maxDrudeDistance;
+                double deltaT = dt;
+                double dotvr1 = vel1.dot(bondDir);
+                Vec3 vb1 = bondDir*dotvr1;
+                Vec3 vp1 = vel1-vb1;
                 if (mass2 == 0) {
                     // The parent particle is massless, so move only the Drude particle.
 
@@ -360,29 +359,29 @@ void ReferenceIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, co
                     if (deltaT > dt)
                         deltaT = dt;
                     dotvr1 = -dotvr1*hardwallscaleDrude/(abs(dotvr1)*sqrt(mass1));
-                    RealOpenMM dr = -deltaR + deltaT*dotvr1;
+                    double dr = -deltaR + deltaT*dotvr1;
                     pos[p1] += bondDir*dr;
                     vel[p1] = vp1 + bondDir*dotvr1;
                 }
                 else {
                     // Move both particles.
 
-                    RealOpenMM invTotalMass = pairInvTotalMass[i];
-                    RealOpenMM dotvr2 = vel2.dot(bondDir);
-                    RealVec vb2 = bondDir*dotvr2;
-                    RealVec vp2 = vel2-vb2;
-                    RealOpenMM vbCMass = (mass1*dotvr1 + mass2*dotvr2)*invTotalMass;
+                    double invTotalMass = pairInvTotalMass[i];
+                    double dotvr2 = vel2.dot(bondDir);
+                    Vec3 vb2 = bondDir*dotvr2;
+                    Vec3 vp2 = vel2-vb2;
+                    double vbCMass = (mass1*dotvr1 + mass2*dotvr2)*invTotalMass;
                     dotvr1 -= vbCMass;
                     dotvr2 -= vbCMass;
                     if (dotvr1 != dotvr2)
                         deltaT = deltaR/abs(dotvr1-dotvr2);
                     if (deltaT > dt)
                         deltaT = dt;
-                    RealOpenMM vBond = hardwallscaleDrude/sqrt(mass1);
+                    double vBond = hardwallscaleDrude/sqrt(mass1);
                     dotvr1 = -dotvr1*vBond*mass2*invTotalMass/abs(dotvr1);
                     dotvr2 = -dotvr2*vBond*mass1*invTotalMass/abs(dotvr2);
-                    RealOpenMM dr1 = -deltaR*mass2*invTotalMass + deltaT*dotvr1;
-                    RealOpenMM dr2 = deltaR*mass1*invTotalMass + deltaT*dotvr2;
+                    double dr1 = -deltaR*mass2*invTotalMass + deltaT*dotvr1;
+                    double dr2 = deltaR*mass1*invTotalMass + deltaT*dotvr2;
                     dotvr1 += vbCMass;
                     dotvr2 += vbCMass;
                     pos[p1] += bondDir*dr1;
@@ -419,7 +418,7 @@ void ReferenceIntegrateDrudeSCFStepKernel::initialize(const System& system, cons
 
     // Record particle masses.
 
-    vector<RealOpenMM> particleMass;
+    vector<double> particleMass;
     for (int i = 0; i < system.getNumParticles(); i++) {
         double mass = system.getParticleMass(i);
         particleMass.push_back(mass);
@@ -433,20 +432,20 @@ void ReferenceIntegrateDrudeSCFStepKernel::initialize(const System& system, cons
         throw OpenMMException("DrudeSCFIntegrator: Failed to allocate memory");
     lbfgs_parameter_init(&minimizerParams);
     minimizerParams.linesearch = LBFGS_LINESEARCH_BACKTRACKING_STRONG_WOLFE;
-    if (sizeof(RealOpenMM) < 8)
+    if (sizeof(double) < 8)
         minimizerParams.xtol = 1e-7;
 }
 
 void ReferenceIntegrateDrudeSCFStepKernel::execute(ContextImpl& context, const DrudeSCFIntegrator& integrator) {
-    vector<RealVec>& pos = extractPositions(context);
-    vector<RealVec>& vel = extractVelocities(context);
-    vector<RealVec>& force = extractForces(context);
+    vector<Vec3>& pos = extractPositions(context);
+    vector<Vec3>& vel = extractVelocities(context);
+    vector<Vec3>& force = extractForces(context);
     
     // Update the positions and velocities.
     
     int numParticles = particleInvMass.size();
-    vector<RealVec> xPrime(numParticles);
-    RealOpenMM dt = integrator.getStepSize();
+    vector<Vec3> xPrime(numParticles);
+    double dt = integrator.getStepSize();
     for (int i = 0; i < numParticles; i++) {
         if (particleInvMass[i] != 0.0) {
             vel[i] += force[i]*particleInvMass[i]*dt;
@@ -460,7 +459,7 @@ void ReferenceIntegrateDrudeSCFStepKernel::execute(ContextImpl& context, const D
     
     // Record the constrained positions and velocities.
     
-    RealOpenMM dtInv = 1.0/dt;
+    double dtInv = 1.0/dt;
     for (int i = 0; i < numParticles; i++) {
         if (particleInvMass[i] != 0.0) {
             vel[i] = (xPrime[i]-pos[i])*dtInv;
@@ -494,13 +493,13 @@ static lbfgsfloatval_t evaluate(void *instance, const lbfgsfloatval_t *x, lbfgsf
 
     // Compute the force and energy for this configuration.
 
-    vector<RealVec>& pos = extractPositions(context);
-    vector<RealVec>& force = extractForces(context);
+    vector<Vec3>& pos = extractPositions(context);
+    vector<Vec3>& force = extractForces(context);
     for (int i = 0; i < numDrudeParticles; i++)
-        pos[drudeParticles[i]] = RealVec(x[3*i], x[3*i+1], x[3*i+2]);
+        pos[drudeParticles[i]] = Vec3(x[3*i], x[3*i+1], x[3*i+2]);
     double energy = context.calcForcesAndEnergy(true, true);
     for (int i = 0; i < numDrudeParticles; i++) {
-        RealVec f = force[drudeParticles[i]];
+        Vec3 f = force[drudeParticles[i]];
         g[3*i] = -f[0];
         g[3*i+1] = -f[1];
         g[3*i+2] = -f[2];
@@ -511,11 +510,11 @@ static lbfgsfloatval_t evaluate(void *instance, const lbfgsfloatval_t *x, lbfgsf
 void ReferenceIntegrateDrudeSCFStepKernel::minimize(ContextImpl& context, double tolerance) {
     // Record the initial positions and determine a normalization constant for scaling the tolerance.
 
-    vector<RealVec>& pos = extractPositions(context);
+    vector<Vec3>& pos = extractPositions(context);
     int numDrudeParticles = drudeParticles.size();
     double norm = 0.0;
     for (int i = 0; i < numDrudeParticles; i++) {
-        RealVec p = pos[drudeParticles[i]];
+        Vec3 p = pos[drudeParticles[i]];
         minimizerPos[3*i] = p[0];
         minimizerPos[3*i+1] = p[1];
         minimizerPos[3*i+2] = p[2];

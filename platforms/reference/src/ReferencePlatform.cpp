@@ -35,7 +35,7 @@
 #include "ReferenceKernels.h"
 #include "openmm/internal/ContextImpl.h"
 #include "SimTKOpenMMRealType.h"
-#include "RealVec.h"
+#include "openmm/Vec3.h"
 #include <map>
 #include <vector>
 
@@ -82,7 +82,7 @@ double ReferencePlatform::getSpeed() const {
 }
 
 bool ReferencePlatform::supportsDoublePrecision() const {
-    return (sizeof(RealOpenMM) >= sizeof(double));
+    return true;
 }
 
 void ReferencePlatform::contextCreated(ContextImpl& context, const map<string, string>& properties) const {
@@ -95,21 +95,21 @@ void ReferencePlatform::contextDestroyed(ContextImpl& context) const {
 }
 
 ReferencePlatform::PlatformData::PlatformData(const System& system) : time(0.0), stepCount(0), numParticles(system.getNumParticles()) {
-    positions = new vector<RealVec>(numParticles);
-    velocities = new vector<RealVec>(numParticles);
-    forces = new vector<RealVec>(numParticles);
-    periodicBoxSize = new RealVec();
-    periodicBoxVectors = new RealVec[3];
+    positions = new vector<Vec3>(numParticles);
+    velocities = new vector<Vec3>(numParticles);
+    forces = new vector<Vec3>(numParticles);
+    periodicBoxSize = new Vec3();
+    periodicBoxVectors = new Vec3[3];
     constraints = new ReferenceConstraints(system);
     energyParameterDerivatives = new map<string, double>();
 }
 
 ReferencePlatform::PlatformData::~PlatformData() {
-    delete (vector<RealVec>*) positions;
-    delete (vector<RealVec>*) velocities;
-    delete (vector<RealVec>*) forces;
-    delete (RealVec*) periodicBoxSize;
-    delete[] (RealVec*) periodicBoxVectors;
+    delete (vector<Vec3>*) positions;
+    delete (vector<Vec3>*) velocities;
+    delete (vector<Vec3>*) forces;
+    delete (Vec3*) periodicBoxSize;
+    delete[] (Vec3*) periodicBoxVectors;
     delete (ReferenceConstraints*) constraints;
     delete (map<string, double>*) energyParameterDerivatives;
 }

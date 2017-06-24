@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2017 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -40,10 +40,17 @@ class ThreadPool::ThreadData {
 public:
     ThreadData(ThreadPool& owner, int index) : owner(owner), index(index), isDeleted(false) {
     }
+    void executeTask() {
+        if (owner.currentTask != NULL)
+            owner.currentTask->execute(owner, index);
+        else
+            owner.currentFunction(owner, index);
+    }
     ThreadPool& owner;
     int index;
     bool isDeleted;
     Task* currentTask;
+    function<void (ThreadPool& pool, int)> currentFunction;
 };
 
 static void* threadBody(void* args) {
@@ -54,13 +61,13 @@ static void* threadBody(void* args) {
         data.owner.syncThreads();
         if (data.isDeleted)
             break;
-        data.currentTask->execute(data.owner, data.index);
+        data.executeTask();
     }
     delete &data;
     return 0;
 }
 
-ThreadPool::ThreadPool(int numThreads) {
+ThreadPool::ThreadPool(int numThreads) : currentTask(NULL) {
     if (numThreads <= 0)
         numThreads = getNumProcessors();
     this->numThreads = numThreads;
@@ -82,13 +89,13 @@ ThreadPool::ThreadPool(int numThreads) {
 }
 
 ThreadPool::~ThreadPool() {
-    for (int i = 0; i < (int) threadData.size(); i++)
-        threadData[i]->isDeleted = true;
+    for (auto data : threadData)
+        data->isDeleted = true;
     pthread_mutex_lock(&lock);
     pthread_cond_broadcast(&startCondition);
     pthread_mutex_unlock(&lock);
-    for (int i = 0; i < (int) thread.size(); i++)
-        pthread_join(thread[i], NULL);
+    for (auto t : thread)
+        pthread_join(t, NULL);
     pthread_mutex_destroy(&lock);
     pthread_cond_destroy(&startCondition);
     pthread_cond_destroy(&endCondition);
@@ -99,8 +106,13 @@ int ThreadPool::getNumThreads() const {
 }
 
 void ThreadPool::execute(Task& task) {
-    for (int i = 0; i < (int) threadData.size(); i++)
-        threadData[i]->currentTask = &task;
+    currentTask = &task;
+    resumeThreads();
+}
+
+void ThreadPool::execute(function<void (ThreadPool&, int)> task) {
+    currentTask = NULL;
+    currentFunction = task;
     resumeThreads();
 }
 

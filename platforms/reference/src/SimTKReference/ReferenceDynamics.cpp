@@ -44,19 +44,10 @@ using namespace OpenMM;
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceDynamics::ReferenceDynamics(int numberOfAtoms,  RealOpenMM deltaT, RealOpenMM temperature) : 
+ReferenceDynamics::ReferenceDynamics(int numberOfAtoms,  double deltaT, double temperature) : 
                   _numberOfAtoms(numberOfAtoms), _deltaT(deltaT), _temperature(temperature) {
 
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceDynamics::ReferenceDynamics";
-
-   static const RealOpenMM one        =  1.0;
-
-   // ---------------------------------------------------------------------------------------
-
-   _timeStep             = 0;
-
+   _timeStep = 0;
    _ownReferenceConstraint = false;
    _referenceConstraint    = NULL;
 }
@@ -68,13 +59,6 @@ ReferenceDynamics::ReferenceDynamics(int numberOfAtoms,  RealOpenMM deltaT, Real
    --------------------------------------------------------------------------------------- */
 
 ReferenceDynamics::~ReferenceDynamics() {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceDynamics::~ReferenceDynamics";
-
-   // ---------------------------------------------------------------------------------------
-
    if (_ownReferenceConstraint) {
       delete _referenceConstraint;
    }
@@ -89,13 +73,6 @@ ReferenceDynamics::~ReferenceDynamics() {
    --------------------------------------------------------------------------------------- */
 
 int ReferenceDynamics::getNumberOfAtoms() const {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName  = "\nReferenceDynamics::getNumberOfAtoms";
-
-   // ---------------------------------------------------------------------------------------
-
    return _numberOfAtoms;
 }
 
@@ -108,13 +85,6 @@ int ReferenceDynamics::getNumberOfAtoms() const {
    --------------------------------------------------------------------------------------- */
 
 int ReferenceDynamics::getTimeStep() const {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName  = "\nReferenceDynamics::getTimeStep";
-
-   // ---------------------------------------------------------------------------------------
-
    return _timeStep;
 }
 
@@ -127,13 +97,6 @@ int ReferenceDynamics::getTimeStep() const {
    --------------------------------------------------------------------------------------- */
 
 int ReferenceDynamics::incrementTimeStep() {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName  = "\nReferenceDynamics::getTimeStep";
-
-   // ---------------------------------------------------------------------------------------
-
    return (++_timeStep);
 }
 
@@ -145,14 +108,7 @@ int ReferenceDynamics::incrementTimeStep() {
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM ReferenceDynamics::getDeltaT() const {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName  = "\nReferenceDynamics::getDeltaT";
-
-   // ---------------------------------------------------------------------------------------
-
+double ReferenceDynamics::getDeltaT() const {
    return _deltaT;
 }
 
@@ -162,14 +118,7 @@ RealOpenMM ReferenceDynamics::getDeltaT() const {
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceDynamics::setDeltaT(RealOpenMM deltaT) {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName  = "\nReferenceDynamics::setDeltaT";
-
-   // ---------------------------------------------------------------------------------------
-
+void ReferenceDynamics::setDeltaT(double deltaT) {
    _deltaT = deltaT;
 }
 
@@ -181,14 +130,7 @@ void ReferenceDynamics::setDeltaT(RealOpenMM deltaT) {
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM ReferenceDynamics::getTemperature() const {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName  = "\nReferenceDynamics::getTemperature";
-
-   // ---------------------------------------------------------------------------------------
-
+double ReferenceDynamics::getTemperature() const {
    return _temperature;
 }
 
@@ -201,13 +143,6 @@ RealOpenMM ReferenceDynamics::getTemperature() const {
    --------------------------------------------------------------------------------------- */
 
 ReferenceConstraintAlgorithm* ReferenceDynamics::getReferenceConstraintAlgorithm() const {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName  = "\nReferenceDynamics::getReferenceConstraint";
-
-   // ---------------------------------------------------------------------------------------
-
    return _referenceConstraint;
 }
 
@@ -220,13 +155,6 @@ ReferenceConstraintAlgorithm* ReferenceDynamics::getReferenceConstraintAlgorithm
    --------------------------------------------------------------------------------------- */
 
 void ReferenceDynamics::setReferenceConstraintAlgorithm(ReferenceConstraintAlgorithm* referenceConstraint) {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName  = "\nReferenceDynamics::setReferenceConstraint";
-
-   // ---------------------------------------------------------------------------------------
-
    // delete if own
 
    if (_referenceConstraint && _ownReferenceConstraint) {
@@ -251,15 +179,6 @@ void ReferenceDynamics::setReferenceConstraintAlgorithm(ReferenceConstraintAlgor
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceDynamics::update(const OpenMM::System& system, vector<RealVec>& atomCoordinates,
-                               vector<RealVec>& velocities, vector<RealVec>& forces, vector<RealOpenMM>& masses, RealOpenMM tolerance) {
-
-   // ---------------------------------------------------------------------------------------
-
-   static const char* methodName      = "\nReferenceDynamics::update";
-
-   static const RealOpenMM zero       =  0.0;
-   static const RealOpenMM one        =  1.0;
-
-   // ---------------------------------------------------------------------------------------
+void ReferenceDynamics::update(const OpenMM::System& system, vector<Vec3>& atomCoordinates,
+                               vector<Vec3>& velocities, vector<Vec3>& forces, vector<double>& masses, double tolerance) {
 }

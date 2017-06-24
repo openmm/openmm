@@ -54,8 +54,6 @@ namespace OpenMM {
  */
 class CpuCalcForcesAndEnergyKernel : public CalcForcesAndEnergyKernel {
 public:
-    class InitForceTask;
-    class SumForceTask;
     CpuCalcForcesAndEnergyKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data, ContextImpl& context);
     /**
      * Initialize the kernel.
@@ -91,7 +89,7 @@ public:
 private:
     CpuPlatform::PlatformData& data;
     Kernel referenceKernel;
-    std::vector<RealVec> lastPositions;
+    std::vector<Vec3> lastPositions;
 };
 
 /**
@@ -130,7 +128,7 @@ private:
     CpuPlatform::PlatformData& data;
     int numAngles;
     int **angleIndexArray;
-    RealOpenMM **angleParamArray;
+    double **angleParamArray;
     CpuBondForce bondForce;
     bool usePeriodic;
 };
@@ -171,7 +169,7 @@ private:
     CpuPlatform::PlatformData& data;
     int numTorsions;
     int **torsionIndexArray;
-    RealOpenMM **torsionParamArray;
+    double **torsionParamArray;
     CpuBondForce bondForce;
     bool usePeriodic;
 };
@@ -212,7 +210,7 @@ private:
     CpuPlatform::PlatformData& data;
     int numTorsions;
     int **torsionIndexArray;
-    RealOpenMM **torsionParamArray;
+    double **torsionParamArray;
     CpuBondForce bondForce;
     bool usePeriodic;
 };
@@ -251,27 +249,37 @@ public:
     void copyParametersToContext(ContextImpl& context, const NonbondedForce& force);
     /**
      * Get the parameters being used for PME.
-     * 
+     *
      * @param alpha   the separation parameter
      * @param nx      the number of grid points along the X axis
      * @param ny      the number of grid points along the Y axis
      * @param nz      the number of grid points along the Z axis
      */
     void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
+    /**
+     * Get the parameters being used for the dispersion term in LJPME.
+     *
+     * @param alpha   the separation parameter
+     * @param nx      the number of grid points along the X axis
+     * @param ny      the number of grid points along the Y axis
+     * @param nz      the number of grid points along the Z axis
+     */
+    void getLJPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
 private:
     class PmeIO;
     CpuPlatform::PlatformData& data;
     int numParticles, num14;
     int **bonded14IndexArray;
     double **bonded14ParamArray;
-    double nonbondedCutoff, switchingDistance, rfDielectric, ewaldAlpha, ewaldSelfEnergy, dispersionCoefficient;
-    int kmax[3], gridSize[3];
-    bool useSwitchingFunction, useOptimizedPme, hasInitializedPme;
+    double nonbondedCutoff, switchingDistance, rfDielectric, ewaldAlpha, ewaldDispersionAlpha, ewaldSelfEnergy, dispersionCoefficient;
+    int kmax[3], gridSize[3], dispersionGridSize[3];
+    bool useSwitchingFunction, useOptimizedPme, hasInitializedPme, hasInitializedDispersionPme;
     std::vector<std::set<int> > exclusions;
     std::vector<std::pair<float, float> > particleParams;
+    std::vector<float> C6params;
     NonbondedMethod nonbondedMethod;
     CpuNonbondedForce* nonbonded;
-    Kernel optimizedPme;
+    Kernel optimizedPme, optimizedDispersionPme;
     CpuBondForce bondForce;
 };
 
@@ -395,8 +403,8 @@ private:
     CpuPlatform::PlatformData& data;
     int numParticles;
     bool isPeriodic;
-    RealOpenMM **particleParamArray;
-    RealOpenMM nonbondedCutoff;
+    double **particleParamArray;
+    double nonbondedCutoff;
     CpuCustomGBForce* ixn;
     std::vector<std::set<int> > exclusions;
     std::vector<std::string> particleParameterNames, globalParameterNames, energyParamDerivNames, valueNames;
@@ -440,8 +448,8 @@ public:
 private:
     CpuPlatform::PlatformData& data;
     int numParticles;
-    RealOpenMM cutoffDistance;
-    RealOpenMM **particleParamArray;
+    double cutoffDistance;
+    double **particleParamArray;
     CpuCustomManyParticleForce* ixn;
     std::vector<std::string> globalParameterNames;
     NonbondedMethod nonbondedMethod;
@@ -516,7 +524,7 @@ public:
 private:
     CpuPlatform::PlatformData& data;
     CpuLangevinDynamics* dynamics;
-    std::vector<RealOpenMM> masses;
+    std::vector<double> masses;
     double prevTemp, prevFriction, prevStepSize;
 };
 

@@ -6,6 +6,7 @@ import re
 import os
 import sys
 import platform
+import numpy
 from distutils.core import setup
 
 MAJOR_VERSION_NUM='@OPENMM_MAJOR_VERSION@'
@@ -203,6 +204,7 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
 
     library_dirs=[openmm_lib_path]
     include_dirs=openmm_include_path.split(';')
+    include_dirs.append(numpy.get_include())
 
     extensionArgs = {"name": "simtk.openmm._openmm",
                     "sources": ["src/swig_doxygen/OpenMMSwig.cxx"],

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2017 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -69,8 +69,8 @@ static void CL_CALLBACK errorCallback(const char* errinfo, const void* private_i
 
 OpenCLContext::OpenCLContext(const System& system, int platformIndex, int deviceIndex, const string& precision, OpenCLPlatform::PlatformData& platformData) :
         system(system), time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), stepsSinceReorder(99999), atomsWereReordered(false), posq(NULL),
-        posqCorrection(NULL), velm(NULL), forceBuffers(NULL), longForceBuffer(NULL), energyBuffer(NULL), energyParamDerivBuffer(NULL), atomIndexDevice(NULL), integration(NULL),
-        expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
+        posqCorrection(NULL), velm(NULL), forceBuffers(NULL), longForceBuffer(NULL), energyBuffer(NULL), energyParamDerivBuffer(NULL), atomIndexDevice(NULL),
+        chargeBuffer(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
     if (precision == "single") {
         useDoublePrecision = false;
         useMixedPrecision = false;
@@ -309,6 +309,7 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
     reduceReal4Kernel = cl::Kernel(utilities, "reduceReal4Buffer");
     if (supports64BitGlobalAtomics)
         reduceForcesKernel = cl::Kernel(utilities, "reduceForces");
+    setChargesKernel = cl::Kernel(utilities, "setCharges");
 
     // Decide whether native_sqrt(), native_rsqrt(), and native_recip() are sufficiently accurate to use.
 
@@ -317,8 +318,8 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
         OpenCLArray valuesArray(*this, 20, sizeof(mm_float8), "values");
         vector<mm_float8> values(valuesArray.getSize());
         float nextValue = 1e-4f;
-        for (int i = 0; i < (int) values.size(); ++i) {
-            values[i].s0 = nextValue;
+        for (auto& val : values) {
+            val.s0 = nextValue;
             nextValue *= (float) M_PI;
         }
         valuesArray.upload(values);
@@ -327,14 +328,14 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
         executeKernel(accuracyKernel, values.size());
         valuesArray.download(values);
         double maxSqrtError = 0.0, maxRsqrtError = 0.0, maxRecipError = 0.0, maxExpError = 0.0, maxLogError = 0.0;
-        for (int i = 0; i < (int) values.size(); ++i) {
-            double v = values[i].s0;
+        for (auto& val : values) {
+            double v = val.s0;
             double correctSqrt = sqrt(v);
-            maxSqrtError = max(maxSqrtError, fabs(correctSqrt-values[i].s1)/correctSqrt);
-            maxRsqrtError = max(maxRsqrtError, fabs(1.0/correctSqrt-values[i].s2)*correctSqrt);
-            maxRecipError = max(maxRecipError, fabs(1.0/v-values[i].s3)/values[i].s3);
-            maxExpError = max(maxExpError, fabs(exp(v)-values[i].s4)/values[i].s4);
-            maxLogError = max(maxLogError, fabs(log(v)-values[i].s5)/values[i].s5);
+            maxSqrtError = max(maxSqrtError, fabs(correctSqrt-val.s1)/correctSqrt);
+            maxRsqrtError = max(maxRsqrtError, fabs(1.0/correctSqrt-val.s2)*correctSqrt);
+            maxRecipError = max(maxRecipError, fabs(1.0/v-val.s3)/val.s3);
+            maxExpError = max(maxExpError, fabs(exp(v)-val.s4)/val.s4);
+            maxLogError = max(maxLogError, fabs(log(v)-val.s5)/val.s5);
         }
         compilationDefines["SQRT"] = (maxSqrtError < 1e-6) ? "native_sqrt" : "sqrt";
         compilationDefines["RSQRT"] = (maxRsqrtError < 1e-6) ? "native_rsqrt" : "rsqrt";
@@ -411,14 +412,14 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
 }
 
 OpenCLContext::~OpenCLContext() {
-    for (int i = 0; i < (int) forces.size(); i++)
-        delete forces[i];
-    for (int i = 0; i < (int) reorderListeners.size(); i++)
-        delete reorderListeners[i];
-    for (int i = 0; i < (int) preComputations.size(); i++)
-        delete preComputations[i];
-    for (int i = 0; i < (int) postComputations.size(); i++)
-        delete postComputations[i];
+    for (auto force : forces)
+        delete force;
+    for (auto listener : reorderListeners)
+        delete listener;
+    for (auto computation : preComputations)
+        delete computation;
+    for (auto computation : postComputations)
+        delete computation;
     if (pinnedBuffer != NULL)
         delete pinnedBuffer;
     if (posq != NULL)
@@ -439,6 +440,8 @@ OpenCLContext::~OpenCLContext() {
         delete energyParamDerivBuffer;
     if (atomIndexDevice != NULL)
         delete atomIndexDevice;
+    if (chargeBuffer != NULL)
+        delete chargeBuffer;
     if (integration != NULL)
         delete integration;
     if (expression != NULL)
@@ -455,8 +458,8 @@ void OpenCLContext::initialize() {
     bonded->initialize(system);
     numForceBuffers = platformData.contexts.size();
     numForceBuffers = std::max(numForceBuffers, bonded->getNumForceBuffers());
-    for (int i = 0; i < (int) forces.size(); i++)
-        numForceBuffers = std::max(numForceBuffers, forces[i]->getRequiredForceBuffers());
+    for (auto force : forces)
+        numForceBuffers = std::max(numForceBuffers, force->getRequiredForceBuffers());
     int energyBufferSize = max(numThreadBlocks*ThreadBlockSize, nonbonded->getNumEnergyBuffers());
     if (useDoublePrecision) {
         forceBuffers = OpenCLArray::create<mm_double4>(*this, paddedNumAtoms*numForceBuffers, "forceBuffers");
@@ -522,17 +525,17 @@ string OpenCLContext::replaceStrings(const string& input, const std::map<std::st
             symbolChars.insert(c);
     }
     string result = input;
-    for (map<string, string>::const_iterator iter = replacements.begin(); iter != replacements.end(); iter++) {
+    for (auto& pair : replacements) {
         int index = 0;
-        int size = iter->first.size();
+        int size = pair.first.size();
         do {
-            index = result.find(iter->first, index);
+            index = result.find(pair.first, index);
             if (index != result.npos) {
                 if ((index == 0 || symbolChars.find(result[index-1]) == symbolChars.end()) && (index == result.size()-size || symbolChars.find(result[index+size]) == symbolChars.end())) {
                     // We have found a complete symbol, not part of a longer symbol.
 
-                    result.replace(index, size, iter->second);
-                    index += iter->second.size();
+                    result.replace(index, size, pair.second);
+                    index += pair.second.size();
                 }
                 else
                     index++;
@@ -551,10 +554,10 @@ cl::Program OpenCLContext::createProgram(const string source, const map<string, 
     stringstream src;
     if (!options.empty())
         src << "// Compilation Options: " << options << endl << endl;
-    for (map<string, string>::const_iterator iter = compilationDefines.begin(); iter != compilationDefines.end(); ++iter) {
-        src << "#define " << iter->first;
-        if (!iter->second.empty())
-            src << " " << iter->second;
+    for (auto& pair : compilationDefines) {
+        src << "#define " << pair.first;
+        if (!pair.second.empty())
+            src << " " << pair.second;
         src << endl;
     }
     if (!compilationDefines.empty())
@@ -585,10 +588,10 @@ cl::Program OpenCLContext::createProgram(const string source, const map<string, 
         src << "typedef float3 mixed3;\n";
         src << "typedef float4 mixed4;\n";
     }
-    for (map<string, string>::const_iterator iter = defines.begin(); iter != defines.end(); ++iter) {
-        src << "#define " << iter->first;
-        if (!iter->second.empty())
-            src << " " << iter->second;
+    for (auto& pair : defines) {
+        src << "#define " << pair.first;
+        if (!pair.second.empty())
+            src << " " << pair.second;
         src << endl;
     }
     if (!defines.empty())
@@ -747,6 +750,28 @@ void OpenCLContext::reduceBuffer(OpenCLArray& array, int numBuffers) {
     executeKernel(reduceReal4Kernel, bufferSize, 128);
 }
 
+void OpenCLContext::setCharges(const vector<double>& charges) {
+    if (chargeBuffer == NULL)
+        chargeBuffer = new OpenCLArray(*this, numAtoms, useDoublePrecision ? sizeof(double) : sizeof(float), "chargeBuffer");
+    if (getUseDoublePrecision()) {
+        double* c = (double*) getPinnedBuffer();
+        for (int i = 0; i < charges.size(); i++)
+            c[i] = charges[i];
+        chargeBuffer->upload(c);
+    }
+    else {
+        float* c = (float*) getPinnedBuffer();
+        for (int i = 0; i < charges.size(); i++)
+            c[i] = (float) charges[i];
+        chargeBuffer->upload(c);
+    }
+    setChargesKernel.setArg<cl::Buffer>(0, chargeBuffer->getDeviceBuffer());
+    setChargesKernel.setArg<cl::Buffer>(1, posq->getDeviceBuffer());
+    setChargesKernel.setArg<cl::Buffer>(2, atomIndexDevice->getDeviceBuffer());
+    setChargesKernel.setArg<cl_int>(3, numAtoms);
+    executeKernel(setChargesKernel, numAtoms);
+}
+
 /**
  * This class ensures that atom reordering doesn't break virtual sites.
  */
@@ -831,10 +856,10 @@ void OpenCLContext::findMoleculeGroups() {
             atomBonds[particle1].push_back(particle2);
             atomBonds[particle2].push_back(particle1);
         }
-        for (int i = 0; i < (int) forces.size(); i++) {
-            for (int j = 0; j < forces[i]->getNumParticleGroups(); j++) {
+        for (auto force : forces) {
+            for (int j = 0; j < force->getNumParticleGroups(); j++) {
                 vector<int> particles;
-                forces[i]->getParticlesInGroup(j, particles);
+                force->getParticlesInGroup(j, particles);
                 for (int k = 0; k < (int) particles.size(); k++)
                     for (int m = 0; m < (int) particles.size(); m++)
                         if (k != m)
@@ -945,9 +970,19 @@ void OpenCLContext::findMoleculeGroups() {
 }
 
 void OpenCLContext::invalidateMolecules() {
+    for (int i = 0; i < forces.size(); i++)
+        if (invalidateMolecules(forces[i]))
+            return;
+}
+
+bool OpenCLContext::invalidateMolecules(OpenCLForceInfo* force) {
     if (numAtoms == 0 || nonbonded == NULL || !nonbonded->getUseCutoff())
-        return;
+        return false;
     bool valid = true;
+    int forceIndex = -1;
+    for (int i = 0; i < forces.size(); i++)
+        if (forces[i] == force)
+            forceIndex = i;
     for (int group = 0; valid && group < (int) moleculeGroups.size(); group++) {
         MoleculeGroup& mol = moleculeGroups[group];
         vector<int>& instances = mol.instances;
@@ -962,22 +997,21 @@ void OpenCLContext::invalidateMolecules() {
             Molecule& m2 = molecules[instances[j]];
             int offset2 = offsets[j];
             for (int i = 0; i < (int) atoms.size() && valid; i++) {
-                for (int k = 0; k < (int) forces.size(); k++)
-                    if (!forces[k]->areParticlesIdentical(atoms[i]+offset1, atoms[i]+offset2))
-                        valid = false;
+                if (!force->areParticlesIdentical(atoms[i]+offset1, atoms[i]+offset2))
+                    valid = false;
             }
 
             // See if the force groups are identical.
 
-            for (int i = 0; i < (int) forces.size() && valid; i++) {
-                for (int k = 0; k < (int) m1.groups[i].size() && valid; k++)
-                    if (!forces[i]->areGroupsIdentical(m1.groups[i][k], m2.groups[i][k]))
+            if (valid && forceIndex > -1) {
+                for (int k = 0; k < (int) m1.groups[forceIndex].size() && valid; k++)
+                    if (!force->areGroupsIdentical(m1.groups[forceIndex][k], m2.groups[forceIndex][k]))
                         valid = false;
             }
         }
     }
     if (valid)
-        return;
+        return false;
 
     // The list of which molecules are identical is no longer valid.  We need to restore the
     // atoms to their original order, rebuild the list of identical molecules, and sort them
@@ -1042,9 +1076,10 @@ void OpenCLContext::invalidateMolecules() {
     }
     atomIndexDevice->upload(atomIndex);
     findMoleculeGroups();
-    for (int i = 0; i < (int) reorderListeners.size(); i++)
-        reorderListeners[i]->execute();
+    for (auto listener : reorderListeners)
+        listener->execute();
     reorderAtoms();
+    return true;
 }
 
 void OpenCLContext::reorderAtoms() {
@@ -1103,10 +1138,9 @@ void OpenCLContext::reorderAtomsImpl() {
     vector<Real4> newPosqCorrection(paddedNumAtoms, Real4(0,0,0,0));
     vector<Mixed4> newVelm(paddedNumAtoms, Mixed4(0,0,0,0));
     vector<mm_int4> newCellOffsets(numAtoms);
-    for (int group = 0; group < (int) moleculeGroups.size(); group++) {
+    for (auto& mol : moleculeGroups) {
         // Find the center of each molecule.
 
-        MoleculeGroup& mol = moleculeGroups[group];
         int numMolecules = mol.offsets.size();
         vector<int>& atoms = mol.atoms;
         vector<Real4> molPos(numMolecules);
@@ -1200,9 +1234,9 @@ void OpenCLContext::reorderAtomsImpl() {
         // Reorder the atoms.
 
         for (int i = 0; i < numMolecules; i++) {
-            for (int j = 0; j < (int)atoms.size(); j++) {
-                int oldIndex = mol.offsets[molBins[i].second]+atoms[j];
-                int newIndex = mol.offsets[i]+atoms[j];
+            for (int atom : atoms) {
+                int oldIndex = mol.offsets[molBins[i].second]+atom;
+                int newIndex = mol.offsets[i]+atom;
                 originalIndex[newIndex] = atomIndex[oldIndex];
                 newPosq[newIndex] = oldPosq[oldIndex];
                 if (useMixedPrecision)
@@ -1224,8 +1258,8 @@ void OpenCLContext::reorderAtomsImpl() {
         posqCorrection->upload(newPosqCorrection);
     velm->upload(newVelm);
     atomIndexDevice->upload(atomIndex);
-    for (int i = 0; i < (int) reorderListeners.size(); i++)
-        reorderListeners[i]->execute();
+    for (auto listener : reorderListeners)
+        listener->execute();
 }
 
 void OpenCLContext::addReorderListener(ReorderListener* listener) {

@@ -79,6 +79,8 @@ yard = yards = Unit({yard_base_unit: 1.0})
 furlongs = furlong = yard.create_unit(scale=220.0, name="furlong", symbol="furlong")
 miles = mile = furlong.create_unit(scale=8.0, name="mile", symbol="mi")
 
+bohrs = bohr = angstrom.create_unit(scale=0.52917721067, name='bohr', symbol='r_0')
+
 ############
 ### MASS ###
 ############

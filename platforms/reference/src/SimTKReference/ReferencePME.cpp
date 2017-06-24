@@ -35,6 +35,7 @@
 
 #include "ReferencePME.h"
 #include "fftpack.h"
+#include "SimTKOpenMMRealType.h"
 
 using std::vector;
 
@@ -45,7 +46,7 @@ namespace OpenMM {
 struct pme
 {
     int          natoms;
-    RealOpenMM       ewaldcoeff;
+    double       ewaldcoeff;
 
     t_complex *  grid;                 /* Memory for the grid we spread charges on.
                                         * Element (i,j,k) is accessed as:
@@ -57,9 +58,9 @@ struct pme
     int          order;                /* PME interpolation order. Almost always 4 */
 
     /* Data for bspline interpolation, see the Essman PME paper */
-    RealOpenMM *     bsplines_moduli[3];   /* 3 pointers, to x/y/z bspline moduli, each of length ngrid[x/y/z]   */
-    RealOpenMM *     bsplines_theta[3];    /* each of x/y/z has length order*natoms */
-    RealOpenMM *     bsplines_dtheta[3];   /* each of x/y/z has length order*natoms */
+    double *     bsplines_moduli[3];   /* 3 pointers, to x/y/z bspline moduli, each of length ngrid[x/y/z]   */
+    double *     bsplines_theta[3];    /* each of x/y/z has length order*natoms */
+    double *     bsplines_dtheta[3];   /* each of x/y/z has length order*natoms */
 
     ivec *       particleindex;        /* Array of length natoms. Each element is
                                         * an ivec (3 ints) that specify the grid
@@ -85,7 +86,7 @@ struct pme
      * the central cell, i.e., in this case we would assume all coordinates fall in -10 nm < x,y,z < 20 nm.
      */
 
-    RealOpenMM       epsilon_r;             /* Dielectric coefficient to use, typically 1.0 */
+    double       epsilon_r;             /* Dielectric coefficient to use, typically 1.0 */
 };
 
 
@@ -101,25 +102,25 @@ pme_calculate_bsplines_moduli(pme_t pme)
     int       i,j,k,l,d;
     int       order;
     int       ndata;
-    RealOpenMM *  data;
-    RealOpenMM *  ddata;
-    RealOpenMM *  bsplines_data;
-    RealOpenMM    div;
-    RealOpenMM    sc,ss,arg;
+    double *  data;
+    double *  ddata;
+    double *  bsplines_data;
+    double    div;
+    double    sc,ss,arg;
 
     nmax = 0;
     for (d=0;d<3;d++)
     {
         nmax = (pme->ngrid[d] > nmax) ? pme->ngrid[d] : nmax;
-        pme->bsplines_moduli[d] = (RealOpenMM *) malloc(sizeof(RealOpenMM)*pme->ngrid[d]);
+        pme->bsplines_moduli[d] = (double *) malloc(sizeof(double)*pme->ngrid[d]);
     }
 
     order = pme->order;
 
     /* temp storage in this routine */
-    data          = (RealOpenMM *) malloc(sizeof(RealOpenMM)*order);
-    ddata         = (RealOpenMM *) malloc(sizeof(RealOpenMM)*order);
-    bsplines_data = (RealOpenMM *) malloc(sizeof(RealOpenMM)*nmax);
+    data          = (double *) malloc(sizeof(double)*order);
+    ddata         = (double *) malloc(sizeof(double)*order);
+    bsplines_data = (double *) malloc(sizeof(double)*nmax);
 
     data[order-1]=0;
     data[1]=0;
@@ -127,7 +128,7 @@ pme_calculate_bsplines_moduli(pme_t pme)
 
     for (k=3;k<order;k++)
     {
-        div=(RealOpenMM) (1.0/(k-1.0));
+        div=1.0/(k-1.0);
         data[k-1]=0;
         for (l=1;l<(k-1);l++)
         {
@@ -143,7 +144,7 @@ pme_calculate_bsplines_moduli(pme_t pme)
         ddata[k]=data[k-1]-data[k];
     }
 
-    div=(RealOpenMM) (1.0/(order-1));
+    div=1.0/(order-1);
     data[order-1]=0;
 
     for (l=1;l<(order-1);l++)
@@ -170,7 +171,7 @@ pme_calculate_bsplines_moduli(pme_t pme)
             sc=ss=0;
             for (j=0;j<ndata;j++)
             {
-                arg=(RealOpenMM) ((2.0*M_PI*i*j)/ndata);
+                arg=(2.0*M_PI*i*j)/ndata;
                 sc+=bsplines_data[j]*cos(arg);
                 ss+=bsplines_data[j]*sin(arg);
             }
@@ -192,25 +193,25 @@ pme_calculate_bsplines_moduli(pme_t pme)
 }
 
 
-static void invert_box_vectors(const RealVec boxVectors[3], RealVec recipBoxVectors[3])
+static void invert_box_vectors(const Vec3 boxVectors[3], Vec3 recipBoxVectors[3])
 {
-    RealOpenMM determinant = boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2];
+    double determinant = boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2];
     assert(determinant > 0);
-    RealOpenMM scale = 1.0/determinant;
-    recipBoxVectors[0] = RealVec(boxVectors[1][1]*boxVectors[2][2], 0, 0)*scale;
-    recipBoxVectors[1] = RealVec(-boxVectors[1][0]*boxVectors[2][2], boxVectors[0][0]*boxVectors[2][2], 0)*scale;
-    recipBoxVectors[2] = RealVec(boxVectors[1][0]*boxVectors[2][1]-boxVectors[1][1]*boxVectors[2][0], -boxVectors[0][0]*boxVectors[2][1], boxVectors[0][0]*boxVectors[1][1])*scale;
+    double scale = 1.0/determinant;
+    recipBoxVectors[0] = Vec3(boxVectors[1][1]*boxVectors[2][2], 0, 0)*scale;
+    recipBoxVectors[1] = Vec3(-boxVectors[1][0]*boxVectors[2][2], boxVectors[0][0]*boxVectors[2][2], 0)*scale;
+    recipBoxVectors[2] = Vec3(boxVectors[1][0]*boxVectors[2][1]-boxVectors[1][1]*boxVectors[2][0], -boxVectors[0][0]*boxVectors[2][1], boxVectors[0][0]*boxVectors[1][1])*scale;
 }
 
 static void
 pme_update_grid_index_and_fraction(pme_t    pme,
-                                   const vector<RealVec>& atomCoordinates,
-                                   const RealVec periodicBoxVectors[3],
-                                   const RealVec recipBoxVectors[3])
+                                   const vector<Vec3>& atomCoordinates,
+                                   const Vec3 periodicBoxVectors[3],
+                                   const Vec3 recipBoxVectors[3])
 {
     int    i;
     int    d;
-    RealOpenMM t;
+    double t;
     int    ti;
 
     for (i=0;i<pme->natoms;i++)
@@ -251,7 +252,7 @@ pme_update_grid_index_and_fraction(pme_t    pme,
          *    numerical problems, so this shouldnt cause any problems.
          *    (And, by adding 100.0 box lengths, we would lose a bit of numerical accuracy here!)
          */
-        RealVec coord = atomCoordinates[i];
+        Vec3 coord = atomCoordinates[i];
         for (d=0;d<3;d++)
         {
             t = coord[0]*recipBoxVectors[0][d]+coord[1]*recipBoxVectors[1][d]+coord[2]*recipBoxVectors[2][d];
@@ -275,9 +276,9 @@ pme_update_bsplines(pme_t    pme)
 {
     int       i,j,k,l;
     int       order;
-    RealOpenMM    dr,div;
-    RealOpenMM *  data;
-    RealOpenMM *  ddata;
+    double    dr,div;
+    double *  data;
+    double *  ddata;
 
     order = pme->order;
 
@@ -296,7 +297,7 @@ pme_update_bsplines(pme_t    pme)
 
             for (k=3; k<order; k++)
             {
-                div = (RealOpenMM) (1.0/(k-1.0));
+                div = 1.0/(k-1.0);
                 data[k-1] = div*dr*data[k-2];
                 for (l=1; l<(k-1); l++)
                 {
@@ -313,7 +314,7 @@ pme_update_bsplines(pme_t    pme)
                 ddata[k] = data[k-1]-data[k];
             }
 
-            div           = (RealOpenMM) (1.0/(order-1));
+            div           = 1.0/(order-1);
             data[order-1] = div*dr*data[order-2];
 
             for (l=1; l<(order-1); l++)
@@ -327,7 +328,7 @@ pme_update_bsplines(pme_t    pme)
 
 
 static void
-pme_grid_spread_charge(pme_t pme, const vector<RealOpenMM>& charges)
+pme_grid_spread_charge(pme_t pme, const vector<double>& charges)
 {
     int       order;
     int       i;
@@ -335,10 +336,10 @@ pme_grid_spread_charge(pme_t pme, const vector<RealOpenMM>& charges)
     int       x0index,y0index,z0index;
     int       xindex,yindex,zindex;
     int       index;
-    RealOpenMM    q;
-    RealOpenMM *  thetax;
-    RealOpenMM *  thetay;
-    RealOpenMM *  thetaz;
+    double    q;
+    double *  thetax;
+    double *  thetay;
+    double *  thetaz;
 
     order = pme->order;
 
@@ -407,24 +408,24 @@ pme_grid_spread_charge(pme_t pme, const vector<RealOpenMM>& charges)
 
 static void
 pme_reciprocal_convolution(pme_t     pme,
-                           const RealVec periodicBoxVectors[3],
-                           const RealVec recipBoxVectors[3],
-                           RealOpenMM *  energy)
+                           const Vec3 periodicBoxVectors[3],
+                           const Vec3 recipBoxVectors[3],
+                           double *  energy)
 {
     int kx,ky,kz;
     int nx,ny,nz;
-    RealOpenMM mx,my,mz;
-    RealOpenMM mhx,mhy,mhz,m2;
-    RealOpenMM one_4pi_eps;
-    RealOpenMM virxx,virxy,virxz,viryy,viryz,virzz;
-    RealOpenMM bx,by,bz;
-    RealOpenMM d1,d2;
-    RealOpenMM eterm,vfactor,struct2,ets2;
-    RealOpenMM esum;
-    RealOpenMM factor;
-    RealOpenMM denom;
-    RealOpenMM boxfactor;
-    RealOpenMM maxkx,maxky,maxkz;
+    double mx,my,mz;
+    double mhx,mhy,mhz,m2;
+    double one_4pi_eps;
+    double virxx,virxy,virxz,viryy,viryz,virzz;
+    double bx,by,bz;
+    double d1,d2;
+    double eterm,vfactor,struct2,ets2;
+    double esum;
+    double factor;
+    double denom;
+    double boxfactor;
+    double maxkx,maxky,maxkz;
 
     t_complex *ptr;
 
@@ -432,9 +433,9 @@ pme_reciprocal_convolution(pme_t     pme,
     ny = pme->ngrid[1];
     nz = pme->ngrid[2];
 
-    one_4pi_eps = (RealOpenMM) (ONE_4PI_EPS0/pme->epsilon_r);
-    factor = (RealOpenMM) (M_PI*M_PI/(pme->ewaldcoeff*pme->ewaldcoeff));
-    boxfactor = (RealOpenMM) (M_PI*periodicBoxVectors[0][0]*periodicBoxVectors[1][1]*periodicBoxVectors[2][2]);
+    one_4pi_eps = ONE_4PI_EPS0/pme->epsilon_r;
+    factor = M_PI*M_PI/(pme->ewaldcoeff*pme->ewaldcoeff);
+    boxfactor = M_PI*periodicBoxVectors[0][0]*periodicBoxVectors[1][1]*periodicBoxVectors[2][2];
 
     esum = 0;
     virxx = 0;
@@ -444,21 +445,21 @@ pme_reciprocal_convolution(pme_t     pme,
     viryz = 0;
     virzz = 0;
 
-    maxkx = (RealOpenMM) ((nx+1)/2);
-    maxky = (RealOpenMM) ((ny+1)/2);
-    maxkz = (RealOpenMM) ((nz+1)/2);
+    maxkx = (nx+1)/2;
+    maxky = (ny+1)/2;
+    maxkz = (nz+1)/2;
 
     for (kx=0;kx<nx;kx++)
     {
         /* Calculate frequency. Grid indices in the upper half correspond to negative frequencies! */
-        mx  = (RealOpenMM) ((kx<maxkx) ? kx : (kx-nx));
+        mx  = (kx<maxkx) ? kx : (kx-nx);
         mhx = mx*recipBoxVectors[0][0];
         bx  = boxfactor*pme->bsplines_moduli[0][kx];
 
         for (ky=0;ky<ny;ky++)
         {
             /* Calculate frequency. Grid indices in the upper half correspond to negative frequencies! */
-            my  = (RealOpenMM) ((ky<maxky) ? ky : (ky-ny));
+            my  = (ky<maxky) ? ky : (ky-ny);
             mhy = mx*recipBoxVectors[1][0]+my*recipBoxVectors[1][1];
             by  = pme->bsplines_moduli[1][ky];
 
@@ -478,7 +479,7 @@ pme_reciprocal_convolution(pme_t     pme,
                 }
 
                 /* Calculate frequency. Grid indices in the upper half correspond to negative frequencies! */
-                mz        = (RealOpenMM) ((kz<maxkz) ? kz : (kz-nz));
+                mz        = (kz<maxkz) ? kz : (kz-nz);
                 mhz       = mx*recipBoxVectors[2][0]+my*recipBoxVectors[2][1]+mz*recipBoxVectors[2][2];
 
                 /* Pointer to the grid cell in question */
@@ -509,15 +510,115 @@ pme_reciprocal_convolution(pme_t     pme,
     }
 
     /* The factor 0.5 is nothing special, but it is better to have it here than inside the loop :-) */
-    *energy = (RealOpenMM) (0.5*esum);
+    *energy = 0.5*esum;
+}
+
+
+static void
+dpme_reciprocal_convolution(pme_t pme,
+                           const Vec3 periodicBoxVectors[3],
+                           const Vec3 recipBoxVectors[3],
+                           double* energy)
+{
+    int kx,ky,kz;
+    int nx,ny,nz;
+    double mx,my,mz;
+    double mhx,mhy,mhz,m2;
+    double bx,by,bz;
+    double d1,d2;
+    double eterm,struct2,ets2;
+    double esum;
+    double denom;
+    double boxfactor;
+    double maxkx,maxky,maxkz;
+
+    t_complex *ptr;
+
+    nx = pme->ngrid[0];
+    ny = pme->ngrid[1];
+    nz = pme->ngrid[2];
+
+    boxfactor = M_PI*sqrt(M_PI) / (6.0*periodicBoxVectors[0][0]*periodicBoxVectors[1][1]*periodicBoxVectors[2][2]);
+
+    esum = 0;
+
+    maxkx = (nx+1)/2;
+    maxky = (ny+1)/2;
+    maxkz = (nz+1)/2;
+
+    double bfac = M_PI / pme->ewaldcoeff;
+    double fac1 = 2.0*M_PI*M_PI*M_PI*sqrt(M_PI);
+    double fac2 = pme->ewaldcoeff*pme->ewaldcoeff*pme->ewaldcoeff;
+    double fac3 = -2.0*pme->ewaldcoeff*M_PI*M_PI;
+    double b, m, m3, expfac, expterm, erfcterm;
+
+    for (kx=0;kx<nx;kx++)
+    {
+        /* Calculate frequency. Grid indices in the upper half correspond to negative frequencies! */
+        mx  = ((kx<maxkx) ? kx : (kx-nx));
+        mhx = mx*recipBoxVectors[0][0];
+        bx  = pme->bsplines_moduli[0][kx];
+
+        for (ky=0;ky<ny;ky++)
+        {
+            /* Calculate frequency. Grid indices in the upper half correspond to negative frequencies! */
+            my  = ((ky<maxky) ? ky : (ky-ny));
+            mhy = mx*recipBoxVectors[1][0]+my*recipBoxVectors[1][1];
+            by  = pme->bsplines_moduli[1][ky];
+
+            for (kz=0;kz<nz;kz++)
+            {
+                /*
+                 * Unlike the Coulombic case, there's an m=0 term so all terms are considered here.
+                 */
+
+                /* Calculate frequency. Grid indices in the upper half correspond to negative frequencies! */
+                mz        = ((kz<maxkz) ? kz : (kz-nz));
+                mhz       = mx*recipBoxVectors[2][0]+my*recipBoxVectors[2][1]+mz*recipBoxVectors[2][2];
+
+                /* Pointer to the grid cell in question */
+                ptr       = pme->grid + kx*ny*nz + ky*nz + kz;
+
+                /* Get grid data for this frequency */
+                d1        = ptr->re;
+                d2        = ptr->im;
+
+                /* Calculate the convolution - see the Essman/Darden paper for the equation! */
+                m2        = mhx*mhx+mhy*mhy+mhz*mhz;
+                bz        = pme->bsplines_moduli[2][kz];
+                denom     = boxfactor / (bx*by*bz);
+
+                m = sqrt(m2);
+                m3 = m*m2;
+                b = bfac*m;
+                expfac = -b*b;
+                erfcterm = erfc(b);
+                expterm = exp(expfac);
+
+                eterm     = (fac1*erfcterm*m3 + expterm*(fac2 + fac3*m2)) * denom;
+
+                /* write back convolution data to grid */
+                ptr->re   = d1*eterm;
+                ptr->im   = d2*eterm;
+
+                struct2   = (d1*d1+d2*d2);
+
+                /* Long-range PME contribution to the energy for this frequency */
+                ets2      = eterm*struct2;
+                esum     += ets2;
+            }
+        }
+    }
+    // Remember the C6 energy is attractive, hence the negative sign.
+    *energy = -esum;
 }
 
 
 static void
 pme_grid_interpolate_force(pme_t pme,
-                           const RealVec recipBoxVectors[3],
-                           const vector<RealOpenMM>& charges,
-                           vector<RealVec>& forces)
+                           const Vec3 recipBoxVectors[3],
+                           const vector<double>& charges,
+                           vector<Vec3>& forces)
 {
     int       i;
     int       ix,iy,iz;
@@ -525,17 +626,17 @@ pme_grid_interpolate_force(pme_t pme,
     int       xindex,yindex,zindex;
     int       index;
     int       order;
-    RealOpenMM    q;
-    RealOpenMM *  thetax;
-    RealOpenMM *  thetay;
-    RealOpenMM *  thetaz;
-    RealOpenMM *  dthetax;
-    RealOpenMM *  dthetay;
-    RealOpenMM *  dthetaz;
-    RealOpenMM    tx,ty,tz;
-    RealOpenMM    dtx,dty,dtz;
-    RealOpenMM    fx,fy,fz;
-    RealOpenMM    gridvalue;
+    double    q;
+    double *  thetax;
+    double *  thetay;
+    double *  thetaz;
+    double *  dthetax;
+    double *  dthetay;
+    double *  dthetaz;
+    double    tx,ty,tz;
+    double    dtx,dty,dtz;
+    double    fx,fy,fz;
+    double    gridvalue;
     int       nx,ny,nz;
 
     nx    = pme->ngrid[0];
@@ -617,11 +718,11 @@ pme_grid_interpolate_force(pme_t pme,
 
 int
 pme_init(pme_t *       ppme,
-         RealOpenMM        ewaldcoeff,
+         double        ewaldcoeff,
          int           natoms,
-         const int           ngrid[3],
+         const int     ngrid[3],
          int           pme_order,
-         RealOpenMM        epsilon_r)
+         double        epsilon_r)
 {
     pme_t pme;
     int   d;
@@ -636,8 +737,8 @@ pme_init(pme_t *       ppme,
     for (d=0;d<3;d++)
     {
         pme->ngrid[d]            = ngrid[d];
-        pme->bsplines_theta[d]   = (RealOpenMM *)malloc(sizeof(RealOpenMM)*pme_order*natoms);
-        pme->bsplines_dtheta[d]  = (RealOpenMM *)malloc(sizeof(RealOpenMM)*pme_order*natoms);
+        pme->bsplines_theta[d]   = (double *)malloc(sizeof(double)*pme_order*natoms);
+        pme->bsplines_dtheta[d]  = (double *)malloc(sizeof(double)*pme_order*natoms);
     }
 
     pme->particlefraction = (rvec *)malloc(sizeof(rvec)*natoms);
@@ -661,15 +762,15 @@ pme_init(pme_t *       ppme,
 
 
 int pme_exec(pme_t       pme,
-             const vector<RealVec>& atomCoordinates,
-             vector<RealVec>& forces,
-             const vector<RealOpenMM>& charges,
-             const RealVec periodicBoxVectors[3],
-             RealOpenMM* energy)
+             const vector<Vec3>& atomCoordinates,
+             vector<Vec3>& forces,
+             const vector<double>& charges,
+             const Vec3 periodicBoxVectors[3],
+             double* energy)
 {
     /* Routine is called with coordinates in x, a box, and charges in q */
 
-    RealVec recipBoxVectors[3];
+    Vec3 recipBoxVectors[3];
     invert_box_vectors(periodicBoxVectors, recipBoxVectors);
     
     /* Before we can do the actual interpolation, we need to recalculate and update
@@ -703,6 +804,49 @@ int pme_exec(pme_t       pme,
     return 0;
 }
 
+
+int pme_exec_dpme(pme_t       pme,
+             const vector<Vec3>& atomCoordinates,
+             vector<Vec3>& forces,
+             const vector<double>& c6s,
+             const Vec3 periodicBoxVectors[3],
+             double* energy)
+{
+    /* Routine is called with coordinates in x, a box, and charges in q */
+
+    Vec3 recipBoxVectors[3];
+    invert_box_vectors(periodicBoxVectors, recipBoxVectors);
+
+    /* Before we can do the actual interpolation, we need to recalculate and update
+     * the indices for each particle in the charge grid (initialized in pme_init()),
+     * and what its fractional offset in this grid cell is.
+     */
+
+    /* Update charge grid indices and fractional offsets for each atom.
+     * The indices/fractions are stored internally in the pme datatype
+     */
+    pme_update_grid_index_and_fraction(pme,atomCoordinates,periodicBoxVectors,recipBoxVectors);
+
+    /* Calculate bsplines (and their differentials) from current fractional coordinates, store in pme structure */
+    pme_update_bsplines(pme);
+
+    /* Spread the charges on grid (using newly calculated bsplines in the pme structure) */
+    pme_grid_spread_charge(pme, c6s);
+
+    /* do 3d-fft */
+    fftpack_exec_3d(pme->fftplan,FFTPACK_FORWARD,pme->grid,pme->grid);
+
+    /* solve in k-space */
+    dpme_reciprocal_convolution(pme,periodicBoxVectors,recipBoxVectors,energy);
+
+    /* do 3d-invfft */
+    fftpack_exec_3d(pme->fftplan,FFTPACK_BACKWARD,pme->grid,pme->grid);
+
+    /* Get the particle forces from the grid and bsplines in the pme structure */
+    pme_grid_interpolate_force(pme,recipBoxVectors,c6s,forces);
+
+    return 0;
+}
 
 
 int

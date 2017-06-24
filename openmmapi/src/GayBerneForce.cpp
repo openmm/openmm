@@ -55,6 +55,8 @@ GayBerneForce::NonbondedMethod GayBerneForce::getNonbondedMethod() const {
 }
 
 void GayBerneForce::setNonbondedMethod(NonbondedMethod method) {
+    if (method < 0 || method > 2)
+        throw OpenMMException("GayBerneForce: Illegal value for nonbonded method");
     nonbondedMethod = method;
 }
 

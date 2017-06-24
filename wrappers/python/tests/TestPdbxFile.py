@@ -4,6 +4,10 @@ from simtk.openmm import *
 from simtk.unit import *
 import simtk.openmm.app.element as elem
 import os
+if sys.version_info >= (3, 0):
+    from io import StringIO
+else:
+    from cStringIO import StringIO
 
 class TestPdbxFile(unittest.TestCase):
     """Test the PDBx/mmCIF file parser"""
@@ -114,6 +118,20 @@ class TestPdbxFile(unittest.TestCase):
                                   places=5)
         del sim
         os.unlink('test.cif')
+
+    def testBonds(self):
+        """Test reading and writing a file that includes bonds."""
+        pdb = PDBFile('systems/methanol_ions.pdb')
+        output = StringIO()
+        PDBxFile.writeFile(pdb.topology, pdb.positions, output)
+        input = StringIO(output.getvalue())
+        pdbx = PDBxFile(input)
+        output.close()
+        input.close()
+        self.assertEqual(pdb.topology.getNumBonds(), pdbx.topology.getNumBonds())
+        for bond1, bond2 in zip(pdb.topology.bonds(), pdbx.topology.bonds()):
+            self.assertEqual(bond1[0].name, bond2[0].name)
+            self.assertEqual(bond1[1].name, bond2[1].name)
 
 if __name__ == '__main__':
     unittest.main()

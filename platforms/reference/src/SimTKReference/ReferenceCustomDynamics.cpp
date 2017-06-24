@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2011-2016 Stanford University and Simbios.
+/* Portions copyright (c) 2011-2017 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -25,6 +25,7 @@
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceVirtualSites.h"
 #include "ReferenceCustomDynamics.h"
+#include "ReferenceTabulatedFunction.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/ForceImpl.h"
@@ -89,7 +90,7 @@ ReferenceCustomDynamics::ReferenceCustomDynamics(int numberOfAtoms, const Custom
 ReferenceCustomDynamics::~ReferenceCustomDynamics() {
 }
 
-void ReferenceCustomDynamics::initialize(ContextImpl& context, vector<RealOpenMM>& masses, map<string, RealOpenMM>& globals) {
+void ReferenceCustomDynamics::initialize(ContextImpl& context, vector<double>& masses, map<string, double>& globals) {
     // Some initialization can't be done in the constructor, since we need a ContextImpl from which to get the list of
     // Context parameters.  Instead, we do it the first time update() or computeKineticEnergy() is called.
 
@@ -113,12 +114,18 @@ void ReferenceCustomDynamics::initialize(ContextImpl& context, vector<RealOpenMM
         variableLocations[ename.str()] = &energy;
     }
     
+    // Create custom functions for the tabulated functions.
+
+    map<string, Lepton::CustomFunction*> functions;
+    for (int i = 0; i < integrator.getNumTabulatedFunctions(); i++)
+        functions[integrator.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(integrator.getTabulatedFunction(i));
+    
     // Parse the expressions.
     
     int numSteps = stepType.size();
     vector<int> forceGroup;
     vector<vector<ParsedExpression> > expressions;
-    CustomIntegratorUtilities::analyzeComputations(context, integrator, expressions, comparisons, blockEnd, invalidatesForces, needsForces, needsEnergy, computeBothForceAndEnergy, forceGroup);
+    CustomIntegratorUtilities::analyzeComputations(context, integrator, expressions, comparisons, blockEnd, invalidatesForces, needsForces, needsEnergy, computeBothForceAndEnergy, forceGroup, functions);
     stepExpressions.resize(expressions.size());
     for (int i = 0; i < numSteps; i++) {
         stepExpressions[i].resize(expressions[i].size());
@@ -136,6 +143,11 @@ void ReferenceCustomDynamics::initialize(ContextImpl& context, vector<RealOpenMM
     kineticEnergyNeedsForce = false;
     if (kineticEnergyExpression.getVariables().find("f") != kineticEnergyExpression.getVariables().end())
         kineticEnergyNeedsForce = true;
+
+    // Delete the custom functions.
+
+    for (auto& function : functions)
+        delete function.second;
 
     // Record the force group flags for each step.
 
@@ -175,8 +187,8 @@ ExpressionTreeNode ReferenceCustomDynamics::replaceDerivFunctions(const Expressi
     }
     else {
         vector<ExpressionTreeNode> children;
-        for (int i = 0; i < (int) node.getChildren().size(); i++)
-            children.push_back(replaceDerivFunctions(node.getChildren()[i], context));
+        for (auto& child : node.getChildren())
+            children.push_back(replaceDerivFunctions(child, context));
         return ExpressionTreeNode(op.clone(), children);
     }
 }
@@ -197,29 +209,36 @@ ExpressionTreeNode ReferenceCustomDynamics::replaceDerivFunctions(const Expressi
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, vector<RealVec>& atomCoordinates,
-                                     vector<RealVec>& velocities, vector<RealVec>& forces, vector<RealOpenMM>& masses,
-                                     map<string, RealOpenMM>& globals, vector<vector<RealVec> >& perDof, bool& forcesAreValid, RealOpenMM tolerance) {
+void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, vector<Vec3>& atomCoordinates,
+                                     vector<Vec3>& velocities, vector<Vec3>& forces, vector<double>& masses,
+                                     map<string, double>& globals, vector<vector<Vec3> >& perDof, bool& forcesAreValid, double tolerance) {
     if (invalidatesForces.size() == 0)
         initialize(context, masses, globals);
     int numSteps = stepType.size();
     globals.insert(context.getParameters().begin(), context.getParameters().end());
-    for (map<string, RealOpenMM>::const_iterator iter = globals.begin(); iter != globals.end(); ++iter)
-        expressionSet.setVariable(expressionSet.getVariableIndex(iter->first), iter->second);
+    for (auto& global : globals)
+        expressionSet.setVariable(expressionSet.getVariableIndex(global.first), global.second);
     oldPos = atomCoordinates;
+    map<int, double> groupEnergy;
+    map<int, vector<Vec3> > groupForces;
+    if (forcesAreValid)
+        groupForces[context.getLastForceGroups()] = forces;
     
     // Loop over steps and execute them.
     
     for (int step = 0; step < numSteps; ) {
-        if ((needsForces[step] || needsEnergy[step]) && (!forcesAreValid || context.getLastForceGroups() != forceGroupFlags[step])) {
+        int flags = forceGroupFlags[step];
+        if ((needsForces[step] && groupForces.find(flags) == groupForces.end()) || (needsEnergy[step] && groupEnergy.find(flags) == groupEnergy.end())) {
             // Recompute forces and/or energy.
             
             bool computeForce = needsForces[step] || computeBothForceAndEnergy[step];
             bool computeEnergy = needsEnergy[step] || computeBothForceAndEnergy[step];
             recordChangedParameters(context, globals);
-            RealOpenMM e = context.calcForcesAndEnergy(computeForce, computeEnergy, forceGroupFlags[step]);
+            double e = context.calcForcesAndEnergy(computeForce, computeEnergy, forceGroupFlags[step]);
+            if (computeForce)
+                groupForces[flags] = forces;
             if (computeEnergy) {
-                energy = e;
+                groupEnergy[flags] = e;
                 context.getEnergyParameterDerivatives(energyParamDerivs);
             }
             forcesAreValid = true;
@@ -227,18 +246,20 @@ void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, ve
         
         // Execute the step.
 
+        energy = (needsEnergy[step] ? groupEnergy[flags] : 0);
+        vector<Vec3>& stepForces = (needsForces[step] ? groupForces[flags] : forces);
         int nextStep = step+1;
         switch (stepType[step]) {
             case CustomIntegrator::ComputeGlobal: {
                 uniform = SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber();
                 gaussian = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
-                RealOpenMM result = stepExpressions[step][0].evaluate();
+                double result = stepExpressions[step][0].evaluate();
                 globals[stepVariable[step]] = result;
                 expressionSet.setVariable(stepVariableIndex[step], result);
                 break;
             }
             case CustomIntegrator::ComputePerDof: {
-                vector<RealVec>* results = NULL;
+                vector<Vec3>* results = NULL;
                 if (stepVariableIndex[step] == xIndex)
                     results = &atomCoordinates;
                 else if (stepVariableIndex[step] == vIndex)
@@ -250,12 +271,12 @@ void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, ve
                 }
                 if (results == NULL)
                     throw OpenMMException("Illegal per-DOF output variable: "+stepVariable[step]);
-                computePerDof(numberOfAtoms, *results, atomCoordinates, velocities, forces, masses, perDof, stepExpressions[step][0]);
+                computePerDof(numberOfAtoms, *results, atomCoordinates, velocities, stepForces, masses, perDof, stepExpressions[step][0]);
                 break;
             }
             case CustomIntegrator::ComputeSum: {
-                computePerDof(numberOfAtoms, sumBuffer, atomCoordinates, velocities, forces, masses, perDof, stepExpressions[step][0]);
-                RealOpenMM sum = 0.0;
+                computePerDof(numberOfAtoms, sumBuffer, atomCoordinates, velocities, stepForces, masses, perDof, stepExpressions[step][0]);
+                double sum = 0.0;
                 for (int j = 0; j < numberOfAtoms; j++)
                     if (masses[j] != 0.0)
                         sum += sumBuffer[j][0]+sumBuffer[j][1]+sumBuffer[j][2];
@@ -276,8 +297,8 @@ void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, ve
                 recordChangedParameters(context, globals);
                 context.updateContextState();
                 globals.insert(context.getParameters().begin(), context.getParameters().end());
-                for (map<string, RealOpenMM>::const_iterator iter = globals.begin(); iter != globals.end(); ++iter)
-                    expressionSet.setVariable(expressionSet.getVariableIndex(iter->first), iter->second);
+                for (auto& global : globals)
+                    expressionSet.setVariable(expressionSet.getVariableIndex(global.first), global.second);
                 break;
             }
             case CustomIntegrator::IfBlockStart: {
@@ -296,8 +317,11 @@ void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, ve
                 break;
             }
         }
-        if (invalidatesForces[step])
+        if (invalidatesForces[step]) {
             forcesAreValid = false;
+            groupForces.clear();
+            groupEnergy.clear();
+        }
         step = nextStep;
     }
     ReferenceVirtualSites::computePositions(context.getSystem(), atomCoordinates);
@@ -305,9 +329,9 @@ void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, ve
     recordChangedParameters(context, globals);
 }
 
-void ReferenceCustomDynamics::computePerDof(int numberOfAtoms, vector<RealVec>& results, const vector<RealVec>& atomCoordinates,
-              const vector<RealVec>& velocities, const vector<RealVec>& forces, const vector<RealOpenMM>& masses,
-              const vector<vector<RealVec> >& perDof, const CompiledExpression& expression) {
+void ReferenceCustomDynamics::computePerDof(int numberOfAtoms, vector<Vec3>& results, const vector<Vec3>& atomCoordinates,
+              const vector<Vec3>& velocities, const vector<Vec3>& forces, const vector<double>& masses,
+              const vector<vector<Vec3> >& perDof, const CompiledExpression& expression) {
     // Loop over all degrees of freedom.
 
     for (int i = 0; i < numberOfAtoms; i++) {
@@ -354,11 +378,11 @@ bool ReferenceCustomDynamics::evaluateCondition(int step) {
 /**
  * Check which context parameters have changed and register them with the context.
  */
-void ReferenceCustomDynamics::recordChangedParameters(OpenMM::ContextImpl& context, std::map<std::string, RealOpenMM>& globals) {
-    for (map<string, double>::const_iterator iter = context.getParameters().begin(); iter != context.getParameters().end(); ++iter) {
-        string name = iter->first;
+void ReferenceCustomDynamics::recordChangedParameters(OpenMM::ContextImpl& context, std::map<std::string, double>& globals) {
+    for (auto& param : context.getParameters()) {
+        string name = param.first;
         double value = globals[name];
-        if (value != iter->second)
+        if (value != param.second)
             context.setParameter(name, globals[name]);
     }
 }
@@ -379,20 +403,20 @@ void ReferenceCustomDynamics::recordChangedParameters(OpenMM::ContextImpl& conte
 
    --------------------------------------------------------------------------------------- */
 
-double ReferenceCustomDynamics::computeKineticEnergy(OpenMM::ContextImpl& context, int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
-        std::vector<OpenMM::RealVec>& velocities, std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& masses,
-        std::map<std::string, RealOpenMM>& globals, std::vector<std::vector<OpenMM::RealVec> >& perDof, bool& forcesAreValid) {
+double ReferenceCustomDynamics::computeKineticEnergy(OpenMM::ContextImpl& context, int numberOfAtoms, std::vector<OpenMM::Vec3>& atomCoordinates,
+        std::vector<OpenMM::Vec3>& velocities, std::vector<OpenMM::Vec3>& forces, std::vector<double>& masses,
+        std::map<std::string, double>& globals, std::vector<std::vector<OpenMM::Vec3> >& perDof, bool& forcesAreValid) {
     if (invalidatesForces.size() == 0)
         initialize(context, masses, globals);
     globals.insert(context.getParameters().begin(), context.getParameters().end());
-    for (map<string, RealOpenMM>::const_iterator iter = globals.begin(); iter != globals.end(); ++iter)
-        expressionSet.setVariable(expressionSet.getVariableIndex(iter->first), iter->second);
+    for (auto& global : globals)
+        expressionSet.setVariable(expressionSet.getVariableIndex(global.first), global.second);
     if (kineticEnergyNeedsForce) {
         energy = context.calcForcesAndEnergy(true, true, -1);
         forcesAreValid = true;
     }
     computePerDof(numberOfAtoms, sumBuffer, atomCoordinates, velocities, forces, masses, perDof, kineticEnergyExpression);
-    RealOpenMM sum = 0.0;
+    double sum = 0.0;
     for (int j = 0; j < numberOfAtoms; j++)
         if (masses[j] != 0.0)
             sum += sumBuffer[j][0]+sumBuffer[j][1]+sumBuffer[j][2];

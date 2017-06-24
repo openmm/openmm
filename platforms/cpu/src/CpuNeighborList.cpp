@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2017 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -59,7 +59,7 @@ public:
  */
 class CpuNeighborList::Voxels {
 public:
-    Voxels(int blockSize, float vsy, float vsz, float miny, float maxy, float minz, float maxz, const RealVec* boxVectors, bool usePeriodic) :
+    Voxels(int blockSize, float vsy, float vsz, float miny, float maxy, float minz, float maxz, const Vec3* boxVectors, bool usePeriodic) :
             blockSize(blockSize), voxelSizeY(vsy), voxelSizeZ(vsz), miny(miny), maxy(maxy), minz(minz), maxz(maxz), usePeriodic(usePeriodic) {
         for (int i = 0; i < 3; i++)
             for (int j = 0; j < 3; j++)
@@ -409,21 +409,11 @@ private:
     vector<vector<vector<pair<float, int> > > > bins;
 };
 
-class CpuNeighborList::ThreadTask : public ThreadPool::Task {
-public:
-    ThreadTask(CpuNeighborList& owner) : owner(owner) {
-    }
-    void execute(ThreadPool& threads, int threadIndex) {
-        owner.threadComputeNeighborList(threads, threadIndex);
-    }
-    CpuNeighborList& owner;
-};
-
 CpuNeighborList::CpuNeighborList(int blockSize) : blockSize(blockSize) {
 }
 
 void CpuNeighborList::computeNeighborList(int numAtoms, const AlignedArray<float>& atomLocations, const vector<set<int> >& exclusions,
-            const RealVec* periodicBoxVectors, bool usePeriodic, float maxDistance, ThreadPool& threads) {
+            const Vec3* periodicBoxVectors, bool usePeriodic, float maxDistance, ThreadPool& threads) {
     int numBlocks = (numAtoms+blockSize-1)/blockSize;
     blockNeighbors.resize(numBlocks);
     blockExclusions.resize(numBlocks);
@@ -460,8 +450,7 @@ void CpuNeighborList::computeNeighborList(int numAtoms, const AlignedArray<float
     // Sort the atoms based on a Hilbert curve.
     
     atomBins.resize(numAtoms);
-    ThreadTask task(*this);
-    threads.execute(task);
+    threads.execute([&] (ThreadPool& threads, int threadIndex) { threadComputeNeighborList(threads, threadIndex); });
     threads.waitForThreads();
     sort(atomBins.begin(), atomBins.end());
 
@@ -588,10 +577,10 @@ void CpuNeighborList::threadComputeNeighborList(ThreadPool& threads, int threadI
         for (int j = 0; j < atomsInBlock; j++) {
             const set<int>& atomExclusions = (*exclusions)[sortedAtoms[firstIndex+j]];
             char mask = 1<<j;
-            for (set<int>::const_iterator iter = atomExclusions.begin(); iter != atomExclusions.end(); ++iter) {
-                map<int, char>::iterator thisAtomFlags = atomFlags.find(*iter);
+            for (int exclusion : atomExclusions) {
+                map<int, char>::iterator thisAtomFlags = atomFlags.find(exclusion);
                 if (thisAtomFlags == atomFlags.end())
-                    atomFlags[*iter] = mask;
+                    atomFlags[exclusion] = mask;
                 else
                     thisAtomFlags->second |= mask;
             }

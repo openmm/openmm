@@ -98,7 +98,7 @@ public:
      */
     double finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups, bool& valid);
 private:
-    std::vector<RealVec> savedForces;
+    std::vector<Vec3> savedForces;
 };
 
 /**
@@ -226,8 +226,8 @@ public:
     void applyToVelocities(ContextImpl& context, double tol);
 private:
     ReferencePlatform::PlatformData& data;
-    std::vector<RealOpenMM> masses;
-    std::vector<RealOpenMM> inverseMasses;
+    std::vector<double> masses;
+    std::vector<double> inverseMasses;
 };
 
 /**
@@ -285,7 +285,7 @@ public:
 private:
     int numBonds;
     int **bondIndexArray;
-    RealOpenMM **bondParamArray;
+    double **bondParamArray;
     bool usePeriodic;
 };
 
@@ -323,7 +323,7 @@ public:
 private:
     int numBonds;
     int **bondIndexArray;
-    RealOpenMM **bondParamArray;
+    double **bondParamArray;
     Lepton::CompiledExpression energyExpression, forceExpression;
     std::vector<Lepton::CompiledExpression> energyParamDerivExpressions;
     std::vector<std::string> parameterNames, globalParameterNames, energyParamDerivNames;
@@ -364,7 +364,7 @@ public:
 private:
     int numAngles;
     int **angleIndexArray;
-    RealOpenMM **angleParamArray;
+    double **angleParamArray;
     bool usePeriodic;
 };
 
@@ -402,7 +402,7 @@ public:
 private:
     int numAngles;
     int **angleIndexArray;
-    RealOpenMM **angleParamArray;
+    double **angleParamArray;
     Lepton::CompiledExpression energyExpression, forceExpression;
     std::vector<Lepton::CompiledExpression> energyParamDerivExpressions;
     std::vector<std::string> parameterNames, globalParameterNames, energyParamDerivNames;
@@ -443,7 +443,7 @@ public:
 private:
     int numTorsions;
     int **torsionIndexArray;
-    RealOpenMM **torsionParamArray;
+    double **torsionParamArray;
     bool usePeriodic;
 };
 
@@ -481,7 +481,7 @@ public:
 private:
     int numTorsions;
     int **torsionIndexArray;
-    RealOpenMM **torsionParamArray;
+    double **torsionParamArray;
     bool usePeriodic;
 };
 
@@ -516,7 +516,7 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CMAPTorsionForce& force);
 private:
-    std::vector<std::vector<std::vector<RealOpenMM> > > coeff;
+    std::vector<std::vector<std::vector<double> > > coeff;
     std::vector<int> torsionMaps;
     std::vector<std::vector<int> > torsionIndices;
     bool usePeriodic;
@@ -556,7 +556,7 @@ public:
 private:
     int numTorsions;
     int **torsionIndexArray;
-    RealOpenMM **torsionParamArray;
+    double **torsionParamArray;
     Lepton::CompiledExpression energyExpression, forceExpression;
     std::vector<Lepton::CompiledExpression> energyParamDerivExpressions;
     std::vector<std::string> parameterNames, globalParameterNames, energyParamDerivNames;
@@ -604,12 +604,21 @@ public:
      * @param nz      the number of grid points along the Z axis
      */
     void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
+    /**
+     * Get the dispersion parameters being used for the dispersion term in LJPME.
+     *
+     * @param alpha   the separation parameter
+     * @param nx      the number of grid points along the X axis
+     * @param ny      the number of grid points along the Y axis
+     * @param nz      the number of grid points along the Z axis
+     */
+    void getLJPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
 private:
     int numParticles, num14;
     int **bonded14IndexArray;
-    RealOpenMM **particleParamArray, **bonded14ParamArray;
-    RealOpenMM nonbondedCutoff, switchingDistance, rfDielectric, ewaldAlpha, dispersionCoefficient;
-    int kmax[3], gridSize[3];
+    double **particleParamArray, **bonded14ParamArray;
+    double nonbondedCutoff, switchingDistance, rfDielectric, ewaldAlpha, ewaldDispersionAlpha, dispersionCoefficient;
+    int kmax[3], gridSize[3], dispersionGridSize[3];
     bool useSwitchingFunction;
     std::vector<std::set<int> > exclusions;
     NonbondedMethod nonbondedMethod;
@@ -649,8 +658,8 @@ public:
     void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force);
 private:
     int numParticles;
-    RealOpenMM **particleParamArray;
-    RealOpenMM nonbondedCutoff, switchingDistance, periodicBoxSize[3], longRangeCoefficient;
+    double **particleParamArray;
+    double nonbondedCutoff, switchingDistance, periodicBoxSize[3], longRangeCoefficient;
     bool useSwitchingFunction, hasInitializedLongRangeCorrection;
     CustomNonbondedForce* forceCopy;
     std::map<std::string, double> globalParamValues;
@@ -697,7 +706,7 @@ public:
     void copyParametersToContext(ContextImpl& context, const GBSAOBCForce& force);
 private:
     ReferenceObc* obc;
-    std::vector<RealOpenMM> charges;
+    std::vector<double> charges;
     bool isPeriodic;
 };
 
@@ -735,8 +744,8 @@ public:
 private:
     int numParticles;
     bool isPeriodic;
-    RealOpenMM **particleParamArray;
-    RealOpenMM nonbondedCutoff;
+    double **particleParamArray;
+    double nonbondedCutoff;
     std::vector<std::set<int> > exclusions;
     std::vector<std::string> particleParameterNames, globalParameterNames, energyParamDerivNames, valueNames;
     std::vector<Lepton::CompiledExpression> valueExpressions;
@@ -788,16 +797,16 @@ private:
     class PeriodicDistanceFunction;
     int numParticles;
     std::vector<int> particles;
-    RealOpenMM **particleParamArray;
+    double **particleParamArray;
     Lepton::CompiledExpression energyExpression, forceExpressionX, forceExpressionY, forceExpressionZ;
     std::vector<std::string> parameterNames, globalParameterNames;
-    RealVec* boxVectors;
+    Vec3* boxVectors;
 };
 
 class ReferenceCalcCustomExternalForceKernel::PeriodicDistanceFunction : public Lepton::CustomFunction {
 public:
-    RealVec** boxVectorHandle;
-    PeriodicDistanceFunction(RealVec** boxVectorHandle);
+    Vec3** boxVectorHandle;
+    PeriodicDistanceFunction(Vec3** boxVectorHandle);
     int getNumArguments() const;
     double evaluate(const double* arguments) const;
     double evaluateDerivative(const double* arguments, const int* derivOrder) const;
@@ -838,8 +847,8 @@ public:
 private:
     int numDonors, numAcceptors, numParticles;
     bool isPeriodic;
-    RealOpenMM **donorParamArray, **acceptorParamArray;
-    RealOpenMM nonbondedCutoff;
+    double **donorParamArray, **acceptorParamArray;
+    double nonbondedCutoff;
     ReferenceCustomHbondIxn* ixn;
     std::vector<std::set<int> > exclusions;
     std::vector<std::string> globalParameterNames;
@@ -878,7 +887,7 @@ public:
     void copyParametersToContext(ContextImpl& context, const CustomCentroidBondForce& force);
 private:
     int numBonds, numParticles;
-    RealOpenMM **bondParamArray;
+    double **bondParamArray;
     ReferenceCustomCentroidBondIxn* ixn;
     std::vector<std::string> globalParameterNames, energyParamDerivNames;
     bool usePeriodic;
@@ -917,7 +926,7 @@ public:
     void copyParametersToContext(ContextImpl& context, const CustomCompoundBondForce& force);
 private:
     int numBonds;
-    RealOpenMM **bondParamArray;
+    double **bondParamArray;
     ReferenceCustomCompoundBondIxn* ixn;
     std::vector<std::string> globalParameterNames, energyParamDerivNames;
     bool usePeriodic;
@@ -956,8 +965,8 @@ public:
     void copyParametersToContext(ContextImpl& context, const CustomManyParticleForce& force);
 private:
     int numParticles;
-    RealOpenMM cutoffDistance;
-    RealOpenMM **particleParamArray;
+    double cutoffDistance;
+    double **particleParamArray;
     ReferenceCustomManyParticleIxn* ixn;
     std::vector<std::string> globalParameterNames;
     NonbondedMethod nonbondedMethod;
@@ -1030,7 +1039,7 @@ public:
 private:
     ReferencePlatform::PlatformData& data;
     ReferenceVerletDynamics* dynamics;
-    std::vector<RealOpenMM> masses;
+    std::vector<double> masses;
     double prevStepSize;
 };
 
@@ -1067,7 +1076,7 @@ public:
 private:
     ReferencePlatform::PlatformData& data;
     ReferenceStochasticDynamics* dynamics;
-    std::vector<RealOpenMM> masses;
+    std::vector<double> masses;
     double prevTemp, prevFriction, prevStepSize;
 };
 
@@ -1104,7 +1113,7 @@ public:
 private:
     ReferencePlatform::PlatformData& data;
     ReferenceBrownianDynamics* dynamics;
-    std::vector<RealOpenMM> masses;
+    std::vector<double> masses;
     double prevTemp, prevFriction, prevStepSize;
 };
 
@@ -1143,7 +1152,7 @@ public:
 private:
     ReferencePlatform::PlatformData& data;
     ReferenceVariableStochasticDynamics* dynamics;
-    std::vector<RealOpenMM> masses;
+    std::vector<double> masses;
     double prevTemp, prevFriction, prevErrorTol;
 };
 
@@ -1182,7 +1191,7 @@ public:
 private:
     ReferencePlatform::PlatformData& data;
     ReferenceVariableVerletDynamics* dynamics;
-    std::vector<RealOpenMM> masses;
+    std::vector<double> masses;
     double prevErrorTol;
 };
 
@@ -1257,8 +1266,8 @@ public:
 private:
     ReferencePlatform::PlatformData& data;
     ReferenceCustomDynamics* dynamics;
-    std::vector<RealOpenMM> masses, globalValues;
-    std::vector<std::vector<OpenMM::RealVec> > perDofValues; 
+    std::vector<double> masses, globalValues;
+    std::vector<std::vector<OpenMM::Vec3> > perDofValues; 
 };
 
 /**
@@ -1285,7 +1294,7 @@ public:
 private:
     ReferenceAndersenThermostat* thermostat;
     std::vector<std::vector<int> > particleGroups;
-    std::vector<RealOpenMM> masses;
+    std::vector<double> masses;
 };
 
 /**

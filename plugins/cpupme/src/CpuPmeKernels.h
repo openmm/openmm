@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2017 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -62,9 +62,103 @@ public:
      * @param gridz        the z size of the PME grid
      * @param numParticles the number of particles in the system
      * @param alpha        the Ewald blending parameter
+     * @param deterministic whether it should attempt to make the resulting forces deterministic
      */
-    void initialize(int xsize, int ysize, int zsize, int numParticles, double alpha);
+    void initialize(int xsize, int ysize, int zsize, int numParticles, double alpha, bool deterministic);
     ~CpuCalcPmeReciprocalForceKernel();
+    /**
+     * Begin computing the force and energy.
+     * 
+     * @param io                  an object that coordinates data transfer
+     * @param periodicBoxVectors  the vectors defining the periodic box (measured in nm)
+     * @param includeEnergy       true if potential energy should be computed
+     */
+    void beginComputation(IO& io, const Vec3* periodicBoxVectors, bool includeEnergy);
+    /**
+     * Finish computing the force and energy.
+     * 
+     * @param io   an object that coordinates data transfer
+     * @return the potential energy due to the PME reciprocal space interactions
+     */
+    double finishComputation(IO& io);
+    /**
+     * This routine contains the code executed by the main thread.
+     */
+    void runMainThread();
+    /**
+     * This routine contains the code executed by each worker thread.
+     */
+    void runWorkerThread(ThreadPool& threads, int index);
+    /**
+     * Get whether the current CPU supports all features needed by this kernel.
+     */
+    static bool isProcessorSupported();
+    /**
+     * Get the parameters being used for PME.
+     * 
+     * @param alpha   the separation parameter
+     * @param nx      the number of grid points along the X axis
+     * @param ny      the number of grid points along the Y axis
+     * @param nz      the number of grid points along the Z axis
+     */
+    void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
+private:
+    /**
+     * Select a size for one grid dimension that FFTW can handle efficiently.
+     */
+    int findFFTDimension(int minimum, bool isZ);
+    static bool hasInitializedThreads;
+    static int numThreads;
+    int gridx, gridy, gridz, numParticles;
+    double alpha;
+    bool deterministic;
+    bool hasCreatedPlan, isFinished, isDeleted;
+    std::vector<float> force;
+    std::vector<float> bsplineModuli[3];
+    std::vector<float> recipEterm;
+    Vec3 lastBoxVectors[3];
+    std::vector<float> threadEnergy;
+    std::vector<float*> tempGrid;
+    float* realGrid;
+    fftwf_complex* complexGrid;
+    fftwf_plan forwardFFT, backwardFFT;
+    int waitCount;
+    pthread_cond_t startCondition, endCondition;
+    pthread_mutex_t lock;
+    pthread_t mainThread;
+    // The following variables are used to store information about the calculation currently being performed.
+    IO* io;
+    float energy;
+    float* posq;
+    Vec3 periodicBoxVectors[3], recipBoxVectors[3];
+    bool includeEnergy;
+    gmx_atomic_t atomicCounter;
+};
+
+
+
+/**
+ * This is an optimized CPU implementation of CalcDispersionPmeReciprocalForceKernel.  It is both
+ * vectorized (requiring SSE 4.1) and multithreaded.  It uses FFTW to perform the FFTs.
+ */
+
+class OPENMM_EXPORT_PME CpuCalcDispersionPmeReciprocalForceKernel : public CalcPmeReciprocalForceKernel {
+public:
+    CpuCalcDispersionPmeReciprocalForceKernel(std::string name, const Platform& platform) : CalcPmeReciprocalForceKernel(name, platform),
+            hasCreatedPlan(false), isDeleted(false), realGrid(NULL), complexGrid(NULL)  {
+    }
+    /**
+     * Initialize the kernel.
+     * 
+     * @param gridx        the x size of the PME grid
+     * @param gridy        the y size of the PME grid
+     * @param gridz        the z size of the PME grid
+     * @param numParticles the number of particles in the system
+     * @param alpha        the Ewald blending parameter
+     * @param deterministic whether it should attempt to make the resulting forces deterministic
+     */
+    void initialize(int xsize, int ysize, int zsize, int numParticles, double alpha, bool deterministic);
+    ~CpuCalcDispersionPmeReciprocalForceKernel();
     /**
      * Begin computing the force and energy.
      * 
@@ -111,6 +205,7 @@ private:
     static int numThreads;
     int gridx, gridy, gridz, numParticles;
     double alpha;
+    bool deterministic;
     bool hasCreatedPlan, isFinished, isDeleted;
     std::vector<float> force;
     std::vector<float> bsplineModuli[3];

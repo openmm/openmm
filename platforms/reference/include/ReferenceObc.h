@@ -39,7 +39,7 @@ class ReferenceObc {
 
       // arrays containing OBC chain derivative 
 
-      std::vector<RealOpenMM> _obcChain;
+      std::vector<double> _obcChain;
 
       // flag to signal whether ACE approximation
       // is to be included
@@ -117,7 +117,7 @@ class ReferenceObc {
       
          --------------------------------------------------------------------------------------- */
       
-      std::vector<RealOpenMM>& getObcChain();
+      std::vector<double>& getObcChain();
       
       /**---------------------------------------------------------------------------------------
       
@@ -128,7 +128,7 @@ class ReferenceObc {
       
          --------------------------------------------------------------------------------------- */
       
-      void computeBornRadii(const std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<RealOpenMM>& bornRadii);
+      void computeBornRadii(const std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<double>& bornRadii);
       
       /**---------------------------------------------------------------------------------------
         
@@ -142,8 +142,8 @@ class ReferenceObc {
         
             --------------------------------------------------------------------------------------- */
         
-      void computeAceNonPolarForce(const ObcParameters* obcParameters, const std::vector<RealOpenMM>& bornRadii,
-                                   RealOpenMM* energy, std::vector<RealOpenMM>& forces) const;
+      void computeAceNonPolarForce(const ObcParameters* obcParameters, const std::vector<double>& bornRadii,
+                                   double* energy, std::vector<double>& forces) const;
         
       /**---------------------------------------------------------------------------------------
       
@@ -155,8 +155,8 @@ class ReferenceObc {
       
          --------------------------------------------------------------------------------------- */
       
-      RealOpenMM computeBornEnergyForces(const std::vector<OpenMM::RealVec>& atomCoordinates,
-                                         const std::vector<RealOpenMM>& partialCharges, std::vector<OpenMM::RealVec>& forces);
+      double computeBornEnergyForces(const std::vector<OpenMM::Vec3>& atomCoordinates,
+                                         const std::vector<double>& partialCharges, std::vector<OpenMM::Vec3>& forces);
     
 };
 

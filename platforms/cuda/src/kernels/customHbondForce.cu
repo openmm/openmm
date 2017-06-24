@@ -6,26 +6,17 @@ inline __device__ real3 trim(real4 v) {
 }
 
 /**
- * This does nothing, and just exists to simply the code generation.
+ * This does nothing, and just exists to simplify the code generation.
  */
 inline __device__ real3 trim(real3 v) {
     return v;
 }
 
 /**
- * Compute the difference between two vectors, setting the fourth component to the squared magnitude.
- */
-inline __device__ real4 delta(real4 vec1, real4 vec2) {
-    real4 result = make_real4(vec1.x-vec2.x, vec1.y-vec2.y, vec1.z-vec2.z, 0.0f);
-    result.w = result.x*result.x + result.y*result.y + result.z*result.z;
-    return result;
-}
-
-/**
- * Compute the difference between two vectors, taking periodic boundary conditions into account
+ * Compute the difference between two vectors, optionally taking periodic boundary conditions into account
  * and setting the fourth component to the squared magnitude.
  */
-inline __device__ real4 deltaPeriodic(real4 vec1, real4 vec2, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ) {
+inline __device__ real4 delta(real4 vec1, real4 vec2, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ) {
     real4 result = make_real4(vec1.x-vec2.x, vec1.y-vec2.y, vec1.z-vec2.z, 0.0f);
 #ifdef USE_PERIODIC
     APPLY_PERIODIC_TO_DELTA(result)
@@ -95,6 +86,7 @@ extern "C" __global__ void computeDonorForces(unsigned long long* __restrict__ f
         for (int acceptorStart = 0; acceptorStart < NUM_ACCEPTORS; acceptorStart += blockDim.x) {
             // Load the next block of acceptors into local memory.
 
+            __syncthreads();
             int blockSize = min((int) blockDim.x, NUM_ACCEPTORS-acceptorStart);
             if (threadIdx.x < blockSize) {
                 int4 atoms2 = acceptorAtoms[acceptorStart+threadIdx.x];
@@ -105,8 +97,8 @@ extern "C" __global__ void computeDonorForces(unsigned long long* __restrict__ f
             __syncthreads();
             if (donorIndex < NUM_DONORS) {
                 for (int index = 0; index < blockSize; index++) {
-#ifdef USE_EXCLUSIONS
                     int acceptorIndex = acceptorStart+index;
+#ifdef USE_EXCLUSIONS
                     if (acceptorIndex == exclusionIndices.x || acceptorIndex == exclusionIndices.y || acceptorIndex == exclusionIndices.z || acceptorIndex == exclusionIndices.w)
                         continue;
 #endif
@@ -115,7 +107,7 @@ extern "C" __global__ void computeDonorForces(unsigned long long* __restrict__ f
                     real4 a1 = posBuffer[3*index];
                     real4 a2 = posBuffer[3*index+1];
                     real4 a3 = posBuffer[3*index+2];
-                    real4 deltaD1A1 = deltaPeriodic(d1, a1, periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);
+                    real4 deltaD1A1 = delta(d1, a1, periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);
 #ifdef USE_CUTOFF
                     if (deltaD1A1.w < CUTOFF_SQUARED) {
 #endif
@@ -183,6 +175,7 @@ extern "C" __global__ void computeAcceptorForces(unsigned long long* __restrict_
         for (int donorStart = 0; donorStart < NUM_DONORS; donorStart += blockDim.x) {
             // Load the next block of donors into local memory.
 
+            __syncthreads();
             int blockSize = min((int) blockDim.x, NUM_DONORS-donorStart);
             if (threadIdx.x < blockSize) {
                 int4 atoms2 = donorAtoms[donorStart+threadIdx.x];
@@ -193,8 +186,8 @@ extern "C" __global__ void computeAcceptorForces(unsigned long long* __restrict_
             __syncthreads();
             if (acceptorIndex < NUM_ACCEPTORS) {
                 for (int index = 0; index < blockSize; index++) {
-#ifdef USE_EXCLUSIONS
                     int donorIndex = donorStart+index;
+#ifdef USE_EXCLUSIONS
                     if (donorIndex == exclusionIndices.x || donorIndex == exclusionIndices.y || donorIndex == exclusionIndices.z || donorIndex == exclusionIndices.w)
                         continue;
 #endif
@@ -203,7 +196,7 @@ extern "C" __global__ void computeAcceptorForces(unsigned long long* __restrict_
                     real4 d1 = posBuffer[3*index];
                     real4 d2 = posBuffer[3*index+1];
                     real4 d3 = posBuffer[3*index+2];
-                    real4 deltaD1A1 = deltaPeriodic(d1, a1, periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);
+                    real4 deltaD1A1 = delta(d1, a1, periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);
 #ifdef USE_CUTOFF
                     if (deltaD1A1.w < CUTOFF_SQUARED) {
 #endif

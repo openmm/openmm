@@ -48,10 +48,10 @@ ReferenceCustomBondIxn::ReferenceCustomBondIxn(const Lepton::CompiledExpression&
         expressionSet.registerExpression(this->energyParamDerivExpressions[i]);
     rIndex = expressionSet.getVariableIndex("r");
     numParameters = parameterNames.size();
-    for (int i = 0; i < (int) numParameters; i++)
-        bondParamIndex.push_back(expressionSet.getVariableIndex(parameterNames[i]));
-    for (map<string, double>::const_iterator iter = globalParameters.begin(); iter != globalParameters.end(); ++iter)
-        expressionSet.setVariable(expressionSet.getVariableIndex(iter->first), iter->second);
+    for (auto& param : parameterNames)
+        bondParamIndex.push_back(expressionSet.getVariableIndex(param));
+    for (auto& param : globalParameters)
+        expressionSet.setVariable(expressionSet.getVariableIndex(param.first), param.second);
 }
 
 /**---------------------------------------------------------------------------------------
@@ -63,7 +63,7 @@ ReferenceCustomBondIxn::ReferenceCustomBondIxn(const Lepton::CompiledExpression&
 ReferenceCustomBondIxn::~ReferenceCustomBondIxn() {
 }
 
-void ReferenceCustomBondIxn::setPeriodic(OpenMM::RealVec* vectors) {
+void ReferenceCustomBondIxn::setPeriodic(OpenMM::Vec3* vectors) {
     usePeriodic = true;
     boxVectors[0] = vectors[0];
     boxVectors[1] = vectors[1];
@@ -83,11 +83,11 @@ void ReferenceCustomBondIxn::setPeriodic(OpenMM::RealVec* vectors) {
    --------------------------------------------------------------------------------------- */
 
 void ReferenceCustomBondIxn::calculateBondIxn(int* atomIndices,
-                                              vector<RealVec>& atomCoordinates,
-                                              RealOpenMM* parameters,
-                                              vector<RealVec>& forces,
-                                              RealOpenMM* totalEnergy, double* energyParamDerivs) {
-   RealOpenMM deltaR[ReferenceForce::LastDeltaRIndex];
+                                              vector<Vec3>& atomCoordinates,
+                                              double* parameters,
+                                              vector<Vec3>& forces,
+                                              double* totalEnergy, double* energyParamDerivs) {
+   double deltaR[ReferenceForce::LastDeltaRIndex];
    for (int i = 0; i < numParameters; i++)
        expressionSet.setVariable(bondParamIndex[i], parameters[i]);
 
@@ -103,19 +103,19 @@ void ReferenceCustomBondIxn::calculateBondIxn(int* atomIndices,
        ReferenceForce::getDeltaR(atomCoordinates[atomAIndex], atomCoordinates[atomBIndex], deltaR);
    
    expressionSet.setVariable(rIndex, deltaR[ReferenceForce::RIndex]);
-   RealOpenMM dEdR            = (RealOpenMM) forceExpression.evaluate();
-   dEdR                       = deltaR[ReferenceForce::RIndex] > 0 ? (dEdR/deltaR[ReferenceForce::RIndex]) : 0;
+   double dEdR            = forceExpression.evaluate();
+   dEdR                   = deltaR[ReferenceForce::RIndex] > 0 ? (dEdR/deltaR[ReferenceForce::RIndex]) : 0;
 
-   forces[atomAIndex][0]     += dEdR*deltaR[ReferenceForce::XIndex];
-   forces[atomAIndex][1]     += dEdR*deltaR[ReferenceForce::YIndex];
-   forces[atomAIndex][2]     += dEdR*deltaR[ReferenceForce::ZIndex];
+   forces[atomAIndex][0] += dEdR*deltaR[ReferenceForce::XIndex];
+   forces[atomAIndex][1] += dEdR*deltaR[ReferenceForce::YIndex];
+   forces[atomAIndex][2] += dEdR*deltaR[ReferenceForce::ZIndex];
 
-   forces[atomBIndex][0]     -= dEdR*deltaR[ReferenceForce::XIndex];
-   forces[atomBIndex][1]     -= dEdR*deltaR[ReferenceForce::YIndex];
-   forces[atomBIndex][2]     -= dEdR*deltaR[ReferenceForce::ZIndex];
+   forces[atomBIndex][0] -= dEdR*deltaR[ReferenceForce::XIndex];
+   forces[atomBIndex][1] -= dEdR*deltaR[ReferenceForce::YIndex];
+   forces[atomBIndex][2] -= dEdR*deltaR[ReferenceForce::ZIndex];
 
    for (int i = 0; i < energyParamDerivExpressions.size(); i++)
        energyParamDerivs[i] += energyParamDerivExpressions[i].evaluate();
    if (totalEnergy != NULL)
-       *totalEnergy += (RealOpenMM) energyExpression.evaluate();
+       *totalEnergy += energyExpression.evaluate();
 }

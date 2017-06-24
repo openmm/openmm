@@ -47,10 +47,10 @@ ReferenceCustomTorsionIxn::ReferenceCustomTorsionIxn(const Lepton::CompiledExpre
         expressionSet.registerExpression(this->energyParamDerivExpressions[i]);
     thetaIndex = expressionSet.getVariableIndex("theta");
     numParameters = parameterNames.size();
-    for (int i = 0; i < (int) numParameters; i++)
-        torsionParamIndex.push_back(expressionSet.getVariableIndex(parameterNames[i]));
-    for (map<string, double>::const_iterator iter = globalParameters.begin(); iter != globalParameters.end(); ++iter)
-        expressionSet.setVariable(expressionSet.getVariableIndex(iter->first), iter->second);
+    for (auto& param : parameterNames)
+        torsionParamIndex.push_back(expressionSet.getVariableIndex(param));
+    for (auto& param : globalParameters)
+        expressionSet.setVariable(expressionSet.getVariableIndex(param.first), param.second);
 }
 
 /**---------------------------------------------------------------------------------------
@@ -62,7 +62,7 @@ ReferenceCustomTorsionIxn::ReferenceCustomTorsionIxn(const Lepton::CompiledExpre
 ReferenceCustomTorsionIxn::~ReferenceCustomTorsionIxn() {
 }
 
-void ReferenceCustomTorsionIxn::setPeriodic(OpenMM::RealVec* vectors) {
+void ReferenceCustomTorsionIxn::setPeriodic(OpenMM::Vec3* vectors) {
     usePeriodic = true;
     boxVectors[0] = vectors[0];
     boxVectors[1] = vectors[1];
@@ -82,11 +82,11 @@ void ReferenceCustomTorsionIxn::setPeriodic(OpenMM::RealVec* vectors) {
    --------------------------------------------------------------------------------------- */
 
 void ReferenceCustomTorsionIxn::calculateBondIxn(int* atomIndices,
-                                                vector<RealVec>& atomCoordinates,
-                                                RealOpenMM* parameters,
-                                                vector<RealVec>& forces,
-                                                RealOpenMM* totalEnergy, double* energyParamDerivs) {
-   RealOpenMM deltaR[3][ReferenceForce::LastDeltaRIndex];
+                                                vector<Vec3>& atomCoordinates,
+                                                double* parameters,
+                                                vector<Vec3>& forces,
+                                                double* totalEnergy, double* energyParamDerivs) {
+   double deltaR[3][ReferenceForce::LastDeltaRIndex];
    for (int i = 0; i < numParameters; i++)
        expressionSet.setVariable(torsionParamIndex[i], parameters[i]);
 
@@ -111,45 +111,45 @@ void ReferenceCustomTorsionIxn::calculateBondIxn(int* atomIndices,
 
    // Visual Studio complains if crossProduct declared as 'crossProduct[2][3]'
 
-   RealOpenMM crossProductMemory[6];
-   RealOpenMM* crossProduct[2];
+   double crossProductMemory[6];
+   double* crossProduct[2];
    crossProduct[0] = crossProductMemory;
    crossProduct[1] = crossProductMemory + 3;
 
    // get dihedral angle
 
-   RealOpenMM dotDihedral;
-   RealOpenMM signOfAngle;
-   RealOpenMM angle = getDihedralAngleBetweenThreeVectors(deltaR[0], deltaR[1], deltaR[2], crossProduct, &dotDihedral, deltaR[0], &signOfAngle, 1);
+   double dotDihedral;
+   double signOfAngle;
+   double angle = getDihedralAngleBetweenThreeVectors(deltaR[0], deltaR[1], deltaR[2], crossProduct, &dotDihedral, deltaR[0], &signOfAngle, 1);
    expressionSet.setVariable(thetaIndex, angle);
 
    // evaluate delta angle, dE/d(angle)
 
-   RealOpenMM dEdAngle = (RealOpenMM) forceExpression.evaluate();
+   double dEdAngle = forceExpression.evaluate();
 
    // compute force
 
-   RealOpenMM internalF[4][3];
-   RealOpenMM forceFactors[4];
-   RealOpenMM normCross1         = DOT3(crossProduct[0], crossProduct[0]);
-   RealOpenMM normBC             = deltaR[1][ReferenceForce::RIndex];
-              forceFactors[0]    = (-dEdAngle*normBC)/normCross1;
+   double internalF[4][3];
+   double forceFactors[4];
+   double normCross1         = DOT3(crossProduct[0], crossProduct[0]);
+   double normBC             = deltaR[1][ReferenceForce::RIndex];
+          forceFactors[0]    = (-dEdAngle*normBC)/normCross1;
 
-   RealOpenMM normCross2         = DOT3(crossProduct[1], crossProduct[1]);
-              forceFactors[3]    = (dEdAngle*normBC)/normCross2;
+   double normCross2         = DOT3(crossProduct[1], crossProduct[1]);
+          forceFactors[3]    = (dEdAngle*normBC)/normCross2;
 
-              forceFactors[1]    = DOT3(deltaR[0], deltaR[1]);
-              forceFactors[1]   /= deltaR[1][ReferenceForce::R2Index];
+          forceFactors[1]    = DOT3(deltaR[0], deltaR[1]);
+          forceFactors[1]   /= deltaR[1][ReferenceForce::R2Index];
 
-              forceFactors[2]    = DOT3(deltaR[2], deltaR[1]);
-              forceFactors[2]   /= deltaR[1][ReferenceForce::R2Index];
+          forceFactors[2]    = DOT3(deltaR[2], deltaR[1]);
+          forceFactors[2]   /= deltaR[1][ReferenceForce::R2Index];
 
    for (int ii = 0; ii < 3; ii++) {
 
       internalF[0][ii]  = forceFactors[0]*crossProduct[0][ii];
       internalF[3][ii]  = forceFactors[3]*crossProduct[1][ii];
 
-      RealOpenMM s      = forceFactors[1]*internalF[0][ii] - forceFactors[2]*internalF[3][ii];
+      double s          = forceFactors[1]*internalF[0][ii] - forceFactors[2]*internalF[3][ii];
 
       internalF[1][ii]  = internalF[0][ii] - s;
       internalF[2][ii]  = internalF[3][ii] + s;
@@ -172,6 +172,6 @@ void ReferenceCustomTorsionIxn::calculateBondIxn(int* atomIndices,
    // accumulate energies
 
    if (totalEnergy != NULL)
-       *totalEnergy += (RealOpenMM) energyExpression.evaluate();
+       *totalEnergy += energyExpression.evaluate();
 }
 

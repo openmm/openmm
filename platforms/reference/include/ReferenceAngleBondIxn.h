@@ -26,6 +26,7 @@
 #define __ReferenceAngleBondIxn_H__
 
 #include "ReferenceBondIxn.h"
+#include "openmm/Vec3.h"
 
 namespace OpenMM {
 
@@ -34,7 +35,7 @@ class OPENMM_EXPORT ReferenceAngleBondIxn : public ReferenceBondIxn {
    private:
 
         bool usePeriodic;
-        RealVec boxVectors[3];
+        Vec3 boxVectors[3];
 
    public:
 
@@ -62,7 +63,7 @@ class OPENMM_EXPORT ReferenceAngleBondIxn : public ReferenceBondIxn {
       
          --------------------------------------------------------------------------------------- */
       
-      void setPeriodic(OpenMM::RealVec* vectors);
+      void setPeriodic(OpenMM::Vec3* vectors);
 
       /**---------------------------------------------------------------------------------------
 
@@ -76,8 +77,8 @@ class OPENMM_EXPORT ReferenceAngleBondIxn : public ReferenceBondIxn {
       
          --------------------------------------------------------------------------------------- */
       
-      void getPrefactorsGivenAngleCosine(RealOpenMM cosine, RealOpenMM* angleParameters,
-                                         RealOpenMM* dEdR, RealOpenMM* energyTerm) const;
+      void getPrefactorsGivenAngleCosine(double cosine, double* angleParameters,
+                                         double* dEdR, double* energyTerm) const;
       
       /**---------------------------------------------------------------------------------------
 
@@ -92,9 +93,9 @@ class OPENMM_EXPORT ReferenceAngleBondIxn : public ReferenceBondIxn {
       
          --------------------------------------------------------------------------------------- */
       
-      void calculateBondIxn(int* atomIndices, std::vector<OpenMM::RealVec>& atomCoordinates,
-                            RealOpenMM* parameters, std::vector<OpenMM::RealVec>& forces,
-                            RealOpenMM* totalEnergy, double* energyParamDerivs);
+      void calculateBondIxn(int* atomIndices, std::vector<OpenMM::Vec3>& atomCoordinates,
+                            double* parameters, std::vector<OpenMM::Vec3>& forces,
+                            double* totalEnergy, double* energyParamDerivs);
       
 
 };

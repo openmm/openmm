@@ -156,6 +156,10 @@ void testSerializeCustomIntegrator() {
     intg->addComputeSum("summand2", "v*v+f*f");
     intg->setConstraintTolerance(1e-5);
     intg->setKineticEnergyExpression("m*v1*v1/2; v1=v+0.5*dt*f/m");
+    vector<double> values(10);
+    for (int i = 0; i < 10; i++)
+        values[i] = sin((double) i);
+    intg->addTabulatedFunction("f", new Continuous1DFunction(values, 0.5, 1.5));
     stringstream ss;
     XmlSerializer::serialize<Integrator>(intg, "CustomIntegrator", ss);
     CustomIntegrator *intg2 = dynamic_cast<CustomIntegrator*>(XmlSerializer::deserialize<Integrator>(ss));
@@ -190,6 +194,19 @@ void testSerializeCustomIntegrator() {
     ASSERT_EQUAL(intg->getRandomNumberSeed(), intg2->getRandomNumberSeed());
     ASSERT_EQUAL(intg->getStepSize(), intg2->getStepSize());
     ASSERT_EQUAL(intg->getConstraintTolerance(), intg2->getConstraintTolerance());
+    ASSERT_EQUAL(intg->getNumTabulatedFunctions(), intg2->getNumTabulatedFunctions());
+    for (int i = 0; i < intg->getNumTabulatedFunctions(); i++) {
+        double min1, min2, max1, max2;
+        vector<double> val1, val2;
+        dynamic_cast<Continuous1DFunction&>(intg->getTabulatedFunction(i)).getFunctionParameters(val1, min1, max1);
+        dynamic_cast<Continuous1DFunction&>(intg2->getTabulatedFunction(i)).getFunctionParameters(val2, min2, max2);
+        ASSERT_EQUAL(intg->getTabulatedFunctionName(i), intg2->getTabulatedFunctionName(i));
+        ASSERT_EQUAL(min1, min2);
+        ASSERT_EQUAL(max1, max2);
+        ASSERT_EQUAL(val1.size(), val2.size());
+        for (int j = 0; j < (int) val1.size(); j++)
+            ASSERT_EQUAL(val1[j], val2[j]);
+    }
     delete intg;
     delete intg2;
 }

@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2016 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2017 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -32,16 +32,6 @@
 
 using namespace OpenMM;
 using namespace std;
-
-class CpuCustomGBForce::ComputeForceTask : public ThreadPool::Task {
-public:
-    ComputeForceTask(CpuCustomGBForce& owner) : owner(owner) {
-    }
-    void execute(ThreadPool& threads, int threadIndex) {
-        owner.threadComputeForce(threads, threadIndex);
-    }
-    CpuCustomGBForce& owner;
-};
 
 CpuCustomGBForce::ThreadData::ThreadData(int numAtoms, int numThreads, int threadIndex,
                       const vector<Lepton::CompiledExpression>& valueExpressions,
@@ -84,48 +74,48 @@ CpuCustomGBForce::ThreadData::ThreadData(int numAtoms, int numThreads, int threa
             variableLocations[name.str()] = &particleValue[2*i+j];
         }
     }
-    for (int i = 0; i < (int) valueExpressions.size(); i++) {
-        this->valueExpressions[i].setVariableLocations(variableLocations);
-        expressionSet.registerExpression(this->valueExpressions[i]);
+    for (auto& expression : this->valueExpressions) {
+        expression.setVariableLocations(variableLocations);
+        expressionSet.registerExpression(expression);
     }
-    for (int i = 0; i < (int) valueDerivExpressions.size(); i++)
-        for (int j = 0; j < (int) valueDerivExpressions[i].size(); j++) {
-            this->valueDerivExpressions[i][j].setVariableLocations(variableLocations);
-            expressionSet.registerExpression(this->valueDerivExpressions[i][j]);
+    for (auto& expressions : this->valueDerivExpressions)
+        for (auto& expression : expressions) {
+            expression.setVariableLocations(variableLocations);
+            expressionSet.registerExpression(expression);
         }
-    for (int i = 0; i < (int) valueGradientExpressions.size(); i++)
-        for (int j = 0; j < (int) valueGradientExpressions[i].size(); j++) {
-            this->valueGradientExpressions[i][j].setVariableLocations(variableLocations);
-            expressionSet.registerExpression(this->valueGradientExpressions[i][j]);
+    for (auto& expressions : this->valueGradientExpressions)
+        for (auto& expression : expressions) {
+            expression.setVariableLocations(variableLocations);
+            expressionSet.registerExpression(expression);
         }
-    for (int i = 0; i < (int) valueParamDerivExpressions.size(); i++)
-        for (int j = 0; j < (int) valueParamDerivExpressions[i].size(); j++) {
-            this->valueParamDerivExpressions[i][j].setVariableLocations(variableLocations);
-            expressionSet.registerExpression(this->valueParamDerivExpressions[i][j]);
+    for (auto& expressions : this->valueParamDerivExpressions)
+        for (auto& expression : expressions) {
+            expression.setVariableLocations(variableLocations);
+            expressionSet.registerExpression(expression);
         }
-    for (int i = 0; i < (int) energyExpressions.size(); i++) {
-        this->energyExpressions[i].setVariableLocations(variableLocations);
-        expressionSet.registerExpression(this->energyExpressions[i]);
+    for (auto& expression : this->energyExpressions) {
+        expression.setVariableLocations(variableLocations);
+        expressionSet.registerExpression(expression);
     }
-    for (int i = 0; i < (int) energyDerivExpressions.size(); i++)
-        for (int j = 0; j < (int) energyDerivExpressions[i].size(); j++) {
-            this->energyDerivExpressions[i][j].setVariableLocations(variableLocations);
-            expressionSet.registerExpression(this->energyDerivExpressions[i][j]);
+    for (auto& expressions : this->energyDerivExpressions)
+        for (auto& expression : expressions) {
+            expression.setVariableLocations(variableLocations);
+            expressionSet.registerExpression(expression);
         }
-    for (int i = 0; i < (int) energyGradientExpressions.size(); i++)
-        for (int j = 0; j < (int) energyGradientExpressions[i].size(); j++) {
-            this->energyGradientExpressions[i][j].setVariableLocations(variableLocations);
-            expressionSet.registerExpression(this->energyGradientExpressions[i][j]);
+    for (auto& expressions : this->energyGradientExpressions)
+        for (auto& expression : expressions) {
+            expression.setVariableLocations(variableLocations);
+            expressionSet.registerExpression(expression);
         }
-    for (int i = 0; i < (int) energyParamDerivExpressions.size(); i++)
-        for (int j = 0; j < (int) energyParamDerivExpressions[i].size(); j++) {
-            this->energyParamDerivExpressions[i][j].setVariableLocations(variableLocations);
-            expressionSet.registerExpression(this->energyParamDerivExpressions[i][j]);
+    for (auto& expressions : this->energyParamDerivExpressions)
+        for (auto& expression : expressions) {
+            expression.setVariableLocations(variableLocations);
+            expressionSet.registerExpression(expression);
         }
     value0.resize(numAtoms);
     dEdV.resize(valueNames.size());
-    for (int i = 0; i < (int) dEdV.size(); i++)
-        dEdV[i].resize(numAtoms);
+    for (auto& v : dEdV)
+        v.resize(numAtoms);
     dVdX.resize(valueDerivExpressions.size());
     dVdY.resize(valueDerivExpressions.size());
     dVdZ.resize(valueDerivExpressions.size());
@@ -165,8 +155,8 @@ CpuCustomGBForce::CpuCustomGBForce(int numAtoms, const std::vector<std::set<int>
 }
 
 CpuCustomGBForce::~CpuCustomGBForce() {
-    for (int i = 0; i < (int) threadData.size(); i++)
-        delete threadData[i];
+    for (auto data : threadData)
+        delete data;
 }
 
 void CpuCustomGBForce::setUseCutoff(float distance, const CpuNeighborList& neighbors) {
@@ -176,7 +166,7 @@ void CpuCustomGBForce::setUseCutoff(float distance, const CpuNeighborList& neigh
     neighborList = &neighbors;
   }
 
-void CpuCustomGBForce::setPeriodic(RealVec& boxSize) {
+void CpuCustomGBForce::setPeriodic(Vec3& boxSize) {
     if (cutoff) {
         assert(boxSize[0] >= 2.0*cutoffDistance);
         assert(boxSize[1] >= 2.0*cutoffDistance);
@@ -188,7 +178,7 @@ void CpuCustomGBForce::setPeriodic(RealVec& boxSize) {
     periodicBoxSize[2] = boxSize[2];
   }
 
-void CpuCustomGBForce::calculateIxn(int numberOfAtoms, float* posq, RealOpenMM** atomParameters,
+void CpuCustomGBForce::calculateIxn(int numberOfAtoms, float* posq, double** atomParameters,
                                            map<string, double>& globalParameters, vector<AlignedArray<float> >& threadForce,
                                            bool includeForce, bool includeEnergy, double& totalEnergy, double* energyParamDerivs) {
     // Record the parameters for the threads.
@@ -206,7 +196,7 @@ void CpuCustomGBForce::calculateIxn(int numberOfAtoms, float* posq, RealOpenMM**
 
     // Calculate the first computed value.
 
-    ComputeForceTask task(*this);
+    auto task = [&] (ThreadPool& threads, int threadIndex) { threadComputeForce(threads, threadIndex); };
     gmx_atomic_set(&counter, 0);
     threads.execute(task);
     threads.waitForThreads();
@@ -266,16 +256,16 @@ void CpuCustomGBForce::threadComputeForce(ThreadPool& threads, int threadIndex) 
     ThreadData& data = *threadData[threadIndex];
     fvec4 boxSize(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2], 0);
     fvec4 invBoxSize((1/periodicBoxSize[0]), (1/periodicBoxSize[1]), (1/periodicBoxSize[2]), 0);
-    for (map<string, double>::const_iterator iter = globalParameters->begin(); iter != globalParameters->end(); ++iter)
-        data.expressionSet.setVariable(data.expressionSet.getVariableIndex(iter->first), iter->second);
+    for (auto& param : *globalParameters)
+        data.expressionSet.setVariable(data.expressionSet.getVariableIndex(param.first), param.second);
 
     // Calculate the first computed value.
 
-    for (int i = 0; i < (int) data.value0.size(); i++)
-        data.value0[i] = 0.0f;
-    for (int i = 0; i < (int) data.dValue0dParam.size(); i++)
-        for (int j = 0; j < (int) data.dValue0dParam[i].size(); j++)
-            data.dValue0dParam[i][j] = 0.0;
+    for (auto& v : data.value0)
+        v = 0.0f;
+    for (auto& vals : data.dValue0dParam)
+        for (auto& v : vals)
+            v = 0.0f;
     if (valueTypes[0] == CustomGBForce::ParticlePair)
         calculateParticlePairValue(0, data, numberOfAtoms, posq, atomParameters, true, boxSize, invBoxSize);
     else
@@ -301,8 +291,8 @@ void CpuCustomGBForce::threadComputeForce(ThreadPool& threads, int threadIndex) 
     int numValues = valueTypes.size();
     for (int atom = data.firstAtom; atom < data.lastAtom; atom++) {
         float sum = 0.0f;
-        for (int j = 0; j < (int) threadData.size(); j++)
-            sum += threadData[j]->value0[atom];
+        for (auto& data : threadData)
+            sum += data->value0[atom];
         values[0][atom] = sum;
         data.x = posq[4*atom];
         data.y = posq[4*atom+1];
@@ -330,11 +320,11 @@ void CpuCustomGBForce::threadComputeForce(ThreadPool& threads, int threadIndex) 
 
     // Now calculate the energy and its derivatives.
 
-    for (int i = 0; i < (int) data.dEdV.size(); i++)
-        for (int j = 0; j < (int) data.dEdV[i].size(); j++)
-            data.dEdV[i][j] = 0.0f;
-    for (int i = 0; i < (int) data.energyParamDerivs.size(); i++)
-        data.energyParamDerivs[i] = 0.0f;
+    for (auto& vals : data.dEdV)
+        for (auto& v : vals)
+            v = 0.0f;
+    for (auto& v : data.energyParamDerivs)
+        v = 0.0f;
     for (int termIndex = 0; termIndex < (int) data.energyExpressions.size(); termIndex++) {
         if (energyTypes[termIndex] == CustomGBForce::SingleParticle)
             calculateSingleParticleEnergyTerm(termIndex, data, numberOfAtoms, posq, atomParameters, forces, energy);
@@ -350,8 +340,8 @@ void CpuCustomGBForce::threadComputeForce(ThreadPool& threads, int threadIndex) 
     for (int atom = data.firstAtom; atom < data.lastAtom; atom++) {
         for (int i = 0; i < (int) dEdV.size(); i++) {
             float sum = 0.0f;
-            for (int j = 0; j < (int) threadData.size(); j++)
-                sum += threadData[j]->dEdV[i][atom];
+            for (auto& data : threadData)
+                sum += data->dEdV[i][atom];
             dEdV[i][atom] = sum;
         }
     }
@@ -362,7 +352,7 @@ void CpuCustomGBForce::threadComputeForce(ThreadPool& threads, int threadIndex) 
     calculateChainRuleForces(data, numberOfAtoms, posq, atomParameters, forces, boxSize, invBoxSize);
 }
 
-void CpuCustomGBForce::calculateParticlePairValue(int index, ThreadData& data, int numAtoms, float* posq, RealOpenMM** atomParameters,
+void CpuCustomGBForce::calculateParticlePairValue(int index, ThreadData& data, int numAtoms, float* posq, double** atomParameters,
         bool useExclusions, const fvec4& boxSize, const fvec4& invBoxSize) {
     for (int i = 0; i < numAtoms; i++)
         values[index][i] = 0.0f;
@@ -409,7 +399,7 @@ void CpuCustomGBForce::calculateParticlePairValue(int index, ThreadData& data, i
     }
 }
 
-void CpuCustomGBForce::calculateOnePairValue(int index, int atom1, int atom2, ThreadData& data, float* posq, RealOpenMM** atomParameters,
+void CpuCustomGBForce::calculateOnePairValue(int index, int atom1, int atom2, ThreadData& data, float* posq, double** atomParameters,
         vector<float>& valueArray, const fvec4& boxSize, const fvec4& invBoxSize) {
     fvec4 deltaR;
     fvec4 pos1(posq+4*atom1);
@@ -436,7 +426,7 @@ void CpuCustomGBForce::calculateOnePairValue(int index, int atom1, int atom2, Th
 }
 
 void CpuCustomGBForce::calculateSingleParticleEnergyTerm(int index, ThreadData& data, int numAtoms, float* posq,
-        RealOpenMM** atomParameters, float* forces, double& totalEnergy) {
+        double** atomParameters, float* forces, double& totalEnergy) {
     for (int i = data.firstAtom; i < data.lastAtom; i++) {
         data.x = posq[4*i];
         data.y = posq[4*i+1];
@@ -460,7 +450,7 @@ void CpuCustomGBForce::calculateSingleParticleEnergyTerm(int index, ThreadData& 
     }
 }
 
-void CpuCustomGBForce::calculateParticlePairEnergyTerm(int index, ThreadData& data, int numAtoms, float* posq, RealOpenMM** atomParameters,
+void CpuCustomGBForce::calculateParticlePairEnergyTerm(int index, ThreadData& data, int numAtoms, float* posq, double** atomParameters,
         bool useExclusions, float* forces, double& totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize) {
     if (cutoff) {
         // Loop over all pairs in the neighbor list.
@@ -502,7 +492,7 @@ void CpuCustomGBForce::calculateParticlePairEnergyTerm(int index, ThreadData& da
     }
 }
 
-void CpuCustomGBForce::calculateOnePairEnergyTerm(int index, int atom1, int atom2, ThreadData& data, float* posq, RealOpenMM** atomParameters,
+void CpuCustomGBForce::calculateOnePairEnergyTerm(int index, int atom1, int atom2, ThreadData& data, float* posq, double** atomParameters,
         float* forces, double& totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize) {
     // Compute the displacement.
 
@@ -547,7 +537,7 @@ void CpuCustomGBForce::calculateOnePairEnergyTerm(int index, int atom1, int atom
         data.energyParamDerivs[i] += data.energyParamDerivExpressions[index][i].evaluate();
 }
 
-void CpuCustomGBForce::calculateChainRuleForces(ThreadData& data, int numAtoms, float* posq, RealOpenMM** atomParameters,
+void CpuCustomGBForce::calculateChainRuleForces(ThreadData& data, int numAtoms, float* posq, double** atomParameters,
         float* forces, const fvec4& boxSize, const fvec4& invBoxSize) {
     if (cutoff) {
         // Loop over all pairs in the neighbor list.
@@ -624,7 +614,7 @@ void CpuCustomGBForce::calculateChainRuleForces(ThreadData& data, int numAtoms, 
                 data.energyParamDerivs[k] += dEdV[j][i]*dValuedParam[j][k][i];
 }
 
-void CpuCustomGBForce::calculateOnePairChainRule(int atom1, int atom2, ThreadData& data, float* posq, RealOpenMM** atomParameters,
+void CpuCustomGBForce::calculateOnePairChainRule(int atom1, int atom2, ThreadData& data, float* posq, double** atomParameters,
         float* forces, bool isExcluded, const fvec4& boxSize, const fvec4& invBoxSize) {
     // Compute the displacement.
 

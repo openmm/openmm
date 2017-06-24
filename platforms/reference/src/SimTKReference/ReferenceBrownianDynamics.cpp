@@ -47,8 +47,8 @@ using namespace OpenMM;
    --------------------------------------------------------------------------------------- */
 
 ReferenceBrownianDynamics::ReferenceBrownianDynamics(int numberOfAtoms,
-                                                          RealOpenMM deltaT, RealOpenMM friction,
-                                                          RealOpenMM temperature) : 
+                                                          double deltaT, double friction,
+                                                          double temperature) : 
            ReferenceDynamics(numberOfAtoms, deltaT, temperature), friction(friction) {
 
    if (friction <= 0) {
@@ -67,13 +67,6 @@ ReferenceBrownianDynamics::ReferenceBrownianDynamics(int numberOfAtoms,
    --------------------------------------------------------------------------------------- */
 
 ReferenceBrownianDynamics::~ReferenceBrownianDynamics() {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceBrownianDynamics::~ReferenceBrownianDynamics";
-
-   // ---------------------------------------------------------------------------------------
-
 }
 
 /**---------------------------------------------------------------------------------------
@@ -84,14 +77,7 @@ ReferenceBrownianDynamics::~ReferenceBrownianDynamics() {
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM ReferenceBrownianDynamics::getFriction() const {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName  = "\nReferenceBrownianDynamics::getFriction";
-
-   // ---------------------------------------------------------------------------------------
-
+double ReferenceBrownianDynamics::getFriction() const {
    return friction;
 }
 
@@ -108,18 +94,9 @@ RealOpenMM ReferenceBrownianDynamics::getFriction() const {
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceBrownianDynamics::update(const OpenMM::System& system, vector<RealVec>& atomCoordinates,
-                                          vector<RealVec>& velocities,
-                                          vector<RealVec>& forces, vector<RealOpenMM>& masses, RealOpenMM tolerance) {
-
-   // ---------------------------------------------------------------------------------------
-
-   static const char* methodName      = "\nReferenceBrownianDynamics::update";
-
-   static const RealOpenMM zero       =  0.0;
-   static const RealOpenMM one        =  1.0;
-
-   // ---------------------------------------------------------------------------------------
+void ReferenceBrownianDynamics::update(const OpenMM::System& system, vector<Vec3>& atomCoordinates,
+                                          vector<Vec3>& velocities,
+                                          vector<Vec3>& forces, vector<double>& masses, double tolerance) {
 
    // first-time-through initialization
 
@@ -128,21 +105,21 @@ void ReferenceBrownianDynamics::update(const OpenMM::System& system, vector<Real
       // invert masses
 
       for (int ii = 0; ii < numberOfAtoms; ii++) {
-         if (masses[ii] == zero)
-             inverseMasses[ii] = zero;
+         if (masses[ii] == 0.0)
+             inverseMasses[ii] = 0.0;
          else
-             inverseMasses[ii] = one/masses[ii];
+             inverseMasses[ii] = 1.0/masses[ii];
       }
    }
    
    // Perform the integration.
    
-   const RealOpenMM noiseAmplitude = static_cast<RealOpenMM>(sqrt(2.0*BOLTZ*getTemperature()*getDeltaT()/getFriction()));
-   const RealOpenMM forceScale = getDeltaT()/getFriction();
+   const double noiseAmplitude = sqrt(2.0*BOLTZ*getTemperature()*getDeltaT()/getFriction());
+   const double forceScale = getDeltaT()/getFriction();
    for (int i = 0; i < numberOfAtoms; ++i) {
-       if (masses[i] != zero)
+       if (masses[i] != 0.0)
            for (int j = 0; j < 3; ++j) {
-               xPrime[i][j] = atomCoordinates[i][j] + forceScale*inverseMasses[i]*forces[i][j] + noiseAmplitude*SQRT(inverseMasses[i])*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+               xPrime[i][j] = atomCoordinates[i][j] + forceScale*inverseMasses[i]*forces[i][j] + noiseAmplitude*sqrt(inverseMasses[i])*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
            }
    }
    ReferenceConstraintAlgorithm* referenceConstraintAlgorithm = getReferenceConstraintAlgorithm();
@@ -151,9 +128,9 @@ void ReferenceBrownianDynamics::update(const OpenMM::System& system, vector<Real
    
    // Update the positions and velocities.
    
-   RealOpenMM velocityScale = static_cast<RealOpenMM>(1.0/getDeltaT());
+   double velocityScale = 1.0/getDeltaT();
    for (int i = 0; i < numberOfAtoms; ++i) {
-       if (masses[i] != zero)
+       if (masses[i] != 0.0)
            for (int j = 0; j < 3; ++j) {
                velocities[i][j] = velocityScale*(xPrime[i][j] - atomCoordinates[i][j]);
                atomCoordinates[i][j] = xPrime[i][j];

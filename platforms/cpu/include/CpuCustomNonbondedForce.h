@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2016 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2017 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -67,7 +67,7 @@ class CpuCustomNonbondedForce {
 
          --------------------------------------------------------------------------------------- */
 
-      void setUseCutoff(RealOpenMM distance, const CpuNeighborList& neighbors);
+      void setUseCutoff(double distance, const CpuNeighborList& neighbors);
 
       /**---------------------------------------------------------------------------------------
 
@@ -88,7 +88,7 @@ class CpuCustomNonbondedForce {
       
          --------------------------------------------------------------------------------------- */
       
-      void setUseSwitchingFunction(RealOpenMM distance);
+      void setUseSwitchingFunction(double distance);
 
       /**---------------------------------------------------------------------------------------
 
@@ -100,7 +100,7 @@ class CpuCustomNonbondedForce {
 
          --------------------------------------------------------------------------------------- */
 
-      void setPeriodic(RealVec* periodicBoxVectors);
+      void setPeriodic(Vec3* periodicBoxVectors);
 
       /**---------------------------------------------------------------------------------------
 
@@ -118,11 +118,10 @@ class CpuCustomNonbondedForce {
 
          --------------------------------------------------------------------------------------- */
 
-    void calculatePairIxn(int numberOfAtoms, float* posq, std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** atomParameters,
-                          RealOpenMM* fixedParameters, const std::map<std::string, double>& globalParameters,
+    void calculatePairIxn(int numberOfAtoms, float* posq, std::vector<OpenMM::Vec3>& atomCoordinates, double** atomParameters,
+                          double* fixedParameters, const std::map<std::string, double>& globalParameters,
                           std::vector<AlignedArray<float> >& threadForce, bool includeForce, bool includeEnergy, double& totalEnergy, double* energyParamDerivs);
 private:
-    class ComputeForceTask;
     class ThreadData;
 
     bool cutoff;
@@ -132,9 +131,9 @@ private:
     bool useInteractionGroups;
     const CpuNeighborList* neighborList;
     float recipBoxSize[3];
-    RealVec periodicBoxVectors[3];
+    Vec3 periodicBoxVectors[3];
     AlignedArray<fvec4> periodicBoxVec4;
-    RealOpenMM cutoffDistance, switchingDistance;
+    double cutoffDistance, switchingDistance;
     ThreadPool& threads;
     const std::vector<std::set<int> > exclusions;
     std::vector<ThreadData*> threadData;
@@ -144,8 +143,8 @@ private:
     // The following variables are used to make information accessible to the individual threads.
     int numberOfAtoms;
     float* posq;
-    RealVec const* atomCoordinates;
-    RealOpenMM** atomParameters;        
+    Vec3 const* atomCoordinates;
+    double** atomParameters;        
     const std::map<std::string, double>* globalParameters;
     std::vector<AlignedArray<float> >* threadForce;
     bool includeForce, includeEnergy;
@@ -186,7 +185,7 @@ public:
     CompiledExpressionSet expressionSet;
     std::vector<double> particleParam;
     double r;
-    std::vector<RealOpenMM> energyParamDerivs; 
+    std::vector<double> energyParamDerivs; 
 };
 
 } // namespace OpenMM

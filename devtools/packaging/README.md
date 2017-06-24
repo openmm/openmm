@@ -1,12 +1,22 @@
 # Packaging OpenMM into ZIP installers
 
+Set your environment variable `TAG` to the git tag for the release:
+```bash
+# OpenMM 7.1.1
+export TAG="c1a64aa"
+```
+
 ## Source
 
 Start the docker container:
 ```bash
-docker run -i -t --rm -v `pwd`:/io jchodera/omnia-build-box:cuda80-amd30-clang38 bash
+docker run -i -t --rm -e TAG -v `pwd`:/io jchodera/omnia-build-box:cuda80-amd30-clang38 bash
 ```
-Inside the docker container:
+Patch the docker container for missing LaTeX files:
+```
+tlmgr install fncychap tabulary capt-of eqparbox environ trimspaces
+```
+Build the installer inside the docker container:
 ```bash
 # Clone the OpenMM beta or release candidate tag $TAG
 git clone https://github.com/pandegroup/openmm.git
@@ -23,9 +33,13 @@ cp packaging/compressed/* /io
 
 Start the docker container:
 ```bash
-docker run -i -t --rm -v `pwd`:/io jchodera/omnia-build-box:cuda80-amd30-clang38 bash
+docker run -i -t --rm -e TAG -v `pwd`:/io jchodera/omnia-build-box:cuda80-amd30-clang38 bash
 ```
-Inside the docker container:
+Patch the docker container for missing LaTeX files:
+```
+tlmgr install fncychap tabulary capt-of eqparbox environ trimspaces
+```
+Build the installer inside the docker container:
 ```bash
 # Clone the OpenMM beta or release candidate tag $TAG
 git clone https://github.com/pandegroup/openmm.git
@@ -50,4 +64,3 @@ source openmm/devtools/packaging/scripts/osx/prepare.sh
 source openmm/devtools/packaging/scripts/osx/build.sh
 source openmm/devtools/packaging/scripts/osx/package.sh
 ```
-

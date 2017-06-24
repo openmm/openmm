@@ -72,10 +72,8 @@ void* GBSAOBCForceProxy::deserialize(const SerializationNode& node) const {
         if (version > 1)
             force->setSurfaceAreaEnergy(node.getDoubleProperty("surfaceAreaEnergy"));
         const SerializationNode& particles = node.getChildNode("Particles");
-        for (int i = 0; i < (int) particles.getChildren().size(); i++) {
-            const SerializationNode& particle = particles.getChildren()[i];
+        for (auto& particle : particles.getChildren())
             force->addParticle(particle.getDoubleProperty("q"), particle.getDoubleProperty("r"), particle.getDoubleProperty("scale"));
-        }
     }
     catch (...) {
         delete force;

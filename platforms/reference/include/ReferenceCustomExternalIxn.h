@@ -26,6 +26,7 @@
 #define __ReferenceCustomExternalIxn_H__
 
 #include "ReferenceCustomExternalIxn.h"
+#include "openmm/Vec3.h"
 #include "lepton/CompiledExpression.h"
 
 namespace OpenMM {
@@ -79,8 +80,8 @@ class ReferenceCustomExternalIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateForce(int atomIndex, std::vector<OpenMM::RealVec>& atomCoordinates,
-                          RealOpenMM* parameters, std::vector<OpenMM::RealVec>& forces, RealOpenMM* energy) const;
+      void calculateForce(int atomIndex, std::vector<OpenMM::Vec3>& atomCoordinates,
+                          double* parameters, std::vector<OpenMM::Vec3>& forces, double* energy) const;
 
 
 };

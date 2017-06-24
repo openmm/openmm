@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2015 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2017 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -30,6 +30,7 @@
 #include "ReferencePME.h"
 #include "openmm/internal/gmx_atomic.h"
 #include <algorithm>
+#include <iostream>
 
 // In case we're using some primitive version of Visual Studio this will
 // make sure that erf() and erfc() are defined.
@@ -41,23 +42,14 @@ using namespace OpenMM;
 const float CpuNonbondedForce::TWO_OVER_SQRT_PI = (float) (2/sqrt(PI_M));
 const int CpuNonbondedForce::NUM_TABLE_POINTS = 2048;
 
-class CpuNonbondedForce::ComputeDirectTask : public ThreadPool::Task {
-public:
-    ComputeDirectTask(CpuNonbondedForce& owner) : owner(owner) {
-    }
-    void execute(ThreadPool& threads, int threadIndex) {
-        owner.threadComputeDirect(threads, threadIndex);
-    }
-    CpuNonbondedForce& owner;
-};
-
 /**---------------------------------------------------------------------------------------
 
    CpuNonbondedForce constructor
 
    --------------------------------------------------------------------------------------- */
 
-CpuNonbondedForce::CpuNonbondedForce() : cutoff(false), useSwitch(false), periodic(false), ewald(false), pme(false), tableIsValid(false), cutoffDistance(0.0f), alphaEwald(0.0f) {
+CpuNonbondedForce::CpuNonbondedForce() : cutoff(false), useSwitch(false), periodic(false), ewald(false), pme(false), ljpme(false), tableIsValid(false), expTableIsValid(false),
+    cutoffDistance(0.0f), alphaDispersionEwald(0.0f), alphaEwald(0.0f) {
 }
 
 CpuNonbondedForce::~CpuNonbondedForce() {
@@ -78,10 +70,21 @@ void CpuNonbondedForce::setUseCutoff(float distance, const CpuNeighborList& neig
         tableIsValid = false;
     cutoff = true;
     cutoffDistance = distance;
+    inverseRcut6 = pow(cutoffDistance, -6);
     neighborList = &neighbors;
     krf = pow(cutoffDistance, -3.0f)*(solventDielectric-1.0)/(2.0*solventDielectric+1.0);
     crf = (1.0/cutoffDistance)*(3.0*solventDielectric)/(2.0*solventDielectric+1.0);
-  }
+    if(alphaDispersionEwald != 0.0f){
+        // We set this here, in case setUseCutoff is called after the dispersion alpha is set.
+        double dalphaR = alphaDispersionEwald*cutoffDistance;
+        double dar2 = dalphaR * dalphaR;
+        double dar4 = dar2*dar2;
+        double dar6 = dar4*dar2;
+        double expterm = EXP(-dar2);
+        inverseRcut6Expterm  = inverseRcut6*(1.0 - expterm * (1.0 + dar2 + 0.5*dar4));
+    }
+
+}
 
 /**---------------------------------------------------------------------------------------
 
@@ -96,7 +99,7 @@ void CpuNonbondedForce::setUseSwitchingFunction(float distance) {
     switchingDistance = distance;
 }
 
-  /**---------------------------------------------------------------------------------------
+/**---------------------------------------------------------------------------------------
 
      Set the force to use periodic boundary conditions.  This requires that a cutoff has
      also been set, and the smallest side of the periodic box is at least twice the cutoff
@@ -106,7 +109,7 @@ void CpuNonbondedForce::setUseSwitchingFunction(float distance) {
 
      --------------------------------------------------------------------------------------- */
 
-  void CpuNonbondedForce::setPeriodic(RealVec* periodicBoxVectors) {
+void CpuNonbondedForce::setPeriodic(Vec3* periodicBoxVectors) {
 
     assert(cutoff);
     assert(periodicBoxVectors[0][0] >= 2.0*cutoffDistance);
@@ -124,11 +127,11 @@ void CpuNonbondedForce::setUseSwitchingFunction(float distance) {
     periodicBoxVec4[1] = fvec4(periodicBoxVectors[1][0], periodicBoxVectors[1][1], periodicBoxVectors[1][2], 0);
     periodicBoxVec4[2] = fvec4(periodicBoxVectors[2][0], periodicBoxVectors[2][1], periodicBoxVectors[2][2], 0);
     triclinic = (periodicBoxVectors[0][1] != 0.0 || periodicBoxVectors[0][2] != 0.0 ||
-                 periodicBoxVectors[1][0] != 0.0 || periodicBoxVectors[1][2] != 0.0 ||
-                 periodicBoxVectors[2][0] != 0.0 || periodicBoxVectors[2][1] != 0.0);
-  }
+            periodicBoxVectors[1][0] != 0.0 || periodicBoxVectors[1][2] != 0.0 ||
+            periodicBoxVectors[2][0] != 0.0 || periodicBoxVectors[2][1] != 0.0);
+}
 
-  /**---------------------------------------------------------------------------------------
+/**---------------------------------------------------------------------------------------
 
      Set the force to use Ewald summation.
 
@@ -139,18 +142,18 @@ void CpuNonbondedForce::setUseSwitchingFunction(float distance) {
 
      --------------------------------------------------------------------------------------- */
 
-  void CpuNonbondedForce::setUseEwald(float alpha, int kmaxx, int kmaxy, int kmaxz) {
-      if (alpha != alphaEwald)
-          tableIsValid = false;
-      alphaEwald = alpha;
-      numRx = kmaxx;
-      numRy = kmaxy;
-      numRz = kmaxz;
-      ewald = true;
-      tabulateEwaldScaleFactor();
-  }
+void CpuNonbondedForce::setUseEwald(float alpha, int kmaxx, int kmaxy, int kmaxz) {
+    if (alpha != alphaEwald)
+        tableIsValid = false;
+    alphaEwald = alpha;
+    numRx = kmaxx;
+    numRy = kmaxy;
+    numRz = kmaxz;
+    ewald = true;
+    tabulateEwaldScaleFactor();
+}
 
-  /**---------------------------------------------------------------------------------------
+/**---------------------------------------------------------------------------------------
 
      Set the force to use Particle-Mesh Ewald (PME) summation.
 
@@ -159,19 +162,49 @@ void CpuNonbondedForce::setUseSwitchingFunction(float distance) {
 
      --------------------------------------------------------------------------------------- */
 
-  void CpuNonbondedForce::setUsePME(float alpha, int meshSize[3]) {
-      if (alpha != alphaEwald)
-          tableIsValid = false;
-      alphaEwald = alpha;
-      meshDim[0] = meshSize[0];
-      meshDim[1] = meshSize[1];
-      meshDim[2] = meshSize[2];
-      pme = true;
-      tabulateEwaldScaleFactor();
-  }
+void CpuNonbondedForce::setUsePME(float alpha, int meshSize[3]) {
+    if (alpha != alphaEwald)
+        tableIsValid = false;
+    alphaEwald = alpha;
+    meshDim[0] = meshSize[0];
+    meshDim[1] = meshSize[1];
+    meshDim[2] = meshSize[2];
+    pme = true;
+    tabulateEwaldScaleFactor();
+}
 
-  
-  void CpuNonbondedForce::tabulateEwaldScaleFactor() {
+
+/**---------------------------------------------------------------------------------------
+
+     Set the force to use Particle-Mesh Ewald (PME) summation for dispersion.
+
+     @param alpha  the Ewald separation parameter
+     @param gridSize the dimensions of the mesh
+
+     --------------------------------------------------------------------------------------- */
+
+void CpuNonbondedForce::setUseLJPME(float alpha, int meshSize[3]) {
+    if (alpha != alphaDispersionEwald)
+        expTableIsValid = false;
+    alphaDispersionEwald = alpha;
+    dispersionMeshDim[0] = meshSize[0];
+    dispersionMeshDim[1] = meshSize[1];
+    dispersionMeshDim[2] = meshSize[2];
+    ljpme = true;
+    tabulateExpTerms();
+    if(cutoffDistance != 0.0f){
+        // We set this here, in case setUseLJPME is called after the cutoff is set
+        double dalphaR = alphaDispersionEwald*cutoffDistance;
+        double dar2 = dalphaR * dalphaR;
+        double dar4 = dar2*dar2;
+        double dar6 = dar4*dar2;
+        double expterm = EXP(-dar2);
+        inverseRcut6Expterm  = inverseRcut6*(1.0 - expterm * (1.0 + dar2 + 0.5*dar4));
+    }
+}
+
+
+void CpuNonbondedForce::tabulateEwaldScaleFactor() {
     if (tableIsValid)
         return;
     tableIsValid = true;
@@ -187,10 +220,30 @@ void CpuNonbondedForce::setUseSwitchingFunction(float distance) {
         ewaldScaleTable[i] = erfcTable[i] + TWO_OVER_SQRT_PI*alphaR*exp(-alphaR*alphaR);
     }
 }
-  
-void CpuNonbondedForce::calculateReciprocalIxn(int numberOfAtoms, float* posq, const vector<RealVec>& atomCoordinates,
-                                             const vector<pair<float, float> >& atomParameters, const vector<set<int> >& exclusions,
-                                             vector<RealVec>& forces, double* totalEnergy) const {
+
+void CpuNonbondedForce::tabulateExpTerms() {
+    if (expTableIsValid)
+        return;
+    expTableIsValid = true;
+    exptermsDX = cutoffDistance/NUM_TABLE_POINTS;
+    exptermsDXInv = 1.0f/exptermsDX;
+    exptermsTable.resize(NUM_TABLE_POINTS+4);
+    dExptermsTable.resize(NUM_TABLE_POINTS+4);
+    for (int i = 0; i < NUM_TABLE_POINTS+4; i++) {
+        double r = i*ewaldDX;
+        double dalphaR = alphaDispersionEwald*r;
+        double dar2 = dalphaR * dalphaR;
+        double dar4 = dar2*dar2;
+        double dar6 = dar4*dar2;
+        double expterm = EXP(-dar2);
+        exptermsTable[i]  = (1.0 - expterm * (1.0 + dar2 + 0.5*dar4));
+        dExptermsTable[i] = (1.0 - expterm * (1.0 + dar2 + 0.5*dar4 + dar6/6.0));
+    }
+}
+
+void CpuNonbondedForce::calculateReciprocalIxn(int numberOfAtoms, float* posq, const vector<Vec3>& atomCoordinates,
+                                               const vector<pair<float, float> >& atomParameters, const vector<float> &C6params, const vector<set<int> >& exclusions,
+                                               vector<Vec3>& forces, double* totalEnergy) const {
     typedef std::complex<float> d_complex;
 
     static const float epsilon     =  1.0;
@@ -203,14 +256,37 @@ void CpuNonbondedForce::calculateReciprocalIxn(int numberOfAtoms, float* posq, c
     if (pme) {
         pme_t pmedata;
         pme_init(&pmedata, alphaEwald, numberOfAtoms, meshDim, 5, 1);
-        vector<RealOpenMM> charges(numberOfAtoms);
+        vector<double> charges(numberOfAtoms);
         for (int i = 0; i < numberOfAtoms; i++)
             charges[i] = posq[4*i+3];
-        RealOpenMM recipEnergy = 0.0;
+        double recipEnergy = 0.0;
         pme_exec(pmedata, atomCoordinates, forces, charges, periodicBoxVectors, &recipEnergy);
         if (totalEnergy)
             *totalEnergy += recipEnergy;
         pme_destroy(pmedata);
+
+        if (ljpme) {
+            // Dispersion reciprocal space terms
+            pme_init(&pmedata,alphaDispersionEwald,numberOfAtoms,dispersionMeshDim,5,1);
+
+            std::vector<Vec3> dpmeforces;
+            for (int i = 0; i < numberOfAtoms; i++){
+                charges[i] = C6params[i];
+                dpmeforces.push_back(Vec3());
+            }
+            double recipDispersionEnergy = 0.0;
+            pme_exec_dpme(pmedata,atomCoordinates,dpmeforces,charges,periodicBoxVectors,&recipDispersionEnergy);
+            for (int i = 0; i < numberOfAtoms; i++){
+                forces[i][0] -= 2.0*dpmeforces[i][0];
+                forces[i][1] -= 2.0*dpmeforces[i][1];
+                forces[i][2] -= 2.0*dpmeforces[i][2];
+            }
+            if (totalEnergy)
+                *totalEnergy += recipDispersionEnergy;
+
+            pme_destroy(pmedata);
+        }
+
     }
 
     // Ewald method
@@ -224,7 +300,7 @@ void CpuNonbondedForce::calculateReciprocalIxn(int numberOfAtoms, float* posq, c
 
         // setup K-vectors
 
-        #define EIR(x, y, z) eir[(x)*numberOfAtoms*3+(y)*3+z]
+#define EIR(x, y, z) eir[(x)*numberOfAtoms*3+(y)*3+z]
         vector<d_complex> eir(kmax*numberOfAtoms*3);
         vector<d_complex> tab_xy(numberOfAtoms);
         vector<d_complex> tab_qxyz(numberOfAtoms);
@@ -232,15 +308,15 @@ void CpuNonbondedForce::calculateReciprocalIxn(int numberOfAtoms, float* posq, c
         for (int i = 0; (i < numberOfAtoms); i++) {
             float* pos = posq+4*i;
             for (int m = 0; (m < 3); m++)
-              EIR(0, i, m) = d_complex(1,0);
+                EIR(0, i, m) = d_complex(1,0);
 
             for (int m=0; (m<3); m++)
-              EIR(1, i, m) = d_complex(cos(pos[m]*recipBoxSize[m]),
-                                       sin(pos[m]*recipBoxSize[m]));
+                EIR(1, i, m) = d_complex(cos(pos[m]*recipBoxSize[m]),
+                                         sin(pos[m]*recipBoxSize[m]));
 
             for (int j=2; (j<kmax); j++)
-              for (int m=0; (m<3); m++)
-                EIR(j, i, m) = EIR(j-1, i, m) * EIR(1, i, m);
+                for (int m=0; (m<3); m++)
+                    EIR(j, i, m) = EIR(j-1, i, m) * EIR(1, i, m);
         }
 
         // calculate reciprocal space energy and forces
@@ -254,11 +330,11 @@ void CpuNonbondedForce::calculateReciprocalIxn(int numberOfAtoms, float* posq, c
                 float ky = ry * recipBoxSize[1];
                 if (ry >= 0) {
                     for (int n = 0; n < numberOfAtoms; n++)
-                      tab_xy[n] = EIR(rx, n, 0) * EIR(ry, n, 1);
+                        tab_xy[n] = EIR(rx, n, 0) * EIR(ry, n, 1);
                 }
                 else {
                     for (int n = 0; n < numberOfAtoms; n++)
-                      tab_xy[n]= EIR(rx, n, 0) * conj (EIR(-ry, n, 1));
+                        tab_xy[n]= EIR(rx, n, 0) * conj (EIR(-ry, n, 1));
                 }
                 for (int rz = lowrz; rz < numRz; rz++) {
                     if (rz >= 0) {
@@ -300,14 +376,15 @@ void CpuNonbondedForce::calculateReciprocalIxn(int numberOfAtoms, float* posq, c
 }
 
 
-void CpuNonbondedForce::calculateDirectIxn(int numberOfAtoms, float* posq, const vector<RealVec>& atomCoordinates, const vector<pair<float, float> >& atomParameters,
-                const vector<set<int> >& exclusions, vector<AlignedArray<float> >& threadForce, double* totalEnergy, ThreadPool& threads) {
+void CpuNonbondedForce::calculateDirectIxn(int numberOfAtoms, float* posq, const vector<Vec3>& atomCoordinates, const vector<pair<float, float> >& atomParameters,
+                                           const vector<float>& C6params, const vector<set<int> >& exclusions, vector<AlignedArray<float> >& threadForce, double* totalEnergy, ThreadPool& threads) {
     // Record the parameters for the threads.
     
     this->numberOfAtoms = numberOfAtoms;
     this->posq = posq;
     this->atomCoordinates = &atomCoordinates[0];
     this->atomParameters = &atomParameters[0];
+    this->C6params = &C6params[0];
     this->exclusions = &exclusions[0];
     this->threadForce = &threadForce;
     includeEnergy = (totalEnergy != NULL);
@@ -318,8 +395,7 @@ void CpuNonbondedForce::calculateDirectIxn(int numberOfAtoms, float* posq, const
     
     // Signal the threads to start running and wait for them to finish.
     
-    ComputeDirectTask task(*this);
-    threads.execute(task);
+    threads.execute([&] (ThreadPool& threads, int threadIndex) { threadComputeDirect(threads, threadIndex); });
     threads.waitForThreads();
     
     // Signal the threads to subtract the exclusions.
@@ -350,9 +426,8 @@ void CpuNonbondedForce::threadComputeDirect(ThreadPool& threads, int threadIndex
     float* forces = &(*threadForce)[threadIndex][0];
     fvec4 boxSize(periodicBoxVectors[0][0], periodicBoxVectors[1][1], periodicBoxVectors[2][2], 0);
     fvec4 invBoxSize(recipBoxSize[0], recipBoxSize[1], recipBoxSize[2], 0);
-    if (ewald || pme) {
+    if (ewald || pme || ljpme) {
         // Compute the interactions from the neighbor list.
-
         while (true) {
             int nextBlock = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
             if (nextBlock >= neighborList->getNumBlocks())
@@ -370,11 +445,11 @@ void CpuNonbondedForce::threadComputeDirect(ThreadPool& threads, int threadIndex
                 break;
             int end = min(start+groupSize, numberOfAtoms);
             for (int i = start; i < end; i++) {
-               fvec4 posI((float) atomCoordinates[i][0], (float) atomCoordinates[i][1], (float) atomCoordinates[i][2], 0.0f);
+                fvec4 posI((float) atomCoordinates[i][0], (float) atomCoordinates[i][1], (float) atomCoordinates[i][2], 0.0f);
                 float scaledChargeI = (float) (ONE_4PI_EPS0*posq[4*i+3]);
-                for (set<int>::const_iterator iter = exclusions[i].begin(); iter != exclusions[i].end(); ++iter) {
-                    if (*iter > i) {
-                        int j = *iter;
+                for (int excluded : exclusions[i]) {
+                    if (excluded > i) {
+                        int j = excluded;
                         fvec4 deltaR;
                         fvec4 posJ((float) atomCoordinates[j][0], (float) atomCoordinates[j][1], (float) atomCoordinates[j][2], 0.0f);
                         float r2;
@@ -394,7 +469,18 @@ void CpuNonbondedForce::threadComputeDirect(ThreadPool& threads, int threadIndex
                                 threadEnergy[threadIndex] -= chargeProdOverR*erfAlphaR;
                         }
                         else if (includeEnergy)
-                           threadEnergy[threadIndex] -= alphaEwald*TWO_OVER_SQRT_PI*scaledChargeI*posq[4*j+3];
+                            threadEnergy[threadIndex] -= alphaEwald*TWO_OVER_SQRT_PI*scaledChargeI*posq[4*j+3];
+                        if (ljpme) {
+                            float C6ij = C6params[i]*C6params[j];
+                            float inverseR2 = 1.0f/r2;
+                            float emult = C6ij*inverseR2*inverseR2*inverseR2*exptermsApprox(r);
+                            if(includeEnergy)
+                                threadEnergy[threadIndex] += emult;
+                            float dEdR = -6.0f*C6ij*inverseR2*inverseR2*inverseR2*inverseR2*dExptermsApprox(r);
+                            fvec4 result = deltaR*dEdR;
+                            (fvec4(forces+4*i)-result).store(forces+4*i);
+                            (fvec4(forces+4*j)+result).store(forces+4*j);
+                        }
                     }
                 }
             }
@@ -444,7 +530,7 @@ void CpuNonbondedForce::calculateOneIxn(int ii, int jj, float* forces, double* t
     }
     float sig       = atomParameters[ii].first + atomParameters[jj].first;
     float sig2      = inverseR*sig;
-          sig2     *= sig2;
+    sig2     *= sig2;
     float sig6      = sig2*sig2*sig2;
 
     float eps       = atomParameters[ii].second*atomParameters[jj].second;
@@ -476,7 +562,7 @@ void CpuNonbondedForce::calculateOneIxn(int ii, int jj, float* forces, double* t
     fvec4 result = deltaR*dEdR;
     (fvec4(forces+4*ii)+result).store(forces+4*ii);
     (fvec4(forces+4*jj)-result).store(forces+4*jj);
-  }
+}
 
 void CpuNonbondedForce::getDeltaR(const fvec4& posI, const fvec4& posJ, fvec4& deltaR, float& r2, bool periodic, const fvec4& boxSize, const fvec4& invBoxSize) const {
     deltaR = posJ-posI;
@@ -502,3 +588,18 @@ float CpuNonbondedForce::erfcApprox(float x) {
     return coeff1*erfcTable[index] + coeff2*erfcTable[index+1];
 }
 
+float CpuNonbondedForce::exptermsApprox(float x) {
+    float x1 = x*exptermsDXInv;
+    int index = min((int) floor(x1), NUM_TABLE_POINTS);
+    float coeff2 = x1-index;
+    float coeff1 = 1.0f-coeff2;
+    return coeff1*exptermsTable[index] + coeff2*exptermsTable[index+1];
+}
+
+float CpuNonbondedForce::dExptermsApprox(float x) {
+    float x1 = x*exptermsDXInv;
+    int index = min((int) floor(x1), NUM_TABLE_POINTS);
+    float coeff2 = x1-index;
+    float coeff1 = 1.0f-coeff2;
+    return coeff1*dExptermsTable[index] + coeff2*dExptermsTable[index+1];
+}

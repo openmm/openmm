@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2017 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -48,6 +48,11 @@ CustomIntegrator::CustomIntegrator(double stepSize) : globalsAreCurrent(true), f
     kineticEnergy = "m*v*v/2";
 }
 
+CustomIntegrator::~CustomIntegrator() {
+    for (auto function : functions)
+        delete function.function;
+}
+
 void CustomIntegrator::initialize(ContextImpl& contextRef) {
     if (owner != NULL && &contextRef.getOwner() != owner)
         throw OpenMMException("This Integrator is already bound to a context");
@@ -55,8 +60,7 @@ void CustomIntegrator::initialize(ContextImpl& contextRef) {
     set<std::string> variableSet;
     variableList.insert(variableList.end(), globalNames.begin(), globalNames.end());
     variableList.insert(variableList.end(), perDofNames.begin(), perDofNames.end());
-    for (int i = 0; i < (int) variableList.size(); i++) {
-        string& name = variableList[i];
+    for (auto& name : variableList) {
         if (variableSet.find(name) != variableSet.end())
             throw OpenMMException("The Integrator defines two variables with the same name: "+name);
         variableSet.insert(name);
@@ -66,8 +70,8 @@ void CustomIntegrator::initialize(ContextImpl& contextRef) {
     set<std::string> globalTargets;
     globalTargets.insert(globalNames.begin(), globalNames.end());
     globalTargets.insert("dt");
-    for (map<string, double>::const_iterator iter = contextRef.getParameters().begin(); iter != contextRef.getParameters().end(); ++iter)
-        globalTargets.insert(iter->first);
+    for (auto& param : contextRef.getParameters())
+        globalTargets.insert(param.first);
     for (int i = 0; i < computations.size(); i++) {
         if (computations[i].type == ComputeGlobal && globalTargets.find(computations[i].variable) == globalTargets.end())
             throw OpenMMException("Unknown global variable: "+computations[i].variable);
@@ -280,6 +284,26 @@ void CustomIntegrator::getComputationStep(int index, ComputationType& type, stri
     type = computations[index].type;
     variable = computations[index].variable;
     expression = computations[index].expression;
+}
+
+int CustomIntegrator::addTabulatedFunction(const std::string& name, TabulatedFunction* function) {
+    functions.push_back(FunctionInfo(name, function));
+    return functions.size()-1;
+}
+
+const TabulatedFunction& CustomIntegrator::getTabulatedFunction(int index) const {
+    ASSERT_VALID_INDEX(index, functions);
+    return *functions[index].function;
+}
+
+TabulatedFunction& CustomIntegrator::getTabulatedFunction(int index) {
+    ASSERT_VALID_INDEX(index, functions);
+    return *functions[index].function;
+}
+
+const string& CustomIntegrator::getTabulatedFunctionName(int index) const {
+    ASSERT_VALID_INDEX(index, functions);
+    return functions[index].name;
 }
 
 const string& CustomIntegrator::getKineticEnergyExpression() const {

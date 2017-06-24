@@ -1,14 +1,16 @@
-os: Windows Server 2012 R2
+os: Visual Studio 2015
+platform: x64
+configuration: Release
 shallow_clone: true
 install:
 
-# Setup shell for VS2010, x64, release mode
-  - >
-    "%ProgramFiles%\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /x64 /release
+# Setup shell for VS2015, x64
+  - call "c:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" amd64
 # Set path to python, git-bash tools.
-  - "set PATH=C:\\Python34-x64;C:\\Python34-x64\\Scripts;%PATH%"
+  - "set PATH=C:\\Python35-x64;C:\\Python35-x64\\Scripts;%PATH%"
   - "set PATH=C:\\Program Files (x86)\\Git\\bin;%PATH%"
   - pip install pytest
+  - pip install numpy
 
 # Use cclash for compiler caching (experimental)
   - ps: wget https://github.com/inorton/cclash/releases/download/0.3.14/cclash-0.3.14.zip -OutFile cclash-0.3.14.zip
@@ -37,7 +39,7 @@ install:
   - ps: 7z x opencl-icd-1.2.11.0.tar > $null
   - ps: mv .\icd\* .
   - ps: mkdir inc/CL > $null
-  - ps: wget https://github.com/$opencl_github | select -ExpandProperty links | where {$_.href -like "*.h*"} | select -ExpandProperty outerText | foreach{ wget https://raw.githubusercontent.com/$opencl_github/master/$_ -OutFile inc/CL/$_ }
+  - ps: wget https://github.com/$opencl_github/tree/master/opencl20/CL | select -ExpandProperty links | where {$_.href -like "*.h*"} | select -ExpandProperty outerText | foreach{ wget https://raw.githubusercontent.com/$opencl_github/master/opencl20/CL/$_ -OutFile inc/CL/$_ }
   - ps: mkdir lib > $null
   - ps: cd lib
   - cmake -G "NMake Makefiles" ..

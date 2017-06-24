@@ -96,9 +96,9 @@ void OpenCLIntegrateRPMDStepKernel::initialize(const System& system, const RPMDI
     groupsNotContracted = -1;
     const map<int, int>& contractions = integrator.getContractions();
     int maxContractedCopies = 0;
-    for (map<int, int>::const_iterator iter = contractions.begin(); iter != contractions.end(); ++iter) {
-        int group = iter->first;
-        int copies = iter->second;
+    for (auto& c : contractions) {
+        int group = c.first;
+        int copies = c.second;
         if (group < 0 || group > 31)
             throw OpenMMException("RPMDIntegrator: Force group must be between 0 and 31");
         if (copies < 0 || copies > numCopies)
@@ -146,8 +146,8 @@ void OpenCLIntegrateRPMDStepKernel::initialize(const System& system, const RPMDI
     
     // Create kernels for doing contractions.
     
-    for (map<int, int>::const_iterator iter = groupsByCopies.begin(); iter != groupsByCopies.end(); ++iter) {
-        int copies = iter->first;
+    for (auto& g : groupsByCopies) {
+        int copies = g.first;
         replacements.clear();
         replacements["NUM_CONTRACTED_COPIES"] = cl.intToString(copies);
         replacements["POS_SCALE"] = cl.doubleToString(1.0/numCopies);
@@ -182,8 +182,8 @@ void OpenCLIntegrateRPMDStepKernel::initializeKernels(ContextImpl& context) {
     copyFromContextKernel.setArg<cl::Buffer>(3, velocities->getDeviceBuffer());
     copyFromContextKernel.setArg<cl::Buffer>(4, cl.getPosq().getDeviceBuffer());
     copyFromContextKernel.setArg<cl::Buffer>(6, cl.getAtomIndexArray().getDeviceBuffer());
-    for (map<int, int>::const_iterator iter = groupsByCopies.begin(); iter != groupsByCopies.end(); ++iter) {
-        int copies = iter->first;
+    for (auto& g : groupsByCopies) {
+        int copies = g.first;
         positionContractionKernels[copies].setArg<cl::Buffer>(0, positions->getDeviceBuffer());
         positionContractionKernels[copies].setArg<cl::Buffer>(1, contractedPositions->getDeviceBuffer());
         forceContractionKernels[copies].setArg<cl::Buffer>(0, forces->getDeviceBuffer());
@@ -286,9 +286,9 @@ void OpenCLIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
         copyToContextKernel.setArg<cl::Buffer>(2, contractedPositions->getDeviceBuffer());
         copyFromContextKernel.setArg<cl::Buffer>(1, contractedForces->getDeviceBuffer());
         copyFromContextKernel.setArg<cl::Buffer>(5, contractedPositions->getDeviceBuffer());
-        for (map<int, int>::const_iterator iter = groupsByCopies.begin(); iter != groupsByCopies.end(); ++iter) {
-            int copies = iter->first;
-            int groupFlags = iter->second;
+        for (auto& g : groupsByCopies) {
+            int copies = g.first;
+            int groupFlags = g.second;
 
             // Find the contracted positions.
 

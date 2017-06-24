@@ -84,19 +84,19 @@ ReferenceCustomGBIxn::ReferenceCustomGBIxn(const vector<Lepton::CompiledExpressi
     xIndex = expressionSet.getVariableIndex("x");
     yIndex = expressionSet.getVariableIndex("y");
     zIndex = expressionSet.getVariableIndex("z");
-    for (int i = 0; i < (int) parameterNames.size(); i++) {
-        paramIndex.push_back(expressionSet.getVariableIndex(parameterNames[i]));
+    for (auto& param : parameterNames) {
+        paramIndex.push_back(expressionSet.getVariableIndex(param));
         for (int j = 1; j < 3; j++) {
             stringstream name;
-            name << parameterNames[i] << j;
+            name << param << j;
             particleParamIndex.push_back(expressionSet.getVariableIndex(name.str()));
         }
     }
-    for (int i = 0; i < (int) valueNames.size(); i++) {
-        valueIndex.push_back(expressionSet.getVariableIndex(valueNames[i]));
+    for (auto& value : valueNames) {
+        valueIndex.push_back(expressionSet.getVariableIndex(value));
         for (int j = 1; j < 3; j++) {
             stringstream name;
-            name << valueNames[i] << j;
+            name << value << j;
             particleValueIndex.push_back(expressionSet.getVariableIndex(name.str()));
         }
     }
@@ -120,7 +120,7 @@ ReferenceCustomGBIxn::~ReferenceCustomGBIxn() {
 
      --------------------------------------------------------------------------------------- */
 
-  void ReferenceCustomGBIxn::setUseCutoff(RealOpenMM distance, const OpenMM::NeighborList& neighbors) {
+  void ReferenceCustomGBIxn::setUseCutoff(double distance, const OpenMM::NeighborList& neighbors) {
 
     cutoff = true;
     cutoffDistance = distance;
@@ -137,7 +137,7 @@ ReferenceCustomGBIxn::~ReferenceCustomGBIxn() {
 
      --------------------------------------------------------------------------------------- */
 
-  void ReferenceCustomGBIxn::setPeriodic(RealVec* vectors) {
+  void ReferenceCustomGBIxn::setPeriodic(Vec3* vectors) {
 
     if (cutoff) {
         assert(vectors[0][0] >= 2.0*cutoffDistance);
@@ -150,21 +150,21 @@ ReferenceCustomGBIxn::~ReferenceCustomGBIxn() {
     periodicBoxVectors[2] = vectors[2];
   }
 
-void ReferenceCustomGBIxn::calculateIxn(int numberOfAtoms, vector<RealVec>& atomCoordinates, RealOpenMM** atomParameters,
-                                           const vector<set<int> >& exclusions, map<string, double>& globalParameters, vector<RealVec>& forces,
-                                           RealOpenMM* totalEnergy, double* energyParamDerivs) {
-    for (map<string, double>::const_iterator iter = globalParameters.begin(); iter != globalParameters.end(); ++iter)
-        expressionSet.setVariable(expressionSet.getVariableIndex(iter->first), iter->second);
+void ReferenceCustomGBIxn::calculateIxn(int numberOfAtoms, vector<Vec3>& atomCoordinates, double** atomParameters,
+                                           const vector<set<int> >& exclusions, map<string, double>& globalParameters, vector<Vec3>& forces,
+                                           double* totalEnergy, double* energyParamDerivs) {
+    for (auto& param : globalParameters)
+        expressionSet.setVariable(expressionSet.getVariableIndex(param.first), param.second);
     
     // Initialize arrays for storing values.
     
     int numValues = valueTypes.size();
     int numDerivs = valueParamDerivExpressions[0].size();
     values.resize(numValues);
-    dEdV.resize(numValues, vector<RealOpenMM>(numberOfAtoms, 0.0));
+    dEdV.resize(numValues, vector<double>(numberOfAtoms, 0.0));
     dValuedParam.resize(numValues);
     for (int i = 0; i < numValues; i++)
-        dValuedParam[i].resize(numDerivs, vector<RealOpenMM>(numberOfAtoms, 0.0));
+        dValuedParam[i].resize(numDerivs, vector<double>(numberOfAtoms, 0.0));
 
     // First calculate the computed values.
 
@@ -193,7 +193,7 @@ void ReferenceCustomGBIxn::calculateIxn(int numberOfAtoms, vector<RealVec>& atom
     calculateChainRuleForces(numberOfAtoms, atomCoordinates, atomParameters, exclusions, forces, energyParamDerivs);
 }
 
-void ReferenceCustomGBIxn::calculateSingleParticleValue(int index, int numAtoms, vector<RealVec>& atomCoordinates, RealOpenMM** atomParameters) {
+void ReferenceCustomGBIxn::calculateSingleParticleValue(int index, int numAtoms, vector<Vec3>& atomCoordinates, double** atomParameters) {
     values[index].resize(numAtoms);
     for (int i = 0; i < numAtoms; i++) {
         expressionSet.setVariable(xIndex, atomCoordinates[i][0]);
@@ -203,30 +203,29 @@ void ReferenceCustomGBIxn::calculateSingleParticleValue(int index, int numAtoms,
             expressionSet.setVariable(paramIndex[j], atomParameters[i][j]);
         for (int j = 0; j < index; j++)
             expressionSet.setVariable(valueIndex[j], values[j][i]);
-        values[index][i] = (RealOpenMM) valueExpressions[index].evaluate();
+        values[index][i] = valueExpressions[index].evaluate();
 
         // Calculate derivatives with respect to parameters.
 
         for (int j = 0; j < valueParamDerivExpressions[index].size(); j++)
             dValuedParam[index][j][i] += valueParamDerivExpressions[index][j].evaluate();
         for (int j = 0; j < index; j++) {
-            RealOpenMM dVdV = valueDerivExpressions[index][j].evaluate();
+            double dVdV = valueDerivExpressions[index][j].evaluate();
             for (int k = 0; k < valueParamDerivExpressions[index].size(); k++)
                 dValuedParam[index][k][i] += dVdV*dValuedParam[j][k][i];
         }
     }
 }
 
-void ReferenceCustomGBIxn::calculateParticlePairValue(int index, int numAtoms, vector<RealVec>& atomCoordinates, RealOpenMM** atomParameters,
+void ReferenceCustomGBIxn::calculateParticlePairValue(int index, int numAtoms, vector<Vec3>& atomCoordinates, double** atomParameters,
         const vector<set<int> >& exclusions, bool useExclusions) {
     values[index].resize(numAtoms);
     for (int i = 0; i < numAtoms; i++)
-        values[index][i] = (RealOpenMM) 0.0;
+        values[index][i] = 0.0;
     if (cutoff) {
         // Loop over all pairs in the neighbor list.
 
-        for (int i = 0; i < (int) neighborList->size(); i++) {
-            OpenMM::AtomPair pair = (*neighborList)[i];
+        for (auto& pair : *neighborList) {
             if (useExclusions && exclusions[pair.first].find(pair.second) != exclusions[pair.first].end())
                 continue;
             calculateOnePairValue(index, pair.first, pair.second, atomCoordinates, atomParameters);
@@ -247,13 +246,13 @@ void ReferenceCustomGBIxn::calculateParticlePairValue(int index, int numAtoms, v
     }
 }
 
-void ReferenceCustomGBIxn::calculateOnePairValue(int index, int atom1, int atom2, vector<RealVec>& atomCoordinates, RealOpenMM** atomParameters) {
-    RealOpenMM deltaR[ReferenceForce::LastDeltaRIndex];
+void ReferenceCustomGBIxn::calculateOnePairValue(int index, int atom1, int atom2, vector<Vec3>& atomCoordinates, double** atomParameters) {
+    double deltaR[ReferenceForce::LastDeltaRIndex];
     if (periodic)
         ReferenceForce::getDeltaRPeriodic(atomCoordinates[atom2], atomCoordinates[atom1], periodicBoxVectors, deltaR);
     else
         ReferenceForce::getDeltaR(atomCoordinates[atom2], atomCoordinates[atom1], deltaR);
-    RealOpenMM r = deltaR[ReferenceForce::RIndex];
+    double r = deltaR[ReferenceForce::RIndex];
     if (cutoff && r >= cutoffDistance)
         return;
     for (int i = 0; i < (int) paramIndex.size(); i++) {
@@ -265,7 +264,7 @@ void ReferenceCustomGBIxn::calculateOnePairValue(int index, int atom1, int atom2
         expressionSet.setVariable(particleValueIndex[i*2], values[i][atom1]);
         expressionSet.setVariable(particleValueIndex[i*2+1], values[i][atom2]);
     }
-    values[index][atom1] += (RealOpenMM) valueExpressions[index].evaluate();
+    values[index][atom1] += valueExpressions[index].evaluate();
     
     // Calculate derivatives with respect to parameters.
     
@@ -273,8 +272,8 @@ void ReferenceCustomGBIxn::calculateOnePairValue(int index, int atom1, int atom2
         dValuedParam[index][i][atom1] += valueParamDerivExpressions[index][i].evaluate();
 }
 
-void ReferenceCustomGBIxn::calculateSingleParticleEnergyTerm(int index, int numAtoms, vector<RealVec>& atomCoordinates,
-        RealOpenMM** atomParameters, vector<RealVec>& forces, RealOpenMM* totalEnergy, double* energyParamDerivs) {
+void ReferenceCustomGBIxn::calculateSingleParticleEnergyTerm(int index, int numAtoms, vector<Vec3>& atomCoordinates,
+        double** atomParameters, vector<Vec3>& forces, double* totalEnergy, double* energyParamDerivs) {
     for (int i = 0; i < numAtoms; i++) {
         expressionSet.setVariable(xIndex, atomCoordinates[i][0]);
         expressionSet.setVariable(yIndex, atomCoordinates[i][1]);
@@ -287,12 +286,12 @@ void ReferenceCustomGBIxn::calculateSingleParticleEnergyTerm(int index, int numA
         // Compute energy and force.
         
         if (totalEnergy != NULL)
-            *totalEnergy += (RealOpenMM) energyExpressions[index].evaluate();
+            *totalEnergy += energyExpressions[index].evaluate();
         for (int j = 0; j < (int) valueIndex.size(); j++)
-            dEdV[j][i] += (RealOpenMM) energyDerivExpressions[index][j].evaluate();
-        forces[i][0] -= (RealOpenMM) energyGradientExpressions[index][0].evaluate();
-        forces[i][1] -= (RealOpenMM) energyGradientExpressions[index][1].evaluate();
-        forces[i][2] -= (RealOpenMM) energyGradientExpressions[index][2].evaluate();
+            dEdV[j][i] += energyDerivExpressions[index][j].evaluate();
+        forces[i][0] -= energyGradientExpressions[index][0].evaluate();
+        forces[i][1] -= energyGradientExpressions[index][1].evaluate();
+        forces[i][2] -= energyGradientExpressions[index][2].evaluate();
         
         // Compute derivatives with respect to parameters.
         
@@ -301,13 +300,12 @@ void ReferenceCustomGBIxn::calculateSingleParticleEnergyTerm(int index, int numA
     }
 }
 
-void ReferenceCustomGBIxn::calculateParticlePairEnergyTerm(int index, int numAtoms, vector<RealVec>& atomCoordinates, RealOpenMM** atomParameters,
-        const vector<set<int> >& exclusions, bool useExclusions, vector<RealVec>& forces, RealOpenMM* totalEnergy, double* energyParamDerivs) {
+void ReferenceCustomGBIxn::calculateParticlePairEnergyTerm(int index, int numAtoms, vector<Vec3>& atomCoordinates, double** atomParameters,
+        const vector<set<int> >& exclusions, bool useExclusions, vector<Vec3>& forces, double* totalEnergy, double* energyParamDerivs) {
     if (cutoff) {
         // Loop over all pairs in the neighbor list.
 
-        for (int i = 0; i < (int) neighborList->size(); i++) {
-            OpenMM::AtomPair pair = (*neighborList)[i];
+        for (auto& pair : *neighborList) {
             if (useExclusions && exclusions[pair.first].find(pair.second) != exclusions[pair.first].end())
                 continue;
             calculateOnePairEnergyTerm(index, pair.first, pair.second, atomCoordinates, atomParameters, forces, totalEnergy, energyParamDerivs);
@@ -326,16 +324,16 @@ void ReferenceCustomGBIxn::calculateParticlePairEnergyTerm(int index, int numAto
     }
 }
 
-void ReferenceCustomGBIxn::calculateOnePairEnergyTerm(int index, int atom1, int atom2, vector<RealVec>& atomCoordinates, RealOpenMM** atomParameters,
-        vector<RealVec>& forces, RealOpenMM* totalEnergy, double* energyParamDerivs) {
+void ReferenceCustomGBIxn::calculateOnePairEnergyTerm(int index, int atom1, int atom2, vector<Vec3>& atomCoordinates, double** atomParameters,
+        vector<Vec3>& forces, double* totalEnergy, double* energyParamDerivs) {
     // Compute the displacement.
 
-    RealOpenMM deltaR[ReferenceForce::LastDeltaRIndex];
+    double deltaR[ReferenceForce::LastDeltaRIndex];
     if (periodic)
         ReferenceForce::getDeltaRPeriodic(atomCoordinates[atom2], atomCoordinates[atom1], periodicBoxVectors, deltaR);
     else
         ReferenceForce::getDeltaR(atomCoordinates[atom2], atomCoordinates[atom1], deltaR);
-    RealOpenMM r = deltaR[ReferenceForce::RIndex];
+    double r = deltaR[ReferenceForce::RIndex];
     if (cutoff && r >= cutoffDistance)
         return;
 
@@ -354,16 +352,16 @@ void ReferenceCustomGBIxn::calculateOnePairEnergyTerm(int index, int atom1, int 
     // Evaluate the energy and its derivatives.
 
     if (totalEnergy != NULL)
-        *totalEnergy += (RealOpenMM) energyExpressions[index].evaluate();
-    RealOpenMM dEdR = (RealOpenMM) energyDerivExpressions[index][0].evaluate();
+        *totalEnergy += energyExpressions[index].evaluate();
+    double dEdR = energyDerivExpressions[index][0].evaluate();
     dEdR *= 1/r;
     for (int i = 0; i < 3; i++) {
        forces[atom1][i] -= dEdR*deltaR[i];
        forces[atom2][i] += dEdR*deltaR[i];
     }
     for (int i = 0; i < (int) valueIndex.size(); i++) {
-        dEdV[i][atom1] += (RealOpenMM) energyDerivExpressions[index][2*i+1].evaluate();
-        dEdV[i][atom2] += (RealOpenMM) energyDerivExpressions[index][2*i+2].evaluate();
+        dEdV[i][atom1] += energyDerivExpressions[index][2*i+1].evaluate();
+        dEdV[i][atom2] += energyDerivExpressions[index][2*i+2].evaluate();
     }
         
     // Compute derivatives with respect to parameters.
@@ -372,13 +370,12 @@ void ReferenceCustomGBIxn::calculateOnePairEnergyTerm(int index, int atom1, int 
         energyParamDerivs[i] += energyParamDerivExpressions[index][i].evaluate();
 }
 
-void ReferenceCustomGBIxn::calculateChainRuleForces(int numAtoms, vector<RealVec>& atomCoordinates, RealOpenMM** atomParameters,
-        const vector<set<int> >& exclusions, vector<RealVec>& forces, double* energyParamDerivs) {
+void ReferenceCustomGBIxn::calculateChainRuleForces(int numAtoms, vector<Vec3>& atomCoordinates, double** atomParameters,
+        const vector<set<int> >& exclusions, vector<Vec3>& forces, double* energyParamDerivs) {
     if (cutoff) {
         // Loop over all pairs in the neighbor list.
 
-        for (int i = 0; i < (int) neighborList->size(); i++) {
-            OpenMM::AtomPair pair = (*neighborList)[i];
+        for (auto& pair : *neighborList) {
             bool isExcluded = (exclusions[pair.first].find(pair.second) != exclusions[pair.first].end());
             calculateOnePairChainRule(pair.first, pair.second, atomCoordinates, atomParameters, forces, isExcluded);
             calculateOnePairChainRule(pair.second, pair.first, atomCoordinates, atomParameters, forces, isExcluded);
@@ -402,22 +399,22 @@ void ReferenceCustomGBIxn::calculateChainRuleForces(int numAtoms, vector<RealVec
         expressionSet.setVariable(xIndex, atomCoordinates[i][0]);
         expressionSet.setVariable(yIndex, atomCoordinates[i][1]);
         expressionSet.setVariable(zIndex, atomCoordinates[i][2]);
-        vector<RealOpenMM> dVdX(valueDerivExpressions.size(), 0.0);
-        vector<RealOpenMM> dVdY(valueDerivExpressions.size(), 0.0);
-        vector<RealOpenMM> dVdZ(valueDerivExpressions.size(), 0.0);
+        vector<double> dVdX(valueDerivExpressions.size(), 0.0);
+        vector<double> dVdY(valueDerivExpressions.size(), 0.0);
+        vector<double> dVdZ(valueDerivExpressions.size(), 0.0);
         for (int j = 0; j < (int) paramIndex.size(); j++)
             expressionSet.setVariable(paramIndex[j], atomParameters[i][j]);
         for (int j = 1; j < (int) valueIndex.size(); j++) {
             expressionSet.setVariable(valueIndex[j-1], values[j-1][i]);
             for (int k = 1; k < j; k++) {
-                RealOpenMM dVdV = (RealOpenMM) valueDerivExpressions[j][k].evaluate();
+                double dVdV = valueDerivExpressions[j][k].evaluate();
                 dVdX[j] += dVdV*dVdX[k];
                 dVdY[j] += dVdV*dVdY[k];
                 dVdZ[j] += dVdV*dVdZ[k];
             }
-            dVdX[j] += (RealOpenMM) valueGradientExpressions[j][0].evaluate();
-            dVdY[j] += (RealOpenMM) valueGradientExpressions[j][1].evaluate();
-            dVdZ[j] += (RealOpenMM) valueGradientExpressions[j][2].evaluate();
+            dVdX[j] += valueGradientExpressions[j][0].evaluate();
+            dVdY[j] += valueGradientExpressions[j][1].evaluate();
+            dVdZ[j] += valueGradientExpressions[j][2].evaluate();
             forces[i][0] -= dEdV[j][i]*dVdX[j];
             forces[i][1] -= dEdV[j][i]*dVdY[j];
             forces[i][2] -= dEdV[j][i]*dVdZ[j];
@@ -432,16 +429,16 @@ void ReferenceCustomGBIxn::calculateChainRuleForces(int numAtoms, vector<RealVec
                 energyParamDerivs[k] += dEdV[j][i]*dValuedParam[j][k][i];
 }
 
-void ReferenceCustomGBIxn::calculateOnePairChainRule(int atom1, int atom2, vector<RealVec>& atomCoordinates, RealOpenMM** atomParameters,
-        vector<RealVec>& forces, bool isExcluded) {
+void ReferenceCustomGBIxn::calculateOnePairChainRule(int atom1, int atom2, vector<Vec3>& atomCoordinates, double** atomParameters,
+        vector<Vec3>& forces, bool isExcluded) {
     // Compute the displacement.
 
-    RealOpenMM deltaR[ReferenceForce::LastDeltaRIndex];
+    double deltaR[ReferenceForce::LastDeltaRIndex];
     if (periodic)
         ReferenceForce::getDeltaRPeriodic(atomCoordinates[atom2], atomCoordinates[atom1], periodicBoxVectors, deltaR);
     else
         ReferenceForce::getDeltaR(atomCoordinates[atom2], atomCoordinates[atom1], deltaR);
-    RealOpenMM r = deltaR[ReferenceForce::RIndex];
+    double r = deltaR[ReferenceForce::RIndex];
     if (cutoff && r >= cutoffDistance)
         return;
 
@@ -457,14 +454,14 @@ void ReferenceCustomGBIxn::calculateOnePairChainRule(int atom1, int atom2, vecto
 
     // Evaluate the derivative of each parameter with respect to position and apply forces.
 
-    RealOpenMM rinv = 1/r;
+    double rinv = 1/r;
     deltaR[0] *= rinv;
     deltaR[1] *= rinv;
     deltaR[2] *= rinv;
-    vector<RealOpenMM> dVdR1(valueDerivExpressions.size(), 0.0);
-    vector<RealOpenMM> dVdR2(valueDerivExpressions.size(), 0.0);
+    vector<double> dVdR1(valueDerivExpressions.size(), 0.0);
+    vector<double> dVdR2(valueDerivExpressions.size(), 0.0);
     if (!isExcluded || valueTypes[0] != OpenMM::CustomGBForce::ParticlePair) {
-        dVdR1[0] = (RealOpenMM) valueDerivExpressions[0][0].evaluate();
+        dVdR1[0] = valueDerivExpressions[0][0].evaluate();
         dVdR2[0] = -dVdR1[0];
         for (int i = 0; i < 3; i++) {
             forces[atom1][i] -= dEdV[0][atom1]*dVdR1[0]*deltaR[i];
@@ -480,7 +477,7 @@ void ReferenceCustomGBIxn::calculateOnePairChainRule(int atom1, int atom2, vecto
         expressionSet.setVariable(yIndex, atomCoordinates[atom1][1]);
         expressionSet.setVariable(zIndex, atomCoordinates[atom1][2]);
         for (int j = 0; j < i; j++) {
-            RealOpenMM dVdV = (RealOpenMM) valueDerivExpressions[i][j].evaluate();
+            double dVdV = valueDerivExpressions[i][j].evaluate();
             dVdR1[i] += dVdV*dVdR1[j];
             dVdR2[i] += dVdV*dVdR2[j];
         }

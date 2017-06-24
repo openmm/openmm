@@ -33,9 +33,9 @@ class ReferenceVariableVerletDynamics : public ReferenceDynamics {
 
    private:
 
-      std::vector<OpenMM::RealVec> xPrime;
-      std::vector<RealOpenMM> inverseMasses;
-      RealOpenMM _accuracy;
+      std::vector<OpenMM::Vec3> xPrime;
+      std::vector<double> inverseMasses;
+      double _accuracy;
 
    public:
 
@@ -48,7 +48,7 @@ class ReferenceVariableVerletDynamics : public ReferenceDynamics {
 
          --------------------------------------------------------------------------------------- */
 
-       ReferenceVariableVerletDynamics(int numberOfAtoms, RealOpenMM accuracy);
+       ReferenceVariableVerletDynamics(int numberOfAtoms, double accuracy);
 
       /**---------------------------------------------------------------------------------------
 
@@ -66,7 +66,7 @@ class ReferenceVariableVerletDynamics : public ReferenceDynamics {
 
          --------------------------------------------------------------------------------------- */
 
-      RealOpenMM getAccuracy() const;
+      double getAccuracy() const;
 
       /**---------------------------------------------------------------------------------------
 
@@ -74,7 +74,7 @@ class ReferenceVariableVerletDynamics : public ReferenceDynamics {
 
          --------------------------------------------------------------------------------------- */
 
-      void setAccuracy(RealOpenMM accuracy);
+      void setAccuracy(double accuracy);
 
       /**---------------------------------------------------------------------------------------
 
@@ -90,8 +90,8 @@ class ReferenceVariableVerletDynamics : public ReferenceDynamics {
 
          --------------------------------------------------------------------------------------- */
 
-      void update(const OpenMM::System& system, std::vector<OpenMM::RealVec>& atomCoordinates,
-                  std::vector<OpenMM::RealVec>& velocities, std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& masses, RealOpenMM maxStepSize, RealOpenMM tolerance);
+      void update(const OpenMM::System& system, std::vector<OpenMM::Vec3>& atomCoordinates,
+                  std::vector<OpenMM::Vec3>& velocities, std::vector<OpenMM::Vec3>& forces, std::vector<double>& masses, double maxStepSize, double tolerance);
 
 };
 

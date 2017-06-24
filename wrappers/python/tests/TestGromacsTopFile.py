@@ -22,12 +22,14 @@ class TestGromacsTopFile(unittest.TestCase):
         self.top2 = GromacsTopFile('systems/implicit.top')
 
     def test_NonbondedMethod(self):
-        """Test all five options for the nonbondedMethod parameter."""
+        """Test all six options for the nonbondedMethod parameter."""
 
         methodMap = {NoCutoff:NonbondedForce.NoCutoff,
                      CutoffNonPeriodic:NonbondedForce.CutoffNonPeriodic,
                      CutoffPeriodic:NonbondedForce.CutoffPeriodic,
-                     Ewald:NonbondedForce.Ewald, PME: NonbondedForce.PME}
+                     Ewald:NonbondedForce.Ewald,
+                     PME:NonbondedForce.PME,
+                     LJPME:NonbondedForce.LJPME}
         for method in methodMap:
             system = self.top1.createSystem(nonbondedMethod=method)
             forces = system.getForces()
@@ -49,10 +51,22 @@ class TestGromacsTopFile(unittest.TestCase):
         ene = context.getState(getEnergy=True, groups=2**1).getPotentialEnergy()
         self.assertAlmostEqual(ene.value_in_unit(kilojoules_per_mole), 341.6905133582857)
 
+    def test_SMOG(self):
+        """ Test to ensure that SMOG models can be run without problems """
+        top = GromacsTopFile('systems/2ci2.pdb.top')
+        gro = GromacsGroFile('systems/2ci2.pdb.gro')
+        system = top.createSystem()
+
+        context = Context(system, VerletIntegrator(1*femtosecond),
+                          Platform.getPlatformByName('Reference'))
+        context.setPositions(gro.positions)
+        ene = context.getState(getEnergy=True).getPotentialEnergy()
+        self.assertAlmostEqual(ene.value_in_unit(kilojoules_per_mole), -346.940915296)
+
     def test_Cutoff(self):
         """Test to make sure the nonbondedCutoff parameter is passed correctly."""
 
-        for method in [CutoffNonPeriodic, CutoffPeriodic, Ewald, PME]:
+        for method in [CutoffNonPeriodic, CutoffPeriodic, Ewald, PME, LJPME]:
             system = self.top1.createSystem(nonbondedMethod=method,
                                                nonbondedCutoff=2*nanometer,
                                                constraints=HBonds)
@@ -66,7 +80,7 @@ class TestGromacsTopFile(unittest.TestCase):
     def test_EwaldErrorTolerance(self):
         """Test to make sure the ewaldErrorTolerance parameter is passed correctly."""
 
-        for method in [Ewald, PME]:
+        for method in [Ewald, PME, LJPME]:
             system = self.top1.createSystem(nonbondedMethod=method,
                                                ewaldErrorTolerance=1e-6,
                                                constraints=HBonds)

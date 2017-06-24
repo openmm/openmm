@@ -57,17 +57,17 @@ ReferenceCustomExternalIxn::ReferenceCustomExternalIxn(const Lepton::CompiledExp
     forceZY = ReferenceForce::getVariablePointer(this->forceExpressionZ, "y");
     forceZZ = ReferenceForce::getVariablePointer(this->forceExpressionZ, "z");
     numParameters = parameterNames.size();
-    for (int i = 0; i < (int) numParameters; i++) {
-        energyParams.push_back(ReferenceForce::getVariablePointer(this->energyExpression, parameterNames[i]));
-        forceXParams.push_back(ReferenceForce::getVariablePointer(this->forceExpressionX, parameterNames[i]));
-        forceYParams.push_back(ReferenceForce::getVariablePointer(this->forceExpressionY, parameterNames[i]));
-        forceZParams.push_back(ReferenceForce::getVariablePointer(this->forceExpressionZ, parameterNames[i]));
+    for (auto& param : parameterNames) {
+        energyParams.push_back(ReferenceForce::getVariablePointer(this->energyExpression, param));
+        forceXParams.push_back(ReferenceForce::getVariablePointer(this->forceExpressionX, param));
+        forceYParams.push_back(ReferenceForce::getVariablePointer(this->forceExpressionY, param));
+        forceZParams.push_back(ReferenceForce::getVariablePointer(this->forceExpressionZ, param));
     }
-    for (map<string, double>::const_iterator iter = globalParameters.begin(); iter != globalParameters.end(); ++iter) {
-        ReferenceForce::setVariable(ReferenceForce::getVariablePointer(this->energyExpression, iter->first), iter->second);
-        ReferenceForce::setVariable(ReferenceForce::getVariablePointer(this->forceExpressionX, iter->first), iter->second);
-        ReferenceForce::setVariable(ReferenceForce::getVariablePointer(this->forceExpressionY, iter->first), iter->second);
-        ReferenceForce::setVariable(ReferenceForce::getVariablePointer(this->forceExpressionZ, iter->first), iter->second);
+    for (auto& param : globalParameters) {
+        ReferenceForce::setVariable(ReferenceForce::getVariablePointer(this->energyExpression, param.first), param.second);
+        ReferenceForce::setVariable(ReferenceForce::getVariablePointer(this->forceExpressionX, param.first), param.second);
+        ReferenceForce::setVariable(ReferenceForce::getVariablePointer(this->forceExpressionY, param.first), param.second);
+        ReferenceForce::setVariable(ReferenceForce::getVariablePointer(this->forceExpressionZ, param.first), param.second);
     }
 }
 
@@ -78,13 +78,6 @@ ReferenceCustomExternalIxn::ReferenceCustomExternalIxn(const Lepton::CompiledExp
    --------------------------------------------------------------------------------------- */
 
 ReferenceCustomExternalIxn::~ReferenceCustomExternalIxn() {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceCustomExternalIxn::~ReferenceCustomExternalIxn";
-
-   // ---------------------------------------------------------------------------------------
-
 }
 
 /**---------------------------------------------------------------------------------------
@@ -100,12 +93,10 @@ ReferenceCustomExternalIxn::~ReferenceCustomExternalIxn() {
    --------------------------------------------------------------------------------------- */
 
 void ReferenceCustomExternalIxn::calculateForce(int atomIndex,
-                                                vector<RealVec>& atomCoordinates,
-                                                RealOpenMM* parameters,
-                                                vector<RealVec>& forces,
-                                                RealOpenMM* energy) const {
-
-   static const std::string methodName = "\nReferenceCustomExternalIxn::calculateBondIxn";
+                                                vector<Vec3>& atomCoordinates,
+                                                double* parameters,
+                                                vector<Vec3>& forces,
+                                                double* energy) const {
 
    for (int i = 0; i < numParameters; i++) {
        ReferenceForce::setVariable(energyParams[i], parameters[i]);
@@ -128,9 +119,9 @@ void ReferenceCustomExternalIxn::calculateForce(int atomIndex,
 
    // ---------------------------------------------------------------------------------------
 
-   forces[atomIndex][0] -= (RealOpenMM) forceExpressionX.evaluate();
-   forces[atomIndex][1] -= (RealOpenMM) forceExpressionY.evaluate();
-   forces[atomIndex][2] -= (RealOpenMM) forceExpressionZ.evaluate();
+   forces[atomIndex][0] -= forceExpressionX.evaluate();
+   forces[atomIndex][1] -= forceExpressionY.evaluate();
+   forces[atomIndex][2] -= forceExpressionZ.evaluate();
    if (energy != NULL)
-       *energy += (RealOpenMM) energyExpression.evaluate();
+       *energy += energyExpression.evaluate();
 }

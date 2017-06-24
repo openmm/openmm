@@ -525,7 +525,7 @@ class PrmtopLoader(object):
                         iScnb = float(self._raw_data["SCNB_SCALE_FACTOR"][iidx])
                     except KeyError:
                         iScnb = 2.0
-    
+
                     returnList.append((iAtom, lAtom, chargeProd, rMin, epsilon, iScee, iScnb))
         return returnList
 
@@ -579,7 +579,8 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
           soluteDielectric=1.0, solventDielectric=78.5,
           implicitSolventKappa=0.0*(1/units.nanometer), nonbondedCutoff=None,
           nonbondedMethod='NoCutoff', scee=None, scnb=None, mm=None, verbose=False,
-          EwaldErrorTolerance=None, flexibleConstraints=True, rigidWater=True, elements=None):
+          EwaldErrorTolerance=None, flexibleConstraints=True, rigidWater=True, elements=None,
+          gbsaModel='ACE'):
     """
     Create an OpenMM System from an Amber prmtop file.
 
@@ -603,6 +604,7 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
       verbose (boolean) - if True, print out information on progress (default: False)
       flexibleConstraints (boolean) - if True, flexible bonds will be added in addition ot constrained bonds
       rigidWater (boolean=True) If true, water molecules will be fully rigid regardless of the value passed for the shake argument
+      gbsaModel (str='ACE') The string representing the SA model to use for GB calculations. Must be 'ACE' or None
 
     NOTES
 
@@ -647,6 +649,9 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
     if prmtop.has_scee_scnb and (scee is not None or scnb is not None):
         warnings.warn("1-4 scaling parameters in topology file are being ignored. "
             "This is not recommended unless you know what you are doing.")
+
+    if gbmodel is not None and gbsaModel not in ('ACE', None):
+        raise ValueError('gbsaModel must be ACE or None')
 
     has_1264 = 'LENNARD_JONES_CCOEF' in prmtop._raw_data.keys()
     if has_1264:
@@ -776,6 +781,8 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
             force.setNonbondedMethod(mm.NonbondedForce.Ewald)
         elif nonbondedMethod == 'PME':
             force.setNonbondedMethod(mm.NonbondedForce.PME)
+        elif nonbondedMethod == 'LJPME':
+            force.setNonbondedMethod(mm.NonbondedForce.LJPME)
         else:
             raise Exception("Cutoff method not understood.")
 
@@ -885,7 +892,7 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
             ii, jj, chg, sig, eps = force.getExceptionParameters(i)
             cforce.addExclusion(ii, jj)
         # Now set the various properties based on the NonbondedForce object
-        if nonbondedMethod in ('PME', 'Ewald', 'CutoffPeriodic'):
+        if nonbondedMethod in ('PME', 'LJPME', 'Ewald', 'CutoffPeriodic'):
             cforce.setNonbondedMethod(cforce.CutoffPeriodic)
             cforce.setCutoffDistance(nonbondedCutoff)
             cforce.setUseLongRangeCorrection(True)
@@ -972,20 +979,20 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
             if units.is_quantity(cutoff):
                 cutoff = cutoff.value_in_unit(units.nanometers)
         if gbmodel == 'HCT':
-            gb = customgb.GBSAHCTForce(solventDielectric, soluteDielectric, 'ACE', cutoff, implicitSolventKappa)
+            gb = customgb.GBSAHCTForce(solventDielectric, soluteDielectric, gbsaModel, cutoff, implicitSolventKappa)
         elif gbmodel == 'OBC1':
-            gb = customgb.GBSAOBC1Force(solventDielectric, soluteDielectric, 'ACE', cutoff, implicitSolventKappa)
+            gb = customgb.GBSAOBC1Force(solventDielectric, soluteDielectric, gbsaModel, cutoff, implicitSolventKappa)
         elif gbmodel == 'OBC2':
             if implicitSolventKappa > 0:
-                gb = customgb.GBSAOBC2Force(solventDielectric, soluteDielectric, 'ACE', cutoff, implicitSolventKappa)
+                gb = customgb.GBSAOBC2Force(solventDielectric, soluteDielectric, gbsaModel, cutoff, implicitSolventKappa)
             else:
                 gb = mm.GBSAOBCForce()
                 gb.setSoluteDielectric(soluteDielectric)
                 gb.setSolventDielectric(solventDielectric)
         elif gbmodel == 'GBn':
-            gb = customgb.GBSAGBnForce(solventDielectric, soluteDielectric, 'ACE', cutoff, implicitSolventKappa)
+            gb = customgb.GBSAGBnForce(solventDielectric, soluteDielectric, gbsaModel, cutoff, implicitSolventKappa)
         elif gbmodel == 'GBn2':
-            gb = customgb.GBSAGBn2Force(solventDielectric, soluteDielectric, 'ACE', cutoff, implicitSolventKappa)
+            gb = customgb.GBSAGBn2Force(solventDielectric, soluteDielectric, gbsaModel, cutoff, implicitSolventKappa)
         else:
             raise ValueError("Illegal value specified for implicit solvent model")
         if isinstance(gb, mm.GBSAOBCForce):
@@ -1119,7 +1126,7 @@ class AmberAsciiRestart(object):
             self.natom = int(words[0])
         except (IndexError, ValueError):
             raise TypeError('Unrecognized file type [%s]' % self.filename)
-        
+
         if len(words) >= 2:
             self.time = float(words[1]) * units.picoseconds
 
@@ -1288,7 +1295,7 @@ class AmberNetcdfRestart(object):
             from scipy.io.netcdf import NetCDFFile
         except ImportError:
             raise ImportError('scipy is necessary to parse NetCDF restarts')
-        
+
         self.filename = filename
         self.velocities = self.boxVectors = self.time = None
 
