@@ -41,9 +41,10 @@ namespace OpenMM {
 /**
  * This class implements a buffered 14-7 potential used to model van der Waals forces.
  *
- * To use it, create an AmoebaVdwForce object then call addParticle() once for each particle.  After
- * a particle has been added, you can modify its force field parameters by calling setParticleParameters().
- * This will have no effect on Contexts that already exist unless you call updateParametersInContext().
+ * To use it, create an AmoebaVdwForce object then call addParticle() once for each particle.  Then call
+ * addVdwprByOldTypes() to use special vdwpr parameters.  After particles have been added,
+ * you can modify its force field parameters by calling setParticleParameters() and setVdwprParameters().  This
+ * will have no effect on Contexts that already exist unless you call updateParametersInContext().
  *
  * A unique feature of this class is that the interaction site for a particle does not need to be
  * exactly at the particle's location.  Instead, it can be placed a fraction of the distance from that
@@ -76,7 +77,7 @@ public:
     AmoebaVdwForce();
 
     /**
-     * Get the number of particles
+     * Get the number of particles.
      */
     int getNumParticles() const {
         return parameters.size();
@@ -87,37 +88,144 @@ public:
      *
      * @param particleIndex   the particle index
      * @param parentIndex     the index of the parent particle
+     * @param vdwprType       the vdw class/type number
      * @param sigma           vdw sigma
      * @param epsilon         vdw epsilon
      * @param reductionFactor the fraction of the distance along the line from the parent particle to this particle
      *                        at which the interaction site should be placed
+     * @param lambda          the alchemical order
      */
-    void setParticleParameters(int particleIndex, int parentIndex, double sigma, double epsilon, double reductionFactor);
+    void setParticleParameters(int particleIndex, int parentIndex, int vdwprType, double sigma, double epsilon, double reductionFactor, double lambda);
 
     /**
      * Get the force field parameters for a vdw particle.
      *
      * @param particleIndex        the particle index
      * @param[out] parentIndex     the index of the parent particle
+     * @param[out] vdwprType       the vdw class/type number
      * @param[out] sigma           vdw sigma
      * @param[out] epsilon         vdw epsilon
      * @param[out] reductionFactor the fraction of the distance along the line from the parent particle to this particle
      *                             at which the interaction site should be placed
+     * @param[out] lambda          the alchemical order
      */
-    void getParticleParameters(int particleIndex, int& parentIndex, double& sigma, double& epsilon, double& reductionFactor) const;
+    void getParticleParameters(int particleIndex, int& parentIndex, int& vdwprType, double& sigma, double& epsilon, double& reductionFactor, double& lambda) const;
 
 
     /**
      * Add the force field parameters for a vdw particle.
      *
      * @param parentIndex     the index of the parent particle
+     * @param vdwprType       the vdw class/type number
      * @param sigma           vdw sigma
      * @param epsilon         vdw epsilon
      * @param reductionFactor the fraction of the distance along the line from the parent particle to this particle
      *                        at which the interaction site should be placed
+     * @param lambda          the alchemical order
      * @return index of added particle
      */
-    int addParticle(int parentIndex, double sigma, double epsilon, double reductionFactor);
+    int addParticle(int parentIndex, int vdwprType, double sigma, double epsilon, double reductionFactor, double lambda);
+
+    /**
+     * Compute the combined sigmas and epsilons using combining rules.
+     */
+    void computeCombinedSigmaEpsilon();
+
+    /**
+     * Get the number of vdw classes/types.
+     */
+    int getNumVdwprTypes() const {
+        return numVdwprTypes;
+    }
+
+    /**
+     * Set the number of vdw classes/types.
+     *
+     * @param newNum the new number of vdw classes/types
+     */
+    void setNumVdwprTypes(int newNum);
+
+    /**
+     * Get the new vdw class/type.
+     *
+     * @param oldType the old vdw class/type
+     * @return the new vdw class/type number
+     */
+    int getNewVdwprType(int oldType) const;
+
+    /**
+     * Get the old vdw class/type number from a new vdw class/type number.
+     *
+     * @param newType the new vdw class/type number
+     * @return the old vdw class/type number
+     */
+    int getOldVdwprType(int newType) const;
+
+    /**
+     * Set an old vdw class/type number with a new vdw class/type.
+     *
+     * @param newType the new vdw class/type number
+     * @param oldType the old vdw class/type number
+     */
+    void setOldVdwprType(int newType, int oldType);
+
+    /**
+     * Resize some internal storing variables.
+     *
+     * @param newSize the new number of vdw classes/types.
+     */
+    void resize(int newSize);
+
+    /**
+     * Set vdwpr parameters by old vdw class/type numbers.
+     *
+     * @param oldtype1        the old vdw class/type number 1
+     * @param oldtype2        the old vdw class/type number 2
+     * @param combinedSigma   combined sigma
+     * @param combinedEpsilon combined epsilon
+     */
+    void setVdwprParametersByOldTypes(int oldtype1, int oldtype2, double combinedSigma, double combinedEpsilon);
+
+    /**
+     * Add vdwpr parameters by old vdw class/type numbers.
+     *
+     * @param oldtype1        the old vdw class/type number 1
+     * @param oldtype2        the old vdw class/type number 2
+     * @param combinedSigma   combined sigma
+     * @param combinedEpsilon combined epsilon
+     * @return the indexed of the added pair
+     */
+    int addVdwprByOldTypes(int oldtype1, int oldtype2, double combinedSigma, double combinedEpsilon);
+
+    /**
+     * Set vdwpr parameters by new vdw class/type numbers.
+     *
+     * @param ntype1          the new vdw class/type number 1
+     * @param ntype2          the new vdw class/type number 2
+     * @param combinedSigma   combined sigma
+     * @param combinedEpsilon combined epsilon
+     */
+    void setVdwprParameters(int ntype1, int ntype2, double combinedSigma, double combinedEpsilon);
+
+    /**
+     * Get vdwpr parameters by new vdw class/type numbers.
+     *
+     * @param ntype1          the new vdw class/vdw number 1
+     * @param ntype2          the new vdw class/vdw number 2
+     * @param combinedSigma   combined sigma
+     * @param combinedEpsilon combined epsilon
+     */
+    void getVdwprParameters(int ntype1, int ntype2, double& combinedSigma, double& combinedEpsilon) const;
+
+    /**
+     * Add vdwpr parameters by new vdw class/type numbers.
+     *
+     * @param ntype1          the new vdw class/type number 1
+     * @param ntype2          the new vdw class/type number 2
+     * @param combinedSigma   combined sigma
+     * @param combinedEpsilon combined epsilon
+     */
+    int addVdwpr(int ntype1, int ntype2, double combinedSigma, double combinedEpsilon);
 
     /**
      * Set sigma combining rule
@@ -146,6 +254,20 @@ public:
      * @return epsilonCombiningRule   epsilon combining rule:  'ARITHMETIC', 'GEOMETRIC'. 'HARMONIC', 'HHG'
      */
     const std::string& getEpsilonCombiningRule(void) const;
+
+    /**
+     * Set vdw functional form
+     *
+     * @param functionalForm   functional form:  'BUFFERED-14-7', 'LENNARD-JONES'
+     */
+    void setFunctionalForm(const std::string& functionalForm);
+
+    /**
+     * Get vdw functional form
+     *
+     * @return functionalForm   functional form:  'BUFFERED-14-7', 'LENNARD-JONES'
+     */
+    const std::string& getFunctionalForm(void) const;
 
     /**
      * Get whether to add a contribution to the energy that approximately represents the effect of VdW
@@ -242,21 +364,26 @@ public:
     bool usesPeriodicBoundaryConditions() const {
         return nonbondedMethod == AmoebaVdwForce::CutoffPeriodic;
     }
+
 protected:
     ForceImpl* createImpl() const;
-private:
 
+private:
     class VdwInfo;
+    class VdwprInfo;
     NonbondedMethod nonbondedMethod;
     double cutoff;
     bool useDispersionCorrection;
+    int numVdwprTypes;
 
     std::string sigmaCombiningRule;
     std::string epsilonCombiningRule;
+    std::string functionalForm;
 
-    std::vector< std::vector<int> > exclusions;
-    std::vector<VdwInfo> parameters;
-    std::vector< std::vector< std::vector<double> > > sigEpsTable;
+    std::vector< std::vector<int> > exclusions; // size = number of atoms
+    std::vector<VdwInfo> parameters; // size = number of atoms
+    std::vector<VdwprInfo> arguments; // size = (number of vdw classes/types)^2
+    std::vector<int> typeMap; // size = number of vdw classes/types
 };
 
 /**
@@ -265,19 +392,43 @@ private:
  */
 class AmoebaVdwForce::VdwInfo {
 public:
-    int parentIndex;
-    double reductionFactor, sigma, epsilon, cutoff;
-    VdwInfo() {
-        parentIndex = -1;
-        reductionFactor      = 0.0;
-        sigma                = 1.0;
-        epsilon              = 0.0;
-    }
-    VdwInfo(int parentIndex, double sigma, double epsilon, double reductionFactor) :
-        parentIndex(parentIndex), reductionFactor(reductionFactor), sigma(sigma), epsilon(epsilon)  {
-    }
+    int parentIndex, vdwprType;
+    double reductionFactor, sigma, epsilon, lambda;
+
+    VdwInfo()
+        : parentIndex(-1)
+        , vdwprType(-1)
+        , reductionFactor(0.0)
+        , sigma(1.0)
+        , epsilon(0.0)
+        , lambda(1.0) {}
+
+    VdwInfo(int parentIndex, int vdwprType, double sigma, double epsilon, double reductionFactor, double lambda)
+        : parentIndex(parentIndex)
+        , vdwprType(vdwprType)
+        , reductionFactor(reductionFactor)
+        , sigma(sigma)
+        , epsilon(epsilon)
+        , lambda(lambda) {}
 };
 
+/**
+ * This is an internal class used to record information about vdw pair.
+ * @private
+ */
+class AmoebaVdwForce::VdwprInfo {
+public:
+    double combinedSigma;
+    double combinedEpsilon;
+
+    VdwprInfo()
+        : combinedSigma(1.0)
+        , combinedEpsilon(0.0) {}
+
+    VdwprInfo(double combinedSigma, double combinedEpsilon)
+        : combinedSigma(combinedSigma)
+        , combinedEpsilon(combinedEpsilon) {}
+};
 } // namespace OpenMM
 
 #endif /*OPENMM_AMOEBA_VDW_FORCE_H_*/

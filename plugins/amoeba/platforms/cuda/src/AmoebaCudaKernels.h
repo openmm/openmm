@@ -44,14 +44,14 @@ class CudaCalcAmoebaGeneralizedKirkwoodForceKernel;
  */
 class CudaCalcAmoebaBondForceKernel : public CalcAmoebaBondForceKernel {
 public:
-    CudaCalcAmoebaBondForceKernel(std::string name, 
+    CudaCalcAmoebaBondForceKernel(std::string name,
                                           const Platform& platform,
                                           CudaContext& cu,
                                           const System& system);
     ~CudaCalcAmoebaBondForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaBondForce this kernel will be used for
      */
@@ -89,7 +89,7 @@ public:
     ~CudaCalcAmoebaAngleForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaAngleForce this kernel will be used for
      */
@@ -127,7 +127,7 @@ public:
     ~CudaCalcAmoebaInPlaneAngleForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaInPlaneAngleForce this kernel will be used for
      */
@@ -165,7 +165,7 @@ public:
     ~CudaCalcAmoebaPiTorsionForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaPiTorsionForce this kernel will be used for
      */
@@ -203,7 +203,7 @@ public:
     ~CudaCalcAmoebaStretchBendForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaStretchBendForce this kernel will be used for
      */
@@ -242,7 +242,7 @@ public:
     ~CudaCalcAmoebaOutOfPlaneBendForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaOutOfPlaneBendForce this kernel will be used for
      */
@@ -280,7 +280,7 @@ public:
     ~CudaCalcAmoebaTorsionTorsionForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaTorsionTorsionForce this kernel will be used for
      */
@@ -314,7 +314,7 @@ public:
     ~CudaCalcAmoebaMultipoleForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaMultipoleForce this kernel will be used for
      */
@@ -330,21 +330,21 @@ public:
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
      /**
      * Get the LabFrame dipole moments of all particles.
-     * 
+     *
      * @param context    the Context for which to get the induced dipoles
      * @param dipoles    the induced dipole moment of particle i is stored into the i'th element
      */
     void getLabFramePermanentDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
     /**
      * Get the induced dipole moments of all particles.
-     * 
+     *
      * @param context    the Context for which to get the induced dipoles
      * @param dipoles    the induced dipole moment of particle i is stored into the i'th element
      */
     void getInducedDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
     /**
      * Get the total dipole moments of all particles.
-     * 
+     *
      * @param context    the Context for which to get the induced dipoles
      * @param dipoles    the induced dipole moment of particle i is stored into the i'th element
      */
@@ -354,12 +354,12 @@ public:
      *
      * @param context        the context in which to execute this kernel
      * @param inputGrid      input grid coordinates
-     * @param outputElectrostaticPotential output potential 
+     * @param outputElectrostaticPotential output potential
      */
     void getElectrostaticPotential(ContextImpl& context, const std::vector< Vec3 >& inputGrid,
                                    std::vector< double >& outputElectrostaticPotential);
 
-   /** 
+   /**
      * Get the system multipole moments
      *
      * @param context      context
@@ -379,7 +379,7 @@ public:
     void copyParametersToContext(ContextImpl& context, const AmoebaMultipoleForce& force);
     /**
      * Get the parameters being used for PME.
-     * 
+     *
      * @param alpha   the separation parameter
      * @param nx      the number of grid points along the X axis
      * @param ny      the number of grid points along the Y axis
@@ -489,7 +489,7 @@ public:
     ~CudaCalcAmoebaGeneralizedKirkwoodForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaMultipoleForce this kernel will be used for
      */
@@ -565,7 +565,7 @@ public:
     ~CudaCalcAmoebaVdwForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaMultipoleForce this kernel will be used for
      */
@@ -592,7 +592,9 @@ private:
     const System& system;
     bool hasInitializedNonbonded;
     double dispersionCoefficient;
+    CudaArray* vdwTypes;
     CudaArray* sigmaEpsilon;
+    CudaArray* lambdas;
     CudaArray* bondReductionAtoms;
     CudaArray* bondReductionFactors;
     CudaArray* tempPosq;
@@ -610,7 +612,7 @@ public:
     ~CudaCalcAmoebaWcaDispersionForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaMultipoleForce this kernel will be used for
      */
@@ -638,6 +640,41 @@ private:
     double totalMaximumDispersionEnergy;
     CudaArray* radiusEpsilon;
     CUfunction forceKernel;
+};
+
+class CudaCalcAmoebaStretchTorsionForceKernel : public CalcAmoebaStretchTorsionForceKernel {
+public:
+	CudaCalcAmoebaStretchTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system);
+	~CudaCalcAmoebaStretchTorsionForceKernel();
+	void initialize(const System& system, const AmoebaStretchTorsionForce& force);
+	double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+	void copyParametersToContext(ContextImpl& context, const AmoebaStretchTorsionForce& force);
+private:
+	class ForceInfo;
+	int numStretchTorsions;
+	CudaContext& cu;
+	const System& system;
+	CudaArray* params1;
+	CudaArray* params2;
+	CudaArray* params3;
+	CudaArray* params4;
+};
+
+class CudaCalcAmoebaAngleTorsionForceKernel : public CalcAmoebaAngleTorsionForceKernel {
+public:
+	CudaCalcAmoebaAngleTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system);
+	~CudaCalcAmoebaAngleTorsionForceKernel();
+	void initialize(const System& system, const AmoebaAngleTorsionForce& force);
+	double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+	void copyParametersToContext(ContextImpl& context, const AmoebaAngleTorsionForce& force);
+private:
+	class ForceInfo;
+	int numAngleTorsions;
+	CudaContext& cu;
+	const System& system;
+	CudaArray* params1;
+	CudaArray* params2;
+	CudaArray* params3;
 };
 
 } // namespace OpenMM

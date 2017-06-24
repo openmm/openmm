@@ -41,13 +41,13 @@ namespace OpenMM {
  */
 class ReferenceCalcAmoebaBondForceKernel : public CalcAmoebaBondForceKernel {
 public:
-    ReferenceCalcAmoebaBondForceKernel(std::string name, 
+    ReferenceCalcAmoebaBondForceKernel(std::string name,
                                                const Platform& platform,
                                                const System& system);
     ~ReferenceCalcAmoebaBondForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaBondForce this kernel will be used for
      */
@@ -72,10 +72,10 @@ private:
     int numBonds;
     std::vector<int>   particle1;
     std::vector<int>   particle2;
-    std::vector<double> length;
-    std::vector<double> kQuadratic;
-    double globalBondCubic;
-    double globalBondQuartic;
+    std::vector<RealOpenMM> length;
+    std::vector<RealOpenMM> kQuadratic;
+    RealOpenMM globalBondCubic;
+    RealOpenMM globalBondQuartic;
     const System& system;
     bool usePeriodic;
 };
@@ -89,7 +89,7 @@ public:
     ~ReferenceCalcAmoebaAngleForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaAngleForce this kernel will be used for
      */
@@ -115,12 +115,12 @@ private:
     std::vector<int>   particle1;
     std::vector<int>   particle2;
     std::vector<int>   particle3;
-    std::vector<double> angle;
-    std::vector<double> kQuadratic;
-    double globalAngleCubic;
-    double globalAngleQuartic;
-    double globalAnglePentic;
-    double globalAngleSextic;
+    std::vector<RealOpenMM> angle;
+    std::vector<RealOpenMM> kQuadratic;
+    RealOpenMM globalAngleCubic;
+    RealOpenMM globalAngleQuartic;
+    RealOpenMM globalAnglePentic;
+    RealOpenMM globalAngleSextic;
     const System& system;
     bool usePeriodic;
 };
@@ -134,7 +134,7 @@ public:
     ~ReferenceCalcAmoebaInPlaneAngleForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaInPlaneAngleForce this kernel will be used for
      */
@@ -161,12 +161,12 @@ private:
     std::vector<int>   particle2;
     std::vector<int>   particle3;
     std::vector<int>   particle4;
-    std::vector<double> angle;
-    std::vector<double> kQuadratic;
-    double globalInPlaneAngleCubic;
-    double globalInPlaneAngleQuartic;
-    double globalInPlaneAnglePentic;
-    double globalInPlaneAngleSextic;
+    std::vector<RealOpenMM> angle;
+    std::vector<RealOpenMM> kQuadratic;
+    RealOpenMM globalInPlaneAngleCubic;
+    RealOpenMM globalInPlaneAngleQuartic;
+    RealOpenMM globalInPlaneAnglePentic;
+    RealOpenMM globalInPlaneAngleSextic;
     const System& system;
     bool usePeriodic;
 };
@@ -180,7 +180,7 @@ public:
     ~ReferenceCalcAmoebaPiTorsionForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaPiTorsionForce this kernel will be used for
      */
@@ -209,7 +209,7 @@ private:
     std::vector<int>   particle4;
     std::vector<int>   particle5;
     std::vector<int>   particle6;
-    std::vector<double> kTorsion;
+    std::vector<RealOpenMM> kTorsion;
     const System& system;
     bool usePeriodic;
 };
@@ -223,7 +223,7 @@ public:
     ~ReferenceCalcAmoebaStretchBendForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaStretchBendForce this kernel will be used for
      */
@@ -249,11 +249,11 @@ private:
     std::vector<int>   particle1;
     std::vector<int>   particle2;
     std::vector<int>   particle3;
-    std::vector<double> lengthABParameters;
-    std::vector<double> lengthCBParameters;
-    std::vector<double> angleParameters;
-    std::vector<double> k1Parameters;
-    std::vector<double> k2Parameters;
+    std::vector<RealOpenMM> lengthABParameters;
+    std::vector<RealOpenMM> lengthCBParameters;
+    std::vector<RealOpenMM> angleParameters;
+    std::vector<RealOpenMM> k1Parameters;
+    std::vector<RealOpenMM> k2Parameters;
     const System& system;
     bool usePeriodic;
 };
@@ -267,7 +267,7 @@ public:
     ~ReferenceCalcAmoebaOutOfPlaneBendForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaOutOfPlaneBendForce this kernel will be used for
      */
@@ -294,11 +294,11 @@ private:
     std::vector<int>   particle2;
     std::vector<int>   particle3;
     std::vector<int>   particle4;
-    std::vector<double> kParameters;
-    double globalOutOfPlaneBendAngleCubic;
-    double globalOutOfPlaneBendAngleQuartic;
-    double globalOutOfPlaneBendAnglePentic;
-    double globalOutOfPlaneBendAngleSextic;
+    std::vector<RealOpenMM> kParameters;
+    RealOpenMM globalOutOfPlaneBendAngleCubic;
+    RealOpenMM globalOutOfPlaneBendAngleQuartic;
+    RealOpenMM globalOutOfPlaneBendAnglePentic;
+    RealOpenMM globalOutOfPlaneBendAngleSextic;
     const System& system;
     bool usePeriodic;
 };
@@ -312,7 +312,7 @@ public:
     ~ReferenceCalcAmoebaTorsionTorsionForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaTorsionTorsionForce this kernel will be used for
      */
@@ -337,7 +337,7 @@ private:
     std::vector<int>   gridIndices;
 
     int numTorsionTorsionGrids;
-    std::vector< std::vector< std::vector< std::vector<double> > > > torsionTorsionGrids;
+    std::vector< std::vector< std::vector< std::vector<RealOpenMM> > > > torsionTorsionGrids;
 
     const System& system;
     bool usePeriodic;
@@ -352,13 +352,13 @@ public:
     ~ReferenceCalcAmoebaMultipoleForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaMultipoleForce this kernel will be used for
      */
     void initialize(const System& system, const AmoebaMultipoleForce& force);
     /**
-     * Setup for AmoebaReferenceMultipoleForce instance. 
+     * Setup for AmoebaReferenceMultipoleForce instance.
      *
      * @param context        the current context
      *
@@ -376,31 +376,31 @@ public:
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
     /**
      * Get the induced dipole moments of all particles.
-     * 
+     *
      * @param context    the Context for which to get the induced dipoles
      * @param dipoles    the induced dipole moment of particle i is stored into the i'th element
      */
     void getInducedDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
     /**
      * Get the fixed dipole moments of all particles in the global reference frame.
-     * 
+     *
      * @param context    the Context for which to get the fixed dipoles
      * @param dipoles    the fixed dipole moment of particle i is stored into the i'th element
      */
     void getLabFramePermanentDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
     /**
      * Get the total dipole moments of all particles in the global reference frame.
-     * 
+     *
      * @param context    the Context for which to get the fixed dipoles
      * @param dipoles    the fixed dipole moment of particle i is stored into the i'th element
      */
     void getTotalDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
-    /** 
+    /**
      * Calculate the electrostatic potential given vector of grid coordinates.
      *
      * @param context                      context
      * @param inputGrid                    input grid coordinates
-     * @param outputElectrostaticPotential output potential 
+     * @param outputElectrostaticPotential output potential
      */
     void getElectrostaticPotential(ContextImpl& context, const std::vector< Vec3 >& inputGrid,
                                    std::vector< double >& outputElectrostaticPotential);
@@ -408,7 +408,7 @@ public:
     /**
      * Get the system multipole moments.
      *
-     * @param context                context 
+     * @param context                context
      * @param outputMultipoleMoments vector of multipole moments:
                                      (charge,
                                       dipole_x, dipole_y, dipole_z,
@@ -426,7 +426,7 @@ public:
     void copyParametersToContext(ContextImpl& context, const AmoebaMultipoleForce& force);
     /**
      * Get the parameters being used for PME.
-     * 
+     *
      * @param alpha   the separation parameter
      * @param nx      the number of grid points along the X axis
      * @param ny      the number of grid points along the Y axis
@@ -439,12 +439,12 @@ private:
     int numMultipoles;
     AmoebaMultipoleForce::NonbondedMethod nonbondedMethod;
     AmoebaMultipoleForce::PolarizationType polarizationType;
-    std::vector<double> charges;
-    std::vector<double> dipoles;
-    std::vector<double> quadrupoles;
-    std::vector<double> tholes;
-    std::vector<double> dampingFactors;
-    std::vector<double> polarity;
+    std::vector<RealOpenMM> charges;
+    std::vector<RealOpenMM> dipoles;
+    std::vector<RealOpenMM> quadrupoles;
+    std::vector<RealOpenMM> tholes;
+    std::vector<RealOpenMM> dampingFactors;
+    std::vector<RealOpenMM> polarity;
     std::vector<int>   axisTypes;
     std::vector<int>   multipoleAtomZs;
     std::vector<int>   multipoleAtomXs;
@@ -452,12 +452,12 @@ private:
     std::vector< std::vector< std::vector<int> > > multipoleAtomCovalentInfo;
 
     int mutualInducedMaxIterations;
-    double mutualInducedTargetEpsilon;
+    RealOpenMM mutualInducedTargetEpsilon;
     std::vector<double> extrapolationCoefficients;
 
     bool usePme;
-    double alphaEwald;
-    double cutoffDistance;
+    RealOpenMM alphaEwald;
+    RealOpenMM cutoffDistance;
     std::vector<int> pmeGridDimension;
 
     const System& system;
@@ -472,7 +472,7 @@ public:
     ~ReferenceCalcAmoebaVdwForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaVdwForce this kernel will be used for
      */
@@ -495,17 +495,19 @@ public:
     void copyParametersToContext(ContextImpl& context, const AmoebaVdwForce& force);
 private:
     int numParticles;
+    int numVdwprTypes;
     int useCutoff;
     int usePBC;
     double cutoff;
     double dispersionCoefficient;
+    std::string functionalForm;
     std::vector<int> indexIVs;
     std::vector< std::set<int> > allExclusions;
-    std::vector<double> sigmas;
-    std::vector<double> epsilons;
-    std::vector<double> reductions;
-    std::string sigmaCombiningRule;
-    std::string epsilonCombiningRule;
+    std::vector<int> vdwprTypes;
+    std::vector<RealOpenMM> combinedSigmas;
+    std::vector<RealOpenMM> combinedEpsilons;
+    std::vector<RealOpenMM> reductions;
+    std::vector<RealOpenMM> lambdas;
     const System& system;
     NeighborList* neighborList;
 };
@@ -519,7 +521,7 @@ public:
     ~ReferenceCalcAmoebaWcaDispersionForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaMultipoleForce this kernel will be used for
      */
@@ -543,17 +545,17 @@ public:
 private:
 
     int numParticles;
-    std::vector<double> radii;
-    std::vector<double> epsilons;
-    double epso; 
-    double epsh; 
-    double rmino; 
-    double rminh; 
-    double awater; 
-    double shctd; 
-    double dispoff;
-    double slevy;
-    double totalMaximumDispersionEnergy;
+    std::vector<RealOpenMM> radii;
+    std::vector<RealOpenMM> epsilons;
+    RealOpenMM epso;
+    RealOpenMM epsh;
+    RealOpenMM rmino;
+    RealOpenMM rminh;
+    RealOpenMM awater;
+    RealOpenMM shctd;
+    RealOpenMM dispoff;
+    RealOpenMM slevy;
+    RealOpenMM totalMaximumDispersionEnergy;
     const System& system;
 };
 
@@ -566,7 +568,7 @@ public:
     ~ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaMultipoleForce this kernel will be used for
      */
@@ -580,7 +582,7 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
- 
+
     /**
      *  Get the 'include cavity term' flag.
      *
@@ -609,7 +611,7 @@ public:
      *  @return soluteDielectric
      *
      */
-    double getSoluteDielectric() const;
+    RealOpenMM getSoluteDielectric() const;
 
     /**
      *  Get the solvent dielectric.
@@ -617,7 +619,7 @@ public:
      *  @return solventDielectric
      *
      */
-    double getSolventDielectric() const;
+    RealOpenMM getSolventDielectric() const;
 
     /**
      *  Get the dielectric offset.
@@ -625,7 +627,7 @@ public:
      *  @return dielectricOffset
      *
      */
-    double getDielectricOffset() const;
+    RealOpenMM getDielectricOffset() const;
 
     /**
      *  Get the probe radius.
@@ -633,7 +635,7 @@ public:
      *  @return probeRadius
      *
      */
-    double getProbeRadius() const;
+    RealOpenMM getProbeRadius() const;
 
     /**
      *  Get the surface area factor.
@@ -641,7 +643,7 @@ public:
      *  @return surfaceAreaFactor
      *
      */
-    double getSurfaceAreaFactor() const;
+    RealOpenMM getSurfaceAreaFactor() const;
 
     /**
      *  Get the vector of particle radii.
@@ -649,7 +651,7 @@ public:
      *  @param atomicRadii vector of atomic radii
      *
      */
-    void getAtomicRadii(std::vector<double>& atomicRadii) const;
+    void getAtomicRadii(std::vector<RealOpenMM>& atomicRadii) const;
 
     /**
      *  Get the vector of scale factors.
@@ -657,7 +659,7 @@ public:
      *  @param scaleFactors vector of scale factors
      *
      */
-    void getScaleFactors(std::vector<double>& scaleFactors) const;
+    void getScaleFactors(std::vector<RealOpenMM>& scaleFactors) const;
 
     /**
      *  Get the vector of charges.
@@ -665,7 +667,7 @@ public:
      *  @param charges vector of charges
      *
      */
-    void getCharges(std::vector<double>& charges) const;
+    void getCharges(std::vector<RealOpenMM>& charges) const;
 
     /**
      * Copy changed parameters over to a context.
@@ -678,17 +680,69 @@ public:
 private:
 
     int numParticles;
-    std::vector<double> atomicRadii;
-    std::vector<double> scaleFactors;
-    std::vector<double> charges;
-    double soluteDielectric;
-    double solventDielectric;
-    double dielectricOffset;
-    double probeRadius;
-    double surfaceAreaFactor;
+    std::vector<RealOpenMM> atomicRadii;
+    std::vector<RealOpenMM> scaleFactors;
+    std::vector<RealOpenMM> charges;
+    RealOpenMM soluteDielectric;
+    RealOpenMM solventDielectric;
+    RealOpenMM dielectricOffset;
+    RealOpenMM probeRadius;
+    RealOpenMM surfaceAreaFactor;
     int includeCavityTerm;
     int directPolarization;
     const System& system;
+};
+
+class ReferenceCalcAmoebaStretchTorsionForceKernel : public CalcAmoebaStretchTorsionForceKernel {
+public:
+	ReferenceCalcAmoebaStretchTorsionForceKernel(std::string name, const Platform& platform, const System& system);
+	~ReferenceCalcAmoebaStretchTorsionForceKernel();
+	void initialize(const System& system, const AmoebaStretchTorsionForce& force);
+	double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+	void copyParametersToContext(ContextImpl& context, const AmoebaStretchTorsionForce& force);
+private:
+	int numStretchTorsions;
+	std::vector<int> particle1;
+	std::vector<int> particle2;
+	std::vector<int> particle3;
+	std::vector<int> particle4;
+	std::vector<RealOpenMM> lengthBAParameters;
+	std::vector<RealOpenMM> lengthCBParameters;
+	std::vector<RealOpenMM> lengthDCParameters;
+	std::vector<RealOpenMM> k1Parameters;
+	std::vector<RealOpenMM> k2Parameters;
+	std::vector<RealOpenMM> k3Parameters;
+	std::vector<RealOpenMM> k4Parameters;
+	std::vector<RealOpenMM> k5Parameters;
+	std::vector<RealOpenMM> k6Parameters;
+	std::vector<RealOpenMM> k7Parameters;
+	std::vector<RealOpenMM> k8Parameters;
+	std::vector<RealOpenMM> k9Parameters;
+	const System& system;
+};
+
+class ReferenceCalcAmoebaAngleTorsionForceKernel : public CalcAmoebaAngleTorsionForceKernel {
+public:
+	ReferenceCalcAmoebaAngleTorsionForceKernel(std::string name, const Platform& platform, const System& system);
+	~ReferenceCalcAmoebaAngleTorsionForceKernel();
+	void initialize(const System& system, const AmoebaAngleTorsionForce& force);
+	double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+	void copyParametersToContext(ContextImpl& context, const AmoebaAngleTorsionForce& force);
+private:
+	int numAngleTorsions;
+	std::vector<int> particle1;
+	std::vector<int> particle2;
+	std::vector<int> particle3;
+	std::vector<int> particle4;
+	std::vector<RealOpenMM> angleCBAParameters;
+	std::vector<RealOpenMM> angleDCBParameters;
+	std::vector<RealOpenMM> k1Parameters;
+	std::vector<RealOpenMM> k2Parameters;
+	std::vector<RealOpenMM> k3Parameters;
+	std::vector<RealOpenMM> k4Parameters;
+	std::vector<RealOpenMM> k5Parameters;
+	std::vector<RealOpenMM> k6Parameters;
+	const System& system;
 };
 
 } // namespace OpenMM

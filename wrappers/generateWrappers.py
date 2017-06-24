@@ -65,7 +65,7 @@ def findNodes(parent, path, **args):
 
 class WrapperGenerator:
     """This is the parent class of generators for various API wrapper files.  It defines functions common to all of them."""
-    
+
     def __init__(self, inputDirname, output):
         self.skipClasses = ['OpenMM::Vec3', 'OpenMM::XmlSerializer', 'OpenMM::Kernel', 'OpenMM::KernelImpl', 'OpenMM::KernelFactory', 'OpenMM::ContextImpl', 'OpenMM::SerializationNode', 'OpenMM::SerializationProxy']
         self.skipMethods = ['OpenMM::Context::getState', 'OpenMM::Platform::loadPluginsFromDirectory', 'OpenMM::Platform::getPluginLoadFailures', 'OpenMM::Context::createCheckpoint', 'OpenMM::Context::loadCheckpoint', 'OpenMM::Context::getMolecules']
@@ -125,14 +125,14 @@ class WrapperGenerator:
                     continue
                 methodList.append(memberNode)
         return methodList
-    
+
     def shouldHideType(self, typeName):
         if typeName.startswith('const '):
             typeName = typeName[6:].strip()
         if typeName.endswith('&') or typeName.endswith('*'):
             typeName = typeName[:-1].strip()
         return typeName in self.hideClasses
-    
+
     def shouldHideMethod(self, methodNode):
         paramList = findNodes(methodNode, 'param')
         returnType = self.getType(getText("type", methodNode))
@@ -149,7 +149,7 @@ class WrapperGenerator:
 
 class CHeaderGenerator(WrapperGenerator):
     """This class generates the header file for the C API wrappers."""
-    
+
     def __init__(self, inputDirname, output):
         WrapperGenerator.__init__(self, inputDirname, output)
         self.typeTranslations = {'bool': 'OpenMM_Boolean',
@@ -164,7 +164,7 @@ class CHeaderGenerator(WrapperGenerator):
                                  'std::vector< double >': 'OpenMM_DoubleArray',
                                  'std::vector< int >': 'OpenMM_IntArray',
                                  'std::set< int >': 'OpenMM_IntSet'}
-    
+
     def writeGlobalConstants(self):
         self.out.write("/* Global Constants */\n\n")
         node = next((x for x in findNodes(self.doc.getroot(), "compounddef", kind="namespace") if x.findtext("compoundname") == "OpenMM"))
@@ -243,7 +243,7 @@ class CHeaderGenerator(WrapperGenerator):
                     self.out.write("extern OPENMM_EXPORT %s* %s_create%s(" % (typeName, typeName, suffix))
                     self.writeArguments(methodNode, False)
                     self.out.write(");\n")
-    
+
         # Write destructor
         self.out.write("extern OPENMM_EXPORT void %s_destroy(%s* target);\n" % (typeName, typeName))
 
@@ -253,7 +253,7 @@ class CHeaderGenerator(WrapperGenerator):
             methodDefinition = getText("definition", methodNode)
             shortMethodDefinition = stripOpenMMPrefix(methodDefinition)
             methodNames[methodNode] = shortMethodDefinition.split()[-1]
-        
+
         # Write other methods
         for methodNode in methodList:
             methodName = methodNames[methodNode]
@@ -274,7 +274,7 @@ class CHeaderGenerator(WrapperGenerator):
                 self.out.write("%s* target" % typeName)
             self.writeArguments(methodNode, isInstanceMethod)
             self.out.write(");\n")
-    
+
     def writeArguments(self, methodNode, initialSeparator):
         paramList = findNodes(methodNode, 'param')
         if initialSeparator:
@@ -292,7 +292,7 @@ class CHeaderGenerator(WrapperGenerator):
             name = getText('declname', node)
             self.out.write("%s%s %s" % (separator, type, name))
             separator = ", "
-    
+
     def getType(self, type):
         if type in self.typeTranslations:
             return self.typeTranslations[type]
@@ -438,7 +438,7 @@ class CSourceGenerator(WrapperGenerator):
         self.classesByShortName = {}
         self.enumerationTypes = {}
         self.findTypes()
-    
+
     def findTypes(self):
         for classNode in self._orderedClassNodes:
             className = getText("compoundname", classNode)
@@ -500,7 +500,7 @@ class CSourceGenerator(WrapperGenerator):
                     self.writeInvocationArguments(methodNode, False)
                     self.out.write("));\n")
                     self.out.write("}\n")
-    
+
         # Write destructor
         self.out.write("OPENMM_EXPORT void %s_destroy(%s* target) {\n" % (typeName, typeName))
         self.out.write("    delete reinterpret_cast<%s*>(target);\n" % className)
@@ -512,7 +512,7 @@ class CSourceGenerator(WrapperGenerator):
             methodDefinition = getText("definition", methodNode)
             shortMethodDefinition = stripOpenMMPrefix(methodDefinition)
             methodNames[methodNode] = shortMethodDefinition.split()[-1]
-        
+
         # Write other methods
         for methodNode in methodList:
             methodName = methodNames[methodNode]
@@ -556,7 +556,7 @@ class CSourceGenerator(WrapperGenerator):
             if returnType != 'void':
                 self.out.write('    return %s;\n' % self.wrapValue(methodType, 'result'))
             self.out.write("}\n")
-    
+
     def writeArguments(self, methodNode, initialSeparator):
         paramList = findNodes(methodNode, 'param')
         if initialSeparator:
@@ -574,7 +574,7 @@ class CSourceGenerator(WrapperGenerator):
             name = getText('declname', node)
             self.out.write("%s%s %s" % (separator, type, name))
             separator = ", "
-    
+
     def writeInvocationArguments(self, methodNode, initialSeparator):
         paramList = findNodes(methodNode, 'param')
         if initialSeparator:
@@ -593,7 +593,7 @@ class CSourceGenerator(WrapperGenerator):
                 name = self.unwrapValue(type, name)
             self.out.write("%s%s" % (separator, name))
             separator = ", "
-    
+
     def getType(self, type):
         if type in self.typeTranslations:
             return self.typeTranslations[type]
@@ -604,7 +604,7 @@ class CSourceGenerator(WrapperGenerator):
         if type.endswith('&') or type.endswith('*'):
             return self.getType(type[:-1].strip())+'*'
         return type
-    
+
     def wrapValue(self, type, value):
         if type == 'bool':
             return '(%s ? OpenMM_True : OpenMM_False)' % value
@@ -620,7 +620,7 @@ class CSourceGenerator(WrapperGenerator):
         if type.endswith('*') or type.endswith('&'):
             return 'reinterpret_cast<%s>(%s)' % (wrappedType, value)
         return 'static_cast<%s>(%s)' % (wrappedType, value)
-    
+
     def unwrapValue(self, type, value):
         if type.endswith('&'):
             unwrappedType = type[:-1].strip()
@@ -643,7 +643,8 @@ class CSourceGenerator(WrapperGenerator):
 #include <cstring>
 #include <sstream>
 #include <vector>
-
+#include <stdio.h>
+#include <stdlib.h>
 using namespace OpenMM;
 using namespace std;
 
@@ -856,7 +857,7 @@ OPENMM_EXPORT OpenMM_Integrator* OpenMM_XmlSerializer_deserializeIntegrator(cons
 
 class FortranHeaderGenerator(WrapperGenerator):
     """This class generates the header file for the Fortran API wrappers."""
-    
+
     def __init__(self, inputDirname, output):
         WrapperGenerator.__init__(self, inputDirname, output)
         self.typeTranslations = {'int': 'integer*4',
@@ -875,7 +876,7 @@ class FortranHeaderGenerator(WrapperGenerator):
                                  'std::vector< int >': 'type (OpenMM_IntArray)',
                                  'std::set< int >': 'type (OpenMM_IntSet)'}
         self.enumerationTypes = set()
-    
+
     def writeGlobalConstants(self):
         self.out.write("    ! Global Constants\n\n")
         node = next((x for x in findNodes(self.doc.getroot(), "compounddef", kind="namespace") if x.findtext("compoundname") == "OpenMM"))
@@ -955,7 +956,7 @@ class FortranHeaderGenerator(WrapperGenerator):
                     self.out.write("            type (%s) result\n" % typeName)
                     self.declareArguments(methodNode)
                     self.out.write("        end subroutine\n")
-    
+
         # Write destructor
         self.out.write("        subroutine %s_destroy(destroy)\n" % typeName)
         self.out.write("            use OpenMM_Types; implicit none\n")
@@ -968,7 +969,7 @@ class FortranHeaderGenerator(WrapperGenerator):
             methodDefinition = getText("definition", methodNode)
             shortMethodDefinition = stripOpenMMPrefix(methodDefinition)
             methodNames[methodNode] = shortMethodDefinition.split()[-1]
-        
+
         # Write other methods
         for methodNode in methodList:
             methodName = methodNames[methodNode]
@@ -1010,7 +1011,7 @@ class FortranHeaderGenerator(WrapperGenerator):
                 self.out.write("        end function\n")
             else:
                 self.out.write("        end subroutine\n")
-    
+
     def writeArguments(self, methodNode, initialSeparator):
         paramList = findNodes(methodNode, 'param')
         if initialSeparator:
@@ -1030,7 +1031,7 @@ class FortranHeaderGenerator(WrapperGenerator):
             separator = ", &\n"
             numArgs += 1
         return numArgs
-    
+
     def declareOneArgument(self, type, name):
         if type == 'void':
             return
@@ -1039,7 +1040,7 @@ class FortranHeaderGenerator(WrapperGenerator):
             self.out.write("            real*8 %s(3)\n" % name)
         else:
             self.out.write("            %s %s\n" % (type, name))
-    
+
     def declareArguments(self, methodNode):
         paramList = findNodes(methodNode, 'param')
         for node in paramList:
@@ -1049,7 +1050,7 @@ class FortranHeaderGenerator(WrapperGenerator):
                 type = getText('type/ref', node)
             name = getText('declname', node)
             self.declareOneArgument(type, name)
-    
+
     def getType(self, type):
         if type in self.typeTranslations:
             return self.typeTranslations[type]
@@ -1308,7 +1309,7 @@ MODULE OpenMM
             integer*4 index
             %(type)s result
         end subroutine""" % values, file=self.out)
-        
+
         print("""
         ! These methods need to be handled specially, since their C++ APIs cannot be directly translated to Fortran.
         ! Unlike the C++ versions, the return value is allocated on the heap, and you must delete it yourself.
@@ -1369,9 +1370,9 @@ MODULE OpenMM
             character(*) xml
             type(OpenMM_Integrator) result
         end subroutine""", file=self.out)
-        
+
         self.writeClasses()
-        
+
         print("""
     end interface
 
@@ -1455,7 +1456,7 @@ class FortranSourceGenerator(WrapperGenerator):
         self.classesByShortName = {}
         self.enumerationTypes = {}
         self.findTypes()
-    
+
     def findTypes(self):
         for classNode in self._orderedClassNodes:
             className = getText("compoundname", classNode)
@@ -1513,7 +1514,7 @@ class FortranSourceGenerator(WrapperGenerator):
                     functionName = "%s_create%s" % (typeName, suffix)
                     self.writeOneConstructor(classNode, methodNode, functionName, functionName.lower()+'_')
                     self.writeOneConstructor(classNode, methodNode, functionName, functionName.upper())
-    
+
         # Write destructor
         functionName = "%s_destroy" % typeName
         self.writeOneDestructor(typeName, functionName.lower()+'_')
@@ -1525,7 +1526,7 @@ class FortranSourceGenerator(WrapperGenerator):
             methodDefinition = getText("definition", methodNode)
             shortMethodDefinition = stripOpenMMPrefix(methodDefinition)
             methodNames[methodNode] = shortMethodDefinition.split()[-1]
-        
+
         # Write other methods
         for methodNode in methodList:
             methodName = methodNames[methodNode]
@@ -1543,7 +1544,7 @@ class FortranSourceGenerator(WrapperGenerator):
             truncatedName = functionName[:63]
             self.writeOneMethod(classNode, methodNode, functionName, truncatedName.lower()+'_')
             self.writeOneMethod(classNode, methodNode, functionName, truncatedName.upper())
-    
+
     def writeOneConstructor(self, classNode, methodNode, functionName, wrapperFunctionName):
         className = getText("compoundname", classNode)
         shortClassName = stripOpenMMPrefix(className)
@@ -1555,13 +1556,13 @@ class FortranSourceGenerator(WrapperGenerator):
         self.writeInvocationArguments(methodNode, False)
         self.out.write(");\n")
         self.out.write("}\n")
-    
+
     def writeOneDestructor(self, typeName, wrapperFunctionName):
         self.out.write("OPENMM_EXPORT void %s(%s*& destroy) {\n" % (wrapperFunctionName, typeName))
         self.out.write("    %s_destroy(destroy);\n" % typeName)
         self.out.write("    destroy = 0;\n")
         self.out.write("}\n")
-    
+
     def writeOneMethod(self, classNode, methodNode, methodName, wrapperFunctionName):
         className = getText("compoundname", classNode)
         typeName = convertOpenMMPrefix(className)
@@ -1612,7 +1613,7 @@ class FortranSourceGenerator(WrapperGenerator):
         if hasReturnArg and returnType == 'const char*':
             self.out.write("    copyAndPadString(result, result_chars, result_length);\n")
         self.out.write("}\n")
-    
+
     def writeArguments(self, methodNode, initialSeparator, extraArg=None):
         paramList = findNodes(methodNode, 'param')
         if initialSeparator:
@@ -1620,9 +1621,9 @@ class FortranSourceGenerator(WrapperGenerator):
         else:
             separator = ""
         numArgs = 0
-        
+
         # Write the arguments.
-        
+
         for node in paramList:
             try:
                 type = getText('type', node)
@@ -1639,16 +1640,16 @@ class FortranSourceGenerator(WrapperGenerator):
             self.out.write("%s%s %s" % (separator, type, name))
             separator = ", "
             numArgs += 1
-        
+
         # If an extra argument is needed for the return value, write it.
-        
+
         if extraArg is not None:
             self.out.write("%s%s" % (separator, extraArg))
             separator = ", "
             numArgs += 1
-        
+
         # Write length arguments for strings.
-        
+
         for node in paramList:
             try:
                 type = getText('type', node)
@@ -1659,7 +1660,7 @@ class FortranSourceGenerator(WrapperGenerator):
                 self.out.write(", int %s_length" % name)
                 numArgs += 1
         return numArgs
-    
+
     def writeInvocationArguments(self, methodNode, initialSeparator):
         paramList = findNodes(methodNode, 'param')
         if initialSeparator:
@@ -1678,7 +1679,7 @@ class FortranSourceGenerator(WrapperGenerator):
                 name = 'makeString(%s, %s_length).c_str()' % (name, name)
             self.out.write("%s%s" % (separator, name))
             separator = ", "
-    
+
     def getType(self, type):
         if type in self.typeTranslations:
             return self.typeTranslations[type]
@@ -1689,7 +1690,7 @@ class FortranSourceGenerator(WrapperGenerator):
         if type.endswith('&') or type.endswith('*'):
             return self.getType(type[:-1].strip())+'*'
         return type
-    
+
     def isHandleType(self, type):
         if type == 'OpenMM_Vec3':
             return False
