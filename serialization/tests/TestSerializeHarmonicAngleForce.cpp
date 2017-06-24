@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -47,6 +47,7 @@ void testSerialization() {
     force.addAngle(0, 2, 3, 2.0, 2.1);
     force.addAngle(2, 3, 4, 3.0, 2.2);
     force.addAngle(5, 1, 2, 4.0, 2.3);
+    force.setUsesPeriodicBoundaryConditions(true);
 
     // Serialize and then deserialize it.
 
@@ -58,6 +59,7 @@ void testSerialization() {
 
     HarmonicAngleForce& force2 = *copy;
     ASSERT_EQUAL(force.getForceGroup(), force2.getForceGroup());
+    ASSERT_EQUAL(force.usesPeriodicBoundaryConditions(), force2.usesPeriodicBoundaryConditions());
     ASSERT_EQUAL(force.getNumAngles(), force2.getNumAngles());
     for (int i = 0; i < force.getNumAngles(); i++) {
         int a1, a2, a3, b1, b2, b3;

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -44,7 +44,7 @@ using std::string;
 using std::stringstream;
 using std::vector;
 
-CustomAngleForce::CustomAngleForce(const string& energy) : energyExpression(energy) {
+CustomAngleForce::CustomAngleForce(const string& energy) : energyExpression(energy), usePeriodic(false) {
 }
 
 const string& CustomAngleForce::getEnergyFunction() const {
@@ -95,6 +95,20 @@ void CustomAngleForce::setGlobalParameterDefaultValue(int index, double defaultV
     globalParameters[index].defaultValue = defaultValue;
 }
 
+void CustomAngleForce::addEnergyParameterDerivative(const string& name) {
+    for (int i = 0; i < globalParameters.size(); i++)
+        if (name == globalParameters[i].name) {
+            energyParameterDerivatives.push_back(i);
+            return;
+        }
+    throw OpenMMException(string("addEnergyParameterDerivative: Unknown global parameter '"+name+"'"));
+}
+
+const string& CustomAngleForce::getEnergyParameterDerivativeName(int index) const {
+    ASSERT_VALID_INDEX(index, energyParameterDerivatives);
+    return globalParameters[energyParameterDerivatives[index]].name;
+}
+
 int CustomAngleForce::addAngle(int particle1, int particle2, int particle3, const vector<double>& parameters) {
     angles.push_back(AngleInfo(particle1, particle2, particle3, parameters));
     return angles.size()-1;
@@ -122,4 +136,12 @@ ForceImpl* CustomAngleForce::createImpl() const {
 
 void CustomAngleForce::updateParametersInContext(Context& context) {
     dynamic_cast<CustomAngleForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
+}
+
+void CustomAngleForce::setUsesPeriodicBoundaryConditions(bool periodic) {
+    usePeriodic = periodic;
+}
+
+bool CustomAngleForce::usesPeriodicBoundaryConditions() const {
+    return usePeriodic;
 }

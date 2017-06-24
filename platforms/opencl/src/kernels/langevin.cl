@@ -72,7 +72,7 @@ __kernel void integrateLangevinPart2(__global real4* restrict posq, __global rea
  * Select the step size to use for the next step.
  */
 
-__kernel void selectLangevinStepSize(mixed maxStepSize, mixed errorTol, mixed tau, mixed kT, __global mixed2* restrict dt,
+__kernel void selectLangevinStepSize(mixed maxStepSize, mixed errorTol, mixed friction, mixed kT, __global mixed2* restrict dt,
         __global const mixed4* restrict velm, __global const real4* restrict force, __global mixed* restrict paramBuffer, __local mixed* restrict params, __local mixed* restrict error) {
     // Calculate the error.
 
@@ -110,9 +110,9 @@ __kernel void selectLangevinStepSize(mixed maxStepSize, mixed errorTol, mixed ta
 
         // Recalculate the integration parameters.
 
-        mixed vscale = exp(-newStepSize/tau);
-        mixed fscale = (1-vscale)*tau;
-        mixed noisescale = sqrt(2*kT/tau)*sqrt(0.5f*(1-vscale*vscale)*tau);
+        mixed vscale = exp(-newStepSize*friction);
+        mixed fscale = (friction == 0 ? newStepSize : (1-vscale)/friction);
+        mixed noisescale = sqrt(kT*(1-vscale*vscale));
         params[VelScale] = vscale;
         params[ForceScale] = fscale;
         params[NoiseScale] = noisescale;

@@ -50,7 +50,8 @@ AmoebaMultipoleForceImpl::~AmoebaMultipoleForceImpl() {
 void AmoebaMultipoleForceImpl::initialize(ContextImpl& context) {
 
     const System& system = context.getSystem();
-    if (owner.getNumMultipoles() != system.getNumParticles())
+    int numParticles = system.getNumParticles();
+    if (owner.getNumMultipoles() != numParticles)
         throw OpenMMException("AmoebaMultipoleForce must have exactly as many particles as the System it belongs to.");
 
     // check cutoff < 0.5*boxSize
@@ -61,10 +62,10 @@ void AmoebaMultipoleForceImpl::initialize(ContextImpl& context) {
         double cutoff = owner.getCutoffDistance();
         if (cutoff > 0.5*boxVectors[0][0] || cutoff > 0.5*boxVectors[1][1] || cutoff > 0.5*boxVectors[2][2])
             throw OpenMMException("AmoebaMultipoleForce: The cutoff distance cannot be greater than half the periodic box size.");
-    }   
+    }
 
     double quadrupoleValidationTolerance = 1.0e-05;
-    for (int ii = 0; ii < system.getNumParticles(); ii++) {
+    for (int ii = 0; ii < numParticles; ii++) {
 
         int axisType, multipoleAtomZ, multipoleAtomX, multipoleAtomY;
         double charge, thole, dampingFactor, polarity ;
@@ -121,6 +122,23 @@ void AmoebaMultipoleForceImpl::initialize(ContextImpl& context) {
              buffer << "] (ZThenX, Bisector, Z-Bisect, ThreeFold, NoAxisType) currently handled .";
              throw OpenMMException(buffer.str());
         }
+        if (axisType != AmoebaMultipoleForce::NoAxisType && (multipoleAtomZ < 0 || multipoleAtomZ >= numParticles)) {
+            std::stringstream buffer;
+            buffer << "AmoebaMultipoleForce: invalid z axis particle: " << multipoleAtomZ;
+            throw OpenMMException(buffer.str());
+        }
+        if (axisType != AmoebaMultipoleForce::NoAxisType && axisType != AmoebaMultipoleForce::ZOnly &&
+                (multipoleAtomX < 0 || multipoleAtomX >= numParticles)) {
+            std::stringstream buffer;
+            buffer << "AmoebaMultipoleForce: invalid x axis particle: " << multipoleAtomX;
+            throw OpenMMException(buffer.str());
+        }
+        if ((axisType == AmoebaMultipoleForce::ZBisect || axisType == AmoebaMultipoleForce::ThreeFold) &&
+                (multipoleAtomY < 0 || multipoleAtomY >= numParticles)) {
+            std::stringstream buffer;
+            buffer << "AmoebaMultipoleForce: invalid y axis particle: " << multipoleAtomY;
+            throw OpenMMException(buffer.str());
+        }
     }
     kernel = context.getPlatform().createKernel(CalcAmoebaMultipoleForceKernel::Name(), context);
     kernel.getAs<CalcAmoebaMultipoleForceKernel>().initialize(context.getSystem(), owner);
@@ -170,7 +188,7 @@ void AmoebaMultipoleForceImpl::getCovalentRange(const AmoebaMultipoleForce& forc
                *maxCovalentIndex = covalentList[ii];
             }
         }
-    }   
+    }
     return;
 }
 
@@ -179,12 +197,20 @@ void AmoebaMultipoleForceImpl::getCovalentDegree(const AmoebaMultipoleForce& for
     const int* CovalentDegrees = AmoebaMultipoleForceImpl::getCovalentDegrees();
     for (unsigned int kk = 0; kk < AmoebaMultipoleForce::CovalentEnd; kk++) {
         covalentDegree[kk] = CovalentDegrees[kk];
-    }   
+    }
     return;
+}
+
+void AmoebaMultipoleForceImpl::getLabFramePermanentDipoles(ContextImpl& context, vector<Vec3>& dipoles) {
+    kernel.getAs<CalcAmoebaMultipoleForceKernel>().getLabFramePermanentDipoles(context, dipoles);
 }
 
 void AmoebaMultipoleForceImpl::getInducedDipoles(ContextImpl& context, vector<Vec3>& dipoles) {
     kernel.getAs<CalcAmoebaMultipoleForceKernel>().getInducedDipoles(context, dipoles);
+}
+
+void AmoebaMultipoleForceImpl::getTotalDipoles(ContextImpl& context, vector<Vec3>& dipoles) {
+    kernel.getAs<CalcAmoebaMultipoleForceKernel>().getTotalDipoles(context, dipoles);
 }
 
 void AmoebaMultipoleForceImpl::getElectrostaticPotential(ContextImpl& context, const std::vector< Vec3 >& inputGrid,
@@ -198,6 +224,7 @@ void AmoebaMultipoleForceImpl::getSystemMultipoleMoments(ContextImpl& context, s
 
 void AmoebaMultipoleForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcAmoebaMultipoleForceKernel>().copyParametersToContext(context, owner);
+    context.systemChanged();
 }
 
 void AmoebaMultipoleForceImpl::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {

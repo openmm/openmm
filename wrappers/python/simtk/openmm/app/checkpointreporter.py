@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2014 Stanford University and the Authors.
+Portions copyright (c) 2014-2016 Stanford University and the Authors.
 Authors: Robert McGibbon
 Contributors:
 
@@ -33,6 +33,9 @@ __author__ = "Robert McGibbon"
 __version__ = "1.0"
 
 import simtk.openmm as mm
+import os
+import os.path
+
 __all__ = ['CheckpointReporter']
 
 
@@ -80,12 +83,7 @@ class CheckpointReporter(object):
         """
 
         self._reportInterval = reportInterval
-        if isinstance(file, str):
-            self._own_handle = True
-            self._out = open(file, 'w+b', 0)
-        else:
-            self._out = file
-            self._own_handle = False
+        self._file = file
 
     def describeNextReport(self, simulation):
         """Get information about the next report this object will generate.
@@ -116,13 +114,24 @@ class CheckpointReporter(object):
         state : State
             The current state of the simulation
         """
-        self._out.seek(0)
-        chk = simulation.context.createCheckpoint()
-        self._out.write(chk)
-        self._out.truncate()
-        self._out.flush()
+        if isinstance(self._file, str):
+            # Do a safe save.
 
-    def __del__(self):
-        if self._own_handle:
-            self._out.close()
+            tempFilename1 = self._file+".backup1"
+            tempFilename2 = self._file+".backup2"
+            with open(tempFilename1, 'w+b', 0) as out:
+                out.write(simulation.context.createCheckpoint())
+            exists = os.path.exists(self._file)
+            if exists:
+                os.rename(self._file, tempFilename2)
+            os.rename(tempFilename1, self._file)
+            if exists:
+                os.remove(tempFilename2)
+        else:
+            # Replace the contents of the file.
 
+            self._file.seek(0)
+            chk = simulation.context.createCheckpoint()
+            self._file.write(chk)
+            self._file.truncate()
+            self._file.flush()

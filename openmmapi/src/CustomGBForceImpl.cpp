@@ -126,4 +126,5 @@ map<string, double> CustomGBForceImpl::getDefaultParameters() {
 
 void CustomGBForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcCustomGBForceKernel>().copyParametersToContext(context, owner);
+    context.systemChanged();
 }

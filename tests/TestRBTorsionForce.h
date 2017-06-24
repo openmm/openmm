@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -107,12 +107,53 @@ void testRBTorsions() {
     }
 }
 
+void testPeriodic() {
+    // Create a force that uses periodic boundary conditions.
+    
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.setDefaultPeriodicBoxVectors(Vec3(3, 0, 0), Vec3(0, 3, 0), Vec3(0, 0, 3));
+    VerletIntegrator integrator(0.01);
+    RBTorsionForce* torsions = new RBTorsionForce();
+    torsions->addTorsion(0, 1, 2, 3, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6);
+    torsions->setUsesPeriodicBoundaryConditions(true);
+    system.addForce(torsions);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(4);
+    positions[0] = Vec3(0, 1, 0);
+    positions[1] = Vec3(0, 0, 0);
+    positions[2] = Vec3(1, 0, 0);
+    positions[3] = Vec3(0, 0, 2);
+    context.setPositions(positions);
+    State state = context.getState(State::Forces | State::Energy);
+    const vector<Vec3>& forces = state.getForces();
+    double psi = 0.5*PI_M;
+    double torque = 0.0;
+    for (int i = 1; i < 6; ++i) {
+        double c = 0.1*(i+1);
+        torque += -c*i*std::pow(std::cos(psi), i-1)*std::sin(psi);
+    }
+    ASSERT_EQUAL_VEC(Vec3(0, 0, torque), forces[0], TOL);
+    ASSERT_EQUAL_VEC(Vec3(0, -torque, 0), forces[3], TOL);
+    ASSERT_EQUAL_VEC(Vec3(forces[0][0]+forces[1][0]+forces[2][0]+forces[3][0], forces[0][1]+forces[1][1]+forces[2][1]+forces[3][1], forces[0][2]+forces[1][2]+forces[2][2]+forces[3][2]), Vec3(0, 0, 0), TOL);
+    double energy = 0.0;
+    for (int i = 0; i < 6; ++i) {
+        double c = 0.1*(i+1);
+        energy += c*std::pow(std::cos(psi), i);
+    }
+    ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), TOL);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
     try {
         initializeTests(argc, argv);
         testRBTorsions();
+        testPeriodic();
         runPlatformTests();
     }
     catch(const exception& e) {

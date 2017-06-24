@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -48,6 +48,7 @@ void testSerialization() {
     force.addGlobalParameter("x", 1.3);
     force.addGlobalParameter("y", 2.221);
     force.addPerParticleParameter("z");
+    force.addEnergyParameterDerivative("y");
     force.addComputedValue("a", "x+1", CustomGBForce::ParticlePairNoExclusions);
     force.addComputedValue("b", "y-1", CustomGBForce::SingleParticle);
     force.addEnergyTerm("a*b", CustomGBForce::SingleParticle);
@@ -86,6 +87,9 @@ void testSerialization() {
         ASSERT_EQUAL(force.getGlobalParameterName(i), force2.getGlobalParameterName(i));
         ASSERT_EQUAL(force.getGlobalParameterDefaultValue(i), force2.getGlobalParameterDefaultValue(i));
     }
+    ASSERT_EQUAL(force.getNumEnergyParameterDerivatives(), force2.getNumEnergyParameterDerivatives());
+    for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++)
+        ASSERT_EQUAL(force.getEnergyParameterDerivativeName(i), force2.getEnergyParameterDerivativeName(i));
     ASSERT_EQUAL(force.getNumComputedValues(), force2.getNumComputedValues());
     for (int i = 0; i < force.getNumComputedValues(); i++) {
         string name1, name2, expression1, expression2;

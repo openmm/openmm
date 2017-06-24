@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -56,10 +56,23 @@ void OpenCLBondedUtilities::addInteraction(const vector<vector<int> >& atoms, co
     }
 }
 
-std::string OpenCLBondedUtilities::addArgument(cl::Memory& data, const string& type) {
+string OpenCLBondedUtilities::addArgument(cl::Memory& data, const string& type) {
     arguments.push_back(&data);
     argTypes.push_back(type);
     return "customArg"+context.intToString(arguments.size());
+}
+
+string OpenCLBondedUtilities::addEnergyParameterDerivative(const string& param) {
+    // See if the parameter has already been added.
+    
+    int index;
+    for (index = 0; index < energyParameterDerivatives.size(); index++)
+        if (param == energyParameterDerivatives[index])
+            break;
+    if (index == energyParameterDerivatives.size())
+        energyParameterDerivatives.push_back(param);
+    context.addEnergyParameterDerivative(param);
+    return string("energyParamDeriv")+context.intToString(index);
 }
 
 void OpenCLBondedUtilities::addPrefixCode(const string& source) {
@@ -190,13 +203,23 @@ void OpenCLBondedUtilities::initialize(const System& system) {
         }
         for (int i = 0; i < (int) arguments.size(); i++)
             s<<", __global "<<argTypes[i]<<"* customArg"<<(i+1);
+        if (energyParameterDerivatives.size() > 0)
+            s<<", __global mixed* restrict energyParamDerivs";
         s<<") {\n";
         s<<"mixed energy = 0;\n";
+        for (int i = 0; i < energyParameterDerivatives.size(); i++)
+            s<<"mixed energyParamDeriv"<<i<<" = 0;\n";
         for (int i = 0; i < setSize; i++) {
             int force = set[i];
             s<<createForceSource(i, forceAtoms[force].size(), forceAtoms[force][0].size(), forceGroup[force], forceSource[force]);
         }
         s<<"energyBuffer[get_global_id(0)] += energy;\n";
+        const vector<string>& allParamDerivNames = context.getEnergyParamDerivNames();
+        int numDerivs = allParamDerivNames.size();
+        for (int i = 0; i < energyParameterDerivatives.size(); i++)
+            for (int index = 0; index < numDerivs; index++)
+                if (allParamDerivNames[index] == energyParameterDerivatives[i])
+                    s<<"energyParamDerivs[get_global_id(0)*"<<numDerivs<<"+"<<index<<"] += energyParamDeriv"<<i<<";\n";
         s<<"}\n";
         map<string, string> defines;
         defines["PADDED_NUM_ATOMS"] = context.intToString(context.getPaddedNumAtoms());
@@ -274,6 +297,8 @@ void OpenCLBondedUtilities::computeInteractions(int groups) {
             }
             for (int j = 0; j < (int) arguments.size(); j++)
                 kernel.setArg<cl::Memory>(index++, *arguments[j]);
+            if (energyParameterDerivatives.size() > 0)
+                kernel.setArg<cl::Memory>(index++, context.getEnergyParamDerivBuffer().getDeviceBuffer());
         }
     }
     for (int i = 0; i < (int) kernels.size(); i++) {

@@ -7,7 +7,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -878,6 +878,16 @@ void testLargeInteractionGroup() {
     State state3 = context.getState(State::Forces);
     for (int i = 0; i < numParticles; i++)
         ASSERT_EQUAL_VEC(state1.getForces()[i], state3.getForces()[i], 1e-4);
+    
+    // Now make the interaction group empty.  The energy should then be zero.
+    
+    set1.clear();
+    set2.clear();
+    nonbonded->setInteractionGroupParameters(0, set1, set2);
+    context.reinitialize();
+    context.setPositions(positions);
+    State state4 = context.getState(State::Energy);
+    ASSERT_EQUAL(0.0, state4.getPotentialEnergy());
 }
 
 void testInteractionGroupLongRangeCorrection() {
@@ -937,6 +947,37 @@ void testInteractionGroupLongRangeCorrection() {
     ASSERT_EQUAL_TOL(expected, energy2-energy1, 1e-4);
 }
 
+void testInteractionGroupTabulatedFunction() {
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    VerletIntegrator integrator(0.01);
+    CustomNonbondedForce* forceField = new CustomNonbondedForce("fn(r-1)+1");
+    set<int> set1, set2;
+    set1.insert(0);
+    set2.insert(1);
+    forceField->addInteractionGroup(set1, set2);
+    forceField->addParticle(vector<double>());
+    forceField->addParticle(vector<double>());
+    vector<double> table;
+    for (int i = 0; i < 21; i++)
+        table.push_back(sin(0.25*i));
+    forceField->addTabulatedFunction("fn", new Discrete1DFunction(table));
+    system.addForce(forceField);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(2);
+    positions[0] = Vec3(0, 0, 0);
+    for (int i = 0; i < (int) table.size(); i++) {
+        positions[1] = Vec3(i+1, 0, 0);
+        context.setPositions(positions);
+        State state = context.getState(State::Forces | State::Energy);
+        const vector<Vec3>& forces = state.getForces();
+        ASSERT_EQUAL_VEC(Vec3(0, 0, 0), forces[0], 1e-6);
+        ASSERT_EQUAL_VEC(Vec3(0, 0, 0), forces[1], 1e-6);
+        ASSERT_EQUAL_TOL(table[i]+1.0, state.getPotentialEnergy(), 1e-6);
+    }
+}
+
 void testMultipleCutoffs() {
     System system;
     system.addParticle(1.0);
@@ -993,6 +1034,65 @@ void testMultipleCutoffs() {
     }
 }
 
+void testMultipleSwitches() {
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    VerletIntegrator integrator(0.01);
+    
+    // Add multiple CustomNonbondedForces, one with a switching function and one without.
+    
+    CustomNonbondedForce* nonbonded1 = new CustomNonbondedForce("2*r");
+    nonbonded1->addParticle(vector<double>());
+    nonbonded1->addParticle(vector<double>());
+    nonbonded1->setNonbondedMethod(CustomNonbondedForce::CutoffNonPeriodic);
+    nonbonded1->setCutoffDistance(1.0);
+    system.addForce(nonbonded1);
+    CustomNonbondedForce* nonbonded2 = new CustomNonbondedForce("3*r");
+    nonbonded2->addParticle(vector<double>());
+    nonbonded2->addParticle(vector<double>());
+    nonbonded2->setNonbondedMethod(CustomNonbondedForce::CutoffNonPeriodic);
+    nonbonded2->setCutoffDistance(1.0);
+    nonbonded2->setSwitchingDistance(0.5);
+    nonbonded2->setUseSwitchingFunction(true);
+    nonbonded2->setForceGroup(1);
+    system.addForce(nonbonded2);
+    Context context(system, integrator, platform);
+    double r = 0.8;
+    vector<Vec3> positions(2);
+    positions[0] = Vec3(0, 0, 0);
+    positions[1] = Vec3(0, r, 0);
+    context.setPositions(positions);
+    double t = (r-0.5)/(1.0-0.5);
+    double switchValue = 1+t*t*t*(-10+t*(15-t*6));
+    double switchDeriv = t*t*(-30+t*(60-t*30))/(1.0-0.5);
+    double e1 = 2.0*r;
+    double e2 = 3.0*r*switchValue;
+    double f1 = 2.0;
+    double f2 = 3.0*switchValue + 3.0*switchDeriv*r;
+
+    // Check the first force.
+
+    State state = context.getState(State::Forces | State::Energy, false, 1);
+    ASSERT_EQUAL_VEC(Vec3(0, f1, 0), state.getForces()[0], TOL);
+    ASSERT_EQUAL_VEC(Vec3(0, -f1, 0), state.getForces()[1], TOL);
+    ASSERT_EQUAL_TOL(e1, state.getPotentialEnergy(), TOL);
+
+    // Check the second force.
+
+    state = context.getState(State::Forces | State::Energy, false, 2);
+    ASSERT_EQUAL_VEC(Vec3(0, f2, 0), state.getForces()[0], TOL);
+    ASSERT_EQUAL_VEC(Vec3(0, -f2, 0), state.getForces()[1], TOL);
+    ASSERT_EQUAL_TOL(e2, state.getPotentialEnergy(), TOL);
+
+    // Check the sum of both forces.
+
+    state = context.getState(State::Forces | State::Energy);
+    ASSERT_EQUAL_VEC(Vec3(0, f1+f2, 0), state.getForces()[0], TOL);
+    ASSERT_EQUAL_VEC(Vec3(0, -f1-f2, 0), state.getForces()[1], TOL);
+    ASSERT_EQUAL_TOL(e1+e2, state.getPotentialEnergy(), TOL);
+}
+
 void testIllegalVariable() {
     System system;
     system.addParticle(1.0);
@@ -1008,6 +1108,84 @@ void testIllegalVariable() {
         threwException = true;
     }
     ASSERT(threwException);
+}
+
+void testEnergyParameterDerivatives() {
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    VerletIntegrator integrator(0.01);
+    CustomNonbondedForce* nonbonded = new CustomNonbondedForce("k*(r-r0)^2");
+    nonbonded->addGlobalParameter("r0", 0.0);
+    nonbonded->addGlobalParameter("k", 0.0);
+    nonbonded->addEnergyParameterDerivative("k");
+    nonbonded->addEnergyParameterDerivative("r0");
+    vector<double> parameters;
+    nonbonded->addParticle(parameters);
+    nonbonded->addParticle(parameters);
+    nonbonded->addParticle(parameters);
+    nonbonded->addExclusion(0, 2);
+    system.addForce(nonbonded);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(3);
+    positions[0] = Vec3(0, 2, 0);
+    positions[1] = Vec3(0, 0, 0);
+    positions[2] = Vec3(1, 0, 0);
+    context.setPositions(positions);
+    for (int i = 0; i < 10; i++) {
+        double r0 = 0.1*i;
+        double k = 10-i;
+        context.setParameter("r0", r0);
+        context.setParameter("k", k);
+        State state = context.getState(State::ParameterDerivatives);
+        map<string, double> derivs = state.getEnergyParameterDerivatives();
+        double dEdr0 = -2*k*((2-r0)+(1-r0));
+        double dEdk = (2-r0)*(2-r0) + (1-r0)*(1-r0);
+        ASSERT_EQUAL_TOL(dEdr0, derivs["r0"], 1e-5);
+        ASSERT_EQUAL_TOL(dEdk, derivs["k"], 1e-5);
+    }
+}
+
+void testEnergyParameterDerivatives2() {
+    // Create a box of particles.
+    
+    const int numParticles = 30;
+    const double boxSize = 2.0;
+    const double a = 1.0;
+    const double delta = 1e-3;
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    CustomNonbondedForce* nonbonded = new CustomNonbondedForce("(r+a)^-4");
+    system.addForce(nonbonded);
+    nonbonded->addGlobalParameter("a", a);
+    nonbonded->addEnergyParameterDerivative("a");
+    nonbonded->setNonbondedMethod(CustomNonbondedForce::CutoffPeriodic);
+    nonbonded->setCutoffDistance(1.0);
+    nonbonded->setSwitchingDistance(0.9);
+    nonbonded->setUseSwitchingFunction(true);
+    nonbonded->setUseLongRangeCorrection(true);
+    vector<Vec3> positions;
+    vector<double> parameters;
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(1.0);
+        nonbonded->addParticle(parameters);
+        positions.push_back(Vec3(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt))*boxSize);
+    }
+    
+    // Compute the energy derivative and compare it to a finite difference approximation.
+    
+    VerletIntegrator integrator(0.01);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    map<string, double> derivs = context.getState(State::ParameterDerivatives).getEnergyParameterDerivatives();
+    context.setParameter("a", a+delta);
+    double energy1 = context.getState(State::Energy).getPotentialEnergy();
+    context.setParameter("a", a-delta);
+    double energy2 = context.getState(State::Energy).getPotentialEnergy();
+    ASSERT_EQUAL_TOL((energy1-energy2)/(2*delta), derivs["a"], 1e-4);
 }
 
 void runPlatformTests();
@@ -1033,8 +1211,12 @@ int main(int argc, char* argv[]) {
         testInteractionGroups();
         testLargeInteractionGroup();
         testInteractionGroupLongRangeCorrection();
+        testInteractionGroupTabulatedFunction();
         testMultipleCutoffs();
+        testMultipleSwitches();
         testIllegalVariable();
+        testEnergyParameterDerivatives();
+        testEnergyParameterDerivatives2();
         runPlatformTests();
     }
     catch(const exception& e) {

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Mark Friedrichs                                                   *
  * Contributors:                                                              *
  *                                                                            *
@@ -448,14 +448,52 @@ void testOneOutOfPlaneBend2(int setId) {
     }
 }
 
+void testPeriodic() {
+    // Create a force that uses periodic boundary conditions.
+
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(3, 0, 0), Vec3(0, 3, 0), Vec3(0, 0, 3));
+    int numberOfParticles = 4;
+    for (int ii = 0; ii < numberOfParticles; ii++)
+        system.addParticle(1.0);
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
+    AmoebaOutOfPlaneBendForce* amoebaOutOfPlaneBendForce = new AmoebaOutOfPlaneBendForce();
+    amoebaOutOfPlaneBendForce->setAmoebaGlobalOutOfPlaneBendCubic( -0.1400000E-01);
+    amoebaOutOfPlaneBendForce->setAmoebaGlobalOutOfPlaneBendQuartic(0.5600000E-04);
+    amoebaOutOfPlaneBendForce->setAmoebaGlobalOutOfPlaneBendPentic(-0.7000000E-06);
+    amoebaOutOfPlaneBendForce->setAmoebaGlobalOutOfPlaneBendSextic( 0.2200000E-07);
+    double kOutOfPlaneBend = 0.328682196E-01;
+    amoebaOutOfPlaneBendForce->addOutOfPlaneBend(0, 1, 2, 3, kOutOfPlaneBend);
+    amoebaOutOfPlaneBendForce->setUsesPeriodicBoundaryConditions(true);
+    system.addForce(amoebaOutOfPlaneBendForce);
+    Context context(system, integrator, Platform::getPlatformByName("CUDA"));
+    std::vector<Vec3> positions(numberOfParticles);
+    positions[0] = Vec3(0, 0, 0);
+    positions[1] = Vec3(1, 0, 0);
+    positions[2] = Vec3(0, 1, 0);
+    positions[3] = Vec3(0, 0, 1);
+    context.setPositions(positions);
+    State s1 = context.getState(State::Forces | State::Energy);
+    
+    // Move one atom to a position that should give identical results.
+
+    positions[3] = Vec3(0, 0, -2);
+    context.setPositions(positions);
+    State s2 = context.getState(State::Forces | State::Energy);
+    ASSERT_EQUAL_TOL(s1.getPotentialEnergy(), s2.getPotentialEnergy(), 1e-5);
+    for (int i = 0; i < numberOfParticles; i++)
+        ASSERT_EQUAL_VEC(s1.getForces()[i], s2.getForces()[i], 1e-5);
+}
+
 int main(int argc, char* argv[]) {
     try {
         std::cout << "TestCudaAmoebaOutOfPlaneBendForce running test..." << std::endl;
         registerAmoebaCudaKernelFactories();
         if (argc > 1)
-            Platform::getPlatformByName("CUDA").setPropertyDefaultValue("CudaPrecision", std::string(argv[1]));
+            Platform::getPlatformByName("CUDA").setPropertyDefaultValue("Precision", std::string(argv[1]));
 
         testOneOutOfPlaneBend();
+        testPeriodic();
 
     } catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;

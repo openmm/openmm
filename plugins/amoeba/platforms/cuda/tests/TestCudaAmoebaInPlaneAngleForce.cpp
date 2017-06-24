@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Mark Friedrichs                                                   *
  * Contributors:                                                              *
  *                                                                            *
@@ -346,13 +346,58 @@ void testOneAngle() {
     compareWithExpectedForceAndEnergy(context, *amoebaInPlaneAngleForce, TOL, "testOneInPlaneAngle");
 }
 
+void testPeriodic() {
+    // Create a force that uses periodic boundary conditions.
+
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(3, 0, 0), Vec3(0, 3, 0), Vec3(0, 0, 3));
+    int numberOfParticles = 4;
+    for (int ii = 0; ii < numberOfParticles; ii++)
+        system.addParticle(1.0);
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
+    AmoebaInPlaneAngleForce* amoebaInPlaneAngleForce = new AmoebaInPlaneAngleForce();
+    double angle      = 65.0;
+    double quadraticK = 1.0;
+    double cubicK     = 0.0e-01;
+    double quarticK   = 0.0e-02;
+    double penticK    = 0.0e-03;
+    double sexticK    = 0.0e-04;
+    amoebaInPlaneAngleForce->addAngle(0, 1, 2, 3, angle, quadraticK);
+    amoebaInPlaneAngleForce->setAmoebaGlobalInPlaneAngleCubic(cubicK);
+    amoebaInPlaneAngleForce->setAmoebaGlobalInPlaneAngleQuartic(quarticK);
+    amoebaInPlaneAngleForce->setAmoebaGlobalInPlaneAnglePentic(penticK);
+    amoebaInPlaneAngleForce->setAmoebaGlobalInPlaneAngleSextic(sexticK);
+    amoebaInPlaneAngleForce->setUsesPeriodicBoundaryConditions(true);
+    system.addForce(amoebaInPlaneAngleForce);
+    Context context(system, integrator, Platform::getPlatformByName("CUDA"));
+
+    std::vector<Vec3> positions(numberOfParticles);
+    positions[0] = Vec3(0, 1, 0);
+    positions[1] = Vec3(0, 0, 0);
+    positions[2] = Vec3(0, 0, 1);
+    positions[3] = Vec3(1, 1, 1);
+
+    context.setPositions(positions);
+    State s1 = context.getState(State::Forces | State::Energy);
+    
+    // Move one atom to a position that should give identical results.
+
+    positions[2] = Vec3(0, 0, -2);
+    context.setPositions(positions);
+    State s2 = context.getState(State::Forces | State::Energy);
+    ASSERT_EQUAL_TOL(s1.getPotentialEnergy(), s2.getPotentialEnergy(), 1e-5);
+    for (int i = 0; i < numberOfParticles; i++)
+        ASSERT_EQUAL_VEC(s1.getForces()[i], s2.getForces()[i], 1e-5);
+}
+
 int main(int argc, char* argv[]) {
     try {
         std::cout << "TestCudaAmoebaInPlaneAngleForce running test..." << std::endl;
         registerAmoebaCudaKernelFactories();
         if (argc > 1)
-            Platform::getPlatformByName("CUDA").setPropertyDefaultValue("CudaPrecision", std::string(argv[1]));
+            Platform::getPlatformByName("CUDA").setPropertyDefaultValue("Precision", std::string(argv[1]));
         testOneAngle();
+        testPeriodic();
     } catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;
         std::cout << "FAIL - ERROR.  Test failed." << std::endl;

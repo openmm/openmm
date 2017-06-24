@@ -197,7 +197,7 @@ int main(int argc, char* argv[]) {
     try {
         registerDrudeOpenCLKernelFactories();
         if (argc > 1)
-            Platform::getPlatformByName("OpenCL").setPropertyDefaultValue("OpenCLPrecision", std::string(argv[1]));
+            Platform::getPlatformByName("OpenCL").setPropertyDefaultValue("Precision", std::string(argv[1]));
         testSingleParticle();
         testAnisotropicParticle();
         testThole();

@@ -74,20 +74,18 @@ void AmoebaMultipoleForceProxy::serialize(const void* object, SerializationNode&
     node.setIntProperty("forceGroup", force.getForceGroup());
     node.setIntProperty("nonbondedMethod",                  force.getNonbondedMethod());
     node.setIntProperty("polarizationType",                 force.getPolarizationType());
-    //node.setIntProperty("pmeBSplineOrder",                  force.getPmeBSplineOrder());
-    //node.setIntProperty("mutualInducedIterationMethod",     force.getMutualInducedIterationMethod());
     node.setIntProperty("mutualInducedMaxIterations",       force.getMutualInducedMaxIterations());
 
     node.setDoubleProperty("cutoffDistance",                force.getCutoffDistance());
-    node.setDoubleProperty("aEwald",                        force.getAEwald());
+    double alpha;
+    int nx, ny, nz;
+    force.getPMEParameters(alpha, nx, ny, nz);
+    node.setDoubleProperty("aEwald",                        alpha);
     node.setDoubleProperty("mutualInducedTargetEpsilon",    force.getMutualInducedTargetEpsilon());
-    //node.setDoubleProperty("electricConstant",              force.getElectricConstant());
     node.setDoubleProperty("ewaldErrorTolerance",           force.getEwaldErrorTolerance());
 
-    std::vector<int> gridDimensions;
-    force.getPmeGridDimensions(gridDimensions);
     SerializationNode& gridDimensionsNode  = node.createChildNode("MultipoleParticleGridDimension");
-    gridDimensionsNode.setIntProperty("d0", gridDimensions[0]).setIntProperty("d1", gridDimensions[1]).setIntProperty("d2", gridDimensions[2]); 
+    gridDimensionsNode.setIntProperty("d0", nx).setIntProperty("d1", ny).setIntProperty("d2", nz); 
     
     SerializationNode& coefficients = node.createChildNode("ExtrapolationCoefficients");
     vector<double> coeff = force.getExtrapolationCoefficients();
@@ -144,22 +142,14 @@ void* AmoebaMultipoleForceProxy::deserialize(const SerializationNode& node) cons
         force->setNonbondedMethod(static_cast<AmoebaMultipoleForce::NonbondedMethod>(node.getIntProperty("nonbondedMethod")));
         if (version >= 2)
             force->setPolarizationType(static_cast<AmoebaMultipoleForce::PolarizationType>(node.getIntProperty("polarizationType")));
-        //force->setPmeBSplineOrder(node.getIntProperty("pmeBSplineOrder"));
-        //force->setMutualInducedIterationMethod(static_cast<AmoebaMultipoleForce::MutualInducedIterationMethod>(node.getIntProperty("mutualInducedIterationMethod")));
         force->setMutualInducedMaxIterations(node.getIntProperty("mutualInducedMaxIterations"));
 
         force->setCutoffDistance(node.getDoubleProperty("cutoffDistance"));
-        force->setAEwald(node.getDoubleProperty("aEwald"));
         force->setMutualInducedTargetEpsilon(node.getDoubleProperty("mutualInducedTargetEpsilon"));
-        //force->setElectricConstant(node.getDoubleProperty("electricConstant"));
         force->setEwaldErrorTolerance(node.getDoubleProperty("ewaldErrorTolerance"));
 
-        std::vector<int> gridDimensions;
         const SerializationNode& gridDimensionsNode  = node.getChildNode("MultipoleParticleGridDimension");
-        gridDimensions.push_back(gridDimensionsNode.getIntProperty("d0"));
-        gridDimensions.push_back(gridDimensionsNode.getIntProperty("d1"));
-        gridDimensions.push_back(gridDimensionsNode.getIntProperty("d2"));
-        force->setPmeGridDimensions(gridDimensions);
+        force->setPMEParameters(node.getDoubleProperty("aEwald"), gridDimensionsNode.getIntProperty("d0"), gridDimensionsNode.getIntProperty("d1"), gridDimensionsNode.getIntProperty("d2"));
     
         if (version >= 3) {
             const SerializationNode& coefficients = node.getChildNode("ExtrapolationCoefficients");

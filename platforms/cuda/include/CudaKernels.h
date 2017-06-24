@@ -164,6 +164,12 @@ public:
      */
     void getForces(ContextImpl& context, std::vector<Vec3>& forces);
     /**
+     * Get the current derivatives of the energy with respect to context parameters.
+     *
+     * @param derivs  on exit, this contains the derivatives
+     */
+    void getEnergyParameterDerivatives(ContextImpl& context, std::map<std::string, double>& derivs);
+    /**
      * Get the current periodic box vectors.
      *
      * @param a      on exit, this contains the vector defining the first edge of the periodic box
@@ -178,7 +184,7 @@ public:
      * @param b      the vector defining the second edge of the periodic box
      * @param c      the vector defining the third edge of the periodic box
      */
-    void setPeriodicBoxVectors(ContextImpl& context, const Vec3& a, const Vec3& b, const Vec3& c) const;
+    void setPeriodicBoxVectors(ContextImpl& context, const Vec3& a, const Vec3& b, const Vec3& c);
     /**
      * Create a checkpoint recording the current state of the Context.
      * 
@@ -718,7 +724,7 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force);
 private:
-    void initInteractionGroups(const CustomNonbondedForce& force, const std::string& interactionSource);
+    void initInteractionGroups(const CustomNonbondedForce& force, const std::string& interactionSource, const std::vector<std::string>& tableTypes);
     CudaContext& cu;
     CudaParameterSet* params;
     CudaArray* globals;
@@ -729,6 +735,7 @@ private:
     std::vector<float> globalParamValues;
     std::vector<CudaArray*> tabulatedFunctions;
     double longRangeCoefficient;
+    std::vector<double> longRangeCoefficientDerivs;
     bool hasInitializedLongRangeCorrection, hasInitializedKernel;
     int numGroupThreadBlocks;
     CustomNonbondedForce* forceCopy;
@@ -819,13 +826,15 @@ public:
     void copyParametersToContext(ContextImpl& context, const CustomGBForce& force);
 private:
     double cutoff;
-    bool hasInitializedKernels, needParameterGradient;
+    bool hasInitializedKernels, needParameterGradient, needEnergyParamDerivs;
     int maxTiles, numComputedValues;
     CudaContext& cu;
     CudaParameterSet* params;
     CudaParameterSet* computedValues;
     CudaParameterSet* energyDerivs;
     CudaParameterSet* energyDerivChain;
+    std::vector<CudaParameterSet*> dValuedParam;
+    std::vector<CudaArray*> dValue0dParam;
     CudaArray* longEnergyDerivs;
     CudaArray* globals;
     CudaArray* valueBuffers;
@@ -970,6 +979,7 @@ public:
 
 private:
     int numGroups, numBonds;
+    bool needEnergyParamDerivs;
     CudaContext& cu;
     CudaParameterSet* params;
     CudaArray* globals;
@@ -1091,6 +1101,74 @@ private:
     const System& system;
     CUfunction forceKernel, blockBoundsKernel, neighborsKernel, startIndicesKernel, copyPairsKernel;
     CUdeviceptr globalsPtr;
+    CUevent event;
+};
+
+/**
+ * This kernel is invoked by GayBerneForce to calculate the forces acting on the system.
+ */
+class CudaCalcGayBerneForceKernel : public CalcGayBerneForceKernel {
+public:
+    CudaCalcGayBerneForceKernel(std::string name, const Platform& platform, CudaContext& cu) : CalcGayBerneForceKernel(name, platform), cu(cu),
+            hasInitializedKernels(false), sortedParticles(NULL), axisParticleIndices(NULL), sigParams(NULL), epsParams(NULL), scale(NULL), exceptionParticles(NULL),
+            exceptionParams(NULL), aMatrix(NULL),
+            bMatrix(NULL), gMatrix(NULL), exclusions(NULL), exclusionStartIndex(NULL), blockCenter(NULL), blockBoundingBox(NULL), neighbors(NULL),
+            neighborIndex(NULL), neighborBlockCount(NULL), sortedPos(NULL), torque(NULL) {
+    }
+    ~CudaCalcGayBerneForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the GayBerneForce this kernel will be used for
+     */
+    void initialize(const System& system, const GayBerneForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the GayBerneForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const GayBerneForce& force);
+private:
+    class ReorderListener;
+    void sortAtoms();
+    CudaContext& cu;
+    bool hasInitializedKernels;
+    int numRealParticles, numExceptions, maxNeighborBlocks;
+    GayBerneForce::NonbondedMethod nonbondedMethod;
+    CudaArray* sortedParticles;
+    CudaArray* axisParticleIndices;
+    CudaArray* sigParams;
+    CudaArray* epsParams;
+    CudaArray* scale;
+    CudaArray* exceptionParticles;
+    CudaArray* exceptionParams;
+    CudaArray* aMatrix;
+    CudaArray* bMatrix;
+    CudaArray* gMatrix;
+    CudaArray* exclusions;
+    CudaArray* exclusionStartIndex;
+    CudaArray* blockCenter;
+    CudaArray* blockBoundingBox;
+    CudaArray* neighbors;
+    CudaArray* neighborIndex;
+    CudaArray* neighborBlockCount;
+    CudaArray* sortedPos;
+    CudaArray* torque;
+    std::vector<bool> isRealParticle;
+    std::vector<std::pair<int, int> > exceptionAtoms;
+    std::vector<std::pair<int, int> > excludedPairs;
+    std::vector<void*> framesArgs, blockBoundsArgs, neighborsArgs, forceArgs, torqueArgs;
+    CUfunction framesKernel, blockBoundsKernel, neighborsKernel, forceKernel, torqueKernel;
     CUevent event;
 };
 
@@ -1284,7 +1362,7 @@ public:
     enum GlobalTargetType {DT, VARIABLE, PARAMETER};
     CudaIntegrateCustomStepKernel(std::string name, const Platform& platform, CudaContext& cu) : IntegrateCustomStepKernel(name, platform), cu(cu),
             hasInitializedKernels(false), localValuesAreCurrent(false), globalValues(NULL), sumBuffer(NULL), summedValue(NULL), uniformRandoms(NULL),
-            randomSeed(NULL), perDofValues(NULL) {
+            randomSeed(NULL), perDofEnergyParamDerivs(NULL), perDofValues(NULL), needsEnergyParamDerivs(false) {
     }
     ~CudaIntegrateCustomStepKernel();
     /**
@@ -1349,27 +1427,35 @@ public:
 private:
     class ReorderListener;
     class GlobalTarget;
+    class DerivFunction;
     std::string createPerDofComputation(const std::string& variable, const Lepton::ParsedExpression& expr, int component, CustomIntegrator& integrator, const std::string& forceName, const std::string& energyName);
     void prepareForComputation(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid);
-    void recordGlobalValue(double value, GlobalTarget target);
+    Lepton::ExpressionTreeNode replaceDerivFunctions(const Lepton::ExpressionTreeNode& node, OpenMM::ContextImpl& context);
+    void findExpressionsForDerivs(const Lepton::ExpressionTreeNode& node, std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& variableNodes);
+    void recordGlobalValue(double value, GlobalTarget target, CustomIntegrator& integrator);
     void recordChangedParameters(ContextImpl& context);
     bool evaluateCondition(int step);
     CudaContext& cu;
     double energy;
     float energyFloat;
     int numGlobalVariables;
-    bool hasInitializedKernels, deviceValuesAreCurrent, deviceGlobalsAreCurrent, modifiesParameters, keNeedsForce, hasAnyConstraints;
+    bool hasInitializedKernels, deviceValuesAreCurrent, deviceGlobalsAreCurrent, modifiesParameters, keNeedsForce, hasAnyConstraints, needsEnergyParamDerivs;
     mutable bool localValuesAreCurrent;
     CudaArray* globalValues;
     CudaArray* sumBuffer;
     CudaArray* summedValue;
     CudaArray* uniformRandoms;
     CudaArray* randomSeed;
+    CudaArray* perDofEnergyParamDerivs;
     std::map<int, CudaArray*> savedForces;
     std::set<int> validSavedForces;
     CudaParameterSet* perDofValues;
     mutable std::vector<std::vector<float> > localPerDofValuesFloat;
     mutable std::vector<std::vector<double> > localPerDofValuesDouble;
+    std::map<std::string, double> energyParamDerivs;
+    std::vector<std::string> perDofEnergyParamDerivNames;
+    std::vector<float> localPerDofEnergyParamDerivsFloat;
+    std::vector<double> localPerDofEnergyParamDerivsDouble;
     std::vector<float> globalValuesFloat;
     std::vector<double> globalValuesDouble;
     std::vector<double> initialGlobalVariables;

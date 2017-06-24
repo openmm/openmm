@@ -1,0 +1,48 @@
+PSF EXT
+
+       4 !NTITLE
+ REMARKS original generated structure x-plor psf file
+ REMARKS topology ../../../../../Charmm36_FF/toppar/top_all36_cgenff.rtf 
+ REMARKS topology ../../../../../Charmm36_FF/toppar/toppar_water_ions.str 
+ REMARKS segment ION { first NONE; last NONE; auto angles dihedrals }
+
+       8 !NATOM
+         1 METH     1        MEOH     CB       CG331   -0.040000       12.0110           0
+         2 METH     1        MEOH     OG       OG311   -0.650000       15.9994           0
+         3 METH     1        MEOH     HG1      HGP1     0.420000        1.0080           0
+         4 METH     1        MEOH     HB1      HGA3     0.090000        1.0080           0
+         5 METH     1        MEOH     HB2      HGA3     0.090000        1.0080           0
+         6 METH     1        MEOH     HB3      HGA3     0.090000        1.0080           0
+         7 ION      2        SOD      SOD      SOD      1.000000       22.9898           0
+         8 ION      3        CLA      CLA      CLA     -1.000000       35.4500           0
+
+       5 !NBOND: bonds
+         1         2         1         4         1         5         1         6
+         2         3
+
+       7 !NTHETA: angles
+         1         2         3         2         1         6         2         1         5
+         2         1         4         4         1         6         4         1         5
+         5         1         6
+
+       3 !NPHI: dihedrals
+         3         2         1         4         3         2         1         5
+         3         2         1         6
+
+       0 !NIMPHI: impropers
+
+
+       0 !NDON: donors
+
+
+       0 !NACC: acceptors
+
+
+       0 !NNB
+
+         0         0         0         0         0         0         0         0
+
+
+       1       0 !NGRP
+         0         0         0
+

@@ -282,7 +282,7 @@ vector<Vec3> setupWaterDimer(System& system,  AmoebaMultipoleForce* amoebaMultip
 }
 
 
-static void check_finite_differences(vector<Vec3> analytic_forces, Context &context, vector<Vec3> positions)
+static void check_finite_differences(vector<Vec3> analytic_forces, Context &context, vector<Vec3> positions, double stepSize)
 {
     // Take a small step in the direction of the energy gradient and see whether the potential energy changes by the expected amount.
 
@@ -290,7 +290,7 @@ static void check_finite_differences(vector<Vec3> analytic_forces, Context &cont
     for (int i = 0; i < (int) analytic_forces.size(); ++i)
         norm += analytic_forces[i].dot(analytic_forces[i]);
     norm = std::sqrt(norm);
-    const double stepSize = 1e-3;
+    //const double stepSize = 1e-3;
     double step = 0.5*stepSize/norm;
     vector<Vec3> positions2(analytic_forces.size()), positions3(analytic_forces.size());
     for (int i = 0; i < (int) positions.size(); ++i) {
@@ -352,7 +352,8 @@ static void testWaterDimerTriclinicPME() {
 
     double tolerance          = 1.0e-04;
     compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
-    check_finite_differences(forces, context, coords);
+    double step               = 1.0e-03;
+    check_finite_differences(forces, context, coords, step);
 }
 
 
@@ -402,7 +403,8 @@ static void testWaterDimerTriclinicPMENoPolGroups() {
 
     double tolerance          = 1.0e-04;
     compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
-    check_finite_differences(forces, context, coords);
+    double step               = 1.0e-03;
+    check_finite_differences(forces, context, coords, step);
 }
 
 
@@ -443,7 +445,8 @@ static void testWaterDimerNoCutoff() {
 
     double tolerance          = 1.0e-04;
     compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
-    check_finite_differences(forces, context, coords);
+    double step               = 1.0e-03;
+    check_finite_differences(forces, context, coords, step);
 }
 
 
@@ -484,7 +487,8 @@ static void testWaterDimerNoCutoffNoPolGroups() {
 
     double tolerance          = 1.0e-04;
     compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
-    check_finite_differences(forces, context, coords);
+    double step               = 5.0e-04;
+    check_finite_differences(forces, context, coords, step);
 }
 
 

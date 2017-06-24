@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -179,11 +179,72 @@ void testWater() {
     ASSERT_USUALLY_EQUAL_TOL(expectedTemp, ke/(0.5*numDof*BOLTZ), 0.03);
 }
 
+void testForceEnergyConsistency() {
+    // Create a box of polarizable particles.
+    
+    const int gridSize = 3;
+    const int numAtoms = gridSize*gridSize*gridSize;
+    const double spacing = 0.6;
+    const double boxSize = spacing*(gridSize+1);
+    const double temperature = 300.0;
+    const double temperatureDrude = 10.0;
+    System system;
+    vector<Vec3> positions;
+    NonbondedForce* nonbonded = new NonbondedForce();
+    DrudeForce* drude = new DrudeForce();
+    system.addForce(nonbonded);
+    system.addForce(drude);
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    nonbonded->setNonbondedMethod(NonbondedForce::PME);
+    nonbonded->setCutoffDistance(1.0);
+    nonbonded->setUseSwitchingFunction(true);
+    nonbonded->setSwitchingDistance(0.9);
+    nonbonded->setEwaldErrorTolerance(5e-5);
+    for (int i = 0; i < numAtoms; i++) {
+        int startIndex = system.getNumParticles();
+        system.addParticle(1.0);
+        system.addParticle(1.0);
+        nonbonded->addParticle(1.0, 0.3, 1.0);
+        nonbonded->addParticle(-1.0, 0.3, 1.0);
+        nonbonded->addException(startIndex, startIndex+1, 0, 1, 0);
+        drude->addParticle(startIndex+1, startIndex, -1, -1, -1, -1.0, 0.001, 1, 1);
+    }
+    for (int i = 0; i < gridSize; i++)
+        for (int j = 0; j < gridSize; j++)
+            for (int k = 0; k < gridSize; k++) {
+                Vec3 pos(i*spacing, j*spacing, k*spacing);
+                positions.push_back(pos);
+                positions.push_back(pos);
+            }
+    
+    // Simulate it and check that force and energy remain consistent.
+    
+    DrudeLangevinIntegrator integ(temperature, 50.0, temperatureDrude, 50.0, 0.001);
+    Platform& platform = Platform::getPlatformByName("Reference");
+    Context context(system, integ, platform);
+    context.setPositions(positions);
+    State prevState;
+    for (int i = 0; i < 100; i++) {
+        State state = context.getState(State::Energy | State::Forces | State::Positions);
+        if (i > 0) {
+            double expectedEnergyChange = 0;
+            for (int j = 0; j < system.getNumParticles(); j++) {
+                Vec3 delta = state.getPositions()[j]-prevState.getPositions()[j];
+                expectedEnergyChange -= 0.5*(state.getForces()[j]+prevState.getForces()[j]).dot(delta);
+            }
+            ASSERT_EQUAL_TOL(expectedEnergyChange, state.getPotentialEnergy()-prevState.getPotentialEnergy(), 0.05);
+        }
+        prevState = state;
+        integ.step(1);
+    }
+}
+
 int main() {
     try {
         registerDrudeReferenceKernelFactories();
         testSinglePair();
         testWater();
+        testForceEnergyConsistency();
     }
     catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;

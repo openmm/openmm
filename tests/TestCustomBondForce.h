@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -148,6 +148,71 @@ void testIllegalVariable() {
     ASSERT(threwException);
 }
 
+void testPeriodic() {
+    // Create a force that uses periodic boundary conditions.
+    
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.setDefaultPeriodicBoxVectors(Vec3(3, 0, 0), Vec3(0, 3, 0), Vec3(0, 0, 3));
+    VerletIntegrator integrator(0.01);
+    CustomBondForce* forceField = new CustomBondForce("scale*k*(r-r0)^2");
+    forceField->addPerBondParameter("r0");
+    forceField->addPerBondParameter("k");
+    forceField->addGlobalParameter("scale", 0.5);
+    vector<double> parameters(2);
+    parameters[0] = 1.9;
+    parameters[1] = 0.8;
+    forceField->addBond(0, 1, parameters);
+    forceField->setUsesPeriodicBoundaryConditions(true);
+    system.addForce(forceField);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(2);
+    positions[0] = Vec3(0, 2, 0);
+    positions[1] = Vec3(0, 0, 0);
+    context.setPositions(positions);
+    State state = context.getState(State::Forces | State::Energy);
+    const vector<Vec3>& forces = state.getForces();
+    ASSERT_EQUAL_VEC(Vec3(0, -0.8*0.9, 0), forces[0], TOL);
+    ASSERT_EQUAL_VEC(Vec3(0, 0.8*0.9, 0), forces[1], TOL);
+    ASSERT_EQUAL_TOL(0.5*0.8*0.9*0.9, state.getPotentialEnergy(), TOL);
+}
+
+void testEnergyParameterDerivatives() {
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    VerletIntegrator integrator(0.01);
+    CustomBondForce* bonds = new CustomBondForce("k*(r-r0)^2");
+    bonds->addGlobalParameter("r0", 0.0);
+    bonds->addGlobalParameter("k", 0.0);
+    bonds->addEnergyParameterDerivative("k");
+    bonds->addEnergyParameterDerivative("r0");
+    vector<double> parameters;
+    bonds->addBond(0, 1, parameters);
+    bonds->addBond(1, 2, parameters);
+    system.addForce(bonds);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(3);
+    positions[0] = Vec3(0, 2, 0);
+    positions[1] = Vec3(0, 0, 0);
+    positions[2] = Vec3(1, 0, 0);
+    context.setPositions(positions);
+    for (int i = 0; i < 10; i++) {
+        double r0 = 0.1*i;
+        double k = 10-i;
+        context.setParameter("r0", r0);
+        context.setParameter("k", k);
+        State state = context.getState(State::ParameterDerivatives);
+        map<string, double> derivs = state.getEnergyParameterDerivatives();
+        double dEdr0 = -2*k*((2-r0)+(1-r0));
+        double dEdk = (2-r0)*(2-r0) + (1-r0)*(1-r0);
+        ASSERT_EQUAL_TOL(dEdr0, derivs["r0"], 1e-5);
+        ASSERT_EQUAL_TOL(dEdk, derivs["k"], 1e-5);
+    }
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -156,6 +221,8 @@ int main(int argc, char* argv[]) {
         testBonds();
         testManyParameters();
         testIllegalVariable();
+        testPeriodic();
+        testEnergyParameterDerivatives();
         runPlatformTests();
     }
     catch(const exception& e) {

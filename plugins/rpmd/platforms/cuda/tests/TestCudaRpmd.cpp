@@ -554,7 +554,7 @@ int main(int argc, char* argv[]) {
     try {
         registerRPMDCudaKernelFactories();
         if (argc > 1)
-            Platform::getPlatformByName("CUDA").setPropertyDefaultValue("CudaPrecision", string(argv[1]));
+            Platform::getPlatformByName("CUDA").setPropertyDefaultValue("Precision", string(argv[1]));
         testFreeParticles();
         testParaHydrogen();
         testCMMotionRemoval();

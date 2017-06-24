@@ -84,6 +84,19 @@ class OPENMM_EXPORT  ReferenceForce {
                             RealOpenMM* deltaR);
       
       /**---------------------------------------------------------------------------------------
+      
+         Get deltaR between atomI and atomJ (static method)
+         deltaR: j - i
+      
+         @param atomCoordinatesI    atom i coordinates
+         @param atomCoordinatesI    atom j coordinates
+         @return the displacement
+      
+         --------------------------------------------------------------------------------------- */
+      
+      static RealVec getDeltaR(const OpenMM::RealVec& atomCoordinatesI, const OpenMM::RealVec& atomCoordinatesJ);
+      
+      /**---------------------------------------------------------------------------------------
 
          Get deltaR and distance and distance**2 between atomI and atomJ, assuming periodic
          boundary conditions (static method); deltaR: j - i
@@ -112,6 +125,21 @@ class OPENMM_EXPORT  ReferenceForce {
 
       static void getDeltaRPeriodic(const OpenMM::RealVec& atomCoordinatesI, const OpenMM::RealVec& atomCoordinatesJ,
                                     const OpenMM::RealVec* boxVectors, RealOpenMM* deltaR);
+
+      /**---------------------------------------------------------------------------------------
+
+         Get deltaR between atomI and atomJ, assuming periodic boundary conditions (static method);
+         deltaR: j - i
+
+         @param atomCoordinatesI    atom i coordinates
+         @param atomCoordinatesI    atom j coordinates
+         @param boxVectors          the vectors defining the periodic box
+         @return the displacement
+
+         --------------------------------------------------------------------------------------- */
+
+      static RealVec getDeltaRPeriodic(const OpenMM::RealVec& atomCoordinatesI, const OpenMM::RealVec& atomCoordinatesJ,
+                                    const OpenMM::RealVec* boxVectors);
 
       /**
        * Get a pointer to the memory for setting a variable in a CompiledExpression.  If the expression

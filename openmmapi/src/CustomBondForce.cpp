@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -44,7 +44,7 @@ using std::string;
 using std::stringstream;
 using std::vector;
 
-CustomBondForce::CustomBondForce(const string& energy) : energyExpression(energy) {
+CustomBondForce::CustomBondForce(const string& energy) : energyExpression(energy), usePeriodic(false) {
 }
 
 const string& CustomBondForce::getEnergyFunction() const {
@@ -95,6 +95,20 @@ void CustomBondForce::setGlobalParameterDefaultValue(int index, double defaultVa
     globalParameters[index].defaultValue = defaultValue;
 }
 
+void CustomBondForce::addEnergyParameterDerivative(const string& name) {
+    for (int i = 0; i < globalParameters.size(); i++)
+        if (name == globalParameters[i].name) {
+            energyParameterDerivatives.push_back(i);
+            return;
+        }
+    throw OpenMMException(string("addEnergyParameterDerivative: Unknown global parameter '"+name+"'"));
+}
+
+const string& CustomBondForce::getEnergyParameterDerivativeName(int index) const {
+    ASSERT_VALID_INDEX(index, energyParameterDerivatives);
+    return globalParameters[energyParameterDerivatives[index]].name;
+}
+
 int CustomBondForce::addBond(int particle1, int particle2, const vector<double>& parameters) {
     bonds.push_back(BondInfo(particle1, particle2, parameters));
     return bonds.size()-1;
@@ -120,4 +134,12 @@ ForceImpl* CustomBondForce::createImpl() const {
 
 void CustomBondForce::updateParametersInContext(Context& context) {
     dynamic_cast<CustomBondForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
+}
+
+void CustomBondForce::setUsesPeriodicBoundaryConditions(bool periodic) {
+    usePeriodic = periodic;
+}
+
+bool CustomBondForce::usesPeriodicBoundaryConditions() const {
+    return usePeriodic;
 }

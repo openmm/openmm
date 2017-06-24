@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2016 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -38,7 +38,7 @@ using namespace OpenMM;
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceAngleBondIxn::ReferenceAngleBondIxn() {
+ReferenceAngleBondIxn::ReferenceAngleBondIxn() : usePeriodic(false) {
 
    // ---------------------------------------------------------------------------------------
 
@@ -62,6 +62,13 @@ ReferenceAngleBondIxn::~ReferenceAngleBondIxn() {
 
    // ---------------------------------------------------------------------------------------
 
+}
+
+void ReferenceAngleBondIxn::setPeriodic(OpenMM::RealVec* vectors) {
+    usePeriodic = true;
+    boxVectors[0] = vectors[0];
+    boxVectors[1] = vectors[1];
+    boxVectors[2] = vectors[2];
 }
 
 /**---------------------------------------------------------------------------------------
@@ -122,7 +129,7 @@ void ReferenceAngleBondIxn::calculateBondIxn(int* atomIndices,
                                              vector<RealVec>& atomCoordinates,
                                              RealOpenMM* parameters,
                                              vector<RealVec>& forces,
-                                             RealOpenMM* totalEnergy) const {
+                                             RealOpenMM* totalEnergy, double* energyParamDerivs) {
 
    // constants -- reduce Visual Studio warnings regarding conversions between float & double
 
@@ -145,8 +152,14 @@ void ReferenceAngleBondIxn::calculateBondIxn(int* atomIndices,
    int atomAIndex = atomIndices[0];
    int atomBIndex = atomIndices[1];
    int atomCIndex = atomIndices[2];
-   ReferenceForce::getDeltaR(atomCoordinates[atomAIndex], atomCoordinates[atomBIndex], deltaR[0]);  
-   ReferenceForce::getDeltaR(atomCoordinates[atomCIndex], atomCoordinates[atomBIndex], deltaR[1]);  
+   if (usePeriodic) {
+      ReferenceForce::getDeltaRPeriodic(atomCoordinates[atomAIndex], atomCoordinates[atomBIndex], boxVectors, deltaR[0]);  
+      ReferenceForce::getDeltaRPeriodic(atomCoordinates[atomCIndex], atomCoordinates[atomBIndex], boxVectors, deltaR[1]);  
+   }
+   else {
+      ReferenceForce::getDeltaR(atomCoordinates[atomAIndex], atomCoordinates[atomBIndex], deltaR[0]);  
+      ReferenceForce::getDeltaR(atomCoordinates[atomCIndex], atomCoordinates[atomBIndex], deltaR[1]);  
+   }
 
    RealOpenMM pVector[threeI];
    SimTKOpenMMUtilities::crossProductVector3(deltaR[0], deltaR[1], pVector);

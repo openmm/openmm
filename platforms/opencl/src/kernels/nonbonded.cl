@@ -35,6 +35,7 @@ __kernel void computeNonbonded(
     const unsigned int tgx = get_local_id(0) & (TILE_SIZE-1);
     const unsigned int tbx = get_local_id(0) - tgx;
     mixed energy = 0;
+    INIT_DERIVATIVES
     __local AtomData localData[FORCE_WORK_GROUP_SIZE];
 
     // First loop: process tiles that contain exclusions.
@@ -85,6 +86,7 @@ __kernel void computeNonbonded(
                 bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS || !(excl & 0x1));
 #endif
                 real tempEnergy = 0;
+                const real interactionScale = 0.5f;
                 COMPUTE_INTERACTION
                 energy += 0.5f*tempEnergy;
 #ifdef INCLUDE_FORCES
@@ -144,6 +146,7 @@ __kernel void computeNonbonded(
                     bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS || !(excl & 0x1));
 #endif
                     real tempEnergy = 0;
+                    const real interactionScale = 1.0f;
                     COMPUTE_INTERACTION
                     energy += tempEnergy;
 #ifdef INCLUDE_FORCES
@@ -200,6 +203,8 @@ __kernel void computeNonbonded(
 
 #ifdef USE_CUTOFF
     unsigned int numTiles = interactionCount[0];
+    if (numTiles > maxTiles)
+        return; // There wasn't enough memory for the neighbor list.
     int pos = (int) (numTiles > maxTiles ? startTileIndex+warp*(long)numTileIndices/totalWarps : warp*(long)numTiles/totalWarps);
     int end = (int) (numTiles > maxTiles ? startTileIndex+(warp+1)*(long)numTileIndices/totalWarps : (warp+1)*(long)numTiles/totalWarps);
 #else
@@ -223,42 +228,38 @@ __kernel void computeNonbonded(
         int x, y;
         bool singlePeriodicCopy = false;
 #ifdef USE_CUTOFF
-        if (numTiles <= maxTiles) {
-            x = tiles[pos];
-            real4 blockSizeX = blockSize[x];
-            singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= MAX_CUTOFF &&
-                                  0.5f*periodicBoxSize.y-blockSizeX.y >= MAX_CUTOFF &&
-                                  0.5f*periodicBoxSize.z-blockSizeX.z >= MAX_CUTOFF);
-        }
-        else
-#endif
-        {
-            y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+        x = tiles[pos];
+        real4 blockSizeX = blockSize[x];
+        singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= MAX_CUTOFF &&
+                              0.5f*periodicBoxSize.y-blockSizeX.y >= MAX_CUTOFF &&
+                              0.5f*periodicBoxSize.z-blockSizeX.z >= MAX_CUTOFF);
+#else
+        y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+        x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+        if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
+            y += (x < y ? -1 : 1);
             x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
-            if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
-                y += (x < y ? -1 : 1);
-                x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
-            }
-
-            // Skip over tiles that have exclusions, since they were already processed.
-
-            SYNC_WARPS;
-            while (skipTiles[tbx+TILE_SIZE-1] < pos) {
-                SYNC_WARPS;
-                if (skipBase+tgx < NUM_TILES_WITH_EXCLUSIONS) {
-                    ushort2 tile = exclusionTiles[skipBase+tgx];
-                    skipTiles[get_local_id(0)] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
-                }
-                else
-                    skipTiles[get_local_id(0)] = end;
-                skipBase += TILE_SIZE;
-                currentSkipIndex = tbx;
-                SYNC_WARPS;
-            }
-            while (skipTiles[currentSkipIndex] < pos)
-                currentSkipIndex++;
-            includeTile = (skipTiles[currentSkipIndex] != pos);
         }
+
+        // Skip over tiles that have exclusions, since they were already processed.
+
+        SYNC_WARPS;
+        while (skipTiles[tbx+TILE_SIZE-1] < pos) {
+            SYNC_WARPS;
+            if (skipBase+tgx < NUM_TILES_WITH_EXCLUSIONS) {
+                ushort2 tile = exclusionTiles[skipBase+tgx];
+                skipTiles[get_local_id(0)] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
+            }
+            else
+                skipTiles[get_local_id(0)] = end;
+            skipBase += TILE_SIZE;
+            currentSkipIndex = tbx;
+            SYNC_WARPS;
+        }
+        while (skipTiles[currentSkipIndex] < pos)
+            currentSkipIndex++;
+        includeTile = (skipTiles[currentSkipIndex] != pos);
+#endif
         if (includeTile) {
             unsigned int atom1 = x*TILE_SIZE + tgx;
 
@@ -268,7 +269,7 @@ __kernel void computeNonbonded(
             LOAD_ATOM1_PARAMETERS
             const unsigned int localAtomIndex = get_local_id(0);
 #ifdef USE_CUTOFF
-            unsigned int j = (numTiles <= maxTiles ? interactingAtoms[pos*TILE_SIZE+tgx] : y*TILE_SIZE + tgx);
+            unsigned int j = interactingAtoms[pos*TILE_SIZE+tgx];
 #else
             unsigned int j = y*TILE_SIZE + tgx;
 #endif
@@ -322,6 +323,7 @@ __kernel void computeNonbonded(
                         bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS);
 #endif
                         real tempEnergy = 0;
+                        const real interactionScale = 1.0f;
                         COMPUTE_INTERACTION
                         energy += tempEnergy;
 #ifdef INCLUDE_FORCES
@@ -376,6 +378,7 @@ __kernel void computeNonbonded(
                         bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS);
 #endif
                         real tempEnergy = 0;
+                        const real interactionScale = 1.0f;
                         COMPUTE_INTERACTION
                         energy += tempEnergy;
 #ifdef INCLUDE_FORCES
@@ -431,4 +434,5 @@ __kernel void computeNonbonded(
 #ifdef INCLUDE_ENERGY
     energyBuffer[get_global_id(0)] += energy;
 #endif
+    SAVE_DERIVATIVES
 }

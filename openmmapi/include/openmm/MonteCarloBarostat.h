@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -59,13 +59,21 @@ public:
         return key;
     }
     /**
+     * This is the name of the parameter which stores the current temperature at which the
+     * system is being maintained (in Kelvin)
+     */
+    static const std::string& Temperature() {
+        static const std::string key = "MonteCarloTemperature";
+        return key;
+    }
+    /**
      * Create a MonteCarloBarostat.
      *
-     * @param defaultPressure   the default pressure acting on the system (in bar)
-     * @param temperature       the temperature at which the system is being maintained (in Kelvin)
-     * @param frequency         the frequency at which Monte Carlo pressure changes should be attempted (in time steps)
+     * @param defaultPressure     the default pressure acting on the system (in bar)
+     * @param defaultTemperature  the default temperature at which the system is being maintained (in Kelvin)
+     * @param frequency           the frequency at which Monte Carlo pressure changes should be attempted (in time steps)
      */
-    MonteCarloBarostat(double defaultPressure, double temperature, int frequency = 25);
+    MonteCarloBarostat(double defaultPressure, double defaultTemperature, int frequency = 25);
     /**
      * Get the default pressure acting on the system (in bar).
      *
@@ -98,18 +106,19 @@ public:
         frequency = freq;
     }
     /**
-     * Get the temperature at which the system is being maintained, measured in Kelvin.
+     * Get the default temperature at which the system is being maintained, measured in Kelvin.
      */
-    double getTemperature() const {
-        return temperature;
+    double getDefaultTemperature() const {
+        return defaultTemperature;
     }
     /**
-     * Set the temperature at which the system is being maintained.
+     * Set the default temperature at which the system is being maintained.  This will affect any new Contexts you create,
+     * but not ones that already exist.
      *
      * @param temp     the system temperature, measured in Kelvin.
      */
-    void setTemperature(double temp) {
-        temperature = temp;
+    void setDefaultTemperature(double temp) {
+        defaultTemperature = temp;
     }
     /**
      * Get the random number seed.  See setRandomNumberSeed() for details.
@@ -138,12 +147,12 @@ public:
      * @returns true if force uses PBC and false otherwise
      */
     bool usesPeriodicBoundaryConditions() const {
-        return true;
+        return false;
     }
 protected:
     ForceImpl* createImpl() const;
 private:
-    double defaultPressure, temperature;
+    double defaultPressure, defaultTemperature;
     int frequency, randomNumberSeed;
 };
 

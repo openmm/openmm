@@ -114,13 +114,13 @@ void CudaSort::sort(CudaArray& data) {
 
         unsigned int numBuckets = bucketOffset->getSize();
         void* rangeArgs[] = {&data.getDevicePointer(), &dataLength, &dataRange->getDevicePointer(), &numBuckets, &bucketOffset->getDevicePointer()};
-        context.executeKernel(computeRangeKernel, rangeArgs, rangeKernelSize, rangeKernelSize, rangeKernelSize*trait->getKeySize());
+        context.executeKernel(computeRangeKernel, rangeArgs, rangeKernelSize, rangeKernelSize, 2*rangeKernelSize*trait->getKeySize());
 
         // Assign array elements to buckets.
 
         void* elementsArgs[] = {&data.getDevicePointer(), &dataLength, &numBuckets, &dataRange->getDevicePointer(),
                 &bucketOffset->getDevicePointer(), &bucketOfElement->getDevicePointer(), &offsetInBucket->getDevicePointer()};
-        context.executeKernel(assignElementsKernel, elementsArgs, data.getSize());
+        context.executeKernel(assignElementsKernel, elementsArgs, data.getSize(), 128);
 
         // Compute the position of each bucket.
 

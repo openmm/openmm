@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2015 Stanford University and the Authors.
+Portions copyright (c) 2012-2016 Stanford University and the Authors.
 Authors: Lee-Ping Wang, Peter Eastman
 Contributors:
 
@@ -35,6 +35,7 @@ __version__ = "1.0"
 import os
 import sys
 from simtk.openmm import Vec3
+from simtk.openmm.app.internal.unitcell import reducePeriodicBoxVectors
 from re import sub, match
 from simtk.unit import nanometers, angstroms, Quantity
 from . import element as elem
@@ -100,7 +101,7 @@ def _construct_box_vectors(line):
     values = [float(i) for i in sline]
     if len(sline) == 3:
         return (Vec3(values[0], 0, 0), Vec3(0, values[1], 0), Vec3(0, 0, values[2]))*nanometers
-    return (Vec3(values[0], values[3], values[4]), Vec3(values[5], values[1], values[6]), Vec3(values[7], values[8], values[2]))*nanometers
+    return reducePeriodicBoxVectors((Vec3(values[0], values[3], values[4]), Vec3(values[5], values[1], values[6]), Vec3(values[7], values[8], values[2]))*nanometers)
 
 class GromacsGroFile(object):
     """GromacsGroFile parses a Gromacs .gro file and constructs a set of atom positions from it.

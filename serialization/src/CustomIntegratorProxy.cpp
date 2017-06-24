@@ -107,6 +107,12 @@ void* CustomIntegratorProxy::deserialize(const SerializationNode& node) const {
             integrator->addConstrainVelocities();
         } else if(computationType == CustomIntegrator::UpdateContextState) {
             integrator->addUpdateContextState();
+        } else if(computationType == CustomIntegrator::IfBlockStart) {
+            integrator->beginIfBlock(cit->getStringProperty("computationExpression"));
+        } else if(computationType == CustomIntegrator::WhileBlockStart) {
+                  integrator->beginWhileBlock(cit->getStringProperty("computationExpression"));
+        } else if(computationType == CustomIntegrator::BlockEnd) {
+                  integrator->endBlock();
         } else {
             throw(OpenMMException("Custom Integrator Deserialization: Unknown computation type"));
         }

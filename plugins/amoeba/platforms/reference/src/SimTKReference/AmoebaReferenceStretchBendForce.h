@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2016 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -40,7 +40,7 @@ public:
        
        --------------------------------------------------------------------------------------- */
  
-    AmoebaReferenceStretchBendForce() {};
+    AmoebaReferenceStretchBendForce() : usePeriodic(false) {};
  
     /**---------------------------------------------------------------------------------------
        
@@ -49,6 +49,16 @@ public:
           --------------------------------------------------------------------------------------- */
  
     ~AmoebaReferenceStretchBendForce() {};
+
+    /**---------------------------------------------------------------------------------------
+
+       Set the force to use periodic boundary conditions.
+      
+       @param vectors    the vectors defining the periodic box
+      
+       --------------------------------------------------------------------------------------- */
+      
+    void setPeriodic(OpenMM::RealVec* vectors);
 
      /**---------------------------------------------------------------------------------------
      
@@ -83,6 +93,9 @@ public:
 
 
 private:
+
+    bool usePeriodic;
+    RealVec boxVectors[3];
 
     /**---------------------------------------------------------------------------------------
     

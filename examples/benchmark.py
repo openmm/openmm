@@ -63,11 +63,13 @@ def runOneTest(testName, options):
             else:
                 method = app.CutoffPeriodic
                 cutoff = 1*unit.nanometers
+            friction = 1*(1/unit.picoseconds)
         else:
             ff = app.ForceField('amber99sb.xml', 'amber99_obc.xml')
             pdb = app.PDBFile('5dfr_minimized.pdb')
             method = app.CutoffNonPeriodic
             cutoff = 2*unit.nanometers
+            friction = 91*(1/unit.picoseconds)
         if options.heavy:
             dt = 0.005*unit.picoseconds
             constraints = app.AllBonds
@@ -77,22 +79,16 @@ def runOneTest(testName, options):
             constraints = app.HBonds
             hydrogenMass = None
         system = ff.createSystem(pdb.topology, nonbondedMethod=method, nonbondedCutoff=cutoff, constraints=constraints, hydrogenMass=hydrogenMass)
-        integ = mm.LangevinIntegrator(300*unit.kelvin, 91*(1/unit.picoseconds), dt)
+        integ = mm.LangevinIntegrator(300*unit.kelvin, friction, dt)
     print('Step Size: %g fs' % dt.value_in_unit(unit.femtoseconds))
     properties = {}
     initialSteps = 5
-    if options.device is not None:
-        if platform.getName() == 'CUDA':
-            properties['CudaDeviceIndex'] = options.device
-        elif platform.getName() == 'OpenCL':
-            properties['OpenCLDeviceIndex'] = options.device
+    if options.device is not None and platform.getName() in ('CUDA', 'OpenCL'):
+        properties['DeviceIndex'] = options.device
         if ',' in options.device or ' ' in options.device:
             initialSteps = 250
-    if options.precision is not None:
-        if platform.getName() == 'CUDA':
-            properties['CudaPrecision'] = options.precision
-        elif platform.getName() == 'OpenCL':
-            properties['OpenCLPrecision'] = options.precision
+    if options.precision is not None and platform.getName() in ('CUDA', 'OpenCL'):
+        properties['Precision'] = options.precision
     
     # Run the simulation.
     

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
  * Authors: Mark Friedrichs, Peter Eastman                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,10 +32,18 @@
 
 using namespace OpenMM;
 
+#ifdef OPENMM_BUILDING_STATIC_LIBRARY
+static void registerPlatforms() {
+#else
 extern "C" OPENMM_EXPORT void registerPlatforms() {
+#endif
 }
 
+#ifdef OPENMM_BUILDING_STATIC_LIBRARY
+static void registerKernelFactories() {
+#else
 extern "C" OPENMM_EXPORT void registerKernelFactories() {
+#endif
     for (int i = 0; i < Platform::getNumPlatforms(); i++) {
         Platform& platform = Platform::getPlatform(i);
         if (dynamic_cast<ReferencePlatform*>(&platform) != NULL) {
@@ -51,6 +59,8 @@ extern "C" OPENMM_EXPORT void registerKernelFactories() {
              platform.registerKernelFactory(CalcAmoebaMultipoleForceKernel::Name(), factory);
              platform.registerKernelFactory(CalcAmoebaGeneralizedKirkwoodForceKernel::Name(), factory);
              platform.registerKernelFactory(CalcAmoebaWcaDispersionForceKernel::Name(), factory);
+	     platform.registerKernelFactory(CalcAmoebaStretchTorsionForceKernel::Name(), factory);
+	     platform.registerKernelFactory(CalcAmoebaAngleTorsionForceKernel::Name(), factory);
         }
     }
 }
@@ -96,6 +106,12 @@ KernelImpl* AmoebaReferenceKernelFactory::createKernelImpl(std::string name, con
 
     if (name == CalcAmoebaWcaDispersionForceKernel::Name())
         return new ReferenceCalcAmoebaWcaDispersionForceKernel(name, platform, context.getSystem());
+
+    if (name == CalcAmoebaStretchTorsionForceKernel::Name())
+	return new ReferenceCalcAmoebaStretchTorsionForceKernel(name, platform, context.getSystem());
+
+    if (name == CalcAmoebaAngleTorsionForceKernel::Name())
+	return new ReferenceCalcAmoebaAngleTorsionForceKernel(name, platform, context.getSystem());
 
     throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '")+name+"'").c_str());
 }

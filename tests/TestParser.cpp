@@ -1,13 +1,13 @@
 #include "../libraries/lepton/include/Lepton.h"
+#include "openmm/internal/AssertionUtilities.h"
 
 #include <iostream>
 #include <limits>
 #include <map>
 
 using namespace Lepton;
+using namespace OpenMM;
 using namespace std;
-
-#define ASSERT_EQUAL_TOL(expected, found, tol) {double _scale_ = std::fabs(expected) > 1.0 ? std::fabs(expected) : 1.0; if (!(std::fabs((expected)-(found))/_scale_ <= (tol))) throw exception();};
 
 /**
  * This is a custom function equal to f(x,y) = 2*x*y.
@@ -101,6 +101,18 @@ void verifyEvaluation(const string& expression, double x, double y, double expec
         compiled.getVariableReference("y") = y;
     value = compiled.evaluate();
     ASSERT_EQUAL_TOL(expectedValue, value, 1e-10);
+    
+    // Try specifying memory locations for the compiled expression.
+    
+    map<string, double*> variablePointers;
+    variablePointers["x"] = &x;
+    variablePointers["y"] = &y;
+    CompiledExpression compiled2 = parsed.createCompiledExpression();
+    compiled2.setVariableLocations(variablePointers);
+    value = compiled2.evaluate();
+    ASSERT_EQUAL_TOL(expectedValue, value, 1e-10);
+    ASSERT_EQUAL(&x, &compiled2.getVariableReference("x"));
+    ASSERT_EQUAL(&y, &compiled2.getVariableReference("y"));
 
     // Make sure that variable renaming works.
 

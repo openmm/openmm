@@ -165,7 +165,8 @@ class TestCharmmFiles(unittest.TestCase):
             #out = open('systems/ala-ala-ala-implicit-forces/'+file[i]+'.xml', 'w')
             #out.write(XmlSerializer.serialize(state1))
             #out.close()
-            state2 = XmlSerializer.deserialize(open('systems/ala-ala-ala-implicit-forces/'+file[i]+'.xml').read())
+            with open('systems/ala-ala-ala-implicit-forces/'+file[i]+'.xml') as xml:
+                state2 = XmlSerializer.deserialize(xml.read())
             for f1, f2, in zip(state1.getForces().value_in_unit(kilojoules_per_mole/nanometer), state2.getForces().value_in_unit(kilojoules_per_mole/nanometer)):
                 diff = norm(f1-f2)
                 self.assertTrue(diff < 0.1 or diff/norm(f1) < 1e-4)

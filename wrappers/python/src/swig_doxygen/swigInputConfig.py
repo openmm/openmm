@@ -124,6 +124,8 @@ NO_OUTPUT_ARGS = [('LocalEnergyMinimizer', 'minimize', 'context'),
                   ('AmoebaMultipoleForce', 'setCovalentMap', 'covalentAtoms'),
                   ('AmoebaMultipoleForce', 'getElectrostaticPotential', 'context'),
                   ('AmoebaMultipoleForce', 'getInducedDipoles', 'context'),
+                  ('AmoebaMultipoleForce', 'getLabFramePermanentDipoles', 'context'),
+                  ('AmoebaMultipoleForce', 'getTotalDipoles', 'context'),
 ]
 
 # SWIG assumes the target language shadow class owns the C++ class
@@ -274,6 +276,8 @@ UNITS = {
 #("AmoebaMultipoleForce",                 "getElectrostaticPotential")                     :  ( ('unit.kilojoule_per_mole'), ()),
 ("AmoebaMultipoleForce",                 "getElectrostaticPotential")                     :  ( None, ()),
 ("AmoebaMultipoleForce",                 "getInducedDipoles")                             :  ( None, ()),
+("AmoebaMultipoleForce",                 "getLabFramePermanentDipoles")                   :  ( None, ()),
+("AmoebaMultipoleForce",                 "getTotalDipoles")                               :  ( None, ()),
 ("AmoebaMultipoleForce",                 "getSystemMultipoleMoments")                     :  ( None, ()),
 
 ("AmoebaOutOfPlaneBendForce",            "getNumOutOfPlaneBends")                         :  ( None, ()),
@@ -302,7 +306,7 @@ UNITS = {
 ("AmoebaVdwForce",                        "getCutoff")                                     :  ( 'unit.nanometer', ()),
 # LPW 2012-10 Modified because it no longer returns ivIndex and classIndex.
 # ("AmoebaVdwForce",                        "getParticleParameters")                         :  ( None, (None, None, 'unit.nanometer', 'unit.kilojoule_per_mole', None)),
-("AmoebaVdwForce",                        "getParticleParameters")                         :  ( None, (None, 'unit.nanometer', 'unit.kilojoule_per_mole', None)),
+("AmoebaVdwForce",                        "getParticleParameters")                         :  ( None, (None, 'unit.nanometer', 'unit.kilojoule_per_mole', None, None, None)),
 
 ("AmoebaWcaDispersionForce",              "getParticleParameters")                         :  ( None, ('unit.nanometer', 'unit.kilojoule_per_mole')),
 ("AmoebaWcaDispersionForce",              "getAwater")                                     :  ( '1/(unit.nanometer*unit.nanometer*unit.nanometer)',()),
@@ -412,6 +416,8 @@ UNITS = {
 ("PeriodicTorsionForce", "getTorsionParameters")
  : (None, (None, None, None, None,
            None, 'unit.radian', 'unit.kilojoule_per_mole')),
+("GayBerneForce", "getParticleParameters")
+ : (None, ('unit.nanometer', 'unit.kilojoule_per_mole', None, None, 'unit.nanometer', 'unit.nanometer', 'unit.nanometer', None, None, None)),
 ("Platform", "getDefaultPluginsDirectory") : (None, ()),
 ("Platform", "getPropertyDefaultValue") : (None, ()),
 ("Platform", "getPropertyNames") : (None, ()),

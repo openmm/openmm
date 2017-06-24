@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013 Stanford University and the Authors.           *
+ * Portions copyright (c) 2013-2016 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -37,6 +37,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 #ifdef LEPTON_USE_JIT
     #include "asmjit.h"
@@ -74,6 +75,12 @@ public:
      */
     double& getVariableReference(const std::string& name);
     /**
+     * You can optionally specify the memory locations from which the values of variables should be read.
+     * This is useful, for example, when several expressions all use the same variable.  You can then set
+     * the value of that variable in one place, and it will be seen by all of them.
+     */
+    void setVariableLocations(std::map<std::string, double*>& variableLocations);
+    /**
      * Evaluate the expression.  The values of all variables should have been set before calling this.
      */
     double evaluate() const;
@@ -82,6 +89,8 @@ private:
     CompiledExpression(const ParsedExpression& expression);
     void compileExpression(const ExpressionTreeNode& node, std::vector<std::pair<ExpressionTreeNode, int> >& temps);
     int findTempIndex(const ExpressionTreeNode& node, std::vector<std::pair<ExpressionTreeNode, int> >& temps);
+    std::map<std::string, double*> variablePointers;
+    std::vector<std::pair<double*, double*> > variablesToCopy;
     std::vector<std::vector<int> > arguments;
     std::vector<int> target;
     std::vector<Operation*> operation;
