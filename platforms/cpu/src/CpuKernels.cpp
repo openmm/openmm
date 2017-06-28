@@ -1018,6 +1018,8 @@ CpuCalcCustomGBForceKernel::~CpuCalcCustomGBForceKernel() {
     }
     if (ixn != NULL)
         delete ixn;
+    if (neighborList != NULL)
+        delete neighborList;
 }
 
 void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGBForce& force) {
@@ -1064,7 +1066,7 @@ void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGB
     nonbondedMethod = CalcCustomGBForceKernel::NonbondedMethod(force.getNonbondedMethod());
     nonbondedCutoff = force.getCutoffDistance();
     if (nonbondedMethod != NoCutoff)
-        data.requestNeighborList(nonbondedCutoff, 0.25*nonbondedCutoff, force.getNumExclusions() > 0, exclusions);
+        neighborList = new CpuNeighborList(4);
 
     // Create custom functions for the tabulated functions.
 
@@ -1171,7 +1173,8 @@ double CpuCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFor
         ixn->setPeriodic(extractBoxSize(context));
     if (nonbondedMethod != NoCutoff) {
         vector<set<int> > noExclusions(numParticles);
-        ixn->setUseCutoff(nonbondedCutoff, *data.neighborList);
+        neighborList->computeNeighborList(numParticles, data.posq, noExclusions, boxVectors, data.isPeriodic, nonbondedCutoff, data.threads);
+        ixn->setUseCutoff(nonbondedCutoff, *neighborList);
     }
     map<string, double> globalParameters;
     for (auto& name : globalParameterNames)
