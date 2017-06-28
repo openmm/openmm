@@ -45,6 +45,7 @@ class ReferenceObc;
 class ReferenceAndersenThermostat;
 class ReferenceCustomCentroidBondIxn;
 class ReferenceCustomCompoundBondIxn;
+class ReferenceCustomCVForce;
 class ReferenceCustomHbondIxn;
 class ReferenceCustomManyParticleIxn;
 class ReferenceGayBerneForce;
@@ -1004,6 +1005,44 @@ public:
     void copyParametersToContext(ContextImpl& context, const GayBerneForce& force);
 private:
     ReferenceGayBerneForce* ixn;
+};
+
+/**
+ * This kernel is invoked by CustomCVForce to calculate the forces acting on the system and the energy of the system.
+ */
+class ReferenceCalcCustomCVForceKernel : public CalcCustomCVForceKernel {
+public:
+    ReferenceCalcCustomCVForceKernel(std::string name, const Platform& platform) : CalcCustomCVForceKernel(name, platform), ixn(NULL) {
+    }
+    ~ReferenceCalcCustomCVForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomCVForce this kernel will be used for
+     * @param innerContext   the context created by the CustomCVForce for computing collective variables
+     */
+    void initialize(const System& system, const CustomCVForce& force, ContextImpl& innerContext);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param innerContext   the context created by the CustomCVForce for computing collective variables
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, ContextImpl& innerContext, bool includeForces, bool includeEnergy);
+    /**
+     * Copy state information to the inner context.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param innerContext   the context created by the CustomCVForce for computing collective variables
+     */
+    void copyState(ContextImpl& context, ContextImpl& innerContext);
+private:
+    ReferenceCustomCVForce* ixn;
+    std::vector<std::string> globalParameterNames, energyParamDerivNames;
 };
 
 /**

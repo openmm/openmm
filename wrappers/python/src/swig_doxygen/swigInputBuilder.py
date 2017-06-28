@@ -280,6 +280,11 @@ class SwigInputBuilder:
             self.fOut.write(",\n         OpenMM::%s" % name)
         self.fOut.write(");\n\n")
 
+        self.fOut.write("%factory(OpenMM::Force& OpenMM::CustomCVForce::getCollectiveVariable")
+        for name in sorted(forceSubclassList):
+            self.fOut.write(",\n         OpenMM::%s" % name)
+        self.fOut.write(");\n\n")
+
         self.fOut.write("%factory(OpenMM::Integrator* OpenMM::Integrator::__copy__")
         for name in sorted(integratorSubclassList):
             self.fOut.write(",\n         OpenMM::%s" % name)

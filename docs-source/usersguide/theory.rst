@@ -1158,6 +1158,21 @@ specified in three ways:
 * Per-donor parameters are defined by specifying a value for each donor group.
 * Per-acceptor parameters are defined by specifying a value for each acceptor group.
 
+CustomCVForce
+*************
+
+CustomCVForce computes an energy as a function of "collective variables".  A
+collective variable may be any scalar valued function of the particle positions
+and other parameters.  Each one is defined by a :code:`Force` object, so any
+function that can be defined via any force class (either standard or custom) can
+be used as a collective variable.  The energy is then computed as
+
+.. math::
+   E=f(...)
+
+where *f*\ (...) is a user supplied mathematical expression of the collective
+variables.  It also may depend on user defined global parameters.
+
 
 .. _writing-custom-expressions:
 

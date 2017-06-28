@@ -77,7 +77,8 @@ public:
     static const int ThreadBlockSize;
     static const int TileSize;
     CudaContext(const System& system, int deviceIndex, bool useBlockingSync, const std::string& precision,
-            const std::string& compiler, const std::string& tempDir, const std::string& hostCompiler, CudaPlatform::PlatformData& platformData);
+            const std::string& compiler, const std::string& tempDir, const std::string& hostCompiler, CudaPlatform::PlatformData& platformData,
+            CudaContext* originalContext);
     ~CudaContext();
     /**
      * This is called to initialize internal data structures after all Forces in the system
@@ -284,6 +285,10 @@ public:
      * Clear all buffers that have been registered with addAutoclearBuffer().
      */
     void clearAutoclearBuffers();
+    /**
+     * Sum the buffer containing energy.
+     */
+    double reduceEnergy();
     /**
      * Get the current simulation time.
      */
@@ -622,6 +627,7 @@ private:
     int numAtomBlocks;
     int numThreadBlocks;
     bool useBlockingSync, useDoublePrecision, useMixedPrecision, contextIsValid, atomsWereReordered, boxIsTriclinic, hasCompilerKernel, isNvccAvailable, forcesValid;
+    bool isLinkedContext;
     std::string compiler, tempDir, cacheDir, gpuArchitecture;
     float4 periodicBoxVecXFloat, periodicBoxVecYFloat, periodicBoxVecZFloat, periodicBoxSizeFloat, invPeriodicBoxSizeFloat;
     double4 periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ, periodicBoxSize, invPeriodicBoxSize;
@@ -636,6 +642,7 @@ private:
     CUfunction clearFourBuffersKernel;
     CUfunction clearFiveBuffersKernel;
     CUfunction clearSixBuffersKernel;
+    CUfunction reduceEnergyKernel;
     CUfunction setChargesKernel;
     std::vector<CudaForceInfo*> forces;
     std::vector<Molecule> molecules;
@@ -647,6 +654,7 @@ private:
     CudaArray* velm;
     CudaArray* force;
     CudaArray* energyBuffer;
+    CudaArray* energySum;
     CudaArray* energyParamDerivBuffer;
     CudaArray* atomIndexDevice;
     CudaArray* chargeBuffer;

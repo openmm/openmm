@@ -115,21 +115,8 @@ double CudaCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bo
     for (auto computation : cu.getPostComputations())
         sum += computation->computeForceAndEnergy(includeForces, includeEnergy, groups);
     cu.getIntegrationUtilities().distributeForcesFromVirtualSites();
-    if (includeEnergy) {
-        CudaArray& energyArray = cu.getEnergyBuffer();
-        if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
-            double* energy = (double*) cu.getPinnedBuffer();
-            energyArray.download(energy);
-            for (int i = 0; i < energyArray.getSize(); i++)
-                sum += energy[i];
-        }
-        else {
-            float* energy = (float*) cu.getPinnedBuffer();
-            energyArray.download(energy);
-            for (int i = 0; i < energyArray.getSize(); i++)
-                sum += energy[i];
-        }
-    }
+    if (includeEnergy)
+        sum += cu.reduceEnergy();
     if (!cu.getForcesValid())
         valid = false;
     return sum;
@@ -6607,6 +6594,176 @@ void CudaCalcGayBerneForceKernel::sortAtoms() {
     startIndexVec[numRealParticles] = index;
     exclusions->upload(exclusionVec);
     exclusionStartIndex->upload(startIndexVec);
+}
+
+class CudaCalcCustomCVForceKernel::ReorderListener : public CudaContext::ReorderListener {
+public:
+    ReorderListener(CudaContext& cu, CudaArray& invAtomOrder) : cu(cu), invAtomOrder(invAtomOrder) {
+    }
+    void execute() {
+        vector<int> invOrder(cu.getPaddedNumAtoms());
+        const vector<int>& order = cu.getAtomIndex();
+        for (int i = 0; i < order.size(); i++)
+            invOrder[order[i]] = i;
+        invAtomOrder.upload(invOrder);
+    }
+private:
+    CudaContext& cu;
+    CudaArray& invAtomOrder;
+};
+
+CudaCalcCustomCVForceKernel::~CudaCalcCustomCVForceKernel() {
+    for (auto force : cvForces)
+        delete force;
+    if (invAtomOrder != NULL)
+        delete invAtomOrder;
+    if (innerInvAtomOrder != NULL)
+        delete innerInvAtomOrder;
+}
+
+void CudaCalcCustomCVForceKernel::initialize(const System& system, const CustomCVForce& force, ContextImpl& innerContext) {
+    int numCVs = force.getNumCollectiveVariables();
+    for (int i = 0; i < force.getNumGlobalParameters(); i++)
+        globalParameterNames.push_back(force.getGlobalParameterName(i));
+    
+    // Create custom functions for the tabulated functions.
+
+    map<string, Lepton::CustomFunction*> functions;
+    for (int i = 0; i < (int) force.getNumTabulatedFunctions(); i++)
+        functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
+
+    // Create the expressions.
+
+    Lepton::ParsedExpression energyExpr = Lepton::Parser::parse(force.getEnergyFunction(), functions);
+    energyExpression = energyExpr.createProgram();
+    for (int i = 0; i < numCVs; i++) {
+        string name = force.getCollectiveVariableName(i);
+        variableNames.push_back(name);
+        variableDerivExpressions.push_back(energyExpr.differentiate(name).optimize().createProgram());
+    }
+    for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
+        string name = force.getEnergyParameterDerivativeName(i);
+        paramDerivNames.push_back(name);
+        paramDerivExpressions.push_back(energyExpr.differentiate(name).optimize().createProgram());
+        cu.addEnergyParameterDerivative(name);
+    }
+
+    // Delete the custom functions.
+
+    for (auto& function : functions)
+        delete function.second;
+        
+    // Copy parameter derivatives from the inner context.
+
+    CudaContext& cu2 = *reinterpret_cast<CudaPlatform::PlatformData*>(innerContext.getPlatformData())->contexts[0];
+    for (auto& param : cu2.getEnergyParamDerivNames())
+        cu.addEnergyParameterDerivative(param);
+    
+    // Create arrays for storing information.
+    
+    int elementSize = (cu.getUseDoublePrecision() || cu.getUseMixedPrecision() ? sizeof(double) : sizeof(float));
+    for (int i = 0; i < numCVs; i++)
+        cvForces.push_back(CudaArray::create<long long>(cu, 3*cu.getPaddedNumAtoms(), "cvForce"));
+    invAtomOrder = CudaArray::create<int>(cu, cu.getPaddedNumAtoms(), "invAtomOrder");
+    innerInvAtomOrder = CudaArray::create<int>(cu, cu.getPaddedNumAtoms(), "innerInvAtomOrder");
+    
+    // Create the kernels.
+    
+    stringstream args, add;
+    for (int i = 0; i < numCVs; i++) {
+        args << ", long long* __restrict__ force" << i << ", real dEdV" << i;
+        add << "forces[i] += (long long) (force" << i << "[i]*dEdV" << i << ");\n";
+    }
+    map<string, string> replacements;
+    replacements["PARAMETER_ARGUMENTS"] = args.str();
+    replacements["ADD_FORCES"] = add.str();
+    CUmodule module = cu.createModule(cu.replaceStrings(CudaKernelSources::vectorOps+CudaKernelSources::customCVForce, replacements));
+    copyStateKernel = cu.getKernel(module, "copyState");
+    copyForcesKernel = cu.getKernel(module, "copyForces");
+    addForcesKernel = cu.getKernel(module, "addForces");
+}
+
+double CudaCalcCustomCVForceKernel::execute(ContextImpl& context, ContextImpl& innerContext, bool includeForces, bool includeEnergy) {
+    copyState(context, innerContext);
+    int numCVs = variableNames.size();
+    int numAtoms = cu.getNumAtoms();
+    int paddedNumAtoms = cu.getPaddedNumAtoms();
+    CudaContext& cu2 = *reinterpret_cast<CudaPlatform::PlatformData*>(innerContext.getPlatformData())->contexts[0];
+    vector<double> cvValues;
+    vector<map<string, double> > cvDerivs(numCVs);
+    void* copyForcesArgs[] = {NULL, &invAtomOrder->getDevicePointer(), &cu2.getForce().getDevicePointer(), &cu2.getAtomIndexArray().getDevicePointer(), &numAtoms, &paddedNumAtoms};
+    for (int i = 0; i < numCVs; i++) {
+        cvValues.push_back(innerContext.calcForcesAndEnergy(true, true, 1<<i));
+        copyForcesArgs[0] = &cvForces[i]->getDevicePointer();
+        cu.executeKernel(copyForcesKernel, copyForcesArgs, numAtoms);
+        innerContext.getEnergyParameterDerivatives(cvDerivs[i]);
+    }
+    
+    // Compute the energy and forces.
+    
+    map<string, double> variables;
+    for (auto& name : globalParameterNames)
+        variables[name] = context.getParameter(name);
+    for (int i = 0; i < numCVs; i++)
+        variables[variableNames[i]] = cvValues[i];
+    double energy = energyExpression.evaluate(variables);
+    int bufferSize = cu.getForce().getSize();
+    vector<void*> addForcesArgs;
+    addForcesArgs.push_back(&cu.getForce().getDevicePointer());
+    addForcesArgs.push_back(&bufferSize);
+    vector<double> dEdV(numCVs);
+    vector<float> dEdVFloat(numCVs);
+    for (int i = 0; i < numCVs; i++) {
+        dEdV[i] = variableDerivExpressions[i].evaluate(variables);
+        dEdVFloat[i] = (float) dEdV[i];
+        addForcesArgs.push_back(&cvForces[i]->getDevicePointer());
+        if (cu.getUseDoublePrecision())
+            addForcesArgs.push_back(&dEdV[i]);
+        else
+            addForcesArgs.push_back(&dEdVFloat[i]);
+    }
+    cu.executeKernel(addForcesKernel, &addForcesArgs[0], numAtoms);
+    
+    // Compute the energy parameter derivatives.
+    
+    map<string, double>& energyParamDerivs = cu.getEnergyParamDerivWorkspace();
+    for (int i = 0; i < paramDerivExpressions.size(); i++)
+        energyParamDerivs[paramDerivNames[i]] += paramDerivExpressions[i].evaluate(variables);
+    for (int i = 0; i < numCVs; i++) {
+        double dEdV = variableDerivExpressions[i].evaluate(variables);
+        for (auto& deriv : cvDerivs[i])
+            energyParamDerivs[deriv.first] += dEdV*deriv.second;
+    }
+    return energy;
+}
+
+void CudaCalcCustomCVForceKernel::copyState(ContextImpl& context, ContextImpl& innerContext) {
+    int numAtoms = cu.getNumAtoms();
+    CudaContext& cu2 = *reinterpret_cast<CudaPlatform::PlatformData*>(innerContext.getPlatformData())->contexts[0];
+    if (!hasInitializedListeners) {
+        hasInitializedListeners = true;
+        
+        // Initialize the listeners.
+        
+        ReorderListener* listener1 = new ReorderListener(cu, *invAtomOrder);
+        ReorderListener* listener2 = new ReorderListener(cu2, *innerInvAtomOrder);
+        cu.addReorderListener(listener1);
+        cu2.addReorderListener(listener2);
+        listener1->execute();
+        listener2->execute();
+    }
+    CUdeviceptr posCorrection = (cu.getUseMixedPrecision() ? cu.getPosqCorrection().getDevicePointer() : 0);
+    CUdeviceptr posCorrection2 = (cu2.getUseMixedPrecision() ? cu2.getPosqCorrection().getDevicePointer() : 0);
+    void* copyStateArgs[] = {&cu.getPosq().getDevicePointer(), &posCorrection, &cu.getVelm().getDevicePointer(), &cu.getAtomIndexArray().getDevicePointer(),
+        &cu2.getPosq().getDevicePointer(), &posCorrection2,& cu2.getVelm().getDevicePointer(), &innerInvAtomOrder->getDevicePointer(), &numAtoms};
+    cu.executeKernel(copyStateKernel, copyStateArgs, numAtoms);
+    Vec3 a, b, c;
+    context.getPeriodicBoxVectors(a, b, c);
+    innerContext.setPeriodicBoxVectors(a, b, c);
+    innerContext.setTime(context.getTime());
+    map<string, double> innerParameters = innerContext.getParameters();
+    for (auto& param : innerParameters)
+        innerContext.setParameter(param.first, context.getParameter(param.first));
 }
 
 CudaIntegrateVerletStepKernel::~CudaIntegrateVerletStepKernel() {

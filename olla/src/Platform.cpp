@@ -34,6 +34,7 @@
 #include "openmm/OpenMMException.h"
 #include "openmm/Kernel.h"
 #include "openmm/KernelFactory.h"
+#include "openmm/internal/ContextImpl.h"
 #ifdef WIN32
 #include <windows.h>
 #include <sstream>
@@ -111,6 +112,16 @@ void Platform::setPropertyDefaultValue(const string& property, const string& val
 }
 
 void Platform::contextCreated(ContextImpl& context, const map<string, string>& properties) const {
+}
+
+void Platform::linkedContextCreated(ContextImpl& context, ContextImpl& originalContext) const {
+    // The default implementation just copies over the properties and calls contextCreated().
+    // Subclasses may override this to do something different.
+    
+    map<string, string> properties;
+    for (auto& name : getPropertyNames())
+        properties[name] = getPropertyValue(originalContext.getOwner(), name);
+    contextCreated(context, properties);
 }
 
 void Platform::contextDestroyed(ContextImpl& context) const {

@@ -32,6 +32,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include "openmm/Context.h"
 #include "openmm/internal/windowsExport.h"
 #include <map>
 #include <string>
@@ -103,6 +104,13 @@ public:
      */
     virtual std::vector<std::pair<int, int> > getBondedParticles() const {
         return std::vector<std::pair<int, int> >(0);
+    }
+protected:
+    /**
+     * Get the ContextImpl corresponding to a Context.
+     */
+    ContextImpl& getContextImpl(Context& context) {
+        return context.getImpl();
     }
 };
 

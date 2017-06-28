@@ -40,16 +40,25 @@
 using namespace OpenMM;
 using namespace std;
 
+Context::Context(const System& system, Integrator& integrator, ContextImpl& linked) : properties(linked.getOwner().properties) {
+    // This is used by ContextImpl::createLinkedContext().
+    impl = new ContextImpl(*this, system, integrator, &linked.getPlatform(), properties, &linked);
+    impl->initialize();
+}
+
 Context::Context(const System& system, Integrator& integrator) : properties(map<string, string>()) {
     impl = new ContextImpl(*this, system, integrator, 0, properties);
+    impl->initialize();
 }
 
 Context::Context(const System& system, Integrator& integrator, Platform& platform) : properties(map<string, string>()) {
     impl = new ContextImpl(*this, system, integrator, &platform, properties);
+    impl->initialize();
 }
 
 Context::Context(const System& system, Integrator& integrator, Platform& platform, const map<string, string>& properties) : properties(properties) {
     impl = new ContextImpl(*this, system, integrator, &platform, properties);
+    impl->initialize();
 }
 
 Context::~Context() {
@@ -240,6 +249,7 @@ void Context::reinitialize() {
     integrator.cleanup();
     delete impl;
     impl = new ContextImpl(*this, system, integrator, &platform, properties);
+    impl->initialize();
 }
 
 void Context::createCheckpoint(ostream& stream) {

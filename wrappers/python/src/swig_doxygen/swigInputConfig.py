@@ -142,6 +142,8 @@ STEAL_OWNERSHIP = {("Platform", "registerPlatform") : [0],
                    ("CustomHbondForce", "addTabulatedFunction") : [1],
                    ("CustomCompoundBondForce", "addTabulatedFunction") : [1],
                    ("CustomManyParticleForce", "addTabulatedFunction") : [1],
+                   ("CustomCVForce", "addTabulatedFunction") : [1],
+                   ("CustomCVForce", "addCollectiveVariable") : [1],
                    ("CompoundIntegrator", "addIntegrator") : [0],
 }
 
@@ -390,6 +392,8 @@ UNITS = {
 ("CustomTorsionForce", "getPerTorsionParameterName") : (None, ()),
 ("CustomTorsionForce", "getGlobalParameterName") : (None, ()),
 ("CustomTorsionForce", "getTorsionParameters") : (None, ()),
+("CustomCVForce", "getCollectiveVariable") : (None, ()),
+("CustomCVForce", "getInnerContext") : (None, ()),
 ("DrudeForce", "getParticleParameters") : (None, (None, None, None, None, None, 'unit.elementary_charge', 'unit.nanometer**3', None, None)),
 ("DrudeForce", "getNumScreenedPairs") : (None, ()),
 ("DrudeForce", "getScreenedPairParameters") : (None, ()),

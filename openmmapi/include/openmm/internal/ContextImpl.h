@@ -55,7 +55,8 @@ public:
     /**
      * Create an ContextImpl for a Context;
      */
-    ContextImpl(Context& owner, const System& system, Integrator& integrator, Platform* platform, const std::map<std::string, std::string>& properties);
+    ContextImpl(Context& owner, const System& system, Integrator& integrator, Platform* platform, const std::map<std::string, std::string>& properties,
+            ContextImpl* originalContext=NULL);
     ~ContextImpl();
     /**
      * Get the Context for which this is the implementation.
@@ -264,8 +265,18 @@ public:
      * you should never call it.  It is exposed here because the same logic is useful to other classes too.
      */
     static std::vector<std::vector<int> > findMolecules(int numParticles, std::vector<std::vector<int> >& particleBonds);
+    /**
+     * Create a new Context based on this one.  The new context will use the same Platform, device, and property
+     * values as this one.  With the CUDA and OpenCL platforms, it also shares the same GPU context, allowing data
+     * to be transferred between them without leaving the GPU.
+     * 
+     * This method exists for very specialized purposes.  If you aren't certain whether you should use it, that probably
+     * means you shouldn't.
+     */
+    Context* createLinkedContext(const System& system, Integrator& integrator);
 private:
     friend class Context;
+    void initialize();
     Context& owner;
     const System& system;
     Integrator& integrator;
