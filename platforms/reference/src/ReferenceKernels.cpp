@@ -1474,7 +1474,8 @@ double ReferenceCalcCustomGBForceKernel::execute(ContextImpl& context, bool incl
     if (periodic)
         ixn.setPeriodic(extractBoxVectors(context));
     if (nonbondedMethod != NoCutoff) {
-        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, extractBoxVectors(context), periodic, nonbondedCutoff, 0.0);
+        vector<set<int> > empty(context.getSystem().getNumParticles()); // Don't omit exclusions from the neighbor list
+        computeNeighborListVoxelHash(*neighborList, numParticles, posData, empty, extractBoxVectors(context), periodic, nonbondedCutoff, 0.0);
         ixn.setUseCutoff(nonbondedCutoff, *neighborList);
     }
     map<string, double> globalParameters;

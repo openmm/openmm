@@ -373,7 +373,7 @@ private:
 class CpuCalcCustomGBForceKernel : public CalcCustomGBForceKernel {
 public:
     CpuCalcCustomGBForceKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data) :
-            CalcCustomGBForceKernel(name, platform), data(data) {
+            CalcCustomGBForceKernel(name, platform), data(data), ixn(NULL), neighborList(NULL) {
     }
     ~CpuCalcCustomGBForceKernel();
     /**
@@ -406,6 +406,7 @@ private:
     double **particleParamArray;
     double nonbondedCutoff;
     CpuCustomGBForce* ixn;
+    CpuNeighborList* neighborList;
     std::vector<std::set<int> > exclusions;
     std::vector<std::string> particleParameterNames, globalParameterNames, energyParamDerivNames, valueNames;
     std::vector<OpenMM::CustomGBForce::ComputationType> valueTypes;
