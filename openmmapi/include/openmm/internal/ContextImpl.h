@@ -210,8 +210,11 @@ public:
     /**
      * This should be called at the start of each time step.  It calls updateContextState() on each
      * ForceImpl in the system, allowing them to modify the values of state variables.
+     * 
+     * @return true if the state was modified in any way that would cause the forces on particles
+     * to change, false otherwise
      */
-    void updateContextState();
+    bool updateContextState();
     /**
      * Get the list of ForceImpls belonging to this ContextImpl.
      */

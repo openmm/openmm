@@ -315,9 +315,11 @@ double ContextImpl::calcKineticEnergy() {
     return integrator.computeKineticEnergy();
 }
 
-void ContextImpl::updateContextState() {
+bool ContextImpl::updateContextState() {
+    bool forcesInvalid = false;
     for (auto force : forceImpls)
-        force->updateContextState(*this);
+        force->updateContextState(*this, forcesInvalid);
+    return forcesInvalid;
 }
 
 const vector<ForceImpl*>& ContextImpl::getForceImpls() const {

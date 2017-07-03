@@ -47,7 +47,7 @@ void AndersenThermostatImpl::initialize(ContextImpl& context) {
     kernel.getAs<ApplyAndersenThermostatKernel>().initialize(context.getSystem(), owner);
 }
 
-void AndersenThermostatImpl::updateContextState(ContextImpl& context) {
+void AndersenThermostatImpl::updateContextState(ContextImpl& context, bool& forcesInvalid) {
     kernel.getAs<ApplyAndersenThermostatKernel>().execute(context);
 }
 

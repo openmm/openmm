@@ -8182,6 +8182,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
                 globalValues->upload(globalValuesFloat);
             }
         }
+        bool stepInvalidatesForces = invalidatesForces[step];
         if (stepType[step] == CustomIntegrator::ComputePerDof && !merged[step]) {
             kernels[step][0].setArg<cl_uint>(9, integration.prepareRandomNumbers(requiredGaussian[step]));
             kernels[step][0].setArg<cl::Buffer>(8, integration.getRandom().getDeviceBuffer());
@@ -8226,7 +8227,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
         }
         else if (stepType[step] == CustomIntegrator::UpdateContextState) {
             recordChangedParameters(context);
-            context.updateContextState();
+            stepInvalidatesForces = context.updateContextState();
         }
         else if (stepType[step] == CustomIntegrator::ConstrainPositions) {
             if (hasAnyConstraints) {
@@ -8250,7 +8251,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
             if (blockEnd[step] != -1)
                 nextStep = blockEnd[step]; // Return to the start of a while block.
         }
-        if (invalidatesForces[step]) {
+        if (stepInvalidatesForces) {
             forcesAreValid = false;
             savedEnergy.clear();
         }
@@ -8471,6 +8472,8 @@ void OpenCLApplyAndersenThermostatKernel::execute(ContextImpl& context) {
 OpenCLApplyMonteCarloBarostatKernel::~OpenCLApplyMonteCarloBarostatKernel() {
     if (savedPositions != NULL)
         delete savedPositions;
+    if (savedForces != NULL)
+        delete savedForces;
     if (moleculeAtoms != NULL)
         delete moleculeAtoms;
     if (moleculeStartIndex != NULL)
@@ -8479,6 +8482,7 @@ OpenCLApplyMonteCarloBarostatKernel::~OpenCLApplyMonteCarloBarostatKernel() {
 
 void OpenCLApplyMonteCarloBarostatKernel::initialize(const System& system, const Force& thermostat) {
     savedPositions = new OpenCLArray(cl, cl.getPaddedNumAtoms(), cl.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4), "savedPositions");
+    savedForces = new OpenCLArray(cl, cl.getPaddedNumAtoms(), cl.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4), "savedForces");
     cl::Program program = cl.createProgram(OpenCLKernelSources::monteCarloBarostat);
     kernel = cl::Kernel(program, "scalePositions");
 }
@@ -8514,6 +8518,7 @@ void OpenCLApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context,
     }
     int bytesToCopy = cl.getPosq().getSize()*(cl.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4));
     cl.getQueue().enqueueCopyBuffer(cl.getPosq().getDeviceBuffer(), savedPositions->getDeviceBuffer(), 0, 0, bytesToCopy);
+    cl.getQueue().enqueueCopyBuffer(cl.getForce().getDeviceBuffer(), savedForces->getDeviceBuffer(), 0, 0, bytesToCopy);
     kernel.setArg<cl_float>(0, (cl_float) scaleX);
     kernel.setArg<cl_float>(1, (cl_float) scaleY);
     kernel.setArg<cl_float>(2, (cl_float) scaleZ);
@@ -8527,6 +8532,7 @@ void OpenCLApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context,
 void OpenCLApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context) {
     int bytesToCopy = cl.getPosq().getSize()*(cl.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4));
     cl.getQueue().enqueueCopyBuffer(savedPositions->getDeviceBuffer(), cl.getPosq().getDeviceBuffer(), 0, 0, bytesToCopy);
+    cl.getQueue().enqueueCopyBuffer(savedForces->getDeviceBuffer(), cl.getForce().getDeviceBuffer(), 0, 0, bytesToCopy);
 }
 
 OpenCLRemoveCMMotionKernel::~OpenCLRemoveCMMotionKernel() {

@@ -249,6 +249,7 @@ void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, ve
         energy = (needsEnergy[step] ? groupEnergy[flags] : 0);
         vector<Vec3>& stepForces = (needsForces[step] ? groupForces[flags] : forces);
         int nextStep = step+1;
+        bool stepInvalidatesForces = invalidatesForces[step];
         switch (stepType[step]) {
             case CustomIntegrator::ComputeGlobal: {
                 uniform = SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber();
@@ -295,7 +296,7 @@ void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, ve
             }
             case CustomIntegrator::UpdateContextState: {
                 recordChangedParameters(context, globals);
-                context.updateContextState();
+                stepInvalidatesForces = context.updateContextState();
                 globals.insert(context.getParameters().begin(), context.getParameters().end());
                 for (auto& global : globals)
                     expressionSet.setVariable(expressionSet.getVariableIndex(global.first), global.second);
@@ -317,7 +318,7 @@ void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, ve
                 break;
             }
         }
-        if (invalidatesForces[step]) {
+        if (stepInvalidatesForces) {
             forcesAreValid = false;
             groupForces.clear();
             groupEnergy.clear();

@@ -7827,6 +7827,7 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
                 globalValues->upload(globalValuesFloat);
             }
         }
+        bool stepInvalidatesForces = invalidatesForces[step];
         if (stepType[step] == CustomIntegrator::ComputePerDof && !merged[step]) {
             int randomIndex = integration.prepareRandomNumbers(requiredGaussian[step]);
             kernelArgs[step][0][1] = &posCorrection;
@@ -7867,7 +7868,7 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
         }
         else if (stepType[step] == CustomIntegrator::UpdateContextState) {
             recordChangedParameters(context);
-            context.updateContextState();
+            stepInvalidatesForces = context.updateContextState();
         }
         else if (stepType[step] == CustomIntegrator::ConstrainPositions) {
             if (hasAnyConstraints) {
@@ -7892,7 +7893,7 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
             if (blockEnd[step] != -1)
                 nextStep = blockEnd[step]; // Return to the start of a while block.
         }
-        if (invalidatesForces[step]) {
+        if (stepInvalidatesForces) {
             forcesAreValid = false;
             savedEnergy.clear();
         }
@@ -8111,6 +8112,8 @@ CudaApplyMonteCarloBarostatKernel::~CudaApplyMonteCarloBarostatKernel() {
     cu.setAsCurrent();
     if (savedPositions != NULL)
         delete savedPositions;
+    if (savedForces != NULL)
+        delete savedForces;
     if (moleculeAtoms != NULL)
         delete moleculeAtoms;
     if (moleculeStartIndex != NULL)
@@ -8120,6 +8123,7 @@ CudaApplyMonteCarloBarostatKernel::~CudaApplyMonteCarloBarostatKernel() {
 void CudaApplyMonteCarloBarostatKernel::initialize(const System& system, const Force& thermostat) {
     cu.setAsCurrent();
     savedPositions = new CudaArray(cu, cu.getPaddedNumAtoms(), cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4), "savedPositions");
+    savedForces = CudaArray::create<long long>(cu, cu.getPaddedNumAtoms()*3, "savedForces");
     CUmodule module = cu.createModule(CudaKernelSources::monteCarloBarostat);
     kernel = cu.getKernel(module, "scalePositions");
 }
@@ -8157,6 +8161,12 @@ void CudaApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, d
         m<<"Error saving positions for MC barostat: "<<cu.getErrorString(result)<<" ("<<result<<")";
         throw OpenMMException(m.str());
     }
+    result = cuMemcpyDtoD(savedForces->getDevicePointer(), cu.getForce().getDevicePointer(), savedForces->getSize()*savedForces->getElementSize());
+    if (result != CUDA_SUCCESS) {
+        std::stringstream m;
+        m<<"Error saving forces for MC barostat: "<<cu.getErrorString(result)<<" ("<<result<<")";
+        throw OpenMMException(m.str());
+    }
     float scalefX = (float) scaleX;
     float scalefY = (float) scaleY;
     float scalefZ = (float) scaleZ;
@@ -8176,6 +8186,12 @@ void CudaApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context)
     if (result != CUDA_SUCCESS) {
         std::stringstream m;
         m<<"Error restoring positions for MC barostat: "<<cu.getErrorString(result)<<" ("<<result<<")";
+        throw OpenMMException(m.str());
+    }
+    result = cuMemcpyDtoD(cu.getForce().getDevicePointer(), savedForces->getDevicePointer(), savedForces->getSize()*savedForces->getElementSize());
+    if (result != CUDA_SUCCESS) {
+        std::stringstream m;
+        m<<"Error restoring forces for MC barostat: "<<cu.getErrorString(result)<<" ("<<result<<")";
         throw OpenMMException(m.str());
     }
 }

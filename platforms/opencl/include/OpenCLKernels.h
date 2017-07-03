@@ -1626,7 +1626,7 @@ private:
 class OpenCLApplyMonteCarloBarostatKernel : public ApplyMonteCarloBarostatKernel {
 public:
     OpenCLApplyMonteCarloBarostatKernel(std::string name, const Platform& platform, OpenCLContext& cl) : ApplyMonteCarloBarostatKernel(name, platform), cl(cl),
-            hasInitializedKernels(false), savedPositions(NULL), moleculeAtoms(NULL), moleculeStartIndex(NULL) {
+            hasInitializedKernels(false), savedPositions(NULL), savedForces(NULL), moleculeAtoms(NULL), moleculeStartIndex(NULL) {
     }
     ~OpenCLApplyMonteCarloBarostatKernel();
     /**
@@ -1661,6 +1661,7 @@ private:
     bool hasInitializedKernels;
     int numMolecules;
     OpenCLArray* savedPositions;
+    OpenCLArray* savedForces;
     OpenCLArray* moleculeAtoms;
     OpenCLArray* moleculeStartIndex;
     cl::Kernel kernel;

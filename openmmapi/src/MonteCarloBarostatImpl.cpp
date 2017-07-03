@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2017 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -68,7 +68,7 @@ void MonteCarloBarostatImpl::initialize(ContextImpl& context) {
     init_gen_rand(randSeed, random);
 }
 
-void MonteCarloBarostatImpl::updateContextState(ContextImpl& context) {
+void MonteCarloBarostatImpl::updateContextState(ContextImpl& context, bool& forcesInvalid) {
     if (++step < owner.getFrequency() || owner.getFrequency() == 0)
         return;
     step = 0;
@@ -101,8 +101,10 @@ void MonteCarloBarostatImpl::updateContextState(ContextImpl& context) {
         context.getOwner().setPeriodicBoxVectors(box[0], box[1], box[2]);
         volume = newVolume;
     }
-    else
+    else {
         numAccepted++;
+        forcesInvalid = true;
+    }
     numAttempted++;
     if (numAttempted >= 10) {
         if (numAccepted < 0.25*numAttempted) {

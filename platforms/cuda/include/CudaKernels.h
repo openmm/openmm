@@ -1640,7 +1640,7 @@ private:
 class CudaApplyMonteCarloBarostatKernel : public ApplyMonteCarloBarostatKernel {
 public:
     CudaApplyMonteCarloBarostatKernel(std::string name, const Platform& platform, CudaContext& cu) : ApplyMonteCarloBarostatKernel(name, platform), cu(cu),
-            hasInitializedKernels(false), savedPositions(NULL), moleculeAtoms(NULL), moleculeStartIndex(NULL) {
+            hasInitializedKernels(false), savedPositions(NULL), savedForces(NULL), moleculeAtoms(NULL), moleculeStartIndex(NULL) {
     }
     ~CudaApplyMonteCarloBarostatKernel();
     /**
@@ -1675,6 +1675,7 @@ private:
     bool hasInitializedKernels;
     int numMolecules;
     CudaArray* savedPositions;
+    CudaArray* savedForces;
     CudaArray* moleculeAtoms;
     CudaArray* moleculeStartIndex;
     CUfunction kernel;

@@ -48,7 +48,7 @@ void CMMotionRemoverImpl::initialize(ContextImpl& context) {
     kernel.getAs<RemoveCMMotionKernel>().initialize(system, owner);
 }
 
-void CMMotionRemoverImpl::updateContextState(ContextImpl& context) {
+void CMMotionRemoverImpl::updateContextState(ContextImpl& context, bool& forcesInvalid) {
     kernel.getAs<RemoveCMMotionKernel>().execute(context);
 }
 
