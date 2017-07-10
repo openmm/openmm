@@ -40,6 +40,7 @@
 #include "openmm/CustomExternalForce.h"
 #include "openmm/CustomIntegrator.h"
 #include "openmm/HarmonicBondForce.h"
+#include "openmm/MonteCarloBarostat.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/System.h"
 #include "SimTKOpenMMRealType.h"
@@ -968,6 +969,56 @@ void testAlternatingGroups() {
     }
 }
 
+/**
+ * Test that the forces are recomputed when updateContextState() modifies positions.
+ */
+void testUpdateContextState() {
+    const int numParticles = 100;
+    const double boxSize = 5.0;
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    CustomIntegrator integrator(0.003);
+    integrator.addPerDofVariable("force1", 0.0);
+    integrator.addPerDofVariable("force2", 0.0);
+    integrator.addComputePerDof("force1", "f");
+    integrator.addUpdateContextState();
+    integrator.addComputePerDof("force2", "f");
+    NonbondedForce* nonbonded = new NonbondedForce();
+    nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    nonbonded->setCutoffDistance(2.0);
+    for (int i = 0; i < numParticles; ++i) {
+        system.addParticle(2.0);
+        nonbonded->addParticle((i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
+    }
+    system.addForce(nonbonded);
+    system.addForce(new MonteCarloBarostat(1.0, 300.0, 1));
+    Context context(system, integrator, platform);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    vector<Vec3> positions(numParticles);
+    for (int i = 0; i < numParticles; ++i)
+        positions[i] = Vec3(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt))*boxSize;
+    context.setPositions(positions);
+    
+    // Make sure the forces change when the barostat accepts a step, and don't change
+    // otherwise.
+    
+    for (int i = 0; i < 50; i++) {
+        State state1 = context.getState(0);
+        integrator.step(1);
+        State state2 = context.getState(0);
+        bool changed = (state1.getPeriodicBoxVolume() != state2.getPeriodicBoxVolume());
+        vector<Vec3> f1, f2;
+        integrator.getPerDofVariable(0, f1);
+        integrator.getPerDofVariable(1, f2);
+        bool different = false;
+        for (int j = 0; j < numParticles; j++)
+            if (f1[j] != f2[j])
+                different = true;
+        ASSERT_EQUAL(changed, different);
+    }
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -992,6 +1043,7 @@ int main(int argc, char* argv[]) {
         testChangeDT();
         testTabulatedFunction();
         testAlternatingGroups();
+        testUpdateContextState();
         runPlatformTests();
     }
     catch(const exception& e) {

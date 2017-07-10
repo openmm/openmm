@@ -1,16 +1,13 @@
-#ifndef OPENMM_AMOEBA_OUT_OF_PLANE_BEND_FORCE_IMPL_H_
-#define OPENMM_AMOEBA_OUT_OF_PLANE_BEND_FORCE_IMPL_H_
-
 /* -------------------------------------------------------------------------- *
- *                                OpenMMAmoeba                                *
+ *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit originating from   *
  * Simbios, the NIH National Center for Physics-Based Simulation of           *
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
- * Authors:                                                                   *
+ * Portions copyright (c) 2017 Stanford University and the Authors.           *
+ * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -33,40 +30,17 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/internal/ForceImpl.h"
-#include "openmm/AmoebaOutOfPlaneBendForce.h"
-#include "openmm/Kernel.h"
-#include <utility>
-#include <set>
-#include <string>
 
-namespace OpenMM {
+using namespace OpenMM;
+using namespace std;
 
-/**
- * This is the internal implementation of AmoebaOutOfPlaneBendForce.
- */
+void ForceImpl::updateContextState(ContextImpl& context, bool& forcesInvalid) {
+    // Usually subclasses will override this.  If they don't, call the old
+    // (single argument) version instead, and just assume they invalidate forces.
 
-class AmoebaOutOfPlaneBendForceImpl : public ForceImpl {
-public:
-    AmoebaOutOfPlaneBendForceImpl(const AmoebaOutOfPlaneBendForce& owner);
-    ~AmoebaOutOfPlaneBendForceImpl();
-    void initialize(ContextImpl& context);
-    const AmoebaOutOfPlaneBendForce& getOwner() const {
-        return owner;
-    }
-    void updateContextState(ContextImpl& context, bool& forcesInvalid) {
-        // This force field doesn't update the state directly.
-    }
-    double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups);
-    std::map<std::string, double> getDefaultParameters() {
-        return std::map<std::string, double>(); // This force field doesn't define any parameters.
-    }
-    std::vector<std::string> getKernelNames();
-    void updateParametersInContext(ContextImpl& context);
-private:
-    const AmoebaOutOfPlaneBendForce& owner;
-    Kernel kernel;
-};
+    updateContextState(context);
+    forcesInvalid = true;
+}
 
-} // namespace OpenMM
-
-#endif /*OPENMM_AMOEBA_OUT_OF_PLANE_BEND_FORCE_IMPL_H_*/
+void ForceImpl::updateContextState(ContextImpl& context) {
+}
