@@ -68,7 +68,15 @@ class WrapperGenerator:
     
     def __init__(self, inputDirname, output):
         self.skipClasses = ['OpenMM::Vec3', 'OpenMM::XmlSerializer', 'OpenMM::Kernel', 'OpenMM::KernelImpl', 'OpenMM::KernelFactory', 'OpenMM::ContextImpl', 'OpenMM::SerializationNode', 'OpenMM::SerializationProxy']
-        self.skipMethods = ['OpenMM::Context::getState', 'OpenMM::Platform::loadPluginsFromDirectory', 'OpenMM::Platform::getPluginLoadFailures', 'OpenMM::Context::createCheckpoint', 'OpenMM::Context::loadCheckpoint', 'OpenMM::Context::getMolecules']
+        self.skipMethods = ['State OpenMM::Context::getState',
+                            'void OpenMM::Context::createCheckpoint',
+                            'void OpenMM::Context::loadCheckpoint',
+                            'const std::vector<std::vector<int> >& OpenMM::Context::getMolecules',
+                            'static std::vector<std::string> OpenMM::Platform::getPluginLoadFailures',
+                            'static std::vector<std::string> OpenMM::Platform::loadPluginsFromDirectory',
+                            'Vec3 OpenMM::LocalCoordinatesSite::getOriginWeights',
+                            'Vec3 OpenMM::LocalCoordinatesSite::getXWeights',
+                            'Vec3 OpenMM::LocalCoordinatesSite::getYWeights']
         self.hideClasses = ['Kernel', 'KernelImpl', 'KernelFactory', 'ContextImpl', 'SerializationNode', 'SerializationProxy']
         self.nodeByID={}
 
@@ -119,9 +127,7 @@ class WrapperGenerator:
         for section in findNodes(classNode, "sectiondef", kind="public-static-func")+findNodes(classNode, "sectiondef", kind="public-func"):
             for memberNode in findNodes(section, "memberdef", kind="function", prot="public"):
                 methodDefinition = getText("definition", memberNode)
-                shortMethodDefinition = stripOpenMMPrefix(methodDefinition)
-                methodName = shortMethodDefinition.split()[-1]
-                if className+'::'+methodName in self.skipMethods:
+                if methodDefinition in self.skipMethods:
                     continue
                 methodList.append(memberNode)
         return methodList
