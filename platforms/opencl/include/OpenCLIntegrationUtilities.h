@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2017 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -156,8 +156,11 @@ private:
     OpenCLArray* vsite3AvgWeights;
     OpenCLArray* vsiteOutOfPlaneAtoms;
     OpenCLArray* vsiteOutOfPlaneWeights;
+    OpenCLArray* vsiteLocalCoordsIndex;
     OpenCLArray* vsiteLocalCoordsAtoms;
-    OpenCLArray* vsiteLocalCoordsParams;
+    OpenCLArray* vsiteLocalCoordsWeights;
+    OpenCLArray* vsiteLocalCoordsPos;
+    OpenCLArray* vsiteLocalCoordsStartIndex;
     int randomPos;
     int lastSeed, numVsites;
     bool hasInitializedPosConstraintKernels, hasInitializedVelConstraintKernels, ccmaUseDirectBuffer, hasOverlappingVsites;
