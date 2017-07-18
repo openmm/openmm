@@ -101,7 +101,7 @@ __kernel void computeVirtualSites(__global real4* restrict posq,
         xdir *= invNormXdir;
         zdir *= invNormZdir;
         ydir = cross(zdir, xdir);
-        mixed3 localPosition = localCoordsPos[index].xyz;
+        mixed3 localPosition = convert_mixed4(localCoordsPos[index]).xyz;
         mixed4 pos = loadPos(posq, posqCorrection, siteAtomIndex);
         pos.x = origin.x + xdir.x*localPosition.x + ydir.x*localPosition.y + zdir.x*localPosition.z;
         pos.y = origin.y + xdir.y*localPosition.x + ydir.y*localPosition.y + zdir.y*localPosition.z;
@@ -247,7 +247,7 @@ __kernel void distributeForces(__global const real4* restrict posq, __global rea
         mixed3 dx = xdir*invNormXdir;
         mixed3 dz = zdir*invNormZdir;
         mixed3 dy = cross(dz, dx);
-        mixed3 localPosition = localCoordsPos[index].xyz;
+        mixed3 localPosition = convert_mixed4(localCoordsPos[index]).xyz;
 
         // The derivatives for this case are very complicated.  They were computed with SymPy then simplified by hand.
 
@@ -266,7 +266,7 @@ __kernel void distributeForces(__global const real4* restrict posq, __global rea
             mixed sx = t3*dz.y-t2*dz.z;
             mixed sy = t1*dz.z-t3*dz.x;
             mixed sz = t2*dz.x-t1*dz.y;
-            mixed4 fresult = 0;
+            real4 fresult = 0;
             fresult.x += fp1.x*wxScaled*(1-dx.x*dx.x) + fp1.z*(dz.x*sx   ) + fp1.y*((-dx.x*dy.x     )*wxScaled + dy.x*sx - dx.y*t2 - dx.z*t3) + f.x*originWeight;
             fresult.y += fp1.x*wxScaled*( -dx.x*dx.y) + fp1.z*(dz.x*sy+t3) + fp1.y*((-dx.y*dy.x-dz.z)*wxScaled + dy.x*sy + dx.y*t1);
             fresult.z += fp1.x*wxScaled*( -dx.x*dx.z) + fp1.z*(dz.x*sz-t2) + fp1.y*((-dx.z*dy.x+dz.y)*wxScaled + dy.x*sz + dx.z*t1);
