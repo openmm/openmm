@@ -1572,17 +1572,18 @@ specific types of rules.  They are:
   :math:`\mathbf{r}_{13} = \mathbf{r}_{3}-\mathbf{r}_{1}`\ .  This allows
   the virtual site to be located outside the plane of the three particles.
 
-* LocalCoordinatesSite: The locations of three other particles are used to compute a local
+* LocalCoordinatesSite: The locations of several other particles are used to compute a local
   coordinate system, and the virtual site is placed at a fixed location in that coordinate
-  system.  The origin of the coordinate system and the directions of its x and y axes
-  are each specified as a weighted sum of the locations of the three particles:
+  system.  The number of particles used to define the coordinate system is user defined.
+  The origin of the coordinate system and the directions of its x and y axes
+  are each specified as a weighted sum of the locations of the other particles:
 
 .. math::
-   \mathbf{o}={w}^{o}_{1}\mathbf{r}_{1} + {w}^{o}_{2}\mathbf{r}_{2} + {w}^{o}_{3}\mathbf{r}_{3}
+   \mathbf{o}={w}^{o}_{1}\mathbf{r}_{1} + {w}^{o}_{2}\mathbf{r}_{2} + ...
 
-   \mathbf{dx}={w}^{x}_{1}\mathbf{r}_{1} + {w}^{x}_{2}\mathbf{r}_{2} + {w}^{x}_{3}\mathbf{r}_{3}
+   \mathbf{dx}={w}^{x}_{1}\mathbf{r}_{1} + {w}^{x}_{2}\mathbf{r}_{2} + ...
 
-   \mathbf{dy}={w}^{y}_{1}\mathbf{r}_{1} + {w}^{y}_{2}\mathbf{r}_{2} + {w}^{y}_{3}\mathbf{r}_{3}
+   \mathbf{dy}={w}^{y}_{1}\mathbf{r}_{1} + {w}^{y}_{2}\mathbf{r}_{2} + ...
 
    \mathbf{dz}=\mathbf{dx}\times \mathbf{dy}
 ..
