@@ -647,10 +647,15 @@ class ForceField(object):
                 numAtoms = 3
                 self.weights = [float(attrib['weight12']), float(attrib['weight13']), float(attrib['weightCross'])]
             elif self.type == 'localCoords':
-                numAtoms = 3
-                self.originWeights = [float(attrib['wo1']), float(attrib['wo2']), float(attrib['wo3'])]
-                self.xWeights = [float(attrib['wx1']), float(attrib['wx2']), float(attrib['wx3'])]
-                self.yWeights = [float(attrib['wy1']), float(attrib['wy2']), float(attrib['wy3'])]
+                numAtoms = 0
+                self.originWeights = []
+                self.xWeights = []
+                self.yWeights = []
+                while ('wo%d' % (numAtoms+1)) in attrib:
+                    numAtoms += 1
+                    self.originWeights.append(float(attrib['wo%d' % numAtoms]))
+                    self.xWeights.append(float(attrib['wx%d' % numAtoms]))
+                    self.yWeights.append(float(attrib['wy%d' % numAtoms]))
                 self.localPos = [float(attrib['p1']), float(attrib['p2']), float(attrib['p3'])]
             else:
                 raise ValueError('Unknown virtual site type: %s' % self.type)
@@ -1255,11 +1260,7 @@ class ForceField(object):
             elif site.type == 'outOfPlane':
                 sys.setVirtualSite(index, mm.OutOfPlaneSite(atoms[0], atoms[1], atoms[2], site.weights[0], site.weights[1], site.weights[2]))
             elif site.type == 'localCoords':
-                sys.setVirtualSite(index, mm.LocalCoordinatesSite(atoms[0], atoms[1], atoms[2],
-                                                                  mm.Vec3(site.originWeights[0], site.originWeights[1], site.originWeights[2]),
-                                                                  mm.Vec3(site.xWeights[0], site.xWeights[1], site.xWeights[2]),
-                                                                  mm.Vec3(site.yWeights[0], site.yWeights[1], site.yWeights[2]),
-                                                                  mm.Vec3(site.localPos[0], site.localPos[1], site.localPos[2])))
+                sys.setVirtualSite(index, mm.LocalCoordinatesSite(atoms, site.originWeights, site.xWeights, site.yWeights, site.localPos))
 
         # Add forces to the System
 

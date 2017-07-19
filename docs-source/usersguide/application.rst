@@ -2051,10 +2051,9 @@ be represented with a virtual site.  The :code:`type` attribute may equal
 :code:`"localCoords"`\ , which correspond to the TwoParticleAverageSite, ThreeParticleAverageSite,
 OutOfPlaneSite, and LocalCoordinatesSite classes respectively.  The :code:`siteName`
 attribute gives the name of the atom to represent with a virtual site.  The atoms
-it is calculated based on are specified by :code:`atomName1`\ , :code:`atomName2`\ ,
-and (for virtual site classes that involve three atoms) :code:`atomName3`\ .
+it is calculated based on are specified by :code:`atomName1`\ , :code:`atomName2`\ , etc.
 (Some old force fields use the deprecated tags :code:`index`, :code:`atom1`,
-:code:`atom2`, and :code:`atom3` to refer to them by index instead of name.)
+:code:`atom2`, etc. to refer to them by index instead of name.)
 
 The remaining attributes are specific to the virtual site class, and specify the
 parameters for calculating the site position.  For a TwoParticleAverageSite,
@@ -2062,9 +2061,10 @@ they are :code:`weight1` and :code:`weight2`\ .  For a
 ThreeParticleAverageSite, they are :code:`weight1`\ , :code:`weight2`\ , and
 \ :code:`weight3`\ . For an OutOfPlaneSite, they are :code:`weight12`\ ,
 :code:`weight13`\ , and :code:`weightCross`\ . For a LocalCoordinatesSite, they
-are :code:`wo1`\ , :code:`wo2`\ , :code:`wo3`\ , :code:`wx1`\ , :code:`wx2`\ ,
-:code:`wx3`\ , :code:`wy1`\ , :code:`wy2`\ , :code:`wy3`\ , :code:`p1`\ ,
-:code:`p2`\ , and :code:`p3`\ .
+are :code:`p1`\ , :code:`p2`\ , and :code:`p3` (giving the x, y, and z coordinates
+of the site position in the local coordinate system), and :code:`wo1`\ ,
+:code:`wx1`\ , :code:`wy1`\ , :code:`wo2`\ , :code:`wx2`\ , :code:`wy2`\ , ...
+(giving the weights for computing the origin, x axis, and y axis).
 
 <Patches>
 =========

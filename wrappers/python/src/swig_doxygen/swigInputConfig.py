@@ -108,6 +108,9 @@ SKIP_METHODS = [('State', 'getPositions'),
                 ('IntegrateDrudeSCFStepKernel',),
                 ('XmlSerializer',  'serialize'),
                 ('XmlSerializer',  'deserialize'),
+                ('LocalCoordinatesSite',  'getOriginWeights', 0),
+                ('LocalCoordinatesSite',  'getXWeights', 0),
+                ('LocalCoordinatesSite',  'getYWeights', 0),
 ]
 
 # The build script assumes method args that are non-const references are

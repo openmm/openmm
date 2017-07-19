@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2012-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2012-2017 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -105,8 +105,30 @@ double OutOfPlaneSite::getWeightCross() const {
     return weightCross;
 }
 
-LocalCoordinatesSite::LocalCoordinatesSite(int particle1, int particle2, int particle3, const Vec3& originWeights, const Vec3& xWeights, const Vec3& yWeights, const Vec3& localPosition) :
+LocalCoordinatesSite::LocalCoordinatesSite(const vector<int>& particles, const vector<double>& originWeights, const vector<double>& xWeights, const vector<double>& yWeights, const Vec3& localPosition) :
         originWeights(originWeights), xWeights(xWeights), yWeights(yWeights), localPosition(localPosition) {
+    int numParticles = particles.size();
+    if (numParticles < 2)
+        throw OpenMMException("LocalCoordinatesSite: Must depend on at least two other particles");
+    if (originWeights.size() != numParticles || xWeights.size() != numParticles || yWeights.size() != numParticles)
+        throw OpenMMException("LocalCoordinatesSite: Number of weights does not match number of particles");
+    double originSum = 0, xSum = 0, ySum = 0;
+    for (int i = 0; i < numParticles; i++) {
+        originSum += originWeights[i];
+        xSum += xWeights[i];
+        ySum += yWeights[i];
+    }
+    if (fabs(originSum-1.0) > 1e-6)
+        throw OpenMMException("LocalCoordinatesSite: Weights for computing origin must add to 1");
+    if (fabs(xSum) > 1e-6)
+        throw OpenMMException("LocalCoordinatesSite: Weights for computing x axis must add to 0");
+    if (fabs(ySum) > 1e-6)
+        throw OpenMMException("LocalCoordinatesSite: Weights for computing y axis must add to 0");
+    setParticles(particles);
+}
+
+LocalCoordinatesSite::LocalCoordinatesSite(int particle1, int particle2, int particle3, const Vec3& originWeights, const Vec3& xWeights, const Vec3& yWeights, const Vec3& localPosition) :
+        localPosition(localPosition) {
     if (fabs(originWeights[0]+originWeights[1]+originWeights[2]-1.0) > 1e-6)
         throw OpenMMException("LocalCoordinatesSite: Weights for computing origin must add to 1");
     if (fabs(xWeights[0]+xWeights[1]+xWeights[2]) > 1e-6)
@@ -118,18 +140,45 @@ LocalCoordinatesSite::LocalCoordinatesSite(int particle1, int particle2, int par
     particles[1] = particle2;
     particles[2] = particle3;
     setParticles(particles);
+    this->originWeights.push_back(originWeights[0]);
+    this->originWeights.push_back(originWeights[1]);
+    this->originWeights.push_back(originWeights[2]);
+    this->xWeights.push_back(xWeights[0]);
+    this->xWeights.push_back(xWeights[1]);
+    this->xWeights.push_back(xWeights[2]);
+    this->yWeights.push_back(yWeights[0]);
+    this->yWeights.push_back(yWeights[1]);
+    this->yWeights.push_back(yWeights[2]);
 }
 
-const Vec3& LocalCoordinatesSite::getOriginWeights() const {
-    return originWeights;
+void LocalCoordinatesSite::getOriginWeights(vector<double>& weights) const {
+    weights = originWeights;
 }
 
-const Vec3& LocalCoordinatesSite::getXWeights() const {
-    return xWeights;
+Vec3 LocalCoordinatesSite::getOriginWeights() const {
+    if (originWeights.size() != 3)
+        throw OpenMMException("LocalCoordinatesSite: This version of getOriginWeights() requires the site to depend on three particles");
+    return Vec3(originWeights[0], originWeights[1], originWeights[2]);
 }
 
-const Vec3& LocalCoordinatesSite::getYWeights() const {
-    return yWeights;
+void LocalCoordinatesSite::getXWeights(vector<double>& weights) const {
+    weights = xWeights;
+}
+
+Vec3 LocalCoordinatesSite::getXWeights() const {
+    if (xWeights.size() != 3)
+        throw OpenMMException("LocalCoordinatesSite: This version of getXWeights() requires the site to depend on three particles");
+    return Vec3(xWeights[0], xWeights[1], xWeights[2]);
+}
+
+void LocalCoordinatesSite::getYWeights(vector<double>& weights) const {
+    weights = yWeights;
+}
+
+Vec3 LocalCoordinatesSite::getYWeights() const {
+    if (yWeights.size() != 3)
+        throw OpenMMException("LocalCoordinatesSite: This version of getYWeights() requires the site to depend on three particles");
+    return Vec3(yWeights[0], yWeights[1], yWeights[2]);
 }
 
 const Vec3& LocalCoordinatesSite::getLocalPosition() const {

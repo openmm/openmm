@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2012-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2012-2017 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -168,21 +168,21 @@ private:
 };
 
 /**
- * This is a VirtualSite that uses the locations of three other particles to compute a local
+ * This is a VirtualSite that uses the locations of several other particles to compute a local
  * coordinate system, then places the virtual site at a fixed location in that coordinate
  * system.  The origin of the coordinate system and the directions of its x and y axes
- * are each specified as a weighted sum of the locations of the three particles:
+ * are each specified as a weighted sum of the locations of the other particles:
  * 
- * origin = w<sup>o</sup><sub>1</sub>r<sub>1</sub> +  w<sup>o</sup><sub>2</sub>r<sub>2</sub> +  w<sup>o</sup><sub>3</sub>r<sub>3</sub>
+ * origin = w<sup>o</sup><sub>1</sub>r<sub>1</sub> +  w<sup>o</sup><sub>2</sub>r<sub>2</sub> +  w<sup>o</sup><sub>3</sub>r<sub>3</sub> + ...
  * 
- * xdir = w<sup>x</sup><sub>1</sub>r<sub>1</sub> +  w<sup>x</sup><sub>2</sub>r<sub>2</sub> +  w<sup>x</sup><sub>3</sub>r<sub>3</sub>
+ * xdir = w<sup>x</sup><sub>1</sub>r<sub>1</sub> +  w<sup>x</sup><sub>2</sub>r<sub>2</sub> +  w<sup>x</sup><sub>3</sub>r<sub>3</sub> + ...
  * 
- * ydir = w<sup>y</sup><sub>1</sub>r<sub>1</sub> +  w<sup>y</sup><sub>2</sub>r<sub>2</sub> +  w<sup>y</sup><sub>3</sub>r<sub>3</sub>
+ * ydir = w<sup>y</sup><sub>1</sub>r<sub>1</sub> +  w<sup>y</sup><sub>2</sub>r<sub>2</sub> +  w<sup>y</sup><sub>3</sub>r<sub>3</sub> + ...
  * 
- * For the origin, the three weights must add to one.  For example if
+ * For the origin, the weights must add to one.  For example if
  * (w<sup>o</sup><sub>1</sub>, w<sup>o</sup><sub>2</sub>, w<sup>o</sup><sub>3</sub>) = (1.0, 0.0, 0.0),
  * the origin of the local coordinate system is at the location of particle 1.  For xdir and ydir,
- * the weights must add to zero.  For excample, if
+ * the weights must add to zero.  For example, if
  * (w<sup>x</sup><sub>1</sub>, w<sup>x</sup><sub>2</sub>, w<sup>x</sup><sub>3</sub>) = (-1.0, 0.5, 0.5),
  * the x axis points from particle 1 toward the midpoint between particles 2 and 3.
  * 
@@ -197,6 +197,17 @@ public:
     /**
      * Create a new LocalCoordinatesSite virtual site.
      * 
+     * @param particles      the indices of the particle the site depends on
+     * @param originWeights  the weight factors for the particles when computing the origin location
+     * @param xWeights       the weight factors for the particles when computing xdir
+     * @param yWeights       the weight factors for the particles when computing ydir
+     * @param localPosition  the position of the virtual site in the local coordinate system
+     */
+    LocalCoordinatesSite(const std::vector<int>& particles, const std::vector<double>& originWeights, const std::vector<double>& xWeights, const std::vector<double>& yWeights, const Vec3& localPosition);
+    /**
+     * Create a new LocalCoordinatesSite virtual site.  This constructor assumes the site depends on
+     * exactly three other particles.
+     * 
      * @param particle1      the index of the first particle
      * @param particle2      the index of the second particle
      * @param particle3      the index of the third particle
@@ -207,23 +218,42 @@ public:
      */
     LocalCoordinatesSite(int particle1, int particle2, int particle3, const Vec3& originWeights, const Vec3& xWeights, const Vec3& yWeights, const Vec3& localPosition);
     /**
-     * Get the weight factors for the three particles when computing the origin location.
+     * Get the weight factors for the particles when computing the origin location.
      */
-    const Vec3& getOriginWeights() const;
+    void getOriginWeights(std::vector<double>& weights) const;
     /**
-     * Get the weight factors for the three particles when computing xdir.
+     * Get the weight factors for the particles when computing the origin location.
+     * This version assumes the site depends on exactly three other particles, and
+     * throws an exception if that is not the case.
      */
-    const Vec3& getXWeights() const;
+    Vec3 getOriginWeights() const;
     /**
-     * Get the weight factors for the three particles when computing ydir.
+     * Get the weight factors for the particles when computing xdir.
      */
-    const Vec3& getYWeights() const;
+    void getXWeights(std::vector<double>& weights) const;
+    /**
+     * Get the weight factors for the particles when computing xdir.
+     * This version assumes the site depends on exactly three other particles, and
+     * throws an exception if that is not the case.
+     */
+    Vec3 getXWeights() const;
+    /**
+     * Get the weight factors for the particles when computing ydir.
+     */
+    void getYWeights(std::vector<double>& weights) const;
+    /**
+     * Get the weight factors for the particles when computing ydir.
+     * This version assumes the site depends on exactly three other particles, and
+     * throws an exception if that is not the case.
+     */
+    Vec3 getYWeights() const;
     /**
      * Get the position of the virtual site in the local coordinate system.
      */
     const Vec3& getLocalPosition() const;
 private:
-    Vec3 originWeights, xWeights, yWeights, localPosition;
+    std::vector<double> originWeights, xWeights, yWeights;
+    Vec3 localPosition;
 };
 
 } // namespace OpenMM

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2017 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -82,6 +82,23 @@ void compareSystems(System& system, System& system2) {
     ASSERT_EQUAL(0.1, site7.getWeight12());
     ASSERT_EQUAL(0.2, site7.getWeight13());
     ASSERT_EQUAL(0.5, site7.getWeightCross());
+    const LocalCoordinatesSite& site8 = dynamic_cast<const LocalCoordinatesSite&>(system2.getVirtualSite(8));
+    ASSERT_EQUAL(4, site8.getNumParticles());
+    ASSERT_EQUAL(4, site8.getParticle(0));
+    ASSERT_EQUAL(3, site8.getParticle(1));
+    ASSERT_EQUAL(2, site8.getParticle(2));
+    ASSERT_EQUAL(1, site8.getParticle(3));
+    ASSERT_EQUAL(Vec3(-0.5, 1.0, 1.5), site8.getLocalPosition());
+    vector<double> wo, wx, wy;
+    site8.getOriginWeights(wo);
+    site8.getXWeights(wx);
+    site8.getYWeights(wy);
+    vector<double> woExpected = {0.1, 0.2, 0.3, 0.4};
+    vector<double> wxExpected = {-1.0, 0.4, 0.4, 0.2};
+    vector<double> wyExpected = {0.3, 0.7, 0.0, -1.0};
+    ASSERT_EQUAL_CONTAINERS(woExpected, wo);
+    ASSERT_EQUAL_CONTAINERS(wxExpected, wx);
+    ASSERT_EQUAL_CONTAINERS(wyExpected, wy);
     ASSERT_EQUAL(system.getNumForces(), system2.getNumForces());
     for (int i = 0; i < system.getNumForces(); i++)
         ASSERT(typeid(system.getForce(i)) == typeid(system2.getForce(i)))
@@ -93,7 +110,7 @@ void testSerialization() {
     System system;
     for (int i = 0; i < 5; i++)
         system.addParticle(0.1*i+1);
-    for (int i = 0; i < 4; i++)
+    for (int i = 0; i < 5; i++)
         system.addParticle(0.0);
     system.addConstraint(0, 1, 3.0);
     system.addConstraint(1, 2, 2.5);
@@ -102,6 +119,7 @@ void testSerialization() {
     system.setVirtualSite(5, new TwoParticleAverageSite(0, 1, 0.3, 0.7));
     system.setVirtualSite(6, new ThreeParticleAverageSite(2, 4, 3, 0.5, 0.2, 0.3));
     system.setVirtualSite(7, new OutOfPlaneSite(0, 3, 1, 0.1, 0.2, 0.5));
+    system.setVirtualSite(8, new LocalCoordinatesSite({4, 3, 2, 1}, {0.1, 0.2, 0.3, 0.4}, {-1.0, 0.4, 0.4, 0.2}, {0.3, 0.7, 0.0, -1.0}, Vec3(-0.5, 1.0, 1.5)));
     system.addForce(new HarmonicBondForce());
 
     // Serialize and then deserialize it, then make sure the systems are identical.
