@@ -53,6 +53,9 @@ void CustomCVForceImpl::initialize(ContextImpl& context) {
     // Construct the inner system used to evaluate collective variables.
     
     const System& system = context.getSystem();
+    Vec3 a, b, c;
+    system.getDefaultPeriodicBoxVectors(a, b, c);
+    innerSystem.setDefaultPeriodicBoxVectors(a, b, c);
     for (int i = 0; i < system.getNumParticles(); i++)
         innerSystem.addParticle(system.getParticleMass(i));
     for (int i = 0; i < owner.getNumCollectiveVariables(); i++) {
