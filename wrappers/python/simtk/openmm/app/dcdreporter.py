@@ -57,7 +57,7 @@ class DCDReporter(object):
         self._reportInterval = reportInterval
         self._append = append
         if append:
-            mode = 'a+b'
+            mode = 'r+b'
         else:
             mode = 'wb'
         self._out = open(file, mode)
