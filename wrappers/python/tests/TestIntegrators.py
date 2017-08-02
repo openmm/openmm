@@ -120,5 +120,33 @@ class TestIntegrators(unittest.TestCase):
             context.setPositions(pdb.positions)
             integrator.step(10)
 
+
+    def testNHCIntegratorExplicit(self):
+        import warnings
+        """Test the Nose-Hoover integrator on an explicit solvent system, with constraints
+           by ensuring that the conserved energy is within a reasonable range"""
+        warnings.filterwarnings('ignore', category=CharmmPSFWarning)
+        # Create a periodic solvated system with PME
+        psf = CharmmPsfFile('systems/ala3_solv.psf')
+        crd = CharmmCrdFile('systems/ala3_solv.crd')
+        params = CharmmParameterSet('systems/par_all36_prot.prm',
+                                    'systems/toppar_water_ions.str')
+        psf.setBox(34.7119500*angstroms, 34.9959600*angstroms, 36.0071500*angstroms)
+        system = psf.createSystem(params, nonbondedMethod=CutoffPeriodic, switchDistance=2*angstrom,
+                                  rigidWater=True, constraints=HBonds, nonbondedCutoff=12*angstrom)
+        integrator = NHCIntegrator(1*femtoseconds)
+        context = Context(system, integrator)
+        context.setPositions(crd.positions)
+
+        integrator.step(40) # quick equilibration
+        energies = []
+        for iteration in range(40):
+            integrator.step(1)
+            energies.append(integrator.getConservedEnergy())
+        refenergy = energies[0]
+        for e in energies:
+            if abs((e-refenergy)/refenergy) > 1e-4:
+                raise Exception('Energy not conserved by Nose-Hoover integrator')
+
 if __name__ == '__main__':
     unittest.main()
