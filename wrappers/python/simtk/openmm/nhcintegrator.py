@@ -52,29 +52,29 @@ class NHCIntegrator(CustomIntegrator):
         Parameters:
         -----------
 
-        timestep: unit.Quantity compatible with femtoseconds, default=1*simtk.unit.femtoseconds
+        timeStep: unit.Quantity compatible with femtoseconds, default=1*simtk.unit.femtoseconds
             The integration timestep for particles.
 
         temperature: unit.Quantity compatible with kelvin, default=298*simtk.unit.kelvin
             The target temperature for the thermostat.
 
-        chainlength: integer, default=5
+        chainLength: integer, default=5
             The number of thermostat particles in the Nosé-Hoover chain.  Increasing
             this parameter will affect computational cost, but will make the simulation
             less sensitive to thermostat parameters, particularly in stiff systems; see
             the 1992 paper referenced above for more details.
 
-        oscillatorperiod: unit.Quantity compatible with picoseconds, default=0.5*simtk.unit.picoseconds
+        oscillatorPeriod: unit.Quantity compatible with picoseconds, default=0.5*simtk.unit.picoseconds
             The period of motion of the thermostat particles.  A very large value will result
             in a distribution approaching the microcanonical ensemble, while a small value will
             cause rapid fluctuations in the temperature before convergence.
 
-        n_mts: integer, default=5
+        numMTS: integer, default=5
             The number of timesteps used in the multi-timestep procedure to update the thermostat
             positions.  A higher value will increase the stability of the dynamics, but will also
             increase the compuational cost of the integration.
 
-        n_yoshidasuzuki: integer, default=5
+        numYoshidaSuzuki: integer, default=5
             The number of Yoshida-Suzuki steps used to subdivide each of the multi-timesteps used
             to update the thermostat positions.  A higher value will increase the stability of the 
             dynamics, but will also increase the computational cost of the integration; only certain
@@ -87,55 +87,55 @@ class NHCIntegrator(CustomIntegrator):
         5 : [ 0.2967324292201065,  0.2967324292201065, -0.1869297168804260, 0.2967324292201065, 0.2967324292201065 ]
     }
 
-    def get_ndf(self):
+    def getNDF(self):
         """ Returns the number of degrees of freedom, 3*natom, ignoring constraints. """
         return int(self.getGlobalVariable(0))
 
-    def get_ke(self):
+    def getKE(self):
         """ Returns the particles' kinetic energy. """
         return self.getGlobalVariable(1) * kilojoules_per_mole
 
-    def get_pe(self):
+    def getPE(self):
         """ Returns the particles' potential energy. """
         return self.getGlobalVariable(2) * kilojoules_per_mole
 
-    def get_bath_ke(self):
+    def getBathKE(self):
         """ Returns the thermostat bath kinetic energy. """
         return self.getGlobalVariable(3) * kilojoules_per_mole
 
-    def get_bath_pe(self):
+    def getBathPE(self):
         """ Returns the thermostat bath potential energy. """
         return self.getGlobalVariable(4) * kilojoules_per_mole
 
-    def get_conserved_energy(self):
+    def getConservedEnergy(self):
         """ Returns the NHC conserved energy, which is the sum
             of all particle and thermostat energies. """
         return self.getGlobalVariable(5) * kilojoules_per_mole
 
-    def get_current_temperature(self):
+    def getCurrentTemperature(self):
         """ Returns the instantaneous temperature of the system. """
         return self.getGlobalVariable(6) * kelvin
 
-    def __init__(self, timestep=0.001*picoseconds, temperature=298*kelvin, chainlength=5,
-                 oscillatorperiod=0.5*picoseconds, n_mts=5, n_yoshidasuzuki=5):
-        CustomIntegrator.__init__(self, timestep)
-        self.n_c         = n_mts
-        self.n_ys        = n_yoshidasuzuki
+    def __init__(self, timeStep=0.001*picoseconds, temperature=298*kelvin, chainLength=5,
+                 oscillatorPeriod=0.5*picoseconds, numMTS=5, numYoshidaSuzuki=5):
+        CustomIntegrator.__init__(self, timeStep)
+        self.n_c         = numMTS
+        self.n_ys        = numYoshidaSuzuki
         try:
             self.weights     = self.YSWeights[self.n_ys]
         except KeyError:
             raise Exception("Invalid Yoshida-Suzuki value. Allowed values are: %s"%
                              ",".join(map(str,self.YSWeights.keys())))
-        if chainlength < 0:
+        if chainLength < 0:
             raise Exception("Nosé-Hoover chain length must be at least 0")
-        if chainlength == 0:
+        if chainLength == 0:
             print("WARNING: Nosé-Hoover chain length is 0; falling back to regular velocity verlet algorithm.")
-        self.M           = chainlength
+        self.M           = chainLength
         self.R           = MOLAR_GAS_CONSTANT_R.value_in_unit(kilojoules_per_mole/kelvin)
         self.RT          = self.R * temperature.value_in_unit(kelvin)
 
         # Define the "mass" of the thermostat particles (multiply by ndf for particle 0)
-        frequency = (2*math.pi/oscillatorperiod).value_in_unit(picoseconds**-1)
+        frequency = (2*math.pi/oscillatorPeriod).value_in_unit(picoseconds**-1)
         Q = self.RT/frequency**2
 
         #
@@ -179,10 +179,7 @@ class NHCIntegrator(CustomIntegrator):
         #
         # Take a step
         #
-        if self.M:
-            self.propagateNHC()
-
-        # Velocity verlet algorithm to propagate particles
+        if self.M: self.propagateNHC()
         self.addUpdateContextState()
         self.addComputePerDof("v", "v+0.5*dt*f/m")
         self.addComputePerDof("x", "x+dt*v")
@@ -190,14 +187,10 @@ class NHCIntegrator(CustomIntegrator):
         self.addConstrainPositions()
         self.addComputePerDof("v", "v+0.5*dt*f/m+(x-x1)/dt")
         self.addConstrainVelocities()
-
-        if self.M:
-            self.propagateNHC()
-
-        #
+        if self.M: self.propagateNHC()
         # Compute statistics
-        #
-        self.compute_energies()
+        self.computeEnergies()
+
 
     def propagateNHC(self):
         """ Propagate the Nosé-Hoover chain """
@@ -228,7 +221,7 @@ class NHCIntegrator(CustomIntegrator):
         # update particle velocities
         self.addComputePerDof("v", "scale*v")
 
-    def compute_energies(self):
+    def computeEnergies(self):
         """ Computes kinetic and potential energies for particles and thermostat
             particles, as well as the conserved energy and current temperature """
         # Particle kinetic energy
@@ -254,7 +247,7 @@ class NHCIntegrator(CustomIntegrator):
 if __name__ == "__main__":
     import os
     from simtk.unit import angstrom, elementary_charge
-    from simtk.openmm import System, Vec3, NonbondedForce, Context, LocalEnergyMinimizer, VerletIntegrator
+    from simtk.openmm import System, Vec3, NonbondedForce, Context, LocalEnergyMinimizer
     import numpy as np
 
     # This example was "borrowed" from John Chodera's really neat Argon free energy example
@@ -288,12 +281,12 @@ if __name__ == "__main__":
     system.addForce(force)
 
     # Create Integrator and Context.
-    integrator = NHCIntegrator(temperature = 300*kelvin,
-                               timestep=0.001*picoseconds,
-                               chainlength=10,
-                               oscillatorperiod=0.1*picoseconds,
-                               n_mts=5,
-                               n_yoshidasuzuki=5)
+    integrator = NHCIntegrator(timeStep=0.001*picoseconds,
+                               temperature = 300*kelvin,
+                               chainLength=10,
+                               oscillatorPeriod=0.1*picoseconds,
+                               numMTS=5,
+                               numYoshidaSuzuki=5)
 
     context = Context(system, integrator)
 
@@ -306,11 +299,11 @@ if __name__ == "__main__":
     for iteration in range(20000):
         integrator.step(1)
         if iteration%20 == 0:
-            PKE = integrator.get_ke().value_in_unit(kilojoules_per_mole)
-            PPE = integrator.get_pe().value_in_unit(kilojoules_per_mole)
-            BKE = integrator.get_bath_ke().value_in_unit(kilojoules_per_mole)
-            BPE = integrator.get_bath_pe().value_in_unit(kilojoules_per_mole)
+            PKE = integrator.getKE().value_in_unit(kilojoules_per_mole)
+            PPE = integrator.getPE().value_in_unit(kilojoules_per_mole)
+            BKE = integrator.getBathKE().value_in_unit(kilojoules_per_mole)
+            BPE = integrator.getBathPE().value_in_unit(kilojoules_per_mole)
             conserved = PKE + PPE + BKE + BPE
-            temp = integrator.get_current_temperature().value_in_unit(kelvin)
+            temp = integrator.getCurrentTemperature().value_in_unit(kelvin)
             print("%7d   %12.6f   %12.6f   %12.6f   %12.6f   %12.6f   %12.6f"%
                       (iteration, PKE, PPE, BKE, BPE, temp, conserved))

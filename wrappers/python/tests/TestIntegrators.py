@@ -142,7 +142,7 @@ class TestIntegrators(unittest.TestCase):
         energies = []
         for iteration in range(40):
             integrator.step(1)
-            energies.append(integrator.get_conserved_energy())
+            energies.append(integrator.getConservedEnergy())
         refenergy = energies[0]
         for e in energies:
             if abs((e-refenergy)/refenergy) > 1e-4:
