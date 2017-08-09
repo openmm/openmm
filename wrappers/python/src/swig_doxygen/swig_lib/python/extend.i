@@ -205,6 +205,13 @@ Parameters:
   %}
 }
 
+%extend OpenMM::CompoundIntegrator {
+  %pythoncode %{
+    def getIntegrator(self, index):
+        return self._integrators[index]
+  %}
+}
+
 %extend OpenMM::System {
   %pythoncode %{
     def __getstate__(self):

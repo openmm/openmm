@@ -28,6 +28,14 @@ from simtk.openmm.vec3 import Vec3
     self._integrator = args[1]
 %}
 
+%pythonappend OpenMM::CompoundIntegrator::CompoundIntegrator %{
+    self._integrators = []
+%}
+
+%pythonprepend OpenMM::CompoundIntegrator::addIntegrator %{
+    self._integrators.append(integrator)
+%}
+
 %pythonprepend OpenMM::AmoebaAngleForce::addAngle %{
     try:
         length = args[3]
