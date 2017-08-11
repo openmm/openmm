@@ -6,6 +6,9 @@
 %extend OpenMM::Context {
 
   %pythoncode %{
+    def getIntegrator(self):
+        return self._integrator
+
     def getState(self, getPositions=False, getVelocities=False,
                  getForces=False, getEnergy=False, getParameters=False,
                  getParameterDerivatives=False, enforcePeriodicBox=False, groups=-1):
@@ -199,6 +202,13 @@ Parameters:
         """
         return self.addException(particle1, particle2,
                                  chargeProd, rMin/RMIN_PER_SIGMA, epsilon)
+  %}
+}
+
+%extend OpenMM::CompoundIntegrator {
+  %pythoncode %{
+    def getIntegrator(self, index):
+        return self._integrators[index]
   %}
 }
 
