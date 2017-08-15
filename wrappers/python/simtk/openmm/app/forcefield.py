@@ -445,17 +445,19 @@ class ForceField(object):
         generator : function
             A function that will be called when a residue is encountered that does not match an existing forcefield template.
 
-        When a residue without a template is encountered, the `generator` function is called with:
+        When a residue without a template is encountered, the ``generator`` function is called with:
 
         ::
            success = generator(forcefield, residue)
-        ```
 
-        where `forcefield` is the calling `ForceField` object and `residue` is a simtk.openmm.app.topology.Residue object.
+        where ``forcefield`` is the calling ``ForceField`` object and ``residue`` is a simtk.openmm.app.topology.Residue object.
 
-        `generator` must conform to the following API:
+        ``generator`` must conform to the following API:
+
         ::
-          Parameters
+           generator API
+
+           Parameters
            ----------
            forcefield : simtk.openmm.app.ForceField
                The ForceField object to which residue templates and/or parameters are to be added.

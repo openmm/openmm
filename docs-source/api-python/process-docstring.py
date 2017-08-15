@@ -14,8 +14,11 @@ def process_docstring(app, what, name, obj, options, lines):
         s = m.group(1)
         if not s.startswith(linesep):
             s = linesep + s
-        newline = '|LINEBREAK|.. admonition:: Deprecated' + linesep
+        newline = '|LINEBREAK|.. admonition::|LINEBREAK|   Deprecated' + linesep
         return newline + '    ' + s.replace(linesep, linesep + '    ')
+    def repl3(m):
+        s = m.group(1)
+        return '*' + s + '*'
 
     linesep = '|LINEBREAK|'
     joined = linesep.join(lines)
@@ -23,6 +26,7 @@ def process_docstring(app, what, name, obj, options, lines):
     joined = re.sub(r'<tt><pre>((|LINEBREAK|)?.*?)</pre></tt>', repl, joined)
     joined = re.sub(r'<tt>(.*?)</tt>', repl, joined)
     joined = re.sub(r'@deprecated(.*?\|LINEBREAK\|)', repl2, joined, flags=re.IGNORECASE)
+    joined = re.sub(r'<i>(.*?)</i>', repl3, joined)
     lines[:] = [(l if not l.isspace() else '') for l in joined.split(linesep)]
 
 

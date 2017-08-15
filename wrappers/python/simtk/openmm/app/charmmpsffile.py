@@ -117,22 +117,23 @@ class CharmmPsfFile(object):
 
     This structure has numerous attributes that are lists of the elements of
     this structure, including atoms, bonds, torsions, etc. The attributes are
-        - residue_list
-        - atom_list
-        - bond_list
-        - angle_list
-        - dihedral_list
-        - dihedral_parameter_list
-        - improper_list
-        - cmap_list
-        - donor_list    # hbonds donors?
-        - acceptor_list # hbond acceptors?
-        - group_list    # list of nonbonded interaction groups
+
+    - residue_list
+    - atom_list
+    - bond_list
+    - angle_list
+    - dihedral_list
+    - dihedral_parameter_list
+    - improper_list
+    - cmap_list
+    - donor_list    # hbonds donors?
+    - acceptor_list # hbond acceptors?
+    - group_list    # list of nonbonded interaction groups
 
     Additional attribute is available if a CharmmParameterSet is loaded into
     this structure.
 
-        - urey_bradley_list
+    - urey_bradley_list
 
     The lengths of each of these lists gives the pointers (e.g., natom, nres,
     etc.)
@@ -713,7 +714,7 @@ class CharmmPsfFile(object):
             solvent.
         implicitSolventSaltConc : float=0.0*u.moles/u.liter
             Salt concentration for GB simulations. Converted to Debye length
-            `kappa'
+            ``kappa``
         temperature : float=298.15*u.kelvin
             Temperature used in the salt concentration-to-kappa conversion for
             GB salt concentration term
