@@ -14,7 +14,7 @@ def process_docstring(app, what, name, obj, options, lines):
         s = m.group(1)
         if not s.startswith(linesep):
             s = linesep + s
-        newline = '|LINEBREAK|.. admonition:: Deprecated' + linesep
+        newline = '|LINEBREAK|.. admonition::|LINEBREAK|   Deprecated' + linesep
         return newline + '    ' + s.replace(linesep, linesep + '    ')
 
     linesep = '|LINEBREAK|'
