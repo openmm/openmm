@@ -978,9 +978,16 @@ void OpenCLContext::findMoleculeGroups() {
             for (int i = 0; i < (int) forces.size() && identical; i++) {
                 if (mol.groups[i].size() != mol2.groups[i].size())
                     identical = false;
-                for (int k = 0; k < (int) mol.groups[i].size() && identical; k++)
+                for (int k = 0; k < (int) mol.groups[i].size() && identical; k++) {
                     if (!forces[i]->areGroupsIdentical(mol.groups[i][k], mol2.groups[i][k]))
                         identical = false;
+                    vector<int> p1, p2;
+                    forces[i]->getParticlesInGroup(mol.groups[i][k], p1);
+                    forces[i]->getParticlesInGroup(mol2.groups[i][k], p2);
+                    for (int m = 0; m < p1.size(); m++)
+                        if (p1[m] != p2[m]-atomOffset)
+                            identical = false;
+                }
             }
             if (identical) {
                 moleculeInstances[j].push_back(molIndex);
