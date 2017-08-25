@@ -112,7 +112,6 @@ SKIP_METHODS = [('State', 'getPositions'),
                 ('LocalCoordinatesSite',  'getOriginWeights', 0),
                 ('LocalCoordinatesSite',  'getXWeights', 0),
                 ('LocalCoordinatesSite',  'getYWeights', 0),
-                ('CompoundIntegrator', 'getIntegrator'),
 ]
 
 # The build script assumes method args that are non-const references are
@@ -149,6 +148,7 @@ STEAL_OWNERSHIP = {("Platform", "registerPlatform") : [0],
                    ("CustomManyParticleForce", "addTabulatedFunction") : [1],
                    ("CustomCVForce", "addTabulatedFunction") : [1],
                    ("CustomCVForce", "addCollectiveVariable") : [1],
+                   ("CompoundIntegrator", "addIntegrator") : [0],
 }
 
 
