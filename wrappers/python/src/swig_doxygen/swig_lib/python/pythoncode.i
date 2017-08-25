@@ -33,7 +33,12 @@ from simtk.openmm.vec3 import Vec3
 %}
 
 %pythonprepend OpenMM::CompoundIntegrator::addIntegrator %{
+    if not integrator.thisown:
+        s = ("the %s object does not own its corresponding OpenMM object"
+             % integrator.__class__.__name__)
+        raise Exception(s)
     self._integrators.append(integrator)
+    integrator.thisown=0
 %}
 
 %pythonprepend OpenMM::AmoebaAngleForce::addAngle %{
