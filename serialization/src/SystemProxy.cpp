@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2017 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -71,15 +71,23 @@ void SystemProxy::serialize(const void* object, SerializationNode& node) const {
             }
             else if (typeid(system.getVirtualSite(i)) == typeid(LocalCoordinatesSite)) {
                 const LocalCoordinatesSite& site = dynamic_cast<const LocalCoordinatesSite&>(system.getVirtualSite(i));
-                Vec3 wo = site.getOriginWeights();
-                Vec3 wx = site.getXWeights();
-                Vec3 wy = site.getYWeights();
+                int numParticles = site.getNumParticles();
+                vector<double> wo, wx, wy;
+                site.getOriginWeights(wo);
+                site.getXWeights(wx);
+                site.getYWeights(wy);
                 Vec3 p = site.getLocalPosition();
-                particle.createChildNode("LocalCoordinatesSite").setIntProperty("p1", site.getParticle(0)).setIntProperty("p2", site.getParticle(1)).setIntProperty("p3", site.getParticle(2)).
-                        setDoubleProperty("wo1", wo[0]).setDoubleProperty("wo2", wo[1]).setDoubleProperty("wo3", wo[2]).
-                        setDoubleProperty("wx1", wx[0]).setDoubleProperty("wx2", wx[1]).setDoubleProperty("wx3", wx[2]).
-                        setDoubleProperty("wy1", wy[0]).setDoubleProperty("wy2", wy[1]).setDoubleProperty("wy3", wy[2]).
-                        setDoubleProperty("pos1", p[0]).setDoubleProperty("pos2", p[1]).setDoubleProperty("pos3", p[2]);
+                SerializationNode& siteNode = particle.createChildNode("LocalCoordinatesSite");
+                siteNode.setDoubleProperty("pos1", p[0]).setDoubleProperty("pos2", p[1]).setDoubleProperty("pos3", p[2]);
+                for (int j = 0; j < numParticles; j++) {
+                    stringstream ss;
+                    ss << (j+1);
+                    string index = ss.str();
+                    siteNode.setIntProperty("p"+index, site.getParticle(j));
+                    siteNode.setDoubleProperty("wo"+index, wo[j]);
+                    siteNode.setDoubleProperty("wx"+index, wx[j]);
+                    siteNode.setDoubleProperty("wy"+index, wy[j]);
+                }
             }
         }
     }
@@ -120,11 +128,21 @@ void* SystemProxy::deserialize(const SerializationNode& node) const {
                 else if (vsite.getName() == "OutOfPlaneSite")
                     system->setVirtualSite(i, new OutOfPlaneSite(vsite.getIntProperty("p1"), vsite.getIntProperty("p2"), vsite.getIntProperty("p3"), vsite.getDoubleProperty("w12"), vsite.getDoubleProperty("w13"), vsite.getDoubleProperty("wc")));
                 else if (vsite.getName() == "LocalCoordinatesSite") {
-                    Vec3 wo(vsite.getDoubleProperty("wo1"), vsite.getDoubleProperty("wo2"), vsite.getDoubleProperty("wo3"));
-                    Vec3 wx(vsite.getDoubleProperty("wx1"), vsite.getDoubleProperty("wx2"), vsite.getDoubleProperty("wx3"));
-                    Vec3 wy(vsite.getDoubleProperty("wy1"), vsite.getDoubleProperty("wy2"), vsite.getDoubleProperty("wy3"));
+                    vector<int> particles;
+                    vector<double> wo, wx, wy;
+                    for (int j = 0; ; j++) {
+                        stringstream ss;
+                        ss << (j+1);
+                        string index = ss.str();
+                        if (!vsite.hasProperty("p"+index))
+                            break;
+                        particles.push_back(vsite.getIntProperty("p"+index));
+                        wo.push_back(vsite.getDoubleProperty("wo"+index));
+                        wx.push_back(vsite.getDoubleProperty("wx"+index));
+                        wy.push_back(vsite.getDoubleProperty("wy"+index));
+                    }
                     Vec3 p(vsite.getDoubleProperty("pos1"), vsite.getDoubleProperty("pos2"), vsite.getDoubleProperty("pos3"));
-                    system->setVirtualSite(i, new LocalCoordinatesSite(vsite.getIntProperty("p1"), vsite.getIntProperty("p2"), vsite.getIntProperty("p3"), wo, wx, wy, p));
+                    system->setVirtualSite(i, new LocalCoordinatesSite(particles, wo, wx, wy, p));
                 }
             }
         }

@@ -170,14 +170,17 @@ void CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedForc
     vector<vector<double> > classes;
     map<vector<double>, int> classIndex;
     vector<int> atomClass(numParticles);
+    vector<double> parameters;
     for (int i = 0; i < numParticles; i++) {
-        vector<double> parameters;
         force.getParticleParameters(i, parameters);
-        if (classIndex.find(parameters) == classIndex.end()) {
+        map<vector<double>, int>::iterator entry = classIndex.find(parameters);
+        if (entry == classIndex.end()) {
             classIndex[parameters] = classes.size();
+            atomClass[i] = classes.size();
             classes.push_back(parameters);
         }
-        atomClass[i] = classIndex[parameters];
+        else
+            atomClass[i] = entry->second;
     }
     int numClasses = classes.size();
     
@@ -228,10 +231,18 @@ void CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedForc
     double nPart = (double) numParticles;
     double numInteractions = (nPart*(nPart+1))/2;
     Lepton::CompiledExpression expression = Lepton::Parser::parse(force.getEnergyFunction(), functions).createCompiledExpression();
+    vector<string> paramNames;
+    for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
+        stringstream name1, name2;
+        name1 << force.getPerParticleParameterName(i) << 1;
+        name2 << force.getPerParticleParameterName(i) << 2;
+        paramNames.push_back(name1.str());
+        paramNames.push_back(name2.str());
+    }
     double sum = 0;
     for (int i = 0; i < numClasses; i++)
         for (int j = i; j < numClasses; j++)
-            sum += interactionCount[make_pair(i, j)]*integrateInteraction(expression, classes[i], classes[j], force, context);
+            sum += interactionCount[make_pair(i, j)]*integrateInteraction(expression, classes[i], classes[j], force, context, paramNames);
     sum /= numInteractions;
     coefficient = 2*M_PI*nPart*nPart*sum;
     
@@ -244,23 +255,20 @@ void CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedForc
         sum = 0;
         for (int i = 0; i < numClasses; i++)
             for (int j = i; j < numClasses; j++)
-                sum += interactionCount[make_pair(i, j)]*integrateInteraction(expression, classes[i], classes[j], force, context);
+                sum += interactionCount[make_pair(i, j)]*integrateInteraction(expression, classes[i], classes[j], force, context, paramNames);
         sum /= numInteractions;
         derivatives[k] = 2*M_PI*nPart*nPart*sum;
     }
 }
 
 double CustomNonbondedForceImpl::integrateInteraction(Lepton::CompiledExpression& expression, const vector<double>& params1, const vector<double>& params2,
-        const CustomNonbondedForce& force, const Context& context) {
+        const CustomNonbondedForce& force, const Context& context, const vector<string>& paramNames) {
     const set<string>& variables = expression.getVariables();
     for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
-        stringstream name1, name2;
-        name1 << force.getPerParticleParameterName(i) << 1;
-        name2 << force.getPerParticleParameterName(i) << 2;
-        if (variables.find(name1.str()) != variables.end())
-            expression.getVariableReference(name1.str()) = params1[i];
-        if (variables.find(name2.str()) != variables.end())
-            expression.getVariableReference(name2.str()) = params2[i];
+        if (variables.find(paramNames[2*i]) != variables.end())
+            expression.getVariableReference(paramNames[2*i]) = params1[i];
+        if (variables.find(paramNames[2*i+1]) != variables.end())
+            expression.getVariableReference(paramNames[2*i+1]) = params2[i];
     }
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {
         const string& name = force.getGlobalParameterName(i);

@@ -51,7 +51,8 @@ static const int PME_ORDER = 5;
 bool CpuCalcDispersionPmeReciprocalForceKernel::hasInitializedThreads = false;
 int CpuCalcDispersionPmeReciprocalForceKernel::numThreads = 0;
 
-static void spreadCharge(float* posq, float* grid, int gridx, int gridy, int gridz, int numParticles, Vec3* periodicBoxVectors, Vec3* recipBoxVectors, gmx_atomic_t& atomicCounter, const float epsilonFactor) {
+static void spreadCharge(float* posq, float* grid, int gridx, int gridy, int gridz, int numParticles, Vec3* periodicBoxVectors, Vec3* recipBoxVectors,
+        gmx_atomic_t& atomicCounter, const float epsilonFactor, int threadIndex, int numThreads, bool deterministic) {
     float temp[4];
     fvec4 boxSize((float) periodicBoxVectors[0][0], (float) periodicBoxVectors[1][1], (float) periodicBoxVectors[2][2], 0);
     fvec4 invBoxSize((float) recipBoxVectors[0][0], (float) recipBoxVectors[1][1], (float) recipBoxVectors[2][2], 0);
@@ -65,8 +66,10 @@ static void spreadCharge(float* posq, float* grid, int gridx, int gridy, int gri
     float posInBox[4] = {0,0,0,0};
     memset(grid, 0, sizeof(float)*gridx*gridy*gridz);
 
+    int i = threadIndex;
     while (true) {
-        int i = gmx_atomic_fetch_add(&atomicCounter, 1);
+        if (!deterministic)
+            i = gmx_atomic_fetch_add(&atomicCounter, 1);
         if (i >= numParticles)
             break;
 
@@ -151,6 +154,8 @@ static void spreadCharge(float* posq, float* grid, int gridx, int gridy, int gri
                 }
             }
         }
+        if (deterministic)
+            i += numThreads;
     }
 }
 
@@ -406,7 +411,7 @@ static void* threadBody(void* args) {
     return 0;
 }
 
-void CpuCalcPmeReciprocalForceKernel::initialize(int xsize, int ysize, int zsize, int numParticles, double alpha) {
+void CpuCalcPmeReciprocalForceKernel::initialize(int xsize, int ysize, int zsize, int numParticles, double alpha, bool deterministic) {
     if (!hasInitializedThreads) {
         numThreads = getNumProcessors();
         char* threadsEnv = getenv("OPENMM_CPU_THREADS");
@@ -421,6 +426,7 @@ void CpuCalcPmeReciprocalForceKernel::initialize(int xsize, int ysize, int zsize
     gridz = findFFTDimension(zsize, true);
     this->numParticles = numParticles;
     this->alpha = alpha;
+    this->deterministic = deterministic;
     force.resize(4*numParticles);
     recipEterm.resize(gridx*gridy*gridz);
     
@@ -580,7 +586,7 @@ void CpuCalcPmeReciprocalForceKernel::runWorkerThread(ThreadPool& threads, int i
     int complexStart = std::max(1, ((index*complexSize)/numThreads));
     int complexEnd = (((index+1)*complexSize)/numThreads);
     const float epsilonFactor = sqrt(ONE_4PI_EPS0);
-    spreadCharge(posq, tempGrid[index], gridx, gridy, gridz, numParticles, periodicBoxVectors, recipBoxVectors, atomicCounter, epsilonFactor);
+    spreadCharge(posq, tempGrid[index], gridx, gridy, gridz, numParticles, periodicBoxVectors, recipBoxVectors, atomicCounter, epsilonFactor, index, numThreads, deterministic);
     threads.syncThreads();
     int numGrids = tempGrid.size();
     for (int i = gridStart; i < gridEnd; i += 4) {
@@ -696,7 +702,7 @@ static void* dispersionThreadBody(void* args) {
     return 0;
 }
 
-void CpuCalcDispersionPmeReciprocalForceKernel::initialize(int xsize, int ysize, int zsize, int numParticles, double alpha) {
+void CpuCalcDispersionPmeReciprocalForceKernel::initialize(int xsize, int ysize, int zsize, int numParticles, double alpha, bool deterministic) {
     if (!hasInitializedThreads) {
         numThreads = getNumProcessors();
         char* threadsEnv = getenv("OPENMM_CPU_THREADS");
@@ -711,6 +717,7 @@ void CpuCalcDispersionPmeReciprocalForceKernel::initialize(int xsize, int ysize,
     gridz = findFFTDimension(zsize, true);
     this->numParticles = numParticles;
     this->alpha = alpha;
+    this->deterministic = deterministic;
     force.resize(4*numParticles);
     recipEterm.resize(gridx*gridy*gridz);
     
@@ -871,7 +878,7 @@ void CpuCalcDispersionPmeReciprocalForceKernel::runWorkerThread(ThreadPool& thre
     int complexStart = std::max(1, ((index*complexSize)/numThreads));
     int complexEnd = (((index+1)*complexSize)/numThreads);
     const float epsilonFactor = 1.0f;
-    spreadCharge(posq, tempGrid[index], gridx, gridy, gridz, numParticles, periodicBoxVectors, recipBoxVectors, atomicCounter, epsilonFactor);
+    spreadCharge(posq, tempGrid[index], gridx, gridy, gridz, numParticles, periodicBoxVectors, recipBoxVectors, atomicCounter, epsilonFactor, index, numThreads, deterministic);
     threads.syncThreads();
     int numGrids = tempGrid.size();
     for (int i = gridStart; i < gridEnd; i += 4) {

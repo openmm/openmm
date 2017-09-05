@@ -1,17 +1,8 @@
 /**
- * Compute the difference between two vectors, setting the fourth component to the squared magnitude.
- */
-real4 delta(real4 vec1, real4 vec2) {
-    real4 result = (real4) (vec1.x-vec2.x, vec1.y-vec2.y, vec1.z-vec2.z, 0);
-    result.w = result.x*result.x + result.y*result.y + result.z*result.z;
-    return result;
-}
-
-/**
- * Compute the difference between two vectors, taking periodic boundary conditions into account
+ * Compute the difference between two vectors, optionally taking periodic boundary conditions into account
  * and setting the fourth component to the squared magnitude.
  */
-real4 deltaPeriodic(real4 vec1, real4 vec2, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ) {
+real4 delta(real4 vec1, real4 vec2, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ) {
     real4 result = (real4) (vec1.x-vec2.x, vec1.y-vec2.y, vec1.z-vec2.z, 0);
 #ifdef USE_PERIODIC
     APPLY_PERIODIC_TO_DELTA(result)
@@ -81,6 +72,7 @@ __kernel void computeDonorForces(__global real4* restrict forceBuffers, __global
         for (int acceptorStart = 0; acceptorStart < NUM_ACCEPTORS; acceptorStart += get_local_size(0)) {
             // Load the next block of acceptors into local memory.
 
+            barrier(CLK_LOCAL_MEM_FENCE);
             int blockSize = min((int) get_local_size(0), NUM_ACCEPTORS-acceptorStart);
             if (get_local_id(0) < blockSize) {
                 int4 atoms2 = acceptorAtoms[acceptorStart+get_local_id(0)];
@@ -91,8 +83,8 @@ __kernel void computeDonorForces(__global real4* restrict forceBuffers, __global
             barrier(CLK_LOCAL_MEM_FENCE);
             if (donorIndex < NUM_DONORS) {
                 for (int index = 0; index < blockSize; index++) {
-#ifdef USE_EXCLUSIONS
                     int acceptorIndex = acceptorStart+index;
+#ifdef USE_EXCLUSIONS
                     if (acceptorIndex == exclusionIndices.x || acceptorIndex == exclusionIndices.y || acceptorIndex == exclusionIndices.z || acceptorIndex == exclusionIndices.w)
                         continue;
 #endif
@@ -101,7 +93,7 @@ __kernel void computeDonorForces(__global real4* restrict forceBuffers, __global
                     real4 a1 = posBuffer[3*index];
                     real4 a2 = posBuffer[3*index+1];
                     real4 a3 = posBuffer[3*index+2];
-                    real4 deltaD1A1 = deltaPeriodic(d1, a1, periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);
+                    real4 deltaD1A1 = delta(d1, a1, periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);
 #ifdef USE_CUTOFF
                     if (deltaD1A1.w < CUTOFF_SQUARED) {
 #endif
@@ -169,6 +161,7 @@ __kernel void computeAcceptorForces(__global real4* restrict forceBuffers, __glo
         for (int donorStart = 0; donorStart < NUM_DONORS; donorStart += get_local_size(0)) {
             // Load the next block of donors into local memory.
 
+            barrier(CLK_LOCAL_MEM_FENCE);
             int blockSize = min((int) get_local_size(0), NUM_DONORS-donorStart);
             if (get_local_id(0) < blockSize) {
                 int4 atoms2 = donorAtoms[donorStart+get_local_id(0)];
@@ -179,8 +172,8 @@ __kernel void computeAcceptorForces(__global real4* restrict forceBuffers, __glo
             barrier(CLK_LOCAL_MEM_FENCE);
             if (acceptorIndex < NUM_ACCEPTORS) {
                 for (int index = 0; index < blockSize; index++) {
-#ifdef USE_EXCLUSIONS
                     int donorIndex = donorStart+index;
+#ifdef USE_EXCLUSIONS
                     if (donorIndex == exclusionIndices.x || donorIndex == exclusionIndices.y || donorIndex == exclusionIndices.z || donorIndex == exclusionIndices.w)
                         continue;
 #endif
@@ -189,7 +182,7 @@ __kernel void computeAcceptorForces(__global real4* restrict forceBuffers, __glo
                     real4 d1 = posBuffer[3*index];
                     real4 d2 = posBuffer[3*index+1];
                     real4 d3 = posBuffer[3*index+2];
-                    real4 deltaD1A1 = deltaPeriodic(d1, a1, periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);
+                    real4 deltaD1A1 = delta(d1, a1, periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);
 #ifdef USE_CUTOFF
                     if (deltaD1A1.w < CUTOFF_SQUARED) {
 #endif

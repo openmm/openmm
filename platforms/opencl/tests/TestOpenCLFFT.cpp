@@ -54,7 +54,7 @@ template <class Real2>
 void testTransform(bool realToComplex, int xsize, int ysize, int zsize) {
     System system;
     system.addParticle(0.0);
-    OpenCLPlatform::PlatformData platformData(system, "", "", platform.getPropertyDefaultValue("OpenCLPrecision"), "false", "false", 1);
+    OpenCLPlatform::PlatformData platformData(system, "", "", platform.getPropertyDefaultValue("OpenCLPrecision"), "false", "false", 1, NULL);
     OpenCLContext& context = *platformData.contexts[0];
     context.initialize();
     OpenMM_SFMT::SFMT sfmt;

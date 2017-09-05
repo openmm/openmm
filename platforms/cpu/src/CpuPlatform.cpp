@@ -37,6 +37,7 @@
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/hardware.h"
 #include "openmm/internal/vectorize.h"
+#include <algorithm>
 #include <sstream>
 #include <stdlib.h>
 
@@ -74,6 +75,7 @@ CpuPlatform::CpuPlatform() {
     registerKernelFactory(CalcGayBerneForceKernel::Name(), factory);
     registerKernelFactory(IntegrateLangevinStepKernel::Name(), factory);
     platformProperties.push_back(CpuThreads());
+    platformProperties.push_back(CpuDeterministicForces());
     int threads = getNumProcessors();
     char* threadsEnv = getenv("OPENMM_CPU_THREADS");
     if (threadsEnv != NULL)
@@ -81,6 +83,7 @@ CpuPlatform::CpuPlatform() {
     stringstream defaultThreads;
     defaultThreads << threads;
     setPropertyDefaultValue(CpuThreads(), defaultThreads.str());
+    setPropertyDefaultValue(CpuDeterministicForces(), "false");
 }
 
 const string& CpuPlatform::getPropertyValue(const Context& context, const string& property) const {
@@ -111,9 +114,13 @@ void CpuPlatform::contextCreated(ContextImpl& context, const map<string, string>
     ReferencePlatform::contextCreated(context, properties);
     const string& threadsPropValue = (properties.find(CpuThreads()) == properties.end() ?
             getPropertyDefaultValue(CpuThreads()) : properties.find(CpuThreads())->second);
+    string deterministicForcesValue = (properties.find(CpuDeterministicForces()) == properties.end() ?
+            getPropertyDefaultValue(CpuDeterministicForces()) : properties.find(CpuDeterministicForces())->second);
     int numThreads;
     stringstream(threadsPropValue) >> numThreads;
-    PlatformData* data = new PlatformData(context.getSystem().getNumParticles(), numThreads);
+    transform(deterministicForcesValue.begin(), deterministicForcesValue.end(), deterministicForcesValue.begin(), ::tolower);
+    bool deterministicForces = (deterministicForcesValue == "true");
+    PlatformData* data = new PlatformData(context.getSystem().getNumParticles(), numThreads, deterministicForces);
     contextData[&context] = data;
     ReferenceConstraints& constraints = *(ReferenceConstraints*) reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData())->constraints;
     if (constraints.settle != NULL) {
@@ -139,8 +146,8 @@ const CpuPlatform::PlatformData& CpuPlatform::getPlatformData(const ContextImpl&
     return *contextData[&context];
 }
 
-CpuPlatform::PlatformData::PlatformData(int numParticles, int numThreads) : posq(4*numParticles), threads(numThreads),
-        neighborList(NULL), cutoff(0.0), paddedCutoff(0.0), anyExclusions(false) {
+CpuPlatform::PlatformData::PlatformData(int numParticles, int numThreads, bool deterministicForces) : posq(4*numParticles), threads(numThreads),
+        deterministicForces(deterministicForces), neighborList(NULL), cutoff(0.0), paddedCutoff(0.0), anyExclusions(false) {
     numThreads = threads.getNumThreads();
     threadForce.resize(numThreads);
     for (int i = 0; i < numThreads; i++)
@@ -149,6 +156,7 @@ CpuPlatform::PlatformData::PlatformData(int numParticles, int numThreads) : posq
     stringstream threadsProperty;
     threadsProperty << numThreads;
     propertyValues[CpuThreads()] = threadsProperty.str();
+    propertyValues[CpuDeterministicForces()] = deterministicForces ? "true" : "false";
 }
 
 CpuPlatform::PlatformData::~PlatformData() {

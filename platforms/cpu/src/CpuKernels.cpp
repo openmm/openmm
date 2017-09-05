@@ -642,7 +642,7 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
             useOptimizedPme = getPlatform().supportsKernels(kernelNames);
             if (useOptimizedPme) {
                 optimizedPme = getPlatform().createKernel(CalcPmeReciprocalForceKernel::Name(), context);
-                optimizedPme.getAs<CalcPmeReciprocalForceKernel>().initialize(gridSize[0], gridSize[1], gridSize[2], numParticles, ewaldAlpha);
+                optimizedPme.getAs<CalcPmeReciprocalForceKernel>().initialize(gridSize[0], gridSize[1], gridSize[2], numParticles, ewaldAlpha, data.deterministicForces);
             }
         }
         if (nonbondedMethod == LJPME) {
@@ -653,10 +653,10 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
             useOptimizedPme = getPlatform().supportsKernels(kernelNames);
             if (useOptimizedPme) {
                 optimizedPme = getPlatform().createKernel(CalcPmeReciprocalForceKernel::Name(), context);
-                optimizedPme.getAs<CalcPmeReciprocalForceKernel>().initialize(gridSize[0], gridSize[1], gridSize[2], numParticles, ewaldAlpha);
+                optimizedPme.getAs<CalcPmeReciprocalForceKernel>().initialize(gridSize[0], gridSize[1], gridSize[2], numParticles, ewaldAlpha, data.deterministicForces);
                 optimizedDispersionPme = getPlatform().createKernel(CalcDispersionPmeReciprocalForceKernel::Name(), context);
                 optimizedDispersionPme.getAs<CalcDispersionPmeReciprocalForceKernel>().initialize(dispersionGridSize[0], dispersionGridSize[1],
-                                                                                                  dispersionGridSize[2], numParticles, ewaldDispersionAlpha);
+                                                                                                  dispersionGridSize[2], numParticles, ewaldDispersionAlpha, data.deterministicForces);
             }
         }
     }
@@ -1018,6 +1018,8 @@ CpuCalcCustomGBForceKernel::~CpuCalcCustomGBForceKernel() {
     }
     if (ixn != NULL)
         delete ixn;
+    if (neighborList != NULL)
+        delete neighborList;
 }
 
 void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGBForce& force) {
@@ -1064,7 +1066,7 @@ void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGB
     nonbondedMethod = CalcCustomGBForceKernel::NonbondedMethod(force.getNonbondedMethod());
     nonbondedCutoff = force.getCutoffDistance();
     if (nonbondedMethod != NoCutoff)
-        data.requestNeighborList(nonbondedCutoff, 0.25*nonbondedCutoff, force.getNumExclusions() > 0, exclusions);
+        neighborList = new CpuNeighborList(4);
 
     // Create custom functions for the tabulated functions.
 
@@ -1171,7 +1173,8 @@ double CpuCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFor
         ixn->setPeriodic(extractBoxSize(context));
     if (nonbondedMethod != NoCutoff) {
         vector<set<int> > noExclusions(numParticles);
-        ixn->setUseCutoff(nonbondedCutoff, *data.neighborList);
+        neighborList->computeNeighborList(numParticles, data.posq, noExclusions, boxVectors, data.isPeriodic, nonbondedCutoff, data.threads);
+        ixn->setUseCutoff(nonbondedCutoff, *neighborList);
     }
     map<string, double> globalParameters;
     for (auto& name : globalParameterNames)

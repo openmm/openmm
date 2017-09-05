@@ -4,6 +4,7 @@ from simtk.openmm.app import *
 from simtk.openmm import *
 from simtk.unit import *
 import simtk.openmm.app.element as elem
+import math
 import warnings
 
 class TestCharmmFiles(unittest.TestCase):
@@ -60,7 +61,7 @@ class TestCharmmFiles(unittest.TestCase):
         """Test implicit solvent using the implicitSolvent parameter.
 
         """
-        system = self.psf_v.createSystem(self.params, implicitSolvent=OBC2)
+        system = self.psf_v.createSystem(self.params, implicitSolvent=OBC2, gbsaModel='ACE')
         self.assertTrue(any(isinstance(f, CustomGBForce) for f in system.getForces()))
 
     def test_ImplicitSolventParameters(self):
@@ -206,6 +207,30 @@ class TestCharmmFiles(unittest.TestCase):
         ene_strict     = state_strict.getPotentialEnergy().value_in_unit(kilocalories_per_mole)
         ene_permissive = state_permissive.getPotentialEnergy().value_in_unit(kilocalories_per_mole)
         self.assertAlmostEqual(ene_strict, ene_permissive, delta=0.00001)
+    
+    def test_Impropers(self):
+        """Test CHARMM improper torsions."""
+        psf = CharmmPsfFile('systems/improper.psf')
+        system = psf.createSystem(self.params)
+        force = [f for f in system.getForces() if isinstance(f, CustomTorsionForce)][0]
+        group = force.getForceGroup()
+        integrator = VerletIntegrator(0.001)
+        context = Context(system, integrator, Platform.getPlatformByName("Reference"))
+        angle = 0.1
+        pos1 = [Vec3(0,0,0), Vec3(1,0,0), Vec3(1,1,0), Vec3(0,1,math.tan(angle))] # theta = angle
+        pos2 = [Vec3(0,0,0), Vec3(1,0,0), Vec3(1,1,0), Vec3(2,1,math.tan(angle))] # theta = pi-angle
+        pos3 = [Vec3(0,0,0), Vec3(1,0,0), Vec3(1,1,0), Vec3(2,1,-math.tan(angle))] # theta = -pi+angle
+        for theta0 in (0, math.pi):
+            force.setTorsionParameters(0, 0, 1, 2, 3, [1.0, theta0])
+            force.updateParametersInContext(context)
+            for pos in (pos1, pos2, pos3):
+                context.setPositions(pos)
+                energy = context.getState(getEnergy=True, groups={group}).getPotentialEnergy().value_in_unit(kilojoules_per_mole)
+                if (theta0 == 0 and pos == pos1) or (theta0 == math.pi and pos in (pos2, pos3)):
+                    dtheta = angle
+                else:
+                    dtheta = math.pi-angle
+                self.assertAlmostEqual(energy, dtheta**2, delta=1e-5)
 
 
 if __name__ == '__main__':

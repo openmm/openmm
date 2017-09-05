@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2017 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -82,6 +82,7 @@ OpenCLPlatform::OpenCLPlatform() {
     registerKernelFactory(CalcCustomHbondForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomCentroidBondForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomCompoundBondForceKernel::Name(), factory);
+    registerKernelFactory(CalcCustomCVForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomManyParticleForceKernel::Name(), factory);
     registerKernelFactory(CalcGayBerneForceKernel::Name(), factory);
     registerKernelFactory(IntegrateVerletStepKernel::Name(), factory);
@@ -179,7 +180,20 @@ void OpenCLPlatform::contextCreated(ContextImpl& context, const map<string, stri
     char* threadsEnv = getenv("OPENMM_CPU_THREADS");
     if (threadsEnv != NULL)
         stringstream(threadsEnv) >> threads;
-    context.setPlatformData(new PlatformData(context.getSystem(), platformPropValue, devicePropValue, precisionPropValue, cpuPmePropValue, pmeStreamPropValue, threads));
+    context.setPlatformData(new PlatformData(context.getSystem(), platformPropValue, devicePropValue, precisionPropValue, cpuPmePropValue,
+            pmeStreamPropValue, threads, NULL));
+}
+
+void OpenCLPlatform::linkedContextCreated(ContextImpl& context, ContextImpl& originalContext) const {
+    Platform& platform = originalContext.getPlatform();
+    string platformPropValue = platform.getPropertyValue(originalContext.getOwner(), OpenCLPlatformIndex());
+    string devicePropValue = platform.getPropertyValue(originalContext.getOwner(), OpenCLDeviceIndex());
+    string precisionPropValue = platform.getPropertyValue(originalContext.getOwner(), OpenCLPrecision());
+    string cpuPmePropValue = platform.getPropertyValue(originalContext.getOwner(), OpenCLUseCpuPme());
+    string pmeStreamPropValue = platform.getPropertyValue(originalContext.getOwner(), OpenCLDisablePmeStream());
+    int threads = reinterpret_cast<PlatformData*>(originalContext.getPlatformData())->threads.getNumThreads();
+    context.setPlatformData(new PlatformData(context.getSystem(), platformPropValue, devicePropValue, precisionPropValue, cpuPmePropValue,
+            pmeStreamPropValue, threads, &originalContext));
 }
 
 void OpenCLPlatform::contextDestroyed(ContextImpl& context) const {
@@ -188,7 +202,7 @@ void OpenCLPlatform::contextDestroyed(ContextImpl& context) const {
 }
 
 OpenCLPlatform::PlatformData::PlatformData(const System& system, const string& platformPropValue, const string& deviceIndexProperty,
-        const string& precisionProperty, const string& cpuPmeProperty, const string& pmeStreamProperty, int numThreads) :
+        const string& precisionProperty, const string& cpuPmeProperty, const string& pmeStreamProperty, int numThreads, ContextImpl* originalContext) :
             removeCM(false), stepCount(0), computeForceCount(0), time(0.0), hasInitializedContexts(false), threads(numThreads)  {
     int platformIndex = -1;
     if (platformPropValue.length() > 0)
@@ -200,16 +214,19 @@ OpenCLPlatform::PlatformData::PlatformData(const System& system, const string& p
         searchPos = nextPos+1;
     }
     devices.push_back(deviceIndexProperty.substr(searchPos));
+    PlatformData* originalData = NULL;
+    if (originalContext != NULL)
+        originalData = reinterpret_cast<PlatformData*>(originalContext->getPlatformData());
     try {
         for (int i = 0; i < (int) devices.size(); i++) {
             if (devices[i].length() > 0) {
                 int deviceIndex;
                 stringstream(devices[i]) >> deviceIndex;
-                contexts.push_back(new OpenCLContext(system, platformIndex, deviceIndex, precisionProperty, *this));
+                contexts.push_back(new OpenCLContext(system, platformIndex, deviceIndex, precisionProperty, *this, (originalData == NULL ? NULL : originalData->contexts[i])));
             }
         }
         if (contexts.size() == 0)
-            contexts.push_back(new OpenCLContext(system, platformIndex, -1, precisionProperty, *this));
+            contexts.push_back(new OpenCLContext(system, platformIndex, -1, precisionProperty, *this, (originalData == NULL ? NULL : originalData->contexts[0])));
     }
     catch (...) {
         // If an exception was thrown, do our best to clean up memory.

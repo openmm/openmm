@@ -37,6 +37,7 @@
 #include "openmm/internal/CompiledExpressionSet.h"
 #include "openmm/internal/CustomIntegratorUtilities.h"
 #include "lepton/CompiledExpression.h"
+#include "lepton/ExpressionProgram.h"
 #include "openmm/System.h"
 
 namespace OpenMM {
@@ -1208,6 +1209,54 @@ private:
 };
 
 /**
+ * This kernel is invoked by CustomCVForce to calculate the forces acting on the system and the energy of the system.
+ */
+class OpenCLCalcCustomCVForceKernel : public CalcCustomCVForceKernel {
+public:
+    OpenCLCalcCustomCVForceKernel(std::string name, const Platform& platform, OpenCLContext& cl) : CalcCustomCVForceKernel(name, platform),
+            cl(cl), hasInitializedKernels(false), invAtomOrder(NULL), innerInvAtomOrder(NULL) {
+    }
+    ~OpenCLCalcCustomCVForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomCVForce this kernel will be used for
+     * @param innerContext   the context created by the CustomCVForce for computing collective variables
+     */
+    void initialize(const System& system, const CustomCVForce& force, ContextImpl& innerContext);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param innerContext   the context created by the CustomCVForce for computing collective variables
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, ContextImpl& innerContext, bool includeForces, bool includeEnergy);
+    /**
+     * Copy state information to the inner context.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param innerContext   the context created by the CustomCVForce for computing collective variables
+     */
+    void copyState(ContextImpl& context, ContextImpl& innerContext);
+private:
+    class ReorderListener;
+    OpenCLContext& cl;
+    bool hasInitializedKernels;
+    Lepton::ExpressionProgram energyExpression;
+    std::vector<std::string> variableNames, paramDerivNames, globalParameterNames;
+    std::vector<Lepton::ExpressionProgram> variableDerivExpressions;
+    std::vector<Lepton::ExpressionProgram> paramDerivExpressions;
+    std::vector<OpenCLArray*> cvForces;
+    OpenCLArray* invAtomOrder;
+    OpenCLArray* innerInvAtomOrder;
+    cl::Kernel copyStateKernel, copyForcesKernel, addForcesKernel;
+};
+
+/**
  * This kernel is invoked by VerletIntegrator to take one time step.
  */
 class OpenCLIntegrateVerletStepKernel : public IntegrateVerletStepKernel {
@@ -1472,7 +1521,9 @@ private:
     class ReorderListener;
     class GlobalTarget;
     class DerivFunction;
-    std::string createPerDofComputation(const std::string& variable, const Lepton::ParsedExpression& expr, int component, CustomIntegrator& integrator, const std::string& forceName, const std::string& energyName);
+    std::string createPerDofComputation(const std::string& variable, const Lepton::ParsedExpression& expr, int component, CustomIntegrator& integrator,
+        const std::string& forceName, const std::string& energyName, std::vector<const TabulatedFunction*>& functions,
+        std::vector<std::pair<std::string, std::string> >& functionNames);
     void prepareForComputation(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid);
     Lepton::ExpressionTreeNode replaceDerivFunctions(const Lepton::ExpressionTreeNode& node, OpenMM::ContextImpl& context);
     void findExpressionsForDerivs(const Lepton::ExpressionTreeNode& node, std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& variableNodes);
@@ -1482,7 +1533,7 @@ private:
     OpenCLContext& cl;
     double energy;
     float energyFloat;
-    int numGlobalVariables;
+    int numGlobalVariables, sumWorkGroupSize;
     bool hasInitializedKernels, deviceValuesAreCurrent, deviceGlobalsAreCurrent, modifiesParameters, keNeedsForce, hasAnyConstraints, needsEnergyParamDerivs;
     mutable bool localValuesAreCurrent;
     OpenCLArray* globalValues;
@@ -1491,6 +1542,8 @@ private:
     OpenCLArray* uniformRandoms;
     OpenCLArray* randomSeed;
     OpenCLArray* perDofEnergyParamDerivs;
+    std::vector<OpenCLArray*> tabulatedFunctions;
+    std::map<int, double> savedEnergy;
     std::map<int, OpenCLArray*> savedForces;
     std::set<int> validSavedForces;
     OpenCLParameterSet* perDofValues;
@@ -1573,7 +1626,7 @@ private:
 class OpenCLApplyMonteCarloBarostatKernel : public ApplyMonteCarloBarostatKernel {
 public:
     OpenCLApplyMonteCarloBarostatKernel(std::string name, const Platform& platform, OpenCLContext& cl) : ApplyMonteCarloBarostatKernel(name, platform), cl(cl),
-            hasInitializedKernels(false), savedPositions(NULL), moleculeAtoms(NULL), moleculeStartIndex(NULL) {
+            hasInitializedKernels(false), savedPositions(NULL), savedForces(NULL), moleculeAtoms(NULL), moleculeStartIndex(NULL) {
     }
     ~OpenCLApplyMonteCarloBarostatKernel();
     /**
@@ -1608,6 +1661,7 @@ private:
     bool hasInitializedKernels;
     int numMolecules;
     OpenCLArray* savedPositions;
+    OpenCLArray* savedForces;
     OpenCLArray* moleculeAtoms;
     OpenCLArray* moleculeStartIndex;
     cl::Kernel kernel;

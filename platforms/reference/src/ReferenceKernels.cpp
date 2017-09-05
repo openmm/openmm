@@ -42,6 +42,7 @@
 #include "ReferenceCustomBondIxn.h"
 #include "ReferenceCustomCentroidBondIxn.h"
 #include "ReferenceCustomCompoundBondIxn.h"
+#include "ReferenceCustomCVForce.h"
 #include "ReferenceCustomDynamics.h"
 #include "ReferenceCustomExternalIxn.h"
 #include "ReferenceCustomGBIxn.h"
@@ -1473,7 +1474,8 @@ double ReferenceCalcCustomGBForceKernel::execute(ContextImpl& context, bool incl
     if (periodic)
         ixn.setPeriodic(extractBoxVectors(context));
     if (nonbondedMethod != NoCutoff) {
-        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, extractBoxVectors(context), periodic, nonbondedCutoff, 0.0);
+        vector<set<int> > empty(context.getSystem().getNumParticles()); // Don't omit exclusions from the neighbor list
+        computeNeighborListVoxelHash(*neighborList, numParticles, posData, empty, extractBoxVectors(context), periodic, nonbondedCutoff, 0.0);
         ixn.setUseCutoff(nonbondedCutoff, *neighborList);
     }
     map<string, double> globalParameters;
@@ -2013,6 +2015,44 @@ void ReferenceCalcGayBerneForceKernel::copyParametersToContext(ContextImpl& cont
     delete ixn;
     ixn = NULL;
     ixn = new ReferenceGayBerneForce(force);
+}
+
+ReferenceCalcCustomCVForceKernel::~ReferenceCalcCustomCVForceKernel() {
+    if (ixn != NULL)
+        delete ixn;
+}
+
+void ReferenceCalcCustomCVForceKernel::initialize(const System& system, const CustomCVForce& force, ContextImpl& innerContext) {
+    for (int i = 0; i < force.getNumGlobalParameters(); i++)
+        globalParameterNames.push_back(force.getGlobalParameterName(i));
+    for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++)
+        energyParamDerivNames.push_back(force.getEnergyParameterDerivativeName(i));
+    ixn = new ReferenceCustomCVForce(force);
+}
+
+double ReferenceCalcCustomCVForceKernel::execute(ContextImpl& context, ContextImpl& innerContext, bool includeForces, bool includeEnergy) {
+    copyState(context, innerContext);
+    vector<Vec3>& posData = extractPositions(context);
+    vector<Vec3>& forceData = extractForces(context);
+    double energy = 0;
+    map<string, double> globalParameters;
+    for (auto& name : globalParameterNames)
+        globalParameters[name] = context.getParameter(name);
+    map<string, double>& energyParamDerivs = extractEnergyParameterDerivatives(context);
+    ixn->calculateIxn(innerContext, posData, globalParameters, forceData, includeEnergy ? &energy : NULL, energyParamDerivs);
+    return energy;
+}
+
+void ReferenceCalcCustomCVForceKernel::copyState(ContextImpl& context, ContextImpl& innerContext) {
+    extractPositions(innerContext) = extractPositions(context);
+    extractVelocities(innerContext) = extractVelocities(context);
+    Vec3 a, b, c;
+    context.getPeriodicBoxVectors(a, b, c);
+    innerContext.setPeriodicBoxVectors(a, b, c);
+    innerContext.setTime(context.getTime());
+    map<string, double> innerParameters = innerContext.getParameters();
+    for (auto& param : innerParameters)
+        innerContext.setParameter(param.first, context.getParameter(param.first));
 }
 
 ReferenceIntegrateVerletStepKernel::~ReferenceIntegrateVerletStepKernel() {

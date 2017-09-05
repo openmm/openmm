@@ -55,7 +55,8 @@ public:
     /**
      * Create an ContextImpl for a Context;
      */
-    ContextImpl(Context& owner, const System& system, Integrator& integrator, Platform* platform, const std::map<std::string, std::string>& properties);
+    ContextImpl(Context& owner, const System& system, Integrator& integrator, Platform* platform, const std::map<std::string, std::string>& properties,
+            ContextImpl* originalContext=NULL);
     ~ContextImpl();
     /**
      * Get the Context for which this is the implementation.
@@ -197,8 +198,11 @@ public:
     double calcForcesAndEnergy(bool includeForces, bool includeEnergy, int groups=0xFFFFFFFF);
     /**
      * Get the set of force group flags that were passed to the most recent call to calcForcesAndEnergy().
+     * 
+     * Note that this returns a reference, so it's possible to modify it.  Be very very cautious about
+     * doing that!  Only do it if you're also modifying forces stored inside the context.
      */
-    int getLastForceGroups() const;
+    int& getLastForceGroups();
     /**
      * Calculate the kinetic energy of the system (in kJ/mol).
      */
@@ -206,8 +210,11 @@ public:
     /**
      * This should be called at the start of each time step.  It calls updateContextState() on each
      * ForceImpl in the system, allowing them to modify the values of state variables.
+     * 
+     * @return true if the state was modified in any way that would cause the forces on particles
+     * to change, false otherwise
      */
-    void updateContextState();
+    bool updateContextState();
     /**
      * Get the list of ForceImpls belonging to this ContextImpl.
      */
@@ -261,8 +268,18 @@ public:
      * you should never call it.  It is exposed here because the same logic is useful to other classes too.
      */
     static std::vector<std::vector<int> > findMolecules(int numParticles, std::vector<std::vector<int> >& particleBonds);
+    /**
+     * Create a new Context based on this one.  The new context will use the same Platform, device, and property
+     * values as this one.  With the CUDA and OpenCL platforms, it also shares the same GPU context, allowing data
+     * to be transferred between them without leaving the GPU.
+     * 
+     * This method exists for very specialized purposes.  If you aren't certain whether you should use it, that probably
+     * means you shouldn't.
+     */
+    Context* createLinkedContext(const System& system, Integrator& integrator);
 private:
     friend class Context;
+    void initialize();
     Context& owner;
     const System& system;
     Integrator& integrator;

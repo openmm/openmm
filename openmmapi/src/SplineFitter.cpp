@@ -568,7 +568,7 @@ void SplineFitter::create3DNaturalSpline(const vector<double>& x, const vector<d
                 int nextk = k+1;
                 double deltax = x[nexti]-x[i];
                 double deltay = y[nextj]-y[j];
-                double deltaz = z[nextj]-z[j];
+                double deltaz = z[nextk]-z[k];
                 double e[] = {values[i+j*xsize+k*xysize], values[nexti+j*xsize+k*xysize], values[i+nextj*xsize+k*xysize], values[nexti+nextj*xsize+k*xysize], values[i+j*xsize+nextk*xysize], values[nexti+j*xsize+nextk*xysize], values[i+nextj*xsize+nextk*xysize], values[nexti+nextj*xsize+nextk*xysize]};
                 double e1[] = {d1[i+j*xsize+k*xysize], d1[nexti+j*xsize+k*xysize], d1[i+nextj*xsize+k*xysize], d1[nexti+nextj*xsize+k*xysize], d1[i+j*xsize+nextk*xysize], d1[nexti+j*xsize+nextk*xysize], d1[i+nextj*xsize+nextk*xysize], d1[nexti+nextj*xsize+nextk*xysize]};
                 double e2[] = {d2[i+j*xsize+k*xysize], d2[nexti+j*xsize+k*xysize], d2[i+nextj*xsize+k*xysize], d2[nexti+nextj*xsize+k*xysize], d2[i+j*xsize+nextk*xysize], d2[nexti+j*xsize+nextk*xysize], d2[i+nextj*xsize+nextk*xysize], d2[nexti+nextj*xsize+nextk*xysize]};

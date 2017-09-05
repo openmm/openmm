@@ -37,6 +37,7 @@
 #include <algorithm>
 #include <set>
 #include <sstream>
+#include <utility>
 
 using namespace OpenMM;
 using namespace std;
@@ -71,7 +72,7 @@ bool CustomIntegratorUtilities::usesVariable(const Lepton::ParsedExpression& exp
 
 void CustomIntegratorUtilities::analyzeComputations(const ContextImpl& context, const CustomIntegrator& integrator, vector<vector<Lepton::ParsedExpression> >& expressions,
             vector<Comparison>& comparisons, vector<int>& blockEnd, vector<bool>& invalidatesForces, vector<bool>& needsForces, vector<bool>& needsEnergy,
-            vector<bool>& computeBoth, vector<int>& forceGroup) {
+            vector<bool>& computeBoth, vector<int>& forceGroup, const map<string, Lepton::CustomFunction*>& functions) {
     int numSteps = integrator.getNumComputations();
     expressions.resize(numSteps);
     comparisons.resize(numSteps);
@@ -82,7 +83,7 @@ void CustomIntegratorUtilities::analyzeComputations(const ContextImpl& context, 
     forceGroup.resize(numSteps, -2);
     vector<CustomIntegrator::ComputationType> stepType(numSteps);
     vector<string> stepVariable(numSteps);
-    map<string, Lepton::CustomFunction*> customFunctions;
+    map<string, Lepton::CustomFunction*> customFunctions = functions;
     DerivFunction derivFunction;
     customFunctions["deriv"] = &derivFunction;
 
@@ -111,7 +112,8 @@ void CustomIntegratorUtilities::analyzeComputations(const ContextImpl& context, 
         for (auto& param : force->getDefaultParameters())
             affectsForce.insert(param.first);
     for (int i = 0; i < numSteps; i++)
-        invalidatesForces[i] = (stepType[i] == CustomIntegrator::ConstrainPositions || affectsForce.find(stepVariable[i]) != affectsForce.end());
+        invalidatesForces[i] = (stepType[i] == CustomIntegrator::ConstrainPositions || stepType[i] == CustomIntegrator::UpdateContextState ||
+                affectsForce.find(stepVariable[i]) != affectsForce.end());
 
     // Make a list of which steps require valid forces or energy to be known.
 
@@ -249,26 +251,23 @@ void CustomIntegratorUtilities::enumeratePaths(int firstStep, vector<int> steps,
 
 void CustomIntegratorUtilities::analyzeForceComputationsForPath(vector<int>& steps, const vector<bool>& needsForces, const vector<bool>& needsEnergy,
             const vector<bool>& invalidatesForces, const vector<int>& forceGroup, vector<bool>& computeBoth) {
-    vector<int> candidatePoints;
-    int currentGroup = -1;
+    vector<pair<int, int> > candidatePoints;
     for (int step : steps) {
-        if (invalidatesForces[step] || ((needsForces[step] || needsEnergy[step]) && forceGroup[step] != currentGroup)) {
-            // Forces and energies are invalidated at this step, or it changes to a different force group,
-            // so anything from this point on won't affect what we do at earlier steps.
+        if (invalidatesForces[step]) {
+            // Forces and energies are invalidated at this step, so anything from this point on won't affect what we do at earlier steps.
 
             candidatePoints.clear();
         }
         if (needsForces[step] || needsEnergy[step]) {
             // See if this step affects what we do at earlier points.
 
-            for (int candidate : candidatePoints)
-                if ((needsForces[candidate] && needsEnergy[step]) || (needsEnergy[candidate] && needsForces[step]))
-                    computeBoth[candidate] = true;
+            for (auto candidate : candidatePoints)
+                if (candidate.second == forceGroup[step] && ((needsForces[candidate.first] && needsEnergy[step]) || (needsEnergy[candidate.first] && needsForces[step])))
+                    computeBoth[candidate.first] = true;
 
             // Add this to the list of candidates that might be affected by later steps.
 
-            candidatePoints.push_back(step);
-            currentGroup = forceGroup[step];
+            candidatePoints.push_back(make_pair(step, forceGroup[step]));
         }
     }
 }

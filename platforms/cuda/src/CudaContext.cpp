@@ -106,9 +106,9 @@ static int executeInWindows(const string &command) {
 #endif
 
 CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlockingSync, const string& precision, const string& compiler,
-        const string& tempDir, const std::string& hostCompiler, CudaPlatform::PlatformData& platformData) : system(system), currentStream(0),
+        const string& tempDir, const std::string& hostCompiler, CudaPlatform::PlatformData& platformData, CudaContext* originalContext) : system(system), currentStream(0),
         time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), stepsSinceReorder(99999), contextIsValid(false), atomsWereReordered(false), hasCompilerKernel(false), isNvccAvailable(false),
-        pinnedBuffer(NULL), posq(NULL), posqCorrection(NULL), velm(NULL), force(NULL), energyBuffer(NULL), energyParamDerivBuffer(NULL), atomIndexDevice(NULL), chargeBuffer(NULL),
+        pinnedBuffer(NULL), posq(NULL), posqCorrection(NULL), velm(NULL), force(NULL), energyBuffer(NULL), energySum(NULL), energyParamDerivBuffer(NULL), atomIndexDevice(NULL), chargeBuffer(NULL),
         integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
     // Determine what compiler to use.
     
@@ -173,40 +173,49 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     cacheDir = cacheDir+"/";
 #endif
     contextIndex = platformData.contexts.size();
-    int numDevices;
     string errorMessage = "Error initializing Context";
-    CHECK_RESULT(cuDeviceGetCount(&numDevices));
-    if (deviceIndex < -1 || deviceIndex >= numDevices)
-        throw OpenMMException("Illegal value for DeviceIndex: "+intToString(deviceIndex));
+    if (originalContext == NULL) {
+        isLinkedContext = false;
+        int numDevices;
+        CHECK_RESULT(cuDeviceGetCount(&numDevices));
+        if (deviceIndex < -1 || deviceIndex >= numDevices)
+            throw OpenMMException("Illegal value for DeviceIndex: "+intToString(deviceIndex));
 
-    vector<int> devicePrecedence;
-    if (deviceIndex == -1) {
-        devicePrecedence = getDevicePrecedence();
-    } else {
-        devicePrecedence.push_back(deviceIndex);
-    }
-
-    this->deviceIndex = -1;
-    for (int i = 0; i < static_cast<int>(devicePrecedence.size()); i++) {
-        int trialDeviceIndex = devicePrecedence[i];
-        CHECK_RESULT(cuDeviceGet(&device, trialDeviceIndex));
-        defaultOptimizationOptions = "--use_fast_math";
-        unsigned int flags = CU_CTX_MAP_HOST;
-        if (useBlockingSync)
-            flags += CU_CTX_SCHED_BLOCKING_SYNC;
-        else
-            flags += CU_CTX_SCHED_SPIN;
-
-        if (cuCtxCreate(&context, flags, device) == CUDA_SUCCESS) {
-            this->deviceIndex = trialDeviceIndex;
-            break;
+        vector<int> devicePrecedence;
+        if (deviceIndex == -1) {
+            devicePrecedence = getDevicePrecedence();
+        } else {
+            devicePrecedence.push_back(deviceIndex);
         }
+
+        this->deviceIndex = -1;
+        for (int i = 0; i < static_cast<int>(devicePrecedence.size()); i++) {
+            int trialDeviceIndex = devicePrecedence[i];
+            CHECK_RESULT(cuDeviceGet(&device, trialDeviceIndex));
+            defaultOptimizationOptions = "--use_fast_math";
+            unsigned int flags = CU_CTX_MAP_HOST;
+            if (useBlockingSync)
+                flags += CU_CTX_SCHED_BLOCKING_SYNC;
+            else
+                flags += CU_CTX_SCHED_SPIN;
+
+            if (cuCtxCreate(&context, flags, device) == CUDA_SUCCESS) {
+                this->deviceIndex = trialDeviceIndex;
+                break;
+            }
+        }
+        if (this->deviceIndex == -1)
+            if (deviceIndex != -1)
+                throw OpenMMException("The requested CUDA device could not be loaded");
+            else
+                throw OpenMMException("No compatible CUDA device is available");
     }
-    if (this->deviceIndex == -1)
-        if (deviceIndex != -1)
-            throw OpenMMException("The requested CUDA device could not be loaded");
-        else
-            throw OpenMMException("No compatible CUDA device is available");
+    else {
+        isLinkedContext = true;
+        context = originalContext->context;
+        this->deviceIndex = originalContext->deviceIndex;
+        this->device = originalContext->device;
+    }
 
     int major, minor;
     CHECK_RESULT(cuDeviceComputeCapability(&major, &minor, device));
@@ -226,6 +235,12 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
             major = 5;
             minor = 3;
         }
+    }
+    if (major == 7) {
+        // Don't generate Volta-specific code until we've made the changes needed
+        // to support it properly.
+        major = 6;
+        minor = 0;
     }
     gpuArchitecture = intToString(major)+intToString(minor);
     computeCapability = major+0.1*minor;
@@ -292,6 +307,7 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     clearFourBuffersKernel = getKernel(utilities, "clearFourBuffers");
     clearFiveBuffersKernel = getKernel(utilities, "clearFiveBuffers");
     clearSixBuffersKernel = getKernel(utilities, "clearSixBuffers");
+    reduceEnergyKernel = getKernel(utilities, "reduceEnergy");
     setChargesKernel = getKernel(utilities, "setCharges");
 
     // Set defines based on the requested precision.
@@ -405,6 +421,8 @@ CudaContext::~CudaContext() {
         delete force;
     if (energyBuffer != NULL)
         delete energyBuffer;
+    if (energySum != NULL)
+        delete energySum;
     if (energyParamDerivBuffer != NULL)
         delete energyParamDerivBuffer;
     if (atomIndexDevice != NULL)
@@ -422,7 +440,7 @@ CudaContext::~CudaContext() {
     if (thread != NULL)
         delete thread;
     string errorMessage = "Error deleting Context";
-    if (contextIsValid) {
+    if (contextIsValid && !isLinkedContext) {
         cuProfilerStop();
         CHECK_RESULT(cuCtxDestroy(context));
     }
@@ -435,16 +453,19 @@ void CudaContext::initialize() {
     int numEnergyBuffers = max(numThreadBlocks*ThreadBlockSize, nonbonded->getNumEnergyBuffers());
     if (useDoublePrecision) {
         energyBuffer = CudaArray::create<double>(*this, numEnergyBuffers, "energyBuffer");
+        energySum = CudaArray::create<double>(*this, 1, "energySum");
         int pinnedBufferSize = max(paddedNumAtoms*4, numEnergyBuffers);
         CHECK_RESULT(cuMemHostAlloc(&pinnedBuffer, pinnedBufferSize*sizeof(double), 0));
     }
     else if (useMixedPrecision) {
         energyBuffer = CudaArray::create<double>(*this, numEnergyBuffers, "energyBuffer");
+        energySum = CudaArray::create<double>(*this, 1, "energySum");
         int pinnedBufferSize = max(paddedNumAtoms*4, numEnergyBuffers);
         CHECK_RESULT(cuMemHostAlloc(&pinnedBuffer, pinnedBufferSize*sizeof(double), 0));
     }
     else {
         energyBuffer = CudaArray::create<float>(*this, numEnergyBuffers, "energyBuffer");
+        energySum = CudaArray::create<float>(*this, 1, "energySum");
         int pinnedBufferSize = max(paddedNumAtoms*6, numEnergyBuffers);
         CHECK_RESULT(cuMemHostAlloc(&pinnedBuffer, pinnedBufferSize*sizeof(float), 0));
     }
@@ -864,6 +885,18 @@ void CudaContext::clearAutoclearBuffers() {
     }
 }
 
+double CudaContext::reduceEnergy() {
+    int bufferSize = energyBuffer->getSize();
+    int workGroupSize  = 512;
+    void* args[] = {&energyBuffer->getDevicePointer(), &energySum->getDevicePointer(), &bufferSize, &workGroupSize};
+    executeKernel(reduceEnergyKernel, args, workGroupSize, workGroupSize, workGroupSize*energyBuffer->getElementSize());
+    energySum->download(pinnedBuffer);
+    if (getUseDoublePrecision() || getUseMixedPrecision())
+        return *((double*) pinnedBuffer);
+    else
+        return *((float*) pinnedBuffer);
+}
+
 void CudaContext::setCharges(const vector<double>& charges) {
     if (chargeBuffer == NULL)
         chargeBuffer = new CudaArray(*this, numAtoms, useDoublePrecision ? sizeof(double) : sizeof(float), "chargeBuffer");
@@ -1050,9 +1083,16 @@ void CudaContext::findMoleculeGroups() {
             for (int i = 0; i < (int) forces.size() && identical; i++) {
                 if (mol.groups[i].size() != mol2.groups[i].size())
                     identical = false;
-                for (int k = 0; k < (int) mol.groups[i].size() && identical; k++)
+                for (int k = 0; k < (int) mol.groups[i].size() && identical; k++) {
                     if (!forces[i]->areGroupsIdentical(mol.groups[i][k], mol2.groups[i][k]))
                         identical = false;
+                    vector<int> p1, p2;
+                    forces[i]->getParticlesInGroup(mol.groups[i][k], p1);
+                    forces[i]->getParticlesInGroup(mol2.groups[i][k], p2);
+                    for (int m = 0; m < p1.size(); m++)
+                        if (p1[m] != p2[m]-atomOffset)
+                            identical = false;
+                }
             }
             if (identical) {
                 moleculeInstances[j].push_back(molIndex);

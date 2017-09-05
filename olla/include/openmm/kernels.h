@@ -39,6 +39,7 @@
 #include "openmm/CustomAngleForce.h"
 #include "openmm/CustomBondForce.h"
 #include "openmm/CustomCentroidBondForce.h"
+#include "openmm/CustomCVForce.h"
 #include "openmm/CustomCompoundBondForce.h"
 #include "openmm/CustomExternalForce.h"
 #include "openmm/CustomGBForce.h"
@@ -944,6 +945,43 @@ public:
 };
 
 /**
+ * This kernel is invoked by CustomCVForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CalcCustomCVForceKernel : public KernelImpl {
+public:
+    static std::string Name() {
+        return "CalcCustomCVForce";
+    }
+    CalcCustomCVForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomCVForce this kernel will be used for
+     * @param innerContext   the context created by the CustomCVForce for computing collective variables
+     */
+    virtual void initialize(const System& system, const CustomCVForce& force, ContextImpl& innerContext) = 0;
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param innerContext   the context created by the CustomCVForce for computing collective variables
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    virtual double execute(ContextImpl& context, ContextImpl& innerContext, bool includeForces, bool includeEnergy) = 0;
+    /**
+     * Copy state information to the inner context.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param innerContext   the context created by the CustomCVForce for computing collective variables
+     */
+    virtual void copyState(ContextImpl& context, ContextImpl& innerContext) = 0;
+};
+
+/**
  * This kernel is invoked by VerletIntegrator to take one time step.
  */
 class IntegrateVerletStepKernel : public KernelImpl {
@@ -1295,8 +1333,9 @@ public:
      * @param gridz        the z size of the PME grid
      * @param numParticles the number of particles in the system
      * @param alpha        the Ewald blending parameter
+     * @param deterministic whether it should attempt to make the resulting forces deterministic
      */
-    virtual void initialize(int gridx, int gridy, int gridz, int numParticles, double alpha) = 0;
+    virtual void initialize(int gridx, int gridy, int gridz, int numParticles, double alpha, bool deterministic) = 0;
     /**
      * Begin computing the force and energy.
      *
@@ -1368,8 +1407,9 @@ public:
      * @param gridz        the z size of the PME grid
      * @param numParticles the number of particles in the system
      * @param alpha        the Ewald blending parameter
+     * @param deterministic whether it should attempt to make the resulting forces deterministic
      */
-    virtual void initialize(int gridx, int gridy, int gridz, int numParticles, double alpha) = 0;
+    virtual void initialize(int gridx, int gridy, int gridz, int numParticles, double alpha, bool deterministic) = 0;
     /**
      * Begin computing the force and energy.
      *

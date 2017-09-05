@@ -53,7 +53,7 @@ using namespace std;
 const static char CHECKPOINT_MAGIC_BYTES[] = "OpenMM Binary Checkpoint\n";
 
 
-ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integrator, Platform* platform, const map<string, string>& properties) :
+ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integrator, Platform* platform, const map<string, string>& properties, ContextImpl* originalContext) :
         owner(owner), system(system), integrator(integrator), hasInitializedForces(false), hasSetPositions(false), integratorIsDeleted(false),
         lastForceGroups(-1), platform(platform), platformData(NULL) {
     int numParticles = system.getNumParticles();
@@ -119,8 +119,6 @@ ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integ
     kernelNames.push_back(VirtualSitesKernel::Name());
     for (int i = 0; i < system.getNumForces(); ++i) {
         forceImpls.push_back(system.getForce(i).createImpl());
-        map<string, double> forceParameters = forceImpls[forceImpls.size()-1]->getDefaultParameters();
-        parameters.insert(forceParameters.begin(), forceParameters.end());
         vector<string> forceKernels = forceImpls[forceImpls.size()-1]->getKernelNames();
         kernelNames.insert(kernelNames.begin(), forceKernels.begin(), forceKernels.end());
     }
@@ -154,7 +152,10 @@ ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integ
     for (int i = candidatePlatforms.size()-1; i >= 0; i--) {
         try {
             this->platform = platform = candidatePlatforms[i].second;
-            platform->contextCreated(*this, validatedProperties);
+            if (originalContext == NULL)
+                platform->contextCreated(*this, validatedProperties);
+            else
+                platform->linkedContextCreated(*this, *originalContext);
             break;
         }
         catch (...) {
@@ -163,7 +164,9 @@ ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integ
             throw;
         }
     }
-    
+}
+
+void ContextImpl::initialize() {
     // Create and initialize kernels and other objects.
     
     initializeForcesKernel = platform->createKernel(CalcForcesAndEnergyKernel::Name(), *this);
@@ -177,10 +180,13 @@ ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integ
     Vec3 periodicBoxVectors[3];
     system.getDefaultPeriodicBoxVectors(periodicBoxVectors[0], periodicBoxVectors[1], periodicBoxVectors[2]);
     updateStateDataKernel.getAs<UpdateStateDataKernel>().setPeriodicBoxVectors(*this, periodicBoxVectors[0], periodicBoxVectors[1], periodicBoxVectors[2]);
-    for (size_t i = 0; i < forceImpls.size(); ++i)
+    for (size_t i = 0; i < forceImpls.size(); ++i) {
         forceImpls[i]->initialize(*this);
+        map<string, double> forceParameters = forceImpls[i]->getDefaultParameters();
+        parameters.insert(forceParameters.begin(), forceParameters.end());
+    }
     integrator.initialize(*this);
-    updateStateDataKernel.getAs<UpdateStateDataKernel>().setVelocities(*this, vector<Vec3>(numParticles));
+    updateStateDataKernel.getAs<UpdateStateDataKernel>().setVelocities(*this, vector<Vec3>(system.getNumParticles()));
 }
 
 ContextImpl::~ContextImpl() {
@@ -301,7 +307,7 @@ double ContextImpl::calcForcesAndEnergy(bool includeForces, bool includeEnergy, 
     }
 }
 
-int ContextImpl::getLastForceGroups() const {
+int& ContextImpl::getLastForceGroups() {
     return lastForceGroups;
 }
 
@@ -309,9 +315,11 @@ double ContextImpl::calcKineticEnergy() {
     return integrator.computeKineticEnergy();
 }
 
-void ContextImpl::updateContextState() {
+bool ContextImpl::updateContextState() {
+    bool forcesInvalid = false;
     for (auto force : forceImpls)
-        force->updateContextState(*this);
+        force->updateContextState(*this, forcesInvalid);
+    return forcesInvalid;
 }
 
 const vector<ForceImpl*>& ContextImpl::getForceImpls() const {
@@ -477,4 +485,8 @@ void ContextImpl::loadCheckpoint(istream& stream) {
 
 void ContextImpl::systemChanged() {
     integrator.stateChanged(State::Energy);
+}
+
+Context* ContextImpl::createLinkedContext(const System& system, Integrator& integrator) {
+    return new Context(system, integrator, *this);
 }

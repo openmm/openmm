@@ -88,8 +88,8 @@ class TestAmberPrmtopFile(unittest.TestCase):
         parameter.
 
         """
-        for implicitSolvent_value in [HCT, OBC1, OBC2, GBn]:
-            system = prmtop2.createSystem(implicitSolvent=implicitSolvent_value)
+        for implicitSolvent_value, gbsa in zip([HCT, OBC1, OBC2, GBn], ['ACE', None, 'ACE', None]):
+            system = prmtop2.createSystem(implicitSolvent=implicitSolvent_value, gbsaModel=gbsa)
             forces = system.getForces()
             if implicitSolvent_value in set([HCT, OBC1, GBn]):
                 force_type = CustomGBForce

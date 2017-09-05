@@ -52,7 +52,7 @@ public:
     const CMAPTorsionForce& getOwner() const {
         return owner;
     }
-    void updateContextState(ContextImpl& context) {
+    void updateContextState(ContextImpl& context, bool& forcesInvalid) {
         // This force field doesn't update the state directly.
     }
     double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups);

@@ -6,6 +6,9 @@
 %extend OpenMM::Context {
 
   %pythoncode %{
+    def getIntegrator(self):
+        return self._integrator
+
     def getState(self, getPositions=False, getVelocities=False,
                  getForces=False, getEnergy=False, getParameters=False,
                  getParameterDerivatives=False, enforcePeriodicBox=False, groups=-1):

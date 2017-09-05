@@ -263,8 +263,11 @@ public:
      */
     const std::vector<std::vector<int> >& getMolecules() const;
 private:
+    friend class ContextImpl;
     friend class Force;
+    friend class ForceImpl;
     friend class Platform;
+    Context(const System& system, Integrator& integrator, ContextImpl& linked);
     ContextImpl& getImpl();
     const ContextImpl& getImpl() const;
     ContextImpl* impl;

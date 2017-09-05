@@ -47,6 +47,16 @@ from . import element as elem
 from simtk.openmm.app import Topology
 from simtk.openmm.app.internal.singleton import Singleton
 
+# Directories from which to load built in force fields.
+
+_dataDirectories = [os.path.join(os.path.dirname(__file__), 'data')]
+try:
+    from pkg_resources import iter_entry_points
+    for entry in iter_entry_points(group='openmm.forcefielddir'):
+        _dataDirectories.append(entry.load()())
+except:
+    pass # pkg_resources is not installed
+
 def _convertParameterToNumber(param):
     if unit.is_quantity(param):
         if param.unit.is_compatible(unit.bar):
@@ -186,11 +196,16 @@ class ForceField(object):
         trees = []
 
         for file in files:
+            tree = None
             try:
                 # this handles either filenames or open file-like objects
                 tree = etree.parse(file)
             except IOError:
-                tree = etree.parse(os.path.join(os.path.dirname(__file__), 'data', file))
+                for dataDir in _dataDirectories:
+                    f = os.path.join(dataDir, file)
+                    if os.path.isfile(f):
+                        tree = etree.parse(f)
+                        break
             except Exception as e:
                 # Fail with an error message about which file could not be read.
                 # TODO: Also handle case where fallback to 'data' directory encounters problems,
@@ -202,9 +217,24 @@ class ForceField(object):
                     filename = str(file)
                 msg += "ForceField.loadFile() encountered an error reading file '%s'\n" % filename
                 raise Exception(msg)
+            if tree is None:
+                raise ValueError('Could not locate file "%s"' % file)
 
             trees.append(tree)
 
+        # Process includes.
+
+        for parentFile, tree in zip(files, trees):
+            if isinstance(parentFile, str):
+                parentDir = os.path.dirname(parentFile)
+            else:
+                parentDir = ''
+            for include in tree.getroot().findall('Include'):
+                includeFile = include.attrib['file']
+                joined = os.path.join(parentDir, includeFile)
+                if os.path.isfile(joined):
+                    includeFile = joined
+                self.loadFile(includeFile)
 
         # Load the atom types.
 
@@ -415,17 +445,19 @@ class ForceField(object):
         generator : function
             A function that will be called when a residue is encountered that does not match an existing forcefield template.
 
-        When a residue without a template is encountered, the `generator` function is called with:
+        When a residue without a template is encountered, the ``generator`` function is called with:
 
         ::
            success = generator(forcefield, residue)
-        ```
 
-        where `forcefield` is the calling `ForceField` object and `residue` is a simtk.openmm.app.topology.Residue object.
+        where ``forcefield`` is the calling ``ForceField`` object and ``residue`` is a simtk.openmm.app.topology.Residue object.
 
-        `generator` must conform to the following API:
+        ``generator`` must conform to the following API:
+
         ::
-          Parameters
+           generator API
+
+           Parameters
            ----------
            forcefield : simtk.openmm.app.ForceField
                The ForceField object to which residue templates and/or parameters are to be added.
@@ -508,6 +540,7 @@ class ForceField(object):
         def __init__(self):
             self.atomType = {}
             self.atomParameters = {}
+            self.atomTemplateIndexes = {}
             self.atoms = []
             self.excludeAtomWith = []
             self.virtualSites = {}
@@ -535,6 +568,7 @@ class ForceField(object):
             for atom, match in zip(residue.atoms(), matches):
                 self.atomType[atom] = template.atoms[match].type
                 self.atomParameters[atom] = template.atoms[match].parameters
+                self.atomTemplateIndexes[atom] = match
                 for site in template.virtualSites:
                     if match == site.index:
                         self.virtualSites[atom] = (site, [matchAtoms[i].index for i in site.atoms], matchAtoms[site.excludeWith].index)
@@ -615,10 +649,15 @@ class ForceField(object):
                 numAtoms = 3
                 self.weights = [float(attrib['weight12']), float(attrib['weight13']), float(attrib['weightCross'])]
             elif self.type == 'localCoords':
-                numAtoms = 3
-                self.originWeights = [float(attrib['wo1']), float(attrib['wo2']), float(attrib['wo3'])]
-                self.xWeights = [float(attrib['wx1']), float(attrib['wx2']), float(attrib['wx3'])]
-                self.yWeights = [float(attrib['wy1']), float(attrib['wy2']), float(attrib['wy3'])]
+                numAtoms = 0
+                self.originWeights = []
+                self.xWeights = []
+                self.yWeights = []
+                while ('wo%d' % (numAtoms+1)) in attrib:
+                    numAtoms += 1
+                    self.originWeights.append(float(attrib['wo%d' % numAtoms]))
+                    self.xWeights.append(float(attrib['wx%d' % numAtoms]))
+                    self.yWeights.append(float(attrib['wy%d' % numAtoms]))
                 self.localPos = [float(attrib['p1']), float(attrib['p2']), float(attrib['p3'])]
             else:
                 raise ValueError('Unknown virtual site type: %s' % self.type)
@@ -1003,6 +1042,8 @@ class ForceField(object):
             not terminated properly.  This option can create ambiguities where multiple
             templates match the same residue.  If that happens, use the residueTemplates
             argument to specify which one to use.
+        flexibleConstraints : boolean=False
+            If True, parameters for constrained degrees of freedom will be added to the System
         args
             Arbitrary additional keyword arguments may also be specified.
             This allows extra parameters to be specified that are specific to
@@ -1108,9 +1149,9 @@ class ForceField(object):
             if not unit.is_quantity(hydrogenMass):
                 hydrogenMass *= unit.dalton
             for atom1, atom2 in topology.bonds():
-                if atom1.element == elem.hydrogen:
+                if atom1.element is elem.hydrogen:
                     (atom1, atom2) = (atom2, atom1)
-                if atom2.element == elem.hydrogen and atom1.element not in (elem.hydrogen, None):
+                if atom2.element is elem.hydrogen and atom1.element not in (elem.hydrogen, None):
                     transferMass = hydrogenMass-sys.getParticleMass(atom2.index)
                     sys.setParticleMass(atom2.index, hydrogenMass)
                     sys.setParticleMass(atom1.index, sys.getParticleMass(atom1.index)-transferMass)
@@ -1176,7 +1217,7 @@ class ForceField(object):
             for bond in data.bonds:
                 atom1 = data.atoms[bond.atom1]
                 atom2 = data.atoms[bond.atom2]
-                bond.isConstrained = atom1.name.startswith('H') or atom2.name.startswith('H')
+                bond.isConstrained = atom1.element is elem.hydrogen or atom2.element is elem.hydrogen
         if rigidWater:
             for bond in data.bonds:
                 atom1 = data.atoms[bond.atom1]
@@ -1192,11 +1233,11 @@ class ForceField(object):
                 atom2 = data.atoms[angle[1]]
                 atom3 = data.atoms[angle[2]]
                 numH = 0
-                if atom1.name.startswith('H'):
+                if atom1.element is elem.hydrogen:
                     numH += 1
-                if atom3.name.startswith('H'):
+                if atom3.element is elem.hydrogen:
                     numH += 1
-                data.isAngleConstrained.append(numH == 2 or (numH == 1 and atom2.name.startswith('O')))
+                data.isAngleConstrained.append(numH == 2 or (numH == 1 and atom2.element is elem.oxygen))
         else:
             data.isAngleConstrained = len(data.angles)*[False]
         if rigidWater:
@@ -1221,11 +1262,7 @@ class ForceField(object):
             elif site.type == 'outOfPlane':
                 sys.setVirtualSite(index, mm.OutOfPlaneSite(atoms[0], atoms[1], atoms[2], site.weights[0], site.weights[1], site.weights[2]))
             elif site.type == 'localCoords':
-                sys.setVirtualSite(index, mm.LocalCoordinatesSite(atoms[0], atoms[1], atoms[2],
-                                                                  mm.Vec3(site.originWeights[0], site.originWeights[1], site.originWeights[2]),
-                                                                  mm.Vec3(site.xWeights[0], site.xWeights[1], site.xWeights[2]),
-                                                                  mm.Vec3(site.yWeights[0], site.yWeights[1], site.yWeights[2]),
-                                                                  mm.Vec3(site.localPos[0], site.localPos[1], site.localPos[2])))
+                sys.setVirtualSite(index, mm.LocalCoordinatesSite(atoms, site.originWeights, site.xWeights, site.yWeights, site.localPos))
 
         # Add forces to the System
 
@@ -1704,6 +1741,108 @@ def _createResidueTemplate(residue):
             template.addExternalBondByName(atom2.name)
     return template
 
+def _matchImproper(data, torsion, generator):
+    type1 = data.atomType[data.atoms[torsion[0]]]
+    type2 = data.atomType[data.atoms[torsion[1]]]
+    type3 = data.atomType[data.atoms[torsion[2]]]
+    type4 = data.atomType[data.atoms[torsion[3]]]
+    wildcard = generator.ff._atomClasses['']
+    match = None
+    for tordef in generator.improper:
+        types1 = tordef.types1
+        types2 = tordef.types2
+        types3 = tordef.types3
+        types4 = tordef.types4
+        hasWildcard = (wildcard in (types1, types2, types3, types4))
+        if match is not None and hasWildcard:
+            # Prefer specific definitions over ones with wildcards
+            continue
+        if type1 in types1:
+            for (t2, t3, t4) in itertools.permutations(((type2, 1), (type3, 2), (type4, 3))):
+                if t2[0] in types2 and t3[0] in types3 and t4[0] in types4:
+                    if tordef.ordering == 'default':
+                        # Workaround to be more consistent with AMBER.  It uses wildcards to define most of its
+                        # impropers, which leaves the ordering ambiguous.  It then follows some bizarre rules
+                        # to pick the order.
+                        a1 = torsion[t2[1]]
+                        a2 = torsion[t3[1]]
+                        e1 = data.atoms[a1].element
+                        e2 = data.atoms[a2].element
+                        if e1 == e2 and a1 > a2:
+                            (a1, a2) = (a2, a1)
+                        elif e1 != elem.carbon and (e2 == elem.carbon or e1.mass < e2.mass):
+                            (a1, a2) = (a2, a1)
+                        match = (a1, a2, torsion[0], torsion[t4[1]], tordef)
+                        break
+                    elif tordef.ordering == 'charmm':
+                        if hasWildcard:
+                            # Workaround to be more consistent with AMBER.  It uses wildcards to define most of its
+                            # impropers, which leaves the ordering ambiguous.  It then follows some bizarre rules
+                            # to pick the order.
+                            a1 = torsion[t2[1]]
+                            a2 = torsion[t3[1]]
+                            e1 = data.atoms[a1].element
+                            e2 = data.atoms[a2].element
+                            if e1 == e2 and a1 > a2:
+                                (a1, a2) = (a2, a1)
+                            elif e1 != elem.carbon and (e2 == elem.carbon or e1.mass < e2.mass):
+                                (a1, a2) = (a2, a1)
+                            match = (a1, a2, torsion[0], torsion[t4[1]], tordef)
+                        else:
+                            # There are no wildcards, so the order is unambiguous.
+                            match = (torsion[0], torsion[t2[1]], torsion[t3[1]], torsion[t4[1]], tordef)
+                        break
+                    elif tordef.ordering == 'amber':
+                        # topology atom indexes
+                        a2 = torsion[t2[1]]
+                        a3 = torsion[t3[1]]
+                        a4 = torsion[t4[1]]
+                        # residue indexes
+                        r2 = data.atoms[a2].residue.index
+                        r3 = data.atoms[a3].residue.index
+                        r4 = data.atoms[a4].residue.index
+                        # template atom indexes
+                        ta2 = data.atomTemplateIndexes[data.atoms[a2]]
+                        ta3 = data.atomTemplateIndexes[data.atoms[a3]]
+                        ta4 = data.atomTemplateIndexes[data.atoms[a4]]
+                        # elements
+                        e2 = data.atoms[a2].element
+                        e3 = data.atoms[a3].element
+                        e4 = data.atoms[a4].element
+                        if not hasWildcard:
+                            if t2[0] == t4[0] and (r2 > r4 or (r2 == r4 and ta2 > ta4)):
+                                (a2, a4) = (a4, a2)
+                                r2 = data.atoms[a2].residue.index
+                                r4 = data.atoms[a4].residue.index
+                                ta2 = data.atomTemplateIndexes[data.atoms[a2]]
+                                ta4 = data.atomTemplateIndexes[data.atoms[a4]]
+                            if t3[0] == t4[0] and (r3 > r4 or (r3 == r4 and ta3 > ta4)):
+                                (a3, a4) = (a4, a3)
+                                r3 = data.atoms[a3].residue.index
+                                r4 = data.atoms[a4].residue.index
+                                ta3 = data.atomTemplateIndexes[data.atoms[a3]]
+                                ta4 = data.atomTemplateIndexes[data.atoms[a4]]
+                            if t2[0] == t3[0] and (r2 > r3 or (r2 == r3 and ta2 > ta3)):
+                                (a2, a3) = (a3, a2)
+                        else:
+                            if e2 == e4 and (r2 > r4 or (r2 == r4 and ta2 > ta4)):
+                                (a2, a4) = (a4, a2)
+                                r2 = data.atoms[a2].residue.index
+                                r4 = data.atoms[a4].residue.index
+                                ta2 = data.atomTemplateIndexes[data.atoms[a2]]
+                                ta4 = data.atomTemplateIndexes[data.atoms[a4]]
+                            if e3 == e4 and (r3 > r4 or (r3 == r4 and ta3 > ta4)):
+                                (a3, a4) = (a4, a3)
+                                r3 = data.atoms[a3].residue.index
+                                r4 = data.atoms[a4].residue.index
+                                ta3 = data.atomTemplateIndexes[data.atoms[a3]]
+                                ta4 = data.atomTemplateIndexes[data.atoms[a4]]
+                            if r2 > r3 or (r2 == r3 and ta2 > ta3):
+                                (a2, a3) = (a3, a2)
+                        match = (a2, a3, torsion[0], a4, tordef)
+                        break
+    return match
+
 # The following classes are generators that know how to create Force subclasses and add them to a System that is being
 # created.  Each generator class must define two methods: 1) a static method that takes an etree Element and a ForceField,
 # and returns the corresponding generator object; 2) a createForce() method that constructs the Force object and adds it
@@ -1763,8 +1902,11 @@ class HarmonicBondGenerator(object):
                     bond.length = self.length[i]
                     if bond.isConstrained:
                         data.addConstraint(sys, bond.atom1, bond.atom2, self.length[i])
-                    elif self.k[i] != 0:
-                        force.addBond(bond.atom1, bond.atom2, self.length[i], self.k[i])
+                    if self.k[i] != 0:
+                        # flexibleConstraints allows us to add parameters even if the DOF is
+                        # constrained
+                        if not bond.isConstrained or args.get('flexibleConstraints', False):
+                            force.addBond(bond.atom1, bond.atom2, self.length[i], self.k[i])
                     break
 
 parsers["HarmonicBondForce"] = HarmonicBondGenerator.parseElement
@@ -1844,8 +1986,9 @@ class HarmonicAngleGenerator(object):
                             if l1 is not None and l2 is not None:
                                 length = sqrt(l1*l1 + l2*l2 - 2*l1*l2*cos(self.angle[i]))
                                 data.addConstraint(sys, angle[0], angle[2], length)
-                    elif self.k[i] != 0:
-                        force.addAngle(angle[0], angle[1], angle[2], self.angle[i], self.k[i])
+                    if self.k[i] != 0:
+                        if not isConstrained or args.get('flexibleConstraints', False):
+                            force.addAngle(angle[0], angle[1], angle[2], self.angle[i], self.k[i])
                     break
 
 parsers["HarmonicAngleForce"] = HarmonicAngleGenerator.parseElement
@@ -1863,6 +2006,7 @@ class PeriodicTorsion(object):
         self.periodicity = []
         self.phase = []
         self.k = []
+        self.ordering = 'default'
 
 ## @private
 class PeriodicTorsionGenerator(object):
@@ -1878,9 +2022,13 @@ class PeriodicTorsionGenerator(object):
         if torsion is not None:
             self.proper.append(torsion)
 
-    def registerImproperTorsion(self, parameters):
+    def registerImproperTorsion(self, parameters, ordering='default'):
         torsion = self.ff._parseTorsion(parameters)
         if torsion is not None:
+            if ordering in ['default', 'charmm', 'amber']:
+                torsion.ordering = ordering
+            else:
+                raise ValueError('Illegal ordering type %s for improper torsion %s' % (ordering, torsion))
             self.improper.append(torsion)
 
     @staticmethod
@@ -1894,7 +2042,10 @@ class PeriodicTorsionGenerator(object):
         for torsion in element.findall('Proper'):
             generator.registerProperTorsion(torsion.attrib)
         for torsion in element.findall('Improper'):
-            generator.registerImproperTorsion(torsion.attrib)
+            if 'ordering' in element.attrib:
+                generator.registerImproperTorsion(torsion.attrib, element.attrib['ordering'])
+            else:
+                generator.registerImproperTorsion(torsion.attrib)
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         existing = [sys.getForce(i) for i in range(sys.getNumForces())]
@@ -1927,36 +2078,7 @@ class PeriodicTorsionGenerator(object):
                     if match.k[i] != 0:
                         force.addTorsion(torsion[0], torsion[1], torsion[2], torsion[3], match.periodicity[i], match.phase[i], match.k[i])
         for torsion in data.impropers:
-            type1 = data.atomType[data.atoms[torsion[0]]]
-            type2 = data.atomType[data.atoms[torsion[1]]]
-            type3 = data.atomType[data.atoms[torsion[2]]]
-            type4 = data.atomType[data.atoms[torsion[3]]]
-            match = None
-            for tordef in self.improper:
-                types1 = tordef.types1
-                types2 = tordef.types2
-                types3 = tordef.types3
-                types4 = tordef.types4
-                hasWildcard = (wildcard in (types1, types2, types3, types4))
-                if match is not None and hasWildcard:
-                    # Prefer specific definitions over ones with wildcards
-                    continue
-                if type1 in types1:
-                    for (t2, t3, t4) in itertools.permutations(((type2, 1), (type3, 2), (type4, 3))):
-                        if t2[0] in types2 and t3[0] in types3 and t4[0] in types4:
-                            # Workaround to be more consistent with AMBER.  It uses wildcards to define most of its
-                            # impropers, which leaves the ordering ambiguous.  It then follows some bizarre rules
-                            # to pick the order.
-                            a1 = torsion[t2[1]]
-                            a2 = torsion[t3[1]]
-                            e1 = data.atoms[a1].element
-                            e2 = data.atoms[a2].element
-                            if e1 == e2 and a1 > a2:
-                                (a1, a2) = (a2, a1)
-                            elif e1 != elem.carbon and (e2 == elem.carbon or e1.mass < e2.mass):
-                                (a1, a2) = (a2, a1)
-                            match = (a1, a2, torsion[0], torsion[t4[1]], tordef)
-                            break
+            match = _matchImproper(data, torsion, self)
             if match is not None:
                 (a1, a2, a3, a4, tordef) = match
                 for i in range(len(tordef.phase)):
@@ -1970,12 +2092,16 @@ parsers["PeriodicTorsionForce"] = PeriodicTorsionGenerator.parseElement
 class RBTorsion(object):
     """An RBTorsion records the information for a Ryckaert-Bellemans torsion definition."""
 
-    def __init__(self, types, c):
+    def __init__(self, types, c, ordering='charmm'):
         self.types1 = types[0]
         self.types2 = types[1]
         self.types3 = types[2]
         self.types4 = types[3]
         self.c = c
+        if ordering in ['default', 'charmm', 'amber']:
+            self.ordering = ordering
+        else:
+            raise ValueError('Illegal ordering type %s for RBTorsion (%s,%s,%s,%s)' % (ordering, types[0], types[1], types[2], types[3]))
 
 ## @private
 class RBTorsionGenerator(object):
@@ -2001,7 +2127,10 @@ class RBTorsionGenerator(object):
         for torsion in element.findall('Improper'):
             types = ff._findAtomTypes(torsion.attrib, 4)
             if None not in types:
-                generator.improper.append(RBTorsion(types, [float(torsion.attrib['c'+str(i)]) for i in range(6)]))
+                if 'ordering' in element.attrib:
+                    generator.improper.append(RBTorsion(types, [float(torsion.attrib['c'+str(i)]) for i in range(6)], element.attrib['ordering']))
+                else:
+                    generator.improper.append(RBTorsion(types, [float(torsion.attrib['c'+str(i)]) for i in range(6)]))
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         existing = [sys.getForce(i) for i in range(sys.getNumForces())]
@@ -2032,40 +2161,7 @@ class RBTorsionGenerator(object):
             if match is not None:
                 force.addTorsion(torsion[0], torsion[1], torsion[2], torsion[3], match.c[0], match.c[1], match.c[2], match.c[3], match.c[4], match.c[5])
         for torsion in data.impropers:
-            type1 = data.atomType[data.atoms[torsion[0]]]
-            type2 = data.atomType[data.atoms[torsion[1]]]
-            type3 = data.atomType[data.atoms[torsion[2]]]
-            type4 = data.atomType[data.atoms[torsion[3]]]
-            match = None
-            for tordef in self.improper:
-                types1 = tordef.types1
-                types2 = tordef.types2
-                types3 = tordef.types3
-                types4 = tordef.types4
-                hasWildcard = (wildcard in (types1, types2, types3, types4))
-                if match is not None and hasWildcard:
-                    # Prefer specific definitions over ones with wildcards
-                    continue
-                if type1 in types1:
-                    for (t2, t3, t4) in itertools.permutations(((type2, 1), (type3, 2), (type4, 3))):
-                        if t2[0] in types2 and t3[0] in types3 and t4[0] in types4:
-                            if hasWildcard:
-                                # Workaround to be more consistent with AMBER.  It uses wildcards to define most of its
-                                # impropers, which leaves the ordering ambiguous.  It then follows some bizarre rules
-                                # to pick the order.
-                                a1 = torsion[t2[1]]
-                                a2 = torsion[t3[1]]
-                                e1 = data.atoms[a1].element
-                                e2 = data.atoms[a2].element
-                                if e1 == e2 and a1 > a2:
-                                    (a1, a2) = (a2, a1)
-                                elif e1 != elem.carbon and (e2 == elem.carbon or e1.mass < e2.mass):
-                                    (a1, a2) = (a2, a1)
-                                match = (a1, a2, torsion[0], torsion[t4[1]], tordef)
-                            else:
-                                # There are no wildcards, so the order is unambiguous.
-                                match = (torsion[0], torsion[t2[1]], torsion[t3[1]], torsion[t4[1]], tordef)
-                            break
+            match = _matchImproper(data, torsion, self)
             if match is not None:
                 (a1, a2, a3, a4, tordef) = match
                 force.addTorsion(a1, a2, a3, a4, tordef.c[0], tordef.c[1], tordef.c[2], tordef.c[3], tordef.c[4], tordef.c[5])
@@ -2526,12 +2622,16 @@ parsers["CustomAngleForce"] = CustomAngleGenerator.parseElement
 class CustomTorsion(object):
     """A CustomTorsion records the information for a custom torsion definition."""
 
-    def __init__(self, types, paramValues):
+    def __init__(self, types, paramValues, ordering='charmm'):
         self.types1 = types[0]
         self.types2 = types[1]
         self.types3 = types[2]
         self.types4 = types[3]
         self.paramValues = paramValues
+        if ordering in ['default', 'charmm', 'amber']:
+            self.ordering = ordering
+        else:
+            raise ValueError('Illegal ordering type %s for CustomTorsion (%s,%s,%s,%s)' % (ordering, types[0], types[1], types[2], types[3]))
 
 ## @private
 class CustomTorsionGenerator(object):
@@ -2560,7 +2660,10 @@ class CustomTorsionGenerator(object):
         for torsion in element.findall('Improper'):
             types = ff._findAtomTypes(torsion.attrib, 4)
             if None not in types:
-                generator.improper.append(CustomTorsion(types, [float(torsion.attrib[param]) for param in generator.perTorsionParams]))
+                if 'ordering' in element.attrib:
+                    generator.improper.append(CustomTorsion(types, [float(torsion.attrib[param]) for param in generator.perTorsionParams], element.attrib['ordering']))
+                else:
+                    generator.improper.append(CustomTorsion(types, [float(torsion.attrib[param]) for param in generator.perTorsionParams]))
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         force = mm.CustomTorsionForce(self.energy)
@@ -2590,40 +2693,7 @@ class CustomTorsionGenerator(object):
             if match is not None:
                 force.addTorsion(torsion[0], torsion[1], torsion[2], torsion[3], match.paramValues)
         for torsion in data.impropers:
-            type1 = data.atomType[data.atoms[torsion[0]]]
-            type2 = data.atomType[data.atoms[torsion[1]]]
-            type3 = data.atomType[data.atoms[torsion[2]]]
-            type4 = data.atomType[data.atoms[torsion[3]]]
-            match = None
-            for tordef in self.improper:
-                types1 = tordef.types1
-                types2 = tordef.types2
-                types3 = tordef.types3
-                types4 = tordef.types4
-                hasWildcard = (wildcard in (types1, types2, types3, types4))
-                if match is not None and hasWildcard:
-                    # Prefer specific definitions over ones with wildcards
-                    continue
-                if type1 in types1:
-                    for (t2, t3, t4) in itertools.permutations(((type2, 1), (type3, 2), (type4, 3))):
-                        if t2[0] in types2 and t3[0] in types3 and t4[0] in types4:
-                            if hasWildcard:
-                                # Workaround to be more consistent with AMBER.  It uses wildcards to define most of its
-                                # impropers, which leaves the ordering ambiguous.  It then follows some bizarre rules
-                                # to pick the order.
-                                a1 = torsion[t2[1]]
-                                a2 = torsion[t3[1]]
-                                e1 = data.atoms[a1].element
-                                e2 = data.atoms[a2].element
-                                if e1 == e2 and a1 > a2:
-                                    (a1, a2) = (a2, a1)
-                                elif e1 != elem.carbon and (e2 == elem.carbon or e1.mass < e2.mass):
-                                    (a1, a2) = (a2, a1)
-                                match = (a1, a2, torsion[0], torsion[t4[1]], tordef)
-                            else:
-                                # There are no wildcards, so the order is unambiguous.
-                                match = (torsion[0], torsion[t2[1]], torsion[t3[1]], torsion[t4[1]], tordef)
-                            break
+            match = _matchImproper(data, torsion, self)
             if match is not None:
                 (a1, a2, a3, a4, tordef) = match
                 force.addTorsion(a1, a2, a3, a4, tordef.paramValues)
@@ -3099,8 +3169,9 @@ class AmoebaBondGenerator(object):
                     bond.length = self.length[i]
                     if bond.isConstrained:
                         data.addConstraint(sys, bond.atom1, bond.atom2, self.length[i])
-                    elif self.k[i] != 0:
-                        force.addBond(bond.atom1, bond.atom2, self.length[i], self.k[i])
+                    if self.k[i] != 0:
+                        if not bond.isConstrained or args.get('flexibleConstraints', False):
+                            force.addBond(bond.atom1, bond.atom2, self.length[i], self.k[i])
                     break
 
 parsers["AmoebaBondForce"] = AmoebaBondGenerator.parseElement
@@ -3227,6 +3298,8 @@ class AmoebaAngleGenerator(object):
         force.setAmoebaGlobalAnglePentic(self.pentic)
         force.setAmoebaGlobalAngleSextic(self.sextic)
 
+        DEG_TO_RAD = math.pi / 180
+
         for angleDict in angleList:
             angle = angleDict['angle']
             isConstrained = angleDict['isConstrained']
@@ -3241,8 +3314,8 @@ class AmoebaAngleGenerator(object):
                 if (type1 in types1 and type2 in types2 and type3 in types3) or (type1 in types3 and type2 in types2 and type3 in types1):
                     if isConstrained and self.k[i] != 0.0:
                         angleDict['idealAngle'] = self.angle[i][0]
-                        addAngleConstraint(angle, self.angle[i][0]*math.pi/180.0, data, sys)
-                    elif self.k[i] != 0:
+                        addAngleConstraint(angle, self.angle[i][0]*DEG_TO_RAD, data, sys)
+                    if self.k[i] != 0 and (not isConstrained or args.get('flexibleConstraints', False)):
                         lenAngle = len(self.angle[i])
                         if (lenAngle > 1):
                             # get k-index by counting number of non-angle hydrogens on the central atom
@@ -3311,7 +3384,7 @@ class AmoebaAngleGenerator(object):
                     angleDict['idealAngle'] = self.angle[i][0]
                     if (isConstrained and self.k[i] != 0.0):
                         addAngleConstraint(angle, self.angle[i][0]*math.pi/180.0, data, sys)
-                    else:
+                    if self.k[i] != 0.0 and (not isConstrained or args.get('flexibleConstraints', False)):
                         force.addAngle(angle[0], angle[1], angle[2], angle[3], self.angle[i][0], self.k[i])
                     break
 
@@ -3963,7 +4036,7 @@ class AmoebaTorsionTorsionGenerator(object):
             # raise error if atoms E or F not found
 
             if (atomE == -1 or atomF == -1):
-                outputString = "getChiralAtomIndex: error getting bonded partners of atomC=%s %d %s" % (atomC.name, atomC.resiude.index, atomC.resiude.name,)
+                outputString = "getChiralAtomIndex: error getting bonded partners of atomC=%s %d %s" % (atomC.name, atomC.residue.index, atomC.residue.name,)
                 raise ValueError(outputString)
 
             # check for different type/mass between atoms E & F
@@ -5370,7 +5443,7 @@ class AmoebaUreyBradleyGenerator(object):
             force = existing[0]
 
         for (angle, isConstrained) in zip(data.angles, data.isAngleConstrained):
-            if (isConstrained):
+            if (isConstrained and not args.get('flexibleConstraints', False)):
                 continue
             type1 = data.atomType[data.atoms[angle[0]]]
             type2 = data.atomType[data.atoms[angle[1]]]

@@ -53,6 +53,7 @@ public:
     const std::string& getPropertyValue(const Context& context, const std::string& property) const;
     void setPropertyValue(Context& context, const std::string& property, const std::string& value) const;
     void contextCreated(ContextImpl& context, const std::map<std::string, std::string>& properties) const;
+    void linkedContextCreated(ContextImpl& context, ContextImpl& originalContext) const;
     void contextDestroyed(ContextImpl& context) const;
     /**
      * This is the name of the parameter for selecting which CUDA device or devices to use.
@@ -130,7 +131,7 @@ class OPENMM_EXPORT_CUDA CudaPlatform::PlatformData {
 public:
     PlatformData(ContextImpl* context, const System& system, const std::string& deviceIndexProperty, const std::string& blockingProperty, const std::string& precisionProperty,
             const std::string& cpuPmeProperty, const std::string& compilerProperty, const std::string& tempProperty, const std::string& hostCompilerProperty,
-            const std::string& pmeStreamProperty, const std::string& deterministicForcesProperty, int numThreads);
+            const std::string& pmeStreamProperty, const std::string& deterministicForcesProperty, int numThreads, ContextImpl* originalContext);
     ~PlatformData();
     void initializeContexts(const System& system);
     void syncContexts();

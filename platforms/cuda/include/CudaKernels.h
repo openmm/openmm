@@ -38,6 +38,7 @@
 #include "openmm/internal/CompiledExpressionSet.h"
 #include "openmm/internal/CustomIntegratorUtilities.h"
 #include "lepton/CompiledExpression.h"
+#include "lepton/ExpressionProgram.h"
 #include <cufft.h>
 
 namespace OpenMM {
@@ -1230,6 +1231,54 @@ private:
 };
 
 /**
+ * This kernel is invoked by CustomCVForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CudaCalcCustomCVForceKernel : public CalcCustomCVForceKernel {
+public:
+    CudaCalcCustomCVForceKernel(std::string name, const Platform& platform, CudaContext& cu) : CalcCustomCVForceKernel(name, platform),
+            cu(cu), hasInitializedListeners(false), invAtomOrder(NULL), innerInvAtomOrder(NULL) {
+    }
+    ~CudaCalcCustomCVForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomCVForce this kernel will be used for
+     * @param innerContext   the context created by the CustomCVForce for computing collective variables
+     */
+    void initialize(const System& system, const CustomCVForce& force, ContextImpl& innerContext);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param innerContext   the context created by the CustomCVForce for computing collective variables
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, ContextImpl& innerContext, bool includeForces, bool includeEnergy);
+    /**
+     * Copy state information to the inner context.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param innerContext   the context created by the CustomCVForce for computing collective variables
+     */
+    void copyState(ContextImpl& context, ContextImpl& innerContext);
+private:
+    class ReorderListener;
+    CudaContext& cu;
+    bool hasInitializedListeners;
+    Lepton::ExpressionProgram energyExpression;
+    std::vector<std::string> variableNames, paramDerivNames, globalParameterNames;
+    std::vector<Lepton::ExpressionProgram> variableDerivExpressions;
+    std::vector<Lepton::ExpressionProgram> paramDerivExpressions;
+    std::vector<CudaArray*> cvForces;
+    CudaArray* invAtomOrder;
+    CudaArray* innerInvAtomOrder;
+    CUfunction copyStateKernel, copyForcesKernel, addForcesKernel;
+};
+
+/**
  * This kernel is invoked by VerletIntegrator to take one time step.
  */
 class CudaIntegrateVerletStepKernel : public IntegrateVerletStepKernel {
@@ -1485,7 +1534,9 @@ private:
     class ReorderListener;
     class GlobalTarget;
     class DerivFunction;
-    std::string createPerDofComputation(const std::string& variable, const Lepton::ParsedExpression& expr, int component, CustomIntegrator& integrator, const std::string& forceName, const std::string& energyName);
+    std::string createPerDofComputation(const std::string& variable, const Lepton::ParsedExpression& expr, int component, CustomIntegrator& integrator,
+        const std::string& forceName, const std::string& energyName, std::vector<const TabulatedFunction*>& functions,
+        std::vector<std::pair<std::string, std::string> >& functionNames);
     void prepareForComputation(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid);
     Lepton::ExpressionTreeNode replaceDerivFunctions(const Lepton::ExpressionTreeNode& node, OpenMM::ContextImpl& context);
     void findExpressionsForDerivs(const Lepton::ExpressionTreeNode& node, std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& variableNodes);
@@ -1495,7 +1546,7 @@ private:
     CudaContext& cu;
     double energy;
     float energyFloat;
-    int numGlobalVariables;
+    int numGlobalVariables, sumWorkGroupSize;
     bool hasInitializedKernels, deviceValuesAreCurrent, deviceGlobalsAreCurrent, modifiesParameters, keNeedsForce, hasAnyConstraints, needsEnergyParamDerivs;
     mutable bool localValuesAreCurrent;
     CudaArray* globalValues;
@@ -1504,6 +1555,8 @@ private:
     CudaArray* uniformRandoms;
     CudaArray* randomSeed;
     CudaArray* perDofEnergyParamDerivs;
+    std::vector<CudaArray*> tabulatedFunctions;
+    std::map<int, double> savedEnergy;
     std::map<int, CudaArray*> savedForces;
     std::set<int> validSavedForces;
     CudaParameterSet* perDofValues;
@@ -1587,7 +1640,7 @@ private:
 class CudaApplyMonteCarloBarostatKernel : public ApplyMonteCarloBarostatKernel {
 public:
     CudaApplyMonteCarloBarostatKernel(std::string name, const Platform& platform, CudaContext& cu) : ApplyMonteCarloBarostatKernel(name, platform), cu(cu),
-            hasInitializedKernels(false), savedPositions(NULL), moleculeAtoms(NULL), moleculeStartIndex(NULL) {
+            hasInitializedKernels(false), savedPositions(NULL), savedForces(NULL), moleculeAtoms(NULL), moleculeStartIndex(NULL) {
     }
     ~CudaApplyMonteCarloBarostatKernel();
     /**
@@ -1622,6 +1675,7 @@ private:
     bool hasInitializedKernels;
     int numMolecules;
     CudaArray* savedPositions;
+    CudaArray* savedForces;
     CudaArray* moleculeAtoms;
     CudaArray* moleculeStartIndex;
     CUfunction kernel;
