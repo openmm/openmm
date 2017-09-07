@@ -778,7 +778,7 @@ private:
     std::vector<CudaArray*> tabulatedFunctions;
     double longRangeCoefficient;
     std::vector<double> longRangeCoefficientDerivs;
-    bool hasInitializedLongRangeCorrection, hasInitializedKernel;
+    bool hasInitializedLongRangeCorrection, hasInitializedKernel, hasParamDerivs;
     int numGroupThreadBlocks;
     CustomNonbondedForce* forceCopy;
     const System& system;

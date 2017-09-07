@@ -17,6 +17,7 @@ extern "C" __global__ void computeInteractionGroups(
     const unsigned int tgx = threadIdx.x & (TILE_SIZE-1); // index within the warp
     const unsigned int tbx = threadIdx.x - tgx;           // block warpIndex
     mixed energy = 0;
+    INIT_DERIVATIVES
     __shared__ AtomData localData[LOCAL_MEMORY_SIZE];
 
     const unsigned int startTile = FIRST_TILE+warp*(LAST_TILE-FIRST_TILE)/totalWarps;
@@ -58,6 +59,7 @@ extern "C" __global__ void computeInteractionGroups(
                 LOAD_ATOM2_PARAMETERS
                 real dEdR = 0.0f;
                 real tempEnergy = 0.0f;
+                const real interactionScale = 1.0f;
                 COMPUTE_INTERACTION
                 energy += tempEnergy;
                 delta *= dEdR;
@@ -82,4 +84,5 @@ extern "C" __global__ void computeInteractionGroups(
         atomicAdd(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fz*0x100000000)));
     }
     energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += energy;
+    SAVE_DERIVATIVES
 }
