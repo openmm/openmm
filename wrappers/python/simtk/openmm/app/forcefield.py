@@ -426,8 +426,8 @@ class ForceField(object):
     def registerTemplatePatch(self, residue, patch, patchResidueIndex):
         """Register that a particular patch can be used with a particular residue."""
         if residue not in self._templatePatches:
-            self._templatePatches[residue] = []
-        self._templatePatches[residue].append((patch, patchResidueIndex))
+            self._templatePatches[residue] = set()
+        self._templatePatches[residue].add((patch, patchResidueIndex))
 
     def registerScript(self, script):
         """Register a new script to be executed after building the System."""
