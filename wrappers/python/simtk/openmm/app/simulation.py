@@ -183,6 +183,9 @@ class Simulation(object):
         nextReport = [None]*len(self.reporters)
         while self.currentStep < endStep and (endTime is None or datetime.now() < endTime):
             nextSteps = endStep-self.currentStep
+            
+            # Find when the next report will happen.
+            
             anyReport = False
             for i, reporter in enumerate(self.reporters):
                 nextReport[i] = reporter.describeNextReport(self)
@@ -198,25 +201,57 @@ class Simulation(object):
             self.integrator.step(stepsToGo)
             self.currentStep += nextSteps
             if anyReport:
-                getPositions = False
-                getVelocities = False
-                getForces = False
-                getEnergy = False
-                for reporter, next in zip(self.reporters, nextReport):
-                    if next[0] == nextSteps:
-                        if next[1]:
-                            getPositions = True
-                        if next[2]:
-                            getVelocities = True
-                        if next[3]:
-                            getForces = True
-                        if next[4]:
-                            getEnergy = True
-                state = self.context.getState(getPositions=getPositions, getVelocities=getVelocities, getForces=getForces,
-                                              getEnergy=getEnergy, getParameters=True, enforcePeriodicBox=self._usesPBC)
-                for reporter, next in zip(self.reporters, nextReport):
-                    if next[0] == nextSteps:
-                        reporter.report(self, state)
+                # One or more reporters are ready to generate reports.  Organize them into three
+                # groups: ones that want wrapped positions, ones that want unwrapped positions,
+                # and ones that don't care about positions.
+                
+                wrapped = []
+                unwrapped = []
+                either = []
+                for reporter, report in zip(self.reporters, nextReport):
+                    if report[0] == nextSteps:
+                        if len(report) > 5:
+                            wantWrap = report[5]
+                            if wantWrap is None:
+                                wantWrap = self._usesPBC
+                        else:
+                            wantWrap = self._usesPBC
+                        if not report[1]:
+                            either.append((reporter, report))
+                        elif wantWrap:
+                            wrapped.append((reporter, report))
+                        else:
+                            unwrapped.append((reporter, report))
+                if len(wrapped) > len(unwrapped):
+                    wrapped += either
+                else:
+                    unwrapped += either
+                
+                # Generate the reports.
+
+                if len(wrapped) > 0:
+                    self._generate_reports(wrapped, True)
+                if len(unwrapped) > 0:
+                    self._generate_reports(unwrapped, False)
+    
+    def _generate_reports(self, reports, periodic):
+        getPositions = False
+        getVelocities = False
+        getForces = False
+        getEnergy = False
+        for reporter, next in reports:
+            if next[1]:
+                getPositions = True
+            if next[2]:
+                getVelocities = True
+            if next[3]:
+                getForces = True
+            if next[4]:
+                getEnergy = True
+        state = self.context.getState(getPositions=getPositions, getVelocities=getVelocities, getForces=getForces,
+                                      getEnergy=getEnergy, getParameters=True, enforcePeriodicBox=periodic)
+        for reporter, next in reports:
+            reporter.report(self, state)
 
     def saveCheckpoint(self, file):
         """Save a checkpoint of the simulation to a file.

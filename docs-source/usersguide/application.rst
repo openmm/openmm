@@ -1794,7 +1794,7 @@ Here is the definition of the :class:`ForceReporter` class:
 
             def describeNextReport(self, simulation):
                 steps = self._reportInterval - simulation.currentStep%self._reportInterval
-                return (steps, False, False, True, False)
+                return (steps, False, False, True, False, None)
 
             def report(self, simulation, state):
                 forces = state.getForces().value_in_unit(kilojoules/mole/nanometer)
@@ -1814,7 +1814,7 @@ We then have two methods that every reporter must implement:
 :meth:`describeNextReport()` and :meth:`report()`.  A Simulation object
 periodically calls :meth:`describeNextReport()` on each of its reporters to
 find out when that reporter will next generate a report, and what information
-will be needed to generate it.  The return value should be a five element tuple,
+will be needed to generate it.  The return value should be a six element tuple,
 whose elements are as follows:
 
 * The number of time steps until the next report.  We calculate this as
@@ -1825,6 +1825,9 @@ whose elements are as follows:
 * Whether the next report will need particle velocities.
 * Whether the next report will need forces.
 * Whether the next report will need energies.
+* Whether the positions should be wrapped to the periodic box.  If None, it will
+  automatically decide whether to wrap positions based on whether the System uses
+  periodic boundary conditions.
 
 
 When the time comes for the next scheduled report, the :class:`Simulation` calls
