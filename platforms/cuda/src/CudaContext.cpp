@@ -236,12 +236,6 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
             minor = 3;
         }
     }
-    if (major == 7) {
-        // Don't generate Volta-specific code until we've made the changes needed
-        // to support it properly.
-        major = 6;
-        minor = 0;
-    }
     gpuArchitecture = intToString(major)+intToString(minor);
     computeCapability = major+0.1*minor;
 
@@ -263,6 +257,14 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     int multiprocessors;
     CHECK_RESULT(cuDeviceGetAttribute(&multiprocessors, CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, device));
     numThreadBlocks = numThreadBlocksPerComputeUnit*multiprocessors;
+    if (cudaDriverVersion >= 9000) {
+        compilationDefines["SYNC_WARPS"] = "__syncwarp();";
+        compilationDefines["SHFL(var, srcLane)"] = "__shfl_sync(0xffffffff, var, srcLane);";
+    }
+    else {
+        compilationDefines["SYNC_WARPS"] = "";
+        compilationDefines["SHFL(var, srcLane)"] = "__shfl(var, srcLane);";
+    }
     if (useDoublePrecision) {
         posq = CudaArray::create<double4>(*this, paddedNumAtoms, "posq");
         velm = CudaArray::create<double4>(*this, paddedNumAtoms, "velm");
