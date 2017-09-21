@@ -57,7 +57,7 @@
 #ifndef WIN32
   #include <unistd.h>
 #endif
-
+#include <cstdio>
 
 #define CHECK_RESULT(result) CHECK_RESULT2(result, errorMessage);
 #define CHECK_RESULT2(result, prefix) \
@@ -260,10 +260,12 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     if (cudaDriverVersion >= 9000) {
         compilationDefines["SYNC_WARPS"] = "__syncwarp();";
         compilationDefines["SHFL(var, srcLane)"] = "__shfl_sync(0xffffffff, var, srcLane);";
+        compilationDefines["BALLOT(var)"] = "__ballot_sync(0xffffffff, var);";
     }
     else {
         compilationDefines["SYNC_WARPS"] = "";
         compilationDefines["SHFL(var, srcLane)"] = "__shfl(var, srcLane);";
+        compilationDefines["BALLOT(var)"] = "__ballot(var);";
     }
     if (useDoublePrecision) {
         posq = CudaArray::create<double4>(*this, paddedNumAtoms, "posq");
