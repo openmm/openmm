@@ -57,7 +57,7 @@
 #ifndef WIN32
   #include <unistd.h>
 #endif
-#include <cstdio>
+
 
 #define CHECK_RESULT(result) CHECK_RESULT2(result, errorMessage);
 #define CHECK_RESULT2(result, prefix) \
