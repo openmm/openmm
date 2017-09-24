@@ -86,7 +86,7 @@ class PDBxFile(object):
         resIdCol = atomData.getAttributeIndex('label_seq_id')
         resNumCol = atomData.getAttributeIndex('auth_seq_id')
         asymIdCol = atomData.getAttributeIndex('label_asym_id')
-        chainIdCol = atomData.getAttributeIndex('label_entity_id')
+        chainIdCol = atomData.getAttributeIndex('auth_asym_id')
         elementCol = atomData.getAttributeIndex('type_symbol')
         altIdCol = atomData.getAttributeIndex('label_alt_id')
         modelCol = atomData.getAttributeIndex('pdbx_PDB_model_num')
@@ -115,7 +115,7 @@ class PDBxFile(object):
 
                 if lastChainId != row[chainIdCol]:
                     # The start of a new chain.
-                    chain = top.addChain(row[asymIdCol])
+                    chain = top.addChain(row[chainIdCol])
                     lastChainId = row[chainIdCol]
                     lastResId = None
                     lastAsymId = None
