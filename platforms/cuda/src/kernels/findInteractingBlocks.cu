@@ -115,7 +115,7 @@ __device__ int saveSinglePairs(int x, int* atoms, int* flags, int length, unsign
         int atom = atoms[i];
         int flag = flags[i];
         bool include = (i < length && __popc(flags[i]) > MAX_BITS_FOR_PAIRS);
-        int includeFlags = __ballot(include);
+        int includeFlags = BALLOT(include);
         if (include) {
             int index = numCompacted+__popc(includeFlags&warpMask);
             atoms[index] = atom;
@@ -271,7 +271,7 @@ extern "C" __global__ void findBlocksWithInteractions(real4 periodicBoxSize, rea
             
             // Loop over any blocks we identified as potentially containing neighbors.
             
-            int includeBlockFlags = __ballot(includeBlock2);
+            int includeBlockFlags = BALLOT(includeBlock2);
             while (includeBlockFlags != 0) {
                 int i = __ffs(includeBlockFlags)-1;
                 includeBlockFlags &= includeBlockFlags-1;
@@ -291,7 +291,7 @@ extern "C" __global__ void findBlocksWithInteractions(real4 periodicBoxSize, rea
 #ifdef USE_PERIODIC
                 APPLY_PERIODIC_TO_DELTA(atomDelta)
 #endif
-                int atomFlags = ballot(atomDelta.x*atomDelta.x+atomDelta.y*atomDelta.y+atomDelta.z*atomDelta.z < (PADDED_CUTOFF+blockCenterY.w)*(PADDED_CUTOFF+blockCenterY.w));
+                int atomFlags = BALLOT(atomDelta.x*atomDelta.x+atomDelta.y*atomDelta.y+atomDelta.z*atomDelta.z < (PADDED_CUTOFF+blockCenterY.w)*(PADDED_CUTOFF+blockCenterY.w));
                 int interacts = 0;
                 if (atom2 < NUM_ATOMS && atomFlags != 0) {
                     int first = __ffs(atomFlags)-1;
@@ -317,7 +317,7 @@ extern "C" __global__ void findBlocksWithInteractions(real4 periodicBoxSize, rea
                 
                 // Add any interacting atoms to the buffer.
                 
-                int includeAtomFlags = __ballot(interacts);
+                int includeAtomFlags = BALLOT(interacts);
                 if (interacts) {
                     int index = neighborsInBuffer+__popc(includeAtomFlags&warpMask);
                     buffer[index] = atom2;
