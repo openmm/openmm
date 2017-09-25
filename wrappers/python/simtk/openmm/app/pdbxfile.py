@@ -85,7 +85,6 @@ class PDBxFile(object):
         resNameCol = atomData.getAttributeIndex('label_comp_id')
         resIdCol = atomData.getAttributeIndex('label_seq_id')
         resNumCol = atomData.getAttributeIndex('auth_seq_id')
-        asymIdCol = atomData.getAttributeIndex('label_asym_id')
         chainIdCol = atomData.getAttributeIndex('auth_asym_id')
         elementCol = atomData.getAttributeIndex('type_symbol')
         altIdCol = atomData.getAttributeIndex('label_alt_id')
@@ -95,12 +94,11 @@ class PDBxFile(object):
         zCol = atomData.getAttributeIndex('Cartn_z')
         lastChainId = None
         lastResId = None
-        lastAsymId = None
         atomTable = {}
         atomsInResidue = set()
         models = []
         for row in atomData.getRowList():
-            atomKey = ((row[resIdCol], row[asymIdCol], row[atomNameCol]))
+            atomKey = ((row[resIdCol], row[chainIdCol], row[atomNameCol]))
             model = ('1' if modelCol == -1 else row[modelCol])
             if model not in models:
                 models.append(model)
@@ -118,12 +116,10 @@ class PDBxFile(object):
                     chain = top.addChain(row[chainIdCol])
                     lastChainId = row[chainIdCol]
                     lastResId = None
-                    lastAsymId = None
-                if lastResId != row[resIdCol] or lastAsymId != row[asymIdCol] or (lastResId == '.' and row[atomNameCol] in atomsInResidue):
+                if lastResId != row[resIdCol] or lastChainId != row[chainIdCol] or (lastResId == '.' and row[atomNameCol] in atomsInResidue):
                     # The start of a new residue.
                     res = top.addResidue(row[resNameCol], chain, None if resNumCol == -1 else row[resNumCol])
                     lastResId = row[resIdCol]
-                    lastAsymId = row[asymIdCol]
                     atomsInResidue.clear()
                 element = None
                 try:
