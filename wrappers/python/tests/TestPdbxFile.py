@@ -135,7 +135,7 @@ class TestPdbxFile(unittest.TestCase):
 
     def testMultiChain(self):
         """Test reading and writing a file that includes multiple chains"""
-        cif_ori = PDBxFile('systems/multichain.cif')
+        cif_ori = PDBxFile('systems/multichain.pdbx')
 
         output = StringIO()
         PDBxFile.writeFile(cif_ori.topology, cif_ori.positions, output, keepIds=True)
