@@ -80,10 +80,9 @@ class PDBxFile(object):
         # Build the topology.
 
         atomData = block.getObj('atom_site')
-        atomNameCol = atomData.getAttributeIndex('label_atom_id')
+        atomNameCol = atomData.getAttributeIndex('auth_atom_id')
         atomIdCol = atomData.getAttributeIndex('id')
-        resNameCol = atomData.getAttributeIndex('label_comp_id')
-        resIdCol = atomData.getAttributeIndex('label_seq_id')
+        resNameCol = atomData.getAttributeIndex('auth_comp_id')
         resNumCol = atomData.getAttributeIndex('auth_seq_id')
         chainIdCol = atomData.getAttributeIndex('auth_asym_id')
         elementCol = atomData.getAttributeIndex('type_symbol')
@@ -98,7 +97,7 @@ class PDBxFile(object):
         atomsInResidue = set()
         models = []
         for row in atomData.getRowList():
-            atomKey = ((row[resIdCol], row[chainIdCol], row[atomNameCol]))
+            atomKey = ((row[resNumCol], row[chainIdCol], row[atomNameCol]))
             model = ('1' if modelCol == -1 else row[modelCol])
             if model not in models:
                 models.append(model)
@@ -116,10 +115,10 @@ class PDBxFile(object):
                     chain = top.addChain(row[chainIdCol])
                     lastChainId = row[chainIdCol]
                     lastResId = None
-                if lastResId != row[resIdCol] or lastChainId != row[chainIdCol] or (lastResId == '.' and row[atomNameCol] in atomsInResidue):
+                if lastResId != row[resNumCol] or lastChainId != row[chainIdCol] or (lastResId == '.' and row[atomNameCol] in atomsInResidue):
                     # The start of a new residue.
                     res = top.addResidue(row[resNameCol], chain, None if resNumCol == -1 else row[resNumCol])
-                    lastResId = row[resIdCol]
+                    lastResId = row[resNumCol]
                     atomsInResidue.clear()
                 element = None
                 try:
@@ -135,7 +134,7 @@ class PDBxFile(object):
                 try:
                     atom = atomTable[atomKey]
                 except KeyError:
-                    raise ValueError('Unknown atom %s in residue %s %s for model %s' % (row[atomNameCol], row[resNameCol], row[resIdCol], model))
+                    raise ValueError('Unknown atom %s in residue %s %s for model %s' % (row[atomNameCol], row[resNameCol], row[resNumCol], model))
                 if atom.index != len(self._positions[modelIndex]):
                     raise ValueError('Atom %s for model %s does not match the order of atoms for model %s' % (row[atomIdCol], model, models[0]))
             self._positions[modelIndex].append(Vec3(float(row[xCol]), float(row[yCol]), float(row[zCol]))*0.1)
