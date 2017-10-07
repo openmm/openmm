@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2016 Stanford University and the Authors.
+Portions copyright (c) 2012-2017 Stanford University and the Authors.
 Authors: Peter Eastman, Mark Friedrichs
 Contributors:
 
@@ -2365,35 +2365,41 @@ class LennardJonesGenerator(object):
             generator.registerNBFIX(Nbfix.attrib)
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
-        # First derive the lookup tables
+        # First derive the lookup tables.  We need to include entries for every type
+        # that a) appears in the system and b) has unique parameters.
 
         nbfixTypeSet = set().union(*self.nbfixTypes)
-        ljIndexList = [None]*len(data.atoms)
-        numLjTypes = 0
-        ljTypeList = []
-        typeMap = {}
-        for i, atom in enumerate(data.atoms):
-            atype = data.atomType[atom]
-            values = tuple(self.ljTypes.getAtomParameters(atom, data))
-            if values in typeMap and atype not in nbfixTypeSet:
-                # Only non-NBFIX types can be compressed
-                ljIndexList[i] = typeMap[values]
+        allTypes = set(data.atomType[atom] for atom in data.atoms)
+        mergedTypes = []
+        mergedTypeParams = []
+        paramsToMergedType = {}
+        typeToMergedType = {}
+        for t in allTypes:
+            typeParams = self.ljTypes.paramsForType[t]
+            params = (typeParams['sigma'], typeParams['epsilon'])
+            if t in nbfixTypeSet:
+                # NBFIX types cannot be merged.
+                typeToMergedType[t] = len(mergedTypes)
+                mergedTypes.append(t)
+                mergedTypeParams.append(params)
+            elif params in paramsToMergedType:
+                # We can merge this with another type.
+                typeToMergedType[t] = paramsToMergedType[params]
             else:
-                typeMap[values] = numLjTypes
-                ljIndexList[i] = numLjTypes
-                numLjTypes += 1
-                ljTypeList.append(atype)
-        reverseMap = [0]*len(typeMap)
-        for typeValue in typeMap:
-            reverseMap[typeMap[typeValue]] = typeValue
-
+                # This is a new type.
+                typeToMergedType[t] = len(mergedTypes)
+                paramsToMergedType[params] = len(mergedTypes)
+                mergedTypes.append(t)
+                mergedTypeParams.append(params)
+        
         # Now everything is assigned. Create the A- and B-coefficient arrays
 
+        numLjTypes = len(mergedTypes)
         acoef = [0]*(numLjTypes*numLjTypes)
         bcoef = acoef[:]
         for m in range(numLjTypes):
             for n in range(numLjTypes):
-                pair = (ljTypeList[m], ljTypeList[n])
+                pair = (mergedTypes[m], mergedTypes[n])
                 if pair in self.nbfixTypes:
                     epsilon = self.nbfixTypes[pair][1]
                     sigma = self.nbfixTypes[pair][0]
@@ -2402,9 +2408,9 @@ class LennardJonesGenerator(object):
                     bcoef[m+numLjTypes*n] = 4*epsilon*sigma6
                     continue
                 else:
-                    sigma = 0.5*(reverseMap[m][0]+reverseMap[n][0])
+                    sigma = 0.5*(mergedTypeParams[m][0]+mergedTypeParams[n][0])
                     sigma6 = sigma**6
-                    epsilon = math.sqrt(reverseMap[m][-1]*reverseMap[n][-1])
+                    epsilon = math.sqrt(mergedTypeParams[m][1]*mergedTypeParams[n][1])
                     acoef[m+numLjTypes*n] = 4*epsilon*sigma6*sigma6
                     bcoef[m+numLjTypes*n] = 4*epsilon*sigma6
 
@@ -2423,8 +2429,8 @@ class LennardJonesGenerator(object):
 
         # Add the particles
 
-        for i in ljIndexList:
-            self.force.addParticle((i,))
+        for atom in data.atoms:
+            self.force.addParticle((typeToMergedType[data.atomType[atom]],))
         self.force.setUseLongRangeCorrection(True)
         self.force.setCutoffDistance(nonbondedCutoff)
         sys.addForce(self.force)
