@@ -777,7 +777,7 @@ File                           Force Field
 :code:`amber10.xml`            Amber10 (documented in the AmberTools_ manual as `ff10`)
 :code:`amberfb15.xml`          AMBER-FB15\ :cite:`Wang2017`. Intramolecular parameters optimized with
                                ForceBalance using high-level ab initio data.
-:code:`amoeba2009.xml`         AMOEBA 2009\ :cite:`Ren2002`.  This force field is deprecated.  It is 
+:code:`amoeba2009.xml`         AMOEBA 2009\ :cite:`Ren2002`.  This force field is deprecated.  It is
                                recommended to use AMOEBA 2013 instead.
 :code:`amoeba2013.xml`         AMOEBA 2013\ :cite:`Shi2013`
 :code:`charmm_polar_2013.xml`  CHARMM 2013 polarizable force field\ :cite:`Lopes2013`
@@ -1963,6 +1963,17 @@ The :code:`<ForceField>` tag contains the following children:
 
 
 The order of these tags does not matter.  They are described in detail below.
+
+<Include>
+=========
+
+An XML file may include other XML files with a :code:`<Include>` tag:
+
+.. code-block:: xml
+
+    <Include file="/path/to/file.xml">
+
+The specified file will be included at that point in the file.
 
 <AtomTypes>
 ===========
