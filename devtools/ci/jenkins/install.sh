@@ -11,7 +11,7 @@ cmake --version
 echo "Using clang (`which clang`) version:"
 clang --version
 
-module load cuda conda/jenkins
+module load cuda/${CUDA_VERSION} conda/jenkins
 
 # Constants
 CONDAENV=openmm-test-3.5
@@ -22,8 +22,11 @@ export OPENMM_CUDA_COMPILER=`which nvcc`
 # Create a conda environment, but clean up after one first. If it doesn't exist, don't complain.
 # But since we are invoking this shell with -e (exit on all errors), we need || true to prevent this
 # command from crashing the whole shell
+create_conda_env() {
+  conda create -yn ${CONDAENV} python=3.5 --no-default-packages --quiet
+}
 conda remove -yn ${CONDAENV} --all --quiet || true
-conda create -yn ${CONDAENV} python=3.5 --no-default-packages --quiet
+create_conda_env || create_conda_env # Crappy way to work around conda concurrency restrictions
 conda install -yn ${CONDAENV} numpy scipy pytest --quiet
 source activate ${CONDAENV} # enter our new environment
 
