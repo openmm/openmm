@@ -1325,7 +1325,7 @@ class Modeller(object):
         # Create a System for the lipids, then add in the protein as stationary particles.
         
         system = forcefield.createSystem(membraneTopology, nonbondedMethod=CutoffPeriodic)
-        proteinSystem = forcefield.createSystem(self.topology, nonbondedMethod=CutoffPeriodic)
+        proteinSystem = forcefield.createSystem(self.topology, nonbondedMethod=CutoffNonPeriodic)
         numMembraneParticles = system.getNumParticles()
         numProteinParticles = proteinSystem.getNumParticles()
         for i in range(numProteinParticles):
