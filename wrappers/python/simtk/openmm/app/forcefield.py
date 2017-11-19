@@ -2391,7 +2391,7 @@ class LennardJonesGenerator(object):
                 paramsToMergedType[params] = len(mergedTypes)
                 mergedTypes.append(t)
                 mergedTypeParams.append(params)
-        
+
         # Now everything is assigned. Create the A- and B-coefficient arrays
 
         numLjTypes = len(mergedTypes)
@@ -2439,37 +2439,32 @@ class LennardJonesGenerator(object):
         # Create the exceptions.
 
         bondIndices = _findBondsForExclusions(data, sys)
-        if self.lj14scale == 1:
-            # Just exclude the 1-2 and 1-3 interactions.
+        forceCopy = deepcopy(self.force)
+        forceCopy.createExclusionsFromBonds(bondIndices, 2)
+        self.force.createExclusionsFromBonds(bondIndices, 3)
+        if self.force.getNumExclusions() > forceCopy.getNumExclusions() and self.lj14scale != 0:
+            # We need to create a CustomBondForce and use it to implement the scaled 1-4 interactions.
 
-            self.force.createExclusionsFromBonds(bondIndices, 2)
-        else:
-            forceCopy = deepcopy(self.force)
-            forceCopy.createExclusionsFromBonds(bondIndices, 2)
-            self.force.createExclusionsFromBonds(bondIndices, 3)
-            if self.force.getNumExclusions() > forceCopy.getNumExclusions() and self.lj14scale != 0:
-                # We need to create a CustomBondForce and use it to implement the scaled 1-4 interactions.
-
-                bonded = mm.CustomBondForce('%g*epsilon*((sigma/r)^12-(sigma/r)^6)' % (4*self.lj14scale))
-                bonded.addPerBondParameter('sigma')
-                bonded.addPerBondParameter('epsilon')
-                sys.addForce(bonded)
-                skip = set(tuple(forceCopy.getExclusionParticles(i)) for i in range(forceCopy.getNumExclusions()))
-                for i in range(self.force.getNumExclusions()):
-                    p1,p2 = self.force.getExclusionParticles(i)
-                    a1 = data.atoms[p1]
-                    a2 = data.atoms[p2]
-                    if (p1,p2) not in skip and (p2,p1) not in skip:
-                        type1 = data.atomType[a1]
-                        type2 = data.atomType[a2]
-                        if (type1, type2) in self.nbfixTypes:
-                            sigma, epsilon = self.nbfixTypes[(type1, type2)]
-                        else:
-                            values1 = self.ljTypes.getAtomParameters(a1, data)
-                            values2 = self.ljTypes.getAtomParameters(a2, data)
-                            sigma = 0.5*(values1[0]+values2[0])
-                            epsilon = sqrt(values1[1]*values2[1])
-                        bonded.addBond(p1, p2, (sigma, epsilon))
+            bonded = mm.CustomBondForce('%g*epsilon*((sigma/r)^12-(sigma/r)^6)' % (4*self.lj14scale))
+            bonded.addPerBondParameter('sigma')
+            bonded.addPerBondParameter('epsilon')
+            sys.addForce(bonded)
+            skip = set(tuple(forceCopy.getExclusionParticles(i)) for i in range(forceCopy.getNumExclusions()))
+            for i in range(self.force.getNumExclusions()):
+                p1,p2 = self.force.getExclusionParticles(i)
+                a1 = data.atoms[p1]
+                a2 = data.atoms[p2]
+                if (p1,p2) not in skip and (p2,p1) not in skip:
+                    type1 = data.atomType[a1]
+                    type2 = data.atomType[a2]
+                    if (type1, type2) in self.nbfixTypes:
+                        sigma, epsilon = self.nbfixTypes[(type1, type2)]
+                    else:
+                        values1 = self.ljTypes.getAtomParameters(a1, data)
+                        values2 = self.ljTypes.getAtomParameters(a2, data)
+                        sigma = 0.5*(values1[0]+values2[0])
+                        epsilon = sqrt(values1[1]*values2[1])
+                    bonded.addBond(p1, p2, (sigma, epsilon))
 
 parsers["LennardJonesForce"] = LennardJonesGenerator.parseElement
 
