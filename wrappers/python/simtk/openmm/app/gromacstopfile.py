@@ -675,8 +675,7 @@ class GromacsTopFile(object):
             for _ in range(moleculeCount):
                 for atom in moleculeType.atoms:
                     atom_types.append(atom[1])
-        has_nbfix_terms = any([pair in self._nonbondTypes for pair in combinations(sorted(atom_types), 2)])
-        has_nbfix_terms = True
+        has_nbfix_terms = any([pair in self._nonbondTypes for pair in combinations(sorted(set(atom_types)), 2)])
 
         if has_nbfix_terms:
             # Build a lookup table and angle/dihedral indices list to
