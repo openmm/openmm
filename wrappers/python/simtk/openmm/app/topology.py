@@ -334,8 +334,6 @@ class Topology(object):
                             toAtom = bond[1]
                         if fromAtom in atomMaps[fromResidue] and toAtom in atomMaps[toResidue]:
                             self.addBond(atomMaps[fromResidue][fromAtom], atomMaps[toResidue][toAtom])
-                        elif name == 'POP':
-                            print(fromAtom, toAtom)
 
     def createDisulfideBonds(self, positions):
         """Identify disulfide bonds based on proximity and add them to the
