@@ -67,8 +67,9 @@ class TestPatches(unittest.TestCase):
         self.assertEqual(0, patch.addedExternalBonds[0].residue)
         self.assertEqual('C', patch.deletedExternalBonds[0].name)
         self.assertEqual(0, patch.deletedExternalBonds[0].residue)
-        self.assertEqual('Test', ff._templatePatches['RES'][0][0])
-        self.assertEqual(0, ff._templatePatches['RES'][0][1])
+        patch = list(ff._templatePatches['RES'])[0]
+        self.assertEqual('Test', patch[0])
+        self.assertEqual(0, patch[1])
 
     def testParseMultiresiduePatch(self):
         """Test parsing a <Patch> tag that affects two residues."""
@@ -110,10 +111,12 @@ class TestPatches(unittest.TestCase):
         self.assertEqual(0, patch.addedBonds[0][0].residue)
         self.assertEqual('B', patch.addedBonds[0][1].name)
         self.assertEqual(1, patch.addedBonds[0][1].residue)
-        self.assertEqual('Test', ff._templatePatches['RESA'][0][0])
-        self.assertEqual(0, ff._templatePatches['RESA'][0][1])
-        self.assertEqual('Test', ff._templatePatches['RESB'][0][0])
-        self.assertEqual(1, ff._templatePatches['RESB'][0][1])
+        patchA = list(ff._templatePatches['RESA'])[0]
+        self.assertEqual('Test', patchA[0])
+        self.assertEqual(0, patchA[1])
+        patchB = list(ff._templatePatches['RESB'])[0]
+        self.assertEqual('Test', patchB[0])
+        self.assertEqual(1, patchB[1])
 
     def testApplyPatch(self):
         """Test applying a patch to a template."""

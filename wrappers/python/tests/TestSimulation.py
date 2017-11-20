@@ -157,6 +157,38 @@ class TestSimulation(unittest.TestCase):
         simulation.loadState(stateFile)
         self.assertEqual(velocities, simulation.context.getState(getVelocities=True).getVelocities())
 
+    def testWrappedCoordinates(self):
+        """Test generating reports with and without wrapped coordinates."""
+        pdb = PDBFile('systems/alanine-dipeptide-explicit.pdb')
+        ff = ForceField('amber99sb.xml', 'tip3p.xml')
+        system = ff.createSystem(pdb.topology, nonbondedMethod=CutoffPeriodic, constraints=HBonds)
+        integrator = LangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
+
+        class CompareCoordinatesReporter(object):
+            def __init__(self, periodic):
+                self.periodic = periodic
+                self.interval = 100
+                
+            def describeNextReport(self, simulation):
+                steps = self.interval - simulation.currentStep%self.interval
+                return (steps, True, False, False, False, self.periodic)
+        
+            def report(self, simulation, state):
+                state2 = simulation.context.getState(getPositions=True, enforcePeriodicBox=self.periodic)
+                assert state.getPositions() == state2.getPositions()
+
+        # Create a Simulation.
+
+        simulation = Simulation(pdb.topology, system, integrator)
+        simulation.context.setPositions(pdb.positions)
+        simulation.context.setVelocitiesToTemperature(300*kelvin)
+        simulation.reporters.append(CompareCoordinatesReporter(False))
+        simulation.reporters.append(CompareCoordinatesReporter(True))
+        
+        # Run for a little while and make sure the reporters don't find any problems.
+        
+        simulation.step(500)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -2664,6 +2664,7 @@ void CudaCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNonbo
     
     // Create the kernel.
     
+    hasParamDerivs = (force.getNumEnergyParameterDerivatives() > 0);
     map<string, string> replacements;
     replacements["COMPUTE_INTERACTION"] = interactionSource;
     const string suffixes[] = {"x", "y", "z", "w"};
@@ -2687,6 +2688,8 @@ void CudaCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNonbo
         args << ", const " << tableTypes[i]<< "* __restrict__ table" << i;
     if (globals != NULL)
         args<<", const float* __restrict__ globals";
+    if (hasParamDerivs)
+        args << ", mixed* __restrict__ energyParamDerivs";
     replacements["PARAMETER_ARGUMENTS"] = args.str();
     stringstream load1;
     for (int i = 0; i < (int) buffers.size(); i++)
@@ -2718,6 +2721,19 @@ void CudaCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNonbo
         }
     }
     replacements["LOAD_ATOM2_PARAMETERS"] = load2.str();
+    stringstream initDerivs, saveDerivs;
+    const vector<string>& allParamDerivNames = cu.getEnergyParamDerivNames();
+    int numDerivs = allParamDerivNames.size();
+    for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
+        string paramName = force.getEnergyParameterDerivativeName(i);
+        string derivVariable = cu.getNonbondedUtilities().addEnergyParameterDerivative(paramName);
+        initDerivs<<"mixed "<<derivVariable<<" = 0;\n";
+        for (int index = 0; index < numDerivs; index++)
+            if (allParamDerivNames[index] == paramName)
+                saveDerivs<<"energyParamDerivs[(blockIdx.x*blockDim.x+threadIdx.x)*"<<numDerivs<<"+"<<index<<"] += "<<derivVariable<<";\n";
+    }
+    replacements["INIT_DERIVATIVES"] = initDerivs.str();
+    replacements["SAVE_DERIVATIVES"] = saveDerivs.str();
     map<string, string> defines;
     if (force.getNonbondedMethod() != CustomNonbondedForce::NoCutoff)
         defines["USE_CUTOFF"] = "1";
@@ -2779,6 +2795,8 @@ double CudaCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool in
                 interactionGroupArgs.push_back(&function->getDevicePointer());
             if (globals != NULL)
                 interactionGroupArgs.push_back(&globals->getDevicePointer());
+            if (hasParamDerivs)
+                interactionGroupArgs.push_back(&cu.getEnergyParamDerivBuffer().getDevicePointer());
         }
         int forceThreadBlockSize = cu.getNonbondedUtilities().getForceThreadBlockSize();
         cu.executeKernel(interactionGroupKernel, &interactionGroupArgs[0], numGroupThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);

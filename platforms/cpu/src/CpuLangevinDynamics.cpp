@@ -112,7 +112,6 @@ void CpuLangevinDynamics::threadUpdate2(int threadIndex) {
 
     for (int i = start; i < end; i++) {
         if (inverseMasses[i] != 0.0) {
-            double sqrtInvMass = sqrt(inverseMasses[i]);
             xPrime[i] = atomCoordinates[i]+velocities[i]*dt;
         }
    }

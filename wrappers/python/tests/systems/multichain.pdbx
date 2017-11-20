@@ -1,0 +1,62 @@
+# dummy file with multiple chains
+# fragment of 1brs
+#
+data_1brs_AD
+_entry.id 1brs_AD
+#
+loop_
+_atom_site.group_PDB
+_atom_site.id
+_atom_site.type_symbol
+_atom_site.label_atom_id
+_atom_site.label_alt_id
+_atom_site.label_comp_id
+_atom_site.label_asym_id
+_atom_site.label_entity_id
+_atom_site.label_seq_id
+_atom_site.pdbx_PDB_ins_code
+_atom_site.Cartn_x
+_atom_site.Cartn_y
+_atom_site.Cartn_z
+_atom_site.occupancy
+_atom_site.B_iso_or_equiv
+_atom_site.pdbx_formal_charge
+_atom_site.auth_asym_id
+_atom_site.pdbx_PDB_model_num
+ATOM   1   N N   . VAL A 1 3 ? 16.783 48.812 26.447 1.00  30.15 0 A 1
+ATOM   2   C CA  . VAL A 1 3 ? 17.591 48.101 25.416 1.00  27.93 0 A 1
+ATOM   3   C C   . VAL A 1 3 ? 16.643 47.160 24.676 1.00  25.52 0 A 1
+ATOM   4   O O   . VAL A 1 3 ? 16.213 46.129 25.220 1.00  26.86 0 A 1
+ATOM   5   C CB  . VAL A 1 3 ? 18.813 47.329 25.940 1.00  28.10 0 A 1
+ATOM   6   C CG1 . VAL A 1 3 ? 19.512 46.623 24.799 1.00  29.27 0 A 1
+ATOM   7   C CG2 . VAL A 1 3 ? 19.838 48.188 26.670 1.00  28.76 0 A 1
+ATOM   8   N N   . ILE A 1 4 ? 16.327 47.509 23.466 1.00  23.19 0 A 1
+ATOM   9   C CA  . ILE A 1 4 ? 15.435 46.625 22.666 1.00  21.26 0 A 1
+ATOM   10  C C   . ILE A 1 4 ? 16.364 45.902 21.716 1.00  19.99 0 A 1
+ATOM   11  O O   . ILE A 1 4 ? 16.847 46.590 20.823 1.00  18.74 0 A 1
+ATOM   12  C CB  . ILE A 1 4 ? 14.415 47.516 21.981 1.00  22.04 0 A 1
+ATOM   13  C CG1 . ILE A 1 4 ? 13.710 48.294 23.129 1.00  22.39 0 A 1
+ATOM   14  C CG2 . ILE A 1 4 ? 13.485 46.762 21.052 1.00  19.05 0 A 1
+ATOM   15  C CD1 . ILE A 1 4 ? 12.870 49.416 22.486 1.00  23.20 0 A 1
+ATOM   16  N N   . LYS D 2 1 ? 48.330 40.393  9.798 1.00  29.18 0 D 1
+ATOM   17  C CA  . LYS D 2 1 ? 47.401 39.287  9.370 1.00  29.51 0 D 1
+ATOM   18  C C   . LYS D 2 1 ? 47.507 38.911  7.890 1.00  28.30 0 D 1
+ATOM   19  O O   . LYS D 2 1 ? 47.126 39.582  6.905 1.00  28.68 0 D 1
+ATOM   20  C CB  . LYS D 2 1 ? 45.995 39.632  9.817 1.00  31.06 0 D 1
+ATOM   21  C CG  . LYS D 2 1 ? 44.801 38.778  9.587 1.00  34.24 0 D 1
+ATOM   22  C CD  . LYS D 2 1 ? 44.946 37.289  9.712 1.00  37.99 0 D 1
+ATOM   23  C CE  . LYS D 2 1 ? 44.733 36.789 11.137 1.00  39.74 0 D 1
+ATOM   24  N NZ  . LYS D 2 1 ? 44.858 35.301 11.250 1.00  39.95 1 D 1
+ATOM   25  N N   . LYS D 2 2 ? 48.047 37.742  7.642 1.00  26.22 0 D 1
+ATOM   26  C CA  . LYS D 2 2 ? 48.270 37.151  6.331 1.00  25.12 0 D 1
+ATOM   27  C C   . LYS D 2 2 ? 47.509 35.851  6.169 1.00  24.31 0 D 1
+ATOM   28  O O   . LYS D 2 2 ? 47.675 35.055  7.114 1.00  25.51 0 D 1
+ATOM   29  C CB  . LYS D 2 2 ? 49.764 36.810  6.325 1.00  25.77 0 D 1
+ATOM   30  C CG  . LYS D 2 2 ? 50.121 35.923  5.159 1.00  27.71 0 D 1
+ATOM   31  C CD  . LYS D 2 2 ? 50.197 36.783  3.916 1.00  28.44 0 D 1
+ATOM   32  C CE  . LYS D 2 2 ? 50.902 36.036  2.805 1.00  30.19 0 D 1
+ATOM   33  N NZ  . LYS D 2 2 ? 52.379 36.102  2.952 1.00  31.01 1 D 1
+HETATM 34  O O   . HOH G 3 111 ? 25.978 40.412 17.662 1.00  16.91 0 A 1
+HETATM 35  O O   . HOH G 3 112 ? 24.196 43.521 11.471 1.00  13.10 0 A 1
+HETATM 36  O O   . HOH J 3 91 ? 25.995 40.067  5.614 1.00  11.53 0 D 1
+HETATM 37  O O   . HOH J 3 92 ? 36.372 43.366 10.462 1.00  17.15 0 D 1

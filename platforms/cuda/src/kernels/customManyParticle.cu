@@ -225,7 +225,7 @@ extern "C" __global__ void findNeighbors(real4 periodicBoxSize, real4 invPeriodi
             
             // Loop over any blocks we identified as potentially containing neighbors.
             
-            int includeBlockFlags = __ballot(includeBlock2);
+            int includeBlockFlags = BALLOT(includeBlock2);
             while (includeBlockFlags != 0) {
                 int i = __ffs(includeBlockFlags)-1;
                 includeBlockFlags &= includeBlockFlags-1;

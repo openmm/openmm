@@ -217,15 +217,25 @@ public:
      */
     void computeVirtualSites();
     /**
-     * When a Context is created, it may cache information about the System being simulated
+     * When a Context is created, it caches information about the System being simulated
      * and the Force objects contained in it.  This means that, if the System or Forces are then
-     * modified, the Context might not see all of the changes.  Call reinitialize() to force
+     * modified, the Context does not see the changes.  Call reinitialize() to force
      * the Context to rebuild its internal representation of the System and pick up any changes
      * that have been made.
      * 
      * This is an expensive operation, so you should try to avoid calling it too frequently.
+     * Most Force classes have an updateParametersInContext() method that provides a less expensive
+     * way of updating certain types of information.  However, this method is the only way to
+     * make some types of changes, so it is sometimes necessary to call it.
+     * 
+     * By default, reinitializing a Context causes all state information (positions, velocities,
+     * etc.) to be discarded.  You can optionally tell it to try to preserve state information.
+     * It does this by internally creating a checkpoint, then reinitializing the Context, then
+     * loading the checkpoint.  Be aware that if the System has changed in a way that prevents
+     * the checkpoint from being loaded (such as changing the number of particles), this will
+     * throw an exception and the state information will be lost.
      */
-    void reinitialize();
+    void reinitialize(bool preserveState=false);
     /**
      * Create a checkpoint recording the current state of the Context.  This should be treated
      * as an opaque block of binary data.  See loadCheckpoint() for more details.

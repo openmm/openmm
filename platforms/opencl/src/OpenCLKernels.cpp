@@ -2789,6 +2789,7 @@ void OpenCLCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
     
     // Create the kernel.
     
+    hasParamDerivs = (force.getNumEnergyParameterDerivatives() > 0);
     map<string, string> replacements;
     replacements["COMPUTE_INTERACTION"] = interactionSource;
     const string suffixes[] = {"x", "y", "z", "w"};
@@ -2812,6 +2813,8 @@ void OpenCLCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
         args << ", __global const " << tableTypes[i]<< "* restrict table" << i;
     if (globals != NULL)
         args<<", __global const float* restrict globals";
+    if (hasParamDerivs)
+        args << ", __global mixed* restrict energyParamDerivs";
     replacements["PARAMETER_ARGUMENTS"] = args.str();
     stringstream load1;
     for (int i = 0; i < (int) buffers.size(); i++)
@@ -2843,6 +2846,19 @@ void OpenCLCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
         }
     }
     replacements["LOAD_ATOM2_PARAMETERS"] = load2.str();
+    stringstream initDerivs, saveDerivs;
+    const vector<string>& allParamDerivNames = cl.getEnergyParamDerivNames();
+    int numDerivs = allParamDerivNames.size();
+    for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
+        string paramName = force.getEnergyParameterDerivativeName(i);
+        string derivVariable = cl.getNonbondedUtilities().addEnergyParameterDerivative(paramName);
+        initDerivs<<"mixed "<<derivVariable<<" = 0;\n";
+        for (int index = 0; index < numDerivs; index++)
+            if (allParamDerivNames[index] == paramName)
+                saveDerivs<<"energyParamDerivs[get_global_id(0)*"<<numDerivs<<"+"<<index<<"] += "<<derivVariable<<";\n";
+    }
+    replacements["INIT_DERIVATIVES"] = initDerivs.str();
+    replacements["SAVE_DERIVATIVES"] = saveDerivs.str();
     map<string, string> defines;
     if (force.getNonbondedMethod() != CustomNonbondedForce::NoCutoff)
         defines["USE_CUTOFF"] = "1";
@@ -2902,6 +2918,8 @@ double OpenCLCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
                 interactionGroupKernel.setArg<cl::Memory>(index++, function->getDeviceBuffer());
             if (globals != NULL)
                 interactionGroupKernel.setArg<cl::Buffer>(index++, globals->getDeviceBuffer());
+            if (hasParamDerivs)
+                interactionGroupKernel.setArg<cl::Memory>(index++, cl.getEnergyParamDerivBuffer().getDeviceBuffer());
         }
         setPeriodicBoxArgs(cl, interactionGroupKernel, 4);
         int forceThreadBlockSize = max(32, cl.getNonbondedUtilities().getForceThreadBlockSize());

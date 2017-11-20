@@ -261,6 +261,7 @@ void testCutoff14() {
     positions[2] = Vec3(2, 0, 0);
     positions[3] = Vec3(3, 0, 0);
     positions[4] = Vec3(4, 0, 0);
+    context.setPositions(positions);
     for (int i = 1; i < 5; ++i) {
 
         // Test LJ forces
@@ -271,8 +272,7 @@ void testCutoff14() {
         nonbonded->setParticleParameters(i, 0, 1.5, 1);
         nonbonded->setExceptionParameters(first14, 0, 3, 0, 1.5, i == 3 ? 0.5 : 0.0);
         nonbonded->setExceptionParameters(second14, 1, 4, 0, 1.5, 0.0);
-        context.reinitialize();
-        context.setPositions(positions);
+        context.reinitialize(true);
         State state = context.getState(State::Forces | State::Energy);
         const vector<Vec3>& forces = state.getForces();
         double r = positions[i][0];
@@ -299,8 +299,7 @@ void testCutoff14() {
         nonbonded->setParticleParameters(i, q, 1.5, 0);
         nonbonded->setExceptionParameters(first14, 0, 3, i == 3 ? q*q/1.2 : 0, 1.5, 0);
         nonbonded->setExceptionParameters(second14, 1, 4, 0, 1.5, 0);
-        context.reinitialize();
-        context.setPositions(positions);
+        context.reinitialize(true);
         state = context.getState(State::Forces | State::Energy);
         const vector<Vec3>& forces2 = state.getForces();
         force = ONE_4PI_EPS0*q*q/(r*r);
