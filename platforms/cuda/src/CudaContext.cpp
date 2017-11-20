@@ -257,7 +257,7 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     int multiprocessors;
     CHECK_RESULT(cuDeviceGetAttribute(&multiprocessors, CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, device));
     numThreadBlocks = numThreadBlocksPerComputeUnit*multiprocessors;
-    if (cudaDriverVersion >= 9000) {
+    if (computeCapability >= 7.0) {
         compilationDefines["SYNC_WARPS"] = "__syncwarp();";
         compilationDefines["SHFL(var, srcLane)"] = "__shfl_sync(0xffffffff, var, srcLane);";
         compilationDefines["BALLOT(var)"] = "__ballot_sync(0xffffffff, var);";

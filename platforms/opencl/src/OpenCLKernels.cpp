@@ -8380,6 +8380,7 @@ void OpenCLIntegrateCustomStepKernel::getGlobalVariables(ContextImpl& context, v
         // The data structures haven't been created yet, so just return the list of values that was given earlier.
         
         values = initialGlobalVariables;
+        return;
     }
     values.resize(numGlobalVariables);
     for (int i = 0; i < numGlobalVariables; i++)

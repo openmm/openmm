@@ -762,7 +762,7 @@ class TestForceField(unittest.TestCase):
   <Atom type="B" sigma="2" epsilon="0.2"/>
   <Atom type="C" sigma="3" epsilon="0.3"/>
   <Atom type="D" sigma="4" epsilon="0.4"/>
-  <Atom type="E" sigma="5" epsilon="0.5"/>
+  <Atom type="E" sigma="4" epsilon="0.4"/>
   <NBFixPair type1="A" type2="D" sigma="2.5" epsilon="1.1"/>
   <NBFixPair type1="A" type2="E" sigma="3.5" epsilon="1.5"/>
  </LennardJonesForce>
@@ -778,7 +778,7 @@ class TestForceField(unittest.TestCase):
         context.setPositions(positions)
         def ljEnergy(sigma, epsilon, r):
             return 4*epsilon*((sigma/r)**12-(sigma/r)**6)
-        expected = 0.3*ljEnergy(2.5, 1.1, 3)  + 0.3*ljEnergy(3.5, sqrt(0.1), 3) + ljEnergy(3.5, 1.5, 4)
+        expected = 0.3*ljEnergy(2.5, 1.1, 3) + 0.3*ljEnergy(3.0, sqrt(0.08), 3) + ljEnergy(3.5, 1.5, 4)
         self.assertAlmostEqual(expected, context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilojoules_per_mole))
 
     def test_IgnoreExternalBonds(self):
