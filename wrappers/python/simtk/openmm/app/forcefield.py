@@ -2016,11 +2016,17 @@ class PeriodicTorsionGenerator(object):
         self.ff = forcefield
         self.proper = []
         self.improper = []
+        self.propersForAtomType = defaultdict(set)
 
     def registerProperTorsion(self, parameters):
         torsion = self.ff._parseTorsion(parameters)
         if torsion is not None:
+            index = len(self.proper)
             self.proper.append(torsion)
+            for t in torsion.types2:
+                self.propersForAtomType[t].add(index)
+            for t in torsion.types3:
+                self.propersForAtomType[t].add(index)
 
     def registerImproperTorsion(self, parameters, ordering='default'):
         torsion = self.ff._parseTorsion(parameters)
@@ -2062,7 +2068,8 @@ class PeriodicTorsionGenerator(object):
             type3 = data.atomType[data.atoms[torsion[2]]]
             type4 = data.atomType[data.atoms[torsion[3]]]
             match = None
-            for tordef in self.proper:
+            for index in self.propersForAtomType[type2]:
+                tordef = self.proper[index]
                 types1 = tordef.types1
                 types2 = tordef.types2
                 types3 = tordef.types3
