@@ -190,12 +190,16 @@ class ForceField(object):
             method from which the forcefield XML data can be loaded.
         """
 
-        if not isinstance(files, tuple):
-            files = (files,)
+        if isinstance(files, tuple):
+            files = list(files)
+        else:
+            files = [files]
 
         trees = []
 
-        for file in files:
+        i = 0
+        while i < len(files):
+            file = files[i]
             tree = None
             try:
                 # this handles either filenames or open file-like objects
@@ -221,12 +225,12 @@ class ForceField(object):
                 raise ValueError('Could not locate file "%s"' % file)
 
             trees.append(tree)
+            i += 1
 
-        # Process includes.
+            # Process includes in this file.
 
-        for parentFile, tree in zip(files, trees):
-            if isinstance(parentFile, str):
-                parentDir = os.path.dirname(parentFile)
+            if isinstance(file, str):
+                parentDir = os.path.dirname(file)
             else:
                 parentDir = ''
             for include in tree.getroot().findall('Include'):
@@ -234,7 +238,8 @@ class ForceField(object):
                 joined = os.path.join(parentDir, includeFile)
                 if os.path.isfile(joined):
                     includeFile = joined
-                self.loadFile(includeFile)
+                if includeFile not in files:
+                    files.append(includeFile)
 
         # Load the atom types.
 

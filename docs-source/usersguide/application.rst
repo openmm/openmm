@@ -2959,12 +2959,6 @@ relative either to the directory containing the parent XML file (the one with
 the :code:`<Include>` tag) or the OpenMM data directory (the one containing
 built in force fields).
 
-The included file is fully processed before any other tags in the parent file
-are processed, and its definitions are added to the force field.  This means the
-parent file can refer to atom types defined in the included file, but not the
-other way around.  If there are multiple :code:`<Include>` tags, they are processed
-in the order they appear in the file.
-
 
 Using Multiple Files
 ********************
