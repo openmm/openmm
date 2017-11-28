@@ -314,7 +314,7 @@ A First Example
 ***************
 
 Let’s begin with our first example of an OpenMM script. It loads a PDB file
-called :file:`input.pdb` that defines a biomolecular system, parameterizes it using the Amber99SB force field and TIP3P water
+called :file:`input.pdb` that defines a biomolecular system, parameterizes it using the Amber14 force field and TIP3P-FB water
 model, energy minimizes it, simulates it for 10,000 steps with a Langevin
 integrator, and saves a snapshot frame to a PDB file called :file:`output.pdb` every 1000 time
 steps.
@@ -328,7 +328,7 @@ steps.
         from sys import stdout
 
         pdb = PDBFile('input.pdb')
-        forcefield = ForceField('amber99sb.xml', 'tip3p.xml')
+        forcefield = ForceField('amber14-all.xml', 'amber14/tip3pfb.xml')
         system = forcefield.createSystem(pdb.topology, nonbondedMethod=PME,
                 nonbondedCutoff=1*nanometer, constraints=HBonds)
         integrator = LangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
@@ -390,14 +390,14 @@ Make sure you include the single quotes around the file name.  OpenMM also can l
 files in the newer PDBx/mmCIF format: just change :class:`PDBFile` to :class:`PDBxFile`.
 ::
 
-    forcefield = ForceField('amber99sb.xml', 'tip3p.xml')
+    forcefield = ForceField('amber14-all.xml', 'amber14/tip3pfb.xml')
 
 This line specifies the force field to use for the simulation.  Force fields are
 defined by XML files.  OpenMM includes XML files defining lots of standard force fields (see Section :ref:`force-fields`).
 If you find you need to extend the repertoire of force fields available,
 you can find more information on how to create these XML files in Chapter :ref:`creating-force-fields`.
-In this case we load two of those files: :file:`amber99sb.xml`, which contains the
-Amber99SB force field, and :file:`tip3p.xml`, which contains the TIP3P water model.  The
+In this case we load two of those files: :file:`amber14-all.xml`, which contains the
+Amber14 force field, and :file:`amber14/tip3pfb.xml`, which contains the TIP3P-FB water model.  The
 :class:`ForceField` object is assigned to a variable called :code:`forcefield`\ .
 ::
 
@@ -760,9 +760,108 @@ the main force field, and possibly a second file to define the water model
 (either implicit or explicit).  For example:
 ::
 
-    forcefield = ForceField('amber99sb.xml', 'tip3p.xml')
+    forcefield = ForceField('amber14-all.xml', 'amber14/tip3pfb.xml')
 
-For the main force field, OpenMM provides the following options:
+In some cases, one XML file may load several others.  For example, :file:`amber14-all.xml`
+is really just a shortcut for loading several different files that together make up
+the AMBER14 force field.  If you need finer grained control over which parameters
+are loaded, you can instead specify the component files individually.
+
+Be aware that some force fields and water models include "extra particles", such
+as lone pairs or Drude particles.  Examples include the CHARMM polarizable force
+field and all of the 4 and 5 site water models.  To use these force fields, you
+must first add the extra particles to the :class:`Topology`.  See section
+:ref:`adding-or-removing-extra-particles` for details.
+
+Amber14
+-------
+
+The Amber14\ :cite:`Maier2015` force field is made up of various files that define
+parameters for proteins, DNA, RNA, lipids, water, and ions.
+
+.. tabularcolumns:: |l|L|
+
+===================================  ============================================
+File                                 Parameters
+===================================  ============================================
+:file:`amber14/protein.ff14SB.xml`   Protein (recommended)
+:file:`amber14/protein.ff15ipq.xml`  Protein (alternative)
+:file:`amber14/DNA.OL15.xml`         DNA (recommended)
+:file:`amber14/DNA.bsc1.xml`         DNA (alternative)
+:file:`amber14/RNA.OL3.xml`          RNA
+:file:`amber14/lipid17.xml`          Lipid
+:file:`amber14/tip3p.xml`            TIP3P water model\ :cite:`Jorgensen1983` and ions
+:file:`amber14/tip3pfb.xml`          TIP3P-FB water model\ :cite:`Wang2014` and ions
+:file:`amber14/tip4pew.xml`          TIP4P-Ew water model\ :cite:`Horn2004` and ions
+:file:`amber14/tip4pfb.xml`          TIP4P-FB water model\ :cite:`Wang2014` and ions
+:file:`amber14/spce.xml`             SPC/E water model\ :cite:`Berendsen1987` and ions
+===================================  ============================================
+
+As a convenience, the file :file:`amber14-all.xml` can be used as a shortcut to include
+:file:`amber14/protein.ff14SB.xml`, :file:`amber14/DNA.OL15.xml`, :file:`amber14/RNA.OL3.xml`,
+and :file:`amber14/lipid17.xml`.  In most cases you can simply include that file,
+plus one of the water models.
+
+CHARMM36
+--------
+
+The CHARMM36\ :cite:`Best2012` force field provides parameters for proteins, DNA,
+RNA, lipids, carbohydrates, water, ions, and various small molecules.
+
+.. tabularcolumns:: |l|L|
+
+=================================  ============================================
+File                               Parameters
+=================================  ============================================
+:file:`charmm36.xml`               Protein, DNA, RNA, lipids, carbohydrates, and small molecules
+:file:`charmm36/water.xml`         Default CHARMM water model (a modified version of TIP3P\ :cite:`Jorgensen1983`) and ions
+:file:`charmm36/spce.xml`          SPC/E water model\ :cite:`Berendsen1987` and ions
+:file:`charmm36/tip3p-pme-b.xml`   TIP3P-PME-B water model\ :cite:`Price2004` and ions
+:file:`charmm36/tip3p-pme-f.xml`   TIP3P-PME-F water model\ :cite:`Price2004` and ions
+:file:`charmm36/tip4pew.xml`       TIP4P-Ew water model\ :cite:`Horn2004` and ions
+:file:`charmm36/tip4p2005.xml`     TIP4P-2005 water model\ :cite:`Abascal2005` and ions
+:file:`charmm36/tip5p.xml`         TIP5P water model\ :cite:`Mahoney2000` and ions
+:file:`charmm36/tip5pew.xml`       TIP5P-Ew water model\ :cite:`Rick2004` and ions
+=================================  ============================================
+
+AMOEBA
+------
+
+The AMOEBA polarizable force field provides parameters for proteins, water, and ions.
+
+.. tabularcolumns:: |l|L|
+
+=============================  ================================================================================
+File                           Parameters
+=============================  ================================================================================
+:file:`amoeba2013.xml`         AMOEBA 2013\ :cite:`Shi2013`
+:file:`amoeba2013_gk.xml`      Generalized Kirkwood solvation model\ :cite:`Schnieders2007` for use with AMOEBA 2013 force field
+:file:`amoeba2009.xml`         AMOEBA 2009\ :cite:`Ren2002`.  This force field is deprecated.  It is 
+                               recommended to use AMOEBA 2013 instead.
+:file:`amoeba2009_gk.xml`      Generalized Kirkwood solvation model for use with AMOEBA 2009 force field
+=============================  ================================================================================
+
+For explicit solvent simulations, just include the single file :file:`amoeba2013.xml`.
+AMOEBA also supports implicit solvent using a Generalized Kirkwood model.  To enable
+it, also include :file:`amoeba2013_gk.xml`.
+
+The older AMOEBA 2009 force field is provided only for backward compatibility, and is not
+recommended for most simulations.
+
+CHARMM Polarizable Force Field
+------------------------------
+
+To use the CHARMM 2013 polarizable force field\ :cite:`Lopes2013`, include the
+single file :file:`charmm_polar_2013.xml`.  It includes parameters for proteins,
+water, and ions.  When using this force field, remember to add extra particles to
+the :class:`Topology` as described in section :ref:`adding-or-removing-extra-particles`.
+
+Older Amber Force Fields
+------------------------
+
+OpenMM includes several older Amber force fields as well.  For most simulations
+Amber14 is preferred over any of these, but they are still useful for reproducing
+older results.
 
 .. tabularcolumns:: |l|L|
 
@@ -775,19 +874,33 @@ File                           Force Field
 :code:`amber99sbnmr.xml`       Amber99SB with modifications to fit NMR data\ :cite:`Li2010`
 :code:`amber03.xml`            Amber03\ :cite:`Duan2003`
 :code:`amber10.xml`            Amber10 (documented in the AmberTools_ manual as `ff10`)
-:code:`amberfb15.xml`          AMBER-FB15\ :cite:`Wang2017`. Intramolecular parameters optimized with
-                               ForceBalance using high-level ab initio data.
-:code:`amoeba2009.xml`         AMOEBA 2009\ :cite:`Ren2002`.  This force field is deprecated.  It is 
-                               recommended to use AMOEBA 2013 instead.
-:code:`amoeba2013.xml`         AMOEBA 2013\ :cite:`Shi2013`
-:code:`charmm_polar_2013.xml`  CHARMM 2013 polarizable force field\ :cite:`Lopes2013`
 =============================  ================================================================================
 
+Several of these force fields support implicit solvent.  To enable it, also
+include the corresponding OBC file.
 
-The AMBER files do not include parameters for water molecules.  This allows you
-to separately select which water model you want to use.  For simulations that
-include explicit water molecules, you should also specify one of the following
-files:
+.. tabularcolumns:: |l|L|
+
+=========================  =================================================================================================
+File                       Implicit Solvation Model
+=========================  =================================================================================================
+:code:`amber96_obc.xml`    GBSA-OBC solvation model\ :cite:`Onufriev2004` for use with Amber96 force field
+:code:`amber99_obc.xml`    GBSA-OBC solvation model for use with Amber99 force field and its variants
+:code:`amber03_obc.xml`    GBSA-OBC solvation model for use with Amber03 force field
+:code:`amber10_obc.xml`    GBSA-OBC solvation model for use with Amber10 force field
+=========================  =================================================================================================
+
+Note that the GBSA-OBC parameters in these files are those used in TINKER.\ :cite:`Tinker`
+They are designed for use with Amber force fields, but they are different from
+the parameters found in the AMBER application.
+
+Water Models
+------------
+
+The following files define popular water models.  They can be used with force fields
+that do not provide their own water models.  When using Amber14 or CHARMM36, use
+the water files included with those force fields instead, since they also include
+ion parameters.
 
 .. tabularcolumns:: |l|L|
 
@@ -803,52 +916,6 @@ File                 Water Model
 :code:`swm4ndp.xml`  SWM4-NDP water model\ :cite:`Lamoureux2006`
 ===================  ============================================
 
-
-For the polarizable force fields (AMOEBA and CHARMM), only one explicit water model
-is currently available and the water parameters are included in the same file as
-the macromolecule parameters.  Also, the polarizable force fields only include
-parameters for amino acids and ions, not for nucleic acids.
-
-If you want to include an implicit solvation model, you can also specify one of
-the following files:
-
-.. tabularcolumns:: |l|L|
-
-=========================  =================================================================================================
-File                       Implicit Solvation Model
-=========================  =================================================================================================
-:code:`amber96_obc.xml`    GBSA-OBC solvation model\ :cite:`Onufriev2004` for use with Amber96 force field
-:code:`amber99_obc.xml`    GBSA-OBC solvation model for use with Amber99 force fields
-:code:`amber03_obc.xml`    GBSA-OBC solvation model for use with Amber03 force field
-:code:`amber10_obc.xml`    GBSA-OBC solvation model for use with Amber10 force field
-:code:`amoeba2009_gk.xml`  Generalized Kirkwood solvation model\ :cite:`Schnieders2007` for use with AMOEBA 2009 force field
-:code:`amoeba2013_gk.xml`  Generalized Kirkwood solvation model for use with AMOEBA 2013 force field
-=========================  =================================================================================================
-
-
-For example, to use the GBSA-OBC solvation model with the Amber99SB force field,
-you would type:
-::
-
-    forcefield = ForceField('amber99sb.xml', 'amber99_obc.xml')
-
-Note that the GBSA-OBC parameters in these files are those used in TINKER.\ :cite:`Tinker`
-They are designed for use with Amber force fields, but they are different from
-the parameters found in the AMBER application.
-
-If you are running a vacuum simulation, you do not need to specify a water
-model.  The following line specifies the Amber10 force field and no water model.
-If you try to use it with a PDB file that contains explicit water, it will
-produce an error since no water parameters are defined:
-::
-
-    forcefield = ForceField('amber10.xml')
-
-Be aware that some force fields and water models include "extra particles", such
-as lone pairs or Drude particles.  Examples include the CHARMM polarizable force
-field and all of the 4 and 5 site water models.  To use these force fields, you
-must first add the extra particles to the :class:`Topology`.  See section
-:ref:`adding-or-removing-extra-particles` for details.
 
 AMBER Implicit Solvent
 ======================
