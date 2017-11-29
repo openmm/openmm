@@ -1649,6 +1649,29 @@ Allowed values for :code:`positiveIon` are ``'Cs+'``, ``'K+'``, ``'Li+'``, ``'Na
 some force fields do not include parameters for all of these ion types, so you
 need to use types that are supported by your chosen force field.
 
+Adding a Membrane
+*****************
+
+If you want to simulate a membrane protein, you may need to create a membrane as
+well.  You can do this by calling :meth:`addMembrane`.  Call it *instead* of
+:meth:`addSolvent`, not in addition to it.  This one method adds the membrane,
+solvent, and ions all at once, making sure the lipid head groups are properly
+solvated.  For example, this creates a POPC membrane, ensuring at least 1 nm of
+padding on all sides:
+::
+
+    modeller.addMembrane(forcefield, lipidType='POPC', minimumPadding=1*nanometer)
+
+The membrane is added in the XY plane, and the existing protein is assumed to already be oriented
+and positioned correctly.  When possible, it is recommended to start with a model
+from the `Orientations of Proteins in Membranes`_ (OPM) database.  Otherwise, it
+is up to you to select the protein position yourself.
+
+Because this method also adds solvent, it takes many of the same arguments as
+:meth:`addSolvent`.  See the API documentation for details.
+
+.. _`Orientations of Proteins in Membranes`: http://opm.phar.umich.edu
+
 .. _adding-or-removing-extra-particles:
 
 Adding or Removing Extra Particles
