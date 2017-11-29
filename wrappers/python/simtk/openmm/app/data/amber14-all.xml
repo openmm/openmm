@@ -1,0 +1,6 @@
+<ForceField>
+ <Include file="amber14/protein.ff14SB.xml"/>
+ <Include file="amber14/DNA.OL15.xml"/>
+ <Include file="amber14/RNA.OL3.xml"/>
+ <Include file="amber14/lipid17.xml"/>
+</ForceField>

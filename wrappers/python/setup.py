@@ -146,7 +146,7 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
     setupKeywords["package_data"]      = {"simtk" : [],
                                           "simtk.unit" : [],
                                           "simtk.openmm" : [],
-                                          "simtk.openmm.app" : ['data/*.xml', 'data/*.pdb'],
+                                          "simtk.openmm.app" : ['data/*.xml', 'data/*.pdb', 'data/amber14/*.xml', 'data/charmm36/*.xml'],
                                           "simtk.openmm.app.internal" : []}
     setupKeywords["platforms"]         = ["Linux", "Mac OS X", "Windows"]
     setupKeywords["description"]       = \

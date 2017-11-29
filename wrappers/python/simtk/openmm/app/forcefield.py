@@ -190,12 +190,16 @@ class ForceField(object):
             method from which the forcefield XML data can be loaded.
         """
 
-        if not isinstance(files, tuple):
-            files = (files,)
+        if isinstance(files, tuple):
+            files = list(files)
+        else:
+            files = [files]
 
         trees = []
 
-        for file in files:
+        i = 0
+        while i < len(files):
+            file = files[i]
             tree = None
             try:
                 # this handles either filenames or open file-like objects
@@ -221,12 +225,12 @@ class ForceField(object):
                 raise ValueError('Could not locate file "%s"' % file)
 
             trees.append(tree)
+            i += 1
 
-        # Process includes.
+            # Process includes in this file.
 
-        for parentFile, tree in zip(files, trees):
-            if isinstance(parentFile, str):
-                parentDir = os.path.dirname(parentFile)
+            if isinstance(file, str):
+                parentDir = os.path.dirname(file)
             else:
                 parentDir = ''
             for include in tree.getroot().findall('Include'):
@@ -234,7 +238,8 @@ class ForceField(object):
                 joined = os.path.join(parentDir, includeFile)
                 if os.path.isfile(joined):
                     includeFile = joined
-                self.loadFile(includeFile)
+                if includeFile not in files:
+                    files.append(includeFile)
 
         # Load the atom types.
 
@@ -2016,11 +2021,17 @@ class PeriodicTorsionGenerator(object):
         self.ff = forcefield
         self.proper = []
         self.improper = []
+        self.propersForAtomType = defaultdict(set)
 
     def registerProperTorsion(self, parameters):
         torsion = self.ff._parseTorsion(parameters)
         if torsion is not None:
+            index = len(self.proper)
             self.proper.append(torsion)
+            for t in torsion.types2:
+                self.propersForAtomType[t].add(index)
+            for t in torsion.types3:
+                self.propersForAtomType[t].add(index)
 
     def registerImproperTorsion(self, parameters, ordering='default'):
         torsion = self.ff._parseTorsion(parameters)
@@ -2062,7 +2073,8 @@ class PeriodicTorsionGenerator(object):
             type3 = data.atomType[data.atoms[torsion[2]]]
             type4 = data.atomType[data.atoms[torsion[3]]]
             match = None
-            for tordef in self.proper:
+            for index in self.propersForAtomType[type2]:
+                tordef = self.proper[index]
                 types1 = tordef.types1
                 types2 = tordef.types2
                 types3 = tordef.types3
@@ -2391,7 +2403,7 @@ class LennardJonesGenerator(object):
                 paramsToMergedType[params] = len(mergedTypes)
                 mergedTypes.append(t)
                 mergedTypeParams.append(params)
-        
+
         # Now everything is assigned. Create the A- and B-coefficient arrays
 
         numLjTypes = len(mergedTypes)
@@ -2439,37 +2451,32 @@ class LennardJonesGenerator(object):
         # Create the exceptions.
 
         bondIndices = _findBondsForExclusions(data, sys)
-        if self.lj14scale == 1:
-            # Just exclude the 1-2 and 1-3 interactions.
+        forceCopy = deepcopy(self.force)
+        forceCopy.createExclusionsFromBonds(bondIndices, 2)
+        self.force.createExclusionsFromBonds(bondIndices, 3)
+        if self.force.getNumExclusions() > forceCopy.getNumExclusions() and self.lj14scale != 0:
+            # We need to create a CustomBondForce and use it to implement the scaled 1-4 interactions.
 
-            self.force.createExclusionsFromBonds(bondIndices, 2)
-        else:
-            forceCopy = deepcopy(self.force)
-            forceCopy.createExclusionsFromBonds(bondIndices, 2)
-            self.force.createExclusionsFromBonds(bondIndices, 3)
-            if self.force.getNumExclusions() > forceCopy.getNumExclusions() and self.lj14scale != 0:
-                # We need to create a CustomBondForce and use it to implement the scaled 1-4 interactions.
-
-                bonded = mm.CustomBondForce('%g*epsilon*((sigma/r)^12-(sigma/r)^6)' % (4*self.lj14scale))
-                bonded.addPerBondParameter('sigma')
-                bonded.addPerBondParameter('epsilon')
-                sys.addForce(bonded)
-                skip = set(tuple(forceCopy.getExclusionParticles(i)) for i in range(forceCopy.getNumExclusions()))
-                for i in range(self.force.getNumExclusions()):
-                    p1,p2 = self.force.getExclusionParticles(i)
-                    a1 = data.atoms[p1]
-                    a2 = data.atoms[p2]
-                    if (p1,p2) not in skip and (p2,p1) not in skip:
-                        type1 = data.atomType[a1]
-                        type2 = data.atomType[a2]
-                        if (type1, type2) in self.nbfixTypes:
-                            sigma, epsilon = self.nbfixTypes[(type1, type2)]
-                        else:
-                            values1 = self.ljTypes.getAtomParameters(a1, data)
-                            values2 = self.ljTypes.getAtomParameters(a2, data)
-                            sigma = 0.5*(values1[0]+values2[0])
-                            epsilon = sqrt(values1[1]*values2[1])
-                        bonded.addBond(p1, p2, (sigma, epsilon))
+            bonded = mm.CustomBondForce('%g*epsilon*((sigma/r)^12-(sigma/r)^6)' % (4*self.lj14scale))
+            bonded.addPerBondParameter('sigma')
+            bonded.addPerBondParameter('epsilon')
+            sys.addForce(bonded)
+            skip = set(tuple(forceCopy.getExclusionParticles(i)) for i in range(forceCopy.getNumExclusions()))
+            for i in range(self.force.getNumExclusions()):
+                p1,p2 = self.force.getExclusionParticles(i)
+                a1 = data.atoms[p1]
+                a2 = data.atoms[p2]
+                if (p1,p2) not in skip and (p2,p1) not in skip:
+                    type1 = data.atomType[a1]
+                    type2 = data.atomType[a2]
+                    if (type1, type2) in self.nbfixTypes:
+                        sigma, epsilon = self.nbfixTypes[(type1, type2)]
+                    else:
+                        values1 = self.ljTypes.getAtomParameters(a1, data)
+                        values2 = self.ljTypes.getAtomParameters(a2, data)
+                        sigma = 0.5*(values1[0]+values2[0])
+                        epsilon = sqrt(values1[1]*values2[1])
+                    bonded.addBond(p1, p2, (sigma, epsilon))
 
 parsers["LennardJonesForce"] = LennardJonesGenerator.parseElement
 
