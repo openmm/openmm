@@ -3,6 +3,7 @@ from validateModeller import *
 from simtk.openmm.app import *
 from simtk.openmm import *
 from simtk.unit import *
+from collections import defaultdict
 if sys.version_info >= (3, 0):
     from io import StringIO
 else:
@@ -1074,6 +1075,31 @@ class TestModeller(unittest.TestCase):
                 dist = norm(pos[i]-pos[j])
                 expectedDist = 0.09 if j == 0 else 0.147
                 self.assertTrue(dist > (expectedDist-0.01)*nanometers and dist < (expectedDist+0.01)*nanometers)
+
+
+    def test_addMembrane(self):
+        """Test adding a membrane."""
+        pdb = PDBFile('systems/alanine-dipeptide-implicit.pdb')
+        modeller = Modeller(pdb.topology, pdb.positions)
+        ff = ForceField('amber14-all.xml', 'amber14/tip3p.xml')
+
+        # Add a membrane around alanine dipeptide???  I know, it's a silly thing to do,
+        # but it's fast, and all we care about is whether it works!
+
+        modeller.addMembrane(ff, minimumPadding=0.5*nanometers, ionicStrength=1*molar)
+        resCount = defaultdict(int)
+        for res in modeller.topology.residues():
+            resCount[res.name] += 1
+        self.assertTrue(resCount['POP'] > 1)
+        self.assertTrue(resCount['HOH'] > 1)
+        self.assertTrue(resCount['CL'] > 1)
+        self.assertEqual(resCount['CL'], resCount['NA'])
+        self.assertEqual(1, resCount['ALA'])
+        originalSize = max(pdb.positions) - min(pdb.positions)
+        newSize = modeller.topology.getUnitCellDimensions()
+        for i in range(3):
+            self.assertTrue(newSize[i] >= originalSize[i]+0.5*nanometers)
+
 
     def assertVecAlmostEqual(self, p1, p2, tol=1e-7):
         scale = max(1.0, norm(p1),)
