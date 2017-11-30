@@ -1150,12 +1150,18 @@ class Modeller(object):
         adds whole copies of the pre-equilibrated membrane patch, so the box dimensions will always be
         integer multiples of the patch size.  That may lead to a larger membrane than what you requested.
         
+        This method has built in support for POPC and POPE lipids.  You can also build other types of
+        membranes by providing a pre-equilibrated, solvated membrane patch that can be tiled in the XY
+        plane to form the membrane.
+        
         Parameters
         ----------
         forcefield : ForceField
             the ForceField to use for determining atomic charges and for relaxing the membrane
-        lipidType : string='POPC'
-            the type of lipid to use.  Supported values are 'POPC' and 'POPE'.
+        lipidType : string or object
+            the type of lipid to use.  Supported string values are 'POPC' and 'POPE'.  For other types
+            of lipids, provide a PDBFile or PDBxFile object (or any other object with "topology" and
+            "positions" fields) containing a membrane patch.
         membraneCenterZ: distance=0*nanometer
             the position along the Z axis of the center of the membrane
         minimumPadding : distance=1*nanometer
@@ -1172,10 +1178,12 @@ class Modeller(object):
         neutralize : bool=True
             whether to add ions to neutralize the system
         """
-        lipidType = lipidType.upper()
-        if lipidType not in ('POPC', 'POPE'):
+        if 'topology' in dir(lipidType) and 'positions' in dir(lipidType):
+            patch = lipidType
+        elif lipidType.upper() in ('POPC', 'POPE'):
+            patch = PDBFile(os.path.join(os.path.dirname(__file__), 'data', lipidType.upper()+'.pdb'))
+        else:
             raise ValueError('Unsupported lipid type: '+lipidType)
-        patchPdb = PDBFile(os.path.join(os.path.dirname(__file__), 'data', lipidType+'.pdb'))
         if is_quantity(membraneCenterZ):
             membraneCenterZ = membraneCenterZ.value_in_unit(nanometer)
         if is_quantity(minimumPadding):
@@ -1189,8 +1197,8 @@ class Modeller(object):
         proteinSize = proteinMaxPos-proteinMinPos
         proteinCenterPos = (proteinMinPos+proteinMaxPos)/2
         proteinCenterPos = Vec3(proteinCenterPos[0], proteinCenterPos[1], membraneCenterZ)
-        patchPos = patchPdb.positions.value_in_unit(nanometer)
-        patchSize = patchPdb.topology.getUnitCellDimensions().value_in_unit(nanometer)
+        patchPos = patch.positions.value_in_unit(nanometer)
+        patchSize = patch.topology.getUnitCellDimensions().value_in_unit(nanometer)
         patchCenterPos = (min(patchPos)+max(patchPos))/2
         nx = int(ceil((proteinSize[0]+2*minimumPadding)/patchSize[0]))
         ny = int(ceil((proteinSize[1]+2*minimumPadding)/patchSize[1]))
@@ -1209,7 +1217,7 @@ class Modeller(object):
         # Record the bonds for each residue.
         
         resBonds = defaultdict(list)
-        for bond in patchPdb.topology.bonds():
+        for bond in patch.topology.bonds():
             resBonds[bond[0].residue].append(bond)
         
         # Identify which leaf of the membrane each lipid is in.
@@ -1217,7 +1225,7 @@ class Modeller(object):
         numLipidAtoms = 0
         resMeanZ = {}
         membraneMeanZ = 0.0
-        for res in patchPdb.topology.residues():
+        for res in patch.topology.residues():
             if res.name != 'HOH':
                 numResAtoms = 0
                 sumZ = 0.0
@@ -1263,7 +1271,7 @@ class Modeller(object):
         for x in range(nx):
             for y in range(ny):
                 offset = proteinCenterPos - patchCenterPos + Vec3((x-0.5*(nx-1))*patchSize[0], (y-0.5*(ny-1))*patchSize[1], 0)
-                for res in patchPdb.topology.residues():
+                for res in patch.topology.residues():
                     resPos = [patchPos[atom.index]+offset for atom in res.atoms()]
                     if res.name == 'HOH':
                         referencePos = proteinPos
