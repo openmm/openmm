@@ -1192,8 +1192,8 @@ class Modeller(object):
         patchPos = patchPdb.positions.value_in_unit(nanometer)
         patchSize = patchPdb.topology.getUnitCellDimensions().value_in_unit(nanometer)
         patchCenterPos = (min(patchPos)+max(patchPos))/2
-        nx = ceil((proteinSize[0]+2*minimumPadding)/patchSize[0])
-        ny = ceil((proteinSize[1]+2*minimumPadding)/patchSize[1])
+        nx = int(ceil((proteinSize[0]+2*minimumPadding)/patchSize[0]))
+        ny = int(ceil((proteinSize[1]+2*minimumPadding)/patchSize[1]))
 
         # Identify the ion types.
 
