@@ -183,6 +183,7 @@ script:
   - if [[ ! -z "${DOCS_DEPLOY}" && "${DOCS_DEPLOY}" = "true" ]]; then
       pip install sphinx==1.5.6 sphinxcontrib-bibtex sphinxcontrib-lunrsearch sphinxcontrib-autodoc_doxygen;
       make sphinxhtml;
+      make sphinxpdf;
       make C++ApiDocs PythonApiDocs;
       mkdir -p api-docs;
       mv sphinx-docs/userguide/html api-docs/userguide;
