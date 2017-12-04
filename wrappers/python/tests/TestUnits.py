@@ -288,6 +288,10 @@ class TestUnits(QuantityTestCase):
         # Tests that __setitem__ converts to the unit of the container
         s[0] = 1 * u.nanometers
         self.assertEqual(s[0]._value, 10)
+        # Tests that __setitem__ handles slice assignment correctly
+        x = [0, 1, 2, 3, 4] * u.kelvin
+        x[2:4] = [-2, -3] * u.kelvin
+        self.assertEqual(x._value, [0, 1, -2, -3, 4])
         # Tests standard unit conversions
         x = [1, 2, 3] * u.centimeters
         self.assertEqual(x / u.millimeters, [10, 20, 30])
