@@ -465,6 +465,14 @@ class Bond(namedtuple('Bond', ['atom1', 'atom2'])):
         "Support for pickle protocol 2: http://docs.python.org/2/library/pickle.html#pickling-and-unpickling-normal-class-instances"
         return self[0], self[1], self.type, self.order
 
+    def __getstate__(self):
+        """
+        Additional support for pickle since parent class implements its own __getstate__
+        so pickle does not store or restore the type and order, python 2 problem only
+        https://www.python.org/dev/peps/pep-0307/#case-3-pickling-new-style-class-instances-using-protocol-2
+        """
+        return self.__dict__
+
     def __deepcopy__(self, memo):
         return Bond(self[0], self[1], self.type, self.order)
 
