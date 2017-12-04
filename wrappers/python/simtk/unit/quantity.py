@@ -737,8 +737,8 @@ class Quantity(object):
         # Delegate slices to one-at-a time ___setitem___
         if isinstance(key, slice): # slice
             indices = key.indices(len(self))
-            for i in range(*indices):
-                self[i] = value[i]
+            for value_idx, self_idx in enumerate(range(*indices)):
+                self[self_idx] = value[value_idx]
         else: # single index
             # Check unit compatibility
             if self.unit.is_dimensionless() and is_dimensionless(value):
