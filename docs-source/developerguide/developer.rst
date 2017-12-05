@@ -325,10 +325,10 @@ look in ReferenceKernels.cpp, you will find code for extracting the correct
 values of these fields.  For example:
 ::
 
-    static vector<RealVec>& extractPositions(ContextImpl& context) {
+    static vector<Vec3>& extractPositions(ContextImpl& context) {
         ReferencePlatform::PlatformData* data =
                 reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-        return *((vector<RealVec>*) data->positions);
+        return *((vector<Vec3>*) data->positions);
     }
 
 The PlatformData’s vector of forces contains one element for each particle.  At
