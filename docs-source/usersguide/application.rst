@@ -4,8 +4,11 @@
 
 .. _the-openmm-application-layer-introduction:
 
-The OpenMM Application Layer: Introduction
-##########################################
+The OpenMM Application Layer: Getting Started
+#############################################
+
+Introduction
+************
 
 The first thing to understand about the OpenMM “application layer” is that it is
 not exactly an application in the traditional sense: there is no program called
@@ -32,23 +35,9 @@ the results.
 .. _installing-openmm:
 
 Installing OpenMM
-#################
+*****************
 
-Follow these instructions to install OpenMM.  There also is an online
-troubleshooting guide that describes common problems and how to fix them
-(http://wiki.simtk.org/openmm/FAQApp).
-
-There are two ways to install OpenMM: using the Conda package manager (http://conda.pydata.org),
-or with standalone installers.  (A third option is to compile it from source, which is
-discussed in Chapter :ref:`compiling-openmm-from-source-code`.)  Using Conda is
-the easier method, and is recommended for most users.  It is described first,
-and then the following sections describe how to use the standalone installers
-for various platforms.
-
-
-Installing with Conda
-*********************
-
+OpenMM is installed using the Conda package manager (http://conda.pydata.org).
 Conda is included as part of the Anaconda Python distribution, which you can
 download from http://docs.continuum.io/anaconda/install.  This is a Python
 distribution specifically designed for scientific applications, with many of the
@@ -58,12 +47,16 @@ which includes only Python itself, plus the Conda package manager.  That offers
 a much smaller initial download, with the ability to then install only the
 packages you want.
 
-1. Begin by installing the most recent 64 bit, Python 3.x version of either
+(A third option is to compile OpenMM from source.  This provides more flexibility,
+but it is much more work, and there is rarely a need for anyone but advanced users
+to compile from source.  Detailed instruction are in Chapter :ref:`compiling-openmm-from-source-code`.)
+
+\1. Begin by installing the most recent 64 bit, Python 3.x version of either
 Anaconda or Miniconda.
 
-2. (Optional) If you want to run OpenMM on a GPU, install CUDA and/or OpenCL.
+\2. (Optional) If you want to run OpenMM on a GPU, install CUDA and/or OpenCL.
 
-  * If you have an Nvidia GPU, download CUDA 8.0 from
+  * If you have an Nvidia GPU, download CUDA 9.0 from
     https://developer.nvidia.com/cuda-downloads.  Be sure to install both the
     drivers and toolkit.  OpenCL is included with the CUDA drivers.
   * If you have an AMD GPU and are using Linux or Windows, download the latest
@@ -85,223 +78,6 @@ This command confirms that OpenMM is installed, checks whether GPU acceleration
 is available (via the OpenCL and/or CUDA platforms), and verifies that all
 platforms produce consistent results.
 
-
-.. _installing-on-mac-os-x:
-
-Installing on Mac OS X
-**********************
-
-OpenMM works on Mac OS X 10.7 or later.  OpenCL is supported on OS X 10.10.3 or
-later.
-
-1. Download the pre-compiled binary of OpenMM for Mac OS X from
-https://simtk.org/project/xml/downloads.xml?group_id=161, then double click
-the .zip file to expand it.
-
-2. If you have not already done so, install Apple’s Xcode developer tools from
-the App Store.  They are required to use OpenMM.  (With Xcode 4.3 and later, you
-must then launch Xcode, open the Preferences window, go to the Downloads tab,
-and tell it to install the command line tools.  With Xcode 4.2 and earlier, the
-command line tools are automatically installed when you install Xcode.)
-
-3. (Optional) If you have an Nvidia GPU and want to use the CUDA platform,
-download CUDA 8.0 from https://developer.nvidia.com/cuda-downloads.  Be sure to
-install both the drivers and toolkit.
-
-4. (Optional) If you plan to use the CPU platform, it is recommended that you
-install FFTW, available from http://www.fftw.org.  When configuring it, be sure
-to specify single precision and multiple threads (the |--|\ :code:`enable-float`
-and |--|\ :code:`enable-threads` options).  OpenMM will still work without FFTW,
-but the performance of particle mesh Ewald (PME) will be much worse.
-
-5. Launch the Terminal application.  Change to the OpenMM directory by typing
-::
-
-    cd <openmm_directory>
-
-where :code:`<openmm_directory>` is the path to the OpenMM folder.  Then run
-the install script by typing
-::
-
-    sudo ./install.sh
-
-It will prompt you for an install location and the path to the python
-executable.  Unless you are certain you know what you are doing, accept the
-defaults for both options.
-
-6. (Optional) To use the CUDA platform on an Nvidia GPU, you must add the CUDA
-libraries to your library path so your computer knows where to find them.  You
-can do this by typing
-::
-
-    export DYLD_LIBRARY_PATH=/usr/local/cuda/lib
-
-This will affect only the particular Terminal window you type it into.  If you
-want to run OpenMM in another Terminal window, you must type the above command
-in the new window.
-
-7. Verify your installation by typing the following command:
-::
-
-    python -m simtk.testInstallation
-
-This command confirms that OpenMM is installed, checks whether GPU acceleration
-is available (via the OpenCL and/or CUDA platforms), and verifies that all
-platforms produce consistent results.
-
-Important Note: Some Mac laptops have two GPUs, only one of which is capable of
-running OpenMM.   If you have a laptop, open the System Preferences and go to
-the Energy Saver panel.  There will be a checkbox labeled “Automatic graphics
-switching”, which should be disabled.  Otherwise, trying to run OpenMM may
-produce an error.  You will only see this option if your laptop has two GPUs
-
-.. _installing-on-linux:
-
-Installing on Linux
-*******************
-
-1. Download the pre-compiled binary of OpenMM for Linux from
-https://simtk.org/project/xml/downloads.xml?group_id=161, then double click the
-.zip file to expand it.
-
-2. Make sure you have Python 2.7 or higher (earlier versions will not work) and
-a C++ compiler (typically :program:`gcc` or :program:`clang`) installed on your computer.  You can
-check what version of Python is installed by typing :code:`python` |--|\ :code:`version`
-into a console window.
-
-3. (Optional) If you want to run OpenMM on a GPU, install CUDA and/or OpenCL.
-
-  * If you have an Nvidia GPU, download CUDA 8.0 from
-    https://developer.nvidia.com/cuda-downloads.  Be sure to install both the
-    drivers and toolkit.  OpenCL is included with the CUDA drivers.
-  * If you have an AMD GPU, download the latest version of the Catalyst driver
-    from http://support.amd.com.
-
-4. (Optional) If you plan to use the CPU platform, it is recommended that you
-install FFTW.  It is probably available through your system’s package manager
-such as :program:`yum` or :program:`apt-get`\ .  Alternatively, you can download
-it from http://www.fftw.org.  When configuring it, be sure to specify single
-precision and multiple threads (the |--|\ :code:`enable-float` and
-|--|\ :code:`enable-threads` options).  OpenMM will still work without FFTW, but the
-performance of particle mesh Ewald (PME) will be much worse.
-
-5. In a console window, change to the OpenMM directory by typing
-::
-
-    cd <openmm_directory>
-
-where :code:`<openmm_directory>` is the path to the OpenMM folder.  Then run
-the install script by typing
-::
-
-    sudo ./install.sh
-
-It will prompt you for an install location and the path to the python
-executable.  Unless you are certain you know what you are doing, accept the
-defaults for both options.
-
-6. (Optional) To use the CUDA platform on an Nvidia GPU, you must add the CUDA
-libraries to your library path so your computer knows where to find them.  You
-can do this by typing
-::
-
-    export LD_LIBRARY_PATH=/usr/local/cuda/lib
-
-This will affect only the particular console window you type it into.  If you
-want to run OpenMM in another console window, you must type the above command in
-the new window.
-
-7. Verify your installation by typing the following command:
-::
-
-    python -m simtk.testInstallation
-
-This command confirms that OpenMM is installed, checks whether GPU acceleration
-is available (via the OpenCL and/or CUDA platforms), and verifies that all
-platforms produce consistent results.
-
-.. _installing-on-windows:
-
-Installing on Windows
-*********************
-
-1. Download the pre-compiled binary of OpenMM for Windows from
-https://simtk.org/project/xml/downloads.xml?group_id=161, then double click the
-.zip file to expand it.  Move the files to :file:`C:\\Program Files\\OpenMM`.
-
-2. Make sure you have the 64-bit version of Python 3.3 or 3.4 (other versions will not
-work) installed on your computer.  To do this, launch the Python program (either
-the command line version or the GUI version).  The first line in the Python
-window will indicate the version you have, as well as whether you have a 32-bit
-or 64-bit version.
-
-3. Double click the Python API Installer to install the Python components.  (On
-some versions of Windows, a “Program Compatibility Assistant” window may appear
-with the warning, “This program might not have installed correctly.”  This is
-just Microsoft trying to scare you.  Click “This program installed correctly”
-and ignore it.)
-
-4. (Optional) If you want to run OpenMM on a GPU, install CUDA and/or OpenCL.
-
-  * If you have an Nvidia GPU, download CUDA 8.0 from
-    https://developer.nvidia.com/cuda-downloads.  Be sure to install both the
-    drivers and toolkit.  OpenCL is included with the CUDA drivers.
-  * If you have an AMD GPU, download the latest version of the Catalyst driver
-    from http://support.amd.com.
-
-
-5. (Optional) If you plan to use the CPU platform, it is recommended that you
-install FFTW.  Precompiled binaries are available from http://www.fftw.org.
-OpenMM will still work without FFTW, but the performance of particle mesh Ewald
-(PME) will be much worse.
-
-6. Before running OpenMM, you must add the OpenMM and FFTW libraries to your
-PATH environment variable.  You may also need to add the Python executable to
-your PATH.
-
-  * To find out if the Python executable is already in your PATH, open a command
-    prompt window by clicking on :menuselection:`Start --> Programs --> Accessories --> Command Prompt`.
-    (On Windows 7, select :menuselection:`Start --> All Programs --> Accessories --> Command Prompt`).
-    Type
-    ::
-
-        python
-
-    If you get an error message, such as "‘python’ is not recognized as an
-    internal or external command, operable program or batch file," then you need
-    to add Python to your PATH.  To do so, locate it by typing
-    ::
-
-        dir C:\py*
-
-    The files are typically located in a directory like :file:`C:\\Python33`.  Remember this
-    location.  You will need to enter it, along with the location of the OpenMM
-    libraries, later in this process.
-
-  * Click on :menuselection:`Start --> Control Panel --> System` (On Windows 7, select :menuselection:`Start -->
-    Control Panel --> System and Security --> System`)
-  * Click on the :menuselection:`Advanced` tab or the :menuselection:`Advanced system settings` link
-  * Click :menuselection:`Environment Variables`
-  * Under :menuselection:`System variables`, select the line for :menuselection:`Path` and click :menuselection:`Edit…`
-  * Add :file:`C:\\Program Files\\OpenMM\\lib` and :file:`C:\\Program Files\\OpenMM\\lib\\plugins`
-    to the “Variable value”.  If you also need to add Python or FFTW to your
-    PATH, enter their directory locations here.  Directory locations need to be
-    separated by semi-colons (;).
-
-
-    If you installed OpenMM somewhere other than the default location, you must also
-    set :envvar:`OPENMM_PLUGIN_DIR` to point to the plugins directory.  If this variable is
-    not set, it will assume plugins are in the default location (:file:`C:\\Program
-    Files\\OpenMM\\lib\\plugins`).
-
-7. Verify your installation by typing the following command:
-::
-
-    python -m simtk.testInstallation
-
-This command confirms that OpenMM is installed, checks whether GPU acceleration
-is available (via the OpenCL and/or CUDA platforms), and verifies that all
-platforms produce consistent results.
 
 .. _running-simulations:
 
@@ -681,31 +457,37 @@ Note that both the CHARMM and XPLOR versions of the :file:`psf` file format are 
 
 .. _the-script-builder-application:
 
-The Script Builder Application
-******************************
+The OpenMM-Setup Application
+****************************
 
-One option for writing your own scripts is to start with one of the examples
-given above (the one in Section :ref:`a-first-example` if you are starting from a PDB file, section
-:ref:`using_amber_files` if you are starting from AMBER :file:`prmtop` and :file:`inpcrd` files, section
-:ref:`using_gromacs_files` if you are starting from Gromacs :file:`gro` and :file:`top` files, or section
-:ref:`using-charmm-files` if you are starting from CHARMM files), then customize it
-to suit your needs.  Another option is to use the `OpenMM Script Builder`_ application.
+One way to create your own scripts is to start with one of the examples given
+above and customize it to suit your needs, but there's an even easier option.
+OpenMM-Setup is a graphical application that walks you through the whole process
+of loading your input files and setting options.  It then generates a complete
+script, and can even run it for you.
 
-
-.. figure:: ../images/ScriptBuilder.png
+.. figure:: ../images/OpenMMSetup.png
    :align: center
    :width: 100%
 
-   :autonumber:`Figure,script builder`:  The Script Builder application
+   :autonumber:`Figure,openmm setup`:  The OpenMM-Setup application
 
-This is a web application available at https://builder.openmm.org.  It provides
-a graphical interface with simple choices for all the most common simulation
-options, then automatically generates a script based on them.  As you change the
-settings, the script is instantly updated to reflect them.  Once everything is
-set the way you want, click the :menuselection:`Save Script` button to save it to disk, or
-simply copy and paste it into a text editor.
+To install OpenMM-Setup, open a command line terminal and type the following command
+::
 
-.. _`OpenMM Script Builder`: https://builder.openmm.org
+    conda install -c omnia openmm-setup
+
+You can then launch it by typing the command
+::
+
+    openmm-setup
+
+It will automatically open a window in your web browser displaying the user interface.
+
+OpenMM-Setup is far more than just a script generator.  It can fix problems in
+your input files, add missing atoms, build membranes and water boxes, and much
+more.  It is a very easy way to quickly do all necessary preparation and setup.
+We highly recommend it to all users of OpenMM, from novices to experts.
 
 .. _simulation-parameters:
 
