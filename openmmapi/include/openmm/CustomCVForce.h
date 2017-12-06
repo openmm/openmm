@@ -148,7 +148,9 @@ public:
      */
     const Force& getCollectiveVariable(int index) const;
     /**
-     * Add a new global parameter that the interaction may depend on.
+     * Add a new global parameter that the interaction may depend on.  The default value provided to
+     * this method is the initial value of the parameter in newly created Contexts.  You can change
+     * the value at any time by calling setParameter() on the Context.
      *
      * @param name             the name of the parameter
      * @param defaultValue     the default value of the parameter
