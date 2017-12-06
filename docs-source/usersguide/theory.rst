@@ -1212,6 +1212,32 @@ is exactly equivalent to
 The definition of an intermediate value may itself involve other intermediate
 values.  All uses of a value must appear *before* that value’s definition.
 
+Setting Parameters
+******************
+
+Most custom forces have two types of parameters you can define.  The simplest type
+are global parameters, which represent a single number.  The value is stored in
+the :class:`Context`, and can be changed at any time by calling :meth:`setParameter`
+on it.  Global parameters are designed to be very inexpensive to change.  Even if
+you set a new value for a global parameter on every time step, the overhead will
+usually be quite small.  There can be exceptions to this rule, however.  For
+example, if a :class:`CustomNonbondedForce` uses a long range correction, changing
+a global parameter may require the correction coefficient to be recalculated,
+which is expensive.
+
+The other type of parameter is ones that record many values, one for each element
+of the force, such as per-particle or per-bond parameters.  These values are stored
+directly in the force object itself, and hence are part of the system definition.
+When a :class:`Context` is created, the values are copied over to it, and thereafter
+the two are disconnected.  Modifying the force will have no effect on any
+:class:`Context` that already exists.
+
+Some forces do provide a way to modify these parameters via an :meth:`updateParametersInContext`
+method.  These methods tend to be somewhat expensive, so it is best not to call
+them too often.  On the other hand, they are still much less expensive than calling
+:meth:`reinitialize` on the :class:`Context`, which is the other way of updating
+the system definition for a running simulation.
+
 Parameter Derivatives
 *********************
 
