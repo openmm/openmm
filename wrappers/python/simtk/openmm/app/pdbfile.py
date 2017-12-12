@@ -319,7 +319,8 @@ class PDBFile(object):
             If True, keep the residue and chain IDs specified in the Topology
             rather than generating new ones.  Warning: It is up to the caller to
             make sure these are valid IDs that satisfy the requirements of the
-            PDB format.  Otherwise, the output file will be invalid.
+            PDB format.  No guarantees are made about what will happen if they
+            are not, and the output file could be invalid.
         extraParticleIdentifier : string=' '
             String to write in the element column of the ATOM records for atoms whose element is None (extra particles)
         """
@@ -339,7 +340,7 @@ class PDBFile(object):
         if modelIndex is not None:
             print("MODEL     %4d" % modelIndex, file=file)
         for (chainIndex, chain) in enumerate(topology.chains()):
-            if keepIds:
+            if keepIds and len(chain.id) == 1:
                 chainName = chain.id
             else:
                 chainName = chr(ord('A')+chainIndex%26)
@@ -349,7 +350,7 @@ class PDBFile(object):
                     resName = res.name[:3]
                 else:
                     resName = res.name
-                if keepIds:
+                if keepIds and len(res.id) < 5:
                     resId = res.id
                 else:
                     resId = "%4d" % ((resIndex+1)%10000)
