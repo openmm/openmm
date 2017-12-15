@@ -2,8 +2,8 @@ cd C:\Users\vagrant
 
 # Install CUDA.
 
-wget https://developer.nvidia.com/compute/cuda/8.0/prod/network_installers/cuda_8.0.44_win10_network-exe -UseBasicParsing -OutFile cuda_8.0.44_win10_network.exe
-.\cuda_8.0.44_win10_network.exe -s compiler_8.0 cudart_8.0 cufft_8.0 cufft_dev_8.0 nvrtc_8.0 nvrtc_dev_8.0 | Out-Null
+wget https://developer.nvidia.com/compute/cuda/9.0/Prod/network_installers/cuda_9.0.176_win10_network-exe -UseBasicParsing -OutFile cuda_9.0.176_win10_network.exe
+.\cuda_9.0.176_win10_network.exe -s compiler_9.0 cudart_9.0 cufft_9.0 cufft_dev_9.0 nvrtc_9.0 nvrtc_dev_9.0 | Out-Null
 
 # Install AMD APP SDK.
 
