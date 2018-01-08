@@ -555,6 +555,9 @@ field and all of the 4 and 5 site water models.  To use these force fields, you
 must first add the extra particles to the :class:`Topology`.  See section
 :ref:`adding-or-removing-extra-particles` for details.
 
+The force fields described below are the ones that are bundled with OpenMM.
+Additional force fields are available online at https://github.com/choderalab/openmm-forcefields.
+
 Amber14
 -------
 
