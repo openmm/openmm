@@ -196,6 +196,40 @@ void testVirtualSites() {
     ASSERT(forceNorm < 2*tolerance);
 }
 
+void testLargeForces() {
+    // Create a set of particles that are almost on top of each other so the initial
+    // forces are huge.
+    
+    const int numParticles = 10;
+    System system;
+    NonbondedForce* nonbonded = new NonbondedForce();
+    system.addForce(nonbonded);
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(1.0);
+        nonbonded->addParticle(1.0, 0.2, 1.0);
+    }
+    vector<Vec3> positions(numParticles);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numParticles; i++)
+        positions[i] = Vec3(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt))*1e-10;
+
+    // Minimize it and verify that it didn't blow up.                                                                               
+
+    VerletIntegrator integrator(0.01);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    LocalEnergyMinimizer::minimize(context, 1.0);
+    State state = context.getState(State::Positions);
+    double maxdist = 0.0;
+    for (int i = 0; i < numParticles; i++) {
+        Vec3 r = state.getPositions()[i];
+        maxdist = max(maxdist, sqrt(r.dot(r)));
+    }
+    ASSERT(maxdist > 0.1);
+    ASSERT(maxdist < 10.0);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -204,6 +238,7 @@ int main(int argc, char* argv[]) {
         testHarmonicBonds();
         testLargeSystem();
         testVirtualSites();
+        testLargeForces();
         runPlatformTests();
     }
     catch(const exception& e) {
