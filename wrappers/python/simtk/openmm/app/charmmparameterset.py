@@ -116,6 +116,9 @@ class CharmmParameterSet(object):
         self.nbfix_types = dict()
         self.parametersets = []
 
+        # Allow the user to skip parameter condensing
+        self._noCondense = False
+
         # Load all of the files
         tops, pars, strs = [], [], []
         for arg in args:
@@ -603,6 +606,14 @@ class CharmmParameterSet(object):
                 self.readParameterFile(section)
             title, section = f.next_section()
 
+    def noCondense(self):
+        """
+        If you have a very large number of interaction types, condensing
+        can be a slow operation.  Allow the user to specify that it
+        should be skipped.
+        """
+        self._noCondense = True
+
     def condense(self):
         """
         This function goes through each of the parameter type dicts and
@@ -614,6 +625,9 @@ class CharmmParameterSet(object):
         -------
         >>> params = CharmmParameterSet('charmm.prm').condense()
         """
+        if self._noCondense:
+            return self
+
         # First scan through all of the bond types
         self._condense_types(self.bond_types)
         self._condense_types(self.angle_types)
