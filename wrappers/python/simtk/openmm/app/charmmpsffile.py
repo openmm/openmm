@@ -740,7 +740,7 @@ class CharmmPsfFile(object):
             raise a ValueError
         """
         # Load the parameter set
-        self.loadParameters(params.condense())
+        self.loadParameters(params)
         hasbox = self.topology.getUnitCellDimensions() is not None
         # Check GB input parameters
         if implicitSolvent is not None and gbsaModel not in ('ACE', None):
