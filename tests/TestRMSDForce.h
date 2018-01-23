@@ -42,6 +42,25 @@
 using namespace OpenMM;
 using namespace std;
 
+double estimateRMSD(vector<Vec3>& positions, vector<Vec3>& referencePos, vector<int>& particles) {
+    // Estimate the RMSD.  For simplicity we omit the orientation alignment, but they should
+    // already be almost perfectly aligned.
+    
+    Vec3 center1, center2;
+    for (int i : particles) {
+        center1 += referencePos[i];
+        center2 += positions[i];
+    }
+    center1 /= particles.size();
+    center2 /= particles.size();
+    double estimate = 0.0;
+    for (int i : particles) {
+        Vec3 delta = (referencePos[i]-center1) - (positions[i]-center2);
+        estimate += delta.dot(delta);
+    }
+    return sqrt(estimate/particles.size());
+}
+
 void testRMSD() {
     const int numParticles = 20;
     System system;
@@ -62,23 +81,7 @@ void testRMSD() {
     VerletIntegrator integrator(0.001);
     Context context(system, integrator, platform);
     context.setPositions(positions);
-    
-    // Estimate the RMSD.  For simplicity we omit the orientation alignment, but they should
-    // already be almost perfectly aligned.
-    
-    Vec3 center1, center2;
-    for (int i : particles) {
-        center1 += referencePos[i];
-        center2 += positions[i];
-    }
-    center1 /= particles.size();
-    center2 /= particles.size();
-    double estimate = 0.0;
-    for (int i : particles) {
-        Vec3 delta = (referencePos[i]-center1) - (positions[i]-center2);
-        estimate += delta.dot(delta);
-    }
-    estimate = sqrt(estimate/particles.size());
+    double estimate = estimateRMSD(positions, referencePos, particles);
     
     // Have the force compute the RMSD.  It should be very slightly less than
     // what we calculated above (since that omitted the rotation).
@@ -90,14 +93,15 @@ void testRMSD() {
 
     // Translate and rotate all the particles.  This should have no effect on the RMSD.
 
+    vector<Vec3> transformedPos(numParticles);
     double cs = cos(1.1), sn = sin(1.1);
     for (int i = 0; i < numParticles; i++) {
         Vec3 p = positions[i];
-        positions[i] = Vec3( cs*p[0] + sn*p[1] + 0.1,
-                            -sn*p[0] + cs*p[1] - 11.3,
-                            p[2] + 1.5);
+        transformedPos[i] = Vec3( cs*p[0] + sn*p[1] + 0.1,
+                                 -sn*p[0] + cs*p[1] - 11.3,
+                                  p[2] + 1.5);
     }
-    context.setPositions(positions);
+    context.setPositions(transformedPos);
     state1 = context.getState(State::Energy | State::Forces);
     ASSERT_EQUAL_TOL(rmsd, state1.getPotentialEnergy(), 1e-4);
 
@@ -112,7 +116,7 @@ void testRMSD() {
     double step = 0.5*stepSize/norm;
     vector<Vec3> positions2(numParticles), positions3(numParticles);
     for (int i = 0; i < (int) positions.size(); ++i) {
-        Vec3 p = positions[i];
+        Vec3 p = transformedPos[i];
         Vec3 f = forces[i];
         positions2[i] = Vec3(p[0]-f[0]*step, p[1]-f[1]*step, p[2]-f[2]*step);
         positions3[i] = Vec3(p[0]+f[0]*step, p[1]+f[1]*step, p[2]+f[2]*step);
@@ -125,12 +129,30 @@ void testRMSD() {
     
     // Check that updateParametersInContext() works correctly.
     
-    context.setPositions(positions);
-    force->setReferencePositions(positions);
+    context.setPositions(transformedPos);
+    force->setReferencePositions(transformedPos);
     force->updateParametersInContext(context);
     ASSERT_EQUAL_TOL(0.0, context.getState(State::Energy).getPotentialEnergy(), 1e-2);
     context.setPositions(referencePos);
     ASSERT_EQUAL_TOL(rmsd, context.getState(State::Energy).getPotentialEnergy(), 1e-4);
+
+    // Verify that giving an empty list of particles is interpreted to mean all particles.
+
+    vector<int> allParticles;
+    for (int i = 0; i < numParticles; i++)
+        allParticles.push_back(i);
+    estimate = estimateRMSD(positions, referencePos, allParticles);
+    force->setParticles(allParticles);
+    force->setReferencePositions(referencePos);
+    force->updateParametersInContext(context);
+    context.setPositions(positions);
+    double rmsd1 = context.getState(State::Energy).getPotentialEnergy();
+    force->setParticles(vector<int>());
+    force->updateParametersInContext(context);
+    double rmsd2 = context.getState(State::Energy).getPotentialEnergy();
+    ASSERT_EQUAL_TOL(rmsd1, rmsd2, 1e-4);
+    ASSERT(rmsd1 <= estimate);
+    ASSERT(rmsd1 > 0.9*estimate);
 }
 
 void runPlatformTests();
