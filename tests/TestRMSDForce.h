@@ -99,7 +99,7 @@ void testRMSD() {
     }
     context.setPositions(positions);
     state1 = context.getState(State::Energy | State::Forces);
-    ASSERT_EQUAL_TOL(rmsd, state1.getPotentialEnergy(), 1e-5);
+    ASSERT_EQUAL_TOL(rmsd, state1.getPotentialEnergy(), 1e-4);
 
     // Take a small step in the direction of the energy gradient and see whether the potential energy changes by the expected amount.
 
@@ -108,7 +108,7 @@ void testRMSD() {
     for (int i = 0; i < (int) forces.size(); ++i)
         norm += forces[i].dot(forces[i]);
     norm = std::sqrt(norm);
-    const double stepSize = 1e-3;
+    const double stepSize = 0.1;
     double step = 0.5*stepSize/norm;
     vector<Vec3> positions2(numParticles), positions3(numParticles);
     for (int i = 0; i < (int) positions.size(); ++i) {
@@ -121,7 +121,16 @@ void testRMSD() {
     State state2 = context.getState(State::Energy);
     context.setPositions(positions3);
     State state3 = context.getState(State::Energy);
-    ASSERT_EQUAL_TOL(norm, (state2.getPotentialEnergy()-state3.getPotentialEnergy())/stepSize, 1e-4);
+    ASSERT_EQUAL_TOL(norm, (state2.getPotentialEnergy()-state3.getPotentialEnergy())/stepSize, 1e-3);
+    
+    // Check that updateParametersInContext() works correctly.
+    
+    context.setPositions(positions);
+    force->setReferencePositions(positions);
+    force->updateParametersInContext(context);
+    ASSERT_EQUAL_TOL(0.0, context.getState(State::Energy).getPotentialEnergy(), 1e-2);
+    context.setPositions(referencePos);
+    ASSERT_EQUAL_TOL(rmsd, context.getState(State::Energy).getPotentialEnergy(), 1e-4);
 }
 
 void runPlatformTests();

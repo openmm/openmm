@@ -51,6 +51,7 @@
 #include "ReferenceTabulatedFunction.h"
 #include "SimTKOpenMMRealType.h"
 #include "SimTKOpenMMUtilities.h"
+#include "jama_eig.h"
 #include <algorithm>
 #include <cmath>
 #include <set>
@@ -7062,6 +7063,203 @@ void OpenCLCalcCustomCVForceKernel::copyState(ContextImpl& context, ContextImpl&
     map<string, double> innerParameters = innerContext.getParameters();
     for (auto& param : innerParameters)
         innerContext.setParameter(param.first, context.getParameter(param.first));
+}
+
+class OpenCLCalcRMSDForceKernel::ForceInfo : public OpenCLForceInfo {
+public:
+    ForceInfo(const RMSDForce& force) : OpenCLForceInfo(0), force(force) {
+        updateParticles();
+    }
+    void updateParticles() {
+        particles.clear();
+        for (int i : force.getParticles())
+            particles.insert(i);
+    }
+    bool areParticlesIdentical(int particle1, int particle2) {
+        bool include1 = (particles.find(particle1) != particles.end());
+        bool include2 = (particles.find(particle2) != particles.end());
+        return (include1 == include2);
+    }
+private:
+    const RMSDForce& force;
+    set<int> particles;
+};
+
+OpenCLCalcRMSDForceKernel::~OpenCLCalcRMSDForceKernel() {
+    if (referencePos != NULL)
+        delete referencePos;
+    if (particles != NULL)
+        delete particles;
+    if (buffer != NULL)
+        delete buffer;
+}
+
+void OpenCLCalcRMSDForceKernel::initialize(const System& system, const RMSDForce& force) {
+    // Create data structures.
+    
+    bool useDouble = cl.getUseDoublePrecision();
+    int elementSize = (useDouble ? sizeof(cl_double) : sizeof(cl_float));
+    int numParticles = force.getParticles().size();
+    if (numParticles == 0)
+        numParticles = system.getNumParticles();
+    referencePos = new OpenCLArray(cl, system.getNumParticles(), 4*elementSize, "referencePos");
+    particles = OpenCLArray::create<cl_int>(cl, numParticles, "particles");
+    buffer = new OpenCLArray(cl, 13, elementSize, "buffer");
+    recordParameters(force);
+    info = new ForceInfo(force);
+    cl.addForce(info);
+    
+    // Create the kernels.
+
+    cl::Program program = cl.createProgram(OpenCLKernelSources::rmsd);
+    kernel1 = cl::Kernel(program, "computeRMSDPart1");
+    kernel2 = cl::Kernel(program, "computeRMSDForces");
+}
+
+void OpenCLCalcRMSDForceKernel::recordParameters(const RMSDForce& force) {
+    // Record the parameters and center the reference positions.
+    
+    vector<int> particleVec = force.getParticles();
+    if (particleVec.size() == 0)
+        for (int i = 0; i < cl.getNumAtoms(); i++)
+            particleVec.push_back(i);
+    vector<Vec3> centeredPositions = force.getReferencePositions();
+    Vec3 center;
+    for (int i : particleVec)
+        center += centeredPositions[i];
+    center /= particleVec.size();
+    for (Vec3& p : centeredPositions)
+        p -= center;
+
+    // Upload them to the device.
+
+    particles->upload(particleVec);
+    if (cl.getUseDoublePrecision()) {
+        vector<mm_double4> pos;
+        for (Vec3 p : centeredPositions)
+            pos.push_back(mm_double4(p[0], p[1], p[2], 0));
+        referencePos->upload(pos);
+    }
+    else {
+        vector<mm_float4> pos;
+        for (Vec3 p : centeredPositions)
+            pos.push_back(mm_float4(p[0], p[1], p[2], 0));
+        referencePos->upload(pos);
+    }
+
+    // Record the sum of the norms of the reference positions.
+
+    sumNormRef = 0.0;
+    for (int i : particleVec) {
+        Vec3 p = centeredPositions[i];
+        sumNormRef += p.dot(p);
+    }
+}
+
+double OpenCLCalcRMSDForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    if (cl.getUseDoublePrecision())
+        return executeImpl<double>(context);
+    return executeImpl<float>(context);
+}
+
+template <class REAL>
+double OpenCLCalcRMSDForceKernel::executeImpl(ContextImpl& context) {
+    // Execute the first kernel.
+
+    int numParticles = particles->getSize();
+    int blockSize = 128;
+    kernel1.setArg<cl_int>(0, numParticles);
+    kernel1.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
+    kernel1.setArg<cl::Buffer>(2, referencePos->getDeviceBuffer());
+    kernel1.setArg<cl::Buffer>(3, particles->getDeviceBuffer());
+    kernel1.setArg<cl::Buffer>(4, buffer->getDeviceBuffer());
+    kernel1.setArg(5, blockSize*sizeof(REAL), NULL);
+    cl.executeKernel(kernel1, blockSize, blockSize);
+    
+    // Download the results, build the F matrix, and find the maximum eigenvalue
+    // and eigenvector.
+
+    vector<REAL> b;
+    buffer->download(b);
+    Array2D<double> F(4, 4);
+    F[0][0] =  b[0*3+0] + b[1*3+1] + b[2*3+2];
+    F[1][0] =  b[1*3+2] - b[2*3+1];
+    F[2][0] =  b[2*3+0] - b[0*3+2];
+    F[3][0] =  b[0*3+1] - b[1*3+0];
+    F[0][1] =  b[1*3+2] - b[2*3+1];
+    F[1][1] =  b[0*3+0] - b[1*3+1] - b[2*3+2];
+    F[2][1] =  b[0*3+1] + b[1*3+0];
+    F[3][1] =  b[0*3+2] + b[2*3+0];
+    F[0][2] =  b[2*3+0] - b[0*3+2];
+    F[1][2] =  b[0*3+1] + b[1*3+0];
+    F[2][2] = -b[0*3+0] + b[1*3+1] - b[2*3+2];
+    F[3][2] =  b[1*3+2] + b[2*3+1];
+    F[0][3] =  b[0*3+1] - b[1*3+0];
+    F[1][3] =  b[0*3+2] + b[2*3+0];
+    F[2][3] =  b[1*3+2] + b[2*3+1];
+    F[3][3] = -b[0*3+0] - b[1*3+1] + b[2*3+2];
+    JAMA::Eigenvalue<double> eigen(F);
+    Array1D<double> values;
+    eigen.getRealEigenvalues(values);
+    Array2D<double> vectors;
+    eigen.getV(vectors);
+
+    // Compute the RMSD.
+
+    double msd = (sumNormRef+b[9]-2*values[3])/numParticles;
+    msd = max(0.0, msd); // Protect against numerical error when the particles are perfectly aligned.
+    double rmsd = sqrt(msd);
+    b[9] = rmsd;
+
+    // Compute the rotation matrix.
+
+    double q[] = {vectors[0][3], vectors[1][3], vectors[2][3], vectors[3][3]};
+    double q00 = q[0]*q[0], q01 = q[0]*q[1], q02 = q[0]*q[2], q03 = q[0]*q[3];
+    double q11 = q[1]*q[1], q12 = q[1]*q[2], q13 = q[1]*q[3];
+    double q22 = q[2]*q[2], q23 = q[2]*q[3];
+    double q33 = q[3]*q[3];
+    b[0] = q00+q11-q22-q33;
+    b[1] = 2*(q12-q03);
+    b[2] = 2*(q13+q02);
+    b[3] = 2*(q12+q03);
+    b[4] = q00-q11+q22-q33;
+    b[5] = 2*(q23-q01);
+    b[6] = 2*(q13-q02);
+    b[7] = 2*(q23+q01);
+    b[8] = q00-q11-q22+q33;
+
+    // Upload it to the device and invoke the kernel to apply forces.
+    
+    buffer->upload(b);
+    kernel2.setArg<cl_int>(0, numParticles);
+    kernel2.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
+    kernel2.setArg<cl::Buffer>(2, referencePos->getDeviceBuffer());
+    kernel2.setArg<cl::Buffer>(3, particles->getDeviceBuffer());
+    kernel2.setArg<cl::Buffer>(4, buffer->getDeviceBuffer());
+    kernel2.setArg<cl::Buffer>(5, cl.getForceBuffers().getDeviceBuffer());
+    cl.executeKernel(kernel2, numParticles);
+    return rmsd;
+}
+
+void OpenCLCalcRMSDForceKernel::copyParametersToContext(ContextImpl& context, const RMSDForce& force) {
+    if (referencePos->getSize() != force.getReferencePositions().size())
+        throw OpenMMException("updateParametersInContext: The number of reference positions has changed");
+    int numParticles = force.getParticles().size();
+    if (numParticles == 0)
+        numParticles = context.getSystem().getNumParticles();
+    if (numParticles != particles->getSize()) {
+        // Recreate the particles array.
+        
+        delete particles;
+        particles = NULL;
+        particles = OpenCLArray::create<cl_int>(cl, numParticles, "particles");
+    }
+    recordParameters(force);
+    
+    // Mark that the current reordering may be invalid.
+    
+    info->updateParticles();
+    cl.invalidateMolecules(info);
 }
 
 OpenCLIntegrateVerletStepKernel::~OpenCLIntegrateVerletStepKernel() {

@@ -96,7 +96,9 @@ double ReferenceRMSDForce::calculateIxn(vector<Vec3>& atomCoordinates, vector<Ve
         int index = particles[i];
         sum += positions[i].dot(positions[i]) + referencePos[index].dot(referencePos[index]);
     }
-    double rmsd = sqrt((sum-2*values[3])/numParticles);
+    double msd = (sum-2*values[3])/numParticles;
+    msd = max(0.0, msd); // Protect against numerical error when the particles are perfectly aligned.
+    double rmsd = sqrt(msd);
 
     // Compute the rotation matrix.
 

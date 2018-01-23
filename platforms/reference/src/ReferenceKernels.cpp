@@ -2058,6 +2058,9 @@ void ReferenceCalcCustomCVForceKernel::copyState(ContextImpl& context, ContextIm
 
 void ReferenceCalcRMSDForceKernel::initialize(const System& system, const RMSDForce& force) {
     particles = force.getParticles();
+    if (particles.size() == 0)
+        for (int i = 0; i < system.getNumParticles(); i++)
+            particles.push_back(i);
     referencePos = force.getReferencePositions();
     Vec3 center;
     for (int i : particles)
@@ -2078,6 +2081,9 @@ void ReferenceCalcRMSDForceKernel::copyParametersToContext(ContextImpl& context,
     if (referencePos.size() != force.getReferencePositions().size())
         throw OpenMMException("updateParametersInContext: The number of reference positions has changed");
     particles = force.getParticles();
+    if (particles.size() == 0)
+        for (int i = 0; i < referencePos.size(); i++)
+            particles.push_back(i);
     referencePos = force.getReferencePositions();
     Vec3 center;
     for (int i : particles)
