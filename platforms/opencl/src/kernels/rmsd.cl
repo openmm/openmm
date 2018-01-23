@@ -78,9 +78,9 @@ __kernel void computeRMSDForces(int numParticles, __global const real4* restrict
         int index = particles[i];
         real3 pos = posq[index].xyz - center;
         real3 refPos = referencePos[index].xyz;
-        real3 rotatedRef = (real3) (buffer[0]*refPos[0] + buffer[3]*refPos[1] + buffer[6]*refPos[2],
-                                    buffer[1]*refPos[0] + buffer[4]*refPos[1] + buffer[7]*refPos[2],
-                                    buffer[2]*refPos[0] + buffer[5]*refPos[1] + buffer[8]*refPos[2]);
+        real3 rotatedRef = (real3) (buffer[0]*refPos.x + buffer[3]*refPos.y + buffer[6]*refPos.z,
+                                    buffer[1]*refPos.x + buffer[4]*refPos.y + buffer[7]*refPos.z,
+                                    buffer[2]*refPos.x + buffer[5]*refPos.y + buffer[8]*refPos.z);
         forceBuffers[index].xyz -= (pos-rotatedRef)*scale;
     }
 }
