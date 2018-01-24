@@ -110,6 +110,8 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
         return new CudaCalcCustomCompoundBondForceKernel(name, platform, cu, context.getSystem());
     if (name == CalcCustomCVForceKernel::Name())
         return new CudaCalcCustomCVForceKernel(name, platform, cu);
+    if (name == CalcRMSDForceKernel::Name())
+        return new CudaCalcRMSDForceKernel(name, platform, cu);
     if (name == CalcCustomManyParticleForceKernel::Name())
         return new CudaCalcCustomManyParticleForceKernel(name, platform, cu, context.getSystem());
     if (name == CalcGayBerneForceKernel::Name())
