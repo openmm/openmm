@@ -4,11 +4,16 @@
 /**
  * Sum a value over all threads.
  */
-real reduceValue(real value, __local real* temp) {
+real reduceValue(real value, __local volatile real* temp) {
     const int thread = get_local_id(0);
     temp[thread] = value;
     barrier(CLK_LOCAL_MEM_FENCE);
-    for (uint step = 1; step < get_local_size(0); step *= 2) {
+    for (uint step = 1; step < 32; step *= 2) {
+        if (thread+step < get_local_size(0) && thread%(2*step) == 0)
+            temp[thread] = temp[thread] + temp[thread+step];
+        SYNC_WARPS
+    }
+    for (uint step = 32; step < get_local_size(0); step *= 2) {
         if (thread+step < get_local_size(0) && thread%(2*step) == 0)
             temp[thread] = temp[thread] + temp[thread+step];
         barrier(CLK_LOCAL_MEM_FENCE);
@@ -20,7 +25,7 @@ real reduceValue(real value, __local real* temp) {
  * Perform the first step of computing the RMSD.  This is executed as a single work group.
  */
 __kernel void computeRMSDPart1(int numParticles, __global const real4* restrict posq, __global const real4* restrict referencePos,
-        __global const int* restrict particles, __global real* buffer, __local real* restrict temp) {
+        __global const int* restrict particles, __global real* buffer, __local volatile real* restrict temp) {
     // Compute the center of the particle positions.
     
     real3 center = (real3) 0;

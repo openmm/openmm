@@ -6887,7 +6887,7 @@ double CudaCalcRMSDForceKernel::executeImpl(ContextImpl& context) {
     // Execute the first kernel.
 
     int numParticles = particles->getSize();
-    int blockSize = 128;
+    int blockSize = 256;
     void* args1[] = {&numParticles, &cu.getPosq().getDevicePointer(), &referencePos->getDevicePointer(),
             &particles->getDevicePointer(), &buffer->getDevicePointer()};
     cu.executeKernel(kernel1, args1, blockSize, blockSize, blockSize*sizeof(REAL));

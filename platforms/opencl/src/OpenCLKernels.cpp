@@ -7167,7 +7167,7 @@ double OpenCLCalcRMSDForceKernel::executeImpl(ContextImpl& context) {
     // Execute the first kernel.
 
     int numParticles = particles->getSize();
-    int blockSize = 128;
+    int blockSize = min(256, (int) kernel1.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(cl.getDevice()));
     kernel1.setArg<cl_int>(0, numParticles);
     kernel1.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
     kernel1.setArg<cl::Buffer>(2, referencePos->getDeviceBuffer());
