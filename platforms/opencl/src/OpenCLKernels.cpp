@@ -7207,7 +7207,11 @@ double OpenCLCalcRMSDForceKernel::executeImpl(ContextImpl& context) {
     // Compute the RMSD.
 
     double msd = (sumNormRef+b[9]-2*values[3])/numParticles;
-    msd = max(0.0, msd); // Protect against numerical error when the particles are perfectly aligned.
+    if (msd < 1e-20) {
+        // The particles are perfectly aligned, so all the forces should be zero.
+        // Numerical error can lead to NaNs, so just return 0 now.
+        return 0.0;
+    }
     double rmsd = sqrt(msd);
     b[9] = rmsd;
 

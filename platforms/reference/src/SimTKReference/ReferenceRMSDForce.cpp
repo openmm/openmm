@@ -97,7 +97,11 @@ double ReferenceRMSDForce::calculateIxn(vector<Vec3>& atomCoordinates, vector<Ve
         sum += positions[i].dot(positions[i]) + referencePos[index].dot(referencePos[index]);
     }
     double msd = (sum-2*values[3])/numParticles;
-    msd = max(0.0, msd); // Protect against numerical error when the particles are perfectly aligned.
+    if (msd < 1e-20) {
+        // The particles are perfectly aligned, so all the forces should be zero.
+        // Numerical error can lead to NaNs, so just return 0 now.
+        return 0.0;
+    }
     double rmsd = sqrt(msd);
 
     // Compute the rotation matrix.
