@@ -1404,8 +1404,9 @@ def _matchResidue(res, template, bondedToAtom, ignoreExternalBonds=False):
 
     candidates = [[] for i in range(numAtoms)]
     for i in range(numAtoms):
+        exactNameMatch = (atoms[i].element is None and any(atom.element is None and atom.name == atoms[i].name for atom in template.atoms))
         for j, atom in enumerate(template.atoms):
-            if (atom.element is not None and atom.element != atoms[i].element) or (atom.element is None and atom.name != atoms[i].name):
+            if (atom.element is not None and atom.element != atoms[i].element) or (exactNameMatch and atom.name != atoms[i].name):
                 continue
             if len(atom.bondedTo) != len(bondedTo[i]):
                 continue

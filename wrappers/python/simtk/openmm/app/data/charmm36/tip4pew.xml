@@ -1,6 +1,6 @@
 <ForceField>
   <Info>
-    <DateGenerated>2017-11-26</DateGenerated>
+    <DateGenerated>2018-01-26</DateGenerated>
     <Source Source="toppar/non_charmm/toppar_water_ions_tip4p_ew.str" md5hash="3f17eb8b2a25e79b52d300ee6b41f847" sourcePackage="charmm36" sourcePackageVersion="toppar_c36_aug15.tgz">toppar/non_charmm/toppar_water_ions_tip4p_ew.str</Source>
     <Reference Reference="H.W. Horn; W.C Swope; J.W. Pitera; J.D. Madura; T.J. Dick; G.L. Hura; T. Head-Gordon. J. Chem. Phys. 120:9665-9678, 2004." forcefield="tip4p-ew">H.W. Horn; W.C Swope; J.W. Pitera; J.D. Madura; T.J. Dick; G.L. Hura; T. Head-Gordon. J. Chem. Phys. 120:9665-9678, 2004.</Reference>
     <Reference Reference="Beglov, D. and Roux, B., Finite Representation of an Infinite Bulk System: Solvent Boundary Potential for Computer Simulations, Journal of Chemical Physics, 1994, 100: 9050-9063" forcefield="ions">Beglov, D. and Roux, B., Finite Representation of an Infinite Bulk System: Solvent Boundary Potential for Computer Simulations, Journal of Chemical Physics, 1994, 100: 9050-9063</Reference>
@@ -32,8 +32,7 @@
       <Atom charge="0.52422" name="H2" type="HT"/>
       <Bond atomName1="OH2" atomName2="H1"/>
       <Bond atomName1="OH2" atomName2="H2"/>
-      <Bond atomName1="H1" atomName2="H2"/>
-      <Bond atomName1="OH2" atomName2="OM"/>
+      <VirtualSite atomName1="OH2" atomName2="H1" atomName3="H2" index="0" p1="0.0125" p2="0" p3="0" siteName="OM" type="localCoords" wo1="1" wo2="0" wo3="0" wx1="-1.0" wx2="0.5" wx3="0.5" wy1="0" wy2="-1" wy3="1"/>
     </Residue>
     <Residue name="OH">
       <Atom charge="-1.32" name="O1" type="OX"/>

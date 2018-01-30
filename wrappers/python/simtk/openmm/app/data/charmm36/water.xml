@@ -1,6 +1,6 @@
 <ForceField>
   <Info>
-    <DateGenerated>2017-11-26</DateGenerated>
+    <DateGenerated>2018-01-26</DateGenerated>
     <Source Source="toppar/toppar_water_ions.str" md5hash="f59e96950d55df9ca4f9b2d1486d7f4f" sourcePackage="charmm36" sourcePackageVersion="toppar_c36_aug15.tgz">toppar/toppar_water_ions.str</Source>
     <Reference Reference="W.L. Jorgensen; J.Chandrasekhar; J.D. Madura; R.W. Impey; M.L. Klein; &quot;Comparison of simple potential functions for simulating liquid water&quot;, J. Chem. Phys. 79 926-935 (1983)." forcefield="tip3p">W.L. Jorgensen; J.Chandrasekhar; J.D. Madura; R.W. Impey; M.L. Klein; "Comparison of simple potential functions for simulating liquid water", J. Chem. Phys. 79 926-935 (1983).</Reference>
     <Reference Reference="Beglov, D. and Roux, B., Finite Representation of an Infinite Bulk System: Solvent Boundary Potential for Computer Simulations, Journal of Chemical Physics, 1994, 100: 9050-9063" forcefield="ions">Beglov, D. and Roux, B., Finite Representation of an Infinite Bulk System: Solvent Boundary Potential for Computer Simulations, Journal of Chemical Physics, 1994, 100: 9050-9063</Reference>
@@ -26,14 +26,6 @@
   </AtomTypes>
   <Residues>
     <Residue name="TIP3">
-      <Atom charge="-0.834" name="OH2" type="OT"/>
-      <Atom charge="0.417" name="H1" type="HT"/>
-      <Atom charge="0.417" name="H2" type="HT"/>
-      <Bond atomName1="OH2" atomName2="H1"/>
-      <Bond atomName1="OH2" atomName2="H2"/>
-      <Bond atomName1="H1" atomName2="H2"/>
-    </Residue>
-    <Residue name="TP3M">
       <Atom charge="-0.834" name="OH2" type="OT"/>
       <Atom charge="0.417" name="H1" type="HT"/>
       <Atom charge="0.417" name="H2" type="HT"/>
