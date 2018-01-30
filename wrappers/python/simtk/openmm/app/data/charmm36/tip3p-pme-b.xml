@@ -1,6 +1,6 @@
 <ForceField>
   <Info>
-    <DateGenerated>2017-11-26</DateGenerated>
+    <DateGenerated>2018-01-26</DateGenerated>
     <Source Source="toppar/non_charmm/toppar_water_ions_tip3p_pme_b.str" md5hash="52fc5f1cff9a0a88ea24adf588612a54" sourcePackage="charmm36" sourcePackageVersion="toppar_c36_aug15.tgz">toppar/non_charmm/toppar_water_ions_tip3p_pme_b.str</Source>
     <Reference Reference="D.J. Price and C.L. Brooks III. A modified TIP3P water potential for simulation with Ewald summation. J. Chem. Phys. 121:10096-10103, 2004." forcefield="tip3p-pme-b">D.J. Price and C.L. Brooks III. A modified TIP3P water potential for simulation with Ewald summation. J. Chem. Phys. 121:10096-10103, 2004.</Reference>
     <Reference Reference="Beglov, D. and Roux, B., Finite Representation of an Infinite Bulk System: Solvent Boundary Potential for Computer Simulations, Journal of Chemical Physics, 1994, 100: 9050-9063" forcefield="ions">Beglov, D. and Roux, B., Finite Representation of an Infinite Bulk System: Solvent Boundary Potential for Computer Simulations, Journal of Chemical Physics, 1994, 100: 9050-9063</Reference>
@@ -30,7 +30,6 @@
       <Atom charge="0.415" name="H2" type="HT"/>
       <Bond atomName1="OH2" atomName2="H1"/>
       <Bond atomName1="OH2" atomName2="H2"/>
-      <Bond atomName1="H1" atomName2="H2"/>
     </Residue>
     <Residue name="OH">
       <Atom charge="-1.32" name="O1" type="OX"/>
