@@ -689,14 +689,14 @@ struct CudaContext::MoleculeGroup {
 /**
  * This abstract class defines a task to be executed on the worker thread.
  */
-class CudaContext::WorkTask {
+class OPENMM_EXPORT_CUDA CudaContext::WorkTask {
 public:
     virtual void execute() = 0;
     virtual ~WorkTask() {
     }
 };
 
-class CudaContext::WorkThread {
+class OPENMM_EXPORT_CUDA CudaContext::WorkThread {
 public:
     struct ThreadData;
     WorkThread();
@@ -731,7 +731,7 @@ private:
  * Objects that need to know when reordering happens should create a ReorderListener
  * and register it by calling addReorderListener().
  */
-class CudaContext::ReorderListener {
+class OPENMM_EXPORT_CUDA CudaContext::ReorderListener {
 public:
     virtual void execute() = 0;
     virtual ~ReorderListener() {
@@ -744,7 +744,7 @@ public:
  * that need to be performed at a nonstandard point in the process.  After creating a
  * ForcePreComputation, register it by calling addForcePreComputation().
  */
-class CudaContext::ForcePreComputation {
+class OPENMM_EXPORT_CUDA CudaContext::ForcePreComputation {
 public:
     virtual ~ForcePreComputation() {
     }
@@ -762,7 +762,7 @@ public:
  * that need to be performed at a nonstandard point in the process.  After creating a
  * ForcePostComputation, register it by calling addForcePostComputation().
  */
-class CudaContext::ForcePostComputation {
+class OPENMM_EXPORT_CUDA CudaContext::ForcePostComputation {
 public:
     virtual ~ForcePostComputation() {
     }
