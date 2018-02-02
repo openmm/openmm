@@ -1,6 +1,6 @@
 <ForceField>
   <Info>
-    <DateGenerated>2017-11-26</DateGenerated>
+    <DateGenerated>2018-01-26</DateGenerated>
     <Source Source="toppar/non_charmm/toppar_water_ions_tip4p_2005.str" md5hash="78828666bfb4ab391baf9fac0e5c3442" sourcePackage="charmm36" sourcePackageVersion="toppar_c36_aug15.tgz">toppar/non_charmm/toppar_water_ions_tip4p_2005.str</Source>
     <Reference Reference="J.L.F. Abascal and C. Vega. A general purpose model for the condensed phases of water: TIP4P/2005 J. Chem. Phys. 123:234505, 2005." forcefield="tip4p-2005">J.L.F. Abascal and C. Vega. A general purpose model for the condensed phases of water: TIP4P/2005 J. Chem. Phys. 123:234505, 2005.</Reference>
     <Reference Reference="Beglov, D. and Roux, B., Finite Representation of an Infinite Bulk System: Solvent Boundary Potential for Computer Simulations, Journal of Chemical Physics, 1994, 100: 9050-9063" forcefield="ions">Beglov, D. and Roux, B., Finite Representation of an Infinite Bulk System: Solvent Boundary Potential for Computer Simulations, Journal of Chemical Physics, 1994, 100: 9050-9063</Reference>
@@ -32,8 +32,7 @@
       <Atom charge="0.5564" name="H2" type="HT"/>
       <Bond atomName1="OH2" atomName2="H1"/>
       <Bond atomName1="OH2" atomName2="H2"/>
-      <Bond atomName1="H1" atomName2="H2"/>
-      <Bond atomName1="OH2" atomName2="OM"/>
+      <VirtualSite atomName1="OH2" atomName2="H1" atomName3="H2" index="0" p1="0.015459999999999998" p2="0" p3="0" siteName="OM" type="localCoords" wo1="1" wo2="0" wo3="0" wx1="-1.0" wx2="0.5" wx3="0.5" wy1="0" wy2="-1" wy3="1"/>
     </Residue>
     <Residue name="OH">
       <Atom charge="-1.32" name="O1" type="OX"/>

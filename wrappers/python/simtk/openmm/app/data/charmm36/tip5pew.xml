@@ -1,6 +1,6 @@
 <ForceField>
   <Info>
-    <DateGenerated>2017-11-26</DateGenerated>
+    <DateGenerated>2018-01-26</DateGenerated>
     <Source Source="toppar/non_charmm/toppar_water_ions_tip5p_ew.str" md5hash="a632f2616c2d3d500b76696074f9527c" sourcePackage="charmm36" sourcePackageVersion="toppar_c36_aug15.tgz">toppar/non_charmm/toppar_water_ions_tip5p_ew.str</Source>
     <Reference Reference="Rick, S.W. A reoptimization of the five-site water potential (TIP5P) for use with Ewald sums. J Chem Phys 120: 6085-93, 2004." forcefield="tip5p-ew">Rick, S.W. A reoptimization of the five-site water potential (TIP5P) for use with Ewald sums. J Chem Phys 120: 6085-93, 2004.</Reference>
     <Reference Reference="Beglov, D. and Roux, B., Finite Representation of an Infinite Bulk System: Solvent Boundary Potential for Computer Simulations, Journal of Chemical Physics, 1994, 100: 9050-9063" forcefield="ions">Beglov, D. and Roux, B., Finite Representation of an Infinite Bulk System: Solvent Boundary Potential for Computer Simulations, Journal of Chemical Physics, 1994, 100: 9050-9063</Reference>
@@ -33,9 +33,8 @@
       <Atom charge="-0.241" name="LP2" type="LP"/>
       <Bond atomName1="OH2" atomName2="H1"/>
       <Bond atomName1="OH2" atomName2="H2"/>
-      <Bond atomName1="H1" atomName2="H2"/>
-      <Bond atomName1="OH2" atomName2="LP1"/>
-      <Bond atomName1="OH2" atomName2="LP2"/>
+      <VirtualSite atomName1="OH2" atomName2="H1" atomName3="H2" index="0" p1="-0.04041512765608711" p2="0" p3="0.057154330164408206" siteName="LP1" type="localCoords" wo1="1" wo2="0" wo3="0" wx1="-1.0" wx2="0.5" wx3="0.5" wy1="0" wy2="-1" wy3="1"/>
+      <VirtualSite atomName1="OH2" atomName2="H1" atomName3="H2" index="1" p1="-0.04041512765608711" p2="0" p3="-0.057154330164408206" siteName="LP2" type="localCoords" wo1="1" wo2="0" wo3="0" wx1="-1.0" wx2="0.5" wx3="0.5" wy1="0" wy2="-1" wy3="1"/>
     </Residue>
     <Residue name="OH">
       <Atom charge="-1.32" name="O1" type="OX"/>

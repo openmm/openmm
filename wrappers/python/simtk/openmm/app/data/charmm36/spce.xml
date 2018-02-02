@@ -1,8 +1,8 @@
 <ForceField>
   <Info>
-    <DateGenerated>2017-11-26</DateGenerated>
-    <Source Source="toppar/non_charmm/toppar_water_ions_spc.str" md5hash="0d8c56cbaa3d3fa6fd0352e11826c12d" sourcePackage="charmm36" sourcePackageVersion="toppar_c36_aug15.tgz">toppar/non_charmm/toppar_water_ions_spc.str</Source>
-    <Reference Reference="H.J.C. Berendsen, J.P.M. Postma, W.F. van Gunsteren, and J. Hermans. INTERACTION MODELS FOR WATER IN RELATION TO PROTEIN HYDRATION In Intermolecular Forces, edited by B. Pullman (Reidel, Dordrecht, 1981), p. 331" forcefield="spc">H.J.C. Berendsen, J.P.M. Postma, W.F. van Gunsteren, and J. Hermans. INTERACTION MODELS FOR WATER IN RELATION TO PROTEIN HYDRATION In Intermolecular Forces, edited by B. Pullman (Reidel, Dordrecht, 1981), p. 331</Reference>
+    <DateGenerated>2018-01-26</DateGenerated>
+    <Source Source="toppar/non_charmm/toppar_water_ions_spc_e.str" md5hash="7a0187836503ba10b8f8207f06f51075" sourcePackage="charmm36" sourcePackageVersion="toppar_c36_aug15.tgz">toppar/non_charmm/toppar_water_ions_spc_e.str</Source>
+    <Reference Reference="H.J.C. Berendsen, J. R. Grigera, and T. P. Straatsma. The Missing Term in Effective Pair Potentials. J. Phys. Chem 91:6269-6271, 1987." forcefield="spc-e">H.J.C. Berendsen, J. R. Grigera, and T. P. Straatsma. The Missing Term in Effective Pair Potentials. J. Phys. Chem 91:6269-6271, 1987.</Reference>
     <Reference Reference="Beglov, D. and Roux, B., Finite Representation of an Infinite Bulk System: Solvent Boundary Potential for Computer Simulations, Journal of Chemical Physics, 1994, 100: 9050-9063" forcefield="ions">Beglov, D. and Roux, B., Finite Representation of an Infinite Bulk System: Solvent Boundary Potential for Computer Simulations, Journal of Chemical Physics, 1994, 100: 9050-9063</Reference>
     <Reference Reference="['Stote, R.H. and Karplus, M. Zinc Binding in Proteins and Solution: A Simple but Accurate Nonbonded Representation, PROTEINS: Structure, Function, and Genetics 23:12-31 (1995)']" forcefield="ions" type="zinc">['Stote, R.H. and Karplus, M. Zinc Binding in Proteins and Solution: A Simple but Accurate Nonbonded Representation, PROTEINS: Structure, Function, and Genetics 23:12-31 (1995)']</Reference>
   </Info>
@@ -24,13 +24,12 @@
     <Type class="CLA" element="Cl" mass="35.45" name="CLA"/>
   </AtomTypes>
   <Residues>
-    <Residue name="SPC">
-      <Atom charge="-0.8068" name="OH2" type="OT"/>
-      <Atom charge="0.4034" name="H1" type="HT"/>
-      <Atom charge="0.4034" name="H2" type="HT"/>
+    <Residue name="SPCE">
+      <Atom charge="-0.8476" name="OH2" type="OT"/>
+      <Atom charge="0.4238" name="H1" type="HT"/>
+      <Atom charge="0.4238" name="H2" type="HT"/>
       <Bond atomName1="OH2" atomName2="H1"/>
       <Bond atomName1="OH2" atomName2="H2"/>
-      <Bond atomName1="H1" atomName2="H2"/>
     </Residue>
     <Residue name="OH">
       <Atom charge="-1.32" name="O1" type="OX"/>
