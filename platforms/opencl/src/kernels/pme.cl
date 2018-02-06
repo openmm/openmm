@@ -226,6 +226,8 @@ __kernel void gridSpreadCharge(__global const real4* restrict posq, __global con
 #else
         const real charge = pos.w;
 #endif
+        if (charge == 0)
+            continue;
         bool hasComputedThetas = false;
         for (int ix = 0; ix < PME_ORDER; ix++) {
             int xindex = gridIndex.x+ix;
