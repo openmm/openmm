@@ -4,11 +4,16 @@
 /**
  * Sum a value over all threads.
  */
-__device__ real reduceValue(real value, real* temp) {
+__device__ real reduceValue(real value, volatile real* temp) {
     const int thread = threadIdx.x;
     temp[thread] = value;
     __syncthreads();
-    for (uint step = 1; step < blockDim.x; step *= 2) {
+    for (uint step = 1; step < 32; step *= 2) {
+        if (thread+step < blockDim.x && thread%(2*step) == 0)
+            temp[thread] = temp[thread] + temp[thread+step];
+        SYNC_WARPS
+    }
+    for (uint step = 32; step < blockDim.x; step *= 2) {
         if (thread+step < blockDim.x && thread%(2*step) == 0)
             temp[thread] = temp[thread] + temp[thread+step];
         __syncthreads();
@@ -21,7 +26,7 @@ __device__ real reduceValue(real value, real* temp) {
  */
 extern "C" __global__ void computeRMSDPart1(int numParticles, const real4* __restrict__ posq, const real4* __restrict__ referencePos,
          const int* __restrict__ particles, real* buffer) {
-    extern __shared__ real temp[];
+    extern __shared__ volatile real temp[];
 
     // Compute the center of the particle positions.
     

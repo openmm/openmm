@@ -762,6 +762,26 @@ where :math:`m_i` and :math:`\mathbf{v}_i` are the mass and velocity of particle
 \ *i*\ .  It then subtracts :math:`\mathbf{v}_\text{CM}` from the velocity of every
 particle.
 
+RMSDForce
+*********
+
+RMSDForce computes the root-mean-squared deviation (RMSD) between the current
+particle positions :math:`\mathbf{x}_i` and a set of reference positions
+:math:`\mathbf{x}_i^\text{ref}`:
+
+.. math::
+   \text{RMSD} = \sqrt{\frac{\sum_{i} \| \mathbf{x}_i - \mathbf{x}_i^\text{ref} \|^2}{N}}
+
+Before computing this, the reference positions are first translated and rotated
+so as to minimize the RMSD.  The computed value is therefore :math:`argmin(\text{RMSD})`,
+where the :math:`argmin` is taken over all possible translations and rotations.
+
+This force is normally used with a CustomCVForce (see Section :ref:`customcvforce`).
+One rarely wants a force whose energy exactly equals the RMSD, but there are many
+situations where it is useful to have a restraining or biasing force that depends
+on the RMSD in some way.
+
+
 Custom Forces
 #############
 
@@ -1157,6 +1177,8 @@ specified in three ways:
 * Global parameters have a single, fixed value.
 * Per-donor parameters are defined by specifying a value for each donor group.
 * Per-acceptor parameters are defined by specifying a value for each acceptor group.
+
+.. _customcvforce:
 
 CustomCVForce
 *************

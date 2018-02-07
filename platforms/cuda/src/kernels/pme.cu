@@ -35,6 +35,14 @@ extern "C" __global__ void gridSpreadCharge(const real4* __restrict__ posq, real
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
         int atom = pmeAtomGridIndex[i].x;
         real4 pos = posq[atom];
+#ifdef USE_LJPME
+        const float2 sigEps = sigmaEpsilon[atom];
+        const real charge = 8*sigEps.x*sigEps.x*sigEps.x*sigEps.y;
+#else
+        const real charge = pos.w;
+#endif
+        if (charge == 0)
+            continue;
         APPLY_PERIODIC_TO_POS(pos)
         real3 t = make_real3(pos.x*recipBoxVecX.x+pos.y*recipBoxVecY.x+pos.z*recipBoxVecZ.x,
                              pos.y*recipBoxVecY.y+pos.z*recipBoxVecZ.y,
@@ -67,12 +75,6 @@ extern "C" __global__ void gridSpreadCharge(const real4* __restrict__ posq, real
         
         // Spread the charge from this atom onto each grid point.
         
-#ifdef USE_LJPME
-        const float2 sigEps = sigmaEpsilon[atom];
-        const real charge = 8*sigEps.x*sigEps.x*sigEps.x*sigEps.y;
-#else
-        const real charge = pos.w;
-#endif
         for (int ix = 0; ix < PME_ORDER; ix++) {
             int xbase = gridIndex.x+ix;
             xbase -= (xbase >= GRID_SIZE_X ? GRID_SIZE_X : 0);
