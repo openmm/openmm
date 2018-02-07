@@ -1279,6 +1279,59 @@ private:
 };
 
 /**
+ * This kernel is invoked by RMSDForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CudaCalcRMSDForceKernel : public CalcRMSDForceKernel {
+public:
+    CudaCalcRMSDForceKernel(std::string name, const Platform& platform, CudaContext& cu) : CalcRMSDForceKernel(name, platform),
+            cu(cu), referencePos(NULL), particles(NULL), buffer(NULL) {
+    }
+    ~CudaCalcRMSDForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the RMSDForce this kernel will be used for
+     */
+    void initialize(const System& system, const RMSDForce& force);
+    /**
+     * Record the reference positions and particle indices.
+     */
+    void recordParameters(const RMSDForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * This is the internal implementation of execute(), templatized on whether we're
+     * using single or double precision.
+     */
+    template <class REAL>
+    double executeImpl(ContextImpl& context);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the RMSDForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const RMSDForce& force);
+private:
+    class ForceInfo;
+    CudaContext& cu;
+    ForceInfo* info;
+    double sumNormRef;
+    CudaArray* referencePos;
+    CudaArray* particles;
+    CudaArray* buffer;
+    CUfunction kernel1, kernel2;
+};
+
+/**
  * This kernel is invoked by VerletIntegrator to take one time step.
  */
 class CudaIntegrateVerletStepKernel : public IntegrateVerletStepKernel {

@@ -415,10 +415,13 @@ int Py_SequenceToVecVecVecDouble(PyObject* obj, std::vector<std::vector<std::vec
     $1 = &v;
 }
 %typemap(typecheck, precedence=SWIG_TYPECHECK_DOUBLE_ARRAY, fragment="Py_SequenceToVecVec3") const std::vector<Vec3>& {
-    std::vector<double> v;
+    std::vector<Vec3> v;
     int res=0;
     res = Py_SequenceToVecVec3($input, v);
     $1 = SWIG_IsOK(res);
+}
+%typemap(out) const std::vector<Vec3>& {
+    $result = copyVVec3ToList(*$1);
 }
 
 

@@ -57,6 +57,7 @@
 #include "openmm/NonbondedForce.h"
 #include "openmm/PeriodicTorsionForce.h"
 #include "openmm/RBTorsionForce.h"
+#include "openmm/RMSDForce.h"
 #include "openmm/System.h"
 #include "openmm/TabulatedFunction.h"
 #include "openmm/VariableLangevinIntegrator.h"
@@ -92,6 +93,7 @@
 #include "openmm/serialization/NonbondedForceProxy.h"
 #include "openmm/serialization/PeriodicTorsionForceProxy.h"
 #include "openmm/serialization/RBTorsionForceProxy.h"
+#include "openmm/serialization/RMSDForceProxy.h"
 #include "openmm/serialization/StateProxy.h"
 #include "openmm/serialization/SystemProxy.h"
 #include "openmm/serialization/TabulatedFunctionProxies.h"
@@ -148,6 +150,7 @@ extern "C" void registerSerializationProxies() {
     SerializationProxy::registerProxy(typeid(NonbondedForce), new NonbondedForceProxy());
     SerializationProxy::registerProxy(typeid(PeriodicTorsionForce), new PeriodicTorsionForceProxy());
     SerializationProxy::registerProxy(typeid(RBTorsionForce), new RBTorsionForceProxy());
+    SerializationProxy::registerProxy(typeid(RMSDForce), new RMSDForceProxy());
     SerializationProxy::registerProxy(typeid(System), new SystemProxy());
     SerializationProxy::registerProxy(typeid(State), new StateProxy());
     SerializationProxy::registerProxy(typeid(VariableLangevinIntegrator), new VariableLangevinIntegratorProxy());

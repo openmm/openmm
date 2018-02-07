@@ -453,5 +453,7 @@ UNITS = {
 ("DrudeSCFIntegrator", "getMinimizationErrorTolerance") : ("unit.kilojoules_per_mole/unit.nanometer", ()),
 ("RPMDIntegrator", "getContractions") : (None, ()),
 ("RPMDIntegrator", "getTotalEnergy") : ("unit.kilojoules_per_mole", ()),
+("RMSDForce", "getReferencePositions") : ("unit.nanometer", ()),
+("RMSDForce", "getParticles") : (None, ()),
 }
 

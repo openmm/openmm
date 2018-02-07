@@ -57,6 +57,7 @@
 #include "ReferenceMonteCarloBarostat.h"
 #include "ReferenceProperDihedralBond.h"
 #include "ReferenceRbDihedralBond.h"
+#include "ReferenceRMSDForce.h"
 #include "ReferenceStochasticDynamics.h"
 #include "ReferenceTabulatedFunction.h"
 #include "ReferenceVariableStochasticDynamics.h"
@@ -2053,6 +2054,43 @@ void ReferenceCalcCustomCVForceKernel::copyState(ContextImpl& context, ContextIm
     map<string, double> innerParameters = innerContext.getParameters();
     for (auto& param : innerParameters)
         innerContext.setParameter(param.first, context.getParameter(param.first));
+}
+
+void ReferenceCalcRMSDForceKernel::initialize(const System& system, const RMSDForce& force) {
+    particles = force.getParticles();
+    if (particles.size() == 0)
+        for (int i = 0; i < system.getNumParticles(); i++)
+            particles.push_back(i);
+    referencePos = force.getReferencePositions();
+    Vec3 center;
+    for (int i : particles)
+        center += referencePos[i];
+    center /= particles.size();
+    for (Vec3& p : referencePos)
+        p -= center;
+}
+
+double ReferenceCalcRMSDForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    vector<Vec3>& posData = extractPositions(context);
+    vector<Vec3>& forceData = extractForces(context);
+    ReferenceRMSDForce rmsd(referencePos, particles);
+    return rmsd.calculateIxn(posData, forceData);
+}
+
+void ReferenceCalcRMSDForceKernel::copyParametersToContext(ContextImpl& context, const RMSDForce& force) {
+    if (referencePos.size() != force.getReferencePositions().size())
+        throw OpenMMException("updateParametersInContext: The number of reference positions has changed");
+    particles = force.getParticles();
+    if (particles.size() == 0)
+        for (int i = 0; i < referencePos.size(); i++)
+            particles.push_back(i);
+    referencePos = force.getReferencePositions();
+    Vec3 center;
+    for (int i : particles)
+        center += referencePos[i];
+    center /= particles.size();
+    for (Vec3& p : referencePos)
+        p -= center;
 }
 
 ReferenceIntegrateVerletStepKernel::~ReferenceIntegrateVerletStepKernel() {

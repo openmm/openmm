@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2017 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -1254,6 +1254,59 @@ private:
     OpenCLArray* invAtomOrder;
     OpenCLArray* innerInvAtomOrder;
     cl::Kernel copyStateKernel, copyForcesKernel, addForcesKernel;
+};
+
+/**
+ * This kernel is invoked by RMSDForce to calculate the forces acting on the system and the energy of the system.
+ */
+class OpenCLCalcRMSDForceKernel : public CalcRMSDForceKernel {
+public:
+    OpenCLCalcRMSDForceKernel(std::string name, const Platform& platform, OpenCLContext& cl) : CalcRMSDForceKernel(name, platform),
+            cl(cl), referencePos(NULL), particles(NULL), buffer(NULL) {
+    }
+    ~OpenCLCalcRMSDForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the RMSDForce this kernel will be used for
+     */
+    void initialize(const System& system, const RMSDForce& force);
+    /**
+     * Record the reference positions and particle indices.
+     */
+    void recordParameters(const RMSDForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * This is the internal implementation of execute(), templatized on whether we're
+     * using single or double precision.
+     */
+    template <class REAL>
+    double executeImpl(ContextImpl& context);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the RMSDForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const RMSDForce& force);
+private:
+    class ForceInfo;
+    OpenCLContext& cl;
+    ForceInfo* info;
+    double sumNormRef;
+    OpenCLArray* referencePos;
+    OpenCLArray* particles;
+    OpenCLArray* buffer;
+    cl::Kernel kernel1, kernel2;
 };
 
 /**

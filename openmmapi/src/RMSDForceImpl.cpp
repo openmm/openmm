@@ -1,6 +1,3 @@
-#ifndef OPENMM_H_
-#define OPENMM_H_
-
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -9,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2017 Stanford University and the Authors.      *
+ * Portions copyright (c) 2018 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,50 +29,62 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/AndersenThermostat.h"
-#include "openmm/BrownianIntegrator.h"
-#include "openmm/CMAPTorsionForce.h"
-#include "openmm/CMMotionRemover.h"
-#include "openmm/CompoundIntegrator.h"
-#include "openmm/CustomBondForce.h"
-#include "openmm/CustomCentroidBondForce.h"
-#include "openmm/CustomCompoundBondForce.h"
-#include "openmm/CustomAngleForce.h"
-#include "openmm/CustomTorsionForce.h"
-#include "openmm/CustomExternalForce.h"
-#include "openmm/CustomCVForce.h"
-#include "openmm/CustomGBForce.h"
-#include "openmm/CustomHbondForce.h"
-#include "openmm/CustomIntegrator.h"
-#include "openmm/CustomManyParticleForce.h"
-#include "openmm/CustomNonbondedForce.h"
-#include "openmm/Force.h"
-#include "openmm/GayBerneForce.h"
-#include "openmm/GBSAOBCForce.h"
-#include "openmm/HarmonicAngleForce.h"
-#include "openmm/HarmonicBondForce.h"
-#include "openmm/Integrator.h"
-#include "openmm/LangevinIntegrator.h"
-#include "openmm/LocalEnergyMinimizer.h"
-#include "openmm/MonteCarloAnisotropicBarostat.h"
-#include "openmm/MonteCarloBarostat.h"
-#include "openmm/MonteCarloMembraneBarostat.h"
-#include "openmm/NonbondedForce.h"
-#include "openmm/Context.h"
 #include "openmm/OpenMMException.h"
-#include "openmm/PeriodicTorsionForce.h"
-#include "openmm/RBTorsionForce.h"
-#include "openmm/RMSDForce.h"
-#include "openmm/State.h"
-#include "openmm/System.h"
-#include "openmm/TabulatedFunction.h"
-#include "openmm/Units.h"
-#include "openmm/VariableLangevinIntegrator.h"
-#include "openmm/VariableVerletIntegrator.h"
-#include "openmm/Vec3.h"
-#include "openmm/VerletIntegrator.h"
-#include "openmm/VirtualSite.h"
-#include "openmm/Platform.h"
-#include "openmm/serialization/XmlSerializer.h"
+#include "openmm/internal/ContextImpl.h"
+#include "openmm/internal/RMSDForceImpl.h"
+#include "openmm/kernels.h"
+#include <set>
+#include <sstream>
 
-#endif /*OPENMM_H_*/
+using namespace OpenMM;
+using namespace std;
+
+RMSDForceImpl::RMSDForceImpl(const RMSDForce& owner) : owner(owner) {
+}
+
+RMSDForceImpl::~RMSDForceImpl() {
+}
+
+void RMSDForceImpl::initialize(ContextImpl& context) {
+    kernel = context.getPlatform().createKernel(CalcRMSDForceKernel::Name(), context);
+
+    // Check for errors in the specification of particles.
+    const System& system = context.getSystem();
+    int numParticles = system.getNumParticles();
+    if (owner.getReferencePositions().size() != numParticles)
+        throw OpenMMException("RMSDForce: Number of reference positions does not equal number of particles in the System");
+    set<int> particles;
+    for (int i : owner.getParticles()) {
+        if (i < 0 || i >= numParticles) {
+            stringstream msg;
+            msg << "RMSDForce: Illegal particle index for RMSD: ";
+            msg << i;
+            throw OpenMMException(msg.str());
+        }
+        if (particles.find(i) != particles.end()) {
+            stringstream msg;
+            msg << "RMSDForce: Duplicated particle index for RMSD: ";
+            msg << i;
+            throw OpenMMException(msg.str());
+        }
+        particles.insert(i);
+    }
+    kernel.getAs<CalcRMSDForceKernel>().initialize(context.getSystem(), owner);
+}
+
+double RMSDForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
+    if ((groups&(1<<owner.getForceGroup())) != 0)
+        return kernel.getAs<CalcRMSDForceKernel>().execute(context, includeForces, includeEnergy);
+    return 0.0;
+}
+
+vector<string> RMSDForceImpl::getKernelNames() {
+    vector<string> names;
+    names.push_back(CalcRMSDForceKernel::Name());
+    return names;
+}
+
+void RMSDForceImpl::updateParametersInContext(ContextImpl& context) {
+    kernel.getAs<CalcRMSDForceKernel>().copyParametersToContext(context, owner);
+    context.systemChanged();
+}
