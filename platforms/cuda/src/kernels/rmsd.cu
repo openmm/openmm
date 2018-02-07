@@ -6,6 +6,7 @@
  */
 __device__ real reduceValue(real value, volatile real* temp) {
     const int thread = threadIdx.x;
+    __syncthreads();
     temp[thread] = value;
     __syncthreads();
     for (uint step = 1; step < 32; step *= 2) {
