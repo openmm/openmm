@@ -7,7 +7,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -38,6 +38,7 @@
 #include "openmm/VerletIntegrator.h"
 #include "openmm/VirtualSite.h"
 #include "sfmt/SFMT.h"
+#include <algorithm>
 #include <iostream>
 #include <vector>
 
