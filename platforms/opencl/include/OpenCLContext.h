@@ -803,14 +803,14 @@ struct OpenCLContext::MoleculeGroup {
 /**
  * This abstract class defines a task to be executed on the worker thread.
  */
-class OpenCLContext::WorkTask {
+class OPENMM_EXPORT_OPENCL OpenCLContext::WorkTask {
 public:
     virtual void execute() = 0;
     virtual ~WorkTask() {
     }
 };
 
-class OpenCLContext::WorkThread {
+class OPENMM_EXPORT_OPENCL OpenCLContext::WorkThread {
 public:
     struct ThreadData;
     WorkThread();
@@ -845,7 +845,7 @@ private:
  * Objects that need to know when reordering happens should create a ReorderListener
  * and register it by calling addReorderListener().
  */
-class OpenCLContext::ReorderListener {
+class OPENMM_EXPORT_OPENCL OpenCLContext::ReorderListener {
 public:
     virtual void execute() = 0;
     virtual ~ReorderListener() {
@@ -858,7 +858,7 @@ public:
  * that need to be performed at a nonstandard point in the process.  After creating a
  * ForcePreComputation, register it by calling addForcePreComputation().
  */
-class OpenCLContext::ForcePreComputation {
+class OPENMM_EXPORT_OPENCL OpenCLContext::ForcePreComputation {
 public:
     virtual ~ForcePreComputation() {
     }
@@ -876,7 +876,7 @@ public:
  * that need to be performed at a nonstandard point in the process.  After creating a
  * ForcePostComputation, register it by calling addForcePostComputation().
  */
-class OpenCLContext::ForcePostComputation {
+class OPENMM_EXPORT_OPENCL OpenCLContext::ForcePostComputation {
 public:
     virtual ~ForcePostComputation() {
     }
