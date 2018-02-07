@@ -11,7 +11,7 @@ real reduceValue(real value, __local volatile real* temp) {
     for (uint step = 1; step < 32; step *= 2) {
         if (thread+step < get_local_size(0) && thread%(2*step) == 0)
             temp[thread] = temp[thread] + temp[thread+step];
-        SYNC_WARPS
+        SYNC_WARPS;
     }
     for (uint step = 32; step < get_local_size(0); step *= 2) {
         if (thread+step < get_local_size(0) && thread%(2*step) == 0)
