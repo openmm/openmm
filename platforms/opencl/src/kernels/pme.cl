@@ -110,6 +110,14 @@ __kernel void gridSpreadCharge(__global const real4* restrict posq, __global con
     for (int i = get_global_id(0); i < NUM_ATOMS; i += get_global_size(0)) {
         int atom = pmeAtomGridIndex[i].x;
         real4 pos = posq[atom];
+#ifdef USE_LJPME
+        const float2 sigEps = sigmaEpsilon[atom];
+        const real charge = 8*sigEps.x*sigEps.x*sigEps.x*sigEps.y;
+#else
+        const real charge = pos.w;
+#endif
+        if (charge == 0)
+            continue;
         APPLY_PERIODIC_TO_POS(pos)
         real3 t = (real3) (pos.x*recipBoxVecX.x+pos.y*recipBoxVecY.x+pos.z*recipBoxVecZ.x,
                            pos.y*recipBoxVecY.y+pos.z*recipBoxVecZ.y,
@@ -142,12 +150,6 @@ __kernel void gridSpreadCharge(__global const real4* restrict posq, __global con
 
         // Spread the charge from this atom onto each grid point.
 
-#ifdef USE_LJPME
-        const float2 sigEps = sigmaEpsilon[atom];
-        const real charge = 8*sigEps.x*sigEps.x*sigEps.x*sigEps.y;
-#else
-        const real charge = pos.w;
-#endif
         for (int ix = 0; ix < PME_ORDER; ix++) {
             int xindex = gridIndex.x+ix;
             xindex -= (xindex >= GRID_SIZE_X ? GRID_SIZE_X : 0);
@@ -224,6 +226,8 @@ __kernel void gridSpreadCharge(__global const real4* restrict posq, __global con
 #else
         const real charge = pos.w;
 #endif
+        if (charge == 0)
+            continue;
         bool hasComputedThetas = false;
         for (int ix = 0; ix < PME_ORDER; ix++) {
             int xindex = gridIndex.x+ix;
