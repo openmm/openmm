@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -39,11 +39,11 @@
 #include <pthread.h>
 #include <cl.hpp>
 #include "windowsExportOpenCL.h"
+#include "OpenCLArray.h"
 #include "OpenCLPlatform.h"
 
 namespace OpenMM {
 
-class OpenCLArray;
 class OpenCLForceInfo;
 class OpenCLIntegrationUtilities;
 class OpenCLExpressionUtilities;
@@ -227,49 +227,49 @@ public:
      * Get the array which contains the position (the xyz components) and charge (the w component) of each atom.
      */
     OpenCLArray& getPosq() {
-        return *posq;
+        return posq;
     }
     /**
      * Get the array which contains a correction to the position of each atom.  This only exists if getUseMixedPrecision() returns true.
      */
     OpenCLArray& getPosqCorrection() {
-        return *posqCorrection;
+        return posqCorrection;
     }
     /**
      * Get the array which contains the velocity (the xyz components) and inverse mass (the w component) of each atom.
      */
     OpenCLArray& getVelm() {
-        return *velm;
+        return velm;
     }
     /**
      * Get the array which contains the force on each atom.
      */
     OpenCLArray& getForce() {
-        return *force;
+        return force;
     }
     /**
      * Get the array which contains the buffers in which forces are computed.
      */
     OpenCLArray& getForceBuffers() {
-        return *forceBuffers;
+        return forceBuffers;
     }
     /**
      * Get the array which contains a contribution to each force represented as 64 bit fixed point.
      */
     OpenCLArray& getLongForceBuffer() {
-        return *longForceBuffer;
+        return longForceBuffer;
     }
     /**
      * Get the array which contains the buffer in which energy is computed.
      */
     OpenCLArray& getEnergyBuffer() {
-        return *energyBuffer;
+        return energyBuffer;
     }
     /**
      * Get the array which contains the buffer in which derivatives of the energy with respect to parameters are computed.
      */
     OpenCLArray& getEnergyParamDerivBuffer() {
-        return *energyParamDerivBuffer;
+        return energyParamDerivBuffer;
     }
     /**
      * Get a pointer to a block of pinned memory that can be used for efficient transfers between host and device.
@@ -288,7 +288,7 @@ public:
      * Get the array which contains the index of each atom.
      */
     OpenCLArray& getAtomIndexArray() {
-        return *atomIndexDevice;
+        return atomIndexDevice;
     }
     /**
      * Get the number of cells by which the positions are offset.
@@ -762,17 +762,17 @@ private:
     std::vector<mm_int4> posCellOffsets;
     cl::Buffer* pinnedBuffer;
     void* pinnedMemory;
-    OpenCLArray* posq;
-    OpenCLArray* posqCorrection;
-    OpenCLArray* velm;
-    OpenCLArray* force;
-    OpenCLArray* forceBuffers;
-    OpenCLArray* longForceBuffer;
-    OpenCLArray* energyBuffer;
-    OpenCLArray* energySum;
-    OpenCLArray* energyParamDerivBuffer;
-    OpenCLArray* atomIndexDevice;
-    OpenCLArray* chargeBuffer;
+    OpenCLArray posq;
+    OpenCLArray posqCorrection;
+    OpenCLArray velm;
+    OpenCLArray force;
+    OpenCLArray forceBuffers;
+    OpenCLArray longForceBuffer;
+    OpenCLArray energyBuffer;
+    OpenCLArray energySum;
+    OpenCLArray energyParamDerivBuffer;
+    OpenCLArray atomIndexDevice;
+    OpenCLArray chargeBuffer;
     std::vector<std::string> energyParamDerivNames;
     std::map<std::string, double> energyParamDerivWorkspace;
     std::vector<int> atomIndex;

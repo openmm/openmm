@@ -28,6 +28,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "OpenCLArray.h"
+#include "OpenCLContext.h"
 #include "windowsExportOpenCL.h"
 
 namespace OpenMM {

@@ -26,6 +26,7 @@
 */
 
 #include "OpenCLArray.h"
+#include "OpenCLContext.h"
 
 namespace OpenMM {
 
