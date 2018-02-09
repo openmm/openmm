@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -107,13 +107,6 @@ private:
     const DrudeForce& force;
 };
 
-OpenCLCalcDrudeForceKernel::~OpenCLCalcDrudeForceKernel() {
-    if (particleParams != NULL)
-        delete particleParams;
-    if (pairParams != NULL)
-        delete pairParams;
-}
-
 void OpenCLCalcDrudeForceKernel::initialize(const System& system, const DrudeForce& force) {
     int numContexts = cl.getPlatformData().contexts.size();
     int startParticleIndex = cl.getContextIndex()*force.getNumParticles()/numContexts;
@@ -123,7 +116,7 @@ void OpenCLCalcDrudeForceKernel::initialize(const System& system, const DrudeFor
         // Create the harmonic interaction .
         
         vector<vector<int> > atoms(numParticles, vector<int>(5));
-        particleParams = OpenCLArray::create<mm_float4>(cl, numParticles, "drudeParticleParams");
+        particleParams.initialize<mm_float4>(cl, numParticles, "drudeParticleParams");
         vector<mm_float4> paramVector(numParticles);
         for (int i = 0; i < numParticles; i++) {
             double charge, polarizability, aniso12, aniso34;
@@ -145,9 +138,9 @@ void OpenCLCalcDrudeForceKernel::initialize(const System& system, const DrudeFor
             }
             paramVector[i] = mm_float4((float) k1, (float) k2, (float) k3, 0.0f);
         }
-        particleParams->upload(paramVector);
+        particleParams.upload(paramVector);
         map<string, string> replacements;
-        replacements["PARAMS"] = cl.getBondedUtilities().addArgument(particleParams->getDeviceBuffer(), "float4");
+        replacements["PARAMS"] = cl.getBondedUtilities().addArgument(particleParams.getDeviceBuffer(), "float4");
         cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLDrudeKernelSources::drudeParticleForce, replacements), force.getForceGroup());
     }
     int startPairIndex = cl.getContextIndex()*force.getNumScreenedPairs()/numContexts;
@@ -157,7 +150,7 @@ void OpenCLCalcDrudeForceKernel::initialize(const System& system, const DrudeFor
         // Create the screened interaction between dipole pairs.
         
         vector<vector<int> > atoms(numPairs, vector<int>(4));
-        pairParams = OpenCLArray::create<mm_float2>(cl, numPairs, "drudePairParams");
+        pairParams.initialize<mm_float2>(cl, numPairs, "drudePairParams");
         vector<mm_float2> paramVector(numPairs);
         for (int i = 0; i < numPairs; i++) {
             int drude1, drude2;
@@ -171,9 +164,9 @@ void OpenCLCalcDrudeForceKernel::initialize(const System& system, const DrudeFor
             double energyScale = ONE_4PI_EPS0*charge1*charge2;
             paramVector[i] = mm_float2((float) screeningScale, (float) energyScale);
         }
-        pairParams->upload(paramVector);
+        pairParams.upload(paramVector);
         map<string, string> replacements;
-        replacements["PARAMS"] = cl.getBondedUtilities().addArgument(pairParams->getDeviceBuffer(), "float2");
+        replacements["PARAMS"] = cl.getBondedUtilities().addArgument(pairParams.getDeviceBuffer(), "float2");
         cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLDrudeKernelSources::drudePairForce, replacements), force.getForceGroup());
     }
     cl.addForce(new OpenCLDrudeForceInfo(force));
@@ -192,7 +185,7 @@ void OpenCLCalcDrudeForceKernel::copyParametersToContext(ContextImpl& context, c
     int endParticleIndex = (cl.getContextIndex()+1)*force.getNumParticles()/numContexts;
     int numParticles = endParticleIndex-startParticleIndex;
     if (numParticles > 0) {
-        if (particleParams == NULL || numParticles != particleParams->getSize())
+        if (!particleParams.isInitialized() || numParticles != particleParams.getSize())
             throw OpenMMException("updateParametersInContext: The number of Drude particles has changed");
         vector<mm_float4> paramVector(numParticles);
         for (int i = 0; i < numParticles; i++) {
@@ -211,7 +204,7 @@ void OpenCLCalcDrudeForceKernel::copyParametersToContext(ContextImpl& context, c
                 k2 = 0;
             paramVector[i] = mm_float4((float) k1, (float) k2, (float) k3, 0.0f);
         }
-        particleParams->upload(paramVector);
+        particleParams.upload(paramVector);
     }
     
     // Set the pair parameters.
@@ -220,7 +213,7 @@ void OpenCLCalcDrudeForceKernel::copyParametersToContext(ContextImpl& context, c
     int endPairIndex = (cl.getContextIndex()+1)*force.getNumScreenedPairs()/numContexts;
     int numPairs = endPairIndex-startPairIndex;
     if (numPairs > 0) {
-        if (pairParams == NULL || numPairs != pairParams->getSize())
+        if (!pairParams.isInitialized() || numPairs != pairParams.getSize())
             throw OpenMMException("updateParametersInContext: The number of screened pairs has changed");
         vector<mm_float2> paramVector(numPairs);
         for (int i = 0; i < numPairs; i++) {
@@ -235,15 +228,8 @@ void OpenCLCalcDrudeForceKernel::copyParametersToContext(ContextImpl& context, c
             double energyScale = ONE_4PI_EPS0*charge1*charge2;
             paramVector[i] = mm_float2((float) screeningScale, (float) energyScale);
         }
-        pairParams->upload(paramVector);
+        pairParams.upload(paramVector);
     }
-}
-
-OpenCLIntegrateDrudeLangevinStepKernel::~OpenCLIntegrateDrudeLangevinStepKernel() {
-    if (normalParticles != NULL)
-        delete normalParticles;
-    if (pairParticles != NULL)
-        delete pairParticles;
 }
 
 void OpenCLIntegrateDrudeLangevinStepKernel::initialize(const System& system, const DrudeLangevinIntegrator& integrator, const DrudeForce& force) {
@@ -266,12 +252,12 @@ void OpenCLIntegrateDrudeLangevinStepKernel::initialize(const System& system, co
         pairParticleVec.push_back(mm_int2(p, p1));
     }
     normalParticleVec.insert(normalParticleVec.begin(), particles.begin(), particles.end());
-    normalParticles = OpenCLArray::create<int>(cl, max((int) normalParticleVec.size(), 1), "drudeNormalParticles");
-    pairParticles = OpenCLArray::create<cl_int2>(cl, max((int) pairParticleVec.size(), 1), "drudePairParticles");
+    normalParticles.initialize<int>(cl, max((int) normalParticleVec.size(), 1), "drudeNormalParticles");
+    pairParticles.initialize<cl_int2>(cl, max((int) pairParticleVec.size(), 1), "drudePairParticles");
     if (normalParticleVec.size() > 0)
-        normalParticles->upload(normalParticleVec);
+        normalParticles.upload(normalParticleVec);
     if (pairParticleVec.size() > 0)
-        pairParticles->upload(pairParticleVec);
+        pairParticles.upload(pairParticleVec);
 
     // Create kernels.
     
@@ -296,8 +282,8 @@ void OpenCLIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, const
         kernel1.setArg<cl::Buffer>(0, cl.getVelm().getDeviceBuffer());
         kernel1.setArg<cl::Buffer>(1, cl.getForce().getDeviceBuffer());
         kernel1.setArg<cl::Buffer>(2, integration.getPosDelta().getDeviceBuffer());
-        kernel1.setArg<cl::Buffer>(3, normalParticles->getDeviceBuffer());
-        kernel1.setArg<cl::Buffer>(4, pairParticles->getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(3, normalParticles.getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(4, pairParticles.getDeviceBuffer());
         kernel1.setArg<cl::Buffer>(5, integration.getStepSize().getDeviceBuffer());
         kernel1.setArg<cl::Buffer>(12, integration.getRandom().getDeviceBuffer());
         kernel2.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
@@ -314,7 +300,7 @@ void OpenCLIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, const
         else
             hardwallKernel.setArg<void*>(1, NULL);
         hardwallKernel.setArg<cl::Buffer>(2, cl.getVelm().getDeviceBuffer());
-        hardwallKernel.setArg<cl::Buffer>(3, pairParticles->getDeviceBuffer());
+        hardwallKernel.setArg<cl::Buffer>(3, pairParticles.getDeviceBuffer());
         hardwallKernel.setArg<cl::Buffer>(4, integration.getStepSize().getDeviceBuffer());
     }
     
@@ -363,7 +349,7 @@ void OpenCLIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, const
 
     // Call the first integration kernel.
 
-    kernel1.setArg<cl_uint>(13, integration.prepareRandomNumbers(normalParticles->getSize()+2*pairParticles->getSize()));
+    kernel1.setArg<cl_uint>(13, integration.prepareRandomNumbers(normalParticles.getSize()+2*pairParticles.getSize()));
     cl.executeKernel(kernel1, numAtoms);
 
     // Apply constraints.
@@ -377,7 +363,7 @@ void OpenCLIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, const
     // Apply hard wall constraints.
     
     if (maxDrudeDistance > 0)
-        cl.executeKernel(hardwallKernel, pairParticles->getSize());
+        cl.executeKernel(hardwallKernel, pairParticles.getSize());
     integration.computeVirtualSites();
 
     // Update the time and step count.

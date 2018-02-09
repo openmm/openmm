@@ -33,11 +33,10 @@ namespace OpenMM {
 class OPENMM_EXPORT_OPENCL OpenCLCompact {
 public:
     OpenCLCompact(OpenCLContext& context);
-    ~OpenCLCompact();
     void compactStream(OpenCLArray& dOut, OpenCLArray& dIn, OpenCLArray& dValid, OpenCLArray& numValid);
 private:
     OpenCLContext& context;
-    OpenCLArray* dgBlockCounts;
+    OpenCLArray dgBlockCounts;
     cl::Kernel countKernel;
     cl::Kernel moveValidKernel;
 };
