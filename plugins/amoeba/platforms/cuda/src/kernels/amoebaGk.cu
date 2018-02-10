@@ -56,6 +56,10 @@ __device__ void computeBornSumOneInteraction(AtomData1& atom1, AtomData1& atom2)
     real r2 = dot(delta, delta);
     real r = SQRT(r2);
     float sk = atom2.scaledRadius;
+
+    if (atom1.radius > r + sk)
+        return; // No descreening due to atom1 engulfing atom2.
+
     real sk2 = sk*sk;
     if (atom1.radius+r < sk) {
         real lik = atom1.radius;
@@ -422,6 +426,9 @@ __device__ void computeBornChainRuleInteraction(AtomData3& atom1, AtomData3& ato
     real r2 = dot(delta, delta);
     real r = SQRT(r2);
     real de = 0;
+
+    if (atom1.radius > r + sk)
+        return; // No descreening due to atom1 engulfing atom2.
 
     if (atom1.radius+r < sk) {
         real uik = sk-r;

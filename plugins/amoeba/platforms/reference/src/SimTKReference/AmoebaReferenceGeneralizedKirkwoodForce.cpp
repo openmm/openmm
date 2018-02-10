@@ -157,6 +157,10 @@ void AmoebaReferenceGeneralizedKirkwoodForce::calculateGrycukBornRadii(const vec
             double r        = sqrt(r2);
 
             double sk       = _atomicRadii[jj]*_scaleFactors[jj];
+
+            // If atom ii engulfs the descreening atom, then continue.
+            if (_atomicRadii[ii] > r + sk) continue;
+
             double sk2      = sk*sk;
 
             if ((_atomicRadii[ii] + r) < sk) {
