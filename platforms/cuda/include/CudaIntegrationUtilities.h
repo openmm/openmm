@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2017 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -47,20 +47,20 @@ public:
      * Get the array which contains position deltas.
      */
     CudaArray& getPosDelta() {
-        return *posDelta;
+        return posDelta;
     }
     /**
      * Get the array which contains random values.  Each element is a float4, whose components
      * are independent, normally distributed random numbers with mean 0 and variance 1.
      */
     CudaArray& getRandom() {
-        return *random;
+        return random;
     }
     /**
      * Get the array which contains the current step size.
      */
     CudaArray& getStepSize() {
-        return *stepSize;
+        return stepSize;
     }
     /**
      * Set the size to use for the next step.
@@ -131,38 +131,38 @@ private:
     CUfunction ccmaUpdateKernel;
     CUfunction vsitePositionKernel, vsiteForceKernel;
     CUfunction randomKernel, timeShiftKernel;
-    CudaArray* posDelta;
-    CudaArray* settleAtoms;
-    CudaArray* settleParams;
-    CudaArray* shakeAtoms;
-    CudaArray* shakeParams;
-    CudaArray* random;
-    CudaArray* randomSeed;
-    CudaArray* stepSize;
-    CudaArray* ccmaAtoms;
-    CudaArray* ccmaDistance;
-    CudaArray* ccmaReducedMass;
-    CudaArray* ccmaAtomConstraints;
-    CudaArray* ccmaNumAtomConstraints;
-    CudaArray* ccmaConstraintMatrixColumn;
-    CudaArray* ccmaConstraintMatrixValue;
-    CudaArray* ccmaDelta1;
-    CudaArray* ccmaDelta2;
-    CudaArray* ccmaConverged;
+    CudaArray posDelta;
+    CudaArray settleAtoms;
+    CudaArray settleParams;
+    CudaArray shakeAtoms;
+    CudaArray shakeParams;
+    CudaArray random;
+    CudaArray randomSeed;
+    CudaArray stepSize;
+    CudaArray ccmaAtoms;
+    CudaArray ccmaDistance;
+    CudaArray ccmaReducedMass;
+    CudaArray ccmaAtomConstraints;
+    CudaArray ccmaNumAtomConstraints;
+    CudaArray ccmaConstraintMatrixColumn;
+    CudaArray ccmaConstraintMatrixValue;
+    CudaArray ccmaDelta1;
+    CudaArray ccmaDelta2;
+    CudaArray ccmaConverged;
     int* ccmaConvergedMemory;
     CUdeviceptr ccmaConvergedDeviceMemory;
     CUevent ccmaEvent;
-    CudaArray* vsite2AvgAtoms;
-    CudaArray* vsite2AvgWeights;
-    CudaArray* vsite3AvgAtoms;
-    CudaArray* vsite3AvgWeights;
-    CudaArray* vsiteOutOfPlaneAtoms;
-    CudaArray* vsiteOutOfPlaneWeights;
-    CudaArray* vsiteLocalCoordsIndex;
-    CudaArray* vsiteLocalCoordsAtoms;
-    CudaArray* vsiteLocalCoordsWeights;
-    CudaArray* vsiteLocalCoordsPos;
-    CudaArray* vsiteLocalCoordsStartIndex;
+    CudaArray vsite2AvgAtoms;
+    CudaArray vsite2AvgWeights;
+    CudaArray vsite3AvgAtoms;
+    CudaArray vsite3AvgWeights;
+    CudaArray vsiteOutOfPlaneAtoms;
+    CudaArray vsiteOutOfPlaneWeights;
+    CudaArray vsiteLocalCoordsIndex;
+    CudaArray vsiteLocalCoordsAtoms;
+    CudaArray vsiteLocalCoordsWeights;
+    CudaArray vsiteLocalCoordsPos;
+    CudaArray vsiteLocalCoordsStartIndex;
     int randomPos;
     int lastSeed, numVsites;
     double2 lastStepSize;
