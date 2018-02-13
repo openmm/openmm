@@ -4151,6 +4151,9 @@ void AmoebaReferenceGeneralizedKirkwoodMultipoleForce::calculateGrycukChainRuleP
     double r                        = sqrt(r2);
     double de                       = 0.0;
 
+    // If atom index engulfs the descreening atom, then there is no descreening. 
+    if (_atomicRadii[iIndex] > r + sk) return;
+
     if ((_atomicRadii[iIndex] + r) < sk) {
         double uik4;
         uik                = sk - r;
