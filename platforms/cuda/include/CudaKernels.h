@@ -1154,12 +1154,8 @@ private:
 class CudaCalcGayBerneForceKernel : public CalcGayBerneForceKernel {
 public:
     CudaCalcGayBerneForceKernel(std::string name, const Platform& platform, CudaContext& cu) : CalcGayBerneForceKernel(name, platform), cu(cu),
-            hasInitializedKernels(false), sortedParticles(NULL), axisParticleIndices(NULL), sigParams(NULL), epsParams(NULL), scale(NULL), exceptionParticles(NULL),
-            exceptionParams(NULL), aMatrix(NULL),
-            bMatrix(NULL), gMatrix(NULL), exclusions(NULL), exclusionStartIndex(NULL), blockCenter(NULL), blockBoundingBox(NULL), neighbors(NULL),
-            neighborIndex(NULL), neighborBlockCount(NULL), sortedPos(NULL), torque(NULL) {
+            hasInitializedKernels(false) {
     }
-    ~CudaCalcGayBerneForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -1191,25 +1187,25 @@ private:
     bool hasInitializedKernels;
     int numRealParticles, numExceptions, maxNeighborBlocks;
     GayBerneForce::NonbondedMethod nonbondedMethod;
-    CudaArray* sortedParticles;
-    CudaArray* axisParticleIndices;
-    CudaArray* sigParams;
-    CudaArray* epsParams;
-    CudaArray* scale;
-    CudaArray* exceptionParticles;
-    CudaArray* exceptionParams;
-    CudaArray* aMatrix;
-    CudaArray* bMatrix;
-    CudaArray* gMatrix;
-    CudaArray* exclusions;
-    CudaArray* exclusionStartIndex;
-    CudaArray* blockCenter;
-    CudaArray* blockBoundingBox;
-    CudaArray* neighbors;
-    CudaArray* neighborIndex;
-    CudaArray* neighborBlockCount;
-    CudaArray* sortedPos;
-    CudaArray* torque;
+    CudaArray sortedParticles;
+    CudaArray axisParticleIndices;
+    CudaArray sigParams;
+    CudaArray epsParams;
+    CudaArray scale;
+    CudaArray exceptionParticles;
+    CudaArray exceptionParams;
+    CudaArray aMatrix;
+    CudaArray bMatrix;
+    CudaArray gMatrix;
+    CudaArray exclusions;
+    CudaArray exclusionStartIndex;
+    CudaArray blockCenter;
+    CudaArray blockBoundingBox;
+    CudaArray neighbors;
+    CudaArray neighborIndex;
+    CudaArray neighborBlockCount;
+    CudaArray sortedPos;
+    CudaArray torque;
     std::vector<bool> isRealParticle;
     std::vector<std::pair<int, int> > exceptionAtoms;
     std::vector<std::pair<int, int> > excludedPairs;
@@ -1224,9 +1220,8 @@ private:
 class CudaCalcCustomCVForceKernel : public CalcCustomCVForceKernel {
 public:
     CudaCalcCustomCVForceKernel(std::string name, const Platform& platform, CudaContext& cu) : CalcCustomCVForceKernel(name, platform),
-            cu(cu), hasInitializedListeners(false), invAtomOrder(NULL), innerInvAtomOrder(NULL) {
+            cu(cu), hasInitializedListeners(false) {
     }
-    ~CudaCalcCustomCVForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -1260,9 +1255,9 @@ private:
     std::vector<std::string> variableNames, paramDerivNames, globalParameterNames;
     std::vector<Lepton::ExpressionProgram> variableDerivExpressions;
     std::vector<Lepton::ExpressionProgram> paramDerivExpressions;
-    std::vector<CudaArray*> cvForces;
-    CudaArray* invAtomOrder;
-    CudaArray* innerInvAtomOrder;
+    std::vector<CudaArray> cvForces;
+    CudaArray invAtomOrder;
+    CudaArray innerInvAtomOrder;
     CUfunction copyStateKernel, copyForcesKernel, addForcesKernel;
 };
 
@@ -1271,10 +1266,8 @@ private:
  */
 class CudaCalcRMSDForceKernel : public CalcRMSDForceKernel {
 public:
-    CudaCalcRMSDForceKernel(std::string name, const Platform& platform, CudaContext& cu) : CalcRMSDForceKernel(name, platform),
-            cu(cu), referencePos(NULL), particles(NULL), buffer(NULL) {
+    CudaCalcRMSDForceKernel(std::string name, const Platform& platform, CudaContext& cu) : CalcRMSDForceKernel(name, platform), cu(cu) {
     }
-    ~CudaCalcRMSDForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -1313,9 +1306,9 @@ private:
     CudaContext& cu;
     ForceInfo* info;
     double sumNormRef;
-    CudaArray* referencePos;
-    CudaArray* particles;
-    CudaArray* buffer;
+    CudaArray referencePos;
+    CudaArray particles;
+    CudaArray buffer;
     CUfunction kernel1, kernel2;
 };
 
@@ -1326,7 +1319,6 @@ class CudaIntegrateVerletStepKernel : public IntegrateVerletStepKernel {
 public:
     CudaIntegrateVerletStepKernel(std::string name, const Platform& platform, CudaContext& cu) : IntegrateVerletStepKernel(name, platform), cu(cu) {
     }
-    ~CudaIntegrateVerletStepKernel();
     /**
      * Initialize the kernel.
      *
@@ -1358,9 +1350,8 @@ private:
  */
 class CudaIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
 public:
-    CudaIntegrateLangevinStepKernel(std::string name, const Platform& platform, CudaContext& cu) : IntegrateLangevinStepKernel(name, platform), cu(cu), params(NULL) {
+    CudaIntegrateLangevinStepKernel(std::string name, const Platform& platform, CudaContext& cu) : IntegrateLangevinStepKernel(name, platform), cu(cu) {
     }
-    ~CudaIntegrateLangevinStepKernel();
     /**
      * Initialize the kernel, setting up the particle masses.
      *
@@ -1385,7 +1376,7 @@ public:
 private:
     CudaContext& cu;
     double prevTemp, prevFriction, prevStepSize;
-    CudaArray* params;
+    CudaArray params;
     CUfunction kernel1, kernel2;
 };
 
@@ -1396,7 +1387,6 @@ class CudaIntegrateBrownianStepKernel : public IntegrateBrownianStepKernel {
 public:
     CudaIntegrateBrownianStepKernel(std::string name, const Platform& platform, CudaContext& cu) : IntegrateBrownianStepKernel(name, platform), cu(cu) {
     }
-    ~CudaIntegrateBrownianStepKernel();
     /**
      * Initialize the kernel.
      *
@@ -1431,7 +1421,6 @@ class CudaIntegrateVariableVerletStepKernel : public IntegrateVariableVerletStep
 public:
     CudaIntegrateVariableVerletStepKernel(std::string name, const Platform& platform, CudaContext& cu) : IntegrateVariableVerletStepKernel(name, platform), cu(cu) {
     }
-    ~CudaIntegrateVariableVerletStepKernel();
     /**
      * Initialize the kernel.
      *
@@ -1466,10 +1455,8 @@ private:
  */
 class CudaIntegrateVariableLangevinStepKernel : public IntegrateVariableLangevinStepKernel {
 public:
-    CudaIntegrateVariableLangevinStepKernel(std::string name, const Platform& platform, CudaContext& cu) : IntegrateVariableLangevinStepKernel(name, platform),
-            cu(cu), params(NULL) {
+    CudaIntegrateVariableLangevinStepKernel(std::string name, const Platform& platform, CudaContext& cu) : IntegrateVariableLangevinStepKernel(name, platform), cu(cu) {
     }
-    ~CudaIntegrateVariableLangevinStepKernel();
     /**
      * Initialize the kernel, setting up the particle masses.
      *
@@ -1496,7 +1483,7 @@ public:
 private:
     CudaContext& cu;
     int blockSize;
-    CudaArray* params;
+    CudaArray params;
     CUfunction kernel1, kernel2, selectSizeKernel;
     double prevTemp, prevFriction, prevErrorTol;
 };
@@ -1508,8 +1495,7 @@ class CudaIntegrateCustomStepKernel : public IntegrateCustomStepKernel {
 public:
     enum GlobalTargetType {DT, VARIABLE, PARAMETER};
     CudaIntegrateCustomStepKernel(std::string name, const Platform& platform, CudaContext& cu) : IntegrateCustomStepKernel(name, platform), cu(cu),
-            hasInitializedKernels(false), localValuesAreCurrent(false), globalValues(NULL), sumBuffer(NULL), summedValue(NULL), uniformRandoms(NULL),
-            randomSeed(NULL), perDofEnergyParamDerivs(NULL), perDofValues(NULL), needsEnergyParamDerivs(false) {
+            hasInitializedKernels(false), localValuesAreCurrent(false), perDofValues(NULL), needsEnergyParamDerivs(false) {
     }
     ~CudaIntegrateCustomStepKernel();
     /**
@@ -1590,15 +1576,15 @@ private:
     int numGlobalVariables, sumWorkGroupSize;
     bool hasInitializedKernels, deviceValuesAreCurrent, deviceGlobalsAreCurrent, modifiesParameters, keNeedsForce, hasAnyConstraints, needsEnergyParamDerivs;
     mutable bool localValuesAreCurrent;
-    CudaArray* globalValues;
-    CudaArray* sumBuffer;
-    CudaArray* summedValue;
-    CudaArray* uniformRandoms;
-    CudaArray* randomSeed;
-    CudaArray* perDofEnergyParamDerivs;
-    std::vector<CudaArray*> tabulatedFunctions;
+    CudaArray globalValues;
+    CudaArray sumBuffer;
+    CudaArray summedValue;
+    CudaArray uniformRandoms;
+    CudaArray randomSeed;
+    CudaArray perDofEnergyParamDerivs;
+    std::vector<CudaArray> tabulatedFunctions;
     std::map<int, double> savedEnergy;
-    std::map<int, CudaArray*> savedForces;
+    std::map<int, CudaArray> savedForces;
     std::set<int> validSavedForces;
     CudaParameterSet* perDofValues;
     mutable std::vector<std::vector<float> > localPerDofValuesFloat;
@@ -1651,10 +1637,8 @@ public:
  */
 class CudaApplyAndersenThermostatKernel : public ApplyAndersenThermostatKernel {
 public:
-    CudaApplyAndersenThermostatKernel(std::string name, const Platform& platform, CudaContext& cu) : ApplyAndersenThermostatKernel(name, platform), cu(cu),
-            atomGroups(NULL) {
+    CudaApplyAndersenThermostatKernel(std::string name, const Platform& platform, CudaContext& cu) : ApplyAndersenThermostatKernel(name, platform), cu(cu) {
     }
-    ~CudaApplyAndersenThermostatKernel();
     /**
      * Initialize the kernel.
      *
@@ -1671,7 +1655,7 @@ public:
 private:
     CudaContext& cu;
     int randomSeed;
-    CudaArray* atomGroups;
+    CudaArray atomGroups;
     CUfunction kernel;
 };
 
@@ -1681,9 +1665,8 @@ private:
 class CudaApplyMonteCarloBarostatKernel : public ApplyMonteCarloBarostatKernel {
 public:
     CudaApplyMonteCarloBarostatKernel(std::string name, const Platform& platform, CudaContext& cu) : ApplyMonteCarloBarostatKernel(name, platform), cu(cu),
-            hasInitializedKernels(false), savedPositions(NULL), savedForces(NULL), moleculeAtoms(NULL), moleculeStartIndex(NULL) {
+            hasInitializedKernels(false) {
     }
-    ~CudaApplyMonteCarloBarostatKernel();
     /**
      * Initialize the kernel.
      *
@@ -1715,10 +1698,10 @@ private:
     CudaContext& cu;
     bool hasInitializedKernels;
     int numMolecules;
-    CudaArray* savedPositions;
-    CudaArray* savedForces;
-    CudaArray* moleculeAtoms;
-    CudaArray* moleculeStartIndex;
+    CudaArray savedPositions;
+    CudaArray savedForces;
+    CudaArray moleculeAtoms;
+    CudaArray moleculeStartIndex;
     CUfunction kernel;
     std::vector<int> lastAtomOrder;
 };
@@ -1728,9 +1711,8 @@ private:
  */
 class CudaRemoveCMMotionKernel : public RemoveCMMotionKernel {
 public:
-    CudaRemoveCMMotionKernel(std::string name, const Platform& platform, CudaContext& cu) : RemoveCMMotionKernel(name, platform), cu(cu), cmMomentum(NULL) {
+    CudaRemoveCMMotionKernel(std::string name, const Platform& platform, CudaContext& cu) : RemoveCMMotionKernel(name, platform), cu(cu) {
     }
-    ~CudaRemoveCMMotionKernel();
     /**
      * Initialize the kernel, setting up the particle masses.
      *
@@ -1747,7 +1729,7 @@ public:
 private:
     CudaContext& cu;
     int frequency;
-    CudaArray* cmMomentum;
+    CudaArray cmMomentum;
     CUfunction kernel1, kernel2;
 };
 

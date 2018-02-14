@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -142,15 +142,13 @@ private:
 
 CudaParallelCalcForcesAndEnergyKernel::CudaParallelCalcForcesAndEnergyKernel(string name, const Platform& platform, CudaPlatform::PlatformData& data) :
         CalcForcesAndEnergyKernel(name, platform), data(data), completionTimes(data.contexts.size()), contextNonbondedFractions(data.contexts.size()),
-        interactionCounts(NULL), contextForces(NULL), pinnedPositionBuffer(NULL), pinnedForceBuffer(NULL) {
+        interactionCounts(NULL), pinnedPositionBuffer(NULL), pinnedForceBuffer(NULL) {
     for (int i = 0; i < (int) data.contexts.size(); i++)
         kernels.push_back(Kernel(new CudaCalcForcesAndEnergyKernel(name, platform, *data.contexts[i])));
 }
 
 CudaParallelCalcForcesAndEnergyKernel::~CudaParallelCalcForcesAndEnergyKernel() {
     data.contexts[0]->setAsCurrent();
-    if (contextForces != NULL)
-        delete contextForces;
     if (pinnedPositionBuffer != NULL)
         cuMemFreeHost(pinnedPositionBuffer);
     if (pinnedForceBuffer != NULL)
@@ -179,8 +177,8 @@ void CudaParallelCalcForcesAndEnergyKernel::initialize(const System& system) {
 void CudaParallelCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups) {
     CudaContext& cu = *data.contexts[0];
     cu.setAsCurrent();
-    if (contextForces == NULL) {
-        contextForces = CudaArray::create<long long>(cu, 3*(data.contexts.size()-1)*cu.getPaddedNumAtoms(), "contextForces");
+    if (!contextForces.isInitialized()) {
+        contextForces.initialize<long long>(cu, 3*(data.contexts.size()-1)*cu.getPaddedNumAtoms(), "contextForces");
         CHECK_RESULT(cuMemHostAlloc((void**) &pinnedForceBuffer, 3*(data.contexts.size()-1)*cu.getPaddedNumAtoms()*sizeof(long long), CU_MEMHOSTALLOC_PORTABLE), "Error allocating pinned memory");
         CHECK_RESULT(cuMemHostAlloc(&pinnedPositionBuffer, cu.getPaddedNumAtoms()*(cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4)), CU_MEMHOSTALLOC_PORTABLE), "Error allocating pinned memory");
     }
@@ -211,7 +209,7 @@ double CudaParallelCalcForcesAndEnergyKernel::finishComputation(ContextImpl& con
     for (int i = 0; i < (int) data.contexts.size(); i++) {
         CudaContext& cu = *data.contexts[i];
         CudaContext::WorkThread& thread = cu.getWorkThread();
-        thread.addTask(new FinishComputationTask(context, cu, getKernel(i), includeForce, includeEnergy, groups, data.contextEnergy[i], completionTimes[i], pinnedForceBuffer, *contextForces, valid, interactionCounts[i]));
+        thread.addTask(new FinishComputationTask(context, cu, getKernel(i), includeForce, includeEnergy, groups, data.contextEnergy[i], completionTimes[i], pinnedForceBuffer, contextForces, valid, interactionCounts[i]));
     }
     data.syncContexts();
     double energy = 0.0;
@@ -222,10 +220,10 @@ double CudaParallelCalcForcesAndEnergyKernel::finishComputation(ContextImpl& con
         
         CudaContext& cu = *data.contexts[0];
         if (!cu.getPlatformData().peerAccessSupported)
-            contextForces->upload(pinnedForceBuffer, false);
+            contextForces.upload(pinnedForceBuffer, false);
         int bufferSize = 3*cu.getPaddedNumAtoms();
         int numBuffers = data.contexts.size()-1;
-        void* args[] = {&cu.getForce().getDevicePointer(), &contextForces->getDevicePointer(), &bufferSize, &numBuffers};
+        void* args[] = {&cu.getForce().getDevicePointer(), &contextForces.getDevicePointer(), &bufferSize, &numBuffers};
         cu.executeKernel(sumKernel, args, bufferSize);
         
         // Balance work between the contexts by transferring a little nonbonded work from the context that
