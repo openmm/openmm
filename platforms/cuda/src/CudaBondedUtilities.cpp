@@ -84,8 +84,10 @@ void CudaBondedUtilities::initialize(const System& system) {
     for (int i = 0; i < numForces; i++) {
         int numBonds = forceAtoms[i].size();
         int numAtoms = forceAtoms[i][0].size();
+        int numArrays = (numAtoms+3)/4;
         int startAtom = 0;
-        while (startAtom < numAtoms) {
+        atomIndices[i].resize(numArrays);
+        for (int j = 0; j < numArrays; j++) {
             int width = min(numAtoms-startAtom, 4);
             int paddedWidth = (width == 3 ? 4 : width);
             vector<unsigned int> indexVec(paddedWidth*numBonds);
@@ -93,9 +95,8 @@ void CudaBondedUtilities::initialize(const System& system) {
                 for (int atom = 0; atom < width; atom++)
                     indexVec[bond*paddedWidth+atom] = forceAtoms[i][bond][startAtom+atom];
             }
-            atomIndices[i].push_back(CudaArray());
-            atomIndices[i].back().initialize(context, numBonds, 4*paddedWidth, "bondedIndices");
-            atomIndices[i].back().upload(&indexVec[0]);
+            atomIndices[i][j].initialize(context, numBonds, 4*paddedWidth, "bondedIndices");
+            atomIndices[i][j].upload(&indexVec[0]);
             startAtom += width;
         }
     }
