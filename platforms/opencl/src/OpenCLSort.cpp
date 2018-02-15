@@ -26,6 +26,7 @@
 
 #include "OpenCLSort.h"
 #include "OpenCLKernelSources.h"
+#include <algorithm>
 #include <map>
 
 using namespace OpenMM;
