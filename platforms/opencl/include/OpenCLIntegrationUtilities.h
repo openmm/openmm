@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2017 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -42,25 +42,24 @@ namespace OpenMM {
 class OPENMM_EXPORT_OPENCL OpenCLIntegrationUtilities {
 public:
     OpenCLIntegrationUtilities(OpenCLContext& context, const System& system);
-    ~OpenCLIntegrationUtilities();
     /**
      * Get the array which contains position deltas.
      */
     OpenCLArray& getPosDelta() {
-        return *posDelta;
+        return posDelta;
     }
     /**
      * Get the array which contains random values.  Each element is a float4, whose components
      * are independent, normally distributed random numbers with mean 0 and variance 1.
      */
     OpenCLArray& getRandom() {
-        return *random;
+        return random;
     }
     /**
      * Get the array which contains the current step size.
      */
     OpenCLArray& getStepSize() {
-        return *stepSize;
+        return stepSize;
     }
     /**
      * Set the size to use for the next step.
@@ -131,36 +130,36 @@ private:
     cl::Kernel ccmaPosUpdateKernel, ccmaVelUpdateKernel;
     cl::Kernel vsitePositionKernel, vsiteForceKernel, vsiteAddForcesKernel;
     cl::Kernel randomKernel, timeShiftKernel;
-    OpenCLArray* posDelta;
-    OpenCLArray* settleAtoms;
-    OpenCLArray* settleParams;
-    OpenCLArray* shakeAtoms;
-    OpenCLArray* shakeParams;
-    OpenCLArray* random;
-    OpenCLArray* randomSeed;
-    OpenCLArray* stepSize;
-    OpenCLArray* ccmaAtoms;
-    OpenCLArray* ccmaDistance;
-    OpenCLArray* ccmaReducedMass;
-    OpenCLArray* ccmaAtomConstraints;
-    OpenCLArray* ccmaNumAtomConstraints;
-    OpenCLArray* ccmaConstraintMatrixColumn;
-    OpenCLArray* ccmaConstraintMatrixValue;
-    OpenCLArray* ccmaDelta1;
-    OpenCLArray* ccmaDelta2;
-    OpenCLArray* ccmaConverged;
-    OpenCLArray* ccmaConvergedHostBuffer;
-    OpenCLArray* vsite2AvgAtoms;
-    OpenCLArray* vsite2AvgWeights;
-    OpenCLArray* vsite3AvgAtoms;
-    OpenCLArray* vsite3AvgWeights;
-    OpenCLArray* vsiteOutOfPlaneAtoms;
-    OpenCLArray* vsiteOutOfPlaneWeights;
-    OpenCLArray* vsiteLocalCoordsIndex;
-    OpenCLArray* vsiteLocalCoordsAtoms;
-    OpenCLArray* vsiteLocalCoordsWeights;
-    OpenCLArray* vsiteLocalCoordsPos;
-    OpenCLArray* vsiteLocalCoordsStartIndex;
+    OpenCLArray posDelta;
+    OpenCLArray settleAtoms;
+    OpenCLArray settleParams;
+    OpenCLArray shakeAtoms;
+    OpenCLArray shakeParams;
+    OpenCLArray random;
+    OpenCLArray randomSeed;
+    OpenCLArray stepSize;
+    OpenCLArray ccmaAtoms;
+    OpenCLArray ccmaDistance;
+    OpenCLArray ccmaReducedMass;
+    OpenCLArray ccmaAtomConstraints;
+    OpenCLArray ccmaNumAtomConstraints;
+    OpenCLArray ccmaConstraintMatrixColumn;
+    OpenCLArray ccmaConstraintMatrixValue;
+    OpenCLArray ccmaDelta1;
+    OpenCLArray ccmaDelta2;
+    OpenCLArray ccmaConverged;
+    OpenCLArray ccmaConvergedHostBuffer;
+    OpenCLArray vsite2AvgAtoms;
+    OpenCLArray vsite2AvgWeights;
+    OpenCLArray vsite3AvgAtoms;
+    OpenCLArray vsite3AvgWeights;
+    OpenCLArray vsiteOutOfPlaneAtoms;
+    OpenCLArray vsiteOutOfPlaneWeights;
+    OpenCLArray vsiteLocalCoordsIndex;
+    OpenCLArray vsiteLocalCoordsAtoms;
+    OpenCLArray vsiteLocalCoordsWeights;
+    OpenCLArray vsiteLocalCoordsPos;
+    OpenCLArray vsiteLocalCoordsStartIndex;
     int randomPos;
     int lastSeed, numVsites;
     bool hasInitializedPosConstraintKernels, hasInitializedVelConstraintKernels, ccmaUseDirectBuffer, hasOverlappingVsites;

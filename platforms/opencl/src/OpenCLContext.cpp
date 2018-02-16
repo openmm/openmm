@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2017 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -68,9 +68,8 @@ static void CL_CALLBACK errorCallback(const char* errinfo, const void* private_i
 }
 
 OpenCLContext::OpenCLContext(const System& system, int platformIndex, int deviceIndex, const string& precision, OpenCLPlatform::PlatformData& platformData, OpenCLContext* originalContext) :
-        system(system), time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), stepsSinceReorder(99999), atomsWereReordered(false), posq(NULL),
-        posqCorrection(NULL), velm(NULL), forceBuffers(NULL), longForceBuffer(NULL), energyBuffer(NULL), energySum(NULL), energyParamDerivBuffer(NULL), atomIndexDevice(NULL),
-        chargeBuffer(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
+        system(system), time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), stepsSinceReorder(99999), atomsWereReordered(false),
+        integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
     if (precision == "single") {
         useDoublePrecision = false;
         useMixedPrecision = false;
@@ -275,23 +274,23 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
         numAtomBlocks = (paddedNumAtoms+(TileSize-1))/TileSize;
         numThreadBlocks = numThreadBlocksPerComputeUnit*device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
         if (useDoublePrecision) {
-            posq = OpenCLArray::create<mm_double4>(*this, paddedNumAtoms, "posq");
-            velm = OpenCLArray::create<mm_double4>(*this, paddedNumAtoms, "velm");
+            posq.initialize<mm_double4>(*this, paddedNumAtoms, "posq");
+            velm.initialize<mm_double4>(*this, paddedNumAtoms, "velm");
             compilationDefines["USE_DOUBLE_PRECISION"] = "1";
             compilationDefines["convert_real4"] = "convert_double4";
             compilationDefines["convert_mixed4"] = "convert_double4";
         }
         else if (useMixedPrecision) {
-            posq = OpenCLArray::create<mm_float4>(*this, paddedNumAtoms, "posq");
-            posqCorrection = OpenCLArray::create<mm_float4>(*this, paddedNumAtoms, "posq");
-            velm = OpenCLArray::create<mm_double4>(*this, paddedNumAtoms, "velm");
+            posq.initialize<mm_float4>(*this, paddedNumAtoms, "posq");
+            posqCorrection.initialize<mm_float4>(*this, paddedNumAtoms, "posq");
+            velm.initialize<mm_double4>(*this, paddedNumAtoms, "velm");
             compilationDefines["USE_MIXED_PRECISION"] = "1";
             compilationDefines["convert_real4"] = "convert_float4";
             compilationDefines["convert_mixed4"] = "convert_double4";
         }
         else {
-            posq = OpenCLArray::create<mm_float4>(*this, paddedNumAtoms, "posq");
-            velm = OpenCLArray::create<mm_float4>(*this, paddedNumAtoms, "velm");
+            posq.initialize<mm_float4>(*this, paddedNumAtoms, "posq");
+            velm.initialize<mm_float4>(*this, paddedNumAtoms, "velm");
             compilationDefines["convert_real4"] = "convert_float4";
             compilationDefines["convert_mixed4"] = "convert_float4";
         }
@@ -429,28 +428,6 @@ OpenCLContext::~OpenCLContext() {
         delete computation;
     if (pinnedBuffer != NULL)
         delete pinnedBuffer;
-    if (posq != NULL)
-        delete posq;
-    if (posqCorrection != NULL)
-        delete posqCorrection;
-    if (velm != NULL)
-        delete velm;
-    if (force != NULL)
-        delete force;
-    if (forceBuffers != NULL)
-        delete forceBuffers;
-    if (longForceBuffer != NULL)
-        delete longForceBuffer;
-    if (energyBuffer != NULL)
-        delete energyBuffer;
-    if (energySum != NULL)
-        delete energySum;
-    if (energyParamDerivBuffer != NULL)
-        delete energyParamDerivBuffer;
-    if (atomIndexDevice != NULL)
-        delete atomIndexDevice;
-    if (chargeBuffer != NULL)
-        delete chargeBuffer;
     if (integration != NULL)
         delete integration;
     if (expression != NULL)
@@ -471,42 +448,42 @@ void OpenCLContext::initialize() {
         numForceBuffers = std::max(numForceBuffers, force->getRequiredForceBuffers());
     int energyBufferSize = max(numThreadBlocks*ThreadBlockSize, nonbonded->getNumEnergyBuffers());
     if (useDoublePrecision) {
-        forceBuffers = OpenCLArray::create<mm_double4>(*this, paddedNumAtoms*numForceBuffers, "forceBuffers");
-        force = OpenCLArray::create<mm_double4>(*this, &forceBuffers->getDeviceBuffer(), paddedNumAtoms, "force");
-        energyBuffer = OpenCLArray::create<cl_double>(*this, energyBufferSize, "energyBuffer");
-        energySum = OpenCLArray::create<cl_double>(*this, 1, "energySum");
+        forceBuffers.initialize<mm_double4>(*this, paddedNumAtoms*numForceBuffers, "forceBuffers");
+        force.initialize<mm_double4>(*this, &forceBuffers.getDeviceBuffer(), paddedNumAtoms, "force");
+        energyBuffer.initialize<cl_double>(*this, energyBufferSize, "energyBuffer");
+        energySum.initialize<cl_double>(*this, 1, "energySum");
     }
     else if (useMixedPrecision) {
-        forceBuffers = OpenCLArray::create<mm_float4>(*this, paddedNumAtoms*numForceBuffers, "forceBuffers");
-        force = OpenCLArray::create<mm_float4>(*this, &forceBuffers->getDeviceBuffer(), paddedNumAtoms, "force");
-        energyBuffer = OpenCLArray::create<cl_double>(*this, energyBufferSize, "energyBuffer");
-        energySum = OpenCLArray::create<cl_double>(*this, 1, "energySum");
+        forceBuffers.initialize<mm_float4>(*this, paddedNumAtoms*numForceBuffers, "forceBuffers");
+        force.initialize<mm_float4>(*this, &forceBuffers.getDeviceBuffer(), paddedNumAtoms, "force");
+        energyBuffer.initialize<cl_double>(*this, energyBufferSize, "energyBuffer");
+        energySum.initialize<cl_double>(*this, 1, "energySum");
     }
     else {
-        forceBuffers = OpenCLArray::create<mm_float4>(*this, paddedNumAtoms*numForceBuffers, "forceBuffers");
-        force = OpenCLArray::create<mm_float4>(*this, &forceBuffers->getDeviceBuffer(), paddedNumAtoms, "force");
-        energyBuffer = OpenCLArray::create<cl_float>(*this, energyBufferSize, "energyBuffer");
-        energySum = OpenCLArray::create<cl_float>(*this, 1, "energySum");
+        forceBuffers.initialize<mm_float4>(*this, paddedNumAtoms*numForceBuffers, "forceBuffers");
+        force.initialize<mm_float4>(*this, &forceBuffers.getDeviceBuffer(), paddedNumAtoms, "force");
+        energyBuffer.initialize<cl_float>(*this, energyBufferSize, "energyBuffer");
+        energySum.initialize<cl_float>(*this, 1, "energySum");
     }
     if (supports64BitGlobalAtomics) {
-        longForceBuffer = OpenCLArray::create<cl_long>(*this, 3*paddedNumAtoms, "longForceBuffer");
-        reduceForcesKernel.setArg<cl::Buffer>(0, longForceBuffer->getDeviceBuffer());
-        reduceForcesKernel.setArg<cl::Buffer>(1, forceBuffers->getDeviceBuffer());
+        longForceBuffer.initialize<cl_long>(*this, 3*paddedNumAtoms, "longForceBuffer");
+        reduceForcesKernel.setArg<cl::Buffer>(0, longForceBuffer.getDeviceBuffer());
+        reduceForcesKernel.setArg<cl::Buffer>(1, forceBuffers.getDeviceBuffer());
         reduceForcesKernel.setArg<cl_int>(2, paddedNumAtoms);
         reduceForcesKernel.setArg<cl_int>(3, numForceBuffers);
-        addAutoclearBuffer(*longForceBuffer);
+        addAutoclearBuffer(longForceBuffer);
     }
-    addAutoclearBuffer(*forceBuffers);
-    addAutoclearBuffer(*energyBuffer);
+    addAutoclearBuffer(forceBuffers);
+    addAutoclearBuffer(energyBuffer);
     int numEnergyParamDerivs = energyParamDerivNames.size();
     if (numEnergyParamDerivs > 0) {
         if (useDoublePrecision || useMixedPrecision)
-            energyParamDerivBuffer = OpenCLArray::create<cl_double>(*this, numEnergyParamDerivs*energyBufferSize, "energyParamDerivBuffer");
+            energyParamDerivBuffer.initialize<cl_double>(*this, numEnergyParamDerivs*energyBufferSize, "energyParamDerivBuffer");
         else
-            energyParamDerivBuffer = OpenCLArray::create<cl_float>(*this, numEnergyParamDerivs*energyBufferSize, "energyParamDerivBuffer");
-        addAutoclearBuffer(*energyParamDerivBuffer);
+            energyParamDerivBuffer.initialize<cl_float>(*this, numEnergyParamDerivs*energyBufferSize, "energyParamDerivBuffer");
+        addAutoclearBuffer(energyParamDerivBuffer);
     }
-    int bufferBytes = max(velm->getSize()*velm->getElementSize(), energyBufferSize*energyBuffer->getElementSize());
+    int bufferBytes = max(velm.getSize()*velm.getElementSize(), energyBufferSize*energyBuffer.getElementSize());
     pinnedBuffer = new cl::Buffer(context, CL_MEM_ALLOC_HOST_PTR, bufferBytes);
     pinnedMemory = currentQueue.enqueueMapBuffer(*pinnedBuffer, CL_TRUE, CL_MAP_READ | CL_MAP_WRITE, 0, bufferBytes);
     for (int i = 0; i < numAtoms; i++) {
@@ -516,12 +493,12 @@ void OpenCLContext::initialize() {
         else
             ((mm_float4*) pinnedMemory)[i] = mm_float4(0.0f, 0.0f, 0.0f, mass == 0.0 ? 0.0f : (cl_float) (1.0/mass));
     }
-    velm->upload(pinnedMemory);
-    atomIndexDevice = OpenCLArray::create<cl_int>(*this, paddedNumAtoms, "atomIndexDevice");
+    velm.upload(pinnedMemory);
+    atomIndexDevice.initialize<cl_int>(*this, paddedNumAtoms, "atomIndexDevice");
     atomIndex.resize(paddedNumAtoms);
     for (int i = 0; i < paddedNumAtoms; ++i)
         atomIndex[i] = i;
-    atomIndexDevice->upload(atomIndex);
+    atomIndexDevice.upload(atomIndex);
     findMoleculeGroups();
     nonbonded->initialize(system);
 }
@@ -756,7 +733,7 @@ void OpenCLContext::reduceForces() {
     if (supports64BitGlobalAtomics)
         executeKernel(reduceForcesKernel, paddedNumAtoms, 128);
     else
-        reduceBuffer(*forceBuffers, numForceBuffers);
+        reduceBuffer(forceBuffers, numForceBuffers);
 }
 
 void OpenCLContext::reduceBuffer(OpenCLArray& array, int numBuffers) {
@@ -771,42 +748,42 @@ double OpenCLContext::reduceEnergy() {
     int workGroupSize  = device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>();
     if (workGroupSize > 512)
         workGroupSize = 512;
-    reduceEnergyKernel.setArg<cl::Buffer>(0, energyBuffer->getDeviceBuffer());
-    reduceEnergyKernel.setArg<cl::Buffer>(1, energySum->getDeviceBuffer());
-    reduceEnergyKernel.setArg<cl_int>(2, energyBuffer->getSize());
+    reduceEnergyKernel.setArg<cl::Buffer>(0, energyBuffer.getDeviceBuffer());
+    reduceEnergyKernel.setArg<cl::Buffer>(1, energySum.getDeviceBuffer());
+    reduceEnergyKernel.setArg<cl_int>(2, energyBuffer.getSize());
     reduceEnergyKernel.setArg<cl_int>(3, workGroupSize);
-    reduceEnergyKernel.setArg(4, workGroupSize*energyBuffer->getElementSize(), NULL);
+    reduceEnergyKernel.setArg(4, workGroupSize*energyBuffer.getElementSize(), NULL);
     executeKernel(reduceEnergyKernel, workGroupSize, workGroupSize);
     if (getUseDoublePrecision() || getUseMixedPrecision()) {
         double energy;
-        energySum->download(&energy);
+        energySum.download(&energy);
         return energy;
     }
     else {
         float energy;
-        energySum->download(&energy);
+        energySum.download(&energy);
         return energy;
     }
 }
 
 void OpenCLContext::setCharges(const vector<double>& charges) {
-    if (chargeBuffer == NULL)
-        chargeBuffer = new OpenCLArray(*this, numAtoms, useDoublePrecision ? sizeof(double) : sizeof(float), "chargeBuffer");
+    if (!chargeBuffer.isInitialized())
+        chargeBuffer.initialize(*this, numAtoms, useDoublePrecision ? sizeof(double) : sizeof(float), "chargeBuffer");
     if (getUseDoublePrecision()) {
         double* c = (double*) getPinnedBuffer();
         for (int i = 0; i < charges.size(); i++)
             c[i] = charges[i];
-        chargeBuffer->upload(c);
+        chargeBuffer.upload(c);
     }
     else {
         float* c = (float*) getPinnedBuffer();
         for (int i = 0; i < charges.size(); i++)
             c[i] = (float) charges[i];
-        chargeBuffer->upload(c);
+        chargeBuffer.upload(c);
     }
-    setChargesKernel.setArg<cl::Buffer>(0, chargeBuffer->getDeviceBuffer());
-    setChargesKernel.setArg<cl::Buffer>(1, posq->getDeviceBuffer());
-    setChargesKernel.setArg<cl::Buffer>(2, atomIndexDevice->getDeviceBuffer());
+    setChargesKernel.setArg<cl::Buffer>(0, chargeBuffer.getDeviceBuffer());
+    setChargesKernel.setArg<cl::Buffer>(1, posq.getDeviceBuffer());
+    setChargesKernel.setArg<cl::Buffer>(2, atomIndexDevice.getDeviceBuffer());
     setChargesKernel.setArg<cl_int>(3, numAtoms);
     executeKernel(setChargesKernel, numAtoms);
 }
@@ -1069,16 +1046,16 @@ bool OpenCLContext::invalidateMolecules(OpenCLForceInfo* force) {
         vector<mm_double4> newPosq(paddedNumAtoms, mm_double4(0,0,0,0));
         vector<mm_double4> oldVelm(paddedNumAtoms);
         vector<mm_double4> newVelm(paddedNumAtoms, mm_double4(0,0,0,0));
-        posq->download(oldPosq);
-        velm->download(oldVelm);
+        posq.download(oldPosq);
+        velm.download(oldVelm);
         for (int i = 0; i < numAtoms; i++) {
             int index = atomIndex[i];
             newPosq[index] = oldPosq[i];
             newVelm[index] = oldVelm[i];
             newCellOffsets[index] = posCellOffsets[i];
         }
-        posq->upload(newPosq);
-        velm->upload(newVelm);
+        posq.upload(newPosq);
+        velm.upload(newVelm);
     }
     else if (useMixedPrecision) {
         vector<mm_float4> oldPosq(paddedNumAtoms);
@@ -1087,8 +1064,8 @@ bool OpenCLContext::invalidateMolecules(OpenCLForceInfo* force) {
         vector<mm_float4> newPosqCorrection(paddedNumAtoms, mm_float4(0,0,0,0));
         vector<mm_double4> oldVelm(paddedNumAtoms);
         vector<mm_double4> newVelm(paddedNumAtoms, mm_double4(0,0,0,0));
-        posq->download(oldPosq);
-        velm->download(oldVelm);
+        posq.download(oldPosq);
+        velm.download(oldVelm);
         for (int i = 0; i < numAtoms; i++) {
             int index = atomIndex[i];
             newPosq[index] = oldPosq[i];
@@ -1096,31 +1073,31 @@ bool OpenCLContext::invalidateMolecules(OpenCLForceInfo* force) {
             newVelm[index] = oldVelm[i];
             newCellOffsets[index] = posCellOffsets[i];
         }
-        posq->upload(newPosq);
-        posqCorrection->upload(newPosqCorrection);
-        velm->upload(newVelm);
+        posq.upload(newPosq);
+        posqCorrection.upload(newPosqCorrection);
+        velm.upload(newVelm);
     }
     else {
         vector<mm_float4> oldPosq(paddedNumAtoms);
         vector<mm_float4> newPosq(paddedNumAtoms, mm_float4(0,0,0,0));
         vector<mm_float4> oldVelm(paddedNumAtoms);
         vector<mm_float4> newVelm(paddedNumAtoms, mm_float4(0,0,0,0));
-        posq->download(oldPosq);
-        velm->download(oldVelm);
+        posq.download(oldPosq);
+        velm.download(oldVelm);
         for (int i = 0; i < numAtoms; i++) {
             int index = atomIndex[i];
             newPosq[index] = oldPosq[i];
             newVelm[index] = oldVelm[i];
             newCellOffsets[index] = posCellOffsets[i];
         }
-        posq->upload(newPosq);
-        velm->upload(newVelm);
+        posq.upload(newPosq);
+        velm.upload(newVelm);
     }
     for (int i = 0; i < numAtoms; i++) {
         atomIndex[i] = i;
         posCellOffsets[i] = newCellOffsets[i];
     }
-    atomIndexDevice->upload(atomIndex);
+    atomIndexDevice.upload(atomIndex);
     findMoleculeGroups();
     for (auto listener : reorderListeners)
         listener->execute();
@@ -1152,10 +1129,10 @@ void OpenCLContext::reorderAtomsImpl() {
     vector<Real4> oldPosq(paddedNumAtoms);
     vector<Real4> oldPosqCorrection(paddedNumAtoms);
     vector<Mixed4> oldVelm(paddedNumAtoms);
-    posq->download(oldPosq);
-    velm->download(oldVelm);
+    posq.download(oldPosq);
+    velm.download(oldVelm);
     if (useMixedPrecision)
-        posqCorrection->download(oldPosqCorrection);
+        posqCorrection.download(oldPosqCorrection);
     Real minx = oldPosq[0].x, maxx = oldPosq[0].x;
     Real miny = oldPosq[0].y, maxy = oldPosq[0].y;
     Real minz = oldPosq[0].z, maxz = oldPosq[0].z;
@@ -1299,11 +1276,11 @@ void OpenCLContext::reorderAtomsImpl() {
         atomIndex[i] = originalIndex[i];
         posCellOffsets[i] = newCellOffsets[i];
     }
-    posq->upload(newPosq);
+    posq.upload(newPosq);
     if (useMixedPrecision)
-        posqCorrection->upload(newPosqCorrection);
-    velm->upload(newVelm);
-    atomIndexDevice->upload(atomIndex);
+        posqCorrection.upload(newPosqCorrection);
+    velm.upload(newVelm);
+    atomIndexDevice.upload(atomIndex);
     for (auto listener : reorderListeners)
         listener->execute();
 }

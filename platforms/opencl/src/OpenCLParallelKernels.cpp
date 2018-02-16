@@ -118,14 +118,12 @@ private:
 
 OpenCLParallelCalcForcesAndEnergyKernel::OpenCLParallelCalcForcesAndEnergyKernel(string name, const Platform& platform, OpenCLPlatform::PlatformData& data) :
         CalcForcesAndEnergyKernel(name, platform), data(data), completionTimes(data.contexts.size()), contextNonbondedFractions(data.contexts.size()),
-        tileCounts(data.contexts.size()), contextForces(NULL), pinnedPositionBuffer(NULL), pinnedPositionMemory(NULL), pinnedForceBuffer(NULL), pinnedForceMemory(NULL) {
+        tileCounts(data.contexts.size()), pinnedPositionBuffer(NULL), pinnedPositionMemory(NULL), pinnedForceBuffer(NULL), pinnedForceMemory(NULL) {
     for (int i = 0; i < (int) data.contexts.size(); i++)
         kernels.push_back(Kernel(new OpenCLCalcForcesAndEnergyKernel(name, platform, *data.contexts[i])));
 }
 
 OpenCLParallelCalcForcesAndEnergyKernel::~OpenCLParallelCalcForcesAndEnergyKernel() {
-    if (contextForces != NULL)
-        delete contextForces;
     if (pinnedPositionBuffer != NULL)
         delete pinnedPositionBuffer;
     if (pinnedForceBuffer != NULL)
@@ -142,8 +140,8 @@ void OpenCLParallelCalcForcesAndEnergyKernel::initialize(const System& system) {
 void OpenCLParallelCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups) {
     OpenCLContext& cl0 = *data.contexts[0];
     int elementSize = (cl0.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4));
-    if (contextForces == NULL) {
-        contextForces = OpenCLArray::create<mm_float4>(cl0, &cl0.getForceBuffers().getDeviceBuffer(),
+    if (!contextForces.isInitialized()) {
+        contextForces.initialize<mm_float4>(cl0, &cl0.getForceBuffers().getDeviceBuffer(),
                 data.contexts.size()*cl0.getPaddedNumAtoms(), "contextForces");
         int bufferBytes = (data.contexts.size()-1)*cl0.getPaddedNumAtoms()*elementSize;
         pinnedPositionBuffer = new cl::Buffer(cl0.getContext(), CL_MEM_ALLOC_HOST_PTR, bufferBytes);
@@ -179,9 +177,9 @@ double OpenCLParallelCalcForcesAndEnergyKernel::finishComputation(ContextImpl& c
         OpenCLContext& cl = *data.contexts[0];
         int numAtoms = cl.getPaddedNumAtoms();
         int elementSize = (cl.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4));
-        cl.getQueue().enqueueWriteBuffer(contextForces->getDeviceBuffer(), CL_FALSE, numAtoms*elementSize,
+        cl.getQueue().enqueueWriteBuffer(contextForces.getDeviceBuffer(), CL_FALSE, numAtoms*elementSize,
                 numAtoms*(data.contexts.size()-1)*elementSize, pinnedForceMemory);
-        cl.reduceBuffer(*contextForces, data.contexts.size());
+        cl.reduceBuffer(contextForces, data.contexts.size());
         
         // Balance work between the contexts by transferring a little nonbonded work from the context that
         // finished last to the one that finished first.

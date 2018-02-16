@@ -24,15 +24,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
+#ifdef _MSC_VER
+    // Prevent Windows from defining macros that interfere with other code.
+    #define NOMINMAX
+#endif
 #include "OpenCLSort.h"
 #include "OpenCLKernelSources.h"
+#include <algorithm>
 #include <map>
 
 using namespace OpenMM;
 using namespace std;
 
-OpenCLSort::OpenCLSort(OpenCLContext& context, SortTrait* trait, unsigned int length) : context(context), trait(trait),
-            dataRange(NULL), bucketOfElement(NULL), offsetInBucket(NULL), bucketOffset(NULL), buckets(NULL), dataLength(length) {
+OpenCLSort::OpenCLSort(OpenCLContext& context, SortTrait* trait, unsigned int length) : context(context), trait(trait), dataLength(length) {
     // Create kernels.
 
     std::map<std::string, std::string> replacements;
@@ -81,26 +85,16 @@ OpenCLSort::OpenCLSort(OpenCLContext& context, SortTrait* trait, unsigned int le
     // Create workspace arrays.
 
     if (!isShortList) {
-        dataRange = new OpenCLArray(context, 2, trait->getKeySize(), "sortDataRange");
-        bucketOffset = OpenCLArray::create<cl_uint>(context, numBuckets, "bucketOffset");
-        bucketOfElement = OpenCLArray::create<cl_uint>(context, length, "bucketOfElement");
-        offsetInBucket = OpenCLArray::create<cl_uint>(context, length, "offsetInBucket");
-        buckets = new OpenCLArray(context, length, trait->getDataSize(), "buckets");
+        dataRange.initialize(context, 2, trait->getKeySize(), "sortDataRange");
+        bucketOffset.initialize<cl_uint>(context, numBuckets, "bucketOffset");
+        bucketOfElement.initialize<cl_uint>(context, length, "bucketOfElement");
+        offsetInBucket.initialize<cl_uint>(context, length, "offsetInBucket");
+        buckets.initialize(context, length, trait->getDataSize(), "buckets");
     }
 }
 
 OpenCLSort::~OpenCLSort() {
     delete trait;
-    if (dataRange != NULL)
-        delete dataRange;
-    if (bucketOfElement != NULL)
-        delete bucketOfElement;
-    if (offsetInBucket != NULL)
-        delete offsetInBucket;
-    if (bucketOffset != NULL)
-        delete bucketOffset;
-    if (buckets != NULL)
-        delete buckets;
 }
 
 void OpenCLSort::sort(OpenCLArray& data) {
@@ -119,14 +113,14 @@ void OpenCLSort::sort(OpenCLArray& data) {
     else {
         // Compute the range of data values.
 
-        unsigned int numBuckets = bucketOffset->getSize();
+        unsigned int numBuckets = bucketOffset.getSize();
         computeRangeKernel.setArg<cl::Buffer>(0, data.getDeviceBuffer());
         computeRangeKernel.setArg<cl_uint>(1, data.getSize());
-        computeRangeKernel.setArg<cl::Buffer>(2, dataRange->getDeviceBuffer());
+        computeRangeKernel.setArg<cl::Buffer>(2, dataRange.getDeviceBuffer());
         computeRangeKernel.setArg(3, rangeKernelSize*trait->getKeySize(), NULL);
         computeRangeKernel.setArg(4, rangeKernelSize*trait->getKeySize(), NULL);
         computeRangeKernel.setArg<cl_int>(5, numBuckets);
-        computeRangeKernel.setArg<cl::Buffer>(6, bucketOffset->getDeviceBuffer());
+        computeRangeKernel.setArg<cl::Buffer>(6, bucketOffset.getDeviceBuffer());
         context.executeKernel(computeRangeKernel, rangeKernelSize, rangeKernelSize);
 
         // Assign array elements to buckets.
@@ -134,35 +128,35 @@ void OpenCLSort::sort(OpenCLArray& data) {
         assignElementsKernel.setArg<cl::Buffer>(0, data.getDeviceBuffer());
         assignElementsKernel.setArg<cl_int>(1, data.getSize());
         assignElementsKernel.setArg<cl_int>(2, numBuckets);
-        assignElementsKernel.setArg<cl::Buffer>(3, dataRange->getDeviceBuffer());
-        assignElementsKernel.setArg<cl::Buffer>(4, bucketOffset->getDeviceBuffer());
-        assignElementsKernel.setArg<cl::Buffer>(5, bucketOfElement->getDeviceBuffer());
-        assignElementsKernel.setArg<cl::Buffer>(6, offsetInBucket->getDeviceBuffer());
+        assignElementsKernel.setArg<cl::Buffer>(3, dataRange.getDeviceBuffer());
+        assignElementsKernel.setArg<cl::Buffer>(4, bucketOffset.getDeviceBuffer());
+        assignElementsKernel.setArg<cl::Buffer>(5, bucketOfElement.getDeviceBuffer());
+        assignElementsKernel.setArg<cl::Buffer>(6, offsetInBucket.getDeviceBuffer());
         context.executeKernel(assignElementsKernel, data.getSize());
 
         // Compute the position of each bucket.
 
         computeBucketPositionsKernel.setArg<cl_int>(0, numBuckets);
-        computeBucketPositionsKernel.setArg<cl::Buffer>(1, bucketOffset->getDeviceBuffer());
+        computeBucketPositionsKernel.setArg<cl::Buffer>(1, bucketOffset.getDeviceBuffer());
         computeBucketPositionsKernel.setArg(2, positionsKernelSize*sizeof(cl_int), NULL);
         context.executeKernel(computeBucketPositionsKernel, positionsKernelSize, positionsKernelSize);
 
         // Copy the data into the buckets.
 
         copyToBucketsKernel.setArg<cl::Buffer>(0, data.getDeviceBuffer());
-        copyToBucketsKernel.setArg<cl::Buffer>(1, buckets->getDeviceBuffer());
+        copyToBucketsKernel.setArg<cl::Buffer>(1, buckets.getDeviceBuffer());
         copyToBucketsKernel.setArg<cl_int>(2, data.getSize());
-        copyToBucketsKernel.setArg<cl::Buffer>(3, bucketOffset->getDeviceBuffer());
-        copyToBucketsKernel.setArg<cl::Buffer>(4, bucketOfElement->getDeviceBuffer());
-        copyToBucketsKernel.setArg<cl::Buffer>(5, offsetInBucket->getDeviceBuffer());
+        copyToBucketsKernel.setArg<cl::Buffer>(3, bucketOffset.getDeviceBuffer());
+        copyToBucketsKernel.setArg<cl::Buffer>(4, bucketOfElement.getDeviceBuffer());
+        copyToBucketsKernel.setArg<cl::Buffer>(5, offsetInBucket.getDeviceBuffer());
         context.executeKernel(copyToBucketsKernel, data.getSize());
 
         // Sort each bucket.
 
         sortBucketsKernel.setArg<cl::Buffer>(0, data.getDeviceBuffer());
-        sortBucketsKernel.setArg<cl::Buffer>(1, buckets->getDeviceBuffer());
+        sortBucketsKernel.setArg<cl::Buffer>(1, buckets.getDeviceBuffer());
         sortBucketsKernel.setArg<cl_int>(2, numBuckets);
-        sortBucketsKernel.setArg<cl::Buffer>(3, bucketOffset->getDeviceBuffer());
+        sortBucketsKernel.setArg<cl::Buffer>(3, bucketOffset.getDeviceBuffer());
         sortBucketsKernel.setArg(4, sortKernelSize*trait->getDataSize(), NULL);
         context.executeKernel(sortBucketsKernel, ((data.getSize()+sortKernelSize-1)/sortKernelSize)*sortKernelSize, sortKernelSize);
     }

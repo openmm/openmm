@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -31,8 +31,7 @@
 using namespace OpenMM;
 using namespace std;
 
-CudaSort::CudaSort(CudaContext& context, SortTrait* trait, unsigned int length) : context(context), trait(trait),
-        dataRange(NULL), bucketOfElement(NULL), offsetInBucket(NULL), bucketOffset(NULL), buckets(NULL), dataLength(length) {
+CudaSort::CudaSort(CudaContext& context, SortTrait* trait, unsigned int length) : context(context), trait(trait), dataLength(length) {
     // Create kernels.
 
     map<string, string> replacements;
@@ -76,26 +75,16 @@ CudaSort::CudaSort(CudaContext& context, SortTrait* trait, unsigned int length) 
     // Create workspace arrays.
 
     if (!isShortList) {
-        dataRange = new CudaArray(context, 2, trait->getKeySize(), "sortDataRange");
-        bucketOffset = CudaArray::create<uint1>(context, numBuckets, "bucketOffset");
-        bucketOfElement = CudaArray::create<uint1>(context, length, "bucketOfElement");
-        offsetInBucket = CudaArray::create<uint1>(context, length, "offsetInBucket");
-        buckets = new CudaArray(context, length, trait->getDataSize(), "buckets");
+        dataRange.initialize(context, 2, trait->getKeySize(), "sortDataRange");
+        bucketOffset.initialize<uint1>(context, numBuckets, "bucketOffset");
+        bucketOfElement.initialize<uint1>(context, length, "bucketOfElement");
+        offsetInBucket.initialize<uint1>(context, length, "offsetInBucket");
+        buckets.initialize(context, length, trait->getDataSize(), "buckets");
     }
 }
 
 CudaSort::~CudaSort() {
     delete trait;
-    if (dataRange != NULL)
-        delete dataRange;
-    if (bucketOfElement != NULL)
-        delete bucketOfElement;
-    if (offsetInBucket != NULL)
-        delete offsetInBucket;
-    if (bucketOffset != NULL)
-        delete bucketOffset;
-    if (buckets != NULL)
-        delete buckets;
 }
 
 void CudaSort::sort(CudaArray& data) {
@@ -112,30 +101,30 @@ void CudaSort::sort(CudaArray& data) {
     else {
         // Compute the range of data values.
 
-        unsigned int numBuckets = bucketOffset->getSize();
-        void* rangeArgs[] = {&data.getDevicePointer(), &dataLength, &dataRange->getDevicePointer(), &numBuckets, &bucketOffset->getDevicePointer()};
+        unsigned int numBuckets = bucketOffset.getSize();
+        void* rangeArgs[] = {&data.getDevicePointer(), &dataLength, &dataRange.getDevicePointer(), &numBuckets, &bucketOffset.getDevicePointer()};
         context.executeKernel(computeRangeKernel, rangeArgs, rangeKernelSize, rangeKernelSize, 2*rangeKernelSize*trait->getKeySize());
 
         // Assign array elements to buckets.
 
-        void* elementsArgs[] = {&data.getDevicePointer(), &dataLength, &numBuckets, &dataRange->getDevicePointer(),
-                &bucketOffset->getDevicePointer(), &bucketOfElement->getDevicePointer(), &offsetInBucket->getDevicePointer()};
+        void* elementsArgs[] = {&data.getDevicePointer(), &dataLength, &numBuckets, &dataRange.getDevicePointer(),
+                &bucketOffset.getDevicePointer(), &bucketOfElement.getDevicePointer(), &offsetInBucket.getDevicePointer()};
         context.executeKernel(assignElementsKernel, elementsArgs, data.getSize(), 128);
 
         // Compute the position of each bucket.
 
-        void* computeArgs[] = {&numBuckets, &bucketOffset->getDevicePointer()};
+        void* computeArgs[] = {&numBuckets, &bucketOffset.getDevicePointer()};
         context.executeKernel(computeBucketPositionsKernel, computeArgs, positionsKernelSize, positionsKernelSize, positionsKernelSize*sizeof(int));
 
         // Copy the data into the buckets.
 
-        void* copyArgs[] = {&data.getDevicePointer(), &buckets->getDevicePointer(), &dataLength, &bucketOffset->getDevicePointer(),
-                &bucketOfElement->getDevicePointer(), &offsetInBucket->getDevicePointer()};
+        void* copyArgs[] = {&data.getDevicePointer(), &buckets.getDevicePointer(), &dataLength, &bucketOffset.getDevicePointer(),
+                &bucketOfElement.getDevicePointer(), &offsetInBucket.getDevicePointer()};
         context.executeKernel(copyToBucketsKernel, copyArgs, data.getSize());
 
         // Sort each bucket.
 
-        void* sortArgs[] = {&data.getDevicePointer(), &buckets->getDevicePointer(), &numBuckets, &bucketOffset->getDevicePointer()};
+        void* sortArgs[] = {&data.getDevicePointer(), &buckets.getDevicePointer(), &numBuckets, &bucketOffset.getDevicePointer()};
         context.executeKernel(sortBucketsKernel, sortArgs, ((data.getSize()+sortKernelSize-1)/sortKernelSize)*sortKernelSize, sortKernelSize, sortKernelSize*trait->getDataSize());
     }
 }

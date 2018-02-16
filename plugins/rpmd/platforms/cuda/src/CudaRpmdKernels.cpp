@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -62,19 +62,6 @@ static int findFFTDimension(int minimum) {
     }
 }
 
-CudaIntegrateRPMDStepKernel::~CudaIntegrateRPMDStepKernel() {
-    if (forces != NULL)
-        delete forces;
-    if (positions != NULL)
-        delete positions;
-    if (velocities != NULL)
-        delete velocities;
-    if (contractedForces != NULL)
-        delete contractedForces;
-    if (contractedPositions != NULL)
-        delete contractedPositions;
-}
-
 void CudaIntegrateRPMDStepKernel::initialize(const System& system, const RPMDIntegrator& integrator) {
     cu.getPlatformData().initializeContexts(system);
     numCopies = integrator.getNumCopies();
@@ -85,30 +72,30 @@ void CudaIntegrateRPMDStepKernel::initialize(const System& system, const RPMDInt
     int paddedParticles = cu.getPaddedNumAtoms();
     bool useDoublePrecision = (cu.getUseDoublePrecision() || cu.getUseMixedPrecision());
     int elementSize = (useDoublePrecision ? sizeof(double4) : sizeof(float4));
-    forces = CudaArray::create<long long>(cu, numCopies*paddedParticles*3, "rpmdForces");
-    positions = new CudaArray(cu, numCopies*paddedParticles, elementSize, "rpmdPositions");
-    velocities = new CudaArray(cu, numCopies*paddedParticles, elementSize, "rpmdVelocities");
+    forces.initialize<long long>(cu, numCopies*paddedParticles*3, "rpmdForces");
+    positions.initialize(cu, numCopies*paddedParticles, elementSize, "rpmdPositions");
+    velocities.initialize(cu, numCopies*paddedParticles, elementSize, "rpmdVelocities");
     cu.getIntegrationUtilities().initRandomNumberGenerator((unsigned int) integrator.getRandomNumberSeed());
     
     // Fill in the posq and velm arrays with safe values to avoid a risk of nans.
     
     if (useDoublePrecision) {
-        vector<double4> temp(positions->getSize());
-        for (int i = 0; i < positions->getSize(); i++)
+        vector<double4> temp(positions.getSize());
+        for (int i = 0; i < positions.getSize(); i++)
             temp[i] = make_double4(0, 0, 0, 0);
-        positions->upload(temp);
-        for (int i = 0; i < velocities->getSize(); i++)
+        positions.upload(temp);
+        for (int i = 0; i < velocities.getSize(); i++)
             temp[i] = make_double4(0, 0, 0, 1);
-        velocities->upload(temp);
+        velocities.upload(temp);
     }
     else {
-        vector<float4> temp(positions->getSize());
-        for (int i = 0; i < positions->getSize(); i++)
+        vector<float4> temp(positions.getSize());
+        for (int i = 0; i < positions.getSize(); i++)
             temp[i] = make_float4(0, 0, 0, 0);
-        positions->upload(temp);
-        for (int i = 0; i < velocities->getSize(); i++)
+        positions.upload(temp);
+        for (int i = 0; i < velocities.getSize(); i++)
             temp[i] = make_float4(0, 0, 0, 1);
-        velocities->upload(temp);
+        velocities.upload(temp);
     }
     
     // Build a list of contractions.
@@ -137,8 +124,8 @@ void CudaIntegrateRPMDStepKernel::initialize(const System& system, const RPMDInt
         }
     }
     if (maxContractedCopies > 0) {
-        contractedForces = CudaArray::create<long long>(cu, maxContractedCopies*paddedParticles*3, "rpmdContractedForces");
-        contractedPositions = new CudaArray(cu, maxContractedCopies*paddedParticles, elementSize, "rpmdContractedPositions");
+        contractedForces.initialize<long long>(cu, maxContractedCopies*paddedParticles*3, "rpmdContractedForces");
+        contractedPositions.initialize(cu, maxContractedCopies*paddedParticles, elementSize, "rpmdContractedPositions");
     }
 
     // Create kernels.
@@ -204,13 +191,13 @@ void CudaIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDIntegr
     float frictionFloat = (float) friction;
     void* frictionPtr = (useDoublePrecision ? (void*) &friction : (void*) &frictionFloat);
     int randomIndex = integration.prepareRandomNumbers(numParticles*numCopies);
-    void* pileArgs[] = {&velocities->getDevicePointer(), &integration.getRandom().getDevicePointer(), &randomIndex, dtPtr, kTPtr, frictionPtr};
+    void* pileArgs[] = {&velocities.getDevicePointer(), &integration.getRandom().getDevicePointer(), &randomIndex, dtPtr, kTPtr, frictionPtr};
     if (integrator.getApplyThermostat())
         cu.executeKernel(pileKernel, pileArgs, numParticles*numCopies, workgroupSize);
 
     // Update positions and velocities.
     
-    void* stepArgs[] = {&positions->getDevicePointer(), &velocities->getDevicePointer(), &forces->getDevicePointer(), dtPtr, kTPtr};
+    void* stepArgs[] = {&positions.getDevicePointer(), &velocities.getDevicePointer(), &forces.getDevicePointer(), dtPtr, kTPtr};
     cu.executeKernel(stepKernel, stepArgs, numParticles*numCopies, workgroupSize);
 
     // Calculate forces based on the updated positions.
@@ -219,7 +206,7 @@ void CudaIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDIntegr
     
     // Update velocities.
 
-    void* velocitiesArgs[] = {&velocities->getDevicePointer(), &forces->getDevicePointer(), dtPtr};
+    void* velocitiesArgs[] = {&velocities.getDevicePointer(), &forces.getDevicePointer(), dtPtr};
     cu.executeKernel(velocitiesKernel, velocitiesArgs, numParticles*numCopies, workgroupSize);
 
     // Apply the PILE-L thermostat again.
@@ -239,7 +226,7 @@ void CudaIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDIntegr
         // the same translation to all the beads.
 
         int i = numCopies-1;
-        void* args[] = {&positions->getDevicePointer(), &cu.getPosq().getDevicePointer(), &cu.getAtomIndexArray().getDevicePointer(), &i};
+        void* args[] = {&positions.getDevicePointer(), &cu.getPosq().getDevicePointer(), &cu.getAtomIndexArray().getDevicePointer(), &i};
         cu.executeKernel(translateKernel, args, cu.getNumAtoms());
     }
 }
@@ -248,7 +235,7 @@ void CudaIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
     // Compute forces from all groups that didn't have a specified contraction.
 
     for (int i = 0; i < numCopies; i++) {
-        void* copyToContextArgs[] = {&velocities->getDevicePointer(), &cu.getVelm().getDevicePointer(), &positions->getDevicePointer(),
+        void* copyToContextArgs[] = {&velocities.getDevicePointer(), &cu.getVelm().getDevicePointer(), &positions.getDevicePointer(),
                 &cu.getPosq().getDevicePointer(), &cu.getAtomIndexArray().getDevicePointer(), &i};
         cu.executeKernel(copyToContextKernel, copyToContextArgs, cu.getNumAtoms());
         context.computeVirtualSites();
@@ -260,8 +247,8 @@ void CudaIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
         if (initialBox[0] != finalBox[0] || initialBox[1] != finalBox[1] || initialBox[2] != finalBox[2])
             throw OpenMMException("Standard barostats cannot be used with RPMDIntegrator.  Use RPMDMonteCarloBarostat instead.");
         context.calcForcesAndEnergy(true, false, groupsNotContracted);
-        void* copyFromContextArgs[] = {&cu.getForce().getDevicePointer(), &forces->getDevicePointer(), &cu.getVelm().getDevicePointer(),
-                &velocities->getDevicePointer(), &cu.getPosq().getDevicePointer(), &positions->getDevicePointer(), &cu.getAtomIndexArray().getDevicePointer(), &i};
+        void* copyFromContextArgs[] = {&cu.getForce().getDevicePointer(), &forces.getDevicePointer(), &cu.getVelm().getDevicePointer(),
+                &velocities.getDevicePointer(), &cu.getPosq().getDevicePointer(), &positions.getDevicePointer(), &cu.getAtomIndexArray().getDevicePointer(), &i};
         cu.executeKernel(copyFromContextKernel, copyFromContextArgs, cu.getNumAtoms());
     }
     
@@ -273,32 +260,32 @@ void CudaIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
         
         // Find the contracted positions.
         
-        void* contractPosArgs[] = {&positions->getDevicePointer(), &contractedPositions->getDevicePointer()};
+        void* contractPosArgs[] = {&positions.getDevicePointer(), &contractedPositions.getDevicePointer()};
         cu.executeKernel(positionContractionKernels[copies], contractPosArgs, numParticles*numCopies, workgroupSize);
 
         // Compute forces.
 
         for (int i = 0; i < copies; i++) {
-            void* copyToContextArgs[] = {&velocities->getDevicePointer(), &cu.getVelm().getDevicePointer(), &contractedPositions->getDevicePointer(),
+            void* copyToContextArgs[] = {&velocities.getDevicePointer(), &cu.getVelm().getDevicePointer(), &contractedPositions.getDevicePointer(),
                     &cu.getPosq().getDevicePointer(), &cu.getAtomIndexArray().getDevicePointer(), &i};
             cu.executeKernel(copyToContextKernel, copyToContextArgs, cu.getNumAtoms());
             context.computeVirtualSites();
             context.calcForcesAndEnergy(true, false, groupFlags);
-            void* copyFromContextArgs[] = {&cu.getForce().getDevicePointer(), &contractedForces->getDevicePointer(), &cu.getVelm().getDevicePointer(),
-                   &velocities->getDevicePointer(), &cu.getPosq().getDevicePointer(), &contractedPositions->getDevicePointer(), &cu.getAtomIndexArray().getDevicePointer(), &i};
+            void* copyFromContextArgs[] = {&cu.getForce().getDevicePointer(), &contractedForces.getDevicePointer(), &cu.getVelm().getDevicePointer(),
+                   &velocities.getDevicePointer(), &cu.getPosq().getDevicePointer(), &contractedPositions.getDevicePointer(), &cu.getAtomIndexArray().getDevicePointer(), &i};
             cu.executeKernel(copyFromContextKernel, copyFromContextArgs, cu.getNumAtoms());
         }
         
         // Apply the forces to the original copies.
         
-        void* contractForceArgs[] = {&forces->getDevicePointer(), &contractedForces->getDevicePointer()};
+        void* contractForceArgs[] = {&forces.getDevicePointer(), &contractedForces.getDevicePointer()};
         cu.executeKernel(forceContractionKernels[copies], contractForceArgs, numParticles*numCopies, workgroupSize);
     }
     if (groupsByCopies.size() > 0) {
         // Ensure the Context contains the positions from the last copy, since we'll assume that later.
         
         int i = numCopies-1;
-        void* copyToContextArgs[] = {&velocities->getDevicePointer(), &cu.getVelm().getDevicePointer(), &positions->getDevicePointer(),
+        void* copyToContextArgs[] = {&velocities.getDevicePointer(), &cu.getVelm().getDevicePointer(), &positions.getDevicePointer(),
                 &cu.getPosq().getDevicePointer(), &cu.getAtomIndexArray().getDevicePointer(), &i};
         cu.executeKernel(copyToContextKernel, copyToContextArgs, cu.getNumAtoms());
     }
@@ -309,7 +296,7 @@ double CudaIntegrateRPMDStepKernel::computeKineticEnergy(ContextImpl& context, c
 }
 
 void CudaIntegrateRPMDStepKernel::setPositions(int copy, const vector<Vec3>& pos) {
-    if (positions == NULL)
+    if (!positions.isInitialized())
         throw OpenMMException("RPMDIntegrator: Cannot set positions before the integrator is added to a Context");
     if (pos.size() != numParticles)
         throw OpenMMException("RPMDIntegrator: wrong number of values passed to setPositions()");
@@ -332,7 +319,7 @@ void CudaIntegrateRPMDStepKernel::setPositions(int copy, const vector<Vec3>& pos
         cu.getPosq().download(posq);
         for (int i = 0; i < numParticles; i++)
             posq[i] = make_double4(offsetPos[i][0], offsetPos[i][1], offsetPos[i][2], posq[i].w);
-        result = cuMemcpyHtoD(positions->getDevicePointer()+copy*cu.getPaddedNumAtoms()*sizeof(double4), &posq[0], numParticles*sizeof(double4));
+        result = cuMemcpyHtoD(positions.getDevicePointer()+copy*cu.getPaddedNumAtoms()*sizeof(double4), &posq[0], numParticles*sizeof(double4));
     }
     else if (cu.getUseMixedPrecision()) {
         vector<float4> posqf(cu.getPaddedNumAtoms());
@@ -340,24 +327,24 @@ void CudaIntegrateRPMDStepKernel::setPositions(int copy, const vector<Vec3>& pos
         vector<double4> posq(cu.getPaddedNumAtoms());
         for (int i = 0; i < numParticles; i++)
             posq[i] = make_double4(offsetPos[i][0], offsetPos[i][1], offsetPos[i][2], posqf[i].w);
-        result = cuMemcpyHtoD(positions->getDevicePointer()+copy*cu.getPaddedNumAtoms()*sizeof(double4), &posq[0], numParticles*sizeof(double4));
+        result = cuMemcpyHtoD(positions.getDevicePointer()+copy*cu.getPaddedNumAtoms()*sizeof(double4), &posq[0], numParticles*sizeof(double4));
     }
     else {
         vector<float4> posq(cu.getPaddedNumAtoms());
         cu.getPosq().download(posq);
         for (int i = 0; i < numParticles; i++)
             posq[i] = make_float4((float) offsetPos[i][0], (float) offsetPos[i][1], (float) offsetPos[i][2], posq[i].w);
-        result = cuMemcpyHtoD(positions->getDevicePointer()+copy*cu.getPaddedNumAtoms()*sizeof(float4), &posq[0], numParticles*sizeof(float4));
+        result = cuMemcpyHtoD(positions.getDevicePointer()+copy*cu.getPaddedNumAtoms()*sizeof(float4), &posq[0], numParticles*sizeof(float4));
     }
     if (result != CUDA_SUCCESS) {
         std::stringstream str;
-        str<<"Error uploading array "<<positions->getName()<<": "<<CudaContext::getErrorString(result)<<" ("<<result<<")";
+        str<<"Error uploading array "<<positions.getName()<<": "<<CudaContext::getErrorString(result)<<" ("<<result<<")";
         throw OpenMMException(str.str());
     }
 }
 
 void CudaIntegrateRPMDStepKernel::setVelocities(int copy, const vector<Vec3>& vel) {
-    if (velocities == NULL)
+    if (!velocities.isInitialized())
         throw OpenMMException("RPMDIntegrator: Cannot set velocities before the integrator is added to a Context");
     if (vel.size() != numParticles)
         throw OpenMMException("RPMDIntegrator: wrong number of values passed to setVelocities()");
@@ -367,24 +354,24 @@ void CudaIntegrateRPMDStepKernel::setVelocities(int copy, const vector<Vec3>& ve
         cu.getVelm().download(velm);
         for (int i = 0; i < numParticles; i++)
             velm[i] = make_double4(vel[i][0], vel[i][1], vel[i][2], velm[i].w);
-        result = cuMemcpyHtoD(velocities->getDevicePointer()+copy*cu.getPaddedNumAtoms()*sizeof(double4), &velm[0], numParticles*sizeof(double4));
+        result = cuMemcpyHtoD(velocities.getDevicePointer()+copy*cu.getPaddedNumAtoms()*sizeof(double4), &velm[0], numParticles*sizeof(double4));
     }
     else {
         vector<float4> velm(cu.getPaddedNumAtoms());
         cu.getVelm().download(velm);
         for (int i = 0; i < numParticles; i++)
             velm[i] = make_float4((float) vel[i][0], (float) vel[i][1], (float) vel[i][2], velm[i].w);
-        result = cuMemcpyHtoD(velocities->getDevicePointer()+copy*cu.getPaddedNumAtoms()*sizeof(float4), &velm[0], numParticles*sizeof(float4));
+        result = cuMemcpyHtoD(velocities.getDevicePointer()+copy*cu.getPaddedNumAtoms()*sizeof(float4), &velm[0], numParticles*sizeof(float4));
     }
     if (result != CUDA_SUCCESS) {
         std::stringstream str;
-        str<<"Error uploading array "<<velocities->getName()<<": "<<CudaContext::getErrorString(result)<<" ("<<result<<")";
+        str<<"Error uploading array "<<velocities.getName()<<": "<<CudaContext::getErrorString(result)<<" ("<<result<<")";
         throw OpenMMException(str.str());
     }
 }
 
 void CudaIntegrateRPMDStepKernel::copyToContext(int copy, ContextImpl& context) {
-    void* copyArgs[] = {&velocities->getDevicePointer(), &cu.getVelm().getDevicePointer(), &positions->getDevicePointer(),
+    void* copyArgs[] = {&velocities.getDevicePointer(), &cu.getVelm().getDevicePointer(), &positions.getDevicePointer(),
             &cu.getPosq().getDevicePointer(), &cu.getAtomIndexArray().getDevicePointer(), &copy};
     cu.executeKernel(copyToContextKernel, copyArgs, cu.getNumAtoms());
 }

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -35,12 +35,6 @@ using namespace OpenMM;
 using namespace std;
 
 CudaBondedUtilities::CudaBondedUtilities(CudaContext& context) : context(context), numForceBuffers(0), maxBonds(0), allGroups(0), hasInitializedKernels(false) {
-}
-
-CudaBondedUtilities::~CudaBondedUtilities() {
-    for (int i = 0; i < (int) atomIndices.size(); i++)
-        for (int j = 0; j < (int) atomIndices[i].size(); j++)
-            delete atomIndices[i][j];
 }
 
 void CudaBondedUtilities::addInteraction(const vector<vector<int> >& atoms, const string& source, int group) {
@@ -90,8 +84,10 @@ void CudaBondedUtilities::initialize(const System& system) {
     for (int i = 0; i < numForces; i++) {
         int numBonds = forceAtoms[i].size();
         int numAtoms = forceAtoms[i][0].size();
+        int numArrays = (numAtoms+3)/4;
         int startAtom = 0;
-        while (startAtom < numAtoms) {
+        atomIndices[i].resize(numArrays);
+        for (int j = 0; j < numArrays; j++) {
             int width = min(numAtoms-startAtom, 4);
             int paddedWidth = (width == 3 ? 4 : width);
             vector<unsigned int> indexVec(paddedWidth*numBonds);
@@ -99,9 +95,8 @@ void CudaBondedUtilities::initialize(const System& system) {
                 for (int atom = 0; atom < width; atom++)
                     indexVec[bond*paddedWidth+atom] = forceAtoms[i][bond][startAtom+atom];
             }
-            CudaArray* indices = new CudaArray(context, numBonds, 4*paddedWidth, "bondedIndices");
-            indices->upload(&indexVec[0]);
-            atomIndices[i].push_back(indices);
+            atomIndices[i][j].initialize(context, numBonds, 4*paddedWidth, "bondedIndices");
+            atomIndices[i][j].upload(&indexVec[0]);
             startAtom += width;
         }
     }
@@ -115,7 +110,7 @@ void CudaBondedUtilities::initialize(const System& system) {
     s<<"extern \"C\" __global__ void computeBondedForces(unsigned long long* __restrict__ forceBuffer, mixed* __restrict__ energyBuffer, const real4* __restrict__ posq, int groups, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ";
     for (int force = 0; force < numForces; force++) {
         for (int i = 0; i < (int) atomIndices[force].size(); i++) {
-            int indexWidth = atomIndices[force][i]->getElementSize()/4;
+            int indexWidth = atomIndices[force][i].getElementSize()/4;
             string indexType = "uint"+context.intToString(indexWidth);
             s<<", const "<<indexType<<"* __restrict__ atomIndices"<<force<<"_"<<i;
         }
@@ -154,7 +149,7 @@ string CudaBondedUtilities::createForceSource(int forceIndex, int numBonds, int 
     s<<"for (unsigned int index = blockIdx.x*blockDim.x+threadIdx.x; index < "<<numBonds<<"; index += blockDim.x*gridDim.x) {\n";
     int startAtom = 0;
     for (int i = 0; i < (int) atomIndices[forceIndex].size(); i++) {
-        int indexWidth = atomIndices[forceIndex][i]->getElementSize()/4;
+        int indexWidth = atomIndices[forceIndex][i].getElementSize()/4;
         string indexType = "uint"+context.intToString(indexWidth);
         s<<"    "<<indexType<<" atoms"<<i<<" = atomIndices"<<forceIndex<<"_"<<i<<"[index];\n";
         int atomsToLoad = min(indexWidth, numAtoms-startAtom);
@@ -191,7 +186,7 @@ void CudaBondedUtilities::computeInteractions(int groups) {
         kernelArgs.push_back(context.getPeriodicBoxVecZPointer());
         for (int i = 0; i < (int) atomIndices.size(); i++)
             for (int j = 0; j < (int) atomIndices[i].size(); j++)
-                kernelArgs.push_back(&atomIndices[i][j]->getDevicePointer());
+                kernelArgs.push_back(&atomIndices[i][j].getDevicePointer());
         for (int i = 0; i < (int) arguments.size(); i++)
             kernelArgs.push_back(&arguments[i]);
         if (energyParameterDerivatives.size() > 0)

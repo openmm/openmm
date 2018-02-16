@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2017 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -505,12 +505,6 @@ private:
     const HarmonicBondForce& force;
 };
 
-CudaCalcHarmonicBondForceKernel::~CudaCalcHarmonicBondForceKernel() {
-    cu.setAsCurrent();
-    if (params != NULL)
-        delete params;
-}
-
 void CudaCalcHarmonicBondForceKernel::initialize(const System& system, const HarmonicBondForce& force) {
     cu.setAsCurrent();
     int numContexts = cu.getPlatformData().contexts.size();
@@ -520,18 +514,18 @@ void CudaCalcHarmonicBondForceKernel::initialize(const System& system, const Har
     if (numBonds == 0)
         return;
     vector<vector<int> > atoms(numBonds, vector<int>(2));
-    params = CudaArray::create<float2>(cu, numBonds, "bondParams");
+    params.initialize<float2>(cu, numBonds, "bondParams");
     vector<float2> paramVector(numBonds);
     for (int i = 0; i < numBonds; i++) {
         double length, k;
         force.getBondParameters(startIndex+i, atoms[i][0], atoms[i][1], length, k);
         paramVector[i] = make_float2((float) length, (float) k);
     }
-    params->upload(paramVector);
+    params.upload(paramVector);
     map<string, string> replacements;
     replacements["APPLY_PERIODIC"] = (force.usesPeriodicBoundaryConditions() ? "1" : "0");
     replacements["COMPUTE_FORCE"] = CudaKernelSources::harmonicBondForce;
-    replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params->getDevicePointer(), "float2");
+    replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params.getDevicePointer(), "float2");
     cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaKernelSources::bondForce, replacements), force.getForceGroup());
     info = new ForceInfo(force);
     cu.addForce(info);
@@ -560,7 +554,7 @@ void CudaCalcHarmonicBondForceKernel::copyParametersToContext(ContextImpl& conte
         force.getBondParameters(startIndex+i, atom1, atom2, length, k);
         paramVector[i] = make_float2((float) length, (float) k);
     }
-    params->upload(paramVector);
+    params.upload(paramVector);
     
     // Mark that the current reordering may be invalid.
     
@@ -600,8 +594,6 @@ CudaCalcCustomBondForceKernel::~CudaCalcCustomBondForceKernel() {
     cu.setAsCurrent();
     if (params != NULL)
         delete params;
-    if (globals != NULL)
-        delete globals;
 }
 
 void CudaCalcCustomBondForceKernel::initialize(const System& system, const CustomBondForce& force) {
@@ -649,9 +641,9 @@ void CudaCalcCustomBondForceKernel::initialize(const System& system, const Custo
         variables[name] = "bondParams"+params->getParameterSuffix(i);
     }
     if (force.getNumGlobalParameters() > 0) {
-        globals = CudaArray::create<float>(cu, force.getNumGlobalParameters(), "customBondGlobals");
-        globals->upload(globalParamValues);
-        string argName = cu.getBondedUtilities().addArgument(globals->getDevicePointer(), "float");
+        globals.initialize<float>(cu, force.getNumGlobalParameters(), "customBondGlobals");
+        globals.upload(globalParamValues);
+        string argName = cu.getBondedUtilities().addArgument(globals.getDevicePointer(), "float");
         for (int i = 0; i < force.getNumGlobalParameters(); i++) {
             const string& name = force.getGlobalParameterName(i);
             string value = argName+"["+cu.intToString(i)+"]";
@@ -680,7 +672,7 @@ void CudaCalcCustomBondForceKernel::initialize(const System& system, const Custo
 }
 
 double CudaCalcCustomBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    if (globals != NULL) {
+    if (globals.isInitialized()) {
         bool changed = false;
         for (int i = 0; i < (int) globalParamNames.size(); i++) {
             float value = (float) context.getParameter(globalParamNames[i]);
@@ -689,7 +681,7 @@ double CudaCalcCustomBondForceKernel::execute(ContextImpl& context, bool include
             globalParamValues[i] = value;
         }
         if (changed)
-            globals->upload(globalParamValues);
+            globals.upload(globalParamValues);
     }
     return 0.0;
 }
@@ -749,12 +741,6 @@ private:
     const HarmonicAngleForce& force;
 };
 
-CudaCalcHarmonicAngleForceKernel::~CudaCalcHarmonicAngleForceKernel() {
-    cu.setAsCurrent();
-    if (params != NULL)
-        delete params;
-}
-
 void CudaCalcHarmonicAngleForceKernel::initialize(const System& system, const HarmonicAngleForce& force) {
     cu.setAsCurrent();
     int numContexts = cu.getPlatformData().contexts.size();
@@ -764,7 +750,7 @@ void CudaCalcHarmonicAngleForceKernel::initialize(const System& system, const Ha
     if (numAngles == 0)
         return;
     vector<vector<int> > atoms(numAngles, vector<int>(3));
-    params = CudaArray::create<float2>(cu, numAngles, "angleParams");
+    params.initialize<float2>(cu, numAngles, "angleParams");
     vector<float2> paramVector(numAngles);
     for (int i = 0; i < numAngles; i++) {
         double angle, k;
@@ -772,11 +758,11 @@ void CudaCalcHarmonicAngleForceKernel::initialize(const System& system, const Ha
         paramVector[i] = make_float2((float) angle, (float) k);
 
     }
-    params->upload(paramVector);
+    params.upload(paramVector);
     map<string, string> replacements;
     replacements["APPLY_PERIODIC"] = (force.usesPeriodicBoundaryConditions() ? "1" : "0");
     replacements["COMPUTE_FORCE"] = CudaKernelSources::harmonicAngleForce;
-    replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params->getDevicePointer(), "float2");
+    replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params.getDevicePointer(), "float2");
     cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaKernelSources::angleForce, replacements), force.getForceGroup());
     info = new ForceInfo(force);
     cu.addForce(info);
@@ -805,7 +791,7 @@ void CudaCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl& cont
         force.getAngleParameters(startIndex+i, atom1, atom2, atom3, angle, k);
         paramVector[i] = make_float2((float) angle, (float) k);
     }
-    params->upload(paramVector);
+    params.upload(paramVector);
     
     // Mark that the current reordering may be invalid.
     
@@ -846,8 +832,6 @@ CudaCalcCustomAngleForceKernel::~CudaCalcCustomAngleForceKernel() {
     cu.setAsCurrent();
     if (params != NULL)
         delete params;
-    if (globals != NULL)
-        delete globals;
 }
 
 void CudaCalcCustomAngleForceKernel::initialize(const System& system, const CustomAngleForce& force) {
@@ -895,9 +879,9 @@ void CudaCalcCustomAngleForceKernel::initialize(const System& system, const Cust
         variables[name] = "angleParams"+params->getParameterSuffix(i);
     }
     if (force.getNumGlobalParameters() > 0) {
-        globals = CudaArray::create<float>(cu, force.getNumGlobalParameters(), "customAngleGlobals");
-        globals->upload(globalParamValues);
-        string argName = cu.getBondedUtilities().addArgument(globals->getDevicePointer(), "float");
+        globals.initialize<float>(cu, force.getNumGlobalParameters(), "customAngleGlobals");
+        globals.upload(globalParamValues);
+        string argName = cu.getBondedUtilities().addArgument(globals.getDevicePointer(), "float");
         for (int i = 0; i < force.getNumGlobalParameters(); i++) {
             const string& name = force.getGlobalParameterName(i);
             string value = argName+"["+cu.intToString(i)+"]";
@@ -926,7 +910,7 @@ void CudaCalcCustomAngleForceKernel::initialize(const System& system, const Cust
 }
 
 double CudaCalcCustomAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    if (globals != NULL) {
+    if (globals.isInitialized()) {
         bool changed = false;
         for (int i = 0; i < (int) globalParamNames.size(); i++) {
             float value = (float) context.getParameter(globalParamNames[i]);
@@ -935,7 +919,7 @@ double CudaCalcCustomAngleForceKernel::execute(ContextImpl& context, bool includ
             globalParamValues[i] = value;
         }
         if (changed)
-            globals->upload(globalParamValues);
+            globals.upload(globalParamValues);
     }
     return 0.0;
 }
@@ -996,12 +980,6 @@ private:
     const PeriodicTorsionForce& force;
 };
 
-CudaCalcPeriodicTorsionForceKernel::~CudaCalcPeriodicTorsionForceKernel() {
-    cu.setAsCurrent();
-    if (params != NULL)
-        delete params;
-}
-
 void CudaCalcPeriodicTorsionForceKernel::initialize(const System& system, const PeriodicTorsionForce& force) {
     cu.setAsCurrent();
     int numContexts = cu.getPlatformData().contexts.size();
@@ -1011,7 +989,7 @@ void CudaCalcPeriodicTorsionForceKernel::initialize(const System& system, const 
     if (numTorsions == 0)
         return;
     vector<vector<int> > atoms(numTorsions, vector<int>(4));
-    params = CudaArray::create<float4>(cu, numTorsions, "periodicTorsionParams");
+    params.initialize<float4>(cu, numTorsions, "periodicTorsionParams");
     vector<float4> paramVector(numTorsions);
     for (int i = 0; i < numTorsions; i++) {
         int periodicity;
@@ -1019,11 +997,11 @@ void CudaCalcPeriodicTorsionForceKernel::initialize(const System& system, const 
         force.getTorsionParameters(startIndex+i, atoms[i][0], atoms[i][1], atoms[i][2], atoms[i][3], periodicity, phase, k);
         paramVector[i] = make_float4((float) k, (float) phase, (float) periodicity, 0.0f);
     }
-    params->upload(paramVector);
+    params.upload(paramVector);
     map<string, string> replacements;
     replacements["APPLY_PERIODIC"] = (force.usesPeriodicBoundaryConditions() ? "1" : "0");
     replacements["COMPUTE_FORCE"] = CudaKernelSources::periodicTorsionForce;
-    replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params->getDevicePointer(), "float4");
+    replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params.getDevicePointer(), "float4");
     cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaKernelSources::torsionForce, replacements), force.getForceGroup());
     info = new ForceInfo(force);
     cu.addForce(info);
@@ -1052,7 +1030,7 @@ void CudaCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImpl& co
         force.getTorsionParameters(startIndex+i, atom1, atom2, atom3, atom4, periodicity, phase, k);
         paramVector[i] = make_float4((float) k, (float) phase, (float) periodicity, 0.0f);
     }
-    params->upload(paramVector);
+    params.upload(paramVector);
     
     // Mark that the current reordering may be invalid.
     
@@ -1087,14 +1065,6 @@ private:
     const RBTorsionForce& force;
 };
 
-CudaCalcRBTorsionForceKernel::~CudaCalcRBTorsionForceKernel() {
-    cu.setAsCurrent();
-    if (params1 != NULL)
-        delete params1;
-    if (params2 != NULL)
-        delete params2;
-}
-
 void CudaCalcRBTorsionForceKernel::initialize(const System& system, const RBTorsionForce& force) {
     cu.setAsCurrent();
     int numContexts = cu.getPlatformData().contexts.size();
@@ -1104,8 +1074,8 @@ void CudaCalcRBTorsionForceKernel::initialize(const System& system, const RBTors
     if (numTorsions == 0)
         return;
     vector<vector<int> > atoms(numTorsions, vector<int>(4));
-    params1 = CudaArray::create<float4>(cu, numTorsions, "rbTorsionParams1");
-    params2 = CudaArray::create<float2>(cu, numTorsions, "rbTorsionParams2");
+    params1.initialize<float4>(cu, numTorsions, "rbTorsionParams1");
+    params2.initialize<float2>(cu, numTorsions, "rbTorsionParams2");
     vector<float4> paramVector1(numTorsions);
     vector<float2> paramVector2(numTorsions);
     for (int i = 0; i < numTorsions; i++) {
@@ -1115,13 +1085,13 @@ void CudaCalcRBTorsionForceKernel::initialize(const System& system, const RBTors
         paramVector2[i] = make_float2((float) c4, (float) c5);
 
     }
-    params1->upload(paramVector1);
-    params2->upload(paramVector2);
+    params1.upload(paramVector1);
+    params2.upload(paramVector2);
     map<string, string> replacements;
     replacements["APPLY_PERIODIC"] = (force.usesPeriodicBoundaryConditions() ? "1" : "0");
     replacements["COMPUTE_FORCE"] = CudaKernelSources::rbTorsionForce;
-    replacements["PARAMS1"] = cu.getBondedUtilities().addArgument(params1->getDevicePointer(), "float4");
-    replacements["PARAMS2"] = cu.getBondedUtilities().addArgument(params2->getDevicePointer(), "float2");
+    replacements["PARAMS1"] = cu.getBondedUtilities().addArgument(params1.getDevicePointer(), "float4");
+    replacements["PARAMS2"] = cu.getBondedUtilities().addArgument(params2.getDevicePointer(), "float2");
     cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaKernelSources::torsionForce, replacements), force.getForceGroup());
     info = new ForceInfo(force);
     cu.addForce(info);
@@ -1152,8 +1122,8 @@ void CudaCalcRBTorsionForceKernel::copyParametersToContext(ContextImpl& context,
         paramVector1[i] = make_float4((float) c0, (float) c1, (float) c2, (float) c3);
         paramVector2[i] = make_float2((float) c4, (float) c5);
     }
-    params1->upload(paramVector1);
-    params2->upload(paramVector2);
+    params1.upload(paramVector1);
+    params2.upload(paramVector2);
     
     // Mark that the current reordering may be invalid.
     
@@ -1190,15 +1160,6 @@ private:
     const CMAPTorsionForce& force;
 };
 
-CudaCalcCMAPTorsionForceKernel::~CudaCalcCMAPTorsionForceKernel() {
-    if (coefficients != NULL)
-        delete coefficients;
-    if (mapPositions != NULL)
-        delete mapPositions;
-    if (torsionMaps != NULL)
-        delete torsionMaps;
-}
-
 void CudaCalcCMAPTorsionForceKernel::initialize(const System& system, const CMAPTorsionForce& force) {
     cu.setAsCurrent();
     int numContexts = cu.getPlatformData().contexts.size();
@@ -1230,17 +1191,17 @@ void CudaCalcCMAPTorsionForceKernel::initialize(const System& system, const CMAP
     vector<int> torsionMapsVec(numTorsions);
     for (int i = 0; i < numTorsions; i++)
         force.getTorsionParameters(startIndex+i, torsionMapsVec[i], atoms[i][0], atoms[i][1], atoms[i][2], atoms[i][3], atoms[i][4], atoms[i][5], atoms[i][6], atoms[i][7]);
-    coefficients = CudaArray::create<float4>(cu, coeffVec.size(), "cmapTorsionCoefficients");
-    mapPositions = CudaArray::create<int2>(cu, numMaps, "cmapTorsionMapPositions");
-    torsionMaps = CudaArray::create<int>(cu, numTorsions, "cmapTorsionMaps");
-    coefficients->upload(coeffVec);
-    mapPositions->upload(mapPositionsVec);
-    torsionMaps->upload(torsionMapsVec);
+    coefficients.initialize<float4>(cu, coeffVec.size(), "cmapTorsionCoefficients");
+    mapPositions.initialize<int2>(cu, numMaps, "cmapTorsionMapPositions");
+    torsionMaps.initialize<int>(cu, numTorsions, "cmapTorsionMaps");
+    coefficients.upload(coeffVec);
+    mapPositions.upload(mapPositionsVec);
+    torsionMaps.upload(torsionMapsVec);
     map<string, string> replacements;
     replacements["APPLY_PERIODIC"] = (force.usesPeriodicBoundaryConditions() ? "1" : "0");
-    replacements["COEFF"] = cu.getBondedUtilities().addArgument(coefficients->getDevicePointer(), "float4");
-    replacements["MAP_POS"] = cu.getBondedUtilities().addArgument(mapPositions->getDevicePointer(), "int2");
-    replacements["MAPS"] = cu.getBondedUtilities().addArgument(torsionMaps->getDevicePointer(), "int");
+    replacements["COEFF"] = cu.getBondedUtilities().addArgument(coefficients.getDevicePointer(), "float4");
+    replacements["MAP_POS"] = cu.getBondedUtilities().addArgument(mapPositions.getDevicePointer(), "int2");
+    replacements["MAPS"] = cu.getBondedUtilities().addArgument(torsionMaps.getDevicePointer(), "int");
     cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaKernelSources::cmapTorsionForce, replacements), force.getForceGroup());
     info = new ForceInfo(force);
     cu.addForce(info);
@@ -1256,9 +1217,9 @@ void CudaCalcCMAPTorsionForceKernel::copyParametersToContext(ContextImpl& contex
     int startIndex = cu.getContextIndex()*force.getNumTorsions()/numContexts;
     int endIndex = (cu.getContextIndex()+1)*force.getNumTorsions()/numContexts;
     numTorsions = endIndex-startIndex;
-    if (mapPositions->getSize() != numMaps)
+    if (mapPositions.getSize() != numMaps)
         throw OpenMMException("updateParametersInContext: The number of maps has changed");
-    if (torsionMaps->getSize() != numTorsions)
+    if (torsionMaps.getSize() != numTorsions)
         throw OpenMMException("updateParametersInContext: The number of CMAP torsions has changed");
 
     // Update the maps.
@@ -1281,7 +1242,7 @@ void CudaCalcCMAPTorsionForceKernel::copyParametersToContext(ContextImpl& contex
             coeffVec.push_back(make_float4((float) c[j][12], (float) c[j][13], (float) c[j][14], (float) c[j][15]));
         }
     }
-    coefficients->upload(coeffVec);
+    coefficients.upload(coeffVec);
 
     // Update the indices.
 
@@ -1290,7 +1251,7 @@ void CudaCalcCMAPTorsionForceKernel::copyParametersToContext(ContextImpl& contex
         int index[8];
         force.getTorsionParameters(i, torsionMapsVec[i], index[0], index[1], index[2], index[3], index[4], index[5], index[6], index[7]);
     }
-    torsionMaps->upload(torsionMapsVec);
+    torsionMaps.upload(torsionMapsVec);
 }
 
 class CudaCalcCustomTorsionForceKernel::ForceInfo : public CudaForceInfo {
@@ -1327,8 +1288,6 @@ private:
 CudaCalcCustomTorsionForceKernel::~CudaCalcCustomTorsionForceKernel() {
     if (params != NULL)
         delete params;
-    if (globals != NULL)
-        delete globals;
 }
 
 void CudaCalcCustomTorsionForceKernel::initialize(const System& system, const CustomTorsionForce& force) {
@@ -1376,9 +1335,9 @@ void CudaCalcCustomTorsionForceKernel::initialize(const System& system, const Cu
         variables[name] = "torsionParams"+params->getParameterSuffix(i);
     }
     if (force.getNumGlobalParameters() > 0) {
-        globals = CudaArray::create<float>(cu, force.getNumGlobalParameters(), "customTorsionGlobals");
-        globals->upload(globalParamValues);
-        string argName = cu.getBondedUtilities().addArgument(globals->getDevicePointer(), "float");
+        globals.initialize<float>(cu, force.getNumGlobalParameters(), "customTorsionGlobals");
+        globals.upload(globalParamValues);
+        string argName = cu.getBondedUtilities().addArgument(globals.getDevicePointer(), "float");
         for (int i = 0; i < force.getNumGlobalParameters(); i++) {
             const string& name = force.getGlobalParameterName(i);
             string value = argName+"["+cu.intToString(i)+"]";
@@ -1407,7 +1366,7 @@ void CudaCalcCustomTorsionForceKernel::initialize(const System& system, const Cu
 }
 
 double CudaCalcCustomTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    if (globals != NULL) {
+    if (globals.isInitialized()) {
         bool changed = false;
         for (int i = 0; i < (int) globalParamNames.size(); i++) {
             float value = (float) context.getParameter(globalParamNames[i]);
@@ -1416,7 +1375,7 @@ double CudaCalcCustomTorsionForceKernel::execute(ContextImpl& context, bool incl
             globalParamValues[i] = value;
         }
         if (changed)
-            globals->upload(globalParamValues);
+            globals.upload(globalParamValues);
     }
     return 0.0;
 }
@@ -1483,12 +1442,8 @@ private:
 
 class CudaCalcNonbondedForceKernel::PmeIO : public CalcPmeReciprocalForceKernel::IO {
 public:
-    PmeIO(CudaContext& cu, CUfunction addForcesKernel) : cu(cu), addForcesKernel(addForcesKernel), forceTemp(NULL) {
-        forceTemp = CudaArray::create<float4>(cu, cu.getNumAtoms(), "PmeForce");
-    }
-    ~PmeIO() {
-        if (forceTemp != NULL)
-            delete forceTemp;
+    PmeIO(CudaContext& cu, CUfunction addForcesKernel) : cu(cu), addForcesKernel(addForcesKernel) {
+        forceTemp.initialize<float4>(cu, cu.getNumAtoms(), "PmeForce");
     }
     float* getPosq() {
         cu.setAsCurrent();
@@ -1496,14 +1451,14 @@ public:
         return (float*) &posq[0];
     }
     void setForce(float* force) {
-        forceTemp->upload(force);
-        void* args[] = {&forceTemp->getDevicePointer(), &cu.getForce().getDevicePointer()};
+        forceTemp.upload(force);
+        void* args[] = {&forceTemp.getDevicePointer(), &cu.getForce().getDevicePointer()};
         cu.executeKernel(addForcesKernel, args, cu.getNumAtoms());
     }
 private:
     CudaContext& cu;
     vector<float4> posq;
-    CudaArray* forceTemp;
+    CudaArray forceTemp;
     CUfunction addForcesKernel;
 };
 
@@ -1576,34 +1531,6 @@ private:
 
 CudaCalcNonbondedForceKernel::~CudaCalcNonbondedForceKernel() {
     cu.setAsCurrent();
-    if (sigmaEpsilon != NULL)
-        delete sigmaEpsilon;
-    if (exceptionParams != NULL)
-        delete exceptionParams;
-    if (cosSinSums != NULL)
-        delete cosSinSums;
-    if (directPmeGrid != NULL)
-        delete directPmeGrid;
-    if (reciprocalPmeGrid != NULL)
-        delete reciprocalPmeGrid;
-    if (pmeBsplineModuliX != NULL)
-        delete pmeBsplineModuliX;
-    if (pmeBsplineModuliY != NULL)
-        delete pmeBsplineModuliY;
-    if (pmeBsplineModuliZ != NULL)
-        delete pmeBsplineModuliZ;
-    if (pmeDispersionBsplineModuliX != NULL)
-        delete pmeDispersionBsplineModuliX;
-    if (pmeDispersionBsplineModuliY != NULL)
-        delete pmeDispersionBsplineModuliY;
-    if (pmeDispersionBsplineModuliZ != NULL)
-        delete pmeDispersionBsplineModuliZ;
-    if (pmeAtomRange != NULL)
-        delete pmeAtomRange;
-    if (pmeAtomGridIndex != NULL)
-        delete pmeAtomGridIndex;
-    if (pmeEnergyBuffer != NULL)
-        delete pmeEnergyBuffer;
     if (sort != NULL)
         delete sort;
     if (fft != NULL)
@@ -1647,7 +1574,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
     // Initialize nonbonded interactions.
 
     int numParticles = force.getNumParticles();
-    sigmaEpsilon = CudaArray::create<float2>(cu, cu.getPaddedNumAtoms(), "sigmaEpsilon");
+    sigmaEpsilon.initialize<float2>(cu, cu.getPaddedNumAtoms(), "sigmaEpsilon");
     CudaArray& posq = cu.getPosq();
     vector<double4> temp(posq.getSize());
     float4* posqf = (float4*) &temp[0];
@@ -1682,7 +1609,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         exclusionList[exclusion.second].push_back(exclusion.first);
     }
     posq.upload(&temp[0]);
-    sigmaEpsilon->upload(sigmaEpsilonVector);
+    sigmaEpsilon.upload(sigmaEpsilonVector);
     nonbondedMethod = CalcNonbondedForceKernel::NonbondedMethod(force.getNonbondedMethod());
     bool useCutoff = (nonbondedMethod != NoCutoff);
     bool usePeriodic = (nonbondedMethod != NoCutoff && nonbondedMethod != CutoffNonPeriodic);
@@ -1740,7 +1667,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
             ewaldSumsKernel = cu.getKernel(module, "calculateEwaldCosSinSums");
             ewaldForcesKernel = cu.getKernel(module, "calculateEwaldForces");
             int elementSize = (cu.getUseDoublePrecision() ? sizeof(double2) : sizeof(float2));
-            cosSinSums = new CudaArray(cu, (2*kmaxx-1)*(2*kmaxy-1)*(2*kmaxz-1), elementSize, "cosSinSums");
+            cosSinSums.initialize(cu, (2*kmaxx-1)*(2*kmaxy-1)*(2*kmaxz-1), elementSize, "cosSinSums");
         }
     }
     else if (nonbondedMethod == PME || nonbondedMethod == LJPME) {
@@ -1844,22 +1771,22 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                 int gridElements = gridSizeX*gridSizeY*gridSizeZ;
                 if (doLJPME)
                     gridElements = max(gridElements, dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ);
-                directPmeGrid = new CudaArray(cu, gridElements, cu.getComputeCapability() >= 2.0 ? 2*elementSize : 2*sizeof(long long), "originalPmeGrid");
-                reciprocalPmeGrid = new CudaArray(cu, gridElements, 2*elementSize, "reciprocalPmeGrid");
-                cu.addAutoclearBuffer(*directPmeGrid);
-                pmeBsplineModuliX = new CudaArray(cu, gridSizeX, elementSize, "pmeBsplineModuliX");
-                pmeBsplineModuliY = new CudaArray(cu, gridSizeY, elementSize, "pmeBsplineModuliY");
-                pmeBsplineModuliZ = new CudaArray(cu, gridSizeZ, elementSize, "pmeBsplineModuliZ");
+                directPmeGrid.initialize(cu, gridElements, cu.getComputeCapability() >= 2.0 ? 2*elementSize : 2*sizeof(long long), "originalPmeGrid");
+                reciprocalPmeGrid.initialize(cu, gridElements, 2*elementSize, "reciprocalPmeGrid");
+                cu.addAutoclearBuffer(directPmeGrid);
+                pmeBsplineModuliX.initialize(cu, gridSizeX, elementSize, "pmeBsplineModuliX");
+                pmeBsplineModuliY.initialize(cu, gridSizeY, elementSize, "pmeBsplineModuliY");
+                pmeBsplineModuliZ.initialize(cu, gridSizeZ, elementSize, "pmeBsplineModuliZ");
                 if (doLJPME) {
-                    pmeDispersionBsplineModuliX = new CudaArray(cu, dispersionGridSizeX, elementSize, "pmeDispersionBsplineModuliX");
-                    pmeDispersionBsplineModuliY = new CudaArray(cu, dispersionGridSizeY, elementSize, "pmeDispersionBsplineModuliY");
-                    pmeDispersionBsplineModuliZ = new CudaArray(cu, dispersionGridSizeZ, elementSize, "pmeDispersionBsplineModuliZ");
+                    pmeDispersionBsplineModuliX.initialize(cu, dispersionGridSizeX, elementSize, "pmeDispersionBsplineModuliX");
+                    pmeDispersionBsplineModuliY.initialize(cu, dispersionGridSizeY, elementSize, "pmeDispersionBsplineModuliY");
+                    pmeDispersionBsplineModuliZ.initialize(cu, dispersionGridSizeZ, elementSize, "pmeDispersionBsplineModuliZ");
                 }
-                pmeAtomRange = CudaArray::create<int>(cu, gridSizeX*gridSizeY*gridSizeZ+1, "pmeAtomRange");
-                pmeAtomGridIndex = CudaArray::create<int2>(cu, numParticles, "pmeAtomGridIndex");
+                pmeAtomRange.initialize<int>(cu, gridSizeX*gridSizeY*gridSizeZ+1, "pmeAtomRange");
+                pmeAtomGridIndex.initialize<int2>(cu, numParticles, "pmeAtomGridIndex");
                 int energyElementSize = (cu.getUseDoublePrecision() || cu.getUseMixedPrecision() ? sizeof(double) : sizeof(float));
-                pmeEnergyBuffer = new CudaArray(cu, cu.getNumThreadBlocks()*CudaContext::ThreadBlockSize, energyElementSize, "pmeEnergyBuffer");
-                cu.clearBuffer(*pmeEnergyBuffer);
+                pmeEnergyBuffer.initialize(cu, cu.getNumThreadBlocks()*CudaContext::ThreadBlockSize, energyElementSize, "pmeEnergyBuffer");
+                cu.clearBuffer(pmeEnergyBuffer);
                 sort = new CudaSort(cu, new SortTrait(), cu.getNumAtoms());
                 int cufftVersion;
                 cufftGetVersion(&cufftVersion);
@@ -1903,7 +1830,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                     if (recipForceGroup < 0)
                         recipForceGroup = force.getForceGroup();
                     cu.addPreComputation(new SyncStreamPreComputation(cu, pmeStream, pmeSyncEvent, recipForceGroup));
-                    cu.addPostComputation(new SyncStreamPostComputation(cu, pmeSyncEvent, cu.getKernel(module, "addEnergy"), *pmeEnergyBuffer, recipForceGroup));
+                    cu.addPostComputation(new SyncStreamPostComputation(cu, pmeSyncEvent, cu.getKernel(module, "addEnergy"), pmeEnergyBuffer, recipForceGroup));
                 }
                 hasInitializedFFT = true;
 
@@ -1916,9 +1843,9 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                         xsize = gridSizeX;
                         ysize = gridSizeY;
                         zsize = gridSizeZ;
-                        xmoduli = pmeBsplineModuliX;
-                        ymoduli = pmeBsplineModuliY;
-                        zmoduli = pmeBsplineModuliZ;
+                        xmoduli = &pmeBsplineModuliX;
+                        ymoduli = &pmeBsplineModuliY;
+                        zmoduli = &pmeBsplineModuliZ;
                     }
                     else {
                         if (!doLJPME)
@@ -1926,9 +1853,9 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                         xsize = dispersionGridSizeX;
                         ysize = dispersionGridSizeY;
                         zsize = dispersionGridSizeZ;
-                        xmoduli = pmeDispersionBsplineModuliX;
-                        ymoduli = pmeDispersionBsplineModuliY;
-                        zmoduli = pmeDispersionBsplineModuliZ;
+                        xmoduli = &pmeDispersionBsplineModuliX;
+                        ymoduli = &pmeDispersionBsplineModuliY;
+                        zmoduli = &pmeDispersionBsplineModuliZ;
                     }
                     int maxSize = max(max(xsize, ysize), zsize);
                     vector<double> data(PmeOrder);
@@ -2008,7 +1935,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
     cu.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source, force.getForceGroup(), true);
     if (hasLJ)
         cu.getNonbondedUtilities().addParameter(CudaNonbondedUtilities::ParameterInfo("sigmaEpsilon", "float", 2,
-                                                sizeof(float2), sigmaEpsilon->getDevicePointer()));
+                                                sizeof(float2), sigmaEpsilon.getDevicePointer()));
 
     // Initialize the exceptions.
 
@@ -2019,7 +1946,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
     if (numExceptions > 0) {
         exceptionAtoms.resize(numExceptions);
         vector<vector<int> > atoms(numExceptions, vector<int>(2));
-        exceptionParams = CudaArray::create<float4>(cu, numExceptions, "exceptionParams");
+        exceptionParams.initialize<float4>(cu, numExceptions, "exceptionParams");
         vector<float4> exceptionParamsVector(numExceptions);
         for (int i = 0; i < numExceptions; i++) {
             double chargeProd, sigma, epsilon;
@@ -2027,9 +1954,9 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
             exceptionParamsVector[i] = make_float4((float) (ONE_4PI_EPS0*chargeProd), (float) sigma, (float) (4.0*epsilon), 0.0f);
             exceptionAtoms[i] = make_pair(atoms[i][0], atoms[i][1]);
         }
-        exceptionParams->upload(exceptionParamsVector);
+        exceptionParams.upload(exceptionParamsVector);
         map<string, string> replacements;
-        replacements["PARAMS"] = cu.getBondedUtilities().addArgument(exceptionParams->getDevicePointer(), "float4");
+        replacements["PARAMS"] = cu.getBondedUtilities().addArgument(exceptionParams.getDevicePointer(), "float4");
         cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaKernelSources::nonbondedExceptions, replacements), force.getForceGroup());
     }
     info = new ForceInfo(force);
@@ -2037,13 +1964,13 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
 }
 
 double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy, bool includeDirect, bool includeReciprocal) {
-    if (cosSinSums != NULL && includeReciprocal) {
-        void* sumsArgs[] = {&cu.getEnergyBuffer().getDevicePointer(), &cu.getPosq().getDevicePointer(), &cosSinSums->getDevicePointer(), cu.getPeriodicBoxSizePointer()};
-        cu.executeKernel(ewaldSumsKernel, sumsArgs, cosSinSums->getSize());
-        void* forcesArgs[] = {&cu.getForce().getDevicePointer(), &cu.getPosq().getDevicePointer(), &cosSinSums->getDevicePointer(), cu.getPeriodicBoxSizePointer()};
+    if (cosSinSums.isInitialized() && includeReciprocal) {
+        void* sumsArgs[] = {&cu.getEnergyBuffer().getDevicePointer(), &cu.getPosq().getDevicePointer(), &cosSinSums.getDevicePointer(), cu.getPeriodicBoxSizePointer()};
+        cu.executeKernel(ewaldSumsKernel, sumsArgs, cosSinSums.getSize());
+        void* forcesArgs[] = {&cu.getForce().getDevicePointer(), &cu.getPosq().getDevicePointer(), &cosSinSums.getDevicePointer(), cu.getPeriodicBoxSizePointer()};
         cu.executeKernel(ewaldForcesKernel, forcesArgs, cu.getNumAtoms());
     }
-    if (directPmeGrid != NULL && includeReciprocal) {
+    if (directPmeGrid.isInitialized()&& includeReciprocal) {
         if (usePmeStream)
             cu.setCurrentStream(pmeStream);
 
@@ -2075,118 +2002,118 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
 
         // Execute the reciprocal space kernels.
 
-        void* gridIndexArgs[] = {&cu.getPosq().getDevicePointer(), &pmeAtomGridIndex->getDevicePointer(), cu.getPeriodicBoxSizePointer(),
+        void* gridIndexArgs[] = {&cu.getPosq().getDevicePointer(), &pmeAtomGridIndex.getDevicePointer(), cu.getPeriodicBoxSizePointer(),
                 cu.getInvPeriodicBoxSizePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
                 recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
         cu.executeKernel(pmeGridIndexKernel, gridIndexArgs, cu.getNumAtoms());
 
-        sort->sort(*pmeAtomGridIndex);
+        sort->sort(pmeAtomGridIndex);
 
-        void* spreadArgs[] = {&cu.getPosq().getDevicePointer(), &directPmeGrid->getDevicePointer(), cu.getPeriodicBoxSizePointer(),
+        void* spreadArgs[] = {&cu.getPosq().getDevicePointer(), &directPmeGrid.getDevicePointer(), cu.getPeriodicBoxSizePointer(),
                 cu.getInvPeriodicBoxSizePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
-                recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2], &pmeAtomGridIndex->getDevicePointer()};
+                recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2], &pmeAtomGridIndex.getDevicePointer()};
         cu.executeKernel(pmeSpreadChargeKernel, spreadArgs, cu.getNumAtoms(), 128);
 
         if (cu.getUseDoublePrecision() || cu.getComputeCapability() < 2.0 || cu.getPlatformData().deterministicForces) {
-            void* finishSpreadArgs[] = {&directPmeGrid->getDevicePointer()};
+            void* finishSpreadArgs[] = {&directPmeGrid.getDevicePointer()};
             cu.executeKernel(pmeFinishSpreadChargeKernel, finishSpreadArgs, gridSizeX*gridSizeY*gridSizeZ, 256);
         }
 
         if (useCudaFFT) {
             if (cu.getUseDoublePrecision())
-                cufftExecD2Z(fftForward, (double*) directPmeGrid->getDevicePointer(), (double2*) reciprocalPmeGrid->getDevicePointer());
+                cufftExecD2Z(fftForward, (double*) directPmeGrid.getDevicePointer(), (double2*) reciprocalPmeGrid.getDevicePointer());
             else
-                cufftExecR2C(fftForward, (float*) directPmeGrid->getDevicePointer(), (float2*) reciprocalPmeGrid->getDevicePointer());
+                cufftExecR2C(fftForward, (float*) directPmeGrid.getDevicePointer(), (float2*) reciprocalPmeGrid.getDevicePointer());
         }
         else {
-            fft->execFFT(*directPmeGrid, *reciprocalPmeGrid, true);
+            fft->execFFT(directPmeGrid, reciprocalPmeGrid, true);
         }
 
         if (includeEnergy) {
-            void* computeEnergyArgs[] = {&reciprocalPmeGrid->getDevicePointer(), usePmeStream ? &pmeEnergyBuffer->getDevicePointer() : &cu.getEnergyBuffer().getDevicePointer(),
-                    &pmeBsplineModuliX->getDevicePointer(), &pmeBsplineModuliY->getDevicePointer(), &pmeBsplineModuliZ->getDevicePointer(),
+            void* computeEnergyArgs[] = {&reciprocalPmeGrid.getDevicePointer(), usePmeStream ? &pmeEnergyBuffer.getDevicePointer() : &cu.getEnergyBuffer().getDevicePointer(),
+                    &pmeBsplineModuliX.getDevicePointer(), &pmeBsplineModuliY.getDevicePointer(), &pmeBsplineModuliZ.getDevicePointer(),
                     cu.getPeriodicBoxSizePointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
             cu.executeKernel(pmeEvalEnergyKernel, computeEnergyArgs, gridSizeX*gridSizeY*gridSizeZ);
         }
 
-        void* convolutionArgs[] = {&reciprocalPmeGrid->getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(),
-                &pmeBsplineModuliX->getDevicePointer(), &pmeBsplineModuliY->getDevicePointer(), &pmeBsplineModuliZ->getDevicePointer(),
+        void* convolutionArgs[] = {&reciprocalPmeGrid.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(),
+                &pmeBsplineModuliX.getDevicePointer(), &pmeBsplineModuliY.getDevicePointer(), &pmeBsplineModuliZ.getDevicePointer(),
                 cu.getPeriodicBoxSizePointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
         cu.executeKernel(pmeConvolutionKernel, convolutionArgs, gridSizeX*gridSizeY*gridSizeZ, 256);
 
         if (useCudaFFT) {
             if (cu.getUseDoublePrecision())
-                cufftExecZ2D(fftBackward, (double2*) reciprocalPmeGrid->getDevicePointer(), (double*) directPmeGrid->getDevicePointer());
+                cufftExecZ2D(fftBackward, (double2*) reciprocalPmeGrid.getDevicePointer(), (double*) directPmeGrid.getDevicePointer());
             else
-                cufftExecC2R(fftBackward, (float2*) reciprocalPmeGrid->getDevicePointer(), (float*)  directPmeGrid->getDevicePointer());
+                cufftExecC2R(fftBackward, (float2*) reciprocalPmeGrid.getDevicePointer(), (float*)  directPmeGrid.getDevicePointer());
         }
         else {
-            fft->execFFT(*reciprocalPmeGrid, *directPmeGrid, false);
+            fft->execFFT(reciprocalPmeGrid, directPmeGrid, false);
         }
 
-        void* interpolateArgs[] = {&cu.getPosq().getDevicePointer(), &cu.getForce().getDevicePointer(), &directPmeGrid->getDevicePointer(), cu.getPeriodicBoxSizePointer(),
+        void* interpolateArgs[] = {&cu.getPosq().getDevicePointer(), &cu.getForce().getDevicePointer(), &directPmeGrid.getDevicePointer(), cu.getPeriodicBoxSizePointer(),
                 cu.getInvPeriodicBoxSizePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
-                recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2], &pmeAtomGridIndex->getDevicePointer()};
+                recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2], &pmeAtomGridIndex.getDevicePointer()};
         cu.executeKernel(pmeInterpolateForceKernel, interpolateArgs, cu.getNumAtoms(), 128);
 
         // As written, we check only the Electrostatic grid pointer to get here.  We could separate them out, but for
         // now we assume that LJPME can only be used if electrostatic PME is also active.
         if (doLJPME) {
-            void* gridIndexArgs[] = {&cu.getPosq().getDevicePointer(), &pmeAtomGridIndex->getDevicePointer(), cu.getPeriodicBoxSizePointer(),
+            void* gridIndexArgs[] = {&cu.getPosq().getDevicePointer(), &pmeAtomGridIndex.getDevicePointer(), cu.getPeriodicBoxSizePointer(),
                     cu.getInvPeriodicBoxSizePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
                     recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
             cu.executeKernel(pmeDispersionGridIndexKernel, gridIndexArgs, cu.getNumAtoms());
 
-            sort->sort(*pmeAtomGridIndex);
+            sort->sort(pmeAtomGridIndex);
 
-            cu.clearBuffer(*directPmeGrid);
-            void* spreadArgs[] = {&cu.getPosq().getDevicePointer(), &directPmeGrid->getDevicePointer(), cu.getPeriodicBoxSizePointer(),
+            cu.clearBuffer(directPmeGrid);
+            void* spreadArgs[] = {&cu.getPosq().getDevicePointer(), &directPmeGrid.getDevicePointer(), cu.getPeriodicBoxSizePointer(),
                     cu.getInvPeriodicBoxSizePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
-                    recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2], &pmeAtomGridIndex->getDevicePointer(),
-                    &sigmaEpsilon->getDevicePointer()};
+                    recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2], &pmeAtomGridIndex.getDevicePointer(),
+                    &sigmaEpsilon.getDevicePointer()};
             cu.executeKernel(pmeDispersionSpreadChargeKernel, spreadArgs, cu.getNumAtoms(), 128);
 
             if (cu.getUseDoublePrecision() || cu.getComputeCapability() < 2.0 || cu.getPlatformData().deterministicForces) {
-                void* finishSpreadArgs[] = {&directPmeGrid->getDevicePointer()};
+                void* finishSpreadArgs[] = {&directPmeGrid.getDevicePointer()};
                 cu.executeKernel(pmeDispersionFinishSpreadChargeKernel, finishSpreadArgs, dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ, 256);
             }
 
             if (useCudaFFT) {
                 if (cu.getUseDoublePrecision())
-                    cufftExecD2Z(dispersionFftForward, (double*) directPmeGrid->getDevicePointer(), (double2*) reciprocalPmeGrid->getDevicePointer());
+                    cufftExecD2Z(dispersionFftForward, (double*) directPmeGrid.getDevicePointer(), (double2*) reciprocalPmeGrid.getDevicePointer());
                 else
-                    cufftExecR2C(dispersionFftForward, (float*) directPmeGrid->getDevicePointer(), (float2*) reciprocalPmeGrid->getDevicePointer());
+                    cufftExecR2C(dispersionFftForward, (float*) directPmeGrid.getDevicePointer(), (float2*) reciprocalPmeGrid.getDevicePointer());
             }
             else {
-                dispersionFft->execFFT(*directPmeGrid, *reciprocalPmeGrid, true);
+                dispersionFft->execFFT(directPmeGrid, reciprocalPmeGrid, true);
             }
 
             if (includeEnergy) {
-                void* computeEnergyArgs[] = {&reciprocalPmeGrid->getDevicePointer(), usePmeStream ? &pmeEnergyBuffer->getDevicePointer() : &cu.getEnergyBuffer().getDevicePointer(),
-                        &pmeDispersionBsplineModuliX->getDevicePointer(), &pmeDispersionBsplineModuliY->getDevicePointer(), &pmeDispersionBsplineModuliZ->getDevicePointer(),
+                void* computeEnergyArgs[] = {&reciprocalPmeGrid.getDevicePointer(), usePmeStream ? &pmeEnergyBuffer.getDevicePointer() : &cu.getEnergyBuffer().getDevicePointer(),
+                        &pmeDispersionBsplineModuliX.getDevicePointer(), &pmeDispersionBsplineModuliY.getDevicePointer(), &pmeDispersionBsplineModuliZ.getDevicePointer(),
                         cu.getPeriodicBoxSizePointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
                 cu.executeKernel(pmeEvalDispersionEnergyKernel, computeEnergyArgs, dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ);
             }
 
-            void* convolutionArgs[] = {&reciprocalPmeGrid->getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(),
-                    &pmeDispersionBsplineModuliX->getDevicePointer(), &pmeDispersionBsplineModuliY->getDevicePointer(), &pmeDispersionBsplineModuliZ->getDevicePointer(),
+            void* convolutionArgs[] = {&reciprocalPmeGrid.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(),
+                    &pmeDispersionBsplineModuliX.getDevicePointer(), &pmeDispersionBsplineModuliY.getDevicePointer(), &pmeDispersionBsplineModuliZ.getDevicePointer(),
                     cu.getPeriodicBoxSizePointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
             cu.executeKernel(pmeDispersionConvolutionKernel, convolutionArgs, dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ, 256);
 
             if (useCudaFFT) {
                 if (cu.getUseDoublePrecision())
-                    cufftExecZ2D(dispersionFftBackward, (double2*) reciprocalPmeGrid->getDevicePointer(), (double*) directPmeGrid->getDevicePointer());
+                    cufftExecZ2D(dispersionFftBackward, (double2*) reciprocalPmeGrid.getDevicePointer(), (double*) directPmeGrid.getDevicePointer());
                 else
-                    cufftExecC2R(dispersionFftBackward, (float2*) reciprocalPmeGrid->getDevicePointer(), (float*)  directPmeGrid->getDevicePointer());
+                    cufftExecC2R(dispersionFftBackward, (float2*) reciprocalPmeGrid.getDevicePointer(), (float*)  directPmeGrid.getDevicePointer());
             }
             else {
-                dispersionFft->execFFT(*reciprocalPmeGrid, *directPmeGrid, false);
+                dispersionFft->execFFT(reciprocalPmeGrid, directPmeGrid, false);
             }
 
-            void* interpolateArgs[] = {&cu.getPosq().getDevicePointer(), &cu.getForce().getDevicePointer(), &directPmeGrid->getDevicePointer(), cu.getPeriodicBoxSizePointer(),
+            void* interpolateArgs[] = {&cu.getPosq().getDevicePointer(), &cu.getForce().getDevicePointer(), &directPmeGrid.getDevicePointer(), cu.getPeriodicBoxSizePointer(),
                     cu.getInvPeriodicBoxSizePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
-                    recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2], &pmeAtomGridIndex->getDevicePointer(),
-                    &sigmaEpsilon->getDevicePointer()};
+                    recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2], &pmeAtomGridIndex.getDevicePointer(),
+                    &sigmaEpsilon.getDevicePointer()};
             cu.executeKernel(pmeInterpolateDispersionForceKernel, interpolateArgs, cu.getNumAtoms(), 128);
         }
         if (usePmeStream) {
@@ -2253,7 +2180,7 @@ void CudaCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context,
         sumSquaredCharges += charge*charge;
     }
     cu.setCharges(chargeVector);
-    sigmaEpsilon->upload(sigmaEpsilonVector);
+    sigmaEpsilon.upload(sigmaEpsilonVector);
     
     // Record the exceptions.
     
@@ -2265,7 +2192,7 @@ void CudaCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context,
             force.getExceptionParameters(exceptions[startIndex+i], atoms[i][0], atoms[i][1], chargeProd, sigma, epsilon);
             exceptionParamsVector[i] = make_float4((float) (ONE_4PI_EPS0*chargeProd), (float) sigma, (float) (4.0*epsilon), 0.0f);
         }
-        exceptionParams->upload(exceptionParamsVector);
+        exceptionParams.upload(exceptionParamsVector);
     }
     
     // Compute other values.
@@ -2355,12 +2282,6 @@ CudaCalcCustomNonbondedForceKernel::~CudaCalcCustomNonbondedForceKernel() {
     cu.setAsCurrent();
     if (params != NULL)
         delete params;
-    if (globals != NULL)
-        delete globals;
-    if (interactionGroupData != NULL)
-        delete interactionGroupData;
-    for (auto function : tabulatedFunctions)
-        delete function;
     if (forceCopy != NULL)
         delete forceCopy;
 }
@@ -2377,7 +2298,7 @@ void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const 
     int numParticles = force.getNumParticles();
     params = new CudaParameterSet(cu, force.getNumPerParticleParameters(), numParticles, "customNonbondedParameters");
     if (force.getNumGlobalParameters() > 0)
-        globals = CudaArray::create<float>(cu, force.getNumGlobalParameters(), "customNonbondedGlobals");
+        globals.initialize<float>(cu, force.getNumGlobalParameters(), "customNonbondedGlobals");
     vector<vector<float> > paramVector(numParticles);
     vector<vector<int> > exclusionList(numParticles);
     for (int i = 0; i < numParticles; i++) {
@@ -2402,6 +2323,7 @@ void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const 
     vector<pair<string, string> > functionDefinitions;
     vector<const TabulatedFunction*> functionList;
     vector<string> tableTypes;
+    tabulatedFunctions.resize(force.getNumTabulatedFunctions());
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         functionList.push_back(&force.getTabulatedFunction(i));
         string name = force.getTabulatedFunctionName(i);
@@ -2410,9 +2332,9 @@ void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const 
         functions[name] = cu.getExpressionUtilities().getFunctionPlaceholder(force.getTabulatedFunction(i));
         int width;
         vector<float> f = cu.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
-        tabulatedFunctions.push_back(CudaArray::create<float>(cu, f.size(), "TabulatedFunction"));
-        tabulatedFunctions[tabulatedFunctions.size()-1]->upload(f);
-        cu.getNonbondedUtilities().addArgument(CudaNonbondedUtilities::ParameterInfo(arrayName, "float", width, width*sizeof(float), tabulatedFunctions[tabulatedFunctions.size()-1]->getDevicePointer()));
+        tabulatedFunctions[i].initialize<float>(cu, f.size(), "TabulatedFunction");
+        tabulatedFunctions[i].upload(f);
+        cu.getNonbondedUtilities().addArgument(CudaNonbondedUtilities::ParameterInfo(arrayName, "float", width, width*sizeof(float), tabulatedFunctions[i].getDevicePointer()));
         if (width == 1)
             tableTypes.push_back("float");
         else
@@ -2427,8 +2349,8 @@ void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const 
         globalParamNames[i] = force.getGlobalParameterName(i);
         globalParamValues[i] = (float) force.getGlobalParameterDefaultValue(i);
     }
-    if (globals != NULL)
-        globals->upload(globalParamValues);
+    if (globals.isInitialized())
+        globals.upload(globalParamValues);
     bool useCutoff = (force.getNonbondedMethod() != CustomNonbondedForce::NoCutoff);
     bool usePeriodic = (force.getNonbondedMethod() != CustomNonbondedForce::NoCutoff && force.getNonbondedMethod() != CustomNonbondedForce::CutoffNonPeriodic);
     Lepton::ParsedExpression energyExpression = Lepton::Parser::parse(force.getEnergyFunction(), functions).optimize();
@@ -2482,9 +2404,9 @@ void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const 
             CudaNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
             cu.getNonbondedUtilities().addParameter(CudaNonbondedUtilities::ParameterInfo(prefix+"params"+cu.intToString(i+1), buffer.getComponentType(), buffer.getNumComponents(), buffer.getSize(), buffer.getMemory()));
         }
-        if (globals != NULL) {
-            globals->upload(globalParamValues);
-            cu.getNonbondedUtilities().addArgument(CudaNonbondedUtilities::ParameterInfo(prefix+"globals", "float", 1, sizeof(float), globals->getDevicePointer()));
+        if (globals.isInitialized()) {
+            globals.upload(globalParamValues);
+            cu.getNonbondedUtilities().addArgument(CudaNonbondedUtilities::ParameterInfo(prefix+"globals", "float", 1, sizeof(float), globals.getDevicePointer()));
         }
     }
     info = new ForceInfo(force);
@@ -2660,8 +2582,8 @@ void CudaCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNonbo
         for (; indexInTileSet < 32; indexInTileSet++)
             groupData.push_back(make_int4(0, 0, 0, 0));
     }
-    interactionGroupData = CudaArray::create<int4>(cu, groupData.size(), "interactionGroupData");
-    interactionGroupData->upload(groupData);
+    interactionGroupData.initialize<int4>(cu, groupData.size(), "interactionGroupData");
+    interactionGroupData.upload(groupData);
     
     // Create the kernel.
     
@@ -2687,7 +2609,7 @@ void CudaCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNonbo
         args<<", const "<<buffers[i].getType()<<"* __restrict__ global_params"<<(i+1);
     for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
         args << ", const " << tableTypes[i]<< "* __restrict__ table" << i;
-    if (globals != NULL)
+    if (globals.isInitialized())
         args<<", const float* __restrict__ globals";
     if (hasParamDerivs)
         args << ", mixed* __restrict__ energyParamDerivs";
@@ -2758,7 +2680,7 @@ void CudaCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNonbo
 }
 
 double CudaCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    if (globals != NULL) {
+    if (globals.isInitialized()) {
         bool changed = false;
         for (int i = 0; i < (int) globalParamNames.size(); i++) {
             float value = (float) context.getParameter(globalParamNames[i]);
@@ -2767,7 +2689,7 @@ double CudaCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool in
             globalParamValues[i] = value;
         }
         if (changed) {
-            globals->upload(globalParamValues);
+            globals.upload(globalParamValues);
             if (forceCopy != NULL) {
                 CustomNonbondedForceImpl::calcLongRangeCorrection(*forceCopy, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs);
                 hasInitializedLongRangeCorrection = true;
@@ -2778,13 +2700,13 @@ double CudaCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool in
         CustomNonbondedForceImpl::calcLongRangeCorrection(*forceCopy, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs);
         hasInitializedLongRangeCorrection = true;
     }
-    if (interactionGroupData != NULL) {
+    if (interactionGroupData.isInitialized()) {
         if (!hasInitializedKernel) {
             hasInitializedKernel = true;
             interactionGroupArgs.push_back(&cu.getForce().getDevicePointer());
             interactionGroupArgs.push_back(&cu.getEnergyBuffer().getDevicePointer());
             interactionGroupArgs.push_back(&cu.getPosq().getDevicePointer());
-            interactionGroupArgs.push_back(&interactionGroupData->getDevicePointer());
+            interactionGroupArgs.push_back(&interactionGroupData.getDevicePointer());
             interactionGroupArgs.push_back(cu.getPeriodicBoxSizePointer());
             interactionGroupArgs.push_back(cu.getInvPeriodicBoxSizePointer());
             interactionGroupArgs.push_back(cu.getPeriodicBoxVecXPointer());
@@ -2792,10 +2714,10 @@ double CudaCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool in
             interactionGroupArgs.push_back(cu.getPeriodicBoxVecZPointer());
             for (auto& buffer : params->getBuffers())
                 interactionGroupArgs.push_back(&buffer.getMemory());
-            for (auto function : tabulatedFunctions)
-                interactionGroupArgs.push_back(&function->getDevicePointer());
-            if (globals != NULL)
-                interactionGroupArgs.push_back(&globals->getDevicePointer());
+            for (auto& function : tabulatedFunctions)
+                interactionGroupArgs.push_back(&function.getDevicePointer());
+            if (globals.isInitialized())
+                interactionGroupArgs.push_back(&globals.getDevicePointer());
             if (hasParamDerivs)
                 interactionGroupArgs.push_back(&cu.getEnergyParamDerivBuffer().getDevicePointer());
         }
@@ -2855,38 +2777,24 @@ private:
     const GBSAOBCForce& force;
 };
 
-CudaCalcGBSAOBCForceKernel::~CudaCalcGBSAOBCForceKernel() {
-    cu.setAsCurrent();
-    if (params != NULL)
-        delete params;
-    if (bornSum != NULL)
-        delete bornSum;
-    if (bornRadii != NULL)
-        delete bornRadii;
-    if (bornForce != NULL)
-        delete bornForce;
-    if (obcChain != NULL)
-        delete obcChain;
-}
-
 void CudaCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOBCForce& force) {
     cu.setAsCurrent();
     if (cu.getPlatformData().contexts.size() > 1)
         throw OpenMMException("GBSAOBCForce does not support using multiple CUDA devices");
     CudaNonbondedUtilities& nb = cu.getNonbondedUtilities();
-    params = CudaArray::create<float2>(cu, cu.getPaddedNumAtoms(), "gbsaObcParams");
+    params.initialize<float2>(cu, cu.getPaddedNumAtoms(), "gbsaObcParams");
     if (cu.getUseDoublePrecision()) {
-        bornRadii = CudaArray::create<double>(cu, cu.getPaddedNumAtoms(), "bornRadii");
-        obcChain = CudaArray::create<double>(cu, cu.getPaddedNumAtoms(), "obcChain");
+        bornRadii.initialize<double>(cu, cu.getPaddedNumAtoms(), "bornRadii");
+        obcChain.initialize<double>(cu, cu.getPaddedNumAtoms(), "obcChain");
     }
     else {
-        bornRadii = CudaArray::create<float>(cu, cu.getPaddedNumAtoms(), "bornRadii");
-        obcChain = CudaArray::create<float>(cu, cu.getPaddedNumAtoms(), "obcChain");
+        bornRadii.initialize<float>(cu, cu.getPaddedNumAtoms(), "bornRadii");
+        obcChain.initialize<float>(cu, cu.getPaddedNumAtoms(), "obcChain");
     }
-    bornSum = CudaArray::create<long long>(cu, cu.getPaddedNumAtoms(), "bornSum");
-    bornForce = CudaArray::create<long long>(cu, cu.getPaddedNumAtoms(), "bornForce");
-    cu.addAutoclearBuffer(*bornSum);
-    cu.addAutoclearBuffer(*bornForce);
+    bornSum.initialize<long long>(cu, cu.getPaddedNumAtoms(), "bornSum");
+    bornForce.initialize<long long>(cu, cu.getPaddedNumAtoms(), "bornForce");
+    cu.addAutoclearBuffer(bornSum);
+    cu.addAutoclearBuffer(bornForce);
     CudaArray& posq = cu.getPosq();
     vector<double4> temp(posq.getSize());
     float4* posqf = (float4*) &temp[0];
@@ -2904,7 +2812,7 @@ void CudaCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOBCF
             posqf[i] = make_float4(0, 0, 0, (float) charge);
     }
     posq.upload(&temp[0]);
-    params->upload(paramsVector);
+    params.upload(paramsVector);
     prefactor = -ONE_4PI_EPS0*((1.0/force.getSoluteDielectric())-(1.0/force.getSolventDielectric()));
     surfaceAreaFactor = -6.0*4*M_PI*force.getSurfaceAreaEnergy();
     bool useCutoff = (force.getNonbondedMethod() != GBSAOBCForce::NoCutoff);
@@ -2912,8 +2820,8 @@ void CudaCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOBCF
     cutoff = force.getCutoffDistance();
     string source = CudaKernelSources::gbsaObc2;
     nb.addInteraction(useCutoff, usePeriodic, false, cutoff, vector<vector<int> >(), source, force.getForceGroup());
-    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("obcParams", "float", 2, sizeof(float2), params->getDevicePointer()));
-    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("bornForce", "long long", 1, sizeof(long long), bornForce->getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("obcParams", "float", 2, sizeof(float2), params.getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("bornForce", "long long", 1, sizeof(long long), bornForce.getDevicePointer()));
     info = new ForceInfo(force);
     cu.addForce(info);
 }
@@ -2951,9 +2859,9 @@ double CudaCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeFor
         map<string, string> replacements;
         CUmodule module = cu.createModule(CudaKernelSources::vectorOps+cu.replaceStrings(CudaKernelSources::gbsaObc1, replacements), defines);
         computeBornSumKernel = cu.getKernel(module, "computeBornSum");
-        computeSumArgs.push_back(&bornSum->getDevicePointer());
+        computeSumArgs.push_back(&bornSum.getDevicePointer());
         computeSumArgs.push_back(&cu.getPosq().getDevicePointer());
-        computeSumArgs.push_back(&params->getDevicePointer());
+        computeSumArgs.push_back(&params.getDevicePointer());
         if (nb.getUseCutoff()) {
             computeSumArgs.push_back(&nb.getInteractingTiles().getDevicePointer());
             computeSumArgs.push_back(&nb.getInteractionCount().getDevicePointer());
@@ -2972,10 +2880,10 @@ double CudaCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeFor
         computeSumArgs.push_back(&nb.getExclusionTiles().getDevicePointer());
         force1Kernel = cu.getKernel(module, "computeGBSAForce1");
         force1Args.push_back(&cu.getForce().getDevicePointer());
-        force1Args.push_back(&bornForce->getDevicePointer());
+        force1Args.push_back(&bornForce.getDevicePointer());
         force1Args.push_back(&cu.getEnergyBuffer().getDevicePointer());
         force1Args.push_back(&cu.getPosq().getDevicePointer());
-        force1Args.push_back(&bornRadii->getDevicePointer());
+        force1Args.push_back(&bornRadii.getDevicePointer());
         force1Args.push_back(NULL);
         if (nb.getUseCutoff()) {
             force1Args.push_back(&nb.getInteractingTiles().getDevicePointer());
@@ -3008,12 +2916,12 @@ double CudaCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeFor
     }
     cu.executeKernel(computeBornSumKernel, &computeSumArgs[0], nb.getNumForceThreadBlocks()*nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());
     float alpha = 1.0f, beta = 0.8f, gamma = 4.85f;
-    void* reduceSumArgs[] = {&alpha, &beta, &gamma, &bornSum->getDevicePointer(), &params->getDevicePointer(),
-            &bornRadii->getDevicePointer(), &obcChain->getDevicePointer()};
+    void* reduceSumArgs[] = {&alpha, &beta, &gamma, &bornSum.getDevicePointer(), &params.getDevicePointer(),
+            &bornRadii.getDevicePointer(), &obcChain.getDevicePointer()};
     cu.executeKernel(reduceBornSumKernel, reduceSumArgs, cu.getPaddedNumAtoms());
     cu.executeKernel(force1Kernel, &force1Args[0], nb.getNumForceThreadBlocks()*nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());
-    void* reduceForceArgs[] = {&bornForce->getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(), &params->getDevicePointer(),
-            &bornRadii->getDevicePointer(), &obcChain->getDevicePointer()};
+    void* reduceForceArgs[] = {&bornForce.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(), &params.getDevicePointer(),
+            &bornRadii.getDevicePointer(), &obcChain.getDevicePointer()};
     cu.executeKernel(reduceBornForceKernel, &reduceForceArgs[0], cu.getPaddedNumAtoms());
     return 0.0;
 }
@@ -3039,7 +2947,7 @@ void CudaCalcGBSAOBCForceKernel::copyParametersToContext(ContextImpl& context, c
         paramsVector[i] = make_float2((float) radius, (float) (scalingFactor*radius));
     }
     cu.setCharges(chargeVector);
-    params->upload(paramsVector);
+    params.upload(paramsVector);
     
     // Mark that the current reordering may be invalid.
     
@@ -3087,16 +2995,6 @@ CudaCalcCustomGBForceKernel::~CudaCalcCustomGBForceKernel() {
         delete energyDerivs;
     if (energyDerivChain != NULL)
         delete energyDerivChain;
-    if (longEnergyDerivs != NULL)
-        delete longEnergyDerivs;
-    if (globals != NULL)
-        delete globals;
-    if (valueBuffers != NULL)
-        delete valueBuffers;
-    for (auto function : tabulatedFunctions)
-        delete function;
-    for (auto d : dValue0dParam)
-        delete d;
     for (auto d : dValuedParam)
         delete d;
 }
@@ -3135,7 +3033,7 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
     params = new CudaParameterSet(cu, force.getNumPerParticleParameters(), paddedNumParticles, "customGBParameters", true);
     computedValues = new CudaParameterSet(cu, force.getNumComputedValues(), paddedNumParticles, "customGBComputedValues", true, cu.getUseDoublePrecision());
     if (force.getNumGlobalParameters() > 0)
-        globals = CudaArray::create<float>(cu, force.getNumGlobalParameters(), "customGBGlobals");
+        globals.initialize<float>(cu, force.getNumGlobalParameters(), "customGBGlobals");
     vector<vector<float> > paramVector(paddedNumParticles, vector<float>(numParams, 0));
     vector<vector<int> > exclusionList(numParticles);
     for (int i = 0; i < numParticles; i++) {
@@ -3159,6 +3057,7 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
     vector<pair<string, string> > functionDefinitions;
     vector<const TabulatedFunction*> functionList;
     stringstream tableArgs;
+    tabulatedFunctions.resize(force.getNumTabulatedFunctions());
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         functionList.push_back(&force.getTabulatedFunction(i));
         string name = force.getTabulatedFunctionName(i);
@@ -3167,9 +3066,9 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
         functions[name] = cu.getExpressionUtilities().getFunctionPlaceholder(force.getTabulatedFunction(i));
         int width;
         vector<float> f = cu.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
-        tabulatedFunctions.push_back(CudaArray::create<float>(cu, f.size(), "TabulatedFunction"));
-        tabulatedFunctions[tabulatedFunctions.size()-1]->upload(f);
-        cu.getNonbondedUtilities().addArgument(CudaNonbondedUtilities::ParameterInfo(arrayName, "float", width, width*sizeof(float), tabulatedFunctions[tabulatedFunctions.size()-1]->getDevicePointer()));
+        tabulatedFunctions[i].initialize<float>(cu, f.size(), "TabulatedFunction");
+        tabulatedFunctions[i].upload(f);
+        cu.getNonbondedUtilities().addArgument(CudaNonbondedUtilities::ParameterInfo(arrayName, "float", width, width*sizeof(float), tabulatedFunctions[i].getDevicePointer()));
         tableArgs << ", const float";
         if (width > 1)
             tableArgs << width;
@@ -3184,8 +3083,8 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
         globalParamNames[i] = force.getGlobalParameterName(i);
         globalParamValues[i] = (float) force.getGlobalParameterDefaultValue(i);
     }
-    if (globals != NULL)
-        globals->upload(globalParamValues);
+    if (globals.isInitialized())
+        globals.upload(globalParamValues);
 
     // Record derivatives of expressions needed for the chain rule terms.
 
@@ -3233,15 +3132,16 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
         for (int j = 0; j < force.getNumEnergyParameterDerivatives(); j++)
             energyParamDerivExpressions[i].push_back(ex.differentiate(force.getEnergyParameterDerivativeName(j)).optimize());
     }
-    longEnergyDerivs = CudaArray::create<long long>(cu, force.getNumComputedValues()*cu.getPaddedNumAtoms(), "customGBLongEnergyDerivatives");
+    longEnergyDerivs.initialize<long long>(cu, force.getNumComputedValues()*cu.getPaddedNumAtoms(), "customGBLongEnergyDerivatives");
     energyDerivs = new CudaParameterSet(cu, force.getNumComputedValues(), cu.getPaddedNumAtoms(), "customGBEnergyDerivatives", true);
     energyDerivChain = new CudaParameterSet(cu, force.getNumComputedValues(), cu.getPaddedNumAtoms(), "customGBEnergyDerivativeChain", true);
     int elementSize = (cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
     needEnergyParamDerivs = (force.getNumEnergyParameterDerivatives() > 0);
+    dValue0dParam.resize(force.getNumEnergyParameterDerivatives());
     for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
         dValuedParam.push_back(new CudaParameterSet(cu, force.getNumComputedValues(), cu.getPaddedNumAtoms(), "dValuedParam", true, cu.getUseDoublePrecision()));
-        dValue0dParam.push_back(CudaArray::create<long long>(cu, cu.getPaddedNumAtoms(), "dValue0dParam"));
-        cu.addAutoclearBuffer(*dValue0dParam.back());
+        dValue0dParam[i].initialize<long long>(cu, cu.getPaddedNumAtoms(), "dValue0dParam");
+        cu.addAutoclearBuffer(dValue0dParam[i]);
         string name = force.getEnergyParameterDerivativeName(i);
         cu.addEnergyParameterDerivative(name);
     }
@@ -3826,9 +3726,9 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
                 parameters.push_back(CudaNonbondedUtilities::ParameterInfo(paramName, buffer.getComponentType(), buffer.getNumComponents(), buffer.getSize(), buffer.getMemory()));
             }
         }
-        if (globals != NULL) {
-            globals->upload(globalParamValues);
-            arguments.push_back(CudaNonbondedUtilities::ParameterInfo(prefix+"globals", "float", 1, sizeof(float), globals->getDevicePointer()));
+        if (globals.isInitialized()) {
+            globals.upload(globalParamValues);
+            arguments.push_back(CudaNonbondedUtilities::ParameterInfo(prefix+"globals", "float", 1, sizeof(float), globals.getDevicePointer()));
         }
         cu.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, force.getNumExclusions() > 0, cutoff, exclusionList, source, force.getForceGroup());
         for (auto param : parameters)
@@ -3838,7 +3738,7 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
     }
     info = new ForceInfo(force);
     cu.addForce(info);
-    cu.addAutoclearBuffer(*longEnergyDerivs);
+    cu.addAutoclearBuffer(longEnergyDerivs);
 }
 
 double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -3881,13 +3781,13 @@ double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFo
         // Set arguments for kernels.
         
         maxTiles = (nb.getUseCutoff() ? nb.getInteractingTiles().getSize() : cu.getNumAtomBlocks()*(cu.getNumAtomBlocks()+1)/2);
-        valueBuffers = CudaArray::create<long long>(cu, cu.getPaddedNumAtoms(), "customGBValueBuffers");
-        cu.addAutoclearBuffer(*valueBuffers);
-        cu.clearBuffer(valueBuffers->getDevicePointer(), sizeof(long long)*valueBuffers->getSize());
+        valueBuffers.initialize<long long>(cu, cu.getPaddedNumAtoms(), "customGBValueBuffers");
+        cu.addAutoclearBuffer(valueBuffers);
+        cu.clearBuffer(valueBuffers.getDevicePointer(), sizeof(long long)*valueBuffers.getSize());
         pairValueArgs.push_back(&cu.getPosq().getDevicePointer());
         pairValueArgs.push_back(&cu.getNonbondedUtilities().getExclusions().getDevicePointer());
         pairValueArgs.push_back(&cu.getNonbondedUtilities().getExclusionTiles().getDevicePointer());
-        pairValueArgs.push_back(&valueBuffers->getDevicePointer());
+        pairValueArgs.push_back(&valueBuffers.getDevicePointer());
         if (nb.getUseCutoff()) {
             pairValueArgs.push_back(&nb.getInteractingTiles().getDevicePointer());
             pairValueArgs.push_back(&nb.getInteractionCount().getDevicePointer());
@@ -3903,31 +3803,31 @@ double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFo
         }
         else
             pairValueArgs.push_back(&maxTiles);
-        if (globals != NULL)
-            pairValueArgs.push_back(&globals->getDevicePointer());
+        if (globals.isInitialized())
+            pairValueArgs.push_back(&globals.getDevicePointer());
         for (int i = 0; i < (int) params->getBuffers().size(); i++) {
             if (pairValueUsesParam[i])
                 pairValueArgs.push_back(&params->getBuffers()[i].getMemory());
         }
-        for (auto d : dValue0dParam)
-            pairValueArgs.push_back(&d->getDevicePointer());
-        for (auto function : tabulatedFunctions)
-            pairValueArgs.push_back(&function->getDevicePointer());
+        for (auto& d : dValue0dParam)
+            pairValueArgs.push_back(&d.getDevicePointer());
+        for (auto& function : tabulatedFunctions)
+            pairValueArgs.push_back(&function.getDevicePointer());
         perParticleValueArgs.push_back(&cu.getPosq().getDevicePointer());
-        perParticleValueArgs.push_back(&valueBuffers->getDevicePointer());
-        if (globals != NULL)
-            perParticleValueArgs.push_back(&globals->getDevicePointer());
+        perParticleValueArgs.push_back(&valueBuffers.getDevicePointer());
+        if (globals.isInitialized())
+            perParticleValueArgs.push_back(&globals.getDevicePointer());
         for (auto& buffer : params->getBuffers())
             perParticleValueArgs.push_back(&buffer.getMemory());
         for (auto& buffer : computedValues->getBuffers())
             perParticleValueArgs.push_back(&buffer.getMemory());
         for (int i = 0; i < dValuedParam.size(); i++) {
-            perParticleValueArgs.push_back(&dValue0dParam[i]->getDevicePointer());
+            perParticleValueArgs.push_back(&dValue0dParam[i].getDevicePointer());
             for (int j = 0; j < dValuedParam[i]->getBuffers().size(); j++)
                 perParticleValueArgs.push_back(&dValuedParam[i]->getBuffers()[j].getMemory());
         }
-        for (auto function : tabulatedFunctions)
-            perParticleValueArgs.push_back(&function->getDevicePointer());
+        for (auto& function : tabulatedFunctions)
+            perParticleValueArgs.push_back(&function.getDevicePointer());
         pairEnergyArgs.push_back(&cu.getForce().getDevicePointer());
         pairEnergyArgs.push_back(&cu.getEnergyBuffer().getDevicePointer());
         pairEnergyArgs.push_back(&cu.getPosq().getDevicePointer());
@@ -3949,8 +3849,8 @@ double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFo
         }
         else
             pairEnergyArgs.push_back(&maxTiles);
-        if (globals != NULL)
-            pairEnergyArgs.push_back(&globals->getDevicePointer());
+        if (globals.isInitialized())
+            pairEnergyArgs.push_back(&globals.getDevicePointer());
         for (int i = 0; i < (int) params->getBuffers().size(); i++) {
             if (pairEnergyUsesParam[i])
                 pairEnergyArgs.push_back(&params->getBuffers()[i].getMemory());
@@ -3959,16 +3859,16 @@ double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFo
             if (pairEnergyUsesValue[i])
                 pairEnergyArgs.push_back(&computedValues->getBuffers()[i].getMemory());
         }
-        pairEnergyArgs.push_back(&longEnergyDerivs->getDevicePointer());
+        pairEnergyArgs.push_back(&longEnergyDerivs.getDevicePointer());
         if (needEnergyParamDerivs)
             pairEnergyArgs.push_back(&cu.getEnergyParamDerivBuffer().getDevicePointer());
-        for (auto function : tabulatedFunctions)
-            pairEnergyArgs.push_back(&function->getDevicePointer());
+        for (auto& function : tabulatedFunctions)
+            pairEnergyArgs.push_back(&function.getDevicePointer());
         perParticleEnergyArgs.push_back(&cu.getForce().getDevicePointer());
         perParticleEnergyArgs.push_back(&cu.getEnergyBuffer().getDevicePointer());
         perParticleEnergyArgs.push_back(&cu.getPosq().getDevicePointer());
-        if (globals != NULL)
-            perParticleEnergyArgs.push_back(&globals->getDevicePointer());
+        if (globals.isInitialized())
+            perParticleEnergyArgs.push_back(&globals.getDevicePointer());
         for (auto& buffer : params->getBuffers())
             perParticleEnergyArgs.push_back(&buffer.getMemory());
         for (auto& buffer : computedValues->getBuffers())
@@ -3977,16 +3877,16 @@ double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFo
             perParticleEnergyArgs.push_back(&buffer.getMemory());
         for (auto& buffer : energyDerivChain->getBuffers())
             perParticleEnergyArgs.push_back(&buffer.getMemory());
-        perParticleEnergyArgs.push_back(&longEnergyDerivs->getDevicePointer());
+        perParticleEnergyArgs.push_back(&longEnergyDerivs.getDevicePointer());
         if (needEnergyParamDerivs)
             perParticleEnergyArgs.push_back(&cu.getEnergyParamDerivBuffer().getDevicePointer());
-        for (auto function : tabulatedFunctions)
-            perParticleEnergyArgs.push_back(&function->getDevicePointer());
+        for (auto& function : tabulatedFunctions)
+            perParticleEnergyArgs.push_back(&function.getDevicePointer());
         if (needParameterGradient || needEnergyParamDerivs) {
             gradientChainRuleArgs.push_back(&cu.getForce().getDevicePointer());
             gradientChainRuleArgs.push_back(&cu.getPosq().getDevicePointer());
-            if (globals != NULL)
-                gradientChainRuleArgs.push_back(&globals->getDevicePointer());
+            if (globals.isInitialized())
+                gradientChainRuleArgs.push_back(&globals.getDevicePointer());
             for (auto& buffer : params->getBuffers())
                 gradientChainRuleArgs.push_back(&buffer.getMemory());
             for (auto& buffer : computedValues->getBuffers())
@@ -4001,7 +3901,7 @@ double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFo
             }
         }
     }
-    if (globals != NULL) {
+    if (globals.isInitialized()) {
         bool changed = false;
         for (int i = 0; i < (int) globalParamNames.size(); i++) {
             float value = (float) context.getParameter(globalParamNames[i]);
@@ -4010,7 +3910,7 @@ double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFo
             globalParamValues[i] = value;
         }
         if (changed)
-            globals->upload(globalParamValues);
+            globals.upload(globalParamValues);
     }
     pairEnergyArgs[5] = &includeEnergy;
     if (nb.getUseCutoff()) {
@@ -4089,8 +3989,6 @@ CudaCalcCustomExternalForceKernel::~CudaCalcCustomExternalForceKernel() {
     cu.setAsCurrent();
     if (params != NULL)
         delete params;
-    if (globals != NULL)
-        delete globals;
 }
 
 void CudaCalcCustomExternalForceKernel::initialize(const System& system, const CustomExternalForce& force) {
@@ -4146,9 +4044,9 @@ void CudaCalcCustomExternalForceKernel::initialize(const System& system, const C
         variables[name] = "particleParams"+params->getParameterSuffix(i);
     }
     if (force.getNumGlobalParameters() > 0) {
-        globals = CudaArray::create<float>(cu, force.getNumGlobalParameters(), "customExternalGlobals");
-        globals->upload(globalParamValues);
-        string argName = cu.getBondedUtilities().addArgument(globals->getDevicePointer(), "float");
+        globals.initialize<float>(cu, force.getNumGlobalParameters(), "customExternalGlobals");
+        globals.upload(globalParamValues);
+        string argName = cu.getBondedUtilities().addArgument(globals.getDevicePointer(), "float");
         for (int i = 0; i < force.getNumGlobalParameters(); i++) {
             const string& name = force.getGlobalParameterName(i);
             string value = argName+"["+cu.intToString(i)+"]";
@@ -4170,7 +4068,7 @@ void CudaCalcCustomExternalForceKernel::initialize(const System& system, const C
 }
 
 double CudaCalcCustomExternalForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    if (globals != NULL) {
+    if (globals.isInitialized()) {
         bool changed = false;
         for (int i = 0; i < (int) globalParamNames.size(); i++) {
             float value = (float) context.getParameter(globalParamNames[i]);
@@ -4179,7 +4077,7 @@ double CudaCalcCustomExternalForceKernel::execute(ContextImpl& context, bool inc
             globalParamValues[i] = value;
         }
         if (changed)
-            globals->upload(globalParamValues);
+            globals.upload(globalParamValues);
     }
     return 0.0;
 }
@@ -4294,18 +4192,6 @@ CudaCalcCustomHbondForceKernel::~CudaCalcCustomHbondForceKernel() {
         delete donorParams;
     if (acceptorParams != NULL)
         delete acceptorParams;
-    if (donors != NULL)
-        delete donors;
-    if (acceptors != NULL)
-        delete acceptors;
-    if (globals != NULL)
-        delete globals;
-    if (donorExclusions != NULL)
-        delete donorExclusions;
-    if (acceptorExclusions != NULL)
-        delete acceptorExclusions;
-    for (auto function : tabulatedFunctions)
-        delete function;
 }
 
 static void addDonorAndAcceptorCode(stringstream& computeDonor, stringstream& computeAcceptor, const string& value) {
@@ -4333,12 +4219,12 @@ void CudaCalcCustomHbondForceKernel::initialize(const System& system, const Cust
     if (numDonors == 0 || numAcceptors == 0)
         return;
     int numParticles = system.getNumParticles();
-    donors = CudaArray::create<int4>(cu, numDonors, "customHbondDonors");
-    acceptors = CudaArray::create<int4>(cu, numAcceptors, "customHbondAcceptors");
+    donors.initialize<int4>(cu, numDonors, "customHbondDonors");
+    acceptors.initialize<int4>(cu, numAcceptors, "customHbondAcceptors");
     donorParams = new CudaParameterSet(cu, force.getNumPerDonorParameters(), numDonors, "customHbondDonorParameters");
     acceptorParams = new CudaParameterSet(cu, force.getNumPerAcceptorParameters(), numAcceptors, "customHbondAcceptorParameters");
     if (force.getNumGlobalParameters() > 0)
-        globals = CudaArray::create<float>(cu, force.getNumGlobalParameters(), "customHbondGlobals");
+        globals.initialize<float>(cu, force.getNumGlobalParameters(), "customHbondGlobals");
     vector<vector<float> > donorParamVector(numDonors);
     vector<int4> donorVector(numDonors);
     for (int i = 0; i < numDonors; i++) {
@@ -4348,7 +4234,7 @@ void CudaCalcCustomHbondForceKernel::initialize(const System& system, const Cust
         for (int j = 0; j < (int) parameters.size(); j++)
             donorParamVector[i][j] = (float) parameters[j];
     }
-    donors->upload(donorVector);
+    donors.upload(donorVector);
     donorParams->setParameterValues(donorParamVector);
     vector<vector<float> > acceptorParamVector(numAcceptors);
     vector<int4> acceptorVector(numAcceptors);
@@ -4359,7 +4245,7 @@ void CudaCalcCustomHbondForceKernel::initialize(const System& system, const Cust
         for (int j = 0; j < (int) parameters.size(); j++)
             acceptorParamVector[i][j] = (float) parameters[j];
     }
-    acceptors->upload(acceptorVector);
+    acceptors.upload(acceptorVector);
     acceptorParams->setParameterValues(acceptorParamVector);
     info = new ForceInfo(force);
     cu.addForce(info);
@@ -4395,10 +4281,10 @@ void CudaCalcCustomHbondForceKernel::initialize(const System& system, const Cust
         else
             throw OpenMMException("CustomHbondForce: CudaPlatform does not support more than four exclusions per acceptor");
     }
-    donorExclusions = CudaArray::create<int4>(cu, numDonors, "customHbondDonorExclusions");
-    acceptorExclusions = CudaArray::create<int4>(cu, numAcceptors, "customHbondAcceptorExclusions");
-    donorExclusions->upload(donorExclusionVector);
-    acceptorExclusions->upload(acceptorExclusionVector);
+    donorExclusions.initialize<int4>(cu, numDonors, "customHbondDonorExclusions");
+    acceptorExclusions.initialize<int4>(cu, numAcceptors, "customHbondAcceptorExclusions");
+    donorExclusions.upload(donorExclusionVector);
+    acceptorExclusions.upload(acceptorExclusionVector);
 
     // Record the tabulated functions.
 
@@ -4406,6 +4292,7 @@ void CudaCalcCustomHbondForceKernel::initialize(const System& system, const Cust
     vector<pair<string, string> > functionDefinitions;
     vector<const TabulatedFunction*> functionList;
     stringstream tableArgs;
+    tabulatedFunctions.resize(force.getNumTabulatedFunctions());
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         functionList.push_back(&force.getTabulatedFunction(i));
         string name = force.getTabulatedFunctionName(i);
@@ -4414,8 +4301,8 @@ void CudaCalcCustomHbondForceKernel::initialize(const System& system, const Cust
         functions[name] = cu.getExpressionUtilities().getFunctionPlaceholder(force.getTabulatedFunction(i));
         int width;
         vector<float> f = cu.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
-        tabulatedFunctions.push_back(CudaArray::create<float>(cu, f.size(), "TabulatedFunction"));
-        tabulatedFunctions[tabulatedFunctions.size()-1]->upload(f);
+        tabulatedFunctions[i].initialize<float>(cu, f.size(), "TabulatedFunction");
+        tabulatedFunctions[i].upload(f);
         tableArgs << ", const float";
         if (width > 1)
             tableArgs << width;
@@ -4430,8 +4317,8 @@ void CudaCalcCustomHbondForceKernel::initialize(const System& system, const Cust
         globalParamNames[i] = force.getGlobalParameterName(i);
         globalParamValues[i] = (float) force.getGlobalParameterDefaultValue(i);
     }
-    if (globals != NULL)
-        globals->upload(globalParamValues);
+    if (globals.isInitialized())
+        globals.upload(globalParamValues);
     map<string, string> variables;
     for (int i = 0; i < force.getNumPerDonorParameters(); i++) {
         const string& name = force.getPerDonorParameterName(i);
@@ -4623,7 +4510,7 @@ void CudaCalcCustomHbondForceKernel::initialize(const System& system, const Cust
 double CudaCalcCustomHbondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     if (numDonors == 0 || numAcceptors == 0)
         return 0.0;
-    if (globals != NULL) {
+    if (globals.isInitialized()) {
         bool changed = false;
         for (int i = 0; i < (int) globalParamNames.size(); i++) {
             float value = (float) context.getParameter(globalParamNames[i]);
@@ -4632,7 +4519,7 @@ double CudaCalcCustomHbondForceKernel::execute(ContextImpl& context, bool includ
             globalParamValues[i] = value;
         }
         if (changed)
-            globals->upload(globalParamValues);
+            globals.upload(globalParamValues);
     }
     if (!hasInitializedKernel) {
         hasInitializedKernel = true;
@@ -4640,42 +4527,42 @@ double CudaCalcCustomHbondForceKernel::execute(ContextImpl& context, bool includ
         donorArgs.push_back(&cu.getForce().getDevicePointer());
         donorArgs.push_back(&cu.getEnergyBuffer().getDevicePointer());
         donorArgs.push_back(&cu.getPosq().getDevicePointer());
-        donorArgs.push_back(&donorExclusions->getDevicePointer());
-        donorArgs.push_back(&donors->getDevicePointer());
-        donorArgs.push_back(&acceptors->getDevicePointer());
+        donorArgs.push_back(&donorExclusions.getDevicePointer());
+        donorArgs.push_back(&donors.getDevicePointer());
+        donorArgs.push_back(&acceptors.getDevicePointer());
         donorArgs.push_back(cu.getPeriodicBoxSizePointer());
         donorArgs.push_back(cu.getInvPeriodicBoxSizePointer());
         donorArgs.push_back(cu.getPeriodicBoxVecXPointer());
         donorArgs.push_back(cu.getPeriodicBoxVecYPointer());
         donorArgs.push_back(cu.getPeriodicBoxVecZPointer());
-        if (globals != NULL)
-            donorArgs.push_back(&globals->getDevicePointer());
+        if (globals.isInitialized())
+            donorArgs.push_back(&globals.getDevicePointer());
         for (auto& buffer : donorParams->getBuffers())
             donorArgs.push_back(&buffer.getMemory());
         for (auto& buffer : acceptorParams->getBuffers())
             donorArgs.push_back(&buffer.getMemory());
-        for (auto function : tabulatedFunctions)
-            donorArgs.push_back(&function->getDevicePointer());
+        for (auto& function : tabulatedFunctions)
+            donorArgs.push_back(&function.getDevicePointer());
         index = 0;
         acceptorArgs.push_back(&cu.getForce().getDevicePointer());
         acceptorArgs.push_back(&cu.getEnergyBuffer().getDevicePointer());
         acceptorArgs.push_back(&cu.getPosq().getDevicePointer());
-        acceptorArgs.push_back(&acceptorExclusions->getDevicePointer());
-        acceptorArgs.push_back(&donors->getDevicePointer());
-        acceptorArgs.push_back(&acceptors->getDevicePointer());
+        acceptorArgs.push_back(&acceptorExclusions.getDevicePointer());
+        acceptorArgs.push_back(&donors.getDevicePointer());
+        acceptorArgs.push_back(&acceptors.getDevicePointer());
         acceptorArgs.push_back(cu.getPeriodicBoxSizePointer());
         acceptorArgs.push_back(cu.getInvPeriodicBoxSizePointer());
         acceptorArgs.push_back(cu.getPeriodicBoxVecXPointer());
         acceptorArgs.push_back(cu.getPeriodicBoxVecYPointer());
         acceptorArgs.push_back(cu.getPeriodicBoxVecZPointer());
-        if (globals != NULL)
-            acceptorArgs.push_back(&globals->getDevicePointer());
+        if (globals.isInitialized())
+            acceptorArgs.push_back(&globals.getDevicePointer());
         for (auto& buffer : donorParams->getBuffers())
             acceptorArgs.push_back(&buffer.getMemory());
         for (auto& buffer : acceptorParams->getBuffers())
             acceptorArgs.push_back(&buffer.getMemory());
-        for (auto function : tabulatedFunctions)
-            acceptorArgs.push_back(&function->getDevicePointer());
+        for (auto& function : tabulatedFunctions)
+            acceptorArgs.push_back(&function.getDevicePointer());
     }
     int sharedMemorySize = 3*CudaContext::ThreadBlockSize*sizeof(float4);
     cu.executeKernel(donorKernel, &donorArgs[0], max(numDonors, numAcceptors), CudaContext::ThreadBlockSize, sharedMemorySize);
@@ -4775,22 +4662,6 @@ CudaCalcCustomCentroidBondForceKernel::~CudaCalcCustomCentroidBondForceKernel() 
     cu.setAsCurrent();
     if (params != NULL)
         delete params;
-    if (globals != NULL)
-        delete globals;
-    if (groupParticles != NULL)
-        delete groupParticles;
-    if (groupWeights != NULL)
-        delete groupWeights;
-    if (groupOffsets != NULL)
-        delete groupOffsets;
-    if (groupForces != NULL)
-        delete groupForces;
-    if (bondGroups != NULL)
-        delete bondGroups;
-    if (centerPositions != NULL)
-        delete centerPositions;
-    for (auto function : tabulatedFunctions)
-        delete function;
 }
 
 void CudaCalcCustomCentroidBondForceKernel::initialize(const System& system, const CustomCentroidBondForce& force) {
@@ -4827,22 +4698,22 @@ void CudaCalcCustomCentroidBondForceKernel::initialize(const System& system, con
             for (int j = 0; j < normalizedWeights[i].size(); j++)
                 groupWeightVecFloat.push_back((float) normalizedWeights[i][j]);
     }
-    groupParticles = CudaArray::create<int>(cu, groupParticleVec.size(), "groupParticles");
-    groupParticles->upload(groupParticleVec);
+    groupParticles.initialize<int>(cu, groupParticleVec.size(), "groupParticles");
+    groupParticles.upload(groupParticleVec);
     if (cu.getUseDoublePrecision()) {
-        groupWeights = CudaArray::create<double>(cu, groupParticleVec.size(), "groupWeights");
-        groupWeights->upload(groupWeightVecDouble);
-        centerPositions = CudaArray::create<double4>(cu, numGroups, "centerPositions");
+        groupWeights.initialize<double>(cu, groupParticleVec.size(), "groupWeights");
+        groupWeights.upload(groupWeightVecDouble);
+        centerPositions.initialize<double4>(cu, numGroups, "centerPositions");
     }
     else {
-        groupWeights = CudaArray::create<float>(cu, groupParticleVec.size(), "groupWeights");
-        groupWeights->upload(groupWeightVecFloat);
-        centerPositions = CudaArray::create<float4>(cu, numGroups, "centerPositions");
+        groupWeights.initialize<float>(cu, groupParticleVec.size(), "groupWeights");
+        groupWeights.upload(groupWeightVecFloat);
+        centerPositions.initialize<float4>(cu, numGroups, "centerPositions");
     }
-    groupOffsets = CudaArray::create<int>(cu, groupOffsetVec.size(), "groupOffsets");
-    groupOffsets->upload(groupOffsetVec);
-    groupForces = CudaArray::create<long long>(cu, numGroups*3, "groupForces");
-    cu.addAutoclearBuffer(*groupForces);
+    groupOffsets.initialize<int>(cu, groupOffsetVec.size(), "groupOffsets");
+    groupOffsets.upload(groupOffsetVec);
+    groupForces.initialize<long long>(cu, numGroups*3, "groupForces");
+    cu.addAutoclearBuffer(groupForces);
     
     // Record the bonds.
     
@@ -4861,15 +4732,15 @@ void CudaCalcCustomCentroidBondForceKernel::initialize(const System& system, con
             paramVector[i][j] = (float) parameters[j];
     }
     params->setParameterValues(paramVector);
-    bondGroups = CudaArray::create<int>(cu, bondGroupVec.size(), "bondGroups");
-    bondGroups->upload(bondGroupVec);
+    bondGroups.initialize<int>(cu, bondGroupVec.size(), "bondGroups");
+    bondGroups.upload(bondGroupVec);
     
     // Record the arguments to the force kernel.
     
-    groupForcesArgs.push_back(&groupForces->getDevicePointer());
+    groupForcesArgs.push_back(&groupForces.getDevicePointer());
     groupForcesArgs.push_back(NULL); // Energy buffer hasn't been created yet
-    groupForcesArgs.push_back(&centerPositions->getDevicePointer());
-    groupForcesArgs.push_back(&bondGroups->getDevicePointer());
+    groupForcesArgs.push_back(&centerPositions.getDevicePointer());
+    groupForcesArgs.push_back(&bondGroups.getDevicePointer());
     groupForcesArgs.push_back(cu.getPeriodicBoxSizePointer());
     groupForcesArgs.push_back(cu.getInvPeriodicBoxSizePointer());
     groupForcesArgs.push_back(cu.getPeriodicBoxVecXPointer());
@@ -4885,6 +4756,7 @@ void CudaCalcCustomCentroidBondForceKernel::initialize(const System& system, con
     vector<pair<string, string> > functionDefinitions;
     vector<const TabulatedFunction*> functionList;
     stringstream extraArgs;
+    tabulatedFunctions.resize(force.getNumTabulatedFunctions());
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         functionList.push_back(&force.getTabulatedFunction(i));
         string name = force.getTabulatedFunctionName(i);
@@ -4893,13 +4765,13 @@ void CudaCalcCustomCentroidBondForceKernel::initialize(const System& system, con
         functions[name] = cu.getExpressionUtilities().getFunctionPlaceholder(force.getTabulatedFunction(i));
         int width;
         vector<float> f = cu.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
-        tabulatedFunctions.push_back(CudaArray::create<float>(cu, f.size(), "TabulatedFunction"));
-        tabulatedFunctions.back()->upload(f);
+        tabulatedFunctions[i].initialize<float>(cu, f.size(), "TabulatedFunction");
+        tabulatedFunctions[i].upload(f);
         extraArgs << ", const float";
         if (width > 1)
             extraArgs << width;
         extraArgs << "* __restrict__ " << arrayName;
-        groupForcesArgs.push_back(&tabulatedFunctions.back()->getDevicePointer());
+        groupForcesArgs.push_back(&tabulatedFunctions[i].getDevicePointer());
     }
     
     // Record information about parameters.
@@ -4924,15 +4796,15 @@ void CudaCalcCustomCentroidBondForceKernel::initialize(const System& system, con
     if (needEnergyParamDerivs)
         extraArgs << ", mixed* __restrict__ energyParamDerivs";
     if (force.getNumGlobalParameters() > 0) {
-        globals = CudaArray::create<float>(cu, force.getNumGlobalParameters(), "customCentroidBondGlobals");
-        globals->upload(globalParamValues);
+        globals.initialize<float>(cu, force.getNumGlobalParameters(), "customCentroidBondGlobals");
+        globals.upload(globalParamValues);
         extraArgs << ", const float* __restrict__ globals";
         for (int i = 0; i < force.getNumGlobalParameters(); i++) {
             const string& name = force.getGlobalParameterName(i);
             string value = "globals["+cu.intToString(i)+"]";
             variables[name] = value;
         }
-        groupForcesArgs.push_back(&globals->getDevicePointer());
+        groupForcesArgs.push_back(&globals.getDevicePointer());
     }
 
     // Now to generate the kernel.  First, it needs to calculate all distances, angles,
@@ -5144,7 +5016,7 @@ void CudaCalcCustomCentroidBondForceKernel::initialize(const System& system, con
 double CudaCalcCustomCentroidBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     if (numBonds == 0)
         return 0.0;
-    if (globals != NULL) {
+    if (globals.isInitialized()) {
         bool changed = false;
         for (int i = 0; i < (int) globalParamNames.size(); i++) {
             float value = (float) context.getParameter(globalParamNames[i]);
@@ -5153,17 +5025,17 @@ double CudaCalcCustomCentroidBondForceKernel::execute(ContextImpl& context, bool
             globalParamValues[i] = value;
         }
         if (changed)
-            globals->upload(globalParamValues);
+            globals.upload(globalParamValues);
     }
-    void* computeCentersArgs[] = {&cu.getPosq().getDevicePointer(), &groupParticles->getDevicePointer(), &groupWeights->getDevicePointer(),
-            &groupOffsets->getDevicePointer(), &centerPositions->getDevicePointer()};
+    void* computeCentersArgs[] = {&cu.getPosq().getDevicePointer(), &groupParticles.getDevicePointer(), &groupWeights.getDevicePointer(),
+            &groupOffsets.getDevicePointer(), &centerPositions.getDevicePointer()};
     cu.executeKernel(computeCentersKernel, computeCentersArgs, CudaContext::TileSize*numGroups);
     groupForcesArgs[1] = &cu.getEnergyBuffer().getDevicePointer();
     if (needEnergyParamDerivs)
         groupForcesArgs[9] = &cu.getEnergyParamDerivBuffer().getDevicePointer();
     cu.executeKernel(groupForcesKernel, &groupForcesArgs[0], numBonds);
-    void* applyForcesArgs[] = {&groupParticles->getDevicePointer(), &groupWeights->getDevicePointer(), &groupOffsets->getDevicePointer(),
-            &groupForces->getDevicePointer(), &cu.getForce().getDevicePointer()};
+    void* applyForcesArgs[] = {&groupParticles.getDevicePointer(), &groupWeights.getDevicePointer(), &groupOffsets.getDevicePointer(),
+            &groupForces.getDevicePointer(), &cu.getForce().getDevicePointer()};
     cu.executeKernel(applyForcesKernel, applyForcesArgs, CudaContext::TileSize*numGroups);
     return 0.0;
 }
@@ -5222,10 +5094,6 @@ CudaCalcCustomCompoundBondForceKernel::~CudaCalcCustomCompoundBondForceKernel() 
     cu.setAsCurrent();
     if (params != NULL)
         delete params;
-    if (globals != NULL)
-        delete globals;
-    for (auto function : tabulatedFunctions)
-        delete function;
 }
 
 void CudaCalcCustomCompoundBondForceKernel::initialize(const System& system, const CustomCompoundBondForce& force) {
@@ -5256,16 +5124,16 @@ void CudaCalcCustomCompoundBondForceKernel::initialize(const System& system, con
     map<string, Lepton::CustomFunction*> functions;
     vector<pair<string, string> > functionDefinitions;
     vector<const TabulatedFunction*> functionList;
+    tabulatedFunctions.resize(force.getNumTabulatedFunctions());
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         functionList.push_back(&force.getTabulatedFunction(i));
         string name = force.getTabulatedFunctionName(i);
         functions[name] = cu.getExpressionUtilities().getFunctionPlaceholder(force.getTabulatedFunction(i));
         int width;
         vector<float> f = cu.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
-        CudaArray* array = CudaArray::create<float>(cu, f.size(), "TabulatedFunction");
-        tabulatedFunctions.push_back(array);
-        array->upload(f);
-        string arrayName = cu.getBondedUtilities().addArgument(array->getDevicePointer(), width == 1 ? "float" : "float"+cu.intToString(width));
+        tabulatedFunctions[i].initialize<float>(cu, f.size(), "TabulatedFunction");
+        tabulatedFunctions[i].upload(f);
+        string arrayName = cu.getBondedUtilities().addArgument(tabulatedFunctions[i].getDevicePointer(), width == 1 ? "float" : "float"+cu.intToString(width));
         functionDefinitions.push_back(make_pair(name, arrayName));
     }
     
@@ -5289,9 +5157,9 @@ void CudaCalcCustomCompoundBondForceKernel::initialize(const System& system, con
         variables[name] = "bondParams"+params->getParameterSuffix(i);
     }
     if (force.getNumGlobalParameters() > 0) {
-        globals = CudaArray::create<float>(cu, force.getNumGlobalParameters(), "customCompoundBondGlobals");
-        globals->upload(globalParamValues);
-        string argName = cu.getBondedUtilities().addArgument(globals->getDevicePointer(), "float");
+        globals.initialize<float>(cu, force.getNumGlobalParameters(), "customCompoundBondGlobals");
+        globals.upload(globalParamValues);
+        string argName = cu.getBondedUtilities().addArgument(globals.getDevicePointer(), "float");
         for (int i = 0; i < force.getNumGlobalParameters(); i++) {
             const string& name = force.getGlobalParameterName(i);
             string value = argName+"["+cu.intToString(i)+"]";
@@ -5474,7 +5342,7 @@ void CudaCalcCustomCompoundBondForceKernel::initialize(const System& system, con
 }
 
 double CudaCalcCustomCompoundBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    if (globals != NULL) {
+    if (globals.isInitialized()) {
         bool changed = false;
         for (int i = 0; i < (int) globalParamNames.size(); i++) {
             float value = (float) context.getParameter(globalParamNames[i]);
@@ -5483,7 +5351,7 @@ double CudaCalcCustomCompoundBondForceKernel::execute(ContextImpl& context, bool
             globalParamValues[i] = value;
         }
         if (changed)
-            globals->upload(globalParamValues);
+            globals.upload(globalParamValues);
     }
     return 0.0;
 }
@@ -5553,32 +5421,6 @@ CudaCalcCustomManyParticleForceKernel::~CudaCalcCustomManyParticleForceKernel() 
     cu.setAsCurrent();
     if (params != NULL)
         delete params;
-    if (orderIndex != NULL)
-        delete orderIndex;
-    if (particleOrder != NULL)
-        delete particleOrder;
-    if (particleTypes != NULL)
-        delete particleTypes;
-    if (exclusions != NULL)
-        delete exclusions;
-    if (exclusionStartIndex != NULL)
-        delete exclusionStartIndex;
-    if (blockCenter != NULL)
-        delete blockCenter;
-    if (blockBoundingBox != NULL)
-        delete blockBoundingBox;
-    if (neighborPairs != NULL)
-        delete neighborPairs;
-    if (numNeighborPairs != NULL)
-        delete numNeighborPairs;
-    if (neighborStartIndex != NULL)
-        delete neighborStartIndex;
-    if (neighbors != NULL)
-        delete neighbors;
-    if (numNeighborsForAtom != NULL)
-        delete numNeighborsForAtom;
-    for (auto function : tabulatedFunctions)
-        delete function;
 }
 
 void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, const CustomManyParticleForce& force) {
@@ -5612,6 +5454,7 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
     vector<pair<string, string> > functionDefinitions;
     vector<const TabulatedFunction*> functionList;
     stringstream tableArgs;
+    tabulatedFunctions.resize(force.getNumTabulatedFunctions());
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         functionList.push_back(&force.getTabulatedFunction(i));
         string name = force.getTabulatedFunctionName(i);
@@ -5620,8 +5463,8 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
         functions[name] = cu.getExpressionUtilities().getFunctionPlaceholder(force.getTabulatedFunction(i));
         int width;
         vector<float> f = cu.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
-        tabulatedFunctions.push_back(CudaArray::create<float>(cu, f.size(), "TabulatedFunction"));
-        tabulatedFunctions[tabulatedFunctions.size()-1]->upload(f);
+        tabulatedFunctions[i].initialize<float>(cu, f.size(), "TabulatedFunction");
+        tabulatedFunctions[i].upload(f);
         tableArgs << ", const float";
         if (width > 1)
             tableArgs << width;
@@ -5667,16 +5510,16 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
     CustomManyParticleForceImpl::buildFilterArrays(force, numTypes, particleTypesVec, orderIndexVec, particleOrderVec);
     bool hasTypeFilters = (particleOrderVec.size() > 1);
     if (hasTypeFilters) {
-        particleTypes = CudaArray::create<int>(cu, particleTypesVec.size(), "customManyParticleTypes");
-        orderIndex = CudaArray::create<int>(cu, orderIndexVec.size(), "customManyParticleOrderIndex");
-        particleOrder = CudaArray::create<int>(cu, particleOrderVec.size()*particlesPerSet, "customManyParticleOrder");
-        particleTypes->upload(particleTypesVec);
-        orderIndex->upload(orderIndexVec);
-        vector<int> flattenedOrder(particleOrder->getSize());
+        particleTypes.initialize<int>(cu, particleTypesVec.size(), "customManyParticleTypes");
+        orderIndex.initialize<int>(cu, orderIndexVec.size(), "customManyParticleOrderIndex");
+        particleOrder.initialize<int>(cu, particleOrderVec.size()*particlesPerSet, "customManyParticleOrder");
+        particleTypes.upload(particleTypesVec);
+        orderIndex.upload(orderIndexVec);
+        vector<int> flattenedOrder(particleOrder.getSize());
         for (int i = 0; i < (int) particleOrderVec.size(); i++)
             for (int j = 0; j < particlesPerSet; j++)
                 flattenedOrder[i*particlesPerSet+j] = particleOrderVec[i][j];
-        particleOrder->upload(flattenedOrder);
+        particleOrder.upload(flattenedOrder);
     }
     
     // Build data structures for exclusions.
@@ -5697,10 +5540,10 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
             exclusionsVec.insert(exclusionsVec.end(), particleExclusions[i].begin(), particleExclusions[i].end());
             exclusionStartIndexVec[i+1] = exclusionsVec.size();
         }
-        exclusions = CudaArray::create<int>(cu, exclusionsVec.size(), "customManyParticleExclusions");
-        exclusionStartIndex = CudaArray::create<int>(cu, exclusionStartIndexVec.size(), "customManyParticleExclusionStart");
-        exclusions->upload(exclusionsVec);
-        exclusionStartIndex->upload(exclusionStartIndexVec);
+        exclusions.initialize<int>(cu, exclusionsVec.size(), "customManyParticleExclusions");
+        exclusionStartIndex.initialize<int>(cu, exclusionStartIndexVec.size(), "customManyParticleExclusionStart");
+        exclusions.upload(exclusionsVec);
+        exclusionStartIndex.upload(exclusionStartIndexVec);
     }
     
     // Build data structures for the neighbor list.
@@ -5708,19 +5551,19 @@ void CudaCalcCustomManyParticleForceKernel::initialize(const System& system, con
     if (nonbondedMethod != NoCutoff) {
         int numAtomBlocks = cu.getNumAtomBlocks();
         int elementSize = (cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
-        blockCenter = new CudaArray(cu, numAtomBlocks, 4*elementSize, "blockCenter");
-        blockBoundingBox = new CudaArray(cu, numAtomBlocks, 4*elementSize, "blockBoundingBox");
-        numNeighborPairs = CudaArray::create<int>(cu, 1, "customManyParticleNumNeighborPairs");
-        neighborStartIndex = CudaArray::create<int>(cu, numParticles+1, "customManyParticleNeighborStartIndex");
-        numNeighborsForAtom = CudaArray::create<int>(cu, numParticles, "customManyParticleNumNeighborsForAtom");
+        blockCenter.initialize(cu, numAtomBlocks, 4*elementSize, "blockCenter");
+        blockBoundingBox.initialize(cu, numAtomBlocks, 4*elementSize, "blockBoundingBox");
+        numNeighborPairs.initialize<int>(cu, 1, "customManyParticleNumNeighborPairs");
+        neighborStartIndex.initialize<int>(cu, numParticles+1, "customManyParticleNeighborStartIndex");
+        numNeighborsForAtom.initialize<int>(cu, numParticles, "customManyParticleNumNeighborsForAtom");
         CHECK_RESULT(cuEventCreate(&event, CU_EVENT_DISABLE_TIMING), "Error creating event for CustomManyParticleForce");
 
         // Select a size for the array that holds the neighbor list.  We have to make a fairly
         // arbitrary guess, but if this turns out to be too small we'll increase it later.
 
         maxNeighborPairs = 150*numParticles;
-        neighborPairs = CudaArray::create<int2>(cu, maxNeighborPairs, "customManyParticleNeighborPairs");
-        neighbors = CudaArray::create<int>(cu, maxNeighborPairs, "customManyParticleNeighbors");
+        neighborPairs.initialize<int2>(cu, maxNeighborPairs, "customManyParticleNeighborPairs");
+        neighbors.initialize<int>(cu, maxNeighborPairs, "customManyParticleNeighbors");
     }
 
     // Now to generate the kernel.  First, it needs to calculate all distances, angles,
@@ -6045,22 +5888,22 @@ double CudaCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool
         forceArgs.push_back(cu.getPeriodicBoxVecYPointer());
         forceArgs.push_back(cu.getPeriodicBoxVecZPointer());
         if (nonbondedMethod != NoCutoff) {
-            forceArgs.push_back(&neighbors->getDevicePointer());
-            forceArgs.push_back(&neighborStartIndex->getDevicePointer());
+            forceArgs.push_back(&neighbors.getDevicePointer());
+            forceArgs.push_back(&neighborStartIndex.getDevicePointer());
         }
-        if (particleTypes != NULL) {
-            forceArgs.push_back(&particleTypes->getDevicePointer());
-            forceArgs.push_back(&orderIndex->getDevicePointer());
-            forceArgs.push_back(&particleOrder->getDevicePointer());
+        if (particleTypes.isInitialized()) {
+            forceArgs.push_back(&particleTypes.getDevicePointer());
+            forceArgs.push_back(&orderIndex.getDevicePointer());
+            forceArgs.push_back(&particleOrder.getDevicePointer());
         }
-        if (exclusions != NULL) {
-            forceArgs.push_back(&exclusions->getDevicePointer());
-            forceArgs.push_back(&exclusionStartIndex->getDevicePointer());
+        if (exclusions.isInitialized()) {
+            forceArgs.push_back(&exclusions.getDevicePointer());
+            forceArgs.push_back(&exclusionStartIndex.getDevicePointer());
         }
         for (auto& buffer : params->getBuffers())
             forceArgs.push_back(&buffer.getMemory());
-        for (auto function : tabulatedFunctions)
-            forceArgs.push_back(&function->getDevicePointer());
+        for (auto& function : tabulatedFunctions)
+            forceArgs.push_back(&function.getDevicePointer());
         
         if (nonbondedMethod != NoCutoff) {
             // Set arguments for the block bounds kernel.
@@ -6071,9 +5914,9 @@ double CudaCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool
             blockBoundsArgs.push_back(cu.getPeriodicBoxVecYPointer());
             blockBoundsArgs.push_back(cu.getPeriodicBoxVecZPointer());
             blockBoundsArgs.push_back(&cu.getPosq().getDevicePointer());
-            blockBoundsArgs.push_back(&blockCenter->getDevicePointer());
-            blockBoundsArgs.push_back(&blockBoundingBox->getDevicePointer());
-            blockBoundsArgs.push_back(&numNeighborPairs->getDevicePointer());
+            blockBoundsArgs.push_back(&blockCenter.getDevicePointer());
+            blockBoundsArgs.push_back(&blockBoundingBox.getDevicePointer());
+            blockBoundsArgs.push_back(&numNeighborPairs.getDevicePointer());
 
             // Set arguments for the neighbor list kernel.
 
@@ -6083,32 +5926,32 @@ double CudaCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool
             neighborsArgs.push_back(cu.getPeriodicBoxVecYPointer());
             neighborsArgs.push_back(cu.getPeriodicBoxVecZPointer());
             neighborsArgs.push_back(&cu.getPosq().getDevicePointer());
-            neighborsArgs.push_back(&blockCenter->getDevicePointer());
-            neighborsArgs.push_back(&blockBoundingBox->getDevicePointer());
-            neighborsArgs.push_back(&neighborPairs->getDevicePointer());
-            neighborsArgs.push_back(&numNeighborPairs->getDevicePointer());
-            neighborsArgs.push_back(&numNeighborsForAtom->getDevicePointer());
+            neighborsArgs.push_back(&blockCenter.getDevicePointer());
+            neighborsArgs.push_back(&blockBoundingBox.getDevicePointer());
+            neighborsArgs.push_back(&neighborPairs.getDevicePointer());
+            neighborsArgs.push_back(&numNeighborPairs.getDevicePointer());
+            neighborsArgs.push_back(&numNeighborsForAtom.getDevicePointer());
             neighborsArgs.push_back(&maxNeighborPairs);
-            if (exclusions != NULL) {
-                neighborsArgs.push_back(&exclusions->getDevicePointer());
-                neighborsArgs.push_back(&exclusionStartIndex->getDevicePointer());
+            if (exclusions.isInitialized()) {
+                neighborsArgs.push_back(&exclusions.getDevicePointer());
+                neighborsArgs.push_back(&exclusionStartIndex.getDevicePointer());
             }
             
             // Set arguments for the kernel to find neighbor list start indices.
             
-            startIndicesArgs.push_back(&numNeighborsForAtom->getDevicePointer());
-            startIndicesArgs.push_back(&neighborStartIndex->getDevicePointer());
-            startIndicesArgs.push_back(&numNeighborPairs->getDevicePointer());
+            startIndicesArgs.push_back(&numNeighborsForAtom.getDevicePointer());
+            startIndicesArgs.push_back(&neighborStartIndex.getDevicePointer());
+            startIndicesArgs.push_back(&numNeighborPairs.getDevicePointer());
             startIndicesArgs.push_back(&maxNeighborPairs);
 
             // Set arguments for the kernel to assemble the final neighbor list.
             
-            copyPairsArgs.push_back(&neighborPairs->getDevicePointer());
-            copyPairsArgs.push_back(&neighbors->getDevicePointer());
-            copyPairsArgs.push_back(&numNeighborPairs->getDevicePointer());
+            copyPairsArgs.push_back(&neighborPairs.getDevicePointer());
+            copyPairsArgs.push_back(&neighbors.getDevicePointer());
+            copyPairsArgs.push_back(&numNeighborPairs.getDevicePointer());
             copyPairsArgs.push_back(&maxNeighborPairs);
-            copyPairsArgs.push_back(&numNeighborsForAtom->getDevicePointer());
-            copyPairsArgs.push_back(&neighborStartIndex->getDevicePointer());
+            copyPairsArgs.push_back(&numNeighborsForAtom.getDevicePointer());
+            copyPairsArgs.push_back(&neighborStartIndex.getDevicePointer());
        }
     }
     if (globalParamValues.size() > 0) {
@@ -6131,7 +5974,7 @@ double CudaCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool
             // We need to make sure there was enough memory for the neighbor list.  Download the
             // information asynchronously so kernels can be running at the same time.
 
-            numNeighborPairs->download(numPairs, false);
+            numNeighborPairs.download(numPairs, false);
             CHECK_RESULT(cuEventRecord(event, 0), "Error recording event for CustomManyParticleForce");
             cu.executeKernel(startIndicesKernel, &startIndicesArgs[0], 256, 256, 256*sizeof(int));
             cu.executeKernel(copyPairsKernel, &copyPairsArgs[0], maxNeighborPairs);
@@ -6145,17 +5988,13 @@ double CudaCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool
             if (*numPairs > maxNeighborPairs) {
                 // Resize the arrays and run the calculation again.
 
-                delete neighborPairs;
-                neighborPairs = NULL;
-                delete neighbors;
-                neighbors = NULL;
                 maxNeighborPairs = (int) (1.1*(*numPairs));
-                neighborPairs = CudaArray::create<int2>(cu, maxNeighborPairs, "customManyParticleNeighborPairs");
-                neighbors = CudaArray::create<int>(cu, maxNeighborPairs, "customManyParticleNeighbors");
-                forceArgs[5] = &neighbors->getDevicePointer();
-                neighborsArgs[5] = &neighborPairs->getDevicePointer();
-                copyPairsArgs[0] = &neighborPairs->getDevicePointer();
-                copyPairsArgs[1] = &neighbors->getDevicePointer();
+                neighborPairs.resize(maxNeighborPairs);
+                neighbors.resize(maxNeighborPairs);
+                forceArgs[5] = &neighbors.getDevicePointer();
+                neighborsArgs[5] = &neighborPairs.getDevicePointer();
+                copyPairsArgs[0] = &neighborPairs.getDevicePointer();
+                copyPairsArgs[1] = &neighbors.getDevicePointer();
                 continue;
             }
         }
@@ -6251,59 +6090,18 @@ private:
     CudaCalcGayBerneForceKernel& owner;
 };
 
-CudaCalcGayBerneForceKernel::~CudaCalcGayBerneForceKernel() {
-    if (sortedParticles != NULL)
-        delete sortedParticles;
-    if (axisParticleIndices != NULL)
-        delete axisParticleIndices;
-    if (sigParams != NULL)
-        delete sigParams;
-    if (epsParams != NULL)
-        delete epsParams;
-    if (scale != NULL)
-        delete scale;
-    if (exceptionParticles != NULL)
-        delete exceptionParticles;
-    if (exceptionParams != NULL)
-        delete exceptionParams;
-    if (aMatrix != NULL)
-        delete aMatrix;
-    if (bMatrix != NULL)
-        delete bMatrix;
-    if (gMatrix != NULL)
-        delete gMatrix;
-    if (exclusions != NULL)
-        delete exclusions;
-    if (exclusionStartIndex != NULL)
-        delete exclusionStartIndex;
-    if (blockCenter != NULL)
-        delete blockCenter;
-    if (blockBoundingBox != NULL)
-        delete blockBoundingBox;
-    if (neighbors != NULL)
-        delete neighbors;
-    if (neighborIndex != NULL)
-        delete neighborIndex;
-    if (neighborBlockCount != NULL)
-        delete neighborBlockCount;
-    if (sortedPos != NULL)
-        delete sortedPos;
-    if (torque != NULL)
-        delete torque;
-}
-
 void CudaCalcGayBerneForceKernel::initialize(const System& system, const GayBerneForce& force) {
     // Initialize interactions.
 
     int numParticles = force.getNumParticles();
-    sigParams = CudaArray::create<float4>(cu, cu.getPaddedNumAtoms(), "sigParams");
-    epsParams = CudaArray::create<float2>(cu, cu.getPaddedNumAtoms(), "epsParams");
-    scale = CudaArray::create<float4>(cu, cu.getPaddedNumAtoms(), "scale");
-    axisParticleIndices = CudaArray::create<int2>(cu, cu.getPaddedNumAtoms(), "axisParticleIndices");
-    sortedParticles = CudaArray::create<int>(cu, cu.getPaddedNumAtoms(), "sortedParticles");
-    aMatrix = CudaArray::create<float>(cu, 9*cu.getPaddedNumAtoms(), "aMatrix");
-    bMatrix = CudaArray::create<float>(cu, 9*cu.getPaddedNumAtoms(), "bMatrix");
-    gMatrix = CudaArray::create<float>(cu, 9*cu.getPaddedNumAtoms(), "gMatrix");
+    sigParams.initialize<float4>(cu, cu.getPaddedNumAtoms(), "sigParams");
+    epsParams.initialize<float2>(cu, cu.getPaddedNumAtoms(), "epsParams");
+    scale.initialize<float4>(cu, cu.getPaddedNumAtoms(), "scale");
+    axisParticleIndices.initialize<int2>(cu, cu.getPaddedNumAtoms(), "axisParticleIndices");
+    sortedParticles.initialize<int>(cu, cu.getPaddedNumAtoms(), "sortedParticles");
+    aMatrix.initialize<float>(cu, 9*cu.getPaddedNumAtoms(), "aMatrix");
+    bMatrix.initialize<float>(cu, 9*cu.getPaddedNumAtoms(), "bMatrix");
+    gMatrix.initialize<float>(cu, 9*cu.getPaddedNumAtoms(), "gMatrix");
     vector<float4> sigParamsVector(cu.getPaddedNumAtoms(), make_float4(0, 0, 0, 0));
     vector<float2> epsParamsVector(cu.getPaddedNumAtoms(), make_float2(0, 0));
     vector<float4> scaleVector(cu.getPaddedNumAtoms(), make_float4(0, 0, 0, 0));
@@ -6319,10 +6117,10 @@ void CudaCalcGayBerneForceKernel::initialize(const System& system, const GayBern
         scaleVector[i] = make_float4((float) (1/sqrt(ex)), (float) (1/sqrt(ey)), (float) (1/sqrt(ez)), 0);
         isRealParticle[i] = (epsilon != 0.0);
     }
-    sigParams->upload(sigParamsVector);
-    epsParams->upload(epsParamsVector);
-    scale->upload(scaleVector);
-    axisParticleIndices->upload(axisParticleVector);
+    sigParams.upload(sigParamsVector);
+    epsParams.upload(epsParamsVector);
+    scale.upload(scaleVector);
+    axisParticleIndices.upload(axisParticleVector);
     
     // Record exceptions and exclusions.
 
@@ -6345,31 +6143,31 @@ void CudaCalcGayBerneForceKernel::initialize(const System& system, const GayBern
         if (isRealParticle[i])
             numRealParticles++;
     numExceptions = exceptionParamsVec.size();
-    exclusions = CudaArray::create<int>(cu, max(1, (int) excludedPairs.size()), "exclusions");
-    exclusionStartIndex = CudaArray::create<int>(cu, numRealParticles+1, "exclusionStartIndex");
-    exceptionParticles = CudaArray::create<int4>(cu, max(1, numExceptions), "exceptionParticles");
-    exceptionParams = CudaArray::create<float2>(cu, max(1, numExceptions), "exceptionParams");
+    exclusions.initialize<int>(cu, max(1, (int) excludedPairs.size()), "exclusions");
+    exclusionStartIndex.initialize<int>(cu, numRealParticles+1, "exclusionStartIndex");
+    exceptionParticles.initialize<int4>(cu, max(1, numExceptions), "exceptionParticles");
+    exceptionParams.initialize<float2>(cu, max(1, numExceptions), "exceptionParams");
     if (numExceptions > 0)
-        exceptionParams->upload(exceptionParamsVec);
+        exceptionParams.upload(exceptionParamsVec);
     
     // Create data structures used for the neighbor list.
 
     int numAtomBlocks = (numRealParticles+31)/32;
     int elementSize = (cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
-    blockCenter = new CudaArray(cu, numAtomBlocks, 4*elementSize, "blockCenter");
-    blockBoundingBox = new CudaArray(cu, numAtomBlocks, 4*elementSize, "blockBoundingBox");
-    sortedPos = new CudaArray(cu, numRealParticles, 4*elementSize, "sortedPos");
+    blockCenter.initialize(cu, numAtomBlocks, 4*elementSize, "blockCenter");
+    blockBoundingBox.initialize(cu, numAtomBlocks, 4*elementSize, "blockBoundingBox");
+    sortedPos.initialize(cu, numRealParticles, 4*elementSize, "sortedPos");
     maxNeighborBlocks = numRealParticles*2;
-    neighbors = CudaArray::create<int>(cu, maxNeighborBlocks*32, "neighbors");
-    neighborIndex = CudaArray::create<int>(cu, maxNeighborBlocks, "neighborIndex");
-    neighborBlockCount = CudaArray::create<int>(cu, 1, "neighborBlockCount");
+    neighbors.initialize<int>(cu, maxNeighborBlocks*32, "neighbors");
+    neighborIndex.initialize<int>(cu, maxNeighborBlocks, "neighborIndex");
+    neighborBlockCount.initialize<int>(cu, 1, "neighborBlockCount");
     if (force.getNonbondedMethod() != GayBerneForce::NoCutoff)
         CHECK_RESULT(cuEventCreate(&event, CU_EVENT_DISABLE_TIMING), "Error creating event for CustomManyParticleForce");
 
     // Create array for accumulating torques.
     
-    torque = CudaArray::create<long long>(cu, 3*cu.getPaddedNumAtoms(), "torque");
-    cu.addAutoclearBuffer(*torque);
+    torque.initialize<long long>(cu, 3*cu.getPaddedNumAtoms(), "torque");
+    cu.addAutoclearBuffer(torque);
 
     // Create the kernels.
     
@@ -6412,25 +6210,25 @@ double CudaCalcGayBerneForceKernel::execute(ContextImpl& context, bool includeFo
         sortAtoms();
         framesArgs.push_back(&numRealParticles);
         framesArgs.push_back(&cu.getPosq().getDevicePointer());
-        framesArgs.push_back(&axisParticleIndices->getDevicePointer());
-        framesArgs.push_back(&sigParams->getDevicePointer());
-        framesArgs.push_back(&scale->getDevicePointer());
-        framesArgs.push_back(&aMatrix->getDevicePointer());
-        framesArgs.push_back(&bMatrix->getDevicePointer());
-        framesArgs.push_back(&gMatrix->getDevicePointer());
-        framesArgs.push_back(&sortedParticles->getDevicePointer());
+        framesArgs.push_back(&axisParticleIndices.getDevicePointer());
+        framesArgs.push_back(&sigParams.getDevicePointer());
+        framesArgs.push_back(&scale.getDevicePointer());
+        framesArgs.push_back(&aMatrix.getDevicePointer());
+        framesArgs.push_back(&bMatrix.getDevicePointer());
+        framesArgs.push_back(&gMatrix.getDevicePointer());
+        framesArgs.push_back(&sortedParticles.getDevicePointer());
         blockBoundsArgs.push_back(&numRealParticles);
         blockBoundsArgs.push_back(cu.getPeriodicBoxSizePointer());
         blockBoundsArgs.push_back(cu.getInvPeriodicBoxSizePointer());
         blockBoundsArgs.push_back(cu.getPeriodicBoxVecXPointer());
         blockBoundsArgs.push_back(cu.getPeriodicBoxVecYPointer());
         blockBoundsArgs.push_back(cu.getPeriodicBoxVecZPointer());
-        blockBoundsArgs.push_back(&sortedParticles->getDevicePointer());
+        blockBoundsArgs.push_back(&sortedParticles.getDevicePointer());
         blockBoundsArgs.push_back(&cu.getPosq().getDevicePointer());
-        blockBoundsArgs.push_back(&sortedPos->getDevicePointer());
-        blockBoundsArgs.push_back(&blockCenter->getDevicePointer());
-        blockBoundsArgs.push_back(&blockBoundingBox->getDevicePointer());
-        blockBoundsArgs.push_back(&neighborBlockCount->getDevicePointer());
+        blockBoundsArgs.push_back(&sortedPos.getDevicePointer());
+        blockBoundsArgs.push_back(&blockCenter.getDevicePointer());
+        blockBoundsArgs.push_back(&blockBoundingBox.getDevicePointer());
+        blockBoundsArgs.push_back(&neighborBlockCount.getDevicePointer());
         neighborsArgs.push_back(&numRealParticles);
         neighborsArgs.push_back(&maxNeighborBlocks);
         neighborsArgs.push_back(cu.getPeriodicBoxSizePointer());
@@ -6438,35 +6236,35 @@ double CudaCalcGayBerneForceKernel::execute(ContextImpl& context, bool includeFo
         neighborsArgs.push_back(cu.getPeriodicBoxVecXPointer());
         neighborsArgs.push_back(cu.getPeriodicBoxVecYPointer());
         neighborsArgs.push_back(cu.getPeriodicBoxVecZPointer());
-        neighborsArgs.push_back(&sortedPos->getDevicePointer());
-        neighborsArgs.push_back(&blockCenter->getDevicePointer());
-        neighborsArgs.push_back(&blockBoundingBox->getDevicePointer());
-        neighborsArgs.push_back(&neighbors->getDevicePointer());
-        neighborsArgs.push_back(&neighborIndex->getDevicePointer());
-        neighborsArgs.push_back(&neighborBlockCount->getDevicePointer());
-        neighborsArgs.push_back(&exclusions->getDevicePointer());
-        neighborsArgs.push_back(&exclusionStartIndex->getDevicePointer());
+        neighborsArgs.push_back(&sortedPos.getDevicePointer());
+        neighborsArgs.push_back(&blockCenter.getDevicePointer());
+        neighborsArgs.push_back(&blockBoundingBox.getDevicePointer());
+        neighborsArgs.push_back(&neighbors.getDevicePointer());
+        neighborsArgs.push_back(&neighborIndex.getDevicePointer());
+        neighborsArgs.push_back(&neighborBlockCount.getDevicePointer());
+        neighborsArgs.push_back(&exclusions.getDevicePointer());
+        neighborsArgs.push_back(&exclusionStartIndex.getDevicePointer());
         forceArgs.push_back(&cu.getForce().getDevicePointer());
-        forceArgs.push_back(&torque->getDevicePointer());
+        forceArgs.push_back(&torque.getDevicePointer());
         forceArgs.push_back(&numRealParticles);
         forceArgs.push_back(&numExceptions);
         forceArgs.push_back(&cu.getEnergyBuffer().getDevicePointer());
-        forceArgs.push_back(&sortedPos->getDevicePointer());
-        forceArgs.push_back(&sigParams->getDevicePointer());
-        forceArgs.push_back(&epsParams->getDevicePointer());
-        forceArgs.push_back(&sortedParticles->getDevicePointer());
-        forceArgs.push_back(&aMatrix->getDevicePointer());
-        forceArgs.push_back(&bMatrix->getDevicePointer());
-        forceArgs.push_back(&gMatrix->getDevicePointer());
-        forceArgs.push_back(&exclusions->getDevicePointer());
-        forceArgs.push_back(&exclusionStartIndex->getDevicePointer());
-        forceArgs.push_back(&exceptionParticles->getDevicePointer());
-        forceArgs.push_back(&exceptionParams->getDevicePointer());
+        forceArgs.push_back(&sortedPos.getDevicePointer());
+        forceArgs.push_back(&sigParams.getDevicePointer());
+        forceArgs.push_back(&epsParams.getDevicePointer());
+        forceArgs.push_back(&sortedParticles.getDevicePointer());
+        forceArgs.push_back(&aMatrix.getDevicePointer());
+        forceArgs.push_back(&bMatrix.getDevicePointer());
+        forceArgs.push_back(&gMatrix.getDevicePointer());
+        forceArgs.push_back(&exclusions.getDevicePointer());
+        forceArgs.push_back(&exclusionStartIndex.getDevicePointer());
+        forceArgs.push_back(&exceptionParticles.getDevicePointer());
+        forceArgs.push_back(&exceptionParams.getDevicePointer());
         if (nonbondedMethod != GayBerneForce::NoCutoff) {
             forceArgs.push_back(&maxNeighborBlocks);
-            forceArgs.push_back(&neighbors->getDevicePointer());
-            forceArgs.push_back(&neighborIndex->getDevicePointer());
-            forceArgs.push_back(&neighborBlockCount->getDevicePointer());
+            forceArgs.push_back(&neighbors.getDevicePointer());
+            forceArgs.push_back(&neighborIndex.getDevicePointer());
+            forceArgs.push_back(&neighborBlockCount.getDevicePointer());
             forceArgs.push_back(cu.getPeriodicBoxSizePointer());
             forceArgs.push_back(cu.getInvPeriodicBoxSizePointer());
             forceArgs.push_back(cu.getPeriodicBoxVecXPointer());
@@ -6474,11 +6272,11 @@ double CudaCalcGayBerneForceKernel::execute(ContextImpl& context, bool includeFo
             forceArgs.push_back(cu.getPeriodicBoxVecZPointer());
         }
         torqueArgs.push_back(&cu.getForce().getDevicePointer());
-        torqueArgs.push_back(&torque->getDevicePointer());
+        torqueArgs.push_back(&torque.getDevicePointer());
         torqueArgs.push_back(&numRealParticles);
         torqueArgs.push_back(&cu.getPosq().getDevicePointer());
-        torqueArgs.push_back(&axisParticleIndices->getDevicePointer());
-        torqueArgs.push_back(&sortedParticles->getDevicePointer());
+        torqueArgs.push_back(&axisParticleIndices.getDevicePointer());
+        torqueArgs.push_back(&sortedParticles.getDevicePointer());
     }
     cu.executeKernel(framesKernel, &framesArgs[0], numRealParticles);
     cu.executeKernel(blockBoundsKernel, &blockBoundsArgs[0], (numRealParticles+31)/32);
@@ -6489,7 +6287,7 @@ double CudaCalcGayBerneForceKernel::execute(ContextImpl& context, bool includeFo
         while (true) {
             cu.executeKernel(neighborsKernel, &neighborsArgs[0], numRealParticles);
             int* count = (int*) cu.getPinnedBuffer();
-            neighborBlockCount->download(count, false);
+            neighborBlockCount.download(count, false);
             CHECK_RESULT(cuEventRecord(event, 0), "Error recording event for GayBerneForce");
             cu.executeKernel(forceKernel, &forceArgs[0], cu.getNonbondedUtilities().getNumForceThreadBlocks()*cu.getNonbondedUtilities().getForceThreadBlockSize());
             CHECK_RESULT(cuEventSynchronize(event), "Error synchronizing on event for GayBerneForce");
@@ -6498,17 +6296,13 @@ double CudaCalcGayBerneForceKernel::execute(ContextImpl& context, bool includeFo
             
             // There wasn't enough room for the neighbor list, so we need to recreate it.
 
-            delete neighbors;
-            neighbors = NULL;
-            delete neighborIndex;
-            neighborIndex = NULL;
             maxNeighborBlocks = (int) ceil((*count)*1.1);
-            neighbors = CudaArray::create<int>(cu, maxNeighborBlocks*32, "neighbors");
-            neighborIndex = CudaArray::create<int>(cu, maxNeighborBlocks, "neighborIndex");
-            neighborsArgs[10] = &neighbors->getDevicePointer();
-            neighborsArgs[11] = &neighborIndex->getDevicePointer();
-            forceArgs[17] = &neighbors->getDevicePointer();
-            forceArgs[18] = &neighborIndex->getDevicePointer();
+            neighbors.resize(maxNeighborBlocks*32);
+            neighborIndex.resize(maxNeighborBlocks);
+            neighborsArgs[10] = &neighbors.getDevicePointer();
+            neighborsArgs[11] = &neighborIndex.getDevicePointer();
+            forceArgs[17] = &neighbors.getDevicePointer();
+            forceArgs[18] = &neighborIndex.getDevicePointer();
         }
     }
     cu.executeKernel(torqueKernel, &torqueArgs[0], numRealParticles);
@@ -6547,9 +6341,9 @@ void CudaCalcGayBerneForceKernel::copyParametersToContext(ContextImpl& context, 
         if (epsilon != 0.0 && !isRealParticle[i])
             throw OpenMMException("updateParametersInContext: The set of ignored particles (ones with epsilon=0) has changed");
     }
-    sigParams->upload(sigParamsVector);
-    epsParams->upload(epsParamsVector);
-    scale->upload(scaleVector);
+    sigParams.upload(sigParamsVector);
+    epsParams.upload(epsParamsVector);
+    scale.upload(scaleVector);
     
     // Record the exceptions.
     
@@ -6561,7 +6355,7 @@ void CudaCalcGayBerneForceKernel::copyParametersToContext(ContextImpl& context, 
             force.getExceptionParameters(exceptions[i], atom1, atom2, sigma, epsilon);
             exceptionParamsVec[i] = make_float2((float) sigma, (float) epsilon);
         }
-        exceptionParams->upload(exceptionParamsVec);
+        exceptionParams.upload(exceptionParamsVec);
     }
     cu.invalidateMolecules();
     sortAtoms();
@@ -6582,7 +6376,7 @@ void CudaCalcGayBerneForceKernel::sortAtoms() {
             particles[nextIndex++] = atom;
         }
     }
-    sortedParticles->upload(particles);
+    sortedParticles.upload(particles);
     
     // Update the list of exception particles.
     
@@ -6591,7 +6385,7 @@ void CudaCalcGayBerneForceKernel::sortAtoms() {
         vector<int4> exceptionParticlesVec(numExceptions);
         for (int i = 0; i < numExceptions; i++)
             exceptionParticlesVec[i] = make_int4(exceptionAtoms[i].first, exceptionAtoms[i].second, inverseOrder[exceptionAtoms[i].first], inverseOrder[exceptionAtoms[i].second]);
-        exceptionParticles->upload(exceptionParticlesVec);
+        exceptionParticles.upload(exceptionParticlesVec);
     }
     
     // Rebuild the list of exclusions.
@@ -6603,16 +6397,16 @@ void CudaCalcGayBerneForceKernel::sortAtoms() {
         excludedAtoms[first].push_back(second);
     }
     int index = 0;
-    vector<int> exclusionVec(exclusions->getSize());
-    vector<int> startIndexVec(exclusionStartIndex->getSize());
+    vector<int> exclusionVec(exclusions.getSize());
+    vector<int> startIndexVec(exclusionStartIndex.getSize());
     for (int i = 0; i < numRealParticles; i++) {
         startIndexVec[i] = index;
         for (int j = 0; j < excludedAtoms[i].size(); j++)
             exclusionVec[index++] = excludedAtoms[i][j];
     }
     startIndexVec[numRealParticles] = index;
-    exclusions->upload(exclusionVec);
-    exclusionStartIndex->upload(startIndexVec);
+    exclusions.upload(exclusionVec);
+    exclusionStartIndex.upload(startIndexVec);
 }
 
 class CudaCalcCustomCVForceKernel::ReorderListener : public CudaContext::ReorderListener {
@@ -6630,15 +6424,6 @@ private:
     CudaContext& cu;
     CudaArray& invAtomOrder;
 };
-
-CudaCalcCustomCVForceKernel::~CudaCalcCustomCVForceKernel() {
-    for (auto force : cvForces)
-        delete force;
-    if (invAtomOrder != NULL)
-        delete invAtomOrder;
-    if (innerInvAtomOrder != NULL)
-        delete innerInvAtomOrder;
-}
 
 void CudaCalcCustomCVForceKernel::initialize(const System& system, const CustomCVForce& force, ContextImpl& innerContext) {
     int numCVs = force.getNumCollectiveVariables();
@@ -6681,10 +6466,11 @@ void CudaCalcCustomCVForceKernel::initialize(const System& system, const CustomC
     // Create arrays for storing information.
     
     int elementSize = (cu.getUseDoublePrecision() || cu.getUseMixedPrecision() ? sizeof(double) : sizeof(float));
+    cvForces.resize(numCVs);
     for (int i = 0; i < numCVs; i++)
-        cvForces.push_back(CudaArray::create<long long>(cu, 3*cu.getPaddedNumAtoms(), "cvForce"));
-    invAtomOrder = CudaArray::create<int>(cu, cu.getPaddedNumAtoms(), "invAtomOrder");
-    innerInvAtomOrder = CudaArray::create<int>(cu, cu.getPaddedNumAtoms(), "innerInvAtomOrder");
+        cvForces[i].initialize<long long>(cu, 3*cu.getPaddedNumAtoms(), "cvForce");
+    invAtomOrder.initialize<int>(cu, cu.getPaddedNumAtoms(), "invAtomOrder");
+    innerInvAtomOrder.initialize<int>(cu, cu.getPaddedNumAtoms(), "innerInvAtomOrder");
     
     // Create the kernels.
     
@@ -6710,10 +6496,10 @@ double CudaCalcCustomCVForceKernel::execute(ContextImpl& context, ContextImpl& i
     CudaContext& cu2 = *reinterpret_cast<CudaPlatform::PlatformData*>(innerContext.getPlatformData())->contexts[0];
     vector<double> cvValues;
     vector<map<string, double> > cvDerivs(numCVs);
-    void* copyForcesArgs[] = {NULL, &invAtomOrder->getDevicePointer(), &cu2.getForce().getDevicePointer(), &cu2.getAtomIndexArray().getDevicePointer(), &numAtoms, &paddedNumAtoms};
+    void* copyForcesArgs[] = {NULL, &invAtomOrder.getDevicePointer(), &cu2.getForce().getDevicePointer(), &cu2.getAtomIndexArray().getDevicePointer(), &numAtoms, &paddedNumAtoms};
     for (int i = 0; i < numCVs; i++) {
         cvValues.push_back(innerContext.calcForcesAndEnergy(true, true, 1<<i));
-        copyForcesArgs[0] = &cvForces[i]->getDevicePointer();
+        copyForcesArgs[0] = &cvForces[i].getDevicePointer();
         cu.executeKernel(copyForcesKernel, copyForcesArgs, numAtoms);
         innerContext.getEnergyParameterDerivatives(cvDerivs[i]);
     }
@@ -6735,7 +6521,7 @@ double CudaCalcCustomCVForceKernel::execute(ContextImpl& context, ContextImpl& i
     for (int i = 0; i < numCVs; i++) {
         dEdV[i] = variableDerivExpressions[i].evaluate(variables);
         dEdVFloat[i] = (float) dEdV[i];
-        addForcesArgs.push_back(&cvForces[i]->getDevicePointer());
+        addForcesArgs.push_back(&cvForces[i].getDevicePointer());
         if (cu.getUseDoublePrecision())
             addForcesArgs.push_back(&dEdV[i]);
         else
@@ -6764,8 +6550,8 @@ void CudaCalcCustomCVForceKernel::copyState(ContextImpl& context, ContextImpl& i
         
         // Initialize the listeners.
         
-        ReorderListener* listener1 = new ReorderListener(cu, *invAtomOrder);
-        ReorderListener* listener2 = new ReorderListener(cu2, *innerInvAtomOrder);
+        ReorderListener* listener1 = new ReorderListener(cu, invAtomOrder);
+        ReorderListener* listener2 = new ReorderListener(cu2, innerInvAtomOrder);
         cu.addReorderListener(listener1);
         cu2.addReorderListener(listener2);
         listener1->execute();
@@ -6774,7 +6560,7 @@ void CudaCalcCustomCVForceKernel::copyState(ContextImpl& context, ContextImpl& i
     CUdeviceptr posCorrection = (cu.getUseMixedPrecision() ? cu.getPosqCorrection().getDevicePointer() : 0);
     CUdeviceptr posCorrection2 = (cu2.getUseMixedPrecision() ? cu2.getPosqCorrection().getDevicePointer() : 0);
     void* copyStateArgs[] = {&cu.getPosq().getDevicePointer(), &posCorrection, &cu.getVelm().getDevicePointer(), &cu.getAtomIndexArray().getDevicePointer(),
-        &cu2.getPosq().getDevicePointer(), &posCorrection2,& cu2.getVelm().getDevicePointer(), &innerInvAtomOrder->getDevicePointer(), &numAtoms};
+        &cu2.getPosq().getDevicePointer(), &posCorrection2,& cu2.getVelm().getDevicePointer(), &innerInvAtomOrder.getDevicePointer(), &numAtoms};
     cu.executeKernel(copyStateKernel, copyStateArgs, numAtoms);
     Vec3 a, b, c;
     context.getPeriodicBoxVectors(a, b, c);
@@ -6805,15 +6591,6 @@ private:
     set<int> particles;
 };
 
-CudaCalcRMSDForceKernel::~CudaCalcRMSDForceKernel() {
-    if (referencePos != NULL)
-        delete referencePos;
-    if (particles != NULL)
-        delete particles;
-    if (buffer != NULL)
-        delete buffer;
-}
-
 void CudaCalcRMSDForceKernel::initialize(const System& system, const RMSDForce& force) {
     // Create data structures.
     
@@ -6822,9 +6599,9 @@ void CudaCalcRMSDForceKernel::initialize(const System& system, const RMSDForce& 
     int numParticles = force.getParticles().size();
     if (numParticles == 0)
         numParticles = system.getNumParticles();
-    referencePos = new CudaArray(cu, system.getNumParticles(), 4*elementSize, "referencePos");
-    particles = CudaArray::create<int>(cu, numParticles, "particles");
-    buffer = new CudaArray(cu, 13, elementSize, "buffer");
+    referencePos.initialize(cu, system.getNumParticles(), 4*elementSize, "referencePos");
+    particles.initialize<int>(cu, numParticles, "particles");
+    buffer.initialize(cu, 13, elementSize, "buffer");
     recordParameters(force);
     info = new ForceInfo(force);
     cu.addForce(info);
@@ -6853,18 +6630,18 @@ void CudaCalcRMSDForceKernel::recordParameters(const RMSDForce& force) {
 
     // Upload them to the device.
 
-    particles->upload(particleVec);
+    particles.upload(particleVec);
     if (cu.getUseDoublePrecision()) {
         vector<double4> pos;
         for (Vec3 p : centeredPositions)
             pos.push_back(make_double4(p[0], p[1], p[2], 0));
-        referencePos->upload(pos);
+        referencePos.upload(pos);
     }
     else {
         vector<float4> pos;
         for (Vec3 p : centeredPositions)
             pos.push_back(make_float4(p[0], p[1], p[2], 0));
-        referencePos->upload(pos);
+        referencePos.upload(pos);
     }
 
     // Record the sum of the norms of the reference positions.
@@ -6886,17 +6663,17 @@ template <class REAL>
 double CudaCalcRMSDForceKernel::executeImpl(ContextImpl& context) {
     // Execute the first kernel.
 
-    int numParticles = particles->getSize();
+    int numParticles = particles.getSize();
     int blockSize = 256;
-    void* args1[] = {&numParticles, &cu.getPosq().getDevicePointer(), &referencePos->getDevicePointer(),
-            &particles->getDevicePointer(), &buffer->getDevicePointer()};
+    void* args1[] = {&numParticles, &cu.getPosq().getDevicePointer(), &referencePos.getDevicePointer(),
+            &particles.getDevicePointer(), &buffer.getDevicePointer()};
     cu.executeKernel(kernel1, args1, blockSize, blockSize, blockSize*sizeof(REAL));
     
     // Download the results, build the F matrix, and find the maximum eigenvalue
     // and eigenvector.
 
     vector<REAL> b;
-    buffer->download(b);
+    buffer.download(b);
     Array2D<double> F(4, 4);
     F[0][0] =  b[0*3+0] + b[1*3+1] + b[2*3+2];
     F[1][0] =  b[1*3+2] - b[2*3+1];
@@ -6950,36 +6727,28 @@ double CudaCalcRMSDForceKernel::executeImpl(ContextImpl& context) {
 
     // Upload it to the device and invoke the kernel to apply forces.
     
-    buffer->upload(b);
+    buffer.upload(b);
     int paddedNumAtoms = cu.getPaddedNumAtoms();
-    void* args2[] = {&numParticles, &paddedNumAtoms, &cu.getPosq().getDevicePointer(), &referencePos->getDevicePointer(),
-            &particles->getDevicePointer(), &buffer->getDevicePointer(), &cu.getForce().getDevicePointer()};
+    void* args2[] = {&numParticles, &paddedNumAtoms, &cu.getPosq().getDevicePointer(), &referencePos.getDevicePointer(),
+            &particles.getDevicePointer(), &buffer.getDevicePointer(), &cu.getForce().getDevicePointer()};
     cu.executeKernel(kernel2, args2, numParticles);
     return rmsd;
 }
 
 void CudaCalcRMSDForceKernel::copyParametersToContext(ContextImpl& context, const RMSDForce& force) {
-    if (referencePos->getSize() != force.getReferencePositions().size())
+    if (referencePos.getSize() != force.getReferencePositions().size())
         throw OpenMMException("updateParametersInContext: The number of reference positions has changed");
     int numParticles = force.getParticles().size();
     if (numParticles == 0)
         numParticles = context.getSystem().getNumParticles();
-    if (numParticles != particles->getSize()) {
-        // Recreate the particles array.
-        
-        delete particles;
-        particles = NULL;
-        particles = CudaArray::create<int>(cu, numParticles, "particles");
-    }
+    if (numParticles != particles.getSize())
+        particles.resize(numParticles);
     recordParameters(force);
     
     // Mark that the current reordering may be invalid.
     
     info->updateParticles();
     cu.invalidateMolecules(info);
-}
-
-CudaIntegrateVerletStepKernel::~CudaIntegrateVerletStepKernel() {
 }
 
 void CudaIntegrateVerletStepKernel::initialize(const System& system, const VerletIntegrator& integrator) {
@@ -7028,12 +6797,6 @@ double CudaIntegrateVerletStepKernel::computeKineticEnergy(ContextImpl& context,
     return cu.getIntegrationUtilities().computeKineticEnergy(0.5*integrator.getStepSize());
 }
 
-CudaIntegrateLangevinStepKernel::~CudaIntegrateLangevinStepKernel() {
-    cu.setAsCurrent();
-    if (params != NULL)
-        delete params;
-}
-
 void CudaIntegrateLangevinStepKernel::initialize(const System& system, const LangevinIntegrator& integrator) {
     cu.getPlatformData().initializeContexts(system);
     cu.setAsCurrent();
@@ -7042,7 +6805,7 @@ void CudaIntegrateLangevinStepKernel::initialize(const System& system, const Lan
     CUmodule module = cu.createModule(CudaKernelSources::langevin, defines, "");
     kernel1 = cu.getKernel(module, "integrateLangevinPart1");
     kernel2 = cu.getKernel(module, "integrateLangevinPart2");
-    params = new CudaArray(cu, 3, cu.getUseDoublePrecision() || cu.getUseMixedPrecision() ? sizeof(double) : sizeof(float), "langevinParams");
+    params.initialize(cu, 3, cu.getUseDoublePrecision() || cu.getUseMixedPrecision() ? sizeof(double) : sizeof(float), "langevinParams");
     prevStepSize = -1.0;
 }
 
@@ -7063,18 +6826,18 @@ void CudaIntegrateLangevinStepKernel::execute(ContextImpl& context, const Langev
         double fscale = (friction == 0 ? stepSize : (1-vscale)/friction);
         double noisescale = sqrt(kT*(1-vscale*vscale));
         if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
-            vector<double> p(params->getSize());
+            vector<double> p(params.getSize());
             p[0] = vscale;
             p[1] = fscale;
             p[2] = noisescale;
-            params->upload(p);
+            params.upload(p);
         }
         else {
-            vector<float> p(params->getSize());
+            vector<float> p(params.getSize());
             p[0] = (float) vscale;
             p[1] = (float) fscale;
             p[2] = (float) noisescale;
-            params->upload(p);
+            params.upload(p);
         }
         prevTemp = temperature;
         prevFriction = friction;
@@ -7085,7 +6848,7 @@ void CudaIntegrateLangevinStepKernel::execute(ContextImpl& context, const Langev
 
     int randomIndex = integration.prepareRandomNumbers(cu.getPaddedNumAtoms());
     void* args1[] = {&numAtoms, &paddedNumAtoms, &cu.getVelm().getDevicePointer(), &cu.getForce().getDevicePointer(), &integration.getPosDelta().getDevicePointer(),
-            &params->getDevicePointer(), &integration.getStepSize().getDevicePointer(), &integration.getRandom().getDevicePointer(), &randomIndex};
+            &params.getDevicePointer(), &integration.getStepSize().getDevicePointer(), &integration.getRandom().getDevicePointer(), &randomIndex};
     cu.executeKernel(kernel1, args1, numAtoms, 128);
 
     // Apply constraints.
@@ -7109,9 +6872,6 @@ void CudaIntegrateLangevinStepKernel::execute(ContextImpl& context, const Langev
 
 double CudaIntegrateLangevinStepKernel::computeKineticEnergy(ContextImpl& context, const LangevinIntegrator& integrator) {
     return cu.getIntegrationUtilities().computeKineticEnergy(0.5*integrator.getStepSize());
-}
-
-CudaIntegrateBrownianStepKernel::~CudaIntegrateBrownianStepKernel() {
 }
 
 void CudaIntegrateBrownianStepKernel::initialize(const System& system, const BrownianIntegrator& integrator) {
@@ -7171,9 +6931,6 @@ void CudaIntegrateBrownianStepKernel::execute(ContextImpl& context, const Browni
 
 double CudaIntegrateBrownianStepKernel::computeKineticEnergy(ContextImpl& context, const BrownianIntegrator& integrator) {
     return cu.getIntegrationUtilities().computeKineticEnergy(0);
-}
-
-CudaIntegrateVariableVerletStepKernel::~CudaIntegrateVariableVerletStepKernel() {
 }
 
 void CudaIntegrateVariableVerletStepKernel::initialize(const System& system, const VariableVerletIntegrator& integrator) {
@@ -7247,12 +7004,6 @@ double CudaIntegrateVariableVerletStepKernel::computeKineticEnergy(ContextImpl& 
     return cu.getIntegrationUtilities().computeKineticEnergy(0.5*integrator.getStepSize());
 }
 
-CudaIntegrateVariableLangevinStepKernel::~CudaIntegrateVariableLangevinStepKernel() {
-    cu.setAsCurrent();
-    if (params != NULL)
-        delete params;
-}
-
 void CudaIntegrateVariableLangevinStepKernel::initialize(const System& system, const VariableLangevinIntegrator& integrator) {
     cu.getPlatformData().initializeContexts(system);
     cu.setAsCurrent();
@@ -7262,9 +7013,9 @@ void CudaIntegrateVariableLangevinStepKernel::initialize(const System& system, c
     kernel1 = cu.getKernel(module, "integrateLangevinPart1");
     kernel2 = cu.getKernel(module, "integrateLangevinPart2");
     selectSizeKernel = cu.getKernel(module, "selectLangevinStepSize");
-    params = new CudaArray(cu, 3, cu.getUseDoublePrecision() || cu.getUseMixedPrecision() ? sizeof(double) : sizeof(float), "langevinParams");
+    params.initialize(cu, 3, cu.getUseDoublePrecision() || cu.getUseMixedPrecision() ? sizeof(double) : sizeof(float), "langevinParams");
     blockSize = min(256, system.getNumParticles());
-    blockSize = max(blockSize, params->getSize());
+    blockSize = max(blockSize, params.getSize());
 }
 
 double CudaIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime) {
@@ -7289,7 +7040,7 @@ double CudaIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, co
             useDouble ? (void*) &friction : (void*) &frictionFloat,
             useDouble ? (void*) &kT : (void*) &kTFloat,
             &cu.getIntegrationUtilities().getStepSize().getDevicePointer(),
-            &cu.getVelm().getDevicePointer(), &cu.getForce().getDevicePointer(), &params->getDevicePointer()};
+            &cu.getVelm().getDevicePointer(), &cu.getForce().getDevicePointer(), &params.getDevicePointer()};
     int sharedSize = 2*blockSize*(useDouble ? sizeof(double) : sizeof(float));
     cu.executeKernel(selectSizeKernel, argsSelect, blockSize, blockSize, sharedSize);
 
@@ -7297,7 +7048,7 @@ double CudaIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, co
 
     int randomIndex = integration.prepareRandomNumbers(cu.getPaddedNumAtoms());
     void* args1[] = {&numAtoms, &paddedNumAtoms, &cu.getVelm().getDevicePointer(), &cu.getForce().getDevicePointer(), &integration.getPosDelta().getDevicePointer(),
-            &params->getDevicePointer(), &integration.getStepSize().getDevicePointer(), &integration.getRandom().getDevicePointer(), &randomIndex};
+            &params.getDevicePointer(), &integration.getStepSize().getDevicePointer(), &integration.getRandom().getDevicePointer(), &randomIndex};
     cu.executeKernel(kernel1, args1, numAtoms, 128);
 
     // Apply constraints.
@@ -7418,24 +7169,8 @@ private:
 
 CudaIntegrateCustomStepKernel::~CudaIntegrateCustomStepKernel() {
     cu.setAsCurrent();
-    if (globalValues != NULL)
-        delete globalValues;
-    if (sumBuffer != NULL)
-        delete sumBuffer;
-    if (summedValue != NULL)
-        delete summedValue;
-    if (uniformRandoms != NULL)
-        delete uniformRandoms;
-    if (randomSeed != NULL)
-        delete randomSeed;
-    if (perDofEnergyParamDerivs != NULL)
-        delete perDofEnergyParamDerivs;
     if (perDofValues != NULL)
         delete perDofValues;
-    for (auto function : tabulatedFunctions)
-        delete function;
-    for (auto& f : savedForces)
-        delete f.second;
 }
 
 void CudaIntegrateCustomStepKernel::initialize(const System& system, const CustomIntegrator& integrator) {
@@ -7444,8 +7179,8 @@ void CudaIntegrateCustomStepKernel::initialize(const System& system, const Custo
     cu.getIntegrationUtilities().initRandomNumberGenerator(integrator.getRandomNumberSeed());
     numGlobalVariables = integrator.getNumGlobalVariables();
     int elementSize = (cu.getUseDoublePrecision() || cu.getUseMixedPrecision() ? sizeof(double) : sizeof(float));
-    sumBuffer = new CudaArray(cu, ((3*system.getNumParticles()+3)/4)*4, elementSize, "sumBuffer");
-    summedValue = new CudaArray(cu, 1, elementSize, "summedValue");
+    sumBuffer.initialize(cu, ((3*system.getNumParticles()+3)/4)*4, elementSize, "sumBuffer");
+    summedValue.initialize(cu, 1, elementSize, "summedValue");
     perDofValues = new CudaParameterSet(cu, integrator.getNumPerDofVariables(), 3*system.getNumParticles(), "perDofVariables", false, cu.getUseDoublePrecision() || cu.getUseMixedPrecision());
     cu.addReorderListener(new ReorderListener(cu, *perDofValues, localPerDofValuesFloat, localPerDofValuesDouble, deviceValuesAreCurrent));
     SimTKOpenMMUtilities::setRandomNumberSeed(integrator.getRandomNumberSeed());
@@ -7529,6 +7264,7 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
         vector<pair<string, string> > functionNames;
         vector<const TabulatedFunction*> functionList;
         vector<string> tableTypes;
+        tabulatedFunctions.resize(integrator.getNumTabulatedFunctions());
         for (int i = 0; i < integrator.getNumTabulatedFunctions(); i++) {
             functionList.push_back(&integrator.getTabulatedFunction(i));
             string name = integrator.getTabulatedFunctionName(i);
@@ -7537,8 +7273,8 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
             functions[name] = createReferenceTabulatedFunction(integrator.getTabulatedFunction(i));
             int width;
             vector<float> f = cu.getExpressionUtilities().computeFunctionCoefficients(integrator.getTabulatedFunction(i), width);
-            tabulatedFunctions.push_back(CudaArray::create<float>(cu, f.size(), "TabulatedFunction"));
-            tabulatedFunctions[tabulatedFunctions.size()-1]->upload(f);
+            tabulatedFunctions[i].initialize<float>(cu, f.size(), "TabulatedFunction");
+            tabulatedFunctions[i].upload(f);
             if (width == 1)
                 tableTypes.push_back("float");
             else
@@ -7602,8 +7338,10 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
                 forceGroupFlags[step] = 1<<forceGroup[step];
             if (forceGroupFlags[step] == -2 && step > 0)
                 forceGroupFlags[step] = forceGroupFlags[step-1];
-            if (forceGroupFlags[step] != -2 && savedForces.find(forceGroupFlags[step]) == savedForces.end())
-                savedForces[forceGroupFlags[step]] = new CudaArray(cu, cu.getForce().getSize(), cu.getForce().getElementSize(), "savedForces");
+            if (forceGroupFlags[step] != -2 && savedForces.find(forceGroupFlags[step]) == savedForces.end()) {
+                savedForces[forceGroupFlags[step]] = CudaArray();
+                savedForces[forceGroupFlags[step]].initialize(cu, cu.getForce().getSize(), cu.getForce().getElementSize(), "savedForces");
+            }
         }
         
         // Allocate space for storing global values, both on the host and the device.
@@ -7611,7 +7349,7 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
         globalValuesFloat.resize(expressionSet.getNumVariables());
         globalValuesDouble.resize(expressionSet.getNumVariables());
         int elementSize = (cu.getUseDoublePrecision() || cu.getUseMixedPrecision() ? sizeof(double) : sizeof(float));
-        globalValues = new CudaArray(cu, expressionSet.getNumVariables(), elementSize, "globalValues");
+        globalValues.initialize(cu, expressionSet.getNumVariables(), elementSize, "globalValues");
         for (int i = 0; i < integrator.getNumGlobalVariables(); i++) {
             globalValuesDouble[globalVariableIndex[i]] = initialGlobalVariables[i];
             expressionSet.setVariable(globalVariableIndex[i], initialGlobalVariables[i]);
@@ -7624,7 +7362,7 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
         int numContextParams = context.getParameters().size();
         localPerDofEnergyParamDerivsFloat.resize(numContextParams);
         localPerDofEnergyParamDerivsDouble.resize(numContextParams);
-        perDofEnergyParamDerivs = new CudaArray(cu, max(1, numContextParams), elementSize, "perDofEnergyParamDerivs");
+        perDofEnergyParamDerivs.initialize(cu, max(1, numContextParams), elementSize, "perDofEnergyParamDerivs");
         
         // Record information about the targets of steps that will be stored in global variables.
         
@@ -7771,8 +7509,8 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
                 args1.push_back(&cu.getVelm().getDevicePointer());
                 args1.push_back(&cu.getForce().getDevicePointer());
                 args1.push_back(&integration.getStepSize().getDevicePointer());
-                args1.push_back(&globalValues->getDevicePointer());
-                args1.push_back(&sumBuffer->getDevicePointer());
+                args1.push_back(&globalValues.getDevicePointer());
+                args1.push_back(&sumBuffer.getDevicePointer());
                 args1.push_back(NULL);
                 args1.push_back(NULL);
                 args1.push_back(NULL);
@@ -7780,18 +7518,18 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
                     args1.push_back(&energy);
                 else
                     args1.push_back(&energyFloat);
-                args1.push_back(&perDofEnergyParamDerivs->getDevicePointer());
+                args1.push_back(&perDofEnergyParamDerivs.getDevicePointer());
                 for (auto& buffer : perDofValues->getBuffers())
                     args1.push_back(&buffer.getMemory());
-                for (auto array : tabulatedFunctions)
-                    args1.push_back(&array->getDevicePointer());
+                for (auto& array : tabulatedFunctions)
+                    args1.push_back(&array.getDevicePointer());
                 kernelArgs[step].push_back(args1);
                 if (stepType[step] == CustomIntegrator::ComputeSum) {
                     // Create a second kernel for this step that sums the values.
 
                     vector<void*> args2;
-                    args2.push_back(&sumBuffer->getDevicePointer());
-                    args2.push_back(&summedValue->getDevicePointer());
+                    args2.push_back(&sumBuffer.getDevicePointer());
+                    args2.push_back(&summedValue.getDevicePointer());
                     defines["SUM_BUFFER_SIZE"] = cu.intToString(3*numAtoms);
                     module = cu.createModule(CudaKernelSources::customIntegrator, defines);
                     kernel = cu.getKernel(module, useDouble ? "computeDoubleSum" : "computeFloatSum");
@@ -7818,9 +7556,9 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
         int maxUniformRandoms = 1;
         for (int required : requiredUniform)
             maxUniformRandoms = max(maxUniformRandoms, required);
-        uniformRandoms = CudaArray::create<float4>(cu, maxUniformRandoms, "uniformRandoms");
-        randomSeed = CudaArray::create<int4>(cu, cu.getNumThreadBlocks()*CudaContext::ThreadBlockSize, "randomSeed");
-        vector<int4> seed(randomSeed->getSize());
+        uniformRandoms.initialize<float4>(cu, maxUniformRandoms, "uniformRandoms");
+        randomSeed.initialize<int4>(cu, cu.getNumThreadBlocks()*CudaContext::ThreadBlockSize, "randomSeed");
+        vector<int4> seed(randomSeed.getSize());
         int rseed = integrator.getRandomNumberSeed();
         // A random seed of 0 means use a unique one
         if (rseed == 0)
@@ -7832,7 +7570,7 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
             s.z = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
             s.w = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
         }
-        randomSeed->upload(seed);
+        randomSeed.upload(seed);
         CUmodule randomProgram = cu.createModule(CudaKernelSources::customIntegrator, defines);
         randomKernel = cu.getKernel(randomProgram, "generateRandomNumbers");
         
@@ -7870,20 +7608,20 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
         kineticEnergyArgs.push_back(&cu.getVelm().getDevicePointer());
         kineticEnergyArgs.push_back(&cu.getForce().getDevicePointer());
         kineticEnergyArgs.push_back(&integration.getStepSize().getDevicePointer());
-        kineticEnergyArgs.push_back(&globalValues->getDevicePointer());
-        kineticEnergyArgs.push_back(&sumBuffer->getDevicePointer());
+        kineticEnergyArgs.push_back(&globalValues.getDevicePointer());
+        kineticEnergyArgs.push_back(&sumBuffer.getDevicePointer());
         kineticEnergyArgs.push_back(NULL);
         kineticEnergyArgs.push_back(NULL);
-        kineticEnergyArgs.push_back(&uniformRandoms->getDevicePointer());
+        kineticEnergyArgs.push_back(&uniformRandoms.getDevicePointer());
         if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision())
             kineticEnergyArgs.push_back(&energy);
         else
             kineticEnergyArgs.push_back(&energyFloat);
-        kineticEnergyArgs.push_back(&perDofEnergyParamDerivs->getDevicePointer());
+        kineticEnergyArgs.push_back(&perDofEnergyParamDerivs.getDevicePointer());
         for (int i = 0; i < (int) perDofValues->getBuffers().size(); i++)
             kineticEnergyArgs.push_back(&perDofValues->getBuffers()[i].getMemory());
-        for (auto array : tabulatedFunctions)
-            kineticEnergyArgs.push_back(&array->getDevicePointer());
+        for (auto& array : tabulatedFunctions)
+            kineticEnergyArgs.push_back(&array.getDevicePointer());
         keNeedsForce = usesVariable(keExpression, "f");
 
         // Create a second kernel to sum the values.
@@ -7970,8 +7708,8 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
 
     // Loop over computation steps in the integrator and execute them.
 
-    int maxUniformRandoms = uniformRandoms->getSize();
-    void* randomArgs[] = {&maxUniformRandoms, &uniformRandoms->getDevicePointer(), &randomSeed->getDevicePointer()};
+    int maxUniformRandoms = uniformRandoms.getSize();
+    void* randomArgs[] = {&maxUniformRandoms, &uniformRandoms.getDevicePointer(), &randomSeed.getDevicePointer()};
     CUdeviceptr posCorrection = (cu.getUseMixedPrecision() ? cu.getPosqCorrection().getDevicePointer() : 0);
     for (int step = 0; step < numSteps; ) {
         int nextStep = step+1;
@@ -7985,7 +7723,7 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
                     // The forces are still valid.  We just need a different force group right now.  Save the old
                     // forces in case we need them again.
 
-                    cu.getForce().copyTo(*savedForces[lastForceGroups]);
+                    cu.getForce().copyTo(savedForces[lastForceGroups]);
                     validSavedForces.insert(lastForceGroups);
                 }
             }
@@ -8000,7 +7738,7 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
             if (!computeEnergy && validSavedForces.find(forceGroups) != validSavedForces.end()) {
                 // We can just restore the forces we saved earlier.
                 
-                savedForces[forceGroups]->copyTo(cu.getForce());
+                savedForces[forceGroups].copyTo(cu.getForce());
                 context.getLastForceGroups() = forceGroups;
             }
             else {
@@ -8013,12 +7751,12 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
                         if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
                             for (int i = 0; i < perDofEnergyParamDerivNames.size(); i++)
                                 localPerDofEnergyParamDerivsDouble[i] = energyParamDerivs[perDofEnergyParamDerivNames[i]];
-                            perDofEnergyParamDerivs->upload(localPerDofEnergyParamDerivsDouble);
+                            perDofEnergyParamDerivs.upload(localPerDofEnergyParamDerivsDouble);
                         }
                         else {
                             for (int i = 0; i < perDofEnergyParamDerivNames.size(); i++)
                                 localPerDofEnergyParamDerivsFloat[i] = (float) energyParamDerivs[perDofEnergyParamDerivNames[i]];
-                            perDofEnergyParamDerivs->upload(localPerDofEnergyParamDerivsFloat);
+                            perDofEnergyParamDerivs.upload(localPerDofEnergyParamDerivsFloat);
                         }
                     }
                 }
@@ -8033,11 +7771,11 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
             // Upload the global values to the device.
             
             if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision())
-                globalValues->upload(globalValuesDouble);
+                globalValues.upload(globalValuesDouble);
             else {
                 for (int j = 0; j < (int) globalValuesDouble.size(); j++)
                     globalValuesFloat[j] = (float) globalValuesDouble[j];
-                globalValues->upload(globalValuesFloat);
+                globalValues.upload(globalValuesFloat);
             }
         }
         bool stepInvalidatesForces = invalidatesForces[step];
@@ -8046,7 +7784,7 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
             kernelArgs[step][0][1] = &posCorrection;
             kernelArgs[step][0][8] = &integration.getRandom().getDevicePointer();
             kernelArgs[step][0][9] = &randomIndex;
-            kernelArgs[step][0][10] = &uniformRandoms->getDevicePointer();
+            kernelArgs[step][0][10] = &uniformRandoms.getDevicePointer();
             if (requiredUniform[step] > 0)
                 cu.executeKernel(randomKernel, &randomArgs[0], numAtoms);
             cu.executeKernel(kernels[step][0], &kernelArgs[step][0][0], numAtoms, 128);
@@ -8062,20 +7800,20 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
             kernelArgs[step][0][1] = &posCorrection;
             kernelArgs[step][0][8] = &integration.getRandom().getDevicePointer();
             kernelArgs[step][0][9] = &randomIndex;
-            kernelArgs[step][0][10] = &uniformRandoms->getDevicePointer();
+            kernelArgs[step][0][10] = &uniformRandoms.getDevicePointer();
             if (requiredUniform[step] > 0)
                 cu.executeKernel(randomKernel, &randomArgs[0], numAtoms);
-            cu.clearBuffer(*sumBuffer);
+            cu.clearBuffer(sumBuffer);
             cu.executeKernel(kernels[step][0], &kernelArgs[step][0][0], numAtoms, 128);
             cu.executeKernel(kernels[step][1], &kernelArgs[step][1][0], sumWorkGroupSize, sumWorkGroupSize);
             if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
                 double value;
-                summedValue->download(&value);
+                summedValue.download(&value);
                 recordGlobalValue(value, stepTarget[step], integrator);
             }
             else {
                 float value;
-                summedValue->download(&value);
+                summedValue.download(&value);
                 recordGlobalValue(value, stepTarget[step], integrator);
             }
         }
@@ -8166,18 +7904,18 @@ double CudaIntegrateCustomStepKernel::computeKineticEnergy(ContextImpl& context,
     kineticEnergyArgs[1] = &posCorrection;
     kineticEnergyArgs[8] = &cu.getIntegrationUtilities().getRandom().getDevicePointer();
     kineticEnergyArgs[9] = &randomIndex;
-    cu.clearBuffer(*sumBuffer);
+    cu.clearBuffer(sumBuffer);
     cu.executeKernel(kineticEnergyKernel, &kineticEnergyArgs[0], cu.getNumAtoms());
-    void* args[] = {&sumBuffer->getDevicePointer(), &summedValue->getDevicePointer()};
+    void* args[] = {&sumBuffer.getDevicePointer(), &summedValue.getDevicePointer()};
     cu.executeKernel(sumKineticEnergyKernel, args, sumWorkGroupSize, sumWorkGroupSize);
     if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
         double ke;
-        summedValue->download(&ke);
+        summedValue.download(&ke);
         return ke;
     }
     else {
         float ke;
-        summedValue->download(&ke);
+        summedValue.download(&ke);
         return ke;
     }
 }
@@ -8212,7 +7950,7 @@ void CudaIntegrateCustomStepKernel::recordChangedParameters(ContextImpl& context
 }
 
 void CudaIntegrateCustomStepKernel::getGlobalVariables(ContextImpl& context, vector<double>& values) const {
-    if (globalValues == NULL) {
+    if (!globalValues.isInitialized()) {
         // The data structures haven't been created yet, so just return the list of values that was given earlier.
         
         values = initialGlobalVariables;
@@ -8226,7 +7964,7 @@ void CudaIntegrateCustomStepKernel::getGlobalVariables(ContextImpl& context, vec
 void CudaIntegrateCustomStepKernel::setGlobalVariables(ContextImpl& context, const vector<double>& values) {
     if (numGlobalVariables == 0)
         return;
-    if (globalValues == NULL) {
+    if (!globalValues.isInitialized()) {
         // The data structures haven't been created yet, so just store the list of values.
         
         initialGlobalVariables = values;
@@ -8285,12 +8023,6 @@ void CudaIntegrateCustomStepKernel::setPerDofVariable(ContextImpl& context, int 
     deviceValuesAreCurrent = false;
 }
 
-CudaApplyAndersenThermostatKernel::~CudaApplyAndersenThermostatKernel() {
-    cu.setAsCurrent();
-    if (atomGroups != NULL)
-        delete atomGroups;
-}
-
 void CudaApplyAndersenThermostatKernel::initialize(const System& system, const AndersenThermostat& thermostat) {
     cu.setAsCurrent();
     randomSeed = thermostat.getRandomNumberSeed();
@@ -8302,13 +8034,13 @@ void CudaApplyAndersenThermostatKernel::initialize(const System& system, const A
     // Create the arrays with the group definitions.
 
     vector<vector<int> > groups = AndersenThermostatImpl::calcParticleGroups(system);
-    atomGroups = CudaArray::create<int>(cu, cu.getNumAtoms(), "atomGroups");
-    vector<int> atoms(atomGroups->getSize());
+    atomGroups.initialize<int>(cu, cu.getNumAtoms(), "atomGroups");
+    vector<int> atoms(atomGroups.getSize());
     for (int i = 0; i < (int) groups.size(); i++) {
         for (int j = 0; j < (int) groups[i].size(); j++)
             atoms[groups[i][j]] = i;
     }
-    atomGroups->upload(atoms);
+    atomGroups.upload(atoms);
 }
 
 void CudaApplyAndersenThermostatKernel::execute(ContextImpl& context) {
@@ -8318,26 +8050,14 @@ void CudaApplyAndersenThermostatKernel::execute(ContextImpl& context) {
     int randomIndex = cu.getIntegrationUtilities().prepareRandomNumbers(cu.getPaddedNumAtoms());
     int numAtoms = cu.getNumAtoms();
     void* args[] = {&numAtoms, &frequency, &kT, &cu.getVelm().getDevicePointer(), &cu.getIntegrationUtilities().getStepSize().getDevicePointer(),
-            &cu.getIntegrationUtilities().getRandom().getDevicePointer(), &randomIndex, &atomGroups->getDevicePointer()};
+            &cu.getIntegrationUtilities().getRandom().getDevicePointer(), &randomIndex, &atomGroups.getDevicePointer()};
     cu.executeKernel(kernel, args, cu.getNumAtoms());
-}
-
-CudaApplyMonteCarloBarostatKernel::~CudaApplyMonteCarloBarostatKernel() {
-    cu.setAsCurrent();
-    if (savedPositions != NULL)
-        delete savedPositions;
-    if (savedForces != NULL)
-        delete savedForces;
-    if (moleculeAtoms != NULL)
-        delete moleculeAtoms;
-    if (moleculeStartIndex != NULL)
-        delete moleculeStartIndex;
 }
 
 void CudaApplyMonteCarloBarostatKernel::initialize(const System& system, const Force& thermostat) {
     cu.setAsCurrent();
-    savedPositions = new CudaArray(cu, cu.getPaddedNumAtoms(), cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4), "savedPositions");
-    savedForces = CudaArray::create<long long>(cu, cu.getPaddedNumAtoms()*3, "savedForces");
+    savedPositions.initialize(cu, cu.getPaddedNumAtoms(), cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4), "savedPositions");
+    savedForces.initialize<long long>(cu, cu.getPaddedNumAtoms()*3, "savedForces");
     CUmodule module = cu.createModule(CudaKernelSources::monteCarloBarostat);
     kernel = cu.getKernel(module, "scalePositions");
 }
@@ -8351,10 +8071,10 @@ void CudaApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, d
 
         vector<vector<int> > molecules = context.getMolecules();
         numMolecules = molecules.size();
-        moleculeAtoms = CudaArray::create<int>(cu, cu.getNumAtoms(), "moleculeAtoms");
-        moleculeStartIndex = CudaArray::create<int>(cu, numMolecules+1, "moleculeStartIndex");
-        vector<int> atoms(moleculeAtoms->getSize());
-        vector<int> startIndex(moleculeStartIndex->getSize());
+        moleculeAtoms.initialize<int>(cu, cu.getNumAtoms(), "moleculeAtoms");
+        moleculeStartIndex.initialize<int>(cu, numMolecules+1, "moleculeStartIndex");
+        vector<int> atoms(moleculeAtoms.getSize());
+        vector<int> startIndex(moleculeStartIndex.getSize());
         int index = 0;
         for (int i = 0; i < numMolecules; i++) {
             startIndex[i] = index;
@@ -8362,20 +8082,20 @@ void CudaApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, d
                 atoms[index++] = molecule;
         }
         startIndex[numMolecules] = index;
-        moleculeAtoms->upload(atoms);
-        moleculeStartIndex->upload(startIndex);
+        moleculeAtoms.upload(atoms);
+        moleculeStartIndex.upload(startIndex);
 
         // Initialize the kernel arguments.
         
     }
     int bytesToCopy = cu.getPosq().getSize()*(cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4));
-    CUresult result = cuMemcpyDtoD(savedPositions->getDevicePointer(), cu.getPosq().getDevicePointer(), bytesToCopy);
+    CUresult result = cuMemcpyDtoD(savedPositions.getDevicePointer(), cu.getPosq().getDevicePointer(), bytesToCopy);
     if (result != CUDA_SUCCESS) {
         std::stringstream m;
         m<<"Error saving positions for MC barostat: "<<cu.getErrorString(result)<<" ("<<result<<")";
         throw OpenMMException(m.str());
     }
-    result = cuMemcpyDtoD(savedForces->getDevicePointer(), cu.getForce().getDevicePointer(), savedForces->getSize()*savedForces->getElementSize());
+    result = cuMemcpyDtoD(savedForces.getDevicePointer(), cu.getForce().getDevicePointer(), savedForces.getSize()*savedForces.getElementSize());
     if (result != CUDA_SUCCESS) {
         std::stringstream m;
         m<<"Error saving forces for MC barostat: "<<cu.getErrorString(result)<<" ("<<result<<")";
@@ -8386,7 +8106,7 @@ void CudaApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, d
     float scalefZ = (float) scaleZ;
     void* args[] = {&scalefX, &scalefY, &scalefZ, &numMolecules, cu.getPeriodicBoxSizePointer(), cu.getInvPeriodicBoxSizePointer(),
                     cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
-		    &cu.getPosq().getDevicePointer(), &moleculeAtoms->getDevicePointer(), &moleculeStartIndex->getDevicePointer()};
+		    &cu.getPosq().getDevicePointer(), &moleculeAtoms.getDevicePointer(), &moleculeStartIndex.getDevicePointer()};
     cu.executeKernel(kernel, args, cu.getNumAtoms());
     for (auto& offset : cu.getPosCellOffsets())
         offset = make_int4(0, 0, 0, 0);
@@ -8396,13 +8116,13 @@ void CudaApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, d
 void CudaApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context) {
     cu.setAsCurrent();
     int bytesToCopy = cu.getPosq().getSize()*(cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4));
-    CUresult result = cuMemcpyDtoD(cu.getPosq().getDevicePointer(), savedPositions->getDevicePointer(), bytesToCopy);
+    CUresult result = cuMemcpyDtoD(cu.getPosq().getDevicePointer(), savedPositions.getDevicePointer(), bytesToCopy);
     if (result != CUDA_SUCCESS) {
         std::stringstream m;
         m<<"Error restoring positions for MC barostat: "<<cu.getErrorString(result)<<" ("<<result<<")";
         throw OpenMMException(m.str());
     }
-    result = cuMemcpyDtoD(cu.getForce().getDevicePointer(), savedForces->getDevicePointer(), savedForces->getSize()*savedForces->getElementSize());
+    result = cuMemcpyDtoD(cu.getForce().getDevicePointer(), savedForces.getDevicePointer(), savedForces.getSize()*savedForces.getElementSize());
     if (result != CUDA_SUCCESS) {
         std::stringstream m;
         m<<"Error restoring forces for MC barostat: "<<cu.getErrorString(result)<<" ("<<result<<")";
@@ -8410,17 +8130,11 @@ void CudaApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context)
     }
 }
 
-CudaRemoveCMMotionKernel::~CudaRemoveCMMotionKernel() {
-    cu.setAsCurrent();
-    if (cmMomentum != NULL)
-        delete cmMomentum;
-}
-
 void CudaRemoveCMMotionKernel::initialize(const System& system, const CMMotionRemover& force) {
     cu.setAsCurrent();
     frequency = force.getFrequency();
     int numAtoms = cu.getNumAtoms();
-    cmMomentum = CudaArray::create<float4>(cu, (numAtoms+CudaContext::ThreadBlockSize-1)/CudaContext::ThreadBlockSize, "cmMomentum");
+    cmMomentum.initialize<float4>(cu, (numAtoms+CudaContext::ThreadBlockSize-1)/CudaContext::ThreadBlockSize, "cmMomentum");
     double totalMass = 0.0;
     for (int i = 0; i < numAtoms; i++)
         totalMass += system.getParticleMass(i);
@@ -8434,7 +8148,7 @@ void CudaRemoveCMMotionKernel::initialize(const System& system, const CMMotionRe
 void CudaRemoveCMMotionKernel::execute(ContextImpl& context) {
     cu.setAsCurrent();
     int numAtoms = cu.getNumAtoms();
-    void* args[] = {&numAtoms, &cu.getVelm().getDevicePointer(), &cmMomentum->getDevicePointer()};
+    void* args[] = {&numAtoms, &cu.getVelm().getDevicePointer(), &cmMomentum.getDevicePointer()};
     cu.executeKernel(kernel1, args, cu.getNumAtoms(), cu.ThreadBlockSize, cu.ThreadBlockSize*sizeof(float4));
     cu.executeKernel(kernel2, args, cu.getNumAtoms(), cu.ThreadBlockSize, cu.ThreadBlockSize*sizeof(float4));
 }

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2017 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -98,30 +98,24 @@ struct CudaIntegrationUtilities::ConstraintOrderer : public binary_function<int,
 };
 
 CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const System& system) : context(context),
-        posDelta(NULL), settleAtoms(NULL), settleParams(NULL), shakeAtoms(NULL), shakeParams(NULL),
-        random(NULL), randomSeed(NULL), randomPos(0), stepSize(NULL), ccmaAtoms(NULL), ccmaDistance(NULL),
-        ccmaReducedMass(NULL), ccmaAtomConstraints(NULL), ccmaNumAtomConstraints(NULL), ccmaConstraintMatrixColumn(NULL),
-        ccmaConstraintMatrixValue(NULL), ccmaDelta1(NULL), ccmaDelta2(NULL), ccmaConverged(NULL), ccmaConvergedMemory(NULL),
-        vsite2AvgAtoms(NULL), vsite2AvgWeights(NULL), vsite3AvgAtoms(NULL), vsite3AvgWeights(NULL),
-        vsiteOutOfPlaneAtoms(NULL), vsiteOutOfPlaneWeights(NULL), vsiteLocalCoordsIndex(NULL), vsiteLocalCoordsAtoms(NULL),
-        vsiteLocalCoordsWeights(NULL), vsiteLocalCoordsPos(NULL), vsiteLocalCoordsStartIndex(NULL) {
+        randomPos(0) {
     // Create workspace arrays.
 
     lastStepSize = make_double2(0.0, 0.0);
     if (context.getUseDoublePrecision() || context.getUseMixedPrecision()) {
-        posDelta = CudaArray::create<double4>(context, context.getPaddedNumAtoms(), "posDelta");
-        vector<double4> deltas(posDelta->getSize(), make_double4(0.0, 0.0, 0.0, 0.0));
-        posDelta->upload(deltas);
-        stepSize = CudaArray::create<double2>(context, 1, "stepSize");
-        stepSize->upload(&lastStepSize);
+        posDelta.initialize<double4>(context, context.getPaddedNumAtoms(), "posDelta");
+        vector<double4> deltas(posDelta.getSize(), make_double4(0.0, 0.0, 0.0, 0.0));
+        posDelta.upload(deltas);
+        stepSize.initialize<double2>(context, 1, "stepSize");
+        stepSize.upload(&lastStepSize);
     }
     else {
-        posDelta = CudaArray::create<float4>(context, context.getPaddedNumAtoms(), "posDelta");
-        vector<float4> deltas(posDelta->getSize(), make_float4(0.0f, 0.0f, 0.0f, 0.0f));
-        posDelta->upload(deltas);
-        stepSize = CudaArray::create<float2>(context, 1, "stepSize");
+        posDelta.initialize<float4>(context, context.getPaddedNumAtoms(), "posDelta");
+        vector<float4> deltas(posDelta.getSize(), make_float4(0.0f, 0.0f, 0.0f, 0.0f));
+        posDelta.upload(deltas);
+        stepSize.initialize<float2>(context, 1, "stepSize");
         float2 lastStepSizeFloat = make_float2(0.0f, 0.0f);
-        stepSize->upload(&lastStepSizeFloat);
+        stepSize.upload(&lastStepSizeFloat);
     }
 
     // Record the set of constraints and how many constraints each atom is involved in.
@@ -208,10 +202,10 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
             isShakeAtom[atom3] = true;
         }
         if (atoms.size() > 0) {
-            settleAtoms = CudaArray::create<int4>(context, atoms.size(), "settleAtoms");
-            settleParams = CudaArray::create<float2>(context, params.size(), "settleParams");
-            settleAtoms->upload(atoms);
-            settleParams->upload(params);
+            settleAtoms.initialize<int4>(context, atoms.size(), "settleAtoms");
+            settleParams.initialize<float2>(context, params.size(), "settleParams");
+            settleAtoms.upload(atoms);
+            settleParams.upload(params);
         }
     }
 
@@ -291,10 +285,10 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
                 isShakeAtom[cluster.peripheralID[2]] = true;
             ++index;
         }
-        shakeAtoms = CudaArray::create<int4>(context, atoms.size(), "shakeAtoms");
-        shakeParams = CudaArray::create<float4>(context, params.size(), "shakeParams");
-        shakeAtoms->upload(atoms);
-        shakeParams->upload(params);
+        shakeAtoms.initialize<int4>(context, atoms.size(), "shakeAtoms");
+        shakeParams.initialize<float4>(context, params.size(), "shakeParams");
+        shakeAtoms.upload(atoms);
+        shakeParams.upload(params);
     }
 
     // Find connected constraints for CCMA.
@@ -371,26 +365,26 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
 
         // Record the CCMA data structures.
 
-        ccmaAtoms = CudaArray::create<int2>(context, numCCMA, "CcmaAtoms");
-        ccmaAtomConstraints = CudaArray::create<int>(context, numAtoms*maxAtomConstraints, "CcmaAtomConstraints");
-        ccmaNumAtomConstraints = CudaArray::create<int>(context, numAtoms, "CcmaAtomConstraintsIndex");
-        ccmaConstraintMatrixColumn = CudaArray::create<int>(context, numCCMA*maxRowElements, "ConstraintMatrixColumn");
-        ccmaConverged = CudaArray::create<int>(context, 2, "ccmaConverged");
+        ccmaAtoms.initialize<int2>(context, numCCMA, "CcmaAtoms");
+        ccmaAtomConstraints.initialize<int>(context, numAtoms*maxAtomConstraints, "CcmaAtomConstraints");
+        ccmaNumAtomConstraints.initialize<int>(context, numAtoms, "CcmaAtomConstraintsIndex");
+        ccmaConstraintMatrixColumn.initialize<int>(context, numCCMA*maxRowElements, "ConstraintMatrixColumn");
+        ccmaConverged.initialize<int>(context, 2, "ccmaConverged");
         CHECK_RESULT2(cuMemHostAlloc((void**) &ccmaConvergedMemory, sizeof(int), CU_MEMHOSTALLOC_DEVICEMAP), "Error allocating pinned memory");
         CHECK_RESULT2(cuMemHostGetDevicePointer(&ccmaConvergedDeviceMemory, ccmaConvergedMemory, 0), "Error getting device address for pinned memory");
-        vector<int2> atomsVec(ccmaAtoms->getSize());
-        vector<int> atomConstraintsVec(ccmaAtomConstraints->getSize());
-        vector<int> numAtomConstraintsVec(ccmaNumAtomConstraints->getSize());
-        vector<int> constraintMatrixColumnVec(ccmaConstraintMatrixColumn->getSize());
+        vector<int2> atomsVec(ccmaAtoms.getSize());
+        vector<int> atomConstraintsVec(ccmaAtomConstraints.getSize());
+        vector<int> numAtomConstraintsVec(ccmaNumAtomConstraints.getSize());
+        vector<int> constraintMatrixColumnVec(ccmaConstraintMatrixColumn.getSize());
         if (context.getUseDoublePrecision() || context.getUseMixedPrecision()) {
-            ccmaDistance = CudaArray::create<double4>(context, numCCMA, "CcmaDistance");
-            ccmaDelta1 = CudaArray::create<double>(context, numCCMA, "CcmaDelta1");
-            ccmaDelta2 = CudaArray::create<double>(context, numCCMA, "CcmaDelta2");
-            ccmaReducedMass = CudaArray::create<double>(context, numCCMA, "CcmaReducedMass");
-            ccmaConstraintMatrixValue = CudaArray::create<double>(context, numCCMA*maxRowElements, "ConstraintMatrixValue");
-            vector<double4> distanceVec(ccmaDistance->getSize());
-            vector<double> reducedMassVec(ccmaReducedMass->getSize());
-            vector<double> constraintMatrixValueVec(ccmaConstraintMatrixValue->getSize());
+            ccmaDistance.initialize<double4>(context, numCCMA, "CcmaDistance");
+            ccmaDelta1.initialize<double>(context, numCCMA, "CcmaDelta1");
+            ccmaDelta2.initialize<double>(context, numCCMA, "CcmaDelta2");
+            ccmaReducedMass.initialize<double>(context, numCCMA, "CcmaReducedMass");
+            ccmaConstraintMatrixValue.initialize<double>(context, numCCMA*maxRowElements, "ConstraintMatrixValue");
+            vector<double4> distanceVec(ccmaDistance.getSize());
+            vector<double> reducedMassVec(ccmaReducedMass.getSize());
+            vector<double> constraintMatrixValueVec(ccmaConstraintMatrixValue.getSize());
             for (int i = 0; i < numCCMA; i++) {
                 int index = constraintOrder[i];
                 int c = ccmaConstraints[index];
@@ -404,19 +398,19 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
                 }
                 constraintMatrixColumnVec[i+matrix[index].size()*numCCMA] = numCCMA;
             }
-            ccmaDistance->upload(distanceVec);
-            ccmaReducedMass->upload(reducedMassVec);
-            ccmaConstraintMatrixValue->upload(constraintMatrixValueVec);
+            ccmaDistance.upload(distanceVec);
+            ccmaReducedMass.upload(reducedMassVec);
+            ccmaConstraintMatrixValue.upload(constraintMatrixValueVec);
         }
         else {
-            ccmaDistance = CudaArray::create<float4>(context, numCCMA, "CcmaDistance");
-            ccmaDelta1 = CudaArray::create<float>(context, numCCMA, "CcmaDelta1");
-            ccmaDelta2 = CudaArray::create<float>(context, numCCMA, "CcmaDelta2");
-            ccmaReducedMass = CudaArray::create<float>(context, numCCMA, "CcmaReducedMass");
-            ccmaConstraintMatrixValue = CudaArray::create<float>(context, numCCMA*maxRowElements, "ConstraintMatrixValue");
-            vector<float4> distanceVec(ccmaDistance->getSize());
-            vector<float> reducedMassVec(ccmaReducedMass->getSize());
-            vector<float> constraintMatrixValueVec(ccmaConstraintMatrixValue->getSize());
+            ccmaDistance.initialize<float4>(context, numCCMA, "CcmaDistance");
+            ccmaDelta1.initialize<float>(context, numCCMA, "CcmaDelta1");
+            ccmaDelta2.initialize<float>(context, numCCMA, "CcmaDelta2");
+            ccmaReducedMass.initialize<float>(context, numCCMA, "CcmaReducedMass");
+            ccmaConstraintMatrixValue.initialize<float>(context, numCCMA*maxRowElements, "ConstraintMatrixValue");
+            vector<float4> distanceVec(ccmaDistance.getSize());
+            vector<float> reducedMassVec(ccmaReducedMass.getSize());
+            vector<float> constraintMatrixValueVec(ccmaConstraintMatrixValue.getSize());
             for (int i = 0; i < numCCMA; i++) {
                 int index = constraintOrder[i];
                 int c = ccmaConstraints[index];
@@ -430,9 +424,9 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
                 }
                 constraintMatrixColumnVec[i+matrix[index].size()*numCCMA] = numCCMA;
             }
-            ccmaDistance->upload(distanceVec);
-            ccmaReducedMass->upload(reducedMassVec);
-            ccmaConstraintMatrixValue->upload(constraintMatrixValueVec);
+            ccmaDistance.upload(distanceVec);
+            ccmaReducedMass.upload(reducedMassVec);
+            ccmaConstraintMatrixValue.upload(constraintMatrixValueVec);
         }
         for (unsigned int i = 0; i < atomConstraints.size(); i++) {
             numAtomConstraintsVec[i] = atomConstraints[i].size();
@@ -441,10 +435,10 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
                 atomConstraintsVec[i+j*numAtoms] = (forward ? inverseOrder[atomConstraints[i][j]]+1 : -inverseOrder[atomConstraints[i][j]]-1);
             }
         }
-        ccmaAtoms->upload(atomsVec);
-        ccmaAtomConstraints->upload(atomConstraintsVec);
-        ccmaNumAtomConstraints->upload(numAtomConstraintsVec);
-        ccmaConstraintMatrixColumn->upload(constraintMatrixColumnVec);
+        ccmaAtoms.upload(atomsVec);
+        ccmaAtomConstraints.upload(atomConstraintsVec);
+        ccmaNumAtomConstraints.upload(numAtomConstraintsVec);
+        ccmaConstraintMatrixColumn.upload(constraintMatrixColumnVec);
     }
     
     // Build the list of virtual sites.
@@ -510,73 +504,73 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
     int num3Avg = vsite3AvgAtomVec.size();
     int numOutOfPlane = vsiteOutOfPlaneAtomVec.size();
     int numLocalCoords = vsiteLocalCoordsPosVec.size();
-    vsite2AvgAtoms = CudaArray::create<int4>(context, max(1, num2Avg), "vsite2AvgAtoms");
-    vsite3AvgAtoms = CudaArray::create<int4>(context, max(1, num3Avg), "vsite3AvgAtoms");
-    vsiteOutOfPlaneAtoms = CudaArray::create<int4>(context, max(1, numOutOfPlane), "vsiteOutOfPlaneAtoms");
-    vsiteLocalCoordsIndex = CudaArray::create<int>(context, max(1, (int) vsiteLocalCoordsIndexVec.size()), "vsiteLocalCoordsIndex");
-    vsiteLocalCoordsAtoms = CudaArray::create<int>(context, max(1, (int) vsiteLocalCoordsAtomVec.size()), "vsiteLocalCoordsAtoms");
-    vsiteLocalCoordsStartIndex = CudaArray::create<int>(context, max(1, (int) vsiteLocalCoordsStartVec.size()), "vsiteLocalCoordsStartIndex");
+    vsite2AvgAtoms.initialize<int4>(context, max(1, num2Avg), "vsite2AvgAtoms");
+    vsite3AvgAtoms.initialize<int4>(context, max(1, num3Avg), "vsite3AvgAtoms");
+    vsiteOutOfPlaneAtoms.initialize<int4>(context, max(1, numOutOfPlane), "vsiteOutOfPlaneAtoms");
+    vsiteLocalCoordsIndex.initialize<int>(context, max(1, (int) vsiteLocalCoordsIndexVec.size()), "vsiteLocalCoordsIndex");
+    vsiteLocalCoordsAtoms.initialize<int>(context, max(1, (int) vsiteLocalCoordsAtomVec.size()), "vsiteLocalCoordsAtoms");
+    vsiteLocalCoordsStartIndex.initialize<int>(context, max(1, (int) vsiteLocalCoordsStartVec.size()), "vsiteLocalCoordsStartIndex");
     if (num2Avg > 0)
-        vsite2AvgAtoms->upload(vsite2AvgAtomVec);
+        vsite2AvgAtoms.upload(vsite2AvgAtomVec);
     if (num3Avg > 0)
-        vsite3AvgAtoms->upload(vsite3AvgAtomVec);
+        vsite3AvgAtoms.upload(vsite3AvgAtomVec);
     if (numOutOfPlane > 0)
-        vsiteOutOfPlaneAtoms->upload(vsiteOutOfPlaneAtomVec);
+        vsiteOutOfPlaneAtoms.upload(vsiteOutOfPlaneAtomVec);
     if (numLocalCoords > 0) {
-        vsiteLocalCoordsIndex->upload(vsiteLocalCoordsIndexVec);
-        vsiteLocalCoordsAtoms->upload(vsiteLocalCoordsAtomVec);
-        vsiteLocalCoordsStartIndex->upload(vsiteLocalCoordsStartVec);
+        vsiteLocalCoordsIndex.upload(vsiteLocalCoordsIndexVec);
+        vsiteLocalCoordsAtoms.upload(vsiteLocalCoordsAtomVec);
+        vsiteLocalCoordsStartIndex.upload(vsiteLocalCoordsStartVec);
     }
     if (context.getUseDoublePrecision()) {
-        vsite2AvgWeights = CudaArray::create<double2>(context, max(1, num2Avg), "vsite2AvgWeights");
-        vsite3AvgWeights = CudaArray::create<double4>(context, max(1, num3Avg), "vsite3AvgWeights");
-        vsiteOutOfPlaneWeights = CudaArray::create<double4>(context, max(1, numOutOfPlane), "vsiteOutOfPlaneWeights");
-        vsiteLocalCoordsWeights = CudaArray::create<double>(context, max(1, (int) vsiteLocalCoordsWeightVec.size()), "vsiteLocalCoordsWeights");
-        vsiteLocalCoordsPos = CudaArray::create<double4>(context, max(1, (int) vsiteLocalCoordsPosVec.size()), "vsiteLocalCoordsPos");
+        vsite2AvgWeights.initialize<double2>(context, max(1, num2Avg), "vsite2AvgWeights");
+        vsite3AvgWeights.initialize<double4>(context, max(1, num3Avg), "vsite3AvgWeights");
+        vsiteOutOfPlaneWeights.initialize<double4>(context, max(1, numOutOfPlane), "vsiteOutOfPlaneWeights");
+        vsiteLocalCoordsWeights.initialize<double>(context, max(1, (int) vsiteLocalCoordsWeightVec.size()), "vsiteLocalCoordsWeights");
+        vsiteLocalCoordsPos.initialize<double4>(context, max(1, (int) vsiteLocalCoordsPosVec.size()), "vsiteLocalCoordsPos");
         if (num2Avg > 0)
-            vsite2AvgWeights->upload(vsite2AvgWeightVec);
+            vsite2AvgWeights.upload(vsite2AvgWeightVec);
         if (num3Avg > 0)
-            vsite3AvgWeights->upload(vsite3AvgWeightVec);
+            vsite3AvgWeights.upload(vsite3AvgWeightVec);
         if (numOutOfPlane > 0)
-            vsiteOutOfPlaneWeights->upload(vsiteOutOfPlaneWeightVec);
+            vsiteOutOfPlaneWeights.upload(vsiteOutOfPlaneWeightVec);
         if (numLocalCoords > 0) {
-            vsiteLocalCoordsWeights->upload(vsiteLocalCoordsWeightVec);
-            vsiteLocalCoordsPos->upload(vsiteLocalCoordsPosVec);
+            vsiteLocalCoordsWeights.upload(vsiteLocalCoordsWeightVec);
+            vsiteLocalCoordsPos.upload(vsiteLocalCoordsPosVec);
         }
     }
     else {
-        vsite2AvgWeights = CudaArray::create<float2>(context, max(1, num2Avg), "vsite2AvgWeights");
-        vsite3AvgWeights = CudaArray::create<float4>(context, max(1, num3Avg), "vsite3AvgWeights");
-        vsiteOutOfPlaneWeights = CudaArray::create<float4>(context, max(1, numOutOfPlane), "vsiteOutOfPlaneWeights");
-        vsiteLocalCoordsWeights = CudaArray::create<float>(context, max(1, (int) vsiteLocalCoordsWeightVec.size()), "vsiteLocalCoordsWeights");
-        vsiteLocalCoordsPos = CudaArray::create<float4>(context, max(1, (int) vsiteLocalCoordsPosVec.size()), "vsiteLocalCoordsPos");
+        vsite2AvgWeights.initialize<float2>(context, max(1, num2Avg), "vsite2AvgWeights");
+        vsite3AvgWeights.initialize<float4>(context, max(1, num3Avg), "vsite3AvgWeights");
+        vsiteOutOfPlaneWeights.initialize<float4>(context, max(1, numOutOfPlane), "vsiteOutOfPlaneWeights");
+        vsiteLocalCoordsWeights.initialize<float>(context, max(1, (int) vsiteLocalCoordsWeightVec.size()), "vsiteLocalCoordsWeights");
+        vsiteLocalCoordsPos.initialize<float4>(context, max(1, (int) vsiteLocalCoordsPosVec.size()), "vsiteLocalCoordsPos");
         if (num2Avg > 0) {
             vector<float2> floatWeights(num2Avg);
             for (int i = 0; i < num2Avg; i++)
                 floatWeights[i] = make_float2((float) vsite2AvgWeightVec[i].x, (float) vsite2AvgWeightVec[i].y);
-            vsite2AvgWeights->upload(floatWeights);
+            vsite2AvgWeights.upload(floatWeights);
         }
         if (num3Avg > 0) {
             vector<float4> floatWeights(num3Avg);
             for (int i = 0; i < num3Avg; i++)
                 floatWeights[i] = make_float4((float) vsite3AvgWeightVec[i].x, (float) vsite3AvgWeightVec[i].y, (float) vsite3AvgWeightVec[i].z, 0.0f);
-            vsite3AvgWeights->upload(floatWeights);
+            vsite3AvgWeights.upload(floatWeights);
         }
         if (numOutOfPlane > 0) {
             vector<float4> floatWeights(numOutOfPlane);
             for (int i = 0; i < numOutOfPlane; i++)
                 floatWeights[i] = make_float4((float) vsiteOutOfPlaneWeightVec[i].x, (float) vsiteOutOfPlaneWeightVec[i].y, (float) vsiteOutOfPlaneWeightVec[i].z, 0.0f);
-            vsiteOutOfPlaneWeights->upload(floatWeights);
+            vsiteOutOfPlaneWeights.upload(floatWeights);
         }
         if (numLocalCoords > 0) {
             vector<float> floatWeights(vsiteLocalCoordsWeightVec.size());
             for (int i = 0; i < (int) vsiteLocalCoordsWeightVec.size(); i++)
                 floatWeights[i] = (float) vsiteLocalCoordsWeightVec[i];
-            vsiteLocalCoordsWeights->upload(floatWeights);
+            vsiteLocalCoordsWeights.upload(floatWeights);
             vector<float4> floatPos(vsiteLocalCoordsPosVec.size());
             for (int i = 0; i < (int) vsiteLocalCoordsPosVec.size(); i++)
                 floatPos[i] = make_float4((float) vsiteLocalCoordsPosVec[i].x, (float) vsiteLocalCoordsPosVec[i].y, (float) vsiteLocalCoordsPosVec[i].z, 0.0f);
-            vsiteLocalCoordsPos->upload(floatPos);
+            vsiteLocalCoordsPos.upload(floatPos);
         }
     }
 
@@ -610,86 +604,28 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
 
 CudaIntegrationUtilities::~CudaIntegrationUtilities() {
     context.setAsCurrent();
-    if (posDelta != NULL)
-        delete posDelta;
-    if (settleAtoms != NULL)
-        delete settleAtoms;
-    if (settleParams != NULL)
-        delete settleParams;
-    if (shakeAtoms != NULL)
-        delete shakeAtoms;
-    if (shakeParams != NULL)
-        delete shakeParams;
-    if (random != NULL)
-        delete random;
-    if (randomSeed != NULL)
-        delete randomSeed;
-    if (stepSize != NULL)
-        delete stepSize;
-    if (ccmaAtoms != NULL)
-        delete ccmaAtoms;
-    if (ccmaDistance != NULL)
-        delete ccmaDistance;
-    if (ccmaReducedMass != NULL)
-        delete ccmaReducedMass;
-    if (ccmaAtomConstraints != NULL)
-        delete ccmaAtomConstraints;
-    if (ccmaNumAtomConstraints != NULL)
-        delete ccmaNumAtomConstraints;
-    if (ccmaConstraintMatrixColumn != NULL)
-        delete ccmaConstraintMatrixColumn;
-    if (ccmaConstraintMatrixValue != NULL)
-        delete ccmaConstraintMatrixValue;
-    if (ccmaDelta1 != NULL)
-        delete ccmaDelta1;
-    if (ccmaDelta2 != NULL)
-        delete ccmaDelta2;
-    if (ccmaConverged != NULL)
-        delete ccmaConverged;
     if (ccmaConvergedMemory != NULL)
         cuMemFreeHost(ccmaConvergedMemory);
-    if (vsite2AvgAtoms != NULL)
-        delete vsite2AvgAtoms;
-    if (vsite2AvgWeights != NULL)
-        delete vsite2AvgWeights;
-    if (vsite3AvgAtoms != NULL)
-        delete vsite3AvgAtoms;
-    if (vsite3AvgWeights != NULL)
-        delete vsite3AvgWeights;
-    if (vsiteOutOfPlaneAtoms != NULL)
-        delete vsiteOutOfPlaneAtoms;
-    if (vsiteOutOfPlaneWeights != NULL)
-        delete vsiteOutOfPlaneWeights;
-    if (vsiteLocalCoordsIndex != NULL)
-        delete vsiteLocalCoordsIndex;
-    if (vsiteLocalCoordsAtoms != NULL)
-        delete vsiteLocalCoordsAtoms;
-    if (vsiteLocalCoordsWeights != NULL)
-        delete vsiteLocalCoordsWeights;
-    if (vsiteLocalCoordsPos != NULL)
-        delete vsiteLocalCoordsPos;
-    if (vsiteLocalCoordsStartIndex != NULL)
-        delete vsiteLocalCoordsStartIndex;
 }
 
 void CudaIntegrationUtilities::setNextStepSize(double size) {
     if (size != lastStepSize.x || size != lastStepSize.y) {
         lastStepSize = make_double2(size, size);
         if (context.getUseDoublePrecision() || context.getUseMixedPrecision())
-            stepSize->upload(&lastStepSize);
+            stepSize.upload(&lastStepSize);
         else {
             float2 lastStepSizeFloat = make_float2((float) size, (float) size);
-            stepSize->upload(&lastStepSizeFloat);
+            stepSize.upload(&lastStepSizeFloat);
         }
     }
 }
 
 double CudaIntegrationUtilities::getLastStepSize() {
     if (context.getUseDoublePrecision() || context.getUseMixedPrecision())
-        stepSize->download(&lastStepSize);
+        stepSize.download(&lastStepSize);
     else {
         float2 lastStepSizeFloat;
-        stepSize->download(&lastStepSizeFloat);
+        stepSize.download(&lastStepSizeFloat);
         lastStepSize = make_double2(lastStepSizeFloat.x, lastStepSizeFloat.y);
     }
     return lastStepSize.y;
@@ -718,41 +654,41 @@ void CudaIntegrationUtilities::applyConstraints(bool constrainVelocities, double
     float floatTol = (float) tol;
     void* tolPointer = (context.getUseDoublePrecision() || context.getUseMixedPrecision() ? (void*) &tol : (void*) &floatTol);
     CUdeviceptr posCorrection = (context.getUseMixedPrecision() ? context.getPosqCorrection().getDevicePointer() : 0);
-    if (settleAtoms != NULL) {
-        int numClusters = settleAtoms->getSize();
+    if (settleAtoms.isInitialized()) {
+        int numClusters = settleAtoms.getSize();
         void* args[] = {&numClusters, tolPointer, &context.getPosq().getDevicePointer(), &posCorrection,
-                &posDelta->getDevicePointer(), &context.getVelm().getDevicePointer(),
-                &settleAtoms->getDevicePointer(), &settleParams->getDevicePointer()};
-        context.executeKernel(settleKernel, args, settleAtoms->getSize());
+                &posDelta.getDevicePointer(), &context.getVelm().getDevicePointer(),
+                &settleAtoms.getDevicePointer(), &settleParams.getDevicePointer()};
+        context.executeKernel(settleKernel, args, settleAtoms.getSize());
     }
-    if (shakeAtoms != NULL) {
-        int numClusters = shakeAtoms->getSize();
+    if (shakeAtoms.isInitialized()) {
+        int numClusters = shakeAtoms.getSize();
         void* args[] = {&numClusters, tolPointer, &context.getPosq().getDevicePointer(), &posCorrection,
-                constrainVelocities ? &context.getVelm().getDevicePointer() : &posDelta->getDevicePointer(),
-                &shakeAtoms->getDevicePointer(), &shakeParams->getDevicePointer()};
-        context.executeKernel(shakeKernel, args, shakeAtoms->getSize());
+                constrainVelocities ? &context.getVelm().getDevicePointer() : &posDelta.getDevicePointer(),
+                &shakeAtoms.getDevicePointer(), &shakeParams.getDevicePointer()};
+        context.executeKernel(shakeKernel, args, shakeAtoms.getSize());
     }
-    if (ccmaAtoms != NULL) {
-        void* directionsArgs[] = {&ccmaAtoms->getDevicePointer(), &ccmaDistance->getDevicePointer(), &context.getPosq().getDevicePointer(), &posCorrection, &ccmaConverged->getDevicePointer()};
-        context.executeKernel(ccmaDirectionsKernel, directionsArgs, ccmaAtoms->getSize());
+    if (ccmaAtoms.isInitialized()) {
+        void* directionsArgs[] = {&ccmaAtoms.getDevicePointer(), &ccmaDistance.getDevicePointer(), &context.getPosq().getDevicePointer(), &posCorrection, &ccmaConverged.getDevicePointer()};
+        context.executeKernel(ccmaDirectionsKernel, directionsArgs, ccmaAtoms.getSize());
         int i;
-        void* forceArgs[] = {&ccmaAtoms->getDevicePointer(), &ccmaDistance->getDevicePointer(),
-                constrainVelocities ? &context.getVelm().getDevicePointer() : &posDelta->getDevicePointer(),
-                &ccmaReducedMass->getDevicePointer(), &ccmaDelta1->getDevicePointer(), &ccmaConverged->getDevicePointer(),
+        void* forceArgs[] = {&ccmaAtoms.getDevicePointer(), &ccmaDistance.getDevicePointer(),
+                constrainVelocities ? &context.getVelm().getDevicePointer() : &posDelta.getDevicePointer(),
+                &ccmaReducedMass.getDevicePointer(), &ccmaDelta1.getDevicePointer(), &ccmaConverged.getDevicePointer(),
                 &ccmaConvergedDeviceMemory, tolPointer, &i};
-        void* multiplyArgs[] = {&ccmaDelta1->getDevicePointer(), &ccmaDelta2->getDevicePointer(),
-                &ccmaConstraintMatrixColumn->getDevicePointer(), &ccmaConstraintMatrixValue->getDevicePointer(), &ccmaConverged->getDevicePointer(), &i};
-        void* updateArgs[] = {&ccmaNumAtomConstraints->getDevicePointer(), &ccmaAtomConstraints->getDevicePointer(), &ccmaDistance->getDevicePointer(),
-                constrainVelocities ? &context.getVelm().getDevicePointer() : &posDelta->getDevicePointer(),
-                &context.getVelm().getDevicePointer(), &ccmaDelta1->getDevicePointer(), &ccmaDelta2->getDevicePointer(),
-                &ccmaConverged->getDevicePointer(), &i};
+        void* multiplyArgs[] = {&ccmaDelta1.getDevicePointer(), &ccmaDelta2.getDevicePointer(),
+                &ccmaConstraintMatrixColumn.getDevicePointer(), &ccmaConstraintMatrixValue.getDevicePointer(), &ccmaConverged.getDevicePointer(), &i};
+        void* updateArgs[] = {&ccmaNumAtomConstraints.getDevicePointer(), &ccmaAtomConstraints.getDevicePointer(), &ccmaDistance.getDevicePointer(),
+                constrainVelocities ? &context.getVelm().getDevicePointer() : &posDelta.getDevicePointer(),
+                &context.getVelm().getDevicePointer(), &ccmaDelta1.getDevicePointer(), &ccmaDelta2.getDevicePointer(),
+                &ccmaConverged.getDevicePointer(), &i};
         const int checkInterval = 4;
         ccmaConvergedMemory[0] = 0;
         for (i = 0; i < 150; i++) {
-            context.executeKernel(ccmaForceKernel, forceArgs, ccmaAtoms->getSize());
+            context.executeKernel(ccmaForceKernel, forceArgs, ccmaAtoms.getSize());
             if ((i+1)%checkInterval == 0)
                 CHECK_RESULT2(cuEventRecord(ccmaEvent, 0), "Error recording event for CCMA");
-            context.executeKernel(ccmaMultiplyKernel, multiplyArgs, ccmaAtoms->getSize());
+            context.executeKernel(ccmaMultiplyKernel, multiplyArgs, ccmaAtoms.getSize());
             context.executeKernel(ccmaUpdateKernel, updateArgs, context.getNumAtoms());
             if ((i+1)%checkInterval == 0) {
                 CHECK_RESULT2(cuEventSynchronize(ccmaEvent), "Error synchronizing on event for CCMA");
@@ -766,12 +702,12 @@ void CudaIntegrationUtilities::applyConstraints(bool constrainVelocities, double
 void CudaIntegrationUtilities::computeVirtualSites() {
     if (numVsites > 0) {
         CUdeviceptr posCorrection = (context.getUseMixedPrecision() ? context.getPosqCorrection().getDevicePointer() : 0);
-        void* args[] = {&context.getPosq().getDevicePointer(), &posCorrection, &vsite2AvgAtoms->getDevicePointer(), &vsite2AvgWeights->getDevicePointer(),
-                &vsite3AvgAtoms->getDevicePointer(), &vsite3AvgWeights->getDevicePointer(),
-                &vsiteOutOfPlaneAtoms->getDevicePointer(), &vsiteOutOfPlaneWeights->getDevicePointer(),
-                &vsiteLocalCoordsIndex->getDevicePointer(), &vsiteLocalCoordsAtoms->getDevicePointer(),
-                &vsiteLocalCoordsWeights->getDevicePointer(), &vsiteLocalCoordsPos->getDevicePointer(),
-                &vsiteLocalCoordsStartIndex->getDevicePointer()};
+        void* args[] = {&context.getPosq().getDevicePointer(), &posCorrection, &vsite2AvgAtoms.getDevicePointer(), &vsite2AvgWeights.getDevicePointer(),
+                &vsite3AvgAtoms.getDevicePointer(), &vsite3AvgWeights.getDevicePointer(),
+                &vsiteOutOfPlaneAtoms.getDevicePointer(), &vsiteOutOfPlaneWeights.getDevicePointer(),
+                &vsiteLocalCoordsIndex.getDevicePointer(), &vsiteLocalCoordsAtoms.getDevicePointer(),
+                &vsiteLocalCoordsWeights.getDevicePointer(), &vsiteLocalCoordsPos.getDevicePointer(),
+                &vsiteLocalCoordsStartIndex.getDevicePointer()};
         context.executeKernel(vsitePositionKernel, args, numVsites);
     }
 }
@@ -780,18 +716,18 @@ void CudaIntegrationUtilities::distributeForcesFromVirtualSites() {
     if (numVsites > 0) {
         CUdeviceptr posCorrection = (context.getUseMixedPrecision() ? context.getPosqCorrection().getDevicePointer() : 0);
         void* args[] = {&context.getPosq().getDevicePointer(), &posCorrection, &context.getForce().getDevicePointer(),
-                &vsite2AvgAtoms->getDevicePointer(), &vsite2AvgWeights->getDevicePointer(),
-                &vsite3AvgAtoms->getDevicePointer(), &vsite3AvgWeights->getDevicePointer(),
-                &vsiteOutOfPlaneAtoms->getDevicePointer(), &vsiteOutOfPlaneWeights->getDevicePointer(),
-                &vsiteLocalCoordsIndex->getDevicePointer(), &vsiteLocalCoordsAtoms->getDevicePointer(),
-                &vsiteLocalCoordsWeights->getDevicePointer(), &vsiteLocalCoordsPos->getDevicePointer(),
-                &vsiteLocalCoordsStartIndex->getDevicePointer()};
+                &vsite2AvgAtoms.getDevicePointer(), &vsite2AvgWeights.getDevicePointer(),
+                &vsite3AvgAtoms.getDevicePointer(), &vsite3AvgWeights.getDevicePointer(),
+                &vsiteOutOfPlaneAtoms.getDevicePointer(), &vsiteOutOfPlaneWeights.getDevicePointer(),
+                &vsiteLocalCoordsIndex.getDevicePointer(), &vsiteLocalCoordsAtoms.getDevicePointer(),
+                &vsiteLocalCoordsWeights.getDevicePointer(), &vsiteLocalCoordsPos.getDevicePointer(),
+                &vsiteLocalCoordsStartIndex.getDevicePointer()};
         context.executeKernel(vsiteForceKernel, args, numVsites);
     }
 }
 
 void CudaIntegrationUtilities::initRandomNumberGenerator(unsigned int randomNumberSeed) {
-    if (random != NULL) {
+    if (random.isInitialized()) {
         if (randomNumberSeed != lastSeed)
            throw OpenMMException("CudaIntegrationUtilities::initRandomNumberGenerator(): Requested two different values for the random number seed");
         return;
@@ -800,63 +736,61 @@ void CudaIntegrationUtilities::initRandomNumberGenerator(unsigned int randomNumb
     // Create the random number arrays.
 
     lastSeed = randomNumberSeed;
-    random = CudaArray::create<float4>(context, 4*context.getPaddedNumAtoms(), "random");
-    randomSeed = CudaArray::create<int4>(context, context.getNumThreadBlocks()*CudaContext::ThreadBlockSize, "randomSeed");
-    randomPos = random->getSize();
+    random.initialize<float4>(context, 4*context.getPaddedNumAtoms(), "random");
+    randomSeed.initialize<int4>(context, context.getNumThreadBlocks()*CudaContext::ThreadBlockSize, "randomSeed");
+    randomPos = random.getSize();
 
     // Use a quick and dirty RNG to pick seeds for the real random number generator.
 
-    vector<int4> seed(randomSeed->getSize());
+    vector<int4> seed(randomSeed.getSize());
     unsigned int r = randomNumberSeed;
     if (r == 0) r = (unsigned int) osrngseed();
-    for (int i = 0; i < randomSeed->getSize(); i++) {
+    for (int i = 0; i < randomSeed.getSize(); i++) {
         seed[i].x = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
         seed[i].y = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
         seed[i].z = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
         seed[i].w = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
     }
-    randomSeed->upload(seed);
+    randomSeed.upload(seed);
 }
 
 int CudaIntegrationUtilities::prepareRandomNumbers(int numValues) {
-    if (randomPos+numValues <= random->getSize()) {
+    if (randomPos+numValues <= random.getSize()) {
         int oldPos = randomPos;
         randomPos += numValues;
         return oldPos;
     }
-    if (numValues > random->getSize()) {
-        delete random;
-        random = CudaArray::create<float4>(context, numValues, "random");
-    }
-    int size = random->getSize();
-    void* args[] = {&size, &random->getDevicePointer(), &randomSeed->getDevicePointer()};
-    context.executeKernel(randomKernel, args, random->getSize());
+    if (numValues > random.getSize())
+        random.resize(numValues);
+    int size = random.getSize();
+    void* args[] = {&size, &random.getDevicePointer(), &randomSeed.getDevicePointer()};
+    context.executeKernel(randomKernel, args, random.getSize());
     randomPos = numValues;
     return 0;
 }
 
 void CudaIntegrationUtilities::createCheckpoint(ostream& stream) {
-    if(random == NULL) 
+    if (!random.isInitialized()) 
         return;
     stream.write((char*) &randomPos, sizeof(int));
     vector<float4> randomVec;
-    random->download(randomVec);
-    stream.write((char*) &randomVec[0], sizeof(float4)*random->getSize());
+    random.download(randomVec);
+    stream.write((char*) &randomVec[0], sizeof(float4)*random.getSize());
     vector<int4> randomSeedVec;
-    randomSeed->download(randomSeedVec);
-    stream.write((char*) &randomSeedVec[0], sizeof(int4)*randomSeed->getSize());
+    randomSeed.download(randomSeedVec);
+    stream.write((char*) &randomSeedVec[0], sizeof(int4)*randomSeed.getSize());
 }
 
 void CudaIntegrationUtilities::loadCheckpoint(istream& stream) {
-    if(random == NULL) 
+    if (!random.isInitialized()) 
         return;
     stream.read((char*) &randomPos, sizeof(int));
-    vector<float4> randomVec(random->getSize());
-    stream.read((char*) &randomVec[0], sizeof(float4)*random->getSize());
-    random->upload(randomVec);
-    vector<int4> randomSeedVec(randomSeed->getSize());
-    stream.read((char*) &randomSeedVec[0], sizeof(int4)*randomSeed->getSize());
-    randomSeed->upload(randomSeedVec);
+    vector<float4> randomVec(random.getSize());
+    stream.read((char*) &randomVec[0], sizeof(float4)*random.getSize());
+    random.upload(randomVec);
+    vector<int4> randomSeedVec(randomSeed.getSize());
+    stream.read((char*) &randomSeedVec[0], sizeof(int4)*randomSeed.getSize());
+    randomSeed.upload(randomSeedVec);
 }
 
 double CudaIntegrationUtilities::computeKineticEnergy(double timeShift) {
@@ -867,7 +801,7 @@ double CudaIntegrationUtilities::computeKineticEnergy(double timeShift) {
 
         // Copy the velocities into the posDelta array while we temporarily modify them.
 
-        context.getVelm().copyTo(*posDelta);
+        context.getVelm().copyTo(posDelta);
 
         // Apply the time shift.
 
@@ -901,6 +835,6 @@ double CudaIntegrationUtilities::computeKineticEnergy(double timeShift) {
     // Restore the velocities.
     
     if (timeShift != 0)
-        posDelta->copyTo(context.getVelm());
+        posDelta.copyTo(context.getVelm());
     return 0.5*energy;
 }

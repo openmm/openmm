@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -175,55 +175,55 @@ public:
      * Get the array containing the center of each atom block.
      */
     OpenCLArray& getBlockCenters() {
-        return *blockCenter;
+        return blockCenter;
     }
     /**
      * Get the array containing the dimensions of each atom block.
      */
     OpenCLArray& getBlockBoundingBoxes() {
-        return *blockBoundingBox;
+        return blockBoundingBox;
     }
     /**
      * Get the array whose first element contains the number of tiles with interactions.
      */
     OpenCLArray& getInteractionCount() {
-        return *interactionCount;
+        return interactionCount;
     }
     /**
      * Get the array containing tiles with interactions.
      */
     OpenCLArray& getInteractingTiles() {
-        return *interactingTiles;
+        return interactingTiles;
     }
     /**
      * Get the array containing the atoms in each tile with interactions.
      */
     OpenCLArray& getInteractingAtoms() {
-        return *interactingAtoms;
+        return interactingAtoms;
     }
     /**
      * Get the array containing exclusion flags.
      */
     OpenCLArray& getExclusions() {
-        return *exclusions;
+        return exclusions;
     }
     /**
      * Get the array containing tiles with exclusions.
      */
     OpenCLArray& getExclusionTiles() {
-        return *exclusionTiles;
+        return exclusionTiles;
     }
     /**
      * Get the array containing the index into the exclusion array for each tile.
      */
     OpenCLArray& getExclusionIndices() {
-        return *exclusionIndices;
+        return exclusionIndices;
     }
     /**
      * Get the array listing where the exclusion data starts for each row.
      */
     OpenCLArray& getExclusionRowIndices() {
-        return *exclusionRowIndices;
+        return exclusionRowIndices;
     }
     /**
      * Get the index of the first tile this context is responsible for processing.
@@ -275,20 +275,20 @@ private:
     class BlockSortTrait;
     OpenCLContext& context;
     std::map<int, KernelSet> groupKernels;
-    OpenCLArray* exclusionTiles;
-    OpenCLArray* exclusions;
-    OpenCLArray* exclusionIndices;
-    OpenCLArray* exclusionRowIndices;
-    OpenCLArray* interactingTiles;
-    OpenCLArray* interactingAtoms;
-    OpenCLArray* interactionCount;
-    OpenCLArray* blockCenter;
-    OpenCLArray* blockBoundingBox;
-    OpenCLArray* sortedBlocks;
-    OpenCLArray* sortedBlockCenter;
-    OpenCLArray* sortedBlockBoundingBox;
-    OpenCLArray* oldPositions;
-    OpenCLArray* rebuildNeighborList;
+    OpenCLArray exclusionTiles;
+    OpenCLArray exclusions;
+    OpenCLArray exclusionIndices;
+    OpenCLArray exclusionRowIndices;
+    OpenCLArray interactingTiles;
+    OpenCLArray interactingAtoms;
+    OpenCLArray interactionCount;
+    OpenCLArray blockCenter;
+    OpenCLArray blockBoundingBox;
+    OpenCLArray sortedBlocks;
+    OpenCLArray sortedBlockCenter;
+    OpenCLArray sortedBlockBoundingBox;
+    OpenCLArray oldPositions;
+    OpenCLArray rebuildNeighborList;
     OpenCLSort* blockSorter;
     cl::Event downloadCountEvent;
     cl::Buffer* pinnedCountBuffer;

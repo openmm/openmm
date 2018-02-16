@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -41,19 +41,6 @@
 using namespace OpenMM;
 using namespace std;
 
-OpenCLIntegrateRPMDStepKernel::~OpenCLIntegrateRPMDStepKernel() {
-    if (forces != NULL)
-        delete forces;
-    if (positions != NULL)
-        delete positions;
-    if (velocities != NULL)
-        delete velocities;
-    if (contractedForces != NULL)
-        delete contractedForces;
-    if (contractedPositions != NULL)
-        delete contractedPositions;
-}
-
 void OpenCLIntegrateRPMDStepKernel::initialize(const System& system, const RPMDIntegrator& integrator) {
     cl.getPlatformData().initializeContexts(system);
     numCopies = integrator.getNumCopies();
@@ -63,32 +50,32 @@ void OpenCLIntegrateRPMDStepKernel::initialize(const System& system, const RPMDI
         throw OpenMMException("RPMDIntegrator: the number of copies must be a multiple of powers of 2, 3, and 5.");
     int paddedParticles = cl.getPaddedNumAtoms();
     int forceElementSize = (cl.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4));
-    forces = new OpenCLArray(cl, numCopies*paddedParticles, forceElementSize, "rpmdForces");
+    forces.initialize(cl, numCopies*paddedParticles, forceElementSize, "rpmdForces");
     bool useDoublePrecision = (cl.getUseDoublePrecision() || cl.getUseMixedPrecision());
     int elementSize = (useDoublePrecision ? sizeof(mm_double4) : sizeof(mm_float4));
-    positions = new OpenCLArray(cl, numCopies*paddedParticles, elementSize, "rpmdPositions");
-    velocities = new OpenCLArray(cl, numCopies*paddedParticles, elementSize, "rpmdVelocities");
+    positions.initialize(cl, numCopies*paddedParticles, elementSize, "rpmdPositions");
+    velocities.initialize(cl, numCopies*paddedParticles, elementSize, "rpmdVelocities");
     cl.getIntegrationUtilities().initRandomNumberGenerator((unsigned int) integrator.getRandomNumberSeed());
     
     // Fill in the posq and velm arrays with safe values to avoid a risk of nans.
     
     if (useDoublePrecision) {
-        vector<mm_double4> temp(positions->getSize());
-        for (int i = 0; i < positions->getSize(); i++)
+        vector<mm_double4> temp(positions.getSize());
+        for (int i = 0; i < positions.getSize(); i++)
             temp[i] = mm_double4(0, 0, 0, 0);
-        positions->upload(temp);
-        for (int i = 0; i < velocities->getSize(); i++)
+        positions.upload(temp);
+        for (int i = 0; i < velocities.getSize(); i++)
             temp[i] = mm_double4(0, 0, 0, 1);
-        velocities->upload(temp);
+        velocities.upload(temp);
     }
     else {
-        vector<mm_float4> temp(positions->getSize());
-        for (int i = 0; i < positions->getSize(); i++)
+        vector<mm_float4> temp(positions.getSize());
+        for (int i = 0; i < positions.getSize(); i++)
             temp[i] = mm_float4(0, 0, 0, 0);
-        positions->upload(temp);
-        for (int i = 0; i < velocities->getSize(); i++)
+        positions.upload(temp);
+        for (int i = 0; i < velocities.getSize(); i++)
             temp[i] = mm_float4(0, 0, 0, 1);
-        velocities->upload(temp);
+        velocities.upload(temp);
     }
     
     // Build a list of contractions.
@@ -117,8 +104,8 @@ void OpenCLIntegrateRPMDStepKernel::initialize(const System& system, const RPMDI
         }
     }
     if (maxContractedCopies > 0) {
-        contractedForces = new OpenCLArray(cl, maxContractedCopies*paddedParticles, forceElementSize, "rpmdContractedForces");
-        contractedPositions = new OpenCLArray(cl, maxContractedCopies*paddedParticles, elementSize, "rpmdContractedPositions");
+        contractedForces.initialize(cl, maxContractedCopies*paddedParticles, forceElementSize, "rpmdContractedForces");
+        contractedPositions.initialize(cl, maxContractedCopies*paddedParticles, elementSize, "rpmdContractedPositions");
     }
 
     // Create kernels.
@@ -164,30 +151,30 @@ void OpenCLIntegrateRPMDStepKernel::initialize(const System& system, const RPMDI
 
 void OpenCLIntegrateRPMDStepKernel::initializeKernels(ContextImpl& context) {
     hasInitializedKernel = true;
-    pileKernel.setArg<cl::Buffer>(0, velocities->getDeviceBuffer());
-    stepKernel.setArg<cl::Buffer>(0, positions->getDeviceBuffer());
-    stepKernel.setArg<cl::Buffer>(1, velocities->getDeviceBuffer());
-    stepKernel.setArg<cl::Buffer>(2, forces->getDeviceBuffer());
-    velocitiesKernel.setArg<cl::Buffer>(0, velocities->getDeviceBuffer());
-    velocitiesKernel.setArg<cl::Buffer>(1, forces->getDeviceBuffer());
-    translateKernel.setArg<cl::Buffer>(0, positions->getDeviceBuffer());
+    pileKernel.setArg<cl::Buffer>(0, velocities.getDeviceBuffer());
+    stepKernel.setArg<cl::Buffer>(0, positions.getDeviceBuffer());
+    stepKernel.setArg<cl::Buffer>(1, velocities.getDeviceBuffer());
+    stepKernel.setArg<cl::Buffer>(2, forces.getDeviceBuffer());
+    velocitiesKernel.setArg<cl::Buffer>(0, velocities.getDeviceBuffer());
+    velocitiesKernel.setArg<cl::Buffer>(1, forces.getDeviceBuffer());
+    translateKernel.setArg<cl::Buffer>(0, positions.getDeviceBuffer());
     translateKernel.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
     translateKernel.setArg<cl::Buffer>(2, cl.getAtomIndexArray().getDeviceBuffer());
-    copyToContextKernel.setArg<cl::Buffer>(0, velocities->getDeviceBuffer());
+    copyToContextKernel.setArg<cl::Buffer>(0, velocities.getDeviceBuffer());
     copyToContextKernel.setArg<cl::Buffer>(1, cl.getVelm().getDeviceBuffer());
     copyToContextKernel.setArg<cl::Buffer>(3, cl.getPosq().getDeviceBuffer());
     copyToContextKernel.setArg<cl::Buffer>(4, cl.getAtomIndexArray().getDeviceBuffer());
     copyFromContextKernel.setArg<cl::Buffer>(0, cl.getForce().getDeviceBuffer());
     copyFromContextKernel.setArg<cl::Buffer>(2, cl.getVelm().getDeviceBuffer());
-    copyFromContextKernel.setArg<cl::Buffer>(3, velocities->getDeviceBuffer());
+    copyFromContextKernel.setArg<cl::Buffer>(3, velocities.getDeviceBuffer());
     copyFromContextKernel.setArg<cl::Buffer>(4, cl.getPosq().getDeviceBuffer());
     copyFromContextKernel.setArg<cl::Buffer>(6, cl.getAtomIndexArray().getDeviceBuffer());
     for (auto& g : groupsByCopies) {
         int copies = g.first;
-        positionContractionKernels[copies].setArg<cl::Buffer>(0, positions->getDeviceBuffer());
-        positionContractionKernels[copies].setArg<cl::Buffer>(1, contractedPositions->getDeviceBuffer());
-        forceContractionKernels[copies].setArg<cl::Buffer>(0, forces->getDeviceBuffer());
-        forceContractionKernels[copies].setArg<cl::Buffer>(1, contractedForces->getDeviceBuffer());
+        positionContractionKernels[copies].setArg<cl::Buffer>(0, positions.getDeviceBuffer());
+        positionContractionKernels[copies].setArg<cl::Buffer>(1, contractedPositions.getDeviceBuffer());
+        forceContractionKernels[copies].setArg<cl::Buffer>(0, forces.getDeviceBuffer());
+        forceContractionKernels[copies].setArg<cl::Buffer>(1, contractedForces.getDeviceBuffer());
     }
 }
 
@@ -261,9 +248,9 @@ void OpenCLIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDInte
 void OpenCLIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
     // Compute forces from all groups that didn't have a specified contraction.
 
-    copyToContextKernel.setArg<cl::Buffer>(2, positions->getDeviceBuffer());
-    copyFromContextKernel.setArg<cl::Buffer>(1, forces->getDeviceBuffer());
-    copyFromContextKernel.setArg<cl::Buffer>(5, positions->getDeviceBuffer());
+    copyToContextKernel.setArg<cl::Buffer>(2, positions.getDeviceBuffer());
+    copyFromContextKernel.setArg<cl::Buffer>(1, forces.getDeviceBuffer());
+    copyFromContextKernel.setArg<cl::Buffer>(5, positions.getDeviceBuffer());
     for (int i = 0; i < numCopies; i++) {
         copyToContextKernel.setArg<cl_int>(5, i);
         cl.executeKernel(copyToContextKernel, cl.getNumAtoms());
@@ -283,9 +270,9 @@ void OpenCLIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
     // Now loop over contractions and compute forces from them.
     
     if (groupsByCopies.size() > 0) {
-        copyToContextKernel.setArg<cl::Buffer>(2, contractedPositions->getDeviceBuffer());
-        copyFromContextKernel.setArg<cl::Buffer>(1, contractedForces->getDeviceBuffer());
-        copyFromContextKernel.setArg<cl::Buffer>(5, contractedPositions->getDeviceBuffer());
+        copyToContextKernel.setArg<cl::Buffer>(2, contractedPositions.getDeviceBuffer());
+        copyFromContextKernel.setArg<cl::Buffer>(1, contractedForces.getDeviceBuffer());
+        copyFromContextKernel.setArg<cl::Buffer>(5, contractedPositions.getDeviceBuffer());
         for (auto& g : groupsByCopies) {
             int copies = g.first;
             int groupFlags = g.second;
@@ -313,7 +300,7 @@ void OpenCLIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
     if (groupsByCopies.size() > 0) {
         // Ensure the Context contains the positions from the last copy, since we'll assume that later.
         
-        copyToContextKernel.setArg<cl::Buffer>(2, positions->getDeviceBuffer());
+        copyToContextKernel.setArg<cl::Buffer>(2, positions.getDeviceBuffer());
         copyToContextKernel.setArg<cl_int>(5, numCopies-1);
         cl.executeKernel(copyToContextKernel, cl.getNumAtoms());
     }
@@ -324,7 +311,7 @@ double OpenCLIntegrateRPMDStepKernel::computeKineticEnergy(ContextImpl& context,
 }
 
 void OpenCLIntegrateRPMDStepKernel::setPositions(int copy, const vector<Vec3>& pos) {
-    if (positions == NULL)
+    if (!positions.isInitialized())
         throw OpenMMException("RPMDIntegrator: Cannot set positions before the integrator is added to a Context");
     if (pos.size() != numParticles)
         throw OpenMMException("RPMDIntegrator: wrong number of values passed to setPositions()");
@@ -346,7 +333,7 @@ void OpenCLIntegrateRPMDStepKernel::setPositions(int copy, const vector<Vec3>& p
         cl.getPosq().download(posq);
         for (int i = 0; i < numParticles; i++)
             posq[i] = mm_double4(offsetPos[i][0], offsetPos[i][1], offsetPos[i][2], posq[i].w);
-        cl.getQueue().enqueueWriteBuffer(positions->getDeviceBuffer(), CL_TRUE, copy*cl.getPaddedNumAtoms()*sizeof(mm_double4), numParticles*sizeof(mm_double4), &posq[0]);
+        cl.getQueue().enqueueWriteBuffer(positions.getDeviceBuffer(), CL_TRUE, copy*cl.getPaddedNumAtoms()*sizeof(mm_double4), numParticles*sizeof(mm_double4), &posq[0]);
     }
     else if (cl.getUseMixedPrecision()) {
         vector<mm_float4> posqf(cl.getPaddedNumAtoms());
@@ -354,19 +341,19 @@ void OpenCLIntegrateRPMDStepKernel::setPositions(int copy, const vector<Vec3>& p
         vector<mm_double4> posq(cl.getPaddedNumAtoms());
         for (int i = 0; i < numParticles; i++)
             posq[i] = mm_double4(offsetPos[i][0], offsetPos[i][1], offsetPos[i][2], posqf[i].w);
-        cl.getQueue().enqueueWriteBuffer(positions->getDeviceBuffer(), CL_TRUE, copy*cl.getPaddedNumAtoms()*sizeof(mm_double4), numParticles*sizeof(mm_double4), &posq[0]);
+        cl.getQueue().enqueueWriteBuffer(positions.getDeviceBuffer(), CL_TRUE, copy*cl.getPaddedNumAtoms()*sizeof(mm_double4), numParticles*sizeof(mm_double4), &posq[0]);
     }
     else {
         vector<mm_float4> posq(cl.getPaddedNumAtoms());
         cl.getPosq().download(posq);
         for (int i = 0; i < numParticles; i++)
             posq[i] = mm_float4((cl_float) offsetPos[i][0], (cl_float) offsetPos[i][1], (cl_float) offsetPos[i][2], posq[i].w);
-        cl.getQueue().enqueueWriteBuffer(positions->getDeviceBuffer(), CL_TRUE, copy*cl.getPaddedNumAtoms()*sizeof(mm_float4), numParticles*sizeof(mm_float4), &posq[0]);
+        cl.getQueue().enqueueWriteBuffer(positions.getDeviceBuffer(), CL_TRUE, copy*cl.getPaddedNumAtoms()*sizeof(mm_float4), numParticles*sizeof(mm_float4), &posq[0]);
     }
 }
 
 void OpenCLIntegrateRPMDStepKernel::setVelocities(int copy, const vector<Vec3>& vel) {
-    if (velocities == NULL)
+    if (!velocities.isInitialized())
         throw OpenMMException("RPMDIntegrator: Cannot set velocities before the integrator is added to a Context");
     if (vel.size() != numParticles)
         throw OpenMMException("RPMDIntegrator: wrong number of values passed to setVelocities()");
@@ -375,21 +362,21 @@ void OpenCLIntegrateRPMDStepKernel::setVelocities(int copy, const vector<Vec3>& 
         cl.getVelm().download(velm);
         for (int i = 0; i < numParticles; i++)
             velm[i] = mm_double4(vel[i][0], vel[i][1], vel[i][2], velm[i].w);
-        cl.getQueue().enqueueWriteBuffer(velocities->getDeviceBuffer(), CL_TRUE, copy*cl.getPaddedNumAtoms()*sizeof(mm_double4), numParticles*sizeof(mm_double4), &velm[0]);
+        cl.getQueue().enqueueWriteBuffer(velocities.getDeviceBuffer(), CL_TRUE, copy*cl.getPaddedNumAtoms()*sizeof(mm_double4), numParticles*sizeof(mm_double4), &velm[0]);
     }
     else {
         vector<mm_float4> velm(cl.getPaddedNumAtoms());
         cl.getVelm().download(velm);
         for (int i = 0; i < numParticles; i++)
             velm[i] = mm_float4((cl_float) vel[i][0], (cl_float) vel[i][1], (cl_float) vel[i][2], velm[i].w);
-        cl.getQueue().enqueueWriteBuffer(velocities->getDeviceBuffer(), CL_TRUE, copy*cl.getPaddedNumAtoms()*sizeof(mm_float4), numParticles*sizeof(mm_float4), &velm[0]);
+        cl.getQueue().enqueueWriteBuffer(velocities.getDeviceBuffer(), CL_TRUE, copy*cl.getPaddedNumAtoms()*sizeof(mm_float4), numParticles*sizeof(mm_float4), &velm[0]);
     }
 }
 
 void OpenCLIntegrateRPMDStepKernel::copyToContext(int copy, ContextImpl& context) {
     if (!hasInitializedKernel)
         initializeKernels(context);
-    copyToContextKernel.setArg<cl::Buffer>(2, positions->getDeviceBuffer());
+    copyToContextKernel.setArg<cl::Buffer>(2, positions.getDeviceBuffer());
     copyToContextKernel.setArg<cl_int>(5, copy);
     cl.executeKernel(copyToContextKernel, cl.getNumAtoms());
 }

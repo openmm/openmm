@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -81,7 +81,6 @@ namespace OpenMM {
 class OPENMM_EXPORT_OPENCL OpenCLBondedUtilities {
 public:
     OpenCLBondedUtilities(OpenCLContext& context);
-    ~OpenCLBondedUtilities();
     /**
      * Add a bonded interaction.
      *
@@ -143,8 +142,8 @@ private:
     std::vector<std::vector<int> > forceSets;
     std::vector<cl::Memory*> arguments;
     std::vector<std::string> argTypes;
-    std::vector<OpenCLArray*> atomIndices;
-    std::vector<OpenCLArray*> bufferIndices;
+    std::vector<OpenCLArray> atomIndices;
+    std::vector<OpenCLArray> bufferIndices;
     std::vector<std::string> prefixCode;
     std::vector<std::string> energyParameterDerivatives;
     int numForceBuffers, maxBonds, allGroups;

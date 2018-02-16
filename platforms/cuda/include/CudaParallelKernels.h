@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -84,7 +84,7 @@ private:
     std::vector<long long> completionTimes;
     std::vector<double> contextNonbondedFractions;
     int2* interactionCounts;
-    CudaArray* contextForces;
+    CudaArray contextForces;
     void* pinnedPositionBuffer;
     long long* pinnedForceBuffer;
     CUfunction sumKernel;

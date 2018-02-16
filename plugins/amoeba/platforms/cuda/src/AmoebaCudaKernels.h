@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
  * Authors: Mark Friedrichs, Peter Eastman                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -48,7 +48,6 @@ public:
                                           const Platform& platform,
                                           CudaContext& cu,
                                           const System& system);
-    ~CudaCalcAmoebaBondForceKernel();
     /**
      * Initialize the kernel.
      * 
@@ -77,7 +76,7 @@ private:
     int numBonds;
     CudaContext& cu;
     const System& system;
-    CudaArray* params;
+    CudaArray params;
 };
 
 /**
@@ -86,7 +85,6 @@ private:
 class CudaCalcAmoebaAngleForceKernel : public CalcAmoebaAngleForceKernel {
 public:
     CudaCalcAmoebaAngleForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system);
-    ~CudaCalcAmoebaAngleForceKernel();
     /**
      * Initialize the kernel.
      * 
@@ -115,7 +113,7 @@ private:
     int numAngles;
     CudaContext& cu;
     const System& system;
-    CudaArray* params;
+    CudaArray params;
 };
 
 /**
@@ -124,7 +122,6 @@ private:
 class CudaCalcAmoebaInPlaneAngleForceKernel : public CalcAmoebaInPlaneAngleForceKernel {
 public:
     CudaCalcAmoebaInPlaneAngleForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system);
-    ~CudaCalcAmoebaInPlaneAngleForceKernel();
     /**
      * Initialize the kernel.
      * 
@@ -153,7 +150,7 @@ private:
     int numAngles;
     CudaContext& cu;
     const System& system;
-    CudaArray* params;
+    CudaArray params;
 };
 
 /**
@@ -162,7 +159,6 @@ private:
 class CudaCalcAmoebaPiTorsionForceKernel : public CalcAmoebaPiTorsionForceKernel {
 public:
     CudaCalcAmoebaPiTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system);
-    ~CudaCalcAmoebaPiTorsionForceKernel();
     /**
      * Initialize the kernel.
      * 
@@ -191,7 +187,7 @@ private:
     int numPiTorsions;
     CudaContext& cu;
     const System& system;
-    CudaArray* params;
+    CudaArray params;
 };
 
 /**
@@ -200,7 +196,6 @@ private:
 class CudaCalcAmoebaStretchBendForceKernel : public CalcAmoebaStretchBendForceKernel {
 public:
     CudaCalcAmoebaStretchBendForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system);
-    ~CudaCalcAmoebaStretchBendForceKernel();
     /**
      * Initialize the kernel.
      * 
@@ -229,8 +224,8 @@ private:
     int numStretchBends;
     CudaContext& cu;
     const System& system;
-    CudaArray* params1; // Equilibrium values
-    CudaArray* params2; // force constants
+    CudaArray params1; // Equilibrium values
+    CudaArray params2; // force constants
 };
 
 /**
@@ -239,7 +234,6 @@ private:
 class CudaCalcAmoebaOutOfPlaneBendForceKernel : public CalcAmoebaOutOfPlaneBendForceKernel {
 public:
     CudaCalcAmoebaOutOfPlaneBendForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system);
-    ~CudaCalcAmoebaOutOfPlaneBendForceKernel();
     /**
      * Initialize the kernel.
      * 
@@ -268,7 +262,7 @@ private:
     int numOutOfPlaneBends;
     CudaContext& cu;
     const System& system;
-    CudaArray* params;
+    CudaArray params;
 };
 
 /**
@@ -277,7 +271,6 @@ private:
 class CudaCalcAmoebaTorsionTorsionForceKernel : public CalcAmoebaTorsionTorsionForceKernel {
 public:
     CudaCalcAmoebaTorsionTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system);
-    ~CudaCalcAmoebaTorsionTorsionForceKernel();
     /**
      * Initialize the kernel.
      * 
@@ -300,9 +293,9 @@ private:
     int numTorsionTorsionGrids;
     CudaContext& cu;
     const System& system;
-    CudaArray* gridValues;
-    CudaArray* gridParams;
-    CudaArray* torsionParams;
+    CudaArray gridValues;
+    CudaArray gridParams;
+    CudaArray torsionParams;
 };
 
 /**
@@ -414,58 +407,58 @@ private:
     const System& system;
     std::vector<int3> covalentFlagValues;
     std::vector<int2> polarizationFlagValues;
-    CudaArray* multipoleParticles;
-    CudaArray* molecularDipoles;
-    CudaArray* molecularQuadrupoles;
-    CudaArray* labFrameDipoles;
-    CudaArray* labFrameQuadrupoles;
-    CudaArray* sphericalDipoles;
-    CudaArray* sphericalQuadrupoles;
-    CudaArray* fracDipoles;
-    CudaArray* fracQuadrupoles;
-    CudaArray* field;
-    CudaArray* fieldPolar;
-    CudaArray* inducedField;
-    CudaArray* inducedFieldPolar;
-    CudaArray* torque;
-    CudaArray* dampingAndThole;
-    CudaArray* inducedDipole;
-    CudaArray* inducedDipolePolar;
-    CudaArray* inducedDipoleErrors;
-    CudaArray* prevDipoles;
-    CudaArray* prevDipolesPolar;
-    CudaArray* prevDipolesGk;
-    CudaArray* prevDipolesGkPolar;
-    CudaArray* prevErrors;
-    CudaArray* diisMatrix;
-    CudaArray* diisCoefficients;
-    CudaArray* extrapolatedDipole;
-    CudaArray* extrapolatedDipolePolar;
-    CudaArray* extrapolatedDipoleGk;
-    CudaArray* extrapolatedDipoleGkPolar;
-    CudaArray* inducedDipoleFieldGradient;
-    CudaArray* inducedDipoleFieldGradientPolar;
-    CudaArray* inducedDipoleFieldGradientGk;
-    CudaArray* inducedDipoleFieldGradientGkPolar;
-    CudaArray* extrapolatedDipoleFieldGradient;
-    CudaArray* extrapolatedDipoleFieldGradientPolar;
-    CudaArray* extrapolatedDipoleFieldGradientGk;
-    CudaArray* extrapolatedDipoleFieldGradientGkPolar;
-    CudaArray* polarizability;
-    CudaArray* covalentFlags;
-    CudaArray* polarizationGroupFlags;
-    CudaArray* pmeGrid;
-    CudaArray* pmeBsplineModuliX;
-    CudaArray* pmeBsplineModuliY;
-    CudaArray* pmeBsplineModuliZ;
-    CudaArray* pmeIgrid;
-    CudaArray* pmePhi;
-    CudaArray* pmePhid;
-    CudaArray* pmePhip;
-    CudaArray* pmePhidp;
-    CudaArray* pmeCphi;
-    CudaArray* pmeAtomRange;
-    CudaArray* lastPositions;
+    CudaArray multipoleParticles;
+    CudaArray molecularDipoles;
+    CudaArray molecularQuadrupoles;
+    CudaArray labFrameDipoles;
+    CudaArray labFrameQuadrupoles;
+    CudaArray sphericalDipoles;
+    CudaArray sphericalQuadrupoles;
+    CudaArray fracDipoles;
+    CudaArray fracQuadrupoles;
+    CudaArray field;
+    CudaArray fieldPolar;
+    CudaArray inducedField;
+    CudaArray inducedFieldPolar;
+    CudaArray torque;
+    CudaArray dampingAndThole;
+    CudaArray inducedDipole;
+    CudaArray inducedDipolePolar;
+    CudaArray inducedDipoleErrors;
+    CudaArray prevDipoles;
+    CudaArray prevDipolesPolar;
+    CudaArray prevDipolesGk;
+    CudaArray prevDipolesGkPolar;
+    CudaArray prevErrors;
+    CudaArray diisMatrix;
+    CudaArray diisCoefficients;
+    CudaArray extrapolatedDipole;
+    CudaArray extrapolatedDipolePolar;
+    CudaArray extrapolatedDipoleGk;
+    CudaArray extrapolatedDipoleGkPolar;
+    CudaArray inducedDipoleFieldGradient;
+    CudaArray inducedDipoleFieldGradientPolar;
+    CudaArray inducedDipoleFieldGradientGk;
+    CudaArray inducedDipoleFieldGradientGkPolar;
+    CudaArray extrapolatedDipoleFieldGradient;
+    CudaArray extrapolatedDipoleFieldGradientPolar;
+    CudaArray extrapolatedDipoleFieldGradientGk;
+    CudaArray extrapolatedDipoleFieldGradientGkPolar;
+    CudaArray polarizability;
+    CudaArray covalentFlags;
+    CudaArray polarizationGroupFlags;
+    CudaArray pmeGrid;
+    CudaArray pmeBsplineModuliX;
+    CudaArray pmeBsplineModuliY;
+    CudaArray pmeBsplineModuliZ;
+    CudaArray pmeIgrid;
+    CudaArray pmePhi;
+    CudaArray pmePhid;
+    CudaArray pmePhip;
+    CudaArray pmePhidp;
+    CudaArray pmeCphi;
+    CudaArray pmeAtomRange;
+    CudaArray lastPositions;
     CudaSort* sort;
     cufftHandle fft;
     CUfunction computeMomentsKernel, recordInducedDipolesKernel, computeFixedFieldKernel, computeInducedFieldKernel, updateInducedFieldKernel, electrostaticsKernel, mapTorqueKernel;
@@ -486,7 +479,6 @@ private:
 class CudaCalcAmoebaGeneralizedKirkwoodForceKernel : public CalcAmoebaGeneralizedKirkwoodForceKernel {
 public:
     CudaCalcAmoebaGeneralizedKirkwoodForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system);
-    ~CudaCalcAmoebaGeneralizedKirkwoodForceKernel();
     /**
      * Initialize the kernel.
      * 
@@ -511,22 +503,22 @@ public:
      * Perform the final parts of the force/energy computation.
      */
     void finishComputation(CudaArray& torque, CudaArray& labFrameDipoles, CudaArray& labFrameQuadrupoles, CudaArray& inducedDipole, CudaArray& inducedDipolePolar, CudaArray& dampingAndThole, CudaArray& covalentFlags, CudaArray& polarizationGroupFlags);
-    CudaArray* getBornRadii() {
+    CudaArray& getBornRadii() {
         return bornRadii;
     }
-    CudaArray* getField() {
+    CudaArray& getField() {
         return field;
     }
-    CudaArray* getInducedField() {
+    CudaArray& getInducedField() {
         return inducedField;
     }
-    CudaArray* getInducedFieldPolar() {
+    CudaArray& getInducedFieldPolar() {
         return inducedFieldPolar;
     }
-    CudaArray* getInducedDipoles() {
+    CudaArray& getInducedDipoles() {
         return inducedDipoleS;
     }
-    CudaArray* getInducedDipolesPolar() {
+    CudaArray& getInducedDipolesPolar() {
         return inducedDipolePolarS;
     }
     /**
@@ -544,15 +536,15 @@ private:
     int computeBornSumThreads, gkForceThreads, chainRuleThreads, ediffThreads;
     AmoebaMultipoleForce::PolarizationType polarizationType;
     std::map<std::string, std::string> defines;
-    CudaArray* params;
-    CudaArray* bornSum;
-    CudaArray* bornRadii;
-    CudaArray* bornForce;
-    CudaArray* field;
-    CudaArray* inducedField;
-    CudaArray* inducedFieldPolar;
-    CudaArray* inducedDipoleS;
-    CudaArray* inducedDipolePolarS;
+    CudaArray params;
+    CudaArray bornSum;
+    CudaArray bornRadii;
+    CudaArray bornForce;
+    CudaArray field;
+    CudaArray inducedField;
+    CudaArray inducedFieldPolar;
+    CudaArray inducedDipoleS;
+    CudaArray inducedDipolePolarS;
     CUfunction computeBornSumKernel, reduceBornSumKernel, surfaceAreaKernel, gkForceKernel, chainRuleKernel, ediffKernel;
 };
 
@@ -592,11 +584,11 @@ private:
     const System& system;
     bool hasInitializedNonbonded;
     double dispersionCoefficient;
-    CudaArray* sigmaEpsilon;
-    CudaArray* bondReductionAtoms;
-    CudaArray* bondReductionFactors;
-    CudaArray* tempPosq;
-    CudaArray* tempForces;
+    CudaArray sigmaEpsilon;
+    CudaArray bondReductionAtoms;
+    CudaArray bondReductionFactors;
+    CudaArray tempPosq;
+    CudaArray tempForces;
     CudaNonbondedUtilities* nonbonded;
     CUfunction prepareKernel, spreadKernel;
 };
@@ -607,7 +599,6 @@ private:
 class CudaCalcAmoebaWcaDispersionForceKernel : public CalcAmoebaWcaDispersionForceKernel {
 public:
     CudaCalcAmoebaWcaDispersionForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system);
-    ~CudaCalcAmoebaWcaDispersionForceKernel();
     /**
      * Initialize the kernel.
      * 
@@ -636,7 +627,7 @@ private:
     CudaContext& cu;
     const System& system;
     double totalMaximumDispersionEnergy;
-    CudaArray* radiusEpsilon;
+    CudaArray radiusEpsilon;
     CUfunction forceKernel;
 };
 
