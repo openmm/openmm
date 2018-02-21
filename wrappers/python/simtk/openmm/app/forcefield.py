@@ -1011,7 +1011,7 @@ class ForceField(object):
 
     def createSystem(self, topology, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
                      constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, residueTemplates=dict(),
-                     ignoreExternalBonds=False, **args):
+                     ignoreExternalBonds=False, switchDistance=None, flexibleConstraints=False, **args):
         """Construct an OpenMM System representing a Topology with this force field.
 
         Parameters
@@ -1047,6 +1047,9 @@ class ForceField(object):
             not terminated properly.  This option can create ambiguities where multiple
             templates match the same residue.  If that happens, use the residueTemplates
             argument to specify which one to use.
+        switchDistance : float=None
+            The distance at which the potential energy switching function is turned on for
+            Lennard-Jones interactions. If this is None, no switching function will be used.
         flexibleConstraints : boolean=False
             If True, parameters for constrained degrees of freedom will be added to the System
         args
@@ -1059,6 +1062,8 @@ class ForceField(object):
         system
             the newly created System
         """
+        args['switchDistance'] = switchDistance
+        args['flexibleConstraints'] = flexibleConstraints
         data = ForceField._SystemData()
         data.atoms = list(topology.atoms())
         for atom in data.atoms:
@@ -2322,6 +2327,9 @@ class NonbondedGenerator(object):
             force.addParticle(values[0], values[1], values[2])
         force.setNonbondedMethod(methodMap[nonbondedMethod])
         force.setCutoffDistance(nonbondedCutoff)
+        if args['switchDistance'] is not None:
+            force.setUseSwitchingFunction(True)
+            force.setSwitchingDistance(args['switchDistance'])
         if 'ewaldErrorTolerance' in args:
             force.setEwaldErrorTolerance(args['ewaldErrorTolerance'])
         if 'useDispersionCorrection' in args:
@@ -2439,6 +2447,9 @@ class LennardJonesGenerator(object):
             self.force.setNonbondedMethod(mm.CustomNonbondedForce.CutoffNonPeriodic)
         else:
             raise AssertionError('Unrecognized nonbonded method [%s]' % nonbondedMethod)
+        if args['switchDistance'] is not None:
+            force.setUseSwitchingFunction(True)
+            force.setSwitchingDistance(args['switchDistance'])
 
         # Add the particles
 

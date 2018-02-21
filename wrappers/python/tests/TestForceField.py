@@ -76,6 +76,21 @@ class TestForceField(unittest.TestCase):
                     cutoff_distance = force.getCutoffDistance()
             self.assertEqual(cutoff_distance, cutoff_check)
 
+    def test_SwitchingDistance(self):
+        """Test that the switchDistance parameter is processed correctly."""
+
+        for switchDistance in [None, 0.9*nanometers]:
+            system = self.forcefield1.createSystem(self.pdb1.topology,
+                                                   nonbondedMethod=PME,
+                                                   switchDistance=switchDistance)
+            for force in system.getForces():
+                if isinstance(force, NonbondedForce):
+                    if switchDistance is None:
+                        self.assertFalse(force.getUseSwitchingFunction())
+                    else:
+                        self.assertTrue(force.getUseSwitchingFunction())
+                        self.assertEqual(switchDistance, force.getSwitchingDistance())
+
     def test_RemoveCMMotion(self):
         """Test both options (True and False) for the removeCMMotion parameter."""
         for b in [True, False]:
