@@ -792,6 +792,16 @@ The error tolerance is roughly equal to the fractional error in the forces due
 to truncating the Ewald summation.  If you do not specify it, a default value of
 0.0005 is used.
 
+Another optional parameter when using a cutoff is :code:`switchDistance`.  This
+causes Lennard-Jones interactions to smoothly go to zero over some finite range,
+rather than being sharply truncated at the cutoff distance.  This can improve
+energy conservation.  To use it, specify a distance at which the interactions
+should start being reduced.  For example:
+::
+
+    system = prmtop.createSystem(nonbondedMethod=PME, nonbondedCutoff=1*nanometer,
+            switchDistance=0.9*nanometer)
+
 
 Nonbonded Forces for AMOEBA
 ---------------------------
