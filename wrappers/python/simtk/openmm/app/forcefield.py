@@ -2486,8 +2486,14 @@ class LennardJonesGenerator(object):
                     else:
                         values1 = self.ljTypes.getAtomParameters(a1, data)
                         values2 = self.ljTypes.getAtomParameters(a2, data)
-                        sigma = 0.5*(values1[0]+values2[0])
-                        epsilon = sqrt(values1[1]*values2[1])
+                        extra1 = self.ljTypes.getExtraParameters(a1, data)
+                        extra2 = self.ljTypes.getExtraParameters(a2, data)
+                        sigma1 = float(extra1['sigma14']) if 'sigma14' in extra1 else values1[0]
+                        sigma2 = float(extra2['sigma14']) if 'sigma14' in extra2 else values2[0]
+                        epsilon1 = float(extra1['epsilon14']) if 'epsilon14' in extra1 else values1[1]
+                        epsilon2 = float(extra2['epsilon14']) if 'epsilon14' in extra2 else values2[1]
+                        sigma = 0.5*(sigma1+sigma2)
+                        epsilon = sqrt(epsilon1*epsilon2)
                     bonded.addBond(p1, p2, (sigma, epsilon))
 
 parsers["LennardJonesForce"] = LennardJonesGenerator.parseElement
