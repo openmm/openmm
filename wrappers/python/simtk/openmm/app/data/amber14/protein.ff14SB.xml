@@ -272,6 +272,7 @@
       <Bond atomName1="C" atomName2="O"/>
       <ExternalBond atomName="N"/>
       <ExternalBond atomName="C"/>
+      <ExternalBond atomName="SG"/>
     </Residue>
     <Residue name="GLH">
       <Atom charge="-0.4157" name="N" type="protein-N"/>
