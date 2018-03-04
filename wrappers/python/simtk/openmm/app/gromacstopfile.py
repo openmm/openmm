@@ -44,7 +44,7 @@ import os
 import re
 import distutils.spawn
 from collections import OrderedDict, defaultdict
-from itertools import combinations
+from itertools import combinations, combinations_with_replacement
 
 HBonds = ff.HBonds
 AllBonds = ff.AllBonds
@@ -675,7 +675,7 @@ class GromacsTopFile(object):
             for _ in range(moleculeCount):
                 for atom in moleculeType.atoms:
                     atom_types.append(atom[1])
-        has_nbfix_terms = any([pair in self._nonbondTypes for pair in combinations(sorted(set(atom_types)), 2)])
+        has_nbfix_terms = any([pair in self._nonbondTypes for pair in combinations_with_replacement(sorted(set(atom_types)), 2)])
 
         if has_nbfix_terms:
             # Build a lookup table and angle/dihedral indices list to
