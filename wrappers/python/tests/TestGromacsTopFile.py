@@ -164,9 +164,10 @@ class TestGromacsTopFile(unittest.TestCase):
         context = Context(system, VerletIntegrator(1*femtosecond),
                           Platform.getPlatformByName('Reference'))
         context.setPositions(gro.positions)
+        context.computeVirtualSites()
         ene = context.getState(getEnergy=True).getPotentialEnergy()
         # the energy output is from gromacs and it only prints out 6 sig digits.
-        self.assertAlmostEqual(ene.value_in_unit(kilojoules_per_mole), 187.559, places=3)
+        self.assertAlmostEqual(ene.value_in_unit(kilojoules_per_mole), 1.88855e+02, places=3)
 
 if __name__ == '__main__':
     unittest.main()

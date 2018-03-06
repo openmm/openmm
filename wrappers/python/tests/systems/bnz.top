@@ -27,6 +27,10 @@ CG2R61    6    12.011000    0.000  A  0.355005321205  0.29288
 HGR61     1     1.008000    0.000  A  0.242003727796  0.12552
 LP        0     0.000000    0.00   A  0.0             0.0    ; pram
 
+; NBFIX for LP, rmin=1.2/2^(1/6), eps=4.184*.01
+[ nonbond_params ]
+LP     LP  1  1.069078461768  0.041840000000                 ; pram
+
 [ bondtypes ]
 ;      i        j  func           b0           kb
   CG2R61   CG2R61     1   0.13750000    255224.00
@@ -159,15 +163,6 @@ BENX              3
 [ virtual_sites2 ]
 ; Vsite from                    funct   a 
 13       1       11       1      0.500
-
-[ atomtypes ]
-;type atnum         mass   charge  ?           sigma  epsilon
-; special dummy-type particles
-LP      0       0.000000        0.00    A       0.0     0.0    ; pram
-
-; NBFIX for LP, rmin=1.2/2^(1/6), eps=4.184*.01
-[ nonbond_params ]
-LP     LP  1  1.069078461768  0.041840000000                 ; pram
 
 [ system ]
 ; Name
