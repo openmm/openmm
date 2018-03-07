@@ -151,6 +151,24 @@ class TestGromacsTopFile(unittest.TestCase):
         totalMass2 = sum([system2.getParticleMass(i) for i in range(system2.getNumParticles())]).value_in_unit(amu)
         self.assertAlmostEqual(totalMass1, totalMass2)
 
+    def test_VirtualParticle(self):
+        """Test virtual particle works correctly."""
+
+        top = GromacsTopFile('systems/bnz.top')
+        gro = GromacsGroFile('systems/bnz.gro')
+        system = top.createSystem()
+
+        self.assertEqual(26, system.getNumParticles())
+        self.assertEqual(1, len(top._moleculeTypes['BENX'].vsites2))
+
+        context = Context(system, VerletIntegrator(1*femtosecond),
+                          Platform.getPlatformByName('Reference'))
+        context.setPositions(gro.positions)
+        context.computeVirtualSites()
+        ene = context.getState(getEnergy=True).getPotentialEnergy()
+        # the energy output is from gromacs and it only prints out 6 sig digits.
+        self.assertAlmostEqual(ene.value_in_unit(kilojoules_per_mole), 1.88855e+02, places=3)
+
 if __name__ == '__main__':
     unittest.main()
 

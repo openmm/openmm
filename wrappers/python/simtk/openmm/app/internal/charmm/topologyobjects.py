@@ -531,7 +531,7 @@ class ResidueList(list):
         return atom
 
     def append(self, thing):
-        raise NotImplemented('Use "add_atom" to build a residue list')
+        raise NotImplementedError('Use "add_atom" to build a residue list')
 
     extend = append
 
