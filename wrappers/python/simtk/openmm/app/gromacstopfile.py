@@ -889,11 +889,8 @@ class GromacsTopFile(object):
                         q = float(params[4])
 
                     if has_nbfix_terms:
-                        # when NBFIX term is found, add all possible nonbond atom pairs explicitly
                         if self._defaults[1] != '2':
-                            # CHARMM parameters are compatible with the Lorentz-Berthelot combination
-                            # rule (type 2) and we will stick with that for simplicity.
-                            raise NotImplemented
+                            raise NotImplemented('NBFIX terms with LB combination rule is not yet supported')
                         nb.addParticle(q, 1.0, 0.0)
                         atom_charges.append(q)
                     else:
@@ -1056,11 +1053,8 @@ class GromacsTopFile(object):
             lj.setCutoffDistance(nonbondedCutoff)
 
         if has_nbfix_terms:
-            # when NBFIX term is found, add all possible nonbond atom pairs explicitly
             if self._defaults[1] != '2':
-                # CHARMM parameters are compatible with the Lorentz-Berthelot combination
-                # rule (type 2) and we will stick with that for simplicity.
-                raise NotImplemented
+                raise NotImplemented('NBFIX terms with LB combination rule is not yet supported')
 
             atom_nbfix_types = set([])
             for pair in self._nonbondTypes:
