@@ -342,9 +342,9 @@ class CharmmPsfFile(object):
             # We have a CHARMM PSF file; now do NUMLP/NUMLPH sections
             numlp, numlph = psfsections['NUMLP NUMLPH'][0]
             if numlp != 0 or numlph != 0:
-                raise NotImplemented('Cannot currently handle PSFs with lone '
-                                     'pairs defined in the NUMLP/NUMLPH '
-                                     'section.')
+                raise NotImplementedError('Cannot currently handle PSFs with lone '
+                                          'pairs defined in the NUMLP/NUMLPH '
+                                          'section.')
         # Now do the CMAPs
         ncrterm = conv(psfsections['NCRTERM'][0], int, 'Number of cross-terms')
         holder = psfsections['NCRTERM'][1]

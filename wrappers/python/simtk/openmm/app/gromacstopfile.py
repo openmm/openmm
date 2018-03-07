@@ -890,7 +890,7 @@ class GromacsTopFile(object):
 
                     if has_nbfix_terms:
                         if self._defaults[1] != '2':
-                            raise NotImplemented('NBFIX terms with LB combination rule is not yet supported')
+                            raise NotImplementedError('NBFIX terms with LB combination rule is not yet supported')
                         nb.addParticle(q, 1.0, 0.0)
                         atom_charges.append(q)
                     else:
@@ -1054,7 +1054,7 @@ class GromacsTopFile(object):
 
         if has_nbfix_terms:
             if self._defaults[1] != '2':
-                raise NotImplemented('NBFIX terms with LB combination rule is not yet supported')
+                raise NotImplementedError('NBFIX terms with LB combination rule is not yet supported')
 
             atom_nbfix_types = set([])
             for pair in self._nonbondTypes:
