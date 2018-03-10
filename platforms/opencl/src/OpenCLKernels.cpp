@@ -2713,6 +2713,16 @@ void OpenCLCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
     }
     interactionGroupData.initialize<mm_int4>(cl, groupData.size(), "interactionGroupData");
     interactionGroupData.upload(groupData);
+    numGroupTiles.initialize<cl_int>(cl, 1, "numGroupTiles");
+
+    // Allocate space for a neighbor list, if necessary.
+
+    if (force.getNonbondedMethod() != CustomNonbondedForce::NoCutoff && groupData.size() > cl.getNumThreadBlocks()) {
+        filteredGroupData.initialize<mm_int4>(cl, groupData.size(), "filteredGroupData");
+        interactionGroupData.copyTo(filteredGroupData);
+        int numTiles = groupData.size()/32;
+        numGroupTiles.upload(&numTiles);
+    }
     
     // Create the kernel.
     
@@ -2791,11 +2801,16 @@ void OpenCLCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
         defines["USE_CUTOFF"] = "1";
     if (force.getNonbondedMethod() == CustomNonbondedForce::CutoffPeriodic)
         defines["USE_PERIODIC"] = "1";
-    defines["LOCAL_MEMORY_SIZE"] = cl.intToString(max(32, cl.getNonbondedUtilities().getForceThreadBlockSize()));
+    int localMemorySize = max(32, cl.getNonbondedUtilities().getForceThreadBlockSize());
+    defines["LOCAL_MEMORY_SIZE"] = cl.intToString(localMemorySize);
+    defines["WARPS_IN_BLOCK"] = cl.intToString(localMemorySize/32);
     double cutoff = force.getCutoffDistance();
     defines["CUTOFF_SQUARED"] = cl.doubleToString(cutoff*cutoff);
+    double paddedCutoff = cl.getNonbondedUtilities().padCutoff(cutoff);
+    defines["PADDED_CUTOFF_SQUARED"] = cl.doubleToString(paddedCutoff*paddedCutoff);
     defines["PADDED_NUM_ATOMS"] = cl.intToString(cl.getPaddedNumAtoms());
     defines["TILE_SIZE"] = "32";
+    defines["NUM_TILES"] = cl.intToString(numTileSets);
     int numContexts = cl.getPlatformData().contexts.size();
     int startIndex = cl.getContextIndex()*numTileSets/numContexts;
     int endIndex = (cl.getContextIndex()+1)*numTileSets/numContexts;
@@ -2805,10 +2820,17 @@ void OpenCLCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
         defines["PARAMETER_SIZE_IS_EVEN"] = "1";
     cl::Program program = cl.createProgram(cl.replaceStrings(OpenCLKernelSources::customNonbondedGroups, replacements), defines);
     interactionGroupKernel = cl::Kernel(program, "computeInteractionGroups");
+    prepareNeighborListKernel = cl::Kernel(program, "prepareToBuildNeighborList");
+    buildNeighborListKernel = cl::Kernel(program, "buildNeighborList");
     numGroupThreadBlocks = cl.getNonbondedUtilities().getNumForceThreadBlocks();
 }
 
 double OpenCLCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    useNeighborList = (filteredGroupData.isInitialized() && cl.getNonbondedUtilities().getUseCutoff());
+    if (useNeighborList && cl.getContextIndex() > 0) {
+        // When using a neighbor list, run the whole calculation on a single device.
+        return 0.0;
+    }
     if (globals.isInitialized()) {
         bool changed = false;
         for (int i = 0; i < (int) globalParamNames.size(); i++) {
@@ -2837,7 +2859,9 @@ double OpenCLCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
             interactionGroupKernel.setArg<cl::Buffer>(index++, (useLong ? cl.getLongForceBuffer() : cl.getForceBuffers()).getDeviceBuffer());
             interactionGroupKernel.setArg<cl::Buffer>(index++, cl.getEnergyBuffer().getDeviceBuffer());
             interactionGroupKernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
-            interactionGroupKernel.setArg<cl::Buffer>(index++, interactionGroupData.getDeviceBuffer());
+            interactionGroupKernel.setArg<cl::Buffer>(index++, (useNeighborList ? filteredGroupData : interactionGroupData).getDeviceBuffer());
+            interactionGroupKernel.setArg<cl::Buffer>(index++, numGroupTiles.getDeviceBuffer());
+            interactionGroupKernel.setArg<cl_bool>(index++, useNeighborList);
             index += 5;
             for (auto& buffer : params->getBuffers())
                 interactionGroupKernel.setArg<cl::Memory>(index++, buffer.getMemory());
@@ -2847,9 +2871,27 @@ double OpenCLCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
                 interactionGroupKernel.setArg<cl::Buffer>(index++, globals.getDeviceBuffer());
             if (hasParamDerivs)
                 interactionGroupKernel.setArg<cl::Memory>(index++, cl.getEnergyParamDerivBuffer().getDeviceBuffer());
+            if (useNeighborList) {
+                // Initialize kernels for building the interaction group neighbor list.
+                
+                prepareNeighborListKernel.setArg<cl::Buffer>(0, cl.getNonbondedUtilities().getRebuildNeighborList().getDeviceBuffer());
+                prepareNeighborListKernel.setArg<cl::Buffer>(1, numGroupTiles.getDeviceBuffer());
+                buildNeighborListKernel.setArg<cl::Buffer>(0, cl.getNonbondedUtilities().getRebuildNeighborList().getDeviceBuffer());
+                buildNeighborListKernel.setArg<cl::Buffer>(1, numGroupTiles.getDeviceBuffer());
+                buildNeighborListKernel.setArg<cl::Buffer>(2, cl.getPosq().getDeviceBuffer());
+                buildNeighborListKernel.setArg<cl::Buffer>(3, interactionGroupData.getDeviceBuffer());
+                buildNeighborListKernel.setArg<cl::Buffer>(4, filteredGroupData.getDeviceBuffer());
+            }
         }
-        setPeriodicBoxArgs(cl, interactionGroupKernel, 4);
         int forceThreadBlockSize = max(32, cl.getNonbondedUtilities().getForceThreadBlockSize());
+        if (useNeighborList) {
+            // Rebuild the neighbor list, if necessary.
+
+            setPeriodicBoxArgs(cl, buildNeighborListKernel, 5);
+            cl.executeKernel(prepareNeighborListKernel, 1, 1);
+            cl.executeKernel(buildNeighborListKernel, numGroupThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
+        }
+        setPeriodicBoxArgs(cl, interactionGroupKernel, 6);
         cl.executeKernel(interactionGroupKernel, numGroupThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
     }
     mm_double4 boxSize = cl.getPeriodicBoxSizeDouble();
