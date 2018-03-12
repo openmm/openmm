@@ -2584,6 +2584,16 @@ void CudaCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNonbo
     }
     interactionGroupData.initialize<int4>(cu, groupData.size(), "interactionGroupData");
     interactionGroupData.upload(groupData);
+    numGroupTiles.initialize<int>(cu, 1, "numGroupTiles");
+
+    // Allocate space for a neighbor list, if necessary.
+
+    if (force.getNonbondedMethod() != CustomNonbondedForce::NoCutoff && groupData.size() > cu.getNumThreadBlocks()) {
+        filteredGroupData.initialize<int4>(cu, groupData.size(), "filteredGroupData");
+        interactionGroupData.copyTo(filteredGroupData);
+        int numTiles = groupData.size()/32;
+        numGroupTiles.upload(&numTiles);
+    }
     
     // Create the kernel.
     
@@ -2662,11 +2672,16 @@ void CudaCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNonbo
         defines["USE_CUTOFF"] = "1";
     if (force.getNonbondedMethod() == CustomNonbondedForce::CutoffPeriodic)
         defines["USE_PERIODIC"] = "1";
-    defines["LOCAL_MEMORY_SIZE"] = cu.intToString(max(32, cu.getNonbondedUtilities().getForceThreadBlockSize()));
+    int localMemorySize = max(32, cu.getNonbondedUtilities().getForceThreadBlockSize());
+    defines["LOCAL_MEMORY_SIZE"] = cu.intToString(localMemorySize);
+    defines["WARPS_IN_BLOCK"] = cu.intToString(localMemorySize/32);
     double cutoff = force.getCutoffDistance();
     defines["CUTOFF_SQUARED"] = cu.doubleToString(cutoff*cutoff);
+    double paddedCutoff = cu.getNonbondedUtilities().padCutoff(cutoff);
+    defines["PADDED_CUTOFF_SQUARED"] = cu.doubleToString(paddedCutoff*paddedCutoff);
     defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
     defines["TILE_SIZE"] = "32";
+    defines["NUM_TILES"] = cu.intToString(numTileSets);
     int numContexts = cu.getPlatformData().contexts.size();
     int startIndex = cu.getContextIndex()*numTileSets/numContexts;
     int endIndex = (cu.getContextIndex()+1)*numTileSets/numContexts;
@@ -2674,12 +2689,19 @@ void CudaCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNonbo
     defines["LAST_TILE"] = cu.intToString(endIndex);
     if ((localDataSize/4)%2 == 0 && !cu.getUseDoublePrecision())
         defines["PARAMETER_SIZE_IS_EVEN"] = "1";
-    CUmodule program = cu.createModule(CudaKernelSources::vectorOps+cu.replaceStrings(CudaKernelSources::customNonbondedGroups, replacements), defines);
-    interactionGroupKernel = cu.getKernel(program, "computeInteractionGroups");
+    CUmodule module = cu.createModule(CudaKernelSources::vectorOps+cu.replaceStrings(CudaKernelSources::customNonbondedGroups, replacements), defines);
+    interactionGroupKernel = cu.getKernel(module, "computeInteractionGroups");
+    prepareNeighborListKernel = cu.getKernel(module, "prepareToBuildNeighborList");
+    buildNeighborListKernel = cu.getKernel(module, "buildNeighborList");
     numGroupThreadBlocks = cu.getNonbondedUtilities().getNumForceThreadBlocks();
 }
 
 double CudaCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    useNeighborList = (filteredGroupData.isInitialized() && cu.getNonbondedUtilities().getUseCutoff());
+    if (useNeighborList && cu.getContextIndex() > 0) {
+        // When using a neighbor list, run the whole calculation on a single device.
+        return 0.0;
+    }
     if (globals.isInitialized()) {
         bool changed = false;
         for (int i = 0; i < (int) globalParamNames.size(); i++) {
@@ -2706,7 +2728,9 @@ double CudaCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool in
             interactionGroupArgs.push_back(&cu.getForce().getDevicePointer());
             interactionGroupArgs.push_back(&cu.getEnergyBuffer().getDevicePointer());
             interactionGroupArgs.push_back(&cu.getPosq().getDevicePointer());
-            interactionGroupArgs.push_back(&interactionGroupData.getDevicePointer());
+            interactionGroupArgs.push_back(&(useNeighborList ? filteredGroupData : interactionGroupData).getDevicePointer());
+            interactionGroupArgs.push_back(&numGroupTiles.getDevicePointer());
+            interactionGroupArgs.push_back(&useNeighborList);
             interactionGroupArgs.push_back(cu.getPeriodicBoxSizePointer());
             interactionGroupArgs.push_back(cu.getInvPeriodicBoxSizePointer());
             interactionGroupArgs.push_back(cu.getPeriodicBoxVecXPointer());
@@ -2720,8 +2744,30 @@ double CudaCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool in
                 interactionGroupArgs.push_back(&globals.getDevicePointer());
             if (hasParamDerivs)
                 interactionGroupArgs.push_back(&cu.getEnergyParamDerivBuffer().getDevicePointer());
+            if (useNeighborList) {
+                // Initialize kernels for building the interaction group neighbor list.
+
+                prepareNeighborListArgs.push_back(&cu.getNonbondedUtilities().getRebuildNeighborList().getDevicePointer());
+                prepareNeighborListArgs.push_back(&numGroupTiles.getDevicePointer());
+                buildNeighborListArgs.push_back(&cu.getNonbondedUtilities().getRebuildNeighborList().getDevicePointer());
+                buildNeighborListArgs.push_back(&numGroupTiles.getDevicePointer());
+                buildNeighborListArgs.push_back(&cu.getPosq().getDevicePointer());
+                buildNeighborListArgs.push_back(&interactionGroupData.getDevicePointer());
+                buildNeighborListArgs.push_back(&filteredGroupData.getDevicePointer());
+                buildNeighborListArgs.push_back(cu.getPeriodicBoxSizePointer());
+                buildNeighborListArgs.push_back(cu.getInvPeriodicBoxSizePointer());
+                buildNeighborListArgs.push_back(cu.getPeriodicBoxVecXPointer());
+                buildNeighborListArgs.push_back(cu.getPeriodicBoxVecYPointer());
+                buildNeighborListArgs.push_back(cu.getPeriodicBoxVecZPointer());
+            }
         }
         int forceThreadBlockSize = cu.getNonbondedUtilities().getForceThreadBlockSize();
+        if (useNeighborList) {
+            // Rebuild the neighbor list, if necessary.
+
+            cu.executeKernel(prepareNeighborListKernel, &prepareNeighborListArgs[0], 1, 1);
+            cu.executeKernel(buildNeighborListKernel, &buildNeighborListArgs[0], numGroupThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
+        }
         cu.executeKernel(interactionGroupKernel, &interactionGroupArgs[0], numGroupThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
     }
     double4 boxSize = cu.getPeriodicBoxSize();

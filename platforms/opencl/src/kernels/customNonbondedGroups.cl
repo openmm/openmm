@@ -43,7 +43,7 @@ __kernel void computeInteractionGroups(
         __global real4* restrict forceBuffers,
 #endif
         __global mixed* restrict energyBuffer, __global const real4* restrict posq, __global const int4* restrict groupData,
-        __global int* restrict numGroupTiles, bool useNeighborList,
+        __global int* restrict numGroupTiles, int useNeighborList,
         real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ
         PARAMETER_ARGUMENTS) {
     const unsigned int totalWarps = get_global_size(0)/TILE_SIZE;
@@ -159,8 +159,8 @@ __kernel void buildNeighborList(__global int* restrict rebuildNeighborList, __gl
     const unsigned int tgx = get_local_id(0) & (TILE_SIZE-1); // index within the warp
     const unsigned int tbx = get_local_id(0) - tgx;           // block warpIndex
     __local real4 localPos[LOCAL_MEMORY_SIZE];
-    __local bool anyInteraction[WARPS_IN_BLOCK];
-    __local int tileIndex[WARPS_IN_BLOCK];
+    __local volatile bool anyInteraction[WARPS_IN_BLOCK];
+    __local volatile int tileIndex[WARPS_IN_BLOCK];
 
     const unsigned int startTile = warp*NUM_TILES/totalWarps;
     const unsigned int endTile = (warp+1)*NUM_TILES/totalWarps;

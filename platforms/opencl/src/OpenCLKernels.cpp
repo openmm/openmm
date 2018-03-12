@@ -2861,7 +2861,7 @@ double OpenCLCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
             interactionGroupKernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
             interactionGroupKernel.setArg<cl::Buffer>(index++, (useNeighborList ? filteredGroupData : interactionGroupData).getDeviceBuffer());
             interactionGroupKernel.setArg<cl::Buffer>(index++, numGroupTiles.getDeviceBuffer());
-            interactionGroupKernel.setArg<cl_bool>(index++, useNeighborList);
+            interactionGroupKernel.setArg<cl_int>(index++, useNeighborList);
             index += 5;
             for (auto& buffer : params->getBuffers())
                 interactionGroupKernel.setArg<cl::Memory>(index++, buffer.getMemory());
