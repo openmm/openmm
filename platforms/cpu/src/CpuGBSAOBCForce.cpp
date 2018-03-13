@@ -143,7 +143,10 @@ void CpuGBSAOBCForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
             break;
         int numInBlock = min(4, numParticles-blockStart);
         ivec4 blockAtomIndex(blockStart, blockStart+1, blockStart+2, blockStart+3);
-        float atomRadius[4], atomx[4], atomy[4], atomz[4];
+        float atomRadius[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+        float atomx[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+        float atomy[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+        float atomz[4] = {0.0f, 0.0f, 0.0f, 0.0f};
         int blockMask[4] = {0, 0, 0, 0};
         for (int i = 0; i < numInBlock; i++) {
             int atomIndex = blockStart+i;
@@ -242,7 +245,10 @@ void CpuGBSAOBCForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
             break;
         int numInBlock = min(4, numParticles-blockStart);
         ivec4 blockAtomIndex(blockStart, blockStart+1, blockStart+2, blockStart+3);
-        float atomCharge[4], atomx[4], atomy[4], atomz[4];
+        float atomCharge[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+        float atomx[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+        float atomy[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+        float atomz[4] = {0.0f, 0.0f, 0.0f, 0.0f};
         int blockMask[4] = {0, 0, 0, 0};
         fvec4 blockAtomForceX(0.0f), blockAtomForceY(0.0f), blockAtomForceZ(0.0f), blockAtomBornForce(0.0f);
         for (int i = 0; i < numInBlock; i++) {
