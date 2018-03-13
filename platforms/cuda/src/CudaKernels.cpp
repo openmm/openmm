@@ -54,6 +54,7 @@
 #include "jama_eig.h"
 #include <algorithm>
 #include <cmath>
+#include <iterator>
 #include <set>
 
 using namespace OpenMM;
@@ -2429,7 +2430,8 @@ void CudaCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNonbo
     
     vector<vector<int> > atomLists;
     vector<pair<int, int> > tiles;
-    map<pair<int, int>, int> duplicateInteractions;
+    vector<int> tileGroup;
+    vector<vector<int> > duplicateAtomsForGroup;
     for (int group = 0; group < force.getNumInteractionGroups(); group++) {
         // Get the list of atoms in this group and sort them.
         
@@ -2440,6 +2442,10 @@ void CudaCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNonbo
         atoms2.insert(atoms2.begin(), set2.begin(), set2.end());
         sort(atoms1.begin(), atoms1.end());
         sort(atoms2.begin(), atoms2.end());
+        duplicateAtomsForGroup.push_back(vector<int>());
+        set_intersection(set1.begin(), set1.end(), set2.begin(), set2.end(),
+                inserter(duplicateAtomsForGroup[group], duplicateAtomsForGroup[group].begin()));
+        sort(duplicateAtomsForGroup[group].begin(), duplicateAtomsForGroup[group].end());
         
         // Find how many tiles we will create for this group.
         
@@ -2451,9 +2457,12 @@ void CudaCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNonbo
         
         // Add the tiles.
         
+        int firstTile = tiles.size();
         for (int i = 0; i < numBlocks1; i++)
-            for (int j = 0; j < numBlocks2; j++)
+            for (int j = 0; j < numBlocks2; j++) {
                 tiles.push_back(make_pair(atomLists.size()+i, atomLists.size()+numBlocks1+j));
+                tileGroup.push_back(group);
+            }
         
         // Add the atom lists.
         
@@ -2473,22 +2482,6 @@ void CudaCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNonbo
                 atoms.push_back(atoms2[j]);
             atomLists.push_back(atoms);
         }
-        
-        // If this group contains duplicate interactions, record that we need to skip them once.
-        
-        for (int a1 : atoms1) {
-            if (set2.find(a1) == set2.end())
-                continue;
-            for (int j = 0; j < (int) atoms2.size() && atoms2[j] < a1; j++) {
-                int a2 = atoms2[j];
-                if (set1.find(a2) != set1.end()) {
-                    pair<int, int> key = make_pair(a2, a1);
-                    if (duplicateInteractions.find(key) == duplicateInteractions.end())
-                        duplicateInteractions[key] = 0;
-                    duplicateInteractions[key]++;
-                }
-            }
-        }
     }
     
     // Build a lookup table for quickly identifying excluded interactions.
@@ -2506,15 +2499,18 @@ void CudaCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNonbo
     vector<vector<int> > exclusionFlags(tiles.size());
     vector<pair<int, int> > tileOrder;
     for (int tile = 0; tile < tiles.size(); tile++) {
+        bool swapped = false;
         if (atomLists[tiles[tile].first].size() < atomLists[tiles[tile].second].size()) {
             // For efficiency, we want the first axis to be the larger one.
             
             int swap = tiles[tile].first;
             tiles[tile].first = tiles[tile].second;
             tiles[tile].second = swap;
+            swapped = true;
         }
         vector<int>& atoms1 = atomLists[tiles[tile].first];
         vector<int>& atoms2 = atomLists[tiles[tile].second];
+        vector<int>& duplicateAtoms = duplicateAtomsForGroup[tileGroup[tile]];
         vector<int> flags(atoms1.size(), (int) (1LL<<atoms2.size())-1);
         int numExcluded = 0;
         for (int i = 0; i < (int) atoms1.size(); i++)
@@ -2525,11 +2521,10 @@ void CudaCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNonbo
                 pair<int, int> key = make_pair(min(a1, a2), max(a1, a2));
                 if (a1 == a2 || exclusions.find(key) != exclusions.end())
                     isExcluded = true; // This is an excluded interaction.
-                else if (duplicateInteractions.find(key) != duplicateInteractions.end() && duplicateInteractions[key] > 0) {
+                else if ((a1 > a2) == swapped && binary_search(duplicateAtoms.begin(), duplicateAtoms.end(), a1) && binary_search(duplicateAtoms.begin(), duplicateAtoms.end(), a2)) {
                     // Both atoms are in both sets, so skip duplicate interactions.
                     
                     isExcluded = true;
-                    duplicateInteractions[key]--;
                 }
                 if (isExcluded) {
                     flags[i] &= -1-(1<<j);
