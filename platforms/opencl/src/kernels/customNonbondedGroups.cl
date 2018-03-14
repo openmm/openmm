@@ -193,6 +193,7 @@ __kernel void buildNeighborList(__global int* restrict rebuildNeighborList, __gl
             SYNC_WARPS;
         }
         if (anyInteraction[local_warp]) {
+            SYNC_WARPS;
             if (tgx == 0)
                 tileIndex[local_warp] = atomic_add(numGroupTiles, 1);
             SYNC_WARPS;

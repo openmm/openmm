@@ -296,6 +296,7 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
         blockSorter = new OpenCLSort(context, new BlockSortTrait(context.getUseDoublePrecision()), numAtomBlocks);
         vector<cl_uint> count(1, 0);
         interactionCount.upload(count);
+        rebuildNeighborList.upload(count);
     }
 }
 
