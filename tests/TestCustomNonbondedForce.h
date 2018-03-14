@@ -7,7 +7,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -978,6 +978,68 @@ void testInteractionGroupTabulatedFunction() {
     }
 }
 
+void testInteractionGroupWithCutoff() {
+    const int numParticles = 1000;
+    const double boxSize = 10.0;
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    NonbondedForce* standard = new NonbondedForce();
+    CustomNonbondedForce* custom = new CustomNonbondedForce("100/(r+0.1)");
+    system.addForce(standard);
+    system.addForce(custom);
+    standard->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    custom->setNonbondedMethod(CustomNonbondedForce::CutoffPeriodic);
+    standard->setCutoffDistance(1.0);
+    custom->setCutoffDistance(1.0);
+    standard->setUseSwitchingFunction(true);
+    custom->setUseSwitchingFunction(true);
+    standard->setSwitchingDistance(0.9);
+    custom->setSwitchingDistance(0.8);
+    vector<Vec3> positions(numParticles);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(10.0);
+        standard->addParticle(0.0, 0.2, 0.1);
+        custom->addParticle();
+        while (true) {
+            positions[i] = Vec3(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt))*boxSize;
+            bool tooClose = false;
+            for (int j = 0; j < i; j++) {
+                Vec3 delta = positions[i]-positions[j];
+                if (delta.dot(delta) < 0.5*0.5)
+                    tooClose = true;
+            }
+            if (!tooClose)
+                break;
+        }
+    }
+    set<int> set1, set2;
+    for (int i = 0; i < 10; i++)
+        set1.insert(2*i);
+    for (int i = 0; i < numParticles; i++)
+        set2.insert(i);
+    custom->addInteractionGroup(set1, set2);
+    custom->setForceGroup(1);
+    
+    // Try simulating it and see if energy is conserved (indicating that any optimizations
+    // for combining the cutoff with the interaction group are behaving consistently).
+
+    VerletIntegrator integrator(0.001);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    context.setVelocitiesToTemperature(100);
+    ASSERT(context.getState(State::Energy, false, 1<<1).getPotentialEnergy() != 0.0);
+    State initialState = context.getState(State::Energy);
+    double initialEnergy = initialState.getPotentialEnergy()+initialState.getKineticEnergy();
+    for (int i = 0; i < 100; i++) {
+        integrator.step(10);
+        State state = context.getState(State::Energy);
+        double energy = state.getPotentialEnergy()+state.getKineticEnergy();
+        ASSERT_EQUAL_TOL(initialEnergy, energy, 0.001);
+    }
+}
+
 void testMultipleCutoffs() {
     System system;
     system.addParticle(1.0);
@@ -1253,6 +1315,7 @@ int main(int argc, char* argv[]) {
         testLargeInteractionGroup();
         testInteractionGroupLongRangeCorrection();
         testInteractionGroupTabulatedFunction();
+        testInteractionGroupWithCutoff();
         testMultipleCutoffs();
         testMultipleSwitches();
         testIllegalVariable();

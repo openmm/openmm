@@ -143,6 +143,11 @@ public:
      */
     double getMaxCutoffDistance();
     /**
+     * Given a nonbonded cutoff, get the padded cutoff distance used in computing
+     * the neighbor list.
+     */
+    double padCutoff(double cutoff);
+    /**
      * Prepare to compute interactions.  This updates the neighbor list.
      */
     void prepareInteractions(int forceGroups);
@@ -219,6 +224,13 @@ public:
      */
     CudaArray& getExclusionRowIndices() {
         return exclusionRowIndices;
+    }
+    /**
+     * Get the array containing a flag for whether the neighbor list was rebuilt
+     * on the most recent call to prepareInteractions().
+     */
+    CudaArray& getRebuildNeighborList() {
+        return rebuildNeighborList;
     }
     /**
      * Get the index of the first tile this context is responsible for processing.

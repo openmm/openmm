@@ -742,15 +742,15 @@ private:
     ForceInfo* info;
     OpenCLParameterSet* params;
     OpenCLArray globals;
-    OpenCLArray interactionGroupData;
-    cl::Kernel interactionGroupKernel;
+    OpenCLArray interactionGroupData, filteredGroupData, numGroupTiles;
+    cl::Kernel interactionGroupKernel, prepareNeighborListKernel, buildNeighborListKernel;
     std::vector<void*> interactionGroupArgs;
     std::vector<std::string> globalParamNames;
     std::vector<cl_float> globalParamValues;
     std::vector<OpenCLArray> tabulatedFunctions;
     double longRangeCoefficient;
     std::vector<double> longRangeCoefficientDerivs;
-    bool hasInitializedLongRangeCorrection, hasInitializedKernel, hasParamDerivs;
+    bool hasInitializedLongRangeCorrection, hasInitializedKernel, hasParamDerivs, useNeighborList;
     int numGroupThreadBlocks;
     CustomNonbondedForce* forceCopy;
     const System& system;

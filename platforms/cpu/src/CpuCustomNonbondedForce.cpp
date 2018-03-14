@@ -252,7 +252,9 @@ void CpuCustomNonbondedForce::calculateOneIxn(int ii, int jj, ThreadData& data,
     // accumulate forces
 
     double dEdR = (includeForce ? data.forceExpression.evaluate()/r : 0.0);
-    double energy = (includeEnergy ? data.energyExpression.evaluate() : 0.0);
+    double energy = 0.0;
+    if (includeEnergy || (useSwitch && r > switchingDistance))
+        energy = data.energyExpression.evaluate();
     double switchValue = 1.0;
     if (useSwitch) {
         if (r > switchingDistance) {
