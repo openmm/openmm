@@ -10,6 +10,7 @@ typedef struct {
 
 extern "C" __global__ void computeInteractionGroups(
         unsigned long long* __restrict__ forceBuffers, mixed* __restrict__ energyBuffer, const real4* __restrict__ posq, const int4* __restrict__ groupData,
+        int* __restrict__ numGroupTiles, bool useNeighborList,
         real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ
         PARAMETER_ARGUMENTS) {
     const unsigned int totalWarps = (blockDim.x*gridDim.x)/TILE_SIZE;
@@ -20,8 +21,8 @@ extern "C" __global__ void computeInteractionGroups(
     INIT_DERIVATIVES
     __shared__ AtomData localData[LOCAL_MEMORY_SIZE];
 
-    const unsigned int startTile = FIRST_TILE+warp*(LAST_TILE-FIRST_TILE)/totalWarps;
-    const unsigned int endTile = FIRST_TILE+(warp+1)*(LAST_TILE-FIRST_TILE)/totalWarps;
+    const unsigned int startTile = (useNeighborList ? warp*numGroupTiles[0]/totalWarps : FIRST_TILE+warp*(LAST_TILE-FIRST_TILE)/totalWarps);
+    const unsigned int endTile = (useNeighborList ? (warp+1)*numGroupTiles[0]/totalWarps : FIRST_TILE+(warp+1)*(LAST_TILE-FIRST_TILE)/totalWarps);
     for (int tile = startTile; tile < endTile; tile++) {
         const int4 atomData = groupData[TILE_SIZE*tile+tgx];
         const int atom1 = atomData.x;
@@ -85,4 +86,76 @@ extern "C" __global__ void computeInteractionGroups(
     }
     energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += energy;
     SAVE_DERIVATIVES
+}
+
+/**
+ * If the neighbor list needs to be rebuilt, reset the number of tiles to 0.  This is
+ * executed by a single thread.
+ */
+extern "C" __global__  void prepareToBuildNeighborList(int* __restrict__ rebuildNeighborList, int* __restrict__ numGroupTiles) {
+    if (rebuildNeighborList[0] == 1)
+        numGroupTiles[0] = 0;
+}
+
+/**
+ * Filter the list of tiles to include only ones that have interactions within the
+ * padded cutoff.
+ */
+extern "C" __global__  void buildNeighborList(int* __restrict__ rebuildNeighborList, int* __restrict__ numGroupTiles,
+        const real4* __restrict__ posq, const int4* __restrict__ groupData, int4* __restrict__ filteredGroupData,
+        real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ) {
+    
+    // If the neighbor list doesn't need to be rebuilt on this step, return immediately.
+    
+    if (rebuildNeighborList[0] == 0)
+        return;
+
+    const unsigned int totalWarps = (blockDim.x*gridDim.x)/TILE_SIZE;
+    const unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/TILE_SIZE; // global warpIndex
+    const unsigned int local_warp = threadIdx.x/TILE_SIZE; // local warpIndex
+    const unsigned int tgx = threadIdx.x & (TILE_SIZE-1); // index within the warp
+    const unsigned int tbx = threadIdx.x - tgx;           // block warpIndex
+
+    __shared__ real4 localPos[LOCAL_MEMORY_SIZE];
+    __shared__ volatile bool anyInteraction[WARPS_IN_BLOCK];
+    __shared__ volatile int tileIndex[WARPS_IN_BLOCK];
+
+    const unsigned int startTile = warp*NUM_TILES/totalWarps;
+    const unsigned int endTile = (warp+1)*NUM_TILES/totalWarps;
+    for (int tile = startTile; tile < endTile; tile++) {
+        const int4 atomData = groupData[TILE_SIZE*tile+tgx];
+        const int atom1 = atomData.x;
+        const int atom2 = atomData.y;
+        const int rangeStart = atomData.z&0xFFFF;
+        const int rangeEnd = (atomData.z>>16)&0xFFFF;
+        const int exclusions = atomData.w;
+        real4 posq1 = posq[atom1];
+        localPos[threadIdx.x] = posq[atom2];
+        if (tgx == 0)
+            anyInteraction[local_warp] = false;
+        int tj = tgx;
+        SYNC_WARPS;
+        for (int j = rangeStart; j < rangeEnd && !anyInteraction[local_warp]; j++) {
+            if (tj < rangeEnd) {
+                bool isExcluded = (((exclusions>>tj)&1) == 0);
+                int localIndex = tbx+tj;
+                real3 delta = make_real3(localPos[localIndex].x-posq1.x, localPos[localIndex].y-posq1.y, localPos[localIndex].z-posq1.z);
+#ifdef USE_PERIODIC
+                APPLY_PERIODIC_TO_DELTA(delta)
+#endif
+                real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+                if (!isExcluded && r2 < PADDED_CUTOFF_SQUARED)
+                    anyInteraction[local_warp] = true;
+            }
+            tj = (tj == rangeEnd-1 ? rangeStart : tj+1);
+            SYNC_WARPS;
+        }
+        if (anyInteraction[local_warp]) {
+            SYNC_WARPS;
+            if (tgx == 0)
+                tileIndex[local_warp] = atomicAdd(numGroupTiles, 1);
+            SYNC_WARPS;
+            filteredGroupData[TILE_SIZE*tileIndex[local_warp]+tgx] = atomData;
+        }
+    }
 }

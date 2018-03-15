@@ -54,6 +54,7 @@
 #include "jama_eig.h"
 #include <algorithm>
 #include <cmath>
+#include <iterator>
 #include <set>
 
 using namespace OpenMM;
@@ -2550,7 +2551,8 @@ void OpenCLCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
     
     vector<vector<int> > atomLists;
     vector<pair<int, int> > tiles;
-    map<pair<int, int>, int> duplicateInteractions;
+    vector<int> tileGroup;
+    vector<vector<int> > duplicateAtomsForGroup;
     for (int group = 0; group < force.getNumInteractionGroups(); group++) {
         // Get the list of atoms in this group and sort them.
         
@@ -2561,6 +2563,10 @@ void OpenCLCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
         atoms2.insert(atoms2.begin(), set2.begin(), set2.end());
         sort(atoms1.begin(), atoms1.end());
         sort(atoms2.begin(), atoms2.end());
+        duplicateAtomsForGroup.push_back(vector<int>());
+        set_intersection(set1.begin(), set1.end(), set2.begin(), set2.end(),
+                inserter(duplicateAtomsForGroup[group], duplicateAtomsForGroup[group].begin()));
+        sort(duplicateAtomsForGroup[group].begin(), duplicateAtomsForGroup[group].end());
         
         // Find how many tiles we will create for this group.
         
@@ -2572,9 +2578,12 @@ void OpenCLCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
         
         // Add the tiles.
         
+        int firstTile = tiles.size();
         for (int i = 0; i < numBlocks1; i++)
-            for (int j = 0; j < numBlocks2; j++)
+            for (int j = 0; j < numBlocks2; j++) {
                 tiles.push_back(make_pair(atomLists.size()+i, atomLists.size()+numBlocks1+j));
+                tileGroup.push_back(group);
+            }
         
         // Add the atom lists.
         
@@ -2594,22 +2603,6 @@ void OpenCLCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
                 atoms.push_back(atoms2[j]);
             atomLists.push_back(atoms);
         }
-        
-        // If this group contains duplicate interactions, record that we need to skip them once.
-        
-        for (int a1 : atoms1) {
-            if (set2.find(a1) == set2.end())
-                continue;
-            for (int j = 0; j < (int) atoms2.size() && atoms2[j] < a1; j++) {
-                int a2 = atoms2[j];
-                if (set1.find(a2) != set1.end()) {
-                    pair<int, int> key = make_pair(a2, a1);
-                    if (duplicateInteractions.find(key) == duplicateInteractions.end())
-                        duplicateInteractions[key] = 0;
-                    duplicateInteractions[key]++;
-                }
-            }
-        }
     }
     
     // Build a lookup table for quickly identifying excluded interactions.
@@ -2627,15 +2620,18 @@ void OpenCLCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
     vector<vector<int> > exclusionFlags(tiles.size());
     vector<pair<int, int> > tileOrder;
     for (int tile = 0; tile < tiles.size(); tile++) {
+        bool swapped = false;
         if (atomLists[tiles[tile].first].size() < atomLists[tiles[tile].second].size()) {
             // For efficiency, we want the first axis to be the larger one.
             
             int swap = tiles[tile].first;
             tiles[tile].first = tiles[tile].second;
             tiles[tile].second = swap;
+            swapped = true;
         }
         vector<int>& atoms1 = atomLists[tiles[tile].first];
         vector<int>& atoms2 = atomLists[tiles[tile].second];
+        vector<int>& duplicateAtoms = duplicateAtomsForGroup[tileGroup[tile]];
         vector<int> flags(atoms1.size(), (int) (1LL<<atoms2.size())-1);
         int numExcluded = 0;
         for (int i = 0; i < (int) atoms1.size(); i++)
@@ -2646,11 +2642,10 @@ void OpenCLCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
                 pair<int, int> key = make_pair(min(a1, a2), max(a1, a2));
                 if (a1 == a2 || exclusions.find(key) != exclusions.end())
                     isExcluded = true; // This is an excluded interaction.
-                else if (duplicateInteractions.find(key) != duplicateInteractions.end() && duplicateInteractions[key] > 0) {
+                else if ((a1 > a2) == swapped && binary_search(duplicateAtoms.begin(), duplicateAtoms.end(), a1) && binary_search(duplicateAtoms.begin(), duplicateAtoms.end(), a2)) {
                     // Both atoms are in both sets, so skip duplicate interactions.
                     
                     isExcluded = true;
-                    duplicateInteractions[key]--;
                 }
                 if (isExcluded) {
                     flags[i] &= -1-(1<<j);
@@ -2713,6 +2708,16 @@ void OpenCLCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
     }
     interactionGroupData.initialize<mm_int4>(cl, groupData.size(), "interactionGroupData");
     interactionGroupData.upload(groupData);
+    numGroupTiles.initialize<cl_int>(cl, 1, "numGroupTiles");
+
+    // Allocate space for a neighbor list, if necessary.
+
+    if (force.getNonbondedMethod() != CustomNonbondedForce::NoCutoff && groupData.size() > cl.getNumThreadBlocks()) {
+        filteredGroupData.initialize<mm_int4>(cl, groupData.size(), "filteredGroupData");
+        interactionGroupData.copyTo(filteredGroupData);
+        int numTiles = groupData.size()/32;
+        numGroupTiles.upload(&numTiles);
+    }
     
     // Create the kernel.
     
@@ -2791,11 +2796,16 @@ void OpenCLCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
         defines["USE_CUTOFF"] = "1";
     if (force.getNonbondedMethod() == CustomNonbondedForce::CutoffPeriodic)
         defines["USE_PERIODIC"] = "1";
-    defines["LOCAL_MEMORY_SIZE"] = cl.intToString(max(32, cl.getNonbondedUtilities().getForceThreadBlockSize()));
+    int localMemorySize = max(32, cl.getNonbondedUtilities().getForceThreadBlockSize());
+    defines["LOCAL_MEMORY_SIZE"] = cl.intToString(localMemorySize);
+    defines["WARPS_IN_BLOCK"] = cl.intToString(localMemorySize/32);
     double cutoff = force.getCutoffDistance();
     defines["CUTOFF_SQUARED"] = cl.doubleToString(cutoff*cutoff);
+    double paddedCutoff = cl.getNonbondedUtilities().padCutoff(cutoff);
+    defines["PADDED_CUTOFF_SQUARED"] = cl.doubleToString(paddedCutoff*paddedCutoff);
     defines["PADDED_NUM_ATOMS"] = cl.intToString(cl.getPaddedNumAtoms());
     defines["TILE_SIZE"] = "32";
+    defines["NUM_TILES"] = cl.intToString(numTileSets);
     int numContexts = cl.getPlatformData().contexts.size();
     int startIndex = cl.getContextIndex()*numTileSets/numContexts;
     int endIndex = (cl.getContextIndex()+1)*numTileSets/numContexts;
@@ -2805,10 +2815,17 @@ void OpenCLCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
         defines["PARAMETER_SIZE_IS_EVEN"] = "1";
     cl::Program program = cl.createProgram(cl.replaceStrings(OpenCLKernelSources::customNonbondedGroups, replacements), defines);
     interactionGroupKernel = cl::Kernel(program, "computeInteractionGroups");
+    prepareNeighborListKernel = cl::Kernel(program, "prepareToBuildNeighborList");
+    buildNeighborListKernel = cl::Kernel(program, "buildNeighborList");
     numGroupThreadBlocks = cl.getNonbondedUtilities().getNumForceThreadBlocks();
 }
 
 double OpenCLCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    useNeighborList = (filteredGroupData.isInitialized() && cl.getNonbondedUtilities().getUseCutoff());
+    if (useNeighborList && cl.getContextIndex() > 0) {
+        // When using a neighbor list, run the whole calculation on a single device.
+        return 0.0;
+    }
     if (globals.isInitialized()) {
         bool changed = false;
         for (int i = 0; i < (int) globalParamNames.size(); i++) {
@@ -2837,7 +2854,9 @@ double OpenCLCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
             interactionGroupKernel.setArg<cl::Buffer>(index++, (useLong ? cl.getLongForceBuffer() : cl.getForceBuffers()).getDeviceBuffer());
             interactionGroupKernel.setArg<cl::Buffer>(index++, cl.getEnergyBuffer().getDeviceBuffer());
             interactionGroupKernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
-            interactionGroupKernel.setArg<cl::Buffer>(index++, interactionGroupData.getDeviceBuffer());
+            interactionGroupKernel.setArg<cl::Buffer>(index++, (useNeighborList ? filteredGroupData : interactionGroupData).getDeviceBuffer());
+            interactionGroupKernel.setArg<cl::Buffer>(index++, numGroupTiles.getDeviceBuffer());
+            interactionGroupKernel.setArg<cl_int>(index++, useNeighborList);
             index += 5;
             for (auto& buffer : params->getBuffers())
                 interactionGroupKernel.setArg<cl::Memory>(index++, buffer.getMemory());
@@ -2847,9 +2866,27 @@ double OpenCLCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
                 interactionGroupKernel.setArg<cl::Buffer>(index++, globals.getDeviceBuffer());
             if (hasParamDerivs)
                 interactionGroupKernel.setArg<cl::Memory>(index++, cl.getEnergyParamDerivBuffer().getDeviceBuffer());
+            if (useNeighborList) {
+                // Initialize kernels for building the interaction group neighbor list.
+                
+                prepareNeighborListKernel.setArg<cl::Buffer>(0, cl.getNonbondedUtilities().getRebuildNeighborList().getDeviceBuffer());
+                prepareNeighborListKernel.setArg<cl::Buffer>(1, numGroupTiles.getDeviceBuffer());
+                buildNeighborListKernel.setArg<cl::Buffer>(0, cl.getNonbondedUtilities().getRebuildNeighborList().getDeviceBuffer());
+                buildNeighborListKernel.setArg<cl::Buffer>(1, numGroupTiles.getDeviceBuffer());
+                buildNeighborListKernel.setArg<cl::Buffer>(2, cl.getPosq().getDeviceBuffer());
+                buildNeighborListKernel.setArg<cl::Buffer>(3, interactionGroupData.getDeviceBuffer());
+                buildNeighborListKernel.setArg<cl::Buffer>(4, filteredGroupData.getDeviceBuffer());
+            }
         }
-        setPeriodicBoxArgs(cl, interactionGroupKernel, 4);
         int forceThreadBlockSize = max(32, cl.getNonbondedUtilities().getForceThreadBlockSize());
+        if (useNeighborList) {
+            // Rebuild the neighbor list, if necessary.
+
+            setPeriodicBoxArgs(cl, buildNeighborListKernel, 5);
+            cl.executeKernel(prepareNeighborListKernel, 1, 1);
+            cl.executeKernel(buildNeighborListKernel, numGroupThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
+        }
+        setPeriodicBoxArgs(cl, interactionGroupKernel, 6);
         cl.executeKernel(interactionGroupKernel, numGroupThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
     }
     mm_double4 boxSize = cl.getPeriodicBoxSizeDouble();

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -266,6 +266,7 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         blockSorter = new CudaSort(context, new BlockSortTrait(context.getUseDoublePrecision()), numAtomBlocks);
         vector<unsigned int> count(2, 0);
         interactionCount.upload(count);
+        rebuildNeighborList.upload(count);
     }
 
     // Record arguments for kernels.
@@ -349,6 +350,11 @@ double CudaNonbondedUtilities::getMaxCutoffDistance() {
     for (map<int, double>::const_iterator iter = groupCutoff.begin(); iter != groupCutoff.end(); ++iter)
         cutoff = max(cutoff, iter->second);
     return cutoff;
+}
+
+double CudaNonbondedUtilities::padCutoff(double cutoff) {
+    double padding = (usePadding ? 0.1*cutoff : 0.0);
+    return cutoff+padding;
 }
 
 void CudaNonbondedUtilities::prepareInteractions(int forceGroups) {
@@ -462,13 +468,12 @@ void CudaNonbondedUtilities::createKernelsForGroups(int groups) {
     kernels.source = source;
     kernels.forceKernel = kernels.energyKernel = kernels.forceEnergyKernel = NULL;
     if (useCutoff) {
-        double padding = (usePadding ? 0.1*cutoff : 0.0);
-        double paddedCutoff = cutoff+padding;
+        double paddedCutoff = padCutoff(cutoff);
         map<string, string> defines;
         defines["TILE_SIZE"] = context.intToString(CudaContext::TileSize);
         defines["NUM_BLOCKS"] = context.intToString(context.getNumAtomBlocks());
         defines["NUM_ATOMS"] = context.intToString(context.getNumAtoms());
-        defines["PADDING"] = context.doubleToString(padding);
+        defines["PADDING"] = context.doubleToString(paddedCutoff-cutoff);
         defines["PADDED_CUTOFF"] = context.doubleToString(paddedCutoff);
         defines["PADDED_CUTOFF_SQUARED"] = context.doubleToString(paddedCutoff*paddedCutoff);
         defines["NUM_TILES_WITH_EXCLUSIONS"] = context.intToString(exclusionTiles.getSize());
