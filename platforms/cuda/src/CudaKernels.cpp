@@ -2486,11 +2486,12 @@ void CudaCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNonbo
     
     // Build a lookup table for quickly identifying excluded interactions.
     
-    set<pair<int, int> > exclusions;
+    vector<set<int> > exclusions(force.getNumParticles());
     for (int i = 0; i < force.getNumExclusions(); i++) {
         int p1, p2;
         force.getExclusionParticles(i, p1, p2);
-        exclusions.insert(make_pair(min(p1, p2), max(p1, p2)));
+        exclusions[p1].insert(p2);
+        exclusions[p2].insert(p1);
     }
     
     // Build the exclusion flags for each tile.  While we're at it, filter out tiles
@@ -2511,30 +2512,28 @@ void CudaCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNonbo
         vector<int>& atoms1 = atomLists[tiles[tile].first];
         vector<int>& atoms2 = atomLists[tiles[tile].second];
         vector<int>& duplicateAtoms = duplicateAtomsForGroup[tileGroup[tile]];
-        vector<int> flags(atoms1.size(), (int) (1LL<<atoms2.size())-1);
+        vector<int>& flags = exclusionFlags[tile];
+        flags.resize(atoms1.size(), (int) (1LL<<atoms2.size())-1);
         int numExcluded = 0;
-        for (int i = 0; i < (int) atoms1.size(); i++)
+        for (int i = 0; i < (int) atoms1.size(); i++) {
+            int a1 = atoms1[i];
+            bool a1IsDuplicate = binary_search(duplicateAtoms.begin(), duplicateAtoms.end(), a1);
             for (int j = 0; j < (int) atoms2.size(); j++) {
-                int a1 = atoms1[i];
                 int a2 = atoms2[j];
                 bool isExcluded = false;
-                pair<int, int> key = make_pair(min(a1, a2), max(a1, a2));
-                if (a1 == a2 || exclusions.find(key) != exclusions.end())
+                if (a1 == a2 || exclusions[a1].find(a2) != exclusions[a1].end())
                     isExcluded = true; // This is an excluded interaction.
-                else if ((a1 > a2) == swapped && binary_search(duplicateAtoms.begin(), duplicateAtoms.end(), a1) && binary_search(duplicateAtoms.begin(), duplicateAtoms.end(), a2)) {
-                    // Both atoms are in both sets, so skip duplicate interactions.
-                    
-                    isExcluded = true;
-                }
+                else if ((a1 > a2) == swapped && a1IsDuplicate && binary_search(duplicateAtoms.begin(), duplicateAtoms.end(), a2))
+                    isExcluded = true; // Both atoms are in both sets, so skip duplicate interactions.
                 if (isExcluded) {
                     flags[i] &= -1-(1<<j);
                     numExcluded++;
                 }
             }
+        }
         if (numExcluded == atoms1.size()*atoms2.size())
             continue; // All interactions are excluded.
         tileOrder.push_back(make_pair((int) -atoms2.size(), tile));
-        exclusionFlags[tile] = flags;
     }
     sort(tileOrder.begin(), tileOrder.end());
     
