@@ -144,7 +144,7 @@ __kernel void prepareToBuildNeighborList(__global int* restrict rebuildNeighborL
  * Filter the list of tiles to include only ones that have interactions within the
  * padded cutoff.
  */
-__kernel void buildNeighborList(__global int* restrict rebuildNeighborList, __global int* numGroupTiles,
+__kernel void buildNeighborList(__global int* restrict rebuildNeighborList, __global int* restrict numGroupTiles,
         __global const real4* restrict posq, __global const int4* restrict groupData, __global int4* restrict filteredGroupData,
         real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ) {
     
@@ -193,8 +193,9 @@ __kernel void buildNeighborList(__global int* restrict rebuildNeighborList, __gl
             SYNC_WARPS;
         }
         if (anyInteraction[local_warp]) {
+            SYNC_WARPS;
             if (tgx == 0)
-                tileIndex[local_warp] = atom_add(numGroupTiles, 1);
+                tileIndex[local_warp] = atomic_add(numGroupTiles, 1);
             SYNC_WARPS;
             filteredGroupData[TILE_SIZE*tileIndex[local_warp]+tgx] = atomData;
         }

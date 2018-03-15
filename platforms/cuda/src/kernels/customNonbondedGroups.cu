@@ -151,6 +151,7 @@ extern "C" __global__  void buildNeighborList(int* __restrict__ rebuildNeighborL
             SYNC_WARPS;
         }
         if (anyInteraction[local_warp]) {
+            SYNC_WARPS;
             if (tgx == 0)
                 tileIndex[local_warp] = atomicAdd(numGroupTiles, 1);
             SYNC_WARPS;
