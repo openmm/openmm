@@ -266,7 +266,7 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         blockSorter = new CudaSort(context, new BlockSortTrait(context.getUseDoublePrecision()), numAtomBlocks);
         vector<unsigned int> count(2, 0);
         interactionCount.upload(count);
-        rebuildNeighborList.upload(count);
+        rebuildNeighborList.upload(&count[0]);
     }
 
     // Record arguments for kernels.
