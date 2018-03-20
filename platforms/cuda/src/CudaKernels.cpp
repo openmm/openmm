@@ -2165,7 +2165,7 @@ void CudaCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context,
     // Record the per-particle parameters.
     
     vector<double> chargeVector(cu.getNumAtoms());
-    vector<float2> sigmaEpsilonVector(cu.getPaddedNumAtoms(), make_float2(0, 0));
+    vector<float2> sigmaEpsilonVector(cu.getPaddedNumAtoms());
     double sumSquaredCharges = 0.0;
     double sumSquaredC6 = 0.0;
     const vector<int>& order = cu.getAtomIndex();
@@ -2180,6 +2180,8 @@ void CudaCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context,
         sumSquaredC6 += C6*C6;
         sumSquaredCharges += charge*charge;
     }
+    for (int i = force.getNumParticles(); i < cu.getPaddedNumAtoms(); i++)
+        sigmaEpsilonVector[i] = make_float2(0,0);
     cu.setCharges(chargeVector);
     sigmaEpsilon.upload(sigmaEpsilonVector);
     
@@ -2977,7 +2979,7 @@ void CudaCalcGBSAOBCForceKernel::copyParametersToContext(ContextImpl& context, c
     // Record the per-particle parameters.
     
     vector<double> chargeVector(cu.getNumAtoms());
-    vector<float2> paramsVector(cu.getPaddedNumAtoms(), make_float2(1, 1));
+    vector<float2> paramsVector(cu.getPaddedNumAtoms());
     const double dielectricOffset = 0.009;
     for (int i = 0; i < numParticles; i++) {
         double charge, radius, scalingFactor;
@@ -2986,6 +2988,8 @@ void CudaCalcGBSAOBCForceKernel::copyParametersToContext(ContextImpl& context, c
         radius -= dielectricOffset;
         paramsVector[i] = make_float2((float) radius, (float) (scalingFactor*radius));
     }
+    for (int i = numParticles; i < cu.getPaddedNumAtoms(); i++)
+        paramsVector[i] = make_float2(1, 1);
     cu.setCharges(chargeVector);
     params.upload(paramsVector);
     

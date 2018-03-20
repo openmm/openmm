@@ -1119,33 +1119,39 @@ bool CudaContext::invalidateMolecules(CudaForceInfo* force) {
     for (int i = 0; i < forces.size(); i++)
         if (forces[i] == force)
             forceIndex = i;
-    for (int group = 0; valid && group < (int) moleculeGroups.size(); group++) {
-        MoleculeGroup& mol = moleculeGroups[group];
-        vector<int>& instances = mol.instances;
-        vector<int>& offsets = mol.offsets;
-        vector<int>& atoms = mol.atoms;
-        int numMolecules = instances.size();
-        Molecule& m1 = molecules[instances[0]];
-        int offset1 = offsets[0];
-        for (int j = 1; valid && j < numMolecules; j++) {
-            // See if the atoms are identical.
+    getPlatformData().threads.execute([&] (ThreadPool& threads, int threadIndex) {
+        for (int group = 0; valid && group < (int) moleculeGroups.size(); group++) {
+            MoleculeGroup& mol = moleculeGroups[group];
+            vector<int>& instances = mol.instances;
+            vector<int>& offsets = mol.offsets;
+            vector<int>& atoms = mol.atoms;
+            int numMolecules = instances.size();
+            Molecule& m1 = molecules[instances[0]];
+            int offset1 = offsets[0];
+            int numThreads = threads.getNumThreads();
+            int start = threadIndex*numMolecules/numThreads;
+            int end = (threadIndex+1)*numMolecules/numThreads;
+            for (int j = start; j < end; j++) {
+                // See if the atoms are identical.
 
-            Molecule& m2 = molecules[instances[j]];
-            int offset2 = offsets[j];
-            for (int i = 0; i < (int) atoms.size() && valid; i++) {
-                if (!force->areParticlesIdentical(atoms[i]+offset1, atoms[i]+offset2))
-                    valid = false;
-            }
-
-            // See if the force groups are identical.
-
-            if (valid && forceIndex > -1) {
-                for (int k = 0; k < (int) m1.groups[forceIndex].size() && valid; k++)
-                    if (!force->areGroupsIdentical(m1.groups[forceIndex][k], m2.groups[forceIndex][k]))
+                Molecule& m2 = molecules[instances[j]];
+                int offset2 = offsets[j];
+                for (int i = 0; i < (int) atoms.size() && valid; i++) {
+                    if (!force->areParticlesIdentical(atoms[i]+offset1, atoms[i]+offset2))
                         valid = false;
+                }
+
+                // See if the force groups are identical.
+
+                if (valid && forceIndex > -1) {
+                    for (int k = 0; k < (int) m1.groups[forceIndex].size() && valid; k++)
+                        if (!force->areGroupsIdentical(m1.groups[forceIndex][k], m2.groups[forceIndex][k]))
+                            valid = false;
+                }
             }
         }
-    }
+    });
+    getPlatformData().threads.waitForThreads();
     if (valid)
         return false;
 

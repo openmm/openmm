@@ -2296,7 +2296,7 @@ void OpenCLCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& contex
     // Record the per-particle parameters.
     
     vector<double> chargeVector(cl.getNumAtoms());
-    vector<mm_float2> sigmaEpsilonVector(cl.getPaddedNumAtoms(), mm_float2(0,0));
+    vector<mm_float2> sigmaEpsilonVector(cl.getPaddedNumAtoms());
     double sumSquaredCharges = 0.0;
     for (int i = 0; i < force.getNumParticles(); i++) {
         double charge, sigma, epsilon;
@@ -2305,6 +2305,8 @@ void OpenCLCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& contex
         sigmaEpsilonVector[i] = mm_float2((float) (0.5*sigma), (float) (2.0*sqrt(epsilon)));
         sumSquaredCharges += charge*charge;
     }
+    for (int i = force.getNumParticles(); i < cl.getPaddedNumAtoms(); i++)
+        sigmaEpsilonVector[i] = mm_float2(0,0);
     cl.setCharges(chargeVector);
     sigmaEpsilon.upload(sigmaEpsilonVector);
     
@@ -3123,7 +3125,7 @@ void OpenCLCalcGBSAOBCForceKernel::copyParametersToContext(ContextImpl& context,
     // Record the per-particle parameters.
     
     vector<double> chargeVector(cl.getNumAtoms());
-    vector<mm_float2> paramsVector(cl.getPaddedNumAtoms(), mm_float2(1,1));
+    vector<mm_float2> paramsVector(cl.getPaddedNumAtoms());
     const double dielectricOffset = 0.009;
     for (int i = 0; i < numParticles; i++) {
         double charge, radius, scalingFactor;
@@ -3132,6 +3134,8 @@ void OpenCLCalcGBSAOBCForceKernel::copyParametersToContext(ContextImpl& context,
         radius -= dielectricOffset;
         paramsVector[i] = mm_float2((float) radius, (float) (scalingFactor*radius));
     }
+    for (int i = numParticles; i < cl.getPaddedNumAtoms(); i++)
+        paramsVector[i] = mm_float2(1,1);
     cl.setCharges(chargeVector);
     params.upload(paramsVector);
     
