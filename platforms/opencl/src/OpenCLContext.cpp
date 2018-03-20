@@ -1016,7 +1016,7 @@ bool OpenCLContext::invalidateMolecules(OpenCLForceInfo* force) {
             Molecule& m1 = molecules[instances[0]];
             int offset1 = offsets[0];
             int numThreads = threads.getNumThreads();
-            int start = threadIndex*numMolecules/numThreads;
+            int start = max(1, threadIndex*numMolecules/numThreads);
             int end = (threadIndex+1)*numMolecules/numThreads;
             for (int j = start; j < end; j++) {
                 // See if the atoms are identical.
