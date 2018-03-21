@@ -10,7 +10,12 @@ real sigma = sigmaEpsilon[pairK].x;
 real epsilon = sigmaEpsilon[pairK].y;
 
 #if FUNCTIONAL_FORM == 1
+#if COUPLE_METHOD == 0
 real combinedLambda = (lambdas1 == lambdas2 ? 1.0f : (lambdas1 < lambdas2 ? lambdas1 : lambdas2));
+#endif /* decouple */
+#if COUPLE_METHOD == 1
+real combinedLambda = (lambdas1 < lambdas2 ? lambdas1 : lambdas2);
+#endif /* annihilate */
 real comblambda2 = combinedLambda * combinedLambda;
 epsilon = epsilon * comblambda2 * comblambda2 * combinedLambda;
 real r_sigma = RECIP(sigma);

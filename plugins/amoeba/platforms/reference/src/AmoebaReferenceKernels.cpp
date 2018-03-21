@@ -1004,6 +1004,7 @@ ReferenceCalcAmoebaVdwForceKernel::ReferenceCalcAmoebaVdwForceKernel(std::string
     , system(system) {
     useCutoff = 0;
     usePBC = 0;
+    coupleMethod = AmoebaVdwForce::Decouple;
     cutoff = 1.0e+10;
     functionalForm = "BUFFERED-14-7";
     neighborList = NULL;
@@ -1022,6 +1023,7 @@ void ReferenceCalcAmoebaVdwForceKernel::initialize(const System& system, const A
 
     numParticles = system.getNumParticles();
     numVdwprTypes = force.getNumVdwprTypes();
+    coupleMethod = force.getCoupleMethod();
 
     indexIVs.resize(numParticles);
     allExclusions.resize(numParticles);
@@ -1076,6 +1078,7 @@ double ReferenceCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool inc
     } else if (functionalForm == "LENNARD-JONES") {
         vdwForce.setFunctionalForm(AmoebaReferenceVdwForce::LENNARD_JONES);
     }
+    vdwForce.setCoupleMethod(coupleMethod);
     RealOpenMM energy;
     if (useCutoff) {
         vdwForce.setCutoff(cutoff);

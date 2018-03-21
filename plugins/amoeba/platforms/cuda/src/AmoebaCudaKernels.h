@@ -591,6 +591,7 @@ private:
     CudaContext& cu;
     const System& system;
     bool hasInitializedNonbonded;
+    int coupleMethod;
     double dispersionCoefficient;
     CudaArray* vdwTypes;
     CudaArray* sigmaEpsilon;

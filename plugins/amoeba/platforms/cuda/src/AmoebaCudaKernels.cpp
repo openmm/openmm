@@ -2544,6 +2544,7 @@ CudaCalcAmoebaVdwForceKernel::CudaCalcAmoebaVdwForceKernel(std::string name, con
     , cu(cu)
     , system(system)
     , hasInitializedNonbonded(false)
+    , coupleMethod(AmoebaVdwForce::Decouple)
     , vdwTypes(NULL)
     , sigmaEpsilon(NULL)
     , lambdas(NULL)
@@ -2575,6 +2576,7 @@ CudaCalcAmoebaVdwForceKernel::~CudaCalcAmoebaVdwForceKernel() {
 
 void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const AmoebaVdwForce& force) {
     cu.setAsCurrent();
+    coupleMethod = force.getCoupleMethod();
     vdwTypes = CudaArray::create<long long>(cu, cu.getPaddedNumAtoms(), "vdwTypes");
     int xsize = force.getNumVdwprTypes();
     sigmaEpsilon = CudaArray::create<float2>(cu, xsize * xsize, "sigmaEpsilon");
@@ -2640,6 +2642,11 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
     } else if(functionalForm == "LENNARD-JONES") {
         replacements["FUNCTIONAL_FORM"] = "2";
     }
+    if (coupleMethod == AmoebaVdwForce::Decouple) {
+        replacements["COUPLE_METHOD"] = "0";
+    } else if (coupleMethod == AmoebaVdwForce::Annihilate) {
+        replacements["COUPLE_METHOD"] = "1";
+    }
     replacements["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
     replacements["NUM_VDWPR_TYPES"] = cu.intToString(xsize);
     double cutoff = force.getCutoffDistance();
@@ -2694,6 +2701,7 @@ void CudaCalcAmoebaVdwForceKernel::copyParametersToContext(ContextImpl& context,
     if (force.getNumParticles() != cu.getNumAtoms())
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
 
+    coupleMethod = force.getCoupleMethod();
     vdwTypes = CudaArray::create<int>(cu, cu.getPaddedNumAtoms(), "vdwTypes");
     int xsize = force.getNumVdwprTypes();
     sigmaEpsilon = CudaArray::create<float2>(cu, xsize * xsize, "sigmaEpsilon");

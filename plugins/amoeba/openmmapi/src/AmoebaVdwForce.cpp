@@ -47,7 +47,8 @@ AmoebaVdwForce::AmoebaVdwForce()
     , functionalForm("BUFFERED-14-7")
     , cutoff(1.0e+10)
     , useDispersionCorrection(false)
-    , numVdwprTypes(0) {}
+    , numVdwprTypes(0)
+    , coupleMethod(AmoebaVdwForce::Decouple) {}
 
 void AmoebaVdwForce::setParticleParameters(int particleIndex,
                                            int parentIndex,
@@ -291,6 +292,17 @@ void AmoebaVdwForce::getParticleExclusions(int particleIndex, std::vector<int>& 
         for (unsigned int ii = 0; ii < exclusions[particleIndex].size(); ii++) {
             outputExclusions[ii] = exclusions[particleIndex][ii];
         }
+    }
+}
+
+int AmoebaVdwForce::getCoupleMethod() const {
+    return coupleMethod;
+}
+
+void AmoebaVdwForce::setCoupleMethod(int method) {
+    coupleMethod = Decouple;
+    if (method != Decouple) {
+        coupleMethod = Annihilate;
     }
 }
 

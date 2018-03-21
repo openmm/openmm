@@ -67,6 +67,11 @@ public:
         LENNARD_JONES = 2,
     };
 
+    enum CoupleMethod {
+        Decouple = 0,
+        Annihilate = 1,
+    };
+
     /**---------------------------------------------------------------------------------------
 
        Constructor
@@ -102,6 +107,9 @@ public:
        --------------------------------------------------------------------------------------- */
 
     void setNonbondedMethod(NonbondedMethod nonbondedMethod);
+
+    int getCoupleMethod() const;
+    void setCoupleMethod(int method);
 
     /**---------------------------------------------------------------------------------------
 
@@ -180,6 +188,7 @@ private:
 
     NonbondedMethod _nonbondedMethod;
     FunctionalForm _functionalForm;
+    int _coupleMethod;
     double _cutoff;
     double _taperCutoffFactor;
     double _taperCutoff;

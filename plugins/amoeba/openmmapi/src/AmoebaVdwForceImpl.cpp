@@ -193,7 +193,13 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
             int total1 = countNon1 + countLig1;
             int total2 = countNon2 + countLig2;
 
-            double termik = total1 * total2 - (1.0 - V1lambda) * (countLig1 * countNon2 + countNon1 * countLig2); // termik is equivalent to 2*pi*count.
+            double termik = 0.0;
+            if (force.getCoupleMethod() == AmoebaVdwForce::Decouple) {
+                termik = total1 * total2 - (1.0 - V1lambda) * (countLig1 * countNon2 + countNon1 * countLig2); // termik is equivalent to 2*pi*count.
+            } else if (force.getCoupleMethod() == AmoebaVdwForce::Annihilate) {
+                termik = V1lambda * total1 * total2 + (1.0 - V1lambda) * countNon1 * countNon2;
+            }
+
             termik *= (2.0 * M_PI);
             double rv2 = rv * rv;
             double rv6 = rv2 * rv2 * rv2;

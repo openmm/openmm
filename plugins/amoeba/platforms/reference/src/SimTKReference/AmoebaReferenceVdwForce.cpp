@@ -34,6 +34,7 @@ using namespace OpenMM;
 AmoebaReferenceVdwForce::AmoebaReferenceVdwForce()
     : _nonbondedMethod(NoCutoff)
     , _functionalForm(BUFFERED_14_7)
+    , _coupleMethod(Decouple)
     , _cutoff(1.0e+10)
     , _taperCutoffFactor(0.9) {
     setTaperCoefficients(_cutoff);
@@ -68,6 +69,17 @@ void AmoebaReferenceVdwForce::setCutoff(double cutoff) {
 
 double AmoebaReferenceVdwForce::getCutoff() const {
     return _cutoff;
+}
+
+int AmoebaReferenceVdwForce::getCoupleMethod() const {
+    return _coupleMethod;
+}
+
+void AmoebaReferenceVdwForce::setCoupleMethod(int method) {
+    _coupleMethod = Decouple;
+    if (method != Decouple) {
+        _coupleMethod = Annihilate;
+    }
 }
 
 void AmoebaReferenceVdwForce::setFunctionalForm(FunctionalForm functionalForm) {
@@ -246,7 +258,13 @@ RealOpenMM AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles, in
                 int k = typeI * numVdwprTypes + typeJ;
                 RealOpenMM combinedSigma = combinedSigmas[k];
                 RealOpenMM combinedEpsilon = combinedEpsilons[k];
-                RealOpenMM combinedLambda = (lambdas[ii] == lambdas[jj] ? 1.0f : (lambdas[ii] < lambdas[jj] ? lambdas[ii] : lambdas[jj]));
+                RealOpenMM combinedLambda = 1.0;
+                if (_coupleMethod == Decouple) {
+                    combinedLambda = (lambdas[ii] == lambdas[jj] ? 1.0f : (lambdas[ii] < lambdas[jj] ? lambdas[ii] : lambdas[jj]));
+                } else if (_coupleMethod == Annihilate) {
+                    combinedLambda = (lambdas[ii] < lambdas[jj] ? lambdas[ii] : lambdas[jj]);
+                }
+
                 Vec3 force;
 
                 energy += calculatePairIxn(combinedSigma, combinedEpsilon, combinedLambda,
@@ -318,7 +336,12 @@ RealOpenMM AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles, in
         int k = typeI * numVdwprTypes + typeJ;
         RealOpenMM combinedSigma = combinedSigmas[k];
         RealOpenMM combinedEpsilon = combinedEpsilons[k];
-        RealOpenMM combinedLambda = (lambdas[siteI] == lambdas[siteJ] ? 1.0f : (lambdas[siteI] < lambdas[siteJ] ? lambdas[siteI] : lambdas[siteJ]));
+        RealOpenMM combinedLambda = 1.0f;
+        if (_coupleMethod == Decouple) {
+            combinedLambda = (lambdas[siteI] == lambdas[siteJ] ? 1.0f : (lambdas[siteI] < lambdas[siteJ] ? lambdas[siteI] : lambdas[siteJ]));
+        } else if (_coupleMethod == Annihilate) {
+            combinedLambda = (lambdas[siteI] == lambdas[siteJ] ? lambdas[siteI] : lambdas[siteJ]);
+        }
         Vec3 force;
         energy += calculatePairIxn(combinedSigma, combinedEpsilon, combinedLambda,
             reducedPositions[siteI], reducedPositions[siteJ], force);
