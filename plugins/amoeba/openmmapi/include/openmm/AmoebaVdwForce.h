@@ -72,6 +72,20 @@ public:
     };
 
     /**
+     * This is an enumeration of the different methods that may be used for vdw decoupling.
+     */
+    enum CoupleMethod {
+        /**
+         * Intra-molecular vdw lambda is set to 1.
+         */
+        Decouple = 0,
+        /**
+         * Intra-molecular vdw lambda is scaled.
+         */
+        Annihilate = 1,
+    };
+
+    /**
      * Create an Amoeba VdwForce.
      */
     AmoebaVdwForce();
@@ -306,6 +320,16 @@ public:
     void getParticleExclusions(int particleIndex, std::vector<int>& exclusions) const;
 
     /**
+      * Get the VDW coupling method.
+      */
+    int getCoupleMethod() const;
+
+    /**
+      * Set the VDW coupling method.
+      */
+    void setCoupleMethod(int method);
+
+    /**
      * Get the cutoff distance (in nm) being used for nonbonded interactions.  If the NonbondedMethod in use
      * is NoCutoff, this value will have no effect.
      *
@@ -375,6 +399,7 @@ private:
     double cutoff;
     bool useDispersionCorrection;
     int numVdwprTypes;
+    int coupleMethod;
 
     std::string sigmaCombiningRule;
     std::string epsilonCombiningRule;

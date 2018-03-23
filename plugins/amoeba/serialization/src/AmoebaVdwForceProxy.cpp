@@ -54,6 +54,7 @@ void AmoebaVdwForceProxy::serialize(const void* object, SerializationNode& node)
     node.setDoubleProperty("VdwCutoff", force.getCutoffDistance());
 
     node.setIntProperty("method", (int) force.getNonbondedMethod());
+    node.setIntProperty("coupleMethod", force.getCoupleMethod());
 
     SerializationNode& particles = node.createChildNode("VdwParticles");
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(force.getNumParticles()); ii++) {
@@ -103,6 +104,7 @@ void* AmoebaVdwForceProxy::deserialize(const SerializationNode& node) const {
         force->setFunctionalForm(node.getStringProperty("FunctionalForm"));
         force->setCutoffDistance(node.getDoubleProperty("VdwCutoff"));
         force->setNonbondedMethod((AmoebaVdwForce::NonbondedMethod) node.getIntProperty("method"));
+        force->setCoupleMethod(node.getIntProperty("coupleMethod"));
 
         const SerializationNode& particles = node.getChildNode("VdwParticles");
         for (unsigned int ii = 0; ii < particles.getChildren().size(); ii++) {

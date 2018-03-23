@@ -496,6 +496,7 @@ public:
 private:
     int numParticles;
     int numVdwprTypes;
+    int coupleMethod;
     int useCutoff;
     int usePBC;
     double cutoff;
