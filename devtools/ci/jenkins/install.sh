@@ -38,7 +38,7 @@ make PythonInstall
 
 # Now run the tests
 python -m simtk.testInstallation
-cd python/tests && py.test -v && cd ../..
+cd python/tests && py.test -v && cd ../../
 python devtools/run-ctest.py --job-duration=120 --timeout 300
 
 # Now remove the conda environment
