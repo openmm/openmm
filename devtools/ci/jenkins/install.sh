@@ -11,8 +11,6 @@ cmake --version
 echo "Using g++ (`which g++`) version:"
 g++ --version
 
-module load conda/jenkins
-
 # Constants
 CONDAENV=openmm-test-3.5
 INSTALL_DIRECTORY="`pwd`/install"
