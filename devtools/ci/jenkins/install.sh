@@ -8,15 +8,14 @@ swig -version
 echo "Using cmake (`which cmake`) version":
 cmake --version
 
-echo "Using clang (`which clang`) version:"
-clang --version
+echo "Using g++ (`which g++`) version:"
+g++ --version
 
 module load cuda/${CUDA_VERSION} conda/jenkins
 
 # Constants
 CONDAENV=openmm-test-3.5
-INSTALL_DIRECTORY="${WORKSPACE}/openmm-install"
-SRC_DIRECTORY="${WORKSPACE}/openmm-src" # set in the Jenkins configuration
+INSTALL_DIRECTORY="`pwd`/install"
 export OPENMM_CUDA_COMPILER=`which nvcc`
 
 # Create a conda environment, but clean up after one first. If it doesn't exist, don't complain.
@@ -31,8 +30,7 @@ conda install -yn ${CONDAENV} numpy scipy pytest --quiet
 source activate ${CONDAENV} # enter our new environment
 
 # Build OpenMM
-cd "${SRC_DIRECTORY}"
-cmake -DCMAKE_INSTALL_PREFIX="${INSTALL_DIRECTORY}" -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang .
+cmake -DCMAKE_INSTALL_PREFIX="${INSTALL_DIRECTORY}" -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc .
 make -j4 install
 make PythonInstall
 
