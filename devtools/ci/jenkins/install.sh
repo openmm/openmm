@@ -11,6 +11,8 @@ cmake --version
 echo "Using g++ (`which g++`) version:"
 g++ --version
 
+module load cuda/9.0
+
 # Constants
 CONDAENV=openmm-test-3.5
 INSTALL_DIRECTORY="`pwd`/install"
