@@ -41,6 +41,7 @@ CudaArray::CudaArray(CudaContext& context, int size, int elementSize, const std:
 
 CudaArray::~CudaArray() {
     if (pointer != 0 && ownsMemory && context->getContextIsValid()) {
+        context->setAsCurrent();
         CUresult result = cuMemFree(pointer);
         if (result != CUDA_SUCCESS) {
             std::stringstream str;
