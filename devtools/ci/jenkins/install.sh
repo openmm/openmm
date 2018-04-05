@@ -31,7 +31,7 @@ source activate ${CONDAENV} # enter our new environment
 
 # Build OpenMM
 cmake -DCMAKE_INSTALL_PREFIX="${INSTALL_DIRECTORY}" -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc .
-make -j4 install
+make -j6 install
 make PythonInstall
 
 # Now run the tests
