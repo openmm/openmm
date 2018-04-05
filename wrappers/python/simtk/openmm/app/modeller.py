@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2017 Stanford University and the Authors.
+Portions copyright (c) 2012-2018 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
@@ -1192,8 +1192,8 @@ class Modeller(object):
         # Figure out how many copies of the membrane patch we need in each direction. 
 
         proteinPos = self.positions.value_in_unit(nanometer)
-        proteinMinPos = min(proteinPos)
-        proteinMaxPos = max(proteinPos)
+        proteinMinPos = Vec3(*[min((p[i] for p in proteinPos)) for i in range(3)])
+        proteinMaxPos = Vec3(*[max((p[i] for p in proteinPos)) for i in range(3)])
         proteinSize = proteinMaxPos-proteinMinPos
         proteinCenterPos = (proteinMinPos+proteinMaxPos)/2
         proteinCenterPos = Vec3(proteinCenterPos[0], proteinCenterPos[1], membraneCenterZ)
