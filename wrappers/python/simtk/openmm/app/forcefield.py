@@ -2439,6 +2439,9 @@ class LennardJonesGenerator(object):
             self.force.setNonbondedMethod(mm.CustomNonbondedForce.CutoffNonPeriodic)
         else:
             raise AssertionError('Unrecognized nonbonded method [%s]' % nonbondedMethod)
+        if args['switchDistance'] is not None:
+            self.force.setUseSwitchingFunction(True)
+            self.force.setSwitchingDistance(args['switchDistance'])
 
         # Add the particles
 
