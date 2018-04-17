@@ -845,6 +845,14 @@ class TestForceField(unittest.TestCase):
         self.assertEqual(system1_indexes, [51, 56, 54, 55])
         self.assertEqual(system2_indexes, [51, 55, 54, 56])
 
+    def test_Disulfides(self):
+        """Test that various force fields handle disulfides correctly."""
+        pdb = PDBFile('systems/bpti.pdb')
+        for ff in ['amber99sb.xml', 'amber14-all.xml', 'charmm36.xml', 'amberfb15.xml', 'amoeba2013.xml']:
+            forcefield = ForceField(ff)
+            system = forcefield.createSystem(pdb.topology)
+
+
 class AmoebaTestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method with the AMOEBA forcefield."""
 
