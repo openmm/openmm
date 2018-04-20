@@ -8,9 +8,21 @@ typedef struct {
 #endif
 } AtomData;
 
+// Find the maximum of a value across all threads in a warp, and return that to
+// every thread.  This is only needed on Volta and later.  On earlier architectures,
+// we can just return the value that was passed in.
+__device__ int reduceMax(int val) {
+#if __CUDA_ARCH__ >= 700
+  for (int mask = 16; mask > 0; mask /= 2) 
+    val = max(val, __shfl_xor(val, mask));
+#endif
+  return val;
+}
+
+
 extern "C" __global__ void computeInteractionGroups(
         unsigned long long* __restrict__ forceBuffers, mixed* __restrict__ energyBuffer, const real4* __restrict__ posq, const int4* __restrict__ groupData,
-        int* __restrict__ numGroupTiles, bool useNeighborList,
+        const int* __restrict__ numGroupTiles, bool useNeighborList,
         real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ
         PARAMETER_ARGUMENTS) {
     const unsigned int totalWarps = (blockDim.x*gridDim.x)/TILE_SIZE;
@@ -43,37 +55,42 @@ extern "C" __global__ void computeInteractionGroups(
         localData[threadIdx.x].fy = 0.0f;
         localData[threadIdx.x].fz = 0.0f;
         int tj = tgx;
-        for (int j = rangeStart; j < rangeEnd; j++) {
-            bool isExcluded = (((exclusions>>tj)&1) == 0);
-            int localIndex = tbx+tj;
-            posq2 = make_real4(localData[localIndex].x, localData[localIndex].y, localData[localIndex].z, localData[localIndex].q);
-            real3 delta = make_real3(posq2.x-posq1.x, posq2.y-posq1.y, posq2.z-posq1.z);
+        int rangeStop = rangeStart + reduceMax(rangeEnd-rangeStart);
+        SYNC_WARPS;
+        for (int j = rangeStart; j < rangeStop; j++) {
+            if (j < rangeEnd) {
+                bool isExcluded = (((exclusions>>tj)&1) == 0);
+                int localIndex = tbx+tj;
+                posq2 = make_real4(localData[localIndex].x, localData[localIndex].y, localData[localIndex].z, localData[localIndex].q);
+                real3 delta = make_real3(posq2.x-posq1.x, posq2.y-posq1.y, posq2.z-posq1.z);
 #ifdef USE_PERIODIC
-            APPLY_PERIODIC_TO_DELTA(delta)
+                APPLY_PERIODIC_TO_DELTA(delta)
 #endif
-            real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+                real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
 #ifdef USE_CUTOFF
-            if (!isExcluded && r2 < CUTOFF_SQUARED) {
+                if (!isExcluded && r2 < CUTOFF_SQUARED) {
 #endif
-                real invR = RSQRT(r2);
-                real r = r2*invR;
-                LOAD_ATOM2_PARAMETERS
-                real dEdR = 0.0f;
-                real tempEnergy = 0.0f;
-                const real interactionScale = 1.0f;
-                COMPUTE_INTERACTION
-                energy += tempEnergy;
-                delta *= dEdR;
-                force.x -= delta.x;
-                force.y -= delta.y;
-                force.z -= delta.z;
-                localData[localIndex].fx += delta.x;
-                localData[localIndex].fy += delta.y;
-                localData[localIndex].fz += delta.z;
+                    real invR = RSQRT(r2);
+                    real r = r2*invR;
+                    LOAD_ATOM2_PARAMETERS
+                    real dEdR = 0.0f;
+                    real tempEnergy = 0.0f;
+                    const real interactionScale = 1.0f;
+                    COMPUTE_INTERACTION
+                    energy += tempEnergy;
+                    delta *= dEdR;
+                    force.x -= delta.x;
+                    force.y -= delta.y;
+                    force.z -= delta.z;
+                    localData[localIndex].fx += delta.x;
+                    localData[localIndex].fy += delta.y;
+                    localData[localIndex].fz += delta.z;
 #ifdef USE_CUTOFF
+                }
+#endif
+                tj = (tj == rangeEnd-1 ? rangeStart : tj+1);
             }
-#endif
-            tj = (tj == rangeEnd-1 ? rangeStart : tj+1);
+            SYNC_WARPS;
         }
         if (exclusions != 0) {
             atomicAdd(&forceBuffers[atom1], static_cast<unsigned long long>((long long) (force.x*0x100000000)));
@@ -83,6 +100,7 @@ extern "C" __global__ void computeInteractionGroups(
         atomicAdd(&forceBuffers[atom2], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fx*0x100000000)));
         atomicAdd(&forceBuffers[atom2+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fy*0x100000000)));
         atomicAdd(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fz*0x100000000)));
+        SYNC_WARPS;
     }
     energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += energy;
     SAVE_DERIVATIVES
@@ -134,9 +152,10 @@ extern "C" __global__  void buildNeighborList(int* __restrict__ rebuildNeighborL
         if (tgx == 0)
             anyInteraction[local_warp] = false;
         int tj = tgx;
+        int rangeStop = rangeStart + reduceMax(rangeEnd-rangeStart);
         SYNC_WARPS;
-        for (int j = rangeStart; j < rangeEnd && !anyInteraction[local_warp]; j++) {
-            if (tj < rangeEnd) {
+        for (int j = rangeStart; j < rangeStop && !anyInteraction[local_warp]; j++) {
+            if (j < rangeEnd && tj < rangeEnd) {
                 bool isExcluded = (((exclusions>>tj)&1) == 0);
                 int localIndex = tbx+tj;
                 real3 delta = make_real3(localPos[localIndex].x-posq1.x, localPos[localIndex].y-posq1.y, localPos[localIndex].z-posq1.z);
