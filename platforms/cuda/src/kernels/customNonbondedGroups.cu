@@ -8,17 +8,18 @@ typedef struct {
 #endif
 } AtomData;
 
-// Find the maximum of a value across all threads in a warp, and return that to
-// every thread.  This is only needed on Volta and later.  On earlier architectures,
-// we can just return the value that was passed in.
+/**
+ * Find the maximum of a value across all threads in a warp, and return that to
+ * every thread.  This is only needed on Volta and later.  On earlier architectures,
+ * we can just return the value that was passed in.
+ */
 __device__ int reduceMax(int val) {
 #if __CUDA_ARCH__ >= 700
-  for (int mask = 16; mask > 0; mask /= 2) 
-    val = max(val, __shfl_xor(val, mask));
+    for (int mask = 16; mask > 0; mask /= 2) 
+        val = max(val, __shfl_xor(val, mask));
 #endif
-  return val;
+    return val;
 }
-
 
 extern "C" __global__ void computeInteractionGroups(
         unsigned long long* __restrict__ forceBuffers, mixed* __restrict__ energyBuffer, const real4* __restrict__ posq, const int4* __restrict__ groupData,
