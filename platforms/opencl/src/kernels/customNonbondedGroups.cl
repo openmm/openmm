@@ -198,6 +198,7 @@ __kernel void buildNeighborList(__global int* restrict rebuildNeighborList, __gl
         int rangeStop = rangeStart + reduceMax(rangeEnd-rangeStart, reductionBuffer);
         SYNC_WARPS;
         for (int j = rangeStart; j < rangeStop && !anyInteraction[local_warp]; j++) {
+            SYNC_WARPS;
             if (j < rangeEnd) {
                 bool isExcluded = (((exclusions>>tj)&1) == 0);
                 int localIndex = tbx+tj;
