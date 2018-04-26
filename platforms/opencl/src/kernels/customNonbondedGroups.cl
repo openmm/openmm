@@ -13,6 +13,22 @@ typedef struct {
 } AtomData;
 
 /**
+ * Find the maximum of a value across all threads in a warp, and return that to
+ * every thread.
+ */
+int reduceMax(int val, __local int* temp) {
+    int indexInWarp = get_local_id(0)%32;
+    temp[get_local_id(0)] = val;
+    SYNC_WARPS;
+    for (int offset = 16; offset > 0; offset /= 2) {
+        if (offset < indexInWarp)
+            temp[get_local_id(0)] = max(temp[get_local_id(0)], temp[get_local_id(0)+offset]);
+        SYNC_WARPS;
+    }
+    return temp[get_local_id(0)-indexInWarp];
+}
+
+/**
  * This function is used on devices that don't support 64 bit atomics.  Multiple threads within
  * a single tile might have computed forces on the same atom.  This loops over them and makes sure
  * that only one thread updates the force on any given atom.
@@ -53,6 +69,7 @@ __kernel void computeInteractionGroups(
     mixed energy = 0;
     INIT_DERIVATIVES
     __local AtomData localData[LOCAL_MEMORY_SIZE];
+    __local int reductionBuffer[LOCAL_MEMORY_SIZE];
 
     const unsigned int startTile = (useNeighborList ? warp*numGroupTiles[0]/totalWarps : FIRST_TILE+warp*(LAST_TILE-FIRST_TILE)/totalWarps);
     const unsigned int endTile = (useNeighborList ? (warp+1)*numGroupTiles[0]/totalWarps : FIRST_TILE+(warp+1)*(LAST_TILE-FIRST_TILE)/totalWarps);
@@ -76,9 +93,10 @@ __kernel void computeInteractionGroups(
         localData[get_local_id(0)].fy = 0.0f;
         localData[get_local_id(0)].fz = 0.0f;
         int tj = tgx;
+        int rangeStop = rangeStart + reduceMax(rangeEnd-rangeStart, reductionBuffer);
         SYNC_WARPS;
-        for (int j = rangeStart; j < rangeEnd; j++) {
-            if (tj < rangeEnd) {
+        for (int j = rangeStart; j < rangeStop; j++) {
+            if (j < rangeEnd) {
                 bool isExcluded = (((exclusions>>tj)&1) == 0);
                 int localIndex = tbx+tj;
                 posq2 = (real4) (localData[localIndex].x, localData[localIndex].y, localData[localIndex].z, localData[localIndex].q);
@@ -161,6 +179,7 @@ __kernel void buildNeighborList(__global int* restrict rebuildNeighborList, __gl
     __local real4 localPos[LOCAL_MEMORY_SIZE];
     __local volatile bool anyInteraction[WARPS_IN_BLOCK];
     __local volatile int tileIndex[WARPS_IN_BLOCK];
+    __local int reductionBuffer[LOCAL_MEMORY_SIZE];
 
     const unsigned int startTile = warp*NUM_TILES/totalWarps;
     const unsigned int endTile = (warp+1)*NUM_TILES/totalWarps;
@@ -176,9 +195,11 @@ __kernel void buildNeighborList(__global int* restrict rebuildNeighborList, __gl
         if (tgx == 0)
             anyInteraction[local_warp] = false;
         int tj = tgx;
+        int rangeStop = rangeStart + reduceMax(rangeEnd-rangeStart, reductionBuffer);
         SYNC_WARPS;
-        for (int j = rangeStart; j < rangeEnd && !anyInteraction[local_warp]; j++) {
-            if (tj < rangeEnd) {
+        for (int j = rangeStart; j < rangeStop && !anyInteraction[local_warp]; j++) {
+            SYNC_WARPS;
+            if (j < rangeEnd) {
                 bool isExcluded = (((exclusions>>tj)&1) == 0);
                 int localIndex = tbx+tj;
                 real4 delta = (real4) (localPos[localIndex].xyz - posq1.xyz, 0);
