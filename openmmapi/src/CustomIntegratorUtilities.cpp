@@ -84,8 +84,15 @@ void CustomIntegratorUtilities::analyzeComputations(const ContextImpl& context, 
     vector<CustomIntegrator::ComputationType> stepType(numSteps);
     vector<string> stepVariable(numSteps);
     map<string, Lepton::CustomFunction*> customFunctions = functions;
-    DerivFunction derivFunction;
-    customFunctions["deriv"] = &derivFunction;
+    Lepton::PlaceholderFunction fn1(1), fn2(2), fn3(3);
+    customFunctions["deriv"] = &fn2;
+    map<string, Lepton::CustomFunction*> vectorFunctions = customFunctions;
+    vectorFunctions["dot"] = &fn2;
+    vectorFunctions["cross"] = &fn2;
+    vectorFunctions["_x"] = &fn1;
+    vectorFunctions["_y"] = &fn1;
+    vectorFunctions["_z"] = &fn1;
+    vectorFunctions["vector"] = &fn3;
 
     // Parse the expressions.
 
@@ -100,6 +107,8 @@ void CustomIntegratorUtilities::analyzeComputations(const ContextImpl& context, 
             expressions[step].push_back(Lepton::Parser::parse(lhs, customFunctions).optimize());
             expressions[step].push_back(Lepton::Parser::parse(rhs, customFunctions).optimize());
         }
+        else if (stepType[step] == CustomIntegrator::ComputePerDof || stepType[step] == CustomIntegrator::ComputeSum)
+            expressions[step].push_back(Lepton::Parser::parse(expression, vectorFunctions).optimize());
         else if (expression.size() > 0)
             expressions[step].push_back(Lepton::Parser::parse(expression, customFunctions).optimize());
     }

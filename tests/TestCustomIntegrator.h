@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2017 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -1019,6 +1019,43 @@ void testUpdateContextState() {
     }
 }
 
+/**
+ * Test using expressions that involve vector functions.
+ */
+void testVectorFunctions() {
+    const int numParticles = 8;
+    System system;
+    CustomIntegrator integrator(0.001);
+    integrator.addGlobalVariable("sumy", 0.0);
+    integrator.addPerDofVariable("angular", 0.0);
+    integrator.addComputeSum("sumy", "x*vector(0, 1, 0)");
+    integrator.addComputePerDof("angular", "cross(v, x)");
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    vector<Vec3> positions(numParticles);
+    vector<Vec3> velocities(numParticles);
+    for (int i = 0; i < numParticles; ++i) {
+        system.addParticle(1.0);
+        positions[i] = Vec3(genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5);
+        velocities[i] = Vec3(genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5);
+    }
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    context.setVelocities(velocities);
+    integrator.step(1);
+    
+    // See if the expressions were computed correctly.
+    
+    double sumy = 0;
+    vector<Vec3> values;
+    integrator.getPerDofVariable(0, values);
+    for (int i = 0; i < numParticles; i++) {
+        ASSERT_EQUAL_VEC(velocities[i].cross(positions[i]), values[i], 1e-5);
+        sumy += positions[i][1];
+    }
+    ASSERT_EQUAL_TOL(sumy, integrator.getGlobalVariable(0), 1e-5);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -1044,6 +1081,7 @@ int main(int argc, char* argv[]) {
         testTabulatedFunction();
         testAlternatingGroups();
         testUpdateContextState();
+        testVectorFunctions();
         runPlatformTests();
     }
     catch(const exception& e) {

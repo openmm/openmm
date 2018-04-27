@@ -60,6 +60,20 @@ private:
     string param;
 };
 
+/**
+ * Determine whether a parsed expression involves any vector functions.
+ */
+static bool isVectorExpression(const ExpressionTreeNode& node) {
+    const Lepton::Operation& op = node.getOperation();
+    if (op.getId() == Lepton::Operation::CUSTOM)
+        if (op.getName() == "dot" || op.getName() == "cross" || op.getName() == "vector" || op.getName() == "_x" || op.getName() == "_y" || op.getName() == "_z")
+            return true;
+    for (auto& child : node.getChildren())
+        if (isVectorExpression(child))
+            return true;
+    return false;
+}
+
 /**---------------------------------------------------------------------------------------
 
    ReferenceCustomDynamics constructor
@@ -127,12 +141,18 @@ void ReferenceCustomDynamics::initialize(ContextImpl& context, vector<double>& m
     vector<vector<ParsedExpression> > expressions;
     CustomIntegratorUtilities::analyzeComputations(context, integrator, expressions, comparisons, blockEnd, invalidatesForces, needsForces, needsEnergy, computeBothForceAndEnergy, forceGroup, functions);
     stepExpressions.resize(expressions.size());
+    stepVectorExpressions.resize(expressions.size());
     for (int i = 0; i < numSteps; i++) {
         stepExpressions[i].resize(expressions[i].size());
         for (int j = 0; j < (int) expressions[i].size(); j++) {
-            stepExpressions[i][j] = ParsedExpression(replaceDerivFunctions(expressions[i][j].getRootNode(), context)).createCompiledExpression();
-            stepExpressions[i][j].setVariableLocations(variableLocations);
-            expressionSet.registerExpression(stepExpressions[i][j]);
+            ParsedExpression parsed(replaceDerivFunctions(expressions[i][j].getRootNode(), context));
+            if (isVectorExpression(parsed.getRootNode()))
+                stepVectorExpressions[i].push_back(VectorExpression(parsed));
+            else {
+                stepExpressions[i][j] = parsed.createCompiledExpression();
+                stepExpressions[i][j].setVariableLocations(variableLocations);
+                expressionSet.registerExpression(stepExpressions[i][j]);
+            }
         }
         if (stepType[i] == CustomIntegrator::WhileBlockStart)
             blockEnd[blockEnd[i]] = i; // Record where to branch back to.
@@ -272,11 +292,17 @@ void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, ve
                 }
                 if (results == NULL)
                     throw OpenMMException("Illegal per-DOF output variable: "+stepVariable[step]);
-                computePerDof(numberOfAtoms, *results, atomCoordinates, velocities, stepForces, masses, perDof, stepExpressions[step][0]);
+                if (stepVectorExpressions[step].size() > 0)
+                    computePerParticle(numberOfAtoms, *results, atomCoordinates, velocities, stepForces, masses, perDof, globals, stepVectorExpressions[step][0]);
+                else
+                    computePerDof(numberOfAtoms, *results, atomCoordinates, velocities, stepForces, masses, perDof, stepExpressions[step][0]);
                 break;
             }
             case CustomIntegrator::ComputeSum: {
-                computePerDof(numberOfAtoms, sumBuffer, atomCoordinates, velocities, stepForces, masses, perDof, stepExpressions[step][0]);
+                if (stepVectorExpressions[step].size() > 0)
+                    computePerParticle(numberOfAtoms, sumBuffer, atomCoordinates, velocities, stepForces, masses, perDof, globals, stepVectorExpressions[step][0]);
+                else
+                    computePerDof(numberOfAtoms, sumBuffer, atomCoordinates, velocities, stepForces, masses, perDof, stepExpressions[step][0]);
                 double sum = 0.0;
                 for (int j = 0; j < numberOfAtoms; j++)
                     if (masses[j] != 0.0)
@@ -350,6 +376,31 @@ void ReferenceCustomDynamics::computePerDof(int numberOfAtoms, vector<Vec3>& res
                     perDofVariable[k] = perDof[k][i][j];
                 results[i][j] = expression.evaluate();
             }
+        }
+    }
+}
+
+void ReferenceCustomDynamics::computePerParticle(int numberOfAtoms, vector<Vec3>& results, const vector<Vec3>& atomCoordinates,
+              const vector<Vec3>& velocities, const vector<Vec3>& forces, const vector<double>& masses,
+              const vector<vector<Vec3> >& perDof, const map<string, double>& globals, const VectorExpression& expression) {
+    // Loop over all degrees of freedom.
+
+    map<string, Vec3> variables;
+    for (auto& entry : globals)
+        variables[entry.first] = Vec3(entry.second, entry.second, entry.second);
+    for (int i = 0; i < numberOfAtoms; i++) {
+        if (masses[i] != 0.0) {
+            variables["m"] = Vec3(masses[i], masses[i], masses[i]);
+            variables["x"] = atomCoordinates[i];
+            variables["v"] = velocities[i];
+            variables["f"] = forces[i];
+            variables["uniform"] = Vec3(SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber(),
+                    SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber(), SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber());
+            variables["gaussian"] = Vec3(SimTKOpenMMUtilities::getNormallyDistributedRandomNumber(),
+                    SimTKOpenMMUtilities::getNormallyDistributedRandomNumber(), SimTKOpenMMUtilities::getNormallyDistributedRandomNumber());
+            for (int j = 0; j < perDof.size(); j++)
+                variables[integrator.getPerDofVariableName(j)] = perDof[j][i];
+            results[i] = expression.evaluate(variables);
         }
     }
 }

@@ -30,6 +30,7 @@
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/CustomIntegratorUtilities.h"
 #include "openmm/internal/CompiledExpressionSet.h"
+#include "openmm/internal/VectorExpression.h"
 #include "lepton/CompiledExpression.h"
 
 #include <map>
@@ -48,6 +49,7 @@ private:
     std::vector<OpenMM::CustomIntegrator::ComputationType> stepType;
     std::vector<std::string> stepVariable;
     std::vector<std::vector<Lepton::CompiledExpression> > stepExpressions;
+    std::vector<std::vector<VectorExpression> > stepVectorExpressions;
     std::vector<CustomIntegratorUtilities::Comparison> comparisons;
     std::vector<bool> invalidatesForces, needsForces, needsEnergy, computeBothForceAndEnergy;
     std::vector<int> forceGroupFlags, blockEnd;
@@ -67,6 +69,10 @@ private:
     void computePerDof(int numberOfAtoms, std::vector<OpenMM::Vec3>& results, const std::vector<OpenMM::Vec3>& atomCoordinates,
                   const std::vector<OpenMM::Vec3>& velocities, const std::vector<OpenMM::Vec3>& forces, const std::vector<double>& masses,
                   const std::vector<std::vector<OpenMM::Vec3> >& perDof, const Lepton::CompiledExpression& expression);
+    
+    void computePerParticle(int numberOfAtoms, std::vector<OpenMM::Vec3>& results, const std::vector<OpenMM::Vec3>& atomCoordinates,
+                  const std::vector<OpenMM::Vec3>& velocities, const std::vector<OpenMM::Vec3>& forces, const std::vector<double>& masses,
+                  const std::vector<std::vector<OpenMM::Vec3> >& perDof, const std::map<std::string, double>& globals, const VectorExpression& expression);
     
     void recordChangedParameters(OpenMM::ContextImpl& context, std::map<std::string, double>& globals);
 
