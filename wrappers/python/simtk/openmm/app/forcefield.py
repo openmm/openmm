@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2017 Stanford University and the Authors.
+Portions copyright (c) 2012-2018 Stanford University and the Authors.
 Authors: Peter Eastman, Mark Friedrichs
 Contributors:
 
@@ -49,13 +49,19 @@ from simtk.openmm.app.internal.singleton import Singleton
 
 # Directories from which to load built in force fields.
 
-_dataDirectories = [os.path.join(os.path.dirname(__file__), 'data')]
-try:
-    from pkg_resources import iter_entry_points
-    for entry in iter_entry_points(group='openmm.forcefielddir'):
-        _dataDirectories.append(entry.load()())
-except:
-    pass # pkg_resources is not installed
+_dataDirectories = None
+
+def _getDataDirectories():
+    global _dataDirectories
+    if _dataDirectories is None:
+        _dataDirectories = [os.path.join(os.path.dirname(__file__), 'data')]
+        try:
+            from pkg_resources import iter_entry_points
+            for entry in iter_entry_points(group='openmm.forcefielddir'):
+                _dataDirectories.append(entry.load()())
+        except:
+            pass # pkg_resources is not installed
+    return _dataDirectories
 
 def _convertParameterToNumber(param):
     if unit.is_quantity(param):
@@ -205,7 +211,7 @@ class ForceField(object):
                 # this handles either filenames or open file-like objects
                 tree = etree.parse(file)
             except IOError:
-                for dataDir in _dataDirectories:
+                for dataDir in _getDataDirectories():
                     f = os.path.join(dataDir, file)
                     if os.path.isfile(f):
                         tree = etree.parse(f)
