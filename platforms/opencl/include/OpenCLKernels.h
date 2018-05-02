@@ -1484,9 +1484,8 @@ class OpenCLIntegrateCustomStepKernel : public IntegrateCustomStepKernel {
 public:
     enum GlobalTargetType {DT, VARIABLE, PARAMETER};
     OpenCLIntegrateCustomStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateCustomStepKernel(name, platform), cl(cl),
-            hasInitializedKernels(false), localValuesAreCurrent(false), perDofValues(NULL), needsEnergyParamDerivs(false) {
+            hasInitializedKernels(false), needsEnergyParamDerivs(false) {
     }
-    ~OpenCLIntegrateCustomStepKernel();
     /**
      * Initialize the kernel.
      * 
@@ -1550,7 +1549,7 @@ private:
     class ReorderListener;
     class GlobalTarget;
     class DerivFunction;
-    std::string createPerDofComputation(const std::string& variable, const Lepton::ParsedExpression& expr, int component, CustomIntegrator& integrator,
+    std::string createPerDofComputation(const std::string& variable, const Lepton::ParsedExpression& expr, CustomIntegrator& integrator,
         const std::string& forceName, const std::string& energyName, std::vector<const TabulatedFunction*>& functions,
         std::vector<std::pair<std::string, std::string> >& functionNames);
     void prepareForComputation(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid);
@@ -1563,21 +1562,21 @@ private:
     double energy;
     float energyFloat;
     int numGlobalVariables, sumWorkGroupSize;
-    bool hasInitializedKernels, deviceValuesAreCurrent, deviceGlobalsAreCurrent, modifiesParameters, keNeedsForce, hasAnyConstraints, needsEnergyParamDerivs;
-    mutable bool localValuesAreCurrent;
+    bool hasInitializedKernels, deviceGlobalsAreCurrent, modifiesParameters, keNeedsForce, hasAnyConstraints, needsEnergyParamDerivs;
+    std::vector<bool> deviceValuesAreCurrent;
+    mutable std::vector<bool> localValuesAreCurrent;
     OpenCLArray globalValues;
     OpenCLArray sumBuffer;
     OpenCLArray summedValue;
     OpenCLArray uniformRandoms;
     OpenCLArray randomSeed;
     OpenCLArray perDofEnergyParamDerivs;
-    std::vector<OpenCLArray> tabulatedFunctions;
+    std::vector<OpenCLArray> tabulatedFunctions, perDofValues;
     std::map<int, double> savedEnergy;
     std::map<int, OpenCLArray> savedForces;
     std::set<int> validSavedForces;
-    OpenCLParameterSet* perDofValues;
-    mutable std::vector<std::vector<cl_float> > localPerDofValuesFloat;
-    mutable std::vector<std::vector<cl_double> > localPerDofValuesDouble;
+    mutable std::vector<std::vector<mm_float4> > localPerDofValuesFloat;
+    mutable std::vector<std::vector<mm_double4> > localPerDofValuesDouble;
     std::map<std::string, double> energyParamDerivs;
     std::vector<std::string> perDofEnergyParamDerivNames;
     std::vector<cl_float> localPerDofEnergyParamDerivsFloat;

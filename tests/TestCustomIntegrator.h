@@ -102,7 +102,6 @@ void testSingleBond() {
  */
 void testConstraints() {
     const int numParticles = 8;
-    const double temp = 500.0;
     System system;
     CustomIntegrator integrator(0.002);
     integrator.addPerDofVariable("oldx", 0);
@@ -1028,8 +1027,10 @@ void testVectorFunctions() {
     CustomIntegrator integrator(0.001);
     integrator.addGlobalVariable("sumy", 0.0);
     integrator.addPerDofVariable("angular", 0.0);
+    integrator.addPerDofVariable("shuffle", 0.0);
     integrator.addComputeSum("sumy", "x*vector(0, 1, 0)");
     integrator.addComputePerDof("angular", "cross(v, x)");
+    integrator.addComputePerDof("shuffle", "dot(vector(_z(x), _x(x), _y(x)), v)");
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
     vector<Vec3> positions(numParticles);
@@ -1047,10 +1048,12 @@ void testVectorFunctions() {
     // See if the expressions were computed correctly.
     
     double sumy = 0;
-    vector<Vec3> values;
-    integrator.getPerDofVariable(0, values);
+    vector<Vec3> angular, shuffle;
+    integrator.getPerDofVariable(0, angular);
+    integrator.getPerDofVariable(1, shuffle);
     for (int i = 0; i < numParticles; i++) {
-        ASSERT_EQUAL_VEC(velocities[i].cross(positions[i]), values[i], 1e-5);
+        ASSERT_EQUAL_VEC(velocities[i].cross(positions[i]), angular[i], 1e-5);
+        ASSERT_EQUAL_VEC(Vec3(1, 1, 1)*velocities[i].dot(Vec3(positions[i][2], positions[i][0], positions[i][1])), shuffle[i], 1e-5);
         sumy += positions[i][1];
     }
     ASSERT_EQUAL_TOL(sumy, integrator.getGlobalVariable(0), 1e-5);

@@ -7501,7 +7501,7 @@ double OpenCLIntegrateVariableLangevinStepKernel::computeKineticEnergy(ContextIm
 
 class OpenCLIntegrateCustomStepKernel::ReorderListener : public OpenCLContext::ReorderListener {
 public:
-    ReorderListener(OpenCLContext& cl, OpenCLParameterSet& perDofValues, vector<vector<cl_float> >& localPerDofValuesFloat, vector<vector<cl_double> >& localPerDofValuesDouble, bool& deviceValuesAreCurrent) :
+    ReorderListener(OpenCLContext& cl, vector<OpenCLArray>& perDofValues, vector<vector<mm_float4> >& localPerDofValuesFloat, vector<vector<mm_double4> >& localPerDofValuesDouble, vector<bool>& deviceValuesAreCurrent) :
             cl(cl), perDofValues(perDofValues), localPerDofValuesFloat(localPerDofValuesFloat), localPerDofValuesDouble(localPerDofValuesDouble), deviceValuesAreCurrent(deviceValuesAreCurrent) {
         int numAtoms = cl.getNumAtoms();
         lastAtomOrder.resize(numAtoms);
@@ -7511,52 +7511,42 @@ public:
     void execute() {
         // Reorder the per-DOF variables to reflect the new atom order.
 
-        if (perDofValues.getNumParameters() == 0)
+        if (perDofValues.size() == 0)
             return;
         int numAtoms = cl.getNumAtoms();
         const vector<int>& order = cl.getAtomIndex();
-        if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {
-            if (deviceValuesAreCurrent)
-                perDofValues.getParameterValues(localPerDofValuesDouble);
-            vector<vector<cl_double> > swap(3*numAtoms);
-            for (int i = 0; i < numAtoms; i++) {
-                swap[3*lastAtomOrder[i]] = localPerDofValuesDouble[3*i];
-                swap[3*lastAtomOrder[i]+1] = localPerDofValuesDouble[3*i+1];
-                swap[3*lastAtomOrder[i]+2] = localPerDofValuesDouble[3*i+2];
+        for (int index = 0; index < perDofValues.size(); index++) {
+            if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {
+                if (deviceValuesAreCurrent[index])
+                    perDofValues[index].download(localPerDofValuesDouble[index]);
+                vector<mm_double4> swap(numAtoms);
+                for (int i = 0; i < numAtoms; i++)
+                    swap[lastAtomOrder[i]] = localPerDofValuesDouble[index][i];
+                for (int i = 0; i < numAtoms; i++)
+                    localPerDofValuesDouble[index][i] = swap[order[i]];
+                perDofValues[index].upload(localPerDofValuesDouble[index]);
             }
-            for (int i = 0; i < numAtoms; i++) {
-                localPerDofValuesDouble[3*i] = swap[3*order[i]];
-                localPerDofValuesDouble[3*i+1] = swap[3*order[i]+1];
-                localPerDofValuesDouble[3*i+2] = swap[3*order[i]+2];
+            else {
+                if (deviceValuesAreCurrent[index])
+                    perDofValues[index].download(localPerDofValuesFloat[index]);
+                vector<mm_float4> swap(numAtoms);
+                for (int i = 0; i < numAtoms; i++)
+                    swap[lastAtomOrder[i]] = localPerDofValuesFloat[index][i];
+                for (int i = 0; i < numAtoms; i++)
+                    localPerDofValuesFloat[index][i] = swap[order[i]];
+                perDofValues[index].upload(localPerDofValuesFloat[index]);
             }
-            perDofValues.setParameterValues(localPerDofValuesDouble);
-        }
-        else {
-            if (deviceValuesAreCurrent)
-                perDofValues.getParameterValues(localPerDofValuesFloat);
-            vector<vector<cl_float> > swap(3*numAtoms);
-            for (int i = 0; i < numAtoms; i++) {
-                swap[3*lastAtomOrder[i]] = localPerDofValuesFloat[3*i];
-                swap[3*lastAtomOrder[i]+1] = localPerDofValuesFloat[3*i+1];
-                swap[3*lastAtomOrder[i]+2] = localPerDofValuesFloat[3*i+2];
-            }
-            for (int i = 0; i < numAtoms; i++) {
-                localPerDofValuesFloat[3*i] = swap[3*order[i]];
-                localPerDofValuesFloat[3*i+1] = swap[3*order[i]+1];
-                localPerDofValuesFloat[3*i+2] = swap[3*order[i]+2];
-            }
-            perDofValues.setParameterValues(localPerDofValuesFloat);
+            deviceValuesAreCurrent[index] = true;
         }
         for (int i = 0; i < numAtoms; i++)
             lastAtomOrder[i] = order[i];
-        deviceValuesAreCurrent = true;
     }
 private:
     OpenCLContext& cl;
-    OpenCLParameterSet& perDofValues;
-    vector<vector<cl_float> >& localPerDofValuesFloat;
-    vector<vector<cl_double> >& localPerDofValuesDouble;
-    bool& deviceValuesAreCurrent;
+    vector<OpenCLArray>& perDofValues;
+    vector<vector<mm_float4> >& localPerDofValuesFloat;
+    vector<vector<mm_double4> >& localPerDofValuesDouble;
+    vector<bool>& deviceValuesAreCurrent;
     vector<int> lastAtomOrder;
 };
 
@@ -7581,47 +7571,47 @@ private:
     string param;
 };
 
-OpenCLIntegrateCustomStepKernel::~OpenCLIntegrateCustomStepKernel() {
-    if (perDofValues != NULL)
-        delete perDofValues;
-}
-
 void OpenCLIntegrateCustomStepKernel::initialize(const System& system, const CustomIntegrator& integrator) {
     cl.getPlatformData().initializeContexts(system);
     cl.getIntegrationUtilities().initRandomNumberGenerator(integrator.getRandomNumberSeed());
     numGlobalVariables = integrator.getNumGlobalVariables();
     int elementSize = (cl.getUseDoublePrecision() || cl.getUseMixedPrecision() ? sizeof(double) : sizeof(float));
-    sumBuffer.initialize(cl, ((3*system.getNumParticles()+3)/4)*4, elementSize, "sumBuffer");
+    sumBuffer.initialize(cl, system.getNumParticles(), elementSize, "sumBuffer");
     summedValue.initialize(cl, 1, elementSize, "summedValue");
-    perDofValues = new OpenCLParameterSet(cl, integrator.getNumPerDofVariables(), 3*system.getNumParticles(), "perDofVariables", false, cl.getUseDoublePrecision() || cl.getUseMixedPrecision());
-    cl.addReorderListener(new ReorderListener(cl, *perDofValues, localPerDofValuesFloat, localPerDofValuesDouble, deviceValuesAreCurrent));
+    perDofValues.resize(integrator.getNumPerDofVariables());
+    localPerDofValuesFloat.resize(perDofValues.size());
+    localPerDofValuesDouble.resize(perDofValues.size());
+    for (int i = 0; i < perDofValues.size(); i++)
+        perDofValues[i].initialize(cl, system.getNumParticles(), 4*elementSize, "perDofVariables");
+    localValuesAreCurrent.resize(integrator.getNumPerDofVariables(), false);
+    deviceValuesAreCurrent.resize(integrator.getNumPerDofVariables(), false);
+    cl.addReorderListener(new ReorderListener(cl, perDofValues, localPerDofValuesFloat, localPerDofValuesDouble, deviceValuesAreCurrent));
     SimTKOpenMMUtilities::setRandomNumberSeed(integrator.getRandomNumberSeed());
 }
 
-string OpenCLIntegrateCustomStepKernel::createPerDofComputation(const string& variable, const Lepton::ParsedExpression& expr, int component, CustomIntegrator& integrator,
+string OpenCLIntegrateCustomStepKernel::createPerDofComputation(const string& variable, const Lepton::ParsedExpression& expr, CustomIntegrator& integrator,
         const string& forceName, const string& energyName, vector<const TabulatedFunction*>& functions, vector<pair<string, string> >& functionNames) {
-    const string suffixes[] = {".x", ".y", ".z"};
-    string suffix = suffixes[component];
+    string tempType = (cl.getSupportsDoublePrecision() ? "double3" : "float3");
     map<string, Lepton::ParsedExpression> expressions;
     if (variable == "x")
-        expressions["position"+suffix+" = "] = expr;
+        expressions["position.xyz = "] = expr;
     else if (variable == "v")
-        expressions["velocity"+suffix+" = "] = expr;
+        expressions["velocity.xyz = "] = expr;
     else if (variable == "")
-        expressions["sum[3*index+"+cl.intToString(component)+"] = "] = expr;
+        expressions[tempType+" tempSum = "] = expr;
     else {
         for (int i = 0; i < integrator.getNumPerDofVariables(); i++)
             if (variable == integrator.getPerDofVariableName(i))
-                expressions["perDof"+suffix.substr(1)+perDofValues->getParameterSuffix(i)+" = "] = expr;
+                expressions["perDof"+cl.intToString(i)+" = "] = expr;
     }
     if (expressions.size() == 0)
         throw OpenMMException("Unknown per-DOF variable: "+variable);
     map<string, string> variables;
-    variables["x"] = "position"+suffix;
-    variables["v"] = "velocity"+suffix;
-    variables[forceName] = "f"+suffix;
-    variables["gaussian"] = "gaussian"+suffix;
-    variables["uniform"] = "uniform"+suffix;
+    variables["x"] = "position.xyz";
+    variables["v"] = "velocity.xyz";
+    variables[forceName] = "f.xyz";
+    variables["gaussian"] = "gaussian.xyz";
+    variables["uniform"] = "uniform.xyz";
     variables["m"] = "mass";
     variables["dt"] = "stepSize";
     if (energyName != "")
@@ -7629,15 +7619,17 @@ string OpenCLIntegrateCustomStepKernel::createPerDofComputation(const string& va
     for (int i = 0; i < integrator.getNumGlobalVariables(); i++)
         variables[integrator.getGlobalVariableName(i)] = "globals["+cl.intToString(globalVariableIndex[i])+"]";
     for (int i = 0; i < integrator.getNumPerDofVariables(); i++)
-        variables[integrator.getPerDofVariableName(i)] = "perDof"+suffix.substr(1)+perDofValues->getParameterSuffix(i);
+        variables[integrator.getPerDofVariableName(i)] = "perDof"+cl.intToString(i);
     for (int i = 0; i < (int) parameterNames.size(); i++)
         variables[parameterNames[i]] = "globals["+cl.intToString(parameterVariableIndex[i])+"]";
-    string tempType = (cl.getSupportsDoublePrecision() ? "double" : "float");
     vector<pair<ExpressionTreeNode, string> > variableNodes;
     findExpressionsForDerivs(expr.getRootNode(), variableNodes);
     for (auto& var : variables)
         variableNodes.push_back(make_pair(ExpressionTreeNode(new Operation::Variable(var.first)), var.second));
-    return cl.getExpressionUtilities().createExpressions(expressions, variableNodes, functions, functionNames, "temp"+cl.intToString(component)+"_", tempType);
+    string result = cl.getExpressionUtilities().createExpressions(expressions, variableNodes, functions, functionNames, "temp", tempType);
+    if (variable == "")
+        result += "sum[index] = tempSum.x+tempSum.y+tempSum.z;\n";
+    return result;
 }
 
 void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid) {
@@ -7645,6 +7637,8 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
     int numAtoms = cl.getNumAtoms();
     int numSteps = integrator.getNumComputations();
     bool useDouble = cl.getUseDoublePrecision() || cl.getUseMixedPrecision();
+    string tempType = (useDouble ? "double3" : "float3");
+    string perDofType = (useDouble ? "double4" : "float4");
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;
         
@@ -7854,12 +7848,8 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
                 // Compute a per-DOF value.
                 
                 stringstream compute;
-                for (int i = 0; i < (int) perDofValues->getBuffers().size(); i++) {
-                    const OpenCLNonbondedUtilities::ParameterInfo& buffer = perDofValues->getBuffers()[i];
-                    compute << buffer.getType()<<" perDofx"<<cl.intToString(i+1)<<" = perDofValues"<<cl.intToString(i+1)<<"[3*index];\n";
-                    compute << buffer.getType()<<" perDofy"<<cl.intToString(i+1)<<" = perDofValues"<<cl.intToString(i+1)<<"[3*index+1];\n";
-                    compute << buffer.getType()<<" perDofz"<<cl.intToString(i+1)<<" = perDofValues"<<cl.intToString(i+1)<<"[3*index+2];\n";
-                }
+                for (int i = 0; i < perDofValues.size(); i++)
+                    compute << tempType<<" perDof"<<cl.intToString(i)<<" = perDofValues"<<cl.intToString(i)<<"[index].xyz;\n";
                 int numGaussian = 0, numUniform = 0;
                 for (int j = step; j < numSteps && (j == step || merged[j]); j++) {
                     numGaussian += numAtoms*usesVariable(expression[j][0], "gaussian");
@@ -7869,8 +7859,7 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
                         compute << "float4 gaussian = gaussianValues[gaussianIndex+index];\n";
                     if (numUniform > 0)
                         compute << "float4 uniform = uniformValues[uniformIndex+index];\n";
-                    for (int i = 0; i < 3; i++)
-                        compute << createPerDofComputation(stepType[j] == CustomIntegrator::ComputePerDof ? variable[j] : "", expression[j][0], i, integrator, forceName[j], energyName[j], functionList, functionNames);
+                    compute << createPerDofComputation(stepType[j] == CustomIntegrator::ComputePerDof ? variable[j] : "", expression[j][0], integrator, forceName[j], energyName[j], functionList, functionNames);
                     if (variable[j] == "x") {
                         if (storePosAsDelta[j]) {
                             if (cl.getSupportsDoublePrecision())
@@ -7884,12 +7873,8 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
                     else if (variable[j] == "v")
                         compute << "velm[index] = convert_mixed4(velocity);\n";
                     else {
-                        for (int i = 0; i < (int) perDofValues->getBuffers().size(); i++) {
-                            const OpenCLNonbondedUtilities::ParameterInfo& buffer = perDofValues->getBuffers()[i];
-                            compute << "perDofValues"<<cl.intToString(i+1)<<"[3*index] = perDofx"<<cl.intToString(i+1)<<";\n";
-                            compute << "perDofValues"<<cl.intToString(i+1)<<"[3*index+1] = perDofy"<<cl.intToString(i+1)<<";\n";
-                            compute << "perDofValues"<<cl.intToString(i+1)<<"[3*index+2] = perDofz"<<cl.intToString(i+1)<<";\n";
-                        }
+                        for (int i = 0; i < perDofValues.size(); i++)
+                            compute << "perDofValues"<<cl.intToString(i)<<"[index] = ("<<perDofType<<") (perDof"<<cl.intToString(i)<<", 0);\n";
                     }
                     if (numGaussian > 0)
                         compute << "gaussianIndex += NUM_ATOMS;\n";
@@ -7900,10 +7885,9 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
                 map<string, string> replacements;
                 replacements["COMPUTE_STEP"] = compute.str();
                 stringstream args;
-                for (int i = 0; i < (int) perDofValues->getBuffers().size(); i++) {
-                    const OpenCLNonbondedUtilities::ParameterInfo& buffer = perDofValues->getBuffers()[i];
-                    string valueName = "perDofValues"+cl.intToString(i+1);
-                    args << ", __global " << buffer.getType() << "* restrict " << valueName;
+                for (int i = 0; i < perDofValues.size(); i++) {
+                    string valueName = "perDofValues"+cl.intToString(i);
+                    args << ", __global " << perDofType << "* restrict " << valueName;
                 }
                 for (int i = 0; i < (int) tableTypes.size(); i++)
                     args << ", __global const " << tableTypes[i]<< "* restrict table" << i;
@@ -7928,8 +7912,8 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
                 kernel.setArg<cl::Buffer>(index++, sumBuffer.getDeviceBuffer());
                 index += 4;
                 kernel.setArg<cl::Buffer>(index++, perDofEnergyParamDerivs.getDeviceBuffer());
-                for (auto& buffer : perDofValues->getBuffers())
-                    kernel.setArg<cl::Memory>(index++, buffer.getMemory());
+                for (auto& array : perDofValues)
+                    kernel.setArg<cl::Memory>(index++, array.getDeviceBuffer());
                 for (auto& array : tabulatedFunctions)
                     kernel.setArg<cl::Buffer>(index++, array.getDeviceBuffer());
                 if (stepType[step] == CustomIntegrator::ComputeSum) {
@@ -7986,22 +7970,16 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
         // Create the kernel for computing kinetic energy.
 
         stringstream computeKE;
-        for (int i = 0; i < (int) perDofValues->getBuffers().size(); i++) {
-            const OpenCLNonbondedUtilities::ParameterInfo& buffer = perDofValues->getBuffers()[i];
-            computeKE << buffer.getType()<<" perDofx"<<cl.intToString(i+1)<<" = perDofValues"<<cl.intToString(i+1)<<"[3*index];\n";
-            computeKE << buffer.getType()<<" perDofy"<<cl.intToString(i+1)<<" = perDofValues"<<cl.intToString(i+1)<<"[3*index+1];\n";
-            computeKE << buffer.getType()<<" perDofz"<<cl.intToString(i+1)<<" = perDofValues"<<cl.intToString(i+1)<<"[3*index+2];\n";
-        }
+        for (int i = 0; i < perDofValues.size(); i++)
+            computeKE << tempType<<" perDof"<<cl.intToString(i)<<" = perDofValues"<<cl.intToString(i)<<"[index].xyz;\n";
         Lepton::ParsedExpression keExpression = Lepton::Parser::parse(integrator.getKineticEnergyExpression()).optimize();
-        for (int i = 0; i < 3; i++)
-            computeKE << createPerDofComputation("", keExpression, i, integrator, "f", "", functionList, functionNames);
+        computeKE << createPerDofComputation("", keExpression, integrator, "f", "", functionList, functionNames);
         map<string, string> replacements;
         replacements["COMPUTE_STEP"] = computeKE.str();
         stringstream args;
-        for (int i = 0; i < (int) perDofValues->getBuffers().size(); i++) {
-            const OpenCLNonbondedUtilities::ParameterInfo& buffer = perDofValues->getBuffers()[i];
-            string valueName = "perDofValues"+cl.intToString(i+1);
-            args << ", __global " << buffer.getType() << "* restrict " << valueName;
+        for (int i = 0; i < perDofValues.size(); i++) {
+            string valueName = "perDofValues"+cl.intToString(i);
+            args << ", __global " << perDofType << "* restrict " << valueName;
         }
         for (int i = 0; i < (int) tableTypes.size(); i++)
             args << ", __global const " << tableTypes[i]<< "* restrict table" << i;
@@ -8026,8 +8004,8 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
         else
             kineticEnergyKernel.setArg<cl_float>(index++, 0.0f);
         kineticEnergyKernel.setArg<cl::Buffer>(index++, perDofEnergyParamDerivs.getDeviceBuffer());
-        for (int i = 0; i < (int) perDofValues->getBuffers().size(); i++)
-            kineticEnergyKernel.setArg<cl::Memory>(index++, perDofValues->getBuffers()[i].getMemory());
+        for (auto& array : perDofValues)
+            kineticEnergyKernel.setArg<cl::Memory>(index++, array.getDeviceBuffer());
         for (auto& array : tabulatedFunctions)
             kineticEnergyKernel.setArg<cl::Buffer>(index++, array.getDeviceBuffer());
         keNeedsForce = usesVariable(keExpression, "f");
@@ -8049,14 +8027,16 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
 
     // Make sure all values (variables, parameters, etc.) are up to date.
     
-    if (!deviceValuesAreCurrent) {
-        if (useDouble)
-            perDofValues->setParameterValues(localPerDofValuesDouble);
-        else
-            perDofValues->setParameterValues(localPerDofValuesFloat);
-        deviceValuesAreCurrent = true;
+    for (int i = 0; i < perDofValues.size(); i++) {
+        if (!deviceValuesAreCurrent[i]) {
+            if (useDouble)
+                perDofValues[i].upload(localPerDofValuesDouble[i]);
+            else
+                perDofValues[i].upload(localPerDofValuesFloat[i]);
+            deviceValuesAreCurrent[i] = true;
+        }
+        localValuesAreCurrent[i] = false;
     }
-    localValuesAreCurrent = false;
     double stepSize = integrator.getStepSize();
     recordGlobalValue(stepSize, GlobalTarget(DT, dtVariableIndex), integrator);
     for (int i = 0; i < (int) parameterNames.size(); i++) {
@@ -8388,49 +8368,46 @@ void OpenCLIntegrateCustomStepKernel::setGlobalVariables(ContextImpl& context, c
 }
 
 void OpenCLIntegrateCustomStepKernel::getPerDofVariable(ContextImpl& context, int variable, vector<Vec3>& values) const {
-    values.resize(perDofValues->getNumObjects()/3);
+    values.resize(perDofValues[variable].getSize());
     const vector<int>& order = cl.getAtomIndex();
     if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {
-        if (!localValuesAreCurrent) {
-            perDofValues->getParameterValues(localPerDofValuesDouble);
-            localValuesAreCurrent = true;
+        if (!localValuesAreCurrent[variable]) {
+            perDofValues[variable].download(localPerDofValuesDouble[variable]);
+            localValuesAreCurrent[variable] = true;
         }
-        for (int i = 0; i < (int) values.size(); i++)
-            for (int j = 0; j < 3; j++)
-                values[order[i]][j] = localPerDofValuesDouble[3*i+j][variable];
+        for (int i = 0; i < (int) values.size(); i++) {
+            values[order[i]][0] = localPerDofValuesDouble[variable][i].x;
+            values[order[i]][1] = localPerDofValuesDouble[variable][i].y;
+            values[order[i]][2] = localPerDofValuesDouble[variable][i].z;
+        }
     }
     else {
-        if (!localValuesAreCurrent) {
-            perDofValues->getParameterValues(localPerDofValuesFloat);
-            localValuesAreCurrent = true;
+        if (!localValuesAreCurrent[variable]) {
+            perDofValues[variable].download(localPerDofValuesFloat[variable]);
+            localValuesAreCurrent[variable] = true;
         }
-        for (int i = 0; i < (int) values.size(); i++)
-            for (int j = 0; j < 3; j++)
-                values[order[i]][j] = localPerDofValuesFloat[3*i+j][variable];
+        for (int i = 0; i < (int) values.size(); i++) {
+            values[order[i]][0] = localPerDofValuesFloat[variable][i].x;
+            values[order[i]][1] = localPerDofValuesFloat[variable][i].y;
+            values[order[i]][2] = localPerDofValuesFloat[variable][i].z;
+        }
     }
 }
 
 void OpenCLIntegrateCustomStepKernel::setPerDofVariable(ContextImpl& context, int variable, const vector<Vec3>& values) {
     const vector<int>& order = cl.getAtomIndex();
+    localValuesAreCurrent[variable] = true;
+    deviceValuesAreCurrent[variable] = false;
     if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {
-        if (!localValuesAreCurrent) {
-            perDofValues->getParameterValues(localPerDofValuesDouble);
-            localValuesAreCurrent = true;
-        }
+        localPerDofValuesDouble[variable].resize(values.size());
         for (int i = 0; i < (int) values.size(); i++)
-            for (int j = 0; j < 3; j++)
-                localPerDofValuesDouble[3*i+j][variable] = values[order[i]][j];
+            localPerDofValuesDouble[variable][i] = mm_double4(values[order[i]][0], values[order[i]][1], values[order[i]][2], 0);
     }
     else {
-        if (!localValuesAreCurrent) {
-            perDofValues->getParameterValues(localPerDofValuesFloat);
-            localValuesAreCurrent = true;
-        }
+        localPerDofValuesFloat[variable].resize(values.size());
         for (int i = 0; i < (int) values.size(); i++)
-            for (int j = 0; j < 3; j++)
-                localPerDofValuesFloat[3*i+j][variable] = (float) values[order[i]][j];
+            localPerDofValuesFloat[variable][i] = mm_float4(values[order[i]][0], values[order[i]][1], values[order[i]][2], 0);
     }
-    deviceValuesAreCurrent = false;
 }
 
 void OpenCLApplyAndersenThermostatKernel::initialize(const System& system, const AndersenThermostat& thermostat) {
