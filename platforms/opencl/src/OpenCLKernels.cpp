@@ -7610,8 +7610,8 @@ string OpenCLIntegrateCustomStepKernel::createPerDofComputation(const string& va
     variables["x"] = "position.xyz";
     variables["v"] = "velocity.xyz";
     variables[forceName] = "f.xyz";
-    variables["gaussian"] = "gaussian.xyz";
-    variables["uniform"] = "uniform.xyz";
+    variables["gaussian"] = "convert_mixed4(gaussian).xyz";
+    variables["uniform"] = "convert_mixed4(uniform).xyz";
     variables["m"] = "mass";
     variables["dt"] = "stepSize";
     if (energyName != "")
@@ -7925,7 +7925,7 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
                     index = 0;
                     kernel.setArg<cl::Buffer>(index++, sumBuffer.getDeviceBuffer());
                     kernel.setArg<cl::Buffer>(index++, summedValue.getDeviceBuffer());
-                    kernel.setArg<cl_int>(index++, 3*numAtoms);
+                    kernel.setArg<cl_int>(index++, numAtoms);
                 }
             }
             else if (stepType[step] == CustomIntegrator::ConstrainPositions) {
@@ -8017,7 +8017,7 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
         index = 0;
         sumKineticEnergyKernel.setArg<cl::Buffer>(index++, sumBuffer.getDeviceBuffer());
         sumKineticEnergyKernel.setArg<cl::Buffer>(index++, summedValue.getDeviceBuffer());
-        sumKineticEnergyKernel.setArg<cl_int>(index++, 3*numAtoms);
+        sumKineticEnergyKernel.setArg<cl_int>(index++, numAtoms);
 
         // Delete the custom functions.
 
