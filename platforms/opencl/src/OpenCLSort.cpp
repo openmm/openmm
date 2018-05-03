@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -48,6 +48,7 @@ OpenCLSort::OpenCLSort(OpenCLContext& context, SortTrait* trait, unsigned int le
     replacements["MAX_VALUE"] = trait->getMaxValue();
     cl::Program program = context.createProgram(context.replaceStrings(OpenCLKernelSources::sort, replacements));
     shortListKernel = cl::Kernel(program, "sortShortList");
+    shortList2Kernel = cl::Kernel(program, "sortShortList2");
     computeRangeKernel = cl::Kernel(program, "computeRange");
     assignElementsKernel = cl::Kernel(program, "assignElementsToBuckets");
     computeBucketPositionsKernel = cl::Kernel(program, "computeBucketPositions");
@@ -66,7 +67,7 @@ OpenCLSort::OpenCLSort(OpenCLContext& context, SortTrait* trait, unsigned int le
     // But AMD's OpenCL returns an inappropriately small value for it that is much shorter than the actual
     // maximum, so including the check hurts performance.  For the moment I'm going to just comment it out.
     // If we officially support Qualcomm in the future, we'll need to do something better.
-    isShortList = (length <= maxLocalBuffer/* && length < maxShortListSize*/);
+    isShortList = (length <= maxLocalBuffer/* && length < maxShortListSize*/ || length <= OpenCLContext::ThreadBlockSize*context.getNumThreadBlocks());
     for (rangeKernelSize = 1; rangeKernelSize*2 <= maxRangeSize; rangeKernelSize *= 2)
         ;
     positionsKernelSize = std::min(rangeKernelSize, maxPositionsSize);
@@ -89,8 +90,8 @@ OpenCLSort::OpenCLSort(OpenCLContext& context, SortTrait* trait, unsigned int le
         bucketOffset.initialize<cl_uint>(context, numBuckets, "bucketOffset");
         bucketOfElement.initialize<cl_uint>(context, length, "bucketOfElement");
         offsetInBucket.initialize<cl_uint>(context, length, "offsetInBucket");
-        buckets.initialize(context, length, trait->getDataSize(), "buckets");
     }
+    buckets.initialize(context, length, trait->getDataSize(), "buckets");
 }
 
 OpenCLSort::~OpenCLSort() {
@@ -103,12 +104,21 @@ void OpenCLSort::sort(OpenCLArray& data) {
     if (data.getSize() == 0)
         return;
     if (isShortList) {
-        // We can use a simpler sort kernel that does the entire operation at once in local memory.
+        // We can use a simpler sort kernel that does the entire operation in one kernel.
         
-        shortListKernel.setArg<cl::Buffer>(0, data.getDeviceBuffer());
-        shortListKernel.setArg<cl_uint>(1, dataLength);
-        shortListKernel.setArg(2, dataLength*trait->getDataSize(), NULL);
-        context.executeKernel(shortListKernel, sortKernelSize, sortKernelSize);
+        if (dataLength <= OpenCLContext::ThreadBlockSize*context.getNumThreadBlocks()) {
+            shortList2Kernel.setArg<cl::Buffer>(0, data.getDeviceBuffer());
+            shortList2Kernel.setArg<cl::Buffer>(1, buckets.getDeviceBuffer());
+            shortList2Kernel.setArg<cl_int>(2, dataLength);
+            context.executeKernel(shortList2Kernel, dataLength);
+            buckets.copyTo(data);
+        }
+        else {
+            shortListKernel.setArg<cl::Buffer>(0, data.getDeviceBuffer());
+            shortListKernel.setArg<cl_uint>(1, dataLength);
+            shortListKernel.setArg(2, dataLength*trait->getDataSize(), NULL);
+            context.executeKernel(shortListKernel, sortKernelSize, sortKernelSize);
+        }
     }
     else {
         // Compute the range of data values.

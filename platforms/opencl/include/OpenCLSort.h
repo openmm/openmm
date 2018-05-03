@@ -92,7 +92,7 @@ private:
     OpenCLArray offsetInBucket;
     OpenCLArray bucketOffset;
     OpenCLArray buckets;
-    cl::Kernel shortListKernel, computeRangeKernel, assignElementsKernel, computeBucketPositionsKernel, copyToBucketsKernel, sortBucketsKernel;
+    cl::Kernel shortListKernel, shortList2Kernel, computeRangeKernel, assignElementsKernel, computeBucketPositionsKernel, copyToBucketsKernel, sortBucketsKernel;
     unsigned int dataLength, rangeKernelSize, positionsKernelSize, sortKernelSize;
     bool isShortList;
 };
