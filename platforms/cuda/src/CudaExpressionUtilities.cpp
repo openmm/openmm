@@ -86,7 +86,10 @@ void CudaExpressionUtilities::processExpression(stringstream& out, const Express
             throw OpenMMException("Unknown variable in expression: "+node.getOperation().getName());
         case Operation::CUSTOM:
         {
-            out << "make_" << tempType << "(0);\n";
+            if (isVecType)
+                out << "make_" << tempType << "(0);\n";
+            else
+                out << "0;\n";
             temps.push_back(make_pair(node, name));
             hasRecordedNode = true;
 
