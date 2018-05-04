@@ -7592,26 +7592,15 @@ void OpenCLIntegrateCustomStepKernel::initialize(const System& system, const Cus
 string OpenCLIntegrateCustomStepKernel::createPerDofComputation(const string& variable, const Lepton::ParsedExpression& expr, CustomIntegrator& integrator,
         const string& forceName, const string& energyName, vector<const TabulatedFunction*>& functions, vector<pair<string, string> >& functionNames) {
     string tempType = (cl.getSupportsDoublePrecision() ? "double3" : "float3");
+    string convert = (cl.getSupportsDoublePrecision() ? "convert_double3" : "");
     map<string, Lepton::ParsedExpression> expressions;
-    if (variable == "x")
-        expressions["position.xyz = "] = expr;
-    else if (variable == "v")
-        expressions["velocity.xyz = "] = expr;
-    else if (variable == "")
-        expressions[tempType+" tempSum = "] = expr;
-    else {
-        for (int i = 0; i < integrator.getNumPerDofVariables(); i++)
-            if (variable == integrator.getPerDofVariableName(i))
-                expressions["perDof"+cl.intToString(i)+" = "] = expr;
-    }
-    if (expressions.size() == 0)
-        throw OpenMMException("Unknown per-DOF variable: "+variable);
+    expressions[tempType+" tempResult = "] = expr;
     map<string, string> variables;
-    variables["x"] = "position.xyz";
-    variables["v"] = "velocity.xyz";
-    variables[forceName] = "f.xyz";
-    variables["gaussian"] = "convert_mixed4(gaussian).xyz";
-    variables["uniform"] = "convert_mixed4(uniform).xyz";
+    variables["x"] = convert+"(position.xyz)";
+    variables["v"] = convert+"(velocity.xyz)";
+    variables[forceName] = convert+"(f.xyz)";
+    variables["gaussian"] = convert+"(gaussian.xyz)";
+    variables["uniform"] = convert+"(uniform.xyz)";
     variables["m"] = "mass";
     variables["dt"] = "stepSize";
     if (energyName != "")
@@ -7619,7 +7608,7 @@ string OpenCLIntegrateCustomStepKernel::createPerDofComputation(const string& va
     for (int i = 0; i < integrator.getNumGlobalVariables(); i++)
         variables[integrator.getGlobalVariableName(i)] = "globals["+cl.intToString(globalVariableIndex[i])+"]";
     for (int i = 0; i < integrator.getNumPerDofVariables(); i++)
-        variables[integrator.getPerDofVariableName(i)] = "perDof"+cl.intToString(i);
+        variables[integrator.getPerDofVariableName(i)] = convert+"(perDof"+cl.intToString(i)+")";
     for (int i = 0; i < (int) parameterNames.size(); i++)
         variables[parameterNames[i]] = "globals["+cl.intToString(parameterVariableIndex[i])+"]";
     vector<pair<ExpressionTreeNode, string> > variableNodes;
@@ -7627,8 +7616,19 @@ string OpenCLIntegrateCustomStepKernel::createPerDofComputation(const string& va
     for (auto& var : variables)
         variableNodes.push_back(make_pair(ExpressionTreeNode(new Operation::Variable(var.first)), var.second));
     string result = cl.getExpressionUtilities().createExpressions(expressions, variableNodes, functions, functionNames, "temp", tempType);
-    if (variable == "")
-        result += "sum[index] = tempSum.x+tempSum.y+tempSum.z;\n";
+    if (variable == "x")
+        result += "position.x = tempResult.x; position.y = tempResult.y; position.z = tempResult.z;\n";
+    else if (variable == "v")
+        result += "velocity.x = tempResult.x; velocity.y = tempResult.y; velocity.z = tempResult.z;\n";
+    else if (variable == "")
+        result += "sum[index] = tempResult.x+tempResult.y+tempResult.z;\n";
+    else {
+        for (int i = 0; i < integrator.getNumPerDofVariables(); i++)
+            if (variable == integrator.getPerDofVariableName(i)) {
+                string varName = "perDof"+cl.intToString(i);
+                result += varName+".x = tempResult.x; "+varName+".y = tempResult.y; "+varName+".z = tempResult.z;\n";
+            }
+    }
     return result;
 }
 
@@ -7637,7 +7637,7 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
     int numAtoms = cl.getNumAtoms();
     int numSteps = integrator.getNumComputations();
     bool useDouble = cl.getUseDoublePrecision() || cl.getUseMixedPrecision();
-    string tempType = (useDouble ? "double3" : "float3");
+    string tempType = (cl.getSupportsDoublePrecision() ? "double3" : "float3");
     string perDofType = (useDouble ? "double4" : "float4");
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;
@@ -7849,7 +7849,7 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
                 
                 stringstream compute;
                 for (int i = 0; i < perDofValues.size(); i++)
-                    compute << tempType<<" perDof"<<cl.intToString(i)<<" = perDofValues"<<cl.intToString(i)<<"[index].xyz;\n";
+                    compute << tempType<<" perDof"<<cl.intToString(i)<<" = convert_"<<tempType<<"(perDofValues"<<cl.intToString(i)<<"[index].xyz);\n";
                 int numGaussian = 0, numUniform = 0;
                 for (int j = step; j < numSteps && (j == step || merged[j]); j++) {
                     numGaussian += numAtoms*usesVariable(expression[j][0], "gaussian");
@@ -7874,7 +7874,7 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
                         compute << "velm[index] = convert_mixed4(velocity);\n";
                     else {
                         for (int i = 0; i < perDofValues.size(); i++)
-                            compute << "perDofValues"<<cl.intToString(i)<<"[index] = ("<<perDofType<<") (perDof"<<cl.intToString(i)<<", 0);\n";
+                            compute << "perDofValues"<<cl.intToString(i)<<"[index] = ("<<perDofType<<") (perDof"<<cl.intToString(i)<<".x, perDof"<<cl.intToString(i)<<".y, perDof"<<cl.intToString(i)<<".z, 0);\n";
                     }
                     if (numGaussian > 0)
                         compute << "gaussianIndex += NUM_ATOMS;\n";
@@ -7971,7 +7971,7 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
 
         stringstream computeKE;
         for (int i = 0; i < perDofValues.size(); i++)
-            computeKE << tempType<<" perDof"<<cl.intToString(i)<<" = perDofValues"<<cl.intToString(i)<<"[index].xyz;\n";
+            computeKE << tempType<<" perDof"<<cl.intToString(i)<<" = convert_"<<tempType<<"(perDofValues"<<cl.intToString(i)<<"[index].xyz);\n";
         Lepton::ParsedExpression keExpression = Lepton::Parser::parse(integrator.getKineticEnergyExpression()).optimize();
         computeKE << createPerDofComputation("", keExpression, integrator, "f", "", functionList, functionNames);
         map<string, string> replacements;
@@ -8005,7 +8005,7 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
             kineticEnergyKernel.setArg<cl_float>(index++, 0.0f);
         kineticEnergyKernel.setArg<cl::Buffer>(index++, perDofEnergyParamDerivs.getDeviceBuffer());
         for (auto& array : perDofValues)
-            kineticEnergyKernel.setArg<cl::Memory>(index++, array.getDeviceBuffer());
+            kineticEnergyKernel.setArg<cl::Buffer>(index++, array.getDeviceBuffer());
         for (auto& array : tabulatedFunctions)
             kineticEnergyKernel.setArg<cl::Buffer>(index++, array.getDeviceBuffer());
         keNeedsForce = usesVariable(keExpression, "f");

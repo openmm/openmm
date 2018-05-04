@@ -7131,7 +7131,7 @@ double CudaIntegrateVariableLangevinStepKernel::computeKineticEnergy(ContextImpl
 
 class CudaIntegrateCustomStepKernel::ReorderListener : public CudaContext::ReorderListener {
 public:
-    ReorderListener(CudaContext& cu, CudaParameterSet& perDofValues, vector<vector<float> >& localPerDofValuesFloat, vector<vector<double> >& localPerDofValuesDouble, bool& deviceValuesAreCurrent) :
+    ReorderListener(CudaContext& cu, vector<CudaArray>& perDofValues, vector<vector<float4> >& localPerDofValuesFloat, vector<vector<double4> >& localPerDofValuesDouble, vector<bool>& deviceValuesAreCurrent) :
             cu(cu), perDofValues(perDofValues), localPerDofValuesFloat(localPerDofValuesFloat), localPerDofValuesDouble(localPerDofValuesDouble), deviceValuesAreCurrent(deviceValuesAreCurrent) {
         int numAtoms = cu.getNumAtoms();
         lastAtomOrder.resize(numAtoms);
@@ -7141,52 +7141,42 @@ public:
     void execute() {
         // Reorder the per-DOF variables to reflect the new atom order.
 
-        if (perDofValues.getNumParameters() == 0)
+        if (perDofValues.size() == 0)
             return;
         int numAtoms = cu.getNumAtoms();
         const vector<int>& order = cu.getAtomIndex();
-        if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
-            if (deviceValuesAreCurrent)
-                perDofValues.getParameterValues(localPerDofValuesDouble);
-            vector<vector<double> > swap(3*numAtoms);
-            for (int i = 0; i < numAtoms; i++) {
-                swap[3*lastAtomOrder[i]] = localPerDofValuesDouble[3*i];
-                swap[3*lastAtomOrder[i]+1] = localPerDofValuesDouble[3*i+1];
-                swap[3*lastAtomOrder[i]+2] = localPerDofValuesDouble[3*i+2];
+        for (int index = 0; index < perDofValues.size(); index++) {
+            if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
+                if (deviceValuesAreCurrent[index])
+                    perDofValues[index].download(localPerDofValuesDouble[index]);
+                vector<double4> swap(numAtoms);
+                for (int i = 0; i < numAtoms; i++)
+                    swap[lastAtomOrder[i]] = localPerDofValuesDouble[index][i];
+                for (int i = 0; i < numAtoms; i++)
+                    localPerDofValuesDouble[index][i] = swap[order[i]];
+                perDofValues[index].upload(localPerDofValuesDouble[index]);
             }
-            for (int i = 0; i < numAtoms; i++) {
-                localPerDofValuesDouble[3*i] = swap[3*order[i]];
-                localPerDofValuesDouble[3*i+1] = swap[3*order[i]+1];
-                localPerDofValuesDouble[3*i+2] = swap[3*order[i]+2];
+            else {
+                if (deviceValuesAreCurrent[index])
+                    perDofValues[index].download(localPerDofValuesFloat[index]);
+                vector<float4> swap(numAtoms);
+                for (int i = 0; i < numAtoms; i++)
+                    swap[lastAtomOrder[i]] = localPerDofValuesFloat[index][i];
+                for (int i = 0; i < numAtoms; i++)
+                    localPerDofValuesFloat[index][i] = swap[order[i]];
+                perDofValues[index].upload(localPerDofValuesFloat[index]);
             }
-            perDofValues.setParameterValues(localPerDofValuesDouble);
-        }
-        else {
-            if (deviceValuesAreCurrent)
-                perDofValues.getParameterValues(localPerDofValuesFloat);
-            vector<vector<float> > swap(3*numAtoms);
-            for (int i = 0; i < numAtoms; i++) {
-                swap[3*lastAtomOrder[i]] = localPerDofValuesFloat[3*i];
-                swap[3*lastAtomOrder[i]+1] = localPerDofValuesFloat[3*i+1];
-                swap[3*lastAtomOrder[i]+2] = localPerDofValuesFloat[3*i+2];
-            }
-            for (int i = 0; i < numAtoms; i++) {
-                localPerDofValuesFloat[3*i] = swap[3*order[i]];
-                localPerDofValuesFloat[3*i+1] = swap[3*order[i]+1];
-                localPerDofValuesFloat[3*i+2] = swap[3*order[i]+2];
-            }
-            perDofValues.setParameterValues(localPerDofValuesFloat);
+            deviceValuesAreCurrent[index] = true;
         }
         for (int i = 0; i < numAtoms; i++)
             lastAtomOrder[i] = order[i];
-        deviceValuesAreCurrent = true;
     }
 private:
     CudaContext& cu;
-    CudaParameterSet& perDofValues;
-    vector<vector<float> >& localPerDofValuesFloat;
-    vector<vector<double> >& localPerDofValuesDouble;
-    bool& deviceValuesAreCurrent;
+    vector<CudaArray>& perDofValues;
+    vector<vector<float4> >& localPerDofValuesFloat;
+    vector<vector<double4> >& localPerDofValuesDouble;
+    vector<bool>& deviceValuesAreCurrent;
     vector<int> lastAtomOrder;
 };
 
@@ -7211,64 +7201,64 @@ private:
     string param;
 };
 
-CudaIntegrateCustomStepKernel::~CudaIntegrateCustomStepKernel() {
-    cu.setAsCurrent();
-    if (perDofValues != NULL)
-        delete perDofValues;
-}
-
 void CudaIntegrateCustomStepKernel::initialize(const System& system, const CustomIntegrator& integrator) {
     cu.getPlatformData().initializeContexts(system);
     cu.setAsCurrent();
     cu.getIntegrationUtilities().initRandomNumberGenerator(integrator.getRandomNumberSeed());
     numGlobalVariables = integrator.getNumGlobalVariables();
     int elementSize = (cu.getUseDoublePrecision() || cu.getUseMixedPrecision() ? sizeof(double) : sizeof(float));
-    sumBuffer.initialize(cu, ((3*system.getNumParticles()+3)/4)*4, elementSize, "sumBuffer");
+    sumBuffer.initialize(cu, system.getNumParticles(), elementSize, "sumBuffer");
     summedValue.initialize(cu, 1, elementSize, "summedValue");
-    perDofValues = new CudaParameterSet(cu, integrator.getNumPerDofVariables(), 3*system.getNumParticles(), "perDofVariables", false, cu.getUseDoublePrecision() || cu.getUseMixedPrecision());
-    cu.addReorderListener(new ReorderListener(cu, *perDofValues, localPerDofValuesFloat, localPerDofValuesDouble, deviceValuesAreCurrent));
+    perDofValues.resize(integrator.getNumPerDofVariables());
+    localPerDofValuesFloat.resize(perDofValues.size());
+    localPerDofValuesDouble.resize(perDofValues.size());
+    for (int i = 0; i < perDofValues.size(); i++)
+        perDofValues[i].initialize(cu, system.getNumParticles(), 4*elementSize, "perDofVariables");
+    localValuesAreCurrent.resize(integrator.getNumPerDofVariables(), false);
+    deviceValuesAreCurrent.resize(integrator.getNumPerDofVariables(), false);
+    cu.addReorderListener(new ReorderListener(cu, perDofValues, localPerDofValuesFloat, localPerDofValuesDouble, deviceValuesAreCurrent));
     SimTKOpenMMUtilities::setRandomNumberSeed(integrator.getRandomNumberSeed());
 }
 
-string CudaIntegrateCustomStepKernel::createPerDofComputation(const string& variable, const Lepton::ParsedExpression& expr, int component, CustomIntegrator& integrator,
+string CudaIntegrateCustomStepKernel::createPerDofComputation(const string& variable, const Lepton::ParsedExpression& expr, CustomIntegrator& integrator,
         const string& forceName, const string& energyName, vector<const TabulatedFunction*>& functions, vector<pair<string, string> >& functionNames) {
-    const string suffixes[] = {".x", ".y", ".z"};
-    string suffix = suffixes[component];
     map<string, Lepton::ParsedExpression> expressions;
-    if (variable == "x")
-        expressions["position"+suffix+" = "] = expr;
-    else if (variable == "v")
-        expressions["velocity"+suffix+" = "] = expr;
-    else if (variable == "")
-        expressions["sum[3*index+"+cu.intToString(component)+"] = "] = expr;
-    else {
-        for (int i = 0; i < integrator.getNumPerDofVariables(); i++)
-            if (variable == integrator.getPerDofVariableName(i))
-                expressions["perDof"+suffix.substr(1)+perDofValues->getParameterSuffix(i)+" = "] = expr;
-    }
-    if (expressions.size() == 0)
-        throw OpenMMException("Unknown per-DOF variable: "+variable);
+    expressions["double3 tempResult = "] = expr;
     map<string, string> variables;
-    variables["x"] = "position"+suffix;
-    variables["v"] = "velocity"+suffix;
-    variables[forceName] = "f"+suffix;
-    variables["gaussian"] = "gaussian"+suffix;
-    variables["uniform"] = "uniform"+suffix;
+    variables["x"] = "trimTo3(position)";
+    variables["v"] = "trimTo3(velocity)";
+    variables[forceName] = "trimTo3(f)";
+    variables["gaussian"] = "trimTo3(gaussian)";
+    variables["uniform"] = "trimTo3(uniform)";
     variables["m"] = "mass";
     variables["dt"] = "stepSize";
     if (energyName != "")
         variables[energyName] = "energy";
     for (int i = 0; i < integrator.getNumGlobalVariables(); i++)
-        variables[integrator.getGlobalVariableName(i)] = "globals["+cu.intToString(globalVariableIndex[i])+"]";
+        variables[integrator.getGlobalVariableName(i)] = "make_double3(globals["+cu.intToString(globalVariableIndex[i])+"])";
     for (int i = 0; i < integrator.getNumPerDofVariables(); i++)
-        variables[integrator.getPerDofVariableName(i)] = "perDof"+suffix.substr(1)+perDofValues->getParameterSuffix(i);
+        variables[integrator.getPerDofVariableName(i)] = "perDof"+cu.intToString(i);
     for (int i = 0; i < (int) parameterNames.size(); i++)
-        variables[parameterNames[i]] = "globals["+cu.intToString(parameterVariableIndex[i])+"]";
+        variables[parameterNames[i]] = "make_double3(globals["+cu.intToString(parameterVariableIndex[i])+"])";
     vector<pair<ExpressionTreeNode, string> > variableNodes;
     findExpressionsForDerivs(expr.getRootNode(), variableNodes);
     for (auto& var : variables)
         variableNodes.push_back(make_pair(ExpressionTreeNode(new Operation::Variable(var.first)), var.second));
-    return cu.getExpressionUtilities().createExpressions(expressions, variableNodes, functions, functionNames, "temp"+cu.intToString(component)+"_", "double");
+    string result = cu.getExpressionUtilities().createExpressions(expressions, variableNodes, functions, functionNames, "temp", "double3");
+    if (variable == "x")
+        result += "position.x = tempResult.x; position.y = tempResult.y; position.z = tempResult.z;\n";
+    else if (variable == "v")
+        result += "velocity.x = tempResult.x; velocity.y = tempResult.y; velocity.z = tempResult.z;\n";
+    else if (variable == "")
+        result += "sum[index] = tempResult.x+tempResult.y+tempResult.z;\n";
+    else {
+        for (int i = 0; i < integrator.getNumPerDofVariables(); i++)
+            if (variable == integrator.getPerDofVariableName(i)) {
+                string varName = "perDof"+cu.intToString(i);
+                result += varName+".x = tempResult.x; "+varName+".y = tempResult.y; "+varName+".z = tempResult.z;\n";
+            }
+    }
+    return result;
 }
 
 void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid) {
@@ -7277,6 +7267,7 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
     int numAtoms = cu.getNumAtoms();
     int numSteps = integrator.getNumComputations();
     bool useDouble = cu.getUseDoublePrecision() || cu.getUseMixedPrecision();
+    string perDofType = (useDouble ? "double4" : "float4");
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;
         
@@ -7487,23 +7478,18 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
                 // Compute a per-DOF value.
                 
                 stringstream compute;
-                for (int i = 0; i < (int) perDofValues->getBuffers().size(); i++) {
-                    CudaNonbondedUtilities::ParameterInfo& buffer = perDofValues->getBuffers()[i];
-                    compute << buffer.getType()<<" perDofx"<<cu.intToString(i+1)<<" = perDofValues"<<cu.intToString(i+1)<<"[3*index];\n";
-                    compute << buffer.getType()<<" perDofy"<<cu.intToString(i+1)<<" = perDofValues"<<cu.intToString(i+1)<<"[3*index+1];\n";
-                    compute << buffer.getType()<<" perDofz"<<cu.intToString(i+1)<<" = perDofValues"<<cu.intToString(i+1)<<"[3*index+2];\n";
-                }
+                for (int i = 0; i < perDofValues.size(); i++)
+                    compute << "double3 perDof"<<cu.intToString(i)<<" = trimTo3(convertToDouble4(perDofValues"<<cu.intToString(i)<<"[index]));\n";
                 int numGaussian = 0, numUniform = 0;
                 for (int j = step; j < numSteps && (j == step || merged[j]); j++) {
                     numGaussian += numAtoms*usesVariable(expression[j][0], "gaussian");
                     numUniform += numAtoms*usesVariable(expression[j][0], "uniform");
                     compute << "{\n";
                     if (numGaussian > 0)
-                        compute << "float4 gaussian = gaussianValues[gaussianIndex+index];\n";
+                        compute << "double4 gaussian = convertToDouble4(gaussianValues[gaussianIndex+index]);\n";
                     if (numUniform > 0)
-                        compute << "float4 uniform = uniformValues[uniformIndex+index];\n";
-                    for (int i = 0; i < 3; i++)
-                        compute << createPerDofComputation(stepType[j] == CustomIntegrator::ComputePerDof ? variable[j] : "", expression[j][0], i, integrator, forceName[j], energyName[j], functionList, functionNames);
+                        compute << "double4 uniform = convertToDouble4(uniformValues[uniformIndex+index]);\n";
+                    compute << createPerDofComputation(stepType[j] == CustomIntegrator::ComputePerDof ? variable[j] : "", expression[j][0], integrator, forceName[j], energyName[j], functionList, functionNames);
                     if (variable[j] == "x") {
                         if (storePosAsDelta[j])
                             compute << "posDelta[index] = convertFromDouble4(position-convertToDouble4(loadPos(posq, posqCorrection, index)));\n";
@@ -7513,12 +7499,8 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
                     else if (variable[j] == "v")
                         compute << "velm[index] = convertFromDouble4(velocity);\n";
                     else {
-                        for (int i = 0; i < (int) perDofValues->getBuffers().size(); i++) {
-                            CudaNonbondedUtilities::ParameterInfo& buffer = perDofValues->getBuffers()[i];
-                            compute << "perDofValues"<<cu.intToString(i+1)<<"[3*index] = perDofx"<<cu.intToString(i+1)<<";\n";
-                            compute << "perDofValues"<<cu.intToString(i+1)<<"[3*index+1] = perDofy"<<cu.intToString(i+1)<<";\n";
-                            compute << "perDofValues"<<cu.intToString(i+1)<<"[3*index+2] = perDofz"<<cu.intToString(i+1)<<";\n";
-                        }
+                        for (int i = 0; i < perDofValues.size(); i++)
+                            compute << "perDofValues"<<cu.intToString(i)<<"[index] = make_"<<perDofType<<"(perDof"<<cu.intToString(i)<<".x, perDof"<<cu.intToString(i)<<".y, perDof"<<cu.intToString(i)<<".z, 0);\n";
                     }
                     if (numGaussian > 0)
                         compute << "gaussianIndex += NUM_ATOMS;\n";
@@ -7529,10 +7511,9 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
                 map<string, string> replacements;
                 replacements["COMPUTE_STEP"] = compute.str();
                 stringstream args;
-                for (int i = 0; i < (int) perDofValues->getBuffers().size(); i++) {
-                    CudaNonbondedUtilities::ParameterInfo& buffer = perDofValues->getBuffers()[i];
-                    string valueName = "perDofValues"+cu.intToString(i+1);
-                    args << ", " << buffer.getType() << "* __restrict__ " << valueName;
+                for (int i = 0; i < perDofValues.size(); i++) {
+                    string valueName = "perDofValues"+cu.intToString(i);
+                    args << ", " << perDofType << "* __restrict__ " << valueName;
                 }
                 for (int i = 0; i < (int) tableTypes.size(); i++)
                     args << ", const " << tableTypes[i]<< "* __restrict__ table" << i;
@@ -7563,8 +7544,8 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
                 else
                     args1.push_back(&energyFloat);
                 args1.push_back(&perDofEnergyParamDerivs.getDevicePointer());
-                for (auto& buffer : perDofValues->getBuffers())
-                    args1.push_back(&buffer.getMemory());
+                for (auto& array : perDofValues)
+                    args1.push_back(&array.getDevicePointer());
                 for (auto& array : tabulatedFunctions)
                     args1.push_back(&array.getDevicePointer());
                 kernelArgs[step].push_back(args1);
@@ -7574,7 +7555,7 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
                     vector<void*> args2;
                     args2.push_back(&sumBuffer.getDevicePointer());
                     args2.push_back(&summedValue.getDevicePointer());
-                    defines["SUM_BUFFER_SIZE"] = cu.intToString(3*numAtoms);
+                    defines["SUM_BUFFER_SIZE"] = cu.intToString(numAtoms);
                     module = cu.createModule(CudaKernelSources::customIntegrator, defines);
                     kernel = cu.getKernel(module, useDouble ? "computeDoubleSum" : "computeFloatSum");
                     kernels[step].push_back(kernel);
@@ -7621,30 +7602,24 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
         // Create the kernel for computing kinetic energy.
 
         stringstream computeKE;
-        for (int i = 0; i < (int) perDofValues->getBuffers().size(); i++) {
-            const CudaNonbondedUtilities::ParameterInfo& buffer = perDofValues->getBuffers()[i];
-            computeKE << buffer.getType()<<" perDofx"<<cu.intToString(i+1)<<" = perDofValues"<<cu.intToString(i+1)<<"[3*index];\n";
-            computeKE << buffer.getType()<<" perDofy"<<cu.intToString(i+1)<<" = perDofValues"<<cu.intToString(i+1)<<"[3*index+1];\n";
-            computeKE << buffer.getType()<<" perDofz"<<cu.intToString(i+1)<<" = perDofValues"<<cu.intToString(i+1)<<"[3*index+2];\n";
-        }
+        for (int i = 0; i < perDofValues.size(); i++)
+            computeKE << "double3 perDof"<<cu.intToString(i)<<" = trimTo3(convertToDouble4(perDofValues"<<cu.intToString(i)<<"[index]));\n";
         Lepton::ParsedExpression keExpression = Lepton::Parser::parse(integrator.getKineticEnergyExpression()).optimize();
-        for (int i = 0; i < 3; i++)
-            computeKE << createPerDofComputation("", keExpression, i, integrator, "f", "", functionList, functionNames);
+        computeKE << createPerDofComputation("", keExpression, integrator, "f", "", functionList, functionNames);
         map<string, string> replacements;
         replacements["COMPUTE_STEP"] = computeKE.str();
         stringstream args;
-        for (int i = 0; i < (int) perDofValues->getBuffers().size(); i++) {
-            const CudaNonbondedUtilities::ParameterInfo& buffer = perDofValues->getBuffers()[i];
-            string valueName = "perDofValues"+cu.intToString(i+1);
-            args << ", " << buffer.getType() << "* __restrict__ " << valueName;
+        for (int i = 0; i < perDofValues.size(); i++) {
+            string valueName = "perDofValues"+cu.intToString(i);
+            args << ", " << perDofType << "* __restrict__ " << valueName;
         }
         for (int i = 0; i < (int) tableTypes.size(); i++)
             args << ", const " << tableTypes[i]<< "* __restrict__ table" << i;
         replacements["PARAMETER_ARGUMENTS"] = args.str();
-        defines["SUM_BUFFER_SIZE"] = cu.intToString(3*numAtoms);
+        defines["SUM_BUFFER_SIZE"] = cu.intToString(numAtoms);
         if (defines.find("LOAD_POS_AS_DELTA") != defines.end())
             defines.erase("LOAD_POS_AS_DELTA");
-        CUmodule module = cu.createModule(cu.replaceStrings(CudaKernelSources::customIntegratorPerDof, replacements), defines);
+        CUmodule module = cu.createModule(cu.replaceStrings(CudaKernelSources::vectorOps+CudaKernelSources::customIntegratorPerDof, replacements), defines);
         kineticEnergyKernel = cu.getKernel(module, "computePerDof");
         kineticEnergyArgs.push_back(&cu.getPosq().getDevicePointer());
         kineticEnergyArgs.push_back(NULL);
@@ -7662,15 +7637,15 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
         else
             kineticEnergyArgs.push_back(&energyFloat);
         kineticEnergyArgs.push_back(&perDofEnergyParamDerivs.getDevicePointer());
-        for (int i = 0; i < (int) perDofValues->getBuffers().size(); i++)
-            kineticEnergyArgs.push_back(&perDofValues->getBuffers()[i].getMemory());
+        for (auto& array : perDofValues)
+            kineticEnergyArgs.push_back(&array.getDevicePointer());
         for (auto& array : tabulatedFunctions)
             kineticEnergyArgs.push_back(&array.getDevicePointer());
         keNeedsForce = usesVariable(keExpression, "f");
 
         // Create a second kernel to sum the values.
 
-        defines["SUM_BUFFER_SIZE"] = cu.intToString(3*numAtoms);
+        defines["SUM_BUFFER_SIZE"] = cu.intToString(numAtoms);
         module = cu.createModule(CudaKernelSources::customIntegrator, defines);
         sumKineticEnergyKernel = cu.getKernel(module, useDouble ? "computeDoubleSum" : "computeFloatSum");
 
@@ -7682,14 +7657,16 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
     
     // Make sure all values (variables, parameters, etc.) are up to date.
     
-    if (!deviceValuesAreCurrent) {
-        if (useDouble)
-            perDofValues->setParameterValues(localPerDofValuesDouble);
-        else
-            perDofValues->setParameterValues(localPerDofValuesFloat);
-        deviceValuesAreCurrent = true;
+    for (int i = 0; i < perDofValues.size(); i++) {
+        if (!deviceValuesAreCurrent[i]) {
+            if (useDouble)
+                perDofValues[i].upload(localPerDofValuesDouble[i]);
+            else
+                perDofValues[i].upload(localPerDofValuesFloat[i]);
+            deviceValuesAreCurrent[i] = true;
+        }
+        localValuesAreCurrent[i] = false;
     }
-    localValuesAreCurrent = false;
     double stepSize = integrator.getStepSize();
     recordGlobalValue(stepSize, GlobalTarget(DT, dtVariableIndex), integrator);
     for (int i = 0; i < (int) parameterNames.size(); i++) {
@@ -7733,7 +7710,7 @@ void CudaIntegrateCustomStepKernel::findExpressionsForDerivs(const ExpressionTre
             ;
         if (index == perDofEnergyParamDerivNames.size())
             perDofEnergyParamDerivNames.push_back(param);
-        variableNodes.push_back(make_pair(node, "energyParamDerivs["+cu.intToString(index)+"]"));
+        variableNodes.push_back(make_pair(node, "make_double3(energyParamDerivs["+cu.intToString(index)+"])"));
         needsEnergyParamDerivs = true;
     }
     else {
@@ -8022,49 +7999,46 @@ void CudaIntegrateCustomStepKernel::setGlobalVariables(ContextImpl& context, con
 }
 
 void CudaIntegrateCustomStepKernel::getPerDofVariable(ContextImpl& context, int variable, vector<Vec3>& values) const {
-    values.resize(perDofValues->getNumObjects()/3);
+    values.resize(perDofValues[variable].getSize());
     const vector<int>& order = cu.getAtomIndex();
     if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
-        if (!localValuesAreCurrent) {
-            perDofValues->getParameterValues(localPerDofValuesDouble);
-            localValuesAreCurrent = true;
+        if (!localValuesAreCurrent[variable]) {
+            perDofValues[variable].download(localPerDofValuesDouble[variable]);
+            localValuesAreCurrent[variable] = true;
         }
-        for (int i = 0; i < (int) values.size(); i++)
-            for (int j = 0; j < 3; j++)
-                values[order[i]][j] = localPerDofValuesDouble[3*i+j][variable];
+        for (int i = 0; i < (int) values.size(); i++) {
+            values[order[i]][0] = localPerDofValuesDouble[variable][i].x;
+            values[order[i]][1] = localPerDofValuesDouble[variable][i].y;
+            values[order[i]][2] = localPerDofValuesDouble[variable][i].z;
+        }
     }
     else {
-        if (!localValuesAreCurrent) {
-            perDofValues->getParameterValues(localPerDofValuesFloat);
-            localValuesAreCurrent = true;
+        if (!localValuesAreCurrent[variable]) {
+            perDofValues[variable].download(localPerDofValuesFloat[variable]);
+            localValuesAreCurrent[variable] = true;
         }
-        for (int i = 0; i < (int) values.size(); i++)
-            for (int j = 0; j < 3; j++)
-                values[order[i]][j] = localPerDofValuesFloat[3*i+j][variable];
+        for (int i = 0; i < (int) values.size(); i++) {
+            values[order[i]][0] = localPerDofValuesFloat[variable][i].x;
+            values[order[i]][1] = localPerDofValuesFloat[variable][i].y;
+            values[order[i]][2] = localPerDofValuesFloat[variable][i].z;
+        }
     }
 }
 
 void CudaIntegrateCustomStepKernel::setPerDofVariable(ContextImpl& context, int variable, const vector<Vec3>& values) {
     const vector<int>& order = cu.getAtomIndex();
+    localValuesAreCurrent[variable] = true;
+    deviceValuesAreCurrent[variable] = false;
     if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
-        if (!localValuesAreCurrent) {
-            perDofValues->getParameterValues(localPerDofValuesDouble);
-            localValuesAreCurrent = true;
-        }
+        localPerDofValuesDouble[variable].resize(values.size());
         for (int i = 0; i < (int) values.size(); i++)
-            for (int j = 0; j < 3; j++)
-                localPerDofValuesDouble[3*i+j][variable] = values[order[i]][j];
+            localPerDofValuesDouble[variable][i] = make_double4(values[order[i]][0], values[order[i]][1], values[order[i]][2], 0);
     }
     else {
-        if (!localValuesAreCurrent) {
-            perDofValues->getParameterValues(localPerDofValuesFloat);
-            localValuesAreCurrent = true;
-        }
+        localPerDofValuesFloat[variable].resize(values.size());
         for (int i = 0; i < (int) values.size(); i++)
-            for (int j = 0; j < 3; j++)
-                localPerDofValuesFloat[3*i+j][variable] = (float) values[order[i]][j];
+            localPerDofValuesFloat[variable][i] = make_float4(values[order[i]][0], values[order[i]][1], values[order[i]][2], 0);
     }
-    deviceValuesAreCurrent = false;
 }
 
 void CudaApplyAndersenThermostatKernel::initialize(const System& system, const AndersenThermostat& thermostat) {
