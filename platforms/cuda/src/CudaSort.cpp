@@ -43,6 +43,7 @@ CudaSort::CudaSort(CudaContext& context, SortTrait* trait, unsigned int length) 
     replacements["MAX_VALUE"] = trait->getMaxValue();
     CUmodule module = context.createModule(context.replaceStrings(CudaKernelSources::sort, replacements));
     shortListKernel = context.getKernel(module, "sortShortList");
+    shortList2Kernel = context.getKernel(module, "sortShortList2");
     computeRangeKernel = context.getKernel(module, "computeRange");
     assignElementsKernel = context.getKernel(module, "assignElementsToBuckets");
     computeBucketPositionsKernel = context.getKernel(module, "computeBucketPositions");
@@ -56,7 +57,7 @@ CudaSort::CudaSort(CudaContext& context, SortTrait* trait, unsigned int length) 
     int maxSharedMem;
     cuDeviceGetAttribute(&maxSharedMem, CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK, context.getDevice());
     unsigned int maxLocalBuffer = (unsigned int) ((maxSharedMem/trait->getDataSize())/2);
-    isShortList = (length <= maxLocalBuffer);
+    isShortList = (length <= maxLocalBuffer || length <= CudaContext::ThreadBlockSize*context.getNumThreadBlocks());
     for (rangeKernelSize = 1; rangeKernelSize*2 <= maxBlockSize; rangeKernelSize *= 2)
         ;
     positionsKernelSize = rangeKernelSize;
@@ -79,8 +80,8 @@ CudaSort::CudaSort(CudaContext& context, SortTrait* trait, unsigned int length) 
         bucketOffset.initialize<uint1>(context, numBuckets, "bucketOffset");
         bucketOfElement.initialize<uint1>(context, length, "bucketOfElement");
         offsetInBucket.initialize<uint1>(context, length, "offsetInBucket");
-        buckets.initialize(context, length, trait->getDataSize(), "buckets");
     }
+    buckets.initialize(context, length, trait->getDataSize(), "buckets");
 }
 
 CudaSort::~CudaSort() {
@@ -93,10 +94,17 @@ void CudaSort::sort(CudaArray& data) {
     if (data.getSize() == 0)
         return;
     if (isShortList) {
-        // We can use a simpler sort kernel that does the entire operation at once in local memory.
+        // We can use a simpler sort kernel that does the entire operation in one kernel.
         
-        void* sortArgs[] = {&data.getDevicePointer(), &dataLength};
-        context.executeKernel(shortListKernel, sortArgs, sortKernelSize, sortKernelSize, dataLength*trait->getDataSize());
+        if (dataLength <= CudaContext::ThreadBlockSize*context.getNumThreadBlocks()) {
+            void* sortArgs[] = {&data.getDevicePointer(), &buckets.getDevicePointer(), &dataLength};
+            context.executeKernel(shortList2Kernel, sortArgs, dataLength);
+            buckets.copyTo(data);
+        }
+        else {
+            void* sortArgs[] = {&data.getDevicePointer(), &dataLength};
+            context.executeKernel(shortListKernel, sortArgs, sortKernelSize, sortKernelSize, dataLength*trait->getDataSize());
+        }
     }
     else {
         // Compute the range of data values.
