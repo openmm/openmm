@@ -537,9 +537,11 @@ void testPerDofVariables() {
     CustomIntegrator integrator(0.01);
     integrator.addPerDofVariable("temp", 0);
     integrator.addPerDofVariable("pos", 0);
+    integrator.addPerDofVariable("computed", 0);
     integrator.addComputePerDof("v", "v+dt*f/m");
     integrator.addComputePerDof("x", "x+dt*v");
     integrator.addComputePerDof("pos", "x");
+    integrator.addComputePerDof("computed", "step(v)*log(x^2)");
     Context context(system, integrator, platform);
     context.setPositions(positions);
     vector<Vec3> initialValues(numParticles);
@@ -552,13 +554,24 @@ void testPerDofVariables() {
     vector<Vec3> values;
     for (int i = 0; i < 100; ++i) {
         integrator.step(1);
-        State state = context.getState(State::Positions);
+        State state = context.getState(State::Positions | State::Velocities);
         integrator.getPerDofVariable(0, values);
         for (int j = 0; j < numParticles; j++)
             ASSERT_EQUAL_VEC(initialValues[j], values[j], 1e-5);
         integrator.getPerDofVariable(1, values);
         for (int j = 0; j < numParticles; j++)
             ASSERT_EQUAL_VEC(state.getPositions()[j], values[j], 1e-5);
+        integrator.getPerDofVariable(2, values);
+        for (int j = 0; j < numParticles; j++)
+            for (int k = 0; k < 3; k++) {
+                if (state.getVelocities()[j][k] < 0) {
+                    ASSERT(values[j][k] == 0.0);
+                }
+                else {
+                    double v = state.getPositions()[j][k];
+                    ASSERT_EQUAL_TOL(log(v*v), values[j][k], 1e-5);
+                }
+            }
     }
 }
 
