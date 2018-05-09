@@ -203,11 +203,12 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
                 break;
             }
         }
-        if (this->deviceIndex == -1)
+        if (this->deviceIndex == -1) {
             if (deviceIndex != -1)
                 throw OpenMMException("The requested CUDA device could not be loaded");
             else
                 throw OpenMMException("No compatible CUDA device is available");
+        }
     }
     else {
         isLinkedContext = true;

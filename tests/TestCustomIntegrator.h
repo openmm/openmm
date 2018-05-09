@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2017 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -102,7 +102,6 @@ void testSingleBond() {
  */
 void testConstraints() {
     const int numParticles = 8;
-    const double temp = 500.0;
     System system;
     CustomIntegrator integrator(0.002);
     integrator.addPerDofVariable("oldx", 0);
@@ -538,9 +537,11 @@ void testPerDofVariables() {
     CustomIntegrator integrator(0.01);
     integrator.addPerDofVariable("temp", 0);
     integrator.addPerDofVariable("pos", 0);
+    integrator.addPerDofVariable("computed", 0);
     integrator.addComputePerDof("v", "v+dt*f/m");
     integrator.addComputePerDof("x", "x+dt*v");
     integrator.addComputePerDof("pos", "x");
+    integrator.addComputePerDof("computed", "step(v)*log(x^2)");
     Context context(system, integrator, platform);
     context.setPositions(positions);
     vector<Vec3> initialValues(numParticles);
@@ -553,13 +554,24 @@ void testPerDofVariables() {
     vector<Vec3> values;
     for (int i = 0; i < 100; ++i) {
         integrator.step(1);
-        State state = context.getState(State::Positions);
+        State state = context.getState(State::Positions | State::Velocities);
         integrator.getPerDofVariable(0, values);
         for (int j = 0; j < numParticles; j++)
             ASSERT_EQUAL_VEC(initialValues[j], values[j], 1e-5);
         integrator.getPerDofVariable(1, values);
         for (int j = 0; j < numParticles; j++)
             ASSERT_EQUAL_VEC(state.getPositions()[j], values[j], 1e-5);
+        integrator.getPerDofVariable(2, values);
+        for (int j = 0; j < numParticles; j++)
+            for (int k = 0; k < 3; k++) {
+                if (state.getVelocities()[j][k] < 0) {
+                    ASSERT(values[j][k] == 0.0);
+                }
+                else {
+                    double v = state.getPositions()[j][k];
+                    ASSERT_EQUAL_TOL(log(v*v), values[j][k], 1e-5);
+                }
+            }
     }
 }
 
@@ -1019,6 +1031,47 @@ void testUpdateContextState() {
     }
 }
 
+/**
+ * Test using expressions that involve vector functions.
+ */
+void testVectorFunctions() {
+    const int numParticles = 8;
+    System system;
+    CustomIntegrator integrator(0.001);
+    integrator.addGlobalVariable("sumy", 0.0);
+    integrator.addPerDofVariable("angular", 0.0);
+    integrator.addPerDofVariable("shuffle", 0.0);
+    integrator.addComputeSum("sumy", "x*vector(0, 1, 0)");
+    integrator.addComputePerDof("angular", "cross(v, x)");
+    integrator.addComputePerDof("shuffle", "dot(vector(_z(x), _x(x), _y(x)), v)");
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    vector<Vec3> positions(numParticles);
+    vector<Vec3> velocities(numParticles);
+    for (int i = 0; i < numParticles; ++i) {
+        system.addParticle(1.0);
+        positions[i] = Vec3(genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5);
+        velocities[i] = Vec3(genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5);
+    }
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    context.setVelocities(velocities);
+    integrator.step(1);
+    
+    // See if the expressions were computed correctly.
+    
+    double sumy = 0;
+    vector<Vec3> angular, shuffle;
+    integrator.getPerDofVariable(0, angular);
+    integrator.getPerDofVariable(1, shuffle);
+    for (int i = 0; i < numParticles; i++) {
+        ASSERT_EQUAL_VEC(velocities[i].cross(positions[i]), angular[i], 1e-5);
+        ASSERT_EQUAL_VEC(Vec3(1, 1, 1)*velocities[i].dot(Vec3(positions[i][2], positions[i][0], positions[i][1])), shuffle[i], 1e-5);
+        sumy += positions[i][1];
+    }
+    ASSERT_EQUAL_TOL(sumy, integrator.getGlobalVariable(0), 1e-5);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -1044,6 +1097,7 @@ int main(int argc, char* argv[]) {
         testTabulatedFunction();
         testAlternatingGroups();
         testUpdateContextState();
+        testVectorFunctions();
         runPlatformTests();
     }
     catch(const exception& e) {

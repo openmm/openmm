@@ -50,7 +50,6 @@ class System;
 
 class OPENMM_EXPORT CustomIntegratorUtilities {
 public:
-    class DerivFunction;
     enum Comparison {
         EQUAL = 0, LESS_THAN = 1, GREATER_THAN = 2, NOT_EQUAL = 3, LESS_THAN_OR_EQUAL = 4, GREATER_THAN_OR_EQUAL = 5
     };
@@ -86,27 +85,6 @@ private:
     static void analyzeForceComputationsForPath(std::vector<int>& steps, const std::vector<bool>& needsForces, const std::vector<bool>& needsEnergy,
             const std::vector<bool>& invalidatesForces, const std::vector<int>& forceGroup, std::vector<bool>& computeBoth);
     static void validateDerivatives(const Lepton::ExpressionTreeNode& node, const std::vector<std::string>& derivNames);
-};
-
-/**
- * This class is used to implement the deriv() function when it appears in expressions.
- */
-class CustomIntegratorUtilities::DerivFunction : public Lepton::CustomFunction {
-public:
-    DerivFunction() {
-    }
-    int getNumArguments() const {
-        return 2;
-    }
-    double evaluate(const double* arguments) const {
-        return 0.0;
-    }
-    double evaluateDerivative(const double* arguments, const int* derivOrder) const {
-        return 0.0;
-    }
-    CustomFunction* clone() const {
-        return new DerivFunction();
-    }
 };
 
 } // namespace OpenMM
