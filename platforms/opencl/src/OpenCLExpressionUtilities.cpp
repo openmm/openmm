@@ -69,6 +69,7 @@ void OpenCLExpressionUtilities::processExpression(stringstream& out, const Expre
         processExpression(out, node.getChildren()[i], temps, functions, functionNames, prefix, functionParams, allExpressions, tempType);
     string name = prefix+context.intToString(temps.size());
     bool hasRecordedNode = false;
+    bool isDouble = (tempType[0] == 'd');
     
     out << tempType << " " << name << " = ";
     switch (node.getOperation().getId()) {
@@ -427,13 +428,13 @@ void OpenCLExpressionUtilities::processExpression(stringstream& out, const Expre
             out << "-" << getTempName(node.getChildren()[0], temps);
             break;
         case Operation::SQRT:
-            out << "sqrt(" << getTempName(node.getChildren()[0], temps) << ")";
+            out << (isDouble ? "sqrt(" : "SQRT(") << getTempName(node.getChildren()[0], temps) << ")";
             break;
         case Operation::EXP:
-            out << "EXP(" << getTempName(node.getChildren()[0], temps) << ")";
+            out << (isDouble ? "exp(" : "EXP(") << getTempName(node.getChildren()[0], temps) << ")";
             break;
         case Operation::LOG:
-            out << "LOG(" << getTempName(node.getChildren()[0], temps) << ")";
+            out << (isDouble ? "log(" : "LOG(") << getTempName(node.getChildren()[0], temps) << ")";
             break;
         case Operation::SIN:
             out << "sin(" << getTempName(node.getChildren()[0], temps) << ")";
@@ -496,7 +497,7 @@ void OpenCLExpressionUtilities::processExpression(stringstream& out, const Expre
             break;
         }
         case Operation::RECIPROCAL:
-            out << "RECIP(" << getTempName(node.getChildren()[0], temps) << ")";
+            out << (isDouble ? "1.0/(" : "RECIP(") << getTempName(node.getChildren()[0], temps) << ")";
             break;
         case Operation::ADD_CONSTANT:
             out << context.doubleToString(dynamic_cast<const Operation::AddConstant*>(&node.getOperation())->getValue()) << "+" << getTempName(node.getChildren()[0], temps);
