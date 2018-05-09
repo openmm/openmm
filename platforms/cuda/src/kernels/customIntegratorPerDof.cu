@@ -51,7 +51,7 @@ extern "C" __global__ void computePerDof(real4* __restrict__ posq, real4* __rest
 #endif
         double4 velocity = convertToDouble4(velm[index]);
         double4 f = make_double4(forceScale*force[index], forceScale*force[index+PADDED_NUM_ATOMS], forceScale*force[index+PADDED_NUM_ATOMS*2], 0.0);
-        double mass = 1.0/velocity.w;
+        double3 mass = make_double3(1.0/velocity.w);
         if (velocity.w != 0.0) {
             int gaussianIndex = gaussianBaseIndex;
             int uniformIndex = 0;

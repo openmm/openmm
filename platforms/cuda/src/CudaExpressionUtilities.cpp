@@ -445,62 +445,91 @@ void CudaExpressionUtilities::processExpression(stringstream& out, const Express
             out << "-" << getTempName(node.getChildren()[0], temps);
             break;
         case Operation::SQRT:
-            out << "SQRT(" << getTempName(node.getChildren()[0], temps) << ")";
+            callFunction(out, "sqrtf", "sqrt", getTempName(node.getChildren()[0], temps), tempType); 
             break;
         case Operation::EXP:
-            out << "EXP(" << getTempName(node.getChildren()[0], temps) << ")";
+            callFunction(out, "expf", "exp", getTempName(node.getChildren()[0], temps), tempType);
             break;
         case Operation::LOG:
-            out << "LOG(" << getTempName(node.getChildren()[0], temps) << ")";
+            callFunction(out, "logf", "log", getTempName(node.getChildren()[0], temps), tempType);
             break;
         case Operation::SIN:
-            out << "SIN(" << getTempName(node.getChildren()[0], temps) << ")";
+            callFunction(out, "sinf", "sin", getTempName(node.getChildren()[0], temps), tempType);
             break;
         case Operation::COS:
-            out << "COS(" << getTempName(node.getChildren()[0], temps) << ")";
+            callFunction(out, "cosf", "cos", getTempName(node.getChildren()[0], temps), tempType);
             break;
         case Operation::SEC:
-            out << "RECIP(COS(" << getTempName(node.getChildren()[0], temps) << "))";
+            out << "1/";
+            callFunction(out, "cosf", "cos", getTempName(node.getChildren()[0], temps), tempType);
             break;
         case Operation::CSC:
-            out << "RECIP(SIN(" << getTempName(node.getChildren()[0], temps) << "))";
+            out << "1/";
+            callFunction(out, "sinf", "sin", getTempName(node.getChildren()[0], temps), tempType);
             break;
         case Operation::TAN:
-            out << "TAN(" << getTempName(node.getChildren()[0], temps) << ")";
+            callFunction(out, "tanf", "tan", getTempName(node.getChildren()[0], temps), tempType);
             break;
         case Operation::COT:
-            out << "RECIP(TAN(" << getTempName(node.getChildren()[0], temps) << "))";
+            out << "1/";
+            callFunction(out, "tanf", "tan", getTempName(node.getChildren()[0], temps), tempType);
             break;
         case Operation::ASIN:
-            out << "ASIN(" << getTempName(node.getChildren()[0], temps) << ")";
+            callFunction(out, "asinf", "asin", getTempName(node.getChildren()[0], temps), tempType);
             break;
         case Operation::ACOS:
-            out << "ACOS(" << getTempName(node.getChildren()[0], temps) << ")";
+            callFunction(out, "acosf", "acos", getTempName(node.getChildren()[0], temps), tempType);
             break;
         case Operation::ATAN:
-            out << "ATAN(" << getTempName(node.getChildren()[0], temps) << ")";
+            callFunction(out, "atanf", "atan", getTempName(node.getChildren()[0], temps), tempType);
             break;
         case Operation::SINH:
-            out << "sinh(" << getTempName(node.getChildren()[0], temps) << ")";
+            callFunction(out, "sinh", "sinh", getTempName(node.getChildren()[0], temps), tempType);
             break;
         case Operation::COSH:
-            out << "cosh(" << getTempName(node.getChildren()[0], temps) << ")";
+            callFunction(out, "cosh", "cosh", getTempName(node.getChildren()[0], temps), tempType);
             break;
         case Operation::TANH:
-            out << "tanh(" << getTempName(node.getChildren()[0], temps) << ")";
+            callFunction(out, "tanh", "tanh", getTempName(node.getChildren()[0], temps), tempType);
             break;
         case Operation::ERF:
-            out << "erf(" << getTempName(node.getChildren()[0], temps) << ")";
+            callFunction(out, "erf", "erf", getTempName(node.getChildren()[0], temps), tempType);
             break;
         case Operation::ERFC:
-            out << "erfc(" << getTempName(node.getChildren()[0], temps) << ")";
+            callFunction(out, "erfc", "erfc", getTempName(node.getChildren()[0], temps), tempType);
             break;
         case Operation::STEP:
-            out << getTempName(node.getChildren()[0], temps) << " >= 0.0f ? 1.0f : 0.0f";
+        {
+            string compareVal = getTempName(node.getChildren()[0], temps);
+            if (isVecType) {
+                out << "make_" << tempType << "(0);\n";
+                out << "{\n";
+                out << tempType<<" tempCompareValue = " << compareVal << ";\n";
+                out << name << ".x = (tempCompareValue.x >= 0 ? 1 : 0);\n";
+                out << name << ".y = (tempCompareValue.y >= 0 ? 1 : 0);\n";
+                out << name << ".z = (tempCompareValue.z >= 0 ? 1 : 0);\n";
+                out << "}\n";
+            }
+            else
+                out << compareVal << " >= 0 ? 1 : 0";
             break;
+        }
         case Operation::DELTA:
-            out << getTempName(node.getChildren()[0], temps) << " == 0.0f ? 1.0f : 0.0f";
+        {
+            string compareVal = getTempName(node.getChildren()[0], temps);
+            if (isVecType) {
+                out << "make_" << tempType << "(0);\n";
+                out << "{\n";
+                out << tempType<<" tempCompareValue = " << compareVal << ";\n";
+                out << name << ".x = (tempCompareValue.x == 0 ? 1 : 0);\n";
+                out << name << ".y = (tempCompareValue.y == 0 ? 1 : 0);\n";
+                out << name << ".z = (tempCompareValue.z == 0 ? 1 : 0);\n";
+                out << "}\n";
+            }
+            else
+                out << compareVal << " == 0 ? 1 : 0";
             break;
+        }
         case Operation::SQUARE:
         {
             string arg = getTempName(node.getChildren()[0], temps);
@@ -586,13 +615,13 @@ void CudaExpressionUtilities::processExpression(stringstream& out, const Express
             out << "max((" << tempType << ") " << getTempName(node.getChildren()[0], temps) << ", (" << tempType << ") " << getTempName(node.getChildren()[1], temps) << ")";
             break;
         case Operation::ABS:
-            out << "fabs(" << getTempName(node.getChildren()[0], temps) << ")";
+            callFunction(out, "fabs", "fabs", getTempName(node.getChildren()[0], temps), tempType);
             break;
         case Operation::FLOOR:
-            out << "floor(" << getTempName(node.getChildren()[0], temps) << ")";
+            callFunction(out, "floor", "floor", getTempName(node.getChildren()[0], temps), tempType);
             break;
         case Operation::CEIL:
-            out << "ceil(" << getTempName(node.getChildren()[0], temps) << ")";
+            callFunction(out, "ceil", "ceil", getTempName(node.getChildren()[0], temps), tempType);
             break;
         case Operation::SELECT:
         {
@@ -879,4 +908,21 @@ Lepton::CustomFunction* CudaExpressionUtilities::getFunctionPlaceholder(const Ta
 
 Lepton::CustomFunction* CudaExpressionUtilities::getPeriodicDistancePlaceholder() {
     return &periodicDistance;
+}
+
+void CudaExpressionUtilities::callFunction(stringstream& out, string singleFn, string doubleFn, const string& arg, const string& tempType) {
+    bool isDouble = (tempType[0] == 'd');
+    bool isVector = (tempType[tempType.size()-1] == '3');
+    if (isVector) {
+        if (isDouble)
+            out<<"make_double3("<<doubleFn<<"("<<arg<<".x), "<<doubleFn<<"("<<arg<<".y), "<<doubleFn<<"("<<arg<<".z))";
+        else
+            out<<"make_float3("<<singleFn<<"("<<arg<<".x), "<<singleFn<<"("<<arg<<".y), "<<singleFn<<"("<<arg<<".z))";
+    }
+    else {
+        if (isDouble)
+            out<<doubleFn<<"("<<arg<<")";
+        else
+            out<<singleFn<<"("<<arg<<")";
+    }
 }

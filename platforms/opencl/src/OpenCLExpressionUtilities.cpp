@@ -478,10 +478,10 @@ void OpenCLExpressionUtilities::processExpression(stringstream& out, const Expre
             out << "erfc(" << getTempName(node.getChildren()[0], temps) << ")";
             break;
         case Operation::STEP:
-            out << getTempName(node.getChildren()[0], temps) << " >= 0.0f ? 1.0f : 0.0f";
+            out << getTempName(node.getChildren()[0], temps) << " >= 0.0f ? (" << tempType << ") 1 : (" << tempType << ") 0";
             break;
         case Operation::DELTA:
-            out << getTempName(node.getChildren()[0], temps) << " == 0.0f ? 1.0f : 0.0f";
+            out << getTempName(node.getChildren()[0], temps) << " == 0.0f ? (" << tempType << ") 1 : (" << tempType << ") 0";
             break;
         case Operation::SQUARE:
         {
