@@ -662,7 +662,9 @@ such as :file:`charmm36/water.xml`, which specifies the default CHARMM water mod
          or include ``CONECT`` records specifying non-chemical ``H-H`` bonds in waters
          can cause issues with the detection and parameter assignment for disulfide bonds.
          Make sure the files you read in comply with the appropriate standards regarding
-         additional bonds and nonstandard residue definitions.
+         additional bonds and nonstandard residue definitions. If you're using files from
+         `CHARMM-GUI <http://charmm-gui.org/>`_, it's easiest to load
+         the PSF file directly, as discussed in Section :ref:`using-charmm-files`.
 
 The converted parameter sets come from the `CHARMM36 July 2017 update <http://mackerell.umaryland.edu/charmm_ff.shtml>`_
 and were converted using the `openmm-forcefields <https://github.com/choderalab/openmm-forcefields>`_ package and `parmed <https://github.com/parmed/parmed>`_.
