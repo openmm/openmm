@@ -585,19 +585,20 @@ File                                 Parameters
 As a convenience, the file :file:`amber14-all.xml` can be used as a shortcut to include
 :file:`amber14/protein.ff14SB.xml`, :file:`amber14/DNA.OL15.xml`, :file:`amber14/RNA.OL3.xml`,
 and :file:`amber14/lipid17.xml`.  In most cases, you can simply include that file,
-plus one of the water models, such as :file:`amber14/tip4pew.xml` for the TIP4P-Ew
-water model\ :cite:`Horn2004`:
+plus one of the water models, such as :file:`amber14/tip4pew.xml` for the TIP3P-FB
+water model and ions\ :cite:`Wang2014`:
 ::
 
-    forcefield = ForceField('amber14-all.xml', 'amber14/tip4pew.xml')
+    forcefield = ForceField('amber14-all.xml', 'amber14/tip3pfb.xml')
 
 .. tip:: The solvent model XML files included under the :file:`amber14/` directory
          include both water *and* ions compatible with that water model, so if you
          mistakenly specify :file:`tip3p.xml` instead of :file:`amber14/tip3p.xml`,
-         you run the risk of neglecting critical parameters for ions in your system.
+         you run the risk of having :class:`ForceField` throw an exception since
+         :file:`tip3p.xml` will be missing parameters for ions in your system.
 
 The converted parameter sets come from the `AmberTools 17 release <http://ambermd.org/AmberTools17-get.html>`_
-and were converted using the `openmm-forcefields <https://github.com/choderalab/openmm-forcefields>`_ package and `parmed <https://github.com/parmed/parmed>`_.
+and were converted using the `openmm-forcefields <https://github.com/choderalab/openmm-forcefields>`_ package and `ParmEd <https://github.com/parmed/parmed>`_.
 
 CHARMM36
 --------
@@ -624,19 +625,23 @@ File                               Parameters
 
 The file :file:`charmm36.xml` bundles everything but the water and ions into a single
 file.  In most cases, you can simply include that file, plus one of the water models,
-such as :file:`charmm36/tip4pew.xml` for the TIP4P-Ew water model\ :cite:`Horn2004`:
+such as :file:`charmm36/water.xml`, which specifies the default CHARMM water model
+(a modified version of TIP3P\ :cite:`Jorgensen1983`) and ions:
 ::
 
-    forcefield = ForceField('charmm36.xml', 'charmm36/tip4pew.xml')
+    forcefield = ForceField('charmm36.xml', 'charmm36/water.xml')
 
 .. warning:: Drude polarizable sites and lone pairs are not yet supported
-             by `parmed <https://github.com/parmed/parmed>`_ and CHARMM36 forcefields that
-             depend on these features have not yet been converted.
+             by `ParmEd <https://github.com/parmed/parmed>`_ and the CHARMM36 forcefields
+             that depend on these features are not included in this port.
+             To use the CHARMM 2013 polarizable force field\ :cite:`Lopes2013`,
+             include the single file :file:`charmm_polar_2013.xml`.
 
 .. tip:: The solvent model XML files included under the :file:`charmm36/` directory
          include both water *and* ions compatible with that water model, so if you
-         mistakenly specify :file:`tip3p.xml` instead of :file:`charmm36/tip3p.xml`,
-         you run the risk of neglecting critical parameters for ions in your system.
+         mistakenly specify :file:`tip3p.xml` instead of :file:`charmm36/water.xml`,
+         you run the risk of having :class:`ForceField` raise an exception due to
+         missing parameters for ions in your system.
 
 .. tip:: CHARMM makes extensive use of patches, which are automatically combined with
          residue templates to create an expanded library of patched residue templates
@@ -648,6 +653,8 @@ such as :file:`charmm36/tip4pew.xml` for the TIP4P-Ew water model\ :cite:`Horn20
          must already contain appropriate hydrogens. This can often cause problems when
          trying to read in PDB files from sources such as `CHARMM-GUI <http://charmm-gui.org/>`_
          that do not generate PDB files that comply with the `PDB standard <http://www.wwpdb.org/documentation/file-format>`_.
+         If you're using files from `CHARMM-GUI <http://charmm-gui.org/>`_, it's easiest to load
+         the PSF file directly, as discussed in Section :ref:`using-charmm-files`.
 
 .. tip:: Trying to read in PDB files from sources such as `CHARMM-GUI <http://charmm-gui.org/>`_
          that do not generate PDB files that comply with the `PDB standard <http://www.wwpdb.org/documentation/file-format>`_
