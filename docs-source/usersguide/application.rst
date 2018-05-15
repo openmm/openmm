@@ -584,14 +584,28 @@ File                                 Parameters
 
 As a convenience, the file :file:`amber14-all.xml` can be used as a shortcut to include
 :file:`amber14/protein.ff14SB.xml`, :file:`amber14/DNA.OL15.xml`, :file:`amber14/RNA.OL3.xml`,
-and :file:`amber14/lipid17.xml`.  In most cases you can simply include that file,
-plus one of the water models.
+and :file:`amber14/lipid17.xml`.  In most cases, you can simply include that file,
+plus one of the water models, such as :file:`amber14/tip3pfb.xml` for the TIP3P-FB
+water model and ions\ :cite:`Wang2014`:
+::
+
+    forcefield = ForceField('amber14-all.xml', 'amber14/tip3pfb.xml')
+
+.. tip:: The solvent model XML files included under the :file:`amber14/` directory
+         include both water *and* ions compatible with that water model, so if you
+         mistakenly specify :file:`tip3p.xml` instead of :file:`amber14/tip3p.xml`,
+         you run the risk of having :class:`ForceField` throw an exception since
+         :file:`tip3p.xml` will be missing parameters for ions in your system.
+
+The converted parameter sets come from the `AmberTools 17 release <http://ambermd.org/AmberTools17-get.html>`_
+and were converted using the `openmm-forcefields <https://github.com/choderalab/openmm-forcefields>`_ package and `ParmEd <https://github.com/parmed/parmed>`_.
 
 CHARMM36
 --------
 
 The CHARMM36\ :cite:`Best2012` force field provides parameters for proteins, DNA,
-RNA, lipids, carbohydrates, water, ions, and various small molecules.
+RNA, lipids, carbohydrates, water, ions, and various small molecules (see `here <http://mackerell.umaryland.edu/charmm_ff.shtml#refs>`_
+for full references).
 
 .. tabularcolumns:: |l|L|
 
@@ -609,6 +623,52 @@ File                               Parameters
 :file:`charmm36/tip5pew.xml`       TIP5P-Ew water model\ :cite:`Rick2004` and ions
 =================================  ============================================
 
+The file :file:`charmm36.xml` bundles everything but the water and ions into a single
+file.  In most cases, you can simply include that file, plus one of the water models,
+such as :file:`charmm36/water.xml`, which specifies the default CHARMM water model
+(a modified version of TIP3P\ :cite:`Jorgensen1983`) and ions:
+::
+
+    forcefield = ForceField('charmm36.xml', 'charmm36/water.xml')
+
+.. warning:: Drude polarizable sites and lone pairs are not yet supported
+             by `ParmEd <https://github.com/parmed/parmed>`_ and the CHARMM36 forcefields
+             that depend on these features are not included in this port.
+             To use the CHARMM 2013 polarizable force field\ :cite:`Lopes2013`,
+             include the single file :file:`charmm_polar_2013.xml`.
+
+.. tip:: The solvent model XML files included under the :file:`charmm36/` directory
+         include both water *and* ions compatible with that water model, so if you
+         mistakenly specify :file:`tip3p.xml` instead of :file:`charmm36/water.xml`,
+         you run the risk of having :class:`ForceField` raise an exception due to
+         missing parameters for ions in your system.
+
+.. tip:: CHARMM makes extensive use of patches, which are automatically combined with
+         residue templates to create an expanded library of patched residue templates
+         by :class:`ForceField`. That means that patched residues, such as ``ACE`` and
+         ``NME`` patched termini, must occur as a single residue in order for :class:`ForceField`
+         to correctly match the residue template and apply parameters. Since these
+         patched residues are not standard PDB residues, :class:`Modeller` does not know
+         how to add hydrogens to these nonstandard residues, and your input topologies
+         must already contain appropriate hydrogens. This can often cause problems when
+         trying to read in PDB files from sources such as `CHARMM-GUI <http://charmm-gui.org/>`_
+         that do not generate PDB files that comply with the `PDB standard <http://www.wwpdb.org/documentation/file-format>`_.
+         If you're using files from `CHARMM-GUI <http://charmm-gui.org/>`_, it's easiest to load
+         the PSF file directly, as discussed in Section :ref:`using-charmm-files`.
+
+.. tip:: Trying to read in PDB files from sources such as `CHARMM-GUI <http://charmm-gui.org/>`_
+         that do not generate PDB files that comply with the `PDB standard <http://www.wwpdb.org/documentation/file-format>`_
+         and omit ``CONECT`` records specifying bonds between residues (such as cysteines)
+         or include ``CONECT`` records specifying non-chemical ``H-H`` bonds in waters
+         can cause issues with the detection and parameter assignment for disulfide bonds.
+         Make sure the files you read in comply with the appropriate standards regarding
+         additional bonds and nonstandard residue definitions. If you're using files from
+         `CHARMM-GUI <http://charmm-gui.org/>`_, it's easiest to load
+         the PSF file directly, as discussed in Section :ref:`using-charmm-files`.
+
+The converted parameter sets come from the `CHARMM36 July 2017 update <http://mackerell.umaryland.edu/charmm_ff.shtml>`_
+and were converted using the `openmm-forcefields <https://github.com/choderalab/openmm-forcefields>`_ package and `parmed <https://github.com/parmed/parmed>`_.
+
 AMOEBA
 ------
 
@@ -621,7 +681,7 @@ File                           Parameters
 =============================  ================================================================================
 :file:`amoeba2013.xml`         AMOEBA 2013\ :cite:`Shi2013`
 :file:`amoeba2013_gk.xml`      Generalized Kirkwood solvation model\ :cite:`Schnieders2007` for use with AMOEBA 2013 force field
-:file:`amoeba2009.xml`         AMOEBA 2009\ :cite:`Ren2002`.  This force field is deprecated.  It is 
+:file:`amoeba2009.xml`         AMOEBA 2009\ :cite:`Ren2002`.  This force field is deprecated.  It is
                                recommended to use AMOEBA 2013 instead.
 :file:`amoeba2009_gk.xml`      Generalized Kirkwood solvation model for use with AMOEBA 2009 force field
 =============================  ================================================================================

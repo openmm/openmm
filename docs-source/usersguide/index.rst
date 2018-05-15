@@ -10,9 +10,9 @@ OpenMM Users Manual and Theory Guide
 
 .. toctree::
    :numbered:
-   :maxdepth: 3
+   :maxdepth: 4
 
-   introduction   
+   introduction
    application
    library
    theory
