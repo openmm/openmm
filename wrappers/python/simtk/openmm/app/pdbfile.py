@@ -375,7 +375,8 @@ class PDBFile(object):
                     line = "%s%5d %-4s %3s %s%4s%1s   %s%s%s  1.00  0.00          %2s  " % (
                         recordName, atomIndex%100000, atomName, resName, chainName, resId, resIC, _format_83(coords[0]),
                         _format_83(coords[1]), _format_83(coords[2]), symbol)
-                    assert len(line) == 80, 'Fixed width overflow detected'
+                    if len(line) != 80:
+                        raise ValueError('Fixed width overflow detected')
                     print(line, file=file)
                     posIndex += 1
                     atomIndex += 1
