@@ -585,7 +585,7 @@ File                                 Parameters
 As a convenience, the file :file:`amber14-all.xml` can be used as a shortcut to include
 :file:`amber14/protein.ff14SB.xml`, :file:`amber14/DNA.OL15.xml`, :file:`amber14/RNA.OL3.xml`,
 and :file:`amber14/lipid17.xml`.  In most cases, you can simply include that file,
-plus one of the water models, such as :file:`amber14/tip4pew.xml` for the TIP3P-FB
+plus one of the water models, such as :file:`amber14/tip3pfb.xml` for the TIP3P-FB
 water model and ions\ :cite:`Wang2014`:
 ::
 
