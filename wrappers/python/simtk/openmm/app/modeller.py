@@ -42,6 +42,7 @@ from simtk.openmm import System, Context, NonbondedForce, CustomNonbondedForce, 
 from simtk.unit import nanometer, molar, elementary_charge, amu, gram, liter, degree, sqrt, acos, is_quantity, dot, norm
 import simtk.unit as unit
 from . import element as elem
+import gc
 import os
 import random
 import xml.etree.ElementTree as etree
@@ -1255,8 +1256,8 @@ class Modeller(object):
             boxSizeZ = max(boxSizeZ, self.topology.getUnitCellDimensions()[2].value_in_unit(nanometer)+2*minimumPadding)
         membraneTopology.setUnitCellDimensions((nx*patchSize[0], ny*patchSize[1], boxSizeZ))
         
-        # Add membrane patches.  We exclude any water that is within a cutoff distance of the *actual* protein,
-        # and any lipid that is within a cutoff distance of the *scaled* protein.  We also keep track of how
+        # Add membrane patches.  We exclude any water that is within a cutoff distance of either the actual or scaled
+        # protein, and any lipid that is within a cutoff distance of the scaled protein.  We also keep track of how
         # many lipids have been excluded from each leaf of the membrane, so we can make sure exactly the same
         # number get removed from each leaf.
         
@@ -1274,23 +1275,28 @@ class Modeller(object):
                 for res in patch.topology.residues():
                     resPos = [patchPos[atom.index]+offset for atom in res.atoms()]
                     if res.name == 'HOH':
-                        referencePos = proteinPos
-                        cells = proteinCells
+                        # Remove waters that are too close to either the original OR scaled protein positions.
+                        referencePosLists = [proteinPos, scaledProteinPos]
+                        cellLists = [proteinCells, scaledProteinCells]
                     else:
-                        referencePos = scaledProteinPos
-                        cells = scaledProteinCells
+                        # Remove lipids that are too close to the scaled protein positions.
+                        referencePosLists = [scaledProteinPos]
+                        cellLists = [scaledProteinCells]
                     overlap = False
                     nearest = nx*patchSize[0]
-                    for index, atom in enumerate(res.atoms()):
-                        pos = resPos[index]
-                        for atom in cells.neighbors(pos):
-                            distance = norm(pos-referencePos[atom])
-                            if distance < overlapCutoff:
-                                overlap = True
-                                break
-                            nearest = min(nearest, distance)
+                    for cells, referencePos in zip(cellLists, referencePosLists):
                         if overlap:
                             break
+                        for index, atom in enumerate(res.atoms()):
+                            pos = resPos[index]
+                            for atom in cells.neighbors(pos):
+                                distance = norm(pos-referencePos[atom])
+                                if distance < overlapCutoff:
+                                    overlap = True
+                                    break
+                                nearest = min(nearest, distance)
+                            if overlap:
+                                break
                     if res.name == 'HOH':
                         if not overlap:
                             addedWater.append((res, resPos))
@@ -1300,6 +1306,9 @@ class Modeller(object):
                         else:
                             addedLipids.append((nearest, res, resPos))
         skipFromLeaf = [max(removedFromLeaf)-removedFromLeaf[i] for i in (0,1)]
+        del cellLists
+        del cells
+        del proteinCells
         
         # Add the lipids.
         
@@ -1317,6 +1326,8 @@ class Modeller(object):
                 membranePos += pos
                 for bond in resBonds[residue]:
                     membraneTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]], bond.type, bond.order)
+        del lipidLeaf
+        del addedLipids
         
         # Add the solvent.
         
@@ -1329,6 +1340,10 @@ class Modeller(object):
             membranePos += pos
             for bond in resBonds[residue]:
                 membraneTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]], bond.type, bond.order)
+        del newAtoms
+        del addedWater
+        del resBonds
+        gc.collect()
 
         # Create a System for the lipids, then add in the protein as stationary particles.
         
@@ -1344,11 +1359,15 @@ class Modeller(object):
                 nonbonded = f2
                 for i in range(numProteinParticles):
                     f1.addParticle(*f2.getParticleParameters(i))
-                    for j in range(i):
-                        f1.addException(i+numMembraneParticles, j+numMembraneParticles, 0.0, 1.0, 0.0)
+                    for j in scaledProteinCells.neighbors(scaledProteinPos[i]):
+                        if j < i:
+                            f1.addException(i+numMembraneParticles, j+numMembraneParticles, 0.0, 1.0, 0.0)
         if nonbonded is None:
             raise ValueError('The ForceField does not specify a NonbondedForce')
         mergedPositions = membranePos+scaledProteinPos
+        del membranePos
+        del scaledProteinCells
+        gc.collect()
         
         # Run a simulation while slowly scaling up the protein so the membrane can relax.
         
@@ -1370,6 +1389,9 @@ class Modeller(object):
         modeller = Modeller(self.topology, self.positions)
         modeller.add(membraneTopology, context.getState(getPositions=True).getPositions()[:numMembraneParticles])
         modeller.topology.setPeriodicBoxVectors(membraneTopology.getPeriodicBoxVectors())
+        del context
+        del system
+        del integrator
         
         # Depending on the box size, we may need to add more water beyond what was included with the membrane patch.
         
