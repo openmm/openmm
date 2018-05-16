@@ -59,15 +59,16 @@ OpenCLSort::OpenCLSort(OpenCLContext& context, SortTrait* trait, unsigned int le
 
     unsigned int maxGroupSize = std::min(256, (int) context.getDevice().getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>());
     int maxSharedMem = context.getDevice().getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
-    unsigned int maxLocalBuffer = (unsigned int) ((maxSharedMem/trait->getDataSize())/2);
     unsigned int maxRangeSize = std::min(maxGroupSize, (unsigned int) computeRangeKernel.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(context.getDevice()));
     unsigned int maxPositionsSize = std::min(maxGroupSize, (unsigned int) computeBucketPositionsKernel.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(context.getDevice()));
-    unsigned int maxShortListSize = shortListKernel.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(context.getDevice());
-    // On Qualcomm's OpenCL, it's essential to check against maxShortListSize.  Otherwise you get a crash.
+    int maxLocalBuffer = (maxSharedMem/trait->getDataSize())/2;
+    unsigned int maxShortList = min(8192, max(maxLocalBuffer, (int) OpenCLContext::ThreadBlockSize*context.getNumThreadBlocks()));
+    // On Qualcomm's OpenCL, it's essential to check against CL_KERNEL_WORK_GROUP_SIZE.  Otherwise you get a crash.
     // But AMD's OpenCL returns an inappropriately small value for it that is much shorter than the actual
     // maximum, so including the check hurts performance.  For the moment I'm going to just comment it out.
     // If we officially support Qualcomm in the future, we'll need to do something better.
-    isShortList = (length <= maxLocalBuffer/* && length < maxShortListSize*/ || length <= OpenCLContext::ThreadBlockSize*context.getNumThreadBlocks());
+    //maxShortList = min(maxShortList, shortListKernel.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(context.getDevice()));
+    isShortList = (length <= maxShortList);
     for (rangeKernelSize = 1; rangeKernelSize*2 <= maxRangeSize; rangeKernelSize *= 2)
         ;
     positionsKernelSize = std::min(rangeKernelSize, maxPositionsSize);
