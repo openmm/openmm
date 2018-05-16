@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2016 Stanford University and the Authors.
+Portions copyright (c) 2012-2018 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
@@ -106,7 +106,7 @@ class PDBFile(object):
                 resName = residue.get_name()
                 if resName in PDBFile._residueNameReplacements:
                     resName = PDBFile._residueNameReplacements[resName]
-                r = top.addResidue(resName, c, str(residue.number))
+                r = top.addResidue(resName, c, str(residue.number), residue.insertion_code)
                 if resName in PDBFile._atomNameReplacements:
                     atomReplacements = PDBFile._atomNameReplacements[resName]
                 else:
@@ -352,8 +352,10 @@ class PDBFile(object):
                     resName = res.name
                 if keepIds and len(res.id) < 5:
                     resId = res.id
+                    resIC = res.insertionCode
                 else:
                     resId = "%4d" % ((resIndex+1)%10000)
+                    resIC = " "
                 if res.name in nonHeterogens:
                     recordName = "ATOM  "
                 else:
@@ -370,10 +372,11 @@ class PDBFile(object):
                     else:
                         atomName = atom.name
                     coords = positions[posIndex]
-                    line = "%s%5d %-4s %3s %s%4s    %s%s%s  1.00  0.00          %2s  " % (
-                        recordName, atomIndex%100000, atomName, resName, chainName, resId, _format_83(coords[0]),
+                    line = "%s%5d %-4s %3s %s%4s%1s   %s%s%s  1.00  0.00          %2s  " % (
+                        recordName, atomIndex%100000, atomName, resName, chainName, resId, resIC, _format_83(coords[0]),
                         _format_83(coords[1]), _format_83(coords[2]), symbol)
-                    assert len(line) == 80, 'Fixed width overflow detected'
+                    if len(line) != 80:
+                        raise ValueError('Fixed width overflow detected')
                     print(line, file=file)
                     posIndex += 1
                     atomIndex += 1

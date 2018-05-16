@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2016 Stanford University and the Authors.
+Portions copyright (c) 2012-2018 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
@@ -137,7 +137,7 @@ class Topology(object):
         self._chains.append(chain)
         return chain
 
-    def addResidue(self, name, chain, id=None):
+    def addResidue(self, name, chain, id=None, insertionCode=''):
         """Create a new Residue and add it to the Topology.
 
         Parameters
@@ -149,6 +149,8 @@ class Topology(object):
         id : string=None
             An optional identifier for the residue.  If this is omitted, an id
             is generated based on the residue index.
+        insertionCode: string=''
+            An optional insertion code for the residue.
 
         Returns
         -------
@@ -159,7 +161,7 @@ class Topology(object):
             raise ValueError('All residues within a chain must be contiguous')
         if id is None:
             id = str(self._numResidues+1)
-        residue = Residue(name, self._numResidues, chain, id)
+        residue = Residue(name, self._numResidues, chain, id, insertionCode)
         self._numResidues += 1
         chain._residues.append(residue)
         return residue
@@ -395,7 +397,7 @@ class Chain(object):
 
 class Residue(object):
     """A Residue object represents a residue within a Topology."""
-    def __init__(self, name, index, chain, id):
+    def __init__(self, name, index, chain, id, insertionCode):
         """Construct a new Residue.  You should call addResidue() on the Topology instead of calling this directly."""
         ## The name of the Residue
         self.name = name
@@ -405,6 +407,8 @@ class Residue(object):
         self.chain = chain
         ## A user defined identifier for this Residue
         self.id = id
+        ## A user defined insertion code for this Residue
+        self.insertionCode = insertionCode
         self._atoms = []
 
     def atoms(self):

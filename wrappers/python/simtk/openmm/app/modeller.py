@@ -109,7 +109,7 @@ class Modeller(object):
         for chain in self.topology.chains():
             newChain = newTopology.addChain(chain.id)
             for residue in chain.residues():
-                newResidue = newTopology.addResidue(residue.name, newChain, residue.id)
+                newResidue = newTopology.addResidue(residue.name, newChain, residue.id, residue.insertionCode)
                 for atom in residue.atoms():
                     newAtom = newTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
                     newAtoms[atom] = newAtom
@@ -123,7 +123,7 @@ class Modeller(object):
         for chain in addTopology.chains():
             newChain = newTopology.addChain(chain.id)
             for residue in chain.residues():
-                newResidue = newTopology.addResidue(residue.name, newChain, residue.id)
+                newResidue = newTopology.addResidue(residue.name, newChain, residue.id, residue.insertionCode)
                 for atom in residue.atoms():
                     newAtom = newTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
                     newAtoms[atom] = newAtom
@@ -168,7 +168,7 @@ class Modeller(object):
                                     newChain = newTopology.addChain(chain.id)
                                     needNewChain = False;
                                 if needNewResidue:
-                                    newResidue = newTopology.addResidue(residue.name, newChain, residue.id)
+                                    newResidue = newTopology.addResidue(residue.name, newChain, residue.id, residue.insertionCode)
                                     needNewResidue = False;
                                 newAtom = newTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
                                 newAtoms[atom] = newAtom
@@ -210,7 +210,7 @@ class Modeller(object):
         for chain in self.topology.chains():
             newChain = newTopology.addChain(chain.id)
             for residue in chain.residues():
-                newResidue = newTopology.addResidue(residue.name, newChain, residue.id)
+                newResidue = newTopology.addResidue(residue.name, newChain, residue.id, residue.insertionCode)
                 if residue.name == "HOH":
                     # Copy the oxygen and hydrogens
                     oatom = [atom for atom in residue.atoms() if atom.element == elem.oxygen]
@@ -395,7 +395,7 @@ class Modeller(object):
         for chain in self.topology.chains():
             newChain = newTopology.addChain(chain.id)
             for residue in chain.residues():
-                newResidue = newTopology.addResidue(residue.name, newChain, residue.id)
+                newResidue = newTopology.addResidue(residue.name, newChain, residue.id, residue.insertionCode)
                 for atom in residue.atoms():
                     newAtom = newTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
                     newAtoms[atom] = newAtom
@@ -691,7 +691,7 @@ class Modeller(object):
         for chain in self.topology.chains():
             newChain = newTopology.addChain(chain.id)
             for residue in chain.residues():
-                newResidue = newTopology.addResidue(residue.name, newChain, residue.id)
+                newResidue = newTopology.addResidue(residue.name, newChain, residue.id, residue.insertionCode)
                 isNTerminal = (residue == chain._residues[0])
                 isCTerminal = (residue == chain._residues[-1])
                 if residue.name in Modeller._residueHydrogens:
@@ -977,7 +977,7 @@ class Modeller(object):
         for chain in self.topology.chains():
             newChain = newTopology.addChain(chain.id)
             for residue in chain.residues():
-                newResidue = newTopology.addResidue(residue.name, newChain, residue.id)
+                newResidue = newTopology.addResidue(residue.name, newChain, residue.id, residue.insertionCode)
 
                 # Look for a matching template.
 
@@ -999,7 +999,7 @@ class Modeller(object):
                     # extra points.
 
                     template = None
-                    residueNoEP = Residue(residue.name, residue.index, residue.chain, residue.id)
+                    residueNoEP = Residue(residue.name, residue.index, residue.chain, residue.id, residue.insertionCode)
                     residueNoEP._atoms = [atom for atom in residue.atoms() if atom.element is not None]
                     if signature in forcefield._templateSignatures:
                         for t in forcefield._templateSignatures[signature]:
@@ -1310,7 +1310,7 @@ class Modeller(object):
                 # Remove the same number of residues from each leaf.
                 skipFromLeaf[lipidLeaf[residue]] -= 1
             else:
-                newResidue = membraneTopology.addResidue(residue.name, lipidChain, residue.id)
+                newResidue = membraneTopology.addResidue(residue.name, lipidChain, residue.id, residue.insertionCode)
                 for atom in residue.atoms():
                     newAtom = membraneTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
                     newAtoms[atom] = newAtom
@@ -1322,7 +1322,7 @@ class Modeller(object):
         
         solventChain = membraneTopology.addChain()
         for (residue, pos) in addedWater:
-            newResidue = membraneTopology.addResidue(residue.name, solventChain, residue.id)
+            newResidue = membraneTopology.addResidue(residue.name, solventChain, residue.id, residue.insertionCode)
             for atom in residue.atoms():
                 newAtom = membraneTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
                 newAtoms[atom] = newAtom
