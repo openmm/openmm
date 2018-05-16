@@ -26,6 +26,7 @@
 
 #include "CudaSort.h"
 #include "CudaKernelSources.h"
+#include <algorithm>
 #include <map>
 
 using namespace OpenMM;
@@ -56,8 +57,9 @@ CudaSort::CudaSort(CudaContext& context, SortTrait* trait, unsigned int length) 
     cuDeviceGetAttribute(&maxBlockSize, CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_X, context.getDevice());
     int maxSharedMem;
     cuDeviceGetAttribute(&maxSharedMem, CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK, context.getDevice());
-    unsigned int maxLocalBuffer = (unsigned int) ((maxSharedMem/trait->getDataSize())/2);
-    isShortList = (length <= maxLocalBuffer || length <= CudaContext::ThreadBlockSize*context.getNumThreadBlocks());
+    int maxLocalBuffer = (maxSharedMem/trait->getDataSize())/2;
+    int maxShortList = min(8192, max(maxLocalBuffer, CudaContext::ThreadBlockSize*context.getNumThreadBlocks()));
+    isShortList = (length <= maxShortList);
     for (rangeKernelSize = 1; rangeKernelSize*2 <= maxBlockSize; rangeKernelSize *= 2)
         ;
     positionsKernelSize = rangeKernelSize;
