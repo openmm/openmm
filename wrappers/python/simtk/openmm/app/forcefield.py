@@ -307,16 +307,15 @@ class ForceField(object):
                     else:
                         numResidues = 1
                     patchData = ForceField._PatchData(patchName, numResidues)
-                    allAtomNames = set()
                     for atom in patch.findall('AddAtom'):
                         params = {}
                         for key in atom.attrib:
                             if key not in ('name', 'type'):
                                 params[key] = _convertParameterToNumber(atom.attrib[key])
                         atomName = atom.attrib['name']
-                        if atomName in allAtomNames:
+                        if atomName in patchData.allAtomNames:
                             raise ValueError('Patch '+patchName+' contains multiple atoms named '+atomName)
-                        allAtomNames.add(atomName)
+                        patchData.allAtomNames.add(atomName)
                         atomDescription = ForceField._PatchAtomData(atomName)
                         typeName = atom.attrib['type']
                         patchData.addedAtoms[atomDescription.residue].append(ForceField._TemplateAtomData(atomDescription.name, typeName, self._atomTypes[typeName].element, params))
@@ -326,17 +325,17 @@ class ForceField(object):
                             if key not in ('name', 'type'):
                                 params[key] = _convertParameterToNumber(atom.attrib[key])
                         atomName = atom.attrib['name']
-                        if atomName in allAtomNames:
+                        if atomName in patchData.allAtomNames:
                             raise ValueError('Patch '+patchName+' contains multiple atoms named '+atomName)
-                        allAtomNames.add(atomName)
+                        patchData.allAtomNames.add(atomName)
                         atomDescription = ForceField._PatchAtomData(atomName)
                         typeName = atom.attrib['type']
                         patchData.changedAtoms[atomDescription.residue].append(ForceField._TemplateAtomData(atomDescription.name, typeName, self._atomTypes[typeName].element, params))
                     for atom in patch.findall('RemoveAtom'):
                         atomName = atom.attrib['name']
-                        if atomName in allAtomNames:
+                        if atomName in patchData.allAtomNames:
                             raise ValueError('Patch '+patchName+' contains multiple atoms named '+atomName)
-                        allAtomNames.add(atomName)
+                        patchData.allAtomNames.add(atomName)
                         atomDescription = ForceField._PatchAtomData(atomName)
                         patchData.deletedAtoms.append(atomDescription)
                     for bond in patch.findall('AddBond'):
@@ -695,6 +694,7 @@ class ForceField(object):
             self.deletedBonds = []
             self.addedExternalBonds = []
             self.deletedExternalBonds = []
+            self.allAtomNames = set()
 
         def createPatchedTemplates(self, templates):
             """Apply this patch to a set of templates, creating new modified ones."""
@@ -1509,7 +1509,7 @@ def _applyPatchesToMatchResidues(forcefield, data, residues, bondedToAtom, ignor
             if len(patches) > 0:
                 newTemplates = []
                 patchedTemplates[name] = newTemplates
-                _generatePatchedSingleResidueTemplates(template, patches, 0, newTemplates)
+                _generatePatchedSingleResidueTemplates(template, patches, 0, newTemplates, set())
                 for patchedTemplate in newTemplates:
                     signature = _createResidueSignature([atom.element for atom in patchedTemplate.atoms])
                     if signature in patchedTemplateSignatures:
@@ -1599,11 +1599,16 @@ def _applyPatchesToMatchResidues(forcefield, data, residues, bondedToAtom, ignor
     return unmatchedResidues
 
 
-def _generatePatchedSingleResidueTemplates(template, patches, index, newTemplates):
+def _generatePatchedSingleResidueTemplates(template, patches, index, newTemplates, alteredAtoms):
     """Apply all possible combinations of a set of single-residue patches to a template."""
     try:
-        patchedTemplate = patches[index].createPatchedTemplates([template])[0]
-        newTemplates.append(patchedTemplate)
+        if len(alteredAtoms.intersection(patches[index].allAtomNames)) > 0:
+            # This patch would alter an atom that another patch has already altered,
+            # so don't apply it.
+            patchedTemplate = None
+        else:
+            patchedTemplate = patches[index].createPatchedTemplates([template])[0]
+            newTemplates.append(patchedTemplate)
     except:
         # This probably means the patch is inconsistent with another one that has already been applied,
         # so just ignore it.
@@ -1612,9 +1617,10 @@ def _generatePatchedSingleResidueTemplates(template, patches, index, newTemplate
     # Call this function recursively to generate combinations of patches.
 
     if index+1 < len(patches):
-        _generatePatchedSingleResidueTemplates(template, patches, index+1, newTemplates)
+        _generatePatchedSingleResidueTemplates(template, patches, index+1, newTemplates, alteredAtoms)
         if patchedTemplate is not None:
-            _generatePatchedSingleResidueTemplates(patchedTemplate, patches, index+1, newTemplates)
+            newAlteredAtoms = alteredAtoms.union(patches[index].allAtomNames)
+            _generatePatchedSingleResidueTemplates(patchedTemplate, patches, index+1, newTemplates, newAlteredAtoms)
 
 
 def _matchToMultiResiduePatchedTemplates(data, clusters, patch, residueTemplates, bondedToAtom, ignoreExternalBonds):
