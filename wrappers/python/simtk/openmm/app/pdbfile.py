@@ -111,7 +111,7 @@ class PDBFile(object):
                     atomReplacements = PDBFile._atomNameReplacements[resName]
                 else:
                     atomReplacements = {}
-                for atom in residue.atoms:
+                for atom in residue.iter_atoms():
                     atomName = atom.get_name()
                     if atomName in atomReplacements:
                         atomName = atomReplacements[atomName]
@@ -153,7 +153,7 @@ class PDBFile(object):
             coords = []
             for chain in model.iter_chains():
                 for residue in chain.iter_residues():
-                    for atom in residue.atoms:
+                    for atom in residue.iter_atoms():
                         pos = atom.get_position().value_in_unit(nanometers)
                         coords.append(Vec3(pos[0], pos[1], pos[2]))
             self._positions.append(coords*nanometers)
