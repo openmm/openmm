@@ -3005,7 +3005,7 @@ double CudaCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeFor
     if (nb.getUseCutoff()) {
         if (maxTiles < nb.getInteractingTiles().getSize()) {
             maxTiles = nb.getInteractingTiles().getSize();
-            computeSumArgs[3] = &nb.getInteractingTiles().getDevicePointer();
+            computeSumArgs[4] = &nb.getInteractingTiles().getDevicePointer();
             force1Args[7] = &nb.getInteractingTiles().getDevicePointer();
             computeSumArgs[14] = &nb.getInteractingAtoms().getDevicePointer();
             force1Args[17] = &nb.getInteractingAtoms().getDevicePointer();
