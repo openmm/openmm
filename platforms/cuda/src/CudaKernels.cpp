@@ -1610,6 +1610,8 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
     bool useCutoff = (nonbondedMethod != NoCutoff);
     bool usePeriodic = (nonbondedMethod != NoCutoff && nonbondedMethod != CutoffNonPeriodic);
     doLJPME = (nonbondedMethod == LJPME && hasLJ);
+    if (hasCoulomb)
+        usePosqCharges = cu.requestPosqCharges();
     map<string, string> defines;
     defines["HAS_COULOMB"] = (hasCoulomb ? "1" : "0");
     defines["HAS_LENNARD_JONES"] = (hasLJ ? "1" : "0");
@@ -1933,7 +1935,6 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
     string source = cu.replaceStrings(CudaKernelSources::coulombLennardJones, defines);
     charges.initialize(cu, cu.getPaddedNumAtoms(), cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float), "charges");
     if (hasCoulomb) {
-        usePosqCharges = cu.requestPosqCharges();
         map<string, string> replacements;
         if (usePosqCharges) {
             cu.setCharges(chargeVec);
@@ -1965,9 +1966,6 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         cu.getNonbondedUtilities().addParameter(CudaNonbondedUtilities::ParameterInfo(prefix+"sigmaEpsilon", "float", 2, sizeof(float2), sigmaEpsilon.getDevicePointer()));
     }
     cu.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source, force.getForceGroup(), true);
-    if (hasLJ)
-        cu.getNonbondedUtilities().addParameter(CudaNonbondedUtilities::ParameterInfo("sigmaEpsilon", "float", 2,
-                                                sizeof(float2), sigmaEpsilon.getDevicePointer()));
 
     // Initialize the exceptions.
 
@@ -2873,7 +2871,7 @@ void CudaCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOBCF
     string prefix = "obc"+cu.intToString(forceIndex)+"_";
     CudaNonbondedUtilities& nb = cu.getNonbondedUtilities();
     params.initialize<float2>(cu, cu.getPaddedNumAtoms(), "gbsaObcParams");
-    int elementSize = (cu.getUseDoublePrecision() ? sizeof(cl_double) : sizeof(cl_float));
+    int elementSize = (cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
     charges.initialize(cu, cu.getPaddedNumAtoms(), elementSize, "gbsaObcCharges");
     bornRadii.initialize(cu, cu.getPaddedNumAtoms(), elementSize, "bornRadii");
     obcChain.initialize(cu, cu.getPaddedNumAtoms(), elementSize, "obcChain");

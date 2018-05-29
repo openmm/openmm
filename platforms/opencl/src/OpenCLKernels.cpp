@@ -1602,6 +1602,8 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     bool useCutoff = (nonbondedMethod != NoCutoff);
     bool usePeriodic = (nonbondedMethod != NoCutoff && nonbondedMethod != CutoffNonPeriodic);
     doLJPME = (nonbondedMethod == LJPME && hasLJ);
+    if (hasCoulomb)
+        usePosqCharges = cl.requestPosqCharges();
     map<string, string> defines;
     defines["HAS_COULOMB"] = (hasCoulomb ? "1" : "0");
     defines["HAS_LENNARD_JONES"] = (hasLJ ? "1" : "0");
@@ -1864,7 +1866,6 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     string source = cl.replaceStrings(OpenCLKernelSources::coulombLennardJones, defines);
     charges.initialize(cl, cl.getPaddedNumAtoms(), cl.getUseDoublePrecision() ? sizeof(double) : sizeof(float), "charges");
     if (hasCoulomb) {
-        usePosqCharges = cl.requestPosqCharges();
         map<string, string> replacements;
         if (usePosqCharges) {
             cl.setCharges(chargeVec);

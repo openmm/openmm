@@ -441,8 +441,8 @@ extern "C" __global__ void computeGBSAForce1(unsigned long long* __restrict__ fo
             localData[threadIdx.x].bornRadius = bornRadius1;
             for (unsigned int j = 0; j < TILE_SIZE; j++) {
                 if (atom1 < NUM_ATOMS && y*TILE_SIZE+j < NUM_ATOMS) {
-                    real4 pos2 = make_real3(localData[tbx+j].x, localData[tbx+j].y, localData[tbx+j].z);
-                    real charge1 = localData[tbx+j].q;
+                    real3 pos2 = make_real3(localData[tbx+j].x, localData[tbx+j].y, localData[tbx+j].z);
+                    real charge2 = localData[tbx+j].q;
                     real3 delta = make_real3(pos2.x-posq1.x, pos2.y-posq1.y, pos2.z-posq1.z);
 #ifdef USE_PERIODIC
                     APPLY_PERIODIC_TO_DELTA(delta)
@@ -498,8 +498,8 @@ extern "C" __global__ void computeGBSAForce1(unsigned long long* __restrict__ fo
             unsigned int tj = tgx;
             for (j = 0; j < TILE_SIZE; j++) {
                 if (atom1 < NUM_ATOMS && y*TILE_SIZE+tj < NUM_ATOMS) {
-                    real4 pos2 = make_real3(localData[tbx+tj].x, localData[tbx+tj].y, localData[tbx+tj].z);
-                    real charge1 = localData[tbx+tj].q;
+                    real3 pos2 = make_real3(localData[tbx+tj].x, localData[tbx+tj].y, localData[tbx+tj].z);
+                    real charge2 = localData[tbx+tj].q;
                     real3 delta = make_real3(pos2.x-posq1.x, pos2.y-posq1.y, pos2.z-posq1.z);
 #ifdef USE_PERIODIC
                     APPLY_PERIODIC_TO_DELTA(delta)
@@ -654,8 +654,8 @@ extern "C" __global__ void computeGBSAForce1(unsigned long long* __restrict__ fo
                 for (j = 0; j < TILE_SIZE; j++) {
                     int atom2 = atomIndices[tbx+tj];
                     if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
-                        real4 pos2 = make_real3(localData[tbx+tj].x, localData[tbx+tj].y, localData[tbx+tj].z);
-                        real charge1 = localData[tbx+tj].q;
+                        real3 pos2 = make_real3(localData[tbx+tj].x, localData[tbx+tj].y, localData[tbx+tj].z);
+                        real charge2 = localData[tbx+tj].q;
                         real3 delta = make_real3(pos2.x-posq1.x, pos2.y-posq1.y, pos2.z-posq1.z);
                         real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                         if (r2 < CUTOFF_SQUARED) {
@@ -700,8 +700,8 @@ extern "C" __global__ void computeGBSAForce1(unsigned long long* __restrict__ fo
                 for (j = 0; j < TILE_SIZE; j++) {
                     int atom2 = atomIndices[tbx+tj];
                     if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
-                        real4 pos2 = make_real3(localData[tbx+tj].x, localData[tbx+tj].y, localData[tbx+tj].z);
-                        real charge1 = localData[tbx+tj].q;
+                        real3 pos2 = make_real3(localData[tbx+tj].x, localData[tbx+tj].y, localData[tbx+tj].z);
+                        real charge2 = localData[tbx+tj].q;
                         real3 delta = make_real3(pos2.x-posq1.x, pos2.y-posq1.y, pos2.z-posq1.z);
 #ifdef USE_PERIODIC
                         APPLY_PERIODIC_TO_DELTA(delta)

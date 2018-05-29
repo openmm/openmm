@@ -816,6 +816,7 @@ private:
     int maxTiles;
     CudaContext& cu;
     ForceInfo* info;
+    CudaArray charges;
     CudaArray params;
     CudaArray bornSum;
     CudaArray bornRadii;
