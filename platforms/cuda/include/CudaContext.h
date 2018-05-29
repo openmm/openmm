@@ -504,6 +504,11 @@ public:
      */
     void setCharges(const std::vector<double>& charges);
     /**
+     * Request to use the fourth element of the posq array for storing charges.  Since only one force can
+     * do that, this returns true the first time it is called, and false on all subsequent calls.
+     */
+    bool requestPosqCharges();
+    /**
      * Get the thread used by this context for executing parallel computations.
      */
     WorkThread& getWorkThread() {
@@ -626,7 +631,7 @@ private:
     int paddedNumAtoms;
     int numAtomBlocks;
     int numThreadBlocks;
-    bool useBlockingSync, useDoublePrecision, useMixedPrecision, contextIsValid, atomsWereReordered, boxIsTriclinic, hasCompilerKernel, isNvccAvailable, forcesValid;
+    bool useBlockingSync, useDoublePrecision, useMixedPrecision, contextIsValid, atomsWereReordered, boxIsTriclinic, hasCompilerKernel, isNvccAvailable, forcesValid, hasAssignedPosqCharges;
     bool isLinkedContext;
     std::string compiler, tempDir, cacheDir, gpuArchitecture;
     float4 periodicBoxVecXFloat, periodicBoxVecYFloat, periodicBoxVecZFloat, periodicBoxSizeFloat, invPeriodicBoxSizeFloat;

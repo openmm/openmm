@@ -19,7 +19,7 @@ __kernel void computeBornSum(
 #else
         __global real* restrict global_bornSum,
 #endif
-        __global const real4* restrict posq, __global const float2* restrict global_params,
+        __global const real4* restrict posq, __global const real* restrict charge, __global const float2* restrict global_params,
 #ifdef USE_CUTOFF
         __global const int* restrict tiles, __global const unsigned int* restrict interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, 
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, __global const real4* restrict blockCenter,
@@ -45,6 +45,7 @@ __kernel void computeBornSum(
         real bornSum = 0.0f;
         unsigned int atom1 = x*TILE_SIZE + tgx;
         real4 posq1 = posq[atom1];
+        real charge1 = charge[atom1];
         float2 params1 = global_params[atom1];
         if (x == y) {
             // This tile is on the diagonal.
@@ -52,7 +53,7 @@ __kernel void computeBornSum(
             localData[get_local_id(0)].x = posq1.x;
             localData[get_local_id(0)].y = posq1.y;
             localData[get_local_id(0)].z = posq1.z;
-            localData[get_local_id(0)].q = posq1.w;
+            localData[get_local_id(0)].q = charge1;
             localData[get_local_id(0)].radius = params1.x;
             localData[get_local_id(0)].scaledRadius = params1.y;
             SYNC_WARPS;
@@ -93,7 +94,7 @@ __kernel void computeBornSum(
             localData[get_local_id(0)].x = tempPosq.x;
             localData[get_local_id(0)].y = tempPosq.y;
             localData[get_local_id(0)].z = tempPosq.z;
-            localData[get_local_id(0)].q = tempPosq.w;
+            localData[get_local_id(0)].q = charge[j];
             float2 tempParams = global_params[j];
             localData[get_local_id(0)].radius = tempParams.x;
             localData[get_local_id(0)].scaledRadius = tempParams.y;
@@ -230,6 +231,7 @@ __kernel void computeBornSum(
             // Load atom data for this tile.
 
             real4 posq1 = posq[atom1];
+            real charge1 = charge[atom1];
             float2 params1 = global_params[atom1];
 #ifdef USE_CUTOFF
             unsigned int j = interactingAtoms[pos*TILE_SIZE+tgx];
@@ -242,7 +244,7 @@ __kernel void computeBornSum(
                 localData[get_local_id(0)].x = tempPosq.x;
                 localData[get_local_id(0)].y = tempPosq.y;
                 localData[get_local_id(0)].z = tempPosq.z;
-                localData[get_local_id(0)].q = tempPosq.w;
+                localData[get_local_id(0)].q = charge[j];
                 float2 tempParams = global_params[j];
                 localData[get_local_id(0)].radius = tempParams.x;
                 localData[get_local_id(0)].scaledRadius = tempParams.y;
@@ -385,7 +387,8 @@ __kernel void computeGBSAForce1(
 #else
         __global real4* restrict forceBuffers, __global real* restrict global_bornForce,
 #endif
-        __global mixed* restrict energyBuffer, __global const real4* restrict posq, __global const real* restrict global_bornRadii, int needEnergy,
+        __global mixed* restrict energyBuffer, __global const real4* restrict posq, __global const real* restrict charge,
+        __global const real* restrict global_bornRadii, int needEnergy,
 #ifdef USE_CUTOFF
         __global const int* restrict tiles, __global const unsigned int* restrict interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, 
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, __global const real4* restrict blockCenter,
@@ -412,6 +415,7 @@ __kernel void computeGBSAForce1(
         real4 force = 0.0f;
         unsigned int atom1 = x*TILE_SIZE + tgx;
         real4 posq1 = posq[atom1];
+        real charge1 = charge[atom1];
         real bornRadius1 = global_bornRadii[atom1];
         if (x == y) {
             // This tile is on the diagonal.
@@ -420,13 +424,14 @@ __kernel void computeGBSAForce1(
             localData[localAtomIndex].x = posq1.x;
             localData[localAtomIndex].y = posq1.y;
             localData[localAtomIndex].z = posq1.z;
-            localData[localAtomIndex].q = posq1.w;
+            localData[localAtomIndex].q = charge1;
             localData[get_local_id(0)].bornRadius = bornRadius1;
             SYNC_WARPS;
             for (unsigned int j = 0; j < TILE_SIZE; j++) {
                 if (atom1 < NUM_ATOMS && y*TILE_SIZE+j < NUM_ATOMS) {
-                    real4 posq2 = (real4) (localData[tbx+j].x, localData[tbx+j].y, localData[tbx+j].z, localData[tbx+j].q);
-                    real4 delta = (real4) (posq2.xyz - posq1.xyz, 0);
+                    real3 pos2 = (real3) (localData[tbx+j].x, localData[tbx+j].y, localData[tbx+j].z);
+                    real charge2 = localData[tbx+j].q;
+                    real4 delta = (real4) (pos2 - posq1.xyz, 0);
 #ifdef USE_PERIODIC
                     APPLY_PERIODIC_TO_DELTA(delta)
 #endif
@@ -442,7 +447,7 @@ __kernel void computeGBSAForce1(
                         real expTerm = EXP(-D_ij);
                         real denominator2 = r2 + alpha2_ij*expTerm;
                         real denominator = SQRT(denominator2);
-                        real scaledChargeProduct = PREFACTOR*posq1.w*posq2.w;
+                        real scaledChargeProduct = PREFACTOR*charge1*charge2;
                         real tempEnergy = scaledChargeProduct*RECIP(denominator);
                         real Gpol = tempEnergy*RECIP(denominator2);
                         real dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);
@@ -471,7 +476,7 @@ __kernel void computeGBSAForce1(
             localData[get_local_id(0)].x = tempPosq.x;
             localData[get_local_id(0)].y = tempPosq.y;
             localData[get_local_id(0)].z = tempPosq.z;
-            localData[get_local_id(0)].q = tempPosq.w;
+            localData[get_local_id(0)].q = charge[j];
             localData[get_local_id(0)].bornRadius = global_bornRadii[j];
             localData[get_local_id(0)].fx = 0.0f;
             localData[get_local_id(0)].fy = 0.0f;
@@ -481,8 +486,9 @@ __kernel void computeGBSAForce1(
             unsigned int tj = tgx;
             for (j = 0; j < TILE_SIZE; j++) {
                 if (atom1 < NUM_ATOMS && y*TILE_SIZE+tj < NUM_ATOMS) {
-                    real4 posq2 = (real4) (localData[tbx+tj].x, localData[tbx+tj].y, localData[tbx+tj].z, localData[tbx+tj].q);
-                    real4 delta = (real4) (posq2.xyz - posq1.xyz, 0);
+                    real3 pos2 = (real3) (localData[tbx+tj].x, localData[tbx+tj].y, localData[tbx+tj].z);
+                    real charge2 = localData[tbx+tj].q;
+                    real4 delta = (real4) (pos2 - posq1.xyz, 0);
 #ifdef USE_PERIODIC
                     APPLY_PERIODIC_TO_DELTA(delta)
 #endif
@@ -498,7 +504,7 @@ __kernel void computeGBSAForce1(
                         real expTerm = EXP(-D_ij);
                         real denominator2 = r2 + alpha2_ij*expTerm;
                         real denominator = SQRT(denominator2);
-                        real scaledChargeProduct = PREFACTOR*posq1.w*posq2.w;
+                        real scaledChargeProduct = PREFACTOR*charge1*charge2;
                         real tempEnergy = scaledChargeProduct*RECIP(denominator);
                         real Gpol = tempEnergy*RECIP(denominator2);
                         real dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);
@@ -617,6 +623,7 @@ __kernel void computeGBSAForce1(
             // Load atom data for this tile.
             
             real4 posq1 = posq[atom1];
+            real charge1 = charge[atom1];
             real bornRadius1 = global_bornRadii[atom1];
 #ifdef USE_CUTOFF
             unsigned int j = interactingAtoms[pos*TILE_SIZE+tgx];
@@ -629,7 +636,7 @@ __kernel void computeGBSAForce1(
                 localData[get_local_id(0)].x = tempPosq.x;
                 localData[get_local_id(0)].y = tempPosq.y;
                 localData[get_local_id(0)].z = tempPosq.z;
-                localData[get_local_id(0)].q = tempPosq.w;
+                localData[get_local_id(0)].q = charge[j];
                 localData[get_local_id(0)].bornRadius = global_bornRadii[j];
                 localData[get_local_id(0)].fx = 0.0f;
                 localData[get_local_id(0)].fy = 0.0f;
@@ -650,8 +657,9 @@ __kernel void computeGBSAForce1(
                 for (j = 0; j < TILE_SIZE; j++) {
                     int atom2 = atomIndices[tbx+tj];
                     if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
-                        real4 posq2 = (real4) (localData[tbx+tj].x, localData[tbx+tj].y, localData[tbx+tj].z, localData[tbx+tj].q);
-                        real4 delta = (real4) (posq2.xyz - posq1.xyz, 0);
+                        real3 pos2 = (real3) (localData[tbx+tj].x, localData[tbx+tj].y, localData[tbx+tj].z);
+                        real charge2 = localData[tbx+tj].q;
+                        real4 delta = (real4) (pos2 - posq1.xyz, 0);
                         real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                         if (r2 < CUTOFF_SQUARED) {
                             real invR = RSQRT(r2);
@@ -662,7 +670,7 @@ __kernel void computeGBSAForce1(
                             real expTerm = EXP(-D_ij);
                             real denominator2 = r2 + alpha2_ij*expTerm;
                             real denominator = SQRT(denominator2);
-                            real scaledChargeProduct = PREFACTOR*posq1.w*posq2.w;
+                            real scaledChargeProduct = PREFACTOR*charge1*charge2;
                             real tempEnergy = scaledChargeProduct*RECIP(denominator);
                             real Gpol = tempEnergy*RECIP(denominator2);
                             real dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);
@@ -694,8 +702,9 @@ __kernel void computeGBSAForce1(
                 for (j = 0; j < TILE_SIZE; j++) {
                     int atom2 = atomIndices[tbx+tj];
                     if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
-                        real4 posq2 = (real4) (localData[tbx+tj].x, localData[tbx+tj].y, localData[tbx+tj].z, localData[tbx+tj].q);
-                        real4 delta = (real4) (posq2.xyz - posq1.xyz, 0);
+                        real3 pos2 = (real3) (localData[tbx+tj].x, localData[tbx+tj].y, localData[tbx+tj].z);
+                        real charge2 = localData[tbx+tj].q;
+                        real4 delta = (real4) (pos2 - posq1.xyz, 0);
 #ifdef USE_PERIODIC
                         APPLY_PERIODIC_TO_DELTA(delta)
 #endif
@@ -711,7 +720,7 @@ __kernel void computeGBSAForce1(
                             real expTerm = EXP(-D_ij);
                             real denominator2 = r2 + alpha2_ij*expTerm;
                             real denominator = SQRT(denominator2);
-                            real scaledChargeProduct = PREFACTOR*posq1.w*posq2.w;
+                            real scaledChargeProduct = PREFACTOR*charge1*charge2;
                             real tempEnergy = scaledChargeProduct*RECIP(denominator);
                             real Gpol = tempEnergy*RECIP(denominator2);
                             real dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);

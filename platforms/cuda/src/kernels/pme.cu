@@ -3,8 +3,8 @@ extern "C" __global__ void findAtomGridIndex(const real4* __restrict__ posq, int
             real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
     // Compute the index of the grid point each atom is associated with.
     
-    for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
-        real4 pos = posq[i];
+    for (int atom = blockIdx.x*blockDim.x+threadIdx.x; atom < NUM_ATOMS; atom += blockDim.x*gridDim.x) {
+        real4 pos = posq[atom];
         APPLY_PERIODIC_TO_POS(pos)
         real3 t = make_real3(pos.x*recipBoxVecX.x+pos.y*recipBoxVecY.x+pos.z*recipBoxVecZ.x,
                              pos.y*recipBoxVecY.y+pos.z*recipBoxVecZ.y,
@@ -15,7 +15,7 @@ extern "C" __global__ void findAtomGridIndex(const real4* __restrict__ posq, int
         int3 gridIndex = make_int3(((int) t.x) % GRID_SIZE_X,
                                    ((int) t.y) % GRID_SIZE_Y,
                                    ((int) t.z) % GRID_SIZE_Z);
-        pmeAtomGridIndex[i] = make_int2(i, gridIndex.x*GRID_SIZE_Y*GRID_SIZE_Z+gridIndex.y*GRID_SIZE_Z+gridIndex.z);
+        pmeAtomGridIndex[atom] = make_int2(atom, gridIndex.x*GRID_SIZE_Y*GRID_SIZE_Z+gridIndex.y*GRID_SIZE_Z+gridIndex.z);
     }
 }
 
@@ -24,6 +24,8 @@ extern "C" __global__ void gridSpreadCharge(const real4* __restrict__ posq, real
         real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ, const int2* __restrict__ pmeAtomGridIndex
 #ifdef USE_LJPME
         , const float2* __restrict__ sigmaEpsilon
+#else
+        , const real* __restrict__ charges
 #endif
         ) {
     real3 data[PME_ORDER];
@@ -39,7 +41,7 @@ extern "C" __global__ void gridSpreadCharge(const real4* __restrict__ posq, real
         const float2 sigEps = sigmaEpsilon[atom];
         const real charge = 8*sigEps.x*sigEps.x*sigEps.x*sigEps.y;
 #else
-        const real charge = pos.w;
+        const real charge = CHARGE;
 #endif
         if (charge == 0)
             continue;
@@ -253,6 +255,8 @@ void gridInterpolateForce(const real4* __restrict__ posq, unsigned long long* __
         real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ, const int2* __restrict__ pmeAtomGridIndex
 #ifdef USE_LJPME
         , const float2* __restrict__ sigmaEpsilon
+#else
+        , const real* __restrict__ charges
 #endif
         ) {
     real3 data[PME_ORDER];
@@ -330,7 +334,7 @@ void gridInterpolateForce(const real4* __restrict__ posq, unsigned long long* __
         const float2 sigEps = sigmaEpsilon[atom];
         real q = 8*sigEps.x*sigEps.x*sigEps.x*sigEps.y;
 #else
-        real q = pos.w*EPSILON_FACTOR;
+        real q = CHARGE*EPSILON_FACTOR;
 #endif
         real forceX = -q*(force.x*GRID_SIZE_X*recipBoxVecX.x);
         real forceY = -q*(force.x*GRID_SIZE_X*recipBoxVecY.x+force.y*GRID_SIZE_Y*recipBoxVecY.y);

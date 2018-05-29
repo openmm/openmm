@@ -9,7 +9,11 @@
     includeInteraction = ((!isExcluded && r2 < CUTOFF_SQUARED) || needCorrection);
     const real alphaR = EWALD_ALPHA*r;
     const real expAlphaRSqr = EXP(-alphaR*alphaR);
-    const real prefactor = 138.935456f*posq1.w*posq2.w*invR;
+#if HAS_COULOMB
+    const real prefactor = 138.935456f*CHARGE1*CHARGE2*invR;
+#else
+    const real prefactor = 0.0f;
+#endif
 
 #ifdef USE_DOUBLE_PRECISION
     const real erfcAlphaR = erfc(alphaR);
@@ -35,7 +39,7 @@
         const real dar6 = dar4*dar2;
         const real invR2 = invR*invR;
         const real expDar2 = EXP(-dar2);
-        const float2 sigExpProd = sigmaEpsilon1*sigmaEpsilon2;
+        const float2 sigExpProd = SIGMA_EPSILON1*SIGMA_EPSILON2;
         const real c6 = 64*sigExpProd.x*sigExpProd.x*sigExpProd.x*sigExpProd.y;
         const real coef = invR2*invR2*invR2*c6;
         const real eprefac = 1.0f + dar2 + 0.5f*dar4;
@@ -45,6 +49,7 @@
     if (needCorrection) {
         // Subtract off the part of this interaction that was included in the reciprocal space contribution.
 
+#if HAS_COULOMB
         if (1-erfcAlphaR > 1e-6) {
             real erfAlphaR = erf(alphaR); // Our erfc approximation is not accurate enough when r is very small, which happens with Drude particles.
             tempForce = -prefactor*(erfAlphaR-alphaR*expAlphaRSqr*TWO_OVER_SQRT_PI);
@@ -52,8 +57,9 @@
         }
         else {
             includeInteraction = false;
-            tempEnergy -= TWO_OVER_SQRT_PI*EWALD_ALPHA*138.935456f*posq1.w*posq2.w;
+            tempEnergy -= TWO_OVER_SQRT_PI*EWALD_ALPHA*138.935456f*CHARGE1*CHARGE2;
         }
+#endif
 #if HAS_LENNARD_JONES
         #if DO_LJPME
             // The multiplicative grid term
@@ -64,11 +70,11 @@
     }
     else {
 #if HAS_LENNARD_JONES
-        real sig = sigmaEpsilon1.x + sigmaEpsilon2.x;
+        real sig = SIGMA_EPSILON1.x + SIGMA_EPSILON2.x;
         real sig2 = invR*sig;
         sig2 *= sig2;
         real sig6 = sig2*sig2*sig2;
-        real eps = sigmaEpsilon1.y*sigmaEpsilon2.y;
+        real eps = SIGMA_EPSILON1.y*SIGMA_EPSILON2.y;
         real epssig6 = sig6*eps;
         tempForce = epssig6*(12.0f*sig6 - 6.0f);
         real ljEnergy = epssig6*(sig6 - 1.0f);
@@ -113,11 +119,11 @@
 #endif
     real tempForce = 0;
   #if HAS_LENNARD_JONES
-    real sig = sigmaEpsilon1.x + sigmaEpsilon2.x;
+    real sig = SIGMA_EPSILON1.x + SIGMA_EPSILON2.x;
     real sig2 = invR*sig;
     sig2 *= sig2;
     real sig6 = sig2*sig2*sig2;
-    real epssig6 = sig6*(sigmaEpsilon1.y*sigmaEpsilon2.y);
+    real epssig6 = sig6*(SIGMA_EPSILON1.y*SIGMA_EPSILON2.y);
     tempForce = epssig6*(12.0f*sig6 - 6.0f);
     real ljEnergy = epssig6*(sig6-1);
     #if USE_LJ_SWITCH
@@ -134,11 +140,11 @@
   #endif
 #if HAS_COULOMB
   #ifdef USE_CUTOFF
-    const real prefactor = 138.935456f*posq1.w*posq2.w;
+    const real prefactor = 138.935456f*CHARGE1*CHARGE2;
     tempForce += prefactor*(invR - 2.0f*REACTION_FIELD_K*r2);
     tempEnergy += select((real) 0, prefactor*(invR + REACTION_FIELD_K*r2 - REACTION_FIELD_C), includeInteraction);
   #else
-    const real prefactor = 138.935456f*posq1.w*posq2.w*invR;
+    const real prefactor = 138.935456f*CHARGE1*CHARGE2*invR;
     tempForce += prefactor;
     tempEnergy += select((real) 0, prefactor, includeInteraction);
   #endif
