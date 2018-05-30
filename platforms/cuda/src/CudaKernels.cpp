@@ -1716,7 +1716,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
             map<string, string> replacements;
             replacements["CHARGE"] = (usePosqCharges ? "pos.w" : "charges[atom]");
             CUmodule module = cu.createModule(CudaKernelSources::vectorOps+cu.replaceStrings(CudaKernelSources::pme, replacements), pmeDefines);
-            if (cu.getPlatformData().useCpuPme && !doLJPME) {
+            if (cu.getPlatformData().useCpuPme && !doLJPME && usePosqCharges) {
                 // Create the CPU PME kernel.
 
                 try {

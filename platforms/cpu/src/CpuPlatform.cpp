@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -147,7 +147,7 @@ const CpuPlatform::PlatformData& CpuPlatform::getPlatformData(const ContextImpl&
 }
 
 CpuPlatform::PlatformData::PlatformData(int numParticles, int numThreads, bool deterministicForces) : posq(4*numParticles), threads(numThreads),
-        deterministicForces(deterministicForces), neighborList(NULL), cutoff(0.0), paddedCutoff(0.0), anyExclusions(false) {
+        deterministicForces(deterministicForces), neighborList(NULL), cutoff(0.0), paddedCutoff(0.0), anyExclusions(false), currentPosqIndex(-1), nextPosqIndex(0) {
     numThreads = threads.getNumThreads();
     threadForce.resize(numThreads);
     for (int i = 0; i < numThreads; i++)
@@ -183,4 +183,8 @@ void CpuPlatform::PlatformData::requestNeighborList(double cutoffDistance, doubl
     }
     else if (!anyExclusions)
         exclusions = exclusionList;
+}
+
+int CpuPlatform::PlatformData::requestPosqIndex() {
+    return nextPosqIndex++;
 }
