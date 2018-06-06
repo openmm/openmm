@@ -1269,7 +1269,7 @@ void testWater2DpmeEnergiesForcesWithExclusions() {
     const vector<Vec3>& forces = state.getForces();
 
 
-    ASSERT_EQUAL_TOL(refenergy, energy, 1E-4);
+    ASSERT_EQUAL_TOL(refenergy, energy, 5E-4);
     for (int n = 0; n < numAtoms; ++n)
         ASSERT_EQUAL_VEC(refforces[n], forces[n], 5E-4);
 }

@@ -1657,7 +1657,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
             cosSinSums.initialize(cl, (2*kmaxx-1)*(2*kmaxy-1)*(2*kmaxz-1), elementSize, "cosSinSums");
         }
     }
-    else if ((nonbondedMethod == PME && hasCoulomb) || doLJPME) {
+    else if (((nonbondedMethod == PME || nonbondedMethod == LJPME) && hasCoulomb) || doLJPME) {
         // Compute the PME parameters.
 
         NonbondedForceImpl::calcPMEParameters(system, force, alpha, gridSizeX, gridSizeY, gridSizeZ, false);
@@ -1865,37 +1865,34 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     
     string source = cl.replaceStrings(OpenCLKernelSources::coulombLennardJones, defines);
     charges.initialize(cl, cl.getPaddedNumAtoms(), cl.getUseDoublePrecision() ? sizeof(double) : sizeof(float), "charges");
-    if (hasCoulomb) {
-        map<string, string> replacements;
-        if (usePosqCharges) {
-            cl.setCharges(chargeVec);
-            replacements["CHARGE1"] = "posq1.w";
-            replacements["CHARGE2"] = "posq2.w";
-        }
-        else {
-            if (cl.getUseDoublePrecision())
-                charges.upload(chargeVec);
-            else {
-                vector<float> c(charges.getSize());
-                for (int i = 0; i < c.size(); i++)
-                    c[i] = (float) chargeVec[i];
-                charges.upload(c);
-            }
-            replacements["CHARGE1"] = prefix+"charge1";
-            replacements["CHARGE2"] = prefix+"charge2";
-        }
-        source = cl.replaceStrings(source, replacements);
-        cl.getNonbondedUtilities().addParameter(OpenCLNonbondedUtilities::ParameterInfo(prefix+"charge", "real", 1, charges.getElementSize(), charges.getDeviceBuffer()));
+    map<string, string> replacements;
+    if (usePosqCharges) {
+        cl.setCharges(chargeVec);
+        replacements["CHARGE1"] = "posq1.w";
+        replacements["CHARGE2"] = "posq2.w";
     }
+    else {
+        if (cl.getUseDoublePrecision())
+            charges.upload(chargeVec);
+        else {
+            vector<float> c(charges.getSize());
+            for (int i = 0; i < c.size(); i++)
+                c[i] = (float) chargeVec[i];
+            charges.upload(c);
+        }
+        replacements["CHARGE1"] = prefix+"charge1";
+        replacements["CHARGE2"] = prefix+"charge2";
+    }
+    if (hasCoulomb)
+        cl.getNonbondedUtilities().addParameter(OpenCLNonbondedUtilities::ParameterInfo(prefix+"charge", "real", 1, charges.getElementSize(), charges.getDeviceBuffer()));
     if (hasLJ) {
         sigmaEpsilon.initialize<mm_float2>(cl, cl.getPaddedNumAtoms(), "sigmaEpsilon");
         sigmaEpsilon.upload(sigmaEpsilonVector);
-        map<string, string> replacements;
         replacements["SIGMA_EPSILON1"] = prefix+"sigmaEpsilon1";
         replacements["SIGMA_EPSILON2"] = prefix+"sigmaEpsilon2";
-        source = cl.replaceStrings(source, replacements);
         cl.getNonbondedUtilities().addParameter(OpenCLNonbondedUtilities::ParameterInfo(prefix+"sigmaEpsilon", "float", 2, sizeof(cl_float2), sigmaEpsilon.getDeviceBuffer()));
     }
+    source = cl.replaceStrings(source, replacements);
     cl.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source, force.getForceGroup());
 
     // Initialize the exceptions.
@@ -2096,35 +2093,20 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
         
         // Execute the reciprocal space kernels.
 
-        setPeriodicBoxArgs(cl, pmeUpdateBsplinesKernel, 4);
-        if (cl.getUseDoublePrecision()) {
-            pmeUpdateBsplinesKernel.setArg<mm_double4>(9, recipBoxVectors[0]);
-            pmeUpdateBsplinesKernel.setArg<mm_double4>(10, recipBoxVectors[1]);
-            pmeUpdateBsplinesKernel.setArg<mm_double4>(11, recipBoxVectors[2]);
-        }
-        else {
-            pmeUpdateBsplinesKernel.setArg<mm_float4>(9, recipBoxVectorsFloat[0]);
-            pmeUpdateBsplinesKernel.setArg<mm_float4>(10, recipBoxVectorsFloat[1]);
-            pmeUpdateBsplinesKernel.setArg<mm_float4>(11, recipBoxVectorsFloat[2]);
-        }
-        cl.executeKernel(pmeUpdateBsplinesKernel, cl.getNumAtoms());
-        if (deviceIsCpu && !cl.getSupports64BitGlobalAtomics()) {
-            setPeriodicBoxArgs(cl, pmeSpreadChargeKernel, 5);
+        if (hasCoulomb) {
+            setPeriodicBoxArgs(cl, pmeUpdateBsplinesKernel, 4);
             if (cl.getUseDoublePrecision()) {
-                pmeSpreadChargeKernel.setArg<mm_double4>(10, recipBoxVectors[0]);
-                pmeSpreadChargeKernel.setArg<mm_double4>(11, recipBoxVectors[1]);
-                pmeSpreadChargeKernel.setArg<mm_double4>(12, recipBoxVectors[2]);
+                pmeUpdateBsplinesKernel.setArg<mm_double4>(9, recipBoxVectors[0]);
+                pmeUpdateBsplinesKernel.setArg<mm_double4>(10, recipBoxVectors[1]);
+                pmeUpdateBsplinesKernel.setArg<mm_double4>(11, recipBoxVectors[2]);
             }
             else {
-                pmeSpreadChargeKernel.setArg<mm_float4>(10, recipBoxVectorsFloat[0]);
-                pmeSpreadChargeKernel.setArg<mm_float4>(11, recipBoxVectorsFloat[1]);
-                pmeSpreadChargeKernel.setArg<mm_float4>(12, recipBoxVectorsFloat[2]);
+                pmeUpdateBsplinesKernel.setArg<mm_float4>(9, recipBoxVectorsFloat[0]);
+                pmeUpdateBsplinesKernel.setArg<mm_float4>(10, recipBoxVectorsFloat[1]);
+                pmeUpdateBsplinesKernel.setArg<mm_float4>(11, recipBoxVectorsFloat[2]);
             }
-            cl.executeKernel(pmeSpreadChargeKernel, 2*cl.getDevice().getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>(), 1);
-        }
-        else {
-            sort->sort(pmeAtomGridIndex);
-            if (cl.getSupports64BitGlobalAtomics()) {
+            cl.executeKernel(pmeUpdateBsplinesKernel, cl.getNumAtoms());
+            if (deviceIsCpu && !cl.getSupports64BitGlobalAtomics()) {
                 setPeriodicBoxArgs(cl, pmeSpreadChargeKernel, 5);
                 if (cl.getUseDoublePrecision()) {
                     pmeSpreadChargeKernel.setArg<mm_double4>(10, recipBoxVectors[0]);
@@ -2136,59 +2118,76 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
                     pmeSpreadChargeKernel.setArg<mm_float4>(11, recipBoxVectorsFloat[1]);
                     pmeSpreadChargeKernel.setArg<mm_float4>(12, recipBoxVectorsFloat[2]);
                 }
-                cl.executeKernel(pmeSpreadChargeKernel, cl.getNumAtoms());
-                cl.executeKernel(pmeFinishSpreadChargeKernel, gridSizeX*gridSizeY*gridSizeZ);
+                cl.executeKernel(pmeSpreadChargeKernel, 2*cl.getDevice().getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>(), 1);
             }
             else {
-                cl.executeKernel(pmeAtomRangeKernel, cl.getNumAtoms());
-                setPeriodicBoxSizeArg(cl, pmeZIndexKernel, 2);
-                if (cl.getUseDoublePrecision())
-                    pmeZIndexKernel.setArg<mm_double4>(3, recipBoxVectors[2]);
-                else
-                    pmeZIndexKernel.setArg<mm_float4>(3, recipBoxVectorsFloat[2]);
-                cl.executeKernel(pmeZIndexKernel, cl.getNumAtoms());
-                cl.executeKernel(pmeSpreadChargeKernel, cl.getNumAtoms());
+                sort->sort(pmeAtomGridIndex);
+                if (cl.getSupports64BitGlobalAtomics()) {
+                    setPeriodicBoxArgs(cl, pmeSpreadChargeKernel, 5);
+                    if (cl.getUseDoublePrecision()) {
+                        pmeSpreadChargeKernel.setArg<mm_double4>(10, recipBoxVectors[0]);
+                        pmeSpreadChargeKernel.setArg<mm_double4>(11, recipBoxVectors[1]);
+                        pmeSpreadChargeKernel.setArg<mm_double4>(12, recipBoxVectors[2]);
+                    }
+                    else {
+                        pmeSpreadChargeKernel.setArg<mm_float4>(10, recipBoxVectorsFloat[0]);
+                        pmeSpreadChargeKernel.setArg<mm_float4>(11, recipBoxVectorsFloat[1]);
+                        pmeSpreadChargeKernel.setArg<mm_float4>(12, recipBoxVectorsFloat[2]);
+                    }
+                    cl.executeKernel(pmeSpreadChargeKernel, cl.getNumAtoms());
+                    cl.executeKernel(pmeFinishSpreadChargeKernel, gridSizeX*gridSizeY*gridSizeZ);
+                }
+                else {
+                    cl.executeKernel(pmeAtomRangeKernel, cl.getNumAtoms());
+                    setPeriodicBoxSizeArg(cl, pmeZIndexKernel, 2);
+                    if (cl.getUseDoublePrecision())
+                        pmeZIndexKernel.setArg<mm_double4>(3, recipBoxVectors[2]);
+                    else
+                        pmeZIndexKernel.setArg<mm_float4>(3, recipBoxVectorsFloat[2]);
+                    cl.executeKernel(pmeZIndexKernel, cl.getNumAtoms());
+                    cl.executeKernel(pmeSpreadChargeKernel, cl.getNumAtoms());
+                }
             }
+            fft->execFFT(pmeGrid, pmeGrid2, true);
+            mm_double4 boxSize = cl.getPeriodicBoxSizeDouble();
+            if (cl.getUseDoublePrecision()) {
+                pmeConvolutionKernel.setArg<mm_double4>(4, recipBoxVectors[0]);
+                pmeConvolutionKernel.setArg<mm_double4>(5, recipBoxVectors[1]);
+                pmeConvolutionKernel.setArg<mm_double4>(6, recipBoxVectors[2]);
+                pmeEvalEnergyKernel.setArg<mm_double4>(5, recipBoxVectors[0]);
+                pmeEvalEnergyKernel.setArg<mm_double4>(6, recipBoxVectors[1]);
+                pmeEvalEnergyKernel.setArg<mm_double4>(7, recipBoxVectors[2]);
+            }
+            else {
+                pmeConvolutionKernel.setArg<mm_float4>(4, recipBoxVectorsFloat[0]);
+                pmeConvolutionKernel.setArg<mm_float4>(5, recipBoxVectorsFloat[1]);
+                pmeConvolutionKernel.setArg<mm_float4>(6, recipBoxVectorsFloat[2]);
+                pmeEvalEnergyKernel.setArg<mm_float4>(5, recipBoxVectorsFloat[0]);
+                pmeEvalEnergyKernel.setArg<mm_float4>(6, recipBoxVectorsFloat[1]);
+                pmeEvalEnergyKernel.setArg<mm_float4>(7, recipBoxVectorsFloat[2]);
+            }
+            if (includeEnergy)
+                cl.executeKernel(pmeEvalEnergyKernel, gridSizeX*gridSizeY*gridSizeZ);
+            cl.executeKernel(pmeConvolutionKernel, gridSizeX*gridSizeY*gridSizeZ);
+            fft->execFFT(pmeGrid2, pmeGrid, false);
+            setPeriodicBoxArgs(cl, pmeInterpolateForceKernel, 3);
+            if (cl.getUseDoublePrecision()) {
+                pmeInterpolateForceKernel.setArg<mm_double4>(8, recipBoxVectors[0]);
+                pmeInterpolateForceKernel.setArg<mm_double4>(9, recipBoxVectors[1]);
+                pmeInterpolateForceKernel.setArg<mm_double4>(10, recipBoxVectors[2]);
+            }
+            else {
+                pmeInterpolateForceKernel.setArg<mm_float4>(8, recipBoxVectorsFloat[0]);
+                pmeInterpolateForceKernel.setArg<mm_float4>(9, recipBoxVectorsFloat[1]);
+                pmeInterpolateForceKernel.setArg<mm_float4>(10, recipBoxVectorsFloat[2]);
+            }
+            if (deviceIsCpu)
+                cl.executeKernel(pmeInterpolateForceKernel, 2*cl.getDevice().getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>(), 1);
+            else
+                cl.executeKernel(pmeInterpolateForceKernel, cl.getNumAtoms());
         }
-        fft->execFFT(pmeGrid, pmeGrid2, true);
-        mm_double4 boxSize = cl.getPeriodicBoxSizeDouble();
-        if (cl.getUseDoublePrecision()) {
-            pmeConvolutionKernel.setArg<mm_double4>(4, recipBoxVectors[0]);
-            pmeConvolutionKernel.setArg<mm_double4>(5, recipBoxVectors[1]);
-            pmeConvolutionKernel.setArg<mm_double4>(6, recipBoxVectors[2]);
-            pmeEvalEnergyKernel.setArg<mm_double4>(5, recipBoxVectors[0]);
-            pmeEvalEnergyKernel.setArg<mm_double4>(6, recipBoxVectors[1]);
-            pmeEvalEnergyKernel.setArg<mm_double4>(7, recipBoxVectors[2]);
-        }
-        else {
-            pmeConvolutionKernel.setArg<mm_float4>(4, recipBoxVectorsFloat[0]);
-            pmeConvolutionKernel.setArg<mm_float4>(5, recipBoxVectorsFloat[1]);
-            pmeConvolutionKernel.setArg<mm_float4>(6, recipBoxVectorsFloat[2]);
-            pmeEvalEnergyKernel.setArg<mm_float4>(5, recipBoxVectorsFloat[0]);
-            pmeEvalEnergyKernel.setArg<mm_float4>(6, recipBoxVectorsFloat[1]);
-            pmeEvalEnergyKernel.setArg<mm_float4>(7, recipBoxVectorsFloat[2]);
-        }
-        if (includeEnergy)
-            cl.executeKernel(pmeEvalEnergyKernel, gridSizeX*gridSizeY*gridSizeZ);
-        cl.executeKernel(pmeConvolutionKernel, gridSizeX*gridSizeY*gridSizeZ);
-        fft->execFFT(pmeGrid2, pmeGrid, false);
-        setPeriodicBoxArgs(cl, pmeInterpolateForceKernel, 3);
-        if (cl.getUseDoublePrecision()) {
-            pmeInterpolateForceKernel.setArg<mm_double4>(8, recipBoxVectors[0]);
-            pmeInterpolateForceKernel.setArg<mm_double4>(9, recipBoxVectors[1]);
-            pmeInterpolateForceKernel.setArg<mm_double4>(10, recipBoxVectors[2]);
-        }
-        else {
-            pmeInterpolateForceKernel.setArg<mm_float4>(8, recipBoxVectorsFloat[0]);
-            pmeInterpolateForceKernel.setArg<mm_float4>(9, recipBoxVectorsFloat[1]);
-            pmeInterpolateForceKernel.setArg<mm_float4>(10, recipBoxVectorsFloat[2]);
-        }
-        if (deviceIsCpu)
-            cl.executeKernel(pmeInterpolateForceKernel, 2*cl.getDevice().getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>(), 1);
-        else
-            cl.executeKernel(pmeInterpolateForceKernel, cl.getNumAtoms());
         
-        if (doLJPME) {
+        if (doLJPME && hasLJ) {
             setPeriodicBoxArgs(cl, pmeDispersionUpdateBsplinesKernel, 4);
             if (cl.getUseDoublePrecision()) {
                 pmeDispersionUpdateBsplinesKernel.setArg<mm_double4>(9, recipBoxVectors[0]);
@@ -2267,7 +2266,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             if (includeEnergy)
                 cl.executeKernel(pmeDispersionEvalEnergyKernel, gridSizeX*gridSizeY*gridSizeZ);
             cl.executeKernel(pmeDispersionConvolutionKernel, gridSizeX*gridSizeY*gridSizeZ);
-            fft->execFFT(pmeGrid2, pmeGrid, false);
+            dispersionFft->execFFT(pmeGrid2, pmeGrid, false);
             setPeriodicBoxArgs(cl, pmeDispersionInterpolateForceKernel, 3);
             if (cl.getUseDoublePrecision()) {
                 pmeDispersionInterpolateForceKernel.setArg<mm_double4>(8, recipBoxVectors[0]);

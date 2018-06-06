@@ -18,7 +18,7 @@ __kernel void computeBornSum(
 #else
         __global real* restrict global_bornSum,
 #endif
-        __global const real4* restrict posq, , __global const real* restrict charge, __global const float2* restrict global_params,
+        __global const real4* restrict posq, __global const real* restrict charge, __global const float2* restrict global_params,
 #ifdef USE_CUTOFF
         __global const int* restrict tiles, __global const unsigned int* restrict interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, __global const real4* restrict blockCenter,
