@@ -444,7 +444,7 @@ __kernel void computeGBSAForce1(
             localData[localAtomIndex].x = tempPosq.x;
             localData[localAtomIndex].y = tempPosq.y;
             localData[localAtomIndex].z = tempPosq.z;
-            localData[localAtomIndex].q = charge[j]
+            localData[localAtomIndex].q = charge[j];
             localData[localAtomIndex].bornRadius = global_bornRadii[j];
         }
         if (x == y) {
