@@ -58,7 +58,6 @@ __kernel void computeBornSum(
                 unsigned int atom1 = x*TILE_SIZE+tgx;
                 real bornSum = 0.0f;
                 real4 posq1 = posq[atom1];
-                real charge1 = charge[atom1];
                 float2 params1 = global_params[atom1];
                 for (unsigned int j = 0; j < TILE_SIZE; j++) {
                     real3 pos2 = (real3) (localData[j].x, localData[j].y, localData[j].z);
@@ -109,7 +108,6 @@ __kernel void computeBornSum(
                 unsigned int atom1 = x*TILE_SIZE+tgx;
                 real bornSum = 0;
                 real4 posq1 = posq[atom1];
-                real charge1 = charge[atom1];
                 float2 params1 = global_params[atom1];
                 for (unsigned int j = 0; j < TILE_SIZE; j++) {
                     real3 pos2 = (real3) (localData[j].x, localData[j].y, localData[j].z);
@@ -319,7 +317,6 @@ __kernel void computeBornSum(
                     unsigned int atom1 = x*TILE_SIZE+tgx;
                     real bornSum = 0;
                     real4 posq1 = posq[atom1];
-                    real charge1 = charge[atom1];
                     float2 params1 = global_params[atom1];
                     for (unsigned int j = 0; j < TILE_SIZE; j++) {
                         real3 pos2 = (real3) (localData[j].x, localData[j].y, localData[j].z);
@@ -684,6 +681,7 @@ __kernel void computeGBSAForce1(
                     unsigned int atom1 = x*TILE_SIZE+tgx;
                     real4 force = 0;
                     real4 posq1 = posq[atom1];
+                    real charge1 = charge[atom1];
                     APPLY_PERIODIC_TO_POS_WITH_CENTER(posq1, blockCenterX)
                     float bornRadius1 = global_bornRadii[atom1];
                     for (unsigned int j = 0; j < TILE_SIZE; j++) {
