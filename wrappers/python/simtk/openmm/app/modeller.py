@@ -39,7 +39,7 @@ from simtk.openmm.app.forcefield import HAngles, AllBonds, CutoffNonPeriodic, Cu
 from simtk.openmm.app.topology import Residue
 from simtk.openmm.vec3 import Vec3
 from simtk.openmm import System, Context, NonbondedForce, CustomNonbondedForce, HarmonicBondForce, HarmonicAngleForce, VerletIntegrator, LangevinIntegrator, LocalEnergyMinimizer
-from simtk.unit import nanometer, molar, elementary_charge, amu, gram, liter, degree, sqrt, acos, is_quantity, dot, norm
+from simtk.unit import nanometer, molar, elementary_charge, amu, gram, liter, degree, sqrt, acos, is_quantity, dot, norm, kilojoules_per_mole
 import simtk.unit as unit
 from . import element as elem
 import gc
@@ -380,7 +380,11 @@ class Modeller(object):
                 nonbonded = system.getForce(i)
         if nonbonded is None:
             raise ValueError('The ForceField does not specify a NonbondedForce')
-        cutoff = [nonbonded.getParticleParameters(i)[1].value_in_unit(nanometer)*vdwRadiusPerSigma+waterRadius for i in range(system.getNumParticles())]
+        cutoff = [waterRadius]*system.getNumParticles()
+        for i in range(system.getNumParticles()):
+            params = nonbonded.getParticleParameters(i)
+            if params[2] != 0*kilojoules_per_mole:
+                cutoff[i] += params[1].value_in_unit(nanometer)*vdwRadiusPerSigma
         waterCutoff = waterRadius
         if len(cutoff) == 0:
             maxCutoff = waterCutoff
@@ -1200,7 +1204,9 @@ class Modeller(object):
         proteinCenterPos = Vec3(proteinCenterPos[0], proteinCenterPos[1], membraneCenterZ)
         patchPos = patch.positions.value_in_unit(nanometer)
         patchSize = patch.topology.getUnitCellDimensions().value_in_unit(nanometer)
-        patchCenterPos = (min(patchPos)+max(patchPos))/2
+        patchMinPos = Vec3(*[min((p[i] for p in patchPos)) for i in range(3)])
+        patchMaxPos = Vec3(*[max((p[i] for p in patchPos)) for i in range(3)])
+        patchCenterPos = (patchMinPos+patchMaxPos)/2
         nx = int(ceil((proteinSize[0]+2*minimumPadding)/patchSize[0]))
         ny = int(ceil((proteinSize[1]+2*minimumPadding)/patchSize[1]))
 
@@ -1254,6 +1260,8 @@ class Modeller(object):
         boxSizeZ = patchSize[2]
         if self.topology.getUnitCellDimensions() is not None:
             boxSizeZ = max(boxSizeZ, self.topology.getUnitCellDimensions()[2].value_in_unit(nanometer)+2*minimumPadding)
+        else:
+            boxSizeZ = max(boxSizeZ, proteinSize[2]+2*minimumPadding)
         membraneTopology.setUnitCellDimensions((nx*patchSize[0], ny*patchSize[1], boxSizeZ))
         
         # Add membrane patches.  We exclude any water that is within a cutoff distance of either the actual or scaled
@@ -1415,8 +1423,11 @@ class Modeller(object):
         if needExtraWater:
             toDelete = []
             addedChain = list(modeller.topology.chains())[-1]
+            patchMinZ = patchMinPos[2]-patchCenterPos[2]+membraneCenterZ
+            patchMaxZ = patchMaxPos[2]-patchCenterPos[2]+membraneCenterZ
             for residue in addedChain.residues():
-                if abs(waterPos[residue][2]-membraneCenterZ) > patchSize[2]/2:
+                z = waterPos[residue][2]
+                if z > patchMinZ and z < patchMaxZ:
                     toDelete.append(residue)
                     del waterPos[residue]
             if len(toDelete) > 0:
