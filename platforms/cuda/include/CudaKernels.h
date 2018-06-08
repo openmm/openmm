@@ -675,6 +675,7 @@ private:
     CudaContext& cu;
     ForceInfo* info;
     bool hasInitializedFFT;
+    CudaArray charges;
     CudaArray sigmaEpsilon;
     CudaArray exceptionParams;
     CudaArray cosSinSums;
@@ -719,7 +720,7 @@ private:
     int interpolateForceThreads;
     int gridSizeX, gridSizeY, gridSizeZ;
     int dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ;
-    bool hasCoulomb, hasLJ, usePmeStream, useCudaFFT, doLJPME;
+    bool hasCoulomb, hasLJ, usePmeStream, useCudaFFT, doLJPME, usePosqCharges;
     NonbondedMethod nonbondedMethod;
     static const int PmeOrder = 5;
 };
@@ -815,6 +816,7 @@ private:
     int maxTiles;
     CudaContext& cu;
     ForceInfo* info;
+    CudaArray charges;
     CudaArray params;
     CudaArray bornSum;
     CudaArray bornRadii;

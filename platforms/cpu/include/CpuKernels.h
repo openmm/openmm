@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -268,7 +268,7 @@ public:
 private:
     class PmeIO;
     CpuPlatform::PlatformData& data;
-    int numParticles, num14;
+    int numParticles, num14, posqIndex;
     int **bonded14IndexArray;
     double **bonded14ParamArray;
     double nonbondedCutoff, switchingDistance, rfDielectric, ewaldAlpha, ewaldDispersionAlpha, ewaldSelfEnergy, dispersionCoefficient;
@@ -277,6 +277,7 @@ private:
     std::vector<std::set<int> > exclusions;
     std::vector<std::pair<float, float> > particleParams;
     std::vector<float> C6params;
+    std::vector<float> charges;
     NonbondedMethod nonbondedMethod;
     CpuNonbondedForce* nonbonded;
     Kernel optimizedPme, optimizedDispersionPme;
@@ -363,7 +364,9 @@ public:
     void copyParametersToContext(ContextImpl& context, const GBSAOBCForce& force);
 private:
     CpuPlatform::PlatformData& data;
+    int posqIndex;
     std::vector<std::pair<float, float> > particleParams;
+    std::vector<float> charges;
     CpuGBSAOBCForce obc;
 };
 

@@ -619,6 +619,11 @@ public:
      */
     void setCharges(const std::vector<double>& charges);
     /**
+     * Request to use the fourth element of the posq array for storing charges.  Since only one force can
+     * do that, this returns true the first time it is called, and false on all subsequent calls.
+     */
+    bool requestPosqCharges();
+    /**
      * Get the thread used by this context for executing parallel computations.
      */
     WorkThread& getWorkThread() {
@@ -738,7 +743,7 @@ private:
     int numThreadBlocks;
     int numForceBuffers;
     int simdWidth;
-    bool supports64BitGlobalAtomics, supportsDoublePrecision, useDoublePrecision, useMixedPrecision, atomsWereReordered, boxIsTriclinic, forcesValid;
+    bool supports64BitGlobalAtomics, supportsDoublePrecision, useDoublePrecision, useMixedPrecision, atomsWereReordered, boxIsTriclinic, forcesValid, hasAssignedPosqCharges;
     mm_float4 periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ;
     mm_double4 periodicBoxSizeDouble, invPeriodicBoxSizeDouble, periodicBoxVecXDouble, periodicBoxVecYDouble, periodicBoxVecZDouble;
     std::string defaultOptimizationOptions;

@@ -3,12 +3,14 @@ __kernel void updateBsplines(__global const real4* restrict posq, __global real4
         real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ
 #ifdef USE_LJPME
         , __global const float2* restrict sigmaEpsilon
+#else
+        , __global const real* restrict charges
 #endif
     ) {
     const real4 scale = 1/(real) (PME_ORDER-1);
-    for (int i = get_global_id(0); i < NUM_ATOMS; i += get_global_size(0)) {
+    for (int atom = get_global_id(0); atom < NUM_ATOMS; atom += get_global_size(0)) {
         __local real4* data = &bsplinesCache[get_local_id(0)*PME_ORDER];
-        real4 pos = posq[i];
+        real4 pos = posq[atom];
         APPLY_PERIODIC_TO_POS(pos)
         real3 t = (real3) (pos.x*recipBoxVecX.x+pos.y*recipBoxVecY.x+pos.z*recipBoxVecZ.x,
                            pos.y*recipBoxVecY.y+pos.z*recipBoxVecZ.y,
@@ -20,7 +22,7 @@ __kernel void updateBsplines(__global const real4* restrict posq, __global real4
         int4 gridIndex = (int4) (((int) t.x) % GRID_SIZE_X,
                                  ((int) t.y) % GRID_SIZE_Y,
                                  ((int) t.z) % GRID_SIZE_Z, 0);
-        pmeAtomGridIndex[i] = (int2) (i, gridIndex.x*GRID_SIZE_Y*GRID_SIZE_Z+gridIndex.y*GRID_SIZE_Z+gridIndex.z);
+        pmeAtomGridIndex[atom] = (int2) (atom, gridIndex.x*GRID_SIZE_Y*GRID_SIZE_Z+gridIndex.y*GRID_SIZE_Z+gridIndex.z);
 #ifndef SUPPORTS_64_BIT_ATOMICS
         data[PME_ORDER-1] = 0.0f;
         data[1] = dr;
@@ -38,13 +40,13 @@ __kernel void updateBsplines(__global const real4* restrict posq, __global real4
         data[0] = scale*(-dr+1.0f)*data[0];
         for (int j = 0; j < PME_ORDER; j++) {
 #ifdef USE_LJPME
-            const float2 sigEps = sigmaEpsilon[i];
+            const float2 sigEps = sigmaEpsilon[atom];
             const real charge = 8*sigEps.x*sigEps.x*sigEps.x*sigEps.y;
 #else
-            const real charge = pos.w;
+            const real charge = CHARGE;
 #endif
             data[j].w = charge; // Storing the charge here improves cache coherency in the charge spreading kernel
-            pmeBsplineTheta[i+j*NUM_ATOMS] = data[j];
+            pmeBsplineTheta[atom+j*NUM_ATOMS] = data[j];
         }
 #endif
     }
@@ -99,6 +101,8 @@ __kernel void gridSpreadCharge(__global const real4* restrict posq, __global con
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ
 #ifdef USE_LJPME
         , __global const float2* restrict sigmaEpsilon
+#else
+        , __global const real* restrict charges
 #endif
     ) {
     const real scale = 1/(real) (PME_ORDER-1);
@@ -114,7 +118,7 @@ __kernel void gridSpreadCharge(__global const real4* restrict posq, __global con
         const float2 sigEps = sigmaEpsilon[atom];
         const real charge = 8*sigEps.x*sigEps.x*sigEps.x*sigEps.y;
 #else
-        const real charge = pos.w;
+        const real charge = CHARGE;
 #endif
         if (charge == 0)
             continue;
@@ -192,6 +196,8 @@ __kernel void gridSpreadCharge(__global const real4* restrict posq, __global con
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ
 #ifdef USE_LJPME
         , __global const float2* restrict sigmaEpsilon
+#else
+        , __global const real* restrict charges
 #endif
     ) {
     const int firstx = get_global_id(0)*GRID_SIZE_X/get_global_size(0);
@@ -224,7 +230,7 @@ __kernel void gridSpreadCharge(__global const real4* restrict posq, __global con
         const float2 sigEps = sigmaEpsilon[atom];
         const real charge = 8*sigEps.x*sigEps.x*sigEps.x*sigEps.y;
 #else
-        const real charge = pos.w;
+        const real charge = CHARGE;
 #endif
         if (charge == 0)
             continue;
@@ -274,6 +280,8 @@ __kernel void gridSpreadCharge(__global const real4* restrict posq, __global con
         __global real* restrict pmeGrid, __global const real4* restrict pmeBsplineTheta
 #ifdef USE_LJPME
         , __global const float2* restrict sigmaEpsilon
+#else
+        , __global const real* restrict charges
 #endif
     ) {
     unsigned int numGridPoints = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
@@ -452,6 +460,8 @@ __kernel void gridInterpolateForce(__global const real4* restrict posq, __global
         real4 recipBoxVecY, real4 recipBoxVecZ, __global int2* restrict pmeAtomGridIndex
 #ifdef USE_LJPME
         , __global const float2* restrict sigmaEpsilon
+#else
+        , __global const real* restrict charges
 #endif
     ) {
     const real scale = 1/(real) (PME_ORDER-1);
@@ -522,7 +532,7 @@ __kernel void gridInterpolateForce(__global const real4* restrict posq, __global
         const float2 sigEps = sigmaEpsilon[atom];
         real q = 8*sigEps.x*sigEps.x*sigEps.x*sigEps.y;
 #else
-        real q = pos.w*EPSILON_FACTOR;
+        real q = CHARGE*EPSILON_FACTOR;
 #endif
         totalForce.x -= q*(force.x*GRID_SIZE_X*recipBoxVecX.x);
         totalForce.y -= q*(force.x*GRID_SIZE_X*recipBoxVecY.x+force.y*GRID_SIZE_Y*recipBoxVecY.y);

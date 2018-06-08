@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -684,6 +684,56 @@ void testSwitchingFunction(NonbondedForce::NonbondedMethod method) {
     }
 }
 
+void testTwoForces() {
+    // Create a system with two NonbondedForces.
+    
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    VerletIntegrator integrator(0.01);
+    NonbondedForce* nb1 = new NonbondedForce();
+    nb1->addParticle(-1.5, 1, 1.2);
+    nb1->addParticle(0.5, 1, 1.0);
+    system.addForce(nb1);
+    NonbondedForce* nb2 = new NonbondedForce();
+    nb2->addParticle(0.4, 1.4, 0.5);
+    nb2->addParticle(0.3, 1.8, 1.0);
+    nb2->setForceGroup(1);
+    system.addForce(nb2);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(2);
+    positions[0] = Vec3(0, 0, 0);
+    positions[1] = Vec3(1.5, 0, 0);
+    context.setPositions(positions);
+    State state1 = context.getState(State::Energy, false, 1<<0);
+    ASSERT_EQUAL_TOL(ONE_4PI_EPS0*(-1.5*0.5)/1.5 + 4.0*sqrt(1.2*1.0)*(pow(1.0/1.5, 12.0)-pow(1.0/1.5, 6.0)), state1.getPotentialEnergy(), TOL);
+    State state2 = context.getState(State::Energy, false, 1<<1);
+    ASSERT_EQUAL_TOL(ONE_4PI_EPS0*(0.4*0.3)/1.5 + 4.0*sqrt(0.5*1.0)*(pow(1.6/1.5, 12.0)-pow(1.6/1.5, 6.0)), state2.getPotentialEnergy(), TOL);
+    State state = context.getState(State::Energy);
+    ASSERT_EQUAL_TOL(state1.getPotentialEnergy()+state2.getPotentialEnergy(), state.getPotentialEnergy(), TOL);
+    
+    // Try modifying them and see if they're still correct.
+    
+    nb1->setParticleParameters(0, -1.2, 1.1, 1.4);
+    nb1->updateParametersInContext(context);
+    nb2->setParticleParameters(0, 0.5, 1.6, 0.6);
+    nb2->updateParametersInContext(context);
+    state1 = context.getState(State::Energy, false, 1<<0);
+    ASSERT_EQUAL_TOL(ONE_4PI_EPS0*(-1.2*0.5)/1.5 + 4.0*sqrt(1.4*1.0)*(pow(1.05/1.5, 12.0)-pow(1.05/1.5, 6.0)), state1.getPotentialEnergy(), TOL);
+    state2 = context.getState(State::Energy, false, 1<<1);
+    ASSERT_EQUAL_TOL(ONE_4PI_EPS0*(0.5*0.3)/1.5 + 4.0*sqrt(0.6*1.0)*(pow(1.7/1.5, 12.0)-pow(1.7/1.5, 6.0)), state2.getPotentialEnergy(), TOL);
+    
+    // Make sure it also works with PME.
+    
+    nb1->setNonbondedMethod(NonbondedForce::PME);
+    nb2->setNonbondedMethod(NonbondedForce::PME);
+    context.reinitialize(true);
+    state1 = context.getState(State::Energy, false, 1<<0);
+    state2 = context.getState(State::Energy, false, 1<<1);
+    state = context.getState(State::Energy);
+    ASSERT_EQUAL_TOL(state1.getPotentialEnergy()+state2.getPotentialEnergy(), state.getPotentialEnergy(), TOL);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -701,6 +751,7 @@ int main(int argc, char* argv[]) {
         testChangingParameters();
         testSwitchingFunction(NonbondedForce::CutoffNonPeriodic);
         testSwitchingFunction(NonbondedForce::PME);
+        testTwoForces();
         runPlatformTests();
     }
     catch(const exception& e) {

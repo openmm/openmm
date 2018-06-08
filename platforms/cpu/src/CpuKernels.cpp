@@ -138,6 +138,19 @@ static double computeShiftedKineticEnergy(ContextImpl& context, vector<double>& 
     return 0.5*energy;
 }
 
+/**
+ * Copy particle charges into the fourth element of the posq array.
+ */
+static void copyChargesToPosq(ContextImpl& context, const vector<float>& charges, int index) {
+    CpuPlatform::PlatformData& data = CpuPlatform::getPlatformData(context);
+    if (index == data.currentPosqIndex)
+        return;
+    data.currentPosqIndex = index;
+    AlignedArray<float>& posq = data.posq;
+    for (int i = 0; i < charges.size(); i++)
+        posq[4*i+3] = charges[i];
+}
+
 CpuCalcForcesAndEnergyKernel::CpuCalcForcesAndEnergyKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data, ContextImpl& context) :
         CalcForcesAndEnergyKernel(name, platform), data(data) {
     // Create a Reference platform version of this kernel.
@@ -530,6 +543,7 @@ CpuCalcNonbondedForceKernel::~CpuCalcNonbondedForceKernel() {
 }
 
 void CpuCalcNonbondedForceKernel::initialize(const System& system, const NonbondedForce& force) {
+    posqIndex = data.requestPosqIndex();
 
     // Identify which exceptions are 1-4 interactions.
 
@@ -556,12 +570,13 @@ void CpuCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
     for (int i = 0; i < num14; i++)
         bonded14ParamArray[i] = new double[3];
     particleParams.resize(numParticles);
+    charges.resize(numParticles);
     C6params.resize(numParticles);
     double sumSquaredCharges = 0.0;
     for (int i = 0; i < numParticles; ++i) {
         double charge, radius, depth;
         force.getParticleParameters(i, charge, radius, depth);
-        data.posq[4*i+3] = (float) charge;
+        charges[i] = (float) charge;
         particleParams[i] = make_pair((float) (0.5*radius), (float) (2.0*sqrt(depth)));
         C6params[i] = 8.0*pow(particleParams[i].first, 3.0) * particleParams[i].second;
         sumSquaredCharges += charge*charge;
@@ -660,6 +675,7 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
             }
         }
     }
+    copyChargesToPosq(context, charges, posqIndex);
     AlignedArray<float>& posq = data.posq;
     vector<Vec3>& posData = extractPositions(context);
     vector<Vec3>& forceData = extractForces(context);
@@ -726,11 +742,12 @@ void CpuCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, 
 
     // Record the values.
 
+    posqIndex = data.requestPosqIndex();
     double sumSquaredCharges = 0.0;
     for (int i = 0; i < numParticles; ++i) {
         double charge, radius, depth;
         force.getParticleParameters(i, charge, radius, depth);
-        data.posq[4*i+3] = (float) charge;
+        charges[i] = (float) charge;
         particleParams[i] = make_pair((float) (0.5*radius), (float) (2.0*sqrt(depth)));
         sumSquaredCharges += charge*charge;
     }
@@ -964,12 +981,14 @@ CpuCalcGBSAOBCForceKernel::~CpuCalcGBSAOBCForceKernel() {
 }
 
 void CpuCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOBCForce& force) {
+    posqIndex = data.requestPosqIndex();
     int numParticles = system.getNumParticles();
     particleParams.resize(numParticles);
+    charges.resize(numParticles);
     for (int i = 0; i < numParticles; ++i) {
         double charge, radius, scalingFactor;
         force.getParticleParameters(i, charge, radius, scalingFactor);
-        data.posq[4*i+3] = (float) charge;
+        charges[i] = (float) charge;
         radius -= 0.009;
         particleParams[i] = make_pair((float) radius, (float) (scalingFactor*radius));
     }
@@ -983,6 +1002,7 @@ void CpuCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOBCFo
 }
 
 double CpuCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    copyChargesToPosq(context, charges, posqIndex);
     if (data.isPeriodic) {
         Vec3& boxSize = extractBoxSize(context);
         float floatBoxSize[3] = {(float) boxSize[0], (float) boxSize[1], (float) boxSize[2]};
@@ -1000,10 +1020,11 @@ void CpuCalcGBSAOBCForceKernel::copyParametersToContext(ContextImpl& context, co
 
     // Record the values.
 
+    posqIndex = data.requestPosqIndex();
     for (int i = 0; i < numParticles; ++i) {
         double charge, radius, scalingFactor;
         force.getParticleParameters(i, charge, radius, scalingFactor);
-        data.posq[4*i+3] = (float) charge;
+        charges[i] = (float) charge;
         radius -= 0.009;
         particleParams[i] = make_pair((float) radius, (float) (scalingFactor*radius));
     }

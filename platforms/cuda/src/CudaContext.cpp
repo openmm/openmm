@@ -107,8 +107,8 @@ static int executeInWindows(const string &command) {
 
 CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlockingSync, const string& precision, const string& compiler,
         const string& tempDir, const std::string& hostCompiler, CudaPlatform::PlatformData& platformData, CudaContext* originalContext) : system(system), currentStream(0),
-        time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), stepsSinceReorder(99999), contextIsValid(false), atomsWereReordered(false), hasCompilerKernel(false), isNvccAvailable(false),
-        pinnedBuffer(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
+        time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), stepsSinceReorder(99999), contextIsValid(false), atomsWereReordered(false), hasAssignedPosqCharges(false),
+        hasCompilerKernel(false), isNvccAvailable(false), pinnedBuffer(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
     // Determine what compiler to use.
     
     this->compiler = "\""+compiler+"\"";
@@ -301,6 +301,11 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
         compilationDefines["make_mixed4"] = "make_float4";
     }
     posCellOffsets.resize(paddedNumAtoms, make_int4(0, 0, 0, 0));
+    atomIndexDevice.initialize<int>(*this, paddedNumAtoms, "atomIndex");
+    atomIndex.resize(paddedNumAtoms);
+    for (int i = 0; i < paddedNumAtoms; ++i)
+        atomIndex[i] = i;
+    atomIndexDevice.upload(atomIndex);
 
     // Create utility kernels that are used in multiple places.
 
@@ -475,11 +480,6 @@ void CudaContext::initialize() {
             energyParamDerivBuffer.initialize<float>(*this, numEnergyParamDerivs*numEnergyBuffers, "energyParamDerivBuffer");
         addAutoclearBuffer(energyParamDerivBuffer);
     }
-    atomIndexDevice.initialize<int>(*this, paddedNumAtoms, "atomIndex");
-    atomIndex.resize(paddedNumAtoms);
-    for (int i = 0; i < paddedNumAtoms; ++i)
-        atomIndex[i] = i;
-    atomIndexDevice.upload(atomIndex);
     findMoleculeGroups();
     nonbonded->initialize(system);
 }
@@ -887,19 +887,25 @@ void CudaContext::setCharges(const vector<double>& charges) {
     if (!chargeBuffer.isInitialized())
         chargeBuffer.initialize(*this, numAtoms, useDoublePrecision ? sizeof(double) : sizeof(float), "chargeBuffer");
     if (getUseDoublePrecision()) {
-        double* c = (double*) getPinnedBuffer();
-        for (int i = 0; i < charges.size(); i++)
+        vector<double> c(numAtoms);
+        for (int i = 0; i < numAtoms; i++)
             c[i] = charges[i];
         chargeBuffer.upload(c);
     }
     else {
-        float* c = (float*) getPinnedBuffer();
-        for (int i = 0; i < charges.size(); i++)
+        vector<float> c(numAtoms);
+        for (int i = 0; i < numAtoms; i++)
             c[i] = (float) charges[i];
         chargeBuffer.upload(c);
     }
     void* args[] = {&chargeBuffer.getDevicePointer(), &posq.getDevicePointer(), &atomIndexDevice.getDevicePointer(), &numAtoms};
     executeKernel(setChargesKernel, args, numAtoms);
+}
+
+bool CudaContext::requestPosqCharges() {
+    bool allow = !hasAssignedPosqCharges;
+    hasAssignedPosqCharges = true;
+    return allow;
 }
 
 /**

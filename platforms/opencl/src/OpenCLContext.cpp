@@ -68,7 +68,7 @@ static void CL_CALLBACK errorCallback(const char* errinfo, const void* private_i
 }
 
 OpenCLContext::OpenCLContext(const System& system, int platformIndex, int deviceIndex, const string& precision, OpenCLPlatform::PlatformData& platformData, OpenCLContext* originalContext) :
-        system(system), time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), stepsSinceReorder(99999), atomsWereReordered(false),
+        system(system), time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), stepsSinceReorder(99999), atomsWereReordered(false), hasAssignedPosqCharges(false),
         integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
     if (precision == "single") {
         useDoublePrecision = false;
@@ -295,6 +295,11 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
             compilationDefines["convert_mixed4"] = "convert_float4";
         }
         posCellOffsets.resize(paddedNumAtoms, mm_int4(0, 0, 0, 0));
+        atomIndexDevice.initialize<cl_int>(*this, paddedNumAtoms, "atomIndexDevice");
+        atomIndex.resize(paddedNumAtoms);
+        for (int i = 0; i < paddedNumAtoms; ++i)
+            atomIndex[i] = i;
+        atomIndexDevice.upload(atomIndex);
     }
     catch (cl::Error err) {
         std::stringstream str;
@@ -494,11 +499,6 @@ void OpenCLContext::initialize() {
             ((mm_float4*) pinnedMemory)[i] = mm_float4(0.0f, 0.0f, 0.0f, mass == 0.0 ? 0.0f : (cl_float) (1.0/mass));
     }
     velm.upload(pinnedMemory);
-    atomIndexDevice.initialize<cl_int>(*this, paddedNumAtoms, "atomIndexDevice");
-    atomIndex.resize(paddedNumAtoms);
-    for (int i = 0; i < paddedNumAtoms; ++i)
-        atomIndex[i] = i;
-    atomIndexDevice.upload(atomIndex);
     findMoleculeGroups();
     nonbonded->initialize(system);
 }
@@ -770,14 +770,14 @@ void OpenCLContext::setCharges(const vector<double>& charges) {
     if (!chargeBuffer.isInitialized())
         chargeBuffer.initialize(*this, numAtoms, useDoublePrecision ? sizeof(double) : sizeof(float), "chargeBuffer");
     if (getUseDoublePrecision()) {
-        double* c = (double*) getPinnedBuffer();
-        for (int i = 0; i < charges.size(); i++)
+        vector<double> c(numAtoms);
+        for (int i = 0; i < numAtoms; i++)
             c[i] = charges[i];
         chargeBuffer.upload(c);
     }
     else {
-        float* c = (float*) getPinnedBuffer();
-        for (int i = 0; i < charges.size(); i++)
+        vector<float> c(numAtoms);
+        for (int i = 0; i < numAtoms; i++)
             c[i] = (float) charges[i];
         chargeBuffer.upload(c);
     }
@@ -786,6 +786,12 @@ void OpenCLContext::setCharges(const vector<double>& charges) {
     setChargesKernel.setArg<cl::Buffer>(2, atomIndexDevice.getDeviceBuffer());
     setChargesKernel.setArg<cl_int>(3, numAtoms);
     executeKernel(setChargesKernel, numAtoms);
+}
+
+bool OpenCLContext::requestPosqCharges() {
+    bool allow = !hasAssignedPosqCharges;
+    hasAssignedPosqCharges = true;
+    return allow;
 }
 
 /**

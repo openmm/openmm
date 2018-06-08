@@ -652,6 +652,7 @@ private:
     OpenCLContext& cl;
     ForceInfo* info;
     bool hasInitializedKernel;
+    OpenCLArray charges;
     OpenCLArray sigmaEpsilon;
     OpenCLArray exceptionParams;
     OpenCLArray cosSinSums;
@@ -698,7 +699,7 @@ private:
     double ewaldSelfEnergy, dispersionCoefficient, alpha, dispersionAlpha;
     int gridSizeX, gridSizeY, gridSizeZ;
     int dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ;
-    bool hasCoulomb, hasLJ, usePmeQueue, doLJPME;
+    bool hasCoulomb, hasLJ, usePmeQueue, doLJPME, usePosqCharges;
     NonbondedMethod nonbondedMethod;
     static const int PmeOrder = 5;
 };
@@ -795,6 +796,7 @@ private:
     OpenCLContext& cl;
     ForceInfo* info;
     OpenCLArray params;
+    OpenCLArray charges;
     OpenCLArray bornSum;
     OpenCLArray longBornSum;
     OpenCLArray bornRadii;
