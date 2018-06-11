@@ -367,6 +367,9 @@ extern OPENMM_EXPORT int OpenMM_ParameterArray_getSize(const OpenMM_ParameterArr
 extern OPENMM_EXPORT double OpenMM_ParameterArray_get(const OpenMM_ParameterArray* array, const char* name);
 
 /* OpenMM_PropertyArray */
+extern OPENMM_EXPORT OpenMM_PropertyArray* OpenMM_PropertyArray_create();
+extern OPENMM_EXPORT void OpenMM_PropertyArray_destroy(OpenMM_PropertyArray* array);
+extern OPENMM_EXPORT void OpenMM_PropertyArray_add(OpenMM_PropertyArray* array, const char* name, const char* value);
 extern OPENMM_EXPORT int OpenMM_PropertyArray_getSize(const OpenMM_PropertyArray* array);
 extern OPENMM_EXPORT const char* OpenMM_PropertyArray_get(const OpenMM_PropertyArray* array, const char* name);""", file=self.out)
 
@@ -740,6 +743,15 @@ OPENMM_EXPORT double OpenMM_ParameterArray_get(const OpenMM_ParameterArray* arra
 }
 
 /* OpenMM_PropertyArray */
+OPENMM_EXPORT OpenMM_PropertyArray* OpenMM_PropertyArray_create() {
+    return reinterpret_cast<OpenMM_PropertyArray*>(new map<string, string>);
+}
+OPENMM_EXPORT void OpenMM_PropertyArray_destroy(OpenMM_PropertyArray* array) {
+    delete reinterpret_cast<map<string, string>*>(array);
+}
+OPENMM_EXPORT void OpenMM_PropertyArray_add(OpenMM_PropertyArray* array, const char* name, const char* value) {
+    reinterpret_cast<map<string, string>*>(array)->operator[](string(name)) = string(value);
+}
 OPENMM_EXPORT int OpenMM_PropertyArray_getSize(const OpenMM_PropertyArray* array) {
     return reinterpret_cast<const map<string, double>*>(array)->size();
 }
