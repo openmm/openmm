@@ -1451,12 +1451,72 @@ class Modeller(object):
             numPositive += numPairs
             numNegative += numPairs
         totalIons = numPositive+numNegative
-        
-        # Now add the ions.  We do this by randomly selecting a set of waters that were just added and replacing
-        # them with ions.
 
+        # Now add the ions. We do this by randomly selecting a set of waters a certain
+        # distance away from either leaflet of the membrane and replacing them with ions,
+        # while ensuring ions are not placed too close to each other.
         if totalIons > 0:
-            toReplace = random.sample(list(waterPos), totalIons)
+
+            # Redo waterPos because previous modeller.delete() changes Chain indexes
+            waterPos = {}
+            for chain in list(modeller.topology.chains())[-2:]:
+                for residue in chain.residues():
+                    if residue.name == 'HOH':
+                        for atom in residue.atoms():
+                            if atom.element == elem.oxygen:
+                                waterPos[residue] = modeller.positions[atom.index].value_in_unit(nanometer)
+
+            # Calculate lipid Z boundaries
+            lipidNames = {res.name for res in patch.topology.residues() if res.name != 'HOH'}
+            lipidZMax = 0.0
+            lipidZMin = 99999.0
+            for res in modeller.topology.residues():
+                if res.name in lipidNames:
+                    for atom in res.atoms():
+                        atomZ = modeller.positions[atom.index][2].value_in_unit(nanometer)
+                        lipidZMax = max(lipidZMax, atomZ)
+                        lipidZMin = min(lipidZMin, atomZ)
+
+            # Ignore waters that are within a certain distance of the membrane
+            lipidOffset = 0.25
+            upperZBoundary = (lipidZMax + lipidOffset)
+            lowerZBoundary = (lipidZMin - lipidOffset)
+            waterResidues = list(waterPos)
+            for wRes in waterResidues:
+                waterZ = waterPos[wRes][2]
+                if lowerZBoundary < waterZ < upperZBoundary:
+                    del waterPos[wRes]
+
+            # Select waters, ignoring those neighboring previously picked sites.
+            ionCutoff = 0.5
+            ionPositions = []
+
+            replaceableWaters = list(waterPos)
+
+            addedIons = 0
+            n_trials = 10
+            toReplace = []
+            while addedIons < totalIons:
+                pickedWater = random.choice(replaceableWaters)
+                replaceableWaters.remove(pickedWater)
+
+                # Check distance to other ions
+                for pos in ionPositions:
+                    distance = norm(pos - waterPos[pickedWater])
+                    if distance <= ionCutoff:
+                        n_trials -= 1
+                        break
+                else:
+                    toReplace.append(pickedWater)
+                    ionPositions.append(waterPos[pickedWater])
+                    addedIons += 1
+
+                    n_trials = 10
+
+                if n_trials == 0:
+                    raise Exception('Could not add more than {} ions to the system'.format(addedIons))
+
+            # Do the replacement
             modeller.delete(toReplace)
             ionChain = modeller.topology.addChain()
             for i, water in enumerate(toReplace):
@@ -1464,7 +1524,7 @@ class Modeller(object):
                 newResidue = modeller.topology.addResidue(element.symbol.upper(), ionChain)
                 modeller.topology.addAtom(element.symbol, element, newResidue)
                 modeller.positions.append(waterPos[water]*nanometer)
-            
+
         self.topology = modeller.topology
         self.positions = modeller.positions
 
