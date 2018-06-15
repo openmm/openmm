@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2016 Stanford University and the Authors.
+Portions copyright (c) 2012-2018 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors: Jason Swails
 
@@ -115,6 +115,7 @@ class GromacsTopFile(object):
             self.dihedrals = []
             self.exclusions = []
             self.pairs = []
+            self.constraints = []
             self.cmaps = []
             self.vsites2 = []
             self.has_virtual_sites = False
@@ -236,6 +237,8 @@ class GromacsTopFile(object):
                 self._processExclusion(line)
             elif self._currentCategory == 'pairs':
                 self._processPair(line)
+            elif self._currentCategory == 'constraints':
+                self._processConstraint(line)
             elif self._currentCategory == 'cmap':
                 self._processCmap(line)
             elif self._currentCategory == 'atomtypes':
@@ -274,7 +277,7 @@ class GromacsTopFile(object):
                 raise ValueError('Too few fields in [ defaults ] line: '+line)
         if fields[0] != '1':
             raise ValueError('Unsupported nonbonded type: '+fields[0])
-        if not (fields[1] == '2' or fields[1] == '1'):
+        if not fields[1] in ('1', '2', '3'):
             raise ValueError('Unsupported combination rule: '+fields[1])
         if fields[2].lower() == 'no':
             self._genpairs = False
@@ -334,7 +337,7 @@ class GromacsTopFile(object):
         fields = line.split()
         if len(fields) < 5:
             raise ValueError('Too few fields in [ dihedrals ] line: '+line)
-        if fields[4] not in ('1', '2', '3', '4', '9'):
+        if fields[4] not in ('1', '2', '3', '4', '5', '9'):
             raise ValueError('Unsupported function type in [ dihedrals ] line: '+line)
         self._currentMoleculeType.dihedrals.append(fields)
 
@@ -357,6 +360,15 @@ class GromacsTopFile(object):
         if fields[2] != '1':
             raise ValueError('Unsupported function type in [ pairs ] line: '+line)
         self._currentMoleculeType.pairs.append(fields)
+
+    def _processConstraint(self, line):
+        """Process a line in the [ constraints ] category."""
+        if self._currentMoleculeType is None:
+            raise ValueError('Found [ constraints ] section before [ moleculetype ]')
+        fields = line.split()
+        if len(fields) < 4:
+            raise ValueError('Too few fields in [ constraints ] line: '+line)
+        self._currentMoleculeType.constraints.append(fields)
 
     def _processCmap(self, line):
         """Process a line in the [ cmaps ] category."""
@@ -408,7 +420,7 @@ class GromacsTopFile(object):
         fields = line.split()
         if len(fields) < 7:
             raise ValueError('Too few fields in [ dihedraltypes ] line: '+line)
-        if fields[4] not in ('1', '2', '3', '4', '9'):
+        if fields[4] not in ('1', '2', '3', '4', '5', '9'):
             raise ValueError('Unsupported function type in [ dihedraltypes ] line: '+line)
         key = tuple(fields[:5])
         if fields[4] == '9' and key in self._dihedralTypes:
@@ -575,7 +587,7 @@ class GromacsTopFile(object):
     def createSystem(self, nonbondedMethod=ff.NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
                      constraints=None, rigidWater=True, implicitSolvent=None, soluteDielectric=1.0, solventDielectric=78.5, ewaldErrorTolerance=0.0005, removeCMMotion=True, hydrogenMass=None):
         """Construct an OpenMM System representing the topology described by this
-        prmtop file.
+        top file.
 
         Parameters
         ----------
@@ -587,6 +599,8 @@ class GromacsTopFile(object):
         constraints : object=None
             Specifies which bonds and angles should be implemented with
             constraints. Allowed values are None, HBonds, AllBonds, or HAngles.
+            Regardless of this value, constraints that are explicitly specified
+            in the top file will always be included.
         rigidWater : boolean=True
             If true, water molecules will be fully rigid regardless of the value
             passed for the constraints argument
@@ -622,8 +636,8 @@ class GromacsTopFile(object):
             raise ValueError('Illegal nonbonded method for a non-periodic system')
         nb = mm.NonbondedForce()
         sys.addForce(nb)
-        if self._defaults[1] == '1':
-            lj = mm.CustomNonbondedForce('sqrt(A1*A2)/r^12-sqrt(C1*C2)/r^6')
+        if self._defaults[1] in ('1', '3'):
+            lj = mm.CustomNonbondedForce('A1*A2/r^12-C1*C2/r^6')
             lj.addPerParticleParameter('C')
             lj.addPerParticleParameter('A')
             sys.addForce(lj)
@@ -802,7 +816,7 @@ class GromacsTopFile(object):
                     dihedralType = fields[4]
                     reversedTypes = types[::-1]+(dihedralType,)
                     types = types+(dihedralType,)
-                    if (dihedralType in ('1', '4', '9') and len(fields) > 7) or (dihedralType == '3' and len(fields) > 10) or (dihedralType == '2' and len(fields) > 6):
+                    if (dihedralType in ('1', '4', '5', '9') and len(fields) > 7) or (dihedralType == '3' and len(fields) > 10) or (dihedralType == '2' and len(fields) > 6):
                         paramsList = [fields]
                     else:
                         # Look for a matching dihedral type.
@@ -847,6 +861,9 @@ class GromacsTopFile(object):
                                 if rb is None:
                                     rb = mm.RBTorsionForce()
                                     sys.addForce(rb)
+                                if dihedralType == '5':
+                                    # Convert Fourier coefficients to RB coefficients.
+                                    c = [c[1]+0.5*(c[0]+c[2]), 0.5*(-c[0]+3*c[2]), -c[1]+4*c[3], -2*c[2], -4*c[3], 0]
                                 rb.addTorsion(baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], baseAtomIndex+atoms[2], baseAtomIndex+atoms[3], c[0], c[1], c[2], c[3], c[4], c[5])
 
                 # Add CMAP terms.
@@ -896,9 +913,14 @@ class GromacsTopFile(object):
                     else:
                         if self._defaults[1] == '1':
                             nb.addParticle(q, 1.0, 0.0)
-                            lj.addParticle([float(params[6]), float(params[7])])
+                            lj.addParticle([math.sqrt(float(params[6])), math.sqrt(float(params[7]))])
                         elif self._defaults[1] == '2':
                             nb.addParticle(q, float(params[6]), float(params[7]))
+                        elif self._defaults[1] == '3':
+                            nb.addParticle(q, 1.0, 0.0)
+                            sigma = float(params[6])
+                            epsilon = float(params[7])
+                            lj.addParticle([math.sqrt(4*epsilon*sigma**6), math.sqrt(4*epsilon*sigma**12)])
 
                 for fields in moleculeType.atoms:
                     if implicitSolvent is OBC2:
@@ -909,6 +931,10 @@ class GromacsTopFile(object):
                 for fields in moleculeType.bonds:
                     atoms = [int(x)-1 for x in fields[:2]]
                     bondIndices.append((baseAtomIndex+atoms[0], baseAtomIndex+atoms[1]))
+                for fields in moleculeType.constraints:
+                    if fields[2] == '1':
+                        atoms = [int(x)-1 for x in fields[:2]]
+                        bondIndices.append((baseAtomIndex+atoms[0], baseAtomIndex+atoms[1]))
                 if has_nbfix_terms:
                     for fields in moleculeType.bonds:
                         atoms = [int(x)-1 for x in fields[:2]]
@@ -932,19 +958,29 @@ class GromacsTopFile(object):
                 for fields in moleculeType.pairs:
                     atoms = [int(x)-1 for x in fields[:2]]
                     types = tuple(atomTypes[i] for i in atoms)
+                    atom1params = nb.getParticleParameters(baseAtomIndex+atoms[0])
+                    atom2params = nb.getParticleParameters(baseAtomIndex+atoms[1])
+                    atom1params = [x.value_in_unit_system(unit.md_unit_system) for x in atom1params]
+                    atom2params = [x.value_in_unit_system(unit.md_unit_system) for x in atom2params]
                     if len(fields) >= 5:
-                        params = fields[3:5]
+                        params = [float(x) for x in fields[3:5]]
                     elif types in self._pairTypes:
-                        params = self._pairTypes[types][3:5]
+                        params = [float(x) for x in self._pairTypes[types][3:5]]
                     elif types[::-1] in self._pairTypes:
-                        params = self._pairTypes[types[::-1]][3:5]
+                        params = [float(x) for x in self._pairTypes[types[::-1]][3:5]]
                     elif not self._genpairs:
                         raise ValueError('No pair parameters defined for atom '
                                          'types %s and gen-pairs is "no"' % types)
+                    elif has_nbfix_terms:
+                        continue
                     else:
-                        continue # We'll use the automatically generated parameters
-                    atom1params = nb.getParticleParameters(baseAtomIndex+atoms[0])
-                    atom2params = nb.getParticleParameters(baseAtomIndex+atoms[1])
+                        # Generate the parameters based on the atom parameters.
+                        if self._defaults[1] == '2':
+                            params = [0.5*(atom1params[1]+atom2params[1]), fudgeLJ*math.sqrt(atom1params[2]*atom2params[2])]
+                        else:
+                            atom1lj = lj.getParticleParameters(baseAtomIndex+atoms[0])
+                            atom2lj = lj.getParticleParameters(baseAtomIndex+atoms[1])
+                            params = [fudgeLJ*atom1lj[0]*atom2lj[0], fudgeLJ*atom1lj[1]*atom2lj[1]]
                     pairs.append((baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], atom1params[0]*atom2params[0]*fudgeQQ, params[0], params[1]))
                 for fields in moleculeType.exclusions:
                     atoms = [int(x)-1 for x in fields]
@@ -959,6 +995,13 @@ class GromacsTopFile(object):
                     c1 = float(fields[4])
                     vsite = mm.TwoParticleAverageSite(baseAtomIndex+atoms[1], baseAtomIndex+atoms[2], (1-c1), c1)
                     sys.setVirtualSite(baseAtomIndex+atoms[0], vsite)
+
+                # Add explicitly specified constraints.
+
+                for fields in moleculeType.constraints:
+                    atoms = [int(x)-1 for x in fields[:2]]
+                    length = float(fields[2])
+                    sys.addConstraint(baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], length)
 
         # Create nonbonded exceptions.
 
@@ -1012,24 +1055,23 @@ class GromacsTopFile(object):
         for exclusion in exclusions:
             nb.addException(exclusion[0], exclusion[1], 0.0, 1.0, 0.0, True)
 
-        if self._defaults[1] == '1':
+        if self._defaults[1] in ('1', '3'):
             # We're using a CustomNonbondedForce for LJ interactions, so also create a CustomBondForce
             # to handle the exceptions.
 
-            pair_bond = mm.CustomBondForce('138.935456*q/r-C/r^6+A/r^12')
-            pair_bond.addPerBondParameter('q')
+            pair_bond = mm.CustomBondForce('-C/r^6+A/r^12')
             pair_bond.addPerBondParameter('C')
             pair_bond.addPerBondParameter('A')
             sys.addForce(pair_bond)
             lj.createExclusionsFromBonds(bondIndices, 3)
             for pair in pairs:
                 nb.addException(pair[0], pair[1], pair[2], 1.0, 0.0, True)
-                pair_bond.addBond(pair[0], pair[1], [pair[2],float(pair[3]), float(pair[4])])
+                pair_bond.addBond(pair[0], pair[1], [pair[3], pair[4]])
             for exclusion in exclusions:
                 lj.addExclusion(exclusion[0], exclusion[1])
         elif self._defaults[1] == '2':
             for pair in pairs:
-                nb.addException(pair[0], pair[1], pair[2], float(pair[3]), float(pair[4]), True)
+                nb.addException(pair[0], pair[1], pair[2], pair[3], pair[4], True)
 
         # Finish configuring the NonbondedForce.
 
@@ -1042,7 +1084,7 @@ class GromacsTopFile(object):
         nb.setNonbondedMethod(methodMap[nonbondedMethod])
         nb.setCutoffDistance(nonbondedCutoff)
         nb.setEwaldErrorTolerance(ewaldErrorTolerance)
-        if self._defaults[1] == '1':
+        if self._defaults[1] in ('1', '3'):
             methodMap = {ff.NoCutoff:mm.CustomNonbondedForce.NoCutoff,
                          ff.CutoffNonPeriodic:mm.CustomNonbondedForce.CutoffNonPeriodic,
                          ff.CutoffPeriodic:mm.CustomNonbondedForce.CutoffPeriodic,
