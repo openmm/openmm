@@ -63,6 +63,22 @@ class TestGromacsTopFile(unittest.TestCase):
         ene = context.getState(getEnergy=True).getPotentialEnergy()
         self.assertAlmostEqual(ene.value_in_unit(kilojoules_per_mole), -346.940915296)
 
+    def test_ionic(self):
+        """Test simulating an ionic liquid"""
+        gro = GromacsGroFile('systems/ionic.gro')
+        top = GromacsTopFile('systems/ionic.top', periodicBoxVectors=gro.getPeriodicBoxVectors())
+        system = top.createSystem(nonbondedMethod=PME, nonbondedCutoff=1.2)
+        for f in system.getForces():
+            if isinstance(f, CustomNonbondedForce):
+                f.setUseLongRangeCorrection(True)
+
+        context = Context(system, VerletIntegrator(1*femtosecond),
+                          Platform.getPlatformByName('Reference'))
+        context.setPositions(gro.positions)
+        energy = context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilojoules_per_mole)
+        self.assertAlmostEqual(energy, 3135.33, delta=energy*0.005)
+        self.assertEqual(1400, system.getNumConstraints())
+
     def test_Cutoff(self):
         """Test to make sure the nonbondedCutoff parameter is passed correctly."""
 
