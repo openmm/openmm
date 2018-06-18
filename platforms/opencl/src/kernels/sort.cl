@@ -221,7 +221,6 @@ __kernel void sortBuckets(__global DATA_TYPE* restrict data, __global const DATA
 
             if (get_local_id(0) < length)
                 data[startIndex+get_local_id(0)] = buffer[get_local_id(0)];
-            barrier(CLK_LOCAL_MEM_FENCE);
         }
         else {
             // Copy the bucket data over to the output array.

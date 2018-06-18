@@ -219,7 +219,6 @@ __global__ void sortBuckets(DATA_TYPE* __restrict__ data, const DATA_TYPE* __res
 
             if (threadIdx.x < length)
                 data[startIndex+threadIdx.x] = dataBuffer[threadIdx.x];
-            __syncthreads();
         }
         else {
             // Copy the bucket data over to the output array.
