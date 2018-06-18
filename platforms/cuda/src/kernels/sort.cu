@@ -144,6 +144,7 @@ __global__ void computeBucketPositions(unsigned int numBuckets, unsigned int* __
         // Load the bucket sizes into local memory.
 
         unsigned int globalIndex = startBucket+threadIdx.x;
+        __syncthreads();
         posBuffer[threadIdx.x] = (globalIndex < numBuckets ? bucketOffset[globalIndex] : 0);
         __syncthreads();
 
@@ -218,6 +219,7 @@ __global__ void sortBuckets(DATA_TYPE* __restrict__ data, const DATA_TYPE* __res
 
             if (threadIdx.x < length)
                 data[startIndex+threadIdx.x] = dataBuffer[threadIdx.x];
+            __syncthreads();
         }
         else {
             // Copy the bucket data over to the output array.
