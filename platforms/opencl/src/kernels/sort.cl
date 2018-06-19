@@ -147,6 +147,7 @@ __kernel void computeBucketPositions(uint numBuckets, __global uint* restrict bu
         // Load the bucket sizes into local memory.
 
         uint globalIndex = startBucket+get_local_id(0);
+        barrier(CLK_LOCAL_MEM_FENCE);
         buffer[get_local_id(0)] = (globalIndex < numBuckets ? bucketOffset[globalIndex] : 0);
         barrier(CLK_LOCAL_MEM_FENCE);
 
