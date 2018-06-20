@@ -734,6 +734,64 @@ void testTwoForces() {
     ASSERT_EQUAL_TOL(state1.getPotentialEnergy()+state2.getPotentialEnergy(), state.getPotentialEnergy(), TOL);
 }
 
+void testParameterOffsets() {
+    System system;
+    for (int i = 0; i < 4; i++)
+        system.addParticle(1.0);
+    NonbondedForce* force = new NonbondedForce();
+    force->addParticle(0.0, 1.0, 0.5);
+    force->addParticle(1.0, 0.5, 0.6);
+    force->addParticle(-1.0, 2.0, 0.7);
+    force->addParticle(0.5, 2.0, 0.8);
+    force->addException(0, 1, 1.0, 1.5, 1.0);
+    force->addException(2, 3, 0.5, 1.0, 1.5);
+    force->addParticleParameterOffset("p1", 0, 3.0, 0.5, 0.5);
+    force->addParticleParameterOffset("p2", 1, 1.0, 1.0, 2.0);
+    force->addExceptionParameterOffset("p1", 1, 0.5, 0.5, 1.5);
+    system.addForce(force);
+    vector<Vec3> positions(4);
+    for (int i = 0; i < 4; i++)
+        positions[i] = Vec3(i, 0, 0);
+    VerletIntegrator integrator(0.001);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    ASSERT_EQUAL(2, context.getParameters().size());
+    ASSERT_EQUAL(0.0, context.getParameter("p1"));
+    ASSERT_EQUAL(0.0, context.getParameter("p2"));
+    context.setParameter("p1", 0.5);
+    context.setParameter("p2", 1.5);
+    
+    // Compute the expected parameters for the six interactions.
+    
+    vector<double> particleCharge = {0.0+3.0*0.5, 1.0+1.0*1.5, -1.0, 0.5};
+    vector<double> particleSigma = {1.0+0.5*0.5, 0.5+1.0*1.5, 2.0, 2.0};
+    vector<double> particleEpsilon = {0.5+0.5*0.5, 0.6+2.0*1.5, 0.7, 0.8};
+    double pairChargeProd[4][4], pairSigma[4][4], pairEpsilon[4][4];
+    for (int i = 0; i < 4; i++)
+        for (int j = i+1; j < 4; j++) {
+            pairChargeProd[i][j] = particleCharge[i]*particleCharge[j];
+            pairSigma[i][j] = 0.5*(particleSigma[i]+particleSigma[j]);
+            pairEpsilon[i][j] = sqrt(particleEpsilon[i]*particleEpsilon[j]);
+        }
+    pairChargeProd[0][1] = 1.0;
+    pairSigma[0][1] = 1.5;
+    pairEpsilon[0][1] = 1.0;
+    pairChargeProd[2][3] = 0.5+0.5*0.5;
+    pairSigma[2][3] = 1.0+0.5*0.5;
+    pairEpsilon[2][3] = 1.5+1.5*0.5;
+    
+    // Compute the expected energy.
+
+    double energy = 0.0;
+    for (int i = 0; i < 4; i++)
+        for (int j = i+1; j < 4; j++) {
+            double dist = j-i;
+            double x = pairSigma[i][j]/dist;
+            energy += ONE_4PI_EPS0*pairChargeProd[i][j]/dist + 4.0*pairEpsilon[i][j]*(pow(x, 12.0)-pow(x, 6.0));
+        }
+    ASSERT_EQUAL_TOL(energy, context.getState(State::Energy).getPotentialEnergy(), 1e-5);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -752,6 +810,7 @@ int main(int argc, char* argv[]) {
         testSwitchingFunction(NonbondedForce::CutoffNonPeriodic);
         testSwitchingFunction(NonbondedForce::PME);
         testTwoForces();
+        testParameterOffsets();
         runPlatformTests();
     }
     catch(const exception& e) {

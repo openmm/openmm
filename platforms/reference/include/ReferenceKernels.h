@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -38,6 +38,8 @@
 #include "ReferenceNeighborList.h"
 #include "lepton/CompiledExpression.h"
 #include "lepton/CustomFunction.h"
+#include <array>
+#include <utility>
 
 namespace OpenMM {
 
@@ -615,9 +617,12 @@ public:
      */
     void getLJPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
 private:
+    void computeParameters(ContextImpl& context);
     int numParticles, num14;
     int **bonded14IndexArray;
     double **particleParamArray, **bonded14ParamArray;
+    std::vector<std::array<double, 3> > baseParticleParams, baseExceptionParams;
+    std::map<std::pair<std::string, int>, std::array<double, 3> > particleParamOffsets, exceptionParamOffsets;
     double nonbondedCutoff, switchingDistance, rfDielectric, ewaldAlpha, ewaldDispersionAlpha, dispersionCoefficient;
     int kmax[3], gridSize[3], dispersionGridSize[3];
     bool useSwitchingFunction;
