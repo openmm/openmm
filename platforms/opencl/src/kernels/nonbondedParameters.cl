@@ -26,17 +26,17 @@ __kernel void computeParameters(__global mixed* restrict energyBuffer, int inclu
         }
 #endif
 #ifdef USE_POSQ_CHARGES
-        posq[i].w = params[0];
+        posq[i].w = params.x;
 #else
-        charge[i] = params[0];
+        charge[i] = params.x;
 #endif
-        sigmaEpsilon[i] = (float2) (0.5f*params[1], 2*SQRT(params[2]));
+        sigmaEpsilon[i] = (float2) (0.5f*params.y, 2*SQRT(params.z));
 #ifdef INCLUDE_EWALD
-        energy -= EWALD_SELF_ENERGY_SCALE*params[0]*params[0];
+        energy -= EWALD_SELF_ENERGY_SCALE*params.x*params.x;
 #endif
 #ifdef INCLUDE_LJPME
-        real sig3 = params[1]*params[1]*params[1];
-        energy += LJPME_SELF_ENERGY_SCALE*sig3*sig3*params[2];
+        real sig3 = params.y*params.y*params.y;
+        energy += LJPME_SELF_ENERGY_SCALE*sig3*sig3*params.z;
 #endif
     }
 
@@ -55,7 +55,7 @@ __kernel void computeParameters(__global mixed* restrict energyBuffer, int inclu
             params.z += value*offset.z;
         }
 #endif
-        exceptionParams[i] = (float4) ((float) (138.935456f*params[0]), (float) params[1], (float) (4*params[2]), 0);
+        exceptionParams[i] = (float4) ((float) (138.935456f*params.x), (float) params.y, (float) (4*params.z), 0);
     }
 #endif
     if (includeSelfEnergy)

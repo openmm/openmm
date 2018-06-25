@@ -1636,6 +1636,8 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         if (cl.getContextIndex() == 0) {
             paramsDefines["INCLUDE_EWALD"] = "1";
             paramsDefines["EWALD_SELF_ENERGY_SCALE"] = cl.doubleToString(ONE_4PI_EPS0*alpha/sqrt(M_PI));
+            for (int i = 0; i < numParticles; i++)
+                ewaldSelfEnergy += baseParticleParamVec[i].x*baseParticleParamVec[i].x*ONE_4PI_EPS0*alpha/sqrt(M_PI);
 
             // Create the reciprocal space kernels.
 
@@ -1675,9 +1677,13 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         if (cl.getContextIndex() == 0) {
             paramsDefines["INCLUDE_EWALD"] = "1";
             paramsDefines["EWALD_SELF_ENERGY_SCALE"] = cl.doubleToString(ONE_4PI_EPS0*alpha/sqrt(M_PI));
+            for (int i = 0; i < numParticles; i++)
+                ewaldSelfEnergy += baseParticleParamVec[i].x*baseParticleParamVec[i].x*ONE_4PI_EPS0*alpha/sqrt(M_PI);
             if (doLJPME) {
                 paramsDefines["INCLUDE_LJPME"] = "1";
                 paramsDefines["LJPME_SELF_ENERGY_SCALE"] = cl.doubleToString(pow(dispersionAlpha, 6)/3.0);
+                for (int i = 0; i < numParticles; i++)
+                    ewaldSelfEnergy += baseParticleParamVec[i].z*pow(baseParticleParamVec[i].y*dispersionAlpha, 6)/3.0;
             }
             pmeDefines["PME_ORDER"] = cl.intToString(PmeOrder);
             pmeDefines["NUM_ATOMS"] = cl.intToString(numParticles);
@@ -1973,6 +1979,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         exceptionOffsetIndices.upload(exceptionOffsetIndicesVec);
     }
     globalParams.initialize(cl, max((int) paramValues.size(), 1), cl.getUseDoublePrecision() ? sizeof(double) : sizeof(float), "globalParams");
+    recomputeParams = true;
     
     // Initialize the kernel for updating parameters.
     
@@ -2143,6 +2150,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
         }
     }
     if (paramChanged) {
+        recomputeParams = true;
         if (cl.getUseDoublePrecision())
             globalParams.upload(paramValues);
         else {
@@ -2152,8 +2160,12 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             globalParams.upload(v);
         }
     }
-    computeParamsKernel.setArg<cl_int>(1, includeEnergy && includeReciprocal);
-    cl.executeKernel(computeParamsKernel, cl.getPaddedNumAtoms());
+    double energy = (includeReciprocal ? ewaldSelfEnergy : 0.0);
+    if (recomputeParams || hasOffsets) {
+        computeParamsKernel.setArg<cl_int>(1, includeEnergy && includeReciprocal);
+        cl.executeKernel(computeParamsKernel, cl.getPaddedNumAtoms());
+        energy = 0.0; // The Ewald self energy was computed in the kernel.
+    }
     
     // Do reciprocal space calculations.
     
@@ -2391,7 +2403,6 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             cl.restoreDefaultQueue();
         }
     }
-    double energy = (includeReciprocal ? ewaldSelfEnergy : 0.0);
     if (dispersionCoefficient != 0.0 && includeDirect) {
         mm_double4 boxSize = cl.getPeriodicBoxSizeDouble();
         energy += dispersionCoefficient/(boxSize.x*boxSize.y*boxSize.z);
@@ -2457,6 +2468,7 @@ void OpenCLCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& contex
     if (force.getUseDispersionCorrection() && cl.getContextIndex() == 0 && (nonbondedMethod == CutoffPeriodic || nonbondedMethod == Ewald || nonbondedMethod == PME))
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(context.getSystem(), force);
     cl.invalidateMolecules(info);
+    recomputeParams = true;
 }
 
 void OpenCLCalcNonbondedForceKernel::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
