@@ -655,6 +655,13 @@ private:
     OpenCLArray charges;
     OpenCLArray sigmaEpsilon;
     OpenCLArray exceptionParams;
+    OpenCLArray baseParticleParams;
+    OpenCLArray baseExceptionParams;
+    OpenCLArray particleParamOffsets;
+    OpenCLArray exceptionParamOffsets;
+    OpenCLArray particleOffsetIndices;
+    OpenCLArray exceptionOffsetIndices;
+    OpenCLArray globalParams;
     OpenCLArray cosSinSums;
     OpenCLArray pmeGrid;
     OpenCLArray pmeGrid2;
@@ -676,6 +683,7 @@ private:
     Kernel cpuPme;
     PmeIO* pmeio;
     SyncQueuePostComputation* syncQueue;
+    cl::Kernel computeParamsKernel;
     cl::Kernel ewaldSumsKernel;
     cl::Kernel ewaldForcesKernel;
     cl::Kernel pmeAtomRangeKernel;
@@ -696,6 +704,8 @@ private:
     cl::Kernel pmeDispersionInterpolateForceKernel;
     std::map<std::string, std::string> pmeDefines;
     std::vector<std::pair<int, int> > exceptionAtoms;
+    std::vector<std::string> paramNames;
+    std::vector<double> paramValues;
     double ewaldSelfEnergy, dispersionCoefficient, alpha, dispersionAlpha;
     int gridSizeX, gridSizeY, gridSizeZ;
     int dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ;

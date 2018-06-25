@@ -284,6 +284,7 @@ private:
     std::vector<std::array<double, 3> > baseParticleParams, baseExceptionParams;
     std::vector<std::vector<std::tuple<double, double, double, int> > > particleParamOffsets, exceptionParamOffsets;
     std::vector<std::string> paramNames;
+    std::vector<double> paramValues;
     NonbondedMethod nonbondedMethod;
     CpuNonbondedForce* nonbonded;
     Kernel optimizedPme, optimizedDispersionPme;

@@ -1571,24 +1571,15 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     // Initialize nonbonded interactions.
 
     int numParticles = force.getNumParticles();
-    vector<double> chargeVec(cl.getPaddedNumAtoms(), 0.0);
-    vector<mm_float2> sigmaEpsilonVector(cl.getPaddedNumAtoms(), mm_float2(0,0));
+    vector<mm_float4> baseParticleParamVec(cl.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
     vector<vector<int> > exclusionList(numParticles);
-    double sumSquaredCharges = 0.0;
-    double sumSquaredC6 = 0.0;
     hasCoulomb = false;
     hasLJ = false;
     for (int i = 0; i < numParticles; i++) {
         double charge, sigma, epsilon;
         force.getParticleParameters(i, charge, sigma, epsilon);
-        chargeVec[i] = charge;
-        double sig = 0.5*sigma;
-        double eps = 2.0*sqrt(epsilon);
-        sigmaEpsilonVector[i] = mm_float2((float) sig, (float) eps);
+        baseParticleParamVec[i] = mm_float4(charge, sigma, epsilon, 0);
         exclusionList[i].push_back(i);
-        sumSquaredCharges += charge*charge;
-        double C6 = 8.0*sig*sig*sig*eps;
-        sumSquaredC6 += C6*C6;
         if (charge != 0.0)
             hasCoulomb = true;
         if (epsilon != 0.0)
@@ -1631,6 +1622,9 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         dispersionCoefficient = 0.0;
     alpha = 0;
     ewaldSelfEnergy = 0.0;
+    map<string, string> paramsDefines;
+    if (force.getNumParticleParameterOffsets() > 0 || force.getNumExceptionParameterOffsets() > 0)
+        paramsDefines["HAS_OFFSETS"] = "1";
     if (nonbondedMethod == Ewald) {
         // Compute the Ewald parameters.
 
@@ -1640,7 +1634,8 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         defines["TWO_OVER_SQRT_PI"] = cl.doubleToString(2.0/sqrt(M_PI));
         defines["USE_EWALD"] = "1";
         if (cl.getContextIndex() == 0) {
-            ewaldSelfEnergy = -ONE_4PI_EPS0*alpha*sumSquaredCharges/sqrt(M_PI);
+            paramsDefines["INCLUDE_EWALD"] = "1";
+            paramsDefines["EWALD_SELF_ENERGY_SCALE"] = cl.doubleToString(ONE_4PI_EPS0*alpha/sqrt(M_PI));
 
             // Create the reciprocal space kernels.
 
@@ -1678,9 +1673,12 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         if (doLJPME)
             defines["EWALD_DISPERSION_ALPHA"] = cl.doubleToString(dispersionAlpha);
         if (cl.getContextIndex() == 0) {
-            ewaldSelfEnergy = -ONE_4PI_EPS0*alpha*sumSquaredCharges/sqrt(M_PI);
-            if (doLJPME)
-                ewaldSelfEnergy += pow(dispersionAlpha, 6)*sumSquaredC6/12.0;
+            paramsDefines["INCLUDE_EWALD"] = "1";
+            paramsDefines["EWALD_SELF_ENERGY_SCALE"] = cl.doubleToString(ONE_4PI_EPS0*alpha/sqrt(M_PI));
+            if (doLJPME) {
+                paramsDefines["INCLUDE_LJPME"] = "1";
+                paramsDefines["LJPME_SELF_ENERGY_SCALE"] = cl.doubleToString(pow(dispersionAlpha, 6)/3.0);
+            }
             pmeDefines["PME_ORDER"] = cl.intToString(PmeOrder);
             pmeDefines["NUM_ATOMS"] = cl.intToString(numParticles);
             pmeDefines["RECIP_EXP_FACTOR"] = cl.doubleToString(M_PI*M_PI/(alpha*alpha));
@@ -1865,29 +1863,22 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     
     string source = cl.replaceStrings(OpenCLKernelSources::coulombLennardJones, defines);
     charges.initialize(cl, cl.getPaddedNumAtoms(), cl.getUseDoublePrecision() ? sizeof(double) : sizeof(float), "charges");
+    baseParticleParams.initialize<mm_float4>(cl, cl.getPaddedNumAtoms(), "baseParticleParams");
+    baseParticleParams.upload(baseParticleParamVec);
     map<string, string> replacements;
     if (usePosqCharges) {
-        cl.setCharges(chargeVec);
         replacements["CHARGE1"] = "posq1.w";
         replacements["CHARGE2"] = "posq2.w";
+        paramsDefines["USE_POSQ_CHARGES"] = "1";
     }
     else {
-        if (cl.getUseDoublePrecision())
-            charges.upload(chargeVec);
-        else {
-            vector<float> c(charges.getSize());
-            for (int i = 0; i < c.size(); i++)
-                c[i] = (float) chargeVec[i];
-            charges.upload(c);
-        }
         replacements["CHARGE1"] = prefix+"charge1";
         replacements["CHARGE2"] = prefix+"charge2";
     }
     if (hasCoulomb)
         cl.getNonbondedUtilities().addParameter(OpenCLNonbondedUtilities::ParameterInfo(prefix+"charge", "real", 1, charges.getElementSize(), charges.getDeviceBuffer()));
+    sigmaEpsilon.initialize<mm_float2>(cl, cl.getPaddedNumAtoms(), "sigmaEpsilon");
     if (hasLJ) {
-        sigmaEpsilon.initialize<mm_float2>(cl, cl.getPaddedNumAtoms(), "sigmaEpsilon");
-        sigmaEpsilon.upload(sigmaEpsilonVector);
         replacements["SIGMA_EPSILON1"] = prefix+"sigmaEpsilon1";
         replacements["SIGMA_EPSILON2"] = prefix+"sigmaEpsilon2";
         cl.getNonbondedUtilities().addParameter(OpenCLNonbondedUtilities::ParameterInfo(prefix+"sigmaEpsilon", "float", 2, sizeof(cl_float2), sigmaEpsilon.getDeviceBuffer()));
@@ -1902,21 +1893,91 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     int endIndex = (cl.getContextIndex()+1)*exceptions.size()/numContexts;
     int numExceptions = endIndex-startIndex;
     if (numExceptions > 0) {
+        paramsDefines["HAS_EXCEPTIONS"] = "1";
         exceptionAtoms.resize(numExceptions);
         vector<vector<int> > atoms(numExceptions, vector<int>(2));
         exceptionParams.initialize<mm_float4>(cl, numExceptions, "exceptionParams");
-        vector<mm_float4> exceptionParamsVector(numExceptions);
+        baseExceptionParams.initialize<mm_float4>(cl, numExceptions, "baseExceptionParams");
+        vector<mm_float4> baseExceptionParamsVec(numExceptions);
         for (int i = 0; i < numExceptions; i++) {
             double chargeProd, sigma, epsilon;
             force.getExceptionParameters(exceptions[startIndex+i], atoms[i][0], atoms[i][1], chargeProd, sigma, epsilon);
-            exceptionParamsVector[i] = mm_float4((float) (ONE_4PI_EPS0*chargeProd), (float) sigma, (float) (4.0*epsilon), 0.0f);
+            baseExceptionParamsVec[i] = mm_float4(chargeProd, sigma, epsilon, 0);
             exceptionAtoms[i] = make_pair(atoms[i][0], atoms[i][1]);
         }
-        exceptionParams.upload(exceptionParamsVector);
+        baseExceptionParams.upload(baseExceptionParamsVec);
         map<string, string> replacements;
         replacements["PARAMS"] = cl.getBondedUtilities().addArgument(exceptionParams.getDeviceBuffer(), "float4");
         cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::nonbondedExceptions, replacements), force.getForceGroup());
     }
+    
+    // Initialize parameter offsets.
+
+    vector<vector<mm_float4> > particleOffsetVec(force.getNumParticles());
+    vector<vector<mm_float4> > exceptionOffsetVec(force.getNumExceptions());
+    for (int i = 0; i < force.getNumParticleParameterOffsets(); i++) {
+        string param;
+        int particle;
+        double charge, sigma, epsilon;
+        force.getParticleParameterOffset(i, param, particle, charge, sigma, epsilon);
+        auto paramPos = find(paramNames.begin(), paramNames.end(), param);
+        int paramIndex;
+        if (paramPos == paramNames.end()) {
+            paramIndex = paramNames.size();
+            paramNames.push_back(param);
+        }
+        else
+            paramIndex = paramPos-paramNames.begin();
+        particleOffsetVec[particle].push_back(mm_float4(charge, sigma, epsilon, paramIndex));
+    }
+    for (int i = 0; i < force.getNumExceptionParameterOffsets(); i++) {
+        string param;
+        int exception;
+        double charge, sigma, epsilon;
+        force.getExceptionParameterOffset(i, param, exception, charge, sigma, epsilon);
+        auto paramPos = find(paramNames.begin(), paramNames.end(), param);
+        int paramIndex;
+        if (paramPos == paramNames.end()) {
+            paramIndex = paramNames.size();
+            paramNames.push_back(param);
+        }
+        else
+            paramIndex = paramPos-paramNames.begin();
+        exceptionOffsetVec[exception].push_back(mm_float4(charge, sigma, epsilon, paramIndex));
+    }
+    paramValues.resize(paramNames.size(), 0.0);
+    particleParamOffsets.initialize<mm_float4>(cl, max(force.getNumParticleParameterOffsets(), 1), "particleParamOffsets");
+    exceptionParamOffsets.initialize<mm_float4>(cl, max(force.getNumExceptionParameterOffsets(), 1), "exceptionParamOffsets");
+    particleOffsetIndices.initialize<cl_int>(cl, force.getNumParticles()+1, "particleOffsetIndices");
+    exceptionOffsetIndices.initialize<cl_int>(cl, force.getNumExceptions()+1, "exceptionOffsetIndices");
+    vector<cl_int> particleOffsetIndicesVec, exceptionOffsetIndicesVec;
+    vector<mm_float4> p, e;
+    for (int i = 0; i < particleOffsetVec.size(); i++) {
+        particleOffsetIndicesVec.push_back(p.size());
+        for (int j = 0; j < particleOffsetVec[i].size(); j++)
+            p.push_back(particleOffsetVec[i][j]);
+    }
+    particleOffsetIndicesVec.push_back(p.size());
+    for (int i = 0; i < exceptionOffsetVec.size(); i++) {
+        exceptionOffsetIndicesVec.push_back(e.size());
+        for (int j = 0; j < exceptionOffsetVec[i].size(); j++)
+            e.push_back(exceptionOffsetVec[i][j]);
+    }
+    exceptionOffsetIndicesVec.push_back(e.size());
+    if (force.getNumParticleParameterOffsets() > 0) {
+        particleParamOffsets.upload(p);
+        particleOffsetIndices.upload(particleOffsetIndicesVec);
+    }
+    if (force.getNumExceptionParameterOffsets() > 0) {
+        exceptionParamOffsets.upload(e);
+        exceptionOffsetIndices.upload(exceptionOffsetIndicesVec);
+    }
+    globalParams.initialize(cl, max((int) paramValues.size(), 1), cl.getUseDoublePrecision() ? sizeof(double) : sizeof(float), "globalParams");
+    
+    // Initialize the kernel for updating parameters.
+    
+    cl::Program program = cl.createProgram(OpenCLKernelSources::nonbondedParameters, paramsDefines);
+    computeParamsKernel = cl::Kernel(program, "computeParameters");
     info = new ForceInfo(cl.getNonbondedUtilities().getNumForceBuffers(), force);
     cl.addForce(info);
 }
@@ -1925,6 +1986,22 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
     bool deviceIsCpu = (cl.getDevice().getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU);
     if (!hasInitializedKernel) {
         hasInitializedKernel = true;
+        computeParamsKernel.setArg<cl::Buffer>(0, cl.getEnergyBuffer().getDeviceBuffer());
+        computeParamsKernel.setArg<cl::Buffer>(2, globalParams.getDeviceBuffer());
+        computeParamsKernel.setArg<cl_int>(3, cl.getPaddedNumAtoms());
+        computeParamsKernel.setArg<cl::Buffer>(4, baseParticleParams.getDeviceBuffer());
+        computeParamsKernel.setArg<cl::Buffer>(5, cl.getPosq().getDeviceBuffer());
+        computeParamsKernel.setArg<cl::Buffer>(6, charges.getDeviceBuffer());
+        computeParamsKernel.setArg<cl::Buffer>(7, sigmaEpsilon.getDeviceBuffer());
+        computeParamsKernel.setArg<cl::Buffer>(8, particleParamOffsets.getDeviceBuffer());
+        computeParamsKernel.setArg<cl::Buffer>(9, particleOffsetIndices.getDeviceBuffer());
+        if (exceptionParams.isInitialized()) {
+            computeParamsKernel.setArg<cl_int>(10, exceptionParams.getSize());
+            computeParamsKernel.setArg<cl::Buffer>(11, baseExceptionParams.getDeviceBuffer());
+            computeParamsKernel.setArg<cl::Buffer>(12, exceptionParams.getDeviceBuffer());
+            computeParamsKernel.setArg<cl::Buffer>(13, exceptionParamOffsets.getDeviceBuffer());
+            computeParamsKernel.setArg<cl::Buffer>(14, exceptionOffsetIndices.getDeviceBuffer());
+        }
         if (cosSinSums.isInitialized()) {
             ewaldSumsKernel.setArg<cl::Buffer>(0, cl.getEnergyBuffer().getDeviceBuffer());
             ewaldSumsKernel.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
@@ -2054,6 +2131,32 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             }
        }
     }
+    
+    // Update particle and exception parameters.
+
+    bool paramChanged = false;
+    for (int i = 0; i < paramNames.size(); i++) {
+        double value = context.getParameter(paramNames[i]);
+        if (value != paramValues[i]) {
+            paramValues[i] = value;;
+            paramChanged = true;
+        }
+    }
+    if (paramChanged) {
+        if (cl.getUseDoublePrecision())
+            globalParams.upload(paramValues);
+        else {
+            vector<float> v(paramValues.size());
+            for (int i = 0; i < v.size(); i++)
+                v[i] = paramValues[i];
+            globalParams.upload(v);
+        }
+    }
+    computeParamsKernel.setArg<cl_int>(1, includeEnergy && includeReciprocal);
+    cl.executeKernel(computeParamsKernel, cl.getPaddedNumAtoms());
+    
+    // Do reciprocal space calculations.
+    
     if (cosSinSums.isInitialized() && includeReciprocal) {
         mm_double4 boxSize = cl.getPeriodicBoxSizeDouble();
         mm_double4 recipBoxSize = mm_double4(2*M_PI/boxSize.x, 2*M_PI/boxSize.y, 2*M_PI/boxSize.z, 0.0);
@@ -2328,49 +2431,29 @@ void OpenCLCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& contex
     
     // Record the per-particle parameters.
     
-    vector<double> chargeVector(cl.getPaddedNumAtoms(), 0.0);
-    vector<mm_float2> sigmaEpsilonVector(cl.getPaddedNumAtoms());
-    double sumSquaredCharges = 0.0;
+    vector<mm_float4> baseParticleParamVec(cl.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
     for (int i = 0; i < force.getNumParticles(); i++) {
         double charge, sigma, epsilon;
         force.getParticleParameters(i, charge, sigma, epsilon);
-        chargeVector[i] = charge;
-        sigmaEpsilonVector[i] = mm_float2((float) (0.5*sigma), (float) (2.0*sqrt(epsilon)));
-        sumSquaredCharges += charge*charge;
+        baseParticleParamVec[i] = mm_float4(charge, sigma, epsilon, 0);
     }
-    for (int i = force.getNumParticles(); i < cl.getPaddedNumAtoms(); i++)
-        sigmaEpsilonVector[i] = mm_float2(0,0);
-    if (usePosqCharges)
-        cl.setCharges(chargeVector);
-    else {
-        if (cl.getUseDoublePrecision())
-            charges.upload(chargeVector);
-        else {
-            vector<float> c(charges.getSize());
-            for (int i = 0; i < c.size(); i++)
-                c[i] = (float) chargeVector[i];
-            charges.upload(c);
-        }
-    }
-    sigmaEpsilon.upload(sigmaEpsilonVector);
+    baseParticleParams.upload(baseParticleParamVec);
     
     // Record the exceptions.
     
     if (numExceptions > 0) {
         vector<vector<int> > atoms(numExceptions, vector<int>(2));
-        vector<mm_float4> exceptionParamsVector(numExceptions);
+        vector<mm_float4> baseExceptionParamsVec(numExceptions);
         for (int i = 0; i < numExceptions; i++) {
             double chargeProd, sigma, epsilon;
             force.getExceptionParameters(exceptions[startIndex+i], atoms[i][0], atoms[i][1], chargeProd, sigma, epsilon);
-            exceptionParamsVector[i] = mm_float4((float) (ONE_4PI_EPS0*chargeProd), (float) sigma, (float) (4.0*epsilon), 0.0f);
+            baseExceptionParamsVec[i] = mm_float4(chargeProd, sigma, epsilon, 0);
         }
-        exceptionParams.upload(exceptionParamsVector);
+        baseExceptionParams.upload(baseExceptionParamsVec);
     }
     
     // Compute other values.
     
-    if (nonbondedMethod == Ewald || nonbondedMethod == PME)
-        ewaldSelfEnergy = (cl.getContextIndex() == 0 ? -ONE_4PI_EPS0*alpha*sumSquaredCharges/sqrt(M_PI) : 0.0);
     if (force.getUseDispersionCorrection() && cl.getContextIndex() == 0 && (nonbondedMethod == CutoffPeriodic || nonbondedMethod == Ewald || nonbondedMethod == PME))
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(context.getSystem(), force);
     cl.invalidateMolecules(info);

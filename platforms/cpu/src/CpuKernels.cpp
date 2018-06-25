@@ -623,6 +623,7 @@ void CpuCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
             paramIndex = paramPos-paramNames.begin();
         exceptionParamOffsets[exception].push_back(make_tuple(charge, sigma, epsilon, paramIndex));
     }
+    paramValues.resize(paramNames.size(), 0.0);
 
     // Record other parameters.
     
@@ -805,9 +806,16 @@ void CpuCalcNonbondedForceKernel::getLJPMEParameters(double& alpha, int& nx, int
 }
 
 void CpuCalcNonbondedForceKernel::computeParameters(ContextImpl& context, bool offsetsOnly) {
-    vector<double> paramValues(paramNames.size());
-    for (int i = 0; i < paramNames.size(); i++)
-        paramValues[i] = context.getParameter(paramNames[i]);
+    bool paramChanged = false;
+    for (int i = 0; i < paramNames.size(); i++) {
+        double value = context.getParameter(paramNames[i]);
+        if (value != paramValues[i]) {
+            paramValues[i] = value;;
+            paramChanged = true;
+        }
+    }
+    if (!paramChanged && offsetsOnly)
+        return;
 
     // Compute particle parameters.
 
