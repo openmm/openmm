@@ -1631,7 +1631,8 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
     alpha = 0;
     ewaldSelfEnergy = 0.0;
     map<string, string> paramsDefines;
-    if (force.getNumParticleParameterOffsets() > 0 || force.getNumExceptionParameterOffsets() > 0)
+    hasOffsets = (force.getNumParticleParameterOffsets() > 0 || force.getNumExceptionParameterOffsets() > 0);
+    if (hasOffsets)
         paramsDefines["HAS_OFFSETS"] = "1";
     if (nonbondedMethod == Ewald) {
         // Compute the Ewald parameters.
