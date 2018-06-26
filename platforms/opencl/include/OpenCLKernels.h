@@ -586,7 +586,7 @@ private:
 class OpenCLCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 public:
     OpenCLCalcNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcNonbondedForceKernel(name, platform),
-            hasInitializedKernel(false), cl(cl), sort(NULL), fft(NULL), dispersionFft(NULL), pmeio(NULL) {
+            hasInitializedKernel(false), cl(cl), sort(NULL), fft(NULL), dispersionFft(NULL), pmeio(NULL), usePmeQueue(false) {
     }
     ~OpenCLCalcNonbondedForceKernel();
     /**
