@@ -2023,7 +2023,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
     paramValues.resize(paramNames.size(), 0.0);
     particleParamOffsets.initialize<float4>(cu, max(force.getNumParticleParameterOffsets(), 1), "particleParamOffsets");
     exceptionParamOffsets.initialize<float4>(cu, max(force.getNumExceptionParameterOffsets(), 1), "exceptionParamOffsets");
-    particleOffsetIndices.initialize<int>(cu, force.getNumParticles()+1, "particleOffsetIndices");
+    particleOffsetIndices.initialize<int>(cu, cu.getPaddedNumAtoms()+1, "particleOffsetIndices");
     exceptionOffsetIndices.initialize<int>(cu, force.getNumExceptions()+1, "exceptionOffsetIndices");
     vector<int> particleOffsetIndicesVec, exceptionOffsetIndicesVec;
     vector<float4> p, e;
@@ -2032,7 +2032,8 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         for (int j = 0; j < particleOffsetVec[i].size(); j++)
             p.push_back(particleOffsetVec[i][j]);
     }
-    particleOffsetIndicesVec.push_back(p.size());
+    while (particleOffsetIndicesVec.size() < particleOffsetIndices.getSize())
+        particleOffsetIndicesVec.push_back(p.size());
     for (int i = 0; i < exceptionOffsetVec.size(); i++) {
         exceptionOffsetIndicesVec.push_back(e.size());
         for (int j = 0; j < exceptionOffsetVec[i].size(); j++)

@@ -1955,7 +1955,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     paramValues.resize(paramNames.size(), 0.0);
     particleParamOffsets.initialize<mm_float4>(cl, max(force.getNumParticleParameterOffsets(), 1), "particleParamOffsets");
     exceptionParamOffsets.initialize<mm_float4>(cl, max(force.getNumExceptionParameterOffsets(), 1), "exceptionParamOffsets");
-    particleOffsetIndices.initialize<cl_int>(cl, force.getNumParticles()+1, "particleOffsetIndices");
+    particleOffsetIndices.initialize<cl_int>(cl, cl.getPaddedNumAtoms()+1, "particleOffsetIndices");
     exceptionOffsetIndices.initialize<cl_int>(cl, force.getNumExceptions()+1, "exceptionOffsetIndices");
     vector<cl_int> particleOffsetIndicesVec, exceptionOffsetIndicesVec;
     vector<mm_float4> p, e;
@@ -1964,7 +1964,8 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         for (int j = 0; j < particleOffsetVec[i].size(); j++)
             p.push_back(particleOffsetVec[i][j]);
     }
-    particleOffsetIndicesVec.push_back(p.size());
+    while (particleOffsetIndicesVec.size() < particleOffsetIndices.getSize())
+        particleOffsetIndicesVec.push_back(p.size());
     for (int i = 0; i < exceptionOffsetVec.size(); i++) {
         exceptionOffsetIndicesVec.push_back(e.size());
         for (int j = 0; j < exceptionOffsetVec[i].size(); j++)
