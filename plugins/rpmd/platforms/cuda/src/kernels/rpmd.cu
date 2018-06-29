@@ -194,7 +194,9 @@ extern "C" __global__ void copyDataToContext(mixed4* srcVel, mixed4* dstVel, mix
         int index = base+order[particle];
         dstVel[particle] = srcVel[index];
         mixed4 posq = srcPos[index];
-        dstPos[particle] = make_real4(posq.x, posq.y, posq.z, posq.w);
+        dstPos[particle].x = posq.x;
+        dstPos[particle].y = posq.y;
+        dstPos[particle].z = posq.z;
     }
 }
 
@@ -211,7 +213,9 @@ extern "C" __global__ void copyDataFromContext(long long* srcForce, long long* d
         dstForce[base*3+index+PADDED_NUM_ATOMS*2] = srcForce[particle+PADDED_NUM_ATOMS*2];
         dstVel[base+index] = srcVel[particle];
         real4 posq = srcPos[particle];
-        dstPos[base+index] = make_mixed4(posq.x, posq.y, posq.z, posq.w);
+        dstPos[base+index].x = posq.x;
+        dstPos[base+index].y = posq.y;
+        dstPos[base+index].z = posq.z;
 
     }
 }
@@ -224,7 +228,10 @@ extern "C" __global__ void applyCellTranslations(mixed4* posq, real4* movedPos, 
         int index = order[particle];
         real4 p = movedPos[particle];
         mixed4 delta = make_mixed4(p.x, p.y, p.z, p.w)-posq[movedCopy*PADDED_NUM_ATOMS+index];
-        for (int copy = 0; copy < NUM_COPIES; copy++)
-            posq[copy*PADDED_NUM_ATOMS+index] += delta;
+        for (int copy = 0; copy < NUM_COPIES; copy++) {
+            posq[copy*PADDED_NUM_ATOMS+index].x += delta.x;
+            posq[copy*PADDED_NUM_ATOMS+index].y += delta.y;
+            posq[copy*PADDED_NUM_ATOMS+index].z += delta.z;
+        }
     }
 }
