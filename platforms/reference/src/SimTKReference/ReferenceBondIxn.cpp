@@ -62,8 +62,8 @@ ReferenceBondIxn::~ReferenceBondIxn() {
       
    --------------------------------------------------------------------------------------- */
      
-   void ReferenceBondIxn::calculateBondIxn(int* atomIndices, vector<Vec3>& atomCoordinates,
-                                           double* parameters, vector<Vec3>& forces,
+   void ReferenceBondIxn::calculateBondIxn(vector<int>& atomIndices, vector<Vec3>& atomCoordinates,
+                                           vector<double>& parameters, vector<Vec3>& forces,
                                            double* totalEnergy, double* energyParamDerivs) {
 }
  

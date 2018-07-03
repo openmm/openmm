@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2013 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2018 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -94,7 +94,7 @@ ReferenceCustomExternalIxn::~ReferenceCustomExternalIxn() {
 
 void ReferenceCustomExternalIxn::calculateForce(int atomIndex,
                                                 vector<Vec3>& atomCoordinates,
-                                                double* parameters,
+                                                vector<double>& parameters,
                                                 vector<Vec3>& forces,
                                                 double* energy) const {
 

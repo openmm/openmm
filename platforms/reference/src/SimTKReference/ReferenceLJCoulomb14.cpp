@@ -65,8 +65,8 @@ ReferenceLJCoulomb14::~ReferenceLJCoulomb14() {
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceLJCoulomb14::calculateBondIxn(int* atomIndices, vector<Vec3>& atomCoordinates,
-                                     double* parameters, vector<Vec3>& forces,
+void ReferenceLJCoulomb14::calculateBondIxn(vector<int>& atomIndices, vector<Vec3>& atomCoordinates,
+                                     vector<double>& parameters, vector<Vec3>& forces,
                                      double* totalEnergy, double* energyParamDerivs) {
    double deltaR[2][ReferenceForce::LastDeltaRIndex];
 

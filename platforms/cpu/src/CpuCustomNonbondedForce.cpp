@@ -120,15 +120,15 @@ void CpuCustomNonbondedForce::setPeriodic(Vec3* periodicBoxVectors) {
 }
 
 
-void CpuCustomNonbondedForce::calculatePairIxn(int numberOfAtoms, float* posq, vector<Vec3>& atomCoordinates, double** atomParameters,
-                                               double* fixedParameters, const map<string, double>& globalParameters,
-                                               vector<AlignedArray<float> >& threadForce, bool includeForce, bool includeEnergy, double& totalEnergy, double* energyParamDerivs) {
+void CpuCustomNonbondedForce::calculatePairIxn(int numberOfAtoms, float* posq, vector<Vec3>& atomCoordinates, vector<vector<double> >& atomParameters,
+                                               const map<string, double>& globalParameters, vector<AlignedArray<float> >& threadForce,
+                                               bool includeForce, bool includeEnergy, double& totalEnergy, double* energyParamDerivs) {
     // Record the parameters for the threads.
     
     this->numberOfAtoms = numberOfAtoms;
     this->posq = posq;
     this->atomCoordinates = &atomCoordinates[0];
-    this->atomParameters = atomParameters;
+    this->atomParameters = &atomParameters[0];
     this->globalParameters = &globalParameters;
     this->threadForce = &threadForce;
     this->includeForce = includeForce;

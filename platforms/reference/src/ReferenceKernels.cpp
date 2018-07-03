@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -88,36 +88,6 @@
 
 using namespace OpenMM;
 using namespace std;
-
-static int** allocateIntArray(int length, int width) {
-    int** array = new int*[length];
-    for (int i = 0; i < length; ++i)
-        array[i] = new int[width];
-    return array;
-}
-
-static double** allocateRealArray(int length, int width) {
-    double** array = new double*[length];
-    for (int i = 0; i < length; ++i)
-        array[i] = new double[width];
-    return array;
-}
-
-static void disposeIntArray(int** array, int size) {
-    if (array) {
-        for (int i = 0; i < size; ++i)
-            delete[] array[i];
-        delete[] array;
-    }
-}
-
-static void disposeRealArray(double** array, int size) {
-    if (array) {
-        for (int i = 0; i < size; ++i)
-            delete[] array[i];
-        delete[] array;
-    }
-}
 
 static vector<Vec3>& extractPositions(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
@@ -366,15 +336,10 @@ void ReferenceVirtualSitesKernel::computePositions(ContextImpl& context) {
     ReferenceVirtualSites::computePositions(context.getSystem(), positions);
 }
 
-ReferenceCalcHarmonicBondForceKernel::~ReferenceCalcHarmonicBondForceKernel() {
-    disposeIntArray(bondIndexArray, numBonds);
-    disposeRealArray(bondParamArray, numBonds);
-}
-
 void ReferenceCalcHarmonicBondForceKernel::initialize(const System& system, const HarmonicBondForce& force) {
     numBonds = force.getNumBonds();
-    bondIndexArray = allocateIntArray(numBonds, 2);
-    bondParamArray = allocateRealArray(numBonds, 2);
+    bondIndexArray.resize(numBonds, vector<int>(2));
+    bondParamArray.resize(numBonds, vector<double>(2));
     for (int i = 0; i < numBonds; ++i) {
         int particle1, particle2;
         double length, k;
@@ -418,11 +383,6 @@ void ReferenceCalcHarmonicBondForceKernel::copyParametersToContext(ContextImpl& 
     }
 }
 
-ReferenceCalcCustomBondForceKernel::~ReferenceCalcCustomBondForceKernel() {
-    disposeIntArray(bondIndexArray, numBonds);
-    disposeRealArray(bondParamArray, numBonds);
-}
-
 void ReferenceCalcCustomBondForceKernel::initialize(const System& system, const CustomBondForce& force) {
     numBonds = force.getNumBonds();
     int numParameters = force.getNumPerBondParameters();
@@ -430,8 +390,8 @@ void ReferenceCalcCustomBondForceKernel::initialize(const System& system, const 
 
     // Build the arrays.
 
-    bondIndexArray = allocateIntArray(numBonds, 2);
-    bondParamArray = allocateRealArray(numBonds, numParameters);
+    bondIndexArray.resize(numBonds, vector<int>(2));
+    bondParamArray.resize(numBonds, vector<double>(numParameters));
     vector<double> params;
     for (int i = 0; i < numBonds; ++i) {
         int particle1, particle2;
@@ -500,15 +460,10 @@ void ReferenceCalcCustomBondForceKernel::copyParametersToContext(ContextImpl& co
     }
 }
 
-ReferenceCalcHarmonicAngleForceKernel::~ReferenceCalcHarmonicAngleForceKernel() {
-    disposeIntArray(angleIndexArray, numAngles);
-    disposeRealArray(angleParamArray, numAngles);
-}
-
 void ReferenceCalcHarmonicAngleForceKernel::initialize(const System& system, const HarmonicAngleForce& force) {
     numAngles = force.getNumAngles();
-    angleIndexArray = allocateIntArray(numAngles, 3);
-    angleParamArray = allocateRealArray(numAngles, 2);
+    angleIndexArray.resize(numAngles, vector<int>(3));
+    angleParamArray.resize(numAngles, vector<double>(2));
     for (int i = 0; i < numAngles; ++i) {
         int particle1, particle2, particle3;
         double angle, k;
@@ -551,11 +506,6 @@ void ReferenceCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl&
     }
 }
 
-ReferenceCalcCustomAngleForceKernel::~ReferenceCalcCustomAngleForceKernel() {
-    disposeIntArray(angleIndexArray, numAngles);
-    disposeRealArray(angleParamArray, numAngles);
-}
-
 void ReferenceCalcCustomAngleForceKernel::initialize(const System& system, const CustomAngleForce& force) {
     numAngles = force.getNumAngles();
     int numParameters = force.getNumPerAngleParameters();
@@ -563,8 +513,8 @@ void ReferenceCalcCustomAngleForceKernel::initialize(const System& system, const
 
     // Build the arrays.
 
-    angleIndexArray = allocateIntArray(numAngles, 3);
-    angleParamArray = allocateRealArray(numAngles, numParameters);
+    angleIndexArray.resize(numAngles, vector<int>(3));
+    angleParamArray.resize(numAngles, vector<double>(numParameters));
     vector<double> params;
     for (int i = 0; i < numAngles; ++i) {
         int particle1, particle2, particle3;
@@ -634,15 +584,10 @@ void ReferenceCalcCustomAngleForceKernel::copyParametersToContext(ContextImpl& c
     }
 }
 
-ReferenceCalcPeriodicTorsionForceKernel::~ReferenceCalcPeriodicTorsionForceKernel() {
-    disposeIntArray(torsionIndexArray, numTorsions);
-    disposeRealArray(torsionParamArray, numTorsions);
-}
-
 void ReferenceCalcPeriodicTorsionForceKernel::initialize(const System& system, const PeriodicTorsionForce& force) {
     numTorsions = force.getNumTorsions();
-    torsionIndexArray = allocateIntArray(numTorsions, 4);
-    torsionParamArray = allocateRealArray(numTorsions, 3);
+    torsionIndexArray.resize(numTorsions, vector<int>(4));
+    torsionParamArray.resize(numTorsions, vector<double>(3));
     for (int i = 0; i < numTorsions; ++i) {
         int particle1, particle2, particle3, particle4, periodicity;
         double phase, k;
@@ -688,15 +633,10 @@ void ReferenceCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImp
     }
 }
 
-ReferenceCalcRBTorsionForceKernel::~ReferenceCalcRBTorsionForceKernel() {
-    disposeIntArray(torsionIndexArray, numTorsions);
-    disposeRealArray(torsionParamArray, numTorsions);
-}
-
 void ReferenceCalcRBTorsionForceKernel::initialize(const System& system, const RBTorsionForce& force) {
     numTorsions = force.getNumTorsions();
-    torsionIndexArray = allocateIntArray(numTorsions, 4);
-    torsionParamArray = allocateRealArray(numTorsions, 6);
+    torsionIndexArray.resize(numTorsions, vector<int>(4));
+    torsionParamArray.resize(numTorsions, vector<double>(6));
     for (int i = 0; i < numTorsions; ++i) {
         int particle1, particle2, particle3, particle4;
         double c0, c1, c2, c3, c4, c5;
@@ -820,11 +760,6 @@ void ReferenceCalcCMAPTorsionForceKernel::copyParametersToContext(ContextImpl& c
     }
 }
 
-ReferenceCalcCustomTorsionForceKernel::~ReferenceCalcCustomTorsionForceKernel() {
-    disposeIntArray(torsionIndexArray, numTorsions);
-    disposeRealArray(torsionParamArray, numTorsions);
-}
-
 void ReferenceCalcCustomTorsionForceKernel::initialize(const System& system, const CustomTorsionForce& force) {
     numTorsions = force.getNumTorsions();
     int numParameters = force.getNumPerTorsionParameters();
@@ -832,8 +767,8 @@ void ReferenceCalcCustomTorsionForceKernel::initialize(const System& system, con
 
     // Build the arrays.
 
-    torsionIndexArray = allocateIntArray(numTorsions, 4);
-    torsionParamArray = allocateRealArray(numTorsions, numParameters);
+    torsionIndexArray.resize(numTorsions, vector<int>(4));
+    torsionParamArray.resize(numTorsions, vector<double>(numParameters));
     vector<double> params;
     for (int i = 0; i < numTorsions; ++i) {
         int particle1, particle2, particle3, particle4;
@@ -905,9 +840,6 @@ void ReferenceCalcCustomTorsionForceKernel::copyParametersToContext(ContextImpl&
 }
 
 ReferenceCalcNonbondedForceKernel::~ReferenceCalcNonbondedForceKernel() {
-    disposeRealArray(particleParamArray, numParticles);
-    disposeIntArray(bonded14IndexArray, num14);
-    disposeRealArray(bonded14ParamArray, num14);
     if (neighborList != NULL)
         delete neighborList;
 }
@@ -932,9 +864,9 @@ void ReferenceCalcNonbondedForceKernel::initialize(const System& system, const N
     // Build the arrays.
 
     num14 = nb14s.size();
-    bonded14IndexArray = allocateIntArray(num14, 2);
-    bonded14ParamArray = allocateRealArray(num14, 3);
-    particleParamArray = allocateRealArray(numParticles, 3);
+    bonded14IndexArray.resize(num14, vector<int>(2));
+    bonded14ParamArray.resize(num14, vector<double>(3));
+    particleParamArray.resize(numParticles, vector<double>(3));
     for (int i = 0; i < numParticles; ++i) {
         double charge, radius, depth;
         force.getParticleParameters(i, charge, radius, depth);
@@ -1019,7 +951,7 @@ double ReferenceCalcNonbondedForceKernel::execute(ContextImpl& context, bool inc
     }
     if (useSwitchingFunction)
         clj.setUseSwitchingFunction(switchingDistance);
-    clj.calculatePairIxn(numParticles, posData, particleParamArray, exclusions, 0, forceData, 0, includeEnergy ? &energy : NULL, includeDirect, includeReciprocal);
+    clj.calculatePairIxn(numParticles, posData, particleParamArray, exclusions, forceData, includeEnergy ? &energy : NULL, includeDirect, includeReciprocal);
     if (includeDirect) {
         ReferenceBondForce refBondForce;
         ReferenceLJCoulomb14 nonbonded14;
@@ -1092,7 +1024,6 @@ void ReferenceCalcNonbondedForceKernel::getLJPMEParameters(double& alpha, int& n
 }
 
 ReferenceCalcCustomNonbondedForceKernel::~ReferenceCalcCustomNonbondedForceKernel() {
-    disposeRealArray(particleParamArray, numParticles);
     if (neighborList != NULL)
         delete neighborList;
     if (forceCopy != NULL)
@@ -1115,13 +1046,9 @@ void ReferenceCalcCustomNonbondedForceKernel::initialize(const System& system, c
     // Build the arrays.
 
     int numParameters = force.getNumPerParticleParameters();
-    particleParamArray = allocateRealArray(numParticles, numParameters);
-    for (int i = 0; i < numParticles; ++i) {
-        vector<double> parameters;
-        force.getParticleParameters(i, parameters);
-        for (int j = 0; j < numParameters; j++)
-            particleParamArray[i][j] = parameters[j];
-    }
+    particleParamArray.resize(numParticles);
+    for (int i = 0; i < numParticles; ++i)
+        force.getParticleParameters(i, particleParamArray[i]);
     nonbondedMethod = CalcCustomNonbondedForceKernel::NonbondedMethod(force.getNonbondedMethod());
     nonbondedCutoff = force.getCutoffDistance();
     if (nonbondedMethod == NoCutoff) {
@@ -1219,7 +1146,7 @@ double ReferenceCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bo
     if (useSwitchingFunction)
         ixn.setUseSwitchingFunction(switchingDistance);
     vector<double> energyParamDerivValues(energyParamDerivNames.size()+1, 0.0);
-    ixn.calculatePairIxn(numParticles, posData, particleParamArray, exclusions, 0, globalParamValues, forceData, 0, includeEnergy ? &energy : NULL, &energyParamDerivValues[0]);
+    ixn.calculatePairIxn(numParticles, posData, particleParamArray, exclusions, globalParamValues, forceData, includeEnergy ? &energy : NULL, &energyParamDerivValues[0]);
     map<string, double>& energyParamDerivs = extractEnergyParameterDerivatives(context);
     for (int i = 0; i < energyParamDerivNames.size(); i++)
         energyParamDerivs[energyParamDerivNames[i]] += energyParamDerivValues[i];
@@ -1323,7 +1250,6 @@ void ReferenceCalcGBSAOBCForceKernel::copyParametersToContext(ContextImpl& conte
 }
 
 ReferenceCalcCustomGBForceKernel::~ReferenceCalcCustomGBForceKernel() {
-    disposeRealArray(particleParamArray, numParticles);
     if (neighborList != NULL)
         delete neighborList;
 }
@@ -1356,13 +1282,9 @@ void ReferenceCalcCustomGBForceKernel::initialize(const System& system, const Cu
     // Build the arrays.
 
     int numPerParticleParameters = force.getNumPerParticleParameters();
-    particleParamArray = allocateRealArray(numParticles, numPerParticleParameters);
-    for (int i = 0; i < numParticles; ++i) {
-        vector<double> parameters;
-        force.getParticleParameters(i, parameters);
-        for (int j = 0; j < numPerParticleParameters; j++)
-            particleParamArray[i][j] = parameters[j];
-    }
+    particleParamArray.resize(numParticles);
+    for (int i = 0; i < numParticles; ++i)
+        force.getParticleParameters(i, particleParamArray[i]);
     for (int i = 0; i < numPerParticleParameters; i++)
         particleParameterNames.push_back(force.getPerParticleParameterName(i));
     for (int i = 0; i < force.getNumGlobalParameters(); i++)
@@ -1548,10 +1470,6 @@ Lepton::CustomFunction* ReferenceCalcCustomExternalForceKernel::PeriodicDistance
     return new PeriodicDistanceFunction(boxVectorHandle);
 }
 
-ReferenceCalcCustomExternalForceKernel::~ReferenceCalcCustomExternalForceKernel() {
-    disposeRealArray(particleParamArray, numParticles);
-}
-
 void ReferenceCalcCustomExternalForceKernel::initialize(const System& system, const CustomExternalForce& force) {
     numParticles = force.getNumParticles();
     int numParameters = force.getNumPerParticleParameters();
@@ -1559,13 +1477,9 @@ void ReferenceCalcCustomExternalForceKernel::initialize(const System& system, co
     // Build the arrays.
 
     particles.resize(numParticles);
-    particleParamArray = allocateRealArray(numParticles, numParameters);
-    vector<double> params;
-    for (int i = 0; i < numParticles; ++i) {
-        force.getParticleParameters(i, particles[i], params);
-        for (int j = 0; j < numParameters; j++)
-            particleParamArray[i][j] = params[j];
-    }
+    particleParamArray.resize(numParticles);
+    for (int i = 0; i < numParticles; ++i)
+        force.getParticleParameters(i, particles[i], particleParamArray[i]);
 
     // Parse the expression used to calculate the force.
 
@@ -1624,8 +1538,6 @@ void ReferenceCalcCustomExternalForceKernel::copyParametersToContext(ContextImpl
 }
 
 ReferenceCalcCustomHbondForceKernel::~ReferenceCalcCustomHbondForceKernel() {
-    disposeRealArray(donorParamArray, numDonors);
-    disposeRealArray(acceptorParamArray, numAcceptors);
     if (ixn != NULL)
         delete ixn;
 }
@@ -1648,29 +1560,23 @@ void ReferenceCalcCustomHbondForceKernel::initialize(const System& system, const
 
     vector<vector<int> > donorParticles(numDonors);
     int numDonorParameters = force.getNumPerDonorParameters();
-    donorParamArray = allocateRealArray(numDonors, numDonorParameters);
+    donorParamArray.resize(numDonors);
     for (int i = 0; i < numDonors; ++i) {
-        vector<double> parameters;
         int d1, d2, d3;
-        force.getDonorParameters(i, d1, d2, d3, parameters);
+        force.getDonorParameters(i, d1, d2, d3, donorParamArray[i]);
         donorParticles[i].push_back(d1);
         donorParticles[i].push_back(d2);
         donorParticles[i].push_back(d3);
-        for (int j = 0; j < numDonorParameters; j++)
-            donorParamArray[i][j] = parameters[j];
     }
     vector<vector<int> > acceptorParticles(numAcceptors);
     int numAcceptorParameters = force.getNumPerAcceptorParameters();
-    acceptorParamArray = allocateRealArray(numAcceptors, numAcceptorParameters);
+    acceptorParamArray.resize(numAcceptors);
     for (int i = 0; i < numAcceptors; ++i) {
-        vector<double> parameters;
         int a1, a2, a3;
-        force.getAcceptorParameters(i, a1, a2, a3, parameters);
+        force.getAcceptorParameters(i, a1, a2, a3, acceptorParamArray[i]);
         acceptorParticles[i].push_back(a1);
         acceptorParticles[i].push_back(a2);
         acceptorParticles[i].push_back(a3);
-        for (int j = 0; j < numAcceptorParameters; j++)
-            acceptorParamArray[i][j] = parameters[j];
     }
     NonbondedMethod nonbondedMethod = CalcCustomHbondForceKernel::NonbondedMethod(force.getNonbondedMethod());
     nonbondedCutoff = force.getCutoffDistance();
@@ -1751,7 +1657,6 @@ void ReferenceCalcCustomHbondForceKernel::copyParametersToContext(ContextImpl& c
 }
 
 ReferenceCalcCustomCentroidBondForceKernel::~ReferenceCalcCustomCentroidBondForceKernel() {
-    disposeRealArray(bondParamArray, numBonds);
     if (ixn != NULL)
         delete ixn;
 }
@@ -1771,13 +1676,9 @@ void ReferenceCalcCustomCentroidBondForceKernel::initialize(const System& system
     numBonds = force.getNumBonds();
     vector<vector<int> > bondGroups(numBonds);
     int numBondParameters = force.getNumPerBondParameters();
-    bondParamArray = allocateRealArray(numBonds, numBondParameters);
-    for (int i = 0; i < numBonds; ++i) {
-        vector<double> parameters;
-        force.getBondParameters(i, bondGroups[i], parameters);
-        for (int j = 0; j < numBondParameters; j++)
-            bondParamArray[i][j] = parameters[j];
-    }
+    bondParamArray.resize(numBonds);
+    for (int i = 0; i < numBonds; ++i)
+        force.getBondParameters(i, bondGroups[i], bondParamArray[i]);
 
     // Create custom functions for the tabulated functions.
 
@@ -1848,7 +1749,6 @@ void ReferenceCalcCustomCentroidBondForceKernel::copyParametersToContext(Context
 }
 
 ReferenceCalcCustomCompoundBondForceKernel::~ReferenceCalcCustomCompoundBondForceKernel() {
-    disposeRealArray(bondParamArray, numBonds);
     if (ixn != NULL)
         delete ixn;
 }
@@ -1861,13 +1761,9 @@ void ReferenceCalcCustomCompoundBondForceKernel::initialize(const System& system
     numBonds = force.getNumBonds();
     vector<vector<int> > bondParticles(numBonds);
     int numBondParameters = force.getNumPerBondParameters();
-    bondParamArray = allocateRealArray(numBonds, numBondParameters);
-    for (int i = 0; i < numBonds; ++i) {
-        vector<double> parameters;
-        force.getBondParameters(i, bondParticles[i], parameters);
-        for (int j = 0; j < numBondParameters; j++)
-            bondParamArray[i][j] = parameters[j];
-    }
+    bondParamArray.resize(numBonds);
+    for (int i = 0; i < numBonds; ++i)
+        force.getBondParameters(i, bondParticles[i], bondParamArray[i]);
 
     // Create custom functions for the tabulated functions.
 
@@ -1938,7 +1834,6 @@ void ReferenceCalcCustomCompoundBondForceKernel::copyParametersToContext(Context
 }
 
 ReferenceCalcCustomManyParticleForceKernel::~ReferenceCalcCustomManyParticleForceKernel() {
-    disposeRealArray(particleParamArray, numParticles);
     if (ixn != NULL)
         delete ixn;
 }
@@ -1949,13 +1844,10 @@ void ReferenceCalcCustomManyParticleForceKernel::initialize(const System& system
 
     numParticles = system.getNumParticles();
     int numParticleParameters = force.getNumPerParticleParameters();
-    particleParamArray = allocateRealArray(numParticles, numParticleParameters);
+    particleParamArray.resize(numParticles);
     for (int i = 0; i < numParticles; ++i) {
-        vector<double> parameters;
         int type;
-        force.getParticleParameters(i, parameters, type);
-        for (int j = 0; j < numParticleParameters; j++)
-            particleParamArray[i][j] = parameters[j];
+        force.getParticleParameters(i, particleParamArray[i], type);
     }
     for (int i = 0; i < force.getNumGlobalParameters(); i++)
         globalParameterNames.push_back(force.getGlobalParameterName(i));

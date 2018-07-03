@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2013 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2018 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -62,14 +62,13 @@ class ReferenceLJCoulombIxn {
          @param atomCoordinates  atom coordinates
          @param atomParameters   atom parameters (charges, c6, c12, ...)     atomParameters[atomIndex][paramterIndex]
          @param forces           force array (forces added)
-         @param energyByAtom     atom energy
          @param totalEnergy      total energy
             
          --------------------------------------------------------------------------------------- */
           
       void calculateOneIxn(int atom1, int atom2, std::vector<OpenMM::Vec3>& atomCoordinates,
-                           double** atomParameters, std::vector<OpenMM::Vec3>& forces,
-                           double* energyByAtom, double* totalEnergy) const;
+                           std::vector<std::vector<double> >& atomParameters, std::vector<OpenMM::Vec3>& forces,
+                           double* totalEnergy) const;
 
 
    public:
@@ -169,9 +168,7 @@ class ReferenceLJCoulombIxn {
          @param atomParameters   atom parameters (charges, c6, c12, ...)     atomParameters[atomIndex][paramterIndex]
          @param exclusions       atom exclusion indices
                                  exclusions[atomIndex] contains the list of exclusions for that atom
-         @param fixedParameters  non atom parameters (not currently used)
          @param forces           force array (forces added)
-         @param energyByAtom     atom energy
          @param totalEnergy      total energy
          @param includeDirect      true if direct space interactions should be included
          @param includeReciprocal  true if reciprocal space interactions should be included
@@ -179,9 +176,8 @@ class ReferenceLJCoulombIxn {
          --------------------------------------------------------------------------------------- */
           
       void calculatePairIxn(int numberOfAtoms, std::vector<OpenMM::Vec3>& atomCoordinates,
-                            double** atomParameters, std::vector<std::set<int> >& exclusions,
-                            double* fixedParameters, std::vector<OpenMM::Vec3>& forces,
-                            double* energyByAtom, double* totalEnergy, bool includeDirect, bool includeReciprocal) const;
+                            std::vector<std::vector<double> >& atomParameters, std::vector<std::set<int> >& exclusions,
+                            std::vector<OpenMM::Vec3>& forces, double* totalEnergy, bool includeDirect, bool includeReciprocal) const;
 
 private:
       /**---------------------------------------------------------------------------------------
@@ -193,9 +189,7 @@ private:
          @param atomParameters   atom parameters (charges, c6, c12, ...)     atomParameters[atomIndex][paramterIndex]
          @param exclusions       atom exclusion indices
                                  exclusions[atomIndex] contains the list of exclusions for that atom
-         @param fixedParameters  non atom parameters (not currently used)
          @param forces           force array (forces added)
-         @param energyByAtom     atom energy
          @param totalEnergy      total energy
          @param includeDirect      true if direct space interactions should be included
          @param includeReciprocal  true if reciprocal space interactions should be included
@@ -203,9 +197,8 @@ private:
          --------------------------------------------------------------------------------------- */
           
       void calculateEwaldIxn(int numberOfAtoms, std::vector<OpenMM::Vec3>& atomCoordinates,
-                            double** atomParameters, std::vector<std::set<int> >& exclusions,
-                            double* fixedParameters, std::vector<OpenMM::Vec3>& forces,
-                            double* energyByAtom, double* totalEnergy, bool includeDirect, bool includeReciprocal) const;
+                             std::vector<std::vector<double> >& atomParameters, std::vector<std::set<int> >& exclusions,
+                             std::vector<OpenMM::Vec3>& forces, double* totalEnergy, bool includeDirect, bool includeReciprocal) const;
 };
 
 } // namespace OpenMM

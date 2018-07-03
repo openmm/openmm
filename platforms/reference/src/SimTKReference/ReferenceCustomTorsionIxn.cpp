@@ -81,9 +81,9 @@ void ReferenceCustomTorsionIxn::setPeriodic(OpenMM::Vec3* vectors) {
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceCustomTorsionIxn::calculateBondIxn(int* atomIndices,
+void ReferenceCustomTorsionIxn::calculateBondIxn(vector<int>& atomIndices,
                                                 vector<Vec3>& atomCoordinates,
-                                                double* parameters,
+                                                vector<double>& parameters,
                                                 vector<Vec3>& forces,
                                                 double* totalEnergy, double* energyParamDerivs) {
    double deltaR[3][ReferenceForce::LastDeltaRIndex];

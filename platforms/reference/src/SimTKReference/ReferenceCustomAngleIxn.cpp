@@ -81,9 +81,9 @@ void ReferenceCustomAngleIxn::setPeriodic(OpenMM::Vec3* vectors) {
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceCustomAngleIxn::calculateBondIxn(int* atomIndices,
+void ReferenceCustomAngleIxn::calculateBondIxn(vector<int>& atomIndices,
                                                vector<Vec3>& atomCoordinates,
-                                               double* parameters,
+                                               vector<double>& parameters,
                                                vector<Vec3>& forces,
                                                double* totalEnergy, double* energyParamDerivs) {
    double deltaR[2][ReferenceForce::LastDeltaRIndex];

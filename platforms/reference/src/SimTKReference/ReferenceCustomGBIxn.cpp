@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2016 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2018 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -150,7 +150,7 @@ ReferenceCustomGBIxn::~ReferenceCustomGBIxn() {
     periodicBoxVectors[2] = vectors[2];
   }
 
-void ReferenceCustomGBIxn::calculateIxn(int numberOfAtoms, vector<Vec3>& atomCoordinates, double** atomParameters,
+void ReferenceCustomGBIxn::calculateIxn(int numberOfAtoms, vector<Vec3>& atomCoordinates, vector<vector<double> >& atomParameters,
                                            const vector<set<int> >& exclusions, map<string, double>& globalParameters, vector<Vec3>& forces,
                                            double* totalEnergy, double* energyParamDerivs) {
     for (auto& param : globalParameters)
@@ -193,7 +193,7 @@ void ReferenceCustomGBIxn::calculateIxn(int numberOfAtoms, vector<Vec3>& atomCoo
     calculateChainRuleForces(numberOfAtoms, atomCoordinates, atomParameters, exclusions, forces, energyParamDerivs);
 }
 
-void ReferenceCustomGBIxn::calculateSingleParticleValue(int index, int numAtoms, vector<Vec3>& atomCoordinates, double** atomParameters) {
+void ReferenceCustomGBIxn::calculateSingleParticleValue(int index, int numAtoms, vector<Vec3>& atomCoordinates, vector<vector<double> >& atomParameters) {
     values[index].resize(numAtoms);
     for (int i = 0; i < numAtoms; i++) {
         expressionSet.setVariable(xIndex, atomCoordinates[i][0]);
@@ -217,7 +217,7 @@ void ReferenceCustomGBIxn::calculateSingleParticleValue(int index, int numAtoms,
     }
 }
 
-void ReferenceCustomGBIxn::calculateParticlePairValue(int index, int numAtoms, vector<Vec3>& atomCoordinates, double** atomParameters,
+void ReferenceCustomGBIxn::calculateParticlePairValue(int index, int numAtoms, vector<Vec3>& atomCoordinates, vector<vector<double> >& atomParameters,
         const vector<set<int> >& exclusions, bool useExclusions) {
     values[index].resize(numAtoms);
     for (int i = 0; i < numAtoms; i++)
@@ -246,7 +246,7 @@ void ReferenceCustomGBIxn::calculateParticlePairValue(int index, int numAtoms, v
     }
 }
 
-void ReferenceCustomGBIxn::calculateOnePairValue(int index, int atom1, int atom2, vector<Vec3>& atomCoordinates, double** atomParameters) {
+void ReferenceCustomGBIxn::calculateOnePairValue(int index, int atom1, int atom2, vector<Vec3>& atomCoordinates, vector<vector<double> >& atomParameters) {
     double deltaR[ReferenceForce::LastDeltaRIndex];
     if (periodic)
         ReferenceForce::getDeltaRPeriodic(atomCoordinates[atom2], atomCoordinates[atom1], periodicBoxVectors, deltaR);
@@ -273,7 +273,7 @@ void ReferenceCustomGBIxn::calculateOnePairValue(int index, int atom1, int atom2
 }
 
 void ReferenceCustomGBIxn::calculateSingleParticleEnergyTerm(int index, int numAtoms, vector<Vec3>& atomCoordinates,
-        double** atomParameters, vector<Vec3>& forces, double* totalEnergy, double* energyParamDerivs) {
+        vector<vector<double> >& atomParameters, vector<Vec3>& forces, double* totalEnergy, double* energyParamDerivs) {
     for (int i = 0; i < numAtoms; i++) {
         expressionSet.setVariable(xIndex, atomCoordinates[i][0]);
         expressionSet.setVariable(yIndex, atomCoordinates[i][1]);
@@ -300,7 +300,7 @@ void ReferenceCustomGBIxn::calculateSingleParticleEnergyTerm(int index, int numA
     }
 }
 
-void ReferenceCustomGBIxn::calculateParticlePairEnergyTerm(int index, int numAtoms, vector<Vec3>& atomCoordinates, double** atomParameters,
+void ReferenceCustomGBIxn::calculateParticlePairEnergyTerm(int index, int numAtoms, vector<Vec3>& atomCoordinates, vector<vector<double> >& atomParameters,
         const vector<set<int> >& exclusions, bool useExclusions, vector<Vec3>& forces, double* totalEnergy, double* energyParamDerivs) {
     if (cutoff) {
         // Loop over all pairs in the neighbor list.
@@ -324,7 +324,7 @@ void ReferenceCustomGBIxn::calculateParticlePairEnergyTerm(int index, int numAto
     }
 }
 
-void ReferenceCustomGBIxn::calculateOnePairEnergyTerm(int index, int atom1, int atom2, vector<Vec3>& atomCoordinates, double** atomParameters,
+void ReferenceCustomGBIxn::calculateOnePairEnergyTerm(int index, int atom1, int atom2, vector<Vec3>& atomCoordinates, vector<vector<double> >& atomParameters,
         vector<Vec3>& forces, double* totalEnergy, double* energyParamDerivs) {
     // Compute the displacement.
 
@@ -370,7 +370,7 @@ void ReferenceCustomGBIxn::calculateOnePairEnergyTerm(int index, int atom1, int 
         energyParamDerivs[i] += energyParamDerivExpressions[index][i].evaluate();
 }
 
-void ReferenceCustomGBIxn::calculateChainRuleForces(int numAtoms, vector<Vec3>& atomCoordinates, double** atomParameters,
+void ReferenceCustomGBIxn::calculateChainRuleForces(int numAtoms, vector<Vec3>& atomCoordinates, vector<vector<double> >& atomParameters,
         const vector<set<int> >& exclusions, vector<Vec3>& forces, double* energyParamDerivs) {
     if (cutoff) {
         // Loop over all pairs in the neighbor list.
@@ -429,7 +429,7 @@ void ReferenceCustomGBIxn::calculateChainRuleForces(int numAtoms, vector<Vec3>& 
                 energyParamDerivs[k] += dEdV[j][i]*dValuedParam[j][k][i];
 }
 
-void ReferenceCustomGBIxn::calculateOnePairChainRule(int atom1, int atom2, vector<Vec3>& atomCoordinates, double** atomParameters,
+void ReferenceCustomGBIxn::calculateOnePairChainRule(int atom1, int atom2, vector<Vec3>& atomCoordinates, vector<vector<double> >& atomParameters,
         vector<Vec3>& forces, bool isExcluded) {
     // Compute the displacement.
 
