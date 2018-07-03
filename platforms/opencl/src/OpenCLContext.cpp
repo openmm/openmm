@@ -769,18 +769,10 @@ double OpenCLContext::reduceEnergy() {
 void OpenCLContext::setCharges(const vector<double>& charges) {
     if (!chargeBuffer.isInitialized())
         chargeBuffer.initialize(*this, numAtoms, useDoublePrecision ? sizeof(double) : sizeof(float), "chargeBuffer");
-    if (getUseDoublePrecision()) {
-        vector<double> c(numAtoms);
-        for (int i = 0; i < numAtoms; i++)
-            c[i] = charges[i];
-        chargeBuffer.upload(c);
-    }
-    else {
-        vector<float> c(numAtoms);
-        for (int i = 0; i < numAtoms; i++)
-            c[i] = (float) charges[i];
-        chargeBuffer.upload(c);
-    }
+    vector<double> c(numAtoms);
+    for (int i = 0; i < numAtoms; i++)
+        c[i] = charges[i];
+    chargeBuffer.upload(c, true, true);
     setChargesKernel.setArg<cl::Buffer>(0, chargeBuffer.getDeviceBuffer());
     setChargesKernel.setArg<cl::Buffer>(1, posq.getDeviceBuffer());
     setChargesKernel.setArg<cl::Buffer>(2, atomIndexDevice.getDeviceBuffer());
