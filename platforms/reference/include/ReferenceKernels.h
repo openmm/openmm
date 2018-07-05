@@ -38,6 +38,8 @@
 #include "ReferenceNeighborList.h"
 #include "lepton/CompiledExpression.h"
 #include "lepton/CustomFunction.h"
+#include <array>
+#include <utility>
 
 namespace OpenMM {
 
@@ -608,9 +610,12 @@ public:
      */
     void getLJPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
 private:
+    void computeParameters(ContextImpl& context);
     int numParticles, num14;
     std::vector<std::vector<int> >bonded14IndexArray;
     std::vector<std::vector<double> > particleParamArray, bonded14ParamArray;
+    std::vector<std::array<double, 3> > baseParticleParams, baseExceptionParams;
+    std::map<std::pair<std::string, int>, std::array<double, 3> > particleParamOffsets, exceptionParamOffsets;
     double nonbondedCutoff, switchingDistance, rfDielectric, ewaldAlpha, ewaldDispersionAlpha, dispersionCoefficient;
     int kmax[3], gridSize[3], dispersionGridSize[3];
     bool useSwitchingFunction;

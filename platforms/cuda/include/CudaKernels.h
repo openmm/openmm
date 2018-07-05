@@ -609,7 +609,7 @@ private:
 class CudaCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 public:
     CudaCalcNonbondedForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcNonbondedForceKernel(name, platform),
-            cu(cu), hasInitializedFFT(false), sort(NULL), dispersionFft(NULL), fft(NULL), pmeio(NULL) {
+            cu(cu), hasInitializedFFT(false), sort(NULL), dispersionFft(NULL), fft(NULL), pmeio(NULL), usePmeStream(false) {
     }
     ~CudaCalcNonbondedForceKernel();
     /**
@@ -678,6 +678,13 @@ private:
     CudaArray charges;
     CudaArray sigmaEpsilon;
     CudaArray exceptionParams;
+    CudaArray baseParticleParams;
+    CudaArray baseExceptionParams;
+    CudaArray particleParamOffsets;
+    CudaArray exceptionParamOffsets;
+    CudaArray particleOffsetIndices;
+    CudaArray exceptionOffsetIndices;
+    CudaArray globalParams;
     CudaArray cosSinSums;
     CudaArray directPmeGrid;
     CudaArray reciprocalPmeGrid;
@@ -701,6 +708,7 @@ private:
     CudaFFT3D* dispersionFft;
     cufftHandle dispersionFftForward;
     cufftHandle dispersionFftBackward;
+    CUfunction computeParamsKernel;
     CUfunction ewaldSumsKernel;
     CUfunction ewaldForcesKernel;
     CUfunction pmeGridIndexKernel;
@@ -716,11 +724,13 @@ private:
     CUfunction pmeInterpolateForceKernel;
     CUfunction pmeInterpolateDispersionForceKernel;
     std::vector<std::pair<int, int> > exceptionAtoms;
+    std::vector<std::string> paramNames;
+    std::vector<double> paramValues;
     double ewaldSelfEnergy, dispersionCoefficient, alpha, dispersionAlpha;
     int interpolateForceThreads;
     int gridSizeX, gridSizeY, gridSizeZ;
     int dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ;
-    bool hasCoulomb, hasLJ, usePmeStream, useCudaFFT, doLJPME, usePosqCharges;
+    bool hasCoulomb, hasLJ, usePmeStream, useCudaFFT, doLJPME, usePosqCharges, recomputeParams, hasOffsets;
     NonbondedMethod nonbondedMethod;
     static const int PmeOrder = 5;
 };

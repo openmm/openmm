@@ -867,23 +867,30 @@ void ReferenceCalcNonbondedForceKernel::initialize(const System& system, const N
     bonded14IndexArray.resize(num14, vector<int>(2));
     bonded14ParamArray.resize(num14, vector<double>(3));
     particleParamArray.resize(numParticles, vector<double>(3));
-    for (int i = 0; i < numParticles; ++i) {
-        double charge, radius, depth;
-        force.getParticleParameters(i, charge, radius, depth);
-        particleParamArray[i][0] = 0.5*radius;
-        particleParamArray[i][1] = 2.0*sqrt(depth);
-        particleParamArray[i][2] = charge;
-    }
+    baseParticleParams.resize(numParticles);
+    baseExceptionParams.resize(num14);
+    for (int i = 0; i < numParticles; ++i)
+       force.getParticleParameters(i, baseParticleParams[i][0], baseParticleParams[i][1], baseParticleParams[i][2]);
     this->exclusions = exclusions;
     for (int i = 0; i < num14; ++i) {
         int particle1, particle2;
-        double charge, radius, depth;
-        force.getExceptionParameters(nb14s[i], particle1, particle2, charge, radius, depth);
+        force.getExceptionParameters(nb14s[i], particle1, particle2, baseExceptionParams[i][0], baseExceptionParams[i][1], baseExceptionParams[i][2]);
         bonded14IndexArray[i][0] = particle1;
         bonded14IndexArray[i][1] = particle2;
-        bonded14ParamArray[i][0] = radius;
-        bonded14ParamArray[i][1] = 4.0*depth;
-        bonded14ParamArray[i][2] = charge;
+    }
+    for (int i = 0; i < force.getNumParticleParameterOffsets(); i++) {
+        string param;
+        int particle;
+        double charge, sigma, epsilon;
+        force.getParticleParameterOffset(i, param, particle, charge, sigma, epsilon);
+        particleParamOffsets[make_pair(param, particle)] = {charge, sigma, epsilon};
+    }
+    for (int i = 0; i < force.getNumExceptionParameterOffsets(); i++) {
+        string param;
+        int exception;
+        double charge, sigma, epsilon;
+        force.getExceptionParameterOffset(i, param, exception, charge, sigma, epsilon);
+        exceptionParamOffsets[make_pair(param, exception)] = {charge, sigma, epsilon};
     }
     nonbondedMethod = CalcNonbondedForceKernel::NonbondedMethod(force.getNonbondedMethod());
     nonbondedCutoff = force.getCutoffDistance();
@@ -922,6 +929,7 @@ void ReferenceCalcNonbondedForceKernel::initialize(const System& system, const N
 }
 
 double ReferenceCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy, bool includeDirect, bool includeReciprocal) {
+    computeParameters(context);
     vector<Vec3>& posData = extractPositions(context);
     vector<Vec3>& forceData = extractForces(context);
     double energy = 0;
@@ -980,22 +988,13 @@ void ReferenceCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& con
 
     // Record the values.
 
-    for (int i = 0; i < numParticles; ++i) {
-        double charge, radius, depth;
-        force.getParticleParameters(i, charge, radius, depth);
-        particleParamArray[i][0] = 0.5*radius;
-        particleParamArray[i][1] = 2.0*sqrt(depth);
-        particleParamArray[i][2] = charge;
-    }
+    for (int i = 0; i < numParticles; ++i)
+        force.getParticleParameters(i, baseParticleParams[i][0], baseParticleParams[i][1], baseParticleParams[i][2]);
     for (int i = 0; i < num14; ++i) {
         int particle1, particle2;
-        double charge, radius, depth;
-        force.getExceptionParameters(nb14s[i], particle1, particle2, charge, radius, depth);
+        force.getExceptionParameters(nb14s[i], particle1, particle2, baseExceptionParams[i][0], baseExceptionParams[i][1], baseExceptionParams[i][2]);
         bonded14IndexArray[i][0] = particle1;
         bonded14IndexArray[i][1] = particle2;
-        bonded14ParamArray[i][0] = radius;
-        bonded14ParamArray[i][1] = 4.0*depth;
-        bonded14ParamArray[i][2] = charge;
     }
     
     // Recompute the coefficient for the dispersion correction.
@@ -1021,6 +1020,52 @@ void ReferenceCalcNonbondedForceKernel::getLJPMEParameters(double& alpha, int& n
     nx = dispersionGridSize[0];
     ny = dispersionGridSize[1];
     nz = dispersionGridSize[2];
+}
+
+void ReferenceCalcNonbondedForceKernel::computeParameters(ContextImpl& context) {
+    // Compute particle parameters.
+
+    vector<double> charges(numParticles), sigmas(numParticles), epsilons(numParticles);
+    for (int i = 0; i < numParticles; i++) {
+        charges[i] = baseParticleParams[i][0];
+        sigmas[i] = baseParticleParams[i][1];
+        epsilons[i] = baseParticleParams[i][2];
+    }
+    for (auto& offset : particleParamOffsets) {
+        double value = context.getParameter(offset.first.first);
+        int index = offset.first.second;
+        charges[index] += value*offset.second[0];
+        sigmas[index] += value*offset.second[1];
+        epsilons[index] += value*offset.second[2];
+    }
+    for (int i = 0; i < numParticles; i++) {
+        particleParamArray[i][0] = 0.5*sigmas[i];
+        particleParamArray[i][1] = 2.0*sqrt(epsilons[i]);
+        particleParamArray[i][2] = charges[i];
+    }
+
+    // Compute exception parameters.
+
+    charges.resize(num14);
+    sigmas.resize(num14);
+    epsilons.resize(num14);
+    for (int i = 0; i < num14; i++) {
+        charges[i] = baseExceptionParams[i][0];
+        sigmas[i] = baseExceptionParams[i][1];
+        epsilons[i] = baseExceptionParams[i][2];
+    }
+    for (auto& offset : exceptionParamOffsets) {
+        double value = context.getParameter(offset.first.first);
+        int index = offset.first.second;
+        charges[index] += value*offset.second[0];
+        sigmas[index] += value*offset.second[1];
+        epsilons[index] += value*offset.second[2];
+    }
+    for (int i = 0; i < num14; i++) {
+        bonded14ParamArray[i][0] = sigmas[i];
+        bonded14ParamArray[i][1] = 4.0*epsilons[i];
+        bonded14ParamArray[i][2] = charges[i];
+    }
 }
 
 ReferenceCalcCustomNonbondedForceKernel::~ReferenceCalcCustomNonbondedForceKernel() {

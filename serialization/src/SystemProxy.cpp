@@ -57,20 +57,21 @@ void SystemProxy::serialize(const void* object, SerializationNode& node) const {
     for (int i = 0; i < system.getNumParticles(); i++) {
         SerializationNode& particle = particles.createChildNode("Particle").setDoubleProperty("mass", system.getParticleMass(i));
         if (system.isVirtualSite(i)) {
-            if (typeid(system.getVirtualSite(i)) == typeid(TwoParticleAverageSite)) {
-                const TwoParticleAverageSite& site = dynamic_cast<const TwoParticleAverageSite&>(system.getVirtualSite(i));
+            const VirtualSite& vsite = system.getVirtualSite(i);
+            if (typeid(vsite) == typeid(TwoParticleAverageSite)) {
+                const TwoParticleAverageSite& site = dynamic_cast<const TwoParticleAverageSite&>(vsite);
                 particle.createChildNode("TwoParticleAverageSite").setIntProperty("p1", site.getParticle(0)).setIntProperty("p2", site.getParticle(1)).setDoubleProperty("w1", site.getWeight(0)).setDoubleProperty("w2", site.getWeight(1));
             }
-            else if (typeid(system.getVirtualSite(i)) == typeid(ThreeParticleAverageSite)) {
-                const ThreeParticleAverageSite& site = dynamic_cast<const ThreeParticleAverageSite&>(system.getVirtualSite(i));
+            else if (typeid(vsite) == typeid(ThreeParticleAverageSite)) {
+                const ThreeParticleAverageSite& site = dynamic_cast<const ThreeParticleAverageSite&>(vsite);
                 particle.createChildNode("ThreeParticleAverageSite").setIntProperty("p1", site.getParticle(0)).setIntProperty("p2", site.getParticle(1)).setIntProperty("p3", site.getParticle(2)).setDoubleProperty("w1", site.getWeight(0)).setDoubleProperty("w2", site.getWeight(1)).setDoubleProperty("w3", site.getWeight(2));
             }
-            else if (typeid(system.getVirtualSite(i)) == typeid(OutOfPlaneSite)) {
-                const OutOfPlaneSite& site = dynamic_cast<const OutOfPlaneSite&>(system.getVirtualSite(i));
+            else if (typeid(vsite) == typeid(OutOfPlaneSite)) {
+                const OutOfPlaneSite& site = dynamic_cast<const OutOfPlaneSite&>(vsite);
                 particle.createChildNode("OutOfPlaneSite").setIntProperty("p1", site.getParticle(0)).setIntProperty("p2", site.getParticle(1)).setIntProperty("p3", site.getParticle(2)).setDoubleProperty("w12", site.getWeight12()).setDoubleProperty("w13", site.getWeight13()).setDoubleProperty("wc", site.getWeightCross());
             }
-            else if (typeid(system.getVirtualSite(i)) == typeid(LocalCoordinatesSite)) {
-                const LocalCoordinatesSite& site = dynamic_cast<const LocalCoordinatesSite&>(system.getVirtualSite(i));
+            else if (typeid(vsite) == typeid(LocalCoordinatesSite)) {
+                const LocalCoordinatesSite& site = dynamic_cast<const LocalCoordinatesSite&>(vsite);
                 int numParticles = site.getNumParticles();
                 vector<double> wo, wx, wy;
                 site.getOriginWeights(wo);

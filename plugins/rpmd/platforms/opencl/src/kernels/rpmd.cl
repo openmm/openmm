@@ -185,7 +185,7 @@ __kernel void copyDataToContext(__global mixed4* srcVel, __global mixed4* dstVel
     for (int particle = get_global_id(0); particle < NUM_ATOMS; particle += get_global_size(0)) {
         int index = base+order[particle];
         dstVel[particle] = srcVel[index];
-        dstPos[particle] = convert_real4(srcPos[index]);
+        dstPos[particle].xyz = convert_real4(srcPos[index]).xyz;
     }
 }
 
@@ -199,7 +199,7 @@ __kernel void copyDataFromContext(__global real4* srcForce, __global real4* dstF
         int index = base+order[particle];
         dstForce[index] = srcForce[particle];
         dstVel[index] = srcVel[particle];
-        dstPos[index] = convert_mixed4(srcPos[particle]);
+        dstPos[index].xyz = convert_mixed4(srcPos[particle]).xyz;
     }
 }
 
@@ -211,6 +211,6 @@ __kernel void applyCellTranslations(__global mixed4* posq, __global real4* moved
         int index = order[particle];
         mixed4 delta = convert_mixed4(movedPos[particle])-posq[movedCopy*PADDED_NUM_ATOMS+index];
         for (int copy = 0; copy < NUM_COPIES; copy++)
-            posq[copy*PADDED_NUM_ATOMS+index] += delta;
+            posq[copy*PADDED_NUM_ATOMS+index].xyz += delta.xyz;
     }
 }
