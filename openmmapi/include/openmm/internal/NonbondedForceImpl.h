@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2010 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -59,9 +59,7 @@ public:
         // This force field doesn't update the state directly.
     }
     double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups);
-    std::map<std::string, double> getDefaultParameters() {
-        return std::map<std::string, double>(); // This force field doesn't define any parameters.
-    }
+    std::map<std::string, double> getDefaultParameters();
     std::vector<std::string> getKernelNames();
     void updateParametersInContext(ContextImpl& context);
     void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;

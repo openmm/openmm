@@ -572,30 +572,59 @@ void CpuCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
     particleParams.resize(numParticles);
     charges.resize(numParticles);
     C6params.resize(numParticles);
-    double sumSquaredCharges = 0.0;
-    for (int i = 0; i < numParticles; ++i) {
-        double charge, radius, depth;
-        force.getParticleParameters(i, charge, radius, depth);
-        charges[i] = (float) charge;
-        particleParams[i] = make_pair((float) (0.5*radius), (float) (2.0*sqrt(depth)));
-        C6params[i] = 8.0*pow(particleParams[i].first, 3.0) * particleParams[i].second;
-        sumSquaredCharges += charge*charge;
-    }
+    baseParticleParams.resize(numParticles);
+    for (int i = 0; i < numParticles; ++i)
+       force.getParticleParameters(i, baseParticleParams[i][0], baseParticleParams[i][1], baseParticleParams[i][2]);
     
-    // Recorded exception parameters.
+    // Record exception parameters.
     
+    baseExceptionParams.resize(num14);
     for (int i = 0; i < num14; ++i) {
         int particle1, particle2;
-        double charge, radius, depth;
-        force.getExceptionParameters(nb14s[i], particle1, particle2, charge, radius, depth);
+        force.getExceptionParameters(nb14s[i], particle1, particle2, baseExceptionParams[i][0], baseExceptionParams[i][1], baseExceptionParams[i][2]);
         bonded14IndexArray[i][0] = particle1;
         bonded14IndexArray[i][1] = particle2;
-        bonded14ParamArray[i][0] = radius;
-        bonded14ParamArray[i][1] = 4.0*depth;
-        bonded14ParamArray[i][2] = charge;
     }
     bondForce.initialize(system.getNumParticles(), num14, 2, bonded14IndexArray, data.threads);
     
+    // Record information about parameter offsets.
+    
+    hasParticleOffsets = (force.getNumParticleParameterOffsets() > 0);
+    hasExceptionOffsets = (force.getNumExceptionParameterOffsets() > 0);
+    particleParamOffsets.resize(force.getNumParticles());
+    exceptionParamOffsets.resize(force.getNumExceptions());
+    for (int i = 0; i < force.getNumParticleParameterOffsets(); i++) {
+        string param;
+        int particle;
+        double charge, sigma, epsilon;
+        force.getParticleParameterOffset(i, param, particle, charge, sigma, epsilon);
+        auto paramPos = find(paramNames.begin(), paramNames.end(), param);
+        int paramIndex;
+        if (paramPos == paramNames.end()) {
+            paramIndex = paramNames.size();
+            paramNames.push_back(param);
+        }
+        else
+            paramIndex = paramPos-paramNames.begin();
+        particleParamOffsets[particle].push_back(make_tuple(charge, sigma, epsilon, paramIndex));
+    }
+    for (int i = 0; i < force.getNumExceptionParameterOffsets(); i++) {
+        string param;
+        int exception;
+        double charge, sigma, epsilon;
+        force.getExceptionParameterOffset(i, param, exception, charge, sigma, epsilon);
+        auto paramPos = find(paramNames.begin(), paramNames.end(), param);
+        int paramIndex;
+        if (paramPos == paramNames.end()) {
+            paramIndex = paramNames.size();
+            paramNames.push_back(param);
+        }
+        else
+            paramIndex = paramPos-paramNames.begin();
+        exceptionParamOffsets[exception].push_back(make_tuple(charge, sigma, epsilon, paramIndex));
+    }
+    paramValues.resize(paramNames.size(), 0.0);
+
     // Record other parameters.
     
     nonbondedMethod = CalcNonbondedForceKernel::NonbondedMethod(force.getNonbondedMethod());
@@ -625,18 +654,6 @@ void CpuCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
         ewaldDispersionAlpha = alpha;
         useSwitchingFunction = false;
     }
-
-    if (nonbondedMethod == Ewald || nonbondedMethod == PME || nonbondedMethod == LJPME) {
-        ewaldSelfEnergy = -ONE_4PI_EPS0*ewaldAlpha*sumSquaredCharges/sqrt(M_PI);
-        if(nonbondedMethod == LJPME){
-            for (int atom = 0; atom < numParticles; atom++) {
-                // Dispersion self term
-                ewaldSelfEnergy += pow(ewaldDispersionAlpha, 6.0) * C6params[atom]*C6params[atom] / 12.0;
-            }
-        }
-    } else {
-        ewaldSelfEnergy = 0.0;
-    }
     rfDielectric = force.getReactionFieldDielectric();
     if (force.getUseDispersionCorrection())
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(system, force);
@@ -649,6 +666,7 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
     if (!hasInitializedPme) {
         hasInitializedPme = true;
         useOptimizedPme = false;
+        computeParameters(context, false);
         if (nonbondedMethod == PME) {
             // If available, use the optimized PME implementation.
 
@@ -675,6 +693,7 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
             }
         }
     }
+    computeParameters(context, true);
     copyChargesToPosq(context, charges, posqIndex);
     AlignedArray<float>& posq = data.posq;
     vector<Vec3>& posData = extractPositions(context);
@@ -743,28 +762,15 @@ void CpuCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, 
     // Record the values.
 
     posqIndex = data.requestPosqIndex();
-    double sumSquaredCharges = 0.0;
-    for (int i = 0; i < numParticles; ++i) {
-        double charge, radius, depth;
-        force.getParticleParameters(i, charge, radius, depth);
-        charges[i] = (float) charge;
-        particleParams[i] = make_pair((float) (0.5*radius), (float) (2.0*sqrt(depth)));
-        sumSquaredCharges += charge*charge;
-    }
-    if (nonbondedMethod == Ewald || nonbondedMethod == PME)
-        ewaldSelfEnergy = -ONE_4PI_EPS0*ewaldAlpha*sumSquaredCharges/sqrt(M_PI);
-    else
-        ewaldSelfEnergy = 0.0;
+    for (int i = 0; i < numParticles; ++i)
+       force.getParticleParameters(i, baseParticleParams[i][0], baseParticleParams[i][1], baseParticleParams[i][2]);
     for (int i = 0; i < num14; ++i) {
         int particle1, particle2;
-        double charge, radius, depth;
-        force.getExceptionParameters(nb14s[i], particle1, particle2, charge, radius, depth);
+        force.getExceptionParameters(nb14s[i], particle1, particle2, baseExceptionParams[i][0], baseExceptionParams[i][1], baseExceptionParams[i][2]);
         bonded14IndexArray[i][0] = particle1;
         bonded14IndexArray[i][1] = particle2;
-        bonded14ParamArray[i][0] = radius;
-        bonded14ParamArray[i][1] = 4.0*depth;
-        bonded14ParamArray[i][2] = charge;
     }
+    computeParameters(context, false);
     
     // Recompute the coefficient for the dispersion correction.
 
@@ -796,6 +802,67 @@ void CpuCalcNonbondedForceKernel::getLJPMEParameters(double& alpha, int& nx, int
         nx = dispersionGridSize[0];
         ny = dispersionGridSize[1];
         nz = dispersionGridSize[2];
+    }
+}
+
+void CpuCalcNonbondedForceKernel::computeParameters(ContextImpl& context, bool offsetsOnly) {
+    bool paramChanged = false;
+    for (int i = 0; i < paramNames.size(); i++) {
+        double value = context.getParameter(paramNames[i]);
+        if (value != paramValues[i]) {
+            paramValues[i] = value;;
+            paramChanged = true;
+        }
+    }
+    if (!paramChanged && offsetsOnly)
+        return;
+
+    // Compute particle parameters.
+
+    if (hasParticleOffsets || !offsetsOnly) {
+        double sumSquaredCharges = 0.0;
+        for (int i = 0; i < numParticles; i++) {
+            double charge = baseParticleParams[i][0];
+            double sigma = baseParticleParams[i][1];
+            double epsilon = baseParticleParams[i][2];
+            for (auto& offset : particleParamOffsets[i]) {
+                double value = paramValues[get<3>(offset)];
+                charge += value*get<0>(offset);
+                sigma += value*get<1>(offset);
+                epsilon += value*get<2>(offset);
+            }
+            charges[i] = (float) charge;
+            particleParams[i] = make_pair((float) (0.5*sigma), (float) (2.0*sqrt(epsilon)));
+            C6params[i] = 8.0*pow(particleParams[i].first, 3.0) * particleParams[i].second;
+            sumSquaredCharges += charge*charge;
+        }
+        if (nonbondedMethod == Ewald || nonbondedMethod == PME || nonbondedMethod == LJPME) {
+            ewaldSelfEnergy = -ONE_4PI_EPS0*ewaldAlpha*sumSquaredCharges/sqrt(M_PI);
+            if (nonbondedMethod == LJPME)
+                for (int atom = 0; atom < numParticles; atom++)
+                    ewaldSelfEnergy += pow(ewaldDispersionAlpha, 6.0) * C6params[atom]*C6params[atom] / 12.0;
+        }
+        else
+            ewaldSelfEnergy = 0.0;
+    }
+
+    // Compute exception parameters.
+
+    if (hasExceptionOffsets || !offsetsOnly) {
+        for (int i = 0; i < num14; i++) {
+            double chargeProd = baseExceptionParams[i][0];
+            double sigma = baseExceptionParams[i][1];
+            double epsilon = baseExceptionParams[i][2];
+            for (auto& offset : exceptionParamOffsets[i]) {
+                double value = paramValues[get<3>(offset)];
+                chargeProd += value*get<0>(offset);
+                sigma += value*get<1>(offset);
+                epsilon += value*get<2>(offset);
+            }
+            bonded14ParamArray[i][0] = sigma;
+            bonded14ParamArray[i][1] = 4.0*epsilon;
+            bonded14ParamArray[i][2] = chargeProd;
+        }
     }
 }
 

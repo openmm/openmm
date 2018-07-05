@@ -44,6 +44,8 @@
 #include "CpuPlatform.h"
 #include "openmm/kernels.h"
 #include "openmm/System.h"
+#include <array>
+#include <tuple>
 
 namespace OpenMM {
 
@@ -267,17 +269,22 @@ public:
     void getLJPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
 private:
     class PmeIO;
+    void computeParameters(ContextImpl& context, bool offsetsOnly);
     CpuPlatform::PlatformData& data;
     int numParticles, num14, posqIndex;
     int **bonded14IndexArray;
     double **bonded14ParamArray;
     double nonbondedCutoff, switchingDistance, rfDielectric, ewaldAlpha, ewaldDispersionAlpha, ewaldSelfEnergy, dispersionCoefficient;
     int kmax[3], gridSize[3], dispersionGridSize[3];
-    bool useSwitchingFunction, useOptimizedPme, hasInitializedPme, hasInitializedDispersionPme;
+    bool useSwitchingFunction, useOptimizedPme, hasInitializedPme, hasInitializedDispersionPme, hasParticleOffsets, hasExceptionOffsets;
     std::vector<std::set<int> > exclusions;
     std::vector<std::pair<float, float> > particleParams;
     std::vector<float> C6params;
     std::vector<float> charges;
+    std::vector<std::array<double, 3> > baseParticleParams, baseExceptionParams;
+    std::vector<std::vector<std::tuple<double, double, double, int> > > particleParamOffsets, exceptionParamOffsets;
+    std::vector<std::string> paramNames;
+    std::vector<double> paramValues;
     NonbondedMethod nonbondedMethod;
     CpuNonbondedForce* nonbonded;
     Kernel optimizedPme, optimizedDispersionPme;

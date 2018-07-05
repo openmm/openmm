@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -108,6 +108,27 @@ double NonbondedForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includ
     if (owner.getReciprocalSpaceForceGroup() >= 0)
         includeReciprocal = ((groups&(1<<owner.getReciprocalSpaceForceGroup())) != 0);
     return kernel.getAs<CalcNonbondedForceKernel>().execute(context, includeForces, includeEnergy, includeDirect, includeReciprocal);
+}
+
+map<string, double> NonbondedForceImpl::getDefaultParameters() {
+    map<string, double> params;
+    for (int i = 0; i < owner.getNumParticleParameterOffsets(); i++) {
+        string parameter;
+        int particle;
+        double charge, sigma, epsilon;
+        owner.getParticleParameterOffset(i, parameter, particle, charge, sigma, epsilon);
+        if (params.find(parameter) == params.end())
+            params[parameter] = 0.0;
+    }
+    for (int i = 0; i < owner.getNumExceptionParameterOffsets(); i++) {
+        string parameter;
+        int exception;
+        double chargeProd, sigma, epsilon;
+        owner.getExceptionParameterOffset(i, parameter, exception, chargeProd, sigma, epsilon);
+        if (params.find(parameter) == params.end())
+            params[parameter] = 0.0;
+    }
+    return params;
 }
 
 std::vector<std::string> NonbondedForceImpl::getKernelNames() {
