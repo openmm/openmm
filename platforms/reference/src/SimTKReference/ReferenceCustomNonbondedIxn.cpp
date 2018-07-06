@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2016 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2018 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -146,18 +146,16 @@ void ReferenceCustomNonbondedIxn::setUseSwitchingFunction(double distance) {
    @param atomParameters   atom parameters                             atomParameters[atomIndex][paramterIndex]
    @param exclusions       atom exclusion indices
                            exclusions[atomIndex] contains the list of exclusions for that atom
-   @param fixedParameters  non atom parameters (not currently used)
    @param globalParameters the values of global parameters
    @param forces           force array (forces added)
-   @param energyByAtom     atom energy
    @param totalEnergy      total energy
 
    --------------------------------------------------------------------------------------- */
 
 void ReferenceCustomNonbondedIxn::calculatePairIxn(int numberOfAtoms, vector<Vec3>& atomCoordinates,
-                                             double** atomParameters, vector<set<int> >& exclusions,
-                                             double* fixedParameters, const map<string, double>& globalParameters, vector<Vec3>& forces,
-                                             double* energyByAtom, double* totalEnergy, double* energyParamDerivs) {
+                                             vector<vector<double> >& atomParameters, vector<set<int> >& exclusions,
+                                             const map<string, double>& globalParameters, vector<Vec3>& forces,
+                                             double* totalEnergy, double* energyParamDerivs) {
 
     for (auto& param : globalParameters)
         expressionSet.setVariable(expressionSet.getVariableIndex(param.first), param.second);
@@ -177,7 +175,7 @@ void ReferenceCustomNonbondedIxn::calculatePairIxn(int numberOfAtoms, vector<Vec
                         expressionSet.setVariable(particleParamIndex[j*2], atomParameters[*atom1][j]);
                         expressionSet.setVariable(particleParamIndex[j*2+1], atomParameters[*atom2][j]);
                     }
-                    calculateOneIxn(*atom1, *atom2, atomCoordinates, forces, energyByAtom, totalEnergy, energyParamDerivs);
+                    calculateOneIxn(*atom1, *atom2, atomCoordinates, forces, totalEnergy, energyParamDerivs);
                 }
             }
         }
@@ -190,7 +188,7 @@ void ReferenceCustomNonbondedIxn::calculatePairIxn(int numberOfAtoms, vector<Vec
                 expressionSet.setVariable(particleParamIndex[j*2], atomParameters[pair.first][j]);
                 expressionSet.setVariable(particleParamIndex[j*2+1], atomParameters[pair.second][j]);
             }
-            calculateOneIxn(pair.first, pair.second, atomCoordinates, forces, energyByAtom, totalEnergy, energyParamDerivs);
+            calculateOneIxn(pair.first, pair.second, atomCoordinates, forces, totalEnergy, energyParamDerivs);
         }
     }
     else {
@@ -203,7 +201,7 @@ void ReferenceCustomNonbondedIxn::calculatePairIxn(int numberOfAtoms, vector<Vec
                         expressionSet.setVariable(particleParamIndex[j*2], atomParameters[ii][j]);
                         expressionSet.setVariable(particleParamIndex[j*2+1], atomParameters[jj][j]);
                     }
-                    calculateOneIxn(ii, jj, atomCoordinates, forces, energyByAtom, totalEnergy, energyParamDerivs);
+                    calculateOneIxn(ii, jj, atomCoordinates, forces, totalEnergy, energyParamDerivs);
                 }
             }
         }
@@ -217,15 +215,13 @@ void ReferenceCustomNonbondedIxn::calculatePairIxn(int numberOfAtoms, vector<Vec
      @param ii               the index of the first atom
      @param jj               the index of the second atom
      @param atomCoordinates  atom coordinates
-     @param atomParameters   atom parameters (charges, c6, c12, ...)     atomParameters[atomIndex][paramterIndex]
      @param forces           force array (forces added)
-     @param energyByAtom     atom energy
      @param totalEnergy      total energy
 
      --------------------------------------------------------------------------------------- */
 
 void ReferenceCustomNonbondedIxn::calculateOneIxn(int ii, int jj, vector<Vec3>& atomCoordinates, vector<Vec3>& forces,
-                        double* energyByAtom, double* totalEnergy, double* energyParamDerivs) {
+                        double* totalEnergy, double* energyParamDerivs) {
     // get deltaR, R2, and R between 2 atoms
 
     double deltaR[ReferenceForce::LastDeltaRIndex];
@@ -262,14 +258,8 @@ void ReferenceCustomNonbondedIxn::calculateOneIxn(int ii, int jj, vector<Vec3>& 
 
     // accumulate energies
 
-    if (totalEnergy || energyByAtom) {
-        if (totalEnergy)
-           *totalEnergy += energy;
-        if (energyByAtom) {
-           energyByAtom[ii] += energy;
-           energyByAtom[jj] += energy;
-        }
-    }
+    if (totalEnergy)
+        *totalEnergy += energy;
   }
 
 

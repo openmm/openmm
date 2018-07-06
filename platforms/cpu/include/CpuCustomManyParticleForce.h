@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2017 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2018 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -65,7 +65,7 @@ private:
     std::vector<ThreadData*> threadData;
     // The following variables are used to make information accessible to the individual threads.
     float* posq;
-    double** particleParameters;        
+    std::vector<double>* particleParameters;        
     const std::map<std::string, double>* globalParameters;
     std::vector<AlignedArray<float> >* threadForce;
     bool includeForces, includeEnergy;
@@ -81,7 +81,7 @@ private:
      * interaction for each one.
      */
     void loopOverInteractions(std::vector<int>& availableParticles, std::vector<int>& particleSet, int loopIndex, int startIndex,
-                              double** particleParameters, float* forces, ThreadData& data, const fvec4& boxSize, const fvec4& invBoxSize);
+                              std::vector<double>* particleParameters, float* forces, ThreadData& data, const fvec4& boxSize, const fvec4& invBoxSize);
 
     /**---------------------------------------------------------------------------------------
 
@@ -104,7 +104,7 @@ private:
      * @param boxSize            the size of the periodic box
      * @param invBoxSize         the inverse size of the periodic box
      */
-    void calculateOneIxn(std::vector<int>& particleSet, double** particleParameters, float* forces, ThreadData& data, const fvec4& boxSize, const fvec4& invBoxSize);
+    void calculateOneIxn(std::vector<int>& particleSet, std::vector<double>* particleParameters, float* forces, ThreadData& data, const fvec4& boxSize, const fvec4& invBoxSize);
 
     /**
      * Compute the displacement and squared distance between two points, optionally using
@@ -154,7 +154,7 @@ public:
      * @param includeEnergy      whether to compute energy
      * @param energy             the total energy is added to this
      */
-    void calculateIxn(AlignedArray<float>& posq, double** particleParameters, const std::map<std::string, double>& globalParameters,
+    void calculateIxn(AlignedArray<float>& posq, std::vector<std::vector<double> >& particleParameters, const std::map<std::string, double>& globalParameters,
                       std::vector<AlignedArray<float> >& threadForce, bool includeForces, bool includeEnergy, double& energy);
 };
 

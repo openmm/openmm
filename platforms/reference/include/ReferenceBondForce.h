@@ -67,9 +67,9 @@ class OPENMM_EXPORT ReferenceBondForce : public ReferenceForce {
       
          --------------------------------------------------------------------------------------- */
       
-       void calculateForce(int numberOfBonds, int** atomIndices,
+       void calculateForce(int numberOfBonds, std::vector<std::vector<int> >& atomIndices,
                            std::vector<OpenMM::Vec3>& atomCoordinates,
-                           double** parameters, std::vector<OpenMM::Vec3>& forces, 
+                           std::vector<std::vector<double> >& parameters, std::vector<OpenMM::Vec3>& forces, 
                            double* totalEnergy, ReferenceBondIxn& referenceBondIxn);
 
 };

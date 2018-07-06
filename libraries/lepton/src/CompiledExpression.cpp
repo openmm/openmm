@@ -188,8 +188,8 @@ double CompiledExpression::evaluate() const {
 
 #ifdef LEPTON_USE_JIT
 static double evaluateOperation(Operation* op, double* args) {
-    map<string, double>* dummyVariables = NULL;
-    return op->evaluate(args, *dummyVariables);
+    static map<string, double> dummyVariables;
+    return op->evaluate(args, dummyVariables);
 }
 
 void CompiledExpression::generateJitCode() {

@@ -69,7 +69,7 @@ void ReferenceAngleBondIxn::setPeriodic(OpenMM::Vec3* vectors) {
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceAngleBondIxn::getPrefactorsGivenAngleCosine(double cosine, double* angleParameters,
+void ReferenceAngleBondIxn::getPrefactorsGivenAngleCosine(double cosine, vector<double>& angleParameters,
                                                           double* dEdR, double* energyTerm) const {
 
    double angle;
@@ -101,9 +101,9 @@ void ReferenceAngleBondIxn::getPrefactorsGivenAngleCosine(double cosine, double*
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceAngleBondIxn::calculateBondIxn(int* atomIndices,
+void ReferenceAngleBondIxn::calculateBondIxn(vector<int>& atomIndices,
                                              vector<Vec3>& atomCoordinates,
-                                             double* parameters,
+                                             vector<double>& parameters,
                                              vector<Vec3>& forces,
                                              double* totalEnergy, double* energyParamDerivs) {
 

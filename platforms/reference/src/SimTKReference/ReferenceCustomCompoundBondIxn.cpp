@@ -116,7 +116,7 @@ void ReferenceCustomCompoundBondIxn::setPeriodic(OpenMM::Vec3* vectors) {
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceCustomCompoundBondIxn::calculatePairIxn(vector<Vec3>& atomCoordinates, double** bondParameters,
+void ReferenceCustomCompoundBondIxn::calculatePairIxn(vector<Vec3>& atomCoordinates, vector<vector<double> >& bondParameters,
                                              const map<string, double>& globalParameters, vector<Vec3>& forces,
                                              double* totalEnergy, double* energyParamDerivs) {
     for (auto& param : globalParameters)

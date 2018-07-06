@@ -70,9 +70,9 @@ void ReferenceHarmonicBondIxn::setPeriodic(OpenMM::Vec3* vectors) {
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceHarmonicBondIxn::calculateBondIxn(int* atomIndices,
+void ReferenceHarmonicBondIxn::calculateBondIxn(vector<int>& atomIndices,
                                                 vector<Vec3>& atomCoordinates,
-                                                double* parameters,
+                                                vector<double>& parameters,
                                                 vector<Vec3>& forces,
                                                 double* totalEnergy, double* energyParamDerivs) {
    double deltaR[ReferenceForce::LastDeltaRIndex];

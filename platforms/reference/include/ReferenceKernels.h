@@ -261,7 +261,6 @@ class ReferenceCalcHarmonicBondForceKernel : public CalcHarmonicBondForceKernel 
 public:
     ReferenceCalcHarmonicBondForceKernel(std::string name, const Platform& platform) : CalcHarmonicBondForceKernel(name, platform) {
     }
-    ~ReferenceCalcHarmonicBondForceKernel();
     /**
      * Initialize the kernel.
      * 
@@ -287,8 +286,8 @@ public:
     void copyParametersToContext(ContextImpl& context, const HarmonicBondForce& force);
 private:
     int numBonds;
-    int **bondIndexArray;
-    double **bondParamArray;
+    std::vector<std::vector<int> >bondIndexArray;
+    std::vector<std::vector<double> >bondParamArray;
     bool usePeriodic;
 };
 
@@ -299,7 +298,6 @@ class ReferenceCalcCustomBondForceKernel : public CalcCustomBondForceKernel {
 public:
     ReferenceCalcCustomBondForceKernel(std::string name, const Platform& platform) : CalcCustomBondForceKernel(name, platform) {
     }
-    ~ReferenceCalcCustomBondForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -325,8 +323,8 @@ public:
     void copyParametersToContext(ContextImpl& context, const CustomBondForce& force);
 private:
     int numBonds;
-    int **bondIndexArray;
-    double **bondParamArray;
+    std::vector<std::vector<int> >bondIndexArray;
+    std::vector<std::vector<double> >bondParamArray;
     Lepton::CompiledExpression energyExpression, forceExpression;
     std::vector<Lepton::CompiledExpression> energyParamDerivExpressions;
     std::vector<std::string> parameterNames, globalParameterNames, energyParamDerivNames;
@@ -340,7 +338,6 @@ class ReferenceCalcHarmonicAngleForceKernel : public CalcHarmonicAngleForceKerne
 public:
     ReferenceCalcHarmonicAngleForceKernel(std::string name, const Platform& platform) : CalcHarmonicAngleForceKernel(name, platform) {
     }
-    ~ReferenceCalcHarmonicAngleForceKernel();
     /**
      * Initialize the kernel.
      * 
@@ -366,8 +363,8 @@ public:
     void copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force);
 private:
     int numAngles;
-    int **angleIndexArray;
-    double **angleParamArray;
+    std::vector<std::vector<int> >angleIndexArray;
+    std::vector<std::vector<double> >angleParamArray;
     bool usePeriodic;
 };
 
@@ -378,7 +375,6 @@ class ReferenceCalcCustomAngleForceKernel : public CalcCustomAngleForceKernel {
 public:
     ReferenceCalcCustomAngleForceKernel(std::string name, const Platform& platform) : CalcCustomAngleForceKernel(name, platform) {
     }
-    ~ReferenceCalcCustomAngleForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -404,8 +400,8 @@ public:
     void copyParametersToContext(ContextImpl& context, const CustomAngleForce& force);
 private:
     int numAngles;
-    int **angleIndexArray;
-    double **angleParamArray;
+    std::vector<std::vector<int> >angleIndexArray;
+    std::vector<std::vector<double> >angleParamArray;
     Lepton::CompiledExpression energyExpression, forceExpression;
     std::vector<Lepton::CompiledExpression> energyParamDerivExpressions;
     std::vector<std::string> parameterNames, globalParameterNames, energyParamDerivNames;
@@ -419,7 +415,6 @@ class ReferenceCalcPeriodicTorsionForceKernel : public CalcPeriodicTorsionForceK
 public:
     ReferenceCalcPeriodicTorsionForceKernel(std::string name, const Platform& platform) : CalcPeriodicTorsionForceKernel(name, platform) {
     }
-    ~ReferenceCalcPeriodicTorsionForceKernel();
     /**
      * Initialize the kernel.
      * 
@@ -445,8 +440,8 @@ public:
     void copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force);
 private:
     int numTorsions;
-    int **torsionIndexArray;
-    double **torsionParamArray;
+    std::vector<std::vector<int> >torsionIndexArray;
+    std::vector<std::vector<double> >torsionParamArray;
     bool usePeriodic;
 };
 
@@ -457,7 +452,6 @@ class ReferenceCalcRBTorsionForceKernel : public CalcRBTorsionForceKernel {
 public:
     ReferenceCalcRBTorsionForceKernel(std::string name, const Platform& platform) : CalcRBTorsionForceKernel(name, platform) {
     }
-    ~ReferenceCalcRBTorsionForceKernel();
     /**
      * Initialize the kernel.
      * 
@@ -483,8 +477,8 @@ public:
     void copyParametersToContext(ContextImpl& context, const RBTorsionForce& force);
 private:
     int numTorsions;
-    int **torsionIndexArray;
-    double **torsionParamArray;
+    std::vector<std::vector<int> >torsionIndexArray;
+    std::vector<std::vector<double> >torsionParamArray;
     bool usePeriodic;
 };
 
@@ -532,7 +526,6 @@ class ReferenceCalcCustomTorsionForceKernel : public CalcCustomTorsionForceKerne
 public:
     ReferenceCalcCustomTorsionForceKernel(std::string name, const Platform& platform) : CalcCustomTorsionForceKernel(name, platform) {
     }
-    ~ReferenceCalcCustomTorsionForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -558,8 +551,8 @@ public:
     void copyParametersToContext(ContextImpl& context, const CustomTorsionForce& force);
 private:
     int numTorsions;
-    int **torsionIndexArray;
-    double **torsionParamArray;
+    std::vector<std::vector<int> >torsionIndexArray;
+    std::vector<std::vector<double> >torsionParamArray;
     Lepton::CompiledExpression energyExpression, forceExpression;
     std::vector<Lepton::CompiledExpression> energyParamDerivExpressions;
     std::vector<std::string> parameterNames, globalParameterNames, energyParamDerivNames;
@@ -619,8 +612,8 @@ public:
 private:
     void computeParameters(ContextImpl& context);
     int numParticles, num14;
-    int **bonded14IndexArray;
-    double **particleParamArray, **bonded14ParamArray;
+    std::vector<std::vector<int> >bonded14IndexArray;
+    std::vector<std::vector<double> > particleParamArray, bonded14ParamArray;
     std::vector<std::array<double, 3> > baseParticleParams, baseExceptionParams;
     std::map<std::pair<std::string, int>, std::array<double, 3> > particleParamOffsets, exceptionParamOffsets;
     double nonbondedCutoff, switchingDistance, rfDielectric, ewaldAlpha, ewaldDispersionAlpha, dispersionCoefficient;
@@ -664,7 +657,7 @@ public:
     void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force);
 private:
     int numParticles;
-    double **particleParamArray;
+    std::vector<std::vector<double> > particleParamArray;
     double nonbondedCutoff, switchingDistance, periodicBoxSize[3], longRangeCoefficient;
     bool useSwitchingFunction, hasInitializedLongRangeCorrection;
     CustomNonbondedForce* forceCopy;
@@ -750,7 +743,7 @@ public:
 private:
     int numParticles;
     bool isPeriodic;
-    double **particleParamArray;
+    std::vector<std::vector<double> > particleParamArray;
     double nonbondedCutoff;
     std::vector<std::set<int> > exclusions;
     std::vector<std::string> particleParameterNames, globalParameterNames, energyParamDerivNames, valueNames;
@@ -775,7 +768,6 @@ class ReferenceCalcCustomExternalForceKernel : public CalcCustomExternalForceKer
 public:
     ReferenceCalcCustomExternalForceKernel(std::string name, const Platform& platform) : CalcCustomExternalForceKernel(name, platform) {
     }
-    ~ReferenceCalcCustomExternalForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -803,7 +795,7 @@ private:
     class PeriodicDistanceFunction;
     int numParticles;
     std::vector<int> particles;
-    double **particleParamArray;
+    std::vector<std::vector<double> > particleParamArray;
     Lepton::CompiledExpression energyExpression, forceExpressionX, forceExpressionY, forceExpressionZ;
     std::vector<std::string> parameterNames, globalParameterNames;
     Vec3* boxVectors;
@@ -853,7 +845,7 @@ public:
 private:
     int numDonors, numAcceptors, numParticles;
     bool isPeriodic;
-    double **donorParamArray, **acceptorParamArray;
+    std::vector<std::vector<double> > donorParamArray, acceptorParamArray;
     double nonbondedCutoff;
     ReferenceCustomHbondIxn* ixn;
     std::vector<std::set<int> > exclusions;
@@ -893,7 +885,7 @@ public:
     void copyParametersToContext(ContextImpl& context, const CustomCentroidBondForce& force);
 private:
     int numBonds, numParticles;
-    double **bondParamArray;
+    std::vector<std::vector<double> > bondParamArray;
     ReferenceCustomCentroidBondIxn* ixn;
     std::vector<std::string> globalParameterNames, energyParamDerivNames;
     bool usePeriodic;
@@ -932,7 +924,7 @@ public:
     void copyParametersToContext(ContextImpl& context, const CustomCompoundBondForce& force);
 private:
     int numBonds;
-    double **bondParamArray;
+    std::vector<std::vector<double> > bondParamArray;
     ReferenceCustomCompoundBondIxn* ixn;
     std::vector<std::string> globalParameterNames, energyParamDerivNames;
     bool usePeriodic;
@@ -972,7 +964,7 @@ public:
 private:
     int numParticles;
     double cutoffDistance;
-    double **particleParamArray;
+    std::vector<std::vector<double> > particleParamArray;
     ReferenceCustomManyParticleIxn* ixn;
     std::vector<std::string> globalParameterNames;
     NonbondedMethod nonbondedMethod;

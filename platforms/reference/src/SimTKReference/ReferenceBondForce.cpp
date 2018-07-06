@@ -64,9 +64,9 @@ ReferenceBondForce::~ReferenceBondForce() {
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceBondForce::calculateForce(int numberOfBonds, int** atomIndices,
+void ReferenceBondForce::calculateForce(int numberOfBonds, vector<vector<int> >& atomIndices,
                                         vector<Vec3>& atomCoordinates,
-                                        double** parameters,
+                                        vector<vector<double> >& parameters,
                                         vector<Vec3>& forces, 
                                         double *totalEnergy, 
                                         ReferenceBondIxn& referenceBondIxn) {

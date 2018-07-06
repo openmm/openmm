@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2016 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2018 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -93,7 +93,7 @@ void ReferenceCustomCentroidBondIxn::setPeriodic(OpenMM::Vec3* vectors) {
     boxVectors[2] = vectors[2];
 }
 
-void ReferenceCustomCentroidBondIxn::calculatePairIxn(vector<Vec3>& atomCoordinates, double** bondParameters,
+void ReferenceCustomCentroidBondIxn::calculatePairIxn(vector<Vec3>& atomCoordinates, vector<vector<double> >& bondParameters,
                                              const map<string, double>& globalParameters, vector<Vec3>& forces,
                                              double* totalEnergy, double* energyParamDerivs) {
 

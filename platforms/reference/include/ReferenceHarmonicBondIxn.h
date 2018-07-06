@@ -77,8 +77,8 @@ class ReferenceHarmonicBondIxn : public ReferenceBondIxn {
 
          --------------------------------------------------------------------------------------- */
       
-      void calculateBondIxn(int* atomIndices, std::vector<OpenMM::Vec3>& atomCoordinates,
-                            double* parameters, std::vector<OpenMM::Vec3>& forces,
+      void calculateBondIxn(std::vector<int>& atomIndices, std::vector<OpenMM::Vec3>& atomCoordinates,
+                            std::vector<double>& parameters, std::vector<OpenMM::Vec3>& forces,
                             double* totalEnergy, double* energyParamDerivs);
 
 };

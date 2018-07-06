@@ -769,18 +769,10 @@ double OpenCLContext::reduceEnergy() {
 void OpenCLContext::setCharges(const vector<double>& charges) {
     if (!chargeBuffer.isInitialized())
         chargeBuffer.initialize(*this, numAtoms, useDoublePrecision ? sizeof(double) : sizeof(float), "chargeBuffer");
-    if (getUseDoublePrecision()) {
-        vector<double> c(numAtoms);
-        for (int i = 0; i < numAtoms; i++)
-            c[i] = charges[i];
-        chargeBuffer.upload(c);
-    }
-    else {
-        vector<float> c(numAtoms);
-        for (int i = 0; i < numAtoms; i++)
-            c[i] = (float) charges[i];
-        chargeBuffer.upload(c);
-    }
+    vector<double> c(numAtoms);
+    for (int i = 0; i < numAtoms; i++)
+        c[i] = charges[i];
+    chargeBuffer.upload(c, true, true);
     setChargesKernel.setArg<cl::Buffer>(0, chargeBuffer.getDeviceBuffer());
     setChargesKernel.setArg<cl::Buffer>(1, posq.getDeviceBuffer());
     setChargesKernel.setArg<cl::Buffer>(2, atomIndexDevice.getDeviceBuffer());
@@ -802,32 +794,33 @@ public:
     VirtualSiteInfo(const System& system) : OpenCLForceInfo(0) {
         for (int i = 0; i < system.getNumParticles(); i++) {
             if (system.isVirtualSite(i)) {
-                siteTypes.push_back(&typeid(system.getVirtualSite(i)));
+                const VirtualSite& vsite = system.getVirtualSite(i);
+                siteTypes.push_back(&typeid(vsite));
                 vector<int> particles;
                 particles.push_back(i);
-                for (int j = 0; j < system.getVirtualSite(i).getNumParticles(); j++)
-                    particles.push_back(system.getVirtualSite(i).getParticle(j));
+                for (int j = 0; j < vsite.getNumParticles(); j++)
+                    particles.push_back(vsite.getParticle(j));
                 siteParticles.push_back(particles);
                 vector<double> weights;
-                if (dynamic_cast<const TwoParticleAverageSite*>(&system.getVirtualSite(i)) != NULL) {
+                if (dynamic_cast<const TwoParticleAverageSite*>(&vsite) != NULL) {
                     // A two particle average.
 
-                    const TwoParticleAverageSite& site = dynamic_cast<const TwoParticleAverageSite&>(system.getVirtualSite(i));
+                    const TwoParticleAverageSite& site = dynamic_cast<const TwoParticleAverageSite&>(vsite);
                     weights.push_back(site.getWeight(0));
                     weights.push_back(site.getWeight(1));
                 }
-                else if (dynamic_cast<const ThreeParticleAverageSite*>(&system.getVirtualSite(i)) != NULL) {
+                else if (dynamic_cast<const ThreeParticleAverageSite*>(&vsite) != NULL) {
                     // A three particle average.
 
-                    const ThreeParticleAverageSite& site = dynamic_cast<const ThreeParticleAverageSite&>(system.getVirtualSite(i));
+                    const ThreeParticleAverageSite& site = dynamic_cast<const ThreeParticleAverageSite&>(vsite);
                     weights.push_back(site.getWeight(0));
                     weights.push_back(site.getWeight(1));
                     weights.push_back(site.getWeight(2));
                 }
-                else if (dynamic_cast<const OutOfPlaneSite*>(&system.getVirtualSite(i)) != NULL) {
+                else if (dynamic_cast<const OutOfPlaneSite*>(&vsite) != NULL) {
                     // An out of plane site.
 
-                    const OutOfPlaneSite& site = dynamic_cast<const OutOfPlaneSite&>(system.getVirtualSite(i));
+                    const OutOfPlaneSite& site = dynamic_cast<const OutOfPlaneSite&>(vsite);
                     weights.push_back(site.getWeight12());
                     weights.push_back(site.getWeight13());
                     weights.push_back(site.getWeightCross());

@@ -1591,10 +1591,8 @@ private:
     mutable std::vector<std::vector<mm_double4> > localPerDofValuesDouble;
     std::map<std::string, double> energyParamDerivs;
     std::vector<std::string> perDofEnergyParamDerivNames;
-    std::vector<cl_float> localPerDofEnergyParamDerivsFloat;
-    std::vector<cl_double> localPerDofEnergyParamDerivsDouble;
-    std::vector<float> globalValuesFloat;
-    std::vector<double> globalValuesDouble;
+    std::vector<cl_double> localPerDofEnergyParamDerivs;
+    std::vector<double> localGlobalValues;
     std::vector<double> initialGlobalVariables;
     std::vector<std::vector<cl::Kernel> > kernels;
     cl::Kernel randomKernel, kineticEnergyKernel, sumKineticEnergyKernel;

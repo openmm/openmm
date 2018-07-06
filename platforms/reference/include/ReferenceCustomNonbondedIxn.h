@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2016 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2018 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -61,15 +61,13 @@ class ReferenceCustomNonbondedIxn {
          @param atom1            the index of the first atom
          @param atom2            the index of the second atom
          @param atomCoordinates  atom coordinates
-         @param atomParameters   atomParameters[atomIndex][parameterIndex]
          @param forces           force array (forces added)
-         @param energyByAtom     atom energy
          @param totalEnergy      total energy
 
          --------------------------------------------------------------------------------------- */
 
       void calculateOneIxn(int atom1, int atom2, std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<OpenMM::Vec3>& forces,
-                           double* energyByAtom, double* totalEnergy, double* energyParamDerivs);
+                           double* totalEnergy, double* energyParamDerivs);
 
 
    public:
@@ -144,19 +142,16 @@ class ReferenceCustomNonbondedIxn {
          @param atomParameters   atom parameters (charges, c6, c12, ...)     atomParameters[atomIndex][paramterIndex]
          @param exclusions       atom exclusion indices
                                  exclusions[atomIndex] contains the list of exclusions for that atom
-         @param fixedParameters  non atom parameters (not currently used)
          @param globalParameters the values of global parameters
          @param forces           force array (forces added)
-         @param energyByAtom     atom energy
          @param totalEnergy      total energy
 
          --------------------------------------------------------------------------------------- */
 
       void calculatePairIxn(int numberOfAtoms, std::vector<OpenMM::Vec3>& atomCoordinates,
-                            double** atomParameters, std::vector<std::set<int> >& exclusions,
-                            double* fixedParameters, const std::map<std::string, double>& globalParameters,
-                            std::vector<OpenMM::Vec3>& forces, double* energyByAtom, double* totalEnergy,
-                            double* energyParamDerivs);
+                            std::vector<std::vector<double> >& atomParameters, std::vector<std::set<int> >& exclusions,
+                            const std::map<std::string, double>& globalParameters, std::vector<OpenMM::Vec3>& forces,
+                            double* totalEnergy, double* energyParamDerivs);
 
 // ---------------------------------------------------------------------------------------
 

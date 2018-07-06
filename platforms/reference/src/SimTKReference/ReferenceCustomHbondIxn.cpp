@@ -116,7 +116,7 @@ void ReferenceCustomHbondIxn::setPeriodic(Vec3* vectors) {
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceCustomHbondIxn::calculatePairIxn(vector<Vec3>& atomCoordinates, double** donorParameters, double** acceptorParameters,
+void ReferenceCustomHbondIxn::calculatePairIxn(vector<Vec3>& atomCoordinates, vector<vector<double> >& donorParameters, vector<vector<double> >& acceptorParameters,
                                              vector<set<int> >& exclusions, const map<string, double>& globalParameters, vector<Vec3>& forces,
                                              double* totalEnergy) const {
 

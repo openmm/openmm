@@ -1602,10 +1602,8 @@ private:
     mutable std::vector<std::vector<double4> > localPerDofValuesDouble;
     std::map<std::string, double> energyParamDerivs;
     std::vector<std::string> perDofEnergyParamDerivNames;
-    std::vector<float> localPerDofEnergyParamDerivsFloat;
-    std::vector<double> localPerDofEnergyParamDerivsDouble;
-    std::vector<float> globalValuesFloat;
-    std::vector<double> globalValuesDouble;
+    std::vector<double> localPerDofEnergyParamDerivs;
+    std::vector<double> localGlobalValues;
     std::vector<double> initialGlobalVariables;
     std::vector<std::vector<CUfunction> > kernels;
     std::vector<std::vector<std::vector<void*> > > kernelArgs;

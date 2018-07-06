@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2014-2017 Stanford University and the Authors.      *
+ * Portions copyright (c) 2014-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -50,22 +50,22 @@ public:
     /**
      * Analyze the set of bonds and decide which to compute with each thread.
      */
-    void initialize(int numAtoms, int numBonds, int numAtomsPerBond, int** bondAtoms, ThreadPool& threads);
+    void initialize(int numAtoms, int numBonds, int numAtomsPerBond, std::vector<std::vector<int> >& bondAtoms, ThreadPool& threads);
     /**
      * Compute the forces from all bonds.
      */
-    void calculateForce(std::vector<OpenMM::Vec3>& atomCoordinates, double** parameters, std::vector<OpenMM::Vec3>& forces, 
+    void calculateForce(std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<std::vector<double> >& parameters, std::vector<OpenMM::Vec3>& forces, 
             double* totalEnergy, ReferenceBondIxn& referenceBondIxn);
     /**
      * This routine contains the code executed by each thread.
      */
-    void threadComputeForce(ThreadPool& threads, int threadIndex, std::vector<OpenMM::Vec3>& atomCoordinates, double** parameters,
+    void threadComputeForce(ThreadPool& threads, int threadIndex, std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<std::vector<double> >& parameters,
             std::vector<OpenMM::Vec3>& forces, double* totalEnergy, ReferenceBondIxn& referenceBondIxn);
 private:
     bool canAssignBond(int bond, int thread, std::vector<int>& atomThread);
     void assignBond(int bond, int thread, std::vector<int>& atomThread, std::vector<int>& bondThread, std::vector<std::set<int> >& atomBonds, std::list<int>& candidateBonds);
     int numBonds, numAtomsPerBond;
-    int** bondAtoms;
+    std::vector<int>* bondAtoms;
     ThreadPool* threads;
     std::vector<std::vector<int> > threadBonds;
     std::vector<int> extraBonds;

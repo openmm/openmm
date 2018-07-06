@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2014-2017 Stanford University and the Authors.      *
+ * Portions copyright (c) 2014-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -38,10 +38,10 @@ using namespace std;
 CpuBondForce::CpuBondForce() {
 }
 
-void CpuBondForce::initialize(int numAtoms, int numBonds, int numAtomsPerBond, int** bondAtoms, ThreadPool& threads) {
+void CpuBondForce::initialize(int numAtoms, int numBonds, int numAtomsPerBond, vector<vector<int> >& bondAtoms, ThreadPool& threads) {
     this->numBonds = numBonds;
     this->numAtomsPerBond = numAtomsPerBond;
-    this->bondAtoms = bondAtoms;
+    this->bondAtoms = &bondAtoms[0];
     this->threads = &threads;
     int numThreads = threads.getNumThreads();
     int targetBondsPerThread = numBonds/numThreads;
@@ -164,7 +164,7 @@ void CpuBondForce::assignBond(int bond, int thread, vector<int>& atomThread, vec
     }
 }
 
-void CpuBondForce::calculateForce(vector<Vec3>& atomCoordinates, double** parameters, vector<Vec3>& forces, 
+void CpuBondForce::calculateForce(vector<Vec3>& atomCoordinates, vector<vector<double> >& parameters, vector<Vec3>& forces, 
         double* totalEnergy, ReferenceBondIxn& referenceBondIxn) {
     // Have the worker threads compute their forces.
     
@@ -189,7 +189,7 @@ void CpuBondForce::calculateForce(vector<Vec3>& atomCoordinates, double** parame
             *totalEnergy += threadEnergy[i];
 }
 
-void CpuBondForce::threadComputeForce(ThreadPool& threads, int threadIndex, vector<Vec3>& atomCoordinates, double** parameters, vector<Vec3>& forces, 
+void CpuBondForce::threadComputeForce(ThreadPool& threads, int threadIndex, vector<Vec3>& atomCoordinates, vector<vector<double> >& parameters, vector<Vec3>& forces, 
             double* totalEnergy, ReferenceBondIxn& referenceBondIxn) {
     vector<int>& bonds = threadBonds[threadIndex];
     int numBonds = bonds.size();

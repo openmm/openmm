@@ -130,7 +130,27 @@ public:
      * Copy the values in a vector to the device memory.
      */
     template <class T>
-    void upload(const std::vector<T>& data) {
+    void upload(const std::vector<T>& data, bool convert = true) {
+        if (convert && data.size() == size && sizeof(T) != elementSize) {
+            if (sizeof(T) == 2*elementSize) {
+                // Convert values from double to single precision.
+                const double* d = reinterpret_cast<const double*>(&data[0]);
+                std::vector<float> v(elementSize*size/sizeof(float));
+                for (int i = 0; i < v.size(); i++)
+                    v[i] = (float) d[i];
+                upload(&v[0], true);
+                return;
+            }
+            if (2*sizeof(T) == elementSize) {
+                // Convert values from single to double precision.
+                const float* d = reinterpret_cast<const float*>(&data[0]);
+                std::vector<double> v(elementSize*size/sizeof(double));
+                for (int i = 0; i < v.size(); i++)
+                    v[i] = (double) d[i];
+                upload(&v[0], true);
+                return;
+            }
+        }
         if (sizeof(T) != elementSize || data.size() != size)
             throw OpenMMException("Error uploading array "+name+": The specified vector does not match the size of the array");
         upload(&data[0], true);

@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2014 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2018 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -105,7 +105,7 @@ ReferenceCustomManyParticleIxn::ReferenceCustomManyParticleIxn(const CustomManyP
 ReferenceCustomManyParticleIxn::~ReferenceCustomManyParticleIxn() {
 }
 
-void ReferenceCustomManyParticleIxn::calculateIxn(vector<Vec3>& atomCoordinates, double** particleParameters,
+void ReferenceCustomManyParticleIxn::calculateIxn(vector<Vec3>& atomCoordinates, vector<vector<double> >& particleParameters,
                                                   const map<string, double>& globalParameters, vector<Vec3>& forces,
                                                   double* totalEnergy) const {
     map<string, double> variables = globalParameters;
@@ -130,7 +130,7 @@ void ReferenceCustomManyParticleIxn::setPeriodic(Vec3* vectors) {
 }
 
 void ReferenceCustomManyParticleIxn::loopOverInteractions(vector<int>& particles, int loopIndex, vector<OpenMM::Vec3>& atomCoordinates,
-                                                          double** particleParameters, map<string, double>& variables, vector<OpenMM::Vec3>& forces,
+                                                          vector<vector<double> >& particleParameters, map<string, double>& variables, vector<OpenMM::Vec3>& forces,
                                                           double* totalEnergy) const {
     int numParticles = atomCoordinates.size();
     int firstPartialLoop = (centralParticleMode ? 2 : 1);
@@ -147,7 +147,7 @@ void ReferenceCustomManyParticleIxn::loopOverInteractions(vector<int>& particles
 }
 
 void ReferenceCustomManyParticleIxn::calculateOneIxn(const vector<int>& particles, vector<Vec3>& atomCoordinates,
-                        double** particleParameters, map<string, double>& variables, vector<Vec3>& forces, double* totalEnergy) const {
+                        vector<vector<double> >& particleParameters, map<string, double>& variables, vector<Vec3>& forces, double* totalEnergy) const {
     // Select the ordering to use for the particles.
     
     vector<int> permutedParticles(numParticlesPerSet);

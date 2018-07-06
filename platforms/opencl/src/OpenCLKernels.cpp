@@ -1834,32 +1834,19 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
                                 sc += bsplines_data[j]*cos(arg);
                                 ss += bsplines_data[j]*sin(arg);
                             }
-                            moduli[i] = (float) (sc*sc+ss*ss);
+                            moduli[i] = sc*sc+ss*ss;
                         }
                         for (int i = 0; i < ndata; i++)
                         {
                             if (moduli[i] < 1.0e-7)
                                 moduli[i] = (moduli[i-1]+moduli[i+1])*0.5f;
                         }
-                        if (cl.getUseDoublePrecision()) {
-                            if (dim == 0)
-                                xmoduli->upload(moduli);
-                            else if (dim == 1)
-                                ymoduli->upload(moduli);
-                            else
-                                zmoduli->upload(moduli);
-                        }
-                        else {
-                            vector<float> modulif(ndata);
-                            for (int i = 0; i < ndata; i++)
-                                modulif[i] = (float) moduli[i];
-                            if (dim == 0)
-                                xmoduli->upload(modulif);
-                            else if (dim == 1)
-                                ymoduli->upload(modulif);
-                            else
-                                zmoduli->upload(modulif);
-                        }
+                        if (dim == 0)
+                            xmoduli->upload(moduli, true, true);
+                        else if (dim == 1)
+                            ymoduli->upload(moduli, true, true);
+                        else
+                            zmoduli->upload(moduli, true, true);
                     }
                 }
             }
@@ -2153,14 +2140,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
     }
     if (paramChanged) {
         recomputeParams = true;
-        if (cl.getUseDoublePrecision())
-            globalParams.upload(paramValues);
-        else {
-            vector<float> v(paramValues.size());
-            for (int i = 0; i < v.size(); i++)
-                v[i] = paramValues[i];
-            globalParams.upload(v);
-        }
+        globalParams.upload(paramValues, true, true);
     }
     double energy = (includeReciprocal ? ewaldSelfEnergy : 0.0);
     if (recomputeParams || hasOffsets) {
@@ -3133,14 +3113,7 @@ void OpenCLCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOB
         chargeVec[i] = charge;
         paramsVector[i] = mm_float2((float) radius, (float) (scalingFactor*radius));
     }
-    if (cl.getUseDoublePrecision())
-        charges.upload(chargeVec);
-    else {
-        vector<float> c(charges.getSize());
-        for (int i = 0; i < c.size(); i++)
-            c[i] = (float) chargeVec[i];
-        charges.upload(c);
-    }
+    charges.upload(chargeVec, true, true);
     params.upload(paramsVector);
     prefactor = -ONE_4PI_EPS0*((1.0/force.getSoluteDielectric())-(1.0/force.getSolventDielectric()));
     surfaceAreaFactor = -6.0*4*M_PI*force.getSurfaceAreaEnergy();
@@ -3307,14 +3280,7 @@ void OpenCLCalcGBSAOBCForceKernel::copyParametersToContext(ContextImpl& context,
     }
     for (int i = numParticles; i < cl.getPaddedNumAtoms(); i++)
         paramsVector[i] = mm_float2(1,1);
-    if (cl.getUseDoublePrecision())
-        charges.upload(chargeVector);
-    else {
-        vector<float> c(charges.getSize());
-        for (int i = 0; i < c.size(); i++)
-            c[i] = (float) chargeVector[i];
-        charges.upload(c);
-    }
+    charges.upload(chargeVector, true, true);
     params.upload(paramsVector);
     
     // Mark that the current reordering may be invalid.
@@ -5162,8 +5128,7 @@ void OpenCLCalcCustomCentroidBondForceKernel::initialize(const System& system, c
     
     numGroups = force.getNumGroups();
     vector<cl_int> groupParticleVec;
-    vector<cl_float> groupWeightVecFloat;
-    vector<cl_double> groupWeightVecDouble;
+    vector<cl_double> groupWeightVec;
     vector<cl_int> groupOffsetVec;
     groupOffsetVec.push_back(0);
     for (int i = 0; i < numGroups; i++) {
@@ -5175,27 +5140,19 @@ void OpenCLCalcCustomCentroidBondForceKernel::initialize(const System& system, c
     }
     vector<vector<double> > normalizedWeights;
     CustomCentroidBondForceImpl::computeNormalizedWeights(force, system, normalizedWeights);
-    if (cl.getUseDoublePrecision()) {
-        for (int i = 0; i < numGroups; i++)
-            groupWeightVecDouble.insert(groupWeightVecDouble.end(), normalizedWeights[i].begin(), normalizedWeights[i].end());
-    }
-    else {
-        for (int i = 0; i < numGroups; i++)
-            for (int j = 0; j < normalizedWeights[i].size(); j++)
-                groupWeightVecFloat.push_back((float) normalizedWeights[i][j]);
-    }
+    for (int i = 0; i < numGroups; i++)
+        groupWeightVec.insert(groupWeightVec.end(), normalizedWeights[i].begin(), normalizedWeights[i].end());
     groupParticles.initialize<int>(cl, groupParticleVec.size(), "groupParticles");
     groupParticles.upload(groupParticleVec);
     if (cl.getUseDoublePrecision()) {
         groupWeights.initialize<double>(cl, groupParticleVec.size(), "groupWeights");
-        groupWeights.upload(groupWeightVecDouble);
         centerPositions.initialize<mm_double4>(cl, numGroups, "centerPositions");
     }
     else {
         groupWeights.initialize<float>(cl, groupParticleVec.size(), "groupWeights");
-        groupWeights.upload(groupWeightVecFloat);
         centerPositions.initialize<mm_float4>(cl, numGroups, "centerPositions");
     }
+    groupWeights.upload(groupWeightVec, true, true);
     groupOffsets.initialize<int>(cl, groupOffsetVec.size(), "groupOffsets");
     groupOffsets.upload(groupOffsetVec);
     groupForces.initialize<long long>(cl, numGroups*3, "groupForces");
@@ -7122,18 +7079,10 @@ void OpenCLCalcRMSDForceKernel::recordParameters(const RMSDForce& force) {
     // Upload them to the device.
 
     particles.upload(particleVec);
-    if (cl.getUseDoublePrecision()) {
-        vector<mm_double4> pos;
-        for (Vec3 p : centeredPositions)
-            pos.push_back(mm_double4(p[0], p[1], p[2], 0));
-        referencePos.upload(pos);
-    }
-    else {
-        vector<mm_float4> pos;
-        for (Vec3 p : centeredPositions)
-            pos.push_back(mm_float4(p[0], p[1], p[2], 0));
-        referencePos.upload(pos);
-    }
+    vector<mm_double4> pos;
+    for (Vec3 p : centeredPositions)
+        pos.push_back(mm_double4(p[0], p[1], p[2], 0));
+    referencePos.upload(pos, true, true);
 
     // Record the sum of the norms of the reference positions.
 
@@ -7352,20 +7301,11 @@ void OpenCLIntegrateLangevinStepKernel::execute(ContextImpl& context, const Lang
         double vscale = exp(-stepSize*friction);
         double fscale = (friction == 0 ? stepSize : (1-vscale)/friction);
         double noisescale = sqrt(kT*(1-vscale*vscale));
-        if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {
-            vector<cl_double> p(params.getSize());
-            p[0] = vscale;
-            p[1] = fscale;
-            p[2] = noisescale;
-            params.upload(p);
-        }
-        else {
-            vector<cl_float> p(params.getSize());
-            p[0] = (cl_float) vscale;
-            p[1] = (cl_float) fscale;
-            p[2] = (cl_float) noisescale;
-            params.upload(p);
-        }
+        vector<cl_double> p(params.getSize());
+        p[0] = vscale;
+        p[1] = fscale;
+        p[2] = noisescale;
+        params.upload(p, true, true);
         prevTemp = temperature;
         prevFriction = friction;
         prevStepSize = stepSize;
@@ -7929,22 +7869,20 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
         
         // Allocate space for storing global values, both on the host and the device.
         
-        globalValuesFloat.resize(expressionSet.getNumVariables());
-        globalValuesDouble.resize(expressionSet.getNumVariables());
+        localGlobalValues.resize(expressionSet.getNumVariables());
         int elementSize = (cl.getUseDoublePrecision() || cl.getUseMixedPrecision() ? sizeof(double) : sizeof(float));
         globalValues.initialize(cl, expressionSet.getNumVariables(), elementSize, "globalValues");
         for (int i = 0; i < integrator.getNumGlobalVariables(); i++) {
-            globalValuesDouble[globalVariableIndex[i]] = initialGlobalVariables[i];
+            localGlobalValues[globalVariableIndex[i]] = initialGlobalVariables[i];
             expressionSet.setVariable(globalVariableIndex[i], initialGlobalVariables[i]);
         }
         for (int i = 0; i < (int) parameterVariableIndex.size(); i++) {
             double value = context.getParameter(parameterNames[i]);
-            globalValuesDouble[parameterVariableIndex[i]] = value;
+            localGlobalValues[parameterVariableIndex[i]] = value;
             expressionSet.setVariable(parameterVariableIndex[i], value);
         }
         int numContextParams = context.getParameters().size();
-        localPerDofEnergyParamDerivsFloat.resize(numContextParams);
-        localPerDofEnergyParamDerivsDouble.resize(numContextParams);
+        localPerDofEnergyParamDerivs.resize(numContextParams);
         perDofEnergyParamDerivs.initialize(cl, max(1, numContextParams), elementSize, "perDofEnergyParamDerivs");
         
         // Record information about the targets of steps that will be stored in global variables.
@@ -8219,8 +8157,8 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
     recordGlobalValue(stepSize, GlobalTarget(DT, dtVariableIndex), integrator);
     for (int i = 0; i < (int) parameterNames.size(); i++) {
         double value = context.getParameter(parameterNames[i]);
-        if (value != globalValuesDouble[parameterVariableIndex[i]]) {
-            globalValuesDouble[parameterVariableIndex[i]] = value;
+        if (value != localGlobalValues[parameterVariableIndex[i]]) {
+            localGlobalValues[parameterVariableIndex[i]] = value;
             deviceGlobalsAreCurrent = false;
         }
     }
@@ -8314,16 +8252,9 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
                 if (needsEnergyParamDerivs) {
                     context.getEnergyParameterDerivatives(energyParamDerivs);
                     if (perDofEnergyParamDerivNames.size() > 0) {
-                        if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {
-                            for (int i = 0; i < perDofEnergyParamDerivNames.size(); i++)
-                                localPerDofEnergyParamDerivsDouble[i] = energyParamDerivs[perDofEnergyParamDerivNames[i]];
-                            perDofEnergyParamDerivs.upload(localPerDofEnergyParamDerivsDouble);
-                        }
-                        else {
-                            for (int i = 0; i < perDofEnergyParamDerivNames.size(); i++)
-                                localPerDofEnergyParamDerivsFloat[i] = (float) energyParamDerivs[perDofEnergyParamDerivNames[i]];
-                            perDofEnergyParamDerivs.upload(localPerDofEnergyParamDerivsFloat);
-                        }
+                        for (int i = 0; i < perDofEnergyParamDerivNames.size(); i++)
+                            localPerDofEnergyParamDerivs[i] = energyParamDerivs[perDofEnergyParamDerivNames[i]];
+                        perDofEnergyParamDerivs.upload(localPerDofEnergyParamDerivs, true, true);
                     }
                 }
                 forcesAreValid = true;
@@ -8334,13 +8265,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
         if (needsGlobals[step] && !deviceGlobalsAreCurrent) {
             // Upload the global values to the device.
             
-            if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision())
-                globalValues.upload(globalValuesDouble);
-            else {
-                for (int j = 0; j < (int) globalValuesDouble.size(); j++)
-                    globalValuesFloat[j] = (float) globalValuesDouble[j];
-                globalValues.upload(globalValuesFloat);
-            }
+            globalValues.upload(localGlobalValues, true, true);
         }
         bool stepInvalidatesForces = invalidatesForces[step];
         if (stepType[step] == CustomIntegrator::ComputePerDof && !merged[step]) {
@@ -8491,17 +8416,17 @@ double OpenCLIntegrateCustomStepKernel::computeKineticEnergy(ContextImpl& contex
 void OpenCLIntegrateCustomStepKernel::recordGlobalValue(double value, GlobalTarget target, CustomIntegrator& integrator) {
     switch (target.type) {
         case DT:
-            if (value != globalValuesDouble[dtVariableIndex])
+            if (value != localGlobalValues[dtVariableIndex])
                 deviceGlobalsAreCurrent = false;
             expressionSet.setVariable(dtVariableIndex, value);
-            globalValuesDouble[dtVariableIndex] = value;
+            localGlobalValues[dtVariableIndex] = value;
             cl.getIntegrationUtilities().setNextStepSize(value);
             integrator.setStepSize(value);
             break;
         case VARIABLE:
         case PARAMETER:
             expressionSet.setVariable(target.variableIndex, value);
-            globalValuesDouble[target.variableIndex] = value;
+            localGlobalValues[target.variableIndex] = value;
             deviceGlobalsAreCurrent = false;
             break;
     }
@@ -8512,8 +8437,8 @@ void OpenCLIntegrateCustomStepKernel::recordChangedParameters(ContextImpl& conte
         return;
     for (int i = 0; i < (int) parameterNames.size(); i++) {
         double value = context.getParameter(parameterNames[i]);
-        if (value != globalValuesDouble[parameterVariableIndex[i]])
-            context.setParameter(parameterNames[i], globalValuesDouble[parameterVariableIndex[i]]);
+        if (value != localGlobalValues[parameterVariableIndex[i]])
+            context.setParameter(parameterNames[i], localGlobalValues[parameterVariableIndex[i]]);
     }
 }
 
@@ -8526,7 +8451,7 @@ void OpenCLIntegrateCustomStepKernel::getGlobalVariables(ContextImpl& context, v
     }
     values.resize(numGlobalVariables);
     for (int i = 0; i < numGlobalVariables; i++)
-        values[i] = globalValuesDouble[globalVariableIndex[i]];
+        values[i] = localGlobalValues[globalVariableIndex[i]];
 }
 
 void OpenCLIntegrateCustomStepKernel::setGlobalVariables(ContextImpl& context, const vector<double>& values) {
@@ -8539,7 +8464,7 @@ void OpenCLIntegrateCustomStepKernel::setGlobalVariables(ContextImpl& context, c
         return;
     }
     for (int i = 0; i < numGlobalVariables; i++) {
-        globalValuesDouble[globalVariableIndex[i]] = values[i];
+        localGlobalValues[globalVariableIndex[i]] = values[i];
         expressionSet.setVariable(globalVariableIndex[i], values[i]);
     }
     deviceGlobalsAreCurrent = false;

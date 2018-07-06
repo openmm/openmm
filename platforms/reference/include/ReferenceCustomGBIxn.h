@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2016 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2018 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -73,7 +73,7 @@ class ReferenceCustomGBIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateSingleParticleValue(int index, int numAtoms, std::vector<OpenMM::Vec3>& atomCoordinates, double** atomParameters);
+      void calculateSingleParticleValue(int index, int numAtoms, std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<std::vector<double> >& atomParameters);
 
       /**---------------------------------------------------------------------------------------
 
@@ -88,7 +88,7 @@ class ReferenceCustomGBIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateParticlePairValue(int index, int numAtoms, std::vector<OpenMM::Vec3>& atomCoordinates, double** atomParameters,
+      void calculateParticlePairValue(int index, int numAtoms, std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<std::vector<double> >& atomParameters,
                                       const std::vector<std::set<int> >& exclusions, bool useExclusions);
 
       /**---------------------------------------------------------------------------------------
@@ -103,7 +103,7 @@ class ReferenceCustomGBIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateOnePairValue(int index, int atom1, int atom2, std::vector<OpenMM::Vec3>& atomCoordinates, double** atomParameters);
+      void calculateOnePairValue(int index, int atom1, int atom2, std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<std::vector<double> >& atomParameters);
 
       /**---------------------------------------------------------------------------------------
 
@@ -119,7 +119,7 @@ class ReferenceCustomGBIxn {
          --------------------------------------------------------------------------------------- */
 
       void calculateSingleParticleEnergyTerm(int index, int numAtoms, std::vector<OpenMM::Vec3>& atomCoordinates,
-                        double** atomParameters, std::vector<OpenMM::Vec3>& forces, double* totalEnergy, double* energyParamDerivs);
+                        std::vector<std::vector<double> >& atomParameters, std::vector<OpenMM::Vec3>& forces, double* totalEnergy, double* energyParamDerivs);
 
       /**---------------------------------------------------------------------------------------
 
@@ -136,7 +136,7 @@ class ReferenceCustomGBIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateParticlePairEnergyTerm(int index, int numAtoms, std::vector<OpenMM::Vec3>& atomCoordinates, double** atomParameters,
+      void calculateParticlePairEnergyTerm(int index, int numAtoms, std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<std::vector<double> >& atomParameters,
                                       const std::vector<std::set<int> >& exclusions, bool useExclusions,
                                       std::vector<OpenMM::Vec3>& forces, double* totalEnergy, double* energyParamDerivs);
 
@@ -154,7 +154,7 @@ class ReferenceCustomGBIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateOnePairEnergyTerm(int index, int atom1, int atom2, std::vector<OpenMM::Vec3>& atomCoordinates, double** atomParameters,
+      void calculateOnePairEnergyTerm(int index, int atom1, int atom2, std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<std::vector<double> >& atomParameters,
                                  std::vector<OpenMM::Vec3>& forces, double* totalEnergy, double* energyParamDerivs);
 
       /**---------------------------------------------------------------------------------------
@@ -169,7 +169,7 @@ class ReferenceCustomGBIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateChainRuleForces(int numAtoms, std::vector<OpenMM::Vec3>& atomCoordinates, double** atomParameters,
+      void calculateChainRuleForces(int numAtoms, std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<std::vector<double> >& atomParameters,
                                       const std::vector<std::set<int> >& exclusions, std::vector<OpenMM::Vec3>& forces, double* energyParamDerivs);
 
       /**---------------------------------------------------------------------------------------
@@ -185,7 +185,7 @@ class ReferenceCustomGBIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateOnePairChainRule(int atom1, int atom2, std::vector<OpenMM::Vec3>& atomCoordinates, double** atomParameters,
+      void calculateOnePairChainRule(int atom1, int atom2, std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<std::vector<double> >& atomParameters,
                                  std::vector<OpenMM::Vec3>& forces, bool isExcluded);
 
    public:
@@ -254,7 +254,7 @@ class ReferenceCustomGBIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateIxn(int numberOfAtoms, std::vector<OpenMM::Vec3>& atomCoordinates, double** atomParameters, const std::vector<std::set<int> >& exclusions,
+      void calculateIxn(int numberOfAtoms, std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<std::vector<double> >& atomParameters, const std::vector<std::set<int> >& exclusions,
                        std::map<std::string, double>& globalParameters, std::vector<OpenMM::Vec3>& forces, double* totalEnergy, double* energyParamDerivs);
 
 // ---------------------------------------------------------------------------------------

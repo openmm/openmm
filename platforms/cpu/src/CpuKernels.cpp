@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -302,25 +302,10 @@ double CpuCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, boo
     return referenceKernel.getAs<ReferenceCalcForcesAndEnergyKernel>().finishComputation(context, includeForce, includeEnergy, groups, valid);
 }
 
-CpuCalcHarmonicAngleForceKernel::~CpuCalcHarmonicAngleForceKernel() {
-    if (angleIndexArray != NULL) {
-        for (int i = 0; i < numAngles; i++) {
-            delete[] angleIndexArray[i];
-            delete[] angleParamArray[i];
-        }
-        delete[] angleIndexArray;
-        delete[] angleParamArray;
-    }
-}
-
 void CpuCalcHarmonicAngleForceKernel::initialize(const System& system, const HarmonicAngleForce& force) {
     numAngles = force.getNumAngles();
-    angleIndexArray = new int*[numAngles];
-    for (int i = 0; i < numAngles; i++)
-        angleIndexArray[i] = new int[3];
-    angleParamArray = new double*[numAngles];
-    for (int i = 0; i < numAngles; i++)
-        angleParamArray[i] = new double[2];
+    angleIndexArray.resize(numAngles, vector<int>(3));
+    angleParamArray.resize(numAngles, vector<double>(2));
     for (int i = 0; i < numAngles; ++i) {
         int particle1, particle2, particle3;
         double angle, k;
@@ -363,25 +348,10 @@ void CpuCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl& conte
     }
 }
 
-CpuCalcPeriodicTorsionForceKernel::~CpuCalcPeriodicTorsionForceKernel() {
-    if (torsionIndexArray != NULL) {
-        for (int i = 0; i < numTorsions; i++) {
-            delete[] torsionIndexArray[i];
-            delete[] torsionParamArray[i];
-        }
-        delete[] torsionIndexArray;
-        delete[] torsionParamArray;
-    }
-}
-
 void CpuCalcPeriodicTorsionForceKernel::initialize(const System& system, const PeriodicTorsionForce& force) {
     numTorsions = force.getNumTorsions();
-    torsionIndexArray = new int*[numTorsions];
-    for (int i = 0; i < numTorsions; i++)
-        torsionIndexArray[i] = new int[4];
-    torsionParamArray = new double*[numTorsions];
-    for (int i = 0; i < numTorsions; i++)
-        torsionParamArray[i] = new double[3];
+    torsionIndexArray.resize(numTorsions, vector<int>(4));
+    torsionParamArray.resize(numTorsions, vector<double>(3));
     for (int i = 0; i < numTorsions; ++i) {
         int particle1, particle2, particle3, particle4, periodicity;
         double phase, k;
@@ -427,25 +397,10 @@ void CpuCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImpl& con
     }
 }
 
-CpuCalcRBTorsionForceKernel::~CpuCalcRBTorsionForceKernel() {
-    if (torsionIndexArray != NULL) {
-        for (int i = 0; i < numTorsions; i++) {
-            delete[] torsionIndexArray[i];
-            delete[] torsionParamArray[i];
-        }
-        delete[] torsionIndexArray;
-        delete[] torsionParamArray;
-    }
-}
-
 void CpuCalcRBTorsionForceKernel::initialize(const System& system, const RBTorsionForce& force) {
     numTorsions = force.getNumTorsions();
-    torsionIndexArray = new int*[numTorsions];
-    for (int i = 0; i < numTorsions; i++)
-        torsionIndexArray[i] = new int[4];
-    torsionParamArray = new double*[numTorsions];
-    for (int i = 0; i < numTorsions; i++)
-        torsionParamArray[i] = new double[6];
+    torsionIndexArray.resize(numTorsions, vector<int>(4));
+    torsionParamArray.resize(numTorsions, vector<double>(6));
     for (int i = 0; i < numTorsions; ++i) {
         int particle1, particle2, particle3, particle4;
         double c0, c1, c2, c3, c4, c5;
@@ -522,7 +477,7 @@ CpuNonbondedForce* createCpuNonbondedForceVec4();
 CpuNonbondedForce* createCpuNonbondedForceVec8();
 
 CpuCalcNonbondedForceKernel::CpuCalcNonbondedForceKernel(string name, const Platform& platform, CpuPlatform::PlatformData& data) : CalcNonbondedForceKernel(name, platform),
-        data(data), bonded14IndexArray(NULL), bonded14ParamArray(NULL), hasInitializedPme(false), hasInitializedDispersionPme(false), nonbonded(NULL) {
+        data(data), hasInitializedPme(false), hasInitializedDispersionPme(false), nonbonded(NULL) {
     if (isVec8Supported())
         nonbonded = createCpuNonbondedForceVec8();
     else
@@ -530,14 +485,6 @@ CpuCalcNonbondedForceKernel::CpuCalcNonbondedForceKernel(string name, const Plat
 }
 
 CpuCalcNonbondedForceKernel::~CpuCalcNonbondedForceKernel() {
-    if (bonded14ParamArray != NULL) {
-        for (int i = 0; i < num14; i++) {
-            delete[] bonded14IndexArray[i];
-            delete[] bonded14ParamArray[i];
-        }
-        delete[] bonded14IndexArray;
-        delete[] bonded14ParamArray;
-    }
     if (nonbonded != NULL)
         delete nonbonded;
 }
@@ -563,12 +510,8 @@ void CpuCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
     // Record the particle parameters.
 
     num14 = nb14s.size();
-    bonded14IndexArray = new int*[num14];
-    for (int i = 0; i < num14; i++)
-        bonded14IndexArray[i] = new int[2];
-    bonded14ParamArray = new double*[num14];
-    for (int i = 0; i < num14; i++)
-        bonded14ParamArray[i] = new double[3];
+    bonded14IndexArray.resize(num14, vector<int>(2));
+    bonded14ParamArray.resize(num14, vector<double>(3));
     particleParams.resize(numParticles);
     charges.resize(numParticles);
     C6params.resize(numParticles);
@@ -871,11 +814,6 @@ CpuCalcCustomNonbondedForceKernel::CpuCalcCustomNonbondedForceKernel(string name
 }
 
 CpuCalcCustomNonbondedForceKernel::~CpuCalcCustomNonbondedForceKernel() {
-    if (particleParamArray != NULL) {
-        for (int i = 0; i < numParticles; i++)
-            delete[] particleParamArray[i];
-        delete[] particleParamArray;
-    }
     if (nonbonded != NULL)
         delete nonbonded;
     if (forceCopy != NULL)
@@ -898,15 +836,9 @@ void CpuCalcCustomNonbondedForceKernel::initialize(const System& system, const C
     // Build the arrays.
 
     int numParameters = force.getNumPerParticleParameters();
-    particleParamArray = new double*[numParticles];
-    for (int i = 0; i < numParticles; i++)
-        particleParamArray[i] = new double[numParameters];
-    for (int i = 0; i < numParticles; ++i) {
-        vector<double> parameters;
-        force.getParticleParameters(i, parameters);
-        for (int j = 0; j < numParameters; j++)
-            particleParamArray[i][j] = parameters[j];
-    }
+    particleParamArray.resize(numParticles);
+    for (int i = 0; i < numParticles; ++i)
+        force.getParticleParameters(i, particleParamArray[i]);
     nonbondedMethod = CalcCustomNonbondedForceKernel::NonbondedMethod(force.getNonbondedMethod());
     nonbondedCutoff = force.getCutoffDistance();
     if (nonbondedMethod == NoCutoff)
@@ -1002,7 +934,7 @@ double CpuCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool inc
     if (useSwitchingFunction)
         nonbonded->setUseSwitchingFunction(switchingDistance);
     vector<double> energyParamDerivValues(energyParamDerivNames.size()+1, 0.0);
-    nonbonded->calculatePairIxn(numParticles, &data.posq[0], posData, particleParamArray, 0, globalParamValues, data.threadForce, includeForces, includeEnergy, energy, &energyParamDerivValues[0]);
+    nonbonded->calculatePairIxn(numParticles, &data.posq[0], posData, particleParamArray, globalParamValues, data.threadForce, includeForces, includeEnergy, energy, &energyParamDerivValues[0]);
     map<string, double>& energyParamDerivs = extractEnergyParameterDerivatives(context);
     for (int i = 0; i < energyParamDerivNames.size(); i++)
         energyParamDerivs[energyParamDerivNames[i]] += energyParamDerivValues[i];
@@ -1099,11 +1031,6 @@ void CpuCalcGBSAOBCForceKernel::copyParametersToContext(ContextImpl& context, co
 }
 
 CpuCalcCustomGBForceKernel::~CpuCalcCustomGBForceKernel() {
-    if (particleParamArray != NULL) {
-        for (int i = 0; i < numParticles; i++)
-            delete[] particleParamArray[i];
-        delete[] particleParamArray;
-    }
     if (ixn != NULL)
         delete ixn;
     if (neighborList != NULL)
@@ -1138,15 +1065,9 @@ void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGB
     // Build the arrays.
 
     int numPerParticleParameters = force.getNumPerParticleParameters();
-    particleParamArray = new double*[numParticles];
-    for (int i = 0; i < numParticles; i++)
-        particleParamArray[i] = new double[numPerParticleParameters];
-    for (int i = 0; i < numParticles; ++i) {
-        vector<double> parameters;
-        force.getParticleParameters(i, parameters);
-        for (int j = 0; j < numPerParticleParameters; j++)
-            particleParamArray[i][j] = parameters[j];
-    }
+    particleParamArray.resize(numParticles);
+    for (int i = 0; i < numParticles; ++i)
+        force.getParticleParameters(i, particleParamArray[i]);
     for (int i = 0; i < numPerParticleParameters; i++)
         particleParameterNames.push_back(force.getPerParticleParameterName(i));
     for (int i = 0; i < force.getNumGlobalParameters(); i++)
@@ -1292,11 +1213,6 @@ void CpuCalcCustomGBForceKernel::copyParametersToContext(ContextImpl& context, c
 }
 
 CpuCalcCustomManyParticleForceKernel::~CpuCalcCustomManyParticleForceKernel() {
-    if (particleParamArray != NULL) {
-        for (int i = 0; i < numParticles; i++)
-            delete[] particleParamArray[i];
-        delete[] particleParamArray;
-    }
     if (ixn != NULL)
         delete ixn;
 }
@@ -1307,15 +1223,10 @@ void CpuCalcCustomManyParticleForceKernel::initialize(const System& system, cons
 
     numParticles = system.getNumParticles();
     int numParticleParameters = force.getNumPerParticleParameters();
-    particleParamArray = new double*[numParticles];
-    for (int i = 0; i < numParticles; i++)
-        particleParamArray[i] = new double[numParticleParameters];
+    particleParamArray.resize(numParticles);
     for (int i = 0; i < numParticles; ++i) {
-        vector<double> parameters;
         int type;
-        force.getParticleParameters(i, parameters, type);
-        for (int j = 0; j < numParticleParameters; j++)
-            particleParamArray[i][j] = parameters[j];
+        force.getParticleParameters(i, particleParamArray[i], type);
     }
     for (int i = 0; i < force.getNumGlobalParameters(); i++)
         globalParameterNames.push_back(force.getGlobalParameterName(i));

@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2014 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2018 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -59,8 +59,8 @@ class ReferenceCustomManyParticleIxn {
       std::vector<DihedralTermInfo> dihedralTerms;
 
       void loopOverInteractions(std::vector<int>& particles, int loopIndex, std::vector<OpenMM::Vec3>& atomCoordinates,
-                                double** particleParameters, std::map<std::string, double>& variables, std::vector<OpenMM::Vec3>& forces,
-                                double* totalEnergy) const;
+                                std::vector<std::vector<double> >& particleParameters, std::map<std::string, double>& variables,
+                                std::vector<OpenMM::Vec3>& forces, double* totalEnergy) const;
 
       /**---------------------------------------------------------------------------------------
 
@@ -76,8 +76,8 @@ class ReferenceCustomManyParticleIxn {
          --------------------------------------------------------------------------------------- */
 
       void calculateOneIxn(const std::vector<int>& particles, std::vector<OpenMM::Vec3>& atomCoordinates,
-                           double** particleParameters, std::map<std::string, double>& variables, std::vector<OpenMM::Vec3>& forces,
-                           double* totalEnergy) const;
+                           std::vector<std::vector<double> >& particleParameters, std::map<std::string, double>& variables,
+                           std::vector<OpenMM::Vec3>& forces, double* totalEnergy) const;
 
       void computeDelta(int atom1, int atom2, double* delta, std::vector<OpenMM::Vec3>& atomCoordinates) const;
 
@@ -136,7 +136,7 @@ class ReferenceCustomManyParticleIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateIxn(std::vector<OpenMM::Vec3>& atomCoordinates, double** particleParameters,
+      void calculateIxn(std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<std::vector<double> >& particleParameters,
                         const std::map<std::string, double>& globalParameters,
                         std::vector<OpenMM::Vec3>& forces, double* totalEnergy) const;
 };

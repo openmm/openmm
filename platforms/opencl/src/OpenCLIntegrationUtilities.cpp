@@ -395,72 +395,38 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
         vector<cl_int> atomConstraintsVec(ccmaAtomConstraints.getSize());
         vector<cl_int> numAtomConstraintsVec(ccmaNumAtomConstraints.getSize());
         vector<cl_int> constraintMatrixColumnVec(ccmaConstraintMatrixColumn.getSize());
-        if (context.getUseDoublePrecision() || context.getUseMixedPrecision()) {
-            ccmaDistance.initialize<mm_double4>(context, numCCMA, "CcmaDistance");
-            ccmaDelta1.initialize<cl_double>(context, numCCMA, "CcmaDelta1");
-            ccmaDelta2.initialize<cl_double>(context, numCCMA, "CcmaDelta2");
-            ccmaReducedMass.initialize<cl_double>(context, numCCMA, "CcmaReducedMass");
-            ccmaConstraintMatrixValue.initialize<cl_double>(context, numCCMA*maxRowElements, "ConstraintMatrixValue");
-            vector<mm_double4> distanceVec(ccmaDistance.getSize());
-            vector<cl_double> reducedMassVec(ccmaReducedMass.getSize());
-            vector<cl_double> constraintMatrixValueVec(ccmaConstraintMatrixValue.getSize());
-            for (int i = 0; i < numCCMA; i++) {
-                int index = constraintOrder[i];
-                int c = ccmaConstraints[index];
-                atomsVec[i].x = atom1[c];
-                atomsVec[i].y = atom2[c];
-                distanceVec[i].w = distance[c];
-                reducedMassVec[i] = (0.5/(1.0/system.getParticleMass(atom1[c])+1.0/system.getParticleMass(atom2[c])));
-                for (unsigned int j = 0; j < matrix[index].size(); j++) {
-                    constraintMatrixColumnVec[i+j*numCCMA] = matrix[index][j].first;
-                    constraintMatrixValueVec[i+j*numCCMA] = matrix[index][j].second;
-                }
-                constraintMatrixColumnVec[i+matrix[index].size()*numCCMA] = numCCMA;
+        int elementSize = (context.getUseDoublePrecision() || context.getUseMixedPrecision() ? sizeof(cl_double) : sizeof(cl_float));
+        ccmaDistance.initialize(context, numCCMA, 4*elementSize, "CcmaDistance");
+        ccmaDelta1.initialize(context, numCCMA, elementSize, "CcmaDelta1");
+        ccmaDelta2.initialize(context, numCCMA, elementSize, "CcmaDelta2");
+        ccmaReducedMass.initialize(context, numCCMA, elementSize, "CcmaReducedMass");
+        ccmaConstraintMatrixValue.initialize(context, numCCMA*maxRowElements, elementSize, "ConstraintMatrixValue");
+        vector<mm_double4> distanceVec(ccmaDistance.getSize());
+        vector<cl_double> reducedMassVec(ccmaReducedMass.getSize());
+        vector<cl_double> constraintMatrixValueVec(ccmaConstraintMatrixValue.getSize());
+        for (int i = 0; i < numCCMA; i++) {
+            int index = constraintOrder[i];
+            int c = ccmaConstraints[index];
+            atomsVec[i].x = atom1[c];
+            atomsVec[i].y = atom2[c];
+            distanceVec[i].w = distance[c];
+            reducedMassVec[i] = (0.5/(1.0/system.getParticleMass(atom1[c])+1.0/system.getParticleMass(atom2[c])));
+            for (unsigned int j = 0; j < matrix[index].size(); j++) {
+                constraintMatrixColumnVec[i+j*numCCMA] = matrix[index][j].first;
+                constraintMatrixValueVec[i+j*numCCMA] = matrix[index][j].second;
             }
-            for (unsigned int i = 0; i < atomConstraints.size(); i++) {
-                numAtomConstraintsVec[i] = atomConstraints[i].size();
-                for (unsigned int j = 0; j < atomConstraints[i].size(); j++) {
-                    bool forward = (atom1[ccmaConstraints[atomConstraints[i][j]]] == i);
-                    atomConstraintsVec[i+j*numAtoms] = (forward ? inverseOrder[atomConstraints[i][j]]+1 : -inverseOrder[atomConstraints[i][j]]-1);
-                }
-            }
-            ccmaDistance.upload(distanceVec);
-            ccmaReducedMass.upload(reducedMassVec);
-            ccmaConstraintMatrixValue.upload(constraintMatrixValueVec);
+            constraintMatrixColumnVec[i+matrix[index].size()*numCCMA] = numCCMA;
         }
-        else {
-            ccmaDistance.initialize<mm_float4>(context, numCCMA, "CcmaDistance");
-            ccmaDelta1.initialize<cl_float>(context, numCCMA, "CcmaDelta1");
-            ccmaDelta2.initialize<cl_float>(context, numCCMA, "CcmaDelta2");
-            ccmaReducedMass.initialize<cl_float>(context, numCCMA, "CcmaReducedMass");
-            ccmaConstraintMatrixValue.initialize<cl_float>(context, numCCMA*maxRowElements, "ConstraintMatrixValue");
-            vector<mm_float4> distanceVec(ccmaDistance.getSize());
-            vector<cl_float> reducedMassVec(ccmaReducedMass.getSize());
-            vector<cl_float> constraintMatrixValueVec(ccmaConstraintMatrixValue.getSize());
-            for (int i = 0; i < numCCMA; i++) {
-                int index = constraintOrder[i];
-                int c = ccmaConstraints[index];
-                atomsVec[i].x = atom1[c];
-                atomsVec[i].y = atom2[c];
-                distanceVec[i].w = (float) distance[c];
-                reducedMassVec[i] = (float) (0.5/(1.0/system.getParticleMass(atom1[c])+1.0/system.getParticleMass(atom2[c])));
-                for (unsigned int j = 0; j < matrix[index].size(); j++) {
-                    constraintMatrixColumnVec[i+j*numCCMA] = matrix[index][j].first;
-                    constraintMatrixValueVec[i+j*numCCMA] = (float) matrix[index][j].second;
-                }
-                constraintMatrixColumnVec[i+matrix[index].size()*numCCMA] = numCCMA;
+        for (unsigned int i = 0; i < atomConstraints.size(); i++) {
+            numAtomConstraintsVec[i] = atomConstraints[i].size();
+            for (unsigned int j = 0; j < atomConstraints[i].size(); j++) {
+                bool forward = (atom1[ccmaConstraints[atomConstraints[i][j]]] == i);
+                atomConstraintsVec[i+j*numAtoms] = (forward ? inverseOrder[atomConstraints[i][j]]+1 : -inverseOrder[atomConstraints[i][j]]-1);
             }
-            for (unsigned int i = 0; i < atomConstraints.size(); i++) {
-                numAtomConstraintsVec[i] = atomConstraints[i].size();
-                for (unsigned int j = 0; j < atomConstraints[i].size(); j++) {
-                    bool forward = (atom1[ccmaConstraints[atomConstraints[i][j]]] == i);
-                    atomConstraintsVec[i+j*numAtoms] = (forward ? inverseOrder[atomConstraints[i][j]]+1 : -inverseOrder[atomConstraints[i][j]]-1);
-                }
-            }
-            ccmaDistance.upload(distanceVec);
-            ccmaReducedMass.upload(reducedMassVec);
-            ccmaConstraintMatrixValue.upload(constraintMatrixValueVec);
         }
+        ccmaDistance.upload(distanceVec, true, true);
+        ccmaReducedMass.upload(reducedMassVec, true, true);
+        ccmaConstraintMatrixValue.upload(constraintMatrixValueVec, true, true);
         ccmaAtoms.upload(atomsVec);
         ccmaAtomConstraints.upload(atomConstraintsVec);
         ccmaNumAtomConstraints.upload(numAtomConstraintsVec);
@@ -563,57 +529,21 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
         vsiteLocalCoordsAtoms.upload(vsiteLocalCoordsAtomVec);
         vsiteLocalCoordsStartIndex.upload(vsiteLocalCoordsStartVec);
     }
-    if (context.getUseDoublePrecision()) {
-        vsite2AvgWeights.initialize<mm_double2>(context, max(1, num2Avg), "vsite2AvgWeights");
-        vsite3AvgWeights.initialize<mm_double4>(context, max(1, num3Avg), "vsite3AvgWeights");
-        vsiteOutOfPlaneWeights.initialize<mm_double4>(context, max(1, numOutOfPlane), "vsiteOutOfPlaneWeights");
-        vsiteLocalCoordsWeights.initialize<cl_double>(context, max(1, (int) vsiteLocalCoordsWeightVec.size()), "vsiteLocalCoordsWeights");
-        vsiteLocalCoordsPos.initialize<mm_double4>(context, max(1, (int) vsiteLocalCoordsPosVec.size()), "vsiteLocalCoordsPos");
-        if (num2Avg > 0)
-            vsite2AvgWeights.upload(vsite2AvgWeightVec);
-        if (num3Avg > 0)
-            vsite3AvgWeights.upload(vsite3AvgWeightVec);
-        if (numOutOfPlane > 0)
-            vsiteOutOfPlaneWeights.upload(vsiteOutOfPlaneWeightVec);
-        if (numLocalCoords > 0) {
-            vsiteLocalCoordsWeights.upload(vsiteLocalCoordsWeightVec);
-            vsiteLocalCoordsPos.upload(vsiteLocalCoordsPosVec);
-        }
-    }
-    else {
-        vsite2AvgWeights.initialize<mm_float2>(context, max(1, num2Avg), "vsite2AvgWeights");
-        vsite3AvgWeights.initialize<mm_float4>(context, max(1, num3Avg), "vsite3AvgWeights");
-        vsiteOutOfPlaneWeights.initialize<mm_float4>(context, max(1, numOutOfPlane), "vsiteOutOfPlaneWeights");
-        vsiteLocalCoordsWeights.initialize<cl_float>(context, max(1, (int) vsiteLocalCoordsWeightVec.size()), "vsiteLocalCoordsWeights");
-        vsiteLocalCoordsPos.initialize<mm_float4>(context, max(1, (int) vsiteLocalCoordsPosVec.size()), "vsiteLocalCoordsPos");
-        if (num2Avg > 0) {
-            vector<mm_float2> floatWeights(num2Avg);
-            for (int i = 0; i < num2Avg; i++)
-                floatWeights[i] = mm_float2((float) vsite2AvgWeightVec[i].x, (float) vsite2AvgWeightVec[i].y);
-            vsite2AvgWeights.upload(floatWeights);
-        }
-        if (num3Avg > 0) {
-            vector<mm_float4> floatWeights(num3Avg);
-            for (int i = 0; i < num3Avg; i++)
-                floatWeights[i] = mm_float4((float) vsite3AvgWeightVec[i].x, (float) vsite3AvgWeightVec[i].y, (float) vsite3AvgWeightVec[i].z, 0.0f);
-            vsite3AvgWeights.upload(floatWeights);
-        }
-        if (numOutOfPlane > 0) {
-            vector<mm_float4> floatWeights(numOutOfPlane);
-            for (int i = 0; i < numOutOfPlane; i++)
-                floatWeights[i] = mm_float4((float) vsiteOutOfPlaneWeightVec[i].x, (float) vsiteOutOfPlaneWeightVec[i].y, (float) vsiteOutOfPlaneWeightVec[i].z, 0.0f);
-            vsiteOutOfPlaneWeights.upload(floatWeights);
-        }
-        if (numLocalCoords > 0) {
-            vector<cl_float> floatWeights(vsiteLocalCoordsWeightVec.size());
-            for (int i = 0; i < (int) vsiteLocalCoordsWeightVec.size(); i++)
-                floatWeights[i] = (cl_float) vsiteLocalCoordsWeightVec[i];
-            vsiteLocalCoordsWeights.upload(floatWeights);
-            vector<mm_float4> floatPos(vsiteLocalCoordsPosVec.size());
-            for (int i = 0; i < (int) vsiteLocalCoordsPosVec.size(); i++)
-                floatPos[i] = mm_float4((float) vsiteLocalCoordsPosVec[i].x, (float) vsiteLocalCoordsPosVec[i].y, (float) vsiteLocalCoordsPosVec[i].z, 0.0f);
-            vsiteLocalCoordsPos.upload(floatPos);
-        }
+    int elementSize = (context.getUseDoublePrecision() ? sizeof(cl_double) : sizeof(cl_float));
+    vsite2AvgWeights.initialize(context, max(1, num2Avg), 2*elementSize, "vsite2AvgWeights");
+    vsite3AvgWeights.initialize(context, max(1, num3Avg), 4*elementSize, "vsite3AvgWeights");
+    vsiteOutOfPlaneWeights.initialize(context, max(1, numOutOfPlane), 4*elementSize, "vsiteOutOfPlaneWeights");
+    vsiteLocalCoordsWeights.initialize(context, max(1, (int) vsiteLocalCoordsWeightVec.size()), elementSize, "vsiteLocalCoordsWeights");
+    vsiteLocalCoordsPos.initialize(context, max(1, (int) vsiteLocalCoordsPosVec.size()), 4*elementSize, "vsiteLocalCoordsPos");
+    if (num2Avg > 0)
+        vsite2AvgWeights.upload(vsite2AvgWeightVec, true, true);
+    if (num3Avg > 0)
+        vsite3AvgWeights.upload(vsite3AvgWeightVec, true, true);
+    if (numOutOfPlane > 0)
+        vsiteOutOfPlaneWeights.upload(vsiteOutOfPlaneWeightVec, true, true);
+    if (numLocalCoords > 0) {
+        vsiteLocalCoordsWeights.upload(vsiteLocalCoordsWeightVec, true, true);
+        vsiteLocalCoordsPos.upload(vsiteLocalCoordsPosVec, true, true);
     }
     
     // If multiple virtual sites depend on the same particle, make sure the force distribution

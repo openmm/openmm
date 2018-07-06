@@ -206,6 +206,6 @@ void ReferenceCMAPTorsionIxn::calculateOneIxn(int index, vector<Vec3>& atomCoord
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceCMAPTorsionIxn::calculateBondIxn(int* atomIndices, vector<Vec3>& atomCoordinates,
-        double* parameters, vector<Vec3>& forces, double* totalEnergy, double* energyParamDerivs) {
+void ReferenceCMAPTorsionIxn::calculateBondIxn(vector<int>& atomIndices, vector<Vec3>& atomCoordinates,
+        vector<double>& parameters, vector<Vec3>& forces, double* totalEnergy, double* energyParamDerivs) {
 }
