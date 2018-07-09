@@ -11,7 +11,7 @@ the ParmEd program and was ported for use with OpenMM.
 Copyright (c) 2014-2016 the Authors
 
 Author: Jason M. Swails
-Contributors:
+Contributors: Jing Huang
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -130,6 +130,12 @@ class CharmmPsfFile(object):
     - acceptor_list # hbond acceptors?
     - group_list    # list of nonbonded interaction groups
 
+    Four additional lists for Drude psf:
+    - drudeconsts_list
+    - drudepair_list
+    - lonepair_list
+    - aniso_list
+
     Additional attribute is available if a CharmmParameterSet is loaded into
     this structure.
 
@@ -186,6 +192,8 @@ class CharmmPsfFile(object):
                                      line.strip())
             # Store the flags
             psf_flags = line.split()[1:]
+            # Determine whether it's a Drude polarizable system
+            IsDrudePSF = 'DRUDE' in psf_flags
             # Now get all of the sections and store them in a dict
             psf.readline()
             # Now get all of the sections
@@ -203,6 +211,8 @@ class CharmmPsfFile(object):
         # Parse all of the atoms
         residue_list = ResidueList()
         atom_list = AtomList()
+        if IsDrudePSF:
+            drudeconsts_list = TrackedList()
         for i in xrange(natom):
             words = psfsections['NATOM'][1][i].split()
             system = words[1]
