@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -61,6 +61,8 @@ void testSerialization() {
     force.addParticle(-0.5, 0.3, 0.03);
     force.addException(0, 1, 2, 0.5, 0.1);
     force.addException(1, 2, 0.2, 0.4, 0.2);
+    force.addParticleParameterOffset("scale1", 2, 1.5, 2.0, 2.5);
+    force.addExceptionParameterOffset("scale2", 1, -0.1, -0.2, -0.3);
 
     // Serialize and then deserialize it.
 
@@ -80,6 +82,9 @@ void testSerialization() {
     ASSERT_EQUAL(force.getReactionFieldDielectric(), force2.getReactionFieldDielectric());
     ASSERT_EQUAL(force.getUseDispersionCorrection(), force2.getUseDispersionCorrection());
     ASSERT_EQUAL(force.getNumParticles(), force2.getNumParticles());
+    ASSERT_EQUAL(force.getNumExceptions(), force2.getNumExceptions());
+    ASSERT_EQUAL(force.getNumParticleParameterOffsets(), force2.getNumParticleParameterOffsets());
+    ASSERT_EQUAL(force.getNumExceptionParameterOffsets(), force2.getNumExceptionParameterOffsets());
     double alpha2;
     int nx2, ny2, nz2;
     force2.getPMEParameters(alpha2, nx2, ny2, nz2);
@@ -94,6 +99,32 @@ void testSerialization() {
     ASSERT_EQUAL(dnx, dnx2);
     ASSERT_EQUAL(dny, dny2);
     ASSERT_EQUAL(dnz, dnz2);    
+    for (int i = 0; i < force.getNumParticleParameterOffsets(); i++) {
+        int index1, index2;
+        string param1, param2;
+        double charge1, sigma1, epsilon1;
+        double charge2, sigma2, epsilon2;
+        force.getParticleParameterOffset(i, param1, index1, charge1, sigma1, epsilon1);
+        force2.getParticleParameterOffset(i, param2, index2, charge2, sigma2, epsilon2);
+        ASSERT_EQUAL(index1, index1);
+        ASSERT_EQUAL(param1, param2);
+        ASSERT_EQUAL(charge1, charge2);
+        ASSERT_EQUAL(sigma1, sigma2);
+        ASSERT_EQUAL(epsilon1, epsilon2);
+    }
+    for (int i = 0; i < force.getNumExceptionParameterOffsets(); i++) {
+        int index1, index2;
+        string param1, param2;
+        double charge1, sigma1, epsilon1;
+        double charge2, sigma2, epsilon2;
+        force.getExceptionParameterOffset(i, param1, index1, charge1, sigma1, epsilon1);
+        force2.getExceptionParameterOffset(i, param2, index2, charge2, sigma2, epsilon2);
+        ASSERT_EQUAL(index1, index1);
+        ASSERT_EQUAL(param1, param2);
+        ASSERT_EQUAL(charge1, charge2);
+        ASSERT_EQUAL(sigma1, sigma2);
+        ASSERT_EQUAL(epsilon1, epsilon2);
+    }
     for (int i = 0; i < force.getNumParticles(); i++) {
         double charge1, sigma1, epsilon1;
         double charge2, sigma2, epsilon2;
