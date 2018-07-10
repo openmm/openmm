@@ -7331,7 +7331,7 @@ string CudaIntegrateCustomStepKernel::createPerDofComputation(const string& vari
     variables["m"] = "mass";
     variables["dt"] = "stepSize";
     if (energyName != "")
-        variables[energyName] = "energy";
+        variables[energyName] = "make_double3(energy)";
     for (int i = 0; i < integrator.getNumGlobalVariables(); i++)
         variables[integrator.getGlobalVariableName(i)] = "make_double3(globals["+cu.intToString(globalVariableIndex[i])+"])";
     for (int i = 0; i < integrator.getNumPerDofVariables(); i++)
