@@ -12,7 +12,7 @@ the ParmEd program and was ported for use with OpenMM.
 Copyright (c) 2014 the Authors
 
 Author: Jason M. Swails
-Contributors:
+Contributors: Jing Huang
 Date: Sep. 17, 2014
 
 Permission is hereby granted, free of charge, to any person obtaining a
@@ -497,21 +497,22 @@ class CharmmParameterSet(object):
                 except IndexError:
                     raise CharmmFileError('Could not parse NBFIX terms.')
                 self.nbfix_types[(min(at1, at2), max(at1, at2))] = (emin, rmin)
-        # Here parse the possible nbthole section
-        if section == 'NBTHOLE':
-            words = line.split()
-            try:
-                at1 = words[0]
-                at2 = words[1]
-                nbt = abs(conv(words[2], float, 'NBTHOLE a'))
+                continue
+            # Here parse the possible nbthole section
+            if section == 'NBTHOLE':
+                words = line.split()
                 try:
-                    self.atom_types_str[at1].add_nbthole(at2, nbt)
-                    self.atom_types_str[at2].add_nbthole(at1, nbt)
-                except KeyError:
-                    pass
-            except IndexError:
-                raise CharmmFileError('Could not parse NBTHOLE terms.')
-            self.nbthole_types[(min(at1, at2), max(at1, at2))] = (nbt)
+                    at1 = words[0]
+                    at2 = words[1]
+                    nbt = abs(conv(words[2], float, 'NBTHOLE a'))
+                    try:
+                        self.atom_types_str[at1].add_nbthole(at2, nbt)
+                        self.atom_types_str[at2].add_nbthole(at1, nbt)
+                    except KeyError:
+                        pass
+                except IndexError:
+                    raise CharmmFileError('Could not parse NBTHOLE terms.')
+                self.nbthole_types[(min(at1, at2), max(at1, at2))] = (nbt)
         # If there were any CMAP terms stored in the parameter set, the last one
         # defined will not have been added to the set. Add it now.
         if current_cmap is not None:

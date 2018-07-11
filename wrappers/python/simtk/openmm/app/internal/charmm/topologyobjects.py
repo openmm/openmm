@@ -179,8 +179,8 @@ class AtomType(object):
         self.nbfix[typename] = (rmin, epsilon, rmin14, epsilon14)
 
     def add_nbthole(self, typename, nbt):
-            """ Adds a new NBTHOLE screening factor for this atom """
-            self.nbthole[typename] = (nbt)
+        """ Adds a new NBTHOLE screening factor for this atom """
+        self.nbthole[typename] = (nbt)
 
     def __str__(self):
         return self.name

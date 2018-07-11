@@ -869,6 +869,13 @@ class CharmmPsfFile(object):
                         raise StopIteration
         except StopIteration:
             pass
+        # test if the system containing the Drude particles
+        has_drude_particle = False
+        try:
+            if self.drudeconsts_list:
+                has_drude_particle = True
+        except AttributeError:
+            pass
 
         # Set up the constraints
         if verbose and (constraints is not None and not rigidWater):
@@ -1219,7 +1226,7 @@ class CharmmPsfFile(object):
                 cforce.addParticle((i - 1,)) # adjust for indexing from 0
 
         # Add NBTHOLE terms
-        if IsDrudePSF and has_nbthole_terms:
+        if has_drude_particle and has_nbthole_terms:
             nbt_idx_list = [0 for atom in self.atom_list]
             nbt_alpha_list = [0 for atom in self.atom_list] # only save alpha for NBThole pairs
             num_nbt_types = 0 
@@ -1314,7 +1321,7 @@ class CharmmPsfFile(object):
             idxa = lpsite[0]
             parent_exclude_list[idx].append(idxa)
             force.addException(idx, idxa, 0.0, 0.1, 0.0)
-        if IsDrudePSF:
+        if has_drude_particle:
             for pair in self.drudepair_list:
                 idx = pair[0]
                 idxa = pair[1]
@@ -1346,7 +1353,7 @@ class CharmmPsfFile(object):
         system.addForce(force)
 
         # Add Drude particles (Drude force)
-        if IsDrudePSF:
+        if has_drude_particle:
             if verbose: print('Adding Drude force and Thole screening...')
             drudeforce = mm.DrudeForce()
             drudeforce.setForceGroup(7)
