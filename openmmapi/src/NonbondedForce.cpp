@@ -256,14 +256,46 @@ void NonbondedForce::addExclusionsToSet(const vector<set<int> >& bonded12, set<i
     }
 }
 
+int NonbondedForce::addGlobalParameter(const string& name, double defaultValue) {
+    globalParameters.push_back(GlobalParameterInfo(name, defaultValue));
+    return globalParameters.size()-1;
+}
+
+const string& NonbondedForce::getGlobalParameterName(int index) const {
+    ASSERT_VALID_INDEX(index, globalParameters);
+    return globalParameters[index].name;
+}
+
+void NonbondedForce::setGlobalParameterName(int index, const string& name) {
+    ASSERT_VALID_INDEX(index, globalParameters);
+    globalParameters[index].name = name;
+}
+
+double NonbondedForce::getGlobalParameterDefaultValue(int index) const {
+    ASSERT_VALID_INDEX(index, globalParameters);
+    return globalParameters[index].defaultValue;
+}
+
+void NonbondedForce::setGlobalParameterDefaultValue(int index, double defaultValue) {
+    ASSERT_VALID_INDEX(index, globalParameters);
+    globalParameters[index].defaultValue = defaultValue;
+}
+
+int NonbondedForce::getGlobalParameterIndex(const std::string& parameter) const {
+    for (int i = 0; i < globalParameters.size(); i++)
+        if (globalParameters[i].name == parameter)
+            return i;
+    throw OpenMMException("There is no global parameter called '"+parameter+"'");
+}
+
 int NonbondedForce::addParticleParameterOffset(const std::string& parameter, int particleIndex, double chargeScale, double sigmaScale, double epsilonScale) {
-    particleOffsets.push_back(ParticleOffsetInfo(parameter, particleIndex, chargeScale, sigmaScale, epsilonScale));
+    particleOffsets.push_back(ParticleOffsetInfo(getGlobalParameterIndex(parameter), particleIndex, chargeScale, sigmaScale, epsilonScale));
     return particleOffsets.size()-1;
 }
 
 void NonbondedForce::getParticleParameterOffset(int index, std::string& parameter, int& particleIndex, double& chargeScale, double& sigmaScale, double& epsilonScale) const {
     ASSERT_VALID_INDEX(index, particleOffsets);
-    parameter = particleOffsets[index].parameter;
+    parameter = globalParameters[particleOffsets[index].parameter].name;
     particleIndex = particleOffsets[index].particle;
     chargeScale = particleOffsets[index].chargeScale;
     sigmaScale = particleOffsets[index].sigmaScale;
@@ -272,7 +304,7 @@ void NonbondedForce::getParticleParameterOffset(int index, std::string& paramete
 
 void NonbondedForce::setParticleParameterOffset(int index, const std::string& parameter, int particleIndex, double chargeScale, double sigmaScale, double epsilonScale) {
     ASSERT_VALID_INDEX(index, particleOffsets);
-    particleOffsets[index].parameter = parameter;
+    particleOffsets[index].parameter = getGlobalParameterIndex(parameter);
     particleOffsets[index].particle = particleIndex;
     particleOffsets[index].chargeScale = chargeScale;
     particleOffsets[index].sigmaScale = sigmaScale;
@@ -280,13 +312,13 @@ void NonbondedForce::setParticleParameterOffset(int index, const std::string& pa
 }
 
 int NonbondedForce::addExceptionParameterOffset(const std::string& parameter, int exceptionIndex, double chargeProdScale, double sigmaScale, double epsilonScale) {
-    exceptionOffsets.push_back(ExceptionOffsetInfo(parameter, exceptionIndex, chargeProdScale, sigmaScale, epsilonScale));
+    exceptionOffsets.push_back(ExceptionOffsetInfo(getGlobalParameterIndex(parameter), exceptionIndex, chargeProdScale, sigmaScale, epsilonScale));
     return exceptionOffsets.size()-1;
 }
 
 void NonbondedForce::getExceptionParameterOffset(int index, std::string& parameter, int& exceptionIndex, double& chargeProdScale, double& sigmaScale, double& epsilonScale) const {
     ASSERT_VALID_INDEX(index, exceptionOffsets);
-    parameter = exceptionOffsets[index].parameter;
+    parameter = globalParameters[exceptionOffsets[index].parameter].name;
     exceptionIndex = exceptionOffsets[index].exception;
     chargeProdScale = exceptionOffsets[index].chargeProdScale;
     sigmaScale = exceptionOffsets[index].sigmaScale;
@@ -295,7 +327,7 @@ void NonbondedForce::getExceptionParameterOffset(int index, std::string& paramet
 
 void NonbondedForce::setExceptionParameterOffset(int index, const std::string& parameter, int exceptionIndex, double chargeProdScale, double sigmaScale, double epsilonScale) {
     ASSERT_VALID_INDEX(index, exceptionOffsets);
-    exceptionOffsets[index].parameter = parameter;
+    exceptionOffsets[index].parameter = getGlobalParameterIndex(parameter);
     exceptionOffsets[index].exception = exceptionIndex;
     exceptionOffsets[index].chargeProdScale = chargeProdScale;
     exceptionOffsets[index].sigmaScale = sigmaScale;

@@ -65,6 +65,9 @@ void NonbondedForceProxy::serialize(const void* object, SerializationNode& node)
     node.setIntProperty("ljny", ny);
     node.setIntProperty("ljnz", nz);
     node.setIntProperty("recipForceGroup", force.getReciprocalSpaceForceGroup());
+    SerializationNode& globalParams = node.createChildNode("GlobalParameters");
+    for (int i = 0; i < force.getNumGlobalParameters(); i++)
+        globalParams.createChildNode("Parameter").setStringProperty("name", force.getGlobalParameterName(i)).setDoubleProperty("default", force.getGlobalParameterDefaultValue(i));
     SerializationNode& particleOffsets = node.createChildNode("ParticleOffsets");
     for (int i = 0; i < force.getNumParticleParameterOffsets(); i++) {
         int particle;
@@ -124,6 +127,9 @@ void* NonbondedForceProxy::deserialize(const SerializationNode& node) const {
         }
         force->setReciprocalSpaceForceGroup(node.getIntProperty("recipForceGroup", -1));
         if (version >= 3) {
+            const SerializationNode& globalParams = node.getChildNode("GlobalParameters");
+            for (auto& parameter : globalParams.getChildren())
+                force->addGlobalParameter(parameter.getStringProperty("name"), parameter.getDoubleProperty("default"));
             const SerializationNode& particleOffsets = node.getChildNode("ParticleOffsets");
             for (auto& offset : particleOffsets.getChildren())
                 force->addParticleParameterOffset(offset.getStringProperty("parameter"), offset.getIntProperty("particle"), offset.getDoubleProperty("q"), offset.getDoubleProperty("sig"), offset.getDoubleProperty("eps"));
