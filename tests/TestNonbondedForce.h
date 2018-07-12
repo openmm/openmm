@@ -745,6 +745,8 @@ void testParameterOffsets() {
     force->addParticle(0.5, 2.0, 0.8);
     force->addException(0, 1, 1.0, 1.5, 1.0);
     force->addException(2, 3, 0.5, 1.0, 1.5);
+    force->addGlobalParameter("p1", 0.0);
+    force->addGlobalParameter("p2", 1.0);
     force->addParticleParameterOffset("p1", 0, 3.0, 0.5, 0.5);
     force->addParticleParameterOffset("p2", 1, 1.0, 1.0, 2.0);
     force->addExceptionParameterOffset("p1", 1, 0.5, 0.5, 1.5);
@@ -757,7 +759,7 @@ void testParameterOffsets() {
     context.setPositions(positions);
     ASSERT_EQUAL(2, context.getParameters().size());
     ASSERT_EQUAL(0.0, context.getParameter("p1"));
-    ASSERT_EQUAL(0.0, context.getParameter("p2"));
+    ASSERT_EQUAL(1.0, context.getParameter("p2"));
     context.setParameter("p1", 0.5);
     context.setParameter("p2", 1.5);
     

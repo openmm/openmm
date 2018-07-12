@@ -111,24 +111,10 @@ double NonbondedForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includ
 }
 
 map<string, double> NonbondedForceImpl::getDefaultParameters() {
-    map<string, double> params;
-    for (int i = 0; i < owner.getNumParticleParameterOffsets(); i++) {
-        string parameter;
-        int particle;
-        double charge, sigma, epsilon;
-        owner.getParticleParameterOffset(i, parameter, particle, charge, sigma, epsilon);
-        if (params.find(parameter) == params.end())
-            params[parameter] = 0.0;
-    }
-    for (int i = 0; i < owner.getNumExceptionParameterOffsets(); i++) {
-        string parameter;
-        int exception;
-        double chargeProd, sigma, epsilon;
-        owner.getExceptionParameterOffset(i, parameter, exception, chargeProd, sigma, epsilon);
-        if (params.find(parameter) == params.end())
-            params[parameter] = 0.0;
-    }
-    return params;
+    map<string, double> parameters;
+    for (int i = 0; i < owner.getNumGlobalParameters(); i++)
+        parameters[owner.getGlobalParameterName(i)] = owner.getGlobalParameterDefaultValue(i);
+    return parameters;
 }
 
 std::vector<std::string> NonbondedForceImpl::getKernelNames() {

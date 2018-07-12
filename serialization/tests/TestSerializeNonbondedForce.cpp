@@ -61,6 +61,8 @@ void testSerialization() {
     force.addParticle(-0.5, 0.3, 0.03);
     force.addException(0, 1, 2, 0.5, 0.1);
     force.addException(1, 2, 0.2, 0.4, 0.2);
+    force.addGlobalParameter("scale1", 1.0);
+    force.addGlobalParameter("scale2", 2.0);
     force.addParticleParameterOffset("scale1", 2, 1.5, 2.0, 2.5);
     force.addExceptionParameterOffset("scale2", 1, -0.1, -0.2, -0.3);
 
@@ -83,6 +85,7 @@ void testSerialization() {
     ASSERT_EQUAL(force.getUseDispersionCorrection(), force2.getUseDispersionCorrection());
     ASSERT_EQUAL(force.getNumParticles(), force2.getNumParticles());
     ASSERT_EQUAL(force.getNumExceptions(), force2.getNumExceptions());
+    ASSERT_EQUAL(force.getNumGlobalParameters(), force2.getNumGlobalParameters());
     ASSERT_EQUAL(force.getNumParticleParameterOffsets(), force2.getNumParticleParameterOffsets());
     ASSERT_EQUAL(force.getNumExceptionParameterOffsets(), force2.getNumExceptionParameterOffsets());
     double alpha2;
@@ -98,7 +101,11 @@ void testSerialization() {
     ASSERT_EQUAL(dalpha, dalpha2);
     ASSERT_EQUAL(dnx, dnx2);
     ASSERT_EQUAL(dny, dny2);
-    ASSERT_EQUAL(dnz, dnz2);    
+    ASSERT_EQUAL(dnz, dnz2);
+    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+        ASSERT_EQUAL(force.getGlobalParameterName(i), force2.getGlobalParameterName(i));
+        ASSERT_EQUAL(force.getGlobalParameterDefaultValue(i), force2.getGlobalParameterDefaultValue(i));
+    }
     for (int i = 0; i < force.getNumParticleParameterOffsets(); i++) {
         int index1, index2;
         string param1, param2;
