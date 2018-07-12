@@ -686,8 +686,8 @@ private:
     CudaArray exceptionOffsetIndices;
     CudaArray globalParams;
     CudaArray cosSinSums;
-    CudaArray directPmeGrid;
-    CudaArray reciprocalPmeGrid;
+    CudaArray pmeGrid1;
+    CudaArray pmeGrid2;
     CudaArray pmeBsplineModuliX;
     CudaArray pmeBsplineModuliY;
     CudaArray pmeBsplineModuliZ;
