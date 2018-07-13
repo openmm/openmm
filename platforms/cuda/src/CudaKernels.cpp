@@ -1749,7 +1749,6 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                     pmeDefines["GRID_SIZE_X"] = cu.intToString(dispersionGridSizeX);
                     pmeDefines["GRID_SIZE_Y"] = cu.intToString(dispersionGridSizeY);
                     pmeDefines["GRID_SIZE_Z"] = cu.intToString(dispersionGridSizeZ);
-                    pmeDefines["EPSILON_FACTOR"] = "1";
                     pmeDefines["RECIP_EXP_FACTOR"] = cu.doubleToString(M_PI*M_PI/(dispersionAlpha*dispersionAlpha));
                     pmeDefines["USE_LJPME"] = "1";
                     double invRCut6 = pow(force.getCutoffDistance(), -6);
@@ -1778,7 +1777,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                     roundedZSize = PmeOrder*(int) ceil(dispersionGridSizeZ/(double) PmeOrder);
                     gridElements = max(gridElements, dispersionGridSizeX*dispersionGridSizeY*roundedZSize);
                 }
-                pmeGrid1.initialize(cu, gridElements, 2*elementSize, "originalPmeGrid");
+                pmeGrid1.initialize(cu, gridElements, 2*elementSize, "pmeGrid1");
                 pmeGrid2.initialize(cu, gridElements, 2*elementSize, "pmeGrid2");
                 cu.addAutoclearBuffer(pmeGrid2);
                 pmeBsplineModuliX.initialize(cu, gridSizeX, elementSize, "pmeBsplineModuliX");
@@ -2196,14 +2195,14 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
                 sort->sort(pmeAtomGridIndex);
             }
 
-            cu.clearBuffer(pmeGrid1);
-            void* spreadArgs[] = {&cu.getPosq().getDevicePointer(), &pmeGrid1.getDevicePointer(), cu.getPeriodicBoxSizePointer(),
+            cu.clearBuffer(pmeGrid2);
+            void* spreadArgs[] = {&cu.getPosq().getDevicePointer(), &pmeGrid2.getDevicePointer(), cu.getPeriodicBoxSizePointer(),
                     cu.getInvPeriodicBoxSizePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
                     recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2], &pmeAtomGridIndex.getDevicePointer(),
                     &sigmaEpsilon.getDevicePointer()};
             cu.executeKernel(pmeDispersionSpreadChargeKernel, spreadArgs, cu.getNumAtoms(), 128);
 
-            void* finishSpreadArgs[] = {&pmeGrid1.getDevicePointer()};
+            void* finishSpreadArgs[] = {&pmeGrid2.getDevicePointer(), &pmeGrid1.getDevicePointer()};
             cu.executeKernel(pmeDispersionFinishSpreadChargeKernel, finishSpreadArgs, dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ, 256);
 
             if (useCudaFFT) {

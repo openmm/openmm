@@ -52,7 +52,7 @@ extern "C" __global__ void gridSpreadCharge(const real4* __restrict__ posq, real
         real4 pos = posq[atom];
 #ifdef USE_LJPME
         const float2 sigEps = sigmaEpsilon[atom];
-        const real charge = 8*sigEps.x*sigEps.x*sigEps.x*sigEps.y*EPSILON_FACTOR;
+        const real charge = 8*sigEps.x*sigEps.x*sigEps.x*sigEps.y;
 #else
         const real charge = (CHARGE)*EPSILON_FACTOR;
 #endif
@@ -140,11 +140,8 @@ extern "C" __global__ void finishSpreadCharge(
     const unsigned int gridSize = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
     real scale = 1/(real) 0x100000000;
     for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < gridSize; index += blockDim.x*gridDim.x) {
-        int xindex = index/(GRID_SIZE_Y*GRID_SIZE_Z);
-        int remainder = index-xindex*GRID_SIZE_Y*GRID_SIZE_Z;
-        int yindex = remainder/GRID_SIZE_Z;
-        int zindex = remainder-yindex*GRID_SIZE_Z;
-        int loadIndex = zindexTable[zindex]+(xindex*GRID_SIZE_Y+yindex)*blockSize;
+        int zindex = index%GRID_SIZE_Z;
+        int loadIndex = zindexTable[zindex] + blockSize*(int) (index/GRID_SIZE_Z);
 #if defined(USE_DOUBLE_PRECISION) || defined(USE_DETERMINISTIC_FORCES)
         grid2[index] = scale*grid1[loadIndex];
 #else
