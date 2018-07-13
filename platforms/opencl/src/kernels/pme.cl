@@ -105,12 +105,25 @@ __kernel void gridSpreadCharge(__global const real4* restrict posq, __global con
         , __global const real* restrict charges
 #endif
     ) {
-    const real scale = 1/(real) (PME_ORDER-1);
-    real4 data[PME_ORDER];
+    // To improve memory efficiency, we divide indices along the z axis into
+    // PME_ORDER blocks, where the data for each block is stored together.  We
+    // can ensure that all threads write to the same block at the same time,
+    // which leads to better coalescing of writes.
     
+    __local int zindexTable[GRID_SIZE_Z+PME_ORDER];
+    int blockSize = (int) ceil(GRID_SIZE_Z/(real) PME_ORDER);
+    for (int i = get_local_id(0); i < GRID_SIZE_Z+PME_ORDER; i += get_local_size(0)) {
+        int zindex = i % GRID_SIZE_Z;
+	int block = zindex % PME_ORDER;
+        zindexTable[i] = zindex/PME_ORDER + block*GRID_SIZE_X*GRID_SIZE_Y*blockSize;
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+        
     // Process the atoms in spatially sorted order.  This improves efficiency when writing
     // the grid values.
     
+    const real scale = 1/(real) (PME_ORDER-1);
+    real4 data[PME_ORDER];
     for (int i = get_global_id(0); i < NUM_ATOMS; i += get_global_size(0)) {
         int atom = pmeAtomGridIndex[i].x;
         real4 pos = posq[atom];
@@ -118,7 +131,7 @@ __kernel void gridSpreadCharge(__global const real4* restrict posq, __global con
         const float2 sigEps = sigmaEpsilon[atom];
         const real charge = 8*sigEps.x*sigEps.x*sigEps.x*sigEps.y;
 #else
-        const real charge = CHARGE;
+        const real charge = (CHARGE)*EPSILON_FACTOR;
 #endif
         if (charge == 0)
             continue;
@@ -154,40 +167,47 @@ __kernel void gridSpreadCharge(__global const real4* restrict posq, __global con
 
         // Spread the charge from this atom onto each grid point.
 
+	int izoffset = (PME_ORDER-(gridIndex.z%PME_ORDER)) % PME_ORDER;
         for (int ix = 0; ix < PME_ORDER; ix++) {
-            int xindex = gridIndex.x+ix;
-            xindex -= (xindex >= GRID_SIZE_X ? GRID_SIZE_X : 0);
+            int xbase = gridIndex.x+ix;
+            xbase -= (xbase >= GRID_SIZE_X ? GRID_SIZE_X : 0);
+            xbase = xbase*GRID_SIZE_Y;
+            real dx = charge*data[ix].x;
             for (int iy = 0; iy < PME_ORDER; iy++) {
-                int yindex = gridIndex.y+iy;
-                yindex -= (yindex >= GRID_SIZE_Y ? GRID_SIZE_Y : 0);
-                for (int iz = 0; iz < PME_ORDER; iz++) {
+                int ybase = gridIndex.y+iy;
+                ybase -= (ybase >= GRID_SIZE_Y ? GRID_SIZE_Y : 0);
+                ybase = (xbase+ybase)*blockSize;
+                real dxdy = dx*data[iy].y;
+                for (int i = 0; i < PME_ORDER; i++) {
+		    int iz = (i+izoffset) % PME_ORDER;
                     int zindex = gridIndex.z+iz;
-                    zindex -= (zindex >= GRID_SIZE_Z ? GRID_SIZE_Z : 0);
-                    int index = xindex*GRID_SIZE_Y*GRID_SIZE_Z + yindex*GRID_SIZE_Z + zindex;
-                    real add = charge*data[ix].x*data[iy].y*data[iz].z;
-#ifdef USE_ALTERNATE_MEMORY_ACCESS_PATTERN
-                    // On Nvidia devices (at least Maxwell anyway), this split ordering produces much higher performance.  Why?
-                    // I have no idea!  And of course on AMD it produces slower performance.  GPUs are not meant to be understood.
-                    atom_add(&pmeGrid[index%2 == 0 ? index/2 : (index+GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z)/2], (long) (add*0x100000000));
-#else
+                    int index = ybase + zindexTable[zindex];
+                    real add = dxdy*data[iz].z;
                     atom_add(&pmeGrid[index], (long) (add*0x100000000));
-#endif
                 }
             }
         }
     }
 }
 
-__kernel void finishSpreadCharge(__global long* restrict fixedGrid, __global real* restrict realGrid) {
+__kernel void finishSpreadCharge(__global long* restrict grid1, __global real* restrict grid2) {
+    // During charge spreading, we shuffled the order of indices along the z
+    // axis to make memory access more efficient.  We now need to unshuffle
+    // them and convert fixed point values to floating point.
+
+    __local int zindexTable[GRID_SIZE_Z];
+    int blockSize = (int) ceil(GRID_SIZE_Z/(real) PME_ORDER);
+    for (int i = get_local_id(0); i < GRID_SIZE_Z; i += get_local_size(0)) {
+	int block = i % PME_ORDER;
+        zindexTable[i] = i/PME_ORDER + block*GRID_SIZE_X*GRID_SIZE_Y*blockSize;
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
     const unsigned int gridSize = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
-    real scale = EPSILON_FACTOR/(real) 0x100000000;
+    real scale = 1/(real) 0x100000000;
     for (int index = get_global_id(0); index < gridSize; index += get_global_size(0)) {
-#ifdef USE_ALTERNATE_MEMORY_ACCESS_PATTERN
-        long value = fixedGrid[index%2 == 0 ? index/2 : (index+gridSize)/2];
-#else
-        long value = fixedGrid[index];
-#endif
-        realGrid[index] = (real) (value*scale);
+        int zindex = index%GRID_SIZE_Z;
+        int loadIndex = zindexTable[zindex] + blockSize*(int) (index/GRID_SIZE_Z);
+        grid2[index] = scale*grid1[loadIndex];
     }
 }
 #elif defined(DEVICE_IS_CPU)
@@ -230,7 +250,7 @@ __kernel void gridSpreadCharge(__global const real4* restrict posq, __global con
         const float2 sigEps = sigmaEpsilon[atom];
         const real charge = 8*sigEps.x*sigEps.x*sigEps.x*sigEps.y;
 #else
-        const real charge = CHARGE;
+        const real charge = (CHARGE)*EPSILON_FACTOR;
 #endif
         if (charge == 0)
             continue;
@@ -269,7 +289,7 @@ __kernel void gridSpreadCharge(__global const real4* restrict posq, __global con
                     int zindex = gridIndex.z+iz;
                     zindex -= (zindex >= GRID_SIZE_Z ? GRID_SIZE_Z : 0);
                     int index = xindex*GRID_SIZE_Y*GRID_SIZE_Z + yindex*GRID_SIZE_Z + zindex;
-                    pmeGrid[index] += EPSILON_FACTOR*charge*data[ix].x*data[iy].y*data[iz].z;
+                    pmeGrid[index] += charge*data[ix].x*data[iy].y*data[iz].z;
                 }
             }
         }
