@@ -1726,15 +1726,18 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
                     defines["MULTSHIFT6"] = cl.doubleToString(multShift6);
                 }
                 int elementSize = (cl.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
-                int gridElements = gridSizeX*gridSizeY*gridSizeZ;
-                if (doLJPME)
-                    gridElements = max(gridElements, dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ);
-                pmeGrid.initialize(cl, gridElements, 2*elementSize, "pmeGrid");
+                int roundedZSize = PmeOrder*(int) ceil(gridSizeZ/(double) PmeOrder);
+                int gridElements = gridSizeX*gridSizeY*roundedZSize;
+                if (doLJPME) {
+                    roundedZSize = PmeOrder*(int) ceil(dispersionGridSizeZ/(double) PmeOrder);
+                    gridElements = max(gridElements, dispersionGridSizeX*dispersionGridSizeY*roundedZSize);
+                }
+                pmeGrid1.initialize(cl, gridElements, 2*elementSize, "pmeGrid1");
                 pmeGrid2.initialize(cl, gridElements, 2*elementSize, "pmeGrid2");
                 if (cl.getSupports64BitGlobalAtomics())
                     cl.addAutoclearBuffer(pmeGrid2);
                 else
-                    cl.addAutoclearBuffer(pmeGrid);
+                    cl.addAutoclearBuffer(pmeGrid1);
                 pmeBsplineModuliX.initialize(cl, gridSizeX, elementSize, "pmeBsplineModuliX");
                 pmeBsplineModuliY.initialize(cl, gridSizeY, elementSize, "pmeBsplineModuliY");
                 pmeBsplineModuliZ.initialize(cl, gridSizeZ, elementSize, "pmeBsplineModuliZ");
@@ -1755,8 +1758,6 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
                     dispersionFft = new OpenCLFFT3D(cl, dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, true);
                 string vendor = cl.getDevice().getInfo<CL_DEVICE_VENDOR>();
                 bool isNvidia = (vendor.size() >= 6 && vendor.substr(0, 6) == "NVIDIA");
-                if (isNvidia)
-                    pmeDefines["USE_ALTERNATE_MEMORY_ACCESS_PATTERN"] = "1";
                 usePmeQueue = (!cl.getPlatformData().disablePmeStream && isNvidia);
                 if (usePmeQueue) {
                     pmeDefines["USE_PME_STREAM"] = "1";
@@ -2006,7 +2007,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             ewaldForcesKernel.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
             ewaldForcesKernel.setArg<cl::Buffer>(2, cosSinSums.getDeviceBuffer());
         }
-        if (pmeGrid.isInitialized()) {
+        if (pmeGrid1.isInitialized()) {
             // Create kernels for Coulomb PME.
             
             map<string, string> replacements;
@@ -2036,7 +2037,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             if (cl.getSupports64BitGlobalAtomics())
                 pmeSpreadChargeKernel.setArg<cl::Buffer>(3, pmeGrid2.getDeviceBuffer());
             else
-                pmeSpreadChargeKernel.setArg<cl::Buffer>(3, pmeGrid.getDeviceBuffer());
+                pmeSpreadChargeKernel.setArg<cl::Buffer>(3, pmeGrid1.getDeviceBuffer());
             pmeSpreadChargeKernel.setArg<cl::Buffer>(4, pmeBsplineTheta.getDeviceBuffer());
             if (deviceIsCpu || cl.getSupports64BitGlobalAtomics())
                 pmeSpreadChargeKernel.setArg<cl::Buffer>(13, charges.getDeviceBuffer());
@@ -2053,13 +2054,13 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             pmeEvalEnergyKernel.setArg<cl::Buffer>(4, pmeBsplineModuliZ.getDeviceBuffer());
             pmeInterpolateForceKernel.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
             pmeInterpolateForceKernel.setArg<cl::Buffer>(1, cl.getForceBuffers().getDeviceBuffer());
-            pmeInterpolateForceKernel.setArg<cl::Buffer>(2, pmeGrid.getDeviceBuffer());
+            pmeInterpolateForceKernel.setArg<cl::Buffer>(2, pmeGrid1.getDeviceBuffer());
             pmeInterpolateForceKernel.setArg<cl::Buffer>(11, pmeAtomGridIndex.getDeviceBuffer());
             pmeInterpolateForceKernel.setArg<cl::Buffer>(12, charges.getDeviceBuffer());
             if (cl.getSupports64BitGlobalAtomics()) {
                 pmeFinishSpreadChargeKernel = cl::Kernel(program, "finishSpreadCharge");
                 pmeFinishSpreadChargeKernel.setArg<cl::Buffer>(0, pmeGrid2.getDeviceBuffer());
-                pmeFinishSpreadChargeKernel.setArg<cl::Buffer>(1, pmeGrid.getDeviceBuffer());
+                pmeFinishSpreadChargeKernel.setArg<cl::Buffer>(1, pmeGrid1.getDeviceBuffer());
             }
             if (usePmeQueue)
                 syncQueue->setKernel(cl::Kernel(program, "addEnergy"));
@@ -2099,7 +2100,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
                 if (cl.getSupports64BitGlobalAtomics())
                     pmeDispersionSpreadChargeKernel.setArg<cl::Buffer>(3, pmeGrid2.getDeviceBuffer());
                 else
-                    pmeDispersionSpreadChargeKernel.setArg<cl::Buffer>(3, pmeGrid.getDeviceBuffer());
+                    pmeDispersionSpreadChargeKernel.setArg<cl::Buffer>(3, pmeGrid1.getDeviceBuffer());
                 pmeDispersionSpreadChargeKernel.setArg<cl::Buffer>(4, pmeBsplineTheta.getDeviceBuffer());
                 if (deviceIsCpu || cl.getSupports64BitGlobalAtomics())
                     pmeDispersionSpreadChargeKernel.setArg<cl::Buffer>(13, sigmaEpsilon.getDeviceBuffer());
@@ -2116,13 +2117,13 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
                 pmeDispersionEvalEnergyKernel.setArg<cl::Buffer>(4, pmeDispersionBsplineModuliZ.getDeviceBuffer());
                 pmeDispersionInterpolateForceKernel.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
                 pmeDispersionInterpolateForceKernel.setArg<cl::Buffer>(1, cl.getForceBuffers().getDeviceBuffer());
-                pmeDispersionInterpolateForceKernel.setArg<cl::Buffer>(2, pmeGrid.getDeviceBuffer());
+                pmeDispersionInterpolateForceKernel.setArg<cl::Buffer>(2, pmeGrid1.getDeviceBuffer());
                 pmeDispersionInterpolateForceKernel.setArg<cl::Buffer>(11, pmeAtomGridIndex.getDeviceBuffer());
                 pmeDispersionInterpolateForceKernel.setArg<cl::Buffer>(12, sigmaEpsilon.getDeviceBuffer());
                 if (cl.getSupports64BitGlobalAtomics()) {
                     pmeDispersionFinishSpreadChargeKernel = cl::Kernel(program, "finishSpreadCharge");
                     pmeDispersionFinishSpreadChargeKernel.setArg<cl::Buffer>(0, pmeGrid2.getDeviceBuffer());
-                    pmeDispersionFinishSpreadChargeKernel.setArg<cl::Buffer>(1, pmeGrid.getDeviceBuffer());
+                    pmeDispersionFinishSpreadChargeKernel.setArg<cl::Buffer>(1, pmeGrid1.getDeviceBuffer());
                 }
             }
        }
@@ -2176,7 +2177,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
         cl.executeKernel(ewaldSumsKernel, cosSinSums.getSize());
         cl.executeKernel(ewaldForcesKernel, cl.getNumAtoms());
     }
-    if (pmeGrid.isInitialized() && includeReciprocal) {
+    if (pmeGrid1.isInitialized() && includeReciprocal) {
         if (usePmeQueue && !includeEnergy)
             cl.setQueue(pmeQueue);
         
@@ -2251,7 +2252,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
                     cl.executeKernel(pmeSpreadChargeKernel, cl.getNumAtoms());
                 }
             }
-            fft->execFFT(pmeGrid, pmeGrid2, true);
+            fft->execFFT(pmeGrid1, pmeGrid2, true);
             mm_double4 boxSize = cl.getPeriodicBoxSizeDouble();
             if (cl.getUseDoublePrecision()) {
                 pmeConvolutionKernel.setArg<mm_double4>(4, recipBoxVectors[0]);
@@ -2272,7 +2273,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             if (includeEnergy)
                 cl.executeKernel(pmeEvalEnergyKernel, gridSizeX*gridSizeY*gridSizeZ);
             cl.executeKernel(pmeConvolutionKernel, gridSizeX*gridSizeY*gridSizeZ);
-            fft->execFFT(pmeGrid2, pmeGrid, false);
+            fft->execFFT(pmeGrid2, pmeGrid1, false);
             setPeriodicBoxArgs(cl, pmeInterpolateForceKernel, 3);
             if (cl.getUseDoublePrecision()) {
                 pmeInterpolateForceKernel.setArg<mm_double4>(8, recipBoxVectors[0]);
@@ -2304,7 +2305,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             }
             cl.executeKernel(pmeDispersionUpdateBsplinesKernel, cl.getNumAtoms());
             if (deviceIsCpu && !cl.getSupports64BitGlobalAtomics()) {
-                cl.clearBuffer(pmeGrid);
+                cl.clearBuffer(pmeGrid1);
                 setPeriodicBoxArgs(cl, pmeDispersionSpreadChargeKernel, 5);
                 if (cl.getUseDoublePrecision()) {
                     pmeDispersionSpreadChargeKernel.setArg<mm_double4>(10, recipBoxVectors[0]);
@@ -2319,7 +2320,8 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
                 cl.executeKernel(pmeDispersionSpreadChargeKernel, 2*cl.getDevice().getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>(), 1);
             }
             else {
-                sort->sort(pmeAtomGridIndex);
+                if (!hasCoulomb)
+                    sort->sort(pmeAtomGridIndex);
                 if (cl.getSupports64BitGlobalAtomics()) {
                     cl.clearBuffer(pmeGrid2);
                     setPeriodicBoxArgs(cl, pmeDispersionSpreadChargeKernel, 5);
@@ -2337,7 +2339,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
                     cl.executeKernel(pmeDispersionFinishSpreadChargeKernel, gridSizeX*gridSizeY*gridSizeZ);
                 }
                 else {
-                    cl.clearBuffer(pmeGrid);
+                    cl.clearBuffer(pmeGrid1);
                     cl.executeKernel(pmeDispersionAtomRangeKernel, cl.getNumAtoms());
                     setPeriodicBoxSizeArg(cl, pmeDispersionZIndexKernel, 2);
                     if (cl.getUseDoublePrecision())
@@ -2348,7 +2350,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
                     cl.executeKernel(pmeDispersionSpreadChargeKernel, cl.getNumAtoms());
                 }
             }
-            dispersionFft->execFFT(pmeGrid, pmeGrid2, true);
+            dispersionFft->execFFT(pmeGrid1, pmeGrid2, true);
             mm_double4 boxSize = cl.getPeriodicBoxSizeDouble();
             if (cl.getUseDoublePrecision()) {
                 pmeDispersionConvolutionKernel.setArg<mm_double4>(4, recipBoxVectors[0]);
@@ -2369,7 +2371,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             if (includeEnergy)
                 cl.executeKernel(pmeDispersionEvalEnergyKernel, gridSizeX*gridSizeY*gridSizeZ);
             cl.executeKernel(pmeDispersionConvolutionKernel, gridSizeX*gridSizeY*gridSizeZ);
-            dispersionFft->execFFT(pmeGrid2, pmeGrid, false);
+            dispersionFft->execFFT(pmeGrid2, pmeGrid1, false);
             setPeriodicBoxArgs(cl, pmeDispersionInterpolateForceKernel, 3);
             if (cl.getUseDoublePrecision()) {
                 pmeDispersionInterpolateForceKernel.setArg<mm_double4>(8, recipBoxVectors[0]);

@@ -663,7 +663,7 @@ private:
     OpenCLArray exceptionOffsetIndices;
     OpenCLArray globalParams;
     OpenCLArray cosSinSums;
-    OpenCLArray pmeGrid;
+    OpenCLArray pmeGrid1;
     OpenCLArray pmeGrid2;
     OpenCLArray pmeBsplineModuliX;
     OpenCLArray pmeBsplineModuliY;

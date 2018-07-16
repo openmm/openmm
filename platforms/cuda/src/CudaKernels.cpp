@@ -1749,7 +1749,6 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                     pmeDefines["GRID_SIZE_X"] = cu.intToString(dispersionGridSizeX);
                     pmeDefines["GRID_SIZE_Y"] = cu.intToString(dispersionGridSizeY);
                     pmeDefines["GRID_SIZE_Z"] = cu.intToString(dispersionGridSizeZ);
-                    pmeDefines["EPSILON_FACTOR"] = "1";
                     pmeDefines["RECIP_EXP_FACTOR"] = cu.doubleToString(M_PI*M_PI/(dispersionAlpha*dispersionAlpha));
                     pmeDefines["USE_LJPME"] = "1";
                     double invRCut6 = pow(force.getCutoffDistance(), -6);
@@ -1772,12 +1771,15 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                 // Create required data structures.
 
                 int elementSize = (cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
-                int gridElements = gridSizeX*gridSizeY*gridSizeZ;
-                if (doLJPME)
-                    gridElements = max(gridElements, dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ);
-                directPmeGrid.initialize(cu, gridElements, cu.getComputeCapability() >= 2.0 ? 2*elementSize : 2*sizeof(long long), "originalPmeGrid");
-                reciprocalPmeGrid.initialize(cu, gridElements, 2*elementSize, "reciprocalPmeGrid");
-                cu.addAutoclearBuffer(directPmeGrid);
+                int roundedZSize = PmeOrder*(int) ceil(gridSizeZ/(double) PmeOrder);
+                int gridElements = gridSizeX*gridSizeY*roundedZSize;
+                if (doLJPME) {
+                    roundedZSize = PmeOrder*(int) ceil(dispersionGridSizeZ/(double) PmeOrder);
+                    gridElements = max(gridElements, dispersionGridSizeX*dispersionGridSizeY*roundedZSize);
+                }
+                pmeGrid1.initialize(cu, gridElements, 2*elementSize, "pmeGrid1");
+                pmeGrid2.initialize(cu, gridElements, 2*elementSize, "pmeGrid2");
+                cu.addAutoclearBuffer(pmeGrid2);
                 pmeBsplineModuliX.initialize(cu, gridSizeX, elementSize, "pmeBsplineModuliX");
                 pmeBsplineModuliY.initialize(cu, gridSizeY, elementSize, "pmeBsplineModuliY");
                 pmeBsplineModuliZ.initialize(cu, gridSizeZ, elementSize, "pmeBsplineModuliZ");
@@ -2093,7 +2095,7 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
         void* forcesArgs[] = {&cu.getForce().getDevicePointer(), &cu.getPosq().getDevicePointer(), &cosSinSums.getDevicePointer(), cu.getPeriodicBoxSizePointer()};
         cu.executeKernel(ewaldForcesKernel, forcesArgs, cu.getNumAtoms());
     }
-    if (directPmeGrid.isInitialized() && includeReciprocal) {
+    if (pmeGrid1.isInitialized() && includeReciprocal) {
         if (usePmeStream)
             cu.setCurrentStream(pmeStream);
 
@@ -2133,50 +2135,48 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
 
             sort->sort(pmeAtomGridIndex);
 
-            void* spreadArgs[] = {&cu.getPosq().getDevicePointer(), &directPmeGrid.getDevicePointer(), cu.getPeriodicBoxSizePointer(),
+            void* spreadArgs[] = {&cu.getPosq().getDevicePointer(), &pmeGrid2.getDevicePointer(), cu.getPeriodicBoxSizePointer(),
                     cu.getInvPeriodicBoxSizePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
                     recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2], &pmeAtomGridIndex.getDevicePointer(),
                     &charges.getDevicePointer()};
             cu.executeKernel(pmeSpreadChargeKernel, spreadArgs, cu.getNumAtoms(), 128);
 
-            if (cu.getUseDoublePrecision() || cu.getComputeCapability() < 2.0 || cu.getPlatformData().deterministicForces) {
-                void* finishSpreadArgs[] = {&directPmeGrid.getDevicePointer()};
-                cu.executeKernel(pmeFinishSpreadChargeKernel, finishSpreadArgs, gridSizeX*gridSizeY*gridSizeZ, 256);
-            }
+            void* finishSpreadArgs[] = {&pmeGrid2.getDevicePointer(), &pmeGrid1.getDevicePointer()};
+            cu.executeKernel(pmeFinishSpreadChargeKernel, finishSpreadArgs, gridSizeX*gridSizeY*gridSizeZ, 256);
 
             if (useCudaFFT) {
                 if (cu.getUseDoublePrecision())
-                    cufftExecD2Z(fftForward, (double*) directPmeGrid.getDevicePointer(), (double2*) reciprocalPmeGrid.getDevicePointer());
+                    cufftExecD2Z(fftForward, (double*) pmeGrid1.getDevicePointer(), (double2*) pmeGrid2.getDevicePointer());
                 else
-                    cufftExecR2C(fftForward, (float*) directPmeGrid.getDevicePointer(), (float2*) reciprocalPmeGrid.getDevicePointer());
+                    cufftExecR2C(fftForward, (float*) pmeGrid1.getDevicePointer(), (float2*) pmeGrid2.getDevicePointer());
             }
             else {
-                fft->execFFT(directPmeGrid, reciprocalPmeGrid, true);
+                fft->execFFT(pmeGrid1, pmeGrid2, true);
             }
 
             if (includeEnergy) {
-                void* computeEnergyArgs[] = {&reciprocalPmeGrid.getDevicePointer(), usePmeStream ? &pmeEnergyBuffer.getDevicePointer() : &cu.getEnergyBuffer().getDevicePointer(),
+                void* computeEnergyArgs[] = {&pmeGrid2.getDevicePointer(), usePmeStream ? &pmeEnergyBuffer.getDevicePointer() : &cu.getEnergyBuffer().getDevicePointer(),
                         &pmeBsplineModuliX.getDevicePointer(), &pmeBsplineModuliY.getDevicePointer(), &pmeBsplineModuliZ.getDevicePointer(),
                         cu.getPeriodicBoxSizePointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
                 cu.executeKernel(pmeEvalEnergyKernel, computeEnergyArgs, gridSizeX*gridSizeY*gridSizeZ);
             }
 
-            void* convolutionArgs[] = {&reciprocalPmeGrid.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(),
+            void* convolutionArgs[] = {&pmeGrid2.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(),
                     &pmeBsplineModuliX.getDevicePointer(), &pmeBsplineModuliY.getDevicePointer(), &pmeBsplineModuliZ.getDevicePointer(),
                     cu.getPeriodicBoxSizePointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
             cu.executeKernel(pmeConvolutionKernel, convolutionArgs, gridSizeX*gridSizeY*gridSizeZ, 256);
 
             if (useCudaFFT) {
                 if (cu.getUseDoublePrecision())
-                    cufftExecZ2D(fftBackward, (double2*) reciprocalPmeGrid.getDevicePointer(), (double*) directPmeGrid.getDevicePointer());
+                    cufftExecZ2D(fftBackward, (double2*) pmeGrid2.getDevicePointer(), (double*) pmeGrid1.getDevicePointer());
                 else
-                    cufftExecC2R(fftBackward, (float2*) reciprocalPmeGrid.getDevicePointer(), (float*)  directPmeGrid.getDevicePointer());
+                    cufftExecC2R(fftBackward, (float2*) pmeGrid2.getDevicePointer(), (float*)  pmeGrid1.getDevicePointer());
             }
             else {
-                fft->execFFT(reciprocalPmeGrid, directPmeGrid, false);
+                fft->execFFT(pmeGrid2, pmeGrid1, false);
             }
 
-            void* interpolateArgs[] = {&cu.getPosq().getDevicePointer(), &cu.getForce().getDevicePointer(), &directPmeGrid.getDevicePointer(), cu.getPeriodicBoxSizePointer(),
+            void* interpolateArgs[] = {&cu.getPosq().getDevicePointer(), &cu.getForce().getDevicePointer(), &pmeGrid1.getDevicePointer(), cu.getPeriodicBoxSizePointer(),
                     cu.getInvPeriodicBoxSizePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
                     recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2], &pmeAtomGridIndex.getDevicePointer(),
                     &charges.getDevicePointer()};
@@ -2186,58 +2186,58 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
         // As written, we check only the Electrostatic grid pointer to get here.  We could separate them out, but for
         // now we assume that LJPME can only be used if electrostatic PME is also active.
         if (doLJPME && hasLJ) {
-            void* gridIndexArgs[] = {&cu.getPosq().getDevicePointer(), &pmeAtomGridIndex.getDevicePointer(), cu.getPeriodicBoxSizePointer(),
-                    cu.getInvPeriodicBoxSizePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
-                    recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
-            cu.executeKernel(pmeDispersionGridIndexKernel, gridIndexArgs, cu.getNumAtoms());
+            if (!hasCoulomb) {
+                void* gridIndexArgs[] = {&cu.getPosq().getDevicePointer(), &pmeAtomGridIndex.getDevicePointer(), cu.getPeriodicBoxSizePointer(),
+                        cu.getInvPeriodicBoxSizePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
+                        recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
+                cu.executeKernel(pmeDispersionGridIndexKernel, gridIndexArgs, cu.getNumAtoms());
 
-            sort->sort(pmeAtomGridIndex);
+                sort->sort(pmeAtomGridIndex);
+            }
 
-            cu.clearBuffer(directPmeGrid);
-            void* spreadArgs[] = {&cu.getPosq().getDevicePointer(), &directPmeGrid.getDevicePointer(), cu.getPeriodicBoxSizePointer(),
+            cu.clearBuffer(pmeGrid2);
+            void* spreadArgs[] = {&cu.getPosq().getDevicePointer(), &pmeGrid2.getDevicePointer(), cu.getPeriodicBoxSizePointer(),
                     cu.getInvPeriodicBoxSizePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
                     recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2], &pmeAtomGridIndex.getDevicePointer(),
                     &sigmaEpsilon.getDevicePointer()};
             cu.executeKernel(pmeDispersionSpreadChargeKernel, spreadArgs, cu.getNumAtoms(), 128);
 
-            if (cu.getUseDoublePrecision() || cu.getComputeCapability() < 2.0 || cu.getPlatformData().deterministicForces) {
-                void* finishSpreadArgs[] = {&directPmeGrid.getDevicePointer()};
-                cu.executeKernel(pmeDispersionFinishSpreadChargeKernel, finishSpreadArgs, dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ, 256);
-            }
+            void* finishSpreadArgs[] = {&pmeGrid2.getDevicePointer(), &pmeGrid1.getDevicePointer()};
+            cu.executeKernel(pmeDispersionFinishSpreadChargeKernel, finishSpreadArgs, dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ, 256);
 
             if (useCudaFFT) {
                 if (cu.getUseDoublePrecision())
-                    cufftExecD2Z(dispersionFftForward, (double*) directPmeGrid.getDevicePointer(), (double2*) reciprocalPmeGrid.getDevicePointer());
+                    cufftExecD2Z(dispersionFftForward, (double*) pmeGrid1.getDevicePointer(), (double2*) pmeGrid2.getDevicePointer());
                 else
-                    cufftExecR2C(dispersionFftForward, (float*) directPmeGrid.getDevicePointer(), (float2*) reciprocalPmeGrid.getDevicePointer());
+                    cufftExecR2C(dispersionFftForward, (float*) pmeGrid1.getDevicePointer(), (float2*) pmeGrid2.getDevicePointer());
             }
             else {
-                dispersionFft->execFFT(directPmeGrid, reciprocalPmeGrid, true);
+                dispersionFft->execFFT(pmeGrid1, pmeGrid2, true);
             }
 
             if (includeEnergy) {
-                void* computeEnergyArgs[] = {&reciprocalPmeGrid.getDevicePointer(), usePmeStream ? &pmeEnergyBuffer.getDevicePointer() : &cu.getEnergyBuffer().getDevicePointer(),
+                void* computeEnergyArgs[] = {&pmeGrid2.getDevicePointer(), usePmeStream ? &pmeEnergyBuffer.getDevicePointer() : &cu.getEnergyBuffer().getDevicePointer(),
                         &pmeDispersionBsplineModuliX.getDevicePointer(), &pmeDispersionBsplineModuliY.getDevicePointer(), &pmeDispersionBsplineModuliZ.getDevicePointer(),
                         cu.getPeriodicBoxSizePointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
                 cu.executeKernel(pmeEvalDispersionEnergyKernel, computeEnergyArgs, dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ);
             }
 
-            void* convolutionArgs[] = {&reciprocalPmeGrid.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(),
+            void* convolutionArgs[] = {&pmeGrid2.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(),
                     &pmeDispersionBsplineModuliX.getDevicePointer(), &pmeDispersionBsplineModuliY.getDevicePointer(), &pmeDispersionBsplineModuliZ.getDevicePointer(),
                     cu.getPeriodicBoxSizePointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
             cu.executeKernel(pmeDispersionConvolutionKernel, convolutionArgs, dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ, 256);
 
             if (useCudaFFT) {
                 if (cu.getUseDoublePrecision())
-                    cufftExecZ2D(dispersionFftBackward, (double2*) reciprocalPmeGrid.getDevicePointer(), (double*) directPmeGrid.getDevicePointer());
+                    cufftExecZ2D(dispersionFftBackward, (double2*) pmeGrid2.getDevicePointer(), (double*) pmeGrid1.getDevicePointer());
                 else
-                    cufftExecC2R(dispersionFftBackward, (float2*) reciprocalPmeGrid.getDevicePointer(), (float*)  directPmeGrid.getDevicePointer());
+                    cufftExecC2R(dispersionFftBackward, (float2*) pmeGrid2.getDevicePointer(), (float*)  pmeGrid1.getDevicePointer());
             }
             else {
-                dispersionFft->execFFT(reciprocalPmeGrid, directPmeGrid, false);
+                dispersionFft->execFFT(pmeGrid2, pmeGrid1, false);
             }
 
-            void* interpolateArgs[] = {&cu.getPosq().getDevicePointer(), &cu.getForce().getDevicePointer(), &directPmeGrid.getDevicePointer(), cu.getPeriodicBoxSizePointer(),
+            void* interpolateArgs[] = {&cu.getPosq().getDevicePointer(), &cu.getForce().getDevicePointer(), &pmeGrid1.getDevicePointer(), cu.getPeriodicBoxSizePointer(),
                     cu.getInvPeriodicBoxSizePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
                     recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2], &pmeAtomGridIndex.getDevicePointer(),
                     &sigmaEpsilon.getDevicePointer()};
