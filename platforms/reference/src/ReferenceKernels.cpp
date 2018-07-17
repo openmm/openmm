@@ -1993,6 +1993,10 @@ void ReferenceCalcCustomCVForceKernel::copyState(ContextImpl& context, ContextIm
         innerContext.setParameter(param.first, context.getParameter(param.first));
 }
 
+void ReferenceCalcCustomCVForceKernel::copyParametersToContext(ContextImpl& context, const CustomCVForce& force) {
+    ixn->rebuildExpressions(force);
+}
+
 void ReferenceCalcRMSDForceKernel::initialize(const System& system, const RMSDForce& force) {
     particles = force.getParticles();
     if (particles.size() == 0)

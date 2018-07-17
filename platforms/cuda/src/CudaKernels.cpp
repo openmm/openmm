@@ -6588,33 +6588,15 @@ void CudaCalcCustomCVForceKernel::initialize(const System& system, const CustomC
     int numCVs = force.getNumCollectiveVariables();
     for (int i = 0; i < force.getNumGlobalParameters(); i++)
         globalParameterNames.push_back(force.getGlobalParameterName(i));
-    
-    // Create custom functions for the tabulated functions.
-
-    map<string, Lepton::CustomFunction*> functions;
-    for (int i = 0; i < (int) force.getNumTabulatedFunctions(); i++)
-        functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
-
-    // Create the expressions.
-
-    Lepton::ParsedExpression energyExpr = Lepton::Parser::parse(force.getEnergyFunction(), functions);
-    energyExpression = energyExpr.createProgram();
-    for (int i = 0; i < numCVs; i++) {
-        string name = force.getCollectiveVariableName(i);
-        variableNames.push_back(name);
-        variableDerivExpressions.push_back(energyExpr.differentiate(name).optimize().createProgram());
-    }
+    energyExpressionText = force.getEnergyFunction();
+    for (int i = 0; i < numCVs; i++)
+        variableNames.push_back(force.getCollectiveVariableName(i));
     for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
         string name = force.getEnergyParameterDerivativeName(i);
         paramDerivNames.push_back(name);
-        paramDerivExpressions.push_back(energyExpr.differentiate(name).optimize().createProgram());
         cu.addEnergyParameterDerivative(name);
     }
-
-    // Delete the custom functions.
-
-    for (auto& function : functions)
-        delete function.second;
+    rebuildExpressions(force);
         
     // Copy parameter derivatives from the inner context.
 
@@ -6728,6 +6710,34 @@ void CudaCalcCustomCVForceKernel::copyState(ContextImpl& context, ContextImpl& i
     map<string, double> innerParameters = innerContext.getParameters();
     for (auto& param : innerParameters)
         innerContext.setParameter(param.first, context.getParameter(param.first));
+}
+
+void CudaCalcCustomCVForceKernel::copyParametersToContext(ContextImpl& context, const CustomCVForce& force) {
+    rebuildExpressions(force);
+}
+
+void CudaCalcCustomCVForceKernel::rebuildExpressions(const OpenMM::CustomCVForce& force) {
+    // Create custom functions for the tabulated functions.
+
+    map<string, Lepton::CustomFunction*> functions;
+    for (int i = 0; i < (int) force.getNumTabulatedFunctions(); i++)
+        functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
+
+    // Create the expressions.
+
+    Lepton::ParsedExpression energyExpr = Lepton::Parser::parse(energyExpressionText, functions);
+    energyExpression = energyExpr.createProgram();
+    variableDerivExpressions.clear();
+    for (auto& name : variableNames)
+        variableDerivExpressions.push_back(energyExpr.differentiate(name).optimize().createProgram());
+    paramDerivExpressions.clear();
+    for (auto& name : paramDerivNames)
+        paramDerivExpressions.push_back(energyExpr.differentiate(name).optimize().createProgram());
+
+    // Delete the custom functions.
+
+    for (auto& function : functions)
+        delete function.second;
 }
 
 class CudaCalcRMSDForceKernel::ForceInfo : public CudaForceInfo {

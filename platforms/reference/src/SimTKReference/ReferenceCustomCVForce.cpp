@@ -33,6 +33,15 @@ using namespace OpenMM;
 using namespace std;
 
 ReferenceCustomCVForce::ReferenceCustomCVForce(const CustomCVForce& force) {
+    energyExpressionText = force.getEnergyFunction();
+    for (int i = 0; i < force.getNumCollectiveVariables(); i++)
+        variableNames.push_back(force.getCollectiveVariableName(i));
+    for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++)
+        paramDerivNames.push_back(force.getEnergyParameterDerivativeName(i));
+    rebuildExpressions(force);
+}
+
+void ReferenceCustomCVForce::rebuildExpressions(const OpenMM::CustomCVForce& force) {
     // Create custom functions for the tabulated functions.
 
     map<string, Lepton::CustomFunction*> functions;
@@ -41,18 +50,14 @@ ReferenceCustomCVForce::ReferenceCustomCVForce(const CustomCVForce& force) {
 
     // Create the expressions.
 
-    Lepton::ParsedExpression energyExpr = Lepton::Parser::parse(force.getEnergyFunction(), functions);
+    Lepton::ParsedExpression energyExpr = Lepton::Parser::parse(energyExpressionText, functions);
     energyExpression = energyExpr.createProgram();
-    for (int i = 0; i < force.getNumCollectiveVariables(); i++) {
-        string name = force.getCollectiveVariableName(i);
-        variableNames.push_back(name);
+    variableDerivExpressions.clear();
+    for (auto& name : variableNames)
         variableDerivExpressions.push_back(energyExpr.differentiate(name).optimize().createProgram());
-    }
-    for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
-        string name = force.getEnergyParameterDerivativeName(i);
-        paramDerivNames.push_back(name);
+    paramDerivExpressions.clear();
+    for (auto& name : paramDerivNames)
         paramDerivExpressions.push_back(energyExpr.differentiate(name).optimize().createProgram());
-    }
 
     // Delete the custom functions.
 

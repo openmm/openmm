@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -980,6 +980,13 @@ public:
      * @param innerContext   the context created by the CustomCVForce for computing collective variables
      */
     virtual void copyState(ContextImpl& context, ContextImpl& innerContext) = 0;
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomCVForce to copy the parameters from
+     */
+    virtual void copyParametersToContext(ContextImpl& context, const CustomCVForce& force) = 0;
 };
 
 /**

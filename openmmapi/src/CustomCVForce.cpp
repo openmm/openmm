@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2017 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -150,6 +150,10 @@ ForceImpl* CustomCVForce::createImpl() const {
 
 Context& CustomCVForce::getInnerContext(Context& context) {
     return dynamic_cast<CustomCVForceImpl&>(getImplInContext(context)).getInnerContext();
+}
+
+void CustomCVForce::updateParametersInContext(Context& context) {
+    dynamic_cast<CustomCVForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
 }
 
 bool CustomCVForce::usesPeriodicBoundaryConditions() const {

@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2017 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -255,6 +255,17 @@ public:
      * @return the inner Context used to evaluate the collective variables
      */
     Context& getInnerContext(Context& context);
+    /**
+     * Update the tabulated function parameters in a Context to match those stored in this Force object.  This method
+     * provides an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
+     * Simply call getTabulatedFunction(index).setFunctionParameters() to modify this object's parameters, then call
+     * updateParametersInContext() to copy them over to the Context.
+     *
+     * This method is very limited.  The only information it updates is the parameters of tabulated functions.
+     * All other aspects of the Force (the energy expression, the set of collective variables, etc.) are unaffected and can
+     * only be changed by reinitializing the Context.
+     */
+    void updateParametersInContext(Context& context);
     /**
      * Returns whether or not this force makes use of periodic boundary
      * conditions.
