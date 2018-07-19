@@ -1259,10 +1259,19 @@ public:
      * @param innerContext   the context created by the CustomCVForce for computing collective variables
      */
     void copyState(ContextImpl& context, ContextImpl& innerContext);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomCVForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CustomCVForce& force);
 private:
     class ReorderListener;
+    void rebuildExpressions(const OpenMM::CustomCVForce& force);
     CudaContext& cu;
     bool hasInitializedListeners;
+    std::string energyExpressionText;
     Lepton::ExpressionProgram energyExpression;
     std::vector<std::string> variableNames, paramDerivNames, globalParameterNames;
     std::vector<Lepton::ExpressionProgram> variableDerivExpressions;
