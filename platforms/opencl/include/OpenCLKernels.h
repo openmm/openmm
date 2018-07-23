@@ -1244,10 +1244,8 @@ public:
     void copyParametersToContext(ContextImpl& context, const CustomCVForce& force);
 private:
     class ReorderListener;
-    void rebuildExpressions(const OpenMM::CustomCVForce& force);
     OpenCLContext& cl;
     bool hasInitializedKernels;
-    std::string energyExpressionText;
     Lepton::ExpressionProgram energyExpression;
     std::vector<std::string> variableNames, paramDerivNames, globalParameterNames;
     std::vector<Lepton::ExpressionProgram> variableDerivExpressions;

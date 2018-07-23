@@ -36,7 +36,6 @@ namespace OpenMM {
 
 class ReferenceCustomCVForce {
 private:
-    std::string energyExpressionText;
     Lepton::ExpressionProgram energyExpression;
     std::vector<std::string> variableNames, paramDerivNames;
     std::vector<Lepton::ExpressionProgram> variableDerivExpressions;
@@ -54,11 +53,10 @@ public:
     ~ReferenceCustomCVForce();
 
     /**
-     * Create the ExpressionPrograms.  This is called automatically when the object is
-     * created.  It can be called again to rebuild them if the user calls
+     * Update any tabulated functions used by the force.  This is called when the user calls
      * updateParametersInContext().
      */
-    void rebuildExpressions(const OpenMM::CustomCVForce& force);
+    void updateTabulatedFunctions(const OpenMM::CustomCVForce& force);
 
     /**
      * Calculate the interaction.

@@ -182,8 +182,8 @@ void testTabulatedFunction() {
         // Now update the tabulated function, call updateParametersInContext(),
         // and see if it's still correct.
         
-        for (int i = 0; i < table.size(); i++)
-            table[i] *= 2;
+        for (int j = 0; j < table.size(); j++)
+            table[j] *= 2;
         dynamic_cast<Continuous2DFunction&>(cv->getTabulatedFunction(0)).setFunctionParameters(xsize, ysize, table, xmin, xmax, ymin, ymax);
         cv->updateParametersInContext(context);
         scale *= 2.0;

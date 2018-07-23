@@ -117,6 +117,15 @@ static pair<ExpressionTreeNode, string> makeVariable(const string& name, const s
     return make_pair(ExpressionTreeNode(new Operation::Variable(name)), value);
 }
 
+static void replaceFunctionsInExpression(map<string, CustomFunction*>& functions, ExpressionProgram& expression) {
+    for (int i = 0; i < expression.getNumOperations(); i++) {
+        if (expression.getOperation(i).getId() == Operation::CUSTOM) {
+            const Operation::Custom& op = dynamic_cast<const Operation::Custom&>(expression.getOperation(i));
+            expression.setOperation(i, new Operation::Custom(op.getName(), functions[op.getName()]->clone(), op.getDerivOrder()));
+        }
+    }
+}
+
 void OpenCLCalcForcesAndEnergyKernel::initialize(const System& system) {
 }
 
@@ -6865,7 +6874,6 @@ void OpenCLCalcCustomCVForceKernel::initialize(const System& system, const Custo
     cl.addForce(new OpenCLForceInfo(1));
     for (int i = 0; i < force.getNumGlobalParameters(); i++)
         globalParameterNames.push_back(force.getGlobalParameterName(i));
-    energyExpressionText = force.getEnergyFunction();
     for (int i = 0; i < numCVs; i++)
         variableNames.push_back(force.getCollectiveVariableName(i));
     for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
@@ -6873,8 +6881,29 @@ void OpenCLCalcCustomCVForceKernel::initialize(const System& system, const Custo
         paramDerivNames.push_back(name);
         cl.addEnergyParameterDerivative(name);
     }
-    rebuildExpressions(force);
-            
+
+    // Create custom functions for the tabulated functions.
+
+    map<string, Lepton::CustomFunction*> functions;
+    for (int i = 0; i < (int) force.getNumTabulatedFunctions(); i++)
+        functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
+
+    // Create the expressions.
+
+    Lepton::ParsedExpression energyExpr = Lepton::Parser::parse(force.getEnergyFunction(), functions);
+    energyExpression = energyExpr.createProgram();
+    variableDerivExpressions.clear();
+    for (auto& name : variableNames)
+        variableDerivExpressions.push_back(energyExpr.differentiate(name).optimize().createProgram());
+    paramDerivExpressions.clear();
+    for (auto& name : paramDerivNames)
+        paramDerivExpressions.push_back(energyExpr.differentiate(name).optimize().createProgram());
+
+    // Delete the custom functions.
+
+    for (auto& function : functions)
+        delete function.second;
+
     // Copy parameter derivatives from the inner context.
 
     OpenCLContext& cl2 = *reinterpret_cast<OpenCLPlatform::PlatformData*>(innerContext.getPlatformData())->contexts[0];
@@ -7004,26 +7033,19 @@ void OpenCLCalcCustomCVForceKernel::copyState(ContextImpl& context, ContextImpl&
 }
 
 void OpenCLCalcCustomCVForceKernel::copyParametersToContext(ContextImpl& context, const CustomCVForce& force) {
-    rebuildExpressions(force);
-}
-
-void OpenCLCalcCustomCVForceKernel::rebuildExpressions(const OpenMM::CustomCVForce& force) {
     // Create custom functions for the tabulated functions.
 
-    map<string, Lepton::CustomFunction*> functions;
+    map<string, CustomFunction*> functions;
     for (int i = 0; i < (int) force.getNumTabulatedFunctions(); i++)
         functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
 
-    // Create the expressions.
+    // Replace tabulated functions in the expressions.
 
-    Lepton::ParsedExpression energyExpr = Lepton::Parser::parse(energyExpressionText, functions);
-    energyExpression = energyExpr.createProgram();
-    variableDerivExpressions.clear();
-    for (auto& name : variableNames)
-        variableDerivExpressions.push_back(energyExpr.differentiate(name).optimize().createProgram());
-    paramDerivExpressions.clear();
-    for (auto& name : paramDerivNames)
-        paramDerivExpressions.push_back(energyExpr.differentiate(name).optimize().createProgram());
+    replaceFunctionsInExpression(functions, energyExpression);
+    for (auto& expression : variableDerivExpressions)
+        replaceFunctionsInExpression(functions, expression);
+    for (auto& expression : paramDerivExpressions)
+        replaceFunctionsInExpression(functions, expression);
 
     // Delete the custom functions.
 
