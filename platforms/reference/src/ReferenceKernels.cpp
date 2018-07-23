@@ -1994,7 +1994,7 @@ void ReferenceCalcCustomCVForceKernel::copyState(ContextImpl& context, ContextIm
 }
 
 void ReferenceCalcCustomCVForceKernel::copyParametersToContext(ContextImpl& context, const CustomCVForce& force) {
-    ixn->rebuildExpressions(force);
+    ixn->updateTabulatedFunctions(force);
 }
 
 void ReferenceCalcRMSDForceKernel::initialize(const System& system, const RMSDForce& force) {
