@@ -45,6 +45,10 @@ namespace OpenMM {
 
 class ReferenceObc;
 class ReferenceAndersenThermostat;
+class ReferenceCustomBondIxn;
+class ReferenceCustomAngleIxn;
+class ReferenceCustomTorsionIxn;
+class ReferenceCustomExternalIxn;
 class ReferenceCustomCentroidBondIxn;
 class ReferenceCustomCompoundBondIxn;
 class ReferenceCustomCVForce;
@@ -296,8 +300,9 @@ private:
  */
 class ReferenceCalcCustomBondForceKernel : public CalcCustomBondForceKernel {
 public:
-    ReferenceCalcCustomBondForceKernel(std::string name, const Platform& platform) : CalcCustomBondForceKernel(name, platform) {
+    ReferenceCalcCustomBondForceKernel(std::string name, const Platform& platform) : CalcCustomBondForceKernel(name, platform), ixn(NULL) {
     }
+    ~ReferenceCalcCustomBondForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -323,6 +328,7 @@ public:
     void copyParametersToContext(ContextImpl& context, const CustomBondForce& force);
 private:
     int numBonds;
+    ReferenceCustomBondIxn* ixn;
     std::vector<std::vector<int> >bondIndexArray;
     std::vector<std::vector<double> >bondParamArray;
     Lepton::CompiledExpression energyExpression, forceExpression;
@@ -373,8 +379,9 @@ private:
  */
 class ReferenceCalcCustomAngleForceKernel : public CalcCustomAngleForceKernel {
 public:
-    ReferenceCalcCustomAngleForceKernel(std::string name, const Platform& platform) : CalcCustomAngleForceKernel(name, platform) {
+    ReferenceCalcCustomAngleForceKernel(std::string name, const Platform& platform) : CalcCustomAngleForceKernel(name, platform), ixn(NULL) {
     }
+    ~ReferenceCalcCustomAngleForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -400,6 +407,7 @@ public:
     void copyParametersToContext(ContextImpl& context, const CustomAngleForce& force);
 private:
     int numAngles;
+    ReferenceCustomAngleIxn* ixn;
     std::vector<std::vector<int> >angleIndexArray;
     std::vector<std::vector<double> >angleParamArray;
     Lepton::CompiledExpression energyExpression, forceExpression;
@@ -524,8 +532,9 @@ private:
  */
 class ReferenceCalcCustomTorsionForceKernel : public CalcCustomTorsionForceKernel {
 public:
-    ReferenceCalcCustomTorsionForceKernel(std::string name, const Platform& platform) : CalcCustomTorsionForceKernel(name, platform) {
+    ReferenceCalcCustomTorsionForceKernel(std::string name, const Platform& platform) : CalcCustomTorsionForceKernel(name, platform), ixn(NULL) {
     }
+    ~ReferenceCalcCustomTorsionForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -551,6 +560,7 @@ public:
     void copyParametersToContext(ContextImpl& context, const CustomTorsionForce& force);
 private:
     int numTorsions;
+    ReferenceCustomTorsionIxn* ixn;
     std::vector<std::vector<int> >torsionIndexArray;
     std::vector<std::vector<double> >torsionParamArray;
     Lepton::CompiledExpression energyExpression, forceExpression;
@@ -766,8 +776,9 @@ private:
  */
 class ReferenceCalcCustomExternalForceKernel : public CalcCustomExternalForceKernel {
 public:
-    ReferenceCalcCustomExternalForceKernel(std::string name, const Platform& platform) : CalcCustomExternalForceKernel(name, platform) {
+    ReferenceCalcCustomExternalForceKernel(std::string name, const Platform& platform) : CalcCustomExternalForceKernel(name, platform), ixn(NULL) {
     }
+    ~ReferenceCalcCustomExternalForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -794,6 +805,7 @@ public:
 private:
     class PeriodicDistanceFunction;
     int numParticles;
+    ReferenceCustomExternalIxn* ixn;
     std::vector<int> particles;
     std::vector<std::vector<double> > particleParamArray;
     Lepton::CompiledExpression energyExpression, forceExpressionX, forceExpressionY, forceExpressionZ;

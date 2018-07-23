@@ -383,6 +383,11 @@ void ReferenceCalcHarmonicBondForceKernel::copyParametersToContext(ContextImpl& 
     }
 }
 
+ReferenceCalcCustomBondForceKernel::~ReferenceCalcCustomBondForceKernel() {
+    if (ixn != NULL)
+        delete ixn;
+}
+
 void ReferenceCalcCustomBondForceKernel::initialize(const System& system, const CustomBondForce& force) {
     numBonds = force.getNumBonds();
     int numParameters = force.getNumPerBondParameters();
@@ -421,6 +426,7 @@ void ReferenceCalcCustomBondForceKernel::initialize(const System& system, const 
     variables.insert(parameterNames.begin(), parameterNames.end());
     variables.insert(globalParameterNames.begin(), globalParameterNames.end());
     validateVariables(expression.getRootNode(), variables);
+    ixn = new ReferenceCustomBondIxn(energyExpression, forceExpression, parameterNames, energyParamDerivExpressions);
 }
 
 double ReferenceCalcCustomBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -430,12 +436,12 @@ double ReferenceCalcCustomBondForceKernel::execute(ContextImpl& context, bool in
     map<string, double> globalParameters;
     for (auto& name : globalParameterNames)
         globalParameters[name] = context.getParameter(name);
-    ReferenceCustomBondIxn bond(energyExpression, forceExpression, parameterNames, globalParameters, energyParamDerivExpressions);
+    ixn->setGlobalParameters(globalParameters);
     if (usePeriodic)
-        bond.setPeriodic(extractBoxVectors(context));
+        ixn->setPeriodic(extractBoxVectors(context));
     vector<double> energyParamDerivValues(energyParamDerivNames.size()+1, 0.0);
     for (int i = 0; i < numBonds; i++)
-        bond.calculateBondIxn(bondIndexArray[i], posData, bondParamArray[i], forceData, includeEnergy ? &energy : NULL, &energyParamDerivValues[0]);
+        ixn->calculateBondIxn(bondIndexArray[i], posData, bondParamArray[i], forceData, includeEnergy ? &energy : NULL, &energyParamDerivValues[0]);
     map<string, double>& energyParamDerivs = extractEnergyParameterDerivatives(context);
     for (int i = 0; i < energyParamDerivNames.size(); i++)
         energyParamDerivs[energyParamDerivNames[i]] += energyParamDerivValues[i];
@@ -506,6 +512,11 @@ void ReferenceCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl&
     }
 }
 
+ReferenceCalcCustomAngleForceKernel::~ReferenceCalcCustomAngleForceKernel() {
+    if (ixn != NULL)
+        delete ixn;
+}
+
 void ReferenceCalcCustomAngleForceKernel::initialize(const System& system, const CustomAngleForce& force) {
     numAngles = force.getNumAngles();
     int numParameters = force.getNumPerAngleParameters();
@@ -545,6 +556,7 @@ void ReferenceCalcCustomAngleForceKernel::initialize(const System& system, const
     variables.insert(parameterNames.begin(), parameterNames.end());
     variables.insert(globalParameterNames.begin(), globalParameterNames.end());
     validateVariables(expression.getRootNode(), variables);
+    ixn = new ReferenceCustomAngleIxn(energyExpression, forceExpression, parameterNames, energyParamDerivExpressions);
 }
 
 double ReferenceCalcCustomAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -554,12 +566,12 @@ double ReferenceCalcCustomAngleForceKernel::execute(ContextImpl& context, bool i
     map<string, double> globalParameters;
     for (auto& name : globalParameterNames)
         globalParameters[name] = context.getParameter(name);
-    ReferenceCustomAngleIxn customAngle(energyExpression, forceExpression, parameterNames, globalParameters, energyParamDerivExpressions);
+    ixn->setGlobalParameters(globalParameters);
     if (usePeriodic)
-        customAngle.setPeriodic(extractBoxVectors(context));
+        ixn->setPeriodic(extractBoxVectors(context));
     vector<double> energyParamDerivValues(energyParamDerivNames.size()+1, 0.0);
     for (int i = 0; i < numAngles; i++)
-        customAngle.calculateBondIxn(angleIndexArray[i], posData, angleParamArray[i], forceData, includeEnergy ? &energy : NULL, &energyParamDerivValues[0]);
+        ixn->calculateBondIxn(angleIndexArray[i], posData, angleParamArray[i], forceData, includeEnergy ? &energy : NULL, &energyParamDerivValues[0]);
     map<string, double>& energyParamDerivs = extractEnergyParameterDerivatives(context);
     for (int i = 0; i < energyParamDerivNames.size(); i++)
         energyParamDerivs[energyParamDerivNames[i]] += energyParamDerivValues[i];
@@ -760,6 +772,11 @@ void ReferenceCalcCMAPTorsionForceKernel::copyParametersToContext(ContextImpl& c
     }
 }
 
+ReferenceCalcCustomTorsionForceKernel::~ReferenceCalcCustomTorsionForceKernel() {
+    if (ixn != NULL)
+        delete ixn;
+}
+
 void ReferenceCalcCustomTorsionForceKernel::initialize(const System& system, const CustomTorsionForce& force) {
     numTorsions = force.getNumTorsions();
     int numParameters = force.getNumPerTorsionParameters();
@@ -800,6 +817,7 @@ void ReferenceCalcCustomTorsionForceKernel::initialize(const System& system, con
     variables.insert(parameterNames.begin(), parameterNames.end());
     variables.insert(globalParameterNames.begin(), globalParameterNames.end());
     validateVariables(expression.getRootNode(), variables);
+    ixn = new ReferenceCustomTorsionIxn(energyExpression, forceExpression, parameterNames, energyParamDerivExpressions);
 }
 
 double ReferenceCalcCustomTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -809,12 +827,12 @@ double ReferenceCalcCustomTorsionForceKernel::execute(ContextImpl& context, bool
     map<string, double> globalParameters;
     for (auto& name : globalParameterNames)
         globalParameters[name] = context.getParameter(name);
-    ReferenceCustomTorsionIxn customTorsion(energyExpression, forceExpression, parameterNames, globalParameters, energyParamDerivExpressions);
+    ixn->setGlobalParameters(globalParameters);
     if (usePeriodic)
-        customTorsion.setPeriodic(extractBoxVectors(context));
+        ixn->setPeriodic(extractBoxVectors(context));
     vector<double> energyParamDerivValues(energyParamDerivNames.size()+1, 0.0);
     for (int i = 0; i < numTorsions; i++)
-        customTorsion.calculateBondIxn(torsionIndexArray[i], posData, torsionParamArray[i], forceData, includeEnergy ? &energy : NULL, &energyParamDerivValues[0]);
+        ixn->calculateBondIxn(torsionIndexArray[i], posData, torsionParamArray[i], forceData, includeEnergy ? &energy : NULL, &energyParamDerivValues[0]);
     map<string, double>& energyParamDerivs = extractEnergyParameterDerivatives(context);
     for (int i = 0; i < energyParamDerivNames.size(); i++)
         energyParamDerivs[energyParamDerivNames[i]] += energyParamDerivValues[i];
@@ -1515,6 +1533,11 @@ Lepton::CustomFunction* ReferenceCalcCustomExternalForceKernel::PeriodicDistance
     return new PeriodicDistanceFunction(boxVectorHandle);
 }
 
+ReferenceCalcCustomExternalForceKernel::~ReferenceCalcCustomExternalForceKernel() {
+    if (ixn != NULL)
+        delete ixn;
+}
+
 void ReferenceCalcCustomExternalForceKernel::initialize(const System& system, const CustomExternalForce& force) {
     numParticles = force.getNumParticles();
     int numParameters = force.getNumPerParticleParameters();
@@ -1547,6 +1570,8 @@ void ReferenceCalcCustomExternalForceKernel::initialize(const System& system, co
     variables.insert(parameterNames.begin(), parameterNames.end());
     variables.insert(globalParameterNames.begin(), globalParameterNames.end());
     validateVariables(expression.getRootNode(), variables);
+    ixn = new ReferenceCustomExternalIxn(energyExpression, forceExpressionX, forceExpressionY, forceExpressionZ, parameterNames);
+
 }
 
 double ReferenceCalcCustomExternalForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -1557,9 +1582,9 @@ double ReferenceCalcCustomExternalForceKernel::execute(ContextImpl& context, boo
     map<string, double> globalParameters;
     for (auto& name : globalParameterNames)
         globalParameters[name] = context.getParameter(name);
-    ReferenceCustomExternalIxn force(energyExpression, forceExpressionX, forceExpressionY, forceExpressionZ, parameterNames, globalParameters);
+    ixn->setGlobalParameters(globalParameters);
     for (int i = 0; i < numParticles; ++i)
-        force.calculateForce(particles[i], posData, particleParamArray[i], forceData, includeEnergy ? &energy : NULL);
+        ixn->calculateForce(particles[i], posData, particleParamArray[i], forceData, includeEnergy ? &energy : NULL);
     return energy;
 }
 
