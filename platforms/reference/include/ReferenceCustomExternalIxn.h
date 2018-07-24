@@ -58,7 +58,7 @@ class ReferenceCustomExternalIxn {
 
        ReferenceCustomExternalIxn(const Lepton::CompiledExpression& energyExpression, const Lepton::CompiledExpression& forceExpressionX,
                               const Lepton::CompiledExpression& forceExpressionY, const Lepton::CompiledExpression& forceExpressionZ,
-                              const std::vector<std::string>& parameterNames, std::map<std::string, double> globalParameters);
+                              const std::vector<std::string>& parameterNames);
 
       /**---------------------------------------------------------------------------------------
 
@@ -67,6 +67,14 @@ class ReferenceCustomExternalIxn {
          --------------------------------------------------------------------------------------- */
 
        ~ReferenceCustomExternalIxn();
+
+       /**---------------------------------------------------------------------------------------
+      
+         Set the values of all global parameters.
+      
+         --------------------------------------------------------------------------------------- */
+      
+       void setGlobalParameters(std::map<std::string, double> parameters);
 
       /**---------------------------------------------------------------------------------------
 
