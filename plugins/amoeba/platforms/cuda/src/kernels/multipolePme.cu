@@ -235,17 +235,16 @@ extern "C" __global__ void gridSpreadFixedMultipoles(const real4* __restrict__ p
                 ybase -= (ybase >= GRID_SIZE_Y ? GRID_SIZE_Y : 0);
                 ybase = xbase + ybase*GRID_SIZE_Z;
                 real4 u = theta2[iy];
+                real term0 = atomCharge*t.x*u.x + atomDipoleY*t.x*u.y + atomQuadrupoleYY*t.x*u.z + atomDipoleX*t.y*u.x + atomQuadrupoleXY*t.y*u.y + atomQuadrupoleXX*t.z*u.x;
+                real term1 = atomDipoleZ*t.x*u.x + atomQuadrupoleYZ*t.x*u.y + atomQuadrupoleXZ*t.y*u.x;
+                real term2 = atomQuadrupoleZZ*t.x*u.x;
                 
                 for (int iz = 0; iz < PME_ORDER; iz++) {
                     int zindex = igrid3+iz;
                     zindex -= (zindex >= GRID_SIZE_Z ? GRID_SIZE_Z : 0);
                     int index = ybase + zindex;
                     real4 v = theta3[iz];
-
-                    real term0 = atomCharge*u.x*v.x + atomDipoleY*u.y*v.x + atomDipoleZ*u.x*v.y + atomQuadrupoleYY*u.z*v.x + atomQuadrupoleZZ*u.x*v.z + atomQuadrupoleYZ*u.y*v.y;
-                    real term1 = atomDipoleX*u.x*v.x + atomQuadrupoleXY*u.y*v.x + atomQuadrupoleXZ*u.x*v.y;
-                    real term2 = atomQuadrupoleXX * u.x * v.x;
-                    real add = term0*t.x + term1*t.y + term2*t.z;
+                    real add = term0*v.x + term1*v.y + term2*v.z;
 #ifdef USE_DOUBLE_PRECISION
                     unsigned long long * ulonglong_p = (unsigned long long *) pmeGrid;
                     atomicAdd(&ulonglong_p[2*index],  static_cast<unsigned long long>((long long) (add*0x100000000)));
@@ -337,6 +336,10 @@ extern "C" __global__ void gridSpreadInducedDipoles(const real4* __restrict__ po
                 ybase -= (ybase >= GRID_SIZE_Y ? GRID_SIZE_Y : 0);
                 ybase = xbase + ybase*GRID_SIZE_Z;
                 real4 u = theta2[iy];
+                real term01 = finducedDipole.y*t.x*u.y + finducedDipole.x*t.y*u.x;
+                real term11 = finducedDipole.z*t.x*u.x;
+                real term02 = finducedDipolePolar.y*t.x*u.y + finducedDipolePolar.x*t.y*u.x;
+                real term12 = finducedDipolePolar.z*t.x*u.x;
                 
                 for (int iz = 0; iz < PME_ORDER; iz++) {
                     int zindex = igrid3+iz;
@@ -344,12 +347,8 @@ extern "C" __global__ void gridSpreadInducedDipoles(const real4* __restrict__ po
                     int index = ybase + zindex;
                     real4 v = theta3[iz];
 
-                    real term01 = finducedDipole.y*u.y*v.x + finducedDipole.z*u.x*v.y;
-                    real term11 = finducedDipole.x*u.x*v.x;
-                    real term02 = finducedDipolePolar.y*u.y*v.x + finducedDipolePolar.z*u.x*v.y;
-                    real term12 = finducedDipolePolar.x*u.x*v.x;
-                    real add1 = term01*t.x + term11*t.y;
-                    real add2 = term02*t.x + term12*t.y;
+                    real add1 = term01*v.x + term11*v.y;
+                    real add2 = term02*v.x + term12*v.y;
 #ifdef USE_DOUBLE_PRECISION
                     unsigned long long * ulonglong_p = (unsigned long long *) pmeGrid;
                     atomicAdd(&ulonglong_p[2*index],  static_cast<unsigned long long>((long long) (add1*0x100000000)));

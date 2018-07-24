@@ -457,7 +457,6 @@ private:
     CudaArray pmePhip;
     CudaArray pmePhidp;
     CudaArray pmeCphi;
-    CudaArray pmeAtomRange;
     CudaArray lastPositions;
     CudaSort* sort;
     cufftHandle fft;

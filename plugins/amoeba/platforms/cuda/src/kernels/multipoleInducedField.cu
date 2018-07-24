@@ -193,39 +193,39 @@ __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, real3 de
     
     real3 dipole = atom1.inducedDipole;
     real muDotR = dipole.x*deltaR.x + dipole.y*deltaR.y + dipole.z*deltaR.z;
-    atom2.fieldGradient[0] -= muDotR*deltaR.x*deltaR.x*scale3 - (2*dipole.x*deltaR.x + muDotR)*scale2;
-    atom2.fieldGradient[1] -= muDotR*deltaR.y*deltaR.y*scale3 - (2*dipole.y*deltaR.y + muDotR)*scale2;
-    atom2.fieldGradient[2] -= muDotR*deltaR.z*deltaR.z*scale3 - (2*dipole.z*deltaR.z + muDotR)*scale2;
-    atom2.fieldGradient[3] -= muDotR*deltaR.x*deltaR.y*scale3 - (dipole.x*deltaR.y + dipole.y*deltaR.x)*scale2;
-    atom2.fieldGradient[4] -= muDotR*deltaR.x*deltaR.z*scale3 - (dipole.x*deltaR.z + dipole.z*deltaR.x)*scale2;
-    atom2.fieldGradient[5] -= muDotR*deltaR.y*deltaR.z*scale3 - (dipole.y*deltaR.z + dipole.z*deltaR.y)*scale2;
+    atom2.fieldGradient[0] -= (muDotR*scale3)*deltaR.x*deltaR.x - (2*dipole.x*deltaR.x + muDotR)*scale2;
+    atom2.fieldGradient[1] -= (muDotR*scale3)*deltaR.y*deltaR.y - (2*dipole.y*deltaR.y + muDotR)*scale2;
+    atom2.fieldGradient[2] -= (muDotR*scale3)*deltaR.z*deltaR.z - (2*dipole.z*deltaR.z + muDotR)*scale2;
+    atom2.fieldGradient[3] -= (muDotR*scale3)*deltaR.x*deltaR.y - (dipole.x*deltaR.y + dipole.y*deltaR.x)*scale2;
+    atom2.fieldGradient[4] -= (muDotR*scale3)*deltaR.x*deltaR.z - (dipole.x*deltaR.z + dipole.z*deltaR.x)*scale2;
+    atom2.fieldGradient[5] -= (muDotR*scale3)*deltaR.y*deltaR.z - (dipole.y*deltaR.z + dipole.z*deltaR.y)*scale2;
 
     dipole = atom1.inducedDipolePolar;
     muDotR = dipole.x*deltaR.x + dipole.y*deltaR.y + dipole.z*deltaR.z;
-    atom2.fieldGradientPolar[0] -= muDotR*deltaR.x*deltaR.x*scale3 - (2*dipole.x*deltaR.x + muDotR)*scale2;
-    atom2.fieldGradientPolar[1] -= muDotR*deltaR.y*deltaR.y*scale3 - (2*dipole.y*deltaR.y + muDotR)*scale2;
-    atom2.fieldGradientPolar[2] -= muDotR*deltaR.z*deltaR.z*scale3 - (2*dipole.z*deltaR.z + muDotR)*scale2;
-    atom2.fieldGradientPolar[3] -= muDotR*deltaR.x*deltaR.y*scale3 - (dipole.x*deltaR.y + dipole.y*deltaR.x)*scale2;
-    atom2.fieldGradientPolar[4] -= muDotR*deltaR.x*deltaR.z*scale3 - (dipole.x*deltaR.z + dipole.z*deltaR.x)*scale2;
-    atom2.fieldGradientPolar[5] -= muDotR*deltaR.y*deltaR.z*scale3 - (dipole.y*deltaR.z + dipole.z*deltaR.y)*scale2;
+    atom2.fieldGradientPolar[0] -= (muDotR*scale3)*deltaR.x*deltaR.x - (2*dipole.x*deltaR.x + muDotR)*scale2;
+    atom2.fieldGradientPolar[1] -= (muDotR*scale3)*deltaR.y*deltaR.y - (2*dipole.y*deltaR.y + muDotR)*scale2;
+    atom2.fieldGradientPolar[2] -= (muDotR*scale3)*deltaR.z*deltaR.z - (2*dipole.z*deltaR.z + muDotR)*scale2;
+    atom2.fieldGradientPolar[3] -= (muDotR*scale3)*deltaR.x*deltaR.y - (dipole.x*deltaR.y + dipole.y*deltaR.x)*scale2;
+    atom2.fieldGradientPolar[4] -= (muDotR*scale3)*deltaR.x*deltaR.z - (dipole.x*deltaR.z + dipole.z*deltaR.x)*scale2;
+    atom2.fieldGradientPolar[5] -= (muDotR*scale3)*deltaR.y*deltaR.z - (dipole.y*deltaR.z + dipole.z*deltaR.y)*scale2;
 
     dipole = atom2.inducedDipole;
     muDotR = dipole.x*deltaR.x + dipole.y*deltaR.y + dipole.z*deltaR.z;
-    atom1.fieldGradient[0] += muDotR*deltaR.x*deltaR.x*scale3 - (2*dipole.x*deltaR.x + muDotR)*scale2;
-    atom1.fieldGradient[1] += muDotR*deltaR.y*deltaR.y*scale3 - (2*dipole.y*deltaR.y + muDotR)*scale2;
-    atom1.fieldGradient[2] += muDotR*deltaR.z*deltaR.z*scale3 - (2*dipole.z*deltaR.z + muDotR)*scale2;
-    atom1.fieldGradient[3] += muDotR*deltaR.x*deltaR.y*scale3 - (dipole.x*deltaR.y + dipole.y*deltaR.x)*scale2;
-    atom1.fieldGradient[4] += muDotR*deltaR.x*deltaR.z*scale3 - (dipole.x*deltaR.z + dipole.z*deltaR.x)*scale2;
-    atom1.fieldGradient[5] += muDotR*deltaR.y*deltaR.z*scale3 - (dipole.y*deltaR.z + dipole.z*deltaR.y)*scale2;
+    atom1.fieldGradient[0] += (muDotR*scale3)*deltaR.x*deltaR.x - (2*dipole.x*deltaR.x + muDotR)*scale2;
+    atom1.fieldGradient[1] += (muDotR*scale3)*deltaR.y*deltaR.y - (2*dipole.y*deltaR.y + muDotR)*scale2;
+    atom1.fieldGradient[2] += (muDotR*scale3)*deltaR.z*deltaR.z - (2*dipole.z*deltaR.z + muDotR)*scale2;
+    atom1.fieldGradient[3] += (muDotR*scale3)*deltaR.x*deltaR.y - (dipole.x*deltaR.y + dipole.y*deltaR.x)*scale2;
+    atom1.fieldGradient[4] += (muDotR*scale3)*deltaR.x*deltaR.z - (dipole.x*deltaR.z + dipole.z*deltaR.x)*scale2;
+    atom1.fieldGradient[5] += (muDotR*scale3)*deltaR.y*deltaR.z - (dipole.y*deltaR.z + dipole.z*deltaR.y)*scale2;
 
     dipole = atom2.inducedDipolePolar;
     muDotR = dipole.x*deltaR.x + dipole.y*deltaR.y + dipole.z*deltaR.z;
-    atom1.fieldGradientPolar[0] += muDotR*deltaR.x*deltaR.x*scale3 - (2*dipole.x*deltaR.x + muDotR)*scale2;
-    atom1.fieldGradientPolar[1] += muDotR*deltaR.y*deltaR.y*scale3 - (2*dipole.y*deltaR.y + muDotR)*scale2;
-    atom1.fieldGradientPolar[2] += muDotR*deltaR.z*deltaR.z*scale3 - (2*dipole.z*deltaR.z + muDotR)*scale2;
-    atom1.fieldGradientPolar[3] += muDotR*deltaR.x*deltaR.y*scale3 - (dipole.x*deltaR.y + dipole.y*deltaR.x)*scale2;
-    atom1.fieldGradientPolar[4] += muDotR*deltaR.x*deltaR.z*scale3 - (dipole.x*deltaR.z + dipole.z*deltaR.x)*scale2;
-    atom1.fieldGradientPolar[5] += muDotR*deltaR.y*deltaR.z*scale3 - (dipole.y*deltaR.z + dipole.z*deltaR.y)*scale2;
+    atom1.fieldGradientPolar[0] += (muDotR*scale3)*deltaR.x*deltaR.x - (2*dipole.x*deltaR.x + muDotR)*scale2;
+    atom1.fieldGradientPolar[1] += (muDotR*scale3)*deltaR.y*deltaR.y - (2*dipole.y*deltaR.y + muDotR)*scale2;
+    atom1.fieldGradientPolar[2] += (muDotR*scale3)*deltaR.z*deltaR.z - (2*dipole.z*deltaR.z + muDotR)*scale2;
+    atom1.fieldGradientPolar[3] += (muDotR*scale3)*deltaR.x*deltaR.y - (dipole.x*deltaR.y + dipole.y*deltaR.x)*scale2;
+    atom1.fieldGradientPolar[4] += (muDotR*scale3)*deltaR.x*deltaR.z - (dipole.x*deltaR.z + dipole.z*deltaR.x)*scale2;
+    atom1.fieldGradientPolar[5] += (muDotR*scale3)*deltaR.y*deltaR.z - (dipole.y*deltaR.z + dipole.z*deltaR.y)*scale2;
 #endif
 }
 #elif defined USE_GK
@@ -315,39 +315,39 @@ __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, real3 de
     
     real3 dipole = atom1.inducedDipole;
     real muDotR = dipole.x*deltaR.x + dipole.y*deltaR.y + dipole.z*deltaR.z;
-    atom2.fieldGradient[0] -= muDotR*deltaR.x*deltaR.x*rr7 - (2*dipole.x*deltaR.x + muDotR)*rr5;
-    atom2.fieldGradient[1] -= muDotR*deltaR.y*deltaR.y*rr7 - (2*dipole.y*deltaR.y + muDotR)*rr5;
-    atom2.fieldGradient[2] -= muDotR*deltaR.z*deltaR.z*rr7 - (2*dipole.z*deltaR.z + muDotR)*rr5;
-    atom2.fieldGradient[3] -= muDotR*deltaR.x*deltaR.y*rr7 - (dipole.x*deltaR.y + dipole.y*deltaR.x)*rr5;
-    atom2.fieldGradient[4] -= muDotR*deltaR.x*deltaR.z*rr7 - (dipole.x*deltaR.z + dipole.z*deltaR.x)*rr5;
-    atom2.fieldGradient[5] -= muDotR*deltaR.y*deltaR.z*rr7 - (dipole.y*deltaR.z + dipole.z*deltaR.y)*rr5;
+    atom2.fieldGradient[0] -= (muDotR*rr7)*deltaR.x*deltaR.x - (2*dipole.x*deltaR.x + muDotR)*rr5;
+    atom2.fieldGradient[1] -= (muDotR*rr7)*deltaR.y*deltaR.y - (2*dipole.y*deltaR.y + muDotR)*rr5;
+    atom2.fieldGradient[2] -= (muDotR*rr7)*deltaR.z*deltaR.z - (2*dipole.z*deltaR.z + muDotR)*rr5;
+    atom2.fieldGradient[3] -= (muDotR*rr7)*deltaR.x*deltaR.y - (dipole.x*deltaR.y + dipole.y*deltaR.x)*rr5;
+    atom2.fieldGradient[4] -= (muDotR*rr7)*deltaR.x*deltaR.z - (dipole.x*deltaR.z + dipole.z*deltaR.x)*rr5;
+    atom2.fieldGradient[5] -= (muDotR*rr7)*deltaR.y*deltaR.z - (dipole.y*deltaR.z + dipole.z*deltaR.y)*rr5;
 
     dipole = atom1.inducedDipolePolar;
     muDotR = dipole.x*deltaR.x + dipole.y*deltaR.y + dipole.z*deltaR.z;
-    atom2.fieldGradientPolar[0] -= muDotR*deltaR.x*deltaR.x*rr7 - (2*dipole.x*deltaR.x + muDotR)*rr5;
-    atom2.fieldGradientPolar[1] -= muDotR*deltaR.y*deltaR.y*rr7 - (2*dipole.y*deltaR.y + muDotR)*rr5;
-    atom2.fieldGradientPolar[2] -= muDotR*deltaR.z*deltaR.z*rr7 - (2*dipole.z*deltaR.z + muDotR)*rr5;
-    atom2.fieldGradientPolar[3] -= muDotR*deltaR.x*deltaR.y*rr7 - (dipole.x*deltaR.y + dipole.y*deltaR.x)*rr5;
-    atom2.fieldGradientPolar[4] -= muDotR*deltaR.x*deltaR.z*rr7 - (dipole.x*deltaR.z + dipole.z*deltaR.x)*rr5;
-    atom2.fieldGradientPolar[5] -= muDotR*deltaR.y*deltaR.z*rr7 - (dipole.y*deltaR.z + dipole.z*deltaR.y)*rr5;
+    atom2.fieldGradientPolar[0] -= (muDotR*rr7)*deltaR.x*deltaR.x - (2*dipole.x*deltaR.x + muDotR)*rr5;
+    atom2.fieldGradientPolar[1] -= (muDotR*rr7)*deltaR.y*deltaR.y - (2*dipole.y*deltaR.y + muDotR)*rr5;
+    atom2.fieldGradientPolar[2] -= (muDotR*rr7)*deltaR.z*deltaR.z - (2*dipole.z*deltaR.z + muDotR)*rr5;
+    atom2.fieldGradientPolar[3] -= (muDotR*rr7)*deltaR.x*deltaR.y - (dipole.x*deltaR.y + dipole.y*deltaR.x)*rr5;
+    atom2.fieldGradientPolar[4] -= (muDotR*rr7)*deltaR.x*deltaR.z - (dipole.x*deltaR.z + dipole.z*deltaR.x)*rr5;
+    atom2.fieldGradientPolar[5] -= (muDotR*rr7)*deltaR.y*deltaR.z - (dipole.y*deltaR.z + dipole.z*deltaR.y)*rr5;
 
     dipole = atom2.inducedDipole;
     muDotR = dipole.x*deltaR.x + dipole.y*deltaR.y + dipole.z*deltaR.z;
-    atom1.fieldGradient[0] += muDotR*deltaR.x*deltaR.x*rr7 - (2*dipole.x*deltaR.x + muDotR)*rr5;
-    atom1.fieldGradient[1] += muDotR*deltaR.y*deltaR.y*rr7 - (2*dipole.y*deltaR.y + muDotR)*rr5;
-    atom1.fieldGradient[2] += muDotR*deltaR.z*deltaR.z*rr7 - (2*dipole.z*deltaR.z + muDotR)*rr5;
-    atom1.fieldGradient[3] += muDotR*deltaR.x*deltaR.y*rr7 - (dipole.x*deltaR.y + dipole.y*deltaR.x)*rr5;
-    atom1.fieldGradient[4] += muDotR*deltaR.x*deltaR.z*rr7 - (dipole.x*deltaR.z + dipole.z*deltaR.x)*rr5;
-    atom1.fieldGradient[5] += muDotR*deltaR.y*deltaR.z*rr7 - (dipole.y*deltaR.z + dipole.z*deltaR.y)*rr5;
+    atom1.fieldGradient[0] += (muDotR*rr7)*deltaR.x*deltaR.x - (2*dipole.x*deltaR.x + muDotR)*rr5;
+    atom1.fieldGradient[1] += (muDotR*rr7)*deltaR.y*deltaR.y - (2*dipole.y*deltaR.y + muDotR)*rr5;
+    atom1.fieldGradient[2] += (muDotR*rr7)*deltaR.z*deltaR.z - (2*dipole.z*deltaR.z + muDotR)*rr5;
+    atom1.fieldGradient[3] += (muDotR*rr7)*deltaR.x*deltaR.y - (dipole.x*deltaR.y + dipole.y*deltaR.x)*rr5;
+    atom1.fieldGradient[4] += (muDotR*rr7)*deltaR.x*deltaR.z - (dipole.x*deltaR.z + dipole.z*deltaR.x)*rr5;
+    atom1.fieldGradient[5] += (muDotR*rr7)*deltaR.y*deltaR.z - (dipole.y*deltaR.z + dipole.z*deltaR.y)*rr5;
 
     dipole = atom2.inducedDipolePolar;
     muDotR = dipole.x*deltaR.x + dipole.y*deltaR.y + dipole.z*deltaR.z;
-    atom1.fieldGradientPolar[0] += muDotR*deltaR.x*deltaR.x*rr7 - (2*dipole.x*deltaR.x + muDotR)*rr5;
-    atom1.fieldGradientPolar[1] += muDotR*deltaR.y*deltaR.y*rr7 - (2*dipole.y*deltaR.y + muDotR)*rr5;
-    atom1.fieldGradientPolar[2] += muDotR*deltaR.z*deltaR.z*rr7 - (2*dipole.z*deltaR.z + muDotR)*rr5;
-    atom1.fieldGradientPolar[3] += muDotR*deltaR.x*deltaR.y*rr7 - (dipole.x*deltaR.y + dipole.y*deltaR.x)*rr5;
-    atom1.fieldGradientPolar[4] += muDotR*deltaR.x*deltaR.z*rr7 - (dipole.x*deltaR.z + dipole.z*deltaR.x)*rr5;
-    atom1.fieldGradientPolar[5] += muDotR*deltaR.y*deltaR.z*rr7 - (dipole.y*deltaR.z + dipole.z*deltaR.y)*rr5;
+    atom1.fieldGradientPolar[0] += (muDotR*rr7)*deltaR.x*deltaR.x - (2*dipole.x*deltaR.x + muDotR)*rr5;
+    atom1.fieldGradientPolar[1] += (muDotR*rr7)*deltaR.y*deltaR.y - (2*dipole.y*deltaR.y + muDotR)*rr5;
+    atom1.fieldGradientPolar[2] += (muDotR*rr7)*deltaR.z*deltaR.z - (2*dipole.z*deltaR.z + muDotR)*rr5;
+    atom1.fieldGradientPolar[3] += (muDotR*rr7)*deltaR.x*deltaR.y - (dipole.x*deltaR.y + dipole.y*deltaR.x)*rr5;
+    atom1.fieldGradientPolar[4] += (muDotR*rr7)*deltaR.x*deltaR.z - (dipole.x*deltaR.z + dipole.z*deltaR.x)*rr5;
+    atom1.fieldGradientPolar[5] += (muDotR*rr7)*deltaR.y*deltaR.z - (dipole.y*deltaR.z + dipole.z*deltaR.y)*rr5;
 #endif
 }
 #endif

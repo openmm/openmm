@@ -5477,18 +5477,18 @@ void AmoebaReferencePmeMultipoleForce::spreadFixedMultipolesOntoGrid(const vecto
         IntVec& gridPoint = _iGrid[atomIndex];
         for (int ix = 0; ix < AMOEBA_PME_ORDER; ix++) {
             int x = (gridPoint[0]+ix) % _pmeGridDimensions[0];
+            double4 t = _thetai[0][atomIndex*AMOEBA_PME_ORDER+ix];
             for (int iy = 0; iy < AMOEBA_PME_ORDER; iy++) {
                 int y = (gridPoint[1]+iy) % _pmeGridDimensions[1];
+                double4 u = _thetai[1][atomIndex*AMOEBA_PME_ORDER+iy];
+                double term0 = atomCharge*t[0]*u[0] + atomDipole[1]*t[0]*u[1] + atomQuadrupoleYY*t[0]*u[2] + atomDipole[0]*t[1]*u[0] + atomQuadrupoleXY*t[1]*u[1] + atomQuadrupoleXX*t[2]*u[0];
+                double term1 = atomDipole[2]*t[0]*u[0] + atomQuadrupoleYZ*t[0]*u[1] + atomQuadrupoleXZ*t[1]*u[0];
+                double term2 = atomQuadrupoleZZ*t[0]*u[0];
                 for (int iz = 0; iz < AMOEBA_PME_ORDER; iz++) {
                     int z = (gridPoint[2]+iz) % _pmeGridDimensions[2];
-                    double4 t = _thetai[0][atomIndex*AMOEBA_PME_ORDER+ix];
-                    double4 u = _thetai[1][atomIndex*AMOEBA_PME_ORDER+iy];
                     double4 v = _thetai[2][atomIndex*AMOEBA_PME_ORDER+iz];
-                    double term0 = atomCharge*u[0]*v[0] + atomDipole[1]*u[1]*v[0] + atomDipole[2]*u[0]*v[1] + atomQuadrupoleYY*u[2]*v[0] + atomQuadrupoleZZ*u[0]*v[2] + atomQuadrupoleYZ*u[1]*v[1];
-                    double term1 = atomDipole[0]*u[0]*v[0] + atomQuadrupoleXY*u[1]*v[0] + atomQuadrupoleXZ*u[0]*v[1];
-                    double term2 = atomQuadrupoleXX * u[0] * v[0];
                     t_complex& gridValue = _pmeGrid[x*_pmeGridDimensions[1]*_pmeGridDimensions[2]+y*_pmeGridDimensions[2]+z];
-                    gridValue.re += term0*t[0] + term1*t[1] + term2*t[2];
+                    gridValue.re += term0*v[0] + term1*v[1] + term2*v[2];
                 }
             }
         }
@@ -5668,23 +5668,20 @@ void AmoebaReferencePmeMultipoleForce::spreadInducedDipolesOnGrid(const vector<V
         IntVec& gridPoint = _iGrid[atomIndex];
         for (int ix = 0; ix < AMOEBA_PME_ORDER; ix++) {
             int x = (gridPoint[0]+ix) % _pmeGridDimensions[0];
+            double4 t = _thetai[0][atomIndex*AMOEBA_PME_ORDER+ix];
             for (int iy = 0; iy < AMOEBA_PME_ORDER; iy++) {
                 int y = (gridPoint[1]+iy) % _pmeGridDimensions[1];
+                double4 u = _thetai[1][atomIndex*AMOEBA_PME_ORDER+iy];
+                double term01 = inducedDipole[1]*t[0]*u[1] + inducedDipole[0]*t[1]*u[0];
+                double term11 = inducedDipole[2]*t[0]*u[0];
+                double term02 = inducedDipolePolar[1]*t[0]*u[1] + inducedDipolePolar[0]*t[1]*u[0];
+                double term12 = inducedDipolePolar[2]*t[0]*u[0];
                 for (int iz = 0; iz < AMOEBA_PME_ORDER; iz++) {
                     int z = (gridPoint[2]+iz) % _pmeGridDimensions[2];
-
-                    double4 t = _thetai[0][atomIndex*AMOEBA_PME_ORDER+ix];
-                    double4 u = _thetai[1][atomIndex*AMOEBA_PME_ORDER+iy];
                     double4 v = _thetai[2][atomIndex*AMOEBA_PME_ORDER+iz];
-
-                    double term01 = inducedDipole[1]*u[1]*v[0] + inducedDipole[2]*u[0]*v[1];
-                    double term11 = inducedDipole[0]*u[0]*v[0];
-                    double term02 = inducedDipolePolar[1]*u[1]*v[0] + inducedDipolePolar[2]*u[0]*v[1];
-                    double term12 = inducedDipolePolar[0]*u[0]*v[0];
-
                     t_complex& gridValue = _pmeGrid[x*_pmeGridDimensions[1]*_pmeGridDimensions[2]+y*_pmeGridDimensions[2]+z];
-                    gridValue.re += term01*t[0] + term11*t[1];
-                    gridValue.im += term02*t[0] + term12*t[1];
+                    gridValue.re += term01*v[0] + term11*v[1];
+                    gridValue.im += term02*v[0] + term12*v[1];
                 }
             }
         }

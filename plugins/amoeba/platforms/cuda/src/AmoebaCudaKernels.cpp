@@ -1127,7 +1127,6 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         pmePhip.initialize(cu, 10*numMultipoles, elementSize, "pmePhip");
         pmePhidp.initialize(cu, 20*numMultipoles, elementSize, "pmePhidp");
         pmeCphi.initialize(cu, 10*numMultipoles, elementSize, "pmeCphi");
-        pmeAtomRange.initialize<int>(cu, gridSizeX*gridSizeY*gridSizeZ+1, "pmeAtomRange");
         sort = new CudaSort(cu, new SortTrait(), cu.getNumAtoms());
         cufftResult result = cufftPlan3d(&fft, gridSizeX, gridSizeY, gridSizeZ, cu.getUseDoublePrecision() ? CUFFT_Z2Z : CUFFT_C2C);
         if (result != CUFFT_SUCCESS)
