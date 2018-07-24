@@ -30,7 +30,7 @@ install:
   - choco install -y doxygen.portable swig > null
 
 # Download OpenCL Headers and build the ICD loader
-  - ps: [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12;
+  - ps: "[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12;"
   - ps: $opencl_registry = "https://www.khronos.org/registry/cl"
   - ps: $opencl_github = "KhronosGroup/OpenCL-Headers"
   - ps: mkdir C:/opencl > $null
