@@ -601,7 +601,7 @@ class ForceField(object):
 
             # Provide a helpful error message if atom name not found.
             msg =  "Atom name '%s' not found in residue template '%s'.\n" % (atom_name, self.name)
-            msg += "Possible atom names are: %s" % str(atomIndices.keys())
+            msg += "Possible atom names are: %s" % str(list(map(lambda x: x.name, self.atoms)))
             raise ValueError(msg)
 
         def addBond(self, atom1, atom2):
