@@ -31,6 +31,7 @@
 #include "openmm/internal/CompiledExpressionSet.h"
 #include "openmm/internal/ThreadPool.h"
 #include "openmm/internal/vectorize.h"
+#include <atomic>
 #include <map>
 #include <set>
 #include <vector>
@@ -63,7 +64,7 @@ private:
     const std::map<std::string, double>* globalParameters;
     std::vector<AlignedArray<float> >* threadForce;
     bool includeForce, includeEnergy;
-    void* atomicCounter;
+    std::atomic<int> atomicCounter;
     
     /**
      * This routine contains the code executed by each thread.

@@ -32,7 +32,6 @@
 #include "ReferenceTabulatedFunction.h"
 #include "openmm/internal/CustomManyParticleForceImpl.h"
 #include "lepton/CustomFunction.h"
-#include "openmm/internal/gmx_atomic.h"
 
 using namespace OpenMM;
 using namespace std;
@@ -99,9 +98,7 @@ void CpuCustomManyParticleForce::calculateIxn(AlignedArray<float>& posq, vector<
     this->threadForce = &threadForce;
     this->includeForces = includeForces;
     this->includeEnergy = includeEnergy;
-    gmx_atomic_t counter;
-    gmx_atomic_set(&counter, 0);
-    this->atomicCounter = &counter;
+    atomicCounter = 0;
     if (useCutoff) {
         // Construct a neighbor list.  We use CpuNeighborList to do this, but then copy the result
         // into a new data structure.  This is needed because in UniqueCentralParticle mode, the
@@ -156,7 +153,7 @@ void CpuCustomManyParticleForce::threadComputeForce(ThreadPool& threads, int thr
         // Loop over interactions from the neighbor list.
         
         while (true) {
-            int i = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            int i = atomicCounter++;
             if (i >= numParticles)
                 break;
             particleIndices[0] = i;
@@ -170,7 +167,7 @@ void CpuCustomManyParticleForce::threadComputeForce(ThreadPool& threads, int thr
         for (int i = 0; i < numParticles; i++)
             particles[i] = i;
         while (true) {
-            int i = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            int i = atomicCounter++;
             if (i >= numParticles)
                 break;
             particleIndices[0] = i;

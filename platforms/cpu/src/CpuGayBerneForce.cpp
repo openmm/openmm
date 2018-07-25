@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2016-2017 Stanford University and the Authors.      *
+ * Portions copyright (c) 2016-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -37,7 +37,6 @@
 #include "ReferenceForce.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/GayBerneForce.h"
-#include "openmm/internal/gmx_atomic.h"
 #include <algorithm>
 #include <cmath>
 
@@ -120,9 +119,7 @@ double CpuGayBerneForce::calculateForce(const vector<Vec3>& positions, std::vect
     this->boxVectors = boxVectors;
     threadEnergy.resize(numThreads);
     threadTorque.resize(numThreads);
-    gmx_atomic_t counter;
-    gmx_atomic_set(&counter, 0);
-    this->atomicCounter = &counter;
+    atomicCounter = 0;
     
     // Signal the threads to compute the pairwise interactions.
     
@@ -131,7 +128,7 @@ double CpuGayBerneForce::calculateForce(const vector<Vec3>& positions, std::vect
     
     // Signal the threads to compute exceptions.
     
-    gmx_atomic_set(&counter, 0);
+    atomicCounter = 0;
     threads.resumeThreads();
     threads.waitForThreads();
     
@@ -162,7 +159,7 @@ void CpuGayBerneForce::threadComputeForce(ThreadPool& threads, int threadIndex, 
     
     if (neighborList == NULL) {
         while (true) {
-            int i = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            int i = atomicCounter++;
             if (i >= numParticles)
                 break;
             if (particles[i].sqrtEpsilon == 0.0f)
@@ -180,7 +177,7 @@ void CpuGayBerneForce::threadComputeForce(ThreadPool& threads, int threadIndex, 
     }
     else {
         while (true) {
-            int blockIndex = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            int blockIndex = atomicCounter++;
             if (blockIndex >= neighborList->getNumBlocks())
                 break;
             const int blockSize = neighborList->getBlockSize();
@@ -211,7 +208,7 @@ void CpuGayBerneForce::threadComputeForce(ThreadPool& threads, int threadIndex, 
     int numExceptions = exceptions.size();
     const int groupSize = max(1, numExceptions/(10*numThreads));
     while (true) {
-        int start = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), groupSize);
+        int start = atomicCounter.fetch_add(groupSize);
         if (start >= numExceptions)
             break;
         int end = min(start+groupSize, numExceptions);

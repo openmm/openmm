@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2017 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -30,7 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "CpuSETTLE.h"
-#include "openmm/internal/gmx_atomic.h"
+#include <atomic>
 
 using namespace OpenMM;
 using namespace std;
@@ -61,11 +61,11 @@ CpuSETTLE::~CpuSETTLE() {
 }
 
 void CpuSETTLE::apply(vector<OpenMM::Vec3>& atomCoordinates, vector<OpenMM::Vec3>& atomCoordinatesP, vector<double>& inverseMasses, double tolerance) {
-    gmx_atomic_t atomicCounter;
-    gmx_atomic_set(&atomicCounter, 0);
+    atomic<int> atomicCounter;
+    atomicCounter = 0;
     threads.execute([&] (ThreadPool& threads, int threadIndex) {
         while (true) {
-            int index = gmx_atomic_fetch_add(&atomicCounter, 1);
+            int index = atomicCounter++;
             if (index >= threadSettle.size())
                 break;
             threadSettle[index]->apply(atomCoordinates, atomCoordinatesP, inverseMasses, tolerance);
@@ -75,11 +75,11 @@ void CpuSETTLE::apply(vector<OpenMM::Vec3>& atomCoordinates, vector<OpenMM::Vec3
 }
 
 void CpuSETTLE::applyToVelocities(vector<OpenMM::Vec3>& atomCoordinates, vector<OpenMM::Vec3>& velocities, vector<double>& inverseMasses, double tolerance) {
-    gmx_atomic_t atomicCounter;
-    gmx_atomic_set(&atomicCounter, 0);
+    atomic<int> atomicCounter;
+    atomicCounter = 0;
     threads.execute([&] (ThreadPool& threads, int threadIndex) {
         while (true) {
-            int index = gmx_atomic_fetch_add(&atomicCounter, 1);
+            int index = atomicCounter++;
             if (index >= threadSettle.size())
                 break;
             threadSettle[index]->applyToVelocities(atomCoordinates, velocities, inverseMasses, tolerance);

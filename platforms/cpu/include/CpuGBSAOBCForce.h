@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2017 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2018 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -28,6 +28,7 @@
 #include "AlignedArray.h"
 #include "openmm/internal/ThreadPool.h"
 #include "openmm/internal/vectorize.h"
+#include <atomic>
 #include <set>
 #include <utility>
 #include <vector>
@@ -112,7 +113,7 @@ private:
     float const* posq;
     std::vector<AlignedArray<float> >* threadForce;
     bool includeEnergy;
-    void* atomicCounter;
+    std::atomic<int> atomicCounter;
   
     static const int NUM_TABLE_POINTS;
     static const float TABLE_MIN;
