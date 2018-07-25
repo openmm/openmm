@@ -28,7 +28,6 @@
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceForce.h"
 #include "CpuCustomGBForce.h"
-#include "openmm/internal/gmx_atomic.h"
 
 using namespace OpenMM;
 using namespace std;
@@ -191,13 +190,11 @@ void CpuCustomGBForce::calculateIxn(int numberOfAtoms, float* posq, vector<vecto
     this->includeForce = includeForce;
     this->includeEnergy = includeEnergy;
     threadEnergy.resize(threads.getNumThreads());
-    gmx_atomic_t counter;
-    this->atomicCounter = &counter;
 
     // Calculate the first computed value.
 
     auto task = [&] (ThreadPool& threads, int threadIndex) { threadComputeForce(threads, threadIndex); };
-    gmx_atomic_set(&counter, 0);
+    atomicCounter = 0;
     threads.execute(task);
     threads.waitForThreads();
 
@@ -217,7 +214,7 @@ void CpuCustomGBForce::calculateIxn(int numberOfAtoms, float* posq, vector<vecto
     // Calculate the energy terms.
 
     for (int i = 0; i < (int) threadData[0]->energyExpressions.size(); i++) {
-        gmx_atomic_set(&counter, 0);
+        atomicCounter = 0;
         threads.execute(task);
         threads.waitForThreads();
     }
@@ -229,7 +226,7 @@ void CpuCustomGBForce::calculateIxn(int numberOfAtoms, float* posq, vector<vecto
     
     // Apply the chain rule to evaluate forces.
 
-    gmx_atomic_set(&counter, 0);
+    atomicCounter = 0;
     threads.resumeThreads();
     threads.waitForThreads();
 
@@ -361,7 +358,7 @@ void CpuCustomGBForce::calculateParticlePairValue(int index, ThreadData& data, i
         // Loop over all pairs in the neighbor list.
 
         while (true) {
-            int blockIndex = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            int blockIndex = atomicCounter++;
             if (blockIndex >= neighborList->getNumBlocks())
                 break;
             const int blockSize = neighborList->getBlockSize();
@@ -386,7 +383,7 @@ void CpuCustomGBForce::calculateParticlePairValue(int index, ThreadData& data, i
         // Perform an O(N^2) loop over all atom pairs.
 
         while (true) {
-            int i = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            int i = atomicCounter++;
             if (i >= numAtoms)
                 break;
             for (int j = i+1; j < numAtoms; j++) {
@@ -456,7 +453,7 @@ void CpuCustomGBForce::calculateParticlePairEnergyTerm(int index, ThreadData& da
         // Loop over all pairs in the neighbor list.
 
         while (true) {
-            int blockIndex = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            int blockIndex = atomicCounter++;
             if (blockIndex >= neighborList->getNumBlocks())
                 break;
             const int blockSize = neighborList->getBlockSize();
@@ -480,7 +477,7 @@ void CpuCustomGBForce::calculateParticlePairEnergyTerm(int index, ThreadData& da
         // Perform an O(N^2) loop over all atom pairs.
 
         while (true) {
-            int i = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            int i = atomicCounter++;
             if (i >= numAtoms)
                 break;
             for (int j = i+1; j < numAtoms; j++) {
@@ -543,7 +540,7 @@ void CpuCustomGBForce::calculateChainRuleForces(ThreadData& data, int numAtoms, 
         // Loop over all pairs in the neighbor list.
 
         while (true) {
-            int blockIndex = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            int blockIndex = atomicCounter++;
             if (blockIndex >= neighborList->getNumBlocks())
                 break;
             const int blockSize = neighborList->getBlockSize();
@@ -567,7 +564,7 @@ void CpuCustomGBForce::calculateChainRuleForces(ThreadData& data, int numAtoms, 
         // Perform an O(N^2) loop over all atom pairs.
 
         while (true) {
-            int i = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            int i = atomicCounter++;
             if (i >= numAtoms)
                 break;
             for (int j = i+1; j < numAtoms; j++) {

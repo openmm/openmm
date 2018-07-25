@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2017 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -476,7 +476,7 @@ void CpuNeighborList::computeNeighborList(int numAtoms, const AlignedArray<float
 
     // Signal the threads to start running and wait for them to finish.
     
-    gmx_atomic_set(&atomicCounter, 0);
+    atomicCounter = 0;
     threads.resumeThreads();
     threads.waitForThreads();
     
@@ -538,7 +538,7 @@ void CpuNeighborList::threadComputeNeighborList(ThreadPool& threads, int threadI
     vector<float> blockAtomX(blockSize), blockAtomY(blockSize), blockAtomZ(blockSize);
     vector<VoxelIndex> atomVoxelIndex;
     while (true) {
-        int i = gmx_atomic_fetch_add(&atomicCounter, 1);
+        int i = atomicCounter++;
         if (i >= numBlocks)
             break;
 

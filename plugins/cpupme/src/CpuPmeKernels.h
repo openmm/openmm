@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2017 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -36,8 +36,8 @@
 #include "internal/windowsExportPme.h"
 #include "openmm/kernels.h"
 #include "openmm/Vec3.h"
-#include "openmm/internal/gmx_atomic.h"
 #include "openmm/internal/ThreadPool.h"
+#include <atomic>
 #include <fftw3.h>
 #include <pthread.h>
 #include <vector>
@@ -132,7 +132,7 @@ private:
     float* posq;
     Vec3 periodicBoxVectors[3], recipBoxVectors[3];
     bool includeEnergy;
-    gmx_atomic_t atomicCounter;
+    std::atomic<int> atomicCounter;
 };
 
 
@@ -226,7 +226,7 @@ private:
     float* posq;
     Vec3 periodicBoxVectors[3], recipBoxVectors[3];
     bool includeEnergy;
-    gmx_atomic_t atomicCounter;
+    std::atomic<int> atomicCounter;
 };
 
 } // namespace OpenMM

@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2017 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2018 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -28,7 +28,6 @@
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceForce.h"
 #include "CpuCustomNonbondedForce.h"
-#include "openmm/internal/gmx_atomic.h"
 
 using namespace OpenMM;
 using namespace std;
@@ -134,9 +133,7 @@ void CpuCustomNonbondedForce::calculatePairIxn(int numberOfAtoms, float* posq, v
     this->includeForce = includeForce;
     this->includeEnergy = includeEnergy;
     threadEnergy.resize(threads.getNumThreads());
-    gmx_atomic_t counter;
-    gmx_atomic_set(&counter, 0);
-    this->atomicCounter = &counter;
+    atomicCounter = 0;
     
     // Signal the threads to start running and wait for them to finish.
     
@@ -177,7 +174,7 @@ void CpuCustomNonbondedForce::threadComputeForce(ThreadPool& threads, int thread
         // The user has specified interaction groups, so compute only the requested interactions.
         
         while (true) {
-            int i = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            int i = atomicCounter++;
             if (i >= groupInteractions.size())
                 break;
             int atom1 = groupInteractions[i].first;
@@ -193,7 +190,7 @@ void CpuCustomNonbondedForce::threadComputeForce(ThreadPool& threads, int thread
         // We are using a cutoff, so get the interactions from the neighbor list.
 
         while (true) {
-            int blockIndex = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            int blockIndex = atomicCounter++;
             if (blockIndex >= neighborList->getNumBlocks())
                 break;
             const int blockSize = neighborList->getBlockSize();
@@ -219,7 +216,7 @@ void CpuCustomNonbondedForce::threadComputeForce(ThreadPool& threads, int thread
         // Every particle interacts with every other one.
         
         while (true) {
-            int ii = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            int ii = atomicCounter++;
             if (ii >= numberOfAtoms)
                 break;
             for (int jj = ii+1; jj < numberOfAtoms; jj++) {
