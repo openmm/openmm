@@ -239,7 +239,7 @@ class CharmmPsfFile(object):
             if IsDrudePSF:
                 alpha = conv(words[9], float, 'alpha')
                 thole = conv(words[10], float, 'thole')
-		drudeconsts_list.append([alpha, thole])
+                drudeconsts_list.append([alpha, thole])
         atom_list.assign_indexes()
         atom_list.changed = False
         # Now get the number of bonds
