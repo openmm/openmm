@@ -1367,15 +1367,26 @@ def set_molecules(atom_list):
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 def _set_owner(atom_list, owner_array, atm, mol_id):
-    """ Recursively sets ownership of given atom and all bonded partners """
+    """ Sets ownership of given atom and all bonded partners """
+    # This could be written more simply as a recursive function, but that leads
+    # to stack overflows, so I flattened it into an iterative one.
+    partners = [atom_list[atm].bond_partners]
+    loop_index = [0]
     atom_list[atm].marked = mol_id
-    for partner in atom_list[atm].bond_partners:
+    while len(partners) > 0:
+        if loop_index[-1] >= len(partners[-1]):
+            partners.pop()
+            loop_index.pop()
+            continue
+        partner = partners[-1][loop_index[-1]]
+        loop_index[-1] += 1
         if not partner.marked:
             owner_array.append(partner.idx)
-            _set_owner(atom_list, owner_array, partner.idx, mol_id)
+            partner.marked = mol_id
+            partners.append(partner.bond_partners)
+            loop_index.append(0)
         elif partner.marked != mol_id:
-            raise MoleculeError('Atom %d in multiple molecules' %
-                                partner.idx)
+            raise MoleculeError('Atom %d in multiple molecules' % partner.idx)
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
