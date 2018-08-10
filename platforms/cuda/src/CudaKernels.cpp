@@ -7913,6 +7913,7 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
             // Upload the global values to the device.
             
             globalValues.upload(localGlobalValues, true);
+            deviceGlobalsAreCurrent = true;
         }
         bool stepInvalidatesForces = invalidatesForces[step];
         if (stepType[step] == CustomIntegrator::ComputePerDof && !merged[step]) {

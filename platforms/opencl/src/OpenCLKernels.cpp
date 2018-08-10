@@ -8300,6 +8300,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
             // Upload the global values to the device.
             
             globalValues.upload(localGlobalValues, true, true);
+            deviceGlobalsAreCurrent = true;
         }
         bool stepInvalidatesForces = invalidatesForces[step];
         if (stepType[step] == CustomIntegrator::ComputePerDof && !merged[step]) {
