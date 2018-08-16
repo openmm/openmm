@@ -1277,9 +1277,9 @@ double AmoebaReferenceMultipoleForce::calculateElectrostaticPairIxn(const Multip
 
     double dmp = particleI.dampingFactor*particleK.dampingFactor;
     double a = particleI.thole < particleK.thole ? particleI.thole : particleK.thole;
-    double u = std::abs(dmp) > 1.0E-5 ? r/dmp : 1E10;
-    double au3 = a*u*u*u;
-    double expau3 = au3 < 50.0 ? exp(-au3) : 0.0;
+    double u = r/dmp;
+    double au3 = fabs(dmp) > 1.0e-5f ? a*u*u*u : 0.0;
+    double expau3 = fabs(dmp) > 1.0e-5f ? exp(-au3) : 0.0;
     double a2u6 = au3*au3;
     double a3u9 = a2u6*au3;
     // Thole damping factors for energies
@@ -6553,9 +6553,9 @@ double AmoebaReferencePmeMultipoleForce::calculatePmeDirectElectrostaticPairIxn(
 
     double dmp = particleI.dampingFactor*particleJ.dampingFactor;
     double a = particleI.thole < particleJ.thole ? particleI.thole : particleJ.thole;
-    double u = std::abs(dmp) > 1.0E-5 ? r/dmp : 1E10;
-    double au3 = a*u*u*u;
-    double expau3 = au3 < 50.0 ? exp(-au3) : 0.0;
+    double u = r/dmp;
+    double au3 = fabs(dmp) > 1.0e-5f ? a*u*u*u : 0.0;
+    double expau3 = fabs(dmp) > 1.0e-5f ? exp(-au3) : 0.0;
     double a2u6 = au3*au3;
     double a3u9 = a2u6*au3;
     // Thole damping factors for energies

@@ -141,9 +141,9 @@ __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, bool has
 
     real dmp = atom1.damp*atom2.damp;
     real a = min(atom1.thole, atom2.thole);
-    real u = fabs(dmp) > 1.0e-5f ? r/dmp : 1e10f;
-    real au3 = a*u*u*u;
-    real expau3 = au3 < 50 ? EXP(-au3) : 0;
+    real u = r/dmp;
+    real au3 = fabs(dmp) > 1.0e-5f ? a*u*u*u : 0;
+    real expau3 = fabs(dmp) > 1.0e-5f ? EXP(-au3) : 0;
     real a2u6 = au3*au3;
     real a3u9 = a2u6*au3;
     // Thole damping factors for energies
