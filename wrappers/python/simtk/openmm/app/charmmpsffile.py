@@ -1412,6 +1412,10 @@ class CharmmPsfFile(object):
                 ii, jj, q, eps, sig = force.getExceptionParameters(i)
                 cforce.addExclusion(ii, jj)
             system.addForce(cforce)
+        if has_drude_particle and has_nbthole_terms:
+            for i in range(force.getNumExceptions()):
+                ii, jj, q, eps, sig = force.getExceptionParameters(i)
+                nbtforce.addExclusion(ii, jj)
 
         # Add GB model if we're doing one
         if implicitSolvent is not None:
