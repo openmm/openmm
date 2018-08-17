@@ -116,6 +116,26 @@ class TestCharmmFiles(unittest.TestCase):
         ene = state.getPotentialEnergy().value_in_unit(kilocalories_per_mole)
         self.assertAlmostEqual(ene, 15490.0033559, delta=0.05)
 
+    def test_drude(self):
+        """Tests CHARMM systems with Drude force field"""
+        warnings.filterwarnings('ignore', category=CharmmPSFWarning)
+        psf = CharmmPsfFile('systems/ala3_solv_drude.psf')
+        crd = CharmmCrdFile('systems/ala3_solv_drude.crd')
+        params = CharmmParameterSet('systems/toppar_drude_master_protein_2013e.str')
+        # Box dimensions (cubic box)
+        psf.setBox(33.2*angstroms, 33.2*angstroms, 33.2*angstroms)
+
+        # Now compute the full energy
+        plat = Platform.getPlatformByName('Reference')
+        system = psf.createSystem(params, nonbondedMethod=PME)
+        integrator = DrudeLangevinIntegrator(300*kelvin, 1.0/picosecond, 1*kelvin, 10/picosecond, 0.001*picoseconds)
+        con = Context(system, integrator, plat)
+        con.setPositions(crd.positions)
+
+        state = con.getState(getEnergy=True, enforcePeriodicBox=True)
+        ene = state.getPotentialEnergy().value_in_unit(kilocalories_per_mole)
+        self.assertAlmostEqual(ene, -1831.54, delta=0.5)
+
     def test_InsCode(self):
         """ Test the parsing of PSF files that contain insertion codes in their residue numbers """
         psf = CharmmPsfFile('systems/4TVP-dmj_wat-ion.psf')
