@@ -2,8 +2,8 @@ cd C:\Users\vagrant
 
 # Install CUDA.
 
-wget https://developer.nvidia.com/compute/cuda/9.0/Prod/network_installers/cuda_9.0.176_win10_network-exe -UseBasicParsing -OutFile cuda_9.0.176_win10_network.exe
-.\cuda_9.0.176_win10_network.exe -s compiler_9.0 cudart_9.0 cufft_9.0 cufft_dev_9.0 nvrtc_9.0 nvrtc_dev_9.0 | Out-Null
+wget https://developer.nvidia.com/compute/cuda/9.2/Prod2/network_installers/cuda_9.2.148_win10_network -UseBasicParsing -OutFile cuda_9.2.148_win10_network.exe
+.\cuda_9.2.148_win10_network.exe -s nvcc_9.2 cudart_9.2 cufft_9.2 cufft_dev_9.2 nvrtc_9.2 nvrtc_dev_9.2 | Out-Null
 
 # Install AMD APP SDK.
 
@@ -17,7 +17,7 @@ wget https://repo.continuum.io/miniconda/Miniconda3-latest-Windows-x86_64.exe -U
 
 # Install software with conda.
 
-& "C:\Miniconda3\Scripts\conda.exe" install -y -c omnia fftw3f jinja2 lxml sphinx sphinxcontrib-autodoc_doxygen sphinxcontrib-lunrsearch conda-build anaconda-client
+& "C:\Miniconda3\Scripts\conda.exe" install -y -c omnia fftw3f==3.3.4=vc14_2 jinja2 lxml sphinx sphinxcontrib-autodoc_doxygen sphinxcontrib-lunrsearch conda-build anaconda-client
 & "C:\Miniconda3\Scripts\pip.exe" install sphinxcontrib.bibtex
 
 # Install software with choco.
