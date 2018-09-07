@@ -9,12 +9,12 @@ __device__ real reduceValue(real value, volatile real* temp) {
     __syncthreads();
     temp[thread] = value;
     __syncthreads();
-    for (uint step = 1; step < 32; step *= 2) {
+    for (unsigned int step = 1; step < 32; step *= 2) {
         if (thread+step < blockDim.x && thread%(2*step) == 0)
             temp[thread] = temp[thread] + temp[thread+step];
         SYNC_WARPS
     }
-    for (uint step = 32; step < blockDim.x; step *= 2) {
+    for (unsigned int step = 32; step < blockDim.x; step *= 2) {
         if (thread+step < blockDim.x && thread%(2*step) == 0)
             temp[thread] = temp[thread] + temp[thread+step];
         __syncthreads();
