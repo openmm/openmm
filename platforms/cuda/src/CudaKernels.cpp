@@ -1801,7 +1801,6 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                 pmeAtomGridIndex.initialize<int2>(cu, numParticles, "pmeAtomGridIndex");
                 int energyElementSize = (cu.getUseDoublePrecision() || cu.getUseMixedPrecision() ? sizeof(double) : sizeof(float));
                 pmeEnergyBuffer.initialize(cu, cu.getNumThreadBlocks()*CudaContext::ThreadBlockSize, energyElementSize, "pmeEnergyBuffer");
-                cu.clearBuffer(pmeEnergyBuffer);
                 sort = new CudaSort(cu, new SortTrait(), cu.getNumAtoms());
                 int cufftVersion;
                 cufftGetVersion(&cufftVersion);
