@@ -2192,8 +2192,6 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
             cu.executeKernel(pmeInterpolateForceKernel, interpolateArgs, cu.getNumAtoms(), 128);
         }
 
-        // As written, we check only the Electrostatic grid pointer to get here.  We could separate them out, but for
-        // now we assume that LJPME can only be used if electrostatic PME is also active.
         if (doLJPME && hasLJ) {
             if (!hasCoulomb) {
                 void* gridIndexArgs[] = {&cu.getPosq().getDevicePointer(), &pmeAtomGridIndex.getDevicePointer(), cu.getPeriodicBoxSizePointer(),
@@ -2202,6 +2200,7 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
                 cu.executeKernel(pmeDispersionGridIndexKernel, gridIndexArgs, cu.getNumAtoms());
 
                 sort->sort(pmeAtomGridIndex);
+                cu.clearBuffer(pmeEnergyBuffer);
             }
 
             cu.clearBuffer(pmeGrid2);
