@@ -1760,7 +1760,6 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
                 pmeAtomGridIndex.initialize<mm_int2>(cl, numParticles, "pmeAtomGridIndex");
                 int energyElementSize = (cl.getUseDoublePrecision() || cl.getUseMixedPrecision() ? sizeof(double) : sizeof(float));
                 pmeEnergyBuffer.initialize(cl, cl.getNumThreadBlocks()*OpenCLContext::ThreadBlockSize, energyElementSize, "pmeEnergyBuffer");
-                cl.clearBuffer(pmeEnergyBuffer);
                 sort = new OpenCLSort(cl, new SortTrait(), cl.getNumAtoms());
                 fft = new OpenCLFFT3D(cl, gridSizeX, gridSizeY, gridSizeZ, true);
                 if (doLJPME)
@@ -2377,6 +2376,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
                 pmeDispersionEvalEnergyKernel.setArg<mm_float4>(6, recipBoxVectorsFloat[1]);
                 pmeDispersionEvalEnergyKernel.setArg<mm_float4>(7, recipBoxVectorsFloat[2]);
             }
+            if (!hasCoulomb) cl.clearBuffer(pmeEnergyBuffer);
             if (includeEnergy)
                 cl.executeKernel(pmeDispersionEvalEnergyKernel, gridSizeX*gridSizeY*gridSizeZ);
             cl.executeKernel(pmeDispersionConvolutionKernel, gridSizeX*gridSizeY*gridSizeZ);

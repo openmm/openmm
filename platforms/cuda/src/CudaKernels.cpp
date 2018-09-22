@@ -1801,7 +1801,6 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                 pmeAtomGridIndex.initialize<int2>(cu, numParticles, "pmeAtomGridIndex");
                 int energyElementSize = (cu.getUseDoublePrecision() || cu.getUseMixedPrecision() ? sizeof(double) : sizeof(float));
                 pmeEnergyBuffer.initialize(cu, cu.getNumThreadBlocks()*CudaContext::ThreadBlockSize, energyElementSize, "pmeEnergyBuffer");
-                cu.clearBuffer(pmeEnergyBuffer);
                 sort = new CudaSort(cu, new SortTrait(), cu.getNumAtoms());
                 int cufftVersion;
                 cufftGetVersion(&cufftVersion);
@@ -2192,8 +2191,6 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
             cu.executeKernel(pmeInterpolateForceKernel, interpolateArgs, cu.getNumAtoms(), 128);
         }
 
-        // As written, we check only the Electrostatic grid pointer to get here.  We could separate them out, but for
-        // now we assume that LJPME can only be used if electrostatic PME is also active.
         if (doLJPME && hasLJ) {
             if (!hasCoulomb) {
                 void* gridIndexArgs[] = {&cu.getPosq().getDevicePointer(), &pmeAtomGridIndex.getDevicePointer(), cu.getPeriodicBoxSizePointer(),
@@ -2202,6 +2199,7 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
                 cu.executeKernel(pmeDispersionGridIndexKernel, gridIndexArgs, cu.getNumAtoms());
 
                 sort->sort(pmeAtomGridIndex);
+                cu.clearBuffer(pmeEnergyBuffer);
             }
 
             cu.clearBuffer(pmeGrid2);
