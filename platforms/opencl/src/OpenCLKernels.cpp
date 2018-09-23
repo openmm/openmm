@@ -1566,6 +1566,14 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
 
     // Identify which exceptions are 1-4 interactions.
 
+    set<int> exceptionsWithOffsets;
+    for (int i = 0; i < force.getNumExceptionParameterOffsets(); i++) {
+        string param;
+        int exception;
+        double charge, sigma, epsilon;
+        force.getExceptionParameterOffset(i, param, exception, charge, sigma, epsilon);
+        exceptionsWithOffsets.insert(exception);
+    }
     vector<pair<int, int> > exclusions;
     vector<int> exceptions;
     for (int i = 0; i < force.getNumExceptions(); i++) {
@@ -1573,7 +1581,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         double chargeProd, sigma, epsilon;
         force.getExceptionParameters(i, particle1, particle2, chargeProd, sigma, epsilon);
         exclusions.push_back(pair<int, int>(particle1, particle2));
-        if (chargeProd != 0.0 || epsilon != 0.0)
+        if (chargeProd != 0.0 || epsilon != 0.0 || exceptionsWithOffsets.find(i) != exceptionsWithOffsets.end())
             exceptions.push_back(i);
     }
 
@@ -1589,6 +1597,16 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         force.getParticleParameters(i, charge, sigma, epsilon);
         baseParticleParamVec[i] = mm_float4(charge, sigma, epsilon, 0);
         exclusionList[i].push_back(i);
+        if (charge != 0.0)
+            hasCoulomb = true;
+        if (epsilon != 0.0)
+            hasLJ = true;
+    }
+    for (int i = 0; i < force.getNumParticleParameterOffsets(); i++) {
+        string param;
+        int particle;
+        double charge, sigma, epsilon;
+        force.getParticleParameterOffset(i, param, particle, charge, sigma, epsilon);
         if (charge != 0.0)
             hasCoulomb = true;
         if (epsilon != 0.0)
