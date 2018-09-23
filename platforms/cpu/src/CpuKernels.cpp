@@ -494,6 +494,14 @@ void CpuCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
 
     // Identify which exceptions are 1-4 interactions.
 
+    set<int> exceptionsWithOffsets;
+    for (int i = 0; i < force.getNumExceptionParameterOffsets(); i++) {
+        string param;
+        int exception;
+        double charge, sigma, epsilon;
+        force.getExceptionParameterOffset(i, param, exception, charge, sigma, epsilon);
+        exceptionsWithOffsets.insert(exception);
+    }
     numParticles = force.getNumParticles();
     exclusions.resize(numParticles);
     vector<int> nb14s;
@@ -503,7 +511,7 @@ void CpuCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
         force.getExceptionParameters(i, particle1, particle2, chargeProd, sigma, epsilon);
         exclusions[particle1].insert(particle2);
         exclusions[particle2].insert(particle1);
-        if (chargeProd != 0.0 || epsilon != 0.0)
+        if (chargeProd != 0.0 || epsilon != 0.0 || exceptionsWithOffsets.find(i) != exceptionsWithOffsets.end())
             nb14s.push_back(i);
     }
 
