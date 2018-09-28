@@ -94,7 +94,7 @@ private:
     OpenCLArray buckets;
     cl::Kernel shortListKernel, shortList2Kernel, computeRangeKernel, assignElementsKernel, computeBucketPositionsKernel, copyToBucketsKernel, sortBucketsKernel;
     unsigned int dataLength, rangeKernelSize, positionsKernelSize, sortKernelSize;
-    bool isShortList;
+    bool isShortList, useShortList2;
 };
 
 /**

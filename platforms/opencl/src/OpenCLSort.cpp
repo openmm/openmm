@@ -32,6 +32,7 @@
 #include "OpenCLKernelSources.h"
 #include <algorithm>
 #include <map>
+#include <string>
 
 using namespace OpenMM;
 using namespace std;
@@ -69,6 +70,11 @@ OpenCLSort::OpenCLSort(OpenCLContext& context, SortTrait* trait, unsigned int le
     // If we officially support Qualcomm in the future, we'll need to do something better.
     //maxShortList = min(maxShortList, shortListKernel.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(context.getDevice()));
     isShortList = (length <= maxShortList);
+    string vendor = context.getDevice().getInfo<CL_DEVICE_VENDOR>();
+    if (vendor.size() >= 6 && vendor.substr(0, 6) == "NVIDIA")
+        useShortList2 = (dataLength <= OpenCLContext::ThreadBlockSize*context.getNumThreadBlocks());
+    else
+        useShortList2 = false;
     for (rangeKernelSize = 1; rangeKernelSize*2 <= maxRangeSize; rangeKernelSize *= 2)
         ;
     positionsKernelSize = std::min(rangeKernelSize, maxPositionsSize);
@@ -107,7 +113,7 @@ void OpenCLSort::sort(OpenCLArray& data) {
     if (isShortList) {
         // We can use a simpler sort kernel that does the entire operation in one kernel.
         
-        if (dataLength <= OpenCLContext::ThreadBlockSize*context.getNumThreadBlocks()) {
+        if (useShortList2) {
             shortList2Kernel.setArg<cl::Buffer>(0, data.getDeviceBuffer());
             shortList2Kernel.setArg<cl::Buffer>(1, buckets.getDeviceBuffer());
             shortList2Kernel.setArg<cl_int>(2, dataLength);
