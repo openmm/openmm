@@ -70,6 +70,11 @@ OpenCLSort::OpenCLSort(OpenCLContext& context, SortTrait* trait, unsigned int le
     // If we officially support Qualcomm in the future, we'll need to do something better.
     //maxShortList = min(maxShortList, shortListKernel.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(context.getDevice()));
     isShortList = (length <= maxShortList);
+    string vendor = context.getDevice().getInfo<CL_DEVICE_VENDOR>();
+    if (vendor.size() >= 6 && vendor.substr(0, 6) == "NVIDIA")
+        useShortList2 = (dataLength <= OpenCLContext::ThreadBlockSize*context.getNumThreadBlocks());
+    else
+        useShortList2 = false;
     for (rangeKernelSize = 1; rangeKernelSize*2 <= maxRangeSize; rangeKernelSize *= 2)
         ;
     positionsKernelSize = std::min(rangeKernelSize, maxPositionsSize);
@@ -92,11 +97,6 @@ OpenCLSort::OpenCLSort(OpenCLContext& context, SortTrait* trait, unsigned int le
         bucketOffset.initialize<cl_uint>(context, numBuckets, "bucketOffset");
         bucketOfElement.initialize<cl_uint>(context, length, "bucketOfElement");
         offsetInBucket.initialize<cl_uint>(context, length, "offsetInBucket");
-        string vendor = context.getDevice().getInfo<CL_DEVICE_VENDOR>();
-        if (vendor.size() >= 6 && vendor.substr(0, 6) == "NVIDIA")
-            useShortList2 = (dataLength <= OpenCLContext::ThreadBlockSize*context.getNumThreadBlocks());
-        else
-            useShortList2 = false;
     }
     buckets.initialize(context, length, trait->getDataSize(), "buckets");
 }
