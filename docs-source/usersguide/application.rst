@@ -56,7 +56,7 @@ Anaconda or Miniconda.
 
 \2. (Optional) If you want to run OpenMM on a GPU, install CUDA and/or OpenCL.
 
-  * If you have an Nvidia GPU, download CUDA 9.0 from
+  * If you have an Nvidia GPU, download CUDA from
     https://developer.nvidia.com/cuda-downloads.  Be sure to install both the
     drivers and toolkit.  OpenCL is included with the CUDA drivers.
   * If you have an AMD GPU and are using Linux or Windows, download the latest
@@ -67,7 +67,20 @@ Anaconda or Miniconda.
 3. Open a command line terminal and type the following command
 ::
 
-    conda install -c omnia openmm
+    conda install -c omnia -c conda-forge openmm
+
+This installs a version of OpenMM that is compiled to work with CUDA 9.2.
+Alternatively you can request a version that is compiled for a specific CUDA
+version with the command
+::
+
+    conda install -c omnia/label/cuda92 -c conda-forge openmm
+
+where :code:`cuda92` should be replaced with the particular CUDA version
+installed on your computer.  Supported values are :code:`cuda75`, :code:`cuda80`,
+:code:`cuda90`, :code:`cuda91`, :code:`cuda92`, and :code:`cuda100`.  Because
+different CUDA releases are not binary compatible with each other, OpenMM can
+only work with the particular CUDA version it was compiled with.
 
 4. Verify your installation by typing the following command:
 ::
