@@ -142,7 +142,7 @@ before_install:
       tar -xjvf swig-3.0.7-0.tar.bz2 -C $HOME/swig;
       export PATH=$HOME/swig/bin:$PATH;
       export SWIG_LIB=$HOME/swig/share/swig/3.0.7;
-      pip install cython
+      pip install cython;
     fi
   - if [[ "$OPENCL" == "false" && "$CUDA" == "false" && "$TRAVIS_OS_NAME" == "osx" ]]; then
       wget http://anaconda.org/omnia/swig/3.0.7/download/osx-64/swig-3.0.7-0.tar.bz2;
