@@ -505,14 +505,17 @@ void CpuCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
     numParticles = force.getNumParticles();
     exclusions.resize(numParticles);
     vector<int> nb14s;
+    map<int, int> nb14Index;
     for (int i = 0; i < force.getNumExceptions(); i++) {
         int particle1, particle2;
         double chargeProd, sigma, epsilon;
         force.getExceptionParameters(i, particle1, particle2, chargeProd, sigma, epsilon);
         exclusions[particle1].insert(particle2);
         exclusions[particle2].insert(particle1);
-        if (chargeProd != 0.0 || epsilon != 0.0 || exceptionsWithOffsets.find(i) != exceptionsWithOffsets.end())
+        if (chargeProd != 0.0 || epsilon != 0.0 || exceptionsWithOffsets.find(i) != exceptionsWithOffsets.end()) {
+            nb14Index[i] = nb14s.size();
             nb14s.push_back(i);
+        }
     }
 
     // Record the particle parameters.
@@ -572,7 +575,7 @@ void CpuCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
         }
         else
             paramIndex = paramPos-paramNames.begin();
-        exceptionParamOffsets[exception].push_back(make_tuple(charge, sigma, epsilon, paramIndex));
+        exceptionParamOffsets[nb14Index[exception]].push_back(make_tuple(charge, sigma, epsilon, paramIndex));
     }
     paramValues.resize(paramNames.size(), 0.0);
 

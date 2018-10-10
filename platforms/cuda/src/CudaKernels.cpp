@@ -1584,13 +1584,16 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
     }
     vector<pair<int, int> > exclusions;
     vector<int> exceptions;
+    map<int, int> exceptionIndex;
     for (int i = 0; i < force.getNumExceptions(); i++) {
         int particle1, particle2;
         double chargeProd, sigma, epsilon;
         force.getExceptionParameters(i, particle1, particle2, chargeProd, sigma, epsilon);
         exclusions.push_back(pair<int, int>(particle1, particle2));
-        if (chargeProd != 0.0 || epsilon != 0.0 || exceptionsWithOffsets.find(i) != exceptionsWithOffsets.end())
+        if (chargeProd != 0.0 || epsilon != 0.0 || exceptionsWithOffsets.find(i) != exceptionsWithOffsets.end()) {
+            exceptionIndex[i] = exceptions.size();
             exceptions.push_back(i);
+        }
     }
 
     // Initialize nonbonded interactions.
@@ -2033,7 +2036,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         }
         else
             paramIndex = paramPos-paramNames.begin();
-        exceptionOffsetVec[exception].push_back(make_float4(charge, sigma, epsilon, paramIndex));
+        exceptionOffsetVec[exceptionIndex[exception]].push_back(make_float4(charge, sigma, epsilon, paramIndex));
     }
     paramValues.resize(paramNames.size(), 0.0);
     particleParamOffsets.initialize<float4>(cu, max(force.getNumParticleParameterOffsets(), 1), "particleParamOffsets");
