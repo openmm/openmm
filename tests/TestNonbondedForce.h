@@ -743,8 +743,9 @@ void testParameterOffsets() {
     force->addParticle(1.0, 0.5, 0.6);
     force->addParticle(-1.0, 2.0, 0.7);
     force->addParticle(0.5, 2.0, 0.8);
-    force->addException(0, 1, 1.0, 1.5, 1.0);
+    force->addException(0, 3, 0.0, 1.0, 0.0);
     force->addException(2, 3, 0.5, 1.0, 1.5);
+    force->addException(0, 1, 1.0, 1.5, 1.0);
     force->addGlobalParameter("p1", 0.0);
     force->addGlobalParameter("p2", 1.0);
     force->addParticleParameterOffset("p1", 0, 3.0, 0.5, 0.5);
@@ -775,12 +776,15 @@ void testParameterOffsets() {
             pairSigma[i][j] = 0.5*(particleSigma[i]+particleSigma[j]);
             pairEpsilon[i][j] = sqrt(particleEpsilon[i]*particleEpsilon[j]);
         }
-    pairChargeProd[0][1] = 1.0;
-    pairSigma[0][1] = 1.5;
-    pairEpsilon[0][1] = 1.0;
+    pairChargeProd[0][3] = 0.0;
+    pairSigma[0][3] = 1.0;
+    pairEpsilon[0][3] = 0.0;
     pairChargeProd[2][3] = 0.5+0.5*0.5;
     pairSigma[2][3] = 1.0+0.5*0.5;
     pairEpsilon[2][3] = 1.5+1.5*0.5;
+    pairChargeProd[0][1] = 1.0;
+    pairSigma[0][1] = 1.5;
+    pairEpsilon[0][1] = 1.0;
     
     // Compute the expected energy.
 
