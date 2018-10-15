@@ -102,10 +102,9 @@ private:
 
 void CudaCalcDrudeForceKernel::initialize(const System& system, const DrudeForce& force) {
     cu.setAsCurrent();
-    int numContexts = cu.getPlatformData().contexts.size();
-    int startParticleIndex = cu.getContextIndex()*force.getNumParticles()/numContexts;
-    int endParticleIndex = (cu.getContextIndex()+1)*force.getNumParticles()/numContexts;
-    int numParticles = endParticleIndex-startParticleIndex;
+    if (cu.getContextIndex() != 0)
+        return; // This is run entirely on one device
+    int numParticles = force.getNumParticles();
     if (numParticles > 0) {
         // Create the harmonic interaction .
         
@@ -114,7 +113,7 @@ void CudaCalcDrudeForceKernel::initialize(const System& system, const DrudeForce
         vector<float4> paramVector(numParticles);
         for (int i = 0; i < numParticles; i++) {
             double charge, polarizability, aniso12, aniso34;
-            force.getParticleParameters(startParticleIndex+i, atoms[i][0], atoms[i][1], atoms[i][2], atoms[i][3], atoms[i][4], charge, polarizability, aniso12, aniso34);
+            force.getParticleParameters(i, atoms[i][0], atoms[i][1], atoms[i][2], atoms[i][3], atoms[i][4], charge, polarizability, aniso12, aniso34);
             double a1 = (atoms[i][2] == -1 ? 1 : aniso12);
             double a2 = (atoms[i][3] == -1 || atoms[i][4] == -1 ? 1 : aniso34);
             double a3 = 3-a1-a2;
@@ -137,9 +136,7 @@ void CudaCalcDrudeForceKernel::initialize(const System& system, const DrudeForce
         replacements["PARAMS"] = cu.getBondedUtilities().addArgument(particleParams.getDevicePointer(), "float4");
         cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaDrudeKernelSources::drudeParticleForce, replacements), force.getForceGroup());
     }
-    int startPairIndex = cu.getContextIndex()*force.getNumScreenedPairs()/numContexts;
-    int endPairIndex = (cu.getContextIndex()+1)*force.getNumScreenedPairs()/numContexts;
-    int numPairs = endPairIndex-startPairIndex;
+    int numPairs = force.getNumScreenedPairs();
     if (numPairs > 0) {
         // Create the screened interaction between dipole pairs.
         
@@ -149,7 +146,7 @@ void CudaCalcDrudeForceKernel::initialize(const System& system, const DrudeForce
         for (int i = 0; i < numPairs; i++) {
             int drude1, drude2;
             double thole;
-            force.getScreenedPairParameters(startPairIndex+i, drude1, drude2, thole);
+            force.getScreenedPairParameters(i, drude1, drude2, thole);
             int p2, p3, p4;
             double charge1, charge2, polarizability1, polarizability2, aniso12, aniso34;
             force.getParticleParameters(drude1, atoms[i][0], atoms[i][1], p2, p3, p4, charge1, polarizability1, aniso12, aniso34);
@@ -171,13 +168,12 @@ double CudaCalcDrudeForceKernel::execute(ContextImpl& context, bool includeForce
 }
 
 void CudaCalcDrudeForceKernel::copyParametersToContext(ContextImpl& context, const DrudeForce& force) {
-    int numContexts = cu.getPlatformData().contexts.size();
+    if (cu.getContextIndex() != 0)
+        return; // This is run entirely on one device
     
     // Set the particle parameters.
     
-    int startParticleIndex = cu.getContextIndex()*force.getNumParticles()/numContexts;
-    int endParticleIndex = (cu.getContextIndex()+1)*force.getNumParticles()/numContexts;
-    int numParticles = endParticleIndex-startParticleIndex;
+    int numParticles = force.getNumParticles();
     if (numParticles > 0) {
         if (!particleParams.isInitialized() || numParticles != particleParams.getSize())
             throw OpenMMException("updateParametersInContext: The number of Drude particles has changed");
@@ -185,7 +181,7 @@ void CudaCalcDrudeForceKernel::copyParametersToContext(ContextImpl& context, con
         for (int i = 0; i < numParticles; i++) {
             int p, p1, p2, p3, p4;
             double charge, polarizability, aniso12, aniso34;
-            force.getParticleParameters(startParticleIndex+i, p, p1, p2, p3, p4, charge, polarizability, aniso12, aniso34);
+            force.getParticleParameters(i, p, p1, p2, p3, p4, charge, polarizability, aniso12, aniso34);
             double a1 = (p2 == -1 ? 1 : aniso12);
             double a2 = (p3 == -1 || p4 == -1 ? 1 : aniso34);
             double a3 = 3-a1-a2;
@@ -203,9 +199,7 @@ void CudaCalcDrudeForceKernel::copyParametersToContext(ContextImpl& context, con
     
     // Set the pair parameters.
     
-    int startPairIndex = cu.getContextIndex()*force.getNumScreenedPairs()/numContexts;
-    int endPairIndex = (cu.getContextIndex()+1)*force.getNumScreenedPairs()/numContexts;
-    int numPairs = endPairIndex-startPairIndex;
+    int numPairs = force.getNumScreenedPairs();
     if (numPairs > 0) {
         if (!pairParams.isInitialized() || numPairs != pairParams.getSize())
             throw OpenMMException("updateParametersInContext: The number of screened pairs has changed");
@@ -213,7 +207,7 @@ void CudaCalcDrudeForceKernel::copyParametersToContext(ContextImpl& context, con
         for (int i = 0; i < numPairs; i++) {
             int drude1, drude2;
             double thole;
-            force.getScreenedPairParameters(startPairIndex+i, drude1, drude2, thole);
+            force.getScreenedPairParameters(i, drude1, drude2, thole);
             int p, p1, p2, p3, p4;
             double charge1, charge2, polarizability1, polarizability2, aniso12, aniso34;
             force.getParticleParameters(drude1, p, p1, p2, p3, p4, charge1, polarizability1, aniso12, aniso34);
