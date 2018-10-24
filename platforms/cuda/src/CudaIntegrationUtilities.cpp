@@ -98,7 +98,7 @@ struct CudaIntegrationUtilities::ConstraintOrderer : public binary_function<int,
 };
 
 CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const System& system) : context(context),
-        randomPos(0) {
+        randomPos(0), ccmaConvergedMemory(NULL) {
     // Create workspace arrays.
 
     lastStepSize = make_double2(0.0, 0.0);
