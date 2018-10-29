@@ -2094,6 +2094,7 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
         globalParams.upload(paramValues, true);
     }
     double energy = (includeReciprocal ? ewaldSelfEnergy : 0.0);
+    recomputeParams = true;
     if (recomputeParams || hasOffsets) {
         bool computeSelfEnergy = (includeEnergy && includeReciprocal);
         int numAtoms = cu.getPaddedNumAtoms();
