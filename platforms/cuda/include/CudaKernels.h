@@ -701,7 +701,7 @@ private:
     Kernel cpuPme;
     PmeIO* pmeio;
     CUstream pmeStream;
-    CUevent pmeSyncEvent;
+    CUevent pmeSyncEvent, paramsSyncEvent;
     CudaFFT3D* fft;
     cufftHandle fftForward;
     cufftHandle fftBackward;
