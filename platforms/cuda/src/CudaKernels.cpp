@@ -1561,6 +1561,7 @@ CudaCalcNonbondedForceKernel::~CudaCalcNonbondedForceKernel() {
         if (usePmeStream) {
             cuStreamDestroy(pmeStream);
             cuEventDestroy(pmeSyncEvent);
+            cuEventDestroy(paramsSyncEvent);
         }
     }
 }
@@ -1862,6 +1863,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                         cufftSetStream(dispersionFftBackward, pmeStream);
                     }
                     CHECK_RESULT(cuEventCreate(&pmeSyncEvent, CU_EVENT_DISABLE_TIMING), "Error creating event for NonbondedForce");
+                    CHECK_RESULT(cuEventCreate(&paramsSyncEvent, CU_EVENT_DISABLE_TIMING), "Error creating event for NonbondedForce");
                     int recipForceGroup = force.getReciprocalSpaceForceGroup();
                     if (recipForceGroup < 0)
                         recipForceGroup = force.getForceGroup();
@@ -2110,8 +2112,8 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
         }
         cu.executeKernel(computeParamsKernel, &paramsArgs[0], cu.getPaddedNumAtoms());
         if (usePmeStream) {
-            cuEventRecord(pmeSyncEvent, cu.getCurrentStream());
-            cuStreamWaitEvent(pmeStream, pmeSyncEvent, 0);
+            cuEventRecord(paramsSyncEvent, cu.getCurrentStream());
+            cuStreamWaitEvent(pmeStream, paramsSyncEvent, 0);
         }
         energy = 0.0; // The Ewald self energy was computed in the kernel.
         recomputeParams = false;
