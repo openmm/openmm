@@ -11,27 +11,15 @@ cmake --version
 echo "Using g++ (`which g++`) version:"
 g++ --version
 
-module load conda
+echo "Using nvcc (`which nvcc`) version:"
+nvcc --version
 
-if [ ! -z $CUDA_VERSION ]; then
-  module load cuda/${CUDA_VERSION}
-  export OPENMM_CUDA_COMPILER=`which nvcc`
-fi
+export OPENMM_CUDA_COMPILER=`which nvcc`
 
 # Constants
-CONDAENV=openmm-test-3.5
 INSTALL_DIRECTORY="`pwd`/install"
 
-# Create a conda environment, but clean up after one first. If it doesn't exist, don't complain.
-# But since we are invoking this shell with -e (exit on all errors), we need || true to prevent this
-# command from crashing the whole shell
-create_conda_env() {
-  conda create -yn ${CONDAENV} python=3.5 --no-default-packages --quiet
-}
-conda remove -yn ${CONDAENV} --all --quiet || true
-create_conda_env || create_conda_env # Crappy way to work around conda concurrency restrictions
-conda install -yn ${CONDAENV} numpy scipy pytest --quiet
-source activate ${CONDAENV} # enter our new environment
+conda install -yn root cmake numpy scipy pytest --quiet
 
 # Build OpenMM
 cmake -DCMAKE_INSTALL_PREFIX="${INSTALL_DIRECTORY}" -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc .

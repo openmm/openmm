@@ -4,11 +4,14 @@ pipeline {
     stages {
         stage("Build and test") {
             agent {
-                label "cuda"
+                dockerfile {
+                    dir "devtools/ci/jenkins"
+                    label "cuda"
+                }
             }
             steps {
                 sh 'git clean -fxd; git checkout .'
-                sh 'CUDA_VERSION=9.0 bash -lex devtools/ci/jenkins/install.sh'
+                sh 'bash devtools/ci/jenkins/install.sh'
             }
         }
     }
