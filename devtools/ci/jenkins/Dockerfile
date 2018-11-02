@@ -7,4 +7,4 @@ RUN apt-get update && apt-get -y install wget git gromacs doxygen gfortran libff
     mkdir /.conda && chmod -R 777 /.conda && chmod -R 777 /opt/miniconda
 
 ENV PATH="/opt/miniconda/bin:${PATH}"
-ENV LD_LIBRARY_PATH="/usr/local/cuda-9.0/lib64:/usr/local/cuda-9.0/lib"
+ENV LD_LIBRARY_PATH="/usr/local/cuda/lib64:/usr/local/cuda/lib"
