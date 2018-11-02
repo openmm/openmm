@@ -4,7 +4,7 @@ pipeline {
     stages {
         stage("Build and test") {
             agent {
-                label "cuda && linux"
+                label "cuda"
             }
             steps {
                 sh 'git clean -fxd; git checkout .'
