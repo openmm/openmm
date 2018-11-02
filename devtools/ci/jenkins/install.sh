@@ -19,7 +19,7 @@ export OPENMM_CUDA_COMPILER=`which nvcc`
 # Constants
 INSTALL_DIRECTORY="`pwd`/install"
 
-conda install -yn root cmake numpy scipy pytest --quiet
+conda install -y cmake numpy scipy pytest
 
 # Build OpenMM
 cmake -DCMAKE_INSTALL_PREFIX="${INSTALL_DIRECTORY}" -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc .
@@ -30,7 +30,3 @@ make PythonInstall
 python -m simtk.testInstallation
 cd python/tests && py.test -v && cd ../..
 python devtools/run-ctest.py --job-duration=120 --timeout 300 --parallel=2
-
-# Now remove the conda environment
-source deactivate
-conda remove -yn ${CONDAENV} --all --quiet
