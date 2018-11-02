@@ -1,0 +1,35 @@
+pipeline {
+    agent any
+
+    post {
+        success {
+            setBuildStatus("Build succeeded", "SUCCESS");
+        }
+        failure {
+            setBuildStatus("Build failed", "FAILURE");
+        }
+    }
+
+    stages {
+        stage("Build and test") {
+            agent {
+                label "cuda && linux"
+            }
+            steps {
+                sh 'git clean -fxd; git checkout .'
+                sh 'CUDA=9.0 devtools/ci/jenkins/install.sh'
+            }
+        }
+    }
+}
+
+// Function for setting GitHub build status
+void setBuildStatus(String message, String state) {
+  step([
+      $class: "GitHubCommitStatusSetter",
+      reposSource: [$class: "ManuallyEnteredRepositorySource", url: "https://github.com/pandegroup/openmm"],
+      contextSource: [$class: "ManuallyEnteredCommitContextSource", context: "ci/jenkins/build-status"],
+      errorHandlers: [[$class: "ChangingBuildStatusErrorHandler", result: "UNSTABLE"]],
+      statusResultSource: [ $class: "ConditionalStatusResultSource", results: [[$class: "AnyBuildResult", message: message, state: state]] ]
+  ]);
+}

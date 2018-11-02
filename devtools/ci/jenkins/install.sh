@@ -11,12 +11,14 @@ cmake --version
 echo "Using g++ (`which g++`) version:"
 g++ --version
 
-module load cuda/9.0
+if [ ! -z $CUDA_VERSION ]; then
+  module load cuda/${CUDA_VERSION}
+  export OPENMM_CUDA_COMPILER=`which nvcc`
+fi
 
 # Constants
 CONDAENV=openmm-test-3.5
 INSTALL_DIRECTORY="`pwd`/install"
-export OPENMM_CUDA_COMPILER=`which nvcc`
 
 # Create a conda environment, but clean up after one first. If it doesn't exist, don't complain.
 # But since we are invoking this shell with -e (exit on all errors), we need || true to prevent this
@@ -37,7 +39,7 @@ make PythonInstall
 # Now run the tests
 python -m simtk.testInstallation
 cd python/tests && py.test -v && cd ../..
-python devtools/run-ctest.py --job-duration=120 --timeout 300
+python devtools/run-ctest.py --job-duration=120 --timeout 300 --parallel=2
 
 # Now remove the conda environment
 source deactivate

@@ -43,6 +43,17 @@ def main():
         help="Timeout for individual tests (seconds). Default=180",
         type=str,
         default='180')
+    parser.add_argument(
+        '--in-order',
+        help='Run the tests in order',
+        type=bool,
+        default=False,
+        action='store_true')
+    parser.add_argument(
+        '--parallel',
+        help='Number of processors to use',
+        type=int,
+        default=1)
 
     args = parser.parse_args()
 
@@ -68,10 +79,11 @@ def execute_tests(options):
         shutil.rmtree('Testing')
     return call(['ctest',
                  '--output-on-failure',
-                 '--schedule-random',
+                 '--parallel', str(options.parallel),
                  '-T', 'Test',
                  '--timeout', options.timeout,
-                 '--stop-time', stop_time.strftime('%H:%M:%S')])
+                 '--stop-time', stop_time.strftime('%H:%M:%S')] +
+                 (['--schedule-random'] if options.in_order else []))
 
 
 def execute_failed_tests(options):
@@ -95,10 +107,11 @@ def execute_failed_tests(options):
     stop_time = start_time + timedelta(minutes=options.job_duration)
     return call(['ctest',
                  '--output-on-failure',
-                 '--schedule-random',
+                 '--parallel', str(options.parallel),
                  '-R', '|'.join(failed_tests),
                  '--timeout', options.timeout,
-                 '--stop-time', stop_time.strftime('%H:%M:%S')])
+                 '--stop-time', stop_time.strftime('%H:%M:%S')] +
+                 (['--schedule-random'] if options.in_order else []))
 
 
 if __name__ == '__main__':
