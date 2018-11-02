@@ -2,6 +2,10 @@
 #   source devtools/ci/jenkins/install.sh
 # in a bash shell with the -lex options turned on
 
+echo "I am `whoami`"
+
+conda install -y cmake numpy scipy pytest swig
+
 echo "Using the following SWIG (`which swig`) version:"
 swig -version
 
@@ -18,8 +22,6 @@ export OPENMM_CUDA_COMPILER=`which nvcc`
 
 # Constants
 INSTALL_DIRECTORY="`pwd`/install"
-
-conda install -y cmake numpy scipy pytest swig
 
 # Build OpenMM
 cmake -DCMAKE_INSTALL_PREFIX="${INSTALL_DIRECTORY}" -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc .

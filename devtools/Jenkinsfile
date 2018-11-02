@@ -11,7 +11,7 @@ pipeline {
             }
             steps {
                 sh 'git clean -fxd; git checkout .'
-                sh 'bash devtools/ci/jenkins/install.sh'
+                sh 'bash -ex devtools/ci/jenkins/install.sh'
             }
         }
     }
