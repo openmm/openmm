@@ -19,7 +19,7 @@ export OPENMM_CUDA_COMPILER=`which nvcc`
 # Constants
 INSTALL_DIRECTORY="`pwd`/install"
 
-conda install -y cmake numpy scipy pytest
+conda install -y cmake numpy scipy pytest swig
 
 # Build OpenMM
 cmake -DCMAKE_INSTALL_PREFIX="${INSTALL_DIRECTORY}" -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc .
