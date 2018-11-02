@@ -8,7 +8,7 @@ pipeline {
             }
             steps {
                 sh 'git clean -fxd; git checkout .'
-                sh 'CUDA_VERSION=9.0 devtools/ci/jenkins/install.sh'
+                sh 'CUDA_VERSION=9.0 bash -lex devtools/ci/jenkins/install.sh'
             }
         }
     }
