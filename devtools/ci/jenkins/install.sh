@@ -11,6 +11,8 @@ cmake --version
 echo "Using g++ (`which g++`) version:"
 g++ --version
 
+module load conda
+
 if [ ! -z $CUDA_VERSION ]; then
   module load cuda/${CUDA_VERSION}
   export OPENMM_CUDA_COMPILER=`which nvcc`
