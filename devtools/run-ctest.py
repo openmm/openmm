@@ -55,15 +55,15 @@ def main():
         type=int,
         default=1)
 
-    args = parser.parse_args()
+    args, raw_args = parser.parse_known_args()
 
-    status = execute_tests(args)
+    status = execute_tests(args, raw_args)
     if status != 0:
-        status = execute_failed_tests(args)
+        status = execute_failed_tests(args, raw_args)
     return status
 
 
-def execute_tests(options):
+def execute_tests(options, raw_options):
     start_time = datetime.fromtimestamp(options.start_time)
     stop_time = start_time + timedelta(minutes=options.job_duration)
 
@@ -82,11 +82,11 @@ def execute_tests(options):
                  '--parallel', str(options.parallel),
                  '-T', 'Test',
                  '--timeout', options.timeout,
-                 '--stop-time', stop_time.strftime('%H:%M:%S')] +
+                 '--stop-time', stop_time.strftime('%H:%M:%S')] + raw_options +
                  (['--schedule-random'] if options.in_order else []))
 
 
-def execute_failed_tests(options):
+def execute_failed_tests(options, raw_options):
     matches = glob('Testing/*/Test.xml')
     assert len(matches) == 1
     root = ElementTree.parse(matches[0])
@@ -110,7 +110,7 @@ def execute_failed_tests(options):
                  '--parallel', str(options.parallel),
                  '-R', '|'.join(failed_tests),
                  '--timeout', options.timeout,
-                 '--stop-time', stop_time.strftime('%H:%M:%S')] +
+                 '--stop-time', stop_time.strftime('%H:%M:%S')] + raw_options +
                  (['--schedule-random'] if options.in_order else []))
 
 

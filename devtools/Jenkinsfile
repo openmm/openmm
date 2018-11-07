@@ -1,8 +1,24 @@
 pipeline {
     agent any
+    options {
+        skipDefaultCheckout true
+    }
 
     stages {
-        stage("Build and test") {
+
+        stage("Stash source code") {
+            agent {
+                label "linux"
+            }
+            steps {
+                dir("openmm") {
+                    checkout scm
+                }
+                stash includes: 'openmm', name: 'raw-source', useDefaultExcludes: false
+            }
+        }
+
+        stage("Build and test python") {
             agent {
                 dockerfile {
                     dir "devtools/ci/jenkins"
@@ -10,8 +26,60 @@ pipeline {
                 }
             }
             steps {
-                sh 'git clean -fxd; git checkout .'
-                sh 'bash -ex devtools/ci/jenkins/install.sh'
+                unstash 'raw-source'
+                dir("openmm") {
+                    sh 'bash -ex devtools/ci/jenkins/install.sh'
+                }
+                stash includes: '**', name: 'built-source', useDefaultExcludes: false
+            }
+        }
+
+        stage("Run tests") {
+            parallel {
+                // We can run a bunch of the tests concurrently to speed things up. Each platform
+                // can be run on its own agent.
+                stage("Test Reference Platform on Linux") {
+                    agent {
+                        dockerfile {
+                            dir "devtools/ci/jenkins"
+                            label "linux"
+                            filename "Dockerfile.non-gpu"
+                        }
+                    }
+
+                    steps {
+                        unstash "built-source"
+                        dir("openmm") {
+                            // Tests already have been run
+                            sh '''
+                                module load cuda
+                                LD_LIBRARY_PATH=$LD_LIBRARY_PATH:. sh devtools/ci/jenkins/test.sh -E
+                            '''
+                        }
+                    }
+                }
+
+                stage("Test CPU Platform on Linux") {
+                    agent {
+                        dockerfile {
+                            dir "devtools/ci/jenkins"
+                            label "linux"
+                            filename "Dockerfile.non-gpu"
+                        }
+                    }
+                }
+
+                stage("Test CUDA Platform on Linux") {
+                    agent {
+                        agent "cuda"
+                    }
+                }
+
+                stage("Test OpenCL Platform on Linux") {
+                    agent {
+                        agent "cuda"
+                    }
+                }
             }
         }
     }
