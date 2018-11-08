@@ -7,11 +7,11 @@ pipeline {
                 stage("Build and test GPU platforms") {
                     agent { label "cuda" }
                     steps {
-                        sh '''
+                        sh '''#!/bin/bash -lex
                             env && \
                             module load cuda && \
-                            bash -ex devtools/ci/jenkins/install.sh && \
-                            bash -ex devtools/ci/jenkins/test.sh -R 'Test(Cuda|OpenCL) --parallel 2'
+                            bash -e devtools/ci/jenkins/install.sh && \
+                            bash -e devtools/ci/jenkins/test.sh -R 'Test(Cuda|OpenCL) --parallel 2'
                         '''
                     }
                 }
@@ -25,11 +25,11 @@ pipeline {
                     }
 
                     steps {
-                        sh '''
-                            bash -ex devtools/ci/jenkins/install.sh \
-                                     -DOPENMM_BUILD_CUDA_LIB=false \
-                                     -DOPENMM_BUILD_OPENCL_LIB=false && \
-                            bash -ex devtools/ci/jenkins/test.sh -R 'Test(Cpu|Reference) --parallel 4'
+                        sh '''#!/bin/bash -lex
+                            bash -e devtools/ci/jenkins/install.sh \
+                                    -DOPENMM_BUILD_CUDA_LIB=false \
+                                    -DOPENMM_BUILD_OPENCL_LIB=false && \
+                            bash -e devtools/ci/jenkins/test.sh -R 'Test(Cpu|Reference) --parallel 4'
                         '''
                     }
                 }
