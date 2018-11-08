@@ -8,6 +8,7 @@ pipeline {
                     agent { label "cuda" }
                     steps {
                         sh '''
+                            env && \
                             module load cuda && \
                             bash -ex devtools/ci/jenkins/install.sh && \
                             bash -ex devtools/ci/jenkins/test.sh -R 'Test(Cuda|OpenCL) --parallel 2'
