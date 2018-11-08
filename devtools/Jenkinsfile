@@ -22,15 +22,15 @@ pipeline {
             parallel {
                 stage("Build and test GPU platforms") {
                     agent { label "cuda" }
-                }
-                steps {
-                    unstash 'raw-source'
-                    dir("openmm") {
-                        sh '''
-                            module load cuda && \
-                            bash -ex devtools/ci/jenkins/install.sh && \
-                            bash -ex devtools/ci/jenkins/test.sh -R 'Test(Cuda|OpenCL)'
-                        '''
+                    steps {
+                        unstash 'raw-source'
+                        dir("openmm") {
+                            sh '''
+                                module load cuda && \
+                                bash -ex devtools/ci/jenkins/install.sh && \
+                                bash -ex devtools/ci/jenkins/test.sh -R 'Test(Cuda|OpenCL)'
+                            '''
+                        }
                     }
                 }
 
