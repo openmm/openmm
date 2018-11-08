@@ -46,7 +46,6 @@ def main():
     parser.add_argument(
         '--in-order',
         help='Run the tests in order',
-        type=bool,
         default=False,
         action='store_true')
     parser.add_argument(
