@@ -20,10 +20,6 @@ fi
 test -z "$INSTALL_DIRECTORY" && INSTALL_DIRECTORY="`pwd`/install"
 
 # Build OpenMM
-cmake -DCMAKE_INSTALL_PREFIX="${INSTALL_DIRECTORY}" -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc $* .
+cmake -DCMAKE_INSTALL_PREFIX="${INSTALL_DIRECTORY}" -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc \
+      -DSWIG_EXECUTABLE=`which swig` -DCUDA_TOOLKIT_ROOT_DIR=${CUDA_HOME} $* .
 make -j6 install
-make PythonInstall
-
-# Now run the tests
-python -m simtk.testInstallation
-cd python/tests && py.test -v && cd ../..
