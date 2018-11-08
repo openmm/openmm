@@ -1,40 +1,21 @@
 pipeline {
     agent any
-    options {
-        skipDefaultCheckout true
-    }
 
     stages {
-
-        stage("Stash source code") {
-            agent {
-                label "linux"
-            }
-            steps {
-                dir("openmm") {
-                    checkout scm
-                }
-                stash includes: 'openmm', name: 'raw-source', useDefaultExcludes: false
-            }
-        }
-
         stage("Build and test") {
             parallel {
                 stage("Build and test GPU platforms") {
                     agent { label "cuda" }
                     steps {
-                        unstash 'raw-source'
-                        dir("openmm") {
-                            sh '''
-                                module load cuda && \
-                                bash -ex devtools/ci/jenkins/install.sh && \
-                                bash -ex devtools/ci/jenkins/test.sh -R 'Test(Cuda|OpenCL) --parallel 2'
-                            '''
-                        }
+                        sh '''
+                            module load cuda && \
+                            bash -ex devtools/ci/jenkins/install.sh && \
+                            bash -ex devtools/ci/jenkins/test.sh -R 'Test(Cuda|OpenCL) --parallel 2'
+                        '''
                     }
                 }
 
-                stage("Build/test non-GPU platforms") {
+                stage("Build/test CPU platforms") {
                     agent {
                         dockerfile {
                             dir "devtools/ci/jenkins"
@@ -43,15 +24,12 @@ pipeline {
                     }
 
                     steps {
-                        unstash 'raw-source'
-                        dir('openmm') {
-                            sh '''
-                                bash -ex devtools/ci/jenkins/install.sh \
-                                         -DOPENMM_BUILD_CUDA_LIB=false \
-                                         -DOPENMM_BUILD_OPENCL_LIB=false && \
-                                bash -ex devtools/ci/jenkins/test.sh -R 'Test(Cpu|Reference) --parallel 4'
-                            '''
-                        }
+                        sh '''
+                            bash -ex devtools/ci/jenkins/install.sh \
+                                     -DOPENMM_BUILD_CUDA_LIB=false \
+                                     -DOPENMM_BUILD_OPENCL_LIB=false && \
+                            bash -ex devtools/ci/jenkins/test.sh -R 'Test(Cpu|Reference) --parallel 4'
+                        '''
                     }
                 }
             } // parallel
