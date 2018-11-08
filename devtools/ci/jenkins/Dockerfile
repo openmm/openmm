@@ -1,10 +1,10 @@
-FROM nvidia/cuda:9.2-devel
+FROM ubuntu:xenial
 
 ENV PATH="/opt/miniconda/bin:${PATH}"
 
 RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
-        wget git gromacs doxygen gfortran libfftw3-dev nvidia-396-dev && \
+    apt-get install --no-install-recommends -y \
+        wget git gromacs doxygen gfortran libfftw3-dev gcc g++ && \
     wget https://repo.continuum.io/miniconda/Miniconda3-4.5.11-Linux-x86_64.sh -O miniconda.sh && \
     bash miniconda.sh -b -p "/opt/miniconda" && \
     rm -f miniconda.sh && \

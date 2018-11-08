@@ -11,18 +11,16 @@ cmake --version
 echo "Using g++ (`which g++`) version:"
 g++ --version
 
-echo "Using nvcc (`which nvcc`) version:"
-nvcc --version
+if [ -x `which nvcc 2>/dev/null || true` ]; then
+    echo "Using nvcc (`which nvcc`) version:"
+    nvcc --version
+    export OPENMM_CUDA_COMPILER=`which nvcc`
+fi
 
-export OPENMM_CUDA_COMPILER=`which nvcc`
-
-# Constants
-#INSTALL_DIRECTORY="`pwd`/install"
+test -z "$INSTALL_DIRECTORY" && INSTALL_DIRECTORY="`pwd`/install"
 
 # Build OpenMM
-#cmake -DCMAKE_INSTALL_PREFIX="${INSTALL_DIRECTORY}" -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc \
-#      -DOPENCL_LIBRARY=/usr/local/cuda/lib64/libOpenCL.so .
-cmake -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc -DOPENCL_LIBRARY=/usr/local/cuda/lib64/libOpenCL.so .
+cmake -DCMAKE_INSTALL_PREFIX="${INSTALL_DIRECTORY}" -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc $* .
 make -j6 install
 make PythonInstall
 

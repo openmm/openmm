@@ -18,69 +18,98 @@ pipeline {
             }
         }
 
-        stage("Build and test python") {
-            agent {
-                dockerfile {
-                    dir "devtools/ci/jenkins"
-                    label "cuda"
-                }
-            }
-            steps {
-                unstash 'raw-source'
-                dir("openmm") {
-                    sh 'bash -ex devtools/ci/jenkins/install.sh'
-                }
-                stash includes: '**', name: 'built-source', useDefaultExcludes: false
-            }
-        }
-
-        stage("Run tests") {
+        stage("Build and test") {
             parallel {
-                // We can run a bunch of the tests concurrently to speed things up. Each platform
-                // can be run on its own agent.
-                stage("Test Reference Platform on Linux") {
-                    agent {
-                        dockerfile {
-                            dir "devtools/ci/jenkins"
-                            label "linux"
-                            filename "Dockerfile.non-gpu"
+                stage("Build and test GPU platforms") {
+                    agent { label "cuda" }
+                }
+                steps {
+                    unstash 'raw-source'
+                    dir("openmm") {
+                        sh '''
+                            module load cuda && \
+                            bash -ex devtools/ci/jenkins/install.sh && \
+                            bash -ex devtools/ci/jenkins/test.sh -R 'Test(Cuda|OpenCL)'
+                        '''
+                    }
+                }
+
+                stage("Build/test non-GPU platforms") {
+                    stages {
+                        stage("Build OpenMM") {
+                            agent {
+                                dockerfile {
+                                    dir "devtools/ci/jenkins"
+                                    label "linux"
+                                }
+                            }
+
+                            steps {
+                                unstash 'raw-source'
+                                dir('openmm') {
+                                    sh '''
+                                        bash -ex devtools/ci/jenkins/install.sh \
+                                                 -DOPENMM_BUILD_CUDA_LIB=false \
+                                                 -DOPENMM_BUILD_OPENCL_LIB=false
+                                    '''
+                                }
+                                stash name: 'cpu-built', includes: 'openmm', useDefaultExcludes: false
+                            }
+                        }
+
+                        stage("Test CPU platforms") {
+                            parallel {
+                                stage("Test Reference platform") {
+                                    agent {
+                                        dockerfile {
+                                            dir "devtools/ci/jenkins"
+                                            label "linux"
+                                        }
+                                    }
+
+                                    steps {
+                                        unstash 'cpu-built'
+                                        dir("openmm") {
+                                            sh '''
+                                                bash -ex devtools/ci/jenkins/test.sh -R TestReference
+                                            '''
+                                        }
+                                    }
+                                }
+
+                                stage("Test CPU platform") {
+                                    agent {
+                                        dockerfile {
+                                            dir "devtools/ci/jenkins"
+                                            label "linux"
+                                        }
+                                    }
+
+                                    steps {
+                                        unstash 'cpu-built'
+                                        dir("openmm") {
+                                            sh '''
+                                                bash -ex devtools/ci/jenkins/test.sh -R TestCpu
+                                            '''
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
-
                     steps {
-                        unstash "built-source"
+                        unstash "raw-source"
                         dir("openmm") {
-                            // Tests already have been run
                             sh '''
-                                module load cuda
-                                LD_LIBRARY_PATH=$LD_LIBRARY_PATH:. sh devtools/ci/jenkins/test.sh -E
+                                bash -ex devtools/ci/jenkins/install.sh \
+                                        -DOPENMM_BUILD_CUDA_LIB=false \
+                                        -DOPENMM_BUILD_OPENCL_LIB=false
                             '''
                         }
+                        stash includes: 'openmm', name: 'cpu-built-source', useDefaultExcludes: false
                     }
                 }
-
-                stage("Test CPU Platform on Linux") {
-                    agent {
-                        dockerfile {
-                            dir "devtools/ci/jenkins"
-                            label "linux"
-                            filename "Dockerfile.non-gpu"
-                        }
-                    }
-                }
-
-                stage("Test CUDA Platform on Linux") {
-                    agent {
-                        agent "cuda"
-                    }
-                }
-
-                stage("Test OpenCL Platform on Linux") {
-                    agent {
-                        agent "cuda"
-                    }
-                }
-            }
+            } // parallel
         }
     }
 }
