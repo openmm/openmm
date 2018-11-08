@@ -153,7 +153,7 @@ public:
         return vec_sub(val, other.val);
     }
     ivec4 operator*(const ivec4& other) const {
-        return val * other.val; //(__m128i) {val[0]*other[0], val[1]*other[1], val[2]*other[2], val[3]*other[3]}; 
+        return val*other.val;
     }
     void operator+=(const ivec4& other) {
         val = vec_add(val, other.val);
@@ -231,7 +231,7 @@ inline ivec4::operator fvec4() const {
 // Functions that operate on fvec4s.
 
 static inline fvec4 abs(const fvec4& v) {
-    return fvec4(fabs(v[0]), fabs(v[1]), fabs(v[2]), fabs(v[3]));
+    return vec_abs(v.val);
 }
 
 static inline fvec4 exp(const fvec4& v) {
@@ -281,12 +281,11 @@ static inline ivec4 max(const ivec4& v1, const ivec4& v2) {
 }
 
 static inline ivec4 abs(const ivec4& v) {
-    return ivec4(abs(v[0]), abs(v[1]), abs(v[2]), abs(v[3]));
+    return vec_abs(v.val);
 }
 
 static inline bool any(const __m128i& v) {
-    ivec4 temp = __builtin_shuffle(v, v, (__m128i) {0, 1, -1, -1}) | __builtin_shuffle(v, v, (__m128i) {2, 3, -1, -1});
-    return (temp[0] || temp[1]);
+    return !vec_all_eq(v, ivec4(0).val);
 }
 
 // Mathematical operators involving a scalar and a vector.
@@ -336,7 +335,15 @@ static inline fvec4 ceil(const fvec4& v) {
 }
 
 static inline fvec4 rsqrt(const fvec4& v) {
-    return fvec4(1.0/sqrt(v[0]), 1.0/sqrt(v[1]), 1.0/sqrt(v[2]), 1.0/sqrt(v[3]));
+    // Initial estimate of rsqrt().
+
+    fvec4 y(vec_rsqrte(v.val));
+
+    // Perform an iteration of Newton refinement.
+
+    fvec4 x2 = v*0.5f;
+    y *= fvec4(1.5f)-x2*y*y;
+    return y;
 }
 
 static inline fvec4 sqrt(const fvec4& v) {
