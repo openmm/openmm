@@ -11,8 +11,8 @@ pipeline {
                             git clean -fxd
                             env
                             module load cuda conda
-                            bash -e devtools/ci/jenkins/install.sh
                             export OPENMM_CUDA_COMPILER=`which nvcc`
+                            bash -e devtools/ci/jenkins/install.sh
                             bash -e devtools/ci/jenkins/test_python.sh
                             bash -e devtools/ci/jenkins/test.sh -R 'Test(Cuda|OpenCL)' --parallel 2
                         '''
