@@ -104,12 +104,12 @@ def execute_failed_tests(options, raw_options):
 
     start_time = datetime.fromtimestamp(options.start_time)
     stop_time = start_time + timedelta(minutes=options.job_duration)
-    return call(['ctest',
+    return call(['ctest'] + raw_options + [
                  '--output-on-failure',
                  '--parallel', str(options.parallel),
                  '-R', '|'.join(failed_tests),
                  '--timeout', options.timeout,
-                 '--stop-time', stop_time.strftime('%H:%M:%S')] + raw_options +
+                 '--stop-time', stop_time.strftime('%H:%M:%S')] +
                  (['--schedule-random'] if options.in_order else []))
 
 
