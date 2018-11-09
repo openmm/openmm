@@ -249,25 +249,30 @@ static inline float dot3(const fvec4& v1, const fvec4& v2) {
 
 static inline float dot4(const fvec4& v1, const fvec4& v2) {
     fvec4 r = v1*v2;
-    fvec4 temp = __builtin_shuffle(r.val, r.val, (__m128i) {0, 1, -1, -1})+__builtin_shuffle(r.val, r.val, (__m128i) {2, 3, -1, -1});
+    fvec4 temp = r + vec_sld(r.val, r.val, 8);
     return temp[0]+temp[1];
 }
 
 static inline fvec4 cross(const fvec4& v1, const fvec4& v2) {
-    __m128 temp = v2.val*__builtin_shuffle(v1.val, v1.val, (__m128i) {2, 0, 1, 3}) -
-                  v1.val*__builtin_shuffle(v2.val, v2.val, (__m128i) {2, 0, 1, 3});
-    return __builtin_shuffle(temp, temp, (__m128i) {2, 0, 1, 3});
+    vector unsigned char perm = (vector unsigned char) {8, 9, 10, 11, 0, 1, 2, 3, 4, 5, 6, 7, 12, 13, 14, 15};
+    __m128 temp = v2.val*vec_perm(v1.val, v1.val, perm) -
+                  v1.val*vec_perm(v2.val, v2.val, perm);
+    return vec_perm(temp, temp, perm);
 }
 
 static inline void transpose(fvec4& v1, fvec4& v2, fvec4& v3, fvec4& v4) {
-    __m128 a1 = __builtin_shuffle(v1.val, v2.val, (__m128i) {0, 4, 2, 6});
-    __m128 a2 = __builtin_shuffle(v1.val, v2.val, (__m128i) {1, 5, 3, 7});
-    __m128 a3 = __builtin_shuffle(v3.val, v4.val, (__m128i) {0, 4, 2, 6});
-    __m128 a4 = __builtin_shuffle(v3.val, v4.val, (__m128i) {1, 5, 3, 7});
-    v1 = __builtin_shuffle(a1, a3, (__m128i) {0, 1, 4, 5});
-    v2 = __builtin_shuffle(a2, a4, (__m128i) {0, 1, 4, 5});
-    v3 = __builtin_shuffle(a1, a3, (__m128i) {2, 3, 6, 7});
-    v4 = __builtin_shuffle(a2, a4, (__m128i) {2, 3, 6, 7});
+    vector unsigned char perm1 = (vector unsigned char) {0, 1, 2, 3, 16, 17, 18, 19, 8, 9, 10, 11, 24, 25, 26, 27};
+    vector unsigned char perm2 = (vector unsigned char) {4, 5, 6, 7, 20, 21, 22, 23, 12, 13, 14, 15, 28, 29, 30, 31};
+    __m128 a1 = vec_perm(v1.val, v2.val, perm1);
+    __m128 a2 = vec_perm(v1.val, v2.val, perm2);
+    __m128 a3 = vec_perm(v3.val, v4.val, perm1);
+    __m128 a4 = vec_perm(v3.val, v4.val, perm2);
+    vector unsigned char perm3 = (vector unsigned char) {0, 1, 2, 3, 4, 5, 6, 7, 16, 17, 18, 19, 20, 21, 22, 23};
+    vector unsigned char perm4 = (vector unsigned char) {8, 9, 10, 11, 12, 13, 14, 15, 24, 25, 26, 27, 28, 29, 30, 31};
+    v1 = vec_perm(a1, a3, perm3);
+    v2 = vec_perm(a2, a4, perm3);
+    v3 = vec_perm(a1, a3, perm4);
+    v4 = vec_perm(a2, a4, perm4);
 }
 
 // Functions that operate on ivec4s.
