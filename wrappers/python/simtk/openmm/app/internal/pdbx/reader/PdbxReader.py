@@ -352,11 +352,10 @@ class PdbxReader(object):
 
              ")")
 
-        fileIter = iter(ifh)
-
         ## Tokenizer loop begins here ---
         while True:
-            line = next(fileIter)
+            line = ifh.readline()
+            if not line: return
             self.__curLineNumber += 1
 
             # Dump comments
@@ -369,7 +368,8 @@ class PdbxReader(object):
             if line.startswith(";"):
                 mlString = [line[1:]]
                 while True:
-                    line = next(fileIter)
+                    line = ifh.readline()
+                    if not line: return
                     self.__curLineNumber += 1
                     if line.startswith(";"):
                         break
@@ -423,11 +423,10 @@ class PdbxReader(object):
 
              ")")
 
-        fileIter = iter(ifh)
-
         ## Tokenizer loop begins here ---
         while True:
-            line = next(fileIter)
+            line = ifh.readline()
+            if not line: return
             self.__curLineNumber += 1
 
             # Dump comments
@@ -440,7 +439,8 @@ class PdbxReader(object):
             if line.startswith(";"):
                 mlString = [line[1:]]
                 while True:
-                    line = next(fileIter)
+                    line = ifh.readline()
+                    if not line: return
                     self.__curLineNumber += 1
                     if line.startswith(";"):
                         break
