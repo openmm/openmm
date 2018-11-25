@@ -18,5 +18,5 @@ if [ ! -z "$OPENMM_CUDA_COMPILER" ]; then
 fi
 
 cmake -DCMAKE_INSTALL_PREFIX="`pwd`/install" -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc \
-      -DSWIG_EXECUTABLE=`which swig` $CUDA_ARGS $* .
+      -DSWIG_EXECUTABLE=`which swig` $CUDA_ARGS $EXTRA_CMAKE_ARGS .
 make -j6 install

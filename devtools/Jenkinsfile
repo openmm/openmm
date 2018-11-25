@@ -33,7 +33,12 @@ pipeline {
                 }
 
                 stage("Build/test CPU platforms") {
-                    agent { label "linux" }
+                    agent {
+                        dockerfile {
+                            dir "devtools/ci/jenkins"
+                            label "linux"
+                        }
+                    }
 
                     steps {
                         sh '''#!/bin/bash -lex
