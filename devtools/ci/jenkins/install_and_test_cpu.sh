@@ -1,7 +1,5 @@
 #!/bin/bash
 
-lsb_release -a
-export LD_LIBRARY_PATH=.
 bash -e devtools/ci/jenkins/install.sh \
         -DOPENMM_BUILD_CUDA_LIB=false \
         -DOPENMM_BUILD_OPENCL_LIB=false && \
