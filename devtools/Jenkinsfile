@@ -41,7 +41,10 @@ pipeline {
                     }
 
                     steps {
-                        sh 'bash -lex devtools/ci/jenkins/install_and_test_cpu.sh'
+                        sh '''#!/bin/bash -lex
+                        git clean -fxd
+                        bash -e devtools/ci/jenkins/install_and_test_cpu.sh
+                        '''
                     }
                 }
             } // parallel

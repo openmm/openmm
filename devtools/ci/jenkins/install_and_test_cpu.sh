@@ -1,7 +1,6 @@
 #!/bin/bash
 
 lsb_release -a
-pwd
 export LD_LIBRARY_PATH=.
 bash -e devtools/ci/jenkins/install.sh \
         -DOPENMM_BUILD_CUDA_LIB=false \
