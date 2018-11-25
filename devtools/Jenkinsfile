@@ -8,7 +8,7 @@ pipeline {
                     agent { label "cuda" }
                     steps {
                         sh '''#!/bin/bash -lex
-                            git clean -fxd
+                            git clean -fxd && git checkout .
                             env
                             module load cuda conda
                             export OPENMM_CUDA_COMPILER=`which nvcc`
@@ -22,7 +22,7 @@ pipeline {
                     agent { label "cuda" }
                     steps {
                         sh '''#!/bin/bash -lex
-                            git clean -fxd
+                            git clean -fxd && git checkout .
                             env
                             module load cuda conda
                             export OPENMM_CUDA_COMPILER=`which nvcc`
@@ -42,7 +42,7 @@ pipeline {
 
                     steps {
                         sh '''#!/bin/bash -lex
-                        git clean -fxd
+                        git clean -fxd && git checkout .
                         bash -e devtools/ci/jenkins/install_and_test_cpu.sh
                         '''
                     }
