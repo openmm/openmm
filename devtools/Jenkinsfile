@@ -2,9 +2,9 @@ pipeline {
     agent any
 
     stages {
-        /*
         stage("Build and test") {
             parallel {
+                /*
                 stage("Build and test CUDA platform") {
                     agent { label "cuda" }
                     steps {
