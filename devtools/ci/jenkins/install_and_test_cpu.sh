@@ -1,6 +1,6 @@
 #!/bin/bash
 
-whoami
+id
 which python
 lsb_release -a
 find / -name "libdl.*"
