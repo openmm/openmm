@@ -26,7 +26,7 @@ create_conda_env() {
 }
 conda remove -yn ${CONDAENV} --all --quiet || true
 create_conda_env || create_conda_env # Crappy way to work around conda concurrency restrictions
-conda install -yn ${CONDAENV} numpy scipy pytest --quiet
+conda install -yn ${CONDAENV} numpy scipy pytest cython --quiet
 source activate ${CONDAENV} # enter our new environment
 
 # Build OpenMM

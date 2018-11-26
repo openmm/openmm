@@ -35,8 +35,9 @@ __author__ = "Peter Eastman"
 __version__ = "1.0"
 
 from simtk.openmm.app import Topology, PDBFile, ForceField
-from simtk.openmm.app.forcefield import HAngles, AllBonds, CutoffNonPeriodic, CutoffPeriodic, _createResidueSignature, _matchResidue, DrudeGenerator
+from simtk.openmm.app.forcefield import HAngles, AllBonds, CutoffNonPeriodic, CutoffPeriodic, _createResidueSignature, DrudeGenerator
 from simtk.openmm.app.topology import Residue
+from simtk.openmm.app.internal import compiled
 from simtk.openmm.vec3 import Vec3
 from simtk.openmm import System, Context, NonbondedForce, CustomNonbondedForce, HarmonicBondForce, HarmonicAngleForce, VerletIntegrator, LangevinIntegrator, LocalEnergyMinimizer
 from simtk.unit import nanometer, molar, elementary_charge, amu, gram, liter, degree, sqrt, acos, is_quantity, dot, norm, kilojoules_per_mole
@@ -416,14 +417,9 @@ class Modeller(object):
             positions = self.positions.value_in_unit(nanometer)[:]
         cells = _CellList(positions, maxCutoff, vectors, True)
 
-        # Define a function to compute the distance between two points, taking periodic boundary conditions into account.
+        # Create a function to compute the distance between two points, taking periodic boundary conditions into account.
 
-        def periodicDistance(pos1, pos2):
-            delta = pos1-pos2
-            delta -= vectors[2]*floor(delta[2]*invBox[2]+0.5)
-            delta -= vectors[1]*floor(delta[1]*invBox[1]+0.5)
-            delta -= vectors[0]*floor(delta[0]*invBox[0]+0.5)
-            return norm(delta)
+        periodicDistance = compiled.periodicDistance(vectors)
 
         # Find the list of water molecules to add.
 
@@ -990,7 +986,7 @@ class Modeller(object):
                 signature = _createResidueSignature([atom.element for atom in residue.atoms()])
                 if signature in forcefield._templateSignatures:
                     for t in forcefield._templateSignatures[signature]:
-                        if _matchResidue(residue, t, bondedToAtom, False) is not None:
+                        if compiled.matchResidueToTemplate(residue, t, bondedToAtom, False) is not None:
                             matchFound = True
                 if matchFound:
                     # Just copy the residue over.
@@ -1009,7 +1005,7 @@ class Modeller(object):
                     if signature in forcefield._templateSignatures:
                         for t in forcefield._templateSignatures[signature]:
                             if t in templatesNoEP:
-                                matches = _matchResidue(residueNoEP, templatesNoEP[t], bondedToAtomNoEP, False)
+                                matches = compiled.matchResidueToTemplate(residueNoEP, templatesNoEP[t], bondedToAtomNoEP, False)
                                 if matches is not None:
                                     template = t;
                                     # Record the corresponding atoms.
@@ -1383,12 +1379,22 @@ class Modeller(object):
         context = Context(system, integrator)
         context.setPositions(mergedPositions)
         LocalEnergyMinimizer.minimize(context, 10.0, 30)
+        try:
+            import numpy as np
+            hasNumpy = True
+            proteinPosArray = np.array(proteinPos)
+            scaledProteinPosArray = np.array(scaledProteinPos)
+        except:
+            hasNumpy = False
         for i in range(50):
             weight1 = i/49.0
             weight2 = 1.0-weight1
-            mergedPositions = context.getState(getPositions=True).getPositions().value_in_unit(nanometer)
-            for j in range(len(proteinPos)):
-                mergedPositions[j+numMembraneParticles] = (weight1*proteinPos[j] + weight2*scaledProteinPos[j])
+            mergedPositions = context.getState(getPositions=True).getPositions(asNumpy=hasNumpy).value_in_unit(nanometer)
+            if hasNumpy:
+                mergedPositions[numMembraneParticles:] = weight1*proteinPosArray + weight2*scaledProteinPosArray
+            else:
+                for j in range(len(proteinPos)):
+                    mergedPositions[j+numMembraneParticles] = (weight1*proteinPos[j] + weight2*scaledProteinPos[j])
             context.setPositions(mergedPositions)
             integrator.step(20)
         
