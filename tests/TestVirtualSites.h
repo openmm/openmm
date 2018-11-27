@@ -219,11 +219,13 @@ Vec3 computeWeightedPosition(const vector<Vec3>& positions, const vector<double>
 void testLocalCoordinates(int numSiteParticles) {
     vector<int> particles;
     vector<double> originWeights, xWeights, yWeights;
+    Vec3 localPosition(0.4, 0.3, 0.2);
     if (numSiteParticles == 2) {
         particles = {0, 1};
         originWeights = {0.4, 0.6};
         xWeights = {-1.0, 1.0};
         yWeights = {1.0, -1.0};
+        localPosition[1] = localPosition[2] = 0.0;
     }
     else if (numSiteParticles == 3) {
         particles = {0, 1, 2};
@@ -237,7 +239,6 @@ void testLocalCoordinates(int numSiteParticles) {
         xWeights = {-1.0, 0.3, 0.3, 0.4};
         yWeights = {0.5, 0.5, -0.5, -0.5};
     }
-    const Vec3 localPosition(0.4, 0.3, 0.2);
     System system;
     for (int i = 0; i < numSiteParticles; i++)
         system.addParticle(1.0);
