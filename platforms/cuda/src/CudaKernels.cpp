@@ -1859,8 +1859,10 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                     if (useCudaFFT) {
                         cufftSetStream(fftForward, pmeStream);
                         cufftSetStream(fftBackward, pmeStream);
-                        cufftSetStream(dispersionFftForward, pmeStream);
-                        cufftSetStream(dispersionFftBackward, pmeStream);
+                        if (doLJPME) {
+                            cufftSetStream(dispersionFftForward, pmeStream);
+                            cufftSetStream(dispersionFftBackward, pmeStream);
+                        }
                     }
                     CHECK_RESULT(cuEventCreate(&pmeSyncEvent, CU_EVENT_DISABLE_TIMING), "Error creating event for NonbondedForce");
                     CHECK_RESULT(cuEventCreate(&paramsSyncEvent, CU_EVENT_DISABLE_TIMING), "Error creating event for NonbondedForce");

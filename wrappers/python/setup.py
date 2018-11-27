@@ -8,6 +8,7 @@ import sys
 import platform
 import numpy
 from distutils.core import setup
+from Cython.Build import cythonize
 
 MAJOR_VERSION_NUM='@OPENMM_MAJOR_VERSION@'
 MINOR_VERSION_NUM='@OPENMM_MINOR_VERSION@'
@@ -217,6 +218,7 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
     if platform.system() != "Windows":
         extensionArgs["runtime_library_dirs"] = library_dirs
     setupKeywords["ext_modules"] = [Extension(**extensionArgs)]
+    setupKeywords["ext_modules"] += cythonize('simtk/openmm/app/internal/*.pyx', language='c++')
 
     outputString = ''
     firstTab     = 40
