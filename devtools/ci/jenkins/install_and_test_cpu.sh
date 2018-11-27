@@ -3,7 +3,6 @@
 id
 which python
 lsb_release -a
-find / -name "libdl.*"
 
 EXTRA_CMAKE_ARGS="-DOPENMM_BUILD_CUDA_LIB=false -DOPENMM_BUILD_OPENCL_LIB=false"
 . devtools/ci/jenkins/install.sh
