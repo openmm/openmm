@@ -4,7 +4,6 @@ pipeline {
     stages {
         stage("Build and test") {
             parallel {
-                /*
                 stage("Build and test CUDA platform") {
                     agent { label "cuda" }
                     steps {
@@ -32,13 +31,12 @@ pipeline {
                         '''
                     }
                 }
-                */
 
                 stage("Build/test CPU platforms") {
                     agent {
                         dockerfile {
                             dir "devtools/ci/jenkins"
-                            label "linux"
+                            label "docker"
                         }
                     }
 
