@@ -1,0 +1,53 @@
+pipeline {
+    agent any
+
+    stages {
+        stage("Build and test") {
+            parallel {
+                stage("Build and test CUDA platform") {
+                    agent { label "cuda" }
+                    steps {
+                        sh '''#!/bin/bash -lex
+                            git clean -fxd && git checkout .
+                            env
+                            module load cuda conda
+                            export OPENMM_CUDA_COMPILER=`which nvcc`
+                            bash -e devtools/ci/jenkins/install.sh
+                            bash -e devtools/ci/jenkins/test.sh -R 'TestCuda' --parallel 2
+                        '''
+                    }
+                }
+
+                stage("Build and test OpenCL platform") {
+                    agent { label "cuda" }
+                    steps {
+                        sh '''#!/bin/bash -lex
+                            git clean -fxd && git checkout .
+                            env
+                            module load cuda conda
+                            export OPENMM_CUDA_COMPILER=`which nvcc`
+                            bash -e devtools/ci/jenkins/install.sh
+                            bash -e devtools/ci/jenkins/test.sh -R 'TestOpenCL' --parallel 2
+                        '''
+                    }
+                }
+
+                stage("Build/test CPU platforms") {
+                    agent {
+                        dockerfile {
+                            dir "devtools/ci/jenkins"
+                            label "docker"
+                        }
+                    }
+
+                    steps {
+                        sh '''#!/bin/bash -lex
+                        git clean -fxd && git checkout .
+                        bash -e devtools/ci/jenkins/install_and_test_cpu.sh
+                        '''
+                    }
+                }
+            } // parallel
+        }
+    }
+}

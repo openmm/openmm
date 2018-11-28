@@ -71,6 +71,9 @@ class PdbxReader(object):
             self.__parser(self.__tokenizer(self.__ifh), containerList)
         except StopIteration:
             pass
+        except RuntimeError as err:
+            if 'StopIteration' not in str(err):
+                raise
         else:
             raise PdbxError()
 
