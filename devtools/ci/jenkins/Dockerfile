@@ -8,4 +8,4 @@ RUN apt-get update && \
     bash miniconda.sh -b -p "/opt/miniconda" && \
     rm -f miniconda.sh && \
     mkdir /.conda &&  chmod -R 777 /.conda &&  chmod -R 777 /opt/miniconda && \
-    conda install -y cmake numpy scipy pytest swig
+    conda install -y cmake numpy scipy pytest swig cython

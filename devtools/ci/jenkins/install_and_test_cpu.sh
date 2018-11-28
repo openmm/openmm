@@ -1,6 +1,6 @@
 #!/bin/bash
 
-id
+whoami
 which python
 lsb_release -a
 
