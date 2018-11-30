@@ -268,7 +268,7 @@ private:
     class PmeIO;
     void computeParameters(ContextImpl& context, bool offsetsOnly);
     CpuPlatform::PlatformData& data;
-    int numParticles, num14, posqIndex;
+    int numParticles, num14, chargePosqIndex, ljPosqIndex;
     std::vector<std::vector<int> > bonded14IndexArray;
     std::vector<std::vector<double> > bonded14ParamArray;
     double nonbondedCutoff, switchingDistance, rfDielectric, ewaldAlpha, ewaldDispersionAlpha, ewaldSelfEnergy, dispersionCoefficient;
