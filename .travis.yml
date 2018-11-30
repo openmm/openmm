@@ -132,9 +132,9 @@ before_install:
       ${AMDAPPSDK}/bin/x86_64/clinfo;
       sudo apt-get install -y libgl1-mesa-dev;
     fi
-  # Install swig for Python wrappers. However, testing CUDA and OpenCL, we
-  # skip the Python wrapper for speed. We're not using anaconda python,
-  # but this is a fast way to get an apparently functional precompiled
+  # Install SWIG and Cython for Python wrappers. However, testing CUDA and
+  # OpenCL, we skip the Python wrapper for speed. We're not using anaconda
+  # python, but this is a fast way to get an apparently functional precompiled
   # build of swig that's more modern than what's in apt.
   - if [[ "$OPENCL" == "false" && "$CUDA" == "false" && "$TRAVIS_OS_NAME" == "linux" ]]; then
       wget http://anaconda.org/omnia/swig/3.0.7/download/linux-64/swig-3.0.7-0.tar.bz2;
@@ -142,6 +142,7 @@ before_install:
       tar -xjvf swig-3.0.7-0.tar.bz2 -C $HOME/swig;
       export PATH=$HOME/swig/bin:$PATH;
       export SWIG_LIB=$HOME/swig/share/swig/3.0.7;
+      pip install cython;
     fi
   - if [[ "$OPENCL" == "false" && "$CUDA" == "false" && "$TRAVIS_OS_NAME" == "osx" ]]; then
       wget http://anaconda.org/omnia/swig/3.0.7/download/osx-64/swig-3.0.7-0.tar.bz2;
@@ -149,6 +150,7 @@ before_install:
       tar -xjvf swig-3.0.7-0.tar.bz2 -C $HOME/swig;
       export PATH=$HOME/swig/bin:$PATH;
       export SWIG_LIB=$HOME/swig/share/swig/3.0.7;
+      sudo pip install cython;
     fi
 
   - if [[ "$CUDA" == "true" ]]; then

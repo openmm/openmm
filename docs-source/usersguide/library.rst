@@ -455,6 +455,7 @@ CMake.
    * Python 2.7 or later (http://www.python.org)
    * SWIG (http://www.swig.org)
    * Doxygen (http://www.doxygen.org)
+   * Cython (https://cython.org)
 
 * For compiling the CPU platform, you need:
 
@@ -2554,69 +2555,6 @@ parameter rather than its ordinal.
 Python API
 **********
 
-
-Installing the Python API
-=========================
-
-There are currently two types of packages for installing the Python API.  One
-contains wrapper source code for Unix-type machines (including Linux and Mac
-operating systems).  You will need a C++ compiler to install it using this type
-of package.  The other type of installation package is a binary package which
-contains compiled wrapper code for Windows machines (no compilers are needed to
-install binary packages).
-
-Installing on Windows
----------------------
-
-OpenMM on Windows only works with Python 3.5, so make sure that version is
-installed before you try installing. For Python installation packages and
-instructions, go to http://python.org.  We suggest that you install Python using
-the default options.
-
-Double click on the Python API Installer icon, located in the top level
-directory for the OpenMM installation (by default, this is C:\Program
-Files\OpenMM).  This will install the OpenMM package into the Python
-installation area.  If you have more than one Python installation, you will be
-asked which Python to use—make sure to select Python 3.5.
-
-Installing on Linux and Mac
----------------------------
-
-Make sure you have Python 2.7 or later installed.  For Python installation
-packages and instructions, go to http://python.org.  If you do not have the
-correct Python version, install a valid version using the default options.  Most
-versions of Linux and Mac OS X have a suitable Python preinstalled.  You can
-check by typing “\ :code:`python` |--|\ :code:`version`\ ” in a terminal window.
-
-You must have a C++ compiler to install the OpenMM Python API.  If you are using
-a Mac, install Apple's Xcode development tools
-(http://developer.apple.com/TOOLS/Xcode) to get the needed compiler.  On other
-Unix-type systems, install gcc or clang.  We recommend clang, since it produces
-faster code than gcc.
-
-The install.sh script installs the Python API automatically as part of the
-installation process, so you probably already have it installed.  If for some
-reason you need to install it manually, you can do that with the
-:code:`setup.py` script included with OpenMM.  Before executing this script,
-you must set two environment variables: :code:`OPENMM_INCLUDE_PATH` must
-point to the directory containing OpenMM header files, and
-:code:`OPENMM_LIB_PATH` must point to the directory containing OpenMM library
-files.  Assuming OpenMM is installed in the default location
-(\ :code:`/usr/local/openmm`\ ), you would type the following commands.
-Note that if you are using the system Python (as opposed to a locally installed
-version), you may need to use the :code:`sudo` command when running
-:code:`python setup.py install`\ .
-::
-
-    export OPENMM_INCLUDE_PATH=/usr/local/openmm/include
-    export OPENMM_LIB_PATH=/usr/local/openmm/lib
-    python setup.py build
-    python setup.py install
-
-If you are compiling OpenMM from source, you can also install by building the
-“PythonInstall” target:
-
-:code:`make PythonInstall` OR :code:`sudo make PythonInstall`
 
 Mapping from the C++ API to the Python API
 ==========================================

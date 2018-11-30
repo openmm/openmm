@@ -39,13 +39,13 @@ import xml.etree.ElementTree as etree
 import math
 from math import sqrt, cos
 from copy import deepcopy
-from heapq import heappush, heappop
 from collections import defaultdict
 import simtk.openmm as mm
 import simtk.unit as unit
 from . import element as elem
 from simtk.openmm.app import Topology
 from simtk.openmm.app.internal.singleton import Singleton
+from simtk.openmm.app.internal import compiled
 
 # Directories from which to load built in force fields.
 
@@ -239,8 +239,8 @@ class ForceField(object):
                 parentDir = os.path.dirname(file)
             else:
                 parentDir = ''
-            for include in tree.getroot().findall('Include'):
-                includeFile = include.attrib['file']
+            for included in tree.getroot().findall('Include'):
+                includeFile = included.attrib['file']
                 joined = os.path.join(parentDir, includeFile)
                 if os.path.isfile(joined):
                     includeFile = joined
@@ -875,7 +875,7 @@ class ForceField(object):
         if signature in templateSignatures:
             allMatches = []
             for t in templateSignatures[signature]:
-                match = _matchResidue(res, t, bondedToAtom, ignoreExternalBonds)
+                match = compiled.matchResidueToTemplate(res, t, bondedToAtom, ignoreExternalBonds)
                 if match is not None:
                     allMatches.append((t, match))
             if len(allMatches) == 1:
@@ -1004,7 +1004,7 @@ class ForceField(object):
             if signature in signatures:
                 # Signature is the same as an existing residue; check connectivity.
                 for check_residue in unique_unmatched_residues:
-                    matches = _matchResidue(check_residue, template, bondedToAtom, False)
+                    matches = compiled.matchResidueToTemplate(check_residue, template, bondedToAtom, False)
                     if matches is not None:
                         is_unique = False
             if is_unique:
@@ -1101,7 +1101,7 @@ class ForceField(object):
                 if res in residueTemplates:
                     tname = residueTemplates[res]
                     template = self._templates[tname]
-                    matches = _matchResidue(res, template, bondedToAtom, ignoreExternalBonds)
+                    matches = compiled.matchResidueToTemplate(res, template, bondedToAtom, ignoreExternalBonds)
                     if matches is None:
                         raise Exception('User-supplied template %s does not match the residue %d (%s)' % (tname, res.index+1, res.name))
                 else:
@@ -1356,144 +1356,6 @@ def _createResidueSignature(elements):
         s += element.symbol+str(count)
     return s
 
-def _matchResidue(res, template, bondedToAtom, ignoreExternalBonds=False):
-    """Determine whether a residue matches a template and return a list of corresponding atoms.
-
-    Parameters
-    ----------
-    res : Residue
-        The residue to check
-    template : _TemplateData
-        The template to compare it to
-    bondedToAtom : list
-        Enumerates which other atoms each atom is bonded to
-    ignoreExternalBonds : bool
-        If true, ignore external bonds when matching templates
-
-    Returns
-    -------
-    list
-        a list specifying which atom of the template each atom of the residue
-        corresponds to, or None if it does not match the template
-    """
-    atoms = list(res.atoms())
-    numAtoms = len(atoms)
-    if numAtoms != len(template.atoms):
-        return None
-
-    # Translate from global to local atom indices, and record the bonds for each atom.
-
-    renumberAtoms = {}
-    for i in range(numAtoms):
-        renumberAtoms[atoms[i].index] = i
-    bondedTo = []
-    externalBonds = []
-    for atom in atoms:
-        bonds = [renumberAtoms[x] for x in bondedToAtom[atom.index] if x in renumberAtoms]
-        bondedTo.append(bonds)
-        externalBonds.append(0 if ignoreExternalBonds else len([x for x in bondedToAtom[atom.index] if x not in renumberAtoms]))
-
-    # For each unique combination of element and number of bonds, make sure the residue and
-    # template have the same number of atoms.
-
-    residueTypeCount = {}
-    for i, atom in enumerate(atoms):
-        key = (atom.element, len(bondedTo[i]), externalBonds[i])
-        if key not in residueTypeCount:
-            residueTypeCount[key] = 1
-        residueTypeCount[key] += 1
-    templateTypeCount = {}
-    for i, atom in enumerate(template.atoms):
-        key = (atom.element, len(atom.bondedTo), 0 if ignoreExternalBonds else atom.externalBonds)
-        if key not in templateTypeCount:
-            templateTypeCount[key] = 1
-        templateTypeCount[key] += 1
-    if residueTypeCount != templateTypeCount:
-        return None
-
-    # Identify template atoms that could potentially be matches for each atom.
-
-    candidates = [[] for i in range(numAtoms)]
-    for i in range(numAtoms):
-        exactNameMatch = (atoms[i].element is None and any(atom.element is None and atom.name == atoms[i].name for atom in template.atoms))
-        for j, atom in enumerate(template.atoms):
-            if (atom.element is not None and atom.element != atoms[i].element) or (exactNameMatch and atom.name != atoms[i].name):
-                continue
-            if len(atom.bondedTo) != len(bondedTo[i]):
-                continue
-            if not ignoreExternalBonds and atom.externalBonds != externalBonds[i]:
-                continue
-            candidates[i].append(j)
-
-    # Find an optimal ordering for matching atoms.  This means 1) start with the one that has the fewest options,
-    # and 2) follow with ones that are bonded to an already matched atom.
-
-    searchOrder = []
-    atomsToOrder = set(range(numAtoms))
-    efficientAtomSet = set()
-    efficientAtomHeap = []
-    while len(atomsToOrder) > 0:
-        if len(efficientAtomSet) == 0:
-            fewestNeighbors = numAtoms+1
-            for i in atomsToOrder:
-                if len(candidates[i]) < fewestNeighbors:
-                    nextAtom = i
-                    fewestNeighbors = len(candidates[i])
-        else:
-            nextAtom = heappop(efficientAtomHeap)[1]
-            efficientAtomSet.remove(nextAtom)
-        searchOrder.append(nextAtom)
-        atomsToOrder.remove(nextAtom)
-        for i in bondedTo[nextAtom]:
-            if i in atomsToOrder:
-                if i not in efficientAtomSet:
-                    efficientAtomSet.add(i)
-                    heappush(efficientAtomHeap, (len(candidates[i]), i))
-    inverseSearchOrder = [0]*numAtoms
-    for i in range(numAtoms):
-        inverseSearchOrder[searchOrder[i]] = i
-    bondedTo = [[inverseSearchOrder[bondedTo[i][j]] for j in range(len(bondedTo[i]))] for i in searchOrder]
-    candidates = [candidates[i] for i in searchOrder]
-
-    # Recursively match atoms.
-
-    matches = numAtoms*[0]
-    hasMatch = numAtoms*[False]
-    if _findAtomMatches(template, bondedTo, matches, hasMatch, candidates, 0):
-        return [matches[inverseSearchOrder[i]] for i in range(numAtoms)]
-    return None
-
-
-def _getAtomMatchCandidates(template, bondedTo, matches, candidates, position):
-    """Get a list of template atoms that are potential matches for the next atom."""
-    for bonded in bondedTo[position]:
-        if bonded < position:
-            # This atom is bonded to another one for which we already have a match, so only consider
-            # template atoms that *that* one is bonded to.
-            return template.atoms[matches[bonded]].bondedTo
-    return candidates[position]
-
-
-def _findAtomMatches(template, bondedTo, matches, hasMatch, candidates, position):
-    """This is called recursively from inside _matchResidue() to identify matching atoms."""
-    if position == len(matches):
-        return True
-    for i in _getAtomMatchCandidates(template, bondedTo, matches, candidates, position):
-        atom = template.atoms[i]
-        if not hasMatch[i] and i in candidates[position]:
-            # See if the bonds for this identification are consistent
-
-            allBondsMatch = all((bonded > position or matches[bonded] in atom.bondedTo for bonded in bondedTo[position]))
-            if allBondsMatch:
-                # This is a possible match, so try matching the rest of the residue.
-
-                matches[position] = i
-                hasMatch[i] = True
-                if _findAtomMatches(template, bondedTo, matches, hasMatch, candidates, position+1):
-                    return True
-                hasMatch[i] = False
-    return False
-
 
 def _applyPatchesToMatchResidues(forcefield, data, residues, bondedToAtom, ignoreExternalBonds):
     """Try to apply patches to find matches for residues."""
@@ -1647,14 +1509,13 @@ def _applyMultiResiduePatch(data, clusters, patch, candidateTemplates, selectedT
         except:
             # This probably means the patch is inconsistent with another one that has already been applied,
             # so just ignore it.
-            raise
             return
         newlyMatchedClusters = []
         for cluster in clusters:
             for residues in itertools.permutations(cluster):
                 residueMatches = []
                 for residue, template in zip(residues, patchedTemplates):
-                    matches = _matchResidue(residue, template, bondedToAtom, ignoreExternalBonds)
+                    matches = compiled.matchResidueToTemplate(residue, template, bondedToAtom, ignoreExternalBonds)
                     if matches is None:
                         residueMatches = None
                         break
@@ -5339,7 +5200,7 @@ class AmoebaGeneralizedKirkwoodGenerator(object):
         if (atomicNumber in bondiMap):
             radius = bondiMap[atomicNumber]
         else:
-            outputString = "Warning no Bondi radius for atom %s of %s %d using default value=%f" % (atom.name, atom.residue.name, atom.residue.index, radius)
+            outputString = "Warning no Bondi radius for atom %s of %s %d using default value" % (atom.name, atom.residue.name, atom.residue.index)
             raise ValueError( outputString )
 
         return radius
@@ -5439,6 +5300,7 @@ class AmoebaUreyBradleyGenerator(object):
 
     def __init__(self):
 
+        self.anglesForAtom2Type = defaultdict(list)
         self.types1 = []
         self.types2 = []
         self.types3 = []
@@ -5459,11 +5321,12 @@ class AmoebaUreyBradleyGenerator(object):
         for bond in element.findall('UreyBradley'):
             types = forceField._findAtomTypes(bond.attrib, 3)
             if None not in types:
-
+                index = len(generator.types1)
                 generator.types1.append(types[0])
                 generator.types2.append(types[1])
                 generator.types3.append(types[2])
-
+                for t in types[1]:
+                    generator.anglesForAtom2Type[t].append(index)
                 generator.length.append(float(bond.attrib['d']))
                 generator.k.append(float(bond.attrib['k']))
 
@@ -5491,7 +5354,7 @@ class AmoebaUreyBradleyGenerator(object):
             type1 = data.atomType[data.atoms[angle[0]]]
             type2 = data.atomType[data.atoms[angle[1]]]
             type3 = data.atomType[data.atoms[angle[2]]]
-            for i in range(len(self.types1)):
+            for i in self.anglesForAtom2Type[type2]:
                 types1 = self.types1[i]
                 types2 = self.types2[i]
                 types3 = self.types3[i]

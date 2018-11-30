@@ -11,34 +11,12 @@ cmake --version
 echo "Using g++ (`which g++`) version:"
 g++ --version
 
-module load cuda/9.0
+if [ ! -z "$OPENMM_CUDA_COMPILER" ]; then
+    echo "Using nvcc ($OPENMM_CUDA_COMPILER) version:"
+    $OPENMM_CUDA_COMPILER --version
+    CUDA_ARGS="-DCUDA_TOOLKIT_ROOT_DIR=${CUDA_HOME}"
+fi
 
-# Constants
-CONDAENV=openmm-test-3.5
-INSTALL_DIRECTORY="`pwd`/install"
-export OPENMM_CUDA_COMPILER=`which nvcc`
-
-# Create a conda environment, but clean up after one first. If it doesn't exist, don't complain.
-# But since we are invoking this shell with -e (exit on all errors), we need || true to prevent this
-# command from crashing the whole shell
-create_conda_env() {
-  conda create -yn ${CONDAENV} python=3.5 --no-default-packages --quiet
-}
-conda remove -yn ${CONDAENV} --all --quiet || true
-create_conda_env || create_conda_env # Crappy way to work around conda concurrency restrictions
-conda install -yn ${CONDAENV} numpy scipy pytest --quiet
-source activate ${CONDAENV} # enter our new environment
-
-# Build OpenMM
-cmake -DCMAKE_INSTALL_PREFIX="${INSTALL_DIRECTORY}" -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc .
+cmake -DCMAKE_INSTALL_PREFIX="`pwd`/install" -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc \
+      -DSWIG_EXECUTABLE=`which swig` $CUDA_ARGS $EXTRA_CMAKE_ARGS .
 make -j6 install
-make PythonInstall
-
-# Now run the tests
-python -m simtk.testInstallation
-cd python/tests && py.test -v && cd ../..
-python devtools/run-ctest.py --job-duration=120 --timeout 300
-
-# Now remove the conda environment
-source deactivate
-conda remove -yn ${CONDAENV} --all --quiet
