@@ -637,6 +637,75 @@ void testPME(bool triclinic) {
         ASSERT_EQUAL_VEC(refState.getForces()[i], Vec3(io.force[4*i], io.force[4*i+1], io.force[4*i+2]), 1e-3);
 }
 
+void testLJPME(bool triclinic) {
+    // Create a cloud of random LJ particles.
+
+    const int numParticles = 51;
+    const double boxWidth = 5.0;
+    const double cutoff = 1.0;
+    const double alpha = 2.91842;
+    Vec3 boxVectors[3];
+    if (triclinic) {
+        boxVectors[0] = Vec3(boxWidth, 0, 0);
+        boxVectors[1] = Vec3(0.2*boxWidth, boxWidth, 0);
+        boxVectors[2] = Vec3(-0.3*boxWidth, -0.1*boxWidth, boxWidth);
+    }
+    else {
+        boxVectors[0] = Vec3(boxWidth, 0, 0);
+        boxVectors[1] = Vec3(0, boxWidth, 0);
+        boxVectors[2] = Vec3(0, 0, boxWidth);
+    }
+    System system;
+    system.setDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+    NonbondedForce* force = new NonbondedForce();
+    system.addForce(force);
+    vector<Vec3> positions(numParticles);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(1.0);
+        force->addParticle(0, 0.5, 1.0);
+        positions[i] = Vec3(boxWidth*genrand_real2(sfmt), boxWidth*genrand_real2(sfmt), boxWidth*genrand_real2(sfmt));
+    }
+    force->setNonbondedMethod(NonbondedForce::LJPME);
+    force->setCutoffDistance(cutoff);
+    force->setReciprocalSpaceForceGroup(1);
+    force->setLJPMEParameters(alpha, 64, 64, 64);
+    
+    // Compute the reciprocal space forces with the reference platform.
+    
+    Platform& platform = Platform::getPlatformByName("Reference");
+    VerletIntegrator integrator(0.01);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    State refState = context.getState(State::Forces | State::Energy, false, 1<<1);
+    
+    // Now compute them with the optimized kernel.
+    
+    CpuCalcDispersionPmeReciprocalForceKernel pme(CalcDispersionPmeReciprocalForceKernel::Name(), platform);
+    IO io;
+    double ewaldSelfEnergy = 0;
+    for (int i = 0; i < numParticles; i++) {
+        io.posq.push_back(positions[i][0]);
+        io.posq.push_back(positions[i][1]);
+        io.posq.push_back(positions[i][2]);
+        double charge, sigma, epsilon;
+        force->getParticleParameters(i, charge, sigma, epsilon);
+        io.posq.push_back(pow(sigma, 3.0) * 2.0*sqrt(epsilon));
+        ewaldSelfEnergy += pow(alpha*sigma, 6.0) * epsilon / 3.0;
+    }
+    pme.initialize(64, 64, 64, numParticles, alpha, true);
+    pme.beginComputation(io, boxVectors, true);
+    double energy = pme.finishComputation(io);
+
+    // See if they match.
+    
+    ASSERT_EQUAL_TOL(refState.getPotentialEnergy(), energy+ewaldSelfEnergy, 1e-3);
+    for (int i = 0; i < numParticles; i++)
+        ASSERT_EQUAL_VEC(refState.getForces()[i], Vec3(io.force[4*i], io.force[4*i+1], io.force[4*i+2]), 1e-3);
+}
+
 int main(int argc, char* argv[]) {
     try {
         if (!CpuCalcPmeReciprocalForceKernel::isProcessorSupported()) {
@@ -645,6 +714,8 @@ int main(int argc, char* argv[]) {
         }
         testPME(false);
         testPME(true);
+        testLJPME(false);
+        testLJPME(true);
         test_water2_dpme_energies_forces_no_exclusions();
     }
     catch(const exception& e) {

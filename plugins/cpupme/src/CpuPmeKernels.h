@@ -142,9 +142,9 @@ private:
  * vectorized (requiring SSE 4.1) and multithreaded.  It uses FFTW to perform the FFTs.
  */
 
-class OPENMM_EXPORT_PME CpuCalcDispersionPmeReciprocalForceKernel : public CalcPmeReciprocalForceKernel {
+class OPENMM_EXPORT_PME CpuCalcDispersionPmeReciprocalForceKernel : public CalcDispersionPmeReciprocalForceKernel {
 public:
-    CpuCalcDispersionPmeReciprocalForceKernel(std::string name, const Platform& platform) : CalcPmeReciprocalForceKernel(name, platform),
+    CpuCalcDispersionPmeReciprocalForceKernel(std::string name, const Platform& platform) : CalcDispersionPmeReciprocalForceKernel(name, platform),
             hasCreatedPlan(false), isDeleted(false), realGrid(NULL), complexGrid(NULL)  {
     }
     /**
@@ -166,14 +166,14 @@ public:
      * @param periodicBoxVectors  the vectors defining the periodic box (measured in nm)
      * @param includeEnergy       true if potential energy should be computed
      */
-    void beginComputation(IO& io, const Vec3* periodicBoxVectors, bool includeEnergy);
+    void beginComputation(CalcPmeReciprocalForceKernel::IO& io, const Vec3* periodicBoxVectors, bool includeEnergy);
     /**
      * Finish computing the force and energy.
      * 
      * @param io   an object that coordinates data transfer
      * @return the potential energy due to the PME reciprocal space interactions
      */
-    double finishComputation(IO& io);
+    double finishComputation(CalcPmeReciprocalForceKernel::IO& io);
     /**
      * This routine contains the code executed by the main thread.
      */
@@ -221,7 +221,7 @@ private:
     pthread_mutex_t lock;
     pthread_t mainThread;
     // The following variables are used to store information about the calculation currently being performed.
-    IO* io;
+    CalcPmeReciprocalForceKernel::IO* io;
     float energy;
     float* posq;
     Vec3 periodicBoxVectors[3], recipBoxVectors[3];

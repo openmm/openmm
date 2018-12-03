@@ -36,7 +36,7 @@ def run_tests():
     data_dir = os.path.join(os.path.abspath(os.path.split(__file__)[0]), 'openmm', 'app', 'data')
     pdb = PDBFile(os.path.join(data_dir, 'test.pdb'))
     forcefield = ForceField('amber99sb.xml', 'tip3p.xml')
-    system = forcefield.createSystem(pdb.topology, nonbondedMethod=PME, nonbondedCutoff=1*nanometer, constraints=HBonds)
+    system = forcefield.createSystem(pdb.topology, nonbondedMethod=LJPME, nonbondedCutoff=1*nanometer, constraints=HBonds, ewaldErrorTolerance=1e-4)
 
     # List all installed platforms and compute forces with each one.
 
