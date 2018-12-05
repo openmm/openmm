@@ -1661,12 +1661,29 @@ def _applyMultiResiduePatch(data, clusters, patch, candidateTemplates, selectedT
                     else:
                         residueMatches.append(matches)
                 if residueMatches is not None:
-                    # We successfully matched the template to the residues.  Record the parameters.
+                    # Each residue individually matches.  Now make sure they're bonded in the correct way.
 
-                    for i in range(patch.numResidues):
-                        data.recordMatchedAtomParameters(residues[i], patchedTemplates[i], residueMatches[i])
-                    newlyMatchedClusters.append(cluster)
-                    break
+                    bondsMatch = True
+                    for a1, a2 in patch.addedBonds:
+                        res1 = a1.residue
+                        res2 = a2.residue
+                        if res1 != res2:
+                            # The patch adds a bond between residues.  Make sure that bond exists.
+
+                            atoms1 = patchedTemplates[res1].atoms
+                            atoms2 = patchedTemplates[res2].atoms
+                            index1 = next(i for i in range(len(atoms1)) if atoms1[residueMatches[res1][i]].name == a1.name)
+                            index2 = next(i for i in range(len(atoms2)) if atoms2[residueMatches[res2][i]].name == a2.name)
+                            atom1 = list(residues[res1].atoms())[index1]
+                            atom2 = list(residues[res2].atoms())[index2]
+                            bondsMatch &= atom2.index in bondedToAtom[atom1.index]
+                    if bondsMatch:
+                        # We successfully matched the template to the residues.  Record the parameters.
+    
+                        for i in range(patch.numResidues):
+                            data.recordMatchedAtomParameters(residues[i], patchedTemplates[i], residueMatches[i])
+                        newlyMatchedClusters.append(cluster)
+                        break
 
         # Record which clusters were successfully matched.
 
