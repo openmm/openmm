@@ -292,17 +292,15 @@ class DesmondDMSFile(object):
         except:
             return None
 
-
     def _add_agbnp2_ct(self,gb):
         """
         adds connection table information to AGBNP3 force
         """
         q = """SELECT p0,p1 FROM bond"""
-
         for (fcounter,conn,tables,offset) in self._localVars():
             for p0, p1 in conn.execute(q):
                 gb.addParticleConnection(p0+offset,p1+offset)
-
+        
     def createSystem(self, nonbondedMethod=ff.NoCutoff, nonbondedCutoff=1.0*nanometer,
                      ewaldErrorTolerance=0.0005, removeCMMotion=True, hydrogenMass=None,
                      OPLS=False, implicitSolvent=None, AGBNPVersion=1):
@@ -328,7 +326,7 @@ class DesmondDMSFile(object):
             If True, forces OPLS combining rules
         implicitSolvent: string=None
             If not None, creates implicit solvent force of the given name
-            Allowed values are: 'HCT' and 'AGBNP'
+            Allowed values are: HCT and 'AGBNP'
             (the corresponding tables must be present in the DMS file)
         AGBNPVersion: int=1
             AGBNP implicit solvent version
@@ -385,6 +383,9 @@ class DesmondDMSFile(object):
         #add implicit solvent model.
         if implicitSolvent is not None:
 
+            if not (implicitSolvent in (HCT, 'AGBNP', 'GVolSA', 'AGBNP3')):
+                raise ValueError('Illegal implicit solvent method')
+            
             if self._verbose:
                 print('Adding implicit solvent ...')
 
@@ -404,31 +405,30 @@ class DesmondDMSFile(object):
                         gb.addParticle(list(gb_parms[i]))
                     gb.finalize()
                     sys.addForce(gb)
-
+                else:
+                    raise IOError("No HCT parameters found in DMS file")
+                    
             if implicitSolvent is 'AGBNP3':
                 #load AGBNP3 plugin if available
                 try:
                     from AGBNP3plugin import AGBNP3Force
-                    AGBNP3enabled = True
                 except ImportError:
-                    AGBNP3enabled = False
+                    raise NotImplementedError('AGBNP3 is not supported in this version')
                 #sets up AGBNP3
-                if AGBNP3enabled:
-                    gb_parms = self._get_agbnp2_params()
-                    if gb_parms:
-                        if self._verbose:
-                            print('Adding AGBNP3 force ...')
-                        gb = AGBNP3Force()
-                        # add particles
-                        for i in range(len(gb_parms)):
-                            p = gb_parms[i]
-                            gb.addParticle(p[0],p[1],p[2],p[3],p[4],p[5],p[6])
-                        # connection table (from bonds)
-                        self._add_agbnp2_ct(gb)
-                        sys.addForce(gb)
-                else:
+                gb_parms = self._get_agbnp2_params()
+                if gb_parms:
                     if self._verbose:
-                        print('Warning: AGBNP3 is not supported in this version')
+                        print('Adding AGBNP3 force ...')
+                    gb = AGBNP3Force()
+                    # add particles
+                    for i in range(len(gb_parms)):
+                        p = gb_parms[i]
+                        gb.addParticle(p[0],p[1],p[2],p[3],p[4],p[5],p[6])
+                    # connection table (from bonds)
+                    self._add_agbnp2_ct(gb)
+                    sys.addForce(gb)
+                else:
+                    raise IOError("No AGBNP parameters found in DMS file")
 
             if implicitSolvent is 'GVolSA':
                 #implemented as AGBNP version 0
@@ -441,31 +441,29 @@ class DesmondDMSFile(object):
                 #load AGBNP plugin if available
                 try:
                     from AGBNPplugin import AGBNPForce
-                    AGBNPEnabled = True
                 except ImportError:
-                    AGBNPEnabled = False
+                    raise NotImplementedError('AGBNP is not supported in this version')
                 #sets up AGBNP
-                if AGBNPEnabled:
-                    gb_parms = self._get_agbnp2_params()
-                    if gb_parms:
-                        gb = AGBNPForce()
-                        gb.setNonbondedMethod(methodMap[nonbondedMethod])
-                        gb.setCutoffDistance(nonbondedCutoff)
-                        gb.setVersion(AGBNPVersion)
-                        if self._verbose:
-                            print('Using AGBNP force version %d ...' % AGBNPVersion)
-                        # add particles
-                        for i in range(len(gb_parms)):
-                            [radiusN,chargeN,gammaN,alphaN,hbtype,hbwN,ishydrogenN] = gb_parms[i]
-                            h_flag = ishydrogenN > 0
-                            gb.addParticle(radiusN, gammaN, alphaN, chargeN, h_flag)
-                        sys.addForce(gb)
-                        self.gb_parms = gb_parms
-                        self.agbnp = gb
-                else:
+                gb_parms = self._get_agbnp2_params()
+                if gb_parms:
+                    gb = AGBNPForce()
+                    gb.setNonbondedMethod(methodMap[nonbondedMethod])
+                    gb.setCutoffDistance(nonbondedCutoff)
+                    gb.setVersion(AGBNPVersion)
                     if self._verbose:
-                        print('Warning: AGBNP is not supported in this version')
+                        print('Using AGBNP force version %d ...' % AGBNPVersion)
+                    # add particles
+                    for i in range(len(gb_parms)):
+                        [radiusN,chargeN,gammaN,alphaN,hbtype,hbwN,ishydrogenN] = gb_parms[i]
+                        h_flag = ishydrogenN > 0
+                        gb.addParticle(radiusN, gammaN, alphaN, chargeN, h_flag)
+                    sys.addForce(gb)
+                    self.gb_parms = gb_parms
+                    self.agbnp = gb
+                else:
+                    raise IOError("No AGBNP parameters found in DMS file")
 
+                    
         # Adjust masses.
         if hydrogenMass is not None:
             for atom1, atom2 in self.topology.bonds():
@@ -865,11 +863,13 @@ class DesmondDMSFile(object):
                 hfczd = (0.5*fcz*kilocalorie_per_mole/angstrom**2).value_in_unit(kilojoule_per_mole/(nanometer**2))
                 force.addParticle(p0,[ x0d, y0d, z0d, hfcxd,  hfcyd,  hfczd])
 
+                
     def _hasTable(self, table_name, tables):
-        """Does a DMS file contain this table?
+        """check existence of a table
         """
         return table_name in tables
 
+    
     def _readSchemas(self, conn):
         """Read and return the schemas of each of the tables in the dms file connection 'conn'"""
         tables = {}
