@@ -12,6 +12,15 @@ class TestDesmondDMSFile(unittest.TestCase):
         # alanine dipeptide with explicit water
         path = os.path.join(os.path.dirname(__file__), 'systems/alanine-dipeptide-explicit-amber99SBILDN-tip3p.dms')
         self.dms = DesmondDMSFile(path)
+
+        #nabumetone OPLS force field
+        path = os.path.join(os.path.dirname(__file__), 'systems/bcd-nabumetone_lig.dms')
+        self.dms_opls1 = DesmondDMSFile(path)
+        
+        #beta-cyclodextrin/nabumetone complex OPLS force field
+        path1 = os.path.join(os.path.dirname(__file__), 'systems/bcd-nabumetone_lig.dms')
+        path2 = os.path.join(os.path.dirname(__file__), 'systems/bcd-nabumetone_rcpt.dms')
+        self.dms_opls2 = DesmondDMSFile([path1,path2])
     
     def test_NonbondedMethod(self):
         """Test all six options for the nonbondedMethod parameter."""
@@ -76,3 +85,24 @@ class TestDesmondDMSFile(unittest.TestCase):
         totalMass1 = sum([system1.getParticleMass(i) for i in range(system1.getNumParticles())]).value_in_unit(amu)
         totalMass2 = sum([system2.getParticleMass(i) for i in range(system2.getNumParticles())]).value_in_unit(amu)
         self.assertAlmostEqual(totalMass1, totalMass2)
+
+    def test_OPLS1(self):
+        """Test OPLS potential energy of nabumetone """
+        system = self.dms_opls1.createSystem(nonbondedMethod=NoCutoff, OPLS = True)
+        integrator = LangevinIntegrator(300*kelvin, 1.0/picosecond, 0.0005*picoseconds)
+        context = Context(system, integrator,Platform.getPlatformByName('Reference'))
+        context.setPositions(self.dms_opls1.positions)
+        ene = context.getState(getEnergy=True).getPotentialEnergy()
+        self.assertAlmostEqual(ene.value_in_unit(kilojoules_per_mole), 94.21, places=2)
+        
+    def test_OPLS2(self):
+        """Test OPLS potential energy of beta-cyclodextrin/nabumetone complex """
+        system = self.dms_opls2.createSystem(nonbondedMethod=NoCutoff, OPLS = True)
+        integrator = LangevinIntegrator(300*kelvin, 1.0/picosecond, 0.0005*picoseconds)
+        context = Context(system, integrator,Platform.getPlatformByName('Reference'))
+        context.setPositions(self.dms_opls2.positions)
+        ene = context.getState(getEnergy=True).getPotentialEnergy()
+        self.assertAlmostEqual(ene.value_in_unit(kilojoules_per_mole), 903.04, places=2)
+
+if __name__ == '__main__':
+    unittest.main()
