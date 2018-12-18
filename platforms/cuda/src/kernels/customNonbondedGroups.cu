@@ -16,7 +16,7 @@ typedef struct {
 __device__ int reduceMax(int val) {
 #if __CUDA_ARCH__ >= 700
     for (int mask = 16; mask > 0; mask /= 2) 
-        val = max(val, __shfl_xor(val, mask));
+        val = max(val, __shfl_xor_sync(0xffffffff, val, mask));
 #endif
     return val;
 }
