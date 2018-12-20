@@ -28,13 +28,14 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
-from __future__ import absolute_import
+from __future__ import absolute_import, division
 __author__ = "Peter Eastman"
 __version__ = "1.0"
 
-import simtk.unit as unit
+from .. import unit
+from collections import namedtuple
 
-class Vec3(tuple):
+class Vec3(namedtuple('Vec3', ['x', 'y', 'z'])):
     """Vec3 is a 3-element tuple that supports many math operations."""
 
     def __new__(cls, x, y, z):
@@ -47,36 +48,39 @@ class Vec3(tuple):
 
     def __add__(self, other):
         """Add two Vec3s."""
-        return Vec3(self[0]+other[0], self[1]+other[1], self[2]+other[2])
+        return Vec3(self.x+other[0], self.y+other[1], self.z+other[2])
 
     def __radd__(self, other):
         """Add two Vec3s."""
-        return Vec3(self[0]+other[0], self[1]+other[1], self[2]+other[2])
+        return Vec3(self.x+other[0], self.y+other[1], self.z+other[2])
 
     def __sub__(self, other):
         """Add two Vec3s."""
-        return Vec3(self[0]-other[0], self[1]-other[1], self[2]-other[2])
+        return Vec3(self.x-other[0], self.y-other[1], self.z-other[2])
 
     def __rsub__(self, other):
         """Add two Vec3s."""
-        return Vec3(other[0]-self[0], other[1]-self[1], other[2]-self[2])
+        return Vec3(other[0]-self.x, other[1]-self.y, other[2]-self.z)
 
     def __mul__(self, other):
         """Multiply a Vec3 by a constant."""
         if unit.is_unit(other):
             return unit.Quantity(self, other)
-        return Vec3(other*self[0], other*self[1], other*self[2])
+        return Vec3(other*self.x, other*self.y, other*self.z)
 
     def __rmul__(self, other):
         """Multiply a Vec3 by a constant."""
         if unit.is_unit(other):
             return unit.Quantity(self, other)
-        return Vec3(other*self[0], other*self[1], other*self[2])
+        return Vec3(other*self.x, other*self.y, other*self.z)
 
     def __div__(self, other):
         """Divide a Vec3 by a constant."""
-        return Vec3(self[0]/other, self[1]/other, self[2]/other)
+        return Vec3(self.x/other, self.y/other, self.z/other)
     __truediv__ = __div__
 
     def __deepcopy__(self, memo):
-        return Vec3(self[0], self[1], self[2])
+        return Vec3(self.x, self.y, self.z)
+
+    def __neg__(self):
+        return Vec3(-self.x, -self.y, -self.z)
