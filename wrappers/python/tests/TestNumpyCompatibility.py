@@ -16,9 +16,9 @@ class TestNumpyCompatibility(unittest.TestCase):
         prmtop = app.AmberPrmtopFile('systems/water-box-216.prmtop')
 
         system = prmtop.createSystem(nonbondedMethod=app.PME,
-                                         nonbondedCutoff=0.9*unit.nanometers,
-                                         constraints=app.HBonds, rigidWater=True,
-                                         ewaldErrorTolerance=0.0005)
+                                     nonbondedCutoff=0.9*unit.nanometers,
+                                     constraints=app.HBonds, rigidWater=True,
+                                     ewaldErrorTolerance=0.0005)
         integrator = mm.LangevinIntegrator(300*unit.kelvin, 1.0/unit.picoseconds,
                                            2.0*unit.femtoseconds)
         self.simulation = app.Simulation(prmtop.topology, system, integrator,
