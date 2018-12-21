@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -225,6 +225,35 @@ void testCustomFunctions() {
     ASSERT_EQUAL_TOL(0.1*2+0.1*2, state.getPotentialEnergy(), TOL);
 }
 
+void test2DFunction() {
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    VerletIntegrator integrator(0.01);
+    CustomHbondForce* custom = new CustomHbondForce("tab(dtype, atype)");
+    custom->addPerDonorParameter("dtype");
+    custom->addPerAcceptorParameter("atype");
+    custom->addDonor(1, 0, -1, {0.0});
+    custom->addDonor(2, 0, -1, {2.0});
+    custom->addAcceptor(0, 1, -1, {1.0});
+    vector<double> function = {0.0, 1.0, 2.0, 5.0, 6.0, 7.0};
+    custom->addTabulatedFunction("tab", new Discrete2DFunction(3, 2, function));
+    system.addForce(custom);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(3);
+    positions[0] = Vec3(0, 0, 0);
+    positions[1] = Vec3(0, 2, 0);
+    positions[2] = Vec3(2, 0, 0);
+    context.setPositions(positions);
+    State state = context.getState(State::Forces | State::Energy);
+    const vector<Vec3>& forces = state.getForces();
+    ASSERT_EQUAL_VEC(Vec3(0, 0, 0), forces[0], TOL);
+    ASSERT_EQUAL_VEC(Vec3(0, 0, 0), forces[1], TOL);
+    ASSERT_EQUAL_VEC(Vec3(0, 0, 0), forces[2], TOL);
+    ASSERT_EQUAL_TOL(12.0, state.getPotentialEnergy(), TOL);
+}
+
 void testIllegalVariable() {
     System system;
     system.addParticle(1.0);
@@ -280,6 +309,7 @@ int main(int argc, char* argv[]) {
         testExclusions();
         testCutoff();
         testCustomFunctions();
+        test2DFunction();
         testIllegalVariable();
         testParameters();
         runPlatformTests();
