@@ -702,6 +702,7 @@ class CharmmPsfFile(object):
             if atom.system != last_chain:
                 chain = topology.addChain(atom.system)
                 last_chain = atom.system
+                last_residue = None
             if resid != last_residue:
                 last_residue = resid
                 residue = topology.addResidue(atom.residue.resname, chain, resid)
