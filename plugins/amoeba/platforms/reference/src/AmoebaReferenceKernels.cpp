@@ -46,6 +46,7 @@
 #include "openmm/internal/AmoebaGeneralizedKirkwoodForceImpl.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/internal/NonbondedForceImpl.h"
+#include "SimTKReference/AmoebaReferenceHippoNonbondedForce.h"
 
 #include <cmath>
 #ifdef _MSC_VER
@@ -1158,186 +1159,82 @@ void ReferenceCalcAmoebaWcaDispersionForceKernel::copyParametersToContext(Contex
  * -------------------------------------------------------------------------- */
 
 ReferenceCalcHippoNonbondedForceKernel::ReferenceCalcHippoNonbondedForceKernel(std::string name, const Platform& platform, const System& system) : 
-         CalcHippoNonbondedForceKernel(name, platform), system(system), usePme(false), cutoffDistance(1.0) {
+         CalcHippoNonbondedForceKernel(name, platform), ixn(NULL) {
 }
 
 ReferenceCalcHippoNonbondedForceKernel::~ReferenceCalcHippoNonbondedForceKernel() {
+    if (ixn != NULL)
+        delete ixn;
 }
 
 void ReferenceCalcHippoNonbondedForceKernel::initialize(const System& system, const HippoNonbondedForce& force) {
-
-    numParticles   = force.getNumParticles();
-
-    charges.resize(numParticles);
-    dipoles.resize(3*numParticles);
-    quadrupoles.resize(9*numParticles);
-    coreCharges.resize(numParticles);
-    alphas.resize(numParticles);
-    epsilons.resize(numParticles);
-    dampings.resize(numParticles);
-    c6s.resize(numParticles);
-    pauliKs.resize(numParticles);
-    pauliQs.resize(numParticles);
-    pauliAlphas.resize(numParticles);
-    polarizabilities.resize(numParticles);
-    axisTypes.resize(numParticles);
-    multipoleAtomZs.resize(numParticles);
-    multipoleAtomXs.resize(numParticles);
-    multipoleAtomYs.resize(numParticles);
-
-    int dipoleIndex      = 0;
-    int quadrupoleIndex  = 0;
-    for (int i = 0; i < numParticles; i++) {
-
-        // multipoles
-
-        std::vector<double> dipolesD;
-        std::vector<double> quadrupolesD;
-        force.getParticleParameters(i, charges[i], dipolesD, quadrupolesD, coreCharges[i], alphas[i], epsilons[i], dampings[i], c6s[i],
-                pauliKs[i], pauliQs[i], pauliAlphas[i], polarizabilities[i], axisTypes[i], multipoleAtomZs[i], multipoleAtomXs[i], multipoleAtomYs[i]);
-
-        dipoles[dipoleIndex++]             = dipolesD[0];
-        dipoles[dipoleIndex++]             = dipolesD[1];
-        dipoles[dipoleIndex++]             = dipolesD[2];
-        
-        quadrupoles[quadrupoleIndex++]     = quadrupolesD[0];
-        quadrupoles[quadrupoleIndex++]     = quadrupolesD[1];
-        quadrupoles[quadrupoleIndex++]     = quadrupolesD[2];
-        quadrupoles[quadrupoleIndex++]     = quadrupolesD[3];
-        quadrupoles[quadrupoleIndex++]     = quadrupolesD[4];
-        quadrupoles[quadrupoleIndex++]     = quadrupolesD[5];
-        quadrupoles[quadrupoleIndex++]     = quadrupolesD[6];
-        quadrupoles[quadrupoleIndex++]     = quadrupolesD[7];
-        quadrupoles[quadrupoleIndex++]     = quadrupolesD[8];
-    }
-
-    extrapolationCoefficients = {0.0, 0.0, 0.0, 1.0};
-
-    // PME
-
-    nonbondedMethod = force.getNonbondedMethod();
-    if (nonbondedMethod == HippoNonbondedForce::PME) {
-        usePme = true;
-        pmeGridDimension.resize(3);
-        dpmeGridDimension.resize(3);
-        cutoffDistance = force.getCutoffDistance();
-        force.getPMEParameters(alphaEwald, pmeGridDimension[0], pmeGridDimension[1], pmeGridDimension[2]);
-        force.getPMEParameters(dalphaEwald, dpmeGridDimension[0], dpmeGridDimension[1], dpmeGridDimension[2]);
-        if (alphaEwald == 0.0 || dalphaEwald == 0.0) {
-            NonbondedForce nb;
-            nb.setEwaldErrorTolerance(force.getEwaldErrorTolerance());
-            nb.setCutoffDistance(force.getCutoffDistance());
-            if (alphaEwald == 0.0)
-                NonbondedForceImpl::calcPMEParameters(system, nb, alphaEwald, pmeGridDimension[0], pmeGridDimension[1], pmeGridDimension[2], false);
-            if (dalphaEwald == 0.0)
-                NonbondedForceImpl::calcPMEParameters(system, nb, dalphaEwald, dpmeGridDimension[0], dpmeGridDimension[1], dpmeGridDimension[2], true);
-        }    
-    } else {
-        usePme = false;
-    }
-    return;
+    if (force.getNonbondedMethod() == HippoNonbondedForce::PME)
+        ixn = new AmoebaReferencePmeHippoNonbondedForce(force, system);
+    else
+        ixn = new AmoebaReferenceHippoNonbondedForce(force);
 }
 
-AmoebaReferenceHippoNonbondedForce* ReferenceCalcHippoNonbondedForceKernel::setupAmoebaReferenceHippoNonbondedForce(ContextImpl& context)
-{
-    AmoebaReferenceHippoNonbondedForce* amoebaReferenceHippoNonbondedForce = NULL;
-    if (usePme) {
-
-        AmoebaReferencePmeHippoNonbondedForce* amoebaReferencePmeHippoNonbondedForce = new AmoebaReferencePmeHippoNonbondedForce();
-        amoebaReferencePmeHippoNonbondedForce->setAlphaEwald(alphaEwald);
-        amoebaReferencePmeHippoNonbondedForce->setCutoffDistance(cutoffDistance);
-        amoebaReferencePmeHippoNonbondedForce->setPmeGridDimensions(pmeGridDimension);
+void ReferenceCalcHippoNonbondedForceKernel::setupAmoebaReferenceHippoNonbondedForce(ContextImpl& context) {
+    if (ixn->getNonbondedMethod() == HippoNonbondedForce::PME) {
+        AmoebaReferencePmeHippoNonbondedForce* force = dynamic_cast<AmoebaReferencePmeHippoNonbondedForce*>(ixn);
         Vec3* boxVectors = extractBoxVectors(context);
-        double minAllowedSize = 1.999999*cutoffDistance;
-        if (boxVectors[0][0] < minAllowedSize || boxVectors[1][1] < minAllowedSize || boxVectors[2][2] < minAllowedSize) {
+        double minAllowedSize = 1.999999*force->getCutoffDistance();
+        if (boxVectors[0][0] < minAllowedSize || boxVectors[1][1] < minAllowedSize || boxVectors[2][2] < minAllowedSize)
             throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
-        }
-        amoebaReferencePmeHippoNonbondedForce->setPeriodicBoxSize(boxVectors);
-        amoebaReferenceHippoNonbondedForce = static_cast<AmoebaReferenceHippoNonbondedForce*>(amoebaReferencePmeHippoNonbondedForce);
-
+        force->setPeriodicBoxSize(boxVectors);
     }
-    else {
-         amoebaReferenceHippoNonbondedForce = new AmoebaReferenceHippoNonbondedForce(AmoebaReferenceHippoNonbondedForce::NoCutoff);
-    }
-    amoebaReferenceHippoNonbondedForce->setExtrapolationCoefficients(extrapolationCoefficients);
-
-    return amoebaReferenceHippoNonbondedForce;
-
 }
 
 double ReferenceCalcHippoNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
 
-    AmoebaReferenceHippoNonbondedForce* amoebaReferenceHippoNonbondedForce = setupAmoebaReferenceHippoNonbondedForce(context);
+    setupAmoebaReferenceHippoNonbondedForce(context);
 
     vector<Vec3>& posData = extractPositions(context);
     vector<Vec3>& forceData = extractForces(context);
-    double energy = amoebaReferenceHippoNonbondedForce->calculateForceAndEnergy(posData, charges, dipoles, quadrupoles, coreCharges,
-                                                                           alphas, epsilons, dampings, c6s, pauliKs, pauliQs, pauliAlphas, polarizabilities, axisTypes, 
-                                                                           multipoleAtomZs, multipoleAtomXs, multipoleAtomYs,
-                                                                           forceData);
-
-    delete amoebaReferenceHippoNonbondedForce;
-
-    return static_cast<double>(energy);
+    return ixn->calculateForceAndEnergy(posData, forceData);
 }
 
 void ReferenceCalcHippoNonbondedForceKernel::getInducedDipoles(ContextImpl& context, vector<Vec3>& outputDipoles) {
     int numParticles = context.getSystem().getNumParticles();
     outputDipoles.resize(numParticles);
-
-    // Create an AmoebaReferenceHippoNonbondedForce to do the calculation.
-    
-    AmoebaReferenceHippoNonbondedForce* amoebaReferenceHippoNonbondedForce = setupAmoebaReferenceHippoNonbondedForce(context);
+    setupAmoebaReferenceHippoNonbondedForce(context);
     vector<Vec3>& posData = extractPositions(context);
     
     // Retrieve the induced dipoles.
     
     vector<Vec3> inducedDipoles;
-    amoebaReferenceHippoNonbondedForce->calculateInducedDipoles(posData, charges, dipoles, quadrupoles, coreCharges, alphas, epsilons,
-            dampings, c6s, pauliKs, pauliQs, pauliAlphas, polarizabilities, axisTypes, multipoleAtomZs, multipoleAtomXs, multipoleAtomYs, inducedDipoles);
+    ixn->calculateInducedDipoles(posData, inducedDipoles);
     for (int i = 0; i < numParticles; i++)
         outputDipoles[i] = inducedDipoles[i];
-    delete amoebaReferenceHippoNonbondedForce;
 }
 
 void ReferenceCalcHippoNonbondedForceKernel::getLabFramePermanentDipoles(ContextImpl& context, vector<Vec3>& outputDipoles) {
     int numParticles = context.getSystem().getNumParticles();
     outputDipoles.resize(numParticles);
-
-    // Create an AmoebaReferenceHippoNonbondedForce to do the calculation.
-    
-    AmoebaReferenceHippoNonbondedForce* amoebaReferenceHippoNonbondedForce = setupAmoebaReferenceHippoNonbondedForce(context);
+    setupAmoebaReferenceHippoNonbondedForce(context);
     vector<Vec3>& posData = extractPositions(context);
     
     // Retrieve the permanent dipoles in the lab frame.
     
     vector<Vec3> labFramePermanentDipoles;
-    amoebaReferenceHippoNonbondedForce->calculateLabFramePermanentDipoles(posData, charges, dipoles, quadrupoles, coreCharges, alphas, epsilons, dampings, c6s, pauliKs, pauliQs,
-            pauliAlphas, polarizabilities, axisTypes, multipoleAtomZs, multipoleAtomXs, multipoleAtomYs, labFramePermanentDipoles);
+    ixn->calculateLabFramePermanentDipoles(posData, labFramePermanentDipoles);
     for (int i = 0; i < numParticles; i++)
         outputDipoles[i] = labFramePermanentDipoles[i];
-    delete amoebaReferenceHippoNonbondedForce;
 }
 
 
 void ReferenceCalcHippoNonbondedForceKernel::getTotalDipoles(ContextImpl& context, vector<Vec3>& outputDipoles) {
     int numParticles = context.getSystem().getNumParticles();
     outputDipoles.resize(numParticles);
-
-    // Create an AmoebaReferenceHippoNonbondedForce to do the calculation.
-    
-    AmoebaReferenceHippoNonbondedForce* amoebaReferenceHippoNonbondedForce = setupAmoebaReferenceHippoNonbondedForce(context);
+    setupAmoebaReferenceHippoNonbondedForce(context);
     vector<Vec3>& posData = extractPositions(context);
     
     // Retrieve the permanent dipoles in the lab frame.
     
     vector<Vec3> totalDipoles;
-    amoebaReferenceHippoNonbondedForce->calculateTotalDipoles(posData, charges, dipoles, quadrupoles, coreCharges, alphas, epsilons, dampings, c6s, pauliKs,
-            pauliQs, pauliAlphas, polarizabilities, axisTypes, multipoleAtomZs, multipoleAtomXs, multipoleAtomYs, totalDipoles);
-
+    ixn->calculateTotalDipoles(posData, totalDipoles);
     for (int i = 0; i < numParticles; i++)
         outputDipoles[i] = totalDipoles[i];
-    delete amoebaReferenceHippoNonbondedForce;
 }
 
 
@@ -1345,70 +1242,50 @@ void ReferenceCalcHippoNonbondedForceKernel::getTotalDipoles(ContextImpl& contex
 void ReferenceCalcHippoNonbondedForceKernel::getElectrostaticPotential(ContextImpl& context, const std::vector< Vec3 >& inputGrid,
                                                                         std::vector< double >& outputElectrostaticPotential) {
 
-    AmoebaReferenceHippoNonbondedForce* amoebaReferenceHippoNonbondedForce = setupAmoebaReferenceHippoNonbondedForce(context);
-    vector<Vec3>& posData                                     = extractPositions(context);
+    setupAmoebaReferenceHippoNonbondedForce(context);
+    vector<Vec3>& posData = extractPositions(context);
     vector<Vec3> grid(inputGrid.size());
     vector<double> potential(inputGrid.size());
-    for (unsigned int ii = 0; ii < inputGrid.size(); ii++) {
+    for (unsigned int ii = 0; ii < inputGrid.size(); ii++)
         grid[ii] = inputGrid[ii];
-    }
-    amoebaReferenceHippoNonbondedForce->calculateElectrostaticPotential(posData, charges, dipoles, quadrupoles, coreCharges, alphas,
-                                                                   epsilons, dampings, c6s, pauliKs, pauliQs, pauliAlphas, polarizabilities, axisTypes, 
-                                                                   multipoleAtomZs, multipoleAtomXs, multipoleAtomYs,
-                                                                   grid, potential);
-
+    ixn->calculateElectrostaticPotential(posData, grid, potential);
     outputElectrostaticPotential.resize(inputGrid.size());
     for (unsigned int ii = 0; ii < inputGrid.size(); ii++) {
         outputElectrostaticPotential[ii] = potential[ii];
     }
-
-    delete amoebaReferenceHippoNonbondedForce;
 }
 
 void ReferenceCalcHippoNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const HippoNonbondedForce& force) {
     if (numParticles != force.getNumParticles())
         throw OpenMMException("updateParametersInContext: The number of multipoles has changed");
-
-    // Record the values.
-
-    int dipoleIndex = 0;
-    int quadrupoleIndex = 0;
-    for (int i = 0; i < numParticles; ++i) {
-        std::vector<double> dipolesD;
-        std::vector<double> quadrupolesD;
-        force.getParticleParameters(i, charges[i], dipolesD, quadrupolesD, coreCharges[i], alphas[i], epsilons[i], dampings[i], c6s[i],
-                pauliKs[i], pauliQs[i], pauliAlphas[i], polarizabilities[i], axisTypes[i], multipoleAtomZs[i], multipoleAtomXs[i], multipoleAtomYs[i]);
-
-        dipoles[dipoleIndex++]             = dipolesD[0];
-        dipoles[dipoleIndex++]             = dipolesD[1];
-        dipoles[dipoleIndex++]             = dipolesD[2];
-        
-        quadrupoles[quadrupoleIndex++]     = quadrupolesD[0];
-        quadrupoles[quadrupoleIndex++]     = quadrupolesD[1];
-        quadrupoles[quadrupoleIndex++]     = quadrupolesD[2];
-        quadrupoles[quadrupoleIndex++]     = quadrupolesD[3];
-        quadrupoles[quadrupoleIndex++]     = quadrupolesD[4];
-        quadrupoles[quadrupoleIndex++]     = quadrupolesD[5];
-        quadrupoles[quadrupoleIndex++]     = quadrupolesD[6];
-        quadrupoles[quadrupoleIndex++]     = quadrupolesD[7];
-        quadrupoles[quadrupoleIndex++]     = quadrupolesD[8];
-    }
+    delete ixn;
+    ixn = NULL;
+    if (force.getNonbondedMethod() == HippoNonbondedForce::PME)
+        ixn = new AmoebaReferencePmeHippoNonbondedForce(force, context.getSystem());
+    else
+        ixn = new AmoebaReferenceHippoNonbondedForce(force);
 }
 
 void ReferenceCalcHippoNonbondedForceKernel::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
-    if (!usePme)
+    if (ixn->getNonbondedMethod() != HippoNonbondedForce::PME)
         throw OpenMMException("getPMEParametersInContext: This Context is not using PME");
-    alpha = alphaEwald;
-    nx = pmeGridDimension[0];
-    ny = pmeGridDimension[1];
-    nz = pmeGridDimension[2];
+    AmoebaReferencePmeHippoNonbondedForce* force = dynamic_cast<AmoebaReferencePmeHippoNonbondedForce*>(ixn);
+    alpha = force->getAlphaEwald();
+    vector<int> dim;
+    force->getPmeGridDimensions(dim);
+    nx = dim[0];
+    ny = dim[1];
+    nz = dim[2];
 }
 
 void ReferenceCalcHippoNonbondedForceKernel::getDPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
-    if (!usePme)
-        throw OpenMMException("getPMEParametersInContext: This Context is not using PME");
-    alpha = dalphaEwald;
-    nx = dpmeGridDimension[0];
-    ny = dpmeGridDimension[1];
-    nz = dpmeGridDimension[2];
+    if (ixn->getNonbondedMethod() != HippoNonbondedForce::PME)
+        throw OpenMMException("getDPMEParametersInContext: This Context is not using PME");
+    AmoebaReferencePmeHippoNonbondedForce* force = dynamic_cast<AmoebaReferencePmeHippoNonbondedForce*>(ixn);
+    alpha = force->getDispersionAlphaEwald();
+    vector<int> dim;
+    force->getDispersionPmeGridDimensions(dim);
+    nx = dim[0];
+    ny = dim[1];
+    nz = dim[2];
 }

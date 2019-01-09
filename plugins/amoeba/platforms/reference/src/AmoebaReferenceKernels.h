@@ -714,7 +714,7 @@ public:
      *
      * @return pointer to initialized instance of AmoebaReferenceHippoNonbondedForce
      */
-    AmoebaReferenceHippoNonbondedForce* setupAmoebaReferenceHippoNonbondedForce(ContextImpl& context);
+    void setupAmoebaReferenceHippoNonbondedForce(ContextImpl& context);
     /**
      * Execute the kernel to calculate the forces and/or energy.
      *
@@ -782,24 +782,8 @@ public:
 
 private:
 
+    AmoebaReferenceHippoNonbondedForce* ixn;
     int numParticles;
-    HippoNonbondedForce::NonbondedMethod nonbondedMethod;
-    std::vector<double> charges, coreCharges, alphas, epsilons, dampings, c6s, pauliKs, pauliQs, pauliAlphas, polarizabilities;
-    std::vector<double> dipoles;
-    std::vector<double> quadrupoles;
-    std::vector<int> axisTypes;
-    std::vector<int> multipoleAtomZs;
-    std::vector<int> multipoleAtomXs;
-    std::vector<int> multipoleAtomYs;
-
-    std::vector<double> extrapolationCoefficients;
-
-    bool usePme;
-    double alphaEwald, dalphaEwald;
-    double cutoffDistance;
-    std::vector<int> pmeGridDimension, dpmeGridDimension;
-
-    const System& system;
 };
 
 } // namespace OpenMM

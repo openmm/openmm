@@ -25,6 +25,7 @@
 #define __AmoebaReferenceHippoNonbondedForce_H__
 
 #include "openmm/HippoNonbondedForce.h"
+#include "openmm/System.h"
 #include "openmm/Vec3.h"
 #include <map>
 #include <utility>
@@ -245,37 +246,12 @@ class AmoebaReferenceHippoNonbondedForce {
 
 public:
 
-    /** 
-     * This is an enumeration of the different methods that may be used for handling long range Multipole forces.
-     */
-    enum NonbondedMethod {
-
-        /**
-         * No cutoff is applied to the interactions.  The full set of N^2 interactions is computed exactly.
-         * This necessarily means that periodic boundary conditions cannot be used.  This is the default.
-         */
-        NoCutoff = 0,
-
-       /** 
-         * Periodic boundary conditions are used, and Particle-Mesh Ewald (PME) summation is used to compute the interaction of each particle
-         * with all periodic copies of every other particle.
-         */
-        PME = 1
-    };
-
     /**
      * Constructor
      * 
      */
-    AmoebaReferenceHippoNonbondedForce();
- 
-    /**
-     * Constructor
-     * 
-     * @param nonbondedMethod nonbonded method
-     */
-    AmoebaReferenceHippoNonbondedForce(NonbondedMethod nonbondedMethod);
- 
+    AmoebaReferenceHippoNonbondedForce(const HippoNonbondedForce& force);
+
     /**
      * Destructor
      * 
@@ -287,14 +263,7 @@ public:
      * 
      * @return nonbonded method
      */
-    NonbondedMethod getNonbondedMethod() const;
-
-    /**
-     * Set nonbonded method.
-     * 
-     * @param nonbondedMethod nonbonded method
-     */
-    void setNonbondedMethod(NonbondedMethod nonbondedMethod);
+    HippoNonbondedForce::NonbondedMethod getNonbondedMethod() const;
 
     /**
      * Set the coefficients for the µ_0, µ_1, µ_2, µ_n terms in the extrapolation
@@ -309,184 +278,51 @@ public:
      * Calculate force and energy.
      *
      * @param particlePositions         Cartesian coordinates of particles
-     * @param charges                   scalar charges for each particle
-     * @param dipoles                   molecular frame dipoles for each particle
-     * @param quadrupoles               molecular frame quadrupoles for each particle
-     * @param tholes                    Thole factors for each particle
-     * @param dampingFactors            damping factors for each particle
-     * @param polarity                  polarity for each particle
-     * @param axisTypes                 axis type (Z-then-X, ...) for each particle
-     * @param multipoleAtomZs           indicies of particle specifying the molecular frame z-axis for each particle
-     * @param multipoleAtomXs           indicies of particle specifying the molecular frame x-axis for each particle
-     * @param multipoleAtomYs           indicies of particle specifying the molecular frame y-axis for each particle
      * @param forces                    add forces to this vector
      *
      * @return energy
      */
     double calculateForceAndEnergy(const std::vector<OpenMM::Vec3>& particlePositions,
-                                   const std::vector<double>& charges,
-                                   const std::vector<double>& dipoles,
-                                   const std::vector<double>& quadrupoles,
-                                   const std::vector<double>& coreCharges,
-                                   const std::vector<double>& alphas,
-                                   const std::vector<double>& epsilons,
-                                   const std::vector<double>& dampings,
-                                   const std::vector<double>& c6s,
-                                   const std::vector<double>& pauliKs,
-                                   const std::vector<double>& pauliQs,
-                                   const std::vector<double>& pauliAlphas,
-                                   const std::vector<double>& polarizabilities,
-                                   const std::vector<int>& axisTypes,
-                                   const std::vector<int>& multipoleAtomZs,
-                                   const std::vector<int>& multipoleAtomXs,
-                                   const std::vector<int>& multipoleAtomYs,
                                    std::vector<OpenMM::Vec3>& forces);
 
     /**
      * Calculate particle induced dipoles.
      *
-     * @param masses                    particle masses
      * @param particlePositions         Cartesian coordinates of particles
-     * @param charges                   scalar charges for each particle
-     * @param dipoles                   molecular frame dipoles for each particle
-     * @param quadrupoles               molecular frame quadrupoles for each particle
-     * @param tholes                    Thole factors for each particle
-     * @param dampingFactors            dampling factors for each particle
-     * @param polarity                  polarity for each particle
-     * @param axisTypes                 axis type (Z-then-X, ...) for each particle
-     * @param multipoleAtomZs           indicies of particle specifying the molecular frame z-axis for each particle
-     * @param multipoleAtomXs           indicies of particle specifying the molecular frame x-axis for each particle
-     * @param multipoleAtomYs           indicies of particle specifying the molecular frame y-axis for each particle
      * @param outputMultipoleMoments    output multipole moments
      */
     void calculateInducedDipoles(const std::vector<OpenMM::Vec3>& particlePositions,
-                                 const std::vector<double>& charges,
-                                 const std::vector<double>& dipoles,
-                                 const std::vector<double>& quadrupoles,
-                                 const std::vector<double>& coreCharges,
-                                 const std::vector<double>& alphas,
-                                 const std::vector<double>& epsilons,
-                                 const std::vector<double>& dampings,
-                                 const std::vector<double>& c6s,
-                                 const std::vector<double>& pauliKs,
-                                 const std::vector<double>& pauliQs,
-                                 const std::vector<double>& pauliAlphas,
-                                 const std::vector<double>& polarizabilities,
-                                 const std::vector<int>& axisTypes,
-                                 const std::vector<int>& multipoleAtomZs,
-                                 const std::vector<int>& multipoleAtomXs,
-                                 const std::vector<int>& multipoleAtomYs,
                                  std::vector<Vec3>& outputInducedDipoles);
 
     /**
      * Calculate particle permanent dipoles rotated in the lab frame.
      *
-     * @param masses                    particle masses
      * @param particlePositions         Cartesian coordinates of particles
-     * @param charges                   scalar charges for each particle
-     * @param dipoles                   molecular frame dipoles for each particle
-     * @param quadrupoles               molecular frame quadrupoles for each particle
-     * @param tholes                    Thole factors for each particle
-     * @param dampingFactors            dampling factors for each particle
-     * @param polarity                  polarity for each particle
-     * @param axisTypes                 axis type (Z-then-X, ...) for each particle
-     * @param multipoleAtomZs           indicies of particle specifying the molecular frame z-axis for each particle
-     * @param multipoleAtomXs           indicies of particle specifying the molecular frame x-axis for each particle
-     * @param multipoleAtomYs           indicies of particle specifying the molecular frame y-axis for each particle
      * @param outputMultipoleMoments    output multipole moments
      */
 
     void calculateLabFramePermanentDipoles(const std::vector<Vec3>& particlePositions,
-                                           const std::vector<double>& charges,
-                                           const std::vector<double>& dipoles,
-                                           const std::vector<double>& quadrupoles,
-                                           const std::vector<double>& coreCharges,
-                                           const std::vector<double>& alphas,
-                                           const std::vector<double>& epsilons,
-                                           const std::vector<double>& dampings,
-                                           const std::vector<double>& c6s,
-                                           const std::vector<double>& pauliKs,
-                                           const std::vector<double>& pauliQs,
-                                           const std::vector<double>& pauliAlphas,
-                                           const std::vector<double>& polarizabilities,
-                                           const std::vector<int>& axisTypes,
-                                           const std::vector<int>& multipoleAtomZs,
-                                           const std::vector<int>& multipoleAtomXs,
-                                           const std::vector<int>& multipoleAtomYs,
                                            std::vector<Vec3>& outputRotatedPermanentDipoles);
 
     /**
      * Calculate particle total dipoles.
      *
-     * @param masses                    particle masses
      * @param particlePositions         Cartesian coordinates of particles
-     * @param charges                   scalar charges for each particle
-     * @param dipoles                   molecular frame dipoles for each particle
-     * @param quadrupoles               molecular frame quadrupoles for each particle
-     * @param tholes                    Thole factors for each particle
-     * @param dampingFactors            dampling factors for each particle
-     * @param polarity                  polarity for each particle
-     * @param axisTypes                 axis type (Z-then-X, ...) for each particle
-     * @param multipoleAtomZs           indicies of particle specifying the molecular frame z-axis for each particle
-     * @param multipoleAtomXs           indicies of particle specifying the molecular frame x-axis for each particle
-     * @param multipoleAtomYs           indicies of particle specifying the molecular frame y-axis for each particle
      * @param outputMultipoleMoments    output multipole moments
      */
 
 
     void calculateTotalDipoles(const std::vector<Vec3>& particlePositions,
-                               const std::vector<double>& charges,
-                               const std::vector<double>& dipoles,
-                               const std::vector<double>& quadrupoles,
-                               const std::vector<double>& coreCharges,
-                               const std::vector<double>& alphas,
-                               const std::vector<double>& epsilons,
-                               const std::vector<double>& dampings,
-                               const std::vector<double>& c6s,
-                               const std::vector<double>& pauliKs,
-                               const std::vector<double>& pauliQs,
-                               const std::vector<double>& pauliAlphas,
-                               const std::vector<double>& polarizabilities,
-                               const std::vector<int>& axisTypes,
-                               const std::vector<int>& multipoleAtomZs,
-                               const std::vector<int>& multipoleAtomXs,
-                               const std::vector<int>& multipoleAtomYs,
                                std::vector<Vec3>& outputRotatedPermanentDipoles);
 
     /**
      * Calculate electrostatic potential at a set of grid points.
      *
      * @param particlePositions         Cartesian coordinates of particles
-     * @param charges                   scalar charges for each particle
-     * @param dipoles                   molecular frame dipoles for each particle
-     * @param quadrupoles               molecular frame quadrupoles for each particle
-     * @param tholes                    Thole factors for each particle
-     * @param dampingFactors            dampling factors for each particle
-     * @param polarity                  polarity for each particle
-     * @param axisTypes                 axis type (Z-then-X, ...) for each particle
-     * @param multipoleAtomZs           indicies of particle specifying the molecular frame z-axis for each particle
-     * @param multipoleAtomXs           indicies of particle specifying the molecular frame x-axis for each particle
-     * @param multipoleAtomYs           indicies of particle specifying the molecular frame y-axis for each particle
      * @param input grid                input grid points to compute potential
      * @param outputPotential           output electrostatic potential
      */
     void calculateElectrostaticPotential(const std::vector<OpenMM::Vec3>& particlePositions,
-                                         const std::vector<double>& charges,
-                                         const std::vector<double>& dipoles,
-                                         const std::vector<double>& quadrupoles,
-                                         const std::vector<double>& coreCharges,
-                                         const std::vector<double>& alphas,
-                                         const std::vector<double>& epsilons,
-                                         const std::vector<double>& dampings,
-                                         const std::vector<double>& c6s,
-                                         const std::vector<double>& pauliKs,
-                                         const std::vector<double>& pauliQs,
-                                         const std::vector<double>& pauliAlphas,
-                                         const std::vector<double>& polarizabilities,
-                                         const std::vector<int>& axisTypes,
-                                         const std::vector<int>& multipoleAtomZs,
-                                         const std::vector<int>& multipoleAtomXs,
-                                         const std::vector<int>& multipoleAtomYs,
                                          const std::vector<Vec3>& inputGrid,
                                          std::vector<double>& outputPotential);
 
@@ -503,7 +339,7 @@ protected:
      */
     class MultipoleParticleData {
         public:
-            unsigned int particleIndex;    
+            int particleIndex, axisType, multipoleAtomX, multipoleAtomY, multipoleAtomZ;    
             Vec3 position;
             double charge;
             Vec3 dipole;
@@ -538,13 +374,14 @@ protected:
 
     unsigned int _numParticles;
 
-    NonbondedMethod _nonbondedMethod;
+    HippoNonbondedForce::NonbondedMethod _nonbondedMethod;
 
     double _electric;
 
     enum ScaleType { D_SCALE, P_SCALE, M_SCALE, U_SCALE, LAST_SCALE_TYPE_INDEX };
     std::map<std::pair<int, int>, std::vector<double> > exceptions;
 
+    std::vector<MultipoleParticleData> particleData;
     std::vector<TransformedMultipole> _transformed;
     std::vector<Vec3> _fixedMultipoleField;
     std::vector<Vec3> _fixedMultipoleFieldPolar;
@@ -560,38 +397,12 @@ protected:
     std::vector<double>  _extPartCoefficients;
 
     /**
-     * Helper constructor method to centralize initialization of objects.
-     *
-     */
-    void initialize();
-
-    /**
      * Load particle data.
      *
      * @param particlePositions   particle coordinates
-     * @param charges             charges
-     * @param dipoles             dipoles
-     * @param quadrupoles         quadrupoles
-     * @param tholes              Thole parameters
-     * @param dampingFactors      dampming factors
-     * @param polarity            polarity
-     * @param particleData        output data struct
      *
      */
-    void loadParticleData(const std::vector<OpenMM::Vec3>& particlePositions, 
-                          const std::vector<double>& charges,
-                          const std::vector<double>& dipoles,
-                          const std::vector<double>& quadrupoles,
-                          const std::vector<double>& coreCharges,
-                          const std::vector<double>& alphas,
-                          const std::vector<double>& epsilons,
-                          const std::vector<double>& dampings,
-                          const std::vector<double>& c6s,
-                          const std::vector<double>& pauliKs,
-                          const std::vector<double>& pauliQs,
-                          const std::vector<double>& pauliAlphas,
-                          const std::vector<double>& polarizabilities,
-                          std::vector<MultipoleParticleData>& particleData) const;
+    void loadParticleData(const std::vector<OpenMM::Vec3>& particlePositions);
 
     /**
      * Calculate fixed multipole fields.
@@ -645,22 +456,12 @@ protected:
      *
      */
     void checkChiralCenterAtParticle(MultipoleParticleData& particleI, int axisType, MultipoleParticleData& particleZ,
-                                     MultipoleParticleData& particleX, MultipoleParticleData& particleY) const;
+                                     MultipoleParticleData& particleX, MultipoleParticleData& particleY);
 
     /**
      * Invert multipole moments (dipole[Y], quadrupole[XY] and quadrupole[YZ]) if chiral center inverted.
-     * 
-     * @param particleData            vector of parameters (charge, labFrame dipoles, quadrupoles, ...) for particles
-     * @param multipoleAtomXs         vector of z-particle indices used to map molecular frame to lab frame
-     * @param multipoleAtomYs         vector of x-particle indices used to map molecular frame to lab frame
-     * @param multipoleAtomZs         vector of y-particle indices used to map molecular frame to lab frame
-     * @param axisType                axis type
      */
-    void checkChiral(std::vector<MultipoleParticleData>& particleData, 
-                     const std::vector<int>& multipoleAtomXs,
-                     const std::vector<int>& multipoleAtomYs,
-                     const std::vector<int>& multipoleAtomZs,
-                     const std::vector<int>& axisTypes) const;
+    void checkChiral();
     /**
      * Apply rotation matrix to molecular dipole/quadrupoles to get corresponding lab frame values
      * for particle I.
@@ -719,11 +520,7 @@ protected:
      * @param multipoleAtomZs         vector of y-particle indices used to map molecular frame to lab frame
      * @param axisType                axis type
      */
-    void applyRotationMatrix(std::vector<MultipoleParticleData>& particleData, 
-                             const std::vector<int>& multipoleAtomXs,
-                             const std::vector<int>& multipoleAtomYs,
-                             const std::vector<int>& multipoleAtomZs,
-                             const std::vector<int>& axisTypes) const;
+    void applyRotationMatrix();
     /**
      * Zero fixed multipole fields.
      */
@@ -794,10 +591,8 @@ protected:
 
     /**
      * Calculate induced dipoles.
-     * 
-     * @param particleData      vector of particle positions and parameters (charge, labFrame dipoles, quadrupoles, ...)
      */
-    virtual void calculateInducedDipoles(const std::vector<MultipoleParticleData>& particleData);
+    virtual void calculateInducedDipoles();
 
     /**
      * Setup: 
@@ -807,37 +602,8 @@ protected:
      *        calculate induced dipoles (see calculateInducedDipoles below)
      *
      * @param particlePositions         Cartesian coordinates of particles
-     * @param charges                   scalar charges for each particle
-     * @param dipoles                   molecular frame dipoles for each particle
-     * @param quadrupoles               molecular frame quadrupoles for each particle
-     * @param tholes                    Thole factors for each particle
-     * @param dampingFactors            dampling factors for each particle
-     * @param polarity                  polarity for each particle
-     * @param axisTypes                 axis type (Z-then-X, ...) for each particle
-     * @param multipoleAtomZs           indicies of particle specifying the molecular frame z-axis for each particle
-     * @param multipoleAtomXs           indicies of particle specifying the molecular frame x-axis for each particle
-     * @param multipoleAtomYs           indicies of particle specifying the molecular frame y-axis for each particle
-     * @param particleData              output vector of parameters (charge, labFrame dipoles, quadrupoles, ...) for particles
-     *
      */
-    void setup(const std::vector<OpenMM::Vec3>& particlePositions,
-               const std::vector<double>& charges,
-               const std::vector<double>& dipoles,
-               const std::vector<double>& quadrupoles,
-               const std::vector<double>& coreCharges,
-               const std::vector<double>& alphas,
-               const std::vector<double>& epsilons,
-               const std::vector<double>& dampings,
-               const std::vector<double>& c6s,
-               const std::vector<double>& pauliKs,
-               const std::vector<double>& pauliQs,
-               const std::vector<double>& pauliAlphas,
-               const std::vector<double>& polarizabilities,
-               const std::vector<int>& axisTypes,
-               const std::vector<int>& multipoleAtomZs,
-               const std::vector<int>& multipoleAtomXs,
-               const std::vector<int>& multipoleAtomYs,
-               std::vector<MultipoleParticleData>& particleData);
+    void setup(const std::vector<OpenMM::Vec3>& particlePositions);
 
     /**
      * Calculate electrostatic interaction between particles I and K.
@@ -866,26 +632,16 @@ protected:
                                      const MultipoleParticleData& particleU,
                                      const MultipoleParticleData& particleV,
                                            MultipoleParticleData* particleW,
-                                     int axisType, const Vec3& torque, std::vector<OpenMM::Vec3>& forces) const;
+                                     int axisType, const Vec3& torque, std::vector<OpenMM::Vec3>& forces);
 
     /**
      * Map torques to forces.
      * 
-     * @param particleData            vector of parameters (charge, labFrame dipoles, quadrupoles, ...) for particles
-     * @param multipoleAtomZs         vector of z-particle indices used to map molecular frame to lab frame
-     * @param multipoleAtomXs         vector of x-particle indices used to map molecular frame to lab frame
-     * @param multipoleAtomYs         vector of y-particle indices used to map molecular frame to lab frame
-     * @param axisType                vector of axis types (Bisector/Z-then-X, ...) for particles
      * @param torques                 output torques
      * @param forces                  output forces 
      */
-    void mapTorqueToForce(std::vector<MultipoleParticleData>& particleData, 
-                          const std::vector<int>& multipoleAtomXs,
-                          const std::vector<int>& multipoleAtomYs,
-                          const std::vector<int>& multipoleAtomZs,
-                          const std::vector<int>& axisTypes,
-                          std::vector<OpenMM::Vec3>& torques,
-                          std::vector<OpenMM::Vec3>& forces) const;
+    void mapTorqueToForce(std::vector<OpenMM::Vec3>& torques,
+                          std::vector<OpenMM::Vec3>& forces);
 
     /**
      * Calculate electrostatic forces
@@ -896,8 +652,7 @@ protected:
      *
      * @return energy
      */
-    virtual double calculateElectrostatic(const std::vector<MultipoleParticleData>& particleData, 
-                                          std::vector<OpenMM::Vec3>& torques,
+    virtual double calculateElectrostatic(std::vector<OpenMM::Vec3>& torques,
                                           std::vector<OpenMM::Vec3>& forces);
 
     /**
@@ -964,7 +719,7 @@ public:
      * Constructor
      * 
      */
-    AmoebaReferencePmeHippoNonbondedForce();
+    AmoebaReferencePmeHippoNonbondedForce(const HippoNonbondedForce& force, const System& system);
  
     /**
      * Destructor
@@ -997,12 +752,12 @@ public:
     double getAlphaEwald() const;
 
     /**
-     * Set alpha used in Ewald summation.
+     * Get alpha used in dispersion Ewald summation.
      *
      * @return alpha
      *
      */
-    void setAlphaEwald(double alphaEwald);
+    double getDispersionAlphaEwald() const;
 
     /**
      * Get PME grid dimensions.
@@ -1014,12 +769,29 @@ public:
     void getPmeGridDimensions(std::vector<int>& pmeGridDimensions) const;
 
     /**
+     * Get PME grid dimensions.
+     *
+     * @param pmeGridDimensions contains PME grid dimensions upon return
+
+     *
+     */
+    void getDispersionPmeGridDimensions(std::vector<int>& pmeGridDimensions) const;
+
+    /**
      * Set PME grid dimensions.
      *
      * @param pmeGridDimensions input PME grid dimensions 
      *
      */
     void setPmeGridDimensions(std::vector<int>& pmeGridDimensions);
+
+    /**
+     * Set PME grid dimensions.
+     *
+     * @param pmeGridDimensions input PME grid dimensions 
+     *
+     */
+    void setDispersionPmeGridDimensions(std::vector<int>& pmeGridDimensions);
 
     /**
      * Set periodic box size.
@@ -1033,7 +805,7 @@ private:
     static const int AMOEBA_PME_ORDER;
     static const double SQRT_PI;
 
-    double _alphaEwald;
+    double _alphaEwald, _dalphaEwald;
     double _cutoffDistance;
     double _cutoffDistanceSquared;
 
@@ -1041,7 +813,7 @@ private:
     Vec3 _periodicBoxVectors[3];
 
     int _totalGridSize;
-    HippoIntVec _pmeGridDimensions;
+    HippoIntVec _pmeGridDimensions, _dpmeGridDimensions;
 
     fftpack_t   _fftplan;
 

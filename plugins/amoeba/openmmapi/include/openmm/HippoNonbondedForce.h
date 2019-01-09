@@ -201,6 +201,7 @@ public:
     /**
      * Get the nonbonded force parameters for a particle.
      *
+     * @param index             the index of the particle for which to get parameters
      * @param charge            the particle's charge
      * @param dipole            the particle's molecular dipole (vector of size 3)
      * @param quadrupole        the particle's molecular quadrupole (vector of size 9)
@@ -224,6 +225,7 @@ public:
     /**
      * Set the nonbonded force parameters for a particle.
      *
+     * @param index             the index of the particle for which to set parameters
      * @param charge            the particle's charge
      * @param dipole            the particle's molecular dipole (vector of size 3)
      * @param quadrupole        the particle's molecular quadrupole (vector of size 9)
@@ -281,7 +283,7 @@ public:
      * If all scale factors are set to 0, this will cause the interaction to be completely omitted from
      * force and energy calculations.
      *
-     * @param index                      the index of the interaction for which to get parameters
+     * @param index                      the index of the interaction for which to set parameters
      * @param particle1                  the index of the first particle involved in the interaction
      * @param particle2                  the index of the second particle involved in the interaction
      * @param multipoleMultipoleScale    the factor by which to scale the Coulomb interaction between fixed multipoles
