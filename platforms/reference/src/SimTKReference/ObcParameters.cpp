@@ -103,13 +103,13 @@ ObcParameters::ObcType ObcParameters::getObcType() const {
 
 void ObcParameters::setObcTypeParameters(ObcParameters::ObcType obcType) {
     if (obcType == ObcTypeI) {
-        _alphaObc   = 0.8f;
-        _betaObc    = 0.0f;
-        _gammaObc   = 2.91f;
+        _alphaObc   = 0.8;
+        _betaObc    = 0.0;
+        _gammaObc   = 2.91;
     } else {
-        _alphaObc   = 1.0f;
-        _betaObc    = 0.8f;
-        _gammaObc   = 4.85f;
+        _alphaObc   = 1.0;
+        _betaObc    = 0.8;
+        _gammaObc   = 4.85;
     }
     _obcType = obcType;
 }
