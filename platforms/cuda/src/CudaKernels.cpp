@@ -4100,6 +4100,8 @@ double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFo
                     for (auto& buffer : d->getBuffers())
                         gradientChainRuleArgs.push_back(&buffer.getMemory());
             }
+            for (auto& function : tabulatedFunctions)
+                gradientChainRuleArgs.push_back(&function.getDevicePointer());
         }
     }
     if (globals.isInitialized()) {
