@@ -29,6 +29,7 @@
 #include "openmm/Vec3.h"
 #include <map>
 #include <utility>
+#include <vector>
 #include "fftpack.h"
 #include <complex>
 
@@ -341,12 +342,11 @@ protected:
         public:
             int particleIndex, axisType, multipoleAtomX, multipoleAtomY, multipoleAtomZ;    
             Vec3 position;
-            double charge;
             Vec3 dipole;
             double quadrupole[6];
             Vec3 sphericalDipole;
             double sphericalQuadrupole[5];
-            double coreCharge, alpha, epsilon, damping, c6, pauliK, pauliQ, pauliAlpha, polarizability;
+            double coreCharge, valenceCharge, alpha, epsilon, damping, c6, pauliK, pauliQ, pauliAlpha, polarizability;
     };
     
     /**
@@ -357,6 +357,15 @@ protected:
         double charge;
         Vec3 dipole;
         double quadrupole[6];
+    };
+    
+    /**
+     * Information defining an exception.
+     */
+    class Exception {
+    public:
+        int particle1, particle2;
+        double multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale;
     };
 
     /* 
@@ -379,7 +388,7 @@ protected:
     double _electric;
 
     enum ScaleType { D_SCALE, P_SCALE, M_SCALE, U_SCALE, LAST_SCALE_TYPE_INDEX };
-    std::map<std::pair<int, int>, std::vector<double> > exceptions;
+    std::map<std::pair<int, int>, Exception> exceptions;
 
     std::vector<MultipoleParticleData> particleData;
     std::vector<TransformedMultipole> _transformed;
@@ -410,7 +419,7 @@ protected:
      * @param particleData vector of particle data
      * 
      */
-    virtual void calculateFixedMultipoleField(const std::vector<MultipoleParticleData>& particleData);
+    virtual void calculateFixedMultipoleField();
 
 
     /**
@@ -444,7 +453,53 @@ protected:
      */
     void getAndScaleInverseRs(double dampI, double dampJ, double tholeI, double tholeJ,
                               double r, std::vector<double>& rrI) const;
-
+    /**
+     * Compute the damping factors for the field due to the fixed multipole moments of a particle.
+     * 
+     * @param particle     parameters for the particle
+     * @param r            the distance from the particle at which to calculate the damping factors
+     * @param fdamp3       outputs the damping factor for the r^-3 term
+     * @param fdamp5       outputs the damping factor for the r^-5 term
+     * @param fdamp7       outputs the damping factor for the r^-7 term
+     */
+    void computeDirectFieldDampingFactors(const MultipoleParticleData& particle, double r, double& fdamp3, double& fdamp5, double& fdamp7);
+    /**
+     * Compute the damping factors for the field at one particle due to the induced dipole of another particle.
+     * 
+     * @param particleI    parameters for the first particle
+     * @param particleJ    parameters for the second particle
+     * @param r            the distance between the two particles
+     * @param fdamp3       outputs the damping factor for the r^-3 term
+     * @param fdamp5       outputs the damping factor for the r^-5 term
+     */
+    void computeMutualFieldDampingFactors(const MultipoleParticleData& particleI, const MultipoleParticleData& particleJ, double r, double& fdamp3, double& fdamp5);
+    /**
+     * Compute the damping factors for the overlap of two particles.
+     * 
+     * @param particleI    parameters for the first particle
+     * @param particleJ    parameters for the second particle
+     * @param r            the distance between the two particles
+     * @param fdampI1      outputs the damping factor for the r^-1 term for the valence charge of particle I
+     * @param fdampI3      outputs the damping factor for the r^-3 term for the valence charge of particle I
+     * @param fdampI5      outputs the damping factor for the r^-5 term for the valence charge of particle I
+     * @param fdampI7      outputs the damping factor for the r^-7 term for the valence charge of particle I
+     * @param fdampI9      outputs the damping factor for the r^-9 term for the valence charge of particle I
+     * @param fdampJ1      outputs the damping factor for the r^-1 term for the valence charge of particle J
+     * @param fdampJ3      outputs the damping factor for the r^-3 term for the valence charge of particle J
+     * @param fdampJ5      outputs the damping factor for the r^-5 term for the valence charge of particle J
+     * @param fdampJ7      outputs the damping factor for the r^-7 term for the valence charge of particle J
+     * @param fdampJ9      outputs the damping factor for the r^-9 term for the valence charge of particle J
+     * @param fdampIJ1     outputs the damping factor for the r^-1 term for the overlap between valence charges
+     * @param fdampIJ3     outputs the damping factor for the r^-3 term for the overlap between valence charges
+     * @param fdampIJ5     outputs the damping factor for the r^-5 term for the overlap between valence charges
+     * @param fdampIJ7     outputs the damping factor for the r^-7 term for the overlap between valence charges
+     * @param fdampIJ9     outputs the damping factor for the r^-9 term for the overlap between valence charges
+     * @param fdampIJ11    outputs the damping factor for the r^-9 term for the overlap between valence charges
+     */
+    void computeOverlapDampingFactors(const MultipoleParticleData& particleI, const MultipoleParticleData& particleJ, double r,
+            double& fdampI1, double& fdampI3, double& fdampI5, double& fdampI7, double& fdampI9,
+            double& fdampJ1, double& fdampJ3, double& fdampJ5, double& fdampJ7, double& fdampJ9,
+            double& fdampIJ1, double& fdampIJ3, double& fdampIJ5, double& fdampIJ7, double& fdampIJ9, double& fdampIJ11);
     /**
      * Check if multipoles at chiral site should be inverted.
      *
@@ -886,7 +941,7 @@ private:
      * @param particleData vector particle data
      * 
      */
-    void calculateFixedMultipoleField(const std::vector<MultipoleParticleData>& particleData);
+    void calculateFixedMultipoleField();
 
     /**
      * This is called from computeAmoebaBsplines().  It calculates the spline coefficients for a single atom along a single axis.

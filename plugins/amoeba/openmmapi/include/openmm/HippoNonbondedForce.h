@@ -85,6 +85,12 @@ public:
         return particles.size();
     }
     /**
+     * Get the number of exceptions.
+     */
+    int getNumExceptions() const {
+        return exceptions.size();
+    }
+    /**
      * Get the method used for handling long-range nonbonded interactions.
      */
     NonbondedMethod getNonbondedMethod() const;
