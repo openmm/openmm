@@ -4365,6 +4365,8 @@ double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
                     for (auto& buffer : d->getBuffers())
                         gradientChainRuleKernel.setArg<cl::Memory>(index++, buffer.getMemory());
             }
+            for (auto& function : tabulatedFunctions)
+                gradientChainRuleKernel.setArg<cl::Buffer>(index++, function.getDeviceBuffer());
         }
     }
     if (globals.isInitialized()) {
