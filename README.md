@@ -1,7 +1,7 @@
 [![Build Status](https://travis-ci.org/pandegroup/openmm.svg?branch=master)](https://travis-ci.org/pandegroup/openmm)
 [![Anaconda Cloud Badge](https://anaconda.org/omnia/openmm/badges/downloads.svg)](https://anaconda.org/omnia/openmm)
 
-# Tinker-OpenMM: An OpenMM Version Enabling use of Tinker on GPUs
+# Tinker-OpenMM: An OpenMM Version Enabling Tinker on GPUs
 
 <H2><B>Introduction</B></H2>
 
