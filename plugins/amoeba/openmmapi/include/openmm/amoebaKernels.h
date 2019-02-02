@@ -501,7 +501,7 @@ public:
 class CalcHippoNonbondedForceKernel : public KernelImpl {
 public:
     static std::string Name() {
-        return "CalcAmoebaMultipoleForce";
+        return "CalcHippoNonbondedForce";
     }
     CalcHippoNonbondedForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }

@@ -462,7 +462,7 @@ protected:
      * @param fdamp5       outputs the damping factor for the r^-5 term
      * @param fdamp7       outputs the damping factor for the r^-7 term
      */
-    void computeDirectFieldDampingFactors(const MultipoleParticleData& particle, double r, double& fdamp3, double& fdamp5, double& fdamp7);
+    void computeDirectFieldDampingFactors(const MultipoleParticleData& particle, double r, double& fdamp3, double& fdamp5, double& fdamp7) const;
     /**
      * Compute the damping factors for the field at one particle due to the induced dipole of another particle.
      * 
@@ -472,7 +472,7 @@ protected:
      * @param fdamp3       outputs the damping factor for the r^-3 term
      * @param fdamp5       outputs the damping factor for the r^-5 term
      */
-    void computeMutualFieldDampingFactors(const MultipoleParticleData& particleI, const MultipoleParticleData& particleJ, double r, double& fdamp3, double& fdamp5);
+    void computeMutualFieldDampingFactors(const MultipoleParticleData& particleI, const MultipoleParticleData& particleJ, double r, double& fdamp3, double& fdamp5) const;
     /**
      * Compute the damping factors for the overlap of two particles.
      * 
@@ -499,7 +499,7 @@ protected:
     void computeOverlapDampingFactors(const MultipoleParticleData& particleI, const MultipoleParticleData& particleJ, double r,
             double& fdampI1, double& fdampI3, double& fdampI5, double& fdampI7, double& fdampI9,
             double& fdampJ1, double& fdampJ3, double& fdampJ5, double& fdampJ7, double& fdampJ9,
-            double& fdampIJ1, double& fdampIJ3, double& fdampIJ5, double& fdampIJ7, double& fdampIJ9, double& fdampIJ11);
+            double& fdampIJ1, double& fdampIJ3, double& fdampIJ5, double& fdampIJ7, double& fdampIJ9, double& fdampIJ11) const;
     /**
      * Check if multipoles at chiral site should be inverted.
      *
@@ -1127,8 +1127,7 @@ private:
      *
      * @return energy
      */
-    double calculateElectrostatic(const std::vector<MultipoleParticleData>& particleData, 
-                                  std::vector<OpenMM::Vec3>& torques,
+    double calculateElectrostatic(std::vector<OpenMM::Vec3>& torques,
                                   std::vector<OpenMM::Vec3>& forces);
 
 };
