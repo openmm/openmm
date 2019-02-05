@@ -39,6 +39,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <iostream>
 
 using namespace OpenMM;
 using namespace std;
@@ -47,6 +48,7 @@ struct MinimizerData {
     Context& context;
     double k;
     bool checkLargeForces;
+    bool largeForceEncountered=false;
     VerletIntegrator cpuIntegrator;
     Context* cpuContext;
     MinimizerData(Context& context, double k) : context(context), k(k), cpuIntegrator(1.0), cpuContext(NULL) {
@@ -115,11 +117,20 @@ static lbfgsfloatval_t evaluate(void *instance, const lbfgsfloatval_t *x, lbfgsf
         // infinite, or NaN) and if necessary recompute them on the CPU.
 
         for (int i = 0; i < 3*numParticles; i++) {
-            if (!(fabs(g[i]) < 2e9)) {
+            lbfgsfloatval_t grad = g[i];
+            // If infinite or NaN, recompute on the CPU
+            if (grad - grad != 0) {
                 energy = computeForcesAndEnergy(data->getCpuContext(), positions, g);
                 break;
             }
+            // Otherwise, just note that an out-of-range force occurred, but see
+            // if we can successfully converge anyway (this is usually true if
+            // it's only one or two entries on a given line search).
+            else if (!(grad < 2e9)) {
+                data->largeForceEncountered = true;
+            }
         }
+
     }
 
     // Add harmonic forces for any constraints.
@@ -147,12 +158,13 @@ static lbfgsfloatval_t evaluate(void *instance, const lbfgsfloatval_t *x, lbfgsf
     return energy;
 }
 
+
 void LocalEnergyMinimizer::minimize(Context& context, double tolerance, int maxIterations) {
     const System& system = context.getSystem();
     int numParticles = system.getNumParticles();
     double constraintTol = context.getIntegrator().getConstraintTolerance();
     double workingConstraintTol = std::max(1e-4, constraintTol);
-    double k = tolerance/workingConstraintTol;
+    double k = 100/workingConstraintTol;
     lbfgsfloatval_t *x = lbfgs_malloc(numParticles*3);
     if (x == NULL)
         throw OpenMMException("LocalEnergyMinimizer: Failed to allocate memory");
@@ -185,15 +197,49 @@ void LocalEnergyMinimizer::minimize(Context& context, double tolerance, int maxI
         norm = (norm < 1 ? 1 : sqrt(norm));
         param.epsilon = tolerance/norm;
 
+        // Appears to improve the stability of the minimization, without too
+        // much impact on performance.
+        param.m = 20;
+        param.ftol = 1e-6;
+
+        /* In tests repeatedly minimizing from coordinates that have been
+         * randomly perturbed by up to +/-0.4A along each axis, this leads to
+         * calls to lbfgs() exiting early (returning LBFGSERR_MAXIMUMSTEP) about
+         * 1 time in 10. That seems fairly harmless, whereas higher values
+         * occasionally allow the minimizer to stray into wildly wrong
+         * configurations that it can struggle to recover from.
+        */
+        param.max_step = 1.0;
+
+
         // Repeatedly minimize, steadily increasing the strength of the springs until all constraints are satisfied.
 
         double prevMaxError = 1e10;
         MinimizerData data(context, k);
+        int tries=0, maxTries=3;
         while (true) {
             // Perform the minimization.
 
             lbfgsfloatval_t fx;
-            lbfgs(numParticles*3, x, &fx, evaluate, NULL, &data, &param);
+            try {
+                int result = lbfgs(numParticles*3, x, &fx, evaluate, NULL, &data, &param);
+                if (LBFGSERR_MAXIMUMSTEP == result)
+                {
+                    tries++;
+                    if (tries < maxTries)
+                        // Try a couple more times to see if resetting the
+                        // minimizer helps find a better path from the current
+                        // coordinates.
+                        continue;
+                    else
+                        // Continue on, and (where applicable) try again with
+                        // tighter spring constants on constrained bonds.
+                        tries=0;
+                }
+            }
+            catch (std::out_of_range) {
+                break;
+            }
 
             // Check whether all constraints are satisfied.
 
@@ -211,10 +257,29 @@ void LocalEnergyMinimizer::minimize(Context& context, double tolerance, int maxI
                     maxError = error;
             }
             if (maxError <= workingConstraintTol)
+            {
+                // Is it worth raising a note here if lbfgs() returned
+                // LBFGSERR_MAXIMUMITERATION, indicating it didn't converge to
+                // the desired tolerance?
                 break; // All constraints are satisfied.
+            }
             context.setPositions(initialPos);
             if (maxError >= prevMaxError)
+            {
+                if (data.largeForceEncountered)
+                {
+                    stringstream msg;
+                    msg << "Energy minimization failed to converge to within "
+                      << "constraint tolerances, and at least one calculated "
+                      << "force exceeded the range of the GPU. You may try "
+                      << "repeating the minimization using the CPU context, "
+                      << "but it is highly advisable to investigate your model "
+                      << "for severe clashes or other pathologies.";
+                    throw OpenMMException(msg.str());
+
+                }
                 break; // Further tightening the springs doesn't seem to be helping, so just give up.
+            }
             prevMaxError = maxError;
             data.k *= 10;
             if (maxError > 100*workingConstraintTol) {
@@ -234,11 +299,10 @@ void LocalEnergyMinimizer::minimize(Context& context, double tolerance, int maxI
         throw;
     }
     lbfgs_free(x);
-    
+
     // If necessary, do a final constraint projection to make sure they are satisfied
     // to the full precision requested by the user.
-    
+
     if (constraintTol < workingConstraintTol)
         context.applyConstraints(workingConstraintTol);
 }
-
