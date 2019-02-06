@@ -673,6 +673,18 @@ protected:
                                          const std::vector<double>& scalingFactors, std::vector<OpenMM::Vec3>& forces, std::vector<Vec3>& torque) const;
 
     /**
+     * Calculate electrostatic interactions involving induced dipoles on particles I and K.
+     * 
+     * @param particleI         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle I
+     * @param particleK         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle K
+     * @param scalingFactors    scaling factors for interaction
+     * @param forces            vector of particle forces to be updated
+     * @param torque            vector of particle torques to be updated
+     */
+    void calculateInducedDipolePairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
+                                       const std::vector<double>& scalingFactors, std::vector<OpenMM::Vec3>& forces, std::vector<Vec3>& torque) const;
+
+    /**
      * Map particle torque to force.
      * 
      * @param particleI               particle whose torque is to be mapped

@@ -68,9 +68,9 @@ void testWaterDimer() {
         hippo->addParticle(0.19140, {0.0, 0.0, ds*-0.20097}, {qs*0.03881, 0.0, 0.0, 0.0, qs*0.02214, 0.0, 0.0, 0.0, qs*-0.06095}, 1.0,
                     10*4.7909, 0.0, 10*3.5582, c6s*4.5670, ps*2.0037, 0.8086, 10*4.6450,
                     0.001*0.341, HippoNonbondedForce::ZThenX, 3*mol, 3*mol+1, -1);
-        hippo->addException(3*mol, 3*mol+1, 0.0, 0.0, 0.0, 0.0, 0.0);
-        hippo->addException(3*mol, 3*mol+2, 0.0, 0.0, 0.0, 0.0, 0.0);
-        hippo->addException(3*mol+1, 3*mol+2, 0.0, 0.0, 0.0, 0.0, 0.0);
+        hippo->addException(3*mol, 3*mol+1, 0.0, 0.0, 0.2, 0.0, 0.0);
+        hippo->addException(3*mol, 3*mol+2, 0.0, 0.0, 0.2, 0.0, 0.0);
+        hippo->addException(3*mol+1, 3*mol+2, 0.0, 0.0, 1.0, 0.0, 0.0);
     }
     VerletIntegrator integrator(0.001);
     Context context(system, integrator, Platform::getPlatformByName("Reference"));
