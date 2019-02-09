@@ -31,12 +31,14 @@ __kernel void computeParameters(__global mixed* restrict energyBuffer, int inclu
         charge[i] = params.x;
 #endif
         sigmaEpsilon[i] = (float2) (0.5f*params.y, 2*SQRT(params.z));
-#ifdef INCLUDE_EWALD
+#ifdef HAS_OFFSETS
+    #ifdef INCLUDE_EWALD
         energy -= EWALD_SELF_ENERGY_SCALE*params.x*params.x;
-#endif
-#ifdef INCLUDE_LJPME
+    #endif
+    #ifdef INCLUDE_LJPME
         real sig3 = params.y*params.y*params.y;
         energy += LJPME_SELF_ENERGY_SCALE*sig3*sig3*params.z;
+    #endif
 #endif
     }
 
