@@ -1042,7 +1042,7 @@ void AmoebaReferenceHippoNonbondedForce::calculateInducedDipolePairIxn(const Mul
 //c
     double rInv = 1/r;
     double rInv2 = rInv*rInv;
-    double rr1 = _electric * scalingFactors[M_SCALE] * rInv;
+    double rr1 = 0.5 * _electric * rInv;
     double rr3 = rr1*rInv2;
     double rr5 = 3*rr3*rInv2;
     double rr7 = 5*rr5*rInv2;
@@ -1243,58 +1243,51 @@ void AmoebaReferenceHippoNonbondedForce::calculateInducedDipolePairIxn(const Mul
 //c
 //c     get the dtau/dr terms used for OPT polarization force
 //c
-//    do j = 0, coptmax-1
-//       uirm = uopt(j,1,i)*xr + uopt(j,2,i)*yr
-//                  + uopt(j,3,i)*zr
-//       do m = 0, coptmax-j-1
-//          ukrm = uopt(m,1,k)*xr + uopt(m,2,k)*yr
-//                     + uopt(m,3,k)*zr
-//          term1 = 2.0d0 * dmpik(5) * rr5
-//          term2 = term1*xr
-//          term3 = rr5*dmpik(5) - rr7*dmpik(7)*xr*xr
-//          tixx = uopt(j,1,i)*term2 + uirm*term3
-//          tkxx = uopt(m,1,k)*term2 + ukrm*term3
-//          term2 = term1*yr
-//          term3 = rr5*dmpik(5) - rr7*dmpik(7)*yr*yr
-//          tiyy = uopt(j,2,i)*term2 + uirm*term3
-//          tkyy = uopt(m,2,k)*term2 + ukrm*term3
-//          term2 = term1*zr
-//          term3 = rr5*dmpik(5) - rr7*dmpik(7)*zr*zr
-//          tizz = uopt(j,3,i)*term2 + uirm*term3
-//          tkzz = uopt(m,3,k)*term2 + ukrm*term3
-//          term1 = rr5*dmpik(5)*yr
-//          term2 = rr5*dmpik(5)*xr
-//          term3 = yr * (rr7*dmpik(7)*xr)
-//          tixy = uopt(j,1,i)*term1 + uopt(j,2,i)*term2
-//                    - uirm*term3
-//          tkxy = uopt(m,1,k)*term1 + uopt(m,2,k)*term2
-//                    - ukrm*term3
-//          term1 = rr5 *dmpik(5) * zr
-//          term3 = zr * (rr7*dmpik(7)*xr)
-//          tixz = uopt(j,1,i)*term1 + uopt(j,3,i)*term2
-//                    - uirm*term3
-//          tkxz = uopt(m,1,k)*term1 + uopt(m,3,k)*term2
-//                    - ukrm*term3
-//          term2 = rr5*dmpik(5)*yr
-//          term3 = zr * (rr7*dmpik(7)*yr)
-//          tiyz = uopt(j,2,i)*term1 + uopt(j,3,i)*term2
-//                    - uirm*term3
-//          tkyz = uopt(m,2,k)*term1 + uopt(m,3,k)*term2
-//                    - ukrm*term3
-//          depx = tixx*uoptp(m,1,k) + tkxx*uoptp(j,1,i)
-//               + tixy*uoptp(m,2,k) + tkxy*uoptp(j,2,i)
-//               + tixz*uoptp(m,3,k) + tkxz*uoptp(j,3,i)
-//          depy = tixy*uoptp(m,1,k) + tkxy*uoptp(j,1,i)
-//               + tiyy*uoptp(m,2,k) + tkyy*uoptp(j,2,i)
-//               + tiyz*uoptp(m,3,k) + tkyz*uoptp(j,3,i)
-//          depz = tixz*uoptp(m,1,k) + tkxz*uoptp(j,1,i)
-//               + tiyz*uoptp(m,2,k) + tkyz*uoptp(j,2,i)
-//               + tizz*uoptp(m,3,k) + tkzz*uoptp(j,3,i)
-//          frcx = frcx + copm(j+m+1)*wscale(k)*depx
-//          frcy = frcy + copm(j+m+1)*wscale(k)*depy
-//          frcz = frcz + copm(j+m+1)*wscale(k)*depz
-//       end do
-//    end do
+    double ddscale = 1;
+    if (exception != exceptions.end())
+        ddscale = exception->second.dipoleDipoleScale;
+    for (int j = 0; j < _maxPTOrder-1; j++) {
+        double uirm = _ptDipoleD[j][iIndex].dot(deltaR);
+        for (int m = 0; m < _maxPTOrder-1-j; m++) {
+            double ukrm = _ptDipoleD[m][kIndex].dot(deltaR);
+            double term1 = 2 * fdampIK5 * rr5;
+            double term2 = term1*deltaR[0];
+            double term3 = rr5*fdampIK5 - rr7*fdampIK7*deltaR[0]*deltaR[0];
+            double tixx = _ptDipoleD[j][iIndex][0]*term2 + uirm*term3;
+            double tkxx = _ptDipoleD[m][kIndex][0]*term2 + ukrm*term3;
+            term2 = term1*deltaR[1];
+            term3 = rr5*fdampIK5 - rr7*fdampIK7*deltaR[1]*deltaR[1];
+            double tiyy = _ptDipoleD[j][iIndex][1]*term2 + uirm*term3;
+            double tkyy = _ptDipoleD[m][kIndex][1]*term2 + ukrm*term3;
+            term2 = term1*deltaR[2];
+            term3 = rr5*fdampIK5 - rr7*fdampIK7*deltaR[2]*deltaR[2];
+            double tizz = _ptDipoleD[j][iIndex][2]*term2 + uirm*term3;
+            double tkzz = _ptDipoleD[m][kIndex][2]*term2 + ukrm*term3;
+            term1 = rr5*fdampIK5*deltaR[1];
+            term2 = rr5*fdampIK5*deltaR[0];
+            term3 = deltaR[1] * (rr7*fdampIK7*deltaR[0]);
+            double tixy = _ptDipoleD[j][iIndex][0]*term1 + _ptDipoleD[j][iIndex][1]*term2 - uirm*term3;
+            double tkxy = _ptDipoleD[m][kIndex][0]*term1 + _ptDipoleD[m][kIndex][1]*term2 - ukrm*term3;
+            term1 = rr5 *fdampIK5 * deltaR[2];
+            term3 = deltaR[2] * (rr7*fdampIK7*deltaR[0]);
+            double tixz = _ptDipoleD[j][iIndex][0]*term1 + _ptDipoleD[j][iIndex][2]*term2 - uirm*term3;
+            double tkxz = _ptDipoleD[m][kIndex][0]*term1 + _ptDipoleD[m][kIndex][2]*term2 - ukrm*term3;
+            term2 = rr5*fdampIK5*deltaR[1];
+            term3 = deltaR[2] * (rr7*fdampIK7*deltaR[1]);
+            double tiyz = _ptDipoleD[j][iIndex][1]*term1 + _ptDipoleD[j][iIndex][2]*term2 - uirm*term3;
+            double tkyz = _ptDipoleD[m][kIndex][1]*term1 + _ptDipoleD[m][kIndex][2]*term2 - ukrm*term3;
+            double depx = tixx*_ptDipoleD[m][kIndex][0] + tkxx*_ptDipoleD[j][iIndex][0]
+                 + tixy*_ptDipoleD[m][kIndex][1] + tkxy*_ptDipoleD[j][iIndex][1]
+                 + tixz*_ptDipoleD[m][kIndex][2] + tkxz*_ptDipoleD[j][iIndex][2];
+            double depy = tixy*_ptDipoleD[m][kIndex][0] + tkxy*_ptDipoleD[j][iIndex][0]
+                 + tiyy*_ptDipoleD[m][kIndex][1] + tkyy*_ptDipoleD[j][iIndex][1]
+                 + tiyz*_ptDipoleD[m][kIndex][2] + tkyz*_ptDipoleD[j][iIndex][2];
+            double depz = tixz*_ptDipoleD[m][kIndex][0] + tkxz*_ptDipoleD[j][iIndex][0]
+                 + tiyz*_ptDipoleD[m][kIndex][1] + tkyz*_ptDipoleD[j][iIndex][1]
+                 + tizz*_ptDipoleD[m][kIndex][2] + tkzz*_ptDipoleD[j][iIndex][2];
+            force += ddscale*_extPartCoefficients[j+m+1]*Vec3(depx, depy, depz);
+        }
+    }
 //c
 //c     increment force-based gradient on the interaction sites
 //c
@@ -1585,30 +1578,30 @@ double AmoebaReferenceHippoNonbondedForce::calculateElectrostatic(vector<Vec3>& 
     }
     for (int i = 0; i < _numParticles; i++) {
         // Compute the µ(m) T µ(n) force contributions here
-        for (int l = 0; l < _maxPTOrder-1; ++l) {
-            for (int m = 0; m < _maxPTOrder-1-l; ++m) {
-                double p = _extPartCoefficients[l+m+1];
-                if(std::fabs(p) < 1e-6) continue;
-                forces[i][0] += 0.5*_electric*p*(_ptDipoleD[l][i][0]*_ptDipoleFieldGradientP[m][6*i+0]
-                                               + _ptDipoleD[l][i][1]*_ptDipoleFieldGradientP[m][6*i+3]
-                                               + _ptDipoleD[l][i][2]*_ptDipoleFieldGradientP[m][6*i+4]);
-                forces[i][1] += 0.5*_electric*p*(_ptDipoleD[l][i][0]*_ptDipoleFieldGradientP[m][6*i+3]
-                                               + _ptDipoleD[l][i][1]*_ptDipoleFieldGradientP[m][6*i+1]
-                                               + _ptDipoleD[l][i][2]*_ptDipoleFieldGradientP[m][6*i+5]);
-                forces[i][2] += 0.5*_electric*p*(_ptDipoleD[l][i][0]*_ptDipoleFieldGradientP[m][6*i+4]
-                                               + _ptDipoleD[l][i][1]*_ptDipoleFieldGradientP[m][6*i+5]
-                                               + _ptDipoleD[l][i][2]*_ptDipoleFieldGradientP[m][6*i+2]);
-                forces[i][0] += 0.5*_electric*p*(_ptDipoleP[l][i][0]*_ptDipoleFieldGradientD[m][6*i+0]
-                                               + _ptDipoleP[l][i][1]*_ptDipoleFieldGradientD[m][6*i+3]
-                                               + _ptDipoleP[l][i][2]*_ptDipoleFieldGradientD[m][6*i+4]);
-                forces[i][1] += 0.5*_electric*p*(_ptDipoleP[l][i][0]*_ptDipoleFieldGradientD[m][6*i+3]
-                                               + _ptDipoleP[l][i][1]*_ptDipoleFieldGradientD[m][6*i+1]
-                                               + _ptDipoleP[l][i][2]*_ptDipoleFieldGradientD[m][6*i+5]);
-                forces[i][2] += 0.5*_electric*p*(_ptDipoleP[l][i][0]*_ptDipoleFieldGradientD[m][6*i+4]
-                                               + _ptDipoleP[l][i][1]*_ptDipoleFieldGradientD[m][6*i+5]
-                                               + _ptDipoleP[l][i][2]*_ptDipoleFieldGradientD[m][6*i+2]);
-            }
-        }
+//        for (int l = 0; l < _maxPTOrder-1; ++l) {
+//            for (int m = 0; m < _maxPTOrder-1-l; ++m) {
+//                double p = _extPartCoefficients[l+m+1];
+//                if(std::fabs(p) < 1e-6) continue;
+//                forces[i][0] += 0.5*_electric*p*(_ptDipoleD[l][i][0]*_ptDipoleFieldGradientP[m][6*i+0]
+//                                               + _ptDipoleD[l][i][1]*_ptDipoleFieldGradientP[m][6*i+3]
+//                                               + _ptDipoleD[l][i][2]*_ptDipoleFieldGradientP[m][6*i+4]);
+//                forces[i][1] += 0.5*_electric*p*(_ptDipoleD[l][i][0]*_ptDipoleFieldGradientP[m][6*i+3]
+//                                               + _ptDipoleD[l][i][1]*_ptDipoleFieldGradientP[m][6*i+1]
+//                                               + _ptDipoleD[l][i][2]*_ptDipoleFieldGradientP[m][6*i+5]);
+//                forces[i][2] += 0.5*_electric*p*(_ptDipoleD[l][i][0]*_ptDipoleFieldGradientP[m][6*i+4]
+//                                               + _ptDipoleD[l][i][1]*_ptDipoleFieldGradientP[m][6*i+5]
+//                                               + _ptDipoleD[l][i][2]*_ptDipoleFieldGradientP[m][6*i+2]);
+//                forces[i][0] += 0.5*_electric*p*(_ptDipoleP[l][i][0]*_ptDipoleFieldGradientD[m][6*i+0]
+//                                               + _ptDipoleP[l][i][1]*_ptDipoleFieldGradientD[m][6*i+3]
+//                                               + _ptDipoleP[l][i][2]*_ptDipoleFieldGradientD[m][6*i+4]);
+//                forces[i][1] += 0.5*_electric*p*(_ptDipoleP[l][i][0]*_ptDipoleFieldGradientD[m][6*i+3]
+//                                               + _ptDipoleP[l][i][1]*_ptDipoleFieldGradientD[m][6*i+1]
+//                                               + _ptDipoleP[l][i][2]*_ptDipoleFieldGradientD[m][6*i+5]);
+//                forces[i][2] += 0.5*_electric*p*(_ptDipoleP[l][i][0]*_ptDipoleFieldGradientD[m][6*i+4]
+//                                               + _ptDipoleP[l][i][1]*_ptDipoleFieldGradientD[m][6*i+5]
+//                                               + _ptDipoleP[l][i][2]*_ptDipoleFieldGradientD[m][6*i+2]);
+//            }
+//        }
         energy -= (0.5*_electric/particleData[i].polarizability)*_ptDipoleD[0][i].dot(_inducedDipole[i]);
     }
     
