@@ -501,6 +501,16 @@ protected:
             double& fdampJ1, double& fdampJ3, double& fdampJ5, double& fdampJ7, double& fdampJ9,
             double& fdampIJ1, double& fdampIJ3, double& fdampIJ5, double& fdampIJ7, double& fdampIJ9, double& fdampIJ11) const;
     /**
+     * Compute the damping factors used for dispersion.
+     * 
+     * @param particleI    parameters for the first particle
+     * @param particleJ    parameters for the second particle
+     * @param r            the distance between the two particles
+     * @param fdamp        outputs the damping factor
+     * @param ddamp        outputs the derivative of the damping factor
+     */
+    void computeDispersionDampingFactors(const MultipoleParticleData& particleI, const MultipoleParticleData& particleJ, double r, double& fdamp, double& ddamp) const;
+    /**
      * Check if multipoles at chiral site should be inverted.
      *
      * @param  particleI            particleI data 
@@ -685,6 +695,16 @@ protected:
                                        const std::vector<double>& scalingFactors, std::vector<OpenMM::Vec3>& forces, std::vector<Vec3>& torque) const;
 
     /**
+     * Calculate dispersion interaction between particles I and K.
+     * 
+     * @param particleI         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle I
+     * @param particleK         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle K
+     * @param forces            vector of particle forces to be updated
+     */
+    double calculateDispersionPairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
+                                      std::vector<OpenMM::Vec3>& forces) const;
+
+    /**
      * Map particle torque to force.
      * 
      * @param particleI               particle whose torque is to be mapped
@@ -711,7 +731,7 @@ protected:
                           std::vector<OpenMM::Vec3>& forces);
 
     /**
-     * Calculate electrostatic forces
+     * Calculate the forces and energy
      * 
      * @param particleData            vector of parameters (charge, labFrame dipoles, quadrupoles, ...) for particles
      * @param torques                 output torques
@@ -719,8 +739,8 @@ protected:
      *
      * @return energy
      */
-    virtual double calculateElectrostatic(std::vector<OpenMM::Vec3>& torques,
-                                          std::vector<OpenMM::Vec3>& forces);
+    virtual double calculateInteractions(std::vector<OpenMM::Vec3>& torques,
+                                         std::vector<OpenMM::Vec3>& forces);
 
     /**
      * Normalize a Vec3
@@ -1131,7 +1151,7 @@ private:
                                                               std::vector<Vec3>& forces, std::vector<Vec3>& torques) const;
 
     /**
-     * Calculate electrostatic forces.
+     * Calculate the forces and energy.
      * 
      * @param particleData            vector of parameters (charge, labFrame dipoles, quadrupoles, ...) for particles
      * @param torques                 output torques
@@ -1139,8 +1159,8 @@ private:
      *
      * @return energy
      */
-    double calculateElectrostatic(std::vector<OpenMM::Vec3>& torques,
-                                  std::vector<OpenMM::Vec3>& forces);
+    double calculateInteractions(std::vector<OpenMM::Vec3>& torques,
+                                 std::vector<OpenMM::Vec3>& forces);
 
 };
 

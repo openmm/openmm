@@ -629,6 +629,44 @@ void AmoebaReferenceHippoNonbondedForce::computeOverlapDampingFactors(const Mult
     }
 }
 
+void AmoebaReferenceHippoNonbondedForce::computeDispersionDampingFactors(const MultipoleParticleData& particleI, const MultipoleParticleData& particleJ, double r, double& fdamp, double& ddamp) const {
+    double arI = particleI.alpha*r;
+    double arI2 = arI*arI;
+    double arI3 = arI2*arI;
+    double expARI = exp(-arI);
+    double fdamp3, fdamp5;
+    if (particleI.alpha == particleJ.alpha) {
+        double arI4 = arI3*arI;
+        double arI5 = arI4*arI;
+        fdamp3 = 1 - (1 + arI + arI2/2 + (7*arI3 + arI4)/48)*expARI;
+        fdamp5 = 1 - (1 + arI + arI2/2 + arI3/6 + arI4/24 + arI5/144)*expARI;
+        ddamp = particleI.alpha*(arI5 - 3*arI3 - 3*arI2)*expARI/96;
+    }
+    else {
+        double arJ = particleJ.alpha*r;
+        double arJ2 = arJ*arJ;
+        double arJ3 = arJ2*arJ;
+        double expARJ = exp(-arJ);
+        double aI2 = particleI.alpha*particleI.alpha;
+        double aJ2 = particleJ.alpha*particleJ.alpha;
+        double A = aJ2/(aJ2-aI2);
+        double B = aI2/(aI2-aJ2);
+        double A2 = A*A;
+        double B2 = B*B;
+        fdamp3 = 1 - A2*(1 + arI + arI2/2)*expARI -
+                     B2*(1 + arJ + arJ2/2)*expARJ -
+                     2*A2*B*(1 + arI)*expARI -
+                     2*B2*A*(1 + arJ)*expARJ;
+        fdamp5 = 1 - A2*(1 + arI + arI2/2 + arI3/6)*expARI -
+                     B2*(1 + arJ + arJ2/2 + arJ3/6)*expARJ -
+                     2*A2*B*(1 + arI + arI2/3)*expARI -
+                     2*B2*A*(1 + arJ + arJ2/3)*expARJ;
+        ddamp = (A2*arI2*particleI.alpha*expARI*(r*particleI.alpha + 4*B - 1) +
+                (B2*arJ2*particleJ.alpha*expARJ*(r*particleJ.alpha + 4*A - 1)))/4;
+    }
+    fdamp = 1.5*fdamp5 - 0.5*fdamp3;
+}
+
 void AmoebaReferenceHippoNonbondedForce::calculateFixedMultipoleFieldPairIxn(const MultipoleParticleData& particleI,
                                                                              const MultipoleParticleData& particleJ,
                                                                              double dScale, double pScale) {
@@ -921,7 +959,7 @@ double AmoebaReferenceHippoNonbondedForce::calculateElectrostaticPairIxn(const M
     Vec3 dkqiTemp(particleK.dipole.dot(qxI), particleK.dipole.dot(qyI), particleK.dipole.dot(qzI));
     Vec3 diqkrCross = deltaR.cross(diqkTemp);
     Vec3 dkqirCross = deltaR.cross(dkqiTemp);
-    Vec3 dqik = particleI.dipole.cross(qk) = particleK.dipole.cross(qi) - 2*(qxI.cross(qxK) + qyI.cross(qyK) + qzI.cross(qzK));
+    Vec3 dqik = particleI.dipole.cross(qk) + particleK.dipole.cross(qi) - 2*(qxI.cross(qxK) + qyI.cross(qyK) + qzI.cross(qzK));
 //c
 //c     get reciprocal distance terms for this interaction
 //c
@@ -992,8 +1030,8 @@ double AmoebaReferenceHippoNonbondedForce::calculateElectrostaticPairIxn(const M
 //c
 //c     compute the torque components for this interaction
 //c
-    Vec3 torqueI = -rr3ik*dikCross + term1*dirCross + term3*(dqik+dkqirCross) - term4*qirCross - term6*(qikrCross+qikCross);
-    Vec3 torqueK = rr3ik*dikCross + term1*dkrCross + term3*(dqik+diqkrCross) - term5*qkrCross - term6*(qkirCross+qikCross);
+    Vec3 torqueI = -rr3ik*dikCross + term1*dirCross + term3*(dqik+dkqirCross) + term4*qirCross - term6*(qikrCross+qikCross);
+    Vec3 torqueK = rr3ik*dikCross + term2*dkrCross - term3*(dqik+diqkrCross) + term5*qkrCross - term6*(qkirCross-qikCross);
     forces[iIndex] += force;
     forces[kIndex] -= force;
     torque[iIndex] += torqueI;
@@ -1320,6 +1358,40 @@ void AmoebaReferenceHippoNonbondedForce::calculateInducedDipolePairIxn(const Mul
     torque[kIndex] += torqueK;
 }
 
+double AmoebaReferenceHippoNonbondedForce::calculateDispersionPairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
+                                      vector<Vec3>& forces) const {
+    unsigned int iIndex = particleI.particleIndex;
+    unsigned int kIndex = particleK.particleIndex;
+
+    Vec3 deltaR = particleK.position - particleI.position;
+    double r2 = deltaR.dot(deltaR);
+    double r = sqrt(r2);
+    
+    // Compute the undamped force and energy.
+    
+    double energy = -particleI.c6*particleK.c6/(r2*r2*r2);
+    double dEnergydR = -6*energy/r;
+    auto exception = exceptions.find(make_pair(particleI.particleIndex, particleK.particleIndex));
+    if (exception != exceptions.end()) {
+        energy *= exception->second.dispersionScale;
+        dEnergydR *= exception->second.dispersionScale;
+    }
+    
+    // Apply the damping function.
+    
+    double fdamp, ddamp;
+    computeDispersionDampingFactors(particleI, particleK, r, fdamp, ddamp);
+    dEnergydR = dEnergydR*fdamp*fdamp + 2*energy*fdamp*ddamp;
+    energy *= fdamp*fdamp;
+    
+    // Accumulate the forces.
+    
+    Vec3 force = deltaR*(dEnergydR/r);
+    forces[iIndex] += force;
+    forces[kIndex] -= force;
+    return energy;
+}
+
 void AmoebaReferenceHippoNonbondedForce::mapTorqueToForceForParticle(const MultipoleParticleData& particleI,
                                                                 const MultipoleParticleData& particleU,
                                                                 const MultipoleParticleData& particleV,
@@ -1554,9 +1626,7 @@ void AmoebaReferenceHippoNonbondedForce::mapTorqueToForce(vector<Vec3>& torques,
     }
 }
 
-double AmoebaReferenceHippoNonbondedForce::calculateElectrostatic(vector<Vec3>& torques,
-                                                                  vector<Vec3>& forces)
-{
+double AmoebaReferenceHippoNonbondedForce::calculateInteractions(vector<Vec3>& torques, vector<Vec3>& forces) {
     double energy = 0.0;
     vector<double> scaleFactors(LAST_SCALE_TYPE_INDEX);
     for (auto& s : scaleFactors)
@@ -1564,15 +1634,16 @@ double AmoebaReferenceHippoNonbondedForce::calculateElectrostatic(vector<Vec3>& 
 
     // main loop over particle pairs
 
-    for (unsigned int ii = 0; ii < particleData.size(); ii++) {
-        for (unsigned int jj = ii+1; jj < particleData.size(); jj++) {
-            getMultipoleScaleFactors(ii, jj, scaleFactors);
+    for (unsigned int i = 0; i < particleData.size(); i++) {
+        for (unsigned int j = i+1; j < particleData.size(); j++) {
+            getMultipoleScaleFactors(i, j, scaleFactors);
 
-            energy += calculateElectrostaticPairIxn(particleData[ii], particleData[jj], scaleFactors, forces, torques);
-            calculateInducedDipolePairIxn(particleData[ii], particleData[jj], scaleFactors, forces, torques);
+            energy += calculateElectrostaticPairIxn(particleData[i], particleData[j], scaleFactors, forces, torques);
+            calculateInducedDipolePairIxn(particleData[i], particleData[j], scaleFactors, forces, torques);
+            energy += calculateDispersionPairIxn(particleData[i], particleData[j], forces);
 
-            for (unsigned int kk = 0; kk < LAST_SCALE_TYPE_INDEX; kk++) {
-                scaleFactors[kk] = 1.0;
+            for (unsigned int k = 0; k < LAST_SCALE_TYPE_INDEX; k++) {
+                scaleFactors[k] = 1.0;
             }
         }
     }
@@ -1628,7 +1699,7 @@ double AmoebaReferenceHippoNonbondedForce::calculateForceAndEnergy(const vector<
 
     vector<Vec3> torques;
     initializeVec3Vector(torques);
-    double energy = calculateElectrostatic(torques, forces);
+    double energy = calculateInteractions(torques, forces);
 
     mapTorqueToForce(torques, forces);
 
@@ -3632,7 +3703,7 @@ double AmoebaReferencePmeHippoNonbondedForce::calculatePmeDirectElectrostaticPai
 
 }
 
-double AmoebaReferencePmeHippoNonbondedForce::calculateElectrostatic(vector<Vec3>& torques, vector<Vec3>& forces)
+double AmoebaReferencePmeHippoNonbondedForce::calculateInteractions(vector<Vec3>& torques, vector<Vec3>& forces)
 {
     double energy = 0.0;
     vector<double> scaleFactors(LAST_SCALE_TYPE_INDEX);
