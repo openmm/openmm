@@ -1,7 +1,7 @@
 # Generate and install examples.
 #
 # This is boilerplate code for generating a set of executables, one per
-# .cpp file in an "examples" subdirectory. 
+# .cpp file in an "examples" subdirectory.
 #
 # For IDEs that can deal with PROJECT_LABEL properties (at least
 # Visual Studio) the projects for building each of these adhoc
@@ -93,15 +93,15 @@ FOREACH(EX_ROOT ${F_EXAMPLES})
     INSTALL(FILES ${EX_ROOT}.f90 DESTINATION examples)
 ENDFOREACH(EX_ROOT ${F_EXAMPLES})
 
-INSTALL(FILES simulateAmber.py simulatePdb.py simulateGromacs.py benchmark.py argon-chemical-potential.py input.inpcrd input.prmtop input.pdb input.gro input.top 5dfr_minimized.pdb 5dfr_solv-cube_equil.pdb
+INSTALL(FILES simulateAmber.py simulatePdb.py simulateGromacs.py benchmark.py argon-chemical-potential.py input.inpcrd input.prmtop input.pdb input.gro input.top 5dfr_minimized.pdb 5dfr_solv-cube_equil.pdb apoa1.pdb 
         DESTINATION examples)
 
-INSTALL(FILES VisualStudio/HelloArgon.vcproj 
-              VisualStudio/HelloArgon.sln 
-              VisualStudio/HelloArgonInC.sln 
-              VisualStudio/HelloArgonInC.vcproj 
-              VisualStudio/HelloArgonInFortran.sln 
-              VisualStudio/HelloArgonInFortran.vfproj 
+INSTALL(FILES VisualStudio/HelloArgon.vcproj
+              VisualStudio/HelloArgon.sln
+              VisualStudio/HelloArgonInC.sln
+              VisualStudio/HelloArgonInC.vcproj
+              VisualStudio/HelloArgonInFortran.sln
+              VisualStudio/HelloArgonInFortran.vfproj
         DESTINATION examples/VisualStudio)
 
 INSTALL(FILES README.txt DESTINATION examples)
