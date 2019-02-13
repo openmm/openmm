@@ -705,6 +705,16 @@ protected:
                                       std::vector<OpenMM::Vec3>& forces) const;
 
     /**
+     * Calculate the charge transfer interaction between particles I and K.
+     * 
+     * @param particleI         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle I
+     * @param particleK         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle K
+     * @param forces            vector of particle forces to be updated
+     */
+    double calculateChargeTransferPairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
+                                          std::vector<OpenMM::Vec3>& forces) const;
+
+    /**
      * Map particle torque to force.
      * 
      * @param particleI               particle whose torque is to be mapped

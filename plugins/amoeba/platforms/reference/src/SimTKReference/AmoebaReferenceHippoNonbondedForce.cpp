@@ -758,62 +758,9 @@ void AmoebaReferenceHippoNonbondedForce::calculateInducedDipolePairIxns(const Mu
         scale3 *= exception->second.dipoleDipoleScale;
         scale5 *= exception->second.dipoleDipoleScale;
     }
-//    vector<double> rrI(3);
-//  
-//    getAndScaleInverseRs(particleI.dampingFactor, particleJ.dampingFactor,
-//                          particleI.thole, particleJ.thole, r, rrI);
-//
-//    double rr3       = -rrI[0];
-//    double rr5       =  rrI[1];
-
     for (auto& field : updateInducedDipoleFields) {
         calculateInducedDipolePairIxn(particleI.particleIndex, particleJ.particleIndex, scale3, scale5, deltaR,
                                        *field.inducedDipoles, field.inducedDipoleField);
-        // Compute and store the field gradient for later use.
-
-// TODO Work out the correct scale factors!!!!!!!
-
-//        double dx = deltaR[0];
-//        double dy = deltaR[1];
-//        double dz = deltaR[2];
-//
-//        OpenMM::Vec3 &dipolesI = (*field.inducedDipoles)[particleI.particleIndex];
-//        double xDipole = dipolesI[0];
-//        double yDipole = dipolesI[1];
-//        double zDipole = dipolesI[2];
-//        double muDotR = xDipole*dx + yDipole*dy + zDipole*dz;
-//        double Exx = muDotR*dx*dx*rrI[2] - (2.0*xDipole*dx + muDotR)*rrI[1];
-//        double Eyy = muDotR*dy*dy*rrI[2] - (2.0*yDipole*dy + muDotR)*rrI[1];
-//        double Ezz = muDotR*dz*dz*rrI[2] - (2.0*zDipole*dz + muDotR)*rrI[1];
-//        double Exy = muDotR*dx*dy*rrI[2] - (xDipole*dy + yDipole*dx)*rrI[1];
-//        double Exz = muDotR*dx*dz*rrI[2] - (xDipole*dz + zDipole*dx)*rrI[1];
-//        double Eyz = muDotR*dy*dz*rrI[2] - (yDipole*dz + zDipole*dy)*rrI[1];
-//
-//        field.inducedDipoleFieldGradient[particleJ.particleIndex][0] -= Exx;
-//        field.inducedDipoleFieldGradient[particleJ.particleIndex][1] -= Eyy;
-//        field.inducedDipoleFieldGradient[particleJ.particleIndex][2] -= Ezz;
-//        field.inducedDipoleFieldGradient[particleJ.particleIndex][3] -= Exy;
-//        field.inducedDipoleFieldGradient[particleJ.particleIndex][4] -= Exz;
-//        field.inducedDipoleFieldGradient[particleJ.particleIndex][5] -= Eyz;
-//
-//        OpenMM::Vec3 &dipolesJ = (*field.inducedDipoles)[particleJ.particleIndex];
-//        xDipole = dipolesJ[0];
-//        yDipole = dipolesJ[1];
-//        zDipole = dipolesJ[2];
-//        muDotR = xDipole*dx + yDipole*dy + zDipole*dz;
-//        Exx = muDotR*dx*dx*rrI[2] - (2.0*xDipole*dx + muDotR)*rrI[1];
-//        Eyy = muDotR*dy*dy*rrI[2] - (2.0*yDipole*dy + muDotR)*rrI[1];
-//        Ezz = muDotR*dz*dz*rrI[2] - (2.0*zDipole*dz + muDotR)*rrI[1];
-//        Exy = muDotR*dx*dy*rrI[2] - (xDipole*dy + yDipole*dx)*rrI[1];
-//        Exz = muDotR*dx*dz*rrI[2] - (xDipole*dz + zDipole*dx)*rrI[1];
-//        Eyz = muDotR*dy*dz*rrI[2] - (yDipole*dz + zDipole*dy)*rrI[1];
-//
-//        field.inducedDipoleFieldGradient[particleI.particleIndex][0] += Exx;
-//        field.inducedDipoleFieldGradient[particleI.particleIndex][1] += Eyy;
-//        field.inducedDipoleFieldGradient[particleI.particleIndex][2] += Ezz;
-//        field.inducedDipoleFieldGradient[particleI.particleIndex][3] += Exy;
-//        field.inducedDipoleFieldGradient[particleI.particleIndex][4] += Exz;
-//        field.inducedDipoleFieldGradient[particleI.particleIndex][5] += Eyz;
     }
 }
 
@@ -1392,14 +1339,41 @@ double AmoebaReferenceHippoNonbondedForce::calculateDispersionPairIxn(const Mult
     return energy;
 }
 
+double AmoebaReferenceHippoNonbondedForce::calculateChargeTransferPairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
+                                      vector<Vec3>& forces) const {
+    unsigned int iIndex = particleI.particleIndex;
+    unsigned int kIndex = particleK.particleIndex;
+
+    Vec3 deltaR = particleK.position - particleI.position;
+    double r2 = deltaR.dot(deltaR);
+    double r = sqrt(r2);
+    
+    // Compute the force and energy.
+
+    double term1 = particleI.epsilon*exp(-particleK.damping*r);
+    double term2 = particleK.epsilon*exp(-particleI.damping*r);
+    double energy = -(term1+term2);
+    double dEnergydR = -(term1*particleK.damping + term2*particleI.damping);
+    auto exception = exceptions.find(make_pair(particleI.particleIndex, particleK.particleIndex));
+    if (exception != exceptions.end()) {
+        energy *= exception->second.multipoleMultipoleScale;
+        dEnergydR *= exception->second.multipoleMultipoleScale;
+    }
+    
+    // Accumulate the forces.
+    
+    Vec3 force = deltaR*(dEnergydR/r);
+    forces[iIndex] += force;
+    forces[kIndex] -= force;
+    return energy;
+}
+
 void AmoebaReferenceHippoNonbondedForce::mapTorqueToForceForParticle(const MultipoleParticleData& particleI,
                                                                 const MultipoleParticleData& particleU,
                                                                 const MultipoleParticleData& particleV,
                                                                       MultipoleParticleData* particleW,
                                                                       int axisType, const Vec3& torque,
-                                                                      vector<Vec3>& forces)
-{
-
+                                                                      vector<Vec3>& forces) {
     static const int U                  = 0;
     static const int V                  = 1;
     static const int W                  = 2;
@@ -1414,11 +1388,6 @@ void AmoebaReferenceHippoNonbondedForce::mapTorqueToForceForParticle(const Multi
     static const int WS                 = 11;
     static const int LastVectorIndex    = 12;
 
-    static const int X                  = 0;
-    static const int Y                  = 1;
-    static const int Z                  = 2;
-    static const int I                  = 3;
-
     double norms[LastVectorIndex];
     double angles[LastVectorIndex][2];
 
@@ -1428,22 +1397,18 @@ void AmoebaReferenceHippoNonbondedForce::mapTorqueToForceForParticle(const Multi
     // compute the vector between the atoms and 1/sqrt(d2), d2 is distance between
     // this atom and the axis atom
 
-    if (axisType == HippoNonbondedForce::NoAxisType) {
+    if (axisType == HippoNonbondedForce::NoAxisType)
         return;
-    }
 
     Vec3 vectorU = particleU.position - particleI.position;
     norms[U] = normalizeVec3(vectorU);
-
     Vec3 vectorV = particleV.position - particleI.position;
     norms[V] = normalizeVec3(vectorV);
-
     Vec3 vectorW;
-    if (particleW && (axisType == HippoNonbondedForce::ZBisect || axisType == HippoNonbondedForce::ThreeFold)) {
-         vectorW = particleW->position - particleI.position;
-    } else {
-         vectorW = vectorU.cross(vectorV);
-    }
+    if (particleW && (axisType == HippoNonbondedForce::ZBisect || axisType == HippoNonbondedForce::ThreeFold))
+        vectorW = particleW->position - particleI.position;
+    else
+        vectorW = vectorU.cross(vectorV);
     norms[W]  = normalizeVec3(vectorW);
 
     Vec3 vectorUV, vectorUW, vectorVW;
@@ -1476,36 +1441,24 @@ void AmoebaReferenceHippoNonbondedForce::mapTorqueToForceForParticle(const Multi
     // branch based on axis type
 
     if (axisType == HippoNonbondedForce::ZThenX || axisType == HippoNonbondedForce::Bisector) {
-
-        double factor1;
-        double factor2;
-        double factor3;
+        double factor1 =  dphi[V]/(norms[U]*angles[UV][1]);
+        double factor2 =  dphi[W]/(norms[U]);
+        double factor3 = -dphi[U]/(norms[V]*angles[UV][1]);
         double factor4;
-        double half = 0.5;
-
-        factor1                 =  dphi[V]/(norms[U]*angles[UV][1]);
-        factor2                 =  dphi[W]/(norms[U]);
-        factor3                 = -dphi[U]/(norms[V]*angles[UV][1]);
-
         if (axisType == HippoNonbondedForce::Bisector) {
-            factor2    *= half;
-            factor4     = half*dphi[W]/(norms[V]);
-        } else {
-            factor4     = 0.0;
+            factor2 *= 0.5;
+            factor4 = 0.5*dphi[W]/(norms[V]);
         }
+        else
+            factor4 = 0.0;
+        Vec3 forceU                      =  vectorUV*factor1 + factor2*vectorUW;
+        forces[particleU.particleIndex] +=  forceU;
+        Vec3 forceV                      =  vectorUV*factor3 + factor4*vectorVW;
+        forces[particleV.particleIndex] +=  forceV;
+        forces[particleI.particleIndex] -=  (forceU + forceV);
 
-        for (int ii = 0; ii < 3; ii++) {
-            double forceU                                        =  vectorUV[ii]*factor1 + factor2*vectorUW[ii];
-            forces[particleU.particleIndex][ii]                 -=  forceU;
-
-            double forceV                                        =  vectorUV[ii]*factor3 + factor4*vectorVW[ii];
-            forces[particleV.particleIndex][ii]                 -=  forceV;
-
-            forces[particleI.particleIndex][ii]                 +=  (forceU + forceV);
-        }
-
-    } else if (axisType == HippoNonbondedForce::ZBisect) {
-
+    }
+    else if (axisType == HippoNonbondedForce::ZBisect) {
         Vec3 vectorR          = vectorV + vectorW;
         Vec3 vectorS          = vectorU.cross(vectorR);
 
@@ -1554,58 +1507,45 @@ void AmoebaReferenceHippoNonbondedForce::mapTorqueToForceForParticle(const Multi
         double factor3        = dphi[U]/(norms[V]*(ut1sin+ut2sin));
         double factor4        = dphi[U]/(norms[W]*(ut1sin+ut2sin));
 
-        Vec3 forceU               =  vectorUR*factor1 + vectorUS*factor2;
-        forces[particleU.particleIndex]        -= forceU;
+        Vec3 forceU =  vectorUR*factor1 + vectorUS*factor2;
+        forces[particleU.particleIndex] += forceU;
+        Vec3 forceV = (vectorS*angles[VS][1] - t1*angles[VS][0])*factor3;
+        forces[particleV.particleIndex] += forceV;
+        Vec3 forceW = (vectorS*angles[WS][1] - t2*angles[WS][0])*factor4;
+        forces[particleW->particleIndex] += forceW;
+        forces[particleI.particleIndex] -= (forceU + forceV + forceW);
 
-        Vec3 forceV               = (vectorS*angles[VS][1] - t1*angles[VS][0])*factor3;
-        forces[particleV.particleIndex]        -= forceV;
+    }
+    else if (axisType == HippoNonbondedForce::ThreeFold) {
+        Vec3 du =  vectorUW*dphi[W]/(norms[U]*angles[UW][1]) +
+                   vectorUV*dphi[V]/(norms[U]*angles[UV][1]) -
+                   vectorUW*dphi[U]/(norms[U]*angles[UW][1]) -
+                   vectorUV*dphi[U]/(norms[U]*angles[UV][1]);
 
-        Vec3 forceW               = (vectorS*angles[WS][1] - t2*angles[WS][0])*factor4;
-        forces[particleW->particleIndex]       -= forceW;
+        Vec3 dv =  vectorVW*dphi[W]/(norms[V]*angles[VW][1]) -
+                   vectorUV*dphi[U]/(norms[V]*angles[UV][1]) -
+                   vectorVW*dphi[V]/(norms[V]*angles[VW][1]) +
+                   vectorUV*dphi[V]/(norms[V]*angles[UV][1]);
 
-        forces[particleI.particleIndex]        += (forceU + forceV + forceW);
+        Vec3 dw = -vectorUW*dphi[U]/(norms[W]*angles[UW][1]) -
+                   vectorVW*dphi[V]/(norms[W]*angles[VW][1]) +
+                   vectorUW*dphi[W]/(norms[W]*angles[UW][1]) +
+                   vectorVW*dphi[W]/(norms[W]*angles[VW][1]);
 
-    } else if (axisType == HippoNonbondedForce::ThreeFold) {
+        du /= 3.0;
+        dv /= 3.0;
+        dw /= 3.0;
 
-        // 3-fold
-
-        for (int ii = 0; ii < 3; ii++) {
-
-            double du =  vectorUW[ii]*dphi[W]/(norms[U]*angles[UW][1]) +
-                         vectorUV[ii]*dphi[V]/(norms[U]*angles[UV][1]) -
-                         vectorUW[ii]*dphi[U]/(norms[U]*angles[UW][1]) -
-                         vectorUV[ii]*dphi[U]/(norms[U]*angles[UV][1]);
-
-            double dv =  vectorVW[ii]*dphi[W]/(norms[V]*angles[VW][1]) -
-                         vectorUV[ii]*dphi[U]/(norms[V]*angles[UV][1]) -
-                         vectorVW[ii]*dphi[V]/(norms[V]*angles[VW][1]) +
-                         vectorUV[ii]*dphi[V]/(norms[V]*angles[UV][1]);
-
-            double dw = -vectorUW[ii]*dphi[U]/(norms[W]*angles[UW][1]) -
-                         vectorVW[ii]*dphi[V]/(norms[W]*angles[VW][1]) +
-                         vectorUW[ii]*dphi[W]/(norms[W]*angles[UW][1]) +
-                         vectorVW[ii]*dphi[W]/(norms[W]*angles[VW][1]);
-
-            du /= 3.0;
-            dv /= 3.0;
-            dw /= 3.0;
-
-            forces[particleU.particleIndex][ii] -= du;
-            forces[particleV.particleIndex][ii] -= dv;
-            if (particleW)
-                forces[particleW->particleIndex][ii] -= dw;
-            forces[particleI.particleIndex][ii] += (du + dv + dw);
-        }
-
-    } else if (axisType == HippoNonbondedForce::ZOnly) {
-
-        // z-only
-
-        for (int ii = 0; ii < 3; ii++) {
-            double du                            = vectorUV[ii]*dphi[V]/(norms[U]*angles[UV][1]) + vectorUW[ii]*dphi[W]/norms[U];
-            forces[particleU.particleIndex][ii] -= du;
-            forces[particleI.particleIndex][ii] += du;
-        }
+        forces[particleU.particleIndex] += du;
+        forces[particleV.particleIndex] += dv;
+        if (particleW)
+            forces[particleW->particleIndex] += dw;
+        forces[particleI.particleIndex] -= (du + dv + dw);
+    }
+    else if (axisType == HippoNonbondedForce::ZOnly) {
+        Vec3 du = vectorUV*dphi[V]/(norms[U]*angles[UV][1]) + vectorUW*dphi[W]/norms[U];
+        forces[particleU.particleIndex] += du;
+        forces[particleI.particleIndex] -= du;
     }
 }
 
@@ -1641,40 +1581,15 @@ double AmoebaReferenceHippoNonbondedForce::calculateInteractions(vector<Vec3>& t
             energy += calculateElectrostaticPairIxn(particleData[i], particleData[j], scaleFactors, forces, torques);
             calculateInducedDipolePairIxn(particleData[i], particleData[j], scaleFactors, forces, torques);
             energy += calculateDispersionPairIxn(particleData[i], particleData[j], forces);
+            energy += calculateChargeTransferPairIxn(particleData[i], particleData[j], forces);
 
             for (unsigned int k = 0; k < LAST_SCALE_TYPE_INDEX; k++) {
                 scaleFactors[k] = 1.0;
             }
         }
     }
-    for (int i = 0; i < _numParticles; i++) {
-        // Compute the µ(m) T µ(n) force contributions here
-//        for (int l = 0; l < _maxPTOrder-1; ++l) {
-//            for (int m = 0; m < _maxPTOrder-1-l; ++m) {
-//                double p = _extPartCoefficients[l+m+1];
-//                if(std::fabs(p) < 1e-6) continue;
-//                forces[i][0] += 0.5*_electric*p*(_ptDipoleD[l][i][0]*_ptDipoleFieldGradientP[m][6*i+0]
-//                                               + _ptDipoleD[l][i][1]*_ptDipoleFieldGradientP[m][6*i+3]
-//                                               + _ptDipoleD[l][i][2]*_ptDipoleFieldGradientP[m][6*i+4]);
-//                forces[i][1] += 0.5*_electric*p*(_ptDipoleD[l][i][0]*_ptDipoleFieldGradientP[m][6*i+3]
-//                                               + _ptDipoleD[l][i][1]*_ptDipoleFieldGradientP[m][6*i+1]
-//                                               + _ptDipoleD[l][i][2]*_ptDipoleFieldGradientP[m][6*i+5]);
-//                forces[i][2] += 0.5*_electric*p*(_ptDipoleD[l][i][0]*_ptDipoleFieldGradientP[m][6*i+4]
-//                                               + _ptDipoleD[l][i][1]*_ptDipoleFieldGradientP[m][6*i+5]
-//                                               + _ptDipoleD[l][i][2]*_ptDipoleFieldGradientP[m][6*i+2]);
-//                forces[i][0] += 0.5*_electric*p*(_ptDipoleP[l][i][0]*_ptDipoleFieldGradientD[m][6*i+0]
-//                                               + _ptDipoleP[l][i][1]*_ptDipoleFieldGradientD[m][6*i+3]
-//                                               + _ptDipoleP[l][i][2]*_ptDipoleFieldGradientD[m][6*i+4]);
-//                forces[i][1] += 0.5*_electric*p*(_ptDipoleP[l][i][0]*_ptDipoleFieldGradientD[m][6*i+3]
-//                                               + _ptDipoleP[l][i][1]*_ptDipoleFieldGradientD[m][6*i+1]
-//                                               + _ptDipoleP[l][i][2]*_ptDipoleFieldGradientD[m][6*i+5]);
-//                forces[i][2] += 0.5*_electric*p*(_ptDipoleP[l][i][0]*_ptDipoleFieldGradientD[m][6*i+4]
-//                                               + _ptDipoleP[l][i][1]*_ptDipoleFieldGradientD[m][6*i+5]
-//                                               + _ptDipoleP[l][i][2]*_ptDipoleFieldGradientD[m][6*i+2]);
-//            }
-//        }
+    for (int i = 0; i < _numParticles; i++)
         energy -= (0.5*_electric/particleData[i].polarizability)*_ptDipoleD[0][i].dot(_inducedDipole[i]);
-    }
     
     return energy;
 }
