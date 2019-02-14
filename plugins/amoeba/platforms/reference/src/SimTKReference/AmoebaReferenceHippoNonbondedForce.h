@@ -342,8 +342,8 @@ protected:
         public:
             int particleIndex, axisType, multipoleAtomX, multipoleAtomY, multipoleAtomZ;    
             Vec3 position;
-            Vec3 dipole;
-            double quadrupole[6];
+            Vec3 dipole, localDipole;
+            double quadrupole[6], localQuadrupole[6];
             Vec3 sphericalDipole;
             double sphericalQuadrupole[5];
             double coreCharge, valenceCharge, alpha, epsilon, damping, c6, pauliK, pauliQ, pauliAlpha, polarizability;
@@ -510,6 +510,21 @@ protected:
      * @param ddamp        outputs the derivative of the damping factor
      */
     void computeDispersionDampingFactors(const MultipoleParticleData& particleI, const MultipoleParticleData& particleJ, double r, double& fdamp, double& ddamp) const;
+    /**
+     * Compute the damping factors used for Pauli repulsion.
+     * 
+     * @param particleI    parameters for the first particle
+     * @param particleJ    parameters for the second particle
+     * @param r            the distance between the two particles
+     * @param fdamp1       outputs the damping factor for the r^-1 term
+     * @param fdamp3       outputs the damping factor for the r^-3 term
+     * @param fdamp5       outputs the damping factor for the r^-5 term
+     * @param fdamp7       outputs the damping factor for the r^-7 term
+     * @param fdamp9       outputs the damping factor for the r^-9 term
+     * @param fdamp11       outputs the damping factor for the r^-11 term
+     */
+    void computeRepulsionDampingFactors(const MultipoleParticleData& particleI, const MultipoleParticleData& particleJ, double r, double& fdamp1, double& fdamp3,
+                                        double& fdamp5, double& fdamp7, double& fdamp9, double& fdamp11) const;
     /**
      * Check if multipoles at chiral site should be inverted.
      *
@@ -703,6 +718,17 @@ protected:
      */
     double calculateDispersionPairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
                                       std::vector<OpenMM::Vec3>& forces) const;
+
+    /**
+     * Calculate the Pauli repulsion interaction between particles I and K.
+     * 
+     * @param particleI         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle I
+     * @param particleK         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle K
+     * @param forces            vector of particle forces to be updated
+     * @param torque            vector of particle torques to be updated
+     */
+    double calculateRepulsionPairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
+                                      std::vector<OpenMM::Vec3>& forces, std::vector<Vec3>& torque) const;
 
     /**
      * Calculate the charge transfer interaction between particles I and K.
