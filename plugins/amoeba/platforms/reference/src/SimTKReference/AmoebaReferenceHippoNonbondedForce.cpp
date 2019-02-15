@@ -82,6 +82,11 @@ AmoebaReferenceHippoNonbondedForce::AmoebaReferenceHippoNonbondedForce(const Hip
 
     setExtrapolationCoefficients({0.042, 0.635, 0.414});
     _nonbondedMethod = force.getNonbondedMethod();
+    useSwitch = (_nonbondedMethod == HippoNonbondedForce::PME ? force.getUseSwitchingFunction() : false);
+    _cutoffDistance = force.getCutoffDistance();
+    _cutoffDistanceSquared = _cutoffDistance*_cutoffDistance;
+    _switchingDistance = force.getSwitchingDistance();
+    _switchingDistanceSquared = _switchingDistance*_switchingDistance;
     checkChiral();
 }
 
@@ -924,7 +929,6 @@ void AmoebaReferenceHippoNonbondedForce::calculateInducedDipoles()
 
 double AmoebaReferenceHippoNonbondedForce::calculateElectrostaticPairIxn(const MultipoleParticleData& particleI,
                                                                         const MultipoleParticleData& particleK,
-                                                                        const vector<double>& scalingFactors,
                                                                         vector<Vec3>& forces,
                                                                         vector<Vec3>& torque) const {
     unsigned int iIndex = particleI.particleIndex;
@@ -979,7 +983,10 @@ double AmoebaReferenceHippoNonbondedForce::calculateElectrostaticPairIxn(const M
 
     double rInv = 1/r;
     double rInv2 = rInv*rInv;
-    double rr1 = _electric * scalingFactors[M_SCALE] * rInv;
+    double rr1 = _electric*rInv;
+    auto exception = exceptions.find(make_pair(particleI.particleIndex, particleK.particleIndex));
+    if (exception != exceptions.end())
+        rr1 *= exception->second.multipoleMultipoleScale;
     double rr3 = rr1*rInv2;
     double rr5 = 3*rr3*rInv2;
     double rr7 = 5*rr5*rInv2;
@@ -1052,7 +1059,6 @@ double AmoebaReferenceHippoNonbondedForce::calculateElectrostaticPairIxn(const M
 
 void AmoebaReferenceHippoNonbondedForce::calculateInducedDipolePairIxn(const MultipoleParticleData& particleI,
                                                                         const MultipoleParticleData& particleK,
-                                                                        const vector<double>& scalingFactors,
                                                                         vector<Vec3>& forces,
                                                                         vector<Vec3>& torque) const {
     unsigned int iIndex = particleI.particleIndex;
@@ -1410,6 +1416,8 @@ double AmoebaReferenceHippoNonbondedForce::calculateRepulsionPairIxn(const Multi
     unsigned int kIndex = particleK.particleIndex;
 
     Vec3 deltaR = particleK.position - particleI.position;
+    if (_nonbondedMethod == HippoNonbondedForce::PME)
+        getPeriodicDelta(deltaR);
     double r2 = deltaR.dot(deltaR);
     double r = sqrt(r2);
 
@@ -1505,6 +1513,15 @@ double AmoebaReferenceHippoNonbondedForce::calculateRepulsionPairIxn(const Multi
     Vec3 torqueK = fdamp3*dikCross + term2*dkrCross - term3*(dqik+diqkrCross) + term5*qkrCross - term6*(qkirCross-qikCross);
     torqueI *= sizik*rr1;
     torqueK *= sizik*rr1;
+    if (useSwitch && r > _switchingDistance) {
+        double t = (r-_switchingDistance)/(_cutoffDistance-_switchingDistance);
+        double switchValue = 1+t*t*t*(-10+t*(15-t*6));
+        double switchDeriv = t*t*(-30+t*(60-t*30))/(_cutoffDistance-_switchingDistance);
+        force = force*switchValue + energy*switchDeriv*rInv*deltaR;
+        energy *= switchValue;
+        torqueI *= switchValue;
+        torqueK *= switchValue;
+    }
     forces[iIndex] += force;
     forces[kIndex] -= force;
     torque[iIndex] += torqueI;
@@ -1518,6 +1535,8 @@ double AmoebaReferenceHippoNonbondedForce::calculateChargeTransferPairIxn(const 
     unsigned int kIndex = particleK.particleIndex;
 
     Vec3 deltaR = particleK.position - particleI.position;
+    if (_nonbondedMethod == HippoNonbondedForce::PME)
+        getPeriodicDelta(deltaR);
     double r2 = deltaR.dot(deltaR);
     double r = sqrt(r2);
     
@@ -1527,6 +1546,13 @@ double AmoebaReferenceHippoNonbondedForce::calculateChargeTransferPairIxn(const 
     double term2 = particleK.epsilon*exp(-particleI.damping*r);
     double energy = -(term1+term2);
     double dEnergydR = -(term1*particleK.damping + term2*particleI.damping);
+    if (useSwitch && r > _switchingDistance) {
+        double t = (r-_switchingDistance)/(_cutoffDistance-_switchingDistance);
+        double switchValue = 1+t*t*t*(-10+t*(15-t*6));
+        double switchDeriv = t*t*(-30+t*(60-t*30))/(_cutoffDistance-_switchingDistance);
+        dEnergydR = dEnergydR*switchValue + energy*switchDeriv;
+        energy *= switchValue;
+    }
     auto exception = exceptions.find(make_pair(particleI.particleIndex, particleK.particleIndex));
     if (exception != exceptions.end()) {
         energy *= exception->second.multipoleMultipoleScale;
@@ -1740,26 +1766,17 @@ void AmoebaReferenceHippoNonbondedForce::mapTorqueToForce(vector<Vec3>& torques,
 }
 
 double AmoebaReferenceHippoNonbondedForce::calculateInteractions(vector<Vec3>& torques, vector<Vec3>& forces) {
-    double energy = 0.0;
-    vector<double> scaleFactors(LAST_SCALE_TYPE_INDEX);
-    for (auto& s : scaleFactors)
-        s = 1.0;
 
     // main loop over particle pairs
 
+    double energy = 0.0;
     for (unsigned int i = 0; i < particleData.size(); i++) {
         for (unsigned int j = i+1; j < particleData.size(); j++) {
-            getMultipoleScaleFactors(i, j, scaleFactors);
-
-            energy += calculateElectrostaticPairIxn(particleData[i], particleData[j], scaleFactors, forces, torques);
-            calculateInducedDipolePairIxn(particleData[i], particleData[j], scaleFactors, forces, torques);
+            energy += calculateElectrostaticPairIxn(particleData[i], particleData[j], forces, torques);
+            calculateInducedDipolePairIxn(particleData[i], particleData[j], forces, torques);
             energy += calculateDispersionPairIxn(particleData[i], particleData[j], forces);
             energy += calculateRepulsionPairIxn(particleData[i], particleData[j], forces, torques);
             energy += calculateChargeTransferPairIxn(particleData[i], particleData[j], forces);
-
-            for (unsigned int k = 0; k < LAST_SCALE_TYPE_INDEX; k++) {
-                scaleFactors[k] = 1.0;
-            }
         }
     }
     for (int i = 0; i < _numParticles; i++)
@@ -1892,7 +1909,6 @@ AmoebaReferencePmeHippoNonbondedForce::AmoebaReferencePmeHippoNonbondedForce(con
     _fftplan = NULL;
     _pmeGrid = NULL;
     _pmeGridDimensions = HippoIntVec(-1, -1, -1);
-    _cutoffDistance = force.getCutoffDistance();
     force.getPMEParameters(_alphaEwald, _pmeGridDimensions[0], _pmeGridDimensions[1], _pmeGridDimensions[2]);
     force.getPMEParameters(_dalphaEwald, _dpmeGridDimensions[0], _dpmeGridDimensions[1], _dpmeGridDimensions[2]);
     if (_alphaEwald == 0.0 || _dalphaEwald == 0.0) {
@@ -1903,7 +1919,9 @@ AmoebaReferencePmeHippoNonbondedForce::AmoebaReferencePmeHippoNonbondedForce(con
             NonbondedForceImpl::calcPMEParameters(system, nb, _alphaEwald, _pmeGridDimensions[0], _pmeGridDimensions[1], _pmeGridDimensions[2], false);
         if (_dalphaEwald == 0.0)
             NonbondedForceImpl::calcPMEParameters(system, nb, _dalphaEwald, _dpmeGridDimensions[0], _dpmeGridDimensions[1], _dpmeGridDimensions[2], true);
-    }    
+    }
+    fftpack_init_3d(&_fftplan, _pmeGridDimensions[0], _pmeGridDimensions[1], _pmeGridDimensions[2]);
+    initializeBSplineModuli();
 }
 
 AmoebaReferencePmeHippoNonbondedForce::~AmoebaReferencePmeHippoNonbondedForce()
@@ -1917,12 +1935,6 @@ AmoebaReferencePmeHippoNonbondedForce::~AmoebaReferencePmeHippoNonbondedForce()
 double AmoebaReferencePmeHippoNonbondedForce::getCutoffDistance() const
 {
      return _cutoffDistance;
-};
-
-void AmoebaReferencePmeHippoNonbondedForce::setCutoffDistance(double cutoffDistance)
-{
-     _cutoffDistance        = cutoffDistance;
-     _cutoffDistanceSquared = cutoffDistance*cutoffDistance;
 };
 
 double AmoebaReferencePmeHippoNonbondedForce::getAlphaEwald() const
@@ -2268,7 +2280,7 @@ void AmoebaReferencePmeHippoNonbondedForce::calculateFixedMultipoleField()
 
     // include direct space fixed multipole fields
 
-    this->AmoebaReferenceHippoNonbondedForce::calculateFixedMultipoleField();
+    AmoebaReferenceHippoNonbondedForce::calculateFixedMultipoleField();
 }
 
 #define ARRAY(x,y) array[(x)-1+((y)-1)*AMOEBA_PME_ORDER]
@@ -3793,58 +3805,58 @@ double AmoebaReferencePmeHippoNonbondedForce::calculatePmeDirectElectrostaticPai
 
 double AmoebaReferencePmeHippoNonbondedForce::calculateInteractions(vector<Vec3>& torques, vector<Vec3>& forces)
 {
-    double energy = 0.0;
-    vector<double> scaleFactors(LAST_SCALE_TYPE_INDEX);
-    for (auto& s : scaleFactors)
-        s = 1.0;
-
-    // loop over particle pairs for direct space interactions
-
-    for (unsigned int ii = 0; ii < particleData.size(); ii++) {
-        for (unsigned int jj = ii+1; jj < particleData.size(); jj++) {
-            getMultipoleScaleFactors(ii, jj, scaleFactors);
-
-            energy += calculatePmeDirectElectrostaticPairIxn(particleData[ii], particleData[jj], scaleFactors, forces, torques);
-
-            for (auto& s : scaleFactors)
-                s = 1.0;
-        }
-    }
-
-    // The polarization energy
-    calculatePmeSelfTorque(particleData, torques);
-    energy += computeReciprocalSpaceInducedDipoleForceAndEnergy(particleData, forces, torques);
-    energy += computeReciprocalSpaceFixedMultipoleForceAndEnergy(particleData, forces, torques);
-    energy += calculatePmeSelfEnergy(particleData);
-
-    // Now that both the direct and reciprocal space contributions have been added, we can compute the dipole
-    // response contributions to the forces, if we're using the extrapolated polarization algorithm.
-    for (int i = 0; i < _numParticles; i++) {
-        // Compute the µ(m) T µ(n) force contributions here
-        for (int l = 0; l < _maxPTOrder-1; ++l) {
-            for (int m = 0; m < _maxPTOrder-1-l; ++m) {
-                double p = _extPartCoefficients[l+m+1];
-                if(std::fabs(p) < 1e-6) continue;
-                forces[i][0] += 0.5*_electric*p*(_ptDipoleD[l][i][0]*_ptDipoleFieldGradientP[m][6*i+0]
-                                               + _ptDipoleD[l][i][1]*_ptDipoleFieldGradientP[m][6*i+3]
-                                               + _ptDipoleD[l][i][2]*_ptDipoleFieldGradientP[m][6*i+4]);
-                forces[i][1] += 0.5*_electric*p*(_ptDipoleD[l][i][0]*_ptDipoleFieldGradientP[m][6*i+3]
-                                               + _ptDipoleD[l][i][1]*_ptDipoleFieldGradientP[m][6*i+1]
-                                               + _ptDipoleD[l][i][2]*_ptDipoleFieldGradientP[m][6*i+5]);
-                forces[i][2] += 0.5*_electric*p*(_ptDipoleD[l][i][0]*_ptDipoleFieldGradientP[m][6*i+4]
-                                               + _ptDipoleD[l][i][1]*_ptDipoleFieldGradientP[m][6*i+5]
-                                               + _ptDipoleD[l][i][2]*_ptDipoleFieldGradientP[m][6*i+2]);
-                forces[i][0] += 0.5*_electric*p*(_ptDipoleP[l][i][0]*_ptDipoleFieldGradientD[m][6*i+0]
-                                               + _ptDipoleP[l][i][1]*_ptDipoleFieldGradientD[m][6*i+3]
-                                               + _ptDipoleP[l][i][2]*_ptDipoleFieldGradientD[m][6*i+4]);
-                forces[i][1] += 0.5*_electric*p*(_ptDipoleP[l][i][0]*_ptDipoleFieldGradientD[m][6*i+3]
-                                               + _ptDipoleP[l][i][1]*_ptDipoleFieldGradientD[m][6*i+1]
-                                               + _ptDipoleP[l][i][2]*_ptDipoleFieldGradientD[m][6*i+5]);
-                forces[i][2] += 0.5*_electric*p*(_ptDipoleP[l][i][0]*_ptDipoleFieldGradientD[m][6*i+4]
-                                               + _ptDipoleP[l][i][1]*_ptDipoleFieldGradientD[m][6*i+5]
-                                               + _ptDipoleP[l][i][2]*_ptDipoleFieldGradientD[m][6*i+2]);
-            }
-        }
-    }
+    double energy = AmoebaReferenceHippoNonbondedForce::calculateInteractions(torques, forces);
+//    vector<double> scaleFactors(LAST_SCALE_TYPE_INDEX);
+//    for (auto& s : scaleFactors)
+//        s = 1.0;
+//
+//    // loop over particle pairs for direct space interactions
+//
+//    for (unsigned int ii = 0; ii < particleData.size(); ii++) {
+//        for (unsigned int jj = ii+1; jj < particleData.size(); jj++) {
+//            getMultipoleScaleFactors(ii, jj, scaleFactors);
+//
+//            energy += calculatePmeDirectElectrostaticPairIxn(particleData[ii], particleData[jj], scaleFactors, forces, torques);
+//
+//            for (auto& s : scaleFactors)
+//                s = 1.0;
+//        }
+//    }
+//
+//    // The polarization energy
+//    calculatePmeSelfTorque(particleData, torques);
+//    energy += computeReciprocalSpaceInducedDipoleForceAndEnergy(particleData, forces, torques);
+//    energy += computeReciprocalSpaceFixedMultipoleForceAndEnergy(particleData, forces, torques);
+//    energy += calculatePmeSelfEnergy(particleData);
+//
+//    // Now that both the direct and reciprocal space contributions have been added, we can compute the dipole
+//    // response contributions to the forces, if we're using the extrapolated polarization algorithm.
+//    for (int i = 0; i < _numParticles; i++) {
+//        // Compute the µ(m) T µ(n) force contributions here
+//        for (int l = 0; l < _maxPTOrder-1; ++l) {
+//            for (int m = 0; m < _maxPTOrder-1-l; ++m) {
+//                double p = _extPartCoefficients[l+m+1];
+//                if(std::fabs(p) < 1e-6) continue;
+//                forces[i][0] += 0.5*_electric*p*(_ptDipoleD[l][i][0]*_ptDipoleFieldGradientP[m][6*i+0]
+//                                               + _ptDipoleD[l][i][1]*_ptDipoleFieldGradientP[m][6*i+3]
+//                                               + _ptDipoleD[l][i][2]*_ptDipoleFieldGradientP[m][6*i+4]);
+//                forces[i][1] += 0.5*_electric*p*(_ptDipoleD[l][i][0]*_ptDipoleFieldGradientP[m][6*i+3]
+//                                               + _ptDipoleD[l][i][1]*_ptDipoleFieldGradientP[m][6*i+1]
+//                                               + _ptDipoleD[l][i][2]*_ptDipoleFieldGradientP[m][6*i+5]);
+//                forces[i][2] += 0.5*_electric*p*(_ptDipoleD[l][i][0]*_ptDipoleFieldGradientP[m][6*i+4]
+//                                               + _ptDipoleD[l][i][1]*_ptDipoleFieldGradientP[m][6*i+5]
+//                                               + _ptDipoleD[l][i][2]*_ptDipoleFieldGradientP[m][6*i+2]);
+//                forces[i][0] += 0.5*_electric*p*(_ptDipoleP[l][i][0]*_ptDipoleFieldGradientD[m][6*i+0]
+//                                               + _ptDipoleP[l][i][1]*_ptDipoleFieldGradientD[m][6*i+3]
+//                                               + _ptDipoleP[l][i][2]*_ptDipoleFieldGradientD[m][6*i+4]);
+//                forces[i][1] += 0.5*_electric*p*(_ptDipoleP[l][i][0]*_ptDipoleFieldGradientD[m][6*i+3]
+//                                               + _ptDipoleP[l][i][1]*_ptDipoleFieldGradientD[m][6*i+1]
+//                                               + _ptDipoleP[l][i][2]*_ptDipoleFieldGradientD[m][6*i+5]);
+//                forces[i][2] += 0.5*_electric*p*(_ptDipoleP[l][i][0]*_ptDipoleFieldGradientD[m][6*i+4]
+//                                               + _ptDipoleP[l][i][1]*_ptDipoleFieldGradientD[m][6*i+5]
+//                                               + _ptDipoleP[l][i][2]*_ptDipoleFieldGradientD[m][6*i+2]);
+//            }
+//        }
+//    }
     return energy;
 }

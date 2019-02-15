@@ -385,7 +385,8 @@ protected:
 
     HippoNonbondedForce::NonbondedMethod _nonbondedMethod;
 
-    double _electric;
+    double _electric, _cutoffDistance, _cutoffDistanceSquared, _switchingDistance, _switchingDistanceSquared;
+    bool useSwitch;
 
     enum ScaleType { D_SCALE, P_SCALE, M_SCALE, U_SCALE, LAST_SCALE_TYPE_INDEX };
     std::map<std::pair<int, int>, Exception> exceptions;
@@ -690,24 +691,22 @@ protected:
      * 
      * @param particleI         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle I
      * @param particleK         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle K
-     * @param scalingFactors    scaling factors for interaction
      * @param forces            vector of particle forces to be updated
      * @param torque            vector of particle torques to be updated
      */
     double calculateElectrostaticPairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
-                                         const std::vector<double>& scalingFactors, std::vector<OpenMM::Vec3>& forces, std::vector<Vec3>& torque) const;
+                                         std::vector<OpenMM::Vec3>& forces, std::vector<Vec3>& torque) const;
 
     /**
      * Calculate electrostatic interactions involving induced dipoles on particles I and K.
      * 
      * @param particleI         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle I
      * @param particleK         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle K
-     * @param scalingFactors    scaling factors for interaction
      * @param forces            vector of particle forces to be updated
      * @param torque            vector of particle torques to be updated
      */
     void calculateInducedDipolePairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
-                                       const std::vector<double>& scalingFactors, std::vector<OpenMM::Vec3>& forces, std::vector<Vec3>& torque) const;
+                                       std::vector<OpenMM::Vec3>& forces, std::vector<Vec3>& torque) const;
 
     /**
      * Calculate dispersion interaction between particles I and K.
@@ -859,14 +858,6 @@ public:
     double getCutoffDistance() const;
 
     /**
-     * Set cutoff distance.
-     *
-     * @return cutoff distance
-     *
-     */
-    void setCutoffDistance(double cutoffDistance);
-
-    /**
      * Get alpha used in Ewald summation.
      *
      * @return alpha
@@ -929,8 +920,6 @@ private:
     static const double SQRT_PI;
 
     double _alphaEwald, _dalphaEwald;
-    double _cutoffDistance;
-    double _cutoffDistanceSquared;
 
     Vec3 _recipBoxVectors[3];
     Vec3 _periodicBoxVectors[3];

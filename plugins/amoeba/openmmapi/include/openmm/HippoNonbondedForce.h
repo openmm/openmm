@@ -113,6 +113,26 @@ public:
      */
     void setCutoffDistance(double distance);
     /**
+     * Get whether a switching function is applied to the repulsion and charge transfer interactions.  If the NonbondedMethod method is set
+     * to NoCutoff, this option is ignored.
+     */
+    bool getUseSwitchingFunction() const;
+    /**
+     * Set whether a switching function is applied to the repulsion and charge transfer interactions.  If the NonbondedMethod method is set
+     * to NoCutoff, this option is ignored.
+     */
+    void setUseSwitchingFunction(bool use);
+    /**
+     * Get the distance at which the switching function begins to reduce the repulsion and charge transfer interactions.  This must be
+     * less than the cutoff distance.
+     */
+    double getSwitchingDistance() const;
+    /**
+     * Set the distance at which the switching function begins to reduce the repulsion and charge transfer interactions.  This must be
+     * less than the cutoff distance.
+     */
+    void setSwitchingDistance(double distance);
+    /**
      * Get the parameters to use for PME calculations.  If alpha is 0 (the default), these parameters are
      * ignored and instead their values are chosen based on the Ewald error tolerance.
      *
@@ -375,7 +395,8 @@ private:
     class ParticleInfo;
     class ExceptionInfo;
     NonbondedMethod nonbondedMethod;
-    double cutoffDistance;
+    double cutoffDistance, switchingDistance;
+    bool useSwitchingFunction;
     double ewaldErrorTol;
     double alpha, dalpha;
     int nx, ny, nz, dnx, dny, dnz;
