@@ -263,17 +263,17 @@ class ForceField(object):
                     template = ForceField._TemplateData(resName)
                     if 'override' in residue.attrib:
                         template.overrideLevel = int(residue.attrib['override'])
-                    atomIndices = {}
-                    for atom in residue.findall('Atom'):
+                    atomIndices = template.atomIndices
+                    for ia, atom in enumerate(residue.findall('Atom')):
                         params = {}
-                        for key in atom.attrib:
-                            if key not in ('name', 'type'):
-                                params[key] = _convertParameterToNumber(atom.attrib[key])
-                        atomName = atom.attrib['name']
+                        a_attrib = atom.attrib
+                        atomName = a_attrib.pop('name')
                         if atomName in atomIndices:
                             raise ValueError('Residue '+resName+' contains multiple atoms named '+atomName)
-                        atomIndices[atomName] = len(template.atoms)
-                        typeName = atom.attrib['type']
+                        typeName = a_attrib.pop('type')
+                        for key in atom.attrib:
+                            params[key] = _convertParameterToNumber(atom.attrib[key])
+                        atomIndices[atomName] = ia
                         template.atoms.append(ForceField._TemplateAtomData(atomName, typeName, self._atomTypes[typeName].element, params))
                     for site in residue.findall('VirtualSite'):
                         template.virtualSites.append(ForceField._VirtualSiteData(site, atomIndices))
@@ -588,6 +588,7 @@ class ForceField(object):
         def __init__(self, name):
             self.name = name
             self.atoms = []
+            self.atomIndices = {}
             self.virtualSites = []
             self.bonds = []
             self.externalBonds = []
@@ -595,14 +596,18 @@ class ForceField(object):
 
         def getAtomIndexByName(self, atom_name):
             """Look up an atom index by atom name, providing a helpful error message if not found."""
-            for (index, atom) in enumerate(self.atoms):
-                if atom.name == atom_name:
-                    return index
+            index = self.atomIndices.get(atom_name, None)
+            if index is not None:
+                return index
 
             # Provide a helpful error message if atom name not found.
             msg =  "Atom name '%s' not found in residue template '%s'.\n" % (atom_name, self.name)
             msg += "Possible atom names are: %s" % str(list(map(lambda x: x.name, self.atoms)))
             raise ValueError(msg)
+
+        def addAtom(self, atom):
+            self.atoms.append(atom)
+            self.atomIndices[atom.name] = len(self.atoms)
 
         def addBond(self, atom1, atom2):
             """Add a bond between two atoms in a template given their indices in the template."""
@@ -712,11 +717,11 @@ class ForceField(object):
 
                 for atom in template.atoms:
                     if not any(deleted.name == atom.name and deleted.residue == index for deleted in self.deletedAtoms):
-                        newTemplate.atoms.append(ForceField._TemplateAtomData(atom.name, atom.type, atom.element, atom.parameters))
+                        newTemplate.addAtom(ForceField._TemplateAtomData(atom.name, atom.type, atom.element, atom.parameters))
                 for atom in self.addedAtoms[index]:
                     if any(a.name == atom.name for a in newTemplate.atoms):
                         raise ValueError("Patch '%s' adds an atom with the same name as an existing atom: %s" % (self.name, atom.name))
-                    newTemplate.atoms.append(ForceField._TemplateAtomData(atom.name, atom.type, atom.element, atom.parameters))
+                    newTemplate.addAtom(ForceField._TemplateAtomData(atom.name, atom.type, atom.element, atom.parameters))
                 oldAtomIndex = dict([(atom.name, i) for i, atom in enumerate(template.atoms)])
                 newAtomIndex = dict([(atom.name, i) for i, atom in enumerate(newTemplate.atoms)])
                 for atom in self.changedAtoms[index]:
@@ -1540,7 +1545,7 @@ def _applyMultiResiduePatch(data, clusters, patch, candidateTemplates, selectedT
                             bondsMatch &= atom2.index in bondedToAtom[atom1.index]
                     if bondsMatch:
                         # We successfully matched the template to the residues.  Record the parameters.
-    
+
                         for i in range(patch.numResidues):
                             data.recordMatchedAtomParameters(residues[i], patchedTemplates[i], residueMatches[i])
                         newlyMatchedClusters.append(cluster)
@@ -1631,7 +1636,7 @@ def _createResidueTemplate(residue):
     """
     template = ForceField._TemplateData(residue.name)
     for atom in residue.atoms():
-        template.atoms.append(ForceField._TemplateAtomData(atom.name, None, atom.element))
+        template.addAtom(ForceField._TemplateAtomData(atom.name, None, atom.element))
     for (atom1,atom2) in residue.internal_bonds():
         template.addBondByName(atom1.name, atom2.name)
     residue_atoms = [ atom for atom in residue.atoms() ]
