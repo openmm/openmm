@@ -75,6 +75,7 @@ class PDBxFile(object):
         reader = PdbxReader(inputFile)
         data = []
         reader.read(data)
+        inputfile.close()
         block = data[0]
 
         # Build the topology.
