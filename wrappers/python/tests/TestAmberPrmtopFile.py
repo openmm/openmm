@@ -293,7 +293,8 @@ class TestAmberPrmtopFile(unittest.TestCase):
             context = Context(system, integrator, Platform.getPlatformByName("Reference"))
             context.setPositions(pdb.positions)
             state1 = context.getState(getForces=True)
-            state2 = XmlSerializer.deserialize(open('systems/alanine-dipeptide-implicit-forces/'+file[i]+'.xml').read())
+            with open('systems/alanine-dipeptide-implicit-forces/'+file[i]+'.xml') as infile:
+                state2 = XmlSerializer.deserialize(infile.read())
             for f1, f2, in zip(state1.getForces().value_in_unit(kilojoules_per_mole/nanometer), state2.getForces().value_in_unit(kilojoules_per_mole/nanometer)):
                 diff = norm(f1-f2)
                 self.assertTrue(diff < 0.1 or diff/norm(f1) < 1e-4)

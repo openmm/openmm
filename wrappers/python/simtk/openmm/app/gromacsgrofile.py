@@ -133,39 +133,40 @@ class GromacsGroFile(object):
         xyz      = []
         ln       = 0
         frame    = 0
-        for line in open(file):
-            if ln == 0:
-                comms.append(line.strip())
-            elif ln == 1:
-                na = int(line.strip())
-            elif _is_gro_coord(line):
-                if frame == 0: # Create the list of residues, atom names etc. only if it's the first frame.
-                    (thisresnum, thisresname, thisatomname) = [line[i*5:i*5+5].strip() for i in range(3)]
-                    resname.append(thisresname)
-                    resid.append(int(thisresnum))
-                    atomname.append(thisatomname)
-                    thiselem = thisatomname
-                    if len(thiselem) > 1:
-                        thiselem = thiselem[0] + sub('[A-Z0-9]','',thiselem[1:])
-                        try:
-                            elements.append(elem.get_by_symbol(thiselem))
-                        except KeyError:
-                            elements.append(None)
-                firstDecimalPos = line.index('.', 20)
-                secondDecimalPos = line.index('.', firstDecimalPos+1)
-                digits = secondDecimalPos-firstDecimalPos
-                pos = [float(line[20+i*digits:20+(i+1)*digits]) for i in range(3)]
-                xyz.append(Vec3(pos[0], pos[1], pos[2]))
-            elif _is_gro_box(line) and ln == na + 2:
-                sline = line.split()
-                boxes.append(_construct_box_vectors(line))
-                xyzs.append(xyz*nanometers)
-                xyz = []
-                ln = -1
-                frame += 1
-            else:
-                raise Exception("Unexpected line in .gro file: "+line)
-            ln += 1
+        with open(file) as grofile:
+            for line in grofile:
+                if ln == 0:
+                    comms.append(line.strip())
+                elif ln == 1:
+                    na = int(line.strip())
+                elif _is_gro_coord(line):
+                    if frame == 0: # Create the list of residues, atom names etc. only if it's the first frame.
+                        (thisresnum, thisresname, thisatomname) = [line[i*5:i*5+5].strip() for i in range(3)]
+                        resname.append(thisresname)
+                        resid.append(int(thisresnum))
+                        atomname.append(thisatomname)
+                        thiselem = thisatomname
+                        if len(thiselem) > 1:
+                            thiselem = thiselem[0] + sub('[A-Z0-9]','',thiselem[1:])
+                            try:
+                                elements.append(elem.get_by_symbol(thiselem))
+                            except KeyError:
+                                elements.append(None)
+                    firstDecimalPos = line.index('.', 20)
+                    secondDecimalPos = line.index('.', firstDecimalPos+1)
+                    digits = secondDecimalPos-firstDecimalPos
+                    pos = [float(line[20+i*digits:20+(i+1)*digits]) for i in range(3)]
+                    xyz.append(Vec3(pos[0], pos[1], pos[2]))
+                elif _is_gro_box(line) and ln == na + 2:
+                    sline = line.split()
+                    boxes.append(_construct_box_vectors(line))
+                    xyzs.append(xyz*nanometers)
+                    xyz = []
+                    ln = -1
+                    frame += 1
+                else:
+                    raise Exception("Unexpected line in .gro file: "+line)
+                ln += 1
 
         ## The atom positions read from the file.  If the file contains multiple frames, these are the positions in the first frame.
         self.positions = xyzs[0]
