@@ -607,7 +607,7 @@ class ForceField(object):
 
         def addAtom(self, atom):
             self.atoms.append(atom)
-            self.atomIndices[atom.name] = len(self.atoms)
+            self.atomIndices[atom.name] = len(self.atoms)-1
 
         def addBond(self, atom1, atom2):
             """Add a bond between two atoms in a template given their indices in the template."""
