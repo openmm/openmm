@@ -627,30 +627,13 @@ protected:
     virtual void initializeInducedDipoles(std::vector<UpdateInducedDipoleFieldStruct>& updateInducedDipoleFields); 
 
     /**
-     * Calculate field at particle I due induced dipole at particle J and vice versa
-     * (field at particle J due induced dipole at particle I).
-     * 
-     * @param particleI               index of particle I
-     * @param particleJ               index of particle J
-     * @param rr3                     damped 1/r^3 factor
-     * @param rr5                     damped 1/r^5 factor
-     * @param delta                   delta of particle positions: particleJ.x - particleI.x, ...
-     * @param inducedDipole           vector of induced dipoles
-     * @param field                   vector of induced dipole fields
-     */
-    void calculateInducedDipolePairIxn(unsigned int particleI, unsigned int particleJ,
-                                       double rr3, double rr5, const Vec3& delta,
-                                       const std::vector<Vec3>& inducedDipole,
-                                       std::vector<Vec3>& field) const;
-
-    /**
      * Calculate fields due induced dipoles at each site.
      *
      * @param particleI                 positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle I
      * @param particleJ                 positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle J
      * @param updateInducedDipoleFields vector of UpdateInducedDipoleFieldStruct containing input induced dipoles and output fields
      */
-    virtual void calculateInducedDipolePairIxns(const MultipoleParticleData& particleI, const MultipoleParticleData& particleJ,
+    void calculateInducedDipolePairIxns(const MultipoleParticleData& particleI, const MultipoleParticleData& particleJ,
                                                 std::vector<UpdateInducedDipoleFieldStruct>& updateInducedDipoleFields);
 
     /**
