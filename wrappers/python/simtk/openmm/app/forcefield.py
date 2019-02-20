@@ -266,13 +266,13 @@ class ForceField(object):
                     atomIndices = template.atomIndices
                     for ia, atom in enumerate(residue.findall('Atom')):
                         params = {}
-                        a_attrib = atom.attrib
-                        atomName = a_attrib.pop('name')
+                        for key in atom.attrib:
+                            if key not in ('name', 'type'):
+                                params[key] = _convertParameterToNumber(atom.attrib[key])
+                        atomName = atom.attrib['name']
                         if atomName in atomIndices:
                             raise ValueError('Residue '+resName+' contains multiple atoms named '+atomName)
-                        typeName = a_attrib.pop('type')
-                        for key in atom.attrib:
-                            params[key] = _convertParameterToNumber(atom.attrib[key])
+                        typeName = atom.attrib['type']
                         atomIndices[atomName] = ia
                         template.atoms.append(ForceField._TemplateAtomData(atomName, typeName, self._atomTypes[typeName].element, params))
                     for site in residue.findall('VirtualSite'):
