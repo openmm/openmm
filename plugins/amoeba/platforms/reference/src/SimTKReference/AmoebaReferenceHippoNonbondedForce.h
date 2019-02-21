@@ -677,7 +677,7 @@ protected:
      * @param forces            vector of particle forces to be updated
      * @param torque            vector of particle torques to be updated
      */
-    double calculateElectrostaticPairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
+    virtual double calculateElectrostaticPairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
                                          std::vector<OpenMM::Vec3>& forces, std::vector<Vec3>& torque) const;
 
     /**
@@ -688,7 +688,7 @@ protected:
      * @param forces            vector of particle forces to be updated
      * @param torque            vector of particle torques to be updated
      */
-    void calculateInducedDipolePairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
+    virtual void calculateInducedDipolePairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
                                        std::vector<OpenMM::Vec3>& forces, std::vector<Vec3>& torque) const;
 
     /**
@@ -1136,17 +1136,26 @@ private:
     void calculatePmeSelfTorque(const std::vector<MultipoleParticleData>& particleData, std::vector<Vec3>& torques) const;
 
     /**
-     * Calculate direct space electrostatic interaction between particles I and J.
+     * Calculate direct space electrostatic interaction between particles I and K.
      * 
      * @param particleI         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle I
-     * @param particleJ         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle J
-     * @param scalingFactors    scaling factors for interaction
+     * @param particleK         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle K
      * @param forces            vector of particle forces to be updated
-     * @param torques           vector of particle torques to be updated
+     * @param torque            vector of particle torques to be updated
      */
-    double calculatePmeDirectElectrostaticPairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleJ,
-                                                  const std::vector<double>& scalingFactors,
-                                                  std::vector<Vec3>& forces, std::vector<Vec3>& torques) const;
+    double calculateElectrostaticPairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
+                                         std::vector<OpenMM::Vec3>& forces, std::vector<Vec3>& torque) const;
+
+    /**
+     * Calculate electrostatic interactions involving induced dipoles on particles I and K.
+     * 
+     * @param particleI         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle I
+     * @param particleK         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle K
+     * @param forces            vector of particle forces to be updated
+     * @param torque            vector of particle torques to be updated
+     */
+    void calculateInducedDipolePairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
+                                       std::vector<OpenMM::Vec3>& forces, std::vector<Vec3>& torque) const;
 
     /**
      * Calculate reciprocal space energy/force/torque for dipole interaction.
