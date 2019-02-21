@@ -67,12 +67,13 @@ class TestPdbFile(unittest.TestCase):
 
     def test_BinaryStream(self):
         """Test reading a stream that was opened in binary mode."""
-        pdb = PDBFile(open('systems/triclinic.pdb', 'rb'))
+        with open('systems/triclinic.pdb', 'rb') as infile:
+            pdb = PDBFile(infile)
         self.assertEqual(len(pdb.positions), 8)
 
     def test_ExtraParticles(self):
         """Test reading, and writing and re-reading of a file containing extra particle atoms."""
-        pdb = PDBFile('systems/tip5p.pdb')  
+        pdb = PDBFile('systems/tip5p.pdb')
         for atom in pdb.topology.atoms():
             if atom.index > 2:
                 self.assertEqual(None, atom.element)

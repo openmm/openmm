@@ -70,11 +70,15 @@ class PDBxFile(object):
         # Load the file.
 
         inputFile = file
+        ownHandle = False
         if isinstance(file, str):
             inputFile = open(file)
+            ownHandle = True
         reader = PdbxReader(inputFile)
         data = []
         reader.read(data)
+        if ownHandle:
+            inputFile.close()
         block = data[0]
 
         # Build the topology.
