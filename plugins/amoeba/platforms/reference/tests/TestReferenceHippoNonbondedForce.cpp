@@ -144,6 +144,8 @@ void testWaterBox() {
     hippo->setCutoffDistance(0.7);
     hippo->setUseSwitchingFunction(true);
     hippo->setSwitchingDistance(0.6);
+    hippo->setPMEParameters(3.85037, 24, 24, 24);
+    hippo->setDPMEParameters(3.85037, 12, 12, 12);
     VerletIntegrator integrator(0.001);
     Context context(system, integrator, Platform::getPlatformByName("Reference"));
     vector<Vec3> positions = {

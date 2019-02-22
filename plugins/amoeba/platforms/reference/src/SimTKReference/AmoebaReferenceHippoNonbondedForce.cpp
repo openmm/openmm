@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2018 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2019 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -26,6 +26,7 @@
 #include "openmm/NonbondedForce.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/NonbondedForceImpl.h"
+#include "ReferencePME.h"
 #include "jama_svd.h"
 #include <algorithm>
 
@@ -59,18 +60,6 @@ AmoebaReferenceHippoNonbondedForce::AmoebaReferenceHippoNonbondedForce(const Hip
         particleData[i].localQuadrupole[QYY]      = quadrupoles[4];
         particleData[i].localQuadrupole[QYZ]      = quadrupoles[5];
         particleData[i].localQuadrupole[QZZ]      = quadrupoles[8];
-
-        // Form spherical harmonic dipoles from Cartesian moments.
-        particleData[i].sphericalDipole[0]  = dipoles[2]; // z -> Q_10
-        particleData[i].sphericalDipole[1]  = dipoles[0]; // x -> Q_11c
-        particleData[i].sphericalDipole[2]  = dipoles[1]; // y -> Q_11s
-
-        // Form spherical harmonic quadrupoles from Cartesian moments.
-        particleData[i].sphericalQuadrupole[0] = quadrupoles[8]*3.0; // zz -> Q_20
-        particleData[i].sphericalQuadrupole[1] = (2.0/sqrt(3.0)) * quadrupoles[2]*3.0; // xz -> Q_21c
-        particleData[i].sphericalQuadrupole[2] = (2.0/sqrt(3.0)) * quadrupoles[5]*3.0; // yz -> Q_21s
-        particleData[i].sphericalQuadrupole[3] = (1.0/sqrt(3.0)) * (quadrupoles[0] - quadrupoles[4])*3.0; // xx-yy -> Q_22c
-        particleData[i].sphericalQuadrupole[4] = (2.0/sqrt(3.0)) * quadrupoles[1]*3.0; // xy -> Q_22s
     }
     for (int i = 0; i < force.getNumExceptions(); i++) {
         Exception e;
@@ -199,9 +188,6 @@ void AmoebaReferenceHippoNonbondedForce::checkChiralCenterAtParticle(MultipolePa
         particleI.dipole[1] *= -1.0; // pole(3,i)
         particleI.quadrupole[QXY] *= -1.0; // pole(6,i) && pole(8,i)
         particleI.quadrupole[QYZ] *= -1.0; // pole(10,i) && pole(12,i)
-        particleI.sphericalDipole[2]     *= -1.0;   // y
-        particleI.sphericalQuadrupole[2] *= -1.0;   // yz
-        particleI.sphericalQuadrupole[4] *= -1.0;   // xy
     }
 }
 
@@ -343,46 +329,6 @@ void AmoebaReferenceHippoNonbondedForce::applyRotationMatrixToParticle( Multipol
     particleI.quadrupole[QYY] = rPole[1][1];
     particleI.quadrupole[QYZ] = rPole[1][2];
     particleI.quadrupole[QZZ] = rPole[2][2];
-
-    double dipoleRotationMatrix[3][3];
-
-    // Reorder the Cartesian {x,y,z} dipole rotation matrix, to account
-    // for spherical harmonic ordering {z,x,y}.
-    dipoleRotationMatrix[0][0] = vectorZ[2];
-    dipoleRotationMatrix[0][1] = vectorX[2];
-    dipoleRotationMatrix[0][2] = vectorY[2];
-    dipoleRotationMatrix[1][0] = vectorZ[0];
-    dipoleRotationMatrix[1][1] = vectorX[0];
-    dipoleRotationMatrix[1][2] = vectorY[0];
-    dipoleRotationMatrix[2][0] = vectorZ[1];
-    dipoleRotationMatrix[2][1] = vectorX[1];
-    dipoleRotationMatrix[2][2] = vectorY[1];
-
-    double quadrupoleRotationMatrix[5][5];
-    buildSphericalQuadrupoleRotationMatrix(dipoleRotationMatrix, quadrupoleRotationMatrix);
-
-    // Rotate the dipoles
-    double rotatedDipole[3];
-    for (int ii = 0; ii < 3; ii++) {
-        double val = 0.0;
-        for (int jj = 0; jj < 3; jj++) {
-            val += dipoleRotationMatrix[ii][jj] * particleI.sphericalDipole[jj];
-        }
-        rotatedDipole[ii] = val;
-    }
-    for (int ii = 0; ii < 3; ii++)
-        particleI.sphericalDipole[ii] = rotatedDipole[ii];
-    // Rotate the quadrupoles
-    double rotatedQuadrupole[5];
-    for (int ii = 0; ii < 5; ii++) {
-        double val = 0.0;
-        for (int jj = 0; jj < 5; jj++) {
-            val += quadrupoleRotationMatrix[ii][jj] * particleI.sphericalQuadrupole[jj];
-        }
-        rotatedQuadrupole[ii] = val;
-    }
-    for (int ii = 0; ii < 5; ii++)
-        particleI.sphericalQuadrupole[ii] = rotatedQuadrupole[ii];
 }
 
 void AmoebaReferenceHippoNonbondedForce::formQIRotationMatrix(const Vec3& iPosition,
@@ -479,40 +425,6 @@ void AmoebaReferenceHippoNonbondedForce::applyRotationMatrix()
                                           p.multipoleAtomX > -1 ? &particleData[p.multipoleAtomX] : NULL,
                                           p.multipoleAtomY > -1 ? &particleData[p.multipoleAtomY] : NULL, p.axisType);
         }
-    }
-}
-
-void AmoebaReferenceHippoNonbondedForce::getAndScaleInverseRs(double dampI, double dampJ,
-                                                         double tholeI, double tholeJ,
-                                                         double r, vector<double>& rrI) const
-{
-
-    double rI             =  1.0/r;
-    double r2I            =  rI*rI;
-
-    rrI[0]                = rI*r2I;
-    double constantFactor = 3.0;
-    for (unsigned int ii  = 1; ii < rrI.size(); ii++) {
-       rrI[ii]         = constantFactor*rrI[ii-1]*r2I;
-       constantFactor += 2.0;
-    }
-
-    double damp = dampI*dampJ;
-    if (damp != 0.0) {
-        double pgamma    = tholeI < tholeJ ? tholeI : tholeJ;
-        double ratio     = (r/damp);
-               ratio     = ratio*ratio*ratio;
-               damp      = -pgamma*ratio;
-
-        if (damp > -50.0) {
-            double dampExp = exp(damp);
-
-            rrI[0]              *= 1.0 - dampExp;
-            rrI[1]              *= 1.0 - (1.0 - damp)*dampExp;
-            if (rrI.size() > 2) {
-                rrI[2]          *= 1.0 - (1.0 - damp + (0.6*damp*damp))*dampExp;
-            }
-       }
     }
 }
 
@@ -910,6 +822,8 @@ void AmoebaReferenceHippoNonbondedForce::calculateInducedDipoles()
     // UpdateInducedDipoleFieldStruct contains induced dipole, fixed multipole fields and fields
     // due to other induced dipoles at each site
     convergeInduceDipolesByExtrapolation(particleData, updateInducedDipoleField);
+    for (int i = 0; i < _inducedDipole.size(); i++)
+        _inducedDipolePolar[i] = _inducedDipole[i];
 }
 
 double AmoebaReferenceHippoNonbondedForce::calculateElectrostaticPairIxn(const MultipoleParticleData& particleI,
@@ -1384,7 +1298,7 @@ double AmoebaReferenceHippoNonbondedForce::calculateDispersionPairIxn(const Mult
     computeDispersionDampingFactors(particleI, particleK, r, fdamp, ddamp);
     dEnergydR = dEnergydR*fdamp*fdamp + 2*energy*fdamp*ddamp;
     energy *= fdamp*fdamp;
-    
+
     // Accumulate the forces.
     
     Vec3 force = deltaR*(dEnergydR/r);
@@ -1404,6 +1318,8 @@ double AmoebaReferenceHippoNonbondedForce::calculateRepulsionPairIxn(const Multi
     if (_nonbondedMethod == HippoNonbondedForce::PME)
         getPeriodicDelta(deltaR);
     double r2 = deltaR.dot(deltaR);
+    if (_nonbondedMethod == HippoNonbondedForce::PME && r2 > _cutoffDistanceSquared)
+        return 0;
     double r = sqrt(r2);
 
     double dir         = particleI.dipole.dot(deltaR);
@@ -1895,7 +1811,7 @@ AmoebaReferencePmeHippoNonbondedForce::AmoebaReferencePmeHippoNonbondedForce(con
     _pmeGrid = NULL;
     _pmeGridDimensions = HippoIntVec(-1, -1, -1);
     force.getPMEParameters(_alphaEwald, _pmeGridDimensions[0], _pmeGridDimensions[1], _pmeGridDimensions[2]);
-    force.getPMEParameters(_dalphaEwald, _dpmeGridDimensions[0], _dpmeGridDimensions[1], _dpmeGridDimensions[2]);
+    force.getDPMEParameters(_dalphaEwald, _dpmeGridDimensions[0], _dpmeGridDimensions[1], _dpmeGridDimensions[2]);
     if (_alphaEwald == 0.0 || _dalphaEwald == 0.0) {
         NonbondedForce nb;
         nb.setEwaldErrorTolerance(force.getEwaldErrorTolerance());
@@ -3272,6 +3188,7 @@ double AmoebaReferencePmeHippoNonbondedForce::calculatePmeSelfEnergy(const vecto
     double cii = 0.0;
     double dii = 0.0;
     double qii = 0.0;
+    double c6ii = 0.0;
     for (unsigned int i = 0; i < _numParticles; i++) {
         const MultipoleParticleData& particleI = particleData[i];
         double charge = particleI.coreCharge + particleI.valenceCharge;
@@ -3283,10 +3200,12 @@ double AmoebaReferencePmeHippoNonbondedForce::calculatePmeSelfEnergy(const vecto
                2*(particleI.quadrupole[QXY]*particleI.quadrupole[QXY] +
                   particleI.quadrupole[QXZ]*particleI.quadrupole[QXZ] +
                   particleI.quadrupole[QYZ]*particleI.quadrupole[QYZ]));
+        c6ii += particleI.c6*particleI.c6;
     }
     double term = 2*_alphaEwald*_alphaEwald;
     double fterm = -_electric*_alphaEwald/SQRT_PI;
-    return fterm*(cii + term*(dii/3+2*term*qii/5));
+    double alpha3 = _dalphaEwald*_dalphaEwald*_dalphaEwald;
+    return fterm*(cii + term*(dii/3+2*term*qii/5)) + alpha3*alpha3*c6ii/12;
 }
 
 void AmoebaReferencePmeHippoNonbondedForce::calculatePmeSelfTorque(const vector<MultipoleParticleData>& particleData,
@@ -3805,12 +3724,72 @@ void AmoebaReferencePmeHippoNonbondedForce::calculateInducedDipolePairIxn(const 
     torque[k] += torqueK;
 }
 
+double AmoebaReferencePmeHippoNonbondedForce::calculateDispersionPairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
+                                      vector<Vec3>& forces) const {
+    unsigned int i = particleI.particleIndex;
+    unsigned int k = particleK.particleIndex;
+
+    Vec3 deltaR = particleK.position - particleI.position;
+    getPeriodicDelta(deltaR);
+    double r2 = deltaR.dot(deltaR);
+    if (r2 > _cutoffDistanceSquared)
+        return 0;
+    double r = sqrt(r2);
+    double rInv6 = 1/(r2*r2*r2);
+    double ralpha2 = r2*_alphaEwald*_alphaEwald;
+    double expterm = exp(-ralpha2);
+    double expa = expterm * (1 + ralpha2 + 0.5*ralpha2*ralpha2);
+    
+    // Compute the damping function.
+    
+    double fdamp, ddamp;
+    computeDispersionDampingFactors(particleI, particleK, r, fdamp, ddamp);
+    
+    // Compute the force and energy.
+
+    double dispersionScale = 1;
+    auto exception = exceptions.find(make_pair(particleI.particleIndex, particleK.particleIndex));
+    if (exception != exceptions.end())
+        dispersionScale = exception->second.dispersionScale;
+    double scale = dispersionScale*fdamp*fdamp - 1;
+    double cick = particleI.c6*particleK.c6;
+    double energy = -cick*(expa+scale)*rInv6;
+    double rterm = -ralpha2*ralpha2*ralpha2*expterm/r;
+    double dEnergydR = -6*energy/r - cick*rInv6*(rterm + 2*dispersionScale*fdamp*ddamp);
+    
+    // Accumulate the forces.
+    
+    Vec3 force = deltaR*(dEnergydR/r);
+    forces[i] -= force;
+    forces[k] += force;
+    return energy;
+}
+
+double AmoebaReferencePmeHippoNonbondedForce::computeReciprocalSpaceDispersionForceAndEnergy(const vector<MultipoleParticleData>& particleData, vector<Vec3>& forces) const {
+    pme_t pmedata;
+    int numParticles = particleData.size();
+    pme_init(&pmedata, _dalphaEwald, numParticles, _dpmeGridDimensions, 5, 1);
+    vector<double> charges(numParticles);
+    vector<Vec3> dpmeforces(numParticles, Vec3()), coords;
+    for (int i = 0; i < numParticles; i++) {
+        charges[i] = particleData[i].c6;
+        coords.push_back(particleData[i].position);
+    }
+    double recipDispersionEnergy;
+    pme_exec_dpme(pmedata, coords, dpmeforces, charges, _periodicBoxVectors, &recipDispersionEnergy);
+    pme_destroy(pmedata);
+    for (int i = 0; i < numParticles; i++)
+        forces[i] -= 2*dpmeforces[i];
+    return recipDispersionEnergy;
+}
+
 double AmoebaReferencePmeHippoNonbondedForce::calculateInteractions(vector<Vec3>& torques, vector<Vec3>& forces)
 {
     double energy = AmoebaReferenceHippoNonbondedForce::calculateInteractions(torques, forces);
     calculatePmeSelfTorque(particleData, torques);
     energy += computeReciprocalSpaceInducedDipoleForceAndEnergy(particleData, forces, torques);
     energy += computeReciprocalSpaceFixedMultipoleForceAndEnergy(particleData, forces, torques);
+    energy += computeReciprocalSpaceDispersionForceAndEnergy(particleData, forces);
     energy += calculatePmeSelfEnergy(particleData);
     return energy;
 }

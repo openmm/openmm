@@ -1,4 +1,4 @@
-/* Portions copyright (c) 2006-2018 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2019 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -344,8 +344,6 @@ protected:
             Vec3 position;
             Vec3 dipole, localDipole;
             double quadrupole[6], localQuadrupole[6];
-            Vec3 sphericalDipole;
-            double sphericalQuadrupole[5];
             double coreCharge, valenceCharge, alpha, epsilon, damping, c6, pauliK, pauliQ, pauliAlpha, polarizability;
     };
     
@@ -443,17 +441,7 @@ protected:
      * @param  pScale              output p-scale factor
      */
     void getDScaleAndPScale(unsigned int particleI, unsigned int particleJ, double& dScale, double& pScale) const;
-    
-    /**
-     * Calculate damped powers of 1/r.
-     *
-     * @param  particleI           index of particleI 
-     * @param  particleJ           index of particleJ
-     * @param  dScale              output d-scale factor
-     * @param  pScale              output p-scale factor
-     */
-    void getAndScaleInverseRs(double dampI, double dampJ, double tholeI, double tholeJ,
-                              double r, std::vector<double>& rrI) const;
+
     /**
      * Compute the damping factors for the field due to the fixed multipole moments of a particle.
      * 
@@ -698,7 +686,7 @@ protected:
      * @param particleK         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle K
      * @param forces            vector of particle forces to be updated
      */
-    double calculateDispersionPairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
+    virtual double calculateDispersionPairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
                                       std::vector<OpenMM::Vec3>& forces) const;
 
     /**
@@ -908,7 +896,8 @@ private:
     Vec3 _periodicBoxVectors[3];
 
     int _totalGridSize;
-    HippoIntVec _pmeGridDimensions, _dpmeGridDimensions;
+    HippoIntVec _pmeGridDimensions;
+    int _dpmeGridDimensions[3];
 
     fftpack_t   _fftplan;
 
@@ -1158,6 +1147,16 @@ private:
                                        std::vector<OpenMM::Vec3>& forces, std::vector<Vec3>& torque) const;
 
     /**
+     * Calculate dispersion interaction between particles I and K.
+     * 
+     * @param particleI         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle I
+     * @param particleK         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle K
+     * @param forces            vector of particle forces to be updated
+     */
+    double calculateDispersionPairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
+                                      std::vector<OpenMM::Vec3>& forces) const;
+
+    /**
      * Calculate reciprocal space energy/force/torque for dipole interaction.
      * 
      * @param particleData      vector of particle positions and parameters (charge, labFrame dipoles, quadrupoles, ...)
@@ -1166,6 +1165,16 @@ private:
      */
      double computeReciprocalSpaceInducedDipoleForceAndEnergy(const std::vector<MultipoleParticleData>& particleData,
                                                               std::vector<Vec3>& forces, std::vector<Vec3>& torques) const;
+
+    /**
+     * Calculate reciprocal space energy and force due to dispersion.
+     * 
+     * @param particleData    vector of particle positions and parameters (charge, labFrame dipoles, quadrupoles, ...)
+     * @param forces          upon return updated vector of forces
+     *
+     * @return energy
+     */
+    double computeReciprocalSpaceDispersionForceAndEnergy(const std::vector<MultipoleParticleData>& particleData, std::vector<Vec3>& forces) const;
 
     /**
      * Calculate the forces and energy.
