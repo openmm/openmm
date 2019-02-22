@@ -123,6 +123,7 @@ private:
     void findRelatedPowers(const Lepton::ExpressionTreeNode& node, const Lepton::ExpressionTreeNode& searchNode,
             std::map<int, const Lepton::ExpressionTreeNode*>& powers);
     void callFunction(std::stringstream& out, std::string singleFn, std::string doubleFn, const std::string& arg, const std::string& tempType);
+    void callFunction2(std::stringstream& out, std::string fn, const std::string& arg1, const std::string& arg2, const std::string& tempType);
     std::vector<std::vector<double> > computeFunctionParameters(const std::vector<const TabulatedFunction*>& functions);
     CudaContext& context;
     FunctionPlaceholder fp1, fp2, fp3, periodicDistance;
