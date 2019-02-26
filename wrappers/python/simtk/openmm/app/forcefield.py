@@ -1968,24 +1968,31 @@ class PeriodicTorsionGenerator(object):
         else:
             force = existing[0]
         wildcard = self.ff._atomClasses['']
+        proper_cache = {}
         for torsion in data.propers:
-            type1 = data.atomType[data.atoms[torsion[0]]]
-            type2 = data.atomType[data.atoms[torsion[1]]]
-            type3 = data.atomType[data.atoms[torsion[2]]]
-            type4 = data.atomType[data.atoms[torsion[3]]]
-            match = None
-            for index in self.propersForAtomType[type2]:
-                tordef = self.proper[index]
-                types1 = tordef.types1
-                types2 = tordef.types2
-                types3 = tordef.types3
-                types4 = tordef.types4
-                if (type2 in types2 and type3 in types3 and type4 in types4 and type1 in types1) or (type2 in types3 and type3 in types2 and type4 in types1 and type1 in types4):
-                    hasWildcard = (wildcard in (types1, types2, types3, types4))
-                    if match is None or not hasWildcard: # Prefer specific definitions over ones with wildcards
-                        match = tordef
-                    if not hasWildcard:
-                        break
+            type1, type2, type3, type4 = [data.atomType[data.atoms[torsion[i]]] for i in range(4)]
+            sig = (type1, type2, type3, type4)
+            sig = frozenset((sig, sig[:-1]))
+            match = proper_cache.get(sig, None)
+            if match == -1:
+                continue
+            if match is None:
+                for index in self.propersForAtomType[type2]:
+                    tordef = self.proper[index]
+                    types1 = tordef.types1
+                    types2 = tordef.types2
+                    types3 = tordef.types3
+                    types4 = tordef.types4
+                    if (type2 in types2 and type3 in types3 and type4 in types4 and type1 in types1) or (type2 in types3 and type3 in types2 and type4 in types1 and type1 in types4):
+                        hasWildcard = (wildcard in (types1, types2, types3, types4))
+                        if match is None or not hasWildcard: # Prefer specific definitions over ones with wildcards
+                            match = tordef
+                        if not hasWildcard:
+                            break
+                if match is None:
+                    proper_cache[sig] = -1
+                else:
+                    proper_cache[sig] = match
             if match is not None:
                 for i in range(len(match.phase)):
                     if match.k[i] != 0:
