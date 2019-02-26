@@ -1998,17 +1998,28 @@ class PeriodicTorsionGenerator(object):
                     if match.k[i] != 0:
                         force.addTorsion(torsion[0], torsion[1], torsion[2], torsion[3], match.periodicity[i], match.phase[i], match.k[i])
         impr_cache = {}
+        # from collections import defaultdict
         for torsion in data.impropers:
-            t1, t2, t3, t4 = [data.atomType[data.atoms[torsion[i]]] for i in range(4)]
-            sig = (t1, frozenset((t2,t3,t4)))
+            t1, t2, t3, t4 = tatoms = [data.atomType[data.atoms[torsion[i]]] for i in range(4)]
+            sig = (t1, t2, t3, t4)
+            # tcount = defaultdict(int)
+            # for t in (t2,t3,t4):
+            #     tcount[t] += 1
+            # sig = (t1, frozenset((atype, count) for atype, count in tcount.items()))
             match = impr_cache.get(sig, None)
             if match == -1:
                 # Previously checked, and doesn't appear in the database
                 continue
+            elif match:
+                i1, i2, i3, i4, tordef = match
+                a1, a2, a3, a4 = (torsion[i] for i in (i1, i2, i3, i4))
+                match = (a1, a2, a3, a4, tordef)
             if match is None:
                 match = _matchImproper(data, torsion, self)
                 if match is not None:
-                    impr_cache[sig] = match
+                    order = match[:4]
+                    i1, i2, i3, i4 = tuple(torsion.index(a) for a in order)
+                    impr_cache[sig] = (i1, i2, i3, i4, match[-1])
                 else:
                     impr_cache[sig] = -1
             if match is not None:
