@@ -27,6 +27,7 @@
 #include "openmm/HippoNonbondedForce.h"
 #include "openmm/System.h"
 #include "openmm/Vec3.h"
+#include <array>
 #include <map>
 #include <utility>
 #include <vector>
@@ -34,65 +35,6 @@
 #include <complex>
 
 namespace OpenMM {
-
-/**
- * 3-dimensional int vector
- */
-class HippoIntVec {
-public:
-    /**
-     * Create a HippoIntVec whose elements are all 0.
-     */
-    HippoIntVec() {
-        data[0] = data[1] = data[2] = 0;
-    }
-    /**
-     * Create a HippoIntVec with specified x, y, z, w components.
-     */
-    HippoIntVec(int x, int y, int z) {
-        data[0] = x;
-        data[1] = y;
-        data[2] = z;
-    }
-    int operator[](int index) const {
-        assert(index >= 0 && index < 3);
-        return data[index];
-    }
-    int& operator[](int index) {
-        assert(index >= 0 && index < 3);
-        return data[index];
-    }
-
-    // Arithmetic operators
-
-    // unary plus
-    HippoIntVec operator+() const {
-        return HippoIntVec(*this);
-    }
-
-    // plus
-    HippoIntVec operator+(const HippoIntVec& rhs) const {
-        const HippoIntVec& lhs = *this;
-        return HippoIntVec(lhs[0] + rhs[0], lhs[1] + rhs[1], lhs[2] + rhs[2]);
-    }
-
-    HippoIntVec& operator+=(const HippoIntVec& rhs) {
-        data[0] += rhs[0];
-        data[1] += rhs[1];
-        data[2] += rhs[2];
-        return *this;
-    }
-
-    HippoIntVec& operator-=(const HippoIntVec& rhs) {
-        data[0] -= rhs[0];
-        data[1] -= rhs[1];
-        data[2] -= rhs[2];
-        return *this;
-    }
-
-private:
-    int data[3];
-};
 
 /**
  * 4-dimensional double vector
@@ -370,11 +312,10 @@ protected:
      * Helper class used in calculating induced dipoles
      */
     struct UpdateInducedDipoleFieldStruct {
-            UpdateInducedDipoleFieldStruct(std::vector<OpenMM::Vec3>& inputFixed_E_Field, std::vector<OpenMM::Vec3>& inputInducedDipoles, std::vector<std::vector<Vec3> >& extrapolatedDipoles, std::vector<std::vector<double> >& extrapolatedDipoleFieldGradient);
+            UpdateInducedDipoleFieldStruct(std::vector<OpenMM::Vec3>& inputFixed_E_Field, std::vector<OpenMM::Vec3>& inputInducedDipoles, std::vector<std::vector<Vec3> >& extrapolatedDipoles);
             std::vector<OpenMM::Vec3>* fixedMultipoleField;
             std::vector<OpenMM::Vec3>* inducedDipoles;
             std::vector<std::vector<Vec3> >* extrapolatedDipoles;
-            std::vector<std::vector<double> >* extrapolatedDipoleFieldGradient;
             std::vector<OpenMM::Vec3> inducedDipoleField;
             std::vector<std::vector<double> > inducedDipoleFieldGradient;
     };
@@ -397,8 +338,6 @@ protected:
     std::vector<Vec3> _inducedDipolePolar;
     std::vector<std::vector<Vec3> > _ptDipoleP;
     std::vector<std::vector<Vec3> > _ptDipoleD;
-    std::vector<std::vector<double> > _ptDipoleFieldGradientP;
-    std::vector<std::vector<double> > _ptDipoleFieldGradientD;
 
     int _maxPTOrder;
     std::vector<double>  _extrapolationCoefficients;
@@ -631,7 +570,8 @@ protected:
      * @param updateInducedDipoleFields vector of UpdateInducedDipoleFieldStruct containing input induced dipoles and output fields
      */
     virtual void calculateInducedDipoleFields(const std::vector<MultipoleParticleData>& particleData,
-                                              std::vector<UpdateInducedDipoleFieldStruct>& updateInducedDipoleFields);
+                                              std::vector<UpdateInducedDipoleFieldStruct>& updateInducedDipoleFields,
+                                              int optOrder);
     /**
      * Calculated induced dipoles using extrapolated perturbation theory.
      *
@@ -896,7 +836,7 @@ private:
     Vec3 _periodicBoxVectors[3];
 
     int _totalGridSize;
-    HippoIntVec _pmeGridDimensions;
+    int _pmeGridDimensions[3];
     int _dpmeGridDimensions[3];
 
     fftpack_t   _fftplan;
@@ -906,11 +846,12 @@ private:
  
     std::vector<double> _pmeBsplineModuli[3];
     std::vector<HippoDouble4> _thetai[3];
-    std::vector<HippoIntVec> _iGrid;
+    std::vector<std::array<int, 3> > _iGrid;
     std::vector<double> _phi;
     std::vector<double> _phid;
     std::vector<double> _phip;
     std::vector<double> _phidp;
+    std::vector<std::vector<double> > optPhi;
     std::vector<HippoDouble4> _pmeBsplineTheta;
     std::vector<HippoDouble4> _pmeBsplineDtheta;
 
@@ -932,20 +873,6 @@ private:
      *                                periodic boundary conditions
      */
     void getPeriodicDelta(Vec3& deltaR) const;
-
-    /**
-     * Calculate damped inverse distances.
-     * 
-     * @param particleI               positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle I
-     * @param particleJ               positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle J
-     * @param dScale                  d-scale value for i-j interaction
-     * @param pScale                  p-scale value for i-j interaction
-     * @param dampedDInverseDistances damped inverse distances (drr3,drr5,drr7 in udirect2a() in TINKER)
-     * @param dampedPInverseDistances damped inverse distances (prr3,prr5,prr7 in udirect2a() in TINKER)
-     */
-    void getDampedInverseDistances(const MultipoleParticleData& particleI, const MultipoleParticleData& particleJ,
-                                   double dscale, double pscale, double r,
-                                   Vec3& dampedDInverseDistances, Vec3& dampedPInverseDistances) const;
     
     /**
      * Initialize B-spline moduli.
@@ -1098,7 +1025,8 @@ private:
      * @param updateInducedDipoleFields vector of UpdateInducedDipoleFieldStruct containing input induced dipoles and output fields
      */
     void calculateInducedDipoleFields(const std::vector<MultipoleParticleData>& particleData,
-                                      std::vector<UpdateInducedDipoleFieldStruct>& updateInducedDipoleFields);
+                                      std::vector<UpdateInducedDipoleFieldStruct>& updateInducedDipoleFields,
+                                      int optOrder);
 
     /**
      * Set reciprocal space induced dipole fields. 
@@ -1157,14 +1085,14 @@ private:
                                       std::vector<OpenMM::Vec3>& forces) const;
 
     /**
-     * Calculate reciprocal space energy/force/torque for dipole interaction.
+     * Calculate reciprocal space force/torque for dipole interaction.
      * 
      * @param particleData      vector of particle positions and parameters (charge, labFrame dipoles, quadrupoles, ...)
      * @param forces            vector of particle forces to be updated
      * @param torques           vector of particle torques to be updated
      */
-     double computeReciprocalSpaceInducedDipoleForceAndEnergy(const std::vector<MultipoleParticleData>& particleData,
-                                                              std::vector<Vec3>& forces, std::vector<Vec3>& torques) const;
+     void computeReciprocalSpaceInducedDipoleForce(const std::vector<MultipoleParticleData>& particleData,
+                                                   std::vector<Vec3>& forces, std::vector<Vec3>& torques) const;
 
     /**
      * Calculate reciprocal space energy and force due to dispersion.

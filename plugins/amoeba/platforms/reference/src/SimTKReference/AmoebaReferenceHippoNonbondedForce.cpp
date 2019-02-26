@@ -733,7 +733,9 @@ void AmoebaReferenceHippoNonbondedForce::calculateInducedDipolePairIxns(const Mu
     }
 }
 
-void AmoebaReferenceHippoNonbondedForce::calculateInducedDipoleFields(const vector<MultipoleParticleData>& particleData, vector<UpdateInducedDipoleFieldStruct>& updateInducedDipoleFields) {
+void AmoebaReferenceHippoNonbondedForce::calculateInducedDipoleFields(const vector<MultipoleParticleData>& particleData,
+                                                                      vector<UpdateInducedDipoleFieldStruct>& updateInducedDipoleFields,
+                                                                      int optOrder) {
     // Initialize the fields to zero.
 
     Vec3 zeroVec(0.0, 0.0, 0.0);
@@ -766,7 +768,7 @@ void AmoebaReferenceHippoNonbondedForce::convergeInduceDipolesByExtrapolation(co
     for (int order = 1; order < _maxPTOrder; ++order) {
         for (int i = 0; i < numFields; i++)
             std::fill(updateInducedDipoleField[i].inducedDipoleFieldGradient.begin(), updateInducedDipoleField[i].inducedDipoleFieldGradient.end(), zeros);
-        calculateInducedDipoleFields(particleData, updateInducedDipoleField);
+        calculateInducedDipoleFields(particleData, updateInducedDipoleField, order-1);
         for (int i = 0; i < numFields; i++) {
             UpdateInducedDipoleFieldStruct& field = updateInducedDipoleField[i];
             (*field.extrapolatedDipoles)[order].resize(_numParticles);
@@ -774,11 +776,6 @@ void AmoebaReferenceHippoNonbondedForce::convergeInduceDipolesByExtrapolation(co
                 (*field.inducedDipoles)[atom] = field.inducedDipoleField[atom] * particleData[atom].polarizability;
                 (*field.extrapolatedDipoles)[order][atom] = (*field.inducedDipoles)[atom];
             }
-            vector<double> fieldGrad(6*_numParticles, 0.0);
-            for (int atom = 0; atom < _numParticles; ++atom)
-                for (int component = 0; component < 6; ++component)
-                    fieldGrad[6*atom + component] = field.inducedDipoleFieldGradient[atom][component];
-            field.extrapolatedDipoleFieldGradient->push_back(fieldGrad);
         }
     }
 
@@ -791,7 +788,7 @@ void AmoebaReferenceHippoNonbondedForce::convergeInduceDipolesByExtrapolation(co
             for (int atom = 0; atom < _numParticles; ++atom)
                 (*field.inducedDipoles)[atom] += (*field.extrapolatedDipoles)[order][atom] * _extPartCoefficients[order];
     }
-    calculateInducedDipoleFields(particleData, updateInducedDipoleField);
+    calculateInducedDipoleFields(particleData, updateInducedDipoleField, _maxPTOrder-1);
 }
 
 void AmoebaReferenceHippoNonbondedForce::calculateInducedDipoles()
@@ -814,8 +811,8 @@ void AmoebaReferenceHippoNonbondedForce::calculateInducedDipoles()
     _inducedDipole.resize(_numParticles);
     _inducedDipolePolar.resize(_numParticles);
     vector<UpdateInducedDipoleFieldStruct> updateInducedDipoleField;
-    updateInducedDipoleField.push_back(UpdateInducedDipoleFieldStruct(_fixedMultipoleField, _inducedDipole, _ptDipoleD, _ptDipoleFieldGradientD));
-    updateInducedDipoleField.push_back(UpdateInducedDipoleFieldStruct(_fixedMultipoleFieldPolar, _inducedDipolePolar, _ptDipoleP, _ptDipoleFieldGradientP));
+    updateInducedDipoleField.push_back(UpdateInducedDipoleFieldStruct(_fixedMultipoleField, _inducedDipole, _ptDipoleD));
+    updateInducedDipoleField.push_back(UpdateInducedDipoleFieldStruct(_fixedMultipoleFieldPolar, _inducedDipolePolar, _ptDipoleP));
 
     initializeInducedDipoles(updateInducedDipoleField);
 
@@ -1795,8 +1792,8 @@ void AmoebaReferenceHippoNonbondedForce::calculateElectrostaticPotential(const v
         p *= _electric;
 }
 
-AmoebaReferenceHippoNonbondedForce::UpdateInducedDipoleFieldStruct::UpdateInducedDipoleFieldStruct(vector<OpenMM::Vec3>& inputFixed_E_Field, vector<OpenMM::Vec3>& inputInducedDipoles, vector<vector<Vec3> >& extrapolatedDipoles, vector<vector<double> >& extrapolatedDipoleFieldGradient) :
-        fixedMultipoleField(&inputFixed_E_Field), inducedDipoles(&inputInducedDipoles), extrapolatedDipoles(&extrapolatedDipoles), extrapolatedDipoleFieldGradient(&extrapolatedDipoleFieldGradient) { 
+AmoebaReferenceHippoNonbondedForce::UpdateInducedDipoleFieldStruct::UpdateInducedDipoleFieldStruct(vector<OpenMM::Vec3>& inputFixed_E_Field, vector<OpenMM::Vec3>& inputInducedDipoles, vector<vector<Vec3> >& extrapolatedDipoles) :
+        fixedMultipoleField(&inputFixed_E_Field), inducedDipoles(&inputInducedDipoles), extrapolatedDipoles(&extrapolatedDipoles) { 
     inducedDipoleField.resize(fixedMultipoleField->size());
 }
 
@@ -1809,7 +1806,6 @@ AmoebaReferencePmeHippoNonbondedForce::AmoebaReferencePmeHippoNonbondedForce(con
                AmoebaReferenceHippoNonbondedForce(force) {
     _fftplan = NULL;
     _pmeGrid = NULL;
-    _pmeGridDimensions = HippoIntVec(-1, -1, -1);
     force.getPMEParameters(_alphaEwald, _pmeGridDimensions[0], _pmeGridDimensions[1], _pmeGridDimensions[2]);
     force.getDPMEParameters(_dalphaEwald, _dpmeGridDimensions[0], _dpmeGridDimensions[1], _dpmeGridDimensions[2]);
     if (_alphaEwald == 0.0 || _dalphaEwald == 0.0) {
@@ -1946,6 +1942,7 @@ void AmoebaReferencePmeHippoNonbondedForce::resizePmeArrays()
     _phid.resize(10*_numParticles);
     _phip.resize(10*_numParticles);
     _phidp.resize(20*_numParticles);
+    optPhi.resize(_maxPTOrder, vector<double>(10*_numParticles));
 }
 
 void AmoebaReferencePmeHippoNonbondedForce::initializePmeGrid()
@@ -1962,50 +1959,6 @@ void AmoebaReferencePmeHippoNonbondedForce::getPeriodicDelta(Vec3& deltaR) const
     deltaR -= _periodicBoxVectors[2]*floor(deltaR[2]*_recipBoxVectors[2][2]+0.5);
     deltaR -= _periodicBoxVectors[1]*floor(deltaR[1]*_recipBoxVectors[1][1]+0.5);
     deltaR -= _periodicBoxVectors[0]*floor(deltaR[0]*_recipBoxVectors[0][0]+0.5);
-}
-
-void AmoebaReferencePmeHippoNonbondedForce::getDampedInverseDistances(const MultipoleParticleData& particleI,
-                                                                 const MultipoleParticleData& particleJ,
-                                                                 double dscale, double pscale, double r,
-                                                                 Vec3& dampedDInverseDistances,
-                                                                 Vec3& dampedPInverseDistances) const
-{
-
-//    Vec3 scaleFactor = Vec3(1.0, 1.0, 1.0);
-//    double damp = particleI.dampingFactor*particleJ.dampingFactor;
-//    if (damp != 0.0) {
-//
-//        double ratio   = (r/damp);
-//               ratio   = ratio*ratio*ratio;
-//
-//        double pgamma  = particleI.thole < particleJ.thole ? particleI.thole : particleJ.thole;
-//               damp    = -pgamma*ratio;
-//
-//        if (damp > -50.0) {
-//            double expdamp = exp(damp);
-//            scaleFactor[0]     = 1.0 - expdamp;
-//            scaleFactor[1]     = 1.0 - expdamp*(1.0-damp);
-//            scaleFactor[2]     = 1.0 - expdamp*(1.0-damp+(0.6f*damp*damp));
-//        }
-//    }
-//    Vec3 dampedDScale          = scaleFactor*dscale;
-//
-//    double r2              = r*r;
-//    double r3              = r*r2;
-//    double r5              = r3*r2;
-//    double r7              = r5*r2;
-//
-//    dampedDInverseDistances[0] =      (1.0-dampedDScale[0])/r3;
-//    dampedDInverseDistances[1] =  3.0*(1.0-dampedDScale[1])/r5;
-//    dampedDInverseDistances[2] = 15.0*(1.0-dampedDScale[2])/r7;
-//    if (pscale == dscale) {
-//        dampedPInverseDistances = dampedDInverseDistances;
-//    } else {
-//        Vec3 dampedPScale = scaleFactor*pscale;
-//        dampedPInverseDistances[0] =      (1.0-dampedPScale[0])/r3;
-//        dampedPInverseDistances[1] =  3.0*(1.0-dampedPScale[1])/r5;
-//        dampedPInverseDistances[2] = 15.0*(1.0-dampedPScale[2])/r7;
-//    }
 }
 
 void AmoebaReferencePmeHippoNonbondedForce::initializeBSplineModuli()
@@ -2263,7 +2216,7 @@ void AmoebaReferencePmeHippoNonbondedForce::computeAmoebaBsplines(const vector<M
     for (unsigned int ii = 0; ii < _numParticles; ii++) {
         Vec3 position  = particleData[ii].position;
         getPeriodicDelta(position);
-        HippoIntVec igrid;
+        int igrid[3];
         for (unsigned int jj = 0; jj < 3; jj++) {
 
             double w  = position[0]*_recipBoxVectors[0][jj]+position[1]*_recipBoxVectors[1][jj]+position[2]*_recipBoxVectors[2][jj];
@@ -2280,7 +2233,7 @@ void AmoebaReferencePmeHippoNonbondedForce::computeAmoebaBsplines(const vector<M
 
         // Record the grid point.
 
-        _iGrid[ii]               = igrid;
+        _iGrid[ii] = {igrid[0], igrid[1], igrid[2]};
     }
 }
 
@@ -2384,7 +2337,7 @@ void AmoebaReferencePmeHippoNonbondedForce::spreadFixedMultipolesOntoGrid(const 
         double atomQuadrupoleYY = _transformed[atomIndex].quadrupole[QYY];
         double atomQuadrupoleYZ = _transformed[atomIndex].quadrupole[QYZ];
         double atomQuadrupoleZZ = _transformed[atomIndex].quadrupole[QZZ];
-        HippoIntVec& gridPoint = _iGrid[atomIndex];
+        array<int,3>& gridPoint = _iGrid[atomIndex];
         for (int ix = 0; ix < AMOEBA_PME_ORDER; ix++) {
             int x = (gridPoint[0]+ix) % _pmeGridDimensions[0];
             HippoDouble4 t = _thetai[0][atomIndex*AMOEBA_PME_ORDER+ix];
@@ -2447,7 +2400,7 @@ void AmoebaReferencePmeHippoNonbondedForce::computeFixedPotentialFromGrid()
     // extract the permanent multipole field at each site
 
     for (int m = 0; m < _numParticles; m++) {
-        HippoIntVec gridPoint = _iGrid[m];
+        array<int,3>& gridPoint = _iGrid[m];
         double tuv000 = 0.0;
         double tuv001 = 0.0;
         double tuv010 = 0.0;
@@ -2570,10 +2523,10 @@ void AmoebaReferencePmeHippoNonbondedForce::spreadInducedDipolesOnGrid(const vec
         Vec3 inducedDipole = Vec3(inputInducedDipole[atomIndex][0]*cartToFrac[0][0] + inputInducedDipole[atomIndex][1]*cartToFrac[0][1] + inputInducedDipole[atomIndex][2]*cartToFrac[0][2],
                                   inputInducedDipole[atomIndex][0]*cartToFrac[1][0] + inputInducedDipole[atomIndex][1]*cartToFrac[1][1] + inputInducedDipole[atomIndex][2]*cartToFrac[1][2],
                                   inputInducedDipole[atomIndex][0]*cartToFrac[2][0] + inputInducedDipole[atomIndex][1]*cartToFrac[2][1] + inputInducedDipole[atomIndex][2]*cartToFrac[2][2]);
-        Vec3 inducedDipolePolar = Vec3(inputInducedDipolePolar[atomIndex][0]*cartToFrac[0][0] + inputInducedDipolePolar[atomIndex][1]*cartToFrac[0][1] + inputInducedDipolePolar[atomIndex][2]*cartToFrac[0][2],
-                                       inputInducedDipolePolar[atomIndex][0]*cartToFrac[1][0] + inputInducedDipolePolar[atomIndex][1]*cartToFrac[1][1] + inputInducedDipolePolar[atomIndex][2]*cartToFrac[1][2],
-                                       inputInducedDipolePolar[atomIndex][0]*cartToFrac[2][0] + inputInducedDipolePolar[atomIndex][1]*cartToFrac[2][1] + inputInducedDipolePolar[atomIndex][2]*cartToFrac[2][2]);
-        HippoIntVec& gridPoint = _iGrid[atomIndex];
+        Vec3 inducedDipolePolar = Vec3(inputInducedDipole[atomIndex][0]*cartToFrac[0][0] + inputInducedDipole[atomIndex][1]*cartToFrac[0][1] + inputInducedDipole[atomIndex][2]*cartToFrac[0][2],
+                                       inputInducedDipole[atomIndex][0]*cartToFrac[1][0] + inputInducedDipole[atomIndex][1]*cartToFrac[1][1] + inputInducedDipole[atomIndex][2]*cartToFrac[1][2],
+                                       inputInducedDipole[atomIndex][0]*cartToFrac[2][0] + inputInducedDipole[atomIndex][1]*cartToFrac[2][1] + inputInducedDipole[atomIndex][2]*cartToFrac[2][2]);
+        array<int,3>& gridPoint = _iGrid[atomIndex];
         for (int ix = 0; ix < AMOEBA_PME_ORDER; ix++) {
             int x = (gridPoint[0]+ix) % _pmeGridDimensions[0];
             HippoDouble4 t = _thetai[0][atomIndex*AMOEBA_PME_ORDER+ix];
@@ -2601,7 +2554,7 @@ void AmoebaReferencePmeHippoNonbondedForce::computeInducedPotentialFromGrid()
     // extract the induced dipole field at each site
 
     for (int m = 0; m < _numParticles; m++) {
-        HippoIntVec gridPoint = _iGrid[m];
+        array<int,3>& gridPoint = _iGrid[m];
         double tuv100_1 = 0.0;
         double tuv010_1 = 0.0;
         double tuv001_1 = 0.0;
@@ -2865,7 +2818,7 @@ double AmoebaReferencePmeHippoNonbondedForce::computeReciprocalSpaceFixedMultipo
             f[2]   += multipole[k]*_phi[20*i+deriv3[k]];
         }
         f *= _electric;
-        forces[i] -= Vec3(f[0]*fracToCart[0][0] + f[1]*fracToCart[0][1] + f[2]*fracToCart[0][2],
+        forces[i] += Vec3(f[0]*fracToCart[0][0] + f[1]*fracToCart[0][1] + f[2]*fracToCart[0][2],
                           f[0]*fracToCart[1][0] + f[1]*fracToCart[1][1] + f[2]*fracToCart[1][2],
                           f[0]*fracToCart[2][0] + f[1]*fracToCart[2][1] + f[2]*fracToCart[2][2]);
     }
@@ -2875,13 +2828,10 @@ double AmoebaReferencePmeHippoNonbondedForce::computeReciprocalSpaceFixedMultipo
 /**
  * Compute the forces due to the reciprocal space PME calculation for induced dipoles.
  */
-double AmoebaReferencePmeHippoNonbondedForce::computeReciprocalSpaceInducedDipoleForceAndEnergy(const vector<MultipoleParticleData>& particleData,
-                                                                                                vector<Vec3>& forces, vector<Vec3>& torques) const
-{
+void AmoebaReferencePmeHippoNonbondedForce::computeReciprocalSpaceInducedDipoleForce(const vector<MultipoleParticleData>& particleData,
+                                                                                     vector<Vec3>& forces, vector<Vec3>& torques) const {
     double multipole[10];
-    double inducedDipole[3];
-    double inducedDipolePolar[3];
-    double scales[3];
+    Vec3 inducedDipole;
     const int deriv1[] = {1, 4, 7, 8, 10, 15, 17, 13, 14, 19};
     const int deriv2[] = {2, 7, 5, 9, 13, 11, 18, 15, 19, 16};
     const int deriv3[] = {3, 8, 9, 6, 14, 16, 12, 19, 17, 18};
@@ -2891,12 +2841,8 @@ double AmoebaReferencePmeHippoNonbondedForce::computeReciprocalSpaceInducedDipol
     for (int i = 0; i < 3; i++)
         for (int j = 0; j < 3; j++)
             cartToFrac[j][i] = fracToCart[i][j] = _pmeGridDimensions[j]*_recipBoxVectors[i][j];
-    double energy = 0.0;
     for (int i = 0; i < _numParticles; i++) {
-
         // Compute the torque.
-
-        unsigned int iIndex = particleData[i].particleIndex;
 
         multipole[0] = particleData[i].coreCharge + particleData[i].valenceCharge;
 
@@ -2912,17 +2858,17 @@ double AmoebaReferencePmeHippoNonbondedForce::computeReciprocalSpaceInducedDipol
         multipole[9] = particleData[i].quadrupole[QYZ]*2.0;
 
         const double* phi = &cphi[10*i];
-        torques[iIndex][0] += 0.5*_electric*(multipole[3]*phi[2] - multipole[2]*phi[3]
+        torques[i][0] += 0.5*_electric*(multipole[3]*phi[2] - multipole[2]*phi[3]
                       + 2.0*(multipole[6]-multipole[5])*phi[9]
                       + multipole[8]*phi[7] + multipole[9]*phi[5]
                       - multipole[7]*phi[8] - multipole[9]*phi[6]);
 
-        torques[iIndex][1] += 0.5*_electric*(multipole[1]*phi[3] - multipole[3]*phi[1]
+        torques[i][1] += 0.5*_electric*(multipole[1]*phi[3] - multipole[3]*phi[1]
                       + 2.0*(multipole[4]-multipole[6])*phi[8]
                       + multipole[7]*phi[9] + multipole[8]*phi[6]
                       - multipole[8]*phi[4] - multipole[9]*phi[7]);
 
-        torques[iIndex][2] += 0.5*_electric*(multipole[2]*phi[1] - multipole[1]*phi[2]
+        torques[i][2] += 0.5*_electric*(multipole[2]*phi[1] - multipole[1]*phi[2]
                       + 2.0*(multipole[5]-multipole[4])*phi[7]
                       + multipole[7]*phi[4] + multipole[9]*phi[8]
                       - multipole[7]*phi[5] - multipole[8]*phi[9]);
@@ -2942,25 +2888,13 @@ double AmoebaReferencePmeHippoNonbondedForce::computeReciprocalSpaceInducedDipol
         inducedDipole[0] = _inducedDipole[i][0]*cartToFrac[0][0] + _inducedDipole[i][1]*cartToFrac[0][1] + _inducedDipole[i][2]*cartToFrac[0][2];
         inducedDipole[1] = _inducedDipole[i][0]*cartToFrac[1][0] + _inducedDipole[i][1]*cartToFrac[1][1] + _inducedDipole[i][2]*cartToFrac[1][2];
         inducedDipole[2] = _inducedDipole[i][0]*cartToFrac[2][0] + _inducedDipole[i][1]*cartToFrac[2][1] + _inducedDipole[i][2]*cartToFrac[2][2];
-        inducedDipolePolar[0] = _inducedDipolePolar[i][0]*cartToFrac[0][0] + _inducedDipolePolar[i][1]*cartToFrac[0][1] + _inducedDipolePolar[i][2]*cartToFrac[0][2];
-        inducedDipolePolar[1] = _inducedDipolePolar[i][0]*cartToFrac[1][0] + _inducedDipolePolar[i][1]*cartToFrac[1][1] + _inducedDipolePolar[i][2]*cartToFrac[1][2];
-        inducedDipolePolar[2] = _inducedDipolePolar[i][0]*cartToFrac[2][0] + _inducedDipolePolar[i][1]*cartToFrac[2][1] + _inducedDipolePolar[i][2]*cartToFrac[2][2];
-
-        energy += (inducedDipole[0]+inducedDipolePolar[0])*_phi[20*i+1];
-        energy += (inducedDipole[1]+inducedDipolePolar[1])*_phi[20*i+2];
-        energy += (inducedDipole[2]+inducedDipolePolar[2])*_phi[20*i+3];
 
         Vec3 f = Vec3(0.0, 0.0, 0.0);
 
         for (int k = 0; k < 3; k++) {
-
-            int j1 = deriv1[k+1];
-            int j2 = deriv2[k+1];
-            int j3 = deriv3[k+1];
-
-            f[0] += (inducedDipole[k]+inducedDipolePolar[k])*_phi[20*i+j1];
-            f[1] += (inducedDipole[k]+inducedDipolePolar[k])*_phi[20*i+j2];
-            f[2] += (inducedDipole[k]+inducedDipolePolar[k])*_phi[20*i+j3];
+            f[0] += 2*inducedDipole[k]*_phi[20*i+deriv1[k+1]];
+            f[1] += 2*inducedDipole[k]*_phi[20*i+deriv2[k+1]];
+            f[2] += 2*inducedDipole[k]*_phi[20*i+deriv3[k+1]];
         }
 
         for (int k = 0; k < 10; k++) {
@@ -2969,12 +2903,28 @@ double AmoebaReferencePmeHippoNonbondedForce::computeReciprocalSpaceInducedDipol
             f[2] += multipole[k]*_phidp[20*i+deriv3[k]];
         }
 
-        f              *= (0.5*_electric);
-        forces[iIndex] -= Vec3(f[0]*fracToCart[0][0] + f[1]*fracToCart[0][1] + f[2]*fracToCart[0][2],
-                               f[0]*fracToCart[1][0] + f[1]*fracToCart[1][1] + f[2]*fracToCart[1][2],
-                               f[0]*fracToCart[2][0] + f[1]*fracToCart[2][1] + f[2]*fracToCart[2][2]);
+        f *= 0.5*_electric;
+
+        // Account for dipole response terms in the OPT method
+
+        for (int j = 0; j < _maxPTOrder-1; j++) {
+            for (int m = 0; m < _maxPTOrder-1-j; m++) {
+                Vec3 optDipole(_ptDipoleD[m][i][0]*cartToFrac[0][0] + _ptDipoleD[m][i][1]*cartToFrac[0][1] + _ptDipoleD[m][i][2]*cartToFrac[0][2],
+                               _ptDipoleD[m][i][0]*cartToFrac[1][0] + _ptDipoleD[m][i][1]*cartToFrac[1][1] + _ptDipoleD[m][i][2]*cartToFrac[1][2],
+                               _ptDipoleD[m][i][0]*cartToFrac[2][0] + _ptDipoleD[m][i][1]*cartToFrac[2][1] + _ptDipoleD[m][i][2]*cartToFrac[2][2]);
+                Vec3 h;
+                for (int k = 0; k < 3; k++) {
+                    h[0] += optDipole[k]*optPhi[j][10*i+deriv1[k+1]];
+                    h[1] += optDipole[k]*optPhi[j][10*i+deriv2[k+1]];
+                    h[2] += optDipole[k]*optPhi[j][10*i+deriv3[k+1]];
+                }
+                f += _electric*_extPartCoefficients[j+m+1]*h;
+            }
+        }
+        forces[i] += Vec3(f[0]*fracToCart[0][0] + f[1]*fracToCart[0][1] + f[2]*fracToCart[0][2],
+                          f[0]*fracToCart[1][0] + f[1]*fracToCart[1][1] + f[2]*fracToCart[1][2],
+                          f[0]*fracToCart[2][0] + f[1]*fracToCart[2][1] + f[2]*fracToCart[2][2]);
     }
-    return (0.25*_electric*energy);
 }
 
 void AmoebaReferencePmeHippoNonbondedForce::recordFixedMultipoleField()
@@ -3029,8 +2979,8 @@ void AmoebaReferencePmeHippoNonbondedForce::calculateReciprocalSpaceInducedDipol
 }
 
 void AmoebaReferencePmeHippoNonbondedForce::calculateInducedDipoleFields(const vector<MultipoleParticleData>& particleData,
-                                                                     vector<UpdateInducedDipoleFieldStruct>& updateInducedDipoleFields)
-{
+                                                                         vector<UpdateInducedDipoleFieldStruct>& updateInducedDipoleFields,
+                                                                         int optOrder) {
     // Initialize the fields to zero.
 
     Vec3 zeroVec(0.0, 0.0, 0.0);
@@ -3048,6 +2998,8 @@ void AmoebaReferencePmeHippoNonbondedForce::calculateInducedDipoleFields(const v
     // reciprocal space ixns
 
     calculateReciprocalSpaceInducedDipoleField(updateInducedDipoleFields);
+    if (optOrder > -1)
+        optPhi[optOrder] = _phid;
 
     // While we have the reciprocal space (fractional coordinate) field gradient available, add it to the real space
     // terms computed above, after transforming to Cartesian coordinates.  This allows real and reciprocal space
@@ -3779,7 +3731,7 @@ double AmoebaReferencePmeHippoNonbondedForce::computeReciprocalSpaceDispersionFo
     pme_exec_dpme(pmedata, coords, dpmeforces, charges, _periodicBoxVectors, &recipDispersionEnergy);
     pme_destroy(pmedata);
     for (int i = 0; i < numParticles; i++)
-        forces[i] -= 2*dpmeforces[i];
+        forces[i] += 2*dpmeforces[i];
     return recipDispersionEnergy;
 }
 
@@ -3787,7 +3739,7 @@ double AmoebaReferencePmeHippoNonbondedForce::calculateInteractions(vector<Vec3>
 {
     double energy = AmoebaReferenceHippoNonbondedForce::calculateInteractions(torques, forces);
     calculatePmeSelfTorque(particleData, torques);
-    energy += computeReciprocalSpaceInducedDipoleForceAndEnergy(particleData, forces, torques);
+    computeReciprocalSpaceInducedDipoleForce(particleData, forces, torques);
     energy += computeReciprocalSpaceFixedMultipoleForceAndEnergy(particleData, forces, torques);
     energy += computeReciprocalSpaceDispersionForceAndEnergy(particleData, forces);
     energy += calculatePmeSelfEnergy(particleData);
