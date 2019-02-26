@@ -1990,14 +1990,25 @@ class PeriodicTorsionGenerator(object):
                 for i in range(len(match.phase)):
                     if match.k[i] != 0:
                         force.addTorsion(torsion[0], torsion[1], torsion[2], torsion[3], match.periodicity[i], match.phase[i], match.k[i])
+        impr_cache = {}
         for torsion in data.impropers:
-            match = _matchImproper(data, torsion, self)
+            t1, t2, t3, t4 = [data.atomType[data.atoms[torsion[i]]] for i in range(4)]
+            sig = (t1, frozenset((t2,t3,t4)))
+            match = impr_cache.get(sig, None)
+            if match == -1:
+                # Previously checked, and doesn't appear in the database
+                continue
+            if match is None:
+                match = _matchImproper(data, torsion, self)
+                if match is not None:
+                    impr_cache[sig] = match
+                else:
+                    impr_cache[sig] = -1
             if match is not None:
                 (a1, a2, a3, a4, tordef) = match
                 for i in range(len(tordef.phase)):
                     if tordef.k[i] != 0:
                         force.addTorsion(a1, a2, a3, a4, tordef.periodicity[i], tordef.phase[i], tordef.k[i])
-
 parsers["PeriodicTorsionForce"] = PeriodicTorsionGenerator.parseElement
 
 
