@@ -97,6 +97,7 @@ void CudaExpressionUtilities::processExpression(stringstream& out, const Express
             // at once, so check to see if both are needed.
 
             vector<const ExpressionTreeNode*> nodes;
+            nodes.push_back(&node);
             for (int j = 0; j < (int) allExpressions.size(); j++)
                 findRelatedCustomFunctions(node, allExpressions[j].getRootNode(), nodes);
             vector<string> nodeNames;
@@ -155,7 +156,7 @@ void CudaExpressionUtilities::processExpression(stringstream& out, const Express
                     if (derivOrder[0] == 0 && derivOrder[1] == 0)
                         out << nodeNames[j] << " = make_" << tempType << "(dot(" << child1 << ", " << child2 << "));\n";
                     else
-                        throw OpenMMException("Unsupported derivative order for cross()");
+                        throw OpenMMException("Unsupported derivative order for dot()");
                 }
             }
             else if (node.getOperation().getName() == "cross") {
@@ -546,7 +547,16 @@ void CudaExpressionUtilities::processExpression(stringstream& out, const Express
             out << "RECIP(" << getTempName(node.getChildren()[0], temps) << ")";
             break;
         case Operation::ADD_CONSTANT:
-            out << context.doubleToString(dynamic_cast<const Operation::AddConstant*>(&node.getOperation())->getValue()) << "+" << getTempName(node.getChildren()[0], temps);
+            if (isVecType) {
+                string val = context.doubleToString(dynamic_cast<const Operation::AddConstant*>(&node.getOperation())->getValue());
+                string arg = getTempName(node.getChildren()[0], temps);
+                out << "make_" << tempType << "(";
+                out << val << "+" << arg << ".x, ";
+                out << val << "+" << arg << ".y, ";
+                out << val << "+" << arg << ".z)";
+            }
+            else
+                out << context.doubleToString(dynamic_cast<const Operation::AddConstant*>(&node.getOperation())->getValue()) << "+" << getTempName(node.getChildren()[0], temps);
             break;
         case Operation::MULTIPLY_CONSTANT:
             out << context.doubleToString(dynamic_cast<const Operation::MultiplyConstant*>(&node.getOperation())->getValue()) << "*" << getTempName(node.getChildren()[0], temps);
@@ -609,10 +619,10 @@ void CudaExpressionUtilities::processExpression(stringstream& out, const Express
             break;
         }
         case Operation::MIN:
-            out << "min((" << tempType << ") " << getTempName(node.getChildren()[0], temps) << ", (" << tempType << ") " << getTempName(node.getChildren()[1], temps) << ")";
+            callFunction2(out, "min", getTempName(node.getChildren()[0], temps), getTempName(node.getChildren()[1], temps), tempType);
             break;
         case Operation::MAX:
-            out << "max((" << tempType << ") " << getTempName(node.getChildren()[0], temps) << ", (" << tempType << ") " << getTempName(node.getChildren()[1], temps) << ")";
+            callFunction2(out, "max", getTempName(node.getChildren()[0], temps), getTempName(node.getChildren()[1], temps), tempType);
             break;
         case Operation::ABS:
             callFunction(out, "fabs", "fabs", getTempName(node.getChildren()[0], temps), tempType);
@@ -925,4 +935,16 @@ void CudaExpressionUtilities::callFunction(stringstream& out, string singleFn, s
         else
             out<<singleFn<<"("<<arg<<")";
     }
+}
+
+void CudaExpressionUtilities::callFunction2(stringstream& out, string fn, const string& arg1, const string& arg2, const string& tempType) {
+    bool isVector = (tempType[tempType.size()-1] == '3');
+    if (isVector) {
+        out<<"make_"<<tempType<<"(";
+        out<<fn<<"("<<arg1<<".x, "<<arg2<<".x), ";
+        out<<fn<<"("<<arg1<<".y, "<<arg2<<".y), ";
+        out<<fn<<"("<<arg1<<".z, "<<arg2<<".z))";
+    }
+    else
+        out<<fn<<"(("<<tempType<<") "<<arg1<<", ("<<tempType<<") "<<arg2<<")";
 }

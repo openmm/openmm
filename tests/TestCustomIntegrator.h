@@ -1041,9 +1041,13 @@ void testVectorFunctions() {
     integrator.addGlobalVariable("sumy", 0.0);
     integrator.addPerDofVariable("angular", 0.0);
     integrator.addPerDofVariable("shuffle", 0.0);
+    integrator.addPerDofVariable("multicross", 0.0);
+    integrator.addPerDofVariable("maxplus", 0.0);
     integrator.addComputeSum("sumy", "x*vector(0, 1, 0)");
     integrator.addComputePerDof("angular", "cross(v, x)");
     integrator.addComputePerDof("shuffle", "dot(vector(_z(x), _x(x), _y(x)), v)");
+    integrator.addComputePerDof("multicross", "cross(vector(1, 0, 0), cross(vector(0, 0, 1), vector(1, 0, 0)))");
+    integrator.addComputePerDof("maxplus", "max(x, 0.1)+0.5");
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
     vector<Vec3> positions(numParticles);
@@ -1061,12 +1065,16 @@ void testVectorFunctions() {
     // See if the expressions were computed correctly.
     
     double sumy = 0;
-    vector<Vec3> angular, shuffle;
+    vector<Vec3> angular, shuffle, multicross, maxplus;
     integrator.getPerDofVariable(0, angular);
     integrator.getPerDofVariable(1, shuffle);
+    integrator.getPerDofVariable(2, multicross);
+    integrator.getPerDofVariable(3, maxplus);
     for (int i = 0; i < numParticles; i++) {
         ASSERT_EQUAL_VEC(velocities[i].cross(positions[i]), angular[i], 1e-5);
         ASSERT_EQUAL_VEC(Vec3(1, 1, 1)*velocities[i].dot(Vec3(positions[i][2], positions[i][0], positions[i][1])), shuffle[i], 1e-5);
+        ASSERT_EQUAL_VEC(Vec3(0, 0, 1), multicross[i], 1e-5);
+        ASSERT_EQUAL_VEC(Vec3(max(positions[i][0], 0.1)+0.5, max(positions[i][1], 0.1)+0.5, max(positions[i][2], 0.1)+0.5), maxplus[i], 1e-5);
         sumy += positions[i][1];
     }
     ASSERT_EQUAL_TOL(sumy, integrator.getGlobalVariable(0), 1e-5);

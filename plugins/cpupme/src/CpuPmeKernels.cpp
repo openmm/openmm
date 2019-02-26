@@ -903,7 +903,7 @@ void CpuCalcDispersionPmeReciprocalForceKernel::runWorkerThread(ThreadPool& thre
     interpolateForces(posq, &force[0], realGrid, gridx, gridy, gridz, numParticles, periodicBoxVectors, recipBoxVectors, atomicCounter, epsilonFactor);
 }
 
-void CpuCalcDispersionPmeReciprocalForceKernel::beginComputation(IO& io, const Vec3* periodicBoxVectors, bool includeEnergy) {
+void CpuCalcDispersionPmeReciprocalForceKernel::beginComputation(CalcPmeReciprocalForceKernel::IO& io, const Vec3* periodicBoxVectors, bool includeEnergy) {
     this->io = &io;
     this->periodicBoxVectors[0] = periodicBoxVectors[0];
     this->periodicBoxVectors[1] = periodicBoxVectors[1];
@@ -927,7 +927,7 @@ void CpuCalcDispersionPmeReciprocalForceKernel::beginComputation(IO& io, const V
     pthread_mutex_unlock(&lock);
 }
 
-double CpuCalcDispersionPmeReciprocalForceKernel::finishComputation(IO& io) {
+double CpuCalcDispersionPmeReciprocalForceKernel::finishComputation(CalcPmeReciprocalForceKernel::IO& io) {
     pthread_mutex_lock(&lock);
     while (!isFinished) {
         pthread_cond_wait(&endCondition, &lock);

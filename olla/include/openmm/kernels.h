@@ -1436,7 +1436,6 @@ public:
  */
 class CalcDispersionPmeReciprocalForceKernel : public KernelImpl {
 public:
-    class IO;
     static std::string Name() {
         return "CalcDispersionPmeReciprocalForce";
     }
@@ -1460,14 +1459,14 @@ public:
      * @param periodicBoxVectors  the vectors defining the periodic box (measured in nm)
      * @param includeEnergy       true if potential energy should be computed
      */
-    virtual void beginComputation(IO& io, const Vec3* periodicBoxVectors, bool includeEnergy) = 0;
+    virtual void beginComputation(CalcPmeReciprocalForceKernel::IO& io, const Vec3* periodicBoxVectors, bool includeEnergy) = 0;
     /**
      * Finish computing the force and energy.
      * 
      * @param io   an object that coordinates data transfer
      * @return the potential energy due to the PME reciprocal space interactions
      */
-    virtual double finishComputation(IO& io) = 0;
+    virtual double finishComputation(CalcPmeReciprocalForceKernel::IO& io) = 0;
     /**
      * Get the parameters being used for PME.
      * 
