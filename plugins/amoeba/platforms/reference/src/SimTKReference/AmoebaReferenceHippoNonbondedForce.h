@@ -219,17 +219,6 @@ protected:
         double multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale;
     };
 
-    /* 
-     * Helper class used in calculating induced dipoles
-     */
-    struct UpdateInducedDipoleFieldStruct {
-            UpdateInducedDipoleFieldStruct(std::vector<OpenMM::Vec3>& inputFixed_E_Field, std::vector<OpenMM::Vec3>& inputInducedDipoles, std::vector<std::vector<Vec3> >& extrapolatedDipoles);
-            std::vector<OpenMM::Vec3>* fixedMultipoleField;
-            std::vector<OpenMM::Vec3>* inducedDipoles;
-            std::vector<std::vector<Vec3> >* extrapolatedDipoles;
-            std::vector<OpenMM::Vec3> inducedDipoleField;
-    };
-
     unsigned int _numParticles;
 
     HippoNonbondedForce::NonbondedMethod _nonbondedMethod;
@@ -243,6 +232,7 @@ protected:
     std::vector<TransformedMultipole> _transformed;
     std::vector<Vec3> _fixedMultipoleField;
     std::vector<Vec3> _inducedDipole;
+    std::vector<Vec3> _inducedDipoleField;
     std::vector<std::vector<Vec3> > _ptDipoleD;
 
     int _maxPTOrder;
@@ -407,38 +397,29 @@ protected:
 
     /**
      * Initialize induced dipoles
-     *
-     * @param updateInducedDipoleFields vector of UpdateInducedDipoleFieldStruct containing input induced dipoles and output fields
      */
-    virtual void initializeInducedDipoles(std::vector<UpdateInducedDipoleFieldStruct>& updateInducedDipoleFields); 
+    virtual void initializeInducedDipoles(); 
 
     /**
      * Calculate fields due induced dipoles at each site.
      *
-     * @param particleI                 positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle I
-     * @param particleJ                 positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle J
-     * @param updateInducedDipoleFields vector of UpdateInducedDipoleFieldStruct containing input induced dipoles and output fields
+     * @param particleI     positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle I
+     * @param particleJ     positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle J
      */
-    void calculateInducedDipolePairIxns(const MultipoleParticleData& particleI, const MultipoleParticleData& particleJ,
-                                                std::vector<UpdateInducedDipoleFieldStruct>& updateInducedDipoleFields);
+    void calculateInducedDipolePairIxns(const MultipoleParticleData& particleI, const MultipoleParticleData& particleJ);
 
     /**
      * Calculate induced dipole fields.
      * 
-     * @param particleData              vector of particle positions and parameters (charge, labFrame dipoles, quadrupoles, ...)
-     * @param updateInducedDipoleFields vector of UpdateInducedDipoleFieldStruct containing input induced dipoles and output fields
+     * @param particleData    vector of particle positions and parameters (charge, labFrame dipoles, quadrupoles, ...)
      */
-    virtual void calculateInducedDipoleFields(const std::vector<MultipoleParticleData>& particleData,
-                                              std::vector<UpdateInducedDipoleFieldStruct>& updateInducedDipoleFields,
-                                              int optOrder);
+    virtual void calculateInducedDipoleFields(const std::vector<MultipoleParticleData>& particleData, int optOrder);
     /**
      * Calculated induced dipoles using extrapolated perturbation theory.
      *
-     * @param particleData              vector of particle positions and parameters (charge, labFrame dipoles, quadrupoles, ...)
-     * @param updateInducedDipoleFields vector of UpdateInducedDipoleFieldStruct containing input induced dipoles and output fields
+     * @param particleData   vector of particle positions and parameters (charge, labFrame dipoles, quadrupoles, ...)
      */
-    void convergeInduceDipolesByExtrapolation(const std::vector<MultipoleParticleData>& particleData,
-                                              std::vector<UpdateInducedDipoleFieldStruct>& calculateInducedDipoleField);
+    void convergeInduceDipolesByExtrapolation(const std::vector<MultipoleParticleData>& particleData);
 
     /**
      * Calculate induced dipoles.
@@ -806,10 +787,8 @@ private:
 
     /**
      * Compute the potential due to the reciprocal space PME calculation for induced dipoles.
-     *
-     * @param updateInducedDipoleFields vector of UpdateInducedDipoleFieldStruct containing input induced dipoles and output fields
      */
-    void calculateReciprocalSpaceInducedDipoleField(std::vector<UpdateInducedDipoleFieldStruct>& updateInducedDipoleFields);
+    void calculateReciprocalSpaceInducedDipoleField();
 
     /**
      * Calculate field at particleI due to induced dipole at particle J and vice versa.
@@ -822,7 +801,7 @@ private:
      * @param inducedDipole vector of induced dipoles
      * @param field         vector of field at each particle due induced dipole of other particles
      */
-    void calculateDirectInducedDipolePairIxn(unsigned int iIndex, unsigned int jIndex,
+    void calculateDirectInducedDipolePairIxn(int iIndex, int jIndex,
                                              double preFactor1, double preFactor2, const Vec3& delta,
                                              const std::vector<Vec3>& inducedDipole,
                                              std::vector<Vec3>& field) const;
@@ -831,20 +810,16 @@ private:
      * Calculate direct space field at particleI due to induced dipole at particle J and vice versa for
      * inducedDipole and inducedDipolePolar.
      * 
-     * @param particleI                 positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle I
-     * @param particleJ                 positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle J
-     * @param updateInducedDipoleFields vector of UpdateInducedDipoleFieldStruct containing input induced dipoles and output fields
+     * @param particleI    positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle I
+     * @param particleJ    positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle J
      */
     void calculateDirectInducedDipolePairIxns(const MultipoleParticleData& particleI,
-                                              const MultipoleParticleData& particleJ,
-                                              std::vector<UpdateInducedDipoleFieldStruct>& updateInducedDipoleFields);
+                                              const MultipoleParticleData& particleJ);
 
     /**
      * Initialize induced dipoles
-     *
-     * @param updateInducedDipoleFields vector of UpdateInducedDipoleFieldStruct containing input induced dipoles and output fields
      */
-    void initializeInducedDipoles(std::vector<UpdateInducedDipoleFieldStruct>& updateInducedDipoleFields); 
+    void initializeInducedDipoles(); 
 
     /**
      * Spread induced dipoles onto grid.
@@ -856,12 +831,9 @@ private:
     /**
      * Calculate induced dipole fields.
      * 
-     * @param particleData              vector of particle positions and parameters (charge, labFrame dipoles, quadrupoles, ...)
-     * @param updateInducedDipoleFields vector of UpdateInducedDipoleFieldStruct containing input induced dipoles and output fields
+     * @param particleData   vector of particle positions and parameters (charge, labFrame dipoles, quadrupoles, ...)
      */
-    void calculateInducedDipoleFields(const std::vector<MultipoleParticleData>& particleData,
-                                      std::vector<UpdateInducedDipoleFieldStruct>& updateInducedDipoleFields,
-                                      int optOrder);
+    void calculateInducedDipoleFields(const std::vector<MultipoleParticleData>& particleData, int optOrder);
 
     /**
      * Set reciprocal space induced dipole fields. 
