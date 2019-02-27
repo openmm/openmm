@@ -102,91 +102,6 @@ using namespace OpenMM;
 
 class AmoebaReferenceHippoNonbondedForce {
 
-   /**
-    * AmoebaReferenceHippoNonbondedForce is base class for MultipoleForce calculations
-    * AmoebaReferencePmeHippoNonbondedForce is derived class for PME calculations
-    *
-    * Below is a outline of the sequence of methods called to evaluate the force and energy 
-    * for each scenario: Generalized Kirkwood (GK) and PME.
-    *
-    * If 'virtual' appears before the method name, the method is overridden in one or more of the derived classes.
-    *
-    * calculateForceAndEnergy()                            calculate forces  and energy
-    *
-    *    setup()                                           rotate molecular multipole moments to lab frame
-    *                                                      setup scaling maps and calculate induced dipoles (see calculateInducedDipoles below)
-    *
-    *    virtual calculateElectrostatic()                  calculate forces and torques
-    *
-    *                                                      GK case includes the following calls:
-    *
-    *                                                          AmoebaReferenceHippoNonbondedForce::calculateElectrostatic()
-    *                                                               loop over particle pairs: calculateElectrostaticPairIxn()
-    *
-    *                                                          TINKER's egk1a: calculateKirkwoodPairIxn()
-    *
-    *                                                          SASA force and energy: calculateCavityTermEnergyAndForces()
-    *
-    *                                                          TINKER's born1 (Born chain rule term): loop over particle pairs: calculateGrycukChainRulePairIxn()
-    *
-    *                                                          TINKER's ediff1: loop over particle pairs: calculateKirkwoodEDiffPairIxn()
-    *                                                       
-    *                                                      PME case includes the following calls:
-    *
-    *                                                          reciprocal [computeReciprocalSpaceInducedDipoleForceAndEnergy(),
-    *                                                                      computeReciprocalSpaceFixedMultipoleForceAndEnergy]
-    *
-    *                                                          direct space calculations [calculatePmeDirectElectrostaticPairIxn()]
-    *
-    *                                                          self-energy [calculatePmeSelfEnergy()]
-    *
-    *                                                          torques [calculatePmeSelfTorque()]
-    *
-    *    mapTorqueToForce()                                map torques to forces
-    * 
-    * setup()
-    *    loadParticleData()                                load particle data (polarity, multipole moments, Thole factors, ...)
-    *    checkChiral()                                     if needed, invert multipole moments at chiral centers
-    *    applyRotationMatrix()                             rotate molecular multipole moments to lab frame
-    *    setupScaleMaps()                                  setup scaling maps
-    *    calculateInducedDipoles()                         calculate induced dipoles
-    * 
-    * 
-    * virtual calculateInducedDipoles()                    calculate induced dipoles:
-    *                                                          field at each site due to fixed multipoles first calculated
-    *                                                          if polarization type == Direct,
-    *                                                          initial induced dipoles are calculated, but are not converged.
-    *                                                          if polarization type == Mutual, then loop until
-    *                                                          induce dipoles converge.
-    *                                                       For GK, include gkField in setup
-    *                                                       For PME, base class method is used
-    *
-    * 
-    *     virtual zeroFixedMultipoleFields()                zero fixed multipole vectors; for GK includes zeroing of gkField vector
-    * 
-    *     virtual calculateFixedMultipoleField()            calculate fixed multipole field -- particle pair loop 
-    *                                                       gkField also calculated for GK
-    *                                                       for PME, reciprocal, direct space (particle pair loop) and self terms calculated
-    *                                                       
-    * 
-    *         virtual calculateFixedMultipoleFieldPairIxn() pair ixn for fixed multipole
-    *                                                       gkField also calculated for GK
-    *                                                       for PME, direct space ixn calculated here
-    * 
-    *     virtual initializeInducedDipoles()                initialize induced dipoles; for PME, calculateReciprocalSpaceInducedDipoleField()
-    *                                                       called in case polarization type == Direct
-    *
-    *     convergeInduceDipoles()                           loop until induced dipoles converge
-    *
-    *         updateInducedDipoleFields()                   update fields at each site due other induced dipoles
-    *
-    *           virtual calculateInducedDipoleFields()      calculate induced dipole field at each site by looping over particle pairs 
-    *                                                       for PME includes reciprocal space calculation calculateReciprocalSpaceInducedDipoleField(), 
-    *                                                       direct space calculateDirectInducedDipolePairIxns() and self terms
-    *
-    *              virtual calculateInducedDipolePairIxns() field at particle i due particle j's induced dipole and vice versa; for GK includes GK field
-    */
-
 public:
 
     /**
@@ -271,10 +186,6 @@ public:
 
 protected:
 
-    enum MultipoleParticleDataEnum { PARTICLE_POSITION, PARTICLE_CHARGE, PARTICLE_DIPOLE, PARTICLE_QUADRUPOLE,
-                                     PARTICLE_THOLE, PARTICLE_DAMPING_FACTOR, PARTICLE_POLARITY, PARTICLE_FIELD, 
-                                     PARTICLE_FIELD_POLAR, GK_FIELD, PARTICLE_INDUCED_DIPOLE, PARTICLE_INDUCED_DIPOLE_POLAR };
-
     enum QuadrupoleIndices { QXX, QXY, QXZ, QYY, QYZ, QZZ };
 
     /* 
@@ -317,31 +228,26 @@ protected:
             std::vector<OpenMM::Vec3>* inducedDipoles;
             std::vector<std::vector<Vec3> >* extrapolatedDipoles;
             std::vector<OpenMM::Vec3> inducedDipoleField;
-            std::vector<std::vector<double> > inducedDipoleFieldGradient;
     };
 
     unsigned int _numParticles;
 
     HippoNonbondedForce::NonbondedMethod _nonbondedMethod;
 
-    double _electric, _cutoffDistance, _cutoffDistanceSquared, _switchingDistance, _switchingDistanceSquared;
+    double _electric, _cutoffDistance, _cutoffDistanceSquared, _switchingDistance;
     bool useSwitch;
 
-    enum ScaleType { D_SCALE, P_SCALE, M_SCALE, U_SCALE, LAST_SCALE_TYPE_INDEX };
     std::map<std::pair<int, int>, Exception> exceptions;
 
     std::vector<MultipoleParticleData> particleData;
     std::vector<TransformedMultipole> _transformed;
     std::vector<Vec3> _fixedMultipoleField;
-    std::vector<Vec3> _fixedMultipoleFieldPolar;
     std::vector<Vec3> _inducedDipole;
-    std::vector<Vec3> _inducedDipolePolar;
-    std::vector<std::vector<Vec3> > _ptDipoleP;
     std::vector<std::vector<Vec3> > _ptDipoleD;
 
     int _maxPTOrder;
-    std::vector<double>  _extrapolationCoefficients;
-    std::vector<double>  _extPartCoefficients;
+    std::vector<double> _extrapolationCoefficients;
+    std::vector<double> _extPartCoefficients;
 
     /**
      * Load particle data.
@@ -358,28 +264,6 @@ protected:
      * 
      */
     virtual void calculateFixedMultipoleField();
-
-
-    /**
-     * Get scale factor for particleI & particleJ
-     * 
-     * @param  particleI           index of particleI whose scale factor is to be retrieved
-     * @param  particleJ           index of particleJ whose scale factor is to be retrieved
-     * @param  scaleType           scale type (D_SCALE, P_SCALE, M_SCAL)
-     *
-     * @return array of scaleFactors 
-     */
-    void getMultipoleScaleFactors(unsigned int particleI, unsigned int particleJ, std::vector<double>& scaleFactors) const;
-
-    /**
-     * Get p- and d-scale factors for particleI & particleJ ixn
-     *
-     * @param  particleI           index of particleI 
-     * @param  particleJ           index of particleJ
-     * @param  dScale              output d-scale factor
-     * @param  pScale              output p-scale factor
-     */
-    void getDScaleAndPScale(unsigned int particleI, unsigned int particleJ, double& dScale, double& pScale) const;
 
     /**
      * Compute the damping factors for the field due to the fixed multipole moments of a particle.
@@ -500,24 +384,6 @@ protected:
                               double r,
                               double (&rotationMatrix)[3][3]) const;
 
-
-    /**
-     * Constructs a rotation matrix for spherical harmonic quadrupoles, using the dipole rotation matrix.
-     *
-     * @param D1                    The input spherical harmonic dipole rotation matrix
-     * @param D2                    The output spherical harmonic quadrupole rotation matrix
-     */
-     void buildSphericalQuadrupoleRotationMatrix(const double (&D1)[3][3], double (&D2)[5][5]) const;
-
-     /**
-      * Constructs a rotation matrix for spherical harmonic quadrupoles, using the dipole rotation matrix.
-      * Only the m={0,1c,1s} terms are constructed; these are the only terms needed to evaluate the field.
-      *
-      * @param D1                    The input spherical harmonic dipole rotation matrix
-      * @param D2                    The output spherical harmonic quadrupole rotation matrix
-      */
-      void buildPartialSphericalQuadrupoleRotationMatrix(const double (&D1)[3][3], double (&D2)[3][5]) const;
-
     /**
      * Apply rotation matrix to molecular dipole/quadrupoles to get corresponding lab frame values.
      * 
@@ -529,10 +395,6 @@ protected:
      * @param axisType                axis type
      */
     void applyRotationMatrix();
-    /**
-     * Zero fixed multipole fields.
-     */
-    virtual void zeroFixedMultipoleFields();
 
     /**
      * Calculate electric field at particle I due fixed multipoles at particle J and vice versa
@@ -540,11 +402,8 @@ protected:
      * 
      * @param particleI               positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle I
      * @param particleJ               positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle J
-     * @param dScale                  d-scale value for i-j interaction
-     * @param pScale                  p-scale value for i-j interaction
      */
-    virtual void calculateFixedMultipoleFieldPairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleJ,
-                                                     double dScale, double pScale);
+    virtual void calculateFixedMultipoleFieldPairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleJ);
 
     /**
      * Initialize induced dipoles
@@ -699,29 +558,12 @@ protected:
     double normalizeVec3(Vec3& vectorToNormalize) const;
 
     /**
-     * Initialize vector of double (size=numParticles)
-     *
-     * @param vectorToInitialize vector to initialize
-     * 
-     */
-    void initializeRealOpenMMVector(std::vector<double>& vectorToInitialize) const;
-
-    /**
      * Initialize vector of Vec3 (size=numParticles)
      *
      * @param vectorToInitialize vector to initialize
      * 
      */
     void initializeVec3Vector(std::vector<Vec3>& vectorToInitialize) const;
-
-    /**
-     * Copy vector of Vec3
-     *
-     * @param inputVector  vector to copy
-     * @param outputVector output vector
-     * 
-     */
-    void copyVec3Vector(const std::vector<OpenMM::Vec3>& inputVector, std::vector<OpenMM::Vec3>& outputVector) const;
 
     /**
      * Calculate potential at grid point due to a particle
@@ -848,8 +690,6 @@ private:
     std::vector<HippoDouble4> _thetai[3];
     std::vector<std::array<int, 3> > _iGrid;
     std::vector<double> _phi;
-    std::vector<double> _phid;
-    std::vector<double> _phip;
     std::vector<double> _phidp;
     std::vector<std::vector<double> > optPhi;
     std::vector<HippoDouble4> _pmeBsplineTheta;
@@ -885,11 +725,8 @@ private:
      * 
      * @param particleI               positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle I
      * @param particleJ               positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle J
-     * @param dScale                  d-scale value for i-j interaction
-     * @param pScale                  p-scale value for i-j interaction
      */
-    void calculateFixedMultipoleFieldPairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleJ,
-                                             double dscale, double pscale);
+    void calculateFixedMultipoleFieldPairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleJ);
     
     /**
      * Calculate fixed multipole fields.
@@ -1013,10 +850,8 @@ private:
      * Spread induced dipoles onto grid.
      *
      * @param inputInducedDipole      induced dipole value
-     * @param inputInducedDipolePolar induced dipole polar value
      */
-    void spreadInducedDipolesOnGrid(const std::vector<Vec3>& inputInducedDipole,
-                                    const std::vector<Vec3>& inputInducedDipolePolar);
+    void spreadInducedDipolesOnGrid(const std::vector<Vec3>& inputInducedDipole);
 
     /**
      * Calculate induced dipole fields.
@@ -1032,10 +867,9 @@ private:
      * Set reciprocal space induced dipole fields. 
      *
      * @param field       reciprocal space output induced dipole field value at each site
-     * @param fieldPolar  reciprocal space output induced dipole polar field value at each site
      * 
      */
-    void recordInducedDipoleField(std::vector<Vec3>& field, std::vector<Vec3>& fieldPolar);
+    void recordInducedDipoleField(std::vector<Vec3>& field);
 
     /**
      * Compute Pme self energy.
