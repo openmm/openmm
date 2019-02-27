@@ -250,7 +250,6 @@ def _bondi_radii(topology):
         E.sulfur:       1.8,
         E.chlorine:     1.5,
     }
-    natoms = topology.getNumAtoms()
     radii = numpy.empty(topology.getNumAtoms(), numpy.double)
     for i, atom in enumerate(topology.atoms()):
         radii[i] = element_to_radius.get(atom.element, default_radius)
@@ -287,7 +286,8 @@ def _mbondi_radii(topology, all_bonds = None):
         elif element is E.carbon:
             radii[i] = 1.7
         # All other elements have fixed radii for all types/partners
-        radii[i] = element_to_const_radius.get(element, default_radius)
+        else:
+            radii[i] = element_to_const_radius.get(element, default_radius)
     return radii  # converted to nanometers above
 
 
@@ -832,45 +832,6 @@ class GBSAGBn2Force(GBSAGBnForce):
 
     def __init__(self, solventDielectric=78.5, soluteDielectric=1, SA=None, cutoff=None, kappa=0.0):
         GBSAGBnForce.__init__(self, solventDielectric, soluteDielectric, SA, cutoff, kappa)
-
-
-    # @staticmethod
-    # def getStandardParameters(topology):
-    #     """ Gets list of standard parameters for this GB model based on an input Topology
-    #
-    #     Parameters
-    #     ----------
-    #     topology : simtk.openmm.app.Topology
-    #         Topology of the system to get parameters for
-    #
-    #     Returns
-    #     -------
-    #     list of float
-    #         List of all parameters needed for this GB model. These can be passed
-    #         to addParticle or setParticleParameters after the charge is inserted
-    #         at the beginning of the list
-    #
-    #     """
-    #     import numpy
-    #     natoms = topology.getNumAtoms()
-    #     radii = numpy.empty((6,natoms), numpy.double)
-    #     radii[:,0] = [[x/10] for x in _mbondi3_radii(topology)]
-    #     for i, atom in enumerate(topology.atoms()):
-    #         radii[i,1] = _screen_parameter(atom)[2]
-    #         e = atom.element
-    #         if e in (E.hydrogen, E.deuterium):
-    #             radii[i, 2:]= [0.788440, 0.798699, 0.437334]
-    #         elif atom.element is E.carbon:
-    #             radii[i].extend([0.733756, 0.506378, 0.205844])
-    #         elif atom.element is E.nitrogen:
-    #             radii[i].extend([0.503364, 0.316828, 0.192915])
-    #         elif atom.element is E.oxygen:
-    #             radii[i].extend([0.867814, 0.876635, 0.387882])
-    #         elif atom.element is E.sulfur:
-    #             radii[i].extend([0.867814, 0.876635, 0.387882])
-    #         else:
-    #             radii[i].extend([0.8, 4.85, 0.5])
-    #     return radii
 
     _atom_params = {
         E.hydrogen:     numpy.array([0.788440, 0.798699, 0.437334]),
