@@ -1972,7 +1972,7 @@ class PeriodicTorsionGenerator(object):
         for torsion in data.propers:
             type1, type2, type3, type4 = [data.atomType[data.atoms[torsion[i]]] for i in range(4)]
             sig = (type1, type2, type3, type4)
-            sig = frozenset((sig, sig[:-1]))
+            sig = frozenset((sig, sig[::-1]))
             match = proper_cache.get(sig, None)
             if match == -1:
                 continue
