@@ -362,17 +362,29 @@ protected:
      * which is the rotation matrix that describes the orientation of the
      * internuclear vector for a given pair (I,J) in lab frame.
      *
-     * @param particleI             particleI position
-     * @param particleJ             particleJ position
      * @param deltaR                the internuclear vector, corrected for periodic boundary conditions
-     * @param r                     the bond length between atoms I and J
+     * @param r                     the distance between atoms I and J
      * @param rotationmatrix        the output rotation matrix for a 3-vector
      */
-    void formQIRotationMatrix(const Vec3& iPosition,
-                              const Vec3& jPosition,
-                              const Vec3 &deltaR,
-                              double r,
-                              double (&rotationMatrix)[3][3]) const;
+    void formQIRotationMatrix(const Vec3 &deltaR, double r, double (&rotationMatrix)[3][3]) const;
+
+    /**
+     * Rotate a vector from the lab frame to the quasi-internal coordinate system.
+     *
+     * @param v      the vector to rotate
+     * @param mat    the rotation matrix computed by formQIRotationMatrix()
+     * @return the rotated vector
+     */
+    Vec3 rotateVectorToQI(const Vec3 v, double (&mat)[3][3]) const;
+
+    /**
+     * Rotate a vector from the quasi-internal coordinate system back to the lab frame.
+     *
+     * @param v      the vector to rotate
+     * @param mat    the rotation matrix computed by formQIRotationMatrix()
+     * @return the rotated vector
+     */
+    Vec3 rotateVectorFromQI(const Vec3 v, double (&mat)[3][3]) const;
 
     /**
      * Apply rotation matrix to molecular dipole/quadrupoles to get corresponding lab frame values.
@@ -442,53 +454,66 @@ protected:
      * 
      * @param particleI         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle I
      * @param particleK         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle K
-     * @param forces            vector of particle forces to be updated
-     * @param torque            vector of particle torques to be updated
+     * @param deltaR            the displacement between the two particles
+     * @param r                 the distance between the two particles
+     * @param force             the force to apply to particle I should be added to this
+     * @param torqueI           the torque to apply to particle I should be added to this
+     * @param torqueK           the torque to apply to particle K should be added to this
      */
     virtual double calculateElectrostaticPairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
-                                         std::vector<OpenMM::Vec3>& forces, std::vector<Vec3>& torque) const;
+                                                 Vec3 deltaR, double r, Vec3& force, Vec3& torqueI, Vec3& torqueK) const;
 
     /**
      * Calculate electrostatic interactions involving induced dipoles on particles I and K.
      * 
      * @param particleI         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle I
      * @param particleK         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle K
-     * @param forces            vector of particle forces to be updated
-     * @param torque            vector of particle torques to be updated
+     * @param deltaR            the displacement between the two particles
+     * @param r                 the distance between the two particles
+     * @param force             the force to apply to particle I should be added to this
+     * @param torqueI           the torque to apply to particle I should be added to this
+     * @param torqueK           the torque to apply to particle K should be added to this
      */
     virtual void calculateInducedDipolePairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
-                                       std::vector<OpenMM::Vec3>& forces, std::vector<Vec3>& torque) const;
+                                               Vec3 deltaR, double r, Vec3& force, Vec3& torqueI, Vec3& torqueK) const;
 
     /**
      * Calculate dispersion interaction between particles I and K.
      * 
      * @param particleI         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle I
      * @param particleK         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle K
-     * @param forces            vector of particle forces to be updated
+     * @param deltaR            the displacement between the two particles
+     * @param r                 the distance between the two particles
+     * @param force             the force to apply to particle I should be added to this
      */
     virtual double calculateDispersionPairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
-                                      std::vector<OpenMM::Vec3>& forces) const;
+                                              Vec3 deltaR, double r, Vec3& force) const;
 
     /**
      * Calculate the Pauli repulsion interaction between particles I and K.
      * 
      * @param particleI         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle I
      * @param particleK         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle K
-     * @param forces            vector of particle forces to be updated
-     * @param torque            vector of particle torques to be updated
+     * @param deltaR            the displacement between the two particles
+     * @param r                 the distance between the two particles
+     * @param force             the force to apply to particle I should be added to this
+     * @param torqueI           the torque to apply to particle I should be added to this
+     * @param torqueK           the torque to apply to particle K should be added to this
      */
     double calculateRepulsionPairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
-                                      std::vector<OpenMM::Vec3>& forces, std::vector<Vec3>& torque) const;
+                                     Vec3 deltaR, double r, Vec3& force, Vec3& torqueI, Vec3& torqueK) const;
 
     /**
      * Calculate the charge transfer interaction between particles I and K.
      * 
      * @param particleI         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle I
      * @param particleK         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle K
-     * @param forces            vector of particle forces to be updated
+     * @param deltaR            the displacement between the two particles
+     * @param r                 the distance between the two particles
+     * @param force             the force to apply to particle I should be added to this
      */
     double calculateChargeTransferPairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
-                                          std::vector<OpenMM::Vec3>& forces) const;
+                                          Vec3 deltaR, double r, Vec3& force) const;
 
     /**
      * Map particle torque to force.
@@ -863,32 +888,40 @@ private:
      * 
      * @param particleI         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle I
      * @param particleK         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle K
-     * @param forces            vector of particle forces to be updated
-     * @param torque            vector of particle torques to be updated
+     * @param deltaR            the displacement between the two particles
+     * @param r                 the distance between the two particles
+     * @param force             the force to apply to particle I should be added to this
+     * @param torqueI           the torque to apply to particle I should be added to this
+     * @param torqueK           the torque to apply to particle K should be added to this
      */
     double calculateElectrostaticPairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
-                                         std::vector<OpenMM::Vec3>& forces, std::vector<Vec3>& torque) const;
+                                         Vec3 deltaR, double r, Vec3& force, Vec3& torqueI, Vec3& torqueK) const;
 
     /**
      * Calculate electrostatic interactions involving induced dipoles on particles I and K.
      * 
      * @param particleI         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle I
      * @param particleK         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle K
-     * @param forces            vector of particle forces to be updated
-     * @param torque            vector of particle torques to be updated
+     * @param deltaR            the displacement between the two particles
+     * @param r                 the distance between the two particles
+     * @param force             the force to apply to particle I should be added to this
+     * @param torqueI           the torque to apply to particle I should be added to this
+     * @param torqueK           the torque to apply to particle K should be added to this
      */
     void calculateInducedDipolePairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
-                                       std::vector<OpenMM::Vec3>& forces, std::vector<Vec3>& torque) const;
+                                       Vec3 deltaR, double r, Vec3& force, Vec3& torqueI, Vec3& torqueK) const;
 
     /**
      * Calculate dispersion interaction between particles I and K.
      * 
      * @param particleI         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle I
      * @param particleK         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle K
-     * @param forces            vector of particle forces to be updated
+     * @param deltaR            the displacement between the two particles
+     * @param r                 the distance between the two particles
+     * @param force             the force to apply to particle I should be added to this
      */
     double calculateDispersionPairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
-                                      std::vector<OpenMM::Vec3>& forces) const;
+                                      Vec3 deltaR, double r, Vec3& force) const;
 
     /**
      * Calculate reciprocal space force/torque for dipole interaction.
