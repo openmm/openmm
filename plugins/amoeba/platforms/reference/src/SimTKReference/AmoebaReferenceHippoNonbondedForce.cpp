@@ -294,7 +294,7 @@ void AmoebaReferenceHippoNonbondedForce::formQIRotationMatrix(const Vec3 &deltaR
     rotationMatrix[2][2] = vectorZ[2];
 }
 
-Vec3 AmoebaReferenceHippoNonbondedForce::rotateVectorToQI(const Vec3 v, double (&mat)[3][3]) const {
+Vec3 AmoebaReferenceHippoNonbondedForce::rotateVectorToQI(const Vec3 v, const double (&mat)[3][3]) const {
     Vec3 rotated;
     for (int i = 0; i < 3; i++)
         for (int j = 0; j < 3; j++)
@@ -302,12 +302,21 @@ Vec3 AmoebaReferenceHippoNonbondedForce::rotateVectorToQI(const Vec3 v, double (
     return rotated;
 }
 
-Vec3 AmoebaReferenceHippoNonbondedForce::rotateVectorFromQI(const Vec3 v, double (&mat)[3][3]) const {
+Vec3 AmoebaReferenceHippoNonbondedForce::rotateVectorFromQI(const Vec3 v, const double (&mat)[3][3]) const {
     Vec3 rotated;
     for (int i = 0; i < 3; i++)
         for (int j = 0; j < 3; j++)
             rotated[i] += mat[j][i]*v[j];
     return rotated;
+}
+
+void AmoebaReferenceHippoNonbondedForce::rotateQuadrupoleToQI(const double (&q)[6], double (&r)[6], const double (&mat)[3][3]) const {
+    r[QXX] = mat[0][0]*(mat[0][0]*q[QXX] + 2*(mat[0][1]*q[QXY] + mat[0][2]*q[QXZ])) + mat[0][1]*(mat[0][1]*q[QYY] + 2*mat[0][2]*q[QYZ]) + mat[0][2]*mat[0][2]*q[QZZ];
+    r[QYY] = mat[1][0]*(mat[1][0]*q[QXX] + 2*(mat[1][1]*q[QXY] + mat[1][2]*q[QXZ])) + mat[1][1]*(mat[1][1]*q[QYY] + 2*mat[1][2]*q[QYZ]) + mat[1][2]*mat[1][2]*q[QZZ];
+    r[QXY] = mat[0][0]*mat[1][0]*q[QXX] + mat[0][1]*mat[1][1]*q[QYY] + mat[0][2]*mat[1][2]*q[QZZ] + (mat[0][0]*mat[1][1] + mat[0][1]*mat[1][0])*q[QXY] + (mat[0][0]*mat[1][2] + mat[0][2]*mat[1][0])*q[QXZ] + (mat[0][1]*mat[1][2] + mat[0][2]*mat[1][1])*q[QYZ];
+    r[QXZ] = mat[0][0]*mat[2][0]*q[QXX] + mat[0][1]*mat[2][1]*q[QYY] + mat[0][2]*mat[2][2]*q[QZZ] + (mat[0][0]*mat[2][1] + mat[0][1]*mat[2][0])*q[QXY] + (mat[0][0]*mat[2][2] + mat[0][2]*mat[2][0])*q[QXZ] + (mat[0][1]*mat[2][2] + mat[0][2]*mat[2][1])*q[QYZ];
+    r[QYZ] = mat[1][0]*mat[2][0]*q[QXX] + mat[1][1]*mat[2][1]*q[QYY] + mat[1][2]*mat[2][2]*q[QZZ] + (mat[1][0]*mat[2][1] + mat[1][1]*mat[2][0])*q[QXY] + (mat[1][0]*mat[2][2] + mat[1][2]*mat[2][0])*q[QXZ] + (mat[1][1]*mat[2][2] + mat[1][2]*mat[2][1])*q[QYZ];
+    r[QZZ] = -r[QXX]-r[QYY];
 }
 
 void AmoebaReferenceHippoNonbondedForce::applyRotationMatrix() {
@@ -327,9 +336,9 @@ void AmoebaReferenceHippoNonbondedForce::computeDirectFieldDampingFactors(const 
     double ar3 = ar2*ar;
     double ar4 = ar2*ar2;
     double expAR = exp(-ar);
-    fdamp3 = 1 - (1 + ar + ar2/2)*expAR;
-    fdamp5 = 1 - (1 + ar + ar2/2 + ar3/6)*expAR;
-    fdamp7 = 1 - (1 + ar + ar2/2 + ar3/6 + ar4/30)*expAR;
+    fdamp3 = 1 - (1 + ar + ar2*(1.0/2))*expAR;
+    fdamp5 = 1 - (1 + ar + ar2*(1.0/2) + ar3*(1.0/6))*expAR;
+    fdamp7 = 1 - (1 + ar + ar2*(1.0/2) + ar3*(1.0/6) + ar4*(1.0/30))*expAR;
 }
 
 void AmoebaReferenceHippoNonbondedForce::computeMutualFieldDampingFactors(const MultipoleParticleData& particleI, const MultipoleParticleData& particleJ, double r, double& fdamp3, double& fdamp5) const {
@@ -340,8 +349,8 @@ void AmoebaReferenceHippoNonbondedForce::computeMutualFieldDampingFactors(const 
     if (particleI.alpha == particleJ.alpha) {
         double arI4 = arI3*arI;
         double arI5 = arI4*arI;
-        fdamp3 = 1 - (1 + arI + arI2/2 + (7*arI3 + arI4)/48)*expARI;
-        fdamp5 = 1 - (1 + arI + arI2/2 + arI3/6 + arI4/24 + arI5/144)*expARI;
+        fdamp3 = 1 - (1 + arI + arI2*(1.0/2) + arI3*(7.0/48) + arI4*(1.0/48))*expARI;
+        fdamp5 = 1 - (1 + arI + arI2*(1.0/2) + arI3*(1.0/6) + arI4*(1.0/24) + arI5*(1.0/144))*expARI;
     }
     else {
         double arJ = particleJ.alpha*r;
@@ -354,14 +363,14 @@ void AmoebaReferenceHippoNonbondedForce::computeMutualFieldDampingFactors(const 
         double B = aI2/(aI2-aJ2);
         double A2 = A*A;
         double B2 = B*B;
-        fdamp3 = 1 - A2*(1 + arI + arI2/2)*expARI -
-                     B2*(1 + arJ + arJ2/2)*expARJ -
+        fdamp3 = 1 - A2*(1 + arI + arI2*(1.0/2))*expARI -
+                     B2*(1 + arJ + arJ2*(1.0/2))*expARJ -
                      2*A2*B*(1 + arI)*expARI -
                      2*B2*A*(1 + arJ)*expARJ;
-        fdamp5 = 1 - A2*(1 + arI + arI2/2 + arI3/6)*expARI -
-                     B2*(1 + arJ + arJ2/2 + arJ3/6)*expARJ -
-                     2*A2*B*(1 + arI + arI2/3)*expARI -
-                     2*B2*A*(1 + arJ + arJ2/3)*expARJ;
+        fdamp5 = 1 - A2*(1 + arI + arI2*(1.0/2) + arI3*(1.0/6))*expARI -
+                     B2*(1 + arJ + arJ2*(1.0/2) + arJ3*(1.0/6))*expARJ -
+                     2*A2*B*(1 + arI + arI2*(1.0/3))*expARI -
+                     2*B2*A*(1 + arJ + arJ2*(1.0/3))*expARJ;
     }
 }
 
@@ -376,11 +385,11 @@ void AmoebaReferenceHippoNonbondedForce::computeOverlapDampingFactors(const Mult
     double arI5 = arI3*arI2;
     double arI6 = arI3*arI3;
     double expARI = exp(-arI);
-    fdampI1 = 1 - (1 + arI/2)*expARI;
-    fdampI3 = 1 - (1 + arI + arI2/2)*expARI;
-    fdampI5 = 1 - (1 + arI + arI2/2 + arI3/6)*expARI;
-    fdampI7 = 1 - (1 + arI + arI2/2 + arI3/6 + arI4/30)*expARI;
-    fdampI9 = 1 - (1 + arI + arI2/2 + arI3/6 + 4*arI4/105 + arI5/210)*expARI;
+    fdampI1 = 1 - (1 + arI*(1.0/2))*expARI;
+    fdampI3 = 1 - (1 + arI + arI2*(1.0/2))*expARI;
+    fdampI5 = 1 - (1 + arI + arI2*(1.0/2) + arI3*(1.0/6))*expARI;
+    fdampI7 = 1 - (1 + arI + arI2*(1.0/2) + arI3*(1.0/6) + arI4*(1.0/30))*expARI;
+    fdampI9 = 1 - (1 + arI + arI2*(1.0/2) + arI3*(1.0/6) + arI4*(4.0/105) + arI5*(1.0/210))*expARI;
     if (particleI.alpha == particleJ.alpha) {
         fdampJ1 = fdampI1;
         fdampJ3 = fdampI3;
@@ -389,12 +398,12 @@ void AmoebaReferenceHippoNonbondedForce::computeOverlapDampingFactors(const Mult
         fdampJ9 = fdampI9;
         double arI7 = arI4*arI3;
         double arI8 = arI4*arI4;
-        fdampIJ1 = 1 - (1 + 11*arI/16 + 3*arI2/16 + arI3/48)*expARI;
-        fdampIJ3 = 1 - (1 + arI + arI2/2 + (7*arI3 + arI4)/48)*expARI;
-        fdampIJ5 = 1 - (1 + arI + arI2/2 + arI3/6 + arI4/24 + arI5/144)*expARI;
-        fdampIJ7 = 1 - (1 + arI + arI2/2 + arI3/6 + arI4/24 + arI5/120 + arI6/720)*expARI;
-        fdampIJ9 = 1 - (1 + arI + arI2/2 + arI3/6 + arI4/24 + arI5/120 + arI6/720 + arI7/5040)*expARI;
-        fdampIJ11 = 1 - (1 + arI + arI2/2 + arI3/6 + arI4/24 + arI5/120 + arI6/720 + arI7/5040 + arI8/45360)*expARI;
+        fdampIJ1 = 1 - (1 + arI*(11.0/16) + arI2*(3.0/16) + arI3*(1.0/48))*expARI;
+        fdampIJ3 = 1 - (1 + arI + arI2*(1.0/2) + arI3*(7.0/48) + arI4*(1.0/48))*expARI;
+        fdampIJ5 = 1 - (1 + arI + arI2*(1.0/2) + arI3*(1.0/6) + arI4*(1.0/24) + arI5*(1.0/144))*expARI;
+        fdampIJ7 = 1 - (1 + arI + arI2*(1.0/2) + arI3*(1.0/6) + arI4*(1.0/24) + arI5*(1.0/120) + arI6*(1.0/720))*expARI;
+        fdampIJ9 = 1 - (1 + arI + arI2*(1.0/2) + arI3*(1.0/6) + arI4*(1.0/24) + arI5*(1.0/120) + arI6*(1.0/720) + arI7*(1.0/5040))*expARI;
+        fdampIJ11 = 1 - (1 + arI + arI2*(1.0/2) + arI3*(1.0/6) + arI4*(1.0/24) + arI5*(1.0/120) + arI6*(1.0/720) + arI7*(1.0/5040) + arI8*(1.0/45360))*expARI;
     }
     else {
         double arJ = particleJ.alpha*r;
@@ -410,33 +419,33 @@ void AmoebaReferenceHippoNonbondedForce::computeOverlapDampingFactors(const Mult
         double B = aI2/(aI2-aJ2);
         double A2 = A*A;
         double B2 = B*B;
-        fdampJ1 = 1 - (1 + arJ/2)*expARJ;
-        fdampJ3 = 1 - (1 + arJ + arJ2/2)*expARJ;
-        fdampJ5 = 1 - (1 + arJ + arJ2/2 + arJ3/6)*expARJ;
-        fdampJ7 = 1 - (1 + arJ + arJ2/2 + arJ3/6 + arJ4/30)*expARJ;
-        fdampJ9 = 1 - (1 + arJ + arJ2/2 + arJ3/6 + 4*arJ4/105 + arJ5/210)*expARJ;
-        fdampIJ1 = 1 - A2*(1 + 2*B + arI/2)*expARI -
-                       B2*(1 + 2*A + arJ/2)*expARJ;
-        fdampIJ3 = 1 - A2*(1 + arI + arI2/2)*expARI -
-                       B2*(1 + arJ + arJ2/2)*expARJ -
+        fdampJ1 = 1 - (1 + arJ*(1.0/2))*expARJ;
+        fdampJ3 = 1 - (1 + arJ + arJ2*(1.0/2))*expARJ;
+        fdampJ5 = 1 - (1 + arJ + arJ2*(1.0/2) + arJ3*(1.0/6))*expARJ;
+        fdampJ7 = 1 - (1 + arJ + arJ2*(1.0/2) + arJ3*(1.0/6) + arJ4*(1.0/30))*expARJ;
+        fdampJ9 = 1 - (1 + arJ + arJ2*(1.0/2) + arJ3*(1.0/6) + 4*arJ4*(1.0/105) + arJ5*(1.0/210))*expARJ;
+        fdampIJ1 = 1 - A2*(1 + 2*B + arI*(1.0/2))*expARI -
+                       B2*(1 + 2*A + arJ*(1.0/2))*expARJ;
+        fdampIJ3 = 1 - A2*(1 + arI + arI2*(1.0/2))*expARI -
+                       B2*(1 + arJ + arJ2*(1.0/2))*expARJ -
                        2*A2*B*(1 + arI)*expARI -
                        2*B2*A*(1 + arJ)*expARJ;
-        fdampIJ5 = 1 - A2*(1 + arI + arI2/2 + arI3/6)*expARI -
-                       B2*(1 + arJ + arJ2/2 + arJ3/6)*expARJ -
-                       2*A2*B*(1 + arI + arI2/3)*expARI -
-                       2*B2*A*(1 + arJ + arJ2/3)*expARJ;
-        fdampIJ7 = 1 - A2*(1 + arI + arI2/2 + arI3/6 + arI4/30)*expARI -
-                       B2*(1 + arJ + arJ2/2 + arJ3/6 + arJ4/30)*expARJ -
-                       2*A2*B*(1 + arI + 2*arI2/5 + arI3/15)*expARI -
-                       2*B2*A*(1 + arJ + 2*arJ2/5 + arJ3/15)*expARJ;
-        fdampIJ9 = 1 - A2*(1 + arI + arI2/2 + arI3/6 + 4*arI4/105 + arI5/210)*expARI -
-                       B2*(1 + arJ + arJ2/2 + arJ3/6 + 4*arJ4/105 + arJ5/210)*expARJ -
-                       2*A2*B*(1 + arI + 3*arI2/7 + 2*arI3/21 + arI4/105)*expARI -
-                       2*B2*A*(1 + arJ + 3*arJ2/7 + 2*arJ3/21 + arJ4/105)*expARJ;
-        fdampIJ11 = 1 - A2*(1 + arI + arI2/2 + arI3/6 + 5*arI4/126 + 2*arI5/315 + arI6/1890)*expARI -
-                        B2*(1 + arJ + arJ2/2 + arJ3/6 + 5*arJ4/126 + 2*arJ5/315 + arJ6/1890)*expARJ -
-                        2*A2*B*(1 + arI + 4*arI2/9 + arI3/9 + arI4/63 + arI5/945)*expARI -
-                        2*B2*A*(1 + arJ + 4*arJ2/9 + arJ3/9 + arJ4/63 + arJ5/945)*expARJ;
+        fdampIJ5 = 1 - A2*(1 + arI + arI2*(1.0/2) + arI3*(1.0/6))*expARI -
+                       B2*(1 + arJ + arJ2*(1.0/2) + arJ3*(1.0/6))*expARJ -
+                       2*A2*B*(1 + arI + arI2*(1.0/3))*expARI -
+                       2*B2*A*(1 + arJ + arJ2*(1.0/3))*expARJ;
+        fdampIJ7 = 1 - A2*(1 + arI + arI2*(1.0/2) + arI3*(1.0/6) + arI4*(1.0/30))*expARI -
+                       B2*(1 + arJ + arJ2*(1.0/2) + arJ3*(1.0/6) + arJ4*(1.0/30))*expARJ -
+                       2*A2*B*(1 + arI + arI2*(2.0/5) + arI3*(1.0/15))*expARI -
+                       2*B2*A*(1 + arJ + arJ2*(2.0/5) + arJ3*(1.0/15))*expARJ;
+        fdampIJ9 = 1 - A2*(1 + arI + arI2*(1.0/2) + arI3*(1.0/6) + arI4*4*(1.0/105) + arI5*(1.0/210))*expARI -
+                       B2*(1 + arJ + arJ2*(1.0/2) + arJ3*(1.0/6) + arJ4*4*(1.0/105) + arJ5*(1.0/210))*expARJ -
+                       2*A2*B*(1 + arI + arI2*(3.0/7) + arI3*(2.0/21) + arI4*(1.0/105))*expARI -
+                       2*B2*A*(1 + arJ + arJ2*(3.0/7) + arJ3*(2.0/21) + arJ4*(1.0/105))*expARJ;
+        fdampIJ11 = 1 - A2*(1 + arI + arI2*(1.0/2) + arI3*(1.0/6) + arI4*(5.0/126) + arI5*(2.0/315) + arI6*(1.0/1890))*expARI -
+                        B2*(1 + arJ + arJ2*(1.0/2) + arJ3*(1.0/6) + arJ4*(5.0/126) + arJ5*(2.0/315) + arJ6*(1.0/1890))*expARJ -
+                        2*A2*B*(1 + arI + arI2*(4.0/9) + arI3*(1.0/9) + arI4*(1.0/63) + arI5*(1.0/945))*expARI -
+                        2*B2*A*(1 + arJ + arJ2*(4.0/9) + arJ3*(1.0/9) + arJ4*(1.0/63) + arJ5*(1.0/945))*expARJ;
     }
 }
 
@@ -449,9 +458,9 @@ void AmoebaReferenceHippoNonbondedForce::computeDispersionDampingFactors(const M
     if (particleI.alpha == particleJ.alpha) {
         double arI4 = arI3*arI;
         double arI5 = arI4*arI;
-        fdamp3 = 1 - (1 + arI + arI2/2 + (7*arI3 + arI4)/48)*expARI;
-        fdamp5 = 1 - (1 + arI + arI2/2 + arI3/6 + arI4/24 + arI5/144)*expARI;
-        ddamp = particleI.alpha*(arI5 - 3*arI3 - 3*arI2)*expARI/96;
+        fdamp3 = 1 - (1 + arI + arI2*(1.0/2) + arI3*(7.0/48) + arI4*(1.0/48))*expARI;
+        fdamp5 = 1 - (1 + arI + arI2*(1.0/2) + arI3*(1.0/6) + arI4*(1.0/24) + arI5*(1.0/144))*expARI;
+        ddamp = particleI.alpha*(arI5 - 3*arI3 - 3*arI2)*expARI*(1.0/96);
     }
     else {
         double arJ = particleJ.alpha*r;
@@ -464,16 +473,16 @@ void AmoebaReferenceHippoNonbondedForce::computeDispersionDampingFactors(const M
         double B = aI2/(aI2-aJ2);
         double A2 = A*A;
         double B2 = B*B;
-        fdamp3 = 1 - A2*(1 + arI + arI2/2)*expARI -
-                     B2*(1 + arJ + arJ2/2)*expARJ -
+        fdamp3 = 1 - A2*(1 + arI + arI2*(1.0/2))*expARI -
+                     B2*(1 + arJ + arJ2*(1.0/2))*expARJ -
                      2*A2*B*(1 + arI)*expARI -
                      2*B2*A*(1 + arJ)*expARJ;
-        fdamp5 = 1 - A2*(1 + arI + arI2/2 + arI3/6)*expARI -
-                     B2*(1 + arJ + arJ2/2 + arJ3/6)*expARJ -
-                     2*A2*B*(1 + arI + arI2/3)*expARI -
-                     2*B2*A*(1 + arJ + arJ2/3)*expARJ;
+        fdamp5 = 1 - A2*(1 + arI + arI2*(1.0/2) + arI3*(1.0/6))*expARI -
+                     B2*(1 + arJ + arJ2*(1.0/2) + arJ3*(1.0/6))*expARJ -
+                     2*A2*B*(1 + arI + arI2*(1.0/3))*expARI -
+                     2*B2*A*(1 + arJ + arJ2*(1.0/3))*expARJ;
         ddamp = (A2*arI2*particleI.alpha*expARI*(r*particleI.alpha + 4*B - 1) +
-                (B2*arJ2*particleJ.alpha*expARJ*(r*particleJ.alpha + 4*A - 1)))/4;
+                (B2*arJ2*particleJ.alpha*expARJ*(r*particleJ.alpha + 4*A - 1)))*(1.0/4);
     }
     fdamp = 1.5*fdamp5 - 0.5*fdamp3;
 }
@@ -499,12 +508,12 @@ void AmoebaReferenceHippoNonbondedForce::computeRepulsionDampingFactors(const Mu
         double r8 = r4*r4;
         double aI2_7 = aI2_4*aI2_3;
         pre = 128;
-        fexp = (r + aI2*r2 + aI2_2*r3/3)*expI;
-        fexp1 = (aI2_2*r3 + aI2_3*r4)*expI/3;
-        fexp2 = aI2_4*expI*r5/9;
-        fexp3 = aI2_5*expI*r6/45;
-        fexp4 = (aI2_5*r6 + aI2_6*r7)*expI/315;
-        fexp5 = (aI2_5*r6 + aI2_6*r7 + aI2_7*r8/3)*expI/945;
+        fexp = (r + aI2*r2 + aI2_2*r3*(1.0/3))*expI;
+        fexp1 = (aI2_2*r3 + aI2_3*r4)*expI*(1.0/3);
+        fexp2 = aI2_4*expI*r5*(1.0/9);
+        fexp3 = aI2_5*expI*r6*(1.0/45);
+        fexp4 = (aI2_5*r6 + aI2_6*r7)*expI*(1.0/315);
+        fexp5 = (aI2_5*r6 + aI2_6*r7 + aI2_7*r8*(1.0/3))*expI*(1.0/945);
     }
     else {
         double aJ2 = 0.5*particleJ.pauliAlpha;
@@ -521,14 +530,14 @@ void AmoebaReferenceHippoNonbondedForce::computeRepulsionDampingFactors(const Mu
         fexp = (arI2-tmp)*expJ + (arJ2+tmp)*expI;
         fexp1 = (aI2*aJ2*r2 - 4*aI2*aJ2_2*r*scale - 4*aI2*aJ2*scale)*expJ +
              (aI2*aJ2*r2 + 4*aI2_2*aJ2*r*scale + 4*aI2*aJ2*scale)*expI;
-        fexp2 = (aI2*aJ2*r2/3 + aI2*aJ2_2*r3/3 - 4.0/3*aI2*aJ2_3*r2*scale - 4*aI2*aJ2_2*r*scale - 4*aI2*aJ2*scale)*expJ +
-                (aI2*aJ2*r2/3 + aI2_2*aJ2*r3/3 + 4.0/3*aI2_3*aJ2*r2*scale + 4*aI2_2*aJ2*r*scale + 4*aI2*aJ2*scale)*expI;
-        fexp3 = (aI2*aJ2_3*r4/15 + aI2*aJ2_2*r3/5 + aI2*aJ2*r2/5 - 4.0/15*aI2*aJ2_4*r3*scale - 8.0/5*aI2*aJ2_3*r2*scale - 4*aI2*aJ2_2*r*scale - 4*scale*aI2*aJ2)*expJ +
-                (aI2_3*aJ2*r4/15 + aI2_2*aJ2*r3/5 + aI2*aJ2*r2/5 + 4.0/15*aI2_4*aJ2*r3*scale + 8.0/5*aI2_3*aJ2*r2*scale + 4*aI2_2*aJ2*r*scale + 4*scale*aI2*aJ2)*expI;
-        fexp4 = (aI2*aJ2_4*r5/105 + 2.0/35*aI2*aJ2_3*r4 + aI2*aJ2_2*r3/7 + aI2*aJ2*r2/7 - 4.0/105*aI2*aJ2_5*r4*scale - 8.0/21*aI2*aJ2_4*r3*scale - 12.0/7*aI2*aJ2_3*r2*scale - 4*aI2*aJ2_2*r*scale - 4*aI2*aJ2*scale)*expJ +
-                (aI2_4*aJ2*r5/105 + 2.0/35*aI2_3*aJ2*r4 + aI2_2*aJ2*r3/7 + aI2*aJ2*r2/7 + 4.0/105*aI2_5*aJ2*r4*scale + 8.0/21*aI2_4*aJ2*r3*scale + 12.0/7*aI2_3*aJ2*r2*scale + 4*aI2_2*aJ2*r*scale + 4*aI2*aJ2*scale)*expI;
-        fexp5 = (aI2*aJ2_5*r6/945 + 2.0/189*aI2*aJ2_4*r5 + aI2*aJ2_3*r4/21 + aI2*aJ2_2*r3/9 + aI2*aJ2*r2/9 - 4.0/945*aI2*aJ2_6*r5*scale - 4.0/63*aI2*aJ2_5*r4*scale - 4.0/9*aI2*aJ2_4*r3*scale - 16.0/9*aI2*aJ2_3*r2*scale - 4*aI2*aJ2_2*r*scale - 4*aI2*aJ2*scale)*expJ +
-                (aI2_5*aJ2*r6/945 + 2.0/189*aI2_4*aJ2*r5 + aI2_3*aJ2*r4/21 + aI2_2*aJ2*r3/9 + aI2*aJ2*r2/9 + 4.0/945*aI2_6*aJ2*r5*scale + 4.0/63*aI2_5*aJ2*r4*scale + 4.0/9*aI2_4*aJ2*r3*scale + 16.0/9*aI2_3*aJ2*r2*scale + 4*aI2_2*aJ2*r*scale + 4*aI2*aJ2*scale)*expI;
+        fexp2 = (aI2*aJ2*r2*(1.0/3) + aI2*aJ2_2*r3*(1.0/3) - (4.0/3)*aI2*aJ2_3*r2*scale - 4*aI2*aJ2_2*r*scale - 4*aI2*aJ2*scale)*expJ +
+                (aI2*aJ2*r2*(1.0/3) + aI2_2*aJ2*r3*(1.0/3) + (4.0/3)*aI2_3*aJ2*r2*scale + 4*aI2_2*aJ2*r*scale + 4*aI2*aJ2*scale)*expI;
+        fexp3 = (aI2*aJ2_3*r4*(1.0/15) + aI2*aJ2_2*r3*(1.0/5) + aI2*aJ2*r2*(1.0/5) - (4.0/15)*aI2*aJ2_4*r3*scale - (8.0/5)*aI2*aJ2_3*r2*scale - 4*aI2*aJ2_2*r*scale - 4*scale*aI2*aJ2)*expJ +
+                (aI2_3*aJ2*r4*(1.0/15) + aI2_2*aJ2*r3*(1.0/5) + aI2*aJ2*r2*(1.0/5) + (4.0/15)*aI2_4*aJ2*r3*scale + (8.0/5)*aI2_3*aJ2*r2*scale + 4*aI2_2*aJ2*r*scale + 4*scale*aI2*aJ2)*expI;
+        fexp4 = (aI2*aJ2_4*r5*(1.0/105) + (2.0/35)*aI2*aJ2_3*r4 + aI2*aJ2_2*r3*(1.0/7) + aI2*aJ2*r2*(1.0/7) - (4.0/105)*aI2*aJ2_5*r4*scale - (8.0/21)*aI2*aJ2_4*r3*scale - (12.0/7)*aI2*aJ2_3*r2*scale - 4*aI2*aJ2_2*r*scale - 4*aI2*aJ2*scale)*expJ +
+                (aI2_4*aJ2*r5*(1.0/105) + (2.0/35)*aI2_3*aJ2*r4 + aI2_2*aJ2*r3*(1.0/7) + aI2*aJ2*r2*(1.0/7) + (4.0/105)*aI2_5*aJ2*r4*scale + (8.0/21)*aI2_4*aJ2*r3*scale + (12.0/7)*aI2_3*aJ2*r2*scale + 4*aI2_2*aJ2*r*scale + 4*aI2*aJ2*scale)*expI;
+        fexp5 = (aI2*aJ2_5*r6*(1.0/945) + (2.0/189)*aI2*aJ2_4*r5 + aI2*aJ2_3*r4*(1.0/21) + aI2*aJ2_2*r3*(1.0/9) + aI2*aJ2*r2*(1.0/9) - (4.0/945)*aI2*aJ2_6*r5*scale - (4.0/63)*aI2*aJ2_5*r4*scale - (4.0/9)*aI2*aJ2_4*r3*scale - (16.0/9)*aI2*aJ2_3*r2*scale - 4*aI2*aJ2_2*r*scale - 4*aI2*aJ2*scale)*expJ +
+                (aI2_5*aJ2*r6*(1.0/945) + (2.0/189)*aI2_4*aJ2*r5 + aI2_3*aJ2*r4*(1.0/21) + aI2_2*aJ2*r3*(1.0/9) + aI2*aJ2*r2*(1.0/9) + (4.0/945)*aI2_6*aJ2*r5*scale + (4.0/63)*aI2_5*aJ2*r4*scale + (4.0/9)*aI2_4*aJ2*r3*scale + (16.0/9)*aI2_3*aJ2*r2*scale + 4*aI2_2*aJ2*r*scale + 4*aI2*aJ2*scale)*expI;
     }
     fexp = fexp/r;
     fexp1 = fexp1/r3;
@@ -652,9 +661,7 @@ void AmoebaReferenceHippoNonbondedForce::convergeInduceDipolesByExtrapolation(co
     calculateInducedDipoleFields(particleData, _maxPTOrder-1);
 }
 
-void AmoebaReferenceHippoNonbondedForce::calculateInducedDipoles()
-{
-
+void AmoebaReferenceHippoNonbondedForce::calculateInducedDipoles() {
     // calculate fixed electric fields
 
     initializeVec3Vector(_fixedMultipoleField);
@@ -671,47 +678,42 @@ void AmoebaReferenceHippoNonbondedForce::calculateInducedDipoles()
 }
 
 double AmoebaReferenceHippoNonbondedForce::calculateElectrostaticPairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
-                                                                        Vec3 deltaR, double r, Vec3& force, Vec3& torqueI, Vec3& torqueK) const {
-    double dir = particleI.dipole.dot(deltaR);
-
-    Vec3 qxI = Vec3(particleI.quadrupole[QXX], particleI.quadrupole[QXY], particleI.quadrupole[QXZ]);
-    Vec3 qyI = Vec3(particleI.quadrupole[QXY], particleI.quadrupole[QYY], particleI.quadrupole[QYZ]);
-    Vec3 qzI = Vec3(particleI.quadrupole[QXZ], particleI.quadrupole[QYZ], particleI.quadrupole[QZZ]);
-
-    Vec3 qi = Vec3(qxI.dot(deltaR), qyI.dot(deltaR), qzI.dot(deltaR));
-    double qir = qi.dot(deltaR);
-
-    double dkr = particleK.dipole.dot(deltaR);
-
-    Vec3 qxK = Vec3(particleK.quadrupole[QXX], particleK.quadrupole[QXY], particleK.quadrupole[QXZ]);
-    Vec3 qyK = Vec3(particleK.quadrupole[QXY], particleK.quadrupole[QYY], particleK.quadrupole[QYZ]);
-    Vec3 qzK = Vec3(particleK.quadrupole[QXZ], particleK.quadrupole[QYZ], particleK.quadrupole[QZZ]);
-
-    Vec3 qk = Vec3(qxK.dot(deltaR), qyK.dot(deltaR), qzK.dot(deltaR));
-    double qkr = qk.dot(deltaR);
-    double dik = particleI.dipole.dot(particleK.dipole);
+                                                                         double r, Vec3& force, Vec3& torqueI, Vec3& torqueK) const {
+    double dir = particleI.qiDipole[2]*r;
+    Vec3 qxI = Vec3(particleI.qiQuadrupole[QXX], particleI.qiQuadrupole[QXY], particleI.qiQuadrupole[QXZ]);
+    Vec3 qyI = Vec3(particleI.qiQuadrupole[QXY], particleI.qiQuadrupole[QYY], particleI.qiQuadrupole[QYZ]);
+    Vec3 qzI = Vec3(particleI.qiQuadrupole[QXZ], particleI.qiQuadrupole[QYZ], particleI.qiQuadrupole[QZZ]);
+    Vec3 qi = r*Vec3(particleI.qiQuadrupole[QXZ], particleI.qiQuadrupole[QYZ], particleI.qiQuadrupole[QZZ]);
+    double qir = qi[2]*r;
+    double dkr = particleK.qiDipole[2]*r;
+    Vec3 qxK = Vec3(particleK.qiQuadrupole[QXX], particleK.qiQuadrupole[QXY], particleK.qiQuadrupole[QXZ]);
+    Vec3 qyK = Vec3(particleK.qiQuadrupole[QXY], particleK.qiQuadrupole[QYY], particleK.qiQuadrupole[QYZ]);
+    Vec3 qzK = Vec3(particleK.qiQuadrupole[QXZ], particleK.qiQuadrupole[QYZ], particleK.qiQuadrupole[QZZ]);
+    Vec3 qk = r*Vec3(particleK.qiQuadrupole[QXZ], particleK.qiQuadrupole[QYZ], particleK.qiQuadrupole[QZZ]);
+    double qkr = qk[2]*r;
+    double dik = particleI.qiDipole.dot(particleK.qiDipole);
     double qik = qi.dot(qk);
-    double diqk = particleI.dipole.dot(qk);
-    double dkqi = particleK.dipole.dot(qi);
+    double diqk = particleI.qiDipole.dot(qk);
+    double dkqi = particleK.qiDipole.dot(qi);
     double qiqk = 2*(qxI[1]*qxK[1]+qxI[2]*qxK[2]+qyI[2]*qyK[2]) + qxI[0]*qxK[0] + qyI[1]*qyK[1] + qzI[2]*qzK[2];
 
     // Additional intermediates involving moments and distance.
 
-    Vec3 dirCross = particleI.dipole.cross(deltaR);
-    Vec3 dkrCross = particleK.dipole.cross(deltaR);
-    Vec3 dikCross = particleI.dipole.cross(particleK.dipole);
-    Vec3 qirCross = qi.cross(deltaR);
-    Vec3 qkrCross = qk.cross(deltaR);
+    Vec3 dirCross(particleI.qiDipole[1]*r, -particleI.qiDipole[0]*r, 0);
+    Vec3 dkrCross(particleK.qiDipole[1]*r, -particleK.qiDipole[0]*r, 0);
+    Vec3 dikCross = particleI.qiDipole.cross(particleK.qiDipole);
+    Vec3 qirCross(qi[1]*r, -qi[0]*r, 0);
+    Vec3 qkrCross(qk[1]*r, -qk[0]*r, 0);
     Vec3 qikCross = qk.cross(qi);
     Vec3 qikTemp(qxI.dot(qk), qyI.dot(qk), qzI.dot(qk));
     Vec3 qkiTemp(qxK.dot(qi), qyK.dot(qi), qzK.dot(qi));
-    Vec3 qikrCross = deltaR.cross(qikTemp);
-    Vec3 qkirCross = deltaR.cross(qkiTemp);
-    Vec3 diqkTemp(particleI.dipole.dot(qxK), particleI.dipole.dot(qyK), particleI.dipole.dot(qzK));
-    Vec3 dkqiTemp(particleK.dipole.dot(qxI), particleK.dipole.dot(qyI), particleK.dipole.dot(qzI));
-    Vec3 diqkrCross = deltaR.cross(diqkTemp);
-    Vec3 dkqirCross = deltaR.cross(dkqiTemp);
-    Vec3 dqik = particleI.dipole.cross(qk) + particleK.dipole.cross(qi) - 2*(qxI.cross(qxK) + qyI.cross(qyK) + qzI.cross(qzK));
+    Vec3 qikrCross(-r*qikTemp[1], r*qikTemp[0], 0);
+    Vec3 qkirCross(-r*qkiTemp[1], r*qkiTemp[0], 0);
+    Vec3 diqkTemp(particleI.qiDipole.dot(qxK), particleI.qiDipole.dot(qyK), particleI.qiDipole.dot(qzK));
+    Vec3 dkqiTemp(particleK.qiDipole.dot(qxI), particleK.qiDipole.dot(qyI), particleK.qiDipole.dot(qzI));
+    Vec3 diqkrCross(-r*diqkTemp[1], r*diqkTemp[0], 0);
+    Vec3 dkqirCross(-r*dkqiTemp[1], r*dkqiTemp[0], 0);
+    Vec3 dqik = particleI.qiDipole.cross(qk) + particleK.qiDipole.cross(qi) - 2*(qxI.cross(qxK) + qyI.cross(qyK) + qzI.cross(qzK));
 
     // Get reciprocal distance terms for this interaction.
 
@@ -780,7 +782,7 @@ double AmoebaReferenceHippoNonbondedForce::calculateElectrostaticPairIxn(const M
 
     // Compute the force and torque.
 
-    force += _electric*(de*deltaR + term1*particleI.dipole + term2*particleK.dipole +
+    force += _electric*(de*Vec3(0, 0, r) + term1*particleI.qiDipole + term2*particleK.qiDipole +
             term3*(diqkTemp-dkqiTemp) + term4*qi + term5*qk + term6*(qikTemp+qkiTemp));
     torqueI += _electric*(-rr3ik*dikCross + term1*dirCross + term3*(dqik+dkqirCross) + term4*qirCross - term6*(qikrCross+qikCross));
     torqueK += _electric*(rr3ik*dikCross + term2*dkrCross - term3*(dqik+diqkrCross) + term5*qkrCross - term6*(qkirCross-qikCross));
@@ -788,33 +790,27 @@ double AmoebaReferenceHippoNonbondedForce::calculateElectrostaticPairIxn(const M
 }
 
 void AmoebaReferenceHippoNonbondedForce::calculateInducedDipolePairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
-                                                                       Vec3 deltaR, double r, Vec3& force, Vec3& torqueI, Vec3& torqueK) const {
-    int i = particleI.particleIndex;
-    int k = particleK.particleIndex;
+                                                                       Vec3 deltaR, double r, Vec3& force, Vec3& torqueI, Vec3& torqueK, Vec3& labForce) const {
+    double r2 = r*r;
 
     // Intermediates involving moments and separation distance
 
-    double dir         = particleI.dipole.dot(deltaR);
-
-    Vec3 qxI           = Vec3(particleI.quadrupole[QXX], particleI.quadrupole[QXY], particleI.quadrupole[QXZ]);
-    Vec3 qyI           = Vec3(particleI.quadrupole[QXY], particleI.quadrupole[QYY], particleI.quadrupole[QYZ]);
-    Vec3 qzI           = Vec3(particleI.quadrupole[QXZ], particleI.quadrupole[QYZ], particleI.quadrupole[QZZ]);
-
-    Vec3 qi            = Vec3(qxI.dot(deltaR), qyI.dot(deltaR), qzI.dot(deltaR));
-    double qir         = qi.dot(deltaR);
-
-    double dkr         = particleK.dipole.dot(deltaR);
-
-    Vec3 qxK           = Vec3(particleK.quadrupole[QXX], particleK.quadrupole[QXY], particleK.quadrupole[QXZ]);
-    Vec3 qyK           = Vec3(particleK.quadrupole[QXY], particleK.quadrupole[QYY], particleK.quadrupole[QYZ]);
-    Vec3 qzK           = Vec3(particleK.quadrupole[QXZ], particleK.quadrupole[QYZ], particleK.quadrupole[QZZ]);
-
-    Vec3 qk            = Vec3(qxK.dot(deltaR), qyK.dot(deltaR), qzK.dot(deltaR));
-    double qkr         = qk.dot(deltaR);
-    const Vec3& ui = _inducedDipole[i];
-    const Vec3& uk = _inducedDipole[k];
-    double uir         = ui.dot(deltaR);
-    double ukr         = uk.dot(deltaR);
+    double dir = particleI.qiDipole[2]*r;
+    Vec3 qxI = Vec3(particleI.qiQuadrupole[QXX], particleI.qiQuadrupole[QXY], particleI.qiQuadrupole[QXZ]);
+    Vec3 qyI = Vec3(particleI.qiQuadrupole[QXY], particleI.qiQuadrupole[QYY], particleI.qiQuadrupole[QYZ]);
+    Vec3 qzI = Vec3(particleI.qiQuadrupole[QXZ], particleI.qiQuadrupole[QYZ], particleI.qiQuadrupole[QZZ]);
+    Vec3 qi = r*Vec3(particleI.qiQuadrupole[QXZ], particleI.qiQuadrupole[QYZ], particleI.qiQuadrupole[QZZ]);
+    double qir = qi[2]*r;
+    double dkr = particleK.qiDipole[2]*r;
+    Vec3 qxK = Vec3(particleK.qiQuadrupole[QXX], particleK.qiQuadrupole[QXY], particleK.qiQuadrupole[QXZ]);
+    Vec3 qyK = Vec3(particleK.qiQuadrupole[QXY], particleK.qiQuadrupole[QYY], particleK.qiQuadrupole[QYZ]);
+    Vec3 qzK = Vec3(particleK.qiQuadrupole[QXZ], particleK.qiQuadrupole[QYZ], particleK.qiQuadrupole[QZZ]);
+    Vec3 qk = r*Vec3(particleK.qiQuadrupole[QXZ], particleK.qiQuadrupole[QYZ], particleK.qiQuadrupole[QZZ]);
+    double qkr = qk[2]*r;
+    const Vec3& ui = particleI.qiInducedDipole;
+    const Vec3& uk = particleK.qiInducedDipole;
+    double uir = ui[2]*r;
+    double ukr = uk[2]*r;
 
     // Get reciprocal distance terms for this interaction.
 
@@ -846,171 +842,35 @@ void AmoebaReferenceHippoNonbondedForce::calculateInducedDipolePairIxn(const Mul
 
     // Get the induced dipole field used for dipole torques.
 
-    Vec3 ti3 = dsr3i*uk;
-    Vec3 tk3 = dsr3k*ui;
-    Vec3 torqueFieldI = ti3 - dsr5i*ukr*deltaR;
-    Vec3 torqueFieldK = tk3 - dsr5k*uir*deltaR;
+    Vec3 torqueFieldI = dsr3i*uk;
+    torqueFieldI[2] -= dsr5i*ukr*r;
+    Vec3 torqueFieldK = dsr3k*ui;
+    torqueFieldK[2] -= dsr5k*uir*r;
 
     // Get induced dipole field gradient used for quadrupole torques.
 
-    Vec3 ti5 = 2*dsr5i*uk;
-    Vec3 tk5 = 2*dsr5k*ui;
-    double tuir = -dsr7i*ukr;
-    double tukr = -dsr7k*uir;
-    double dtorqueFieldI1 = deltaR[0]*ti5[0] + deltaR[0]*deltaR[0]*tuir;
-    double dtorqueFieldI2 = deltaR[0]*ti5[1] + deltaR[1]*ti5[0] + 2*deltaR[0]*deltaR[1]*tuir;
-    double dtorqueFieldI3 = deltaR[1]*ti5[1] + deltaR[1]*deltaR[1]*tuir;
-    double dtorqueFieldI4 = deltaR[0]*ti5[2] + deltaR[2]*ti5[0] + 2*deltaR[0]*deltaR[2]*tuir;
-    double dtorqueFieldI5 = deltaR[1]*ti5[2] + deltaR[2]*ti5[1] + 2*deltaR[1]*deltaR[2]*tuir;
-    double dtorqueFieldI6 = deltaR[2]*ti5[2] + deltaR[2]*deltaR[2]*tuir;
-    double dtorqueFieldK1 = -deltaR[0]*tk5[0] - deltaR[0]*deltaR[0]*tukr;
-    double dtorqueFieldK2 = -deltaR[0]*tk5[1] - deltaR[1]*tk5[0] - 2*deltaR[0]*deltaR[1]*tukr;
-    double dtorqueFieldK3 = -deltaR[1]*tk5[1] - deltaR[1]*deltaR[1]*tukr;
-    double dtorqueFieldK4 = -deltaR[0]*tk5[2] - deltaR[2]*tk5[0] - 2*deltaR[0]*deltaR[2]*tukr;
-    double dtorqueFieldK5 = -deltaR[1]*tk5[2] - deltaR[2]*tk5[1] - 2*deltaR[1]*deltaR[2]*tukr;
-    double dtorqueFieldK6 = -deltaR[2]*tk5[2] - deltaR[2]*deltaR[2]*tukr;
+    Vec3 dtorqueFieldI = 2*r*dsr5i*uk;
+    dtorqueFieldI[2] -= r2*dsr7i*ukr;
+    Vec3 dtorqueFieldK = -2*r*dsr5k*ui;
+    dtorqueFieldK[2] += r2*dsr7k*uir;
 
     // Get the field gradient for direct polarization force
 
     double ti[6], tk[6];
-    {
-        double term1i = rr3*fdampI3 - rr5*fdampI5*deltaR[0]*deltaR[0];
-        double term1core = rr3 - rr5*deltaR[0]*deltaR[0];
-        double term2i = 2*rr5*fdampI5*deltaR[0];
-        double term3i = rr7*fdampI7*deltaR[0]*deltaR[0] - rr5*fdampI5;
-        double term4i = 2*rr5*fdampI5;
-        double term5i = 5*rr7*fdampI7*deltaR[0];
-        double term6i = rr9*fdampI9*deltaR[0]*deltaR[0];
-        double term1k = rr3*fdampK3 - rr5*fdampK5*deltaR[0]*deltaR[0];
-        double term2k = 2*rr5*fdampK5*deltaR[0];
-        double term3k = rr7*fdampK7*deltaR[0]*deltaR[0] - rr5*fdampK5;
-        double term4k = 2*rr5*fdampK5;
-        double term5k = 5*rr7*fdampK7*deltaR[0];
-        double term6k = rr9*fdampK9*deltaR[0]*deltaR[0];
-        ti[QXX] = particleI.valenceCharge*term1i + particleI.coreCharge*term1core + particleI.dipole[0]*term2i - dir*term3i
-                  - qxI[0]*term4i + qi[0]*term5i - qir*term6i
-                  + (qi[1]*deltaR[1]+qi[2]*deltaR[2])*rr7*fdampI7;
-        tk[QXX] = particleK.valenceCharge*term1k + particleK.coreCharge*term1core - particleK.dipole[0]*term2k + dkr*term3k
-                  - qxK[0]*term4k + qk[0]*term5k - qkr*term6k
-                  + (qk[1]*deltaR[1]+qk[2]*deltaR[2])*rr7*fdampK7;
-    }
-    {
-        double term1i = rr3*fdampI3 - rr5*fdampI5*deltaR[1]*deltaR[1];
-        double term1core = rr3 - rr5*deltaR[1]*deltaR[1];
-        double term2i = 2*rr5*fdampI5*deltaR[1];
-        double term3i = rr7*fdampI7*deltaR[1]*deltaR[1] - rr5*fdampI5;
-        double term4i = 2*rr5*fdampI5;
-        double term5i = 5*rr7*fdampI7*deltaR[1];
-        double term6i = rr9*fdampI9*deltaR[1]*deltaR[1];
-        double term1k = rr3*fdampK3 - rr5*fdampK5*deltaR[1]*deltaR[1];
-        double term2k = 2*rr5*fdampK5*deltaR[1];
-        double term3k = rr7*fdampK7*deltaR[1]*deltaR[1] - rr5*fdampK5;
-        double term4k = 2*rr5*fdampK5;
-        double term5k = 5*rr7*fdampK7*deltaR[1];
-        double term6k = rr9*fdampK9*deltaR[1]*deltaR[1];
-        ti[QYY] = particleI.valenceCharge*term1i + particleI.coreCharge*term1core + particleI.dipole[1]*term2i - dir*term3i
-                  - qyI[1]*term4i + qi[1]*term5i - qir*term6i
-                  + (qi[0]*deltaR[0]+qi[2]*deltaR[2])*rr7*fdampI7;
-        tk[QYY] = particleK.valenceCharge*term1k + particleK.coreCharge*term1core - particleK.dipole[1]*term2k + dkr*term3k
-                  - qyK[1]*term4k + qk[1]*term5k - qkr*term6k
-                  + (qk[0]*deltaR[0]+qk[2]*deltaR[2])*rr7*fdampK7;
-    }
-    {
-        double term1i = rr3*fdampI3 - rr5*fdampI5*deltaR[2]*deltaR[2];
-        double term1core = rr3 - rr5*deltaR[2]*deltaR[2];
-        double term2i = 2*rr5*fdampI5*deltaR[2];
-        double term3i = rr7*fdampI7*deltaR[2]*deltaR[2] - rr5*fdampI5;
-        double term4i = 2*rr5*fdampI5;
-        double term5i = 5*rr7*fdampI7*deltaR[2];
-        double term6i = rr9*fdampI9*deltaR[2]*deltaR[2];
-        double term1k = rr3*fdampK3 - rr5*fdampK5*deltaR[2]*deltaR[2];
-        double term2k = 2*rr5*fdampK5*deltaR[2];
-        double term3k = rr7*fdampK7*deltaR[2]*deltaR[2] - rr5*fdampK5;
-        double term4k = 2*rr5*fdampK5;
-        double term5k = 5*rr7*fdampK7*deltaR[2];
-        double term6k = rr9*fdampK9*deltaR[2]*deltaR[2];
-        ti[QZZ] = particleI.valenceCharge*term1i + particleI.coreCharge*term1core + particleI.dipole[2]*term2i - dir*term3i
-                  - qzI[2]*term4i + qi[2]*term5i - qir*term6i
-                  + (qi[0]*deltaR[0]+qi[1]*deltaR[1])*rr7*fdampI7;
-        tk[QZZ] = particleK.valenceCharge*term1k + particleK.coreCharge*term1core - particleK.dipole[2]*term2k + dkr*term3k
-                  - qzK[2]*term4k + qk[2]*term5k - qkr*term6k
-                  + (qk[0]*deltaR[0]+qk[1]*deltaR[1])*rr7*fdampK7;
-    }
-    {
-        double term2i = rr5*fdampI5*deltaR[0];
-        double term1i = deltaR[1] * term2i;
-        double term1core = rr5*deltaR[0]*deltaR[1];
-        double term3i = rr5*fdampI5*deltaR[1];
-        double term4i = deltaR[1] * (rr7*fdampI7*deltaR[0]);
-        double term5i = 2*rr5*fdampI5;
-        double term6i = 2*rr7*fdampI7*deltaR[0];
-        double term7i = 2*rr7*fdampI7*deltaR[1];
-        double term8i = deltaR[1]*rr9*fdampI9*deltaR[0];
-        double term2k = rr5*fdampK5*deltaR[0];
-        double term1k = deltaR[1] * term2k;
-        double term3k = rr5*fdampK5*deltaR[1];
-        double term4k = deltaR[1] * (rr7*fdampK7*deltaR[0]);
-        double term5k = 2*rr5*fdampK5;
-        double term6k = 2*rr7*fdampK7*deltaR[0];
-        double term7k = 2*rr7*fdampK7*deltaR[1];
-        double term8k = deltaR[1]*rr9*fdampK9*deltaR[0];
-        ti[QXY] = -particleI.valenceCharge*term1i - particleI.coreCharge*term1core + particleI.dipole[1]*term2i + particleI.dipole[0]*term3i
-                  - dir*term4i - qxI[1]*term5i + qi[1]*term6i
-                  + qi[0]*term7i - qir*term8i;
-        tk[QXY] = -particleK.valenceCharge*term1k - particleK.coreCharge*term1core - particleK.dipole[1]*term2k - particleK.dipole[0]*term3k
-                  + dkr*term4k - qxK[1]*term5k + qk[1]*term6k
-                  + qk[0]*term7k - qkr*term8k;
-    }
-    {
-        double term2i = rr5*fdampI5*deltaR[0];
-        double term1i = deltaR[2] * term2i;
-        double term1core = rr5*deltaR[0]*deltaR[2];
-        double term3i = rr5*fdampI5*deltaR[2];
-        double term4i = deltaR[2] * (rr7*fdampI7*deltaR[0]);
-        double term5i = 2*rr5*fdampI5;
-        double term6i = 2*rr7*fdampI7*deltaR[0];
-        double term7i = 2*rr7*fdampI7*deltaR[2];
-        double term8i = deltaR[2]*rr9*fdampI9*deltaR[0];
-        double term2k = rr5*fdampK5*deltaR[0];
-        double term1k = deltaR[2] * term2k;
-        double term3k = rr5*fdampK5*deltaR[2];
-        double term4k = deltaR[2] * (rr7*fdampK7*deltaR[0]);
-        double term5k = 2*rr5*fdampK5;
-        double term6k = 2*rr7*fdampK7*deltaR[0];
-        double term7k = 2*rr7*fdampK7*deltaR[2];
-        double term8k = deltaR[2]*rr9*fdampK9*deltaR[0];
-        ti[QXZ] = -particleI.valenceCharge*term1i - particleI.coreCharge*term1core + particleI.dipole[2]*term2i + particleI.dipole[0]*term3i
-                  - dir*term4i - qxI[2]*term5i + qi[2]*term6i
-                  + qi[0]*term7i - qir*term8i;
-        tk[QXZ] = -particleK.valenceCharge*term1k - particleK.coreCharge*term1core - particleK.dipole[2]*term2k - particleK.dipole[0]*term3k
-                  + dkr*term4k - qxK[2]*term5k + qk[2]*term6k
-                  + qk[0]*term7k - qkr*term8k;
-    }
-    {
-        double term2i = rr5*fdampI5*deltaR[1];
-        double term1i = deltaR[2] * term2i;
-        double term1core = rr5*deltaR[1]*deltaR[2];
-        double term3i = rr5*fdampI5*deltaR[2];
-        double term4i = deltaR[2] * (rr7*fdampI7*deltaR[1]);
-        double term5i = 2*rr5*fdampI5;
-        double term6i = 2*rr7*fdampI7*deltaR[1];
-        double term7i = 2*rr7*fdampI7*deltaR[2];
-        double term8i = deltaR[2]*rr9*fdampI9*deltaR[1];
-        double term2k = rr5*fdampK5*deltaR[1];
-        double term1k = deltaR[2] * term2k;
-        double term3k = rr5*fdampK5*deltaR[2];
-        double term4k = deltaR[2] * (rr7*fdampK7*deltaR[1]);
-        double term5k = 2*rr5*fdampK5;
-        double term6k = 2*rr7*fdampK7*deltaR[1];
-        double term7k = 2*rr7*fdampK7*deltaR[2];
-        double term8k = deltaR[2]*rr9*fdampK9*deltaR[1];
-        ti[QYZ] = -particleI.valenceCharge*term1i - particleI.coreCharge*term1core + particleI.dipole[2]*term2i + particleI.dipole[1]*term3i
-                  - dir*term4i - qyI[2]*term5i + qi[2]*term6i
-                  + qi[1]*term7i - qir*term8i;
-        tk[QYZ] = -particleK.valenceCharge*term1k - particleK.coreCharge*term1core - particleK.dipole[2]*term2k - particleK.dipole[1]*term3k
-                  + dkr*term4k - qyK[2]*term5k + qk[2]*term6k
-                  + qk[1]*term7k - qkr*term8k;
-    }
+    ti[QXX] = particleI.valenceCharge*rr3*fdampI3 + particleI.coreCharge*rr3 + dir*rr5*fdampI5 - qxI[0]*2*rr5*fdampI5 + qi[2]*r*rr7*fdampI7;
+    tk[QXX] = particleK.valenceCharge*rr3*fdampK3 + particleK.coreCharge*rr3 - dkr*rr5*fdampK5 - qxK[0]*2*rr5*fdampK5 + qk[2]*r*rr7*fdampK7;
+    ti[QYY] = particleI.valenceCharge*rr3*fdampI3 + particleI.coreCharge*rr3 + dir*rr5*fdampI5 - qyI[1]*2*rr5*fdampI5 + qi[2]*r*rr7*fdampI7;
+    tk[QYY] = particleK.valenceCharge*rr3*fdampK3 + particleK.coreCharge*rr3 - dkr*rr5*fdampK5 - qyK[1]*2*rr5*fdampK5 + qk[2]*r*rr7*fdampK7;
+    ti[QZZ] = particleI.valenceCharge*(rr3*fdampI3-rr5*fdampI5*r2) + particleI.coreCharge*(rr3-rr5*r2) + particleI.qiDipole[2]*2*rr5*fdampI5*r -
+              dir*(rr7*fdampI7*r2-rr5*fdampI5) - qzI[2]*2*rr5*fdampI5 + qi[2]*5*rr7*fdampI7*r - qir*rr9*fdampI9*r2;
+    tk[QZZ] = particleK.valenceCharge*(rr3*fdampK3-rr5*fdampK5*r2) + particleK.coreCharge*(rr3-rr5*r2) - particleK.qiDipole[2]*2*rr5*fdampK5*r +
+              dkr*(rr7*fdampK7*r2-rr5*fdampK5) - qzK[2]*2*rr5*fdampK5 + qk[2]*5*rr7*fdampK7*r - qkr*rr9*fdampK9*r2;
+    ti[QXY] = -qxI[1]*2*rr5*fdampI5;
+    tk[QXY] = -qxK[1]*2*rr5*fdampK5;
+    ti[QXZ] = particleI.qiDipole[0]*rr5*fdampI5*r - qxI[2]*2*rr5*fdampI5 + qi[0]*2*rr7*fdampI7*r;
+    tk[QXZ] = -particleK.qiDipole[0]*rr5*fdampK5*r - qxK[2]*2*rr5*fdampK5 + qk[0]*2*rr7*fdampK7*r;
+    ti[QYZ] = particleI.qiDipole[1]*rr5*fdampI5*r - qyI[2]*2*rr5*fdampI5 + qi[1]*2*rr7*fdampI7*r;
+    tk[QYZ] = -particleK.qiDipole[1]*rr5*fdampK5*r - qyK[2]*2*rr5*fdampK5 + qk[1]*2*rr7*fdampK7*r;
 
     // Get the dEp/dR terms for chgpen direct polarization force.
 
@@ -1024,6 +884,8 @@ void AmoebaReferenceHippoNonbondedForce::calculateInducedDipolePairIxn(const Mul
     double ddscale = 0.5*_electric;
     if (exception != exceptions.end())
         ddscale *= exception->second.dipoleDipoleScale;
+    int i = particleI.particleIndex;
+    int k = particleK.particleIndex;
     for (int j = 0; j < _maxPTOrder-1; j++) {
         double uirm = _ptDipoleD[j][i].dot(deltaR);
         for (int m = 0; m < _maxPTOrder-1-j; m++) {
@@ -1063,36 +925,24 @@ void AmoebaReferenceHippoNonbondedForce::calculateInducedDipolePairIxn(const Mul
             double depz = tixz*_ptDipoleD[m][k][0] + tkxz*_ptDipoleD[j][i][0]
                  + tiyz*_ptDipoleD[m][k][1] + tkyz*_ptDipoleD[j][i][1]
                  + tizz*_ptDipoleD[m][k][2] + tkzz*_ptDipoleD[j][i][2];
-            force += ddscale*_extPartCoefficients[j+m+1]*Vec3(depx, depy, depz);
+            labForce += ddscale*_extPartCoefficients[j+m+1]*Vec3(depx, depy, depz);
         }
     }
 
     // Torque is induced field and gradient cross permanent moments.
 
-    torqueI += torqueFieldI.cross(particleI.dipole);
-    torqueI[0] += qxI[2]*dtorqueFieldI2 - qxI[1]*dtorqueFieldI4
-               + 2*qyI[2]*(dtorqueFieldI3-dtorqueFieldI6)
-               + (qzI[2]-qyI[1])*dtorqueFieldI5;
-    torqueI[1] += - qyI[2]*dtorqueFieldI2 + qxI[1]*dtorqueFieldI5
-               + 2*qxI[2]*(dtorqueFieldI6-dtorqueFieldI1)
-               + (qxI[0]-qzI[2])*dtorqueFieldI4;
-    torqueI[2] += qyI[2]*dtorqueFieldI4 - qxI[2]*dtorqueFieldI5
-               + 2*qxI[1]*(dtorqueFieldI1-dtorqueFieldI3)
-               + (qyI[1]-qxI[0])*dtorqueFieldI2;
-    torqueK += torqueFieldK.cross(particleK.dipole);
-    torqueK[0] += qxK[2]*dtorqueFieldK2 - qxK[1]*dtorqueFieldK4
-               + 2*qyK[2]*(dtorqueFieldK3-dtorqueFieldK6)
-               + (qzK[2]-qyK[1])*dtorqueFieldK5;
-    torqueK[1] += - qyK[2]*dtorqueFieldK2 + qxK[1]*dtorqueFieldK5
-               + 2*qxK[2]*(dtorqueFieldK6-dtorqueFieldK1)
-               + (qxK[0]-qzK[2])*dtorqueFieldK4;
-    torqueK[2] += qyK[2]*dtorqueFieldK4 - qxK[2]*dtorqueFieldK5
-               + 2*qxK[1]*(dtorqueFieldK1-dtorqueFieldK3)
-               + (qyK[1]-qxK[0])*dtorqueFieldK2;
+    torqueI += torqueFieldI.cross(particleI.qiDipole);
+    torqueI[0] += -qxI[1]*dtorqueFieldI[0] - 2*qyI[2]*dtorqueFieldI[2] + (qzI[2]-qyI[1])*dtorqueFieldI[1];
+    torqueI[1] += qxI[1]*dtorqueFieldI[1] + 2*qxI[2]*dtorqueFieldI[2] + (qxI[0]-qzI[2])*dtorqueFieldI[0];
+    torqueI[2] += qyI[2]*dtorqueFieldI[0] - qxI[2]*dtorqueFieldI[1];
+    torqueK += torqueFieldK.cross(particleK.qiDipole);
+    torqueK[0] += -qxK[1]*dtorqueFieldK[0] - 2*qyK[2]*dtorqueFieldK[2] + (qzK[2]-qyK[1])*dtorqueFieldK[1];
+    torqueK[1] += qxK[1]*dtorqueFieldK[1] + 2*qxK[2]*dtorqueFieldK[2] + (qxK[0]-qzK[2])*dtorqueFieldK[0];
+    torqueK[2] += qyK[2]*dtorqueFieldK[0] - qxK[2]*dtorqueFieldK[1];
 }
 
 double AmoebaReferenceHippoNonbondedForce::calculateDispersionPairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
-                                                                      Vec3 deltaR, double r, Vec3& force) const {
+                                                                      double r, Vec3& force) const {
     // Compute the undamped force and energy.
     
     double r2 = r*r;
@@ -1113,52 +963,47 @@ double AmoebaReferenceHippoNonbondedForce::calculateDispersionPairIxn(const Mult
 
     // Accumulate the forces.
     
-    force -= deltaR*(dEnergydR/r);
+    force[2] -= dEnergydR;
     return energy;
 }
 
 double AmoebaReferenceHippoNonbondedForce::calculateRepulsionPairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
-                                                                     Vec3 deltaR, double r, Vec3& force, Vec3& torqueI, Vec3& torqueK) const {
-    double dir         = particleI.dipole.dot(deltaR);
-
-    Vec3 qxI           = Vec3(particleI.quadrupole[QXX], particleI.quadrupole[QXY], particleI.quadrupole[QXZ]);
-    Vec3 qyI           = Vec3(particleI.quadrupole[QXY], particleI.quadrupole[QYY], particleI.quadrupole[QYZ]);
-    Vec3 qzI           = Vec3(particleI.quadrupole[QXZ], particleI.quadrupole[QYZ], particleI.quadrupole[QZZ]);
-
-    Vec3 qi            = Vec3(qxI.dot(deltaR), qyI.dot(deltaR), qzI.dot(deltaR));
-    double qir         = qi.dot(deltaR);
-
-    double dkr         = particleK.dipole.dot(deltaR);
-
-    Vec3 qxK           = Vec3(particleK.quadrupole[QXX], particleK.quadrupole[QXY], particleK.quadrupole[QXZ]);
-    Vec3 qyK           = Vec3(particleK.quadrupole[QXY], particleK.quadrupole[QYY], particleK.quadrupole[QYZ]);
-    Vec3 qzK           = Vec3(particleK.quadrupole[QXZ], particleK.quadrupole[QYZ], particleK.quadrupole[QZZ]);
-
-    Vec3 qk            = Vec3(qxK.dot(deltaR), qyK.dot(deltaR), qzK.dot(deltaR));
-    double qkr         = qk.dot(deltaR);
-    double dik = particleI.dipole.dot(particleK.dipole);
+                                                                     double r, Vec3& force, Vec3& torqueI, Vec3& torqueK) const {
+    double dir = particleI.qiDipole[2]*r;
+    Vec3 qxI = Vec3(particleI.qiQuadrupole[QXX], particleI.qiQuadrupole[QXY], particleI.qiQuadrupole[QXZ]);
+    Vec3 qyI = Vec3(particleI.qiQuadrupole[QXY], particleI.qiQuadrupole[QYY], particleI.qiQuadrupole[QYZ]);
+    Vec3 qzI = Vec3(particleI.qiQuadrupole[QXZ], particleI.qiQuadrupole[QYZ], particleI.qiQuadrupole[QZZ]);
+    Vec3 qi = r*Vec3(particleI.qiQuadrupole[QXZ], particleI.qiQuadrupole[QYZ], particleI.qiQuadrupole[QZZ]);
+    double qir = qi[2]*r;
+    double dkr = particleK.qiDipole[2]*r;
+    Vec3 qxK = Vec3(particleK.qiQuadrupole[QXX], particleK.qiQuadrupole[QXY], particleK.qiQuadrupole[QXZ]);
+    Vec3 qyK = Vec3(particleK.qiQuadrupole[QXY], particleK.qiQuadrupole[QYY], particleK.qiQuadrupole[QYZ]);
+    Vec3 qzK = Vec3(particleK.qiQuadrupole[QXZ], particleK.qiQuadrupole[QYZ], particleK.qiQuadrupole[QZZ]);
+    Vec3 qk = r*Vec3(particleK.qiQuadrupole[QXZ], particleK.qiQuadrupole[QYZ], particleK.qiQuadrupole[QZZ]);
+    double qkr = qk[2]*r;
+    double dik = particleI.qiDipole.dot(particleK.qiDipole);
     double qik = qi.dot(qk);
-    double diqk = particleI.dipole.dot(qk);
-    double dkqi = particleK.dipole.dot(qi);
+    double diqk = particleI.qiDipole.dot(qk);
+    double dkqi = particleK.qiDipole.dot(qi);
     double qiqk = 2*(qxI[1]*qxK[1]+qxI[2]*qxK[2]+qyI[2]*qyK[2]) + qxI[0]*qxK[0] + qyI[1]*qyK[1] + qzI[2]*qzK[2];
 
     // Additional intermediates involving moments and distance.
 
-    Vec3 dirCross = particleI.dipole.cross(deltaR);
-    Vec3 dkrCross = particleK.dipole.cross(deltaR);
-    Vec3 dikCross = particleI.dipole.cross(particleK.dipole);
-    Vec3 qirCross = qi.cross(deltaR);
-    Vec3 qkrCross = qk.cross(deltaR);
+    Vec3 dirCross(particleI.qiDipole[1]*r, -particleI.qiDipole[0]*r, 0);
+    Vec3 dkrCross(particleK.qiDipole[1]*r, -particleK.qiDipole[0]*r, 0);
+    Vec3 dikCross = particleI.qiDipole.cross(particleK.qiDipole);
+    Vec3 qirCross(qi[1]*r, -qi[0]*r, 0);
+    Vec3 qkrCross(qk[1]*r, -qk[0]*r, 0);
     Vec3 qikCross = qk.cross(qi);
     Vec3 qikTemp(qxI.dot(qk), qyI.dot(qk), qzI.dot(qk));
     Vec3 qkiTemp(qxK.dot(qi), qyK.dot(qi), qzK.dot(qi));
-    Vec3 qikrCross = deltaR.cross(qikTemp);
-    Vec3 qkirCross = deltaR.cross(qkiTemp);
-    Vec3 diqkTemp(particleI.dipole.dot(qxK), particleI.dipole.dot(qyK), particleI.dipole.dot(qzK));
-    Vec3 dkqiTemp(particleK.dipole.dot(qxI), particleK.dipole.dot(qyI), particleK.dipole.dot(qzI));
-    Vec3 diqkrCross = deltaR.cross(diqkTemp);
-    Vec3 dkqirCross = deltaR.cross(dkqiTemp);
-    Vec3 dqik = particleI.dipole.cross(qk) + particleK.dipole.cross(qi) - 2*(qxI.cross(qxK) + qyI.cross(qyK) + qzI.cross(qzK));
+    Vec3 qikrCross(-r*qikTemp[1], r*qikTemp[0], 0);
+    Vec3 qkirCross(-r*qkiTemp[1], r*qkiTemp[0], 0);
+    Vec3 diqkTemp(particleI.qiDipole.dot(qxK), particleI.qiDipole.dot(qyK), particleI.qiDipole.dot(qzK));
+    Vec3 dkqiTemp(particleK.qiDipole.dot(qxI), particleK.qiDipole.dot(qyI), particleK.qiDipole.dot(qzI));
+    Vec3 diqkrCross(-r*diqkTemp[1], r*diqkTemp[0], 0);
+    Vec3 dkqirCross(-r*dkqiTemp[1], r*dkqiTemp[0], 0);
+    Vec3 dqik = particleI.qiDipole.cross(qk) + particleK.qiDipole.cross(qi) - 2*(qxI.cross(qxK) + qyI.cross(qyK) + qzI.cross(qzK));
 
     // Get reciprocal distance terms for this interaction.
 
@@ -1201,9 +1046,9 @@ double AmoebaReferenceHippoNonbondedForce::calculateRepulsionPairIxn(const Multi
 
     // Compute the force and torque.
 
-    Vec3 f = de*deltaR + term1*particleI.dipole + term2*particleK.dipole + term3*(diqkTemp-dkqiTemp)
+    Vec3 f = Vec3(0, 0, de*r) + term1*particleI.qiDipole + term2*particleK.qiDipole + term3*(diqkTemp-dkqiTemp)
             + term4*qi + term5*qk + term6*(qikTemp+qkiTemp);
-    f = sizik*(f*rr1 + eterm*rr3*deltaR);
+    f = sizik*(f*rr1 + Vec3(0, 0, eterm*rr3*r));
     Vec3 tI = -fdamp3*dikCross + term1*dirCross + term3*(dqik+dkqirCross) + term4*qirCross - term6*(qikrCross+qikCross);
     Vec3 tK = fdamp3*dikCross + term2*dkrCross - term3*(dqik+diqkrCross) + term5*qkrCross - term6*(qkirCross-qikCross);
     tI *= sizik*rr1;
@@ -1212,7 +1057,8 @@ double AmoebaReferenceHippoNonbondedForce::calculateRepulsionPairIxn(const Multi
         double t = (r-_switchingDistance)/(_cutoffDistance-_switchingDistance);
         double switchValue = 1+t*t*t*(-10+t*(15-t*6));
         double switchDeriv = t*t*(-30+t*(60-t*30))/(_cutoffDistance-_switchingDistance);
-        f = f*switchValue + energy*switchDeriv*rInv*deltaR;
+        f *= switchValue;
+        f[2] += energy*switchDeriv;
         energy *= switchValue;
         tI *= switchValue;
         tK *= switchValue;
@@ -1224,7 +1070,7 @@ double AmoebaReferenceHippoNonbondedForce::calculateRepulsionPairIxn(const Multi
 }
 
 double AmoebaReferenceHippoNonbondedForce::calculateChargeTransferPairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
-                                                                          Vec3 deltaR, double r, Vec3& force) const {
+                                                                          double r, Vec3& force) const {
     // Compute the force and energy.
 
     double term1 = particleI.epsilon*exp(-particleK.damping*r);
@@ -1243,7 +1089,7 @@ double AmoebaReferenceHippoNonbondedForce::calculateChargeTransferPairIxn(const 
         energy *= exception->second.multipoleMultipoleScale;
         dEnergydR *= exception->second.multipoleMultipoleScale;
     }
-    force += deltaR*(dEnergydR/r);
+    force[2] += dEnergydR;
     return energy;
 }
 
@@ -1429,9 +1275,7 @@ void AmoebaReferenceHippoNonbondedForce::mapTorqueToForceForParticle(const Multi
 }
 
 void AmoebaReferenceHippoNonbondedForce::mapTorqueToForce(vector<Vec3>& torques,
-                                                          vector<Vec3>& forces)
-{
-
+                                                          vector<Vec3>& forces) {
     // map torques to forces
 
     for (int ii = 0; ii < _numParticles; ii++) {
@@ -1459,14 +1303,25 @@ double AmoebaReferenceHippoNonbondedForce::calculateInteractions(vector<Vec3>& t
             if (_nonbondedMethod == HippoNonbondedForce::PME && r2 > _cutoffDistanceSquared)
                 continue;
             double r = sqrt(r2);
-            Vec3 force, torqueI, torqueJ;
-            energy += calculateElectrostaticPairIxn(particleData[i], particleData[j], deltaR, r, force, torqueI, torqueJ);
-            calculateInducedDipolePairIxn(particleData[i], particleData[j], deltaR, r, force, torqueI, torqueJ);
-            energy += calculateDispersionPairIxn(particleData[i], particleData[j], deltaR, r, force);
-            energy += calculateRepulsionPairIxn(particleData[i], particleData[j], deltaR, r, force, torqueI, torqueJ);
-            energy += calculateChargeTransferPairIxn(particleData[i], particleData[j], deltaR, r, force);
-            forces[i] += force;
-            forces[j] -= force;
+            double mat[3][3];
+            formQIRotationMatrix(deltaR, r, mat);
+            particleData[i].qiDipole = rotateVectorToQI(particleData[i].dipole, mat);
+            particleData[j].qiDipole = rotateVectorToQI(particleData[j].dipole, mat);
+            particleData[i].qiInducedDipole = rotateVectorToQI(_inducedDipole[i], mat);
+            particleData[j].qiInducedDipole = rotateVectorToQI(_inducedDipole[j], mat);
+            rotateQuadrupoleToQI(particleData[i].quadrupole, particleData[i].qiQuadrupole, mat);
+            rotateQuadrupoleToQI(particleData[j].quadrupole, particleData[j].qiQuadrupole, mat);
+            Vec3 force, labForce, torqueI, torqueJ;
+            energy += calculateElectrostaticPairIxn(particleData[i], particleData[j], r, force, torqueI, torqueJ);
+            calculateInducedDipolePairIxn(particleData[i], particleData[j], deltaR, r, force, torqueI, torqueJ, labForce);
+            energy += calculateDispersionPairIxn(particleData[i], particleData[j], r, force);
+            energy += calculateRepulsionPairIxn(particleData[i], particleData[j], r, force, torqueI, torqueJ);
+            energy += calculateChargeTransferPairIxn(particleData[i], particleData[j], r, force);
+            force = rotateVectorFromQI(force, mat);
+            torqueI = rotateVectorFromQI(torqueI, mat);
+            torqueJ = rotateVectorFromQI(torqueJ, mat);
+            forces[i] += force+labForce;
+            forces[j] -= force+labForce;
             torques[i] += torqueI;
             torques[j] += torqueJ;
         }
@@ -1477,17 +1332,14 @@ double AmoebaReferenceHippoNonbondedForce::calculateInteractions(vector<Vec3>& t
     return energy;
 }
 
-void AmoebaReferenceHippoNonbondedForce::setup(const vector<Vec3>& particlePositions)
-{
+void AmoebaReferenceHippoNonbondedForce::setup(const vector<Vec3>& particlePositions) {
     loadParticleData(particlePositions);
     applyRotationMatrix();
     calculateInducedDipoles();
 }
 
 double AmoebaReferenceHippoNonbondedForce::calculateForceAndEnergy(const vector<Vec3>& particlePositions,
-                                                                   vector<Vec3>& forces)
-{
-
+                                                                   vector<Vec3>& forces) {
     // setup, including calculating induced dipoles
     // calculate electrostatic ixns including torques
     // map torques to forces
@@ -1535,9 +1387,7 @@ void AmoebaReferenceHippoNonbondedForce::calculateTotalDipoles(const vector<Vec3
             outputTotalDipoles[i][j] = particleData[i].dipole[j] + _inducedDipole[i][j];
 }
 
-double AmoebaReferenceHippoNonbondedForce::calculateElectrostaticPotentialForParticleGridPoint(const MultipoleParticleData& particleI, const Vec3& gridPoint) const
-{
-
+double AmoebaReferenceHippoNonbondedForce::calculateElectrostaticPotentialForParticleGridPoint(const MultipoleParticleData& particleI, const Vec3& gridPoint) const {
     Vec3 deltaR = particleI.position - gridPoint;
 
     getPeriodicDelta(deltaR);
@@ -1564,8 +1414,7 @@ double AmoebaReferenceHippoNonbondedForce::calculateElectrostaticPotentialForPar
 
 void AmoebaReferenceHippoNonbondedForce::calculateElectrostaticPotential(const vector<Vec3>& particlePositions,
                                                                     const vector<Vec3>& grid,
-                                                                    vector<double>& potential)
-{
+                                                                    vector<double>& potential) {
     // setup, including calculating induced dipoles
     // initialize potential
     // calculate contribution of each particle to potential at grid point
@@ -1609,31 +1458,26 @@ AmoebaReferencePmeHippoNonbondedForce::AmoebaReferencePmeHippoNonbondedForce(con
     initializeBSplineModuli();
 }
 
-AmoebaReferencePmeHippoNonbondedForce::~AmoebaReferencePmeHippoNonbondedForce()
-{
+AmoebaReferencePmeHippoNonbondedForce::~AmoebaReferencePmeHippoNonbondedForce() {
     if (_fftplan != NULL)
         fftpack_destroy(_fftplan);
     if (_pmeGrid != NULL)
         delete _pmeGrid;
 };
 
-double AmoebaReferencePmeHippoNonbondedForce::getCutoffDistance() const
-{
+double AmoebaReferencePmeHippoNonbondedForce::getCutoffDistance() const {
      return _cutoffDistance;
 };
 
-double AmoebaReferencePmeHippoNonbondedForce::getAlphaEwald() const
-{
+double AmoebaReferencePmeHippoNonbondedForce::getAlphaEwald() const {
      return _alphaEwald;
 };
 
-double AmoebaReferencePmeHippoNonbondedForce::getDispersionAlphaEwald() const
-{
+double AmoebaReferencePmeHippoNonbondedForce::getDispersionAlphaEwald() const {
      return _dalphaEwald;
 };
 
-void AmoebaReferencePmeHippoNonbondedForce::getPmeGridDimensions(vector<int>& pmeGridDimensions) const
-{
+void AmoebaReferencePmeHippoNonbondedForce::getPmeGridDimensions(vector<int>& pmeGridDimensions) const {
     pmeGridDimensions.resize(3);
 
     pmeGridDimensions[0] = _pmeGridDimensions[0];
@@ -1641,8 +1485,7 @@ void AmoebaReferencePmeHippoNonbondedForce::getPmeGridDimensions(vector<int>& pm
     pmeGridDimensions[2] = _pmeGridDimensions[2];
 };
 
-void AmoebaReferencePmeHippoNonbondedForce::getDispersionPmeGridDimensions(vector<int>& pmeGridDimensions) const
-{
+void AmoebaReferencePmeHippoNonbondedForce::getDispersionPmeGridDimensions(vector<int>& pmeGridDimensions) const {
     pmeGridDimensions.resize(3);
 
     pmeGridDimensions[0] = _dpmeGridDimensions[0];
@@ -1650,8 +1493,7 @@ void AmoebaReferencePmeHippoNonbondedForce::getDispersionPmeGridDimensions(vecto
     pmeGridDimensions[2] = _dpmeGridDimensions[2];
 };
 
-void AmoebaReferencePmeHippoNonbondedForce::setPmeGridDimensions(vector<int>& pmeGridDimensions)
-{
+void AmoebaReferencePmeHippoNonbondedForce::setPmeGridDimensions(vector<int>& pmeGridDimensions) {
     if ((pmeGridDimensions[0] == _pmeGridDimensions[0]) &&
         (pmeGridDimensions[1] == _pmeGridDimensions[1]) &&
         (pmeGridDimensions[2] == _pmeGridDimensions[2]))
@@ -1669,8 +1511,7 @@ void AmoebaReferencePmeHippoNonbondedForce::setPmeGridDimensions(vector<int>& pm
     initializeBSplineModuli();
 };
 
-void AmoebaReferencePmeHippoNonbondedForce::setDispersionPmeGridDimensions(vector<int>& pmeGridDimensions)
-{
+void AmoebaReferencePmeHippoNonbondedForce::setDispersionPmeGridDimensions(vector<int>& pmeGridDimensions) {
     if ((pmeGridDimensions[0] == _dpmeGridDimensions[0]) &&
         (pmeGridDimensions[1] == _dpmeGridDimensions[1]) &&
         (pmeGridDimensions[2] == _dpmeGridDimensions[2]))
@@ -1688,9 +1529,7 @@ void AmoebaReferencePmeHippoNonbondedForce::setDispersionPmeGridDimensions(vecto
     initializeBSplineModuli();
 };
 
-void AmoebaReferencePmeHippoNonbondedForce::setPeriodicBoxSize(OpenMM::Vec3* vectors)
-{
-
+void AmoebaReferencePmeHippoNonbondedForce::setPeriodicBoxSize(OpenMM::Vec3* vectors) {
     if (vectors[0][0] == 0.0 || vectors[1][1] == 0.0 || vectors[2][2] == 0.0) {
         std::stringstream message;
         message << "Box size of zero is invalid.";
@@ -1708,9 +1547,7 @@ void AmoebaReferencePmeHippoNonbondedForce::setPeriodicBoxSize(OpenMM::Vec3* vec
     _recipBoxVectors[2] = Vec3(vectors[1][0]*vectors[2][1]-vectors[1][1]*vectors[2][0], -vectors[0][0]*vectors[2][1], vectors[0][0]*vectors[1][1])*scale;
 };
 
-void AmoebaReferencePmeHippoNonbondedForce::resizePmeArrays()
-{
-
+void AmoebaReferencePmeHippoNonbondedForce::resizePmeArrays() {
     _totalGridSize = _pmeGridDimensions[0]*_pmeGridDimensions[1]*_pmeGridDimensions[2];
     if (_pmeGridSize < _totalGridSize) {
         if (_pmeGrid) {
@@ -1731,8 +1568,7 @@ void AmoebaReferencePmeHippoNonbondedForce::resizePmeArrays()
     optPhi.resize(_maxPTOrder, vector<double>(10*_numParticles));
 }
 
-void AmoebaReferencePmeHippoNonbondedForce::initializePmeGrid()
-{
+void AmoebaReferencePmeHippoNonbondedForce::initializePmeGrid() {
     if (_pmeGrid == NULL)
         return;
 
@@ -1740,16 +1576,13 @@ void AmoebaReferencePmeHippoNonbondedForce::initializePmeGrid()
         _pmeGrid[jj].re = _pmeGrid[jj].im = 0.0;
 }
 
-void AmoebaReferencePmeHippoNonbondedForce::getPeriodicDelta(Vec3& deltaR) const
-{
+void AmoebaReferencePmeHippoNonbondedForce::getPeriodicDelta(Vec3& deltaR) const {
     deltaR -= _periodicBoxVectors[2]*floor(deltaR[2]*_recipBoxVectors[2][2]+0.5);
     deltaR -= _periodicBoxVectors[1]*floor(deltaR[1]*_recipBoxVectors[1][1]+0.5);
     deltaR -= _periodicBoxVectors[0]*floor(deltaR[0]*_recipBoxVectors[0][0]+0.5);
 }
 
-void AmoebaReferencePmeHippoNonbondedForce::initializeBSplineModuli()
-{
-
+void AmoebaReferencePmeHippoNonbondedForce::initializeBSplineModuli() {
     // Initialize the b-spline moduli.
 
     int maxSize = -1;
@@ -2172,8 +2005,7 @@ void AmoebaReferencePmeHippoNonbondedForce::performAmoebaReciprocalConvolution()
     }
 }
 
-void AmoebaReferencePmeHippoNonbondedForce::computeFixedPotentialFromGrid()
-{
+void AmoebaReferencePmeHippoNonbondedForce::computeFixedPotentialFromGrid() {
     // extract the permanent multipole field at each site
 
     for (int m = 0; m < _numParticles; m++) {
@@ -2676,9 +2508,7 @@ void AmoebaReferencePmeHippoNonbondedForce::calculateDirectInducedDipolePairIxn(
                                                                                 double preFactor1, double preFactor2,
                                                                                 const Vec3& delta,
                                                                                 const vector<Vec3>& inducedDipole,
-                                                                                vector<Vec3>& field) const
-{
-
+                                                                                vector<Vec3>& field) const {
     // field at i due induced dipole at j
 
     double dur  = inducedDipole[jIndex].dot(delta);
@@ -2767,47 +2597,42 @@ void AmoebaReferencePmeHippoNonbondedForce::calculatePmeSelfTorque(const vector<
 
 double AmoebaReferencePmeHippoNonbondedForce::calculateElectrostaticPairIxn(const MultipoleParticleData& particleI,
                                                                             const MultipoleParticleData& particleK,
-                                                                            Vec3 deltaR, double r, Vec3& force, Vec3& torqueI, Vec3& torqueK) const {
-    double dir = particleI.dipole.dot(deltaR);
-
-    Vec3 qxI = Vec3(particleI.quadrupole[QXX], particleI.quadrupole[QXY], particleI.quadrupole[QXZ]);
-    Vec3 qyI = Vec3(particleI.quadrupole[QXY], particleI.quadrupole[QYY], particleI.quadrupole[QYZ]);
-    Vec3 qzI = Vec3(particleI.quadrupole[QXZ], particleI.quadrupole[QYZ], particleI.quadrupole[QZZ]);
-
-    Vec3 qi = Vec3(qxI.dot(deltaR), qyI.dot(deltaR), qzI.dot(deltaR));
-    double qir = qi.dot(deltaR);
-
-    double dkr = particleK.dipole.dot(deltaR);
-
-    Vec3 qxK = Vec3(particleK.quadrupole[QXX], particleK.quadrupole[QXY], particleK.quadrupole[QXZ]);
-    Vec3 qyK = Vec3(particleK.quadrupole[QXY], particleK.quadrupole[QYY], particleK.quadrupole[QYZ]);
-    Vec3 qzK = Vec3(particleK.quadrupole[QXZ], particleK.quadrupole[QYZ], particleK.quadrupole[QZZ]);
-
-    Vec3 qk = Vec3(qxK.dot(deltaR), qyK.dot(deltaR), qzK.dot(deltaR));
-    double qkr = qk.dot(deltaR);
-    double dik = particleI.dipole.dot(particleK.dipole);
+                                                                            double r, Vec3& force, Vec3& torqueI, Vec3& torqueK) const {
+    double dir = particleI.qiDipole[2]*r;
+    Vec3 qxI = Vec3(particleI.qiQuadrupole[QXX], particleI.qiQuadrupole[QXY], particleI.qiQuadrupole[QXZ]);
+    Vec3 qyI = Vec3(particleI.qiQuadrupole[QXY], particleI.qiQuadrupole[QYY], particleI.qiQuadrupole[QYZ]);
+    Vec3 qzI = Vec3(particleI.qiQuadrupole[QXZ], particleI.qiQuadrupole[QYZ], particleI.qiQuadrupole[QZZ]);
+    Vec3 qi = r*Vec3(particleI.qiQuadrupole[QXZ], particleI.qiQuadrupole[QYZ], particleI.qiQuadrupole[QZZ]);
+    double qir = qi[2]*r;
+    double dkr = particleK.qiDipole[2]*r;
+    Vec3 qxK = Vec3(particleK.qiQuadrupole[QXX], particleK.qiQuadrupole[QXY], particleK.qiQuadrupole[QXZ]);
+    Vec3 qyK = Vec3(particleK.qiQuadrupole[QXY], particleK.qiQuadrupole[QYY], particleK.qiQuadrupole[QYZ]);
+    Vec3 qzK = Vec3(particleK.qiQuadrupole[QXZ], particleK.qiQuadrupole[QYZ], particleK.qiQuadrupole[QZZ]);
+    Vec3 qk = r*Vec3(particleK.qiQuadrupole[QXZ], particleK.qiQuadrupole[QYZ], particleK.qiQuadrupole[QZZ]);
+    double qkr = qk[2]*r;
+    double dik = particleI.qiDipole.dot(particleK.qiDipole);
     double qik = qi.dot(qk);
-    double diqk = particleI.dipole.dot(qk);
-    double dkqi = particleK.dipole.dot(qi);
+    double diqk = particleI.qiDipole.dot(qk);
+    double dkqi = particleK.qiDipole.dot(qi);
     double qiqk = 2*(qxI[1]*qxK[1]+qxI[2]*qxK[2]+qyI[2]*qyK[2]) + qxI[0]*qxK[0] + qyI[1]*qyK[1] + qzI[2]*qzK[2];
 
     // Additional intermediates involving moments and distance.
 
-    Vec3 dirCross = particleI.dipole.cross(deltaR);
-    Vec3 dkrCross = particleK.dipole.cross(deltaR);
-    Vec3 dikCross = particleI.dipole.cross(particleK.dipole);
-    Vec3 qirCross = qi.cross(deltaR);
-    Vec3 qkrCross = qk.cross(deltaR);
+    Vec3 dirCross(particleI.qiDipole[1]*r, -particleI.qiDipole[0]*r, 0);
+    Vec3 dkrCross(particleK.qiDipole[1]*r, -particleK.qiDipole[0]*r, 0);
+    Vec3 dikCross = particleI.qiDipole.cross(particleK.qiDipole);
+    Vec3 qirCross(qi[1]*r, -qi[0]*r, 0);
+    Vec3 qkrCross(qk[1]*r, -qk[0]*r, 0);
     Vec3 qikCross = qk.cross(qi);
     Vec3 qikTemp(qxI.dot(qk), qyI.dot(qk), qzI.dot(qk));
     Vec3 qkiTemp(qxK.dot(qi), qyK.dot(qi), qzK.dot(qi));
-    Vec3 qikrCross = deltaR.cross(qikTemp);
-    Vec3 qkirCross = deltaR.cross(qkiTemp);
-    Vec3 diqkTemp(particleI.dipole.dot(qxK), particleI.dipole.dot(qyK), particleI.dipole.dot(qzK));
-    Vec3 dkqiTemp(particleK.dipole.dot(qxI), particleK.dipole.dot(qyI), particleK.dipole.dot(qzI));
-    Vec3 diqkrCross = deltaR.cross(diqkTemp);
-    Vec3 dkqirCross = deltaR.cross(dkqiTemp);
-    Vec3 dqik = particleI.dipole.cross(qk) + particleK.dipole.cross(qi) - 2*(qxI.cross(qxK) + qyI.cross(qyK) + qzI.cross(qzK));
+    Vec3 qikrCross(-r*qikTemp[1], r*qikTemp[0], 0);
+    Vec3 qkirCross(-r*qkiTemp[1], r*qkiTemp[0], 0);
+    Vec3 diqkTemp(particleI.qiDipole.dot(qxK), particleI.qiDipole.dot(qyK), particleI.qiDipole.dot(qzK));
+    Vec3 dkqiTemp(particleK.qiDipole.dot(qxI), particleK.qiDipole.dot(qyI), particleK.qiDipole.dot(qzI));
+    Vec3 diqkrCross(-r*diqkTemp[1], r*diqkTemp[0], 0);
+    Vec3 dkqirCross(-r*dkqiTemp[1], r*dkqiTemp[0], 0);
+    Vec3 dqik = particleI.qiDipole.cross(qk) + particleK.qiDipole.cross(qi) - 2*(qxI.cross(qxK) + qyI.cross(qyK) + qzI.cross(qzK));
 
     // Get reciprocal distance terms for this interaction.
 
@@ -2903,7 +2728,7 @@ double AmoebaReferencePmeHippoNonbondedForce::calculateElectrostaticPairIxn(cons
 
     // Compute the force and torque.
 
-    force += de*deltaR + term1*particleI.dipole + term2*particleK.dipole +
+    force += Vec3(0, 0, de*r) + term1*particleI.qiDipole + term2*particleK.qiDipole +
             term3*(diqkTemp-dkqiTemp) + term4*qi + term5*qk + term6*(qikTemp+qkiTemp);
     torqueI += -rr3ik*dikCross + term1*dirCross + term3*(dqik+dkqirCross) + term4*qirCross - term6*(qikrCross+qikCross);
     torqueK += rr3ik*dikCross + term2*dkrCross - term3*(dqik+diqkrCross) + term5*qkrCross - term6*(qkirCross-qikCross);
@@ -2912,33 +2737,27 @@ double AmoebaReferencePmeHippoNonbondedForce::calculateElectrostaticPairIxn(cons
 
 void AmoebaReferencePmeHippoNonbondedForce::calculateInducedDipolePairIxn(const MultipoleParticleData& particleI,
                                                                           const MultipoleParticleData& particleK,
-                                                                          Vec3 deltaR, double r, Vec3& force, Vec3& torqueI, Vec3& torqueK) const {
-    int i = particleI.particleIndex;
-    int k = particleK.particleIndex;
+                                                                          Vec3 deltaR, double r, Vec3& force, Vec3& torqueI, Vec3& torqueK, Vec3& labForce) const {
+    double r2 = r*r;
 
     // Intermediates involving moments and separation distance
 
-    double dir         = particleI.dipole.dot(deltaR);
-
-    Vec3 qxI           = Vec3(particleI.quadrupole[QXX], particleI.quadrupole[QXY], particleI.quadrupole[QXZ]);
-    Vec3 qyI           = Vec3(particleI.quadrupole[QXY], particleI.quadrupole[QYY], particleI.quadrupole[QYZ]);
-    Vec3 qzI           = Vec3(particleI.quadrupole[QXZ], particleI.quadrupole[QYZ], particleI.quadrupole[QZZ]);
-
-    Vec3 qi            = Vec3(qxI.dot(deltaR), qyI.dot(deltaR), qzI.dot(deltaR));
-    double qir         = qi.dot(deltaR);
-
-    double dkr         = particleK.dipole.dot(deltaR);
-
-    Vec3 qxK           = Vec3(particleK.quadrupole[QXX], particleK.quadrupole[QXY], particleK.quadrupole[QXZ]);
-    Vec3 qyK           = Vec3(particleK.quadrupole[QXY], particleK.quadrupole[QYY], particleK.quadrupole[QYZ]);
-    Vec3 qzK           = Vec3(particleK.quadrupole[QXZ], particleK.quadrupole[QYZ], particleK.quadrupole[QZZ]);
-
-    Vec3 qk            = Vec3(qxK.dot(deltaR), qyK.dot(deltaR), qzK.dot(deltaR));
-    double qkr         = qk.dot(deltaR);
-    const Vec3& ui = _inducedDipole[i];
-    const Vec3& uk = _inducedDipole[k];
-    double uir         = ui.dot(deltaR);
-    double ukr         = uk.dot(deltaR);
+    double dir = particleI.qiDipole[2]*r;
+    Vec3 qxI = Vec3(particleI.qiQuadrupole[QXX], particleI.qiQuadrupole[QXY], particleI.qiQuadrupole[QXZ]);
+    Vec3 qyI = Vec3(particleI.qiQuadrupole[QXY], particleI.qiQuadrupole[QYY], particleI.qiQuadrupole[QYZ]);
+    Vec3 qzI = Vec3(particleI.qiQuadrupole[QXZ], particleI.qiQuadrupole[QYZ], particleI.qiQuadrupole[QZZ]);
+    Vec3 qi = r*Vec3(particleI.qiQuadrupole[QXZ], particleI.qiQuadrupole[QYZ], particleI.qiQuadrupole[QZZ]);
+    double qir = qi[2]*r;
+    double dkr = particleK.qiDipole[2]*r;
+    Vec3 qxK = Vec3(particleK.qiQuadrupole[QXX], particleK.qiQuadrupole[QXY], particleK.qiQuadrupole[QXZ]);
+    Vec3 qyK = Vec3(particleK.qiQuadrupole[QXY], particleK.qiQuadrupole[QYY], particleK.qiQuadrupole[QYZ]);
+    Vec3 qzK = Vec3(particleK.qiQuadrupole[QXZ], particleK.qiQuadrupole[QYZ], particleK.qiQuadrupole[QZZ]);
+    Vec3 qk = r*Vec3(particleK.qiQuadrupole[QXZ], particleK.qiQuadrupole[QYZ], particleK.qiQuadrupole[QZZ]);
+    double qkr = qk[2]*r;
+    const Vec3& ui = particleI.qiInducedDipole;
+    const Vec3& uk = particleK.qiInducedDipole;
+    double uir = ui[2]*r;
+    double ukr = uk[2]*r;
 
     // Get reciprocal distance terms for this interaction.
 
@@ -2994,171 +2813,35 @@ void AmoebaReferencePmeHippoNonbondedForce::calculateInducedDipolePairIxn(const 
 
     // Get the induced dipole field used for dipole torques.
 
-    Vec3 ti3 = 2*rr3i*uk;
-    Vec3 tk3 = 2*rr3k*ui;
-    Vec3 torqueFieldI = ti3 - 2*rr5i*ukr*deltaR;
-    Vec3 torqueFieldK = tk3 - 2*rr5k*uir*deltaR;
+    Vec3 torqueFieldI = 2*rr3i*uk;
+    torqueFieldI[2] -= 2*rr5i*ukr*r;
+    Vec3 torqueFieldK = 2*rr3k*ui;
+    torqueFieldK[2] -= 2*rr5k*uir*r;
 
     // Get induced dipole field gradient used for quadrupole torques.
 
-    Vec3 ti5 = 4*rr5i*uk;
-    Vec3 tk5 = 4*rr5k*ui;
-    double tuir = -2*rr7i*ukr;
-    double tukr = -2*rr7k*uir;
-    double dtorqueFieldI1 = deltaR[0]*ti5[0] + deltaR[0]*deltaR[0]*tuir;
-    double dtorqueFieldI2 = deltaR[0]*ti5[1] + deltaR[1]*ti5[0] + 2*deltaR[0]*deltaR[1]*tuir;
-    double dtorqueFieldI3 = deltaR[1]*ti5[1] + deltaR[1]*deltaR[1]*tuir;
-    double dtorqueFieldI4 = deltaR[0]*ti5[2] + deltaR[2]*ti5[0] + 2*deltaR[0]*deltaR[2]*tuir;
-    double dtorqueFieldI5 = deltaR[1]*ti5[2] + deltaR[2]*ti5[1] + 2*deltaR[1]*deltaR[2]*tuir;
-    double dtorqueFieldI6 = deltaR[2]*ti5[2] + deltaR[2]*deltaR[2]*tuir;
-    double dtorqueFieldK1 = -deltaR[0]*tk5[0] - deltaR[0]*deltaR[0]*tukr;
-    double dtorqueFieldK2 = -deltaR[0]*tk5[1] - deltaR[1]*tk5[0] - 2*deltaR[0]*deltaR[1]*tukr;
-    double dtorqueFieldK3 = -deltaR[1]*tk5[1] - deltaR[1]*deltaR[1]*tukr;
-    double dtorqueFieldK4 = -deltaR[0]*tk5[2] - deltaR[2]*tk5[0] - 2*deltaR[0]*deltaR[2]*tukr;
-    double dtorqueFieldK5 = -deltaR[1]*tk5[2] - deltaR[2]*tk5[1] - 2*deltaR[1]*deltaR[2]*tukr;
-    double dtorqueFieldK6 = -deltaR[2]*tk5[2] - deltaR[2]*deltaR[2]*tukr;
+    Vec3 dtorqueFieldI = 4*r*rr5i*uk;
+    dtorqueFieldI[2] -= 2*r2*rr7i*ukr;
+    Vec3 dtorqueFieldK = -4*r*rr5k*ui;
+    dtorqueFieldK[2] += 2*r2*rr7k*uir;
 
     // Get the field gradient for direct polarization force
 
     double ti[6], tk[6];
-    {
-        double term1i = rr3i - rr5i*deltaR[0]*deltaR[0];
-        double term1core = rr3core - rr5core*deltaR[0]*deltaR[0];
-        double term2i = 2*rr5i*deltaR[0];
-        double term3i = rr7i*deltaR[0]*deltaR[0] - rr5i;
-        double term4i = 2*rr5i;
-        double term5i = 5*rr7i*deltaR[0];
-        double term6i = rr9i*deltaR[0]*deltaR[0];
-        double term1k = rr3k - rr5k*deltaR[0]*deltaR[0];
-        double term2k = 2*rr5k*deltaR[0];
-        double term3k = rr7k*deltaR[0]*deltaR[0] - rr5k;
-        double term4k = 2*rr5k;
-        double term5k = 5*rr7k*deltaR[0];
-        double term6k = rr9k*deltaR[0]*deltaR[0];
-        ti[QXX] = particleI.valenceCharge*term1i + particleI.coreCharge*term1core + particleI.dipole[0]*term2i - dir*term3i
-                  - qxI[0]*term4i + qi[0]*term5i - qir*term6i
-                  + (qi[1]*deltaR[1]+qi[2]*deltaR[2])*rr7i;
-        tk[QXX] = particleK.valenceCharge*term1k + particleK.coreCharge*term1core - particleK.dipole[0]*term2k + dkr*term3k
-                  - qxK[0]*term4k + qk[0]*term5k - qkr*term6k
-                  + (qk[1]*deltaR[1]+qk[2]*deltaR[2])*rr7k;
-    }
-    {
-        double term1i = rr3i - rr5i*deltaR[1]*deltaR[1];
-        double term1core = rr3core - rr5core*deltaR[1]*deltaR[1];
-        double term2i = 2*rr5i*deltaR[1];
-        double term3i = rr7i*deltaR[1]*deltaR[1] - rr5i;
-        double term4i = 2*rr5i;
-        double term5i = 5*rr7i*deltaR[1];
-        double term6i = rr9i*deltaR[1]*deltaR[1];
-        double term1k = rr3k - rr5k*deltaR[1]*deltaR[1];
-        double term2k = 2*rr5k*deltaR[1];
-        double term3k = rr7k*deltaR[1]*deltaR[1] - rr5k;
-        double term4k = 2*rr5k;
-        double term5k = 5*rr7k*deltaR[1];
-        double term6k = rr9k*deltaR[1]*deltaR[1];
-        ti[QYY] = particleI.valenceCharge*term1i + particleI.coreCharge*term1core + particleI.dipole[1]*term2i - dir*term3i
-                  - qyI[1]*term4i + qi[1]*term5i - qir*term6i
-                  + (qi[0]*deltaR[0]+qi[2]*deltaR[2])*rr7i;
-        tk[QYY] = particleK.valenceCharge*term1k + particleK.coreCharge*term1core - particleK.dipole[1]*term2k + dkr*term3k
-                  - qyK[1]*term4k + qk[1]*term5k - qkr*term6k
-                  + (qk[0]*deltaR[0]+qk[2]*deltaR[2])*rr7k;
-    }
-    {
-        double term1i = rr3i - rr5i*deltaR[2]*deltaR[2];
-        double term1core = rr3core - rr5core*deltaR[2]*deltaR[2];
-        double term2i = 2*rr5i*deltaR[2];
-        double term3i = rr7i*deltaR[2]*deltaR[2] - rr5i;
-        double term4i = 2*rr5i;
-        double term5i = 5*rr7i*deltaR[2];
-        double term6i = rr9i*deltaR[2]*deltaR[2];
-        double term1k = rr3k - rr5k*deltaR[2]*deltaR[2];
-        double term2k = 2*rr5k*deltaR[2];
-        double term3k = rr7k*deltaR[2]*deltaR[2] - rr5k;
-        double term4k = 2*rr5k;
-        double term5k = 5*rr7k*deltaR[2];
-        double term6k = rr9k*deltaR[2]*deltaR[2];
-        ti[QZZ] = particleI.valenceCharge*term1i + particleI.coreCharge*term1core + particleI.dipole[2]*term2i - dir*term3i
-                  - qzI[2]*term4i + qi[2]*term5i - qir*term6i
-                  + (qi[0]*deltaR[0]+qi[1]*deltaR[1])*rr7i;
-        tk[QZZ] = particleK.valenceCharge*term1k + particleK.coreCharge*term1core - particleK.dipole[2]*term2k + dkr*term3k
-                  - qzK[2]*term4k + qk[2]*term5k - qkr*term6k
-                  + (qk[0]*deltaR[0]+qk[1]*deltaR[1])*rr7k;
-    }
-    {
-        double term2i = rr5i*deltaR[0];
-        double term1i = deltaR[1] * term2i;
-        double term1core = rr5core*deltaR[0]*deltaR[1];
-        double term3i = rr5i*deltaR[1];
-        double term4i = deltaR[1] * (rr7i*deltaR[0]);
-        double term5i = 2*rr5i;
-        double term6i = 2*rr7i*deltaR[0];
-        double term7i = 2*rr7i*deltaR[1];
-        double term8i = deltaR[1]*rr9i*deltaR[0];
-        double term2k = rr5k*deltaR[0];
-        double term1k = deltaR[1] * term2k;
-        double term3k = rr5k*deltaR[1];
-        double term4k = deltaR[1] * (rr7k*deltaR[0]);
-        double term5k = 2*rr5k;
-        double term6k = 2*rr7k*deltaR[0];
-        double term7k = 2*rr7k*deltaR[1];
-        double term8k = deltaR[1]*rr9k*deltaR[0];
-        ti[QXY] = -particleI.valenceCharge*term1i - particleI.coreCharge*term1core + particleI.dipole[1]*term2i + particleI.dipole[0]*term3i
-                  - dir*term4i - qxI[1]*term5i + qi[1]*term6i
-                  + qi[0]*term7i - qir*term8i;
-        tk[QXY] = -particleK.valenceCharge*term1k - particleK.coreCharge*term1core - particleK.dipole[1]*term2k - particleK.dipole[0]*term3k
-                  + dkr*term4k - qxK[1]*term5k + qk[1]*term6k
-                  + qk[0]*term7k - qkr*term8k;
-    }
-    {
-        double term2i = rr5i*deltaR[0];
-        double term1i = deltaR[2] * term2i;
-        double term1core = rr5core*deltaR[0]*deltaR[2];
-        double term3i = rr5i*deltaR[2];
-        double term4i = deltaR[2] * (rr7i*deltaR[0]);
-        double term5i = 2*rr5i;
-        double term6i = 2*rr7i*deltaR[0];
-        double term7i = 2*rr7i*deltaR[2];
-        double term8i = deltaR[2]*rr9i*deltaR[0];
-        double term2k = rr5k*deltaR[0];
-        double term1k = deltaR[2] * term2k;
-        double term3k = rr5k*deltaR[2];
-        double term4k = deltaR[2] * (rr7k*deltaR[0]);
-        double term5k = 2*rr5k;
-        double term6k = 2*rr7k*deltaR[0];
-        double term7k = 2*rr7k*deltaR[2];
-        double term8k = deltaR[2]*rr9k*deltaR[0];
-        ti[QXZ] = -particleI.valenceCharge*term1i - particleI.coreCharge*term1core + particleI.dipole[2]*term2i + particleI.dipole[0]*term3i
-                  - dir*term4i - qxI[2]*term5i + qi[2]*term6i
-                  + qi[0]*term7i - qir*term8i;
-        tk[QXZ] = -particleK.valenceCharge*term1k - particleK.coreCharge*term1core - particleK.dipole[2]*term2k - particleK.dipole[0]*term3k
-                  + dkr*term4k - qxK[2]*term5k + qk[2]*term6k
-                  + qk[0]*term7k - qkr*term8k;
-    }
-    {
-        double term2i = rr5i*deltaR[1];
-        double term1i = deltaR[2] * term2i;
-        double term1core = rr5core*deltaR[1]*deltaR[2];
-        double term3i = rr5i*deltaR[2];
-        double term4i = deltaR[2] * (rr7i*deltaR[1]);
-        double term5i = 2*rr5i;
-        double term6i = 2*rr7i*deltaR[1];
-        double term7i = 2*rr7i*deltaR[2];
-        double term8i = deltaR[2]*rr9i*deltaR[1];
-        double term2k = rr5k*deltaR[1];
-        double term1k = deltaR[2] * term2k;
-        double term3k = rr5k*deltaR[2];
-        double term4k = deltaR[2] * (rr7k*deltaR[1]);
-        double term5k = 2*rr5k;
-        double term6k = 2*rr7k*deltaR[1];
-        double term7k = 2*rr7k*deltaR[2];
-        double term8k = deltaR[2]*rr9k*deltaR[1];
-        ti[QYZ] = -particleI.valenceCharge*term1i - particleI.coreCharge*term1core + particleI.dipole[2]*term2i + particleI.dipole[1]*term3i
-                  - dir*term4i - qyI[2]*term5i + qi[2]*term6i
-                  + qi[1]*term7i - qir*term8i;
-        tk[QYZ] = -particleK.valenceCharge*term1k - particleK.coreCharge*term1core - particleK.dipole[2]*term2k - particleK.dipole[1]*term3k
-                  + dkr*term4k - qyK[2]*term5k + qk[2]*term6k
-                  + qk[1]*term7k - qkr*term8k;
-    }
+    ti[QXX] = particleI.valenceCharge*rr3i + particleI.coreCharge*rr3core + dir*rr5i - qxI[0]*2*rr5i + qi[2]*r*rr7i;
+    tk[QXX] = particleK.valenceCharge*rr3k + particleK.coreCharge*rr3core - dkr*rr5k - qxK[0]*2*rr5k + qk[2]*r*rr7k;
+    ti[QYY] = particleI.valenceCharge*rr3i + particleI.coreCharge*rr3core + dir*rr5i - qyI[1]*2*rr5i + qi[2]*r*rr7i;
+    tk[QYY] = particleK.valenceCharge*rr3k + particleK.coreCharge*rr3core - dkr*rr5k - qyK[1]*2*rr5k + qk[2]*r*rr7k;
+    ti[QZZ] = particleI.valenceCharge*(rr3i-rr5i*r2) + particleI.coreCharge*(rr3core-rr5core*r2) + particleI.qiDipole[2]*2*rr5i*r -
+                dir*(rr7i*r2-rr5i) - qzI[2]*2*rr5i + qi[2]*5*rr7i*r - qir*rr9i*r2;
+    tk[QZZ] = particleK.valenceCharge*(rr3k-rr5k*r2) + particleK.coreCharge*(rr3core-rr5core*r2) - particleK.qiDipole[2]*2*rr5k*r +
+                dkr*(rr7k*r2-rr5k) - qzK[2]*2*rr5k + qk[2]*5*rr7k*r - qkr*rr9k*r2;
+    ti[QXY] = -qxI[1]*2*rr5i;
+    tk[QXY] = -qxK[1]*2*rr5k;
+    ti[QXZ] = particleI.qiDipole[0]*rr5i*r - qxI[2]*2*rr5i + qi[0]*2*rr7i*r;
+    tk[QXZ] = - particleK.qiDipole[0]*rr5k*r - qxK[2]*2*rr5k + qk[0]*2*rr7k*r;
+    ti[QYZ] = particleI.qiDipole[1]*rr5i*r - qyI[2]*2*rr5i + qi[1]*2*rr7i*r;
+    tk[QYZ] = - particleK.qiDipole[1]*rr5k*r - qyK[2]*2*rr5k + qk[1]*2*rr7k*r;
 
     // Get the dEp/dR terms for chgpen direct polarization force.
 
@@ -3169,6 +2852,8 @@ void AmoebaReferencePmeHippoNonbondedForce::calculateInducedDipolePairIxn(const 
 
     // Get the dtau/dr terms used for OPT polarization force.
 
+    int i = particleI.particleIndex;
+    int k = particleK.particleIndex;
     for (int j = 0; j < _maxPTOrder-1; j++) {
         double uirm = _ptDipoleD[j][i].dot(deltaR);
         for (int m = 0; m < _maxPTOrder-1-j; m++) {
@@ -3208,36 +2893,24 @@ void AmoebaReferencePmeHippoNonbondedForce::calculateInducedDipolePairIxn(const 
             double depz = tixz*_ptDipoleD[m][k][0] + tkxz*_ptDipoleD[j][i][0]
                  + tiyz*_ptDipoleD[m][k][1] + tkyz*_ptDipoleD[j][i][1]
                  + tizz*_ptDipoleD[m][k][2] + tkzz*_ptDipoleD[j][i][2];
-            force += _extPartCoefficients[j+m+1]*Vec3(depx, depy, depz);
+            labForce += _extPartCoefficients[j+m+1]*Vec3(depx, depy, depz);
         }
     }
 
     // Torque is induced field and gradient cross permanent moments.
 
-    torqueI += torqueFieldI.cross(particleI.dipole);
-    torqueI[0] += qxI[2]*dtorqueFieldI2 - qxI[1]*dtorqueFieldI4
-               + 2*qyI[2]*(dtorqueFieldI3-dtorqueFieldI6)
-               + (qzI[2]-qyI[1])*dtorqueFieldI5;
-    torqueI[1] += - qyI[2]*dtorqueFieldI2 + qxI[1]*dtorqueFieldI5
-               + 2*qxI[2]*(dtorqueFieldI6-dtorqueFieldI1)
-               + (qxI[0]-qzI[2])*dtorqueFieldI4;
-    torqueI[2] += qyI[2]*dtorqueFieldI4 - qxI[2]*dtorqueFieldI5
-               + 2*qxI[1]*(dtorqueFieldI1-dtorqueFieldI3)
-               + (qyI[1]-qxI[0])*dtorqueFieldI2;
-    torqueK += torqueFieldK.cross(particleK.dipole);
-    torqueK[0] += qxK[2]*dtorqueFieldK2 - qxK[1]*dtorqueFieldK4
-               + 2*qyK[2]*(dtorqueFieldK3-dtorqueFieldK6)
-               + (qzK[2]-qyK[1])*dtorqueFieldK5;
-    torqueK[1] += - qyK[2]*dtorqueFieldK2 + qxK[1]*dtorqueFieldK5
-               + 2*qxK[2]*(dtorqueFieldK6-dtorqueFieldK1)
-               + (qxK[0]-qzK[2])*dtorqueFieldK4;
-    torqueK[2] += qyK[2]*dtorqueFieldK4 - qxK[2]*dtorqueFieldK5
-               + 2*qxK[1]*(dtorqueFieldK1-dtorqueFieldK3)
-               + (qyK[1]-qxK[0])*dtorqueFieldK2;
+    torqueI += torqueFieldI.cross(particleI.qiDipole);
+    torqueI[0] += -qxI[1]*dtorqueFieldI[0] - 2*qyI[2]*dtorqueFieldI[2] + (qzI[2]-qyI[1])*dtorqueFieldI[1];
+    torqueI[1] += qxI[1]*dtorqueFieldI[1] + 2*qxI[2]*dtorqueFieldI[2] + (qxI[0]-qzI[2])*dtorqueFieldI[0];
+    torqueI[2] += qyI[2]*dtorqueFieldI[0] - qxI[2]*dtorqueFieldI[1];
+    torqueK += torqueFieldK.cross(particleK.qiDipole);
+    torqueK[0] += -qxK[1]*dtorqueFieldK[0] - 2*qyK[2]*dtorqueFieldK[2] + (qzK[2]-qyK[1])*dtorqueFieldK[1];
+    torqueK[1] += qxK[1]*dtorqueFieldK[1] + 2*qxK[2]*dtorqueFieldK[2] + (qxK[0]-qzK[2])*dtorqueFieldK[0];
+    torqueK[2] += qyK[2]*dtorqueFieldK[0] - qxK[2]*dtorqueFieldK[1];
 }
 
 double AmoebaReferencePmeHippoNonbondedForce::calculateDispersionPairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
-                                                                         Vec3 deltaR, double r, Vec3& force) const {
+                                                                         double r, Vec3& force) const {
     double r2 = r*r;
     double rInv6 = 1/(r2*r2*r2);
     double ralpha2 = r2*_alphaEwald*_alphaEwald;
@@ -3260,7 +2933,7 @@ double AmoebaReferencePmeHippoNonbondedForce::calculateDispersionPairIxn(const M
     double energy = -cick*(expa+scale)*rInv6;
     double rterm = -ralpha2*ralpha2*ralpha2*expterm/r;
     double dEnergydR = -6*energy/r - cick*rInv6*(rterm + 2*dispersionScale*fdamp*ddamp);
-    force -= deltaR*(dEnergydR/r);
+    force[2] -= dEnergydR;
     return energy;
 }
 

@@ -195,8 +195,8 @@ protected:
         public:
             int particleIndex, axisType, multipoleAtomX, multipoleAtomY, multipoleAtomZ;    
             Vec3 position;
-            Vec3 dipole, localDipole;
-            double quadrupole[6], localQuadrupole[6];
+            Vec3 dipole, localDipole, qiDipole, qiInducedDipole;
+            double quadrupole[6], localQuadrupole[6], qiQuadrupole[6];
             double coreCharge, valenceCharge, alpha, epsilon, damping, c6, pauliK, pauliQ, pauliAlpha, polarizability;
     };
     
@@ -375,7 +375,7 @@ protected:
      * @param mat    the rotation matrix computed by formQIRotationMatrix()
      * @return the rotated vector
      */
-    Vec3 rotateVectorToQI(const Vec3 v, double (&mat)[3][3]) const;
+    Vec3 rotateVectorToQI(const Vec3 v, const double (&mat)[3][3]) const;
 
     /**
      * Rotate a vector from the quasi-internal coordinate system back to the lab frame.
@@ -384,7 +384,16 @@ protected:
      * @param mat    the rotation matrix computed by formQIRotationMatrix()
      * @return the rotated vector
      */
-    Vec3 rotateVectorFromQI(const Vec3 v, double (&mat)[3][3]) const;
+    Vec3 rotateVectorFromQI(const Vec3 v, const double (&mat)[3][3]) const;
+
+    /**
+     * Rotate a quadrupole from the lab frame to the quasi-internal coordinate system.
+     *
+     * @param q      the quadrupole to rotate
+     * @param r      the rotated quadrupole to stored into this
+     * @param mat    the rotation matrix computed by formQIRotationMatrix()
+     */
+    void rotateQuadrupoleToQI(const double (&q)[6], double (&r)[6], const double (&mat)[3][3]) const;
 
     /**
      * Apply rotation matrix to molecular dipole/quadrupoles to get corresponding lab frame values.
@@ -454,66 +463,63 @@ protected:
      * 
      * @param particleI         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle I
      * @param particleK         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle K
-     * @param deltaR            the displacement between the two particles
      * @param r                 the distance between the two particles
-     * @param force             the force to apply to particle I should be added to this
-     * @param torqueI           the torque to apply to particle I should be added to this
-     * @param torqueK           the torque to apply to particle K should be added to this
+     * @param force             the force to apply (in the quasi-internal frame) to particle I should be added to this
+     * @param torqueI           the torque to apply (in the quasi-internal frame) to particle I should be added to this
+     * @param torqueK           the torque to apply (in the quasi-internal frame) to particle K should be added to this
      */
     virtual double calculateElectrostaticPairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
-                                                 Vec3 deltaR, double r, Vec3& force, Vec3& torqueI, Vec3& torqueK) const;
+                                                 double r, Vec3& force, Vec3& torqueI, Vec3& torqueK) const;
 
     /**
      * Calculate electrostatic interactions involving induced dipoles on particles I and K.
      * 
      * @param particleI         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle I
      * @param particleK         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle K
-     * @param deltaR            the displacement between the two particles
+     * @param deltaR            the displacement between the two particles (in the lab frame)
      * @param r                 the distance between the two particles
-     * @param force             the force to apply to particle I should be added to this
-     * @param torqueI           the torque to apply to particle I should be added to this
-     * @param torqueK           the torque to apply to particle K should be added to this
+     * @param force             the force to apply (in the quasi-internal frame) to particle I should be added to this
+     * @param torqueI           the torque to apply (in the quasi-internal frame) to particle I should be added to this
+     * @param torqueK           the torque to apply (in the quasi-internal frame) to particle K should be added to this
+     * @param labForce          the force to apply (in the lab frame) to particle I should be added to this
      */
     virtual void calculateInducedDipolePairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
-                                               Vec3 deltaR, double r, Vec3& force, Vec3& torqueI, Vec3& torqueK) const;
+                                               Vec3 deltaR, double r, Vec3& force, Vec3& torqueI, Vec3& torqueK, Vec3& labForce) const;
 
     /**
      * Calculate dispersion interaction between particles I and K.
      * 
      * @param particleI         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle I
      * @param particleK         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle K
-     * @param deltaR            the displacement between the two particles
      * @param r                 the distance between the two particles
-     * @param force             the force to apply to particle I should be added to this
+     * @param force             the force to apply (in the quasi-internal frame) to particle I should be added to this
      */
     virtual double calculateDispersionPairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
-                                              Vec3 deltaR, double r, Vec3& force) const;
+                                              double r, Vec3& force) const;
 
     /**
      * Calculate the Pauli repulsion interaction between particles I and K.
      * 
      * @param particleI         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle I
      * @param particleK         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle K
-     * @param deltaR            the displacement between the two particles
      * @param r                 the distance between the two particles
-     * @param force             the force to apply to particle I should be added to this
-     * @param torqueI           the torque to apply to particle I should be added to this
-     * @param torqueK           the torque to apply to particle K should be added to this
+     * @param force             the force to apply (in the quasi-internal frame) to particle I should be added to this
+     * @param torqueI           the torque to apply (in the quasi-internal frame) to particle I should be added to this
+     * @param torqueK           the torque to apply (in the quasi-internal frame) to particle K should be added to this
      */
     double calculateRepulsionPairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
-                                     Vec3 deltaR, double r, Vec3& force, Vec3& torqueI, Vec3& torqueK) const;
+                                     double r, Vec3& force, Vec3& torqueI, Vec3& torqueK) const;
 
     /**
      * Calculate the charge transfer interaction between particles I and K.
      * 
      * @param particleI         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle I
      * @param particleK         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle K
-     * @param deltaR            the displacement between the two particles
      * @param r                 the distance between the two particles
-     * @param force             the force to apply to particle I should be added to this
+     * @param force             the force to apply (in the quasi-internal frame) to particle I should be added to this
      */
     double calculateChargeTransferPairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
-                                          Vec3 deltaR, double r, Vec3& force) const;
+                                          double r, Vec3& force) const;
 
     /**
      * Map particle torque to force.
@@ -888,28 +894,28 @@ private:
      * 
      * @param particleI         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle I
      * @param particleK         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle K
-     * @param deltaR            the displacement between the two particles
      * @param r                 the distance between the two particles
-     * @param force             the force to apply to particle I should be added to this
-     * @param torqueI           the torque to apply to particle I should be added to this
-     * @param torqueK           the torque to apply to particle K should be added to this
+     * @param force             the force to apply (in the quasi-internal frame) to particle I should be added to this
+     * @param torqueI           the torque to apply (in the quasi-internal frame) to particle I should be added to this
+     * @param torqueK           the torque to apply (in the quasi-internal frame) to particle K should be added to this
      */
     double calculateElectrostaticPairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
-                                         Vec3 deltaR, double r, Vec3& force, Vec3& torqueI, Vec3& torqueK) const;
+                                         double r, Vec3& force, Vec3& torqueI, Vec3& torqueK) const;
 
     /**
      * Calculate electrostatic interactions involving induced dipoles on particles I and K.
      * 
      * @param particleI         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle I
      * @param particleK         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle K
-     * @param deltaR            the displacement between the two particles
+     * @param deltaR            the displacement between the two particles (in the lab frame)
      * @param r                 the distance between the two particles
-     * @param force             the force to apply to particle I should be added to this
-     * @param torqueI           the torque to apply to particle I should be added to this
-     * @param torqueK           the torque to apply to particle K should be added to this
+     * @param force             the force to apply (in the quasi-internal frame) to particle I should be added to this
+     * @param torqueI           the torque to apply (in the quasi-internal frame) to particle I should be added to this
+     * @param torqueK           the torque to apply (in the quasi-internal frame) to particle K should be added to this
+     * @param labForce          the force to apply (in the lab frame) to particle I should be added to this
      */
     void calculateInducedDipolePairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
-                                       Vec3 deltaR, double r, Vec3& force, Vec3& torqueI, Vec3& torqueK) const;
+                                       Vec3 deltaR, double r, Vec3& force, Vec3& torqueI, Vec3& torqueK, Vec3& labForce) const;
 
     /**
      * Calculate dispersion interaction between particles I and K.
@@ -921,7 +927,7 @@ private:
      * @param force             the force to apply to particle I should be added to this
      */
     double calculateDispersionPairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleK,
-                                      Vec3 deltaR, double r, Vec3& force) const;
+                                      double r, Vec3& force) const;
 
     /**
      * Calculate reciprocal space force/torque for dipole interaction.
