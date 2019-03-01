@@ -46,6 +46,7 @@ from . import element as elem
 import gc
 import os
 import random
+import sys
 import xml.etree.ElementTree as etree
 from copy import deepcopy
 from math import ceil, floor
@@ -256,6 +257,120 @@ class Modeller(object):
                 newTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]])
         self.topology = newTopology
         self.positions = newPositions
+
+    def _addIons(self, forcefield, replaceableMols, ionCutoff=0.05*nanometer, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar, neutralize=True):
+        """Adds ions to the system by replacing certain molecules.
+
+        Parameters
+        ----------
+        forcefield : ForceField
+            the ForceField to use to determine the total charge of the system.
+        replaceableMols : dict
+            the molecules to replace by ions, as a dictionary of residue:positions
+        ionCutoff: distance=0.5*nanometer
+        positiveIon : string='Na+'
+            the type of positive ion to add.  Allowed values are 'Cs+', 'K+', 'Li+', 'Na+', and 'Rb+'
+        negativeIon : string='Cl-'
+            the type of negative ion to add.  Allowed values are 'Cl-', 'Br-', 'F-', and 'I-'. Be aware
+            that not all force fields support all ion types.
+        ionicStrength : concentration=0*molar
+            the total concentration of ions (both positive and negative) to add.  This
+            does not include ions that are added to neutralize the system.
+            Note that only monovalent ions are currently supported.
+        neutralize : bool=True
+            whether to add ions to neutralize the system
+        """
+
+        posIonElements = {'Cs+': elem.cesium, 'K+': elem.potassium,
+                          'Li+': elem.lithium, 'Na+': elem.sodium,
+                          'Rb+': elem.rubidium}
+        negIonElements = {'Cl-': elem.chlorine, 'Br-': elem.bromine,
+                          'F-': elem.fluorine, 'I-': elem.iodine}
+
+        ionPositions = []
+
+        numReplaceableMols = len(replaceableMols)
+
+        # Fetch ion elements from user input
+        if positiveIon not in posIonElements:
+            raise ValueError('Illegal value for positive ion: {}'.format(positiveIon))
+        if negativeIon not in negIonElements:
+            raise ValueError('Illegal value for negative ion: {}'.format(negativeIon))
+        positiveElement = posIonElements[positiveIon]
+        negativeElement = negIonElements[negativeIon]
+
+        # Determine the total charge of the system
+        system = forcefield.createSystem(self.topology)
+        for i in range(system.getNumForces()):
+            if isinstance(system.getForce(i), NonbondedForce):
+                nonbonded = system.getForce(i)
+                break
+        else:
+            raise ValueError('The ForceField does not specify a NonbondedForce')
+
+        totalCharge = 0.0
+        for i in range(nonbonded.getNumParticles()):
+            nb_i = nonbonded.getParticleParameters(i)
+            totalCharge += nb_i[0].value_in_unit(elementary_charge)
+        # Round up to integer
+        totalCharge = int(floor(0.5 + totalCharge))
+
+        # Figure out how many ions to add based on requested params/concentration
+        numPositive, numNegative = 0, 0
+        if neutralize:
+            if abs(totalCharge) > numReplaceableMols:
+                raise Exception('Cannot neutralize the system because the charge is greater than the number of available positions for ions')
+            if totalCharge > 0:
+                numNegative += totalCharge
+            else:
+                numPositive -= totalCharge
+
+        if ionicStrength > 0 * molar:
+            numIons = (numReplaceableMols - numPositive - numNegative) * ionicStrength / (55.4 * molar)  # Pure water is about 55.4 molar (depending on temperature)
+            numPairs = int(floor(numIons + 0.5))
+            numPositive += numPairs
+            numNegative += numPairs
+        totalIons = numPositive + numNegative
+
+        # Randomly select a set of waters
+        # while ensuring ions are not placed too close to each other.
+        modeller = Modeller(self.topology, self.positions)
+
+        replaceableList = list(replaceableMols)
+        numAddedIons = 0
+        numTrials = 10  # Attempts to add ions N times before quitting
+        toReplace = []  # list of molecules to be replaced
+        while numAddedIons < totalIons:
+            pickedMol = random.choice(replaceableList)
+            replaceableList.remove(pickedMol)
+            # Check distance to other ions
+            for pos in ionPositions:
+                distance = norm(pos - replaceableMols[pickedMol])
+                if distance <= ionCutoff:
+                    numTrials -= 1
+                    break
+            else:
+                toReplace.append(pickedMol)
+                ionPositions.append(replaceableMols[pickedMol])
+                numAddedIons += 1
+
+                n_trials = 10
+
+            if n_trials == 0:
+                raise ValueError('Could not add more than {} ions to the system'.format(addedIons))
+
+        # Replace waters/ions in the topology
+        modeller.delete(toReplace)
+        ionChain = modeller.topology.addChain()
+        for i, water in enumerate(toReplace):
+            element = (positiveElement if i < numPositive else negativeElement)
+            newResidue = modeller.topology.addResidue(element.symbol.upper(), ionChain)
+            modeller.topology.addAtom(element.symbol, element, newResidue)
+            modeller.positions.append(replaceableMols[water] * nanometer)
+
+        # Update topology/positions
+        self.topology = modeller.topology
+        self.positions = modeller.positions
 
     def addSolvent(self, forcefield, model='tip3p', boxSize=None, boxVectors=None, padding=None, numAdded=None, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar, neutralize=True):
         """Add solvent (both water and ions) to the model to fill a rectangular box.
@@ -487,31 +602,6 @@ class Modeller(object):
                         filteredWaters.append(entry)
             addedWaters = filteredWaters
 
-        # Add ions to neutralize the system.
-
-        def addIon(element):
-            # Replace a water by an ion.
-            index = random.randint(0, len(addedWaters)-1)
-            newResidue = newTopology.addResidue(element.symbol.upper(), newChain)
-            newTopology.addAtom(element.symbol, element, newResidue)
-            newPositions.append(addedWaters[index][1]*nanometer)
-            del addedWaters[index]
-        if neutralize:
-            totalCharge = int(floor(0.5+sum((nonbonded.getParticleParameters(i)[0].value_in_unit(elementary_charge) for i in range(system.getNumParticles())))))
-            if abs(totalCharge) > len(addedWaters):
-                raise Exception('Cannot neutralize the system because the charge is greater than the number of available positions for ions')
-            for i in range(abs(totalCharge)):
-                addIon(positiveElement if totalCharge < 0 else negativeElement)
-
-        # Add ions based on the desired ionic strength.
-
-        numIons = len(addedWaters)*ionicStrength/(55.4*molar) # Pure water is about 55.4 molar (depending on temperature)
-        numPairs = int(floor(numIons+0.5))
-        for i in range(numPairs):
-            addIon(positiveElement)
-        for i in range(numPairs):
-            addIon(negativeElement)
-
         # Add the water molecules.
 
         for index, pos in addedWaters:
@@ -528,8 +618,12 @@ class Modeller(object):
                     for atom2 in molAtoms:
                         if atom2.element == elem.hydrogen:
                             newTopology.addBond(atom1, atom2)
+
         self.topology = newTopology
         self.positions = newPositions
+
+        # Add ions to neutralize the system.
+        self._addIons(forcefield, addedWaters, positiveIon=positiveIon, negativeIon=negativeIon, ionicStrength=ionicStrength, neutralize=neutralize)
 
     class _ResidueData:
         """Inner class used to encapsulate data about the hydrogens for a residue."""
@@ -1422,10 +1516,9 @@ class Modeller(object):
                     for atom in residue.atoms():
                         if atom.element == elem.oxygen:
                             waterPos[residue] = modeller.positions[atom.index].value_in_unit(nanometer)
-        
+
         # We may have added extra water molecules inside the membrane.  We really only wanted to extend the box
         # without adding more water in the existing box, so remove the unwanted ones.
-        
         if needExtraWater:
             toDelete = []
             addedChain = list(modeller.topology.chains())[-1]
@@ -1438,41 +1531,43 @@ class Modeller(object):
                     del waterPos[residue]
             if len(toDelete) > 0:
                 modeller.delete(toDelete)
-        
-        # Determine how many positive and negative ions to add.
-        
-        numPositive = 0
-        numNegative = 0
-        if neutralize:
-            totalCharge = int(floor(0.5+sum((nonbonded.getParticleParameters(i)[0].value_in_unit(elementary_charge) for i in range(nonbonded.getNumParticles())))))
-            if abs(totalCharge) > len(waterPos):
-                raise Exception('Cannot neutralize the system because the charge is greater than the number of available positions for ions')
-            if totalCharge > 0:
-                numNegative += totalCharge
-            else:
-                numPositive -= totalCharge
-        if ionicStrength > 0*molar:
-            numIons = (len(waterPos)-numPositive-numNegative)*ionicStrength/(55.4*molar) # Pure water is about 55.4 molar (depending on temperature)
-            numPairs = int(floor(numIons+0.5))
-            numPositive += numPairs
-            numNegative += numPairs
-        totalIons = numPositive+numNegative
-        
-        # Now add the ions.  We do this by randomly selecting a set of waters that were just added and replacing
-        # them with ions.
 
-        if totalIons > 0:
-            toReplace = random.sample(list(waterPos), totalIons)
-            modeller.delete(toReplace)
-            ionChain = modeller.topology.addChain()
-            for i, water in enumerate(toReplace):
-                element = (positiveElement if i < numPositive else negativeElement)
-                newResidue = modeller.topology.addResidue(element.symbol.upper(), ionChain)
-                modeller.topology.addAtom(element.symbol, element, newResidue)
-                modeller.positions.append(waterPos[water]*nanometer)
-            
         self.topology = modeller.topology
         self.positions = modeller.positions
+
+        # Select a subset of water molecules to replace with ions, ignoring
+        # those within a certain distance from either leaflet of the membrane.
+
+        waterPos = {}  # redo because modeller.delete changes chain indexes
+        for chain in list(modeller.topology.chains())[-2:]:
+            for residue in chain.residues():
+                if residue.name == 'HOH':
+                    for atom in residue.atoms():
+                        if atom.element == elem.oxygen:
+                            waterPos[residue] = modeller.positions[atom.index].value_in_unit(nanometer)
+
+        # Calculate lipid Z boundaries
+        lipidNames = {res.name for res in patch.topology.residues() if res.name != 'HOH'}
+        lipidZMax = sys.float_info.min
+        lipidZMin = sys.float_info.max
+        for res in modeller.topology.residues():
+            if res.name in lipidNames:
+                for atom in res.atoms():
+                    atomZ = modeller.positions[atom.index][2].value_in_unit(nanometer)
+                    lipidZMax = max(lipidZMax, atomZ)
+                    lipidZMin = min(lipidZMin, atomZ)
+
+        # Ignore waters that are within a certain distance of the membrane
+        lipidOffset = 0.25
+        upperZBoundary = (lipidZMax + lipidOffset)
+        lowerZBoundary = (lipidZMin - lipidOffset)
+        waterResidues = list(waterPos)
+        for wRes in waterResidues:
+            waterZ = waterPos[wRes][2]
+            if lowerZBoundary < waterZ < upperZBoundary:
+                del waterPos[wRes]
+
+        self._addIons(forcefield, waterPos, positiveIon=positiveIon, negativeIon=negativeIon, ionicStrength=ionicStrength, neutralize=neutralize)
 
 
 class _CellList(object):
