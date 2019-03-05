@@ -1544,7 +1544,7 @@ class Modeller(object):
                 if residue.name == 'HOH':
                     for atom in residue.atoms():
                         if atom.element == elem.oxygen:
-                            waterPos[residue] = modeller.positions[atom.index].value_in_unit(nanometer)
+                            waterPos[residue] = modeller.positions[atom.index]
 
         # Calculate lipid Z boundaries
         lipidNames = {res.name for res in patch.topology.residues() if res.name != 'HOH'}
@@ -1564,7 +1564,7 @@ class Modeller(object):
         waterResidues = list(waterPos)
         for wRes in waterResidues:
             waterZ = waterPos[wRes][2]
-            if lowerZBoundary < waterZ < upperZBoundary:
+            if lowerZBoundary < waterZ.value_in_unit(nanometer) < upperZBoundary:
                 del waterPos[wRes]
 
         self._addIons(forcefield, waterPos, positiveIon=positiveIon, negativeIon=negativeIon, ionicStrength=ionicStrength, neutralize=neutralize)
