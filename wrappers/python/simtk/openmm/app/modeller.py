@@ -312,7 +312,7 @@ class Modeller(object):
         for i in range(nonbonded.getNumParticles()):
             nb_i = nonbonded.getParticleParameters(i)
             totalCharge += nb_i[0].value_in_unit(elementary_charge)
-        # Round up to integer
+        # Round to nearest integer
         totalCharge = int(floor(0.5 + totalCharge))
 
         # Figure out how many ions to add based on requested params/concentration
@@ -475,17 +475,6 @@ class Modeller(object):
             if box is None:
                 raise ValueError('Neither the box size, box vectors, nor padding was specified, and the Topology does not define unit cell dimensions')
         invBox = Vec3(1.0/box[0], 1.0/box[1], 1.0/box[2])
-
-        # Identify the ion types.
-
-        posIonElements = {'Cs+':elem.cesium, 'K+':elem.potassium, 'Li+':elem.lithium, 'Na+':elem.sodium, 'Rb+':elem.rubidium}
-        negIonElements = {'Cl-':elem.chlorine, 'Br-':elem.bromine, 'F-':elem.fluorine, 'I-':elem.iodine}
-        if positiveIon not in posIonElements:
-            raise ValueError('Illegal value for positive ion: %s' % positiveIon)
-        if negativeIon not in negIonElements:
-            raise ValueError('Illegal value for negative ion: %s' % negativeIon)
-        positiveElement = posIonElements[positiveIon]
-        negativeElement = negIonElements[negativeIon]
 
         # Have the ForceField build a System for the solute from which we can determine van der Waals radii.
 
@@ -1309,18 +1298,7 @@ class Modeller(object):
         patchCenterPos = (patchMinPos+patchMaxPos)/2
         nx = int(ceil((proteinSize[0]+2*minimumPadding)/patchSize[0]))
         ny = int(ceil((proteinSize[1]+2*minimumPadding)/patchSize[1]))
-
-        # Identify the ion types.
-
-        posIonElements = {'Cs+':elem.cesium, 'K+':elem.potassium, 'Li+':elem.lithium, 'Na+':elem.sodium, 'Rb+':elem.rubidium}
-        negIonElements = {'Cl-':elem.chlorine, 'Br-':elem.bromine, 'F-':elem.fluorine, 'I-':elem.iodine}
-        if positiveIon not in posIonElements:
-            raise ValueError('Illegal value for positive ion: %s' % positiveIon)
-        if negativeIon not in negIonElements:
-            raise ValueError('Illegal value for negative ion: %s' % negativeIon)
-        positiveElement = posIonElements[positiveIon]
-        negativeElement = negIonElements[negativeIon]
-        
+       
         # Record the bonds for each residue.
         
         resBonds = defaultdict(list)
