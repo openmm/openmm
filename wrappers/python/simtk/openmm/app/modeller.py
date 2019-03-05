@@ -336,7 +336,7 @@ class Modeller(object):
         # while ensuring ions are not placed too close to each other.
         modeller = Modeller(self.topology, self.positions)
 
-        replaceableList = list(replaceableMols)
+        replaceableList = list(replaceableMols.keys())
         numAddedIons = 0
         numTrials = 10  # Attempts to add ions N times before quitting
         toReplace = []  # list of molecules to be replaced
