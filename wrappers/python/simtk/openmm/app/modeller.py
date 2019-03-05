@@ -357,7 +357,7 @@ class Modeller(object):
                 n_trials = 10
 
             if n_trials == 0:
-                raise ValueError('Could not add more than {} ions to the system'.format(addedIons))
+                raise ValueError('Could not add more than {} ions to the system'.format(numAddedIons))
 
         # Replace waters/ions in the topology
         modeller.delete(toReplace)
@@ -366,7 +366,7 @@ class Modeller(object):
             element = (positiveElement if i < numPositive else negativeElement)
             newResidue = modeller.topology.addResidue(element.symbol.upper(), ionChain)
             modeller.topology.addAtom(element.symbol, element, newResidue)
-            modeller.positions.append(replaceableMols[water] * nanometer)
+            modeller.positions.append(replaceableMols[water])
 
         # Update topology/positions
         self.topology = modeller.topology
@@ -622,8 +622,18 @@ class Modeller(object):
         self.topology = newTopology
         self.positions = newPositions
 
+        # Convert water list to dictionary (residue:position)
+        waterPos = {}
+        _oxygen = elem.oxygen
+        for chain in newTopology.chains():
+            for residue in chain.residues():
+                if residue.name == 'HOH':
+                    for atom in residue.atoms():
+                        if atom.element == _oxygen:
+                            waterPos[residue] = newPositions[atom.index]
+
         # Add ions to neutralize the system.
-        self._addIons(forcefield, addedWaters, positiveIon=positiveIon, negativeIon=negativeIon, ionicStrength=ionicStrength, neutralize=neutralize)
+        self._addIons(forcefield, waterPos, positiveIon=positiveIon, negativeIon=negativeIon, ionicStrength=ionicStrength, neutralize=neutralize)
 
     class _ResidueData:
         """Inner class used to encapsulate data about the hydrogens for a residue."""
