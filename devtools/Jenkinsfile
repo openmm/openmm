@@ -15,7 +15,6 @@ pipeline {
                         sh '''#!/bin/bash -lex
                             git clean -fxd && git checkout .
                             env
-                            module load cuda conda
                             export OPENMM_CUDA_COMPILER=`which nvcc`
                             bash -e devtools/ci/jenkins/install.sh
                             bash -e devtools/ci/jenkins/test.sh -R 'TestCuda' --parallel 2
@@ -34,7 +33,6 @@ pipeline {
                         sh '''#!/bin/bash -lex
                             git clean -fxd && git checkout .
                             env
-                            module load cuda conda
                             export OPENMM_CUDA_COMPILER=`which nvcc`
                             bash -e devtools/ci/jenkins/install.sh
                             bash -e devtools/ci/jenkins/test.sh -R 'TestOpenCL' --parallel 2
@@ -56,7 +54,7 @@ pipeline {
                         '''
                     }
                 }
-            } // parallel
+            }
         }
     }
 }
