@@ -5,7 +5,12 @@ pipeline {
         stage("Build and test") {
             parallel {
                 stage("Build and test CUDA platform") {
-                    agent { label "cuda" }
+                    agent {
+                        dockerfile {
+                            dir "devtools/ci/jenkins"
+                            label "cuda"
+                        }
+                    }
                     steps {
                         sh '''#!/bin/bash -lex
                             git clean -fxd && git checkout .
@@ -19,7 +24,12 @@ pipeline {
                 }
 
                 stage("Build and test OpenCL platform") {
-                    agent { label "cuda" }
+                    agent {
+                        dockerfile {
+                            dir "devtools/ci/jenkins"
+                            label "cuda"
+                        }
+                    }
                     steps {
                         sh '''#!/bin/bash -lex
                             git clean -fxd && git checkout .
@@ -36,7 +46,6 @@ pipeline {
                     agent {
                         dockerfile {
                             dir "devtools/ci/jenkins"
-                            label "docker"
                         }
                     }
 

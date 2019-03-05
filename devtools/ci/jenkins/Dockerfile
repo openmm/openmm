@@ -1,4 +1,4 @@
-FROM ubuntu:xenial
+FROM nvidia/cuda:10.0-devel-ubuntu18.04
 
 ENV PATH="/opt/miniconda/bin:${PATH}"
 
