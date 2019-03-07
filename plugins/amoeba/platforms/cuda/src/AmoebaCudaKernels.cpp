@@ -2666,6 +2666,7 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
     vector<float> coreChargeVec, valenceChargeVec, alphaVec, epsilonVec, dampingVec, c6Vec, pauliKVec, pauliQVec, pauliAlphaVec, polarizabilityVec;
     vector<float> localDipolesVec, localQuadrupolesVec;
     vector<int4> multipoleParticlesVec;
+    vector<vector<int> > exclusions(numParticles);
     for (int i = 0; i < numParticles; i++) {
         double charge, coreCharge, alpha, epsilon, damping, c6, pauliK, pauliQ, pauliAlpha, polarizability;
         int axisType, atomX, atomY, atomZ;
@@ -2690,6 +2691,7 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
         localQuadrupolesVec.push_back((float) quadrupole[2]);
         localQuadrupolesVec.push_back((float) quadrupole[4]);
         localQuadrupolesVec.push_back((float) quadrupole[5]);
+        exclusions[i].push_back(i);
     }
     int paddedNumAtoms = cu.getPaddedNumAtoms();
     for (int i = numParticles; i < paddedNumAtoms; i++) {
@@ -2747,23 +2749,21 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
     fracQuadrupoles.initialize(cu, 6*paddedNumAtoms, elementSize, "fracQuadrupoles");
     field.initialize(cu, 3*paddedNumAtoms, sizeof(long long), "field");
     torque.initialize(cu, 3*paddedNumAtoms, sizeof(long long), "torque");
-    inducedDipole.initialize(cu, 3*paddedNumAtoms, elementSize, "inducedDipole");
+    inducedDipole.initialize(cu, paddedNumAtoms, 3*elementSize, "inducedDipole");
     int numOrders = extrapolationCoefficients.size();
     extrapolatedDipole.initialize(cu, 3*numParticles*numOrders, elementSize, "extrapolatedDipole");
-    inducedDipoleFieldGradient.initialize(cu, 6*paddedNumAtoms, sizeof(long long), "inducedDipoleFieldGradient");
-    extrapolatedDipoleFieldGradient.initialize(cu, 6*numParticles*(numOrders-1), elementSize, "extrapolatedDipoleFieldGradient");
     cu.addAutoclearBuffer(field);
     cu.addAutoclearBuffer(torque);
     
     // Record exceptions and exclusions.
     
-    vector<pair<int, int> > exclusions;
     vector<float> exceptionScaleVec[5];
     for (int i = 0; i < force.getNumExceptions(); i++) {
         int particle1, particle2;
         double multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale;
         force.getExceptionParameters(i, particle1, particle2, multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale);
-        exclusions.push_back(pair<int, int>(particle1, particle2));
+        exclusions[particle1].push_back(particle2);
+        exclusions[particle2].push_back(particle1);
         if (multipoleMultipoleScale != 0 || dipoleMultipoleScale != 0 || dipoleDipoleScale != 0 || dispersionScale != 0 || repulsionScale != 0) {
             exceptionAtoms.push_back({particle1, particle2});
             exceptionScaleVec[0].push_back(multipoleMultipoleScale);
@@ -3015,11 +3015,34 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
         }
     }
 
-    // Add an interaction to the default nonbonded kernel.  This doesn't actually do any calculations.  It's
-    // just so that CudaNonbondedUtilities will build the exclusion flags and maintain the neighbor list.
+    // Add the interaction to the default nonbonded kernel.
     
-//    cu.getNonbondedUtilities().addInteraction(usePME, usePME, true, force.getCutoffDistance(), exclusions, "", force.getForceGroup());
-//    cu.getNonbondedUtilities().setUsePadding(false);
+    CudaNonbondedUtilities& nb = cu.getNonbondedUtilities();
+    nb.setKernelSource(CudaAmoebaKernelSources::hippoNonbonded);
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("coreCharge", "float", 1, coreCharge.getElementSize(), coreCharge.getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("valenceCharge", "float", 1, valenceCharge.getElementSize(), valenceCharge.getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("alpha", "float", 1, alpha.getElementSize(), alpha.getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("epsilon", "float", 1, epsilon.getElementSize(), epsilon.getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("damping", "float", 1, damping.getElementSize(), damping.getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("c6", "float", 1, c6.getElementSize(), c6.getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("pauliK", "float", 1, pauliK.getElementSize(), pauliK.getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("pauliQ", "float", 1, pauliQ.getElementSize(), pauliQ.getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("pauliAlpha", "float", 1, pauliAlpha.getElementSize(), pauliAlpha.getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("dipole", "real", 3, labDipoles.getElementSize(), labDipoles.getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("inducedDipole", "real", 3, inducedDipole.getElementSize(), inducedDipole.getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("QXX", "real", 1, labQuadrupoles[0].getElementSize(), labQuadrupoles[0].getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("QXY", "real", 1, labQuadrupoles[1].getElementSize(), labQuadrupoles[1].getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("QXZ", "real", 1, labQuadrupoles[2].getElementSize(), labQuadrupoles[2].getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("QYY", "real", 1, labQuadrupoles[3].getElementSize(), labQuadrupoles[3].getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("QYZ", "real", 1, labQuadrupoles[4].getElementSize(), labQuadrupoles[4].getDevicePointer()));
+    map<string, string> replacements;
+    replacements["SWITCH_CUTOFF"] = cu.doubleToString(force.getSwitchingDistance());
+    replacements["SWITCH_C3"] = cu.doubleToString(10/pow(force.getSwitchingDistance()-force.getCutoffDistance(), 3.0));
+    replacements["SWITCH_C4"] = cu.doubleToString(15/pow(force.getSwitchingDistance()-force.getCutoffDistance(), 4.0));
+    replacements["SWITCH_C5"] = cu.doubleToString(6/pow(force.getSwitchingDistance()-force.getCutoffDistance(), 5.0));
+    string source = cu.replaceStrings(CudaAmoebaKernelSources::hippoInteraction, replacements);
+    nb.addInteraction(usePME, usePME, true, force.getCutoffDistance(), exclusions, source, force.getForceGroup());
+    nb.setUsePadding(false);
     cu.addForce(new ForceInfo(force));
 }
 
