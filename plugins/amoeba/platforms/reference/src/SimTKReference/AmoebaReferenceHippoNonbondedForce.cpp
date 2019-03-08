@@ -720,9 +720,6 @@ double AmoebaReferenceHippoNonbondedForce::calculateElectrostaticPairIxn(const M
     double rInv = 1/r;
     double rInv2 = rInv*rInv;
     double rr1 = rInv;
-    auto exception = exceptions.find(make_pair(particleI.particleIndex, particleK.particleIndex));
-    if (exception != exceptions.end())
-        rr1 *= exception->second.multipoleMultipoleScale;
     double rr3 = rr1*rInv2;
     double rr5 = 3*rr3*rInv2;
     double rr7 = 5*rr5*rInv2;
@@ -762,10 +759,14 @@ double AmoebaReferenceHippoNonbondedForce::calculateElectrostaticPairIxn(const M
     double rr7ik = fdampIK7*rr7;
     double rr9ik = fdampIK9*rr9;
     double rr11ik = fdampIK11*rr11;
-    double energy = _electric*(term1*rr1 + term4ik*rr7ik + term5ik*rr9ik +
-                               term1i*rr1i + term1k*rr1k + term1ik*rr1ik +
-                               term2i*rr3i + term2k*rr3k + term2ik*rr3ik +
-                               term3i*rr5i + term3k*rr5k + term3ik*rr5ik);
+    double scale = _electric;
+    auto exception = exceptions.find(make_pair(particleI.particleIndex, particleK.particleIndex));
+    if (exception != exceptions.end())
+        scale *= exception->second.multipoleMultipoleScale;
+    double energy = scale*(term1*rr1 + term4ik*rr7ik + term5ik*rr9ik +
+                           term1i*rr1i + term1k*rr1k + term1ik*rr1ik +
+                           term2i*rr3i + term2k*rr3k + term2ik*rr3ik +
+                           term3i*rr5i + term3k*rr5k + term3ik*rr5ik);
 
     // Find damped multipole intermediates for force and torque.
 
@@ -782,10 +783,10 @@ double AmoebaReferenceHippoNonbondedForce::calculateElectrostaticPairIxn(const M
 
     // Compute the force and torque.
 
-    force += _electric*(de*Vec3(0, 0, r) + term1*particleI.qiDipole + term2*particleK.qiDipole +
+    force += scale*(de*Vec3(0, 0, r) + term1*particleI.qiDipole + term2*particleK.qiDipole +
             term3*(diqkTemp-dkqiTemp) + term4*qi + term5*qk + term6*(qikTemp+qkiTemp));
-    torqueI += _electric*(-rr3ik*dikCross + term1*dirCross + term3*(dqik+dkqirCross) + term4*qirCross - term6*(qikrCross+qikCross));
-    torqueK += _electric*(rr3ik*dikCross + term2*dkrCross - term3*(dqik+diqkrCross) + term5*qkrCross - term6*(qkirCross-qikCross));
+    torqueI += scale*(-rr3ik*dikCross + term1*dirCross + term3*(dqik+dkqirCross) + term4*qirCross - term6*(qikrCross+qikCross));
+    torqueK += scale*(rr3ik*dikCross + term2*dkrCross - term3*(dqik+diqkrCross) + term5*qkrCross - term6*(qkirCross-qikCross));
     return energy;
 }
 
@@ -2638,7 +2639,7 @@ double AmoebaReferencePmeHippoNonbondedForce::calculateElectrostaticPairIxn(cons
 
     double rInv = 1/r;
     double rInv2 = rInv*rInv;
-    double rr1 = _electric*rInv;
+    double rr1 = rInv;
     double rr3 = rr1*rInv2;
     double rr5 = 3*rr3*rInv2;
     double rr7 = 5*rr5*rInv2;
@@ -2662,12 +2663,6 @@ double AmoebaReferencePmeHippoNonbondedForce::calculateElectrostaticPairIxn(cons
     double bn4 = (7*bn3+alsq2n*exp2a)*rInv2;
     alsq2n *= alsq2;
     double bn5 = (9*bn4+alsq2n*exp2a)*rInv2;
-    bn0 *= _electric;
-    bn1 *= _electric;
-    bn2 *= _electric;
-    bn3 *= _electric;
-    bn4 *= _electric;
-    bn5 *= _electric;
 
     // Find damped multipole intermediates and energy value.
 
@@ -2708,10 +2703,10 @@ double AmoebaReferencePmeHippoNonbondedForce::calculateElectrostaticPairIxn(cons
     double rr11ik = bn5 - (1-scale*fdampIK11)*rr11;
     rr1 = bn0 - (1-scale)*rr1;
     rr3 = bn1 - (1-scale)*rr3;
-    double energy = term1*rr1 + term4ik*rr7ik + term5ik*rr9ik +
-                    term1i*rr1i + term1k*rr1k + term1ik*rr1ik +
-                    term2i*rr3i + term2k*rr3k + term2ik*rr3ik +
-                    term3i*rr5i + term3k*rr5k + term3ik*rr5ik;
+    double energy = _electric*(term1*rr1 + term4ik*rr7ik + term5ik*rr9ik +
+                               term1i*rr1i + term1k*rr1k + term1ik*rr1ik +
+                               term2i*rr3i + term2k*rr3k + term2ik*rr3ik +
+                               term3i*rr5i + term3k*rr5k + term3ik*rr5ik);
 
     // Find damped multipole intermediates for force and torque.
 
@@ -2728,10 +2723,10 @@ double AmoebaReferencePmeHippoNonbondedForce::calculateElectrostaticPairIxn(cons
 
     // Compute the force and torque.
 
-    force += Vec3(0, 0, de*r) + term1*particleI.qiDipole + term2*particleK.qiDipole +
-            term3*(diqkTemp-dkqiTemp) + term4*qi + term5*qk + term6*(qikTemp+qkiTemp);
-    torqueI += -rr3ik*dikCross + term1*dirCross + term3*(dqik+dkqirCross) + term4*qirCross - term6*(qikrCross+qikCross);
-    torqueK += rr3ik*dikCross + term2*dkrCross - term3*(dqik+diqkrCross) + term5*qkrCross - term6*(qkirCross-qikCross);
+    force += _electric*(Vec3(0, 0, de*r) + term1*particleI.qiDipole + term2*particleK.qiDipole +
+            term3*(diqkTemp-dkqiTemp) + term4*qi + term5*qk + term6*(qikTemp+qkiTemp));
+    torqueI += _electric*(-rr3ik*dikCross + term1*dirCross + term3*(dqik+dkqirCross) + term4*qirCross - term6*(qikrCross+qikCross));
+    torqueK += _electric*(rr3ik*dikCross + term2*dkrCross - term3*(dqik+diqkrCross) + term5*qkrCross - term6*(qkirCross-qikCross));
     return energy;
 }
 

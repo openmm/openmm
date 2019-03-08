@@ -702,6 +702,7 @@ private:
     void computeExtrapolatedDipoles(void** recipBoxVectorPointer);
     void ensureMultipolesValid(ContextImpl& context);
     void addTorquesToForces();
+    void uploadRealVec(CudaArray& array, const std::vector<double>& values);
     int numParticles, maxExtrapolationOrder;
     int fixedFieldThreads, inducedFieldThreads, electrostaticsThreads;
     int gridSizeX, gridSizeY, gridSizeZ;

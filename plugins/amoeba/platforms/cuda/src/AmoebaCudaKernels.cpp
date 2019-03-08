@@ -2675,8 +2675,8 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
     // Initialize particle parameters.
 
     numParticles = force.getNumParticles();
-    vector<float> coreChargeVec, valenceChargeVec, alphaVec, epsilonVec, dampingVec, c6Vec, pauliKVec, pauliQVec, pauliAlphaVec, polarizabilityVec;
-    vector<float> localDipolesVec, localQuadrupolesVec;
+    vector<double> coreChargeVec, valenceChargeVec, alphaVec, epsilonVec, dampingVec, c6Vec, pauliKVec, pauliQVec, pauliAlphaVec, polarizabilityVec;
+    vector<double> localDipolesVec, localQuadrupolesVec;
     vector<int4> multipoleParticlesVec;
     vector<vector<int> > exclusions(numParticles);
     for (int i = 0; i < numParticles; i++) {
@@ -2685,24 +2685,24 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
         vector<double> dipole, quadrupole;
         force.getParticleParameters(i, charge, dipole, quadrupole, coreCharge, alpha, epsilon, damping, c6, pauliK, pauliQ, pauliAlpha,
                                     polarizability, axisType, atomZ, atomX, atomY);
-        coreChargeVec.push_back((float) coreCharge);
-        valenceChargeVec.push_back((float) (charge-coreCharge));
-        alphaVec.push_back((float) alpha);
-        epsilonVec.push_back((float) epsilon);
-        dampingVec.push_back((float) damping);
-        c6Vec.push_back((float) c6);
-        pauliKVec.push_back((float) pauliK);
-        pauliQVec.push_back((float) pauliQ);
-        pauliAlphaVec.push_back((float) pauliAlpha);
-        polarizabilityVec.push_back((float) polarizability);
+        coreChargeVec.push_back(coreCharge);
+        valenceChargeVec.push_back(charge-coreCharge);
+        alphaVec.push_back(alpha);
+        epsilonVec.push_back(epsilon);
+        dampingVec.push_back(damping);
+        c6Vec.push_back(c6);
+        pauliKVec.push_back(pauliK);
+        pauliQVec.push_back(pauliQ);
+        pauliAlphaVec.push_back(pauliAlpha);
+        polarizabilityVec.push_back(polarizability);
         multipoleParticlesVec.push_back(make_int4(atomX, atomY, atomZ, axisType));
         for (int j = 0; j < 3; j++)
-            localDipolesVec.push_back((float) dipole[j]);
-        localQuadrupolesVec.push_back((float) quadrupole[0]);
-        localQuadrupolesVec.push_back((float) quadrupole[1]);
-        localQuadrupolesVec.push_back((float) quadrupole[2]);
-        localQuadrupolesVec.push_back((float) quadrupole[4]);
-        localQuadrupolesVec.push_back((float) quadrupole[5]);
+            localDipolesVec.push_back(dipole[j]);
+        localQuadrupolesVec.push_back(quadrupole[0]);
+        localQuadrupolesVec.push_back(quadrupole[1]);
+        localQuadrupolesVec.push_back(quadrupole[2]);
+        localQuadrupolesVec.push_back(quadrupole[4]);
+        localQuadrupolesVec.push_back(quadrupole[5]);
         exclusions[i].push_back(i);
     }
     int paddedNumAtoms = cu.getPaddedNumAtoms();
@@ -2723,37 +2723,37 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
         for (int j = 0; j < 5; j++)
             localQuadrupolesVec.push_back(0);
     }
-    coreCharge.initialize<float>(cu, paddedNumAtoms, "coreCharge");
-    valenceCharge.initialize<float>(cu, paddedNumAtoms, "valenceCharge");
-    alpha.initialize<float>(cu, paddedNumAtoms, "alpha");
-    epsilon.initialize<float>(cu, paddedNumAtoms, "epsilon");
-    damping.initialize<float>(cu, paddedNumAtoms, "damping");
-    c6.initialize<float>(cu, paddedNumAtoms, "c6");
-    pauliK.initialize<float>(cu, paddedNumAtoms, "pauliK");
-    pauliQ.initialize<float>(cu, paddedNumAtoms, "pauliQ");
-    pauliAlpha.initialize<float>(cu, paddedNumAtoms, "pauliAlpha");
-    polarizability.initialize<float>(cu, paddedNumAtoms, "polarizability");
+    int elementSize = (cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
+    coreCharge.initialize(cu, paddedNumAtoms, elementSize, "coreCharge");
+    valenceCharge.initialize(cu, paddedNumAtoms, elementSize, "valenceCharge");
+    alpha.initialize(cu, paddedNumAtoms, elementSize, "alpha");
+    epsilon.initialize(cu, paddedNumAtoms, elementSize, "epsilon");
+    damping.initialize(cu, paddedNumAtoms, elementSize, "damping");
+    c6.initialize(cu, paddedNumAtoms, elementSize, "c6");
+    pauliK.initialize(cu, paddedNumAtoms, elementSize, "pauliK");
+    pauliQ.initialize(cu, paddedNumAtoms, elementSize, "pauliQ");
+    pauliAlpha.initialize(cu, paddedNumAtoms, elementSize, "pauliAlpha");
+    polarizability.initialize(cu, paddedNumAtoms, elementSize, "polarizability");
     multipoleParticles.initialize<int4>(cu, paddedNumAtoms, "multipoleParticles");
-    localDipoles.initialize<float>(cu, 3*paddedNumAtoms, "localDipoles");
-    localQuadrupoles.initialize<float>(cu, 5*paddedNumAtoms, "localQuadrupoles");
+    localDipoles.initialize(cu, 3*paddedNumAtoms, elementSize, "localDipoles");
+    localQuadrupoles.initialize(cu, 5*paddedNumAtoms, elementSize, "localQuadrupoles");
     lastPositions.initialize(cu, cu.getPosq().getSize(), cu.getPosq().getElementSize(), "lastPositions");
-    coreCharge.upload(coreChargeVec);
-    valenceCharge.upload(valenceChargeVec);
-    alpha.upload(alphaVec);
-    epsilon.upload(epsilonVec);
-    damping.upload(dampingVec);
-    c6.upload(c6Vec);
-    pauliK.upload(pauliKVec);
-    pauliQ.upload(pauliQVec);
-    pauliAlpha.upload(pauliAlphaVec);
-    polarizability.upload(polarizabilityVec);
+    uploadRealVec(coreCharge, coreChargeVec);
+    uploadRealVec(valenceCharge, valenceChargeVec);
+    uploadRealVec(alpha, alphaVec);
+    uploadRealVec(epsilon, epsilonVec);
+    uploadRealVec(damping, dampingVec);
+    uploadRealVec(c6, c6Vec);
+    uploadRealVec(pauliK, pauliKVec);
+    uploadRealVec(pauliQ, pauliQVec);
+    uploadRealVec(pauliAlpha, pauliAlphaVec);
+    uploadRealVec(polarizability, polarizabilityVec);
     multipoleParticles.upload(multipoleParticlesVec);
-    localDipoles.upload(localDipolesVec);
-    localQuadrupoles.upload(localQuadrupolesVec);
+    uploadRealVec(localDipoles, localDipolesVec);
+    uploadRealVec(localQuadrupoles, localQuadrupolesVec);
     
     // Create workspace arrays.
     
-    int elementSize = (cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
     labDipoles.initialize(cu, paddedNumAtoms, 3*elementSize, "labDipoles");
     for (int i = 0; i < 5; i++)
         labQuadrupoles[i].initialize(cu, paddedNumAtoms, elementSize, "labQuadrupoles");
@@ -2917,7 +2917,6 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
 
         // Create required data structures.
 
-        int elementSize = (cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
         pmeGrid.initialize(cu, gridSizeX*gridSizeY*gridSizeZ, 2*elementSize, "pmeGrid");
         cu.addAutoclearBuffer(pmeGrid);
         pmeBsplineModuliX.initialize(cu, gridSizeX, elementSize, "pmeBsplineModuliX");
@@ -3030,17 +3029,17 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
     // Add the interaction to the default nonbonded kernel.
     
     CudaNonbondedUtilities& nb = cu.getNonbondedUtilities();
-    nb.setKernelSource(CudaAmoebaKernelSources::hippoNonbonded);
+    nb.setKernelSource(CudaAmoebaKernelSources::hippoInteractionHeader+CudaAmoebaKernelSources::hippoNonbonded);
     nb.addArgument(CudaNonbondedUtilities::ParameterInfo("torqueBuffers", "unsigned long long", 1, torque.getElementSize(), torque.getDevicePointer(), false));
-    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("coreCharge", "float", 1, coreCharge.getElementSize(), coreCharge.getDevicePointer()));
-    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("valenceCharge", "float", 1, valenceCharge.getElementSize(), valenceCharge.getDevicePointer()));
-    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("alpha", "float", 1, alpha.getElementSize(), alpha.getDevicePointer()));
-    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("epsilon", "float", 1, epsilon.getElementSize(), epsilon.getDevicePointer()));
-    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("damping", "float", 1, damping.getElementSize(), damping.getDevicePointer()));
-    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("c6", "float", 1, c6.getElementSize(), c6.getDevicePointer()));
-    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("pauliK", "float", 1, pauliK.getElementSize(), pauliK.getDevicePointer()));
-    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("pauliQ", "float", 1, pauliQ.getElementSize(), pauliQ.getDevicePointer()));
-    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("pauliAlpha", "float", 1, pauliAlpha.getElementSize(), pauliAlpha.getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("coreCharge", "real", 1, coreCharge.getElementSize(), coreCharge.getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("valenceCharge", "real", 1, valenceCharge.getElementSize(), valenceCharge.getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("alpha", "real", 1, alpha.getElementSize(), alpha.getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("epsilon", "real", 1, epsilon.getElementSize(), epsilon.getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("damping", "real", 1, damping.getElementSize(), damping.getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("c6", "real", 1, c6.getElementSize(), c6.getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("pauliK", "real", 1, pauliK.getElementSize(), pauliK.getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("pauliQ", "real", 1, pauliQ.getElementSize(), pauliQ.getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("pauliAlpha", "real", 1, pauliAlpha.getElementSize(), pauliAlpha.getDevicePointer()));
     nb.addParameter(CudaNonbondedUtilities::ParameterInfo("dipole", "real", 3, labDipoles.getElementSize(), labDipoles.getDevicePointer()));
     nb.addParameter(CudaNonbondedUtilities::ParameterInfo("inducedDipole", "real", 3, inducedDipole.getElementSize(), inducedDipole.getDevicePointer()));
     nb.addParameter(CudaNonbondedUtilities::ParameterInfo("qXX", "real", 1, labQuadrupoles[0].getElementSize(), labQuadrupoles[0].getDevicePointer()));
@@ -3049,6 +3048,7 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
     nb.addParameter(CudaNonbondedUtilities::ParameterInfo("qYY", "real", 1, labQuadrupoles[3].getElementSize(), labQuadrupoles[3].getDevicePointer()));
     nb.addParameter(CudaNonbondedUtilities::ParameterInfo("qYZ", "real", 1, labQuadrupoles[4].getElementSize(), labQuadrupoles[4].getDevicePointer()));
     map<string, string> replacements;
+    replacements["ENERGY_SCALE_FACTOR"] = cu.doubleToString(138.9354558456);
     replacements["SWITCH_CUTOFF"] = cu.doubleToString(force.getSwitchingDistance());
     replacements["SWITCH_C3"] = cu.doubleToString(10/pow(force.getSwitchingDistance()-force.getCutoffDistance(), 3.0));
     replacements["SWITCH_C4"] = cu.doubleToString(15/pow(force.getSwitchingDistance()-force.getCutoffDistance(), 4.0));
@@ -3058,6 +3058,17 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
     nb.setUsePadding(false);
     cu.addForce(new ForceInfo(force));
     cu.addPostComputation(new TorquePostComputation(*this));
+}
+
+void CudaCalcHippoNonbondedForceKernel::uploadRealVec(CudaArray& array, const std::vector<double>& values) {
+    if (cu.getUseDoublePrecision())
+        array.upload(values);
+    else {
+        vector<float> floatValues;
+        for (double v : values)
+            floatValues.push_back((float) v);
+        array.upload(floatValues);
+    }
 }
 
 double CudaCalcHippoNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {

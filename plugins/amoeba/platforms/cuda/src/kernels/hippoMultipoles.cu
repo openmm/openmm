@@ -1,5 +1,5 @@
-extern "C" __global__ void computeLabFrameMoments(real4* __restrict__ posq, int4* __restrict__ multipoleParticles, float3* __restrict__ localDipoles,
-        float* __restrict__ localQuadrupoles, real3* __restrict__ labDipoles, real* __restrict__ labQXX, real* __restrict__ labQXY, real* __restrict__ labQXZ,
+extern "C" __global__ void computeLabFrameMoments(real4* __restrict__ posq, int4* __restrict__ multipoleParticles, real3* __restrict__ localDipoles,
+        real* __restrict__ localQuadrupoles, real3* __restrict__ labDipoles, real* __restrict__ labQXX, real* __restrict__ labQXY, real* __restrict__ labQXZ,
         real* __restrict__ labQYY, real* __restrict__ labQYZ) {
     for (int atom = blockIdx.x*blockDim.x+threadIdx.x; atom < NUM_ATOMS; atom += gridDim.x*blockDim.x) {
         int4 particles = multipoleParticles[atom];
@@ -107,7 +107,7 @@ extern "C" __global__ void computeLabFrameMoments(real4* __restrict__ posq, int4
         
             // Transform the dipole
             
-            float3 dipole = localDipoles[atom];
+            real3 dipole = localDipoles[atom];
             if (reverse)
                 dipole.y *= -1;
             labDipoles[atom] = make_real3(dipole.x*vectorX.x + dipole.y*vectorY.x + dipole.z*vectorZ.x,
@@ -155,7 +155,7 @@ extern "C" __global__ void computeLabFrameMoments(real4* __restrict__ posq, int4
     }
 }
 
-extern "C" __global__ void recordInducedDipoles(const long long* __restrict__ fieldBuffers, real* __restrict__ inducedDipole, const float* __restrict__ polarizability) {
+extern "C" __global__ void recordInducedDipoles(const long long* __restrict__ fieldBuffers, real* __restrict__ inducedDipole, const real* __restrict__ polarizability) {
     for (int atom = blockIdx.x*blockDim.x+threadIdx.x; atom < NUM_ATOMS; atom += gridDim.x*blockDim.x) {
         real scale = polarizability[atom]/(real) 0x100000000;
         inducedDipole[3*atom] = scale*fieldBuffers[atom];
