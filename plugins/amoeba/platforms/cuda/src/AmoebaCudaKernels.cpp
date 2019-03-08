@@ -2644,6 +2644,18 @@ private:
     const HippoNonbondedForce& force;
 };
 
+class CudaCalcHippoNonbondedForceKernel::TorquePostComputation : public CudaContext::ForcePostComputation {
+public:
+    TorquePostComputation(CudaCalcHippoNonbondedForceKernel& owner) : owner(owner) {
+    }
+    double computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
+        owner.addTorquesToForces();
+        return 0.0;
+    }
+private:
+    CudaCalcHippoNonbondedForceKernel owner;
+};
+
 CudaCalcHippoNonbondedForceKernel::CudaCalcHippoNonbondedForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : 
         CalcHippoNonbondedForceKernel(name, platform), cu(cu), system(system), hasInitializedFFT(false), multipolesAreValid(false) {
 }
@@ -3019,6 +3031,7 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
     
     CudaNonbondedUtilities& nb = cu.getNonbondedUtilities();
     nb.setKernelSource(CudaAmoebaKernelSources::hippoNonbonded);
+    nb.addArgument(CudaNonbondedUtilities::ParameterInfo("torqueBuffers", "unsigned long long", 1, torque.getElementSize(), torque.getDevicePointer(), false));
     nb.addParameter(CudaNonbondedUtilities::ParameterInfo("coreCharge", "float", 1, coreCharge.getElementSize(), coreCharge.getDevicePointer()));
     nb.addParameter(CudaNonbondedUtilities::ParameterInfo("valenceCharge", "float", 1, valenceCharge.getElementSize(), valenceCharge.getDevicePointer()));
     nb.addParameter(CudaNonbondedUtilities::ParameterInfo("alpha", "float", 1, alpha.getElementSize(), alpha.getDevicePointer()));
@@ -3030,11 +3043,11 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
     nb.addParameter(CudaNonbondedUtilities::ParameterInfo("pauliAlpha", "float", 1, pauliAlpha.getElementSize(), pauliAlpha.getDevicePointer()));
     nb.addParameter(CudaNonbondedUtilities::ParameterInfo("dipole", "real", 3, labDipoles.getElementSize(), labDipoles.getDevicePointer()));
     nb.addParameter(CudaNonbondedUtilities::ParameterInfo("inducedDipole", "real", 3, inducedDipole.getElementSize(), inducedDipole.getDevicePointer()));
-    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("QXX", "real", 1, labQuadrupoles[0].getElementSize(), labQuadrupoles[0].getDevicePointer()));
-    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("QXY", "real", 1, labQuadrupoles[1].getElementSize(), labQuadrupoles[1].getDevicePointer()));
-    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("QXZ", "real", 1, labQuadrupoles[2].getElementSize(), labQuadrupoles[2].getDevicePointer()));
-    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("QYY", "real", 1, labQuadrupoles[3].getElementSize(), labQuadrupoles[3].getDevicePointer()));
-    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("QYZ", "real", 1, labQuadrupoles[4].getElementSize(), labQuadrupoles[4].getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("qXX", "real", 1, labQuadrupoles[0].getElementSize(), labQuadrupoles[0].getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("qXY", "real", 1, labQuadrupoles[1].getElementSize(), labQuadrupoles[1].getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("qXZ", "real", 1, labQuadrupoles[2].getElementSize(), labQuadrupoles[2].getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("qYY", "real", 1, labQuadrupoles[3].getElementSize(), labQuadrupoles[3].getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("qYZ", "real", 1, labQuadrupoles[4].getElementSize(), labQuadrupoles[4].getDevicePointer()));
     map<string, string> replacements;
     replacements["SWITCH_CUTOFF"] = cu.doubleToString(force.getSwitchingDistance());
     replacements["SWITCH_C3"] = cu.doubleToString(10/pow(force.getSwitchingDistance()-force.getCutoffDistance(), 3.0));
@@ -3044,6 +3057,7 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
     nb.addInteraction(usePME, usePME, true, force.getCutoffDistance(), exclusions, source, force.getForceGroup());
     nb.setUsePadding(false);
     cu.addForce(new ForceInfo(force));
+    cu.addPostComputation(new TorquePostComputation(*this));
 }
 
 double CudaCalcHippoNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -3069,6 +3083,11 @@ double CudaCalcHippoNonbondedForceKernel::execute(ContextImpl& context, bool inc
     return 0.0;
 }
 
+void CudaCalcHippoNonbondedForceKernel::addTorquesToForces() {
+    void* mapTorqueArgs[] = {&cu.getForce().getDevicePointer(), &torque.getDevicePointer(),
+        &cu.getPosq().getDevicePointer(), &multipoleParticles.getDevicePointer()};
+    cu.executeKernel(mapTorqueKernel, mapTorqueArgs, cu.getNumAtoms());
+}
 
 void CudaCalcHippoNonbondedForceKernel::getInducedDipoles(ContextImpl& context, vector<Vec3>& dipoles) {
     

@@ -9,7 +9,10 @@
 typedef struct {
     real x, y, z;
     real q;
+#ifndef ENABLE_SHUFFLE
     real fx, fy, fz;
+    real tx, ty, tz;
+#endif
     ATOM_PARAMETER_DATA
 #ifndef PARAMETER_SIZE_IS_EVEN
     real padding;
@@ -42,8 +45,8 @@ static __inline__ __device__ long long real_shfl(long long var, int srcLane) {
 }
 #endif
 
-__device__ void formQIRotationMatrix(real3 deltaR, real invR, real (&rotationMatrix)[3][3]) {
-    real3 vectorZ = deltaR*invR;
+__device__ void formQIRotationMatrix(real3 deltaR, real rInv, real (&rotationMatrix)[3][3]) {
+    real3 vectorZ = deltaR*rInv;
     real3 vectorX = make_real3(0);
     if (fabs(vectorZ.y) > fabs(vectorZ.x))
         vectorX.x = 1;
@@ -77,14 +80,16 @@ __device__ real3 rotateVectorFromQI(real3 v, const real (&mat)[3][3]) {
                       mat[0][2]*v.x + mat[1][2]*v.y + mat[2][2]*v.z);
 }
 
-//void rotateQuadrupoleToQI(const real (&q)[6], real (&r)[6], const real (&mat)[3][3]) {
-//    r[QXX] = mat[0][0]*(mat[0][0]*q[QXX] + 2*(mat[0][1]*q[QXY] + mat[0][2]*q[QXZ])) + mat[0][1]*(mat[0][1]*q[QYY] + 2*mat[0][2]*q[QYZ]) + mat[0][2]*mat[0][2]*q[QZZ];
-//    r[QYY] = mat[1][0]*(mat[1][0]*q[QXX] + 2*(mat[1][1]*q[QXY] + mat[1][2]*q[QXZ])) + mat[1][1]*(mat[1][1]*q[QYY] + 2*mat[1][2]*q[QYZ]) + mat[1][2]*mat[1][2]*q[QZZ];
-//    r[QXY] = mat[0][0]*mat[1][0]*q[QXX] + mat[0][1]*mat[1][1]*q[QYY] + mat[0][2]*mat[1][2]*q[QZZ] + (mat[0][0]*mat[1][1] + mat[0][1]*mat[1][0])*q[QXY] + (mat[0][0]*mat[1][2] + mat[0][2]*mat[1][0])*q[QXZ] + (mat[0][1]*mat[1][2] + mat[0][2]*mat[1][1])*q[QYZ];
-//    r[QXZ] = mat[0][0]*mat[2][0]*q[QXX] + mat[0][1]*mat[2][1]*q[QYY] + mat[0][2]*mat[2][2]*q[QZZ] + (mat[0][0]*mat[2][1] + mat[0][1]*mat[2][0])*q[QXY] + (mat[0][0]*mat[2][2] + mat[0][2]*mat[2][0])*q[QXZ] + (mat[0][1]*mat[2][2] + mat[0][2]*mat[2][1])*q[QYZ];
-//    r[QYZ] = mat[1][0]*mat[2][0]*q[QXX] + mat[1][1]*mat[2][1]*q[QYY] + mat[1][2]*mat[2][2]*q[QZZ] + (mat[1][0]*mat[2][1] + mat[1][1]*mat[2][0])*q[QXY] + (mat[1][0]*mat[2][2] + mat[1][2]*mat[2][0])*q[QXZ] + (mat[1][1]*mat[2][2] + mat[1][2]*mat[2][1])*q[QYZ];
-//    r[QZZ] = -r[QXX]-r[QYY];
-//}
+__device__ void rotateQuadrupoleToQI(real qXX, real qXY, real qXZ, real qYY, real qYZ, 
+            real &qiQXX, real &qiQXY, real &qiQXZ, real &qiQYY, real &qiQYZ, real &qiQZZ, const real (&mat)[3][3]) {
+    real qZZ = -qXX-qYY;
+    qiQXX = mat[0][0]*(mat[0][0]*qXX + 2*(mat[0][1]*qXY + mat[0][2]*qXZ)) + mat[0][1]*(mat[0][1]*qYY + 2*mat[0][2]*qYZ) + mat[0][2]*mat[0][2]*qZZ;
+    qiQYY = mat[1][0]*(mat[1][0]*qXX + 2*(mat[1][1]*qXY + mat[1][2]*qXZ)) + mat[1][1]*(mat[1][1]*qYY + 2*mat[1][2]*qYZ) + mat[1][2]*mat[1][2]*qZZ;
+    qiQXY = mat[0][0]*mat[1][0]*qXX + mat[0][1]*mat[1][1]*qYY + mat[0][2]*mat[1][2]*qZZ + (mat[0][0]*mat[1][1] + mat[0][1]*mat[1][0])*qXY + (mat[0][0]*mat[1][2] + mat[0][2]*mat[1][0])*qXZ + (mat[0][1]*mat[1][2] + mat[0][2]*mat[1][1])*qYZ;
+    qiQXZ = mat[0][0]*mat[2][0]*qXX + mat[0][1]*mat[2][1]*qYY + mat[0][2]*mat[2][2]*qZZ + (mat[0][0]*mat[2][1] + mat[0][1]*mat[2][0])*qXY + (mat[0][0]*mat[2][2] + mat[0][2]*mat[2][0])*qXZ + (mat[0][1]*mat[2][2] + mat[0][2]*mat[2][1])*qYZ;
+    qiQYZ = mat[1][0]*mat[2][0]*qXX + mat[1][1]*mat[2][1]*qYY + mat[1][2]*mat[2][2]*qZZ + (mat[1][0]*mat[2][1] + mat[1][1]*mat[2][0])*qXY + (mat[1][0]*mat[2][2] + mat[1][2]*mat[2][0])*qXZ + (mat[1][1]*mat[2][2] + mat[1][2]*mat[2][1])*qYZ;
+    qiQZZ = -qiQXX-qiQYY;
+}
 
 __device__ void computeDispersionDampingFactors(float alphaI, float alphaJ, real r, real& fdamp, real& ddamp) {
     real arI = alphaI*r;
@@ -126,6 +131,78 @@ __device__ void computeDispersionDampingFactors(float alphaI, float alphaJ, real
     fdamp = 1.5f*fdamp5 - 0.5f*fdamp3;
 }
 
+__device__ void computeRepulsionDampingFactors(real pauliAlphaI, real pauliAlphaJ, real r,
+            real& fdamp1, real& fdamp3, real& fdamp5, real& fdamp7, real& fdamp9, real& fdamp11) {
+    real r2 = r*r;
+    real r3 = r2*r;
+    real r4 = r2*r2;
+    real r5 = r3*r2;
+    real r6 = r3*r3;
+    real aI2 = 0.5f*pauliAlphaI;
+    real arI2 = aI2*r;
+    real expI = EXP(-arI2);
+    real aI2_2 = aI2*aI2;
+    real aI2_3 = aI2_2*aI2;
+    real aI2_4 = aI2_2*aI2_2;
+    real aI2_5 = aI2_3*aI2_2;
+    real aI2_6 = aI2_3*aI2_3;
+    real fexp, fexp1, fexp2, fexp3, fexp4, fexp5, pre;
+    real one = 1;
+    real two = 2;
+    real four = 4;
+    real eight = 8;
+    real twelve = 12;
+    real sixteen = 16;
+    if (pauliAlphaI == pauliAlphaJ) {
+        real r7 = r4*r3;
+        real r8 = r4*r4;
+        real aI2_7 = aI2_4*aI2_3;
+        pre = 128;
+        fexp = (r + aI2*r2 + aI2_2*r3*(one/3))*expI;
+        fexp1 = (aI2_2*r3 + aI2_3*r4)*expI*(one/3);
+        fexp2 = aI2_4*expI*r5*(one/9);
+        fexp3 = aI2_5*expI*r6*(one/45);
+        fexp4 = (aI2_5*r6 + aI2_6*r7)*expI*(one/315);
+        fexp5 = (aI2_5*r6 + aI2_6*r7 + aI2_7*r8*(one/3))*expI*(one/945);
+    }
+    else {
+        real aJ2 = 0.5f*pauliAlphaJ;
+        real arJ2 = aJ2*r;
+        real expJ = EXP(-arJ2);
+        real aJ2_2 = aJ2*aJ2;
+        real aJ2_3 = aJ2_2*aJ2;
+        real aJ2_4 = aJ2_2*aJ2_2;
+        real aJ2_5 = aJ2_3*aJ2_2;
+        real aJ2_6 = aJ2_3*aJ2_3;
+        real scale = 1/(aI2_2-aJ2_2);
+        pre = 8192*aI2_3*aJ2_3*(scale*scale*scale*scale);
+        real tmp = 4*aI2*aJ2*scale;
+        fexp = (arI2-tmp)*expJ + (arJ2+tmp)*expI;
+        fexp1 = (aI2*aJ2*r2 - 4*aI2*aJ2_2*r*scale - 4*aI2*aJ2*scale)*expJ +
+             (aI2*aJ2*r2 + 4*aI2_2*aJ2*r*scale + 4*aI2*aJ2*scale)*expI;
+        fexp2 = (aI2*aJ2*r2*(one/3) + aI2*aJ2_2*r3*(one/3) - (four/3)*aI2*aJ2_3*r2*scale - 4*aI2*aJ2_2*r*scale - 4*aI2*aJ2*scale)*expJ +
+                (aI2*aJ2*r2*(one/3) + aI2_2*aJ2*r3*(one/3) + (four/3)*aI2_3*aJ2*r2*scale + 4*aI2_2*aJ2*r*scale + 4*aI2*aJ2*scale)*expI;
+        fexp3 = (aI2*aJ2_3*r4*(one/15) + aI2*aJ2_2*r3*(one/5) + aI2*aJ2*r2*(one/5) - (four/15)*aI2*aJ2_4*r3*scale - (eight/5)*aI2*aJ2_3*r2*scale - 4*aI2*aJ2_2*r*scale - 4*scale*aI2*aJ2)*expJ +
+                (aI2_3*aJ2*r4*(one/15) + aI2_2*aJ2*r3*(one/5) + aI2*aJ2*r2*(one/5) + (four/15)*aI2_4*aJ2*r3*scale + (eight/5)*aI2_3*aJ2*r2*scale + 4*aI2_2*aJ2*r*scale + 4*scale*aI2*aJ2)*expI;
+        fexp4 = (aI2*aJ2_4*r5*(one/105) + (two/35)*aI2*aJ2_3*r4 + aI2*aJ2_2*r3*(one/7) + aI2*aJ2*r2*(one/7) - (four/105)*aI2*aJ2_5*r4*scale - (eight/21)*aI2*aJ2_4*r3*scale - (twelve/7)*aI2*aJ2_3*r2*scale - 4*aI2*aJ2_2*r*scale - 4*aI2*aJ2*scale)*expJ +
+                (aI2_4*aJ2*r5*(one/105) + (two/35)*aI2_3*aJ2*r4 + aI2_2*aJ2*r3*(one/7) + aI2*aJ2*r2*(one/7) + (four/105)*aI2_5*aJ2*r4*scale + (eight/21)*aI2_4*aJ2*r3*scale + (twelve/7)*aI2_3*aJ2*r2*scale + 4*aI2_2*aJ2*r*scale + 4*aI2*aJ2*scale)*expI;
+        fexp5 = (aI2*aJ2_5*r6*(one/945) + (two/189)*aI2*aJ2_4*r5 + aI2*aJ2_3*r4*(one/21) + aI2*aJ2_2*r3*(one/9) + aI2*aJ2*r2*(one/9) - (four/945)*aI2*aJ2_6*r5*scale - (four/63)*aI2*aJ2_5*r4*scale - (four/9)*aI2*aJ2_4*r3*scale - (sixteen/9)*aI2*aJ2_3*r2*scale - 4*aI2*aJ2_2*r*scale - 4*aI2*aJ2*scale)*expJ +
+                (aI2_5*aJ2*r6*(one/945) + (two/189)*aI2_4*aJ2*r5 + aI2_3*aJ2*r4*(one/21) + aI2_2*aJ2*r3*(one/9) + aI2*aJ2*r2*(one/9) + (four/945)*aI2_6*aJ2*r5*scale + (four/63)*aI2_5*aJ2*r4*scale + (four/9)*aI2_4*aJ2*r3*scale + (sixteen/9)*aI2_3*aJ2*r2*scale + 4*aI2_2*aJ2*r*scale + 4*aI2*aJ2*scale)*expI;
+    }
+    fexp = fexp/r;
+    fexp1 = fexp1/r3;
+    fexp2 = 3*fexp2/r5;
+    fexp3 = 15*fexp3/(r5*r2);
+    fexp4 = 105*fexp4/(r5*r4);
+    fexp5 = 945*fexp5/(r5*r6);
+    fdamp1 = 0.5f*pre*fexp*fexp;
+    fdamp3 = pre*fexp*fexp1;
+    fdamp5 = pre*(fexp*fexp2 + fexp1*fexp1);
+    fdamp7 = pre*(fexp*fexp3 + 3*fexp1*fexp2);
+    fdamp9 = pre*(fexp*fexp4 + 4*fexp1*fexp3 + 3*fexp2*fexp2);
+    fdamp11 = pre*(fexp*fexp5 + 5*fexp1*fexp4 + 10*fexp2*fexp3);
+}
+
 extern "C" __global__ void computeNonbonded(
         unsigned long long* __restrict__ forceBuffers, mixed* __restrict__ energyBuffer, const real4* __restrict__ posq, const tileflags* __restrict__ exclusions,
         const ushort2* __restrict__ exclusionTiles, unsigned int startTileIndex, unsigned int numTileIndices
@@ -156,6 +233,7 @@ extern "C" __global__ void computeNonbonded(
         const unsigned int x = tileIndices.x;
         const unsigned int y = tileIndices.y;
         real3 force = make_real3(0);
+        real3 torque = make_real3(0);
         unsigned int atom1 = x*TILE_SIZE + tgx;
         real4 posq1 = posq[atom1];
         LOAD_ATOM1_PARAMETERS
@@ -188,19 +266,20 @@ extern "C" __global__ void computeNonbonded(
                 APPLY_PERIODIC_TO_DELTA(delta)
 #endif
                 real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-                real invR = RSQRT(r2);
-                real r = r2*invR;
+                real rInv = RSQRT(r2);
+                real r = r2*rInv;
                 LOAD_ATOM2_PARAMETERS
                 atom2 = y*TILE_SIZE+j;
                 real3 tempForce = make_real3(0);
+                real3 tempTorque1 = make_real3(0);
+                real3 tempTorque2 = make_real3(0);
                 bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS || !(excl & 0x1));
                 real tempEnergy = 0.0f;
                 const real interactionScale = 0.5f;
                 COMPUTE_INTERACTION
                 energy += 0.5f*tempEnergy;
-                force.x -= tempForce.x;
-                force.y -= tempForce.y;
-                force.z -= tempForce.z;
+                force -= tempForce;
+                torque += tempTorque1;
                 excl >>= 1;
             }
         }
@@ -209,10 +288,8 @@ extern "C" __global__ void computeNonbonded(
             unsigned int j = y*TILE_SIZE + tgx;
             real4 shflPosq = posq[j];
 #ifdef ENABLE_SHUFFLE
-            real3 shflForce;
-            shflForce.x = 0.0f;
-            shflForce.y = 0.0f;
-            shflForce.z = 0.0f;
+            real3 shflForce = make_real3(0);
+            real3 shflTorque = make_real3(0);
 #else
             localData[threadIdx.x].x = shflPosq.x;
             localData[threadIdx.x].y = shflPosq.y;
@@ -221,6 +298,9 @@ extern "C" __global__ void computeNonbonded(
             localData[threadIdx.x].fx = 0.0f;
             localData[threadIdx.x].fy = 0.0f;
             localData[threadIdx.x].fz = 0.0f;
+            localData[threadIdx.x].tx = 0.0f;
+            localData[threadIdx.x].ty = 0.0f;
+            localData[threadIdx.x].tz = 0.0f;
 #endif
             DECLARE_LOCAL_PARAMETERS
             LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
@@ -238,28 +318,34 @@ extern "C" __global__ void computeNonbonded(
                 APPLY_PERIODIC_TO_DELTA(delta)
 #endif
                 real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-                real invR = RSQRT(r2);
-                real r = r2*invR;
+                real rInv = RSQRT(r2);
+                real r = r2*rInv;
                 LOAD_ATOM2_PARAMETERS
                 atom2 = y*TILE_SIZE+tj;
                 real3 tempForce = make_real3(0);
+                real3 tempTorque1 = make_real3(0);
+                real3 tempTorque2 = make_real3(0);
                 bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS || !(excl & 0x1));
                 real tempEnergy = 0.0f;
                 const real interactionScale = 1.0f;
                 COMPUTE_INTERACTION
                 energy += tempEnergy;
-                force.x -= tempForce.x;
-                force.y -= tempForce.y;
-                force.z -= tempForce.z;
+                force -= tempForce;
+                torque + tempTorque1;
 #ifdef ENABLE_SHUFFLE
-                shflForce.x += delta.x;
-                shflForce.y += delta.y;
-                shflForce.z += delta.z;
+                shflForce += tempForce;
+                shflTorque += tempTorque2;
                 SHUFFLE_WARP_DATA
+                shflTorque.x = real_shfl(shflTorque.x, tgx+1);
+                shflTorque.y = real_shfl(shflTorque.y, tgx+1);
+                shflTorque.z = real_shfl(shflTorque.z, tgx+1);
 #else
-                localData[tbx+tj].fx += delta.x;
-                localData[tbx+tj].fy += delta.y;
-                localData[tbx+tj].fz += delta.z;
+                localData[tbx+tj].fx += tempForce.x;
+                localData[tbx+tj].fy += tempForce.y;
+                localData[tbx+tj].fz += tempForce.z;
+                localData[tbx+tj].tx += tempTorque2.x;
+                localData[tbx+tj].ty += tempTorque2.y;
+                localData[tbx+tj].tz += tempTorque2.z;
 #endif
                 excl >>= 1;
                 // cycles the indices
@@ -272,10 +358,16 @@ extern "C" __global__ void computeNonbonded(
             atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (shflForce.x*0x100000000)));
             atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (shflForce.y*0x100000000)));
             atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (shflForce.z*0x100000000)));
+            atomicAdd(&torqueBuffers[offset], static_cast<unsigned long long>((long long) (shflTorque.x*0x100000000)));
+            atomicAdd(&torqueBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (shflTorque.y*0x100000000)));
+            atomicAdd(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (shflTorque.z*0x100000000)));
 #else
             atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fx*0x100000000)));
             atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fy*0x100000000)));
             atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fz*0x100000000)));
+            atomicAdd(&torqueBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].tx*0x100000000)));
+            atomicAdd(&torqueBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].ty*0x100000000)));
+            atomicAdd(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].tz*0x100000000)));
 #endif
         }
         // Write results for on and off diagonal tiles
@@ -284,6 +376,9 @@ extern "C" __global__ void computeNonbonded(
         atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (force.x*0x100000000)));
         atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force.y*0x100000000)));
         atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force.z*0x100000000)));
+        atomicAdd(&torqueBuffers[offset], static_cast<unsigned long long>((long long) (torque.x*0x100000000)));
+        atomicAdd(&torqueBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (torque.y*0x100000000)));
+        atomicAdd(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (torque.z*0x100000000)));
     }
 
     // Second loop: tiles without exclusions, either from the neighbor list (with cutoff) or just enumerating all
@@ -311,6 +406,7 @@ extern "C" __global__ void computeNonbonded(
     while (pos < end) {
         const bool hasExclusions = false;
         real3 force = make_real3(0);
+        real3 torque = make_real3(0);
         bool includeTile = true;
 
         // Extract the coordinates of this tile.
@@ -361,10 +457,8 @@ extern "C" __global__ void computeNonbonded(
 #ifdef ENABLE_SHUFFLE
             DECLARE_LOCAL_PARAMETERS
             real4 shflPosq;
-            real3 shflForce;
-            shflForce.x = 0.0f;
-            shflForce.y = 0.0f;
-            shflForce.z = 0.0f;
+            real3 shflForce = make_real3(0);
+            real3 shflTorque = make_real3(0);
 #endif
             if (j < PADDED_NUM_ATOMS) {
                 // Load position of atom j from from global memory
@@ -411,28 +505,34 @@ extern "C" __global__ void computeNonbonded(
 #endif
                     real3 delta = make_real3(posq2.x-posq1.x, posq2.y-posq1.y, posq2.z-posq1.z);
                     real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-                    real invR = RSQRT(r2);
-                    real r = r2*invR;
+                    real rInv = RSQRT(r2);
+                    real r = r2*rInv;
                     LOAD_ATOM2_PARAMETERS
                     atom2 = atomIndices[tbx+tj];
                     real3 tempForce = make_real3(0);
+                    real3 tempTorque1 = make_real3(0);
+                    real3 tempTorque2 = make_real3(0);
                     bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS);
                     real tempEnergy = 0.0f;
                     const real interactionScale = 1.0f;
                     COMPUTE_INTERACTION
                     energy += tempEnergy;
-                    force.x -= tempForce.x;
-                    force.y -= tempForce.y;
-                    force.z -= tempForce.z;
+                    force -= tempForce;
+                    torque += tempTorque1;
 #ifdef ENABLE_SHUFFLE
-                    shflForce.x += delta.x;
-                    shflForce.y += delta.y;
-                    shflForce.z += delta.z;
+                    shflForce += tempForce;
+                    shflTorque += tempTorque2;
                     SHUFFLE_WARP_DATA
+                    shflTorque.x = real_shfl(shflTorque.x, tgx+1);
+                    shflTorque.y = real_shfl(shflTorque.y, tgx+1);
+                    shflTorque.z = real_shfl(shflTorque.z, tgx+1);
 #else
-                    localData[tbx+tj].fx += delta.x;
-                    localData[tbx+tj].fy += delta.y;
-                    localData[tbx+tj].fz += delta.z;
+                    localData[tbx+tj].fx += tempForce.x;
+                    localData[tbx+tj].fy += tempForce.y;
+                    localData[tbx+tj].fz += tempForce.z;
+                    localData[tbx+tj].tx += tempTorque2.x;
+                    localData[tbx+tj].ty += tempTorque2.y;
+                    localData[tbx+tj].tz += tempTorque2.z;
 #endif
                     tj = (tj + 1) & (TILE_SIZE - 1);
                 }
@@ -454,28 +554,34 @@ extern "C" __global__ void computeNonbonded(
                     APPLY_PERIODIC_TO_DELTA(delta)
 #endif
                     real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-                    real invR = RSQRT(r2);
-                    real r = r2*invR;
+                    real rInv = RSQRT(r2);
+                    real r = r2*rInv;
                     LOAD_ATOM2_PARAMETERS
                     atom2 = atomIndices[tbx+tj];
                     real3 tempForce = make_real3(0);
+                    real3 tempTorque1 = make_real3(0);
+                    real3 tempTorque2 = make_real3(0);
                     bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS);
                     real tempEnergy = 0.0f;
                     const real interactionScale = 1.0f;
                     COMPUTE_INTERACTION
                     energy += tempEnergy;
-                    force.x -= tempForce.x;
-                    force.y -= tempForce.y;
-                    force.z -= tempForce.z;
+                    force -= tempForce;
+                    torque += tempTorque1;
 #ifdef ENABLE_SHUFFLE
-                    shflForce.x += delta.x;
-                    shflForce.y += delta.y;
-                    shflForce.z += delta.z;
+                    shflForce += tempForce;
+                    shflTorque += tempTorque2;
                     SHUFFLE_WARP_DATA
+                    shflTorque.x = real_shfl(shflTorque.x, tgx+1);
+                    shflTorque.y = real_shfl(shflTorque.y, tgx+1);
+                    shflTorque.z = real_shfl(shflTorque.z, tgx+1);
 #else
-                    localData[tbx+tj].fx += delta.x;
-                    localData[tbx+tj].fy += delta.y;
-                    localData[tbx+tj].fz += delta.z;
+                    localData[tbx+tj].fx += tempForce.x;
+                    localData[tbx+tj].fy += tempForce.y;
+                    localData[tbx+tj].fz += tempForce.z;
+                    localData[tbx+tj].tx += tempTorque.x;
+                    localData[tbx+tj].ty += tempTorque.y;
+                    localData[tbx+tj].tz += tempTorque.z;
 #endif
                     tj = (tj + 1) & (TILE_SIZE - 1);
                 }
@@ -486,6 +592,9 @@ extern "C" __global__ void computeNonbonded(
             atomicAdd(&forceBuffers[atom1], static_cast<unsigned long long>((long long) (force.x*0x100000000)));
             atomicAdd(&forceBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force.y*0x100000000)));
             atomicAdd(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force.z*0x100000000)));
+            atomicAdd(&torqueBuffers[atom1], static_cast<unsigned long long>((long long) (torque.x*0x100000000)));
+            atomicAdd(&torqueBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (torque.y*0x100000000)));
+            atomicAdd(&torqueBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (torque.z*0x100000000)));
 #ifdef USE_CUTOFF
             unsigned int atom2 = atomIndices[threadIdx.x];
 #else
@@ -496,10 +605,16 @@ extern "C" __global__ void computeNonbonded(
                 atomicAdd(&forceBuffers[atom2], static_cast<unsigned long long>((long long) (shflForce.x*0x100000000)));
                 atomicAdd(&forceBuffers[atom2+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (shflForce.y*0x100000000)));
                 atomicAdd(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (shflForce.z*0x100000000)));
+                atomicAdd(&torqueBuffers[atom2], static_cast<unsigned long long>((long long) (shflTorque.x*0x100000000)));
+                atomicAdd(&torqueBuffers[atom2+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (shflTorque.y*0x100000000)));
+                atomicAdd(&torqueBuffers[atom2+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (shflTorque.z*0x100000000)));
 #else
                 atomicAdd(&forceBuffers[atom2], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fx*0x100000000)));
                 atomicAdd(&forceBuffers[atom2+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fy*0x100000000)));
                 atomicAdd(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fz*0x100000000)));
+                atomicAdd(&torqueBuffers[atom2], static_cast<unsigned long long>((long long) (localData[threadIdx.x].tx*0x100000000)));
+                atomicAdd(&torqueBuffers[atom2+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].ty*0x100000000)));
+                atomicAdd(&torqueBuffers[atom2+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].tz*0x100000000)));
 #endif
             }
         }

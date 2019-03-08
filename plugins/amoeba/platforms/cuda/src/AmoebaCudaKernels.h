@@ -697,9 +697,11 @@ public:
     void getDPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
 private:
     class ForceInfo;
+    class TorquePostComputation;
     void computeInducedField(void** recipBoxVectorPointer);
     void computeExtrapolatedDipoles(void** recipBoxVectorPointer);
     void ensureMultipolesValid(ContextImpl& context);
+    void addTorquesToForces();
     int numParticles, maxExtrapolationOrder;
     int fixedFieldThreads, inducedFieldThreads, electrostaticsThreads;
     int gridSizeX, gridSizeY, gridSizeZ;
