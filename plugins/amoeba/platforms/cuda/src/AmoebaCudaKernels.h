@@ -32,6 +32,7 @@
 #include "openmm/System.h"
 #include "CudaArray.h"
 #include "CudaContext.h"
+#include "CudaNonbondedUtilities.h"
 #include <cufft.h>
 
 namespace OpenMM {
@@ -703,12 +704,14 @@ private:
     void ensureMultipolesValid(ContextImpl& context);
     void addTorquesToForces();
     void uploadRealVec(CudaArray& array, const std::vector<double>& values);
-    int numParticles, maxExtrapolationOrder;
+    void createFieldKernel(const std::string& interactionSrc, std::vector<CudaNonbondedUtilities::ParameterInfo> params,
+            CudaArray& fieldBuffer, CUfunction& kernel, std::vector<void*>& args);
+    int numParticles, maxExtrapolationOrder, maxTiles;
     int fixedFieldThreads, inducedFieldThreads, electrostaticsThreads;
     int gridSizeX, gridSizeY, gridSizeZ;
     int dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ;
-    double pmeAlpha, dpmeAlpha;
-    bool usePME, hasInitializedFFT, multipolesAreValid;
+    double pmeAlpha, dpmeAlpha, cutoff;
+    bool usePME, hasInitializedKernels, hasInitializedFFT, multipolesAreValid;
     std::vector<double> extrapolationCoefficients;
     std::vector<std::vector<int> > exceptionAtoms;
     CudaContext& cu;
@@ -731,11 +734,13 @@ private:
     CudaArray lastPositions;
     CudaArray exceptionScales[5];
     cufftHandle fft, dfft;
-    CUfunction computeMomentsKernel, recordInducedDipolesKernel, computeFixedFieldKernel, computeInducedFieldKernel, updateInducedFieldKernel, electrostaticsKernel, mapTorqueKernel;
+    CUfunction computeMomentsKernel, fixedFieldKernel, mutualFieldKernel;
+    CUfunction recordInducedDipolesKernel, computeFixedFieldKernel, computeInducedFieldKernel, updateInducedFieldKernel, electrostaticsKernel, mapTorqueKernel;
     CUfunction pmeSpreadFixedMultipolesKernel, pmeSpreadInducedDipolesKernel, pmeFinishSpreadChargeKernel, pmeConvolutionKernel;
     CUfunction pmeFixedPotentialKernel, pmeInducedPotentialKernel, pmeFixedForceKernel, pmeInducedForceKernel, pmeRecordInducedFieldDipolesKernel, computePotentialKernel;
     CUfunction initExtrapolatedKernel, iterateExtrapolatedKernel, computeExtrapolatedKernel, addExtrapolatedGradientKernel;
     CUfunction pmeTransformMultipolesKernel, pmeTransformPotentialKernel;
+    std::vector<void*> fixedFieldArgs, mutualFieldArgs;
     static const int PmeOrder = 5;
 };
 

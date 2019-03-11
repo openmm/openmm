@@ -40,7 +40,6 @@
 #include "CudaFFT3D.h"
 #include "CudaForceInfo.h"
 #include "CudaKernelSources.h"
-#include "CudaNonbondedUtilities.h"
 #include "jama_lu.h"
 
 #include <algorithm>
@@ -1706,12 +1705,12 @@ void CudaCalcAmoebaMultipoleForceKernel::computeExtrapolatedDipoles(void** recip
     // Start by storing the direct dipoles as PT0
 
     if (gkKernel == NULL) {
-        void* initArgs[] = {&inducedDipole.getDevicePointer(), &inducedDipolePolar.getDevicePointer(), &extrapolatedDipole.getDevicePointer(),
+        void* initArgs[] = {&inducedDipole.getDevicePointer(), &extrapolatedDipole.getDevicePointer(), &inducedDipolePolar.getDevicePointer(),
             &extrapolatedDipolePolar.getDevicePointer(), &inducedDipoleFieldGradient.getDevicePointer(), &inducedDipoleFieldGradientPolar.getDevicePointer()};
         cu.executeKernel(initExtrapolatedKernel, initArgs, extrapolatedDipole.getSize());
     }
     else {
-        void* initArgs[] = {&inducedDipole.getDevicePointer(), &inducedDipolePolar.getDevicePointer(), &extrapolatedDipole.getDevicePointer(),
+        void* initArgs[] = {&inducedDipole.getDevicePointer(), &extrapolatedDipole.getDevicePointer(), &inducedDipolePolar.getDevicePointer(),
             &extrapolatedDipolePolar.getDevicePointer(), &inducedDipoleFieldGradient.getDevicePointer(), &inducedDipoleFieldGradientPolar.getDevicePointer(),
             &gkKernel->getInducedDipoles().getDevicePointer(), &gkKernel->getInducedDipolesPolar().getDevicePointer(), &extrapolatedDipoleGk.getDevicePointer(),
             &extrapolatedDipoleGkPolar.getDevicePointer(), &inducedDipoleFieldGradientGk.getDevicePointer(), &inducedDipoleFieldGradientGkPolar.getDevicePointer()};
@@ -1723,16 +1722,17 @@ void CudaCalcAmoebaMultipoleForceKernel::computeExtrapolatedDipoles(void** recip
     for (int order = 1; order < maxExtrapolationOrder; ++order) {
         computeInducedField(recipBoxVectorPointer);
         if (gkKernel == NULL) {
-            void* iterateArgs[] = {&order, &inducedDipole.getDevicePointer(), &inducedDipolePolar.getDevicePointer(), &extrapolatedDipole.getDevicePointer(),
-                &extrapolatedDipolePolar.getDevicePointer(), &inducedDipoleFieldGradient.getDevicePointer(), &inducedDipoleFieldGradientPolar.getDevicePointer(),
-                &inducedField.getDevicePointer(), &inducedFieldPolar.getDevicePointer(), &extrapolatedDipoleFieldGradient.getDevicePointer(), &extrapolatedDipoleFieldGradientPolar.getDevicePointer(),
-                &polarizability.getDevicePointer()};
+            void* iterateArgs[] = {&order, &inducedDipole.getDevicePointer(), &extrapolatedDipole.getDevicePointer(), &inducedField.getDevicePointer(),
+                &inducedDipolePolar.getDevicePointer(), &extrapolatedDipolePolar.getDevicePointer(), &inducedFieldPolar.getDevicePointer(),
+                &inducedDipoleFieldGradient.getDevicePointer(), &inducedDipoleFieldGradientPolar.getDevicePointer(),
+                &extrapolatedDipoleFieldGradient.getDevicePointer(), &extrapolatedDipoleFieldGradientPolar.getDevicePointer(), &polarizability.getDevicePointer()};
             cu.executeKernel(iterateExtrapolatedKernel, iterateArgs, extrapolatedDipole.getSize());
         }
         else {
-            void* iterateArgs[] = {&order, &inducedDipole.getDevicePointer(), &inducedDipolePolar.getDevicePointer(), &extrapolatedDipole.getDevicePointer(),
-                &extrapolatedDipolePolar.getDevicePointer(), &inducedDipoleFieldGradient.getDevicePointer(), &inducedDipoleFieldGradientPolar.getDevicePointer(),
-                &inducedField.getDevicePointer(), &inducedFieldPolar.getDevicePointer(), &extrapolatedDipoleFieldGradient.getDevicePointer(), &extrapolatedDipoleFieldGradientPolar.getDevicePointer(),
+            void* iterateArgs[] = {&order, &inducedDipole.getDevicePointer(), &extrapolatedDipole.getDevicePointer(), &inducedField.getDevicePointer(),
+                &inducedDipolePolar.getDevicePointer(), &extrapolatedDipolePolar.getDevicePointer(), &inducedFieldPolar.getDevicePointer(),
+                &inducedDipoleFieldGradient.getDevicePointer(), &inducedDipoleFieldGradientPolar.getDevicePointer(),
+                &extrapolatedDipoleFieldGradient.getDevicePointer(), &extrapolatedDipoleFieldGradientPolar.getDevicePointer(),
                 &gkKernel->getInducedDipoles().getDevicePointer(), &gkKernel->getInducedDipolesPolar().getDevicePointer(), &extrapolatedDipoleGk.getDevicePointer(),
                 &extrapolatedDipoleGkPolar.getDevicePointer(), &inducedDipoleFieldGradientGk.getDevicePointer(), &inducedDipoleFieldGradientGkPolar.getDevicePointer(),
                 &gkKernel->getInducedField().getDevicePointer(), &gkKernel->getInducedFieldPolar().getDevicePointer(),
@@ -1745,12 +1745,12 @@ void CudaCalcAmoebaMultipoleForceKernel::computeExtrapolatedDipoles(void** recip
     // Take a linear combination of the µ_(n) components to form the total dipole
 
     if (gkKernel == NULL) {
-        void* computeArgs[] = {&inducedDipole.getDevicePointer(), &inducedDipolePolar.getDevicePointer(), &extrapolatedDipole.getDevicePointer(),
+        void* computeArgs[] = {&inducedDipole.getDevicePointer(), &extrapolatedDipole.getDevicePointer(), &inducedDipolePolar.getDevicePointer(),
                 &extrapolatedDipolePolar.getDevicePointer()};
         cu.executeKernel(computeExtrapolatedKernel, computeArgs, extrapolatedDipole.getSize());
     }
     else {
-        void* computeArgs[] = {&inducedDipole.getDevicePointer(), &inducedDipolePolar.getDevicePointer(), &extrapolatedDipole.getDevicePointer(),
+        void* computeArgs[] = {&inducedDipole.getDevicePointer(), &extrapolatedDipole.getDevicePointer(), &inducedDipolePolar.getDevicePointer(),
                 &extrapolatedDipolePolar.getDevicePointer(), &gkKernel->getInducedDipoles().getDevicePointer(), &gkKernel->getInducedDipolesPolar().getDevicePointer(),
                 &extrapolatedDipoleGk.getDevicePointer(), &extrapolatedDipoleGkPolar.getDevicePointer()};
         cu.executeKernel(computeExtrapolatedKernel, computeArgs, extrapolatedDipole.getSize());
@@ -2657,7 +2657,7 @@ private:
 };
 
 CudaCalcHippoNonbondedForceKernel::CudaCalcHippoNonbondedForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : 
-        CalcHippoNonbondedForceKernel(name, platform), cu(cu), system(system), hasInitializedFFT(false), multipolesAreValid(false) {
+        CalcHippoNonbondedForceKernel(name, platform), cu(cu), system(system), hasInitializedKernels(false), hasInitializedFFT(false), multipolesAreValid(false) {
 }
 
 CudaCalcHippoNonbondedForceKernel::~CudaCalcHippoNonbondedForceKernel() {
@@ -2760,6 +2760,7 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
     fracDipoles.initialize(cu, paddedNumAtoms, 3*elementSize, "fracDipoles");
     fracQuadrupoles.initialize(cu, 6*paddedNumAtoms, elementSize, "fracQuadrupoles");
     field.initialize(cu, 3*paddedNumAtoms, sizeof(long long), "field");
+    inducedField.initialize(cu, 3*paddedNumAtoms, sizeof(long long), "inducedField");
     torque.initialize(cu, 3*paddedNumAtoms, sizeof(long long), "torque");
     inducedDipole.initialize(cu, paddedNumAtoms, 3*elementSize, "inducedDipole");
     int numOrders = extrapolationCoefficients.size();
@@ -2800,6 +2801,7 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
 //    if (!useShuffle)
 //        fixedThreadMemory += 3*elementSize;
     map<string, string> defines;
+    defines["HIPPO"] = "1";
     defines["NUM_ATOMS"] = cu.intToString(numParticles);
     defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
     defines["NUM_BLOCKS"] = cu.intToString(cu.getNumAtomBlocks());
@@ -2826,6 +2828,8 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
         coefficients << cu.doubleToString(sum);
     }
     defines["EXTRAPOLATION_COEFFICIENTS_SUM"] = coefficients.str();
+    usePME = (force.getNonbondedMethod() == HippoNonbondedForce::PME);
+    cutoff = force.getCutoffDistance();
     if (usePME) {
         int nx, ny, nz;
         force.getPMEParameters(pmeAlpha, nx, ny, nz);
@@ -2860,14 +2864,10 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
 //    defines["THREAD_BLOCK_SIZE"] = cu.intToString(fixedFieldThreads);
 //    module = cu.createModule(CudaKernelSources::vectorOps+CudaAmoebaKernelSources::multipoleFixedField, defines);
 //    computeFixedFieldKernel = cu.getKernel(module, "computeFixedField");
-//    defines["THREAD_BLOCK_SIZE"] = cu.intToString(inducedFieldThreads);
-//    module = cu.createModule(CudaKernelSources::vectorOps+CudaAmoebaKernelSources::multipoleInducedField, defines);
-//    computeInducedFieldKernel = cu.getKernel(module, "computeInducedField");
-//    updateInducedFieldKernel = cu.getKernel(module, "updateInducedFieldByDIIS");
-//    initExtrapolatedKernel = cu.getKernel(module, "initExtrapolatedDipoles");
-//    iterateExtrapolatedKernel = cu.getKernel(module, "iterateExtrapolatedDipoles");
-//    computeExtrapolatedKernel = cu.getKernel(module, "computeExtrapolatedDipoles");
-//    addExtrapolatedGradientKernel = cu.getKernel(module, "addExtrapolatedFieldGradientToForce");
+    module = cu.createModule(CudaKernelSources::vectorOps+CudaAmoebaKernelSources::multipoleInducedField, defines);
+    initExtrapolatedKernel = cu.getKernel(module, "initExtrapolatedDipoles");
+    iterateExtrapolatedKernel = cu.getKernel(module, "iterateExtrapolatedDipoles");
+    computeExtrapolatedKernel = cu.getKernel(module, "computeExtrapolatedDipoles");
 //    stringstream electrostaticsSource;
 //    electrostaticsSource << CudaKernelSources::vectorOps;
 //    electrostaticsSource << CudaAmoebaKernelSources::sphericalMultipoles;
@@ -2883,7 +2883,6 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
 
     // Set up PME.
     
-    usePME = (force.getNonbondedMethod() == HippoNonbondedForce::PME);
     if (usePME) {
         // Create the PME kernels.
 
@@ -3071,7 +3070,114 @@ void CudaCalcHippoNonbondedForceKernel::uploadRealVec(CudaArray& array, const st
     }
 }
 
+void CudaCalcHippoNonbondedForceKernel::createFieldKernel(const string& interactionSrc, vector<CudaNonbondedUtilities::ParameterInfo> params,
+            CudaArray& fieldBuffer, CUfunction& kernel, vector<void*>& args) {
+    // Create the kernel source.
+
+    map<string, string> replacements;
+    replacements["COMPUTE_FIELD"] = interactionSrc;
+    stringstream extraArgs, atomParams, loadLocal1, loadLocal2, load1, load2;
+    for (auto& param : params) {
+        extraArgs << ", const " << param.getType() << "* __restrict__ " << param.getName();
+        atomParams << param.getType() << " " << param.getName() << ";\n";
+        loadLocal1 << "localData[localAtomIndex]." << param.getName() << " = " << param.getName() << "1;\n";
+        loadLocal2 << "localData[localAtomIndex]." << param.getName() << " = " << param.getName() << "[j];\n";
+        load1 << param.getType() << " " << param.getName() << "1 = " << param.getName() << "[atom1];\n";
+        load2 << param.getType() << " " << param.getName() << "2 = localData[atom2]." << param.getName() << ";\n";
+    }
+    replacements["PARAMETER_ARGUMENTS"] = extraArgs.str();
+    replacements["ATOM_PARAMETER_DATA"] = atomParams.str();
+    replacements["LOAD_LOCAL_PARAMETERS_FROM_1"] = loadLocal1.str();
+    replacements["LOAD_LOCAL_PARAMETERS_FROM_GLOBAL"] = loadLocal2.str();
+    replacements["LOAD_ATOM1_PARAMETERS"] = load1.str();
+    replacements["LOAD_ATOM2_PARAMETERS"] = load2.str();
+    string src = cu.replaceStrings(CudaAmoebaKernelSources::hippoComputeField, replacements);
+
+    // Set defines and create the kernel.
+
+    map<string, string> defines;
+    if (usePME) {
+        defines["USE_CUTOFF"] = "1";
+        defines["USE_PERIODIC"] = "1";
+    }
+    defines["USE_EXCLUSIONS"] = "1";
+    defines["WARPS_PER_GROUP"] = cu.intToString(cu.getNonbondedUtilities().getForceThreadBlockSize()/CudaContext::TileSize);
+    defines["THREAD_BLOCK_SIZE"] = cu.intToString(cu.getNonbondedUtilities().getForceThreadBlockSize());
+    defines["CUTOFF"] = cu.doubleToString(cutoff);
+    defines["CUTOFF_SQUARED"] = cu.doubleToString(cutoff*cutoff);
+    defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
+    defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
+    defines["NUM_BLOCKS"] = cu.intToString(cu.getNumAtomBlocks());
+    defines["TILE_SIZE"] = cu.intToString(CudaContext::TileSize);
+    int numExclusionTiles = cu.getNonbondedUtilities().getExclusionTiles().getSize();
+    defines["NUM_TILES_WITH_EXCLUSIONS"] = cu.intToString(numExclusionTiles);
+    defines["FIRST_EXCLUSION_TILE"] = cu.intToString(0);
+    defines["LAST_EXCLUSION_TILE"] = cu.intToString(numExclusionTiles);
+    CUmodule module = cu.createModule(CudaKernelSources::vectorOps+CudaAmoebaKernelSources::hippoInteractionHeader+src, defines);
+    kernel = cu.getKernel(module, "computeField");
+
+    // Build the list of arguments.
+
+    CudaNonbondedUtilities& nb = cu.getNonbondedUtilities();
+    maxTiles = (nb.getUseCutoff() ? nb.getInteractingTiles().getSize() : cu.getNumAtomBlocks()*(cu.getNumAtomBlocks()+1)/2);
+    args.push_back(&cu.getPosq().getDevicePointer());
+    args.push_back(&cu.getNonbondedUtilities().getExclusions().getDevicePointer());
+    args.push_back(&cu.getNonbondedUtilities().getExclusionTiles().getDevicePointer());
+    args.push_back(&fieldBuffer.getDevicePointer());
+    if (nb.getUseCutoff()) {
+        args.push_back(&nb.getInteractingTiles().getDevicePointer());
+        args.push_back(&nb.getInteractionCount().getDevicePointer());
+        args.push_back(cu.getPeriodicBoxSizePointer());
+        args.push_back(cu.getInvPeriodicBoxSizePointer());
+        args.push_back(cu.getPeriodicBoxVecXPointer());
+        args.push_back(cu.getPeriodicBoxVecYPointer());
+        args.push_back(cu.getPeriodicBoxVecZPointer());
+        args.push_back(&maxTiles);
+        args.push_back(&nb.getBlockCenters().getDevicePointer());
+        args.push_back(&nb.getBlockBoundingBoxes().getDevicePointer());
+        args.push_back(&nb.getInteractingAtoms().getDevicePointer());
+    }
+    else
+        args.push_back(&maxTiles);
+    for (auto& param : params)
+        args.push_back(&param.getMemory());
+}
+
 double CudaCalcHippoNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    CudaNonbondedUtilities& nb = cu.getNonbondedUtilities();
+    if (!hasInitializedKernels) {
+        hasInitializedKernels = true;
+        
+        // These kernels can't be compiled in initialize(), because the nonbonded utilities object
+        // has not yet been initialized then.
+
+        createFieldKernel(CudaAmoebaKernelSources::hippoFixedField, {
+                CudaNonbondedUtilities::ParameterInfo("coreCharge", "real", 1, coreCharge.getElementSize(), coreCharge.getDevicePointer()),
+                CudaNonbondedUtilities::ParameterInfo("valenceCharge", "real", 1, valenceCharge.getElementSize(), valenceCharge.getDevicePointer()),
+                CudaNonbondedUtilities::ParameterInfo("alpha", "real", 1, alpha.getElementSize(), alpha.getDevicePointer()),
+                CudaNonbondedUtilities::ParameterInfo("dipole", "real", 3, labDipoles.getElementSize(), labDipoles.getDevicePointer()),
+                CudaNonbondedUtilities::ParameterInfo("qXX", "real", 1, labQuadrupoles[0].getElementSize(), labQuadrupoles[0].getDevicePointer()),
+                CudaNonbondedUtilities::ParameterInfo("qXY", "real", 1, labQuadrupoles[1].getElementSize(), labQuadrupoles[1].getDevicePointer()),
+                CudaNonbondedUtilities::ParameterInfo("qXZ", "real", 1, labQuadrupoles[2].getElementSize(), labQuadrupoles[2].getDevicePointer()),
+                CudaNonbondedUtilities::ParameterInfo("qYY", "real", 1, labQuadrupoles[3].getElementSize(), labQuadrupoles[3].getDevicePointer()),
+                CudaNonbondedUtilities::ParameterInfo("qYZ", "real", 1, labQuadrupoles[4].getElementSize(), labQuadrupoles[4].getDevicePointer())
+            }, field, fixedFieldKernel, fixedFieldArgs);
+        createFieldKernel(CudaAmoebaKernelSources::hippoMutualField, {
+                CudaNonbondedUtilities::ParameterInfo("alpha", "real", 1, alpha.getElementSize(), alpha.getDevicePointer()),
+                CudaNonbondedUtilities::ParameterInfo("inducedDipole", "real", 3, inducedDipole.getElementSize(), inducedDipole.getDevicePointer())
+            }, field, mutualFieldKernel, mutualFieldArgs);
+    }
+    
+    // Make sure the arrays for the neighbor list haven't been recreated.
+
+    if (nb.getUseCutoff()) {
+        if (maxTiles < nb.getInteractingTiles().getSize()) {
+            maxTiles = nb.getInteractingTiles().getSize();
+            fixedFieldArgs[4] = &nb.getInteractingTiles().getDevicePointer();
+            fixedFieldArgs[14] = &nb.getInteractingAtoms().getDevicePointer();
+        }
+    }
+
     // Compute the lab frame moments.
 
     void* computeMomentsArgs[] = {&cu.getPosq().getDevicePointer(), &multipoleParticles.getDevicePointer(),
@@ -3081,12 +3187,10 @@ double CudaCalcHippoNonbondedForceKernel::execute(ContextImpl& context, bool inc
         &labQuadrupoles[3].getDevicePointer(), &labQuadrupoles[4].getDevicePointer()};
     cu.executeKernel(computeMomentsKernel, computeMomentsArgs, cu.getNumAtoms());
 
-    // Map torques to force.
+    // Compute the field from fixed multipoles.
 
-    void* mapTorqueArgs[] = {&cu.getForce().getDevicePointer(), &torque.getDevicePointer(),
-        &cu.getPosq().getDevicePointer(), &multipoleParticles.getDevicePointer()};
-    cu.executeKernel(mapTorqueKernel, mapTorqueArgs, cu.getNumAtoms());
-    
+    cu.executeKernel(fixedFieldKernel, &fixedFieldArgs[0], nb.getNumForceThreadBlocks()*nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());
+
     // Record the current atom positions so we can tell later if they have changed.
     
     cu.getPosq().copyTo(lastPositions);
