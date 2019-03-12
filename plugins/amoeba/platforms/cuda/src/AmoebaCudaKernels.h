@@ -704,7 +704,7 @@ private:
     void ensureMultipolesValid(ContextImpl& context);
     void addTorquesToForces();
     void uploadRealVec(CudaArray& array, const std::vector<double>& values);
-    void createFieldKernel(const std::string& interactionSrc, std::vector<CudaNonbondedUtilities::ParameterInfo> params,
+    void createFieldKernel(const std::string& interactionSrc, std::vector<CudaArray*> params,
             CudaArray& fieldBuffer, CUfunction& kernel, std::vector<void*>& args);
     int numParticles, maxExtrapolationOrder, maxTiles;
     int fixedFieldThreads, inducedFieldThreads, electrostaticsThreads;

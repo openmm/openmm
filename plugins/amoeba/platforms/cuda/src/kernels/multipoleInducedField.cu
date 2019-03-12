@@ -849,16 +849,16 @@ extern "C" __global__ void initExtrapolatedDipoles(real* __restrict__ inducedDip
         extrapolatedDipoleGkPolar[index] = inducedDipoleGkPolar[index];
 #endif
     }
-    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < 6*NUM_ATOMS; index += blockDim.x*gridDim.x) {
 #ifndef HIPPO
+    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < 6*NUM_ATOMS; index += blockDim.x*gridDim.x) {
         inducedDipoleFieldGradient[index] = 0;
         inducedDipoleFieldGradientPolar[index] = 0;
-#endif
 #ifdef USE_GK
         inducedDipoleFieldGradientGk[index] = 0;
         inducedDipoleFieldGradientGkPolar[index] = 0;
 #endif
     }
+#endif
 }
 
 extern "C" __global__ void iterateExtrapolatedDipoles(int order, real* __restrict__ inducedDipole, real* __restrict__ extrapolatedDipole, long long* __restrict__ inducedDipoleField,

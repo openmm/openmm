@@ -52,7 +52,7 @@ typedef struct {
 } AtomData;
 
 /**
- * Compute a value based on pair interactions.
+ * Compute the electrostatic field.
  */
 extern "C" __global__ void computeField(const real4* __restrict__ posq, const unsigned int* __restrict__ exclusions,
         const ushort2* __restrict__ exclusionTiles, unsigned long long* __restrict__ fieldBuffers,
@@ -72,17 +72,17 @@ extern "C" __global__ void computeField(const real4* __restrict__ posq, const un
 
     // First loop: process tiles that contain exclusions.
     
-    const unsigned int firstExclusionTile = FIRST_EXCLUSION_TILE+warp*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
-    const unsigned int lastExclusionTile = FIRST_EXCLUSION_TILE+(warp+1)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
-    for (int pos = firstExclusionTile; pos < lastExclusionTile; pos++) {
-        const ushort2 tileIndices = exclusionTiles[pos];
+    const unsigned int firstExclusionTile = warp*NUM_TILES_WITH_EXCLUSIONS/totalWarps;
+    const unsigned int lastExclusionTile = (warp+1)*NUM_TILES_WITH_EXCLUSIONS/totalWarps;
+    for (int tile = firstExclusionTile; tile < lastExclusionTile; tile++) {
+        const ushort2 tileIndices = exclusionTiles[tile];
         const unsigned int x = tileIndices.x;
         const unsigned int y = tileIndices.y;
         real3 field = make_real3(0);
         unsigned int atom1 = x*TILE_SIZE + tgx;
         real4 pos1 = posq[atom1];
         LOAD_ATOM1_PARAMETERS
-        unsigned int excl = exclusions[pos*TILE_SIZE+tgx];
+        unsigned int excl = exclusions[tile*TILE_SIZE+tgx];
         if (x == y) {
             // This tile is on the diagonal.
 
@@ -180,10 +180,10 @@ extern "C" __global__ void computeField(const real4* __restrict__ posq, const un
     unsigned int numTiles = interactionCount[0];
     if (numTiles > maxTiles)
         return; // There wasn't enough memory for the neighbor list.
-    int pos = (int) (warp*(numTiles > maxTiles ? NUM_BLOCKS*((long long)NUM_BLOCKS+1)/2 : (long)numTiles)/totalWarps);
+    int tile = (int) (warp*(numTiles > maxTiles ? NUM_BLOCKS*((long long)NUM_BLOCKS+1)/2 : (long)numTiles)/totalWarps);
     int end = (int) ((warp+1)*(numTiles > maxTiles ? NUM_BLOCKS*((long long)NUM_BLOCKS+1)/2 : (long)numTiles)/totalWarps);
 #else
-    int pos = (int) (warp*(long long)numTiles/totalWarps);
+    int tile = (int) (warp*(long long)numTiles/totalWarps);
     int end = (int) ((warp+1)*(long long)numTiles/totalWarps);
 #endif
     int skipBase = 0;
@@ -192,7 +192,7 @@ extern "C" __global__ void computeField(const real4* __restrict__ posq, const un
     __shared__ volatile int skipTiles[THREAD_BLOCK_SIZE];
     skipTiles[threadIdx.x] = -1;
     
-    while (pos < end) {
+    while (tile < end) {
         real3 field = make_real3(0);
         bool includeTile = true;
         
@@ -201,22 +201,22 @@ extern "C" __global__ void computeField(const real4* __restrict__ posq, const un
         int x, y;
         bool singlePeriodicCopy = false;
 #ifdef USE_CUTOFF
-        x = tiles[pos];
+        x = tiles[tile];
         real4 blockSizeX = blockSize[x];
         singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= CUTOFF &&
                               0.5f*periodicBoxSize.y-blockSizeX.y >= CUTOFF &&
                               0.5f*periodicBoxSize.z-blockSizeX.z >= CUTOFF);
 #else
-        y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
-        x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+        y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*tile));
+        x = (tile-y*NUM_BLOCKS+y*(y+1)/2);
         if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
             y += (x < y ? -1 : 1);
-            x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+            x = (tile-y*NUM_BLOCKS+y*(y+1)/2);
         }
 
         // Skip over tiles that have exclusions, since they were already processed.
 
-        while (skipTiles[tbx+TILE_SIZE-1] < pos) {
+        while (skipTiles[tbx+TILE_SIZE-1] < tile) {
             if (skipBase+tgx < NUM_TILES_WITH_EXCLUSIONS) {
                 ushort2 tile = exclusionTiles[skipBase+tgx];
                 skipTiles[threadIdx.x] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
@@ -226,9 +226,9 @@ extern "C" __global__ void computeField(const real4* __restrict__ posq, const un
             skipBase += TILE_SIZE;            
             currentSkipIndex = tbx;
         }
-        while (skipTiles[currentSkipIndex] < pos)
+        while (skipTiles[currentSkipIndex] < tile)
             currentSkipIndex++;
-        includeTile = (skipTiles[currentSkipIndex] != pos);
+        includeTile = (skipTiles[currentSkipIndex] != tile);
 #endif
         if (includeTile) {
             unsigned int atom1 = x*TILE_SIZE + tgx;
@@ -239,7 +239,7 @@ extern "C" __global__ void computeField(const real4* __restrict__ posq, const un
             LOAD_ATOM1_PARAMETERS
             const unsigned int localAtomIndex = threadIdx.x;
 #ifdef USE_CUTOFF
-            unsigned int j = interactingAtoms[pos*TILE_SIZE+tgx];
+            unsigned int j = interactingAtoms[tile*TILE_SIZE+tgx];
 #else
             unsigned int j = y*TILE_SIZE + tgx;
 #endif
@@ -333,6 +333,6 @@ extern "C" __global__ void computeField(const real4* __restrict__ posq, const un
                 atomicAdd(&fieldBuffers[offset2+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].field.z*0x100000000)));
             }
         }
-        pos++;
+        tile++;
     }
 }
