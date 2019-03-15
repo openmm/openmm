@@ -28,6 +28,6 @@ computeDirectFieldDampingFactors(alpha1, r, fdamp3, fdamp5, fdamp7);
 real factor1 = invR3*coreCharge1 + fdamp3*invR3*valenceCharge1 + 3*fdamp5*invR5*dipoleDelta1 + 15*fdamp7*invR7*qdpoleDelta1;
 tempField2 = delta*factor1 - dipole1*fdamp3*invR3 - qDotDelta1*6*fdamp5*invR5;
 #ifdef COMPUTING_EXCEPTIONS
-tempField1 *= dipoleMultipoleScale;
-tempField2 *= dipoleMultipoleScale;
+tempField1 *= scale;
+tempField2 *= scale;
 #endif

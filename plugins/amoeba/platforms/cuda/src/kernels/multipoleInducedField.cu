@@ -871,7 +871,12 @@ extern "C" __global__ void iterateExtrapolatedDipoles(int order, real* __restric
         real* __restrict__ inducedDipoleFieldGradientGk, real* __restrict__ inducedDipoleFieldGradientGkPolar, long long* __restrict__ inducedDipoleFieldGk,
         long long* __restrict__ inducedDipoleFieldGkPolar, real* __restrict__ extrapolatedDipoleFieldGradientGk, real* __restrict__ extrapolatedDipoleFieldGradientGkPolar,
 #endif
-        const float* __restrict__ polarizability) {
+#ifdef HIPPO
+        const real* __restrict__ polarizability
+#else
+        const float* __restrict__ polarizability
+#endif
+    ) {
     const real fieldScale = 1/(real) 0x100000000;
     for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < 3*NUM_ATOMS; index += blockDim.x*gridDim.x) {
         int atom = index/3;

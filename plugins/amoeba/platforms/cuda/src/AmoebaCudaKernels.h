@@ -704,8 +704,9 @@ private:
     void ensureMultipolesValid(ContextImpl& context);
     void addTorquesToForces();
     void uploadRealVec(CudaArray& array, const std::vector<double>& values);
-    void createFieldKernel(const std::string& interactionSrc, std::vector<CudaArray*> params,
-            CudaArray& fieldBuffer, CUfunction& kernel, std::vector<void*>& args);
+    void createFieldKernel(const std::string& interactionSrc, std::vector<CudaArray*> params, CudaArray& fieldBuffer,
+        CUfunction& kernel, std::vector<void*>& args, CUfunction& exceptionKernel, std::vector<void*>& exceptionArgs,
+        CudaArray& exceptionAtoms, CudaArray& exceptionScale);
     int numParticles, maxExtrapolationOrder, maxTiles;
     int fixedFieldThreads, inducedFieldThreads, electrostaticsThreads;
     int gridSizeX, gridSizeY, gridSizeZ;
@@ -733,14 +734,15 @@ private:
     CudaArray pmePhi, pmePhidp, pmeCphi;
     CudaArray lastPositions;
     CudaArray exceptionScales[5];
+    CudaArray fixedFieldExceptionAtoms, mutualFieldExceptionAtoms, fixedFieldExceptionScale, mutualFieldExceptionScale;
     cufftHandle fft, dfft;
-    CUfunction computeMomentsKernel, fixedFieldKernel, mutualFieldKernel;
+    CUfunction computeMomentsKernel, fixedFieldKernel, fixedFieldExceptionKernel, mutualFieldKernel, mutualFieldExceptionKernel;
     CUfunction recordInducedDipolesKernel, computeFixedFieldKernel, computeInducedFieldKernel, updateInducedFieldKernel, electrostaticsKernel, mapTorqueKernel;
     CUfunction pmeSpreadFixedMultipolesKernel, pmeSpreadInducedDipolesKernel, pmeFinishSpreadChargeKernel, pmeConvolutionKernel;
     CUfunction pmeFixedPotentialKernel, pmeInducedPotentialKernel, pmeFixedForceKernel, pmeInducedForceKernel, pmeRecordInducedFieldDipolesKernel, computePotentialKernel;
     CUfunction initExtrapolatedKernel, iterateExtrapolatedKernel, computeExtrapolatedKernel, addExtrapolatedGradientKernel;
     CUfunction pmeTransformMultipolesKernel, pmeTransformPotentialKernel;
-    std::vector<void*> fixedFieldArgs, mutualFieldArgs;
+    std::vector<void*> fixedFieldArgs, fixedFieldExceptionArgs, mutualFieldArgs, mutualFieldExceptionArgs;
     static const int PmeOrder = 5;
 };
 

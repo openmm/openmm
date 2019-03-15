@@ -1,8 +1,8 @@
 real fdamp3, fdamp5;
 computeMutualFieldDampingFactors(alpha1, alpha2, r, fdamp3, fdamp5);
 #ifdef COMPUTING_EXCEPTIONS
-fdamp3 *= dipoleDipoleScale;
-fdamp5 *= dipoleDipoleScale;
+fdamp3 *= scale;
+fdamp5 *= scale;
 #endif
 real invR2 = invR*invR;
 real invR3 = invR*invR2;

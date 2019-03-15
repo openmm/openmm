@@ -317,22 +317,65 @@ extern "C" __global__ void computeField(const real4* __restrict__ posq, const un
         
             // Write results.
 
-            unsigned int offset1 = atom1;
-            atomicAdd(&fieldBuffers[offset1], static_cast<unsigned long long>((long long) (field.x*0x100000000)));
-            atomicAdd(&fieldBuffers[offset1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (field.y*0x100000000)));
-            atomicAdd(&fieldBuffers[offset1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (field.z*0x100000000)));
+            atomicAdd(&fieldBuffers[atom1], static_cast<unsigned long long>((long long) (field.x*0x100000000)));
+            atomicAdd(&fieldBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (field.y*0x100000000)));
+            atomicAdd(&fieldBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (field.z*0x100000000)));
 #ifdef USE_CUTOFF
             unsigned int atom2 = atomIndices[threadIdx.x];
 #else
             unsigned int atom2 = y*TILE_SIZE + tgx;
 #endif
             if (atom2 < PADDED_NUM_ATOMS) {
-                unsigned int offset2 = atom2;
-                atomicAdd(&fieldBuffers[offset2], static_cast<unsigned long long>((long long) (localData[threadIdx.x].field.x*0x100000000)));
-                atomicAdd(&fieldBuffers[offset2+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].field.y*0x100000000)));
-                atomicAdd(&fieldBuffers[offset2+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].field.z*0x100000000)));
+                atomicAdd(&fieldBuffers[atom2], static_cast<unsigned long long>((long long) (localData[threadIdx.x].field.x*0x100000000)));
+                atomicAdd(&fieldBuffers[atom2+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].field.y*0x100000000)));
+                atomicAdd(&fieldBuffers[atom2+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].field.z*0x100000000)));
             }
         }
         tile++;
+    }
+}
+
+#define COMPUTING_EXCEPTIONS
+
+/**
+ * Compute the electrostatic field from nonbonded exceptions.
+ */
+extern "C" __global__ void computeFieldExceptions(const real4* __restrict__ posq, unsigned long long* __restrict__ fieldBuffers,
+        const int2* exceptionAtoms, const real* exceptionScale
+#ifdef USE_CUTOFF
+        , real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ
+#endif
+        PARAMETER_ARGUMENTS) {
+    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_EXCEPTIONS; index += blockDim.x*gridDim.x) {
+        int2 atoms = exceptionAtoms[index];
+        int atom1 = atoms.x;
+        int atom2 = atoms.y;
+        real4 pos1 = posq[atom1];
+        real4 pos2 = posq[atom2];
+        LOAD_ATOM1_PARAMETERS
+        LOAD_ATOM2_PARAMETERS_FROM_GLOBAL
+        real scale = exceptionScale[index];
+        real3 delta = make_real3(pos2.x-pos1.x, pos2.y-pos1.y, pos2.z-pos1.z);
+#ifdef USE_PERIODIC
+        APPLY_PERIODIC_TO_DELTA(delta)
+#endif
+        real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+#ifdef USE_CUTOFF
+        if (r2 < CUTOFF_SQUARED && scale != 0) {
+#endif
+            real invR = RSQRT(r2);
+            real r = r2*invR;
+            real3 tempField1 = make_real3(0);
+            real3 tempField2 = make_real3(0);
+            COMPUTE_FIELD
+            atomicAdd(&fieldBuffers[atom1], static_cast<unsigned long long>((long long) (tempField1.x*0x100000000)));
+            atomicAdd(&fieldBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (tempField1.y*0x100000000)));
+            atomicAdd(&fieldBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (tempField1.z*0x100000000)));
+            atomicAdd(&fieldBuffers[atom2], static_cast<unsigned long long>((long long) (tempField2.x*0x100000000)));
+            atomicAdd(&fieldBuffers[atom2+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (tempField2.y*0x100000000)));
+            atomicAdd(&fieldBuffers[atom2+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (tempField2.z*0x100000000)));
+#ifdef USE_CUTOFF
+        }
+#endif
     }
 }
