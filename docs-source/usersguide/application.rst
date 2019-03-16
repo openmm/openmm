@@ -74,7 +74,7 @@ Alternatively you can request a version that is compiled for a specific CUDA
 version with the command
 ::
 
-    conda install -c omnia/label/cuda92 -c conda-forge openmm
+    conda install -c omnia/label/cuda92 -c omnia -c conda-forge openmm
 
 where :code:`cuda92` should be replaced with the particular CUDA version
 installed on your computer.  Supported values are :code:`cuda75`, :code:`cuda80`,
@@ -488,7 +488,7 @@ script, and can even run it for you.
 To install OpenMM-Setup, open a command line terminal and type the following command
 ::
 
-    conda install -c omnia openmm-setup
+    conda install -c omnia -c conda-forge openmm-setup
 
 You can then launch it by typing the command
 ::
