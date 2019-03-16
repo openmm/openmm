@@ -93,7 +93,8 @@ FOREACH(EX_ROOT ${F_EXAMPLES})
     INSTALL(FILES ${EX_ROOT}.f90 DESTINATION examples)
 ENDFOREACH(EX_ROOT ${F_EXAMPLES})
 
-INSTALL(FILES simulateAmber.py simulatePdb.py simulateGromacs.py benchmark.py argon-chemical-potential.py input.inpcrd input.prmtop input.pdb input.gro input.top 5dfr_minimized.pdb 5dfr_solv-cube_equil.pdb apoa1.pdb 
+# Install Python and input files for various codes
+INSTALL(FILES *.py *.pdb *.inpcrd *.prmtop *.dms *.gro *.top *.psf *.par *.rtf
         DESTINATION examples)
 
 INSTALL(FILES VisualStudio/HelloArgon.vcproj
