@@ -60,7 +60,6 @@ extern "C" __global__ void computeNonbonded(
     const unsigned int tgx = threadIdx.x & (TILE_SIZE-1); // index within the warp
     const unsigned int tbx = threadIdx.x - tgx;           // block warpIndex
     mixed energy = 0;
-    INIT_DERIVATIVES
     // used shared memory if the device cannot shuffle
 #ifndef ENABLE_SHUFFLE
     __shared__ AtomData localData[THREAD_BLOCK_SIZE];
@@ -465,5 +464,4 @@ extern "C" __global__ void computeNonbonded(
 #ifdef INCLUDE_ENERGY
     energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += energy;
 #endif
-    SAVE_DERIVATIVES
 }

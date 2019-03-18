@@ -714,7 +714,6 @@ private:
     double pmeAlpha, dpmeAlpha, cutoff;
     bool usePME, hasInitializedKernels, hasInitializedFFT, multipolesAreValid;
     std::vector<double> extrapolationCoefficients;
-    std::vector<std::vector<int> > exceptionAtoms;
     CudaContext& cu;
     const System& system;
     CudaArray multipoleParticles;
@@ -734,15 +733,15 @@ private:
     CudaArray pmePhi, pmePhidp, pmeCphi;
     CudaArray lastPositions;
     CudaArray exceptionScales[5];
-    CudaArray fixedFieldExceptionAtoms, mutualFieldExceptionAtoms, fixedFieldExceptionScale, mutualFieldExceptionScale;
+    CudaArray exceptionAtoms, fixedFieldExceptionAtoms, mutualFieldExceptionAtoms, fixedFieldExceptionScale, mutualFieldExceptionScale;
     cufftHandle fft, dfft;
-    CUfunction computeMomentsKernel, fixedFieldKernel, fixedFieldExceptionKernel, mutualFieldKernel, mutualFieldExceptionKernel;
+    CUfunction computeMomentsKernel, fixedFieldKernel, fixedFieldExceptionKernel, mutualFieldKernel, mutualFieldExceptionKernel, computeExceptionsKernel;
     CUfunction recordInducedDipolesKernel, computeFixedFieldKernel, computeInducedFieldKernel, updateInducedFieldKernel, electrostaticsKernel, mapTorqueKernel;
     CUfunction pmeSpreadFixedMultipolesKernel, pmeSpreadInducedDipolesKernel, pmeFinishSpreadChargeKernel, pmeConvolutionKernel;
     CUfunction pmeFixedPotentialKernel, pmeInducedPotentialKernel, pmeFixedForceKernel, pmeInducedForceKernel, pmeRecordInducedFieldDipolesKernel, computePotentialKernel;
     CUfunction initExtrapolatedKernel, iterateExtrapolatedKernel, computeExtrapolatedKernel, addExtrapolatedGradientKernel;
     CUfunction pmeTransformMultipolesKernel, pmeTransformPotentialKernel;
-    std::vector<void*> fixedFieldArgs, fixedFieldExceptionArgs, mutualFieldArgs, mutualFieldExceptionArgs;
+    std::vector<void*> fixedFieldArgs, fixedFieldExceptionArgs, mutualFieldArgs, mutualFieldExceptionArgs, computeExceptionsArgs;
     static const int PmeOrder = 5;
 };
 

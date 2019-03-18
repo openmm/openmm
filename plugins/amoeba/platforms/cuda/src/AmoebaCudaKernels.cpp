@@ -2774,7 +2774,7 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
     // Record exceptions and exclusions.
     
     vector<double> exceptionScaleVec[5], fixedFieldExceptionScaleVec, mutualFieldExceptionScaleVec;
-    vector<int2> fixedFieldExceptionAtomsVec, mutualFieldExceptionAtomsVec;
+    vector<int2> exceptionAtomsVec, fixedFieldExceptionAtomsVec, mutualFieldExceptionAtomsVec;
     for (int i = 0; i < force.getNumExceptions(); i++) {
         int particle1, particle2;
         double multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale;
@@ -2782,7 +2782,7 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
         exclusions[particle1].push_back(particle2);
         exclusions[particle2].push_back(particle1);
         if (multipoleMultipoleScale != 0 || dipoleMultipoleScale != 0 || dipoleDipoleScale != 0 || dispersionScale != 0 || repulsionScale != 0) {
-            exceptionAtoms.push_back({particle1, particle2});
+            exceptionAtomsVec.push_back(make_int2(particle1, particle2));
             exceptionScaleVec[0].push_back(multipoleMultipoleScale);
             exceptionScaleVec[1].push_back(dipoleMultipoleScale);
             exceptionScaleVec[2].push_back(dipoleDipoleScale);
@@ -2798,11 +2798,14 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
             }
         }
     }
-    if (exceptionAtoms.size() > 0)
+    if (exceptionAtomsVec.size() > 0) {
+        exceptionAtoms.initialize<int2>(cu, exceptionAtomsVec.size(), "exceptionAtoms");
+        exceptionAtoms.upload(exceptionAtomsVec);
         for (int i = 0; i < 5; i++) {
-            exceptionScales[i].initialize(cu, exceptionAtoms.size(), elementSize, "exceptionScales");
+            exceptionScales[i].initialize(cu, exceptionAtomsVec.size(), elementSize, "exceptionScales");
             uploadRealVec(exceptionScales[i], exceptionScaleVec[i]);
         }
+    }
     if (fixedFieldExceptionAtomsVec.size() > 0) {
         fixedFieldExceptionAtoms.initialize<int2>(cu, fixedFieldExceptionAtomsVec.size(), "fixedFieldExceptionAtoms");
         fixedFieldExceptionScale.initialize(cu, fixedFieldExceptionScaleVec.size(), elementSize, "fixedFieldExceptionScale");
@@ -3055,6 +3058,7 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
     CudaNonbondedUtilities& nb = cu.getNonbondedUtilities();
     nb.setKernelSource(CudaAmoebaKernelSources::hippoInteractionHeader+CudaAmoebaKernelSources::hippoNonbonded);
     nb.addArgument(CudaNonbondedUtilities::ParameterInfo("torqueBuffers", "unsigned long long", 1, torque.getElementSize(), torque.getDevicePointer(), false));
+    nb.addArgument(CudaNonbondedUtilities::ParameterInfo("extrapolatedDipole", "real3", 1, extrapolatedDipole.getElementSize(), extrapolatedDipole.getDevicePointer()));
     nb.addParameter(CudaNonbondedUtilities::ParameterInfo("coreCharge", "real", 1, coreCharge.getElementSize(), coreCharge.getDevicePointer()));
     nb.addParameter(CudaNonbondedUtilities::ParameterInfo("valenceCharge", "real", 1, valenceCharge.getElementSize(), valenceCharge.getDevicePointer()));
     nb.addParameter(CudaNonbondedUtilities::ParameterInfo("alpha", "real", 1, alpha.getElementSize(), alpha.getDevicePointer()));
@@ -3077,9 +3081,22 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
     replacements["SWITCH_C3"] = cu.doubleToString(10/pow(force.getSwitchingDistance()-force.getCutoffDistance(), 3.0));
     replacements["SWITCH_C4"] = cu.doubleToString(15/pow(force.getSwitchingDistance()-force.getCutoffDistance(), 4.0));
     replacements["SWITCH_C5"] = cu.doubleToString(6/pow(force.getSwitchingDistance()-force.getCutoffDistance(), 5.0));
-    string source = cu.replaceStrings(CudaAmoebaKernelSources::hippoInteraction, replacements);
-    nb.addInteraction(usePME, usePME, true, force.getCutoffDistance(), exclusions, source, force.getForceGroup());
+    replacements["MAX_EXTRAPOLATION_ORDER"] = cu.intToString(maxExtrapolationOrder);
+    replacements["EXTRAPOLATION_COEFFICIENTS_SUM"] = coefficients.str();
+    string interactionSource = cu.replaceStrings(CudaAmoebaKernelSources::hippoInteraction, replacements);
+    nb.addInteraction(usePME, usePME, true, force.getCutoffDistance(), exclusions, interactionSource, force.getForceGroup());
     nb.setUsePadding(false);
+    
+    // Create the kernel for computing exceptions.
+    
+    if (exceptionAtoms.isInitialized()) {
+        replacements["COMPUTE_INTERACTION"] = interactionSource;
+        string exceptionsSrc = CudaKernelSources::vectorOps+CudaAmoebaKernelSources::hippoInteractionHeader+CudaAmoebaKernelSources::hippoNonbondedExceptions;
+        exceptionsSrc = cu.replaceStrings(exceptionsSrc, replacements);
+        defines["NUM_EXCEPTIONS"] = cu.intToString(exceptionAtoms.getSize());
+        module = cu.createModule(exceptionsSrc, defines);
+        computeExceptionsKernel = cu.getKernel(module, "computeNonbondedExceptions");
+    }
     cu.addForce(new ForceInfo(force));
     cu.addPostComputation(new TorquePostComputation(*this));
 }
@@ -3202,6 +3219,43 @@ double CudaCalcHippoNonbondedForceKernel::execute(ContextImpl& context, bool inc
                 fixedFieldExceptionKernel, fixedFieldExceptionArgs, fixedFieldExceptionAtoms, fixedFieldExceptionScale);
         createFieldKernel(CudaAmoebaKernelSources::hippoMutualField, {&alpha, &inducedDipole}, inducedField, mutualFieldKernel, mutualFieldArgs,
                 mutualFieldExceptionKernel, mutualFieldExceptionArgs, mutualFieldExceptionAtoms, mutualFieldExceptionScale);
+        if (exceptionAtoms.isInitialized()) {
+            computeExceptionsArgs.push_back(&cu.getForce().getDevicePointer());
+            computeExceptionsArgs.push_back(&cu.getEnergyBuffer().getDevicePointer());
+            computeExceptionsArgs.push_back(&torque.getDevicePointer());
+            computeExceptionsArgs.push_back(&cu.getPosq().getDevicePointer());
+            computeExceptionsArgs.push_back(&extrapolatedDipole.getDevicePointer());
+            computeExceptionsArgs.push_back(&exceptionAtoms.getDevicePointer());
+            computeExceptionsArgs.push_back(&exceptionScales[0].getDevicePointer());
+            computeExceptionsArgs.push_back(&exceptionScales[1].getDevicePointer());
+            computeExceptionsArgs.push_back(&exceptionScales[2].getDevicePointer());
+            computeExceptionsArgs.push_back(&exceptionScales[3].getDevicePointer());
+            computeExceptionsArgs.push_back(&exceptionScales[4].getDevicePointer());
+            computeExceptionsArgs.push_back(&coreCharge.getDevicePointer());
+            computeExceptionsArgs.push_back(&valenceCharge.getDevicePointer());
+            computeExceptionsArgs.push_back(&alpha.getDevicePointer());
+            computeExceptionsArgs.push_back(&epsilon.getDevicePointer());
+            computeExceptionsArgs.push_back(&damping.getDevicePointer());
+            computeExceptionsArgs.push_back(&c6.getDevicePointer());
+            computeExceptionsArgs.push_back(&pauliK.getDevicePointer());
+            computeExceptionsArgs.push_back(&pauliQ.getDevicePointer());
+            computeExceptionsArgs.push_back(&pauliAlpha.getDevicePointer());
+            computeExceptionsArgs.push_back(&labDipoles.getDevicePointer());
+            computeExceptionsArgs.push_back(&inducedDipole.getDevicePointer());
+            computeExceptionsArgs.push_back(&labQuadrupoles[0].getDevicePointer());
+            computeExceptionsArgs.push_back(&labQuadrupoles[1].getDevicePointer());
+            computeExceptionsArgs.push_back(&labQuadrupoles[2].getDevicePointer());
+            computeExceptionsArgs.push_back(&labQuadrupoles[3].getDevicePointer());
+            computeExceptionsArgs.push_back(&labQuadrupoles[4].getDevicePointer());
+            computeExceptionsArgs.push_back(&extrapolatedDipole.getDevicePointer());
+            if (nb.getUseCutoff()) {
+                computeExceptionsArgs.push_back(cu.getPeriodicBoxSizePointer());
+                computeExceptionsArgs.push_back(cu.getInvPeriodicBoxSizePointer());
+                computeExceptionsArgs.push_back(cu.getPeriodicBoxVecXPointer());
+                computeExceptionsArgs.push_back(cu.getPeriodicBoxVecYPointer());
+                computeExceptionsArgs.push_back(cu.getPeriodicBoxVecZPointer());
+            }
+        }
     }
     
     // Make sure the arrays for the neighbor list haven't been recreated.
@@ -3234,6 +3288,11 @@ double CudaCalcHippoNonbondedForceKernel::execute(ContextImpl& context, bool inc
     // Iterate the induced dipoles.
 
     computeExtrapolatedDipoles(NULL);
+
+    // Compute nonbonded exceptions.
+
+    if (exceptionAtoms.isInitialized())
+        cu.executeKernel(computeExceptionsKernel, &computeExceptionsArgs[0], exceptionAtoms.getSize());
 
     // Record the current atom positions so we can tell later if they have changed.
     

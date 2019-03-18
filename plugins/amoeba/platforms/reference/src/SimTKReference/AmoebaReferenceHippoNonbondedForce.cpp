@@ -888,44 +888,46 @@ void AmoebaReferenceHippoNonbondedForce::calculateInducedDipolePairIxn(const Mul
     int i = particleI.particleIndex;
     int k = particleK.particleIndex;
     for (int j = 0; j < _maxPTOrder-1; j++) {
-        double uirm = _ptDipoleD[j][i].dot(deltaR);
+        Vec3 extDipole1 = _ptDipoleD[j][i];
+        double uirm = extDipole1.dot(deltaR);
         for (int m = 0; m < _maxPTOrder-1-j; m++) {
-            double ukrm = _ptDipoleD[m][k].dot(deltaR);
+            Vec3 extDipole2 = _ptDipoleD[m][k];
+            double ukrm = extDipole2.dot(deltaR);
             double term1 = 2*fdampIK5*rr5;
             double term2 = term1*deltaR[0];
             double term3 = rr5*fdampIK5 - rr7*fdampIK7*deltaR[0]*deltaR[0];
-            double tixx = _ptDipoleD[j][i][0]*term2 + uirm*term3;
-            double tkxx = _ptDipoleD[m][k][0]*term2 + ukrm*term3;
+            double tixx = extDipole1[0]*term2 + uirm*term3;
+            double tkxx = extDipole2[0]*term2 + ukrm*term3;
             term2 = term1*deltaR[1];
             term3 = rr5*fdampIK5 - rr7*fdampIK7*deltaR[1]*deltaR[1];
-            double tiyy = _ptDipoleD[j][i][1]*term2 + uirm*term3;
-            double tkyy = _ptDipoleD[m][k][1]*term2 + ukrm*term3;
+            double tiyy = extDipole1[1]*term2 + uirm*term3;
+            double tkyy = extDipole2[1]*term2 + ukrm*term3;
             term2 = term1*deltaR[2];
             term3 = rr5*fdampIK5 - rr7*fdampIK7*deltaR[2]*deltaR[2];
-            double tizz = _ptDipoleD[j][i][2]*term2 + uirm*term3;
-            double tkzz = _ptDipoleD[m][k][2]*term2 + ukrm*term3;
+            double tizz = extDipole1[2]*term2 + uirm*term3;
+            double tkzz = extDipole2[2]*term2 + ukrm*term3;
             term1 = rr5*fdampIK5*deltaR[1];
             term2 = rr5*fdampIK5*deltaR[0];
             term3 = deltaR[1] * (rr7*fdampIK7*deltaR[0]);
-            double tixy = _ptDipoleD[j][i][0]*term1 + _ptDipoleD[j][i][1]*term2 - uirm*term3;
-            double tkxy = _ptDipoleD[m][k][0]*term1 + _ptDipoleD[m][k][1]*term2 - ukrm*term3;
+            double tixy = extDipole1[0]*term1 + extDipole1[1]*term2 - uirm*term3;
+            double tkxy = extDipole2[0]*term1 + extDipole2[1]*term2 - ukrm*term3;
             term1 = rr5 *fdampIK5 * deltaR[2];
             term3 = deltaR[2] * (rr7*fdampIK7*deltaR[0]);
-            double tixz = _ptDipoleD[j][i][0]*term1 + _ptDipoleD[j][i][2]*term2 - uirm*term3;
-            double tkxz = _ptDipoleD[m][k][0]*term1 + _ptDipoleD[m][k][2]*term2 - ukrm*term3;
+            double tixz = extDipole1[0]*term1 + extDipole1[2]*term2 - uirm*term3;
+            double tkxz = extDipole2[0]*term1 + extDipole2[2]*term2 - ukrm*term3;
             term2 = rr5*fdampIK5*deltaR[1];
             term3 = deltaR[2] * (rr7*fdampIK7*deltaR[1]);
-            double tiyz = _ptDipoleD[j][i][1]*term1 + _ptDipoleD[j][i][2]*term2 - uirm*term3;
-            double tkyz = _ptDipoleD[m][k][1]*term1 + _ptDipoleD[m][k][2]*term2 - ukrm*term3;
-            double depx = tixx*_ptDipoleD[m][k][0] + tkxx*_ptDipoleD[j][i][0]
-                 + tixy*_ptDipoleD[m][k][1] + tkxy*_ptDipoleD[j][i][1]
-                 + tixz*_ptDipoleD[m][k][2] + tkxz*_ptDipoleD[j][i][2];
-            double depy = tixy*_ptDipoleD[m][k][0] + tkxy*_ptDipoleD[j][i][0]
-                 + tiyy*_ptDipoleD[m][k][1] + tkyy*_ptDipoleD[j][i][1]
-                 + tiyz*_ptDipoleD[m][k][2] + tkyz*_ptDipoleD[j][i][2];
-            double depz = tixz*_ptDipoleD[m][k][0] + tkxz*_ptDipoleD[j][i][0]
-                 + tiyz*_ptDipoleD[m][k][1] + tkyz*_ptDipoleD[j][i][1]
-                 + tizz*_ptDipoleD[m][k][2] + tkzz*_ptDipoleD[j][i][2];
+            double tiyz = extDipole1[1]*term1 + extDipole1[2]*term2 - uirm*term3;
+            double tkyz = extDipole2[1]*term1 + extDipole2[2]*term2 - ukrm*term3;
+            double depx = tixx*extDipole2[0] + tkxx*extDipole1[0]
+                 + tixy*extDipole2[1] + tkxy*extDipole1[1]
+                 + tixz*extDipole2[2] + tkxz*extDipole1[2];
+            double depy = tixy*extDipole2[0] + tkxy*extDipole1[0]
+                 + tiyy*extDipole2[1] + tkyy*extDipole1[1]
+                 + tiyz*extDipole2[2] + tkyz*extDipole1[2];
+            double depz = tixz*extDipole2[0] + tkxz*extDipole1[0]
+                 + tiyz*extDipole2[1] + tkyz*extDipole1[1]
+                 + tizz*extDipole2[2] + tkzz*extDipole1[2];
             labForce += ddscale*_extPartCoefficients[j+m+1]*Vec3(depx, depy, depz);
         }
     }
@@ -2850,44 +2852,46 @@ void AmoebaReferencePmeHippoNonbondedForce::calculateInducedDipolePairIxn(const 
     int i = particleI.particleIndex;
     int k = particleK.particleIndex;
     for (int j = 0; j < _maxPTOrder-1; j++) {
-        double uirm = _ptDipoleD[j][i].dot(deltaR);
+        Vec3 extDipole1 = _ptDipoleD[j][i];
+        double uirm = extDipole1.dot(deltaR);
         for (int m = 0; m < _maxPTOrder-1-j; m++) {
-            double ukrm = _ptDipoleD[m][k].dot(deltaR);
+            Vec3 extDipole2 = _ptDipoleD[m][k];
+            double ukrm = extDipole2.dot(deltaR);
             double term1 = 2*rr5ik;
             double term2 = term1*deltaR[0];
             double term3 = rr5ik - rr7ik*deltaR[0]*deltaR[0];
-            double tixx = _ptDipoleD[j][i][0]*term2 + uirm*term3;
-            double tkxx = _ptDipoleD[m][k][0]*term2 + ukrm*term3;
+            double tixx = extDipole1[0]*term2 + uirm*term3;
+            double tkxx = extDipole2[0]*term2 + ukrm*term3;
             term2 = term1*deltaR[1];
             term3 = rr5ik - rr7ik*deltaR[1]*deltaR[1];
-            double tiyy = _ptDipoleD[j][i][1]*term2 + uirm*term3;
-            double tkyy = _ptDipoleD[m][k][1]*term2 + ukrm*term3;
+            double tiyy = extDipole1[1]*term2 + uirm*term3;
+            double tkyy = extDipole2[1]*term2 + ukrm*term3;
             term2 = term1*deltaR[2];
             term3 = rr5ik - rr7ik*deltaR[2]*deltaR[2];
-            double tizz = _ptDipoleD[j][i][2]*term2 + uirm*term3;
-            double tkzz = _ptDipoleD[m][k][2]*term2 + ukrm*term3;
+            double tizz = extDipole1[2]*term2 + uirm*term3;
+            double tkzz = extDipole2[2]*term2 + ukrm*term3;
             term1 = rr5ik*deltaR[1];
             term2 = rr5ik*deltaR[0];
             term3 = deltaR[1] * (rr7ik*deltaR[0]);
-            double tixy = _ptDipoleD[j][i][0]*term1 + _ptDipoleD[j][i][1]*term2 - uirm*term3;
-            double tkxy = _ptDipoleD[m][k][0]*term1 + _ptDipoleD[m][k][1]*term2 - ukrm*term3;
+            double tixy = extDipole1[0]*term1 + extDipole1[1]*term2 - uirm*term3;
+            double tkxy = extDipole2[0]*term1 + extDipole2[1]*term2 - ukrm*term3;
             term1 = rr5ik * deltaR[2];
             term3 = deltaR[2] * (rr7ik*deltaR[0]);
-            double tixz = _ptDipoleD[j][i][0]*term1 + _ptDipoleD[j][i][2]*term2 - uirm*term3;
-            double tkxz = _ptDipoleD[m][k][0]*term1 + _ptDipoleD[m][k][2]*term2 - ukrm*term3;
+            double tixz = extDipole1[0]*term1 + extDipole1[2]*term2 - uirm*term3;
+            double tkxz = extDipole2[0]*term1 + extDipole2[2]*term2 - ukrm*term3;
             term2 = rr5ik*deltaR[1];
             term3 = deltaR[2] * (rr7ik*deltaR[1]);
-            double tiyz = _ptDipoleD[j][i][1]*term1 + _ptDipoleD[j][i][2]*term2 - uirm*term3;
-            double tkyz = _ptDipoleD[m][k][1]*term1 + _ptDipoleD[m][k][2]*term2 - ukrm*term3;
-            double depx = tixx*_ptDipoleD[m][k][0] + tkxx*_ptDipoleD[j][i][0]
-                 + tixy*_ptDipoleD[m][k][1] + tkxy*_ptDipoleD[j][i][1]
-                 + tixz*_ptDipoleD[m][k][2] + tkxz*_ptDipoleD[j][i][2];
-            double depy = tixy*_ptDipoleD[m][k][0] + tkxy*_ptDipoleD[j][i][0]
-                 + tiyy*_ptDipoleD[m][k][1] + tkyy*_ptDipoleD[j][i][1]
-                 + tiyz*_ptDipoleD[m][k][2] + tkyz*_ptDipoleD[j][i][2];
-            double depz = tixz*_ptDipoleD[m][k][0] + tkxz*_ptDipoleD[j][i][0]
-                 + tiyz*_ptDipoleD[m][k][1] + tkyz*_ptDipoleD[j][i][1]
-                 + tizz*_ptDipoleD[m][k][2] + tkzz*_ptDipoleD[j][i][2];
+            double tiyz = extDipole1[1]*term1 + extDipole1[2]*term2 - uirm*term3;
+            double tkyz = extDipole2[1]*term1 + extDipole2[2]*term2 - ukrm*term3;
+            double depx = tixx*extDipole2[0] + tkxx*extDipole1[0]
+                 + tixy*extDipole2[1] + tkxy*extDipole1[1]
+                 + tixz*extDipole2[2] + tkxz*extDipole1[2];
+            double depy = tixy*extDipole2[0] + tkxy*extDipole1[0]
+                 + tiyy*extDipole2[1] + tkyy*extDipole1[1]
+                 + tiyz*extDipole2[2] + tkyz*extDipole1[2];
+            double depz = tixz*extDipole2[0] + tkxz*extDipole1[0]
+                 + tiyz*extDipole2[1] + tkyz*extDipole1[1]
+                 + tizz*extDipole2[2] + tkzz*extDipole1[2];
             labForce += _extPartCoefficients[j+m+1]*Vec3(depx, depy, depz);
         }
     }

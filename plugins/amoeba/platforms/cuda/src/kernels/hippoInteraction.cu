@@ -8,8 +8,11 @@ unsigned int includeInteraction = (!isExcluded);
 
 real mat[3][3];
 formQIRotationMatrix(delta, rInv, mat);
+real3 labForce = make_real3(0);
 real3 qiDipole1 = rotateVectorToQI(dipole1, mat);
 real3 qiDipole2 = rotateVectorToQI(dipole2, mat);
+real3 qiInducedDipole1 = rotateVectorToQI(inducedDipole1, mat);
+real3 qiInducedDipole2 = rotateVectorToQI(inducedDipole2, mat);
 real qiQXX1, qiQXY1, qiQXZ1, qiQYY1, qiQYZ1, qiQZZ1;
 real qiQXX2, qiQXY2, qiQXZ2, qiQYY2, qiQYZ2, qiQZZ2;
 rotateQuadrupoleToQI(qXX1, qXY1, qXZ1, qYY1, qYZ1, qiQXX1, qiQXY1, qiQXZ1, qiQYY1, qiQYZ1, qiQZZ1, mat);
@@ -130,6 +133,130 @@ real rr11 = 9*rr9*rInv2;
     tempTorque2 += includeInteraction ? tK : make_real3(0);
 }
 
+// Compute the induced dipole interactions.
+
+{
+    real uir = qiInducedDipole1.z*r;
+    real ukr = qiInducedDipole2.z*r;
+
+    // Apply charge penetration damping to scale factors.
+
+    real fdampI1, fdampI3, fdampI5, fdampI7, fdampI9;
+    real fdampK1, fdampK3, fdampK5, fdampK7, fdampK9;
+    real fdampIK1, fdampIK3, fdampIK5, fdampIK7, fdampIK9, fdampIK11;
+    computeOverlapDampingFactors(alpha1, alpha2, r, fdampI1, fdampI3, fdampI5, fdampI7, fdampI9, fdampK1, fdampK3, fdampK5, fdampK7, fdampK9,
+                                 fdampIK1, fdampIK3, fdampIK5, fdampIK7, fdampIK9, fdampIK11);
+    real scale = ENERGY_SCALE_FACTOR;
+#ifdef COMPUTING_EXCEPTIONS
+    scale *= dipoleMultipoleScale;
+#endif
+    real dsr3i = rr3*fdampI3*scale;
+    real dsr5i = rr5*fdampI5*scale;
+    real dsr7i = rr7*fdampI7*scale;
+    real dsr3k = rr3*fdampK3*scale;
+    real dsr5k = rr5*fdampK5*scale;
+    real dsr7k = rr7*fdampK7*scale;
+
+    // Get the induced dipole field used for dipole torques.
+
+    real3 torqueField1 = dsr3i*qiInducedDipole2;
+    torqueField1.z -= dsr5i*ukr*r;
+    real3 torqueField2 = dsr3k*qiInducedDipole1;
+    torqueField2.z -= dsr5k*uir*r;
+
+    // Get induced dipole field gradient used for quadrupole torques.
+
+    real3 dtorqueField1 = 2*r*dsr5i*qiInducedDipole2;
+    dtorqueField1.z -= r2*dsr7i*ukr;
+    real3 dtorqueField2 = -2*r*dsr5k*qiInducedDipole1;
+    dtorqueField2.z += r2*dsr7k*uir;
+
+    // Get the field gradient for direct polarization force
+
+    real t1XX = valenceCharge1*rr3*fdampI3 + coreCharge1*rr3 + dir*rr5*fdampI5 - qxI.x*2*rr5*fdampI5 + qi.z*r*rr7*fdampI7;
+    real t2XX = valenceCharge2*rr3*fdampK3 + coreCharge2*rr3 - dkr*rr5*fdampK5 - qxK.x*2*rr5*fdampK5 + qk.z*r*rr7*fdampK7;
+    real t1YY = valenceCharge1*rr3*fdampI3 + coreCharge1*rr3 + dir*rr5*fdampI5 - qyI.y*2*rr5*fdampI5 + qi.z*r*rr7*fdampI7;
+    real t2YY = valenceCharge2*rr3*fdampK3 + coreCharge2*rr3 - dkr*rr5*fdampK5 - qyK.y*2*rr5*fdampK5 + qk.z*r*rr7*fdampK7;
+    real t1ZZ = valenceCharge1*(rr3*fdampI3-rr5*fdampI5*r2) + coreCharge1*(rr3-rr5*r2) + qiDipole1.z*2*rr5*fdampI5*r -
+              dir*(rr7*fdampI7*r2-rr5*fdampI5) - qzI.z*2*rr5*fdampI5 + qi.z*5*rr7*fdampI7*r - qir*rr9*fdampI9*r2;
+    real t2ZZ = valenceCharge2*(rr3*fdampK3-rr5*fdampK5*r2) + coreCharge2*(rr3-rr5*r2) - qiDipole2.z*2*rr5*fdampK5*r +
+              dkr*(rr7*fdampK7*r2-rr5*fdampK5) - qzK.z*2*rr5*fdampK5 + qk.z*5*rr7*fdampK7*r - qkr*rr9*fdampK9*r2;
+    real t1XY = -qxI.y*2*rr5*fdampI5;
+    real t2XY = -qxK.y*2*rr5*fdampK5;
+    real t1XZ = qiDipole1.x*rr5*fdampI5*r - qxI.z*2*rr5*fdampI5 + qi.x*2*rr7*fdampI7*r;
+    real t2XZ = -qiDipole2.x*rr5*fdampK5*r - qxK.z*2*rr5*fdampK5 + qk.x*2*rr7*fdampK7*r;
+    real t1YZ = qiDipole1.y*rr5*fdampI5*r - qyI.z*2*rr5*fdampI5 + qi.y*2*rr7*fdampI7*r;
+    real t2YZ = -qiDipole2.y*rr5*fdampK5*r - qyK.z*2*rr5*fdampK5 + qk.y*2*rr7*fdampK7*r;
+
+    // Get the dEp/dR terms for chgpen direct polarization force.
+
+    real depx = t1XX*qiInducedDipole2.x + t1XY*qiInducedDipole2.y + t1XZ*qiInducedDipole2.z - t2XX*qiInducedDipole1.x - t2XY*qiInducedDipole1.y - t2XZ*qiInducedDipole1.z;
+    real depy = t1XY*qiInducedDipole2.x + t1YY*qiInducedDipole2.y + t1YZ*qiInducedDipole2.z - t2XY*qiInducedDipole1.x - t2YY*qiInducedDipole1.y - t2YZ*qiInducedDipole1.z;
+    real depz = t1XZ*qiInducedDipole2.x + t1YZ*qiInducedDipole2.y + t1ZZ*qiInducedDipole2.z - t2XZ*qiInducedDipole1.x - t2YZ*qiInducedDipole1.y - t2ZZ*qiInducedDipole1.z;
+    real3 indForce = scale*make_real3(depx, depy, depz);
+
+    // Torque is induced field and gradient cross permanent moments.
+
+    real3 tI = cross(torqueField1, qiDipole1);
+    tI.x += -qxI.y*dtorqueField1.x - 2*qyI.z*dtorqueField1.z + (qzI.z-qyI.y)*dtorqueField1.y;
+    tI.y += qxI.y*dtorqueField1.y + 2*qxI.z*dtorqueField1.z + (qxI.x-qzI.z)*dtorqueField1.x;
+    tI.z += qyI.z*dtorqueField1.x - qxI.z*dtorqueField1.y;
+    real3 tK = cross(torqueField2, qiDipole2);
+    tK.x += -qxK.y*dtorqueField2.x - 2*qyK.z*dtorqueField2.z + (qzK.z-qyK.y)*dtorqueField2.y;
+    tK.y += qxK.y*dtorqueField2.y + 2*qxK.z*dtorqueField2.z + (qxK.x-qzK.z)*dtorqueField2.x;
+    tK.z += qyK.z*dtorqueField2.x - qxK.z*dtorqueField2.y;
+    tempForce -= includeInteraction ? indForce : make_real3(0);
+    tempTorque1 -= includeInteraction ? tI : make_real3(0);
+    tempTorque2 -= includeInteraction ? tK : make_real3(0);
+
+    // Get the dtau/dr terms used for OPT polarization force.
+
+#ifdef COMPUTING_EXCEPTIONS
+    real ddscale = dipoleDipoleScale*ENERGY_SCALE_FACTOR/2;
+#else
+    real ddscale = ENERGY_SCALE_FACTOR/2;
+#endif
+    real coeff[] = {EXTRAPOLATION_COEFFICIENTS_SUM};
+    for (int j = 0; j < MAX_EXTRAPOLATION_ORDER-1; j++) {
+        real3 extDipole1 = (atom1 < NUM_ATOMS ? extrapolatedDipole[j*NUM_ATOMS+atom1] : make_real3(0));
+        real uirm = dot(extDipole1, delta);
+        for (int m = 0; m < MAX_EXTRAPOLATION_ORDER-1-j; m++) {
+            real3 extDipole2 = (atom2 < NUM_ATOMS ? extrapolatedDipole[m*NUM_ATOMS+atom2] : make_real3(0));
+            real ukrm = dot(extDipole2, delta);
+            real term1 = 2*fdampIK5*rr5;
+            real term2 = term1*delta.x;
+            real term3 = rr5*fdampIK5 - rr7*fdampIK7*delta.x*delta.x;
+            real tixx = extDipole1.x*term2 + uirm*term3;
+            real tkxx = extDipole2.x*term2 + ukrm*term3;
+            term2 = term1*delta.y;
+            term3 = rr5*fdampIK5 - rr7*fdampIK7*delta.y*delta.y;
+            real tiyy = extDipole1.y*term2 + uirm*term3;
+            real tkyy = extDipole2.y*term2 + ukrm*term3;
+            term2 = term1*delta.z;
+            term3 = rr5*fdampIK5 - rr7*fdampIK7*delta.z*delta.z;
+            real tizz = extDipole1.z*term2 + uirm*term3;
+            real tkzz = extDipole2.z*term2 + ukrm*term3;
+            term1 = rr5*fdampIK5*delta.y;
+            term2 = rr5*fdampIK5*delta.x;
+            term3 = delta.y * (rr7*fdampIK7*delta.x);
+            real tixy = extDipole1.x*term1 + extDipole1.y*term2 - uirm*term3;
+            real tkxy = extDipole2.x*term1 + extDipole2.y*term2 - ukrm*term3;
+            term1 = rr5 *fdampIK5 * delta.z;
+            term3 = delta.z * (rr7*fdampIK7*delta.x);
+            real tixz = extDipole1.x*term1 + extDipole1.z*term2 - uirm*term3;
+            real tkxz = extDipole2.x*term1 + extDipole2.z*term2 - ukrm*term3;
+            term2 = rr5*fdampIK5*delta.y;
+            term3 = delta.z * (rr7*fdampIK7*delta.y);
+            real tiyz = extDipole1.y*term1 + extDipole1.z*term2 - uirm*term3;
+            real tkyz = extDipole2.y*term1 + extDipole2.z*term2 - ukrm*term3;
+            real depx = tixx*extDipole2.x + tkxx*extDipole1.x + tixy*extDipole2.y + tkxy*extDipole1.y + tixz*extDipole2.z + tkxz*extDipole1.z;
+            real depy = tixy*extDipole2.x + tkxy*extDipole1.x + tiyy*extDipole2.y + tkyy*extDipole1.y + tiyz*extDipole2.z + tkyz*extDipole1.z;
+            real depz = tixz*extDipole2.x + tkxz*extDipole1.x + tiyz*extDipole2.y + tkyz*extDipole1.y + tizz*extDipole2.z + tkzz*extDipole1.z;
+            labForce += ddscale*coeff[j+m+1]*make_real3(depx, depy, depz);
+        }
+    }
+}
+
 // Compute the repulsion interaction.
 
 {
@@ -225,6 +352,10 @@ real rr11 = 9*rr9*rInv2;
         ctEnergy *= switchValue;
     }
 #endif
+#ifdef COMPUTING_EXCEPTIONS
+    ctForce *= multipoleMultipoleScale;
+    ctEnergy *= multipoleMultipoleScale;
+#endif
     tempEnergy += includeInteraction ? ctEnergy : 0;
     tempForce.z += includeInteraction ? ctForce*r : 0;
 }
@@ -232,7 +363,7 @@ real rr11 = 9*rr9*rInv2;
 // Rotate back to the lab frame.
 
 if (includeInteraction) {
-    tempForce = rotateVectorFromQI(tempForce, mat);
+    tempForce = rotateVectorFromQI(tempForce, mat) - labForce;
     tempTorque1 = rotateVectorFromQI(tempTorque1, mat);
     tempTorque2 = rotateVectorFromQI(tempTorque2, mat);
 }

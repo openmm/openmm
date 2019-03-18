@@ -341,7 +341,7 @@ extern "C" __global__ void computeField(const real4* __restrict__ posq, const un
  * Compute the electrostatic field from nonbonded exceptions.
  */
 extern "C" __global__ void computeFieldExceptions(const real4* __restrict__ posq, unsigned long long* __restrict__ fieldBuffers,
-        const int2* exceptionAtoms, const real* exceptionScale
+        const int2* __restrict__ exceptionAtoms, const real* __restrict__ exceptionScale
 #ifdef USE_CUTOFF
         , real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ
 #endif
