@@ -9,10 +9,8 @@
 typedef struct {
     real x, y, z;
     real q;
-#ifndef ENABLE_SHUFFLE
     real fx, fy, fz;
     real tx, ty, tz;
-#endif
     ATOM_PARAMETER_DATA
 #ifndef PARAMETER_SIZE_IS_EVEN
     real padding;

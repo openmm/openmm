@@ -995,3 +995,13 @@ extern "C" __global__ void addExtrapolatedFieldGradientToForce(long long* __rest
         forceBuffers[atom+PADDED_NUM_ATOMS*2] += (long long) (fz*0x100000000);
     }
 }
+
+#ifdef HIPPO
+extern "C" __global__ void computePolarizationEnergy(mixed* __restrict__ energyBuffer, const real3* __restrict__ inducedDipole,
+        const real3* __restrict__ extrapolatedDipole, const real* __restrict__ polarizability) {
+    mixed energy = 0;
+    for (int atom = blockIdx.x*blockDim.x+threadIdx.x; atom < NUM_ATOMS; atom += blockDim.x*gridDim.x)
+        energy -= (ENERGY_SCALE_FACTOR/2)*dot(extrapolatedDipole[atom], inducedDipole[atom])/polarizability[atom];
+    energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += energy;
+}
+#endif

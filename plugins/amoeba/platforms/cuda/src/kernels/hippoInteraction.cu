@@ -63,6 +63,14 @@ real rr7 = 5*rr5*rInv2;
 real rr9 = 7*rr7*rInv2;
 real rr11 = 9*rr9*rInv2;
 
+// Compute damping factors for multipole interactions.
+
+real fdampI1, fdampI3, fdampI5, fdampI7, fdampI9;
+real fdampK1, fdampK3, fdampK5, fdampK7, fdampK9;
+real fdampIK1, fdampIK3, fdampIK5, fdampIK7, fdampIK9, fdampIK11;
+computeOverlapDampingFactors(alpha1, alpha2, r, fdampI1, fdampI3, fdampI5, fdampI7, fdampI9, fdampK1, fdampK3, fdampK5, fdampK7, fdampK9,
+                             fdampIK1, fdampIK3, fdampIK5, fdampIK7, fdampIK9, fdampIK11);
+
 // Compute the fixed multipole interaction.
 
 {
@@ -80,11 +88,6 @@ real rr11 = 9*rr9*rInv2;
     real term3ik = valenceCharge1*qkr + valenceCharge2*qir - dir*dkr + 2*(dkqi-diqk+qiqk);
     real term4ik = dir*qkr - dkr*qir - 4*qik;
     real term5ik = qir*qkr;
-    real fdampI1, fdampI3, fdampI5, fdampI7, fdampI9;
-    real fdampK1, fdampK3, fdampK5, fdampK7, fdampK9;
-    real fdampIK1, fdampIK3, fdampIK5, fdampIK7, fdampIK9, fdampIK11;
-    computeOverlapDampingFactors(alpha1, alpha2, r, fdampI1, fdampI3, fdampI5, fdampI7, fdampI9, fdampK1, fdampK3, fdampK5, fdampK7, fdampK9,
-                                 fdampIK1, fdampIK3, fdampIK5, fdampIK7, fdampIK9, fdampIK11);
     real rr1i = fdampI1*rr1;
     real rr3i = fdampI3*rr3;
     real rr5i = fdampI5*rr5;
@@ -141,11 +144,6 @@ real rr11 = 9*rr9*rInv2;
 
     // Apply charge penetration damping to scale factors.
 
-    real fdampI1, fdampI3, fdampI5, fdampI7, fdampI9;
-    real fdampK1, fdampK3, fdampK5, fdampK7, fdampK9;
-    real fdampIK1, fdampIK3, fdampIK5, fdampIK7, fdampIK9, fdampIK11;
-    computeOverlapDampingFactors(alpha1, alpha2, r, fdampI1, fdampI3, fdampI5, fdampI7, fdampI9, fdampK1, fdampK3, fdampK5, fdampK7, fdampK9,
-                                 fdampIK1, fdampIK3, fdampIK5, fdampIK7, fdampIK9, fdampIK11);
     real scale = ENERGY_SCALE_FACTOR;
 #ifdef COMPUTING_EXCEPTIONS
     scale *= dipoleMultipoleScale;
@@ -322,16 +320,28 @@ real rr11 = 9*rr9*rInv2;
 // Compute the dispersion force and energy.
 
 {
-    real dispEnergy = -c61*c62/(r2*r2*r2);
-    real dispForce = -6*dispEnergy*rInv;
-#ifdef COMPUTING_EXCEPTIONS
-    dispEnergy *= dispersionScale;
-    dispForce *= dispersionScale;
+    real rInv6 = rInv2*rInv2*rInv2;
+#ifndef COMPUTING_EXCEPTIONS
+    real dispersionScale = 1;
 #endif
     real fdamp, ddamp;
     computeDispersionDampingFactors(alpha1, alpha2, r, fdamp, ddamp);
+#if USE_EWALD
+    real ralpha2 = r2*DPME_ALPHA*DPME_ALPHA;
+    real ralpha4 = ralpha2*ralpha2;
+    real expterm = EXP(-ralpha2);
+    real expa = expterm * (1 + ralpha2 + ralpha4/2);
+    real scale = dispersionScale*fdamp*fdamp - 1;
+    real cick = c61*c62;
+    real dispEnergy = -cick*(expa+scale)*rInv6;
+    real rterm = -ralpha2*ralpha4*expterm*rInv;
+    real dispForce = 6*dispEnergy*rInv + cick*rInv6*(rterm + 2*dispersionScale*fdamp*ddamp);
+#else
+    real dispEnergy = -dispersionScale*c61*c62*rInv6;
+    real dispForce = -6*dispEnergy*rInv;
     dispForce = dispForce*fdamp*fdamp + 2*dispEnergy*fdamp*ddamp;
     dispEnergy *= fdamp*fdamp;
+#endif
     tempEnergy += includeInteraction ? dispEnergy : 0;
     tempForce.z += includeInteraction ? dispForce : 0;
 }

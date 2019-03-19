@@ -6,7 +6,7 @@
 extern "C" __global__ void computeNonbondedExceptions(
         unsigned long long* __restrict__ forceBuffers, mixed* __restrict__ energyBuffer, unsigned long long* __restrict__ torqueBuffers,
         const real4* __restrict__ posq, const real3* __restrict__ extDipole, const int2* __restrict__ exceptionAtoms, const real* __restrict__ mmScale,
-        const real* __restrict__ dmScale, const real* __restrict__ ddScale, const real* __restrict__ repScale, const real* __restrict__ dispScale,
+        const real* __restrict__ dmScale, const real* __restrict__ ddScale, const real* __restrict__ dispScale, const real* __restrict__ repScale,
         const real* __restrict__ coreCharge, const real* __restrict__ valenceCharge, const real* __restrict__ alpha, const real* __restrict__ epsilon,
         const real* __restrict__ damping, const real* __restrict__ c6, const real* __restrict__ pauliK, const real* __restrict__ pauliQ,
         const real* __restrict__ pauliAlpha, const real3* __restrict__ dipole, const real3* __restrict__ inducedDipole, const real* __restrict__ qXX,
@@ -94,7 +94,5 @@ extern "C" __global__ void computeNonbondedExceptions(
         }
 #endif
     }
-#ifdef INCLUDE_ENERGY
     energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += energy;
-#endif
 }

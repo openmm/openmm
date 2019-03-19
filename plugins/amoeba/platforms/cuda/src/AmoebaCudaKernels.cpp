@@ -2896,6 +2896,7 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
     initExtrapolatedKernel = cu.getKernel(module, "initExtrapolatedDipoles");
     iterateExtrapolatedKernel = cu.getKernel(module, "iterateExtrapolatedDipoles");
     computeExtrapolatedKernel = cu.getKernel(module, "computeExtrapolatedDipoles");
+    polarizationEnergyKernel = cu.getKernel(module, "computePolarizationEnergy");
 //    stringstream electrostaticsSource;
 //    electrostaticsSource << CudaKernelSources::vectorOps;
 //    electrostaticsSource << CudaAmoebaKernelSources::sphericalMultipoles;
@@ -3083,6 +3084,9 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
     replacements["SWITCH_C5"] = cu.doubleToString(6/pow(force.getSwitchingDistance()-force.getCutoffDistance(), 5.0));
     replacements["MAX_EXTRAPOLATION_ORDER"] = cu.intToString(maxExtrapolationOrder);
     replacements["EXTRAPOLATION_COEFFICIENTS_SUM"] = coefficients.str();
+    replacements["USE_EWALD"] = (usePME ? "1" : "0");
+    replacements["PME_ALPHA"] = (usePME ? cu.doubleToString(pmeAlpha) : "0");
+    replacements["DPME_ALPHA"] = (usePME ? cu.doubleToString(dpmeAlpha) : "0");
     string interactionSource = cu.replaceStrings(CudaAmoebaKernelSources::hippoInteraction, replacements);
     nb.addInteraction(usePME, usePME, true, force.getCutoffDistance(), exclusions, interactionSource, force.getForceGroup());
     nb.setUsePadding(false);
@@ -3284,7 +3288,7 @@ double CudaCalcHippoNonbondedForceKernel::execute(ContextImpl& context, bool inc
     cu.executeKernel(fixedFieldKernel, &fixedFieldArgs[0], nb.getNumForceThreadBlocks()*nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());
     if (fixedFieldExceptionArgs.size() > 0)
         cu.executeKernel(fixedFieldExceptionKernel, &fixedFieldExceptionArgs[0], fixedFieldExceptionAtoms.getSize());
-    
+
     // Iterate the induced dipoles.
 
     computeExtrapolatedDipoles(NULL);
@@ -3294,6 +3298,14 @@ double CudaCalcHippoNonbondedForceKernel::execute(ContextImpl& context, bool inc
     if (exceptionAtoms.isInitialized())
         cu.executeKernel(computeExceptionsKernel, &computeExceptionsArgs[0], exceptionAtoms.getSize());
 
+    // Add the polarization energy.
+
+    if (includeEnergy) {
+        void* polarizationEnergyArgs[] = {&cu.getEnergyBuffer().getDevicePointer(), &inducedDipole.getDevicePointer(),
+            &extrapolatedDipole.getDevicePointer(), &polarizability.getDevicePointer()};
+        cu.executeKernel(polarizationEnergyKernel, polarizationEnergyArgs, cu.getNumAtoms());
+    }
+    
     // Record the current atom positions so we can tell later if they have changed.
     
     cu.getPosq().copyTo(lastPositions);

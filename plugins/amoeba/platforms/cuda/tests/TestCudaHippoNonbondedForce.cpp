@@ -46,6 +46,8 @@ using namespace std;
 
 extern "C" void registerAmoebaCudaKernelFactories();
 
+double forceTol, energyTol, consistencyTol;
+
 void buildWaterSystem(System& system, int numWaters, HippoNonbondedForce* hippo) {
     system.addForce(hippo);
     for (int mol = 0; mol < numWaters; mol++) {
@@ -99,7 +101,7 @@ void checkForceEnergyConsistency(Context& context) {
     State state2 = context.getState(State::Energy);
     context.setPositions(positions3);
     State state3 = context.getState(State::Energy);
-    ASSERT_EQUAL_TOL(state3.getPotentialEnergy()-state2.getPotentialEnergy(), norm*delta, 5e-3)
+    ASSERT_EQUAL_TOL(state3.getPotentialEnergy()-state2.getPotentialEnergy(), norm*delta, consistencyTol)
 }
 
 void testWaterDimer() {
@@ -121,7 +123,7 @@ void testWaterDimer() {
 
     // Compare the forces and energy to reference values computed with Tinker.
 
-    ASSERT_EQUAL_TOL(-18.393623712669680, state.getPotentialEnergy(), 1e-5);
+    ASSERT_EQUAL_TOL(-18.393623712669680, state.getPotentialEnergy(), energyTol);
     vector<Vec3> expectedForces = {
         Vec3(-162.94090034728887, 0.0, 35.06615691195519),
         Vec3(127.50063696213348, 0.0, -46.51857483822334),
@@ -131,7 +133,7 @@ void testWaterDimer() {
         Vec3(34.68383272305204, 26.35219958830841, 45.867730707927564),
     };
     for (int i = 0; i < system.getNumParticles(); i++)
-        ASSERT_EQUAL_VEC(expectedForces[i], state.getForces()[i], 1e-5);
+        ASSERT_EQUAL_VEC(expectedForces[i], state.getForces()[i], forceTol);
     checkForceEnergyConsistency(context);
 }
 
@@ -803,7 +805,7 @@ void testWaterBox() {
     
     // Compare the forces and energy to reference values computed with Tinker.
 
-    ASSERT_EQUAL_TOL(-8689.0456938244151, state.getPotentialEnergy(), 1e-5);
+    ASSERT_EQUAL_TOL(-8689.0456938244151, state.getPotentialEnergy(), energyTol);
     vector<Vec3> expectedForces = {
         Vec3(-335.0172933029931, 22.266752620867532, -311.0298423949193),
         Vec3(125.33189469021171, -48.64909489077264, 173.68519722812303),
@@ -1455,7 +1457,7 @@ void testWaterBox() {
         Vec3(233.29776444327882, 35.00686695783241, 265.51562401167655)
     };
     for (int i = 0; i < system.getNumParticles(); i++)
-        ASSERT_EQUAL_VEC(expectedForces[i], state.getForces()[i], 1e-5);
+        ASSERT_EQUAL_VEC(expectedForces[i], state.getForces()[i], forceTol);
     checkForceEnergyConsistency(context);
 }
 
@@ -1464,6 +1466,17 @@ int main(int argc, char* argv[]) {
         registerAmoebaCudaKernelFactories();
         if (argc > 1)
             Platform::getPlatformByName("CUDA").setPropertyDefaultValue("Precision", std::string(argv[1]));
+        string precision = Platform::getPlatformByName("CUDA").getPropertyDefaultValue("Precision");
+        if (precision == "double") {
+            forceTol = 1e-5;
+            energyTol = 1e-5;
+            consistencyTol = 5e-3;
+        }
+        else {
+            forceTol = 5e-3;
+            energyTol = 1e-3;
+            consistencyTol = 1e-2;
+        }
         testWaterDimer();
         testWaterBox();
     }
