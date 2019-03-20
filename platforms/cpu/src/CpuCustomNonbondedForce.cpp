@@ -173,10 +173,9 @@ void CpuCustomNonbondedForce::threadComputeForce(ThreadPool& threads, int thread
     if (useInteractionGroups) {
         // The user has specified interaction groups, so compute only the requested interactions.
         
-        while (true) {
-            int i = atomicCounter++;
-            if (i >= groupInteractions.size())
-                break;
+        int start = threadIndex*groupInteractions.size()/numThreads;
+        int end = (threadIndex+1)*groupInteractions.size()/numThreads;
+        for (int i = start; i < end; i++) {
             int atom1 = groupInteractions[i].first;
             int atom2 = groupInteractions[i].second;
             for (int j = 0; j < (int) paramNames.size(); j++) {
