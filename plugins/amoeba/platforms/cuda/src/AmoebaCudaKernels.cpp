@@ -2874,6 +2874,20 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
             gridSizeY = CudaFFT3D::findLegalDimension(ny);
             gridSizeZ = CudaFFT3D::findLegalDimension(nz);
         }
+        force.getDPMEParameters(dpmeAlpha, nx, ny, nz);
+        if (nx == 0 || dpmeAlpha == 0) {
+            NonbondedForce nb;
+            nb.setEwaldErrorTolerance(force.getEwaldErrorTolerance());
+            nb.setCutoffDistance(force.getCutoffDistance());
+            NonbondedForceImpl::calcPMEParameters(system, nb, dpmeAlpha, dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, true);
+            dispersionGridSizeX = CudaFFT3D::findLegalDimension(dispersionGridSizeX);
+            dispersionGridSizeY = CudaFFT3D::findLegalDimension(dispersionGridSizeY);
+            dispersionGridSizeZ = CudaFFT3D::findLegalDimension(dispersionGridSizeZ);
+        } else {
+            dispersionGridSizeX = CudaFFT3D::findLegalDimension(nx);
+            dispersionGridSizeY = CudaFFT3D::findLegalDimension(ny);
+            dispersionGridSizeZ = CudaFFT3D::findLegalDimension(nz);
+        }
         defines["EWALD_ALPHA"] = cu.doubleToString(pmeAlpha);
         defines["SQRT_PI"] = cu.doubleToString(sqrt(M_PI));
         defines["USE_EWALD"] = "";
@@ -3087,6 +3101,7 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
     replacements["USE_EWALD"] = (usePME ? "1" : "0");
     replacements["PME_ALPHA"] = (usePME ? cu.doubleToString(pmeAlpha) : "0");
     replacements["DPME_ALPHA"] = (usePME ? cu.doubleToString(dpmeAlpha) : "0");
+    replacements["SQRT_PI"] = cu.doubleToString(sqrt(M_PI));
     string interactionSource = cu.replaceStrings(CudaAmoebaKernelSources::hippoInteraction, replacements);
     nb.addInteraction(usePME, usePME, true, force.getCutoffDistance(), exclusions, interactionSource, force.getForceGroup());
     nb.setUsePadding(false);

@@ -71,6 +71,26 @@ real fdampIK1, fdampIK3, fdampIK5, fdampIK7, fdampIK9, fdampIK11;
 computeOverlapDampingFactors(alpha1, alpha2, r, fdampI1, fdampI3, fdampI5, fdampI7, fdampI9, fdampK1, fdampK3, fdampK5, fdampK7, fdampK9,
                              fdampIK1, fdampIK3, fdampIK5, fdampIK7, fdampIK9, fdampIK11);
 
+#if USE_EWALD
+// Calculate the error function damping terms.
+
+real ralpha = PME_ALPHA*r;
+real bn0 = erfc(ralpha)*rInv;
+real alsq2 = 2*PME_ALPHA*PME_ALPHA;
+real alsq2n = 1/(SQRT_PI*PME_ALPHA);
+real exp2a = EXP(-(ralpha*ralpha));
+alsq2n *= alsq2;
+real bn1 = (bn0+alsq2n*exp2a)*rInv2;
+alsq2n *= alsq2;
+real bn2 = (3*bn1+alsq2n*exp2a)*rInv2;
+alsq2n *= alsq2;
+real bn3 = (5*bn2+alsq2n*exp2a)*rInv2;
+alsq2n *= alsq2;
+real bn4 = (7*bn3+alsq2n*exp2a)*rInv2;
+alsq2n *= alsq2;
+real bn5 = (9*bn4+alsq2n*exp2a)*rInv2;
+#endif
+
 // Compute the fixed multipole interaction.
 
 {
@@ -88,6 +108,28 @@ computeOverlapDampingFactors(alpha1, alpha2, r, fdampI1, fdampI3, fdampI5, fdamp
     real term3ik = valenceCharge1*qkr + valenceCharge2*qir - dir*dkr + 2*(dkqi-diqk+qiqk);
     real term4ik = dir*qkr - dkr*qir - 4*qik;
     real term5ik = qir*qkr;
+#ifndef COMPUTING_EXCEPTIONS
+    real multipoleMultipoleScale = 1;
+#endif
+#if USE_EWALD
+    real rr1i = bn0 - (1-multipoleMultipoleScale*fdampI1)*rr1;
+    real rr3i = bn1 - (1-multipoleMultipoleScale*fdampI3)*rr3;
+    real rr5i = bn2 - (1-multipoleMultipoleScale*fdampI5)*rr5;
+    real rr7i = bn3 - (1-multipoleMultipoleScale*fdampI7)*rr7;
+    real rr1k = bn0 - (1-multipoleMultipoleScale*fdampK1)*rr1;
+    real rr3k = bn1 - (1-multipoleMultipoleScale*fdampK3)*rr3;
+    real rr5k = bn2 - (1-multipoleMultipoleScale*fdampK5)*rr5;
+    real rr7k = bn3 - (1-multipoleMultipoleScale*fdampK7)*rr7;
+    real rr1ik = bn0 - (1-multipoleMultipoleScale*fdampIK1)*rr1;
+    real rr3ik = bn1 - (1-multipoleMultipoleScale*fdampIK3)*rr3;
+    real rr5ik = bn2 - (1-multipoleMultipoleScale*fdampIK5)*rr5;
+    real rr7ik = bn3 - (1-multipoleMultipoleScale*fdampIK7)*rr7;
+    real rr9ik = bn4 - (1-multipoleMultipoleScale*fdampIK9)*rr9;
+    real rr11ik = bn5 - (1-multipoleMultipoleScale*fdampIK11)*rr11;
+    real rr1s = bn0 - (1-multipoleMultipoleScale)*rr1;
+    real rr3s = bn1 - (1-multipoleMultipoleScale)*rr3;
+    real scale = ENERGY_SCALE_FACTOR;
+#else
     real rr1i = fdampI1*rr1;
     real rr3i = fdampI3*rr3;
     real rr5i = fdampI5*rr5;
@@ -102,18 +144,18 @@ computeOverlapDampingFactors(alpha1, alpha2, r, fdampI1, fdampI3, fdampI5, fdamp
     real rr7ik = fdampIK7*rr7;
     real rr9ik = fdampIK9*rr9;
     real rr11ik = fdampIK11*rr11;
-    real scale = ENERGY_SCALE_FACTOR;
-#ifdef COMPUTING_EXCEPTIONS
-    scale *= multipoleMultipoleScale;
+    real rr1s = rr1;
+    real rr3s = rr3;
+    real scale = ENERGY_SCALE_FACTOR*multipoleMultipoleScale;
 #endif
-    real elecEnergy = scale*(term1*rr1 + term4ik*rr7ik + term5ik*rr9ik +
+    real elecEnergy = scale*(term1*rr1s + term4ik*rr7ik + term5ik*rr9ik +
                              term1i*rr1i + term1k*rr1k + term1ik*rr1ik +
                              term2i*rr3i + term2k*rr3k + term2ik*rr3ik +
                              term3i*rr5i + term3k*rr5k + term3ik*rr5ik);
 
     // Find damped multipole intermediates for force and torque.
 
-    real de = term1*rr3 + term4ik*rr9ik + term5ik*rr11ik +
+    real de = term1*rr3s + term4ik*rr9ik + term5ik*rr11ik +
               term1i*rr3i + term1k*rr3k + term1ik*rr3ik +
               term2i*rr5i + term2k*rr5k + term2ik*rr5ik +
               term3i*rr7i + term3k*rr7k + term3ik*rr7ik;
@@ -144,54 +186,77 @@ computeOverlapDampingFactors(alpha1, alpha2, r, fdampI1, fdampI3, fdampI5, fdamp
 
     // Apply charge penetration damping to scale factors.
 
-    real scale = ENERGY_SCALE_FACTOR;
-#ifdef COMPUTING_EXCEPTIONS
-    scale *= dipoleMultipoleScale;
+#ifndef COMPUTING_EXCEPTIONS
+    real dipoleMultipoleScale = 1;
+    real dipoleDipoleScale = 1;
 #endif
-    real dsr3i = rr3*fdampI3*scale;
-    real dsr5i = rr5*fdampI5*scale;
-    real dsr7i = rr7*fdampI7*scale;
-    real dsr3k = rr3*fdampK3*scale;
-    real dsr5k = rr5*fdampK5*scale;
-    real dsr7k = rr7*fdampK7*scale;
+#if USE_EWALD
+    real rr3core = ENERGY_SCALE_FACTOR*(bn1 - (1-dipoleMultipoleScale)*rr3);
+    real rr5core = ENERGY_SCALE_FACTOR*(bn2 - (1-dipoleMultipoleScale)*rr5);
+    real rr3i = ENERGY_SCALE_FACTOR*(bn1 - (1-dipoleMultipoleScale*fdampI3)*rr3);
+    real rr5i = ENERGY_SCALE_FACTOR*(bn2 - (1-dipoleMultipoleScale*fdampI5)*rr5);
+    real rr7i = ENERGY_SCALE_FACTOR*(bn3 - (1-dipoleMultipoleScale*fdampI7)*rr7);
+    real rr9i = ENERGY_SCALE_FACTOR*(bn4 - (1-dipoleMultipoleScale*fdampI9)*rr9);
+    real rr3k = ENERGY_SCALE_FACTOR*(bn1 - (1-dipoleMultipoleScale*fdampK3)*rr3);
+    real rr5k = ENERGY_SCALE_FACTOR*(bn2 - (1-dipoleMultipoleScale*fdampK5)*rr5);
+    real rr7k = ENERGY_SCALE_FACTOR*(bn3 - (1-dipoleMultipoleScale*fdampK7)*rr7);
+    real rr9k = ENERGY_SCALE_FACTOR*(bn4 - (1-dipoleMultipoleScale*fdampK9)*rr9);
+    real rr5ik = ENERGY_SCALE_FACTOR*(bn2 - (1-dipoleDipoleScale*fdampIK5)*rr5);
+    real rr7ik = ENERGY_SCALE_FACTOR*(bn3 - (1-dipoleDipoleScale*fdampIK7)*rr7);
+#else
+    real dmScale = ENERGY_SCALE_FACTOR*dipoleMultipoleScale;
+    real ddScale = ENERGY_SCALE_FACTOR*dipoleDipoleScale;
+    real rr3core = rr3*dmScale;
+    real rr5core = rr5*dmScale;
+    real rr3i = rr3*fdampI3*dmScale;
+    real rr5i = rr5*fdampI5*dmScale;
+    real rr7i = rr7*fdampI7*dmScale;
+    real rr9i = rr9*fdampI9*dmScale;
+    real rr3k = rr3*fdampK3*dmScale;
+    real rr5k = rr5*fdampK5*dmScale;
+    real rr7k = rr7*fdampK7*dmScale;
+    real rr9k = rr9*fdampK9*dmScale;
+    real rr5ik = rr5*fdampIK5*ddScale;
+    real rr7ik = rr7*fdampIK7*ddScale;
+#endif
 
     // Get the induced dipole field used for dipole torques.
 
-    real3 torqueField1 = dsr3i*qiInducedDipole2;
-    torqueField1.z -= dsr5i*ukr*r;
-    real3 torqueField2 = dsr3k*qiInducedDipole1;
-    torqueField2.z -= dsr5k*uir*r;
+    real3 torqueField1 = rr3i*qiInducedDipole2;
+    torqueField1.z -= rr5i*ukr*r;
+    real3 torqueField2 = rr3k*qiInducedDipole1;
+    torqueField2.z -= rr5k*uir*r;
 
     // Get induced dipole field gradient used for quadrupole torques.
 
-    real3 dtorqueField1 = 2*r*dsr5i*qiInducedDipole2;
-    dtorqueField1.z -= r2*dsr7i*ukr;
-    real3 dtorqueField2 = -2*r*dsr5k*qiInducedDipole1;
-    dtorqueField2.z += r2*dsr7k*uir;
+    real3 dtorqueField1 = 2*r*rr5i*qiInducedDipole2;
+    dtorqueField1.z -= r2*rr7i*ukr;
+    real3 dtorqueField2 = -2*r*rr5k*qiInducedDipole1;
+    dtorqueField2.z += r2*rr7k*uir;
 
     // Get the field gradient for direct polarization force
 
-    real t1XX = valenceCharge1*rr3*fdampI3 + coreCharge1*rr3 + dir*rr5*fdampI5 - qxI.x*2*rr5*fdampI5 + qi.z*r*rr7*fdampI7;
-    real t2XX = valenceCharge2*rr3*fdampK3 + coreCharge2*rr3 - dkr*rr5*fdampK5 - qxK.x*2*rr5*fdampK5 + qk.z*r*rr7*fdampK7;
-    real t1YY = valenceCharge1*rr3*fdampI3 + coreCharge1*rr3 + dir*rr5*fdampI5 - qyI.y*2*rr5*fdampI5 + qi.z*r*rr7*fdampI7;
-    real t2YY = valenceCharge2*rr3*fdampK3 + coreCharge2*rr3 - dkr*rr5*fdampK5 - qyK.y*2*rr5*fdampK5 + qk.z*r*rr7*fdampK7;
-    real t1ZZ = valenceCharge1*(rr3*fdampI3-rr5*fdampI5*r2) + coreCharge1*(rr3-rr5*r2) + qiDipole1.z*2*rr5*fdampI5*r -
-              dir*(rr7*fdampI7*r2-rr5*fdampI5) - qzI.z*2*rr5*fdampI5 + qi.z*5*rr7*fdampI7*r - qir*rr9*fdampI9*r2;
-    real t2ZZ = valenceCharge2*(rr3*fdampK3-rr5*fdampK5*r2) + coreCharge2*(rr3-rr5*r2) - qiDipole2.z*2*rr5*fdampK5*r +
-              dkr*(rr7*fdampK7*r2-rr5*fdampK5) - qzK.z*2*rr5*fdampK5 + qk.z*5*rr7*fdampK7*r - qkr*rr9*fdampK9*r2;
-    real t1XY = -qxI.y*2*rr5*fdampI5;
-    real t2XY = -qxK.y*2*rr5*fdampK5;
-    real t1XZ = qiDipole1.x*rr5*fdampI5*r - qxI.z*2*rr5*fdampI5 + qi.x*2*rr7*fdampI7*r;
-    real t2XZ = -qiDipole2.x*rr5*fdampK5*r - qxK.z*2*rr5*fdampK5 + qk.x*2*rr7*fdampK7*r;
-    real t1YZ = qiDipole1.y*rr5*fdampI5*r - qyI.z*2*rr5*fdampI5 + qi.y*2*rr7*fdampI7*r;
-    real t2YZ = -qiDipole2.y*rr5*fdampK5*r - qyK.z*2*rr5*fdampK5 + qk.y*2*rr7*fdampK7*r;
+    real t1XX = valenceCharge1*rr3i + coreCharge1*rr3core + dir*rr5i - qxI.x*2*rr5i + qi.z*r*rr7i;
+    real t2XX = valenceCharge2*rr3k + coreCharge2*rr3core - dkr*rr5k - qxK.x*2*rr5k + qk.z*r*rr7k;
+    real t1YY = valenceCharge1*rr3i + coreCharge1*rr3core + dir*rr5i - qyI.y*2*rr5i + qi.z*r*rr7i;
+    real t2YY = valenceCharge2*rr3k + coreCharge2*rr3core - dkr*rr5k - qyK.y*2*rr5k + qk.z*r*rr7k;
+    real t1ZZ = valenceCharge1*(rr3i-rr5i*r2) + coreCharge1*(rr3core-rr5core*r2) + qiDipole1.z*2*rr5i*r -
+              dir*(rr7i*r2-rr5i) - qzI.z*2*rr5i + qi.z*5*rr7i*r - qir*rr9i*r2;
+    real t2ZZ = valenceCharge2*(rr3k-rr5k*r2) + coreCharge2*(rr3core-rr5core*r2) - qiDipole2.z*2*rr5k*r +
+              dkr*(rr7k*r2-rr5k) - qzK.z*2*rr5k + qk.z*5*rr7k*r - qkr*rr9k*r2;
+    real t1XY = -qxI.y*2*rr5i;
+    real t2XY = -qxK.y*2*rr5k;
+    real t1XZ = qiDipole1.x*rr5i*r - qxI.z*2*rr5i + qi.x*2*rr7i*r;
+    real t2XZ = -qiDipole2.x*rr5k*r - qxK.z*2*rr5k + qk.x*2*rr7k*r;
+    real t1YZ = qiDipole1.y*rr5i*r - qyI.z*2*rr5i + qi.y*2*rr7i*r;
+    real t2YZ = -qiDipole2.y*rr5k*r - qyK.z*2*rr5k + qk.y*2*rr7k*r;
 
     // Get the dEp/dR terms for chgpen direct polarization force.
 
     real depx = t1XX*qiInducedDipole2.x + t1XY*qiInducedDipole2.y + t1XZ*qiInducedDipole2.z - t2XX*qiInducedDipole1.x - t2XY*qiInducedDipole1.y - t2XZ*qiInducedDipole1.z;
     real depy = t1XY*qiInducedDipole2.x + t1YY*qiInducedDipole2.y + t1YZ*qiInducedDipole2.z - t2XY*qiInducedDipole1.x - t2YY*qiInducedDipole1.y - t2YZ*qiInducedDipole1.z;
     real depz = t1XZ*qiInducedDipole2.x + t1YZ*qiInducedDipole2.y + t1ZZ*qiInducedDipole2.z - t2XZ*qiInducedDipole1.x - t2YZ*qiInducedDipole1.y - t2ZZ*qiInducedDipole1.z;
-    real3 indForce = scale*make_real3(depx, depy, depz);
+    real3 indForce = make_real3(depx, depy, depz);
 
     // Torque is induced field and gradient cross permanent moments.
 
@@ -209,11 +274,6 @@ computeOverlapDampingFactors(alpha1, alpha2, r, fdampI1, fdampI3, fdampI5, fdamp
 
     // Get the dtau/dr terms used for OPT polarization force.
 
-#ifdef COMPUTING_EXCEPTIONS
-    real ddscale = dipoleDipoleScale*ENERGY_SCALE_FACTOR/2;
-#else
-    real ddscale = ENERGY_SCALE_FACTOR/2;
-#endif
     real coeff[] = {EXTRAPOLATION_COEFFICIENTS_SUM};
     for (int j = 0; j < MAX_EXTRAPOLATION_ORDER-1; j++) {
         real3 extDipole1 = (atom1 < NUM_ATOMS ? extrapolatedDipole[j*NUM_ATOMS+atom1] : make_real3(0));
@@ -221,36 +281,36 @@ computeOverlapDampingFactors(alpha1, alpha2, r, fdampI1, fdampI3, fdampI5, fdamp
         for (int m = 0; m < MAX_EXTRAPOLATION_ORDER-1-j; m++) {
             real3 extDipole2 = (atom2 < NUM_ATOMS ? extrapolatedDipole[m*NUM_ATOMS+atom2] : make_real3(0));
             real ukrm = dot(extDipole2, delta);
-            real term1 = 2*fdampIK5*rr5;
+            real term1 = 2*rr5ik;
             real term2 = term1*delta.x;
-            real term3 = rr5*fdampIK5 - rr7*fdampIK7*delta.x*delta.x;
+            real term3 = rr5ik - rr7ik*delta.x*delta.x;
             real tixx = extDipole1.x*term2 + uirm*term3;
             real tkxx = extDipole2.x*term2 + ukrm*term3;
             term2 = term1*delta.y;
-            term3 = rr5*fdampIK5 - rr7*fdampIK7*delta.y*delta.y;
+            term3 = rr5ik - rr7ik*delta.y*delta.y;
             real tiyy = extDipole1.y*term2 + uirm*term3;
             real tkyy = extDipole2.y*term2 + ukrm*term3;
             term2 = term1*delta.z;
-            term3 = rr5*fdampIK5 - rr7*fdampIK7*delta.z*delta.z;
+            term3 = rr5ik - rr7ik*delta.z*delta.z;
             real tizz = extDipole1.z*term2 + uirm*term3;
             real tkzz = extDipole2.z*term2 + ukrm*term3;
-            term1 = rr5*fdampIK5*delta.y;
-            term2 = rr5*fdampIK5*delta.x;
-            term3 = delta.y * (rr7*fdampIK7*delta.x);
+            term1 = rr5ik*delta.y;
+            term2 = rr5ik*delta.x;
+            term3 = delta.y * (rr7ik*delta.x);
             real tixy = extDipole1.x*term1 + extDipole1.y*term2 - uirm*term3;
             real tkxy = extDipole2.x*term1 + extDipole2.y*term2 - ukrm*term3;
-            term1 = rr5 *fdampIK5 * delta.z;
-            term3 = delta.z * (rr7*fdampIK7*delta.x);
+            term1 = rr5ik*delta.z;
+            term3 = delta.z * (rr7ik*delta.x);
             real tixz = extDipole1.x*term1 + extDipole1.z*term2 - uirm*term3;
             real tkxz = extDipole2.x*term1 + extDipole2.z*term2 - ukrm*term3;
-            term2 = rr5*fdampIK5*delta.y;
-            term3 = delta.z * (rr7*fdampIK7*delta.y);
+            term2 = rr5ik*delta.y;
+            term3 = delta.z * (rr7ik*delta.y);
             real tiyz = extDipole1.y*term1 + extDipole1.z*term2 - uirm*term3;
             real tkyz = extDipole2.y*term1 + extDipole2.z*term2 - ukrm*term3;
             real depx = tixx*extDipole2.x + tkxx*extDipole1.x + tixy*extDipole2.y + tkxy*extDipole1.y + tixz*extDipole2.z + tkxz*extDipole1.z;
             real depy = tixy*extDipole2.x + tkxy*extDipole1.x + tiyy*extDipole2.y + tkyy*extDipole1.y + tiyz*extDipole2.z + tkyz*extDipole1.z;
             real depz = tixz*extDipole2.x + tkxz*extDipole1.x + tiyz*extDipole2.y + tkyz*extDipole1.y + tizz*extDipole2.z + tkzz*extDipole1.z;
-            labForce += ddscale*coeff[j+m+1]*make_real3(depx, depy, depz);
+            labForce += (coeff[j+m+1]/2)*make_real3(depx, depy, depz);
         }
     }
 }

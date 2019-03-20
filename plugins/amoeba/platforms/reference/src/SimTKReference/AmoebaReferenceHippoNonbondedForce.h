@@ -193,7 +193,7 @@ protected:
      */
     class MultipoleParticleData {
         public:
-            int particleIndex, axisType, multipoleAtomX, multipoleAtomY, multipoleAtomZ;    
+            int index, axisType, multipoleAtomX, multipoleAtomY, multipoleAtomZ;    
             Vec3 position;
             Vec3 dipole, localDipole, qiDipole, qiInducedDipole;
             double quadrupole[6], localQuadrupole[6], qiQuadrupole[6];
