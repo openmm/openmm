@@ -485,7 +485,7 @@ void CudaExpressionUtilities::processExpression(stringstream& out, const Express
             callFunction(out, "atanf", "atan", getTempName(node.getChildren()[0], temps), tempType);
             break;
         case Operation::ATAN2:
-            callFunction2(out, "atan2f", "atan2", getTempName(node.getChildren()[0], temps), getTempName(node.getChildren()[1], tempType);
+            callFunction2(out, "atan2f", "atan2", getTempName(node.getChildren()[0], temps), getTempName(node.getChildren()[1], temps), tempType);
             break;
         case Operation::SINH:
             callFunction(out, "sinh", "sinh", getTempName(node.getChildren()[0], temps), tempType);
