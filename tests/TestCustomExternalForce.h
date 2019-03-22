@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -216,6 +216,21 @@ void testIllegalVariable() {
     ASSERT(threwException);
 }
 
+void testAtan2() {
+    System system;
+    system.addParticle(1.0);
+    CustomExternalForce* force = new CustomExternalForce("atan2(x, y)");
+    force->addParticle(0);
+    system.addForce(force);
+    VerletIntegrator integrator(0.01);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(1);
+    positions[0] = Vec3(1.5, -2.1, 1.2);
+    context.setPositions(positions);
+    State state = context.getState(State::Energy);
+    ASSERT_EQUAL_TOL(atan2(positions[0][0], positions[0][1]), state.getPotentialEnergy(), 1e-5);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -226,6 +241,7 @@ int main(int argc, char* argv[]) {
         testPeriodic();
         testZeroPeriodicDistance();
         testIllegalVariable();
+        testAtan2();
         runPlatformTests();
     }
     catch(const exception& e) {

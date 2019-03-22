@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -294,6 +294,9 @@ void CompiledExpression::generateJitCode() {
                 c.movsd(workspaceVar[target[step]], workspaceVar[args[0]]);
                 c.divsd(workspaceVar[target[step]], workspaceVar[args[1]]);
                 break;
+            case Operation::POWER:
+                generateTwoArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], workspaceVar[args[1]], pow);
+                break;
             case Operation::NEGATE:
                 c.xorps(workspaceVar[target[step]], workspaceVar[target[step]]);
                 c.subsd(workspaceVar[target[step]], workspaceVar[args[0]]);
@@ -324,6 +327,9 @@ void CompiledExpression::generateJitCode() {
                 break;
             case Operation::ATAN:
                 generateSingleArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], atan);
+                break;
+            case Operation::ATAN2:
+                generateTwoArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], workspaceVar[args[1]], atan2);
                 break;
             case Operation::SINH:
                 generateSingleArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], sinh);
@@ -398,6 +404,15 @@ void CompiledExpression::generateSingleArgCall(X86Compiler& c, X86Xmm& dest, X86
     c.mov(fn, imm_ptr((void*) function));
     CCFuncCall* call = c.call(fn, FuncSignature1<double, double>());
     call->setArg(0, arg);
+    call->setRet(0, dest);
+}
+
+void CompiledExpression::generateTwoArgCall(X86Compiler& c, X86Xmm& dest, X86Xmm& arg1, X86Xmm& arg2, double (*function)(double, double)) {
+    X86Gp fn = c.newIntPtr();
+    c.mov(fn, imm_ptr((void*) function));
+    CCFuncCall* call = c.call(fn, FuncSignature2<double, double, double>());
+    call->setArg(0, arg1);
+    call->setArg(1, arg2);
     call->setRet(0, dest);
 }
 #endif

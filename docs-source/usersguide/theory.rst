@@ -1209,7 +1209,7 @@ The following operators are supported: + (add), - (subtract), * (multiply), /
 (divide), and ^ (power).  Parentheses “(“ and “)” may be used for grouping.
 
 The following standard functions are supported: sqrt, exp, log, sin, cos, sec,
-csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs,
+csc, tan, cot, asin, acos, atan, atan2, sinh, cosh, tanh, erf, erfc, min, max, abs,
 floor, ceil, step, delta, select. step(x) = 0 if x < 0, 1 otherwise.
 delta(x) = 1 if x is 0, 0 otherwise.  select(x,y,z) = z if x = 0, y otherwise.
 Some custom forces allow additional functions to be defined from tabulated values.
