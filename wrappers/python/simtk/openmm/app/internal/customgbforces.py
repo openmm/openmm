@@ -34,7 +34,6 @@ from __future__ import division, absolute_import
 
 from collections import defaultdict
 import copy
-import numpy
 from simtk.openmm.app import element as E
 from simtk.openmm import CustomGBForce, Discrete2DFunction
 import simtk.unit as u
