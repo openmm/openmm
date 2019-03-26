@@ -695,8 +695,7 @@ private:
 
     fftpack_t   _fftplan;
 
-    unsigned int _pmeGridSize;
-    t_complex* _pmeGrid;
+    std::vector<t_complex> _pmeGrid;
  
     std::vector<double> _pmeBsplineModuli[3];
     std::vector<HippoDouble4> _thetai[3];

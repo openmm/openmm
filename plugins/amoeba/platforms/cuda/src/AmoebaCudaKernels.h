@@ -727,14 +727,14 @@ private:
     CudaArray extrapolatedDipole;
     CudaArray inducedDipoleFieldGradient;
     CudaArray extrapolatedDipoleFieldGradient;
-    CudaArray pmeGrid;
+    CudaArray pmeGrid1, pmeGrid2;
     CudaArray pmeBsplineModuliX, pmeBsplineModuliY, pmeBsplineModuliZ;
     CudaArray dpmeBsplineModuliX, dpmeBsplineModuliY, dpmeBsplineModuliZ;
     CudaArray pmePhi, pmePhidp, pmeCphi;
     CudaArray lastPositions;
     CudaArray exceptionScales[5];
     CudaArray exceptionAtoms, fixedFieldExceptionAtoms, mutualFieldExceptionAtoms, fixedFieldExceptionScale, mutualFieldExceptionScale;
-    cufftHandle fft, dfft;
+    cufftHandle fftForward, fftBackward, dfft;
     CUfunction computeMomentsKernel, fixedFieldKernel, fixedFieldExceptionKernel, mutualFieldKernel, mutualFieldExceptionKernel, computeExceptionsKernel;
     CUfunction recordInducedDipolesKernel, computeFixedFieldKernel, computeInducedFieldKernel, updateInducedFieldKernel, electrostaticsKernel, mapTorqueKernel;
     CUfunction pmeSpreadFixedMultipolesKernel, pmeSpreadInducedDipolesKernel, pmeFinishSpreadChargeKernel, pmeConvolutionKernel;

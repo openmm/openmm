@@ -361,7 +361,7 @@ extern "C" __global__ void computeFieldExceptions(const real4* __restrict__ posq
 #endif
         real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
 #ifdef USE_CUTOFF
-        if (r2 < CUTOFF_SQUARED && scale != 0) {
+        if (r2 < CUTOFF_SQUARED) {
 #endif
             real invR = RSQRT(r2);
             real r = r2*invR;
