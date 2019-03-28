@@ -2570,12 +2570,12 @@ double AmoebaReferencePmeHippoNonbondedForce::calculatePmeSelfEnergy(const vecto
         double charge = particleI.coreCharge + particleI.valenceCharge;
         cii += charge*charge;
         dii += particleI.dipole.dot(particleI.dipole);
-        qii += (particleI.quadrupole[QXX]*particleI.quadrupole[QXX] +
+        qii += particleI.quadrupole[QXX]*particleI.quadrupole[QXX] +
                particleI.quadrupole[QYY]*particleI.quadrupole[QYY] +
                particleI.quadrupole[QZZ]*particleI.quadrupole[QZZ] +
                2*(particleI.quadrupole[QXY]*particleI.quadrupole[QXY] +
                   particleI.quadrupole[QXZ]*particleI.quadrupole[QXZ] +
-                  particleI.quadrupole[QYZ]*particleI.quadrupole[QYZ]));
+                  particleI.quadrupole[QYZ]*particleI.quadrupole[QYZ]);
         c6ii += particleI.c6*particleI.c6;
     }
     double term = 2*_alphaEwald*_alphaEwald;

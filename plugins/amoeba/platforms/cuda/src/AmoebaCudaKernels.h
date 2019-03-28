@@ -33,6 +33,7 @@
 #include "CudaArray.h"
 #include "CudaContext.h"
 #include "CudaNonbondedUtilities.h"
+#include "CudaSort.h"
 #include <cufft.h>
 
 namespace OpenMM {
@@ -699,7 +700,17 @@ public:
 private:
     class ForceInfo;
     class TorquePostComputation;
-    void computeInducedField(void** recipBoxVectorPointer);
+    class SortTrait : public CudaSort::SortTrait {
+        int getDataSize() const {return 8;}
+        int getKeySize() const {return 4;}
+        const char* getDataType() const {return "int2";}
+        const char* getKeyType() const {return "int";}
+        const char* getMinKey() const {return "(-2147483647-1)";}
+        const char* getMaxKey() const {return "2147483647";}
+        const char* getMaxValue() const {return "make_int2(2147483647, 2147483647)";}
+        const char* getSortKey() const {return "value.y";}
+    };
+    void computeInducedField(void** recipBoxVectorPointer, int optOrder);
     void computeExtrapolatedDipoles(void** recipBoxVectorPointer);
     void ensureMultipolesValid(ContextImpl& context);
     void addTorquesToForces();
@@ -724,21 +735,25 @@ private:
     CudaArray inducedField;
     CudaArray torque;
     CudaArray inducedDipole;
-    CudaArray extrapolatedDipole;
+    CudaArray extrapolatedDipole, extrapolatedPhi;
     CudaArray inducedDipoleFieldGradient;
     CudaArray extrapolatedDipoleFieldGradient;
     CudaArray pmeGrid1, pmeGrid2;
+    CudaArray pmeAtomGridIndex;
     CudaArray pmeBsplineModuliX, pmeBsplineModuliY, pmeBsplineModuliZ;
     CudaArray dpmeBsplineModuliX, dpmeBsplineModuliY, dpmeBsplineModuliZ;
     CudaArray pmePhi, pmePhidp, pmeCphi;
     CudaArray lastPositions;
     CudaArray exceptionScales[5];
     CudaArray exceptionAtoms, fixedFieldExceptionAtoms, mutualFieldExceptionAtoms, fixedFieldExceptionScale, mutualFieldExceptionScale;
-    cufftHandle fftForward, fftBackward, dfft;
+    CudaSort* sort;
+    cufftHandle fftForward, fftBackward, dfftForward, dfftBackward;
     CUfunction computeMomentsKernel, fixedFieldKernel, fixedFieldExceptionKernel, mutualFieldKernel, mutualFieldExceptionKernel, computeExceptionsKernel;
     CUfunction recordInducedDipolesKernel, computeFixedFieldKernel, computeInducedFieldKernel, updateInducedFieldKernel, electrostaticsKernel, mapTorqueKernel;
     CUfunction pmeSpreadFixedMultipolesKernel, pmeSpreadInducedDipolesKernel, pmeFinishSpreadChargeKernel, pmeConvolutionKernel;
-    CUfunction pmeFixedPotentialKernel, pmeInducedPotentialKernel, pmeFixedForceKernel, pmeInducedForceKernel, pmeRecordInducedFieldDipolesKernel, computePotentialKernel;
+    CUfunction pmeFixedPotentialKernel, pmeInducedPotentialKernel, pmeFixedForceKernel, pmeInducedForceKernel, pmeRecordInducedFieldDipolesKernel;
+    CUfunction pmeSelfEnergyKernel, computePotentialKernel;
+    CUfunction dpmeGridIndexKernel, dpmeSpreadChargeKernel, dpmeFinishSpreadChargeKernel, dpmeEvalEnergyKernel, dpmeConvolutionKernel, dpmeInterpolateForceKernel;
     CUfunction initExtrapolatedKernel, iterateExtrapolatedKernel, computeExtrapolatedKernel, polarizationEnergyKernel;
     CUfunction pmeTransformMultipolesKernel, pmeTransformPotentialKernel;
     std::vector<void*> fixedFieldArgs, fixedFieldExceptionArgs, mutualFieldArgs, mutualFieldExceptionArgs, computeExceptionsArgs;
