@@ -3519,11 +3519,6 @@ double CudaCalcHippoNonbondedForceKernel::execute(ContextImpl& context, bool inc
 
     computeExtrapolatedDipoles(recipBoxVectorPointer);
 
-    // Compute nonbonded exceptions.
-
-    if (exceptionAtoms.isInitialized())
-        cu.executeKernel(computeExceptionsKernel, &computeExceptionsArgs[0], exceptionAtoms.getSize());
-
     // Add the polarization energy.
 
     if (includeEnergy) {
@@ -3535,6 +3530,8 @@ double CudaCalcHippoNonbondedForceKernel::execute(ContextImpl& context, bool inc
     // Compute the forces due to the reciprocal space PME calculation for induced dipoles.
 
     if (usePME) {
+        void* pmeTransformInducedPotentialArgs[] = {&pmePhidp.getDevicePointer(), &pmeCphi.getDevicePointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
+        cu.executeKernel(pmeTransformPotentialKernel, pmeTransformInducedPotentialArgs, cu.getNumAtoms());
         void* pmeInducedForceArgs[] = {&cu.getPosq().getDevicePointer(), &cu.getForce().getDevicePointer(), &torque.getDevicePointer(),
             &cu.getEnergyBuffer().getDevicePointer(), &labDipoles.getDevicePointer(), &coreCharge.getDevicePointer(),
             &valenceCharge.getDevicePointer(), &extrapolatedDipole.getDevicePointer(), &extrapolatedPhi.getDevicePointer(),
@@ -3549,6 +3546,11 @@ double CudaCalcHippoNonbondedForceKernel::execute(ContextImpl& context, bool inc
             &labQuadrupoles[2].getDevicePointer(), &labQuadrupoles[3].getDevicePointer(), &labQuadrupoles[4].getDevicePointer()};
         cu.executeKernel(pmeSelfEnergyKernel, pmeSelfEnergyArgs, cu.getNumAtoms());
     }
+
+    // Compute nonbonded exceptions.
+
+    if (exceptionAtoms.isInitialized())
+        cu.executeKernel(computeExceptionsKernel, &computeExceptionsArgs[0], exceptionAtoms.getSize());
 
     // Record the current atom positions so we can tell later if they have changed.
     

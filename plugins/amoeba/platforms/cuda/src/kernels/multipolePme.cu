@@ -1017,7 +1017,7 @@ extern "C" __global__ void computeFixedMultipoleForceAndEnergy(real4* __restrict
             f.y += multipole[k]*phi[i+NUM_ATOMS*deriv2[k]];
             f.z += multipole[k]*phi[i+NUM_ATOMS*deriv3[k]];
         }
-        f = make_real4(EPSILON_FACTOR*(f.x*fracToCart[0][0] + f.y*fracToCart[0][1] + f.z*fracToCart[0][2]),
+        f = -make_real4(EPSILON_FACTOR*(f.x*fracToCart[0][0] + f.y*fracToCart[0][1] + f.z*fracToCart[0][2]),
                        EPSILON_FACTOR*(f.x*fracToCart[1][0] + f.y*fracToCart[1][1] + f.z*fracToCart[1][2]),
                        EPSILON_FACTOR*(f.x*fracToCart[2][0] + f.y*fracToCart[2][1] + f.z*fracToCart[2][2]), 0);
         forceBuffers[i] -= static_cast<unsigned long long>((long long) (f.x*0x100000000));
@@ -1167,9 +1167,6 @@ extern "C" __global__ void computeInducedDipoleForceAndEnergy(real4* __restrict_
             f.y += multipole[k]*phidp[i+NUM_ATOMS*deriv2[k]];
             f.z += multipole[k]*phidp[i+NUM_ATOMS*deriv3[k]];
         }
-        f = make_real3(scale*(f.x*fracToCart[0][0] + f.y*fracToCart[0][1] + f.z*fracToCart[0][2]),
-                       scale*(f.x*fracToCart[1][0] + f.y*fracToCart[1][1] + f.z*fracToCart[1][2]),
-                       scale*(f.x*fracToCart[2][0] + f.y*fracToCart[2][1] + f.z*fracToCart[2][2]));
 
 #ifdef HIPPO
         // Account for dipole response terms in the OPT method
@@ -1188,6 +1185,9 @@ extern "C" __global__ void computeInducedDipoleForceAndEnergy(real4* __restrict_
             }
         }
 #endif
+        f = -make_real3(scale*(f.x*fracToCart[0][0] + f.y*fracToCart[0][1] + f.z*fracToCart[0][2]),
+                       scale*(f.x*fracToCart[1][0] + f.y*fracToCart[1][1] + f.z*fracToCart[1][2]),
+                       scale*(f.x*fracToCart[2][0] + f.y*fracToCart[2][1] + f.z*fracToCart[2][2]));
         forceBuffers[i] -= static_cast<unsigned long long>((long long) (f.x*0x100000000));
         forceBuffers[i+PADDED_NUM_ATOMS] -= static_cast<unsigned long long>((long long) (f.y*0x100000000));
         forceBuffers[i+PADDED_NUM_ATOMS*2] -= static_cast<unsigned long long>((long long) (f.z*0x100000000));

@@ -170,7 +170,7 @@ extern "C" __global__ void computeNonbonded(
                 COMPUTE_INTERACTION
                 energy += tempEnergy;
                 force -= tempForce;
-                torque + tempTorque1;
+                torque += tempTorque1;
 #ifdef ENABLE_SHUFFLE
                 shflForce += tempForce;
                 shflTorque += tempTorque2;

@@ -213,10 +213,10 @@ extern "C" __global__ void mapTorqueToForce(unsigned long long* __restrict__ for
     
         if (axisType < 5 && particles.z >= 0) {
             real3 atomPos = trimTo3(posq[atom]);
-            vector[U] = atomPos - trimTo3(posq[axisAtom]);
+            vector[U] = trimTo3(posq[axisAtom]) - atomPos;
             norms[U] = normVector(vector[U]);
             if (axisType != 4 && particles.x >= 0)
-                vector[V] = atomPos - trimTo3(posq[particles.x]);
+                vector[V] = trimTo3(posq[particles.x]) - atomPos;
             else {
                 if (fabs(vector[U].x/norms[U]) < 0.866)
                     vector[V] = make_real3(1, 0, 0);
@@ -230,7 +230,7 @@ extern "C" __global__ void mapTorqueToForce(unsigned long long* __restrict__ for
             if (axisType < 2 || axisType > 3)
                 vector[W] = cross(vector[U], vector[V]);
             else
-                vector[W] = atomPos - trimTo3(posq[particles.y]);
+                vector[W] = trimTo3(posq[particles.y]) - atomPos;
             norms[W] = normVector(vector[W]);
         
             vector[UV] = cross(vector[V], vector[U]);

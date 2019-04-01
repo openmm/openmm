@@ -170,8 +170,8 @@ real bn5 = (9*bn4+alsq2n*exp2a)*rInv2;
 
     real3 elecForce = -scale*(de*make_real3(0, 0, r) + term1*qiDipole1 + term2*qiDipole2 +
             term3*(diqkTemp-dkqiTemp) + term4*qi + term5*qk + term6*(qikTemp+qkiTemp));
-    real3 tI = -scale*(-rr3ik*dikCross + term1*dirCross + term3*(dqik+dkqirCross) + term4*qirCross - term6*(qikrCross+qikCross));
-    real3 tK = -scale*(rr3ik*dikCross + term2*dkrCross - term3*(dqik+diqkrCross) + term5*qkrCross - term6*(qkirCross-qikCross));
+    real3 tI = scale*(-rr3ik*dikCross + term1*dirCross + term3*(dqik+dkqirCross) + term4*qirCross - term6*(qikrCross+qikCross));
+    real3 tK = scale*(rr3ik*dikCross + term2*dkrCross - term3*(dqik+diqkrCross) + term5*qkrCross - term6*(qkirCross-qikCross));
     tempEnergy += includeInteraction ? elecEnergy : 0;
     tempForce += includeInteraction ? elecForce : make_real3(0);
     tempTorque1 += includeInteraction ? tI : make_real3(0);
@@ -269,8 +269,8 @@ real bn5 = (9*bn4+alsq2n*exp2a)*rInv2;
     tK.y += qxK.y*dtorqueField2.y + 2*qxK.z*dtorqueField2.z + (qxK.x-qzK.z)*dtorqueField2.x;
     tK.z += qyK.z*dtorqueField2.x - qxK.z*dtorqueField2.y;
     tempForce -= includeInteraction ? indForce : make_real3(0);
-    tempTorque1 -= includeInteraction ? tI : make_real3(0);
-    tempTorque2 -= includeInteraction ? tK : make_real3(0);
+    tempTorque1 += includeInteraction ? tI : make_real3(0);
+    tempTorque2 += includeInteraction ? tK : make_real3(0);
 
     // Get the dtau/dr terms used for OPT polarization force.
 
@@ -357,8 +357,8 @@ real bn5 = (9*bn4+alsq2n*exp2a)*rInv2;
     repForce = -sizik*(repForce*rr1 + make_real3(0, 0, eterm*rr3*r));
     real3 tI = -fdamp3*dikCross + term1*dirCross + term3*(dqik+dkqirCross) + term4*qirCross - term6*(qikrCross+qikCross);
     real3 tK = fdamp3*dikCross + term2*dkrCross - term3*(dqik+diqkrCross) + term5*qkrCross - term6*(qkirCross-qikCross);
-    tI *= -sizik*rr1;
-    tK *= -sizik*rr1;
+    tI *= sizik*rr1;
+    tK *= sizik*rr1;
 #ifdef USE_CUTOFF
     if (r > SWITCH_CUTOFF) {
         real x = r-SWITCH_CUTOFF;
@@ -395,7 +395,7 @@ real bn5 = (9*bn4+alsq2n*exp2a)*rInv2;
     real cick = c61*c62;
     real dispEnergy = -cick*(expa+scale)*rInv6;
     real rterm = -ralpha2*ralpha4*expterm*rInv;
-    real dispForce = 6*dispEnergy*rInv + cick*rInv6*(rterm + 2*dispersionScale*fdamp*ddamp);
+    real dispForce = -6*dispEnergy*rInv - cick*rInv6*(rterm + 2*dispersionScale*fdamp*ddamp);
 #else
     real dispEnergy = -dispersionScale*c61*c62*rInv6;
     real dispForce = -6*dispEnergy*rInv;
