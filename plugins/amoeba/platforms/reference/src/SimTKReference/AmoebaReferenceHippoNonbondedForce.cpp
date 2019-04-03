@@ -1400,54 +1400,6 @@ void AmoebaReferenceHippoNonbondedForce::calculateTotalDipoles(const vector<Vec3
             outputTotalDipoles[i][j] = particleData[i].dipole[j] + _inducedDipole[i][j];
 }
 
-double AmoebaReferenceHippoNonbondedForce::calculateElectrostaticPotentialForParticleGridPoint(const MultipoleParticleData& particleI, const Vec3& gridPoint) const {
-    Vec3 deltaR = particleI.position - gridPoint;
-
-    getPeriodicDelta(deltaR);
-
-    double r2            = deltaR.dot(deltaR);
-    double r             = sqrt(r2);
-
-    double rr1           = 1.0/r;
-    double rr2           = rr1*rr1;
-    double rr3           = rr1*rr2;
-    double potential     = (particleI.coreCharge+particleI.valenceCharge)*rr1;
-
-    double scd           = particleI.dipole.dot(deltaR);
-    double scu           = _inducedDipole[particleI.index].dot(deltaR);
-    potential           -= (scd + scu)*rr3;
-
-    double rr5           = 3.0*rr3*rr2;
-    double scq           = deltaR[0]*(particleI.quadrupole[QXX]*deltaR[0] + particleI.quadrupole[QXY]*deltaR[1] + particleI.quadrupole[QXZ]*deltaR[2]);
-          scq           += deltaR[1]*(particleI.quadrupole[QXY]*deltaR[0] + particleI.quadrupole[QYY]*deltaR[1] + particleI.quadrupole[QYZ]*deltaR[2]);
-          scq           += deltaR[2]*(particleI.quadrupole[QXZ]*deltaR[0] + particleI.quadrupole[QYZ]*deltaR[1] + particleI.quadrupole[QZZ]*deltaR[2]);
-    potential           += scq*rr5;
-    return potential;
-}
-
-void AmoebaReferenceHippoNonbondedForce::calculateElectrostaticPotential(const vector<Vec3>& particlePositions,
-                                                                    const vector<Vec3>& grid,
-                                                                    vector<double>& potential) {
-    // setup, including calculating induced dipoles
-    // initialize potential
-    // calculate contribution of each particle to potential at grid point
-    // apply prefactor
-    setup(particlePositions);
-
-    potential.resize(grid.size());
-    for (auto& p : potential)
-        p = 0.0;
-
-    for (int ii = 0; ii < _numParticles; ii++) {
-        for (int jj = 0; jj < grid.size(); jj++) {
-            potential[jj] += calculateElectrostaticPotentialForParticleGridPoint(particleData[ii], grid[jj]);
-        }
-    }
-
-    for (auto& p : potential)
-        p *= _electric;
-}
-
 const int AmoebaReferencePmeHippoNonbondedForce::AMOEBA_PME_ORDER = 5;
 
 const double AmoebaReferencePmeHippoNonbondedForce::SQRT_PI = sqrt(M_PI);
@@ -2945,7 +2897,7 @@ double AmoebaReferencePmeHippoNonbondedForce::computeReciprocalSpaceDispersionFo
     pme_exec_dpme(pmedata, coords, dpmeforces, charges, _periodicBoxVectors, &recipDispersionEnergy);
     pme_destroy(pmedata);
     for (int i = 0; i < _numParticles; i++)
-        forces[i] += 2*dpmeforces[i];
+        forces[i] -= dpmeforces[i];
     return recipDispersionEnergy;
 }
 

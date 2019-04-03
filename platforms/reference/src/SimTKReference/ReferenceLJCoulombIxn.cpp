@@ -252,17 +252,12 @@ void ReferenceLJCoulombIxn::calculateEwaldIxn(int numberOfAtoms, vector<Vec3>& a
             // Dispersion reciprocal space terms
             pme_init(&pmedata,alphaDispersionEwald,numberOfAtoms,dispersionMeshDim,5,1);
 
-            std::vector<Vec3> dpmeforces;
-            for (int i = 0; i < numberOfAtoms; i++){
+            std::vector<Vec3> dpmeforces(numberOfAtoms);
+            for (int i = 0; i < numberOfAtoms; i++)
                 charges[i] = 8.0*pow(atomParameters[i][SigIndex], 3.0) * atomParameters[i][EpsIndex];
-                dpmeforces.push_back(Vec3());
-            }
             pme_exec_dpme(pmedata,atomCoordinates,dpmeforces,charges,periodicBoxVectors,&recipDispersionEnergy);
-            for (int i = 0; i < numberOfAtoms; i++){
-                forces[i][0] -= 2.0*dpmeforces[i][0];
-                forces[i][1] -= 2.0*dpmeforces[i][1];
-                forces[i][2] -= 2.0*dpmeforces[i][2];
-            }
+            for (int i = 0; i < numberOfAtoms; i++)
+                forces[i] += dpmeforces[i];
             if (totalEnergy)
                 *totalEnergy += recipDispersionEnergy;
             pme_destroy(pmedata);

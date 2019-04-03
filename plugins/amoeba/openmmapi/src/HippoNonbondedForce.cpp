@@ -233,10 +233,6 @@ void HippoNonbondedForce::getTotalDipoles(Context& context, vector<Vec3>& dipole
     dynamic_cast<HippoNonbondedForceImpl&>(getImplInContext(context)).getTotalDipoles(getContextImpl(context), dipoles);
 }
 
-void HippoNonbondedForce::getElectrostaticPotential(const std::vector< Vec3 >& inputGrid, Context& context, std::vector< double >& outputElectrostaticPotential) {
-    dynamic_cast<HippoNonbondedForceImpl&>(getImplInContext(context)).getElectrostaticPotential(getContextImpl(context), inputGrid, outputElectrostaticPotential);
-}
-
 ForceImpl* HippoNonbondedForce::createImpl()  const {
     return new HippoNonbondedForceImpl(*this);
 }

@@ -158,11 +158,6 @@ void HippoNonbondedForceImpl::getTotalDipoles(ContextImpl& context, vector<Vec3>
     kernel.getAs<CalcHippoNonbondedForceKernel>().getTotalDipoles(context, dipoles);
 }
 
-void HippoNonbondedForceImpl::getElectrostaticPotential(ContextImpl& context, const std::vector< Vec3 >& inputGrid,
-                                                         std::vector< double >& outputElectrostaticPotential) {
-    kernel.getAs<CalcHippoNonbondedForceKernel>().getElectrostaticPotential(context, inputGrid, outputElectrostaticPotential);
-}
-
 void HippoNonbondedForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcHippoNonbondedForceKernel>().copyParametersToContext(context, owner);
     context.systemChanged();

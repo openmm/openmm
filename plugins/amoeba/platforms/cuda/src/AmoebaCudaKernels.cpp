@@ -2742,19 +2742,19 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
     localDipoles.initialize(cu, 3*paddedNumAtoms, elementSize, "localDipoles");
     localQuadrupoles.initialize(cu, 5*paddedNumAtoms, elementSize, "localQuadrupoles");
     lastPositions.initialize(cu, cu.getPosq().getSize(), cu.getPosq().getElementSize(), "lastPositions");
-    uploadRealVec(coreCharge, coreChargeVec);
-    uploadRealVec(valenceCharge, valenceChargeVec);
-    uploadRealVec(alpha, alphaVec);
-    uploadRealVec(epsilon, epsilonVec);
-    uploadRealVec(damping, dampingVec);
-    uploadRealVec(c6, c6Vec);
-    uploadRealVec(pauliK, pauliKVec);
-    uploadRealVec(pauliQ, pauliQVec);
-    uploadRealVec(pauliAlpha, pauliAlphaVec);
-    uploadRealVec(polarizability, polarizabilityVec);
+    coreCharge.upload(coreChargeVec, true);
+    valenceCharge.upload(valenceChargeVec, true);
+    alpha.upload(alphaVec, true);
+    epsilon.upload(epsilonVec, true);
+    damping.upload(dampingVec, true);
+    c6.upload(c6Vec, true);
+    pauliK.upload(pauliKVec, true);
+    pauliQ.upload(pauliQVec, true);
+    pauliAlpha.upload(pauliAlphaVec, true);
+    polarizability.upload(polarizabilityVec, true);
     multipoleParticles.upload(multipoleParticlesVec);
-    uploadRealVec(localDipoles, localDipolesVec);
-    uploadRealVec(localQuadrupoles, localQuadrupolesVec);
+    localDipoles.upload(localDipolesVec, true);
+    localQuadrupoles.upload(localQuadrupolesVec, true);
     
     // Create workspace arrays.
     
@@ -2808,31 +2808,25 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
         exceptionAtoms.upload(exceptionAtomsVec);
         for (int i = 0; i < 5; i++) {
             exceptionScales[i].initialize(cu, exceptionAtomsVec.size(), elementSize, "exceptionScales");
-            uploadRealVec(exceptionScales[i], exceptionScaleVec[i]);
+            exceptionScales[i].upload(exceptionScaleVec[i], true);
         }
     }
     if (fixedFieldExceptionAtomsVec.size() > 0) {
         fixedFieldExceptionAtoms.initialize<int2>(cu, fixedFieldExceptionAtomsVec.size(), "fixedFieldExceptionAtoms");
         fixedFieldExceptionScale.initialize(cu, fixedFieldExceptionScaleVec.size(), elementSize, "fixedFieldExceptionScale");
         fixedFieldExceptionAtoms.upload(fixedFieldExceptionAtomsVec);
-        uploadRealVec(fixedFieldExceptionScale, fixedFieldExceptionScaleVec);
+        fixedFieldExceptionScale.upload(fixedFieldExceptionScaleVec, true);
     }
     if (mutualFieldExceptionAtomsVec.size() > 0) {
         mutualFieldExceptionAtoms.initialize<int2>(cu, mutualFieldExceptionAtomsVec.size(), "mutualFieldExceptionAtoms");
         mutualFieldExceptionScale.initialize(cu, mutualFieldExceptionScaleVec.size(), elementSize, "mutualFieldExceptionScale");
         mutualFieldExceptionAtoms.upload(mutualFieldExceptionAtomsVec);
-        uploadRealVec(mutualFieldExceptionScale, mutualFieldExceptionScaleVec);
+        mutualFieldExceptionScale.upload(mutualFieldExceptionScaleVec, true);
     }
     
     // Create the kernels.
 
     bool useShuffle = (cu.getComputeCapability() >= 3.0 && !cu.getUseDoublePrecision());
-//    double fixedThreadMemory = 19*elementSize+2*sizeof(float)+3*sizeof(int)/(double) cu.TileSize;
-//    double inducedThreadMemory = 15*elementSize+2*sizeof(float);
-//    inducedThreadMemory += 12*elementSize;
-//    double electrostaticsThreadMemory = 0;
-//    if (!useShuffle)
-//        fixedThreadMemory += 3*elementSize;
     map<string, string> defines;
     defines["HIPPO"] = "1";
     defines["NUM_ATOMS"] = cu.intToString(numParticles);
@@ -2841,14 +2835,6 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
     defines["ENERGY_SCALE_FACTOR"] = cu.doubleToString(138.9354558456);
     if (useShuffle)
         defines["USE_SHUFFLE"] = "";
-//    defines["TILE_SIZE"] = cu.intToString(CudaContext::TileSize);
-//    int numExclusionTiles = tilesWithExclusions.size();
-//    defines["NUM_TILES_WITH_EXCLUSIONS"] = cu.intToString(numExclusionTiles);
-//    int numContexts = cu.getPlatformData().contexts.size();
-//    int startExclusionIndex = cu.getContextIndex()*numExclusionTiles/numContexts;
-//    int endExclusionIndex = (cu.getContextIndex()+1)*numExclusionTiles/numContexts;
-//    defines["FIRST_EXCLUSION_TILE"] = cu.intToString(startExclusionIndex);
-//    defines["LAST_EXCLUSION_TILE"] = cu.intToString(endExclusionIndex);
     maxExtrapolationOrder = extrapolationCoefficients.size();
     defines["MAX_EXTRAPOLATION_ORDER"] = cu.intToString(maxExtrapolationOrder);
     stringstream coefficients;
@@ -2899,34 +2885,15 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
         defines["USE_PERIODIC"] = "";
         defines["CUTOFF_SQUARED"] = cu.doubleToString(force.getCutoffDistance()*force.getCutoffDistance());
     }
-//    int maxThreads = cu.getNonbondedUtilities().getForceThreadBlockSize();
-//    fixedFieldThreads = min(maxThreads, cu.computeThreadBlockSize(fixedThreadMemory));
-//    inducedFieldThreads = min(maxThreads, cu.computeThreadBlockSize(inducedThreadMemory));
     CUmodule module = cu.createModule(CudaKernelSources::vectorOps+CudaAmoebaKernelSources::hippoMultipoles, defines);
     computeMomentsKernel = cu.getKernel(module, "computeLabFrameMoments");
     recordInducedDipolesKernel = cu.getKernel(module, "recordInducedDipoles");
     mapTorqueKernel = cu.getKernel(module, "mapTorqueToForce");
-    computePotentialKernel = cu.getKernel(module, "computePotentialAtPoints");
-//    defines["THREAD_BLOCK_SIZE"] = cu.intToString(fixedFieldThreads);
-//    module = cu.createModule(CudaKernelSources::vectorOps+CudaAmoebaKernelSources::multipoleFixedField, defines);
-//    computeFixedFieldKernel = cu.getKernel(module, "computeFixedField");
     module = cu.createModule(CudaKernelSources::vectorOps+CudaAmoebaKernelSources::multipoleInducedField, defines);
     initExtrapolatedKernel = cu.getKernel(module, "initExtrapolatedDipoles");
     iterateExtrapolatedKernel = cu.getKernel(module, "iterateExtrapolatedDipoles");
     computeExtrapolatedKernel = cu.getKernel(module, "computeExtrapolatedDipoles");
     polarizationEnergyKernel = cu.getKernel(module, "computePolarizationEnergy");
-//    stringstream electrostaticsSource;
-//    electrostaticsSource << CudaKernelSources::vectorOps;
-//    electrostaticsSource << CudaAmoebaKernelSources::sphericalMultipoles;
-//    if (usePME)
-//        electrostaticsSource << CudaAmoebaKernelSources::pmeMultipoleElectrostatics;
-//    else
-//        electrostaticsSource << CudaAmoebaKernelSources::multipoleElectrostatics;
-//    electrostaticsThreadMemory = 24*elementSize+3*sizeof(float)+3*sizeof(int)/(double) cu.TileSize;
-//    electrostaticsThreads = min(maxThreads, cu.computeThreadBlockSize(electrostaticsThreadMemory));
-//    defines["THREAD_BLOCK_SIZE"] = cu.intToString(electrostaticsThreads);
-//    module = cu.createModule(electrostaticsSource.str(), defines);
-//    electrostaticsKernel = cu.getKernel(module, "computeElectrostatics");
 
     // Set up PME.
     
@@ -2972,6 +2939,7 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
         pmeDefines["RECIP_EXP_FACTOR"] = cu.doubleToString(M_PI*M_PI/(dpmeAlpha*dpmeAlpha));
         pmeDefines["CHARGE"] = "charges[atom]";
         pmeDefines["USE_LJPME"] = "1";
+        pmeDefines["FORCE_SCALE"] = "-1";
         module = cu.createModule(CudaKernelSources::vectorOps+CudaKernelSources::pme, pmeDefines);
         dpmeFinishSpreadChargeKernel = cu.getKernel(module, "finishSpreadCharge");
         dpmeGridIndexKernel = cu.getKernel(module, "findAtomGridIndex");
@@ -3217,17 +3185,6 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
     }
     cu.addForce(new ForceInfo(force));
     cu.addPostComputation(new TorquePostComputation(*this));
-}
-
-void CudaCalcHippoNonbondedForceKernel::uploadRealVec(CudaArray& array, const std::vector<double>& values) {
-    if (cu.getUseDoublePrecision())
-        array.upload(values);
-    else {
-        vector<float> floatValues;
-        for (double v : values)
-            floatValues.push_back((float) v);
-        array.upload(floatValues);
-    }
 }
 
 void CudaCalcHippoNonbondedForceKernel::createFieldKernel(const string& interactionSrc, vector<CudaArray*> params,
@@ -3692,11 +3649,6 @@ void CudaCalcHippoNonbondedForceKernel::getLabFramePermanentDipoles(ContextImpl&
 
 
 void CudaCalcHippoNonbondedForceKernel::getTotalDipoles(ContextImpl& context, vector<Vec3>& dipoles) {
-    
-}
-
-
-void CudaCalcHippoNonbondedForceKernel::getElectrostaticPotential(ContextImpl& context, const vector<Vec3>& inputGrid, vector<double>& outputElectrostaticPotential) {
     
 }
 

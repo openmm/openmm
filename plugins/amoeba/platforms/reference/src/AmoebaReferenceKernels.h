@@ -745,15 +745,6 @@ public:
      * @param dipoles    the fixed dipole moment of particle i is stored into the i'th element
      */
     void getTotalDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
-    /** 
-     * Calculate the electrostatic potential given vector of grid coordinates.
-     *
-     * @param context                      context
-     * @param inputGrid                    input grid coordinates
-     * @param outputElectrostaticPotential output potential 
-     */
-    void getElectrostaticPotential(ContextImpl& context, const std::vector< Vec3 >& inputGrid,
-                                   std::vector< double >& outputElectrostaticPotential);
     /**
      * Copy changed parameters over to a context.
      *

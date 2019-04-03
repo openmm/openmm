@@ -714,12 +714,10 @@ private:
     void computeExtrapolatedDipoles(void** recipBoxVectorPointer);
     void ensureMultipolesValid(ContextImpl& context);
     void addTorquesToForces();
-    void uploadRealVec(CudaArray& array, const std::vector<double>& values);
     void createFieldKernel(const std::string& interactionSrc, std::vector<CudaArray*> params, CudaArray& fieldBuffer,
         CUfunction& kernel, std::vector<void*>& args, CUfunction& exceptionKernel, std::vector<void*>& exceptionArgs,
         CudaArray& exceptionAtoms, CudaArray& exceptionScale);
     int numParticles, maxExtrapolationOrder, maxTiles;
-    int fixedFieldThreads, inducedFieldThreads, electrostaticsThreads;
     int gridSizeX, gridSizeY, gridSizeZ;
     int dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ;
     double pmeAlpha, dpmeAlpha, cutoff;
@@ -736,8 +734,6 @@ private:
     CudaArray torque;
     CudaArray inducedDipole;
     CudaArray extrapolatedDipole, extrapolatedPhi;
-    CudaArray inducedDipoleFieldGradient;
-    CudaArray extrapolatedDipoleFieldGradient;
     CudaArray pmeGrid1, pmeGrid2;
     CudaArray pmeAtomGridIndex;
     CudaArray pmeBsplineModuliX, pmeBsplineModuliY, pmeBsplineModuliZ;
@@ -749,10 +745,10 @@ private:
     CudaSort* sort;
     cufftHandle fftForward, fftBackward, dfftForward, dfftBackward;
     CUfunction computeMomentsKernel, fixedFieldKernel, fixedFieldExceptionKernel, mutualFieldKernel, mutualFieldExceptionKernel, computeExceptionsKernel;
-    CUfunction recordInducedDipolesKernel, computeFixedFieldKernel, computeInducedFieldKernel, updateInducedFieldKernel, electrostaticsKernel, mapTorqueKernel;
+    CUfunction recordInducedDipolesKernel, mapTorqueKernel;
     CUfunction pmeSpreadFixedMultipolesKernel, pmeSpreadInducedDipolesKernel, pmeFinishSpreadChargeKernel, pmeConvolutionKernel;
     CUfunction pmeFixedPotentialKernel, pmeInducedPotentialKernel, pmeFixedForceKernel, pmeInducedForceKernel, pmeRecordInducedFieldDipolesKernel;
-    CUfunction pmeSelfEnergyKernel, computePotentialKernel;
+    CUfunction pmeSelfEnergyKernel;
     CUfunction dpmeGridIndexKernel, dpmeSpreadChargeKernel, dpmeFinishSpreadChargeKernel, dpmeEvalEnergyKernel, dpmeConvolutionKernel, dpmeInterpolateForceKernel;
     CUfunction initExtrapolatedKernel, iterateExtrapolatedKernel, computeExtrapolatedKernel, polarizationEnergyKernel;
     CUfunction pmeTransformMultipolesKernel, pmeTransformPotentialKernel;

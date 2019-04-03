@@ -1237,24 +1237,6 @@ void ReferenceCalcHippoNonbondedForceKernel::getTotalDipoles(ContextImpl& contex
         outputDipoles[i] = totalDipoles[i];
 }
 
-
-
-void ReferenceCalcHippoNonbondedForceKernel::getElectrostaticPotential(ContextImpl& context, const std::vector< Vec3 >& inputGrid,
-                                                                        std::vector< double >& outputElectrostaticPotential) {
-
-    setupAmoebaReferenceHippoNonbondedForce(context);
-    vector<Vec3>& posData = extractPositions(context);
-    vector<Vec3> grid(inputGrid.size());
-    vector<double> potential(inputGrid.size());
-    for (unsigned int ii = 0; ii < inputGrid.size(); ii++)
-        grid[ii] = inputGrid[ii];
-    ixn->calculateElectrostaticPotential(posData, grid, potential);
-    outputElectrostaticPotential.resize(inputGrid.size());
-    for (unsigned int ii = 0; ii < inputGrid.size(); ii++) {
-        outputElectrostaticPotential[ii] = potential[ii];
-    }
-}
-
 void ReferenceCalcHippoNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const HippoNonbondedForce& force) {
     if (numParticles != force.getNumParticles())
         throw OpenMMException("updateParametersInContext: The number of multipoles has changed");

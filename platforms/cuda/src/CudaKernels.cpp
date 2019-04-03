@@ -1741,6 +1741,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
             pmeDefines["GRID_SIZE_Y"] = cu.intToString(gridSizeY);
             pmeDefines["GRID_SIZE_Z"] = cu.intToString(gridSizeZ);
             pmeDefines["EPSILON_FACTOR"] = cu.doubleToString(sqrt(ONE_4PI_EPS0));
+            pmeDefines["FORCE_SCALE"] = "1";
             pmeDefines["M_PI"] = cu.doubleToString(M_PI);
             if (cu.getUseDoublePrecision())
                 pmeDefines["USE_DOUBLE_PRECISION"] = "1";

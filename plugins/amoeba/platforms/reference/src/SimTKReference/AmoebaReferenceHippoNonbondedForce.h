@@ -173,17 +173,6 @@ public:
     void calculateTotalDipoles(const std::vector<Vec3>& particlePositions,
                                std::vector<Vec3>& outputRotatedPermanentDipoles);
 
-    /**
-     * Calculate electrostatic potential at a set of grid points.
-     *
-     * @param particlePositions         Cartesian coordinates of particles
-     * @param input grid                input grid points to compute potential
-     * @param outputPotential           output electrostatic potential
-     */
-    void calculateElectrostaticPotential(const std::vector<OpenMM::Vec3>& particlePositions,
-                                         const std::vector<Vec3>& inputGrid,
-                                         std::vector<double>& outputPotential);
-
 protected:
 
     enum QuadrupoleIndices { QXX, QXY, QXZ, QYY, QYZ, QZZ };
@@ -576,17 +565,6 @@ protected:
      * 
      */
     void initializeVec3Vector(std::vector<Vec3>& vectorToInitialize) const;
-
-    /**
-     * Calculate potential at grid point due to a particle
-     *
-     * @param particleData            vector of parameters (charge, labFrame dipoles, quadrupoles, ...) for particles
-     * @param gridPoint               grid point
-     *
-     * @return potential at grid point
-     * 
-     */
-    double calculateElectrostaticPotentialForParticleGridPoint(const MultipoleParticleData& particleI, const Vec3& gridPoint) const;
 
     /**
      * Apply periodic boundary conditions to difference in positions

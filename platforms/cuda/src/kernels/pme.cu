@@ -358,9 +358,9 @@ void gridInterpolateForce(const real4* __restrict__ posq, unsigned long long* __
 #else
         real q = CHARGE*EPSILON_FACTOR;
 #endif
-        real forceX = -q*(force.x*GRID_SIZE_X*recipBoxVecX.x);
-        real forceY = -q*(force.x*GRID_SIZE_X*recipBoxVecY.x+force.y*GRID_SIZE_Y*recipBoxVecY.y);
-        real forceZ = -q*(force.x*GRID_SIZE_X*recipBoxVecZ.x+force.y*GRID_SIZE_Y*recipBoxVecZ.y+force.z*GRID_SIZE_Z*recipBoxVecZ.z);
+        real forceX = -FORCE_SCALE*q*(force.x*GRID_SIZE_X*recipBoxVecX.x);
+        real forceY = -FORCE_SCALE*q*(force.x*GRID_SIZE_X*recipBoxVecY.x+force.y*GRID_SIZE_Y*recipBoxVecY.y);
+        real forceZ = -FORCE_SCALE*q*(force.x*GRID_SIZE_X*recipBoxVecZ.x+force.y*GRID_SIZE_Y*recipBoxVecZ.y+force.z*GRID_SIZE_Z*recipBoxVecZ.z);
         atomicAdd(&forceBuffers[atom], static_cast<unsigned long long>((long long) (forceX*0x100000000)));
         atomicAdd(&forceBuffers[atom+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (forceY*0x100000000)));
         atomicAdd(&forceBuffers[atom+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (forceZ*0x100000000)));

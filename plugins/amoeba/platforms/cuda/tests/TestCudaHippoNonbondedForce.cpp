@@ -1475,7 +1475,7 @@ int main(int argc, char* argv[]) {
         else {
             forceTol = 5e-3;
             energyTol = 1e-3;
-            consistencyTol = 1e-2;
+            consistencyTol = 5e-2;
         }
         testWaterDimer();
         testWaterBox();
