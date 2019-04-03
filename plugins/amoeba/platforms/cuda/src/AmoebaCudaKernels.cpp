@@ -2673,7 +2673,7 @@ CudaCalcHippoNonbondedForceKernel::~CudaCalcHippoNonbondedForceKernel() {
 
 void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const HippoNonbondedForce& force) {
     cu.setAsCurrent();
-    extrapolationCoefficients = {0.042, 0.635, 0.414};
+    extrapolationCoefficients = force.getExtrapolationCoefficients();
     usePME = (force.getNonbondedMethod() == HippoNonbondedForce::PME);
 
     // Initialize particle parameters.
@@ -2778,8 +2778,8 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
     
     // Record exceptions and exclusions.
     
-    vector<double> exceptionScaleVec[5], fixedFieldExceptionScaleVec, mutualFieldExceptionScaleVec;
-    vector<int2> exceptionAtomsVec, fixedFieldExceptionAtomsVec, mutualFieldExceptionAtomsVec;
+    vector<double> exceptionScaleVec[5];
+    vector<int2> exceptionAtomsVec;
     for (int i = 0; i < force.getNumExceptions(); i++) {
         int particle1, particle2;
         double multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale;
@@ -2793,14 +2793,6 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
             exceptionScaleVec[2].push_back(dipoleDipoleScale);
             exceptionScaleVec[3].push_back(dispersionScale);
             exceptionScaleVec[4].push_back(repulsionScale);
-            if (usePME || dipoleMultipoleScale != 0) {
-                fixedFieldExceptionAtomsVec.push_back(make_int2(particle1, particle2));
-                fixedFieldExceptionScaleVec.push_back(dipoleMultipoleScale);
-            }
-            if (usePME || dipoleDipoleScale != 0) {
-                mutualFieldExceptionAtomsVec.push_back(make_int2(particle1, particle2));
-                mutualFieldExceptionScaleVec.push_back(dipoleDipoleScale);
-            }
         }
     }
     if (exceptionAtomsVec.size() > 0) {
@@ -2810,18 +2802,6 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
             exceptionScales[i].initialize(cu, exceptionAtomsVec.size(), elementSize, "exceptionScales");
             exceptionScales[i].upload(exceptionScaleVec[i], true);
         }
-    }
-    if (fixedFieldExceptionAtomsVec.size() > 0) {
-        fixedFieldExceptionAtoms.initialize<int2>(cu, fixedFieldExceptionAtomsVec.size(), "fixedFieldExceptionAtoms");
-        fixedFieldExceptionScale.initialize(cu, fixedFieldExceptionScaleVec.size(), elementSize, "fixedFieldExceptionScale");
-        fixedFieldExceptionAtoms.upload(fixedFieldExceptionAtomsVec);
-        fixedFieldExceptionScale.upload(fixedFieldExceptionScaleVec, true);
-    }
-    if (mutualFieldExceptionAtomsVec.size() > 0) {
-        mutualFieldExceptionAtoms.initialize<int2>(cu, mutualFieldExceptionAtomsVec.size(), "mutualFieldExceptionAtoms");
-        mutualFieldExceptionScale.initialize(cu, mutualFieldExceptionScaleVec.size(), elementSize, "mutualFieldExceptionScale");
-        mutualFieldExceptionAtoms.upload(mutualFieldExceptionAtomsVec);
-        mutualFieldExceptionScale.upload(mutualFieldExceptionScaleVec, true);
     }
     
     // Create the kernels.
@@ -3189,7 +3169,7 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
 
 void CudaCalcHippoNonbondedForceKernel::createFieldKernel(const string& interactionSrc, vector<CudaArray*> params,
             CudaArray& fieldBuffer, CUfunction& kernel, vector<void*>& args, CUfunction& exceptionKernel, vector<void*>& exceptionArgs,
-            CudaArray& exceptionAtoms, CudaArray& exceptionScale) {
+            CudaArray& exceptionScale) {
     // Create the kernel source.
 
     map<string, string> replacements;
@@ -3294,9 +3274,9 @@ double CudaCalcHippoNonbondedForceKernel::execute(ContextImpl& context, bool inc
         maxTiles = (nb.getUseCutoff() ? nb.getInteractingTiles().getSize() : cu.getNumAtomBlocks()*(cu.getNumAtomBlocks()+1)/2);
         createFieldKernel(CudaAmoebaKernelSources::hippoFixedField, {&coreCharge, &valenceCharge, &alpha, &labDipoles, &labQuadrupoles[0],
                 &labQuadrupoles[1], &labQuadrupoles[2], &labQuadrupoles[3], &labQuadrupoles[4]}, field, fixedFieldKernel, fixedFieldArgs,
-                fixedFieldExceptionKernel, fixedFieldExceptionArgs, fixedFieldExceptionAtoms, fixedFieldExceptionScale);
+                fixedFieldExceptionKernel, fixedFieldExceptionArgs, exceptionScales[1]);
         createFieldKernel(CudaAmoebaKernelSources::hippoMutualField, {&alpha, &inducedDipole}, inducedField, mutualFieldKernel, mutualFieldArgs,
-                mutualFieldExceptionKernel, mutualFieldExceptionArgs, mutualFieldExceptionAtoms, mutualFieldExceptionScale);
+                mutualFieldExceptionKernel, mutualFieldExceptionArgs, exceptionScales[2]);
         if (exceptionAtoms.isInitialized()) {
             computeExceptionsArgs.push_back(&cu.getForce().getDevicePointer());
             computeExceptionsArgs.push_back(&cu.getEnergyBuffer().getDevicePointer());
@@ -3470,7 +3450,7 @@ double CudaCalcHippoNonbondedForceKernel::execute(ContextImpl& context, bool inc
 
     cu.executeKernel(fixedFieldKernel, &fixedFieldArgs[0], nb.getNumForceThreadBlocks()*nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());
     if (fixedFieldExceptionArgs.size() > 0)
-        cu.executeKernel(fixedFieldExceptionKernel, &fixedFieldExceptionArgs[0], fixedFieldExceptionAtoms.getSize());
+        cu.executeKernel(fixedFieldExceptionKernel, &fixedFieldExceptionArgs[0], exceptionAtoms.getSize());
 
     // Iterate the induced dipoles.
 
@@ -3521,7 +3501,7 @@ void CudaCalcHippoNonbondedForceKernel::computeInducedField(void** recipBoxVecto
     cu.clearBuffer(inducedField);
     cu.executeKernel(mutualFieldKernel, &mutualFieldArgs[0], nb.getNumForceThreadBlocks()*nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());
     if (mutualFieldExceptionArgs.size() > 0)
-        cu.executeKernel(mutualFieldExceptionKernel, &mutualFieldExceptionArgs[0], mutualFieldExceptionAtoms.getSize());
+        cu.executeKernel(mutualFieldExceptionKernel, &mutualFieldExceptionArgs[0], exceptionAtoms.getSize());
     if (usePME) {
         cu.clearBuffer(pmeGrid1);
         void* pmeSpreadInducedDipolesArgs[] = {&cu.getPosq().getDevicePointer(), &inducedDipole.getDevicePointer(),
@@ -3647,22 +3627,115 @@ void CudaCalcHippoNonbondedForceKernel::getLabFramePermanentDipoles(ContextImpl&
     }
 }
 
-
-void CudaCalcHippoNonbondedForceKernel::getTotalDipoles(ContextImpl& context, vector<Vec3>& dipoles) {
-    
-}
-
-
 void CudaCalcHippoNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const HippoNonbondedForce& force) {
+    // Make sure the new parameters are acceptable.
     
-}
+    cu.setAsCurrent();
+    if (force.getNumParticles() != cu.getNumAtoms())
+        throw OpenMMException("updateParametersInContext: The number of particles has changed");
+    
+    // Record the per-particle parameters.
+    
+    vector<double> coreChargeVec, valenceChargeVec, alphaVec, epsilonVec, dampingVec, c6Vec, pauliKVec, pauliQVec, pauliAlphaVec, polarizabilityVec;
+    vector<double> localDipolesVec, localQuadrupolesVec;
+    vector<int4> multipoleParticlesVec;
+    for (int i = 0; i < numParticles; i++) {
+        double charge, coreCharge, alpha, epsilon, damping, c6, pauliK, pauliQ, pauliAlpha, polarizability;
+        int axisType, atomX, atomY, atomZ;
+        vector<double> dipole, quadrupole;
+        force.getParticleParameters(i, charge, dipole, quadrupole, coreCharge, alpha, epsilon, damping, c6, pauliK, pauliQ, pauliAlpha,
+                                    polarizability, axisType, atomZ, atomX, atomY);
+        coreChargeVec.push_back(coreCharge);
+        valenceChargeVec.push_back(charge-coreCharge);
+        alphaVec.push_back(alpha);
+        epsilonVec.push_back(epsilon);
+        dampingVec.push_back(damping);
+        c6Vec.push_back(c6);
+        pauliKVec.push_back(pauliK);
+        pauliQVec.push_back(pauliQ);
+        pauliAlphaVec.push_back(pauliAlpha);
+        polarizabilityVec.push_back(polarizability);
+        multipoleParticlesVec.push_back(make_int4(atomX, atomY, atomZ, axisType));
+        for (int j = 0; j < 3; j++)
+            localDipolesVec.push_back(dipole[j]);
+        localQuadrupolesVec.push_back(quadrupole[0]);
+        localQuadrupolesVec.push_back(quadrupole[1]);
+        localQuadrupolesVec.push_back(quadrupole[2]);
+        localQuadrupolesVec.push_back(quadrupole[4]);
+        localQuadrupolesVec.push_back(quadrupole[5]);
+    }
+    int paddedNumAtoms = cu.getPaddedNumAtoms();
+    for (int i = numParticles; i < paddedNumAtoms; i++) {
+        coreChargeVec.push_back(0);
+        valenceChargeVec.push_back(0);
+        alphaVec.push_back(0);
+        epsilonVec.push_back(0);
+        dampingVec.push_back(0);
+        c6Vec.push_back(0);
+        pauliKVec.push_back(0);
+        pauliQVec.push_back(0);
+        pauliAlphaVec.push_back(0);
+        polarizabilityVec.push_back(0);
+        multipoleParticlesVec.push_back(make_int4(0, 0, 0, 0));
+        for (int j = 0; j < 3; j++)
+            localDipolesVec.push_back(0);
+        for (int j = 0; j < 5; j++)
+            localQuadrupolesVec.push_back(0);
+    }
+    coreCharge.upload(coreChargeVec, true);
+    valenceCharge.upload(valenceChargeVec, true);
+    alpha.upload(alphaVec, true);
+    epsilon.upload(epsilonVec, true);
+    damping.upload(dampingVec, true);
+    c6.upload(c6Vec, true);
+    pauliK.upload(pauliKVec, true);
+    pauliQ.upload(pauliQVec, true);
+    pauliAlpha.upload(pauliAlphaVec, true);
+    polarizability.upload(polarizabilityVec, true);
+    multipoleParticles.upload(multipoleParticlesVec);
+    localDipoles.upload(localDipolesVec, true);
+    localQuadrupoles.upload(localQuadrupolesVec, true);
+    
+    // Record the per-exception parameters.
 
+    vector<double> exceptionScaleVec[5];
+    vector<int2> exceptionAtomsVec;
+    for (int i = 0; i < force.getNumExceptions(); i++) {
+        int particle1, particle2;
+        double multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale;
+        force.getExceptionParameters(i, particle1, particle2, multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale);
+        if (usePME || multipoleMultipoleScale != 0 || dipoleMultipoleScale != 0 || dipoleDipoleScale != 0 || dispersionScale != 0 || repulsionScale != 0) {
+            exceptionAtomsVec.push_back(make_int2(particle1, particle2));
+            exceptionScaleVec[0].push_back(multipoleMultipoleScale);
+            exceptionScaleVec[1].push_back(dipoleMultipoleScale);
+            exceptionScaleVec[2].push_back(dipoleDipoleScale);
+            exceptionScaleVec[3].push_back(dispersionScale);
+            exceptionScaleVec[4].push_back(repulsionScale);
+        }
+    }
+    if (exceptionAtomsVec.size() > 0) {
+        if (!exceptionAtoms.isInitialized() || exceptionAtoms.getSize() != exceptionAtomsVec.size())
+            throw OpenMMException("updateParametersInContext: The number of exceptions has changed");
+        exceptionAtoms.upload(exceptionAtomsVec);
+        for (int i = 0; i < 5; i++)
+            exceptionScales[i].upload(exceptionScaleVec[i], true);
+    }
+    else if (exceptionAtoms.isInitialized())
+        throw OpenMMException("updateParametersInContext: The number of exceptions has changed");
+    cu.invalidateMolecules();
+    multipolesAreValid = false;
+}
 
 void CudaCalcHippoNonbondedForceKernel::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
-    
+    alpha = pmeAlpha;
+    nx = gridSizeX;
+    ny = gridSizeY;
+    nz = gridSizeZ;
 }
 
-
 void CudaCalcHippoNonbondedForceKernel::getDPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
-    
+    alpha = dpmeAlpha;
+    nx = dispersionGridSizeX;
+    ny = dispersionGridSizeY;
+    nz = dispersionGridSizeZ;
 }

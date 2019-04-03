@@ -523,7 +523,6 @@ public:
     virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
     virtual void getLabFramePermanentDipoles(ContextImpl& context, std::vector<Vec3>& dipoles) = 0;
     virtual void getInducedDipoles(ContextImpl& context, std::vector<Vec3>& dipoles) = 0;
-    virtual void getTotalDipoles(ContextImpl& context, std::vector<Vec3>& dipoles) = 0;
     /**
      * Copy changed parameters over to a context.
      *

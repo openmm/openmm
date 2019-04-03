@@ -656,13 +656,6 @@ public:
      * @param dipoles    the fixed dipole moment of particle i is stored into the i'th element
      */
     void getLabFramePermanentDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
-    /**
-     * Get the total dipole moments of all particles in the global reference frame.
-     * 
-     * @param context    the Context for which to get the fixed dipoles
-     * @param dipoles    the fixed dipole moment of particle i is stored into the i'th element
-     */
-    void getTotalDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
     /** 
      * Calculate the electrostatic potential given vector of grid coordinates.
      *
@@ -716,7 +709,7 @@ private:
     void addTorquesToForces();
     void createFieldKernel(const std::string& interactionSrc, std::vector<CudaArray*> params, CudaArray& fieldBuffer,
         CUfunction& kernel, std::vector<void*>& args, CUfunction& exceptionKernel, std::vector<void*>& exceptionArgs,
-        CudaArray& exceptionAtoms, CudaArray& exceptionScale);
+        CudaArray& exceptionScale);
     int numParticles, maxExtrapolationOrder, maxTiles;
     int gridSizeX, gridSizeY, gridSizeZ;
     int dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ;
@@ -741,7 +734,7 @@ private:
     CudaArray pmePhi, pmePhidp, pmeCphi;
     CudaArray lastPositions;
     CudaArray exceptionScales[5];
-    CudaArray exceptionAtoms, fixedFieldExceptionAtoms, mutualFieldExceptionAtoms, fixedFieldExceptionScale, mutualFieldExceptionScale;
+    CudaArray exceptionAtoms;
     CudaSort* sort;
     cufftHandle fftForward, fftBackward, dfftForward, dfftBackward;
     CUfunction computeMomentsKernel, fixedFieldKernel, fixedFieldExceptionKernel, mutualFieldKernel, mutualFieldExceptionKernel, computeExceptionsKernel;

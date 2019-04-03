@@ -50,6 +50,7 @@ double forceTol, energyTol, consistencyTol;
 
 void buildWaterSystem(System& system, int numWaters, HippoNonbondedForce* hippo) {
     system.addForce(hippo);
+    hippo->setExtrapolationCoefficients({0.042, 0.635, 0.414});
     for (int mol = 0; mol < numWaters; mol++) {
         system.addParticle(15.995);
         system.addParticle(1.008);
@@ -134,6 +135,39 @@ void testWaterDimer() {
     };
     for (int i = 0; i < system.getNumParticles(); i++)
         ASSERT_EQUAL_VEC(expectedForces[i], state.getForces()[i], forceTol);
+
+    // Compare the induced dipoles to reference values computed with Tinker.
+
+    vector<Vec3> expectedLabDipoles = {
+        Vec3(-1.3999971343167967e-3, 0.0, 2.5377493339976591e-3),
+        Vec3(-1.0546602554698980e-2, 0.0, 1.3673800193405874e-3),
+        Vec3(4.4683063920526751e-3, 0.0, 9.6506368469037353e-3),
+        Vec3(-1.7652415043849052e-3, 0.0, -2.2987140077655862e-3),
+        Vec3(-3.8321399176713630e-3, 8.5739534328208283e-3, -4.9902484654859164e-3),
+        Vec3(-3.8321399176713630e-3, -8.5739534328208283e-3, -4.9902484654859164e-3)
+    };
+    vector<Vec3> labDipoles;
+    hippo->getLabFramePermanentDipoles(context, labDipoles);
+    for (int i = 0; i < system.getNumParticles(); i++)
+        ASSERT_EQUAL_VEC(expectedLabDipoles[i], labDipoles[i], 1e-5);
+
+    // Compare the induced dipoles to reference values computed with Tinker.
+
+    vector<Vec3> expectedInducedDipoles = {
+        Vec3(-2.6946897397455059e-3, 0.0, 5.7283370317562626e-4),
+        Vec3(-3.4687164828218306e-3, 0.0, 2.3558084682622801e-4),
+        Vec3(-8.3759103839743578e-4, 0.0, -4.0453541836814088e-4),
+        Vec3(-4.7635598636156719e-3, 0.0, -6.2133742026147971e-4),
+        Vec3(-6.3777660942845697e-4, 5.2439508203868156e-4, -4.3219965383009991e-4),
+        Vec3(-6.3777660942845697e-4, -5.2439508203868156e-4, -4.3219965383009991e-4)
+    };
+    vector<Vec3> inducedDipoles;
+    hippo->getInducedDipoles(context, inducedDipoles);
+    for (int i = 0; i < system.getNumParticles(); i++)
+        ASSERT_EQUAL_VEC(expectedInducedDipoles[i], inducedDipoles[i], 1e-5);
+
+    // Check for consistency between forces and energy.
+
     checkForceEnergyConsistency(context);
 }
 
@@ -150,6 +184,18 @@ void testWaterBox() {
     hippo->setDPMEParameters(3.85037, 20, 20, 20);
     VerletIntegrator integrator(0.001);
     Context context(system, integrator, Platform::getPlatformByName("CUDA"));
+    double alpha;
+    int nx, ny, nz;
+    hippo->getPMEParametersInContext(context, alpha, nx, ny, nz);
+    ASSERT_EQUAL_TOL(alpha, 3.85037, 1e-5);
+    ASSERT_EQUAL(24, nx);
+    ASSERT_EQUAL(24, ny);
+    ASSERT_EQUAL(24, nz);
+    hippo->getDPMEParametersInContext(context, alpha, nx, ny, nz);
+    ASSERT_EQUAL_TOL(alpha, 3.85037, 1e-5);
+    ASSERT_EQUAL(20, nx);
+    ASSERT_EQUAL(20, ny);
+    ASSERT_EQUAL(20, nz);
     vector<Vec3> positions = {
         Vec3(0.8679662000000001, 0.7087692, -0.0696862),
         Vec3(0.7809455000000001, 0.6755792, -0.03822590000000001),
@@ -1461,6 +1507,44 @@ void testWaterBox() {
     checkForceEnergyConsistency(context);
 }
 
+void testChangingParameters() {
+    System system;
+    HippoNonbondedForce* hippo = new HippoNonbondedForce();
+    buildWaterSystem(system, 2, hippo);
+    VerletIntegrator integrator(0.001);
+    Context context(system, integrator, Platform::getPlatformByName("CUDA"));
+    vector<Vec3> positions = {
+        0.1*Vec3(1.505434, 0.0, -0.065656),
+        0.1*Vec3(0.553912, 0.0, 0.057710),
+        0.1*Vec3(1.907155, 0.0, 0.801980),
+        0.1*Vec3(-1.436029, 0.0, 0.060505),
+        0.1*Vec3(-1.781197, 0.772272, -0.388976),
+        0.1*Vec3(-1.781197, -0.772272, -0.388976)
+    };
+    context.setPositions(positions);
+    State state1 = context.getState(State::Energy | State::Forces);
+    
+    // Change some of the parameters and make sure the results change.
+
+    hippo->setParticleParameters(0, -0.2, {0.0, 0.0, 0.005}, {0.001, 0.0, 0.0, 0.0, -0.001, 0.0, 0.0, 0.0, 0.0}, 6.0,
+                20, 4.184*1326.0, 10*40.0, 0.03, 2.0, -2.4233, 10*4.3097,
+                0.001*0.795, HippoNonbondedForce::Bisector, 1, 2, -1);
+    hippo->setExceptionParameters(3, 3, 4, 0.1, 0.1, 0.3, 0.05, 0.05);
+    hippo->updateParametersInContext(context);
+    State state2 = context.getState(State::Energy | State::Forces);
+    ASSERT(fabs(state1.getPotentialEnergy()-state2.getPotentialEnergy()) > 1.0)
+
+    // Create a new context with the altered parameters and see if it agrees.
+
+    VerletIntegrator integrator2(0.001);
+    Context context2(system, integrator2, Platform::getPlatformByName("CUDA"));
+    context.setPositions(positions);
+    State state3 = context.getState(State::Energy | State::Forces);
+    ASSERT_EQUAL_TOL(state2.getPotentialEnergy(), state3.getPotentialEnergy(), 1e-5);
+    for (int i = 0; i < system.getNumParticles(); i++)
+        ASSERT_EQUAL_VEC(state2.getForces()[i], state3.getForces()[i], 1e-5);
+}
+
 int main(int argc, char* argv[]) {
     try {
         registerAmoebaCudaKernelFactories();
@@ -1479,6 +1563,7 @@ int main(int argc, char* argv[]) {
         }
         testWaterDimer();
         testWaterBox();
+        testChangingParameters();
     }
     catch (const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;

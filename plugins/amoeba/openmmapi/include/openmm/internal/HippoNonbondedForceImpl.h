@@ -62,7 +62,6 @@ public:
     std::vector<std::string> getKernelNames();
     void getLabFramePermanentDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
     void getInducedDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
-    void getTotalDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
     void updateParametersInContext(ContextImpl& context);
     void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
     void getDPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;

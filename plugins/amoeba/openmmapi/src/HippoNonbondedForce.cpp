@@ -41,6 +41,7 @@ using namespace std;
 
 HippoNonbondedForce::HippoNonbondedForce() : nonbondedMethod(NoCutoff), cutoffDistance(1.0), switchingDistance(-1.0), useSwitchingFunction(false),
         ewaldErrorTol(1e-4), alpha(0.0), dalpha(0.0), nx(0), ny(0), nz(0), dnx(0), dny(0), dnz(0) {
+    extrapolationCoefficients = {0.042, 0.635, 0.414};
 }
 
 HippoNonbondedForce::NonbondedMethod HippoNonbondedForce::getNonbondedMethod() const {
@@ -75,6 +76,14 @@ double HippoNonbondedForce::getSwitchingDistance() const {
 
 void HippoNonbondedForce::setSwitchingDistance(double distance) {
     switchingDistance = distance;
+}
+
+const std::vector<double> & HippoNonbondedForce::getExtrapolationCoefficients() const {
+    return extrapolationCoefficients;
+}
+
+void HippoNonbondedForce::setExtrapolationCoefficients(const std::vector<double> &coefficients) {
+    extrapolationCoefficients = coefficients;
 }
 
 void HippoNonbondedForce::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
@@ -227,10 +236,6 @@ void HippoNonbondedForce::getInducedDipoles(Context& context, vector<Vec3>& dipo
 
 void HippoNonbondedForce::getLabFramePermanentDipoles(Context& context, vector<Vec3>& dipoles) {
     dynamic_cast<HippoNonbondedForceImpl&>(getImplInContext(context)).getLabFramePermanentDipoles(getContextImpl(context), dipoles);
-}
-
-void HippoNonbondedForce::getTotalDipoles(Context& context, vector<Vec3>& dipoles) {
-    dynamic_cast<HippoNonbondedForceImpl&>(getImplInContext(context)).getTotalDipoles(getContextImpl(context), dipoles);
 }
 
 ForceImpl* HippoNonbondedForce::createImpl()  const {

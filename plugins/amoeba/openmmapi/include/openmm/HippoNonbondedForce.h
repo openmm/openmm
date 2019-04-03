@@ -133,6 +133,19 @@ public:
      */
     void setSwitchingDistance(double distance);
     /**
+     * Get the coefficients for the mu_0, mu_1, mu_2, ..., mu_n terms in the extrapolation
+     * algorithm for induced dipoles.
+     */
+    const std::vector<double>& getExtrapolationCoefficients() const;
+    /**
+     * Set the coefficients for the mu_0, mu_1, mu_2, ..., mu_n terms in the extrapolation
+     * algorithm for induced dipoles.
+     *
+     * @param coefficients      a vector whose mth entry specifies the coefficient for mu_m.  The length of this
+     *                          vector determines how many iterations are performed.
+     */
+    void setExtrapolationCoefficients(const std::vector<double> &coefficients);
+    /**
      * Get the parameters to use for PME calculations.  If alpha is 0 (the default), these parameters are
      * ignored and instead their values are chosen based on the Ewald error tolerance.
      *
@@ -353,13 +366,6 @@ public:
      */
     void getInducedDipoles(Context& context, std::vector<Vec3>& dipoles);
     /**
-     * Get the total dipole moments (fixed plus induced) of all particles.
-     *
-     * @param context         the Context for which to get the total dipoles
-     * @param[out] dipoles    the total dipole moment of particle i is stored into the i'th element
-     */
-    void getTotalDipoles(Context& context, std::vector<Vec3>& dipoles);
-    /**
      * Update the particle and exception parameters in a Context to match those stored in this Force object.  This method
      * provides an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
      * Simply call setParticleParameters() to modify this object's parameters, then call updateParametersInContext() to
@@ -395,6 +401,7 @@ private:
     std::vector<ParticleInfo> particles;
     std::vector<ExceptionInfo> exceptions;
     std::map<std::pair<int, int>, int> exceptionMap;
+    std::vector<double> extrapolationCoefficients;
 };
 
 /**

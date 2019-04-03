@@ -1168,6 +1168,7 @@ ReferenceCalcHippoNonbondedForceKernel::~ReferenceCalcHippoNonbondedForceKernel(
 }
 
 void ReferenceCalcHippoNonbondedForceKernel::initialize(const System& system, const HippoNonbondedForce& force) {
+    numParticles = force.getNumParticles();
     if (force.getNonbondedMethod() == HippoNonbondedForce::PME)
         ixn = new AmoebaReferencePmeHippoNonbondedForce(force, system);
     else
@@ -1195,7 +1196,6 @@ double ReferenceCalcHippoNonbondedForceKernel::execute(ContextImpl& context, boo
 }
 
 void ReferenceCalcHippoNonbondedForceKernel::getInducedDipoles(ContextImpl& context, vector<Vec3>& outputDipoles) {
-    int numParticles = context.getSystem().getNumParticles();
     outputDipoles.resize(numParticles);
     setupAmoebaReferenceHippoNonbondedForce(context);
     vector<Vec3>& posData = extractPositions(context);
@@ -1209,7 +1209,6 @@ void ReferenceCalcHippoNonbondedForceKernel::getInducedDipoles(ContextImpl& cont
 }
 
 void ReferenceCalcHippoNonbondedForceKernel::getLabFramePermanentDipoles(ContextImpl& context, vector<Vec3>& outputDipoles) {
-    int numParticles = context.getSystem().getNumParticles();
     outputDipoles.resize(numParticles);
     setupAmoebaReferenceHippoNonbondedForce(context);
     vector<Vec3>& posData = extractPositions(context);
@@ -1220,21 +1219,6 @@ void ReferenceCalcHippoNonbondedForceKernel::getLabFramePermanentDipoles(Context
     ixn->calculateLabFramePermanentDipoles(posData, labFramePermanentDipoles);
     for (int i = 0; i < numParticles; i++)
         outputDipoles[i] = labFramePermanentDipoles[i];
-}
-
-
-void ReferenceCalcHippoNonbondedForceKernel::getTotalDipoles(ContextImpl& context, vector<Vec3>& outputDipoles) {
-    int numParticles = context.getSystem().getNumParticles();
-    outputDipoles.resize(numParticles);
-    setupAmoebaReferenceHippoNonbondedForce(context);
-    vector<Vec3>& posData = extractPositions(context);
-    
-    // Retrieve the permanent dipoles in the lab frame.
-    
-    vector<Vec3> totalDipoles;
-    ixn->calculateTotalDipoles(posData, totalDipoles);
-    for (int i = 0; i < numParticles; i++)
-        outputDipoles[i] = totalDipoles[i];
 }
 
 void ReferenceCalcHippoNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const HippoNonbondedForce& force) {

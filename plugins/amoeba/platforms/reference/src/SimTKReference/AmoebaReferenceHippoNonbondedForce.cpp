@@ -69,7 +69,7 @@ AmoebaReferenceHippoNonbondedForce::AmoebaReferenceHippoNonbondedForce(const Hip
         exceptions[make_pair(e.particle2, e.particle1)] = e;
     }
 
-    setExtrapolationCoefficients({0.042, 0.635, 0.414});
+    setExtrapolationCoefficients(force.getExtrapolationCoefficients());
     _nonbondedMethod = force.getNonbondedMethod();
     useSwitch = (_nonbondedMethod == HippoNonbondedForce::PME ? force.getUseSwitchingFunction() : false);
     _cutoffDistance = force.getCutoffDistance();
@@ -1387,17 +1387,6 @@ void AmoebaReferenceHippoNonbondedForce::calculateLabFramePermanentDipoles(const
     outputRotatedPermanentDipoles.resize(_numParticles);
     for (int i = 0; i < _numParticles; i++)
         outputRotatedPermanentDipoles[i] = particleData[i].dipole;
-}
-
-void AmoebaReferenceHippoNonbondedForce::calculateTotalDipoles(const vector<Vec3>& particlePositions,
-                                                               vector<Vec3>& outputTotalDipoles) {
-    // setup, including calculating permanent dipoles
-
-    setup(particlePositions);
-    outputTotalDipoles.resize(_numParticles);
-    for (int i = 0; i < _numParticles; i++)
-        for (int j = 0; j < 3; j++)
-            outputTotalDipoles[i][j] = particleData[i].dipole[j] + _inducedDipole[i][j];
 }
 
 const int AmoebaReferencePmeHippoNonbondedForce::AMOEBA_PME_ORDER = 5;

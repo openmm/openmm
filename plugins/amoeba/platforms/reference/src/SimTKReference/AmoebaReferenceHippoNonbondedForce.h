@@ -162,17 +162,6 @@ public:
     void calculateLabFramePermanentDipoles(const std::vector<Vec3>& particlePositions,
                                            std::vector<Vec3>& outputRotatedPermanentDipoles);
 
-    /**
-     * Calculate particle total dipoles.
-     *
-     * @param particlePositions         Cartesian coordinates of particles
-     * @param outputMultipoleMoments    output multipole moments
-     */
-
-
-    void calculateTotalDipoles(const std::vector<Vec3>& particlePositions,
-                               std::vector<Vec3>& outputRotatedPermanentDipoles);
-
 protected:
 
     enum QuadrupoleIndices { QXX, QXY, QXZ, QYY, QYZ, QZZ };

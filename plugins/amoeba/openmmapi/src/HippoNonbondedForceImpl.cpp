@@ -154,10 +154,6 @@ void HippoNonbondedForceImpl::getInducedDipoles(ContextImpl& context, vector<Vec
     kernel.getAs<CalcHippoNonbondedForceKernel>().getInducedDipoles(context, dipoles);
 }
 
-void HippoNonbondedForceImpl::getTotalDipoles(ContextImpl& context, vector<Vec3>& dipoles) {
-    kernel.getAs<CalcHippoNonbondedForceKernel>().getTotalDipoles(context, dipoles);
-}
-
 void HippoNonbondedForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcHippoNonbondedForceKernel>().copyParametersToContext(context, owner);
     context.systemChanged();
