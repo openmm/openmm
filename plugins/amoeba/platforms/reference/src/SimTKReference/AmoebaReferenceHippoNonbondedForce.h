@@ -198,14 +198,9 @@ protected:
     };
 
     unsigned int _numParticles;
-
     HippoNonbondedForce::NonbondedMethod _nonbondedMethod;
-
     double _electric, _cutoffDistance, _cutoffDistanceSquared, _switchingDistance;
-    bool useSwitch;
-
     std::map<std::pair<int, int>, Exception> exceptions;
-
     std::vector<MultipoleParticleData> particleData;
     std::vector<TransformedMultipole> _transformed;
     std::vector<Vec3> _fixedMultipoleField;

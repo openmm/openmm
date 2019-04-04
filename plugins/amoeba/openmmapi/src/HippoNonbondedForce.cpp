@@ -39,7 +39,7 @@
 using namespace OpenMM;
 using namespace std;
 
-HippoNonbondedForce::HippoNonbondedForce() : nonbondedMethod(NoCutoff), cutoffDistance(1.0), switchingDistance(-1.0), useSwitchingFunction(false),
+HippoNonbondedForce::HippoNonbondedForce() : nonbondedMethod(NoCutoff), cutoffDistance(1.0), switchingDistance(0.9),
         ewaldErrorTol(1e-4), alpha(0.0), dalpha(0.0), nx(0), ny(0), nz(0), dnx(0), dny(0), dnz(0) {
     extrapolationCoefficients = {0.042, 0.635, 0.414};
 }
@@ -60,14 +60,6 @@ double HippoNonbondedForce::getCutoffDistance() const {
 
 void HippoNonbondedForce::setCutoffDistance(double distance) {
     cutoffDistance = distance;
-}
-
-bool HippoNonbondedForce::getUseSwitchingFunction() const {
-    return useSwitchingFunction;
-}
-
-void HippoNonbondedForce::setUseSwitchingFunction(bool use) {
-    useSwitchingFunction = use;
 }
 
 double HippoNonbondedForce::getSwitchingDistance() const {

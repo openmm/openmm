@@ -51,6 +51,7 @@
 #include "openmm/AmoebaTorsionTorsionForce.h"
 #include "openmm/AmoebaVdwForce.h"
 #include "openmm/AmoebaWcaDispersionForce.h"
+#include "openmm/HippoNonbondedForce.h"
 
 #include "openmm/serialization/SerializationProxy.h"
 
@@ -65,6 +66,7 @@
 #include "openmm/serialization/AmoebaTorsionTorsionForceProxy.h"
 #include "openmm/serialization/AmoebaVdwForceProxy.h"
 #include "openmm/serialization/AmoebaWcaDispersionForceProxy.h"
+#include "openmm/serialization/HippoNonbondedForceProxy.h"
 
 #if defined(WIN32)
     #include <windows.h>
@@ -92,4 +94,5 @@ extern "C" OPENMM_EXPORT_AMOEBA void registerAmoebaSerializationProxies() {
     SerializationProxy::registerProxy(typeid(AmoebaTorsionTorsionForce),              new AmoebaTorsionTorsionForceProxy());
     SerializationProxy::registerProxy(typeid(AmoebaVdwForce),                         new AmoebaVdwForceProxy());
     SerializationProxy::registerProxy(typeid(AmoebaWcaDispersionForce),               new AmoebaWcaDispersionForceProxy());
+    SerializationProxy::registerProxy(typeid(HippoNonbondedForce),                    new HippoNonbondedForceProxy());
 }

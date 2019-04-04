@@ -178,7 +178,6 @@ void testWaterBox() {
     system.setDefaultPeriodicBoxVectors(Vec3(1.8643, 0, 0), Vec3(0, 1.8643, 0), Vec3(0, 0, 1.8643));
     hippo->setNonbondedMethod(HippoNonbondedForce::PME);
     hippo->setCutoffDistance(0.7);
-    hippo->setUseSwitchingFunction(true);
     hippo->setSwitchingDistance(0.6);
     hippo->setPMEParameters(3.85037, 24, 24, 24);
     hippo->setDPMEParameters(3.85037, 20, 20, 20);

@@ -71,7 +71,6 @@ AmoebaReferenceHippoNonbondedForce::AmoebaReferenceHippoNonbondedForce(const Hip
 
     setExtrapolationCoefficients(force.getExtrapolationCoefficients());
     _nonbondedMethod = force.getNonbondedMethod();
-    useSwitch = (_nonbondedMethod == HippoNonbondedForce::PME ? force.getUseSwitchingFunction() : false);
     _cutoffDistance = force.getCutoffDistance();
     _cutoffDistanceSquared = _cutoffDistance*_cutoffDistance;
     _switchingDistance = force.getSwitchingDistance();
@@ -1066,7 +1065,7 @@ double AmoebaReferenceHippoNonbondedForce::calculateRepulsionPairIxn(const Multi
     Vec3 tK = fdamp3*dikCross + term2*dkrCross - term3*(dqik+diqkrCross) + term5*qkrCross - term6*(qkirCross-qikCross);
     tI *= sizik*rr1;
     tK *= sizik*rr1;
-    if (useSwitch && r > _switchingDistance) {
+    if (_nonbondedMethod == HippoNonbondedForce::PME && r > _switchingDistance) {
         double t = (r-_switchingDistance)/(_cutoffDistance-_switchingDistance);
         double switchValue = 1+t*t*t*(-10+t*(15-t*6));
         double switchDeriv = t*t*(-30+t*(60-t*30))/(_cutoffDistance-_switchingDistance);
@@ -1090,7 +1089,7 @@ double AmoebaReferenceHippoNonbondedForce::calculateChargeTransferPairIxn(const 
     double term2 = particleK.epsilon*exp(-particleI.damping*r);
     double energy = -(term1+term2);
     double dEnergydR = -(term1*particleK.damping + term2*particleI.damping);
-    if (useSwitch && r > _switchingDistance) {
+    if (_nonbondedMethod == HippoNonbondedForce::PME && r > _switchingDistance) {
         double t = (r-_switchingDistance)/(_cutoffDistance-_switchingDistance);
         double switchValue = 1+t*t*t*(-10+t*(15-t*6));
         double switchDeriv = t*t*(-30+t*(60-t*30))/(_cutoffDistance-_switchingDistance);

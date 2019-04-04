@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman, Mark Friedrichs                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -112,16 +112,6 @@ public:
      * @param distance    the cutoff distance, measured in nm
      */
     void setCutoffDistance(double distance);
-    /**
-     * Get whether a switching function is applied to the repulsion and charge transfer interactions.  If the NonbondedMethod method is set
-     * to NoCutoff, this option is ignored.
-     */
-    bool getUseSwitchingFunction() const;
-    /**
-     * Set whether a switching function is applied to the repulsion and charge transfer interactions.  If the NonbondedMethod method is set
-     * to NoCutoff, this option is ignored.
-     */
-    void setUseSwitchingFunction(bool use);
     /**
      * Get the distance at which the switching function begins to reduce the repulsion and charge transfer interactions.  This must be
      * less than the cutoff distance.
@@ -394,7 +384,6 @@ private:
     class ExceptionInfo;
     NonbondedMethod nonbondedMethod;
     double cutoffDistance, switchingDistance;
-    bool useSwitchingFunction;
     double ewaldErrorTol;
     double alpha, dalpha;
     int nx, ny, nz, dnx, dny, dnz;
