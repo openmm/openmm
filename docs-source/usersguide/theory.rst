@@ -851,7 +851,7 @@ by the user.  That is, the interaction energy of each angle is given by
 
 
 where :math:`f(\theta)` is a user defined mathematical expression.  The angle
-:math:`\theta` is guaranteed to be in the range [-π, π].  Like PeriodicTorsionForce, it
+:math:`\theta` is guaranteed to be in the range :math:`[-\pi, +\pi]`\ .  Like PeriodicTorsionForce, it
 is defined to be zero when the first and last particles are on the same side of
 the bond formed by the middle two particles (the *cis* configuration).
 
@@ -973,7 +973,7 @@ of four particles.  That is, the interaction energy of each bond is given by
 where *f*\ (\ *...*\ ) is a user defined mathematical expression.  It may
 depend on an arbitrary set of positions {\ :math:`x_i`\ }, distances {\ :math:`r_i`\ },
 angles {\ :math:`\theta_i`\ }, and dihedral angles {\ :math:`\phi_i`\ }
-guaranteed to be in the range [-π, π]. 
+guaranteed to be in the range :math:`[-\pi, +\pi]`\ .
 
 Each distance, angle, or dihedral is defined by specifying a sequence of
 particles chosen from among the particles that make up the bond.  A distance
