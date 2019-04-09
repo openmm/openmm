@@ -78,12 +78,12 @@ extern "C" __global__ void computeNonbondedExceptions(
             real tempEnergy = 0.0f;
             COMPUTE_INTERACTION
             energy += tempEnergy;
-            atomicAdd(&forceBuffers[atom1], static_cast<unsigned long long>((long long) (-tempForce.x*0x100000000)));
-            atomicAdd(&forceBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (-tempForce.y*0x100000000)));
-            atomicAdd(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (-tempForce.z*0x100000000)));
-            atomicAdd(&forceBuffers[atom2], static_cast<unsigned long long>((long long) (tempForce.x*0x100000000)));
-            atomicAdd(&forceBuffers[atom2+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (tempForce.y*0x100000000)));
-            atomicAdd(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (tempForce.z*0x100000000)));
+            atomicAdd(&forceBuffers[atom1], static_cast<unsigned long long>((long long) (tempForce.x*0x100000000)));
+            atomicAdd(&forceBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (tempForce.y*0x100000000)));
+            atomicAdd(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (tempForce.z*0x100000000)));
+            atomicAdd(&forceBuffers[atom2], static_cast<unsigned long long>((long long) (-tempForce.x*0x100000000)));
+            atomicAdd(&forceBuffers[atom2+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (-tempForce.y*0x100000000)));
+            atomicAdd(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (-tempForce.z*0x100000000)));
             atomicAdd(&torqueBuffers[atom1], static_cast<unsigned long long>((long long) (tempTorque1.x*0x100000000)));
             atomicAdd(&torqueBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (tempTorque1.y*0x100000000)));
             atomicAdd(&torqueBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (tempTorque1.z*0x100000000)));

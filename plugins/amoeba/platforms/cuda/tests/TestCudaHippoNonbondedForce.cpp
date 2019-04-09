@@ -102,7 +102,7 @@ void checkForceEnergyConsistency(Context& context) {
     State state2 = context.getState(State::Energy);
     context.setPositions(positions3);
     State state3 = context.getState(State::Energy);
-    ASSERT_EQUAL_TOL(state3.getPotentialEnergy()-state2.getPotentialEnergy(), norm*delta, consistencyTol)
+    ASSERT_EQUAL_TOL(state2.getPotentialEnergy()-state3.getPotentialEnergy(), norm*delta, consistencyTol)
 }
 
 void testWaterDimer() {
@@ -134,7 +134,7 @@ void testWaterDimer() {
         Vec3(34.68383272305204, 26.35219958830841, 45.867730707927564),
     };
     for (int i = 0; i < system.getNumParticles(); i++)
-        ASSERT_EQUAL_VEC(expectedForces[i], state.getForces()[i], forceTol);
+        ASSERT_EQUAL_VEC(-expectedForces[i], state.getForces()[i], forceTol);
 
     // Compare the induced dipoles to reference values computed with Tinker.
 
@@ -1502,7 +1502,7 @@ void testWaterBox() {
         Vec3(233.29776444327882, 35.00686695783241, 265.51562401167655)
     };
     for (int i = 0; i < system.getNumParticles(); i++)
-        ASSERT_EQUAL_VEC(expectedForces[i], state.getForces()[i], forceTol);
+        ASSERT_EQUAL_VEC(-expectedForces[i], state.getForces()[i], forceTol);
     checkForceEnergyConsistency(context);
 }
 

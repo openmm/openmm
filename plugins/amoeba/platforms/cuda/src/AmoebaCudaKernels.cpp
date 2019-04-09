@@ -2919,7 +2919,6 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
         pmeDefines["RECIP_EXP_FACTOR"] = cu.doubleToString(M_PI*M_PI/(dpmeAlpha*dpmeAlpha));
         pmeDefines["CHARGE"] = "charges[atom]";
         pmeDefines["USE_LJPME"] = "1";
-        pmeDefines["FORCE_SCALE"] = "-1";
         module = cu.createModule(CudaKernelSources::vectorOps+CudaKernelSources::pme, pmeDefines);
         dpmeFinishSpreadChargeKernel = cu.getKernel(module, "finishSpreadCharge");
         dpmeGridIndexKernel = cu.getKernel(module, "findAtomGridIndex");

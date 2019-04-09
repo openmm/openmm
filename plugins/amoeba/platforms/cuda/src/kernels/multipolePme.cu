@@ -982,7 +982,6 @@ extern "C" __global__ void computeFixedMultipoleForceAndEnergy(real4* __restrict
         multipole[7] = 2*labQXY[i];
         multipole[8] = 2*labQXZ[i];
         multipole[9] = 2*labQYZ[i];
-        real forceScale = -EPSILON_FACTOR;
 #else
         multipole[0] = posq[i].w;
         multipole[4] = labFrameQuadrupole[i*5];
@@ -990,7 +989,6 @@ extern "C" __global__ void computeFixedMultipoleForceAndEnergy(real4* __restrict
         multipole[7] = 2*labFrameQuadrupole[i*5+1];
         multipole[8] = 2*labFrameQuadrupole[i*5+2];
         multipole[9] = 2*labFrameQuadrupole[i*5+4];
-        real forceScale = EPSILON_FACTOR;
 #endif
         multipole[6] = -(multipole[4]+multipole[5]);
 
@@ -1030,9 +1028,9 @@ extern "C" __global__ void computeFixedMultipoleForceAndEnergy(real4* __restrict
             f.y += multipole[k]*phi[i+NUM_ATOMS*deriv2[k]];
             f.z += multipole[k]*phi[i+NUM_ATOMS*deriv3[k]];
         }
-        f = make_real3(forceScale*(f.x*fracToCart[0][0] + f.y*fracToCart[0][1] + f.z*fracToCart[0][2]),
-                       forceScale*(f.x*fracToCart[1][0] + f.y*fracToCart[1][1] + f.z*fracToCart[1][2]),
-                       forceScale*(f.x*fracToCart[2][0] + f.y*fracToCart[2][1] + f.z*fracToCart[2][2]));
+        f = make_real3(EPSILON_FACTOR*(f.x*fracToCart[0][0] + f.y*fracToCart[0][1] + f.z*fracToCart[0][2]),
+                       EPSILON_FACTOR*(f.x*fracToCart[1][0] + f.y*fracToCart[1][1] + f.z*fracToCart[1][2]),
+                       EPSILON_FACTOR*(f.x*fracToCart[2][0] + f.y*fracToCart[2][1] + f.z*fracToCart[2][2]));
         forceBuffers[i] -= static_cast<unsigned long long>((long long) (f.x*0x100000000));
         forceBuffers[i+PADDED_NUM_ATOMS] -= static_cast<unsigned long long>((long long) (f.y*0x100000000));
         forceBuffers[i+PADDED_NUM_ATOMS*2] -= static_cast<unsigned long long>((long long) (f.z*0x100000000));
@@ -1199,7 +1197,6 @@ extern "C" __global__ void computeInducedDipoleForceAndEnergy(real4* __restrict_
                 f += coeff[j+m+1]*h;
             }
         }
-        f = -f;
 #endif
         f = make_real3(scale*(f.x*fracToCart[0][0] + f.y*fracToCart[0][1] + f.z*fracToCart[0][2]),
                        scale*(f.x*fracToCart[1][0] + f.y*fracToCart[1][1] + f.z*fracToCart[1][2]),

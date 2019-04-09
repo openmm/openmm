@@ -117,7 +117,7 @@ extern "C" __global__ void computeNonbonded(
                 const real interactionScale = 0.5f;
                 COMPUTE_INTERACTION
                 energy += 0.5f*tempEnergy;
-                force -= tempForce;
+                force += tempForce;
                 torque += tempTorque1;
                 excl >>= 1;
             }
@@ -169,19 +169,19 @@ extern "C" __global__ void computeNonbonded(
                 const real interactionScale = 1.0f;
                 COMPUTE_INTERACTION
                 energy += tempEnergy;
-                force -= tempForce;
+                force += tempForce;
                 torque += tempTorque1;
 #ifdef ENABLE_SHUFFLE
-                shflForce += tempForce;
+                shflForce -= tempForce;
                 shflTorque += tempTorque2;
                 SHUFFLE_WARP_DATA
                 shflTorque.x = real_shfl(shflTorque.x, tgx+1);
                 shflTorque.y = real_shfl(shflTorque.y, tgx+1);
                 shflTorque.z = real_shfl(shflTorque.z, tgx+1);
 #else
-                localData[tbx+tj].fx += tempForce.x;
-                localData[tbx+tj].fy += tempForce.y;
-                localData[tbx+tj].fz += tempForce.z;
+                localData[tbx+tj].fx -= tempForce.x;
+                localData[tbx+tj].fy -= tempForce.y;
+                localData[tbx+tj].fz -= tempForce.z;
                 localData[tbx+tj].tx += tempTorque2.x;
                 localData[tbx+tj].ty += tempTorque2.y;
                 localData[tbx+tj].tz += tempTorque2.z;
@@ -356,19 +356,19 @@ extern "C" __global__ void computeNonbonded(
                     const real interactionScale = 1.0f;
                     COMPUTE_INTERACTION
                     energy += tempEnergy;
-                    force -= tempForce;
+                    force += tempForce;
                     torque += tempTorque1;
 #ifdef ENABLE_SHUFFLE
-                    shflForce += tempForce;
+                    shflForce -= tempForce;
                     shflTorque += tempTorque2;
                     SHUFFLE_WARP_DATA
                     shflTorque.x = real_shfl(shflTorque.x, tgx+1);
                     shflTorque.y = real_shfl(shflTorque.y, tgx+1);
                     shflTorque.z = real_shfl(shflTorque.z, tgx+1);
 #else
-                    localData[tbx+tj].fx += tempForce.x;
-                    localData[tbx+tj].fy += tempForce.y;
-                    localData[tbx+tj].fz += tempForce.z;
+                    localData[tbx+tj].fx -= tempForce.x;
+                    localData[tbx+tj].fy -= tempForce.y;
+                    localData[tbx+tj].fz -= tempForce.z;
                     localData[tbx+tj].tx += tempTorque2.x;
                     localData[tbx+tj].ty += tempTorque2.y;
                     localData[tbx+tj].tz += tempTorque2.z;
@@ -405,19 +405,19 @@ extern "C" __global__ void computeNonbonded(
                     const real interactionScale = 1.0f;
                     COMPUTE_INTERACTION
                     energy += tempEnergy;
-                    force -= tempForce;
+                    force += tempForce;
                     torque += tempTorque1;
 #ifdef ENABLE_SHUFFLE
-                    shflForce += tempForce;
+                    shflForce -= tempForce;
                     shflTorque += tempTorque2;
                     SHUFFLE_WARP_DATA
                     shflTorque.x = real_shfl(shflTorque.x, tgx+1);
                     shflTorque.y = real_shfl(shflTorque.y, tgx+1);
                     shflTorque.z = real_shfl(shflTorque.z, tgx+1);
 #else
-                    localData[tbx+tj].fx += tempForce.x;
-                    localData[tbx+tj].fy += tempForce.y;
-                    localData[tbx+tj].fz += tempForce.z;
+                    localData[tbx+tj].fx -= tempForce.x;
+                    localData[tbx+tj].fy -= tempForce.y;
+                    localData[tbx+tj].fz -= tempForce.z;
                     localData[tbx+tj].tx += tempTorque.x;
                     localData[tbx+tj].ty += tempTorque.y;
                     localData[tbx+tj].tz += tempTorque.z;
