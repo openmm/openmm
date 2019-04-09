@@ -157,6 +157,10 @@ private:
     double data[3];
 };
 
+static Vec3 operator*(double lhs, Vec3 rhs) {
+    return Vec3(rhs[0]*lhs, rhs[1]*lhs, rhs[2]*lhs);
+}
+
 template <class CHAR, class TRAITS>
 std::basic_ostream<CHAR,TRAITS>& operator<<(std::basic_ostream<CHAR,TRAITS>& o, const Vec3& v) {
     o<<'['<<v[0]<<", "<<v[1]<<", "<<v[2]<<']';

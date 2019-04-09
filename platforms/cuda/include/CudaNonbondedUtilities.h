@@ -277,6 +277,11 @@ public:
      * @param groups    the set of force groups
      */
     void createKernelsForGroups(int groups);
+    /**
+     * Set the source code for the main kernel.  This defaults to the content of nonbonded.cu.  It only needs to be
+     * changed in very unusual circumstances.
+     */
+    void setKernelSource(const std::string& source);
 private:
     class KernelSet;
     class BlockSortTrait;
@@ -311,6 +316,7 @@ private:
     double lastCutoff;
     bool useCutoff, usePeriodic, anyExclusions, usePadding, forceRebuildNeighborList, canUsePairList;
     int startTileIndex, numTiles, startBlockIndex, numBlocks, maxTiles, maxSinglePairs, maxExclusions, numForceThreadBlocks, forceThreadBlockSize, numAtoms, groupFlags;
+    std::string kernelSource;
 };
 
 /**
@@ -343,9 +349,10 @@ public:
      * @param numComponents  the number of components in the parameter
      * @param size           the size of the parameter in bytes
      * @param memory         the memory containing the parameter values
+     * @param constant       whether the memory should be marked as constant
      */
-    ParameterInfo(const std::string& name, const std::string& componentType, int numComponents, int size, CUdeviceptr memory) :
-            name(name), componentType(componentType), numComponents(numComponents), size(size), memory(memory) {
+    ParameterInfo(const std::string& name, const std::string& componentType, int numComponents, int size, CUdeviceptr memory, bool constant=true) :
+            name(name), componentType(componentType), numComponents(numComponents), size(size), memory(memory), constant(constant) {
         if (numComponents == 1)
             type = componentType;
         else {
@@ -372,12 +379,16 @@ public:
     CUdeviceptr& getMemory() {
         return memory;
     }
+    bool isConstant() const {
+        return constant;
+    }
 private:
     std::string name;
     std::string componentType;
     std::string type;
     int size, numComponents;
     CUdeviceptr memory;
+    bool constant;
 };
 
 } // namespace OpenMM

@@ -276,9 +276,9 @@ void CpuNonbondedForce::calculateReciprocalIxn(int numberOfAtoms, float* posq, c
             double recipDispersionEnergy = 0.0;
             pme_exec_dpme(pmedata,atomCoordinates,dpmeforces,charges,periodicBoxVectors,&recipDispersionEnergy);
             for (int i = 0; i < numberOfAtoms; i++){
-                forces[i][0] -= 2.0*dpmeforces[i][0];
-                forces[i][1] -= 2.0*dpmeforces[i][1];
-                forces[i][2] -= 2.0*dpmeforces[i][2];
+                forces[i][0] += dpmeforces[i][0];
+                forces[i][1] += dpmeforces[i][1];
+                forces[i][2] += dpmeforces[i][2];
             }
             if (totalEnergy)
                 *totalEnergy += recipDispersionEnergy;

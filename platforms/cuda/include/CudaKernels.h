@@ -694,7 +694,6 @@ private:
     CudaArray pmeDispersionBsplineModuliX;
     CudaArray pmeDispersionBsplineModuliY;
     CudaArray pmeDispersionBsplineModuliZ;
-    CudaArray pmeAtomRange;
     CudaArray pmeAtomGridIndex;
     CudaArray pmeEnergyBuffer;
     CudaSort* sort;

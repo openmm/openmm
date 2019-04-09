@@ -1,16 +1,16 @@
-#ifndef AMOEBA_OPENMM_H_
-#define AMOEBA_OPENMM_H_
+#ifndef OPENMM_HIPPO_NONBONDED_FORCE_PROXY_H_
+#define OPENMM_HIPPO_NONBONDED_FORCE_PROXY_H_
 
 /* -------------------------------------------------------------------------- *
- *                               OpenMMAmoeba                                 *
+ *                                OpenMMAmoeba                                *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit originating from   *
  * Simbios, the NIH National Center for Physics-Based Simulation of           *
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009 Stanford University and the Authors.           *
- * Authors:                                                                   *
+ * Portions copyright (c) 2019 Stanford University and the Authors.           *
+ * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -32,17 +32,22 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/AmoebaBondForce.h"
-#include "openmm/AmoebaAngleForce.h"
-#include "openmm/AmoebaInPlaneAngleForce.h"
-#include "openmm/AmoebaPiTorsionForce.h"
-#include "openmm/AmoebaStretchBendForce.h"
-#include "openmm/AmoebaOutOfPlaneBendForce.h"
-#include "openmm/AmoebaTorsionTorsionForce.h"
-#include "openmm/AmoebaMultipoleForce.h"
-#include "openmm/AmoebaGeneralizedKirkwoodForce.h"
-#include "openmm/AmoebaVdwForce.h"
-#include "openmm/AmoebaWcaDispersionForce.h"
-#include "openmm/HippoNonbondedForce.h"
+#include "openmm/internal/windowsExportAmoeba.h"
+#include "openmm/serialization/SerializationProxy.h"
 
-#endif /*AMOEBA_OPENMM_H_*/
+namespace OpenMM {
+
+/**
+ * This is a proxy for serializing HippoNonbondedForce objects.
+ */
+
+class OPENMM_EXPORT_AMOEBA HippoNonbondedForceProxy : public SerializationProxy {
+public:
+    HippoNonbondedForceProxy();
+    void serialize(const void* object, SerializationNode& node) const;
+    void* deserialize(const SerializationNode& node) const;
+};
+
+} // namespace OpenMM
+
+#endif /*OPENMM_HIPPO_NONBONDED_FORCE_PROXY_H_*/
