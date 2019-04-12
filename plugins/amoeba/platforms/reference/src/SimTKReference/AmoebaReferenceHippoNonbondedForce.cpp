@@ -64,7 +64,7 @@ AmoebaReferenceHippoNonbondedForce::AmoebaReferenceHippoNonbondedForce(const Hip
     for (int i = 0; i < force.getNumExceptions(); i++) {
         Exception e;
         force.getExceptionParameters(i, e.particle1, e.particle2, e.multipoleMultipoleScale, e.dipoleMultipoleScale,
-                                     e.dipoleDipoleScale, e.dispersionScale, e.repulsionScale);
+                                     e.dipoleDipoleScale, e.dispersionScale, e.repulsionScale, e.chargeTransferScale);
         exceptions[make_pair(e.particle1, e.particle2)] = e;
         exceptions[make_pair(e.particle2, e.particle1)] = e;
     }
@@ -1099,8 +1099,8 @@ double AmoebaReferenceHippoNonbondedForce::calculateChargeTransferPairIxn(const 
     }
     auto exception = exceptions.find(make_pair(particleI.index, particleK.index));
     if (exception != exceptions.end()) {
-        energy *= exception->second.multipoleMultipoleScale;
-        dEnergydR *= exception->second.multipoleMultipoleScale;
+        energy *= exception->second.chargeTransferScale;
+        dEnergydR *= exception->second.chargeTransferScale;
     }
     force[2] += dEnergydR;
     return energy;

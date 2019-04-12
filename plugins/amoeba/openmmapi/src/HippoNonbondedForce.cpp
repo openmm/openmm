@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -173,7 +173,7 @@ void HippoNonbondedForce::setParticleParameters(int index, double charge, const 
 }
 
 int HippoNonbondedForce::addException(int particle1, int particle2, double multipoleMultipoleScale, double dipoleMultipoleScale, double dipoleDipoleScale,
-        double dispersionScale, double repulsionScale, bool replace) {
+        double dispersionScale, double repulsionScale, double chargeTransferScale, bool replace) {
     map<pair<int, int>, int>::iterator iter = exceptionMap.find(pair<int, int>(particle1, particle2));
     int newIndex;
     if (iter == exceptionMap.end())
@@ -187,19 +187,19 @@ int HippoNonbondedForce::addException(int particle1, int particle2, double multi
             msg << particle2;
             throw OpenMMException(msg.str());
         }
-        exceptions[iter->second] = ExceptionInfo(particle1, particle2, multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale);
+        exceptions[iter->second] = ExceptionInfo(particle1, particle2, multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale, chargeTransferScale);
         newIndex = iter->second;
         exceptionMap.erase(iter->first);
     }
     else {
-        exceptions.push_back(ExceptionInfo(particle1, particle2, multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale));
+        exceptions.push_back(ExceptionInfo(particle1, particle2, multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale, chargeTransferScale));
         newIndex = exceptions.size()-1;
     }
     exceptionMap[pair<int, int>(particle1, particle2)] = newIndex;
     return newIndex;
 }
 void HippoNonbondedForce::getExceptionParameters(int index, int& particle1, int& particle2, double& multipoleMultipoleScale, double& dipoleMultipoleScale, double& dipoleDipoleScale,
-        double& dispersionScale, double& repulsionScale) const {
+        double& dispersionScale, double& repulsionScale, double& chargeTransferScale) const {
     ASSERT_VALID_INDEX(index, exceptions);
     particle1 = exceptions[index].particle1;
     particle2 = exceptions[index].particle2;
@@ -208,10 +208,11 @@ void HippoNonbondedForce::getExceptionParameters(int index, int& particle1, int&
     dipoleDipoleScale = exceptions[index].dipoleDipoleScale;
     dispersionScale = exceptions[index].dispersionScale;
     repulsionScale = exceptions[index].repulsionScale;
+    chargeTransferScale = exceptions[index].chargeTransferScale;
 }
 
 void HippoNonbondedForce::setExceptionParameters(int index, int particle1, int particle2, double multipoleMultipoleScale, double dipoleMultipoleScale, double dipoleDipoleScale,
-        double dispersionScale, double repulsionScale) {
+        double dispersionScale, double repulsionScale, double chargeTransferScale) {
     ASSERT_VALID_INDEX(index, exceptions);
     exceptions[index].particle1 = particle1;
     exceptions[index].particle2 = particle2;
@@ -220,6 +221,7 @@ void HippoNonbondedForce::setExceptionParameters(int index, int particle1, int p
     exceptions[index].dipoleDipoleScale = dipoleDipoleScale;
     exceptions[index].dispersionScale = dispersionScale;
     exceptions[index].repulsionScale = repulsionScale;
+    exceptions[index].chargeTransferScale = chargeTransferScale;
 }
 
 void HippoNonbondedForce::getInducedDipoles(Context& context, vector<Vec3>& dipoles) {

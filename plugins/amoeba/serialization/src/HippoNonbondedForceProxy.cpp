@@ -100,9 +100,9 @@ void HippoNonbondedForceProxy::serialize(const void* object, SerializationNode& 
     }
     SerializationNode& exceptions = node.createChildNode("Exceptions");
     for (int i = 0; i < force.getNumExceptions(); i++) {
-        double multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale;
+        double multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale, chargeTransferScale;
         int p1, p2;
-        force.getExceptionParameters(i, p1, p2, multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale);
+        force.getExceptionParameters(i, p1, p2, multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale, chargeTransferScale);
         SerializationNode& exception = exceptions.createChildNode("Exception");
         exception.setIntProperty("p1", p1);
         exception.setIntProperty("p2", p2);
@@ -111,6 +111,7 @@ void HippoNonbondedForceProxy::serialize(const void* object, SerializationNode& 
         exception.setDoubleProperty("ddScale", dipoleDipoleScale);
         exception.setDoubleProperty("dispScale", dispersionScale);
         exception.setDoubleProperty("repScale", repulsionScale);
+        exception.setDoubleProperty("ctScale", chargeTransferScale);
     }
 }
 
@@ -167,7 +168,8 @@ void* HippoNonbondedForceProxy::deserialize(const SerializationNode& node) const
             const SerializationNode& exception = exceptions.getChildren()[i];
             force->addException(exception.getIntProperty("p1"), exception.getIntProperty("p2"), exception.getDoubleProperty("mmScale"),
                     exception.getDoubleProperty("dmScale"), exception.getDoubleProperty("ddScale"),
-                    exception.getDoubleProperty("dispScale"), exception.getDoubleProperty("repScale"));
+                    exception.getDoubleProperty("dispScale"), exception.getDoubleProperty("repScale"),
+                    exception.getDoubleProperty("ctScale"));
         }
     }
     catch (...) {

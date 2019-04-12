@@ -733,7 +733,7 @@ private:
     CudaArray dpmeBsplineModuliX, dpmeBsplineModuliY, dpmeBsplineModuliZ;
     CudaArray pmePhi, pmePhidp, pmeCphi;
     CudaArray lastPositions;
-    CudaArray exceptionScales[5];
+    CudaArray exceptionScales[6];
     CudaArray exceptionAtoms;
     CudaSort* sort;
     cufftHandle fftForward, fftBackward, dfftForward, dfftBackward;

@@ -194,7 +194,7 @@ protected:
     class Exception {
     public:
         int particle1, particle2;
-        double multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale;
+        double multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale, chargeTransferScale;
     };
 
     unsigned int _numParticles;

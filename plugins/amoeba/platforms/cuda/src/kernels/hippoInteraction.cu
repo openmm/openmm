@@ -423,8 +423,8 @@ real bn5 = (9*bn4+alsq2n*exp2a)*rInv2;
     }
 #endif
 #ifdef COMPUTING_EXCEPTIONS
-    ctForce *= multipoleMultipoleScale;
-    ctEnergy *= multipoleMultipoleScale;
+    ctForce *= chargeTransferScale;
+    ctEnergy *= chargeTransferScale;
 #endif
     tempEnergy += includeInteraction ? ctEnergy : 0;
     tempForce.z += includeInteraction ? ctForce*r : 0;
