@@ -96,35 +96,35 @@ __device__ void computeOverlapDampingFactors(real alphaI, real alphaJ, real r,
         real aJ2 = alphaJ*alphaJ;
         real A = aJ2/(aJ2-aI2);
         real B = aI2/(aI2-aJ2);
-        real A2 = A*A;
-        real B2 = B*B;
+        real A2expARI = A*A*expARI;
+        real B2expARJ = B*B*expARJ;
         fdampJ1 = 1 - (1 + arJ*(one/2))*expARJ;
         fdampJ3 = 1 - (1 + arJ + arJ2*(one/2))*expARJ;
         fdampJ5 = 1 - (1 + arJ + arJ2*(one/2) + arJ3*(one/6))*expARJ;
         fdampJ7 = 1 - (1 + arJ + arJ2*(one/2) + arJ3*(one/6) + arJ4*(one/30))*expARJ;
         fdampJ9 = 1 - (1 + arJ + arJ2*(one/2) + arJ3*(one/6) + 4*arJ4*(one/105) + arJ5*(one/210))*expARJ;
-        fdampIJ1 = 1 - A2*(1 + 2*B + arI*(one/2))*expARI -
-                       B2*(1 + 2*A + arJ*(one/2))*expARJ;
-        fdampIJ3 = 1 - A2*(1 + arI + arI2*(one/2))*expARI -
-                       B2*(1 + arJ + arJ2*(one/2))*expARJ -
-                       2*A2*B*(1 + arI)*expARI -
-                       2*B2*A*(1 + arJ)*expARJ;
-        fdampIJ5 = 1 - A2*(1 + arI + arI2*(one/2) + arI3*(one/6))*expARI -
-                       B2*(1 + arJ + arJ2*(one/2) + arJ3*(one/6))*expARJ -
-                       2*A2*B*(1 + arI + arI2*(one/3))*expARI -
-                       2*B2*A*(1 + arJ + arJ2*(one/3))*expARJ;
-        fdampIJ7 = 1 - A2*(1 + arI + arI2*(one/2) + arI3*(one/6) + arI4*(one/30))*expARI -
-                       B2*(1 + arJ + arJ2*(one/2) + arJ3*(one/6) + arJ4*(one/30))*expARJ -
-                       2*A2*B*(1 + arI + arI2*(two/5) + arI3*(one/15))*expARI -
-                       2*B2*A*(1 + arJ + arJ2*(two/5) + arJ3*(one/15))*expARJ;
-        fdampIJ9 = 1 - A2*(1 + arI + arI2*(one/2) + arI3*(one/6) + arI4*4*(one/105) + arI5*(one/210))*expARI -
-                       B2*(1 + arJ + arJ2*(one/2) + arJ3*(one/6) + arJ4*4*(one/105) + arJ5*(one/210))*expARJ -
-                       2*A2*B*(1 + arI + arI2*(three/7) + arI3*(two/21) + arI4*(one/105))*expARI -
-                       2*B2*A*(1 + arJ + arJ2*(three/7) + arJ3*(two/21) + arJ4*(one/105))*expARJ;
-        fdampIJ11 = 1 - A2*(1 + arI + arI2*(one/2) + arI3*(one/6) + arI4*(five/126) + arI5*(two/315) + arI6*(one/1890))*expARI -
-                        B2*(1 + arJ + arJ2*(one/2) + arJ3*(one/6) + arJ4*(five/126) + arJ5*(two/315) + arJ6*(one/1890))*expARJ -
-                        2*A2*B*(1 + arI + arI2*(four/9) + arI3*(one/9) + arI4*(one/63) + arI5*(one/945))*expARI -
-                        2*B2*A*(1 + arJ + arJ2*(four/9) + arJ3*(one/9) + arJ4*(one/63) + arJ5*(one/945))*expARJ;
+        fdampIJ1 = 1 - (1 + 2*B + arI*(one/2))*A2expARI -
+                       (1 + 2*A + arJ*(one/2))*B2expARJ;
+        fdampIJ3 = 1 - (1 + arI + arI2*(one/2))*A2expARI -
+                       (1 + arJ + arJ2*(one/2))*B2expARJ -
+                       (1 + arI)*2*B*A2expARI -
+                       (1 + arJ)*2*A*B2expARJ;
+        fdampIJ5 = 1 - (1 + arI + arI2*(one/2) + arI3*(one/6))*A2expARI -
+                       (1 + arJ + arJ2*(one/2) + arJ3*(one/6))*B2expARJ -
+                       (1 + arI + arI2*(one/3))*2*B*A2expARI -
+                       (1 + arJ + arJ2*(one/3))*2*A*B2expARJ;
+        fdampIJ7 = 1 - (1 + arI + arI2*(one/2) + arI3*(one/6) + arI4*(one/30))*A2expARI -
+                       (1 + arJ + arJ2*(one/2) + arJ3*(one/6) + arJ4*(one/30))*B2expARJ -
+                       (1 + arI + arI2*(two/5) + arI3*(one/15))*2*B*A2expARI -
+                       (1 + arJ + arJ2*(two/5) + arJ3*(one/15))*2*A*B2expARJ;
+        fdampIJ9 = 1 - (1 + arI + arI2*(one/2) + arI3*(one/6) + arI4*4*(one/105) + arI5*(one/210))*A2expARI -
+                       (1 + arJ + arJ2*(one/2) + arJ3*(one/6) + arJ4*4*(one/105) + arJ5*(one/210))*B2expARJ -
+                       (1 + arI + arI2*(three/7) + arI3*(two/21) + arI4*(one/105))*2*B*A2expARI -
+                       (1 + arJ + arJ2*(three/7) + arJ3*(two/21) + arJ4*(one/105))*2*A*B2expARJ;
+        fdampIJ11 = 1 - (1 + arI + arI2*(one/2) + arI3*(one/6) + arI4*(five/126) + arI5*(two/315) + arI6*(one/1890))*A2expARI -
+                        (1 + arJ + arJ2*(one/2) + arJ3*(one/6) + arJ4*(five/126) + arJ5*(two/315) + arJ6*(one/1890))*B2expARJ -
+                        (1 + arI + arI2*(four/9) + arI3*(one/9) + arI4*(one/63) + arI5*(one/945))*2*B*A2expARI -
+                        (1 + arJ + arJ2*(four/9) + arJ3*(one/9) + arJ4*(one/63) + arJ5*(one/945))*2*A*B2expARJ;
     }
 }
 
@@ -152,18 +152,18 @@ __device__ void computeDispersionDampingFactors(real alphaI, real alphaJ, real r
         real aJ2 = alphaJ*alphaJ;
         real A = aJ2/(aJ2-aI2);
         real B = aI2/(aI2-aJ2);
-        real A2 = A*A;
-        real B2 = B*B;
-        fdamp3 = 1 - A2*(1 + arI + arI2*(one/2))*expARI -
-                     B2*(1 + arJ + arJ2*(one/2))*expARJ -
-                     2*A2*B*(1 + arI)*expARI -
-                     2*B2*A*(1 + arJ)*expARJ;
-        fdamp5 = 1 - A2*(1 + arI + arI2*(one/2) + arI3*(one/6))*expARI -
-                     B2*(1 + arJ + arJ2*(one/2) + arJ3*(one/6))*expARJ -
-                     2*A2*B*(1 + arI + arI2*(one/3))*expARI -
-                     2*B2*A*(1 + arJ + arJ2*(one/3))*expARJ;
-        ddamp = (A2*arI2*alphaI*expARI*(r*alphaI + 4*B - 1) +
-                (B2*arJ2*alphaJ*expARJ*(r*alphaJ + 4*A - 1)))*(one/4);
+        real A2expARI = A*A*expARI;
+        real B2expARJ = B*B*expARJ;
+        fdamp3 = 1 - (1 + arI + arI2*(one/2))*A2expARI -
+                     (1 + arJ + arJ2*(one/2))*B2expARJ -
+                     (1 + arI)*2*B*A2expARI -
+                     (1 + arJ)*2*A*B2expARJ;
+        fdamp5 = 1 - (1 + arI + arI2*(one/2) + arI3*(one/6))*A2expARI -
+                     (1 + arJ + arJ2*(one/2) + arJ3*(one/6))*B2expARJ -
+                     (1 + arI + arI2*(one/3))*2*B*A2expARI -
+                     (1 + arJ + arJ2*(one/3))*2*A*B2expARJ;
+        ddamp = (arI2*alphaI*A2expARI*(r*alphaI + 4*B - 1) +
+                (arJ2*alphaJ*B2expARJ*(r*alphaJ + 4*A - 1)))*(one/4);
     }
     fdamp = 1.5f*fdamp5 - 0.5f*fdamp3;
 }
@@ -210,21 +210,22 @@ __device__ void computeRepulsionDampingFactors(real pauliAlphaI, real pauliAlpha
         real aJ2_3 = aJ2_2*aJ2;
         real aJ2_4 = aJ2_2*aJ2_2;
         real aJ2_5 = aJ2_3*aJ2_2;
-        real aJ2_6 = aJ2_3*aJ2_3;
         real scale = 1/(aI2_2-aJ2_2);
+        real aI2aJ2expI = aI2*aJ2*expI;
+        real aI2aJ2expJ = aI2*aJ2*expJ;
         pre = 8192*aI2_3*aJ2_3*(scale*scale*scale*scale);
         real tmp = 4*aI2*aJ2*scale;
         fexp = (arI2-tmp)*expJ + (arJ2+tmp)*expI;
-        fexp1 = (aI2*aJ2*r2 - 4*aI2*aJ2_2*r*scale - 4*aI2*aJ2*scale)*expJ +
-             (aI2*aJ2*r2 + 4*aI2_2*aJ2*r*scale + 4*aI2*aJ2*scale)*expI;
-        fexp2 = (aI2*aJ2*r2*(one/3) + aI2*aJ2_2*r3*(one/3) - (four/3)*aI2*aJ2_3*r2*scale - 4*aI2*aJ2_2*r*scale - 4*aI2*aJ2*scale)*expJ +
-                (aI2*aJ2*r2*(one/3) + aI2_2*aJ2*r3*(one/3) + (four/3)*aI2_3*aJ2*r2*scale + 4*aI2_2*aJ2*r*scale + 4*aI2*aJ2*scale)*expI;
-        fexp3 = (aI2*aJ2_3*r4*(one/15) + aI2*aJ2_2*r3*(one/5) + aI2*aJ2*r2*(one/5) - (four/15)*aI2*aJ2_4*r3*scale - (eight/5)*aI2*aJ2_3*r2*scale - 4*aI2*aJ2_2*r*scale - 4*scale*aI2*aJ2)*expJ +
-                (aI2_3*aJ2*r4*(one/15) + aI2_2*aJ2*r3*(one/5) + aI2*aJ2*r2*(one/5) + (four/15)*aI2_4*aJ2*r3*scale + (eight/5)*aI2_3*aJ2*r2*scale + 4*aI2_2*aJ2*r*scale + 4*scale*aI2*aJ2)*expI;
-        fexp4 = (aI2*aJ2_4*r5*(one/105) + (two/35)*aI2*aJ2_3*r4 + aI2*aJ2_2*r3*(one/7) + aI2*aJ2*r2*(one/7) - (four/105)*aI2*aJ2_5*r4*scale - (eight/21)*aI2*aJ2_4*r3*scale - (twelve/7)*aI2*aJ2_3*r2*scale - 4*aI2*aJ2_2*r*scale - 4*aI2*aJ2*scale)*expJ +
-                (aI2_4*aJ2*r5*(one/105) + (two/35)*aI2_3*aJ2*r4 + aI2_2*aJ2*r3*(one/7) + aI2*aJ2*r2*(one/7) + (four/105)*aI2_5*aJ2*r4*scale + (eight/21)*aI2_4*aJ2*r3*scale + (twelve/7)*aI2_3*aJ2*r2*scale + 4*aI2_2*aJ2*r*scale + 4*aI2*aJ2*scale)*expI;
-        fexp5 = (aI2*aJ2_5*r6*(one/945) + (two/189)*aI2*aJ2_4*r5 + aI2*aJ2_3*r4*(one/21) + aI2*aJ2_2*r3*(one/9) + aI2*aJ2*r2*(one/9) - (four/945)*aI2*aJ2_6*r5*scale - (four/63)*aI2*aJ2_5*r4*scale - (four/9)*aI2*aJ2_4*r3*scale - (sixteen/9)*aI2*aJ2_3*r2*scale - 4*aI2*aJ2_2*r*scale - 4*aI2*aJ2*scale)*expJ +
-                (aI2_5*aJ2*r6*(one/945) + (two/189)*aI2_4*aJ2*r5 + aI2_3*aJ2*r4*(one/21) + aI2_2*aJ2*r3*(one/9) + aI2*aJ2*r2*(one/9) + (four/945)*aI2_6*aJ2*r5*scale + (four/63)*aI2_5*aJ2*r4*scale + (four/9)*aI2_4*aJ2*r3*scale + (sixteen/9)*aI2_3*aJ2*r2*scale + 4*aI2_2*aJ2*r*scale + 4*aI2*aJ2*scale)*expI;
+        fexp1 = (r2 - (4*aJ2*r + 4)*scale)*aI2aJ2expJ +
+                (r2 + (4*aI2*r + 4)*scale)*aI2aJ2expI;
+        fexp2 = (r2*(one/3) + aJ2*r3*(one/3) - ((four/3)*aJ2_2*r2 + 4*aJ2*r + 4)*scale)*aI2aJ2expJ +
+                (r2*(one/3) + aI2*r3*(one/3) + ((four/3)*aI2_2*r2 + 4*aI2*r + 4)*scale)*aI2aJ2expI;
+        fexp3 = (aJ2_2*r4*(one/15) + aJ2*r3*(one/5) + r2*(one/5) - ((four/15)*aJ2_3*r3 + (eight/5)*aJ2_2*r2 + 4*aJ2*r + 4)*scale)*aI2aJ2expJ +
+                (aI2_2*r4*(one/15) + aI2*r3*(one/5) + r2*(one/5) + ((four/15)*aI2_3*r3 + (eight/5)*aI2_2*r2 + 4*aI2*r + 4)*scale)*aI2aJ2expI;
+        fexp4 = (aJ2_3*r5*(one/105) + (two/35)*aJ2_2*r4 + aJ2*r3*(one/7) + r2*(one/7) - ((four/105)*aJ2_4*r4 + (eight/21)*aJ2_3*r3 + (twelve/7)*aJ2_2*r2 + 4*aJ2*r + 4)*scale)*aI2aJ2expJ +
+                (aI2_3*r5*(one/105) + (two/35)*aI2_2*r4 + aI2*r3*(one/7) + r2*(one/7) + ((four/105)*aI2_4*r4 + (eight/21)*aI2_3*r3 + (twelve/7)*aI2_2*r2 + 4*aI2*r + 4)*scale)*aI2aJ2expI;
+        fexp5 = (aJ2_4*r6*(one/945) + (two/189)*aJ2_3*r5 + aJ2_2*r4*(one/21) + aJ2*r3*(one/9) + r2*(one/9) - ((four/945)*aJ2_5*r5 + (four/63)*aJ2_4*r4 + (four/9)*aJ2_3*r3 + (sixteen/9)*aJ2_2*r2 + 4*aJ2*r + 4)*scale)*aI2aJ2expJ +
+                (aI2_4*r6*(one/945) + (two/189)*aI2_3*r5 + aI2_2*r4*(one/21) + aI2*r3*(one/9) + r2*(one/9) + ((four/945)*aI2_5*r5 + (four/63)*aI2_4*r4 + (four/9)*aI2_3*r3 + (sixteen/9)*aI2_2*r2 + 4*aI2*r + 4)*scale)*aI2aJ2expI;
     }
     fexp = fexp/r;
     fexp1 = fexp1/r3;
