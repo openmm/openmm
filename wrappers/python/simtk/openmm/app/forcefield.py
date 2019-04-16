@@ -5537,7 +5537,7 @@ class HippoNonbondedGenerator(object):
             zAtom = self._findAxisAtom('zAtomType', extra, bonded12[atom.index], None, data, [])
             xAtom = self._findAxisAtom('xAtomType', extra, bonded12[atom.index], bonded13[atom.index], data, [zAtom])
             yAtom = self._findAxisAtom('yAtomType', extra, bonded12[atom.index], bonded13[atom.index], data, [zAtom, xAtom])
-            force.addParticle(params[0], dipole, quadrupole, *params[1:], axisType, zAtom, xAtom, yAtom)
+            force.addParticle(params[0], dipole, quadrupole, *params[1:], axisType=axisType, multipoleAtomZ=zAtom, multipoleAtomX=xAtom, multipoleAtomY=yAtom)
         force.setNonbondedMethod(methodMap[nonbondedMethod])
         force.setExtrapolationCoefficients(self.extrapCoeff)
         force.setCutoffDistance(nonbondedCutoff)
