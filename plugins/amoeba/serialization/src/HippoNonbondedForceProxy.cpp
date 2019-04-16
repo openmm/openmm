@@ -62,7 +62,7 @@ void HippoNonbondedForceProxy::serialize(const void* object, SerializationNode& 
     node.setIntProperty("dpmeGridX", nx);
     node.setIntProperty("dpmeGridY", ny);
     node.setIntProperty("dpmeGridZ", nz);
-    SerializationNode& coefficients = node.createChildNode("extrapolationCoefficients");
+    SerializationNode& coefficients = node.createChildNode("ExtrapolationCoefficients");
     vector<double> coeff = force.getExtrapolationCoefficients();
     for (int i = 0; i < coeff.size(); i++) {
         stringstream key;
@@ -128,7 +128,7 @@ void* HippoNonbondedForceProxy::deserialize(const SerializationNode& node) const
         force->setEwaldErrorTolerance(node.getDoubleProperty("ewaldErrorTolerance"));
         force->setPMEParameters(node.getDoubleProperty("pmeAlpha"), node.getIntProperty("pmeGridX"), node.getIntProperty("pmeGridY"), node.getIntProperty("pmeGridZ"));
         force->setDPMEParameters(node.getDoubleProperty("dpmeAlpha"), node.getIntProperty("dpmeGridX"), node.getIntProperty("dpmeGridY"), node.getIntProperty("dpmeGridZ"));
-        const SerializationNode& coefficients = node.getChildNode("extrapolationCoefficients");
+        const SerializationNode& coefficients = node.getChildNode("ExtrapolationCoefficients");
         vector<double> coeff;
         for (int i = 0; ; i++) {
             stringstream key;
