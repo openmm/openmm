@@ -32,16 +32,16 @@ __device__ void computeMutualFieldDampingFactors(real alphaI, real alphaJ, real 
         real aJ2 = alphaJ*alphaJ;
         real A = aJ2/(aJ2-aI2);
         real B = aI2/(aI2-aJ2);
-        real A2 = A*A;
-        real B2 = B*B;
-        fdamp3 = 1 - A2*(1 + arI + arI2*(one/2))*expARI -
-                     B2*(1 + arJ + arJ2*(one/2))*expARJ -
-                     2*A2*B*(1 + arI)*expARI -
-                     2*B2*A*(1 + arJ)*expARJ;
-        fdamp5 = 1 - A2*(1 + arI + arI2*(one/2) + arI3*(one/6))*expARI -
-                     B2*(1 + arJ + arJ2*(one/2) + arJ3*(one/6))*expARJ -
-                     2*A2*B*(1 + arI + arI2*(one/3))*expARI -
-                     2*B2*A*(1 + arJ + arJ2*(one/3))*expARJ;
+        real A2expARI = A*A*expARI;
+        real B2expARJ = B*B*expARJ;
+        fdamp3 = 1 - (1 + arI + arI2*(one/2))*A2expARI -
+                     (1 + arJ + arJ2*(one/2))*B2expARJ -
+                     (1 + arI)*2*B*A2expARI -
+                     (1 + arJ)*2*A*B2expARJ;
+        fdamp5 = 1 - (1 + arI + arI2*(one/2) + arI3*(one/6))*A2expARI -
+                     (1 + arJ + arJ2*(one/2) + arJ3*(one/6))*B2expARJ -
+                     (1 + arI + arI2*(one/3))*2*B*A2expARI -
+                     (1 + arJ + arJ2*(one/3))*2*A*B2expARJ;
     }
 }
 

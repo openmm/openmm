@@ -69,9 +69,9 @@ void buildWaterSystem(System& system, int numWaters, HippoNonbondedForce* hippo)
         hippo->addParticle(0.19140, {0.0, 0.0, ds*-0.20097}, {qs*0.03881, 0.0, 0.0, 0.0, qs*0.02214, 0.0, 0.0, 0.0, qs*-0.06095}, 1.0,
                     10*4.7909, 0.0, 10*3.5582, c6s*4.5670, ps*2.0037, -0.8086, 10*4.6450,
                     0.001*0.341, HippoNonbondedForce::ZThenX, 3*mol, 3*mol+1, -1);
-        hippo->addException(3*mol, 3*mol+1, 0.0, 0.0, 0.2, 0.0, 0.0);
-        hippo->addException(3*mol, 3*mol+2, 0.0, 0.0, 0.2, 0.0, 0.0);
-        hippo->addException(3*mol+1, 3*mol+2, 0.0, 0.0, 1.0, 0.0, 0.0);
+        hippo->addException(3*mol, 3*mol+1, 0.0, 0.0, 0.2, 0.0, 0.0, 0.0);
+        hippo->addException(3*mol, 3*mol+2, 0.0, 0.0, 0.2, 0.0, 0.0, 0.0);
+        hippo->addException(3*mol+1, 3*mol+2, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0);
     }
 }
 
@@ -95,8 +95,8 @@ void checkForceEnergyConsistency(Context& context) {
     for (int i = 0; i < numParticles; ++i) {
         Vec3 p = state.getPositions()[i];
         Vec3 f = state.getForces()[i];
-        positions2[i] = Vec3(p[0]-f[0]*step, p[1]-f[1]*step, p[2]-f[2]*step);
-        positions3[i] = Vec3(p[0]+f[0]*step, p[1]+f[1]*step, p[2]+f[2]*step);
+        positions2[i] = p-f*step;
+        positions3[i] = p+f*step;
     }
     context.setPositions(positions2);
     State state2 = context.getState(State::Energy);
@@ -136,7 +136,7 @@ void testWaterDimer() {
     for (int i = 0; i < system.getNumParticles(); i++)
         ASSERT_EQUAL_VEC(-expectedForces[i], state.getForces()[i], forceTol);
 
-    // Compare the induced dipoles to reference values computed with Tinker.
+    // Compare the permanent dipoles to reference values computed with Tinker.
 
     vector<Vec3> expectedLabDipoles = {
         Vec3(-1.3999971343167967e-3, 0.0, 2.5377493339976591e-3),
@@ -1528,7 +1528,7 @@ void testChangingParameters() {
     hippo->setParticleParameters(0, -0.2, {0.0, 0.0, 0.005}, {0.001, 0.0, 0.0, 0.0, -0.001, 0.0, 0.0, 0.0, 0.0}, 6.0,
                 20, 4.184*1326.0, 10*40.0, 0.03, 2.0, -2.4233, 10*4.3097,
                 0.001*0.795, HippoNonbondedForce::Bisector, 1, 2, -1);
-    hippo->setExceptionParameters(3, 3, 4, 0.1, 0.1, 0.3, 0.05, 0.05);
+    hippo->setExceptionParameters(3, 3, 4, 0.1, 0.1, 0.3, 0.05, 0.05, 0.15);
     hippo->updateParametersInContext(context);
     State state2 = context.getState(State::Energy | State::Forces);
     ASSERT(fabs(state1.getPotentialEnergy()-state2.getPotentialEnergy()) > 1.0)

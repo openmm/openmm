@@ -64,7 +64,7 @@ AmoebaReferenceHippoNonbondedForce::AmoebaReferenceHippoNonbondedForce(const Hip
     for (int i = 0; i < force.getNumExceptions(); i++) {
         Exception e;
         force.getExceptionParameters(i, e.particle1, e.particle2, e.multipoleMultipoleScale, e.dipoleMultipoleScale,
-                                     e.dipoleDipoleScale, e.dispersionScale, e.repulsionScale);
+                                     e.dipoleDipoleScale, e.dispersionScale, e.repulsionScale, e.chargeTransferScale);
         exceptions[make_pair(e.particle1, e.particle2)] = e;
         exceptions[make_pair(e.particle2, e.particle1)] = e;
     }
@@ -522,21 +522,22 @@ void AmoebaReferenceHippoNonbondedForce::computeRepulsionDampingFactors(const Mu
         double aJ2_3 = aJ2_2*aJ2;
         double aJ2_4 = aJ2_2*aJ2_2;
         double aJ2_5 = aJ2_3*aJ2_2;
-        double aJ2_6 = aJ2_3*aJ2_3;
         double scale = 1/(aI2_2-aJ2_2);
+        double aI2aJ2expI = aI2*aJ2*expI;
+        double  aI2aJ2expJ = aI2*aJ2*expJ;
         pre = 8192*aI2_3*aJ2_3*(scale*scale*scale*scale);
         double tmp = 4*aI2*aJ2*scale;
         fexp = (arI2-tmp)*expJ + (arJ2+tmp)*expI;
-        fexp1 = (aI2*aJ2*r2 - 4*aI2*aJ2_2*r*scale - 4*aI2*aJ2*scale)*expJ +
-             (aI2*aJ2*r2 + 4*aI2_2*aJ2*r*scale + 4*aI2*aJ2*scale)*expI;
-        fexp2 = (aI2*aJ2*r2*(1.0/3) + aI2*aJ2_2*r3*(1.0/3) - (4.0/3)*aI2*aJ2_3*r2*scale - 4*aI2*aJ2_2*r*scale - 4*aI2*aJ2*scale)*expJ +
-                (aI2*aJ2*r2*(1.0/3) + aI2_2*aJ2*r3*(1.0/3) + (4.0/3)*aI2_3*aJ2*r2*scale + 4*aI2_2*aJ2*r*scale + 4*aI2*aJ2*scale)*expI;
-        fexp3 = (aI2*aJ2_3*r4*(1.0/15) + aI2*aJ2_2*r3*(1.0/5) + aI2*aJ2*r2*(1.0/5) - (4.0/15)*aI2*aJ2_4*r3*scale - (8.0/5)*aI2*aJ2_3*r2*scale - 4*aI2*aJ2_2*r*scale - 4*scale*aI2*aJ2)*expJ +
-                (aI2_3*aJ2*r4*(1.0/15) + aI2_2*aJ2*r3*(1.0/5) + aI2*aJ2*r2*(1.0/5) + (4.0/15)*aI2_4*aJ2*r3*scale + (8.0/5)*aI2_3*aJ2*r2*scale + 4*aI2_2*aJ2*r*scale + 4*scale*aI2*aJ2)*expI;
-        fexp4 = (aI2*aJ2_4*r5*(1.0/105) + (2.0/35)*aI2*aJ2_3*r4 + aI2*aJ2_2*r3*(1.0/7) + aI2*aJ2*r2*(1.0/7) - (4.0/105)*aI2*aJ2_5*r4*scale - (8.0/21)*aI2*aJ2_4*r3*scale - (12.0/7)*aI2*aJ2_3*r2*scale - 4*aI2*aJ2_2*r*scale - 4*aI2*aJ2*scale)*expJ +
-                (aI2_4*aJ2*r5*(1.0/105) + (2.0/35)*aI2_3*aJ2*r4 + aI2_2*aJ2*r3*(1.0/7) + aI2*aJ2*r2*(1.0/7) + (4.0/105)*aI2_5*aJ2*r4*scale + (8.0/21)*aI2_4*aJ2*r3*scale + (12.0/7)*aI2_3*aJ2*r2*scale + 4*aI2_2*aJ2*r*scale + 4*aI2*aJ2*scale)*expI;
-        fexp5 = (aI2*aJ2_5*r6*(1.0/945) + (2.0/189)*aI2*aJ2_4*r5 + aI2*aJ2_3*r4*(1.0/21) + aI2*aJ2_2*r3*(1.0/9) + aI2*aJ2*r2*(1.0/9) - (4.0/945)*aI2*aJ2_6*r5*scale - (4.0/63)*aI2*aJ2_5*r4*scale - (4.0/9)*aI2*aJ2_4*r3*scale - (16.0/9)*aI2*aJ2_3*r2*scale - 4*aI2*aJ2_2*r*scale - 4*aI2*aJ2*scale)*expJ +
-                (aI2_5*aJ2*r6*(1.0/945) + (2.0/189)*aI2_4*aJ2*r5 + aI2_3*aJ2*r4*(1.0/21) + aI2_2*aJ2*r3*(1.0/9) + aI2*aJ2*r2*(1.0/9) + (4.0/945)*aI2_6*aJ2*r5*scale + (4.0/63)*aI2_5*aJ2*r4*scale + (4.0/9)*aI2_4*aJ2*r3*scale + (16.0/9)*aI2_3*aJ2*r2*scale + 4*aI2_2*aJ2*r*scale + 4*aI2*aJ2*scale)*expI;
+        fexp1 = (r2 - (4*aJ2*r + 4)*scale)*aI2aJ2expJ +
+                (r2 + (4*aI2*r + 4)*scale)*aI2aJ2expI;
+        fexp2 = (r2*(1.0/3) + aJ2*r3*(1.0/3) - ((4.0/3)*aJ2_2*r2 + 4*aJ2*r + 4)*scale)*aI2aJ2expJ +
+                (r2*(1.0/3) + aI2*r3*(1.0/3) + ((4.0/3)*aI2_2*r2 + 4*aI2*r + 4)*scale)*aI2aJ2expI;
+        fexp3 = (aJ2_2*r4*(1.0/15) + aJ2*r3*(1.0/5) + r2*(1.0/5) - ((4.0/15)*aJ2_3*r3 + (8.0/5)*aJ2_2*r2 + 4*aJ2*r + 4)*scale)*aI2aJ2expJ +
+                (aI2_2*r4*(1.0/15) + aI2*r3*(1.0/5) + r2*(1.0/5) + ((4.0/15)*aI2_3*r3 + (8.0/5)*aI2_2*r2 + 4*aI2*r + 4)*scale)*aI2aJ2expI;
+        fexp4 = (aJ2_3*r5*(1.0/105) + (2.0/35)*aJ2_2*r4 + aJ2*r3*(1.0/7) + r2*(1.0/7) - ((4.0/105)*aJ2_4*r4 + (8.0/21)*aJ2_3*r3 + (12.0/7)*aJ2_2*r2 + 4*aJ2*r + 4)*scale)*aI2aJ2expJ +
+                (aI2_3*r5*(1.0/105) + (2.0/35)*aI2_2*r4 + aI2*r3*(1.0/7) + r2*(1.0/7) + ((4.0/105)*aI2_4*r4 + (8.0/21)*aI2_3*r3 + (12.0/7)*aI2_2*r2 + 4*aI2*r + 4)*scale)*aI2aJ2expI;
+        fexp5 = (aJ2_4*r6*(1.0/945) + (2.0/189)*aJ2_3*r5 + aJ2_2*r4*(1.0/21) + aJ2*r3*(1.0/9) + r2*(1.0/9) - ((4.0/945)*aJ2_5*r5 + (4.0/63)*aJ2_4*r4 + (4.0/9)*aJ2_3*r3 + (16.0/9)*aJ2_2*r2 + 4*aJ2*r + 4)*scale)*aI2aJ2expJ +
+                (aI2_4*r6*(1.0/945) + (2.0/189)*aI2_3*r5 + aI2_2*r4*(1.0/21) + aI2*r3*(1.0/9) + r2*(1.0/9) + ((4.0/945)*aI2_5*r5 + (4.0/63)*aI2_4*r4 + (4.0/9)*aI2_3*r3 + (16.0/9)*aI2_2*r2 + 4*aI2*r + 4)*scale)*aI2aJ2expI;
     }
     fexp = fexp/r;
     fexp1 = fexp1/r3;
@@ -1098,8 +1099,8 @@ double AmoebaReferenceHippoNonbondedForce::calculateChargeTransferPairIxn(const 
     }
     auto exception = exceptions.find(make_pair(particleI.index, particleK.index));
     if (exception != exceptions.end()) {
-        energy *= exception->second.multipoleMultipoleScale;
-        dEnergydR *= exception->second.multipoleMultipoleScale;
+        energy *= exception->second.chargeTransferScale;
+        dEnergydR *= exception->second.chargeTransferScale;
     }
     force[2] += dEnergydR;
     return energy;

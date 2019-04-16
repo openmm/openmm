@@ -72,7 +72,7 @@ public:
         PME = 1
     };
 
-    enum ParticleAxisTypes { ZThenX = 0, Bisector = 1, ZBisect = 2, ThreeFold = 3, ZOnly = 4, NoAxisType = 5, LastAxisTypeIndex = 6 };
+    enum ParticleAxisTypes { ZThenX = 0, Bisector = 1, ZBisect = 2, ThreeFold = 3, ZOnly = 4, NoAxisType = 5 };
 
     /**
      * Create a HippoNonbondedForce.
@@ -287,12 +287,13 @@ public:
      * @param dipoleDipoleScale          the factor by which to scale the Coulomb interaction between induced dipoles
      * @param dispersionScale            the factor by which to scale the dispersion interaction
      * @param repulsionScale             the factor by which to scale the Pauli repulsion
+     * @param chargeTransferScale        the factor by which to scale the charge transfer interaction
      * @param replace                    determines the behavior if there is already an exception for the same two particles.  If true, the existing one is replaced.
      *                                   If false, an exception is thrown.
      * @return the index of the exception that was added
      */
     int addException(int particle1, int particle2, double multipoleMultipoleScale, double dipoleMultipoleScale, double dipoleDipoleScale,
-                     double dispersionScale, double repulsionScale, bool replace = false);
+                     double dispersionScale, double repulsionScale, double chargeTransferScale, bool replace = false);
     /**
      * Get the scale factors for an interaction that should be calculated differently from others.
      *
@@ -304,9 +305,10 @@ public:
      * @param dipoleDipoleScale          the factor by which to scale the Coulomb interaction between induced dipoles
      * @param dispersionScale            the factor by which to scale the dispersion interaction
      * @param repulsionScale             the factor by which to scale the Pauli repulsion
+     * @param chargeTransferScale        the factor by which to scale the charge transfer interaction
      */
     void getExceptionParameters(int index, int& particle1, int& particle2, double& multipoleMultipoleScale, double& dipoleMultipoleScale, double& dipoleDipoleScale,
-                                double& dispersionScale, double& repulsionScale) const;
+                                double& dispersionScale, double& repulsionScale, double& chargeTransferScale) const;
     /**
      * Set the scale factors for an interaction that should be calculated differently from others.
      * If all scale factors are set to 0, this will cause the interaction to be completely omitted from
@@ -320,9 +322,10 @@ public:
      * @param dipoleDipoleScale          the factor by which to scale the Coulomb interaction between induced dipoles
      * @param dispersionScale            the factor by which to scale the dispersion interaction
      * @param repulsionScale             the factor by which to scale the Pauli repulsion
+     * @param chargeTransferScale        the factor by which to scale the charge transfer interaction
      */
     void setExceptionParameters(int index, int particle1, int particle2, double multipoleMultipoleScale, double dipoleMultipoleScale, double dipoleDipoleScale,
-                                double dispersionScale, double repulsionScale);
+                                double dispersionScale, double repulsionScale, double chargeTransferScale);
     /**
      * Get the error tolerance for Ewald summation.  This corresponds to the fractional error in the forces
      * which is acceptable.  This value is used to select the grid dimensions and separation (alpha)
@@ -424,14 +427,14 @@ public:
 class HippoNonbondedForce::ExceptionInfo {
 public:
     int particle1, particle2;
-    double multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale;
+    double multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale, chargeTransferScale;
     ExceptionInfo() {
         particle1 = particle2 = -1;
-        multipoleMultipoleScale = dipoleMultipoleScale = dipoleDipoleScale = dispersionScale = repulsionScale = 0.0;
+        multipoleMultipoleScale = dipoleMultipoleScale = dipoleDipoleScale = dispersionScale = repulsionScale = chargeTransferScale = 0.0;
     }
-    ExceptionInfo(int particle1, int particle2, double multipoleMultipoleScale, double dipoleMultipoleScale, double dipoleDipoleScale, double dispersionScale, double repulsionScale) :
+    ExceptionInfo(int particle1, int particle2, double multipoleMultipoleScale, double dipoleMultipoleScale, double dipoleDipoleScale, double dispersionScale, double repulsionScale, double chargeTransferScale) :
         particle1(particle1), particle2(particle2), multipoleMultipoleScale(multipoleMultipoleScale), dipoleMultipoleScale(dipoleMultipoleScale),
-        dipoleDipoleScale(dipoleDipoleScale), dispersionScale(dispersionScale), repulsionScale(repulsionScale) {
+        dipoleDipoleScale(dipoleDipoleScale), dispersionScale(dispersionScale), repulsionScale(repulsionScale), chargeTransferScale(chargeTransferScale) {
     }
 };
 

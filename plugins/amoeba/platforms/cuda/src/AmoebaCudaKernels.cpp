@@ -2624,20 +2624,20 @@ public:
     }
     void getParticlesInGroup(int index, vector<int>& particles) {
         int particle1, particle2;
-        double multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale;
-        force.getExceptionParameters(index, particle1, particle2, multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale);
+        double multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale, chargeTransferScale;
+        force.getExceptionParameters(index, particle1, particle2, multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale, chargeTransferScale);
         particles.resize(2);
         particles[0] = particle1;
         particles[1] = particle2;
     }
     bool areGroupsIdentical(int group1, int group2) {
         int particle1, particle2;
-        double multipoleMultipoleScale1, dipoleMultipoleScale1, dipoleDipoleScale1, dispersionScale1, repulsionScale1;
-        double multipoleMultipoleScale2, dipoleMultipoleScale2, dipoleDipoleScale2, dispersionScale2, repulsionScale2;
-        force.getExceptionParameters(group1, particle1, particle2, multipoleMultipoleScale1, dipoleMultipoleScale1, dipoleDipoleScale1, dispersionScale1, repulsionScale1);
-        force.getExceptionParameters(group2, particle1, particle2, multipoleMultipoleScale2, dipoleMultipoleScale2, dipoleDipoleScale2, dispersionScale2, repulsionScale2);
+        double multipoleMultipoleScale1, dipoleMultipoleScale1, dipoleDipoleScale1, dispersionScale1, repulsionScale1, chargeTransferScale1;
+        double multipoleMultipoleScale2, dipoleMultipoleScale2, dipoleDipoleScale2, dispersionScale2, repulsionScale2, chargeTransferScale2;
+        force.getExceptionParameters(group1, particle1, particle2, multipoleMultipoleScale1, dipoleMultipoleScale1, dipoleDipoleScale1, dispersionScale1, repulsionScale1, chargeTransferScale1);
+        force.getExceptionParameters(group2, particle1, particle2, multipoleMultipoleScale2, dipoleMultipoleScale2, dipoleDipoleScale2, dispersionScale2, repulsionScale2, chargeTransferScale2);
         return (multipoleMultipoleScale1 == multipoleMultipoleScale2 && dipoleMultipoleScale1 == dipoleMultipoleScale2 &&
-                dipoleDipoleScale1 == dipoleDipoleScale2 && dispersionScale1 == dispersionScale2 && repulsionScale1 == repulsionScale2);
+                dipoleDipoleScale1 == dipoleDipoleScale2 && dispersionScale1 == dispersionScale2 && repulsionScale1 == repulsionScale2 && chargeTransferScale1 == chargeTransferScale2);
     }
 private:
     const HippoNonbondedForce& force;
@@ -2778,27 +2778,28 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
     
     // Record exceptions and exclusions.
     
-    vector<double> exceptionScaleVec[5];
+    vector<double> exceptionScaleVec[6];
     vector<int2> exceptionAtomsVec;
     for (int i = 0; i < force.getNumExceptions(); i++) {
         int particle1, particle2;
-        double multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale;
-        force.getExceptionParameters(i, particle1, particle2, multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale);
+        double multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale, chargeTransferScale;
+        force.getExceptionParameters(i, particle1, particle2, multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale, chargeTransferScale);
         exclusions[particle1].push_back(particle2);
         exclusions[particle2].push_back(particle1);
-        if (usePME || multipoleMultipoleScale != 0 || dipoleMultipoleScale != 0 || dipoleDipoleScale != 0 || dispersionScale != 0 || repulsionScale != 0) {
+        if (usePME || multipoleMultipoleScale != 0 || dipoleMultipoleScale != 0 || dipoleDipoleScale != 0 || dispersionScale != 0 || repulsionScale != 0 || chargeTransferScale != 0) {
             exceptionAtomsVec.push_back(make_int2(particle1, particle2));
             exceptionScaleVec[0].push_back(multipoleMultipoleScale);
             exceptionScaleVec[1].push_back(dipoleMultipoleScale);
             exceptionScaleVec[2].push_back(dipoleDipoleScale);
             exceptionScaleVec[3].push_back(dispersionScale);
             exceptionScaleVec[4].push_back(repulsionScale);
+            exceptionScaleVec[5].push_back(chargeTransferScale);
         }
     }
     if (exceptionAtomsVec.size() > 0) {
         exceptionAtoms.initialize<int2>(cu, exceptionAtomsVec.size(), "exceptionAtoms");
         exceptionAtoms.upload(exceptionAtomsVec);
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 6; i++) {
             exceptionScales[i].initialize(cu, exceptionAtomsVec.size(), elementSize, "exceptionScales");
             exceptionScales[i].upload(exceptionScaleVec[i], true);
         }
@@ -3288,6 +3289,7 @@ double CudaCalcHippoNonbondedForceKernel::execute(ContextImpl& context, bool inc
             computeExceptionsArgs.push_back(&exceptionScales[2].getDevicePointer());
             computeExceptionsArgs.push_back(&exceptionScales[3].getDevicePointer());
             computeExceptionsArgs.push_back(&exceptionScales[4].getDevicePointer());
+            computeExceptionsArgs.push_back(&exceptionScales[5].getDevicePointer());
             computeExceptionsArgs.push_back(&coreCharge.getDevicePointer());
             computeExceptionsArgs.push_back(&valenceCharge.getDevicePointer());
             computeExceptionsArgs.push_back(&alpha.getDevicePointer());
@@ -3697,26 +3699,27 @@ void CudaCalcHippoNonbondedForceKernel::copyParametersToContext(ContextImpl& con
     
     // Record the per-exception parameters.
 
-    vector<double> exceptionScaleVec[5];
+    vector<double> exceptionScaleVec[6];
     vector<int2> exceptionAtomsVec;
     for (int i = 0; i < force.getNumExceptions(); i++) {
         int particle1, particle2;
-        double multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale;
-        force.getExceptionParameters(i, particle1, particle2, multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale);
-        if (usePME || multipoleMultipoleScale != 0 || dipoleMultipoleScale != 0 || dipoleDipoleScale != 0 || dispersionScale != 0 || repulsionScale != 0) {
+        double multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale, chargeTransferScale;
+        force.getExceptionParameters(i, particle1, particle2, multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale, chargeTransferScale);
+        if (usePME || multipoleMultipoleScale != 0 || dipoleMultipoleScale != 0 || dipoleDipoleScale != 0 || dispersionScale != 0 || repulsionScale != 0 || chargeTransferScale != 0) {
             exceptionAtomsVec.push_back(make_int2(particle1, particle2));
             exceptionScaleVec[0].push_back(multipoleMultipoleScale);
             exceptionScaleVec[1].push_back(dipoleMultipoleScale);
             exceptionScaleVec[2].push_back(dipoleDipoleScale);
             exceptionScaleVec[3].push_back(dispersionScale);
             exceptionScaleVec[4].push_back(repulsionScale);
+            exceptionScaleVec[5].push_back(chargeTransferScale);
         }
     }
     if (exceptionAtomsVec.size() > 0) {
         if (!exceptionAtoms.isInitialized() || exceptionAtoms.getSize() != exceptionAtomsVec.size())
             throw OpenMMException("updateParametersInContext: The number of exceptions has changed");
         exceptionAtoms.upload(exceptionAtomsVec);
-        for (int i = 0; i < 5; i++)
+        for (int i = 0; i < 6; i++)
             exceptionScales[i].upload(exceptionScaleVec[i], true);
     }
     else if (exceptionAtoms.isInitialized())

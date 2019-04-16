@@ -168,7 +168,7 @@ real bn5 = (9*bn4+alsq2n*exp2a)*rInv2;
 
     // Compute the force and torque.
 
-    real3 elecForce = -scale*(de*make_real3(0, 0, r) + term1*qiDipole1 + term2*qiDipole2 +
+    real3 elecForce = -scale*(make_real3(0, 0, de*r) + term1*qiDipole1 + term2*qiDipole2 +
             term3*(diqkTemp-dkqiTemp) + term4*qi + term5*qk + term6*(qikTemp+qkiTemp));
     real3 tI = scale*(-rr3ik*dikCross + term1*dirCross + term3*(dqik+dkqirCross) + term4*qirCross - term6*(qikrCross+qikCross));
     real3 tK = scale*(rr3ik*dikCross + term2*dkrCross - term3*(dqik+diqkrCross) + term5*qkrCross - term6*(qkirCross-qikCross));
@@ -423,8 +423,8 @@ real bn5 = (9*bn4+alsq2n*exp2a)*rInv2;
     }
 #endif
 #ifdef COMPUTING_EXCEPTIONS
-    ctForce *= multipoleMultipoleScale;
-    ctEnergy *= multipoleMultipoleScale;
+    ctForce *= chargeTransferScale;
+    ctEnergy *= chargeTransferScale;
 #endif
     tempEnergy += includeInteraction ? ctEnergy : 0;
     tempForce.z += includeInteraction ? ctForce*r : 0;

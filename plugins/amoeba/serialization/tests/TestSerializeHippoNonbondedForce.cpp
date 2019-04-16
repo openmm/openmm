@@ -67,7 +67,7 @@ void testSerialization() {
                            genrand_real2(sfmt), HippoNonbondedForce::Bisector, i+1, i+2, i+3);
     }
     for (int i = 0; i < 2; i++)
-        force1.addException(i, i+1, genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt));
+        force1.addException(i, i+1, genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt));
 
     // Serialize and then deserialize it.
 
@@ -131,10 +131,10 @@ void testSerialization() {
     for (int i = 0; i < force1.getNumExceptions(); i++) {
         int p11, p21;
         int p12, p22;
-        double mm1, dm1, dd1, disp1, rep1;
-        double mm2, dm2, dd2, disp2, rep2;
-        force1.getExceptionParameters(i, p11, p21, mm1, dm1, dd1, disp1, rep1);
-        force2.getExceptionParameters(i, p12, p22, mm2, dm2, dd2, disp2, rep2);
+        double mm1, dm1, dd1, disp1, rep1, ct1;
+        double mm2, dm2, dd2, disp2, rep2, ct2;
+        force1.getExceptionParameters(i, p11, p21, mm1, dm1, dd1, disp1, rep1, ct1);
+        force2.getExceptionParameters(i, p12, p22, mm2, dm2, dd2, disp2, rep2, ct2);
         ASSERT_EQUAL(p11, p12);
         ASSERT_EQUAL(p21, p22);
         ASSERT_EQUAL(mm1, mm2);
@@ -142,6 +142,7 @@ void testSerialization() {
         ASSERT_EQUAL(dd1, dd2);
         ASSERT_EQUAL(disp1, disp2);
         ASSERT_EQUAL(rep1, rep2);
+        ASSERT_EQUAL(ct1, ct2);
     }
 }
 

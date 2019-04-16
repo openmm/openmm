@@ -62,7 +62,7 @@ void HippoNonbondedForceProxy::serialize(const void* object, SerializationNode& 
     node.setIntProperty("dpmeGridX", nx);
     node.setIntProperty("dpmeGridY", ny);
     node.setIntProperty("dpmeGridZ", nz);
-    SerializationNode& coefficients = node.createChildNode("extrapolationCoefficients");
+    SerializationNode& coefficients = node.createChildNode("ExtrapolationCoefficients");
     vector<double> coeff = force.getExtrapolationCoefficients();
     for (int i = 0; i < coeff.size(); i++) {
         stringstream key;
@@ -100,9 +100,9 @@ void HippoNonbondedForceProxy::serialize(const void* object, SerializationNode& 
     }
     SerializationNode& exceptions = node.createChildNode("Exceptions");
     for (int i = 0; i < force.getNumExceptions(); i++) {
-        double multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale;
+        double multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale, chargeTransferScale;
         int p1, p2;
-        force.getExceptionParameters(i, p1, p2, multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale);
+        force.getExceptionParameters(i, p1, p2, multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale, chargeTransferScale);
         SerializationNode& exception = exceptions.createChildNode("Exception");
         exception.setIntProperty("p1", p1);
         exception.setIntProperty("p2", p2);
@@ -111,6 +111,7 @@ void HippoNonbondedForceProxy::serialize(const void* object, SerializationNode& 
         exception.setDoubleProperty("ddScale", dipoleDipoleScale);
         exception.setDoubleProperty("dispScale", dispersionScale);
         exception.setDoubleProperty("repScale", repulsionScale);
+        exception.setDoubleProperty("ctScale", chargeTransferScale);
     }
 }
 
@@ -127,7 +128,7 @@ void* HippoNonbondedForceProxy::deserialize(const SerializationNode& node) const
         force->setEwaldErrorTolerance(node.getDoubleProperty("ewaldErrorTolerance"));
         force->setPMEParameters(node.getDoubleProperty("pmeAlpha"), node.getIntProperty("pmeGridX"), node.getIntProperty("pmeGridY"), node.getIntProperty("pmeGridZ"));
         force->setDPMEParameters(node.getDoubleProperty("dpmeAlpha"), node.getIntProperty("dpmeGridX"), node.getIntProperty("dpmeGridY"), node.getIntProperty("dpmeGridZ"));
-        const SerializationNode& coefficients = node.getChildNode("extrapolationCoefficients");
+        const SerializationNode& coefficients = node.getChildNode("ExtrapolationCoefficients");
         vector<double> coeff;
         for (int i = 0; ; i++) {
             stringstream key;
@@ -167,7 +168,8 @@ void* HippoNonbondedForceProxy::deserialize(const SerializationNode& node) const
             const SerializationNode& exception = exceptions.getChildren()[i];
             force->addException(exception.getIntProperty("p1"), exception.getIntProperty("p2"), exception.getDoubleProperty("mmScale"),
                     exception.getDoubleProperty("dmScale"), exception.getDoubleProperty("ddScale"),
-                    exception.getDoubleProperty("dispScale"), exception.getDoubleProperty("repScale"));
+                    exception.getDoubleProperty("dispScale"), exception.getDoubleProperty("repScale"),
+                    exception.getDoubleProperty("ctScale"));
         }
     }
     catch (...) {

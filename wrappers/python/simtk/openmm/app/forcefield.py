@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2018 Stanford University and the Authors.
+Portions copyright (c) 2012-2019 Stanford University and the Authors.
 Authors: Peter Eastman, Mark Friedrichs
 Contributors:
 
@@ -1334,6 +1334,70 @@ def _findBondsForExclusions(data, sys):
             bondIndices.append((child, atom.index))
     return bondIndices
 
+def _findExclusions(bondIndices, maxSeparation, numAtoms):
+    """Identify pairs of atoms in the same molecule separated by no more than maxSeparation bonds."""
+    bondedTo = [set() for i in range(numAtoms)]
+    for i, j in bondIndices:
+        bondedTo[i].add(j)
+        bondedTo[j].add(i)
+
+    # Identify all neighbors of each atom with each separation.
+
+    bondedWithSeparation = [bondedTo]
+    for i in range(maxSeparation-1):
+        lastBonds = bondedWithSeparation[-1]
+        newBonds = deepcopy(lastBonds)
+        for atom in range(numAtoms):
+            for a1 in lastBonds[atom]:
+                for a2 in bondedTo[a1]:
+                    newBonds[atom].add(a2)
+        bondedWithSeparation.append(newBonds)
+
+    # Build the list of pairs.
+
+    pairs = []
+    for atom in range(numAtoms):
+        for otherAtom in bondedWithSeparation[-1][atom]:
+            if otherAtom > atom:
+                # Determine the minimum number of bonds between them.
+                sep = maxSeparation
+                for i in reversed(range(maxSeparation-1)):
+                    if otherAtom in bondedWithSeparation[i][atom]:
+                        sep -= 1
+                    else:
+                        break
+                pairs.append((atom, otherAtom, sep))
+    return pairs
+
+
+def _findGroups(bondedTo):
+    """Given bonds that connect atoms, identify the connected groups."""
+    atomGroup = [None]*len(bondedTo)
+    numGroups = 0
+    for i in range(len(bondedTo)):
+        if atomGroup[i] is None:
+            # Start a new group.
+
+            atomStack = [i]
+            neighborStack = [0]
+            group = numGroups
+            numGroups += 1
+
+            # Recursively tag all the bonded atoms.
+
+            while len(atomStack) > 0:
+                atom = atomStack[-1]
+                atomGroup[atom] = group
+                while neighborStack[-1] < len(bondedTo[atom]) and atomGroup[bondedTo[atom][neighborStack[-1]]] is not None:
+                    neighborStack[-1] += 1
+                if neighborStack[-1] < len(bondedTo[atom]):
+                    atomStack.append(bondedTo[atom][neighborStack[-1]])
+                    neighborStack.append(0)
+                else:
+                    atomStack.pop()
+                    neighborStack.pop()
+    return atomGroup
+
 def _countResidueAtoms(elements):
     """Count the number of atoms of each element in a residue."""
     counts = {}
@@ -1748,6 +1812,7 @@ def _matchImproper(data, torsion, generator):
                         match = (a2, a3, torsion[0], a4, tordef)
                         break
     return match
+
 
 # The following classes are generators that know how to create Force subclasses and add them to a System that is being
 # created.  Each generator class must define two methods: 1) a static method that takes an etree Element and a ForceField,
@@ -5411,6 +5476,112 @@ class AmoebaUreyBradleyGenerator(object):
 parsers["AmoebaUreyBradleyForce"] = AmoebaUreyBradleyGenerator.parseElement
 
 #=============================================================================================
+
+
+## @private
+class HippoNonbondedGenerator(object):
+    """A HippoNonbondedGenerator constructs a HippoNonbondedForce."""
+
+    def __init__(self, forcefield, extrapCoeff):
+        self.ff = forcefield
+        self.extrapCoeff = extrapCoeff
+        self.exceptions = {}
+
+    @staticmethod
+    def parseElement(element, ff):
+        extrapCoeff = [float(c) for c in element.attrib['extrapolationCoefficients'].split(',')]
+        generator = HippoNonbondedGenerator(ff, extrapCoeff)
+        ff.registerGenerator(generator)
+        scaleNames = ('mmScale', 'dmScale', 'ddScale', 'dispScale', 'repScale', 'ctScale')
+        paramNames = ('charge', 'coreCharge', 'alpha', 'epsilon', 'damping', 'c6', 'pauliK', 'pauliQ', 'pauliAlpha', 'polarizability', 'axisType', 'd0', 'd1', 'd2', 'q11', 'q12', 'q13', 'q21', 'q22', 'q23', 'q31', 'q32', 'q33')
+        for ex in element.findall('Exception'):
+            separation = int(ex.attrib['separation'])
+            ingroup = ex.attrib['ingroup'].lower() == 'true'
+            key = (separation, ingroup)
+            if key in generator.exceptions:
+                raise ValueError('HippoNonbondedForce: multiple exceptions with separation=%d ingroup=%s' % (separation, ingroup))
+            generator.exceptions[key] = [float(ex.attrib[s]) for s in scaleNames]
+        generator.params = ForceField._AtomTypeParameters(ff, 'HippoNonbondedForce', 'Atom', paramNames)
+        generator.params.parseDefinitions(element)
+
+    def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
+        methodMap = {NoCutoff:mm.HippoNonbondedForce.NoCutoff,
+                     PME:mm.HippoNonbondedForce.PME}
+        if nonbondedMethod not in methodMap:
+            raise ValueError('Illegal nonbonded method for HippoNonbondedForce')
+
+        # Build data structures we'll need for building local coordinate frames.
+
+        bondIndices = _findBondsForExclusions(data, sys)
+        pairs = _findExclusions(bondIndices, 2, len(data.atoms))
+        bonded12 = [set() for i in range(len(data.atoms))]
+        bonded13 = [set() for i in range(len(data.atoms))]
+        for atom1, atom2, sep in pairs:
+            if sep == 1:
+                bonded12[atom1].add(data.atoms[atom2])
+                bonded12[atom2].add(data.atoms[atom1])
+            else:
+                bonded13[atom1].add(data.atoms[atom2])
+                bonded13[atom2].add(data.atoms[atom1])
+
+        # Create the force.
+
+        force = mm.HippoNonbondedForce()
+        for atom in data.atoms:
+            values = self.params.getAtomParameters(atom, data)
+            params = [float(v) for v in values[:10]]
+            axisType = int(values[10])
+            dipole = [float(v) for v in values[11:14]]
+            quadrupole = [float(v) for v in values[14:23]]
+            extra = self.params.getExtraParameters(atom, data)
+            zAtom = self._findAxisAtom('zAtomType', extra, bonded12[atom.index], None, data, [])
+            xAtom = self._findAxisAtom('xAtomType', extra, bonded12[atom.index], bonded13[atom.index], data, [zAtom])
+            yAtom = self._findAxisAtom('yAtomType', extra, bonded12[atom.index], bonded13[atom.index], data, [zAtom, xAtom])
+            force.addParticle(params[0], dipole, quadrupole, *params[1:], axisType=axisType, multipoleAtomZ=zAtom, multipoleAtomX=xAtom, multipoleAtomY=yAtom)
+        force.setNonbondedMethod(methodMap[nonbondedMethod])
+        force.setExtrapolationCoefficients(self.extrapCoeff)
+        force.setCutoffDistance(nonbondedCutoff)
+        if args['switchDistance'] is not None:
+            force.setSwitchingDistance(args['switchDistance'])
+        if 'ewaldErrorTolerance' in args:
+            force.setEwaldErrorTolerance(args['ewaldErrorTolerance'])
+        sys.addForce(force)
+
+    def _findAxisAtom(self, paramName, params, bonded12, bonded13, data, exclude):
+        if paramName not in params:
+            return -1
+        atomType = params[paramName]
+        for atom in bonded12:
+            if data.atomType[atom] == atomType and atom.index not in exclude:
+                return atom.index
+        if bonded13 is not None:
+            for atom in bonded13:
+                if data.atomType[atom] == atomType and atom.index not in exclude:
+                    return atom.index
+        raise ValueError('No bonded atom of type %s' % atomType)
+
+    def postprocessSystem(self, sys, data, args):
+        # Identify polarization groups.
+
+        bondIndices = _findBondsForExclusions(data, sys)
+        groupBondTypes = [self.params.getExtraParameters(atom, data)['groupTypes'].split(',') for atom in data.atoms]
+        groupBonds = [[] for i in range(len(data.atoms))]
+        for i,j in bondIndices:
+            if data.atomType[data.atoms[i]] in groupBondTypes[j]:
+                groupBonds[i].append(j)
+                groupBonds[j].append(i)
+        polarizationGroup = _findGroups(groupBonds)
+
+        # Create the exclusions.
+
+        maxSeparation = max(e[0] for e in self.exceptions)
+        hippo = [f for f in sys.getForces() if isinstance(f, mm.HippoNonbondedForce)][0]
+        pairs = _findExclusions(bondIndices, maxSeparation, hippo.getNumParticles())
+        for atom1, atom2, sep in pairs:
+            params = self.exceptions[(sep, polarizationGroup[atom1] == polarizationGroup[atom2])]
+            hippo.addException(atom1, atom2, *params)
+
+parsers["HippoNonbondedForce"] = HippoNonbondedGenerator.parseElement
 
 
 ## @private
