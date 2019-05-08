@@ -55,6 +55,7 @@
 #include "ReferenceLJCoulomb14.h"
 #include "ReferenceLJCoulombIxn.h"
 #include "ReferenceMonteCarloBarostat.h"
+#include "ReferenceNoseHooverChain.h"
 #include "ReferenceProperDihedralBond.h"
 #include "ReferenceRbDihedralBond.h"
 #include "ReferenceRMSDForce.h"
@@ -62,6 +63,7 @@
 #include "ReferenceTabulatedFunction.h"
 #include "ReferenceVariableStochasticDynamics.h"
 #include "ReferenceVariableVerletDynamics.h"
+#include "ReferenceVelocityVerletDynamics.h"
 #include "ReferenceVerletDynamics.h"
 #include "ReferenceVirtualSites.h"
 #include "openmm/CMMotionRemover.h"
@@ -2105,6 +2107,40 @@ double ReferenceIntegrateVerletStepKernel::computeKineticEnergy(ContextImpl& con
     return computeShiftedKineticEnergy(context, masses, 0.5*integrator.getStepSize());
 }
 
+ReferenceIntegrateVelocityVerletStepKernel::~ReferenceIntegrateVelocityVerletStepKernel() {
+    if (dynamics)
+        delete dynamics;
+}
+
+void ReferenceIntegrateVelocityVerletStepKernel::initialize(const System& system, const VelocityVerletIntegrator& integrator) {
+    int numParticles = system.getNumParticles();
+    masses.resize(numParticles);
+    for (int i = 0; i < numParticles; ++i)
+        masses[i] = system.getParticleMass(i);
+}
+
+void ReferenceIntegrateVelocityVerletStepKernel::execute(ContextImpl& context, const VelocityVerletIntegrator& integrator) {
+    double stepSize = integrator.getStepSize();
+    vector<Vec3>& posData = extractPositions(context);
+    vector<Vec3>& velData = extractVelocities(context);
+    vector<Vec3>& forceData = extractForces(context);
+    if (dynamics == 0 || stepSize != prevStepSize) {
+        // Recreate the computation objects with the new parameters.
+        if (dynamics)
+            delete dynamics;
+        dynamics = new ReferenceVelocityVerletDynamics(context.getSystem().getNumParticles(), stepSize);
+        dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
+        prevStepSize = stepSize;
+    }
+    dynamics->update(context, context.getSystem(), posData, velData, forceData, masses, integrator.getConstraintTolerance());
+    data.time += stepSize;
+    data.stepCount++;
+}
+
+double ReferenceIntegrateVelocityVerletStepKernel::computeKineticEnergy(ContextImpl& context, const VelocityVerletIntegrator& integrator) {
+    return computeShiftedKineticEnergy(context, masses, 0);
+}
+
 ReferenceIntegrateLangevinStepKernel::~ReferenceIntegrateLangevinStepKernel() {
     if (dynamics)
         delete dynamics;
@@ -2384,6 +2420,39 @@ void ReferenceApplyAndersenThermostatKernel::execute(ContextImpl& context) {
         context.getParameter(AndersenThermostat::Temperature()),
         context.getParameter(AndersenThermostat::CollisionFrequency()),
         context.getIntegrator().getStepSize());
+}
+
+ReferencePropagateNoseHooverChainKernel::~ReferencePropagateNoseHooverChainKernel() {
+    if (chainPropagator)
+        delete chainPropagator;
+}
+
+void ReferencePropagateNoseHooverChainKernel::initialize(const System& system, const NoseHooverChain& nhc) {
+    this->chainPropagator = new ReferenceNoseHooverChain();
+    //SimTKOpenMMUtilities::setRandomNumberSeed((unsigned int) thermostat.getRandomNumberSeed());
+}
+
+void ReferencePropagateNoseHooverChainKernel::execute(ContextImpl& context, const NoseHooverChain &nhc, double kineticEnergy, double timeStep) {
+    int chainLength = context.getParameter(nhc.ChainLength());
+    std::vector<double> chainPositions(chainLength), chainVelocities(chainLength), chainForces(chainLength),
+                        chainMasses(chainLength);
+    double temperature = context.getParameter(nhc.Temperature());
+    double collisionFrequency = context.getParameter(nhc.CollisionFrequency());
+    int numDOFs = context.getParameter(nhc.NumDegreesOfFreedom());
+    int numMTS = context.getParameter(nhc.NumMultiTimeSteps());
+    for(int i = 0; i < chainLength; ++i) {
+        chainPositions[i] = context.getParameter(nhc.Position(i));
+        chainVelocities[i] = context.getParameter(nhc.Velocity(i));
+        chainMasses[i] = context.getParameter(nhc.Mass(i));
+        chainForces[i] = context.getParameter(nhc.Force(i));
+    }
+
+    chainPropagator->propagate(kineticEnergy, chainMasses, chainVelocities, chainPositions, chainForces, numDOFs,
+                               temperature, collisionFrequency, timeStep, numMTS, nhc.getDefaultYoshidaSuzukiWeights());
+    //chain->applyThermostat(particleGroups, velData, masses,
+    //    context.getParameter(AndersenThermostat::Temperature()),
+    //    context.getParameter(AndersenThermostat::CollisionFrequency()),
+    //    context.getIntegrator().getStepSize());
 }
 
 ReferenceApplyMonteCarloBarostatKernel::~ReferenceApplyMonteCarloBarostatKernel() {

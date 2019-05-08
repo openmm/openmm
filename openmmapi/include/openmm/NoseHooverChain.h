@@ -1,0 +1,278 @@
+#ifndef OPENMM_NOSEHOOVERCHAIN_H_
+#define OPENMM_NOSEHOOVERCHAIN_H_
+
+/* -------------------------------------------------------------------------- *
+ *                                   OpenMM                                   *
+ * -------------------------------------------------------------------------- *
+ * This is part of the OpenMM molecular simulation toolkit originating from   *
+ * Simbios, the NIH National Center for Physics-Based Simulation of           *
+ * Biological Structures at Stanford, funded under the NIH Roadmap for        *
+ * Medical Research, grant U54 GM072970. See https://simtk.org.               *
+ *                                                                            *
+ * Portions copyright (c) 2019 Stanford University and the Authors.           *
+ * Authors: Andreas Krämer and Andrew C. Simmonett                            *
+ * Contributors:                                                              *
+ *                                                                            *
+ * Permission is hereby granted, free of charge, to any person obtaining a    *
+ * copy of this software and associated documentation files (the "Software"), *
+ * to deal in the Software without restriction, including without limitation  *
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,   *
+ * and/or sell copies of the Software, and to permit persons to whom the      *
+ * Software is furnished to do so, subject to the following conditions:       *
+ *                                                                            *
+ * The above copyright notice and this permission notice shall be included in *
+ * all copies or substantial portions of the Software.                        *
+ *                                                                            *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR *
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,   *
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL    *
+ * THE AUTHORS, CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,    *
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR      *
+ * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE  *
+ * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
+ * -------------------------------------------------------------------------- */
+
+#include "Force.h"
+#include <string>
+#include <vector>
+#include "internal/windowsExport.h"
+
+namespace OpenMM {
+
+/**
+ * This class defines a chain of Nose-Hoover particles to be used as a heat bath to
+ * scale the velocities of a collection of particles subject to thermostating.  The
+ * heat bath is propagated using the multi time step approach detailed in
+ *
+ * G. J. Martyna, M. E. Tuckerman, D. J. Tobias and M. L. Klein, Mol. Phys. 87, 1117 (1996).
+ *
+ * where the total number of timesteps used to propagate the chain in each step is
+ * the number of MTS steps multiplied by the number of terms in the Yoshida-Suzuki decomposition.
+ */
+
+class OPENMM_EXPORT NoseHooverChain : public Force {
+public:
+    /**
+     * This is the name of the parameter that stores the current temperature of the
+     * heat bath (in Kelvin).
+     */
+    std::string Temperature() const {
+        return defaultLabel + "NoseHooverChainTemperature";
+    }
+    /**
+     * This is the name of the parameter that stores the current collision frequency (in 1/ps).
+     */
+    std::string CollisionFrequency() const {
+        return defaultLabel + "NoseHooverChainCollisionFrequency";
+    }
+    /**
+     * This is the name of the parameter that stores the current number of degrees of freedom.
+     */
+    std::string NumDegreesOfFreedom() const {
+        return defaultLabel + "NoseHooverChainNumDegreesOfFreedom";
+    }
+    /**
+     * This is the name of the parameter that stores the current chain length
+     */
+    std::string ChainLength() const {
+        return defaultLabel + "NoseHooverChainLength";
+    }
+    /**
+     * This is the name of the parameter that stores the current number of multi time steps
+     */
+    std::string NumMultiTimeSteps() const {
+        return defaultLabel + "NoseHooverChainNumMultiTimeSteps";
+    }
+    /**
+     * This is the name of the parameter that stores the current number of Yoshida Suzuki time steps
+     */
+    std::string NumYoshidaSuzukiTimeSteps() const {
+        return defaultLabel + "NoseHooverChainNumYoshidaSuzukiTimeSteps";
+    }
+    /**
+     * This is the name of the parameter that stores the force acting on the ith bead
+     */
+    std::string Force(int i) const {
+        return defaultLabel + "NoseHooverChainForce" + std::to_string(i);
+    }
+    /**
+     * This is the name of the parameter that stores the mass of the ith bead
+     */
+    std::string Mass(int i) const {
+        return defaultLabel + "NoseHooverChainMass" + std::to_string(i);
+    }
+    /**
+     * This is the name of the parameter that stores the position of the ith bead
+     */
+    std::string Position(int i) const {
+        return defaultLabel + "NoseHooverChainPosition" + std::to_string(i);
+    }
+    /**
+     * This is the name of the parameter that stores the velocity of the ith bead
+     */
+    std::string Velocity(int i) const {
+        return defaultLabel + "NoseHooverChainVelocity" + std::to_string(i);
+    }
+    /**
+     * Create a NoseHooverChain.
+     * 
+     * @param defaultTemperature        the default temperature of the heat bath (in Kelvin)
+     * @param defaultCollisionFrequency the default collision frequency (in 1/ps)
+     * @param defaultNumDOFs            the default number of degrees of freedom in the particles that
+     *                                  interact with this chain
+     * @param defaultChainLength        the default length of (number of particles in) this heat bath
+     * @param defaultNumMTS             the default number of multi time steps used to propagate this chain
+     * @param defaultNumYoshidaSuzuki   the default number of Yoshida Suzuki steps used to propagate this chain (1, 3, or 5).
+     * @param defaultLabel              the default label used to distinguish this Nose-Hoover chain from others that may
+     *                                  be used to control a different set of particles, e.g. for Drude oscillators
+     */
+    NoseHooverChain(double defaultTemperature, double defaultCollisionFrequency, int defaultNumDOFs, int defaultChainLength,
+                    int defaultNumMTS, int defaultNumYoshidaSuzuki, const std::string &defaultLabel);
+    /**
+     * Get the default temperature of the heat bath (in Kelvin).
+     *
+     * @return the default temperature of the heat bath, measured in Kelvin.
+     */
+    double getDefaultTemperature() const {
+        return defaultTemp;
+    }
+    /**
+     * Set the default temperature of the heat bath.  This will affect any new Contexts you create,
+     * but not ones that already exist.
+     *
+     * @param temperature the default temperature of the heat bath (in Kelvin)
+     */
+    void setDefaultTemperature(double temperature) {
+        defaultTemp = temperature;
+    }
+    /**
+     * Get the default collision frequency (in 1/ps).
+     *
+     * @return the default collision frequency, measured in 1/ps.
+     */
+    double getDefaultCollisionFrequency() const {
+        return defaultFreq;
+    }
+    /**
+     * Set the default collision frequency.  This will affect any new Contexts you create,
+     * but not those that already exist.
+     *
+     * @param frequency the default collision frequency (in 1/ps)
+     */
+    void setDefaultCollisionFrequency(double frequency) {
+        defaultFreq = frequency;
+    }
+    /**
+     * Get the default number of degrees of freedom in the particles controled by this heat bath.
+     *
+     * @return the default number of degrees of freedom.
+     */
+    int getDefaultNumDegreesOfFreedom() const {
+        return defaultNumDOFs;
+    }
+    /**
+     * Set the default number of degrees of freedom in the particles controled by this heat bath.
+     * This will affect any new Contexts you create, but not those that already exist.
+     *
+     * @param numDOFs 
+     */
+    void setDefaultNumDegreesOfFreedom(int numDOFs) {
+        defaultNumDOFs = numDOFs;
+    }
+    /**
+     * Get the default chain length of this heat bath.
+     *
+     * @return the default chain length.
+     */
+    int getDefaultChainLength() const {
+        return defaultChainLength;
+    }
+    /**
+     * Set the default chain length of this heat bath.
+     * This will affect any new Contexts you create, but not those that already exist.
+     *
+     * @param numDOFs 
+     */
+    void setDefaultChainLength(int chainLength) {
+        defaultChainLength = chainLength;
+    }
+    /**
+     * Get the default number of steps used in the multi time step propagation.
+     *
+     * @returns the default number of multi time steps.
+     */
+    int getDefaultNumMultiTimeSteps() const {
+        return defaultNumMTS;
+    }
+    /**
+     * Set the default number of steps used in the multi time step propagation.
+     * This will affect any new Contexts you create, but not those that already exist.
+     *
+     * @param numSteps 
+     */
+    void setDefaultNumMultiTimeSteps(int numSteps) {
+        defaultNumMTS = numSteps;
+    }
+    /**
+     * Get the default number of steps used in the Yoshida-Suzuki decomposition for
+     * multi time step propagation.
+     *
+     * @returns the default number of multi time steps in the Yoshida-Suzuki decomposition.
+     */
+    int getDefaultNumYoshidaSuzukiTimeSteps() const {
+        return defaultNumYS;
+    }
+    /**
+     * Set the default number of steps used in the Yoshida-Suzuki decomposition for
+     * multi time step propagation. This will affect any new Contexts you create,
+     * but not those that already exist.
+     * 
+     * @param the default number of multi time steps in the Yoshida-Suzuki decomposition.
+     */
+    void setDefaultNumYoshidaSuzukiTimeSteps(int numSteps) {
+        defaultNumYS = numSteps;
+    }
+    /**
+     * Get the default label used to identify this chain
+     *
+     * @returns the default label
+     */
+    std::string getDefaultLabel() const {
+        return defaultLabel;
+    }
+    /**
+     * Set the default label used to identify this chain
+     * This will affect any new Contexts you create, but not those that already exist.
+     *
+     * @param the default label
+     */
+    void setDefaultLabel(const std::string& label) {
+        defaultLabel = label;
+    }
+    /**
+     * Get the default weights used in the Yoshida Suzuki multi time step decomposition (dimensionless) 
+     *
+     * @returns the weights for the Yoshida-Suzuki integration
+     */
+    std::vector<double> getDefaultYoshidaSuzukiWeights() const;
+    /**
+     * Returns whether or not this force makes use of periodic boundary
+     * conditions.
+     *
+     * @returns true if force uses PBC and false otherwise
+     */
+    bool usesPeriodicBoundaryConditions() const {
+        return false;
+    }
+protected:
+    ForceImpl* createImpl() const;
+private:
+    double defaultTemp, defaultFreq, defaultTimeStep;
+    int defaultNumDOFs, defaultChainLength, defaultNumMTS, defaultNumYS;
+    // The suffix used to distinguish NH chains, e.g. for Drude particles vs. regular particles.
+    std::string defaultLabel;
+};
+
+} // namespace OpenMM
+
+#endif /*OPENMM_NOSEHOOVERCHAIN_H_*/

@@ -58,7 +58,9 @@ class ReferenceGayBerneForce;
 class ReferenceBrownianDynamics;
 class ReferenceStochasticDynamics;
 class ReferenceConstraintAlgorithm;
+class ReferenceNoseHooverChain;
 class ReferenceMonteCarloBarostat;
+class ReferenceVelocityVerletDynamics;
 class ReferenceVariableStochasticDynamics;
 class ReferenceVariableVerletDynamics;
 class ReferenceVerletDynamics;
@@ -1131,6 +1133,43 @@ private:
     ReferenceVerletDynamics* dynamics;
     std::vector<double> masses;
     double prevStepSize;
+}
+;
+/**
+ * This kernel is invoked by VelocityVerletIntegrator to take one time step.
+ */
+class ReferenceIntegrateVelocityVerletStepKernel : public IntegrateVelocityVerletStepKernel {
+public:
+    ReferenceIntegrateVelocityVerletStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : IntegrateVelocityVerletStepKernel(name, platform),
+        data(data), dynamics(0) {
+    }
+    ~ReferenceIntegrateVelocityVerletStepKernel();
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param integrator the VelocityVerletIntegrator this kernel will be used for
+     */
+    void initialize(const System& system, const VelocityVerletIntegrator& integrator);
+    /**
+     * Execute the kernel.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VerletIntegrator this kernel is being used for
+     */
+    void execute(ContextImpl& context, const VelocityVerletIntegrator& integrator);
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VelocityVerletIntegrator this kernel is being used for
+     */
+    double computeKineticEnergy(ContextImpl& context, const VelocityVerletIntegrator& integrator);
+private:
+    ReferencePlatform::PlatformData& data;
+    ReferenceVelocityVerletDynamics* dynamics;
+    std::vector<double> masses;
+    double prevStepSize;
 };
 
 /**
@@ -1385,6 +1424,32 @@ private:
     ReferenceAndersenThermostat* thermostat;
     std::vector<std::vector<int> > particleGroups;
     std::vector<double> masses;
+};
+
+/**
+ * This kernel is invoked by NoseHooverChain at the start of each time step to adjust the thermostat
+ * and update the associated particle velocities.
+ */
+class ReferencePropagateNoseHooverChainKernel : public PropagateNoseHooverChainKernel {
+public:
+    ReferencePropagateNoseHooverChainKernel(std::string name, const Platform& platform) : PropagateNoseHooverChainKernel(name, platform), chainPropagator(0) {
+    }
+    ~ReferencePropagateNoseHooverChainKernel();
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param thermostat the NoseHooverChain this kernel will be used for
+     */
+    void initialize(const System& system, const NoseHooverChain& chain);
+    /**
+     * Execute the kernel.
+     * 
+     * @param context    the context in which to execute this kernel
+     */
+    void execute(ContextImpl& context, const NoseHooverChain &nhc, double kineticEnergy, double timeStep);
+private:
+    ReferenceNoseHooverChain* chainPropagator;
 };
 
 /**
