@@ -2433,6 +2433,7 @@ void ReferenceNoseHooverChainKernel::initialize() {
 }
 
 double ReferenceNoseHooverChainKernel::propagateChain(ContextImpl& context, const NoseHooverChain &nhc, double kineticEnergy, double timeStep) {
+    if (kineticEnergy < 1e-10) return 1.0;  // (catches the problem of zero velocities in the first dynamics step, where we have nothing to scale)
     // Get the variables describing the NHC
     int chainLength = nhc.getDefaultChainLength();
     double temperature = nhc.getDefaultTemperature();
@@ -2446,7 +2447,6 @@ double ReferenceNoseHooverChainKernel::propagateChain(ContextImpl& context, cons
         chainPositions[i] = context.getParameter(nhc.Position(i));
         chainVelocities[i] = context.getParameter(nhc.Velocity(i));
     }
-
     double scale = chainPropagator->propagate(kineticEnergy, chainVelocities, chainPositions, numDOFs,
                                               temperature, collisionFrequency, timeStep,
                                               numMTS, nhc.getDefaultYoshidaSuzukiWeights());

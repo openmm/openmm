@@ -35,6 +35,7 @@
 #include "openmm/Context.h"
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/NonbondedForce.h"
+#include "openmm/CustomExternalForce.h"
 #include "openmm/System.h"
 #include "SimTKOpenMMRealType.h"
 #include "sfmt/SFMT.h"
@@ -44,6 +45,43 @@
 
 using namespace OpenMM;
 using namespace std;
+
+void testHarmonicOscillator() {
+    const double mass = 1.0;
+    double temperature = 300;
+    double frequency = 1;
+    double mts = 3, ys = 3, chain_length = 1;
+   
+    System system;    
+    system.addParticle(mass);
+    vector<Vec3> positions(1);
+    positions[0] = Vec3(0.7, 0.8,0.6);
+    vector<Vec3> velocities(1);
+    velocities[0] = Vec3(0, 0, 0);
+    auto harmonic_restraint = new CustomExternalForce("x^2+y^2+z^2");
+    harmonic_restraint->addParticle(0);
+    system.addForce(harmonic_restraint);
+    VelocityVerletIntegrator integrator(0.001);
+    integrator.addNoseHooverChainThermostat(system, temperature, frequency, chain_length, mts, ys);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    context.setVelocities(velocities);
+
+   double mean_temperature=0;
+    // equilibration
+    // integrator.step(10000);
+    for (size_t i=0; i < 10000; i++){
+        integrator.step(10);
+        State state = context.getState(State::Energy);
+        double kinetic_energy = state.getKineticEnergy();
+        double temp = kinetic_energy/(0.5*3*BOLTZ);
+        mean_temperature = (i*mean_temperature + temp)/(i+1);
+        //cout << kinetic_energy << " " << temp << " " << temperature << endl;
+    }
+    //cout << "Mean Temperature: " << mean_temperature;
+    ASSERT_EQUAL_TOL(temperature, mean_temperature, 0.02);
+    //ASSERT_USUALLY_EQUAL_TOL(3*0.5*BOLTZ*temperatureDrude, keInternal/numSteps, 0.01);
+}
 
 void testSingleBond() {
     // Check conservation of system + bath energy for a harmonic oscillator
@@ -147,25 +185,30 @@ void testNHCPropagation() {
         for (int numYS = 1; numYS <=5; numYS+=2){
             for (int chainLength = 2; chainLength < 6; chainLength += 2){
             double temperature = 300; // kelvin
-            double collisionFrequency = 0.01; // 1/ps
+            double collisionFrequency = 10; // 1/ps
             VelocityVerletIntegrator integrator(0.001);
             // make system
             System system;
             double mass = 1;
             system.addParticle(mass);
-            std::vector<int> particleList {0};
             int chainID = integrator.addNoseHooverChainThermostat(system, temperature, collisionFrequency,
                                                                   chainLength, numMTS, numYS);
             Context context(system, integrator, platform);
             // propagate the chain
-            double velocity = 0.1;
-            double scale, kineticEnergy;
-            for(int i = 0; i < 100; ++i) {
+            double velocity = 1;
+            double temp, scale, kineticEnergy;
+            double mean_temp=0, mean_scale=0;
+            for(int i = 0; i < 10000; ++i) {
                 kineticEnergy = 3 * 0.5 * mass * velocity * velocity;
                 scale = integrator.propagateChain(kineticEnergy, chainID);
                 velocity *= scale;
+                temp = 2* kineticEnergy / BOLTZ / 3;
+                mean_temp = (i*mean_temp + temp)/(i+1);
+                mean_scale = (i*mean_scale + scale)/(i+1);
             }
-            ASSERT_EQUAL_TOL(1, scale,  1e-3);
+            //std::cout << mean_scale <<  " " << mean_temp << std::endl;
+            ASSERT_EQUAL_TOL(1, mean_scale,  1e-2);
+            ASSERT_EQUAL_TOL(temperature, mean_temp,  0.25);
             }
         }
     }
@@ -182,7 +225,7 @@ void testPropagateChainConsistentWithPythonReference() {
                                                                   chainLength, numMTS, numYS);
     Context context(system, integrator, platform);
     double scale = integrator.propagateChain(kineticEnergy, chainID);
-    std::cout << std::setw(12) << std::setprecision(10) << scale << std::endl;
+    //std::cout << std::setw(12) << std::setprecision(10) << scale << std::endl;
     ASSERT_EQUAL_TOL(0.9674732261005896, scale, 1e-5)
 }
 
@@ -190,10 +233,12 @@ void runPlatformTests();
 
 int main(int argc, char* argv[]) {
     try {
-        initializeTests(argc, argv);
+        
+        //initializeTests(argc, argv);
         //testNHCPropagation();
-        testPropagateChainConsistentWithPythonReference();
-        //testSingleBond();
+        //testPropagateChainConsistentWithPythonReference();
+        testHarmonicOscillator();
+       //testSingleBond();
         //testConstraints();
         //runPlatformTests();
     }

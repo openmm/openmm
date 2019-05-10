@@ -23,6 +23,7 @@
  */
 
 #include <cstring>
+#include <iostream>
 #include <sstream>
 
 #include "SimTKOpenMMUtilities.h"

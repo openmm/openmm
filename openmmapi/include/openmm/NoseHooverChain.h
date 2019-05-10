@@ -54,43 +54,6 @@ namespace OpenMM {
 class OPENMM_EXPORT NoseHooverChain : public Force {
 public:
     /**
-     * This is the name of the parameter that stores the current temperature of the
-     * heat bath (in Kelvin).
-     */
-    std::string Temperature() const {
-        return defaultLabel + "NoseHooverChainTemperature";
-    }
-    /**
-     * This is the name of the parameter that stores the current collision frequency (in 1/ps).
-     */
-    std::string CollisionFrequency() const {
-        return defaultLabel + "NoseHooverChainCollisionFrequency";
-    }
-    /**
-     * This is the name of the parameter that stores the current number of degrees of freedom.
-     */
-    std::string NumDegreesOfFreedom() const {
-        return defaultLabel + "NoseHooverChainNumDegreesOfFreedom";
-    }
-    /**
-     * This is the name of the parameter that stores the current chain length
-     */
-    std::string ChainLength() const {
-        return defaultLabel + "NoseHooverChainLength";
-    }
-    /**
-     * This is the name of the parameter that stores the current number of multi time steps
-     */
-    std::string NumMultiTimeSteps() const {
-        return defaultLabel + "NoseHooverChainNumMultiTimeSteps";
-    }
-    /**
-     * This is the name of the parameter that stores the current number of Yoshida Suzuki time steps
-     */
-    std::string NumYoshidaSuzukiTimeSteps() const {
-        return defaultLabel + "NoseHooverChainNumYoshidaSuzukiTimeSteps";
-    }
-    /**
      * This is the name of the parameter that stores the position of the ith bead
      */
     std::string Position(int i) const {

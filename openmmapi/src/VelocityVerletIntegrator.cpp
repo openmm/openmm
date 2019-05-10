@@ -61,6 +61,9 @@ double VelocityVerletIntegrator::propagateChain(double kineticEnergy, int chainI
 
 int VelocityVerletIntegrator::addNoseHooverChainThermostat(System& system, double temperature, double collisionFrequency,
                                                            int chainLength, int numMTS, int numYoshidaSuzuki) {
+    if (context) {
+        throw OpenMMException("addNoseHooverChainThermostat cannot be called after binding this integrator to a context.");
+    }
     std::vector<int> mask, parents;
     int nDOF = 0;
     int numForces = system.getNumForces();
