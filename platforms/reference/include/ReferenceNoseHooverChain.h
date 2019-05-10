@@ -59,10 +59,8 @@ class ReferenceNoseHooverChain {
          Propagate the Nose-Hoover chain a half timestep and find the appropriate velocity scaling
 
          @param kineticEnergy      the instantaneous kinetic energy of the particles being thermostated
-         @param chainMasses        the "masses" assigned to each thermostat bead in ps^2 kJ / mol
          @param chainVelocities    the velocities of the chain's beads in nm / ps
          @param chainPositions     the positions of the chains's beads in nm
-         @param chainForces        the forces on each bead in the chain
          @param numDOFs            the number of degrees of freedom in the system that this chain thermostats
          @param temperature        thermostat temperature in Kelvin
          @param collisionFrequency collision frequency for each atom in ps^-1
@@ -70,9 +68,8 @@ class ReferenceNoseHooverChain {
          @param numMTS             number of multi timestep increments used in the Trotter expansion
          @param YSWeights          vector of weights used in the Yoshida-Suzuki multi-timestepping.
          --------------------------------------------------------------------------------------- */
-      double propagate(double kineticEnergy, const vector<double>& chainMasses,
-                       vector<double>& chainVelocities, vector<double>& chainPositions,
-                       vector<double>& chainForces, int numDOFs,
+      double propagate(double kineticEnergy, vector<double>& chainVelocities,
+                       vector<double>& chainPositions, int numDOFs,
                        double temperature, double collisionFrequency, double timeStep,
                        int numMTS, const vector<double>& YSWeights) const;
 };

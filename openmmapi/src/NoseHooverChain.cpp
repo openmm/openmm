@@ -37,10 +37,12 @@ using namespace OpenMM;
 
 NoseHooverChain::NoseHooverChain(double defaultTemperature, double defaultCollisionFrequency, 
                                  int defaultNumDOFs, int defaultChainLength, int defaultNumMTS,
-                                 int defaultNumYoshidaSuzuki, const std::string &defaultLabel) :
+                                 int defaultNumYoshidaSuzuki, const std::string &defaultLabel,
+                                 const std::vector<int>& thermostatedAtoms, const std::vector<int>& parentAtoms):
         defaultTemp(defaultTemperature), defaultFreq(defaultCollisionFrequency), defaultNumDOFs(defaultNumDOFs),
-        defaultChainLength(defaultChainLength), defaultNumMTS(defaultNumMTS), defaultNumYS(defaultNumYS),
-        defaultLabel(defaultLabel) {}
+        defaultChainLength(defaultChainLength), defaultNumMTS(defaultNumMTS), defaultNumYS(defaultNumYoshidaSuzuki),
+        defaultLabel(defaultLabel), thermostatedAtoms(thermostatedAtoms), parentAtoms(parentAtoms) 
+{}
 
 ForceImpl* NoseHooverChain::createImpl() const {
     return new NoseHooverChainImpl(*this);

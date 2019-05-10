@@ -52,6 +52,11 @@ using namespace OpenMM;
 using namespace std;
 const static char CHECKPOINT_MAGIC_BYTES[] = "OpenMM Binary Checkpoint\n";
 
+void printvars(std::map<std::string, double> & map) {
+    for(auto & v: map) {
+        std::cout << v.first << "  " << v.second << std::endl;
+    }
+}
 
 ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integrator, Platform* platform, const map<string, string>& properties, ContextImpl* originalContext) :
         owner(owner), system(system), integrator(integrator), hasInitializedForces(false), hasSetPositions(false), integratorIsDeleted(false),

@@ -25,7 +25,9 @@
 #include <cmath>
 #include <string.h>
 #include <sstream>
-
+#include <exception>
+#include <iostream>
+#include <fenv.h>
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceNoseHooverChain.h"
 
@@ -50,16 +52,22 @@ using namespace OpenMM;
  ReferenceNoseHooverChain::~ReferenceNoseHooverChain() {
  }
 
-double ReferenceNoseHooverChain::propagate(double kineticEnergy, const vector<double>& chainMasses,
-                                           vector<double>& chainVelocities, vector<double>& chainPositions,
-                                           vector<double>& chainForces, int numDOFs,
+double ReferenceNoseHooverChain::propagate(double kineticEnergy, vector<double>& chainVelocities,
+                                           vector<double>& chainPositions, int numDOFs,
                                            double temperature, double collisionFrequency, double timeStep,
                                            int numMTS, const vector<double>& YSWeights) const {
      double scale = 1;
-     double KE2 = 2 * kineticEnergy;
      const double kT = BOLTZ * temperature;
-     const size_t chainLength = chainMasses.size();
+     const size_t chainLength = chainPositions.size();
+     std::vector<double> chainForces(chainLength, 0);
+     std::vector<double> chainMasses(chainLength, kT/(collisionFrequency*collisionFrequency));
+     chainMasses[0] *= numDOFs;
+      feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
+     double KE2 = 2 * kineticEnergy;
      chainForces[0] = (KE2 - numDOFs * kT) / chainMasses[0];
+     for (int bead = 0; bead < chainLength - 1; ++bead) {
+         chainForces[bead + 1] = (chainMasses[bead] * chainVelocities[bead] * chainVelocities[bead] - kT) / chainMasses[bead + 1];
+     }
      for (int mts = 0; mts < numMTS; ++mts) {
          for (const auto &ys : YSWeights) {
              double wdt = ys * timeStep / numMTS;
@@ -83,7 +91,10 @@ double ReferenceNoseHooverChain::propagate(double kineticEnergy, const vector<do
                  chainVelocities[bead] = aa * (aa * chainVelocities[bead] + 0.25 * wdt * chainForces[bead]);
                  chainForces[bead + 1] = (chainMasses[bead] * chainVelocities[bead] * chainVelocities[bead] - kT) / chainMasses[bead + 1];
              }
-             chainVelocities.back() += 0.25 * wdt * chainForces.back();
+             chainVelocities[chainLength-1] += 0.25 * wdt * chainForces.back();
+             //  std::cout << "P " << chainPositions.back() << std::endl;
+             //  std::cout << "V " << chainVelocities.back() << std::endl;
+             //  std::cout << "F " << chainForces.back() << std::endl;
          }  // YS loop
      } // MTS loop
      return scale;

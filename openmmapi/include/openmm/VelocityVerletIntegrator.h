@@ -67,8 +67,26 @@ public:
      * @param chainID        id of the Nose-Hoover-Chain
      */
     double propagateChain(double kineticEnergy, int chainID=0);
+    /**
+     * Add a Nose-Hoover Chain thermostat to control the temperature of the systeml
+     *
+     * @param system the system to be thermostated.  Note: this must be setup, i.e. all
+     *        particles should have been added, before calling this function.
+     * @param temperature the target temperature for the system.
+     * @param collisionFrequency the frequency of the interaction with the heat bath (in 1/ps).
+     * @param chainLength the number of beads in the Nose-Hoover chain.
+     * @param numMTS the number of step in the  multiple time step chain propagation algorithm.
+     * @param numYoshidaSuzuki the number of terms in the Yoshida-Suzuki multi time step decomposition
+     *        used in the chain propagation algorithm (must be 1, 3, or 5).
+     */
     int addNoseHooverChainThermostat(System& system, double temperature, double collisionFrequency,
                                      int chainLength, int numMTS, int numYoshidaSuzuki);
+    /**
+     * Compute the total (potential + kinetic) heat bath energy for all heat baths
+     * associated with this integrator, at the current time.
+     */
+    double computeHeatBathEnergy();
+
 protected:
     /**
      * This will be called by the Context when it is created.  It informs the Integrator
@@ -90,9 +108,8 @@ protected:
      */
     double computeKineticEnergy();
 private:
-    Kernel vvKernel;
+    Kernel vvKernel, nhcKernel;
     std::vector<NoseHooverChain*> noseHooverChains;
-    std::vector<Kernel> nhcKernels;
 };
 
 } // namespace OpenMM

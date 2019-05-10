@@ -58,7 +58,6 @@ public:
     std::vector<std::string> getKernelNames();
 private:
     const NoseHooverChain& owner;
-    Kernel kernel;
 };
 
 } // namespace OpenMM

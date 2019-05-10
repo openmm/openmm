@@ -39,16 +39,26 @@
 #include "SimTKOpenMMRealType.h"
 #include "sfmt/SFMT.h"
 #include <iostream>
+#include <iomanip>
 #include <vector>
 
 using namespace OpenMM;
 using namespace std;
 
 void testSingleBond() {
+    // Check conservation of system + bath energy for a harmonic oscillator
     System system;
     system.addParticle(2.0);
     system.addParticle(2.0);
-    VelocityVerletIntegrator integrator(0.01);
+    VelocityVerletIntegrator integrator(0.001);
+    double temperature = 300; // kelvin
+    double collisionFrequency = 0.1; // 1/ps
+    int numMTS = 3;
+    int numYS = 3;
+    int chainLength = 5;
+    int numDOF = 6;
+    integrator.addNoseHooverChainThermostat(system, temperature, collisionFrequency,
+                                            chainLength, numMTS, numYS);
     HarmonicBondForce* forceField = new HarmonicBondForce();
     forceField->addBond(0, 1, 1.5, 1);
     system.addForce(forceField);
@@ -57,26 +67,25 @@ void testSingleBond() {
     positions[0] = Vec3(-1, 0, 0);
     positions[1] = Vec3(1, 0, 0);
     context.setPositions(positions);
-    
-    // This is simply a harmonic oscillator, so compare it to the analytical solution.
-    
-    const double freq = 1.0;
-    State state = context.getState(State::Energy);
-    const double initialEnergy = state.getKineticEnergy()+state.getPotentialEnergy();
-    for (int i = 0; i < 1000; ++i) {
-        state = context.getState(State::Positions | State::Velocities | State::Energy);
+
+    integrator.step(10000);
+
+    double mean_temp = 0.0;
+    for (int i = 0; i < 10000000; ++i) {
+        State state = context.getState(State::Energy);
+        double KE = state.getKineticEnergy();
+        double PE = state.getPotentialEnergy();
         double time = state.getTime();
-        double expectedDist = 1.5+0.5*std::cos(freq*time);
-        ASSERT_EQUAL_VEC(Vec3(-0.5*expectedDist, 0, 0), state.getPositions()[0], 0.02);
-        ASSERT_EQUAL_VEC(Vec3(0.5*expectedDist, 0, 0), state.getPositions()[1], 0.02);
-        double expectedSpeed = -0.5*freq*std::sin(freq*time);
-        ASSERT_EQUAL_VEC(Vec3(-0.5*expectedSpeed, 0, 0), state.getVelocities()[0], 0.02);
-        ASSERT_EQUAL_VEC(Vec3(0.5*expectedSpeed, 0, 0), state.getVelocities()[1], 0.02);
-        double energy = state.getKineticEnergy()+state.getPotentialEnergy();
-        ASSERT_EQUAL_TOL(initialEnergy, energy, 0.01);
+        double temperature = 2 * KE / (BOLTZ * numDOF);
+        mean_temp = (i*mean_temp + temperature)/(i+1);
+        double energy = KE + PE + integrator.computeHeatBathEnergy();
+        if(i % 100 == 0)
+        std::cout << " Time: " << std::setw(4) << time 
+                  << " Temperature: " << std::setw(8) << std::setprecision(3) << temperature
+                  << " Mean Temperature: " << std::setw(8) << std::setprecision(3) << mean_temp
+                  << " Total Energy: " << std::setw(12) << std::setprecision(8) << energy << std::endl;
         integrator.step(1);
     }
-    ASSERT_EQUAL_TOL(10.0, context.getState(0).getTime(), 1e-5);
 }
 
 void testConstraints() {
@@ -132,15 +141,49 @@ void testConstraints() {
     }
 }
 void testNHCPropagation() {
-    double temperature = 300; // kelvin
-    double collisionFrequency = 20; // 1/ps
-    int numDOFs = 1;
-    int chainLength = 4;
-    int numMTS = 3;
-    int numYS = 1;
-    std::string label;
-    NoseHooverChain nhc(temperature, collisionFrequency, numDOFs, chainLength, numMTS, numYS, label);
-    
+    // test if the velocity scale factor goes to one for a single particle
+    // with no forces in the system
+    for (int numMTS = 1; numMTS < 5; numMTS++){
+        for (int numYS = 1; numYS <=5; numYS+=2){
+            for (int chainLength = 2; chainLength < 6; chainLength += 2){
+            double temperature = 300; // kelvin
+            double collisionFrequency = 0.01; // 1/ps
+            VelocityVerletIntegrator integrator(0.001);
+            // make system
+            System system;
+            double mass = 1;
+            system.addParticle(mass);
+            std::vector<int> particleList {0};
+            int chainID = integrator.addNoseHooverChainThermostat(system, temperature, collisionFrequency,
+                                                                  chainLength, numMTS, numYS);
+            Context context(system, integrator, platform);
+            // propagate the chain
+            double velocity = 0.1;
+            double scale, kineticEnergy;
+            for(int i = 0; i < 100; ++i) {
+                kineticEnergy = 3 * 0.5 * mass * velocity * velocity;
+                scale = integrator.propagateChain(kineticEnergy, chainID);
+                velocity *= scale;
+            }
+            ASSERT_EQUAL_TOL(1, scale,  1e-3);
+            }
+        }
+    }
+}
+
+void testPropagateChainConsistentWithPythonReference() {
+    VelocityVerletIntegrator integrator(0.001);
+    System system;
+    double mass = 1;
+    system.addParticle(mass);
+    double kineticEnergy = 1e6;
+    double temperature=300, collisionFrequency=1, chainLength=3, numMTS=3, numYS=3;
+    int chainID = integrator.addNoseHooverChainThermostat(system, temperature, collisionFrequency,
+                                                                  chainLength, numMTS, numYS);
+    Context context(system, integrator, platform);
+    double scale = integrator.propagateChain(kineticEnergy, chainID);
+    std::cout << std::setw(12) << std::setprecision(10) << scale << std::endl;
+    ASSERT_EQUAL_TOL(0.9674732261005896, scale, 1e-5)
 }
 
 void runPlatformTests();
@@ -148,9 +191,11 @@ void runPlatformTests();
 int main(int argc, char* argv[]) {
     try {
         initializeTests(argc, argv);
-        testSingleBond();
-        testConstraints();
-        runPlatformTests();
+        //testNHCPropagation();
+        testPropagateChainConsistentWithPythonReference();
+        //testSingleBond();
+        //testConstraints();
+        //runPlatformTests();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

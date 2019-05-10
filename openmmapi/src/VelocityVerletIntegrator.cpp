@@ -39,6 +39,7 @@
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/kernels.h"
 #include <string>
+#include <iostream>
 
 using namespace OpenMM;
 using std::string;
@@ -50,6 +51,7 @@ VelocityVerletIntegrator::VelocityVerletIntegrator(double stepSize) {
 }
 
 double VelocityVerletIntegrator::propagateChain(double kineticEnergy, int chainID) {
+    return nhcKernel.getAs<NoseHooverChainKernel>().propagateChain(*context, *noseHooverChains[chainID], kineticEnergy, getStepSize());
 }
 
 /*int VelocityVerletIntegrator::addMaskedNoseHooverChain(System& system, std::vector<int> mask, std::vector<int> parents, double temperature,
@@ -62,8 +64,13 @@ int VelocityVerletIntegrator::addNoseHooverChainThermostat(System& system, doubl
     std::vector<int> mask, parents;
     int nDOF = 0;
     int numForces = system.getNumForces();
+    vector<int> thermostatedParticles;
+    vector<int> parentParticles;
     for(int particle = 0; particle < system.getNumParticles(); ++particle) {
-        if(system.getParticleMass(particle) > 0) nDOF += 3;
+        if(system.getParticleMass(particle) > 0) {
+            nDOF += 3;
+            thermostatedParticles.push_back(particle);
+        }
     }
     nDOF -= system.getNumConstraints();
     for (int forceNum = 0; forceNum < numForces; ++forceNum) {
@@ -71,13 +78,23 @@ int VelocityVerletIntegrator::addNoseHooverChainThermostat(System& system, doubl
     }
 
     auto nhcForce = new NoseHooverChain(temperature, collisionFrequency, nDOF, chainLength,
-                                        numMTS, numYoshidaSuzuki, std::to_string(noseHooverChains.size()));
+                                        numMTS, numYoshidaSuzuki, std::to_string(noseHooverChains.size()),
+                                        thermostatedParticles, parentParticles);
     system.addForce(nhcForce);
     noseHooverChains.push_back(nhcForce);
+    return noseHooverChains.size() - 1;
 }
 
 double VelocityVerletIntegrator::computeKineticEnergy() {
     return vvKernel.getAs<IntegrateVelocityVerletStepKernel>().computeKineticEnergy(*context, *this);
+}
+
+double VelocityVerletIntegrator::computeHeatBathEnergy() {
+    double energy = 0;
+    for(auto &nhc : noseHooverChains) {
+        energy += nhcKernel.getAs<NoseHooverChainKernel>().computeHeatBathEnergy(*context, *nhc);
+    }
+    return energy;
 }
 
 void VelocityVerletIntegrator::initialize(ContextImpl& contextRef) {
@@ -87,20 +104,18 @@ void VelocityVerletIntegrator::initialize(ContextImpl& contextRef) {
     owner = &contextRef.getOwner();
     vvKernel = context->getPlatform().createKernel(IntegrateVelocityVerletStepKernel::Name(), contextRef);
     vvKernel.getAs<IntegrateVelocityVerletStepKernel>().initialize(contextRef.getSystem(), *this);
-    for (auto * nhc: noseHooverChains){
-        nhcKernels.push_back(context->getPlatform().createKernel(PropagateNoseHooverChainKernel::Name(), contextRef));
-        nhcKernels.back().getAs<PropagateNoseHooverChainKernel>().initialize(contextRef.getSystem(), *nhc);
-    }
+    nhcKernel = context->getPlatform().createKernel(NoseHooverChainKernel::Name(), contextRef);
+    nhcKernel.getAs<NoseHooverChainKernel>().initialize();
 }
 
 void VelocityVerletIntegrator::cleanup() {
     vvKernel = Kernel();
-    nhcKernels.clear();
+    nhcKernel = Kernel();
 }
 
 vector<string> VelocityVerletIntegrator::getKernelNames() {
     std::vector<std::string> names;
-    names.push_back(PropagateNoseHooverChainKernel::Name());
+    names.push_back(NoseHooverChainKernel::Name());
     names.push_back(IntegrateVelocityVerletStepKernel::Name());
     return names;
 }
@@ -108,8 +123,23 @@ vector<string> VelocityVerletIntegrator::getKernelNames() {
 void VelocityVerletIntegrator::step(int steps) {
     if (context == NULL)
         throw OpenMMException("This Integrator is not bound to a context!");
+    double scale, kineticEnergy;
     for (int i = 0; i < steps; ++i) {
         context->updateContextState();
+        for(auto &nhc : noseHooverChains) {
+            
+            kineticEnergy = nhcKernel.getAs<NoseHooverChainKernel>().computeMaskedKineticEnergy(*context, *nhc);
+            //std::cout << "ke " << kineticEnergy << std::endl;
+            scale = nhcKernel.getAs<NoseHooverChainKernel>().propagateChain(*context, *nhc, kineticEnergy, getStepSize());
+            //std::cout << "scl " << scale << std::endl;
+            nhcKernel.getAs<NoseHooverChainKernel>().scaleVelocities(*context, *nhc, scale);
+        }
         vvKernel.getAs<IntegrateVelocityVerletStepKernel>().execute(*context, *this);
+        for(auto &nhc : noseHooverChains) {
+            kineticEnergy = nhcKernel.getAs<NoseHooverChainKernel>().computeMaskedKineticEnergy(*context, *nhc);
+            scale = nhcKernel.getAs<NoseHooverChainKernel>().propagateChain(*context, *nhc, kineticEnergy, getStepSize());
+            //std::cout << "ke " << kineticEnergy << " scale " << scale << std::endl;
+            nhcKernel.getAs<NoseHooverChainKernel>().scaleVelocities(*context, *nhc, scale);
+        }
     }
 }

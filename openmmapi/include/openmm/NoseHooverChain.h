@@ -35,6 +35,7 @@
 #include "Force.h"
 #include <string>
 #include <vector>
+#include "openmm/OpenMMException.h"
 #include "internal/windowsExport.h"
 
 namespace OpenMM {
@@ -90,18 +91,6 @@ public:
         return defaultLabel + "NoseHooverChainNumYoshidaSuzukiTimeSteps";
     }
     /**
-     * This is the name of the parameter that stores the force acting on the ith bead
-     */
-    std::string Force(int i) const {
-        return defaultLabel + "NoseHooverChainForce" + std::to_string(i);
-    }
-    /**
-     * This is the name of the parameter that stores the mass of the ith bead
-     */
-    std::string Mass(int i) const {
-        return defaultLabel + "NoseHooverChainMass" + std::to_string(i);
-    }
-    /**
      * This is the name of the parameter that stores the position of the ith bead
      */
     std::string Position(int i) const {
@@ -125,9 +114,12 @@ public:
      * @param defaultNumYoshidaSuzuki   the default number of Yoshida Suzuki steps used to propagate this chain (1, 3, or 5).
      * @param defaultLabel              the default label used to distinguish this Nose-Hoover chain from others that may
      *                                  be used to control a different set of particles, e.g. for Drude oscillators
+     * @param thermostatedAtoms         the list of atoms to be handled by this thermostat
+     * @param parentAtoms               the list of parent atoms, if this thermostat handles Drude particles. Empty vector otherwise.
      */
     NoseHooverChain(double defaultTemperature, double defaultCollisionFrequency, int defaultNumDOFs, int defaultChainLength,
-                    int defaultNumMTS, int defaultNumYoshidaSuzuki, const std::string &defaultLabel);
+                    int defaultNumMTS, int defaultNumYoshidaSuzuki, const std::string &defaultLabel,
+                    const std::vector<int>& thermostatedAtoms, const std::vector<int>& parentAtoms);
     /**
      * Get the default temperature of the heat bath (in Kelvin).
      *
@@ -250,6 +242,44 @@ public:
         defaultLabel = label;
     }
     /**
+     * Get the atom ids of all atoms that are thermostated 
+     *
+     * @returns ids of all atoms that are being handled by this thermostat
+     */
+    const std::vector<int>& getThermostatedAtoms() const {
+        return thermostatedAtoms;
+    }
+    /**
+     * Set list of atoms that are handled by this thermostat
+     *
+     * @param atomIDs 
+     */
+    void setThermostatedAtoms(const std::vector<int>& atomIDs){
+        thermostatedAtoms = atomIDs;
+    }
+    /**
+     * In case this thermostat handles the kinetic energy of Drude particles relative to the
+     * atoms that they are attached to, get the atom ids of all parent atoms.
+     * If this is a regular thermostat, returns an empty vector.
+     *
+     * @returns ids of all parent atoms
+     */
+    const std::vector<int>& getParentAtoms() const {
+        return parentAtoms;
+    }
+    /**
+     * In case this thermostat handles the kinetic energy of Drude particles 
+     * set the atom IDs of all parent atoms. 
+     *
+     * @param parentIDs 
+     */
+    void setParentAtoms(const std::vector<int>& parentIDs){
+        if (not parentIDs.size() == thermostatedAtoms.size()){
+            throw OpenMMException("The number of parent atoms has to be the same as the number of thermostated atoms, or zero.");
+        }
+        parentAtoms = parentIDs;
+    }
+    /**
      * Get the default weights used in the Yoshida Suzuki multi time step decomposition (dimensionless) 
      *
      * @returns the weights for the Yoshida-Suzuki integration
@@ -271,6 +301,7 @@ private:
     int defaultNumDOFs, defaultChainLength, defaultNumMTS, defaultNumYS;
     // The suffix used to distinguish NH chains, e.g. for Drude particles vs. regular particles.
     std::string defaultLabel;
+    std::vector<int> thermostatedAtoms, parentAtoms;
 };
 
 } // namespace OpenMM

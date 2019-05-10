@@ -2422,38 +2422,117 @@ void ReferenceApplyAndersenThermostatKernel::execute(ContextImpl& context) {
         context.getIntegrator().getStepSize());
 }
 
-ReferencePropagateNoseHooverChainKernel::~ReferencePropagateNoseHooverChainKernel() {
+ReferenceNoseHooverChainKernel::~ReferenceNoseHooverChainKernel() {
     if (chainPropagator)
         delete chainPropagator;
 }
 
-void ReferencePropagateNoseHooverChainKernel::initialize(const System& system, const NoseHooverChain& nhc) {
+void ReferenceNoseHooverChainKernel::initialize() {
     this->chainPropagator = new ReferenceNoseHooverChain();
     //SimTKOpenMMUtilities::setRandomNumberSeed((unsigned int) thermostat.getRandomNumberSeed());
 }
 
-void ReferencePropagateNoseHooverChainKernel::execute(ContextImpl& context, const NoseHooverChain &nhc, double kineticEnergy, double timeStep) {
-    int chainLength = context.getParameter(nhc.ChainLength());
-    std::vector<double> chainPositions(chainLength), chainVelocities(chainLength), chainForces(chainLength),
-                        chainMasses(chainLength);
-    double temperature = context.getParameter(nhc.Temperature());
-    double collisionFrequency = context.getParameter(nhc.CollisionFrequency());
-    int numDOFs = context.getParameter(nhc.NumDegreesOfFreedom());
-    int numMTS = context.getParameter(nhc.NumMultiTimeSteps());
+double ReferenceNoseHooverChainKernel::propagateChain(ContextImpl& context, const NoseHooverChain &nhc, double kineticEnergy, double timeStep) {
+    // Get the variables describing the NHC
+    int chainLength = nhc.getDefaultChainLength();
+    double temperature = nhc.getDefaultTemperature();
+    double collisionFrequency = nhc.getDefaultCollisionFrequency();
+    int numDOFs = nhc.getDefaultNumDegreesOfFreedom();
+    int numMTS = nhc.getDefaultNumMultiTimeSteps();
+
+    // Get the state of the NHC from the context
+    std::vector<double> chainPositions(chainLength), chainVelocities(chainLength);
     for(int i = 0; i < chainLength; ++i) {
         chainPositions[i] = context.getParameter(nhc.Position(i));
         chainVelocities[i] = context.getParameter(nhc.Velocity(i));
-        chainMasses[i] = context.getParameter(nhc.Mass(i));
-        chainForces[i] = context.getParameter(nhc.Force(i));
     }
 
-    chainPropagator->propagate(kineticEnergy, chainMasses, chainVelocities, chainPositions, chainForces, numDOFs,
-                               temperature, collisionFrequency, timeStep, numMTS, nhc.getDefaultYoshidaSuzukiWeights());
-    //chain->applyThermostat(particleGroups, velData, masses,
-    //    context.getParameter(AndersenThermostat::Temperature()),
-    //    context.getParameter(AndersenThermostat::CollisionFrequency()),
-    //    context.getIntegrator().getStepSize());
+    double scale = chainPropagator->propagate(kineticEnergy, chainVelocities, chainPositions, numDOFs,
+                                              temperature, collisionFrequency, timeStep,
+                                              numMTS, nhc.getDefaultYoshidaSuzukiWeights());
+
+    // Update the state of the NHC in the context
+    for(int i = 0; i < chainLength; ++i) {
+        context.setParameter(nhc.Position(i), chainPositions[i]);
+        context.setParameter(nhc.Velocity(i), chainVelocities[i]);
+    }
+
+    return scale;
 }
+
+double ReferenceNoseHooverChainKernel::computeHeatBathEnergy(ContextImpl& context, const NoseHooverChain &nhc) {
+    double energy = 0;
+    int chainLength = nhc.getDefaultChainLength();
+    double temperature = nhc.getDefaultTemperature();
+    double collisionFrequency = nhc.getDefaultCollisionFrequency();
+    double kT = temperature * BOLTZ;
+    int numDOFs = nhc.getDefaultNumDegreesOfFreedom();
+    for(int i = 0; i < chainLength; ++i) {
+         double mass = kT / (collisionFrequency * collisionFrequency);
+         mass *= i ? 1 : numDOFs;
+         double velocity = context.getParameter(nhc.Velocity(i));
+         // The kinetic energy of this bead
+         energy += 0.5 * mass * velocity * velocity;
+         // The potential energy of this bead
+         double position = context.getParameter(nhc.Position(i));
+         energy += numDOFs * kT * position;
+    }
+    return energy;
+}
+
+double ReferenceNoseHooverChainKernel::computeMaskedKineticEnergy(ContextImpl& context, const NoseHooverChain &noseHooverChain) {
+    const std::vector<int>& mask = noseHooverChain.getThermostatedAtoms();
+    const std::vector<int>& parents = noseHooverChain.getParentAtoms();
+    std::vector<Vec3>& velocities = extractVelocities(context);
+    // TODO move these bad boys into the class
+    const System& system = context.getSystem();
+    int numParticles = system.getNumParticles();
+    std::vector<double> masses(numParticles);
+    for (int i = 0; i < numParticles; ++i)
+        masses[i] = system.getParticleMass(i);
+
+    double ke = 0;
+    if (parents.size() == 0){
+        // scale absolute velocities
+        for (auto m: mask){ 
+            ke += 0.5 * masses[m] * velocities[m].dot(velocities[m]);
+        }
+    } else {
+        // scale velocities relative to parent
+        assert(parents.size() == mask.size()); 
+        Vec3 velocity;
+        double mass;
+        for (int i=0; i < mask.size(); i++){
+            velocity = velocities[mask[i]] - velocities[parents[i]];
+            mass = masses[mask[i]] * masses[parents[i]] / (masses[mask[i]] + masses[parents[i]]);
+            ke += 0.5 * mass * velocity.dot(velocity);
+        }
+    }
+    return ke;
+}
+
+
+void ReferenceNoseHooverChainKernel::scaleVelocities(ContextImpl& context, const NoseHooverChain &noseHooverChain, double scaleFactor) {
+    const std::vector<int>& mask = noseHooverChain.getThermostatedAtoms();
+    const std::vector<int>& parents = noseHooverChain.getParentAtoms();
+    std::vector<Vec3>& velocities = extractVelocities(context);
+
+    if (parents.size() == 0){
+        // scale absolute velocities
+        for (auto m: mask){
+            //std::cout << m << " " << velocities[m] << " " << scaleFactor << std::endl;
+            velocities[m] *= scaleFactor;
+        }
+    } else {
+        std::cout << "OUCHH" << std::endl; 
+        // scale velocities relative to parent
+        assert(parents.size() == mask.size());
+        for (int i=0; i < mask.size(); i++){
+            velocities[mask[i]] = velocities[parents[i]] + scaleFactor * (velocities[mask[i]] - velocities[parents[i]]);
+        }
+    }
+}
+
 
 ReferenceApplyMonteCarloBarostatKernel::~ReferenceApplyMonteCarloBarostatKernel() {
     if (barostat)
