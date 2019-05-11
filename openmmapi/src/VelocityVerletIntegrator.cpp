@@ -130,18 +130,14 @@ void VelocityVerletIntegrator::step(int steps) {
     for (int i = 0; i < steps; ++i) {
         context->updateContextState();
         for(auto &nhc : noseHooverChains) {
-            
             kineticEnergy = nhcKernel.getAs<NoseHooverChainKernel>().computeMaskedKineticEnergy(*context, *nhc);
-            //std::cout << "ke " << kineticEnergy << std::endl;
             scale = nhcKernel.getAs<NoseHooverChainKernel>().propagateChain(*context, *nhc, kineticEnergy, getStepSize());
-            //std::cout << "scl " << scale << std::endl;
             nhcKernel.getAs<NoseHooverChainKernel>().scaleVelocities(*context, *nhc, scale);
         }
         vvKernel.getAs<IntegrateVelocityVerletStepKernel>().execute(*context, *this);
         for(auto &nhc : noseHooverChains) {
             kineticEnergy = nhcKernel.getAs<NoseHooverChainKernel>().computeMaskedKineticEnergy(*context, *nhc);
             scale = nhcKernel.getAs<NoseHooverChainKernel>().propagateChain(*context, *nhc, kineticEnergy, getStepSize());
-            //std::cout << "ke " << kineticEnergy << " scale " << scale << std::endl;
             nhcKernel.getAs<NoseHooverChainKernel>().scaleVelocities(*context, *nhc, scale);
         }
     }

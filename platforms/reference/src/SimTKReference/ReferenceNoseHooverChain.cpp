@@ -27,7 +27,6 @@
 #include <sstream>
 #include <exception>
 #include <iostream>
-#include <fenv.h>
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceNoseHooverChain.h"
 
@@ -62,7 +61,6 @@ double ReferenceNoseHooverChain::propagate(double kineticEnergy, vector<double>&
      std::vector<double> chainForces(chainLength, 0);
      std::vector<double> chainMasses(chainLength, kT/(collisionFrequency*collisionFrequency));
      chainMasses[0] *= numDOFs;
-      feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
      double KE2 = 2 * kineticEnergy;
      chainForces[0] = (KE2 - numDOFs * kT) / chainMasses[0];
      for (int bead = 0; bead < chainLength - 1; ++bead) {
@@ -71,7 +69,7 @@ double ReferenceNoseHooverChain::propagate(double kineticEnergy, vector<double>&
      for (int mts = 0; mts < numMTS; ++mts) {
          for (const auto &ys : YSWeights) {
              double wdt = ys * timeStep / numMTS;
-             chainVelocities.back() += 0.25 * wdt + chainForces.back();
+             chainVelocities.back() += 0.25 * wdt * chainForces.back();
              for (int bead = chainLength - 2; bead >= 0; --bead) {
                  double aa = exp(-0.125 * wdt * chainVelocities[bead + 1]);
                  chainVelocities[bead] = aa * (chainVelocities[bead] * aa + 0.25 * wdt * chainForces[bead]);
@@ -92,9 +90,6 @@ double ReferenceNoseHooverChain::propagate(double kineticEnergy, vector<double>&
                  chainForces[bead + 1] = (chainMasses[bead] * chainVelocities[bead] * chainVelocities[bead] - kT) / chainMasses[bead + 1];
              }
              chainVelocities[chainLength-1] += 0.25 * wdt * chainForces.back();
-             //  std::cout << "P " << chainPositions.back() << std::endl;
-             //  std::cout << "V " << chainVelocities.back() << std::endl;
-             //  std::cout << "F " << chainForces.back() << std::endl;
          }  // YS loop
      } // MTS loop
      return scale;

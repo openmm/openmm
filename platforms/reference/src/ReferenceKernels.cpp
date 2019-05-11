@@ -2433,7 +2433,7 @@ void ReferenceNoseHooverChainKernel::initialize() {
 }
 
 double ReferenceNoseHooverChainKernel::propagateChain(ContextImpl& context, const NoseHooverChain &nhc, double kineticEnergy, double timeStep) {
-    if (kineticEnergy < 1e-10) return 1.0;  // (catches the problem of zero velocities in the first dynamics step, where we have nothing to scale)
+    if (kineticEnergy < 1e-8) return 1.0;  // (catches the problem of zero velocities in the first dynamics step, where we have nothing to scale)
     // Get the variables describing the NHC
     int chainLength = nhc.getDefaultChainLength();
     double temperature = nhc.getDefaultTemperature();
@@ -2461,23 +2461,24 @@ double ReferenceNoseHooverChainKernel::propagateChain(ContextImpl& context, cons
 }
 
 double ReferenceNoseHooverChainKernel::computeHeatBathEnergy(ContextImpl& context, const NoseHooverChain &nhc) {
-    double energy = 0;
+    double potentialEnergy = 0;
+    double kineticEnergy = 0;
     int chainLength = nhc.getDefaultChainLength();
     double temperature = nhc.getDefaultTemperature();
     double collisionFrequency = nhc.getDefaultCollisionFrequency();
     double kT = temperature * BOLTZ;
     int numDOFs = nhc.getDefaultNumDegreesOfFreedom();
     for(int i = 0; i < chainLength; ++i) {
-         double mass = kT / (collisionFrequency * collisionFrequency);
-         mass *= i ? 1 : numDOFs;
-         double velocity = context.getParameter(nhc.Velocity(i));
-         // The kinetic energy of this bead
-         energy += 0.5 * mass * velocity * velocity;
-         // The potential energy of this bead
-         double position = context.getParameter(nhc.Position(i));
-         energy += numDOFs * kT * position;
+        double prefac = i ? 1 : numDOFs;
+        double mass = prefac * kT / (collisionFrequency * collisionFrequency);
+        double velocity = context.getParameter(nhc.Velocity(i));
+        // The kinetic energy of this bead
+        kineticEnergy += 0.5 * mass * velocity * velocity;
+        // The potential energy of this bead
+        double position = context.getParameter(nhc.Position(i));
+        potentialEnergy += prefac * kT * position;
     }
-    return energy;
+    return kineticEnergy + potentialEnergy;
 }
 
 double ReferenceNoseHooverChainKernel::computeMaskedKineticEnergy(ContextImpl& context, const NoseHooverChain &noseHooverChain) {
@@ -2520,11 +2521,9 @@ void ReferenceNoseHooverChainKernel::scaleVelocities(ContextImpl& context, const
     if (parents.size() == 0){
         // scale absolute velocities
         for (auto m: mask){
-            //std::cout << m << " " << velocities[m] << " " << scaleFactor << std::endl;
             velocities[m] *= scaleFactor;
         }
     } else {
-        std::cout << "OUCHH" << std::endl; 
         // scale velocities relative to parent
         assert(parents.size() == mask.size());
         for (int i=0; i < mask.size(); i++){

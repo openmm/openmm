@@ -42,23 +42,24 @@
 #include <iostream>
 #include <iomanip>
 #include <vector>
+#include <algorithm>
 
 using namespace OpenMM;
 using namespace std;
-
+#define DEBUG 0
 void testHarmonicOscillator() {
     const double mass = 1.0;
     double temperature = 300;
     double frequency = 1;
-    double mts = 3, ys = 3, chain_length = 1;
-   
+    double mts = 1, ys = 1, chain_length = 3;
+
     System system;    
     system.addParticle(mass);
     vector<Vec3> positions(1);
-    positions[0] = Vec3(0.7, 0.8,0.6);
+    positions[0] = Vec3(0.5,0.5,0.5);
     vector<Vec3> velocities(1);
     velocities[0] = Vec3(0, 0, 0);
-    auto harmonic_restraint = new CustomExternalForce("x^2+y^2+z^2");
+    auto harmonic_restraint = new CustomExternalForce("0.5*(x^2+y^2+z^2)");
     harmonic_restraint->addParticle(0);
     system.addForce(harmonic_restraint);
     VelocityVerletIntegrator integrator(0.001);
@@ -67,117 +68,145 @@ void testHarmonicOscillator() {
     context.setPositions(positions);
     context.setVelocities(velocities);
 
-   double mean_temperature=0;
+    double mean_temperature=0;
     // equilibration
-    // integrator.step(10000);
-    for (size_t i=0; i < 10000; i++){
+    integrator.step(2000);
+    for (size_t i=0; i < 2500; i++){
         integrator.step(10);
-        State state = context.getState(State::Energy);
+        State state = context.getState(State::Energy | State::Positions | State::Velocities);
         double kinetic_energy = state.getKineticEnergy();
         double temp = kinetic_energy/(0.5*3*BOLTZ);
         mean_temperature = (i*mean_temperature + temp)/(i+1);
-        //cout << kinetic_energy << " " << temp << " " << temperature << endl;
+        double PE = state.getPotentialEnergy();
+        double time = state.getTime();
+        double energy = kinetic_energy + PE + integrator.computeHeatBathEnergy();
+#if DEBUG
+        std::cout << " Time: " << std::setw(4) << time 
+                  << " Temperature: " << std::setw(8) << std::setprecision(3) << temp
+                  << " Mean Temp: " << std::setw(8) << std::setprecision(3) << mean_temperature
+                  << " Kinet Energy: " << std::setw(12) << std::setprecision(8) << kinetic_energy
+                  << " Poten Energy: " << std::setw(12) << std::setprecision(8) << PE
+                  << " Total Energy: " << std::setw(12) << std::setprecision(8) << energy << std::endl;
+#endif
     }
-    //cout << "Mean Temperature: " << mean_temperature;
+#if DEBUG
+    std::cout << "Mean Temperature: " << mean_temperature << std::endl;;
+#endif
     ASSERT_EQUAL_TOL(temperature, mean_temperature, 0.02);
-    //ASSERT_USUALLY_EQUAL_TOL(3*0.5*BOLTZ*temperatureDrude, keInternal/numSteps, 0.01);
 }
 
-void testSingleBond() {
+void testDimerBox(bool constrain=true) {
     // Check conservation of system + bath energy for a harmonic oscillator
     System system;
-    system.addParticle(2.0);
-    system.addParticle(2.0);
+    int numMolecules = 20;
+    double boxLength = 2; // nm
+    Vec3 a(boxLength, 0.0, 0.0);
+    Vec3 b(0.0, boxLength, 0.0);
+    Vec3 c(0.0, 0.0, boxLength);
+    double mass = 20;
+    double bondForceConstant = 30000; //0.001;
+    double bondLength = 0.1;
+    double bondLengthSquared = bondLength * bondLength;
+    int numDOF = 0;
+    NonbondedForce* forceField = new NonbondedForce();
+    HarmonicBondForce* bondForce = new HarmonicBondForce();
+    for(int molecule = 0; molecule < numMolecules; ++molecule) {
+        int particle1 = system.addParticle(mass);
+        int particle2 = system.addParticle(mass);
+        forceField->addParticle(0.0, 0.1, 1.0);
+        forceField->addParticle(0.0, 0.1, 1.0);
+        forceField->addException(particle1, particle2, 0, 0, 0);
+        bondForce->addBond(particle1, particle2, bondLength, bondForceConstant);
+        numDOF += 6;
+        if (constrain) {
+            system.addConstraint(particle1, particle2, bondLength);
+            numDOF -= 1;
+        }
+    }
+    forceField->setCutoffDistance(.99*boxLength/2);
+    forceField->setSwitchingDistance(.88*boxLength/2);
+    forceField->setUseSwitchingFunction(true);
+    forceField->setUseDispersionCorrection(false);
+    forceField->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    system.addForce(forceField);
+    system.addForce(bondForce);
+    system.setDefaultPeriodicBoxVectors(a, b, c);
+    std::vector<Vec3> positions(numMolecules*2);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numMolecules; i++) {
+        while (true) {
+            Vec3 pos = Vec3(boxLength*genrand_real2(sfmt), boxLength*genrand_real2(sfmt), boxLength*genrand_real2(sfmt));
+            Vec3 pos1 = pos + Vec3(0,0, bondLength/2);
+            Vec3 pos2 = pos + Vec3(0,0,-bondLength/2);
+            double minDist = 2*boxLength;
+            for (int j = 0; j < i; j++) {
+                Vec3 delta = pos1-positions[j];
+                minDist = std::min(minDist, sqrt(delta.dot(delta)));
+                delta = pos2-positions[j];
+                minDist = std::min(minDist, sqrt(delta.dot(delta)));
+            }
+            if (minDist > 0.15) {
+                positions[2*i+0] = pos1;
+                positions[2*i+1] = pos2;
+                break;
+            }
+        }
+    }
+ 
     VelocityVerletIntegrator integrator(0.001);
     double temperature = 300; // kelvin
-    double collisionFrequency = 0.1; // 1/ps
+    double collisionFrequency = 25; // 1/ps
     int numMTS = 3;
     int numYS = 3;
     int chainLength = 5;
-    int numDOF = 6;
     integrator.addNoseHooverChainThermostat(system, temperature, collisionFrequency,
                                             chainLength, numMTS, numYS);
-    HarmonicBondForce* forceField = new HarmonicBondForce();
-    forceField->addBond(0, 1, 1.5, 1);
-    system.addForce(forceField);
     Context context(system, integrator, platform);
-    vector<Vec3> positions(2);
-    positions[0] = Vec3(-1, 0, 0);
-    positions[1] = Vec3(1, 0, 0);
     context.setPositions(positions);
+    context.setVelocitiesToTemperature(temperature);
+    integrator.step(1500);
 
-    integrator.step(10000);
-
+    int nSteps = 2000;
     double mean_temp = 0.0;
-    for (int i = 0; i < 10000000; ++i) {
-        State state = context.getState(State::Energy);
+    std::vector<double> energies(nSteps);
+    for (int i = 0; i < nSteps; ++i) {
+        integrator.step(1);
+        State state = context.getState(State::Energy | (constrain ? State::Positions : 0));
+        if (constrain) {
+            auto positions = state.getPositions();
+            for(int i = 0; i < numMolecules; ++i) {
+                Vec3 delta = positions[2*i+1] - positions[2*i];
+                double dR2 = delta.dot(delta);
+                ASSERT_EQUAL_TOL(bondLengthSquared, dR2, 1e-4);
+            }
+        }
         double KE = state.getKineticEnergy();
         double PE = state.getPotentialEnergy();
         double time = state.getTime();
-        double temperature = 2 * KE / (BOLTZ * numDOF);
-        mean_temp = (i*mean_temp + temperature)/(i+1);
+        double instantaneous_temperature = 2 * KE / (BOLTZ * numDOF);
+        mean_temp = (i*mean_temp + instantaneous_temperature)/(i+1);
         double energy = KE + PE + integrator.computeHeatBathEnergy();
-        if(i % 100 == 0)
-        std::cout << " Time: " << std::setw(4) << time 
-                  << " Temperature: " << std::setw(8) << std::setprecision(3) << temperature
-                  << " Mean Temperature: " << std::setw(8) << std::setprecision(3) << mean_temp
-                  << " Total Energy: " << std::setw(12) << std::setprecision(8) << energy << std::endl;
-        integrator.step(1);
+#if DEBUG
+        if(i % 10 == 0) std::cout << " Time: " << std::setw(4) << time 
+                                  << " Temperature: " << std::setw(8) << std::setprecision(3) << temperature
+                                  << " Mean Temperature: " << std::setw(8) << std::setprecision(3) << mean_temp
+                                  << " Total Energy: " << std::setw(12) << std::setprecision(8) << energy << std::endl;
+#endif
+        energies[i] = energy;
     }
+    double sum = std::accumulate(energies.begin(), energies.end(), 0.0);
+    double mean = sum / energies.size();
+    double sq_sum = std::inner_product(energies.begin(), energies.end(), energies.begin(), 0.0);
+    double std = std::sqrt(sq_sum / energies.size() - mean * mean);
+    double relative_std = std / mean;
+    //std::cout << "Relative STD of energy " << relative_std << std::endl;
+    // Check mean temperature
+    ASSERT_EQUAL_TOL(temperature, temperature, 1e-2);
+    // Check fluctuation of conserved (total bath + system) energy
+    ASSERT_EQUAL_TOL(relative_std, 0, 1e-4);
 }
 
-void testConstraints() {
-    const int numParticles = 8;
-    const int numConstraints = 5;
-    System system;
-    VelocityVerletIntegrator integrator(0.001);
-    integrator.setConstraintTolerance(1e-5);
-    NonbondedForce* forceField = new NonbondedForce();
-    for (int i = 0; i < numParticles; ++i) {
-        system.addParticle(i%2 == 0 ? 5.0 : 10.0);
-        forceField->addParticle((i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);
-    }
-    system.addConstraint(0, 1, 1.0);
-    system.addConstraint(1, 2, 1.0);
-    system.addConstraint(2, 3, 1.0);
-    system.addConstraint(4, 5, 1.0);
-    system.addConstraint(6, 7, 1.0);
-    system.addForce(forceField);
-    Context context(system, integrator, platform);
-    vector<Vec3> positions(numParticles);
-    vector<Vec3> velocities(numParticles);
-    OpenMM_SFMT::SFMT sfmt;
-    init_gen_rand(0, sfmt);
-
-    for (int i = 0; i < numParticles; ++i) {
-        positions[i] = Vec3(i/2, (i+1)/2, 0);
-        velocities[i] = Vec3(genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5);
-    }
-    context.setPositions(positions);
-    context.setVelocities(velocities);
-
-    // Simulate it and see whether the constraints remain satisfied.
-
-    double initialEnergy = 0.0;
-    for (int i = 0; i < 1000; ++i) {
-        State state = context.getState(State::Positions | State::Energy | State::Velocities | State::Forces);
-        for (int j = 0; j < numConstraints; ++j) {
-            int particle1, particle2;
-            double distance;
-            system.getConstraintParameters(j, particle1, particle2, distance);
-            Vec3 p1 = state.getPositions()[particle1];
-            Vec3 p2 = state.getPositions()[particle2];
-            double dist = std::sqrt((p1[0]-p2[0])*(p1[0]-p2[0])+(p1[1]-p2[1])*(p1[1]-p2[1])+(p1[2]-p2[2])*(p1[2]-p2[2]));
-            ASSERT_EQUAL_TOL(distance, dist, 1e-4);
-        }
-        double energy = state.getPotentialEnergy()+state.getKineticEnergy();
-        if (i == 1)
-            initialEnergy = energy;
-        else if (i > 1)
-            ASSERT_EQUAL_TOL(initialEnergy, energy, 0.01);
-        integrator.step(1);
-    }
-}
 void testNHCPropagation() {
     // test if the velocity scale factor goes to one for a single particle
     // with no forces in the system
@@ -225,7 +254,9 @@ void testPropagateChainConsistentWithPythonReference() {
                                                                   chainLength, numMTS, numYS);
     Context context(system, integrator, platform);
     double scale = integrator.propagateChain(kineticEnergy, chainID);
-    //std::cout << std::setw(12) << std::setprecision(10) << scale << std::endl;
+#if DEBUG
+    std::cout << std::setw(12) << std::setprecision(10) << scale << std::endl;
+#endif
     ASSERT_EQUAL_TOL(0.9674732261005896, scale, 1e-5)
 }
 
@@ -233,14 +264,14 @@ void runPlatformTests();
 
 int main(int argc, char* argv[]) {
     try {
-        
-        //initializeTests(argc, argv);
-        //testNHCPropagation();
-        //testPropagateChainConsistentWithPythonReference();
+        initializeTests(argc, argv);
+        testNHCPropagation();
+        testPropagateChainConsistentWithPythonReference();
         testHarmonicOscillator();
-       //testSingleBond();
-        //testConstraints();
-        //runPlatformTests();
+        bool constrain;
+        constrain = false; testDimerBox(constrain);
+        constrain = true; testDimerBox(constrain);
+        runPlatformTests();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

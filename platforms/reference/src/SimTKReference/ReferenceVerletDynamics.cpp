@@ -24,6 +24,7 @@
 
 #include <cstring>
 #include <sstream>
+#include <iostream>
 
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceVerletDynamics.h"
