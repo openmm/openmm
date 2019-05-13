@@ -1366,6 +1366,40 @@ private:
     CUfunction kernel1, kernel2;
 };
 
+/*
+ * This kernel is invoked by VelocityVerletIntegrator to take one time step.
+ */
+class CudaIntegrateVelocityVerletStepKernel : public IntegrateVelocityVerletStepKernel {
+public:
+    CudaIntegrateVelocityVerletStepKernel(std::string name, const Platform& platform, CudaContext& cu) :
+                                  IntegrateVelocityVerletStepKernel(name, platform), cu(cu) { }
+    ~CudaIntegrateVelocityVerletStepKernel() {}
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param integrator the VelocityVerletIntegrator this kernel will be used for
+     */
+    void initialize(const System& system, const VelocityVerletIntegrator& integrator);
+    /**
+     * Execute the kernel.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VerletIntegrator this kernel is being used for
+     */
+    void execute(ContextImpl& context, const VelocityVerletIntegrator& integrator);
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VelocityVerletIntegrator this kernel is being used for
+     */
+    double computeKineticEnergy(ContextImpl& context, const VelocityVerletIntegrator& integrator);
+private:
+    CudaContext& cu;
+    CUfunction kernel1, kernel2, kernel3;
+};
+
 /**
  * This kernel is invoked by LangevinIntegrator to take one time step.
  */
@@ -1674,6 +1708,60 @@ private:
     CudaContext& cu;
     int randomSeed;
     CudaArray atomGroups;
+    CUfunction kernel;
+};
+
+/**
+ * This kernel is invoked by NoseHooverChain at the start of each time step to adjust the thermostat
+ * and update the associated particle velocities.
+ */
+class CudaNoseHooverChainKernel : public NoseHooverChainKernel {
+public:
+    CudaNoseHooverChainKernel(std::string name, const Platform& platform, CudaContext& cu) : NoseHooverChainKernel(name, platform), cu(cu) {
+    }
+    ~CudaNoseHooverChainKernel() {}
+    /**
+     * Initialize the kernel.
+     */
+    virtual void initialize();
+    /**
+     * Execute the kernel that propagates the Nose Hoover chain and determines the velocity scale factor.
+     * 
+     * @param context  the context in which to execute this kernel
+     * @param noseHooverChain the object describing the chain to be propagated.
+     * @param kineticEnergy the kineticEnergy of the particles being thermostated by this chain.
+     * @param timeStep the time step used by the integrator.
+     * @return the velocity scale factor to apply to the particles associated with this heat bath.
+     */
+    virtual double propagateChain(ContextImpl& context, const NoseHooverChain &nhc, double kineticEnergy, double timeStep);
+    /**
+     * Execute the kernal that computes the total (kinetic + potential) heat bath energy.
+     *
+     * @param context the context in which to execute this kernel
+     * @param noseHooverChain the chain whose energy is to be determined.
+     * @return the total heat bath energy.
+     */
+    virtual double computeHeatBathEnergy(ContextImpl& context, const NoseHooverChain &nhc);
+    /**
+     * Execute the kernel that computes the kinetic energy for a subset of atoms,
+     * or the relative kinetic energy of Drude particles with respect to their parent atoms
+     *
+     * @param context the context in which to execute this kernel
+     * @param noseHooverChain the chain whose energy is to be determined.
+     */
+     virtual double computeMaskedKineticEnergy(ContextImpl& context, const NoseHooverChain &noseHooverChain);
+
+    /**
+     * Execute the kernel that scales the velocities of particles associated with a nose hoover chain
+     *
+     * @param context the context in which to execute this kernel
+     * @param noseHooverChain the chain whose energy is to be determined.
+     * @param scaleFactor the multiplicative factor by which velocities are scaled.
+     */
+    virtual void scaleVelocities(ContextImpl& context, const NoseHooverChain &noseHooverChain, double scaleFactor);
+
+private:
+    CudaContext& cu;
     CUfunction kernel;
 };
 

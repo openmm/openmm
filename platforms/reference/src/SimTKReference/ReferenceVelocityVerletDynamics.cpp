@@ -109,6 +109,8 @@ void ReferenceVelocityVerletDynamics::update(OpenMM::ContextImpl &context, const
    if (referenceConstraintAlgorithm)
       referenceConstraintAlgorithm->apply(xPrime, atomCoordinates, inverseMasses, tolerance);
 
+   ReferenceVirtualSites::computePositions(system, atomCoordinates);
+
    context.calcForcesAndEnergy(true, false);
 
    for (int i = 0; i < numberOfAtoms; ++i) {
@@ -129,6 +131,5 @@ void ReferenceVelocityVerletDynamics::update(OpenMM::ContextImpl &context, const
    if (referenceConstraintAlgorithm)
       referenceConstraintAlgorithm->applyToVelocities(atomCoordinates, velocities, inverseMasses, tolerance);
 
-   ReferenceVirtualSites::computePositions(system, atomCoordinates);
    incrementTimeStep();
 }

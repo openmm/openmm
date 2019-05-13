@@ -37,6 +37,7 @@
 #include "openmm/internal/CustomManyParticleForceImpl.h"
 #include "openmm/internal/CustomNonbondedForceImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
+#include "openmm/internal/NoseHooverChainImpl.h"
 #include "openmm/internal/OSRngSeed.h"
 #include "CudaBondedUtilities.h"
 #include "CudaExpressionUtilities.h"
@@ -7075,6 +7076,67 @@ double CudaIntegrateVerletStepKernel::computeKineticEnergy(ContextImpl& context,
     return cu.getIntegrationUtilities().computeKineticEnergy(0.5*integrator.getStepSize());
 }
 
+void CudaIntegrateVelocityVerletStepKernel::initialize(const System& system, const VelocityVerletIntegrator& integrator) {
+    cu.getPlatformData().initializeContexts(system);
+    cu.setAsCurrent();
+    map<string, string> defines;
+    CUmodule module = cu.createModule(CudaKernelSources::velocityVerlet, defines, "");
+    kernel1 = cu.getKernel(module, "integrateVelocityVerletPart1");
+    kernel2 = cu.getKernel(module, "integrateVelocityVerletPart2");
+    kernel3 = cu.getKernel(module, "integrateVelocityVerletPart3");
+}
+
+void CudaIntegrateVelocityVerletStepKernel::execute(ContextImpl& context, const VelocityVerletIntegrator& integrator) {
+    cu.setAsCurrent();
+    CudaIntegrationUtilities& integration = cu.getIntegrationUtilities();
+    int numAtoms = cu.getNumAtoms();
+    int paddedNumAtoms = cu.getPaddedNumAtoms();
+    double dt = integrator.getStepSize();
+    cu.getIntegrationUtilities().setNextStepSize(dt);
+
+    //// Call the first integration kernel.
+
+    CUdeviceptr posCorrection = (cu.getUseMixedPrecision() ? cu.getPosqCorrection().getDevicePointer() : 0);
+    void* args1[] = {&numAtoms, &paddedNumAtoms, &cu.getIntegrationUtilities().getStepSize().getDevicePointer(), &cu.getPosq().getDevicePointer(), &posCorrection,
+            &cu.getVelm().getDevicePointer(), &cu.getForce().getDevicePointer(), &integration.getPosDelta().getDevicePointer()};
+    cu.executeKernel(kernel1, args1, numAtoms, 128);
+
+    //// Apply constraints.
+
+    integration.applyConstraints(integrator.getConstraintTolerance());
+
+    //// Call the second integration kernel.
+
+    void* args2[] = {&numAtoms, &cu.getIntegrationUtilities().getStepSize().getDevicePointer(), &cu.getPosq().getDevicePointer(), &posCorrection,
+            &cu.getVelm().getDevicePointer(), &integration.getPosDelta().getDevicePointer()};
+    cu.executeKernel(kernel2, args2, numAtoms, 128);
+
+    integration.computeVirtualSites();
+
+    //// Update forces
+    context.calcForcesAndEnergy(true, false);
+
+    //// Call the third integration kernel.
+
+    void* args3[] = {&numAtoms, &paddedNumAtoms, &cu.getIntegrationUtilities().getStepSize().getDevicePointer(), &cu.getPosq().getDevicePointer(), &posCorrection,
+            &cu.getVelm().getDevicePointer(), &cu.getForce().getDevicePointer(), &integration.getPosDelta().getDevicePointer()};
+    cu.executeKernel(kernel3, args3, numAtoms, 128);
+
+    // TODO: Figure out if this is really needed.  The constraint velocities are accounted for
+    // in a finite difference sense in the step 3 kernel, when the velocities are updated.
+    integration.applyVelocityConstraints(integrator.getConstraintTolerance());
+
+    //// Update the time and step count.
+
+    cu.setTime(cu.getTime()+dt);
+    cu.setStepCount(cu.getStepCount()+1);
+    cu.reorderAtoms();
+}
+
+double CudaIntegrateVelocityVerletStepKernel::computeKineticEnergy(ContextImpl& context, const VelocityVerletIntegrator& integrator) {
+    return cu.getIntegrationUtilities().computeKineticEnergy(0);
+}
+
 void CudaIntegrateLangevinStepKernel::initialize(const System& system, const LangevinIntegrator& integrator) {
     cu.getPlatformData().initializeContexts(system);
     cu.setAsCurrent();
@@ -8285,6 +8347,24 @@ void CudaApplyAndersenThermostatKernel::execute(ContextImpl& context) {
     void* args[] = {&numAtoms, &frequency, &kT, &cu.getVelm().getDevicePointer(), &cu.getIntegrationUtilities().getStepSize().getDevicePointer(),
             &cu.getIntegrationUtilities().getRandom().getDevicePointer(), &randomIndex, &atomGroups.getDevicePointer()};
     cu.executeKernel(kernel, args, cu.getNumAtoms());
+}
+
+void CudaNoseHooverChainKernel::initialize() {
+}
+
+double CudaNoseHooverChainKernel::propagateChain(ContextImpl& context, const NoseHooverChain &nhc, double kineticEnergy, double timeStep) {
+    return 1;
+}
+
+double CudaNoseHooverChainKernel::computeHeatBathEnergy(ContextImpl& context, const NoseHooverChain &nhc) {
+    return 1;
+}
+
+double CudaNoseHooverChainKernel::computeMaskedKineticEnergy(ContextImpl& context, const NoseHooverChain &noseHooverChain) {
+    return 1;
+}
+
+void CudaNoseHooverChainKernel::scaleVelocities(ContextImpl& context, const NoseHooverChain &noseHooverChain, double scaleFactor) {
 }
 
 void CudaApplyMonteCarloBarostatKernel::initialize(const System& system, const Force& thermostat) {

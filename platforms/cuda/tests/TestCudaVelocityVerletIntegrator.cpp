@@ -6,8 +6,8 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2015 Stanford University and the Authors.           *
- * Authors: Peter Eastman                                                     *
+ * Portions copyright (c) 2019 Stanford University and the Authors.           *
+ * Authors: Andreas Krämer and Andrew C. Simmmonett                           *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -29,7 +29,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "ReferenceTests.h"
+#include "CudaTests.h"
 #include "TestVelocityVerletIntegrator.h"
 
 void runPlatformTests() {
