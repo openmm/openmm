@@ -226,6 +226,47 @@ void testVVConstrainedMasslessParticles() {
     ASSERT_EQUAL(0.0, state.getVelocities()[0][0]);
 }
 
+/**
+ * Make sure that virtual sites are updated correctly
+ */
+void testThreeParticleVirtualSite() {
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(0.0);
+    system.setVirtualSite(3, new ThreeParticleAverageSite(0, 1, 2, 0.2, 0.3, 0.5));
+    CustomExternalForce* forceField = new CustomExternalForce("-a*x");
+    system.addForce(forceField);
+    forceField->addPerParticleParameter("a");
+    vector<double> params(1);
+    params[0] = 0.1;
+    forceField->addParticle(0, params);
+    params[0] = 0.2;
+    forceField->addParticle(1, params);
+    params[0] = 0.3;
+    forceField->addParticle(2, params);
+    params[0] = 0.4;
+    forceField->addParticle(3, params);
+    VelocityVerletIntegrator integrator(0.002);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(4);
+    positions[0] = Vec3(0, 0, 0);
+    positions[1] = Vec3(1, 0, 0);
+    positions[2] = Vec3(0, 1, 0);
+    context.setPositions(positions);
+    context.applyConstraints(0.0001);
+    for (int i = 0; i < 1000; i++) {
+        State state = context.getState(State::Positions | State::Forces);
+        const vector<Vec3>& pos = state.getPositions();
+        ASSERT_EQUAL_VEC(pos[0]*0.2+pos[1]*0.3+pos[2]*0.5, pos[3], 1e-5);
+        ASSERT_EQUAL_VEC(Vec3(0.1+0.4*0.2, 0, 0), state.getForces()[0], 1e-5);
+        ASSERT_EQUAL_VEC(Vec3(0.2+0.4*0.3, 0, 0), state.getForces()[1], 1e-5);
+        ASSERT_EQUAL_VEC(Vec3(0.3+0.4*0.5, 0, 0), state.getForces()[2], 1e-5);
+        integrator.step(1);
+    }
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -235,6 +276,7 @@ int main(int argc, char* argv[]) {
         testVVConstraints();
         testVVConstrainedClusters();
         testVVConstrainedMasslessParticles();
+        testThreeParticleVirtualSite();
         runPlatformTests();
     }
     catch(const exception& e) {
