@@ -81,7 +81,7 @@ int VelocityVerletIntegrator::addNoseHooverChainThermostat(System& system, doubl
     }
 
     auto nhcForce = new NoseHooverChain(temperature, collisionFrequency, nDOF, chainLength,
-                                        numMTS, numYoshidaSuzuki, std::to_string(noseHooverChains.size()),
+                                        numMTS, numYoshidaSuzuki, noseHooverChains.size(),
                                         thermostatedParticles, parentParticles);
     system.addForce(nhcForce);
     noseHooverChains.push_back(nhcForce);

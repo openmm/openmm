@@ -57,13 +57,13 @@ public:
      * This is the name of the parameter that stores the position of the ith bead
      */
     std::string Position(int i) const {
-        return defaultLabel + "NoseHooverChainPosition" + std::to_string(i);
+        return std::to_string(defaultChainID) + "NoseHooverChainPosition" + std::to_string(i);
     }
     /**
      * This is the name of the parameter that stores the velocity of the ith bead
      */
     std::string Velocity(int i) const {
-        return defaultLabel + "NoseHooverChainVelocity" + std::to_string(i);
+        return std::to_string(defaultChainID) + "NoseHooverChainVelocity" + std::to_string(i);
     }
     /**
      * Create a NoseHooverChain.
@@ -75,13 +75,13 @@ public:
      * @param defaultChainLength        the default length of (number of particles in) this heat bath
      * @param defaultNumMTS             the default number of multi time steps used to propagate this chain
      * @param defaultNumYoshidaSuzuki   the default number of Yoshida Suzuki steps used to propagate this chain (1, 3, or 5).
-     * @param defaultLabel              the default label used to distinguish this Nose-Hoover chain from others that may
+     * @param defaultChainID            the default chain id used to distinguish this Nose-Hoover chain from others that may
      *                                  be used to control a different set of particles, e.g. for Drude oscillators
      * @param thermostatedAtoms         the list of atoms to be handled by this thermostat
      * @param parentAtoms               the list of parent atoms, if this thermostat handles Drude particles. Empty vector otherwise.
      */
     NoseHooverChain(double defaultTemperature, double defaultCollisionFrequency, int defaultNumDOFs, int defaultChainLength,
-                    int defaultNumMTS, int defaultNumYoshidaSuzuki, const std::string &defaultLabel,
+                    int defaultNumMTS, int defaultNumYoshidaSuzuki, int defaultChainID,
                     const std::vector<int>& thermostatedAtoms, const std::vector<int>& parentAtoms);
     /**
      * Get the default temperature of the heat bath (in Kelvin).
@@ -188,21 +188,21 @@ public:
         defaultNumYS = numSteps;
     }
     /**
-     * Get the default label used to identify this chain
+     * Get the default chain id used to identify this chain
      *
-     * @returns the default label
+     * @returns the default chain id 
      */
-    std::string getDefaultLabel() const {
-        return defaultLabel;
+    int getDefaultChainID() const {
+        return defaultChainID;
     }
     /**
-     * Set the default label used to identify this chain
+     * Set the default chain id used to identify this chain
      * This will affect any new Contexts you create, but not those that already exist.
      *
-     * @param the default label
+     * @param the default chain id
      */
-    void setDefaultLabel(const std::string& label) {
-        defaultLabel = label;
+    void setDefaultChainID(int chainID) {
+        defaultChainID = chainID;
     }
     /**
      * Get the atom ids of all atoms that are thermostated 
@@ -263,7 +263,7 @@ private:
     double defaultTemp, defaultFreq, defaultTimeStep;
     int defaultNumDOFs, defaultChainLength, defaultNumMTS, defaultNumYS;
     // The suffix used to distinguish NH chains, e.g. for Drude particles vs. regular particles.
-    std::string defaultLabel;
+    int defaultChainID;
     std::vector<int> thermostatedAtoms, parentAtoms;
 };
 
