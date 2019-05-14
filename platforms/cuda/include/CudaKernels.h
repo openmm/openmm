@@ -1762,7 +1762,7 @@ public:
 
 private:
     CudaContext& cu;
-    CUfunction kernel;
+    std::map<int, CUfunction> propagateKernels;
 };
 
 /**

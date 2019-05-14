@@ -716,6 +716,15 @@ void CudaIntegrationUtilities::createCheckpoint(ostream& stream) {
     vector<int4> randomSeedVec;
     randomSeed.download(randomSeedVec);
     stream.write((char*) &randomSeedVec[0], sizeof(int4)*randomSeed.getSize());
+    size_t numChains = noseHooverChainState.size();
+    stream.write((char*) &numChains, sizeof(size_t));
+    for (auto &chainState: noseHooverChainState){
+        vector<float2> stateVec;
+        chainState.download(stateVec);
+        size_t vecLength = stateVec.size();
+        stream.write((char*) &vecLength, sizeof(size_t));
+        stream.write((char*) stateVec.data(), sizeof(float2)*stateVec.size());
+    }
 }
 
 void CudaIntegrationUtilities::loadCheckpoint(istream& stream) {
@@ -728,6 +737,17 @@ void CudaIntegrationUtilities::loadCheckpoint(istream& stream) {
     vector<int4> randomSeedVec(randomSeed.getSize());
     stream.read((char*) &randomSeedVec[0], sizeof(int4)*randomSeed.getSize());
     randomSeed.upload(randomSeedVec);
+    size_t numChains, chainLength;
+    stream.read((char*) &numChains, sizeof(size_t));
+    noseHooverChainState.clear();
+    for (size_t i=0; i<numChains; i++){
+        stream.read((char*) &chainLength, sizeof(size_t));
+        std::vector<float2> stateVec(chainLength);
+        stream.read((char*) &stateVec[0], sizeof(float2)*chainLength);
+        CudaArray state;
+        state.upload(stateVec);
+        noseHooverChainState.push_back(state);
+    }
 }
 
 double CudaIntegrationUtilities::computeKineticEnergy(double timeShift) {
@@ -775,3 +795,7 @@ double CudaIntegrationUtilities::computeKineticEnergy(double timeShift) {
         posDelta.copyTo(context.getVelm());
     return 0.5*energy;
 }
+
+std::vector<CudaArray>& CudaIntegrationUtilities::getNoseHooverChainState(){
+        return noseHooverChainState;
+};

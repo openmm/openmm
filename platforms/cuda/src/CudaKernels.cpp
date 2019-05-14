@@ -387,7 +387,7 @@ void CudaUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context, cons
 
 void CudaUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostream& stream) {
     cu.setAsCurrent();
-    int version = 2;
+    int version = 3;
     stream.write((char*) &version, sizeof(int));
     int precision = (cu.getUseDoublePrecision() ? 2 : cu.getUseMixedPrecision() ? 1 : 0);
     stream.write((char*) &precision, sizeof(int));
@@ -419,7 +419,7 @@ void CudaUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& st
     cu.setAsCurrent();
     int version;
     stream.read((char*) &version, sizeof(int));
-    if (version != 2)
+    if (version != 3)
         throw OpenMMException("Checkpoint was created with a different version of OpenMM");
     int precision;
     stream.read((char*) &precision, sizeof(int));
@@ -8350,17 +8350,35 @@ void CudaApplyAndersenThermostatKernel::execute(ContextImpl& context) {
 }
 
 void CudaNoseHooverChainKernel::initialize() {
+    cu.setAsCurrent();
+
+    map<string, string> defines;
+    defines["BEGIN_YS_LOOP"] = "for(const real & ys : {1} {";
+    defines["END_YS_LOOP"] = "}";
+    CUmodule module = cu.createModule(CudaKernelSources::noseHooverChain, defines, "");
+    propagateKernels[1] = cu.getKernel(module, "propagateNoseHooverChain");
+    defines["BEGIN_YS_LOOP"] = "for(const real & ys : {0.828981543588751, -0.657963087177502, 0.828981543588751} {";
+    module = cu.createModule(CudaKernelSources::noseHooverChain, defines, "");
+    propagateKernels[3] = cu.getKernel(module, "propagateNoseHooverChain");
+    defines["BEGIN_YS_LOOP"] = "for(const real & ys : {0.2967324292201065, 0.2967324292201065, -0.186929716880426, 0.2967324292201065, 0.2967324292201065} {";
+    module = cu.createModule(CudaKernelSources::noseHooverChain, defines, "");
+    propagateKernels[5] = cu.getKernel(module, "propagateNoseHooverChain");
+
 }
 
 double CudaNoseHooverChainKernel::propagateChain(ContextImpl& context, const NoseHooverChain &nhc, double kineticEnergy, double timeStep) {
+    cu.setAsCurrent();
+
     return 1;
 }
 
 double CudaNoseHooverChainKernel::computeHeatBathEnergy(ContextImpl& context, const NoseHooverChain &nhc) {
+    cu.setAsCurrent();
     return 1;
 }
 
 double CudaNoseHooverChainKernel::computeMaskedKineticEnergy(ContextImpl& context, const NoseHooverChain &noseHooverChain) {
+    cu.setAsCurrent();
     return 1;
 }
 
