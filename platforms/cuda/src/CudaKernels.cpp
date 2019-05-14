@@ -8353,28 +8353,145 @@ void CudaNoseHooverChainKernel::initialize() {
     cu.setAsCurrent();
 
     map<string, string> defines;
-    defines["BEGIN_YS_LOOP"] = "for(const real & ys : {1} {";
+    defines["BEGIN_YS_LOOP"] = "for(const real & ys : {1}) {";
     defines["END_YS_LOOP"] = "}";
-    CUmodule module = cu.createModule(CudaKernelSources::noseHooverChain, defines, "");
+    CUmodule module = cu.createModule(CudaKernelSources::noseHooverChain, defines, "-std=c++11");
     propagateKernels[1] = cu.getKernel(module, "propagateNoseHooverChain");
-    defines["BEGIN_YS_LOOP"] = "for(const real & ys : {0.828981543588751, -0.657963087177502, 0.828981543588751} {";
-    module = cu.createModule(CudaKernelSources::noseHooverChain, defines, "");
+    defines["BEGIN_YS_LOOP"] = "for(const real & ys : {0.828981543588751, -0.657963087177502, 0.828981543588751}){";
+    module = cu.createModule(CudaKernelSources::noseHooverChain, defines, "-std=c++11");
     propagateKernels[3] = cu.getKernel(module, "propagateNoseHooverChain");
-    defines["BEGIN_YS_LOOP"] = "for(const real & ys : {0.2967324292201065, 0.2967324292201065, -0.186929716880426, 0.2967324292201065, 0.2967324292201065} {";
-    module = cu.createModule(CudaKernelSources::noseHooverChain, defines, "");
+    defines["BEGIN_YS_LOOP"] = "for(const real & ys : {0.2967324292201065, 0.2967324292201065, -0.186929716880426, 0.2967324292201065, 0.2967324292201065}){";
+    module = cu.createModule(CudaKernelSources::noseHooverChain, defines, "-std=c++11");
     propagateKernels[5] = cu.getKernel(module, "propagateNoseHooverChain");
 
+    computeHeatBathEnergyKernel = cu.getKernel(module, "computeHeatBathEnergy");
 }
 
 double CudaNoseHooverChainKernel::propagateChain(ContextImpl& context, const NoseHooverChain &nhc, double kineticEnergy, double timeStep) {
     cu.setAsCurrent();
 
-    return 1;
+    bool useDouble = cu.getUseDoublePrecision() || cu.getUseMixedPrecision();
+
+    int chainID = nhc.getDefaultChainID();
+    int chainLength = nhc.getDefaultChainLength();
+    int numYS = nhc.getDefaultNumYoshidaSuzukiTimeSteps();
+    int numMTS = nhc.getDefaultNumMultiTimeSteps();
+    int numDOFs = nhc.getDefaultNumDegreesOfFreedom();
+    double temperature = nhc.getDefaultTemperature();
+    double frequency = nhc.getDefaultCollisionFrequency();
+
+    auto & chainState = cu.getIntegrationUtilities().getNoseHooverChainState();
+    if (chainID >= chainState.size()) chainState.resize(chainID+1);
+    if (!chainState[chainID].isInitialized() || chainState[chainID].getSize() != chainLength) {
+        // We need to upload the CUDA array
+        if(useDouble){
+            chainState[chainID].initialize<double2>(cu, chainLength, "chainState" + std::to_string(chainID));
+            std::vector<double2> zeros(chainLength, {0.0, 0.0});
+            chainState[chainID].upload(zeros);
+        } else {
+            chainState[chainID].initialize<float2>(cu, chainLength, "chainState" + std::to_string(chainID));
+            std::vector<float2> zeros(chainLength, {0.0, 0.0});
+            chainState[chainID].upload(zeros);
+        }
+    }
+
+    if (!scaleFactor.isInitialized() ||scaleFactor.getSize() == 0) {
+        if(useDouble){
+            std::vector<double> one(1);
+            scaleFactor.initialize<double>(cu, 1, "scaleFactor");
+            scaleFactor.upload(one);
+        } else {
+            std::vector<float> one(1);
+            scaleFactor.initialize<float>(cu, 1, "scaleFactor");
+            scaleFactor.upload(one);
+        }
+    }
+
+    if (!chainForces.isInitialized() || !chainMasses.isInitialized() || chainForces.getSize() < chainLength || chainMasses.getSize() < chainLength) {
+        if(useDouble){
+            std::vector<double> zeros(chainLength,0);
+            chainMasses.initialize<double>(cu, chainLength, "chainMasses");
+            chainForces.initialize<double>(cu, chainLength, "chainForces");
+            chainMasses.upload(zeros);
+            chainForces.upload(zeros);
+        } else {
+            std::vector<float> zeros(chainLength,0);
+            chainMasses.initialize<float>(cu, chainLength, "chainMasses");
+            chainForces.initialize<float>(cu, chainLength, "chainForces");
+            chainMasses.upload(zeros);
+            chainForces.upload(zeros);
+        }
+    }
+
+    double kT = BOLTZ * temperature;
+    float kTfloat = (float) kT;
+    float timeStepFloat = (float) timeStep;
+    float frequencyFloat = (float) frequency;
+    float kineticEnergyFloat = (float) kineticEnergy;
+
+    void *args[] = {&scaleFactor.getDevicePointer(),
+                    &chainMasses.getDevicePointer(),
+                    &chainForces.getDevicePointer(),
+                    &chainLength, &numMTS, &numDOFs,
+                    &timeStepFloat,
+                    useDouble ? (void*) &kT : (void*) &kTfloat, 
+                    &frequencyFloat,
+                    useDouble ? (void*) &kineticEnergy : (void*) &kineticEnergyFloat, &chainState[chainID].getDevicePointer()};
+    if (numYS == 1 || numYS == 3 || numYS == 5) {
+        cu.executeKernel(propagateKernels[numYS], args, 1);
+    } else {
+        throw OpenMMException("Number of Yoshida Suzuki time steps has to be 1, 3, or 5.");
+    }
+    return 0;
 }
 
 double CudaNoseHooverChainKernel::computeHeatBathEnergy(ContextImpl& context, const NoseHooverChain &nhc) {
     cu.setAsCurrent();
-    return 1;
+
+    bool useDouble = cu.getUseDoublePrecision() || cu.getUseMixedPrecision();
+
+    int chainID = nhc.getDefaultChainID();
+    int chainLength = nhc.getDefaultChainLength();
+    int numDOFs = nhc.getDefaultNumDegreesOfFreedom();
+    double temperature = nhc.getDefaultTemperature();
+    double frequency = nhc.getDefaultCollisionFrequency();
+
+    auto & chainState = cu.getIntegrationUtilities().getNoseHooverChainState();
+    if (chainID >= chainState.size() || !chainState[chainID].isInitialized() || chainState[chainID].getSize() != chainLength) {
+        return 0.0;
+    }
+
+    if (!heatBathEnergy.isInitialized() || heatBathEnergy.getSize() == 0) {
+        if(useDouble){
+            std::vector<double> one(1);
+            heatBathEnergy.initialize<double>(cu, 1, "heatBathEnergy");
+            heatBathEnergy.upload(one);
+        } else {
+            std::vector<float> one(1);
+            heatBathEnergy.initialize<float>(cu, 1, "heatBathEnergy");
+            heatBathEnergy.upload(one);
+        }
+    }
+
+    double kT = BOLTZ * temperature;
+    float kTfloat = (float) kT;
+    float frequencyFloat = (float) frequency;
+
+    void * args[] = {&heatBathEnergy.getDevicePointer(), &chainLength, &numDOFs, 
+                     useDouble ? (void*) &kT : (void*) & kTfloat,
+                     &frequencyFloat, &chainState[chainID].getDevicePointer()};
+
+    cu.executeKernel(computeHeatBathEnergyKernel, args, 1);
+
+    if (useDouble){
+        std::vector<double> energy(1);
+        heatBathEnergy.download(energy);
+        return energy[0];
+    } else {
+        std::vector<float> energy(1);
+        heatBathEnergy.download(energy);
+        return (double) energy[0];
+    }
 }
 
 double CudaNoseHooverChainKernel::computeMaskedKineticEnergy(ContextImpl& context, const NoseHooverChain &noseHooverChain) {

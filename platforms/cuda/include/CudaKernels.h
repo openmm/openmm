@@ -1762,7 +1762,9 @@ public:
 
 private:
     CudaContext& cu;
+    CudaArray scaleFactor, chainMasses, chainForces, heatBathEnergy;
     std::map<int, CUfunction> propagateKernels;
+    CUfunction computeHeatBathEnergyKernel;
 };
 
 /**
