@@ -29,10 +29,8 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "ReferenceTests.h"
+#include "CudaTests.h"
 #include "TestNoseHooverThermostat.h"
 
 void runPlatformTests() {
-    testNHCPropagation();
-    testPropagateChainConsistentWithPythonReference();
 }

@@ -1762,9 +1762,14 @@ public:
 
 private:
     CudaContext& cu;
-    CudaArray scaleFactor, chainMasses, chainForces, heatBathEnergy;
+    CudaArray scaleFactorBuffer, kineticEnergyBuffer, chainMasses, chainForces, heatBathEnergy;
+    std::vector<CudaArray> masks;
     std::map<int, CUfunction> propagateKernels;
+    CUfunction reduceEnergyKernel;
     CUfunction computeHeatBathEnergyKernel;
+    CUfunction computeMaskedKineticEnergyKernel;
+    CUfunction scaleVelocitiesKernel;
+    CUfunction zeroEnergyBuffersKernel;
 };
 
 /**

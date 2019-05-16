@@ -57,6 +57,7 @@
 #include <cmath>
 #include <iterator>
 #include <set>
+#include <assert.h>
 
 using namespace OpenMM;
 using namespace std;
@@ -8365,6 +8366,10 @@ void CudaNoseHooverChainKernel::initialize() {
     propagateKernels[5] = cu.getKernel(module, "propagateNoseHooverChain");
 
     computeHeatBathEnergyKernel = cu.getKernel(module, "computeHeatBathEnergy");
+    computeMaskedKineticEnergyKernel = cu.getKernel(module, "computeMaskedKineticEnergy");
+    scaleVelocitiesKernel = cu.getKernel(module, "scaleVelocities");
+    CUmodule utilities = cu.createModule(CudaKernelSources::vectorOps+CudaKernelSources::utilities);
+    reduceEnergyKernel = cu.getKernel(utilities, "reduceEnergy");
 }
 
 double CudaNoseHooverChainKernel::propagateChain(ContextImpl& context, const NoseHooverChain &nhc, double kineticEnergy, double timeStep) {
@@ -8386,24 +8391,24 @@ double CudaNoseHooverChainKernel::propagateChain(ContextImpl& context, const Nos
         // We need to upload the CUDA array
         if(useDouble){
             chainState[chainID].initialize<double2>(cu, chainLength, "chainState" + std::to_string(chainID));
-            std::vector<double2> zeros(chainLength, {0.0, 0.0});
-            chainState[chainID].upload(zeros);
+            std::vector<double2> zeros(chainLength, make_double2(0, 0));
+            chainState[chainID].upload(zeros.data());
         } else {
             chainState[chainID].initialize<float2>(cu, chainLength, "chainState" + std::to_string(chainID));
-            std::vector<float2> zeros(chainLength, {0.0, 0.0});
-            chainState[chainID].upload(zeros);
+            std::vector<float2> zeros(chainLength, make_float2(0, 0));
+            chainState[chainID].upload(zeros.data());
         }
     }
 
-    if (!scaleFactor.isInitialized() ||scaleFactor.getSize() == 0) {
+    if (!scaleFactorBuffer.isInitialized() ||scaleFactorBuffer.getSize() == 0) {
         if(useDouble){
             std::vector<double> one(1);
-            scaleFactor.initialize<double>(cu, 1, "scaleFactor");
-            scaleFactor.upload(one);
+            scaleFactorBuffer.initialize<double>(cu, 1, "scaleFactorBuffer");
+            scaleFactorBuffer.upload(one);
         } else {
             std::vector<float> one(1);
-            scaleFactor.initialize<float>(cu, 1, "scaleFactor");
-            scaleFactor.upload(one);
+            scaleFactorBuffer.initialize<float>(cu, 1, "scaleFactorBuffer");
+            scaleFactorBuffer.upload(one);
         }
     }
 
@@ -8422,23 +8427,24 @@ double CudaNoseHooverChainKernel::propagateChain(ContextImpl& context, const Nos
             chainForces.upload(zeros);
         }
     }
-
     double kT = BOLTZ * temperature;
     float kTfloat = (float) kT;
     float timeStepFloat = (float) timeStep;
     float frequencyFloat = (float) frequency;
-    float kineticEnergyFloat = (float) kineticEnergy;
-
-    void *args[] = {&scaleFactor.getDevicePointer(),
+    // N.B. We ignore the incoming kineticEnergy and grab it from the device buffer instead
+    void *args[] = {
+                    &chainState[chainID].getDevicePointer(),
+                    &kineticEnergyBuffer.getDevicePointer(),
+                    &scaleFactorBuffer.getDevicePointer(),
                     &chainMasses.getDevicePointer(),
                     &chainForces.getDevicePointer(),
                     &chainLength, &numMTS, &numDOFs,
                     &timeStepFloat,
                     useDouble ? (void*) &kT : (void*) &kTfloat, 
-                    &frequencyFloat,
-                    useDouble ? (void*) &kineticEnergy : (void*) &kineticEnergyFloat, &chainState[chainID].getDevicePointer()};
+                    &frequencyFloat
+                    };
     if (numYS == 1 || numYS == 3 || numYS == 5) {
-        cu.executeKernel(propagateKernels[numYS], args, 1);
+        cu.executeKernel(propagateKernels[numYS], args, 1, 1);
     } else {
         throw OpenMMException("Number of Yoshida Suzuki time steps has to be 1, 3, or 5.");
     }
@@ -8481,25 +8487,87 @@ double CudaNoseHooverChainKernel::computeHeatBathEnergy(ContextImpl& context, co
                      useDouble ? (void*) &kT : (void*) & kTfloat,
                      &frequencyFloat, &chainState[chainID].getDevicePointer()};
 
-    cu.executeKernel(computeHeatBathEnergyKernel, args, 1);
+    cu.executeKernel(computeHeatBathEnergyKernel, args, 1, 1);
 
+    void * pinnedBuffer = cu.getPinnedBuffer();
+    heatBathEnergy.download(pinnedBuffer);
     if (useDouble){
-        std::vector<double> energy(1);
-        heatBathEnergy.download(energy);
-        return energy[0];
+        return *((double*) pinnedBuffer);
     } else {
-        std::vector<float> energy(1);
-        heatBathEnergy.download(energy);
-        return (double) energy[0];
+        return *((float*) pinnedBuffer);
     }
 }
 
-double CudaNoseHooverChainKernel::computeMaskedKineticEnergy(ContextImpl& context, const NoseHooverChain &noseHooverChain) {
+double CudaNoseHooverChainKernel::computeMaskedKineticEnergy(ContextImpl& context, const NoseHooverChain &nhc) {
     cu.setAsCurrent();
-    return 1;
+
+    bool useDouble = cu.getUseDoublePrecision() || cu.getUseMixedPrecision();
+
+    int chainID = nhc.getDefaultChainID();
+    const auto & parents = nhc.getParentAtoms();
+    const auto & thermostatedAtoms = nhc.getThermostatedAtoms();
+    if (chainID >= masks.size()) masks.resize(chainID+1);
+    auto nAtoms = cu.getPaddedNumAtoms();
+    if (!masks[chainID].isInitialized()) { 
+        // We need to upload the CUDA array
+        std::vector<int> maskVec(nAtoms);
+        for (int i = 0; i < nAtoms; ++i) maskVec[i] = i;
+
+        if (parents.size() ) {
+            assert(parents.size() == thermostatedAtoms.size());
+            for ( size_t i = 0; i < parents.size(); ++i) {
+                int atom = thermostatedAtoms[i];
+                maskVec[atom] = parents[i];
+            }
+        } else {
+            for ( const auto & atom : thermostatedAtoms) {
+                maskVec[atom] = -1L;
+            }
+        }
+        // Account for padding in the paddedNumAtoms loops
+        for(int i = thermostatedAtoms.size(); i < nAtoms; ++i){
+            maskVec[i] = i;
+        }
+        masks[chainID].initialize<int>(cu, nAtoms, "mask" + std::to_string(chainID));
+        masks[chainID].upload(maskVec);
+    }
+    if (masks[chainID].getSize() != nAtoms) {
+        throw OpenMMException("Number of atoms changed. Cannot be handled by the same Nose-Hoover thermostat.");
+    }
+    if (!kineticEnergyBuffer.isInitialized() || kineticEnergyBuffer.getSize() == 0) {
+        if(useDouble){
+            std::vector<double> one(1);
+            kineticEnergyBuffer.initialize<double>(cu, 1, "kineticEnergyBuffer");
+            kineticEnergyBuffer.upload(one);
+        } else {
+            std::vector<float> one(1);
+            kineticEnergyBuffer.initialize<float>(cu, 1, "kineticEnergyBuffer");
+            kineticEnergyBuffer.upload(one);
+        }
+    }
+    cu.clearBuffer(cu.getEnergyBuffer());
+    void *args[] = {&cu.getEnergyBuffer().getDevicePointer(),&nAtoms, &cu.getVelm().getDevicePointer(), &masks[chainID].getDevicePointer()};
+    cu.executeKernel(computeMaskedKineticEnergyKernel, args, nAtoms);
+
+    //taken from CudaContext::reduceEnergy(); the final kinetic energy will live in the kineticEnergy buffer
+    int bufferSize = cu.getEnergyBuffer().getSize();
+    int workGroupSize  = 512;
+    void* args2[] = {&cu.getEnergyBuffer().getDevicePointer(), &kineticEnergyBuffer.getDevicePointer(), &bufferSize, &workGroupSize};
+    cu.executeKernel(reduceEnergyKernel, args2, workGroupSize, workGroupSize, workGroupSize*cu.getEnergyBuffer().getElementSize());
+
+    return 0;
 }
 
-void CudaNoseHooverChainKernel::scaleVelocities(ContextImpl& context, const NoseHooverChain &noseHooverChain, double scaleFactor) {
+void CudaNoseHooverChainKernel::scaleVelocities(ContextImpl& context, const NoseHooverChain &nhc, double scaleFactor) {
+    // For now we assume that the mask info is valid, because computeMaskedKineticEnergy must have been
+    // called before this kernel.  If that ever ceases to be true, some sanity checks are needed here.
+    cu.setAsCurrent();
+
+    auto nAtoms = cu.getPaddedNumAtoms();
+    int chainID = nhc.getDefaultChainID();
+    void *args[] = {&scaleFactorBuffer.getDevicePointer(),
+                    &nAtoms, &cu.getVelm().getDevicePointer(), &masks[chainID].getDevicePointer()};
+    cu.executeKernel(scaleVelocitiesKernel, args, nAtoms);
 }
 
 void CudaApplyMonteCarloBarostatKernel::initialize(const System& system, const Force& thermostat) {

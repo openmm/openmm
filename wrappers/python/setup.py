@@ -184,7 +184,7 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
     if not openmm_lib_path:
         reportError("Set OPENMM_LIB_PATH to point to the lib directory for OpenMM")
 
-    extra_compile_args=[]
+    extra_compile_args=['-std=c++11']
     extra_link_args=[]
     if platform.system() == "Windows":
         define_macros.append( ('WIN32', None) )
@@ -193,7 +193,7 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
         extra_compile_args.append('/EHsc')
     else:
         if platform.system() == 'Darwin':
-            extra_compile_args += ['-stdlib=libc++', '-mmacosx-version-min=10.7']
+            extra_compile_args += ['-std=c++11 -stdlib=libc++', '-mmacosx-version-min=10.7']
             extra_link_args += ['-stdlib=libc++', '-mmacosx-version-min=10.7', '-Wl', '-rpath', openmm_lib_path]
             # Hard-code CC and CXX to clang, since gcc/g++ will *not* work with
             # Anaconda, despite the fact that distutils will try to use them.

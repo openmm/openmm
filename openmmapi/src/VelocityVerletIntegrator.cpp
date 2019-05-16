@@ -64,11 +64,10 @@ int VelocityVerletIntegrator::addNoseHooverChainThermostat(System& system, doubl
     if (context) {
         throw OpenMMException("addNoseHooverChainThermostat cannot be called after binding this integrator to a context.");
     }
-    std::vector<int> mask, parents;
     int nDOF = 0;
     int numForces = system.getNumForces();
-    vector<int> thermostatedParticles;
-    vector<int> parentParticles;
+    std::vector<int> thermostatedParticles;
+    std::vector<int> parentParticles;
     for(int particle = 0; particle < system.getNumParticles(); ++particle) {
         if(system.getParticleMass(particle) > 0) {
             nDOF += 3;

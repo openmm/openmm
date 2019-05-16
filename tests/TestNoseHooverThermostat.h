@@ -265,8 +265,6 @@ void runPlatformTests();
 int main(int argc, char* argv[]) {
     try {
         initializeTests(argc, argv);
-        testNHCPropagation();
-        testPropagateChainConsistentWithPythonReference();
         testHarmonicOscillator();
         bool constrain;
         constrain = false; testDimerBox(constrain);
