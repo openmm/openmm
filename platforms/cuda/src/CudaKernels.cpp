@@ -8353,7 +8353,10 @@ void CudaApplyAndersenThermostatKernel::execute(ContextImpl& context) {
 void CudaNoseHooverChainKernel::initialize() {
     cu.setAsCurrent();
 
+    bool useDouble = cu.getUseDoublePrecision() || cu.getUseMixedPrecision();
+
     map<string, string> defines;
+    defines["MIXEDEXP"] = useDouble ? "exp" : "expf";
     defines["BEGIN_YS_LOOP"] = "for(const real & ys : {1}) {";
     defines["END_YS_LOOP"] = "}";
     CUmodule module = cu.createModule(CudaKernelSources::noseHooverChain, defines, "-std=c++11");
