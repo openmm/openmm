@@ -54,6 +54,8 @@ public:
      * @param stepSize the step size with which to integrate the system (in picoseconds)
      */
     explicit VelocityVerletIntegrator(double stepSize);
+
+    virtual ~VelocityVerletIntegrator(); 
    /**
      * Advance a simulation through time by taking a series of time steps.
      * 
@@ -68,7 +70,7 @@ public:
      */
     double propagateChain(double kineticEnergy, int chainID=0);
     /**
-     * Add a Nose-Hoover Chain thermostat to control the temperature of the systeml
+     * Add a Nose-Hoover Chain thermostat to control the temperature of the system
      *
      * @param system the system to be thermostated.  Note: this must be setup, i.e. all
      *        particles should have been added, before calling this function.
@@ -79,8 +81,56 @@ public:
      * @param numYoshidaSuzuki the number of terms in the Yoshida-Suzuki multi time step decomposition
      *        used in the chain propagation algorithm (must be 1, 3, or 5).
      */
-    int addNoseHooverChainThermostat(System& system, double temperature, double collisionFrequency,
-                                     int chainLength, int numMTS, int numYoshidaSuzuki);
+     int addNoseHooverChainThermostat(System& system, double temperature, double collisionFrequency,
+                                             int chainLength, int numMTS, int numYoshidaSuzuki);
+    /**
+     * Add a Nose-Hoover Chain thermostat to control the temperature of the system
+     *
+     * @param system the system to be thermostated.  Note: this must be setup, i.e. all
+     *        particles should have been added, before calling this function.
+     * @param mask list of particle ids to be thermostated.
+     * @param parents either an empty list of a list describing the parent atoms that each thermostated
+     *        atom is connected to.
+     * @param temperature the target temperature for the system.
+     * @param collisionFrequency the frequency of the interaction with the heat bath (in 1/ps).
+     * @param chainLength the number of beads in the Nose-Hoover chain.
+     * @param numMTS the number of step in the  multiple time step chain propagation algorithm.
+     * @param numYoshidaSuzuki the number of terms in the Yoshida-Suzuki multi time step decomposition
+     *        used in the chain propagation algorithm (must be 1, 3, or 5).
+     */
+     int addMaskedNoseHooverChainThermostat(System& system, const std::vector<int>& mask, const std::vector<int>& parents,
+                                             double temperature, double collisionFrequency,
+                                             int chainLength, int numMTS, int numYoshidaSuzuki);
+    /**
+     * Get the temperature of the i-th chain (in Kelvin).
+     * 
+     * @param chainID the index of the Nose-Hoover chain (default=0).
+     * 
+     * @return the temperature.
+     */
+    double getTemperature(int chainID=0) const;
+    /**
+     * set the temperature of the i-th chain.
+     *
+     * @param temperature the temperature for the Nose-Hoover chain thermostat (in Kelvin).
+     * @param chainID The id of the Nose-Hoover chain for which the temperature is set (default=0).
+     */
+    void setTemperature(double temperature, int chainID=0);
+    /**
+     * Get the collision frequency of the i-th chain (in 1/picosecond).
+     * 
+     * @param chainID the index of the Nose-Hoover chain (default=0).
+     *
+     * @return the collision frequency.
+     */
+    double getCollisionFrequency(int chainID=0) const;
+    /**
+     * Set the collision frequency of the i-th chain.
+     *
+     * @param frequency the collision frequency in picosecond.
+     * @param chainID the index of the Nose-Hoover chain (default=0).
+     */
+    void setCollisionFrequency(double frequency, int chainID=0);
     /**
      * Compute the total (potential + kinetic) heat bath energy for all heat baths
      * associated with this integrator, at the current time.
@@ -107,9 +157,9 @@ protected:
      * Compute the kinetic energy of the system at the current time.
      */
     double computeKineticEnergy();
+    std::map<int, NoseHooverChain*> noseHooverChains;
 private:
     Kernel vvKernel, nhcKernel;
-    std::vector<NoseHooverChain*> noseHooverChains;
 };
 
 } // namespace OpenMM
