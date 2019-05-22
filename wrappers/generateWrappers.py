@@ -77,17 +77,6 @@ class WrapperGenerator:
                             'Vec3 OpenMM::LocalCoordinatesSite::getOriginWeights',
                             'Vec3 OpenMM::LocalCoordinatesSite::getXWeights',
                             'Vec3 OpenMM::LocalCoordinatesSite::getYWeights',
-                            'std::string OpenMM::NoseHooverChain::Temperature',
-                            'std::string OpenMM::NoseHooverChain::CollisionFrequency',
-                            'std::string OpenMM::NoseHooverChain::NumDegreesOfFreedom',
-                            'std::string OpenMM::NoseHooverChain::ChainLength',
-                            'std::string OpenMM::NoseHooverChain::NumMultiTimeSteps',
-                            'std::string OpenMM::NoseHooverChain::NumYoshidaSuzukiTimeSteps',
-                            'std::string OpenMM::NoseHooverChain::Force',
-                            'std::string OpenMM::NoseHooverChain::Mass',
-                            'std::string OpenMM::NoseHooverChain::Position',
-                            'std::string OpenMM::NoseHooverChain::Velocity',
-                            'std::string OpenMM::NoseHooverChain::getDefaultLabel',
                             'std::vector<double> OpenMM::NoseHooverChain::getDefaultYoshidaSuzukiWeights',
                            ] 
         self.hideClasses = ['Kernel', 'KernelImpl', 'KernelFactory', 'ContextImpl', 'SerializationNode', 'SerializationProxy']

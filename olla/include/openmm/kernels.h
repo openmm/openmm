@@ -1081,8 +1081,10 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      * @param integrator the VelocityVerletIntegrator this kernel is being used for
+     * @param forcesAreValid a reference to the parent integrator's boolean for keeping
+     *                       track of the validity of the current forces.
      */
-    virtual void execute(ContextImpl& context, const VelocityVerletIntegrator& integrator) = 0;
+    virtual void execute(ContextImpl& context, const VelocityVerletIntegrator& integrator, bool &forcesAreValid) = 0;
     /**
      * Compute the kinetic energy.
      * 

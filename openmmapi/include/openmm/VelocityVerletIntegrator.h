@@ -136,6 +136,24 @@ public:
      * associated with this integrator, at the current time.
      */
     double computeHeatBathEnergy();
+    /**
+     * Get the number of Nose-Hoover chains registered with this integrator.
+     */
+    int getNumNoseHooverChains() const {
+        return noseHooverChains.size();
+    }
+    /**
+     * This will be called by the Context when the user modifies aspects of the context state, such
+     * as positions, velocities, or parameters.  This gives the Integrator a chance to discard cached
+     * information.  This is <i>only</i> called when the user modifies information using methods of the Context
+     * object.  It is <i>not</i> called when a ForceImpl object modifies state information in its updateContextState()
+     * method (unless the ForceImpl calls a Context method to perform the modification).
+     * 
+     * @param changed     this specifies what aspect of the Context was changed
+     */
+    virtual void stateChanged(State::DataType changed) {
+       if (State::Positions == changed) forcesAreValid = false;
+    }
 
 protected:
     /**
@@ -157,7 +175,8 @@ protected:
      * Compute the kinetic energy of the system at the current time.
      */
     double computeKineticEnergy();
-    std::map<int, NoseHooverChain*> noseHooverChains;
+    std::vector<NoseHooverChain> noseHooverChains;
+    bool forcesAreValid;
 private:
     Kernel vvKernel, nhcKernel;
 };

@@ -35,6 +35,47 @@ using namespace OpenMM;
 CudaArray::CudaArray() : pointer(0), ownsMemory(false) {
 }
 
+CudaArray::CudaArray(const CudaArray &other) noexcept {
+    context = other.context;
+    pointer = other.pointer;
+    size = other.size;
+    elementSize = other.elementSize;
+    ownsMemory = false;
+    name = other.name;
+}
+
+CudaArray::CudaArray(CudaArray &&other) noexcept :
+    context(std::move(other.context)),
+    pointer(std::move(other.pointer)),
+    size(std::move(other.size)),
+    elementSize(std::move(other.elementSize)),
+    ownsMemory(false),
+    name(std::move(other.name)) { }
+
+CudaArray& CudaArray::operator =(const CudaArray& other) noexcept{
+    if(this != &other) {
+        context = other.context;
+        pointer = other.pointer;
+        size = other.size;
+        elementSize = other.elementSize;
+        ownsMemory = false;
+        name = other.name;
+    }
+    return *this;
+}
+
+CudaArray& CudaArray::operator =(CudaArray &&other) noexcept{
+    if(this != &other) {
+        context = other.context;
+        pointer = other.pointer;
+        size = other.size;
+        elementSize = other.elementSize;
+        ownsMemory = false;
+        name = other.name;
+    }
+    return *this;
+}
+
 CudaArray::CudaArray(CudaContext& context, int size, int elementSize, const std::string& name) : pointer(0) {
     initialize(context, size, elementSize, name);
 }

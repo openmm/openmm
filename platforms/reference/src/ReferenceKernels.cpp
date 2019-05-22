@@ -126,6 +126,15 @@ static map<string, double>& extractEnergyParameterDerivatives(ContextImpl& conte
     return *data->energyParameterDerivatives;
 }
 
+static vector<vector<double> >& extractNoseHooverPositions(ContextImpl& context) {
+    ReferencePlatform::PlatformData *data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());  
+    return *((vector<vector<double> >*) data->noseHooverPositions);
+}
+
+static vector<vector<double> >& extractNoseHooverVelocities(ContextImpl& context) {
+    ReferencePlatform::PlatformData *data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());  
+    return *((vector<vector<double> >*) data->noseHooverVelocities);
+}
 /**
  * Make sure an expression doesn't use any undefined variables.
  */
@@ -278,7 +287,7 @@ void ReferenceUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context,
 }
 
 void ReferenceUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostream& stream) {
-    int version = 2;
+    int version = 3;
     stream.write((char*) &version, sizeof(int));
     stream.write((char*) &data.time, sizeof(data.time));
     vector<Vec3>& posData = extractPositions(context);
@@ -287,13 +296,27 @@ void ReferenceUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostr
     stream.write((char*) &velData[0], sizeof(Vec3)*velData.size());
     Vec3* vectors = extractBoxVectors(context);
     stream.write((char*) vectors, 3*sizeof(Vec3));
+    auto& allNoseHooverPositions = extractNoseHooverPositions(context);
+    auto& allNoseHooverVelocities = extractNoseHooverVelocities(context);
+    size_t numChains = allNoseHooverPositions.size();
+    assert(numChains == allNoseHooverVelocities.size());
+    stream.write((char*) &numChains, sizeof(size_t));
+    for (size_t i=0; i<numChains; i++){
+        auto & noseHooverPositions = allNoseHooverPositions.at(i);
+        auto & noseHooverVelocities = allNoseHooverVelocities.at(i);
+        size_t numBeads = noseHooverPositions.size();
+        assert(numBeads == noseHooverVelocities.size());
+        stream.write((char*) &numBeads, sizeof(size_t));
+        stream.write((char*) noseHooverPositions.data(), sizeof(double)*numBeads);
+        stream.write((char*) noseHooverVelocities.data(), sizeof(double)*numBeads);
+    }
     SimTKOpenMMUtilities::createCheckpoint(stream);
 }
 
 void ReferenceUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& stream) {
     int version;
     stream.read((char*) &version, sizeof(int));
-    if (version != 2)
+    if (version != 3)
         throw OpenMMException("Checkpoint was created with a different version of OpenMM");
     stream.read((char*) &data.time, sizeof(data.time));
     vector<Vec3>& posData = extractPositions(context);
@@ -302,6 +325,21 @@ void ReferenceUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istrea
     stream.read((char*) &velData[0], sizeof(Vec3)*velData.size());
     Vec3* vectors = extractBoxVectors(context);
     stream.read((char*) vectors, 3*sizeof(Vec3));
+    size_t numChains, numBeads;
+    auto& allNoseHooverPositions = extractNoseHooverPositions(context);
+    auto& allNoseHooverVelocities = extractNoseHooverVelocities(context);
+    stream.read((char*) &numChains, sizeof(size_t));
+    allNoseHooverPositions.clear();
+    allNoseHooverVelocities.clear();
+    for (size_t i=0; i<numChains; i++){
+        stream.read((char*) &numBeads, sizeof(size_t));
+        std::vector<double> noseHooverPositions(numBeads);
+        std::vector<double> noseHooverVelocities(numBeads);
+        stream.read((char*) &noseHooverPositions[0], sizeof(double)*numBeads);
+        stream.read((char*) &noseHooverVelocities[0], sizeof(double)*numBeads);
+        allNoseHooverPositions.push_back(noseHooverPositions);
+        allNoseHooverVelocities.push_back(noseHooverVelocities);
+    }
     SimTKOpenMMUtilities::loadCheckpoint(stream);
 }
 
@@ -2119,7 +2157,7 @@ void ReferenceIntegrateVelocityVerletStepKernel::initialize(const System& system
         masses[i] = system.getParticleMass(i);
 }
 
-void ReferenceIntegrateVelocityVerletStepKernel::execute(ContextImpl& context, const VelocityVerletIntegrator& integrator) {
+void ReferenceIntegrateVelocityVerletStepKernel::execute(ContextImpl& context, const VelocityVerletIntegrator& integrator, bool &forcesAreValid) {
     double stepSize = integrator.getStepSize();
     vector<Vec3>& posData = extractPositions(context);
     vector<Vec3>& velData = extractVelocities(context);
@@ -2132,7 +2170,7 @@ void ReferenceIntegrateVelocityVerletStepKernel::execute(ContextImpl& context, c
         dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
         prevStepSize = stepSize;
     }
-    dynamics->update(context, context.getSystem(), posData, velData, forceData, masses, integrator.getConstraintTolerance());
+    dynamics->update(context, context.getSystem(), posData, velData, forceData, masses, integrator.getConstraintTolerance(), forcesAreValid);
     data.time += stepSize;
     data.stepCount++;
 }
@@ -2436,27 +2474,32 @@ double ReferenceNoseHooverChainKernel::propagateChain(ContextImpl& context, cons
     if (kineticEnergy < 1e-8) return 1.0;  // (catches the problem of zero velocities in the first dynamics step, where we have nothing to scale)
     // Get the variables describing the NHC
     int chainLength = nhc.getDefaultChainLength();
+    int chainID = nhc.getDefaultChainID();
     double temperature = nhc.getDefaultTemperature();
     double collisionFrequency = nhc.getDefaultCollisionFrequency();
     int numDOFs = nhc.getDefaultNumDegreesOfFreedom();
     int numMTS = nhc.getDefaultNumMultiTimeSteps();
 
     // Get the state of the NHC from the context
-    std::vector<double> chainPositions(chainLength), chainVelocities(chainLength);
-    for(int i = 0; i < chainLength; ++i) {
-        chainPositions[i] = context.getParameter(nhc.Position(i));
-        chainVelocities[i] = context.getParameter(nhc.Velocity(i));
+    auto& allChainPositions = extractNoseHooverPositions(context);
+    auto& allChainVelocities = extractNoseHooverVelocities(context);
+    if (allChainPositions.size() < chainID+1){
+        allChainPositions.resize(chainID+1);
+    }
+    if (allChainVelocities.size() < chainID+1){
+        allChainVelocities.resize(chainID+1);
+    }
+    auto& chainPositions = allChainPositions.at(chainID);
+    auto& chainVelocities = allChainVelocities.at(chainID);
+    if (chainPositions.size() < chainLength){
+        chainPositions.resize(chainLength, 0);
+    }
+    if (chainVelocities.size() < chainLength){
+        chainVelocities.resize(chainLength, 0);
     }
     double scale = chainPropagator->propagate(kineticEnergy, chainVelocities, chainPositions, numDOFs,
                                               temperature, collisionFrequency, timeStep,
                                               numMTS, nhc.getDefaultYoshidaSuzukiWeights());
-
-    // Update the state of the NHC in the context
-    for(int i = 0; i < chainLength; ++i) {
-        context.setParameter(nhc.Position(i), chainPositions[i]);
-        context.setParameter(nhc.Velocity(i), chainVelocities[i]);
-    }
-
     return scale;
 }
 
@@ -2464,18 +2507,21 @@ double ReferenceNoseHooverChainKernel::computeHeatBathEnergy(ContextImpl& contex
     double potentialEnergy = 0;
     double kineticEnergy = 0;
     int chainLength = nhc.getDefaultChainLength();
+    int chainID = nhc.getDefaultChainID();
     double temperature = nhc.getDefaultTemperature();
     double collisionFrequency = nhc.getDefaultCollisionFrequency();
     double kT = temperature * BOLTZ;
     int numDOFs = nhc.getDefaultNumDegreesOfFreedom();
+    auto& nhcPositions = extractNoseHooverPositions(context);
+    auto& nhcVelocities = extractNoseHooverVelocities(context);
     for(int i = 0; i < chainLength; ++i) {
         double prefac = i ? 1 : numDOFs;
         double mass = prefac * kT / (collisionFrequency * collisionFrequency);
-        double velocity = context.getParameter(nhc.Velocity(i));
+        double velocity = nhcVelocities[chainID][i];
         // The kinetic energy of this bead
         kineticEnergy += 0.5 * mass * velocity * velocity;
         // The potential energy of this bead
-        double position = context.getParameter(nhc.Position(i));
+        double position = nhcPositions[chainID][i];
         potentialEnergy += prefac * kT * position;
     }
     return kineticEnergy + potentialEnergy;
@@ -2485,7 +2531,6 @@ double ReferenceNoseHooverChainKernel::computeMaskedKineticEnergy(ContextImpl& c
     const std::vector<int>& mask = noseHooverChain.getThermostatedAtoms();
     const std::vector<int>& parents = noseHooverChain.getParentAtoms();
     std::vector<Vec3>& velocities = extractVelocities(context);
-    // TODO move these bad boys into the class
     const System& system = context.getSystem();
     int numParticles = system.getNumParticles();
     std::vector<double> masses(numParticles);

@@ -77,59 +77,61 @@ ReferenceVelocityVerletDynamics::~ReferenceVelocityVerletDynamics() {
 
 void ReferenceVelocityVerletDynamics::update(OpenMM::ContextImpl &context, const OpenMM::System& system, vector<Vec3>& atomCoordinates,
                                           vector<Vec3>& velocities,
-                                          vector<Vec3>& forces, vector<double>& masses, double tolerance) {
-   // first-time-through initialization
+                                          vector<Vec3>& forces, vector<double>& masses, double tolerance, bool &forcesAreValid) {
 
-   int numberOfAtoms = system.getNumParticles();
-   if (getTimeStep() == 0) {
-      // invert masses
+    // first-time-through initialization
+    if (!forcesAreValid) context.calcForcesAndEnergy(true, false);
 
-      for (int ii = 0; ii < numberOfAtoms; ii++) {
-         if (masses[ii] == 0.0)
-             inverseMasses[ii] = 0.0;
-         else
-             inverseMasses[ii] = 1.0/masses[ii];
-      }
-   }
+    int numberOfAtoms = system.getNumParticles();
+    if (getTimeStep() == 0) {
+       // invert masses
 
-   // Perform the integration.
+       for (int ii = 0; ii < numberOfAtoms; ii++) {
+          if (masses[ii] == 0.0)
+              inverseMasses[ii] = 0.0;
+          else
+              inverseMasses[ii] = 1.0/masses[ii];
+       }
+    }
 
-   for (int i = 0; i < numberOfAtoms; ++i) {
-       if (masses[i] != 0.0)
-           for (int j = 0; j < 3; ++j) {
-               velocities[i][j] += 0.5 * inverseMasses[i]*forces[i][j]*getDeltaT();
-               xPrime[i][j] = atomCoordinates[i][j];
-               atomCoordinates[i][j] += velocities[i][j]*getDeltaT();
-           }
-   }
+    // Perform the integration.
 
-   // 
+    for (int i = 0; i < numberOfAtoms; ++i) {
+        if (masses[i] != 0.0)
+            for (int j = 0; j < 3; ++j) {
+                velocities[i][j] += 0.5 * inverseMasses[i]*forces[i][j]*getDeltaT();
+                xPrime[i][j] = atomCoordinates[i][j];
+                atomCoordinates[i][j] += velocities[i][j]*getDeltaT();
+            }
+    }
+   
+    // 
 
-   ReferenceConstraintAlgorithm* referenceConstraintAlgorithm = getReferenceConstraintAlgorithm();
-   if (referenceConstraintAlgorithm)
-      referenceConstraintAlgorithm->apply(xPrime, atomCoordinates, inverseMasses, tolerance);
+    ReferenceConstraintAlgorithm* referenceConstraintAlgorithm = getReferenceConstraintAlgorithm();
+    if (referenceConstraintAlgorithm)
+       referenceConstraintAlgorithm->apply(xPrime, atomCoordinates, inverseMasses, tolerance);
 
-   ReferenceVirtualSites::computePositions(system, atomCoordinates);
+    ReferenceVirtualSites::computePositions(system, atomCoordinates);
+    context.calcForcesAndEnergy(true, false);
+    forcesAreValid = true;
 
-   context.calcForcesAndEnergy(true, false);
+    for (int i = 0; i < numberOfAtoms; ++i) {
+        if (masses[i] != 0.0)
+            for (int j = 0; j < 3; ++j) {
+                xPrime[i][j] += velocities[i][j]*getDeltaT();
+            }
+    }
 
-   for (int i = 0; i < numberOfAtoms; ++i) {
-       if (masses[i] != 0.0)
-           for (int j = 0; j < 3; ++j) {
-               xPrime[i][j] += velocities[i][j]*getDeltaT();
-           }
-   }
+    // Update the positions and velocities.
 
-   // Update the positions and velocities.
+    for (int i = 0; i < numberOfAtoms; ++i) {
+        if (masses[i] != 0.0)
+            for (int j = 0; j < 3; ++j) {
+                velocities[i][j] += 0.5*inverseMasses[i]*forces[i][j]*getDeltaT() + (atomCoordinates[i][j] - xPrime[i][j]) / getDeltaT();
+            }
+    }
+    if (referenceConstraintAlgorithm)
+       referenceConstraintAlgorithm->applyToVelocities(atomCoordinates, velocities, inverseMasses, tolerance);
 
-   for (int i = 0; i < numberOfAtoms; ++i) {
-       if (masses[i] != 0.0)
-           for (int j = 0; j < 3; ++j) {
-               velocities[i][j] += 0.5*inverseMasses[i]*forces[i][j]*getDeltaT() + (atomCoordinates[i][j] - xPrime[i][j]) / getDeltaT();
-           }
-   }
-   if (referenceConstraintAlgorithm)
-      referenceConstraintAlgorithm->applyToVelocities(atomCoordinates, velocities, inverseMasses, tolerance);
-
-   incrementTimeStep();
+    incrementTimeStep();
 }

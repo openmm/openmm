@@ -70,11 +70,12 @@ class ReferenceVelocityVerletDynamics : public ReferenceDynamics {
          @param forces              forces
          @param masses              atom masses
          @param tolerance           the constraint tolerance
+         @param forcesAreValid      whether the forces are valid (duh!)
       
          --------------------------------------------------------------------------------------- */
      
       void update(OpenMM::ContextImpl &context, const OpenMM::System& system, std::vector<OpenMM::Vec3>& atomCoordinates,
-                  std::vector<OpenMM::Vec3>& velocities, std::vector<OpenMM::Vec3>& forces, std::vector<double>& masses, double tolerance);
+                  std::vector<OpenMM::Vec3>& velocities, std::vector<OpenMM::Vec3>& forces, std::vector<double>& masses, double tolerance, bool &forcesAreValid);
       
 };
 

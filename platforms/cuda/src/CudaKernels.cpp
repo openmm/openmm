@@ -37,7 +37,6 @@
 #include "openmm/internal/CustomManyParticleForceImpl.h"
 #include "openmm/internal/CustomNonbondedForceImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
-#include "openmm/internal/NoseHooverChainImpl.h"
 #include "openmm/internal/OSRngSeed.h"
 #include "CudaBondedUtilities.h"
 #include "CudaExpressionUtilities.h"
@@ -7087,13 +7086,15 @@ void CudaIntegrateVelocityVerletStepKernel::initialize(const System& system, con
     kernel3 = cu.getKernel(module, "integrateVelocityVerletPart3");
 }
 
-void CudaIntegrateVelocityVerletStepKernel::execute(ContextImpl& context, const VelocityVerletIntegrator& integrator) {
+void CudaIntegrateVelocityVerletStepKernel::execute(ContextImpl& context, const VelocityVerletIntegrator& integrator, bool &forcesAreValid) {
     cu.setAsCurrent();
     CudaIntegrationUtilities& integration = cu.getIntegrationUtilities();
     int numAtoms = cu.getNumAtoms();
     int paddedNumAtoms = cu.getPaddedNumAtoms();
     double dt = integrator.getStepSize();
     cu.getIntegrationUtilities().setNextStepSize(dt);
+
+    if( !forcesAreValid ) context.calcForcesAndEnergy(true, false);
 
     //// Call the first integration kernel.
 
@@ -7116,6 +7117,7 @@ void CudaIntegrateVelocityVerletStepKernel::execute(ContextImpl& context, const 
 
     //// Update forces
     context.calcForcesAndEnergy(true, false);
+    forcesAreValid = true;
 
     //// Call the third integration kernel.
 
@@ -8390,16 +8392,16 @@ double CudaNoseHooverChainKernel::propagateChain(ContextImpl& context, const Nos
 
     auto & chainState = cu.getIntegrationUtilities().getNoseHooverChainState();
     if (chainID >= chainState.size()) chainState.resize(chainID+1);
-    if (!chainState[chainID].isInitialized() || chainState[chainID].getSize() != chainLength) {
+    if (!chainState.at(chainID).isInitialized() || chainState.at(chainID).getSize() != chainLength) {
         // We need to upload the CUDA array
         if(useDouble){
-            chainState[chainID].initialize<double2>(cu, chainLength, "chainState" + std::to_string(chainID));
+            chainState.at(chainID).initialize<double2>(cu, chainLength, "chainState" + std::to_string(chainID));
             std::vector<double2> zeros(chainLength, make_double2(0, 0));
-            chainState[chainID].upload(zeros.data());
+            chainState.at(chainID).upload(zeros.data());
         } else {
-            chainState[chainID].initialize<float2>(cu, chainLength, "chainState" + std::to_string(chainID));
+            chainState.at(chainID).initialize<float2>(cu, chainLength, "chainState" + std::to_string(chainID));
             std::vector<float2> zeros(chainLength, make_float2(0, 0));
-            chainState[chainID].upload(zeros.data());
+            chainState.at(chainID).upload(zeros.data());
         }
     }
 
@@ -8415,21 +8417,22 @@ double CudaNoseHooverChainKernel::propagateChain(ContextImpl& context, const Nos
         }
     }
 
-    if (!chainForces.isInitialized() || !chainMasses.isInitialized() || chainForces.getSize() < chainLength || chainMasses.getSize() < chainLength) {
+    std::vector<double> zeros(chainLength,0);
+    if (!chainForces.isInitialized() || !chainMasses.isInitialized() ){
         if(useDouble){
-            std::vector<double> zeros(chainLength,0);
             chainMasses.initialize<double>(cu, chainLength, "chainMasses");
             chainForces.initialize<double>(cu, chainLength, "chainForces");
             chainMasses.upload(zeros);
             chainForces.upload(zeros);
         } else {
-            std::vector<float> zeros(chainLength,0);
             chainMasses.initialize<float>(cu, chainLength, "chainMasses");
             chainForces.initialize<float>(cu, chainLength, "chainForces");
             chainMasses.upload(zeros);
             chainForces.upload(zeros);
         }
     }
+    if (chainForces.getSize() < chainLength) chainMasses.resize(chainLength);
+    if (chainMasses.getSize() < chainLength) chainMasses.resize(chainLength);
     double kT = BOLTZ * temperature;
     float kTfloat = (float) kT;
     float timeStepFloat = (float) timeStep;
@@ -8511,7 +8514,7 @@ double CudaNoseHooverChainKernel::computeMaskedKineticEnergy(ContextImpl& contex
     const auto & thermostatedAtoms = nhc.getThermostatedAtoms();
     if (chainID >= masks.size()) masks.resize(chainID+1);
     auto nAtoms = cu.getPaddedNumAtoms();
-    if (!masks[chainID].isInitialized()) { 
+    if (!masks.at(chainID).isInitialized()) { 
         // We need to upload the CUDA array
         std::vector<int> maskVec(nAtoms);
         for (int i = 0; i < nAtoms; ++i) maskVec[i] = i;
@@ -8531,8 +8534,8 @@ double CudaNoseHooverChainKernel::computeMaskedKineticEnergy(ContextImpl& contex
         for(int i = thermostatedAtoms.size(); i < nAtoms; ++i){
             maskVec[i] = i;
         }
-        masks[chainID].initialize<int>(cu, nAtoms, "mask" + std::to_string(chainID));
-        masks[chainID].upload(maskVec);
+        masks.at(chainID).initialize<int>(cu, nAtoms, "mask" + std::to_string(chainID));
+        masks.at(chainID).upload(maskVec);
     }
     if (masks[chainID].getSize() != nAtoms) {
         throw OpenMMException("Number of atoms changed. Cannot be handled by the same Nose-Hoover thermostat.");

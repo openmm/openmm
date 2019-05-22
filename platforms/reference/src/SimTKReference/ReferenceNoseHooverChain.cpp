@@ -26,7 +26,6 @@
 #include <string.h>
 #include <sstream>
 #include <exception>
-#include <iostream>
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceNoseHooverChain.h"
 

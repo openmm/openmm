@@ -33,6 +33,7 @@
 #include "openmm/NoseHooverChain.h"
 #include "openmm/VelocityVerletIntegrator.h"
 #include "openmm/Context.h"
+#include "openmm/State.h"
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/CustomExternalForce.h"
@@ -40,9 +41,11 @@
 #include "SimTKOpenMMRealType.h"
 #include "sfmt/SFMT.h"
 #include <iostream>
+#include <sstream>
 #include <iomanip>
 #include <vector>
 #include <algorithm>
+#include <numeric>
 
 using namespace OpenMM;
 using namespace std;
@@ -260,6 +263,67 @@ void testPropagateChainConsistentWithPythonReference() {
     ASSERT_EQUAL_TOL(0.9674732261005896, scale, 1e-5)
 }
 
+
+void testCheckpoints() {
+    VelocityVerletIntegrator integrator(0.001);
+    System system;
+    double mass = 1;
+    system.addParticle(mass);
+    system.addParticle(mass);
+    NonbondedForce* force = new NonbondedForce();
+    force->addParticle(0, 0.1, 1.0);
+    force->addParticle(0, 0.1, 1.0);
+    system.addForce(force);
+    double kineticEnergy = 1e6;
+    double temperature=300, collisionFrequency=1, chainLength=3, numMTS=3, numYS=3;
+    integrator.addMaskedNoseHooverChainThermostat(system, std::vector<int>(1,0), std::vector<int>(), temperature, collisionFrequency,
+                                                                  chainLength, numMTS, numYS);
+    chainLength = 10;
+    integrator.addMaskedNoseHooverChainThermostat(system, std::vector<int>(1,1),  std::vector<int>(1,0), 
+                                                                  temperature, collisionFrequency,
+                                                                  chainLength, numMTS, numYS);
+    Context context(system, integrator, platform);
+    std::vector<Vec3> positions(2);
+    positions[1] = {0.1,0.1,0.1};
+    context.setPositions(positions);
+    integrator.step(300);
+#if DEBUG
+    std::cout << std::endl << std::endl << std::endl << "writing checkpoint";
+#endif
+    std::stringstream checkpoint; 
+    context.createCheckpoint(checkpoint);
+    
+    State state = context.getState(State::Positions | State::Velocities);
+    for (size_t i=0; i<100; i++){
+        state = context.getState(State::Positions | State::Velocities);
+#if DEBUG
+        std::cout << "posvel" << state.getPositions()[0] << " " << state.getVelocities()[0] << std::endl;
+#endif
+        integrator.step(1);
+    }
+#if DEBUG
+    std::cout << std::endl << std::endl << "loading checkpoint" << std::endl;
+#endif
+    context.loadCheckpoint(checkpoint);
+
+    
+    State state2 = context.getState(State::Positions | State::Velocities);
+    for (size_t i=0; i<100; i++){
+        state2 = context.getState(State::Positions | State::Velocities);
+#if DEBUG
+        std::cout << "posvel" << state2.getPositions()[0] << " " << state2.getVelocities()[0] << std::endl;
+#endif
+        integrator.step(1);
+    }
+
+    for (int i=0; i<3;i++){
+        ASSERT_EQUAL_VEC(state.getPositions()[0], state2.getPositions()[0], 1e-6); 
+        ASSERT_EQUAL_VEC(state.getPositions()[1], state2.getPositions()[1], 1e-6); 
+        ASSERT_EQUAL_VEC(state.getVelocities()[0], state2.getVelocities()[0], 1e-6); 
+        ASSERT_EQUAL_VEC(state.getVelocities()[1], state2.getVelocities()[1], 1e-6); 
+    }
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -269,6 +333,7 @@ int main(int argc, char* argv[]) {
         bool constrain;
         constrain = false; testDimerBox(constrain);
         constrain = true; testDimerBox(constrain);
+        testCheckpoints();
         runPlatformTests();
     }
     catch(const exception& e) {

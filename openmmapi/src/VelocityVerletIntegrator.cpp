@@ -46,7 +46,9 @@ using namespace OpenMM;
 using std::string;
 using std::vector;
 
-VelocityVerletIntegrator::VelocityVerletIntegrator(double stepSize) {
+VelocityVerletIntegrator::VelocityVerletIntegrator(double stepSize):
+    forcesAreValid(false)
+{
     setStepSize(stepSize);
     setConstraintTolerance(1e-5);
 }
@@ -54,7 +56,7 @@ VelocityVerletIntegrator::VelocityVerletIntegrator(double stepSize) {
 VelocityVerletIntegrator::~VelocityVerletIntegrator() {}
 
 double VelocityVerletIntegrator::propagateChain(double kineticEnergy, int chainID) {
-    return nhcKernel.getAs<NoseHooverChainKernel>().propagateChain(*context, *noseHooverChains.at(chainID), kineticEnergy, getStepSize());
+    return nhcKernel.getAs<NoseHooverChainKernel>().propagateChain(*context, noseHooverChains.at(chainID), kineticEnergy, getStepSize());
 }
 
 int VelocityVerletIntegrator::addNoseHooverChainThermostat(System& system, double temperature, double collisionFrequency,
@@ -112,42 +114,25 @@ int VelocityVerletIntegrator::addMaskedNoseHooverChainThermostat(System& system,
         }
     }
 
-    // figure out the chain ID
-    std::vector<int> takenIDs;
-    for (int forceNum = 0; forceNum < numForces; ++forceNum){
-        const auto & other_nhc = dynamic_cast<NoseHooverChain*>(&system.getForce(forceNum));
-        if (other_nhc){
-            takenIDs.push_back(other_nhc->getDefaultChainID());
-        }
-    }
-    int chainID = 0;
-    while (true) {
-        bool isChainIDTaken = (std::find(takenIDs.begin(), takenIDs.end(), chainID) != takenIDs.end());
-        bool isChainIDRegistered = (noseHooverChains.find(chainID) != noseHooverChains.end());
-        if (isChainIDTaken || isChainIDRegistered) {
-            chainID ++; 
-        } else {
-            break;
-        }
-    }
-    auto nhcForce = new NoseHooverChain(temperature, collisionFrequency, nDOF, chainLength,
-                                        numMTS, numYoshidaSuzuki, chainID,
-                                        thermostatedParticles, parentParticles);
-
     // make sure that thermostats do not overlap 
     for (auto &other_nhc: noseHooverChains) {
         for (auto &particle: mask){
-            bool isParticleInOtherChain = (std::find(other_nhc.second->getThermostatedAtoms().begin(), 
-                                                    other_nhc.second->getThermostatedAtoms().end(),
-                                                    particle) == other_nhc.second->getThermostatedAtoms().begin());
+            bool isParticleInOtherChain = (std::find(other_nhc.getThermostatedAtoms().begin(), 
+                                                    other_nhc.getThermostatedAtoms().end(),
+                                                    particle) == other_nhc.getThermostatedAtoms().begin());
             if (isParticleInOtherChain){
                 throw OpenMMException("Found particle " + std::to_string(particle) + "in a different NoseHooverChain, "
                                       "but particles can only be thermostated by one thermostat.");
             }
         }
     }
-    system.addForce(nhcForce);
-    noseHooverChains[chainID] = nhcForce;
+
+    // create and add new chain 
+    int chainID = noseHooverChains.size();
+    auto nhc = NoseHooverChain(temperature, collisionFrequency, nDOF, chainLength,
+                                    numMTS, numYoshidaSuzuki, chainID,
+                                    thermostatedParticles, parentParticles);
+    noseHooverChains.push_back(nhc);
     return chainID;
 }
 
@@ -157,7 +142,7 @@ double VelocityVerletIntegrator::getTemperature(int chainID) const {
                 + ". Only " + std::to_string(noseHooverChains.size()) + " have been registered with this integrator."
         );
     }
-    return noseHooverChains.at(chainID)->getDefaultTemperature();
+    return noseHooverChains.at(chainID).getDefaultTemperature();
 }
 
 void VelocityVerletIntegrator::setTemperature(double temperature, int chainID){
@@ -166,7 +151,7 @@ void VelocityVerletIntegrator::setTemperature(double temperature, int chainID){
                 + ". Only " + std::to_string(noseHooverChains.size()) + " have been registered with this integrator."
         );
     }
-    noseHooverChains.at(chainID)->setDefaultTemperature(temperature);
+    noseHooverChains.at(chainID).setDefaultTemperature(temperature);
 
 }
 
@@ -176,7 +161,7 @@ double VelocityVerletIntegrator::getCollisionFrequency(int chainID) const {
                 + ". Only " + std::to_string(noseHooverChains.size()) + " have been registered with this integrator."
         );
     }
-    return noseHooverChains.at(chainID)->getDefaultCollisionFrequency();
+    return noseHooverChains.at(chainID).getDefaultCollisionFrequency();
 } 
 void VelocityVerletIntegrator::setCollisionFrequency(double frequency, int chainID){
     if (chainID >= noseHooverChains.size()) {
@@ -184,7 +169,7 @@ void VelocityVerletIntegrator::setCollisionFrequency(double frequency, int chain
                 + ". Only " + std::to_string(noseHooverChains.size()) + " have been registered with this integrator."
         );
     }
-    noseHooverChains.at(chainID)->setDefaultCollisionFrequency(frequency);
+    noseHooverChains.at(chainID).setDefaultCollisionFrequency(frequency);
 }
 
 double VelocityVerletIntegrator::computeKineticEnergy() {
@@ -195,7 +180,7 @@ double VelocityVerletIntegrator::computeKineticEnergy() {
 double VelocityVerletIntegrator::computeHeatBathEnergy() {
     double energy = 0;
     for(auto &nhc : noseHooverChains) {
-        energy += nhcKernel.getAs<NoseHooverChainKernel>().computeHeatBathEnergy(*context, *nhc.second);
+        energy += nhcKernel.getAs<NoseHooverChainKernel>().computeHeatBathEnergy(*context, nhc);
     }
     return energy;
 }
@@ -209,6 +194,7 @@ void VelocityVerletIntegrator::initialize(ContextImpl& contextRef) {
     vvKernel.getAs<IntegrateVelocityVerletStepKernel>().initialize(contextRef.getSystem(), *this);
     nhcKernel = context->getPlatform().createKernel(NoseHooverChainKernel::Name(), contextRef);
     nhcKernel.getAs<NoseHooverChainKernel>().initialize();
+    forcesAreValid = false;
 }
 
 void VelocityVerletIntegrator::cleanup() {
@@ -230,15 +216,15 @@ void VelocityVerletIntegrator::step(int steps) {
     for (int i = 0; i < steps; ++i) {
         context->updateContextState();
         for(auto &nhc : noseHooverChains) {
-            kineticEnergy = nhcKernel.getAs<NoseHooverChainKernel>().computeMaskedKineticEnergy(*context, *nhc.second);
-            scale = nhcKernel.getAs<NoseHooverChainKernel>().propagateChain(*context, *nhc.second, kineticEnergy, getStepSize());
-            nhcKernel.getAs<NoseHooverChainKernel>().scaleVelocities(*context, *nhc.second, scale);
+            kineticEnergy = nhcKernel.getAs<NoseHooverChainKernel>().computeMaskedKineticEnergy(*context, nhc);
+            scale = nhcKernel.getAs<NoseHooverChainKernel>().propagateChain(*context, nhc, kineticEnergy, getStepSize());
+            nhcKernel.getAs<NoseHooverChainKernel>().scaleVelocities(*context, nhc, scale);
         }
-        vvKernel.getAs<IntegrateVelocityVerletStepKernel>().execute(*context, *this);
+        vvKernel.getAs<IntegrateVelocityVerletStepKernel>().execute(*context, *this, forcesAreValid);
         for(auto &nhc : noseHooverChains) {
-            kineticEnergy = nhcKernel.getAs<NoseHooverChainKernel>().computeMaskedKineticEnergy(*context, *nhc.second);
-            scale = nhcKernel.getAs<NoseHooverChainKernel>().propagateChain(*context, *nhc.second, kineticEnergy, getStepSize());
-            nhcKernel.getAs<NoseHooverChainKernel>().scaleVelocities(*context, *nhc.second, scale);
+            kineticEnergy = nhcKernel.getAs<NoseHooverChainKernel>().computeMaskedKineticEnergy(*context, nhc);
+            scale = nhcKernel.getAs<NoseHooverChainKernel>().propagateChain(*context, nhc, kineticEnergy, getStepSize());
+            nhcKernel.getAs<NoseHooverChainKernel>().scaleVelocities(*context, nhc, scale);
         }
     }
 }

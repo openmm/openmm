@@ -71,6 +71,10 @@ public:
      * @param name              the name of the array
      */
     CudaArray(CudaContext& context, int size, int elementSize, const std::string& name);
+    CudaArray(const CudaArray &other) noexcept;
+    CudaArray& operator=(CudaArray &&other) noexcept;
+    CudaArray& operator=(const CudaArray& other) noexcept;
+    CudaArray(CudaArray &&other) noexcept ; 
     ~CudaArray();
     /**
      * Initialize this object.

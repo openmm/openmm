@@ -51,20 +51,8 @@ namespace OpenMM {
  * the number of MTS steps multiplied by the number of terms in the Yoshida-Suzuki decomposition.
  */
 
-class OPENMM_EXPORT NoseHooverChain : public Force {
+class OPENMM_EXPORT NoseHooverChain {
 public:
-    /**
-     * This is the name of the parameter that stores the position of the ith bead
-     */
-    std::string Position(int i) const {
-        return std::to_string(defaultChainID) + "NoseHooverChainPosition" + std::to_string(i);
-    }
-    /**
-     * This is the name of the parameter that stores the velocity of the ith bead
-     */
-    std::string Velocity(int i) const {
-        return std::to_string(defaultChainID) + "NoseHooverChainVelocity" + std::to_string(i);
-    }
     /**
      * Create a NoseHooverChain.
      * 
@@ -257,8 +245,6 @@ public:
     bool usesPeriodicBoundaryConditions() const {
         return false;
     }
-protected:
-    ForceImpl* createImpl() const;
 private:
     double defaultTemp, defaultFreq; //, defaultTimeStep;
     int defaultNumDOFs, defaultChainLength, defaultNumMTS, defaultNumYS;

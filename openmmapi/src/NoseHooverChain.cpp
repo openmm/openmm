@@ -30,7 +30,6 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/NoseHooverChain.h"
-#include "openmm/internal/NoseHooverChainImpl.h"
 #include "openmm/OpenMMException.h"
 
 using namespace OpenMM;
@@ -44,9 +43,6 @@ NoseHooverChain::NoseHooverChain(double defaultTemperature, double defaultCollis
         defaultChainID(defaultChainID), thermostatedAtoms(thermostatedAtoms), parentAtoms(parentAtoms) 
 {}
 
-ForceImpl* NoseHooverChain::createImpl() const {
-    return new NoseHooverChainImpl(*this);
-}
 
 std::vector<double> NoseHooverChain::getDefaultYoshidaSuzukiWeights() const {
     switch (defaultNumYS) {
