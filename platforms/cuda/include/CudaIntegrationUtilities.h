@@ -30,6 +30,7 @@
 #include "openmm/System.h"
 #include "CudaContext.h"
 #include "windowsExportCuda.h"
+#include <map>
 #include <iosfwd>
 
 namespace OpenMM {
@@ -125,7 +126,7 @@ public:
      * 
      * @return  vector of chain states
      */
-    std::vector<CudaArray>& getNoseHooverChainState();
+    std::map<int, CudaArray>& getNoseHooverChainState();
 private:
     void applyConstraints(bool constrainVelocities, double tol);
     CudaContext& context;
@@ -174,7 +175,7 @@ private:
     double2 lastStepSize;
     struct ShakeCluster;
     struct ConstraintOrderer;
-    std::vector<CudaArray> noseHooverChainState;
+    std::map<int, CudaArray> noseHooverChainState;
 };
 
 } // namespace OpenMM

@@ -35,7 +35,10 @@
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/DrudeKernels.h"
 #include "openmm/DrudeForce.h"
+#include "openmm/CMMotionRemover.h"
+#include "openmm/kernels.h"
 #include <ctime>
+#include <iostream>
 #include <string>
 #include <set>
 
@@ -63,19 +66,18 @@ int DrudeVelocityVerletIntegrator::addDrudeNoseHooverChainThermostat(System& sys
     std::set<int> realParticlesSet; 
     vector<int> realParticles, drudeParticles, drudeParents;
     for (int i = 0; i < system.getNumParticles(); i++) {
-        realParticlesSet.insert(i); 
+        if (system.getParticleMass(i) > 0.0) realParticlesSet.insert(i); 
     }
     for (int i = 0; i < drudeForce->getNumParticles(); i++) {
         int p, p1, p2, p3, p4;
         double charge, polarizability, aniso12, aniso34;
         drudeForce->getParticleParameters(i, p, p1, p2, p3, p4, charge, polarizability, aniso12, aniso34);
         realParticlesSet.erase(p);
-        realParticlesSet.erase(p1);
         drudeParticles.push_back(p);
         drudeParents.push_back(p1);
     }
     for(const auto &p : realParticlesSet) realParticles.push_back(p);
-
+    
     addMaskedNoseHooverChainThermostat(system, realParticles, vector<int>(), temperature, collisionFrequency,
                                       chainLength, numMTS, numYoshidaSuzuki);
     addMaskedNoseHooverChainThermostat(system, drudeParticles, drudeParents, drudeTemperature, drudeCollisionFrequency,
@@ -84,19 +86,44 @@ int DrudeVelocityVerletIntegrator::addDrudeNoseHooverChainThermostat(System& sys
 }
 
 void DrudeVelocityVerletIntegrator::initialize(ContextImpl& contextRef) {
+    VelocityVerletIntegrator::initialize(contextRef);
     if (owner != NULL && &contextRef.getOwner() != owner)
         throw OpenMMException("This Integrator is already bound to a context");
     const DrudeForce* drudeForce = NULL;
     const System& system = contextRef.getSystem();
-    for (int i = 0; i < system.getNumForces(); i++)
+    bool hasCMMotionRemover = false;
+    for (int i = 0; i < system.getNumForces(); i++){
         if (dynamic_cast<const DrudeForce*>(&system.getForce(i)) != NULL) {
             if (drudeForce == NULL)
                 drudeForce = dynamic_cast<const DrudeForce*>(&system.getForce(i));
             else
                 throw OpenMMException("The System contains multiple DrudeForces");
         }
+        if (dynamic_cast<const CMMotionRemover*>(&system.getForce(i))) {
+            hasCMMotionRemover = true;
+        }
+    }
     if (drudeForce == NULL)
         throw OpenMMException("The System does not contain a DrudeForce");
+    if (!hasCMMotionRemover) {
+        std::cout << "Warning: Did not find a center-of-mass motion remover in the system. "
+                     "This is problematic when using Drude." << std::endl;
+    }
     context = &contextRef;
     owner = &contextRef.getOwner();
 }
+
+double DrudeVelocityVerletIntegrator::computeDrudeKineticEnergy() {
+    double kE = 0.0;
+    for (const auto &nhc: noseHooverChains){
+        if (nhc.getParentAtoms().size() != 0) {
+            kE += nhcKernel.getAs<NoseHooverChainKernel>().computeMaskedKineticEnergy(*context, nhc, true);
+        }
+    }
+    return kE;
+}
+
+double DrudeVelocityVerletIntegrator::computeTotalKineticEnergy() {
+    return vvKernel.getAs<IntegrateVelocityVerletStepKernel>().computeKineticEnergy(*context, *this);
+}
+

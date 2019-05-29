@@ -265,7 +265,8 @@ void testPropagateChainConsistentWithPythonReference() {
 
 
 void testCheckpoints() {
-    VelocityVerletIntegrator integrator(0.001);
+    double timeStep = 0.001;
+    VelocityVerletIntegrator integrator(timeStep), newIntegrator(timeStep);
     System system;
     double mass = 1;
     system.addParticle(mass);
@@ -278,11 +279,17 @@ void testCheckpoints() {
     double temperature=300, collisionFrequency=1, chainLength=3, numMTS=3, numYS=3;
     integrator.addMaskedNoseHooverChainThermostat(system, std::vector<int>(1,0), std::vector<int>(), temperature, collisionFrequency,
                                                                   chainLength, numMTS, numYS);
+    newIntegrator.addMaskedNoseHooverChainThermostat(system, std::vector<int>(1,0), std::vector<int>(), temperature, collisionFrequency,
+                                                                  chainLength, numMTS, numYS);
     chainLength = 10;
     integrator.addMaskedNoseHooverChainThermostat(system, std::vector<int>(1,1),  std::vector<int>(1,0), 
                                                                   temperature, collisionFrequency,
                                                                   chainLength, numMTS, numYS);
+    newIntegrator.addMaskedNoseHooverChainThermostat(system, std::vector<int>(1,1),  std::vector<int>(1,0), 
+                                                                  temperature, collisionFrequency,
+                                                                  chainLength, numMTS, numYS);
     Context context(system, integrator, platform);
+    Context newContext(system, newIntegrator, platform);
     std::vector<Vec3> positions(2);
     positions[1] = {0.1,0.1,0.1};
     context.setPositions(positions);
@@ -304,16 +311,16 @@ void testCheckpoints() {
 #if DEBUG
     std::cout << std::endl << std::endl << "loading checkpoint" << std::endl;
 #endif
-    context.loadCheckpoint(checkpoint);
+    newContext.loadCheckpoint(checkpoint);
 
     
     State state2 = context.getState(State::Positions | State::Velocities);
     for (size_t i=0; i<100; i++){
-        state2 = context.getState(State::Positions | State::Velocities);
+        state2 = newContext.getState(State::Positions | State::Velocities);
 #if DEBUG
         std::cout << "posvel" << state2.getPositions()[0] << " " << state2.getVelocities()[0] << std::endl;
 #endif
-        integrator.step(1);
+        newIntegrator.step(1);
     }
 
     for (int i=0; i<3;i++){

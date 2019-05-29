@@ -78,6 +78,7 @@ class WrapperGenerator:
                             'Vec3 OpenMM::LocalCoordinatesSite::getXWeights',
                             'Vec3 OpenMM::LocalCoordinatesSite::getYWeights',
                             'std::vector<double> OpenMM::NoseHooverChain::getDefaultYoshidaSuzukiWeights',
+                            'virtual void OpenMM::VelocityVerletIntegrator::stateChanged',
                            ] 
         self.hideClasses = ['Kernel', 'KernelImpl', 'KernelFactory', 'ContextImpl', 'SerializationNode', 'SerializationProxy']
         self.nodeByID={}

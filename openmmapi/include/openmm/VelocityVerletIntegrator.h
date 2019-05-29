@@ -33,6 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "Integrator.h"
+#include "openmm/State.h"
 #include "openmm/Kernel.h"
 #include "openmm/NoseHooverChain.h"
 #include "internal/windowsExport.h"
@@ -174,10 +175,10 @@ protected:
     /**
      * Compute the kinetic energy of the system at the current time.
      */
-    double computeKineticEnergy();
+    virtual double computeKineticEnergy();
+
     std::vector<NoseHooverChain> noseHooverChains;
     bool forcesAreValid;
-private:
     Kernel vvKernel, nhcKernel;
 };
 

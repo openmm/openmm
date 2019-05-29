@@ -77,22 +77,19 @@ public:
                                           double drudeTemperature, double drudeCollisionFrequency,
                                           int chainLength, int numMTS, int numYoshidaSuzuki);
     /**
-     * Advance a simulation through time by taking a series of time steps.
-     *
-     * @param steps   the number of time steps to take
-     */
-    //void step(int steps);
-//protected:
-    /**
      * This will be called by the Context when it is created.  It informs the Integrator
      * of what context it will be integrating, and gives it a chance to do any necessary initialization.
      * It will also get called again if the application calls reinitialize() on the Context.
      */
     void initialize(ContextImpl& context);
     /**
-     * Compute the kinetic energy of the system at the current time.
+     * Compute the kinetic energy of the drude particles at the current time.
      */
-    //double computeKineticEnergy();
+    double computeDrudeKineticEnergy();
+    /**
+     * Compute the kinetic energy of all (real and drude) particles at the current time.
+     */
+    double computeTotalKineticEnergy();
 };
 
 } // namespace OpenMM

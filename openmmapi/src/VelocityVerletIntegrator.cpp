@@ -38,9 +38,9 @@
 #include "openmm/CMMotionRemover.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/kernels.h"
+#include <iostream>
 #include <string>
 #include <algorithm>
-#include <iostream>
 
 using namespace OpenMM;
 using std::string;
@@ -95,8 +95,8 @@ int VelocityVerletIntegrator::addMaskedNoseHooverChainThermostat(System& system,
         int particle1, particle2;
         double distance;
         system.getConstraintParameters(constraintNum, particle1, particle2, distance);
-        bool particle1_in_mask = (std::find(mask.begin(), mask.end(), particle1) == mask.end());
-        bool particle2_in_mask = (std::find(mask.begin(), mask.end(), particle2) == mask.end());
+        bool particle1_in_mask = (std::find(mask.begin(), mask.end(), particle1) != mask.end());
+        bool particle2_in_mask = (std::find(mask.begin(), mask.end(), particle2) != mask.end());
         if ((system.getParticleMass(particle1) > 0) && (system.getParticleMass(particle2) > 0)){
             if ((particle1_in_mask && !particle2_in_mask) || (!particle1_in_mask && particle2_in_mask)){
                 throw OpenMMException("Cannot add only one of particles " + std::to_string(particle1) + " and " + std::to_string(particle2)
@@ -173,8 +173,17 @@ void VelocityVerletIntegrator::setCollisionFrequency(double frequency, int chain
 }
 
 double VelocityVerletIntegrator::computeKineticEnergy() {
-    return vvKernel.getAs<IntegrateVelocityVerletStepKernel>().computeKineticEnergy(*context, *this);
-
+    double kE = 0.0;
+    if(noseHooverChains.size()) {
+        for (const auto &nhc: noseHooverChains){
+            if (nhc.getParentAtoms().size() == 0) {
+                kE += nhcKernel.getAs<NoseHooverChainKernel>().computeMaskedKineticEnergy(*context, nhc, true);
+            }
+        }
+    } else {
+        kE = vvKernel.getAs<IntegrateVelocityVerletStepKernel>().computeKineticEnergy(*context, *this);
+    }
+    return kE;
 }
 
 double VelocityVerletIntegrator::computeHeatBathEnergy() {
@@ -216,13 +225,13 @@ void VelocityVerletIntegrator::step(int steps) {
     for (int i = 0; i < steps; ++i) {
         context->updateContextState();
         for(auto &nhc : noseHooverChains) {
-            kineticEnergy = nhcKernel.getAs<NoseHooverChainKernel>().computeMaskedKineticEnergy(*context, nhc);
+            kineticEnergy = nhcKernel.getAs<NoseHooverChainKernel>().computeMaskedKineticEnergy(*context, nhc, false);
             scale = nhcKernel.getAs<NoseHooverChainKernel>().propagateChain(*context, nhc, kineticEnergy, getStepSize());
             nhcKernel.getAs<NoseHooverChainKernel>().scaleVelocities(*context, nhc, scale);
         }
         vvKernel.getAs<IntegrateVelocityVerletStepKernel>().execute(*context, *this, forcesAreValid);
         for(auto &nhc : noseHooverChains) {
-            kineticEnergy = nhcKernel.getAs<NoseHooverChainKernel>().computeMaskedKineticEnergy(*context, nhc);
+            kineticEnergy = nhcKernel.getAs<NoseHooverChainKernel>().computeMaskedKineticEnergy(*context, nhc, false);
             scale = nhcKernel.getAs<NoseHooverChainKernel>().propagateChain(*context, nhc, kineticEnergy, getStepSize());
             nhcKernel.getAs<NoseHooverChainKernel>().scaleVelocities(*context, nhc, scale);
         }

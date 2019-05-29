@@ -8391,8 +8391,10 @@ double CudaNoseHooverChainKernel::propagateChain(ContextImpl& context, const Nos
     double frequency = nhc.getDefaultCollisionFrequency();
 
     auto & chainState = cu.getIntegrationUtilities().getNoseHooverChainState();
-    if (chainID >= chainState.size()) chainState.resize(chainID+1);
-    if (!chainState.at(chainID).isInitialized() || chainState.at(chainID).getSize() != chainLength) {
+    if (!chainState.count(chainID)) {
+        chainState[chainID] = CudaArray();
+    }
+    if (chainState.at(chainID).getSize() != chainLength) {
         // We need to upload the CUDA array
         if(useDouble){
             chainState.at(chainID).initialize<double2>(cu, chainLength, "chainState" + std::to_string(chainID));
@@ -8504,7 +8506,7 @@ double CudaNoseHooverChainKernel::computeHeatBathEnergy(ContextImpl& context, co
     }
 }
 
-double CudaNoseHooverChainKernel::computeMaskedKineticEnergy(ContextImpl& context, const NoseHooverChain &nhc) {
+double CudaNoseHooverChainKernel::computeMaskedKineticEnergy(ContextImpl& context, const NoseHooverChain &nhc, bool downloadValue) {
     cu.setAsCurrent();
 
     bool useDouble = cu.getUseDoublePrecision() || cu.getUseMixedPrecision();
@@ -8512,9 +8514,8 @@ double CudaNoseHooverChainKernel::computeMaskedKineticEnergy(ContextImpl& contex
     int chainID = nhc.getDefaultChainID();
     const auto & parents = nhc.getParentAtoms();
     const auto & thermostatedAtoms = nhc.getThermostatedAtoms();
-    if (chainID >= masks.size()) masks.resize(chainID+1);
     auto nAtoms = cu.getPaddedNumAtoms();
-    if (!masks.at(chainID).isInitialized()) { 
+    if (!masks.count(chainID)) { 
         // We need to upload the CUDA array
         std::vector<int> maskVec(nAtoms);
         for (int i = 0; i < nAtoms; ++i) maskVec[i] = i;
@@ -8530,12 +8531,9 @@ double CudaNoseHooverChainKernel::computeMaskedKineticEnergy(ContextImpl& contex
                 maskVec[atom] = -1L;
             }
         }
-        // Account for padding in the paddedNumAtoms loops
-        for(int i = thermostatedAtoms.size(); i < nAtoms; ++i){
-            maskVec[i] = i;
-        }
-        masks.at(chainID).initialize<int>(cu, nAtoms, "mask" + std::to_string(chainID));
-        masks.at(chainID).upload(maskVec);
+        masks[chainID] = CudaArray();
+        masks[chainID].initialize<int>(cu, nAtoms, "mask" + std::to_string(chainID));
+        masks[chainID].upload(maskVec);
     }
     if (masks[chainID].getSize() != nAtoms) {
         throw OpenMMException("Number of atoms changed. Cannot be handled by the same Nose-Hoover thermostat.");
@@ -8561,7 +8559,13 @@ double CudaNoseHooverChainKernel::computeMaskedKineticEnergy(ContextImpl& contex
     void* args2[] = {&cu.getEnergyBuffer().getDevicePointer(), &kineticEnergyBuffer.getDevicePointer(), &bufferSize, &workGroupSize};
     cu.executeKernel(reduceEnergyKernel, args2, workGroupSize, workGroupSize, workGroupSize*cu.getEnergyBuffer().getElementSize());
 
-    return 0;
+    double value = 0;
+    if (downloadValue) {
+        void * pinnedBuffer = cu.getPinnedBuffer();
+        kineticEnergyBuffer.download(pinnedBuffer);
+        value = useDouble ? *((double*) pinnedBuffer) : *((float*) pinnedBuffer);
+    }
+    return value;
 }
 
 void CudaNoseHooverChainKernel::scaleVelocities(ContextImpl& context, const NoseHooverChain &nhc, double scaleFactor) {

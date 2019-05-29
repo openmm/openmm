@@ -2527,7 +2527,7 @@ double ReferenceNoseHooverChainKernel::computeHeatBathEnergy(ContextImpl& contex
     return kineticEnergy + potentialEnergy;
 }
 
-double ReferenceNoseHooverChainKernel::computeMaskedKineticEnergy(ContextImpl& context, const NoseHooverChain &noseHooverChain) {
+double ReferenceNoseHooverChainKernel::computeMaskedKineticEnergy(ContextImpl& context, const NoseHooverChain &noseHooverChain, bool downloadValue) {
     const std::vector<int>& mask = noseHooverChain.getThermostatedAtoms();
     const std::vector<int>& parents = noseHooverChain.getParentAtoms();
     std::vector<Vec3>& velocities = extractVelocities(context);
@@ -2554,6 +2554,7 @@ double ReferenceNoseHooverChainKernel::computeMaskedKineticEnergy(ContextImpl& c
             ke += 0.5 * mass * velocity.dot(velocity);
         }
     }
+    // We ignore the downloadValue argument here and always return the correct value
     return ke;
 }
 

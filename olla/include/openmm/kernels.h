@@ -1365,8 +1365,9 @@ public:
      *
      * @param context the context in which to execute this kernel
      * @param noseHooverChain the chain whose energy is to be determined.
+     * @param downloadValue whether the computed value should be downloaded and returned.
      */
-    virtual double computeMaskedKineticEnergy(ContextImpl& context, const NoseHooverChain &noseHooverChain) = 0;
+    virtual double computeMaskedKineticEnergy(ContextImpl& context, const NoseHooverChain &noseHooverChain, bool downloadValue) = 0;
     /**
      * Execute the kernel that scales the velocities of particles associated with a nose hoover chain
      *
