@@ -253,19 +253,6 @@ private:
     std::vector<int> thermostatedAtoms, parentAtoms;
 };
 
-/**
- * Check if two Nose-Hoover chains are identical (checks all member variables but the chain id).
- */
-//inline bool operator==(const NoseHooverChain& lhs, const NoseHooverChain& rhs){
-//    if (lhs.getDefaultTemperature() != rhs.getDefaultTemperature()) return false;
-//    if (lhs.getDefaultCollisionFrequency() != rhs.getDefaultCollisionFrequency()) return false;
-//    if (lhs.getDefaultNumDegreesOfFreedom() != rhs.getDefaultNumDegreesOfFreedom()) return false;
-//    if (lhs.getDefaultNumMultiTimeSteps() != rhs.getDefaultNumMultiTimeSteps()) return false;
-//    if (lhs.getDefaultNumYoshidaSuzukiTimeSteps() != rhs.getDefaultNumYoshidaSuzukiTimeSteps()) return false;
-//    if (lhs.getThermostatedAtoms() != rhs.getThermostatedAtoms()) return false;
-//    if (lhs.getParentAtoms() != rhs.getParentAtoms()) return false;
-//}
-
 } // namespace OpenMM
 
 #endif /*OPENMM_NOSEHOOVERCHAIN_H_*/

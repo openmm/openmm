@@ -1,9 +1,6 @@
 
 #include <initializer_list>
 
-/**
- * Propagate the Nose-Hoover chain with one yoshida-suzuki term
- */
 extern "C" __global__ void propagateNoseHooverChain(mixed2* __restrict__ chainData, const mixed * __restrict__ energySum, mixed* __restrict__ scaleFactor,
                                                     mixed* __restrict__ chainMasses, mixed* __restrict__ chainForces, 
                                                     int chainLength, int numMTS, int numDOFs, float timeStep,

@@ -63,13 +63,6 @@ public:
      * @param steps   the number of time steps to take
      */
     void step(int steps);
-   /**
-     * Advance a simulation through time by taking a series of time steps.
-     * 
-     * @param kineticEnergy  the kinetic energy of the system that the chain is thermostating
-     * @param chainID        id of the Nose-Hoover-Chain
-     */
-    double propagateChain(double kineticEnergy, int chainID=0);
     /**
      * Add a Nose-Hoover Chain thermostat to control the temperature of the system
      *
@@ -157,6 +150,15 @@ public:
     }
 
 protected:
+   /**
+     * Advance any Nose-Hoover chains associated with this integrator and determine
+     * scale factor for the velocities.
+     * 
+     * @param kineticEnergy  the kinetic energy of the system that the chain is thermostating
+     * @param chainID        id of the Nose-Hoover-Chain
+     * @return the scale factor to be applied to the velocities of the particles thermostated by the chain.
+     */
+    double propagateChain(double kineticEnergy, int chainID=0);
     /**
      * This will be called by the Context when it is created.  It informs the Integrator
      * of what context it will be integrating, and gives it a chance to do any necessary initialization.

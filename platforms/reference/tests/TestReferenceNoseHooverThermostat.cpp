@@ -33,6 +33,4 @@
 #include "TestNoseHooverThermostat.h"
 
 void runPlatformTests() {
-    testNHCPropagation();
-    testPropagateChainConsistentWithPythonReference();
 }

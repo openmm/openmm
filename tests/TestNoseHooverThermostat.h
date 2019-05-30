@@ -210,60 +210,6 @@ void testDimerBox(bool constrain=true) {
     ASSERT_EQUAL_TOL(relative_std, 0, 1e-4);
 }
 
-void testNHCPropagation() {
-    // test if the velocity scale factor goes to one for a single particle
-    // with no forces in the system
-    for (int numMTS = 1; numMTS < 5; numMTS++){
-        for (int numYS = 1; numYS <=5; numYS+=2){
-            for (int chainLength = 2; chainLength < 6; chainLength += 2){
-            double temperature = 300; // kelvin
-            double collisionFrequency = 10; // 1/ps
-            VelocityVerletIntegrator integrator(0.001);
-            // make system
-            System system;
-            double mass = 1;
-            system.addParticle(mass);
-            int chainID = integrator.addNoseHooverChainThermostat(system, temperature, collisionFrequency,
-                                                                  chainLength, numMTS, numYS);
-            Context context(system, integrator, platform);
-            // propagate the chain
-            double velocity = 1;
-            double temp, scale, kineticEnergy;
-            double mean_temp=0, mean_scale=0;
-            for(int i = 0; i < 10000; ++i) {
-                kineticEnergy = 3 * 0.5 * mass * velocity * velocity;
-                scale = integrator.propagateChain(kineticEnergy, chainID);
-                velocity *= scale;
-                temp = 2* kineticEnergy / BOLTZ / 3;
-                mean_temp = (i*mean_temp + temp)/(i+1);
-                mean_scale = (i*mean_scale + scale)/(i+1);
-            }
-            //std::cout << mean_scale <<  " " << mean_temp << std::endl;
-            ASSERT_EQUAL_TOL(1, mean_scale,  1e-2);
-            ASSERT_EQUAL_TOL(temperature, mean_temp,  0.25);
-            }
-        }
-    }
-}
-
-void testPropagateChainConsistentWithPythonReference() {
-    VelocityVerletIntegrator integrator(0.001);
-    System system;
-    double mass = 1;
-    system.addParticle(mass);
-    double kineticEnergy = 1e6;
-    double temperature=300, collisionFrequency=1, chainLength=3, numMTS=3, numYS=3;
-    int chainID = integrator.addNoseHooverChainThermostat(system, temperature, collisionFrequency,
-                                                                  chainLength, numMTS, numYS);
-    Context context(system, integrator, platform);
-    double scale = integrator.propagateChain(kineticEnergy, chainID);
-#if DEBUG
-    std::cout << std::setw(12) << std::setprecision(10) << scale << std::endl;
-#endif
-    ASSERT_EQUAL_TOL(0.9674732261005896, scale, 1e-5)
-}
-
-
 void testCheckpoints() {
     double timeStep = 0.001;
     VelocityVerletIntegrator integrator(timeStep), newIntegrator(timeStep);
