@@ -266,6 +266,8 @@ int main() {
         verifyEvaluation("select(x, 1.0, y)", 0.3, 2.0, 1.0);
         verifyEvaluation("select(x, 1.0, y)", 0.0, 2.0, 2.0);
         verifyEvaluation("atan2(x, y)", 3.0, 1.5, std::atan(2.0));
+        verifyEvaluation("sqrt(x^2)", -2.2, 0.0, 2.2);
+        verifyEvaluation("sqrt(x)^2", 2.2, 0.0, 2.2);
         verifyInvalidExpression("1..2");
         verifyInvalidExpression("1*(2+3");
         verifyInvalidExpression("5++4");
