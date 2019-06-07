@@ -1,7 +1,6 @@
 {
 #if USE_EWALD
-    bool needCorrection = hasExclusions && isExcluded && atom1 != atom2 && atom1 < NUM_ATOMS && atom2 < NUM_ATOMS;
-    unsigned int includeInteraction = ((!isExcluded && r2 < CUTOFF_SQUARED) || needCorrection);
+    unsigned int includeInteraction = (!isExcluded && r2 < CUTOFF_SQUARED);
     const real alphaR = EWALD_ALPHA*r;
     const real expAlphaRSqr = EXP(-alphaR*alphaR);
 #if HAS_COULOMB
@@ -22,89 +21,58 @@
 #endif
     real tempForce = 0.0f;
 #if HAS_LENNARD_JONES
-    // The multiplicative term to correct for the multiplicative terms that are always
-    // present in reciprocal space.  The real terms have an additive contribution
-    // added in, but for excluded terms the multiplicative term is just subtracted.
-    // These factors are needed in both clauses of the needCorrection statement, so
-    // I declare them up here.
-    #if DO_LJPME
-        const real dispersionAlphaR = EWALD_DISPERSION_ALPHA*r;
-        const real dar2 = dispersionAlphaR*dispersionAlphaR;
-        const real dar4 = dar2*dar2;
-        const real dar6 = dar4*dar2;
-        const real invR2 = invR*invR;
-        const real expDar2 = EXP(-dar2);
-        const float2 sigExpProd = SIGMA_EPSILON1*SIGMA_EPSILON2;
-        const real c6 = 64*sigExpProd.x*sigExpProd.x*sigExpProd.x*sigExpProd.y;
-        const real coef = invR2*invR2*invR2*c6;
-        const real eprefac = 1.0f + dar2 + 0.5f*dar4;
-        const real dprefac = eprefac + dar6/6.0f;
+    real sig = SIGMA_EPSILON1.x + SIGMA_EPSILON2.x;
+    real sig2 = invR*sig;
+    sig2 *= sig2;
+    real sig6 = sig2*sig2*sig2;
+    real eps = SIGMA_EPSILON1.y*SIGMA_EPSILON2.y;
+    real epssig6 = sig6*eps;
+    tempForce = epssig6*(12.0f*sig6 - 6.0f);
+    real ljEnergy = epssig6*(sig6 - 1.0f);
+    #if USE_LJ_SWITCH
+    if (r > LJ_SWITCH_CUTOFF) {
+        real x = r-LJ_SWITCH_CUTOFF;
+        real switchValue = 1+x*x*x*(LJ_SWITCH_C3+x*(LJ_SWITCH_C4+x*LJ_SWITCH_C5));
+        real switchDeriv = x*x*(3*LJ_SWITCH_C3+x*(4*LJ_SWITCH_C4+x*5*LJ_SWITCH_C5));
+        tempForce = tempForce*switchValue - ljEnergy*switchDeriv*r;
+        ljEnergy *= switchValue;
+    }
     #endif
-#endif
-    if (needCorrection) {
-        // Subtract off the part of this interaction that was included in the reciprocal space contribution.
-
-#if HAS_COULOMB
-        if (1-erfcAlphaR > 1e-6) {
-            real erfAlphaR = ERF(alphaR); // Our erfc approximation is not accurate enough when r is very small, which happens with Drude particles.
-            tempForce = -prefactor*(erfAlphaR-alphaR*expAlphaRSqr*TWO_OVER_SQRT_PI);
-            tempEnergy += -prefactor*erfAlphaR;
-        }
-        else {
-            includeInteraction = false;
-            tempEnergy -= TWO_OVER_SQRT_PI*EWALD_ALPHA*138.935456f*CHARGE1*CHARGE2;
-        }
-#endif
-#if HAS_LENNARD_JONES
-        #if DO_LJPME
-            // The multiplicative grid term
-            tempEnergy += coef*(1.0f - expDar2*eprefac);
-            tempForce += 6.0f*coef*(1.0f - expDar2*dprefac);
-        #endif
-#endif
-    }
-    else {
-#if HAS_LENNARD_JONES
-        real sig = SIGMA_EPSILON1.x + SIGMA_EPSILON2.x;
-        real sig2 = invR*sig;
-        sig2 *= sig2;
-        real sig6 = sig2*sig2*sig2;
-        real eps = SIGMA_EPSILON1.y*SIGMA_EPSILON2.y;
-        real epssig6 = sig6*eps;
-        tempForce = epssig6*(12.0f*sig6 - 6.0f);
-        real ljEnergy = epssig6*(sig6 - 1.0f);
-        #if USE_LJ_SWITCH
-        if (r > LJ_SWITCH_CUTOFF) {
-            real x = r-LJ_SWITCH_CUTOFF;
-            real switchValue = 1+x*x*x*(LJ_SWITCH_C3+x*(LJ_SWITCH_C4+x*LJ_SWITCH_C5));
-            real switchDeriv = x*x*(3*LJ_SWITCH_C3+x*(4*LJ_SWITCH_C4+x*5*LJ_SWITCH_C5));
-            tempForce = tempForce*switchValue - ljEnergy*switchDeriv*r;
-            ljEnergy *= switchValue;
-        }
-        #endif
 #if DO_LJPME
-        // The multiplicative grid term
-        ljEnergy += coef*(1.0f - expDar2*eprefac);
-        tempForce += 6.0f*coef*(1.0f - expDar2*dprefac);
-        // The potential shift accounts for the step at the cutoff introduced by the
-        // transition from additive to multiplicative combintion rules and is only
-        // needed for the real (not excluded) terms.  By addin these terms to ljEnergy
-        // instead of tempEnergy here, the includeInteraction mask is correctly applied.
-        sig2 = sig*sig;
-        sig6 = sig2*sig2*sig2*INVCUT6;
-        epssig6 = eps*sig6;
-        // The additive part of the potential shift
-        ljEnergy += epssig6*(1.0f - sig6);
-        // The multiplicative part of the potential shift
-        ljEnergy += MULTSHIFT6*c6;
+    // The multiplicative term to correct for the multiplicative terms that are always
+    // present in reciprocal space.
+    const real dispersionAlphaR = EWALD_DISPERSION_ALPHA*r;
+    const real dar2 = dispersionAlphaR*dispersionAlphaR;
+    const real dar4 = dar2*dar2;
+    const real dar6 = dar4*dar2;
+    const real invR2 = invR*invR;
+    const real expDar2 = EXP(-dar2);
+    const float2 sigExpProd = SIGMA_EPSILON1*SIGMA_EPSILON2;
+    const real c6 = 64*sigExpProd.x*sigExpProd.x*sigExpProd.x*sigExpProd.y;
+    const real coef = invR2*invR2*invR2*c6;
+    const real eprefac = 1.0f + dar2 + 0.5f*dar4;
+    const real dprefac = eprefac + dar6/6.0f;
+    // The multiplicative grid term
+    ljEnergy += coef*(1.0f - expDar2*eprefac);
+    tempForce += 6.0f*coef*(1.0f - expDar2*dprefac);
+    // The potential shift accounts for the step at the cutoff introduced by the
+    // transition from additive to multiplicative combintion rules and is only
+    // needed for the real (not excluded) terms.  By addin these terms to ljEnergy
+    // instead of tempEnergy here, the includeInteraction mask is correctly applied.
+    sig2 = sig*sig;
+    sig6 = sig2*sig2*sig2*INVCUT6;
+    epssig6 = eps*sig6;
+    // The additive part of the potential shift
+    ljEnergy += epssig6*(1.0f - sig6);
+    // The multiplicative part of the potential shift
+    ljEnergy += MULTSHIFT6*c6;
 #endif
-        tempForce += prefactor*(erfcAlphaR+alphaR*expAlphaRSqr*TWO_OVER_SQRT_PI);
-        tempEnergy += includeInteraction ? ljEnergy + prefactor*erfcAlphaR : 0;
+    tempForce += prefactor*(erfcAlphaR+alphaR*expAlphaRSqr*TWO_OVER_SQRT_PI);
+    tempEnergy += includeInteraction ? ljEnergy + prefactor*erfcAlphaR : 0;
 #else
-        tempForce = prefactor*(erfcAlphaR+alphaR*expAlphaRSqr*TWO_OVER_SQRT_PI);
-        tempEnergy += includeInteraction ? prefactor*erfcAlphaR : 0;
+    tempForce = prefactor*(erfcAlphaR+alphaR*expAlphaRSqr*TWO_OVER_SQRT_PI);
+    tempEnergy += includeInteraction ? prefactor*erfcAlphaR : 0;
 #endif
-    }
     dEdR += includeInteraction ? tempForce*invR*invR : 0;
 #else
 #ifdef USE_CUTOFF
@@ -113,7 +81,7 @@
     unsigned int includeInteraction = (!isExcluded);
 #endif
     real tempForce = 0.0f;
-  #if HAS_LENNARD_JONES
+#if HAS_LENNARD_JONES
     real sig = SIGMA_EPSILON1.x + SIGMA_EPSILON2.x;
     real sig2 = invR*sig;
     sig2 *= sig2;
@@ -131,7 +99,7 @@
     }
     #endif
     tempEnergy += ljEnergy;
-  #endif
+#endif
 #if HAS_COULOMB
   #ifdef USE_CUTOFF
     const real prefactor = 138.935456f*CHARGE1*CHARGE2;

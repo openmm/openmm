@@ -655,6 +655,8 @@ private:
     OpenCLArray charges;
     OpenCLArray sigmaEpsilon;
     OpenCLArray exceptionParams;
+    OpenCLArray exclusionAtoms;
+    OpenCLArray exclusionParams;
     OpenCLArray baseParticleParams;
     OpenCLArray baseExceptionParams;
     OpenCLArray particleParamOffsets;

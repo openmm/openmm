@@ -1665,6 +1665,8 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
     hasOffsets = (force.getNumParticleParameterOffsets() > 0 || force.getNumExceptionParameterOffsets() > 0);
     if (hasOffsets)
         paramsDefines["HAS_OFFSETS"] = "1";
+    if (usePosqCharges)
+        paramsDefines["USE_POSQ_CHARGES"] = "1";
     if (nonbondedMethod == Ewald) {
         // Compute the Ewald parameters.
 
@@ -1929,7 +1931,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
 
                     // Evaluate the actual bspline moduli for X/Y/Z.
 
-                    for(int dim = 0; dim < 3; dim++) {
+                    for (int dim = 0; dim < 3; dim++) {
                         int ndata = (dim == 0 ? xsize : dim == 1 ? ysize : zsize);
                         vector<double> moduli(ndata);
                         for (int i = 0; i < ndata; i++) {
@@ -1957,6 +1959,37 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         }
     }
 
+    // Add code to subtract off the reciprocal part of excluded interactions.
+
+    if ((nonbondedMethod == Ewald || nonbondedMethod == PME || nonbondedMethod == LJPME) && pmeio == NULL) {
+        int numContexts = cu.getPlatformData().contexts.size();
+        int startIndex = cu.getContextIndex()*force.getNumExceptions()/numContexts;
+        int endIndex = (cu.getContextIndex()+1)*force.getNumExceptions()/numContexts;
+        int numExclusions = endIndex-startIndex;
+        if (numExclusions > 0) {
+            paramsDefines["HAS_EXCLUSIONS"] = "1";
+            vector<vector<int> > atoms(numExclusions, vector<int>(2));
+            exclusionAtoms.initialize<int2>(cu, numExclusions, "exclusionAtoms");
+            exclusionParams.initialize<float4>(cu, numExclusions, "exclusionParams");
+            vector<int2> exclusionAtomsVec(numExclusions);
+            for (int i = 0; i < numExclusions; i++) {
+                int j = i+startIndex;
+                exclusionAtomsVec[i] = make_int2(exclusions[j].first, exclusions[j].second);
+                atoms[i][0] = exclusions[j].first;
+                atoms[i][1] = exclusions[j].second;
+            }
+            exclusionAtoms.upload(exclusionAtomsVec);
+            map<string, string> replacements;
+            replacements["PARAMS"] = cu.getBondedUtilities().addArgument(exclusionParams.getDevicePointer(), "float4");
+            replacements["EWALD_ALPHA"] = cu.doubleToString(alpha);
+            replacements["TWO_OVER_SQRT_PI"] = cu.doubleToString(2.0/sqrt(M_PI));
+            replacements["DO_LJPME"] = doLJPME ? "1" : "0";
+            if (doLJPME)
+                replacements["EWALD_DISPERSION_ALPHA"] = cu.doubleToString(dispersionAlpha);
+            cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaKernelSources::pmeExclusions, replacements), force.getForceGroup());
+        }
+    }
+
     // Add the interaction to the default nonbonded kernel.
 
     string source = cu.replaceStrings(CudaKernelSources::coulombLennardJones, defines);
@@ -1967,7 +2000,6 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
     if (usePosqCharges) {
         replacements["CHARGE1"] = "posq1.w";
         replacements["CHARGE2"] = "posq2.w";
-        paramsDefines["USE_POSQ_CHARGES"] = "1";
     }
     else {
         replacements["CHARGE1"] = prefix+"charge1";
@@ -2104,13 +2136,20 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
         vector<void*> paramsArgs = {&cu.getEnergyBuffer().getDevicePointer(), &computeSelfEnergy, &globalParams.getDevicePointer(), &numAtoms,
                 &baseParticleParams.getDevicePointer(), &cu.getPosq().getDevicePointer(), &charges.getDevicePointer(), &sigmaEpsilon.getDevicePointer(),
                 &particleParamOffsets.getDevicePointer(), &particleOffsetIndices.getDevicePointer()};
+        int numExceptions, numExclusions;
         if (exceptionParams.isInitialized()) {
-            int numExceptions = exceptionParams.getSize();
+            numExceptions = exceptionParams.getSize();
             paramsArgs.push_back(&numExceptions);
             paramsArgs.push_back(&baseExceptionParams.getDevicePointer());
             paramsArgs.push_back(&exceptionParams.getDevicePointer());
             paramsArgs.push_back(&exceptionParamOffsets.getDevicePointer());
             paramsArgs.push_back(&exceptionOffsetIndices.getDevicePointer());
+        }
+        if (exclusionParams.isInitialized()) {
+            numExclusions = exclusionParams.getSize();
+            paramsArgs.push_back(&numExclusions);
+            paramsArgs.push_back(&exclusionAtoms.getDevicePointer());
+            paramsArgs.push_back(&exclusionParams.getDevicePointer());
         }
         cu.executeKernel(computeParamsKernel, &paramsArgs[0], cu.getPaddedNumAtoms());
         if (usePmeStream) {

@@ -8,6 +8,9 @@ __kernel void computeParameters(__global mixed* restrict energyBuffer, int inclu
         , int numExceptions, __global const float4* restrict baseExceptionParams, __global float4* restrict exceptionParams,
         __global float4* restrict exceptionParamOffsets, __global int* restrict exceptionOffsetIndices
 #endif
+#ifdef HAS_EXCLUSIONS
+        , int numExclusions, __global const int2* restrict exclusionAtoms, __global float4* restrict exclusionParams
+#endif
         ) {
     mixed energy = 0;
 
@@ -58,6 +61,29 @@ __kernel void computeParameters(__global mixed* restrict energyBuffer, int inclu
         }
 #endif
         exceptionParams[i] = (float4) ((float) (138.935456f*params.x), (float) params.y, (float) (4*params.z), 0);
+    }
+#endif
+
+    // Compute parameters for subtracting the reciprocal part of excluded interactions.
+
+#ifdef HAS_EXCLUSIONS
+    for (int i = get_global_id(0); i < numExclusions; i += get_global_size(0)) {
+        int2 atoms = exclusionAtoms[i];
+#ifdef USE_POSQ_CHARGES
+        real chargeProd = posq[atoms.x].w*posq[atoms.y].w;
+#else
+        real chargeProd = charge[atoms.x]*charge[atoms.y];
+#endif
+#ifdef INCLUDE_LJPME
+        float2 sigEps1 = sigmaEpsilon[atoms.x];
+        float2 sigEps2 = sigmaEpsilon[atoms.y];
+        float sigma = sigEps1.x*sigEps2.x;
+        float epsilon = sigEps1.y*sigEps2.y;
+#else
+        float sigma = 0;
+        float epsilon = 0;
+#endif
+        exclusionParams[i] = (float4) ((float) (138.935456f*chargeProd), sigma, epsilon, 0);
     }
 #endif
     if (includeSelfEnergy)

@@ -678,6 +678,8 @@ private:
     CudaArray charges;
     CudaArray sigmaEpsilon;
     CudaArray exceptionParams;
+    CudaArray exclusionAtoms;
+    CudaArray exclusionParams;
     CudaArray baseParticleParams;
     CudaArray baseExceptionParams;
     CudaArray particleParamOffsets;
