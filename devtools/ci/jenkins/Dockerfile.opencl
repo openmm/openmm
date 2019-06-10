@@ -1,4 +1,4 @@
-FROM nvidia/cuda:10.1-devel-ubuntu18.04
+FROM nvidia/opencl:devel-ubuntu18.04
 
 ENV PATH="/opt/miniconda/bin:${PATH}"
 

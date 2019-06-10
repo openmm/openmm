@@ -27,6 +27,7 @@ pipeline {
                         dockerfile {
                             dir "devtools/ci/jenkins"
                             label "cuda"
+                            filename "Dockerfile.opencl"
                         }
                     }
                     steps {
