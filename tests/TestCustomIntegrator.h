@@ -45,6 +45,7 @@
 #include "openmm/System.h"
 #include "SimTKOpenMMRealType.h"
 #include "sfmt/SFMT.h"
+#include <algorithm>
 #include <cmath>
 #include <iostream>
 #include <vector>
