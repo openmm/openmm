@@ -1,13 +1,13 @@
 const float4 exclusionParams = PARAMS[index];
 real3 delta = make_real3(pos2.x-pos1.x, pos2.y-pos1.y, pos2.z-pos1.z);
 const real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-const real invR = RSQRT(r2);
-const real r = r2*invR;
+const real r = SQRT(r2);
+const real invR = RECIP(r);
 const real alphaR = EWALD_ALPHA*r;
 const real expAlphaRSqr = EXP(-alphaR*alphaR);
-const real erfAlphaR = ERF(alphaR);
 real tempForce = 0.0f;
-if (erfAlphaR > 1e-6f) {
+if (alphaR > 1e-6f) {
+    const real erfAlphaR = ERF(alphaR);
     const real prefactor = exclusionParams.x*invR;
     tempForce = -prefactor*(erfAlphaR-alphaR*expAlphaRSqr*TWO_OVER_SQRT_PI);
     energy -= prefactor*erfAlphaR;
@@ -29,6 +29,7 @@ const real dprefac = eprefac + dar6/6.0f;
 energy += coef*(1.0f - expDar2*eprefac);
 tempForce += 6.0f*coef*(1.0f - expDar2*dprefac);
 #endif
-delta *= tempForce*invR*invR;
+if (r > 0)
+    delta *= tempForce*invR*invR;
 real3 force1 = -delta;
 real3 force2 = delta;
