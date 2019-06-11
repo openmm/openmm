@@ -2036,6 +2036,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     
     cl::Program program = cl.createProgram(OpenCLKernelSources::nonbondedParameters, paramsDefines);
     computeParamsKernel = cl::Kernel(program, "computeParameters");
+    computeExclusionParamsKernel = cl::Kernel(program, "computeExclusionParameters");
     info = new ForceInfo(cl.getNonbondedUtilities().getNumForceBuffers(), force);
     cl.addForce(info);
 }
@@ -2063,9 +2064,12 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             computeParamsKernel.setArg<cl::Buffer>(index++, exceptionOffsetIndices.getDeviceBuffer());
         }
         if (exclusionParams.isInitialized()) {
-            computeParamsKernel.setArg<cl_int>(index++, exclusionParams.getSize());
-            computeParamsKernel.setArg<cl::Buffer>(index++, exclusionAtoms.getDeviceBuffer());
-            computeParamsKernel.setArg<cl::Buffer>(index++, exclusionParams.getDeviceBuffer());
+            computeExclusionParamsKernel.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
+            computeExclusionParamsKernel.setArg<cl::Buffer>(1, charges.getDeviceBuffer());
+            computeExclusionParamsKernel.setArg<cl::Buffer>(2, sigmaEpsilon.getDeviceBuffer());
+            computeExclusionParamsKernel.setArg<cl_int>(3, exclusionParams.getSize());
+            computeExclusionParamsKernel.setArg<cl::Buffer>(4, exclusionAtoms.getDeviceBuffer());
+            computeExclusionParamsKernel.setArg<cl::Buffer>(5, exclusionParams.getDeviceBuffer());
         }
         if (cosSinSums.isInitialized()) {
             ewaldSumsKernel.setArg<cl::Buffer>(0, cl.getEnergyBuffer().getDeviceBuffer());
@@ -2215,6 +2219,8 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
     if (recomputeParams || hasOffsets) {
         computeParamsKernel.setArg<cl_int>(1, includeEnergy && includeReciprocal);
         cl.executeKernel(computeParamsKernel, cl.getPaddedNumAtoms());
+        if (exclusionParams.isInitialized())
+            cl.executeKernel(computeExclusionParamsKernel, exclusionParams.getSize());
         if (usePmeQueue) {
             vector<cl::Event> events(1);
             cl.getQueue().enqueueMarker(&events[0]);

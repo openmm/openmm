@@ -8,9 +8,6 @@ __kernel void computeParameters(__global mixed* restrict energyBuffer, int inclu
         , int numExceptions, __global const float4* restrict baseExceptionParams, __global float4* restrict exceptionParams,
         __global float4* restrict exceptionParamOffsets, __global int* restrict exceptionOffsetIndices
 #endif
-#ifdef HAS_EXCLUSIONS
-        , int numExclusions, __global const int2* restrict exclusionAtoms, __global float4* restrict exclusionParams
-#endif
         ) {
     mixed energy = 0;
 
@@ -63,10 +60,15 @@ __kernel void computeParameters(__global mixed* restrict energyBuffer, int inclu
         exceptionParams[i] = (float4) ((float) (138.935456f*params.x), (float) params.y, (float) (4*params.z), 0);
     }
 #endif
+    if (includeSelfEnergy)
+        energyBuffer[get_global_id(0)] += energy;
+}
 
-    // Compute parameters for subtracting the reciprocal part of excluded interactions.
-
-#ifdef HAS_EXCLUSIONS
+/**
+ * Compute parameters for subtracting the reciprocal part of excluded interactions.
+ */
+__kernel void computeExclusionParameters(__global real4* restrict posq, __global real* restrict charge, __global float2* restrict sigmaEpsilon,
+        int numExclusions, __global const int2* restrict exclusionAtoms, __global float4* restrict exclusionParams) {
     for (int i = get_global_id(0); i < numExclusions; i += get_global_size(0)) {
         int2 atoms = exclusionAtoms[i];
 #ifdef USE_POSQ_CHARGES
@@ -85,7 +87,4 @@ __kernel void computeParameters(__global mixed* restrict energyBuffer, int inclu
 #endif
         exclusionParams[i] = (float4) ((float) (138.935456f*chargeProd), sigma, epsilon, 0);
     }
-#endif
-    if (includeSelfEnergy)
-        energyBuffer[get_global_id(0)] += energy;
 }

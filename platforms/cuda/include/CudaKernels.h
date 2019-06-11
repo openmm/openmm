@@ -709,7 +709,7 @@ private:
     CudaFFT3D* dispersionFft;
     cufftHandle dispersionFftForward;
     cufftHandle dispersionFftBackward;
-    CUfunction computeParamsKernel;
+    CUfunction computeParamsKernel, computeExclusionParamsKernel;
     CUfunction ewaldSumsKernel;
     CUfunction ewaldForcesKernel;
     CUfunction pmeGridIndexKernel;

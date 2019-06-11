@@ -2110,6 +2110,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
     
     CUmodule module = cu.createModule(CudaKernelSources::nonbondedParameters, paramsDefines);
     computeParamsKernel = cu.getKernel(module, "computeParameters");
+    computeExclusionParamsKernel = cu.getKernel(module, "computeExclusionParameters");
     info = new ForceInfo(force);
     cu.addForce(info);
 }
@@ -2136,7 +2137,7 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
         vector<void*> paramsArgs = {&cu.getEnergyBuffer().getDevicePointer(), &computeSelfEnergy, &globalParams.getDevicePointer(), &numAtoms,
                 &baseParticleParams.getDevicePointer(), &cu.getPosq().getDevicePointer(), &charges.getDevicePointer(), &sigmaEpsilon.getDevicePointer(),
                 &particleParamOffsets.getDevicePointer(), &particleOffsetIndices.getDevicePointer()};
-        int numExceptions, numExclusions;
+        int numExceptions;
         if (exceptionParams.isInitialized()) {
             numExceptions = exceptionParams.getSize();
             paramsArgs.push_back(&numExceptions);
@@ -2145,13 +2146,13 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
             paramsArgs.push_back(&exceptionParamOffsets.getDevicePointer());
             paramsArgs.push_back(&exceptionOffsetIndices.getDevicePointer());
         }
-        if (exclusionParams.isInitialized()) {
-            numExclusions = exclusionParams.getSize();
-            paramsArgs.push_back(&numExclusions);
-            paramsArgs.push_back(&exclusionAtoms.getDevicePointer());
-            paramsArgs.push_back(&exclusionParams.getDevicePointer());
-        }
         cu.executeKernel(computeParamsKernel, &paramsArgs[0], cu.getPaddedNumAtoms());
+        if (exclusionParams.isInitialized()) {
+            int numExclusions = exclusionParams.getSize();
+            vector<void*> exclusionParamsArgs = {&cu.getPosq().getDevicePointer(), &charges.getDevicePointer(), &sigmaEpsilon.getDevicePointer(),
+                    &numExclusions, &exclusionAtoms.getDevicePointer(), &exclusionParams.getDevicePointer()};
+            cu.executeKernel(computeExclusionParamsKernel, &exclusionParamsArgs[0], numExclusions);
+        }
         if (usePmeStream) {
             cuEventRecord(paramsSyncEvent, cu.getCurrentStream());
             cuStreamWaitEvent(pmeStream, paramsSyncEvent, 0);

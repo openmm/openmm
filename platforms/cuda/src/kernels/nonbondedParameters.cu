@@ -8,9 +8,6 @@ extern "C" __global__ void computeParameters(mixed* __restrict__ energyBuffer, b
         , int numExceptions, const float4* __restrict__ baseExceptionParams, float4* __restrict__ exceptionParams,
         float4* __restrict__ exceptionParamOffsets, int* __restrict__ exceptionOffsetIndices
 #endif
-#ifdef HAS_EXCLUSIONS
-        , int numExclusions, const int2* __restrict__ exclusionAtoms, float4* __restrict__ exclusionParams
-#endif
         ) {
     mixed energy = 0;
 
@@ -63,10 +60,15 @@ extern "C" __global__ void computeParameters(mixed* __restrict__ energyBuffer, b
         exceptionParams[i] = make_float4((float) (138.935456f*params.x), (float) params.y, (float) (4*params.z), 0);
     }
 #endif
+    if (includeSelfEnergy)
+        energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += energy;
+}
 
-    // Compute parameters for subtracting the reciprocal part of excluded interactions.
-
-#ifdef HAS_EXCLUSIONS
+/**
+ * Compute parameters for subtracting the reciprocal part of excluded interactions.
+ */
+extern "C" __global__ void computeExclusionParameters(real4* __restrict__ posq, real* __restrict__ charge, float2* __restrict__ sigmaEpsilon,
+        int numExclusions, const int2* __restrict__ exclusionAtoms, float4* __restrict__ exclusionParams) {
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < numExclusions; i += blockDim.x*gridDim.x) {
         int2 atoms = exclusionAtoms[i];
 #ifdef USE_POSQ_CHARGES
@@ -85,7 +87,4 @@ extern "C" __global__ void computeParameters(mixed* __restrict__ energyBuffer, b
 #endif
         exclusionParams[i] = make_float4((float) (138.935456f*chargeProd), sigma, epsilon, 0);
     }
-#endif
-    if (includeSelfEnergy)
-        energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += energy;
 }

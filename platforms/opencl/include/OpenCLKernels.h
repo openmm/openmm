@@ -685,7 +685,7 @@ private:
     Kernel cpuPme;
     PmeIO* pmeio;
     SyncQueuePostComputation* syncQueue;
-    cl::Kernel computeParamsKernel;
+    cl::Kernel computeParamsKernel, computeExclusionParamsKernel;
     cl::Kernel ewaldSumsKernel;
     cl::Kernel ewaldForcesKernel;
     cl::Kernel pmeAtomRangeKernel;
