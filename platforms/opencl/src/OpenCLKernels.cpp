@@ -2395,9 +2395,9 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
                 cl.executeKernel(pmeDispersionSpreadChargeKernel, 2*cl.getDevice().getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>(), 1);
             }
             else {
-                if (!hasCoulomb)
-                    sort->sort(pmeAtomGridIndex);
                 if (cl.getSupports64BitGlobalAtomics()) {
+                    if (!hasCoulomb)
+                        sort->sort(pmeAtomGridIndex);
                     cl.clearBuffer(pmeGrid2);
                     setPeriodicBoxArgs(cl, pmeDispersionSpreadChargeKernel, 5);
                     if (cl.getUseDoublePrecision()) {
@@ -2414,6 +2414,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
                     cl.executeKernel(pmeDispersionFinishSpreadChargeKernel, gridSizeX*gridSizeY*gridSizeZ);
                 }
                 else {
+                    sort->sort(pmeAtomGridIndex);
                     cl.clearBuffer(pmeGrid1);
                     cl.executeKernel(pmeDispersionAtomRangeKernel, cl.getNumAtoms());
                     setPeriodicBoxSizeArg(cl, pmeDispersionZIndexKernel, 2);
