@@ -63,3 +63,28 @@ __kernel void computeParameters(__global mixed* restrict energyBuffer, int inclu
     if (includeSelfEnergy)
         energyBuffer[get_global_id(0)] += energy;
 }
+
+/**
+ * Compute parameters for subtracting the reciprocal part of excluded interactions.
+ */
+__kernel void computeExclusionParameters(__global real4* restrict posq, __global real* restrict charge, __global float2* restrict sigmaEpsilon,
+        int numExclusions, __global const int2* restrict exclusionAtoms, __global float4* restrict exclusionParams) {
+    for (int i = get_global_id(0); i < numExclusions; i += get_global_size(0)) {
+        int2 atoms = exclusionAtoms[i];
+#ifdef USE_POSQ_CHARGES
+        real chargeProd = posq[atoms.x].w*posq[atoms.y].w;
+#else
+        real chargeProd = charge[atoms.x]*charge[atoms.y];
+#endif
+#ifdef INCLUDE_LJPME
+        float2 sigEps1 = sigmaEpsilon[atoms.x];
+        float2 sigEps2 = sigmaEpsilon[atoms.y];
+        float sigma = sigEps1.x*sigEps2.x;
+        float epsilon = sigEps1.y*sigEps2.y;
+#else
+        float sigma = 0;
+        float epsilon = 0;
+#endif
+        exclusionParams[i] = (float4) ((float) (138.935456f*chargeProd), sigma, epsilon, 0);
+    }
+}

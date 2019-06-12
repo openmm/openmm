@@ -678,6 +678,8 @@ private:
     CudaArray charges;
     CudaArray sigmaEpsilon;
     CudaArray exceptionParams;
+    CudaArray exclusionAtoms;
+    CudaArray exclusionParams;
     CudaArray baseParticleParams;
     CudaArray baseExceptionParams;
     CudaArray particleParamOffsets;
@@ -707,7 +709,7 @@ private:
     CudaFFT3D* dispersionFft;
     cufftHandle dispersionFftForward;
     cufftHandle dispersionFftBackward;
-    CUfunction computeParamsKernel;
+    CUfunction computeParamsKernel, computeExclusionParamsKernel;
     CUfunction ewaldSumsKernel;
     CUfunction ewaldForcesKernel;
     CUfunction pmeGridIndexKernel;

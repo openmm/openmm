@@ -655,6 +655,8 @@ private:
     OpenCLArray charges;
     OpenCLArray sigmaEpsilon;
     OpenCLArray exceptionParams;
+    OpenCLArray exclusionAtoms;
+    OpenCLArray exclusionParams;
     OpenCLArray baseParticleParams;
     OpenCLArray baseExceptionParams;
     OpenCLArray particleParamOffsets;
@@ -683,7 +685,7 @@ private:
     Kernel cpuPme;
     PmeIO* pmeio;
     SyncQueuePostComputation* syncQueue;
-    cl::Kernel computeParamsKernel;
+    cl::Kernel computeParamsKernel, computeExclusionParamsKernel;
     cl::Kernel ewaldSumsKernel;
     cl::Kernel ewaldForcesKernel;
     cl::Kernel pmeAtomRangeKernel;
