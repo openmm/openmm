@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -505,6 +505,10 @@ void OpenCLContext::initialize() {
 
 void OpenCLContext::addForce(OpenCLForceInfo* force) {
     forces.push_back(force);
+}
+
+vector<OpenCLForceInfo*>& OpenCLContext::getForceInfos() {
+    return forces;
 }
 
 string OpenCLContext::replaceStrings(const string& input, const std::map<std::string, std::string>& replacements) const {

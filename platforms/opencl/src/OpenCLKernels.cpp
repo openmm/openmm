@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -6925,6 +6925,26 @@ void OpenCLCalcGayBerneForceKernel::sortAtoms() {
     exclusionStartIndex.upload(startIndexVec);
 }
 
+class OpenCLCalcCustomCVForceKernel::ForceInfo : public OpenCLForceInfo {
+public:
+    ForceInfo(OpenCLForceInfo& force) : OpenCLForceInfo(0), force(force) {
+    }
+    bool areParticlesIdentical(int particle1, int particle2) {
+        return force.areParticlesIdentical(particle1, particle2);
+    }
+    int getNumParticleGroups() {
+        return force.getNumParticleGroups();
+    }
+    void getParticlesInGroup(int index, std::vector<int>& particles) {
+        force.getParticlesInGroup(index, particles);
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        return force.areGroupsIdentical(group1, group2);
+    }
+private:
+    OpenCLForceInfo& force;
+};
+
 class OpenCLCalcCustomCVForceKernel::ReorderListener : public OpenCLContext::ReorderListener {
 public:
     ReorderListener(OpenCLContext& cl, OpenCLArray& invAtomOrder) : cl(cl), invAtomOrder(invAtomOrder) {
@@ -7005,6 +7025,11 @@ void OpenCLCalcCustomCVForceKernel::initialize(const System& system, const Custo
     copyStateKernel = cl::Kernel(program, "copyState");
     copyForcesKernel = cl::Kernel(program, "copyForces");
     addForcesKernel = cl::Kernel(program, "addForces");
+
+    // This context needs to respect all forces in the inner context when reordering atoms.
+
+    for (OpenCLForceInfo* info : cl2.getForceInfos())
+        cl.addForce(new ForceInfo(*info));
 }
 
 double OpenCLCalcCustomCVForceKernel::execute(ContextImpl& context, ContextImpl& innerContext, bool includeForces, bool includeEnergy) {
