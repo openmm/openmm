@@ -116,8 +116,8 @@ class TestCharmmFiles(unittest.TestCase):
         ene = state.getPotentialEnergy().value_in_unit(kilocalories_per_mole)
         self.assertAlmostEqual(ene, 15490.0033559, delta=0.05)
 
-    def test_drude(self):
-        """Tests CHARMM systems with Drude force field"""
+    def test_Drude(self):
+        """Test CHARMM systems with Drude force field"""
         warnings.filterwarnings('ignore', category=CharmmPSFWarning)
         psf = CharmmPsfFile('systems/ala3_solv_drude.psf')
         crd = CharmmCrdFile('systems/ala3_solv_drude.crd')
@@ -135,6 +135,23 @@ class TestCharmmFiles(unittest.TestCase):
         state = con.getState(getEnergy=True, enforcePeriodicBox=True)
         ene = state.getPotentialEnergy().value_in_unit(kilocalories_per_mole)
         self.assertAlmostEqual(ene, -1831.54, delta=0.5)
+
+    def test_Lonepair(self):
+        """Test the lonepair facilities, in particular the colinear type of lonepairs"""
+        warnings.filterwarnings('ignore', category=CharmmPSFWarning)
+        psf = CharmmPsfFile('systems/chlb_cgenff.psf')
+        crd = CharmmCrdFile('systems/chlb_cgenff.crd')
+        # move the position of the lonepair on Cholride
+        params = CharmmParameterSet('systems/par_all36_cgenff.prm',
+                                    'systems/top_all36_cgenff.rtf')
+        # Box dimensions (found from bounding box)
+        plat = Platform.getPlatformByName('Reference')
+        system = psf.createSystem(params, nonbondedMethod=PME,
+                                  nonbondedCutoff=8*angstroms)
+
+        con = Context(system, VerletIntegrator(2*femtoseconds), plat)
+        con.setPositions(crd.positions)
+
 
     def test_InsCode(self):
         """ Test the parsing of PSF files that contain insertion codes in their residue numbers """
