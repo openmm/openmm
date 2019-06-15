@@ -714,7 +714,8 @@ class CharmmPsfFile(object):
             if atom.type is not None:
                 # This is the most reliable way of determining the element
                 atomic_num = atom.type.atomic_number
-                elem = element.Element.getByAtomicNumber(atomic_num)
+                if atomic_num != 0:
+                    elem = element.Element.getByAtomicNumber(atomic_num)
             else:
                 # Figure it out from the mass
                 elem = element.Element.getByMass(atom.mass)
@@ -911,33 +912,34 @@ class CharmmPsfFile(object):
                                          bond.bond_type.req*length_conv)
 
         # Add virtual sites
-        if verbose: print('Adding lonepairs...')
-        for lpsite in self.lonepair_list:
-            index=lpsite[0]
-            atom1=lpsite[1]
-            atom2=lpsite[2]
-            atom3=lpsite[3]
-            if atom3 > 0: 
-                if lpsite[4] > 0 : # relative lonepair type
-                    r = lpsite[4] /10.0 # in nanometer
-                    xweights = [-1.0, 0.0, 1.0]
-                elif lpsite[4] < 0: # bisector lonepair type
-                    r = lpsite[4] / (-10.0)
-                    xweights = [-1.0, 0.5, 0.5]
-                theta = lpsite[5] * pi / 180.0
-                phi = (180.0 - lpsite[6]) * pi / 180.0
-                p = [r*cos(theta), r*sin(theta)*cos(phi), r*sin(theta)*sin(phi)]
-                p = [x if abs(x) > 1e-10 else 0 for x in p] # Avoid tiny numbers caused by roundoff error
-                system.setVirtualSite(index, mm.LocalCoordinatesSite(atom1, atom3, atom2, mm.Vec3(1.0, 0.0, 0.0), mm.Vec3(xweights[0],xweights[1],xweights[2]), mm.Vec3(0.0, -1.0, 1.0), mm.Vec3(p[0],p[1],p[2])))
-            else: # colinear lonepair type
-                # find a real atom to be the third one for LocalCoordinatesSite
-                for bond in self.bond_list:
-                    if (bond.atom1.idx == atom2 and bond.atom2.idx != atom1):
-                        a3=bond.atom2.idx
-                    elif (bond.atom2.idx == atom2 and bond.atom1.idx != atom1):
-                        a3=bond.atom1.idx
-                r = lpsite[4] / 10.0 # in nanometer
-                system.setVirtualSite(index, mm.LocalCoordinatesSite(atom1, atom2, a3, mm.Vec3(1.0, 0.0, 0.0), mm.Vec3(1.0,-1.0, 0.0), mm.Vec3(0.0, -1.0, 1.0), mm.Vec3(r,0.0,0.0)))   
+        if hasattr(self, 'lonepair_list'):
+            if verbose: print('Adding lonepairs...')
+            for lpsite in self.lonepair_list:
+                index=lpsite[0]
+                atom1=lpsite[1]
+                atom2=lpsite[2]
+                atom3=lpsite[3]
+                if atom3 > 0: 
+                    if lpsite[4] > 0 : # relative lonepair type
+                        r = lpsite[4] /10.0 # in nanometer
+                        xweights = [-1.0, 0.0, 1.0]
+                    elif lpsite[4] < 0: # bisector lonepair type
+                        r = lpsite[4] / (-10.0)
+                        xweights = [-1.0, 0.5, 0.5]
+                    theta = lpsite[5] * pi / 180.0
+                    phi = (180.0 - lpsite[6]) * pi / 180.0
+                    p = [r*cos(theta), r*sin(theta)*cos(phi), r*sin(theta)*sin(phi)]
+                    p = [x if abs(x) > 1e-10 else 0 for x in p] # Avoid tiny numbers caused by roundoff error
+                    system.setVirtualSite(index, mm.LocalCoordinatesSite(atom1, atom3, atom2, mm.Vec3(1.0, 0.0, 0.0), mm.Vec3(xweights[0],xweights[1],xweights[2]), mm.Vec3(0.0, -1.0, 1.0), mm.Vec3(p[0],p[1],p[2])))
+                else: # colinear lonepair type
+                    # find a real atom to be the third one for LocalCoordinatesSite
+                    for bond in self.bond_list:
+                        if (bond.atom1.idx == atom2 and bond.atom2.idx != atom1):
+                            a3=bond.atom2.idx
+                        elif (bond.atom2.idx == atom2 and bond.atom1.idx != atom1):
+                            a3=bond.atom1.idx
+                    r = lpsite[4] / 10.0 # in nanometer
+                    system.setVirtualSite(index, mm.LocalCoordinatesSite(atom1, atom2, a3, mm.Vec3(1.0, 0.0, 0.0), mm.Vec3(1.0,-1.0, 0.0), mm.Vec3(0.0, -1.0, 1.0), mm.Vec3(r,0.0,0.0)))   
         # Add Bond forces
         if verbose: print('Adding bonds...')
         force = mm.HarmonicBondForce()

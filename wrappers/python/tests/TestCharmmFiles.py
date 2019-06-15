@@ -141,17 +141,20 @@ class TestCharmmFiles(unittest.TestCase):
         warnings.filterwarnings('ignore', category=CharmmPSFWarning)
         psf = CharmmPsfFile('systems/chlb_cgenff.psf')
         crd = CharmmCrdFile('systems/chlb_cgenff.crd')
-        # move the position of the lonepair on Cholride
-        params = CharmmParameterSet('systems/par_all36_cgenff.prm',
-                                    'systems/top_all36_cgenff.rtf')
-        # Box dimensions (found from bounding box)
+        params = CharmmParameterSet('systems/top_all36_cgenff.rtf',
+                                    'systems/par_all36_cgenff.prm')
         plat = Platform.getPlatformByName('Reference')
-        system = psf.createSystem(params, nonbondedMethod=PME,
-                                  nonbondedCutoff=8*angstroms)
-
+        system = psf.createSystem(params)
         con = Context(system, VerletIntegrator(2*femtoseconds), plat)
         con.setPositions(crd.positions)
-
+        init_coor = con.getState(getPositions=True).getPositions()
+        # move the position of the lonepair and recompute its coordinates
+        crd.positions[12] = Vec3(0.5, 1.0, 1.5) * angstrom
+        con.setPositions(crd.positions)
+        con.computeVirtualSites()
+        new_coor = con.getState(getPositions=True).getPositions()
+        
+        self.assertEqual(init_coor, new_coor)
 
     def test_InsCode(self):
         """ Test the parsing of PSF files that contain insertion codes in their residue numbers """
