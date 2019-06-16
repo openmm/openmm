@@ -149,12 +149,15 @@ class TestCharmmFiles(unittest.TestCase):
         con.setPositions(crd.positions)
         init_coor = con.getState(getPositions=True).getPositions()
         # move the position of the lonepair and recompute its coordinates
-        crd.positions[12] = Vec3(0.5, 1.0, 1.5) * angstrom
+        plp=12
+        crd.positions[plp] = Vec3(0.5, 1.0, 1.5) * angstrom
         con.setPositions(crd.positions)
         con.computeVirtualSites()
         new_coor = con.getState(getPositions=True).getPositions()
         
-        self.assertEqual(init_coor, new_coor)
+        self.assertAlmostEqual(init_coor[plp][0]/nanometers, new_coor[plp][0]/nanometers)
+        self.assertAlmostEqual(init_coor[plp][1]/nanometers, new_coor[plp][1]/nanometers)
+        self.assertAlmostEqual(init_coor[plp][2]/nanometers, new_coor[plp][2]/nanometers)
 
     def test_InsCode(self):
         """ Test the parsing of PSF files that contain insertion codes in their residue numbers """
