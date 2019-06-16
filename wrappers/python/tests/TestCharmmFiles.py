@@ -116,8 +116,8 @@ class TestCharmmFiles(unittest.TestCase):
         ene = state.getPotentialEnergy().value_in_unit(kilocalories_per_mole)
         self.assertAlmostEqual(ene, 15490.0033559, delta=0.05)
 
-    def test_drude(self):
-        """Tests CHARMM systems with Drude force field"""
+    def test_Drude(self):
+        """Test CHARMM systems with Drude force field"""
         warnings.filterwarnings('ignore', category=CharmmPSFWarning)
         psf = CharmmPsfFile('systems/ala3_solv_drude.psf')
         crd = CharmmCrdFile('systems/ala3_solv_drude.crd')
@@ -135,6 +135,29 @@ class TestCharmmFiles(unittest.TestCase):
         state = con.getState(getEnergy=True, enforcePeriodicBox=True)
         ene = state.getPotentialEnergy().value_in_unit(kilocalories_per_mole)
         self.assertAlmostEqual(ene, -1831.54, delta=0.5)
+
+    def test_Lonepair(self):
+        """Test the lonepair facilities, in particular the colinear type of lonepairs"""
+        warnings.filterwarnings('ignore', category=CharmmPSFWarning)
+        psf = CharmmPsfFile('systems/chlb_cgenff.psf')
+        crd = CharmmCrdFile('systems/chlb_cgenff.crd')
+        params = CharmmParameterSet('systems/top_all36_cgenff.rtf',
+                                    'systems/par_all36_cgenff.prm')
+        plat = Platform.getPlatformByName('Reference')
+        system = psf.createSystem(params)
+        con = Context(system, VerletIntegrator(2*femtoseconds), plat)
+        con.setPositions(crd.positions)
+        init_coor = con.getState(getPositions=True).getPositions()
+        # move the position of the lonepair and recompute its coordinates
+        plp=12
+        crd.positions[plp] = Vec3(0.5, 1.0, 1.5) * angstrom
+        con.setPositions(crd.positions)
+        con.computeVirtualSites()
+        new_coor = con.getState(getPositions=True).getPositions()
+        
+        self.assertAlmostEqual(init_coor[plp][0]/nanometers, new_coor[plp][0]/nanometers)
+        self.assertAlmostEqual(init_coor[plp][1]/nanometers, new_coor[plp][1]/nanometers)
+        self.assertAlmostEqual(init_coor[plp][2]/nanometers, new_coor[plp][2]/nanometers)
 
     def test_InsCode(self):
         """ Test the parsing of PSF files that contain insertion codes in their residue numbers """
