@@ -80,7 +80,13 @@ where :code:`cuda92` should be replaced with the particular CUDA version
 installed on your computer.  Supported values are :code:`cuda75`, :code:`cuda80`,
 :code:`cuda90`, :code:`cuda91`, :code:`cuda92`, and :code:`cuda100`.  Because
 different CUDA releases are not binary compatible with each other, OpenMM can
-only work with the particular CUDA version it was compiled with.
+only work with the particular CUDA version it was compiled with. You most likely 
+want to also install the corresponding version of the cuda package :code:`cuda92`
+and the corresponding version of :code:`cudatoolkit` from the default channel
+::
+
+   conda install -c omnia/label/cuda92 cuda92
+   conda install 'cudatoolkit==9.2'
 
 4. Verify your installation by typing the following command:
 ::
