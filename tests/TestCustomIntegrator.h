@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -1081,6 +1081,53 @@ void testVectorFunctions() {
     ASSERT_EQUAL_TOL(sumy, integrator.getGlobalVariable(0), 1e-5);
 }
 
+/**
+ * This test records energies at multiple points during the step and checks that
+ * they're correct.
+ */
+void testRecordEnergy() {
+    const int numParticles = 8;
+    System system;
+    CustomIntegrator integrator(0.002);
+    integrator.addGlobalVariable("startEnergy", 0);
+    integrator.addGlobalVariable("endEnergy", 0);
+    integrator.addUpdateContextState();
+    integrator.addComputePerDof("v", "v+0.5*dt*f/m");
+    integrator.addComputeGlobal("startEnergy", "energy");
+    integrator.addComputePerDof("x", "x+dt*v");
+    integrator.addComputeGlobal("endEnergy", "energy");
+    integrator.addConstrainPositions();
+    integrator.addComputePerDof("v", "v+0.5*dt*f/m");
+    NonbondedForce* forceField = new NonbondedForce();
+    for (int i = 0; i < numParticles; ++i) {
+        system.addParticle(i%2 == 0 ? 5.0 : 10.0);
+        forceField->addParticle((i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);
+    }
+    system.addForce(forceField);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(numParticles);
+    vector<Vec3> velocities(numParticles);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+
+    for (int i = 0; i < numParticles; ++i) {
+        positions[i] = Vec3(i/2, (i+1)/2, 0);
+        velocities[i] = Vec3(genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5);
+    }
+    context.setPositions(positions);
+    context.setVelocities(velocities);
+    
+    // Simulate it and see whether the energies are recorded correctly.
+    
+    for (int i = 0; i < 10; ++i) {
+        double startEnergy = context.getState(State::Energy).getPotentialEnergy();
+        integrator.step(1);
+        double endEnergy = context.getState(State::Energy).getPotentialEnergy();
+        ASSERT_EQUAL_TOL(startEnergy, integrator.getGlobalVariable(0), 1e-6);
+        ASSERT_EQUAL_TOL(endEnergy, integrator.getGlobalVariable(1), 1e-6);
+    }
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -1107,6 +1154,7 @@ int main(int argc, char* argv[]) {
         testAlternatingGroups();
         testUpdateContextState();
         testVectorFunctions();
+        testRecordEnergy();
         runPlatformTests();
     }
     catch(const exception& e) {
