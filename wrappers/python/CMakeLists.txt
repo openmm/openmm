@@ -59,6 +59,7 @@ foreach(SUBDIR ${SUBDIRS})
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.cif"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.prmtop"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.prm"
+        "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.rtf"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.inpcrd"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.crd"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.gro"

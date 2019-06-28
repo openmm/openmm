@@ -722,8 +722,6 @@ void CpuCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, 
 
     // Record the values.
 
-    chargePosqIndex = data.requestPosqIndex();
-    ljPosqIndex = data.requestPosqIndex();
     for (int i = 0; i < numParticles; ++i)
        force.getParticleParameters(i, baseParticleParams[i][0], baseParticleParams[i][1], baseParticleParams[i][2]);
     for (int i = 0; i < num14; ++i) {
@@ -806,6 +804,8 @@ void CpuCalcNonbondedForceKernel::computeParameters(ContextImpl& context, bool o
         }
         else
             ewaldSelfEnergy = 0.0;
+        chargePosqIndex = data.requestPosqIndex();
+        ljPosqIndex = data.requestPosqIndex();
     }
 
     // Compute exception parameters.
