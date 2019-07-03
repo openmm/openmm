@@ -183,7 +183,7 @@ class ForceField(object):
         self._templateGenerators = []
         self.loadFile(files)
 
-    def loadFile(self, files):
+    def loadFile(self, files, prefix=''):
         """Load an XML file and add the definitions from it to this ForceField.
 
         Parameters
@@ -194,6 +194,9 @@ class ForceField(object):
             directory, a path relative to this module's data subdirectory (for
             built in force fields), or an open file-like object with a read()
             method from which the forcefield XML data can be loaded.
+        prefix : string
+            An optional string to be prepended to each residue name found in the
+            loaded files.
         """
 
         if isinstance(files, tuple):
@@ -259,7 +262,7 @@ class ForceField(object):
         for tree in trees:
             if tree.getroot().find('Residues') is not None:
                 for residue in tree.getroot().find('Residues').findall('Residue'):
-                    resName = residue.attrib['name']
+                    resName = prefix+residue.attrib['name']
                     template = ForceField._TemplateData(resName)
                     if 'override' in residue.attrib:
                         template.overrideLevel = int(residue.attrib['override'])
