@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -45,6 +45,7 @@
 #include "openmm/System.h"
 #include "SimTKOpenMMRealType.h"
 #include "sfmt/SFMT.h"
+#include <algorithm>
 #include <cmath>
 #include <iostream>
 #include <vector>
@@ -1042,10 +1043,12 @@ void testVectorFunctions() {
     integrator.addPerDofVariable("angular", 0.0);
     integrator.addPerDofVariable("shuffle", 0.0);
     integrator.addPerDofVariable("multicross", 0.0);
+    integrator.addPerDofVariable("maxplus", 0.0);
     integrator.addComputeSum("sumy", "x*vector(0, 1, 0)");
     integrator.addComputePerDof("angular", "cross(v, x)");
     integrator.addComputePerDof("shuffle", "dot(vector(_z(x), _x(x), _y(x)), v)");
     integrator.addComputePerDof("multicross", "cross(vector(1, 0, 0), cross(vector(0, 0, 1), vector(1, 0, 0)))");
+    integrator.addComputePerDof("maxplus", "max(x, 0.1)+0.5");
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
     vector<Vec3> positions(numParticles);
@@ -1063,17 +1066,66 @@ void testVectorFunctions() {
     // See if the expressions were computed correctly.
     
     double sumy = 0;
-    vector<Vec3> angular, shuffle, multicross;
+    vector<Vec3> angular, shuffle, multicross, maxplus;
     integrator.getPerDofVariable(0, angular);
     integrator.getPerDofVariable(1, shuffle);
     integrator.getPerDofVariable(2, multicross);
+    integrator.getPerDofVariable(3, maxplus);
     for (int i = 0; i < numParticles; i++) {
         ASSERT_EQUAL_VEC(velocities[i].cross(positions[i]), angular[i], 1e-5);
         ASSERT_EQUAL_VEC(Vec3(1, 1, 1)*velocities[i].dot(Vec3(positions[i][2], positions[i][0], positions[i][1])), shuffle[i], 1e-5);
         ASSERT_EQUAL_VEC(Vec3(0, 0, 1), multicross[i], 1e-5);
+        ASSERT_EQUAL_VEC(Vec3(max(positions[i][0], 0.1)+0.5, max(positions[i][1], 0.1)+0.5, max(positions[i][2], 0.1)+0.5), maxplus[i], 1e-5);
         sumy += positions[i][1];
     }
     ASSERT_EQUAL_TOL(sumy, integrator.getGlobalVariable(0), 1e-5);
+}
+
+/**
+ * This test records energies at multiple points during the step and checks that
+ * they're correct.
+ */
+void testRecordEnergy() {
+    const int numParticles = 8;
+    System system;
+    CustomIntegrator integrator(0.002);
+    integrator.addGlobalVariable("startEnergy", 0);
+    integrator.addGlobalVariable("endEnergy", 0);
+    integrator.addUpdateContextState();
+    integrator.addComputePerDof("v", "v+0.5*dt*f/m");
+    integrator.addComputeGlobal("startEnergy", "energy");
+    integrator.addComputePerDof("x", "x+dt*v");
+    integrator.addComputeGlobal("endEnergy", "energy");
+    integrator.addConstrainPositions();
+    integrator.addComputePerDof("v", "v+0.5*dt*f/m");
+    NonbondedForce* forceField = new NonbondedForce();
+    for (int i = 0; i < numParticles; ++i) {
+        system.addParticle(i%2 == 0 ? 5.0 : 10.0);
+        forceField->addParticle((i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);
+    }
+    system.addForce(forceField);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(numParticles);
+    vector<Vec3> velocities(numParticles);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+
+    for (int i = 0; i < numParticles; ++i) {
+        positions[i] = Vec3(i/2, (i+1)/2, 0);
+        velocities[i] = Vec3(genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5);
+    }
+    context.setPositions(positions);
+    context.setVelocities(velocities);
+    
+    // Simulate it and see whether the energies are recorded correctly.
+    
+    for (int i = 0; i < 10; ++i) {
+        double startEnergy = context.getState(State::Energy).getPotentialEnergy();
+        integrator.step(1);
+        double endEnergy = context.getState(State::Energy).getPotentialEnergy();
+        ASSERT_EQUAL_TOL(startEnergy, integrator.getGlobalVariable(0), 1e-6);
+        ASSERT_EQUAL_TOL(endEnergy, integrator.getGlobalVariable(1), 1e-6);
+    }
 }
 
 void runPlatformTests();
@@ -1102,6 +1154,7 @@ int main(int argc, char* argv[]) {
         testAlternatingGroups();
         testUpdateContextState();
         testVectorFunctions();
+        testRecordEnergy();
         runPlatformTests();
     }
     catch(const exception& e) {

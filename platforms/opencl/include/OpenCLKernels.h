@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -655,6 +655,8 @@ private:
     OpenCLArray charges;
     OpenCLArray sigmaEpsilon;
     OpenCLArray exceptionParams;
+    OpenCLArray exclusionAtoms;
+    OpenCLArray exclusionParams;
     OpenCLArray baseParticleParams;
     OpenCLArray baseExceptionParams;
     OpenCLArray particleParamOffsets;
@@ -683,7 +685,7 @@ private:
     Kernel cpuPme;
     PmeIO* pmeio;
     SyncQueuePostComputation* syncQueue;
-    cl::Kernel computeParamsKernel;
+    cl::Kernel computeParamsKernel, computeExclusionParamsKernel;
     cl::Kernel ewaldSumsKernel;
     cl::Kernel ewaldForcesKernel;
     cl::Kernel pmeAtomRangeKernel;
@@ -1243,6 +1245,7 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomCVForce& force);
 private:
+    class ForceInfo;
     class ReorderListener;
     OpenCLContext& cl;
     bool hasInitializedKernels;

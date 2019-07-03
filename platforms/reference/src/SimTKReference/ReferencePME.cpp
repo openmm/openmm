@@ -538,7 +538,7 @@ dpme_reciprocal_convolution(pme_t pme,
     ny = pme->ngrid[1];
     nz = pme->ngrid[2];
 
-    boxfactor = M_PI*sqrt(M_PI) / (6.0*periodicBoxVectors[0][0]*periodicBoxVectors[1][1]*periodicBoxVectors[2][2]);
+    boxfactor = -2*M_PI*sqrt(M_PI) / (6.0*periodicBoxVectors[0][0]*periodicBoxVectors[1][1]*periodicBoxVectors[2][2]);
 
     esum = 0;
 
@@ -610,7 +610,7 @@ dpme_reciprocal_convolution(pme_t pme,
         }
     }
     // Remember the C6 energy is attractive, hence the negative sign.
-    *energy = -esum;
+    *energy = 0.5*esum;
 }
 
 

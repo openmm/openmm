@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -678,6 +678,8 @@ private:
     CudaArray charges;
     CudaArray sigmaEpsilon;
     CudaArray exceptionParams;
+    CudaArray exclusionAtoms;
+    CudaArray exclusionParams;
     CudaArray baseParticleParams;
     CudaArray baseExceptionParams;
     CudaArray particleParamOffsets;
@@ -694,7 +696,6 @@ private:
     CudaArray pmeDispersionBsplineModuliX;
     CudaArray pmeDispersionBsplineModuliY;
     CudaArray pmeDispersionBsplineModuliZ;
-    CudaArray pmeAtomRange;
     CudaArray pmeAtomGridIndex;
     CudaArray pmeEnergyBuffer;
     CudaSort* sort;
@@ -708,7 +709,7 @@ private:
     CudaFFT3D* dispersionFft;
     cufftHandle dispersionFftForward;
     cufftHandle dispersionFftBackward;
-    CUfunction computeParamsKernel;
+    CUfunction computeParamsKernel, computeExclusionParamsKernel;
     CUfunction ewaldSumsKernel;
     CUfunction ewaldForcesKernel;
     CUfunction pmeGridIndexKernel;
@@ -1267,6 +1268,7 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomCVForce& force);
 private:
+    class ForceInfo;
     class ReorderListener;
     CudaContext& cu;
     bool hasInitializedListeners;

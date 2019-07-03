@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -484,6 +484,9 @@ void CudaExpressionUtilities::processExpression(stringstream& out, const Express
         case Operation::ATAN:
             callFunction(out, "atanf", "atan", getTempName(node.getChildren()[0], temps), tempType);
             break;
+        case Operation::ATAN2:
+            callFunction2(out, "atan2f", "atan2", getTempName(node.getChildren()[0], temps), getTempName(node.getChildren()[1], temps), tempType);
+            break;
         case Operation::SINH:
             callFunction(out, "sinh", "sinh", getTempName(node.getChildren()[0], temps), tempType);
             break;
@@ -547,7 +550,16 @@ void CudaExpressionUtilities::processExpression(stringstream& out, const Express
             out << "RECIP(" << getTempName(node.getChildren()[0], temps) << ")";
             break;
         case Operation::ADD_CONSTANT:
-            out << context.doubleToString(dynamic_cast<const Operation::AddConstant*>(&node.getOperation())->getValue()) << "+" << getTempName(node.getChildren()[0], temps);
+            if (isVecType) {
+                string val = context.doubleToString(dynamic_cast<const Operation::AddConstant*>(&node.getOperation())->getValue());
+                string arg = getTempName(node.getChildren()[0], temps);
+                out << "make_" << tempType << "(";
+                out << val << "+" << arg << ".x, ";
+                out << val << "+" << arg << ".y, ";
+                out << val << "+" << arg << ".z)";
+            }
+            else
+                out << context.doubleToString(dynamic_cast<const Operation::AddConstant*>(&node.getOperation())->getValue()) << "+" << getTempName(node.getChildren()[0], temps);
             break;
         case Operation::MULTIPLY_CONSTANT:
             out << context.doubleToString(dynamic_cast<const Operation::MultiplyConstant*>(&node.getOperation())->getValue()) << "*" << getTempName(node.getChildren()[0], temps);
@@ -610,10 +622,10 @@ void CudaExpressionUtilities::processExpression(stringstream& out, const Express
             break;
         }
         case Operation::MIN:
-            out << "min((" << tempType << ") " << getTempName(node.getChildren()[0], temps) << ", (" << tempType << ") " << getTempName(node.getChildren()[1], temps) << ")";
+            callFunction2(out, "min", "min", getTempName(node.getChildren()[0], temps), getTempName(node.getChildren()[1], temps), tempType);
             break;
         case Operation::MAX:
-            out << "max((" << tempType << ") " << getTempName(node.getChildren()[0], temps) << ", (" << tempType << ") " << getTempName(node.getChildren()[1], temps) << ")";
+            callFunction2(out, "max", "max", getTempName(node.getChildren()[0], temps), getTempName(node.getChildren()[1], temps), tempType);
             break;
         case Operation::ABS:
             callFunction(out, "fabs", "fabs", getTempName(node.getChildren()[0], temps), tempType);
@@ -914,16 +926,23 @@ Lepton::CustomFunction* CudaExpressionUtilities::getPeriodicDistancePlaceholder(
 void CudaExpressionUtilities::callFunction(stringstream& out, string singleFn, string doubleFn, const string& arg, const string& tempType) {
     bool isDouble = (tempType[0] == 'd');
     bool isVector = (tempType[tempType.size()-1] == '3');
+    string fn = (isDouble ? doubleFn : singleFn);
+    if (isVector)
+        out<<"make_"<<tempType<<"("<<fn<<"("<<arg<<".x), "<<fn<<"("<<arg<<".y), "<<fn<<"("<<arg<<".z))";
+    else
+        out<<fn<<"("<<arg<<")";
+}
+
+void CudaExpressionUtilities::callFunction2(stringstream& out, string singleFn, string doubleFn, const string& arg1, const string& arg2, const string& tempType) {
+    bool isDouble = (tempType[0] == 'd');
+    bool isVector = (tempType[tempType.size()-1] == '3');
+    string fn = (isDouble ? doubleFn : singleFn);
     if (isVector) {
-        if (isDouble)
-            out<<"make_double3("<<doubleFn<<"("<<arg<<".x), "<<doubleFn<<"("<<arg<<".y), "<<doubleFn<<"("<<arg<<".z))";
-        else
-            out<<"make_float3("<<singleFn<<"("<<arg<<".x), "<<singleFn<<"("<<arg<<".y), "<<singleFn<<"("<<arg<<".z))";
+        out<<"make_"<<tempType<<"(";
+        out<<fn<<"("<<arg1<<".x, "<<arg2<<".x), ";
+        out<<fn<<"("<<arg1<<".y, "<<arg2<<".y), ";
+        out<<fn<<"("<<arg1<<".z, "<<arg2<<".z))";
     }
-    else {
-        if (isDouble)
-            out<<doubleFn<<"("<<arg<<")";
-        else
-            out<<singleFn<<"("<<arg<<")";
-    }
+    else
+        out<<fn<<"(("<<tempType<<") "<<arg1<<", ("<<tempType<<") "<<arg2<<")";
 }

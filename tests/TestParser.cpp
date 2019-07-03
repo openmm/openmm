@@ -265,6 +265,9 @@ int main() {
         verifyEvaluation("ceil(x)", -2.1, 3.0, -2.0);
         verifyEvaluation("select(x, 1.0, y)", 0.3, 2.0, 1.0);
         verifyEvaluation("select(x, 1.0, y)", 0.0, 2.0, 2.0);
+        verifyEvaluation("atan2(x, y)", 3.0, 1.5, std::atan(2.0));
+        verifyEvaluation("sqrt(x^2)", -2.2, 0.0, 2.2);
+        verifyEvaluation("sqrt(x)^2", 2.2, 0.0, 2.2);
         verifyInvalidExpression("1..2");
         verifyInvalidExpression("1*(2+3");
         verifyInvalidExpression("5++4");
@@ -285,6 +288,7 @@ int main() {
         verifyDerivative("asin(x)", "1/sqrt(1-x^2)");
         verifyDerivative("acos(x)", "-1/sqrt(1-x^2)");
         verifyDerivative("atan(x)", "1/(1+x^2)");
+        verifyDerivative("atan2(2*x,y)", "2*y/(4*x^2+y^2)");
         verifyDerivative("sinh(x)", "cosh(x)");
         verifyDerivative("cosh(x)", "sinh(x)");
         verifyDerivative("tanh(x)", "1/(cosh(x)^2)");

@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2015-2018 Stanford University and the Authors.
+Portions copyright (c) 2015-2019 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors: Jason Swails
 
@@ -85,11 +85,19 @@ class PDBxFile(object):
 
         atomData = block.getObj('atom_site')
         atomNameCol = atomData.getAttributeIndex('auth_atom_id')
+        if atomNameCol == -1:
+            atomNameCol = atomData.getAttributeIndex('label_atom_id')
         atomIdCol = atomData.getAttributeIndex('id')
         resNameCol = atomData.getAttributeIndex('auth_comp_id')
+        if resNameCol == -1:
+            resNameCol = atomData.getAttributeIndex('label_comp_id')
         resNumCol = atomData.getAttributeIndex('auth_seq_id')
+        if resNumCol == -1:
+            resNumCol = atomData.getAttributeIndex('label_seq_id')
         resInsertionCol = atomData.getAttributeIndex('pdbx_PDB_ins_code')
         chainIdCol = atomData.getAttributeIndex('auth_asym_id')
+        if chainIdCol == -1:
+            chainIdCol = atomData.getAttributeIndex('label_asym_id')
         elementCol = atomData.getAttributeIndex('type_symbol')
         altIdCol = atomData.getAttributeIndex('label_alt_id')
         modelCol = atomData.getAttributeIndex('pdbx_PDB_model_num')

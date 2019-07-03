@@ -73,6 +73,7 @@ CudaNonbondedUtilities::CudaNonbondedUtilities(CudaContext& context) : context(c
     CHECK_RESULT(cuMemHostAlloc((void**) &pinnedCountBuffer, 2*sizeof(int), CU_MEMHOSTALLOC_PORTABLE));
     numForceThreadBlocks = 4*multiprocessors;
     forceThreadBlockSize = (context.getComputeCapability() < 2.0 ? 128 : 256);
+    setKernelSource(CudaKernelSources::nonbonded);
 }
 
 CudaNonbondedUtilities::~CudaNonbondedUtilities() {
@@ -510,13 +511,17 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
     replacements["ATOM_PARAMETER_DATA"] = localData.str();
     stringstream args;
     for (int i = 0; i < (int) params.size(); i++) {
-        args << ", const ";
+        args << ", ";
+        if (params[i].isConstant())
+            args << "const ";
         args << params[i].getType();
         args << "* __restrict__ global_";
         args << params[i].getName();
     }
     for (int i = 0; i < (int) arguments.size(); i++) {
-        args << ", const ";
+        args << ", ";
+        if (arguments[i].isConstant())
+            args << "const ";
         args << arguments[i].getType();
         args << "* __restrict__ ";
         args << arguments[i].getName();
@@ -710,7 +715,11 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
     defines["LAST_EXCLUSION_TILE"] = context.intToString(endExclusionIndex);
     if ((localDataSize/4)%2 == 0 && !context.getUseDoublePrecision())
         defines["PARAMETER_SIZE_IS_EVEN"] = "1";
-    CUmodule program = context.createModule(CudaKernelSources::vectorOps+context.replaceStrings(CudaKernelSources::nonbonded, replacements), defines);
+    CUmodule program = context.createModule(CudaKernelSources::vectorOps+context.replaceStrings(kernelSource, replacements), defines);
     CUfunction kernel = context.getKernel(program, "computeNonbonded");
     return kernel;
+}
+
+void CudaNonbondedUtilities::setKernelSource(const string& source) {
+    kernelSource = source;
 }
