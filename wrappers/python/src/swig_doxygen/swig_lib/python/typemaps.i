@@ -156,13 +156,49 @@ OpenMM::Vec3 Py_SequenceToVec3(PyObject* obj, int& status) {
 
 %fragment("Py_SequenceToVecDouble", "header", fragment="Py_StripOpenMMUnits") {
 int Py_SequenceToVecDouble(PyObject* obj, std::vector<double>& out) {
-    PyObject* stripped = NULL;
+    PyObject* stripped = Py_StripOpenMMUnits(obj);
     PyObject* item = NULL;
     PyObject* item1 = NULL;
-    PyObject* iterator = NULL;
-    stripped = Py_StripOpenMMUnits(obj);
-    iterator = PyObject_GetIter(stripped);
 
+    if (isNumpyAvailable()) {
+        if (PyArray_Check(stripped) && PyArray_ISCARRAY_RO(stripped) && PyArray_NDIM(stripped) == 1) {
+            int type = PyArray_TYPE(stripped);
+            int length = PyArray_SIZE(stripped);
+            void* data = PyArray_DATA((PyArrayObject*) stripped);
+            if (type == NPY_DOUBLE) {
+                out.resize(length);
+                memcpy(&out[0], data, sizeof(double)*length);
+                Py_DECREF(stripped);
+                return SWIG_OK;
+            }
+            if (type == NPY_FLOAT) {
+                out.resize(length);
+                float* floatData = (float*) data;
+                for (int i = 0; i < length; i++)
+                    out[i] = floatData[i];
+                Py_DECREF(stripped);
+                return SWIG_OK;
+            }
+            if (type == NPY_INT32) {
+                out.resize(length);
+                int* intData = (int*) data;
+                for (int i = 0; i < length; i++)
+                    out[i] = intData[i];
+                Py_DECREF(stripped);
+                return SWIG_OK;
+            }
+            if (type == NPY_INT64) {
+                out.resize(length);
+                long long* longData = (long long*) data;
+                for (int i = 0; i < length; i++)
+                    out[i] = longData[i];
+                Py_DECREF(stripped);
+                return SWIG_OK;
+            }
+        }
+    }
+
+    PyObject* iterator = PyObject_GetIter(stripped);
     if (iterator == NULL) {
         Py_DECREF(stripped);
         return SWIG_ERROR;
@@ -194,16 +230,6 @@ int Py_SequenceToVecDouble(PyObject* obj, std::vector<double>& out) {
 }
 
 %fragment("Py_SequenceToVecVec3", "header", fragment="Py_SequenceToVec3") {
-int isNumpyAvailable() {
-    static bool initialized = false;
-    static bool available = false;
-    if (!initialized) {
-        initialized = true;
-        available = (_import_array() >= 0);
-    }
-    return available;
-}
-
 int Py_SequenceToVecVec3(PyObject* obj, std::vector<Vec3>& out) {
     PyObject* stripped = Py_StripOpenMMUnits(obj);      // new reference
     if (isNumpyAvailable()) {
