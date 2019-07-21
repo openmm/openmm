@@ -28,7 +28,7 @@ install:
   - "set PATH=C:\\fftw;%PATH%"
 
 # Download and install some OpenMM build dependencies (doxygen, swig)
-  - choco install -y doxygen.portable swig > null
+  - choco install -y doxygen.install swig > null
 
 # Download OpenCL Headers and build the ICD loader
   - ps: "[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12;"

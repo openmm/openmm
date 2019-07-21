@@ -20,6 +20,16 @@ PyObject *copyVVec3ToList(std::vector<Vec3> vVec3) {
   return pyList;
 }
 
+int isNumpyAvailable() {
+    static bool initialized = false;
+    static bool available = false;
+    if (!initialized) {
+        initialized = true;
+        available = (_import_array() >= 0);
+    }
+    return available;
+}
+
 } // namespace OpenMM
 %}
 
