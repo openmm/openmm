@@ -1,0 +1,37 @@
+<ForceField>
+ <AtomTypes>
+  <Type name="380" class="73" element="O" mass="15.999"/>
+  <Type name="381" class="74" element="H" mass="1.008"/>
+ </AtomTypes>
+ <Residues>
+  <Residue name="HOH">
+   <Atom name="H1" type="381"/>
+   <Atom name="H2" type="381"/>
+   <Atom name="O" type="380"/>
+   <Bond from="0" to="2"/>
+   <Bond from="1" to="2"/>
+ </Residue>
+ </Residues>
+  <AmoebaBondForce bond-cubic="-25.5" bond-quartic="379.3125">
+   <Bond class1="73" class2="74" length="9.584047e-02" k="2.3331232e+05"/>
+ </AmoebaBondForce>
+  <AmoebaAngleForce angle-cubic="-0.014" angle-quartic="5.6e-05" angle-pentic="-7e-07" angle-sextic="2.2e-08">
+   <Angle class1="74" class2="73" class3="74" k="6.359379296918e-02" angle1="1.064826e+02"/> 
+ </AmoebaAngleForce>
+  <AmoebaOutOfPlaneBendForce type="ALLINGER" opbend-cubic="-0.014" opbend-quartic="5.6e-05" opbend-pentic="-7e-07" opbend-sextic="2.2e-08">
+    <!-- LPW: Mark's force field parsing code requires AmoebaOutOfPlaneBendForce in order to read AmoebaAngleForce, even if the clause is empty -->
+ </AmoebaOutOfPlaneBendForce>
+  <AmoebaVdwForce type="BUFFERED-14-7" radiusrule="CUBIC-MEAN" radiustype="R-MIN" radiussize="DIAMETER" epsilonrule="HHG" vdw-13-scale="0.0" vdw-14-scale="1.0" vdw-15-scale="1.0">
+   <Vdw class="73" sigma="3.645297e-01" epsilon="8.2348e-01" reduction="1.0"/> 
+   <Vdw class="74" sigma="0.0" epsilon="0.0" reduction="1.0"/> 
+ </AmoebaVdwForce>
+  <AmoebaMultipoleForce direct11Scale="0.0" direct12Scale="1.0" direct13Scale="1.0" direct14Scale="1.0" mpole12Scale="0.0" mpole13Scale="0.0" mpole14Scale="0.4" mpole15Scale="0.8" mutual11Scale="1.0" mutual12Scale="1.0" mutual13Scale="1.0" mutual14Scale="1.0" polar12Scale="0.0" polar13Scale="0.0" polar14Intra="0.5" polar14Scale="1.0" polar15Scale="1.0"> 
+   <Multipole type="380" kz="-381" kx="-381" c0="-5.94024e-01" d1="0.0" d2="0.0" d3="4.682021361460e-03" q11="2.111247211390e-04" q21="0.0" q22="-3.009710770960e-04" q31="0.0" q32="0.0" q33="8.984635595700e-05"/>
+   <Multipole type="381" kz="380" kx="381" c0="2.97012e-01" d1="-4.969244847950e-03" d2="0.0" d3="-6.646702999580e-03" q11="1.750551751017e-04" q21="0.0" q22="2.029112480700e-05" q31="-3.392685963908e-05" q32="0.0" q33="-1.953462999087e-04"/>
+   <Polarize type="380" polarizability="8.063631227791e-04" thole="2.36164e-01" pgrp1="381"/>
+   <Polarize type="381" polarizability="5.048434386104e-04" thole="2.36164e-01" pgrp1="380"/>
+ </AmoebaMultipoleForce>
+  <AmoebaUreyBradleyForce cubic="0.0" quartic="0.0">
+   <UreyBradley class1="74" class2="73" class3="74" k="-4.31294e+03" d="1.535676676685e-01"/> 
+ </AmoebaUreyBradleyForce>
+</ForceField>

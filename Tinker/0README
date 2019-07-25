@@ -1,0 +1,28 @@
+
+                    #######################################
+                    SOURCE Directory for the TINKER Package
+                    #######################################
+
+         This directory contains the Fortran 95 source code for the
+         current version of the TINKER program package.
+
+         The code is in a standard Fortran dialect that should compile
+         unchanged on most machines. Script files to build the package
+         on a variety of systems are in subdirectories named for the
+         machine/operating system. A Makefile is also provided.
+
+         Only a few source files may require editing prior to building:
+         "sizes.f" which contains some master array dimensions used
+         throughout the package, and "openend.f" which is a system
+         dependent routine to open a file at the end.
+
+         If you are building an OpenMP-capable version of TINKER with
+         the Intel Fortran compiler, then it is necessary to uncomment
+         the calls to Intel-specific extensions "kmp_set_stacksize_s"
+         and "kmp_set_blocksize" near the top of the file "initial.f".
+
+         In addition, if your system does not support the iargc/getarg
+         mechanism for command line arguments, then comment out the
+         call to the subroutine "command" at the bottom of the source
+         file "initial.f".
+

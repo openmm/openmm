@@ -1,0 +1,17 @@
+c     ##  subroutine nblist  --  maintain pairwise neighbor lists  ##
+
+c     ##  subroutine vlist  --  get van der Waals neighbor lists  ##
+c     ##  subroutine vbuild  --  build vdw list for all sites  ##
+c     ##  subroutine vlight  --  build vdw pair list via lights  ##
+
+c     ##  subroutine clist  --  get partial charge neighbor lists  ##
+c     ##  subroutine cbuild  --  build charge list for all sites  ##
+c     ##  subroutine clight  --  get partial charge list via lights  ##
+
+c     ##  subroutine mlist  --  get atomic multipole neighbor lists  ##
+c     ##  subroutine mbuild  --  build mpole list for all sites  ##
+c     ##  subroutine mlight  --  get multipole pair list via lights  ##
+
+c     ##  subroutine ulist  --  get preconditioner neighbor lists  ##
+c     ##  subroutine ubuild  --  preconditioner list for all sites  ##
+c     ##  subroutine ulight  --  get preconditioner list via lights  ##

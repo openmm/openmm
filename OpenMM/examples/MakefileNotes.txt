@@ -1,0 +1,45 @@
+Instructions for using the Makefile provided.
+---------------------------------------------
+
+There is a Makefile for use on Linux and Mac, and an NMakefile
+for use with Microsoft's "nmake" program. For Fortran, the
+Makefile expects gfortran to be in the path while NMakefile
+expects "ifort" (Intel Fortran).
+
+You must already have the OpenMM binaries installed from 
+SimTK.org/home/OpenMM. Pay careful attention to the installation 
+instructions -- if you are hoping to get GPU acceleration you 
+may also have to install appropriate vendor libraries and a driver.
+
+You may need to slightly edit the Makefile or NMakefile to make 
+it run on your system, depending where you installed OpenMM and 
+the particular requirements of your compiler versions for mixed 
+Fortran/C++ programming. 
+
+Type "make" (or "make default") to get just one C++ example built
+(HelloArgon). Make sure it runs.
+
+To compile all example programs type "make all". That includes Fortran
+examples though so you will see failures unless you have gfortran
+installed (Linux and Mac) or ifort installed (Windows). However, 
+the C++ and C examples should compile with just g++ or cl.
+
+To build just one example, type "make HelloArgonInC" or whatever.
+
+Before you run the executables, remember to add the OpenMM dynamic 
+library directory to your library path. 
+
+The simplest way to do this is to type the following commands:
+
+For linux (for the bash shell, assuming installation was done in 
+the default location: /usr/local/openmm): 
+  $ export LD_LIBRARY_PATH=/usr/local/openmm/lib 
+
+For MAC (for the bash shell, assuming installation was done 
+in the default location: /usr/local/openmm):
+  $ export DYLD_LIBRARY_PATH=/usr/local/openmm/lib 
+
+For Windows (command tool, assuming installation was done 
+in the default location: C:/Program Files/OpenMM):
+C:\> set path=%path%;C:\Program Files\OpenMM\lib
+

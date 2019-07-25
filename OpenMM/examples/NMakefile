@@ -1,0 +1,63 @@
+# ----------------------------------------------------------------------
+# Microsoft NMakefile for OpenMM Preview Release 4 "hello world" examples.
+# August 19, 2009.
+# See https://simtk.org/home/openmm.
+# ----------------------------------------------------------------------
+# This assumes you have gcc compilers for whatever language you are
+# using: cl for C++ and C, ifort for Fortran 95.
+# 
+
+OpenMM_INSTALL_DIR="C:/Program Files/OpenMM"
+CC = cl
+FC = ifort
+CFLAGS = /MD /EHsc
+FFLAGS = /MD
+
+# Extra libraries required when ifort links with a C++ module.
+FCPPLIBS = 
+
+LIB_DIR=$(OpenMM_INSTALL_DIR)/lib
+INCLUDE_DIR=$(OpenMM_INSTALL_DIR)/include
+LIBS= OpenMM.lib
+
+ALL_CPP_EXAMPLES = HelloArgon HelloSodiumChloride HelloEthane HelloWaterBox
+ALL_C_EXAMPLES   = HelloArgonInC HelloSodiumChlorideInC
+ALL_F95_EXAMPLES = HelloArgonInFortran HelloSodiumChlorideInFortran
+
+ALL_PROGS = $(ALL_CPP_EXAMPLES) $(ALL_C_EXAMPLES) $(ALL_F95_EXAMPLES)
+
+default: HelloArgon
+
+all : cpp cc fortran
+
+cpp c++: $(ALL_CPP_EXAMPLES)
+
+cc: $(ALL_C_EXAMPLES)
+
+fortran: $(ALL_F95_EXAMPLES)
+
+
+# Treat all .cpp source files the same way.
+HelloArgon HelloSodiumChloride HelloEthane HelloWaterBox: 
+	$(CC) $(CFLAGS) -I$(INCLUDE_DIR) $*.cpp /link /libpath:$(LIB_DIR) $(LIBS) /out:$*.exe
+
+HelloArgonInC: HelloArgonInC.c
+	$(CC) $(CFLAGS) -I$(INCLUDE_DIR) $*.c /link /libpath:$(LIB_DIR) $(LIBS) /out:$*.exe
+
+HelloSodiumChlorideInC: HelloSodiumChlorideInC.c
+	$(CC) $(CFLAGS) -I$(INCLUDE_DIR) $*.c /link /libpath:$(LIB_DIR) $(LIBS) /out:$*.exe
+
+HelloArgonInFortran: HelloArgonInFortran.f90 openmm.mod
+	$(FC) $(FFLAGS) $*.f90 /link /libpath:$(LIB_DIR) $(LIBS) /out:$*.exe
+
+HelloSodiumChlorideInFortran: HelloSodiumChlorideInFortran.f90 openmm.mod
+	$(FC) $(FFLAGS) $*.f90 /link /libpath:$(LIB_DIR) $(LIBS) /out:$*.exe
+
+
+# Build Fortran 95 Module file
+openmm.mod:
+	$(FC) -c $(FFLAGS) $(INCLUDE_DIR)/OpenMMFortranModule.f90
+
+clean : 
+	del *.mod *.obj *.exe *.pdb *.exe.manifest
+

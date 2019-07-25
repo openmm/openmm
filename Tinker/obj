@@ -1,0 +1,686 @@
+##
+###################################################################
+##                                                               ##
+##  Makefile for Building the TINKER Molecular Modeling Package  ##
+##                                                               ##
+###################################################################
+##
+##  Invocation Options:
+##
+##   1. make all              Build all the TINKER executables
+##   2. make install          Move the executables to BINDIR
+##   3. make create_links     Create soft links in LINKDIR
+##   4. make remove_links     Remove soft links from LINKDIR
+##   6. make listing          Concatenate source to tinker.txt
+##   5. make clean            Delete objects and executables
+##
+##  Original version of this file is due to Peter Happersberger
+##  and Jochen Buehler of the University of Konstanz, January 1998.
+##  Modifications by Reece Hart & Jay Ponder, Washington University
+##
+##  Building TINKER from source requires libraries from the FFTW
+##  Fast Fourier Transform package and (optionally) APBS Poisson-
+##  Boltzmann solver. These libraries are assumed to already be
+##  present, and are not built by this Makefile
+##
+###################################################################
+
+###################################################################
+##  Master Directory Locations; Change as Needed for Local Site  ##
+###################################################################
+
+##  TINKERDIR       TINKER Distribution Directory
+##  TINKER_LIBDIR   Libraries needed to build TINKER
+##  BINDIR          Directory with TINKER Executables
+##  LINKDIR         Linked Copies of TINKER Executables
+##  FFTWDIR         FFTW Top-Level Directory
+##  FFTW_LIB_DIR    Directory with FFTW Libraries
+##  FFTW_LIBS       FFTW Libraries needed to build TINKER
+##  APBSDIR         APBS Top-Level Directory
+##  APBS_INC_DIR    Directory with APBS Include Files
+##  APBS_LIB_DIR    Directory with APBS Libraries
+##  APBS_LIBS       APBS Libraries needed to build TINKER
+
+TINKERDIR = /home/liuchw/Softwares/tinkers/tinker-8.2/
+TINKER_LIBDIR = $(TINKERDIR)/lib
+BINDIR = $(TINKERDIR)/bin
+LINKDIR = $(TINKERDIR)/bin_link
+
+FFTWDIR = $(TINKERDIR)/fftw
+FFTW_LIBDIR = -L$(FFTWDIR)/lib
+FFTW_LIBS = -lfftw3_threads -lfftw3
+
+APBSDIR = $(TINKERDIR)/apbs
+APBS_INCDIR = -I$(APBSDIR)/include
+APBS_LIBDIR = -L$(APBSDIR)/lib
+APBS_LIBS = -lapbsmainroutines -lapbs -lmaloc -lapbsblas
+
+####################################################################
+##  Known Machine Types; Uncomment One of the Following Sections  ##
+##  May Need Editing to Match Your Desired OS & Compiler Version  ##
+####################################################################
+
+##  Build:     TINKER
+##  OS Type:   Generic Linux
+##  CPU Type:  Intel x86 Compatible
+##  Compiler:  GNU gfortran 6.3
+##  Parallel:  OpenMP
+
+#F77 = gfortran
+#F77FLAGS = -c
+#OPTFLAGS = -Ofast -msse3 -fopenmp
+#LIBDIR = -L. -L$(TINKER_LIBDIR)/linux
+#LIBS = 
+#LIBFLAGS = -crusv
+#RANLIB = ranlib
+#LINKFLAGS = $(OPTFLAGS) -static-libgcc
+#RENAME = rename_bin
+
+##  Build:     TINKER
+##  OS Type:   Apple MacOS
+##  CPU Type:  Intel x86 Compatible
+##  Compiler:  GNU gfortran 7.1
+##  Parallel:  OpenMP
+
+#F77 = gfortran
+#F77FLAGS = -c
+#OPTFLAGS = -Ofast -mssse3 -fopenmp
+#LIBDIR = -L. -L$(TINKER_LIBDIR)/macos
+#LIBS = 
+#LIBFLAGS = -crusv
+#RANLIB = ranlib -c
+#LINKFLAGS = $(OPTFLAGS) -static-libgcc
+#RENAME = rename_bin
+
+##  Build:     TINKER
+##  OS Type:   Microsoft Windows 10
+##  CPU Type:  Intel x86 Compatible
+##  Compiler:  MinGW GNU gfortran 5.4
+##  Parallel:  OpenMP
+
+#F77 = gfortran
+#F77FLAGS = -c
+#OPTFLAGS = -Ofast -msse3 -fopenmp
+#LIBDIR = -L. -L$(TINKER_LIBDIR)/windows
+#LIBS = 
+#LIBFLAGS = -crusv
+#RANLIB = ranlib
+#LINKFLAGS = $(OPTFLAGS) -static
+#RENAME = rename_exe
+
+##  Build:     TINKER
+##  OS Type:   Generic Linux
+##  CPU Type:  Intel x86 Compatible (also AMD)
+##  Compiler:  Intel Fortran for Linux 15.0
+##  Parallel:  OpenMP
+
+F77 = ifort
+F77FLAGS = -c -xHost
+OPTFLAGS = -O3 -no-ipo -no-prec-div -recursive -openmp
+LIBDIR = -L. -L$(TINKER_LIBDIR)/linux
+LIBS =  -L$(TINKERDIR)/fftw/lib -lfftw3_threads -lfftw3
+LIBFLAGS = -crusv
+RANLIB = echo
+LINKFLAGS = $(OPTFLAGS) -static-libgcc -static-intel
+RENAME = rename_bin
+
+##  Build:     TINKER
+##  OS Type:   Apple MacOS
+##  CPU Type:  Intel Xeon
+##  Compiler:  Intel Fortran for MacOS 15.0
+##  Parallel:  OpenMP
+
+#F77 = ifort
+#F77FLAGS = -c -axSSSE3
+#OPTFLAGS = -O3 -no-ipo -no-prec-div -mdynamic-no-pic -qopenmp
+#LIBDIR = -L. -L$(TINKER_LIBDIR)/macos
+#LIBS = 
+#LIBFLAGS = -crusv
+#RANLIB = ranlib -c
+#LINKFLAGS = $(OPTFLAGS) -static-intel -mmacosx-version-min=10.6 \
+#		-Wl,-stack_size,0x10000000
+#RENAME = rename_bin
+
+#################################################################
+##  Should not be Necessary to Change Things Below this Point  ##
+#################################################################
+
+ action.f
+ align.f
+ analyz.f
+ angang.f
+ angbnd.f
+ angpot.f
+ angtor.f
+ argue.f
+ ascii.f
+ atmlst.f
+ atomid.f
+ atoms.f
+ bath.f
+ bitor.f
+ bndpot.f
+ bndstr.f
+ bound.f
+ boxes.f
+ cell.f
+ ct.f
+ charge.f
+ chgpot.f
+ chgpen.f
+ chrono.f
+ chunks.f
+ couple.f
+ deriv.f
+ dipole.f
+ disgeo.f
+ dma.f
+ domega.f
+ dualpol.f
+ energi.f
+ ewald.f
+ faces.f
+ fft.f
+ fields.f
+ files.f
+ fracs.f
+ freeze.f
+ gkstuf.f
+ group.f
+ hescut.f
+ hessn.f
+ hpmf.f
+ ielscf.f
+ improp.f
+ imptor.f
+ inform.f
+ inter.f
+ iounit.f
+ kanang.f
+ kangs.f
+ kantor.f
+ katoms.f
+ kbonds.f
+ kchrge.f
+ kdipol.f
+ keys.f
+ khbond.f
+ kiprop.f
+ kitors.f
+ kmulti.f
+ kopbnd.f
+ kopdst.f
+ korbs.f
+ kpitor.f
+ kpolr.f
+ kstbnd.f
+ ksttor.f
+ ktorsn.f
+ ktrtor.f
+ kurybr.f
+ kvdwpr.f
+ kvdws.f
+ light.f
+ limits.f
+ linmin.f
+ math.f
+ mdstuf.f
+ merck.f
+ minima.f
+ molcul.f
+ moldyn.f
+ moment.f
+ mplpot.f
+ mpole.f
+ mrecip.f
+ mutant.f
+ neigh.f
+ nonpol.f
+ nucleo.f
+ omega.f
+ opbend.f
+ opdist.f
+ openmp.f
+ orbits.f
+ output.f
+ params.f
+ paths.f
+ pbstuf.f
+ pdb.f
+ phipsi.f
+ piorbs.f
+ pistuf.f
+ pitors.f
+ pme.f
+ polar.f
+ polgrp.f
+ polpot.f
+ potderivs.f
+ potent.f
+ potfit.f
+ precis.f
+ ptable.f
+ qmstuf.f
+ refer.f
+ resdue.f
+ restrn.f
+ rgddyn.f
+ rigid.f
+ ring.f
+ rotbnd.f
+ rxnfld.f
+ rxnpot.f
+ scales.f
+ sequen.f
+ shunt.f
+ socket.f
+ solute.f
+ stodyn.f
+ strbnd.f
+ strtor.f
+ syntrn.f
+ tarray.f
+ titles.f
+ torpot.f
+ tors.f
+ tortor.f
+ tree.f
+ units.f
+ uprior.f
+ urey.f
+ urypot.f
+ usage.f
+ usolve.f
+ valfit.f
+ vdw.f
+ vdwpot.f
+ vibs.f
+ virial.f
+ warp.f
+ xtals.f
+ zclose.f
+ zcoord.f
+
+
+ active.f
+ alchemy.f
+ analysis.f
+ analyze.f
+ angles.f
+ anneal.f
+ archive.f
+ attach.f
+ bar.f
+ basefile.f
+ beeman.f
+ bicubic.f
+ bitors.f
+ bonds.f
+ born.f
+ bounds.f
+ bussi.f
+ calendar.f
+ center.f
+ chkpole.f
+ chkring.f
+ chkxyz.f
+ cholesky.f
+ clock.f
+ cluster.f
+ column.f
+ command.f
+ connect.f
+ connolly.f
+ control.f
+ correlate.f
+ crystal.f
+ cspline.f
+ cutoffs.f
+ damping.f
+ deflate.f
+ delete.f
+ diagq.f
+ diffeq.f
+ diffuse.f
+ distgeom.f
+ document.f
+ dynamic.f
+ eangang.f
+ eangang1.f
+ eangang2.f
+ eangang3.f
+ eangle.f
+ eangle1.f
+ eangle2.f
+ eangle3.f
+ eangtor.f
+ eangtor1.f
+ eangtor2.f
+ eangtor3.f
+ ebond.f
+ ebond1.f
+ ebond2.f
+ ebond3.f
+ ebuck.f
+ ebuck1.f
+ ebuck2.f
+ ebuck3.f
+ echarge.f
+ echarge1.f
+ echarge2.f
+ echarge3.f
+ echgdpl.f
+ echgdpl1.f
+ echgdpl2.f
+ echgdpl3.f
+ ect0.f
+ ect1.f
+ ect3.f
+ edipole.f
+ edipole1.f
+ edipole2.f
+ edipole3.f
+ egauss.f
+ egauss1.f
+ egauss2.f
+ egauss3.f
+ egeom.f
+ egeom1.f
+ egeom2.f
+ egeom3.f
+ ehal.f
+ ehal1.f
+ ehal2.f
+ ehal3.f
+ eimprop.f
+ eimprop1.f
+ eimprop2.f
+ eimprop3.f
+ eimptor.f
+ eimptor1.f
+ eimptor2.f
+ eimptor3.f
+ elj.f
+ elj1.f
+ elj2.f
+ elj3.f
+ embed.f
+ emetal.f
+ emetal1.f
+ emetal2.f
+ emetal3.f
+ emm3hb.f
+ emm3hb1.f
+ emm3hb2.f
+ emm3hb3.f
+ empole.f
+ empole1.f
+ empole3.f
+ energy.f
+ eopbend.f
+ eopbend1.f
+ eopbend2.f
+ eopbend3.f
+ eopdist.f
+ eopdist1.f
+ eopdist2.f
+ eopdist3.f
+ epitors.f
+ epitors1.f
+ epitors2.f
+ epitors3.f
+ epolar.f
+ epolar1.f
+ epolar2.f
+ epolar3.f
+ erf.f
+ erxnfld.f
+ erxnfld1.f
+ erxnfld2.f
+ erxnfld3.f
+ esolv.f
+ esolv1.f
+ esolv2.f
+ esolv3.f
+ estrbnd.f
+ estrbnd1.f
+ estrbnd2.f
+ estrbnd3.f
+ estrtor.f
+ estrtor1.f
+ estrtor2.f
+ estrtor3.f
+ etors.f
+ etors1.f
+ etors2.f
+ etors3.f
+ etortor.f
+ etortor1.f
+ etortor2.f
+ etortor3.f
+ eurey.f
+ eurey1.f
+ eurey2.f
+ eurey3.f
+ evcorr.f
+ extra.f
+ extra1.f
+ extra2.f
+ extra3.f
+ fatal.f
+ fft3d.f
+ fftpack.f
+ field.f
+ fieldstuff.f
+ final.f
+ flatten.f
+ freeunit.f
+ gda.f
+ geometry.f
+ getint.f
+ getkey.f
+ getmol.f
+ getmol2.f
+ getnumb.f
+ getpdb.f
+ getprm.f
+ getref.f
+ getstring.f
+ gettext.f
+ getword.f
+ getxyz.f
+ ghmcstep.f
+ gradient.f
+ gradrgd.f
+ gradrot.f
+ groups.f
+ grpline.f
+ gyrate.f
+ hessian.f
+ hessrgd.f
+ hessrot.f
+ hybrid.f
+ image.f
+ impose.f
+ induce.f
+ inertia.f
+ initatom.f
+ initial.f
+ initprm.f
+ initres.f
+ initrot.f
+ insert.f
+ intedit.f
+ intxyz.f
+ invbeta.f
+ invert.f
+ jacobi.f
+ kangang.f
+ kangle.f
+ kangtor.f
+ katom.f
+ kbond.f
+ kcharge.f
+ kdipole.f
+ kewald.f
+ kextra.f
+ kgeom.f
+ kimprop.f
+ kimptor.f
+ kinetic.f
+ kmetal.f
+ kmpole.f
+ kopbend.f
+ kopdist.f
+ korbit.f
+ kpitors.f
+ kpolar.f
+ ksolv.f
+ kstrbnd.f
+ kstrtor.f
+ ktors.f
+ ktortor.f
+ kurey.f
+ kvdw.f
+ lattice.f
+ lbfgs.f
+ lights.f
+ makeint.f
+ makeref.f
+ makexyz.f
+ maxwell.f
+ mdinit.f
+ mdrest.f
+ mdsave.f
+ mdstat.f
+ mechanic.f
+ merge.f
+ minimize.f
+ minirot.f
+ minrigid.f
+ molecule.f
+ molxyz.f
+ moments.f
+ monte.f
+ mutate.f
+ nblist.f
+ newton.f
+ newtrot.f
+ nextarg.f
+ nexttext.f
+ nose.f
+ nspline.f
+ nucleic.f
+ number.f
+ numeral.f
+ numgrad.f
+ ocvm.f
+ openend.f
+ optimize.f
+ optirot.f
+ optrigid.f
+ optsave.f
+ orbital.f
+ orient.f
+ orthog.f
+ overlap.f
+ path.f
+ pdbxyz.f
+ permfield2.f
+ permfield3.f
+ picalc.f
+ pmestuff.f
+ pmpb.f
+ polarize.f
+ poledit.f
+ polymer.f
+ potential.f
+ precise.f
+ pressure.f
+ prmedit.f
+ prmkey.f
+ promo.f
+ protein.f
+ prtdyn.f
+ prterr.f
+ prtint.f
+ prtmol2.f
+ prtpdb.f
+ prtprm.f
+ prtseq.f
+ prtxyz.f
+ pss.f
+ pssrigid.f
+ pssrot.f
+ qrfact.f
+ quatfit.f
+ radial.f
+ random.f
+ rattle.f
+ readdyn.f
+ readgau.f
+ readint.f
+ readmol.f
+ readmol2.f
+ readpdb.f
+ readprm.f
+ readseq.f
+ readxyz.f
+ replica.f
+ respa.f
+ rgdstep.f
+ rings.f
+ rmsfit.f
+ rotlist.f
+ rotpole.f
+ saddle.f
+ scan.f
+ sdstep.f
+ search.f
+ server.f
+ shakeup.f
+ sigmoid.f
+ simplex.f
+ sktstuff.f
+ sniffer.f
+ sort.f
+ spacefill.f
+ spectrum.f
+ square.f
+ suffix.f
+ superpose.f
+ surface.f
+ surfatom.f
+ switch.f
+ sybylxyz.f
+ temper.f
+ testgrad.f
+ testhess.f
+ testpair.f
+ testpol.f
+ testrot.f
+ timer.f
+ timerot.f
+ tmatrix.f
+ tncg.f
+ torphase.f
+ torque.f
+ torsfit.f
+ torsions.f
+ trimtext.f
+ unitcell.f
+ valence.f
+ verlet.f
+ version.f
+ vibbig.f
+ vibrate.f
+ vibrot.f
+ volume.f
+ xtalfit.f
+ xtalmin.f
+ xyzatm.f
+ xyzedit.f
+ xyzint.f
+ xyzpdb.f
+ xyzsybyl.f
+ zatom.f

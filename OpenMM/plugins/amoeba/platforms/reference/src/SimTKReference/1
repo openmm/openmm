@@ -1,0 +1,16 @@
+     * @param tholes                    Thole factors for each particle
+                                       const std::vector<RealOpenMM>& tholes,
+     * @param tholes                    Thole factors for each particle
+                                 const std::vector<RealOpenMM>& tholes,
+     * @param tholes                    Thole factors for each particle
+                                           const std::vector<RealOpenMM>& tholes,
+     * @param tholes                    Thole factors for each particle
+                                           const std::vector<RealOpenMM>& tholes,
+     * @param tholes                    Thole factors for each particle
+                                               const std::vector<RealOpenMM>& tholes,
+     * @param tholes                    Thole factors for each particle
+                                         const std::vector<RealOpenMM>& tholes,
+     * @param tholes              Thole parameters
+                          const std::vector<RealOpenMM>& tholes,
+     * @param tholes                    Thole factors for each particle
+               const std::vector<RealOpenMM>& tholes,

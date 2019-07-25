@@ -1,0 +1,36 @@
+<ForceField>
+ <AtomTypes>
+  <Type name="swm4ndp-O" class="OW" element="O" mass="15.59943"/>
+  <Type name="swm4ndp-H" class="HW" element="H" mass="1.007947"/>
+  <Type name="swm4ndp-M" class="MW" mass="0"/>
+  <Type name="swm4ndp-OD" class="OWD" mass="0.4"/>
+ </AtomTypes>
+ <Residues>
+  <Residue name="HOH">
+   <Atom name="O" type="swm4ndp-O"/>
+   <Atom name="H1" type="swm4ndp-H"/>
+   <Atom name="H2" type="swm4ndp-H"/>
+   <Atom name="M" type="swm4ndp-M"/>
+   <Atom name="OD" type="swm4ndp-OD"/>
+   <VirtualSite type="average3" index="3" atom1="0" atom2="1" atom3="2" weight1="0.589781071" weight2="0.2051094645" weight3="0.2051094645"/>
+   <Bond from="0" to="1"/>
+   <Bond from="0" to="2"/>
+  </Residue>
+ </Residues>
+ <HarmonicBondForce>
+  <Bond class1="OW" class2="HW" length="0.09572" k="462750.4"/>
+ </HarmonicBondForce>
+ <HarmonicAngleForce>
+  <Angle class1="HW" class2="OW" class3="HW" angle="1.82421813418" k="836.8"/>
+ </HarmonicAngleForce>
+ <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5">
+  <Atom type="swm4ndp-O" charge="1.71636" sigma="0.318395" epsilon="0.882573"/>
+  <Atom type="swm4ndp-H" charge="0.55733" sigma="1" epsilon="0"/>
+  <Atom type="swm4ndp-M" charge="-1.11466" sigma="1" epsilon="0"/>
+  <Atom type="swm4ndp-OD" charge="-1.71636" sigma="1" epsilon="0"/>
+ </NonbondedForce>
+ <DrudeForce>
+  <Particle type1="swm4ndp-OD" type2="swm4ndp-O" charge="-1.71636" polarizability="0.000978253" thole="1.3"/>
+ </DrudeForce>
+</ForceField>
+

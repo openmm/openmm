@@ -1,0 +1,9 @@
+AC_INIT([tinker], [7.0], [ponder@dasher.wustl.edu])
+AC_CONFIG_AUX_DIR([.])
+AC_CONFIG_MACRO_DIR([.])
+AM_INIT_AUTOMAKE([1.8 foreign])
+LT_INIT
+AC_PROG_F77
+AC_F77_LIBRARY_LDFLAGS
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT

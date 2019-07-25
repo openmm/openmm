@@ -1,0 +1,7 @@
+
+!$OMP& shared(penetration,atomic,
+!$OMP& nucpotm,elepotm,elefieldm,elegradfieldm,order,rorder,
+!$OMP& t0rr1,t1rr3,t2rr3,t2rr5,t3rr5,t3rr7,t4rr5,t4rr7,t4rr9,
+!$OMP& t0,t1,t2,t3,t4,t0i,t1i,t2i,t3i,t4i,
+!$OMP& t0k,t1k,t2k,t3k,t4k,t0ik,t1ik,t2ik,t3ik,t4ik,
+!$OMP& scale,scalei,scalek,scaleik)

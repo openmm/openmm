@@ -1,0 +1,1871 @@
+Only in .: chgpen.f 
+Only in ../../AMOEBAplusCFlux/Tinker/: echrgflux1.f
+diff ./empole1.f ../../AMOEBAplusCFlux/Tinker/empole1.f
+57a58,59
+>       use angbnd
+>       use bndstr
+59a62
+>       use cflux
+66a70
+>       use math
+69a74
+>       use potent
+120d124
+< !     charge penetration varables
+125,126d128
+<       real*8, allocatable ::  scalei(:),scalek(:)
+<       real*8, allocatable ::  scaleik(:)
+128d129
+< !     end 
+131c132,143
+<       logical proceed,usei,usek
+---
+>       real*8, allocatable ::  scalei(:),scalek(:)
+>       real*8, allocatable ::  scaleik(:)
+>       real*8 term1i,term2i,term3i
+>       real*8 term1k,term2k,term3k
+>       real*8 poti,potk
+>       real*8, allocatable :: damppot(:)
+>       real*8, allocatable :: decfbemx(:)
+>       real*8, allocatable :: decfbemy(:)
+>       real*8, allocatable :: decfbemz(:)
+>       real*8, allocatable :: decfaemx(:)
+>       real*8, allocatable :: decfaemy(:)
+>       real*8, allocatable :: decfaemz(:)
+132a145
+>       logical proceed,usei,usek
+155a169,175
+>       allocate (damppot(n))
+>       allocate (decfbemx(n))
+>       allocate (decfbemy(n))
+>       allocate (decfbemz(n))
+>       allocate (decfaemx(n))
+>       allocate (decfaemy(n))
+>       allocate (decfaemz(n))
+175a196,202
+>          damppot(i) = 0.0d0
+>          decfaemx(i) = 0.0d0
+>          decfaemy(i) = 0.0d0
+>          decfaemz(i) = 0.0d0
+>          decfbemx(i) = 0.0d0
+>          decfbemy(i) = 0.0d0
+>          decfbemz(i) = 0.0d0
+185a213
+>       if (use_cflux) call chrgflux
+197a226
+>          ci=ci+pchrgflux(i)
+241a271
+>                ck = ck+pchrgflux(k)
+483a514,528
+> c
+> c     calculate the CP-damped potential at each mpole site 
+> c
+>                if (use_cflux) then
+>                   term1i = nuck*scalei(1) + qk*scaleik(1) 
+>                   term1k = nuci*scalek(1) + qi*scaleik(1) 
+>                   term2i = -drk*scaleik(3)
+>                   term2k = +dri*scaleik(3)
+>                   term3i = qrrk*scaleik(5)
+>                   term3k = qrri*scaleik(5)
+>                   poti = term1i*rr1 + term2i*rr3 + term3i*rr5
+>                   potk = term1k*rr1 + term2k*rr3 + term3k*rr5
+>                   damppot(ii) = damppot(ii) + poti
+>                   damppot(kk) = damppot(kk) + potk
+>                end if 
+575a621,640
+> c     Extra derivative terms due to charge flux
+> c
+>       if (use_cflux .and. dobondcflux) then 
+>           call cfbondem(damppot,decfbemx,decfbemy,decfbemz)
+>           do i = 1, npole 
+>             dem(1,i) = dem(1,i) + decfbemx(i) 
+>             dem(2,i) = dem(2,i) + decfbemy(i) 
+>             dem(3,i) = dem(3,i) + decfbemz(i) 
+>           end do
+>       end if
+> 
+>       if (use_cflux .and. doanglecflux) then
+>           call cfangleem(damppot,decfaemx,decfaemy,decfaemz)
+>           do i = 1, npole 
+>             dem(1,i) = dem(1,i) + decfaemx(i) 
+>             dem(2,i) = dem(2,i) + decfaemy(i) 
+>             dem(3,i) = dem(3,i) + decfaemz(i) 
+>           end do
+>       end if
+> c
+591a657
+>          ci = ci+pchrgflux(i)
+638a705
+>                ck = ck+pchrgflux(k)
+881a949,963
+> c     calculate the CP-damped potential at each mpole site 
+> c
+>                if (use_cflux) then
+>                   term1i = nuck*scalei(1) + qk*scaleik(1) 
+>                   term1k = nuci*scalek(1) + qi*scaleik(1) 
+>                   term2i = -drk*scaleik(3)
+>                   term2k = +dri*scaleik(3)
+>                   term3i = qrrk*scaleik(5)
+>                   term3k = qrri*scaleik(5)
+>                   poti = term1i*rr1 + term2i*rr3 + term3i*rr5
+>                   potk = term1k*rr1 + term2k*rr3 + term3k*rr5
+>                   damppot(ii) = damppot(ii) + poti
+>                   damppot(kk) = damppot(kk) + potk
+>                end if 
+> c
+1018a1101,1107
+>       deallocate (damppot)
+>       deallocate (decfaemx)
+>       deallocate (decfaemy)
+>       deallocate (decfaemz)
+>       deallocate (decfbemx)
+>       deallocate (decfbemy)
+>       deallocate (decfbemz)
+1038a1128,1129
+>       use angbnd
+>       use bndstr
+1039a1131
+>       use cflux
+1046a1139
+>       use math
+1050a1144
+>       use potent
+1066c1160
+<       real*8 r,r2,rr1,rr3
+---
+>       real*8 r,r2,rr1,rr3,rr3sc
+1101d1194
+< !     charge penetration varables
+1109,1110d1201
+< !     end 
+< 
+1113a1205,1214
+>       real*8 term1i,term2i,term3i
+>       real*8 term1k,term2k,term3k
+>       real*8 poti,potk
+>       real*8, allocatable :: damppot(:)
+>       real*8, allocatable :: decfbemx(:)
+>       real*8, allocatable :: decfbemy(:)
+>       real*8, allocatable :: decfbemz(:)
+>       real*8, allocatable :: decfaemx(:)
+>       real*8, allocatable :: decfaemy(:)
+>       real*8, allocatable :: decfaemz(:)
+1137a1239,1245
+>       allocate (damppot(n))
+>       allocate (decfbemx(n))
+>       allocate (decfbemy(n))
+>       allocate (decfbemz(n))
+>       allocate (decfaemx(n))
+>       allocate (decfaemy(n))
+>       allocate (decfaemz(n))
+1143a1252,1258
+>          damppot(i) = 0.0d0
+>          decfaemx(i) = 0.0d0
+>          decfaemy(i) = 0.0d0
+>          decfaemz(i) = 0.0d0
+>          decfbemx(i) = 0.0d0
+>          decfbemy(i) = 0.0d0
+>          decfbemz(i) = 0.0d0
+1167a1283
+>       if (use_cflux) call chrgflux
+1174c1290,1291
+< !$OMP& atomic,penalpha,type,
+---
+> !$OMP& atomic,penalpha,type,use_cflux,
+> !$OMP& ibnd,nbond,nangle,iang,pchrgflux,
+1176,1177c1293,1295
+< !$OMP& firstprivate(mscale) shared (em,einter,dem,tem,vir)
+< !$OMP DO reduction(+:em,einter,dem,tem,vir) schedule(guided)
+---
+> !$OMP& firstprivate(mscale) shared(em,einter,dem,tem,vir,damppot)
+> !$OMP DO reduction(+:em,einter,dem,tem,vir,damppot)
+> !$OMP& schedule(guided)
+1189a1308
+>          ci = ci+pchrgflux(i)
+1234a1354
+>                ck = ck+pchrgflux(k)
+1477a1598,1613
+> 
+> c
+> c     calculate the CP-damped potential at each mpole site 
+> c
+>                if (use_cflux) then
+>                   term1i = nuck*scalei(1) + qk*scaleik(1) 
+>                   term1k = nuci*scalek(1) + qi*scaleik(1) 
+>                   term2i = -drk*scaleik(3)
+>                   term2k = +dri*scaleik(3)
+>                   term3i = qrrk*scaleik(5)
+>                   term3k = qrri*scaleik(5)
+>                   poti = term1i*rr1 + term2i*rr3 + term3i*rr5
+>                   potk = term1k*rr1 + term2k*rr3 + term3k*rr5
+>                   damppot(ii) = damppot(ii) + poti
+>                   damppot(kk) = damppot(kk) + potk
+>                end if 
+1481c1617
+<                rr3 = rr3*scaleik(3)
+---
+>                rr3sc = rr3*scaleik(3)
+1483,1487c1619,1623
+<                ttmi(1) = -rr3*dikx + term1*dirx + term3*(dqiqkx+dkqixr)
+<      &                      - term4*qrixr - term6*(qikrxr+qrrx)
+<                ttmi(2) = -rr3*diky + term1*diry + term3*(dqiqky+dkqiyr)
+<      &                      - term4*qriyr - term6*(qikryr+qrry)
+<                ttmi(3) = -rr3*dikz + term1*dirz + term3*(dqiqkz+dkqizr)
+---
+>                ttmi(1) =-rr3sc*dikx + term1*dirx + term3*(dqiqkx+dkqixr)
+>      &                     - term4*qrixr - term6*(qikrxr+qrrx)
+>                ttmi(2) =-rr3sc*diky + term1*diry + term3*(dqiqky+dkqiyr)
+>      &                     - term4*qriyr - term6*(qikryr+qrry)
+>                ttmi(3) =-rr3sc*dikz + term1*dirz + term3*(dqiqkz+dkqizr)
+1489c1625
+<                ttmk(1) = rr3*dikx + term2*dkrx - term3*(dqiqkx+diqkxr)
+---
+>                ttmk(1) = rr3sc*dikx + term2*dkrx - term3*(dqiqkx+diqkxr)
+1491c1627
+<                ttmk(2) = rr3*diky + term2*dkry - term3*(dqiqky+diqkyr)
+---
+>                ttmk(2) = rr3sc*diky + term2*dkry - term3*(dqiqky+diqkyr)
+1493c1629
+<                ttmk(3) = rr3*dikz + term2*dkrz - term3*(dqiqkz+diqkzr)
+---
+>                ttmk(3) = rr3sc*dikz + term2*dkrz - term3*(dqiqkz+diqkzr)
+1553a1690
+> 
+1599a1737,1755
+> 
+>       if (use_cflux .and. dobondcflux) then 
+>           call cfbondem(damppot,decfbemx,decfbemy,decfbemz)
+>           do i = 1, npole 
+>             dem(1,i) = dem(1,i) + decfbemx(i) 
+>             dem(2,i) = dem(2,i) + decfbemy(i) 
+>             dem(3,i) = dem(3,i) + decfbemz(i) 
+>           end do
+>       end if
+> 
+>       if (use_cflux .and. doanglecflux) then
+>           call cfangleem(damppot,decfaemx,decfaemy,decfaemz)
+>           do i = 1, npole 
+>             dem(1,i) = dem(1,i) + decfaemx(i) 
+>             dem(2,i) = dem(2,i) + decfaemy(i) 
+>             dem(3,i) = dem(3,i) + decfaemz(i) 
+>           end do
+>       end if
+> c
+1603a1760,1766
+>       deallocate (damppot)
+>       deallocate (decfaemx)
+>       deallocate (decfaemy)
+>       deallocate (decfaemz)
+>       deallocate (decfbemx)
+>       deallocate (decfbemy)
+>       deallocate (decfbemz)
+1622a1786
+>       use atomid
+1623a1788,1789
+>       use bndstr
+>       use angbnd
+1624a1791
+>       use cflux
+1630a1798
+>       use potent
+1647c1815,1831
+< c
+---
+>       real*8, allocatable :: decfbselfemx(:)
+>       real*8, allocatable :: decfbselfemy(:)
+>       real*8, allocatable :: decfbselfemz(:)
+>       real*8, allocatable :: decfaselfemx(:)
+>       real*8, allocatable :: decfaselfemy(:)
+>       real*8, allocatable :: decfaselfemz(:)
+>       real*8, allocatable :: chrge(:)
+> c
+> c     allocate some local arrays
+> c
+>       allocate (decfbselfemx(n))
+>       allocate (decfbselfemy(n))
+>       allocate (decfbselfemz(n))
+>       allocate (decfaselfemx(n))
+>       allocate (decfaselfemy(n))
+>       allocate (decfaselfemz(n))
+>       allocate (chrge(n))
+1652a1837,1843
+>          decfbselfemx(i) = 0.0d0
+>          decfbselfemy(i) = 0.0d0
+>          decfbselfemz(i) = 0.0d0
+>          decfaselfemx(i) = 0.0d0
+>          decfaselfemy(i) = 0.0d0
+>          decfaselfemz(i) = 0.0d0
+>          chrge(i) = 0.0d0
+1669a1861,1864
+> c     
+> c     charge flux
+> c  
+>       if (use_cflux) call chrgflux
+1684a1880
+>          ci = ci+pchrgflux(i)
+1701a1898,1924
+> c     force due to charge flux-bond for self energy
+> c
+>       if (use_cflux) then
+>         do i = 1, npole
+>           chrge(i) = rpole(1,i)
+>         end do
+>       end if
+>       if (use_cflux .and. dobondcflux) then
+>         call cfemselfb(fterm,chrge,pchrgflux,
+>      &        decfbselfemx,decfbselfemy,decfbselfemz)
+>         do i = 1, npole
+>           dem(1,i) = dem(1,i) + decfbselfemx(i)
+>           dem(2,i) = dem(2,i) + decfbselfemy(i)
+>           dem(3,i) = dem(3,i) + decfbselfemz(i)
+>         end do 
+>       end if
+>       if (use_cflux .and. doanglecflux) then
+>         call cfemselfa(fterm,chrge,pchrgflux,
+>      &        decfaselfemx,decfaselfemy,decfaselfemz)
+>         do i = 1, npole
+>           dem(1,i) = dem(1,i) + decfaselfemx(i)
+>           dem(2,i) = dem(2,i) + decfaselfemy(i)
+>           dem(3,i) = dem(3,i) + decfaselfemz(i)
+>         end do 
+>       end if
+> 
+> c
+1763a1987,1996
+> c
+> c     deallocate some local arrays
+> c
+>       deallocate (decfbselfemx)
+>       deallocate (decfbselfemy)
+>       deallocate (decfbselfemz)
+>       deallocate (decfaselfemx)
+>       deallocate (decfaselfemy)
+>       deallocate (decfaselfemz)
+>       deallocate (chrge)
+1783a2017,2018
+>       use angbnd
+>       use bndstr 
+1785a2021
+>       use cflux
+1796a2033
+>       use potent
+1807d2043
+<       real*8 scalekk
+1849d2084
+< !     charge penetration varables
+1857d2091
+< !     end 
+1859a2094,2103
+>       real*8 term1i,term2i,term3i
+>       real*8 term1k,term2k,term3k
+>       real*8 poti,potk
+>       real*8, allocatable :: damppot(:)
+>       real*8, allocatable :: decfbemx(:)
+>       real*8, allocatable :: decfbemy(:)
+>       real*8, allocatable :: decfbemz(:)
+>       real*8, allocatable :: decfaemx(:)
+>       real*8, allocatable :: decfaemy(:)
+>       real*8, allocatable :: decfaemz(:)
+1866a2111,2117
+>       allocate (damppot(n))
+>       allocate (decfbemx(n))
+>       allocate (decfbemy(n))
+>       allocate (decfbemz(n))
+>       allocate (decfaemx(n))
+>       allocate (decfaemy(n))
+>       allocate (decfaemz(n))
+1886a2138,2144
+>          damppot(i) = 0.0d0
+>          decfbemx(i) = 0.0d0
+>          decfbemy(i) = 0.0d0
+>          decfbemz(i) = 0.0d0
+>          decfaemx(i) = 0.0d0
+>          decfaemy(i) = 0.0d0
+>          decfaemz(i) = 0.0d0
+1896a2155
+>       if (use_cflux) call chrgflux
+1905a2165
+>          ci = ci+pchrgflux(i)
+1939a2200
+>                ck = ck+pchrgflux(k)
+2242a2504,2520
+> c     calculate the damped potential at each mpole site 
+> c
+>                if (use_cflux) then
+>                   term1i = nuck*(bn(0)-(1.0d0-scalei(1)*mscale(kk))) 
+>      &                     + qk*(bn(0)-(1.0d0-scaleik(1)*mscale(kk)))
+>                   term1k = nuci*(bn(0)-(1.0d0-scalek(1)*mscale(kk))) 
+>      &                     + qi*(bn(0)-(1.0d0-scaleik(1)*mscale(kk)))
+>                   term2i = -drk*(bn(1)-(1.0d0-scaleik(3)*mscale(kk)))
+>                   term2k = +dri*(bn(1)-(1.0d0-scaleik(3)*mscale(kk)))
+>                   term3i = qrrk*(bn(2)-(1.0d0-scaleik(5)*mscale(kk)))
+>                   term3k = qrri*(bn(2)-(1.0d0-scaleik(5)*mscale(kk)))
+>                   poti = term1i*rr1 + term2i*rr3 + term3i*rr5
+>                   potk = term1k*rr1 + term2k*rr3 + term3k*rr5
+>                   damppot(ii) = damppot(ii) + poti
+>                   damppot(kk) = damppot(kk) + potk
+>                end if 
+> c
+2313a2592,2611
+> c     charge flux force
+> c
+>       if (use_cflux .and. dobondcflux) then 
+>           call cfbondem(damppot,decfbemx,decfbemy,decfbemz)
+>           do i = 1, npole 
+>             dem(1,i) = dem(1,i) + decfbemx(i) 
+>             dem(2,i) = dem(2,i) + decfbemy(i) 
+>             dem(3,i) = dem(3,i) + decfbemz(i) 
+>           end do
+>       end if
+> 
+>       if (use_cflux .and. doanglecflux) then
+>           call cfangleem(damppot,decfaemx,decfaemy,decfaemz)
+>           do i = 1, npole 
+>             dem(1,i) = dem(1,i) + decfaemx(i) 
+>             dem(2,i) = dem(2,i) + decfaemy(i) 
+>             dem(3,i) = dem(3,i) + decfaemz(i) 
+>           end do
+>       end if
+> c
+2796a3095,3101
+>       deallocate (damppot)
+>       deallocate (decfbemx)    
+>       deallocate (decfbemy)
+>       deallocate (decfbemz)
+>       deallocate (decfaemx)
+>       deallocate (decfaemy)
+>       deallocate (decfaemz)
+2816a3122
+>       use cflux
+2822a3129
+>       use potent
+2838a3146,3162
+>       real*8, allocatable :: decfbselfemx(:)
+>       real*8, allocatable :: decfbselfemy(:)
+>       real*8, allocatable :: decfbselfemz(:)
+>       real*8, allocatable :: decfaselfemx(:)
+>       real*8, allocatable :: decfaselfemy(:)
+>       real*8, allocatable :: decfaselfemz(:)
+>       real*8, allocatable :: chrge(:)
+> c
+> c     allocate some local arrays
+> c
+>       allocate (decfbselfemx(n))
+>       allocate (decfbselfemy(n))
+>       allocate (decfbselfemz(n))
+>       allocate (decfaselfemx(n))
+>       allocate (decfaselfemy(n))
+>       allocate (decfaselfemz(n))
+>       allocate (chrge(n))
+2844a3169,3175
+>          decfbselfemx(i) = 0.0d0
+>          decfbselfemy(i) = 0.0d0
+>          decfbselfemz(i) = 0.0d0
+>          decfaselfemx(i) = 0.0d0
+>          decfaselfemy(i) = 0.0d0
+>          decfaselfemz(i) = 0.0d0
+>          chrge(i) = 0.0d0
+2861a3193,3196
+> c     
+> c     charge flux
+> c  
+>       if (use_cflux) call chrgflux
+2876a3212
+>          ci = ci+pchrgflux(i)
+2893a3230,3255
+> c     force due to charge flux-bond for self energy
+> c
+>       if (use_cflux) then
+>         do i = 1, npole
+>           chrge(i) = rpole(1,i)
+>         end do
+>       end if
+>       if (use_cflux .and. dobondcflux) then
+>         call cfemselfb(fterm,chrge,pchrgflux,
+>      &        decfbselfemx,decfbselfemy,decfbselfemz)
+>         do i = 1, npole
+>           dem(1,i) = dem(1,i) + decfbselfemx(i)
+>           dem(2,i) = dem(2,i) + decfbselfemy(i)
+>           dem(3,i) = dem(3,i) + decfbselfemz(i)
+>         end do 
+>       end if
+>       if (use_cflux .and. doanglecflux) then
+>         call cfemselfa(fterm,chrge,pchrgflux,
+>      &        decfaselfemx,decfaselfemy,decfaselfemz)
+>         do i = 1, npole
+>           dem(1,i) = dem(1,i) + decfaselfemx(i)
+>           dem(2,i) = dem(2,i) + decfaselfemy(i)
+>           dem(3,i) = dem(3,i) + decfaselfemz(i)
+>         end do 
+>       end if
+> c
+2955a3318,3327
+> c
+> c     deallocate some local arrays
+> c
+>       deallocate (decfbselfemx)
+>       deallocate (decfbselfemy)
+>       deallocate (decfbselfemz)
+>       deallocate (decfaselfemx)
+>       deallocate (decfaselfemy)
+>       deallocate (decfaselfemz)
+>       deallocate (chrge)
+2973a3346
+>       use angbnd
+2976a3350,3351
+>       use bndstr
+>       use cflux
+2988a3364
+>       use potent
+2999d3374
+<       real*8 scalekk
+3041d3415
+< !     charge penetration varables
+3049,3050d3422
+< !     end 
+< 
+3052a3425,3434
+>       real*8, allocatable :: damppot(:)
+>       real*8 term1i,term2i,term3i
+>       real*8 term1k,term2k,term3k
+>       real*8 poti,potk
+>       real*8, allocatable :: decfbemx(:)
+>       real*8, allocatable :: decfbemy(:)
+>       real*8, allocatable :: decfbemz(:)
+>       real*8, allocatable :: decfaemx(:)
+>       real*8, allocatable :: decfaemy(:)
+>       real*8, allocatable :: decfaemz(:)
+3060a3443,3449
+>       allocate (damppot(n))
+>       allocate (decfbemx(n))
+>       allocate (decfbemy(n))
+>       allocate (decfbemz(n))
+>       allocate (decfaemx(n))
+>       allocate (decfaemy(n))
+>       allocate (decfaemz(n))
+3065a3455,3461
+>          damppot(i) = 0.0d0
+>          decfbemx(i) = 0.0d0
+>          decfbemy(i) = 0.0d0
+>          decfbemz(i) = 0.0d0
+>          decfaemx(i) = 0.0d0
+>          decfaemy(i) = 0.0d0
+>          decfaemz(i) = 0.0d0
+3096c3492,3493
+< !$OMP& atomic,penalpha,type,
+---
+> !$OMP& atomic,penalpha,type,use_cflux,
+> !$OMP& ibnd,nbond,nangle,iang,pchrgflux,
+3098,3099c3495,3496
+< !$OMP& firstprivate(mscale) shared (em,einter,dem,tem,vir)
+< !$OMP DO reduction(+:em,einter,dem,tem,vir) schedule(guided)
+---
+> !$OMP& firstprivate(mscale) shared (em,einter,dem,tem,vir,damppot)
+> !$OMP DO reduction(+:em,einter,dem,tem,vir,damppot) schedule(guided)
+3108a3506
+>          ci = ci+pchrgflux(i)
+3143a3542
+>                ck = ck+pchrgflux(k)
+3448a3848,3864
+> c     calculate the damped potential at each mpole site 
+> c
+>                if (use_cflux) then
+>                   term1i = nuck*(bn(0)-(1.0d0-scalei(1)*mscale(kk))) 
+>      &                     + qk*(bn(0)-(1.0d0-scaleik(1)*mscale(kk)))
+>                   term1k = nuci*(bn(0)-(1.0d0-scalek(1)*mscale(kk))) 
+>      &                     + qi*(bn(0)-(1.0d0-scaleik(1)*mscale(kk)))
+>                   term2i = -drk*(bn(1)-(1.0d0-scaleik(3)*mscale(kk)))
+>                   term2k = +dri*(bn(1)-(1.0d0-scaleik(3)*mscale(kk)))
+>                   term3i = qrrk*(bn(2)-(1.0d0-scaleik(5)*mscale(kk)))
+>                   term3k = qrri*(bn(2)-(1.0d0-scaleik(5)*mscale(kk)))
+>                   poti = term1i*rr1 + term2i*rr3 + term3i*rr5
+>                   potk = term1k*rr1 + term2k*rr3 + term3k*rr5
+>                   damppot(ii) = damppot(ii) + poti
+>                   damppot(kk) = damppot(kk) + potk
+>                end if 
+> c
+3569a3986,4005
+> c     charge flux force
+> c
+>       if (use_cflux .and. dobondcflux) then 
+>           call cfbondem(damppot,decfbemx,decfbemy,decfbemz)
+>           do i = 1, npole 
+>             dem(1,i) = dem(1,i) + decfbemx(i) 
+>             dem(2,i) = dem(2,i) + decfbemy(i) 
+>             dem(3,i) = dem(3,i) + decfbemz(i) 
+>           end do
+>       end if
+> 
+>       if (use_cflux .and. doanglecflux) then
+>           call cfangleem(damppot,decfaemx,decfaemy,decfaemz)
+>           do i = 1, npole 
+>             dem(1,i) = dem(1,i) + decfaemx(i) 
+>             dem(2,i) = dem(2,i) + decfaemy(i) 
+>             dem(3,i) = dem(3,i) + decfaemz(i) 
+>           end do
+>       end if
+> c
+3573a4010,4016
+>       deallocate (damppot)    
+>       deallocate (decfbemx)    
+>       deallocate (decfbemy)
+>       deallocate (decfbemz)
+>       deallocate (decfaemx)
+>       deallocate (decfaemy)
+>       deallocate (decfaemz)
+3601a4045,4046
+>       use angbnd
+>       use bndstr
+3604a4050
+>       use cflux
+3611a4058
+>       use potent
+3638a4086,4092
+>       real*8, allocatable :: cphi1d(:)
+>       real*8, allocatable :: decfbemx(:)
+>       real*8, allocatable :: decfbemy(:)
+>       real*8, allocatable :: decfbemz(:)
+>       real*8, allocatable :: decfaemx(:)
+>       real*8, allocatable :: decfaemy(:)
+>       real*8, allocatable :: decfaemz(:)
+3667a4122,4129
+> 
+>       allocate (cphi1d(npole))
+>       allocate (decfbemx(n))
+>       allocate (decfbemy(n))
+>       allocate (decfbemz(n))
+>       allocate (decfaemx(n))
+>       allocate (decfaemy(n))
+>       allocate (decfaemz(n))
+3681c4143,4150
+<          cmp(1,i) = rpole(1,i)
+---
+>          cphi1d(i) = 0.0d0
+>          decfaemx(i) = 0.0d0
+>          decfaemy(i) = 0.0d0
+>          decfaemz(i) = 0.0d0
+>          decfbemx(i) = 0.0d0
+>          decfbemy(i) = 0.0d0
+>          decfbemz(i) = 0.0d0
+>          cmp(1,i) = rpole(1,i)+ pchrgflux(i)
+3826a4296,4322
+> 
+> c
+> c     force due to charge flux
+> c
+>       if (use_cflux) then
+>         do i = 1, npole
+>           cphi1d(i) = cphi(1,i)
+>         end do
+>       end if
+> 
+>       if (use_cflux .and. dobondcflux) then 
+>         call cfbondem(cphi1d,decfbemx,decfbemy,decfbemz)
+>         do i = 1, npole 
+>           dem(1,i) = dem(1,i) + decfbemx(i) 
+>           dem(2,i) = dem(2,i) + decfbemy(i) 
+>           dem(3,i) = dem(3,i) + decfbemz(i) 
+>         end do
+>       end if
+> 
+>       if (use_cflux .and. doanglecflux) then
+>         call cfangleem(cphi1d,decfaemx,decfaemy,decfaemz)
+>         do i = 1, npole 
+>           dem(1,i) = dem(1,i) + decfaemx(i) 
+>           dem(2,i) = dem(2,i) + decfaemy(i) 
+>           dem(3,i) = dem(3,i) + decfaemz(i) 
+>         end do
+>       end if 
+3904a4401,4408
+> 
+>       deallocate (cphi1d)
+>       deallocate (decfaemx)
+>       deallocate (decfaemy)
+>       deallocate (decfaemz)
+>       deallocate (decfbemx)
+>       deallocate (decfbemy)
+>       deallocate (decfbemz)
+diff ./empole3.f ../../AMOEBAplusCFlux/Tinker/empole3.f
+61a62
+>       use cflux
+101d101
+< !     charge penetration varables
+109d108
+< !     end 
+173a173
+>       if (use_cflux) call chrgflux
+185a186
+>          ci = ci+pchrgflux(i)
+229a231
+>                   ck=ck+pchrgflux(k)
+419a422
+>             ci=ci+pchrgflux(i)
+465a469
+>                         ck=ck+pchrgflux(k)
+675a680
+>       use cflux
+716d720
+< !     charge penetration varables
+724d727
+< !     end 
+787a791
+>       if (use_cflux) call chrgflux
+794c798
+< !$OMP& atomic,penalpha,type,
+---
+> !$OMP& atomic,penalpha,type,pchrgflux,use_cflux,
+810a815
+>          ci=ci+pchrgflux(i)
+855a861
+>                   ck=ck+pchrgflux(k)
+1059a1066
+>       use cflux
+1064a1072
+>       use potent
+1087a1096,1099
+> c   
+> c     call charge flux
+> c
+>       if (use_cflux) call chrgflux
+1110a1123
+>          ci = ci + pchrgflux(i)
+1182a1196
+>       use cflux
+1205d1218
+<       real*8 scalekk
+1279a1293,1294
+> 
+>       if (use_cflux) call chrgflux
+1288a1304
+>          ci=ci + pchrgflux(i) 
+1322a1339
+>                ck=ck + pchrgflux(k) 
+1555a1573
+>             ci = ci + pchrgflux(i)
+1592a1611
+>                      ck = ck + pchrgflux(k)
+1845a1865
+>       use cflux
+1850a1871
+>       use potent
+1873a1895,1898
+> c 
+> c     call charge flux
+> c
+>       if (use_cflux) call chrgflux
+1896a1922
+>          ci = ci+pchrgflux(i)
+1967a1994
+>       use cflux
+1990d2016
+<       real*8 scalekk
+2065a2092
+>       if (use_cflux) call chrgflux
+2072c2099
+< !$OMP& atomic,penalpha,type,
+---
+> !$OMP& atomic,penalpha,type,pchrgflux,use_cflux,
+2084a2112
+>          ci=ci+pchrgflux(i)
+2119a2148
+>                ck=ck+pchrgflux(k)
+diff ./empole.f ../../AMOEBAplusCFlux/Tinker/empole.f
+59a60
+>       use cflux
+69a71
+>       use potent
+94d95
+< !     charge penetration varables
+102d102
+< !     end 
+149a150
+>       if (use_cflux) call chrgflux
+161a163
+>          ci = ci+pchrgflux(i)
+205a208
+>                   ck = ck+pchrgflux(k)
+367a371
+>             ci = ci+pchrgflux(i)
+413a418
+>                         ck = ck+pchrgflux(k)
+594a600
+>       use cflux
+603a610
+>       use potent
+630d636
+< !     charge penetration varables
+638d643
+< !     end 
+685a691
+>       if (use_cflux) call chrgflux
+692c698
+< !$OMP& atomic,penalpha,type,
+---
+> !$OMP& atomic,penalpha,type,use_cflux,pchrgflux,
+707a714
+>          ci = ci+pchrgflux(i)
+752a760
+>                   ck = ck+pchrgflux(k)
+925a934
+>       use cflux
+930a940
+>       use potent
+950a961,964
+> c     call charge flux
+> c
+>       if (use_cflux) call chrgflux
+> c
+972a987
+>          ci = ci+pchrgflux(i)
+1034a1050
+>       use cflux
+1042a1059
+>       use potent
+1051d1067
+<       real*8 scalekk
+1071d1086
+< !     charge penetration varables
+1079d1093
+< !     end 
+1113a1128
+>       if (use_cflux) call chrgflux
+1122a1138
+>          ci = ci + pchrgflux(i)
+1156a1173
+>                ck = ck + pchrgflux(k)
+1348a1366
+>             ci = ci+pchrgflux(i) 
+1385a1404
+>                      ck = ck + pchrgflux(k)
+1594a1614
+>       use cflux
+1599a1620
+>       use potent
+1618a1640
+>       if (use_cflux) call chrgflux
+1641a1664
+>          ci = ci+pchrgflux(i)
+1702a1726
+>       use cflux
+1711a1736
+>       use potent
+1719d1743
+<       real*8 scalekk
+1739d1762
+< !     charge penetration varables
+1747d1769
+< !     end 
+1782a1805
+>       if (use_cflux) call chrgflux
+1789c1812
+< !$OMP& atomic,penalpha,type,
+---
+> !$OMP& atomic,penalpha,type,use_cflux,pchrgflux,
+1801a1825
+>          ci = ci+pchrgflux(i)
+1836a1861
+>                ck = ck+pchrgflux(k)
+2064a2090
+>       use cflux
+2090a2117,2118
+> 
+>       if (use_cflux) call chrgflux
+2112c2140
+<          cmp(1,i) = rpole(1,i)
+---
+>          cmp(1,i) = rpole(1,i) + pchrgflux(i)
+diff ./epolar1.f ../../AMOEBAplusCFlux/Tinker/epolar1.f
+59a60
+>       use cflux
+126a128,129
+>       real*8 term2i,term2k
+>       real*8 poti,potk
+131a135,141
+>       real*8, allocatable :: damppot(:)
+>       real*8, allocatable :: decfbemx(:)
+>       real*8, allocatable :: decfbemy(:)
+>       real*8, allocatable :: decfbemz(:)
+>       real*8, allocatable :: decfaemx(:)
+>       real*8, allocatable :: decfaemy(:)
+>       real*8, allocatable :: decfaemz(:)
+163a174,180
+>       allocate (damppot(n))
+>       allocate (decfbemx(n))
+>       allocate (decfbemy(n))
+>       allocate (decfbemz(n))
+>       allocate (decfaemx(n))
+>       allocate (decfaemy(n))
+>       allocate (decfaemz(n))
+170a188,194
+>          damppot(i) = 0.0d0
+>          decfaemx(i) = 0.0d0
+>          decfaemy(i) = 0.0d0
+>          decfaemz(i) = 0.0d0
+>          decfbemx(i) = 0.0d0
+>          decfbemy(i) = 0.0d0
+>          decfbemz(i) = 0.0d0
+195a220
+>          ci = ci + pchrgflux(i) 
+255a281
+>                ck = ck + pchrgflux(k) 
+371a398,408
+> c     save the potential 
+> c
+>                if (use_cflux) then
+>                   term2i = -urk 
+>                   term2k = +uri
+>                   poti = 2.0d0*term2i*psr3
+>                   potk = 2.0d0*term2k*psr3
+>                   damppot(ii) = damppot(ii) + poti 
+>                   damppot(kk) = damppot(kk) + potk 
+>                end if
+> c
+742a780,799
+> c     Extra derivative terms due to charge flux
+> c
+>       if (use_cflux .and. dobondcflux) then 
+>           call cfbondem(damppot,decfbemx,decfbemy,decfbemz)
+>           do i = 1, npole 
+>             dep(1,i) = dep(1,i) + decfbemx(i) 
+>             dep(2,i) = dep(2,i) + decfbemy(i) 
+>             dep(3,i) = dep(3,i) + decfbemz(i) 
+>           end do
+>       end if
+> 
+>       if (use_cflux .and. doanglecflux) then
+>           call cfangleem(damppot,decfaemx,decfaemy,decfaemz)
+>           do i = 1, npole 
+>             dep(1,i) = dep(1,i) + decfaemx(i) 
+>             dep(2,i) = dep(2,i) + decfaemy(i) 
+>             dep(3,i) = dep(3,i) + decfaemz(i) 
+>           end do
+>       end if
+> c
+758a816
+>          ci = ci + pchrgflux(i) 
+824a883
+>                ck = ck + pchrgflux(k) 
+934a994,1004
+> c     save the potential 
+> c
+>                if (use_cflux) then
+>                   term2i = -urk 
+>                   term2k = +uri
+>                   poti = 2.0d0*term2i*psr3
+>                   potk = 2.0d0*term2k*psr3
+>                   damppot(ii) = damppot(ii) + poti 
+>                   damppot(kk) = damppot(kk) + potk 
+>                end if
+> c
+1318a1389,1408
+> c
+> c     Extra derivative terms due to charge flux
+> c
+>       if (use_cflux .and. dobondcflux) then 
+>           call cfbondem(damppot,decfbemx,decfbemy,decfbemz)
+>           do i = 1, npole 
+>             dep(1,i) = dep(1,i) + decfbemx(i) 
+>             dep(2,i) = dep(2,i) + decfbemy(i) 
+>             dep(3,i) = dep(3,i) + decfbemz(i) 
+>           end do
+>       end if
+> 
+>       if (use_cflux .and. doanglecflux) then
+>           call cfangleem(damppot,decfaemx,decfaemy,decfaemz)
+>           do i = 1, npole 
+>             dep(1,i) = dep(1,i) + decfaemx(i) 
+>             dep(2,i) = dep(2,i) + decfaemy(i) 
+>             dep(3,i) = dep(3,i) + decfaemz(i) 
+>           end do
+>       end if
+1388a1479,1485
+>       deallocate (damppot)
+>       deallocate (decfaemx)
+>       deallocate (decfaemy)
+>       deallocate (decfaemz)
+>       deallocate (decfbemx)
+>       deallocate (decfbemy)
+>       deallocate (decfbemz)
+1407a1505
+>       use angbnd
+1408a1507,1508
+>       use bndstr
+>       use cflux
+1481a1582,1590
+>       real*8 term2i,term2k
+>       real*8 poti,potk
+>       real*8, allocatable :: damppot(:)
+>       real*8, allocatable :: decfbemx(:)
+>       real*8, allocatable :: decfbemy(:)
+>       real*8, allocatable :: decfbemz(:)
+>       real*8, allocatable :: decfaemx(:)
+>       real*8, allocatable :: decfaemy(:)
+>       real*8, allocatable :: decfaemz(:)
+1513a1623,1629
+>       allocate (damppot(n))
+>       allocate (decfbemx(n))
+>       allocate (decfbemy(n))
+>       allocate (decfbemz(n))
+>       allocate (decfaemx(n))
+>       allocate (decfaemy(n))
+>       allocate (decfaemz(n))
+1520a1637,1643
+>          damppot(i) = 0.0d0
+>          decfaemx(i) = 0.0d0
+>          decfaemy(i) = 0.0d0
+>          decfaemz(i) = 0.0d0
+>          decfbemx(i) = 0.0d0
+>          decfbemy(i) = 0.0d0
+>          decfbemz(i) = 0.0d0
+1543,1544c1666,1667
+< !$OMP& shared (ep,einter,dep,vir,ufld,dufld,
+< !$OMP& dirdamp) 
+---
+> !$OMP& shared (ep,einter,dep,vir,ufld,dufld,use_cflux,
+> !$OMP& dirdamp,pchrgflux,damppot,ibnd,nbond,iang,nangle) 
+1546c1669,1670
+< !$OMP DO reduction(+:ep,einter,dep,vir,ufld,dufld) schedule(guided)
+---
+> !$OMP DO reduction(+:ep,einter,dep,vir,ufld,dufld,
+> !$OMP& damppot) schedule(guided)
+1558a1683
+>          ci = ci + pchrgflux(i) 
+1619a1745
+>                ck = ck + pchrgflux(k) 
+1729a1856,1866
+> c     save the potential 
+> c
+>                if (use_cflux) then
+>                   term2i = -urk 
+>                   term2k = +uri
+>                   poti = 2.0d0*term2i*psr3
+>                   potk = 2.0d0*term2k*psr3
+>                   damppot(ii) = damppot(ii) + poti 
+>                   damppot(kk) = damppot(kk) + potk 
+>                end if
+> c
+2169a2307,2326
+> c     Extra derivative terms due to charge flux
+> c
+>       if (use_cflux .and. dobondcflux) then 
+>           call cfbondem(damppot,decfbemx,decfbemy,decfbemz)
+>           do i = 1, npole 
+>             dep(1,i) = dep(1,i) + decfbemx(i) 
+>             dep(2,i) = dep(2,i) + decfbemy(i) 
+>             dep(3,i) = dep(3,i) + decfbemz(i) 
+>           end do
+>       end if
+> 
+>       if (use_cflux .and. doanglecflux) then
+>           call cfangleem(damppot,decfaemx,decfaemy,decfaemz)
+>           do i = 1, npole 
+>             dep(1,i) = dep(1,i) + decfaemx(i) 
+>             dep(2,i) = dep(2,i) + decfaemy(i) 
+>             dep(3,i) = dep(3,i) + decfaemz(i) 
+>           end do
+>       end if
+> c
+2176a2334,2340
+>       deallocate (damppot)
+>       deallocate (decfaemx)
+>       deallocate (decfaemy)
+>       deallocate (decfaemz)
+>       deallocate (decfbemx)
+>       deallocate (decfbemy)
+>       deallocate (decfbemz)
+2196a2361
+>       use cflux
+2390a2556
+>       use cflux
+2475a2642,2650
+>       real*8 term2i,term2k
+>       real*8 poti,potk
+>       real*8, allocatable :: damppot(:)
+>       real*8, allocatable :: decfbepx(:)
+>       real*8, allocatable :: decfbepy(:)
+>       real*8, allocatable :: decfbepz(:)
+>       real*8, allocatable :: decfaepx(:)
+>       real*8, allocatable :: decfaepy(:)
+>       real*8, allocatable :: decfaepz(:)
+2486a2662,2668
+>       allocate (damppot(n))
+>       allocate (decfbepx(n))
+>       allocate (decfbepy(n))
+>       allocate (decfbepz(n))
+>       allocate (decfaepx(n))
+>       allocate (decfaepy(n))
+>       allocate (decfaepz(n))
+2493a2676,2682
+>          damppot(i) = 0.0d0
+>          decfaepx(i) = 0.0d0
+>          decfaepy(i) = 0.0d0
+>          decfaepz(i) = 0.0d0
+>          decfbepx(i) = 0.0d0
+>          decfbepy(i) = 0.0d0
+>          decfbepz(i) = 0.0d0
+2518a2708
+>          ci = ci + pchrgflux(i) 
+2578a2769
+>                ck = ck + pchrgflux(k) 
+2733a2925,2934
+> c     save the potential 
+> c
+>                if (use_cflux) then
+>                   term2i = -urk 
+>                   term2k = +uri
+>                   poti = 2.0d0*term2i*psr3
+>                   potk = 2.0d0*term2k*psr3
+>                   damppot(ii) = damppot(ii) + poti 
+>                   damppot(kk) = damppot(kk) + potk 
+>                end if
+3188a3390,3409
+> c     Extra derivative terms due to charge flux
+> c
+>       if (use_cflux .and. dobondcflux) then 
+>           call cfbondem(damppot,decfbepx,decfbepy,decfbepz)
+>           do i = 1, npole 
+>             dep(1,i) = dep(1,i) + decfbepx(i) 
+>             dep(2,i) = dep(2,i) + decfbepy(i) 
+>             dep(3,i) = dep(3,i) + decfbepz(i) 
+>           end do
+>       end if
+> 
+>       if (use_cflux .and. doanglecflux) then
+>           call cfangleem(damppot,decfaepx,decfaepy,decfaepz)
+>           do i = 1, npole 
+>             dep(1,i) = dep(1,i) + decfaepx(i) 
+>             dep(2,i) = dep(2,i) + decfaepy(i) 
+>             dep(3,i) = dep(3,i) + decfaepz(i) 
+>           end do
+>       end if
+> c
+3204a3426
+>          ci = ci + pchrgflux(i) 
+3270a3493
+>                ck = ck + pchrgflux(k) 
+3965a4189,4195
+>       deallocate (damppot)
+>       deallocate (decfaepx)
+>       deallocate (decfaepy)
+>       deallocate (decfaepz)
+>       deallocate (decfbepx)
+>       deallocate (decfbepy)
+>       deallocate (decfbepz)
+4177a4408
+>       use angbnd
+4178a4410,4411
+>       use bndstr
+>       use cflux
+4264a4498,4506
+>       real*8 term2i,term2k
+>       real*8 poti,potk
+>       real*8, allocatable :: damppot(:)
+>       real*8, allocatable :: decfbemx(:)
+>       real*8, allocatable :: decfbemy(:)
+>       real*8, allocatable :: decfbemz(:)
+>       real*8, allocatable :: decfaemx(:)
+>       real*8, allocatable :: decfaemy(:)
+>       real*8, allocatable :: decfaemz(:)
+4275a4518,4524
+>       allocate (damppot(n))
+>       allocate (decfbemx(n))
+>       allocate (decfbemy(n))
+>       allocate (decfbemz(n))
+>       allocate (decfaemx(n))
+>       allocate (decfaemy(n))
+>       allocate (decfaemz(n))
+4282a4532,4538
+>          damppot(i) = 0.0d0
+>          decfaemx(i) = 0.0d0
+>          decfaemy(i) = 0.0d0
+>          decfaemz(i) = 0.0d0
+>          decfbemx(i) = 0.0d0
+>          decfbemy(i) = 0.0d0
+>          decfbemz(i) = 0.0d0
+4303a4560
+> !$OMP& use_cflux,ibnd,nbond,nangle,iang,pchrgflux,
+4306c4563
+< !$OMP& dirdamp)
+---
+> !$OMP& dirdamp,damppot)
+4308c4565,4566
+< !$OMP DO reduction(+:ep,einter,dep,vir,ufld,dufld) schedule(guided)
+---
+> !$OMP DO reduction(+:ep,einter,dep,vir,ufld,dufld,
+> !$OMP& damppot) schedule(guided)
+4320a4579
+>          ci = ci + pchrgflux(i) 
+4381a4641
+>                ck = ck + pchrgflux(k) 
+4530a4791,4800
+> c     save the potential 
+> c
+>                if (use_cflux) then
+>                   term2i = -urk 
+>                   term2k = +uri
+>                   poti = 2.0d0*term2i*psr3
+>                   potk = 2.0d0*term2k*psr3
+>                   damppot(ii) = damppot(ii) + poti 
+>                   damppot(kk) = damppot(kk) + potk 
+>                end if
+5053a5324,5343
+> c     Extra derivative terms due to charge flux
+> c
+>       if (use_cflux .and. dobondcflux) then 
+>           call cfbondem(damppot,decfbemx,decfbemy,decfbemz)
+>           do i = 1, npole 
+>             dep(1,i) = dep(1,i) + decfbemx(i) 
+>             dep(2,i) = dep(2,i) + decfbemy(i) 
+>             dep(3,i) = dep(3,i) + decfbemz(i) 
+>           end do
+>       end if
+> 
+>       if (use_cflux .and. doanglecflux) then
+>           call cfangleem(damppot,decfaemx,decfaemy,decfaemz)
+>           do i = 1, npole 
+>             dep(1,i) = dep(1,i) + decfaemx(i) 
+>             dep(2,i) = dep(2,i) + decfaemy(i) 
+>             dep(3,i) = dep(3,i) + decfaemz(i) 
+>           end do
+>       end if
+> c
+5060a5351,5357
+>       deallocate (damppot)
+>       deallocate (decfaemx)
+>       deallocate (decfaemy)
+>       deallocate (decfaemz)
+>       deallocate (decfbemx)
+>       deallocate (decfbemy)
+>       deallocate (decfbemz)
+5091a5389
+>       use cflux
+5138a5437,5443
+>       real*8, allocatable :: cphi1d(:)
+>       real*8, allocatable :: decfbeprx(:)
+>       real*8, allocatable :: decfbepry(:)
+>       real*8, allocatable :: decfbeprz(:)
+>       real*8, allocatable :: decfaeprx(:)
+>       real*8, allocatable :: decfaepry(:)
+>       real*8, allocatable :: decfaeprz(:)
+5168a5474,5483
+> c     allocate some local arrays
+> c
+>       allocate (cphi1d(n))
+>       allocate (decfbeprx(n))
+>       allocate (decfbepry(n))
+>       allocate (decfbeprz(n))
+>       allocate (decfaeprx(n))
+>       allocate (decfaepry(n))
+>       allocate (decfaeprz(n))
+> c
+5194c5509
+<       if (use_mpole) then
+---
+>       if (use_mpole .and..not.use_cflux) then
+5212c5527,5534
+<             cmp(1,i) = rpole(1,i)
+---
+>             cphi1d(i) = 0.0d0
+>             decfaeprx(i) = 0.0d0
+>             decfaepry(i) = 0.0d0
+>             decfaeprz(i) = 0.0d0
+>             decfbeprx(i) = 0.0d0
+>             decfbepry(i) = 0.0d0
+>             decfbeprz(i) = 0.0d0
+>             cmp(1,i) = rpole(1,i)+ pchrgflux(i)
+5765a6088,6113
+> c     force due to charge flux
+> c
+>       if (use_cflux) then
+>         do i = 1, npole
+>           cphi1d(i) = cphi(1,i)
+>         end do
+>       end if
+> 
+>       if (use_cflux .and. dobondcflux) then 
+>         call cfbondem(cphi1d,decfbeprx,decfbepry,decfbeprz)
+>         do i = 1, npole 
+>           dep(1,i) = dep(1,i) + decfbeprx(i) 
+>           dep(2,i) = dep(2,i) + decfbepry(i) 
+>           dep(3,i) = dep(3,i) + decfbeprz(i) 
+>         end do
+>       end if
+> 
+>       if (use_cflux .and. doanglecflux) then
+>         call cfangleem(cphi1d,decfaeprx,decfaepry,decfaeprz)
+>         do i = 1, npole 
+>           dep(1,i) = dep(1,i) + decfaeprx(i) 
+>           dep(2,i) = dep(2,i) + decfaepry(i) 
+>           dep(3,i) = dep(3,i) + decfaeprz(i) 
+>         end do
+>       end if 
+> c
+5779a6128,6134
+>       deallocate (cphi1d)
+>       deallocate (decfaeprx)
+>       deallocate (decfaepry)
+>       deallocate (decfaeprz)
+>       deallocate (decfbeprx)
+>       deallocate (decfbepry)
+>       deallocate (decfbeprz)
+diff ./epolar3.f ../../AMOEBAplusCFlux/Tinker/epolar3.f
+67a68
+>       use cflux
+170a172
+>          ci = ci + pchrgflux(i) 
+211a214
+>                ck = ck + pchrgflux(k) 
+345a349
+>             ci = ci + pchrgflux(i)
+389a394
+>                      ck = ck + pchrgflux(k) 
+534a540
+>       use cflux
+634c640
+< !$OMP& dirdamp,
+---
+> !$OMP& dirdamp,pchrgflux,
+649a656
+>          ci = ci + pchrgflux(i) 
+691a699
+>                ck = ck + pchrgflux(k) 
+955a964
+>       use cflux
+1045a1055
+>          ci = ci + pchrgflux(i) 
+1086a1097
+>                ck = ck + pchrgflux(k) 
+1250a1262
+>             ci = ci + pchrgflux(i) 
+1294a1307
+>                      ck = ck + pchrgflux(k) 
+1587a1601
+>       use cflux
+1674c1688
+< !$OMP& molcule,name,verbose,debug,header,iout,
+---
+> !$OMP& molcule,name,verbose,debug,header,iout,pchrgflux,
+1689a1704
+>          ci = ci + pchrgflux(i) 
+1731a1747
+>                ck = ck + pchrgflux(k) 
+diff ./epolar.f ../../AMOEBAplusCFlux/Tinker/epolar.f
+64a65
+>       use cflux
+1615a1617
+>       use cflux
+1740a1743
+>       use cflux
+1814c1817
+<             cmp(1,i) = rpole(1,i)
+---
+>             cmp(1,i) = rpole(1,i)+ pchrgflux(i)
+Common subdirectories: ./example and ../../AMOEBAplusCFlux/Tinker/example
+diff ./field.f ../../AMOEBAplusCFlux/Tinker/field.f
+43a44
+>       use_cflux = .true.
+diff ./final.f ../../AMOEBAplusCFlux/Tinker/final.f
+97a98
+>       use cflux
+640a642,651
+> c     deallocation of global arrays from module cflux
+> c
+>       if (allocated(pchrgflux))  deallocate (pchrgflux)
+>       if (allocated(b0))  deallocate (b0)
+>       if (allocated(jb))  deallocate (jb)
+>       if (allocated(theta0))  deallocate (theta0)
+>       if (allocated(bp0))  deallocate (bp0)
+>       if (allocated(jbp))  deallocate (jbp)
+>       if (allocated(jtheta))  deallocate (jtheta)
+> c
+diff ./induce.f ../../AMOEBAplusCFlux/Tinker/induce.f
+576a577
+>       use cflux
+582a584
+>       use potent
+625a628,632
+> 
+> c
+> c     call charge flux
+> c
+>       if (use_cflux) call chrgflux
+646a654
+>          ci = ci + pchrgflux(i) 
+696a705
+>                   ck = ck + pchrgflux(k)
+792a802
+>             ci = ci + pchrgflux(i)
+828a839
+>                ck = ck + pchrgflux(k) 
+1251a1263
+>       use cflux
+1258a1271
+>       use potent
+1301a1315,1318
+> c     call charge flux
+> c
+>       if (use_cflux) call chrgflux
+> c
+1321a1339
+>          ci = ci + pchrgflux(i) 
+1372a1391
+>                   ck = ck + pchrgflux(k) 
+1832a1852
+>       use cflux
+1836a1857
+>       use potent
+1864a1886,1889
+> c     call charge flux
+> c
+>       if (use_cflux) call chrgflux
+> c
+1868a1894
+>          cmp(1,i) = cmp(1,i) + pchrgflux(i) 
+1999a2026
+>       use cflux
+2006a2034
+>       use potent
+2064a2093,2096
+> c     call charge flux
+> c
+>       if (use_cflux) call chrgflux
+> c
+2072a2105
+>          ci = ci + pchrgflux(i) 
+2124a2158
+>                ck = ck + pchrgflux(k) 
+2255a2290
+>             ci = ci + pchrgflux(i) 
+2291a2327
+>                ck = ck + pchrgflux(k) 
+2471a2508
+>       use cflux
+2480a2518
+>       use potent
+2567a2606,2609
+> c     call charge flux
+> c
+>       if (use_cflux) call chrgflux
+> c
+2572a2615
+> !$OMP& pchrgflux,
+2595a2639
+>          ci = ci + pchrgflux(i) 
+2652a2697
+>                ck = ck + pchrgflux(k) 
+diff ./initprm.f ../../AMOEBAplusCFlux/Tinker/initprm.f
+29a30
+>       use kcfluxes
+57a59
+>       use cflux
+87a90,97
+> 
+>       do i = 1, maxnbcf
+>          kcfb(i) = blank8
+>       end do
+>       do i = 1, maxnacf
+>          kcfa(i) = blank12
+>       end do
+> 
+304a315,319
+> c   
+> c     set default control parameters for charge flux 
+> c
+>       dobondcflux = .false.
+>       doanglecflux = .false.      
+Only in ../../AMOEBAplusCFlux/Tinker/: kcfluxes.f
+Only in ../../AMOEBAplusCFlux/Tinker/: kcflux.f
+diff ./kmpole.f ../../AMOEBAplusCFlux/Tinker/kmpole.f
+21a22
+>       use cflux
+554a556,568
+> c     perform dynamic allocation of some global arrays
+> c
+>       if (.not. use_cflux) then
+>          if (allocated(pchrgflux))  deallocate (pchrgflux)
+>          allocate (pchrgflux(n))
+> 
+> c     if charge flux not used, zero out pchrgflux 
+> 
+>         do i = 1, n
+>           pchrgflux(i) = 0.0d0
+>         end do
+>       end if
+> c
+diff ./kpolar.f ../../AMOEBAplusCFlux/Tinker/kpolar.f
+28a29
+>       use cflux
+165a167,179
+> c     perform dynamic allocation of some global arrays
+> c
+> c      if (.not. use_cflux) then
+> c         if (allocated(pchrgflux))  deallocate (pchrgflux)
+> c         allocate (pchrgflux(n))
+> c
+> cc     if charge flux not used, zero out pchrgflux 
+> c
+> c        do i = 1, n
+> c          pchrgflux(i) = 0.0d0
+> c        end do
+> c      end if
+> c
+210c224
+<             adird = -1.0d0
+---
+>             dird = -1.0d0
+Common subdirectories: ./.libs and ../../AMOEBAplusCFlux/Tinker/.libs
+Binary files ./libtinker.a and ../../AMOEBAplusCFlux/Tinker/libtinker.a differ
+diff ./Makefile ../../AMOEBAplusCFlux/Tinker/Makefile
+51c51
+< OPENMMDIR =/home/liuchw/Softwares/tinkers/Tinker-OpenMM/AMOEBAplus/bin2019
+---
+> OPENMMDIR =/home/liuchw/Softwares/tinkers/Tinker-OpenMM/AMOEBAplus/AMOEBAplusCFlux/bin
+120a121,122
+> 	cflux.o \
+> 	chrgflux.o \
+212a215
+> 	echrgflux1.o \
+350a354,355
+> 	kcflux.o \
+> 	kcfluxes.o \
+691a697,699
+> 	ctran.o \
+> 	cflux.o \
+> 	chrgflux.o \
+777a786
+> 	echrgflux1.o \
+913a923
+> 	kcflux.o \
+914a925
+> 	kcfluxes.o \
+1137c1148
+< dynamic_omm.o: angbnd.o angpot.o angtor.o atomid.o atoms.o bath.o bitor.o bndpot.o bndstr.o bound.o boxes.o cell.o charge.o chgpot.o couple.o ctran.o deriv.o energi.o ewald.o freeze.o group.o imptor.o inform.o iounit.o keys.o ktrtor.o kvdws.o limits.o mdstuf.o molcul.o moldyn.o mplpot.o mpole.o mutant.o nonpol.o opbend.o openmm.o openmp.o pitors.o pme.o polar.o polgrp.o polpot.o potent.o restrn.o sizes.o solute.o stodyn.o strbnd.o strtor.o torpot.o tors.o tortor.o units.o urey.o urypot.o usage.o vdw.o vdwpot.o
+---
+> dynamic_omm.o: angbnd.o angpot.o angtor.o atomid.o atoms.o bath.o bitor.o bndpot.o bndstr.o bound.o boxes.o cell.o cflux.o charge.o chgpot.o couple.o ctran.o deriv.o energi.o ewald.o freeze.o group.o imptor.o inform.o iounit.o keys.o ktrtor.o kvdws.o limits.o mdstuf.o molcul.o moldyn.o mplpot.o mpole.o mutant.o nonpol.o opbend.o openmm.o openmp.o pitors.o pme.o polar.o polgrp.o polpot.o potent.o restrn.o sizes.o solute.o stodyn.o strbnd.o strtor.o torpot.o tors.o tortor.o units.o urey.o urypot.o usage.o vdw.o vdwpot.o
+1180a1192,1193
+> cflux.o: sizes.o
+> chrgflux.o: atomid.o atoms.o bound.o bndstr.o cflux.o group.o potent.o sizes.o usage.o 
+1271a1285
+> echrgflux1.o:  atoms.o sizes.o atomid.o bndstr.o cflux.o deriv.o 
+1281,1283c1295,1297
+< empole.o: atoms.o bound.o boxes.o cell.o chgpot.o ctran.o couple.o energi.o ewald.o group.o limits.o math.o mplpot.o mpole.o mrecip.o neigh.o pme.o potent.o shunt.o sizes.o usage.o
+< empole1.o: atoms.o bound.o boxes.o cell.o chgpot.o ctran.o couple.o deriv.o energi.o ewald.o group.o inter.o limits.o math.o molcul.o mplpot.o mpole.o mrecip.o neigh.o pme.o shunt.o sizes.o usage.o virial.o
+< empole3.o: action.o analyz.o atomid.o atoms.o bound.o boxes.o cell.o chgpot.o ctran.o couple.o energi.o ewald.o group.o inform.o inter.o iounit.o limits.o math.o molcul.o mplpot.o mpole.o neigh.o potent.o shunt.o sizes.o usage.o
+---
+> empole.o: atoms.o bound.o boxes.o cell.o cflux.o chgpot.o couple.o energi.o ewald.o group.o limits.o math.o mplpot.o mpole.o mrecip.o neigh.o pme.o potent.o shunt.o sizes.o usage.o
+> empole1.o: atoms.o bound.o boxes.o cell.o cflux.o chgpot.o couple.o deriv.o energi.o ewald.o group.o inter.o limits.o math.o molcul.o mplpot.o mpole.o mrecip.o neigh.o pme.o shunt.o sizes.o usage.o virial.o
+> empole3.o: action.o analyz.o atomid.o atoms.o bound.o boxes.o cell.o chgpot.o couple.o energi.o ewald.o group.o inform.o inter.o iounit.o limits.o math.o molcul.o mplpot.o mpole.o neigh.o potent.o shunt.o sizes.o usage.o
+1344c1358
+< final.o: align.o analyz.o angang.o angbnd.o angtor.o atmlst.o bitor.o bndstr.o cell.o charge.o chunks.o couple.o ctran.o deriv.o dipole.o disgeo.o domega.o faces.o fracs.o freeze.o group.o hessn.o hpmf.o ielscf.o improp.o imptor.o inform.o iounit.o katoms.o kchrge.o kpolr.o kvdws.o light.o merck.o molcul.o moldyn.o mpole.o mrecip.o mutant.o neigh.o nonpol.o omega.o opbend.o opdist.o orbits.o paths.o pbstuf.o pdb.o piorbs.o pistuf.o pitors.o pme.o polar.o polgrp.o potfit.o qmstuf.o refer.o restrn.o rgddyn.o rigid.o ring.o rotbnd.o sizes.o socket.o solute.o stodyn.o strbnd.o strtor.o syntrn.o tarray.o tors.o tortor.o uprior.o urey.o usage.o usolve.o vdw.o vibs.o warp.o
+---
+> final.o: align.o analyz.o angang.o angbnd.o angtor.o atmlst.o bitor.o bndstr.o cell.o charge.o cflux.o chunks.o couple.o ctran.o deriv.o dipole.o disgeo.o domega.o faces.o fracs.o freeze.o group.o hessn.o hpmf.o ielscf.o improp.o imptor.o inform.o iounit.o katoms.o kchrge.o kpolr.o kvdws.o light.o merck.o molcul.o moldyn.o mpole.o mrecip.o mutant.o neigh.o nonpol.o omega.o opbend.o opdist.o orbits.o paths.o pbstuf.o pdb.o piorbs.o pistuf.o pitors.o pme.o polar.o polgrp.o potfit.o qmstuf.o refer.o restrn.o rgddyn.o rigid.o ring.o rotbnd.o sizes.o socket.o solute.o stodyn.o strbnd.o strtor.o syntrn.o tarray.o tors.o tortor.o uprior.o urey.o usage.o usolve.o vdw.o vibs.o warp.o
+1389c1403
+< initprm.o: angpot.o bndpot.o chgpot.o ctran.o fields.o kanang.o kangs.o kantor.o katoms.o kbonds.o kchrge.o kdipol.o khbond.o kiprop.o kitors.o kmulti.o kopbnd.o kopdst.o korbs.o kpitor.o kpolr.o kstbnd.o ksttor.o ktorsn.o ktrtor.o kurybr.o kvdwpr.o kvdws.o math.o merck.o mplpot.o polpot.o rxnpot.o sizes.o solute.o torpot.o units.o urypot.o vdwpot.o
+---
+> initprm.o: angpot.o bndpot.o chgpot.o ctran.o fields.o kanang.o kangs.o kantor.o katoms.o kbonds.o kcfluxes.o kchrge.o kdipol.o khbond.o kiprop.o kitors.o kmulti.o kopbnd.o kopdst.o korbs.o kpitor.o kpolr.o kstbnd.o ksttor.o ktorsn.o ktrtor.o kurybr.o kvdwpr.o kvdws.o math.o merck.o mplpot.o polpot.o rxnpot.o sizes.o solute.o torpot.o units.o urypot.o vdwpot.o
+1408a1423
+> kcflux.o: sizes.o angbnd.o atomid.o bndstr.o cflux.o inform.o iounit.o kcfluxes.o keys.o potent.o usage.o  
+1409a1425
+> kcfluxes.o: sizes.o 
+1480c1496
+< moments.o: atomid.o atoms.o bound.o charge.o dipole.o limits.o moment.o mpole.o polar.o potent.o rigid.o sizes.o solute.o units.o usage.o
+---
+> moments.o: atomid.o atoms.o bound.o charge.o cflux.o dipole.o limits.o moment.o mpole.o polar.o potent.o rigid.o sizes.o solute.o units.o usage.o
+1544c1560
+< prmkey.o: angpot.o bndpot.o chgpot.o ctran.o fields.o mplpot.o polpot.o potent.o rxnpot.o torpot.o urypot.o vdwpot.o
+---
+> prmkey.o: angpot.o bndpot.o chgpot.o ctran.o cflux.o fields.o mplpot.o polpot.o potent.o rxnpot.o torpot.o urypot.o vdwpot.o
+1552c1568
+< prtprm.o: angpot.o bndpot.o chgpot.o ctran.o fields.o kanang.o kangs.o kantor.o katoms.o kbonds.o kchrge.o kdipol.o khbond.o kiprop.o kitors.o kmulti.o kopbnd.o kopdst.o korbs.o kpitor.o kpolr.o kstbnd.o ksttor.o ktorsn.o ktrtor.o kurybr.o kvdwpr.o kvdws.o mplpot.o polpot.o sizes.o urypot.o vdwpot.o
+---
+> prtprm.o: angpot.o bndpot.o cflux.o chgpot.o ctran.o fields.o kanang.o kangs.o kantor.o katoms.o kbonds.o kchrge.o kdipol.o khbond.o kiprop.o kitors.o kmulti.o kopbnd.o kopdst.o korbs.o kpitor.o kpolr.o kstbnd.o ksttor.o ktorsn.o ktrtor.o kurybr.o kvdwpr.o kvdws.o mplpot.o polpot.o sizes.o urypot.o vdwpot.o
+1572c1588
+< readprm.o: ctran.o fields.o iounit.o kanang.o kangs.o kantor.o katoms.o kbonds.o kchrge.o kdipol.o khbond.o kiprop.o kitors.o kmulti.o kopbnd.o kopdst.o korbs.o kpitor.o kpolr.o kstbnd.o ksttor.o ktorsn.o ktrtor.o kurybr.o kvdwpr.o kvdws.o merck.o params.o sizes.o
+---
+> readprm.o: ctran.o cflux.o fields.o iounit.o kanang.o kangs.o kantor.o katoms.o kbonds.o kchrge.o kdipol.o khbond.o kiprop.o kitors.o kmulti.o kopbnd.o kopdst.o korbs.o kpitor.o kpolr.o kstbnd.o ksttor.o ktorsn.o ktrtor.o kurybr.o kvdwpr.o kvdws.o merck.o params.o sizes.o
+diff ./mechanic.f ../../AMOEBAplusCFlux/Tinker/mechanic.f
+78a79,80
+> 
+>       if (use_cflux) call kcflux
+diff ./moments.f ../../AMOEBAplusCFlux/Tinker/moments.f
+24a25
+>       use cflux
+45a47
+>       real*8, allocatable :: chrge(:)
+72a75
+>       if (use_cflux)  call chrgflux
+78a82,86
+>       allocate (chrge(n))
+> 
+>       do i = 1, n
+>         chrge(i) = 0.0d0
+>       end do
+106a115
+> CW: not used      
+127a137
+> CW: not used      
+182,186c192,197
+<             netchg = netchg + rpole(1,i)
+<             xdpl = xdpl + xcm(k)*rpole(1,i) + rpole(2,i)
+<             ydpl = ydpl + ycm(k)*rpole(1,i) + rpole(3,i)
+<             zdpl = zdpl + zcm(k)*rpole(1,i) + rpole(4,i)
+<             xxqdp = xxqdp + xcm(k)*xcm(k)*rpole(1,i)
+---
+>             chrge(i) = rpole(1,i) + pchrgflux(i)
+>             netchg = netchg + chrge(i) 
+>             xdpl = xdpl + xcm(k)*chrge(i) + rpole(2,i)
+>             ydpl = ydpl + ycm(k)*chrge(i) + rpole(3,i)
+>             zdpl = zdpl + zcm(k)*chrge(i) + rpole(4,i)
+>             xxqdp = xxqdp + xcm(k)*xcm(k)*chrge(i)
+188c199
+<             xyqdp = xyqdp + xcm(k)*ycm(k)*rpole(1,i)
+---
+>             xyqdp = xyqdp + xcm(k)*ycm(k)*chrge(i)
+190c201
+<             xzqdp = xzqdp + xcm(k)*zcm(k)*rpole(1,i)
+---
+>             xzqdp = xzqdp + xcm(k)*zcm(k)*chrge(i)
+192c203
+<             yxqdp = yxqdp + ycm(k)*xcm(k)*rpole(1,i)
+---
+>             yxqdp = yxqdp + ycm(k)*xcm(k)*chrge(i)
+194c205
+<             yyqdp = yyqdp + ycm(k)*ycm(k)*rpole(1,i)
+---
+>             yyqdp = yyqdp + ycm(k)*ycm(k)*chrge(i)
+196c207
+<             yzqdp = yzqdp + ycm(k)*zcm(k)*rpole(1,i)
+---
+>             yzqdp = yzqdp + ycm(k)*zcm(k)*chrge(i)
+198c209
+<             zxqdp = zxqdp + zcm(k)*xcm(k)*rpole(1,i)
+---
+>             zxqdp = zxqdp + zcm(k)*xcm(k)*chrge(i)
+200c211
+<             zyqdp = zyqdp + zcm(k)*ycm(k)*rpole(1,i)
+---
+>             zyqdp = zyqdp + zcm(k)*ycm(k)*chrge(i)
+202c213
+<             zzqdp = zzqdp + zcm(k)*zcm(k)*rpole(1,i)
+---
+>             zzqdp = zzqdp + zcm(k)*zcm(k)*chrge(i)
+211a223
+>       deallocate (chrge)
+diff ./ommstuff.cpp ../../AMOEBAplusCFlux/Tinker/ommstuff.cpp
+226a227,238
+>    double* theta0;
+>    double* bp0;
+>    double* jbp;
+>    double* jtheta;
+>    double* jb;
+>    double* b0;
+>    double* pchrgflux;
+>    int    dobondcflux;
+>    int    doanglecflux;
+> } cflux__;
+> 
+> struct {
+635a648
+>    int use_cflux;
+987,999d999
+< void set_cell_data_ (int* ncell, int* icell, double* xcell, double* ycell,
+<                      double* zcell, double* xcell2, double* ycell2,
+<                      double* zcell2) {
+<    cell__.ncell = *ncell;
+<    cell__.icell = icell;
+<    cell__.xcell = *xcell;
+<    cell__.ycell = *ycell;
+<    cell__.zcell = *zcell;
+<    cell__.xcell2 = *xcell2;
+<    cell__.ycell2 = *ycell2;
+<    cell__.zcell2 = *zcell2;
+< }
+< 
+1051a1052,1077
+> void set_cell_data_ (int* ncell, int* icell, double* xcell, double* ycell,
+>                      double* zcell, double* xcell2, double* ycell2,
+>                      double* zcell2) {
+>    cell__.ncell = *ncell;
+>    cell__.icell = icell;
+>    cell__.xcell = *xcell;
+>    cell__.ycell = *ycell;
+>    cell__.zcell = *zcell;
+>    cell__.xcell2 = *xcell2;
+>    cell__.ycell2 = *ycell2;
+>    cell__.zcell2 = *zcell2;
+> }
+> 
+> void set_cflux_data_ (double* theta0, double* bp0, double* jbp, double* jtheta,
+>                      double* jb, double* b0, int* dobondcflux, int* doanglecflux) {
+>    cflux__.theta0 = theta0;
+>    cflux__.bp0 = bp0;
+>    cflux__.jbp = jbp;
+>    cflux__.jtheta = jtheta;
+>    cflux__.jb = jb;
+>    cflux__.b0 = b0;
+>    cflux__.dobondcflux =  *dobondcflux;
+>    cflux__.doanglecflux = *doanglecflux;
+> }
+> 
+> 
+1516c1542
+<                        int* use_ct) {
+---
+>                        int* use_ct, int* use_cflux) {
+1545a1572
+>    potent__.use_cflux = *use_cflux;
+2004a2032,2057
+> //
+> //Chengwen Charge Flux
+> //
+> static void setupAmoebaCFluxBond (OpenMM_System* system, FILE* log) {
+> 
+>    int ii, jj;
+>    int* bondPtr;
+>    double jParameterConversion;
+> 
+>    OpenMM_AmoebaCFluxBond* amoebaCFluxBond;
+>    amoebaCFluxBond = OpenMM_AmoebaCFluxBond_create ();
+> 
+>    jParameterConversion = (double) 1.0/OpenMM_NmPerAngstrom;
+>    bondPtr = bndstr__.ibnd;
+>    for (ii = 0; ii < bndstr__.nbond; ii++) {
+>       OpenMM_AmoebaCFluxBond_addBond (amoebaCFluxBond, (*bondPtr)-1,
+>                 *(bondPtr+1)-1, cflux__.b0[ii]*OpenMM_NmPerAngstrom,
+>                 jParameterConversion*cflux__.jb[ii]);
+>       bondPtr += 2;
+>       //printf("ii, b0, jb %i %f %f\n", ii, cflux__.b0[ii], cflux__.jb[ii]); //PASSED
+>    }
+>    OpenMM_System_addForce (system, (OpenMM_Force*) amoebaCFluxBond);
+>       //printf("jParameterConversion %f \n", jParameterConversion); //PASSED 10.0
+> }
+> 
+> //Chengwen <===
+2981d3033
+< //Chengwen Below
+3062d3113
+< //Chengwen Above
+3158,3159d3208
+<      //printf("ii, penalpha[ii] %i %f \n", ii, polar__.penalpha[ii]); 
+<      //printf("ii, dirdamp[ii] %i %f \n", ii, polar__.dirdamp[ii]); 
+3972a4022,4025
+>    if (potent__.use_cflux) {
+>       setupAmoebaCFluxBond (omm->system,log);
+>    }
+> 
+5073a5127
+>    if (potent__.use_cflux)  countActiveForces++;
+5133a5188,5191
+>       if (potent__.use_cflux) {
+>          setupAmoebaCFluxBond (system, log);
+>       }
+> 
+diff ./potent.f ../../AMOEBAplusCFlux/Tinker/potent.f
+30a31
+> c     use_cflux   logical flag governing use of charge flux potential
+55c56
+<       logical use_ct
+---
+>       logical use_ct,use_cflux
+diff ./prmkey.f ../../AMOEBAplusCFlux/Tinker/prmkey.f
+31d30
+< !CW
+32a32
+>       use cflux
+131a132,137
+> 
+>       else if (keyword(1:10) .eq. 'CFLUXTERM ') then
+>          call getword (record,value,next)
+>          if (value .eq. 'ONLY')  call potoff
+>          use_cflux = .true.
+>          if (value .eq. 'NONE')  use_cflux = .false.
+314,316c320,322
+< 
+< c CW
+< c     set charge transfer  
+---
+> c
+> c     Set control parameters for charge transfer potential
+> c
+470a477
+>       use_cflux = .false.
+diff ./prtprm.f ../../AMOEBAplusCFlux/Tinker/prtprm.f
+52a53
+>       use cflux
+diff ./readprm.f ../../AMOEBAplusCFlux/Tinker/readprm.f
+20a21
+>       use cflux
+28a30
+>       use kcfluxes
+56,57c58,59
+<       integer nb,nb5,nb4,nb3,nel
+<       integer na,na5,na4,na3,naf
+---
+>       integer nb,nbcf,nb5,nb4,nb3,nel
+>       integer na,nacf,na5,na4,na3,naf
+91a94
+>       real*8 tta,jtt1,jtt2,bd10,bd20,jb1,jb2
+106a110
+>       nbcf = 0
+111a116
+>       nacf = 0
+332a338,359
+> c     charge flux-bond parameters
+> c
+>          else if (keyword(1:8) .eq. 'CFLUX-B ') then
+>             ia = 0
+>             ib = 0
+>             bd = 0.0d0
+>             fc = 0.0d0
+>             dobondcflux = .true.
+>             string = record(next:240)
+>             read (string,*,err=115,end=115)  ia,ib,bd,fc
+>   115       continue
+>             call numeral (ia,pa,size)
+>             call numeral (ib,pb,size)
+>             nbcf = nbcf + 1
+>             if (ia .le. ib) then
+>                kcfb(nbcf) = pa//pb
+>             else
+>                kcfb(nbcf) = pb//pa
+>             end if
+>             beq(nbcf) = bd
+>             jbnd(nbcf) = fc
+> c
+443a471,505
+> c     bond angle bending parameters
+> c
+>          else if (keyword(1:7) .eq. 'CFLUX-A ') then
+>             ia = 0
+>             ib = 0
+>             ic = 0
+>             tta = 0.0d0
+>             jtt1 = 0.0d0
+>             jtt2 = 0.0d0
+>             bd10 = 0.0d0
+>             bd20 = 0.0d0
+>             jb1 = 0.0d0
+>             jb2 = 0.0d0
+>             doanglecflux = .true.
+>             string = record(next:240)
+>             read (string,*,err=165,end=165)  ia,ib,ic,tta,jtt1,jtt2,
+>      &          bd10,jb1,bd20,jb2
+>   165       continue
+>             call numeral (ia,pa,size)
+>             call numeral (ib,pb,size)
+>             call numeral (ic,pc,size)
+>             nacf = nacf + 1
+>             if (ia .le. ic) then
+>                kcfa(nacf) = pa//pb//pc
+>             else
+>                kcfa(nacf) = pc//pb//pa
+>             end if
+>             theta0l(nacf) = tta
+>             jthetal(1,nacf) = jtt1 
+>             jthetal(2,nacf) = jtt2 
+>             jbpl(1,nacf) = jb1 
+>             jbpl(2,nacf) = jb2 
+>             bp0l(1,nacf) = bd10 
+>             bp0l(2,nacf) = bd20
+> c
+Only in .: test

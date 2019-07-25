@@ -1,0 +1,30 @@
+<ForceField>
+ <AtomTypes>
+  <Type name="tip4pew-O" class="OW" element="O" mass="15.99943"/>
+  <Type name="tip4pew-H" class="HW" element="H" mass="1.007947"/>
+  <Type name="tip4pew-M" class="MW" mass="0"/>
+ </AtomTypes>
+ <Residues>
+  <Residue name="HOH">
+   <Atom name="O" type="tip4pew-O"/>
+   <Atom name="H1" type="tip4pew-H"/>
+   <Atom name="H2" type="tip4pew-H"/>
+   <Atom name="M" type="tip4pew-M"/>
+   <VirtualSite type="average3" siteName="M" atomName1="O" atomName2="H1" atomName3="H2" weight1="0.786646558" weight2="0.106676721" weight3="0.106676721"/>
+   <Bond atomName1="O" atomName2="H1"/>
+   <Bond atomName1="O" atomName2="H2"/>
+  </Residue>
+ </Residues>
+ <HarmonicBondForce>
+  <Bond class1="OW" class2="HW" length="0.09572" k="462750.4"/>
+ </HarmonicBondForce>
+ <HarmonicAngleForce>
+  <Angle class1="HW" class2="OW" class3="HW" angle="1.82421813418" k="836.8"/>
+ </HarmonicAngleForce>
+ <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5">
+  <Atom type="tip4pew-O" charge="0" sigma="0.316435" epsilon="0.680946"/>
+  <Atom type="tip4pew-H" charge="0.52422" sigma="1" epsilon="0"/>
+  <Atom type="tip4pew-M" charge="-1.04844" sigma="1" epsilon="0"/>
+ </NonbondedForce>
+</ForceField>
+

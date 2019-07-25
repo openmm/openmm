@@ -1,0 +1,32 @@
+<ForceField>
+ <AtomTypes>
+  <Type name="tip5p-O" class="OW" element="O" mass="15.99943"/>
+  <Type name="tip5p-H" class="HW" element="H" mass="1.007947"/>
+  <Type name="tip5p-M" class="MW" mass="0"/>
+ </AtomTypes>
+ <Residues>
+  <Residue name="HOH">
+   <Atom name="O" type="tip5p-O"/>
+   <Atom name="H1" type="tip5p-H"/>
+   <Atom name="H2" type="tip5p-H"/>
+   <Atom name="M1" type="tip5p-M"/>
+   <Atom name="M2" type="tip5p-M"/>
+   <VirtualSite type="outOfPlane" siteName="M1" atomName1="O" atomName2="H1" atomName3="H2" weight12="-0.34490826" weight13="-0.34490826" weightCross="-6.4437903"/>
+   <VirtualSite type="outOfPlane" siteName="M2" atomName1="O" atomName2="H1" atomName3="H2" weight12="-0.34490826" weight13="-0.34490826" weightCross="6.4437903"/>
+   <Bond atomName1="O" atomName2="H1"/>
+   <Bond atomName1="O" atomName2="H2"/>
+  </Residue>
+ </Residues>
+ <HarmonicBondForce>
+  <Bond class1="OW" class2="HW" length="0.09572" k="462750.4"/>
+ </HarmonicBondForce>
+ <HarmonicAngleForce>
+  <Angle class1="HW" class2="OW" class3="HW" angle="1.82421813418" k="836.8"/>
+ </HarmonicAngleForce>
+ <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5">
+  <Atom type="tip5p-O" charge="0" sigma="0.312" epsilon="0.66944"/>
+  <Atom type="tip5p-H" charge="0.241" sigma="1" epsilon="0"/>
+  <Atom type="tip5p-M" charge="-0.241" sigma="1" epsilon="0"/>
+ </NonbondedForce>
+</ForceField>
+

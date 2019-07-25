@@ -1,0 +1,2490 @@
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  analyz.f -o analyz.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  sizes.f -o sizes.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  energi.f -o energi.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  files.f -o files.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  inform.f -o inform.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  iounit.f -o iounit.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  katoms.f -o katoms.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  mutant.f -o mutant.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  potent.f -o potent.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  units.f -o units.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  usage.f -o usage.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  action.f -o action.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  keys.f -o keys.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  align.f -o align.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  bound.f -o bound.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  group.f -o group.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  inter.f -o inter.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  limits.f -o limits.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  vdwpot.f -o vdwpot.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  angang.f -o angang.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  angbnd.f -o angbnd.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  angpot.f -o angpot.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  angtor.f -o angtor.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  atomid.f -o atomid.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  bitor.f -o bitor.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  bndstr.f -o bndstr.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  boxes.f -o boxes.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  charge.f -o charge.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  chgpot.f -o chgpot.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  couple.f -o couple.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  ctran.f -o ctran.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  dipole.f -o dipole.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  ewald.f -o ewald.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  fields.f -o fields.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  improp.f -o improp.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  imptor.f -o imptor.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  korbs.f -o korbs.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  ktrtor.f -o ktrtor.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kvdws.f -o kvdws.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  math.f -o math.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  molcul.f -o molcul.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  moment.f -o moment.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  mpole.f -o mpole.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  opbend.f -o opbend.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  opdist.f -o opdist.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  piorbs.f -o piorbs.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  pistuf.f -o pistuf.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  pitors.f -o pitors.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  pme.f -o pme.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  polar.f -o polar.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  polgrp.f -o polgrp.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  solute.f -o solute.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  strbnd.f -o strbnd.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  strtor.f -o strtor.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  tors.f -o tors.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  tortor.f -o tortor.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  urey.f -o urey.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  vdw.f -o vdw.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  virial.f -o virial.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  atmlst.f -o atmlst.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  bath.f -o bath.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  mdstuf.f -o mdstuf.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  warp.f -o warp.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  titles.f -o titles.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  argue.f -o argue.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  ascii.f -o ascii.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  freeze.f -o freeze.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  ielscf.f -o ielscf.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  moldyn.f -o moldyn.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  bicubic.f -o bicubic.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  bndpot.f -o bndpot.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  deriv.f -o deriv.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  pbstuf.f -o pbstuf.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  calendar.f -o calendar.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  cell.f -o cell.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  center.f -o center.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  chgpen.f -o chgpen.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  chkring.f -o chkring.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  cholesky.f -o cholesky.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  chrono.f -o chrono.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  chunks.f -o chunks.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  column.f -o column.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  command.f -o command.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  zclose.f -o zclose.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  zcoord.f -o zcoord.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  faces.f -o faces.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  output.f -o output.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  cspline.f -o cspline.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  hescut.f -o hescut.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  neigh.f -o neigh.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  polpot.f -o polpot.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  tarray.f -o tarray.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  deflate.f -o deflate.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  diagq.f -o diagq.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  disgeo.f -o disgeo.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  refer.f -o refer.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  restrn.f -o restrn.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  dma.f -o dma.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  document.f -o document.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  domega.f -o domega.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  dualpol.f -o dualpol.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  stodyn.f -o stodyn.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  hessn.f -o hessn.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  torpot.f -o torpot.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  light.f -o light.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  shunt.f -o shunt.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  minima.f -o minima.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kchrge.f -o kchrge.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  emetal2.f -o emetal2.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  mplpot.f -o mplpot.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  mrecip.f -o mrecip.o 
+emetal2.f(19): remark #7712: This variable has not been used.   [I]
+      subroutine emetal2 (i)
+--------------------------^
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  potderivs.f -o potderivs.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  rigid.f -o rigid.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  erf.f -o erf.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  rxnfld.f -o rxnfld.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  rxnpot.f -o rxnpot.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  erxnfld2.f -o erxnfld2.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  gkstuf.f -o gkstuf.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  hpmf.f -o hpmf.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+erxnfld2.f(19): remark #7712: This variable has not been used.   [I]
+      subroutine erxnfld2 (i)
+---------------------------^
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  nonpol.f -o nonpol.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  urypot.f -o urypot.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  extra.f -o extra.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  fatal.f -o fatal.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  fft.f -o fft.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  openmp.f -o openmp.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  fftpack.f -o fftpack.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  field.f -o field.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  fracs.f -o fracs.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kpolr.f -o kpolr.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  merck.f -o merck.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  omega.f -o omega.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  orbits.f -o orbits.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  paths.f -o paths.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  pdb.f -o pdb.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  potfit.f -o potfit.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  qmstuf.f -o qmstuf.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  rgddyn.f -o rgddyn.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  ring.f -o ring.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  rotbnd.f -o rotbnd.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  socket.f -o socket.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  syntrn.f -o syntrn.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  uprior.f -o uprior.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  usolve.f -o usolve.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  vibs.f -o vibs.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  freeunit.f -o freeunit.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  getkey.f -o getkey.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  getmol.f -o getmol.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  getmol2.f -o getmol2.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  getnumb.f -o getnumb.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  getpdb.f -o getpdb.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  params.f -o params.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  getstring.f -o getstring.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  gettext.f -o gettext.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  getword.f -o getword.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  getxyz.f -o getxyz.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  groups.f -o groups.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  hessrot.f -o hessrot.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kangs.f -o kangs.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kbonds.f -o kbonds.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kdipol.f -o kdipol.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kitors.f -o kitors.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kstbnd.f -o kstbnd.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  ksttor.f -o ksttor.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  ktorsn.f -o ktorsn.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  image.f -o image.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  impose.f -o impose.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  ptable.f -o ptable.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  linmin.f -o linmin.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  precis.f -o precis.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  scales.f -o scales.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  sequen.f -o sequen.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kanang.f -o kanang.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kantor.f -o kantor.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  khbond.f -o khbond.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kiprop.f -o kiprop.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kmulti.f -o kmulti.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kopbnd.f -o kopbnd.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kopdst.f -o kopdst.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kpitor.f -o kpitor.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kurybr.f -o kurybr.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kvdwpr.f -o kvdwpr.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  resdue.f -o resdue.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  intxyz.f -o intxyz.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  invbeta.f -o invbeta.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  invert.f -o invert.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  jacobi.f -o jacobi.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kmetal.f -o kmetal.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  lattice.f -o lattice.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  lbfgs.f -o lbfgs.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  lights.f -o lights.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  maxwell.f -o maxwell.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  mechanic.f -o mechanic.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  minirot.f -o minirot.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  minrigid.f -o minrigid.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  molxyz.f -o molxyz.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabledifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  newtrot.f -o newtrot.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  nextarg.f -o nextarg.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  nexttext.f -o nexttext.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  nspline.f -o nspline.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  nucleo.f -o nucleo.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  number.f -o number.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  numeral.f -o numeral.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  ocvm.f -o ocvm.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  openend.f -o openend.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  optirot.f -o optirot.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  optrigid.f -o optrigid.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  orthog.f -o orthog.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  overlap.f -o overlap.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  phipsi.f -o phipsi.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  pmpb.f -o pmpb.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  precise.f -o precise.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+pmpb.f(23): remark #7712: This variable has not been used.   [DIME]
+      subroutine apbsinitial (dime,grid,gcent,cgrid,cgcent,fgrid,
+------------------------------^
+pmpb.f(23): remark #7712: This variable has not been used.   [GRID]
+      subroutine apbsinitial (dime,grid,gcent,cgrid,cgcent,fgrid,
+-----------------------------------^
+pmpb.f(23): remark #7712: This variable has not been used.   [GCENT]
+      subroutine apbsinitial (dime,grid,gcent,cgrid,cgcent,fgrid,
+----------------------------------------^
+pmpb.f(23): remark #7712: This variable has not been used.   [CGRID]
+      subroutine apbsinitial (dime,grid,gcent,cgrid,cgcent,fgrid,
+----------------------------------------------^
+pmpb.f(23): remark #7712: This variable has not been used.   [CGCENT]
+      subroutine apbsinitial (dime,grid,gcent,cgrid,cgcent,fgrid,
+----------------------------------------------------^
+pmpb.f(23): remark #7712: This variable has not been used.   [FGRID]
+      subroutine apbsinitial (dime,grid,gcent,cgrid,cgcent,fgrid,
+-----------------------------------------------------------^
+pmpb.f(24): remark #7712: This variable has not been used.   [FGCENT]
+     &                        fgcent,pdie,sdie,srad,swin,sdens,
+------------------------------^
+pmpb.f(24): remark #7712: This variable has not been used.   [PDIE]
+     &                        fgcent,pdie,sdie,srad,swin,sdens,
+-------------------------------------^
+pmpb.f(24): remark #7712: This variable has not been used.   [SDIE]
+     &                        fgcent,pdie,sdie,srad,swin,sdens,
+------------------------------------------^
+pmpb.f(24): remark #7712: This variable has not been used.   [SRAD]
+     &                        fgcent,pdie,sdie,srad,swin,sdens,
+-----------------------------------------------^
+pmpb.f(24): remark #7712: This variable has not been used.   [SWIN]
+     &                        fgcent,pdie,sdie,srad,swin,sdens,
+----------------------------------------------------^
+pmpb.f(24): remark #7712: This variable has not been used.   [SDENS]
+     &                        fgcent,pdie,sdie,srad,swin,sdens,
+---------------------------------------------------------^
+pmpb.f(25): remark #7712: This variable has not been used.   [KELVIN]
+     &                        kelvin,ionn,ionc,ionq,ionr,pbtyp,
+------------------------------^
+pmpb.f(25): remark #7712: This variable has not been used.   [IONN]
+     &                        kelvin,ionn,ionc,ionq,ionr,pbtyp,
+-------------------------------------^
+pmpb.f(25): remark #7712: This variable has not been used.   [IONC]
+     &                        kelvin,ionn,ionc,ionq,ionr,pbtyp,
+------------------------------------------^
+pmpb.f(25): remark #7712: This variable has not been used.   [IONQ]
+     &                        kelvin,ionn,ionc,ionq,ionr,pbtyp,
+-----------------------------------------------^
+pmpb.f(25): remark #7712: This variable has not been used.   [IONR]
+     &                        kelvin,ionn,ionc,ionq,ionr,pbtyp,
+----------------------------------------------------^
+pmpb.f(25): remark #7712: This variable has not been used.   [PBTYP]
+     &                        kelvin,ionn,ionc,ionq,ionr,pbtyp,
+---------------------------------------------------------^
+pmpb.f(26): remark #7712: This variable has not been used.   [PBTYPLEN]
+     &                        pbtyplen,pbsoln,pbsolnlen,bcfl,
+------------------------------^
+pmpb.f(26): remark #7712: This variable has not been used.   [PBSOLN]
+     &                        pbtyplen,pbsoln,pbsolnlen,bcfl,
+---------------------------------------^
+pmpb.f(26): remark #7712: This variable has not been used.   [PBSOLNLEN]
+     &                        pbtyplen,pbsoln,pbsolnlen,bcfl,
+----------------------------------------------^
+pmpb.f(26): remark #7712: This variable has not been used.   [BCFL]
+     &                        pbtyplen,pbsoln,pbsolnlen,bcfl,
+--------------------------------------------------------^
+pmpb.f(27): remark #7712: This variable has not been used.   [BCFLLEN]
+     &                        bcfllen,chgm,chgmlen,srfm,srfmlen)
+------------------------------^
+pmpb.f(27): remark #7712: This variable has not been used.   [CHGM]
+     &                        bcfllen,chgm,chgmlen,srfm,srfmlen)
+--------------------------------------^
+pmpb.f(27): remark #7712: This variable has not been used.   [CHGMLEN]
+     &                        bcfllen,chgm,chgmlen,srfm,srfmlen)
+-------------------------------------------^
+pmpb.f(27): remark #7712: This variable has not been used.   [SRFM]
+     &                        bcfllen,chgm,chgmlen,srfm,srfmlen)
+---------------------------------------------------^
+pmpb.f(27): remark #7712: This variable has not been used.   [SRFMLEN]
+     &                        bcfllen,chgm,chgmlen,srfm,srfmlen)
+--------------------------------------------------------^
+pmpb.f(76): remark #7712: This variable has not been used.   [N]
+      subroutine apbsempole (n,pos,rsolv,pbpole,pbe,apbe,pbep,pbfp,pbtp)
+-----------------------------^
+pmpb.f(76): remark #7712: This variable has not been used.   [POS]
+      subroutine apbsempole (n,pos,rsolv,pbpole,pbe,apbe,pbep,pbfp,pbtp)
+-------------------------------^
+pmpb.f(76): remark #7712: This variable has not been used.   [RSOLV]
+      subroutine apbsempole (n,pos,rsolv,pbpole,pbe,apbe,pbep,pbfp,pbtp)
+-----------------------------------^
+pmpb.f(76): remark #7712: This variable has not been used.   [PBPOLE]
+      subroutine apbsempole (n,pos,rsolv,pbpole,pbe,apbe,pbep,pbfp,pbtp)
+-----------------------------------------^
+pmpb.f(76): remark #7712: This variable has not been used.   [PBE]
+      subroutine apbsempole (n,pos,rsolv,pbpole,pbe,apbe,pbep,pbfp,pbtp)
+------------------------------------------------^
+pmpb.f(76): remark #7712: This variable has not been used.   [APBE]
+      subroutine apbsempole (n,pos,rsolv,pbpole,pbe,apbe,pbep,pbfp,pbtp)
+----------------------------------------------------^
+pmpb.f(76): remark #7712: This variable has not been used.   [PBEP]
+      subroutine apbsempole (n,pos,rsolv,pbpole,pbe,apbe,pbep,pbfp,pbtp)
+---------------------------------------------------------^
+pmpb.f(76): remark #7712: This variable has not been used.   [PBFP]
+      subroutine apbsempole (n,pos,rsolv,pbpole,pbe,apbe,pbep,pbfp,pbtp)
+--------------------------------------------------------------^
+pmpb.f(76): remark #7712: This variable has not been used.   [PBTP]
+      subroutine apbsempole (n,pos,rsolv,pbpole,pbe,apbe,pbep,pbfp,pbtp)
+-------------------------------------------------------------------^
+pmpb.f(98): remark #7712: This variable has not been used.   [INDPOLE]
+      subroutine apbsinduce (indpole,pbeuind)
+-----------------------------^
+pmpb.f(98): remark #7712: This variable has not been used.   [PBEUIND]
+      subroutine apbsinduce (indpole,pbeuind)
+-------------------------------------^
+pmpb.f(113): remark #7712: This variable has not been used.   [INPPOLE]
+      subroutine apbsnlinduce (inppole,pbeuinp)
+-------------------------------^
+pmpb.f(113): remark #7712: This variable has not been used.   [PBEUINP]
+      subroutine apbsnlinduce (inppole,pbeuinp)
+---------------------------------------^
+pmpb.f(128): remark #7712: This variable has not been used.   [INDPOLE]
+      subroutine pbdirectpolforce (indpole,inppole,directf,directt)
+-----------------------------------^
+pmpb.f(128): remark #7712: This variable has not been used.   [INPPOLE]
+      subroutine pbdirectpolforce (indpole,inppole,directf,directt)
+-------------------------------------------^
+pmpb.f(128): remark #7712: This variable has not been used.   [DIRECTF]
+      subroutine pbdirectpolforce (indpole,inppole,directf,directt)
+---------------------------------------------------^
+pmpb.f(128): remark #7712: This variable has not been used.   [DIRECTT]
+      subroutine pbdirectpolforce (indpole,inppole,directf,directt)
+-----------------------------------------------------------^
+pmpb.f(145): remark #7712: This variable has not been used.   [INDPOLE]
+      subroutine pbmutualpolforce (indpole,inppole,mutualf)
+-----------------------------------^
+pmpb.f(145): remark #7712: This variable has not been used.   [INPPOLE]
+      subroutine pbmutualpolforce (indpole,inppole,mutualf)
+-------------------------------------------^
+pmpb.f(145): remark #7712: This variable has not been used.   [MUTUALF]
+      subroutine pbmutualpolforce (indpole,inppole,mutualf)
+---------------------------------------------------^
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  prmedit.f -o prmedit.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  prmkey.f -o prmkey.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  promo.f -o promo.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  prterr.f -o prterr.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  prtpdb.f -o prtpdb.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  prtprm.f -o prtprm.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  prtseq.f -o prtseq.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  tree.f -o tree.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  qrfact.f -o qrfact.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  quatfit.f -o quatfit.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  random.f -o random.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  readgau.f -o readgau.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+quatfit.f(28): remark #7712: This variable has not been used.   [N1]
+      subroutine quatfit (n1,x1,y1,z1,n2,x2,y2,z2)
+--------------------------^
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  readpdb.f -o readpdb.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  readprm.f -o readprm.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  readseq.f -o readseq.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  replica.f -o replica.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  rmsfit.f -o rmsfit.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  search.f -o search.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  server.f -o server.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  sigmoid.f -o sigmoid.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  simplex.f -o simplex.o 
+server.f(44): remark #7712: This variable has not been used.   [FLAG]
+      subroutine createjvm (flag)
+----------------------------^
+server.f(71): remark #7712: This variable has not been used.   [FLAG]
+      subroutine createserver (flag)
+-------------------------------^
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+server.f(98): remark #7712: This variable has not been used.   [N]
+      subroutine createsystem (n,nkey,flag)
+-------------------------------^
+server.f(98): remark #7712: This variable has not been used.   [NKEY]
+      subroutine createsystem (n,nkey,flag)
+---------------------------------^
+server.f(98): remark #7712: This variable has not been used.   [FLAG]
+      subroutine createsystem (n,nkey,flag)
+--------------------------------------^
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+server.f(140): remark #7712: This variable has not been used.   [N]
+      subroutine createupdate (n,mode,amoeba,flag)
+-------------------------------^
+server.f(140): remark #7712: This variable has not been used.   [MODE]
+      subroutine createupdate (n,mode,amoeba,flag)
+---------------------------------^
+server.f(140): remark #7712: This variable has not been used.   [AMOEBA]
+      subroutine createupdate (n,mode,amoeba,flag)
+--------------------------------------^
+server.f(140): remark #7712: This variable has not been used.   [FLAG]
+      subroutine createupdate (n,mode,amoeba,flag)
+---------------------------------------------^
+server.f(157): remark #7712: This variable has not been used.   [FLAG]
+      subroutine needupdate (flag)
+-----------------------------^
+server.f(184): remark #7712: This variable has not been used.   [FILENAME]
+      subroutine setfile (filename)
+--------------------------^
+server.f(198): remark #7712: This variable has not been used.   [FORCEFIELD]
+      subroutine setforcefield (forcefield)
+--------------------------------^
+server.f(212): remark #7712: This variable has not been used.   [I]
+      subroutine setkeyword (i,keyline)
+-----------------------------^
+server.f(212): remark #7712: This variable has not been used.   [KEYLINE]
+      subroutine setkeyword (i,keyline)
+-------------------------------^
+server.f(227): remark #7712: This variable has not been used.   [TYPE]
+      subroutine setatomtypes (n,type)
+---------------------------------^
+server.f(227): remark #7712: This variable has not been used.   [N]
+      subroutine setatomtypes (n,type)
+-------------------------------^
+server.f(242): remark #7712: This variable has not been used.   [ATOMIC]
+      subroutine setatomic (n,atomic)
+------------------------------^
+server.f(242): remark #7712: This variable has not been used.   [N]
+      subroutine setatomic (n,atomic)
+----------------------------^
+server.f(257): remark #7712: This variable has not been used.   [N]
+      subroutine setmass (n,mass)
+--------------------------^
+server.f(257): remark #7712: This variable has not been used.   [MASS]
+      subroutine setmass (n,mass)
+----------------------------^
+server.f(272): remark #7712: This variable has not been used.   [N]
+      subroutine setcharge (n,charge)
+----------------------------^
+server.f(272): remark #7712: This variable has not been used.   [CHARGE]
+      subroutine setcharge (n,charge)
+------------------------------^
+server.f(287): remark #7712: This variable has not been used.   [N]
+      subroutine setconnectivity (n,b1,b2,b3,b4)
+----------------------------------^
+server.f(287): remark #7712: This variable has not been used.   [B1]
+      subroutine setconnectivity (n,b1,b2,b3,b4)
+------------------------------------^
+server.f(287): remark #7712: This variable has not been used.   [B2]
+      subroutine setconnectivity (n,b1,b2,b3,b4)
+---------------------------------------^
+server.f(287): remark #7712: This variable has not been used.   [B3]
+      subroutine setconnectivity (n,b1,b2,b3,b4)
+------------------------------------------^
+server.f(287): remark #7712: This variable has not been used.   [B4]
+      subroutine setconnectivity (n,b1,b2,b3,b4)
+---------------------------------------------^
+server.f(305): remark #7712: This variable has not been used.   [I]
+      subroutine setname (i,name)
+--------------------------^
+server.f(305): remark #7712: This variable has not been used.   [NAME]
+      subroutine setname (i,name)
+----------------------------^
+server.f(320): remark #7712: This variable has not been used.   [I]
+      subroutine setstory (i,story)
+---------------------------^
+server.f(320): remark #7712: This variable has not been used.   [STORY]
+      subroutine setstory (i,story)
+-----------------------------^
+server.f(335): remark #7712: This variable has not been used.   [N]
+      subroutine setcoordinates (n,x,y,z)
+---------------------------------^
+server.f(335): remark #7712: This variable has not been used.   [X]
+      subroutine setcoordinates (n,x,y,z)
+-----------------------------------^
+server.f(335): remark #7712: This variable has not been used.   [Y]
+      subroutine setcoordinates (n,x,y,z)
+-------------------------------------^
+server.f(335): remark #7712: This variable has not been used.   [Z]
+      subroutine setcoordinates (n,x,y,z)
+---------------------------------------^
+server.f(352): remark #7712: This variable has not been used.   [NCYCLE]
+      subroutine setstep (ncycle)
+--------------------------^
+server.f(366): remark #7712: This variable has not been used.   [TIME]
+      subroutine setmdtime (time)
+----------------------------^
+server.f(380): remark #7712: This variable has not been used.   [ENERGY]
+      subroutine setenergy (energy)
+----------------------------^
+server.f(394): remark #7712: This variable has not been used.   [N]
+      subroutine setgradients (n,dx,dy,dz)
+-------------------------------^
+server.f(394): remark #7712: This variable has not been used.   [DX]
+      subroutine setgradients (n,dx,dy,dz)
+---------------------------------^
+server.f(394): remark #7712: This variable has not been used.   [DY]
+      subroutine setgradients (n,dx,dy,dz)
+------------------------------------^
+server.f(394): remark #7712: This variable has not been used.   [DZ]
+      subroutine setgradients (n,dx,dy,dz)
+---------------------------------------^
+server.f(411): remark #7712: This variable has not been used.   [N]
+      subroutine setvelocity (n,vx,vy,vz)
+------------------------------^
+server.f(411): remark #7712: This variable has not been used.   [VX]
+      subroutine setvelocity (n,vx,vy,vz)
+--------------------------------^
+server.f(411): remark #7712: This variable has not been used.   [VY]
+      subroutine setvelocity (n,vx,vy,vz)
+-----------------------------------^
+server.f(411): remark #7712: This variable has not been used.   [VZ]
+      subroutine setvelocity (n,vx,vy,vz)
+--------------------------------------^
+server.f(428): remark #7712: This variable has not been used.   [N]
+      subroutine setacceleration (n,ax,ay,az)
+----------------------------------^
+server.f(428): remark #7712: This variable has not been used.   [AX]
+      subroutine setacceleration (n,ax,ay,az)
+------------------------------------^
+server.f(428): remark #7712: This variable has not been used.   [AY]
+      subroutine setacceleration (n,ax,ay,az)
+---------------------------------------^
+server.f(428): remark #7712: This variable has not been used.   [AZ]
+      subroutine setacceleration (n,ax,ay,az)
+------------------------------------------^
+server.f(445): remark #7712: This variable has not been used.   [N]
+      subroutine setinduced (n,ux,uy,uz)
+-----------------------------^
+server.f(445): remark #7712: This variable has not been used.   [UX]
+      subroutine setinduced (n,ux,uy,uz)
+-------------------------------^
+server.f(445): remark #7712: This variable has not been used.   [UY]
+      subroutine setinduced (n,ux,uy,uz)
+----------------------------------^
+server.f(445): remark #7712: This variable has not been used.   [UZ]
+      subroutine setinduced (n,ux,uy,uz)
+-------------------------------------^
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  sort.f -o sort.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  spectrum.f -o spectrum.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  square.f -o square.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  suffix.f -o suffix.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  switch.f -o switch.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  sybylxyz.f -o sybylxyz.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  testrot.f -o testrot.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  timerot.f -o timerot.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  torphase.f -o torphase.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  trimtext.f -o trimtext.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  unitcell.f -o unitcell.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  valfit.f -o valfit.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  version.f -o version.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  vibrot.f -o vibrot.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  xtals.f -o xtals.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  xyzint.f -o xyzint.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  xyzsybyl.f -o xyzsybyl.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  atoms.f -o atoms.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  bar.f -o bar.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  basefile.f -o basefile.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  clock.f -o clock.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  control.f -o control.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  energy.f -o energy.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  fft3d.f -o fft3d.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  final.f -o final.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  getprm.f -o getprm.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  initatom.f -o initatom.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  initprm.f -o initprm.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  initres.f -o initres.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  initrot.f -o initrot.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  insert.f -o insert.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  intedit.f -o intedit.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kangang.f -o kangang.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kangle.f -o kangle.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kangtor.f -o kangtor.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  katom.f -o katom.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kbond.f -o kbond.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kcharge.f -o kcharge.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kdipole.f -o kdipole.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kewald.f -o kewald.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kextra.f -o kextra.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+kextra.f(28): remark #7712: This variable has not been used.   [J]
+      integer i,k,ii,j,jj,next,m
+---------------------^
+kextra.f(28): remark #7712: This variable has not been used.   [JJ]
+      integer i,k,ii,j,jj,next,m
+-----------------------^
+kextra.f(28): remark #7712: This variable has not been used.   [M]
+      integer i,k,ii,j,jj,next,m
+-------------------------------^
+kextra.f(29): remark #7712: This variable has not been used.   [ALPHA_ATOM]
+      real*8 alpha_atom(112)
+-------------^
+kextra.f(30): remark #7712: This variable has not been used.   [ZETA_ATOM]
+      real*8 zeta_atom(112)
+-------------^
+kextra.f(31): remark #7712: This variable has not been used.   [FACTOR]
+      real*8 factor
+-------------^
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kgeom.f -o kgeom.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kimprop.f -o kimprop.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kimptor.f -o kimptor.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kinetic.f -o kinetic.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kmpole.f -o kmpole.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kopbend.f -o kopbend.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kopdist.f -o kopdist.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  korbit.f -o korbit.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kpitors.f -o kpitors.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kpolar.f -o kpolar.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  ksolv.f -o ksolv.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kstrbnd.f -o kstrbnd.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kstrtor.f -o kstrtor.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  ktors.f -o ktors.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  ktortor.f -o ktortor.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kurey.f -o kurey.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kctr.f -o kctr.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  kvdw.f -o kvdw.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  makeint.f -o makeint.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  makeref.f -o makeref.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  makexyz.f -o makexyz.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  mdinit.f -o mdinit.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  mdrest.f -o mdrest.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  mdsave.f -o mdsave.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  mdstat.f -o mdstat.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  merge.f -o merge.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  minimize.f -o minimize.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  molecule.f -o molecule.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  moments.f -o moments.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  monte.f -o monte.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  mutate.f -o mutate.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  nblist.f -o nblist.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  newton.f -o newton.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  nose.f -o nose.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  nucleic.f -o nucleic.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  numgrad.f -o numgrad.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  optimize.f -o optimize.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  optsave.f -o optsave.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  orbital.f -o orbital.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  orient.f -o orient.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  path.f -o path.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  pdbxyz.f -o pdbxyz.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  picalc.f -o picalc.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  pmestuff.f -o pmestuff.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  polarize.f -o polarize.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  poledit.f -o poledit.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  polymer.f -o polymer.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  potential.f -o potential.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  pressure.f -o pressure.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  protein.f -o protein.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+potential.f(2008): warning #5194: Source line truncated.
+     &           /,' Average Potential Magnitude for Model 2 :',6x,f12.4,
+------------------------------------------------------------------------^
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  prtdyn.f -o prtdyn.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  prtint.f -o prtint.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  prtmol2.f -o prtmol2.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  prtxyz.f -o prtxyz.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  pss.f -o pss.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  pssrigid.f -o pssrigid.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  pssrot.f -o pssrot.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  radial.f -o radial.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  rattle.f -o rattle.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  readdyn.f -o readdyn.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  readint.f -o readint.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  readmol.f -o readmol.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  readmol2.f -o readmol2.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  readxyz.f -o readxyz.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  respa.f -o respa.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  rgdstep.f -o rgdstep.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  rings.f -o rings.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  rotlist.f -o rotlist.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  rotpole.f -o rotpole.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  saddle.f -o saddle.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  scan.f -o scan.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  sdstep.f -o sdstep.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  shakeup.f -o shakeup.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  sktstuff.f -o sktstuff.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  sniffer.f -o sniffer.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  spacefill.f -o spacefill.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  superpose.f -o superpose.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  surface.f -o surface.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  surfatom.f -o surfatom.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  temper.f -o temper.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  testgrad.f -o testgrad.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  testhess.f -o testhess.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  testpair.f -o testpair.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  testpol.f -o testpol.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  timer.f -o timer.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  tncg.f -o tncg.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  torque.f -o torque.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  torsfit.f -o torsfit.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  torsions.f -o torsions.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  valence.f -o valence.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+valence.f(1594): remark #7712: This variable has not been used.   [IC]
+      function opbguess (ia,ib,ic,id)
+-------------------------------^
+valence.f(1594): remark #7712: This variable has not been used.   [ID]
+      function opbguess (ia,ib,ic,id)
+----------------------------------^
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  verlet.f -o verlet.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  vibbig.f -o vibbig.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  vibrate.f -o vibrate.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  volume.f -o volume.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  xtalfit.f -o xtalfit.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  xtalmin.f -o xtalmin.o 
+xtalfit.f(584): remark #7712: This variable has not been used.   [NVARIED]
+      subroutine xtalerr (nvaried,nresid,xx,resid)
+--------------------------^
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  xyzatm.f -o xyzatm.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  xyzedit.f -o xyzedit.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  xyzpdb.f -o xyzpdb.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  zatom.f -o zatom.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  alchemy.f -o alchemy.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  active.f -o active.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  analysis.f -o analysis.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  analyze.f -o analyze.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  angles.f -o angles.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  anneal.f -o anneal.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  archive.f -o archive.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  attach.f -o attach.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  beeman.f -o beeman.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  bitors.f -o bitors.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  bonds.f -o bonds.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  born.f -o born.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  bounds.f -o bounds.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  bussi.f -o bussi.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  chkpole.f -o chkpole.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  chkxyz.f -o chkxyz.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  cluster.f -o cluster.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  connect.f -o connect.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  connolly.f -o connolly.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  correlate.f -o correlate.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  crystal.f -o crystal.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  cutoffs.f -o cutoffs.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  delete.f -o delete.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  diffeq.f -o diffeq.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  diffuse.f -o diffuse.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  distgeom.f -o distgeom.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  dynamic.f -o dynamic.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  eangang.f -o eangang.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  eangang1.f -o eangang1.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  eangang2.f -o eangang2.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  eangang3.f -o eangang3.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  eangle.f -o eangle.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  eangle1.f -o eangle1.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  eangle2.f -o eangle2.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  eangle3.f -o eangle3.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  eangtor.f -o eangtor.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  eangtor1.f -o eangtor1.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  eangtor2.f -o eangtor2.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  eangtor3.f -o eangtor3.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  ebond.f -o ebond.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  ebond1.f -o ebond1.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  ebond2.f -o ebond2.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  ebond3.f -o ebond3.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  ebuck.f -o ebuck.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  ebuck1.f -o ebuck1.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  ebuck2.f -o ebuck2.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  ebuck3.f -o ebuck3.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  echarge.f -o echarge.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  echarge1.f -o echarge1.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  echarge2.f -o echarge2.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  echarge3.f -o echarge3.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  echgdpl.f -o echgdpl.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  echgdpl1.f -o echgdpl1.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  echgdpl2.f -o echgdpl2.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  echgdpl3.f -o echgdpl3.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  edipole.f -o edipole.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  edipole1.f -o edipole1.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  edipole2.f -o edipole2.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  edipole3.f -o edipole3.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  egauss.f -o egauss.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  egauss1.f -o egauss1.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  egauss2.f -o egauss2.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  egauss3.f -o egauss3.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  egeom.f -o egeom.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  egeom1.f -o egeom1.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  egeom2.f -o egeom2.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  egeom3.f -o egeom3.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  ehal.f -o ehal.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  ehal1.f -o ehal1.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  ehal2.f -o ehal2.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  ehal3.f -o ehal3.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  eimprop.f -o eimprop.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  eimprop1.f -o eimprop1.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  eimprop2.f -o eimprop2.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  eimprop3.f -o eimprop3.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  eimptor.f -o eimptor.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  eimptor1.f -o eimptor1.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  eimptor2.f -o eimptor2.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  eimptor3.f -o eimptor3.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  elj.f -o elj.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  elj1.f -o elj1.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  elj2.f -o elj2.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  elj3.f -o elj3.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  ect0.f -o ect0.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  ect3.f -o ect3.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ect3.f(436): remark #7712: This variable has not been used.   [HUGE]
+      logical header,huge
+---------------------^
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  embed.f -o embed.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  emetal.f -o emetal.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  emetal1.f -o emetal1.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  emetal3.f -o emetal3.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  emm3hb.f -o emm3hb.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  emm3hb1.f -o emm3hb1.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  emm3hb2.f -o emm3hb2.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  emm3hb3.f -o emm3hb3.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  empole.f -o empole.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  empole1.f -o empole1.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  empole3.f -o empole3.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  eopbend.f -o eopbend.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  eopbend1.f -o eopbend1.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  eopbend2.f -o eopbend2.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  eopbend3.f -o eopbend3.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  eopdist.f -o eopdist.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  eopdist1.f -o eopdist1.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  eopdist2.f -o eopdist2.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  eopdist3.f -o eopdist3.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  epitors.f -o epitors.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  epitors1.f -o epitors1.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  epitors2.f -o epitors2.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  epitors3.f -o epitors3.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  epolar.f -o epolar.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  epolar1.f -o epolar1.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  epolar3.f -o epolar3.o 
+epolar1.f(1540): remark #7712: This variable has not been used.   [SC9]
+      real*8 sc3,sc5,sc7,sc9
+-------------------------^
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+epolar1.f(2581): remark #7712: This variable has not been used.   [SC9]
+      real*8 sc3,sc5,sc7,sc9
+-------------------------^
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  erxnfld.f -o erxnfld.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  erxnfld1.f -o erxnfld1.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  erxnfld3.f -o erxnfld3.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  esolv.f -o esolv.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  esolv1.f -o esolv1.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  esolv2.f -o esolv2.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+esolv2.f(271): remark #7712: This variable has not been used.   [LIST]
+      subroutine esolv2b (nlist,list,reborn,reinduce)
+--------------------------------^
+esolv2.f(271): remark #7712: This variable has not been used.   [NLIST]
+      subroutine esolv2b (nlist,list,reborn,reinduce)
+--------------------------^
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  esolv3.f -o esolv3.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  estrbnd.f -o estrbnd.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  estrbnd1.f -o estrbnd1.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  estrbnd2.f -o estrbnd2.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  estrbnd3.f -o estrbnd3.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  estrtor.f -o estrtor.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  estrtor1.f -o estrtor1.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  estrtor2.f -o estrtor2.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  estrtor3.f -o estrtor3.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  etors.f -o etors.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  etors1.f -o etors1.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  etors2.f -o etors2.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  etors3.f -o etors3.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  etortor.f -o etortor.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  etortor1.f -o etortor1.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  etortor2.f -o etortor2.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  etortor3.f -o etortor3.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  eurey.f -o eurey.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  eurey1.f -o eurey1.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  eurey2.f -o eurey2.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  eurey3.f -o eurey3.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  evcorr.f -o evcorr.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  extra1.f -o extra1.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  extra2.f -o extra2.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  extra3.f -o extra3.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+extra2.f(20): remark #7712: This variable has not been used.   [I]
+      subroutine extra2 (i)
+-------------------------^
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  flatten.f -o flatten.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  gda.f -o gda.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+gda.f(265): remark #7712: This variable has not been used.   [BETA]
+      subroutine gda1 (beta,xx,g)
+-----------------------^
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  geometry.f -o geometry.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  getint.f -o getint.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  getref.f -o getref.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  ghmcstep.f -o ghmcstep.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  gradient.f -o gradient.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  gradrgd.f -o gradrgd.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  gradrot.f -o gradrot.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  grpline.f -o grpline.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  gyrate.f -o gyrate.o 
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  hessian.f -o hessian.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  hessrgd.f -o hessrgd.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  hybrid.f -o hybrid.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  induce.f -o induce.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  inertia.f -o inertia.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -c -xHost -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  initial.f -o initial.o 
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ar -crusv libtinker.a \
+	action.o \
+	active.o \
+	align.o \
+	analysis.o \
+	analyz.o \
+	angang.o \
+	angbnd.o \
+	angles.o \
+	angpot.o \
+	angtor.o \
+	argue.o \
+	ascii.o \
+	atmlst.o \
+	atomid.o \
+	atoms.o \
+	attach.o \
+	basefile.o \
+	bath.o \
+	beeman.o \
+	bicubic.o \
+	bitor.o \
+	bitors.o \
+	bndpot.o \
+	bndstr.o \
+	bonds.o \
+	born.o \
+	bound.o \
+	bounds.o \
+	boxes.o \
+	bussi.o \
+	calendar.o \
+	cell.o \
+	center.o \
+	charge.o \
+	ctran.o \
+	chgpot.o \
+	chgpen.o \
+	chkpole.o \
+	chkring.o \
+	chkxyz.o \
+	cholesky.o \
+	chrono.o \
+	chunks.o \
+	clock.o \
+	cluster.o \
+	column.o \
+	command.o \
+	connect.o \
+	connolly.o \
+	control.o \
+	couple.o \
+	cspline.o \
+	cutoffs.o \
+	deflate.o \
+	delete.o \
+	deriv.o \
+	diagq.o \
+	diffeq.o \
+	dipole.o \
+	disgeo.o \
+	dma.o \
+	domega.o \
+	dualpol.o \
+	eangang.o \
+	eangang1.o \
+	eangang2.o \
+	eangang3.o \
+	eangle.o \
+	eangle1.o \
+	eangle2.o \
+	eangle3.o \
+	eangtor.o \
+	eangtor1.o \
+	eangtor2.o \
+	eangtor3.o \
+	ebond.o \
+	ebond1.o \
+	ebond2.o \
+	ebond3.o \
+	ebuck.o \
+	ebuck1.o \
+	ebuck2.o \
+	ebuck3.o \
+	echarge.o \
+	echarge1.o \
+	echarge2.o \
+	echarge3.o \
+	echgdpl.o \
+	echgdpl1.o \
+	echgdpl2.o \
+	echgdpl3.o \
+	edipole.o \
+	edipole1.o \
+	edipole2.o \
+	edipole3.o \
+	egauss.o \
+	egauss1.o \
+	egauss2.o \
+	egauss3.o \
+	egeom.o \
+	egeom1.o \
+	egeom2.o \
+	egeom3.o \
+	ehal.o \
+	ehal1.o \
+	ehal2.o \
+	ehal3.o \
+	eimprop.o \
+	eimprop1.o \
+	eimprop2.o \
+	eimprop3.o \
+	eimptor.o \
+	eimptor1.o \
+	eimptor2.o \
+	eimptor3.o \
+	elj.o \
+	elj1.o \
+	elj2.o \
+	elj3.o \
+	ect0.o \
+	ect1.o \
+	ect3.o \
+	embed.o \
+	emetal.o \
+	emetal1.o \
+	emetal2.o \
+	emetal3.o \
+	emm3hb.o \
+	emm3hb1.o \
+	emm3hb2.o \
+	emm3hb3.o \
+	empole.o \
+	empole1.o \
+	empole3.o \
+	energi.o \
+	energy.o \
+	eopbend.o \
+	eopbend1.o \
+	eopbend2.o \
+	eopbend3.o \
+	eopdist.o \
+	eopdist1.o \
+	eopdist2.o \
+	eopdist3.o \
+	epitors.o \
+	epitors1.o \
+	epitors2.o \
+	epitors3.o \
+	epolar.o \
+	epolar1.o \
+	epolar3.o \
+	erf.o \
+	erxnfld.o \
+	erxnfld1.o \
+	erxnfld2.o \
+	erxnfld3.o \
+	esolv.o \
+	esolv1.o \
+	esolv2.o \
+	esolv3.o \
+	estrbnd.o \
+	estrbnd1.o \
+	estrbnd2.o \
+	estrbnd3.o \
+	estrtor.o \
+	estrtor1.o \
+	estrtor2.o \
+	estrtor3.o \
+	etors.o \
+	etors1.o \
+	etors2.o \
+	etors3.o \
+	etortor.o \
+	etortor1.o \
+	etortor2.o \
+	etortor3.o \
+	eurey.o \
+	eurey1.o \
+	eurey2.o \
+	eurey3.o \
+	evcorr.o \
+	ewald.o \
+	extra.o \
+	extra1.o \
+	extra2.o \
+	extra3.o \
+	faces.o \
+	fatal.o \
+	fft.o \
+	fft3d.o \
+	fftpack.o \
+	field.o \
+	fields.o \
+	files.o \
+	final.o \
+	flatten.o \
+	fracs.o \
+	freeunit.o \
+	freeze.o \
+	geometry.o \
+	getint.o \
+	getkey.o \
+	getmol.o \
+	getmol2.o \
+	getnumb.o \
+	getpdb.o \
+	getprm.o \
+	getref.o \
+	getstring.o \
+	gettext.o \
+	getword.o \
+	getxyz.o \
+	ghmcstep.o \
+	gkstuf.o \
+	gradient.o \
+	gradrgd.o \
+	gradrot.o \
+	group.o \
+	groups.o \
+	grpline.o \
+	gyrate.o \
+	hescut.o \
+	hessian.o \
+	hessn.o \
+	hessrgd.o \
+	hessrot.o \
+	hpmf.o \
+	hybrid.o \
+	ielscf.o \
+	image.o \
+	impose.o \
+	improp.o \
+	imptor.o \
+	induce.o \
+	inertia.o \
+	inform.o \
+	initatom.o \
+	initial.o \
+	initprm.o \
+	initres.o \
+	initrot.o \
+	insert.o \
+	inter.o \
+	invbeta.o \
+	invert.o \
+	iounit.o \
+	jacobi.o \
+	kanang.o \
+	kangang.o \
+	kangle.o \
+	kangs.o \
+	kangtor.o \
+	kantor.o \
+	katom.o \
+	katoms.o \
+	kbond.o \
+	kbonds.o \
+	kcharge.o \
+	kchrge.o \
+	kdipol.o \
+	kdipole.o \
+	kewald.o \
+	kextra.o \
+	keys.o \
+	kgeom.o \
+	khbond.o \
+	kimprop.o \
+	kimptor.o \
+	kinetic.o \
+	kiprop.o \
+	kitors.o \
+	kmetal.o \
+	kmpole.o \
+	kmulti.o \
+	kopbend.o \
+	kopbnd.o \
+	kopdist.o \
+	kopdst.o \
+	korbit.o \
+	korbs.o \
+	kpitor.o \
+	kpitors.o \
+	kpolar.o \
+	kpolr.o \
+	ksolv.o \
+	kstbnd.o \
+	kstrbnd.o \
+	kstrtor.o \
+	ksttor.o \
+	ktors.o \
+	ktorsn.o \
+	ktortor.o \
+	ktrtor.o \
+	kurey.o \
+	kurybr.o \
+	kctr.o \
+	kvdw.o \
+	kvdwpr.o \
+	kvdws.o \
+	lattice.o \
+	lbfgs.o \
+	light.o \
+	lights.o \
+	limits.o \
+	linmin.o \
+	makeint.o \
+	makeref.o \
+	makexyz.o \
+	math.o \
+	maxwell.o \
+	mdinit.o \
+	mdrest.o \
+	mdsave.o \
+	mdstat.o \
+	mdstuf.o \
+	mechanic.o \
+	merck.o \
+	merge.o \
+	minima.o \
+	molcul.o \
+	moldyn.o \
+	molecule.o \
+	moment.o \
+	moments.o \
+	mplpot.o \
+	mpole.o \
+	mrecip.o \
+	mutant.o \
+	mutate.o \
+	nblist.o \
+	neigh.o \
+	nextarg.o \
+	nexttext.o \
+	nonpol.o \
+	nose.o \
+	nspline.o \
+	nucleo.o \
+	number.o \
+	numeral.o \
+	numgrad.o \
+	ocvm.o \
+	omega.o \
+	opbend.o \
+	opdist.o \
+	openend.o \
+	openmp.o \
+	optsave.o \
+	orbital.o \
+	orbits.o \
+	orient.o \
+	orthog.o \
+	output.o \
+	overlap.o \
+	params.o \
+	paths.o \
+	pbstuf.o \
+	pdb.o \
+	phipsi.o \
+	picalc.o \
+	piorbs.o \
+	pistuf.o \
+	pitors.o \
+	pme.o \
+	pmestuff.o \
+	pmpb.o \
+	polar.o \
+	polgrp.o \
+	polpot.o \
+	polymer.o \
+	potderivs.o \
+	potent.o \
+	potfit.o \
+	precis.o \
+	precise.o \
+	pressure.o \
+	prmkey.o \
+	promo.o \
+	prtdyn.o \
+	prterr.o \
+	prtint.o \
+	prtmol2.o \
+	prtpdb.o \
+	prtprm.o \
+	prtseq.o \
+	prtxyz.o \
+	ptable.o \
+	qmstuf.o \
+	qrfact.o \
+	quatfit.o \
+	random.o \
+	rattle.o \
+	readdyn.o \
+	readgau.o \
+	readgdma.o \
+	readint.o \
+	readmol.o \
+	readmol2.o \
+	readpdb.o \
+	readprm.o \
+	readseq.o \
+	readxyz.o \
+	refer.o \
+	replica.o \
+	resdue.o \
+	respa.o \
+	restrn.o \
+	rgddyn.o \
+	rgdstep.o \
+	rigid.o \
+	ring.o \
+	rings.o \
+	rmsfit.o \
+	rotbnd.o \
+	rotlist.o \
+	rotpole.o \
+	rxnfld.o \
+	rxnpot.o \
+	scales.o \
+	sdstep.o \
+	search.o \
+	sequen.o \
+	server.o \
+	shakeup.o \
+	shunt.o \
+	sigmoid.o \
+	simplex.o \
+	sizes.o \
+	sktstuff.o \
+	socket.o \
+	solute.o \
+	sort.o \
+	square.o \
+	stodyn.o \
+	strbnd.o \
+	strtor.o \
+	suffix.o \
+	surface.o \
+	surfatom.o \
+	switch.o \
+	syntrn.o \
+	tarray.o \
+	temper.o \
+	titles.o \
+	tncg.o \
+	torphase.o \
+	torpot.o \
+	torque.o \
+	tors.o \
+	torsions.o \
+	tortor.o \
+	tree.o \
+	trimtext.o \
+	unitcell.o \
+	units.o \
+	uprior.o \
+	urey.o \
+	urypot.o \
+	usage.o \
+	usolve.o \
+	valfit.o \
+	vdw.o \
+	vdwpot.o \
+	verlet.o \
+	version.o \
+	vibs.o \
+	virial.o \
+	volume.o \
+	warp.o \
+	xtals.o \
+	xyzatm.o \
+	zatom.o \
+	zclose.o \
+	zcoord.o
+r - action.o
+r - active.o
+r - align.o
+r - analysis.o
+r - analyz.o
+r - angang.o
+r - angbnd.o
+r - angles.o
+r - angpot.o
+r - angtor.o
+r - argue.o
+r - ascii.o
+r - atmlst.o
+r - atomid.o
+r - atoms.o
+r - attach.o
+r - basefile.o
+r - bath.o
+r - beeman.o
+r - bicubic.o
+r - bitor.o
+r - bitors.o
+r - bndpot.o
+r - bndstr.o
+r - bonds.o
+r - born.o
+r - bound.o
+r - bounds.o
+r - boxes.o
+r - bussi.o
+r - calendar.o
+r - cell.o
+r - center.o
+r - charge.o
+r - ctran.o
+r - chgpot.o
+r - chgpen.o
+r - chkpole.o
+r - chkring.o
+r - chkxyz.o
+r - cholesky.o
+r - chrono.o
+r - chunks.o
+r - clock.o
+r - cluster.o
+r - column.o
+r - command.o
+r - connect.o
+r - connolly.o
+r - control.o
+r - couple.o
+r - cspline.o
+r - cutoffs.o
+r - deflate.o
+r - delete.o
+r - deriv.o
+r - diagq.o
+r - diffeq.o
+r - dipole.o
+r - disgeo.o
+r - dma.o
+r - domega.o
+r - dualpol.o
+r - eangang.o
+r - eangang1.o
+r - eangang2.o
+r - eangang3.o
+r - eangle.o
+r - eangle1.o
+r - eangle2.o
+r - eangle3.o
+r - eangtor.o
+r - eangtor1.o
+r - eangtor2.o
+r - eangtor3.o
+r - ebond.o
+r - ebond1.o
+r - ebond2.o
+r - ebond3.o
+r - ebuck.o
+r - ebuck1.o
+r - ebuck2.o
+r - ebuck3.o
+r - echarge.o
+r - echarge1.o
+r - echarge2.o
+r - echarge3.o
+r - echgdpl.o
+r - echgdpl1.o
+r - echgdpl2.o
+r - echgdpl3.o
+r - edipole.o
+r - edipole1.o
+r - edipole2.o
+r - edipole3.o
+r - egauss.o
+r - egauss1.o
+r - egauss2.o
+r - egauss3.o
+r - egeom.o
+r - egeom1.o
+r - egeom2.o
+r - egeom3.o
+r - ehal.o
+r - ehal1.o
+r - ehal2.o
+r - ehal3.o
+r - eimprop.o
+r - eimprop1.o
+r - eimprop2.o
+r - eimprop3.o
+r - eimptor.o
+r - eimptor1.o
+r - eimptor2.o
+r - eimptor3.o
+r - elj.o
+r - elj1.o
+r - elj2.o
+r - elj3.o
+r - ect0.o
+r - ect3.o
+r - embed.o
+r - emetal.o
+r - emetal1.o
+r - emetal2.o
+r - emetal3.o
+r - emm3hb.o
+r - emm3hb1.o
+r - emm3hb2.o
+r - emm3hb3.o
+r - empole.o
+r - empole1.o
+r - empole3.o
+r - energi.o
+r - energy.o
+r - eopbend.o
+r - eopbend1.o
+r - eopbend2.o
+r - eopbend3.o
+r - eopdist.o
+r - eopdist1.o
+r - eopdist2.o
+r - eopdist3.o
+r - epitors.o
+r - epitors1.o
+r - epitors2.o
+r - epitors3.o
+r - epolar.o
+r - epolar1.o
+r - epolar3.o
+r - erf.o
+r - erxnfld.o
+r - erxnfld1.o
+r - erxnfld2.o
+r - erxnfld3.o
+r - esolv.o
+r - esolv1.o
+r - esolv2.o
+r - esolv3.o
+r - estrbnd.o
+r - estrbnd1.o
+r - estrbnd2.o
+r - estrbnd3.o
+r - estrtor.o
+r - estrtor1.o
+r - estrtor2.o
+r - estrtor3.o
+r - etors.o
+r - etors1.o
+r - etors2.o
+r - etors3.o
+r - etortor.o
+r - etortor1.o
+r - etortor2.o
+r - etortor3.o
+r - eurey.o
+r - eurey1.o
+r - eurey2.o
+r - eurey3.o
+r - evcorr.o
+r - ewald.o
+r - extra.o
+r - extra1.o
+r - extra2.o
+r - extra3.o
+r - faces.o
+r - fatal.o
+r - fft.o
+r - fft3d.o
+r - fftpack.o
+r - field.o
+r - fields.o
+r - files.o
+r - final.o
+r - flatten.o
+r - fracs.o
+r - freeunit.o
+r - freeze.o
+r - geometry.o
+r - getint.o
+r - getkey.o
+r - getmol.o
+r - getmol2.o
+r - getnumb.o
+r - getpdb.o
+r - getprm.o
+r - getref.o
+r - getstring.o
+r - gettext.o
+r - getword.o
+r - getxyz.o
+r - ghmcstep.o
+r - gkstuf.o
+r - gradient.o
+r - gradrgd.o
+r - gradrot.o
+r - group.o
+r - groups.o
+r - grpline.o
+r - gyrate.o
+r - hescut.o
+r - hessian.o
+r - hessn.o
+r - hessrgd.o
+r - hessrot.o
+r - hpmf.o
+r - hybrid.o
+r - ielscf.o
+r - image.o
+r - impose.o
+r - improp.o
+r - imptor.o
+r - induce.o
+r - inertia.o
+r - inform.o
+r - initatom.o
+r - initial.o
+r - initprm.o
+r - initres.o
+r - initrot.o
+r - insert.o
+r - inter.o
+r - invbeta.o
+r - invert.o
+r - iounit.o
+r - jacobi.o
+r - kanang.o
+r - kangang.o
+r - kangle.o
+r - kangs.o
+r - kangtor.o
+r - kantor.o
+r - katom.o
+r - katoms.o
+r - kbond.o
+r - kbonds.o
+r - kcharge.o
+r - kchrge.o
+r - kdipol.o
+r - kdipole.o
+r - kewald.o
+r - kextra.o
+r - keys.o
+r - kgeom.o
+r - khbond.o
+r - kimprop.o
+r - kimptor.o
+r - kinetic.o
+r - kiprop.o
+r - kitors.o
+r - kmetal.o
+r - kmpole.o
+r - kmulti.o
+r - kopbend.o
+r - kopbnd.o
+r - kopdist.o
+r - kopdst.o
+r - korbit.o
+r - korbs.o
+r - kpitor.o
+r - kpitors.o
+r - kpolar.o
+r - kpolr.o
+r - ksolv.o
+r - kstbnd.o
+r - kstrbnd.o
+r - kstrtor.o
+r - ksttor.o
+r - ktors.o
+r - ktorsn.o
+r - ktortor.o
+r - ktrtor.o
+r - kurey.o
+r - kurybr.o
+r - kctr.o
+r - kvdw.o
+r - kvdwpr.o
+r - kvdws.o
+r - lattice.o
+r - lbfgs.o
+r - light.o
+r - lights.o
+r - limits.o
+r - linmin.o
+r - makeint.o
+r - makeref.o
+r - makexyz.o
+r - math.o
+r - maxwell.o
+r - mdinit.o
+r - mdrest.o
+r - mdsave.o
+r - mdstat.o
+r - mdstuf.o
+r - mechanic.o
+r - merck.o
+r - merge.o
+r - minima.o
+r - molcul.o
+r - moldyn.o
+r - molecule.o
+r - moment.o
+r - moments.o
+r - mplpot.o
+r - mpole.o
+r - mrecip.o
+r - mutant.o
+r - mutate.o
+r - nblist.o
+r - neigh.o
+r - nextarg.o
+r - nexttext.o
+r - nonpol.o
+r - nose.o
+r - nspline.o
+r - nucleo.o
+r - number.o
+r - numeral.o
+r - numgrad.o
+r - ocvm.o
+r - omega.o
+r - opbend.o
+r - opdist.o
+r - openend.o
+r - openmp.o
+r - optsave.o
+r - orbital.o
+r - orbits.o
+r - orient.o
+r - orthog.o
+r - output.o
+r - overlap.o
+r - params.o
+r - paths.o
+r - pbstuf.o
+r - pdb.o
+r - phipsi.o
+r - picalc.o
+r - piorbs.o
+r - pistuf.o
+r - pitors.o
+r - pme.o
+r - pmestuff.o
+r - pmpb.o
+r - polar.o
+r - polgrp.o
+r - polpot.o
+r - polymer.o
+r - potderivs.o
+r - potent.o
+r - potfit.o
+r - precis.o
+r - precise.o
+r - pressure.o
+r - prmkey.o
+r - promo.o
+r - prtdyn.o
+r - prterr.o
+r - prtint.o
+r - prtmol2.o
+r - prtpdb.o
+r - prtprm.o
+r - prtseq.o
+r - prtxyz.o
+r - ptable.o
+r - qmstuf.o
+r - qrfact.o
+r - quatfit.o
+r - random.o
+r - rattle.o
+r - readdyn.o
+r - readgau.o
+r - readint.o
+r - readmol.o
+r - readmol2.o
+r - readpdb.o
+r - readprm.o
+r - readseq.o
+r - readxyz.o
+r - refer.o
+r - replica.o
+r - resdue.o
+r - respa.o
+r - restrn.o
+r - rgddyn.o
+r - rgdstep.o
+r - rigid.o
+r - ring.o
+r - rings.o
+r - rmsfit.o
+r - rotbnd.o
+r - rotlist.o
+r - rotpole.o
+r - rxnfld.o
+r - rxnpot.o
+r - scales.o
+r - sdstep.o
+r - search.o
+r - sequen.o
+r - server.o
+r - shakeup.o
+r - shunt.o
+r - sigmoid.o
+r - simplex.o
+r - sizes.o
+r - sktstuff.o
+r - socket.o
+r - solute.o
+r - sort.o
+r - square.o
+r - stodyn.o
+r - strbnd.o
+r - strtor.o
+r - suffix.o
+r - surface.o
+r - surfatom.o
+r - switch.o
+r - syntrn.o
+r - tarray.o
+r - temper.o
+r - titles.o
+r - tncg.o
+r - torphase.o
+r - torpot.o
+r - torque.o
+r - tors.o
+r - torsions.o
+r - tortor.o
+r - tree.o
+r - trimtext.o
+r - unitcell.o
+r - units.o
+r - uprior.o
+r - urey.o
+r - urypot.o
+r - usage.o
+r - usolve.o
+r - valfit.o
+r - vdw.o
+r - vdwpot.o
+r - verlet.o
+r - version.o
+r - vibs.o
+r - virial.o
+r - volume.o
+r - warp.o
+r - xtals.o
+r - xyzatm.o
+r - zatom.o
+r - zclose.o
+r - zcoord.o
+echo libtinker.a
+libtinker.a
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o alchemy.x alchemy.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip alchemy.x
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o analyze.x analyze.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip analyze.x
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o anneal.x anneal.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip anneal.x
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o archive.x archive.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip archive.x
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o bar.x bar.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip bar.x
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o correlate.x correlate.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip correlate.x
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o crystal.x crystal.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip crystal.x
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o diffuse.x diffuse.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip diffuse.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o distgeom.x distgeom.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip distgeom.x
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o document.x document.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip document.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o dynamic.x dynamic.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip dynamic.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o gda.x gda.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip gda.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o intedit.x intedit.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip intedit.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o intxyz.x intxyz.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip intxyz.x
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o minimize.x minimize.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip minimize.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o minirot.x minirot.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip minirot.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o minrigid.x minrigid.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip minrigid.x
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o molxyz.x molxyz.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip molxyz.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o monte.x monte.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip monte.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o newton.x newton.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip newton.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o newtrot.x newtrot.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip newtrot.x
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o nucleic.x nucleic.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip nucleic.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o optimize.x optimize.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip optimize.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o optirot.x optirot.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip optirot.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o optrigid.x optrigid.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip optrigid.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o path.x path.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip path.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o pdbxyz.x pdbxyz.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip pdbxyz.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o polarize.x polarize.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip polarize.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o poledit.x poledit.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip poledit.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o potential.x potential.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip potential.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o prmedit.x prmedit.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip prmedit.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o protein.x protein.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip protein.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o pss.x pss.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip pss.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o pssrigid.x pssrigid.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip pssrigid.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o pssrot.x pssrot.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip pssrot.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o radial.x radial.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip radial.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o saddle.x saddle.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip saddle.x
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o scan.x scan.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip scan.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o sniffer.x sniffer.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip sniffer.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o spacefill.x spacefill.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip spacefill.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o spectrum.x spectrum.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip spectrum.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o superpose.x superpose.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip superpose.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o sybylxyz.x sybylxyz.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip sybylxyz.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o testgrad.x testgrad.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip testgrad.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o testhess.x testhess.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip testhess.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o testpair.x testpair.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip testpair.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o testpol.x testpol.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip testpol.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o testrot.x testrot.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip testrot.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o timer.x timer.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip timer.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o timerot.x timerot.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip timerot.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o torsfit.x torsfit.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip torsfit.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o valence.x valence.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip valence.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o vibbig.x vibbig.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip vibbig.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o vibrate.x vibrate.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip vibrate.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o vibrot.x vibrot.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip vibrot.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o xtalfit.x xtalfit.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip xtalfit.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o xtalmin.x xtalmin.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip xtalmin.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o xyzedit.x xyzedit.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip xyzedit.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o xyzint.x xyzint.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip xyzint.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o xyzpdb.x xyzpdb.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip xyzpdb.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled
+ifort -g -check all -fpe0 -warn -traceback -debug extended -O3 -no-ipo -no-prec-div -recursive -openmp  -static-libgcc -static-intel -o xyzsybyl.x xyzsybyl.o libtinker.a -L/opt/intel/composer_xe_2013/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core ; strip xyzsybyl.x
+ifort: warning #10182: disabling optimization; runtime debug checks enabled

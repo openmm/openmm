@@ -1,0 +1,17 @@
+Quern 0.9 (beta)
+
+Public domain code for sparse up-looking Givens QR, including incomplete
+drop tolerance version for preconditioning iterative solvers.
+
+Edit Makefile to fit your set up (in particular, MATLAB-specific stuff).
+Currently it's set up for debugging; change the flags to get optimized
+versions of the code.
+
+In addition to the library libquern.a (with header quern.h), there are
+two mex files (quern_internal_mex and quern_cgnr_mex) as well as a
+stand-alone executable test_mat for running tests on matrices stored
+in .mat files.
+
+- Robert Bridson
+  UBC Computer Science
+  February 4, 2009

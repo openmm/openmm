@@ -1,0 +1,163 @@
+
+      ##############################
+      ##                          ##
+      ##  Force Field Definition  ##
+      ##                          ##
+      ##############################
+
+
+forcefield              AMOEBA-WATER-2003
+
+bond-cubic              -2.55
+bond-quartic            3.793125
+angle-cubic             -0.014
+angle-quartic           0.000056
+angle-pentic            -0.0000007
+angle-sextic            0.000000022
+vdwtype                 BUFFERED-14-7
+radiusrule              CUBIC-MEAN
+radiustype              R-MIN
+radiussize              DIAMETER
+epsilonrule             W-H 
+dielectric              1.0
+polarization            MUTUAL
+vdw-12-scale            0.0
+vdw-13-scale            0.0
+vdw-14-scale            1.0
+vdw-15-scale            1.0
+mpole-12-scale          0.0
+mpole-13-scale          0.0
+mpole-14-scale          0.4
+mpole-15-scale          0.8
+polar-12-scale          0.0
+polar-13-scale          0.0
+polar-14-scale          1.0
+polar-15-scale          1.0
+polar-14-intra          0.5
+direct-11-scale         0.0
+direct-12-scale         1.0
+direct-13-scale         1.0
+direct-14-scale         1.0
+mutual-11-scale         1.0
+mutual-12-scale         1.0
+mutual-13-scale         1.0
+mutual-14-scale         1.0
+
+
+      #############################
+      ##                         ##
+      ##  Literature References  ##
+      ##                         ##
+      #############################
+
+
+P. Ren and J. W. Ponder, "A Polarizable Atomic Multipole Water Model
+for Molecular Mechanics Simulation", J. Phys. Chem. B, 107, 5933-5947
+(2003)
+
+Y. Kong, "Multipole Electrostatic Methods for Protein Modeling with
+Reaction Field Treatment", Ph.D. thesis, DBBS Program in Molecular
+Biophysics, Washington University, St. Louis, August, 1997  [available
+online from http://dasher.wustl.edu/ponder/]
+
+alternative valence parameters to match symmetric and antisymmetric
+bond stretches by David Semrouni, Ecole Polytechnique, Paris
+
+
+      #############################
+      ##                         ##
+      ##  Atom Type Definitions  ##
+      ##                         ##
+      #############################
+
+
+atom          1    1    O     "AMOEBA Water O"               8    15.995    2
+atom          2    2    H     "AMOEBA Water H"               1     1.008    1
+
+
+      ################################
+      ##                            ##
+      ##  Van der Waals Parameters  ##
+      ##                            ##
+      ################################
+
+vdw 1  3.808991962421e+00  6.136105292421e-02   # PRM  2 3
+vdw 2  3.340781062854e+00  4.571397369232e-03  9.836043276847e-01 # PRM 2 3
+
+      ##################################
+      ##                              ##
+      ##  Bond Stretching Parameters  ##
+      ##                              ##
+      ##################################
+
+
+bond          1    2          556.85     9.394052718541e-01 # PRM 4
+
+
+      ################################
+      ##                            ##
+      ##  Angle Bending Parameters  ##
+      ##                            ##
+      ################################
+
+
+angle         2    1    2      48.70     1.088184941170e+02 # PRM 5
+
+
+      ###############################
+      ##                           ##
+      ##  Urey-Bradley Parameters  ##
+      ##                           ##
+      ###############################
+
+
+ureybrad      2    1    2      -7.60     1.527838776869e+00 # EVAL 5 sqrt(2*PARM['BONDB/1.2']**2*(1-cos(pi*PARM['ANGLEB/2.1.2']/180)))
+
+
+      ###################################
+      ##                               ##
+      ##  Atomic Multipole Parameters  ##
+      ##                               ##
+      ###################################
+
+
+multipole   1 -2 -2                    -5.582454644933e-01                        # PRM 4
+                                        0.00000    0.00000   -1.449228974529e-01  # PRM 2
+                                        4.515987165373e-01                        # PRM 0
+                                        0.00000   -2.801079613215e-01             # PRM 1
+                                        0.00000    0.00000   -1.714907552159e-01  # EVAL 2 -(PRM["QUADXX/1.-2.-2"]+PRM["QUADYY/1.-2.-2"])
+
+multipole   2  1  2                     2.791227322466e-01                        # EVAL 4 -0.5*PRM["MCHARGE/1.-2.-2"]
+                                        0.00000    0.00000   -2.300597032501e-01  # PRM 2
+                                        2.152070876406e-01                        # PRM 0
+                                        0.00000   -2.976094747210e-02             # PRM 1
+                                        1.911000691015e-01    0.00000   -1.854461401686e-01  # PRM 0 EVAL 2 -(PRM["QUADXX/2.1.2"]+PRM["QUADYY/2.1.2"])
+
+      ########################################
+      ##                                    ##
+      ##  Dipole Polarizability Parameters  ##
+      ##                                    ##
+      ########################################
+
+
+polarize      1           9.479157312550e-01      0.390     0.70    2  # PRM 2
+polarize      2           4.158204241627e-01      0.390     0.70    1  # PRM 2
+
+      ########################################
+      ##                                    ##
+      ##  Charge Transfer Parameters        ##
+      ##                                    ##
+      ########################################
+
+ct            1     3.200293442024e+00    3.718783952450e+00 # PRM 2 3
+ct            2     2.943614595207e+00    4.713467998214e+00 # PRM 2 3
+
+      ########################################
+      ##                                    ##
+      ##  Charge Penetration Parameters     ##
+      ##                                    ##
+      ########################################
+
+cp            1     4.048293501352e+00 # PRM 2
+cp            2     3.274788424018e+00 # PRM 2
+

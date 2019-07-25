@@ -1,0 +1,86 @@
+data_PHPWKVVWM
+# 
+loop_
+_pdbx_nonpoly_scheme.asym_id 
+_pdbx_nonpoly_scheme.entity_id 
+_pdbx_nonpoly_scheme.mon_id 
+_pdbx_nonpoly_scheme.ndb_seq_num 
+_pdbx_nonpoly_scheme.pdb_seq_num 
+_pdbx_nonpoly_scheme.auth_seq_num 
+_pdbx_nonpoly_scheme.pdb_mon_id 
+_pdbx_nonpoly_scheme.auth_mon_id 
+_pdbx_nonpoly_scheme.pdb_strand_id 
+_pdbx_nonpoly_scheme.pdb_ins_code 
+A 1 Cl 1 1 1 Cl Cl A . 
+B 1 Cl 1 2 2 Cl Cl A . 
+C 1 Cl 1 3 3 Cl Cl A . 
+D 1 Cl 1 4 4 Cl Cl A . 
+E 2 Na 1 5 5 Na Na A . 
+F 2 Na 1 6 6 Na Na A . 
+G 2 Na 1 7 7 Na Na A . 
+H 2 Na 1 8 8 Na Na A . 
+# 
+_cell.entry_id           PHPWKVVWM 
+_cell.length_a           25.000 
+_cell.length_b           30.4138126515 
+_cell.length_c           36.8103246386 
+_cell.angle_alpha        74.1909185129 
+_cell.angle_beta         79.0376425369 
+_cell.angle_gamma        80.537677792 
+_cell.Z_PDB              1 
+_cell.pdbx_unique_axis   ? 
+# 
+loop_
+_atom_type.symbol 
+Cl 
+Na 
+# 
+loop_
+_pdbx_entity_nonpoly.entity_id 
+_pdbx_entity_nonpoly.name 
+_pdbx_entity_nonpoly.comp_id 
+1 ? Cl 
+2 ? Na 
+# 
+loop_
+_atom_site.group_PDB 
+_atom_site.id 
+_atom_site.type_symbol 
+_atom_site.label_atom_id 
+_atom_site.label_alt_id 
+_atom_site.label_comp_id 
+_atom_site.label_asym_id 
+_atom_site.label_entity_id 
+_atom_site.label_seq_id 
+_atom_site.pdbx_label_seq_num 
+_atom_site.pdbx_PDB_ins_code 
+_atom_site.Cartn_x 
+_atom_site.Cartn_y 
+_atom_site.Cartn_z 
+_atom_site.occupancy 
+_atom_site.B_iso_or_equiv 
+_atom_site.Cartn_x_esd 
+_atom_site.Cartn_y_esd 
+_atom_site.Cartn_z_esd 
+_atom_site.occupancy_esd 
+_atom_site.B_iso_or_equiv_esd 
+_atom_site.footnote_id 
+_atom_site.pdbx_formal_charge 
+_atom_site.auth_seq_id 
+_atom_site.auth_comp_id 
+_atom_site.auth_asym_id 
+_atom_site.auth_atom_id 
+_atom_site.pdbx_auth_seq_id 
+_atom_site.pdbx_auth_comp_id 
+_atom_site.pdbx_auth_asym_id 
+_atom_site.pdbx_auth_atom_name 
+_atom_site.pdbx_PDB_model_num 
+HETATM 1 Cl Cl . Cl A 1 . 1 ? 17.440 27.880 31.620 1.00 0.00 ? ? ? ? ? ? ? 1 Cl A Cl 1 Cl A Cl 1 
+HETATM 2 Cl Cl . Cl B 1 . 1 ? 10.480 7.620  23.400 1.00 0.00 ? ? ? ? ? ? ? 2 Cl A Cl 2 Cl A Cl 1 
+HETATM 3 Cl Cl . Cl C 1 . 1 ? 24.890 15.700 28.170 1.00 0.00 ? ? ? ? ? ? ? 3 Cl A Cl 3 Cl A Cl 1 
+HETATM 4 Cl Cl . Cl D 1 . 1 ? 10.270 18.930 32.710 1.00 0.00 ? ? ? ? ? ? ? 4 Cl A Cl 4 Cl A Cl 1 
+HETATM 5 Na Na . Na E 2 . 1 ? 9.370  8.250  0.090  1.00 0.00 ? ? ? ? ? ? ? 5 Na A Na 5 Na A Na 1 
+HETATM 6 Na Na . Na F 2 . 1 ? 22.900 18.870 33.520 1.00 0.00 ? ? ? ? ? ? ? 6 Na A Na 6 Na A Na 1 
+HETATM 7 Na Na . Na G 2 . 1 ? 12.660 11.110 28.940 1.00 0.00 ? ? ? ? ? ? ? 7 Na A Na 7 Na A Na 1 
+HETATM 8 Na Na . Na H 2 . 1 ? 9.330  18.620 34.900 1.00 0.00 ? ? ? ? ? ? ? 8 Na A Na 8 Na A Na 1 
+# 

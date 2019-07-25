@@ -1,0 +1,59 @@
+c
+c
+c     ###################################################
+c     ##  COPYRIGHT (C)  1992  by  Jay William Ponder  ##
+c     ##              All Rights Reserved              ##
+c     ###################################################
+c
+c     ##############################################################
+c     ##                                                          ##
+c     ##  module potderivs  --  electric potential, field, field  ##        
+c     ##                        gradient and field hessian        ##
+c     ##                                                          ##
+c     ##############################################################
+c
+c
+c     potm        electric potential at every multipole site
+c     fieldm      electric field with mscale exclusion rules
+c     fieldd      electric field with dscale exclusion rules
+c     fieldp      electric field with pscale exclusion rules
+c     gradfieldm  electric field gradient with mscale exclusion rules
+c     gradfieldp  electric field gradient with pscale exclusion rules
+c     hessfieldm  electric field hession with mscale exclusion rules
+c
+c
+      module potderivs
+      implicit none
+      real*8, allocatable :: pot(:)
+      real*8, allocatable :: field(:,:)
+      real*8, allocatable :: gradfield(:,:,:)
+      real*8, allocatable :: hessfield(:,:,:,:)
+c
+      real*8, allocatable :: potm(:)
+      real*8, allocatable :: fieldm(:,:)
+      real*8, allocatable :: gradfieldm(:,:,:)
+      real*8, allocatable :: hessfieldm(:,:,:,:)
+c
+      real*8, allocatable :: potm_gordon(:)
+      real*8, allocatable :: fieldm_gordon(:,:)
+      real*8, allocatable :: gradfieldm_gordon(:,:,:)
+      real*8, allocatable :: hessfieldm_gordon(:,:,:,:)
+c
+      real*8, allocatable :: nucpotm_gordon(:)
+      real*8, allocatable :: nucfieldm_gordon(:,:)
+c
+      real*8, allocatable :: fieldd_gordon(:,:)
+      real*8, allocatable :: fieldp_gordon(:,:)
+      real*8, allocatable :: gradfieldd_gordon(:,:,:)
+      real*8, allocatable :: gradfieldp_gordon(:,:,:)
+c
+c     all induced dipole field quantities are d or p (coming from
+c     d or p dipoles)
+c
+c     logical flags for types of damping needed
+c
+      logical damp_none
+      logical damp_ewald
+      logical damp_gordon
+      save
+      end
