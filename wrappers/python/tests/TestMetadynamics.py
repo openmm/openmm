@@ -17,7 +17,7 @@ class TestMetadynamics(unittest.TestCase):
         cv = CustomBondForce('r')
         cv.addBond(0, 1)
         bias = BiasVariable(cv, 0.94, 1.06, 0.02)
-        meta = Metadynamics(system, [bias], 300*kelvin, 2.0, 10.0, 10)
+        meta = Metadynamics(system, [bias], 300*kelvin, 2.0, 5.0, 10)
         integrator = LangevinIntegrator(300*kelvin, 10/picosecond, 0.001*picosecond)
         topology = Topology()
         chain = topology.addChain()
@@ -26,7 +26,7 @@ class TestMetadynamics(unittest.TestCase):
         topology.addAtom('H2', element.hydrogen, residue)
         simulation = Simulation(topology, system, integrator, Platform.getPlatformByName('Reference'))
         simulation.context.setPositions([Vec3(0, 0, 0), Vec3(1, 0, 0)])
-        meta.step(simulation, 100000)
+        meta.step(simulation, 200000)
         fe = meta.getFreeEnergy()
         center = bias.gridWidth//2
         fe -= fe[center]
