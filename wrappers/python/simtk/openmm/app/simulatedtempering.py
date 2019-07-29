@@ -33,8 +33,6 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
 __author__ = "Peter Eastman"
 __version__ = "1.0"
 
-import simtk.openmm as mm
-import simtk.openmm.app as app
 import simtk.unit as unit
 import math
 import random
