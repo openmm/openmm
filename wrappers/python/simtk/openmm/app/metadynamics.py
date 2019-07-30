@@ -118,7 +118,7 @@ class Metadynamics(object):
         self.frequency = frequency
         self.biasDir = biasDir
         self.saveFrequency = saveFrequency
-        self._id = np.random.randint(0xFFFFFFFFFFFF)
+        self._id = np.random.randint(0x7FFFFFFF)
         self._saveIndex = 0
         self._selfBias = np.zeros(tuple(v.gridWidth for v in variables))
         self._totalBias = np.zeros(tuple(v.gridWidth for v in variables))
