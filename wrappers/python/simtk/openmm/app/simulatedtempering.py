@@ -200,7 +200,6 @@ class SimulatedTempering(object):
     
     def _attemptTemperatureChange(self, state):
         """Attempt to move to a different temperature."""
-        i = self.currentTemperature
         
         # Compute the probability for each temperature.  This is done in log space to avoid overflow.
 
@@ -212,17 +211,17 @@ class SimulatedTempering(object):
         for j in range(len(probability)):
             if r < probability[j]:
                 if j != self.currentTemperature:
+                    # Rescale the velocities.
+                    
+                    scale = math.sqrt(self.temperatures[j]/self.temperatures[self.currentTemperature])
+                    velocities = [v*scale for v in state.getVelocities().value_in_unit(unit.nanometers/unit.picoseconds)]
+                    self.simulation.context.setVelocities(velocities)
+
                     # Select this temperature.
                     
                     self._hasMadeTransition = True
                     self.currentTemperature = j
                     self.simulation.integrator.setTemperature(self.temperatures[j])
-                    
-                    # Rescale the velocities.
-                    
-                    scale = math.sqrt(self.temperatures[j]/self.temperatures[i])
-                    velocities = [v*scale for v in state.getVelocities().value_in_unit(unit.nanometers/unit.picoseconds)]
-                    self.simulation.context.setVelocities(velocities)
                 if self._updateWeights:
                     # Update the weight factors.
                     
