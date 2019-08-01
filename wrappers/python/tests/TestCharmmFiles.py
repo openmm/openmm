@@ -93,12 +93,10 @@ class TestCharmmFiles(unittest.TestCase):
     def test_NBFIX(self):
         """Tests CHARMM systems with NBFIX Lennard-Jones modifications"""
         warnings.filterwarnings('ignore', category=CharmmPSFWarning)
-        psf = CharmmPsfFile('systems/ala3_solv.psf')
+        psf = CharmmPsfFile('systems/ala3_solv.psf', unitCellDimensions=Vec3(32.7119500, 32.9959600, 33.0071500)*angstroms)
         crd = CharmmCrdFile('systems/ala3_solv.crd')
         params = CharmmParameterSet('systems/par_all36_prot.prm',
                                     'systems/toppar_water_ions.str')
-        # Box dimensions (found from bounding box)
-        psf.setBox(32.7119500*angstroms, 32.9959600*angstroms, 33.0071500*angstroms)
 
         # Turn off charges so we only test the Lennard-Jones energies
         for a in psf.atom_list:
@@ -169,12 +167,11 @@ class TestCharmmFiles(unittest.TestCase):
     def testSystemOptions(self):
         """ Test various options in CharmmPsfFile.createSystem """
         warnings.filterwarnings('ignore', category=CharmmPSFWarning)
-        psf = CharmmPsfFile('systems/ala3_solv.psf')
+        psf = CharmmPsfFile('systems/ala3_solv.psf',
+                            periodicBoxVectors=(Vec3(32.7119500, 0, 0)*angstroms, Vec3(0, 32.9959600, 0)*angstroms, Vec3(0, 0, 33.0071500)*angstroms))
         crd = CharmmCrdFile('systems/ala3_solv.crd')
         params = CharmmParameterSet('systems/par_all36_prot.prm',
                                     'systems/toppar_water_ions.str')
-        # Box dimensions (found from bounding box)
-        psf.setBox(32.7119500*angstroms, 32.9959600*angstroms, 33.0071500*angstroms)
 
         # Check some illegal options
         self.assertRaises(ValueError, lambda:
