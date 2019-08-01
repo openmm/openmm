@@ -35,7 +35,6 @@
 #include <map>
 #include <string>
 #include <vector>
-#include <sstream>
 #include "openmm/internal/windowsExport.h"
 
 namespace OpenMM {
@@ -227,6 +226,13 @@ public:
      * Get the default directory from which to load plugins.  If the environment variable
      * OPENMM_PLUGIN_DIR is set, this returns its value.  Otherwise, it returns a platform
      * specific default location.
+     *
+     * On unix-like systems, OPENMM_PLUGIN_DIR is allowed to either be a
+     * single, fully-qualified path (e.g., /foo/plugins) or a ':'-concatenated
+     * set of fully-qualified paths (e.g., /foo/plugins:bar/plugins). On
+     * windows-like systems, the same is true, but the path separator is '\\'
+     * and the path concatenator is ';'. If an identically-named plugin is
+     * encountered twice it will be loaded at both points; be careful!!!
      *
      * @return the path to the default plugin directory
      */

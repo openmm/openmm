@@ -37,7 +37,6 @@
 #include "openmm/internal/ContextImpl.h"
 #ifdef WIN32
 #include <windows.h>
-#include <sstream>
 #else
 #ifndef __PNACL__
     #include <dlfcn.h>
@@ -45,6 +44,7 @@
 #include <dirent.h>
 #include <cstdlib>
 #endif
+#include <sstream>
 #include <set>
 #include <algorithm>
 
