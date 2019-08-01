@@ -729,7 +729,7 @@ void OpenCLContext::clearAutoclearBuffers() {
         executeKernel(clearTwoBuffersKernel, max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]), 128);
     }
     else if (total-base == 1) {
-        clearBuffer(*autoclearBuffers[base], autoclearBufferSizes[base]);
+        clearBuffer(*autoclearBuffers[base], autoclearBufferSizes[base]*4);
     }
 }
 
