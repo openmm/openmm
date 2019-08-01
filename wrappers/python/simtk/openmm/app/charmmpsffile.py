@@ -166,7 +166,7 @@ class CharmmPsfFile(object):
     GB_FORCE_GROUP = 6
 
     @_catchindexerror
-    def __init__(self, psf_name):
+    def __init__(self, psf_name, periodicBoxVectors=None, unitCellDimensions=None):
         """Opens and parses a PSF file, then instantiates a CharmmPsfFile
         instance from the data.
 
@@ -174,6 +174,11 @@ class CharmmPsfFile(object):
         ----------
         psf_name : str
             Name of the PSF file (it must exist)
+        periodicBoxVectors : tuple of Vec3
+            the vectors defining the periodic box
+        unitCellDimensions : Vec3
+            the dimensions of the crystallographic unit cell.  For
+            non-rectangular unit cells, specify periodicBoxVectors instead.
 
         Raises
         ------
@@ -449,7 +454,14 @@ class CharmmPsfFile(object):
         self.group_list = group_list
         self.title = title
         self.flags = psf_flags
-        self.box_vectors = None
+        if unitCellDimensions is not None:
+            if periodicBoxVectors is not None:
+                raise ValueError("specify either periodicBoxVectors or unitCellDimensions, but not both")
+            if u.is_quantity(unitCellDimensions):
+                unitCellDimensions = unitCellDimensions.value_in_unit(u.nanometers)
+            self.box_vectors = (Vec3(unitCellDimensions[0], 0, 0), Vec3(0, unitCellDimensions[1], 0), Vec3(0, 0, unitCellDimensions[2]))*u.nanometers
+        else:
+            self.box_vectors = periodicBoxVectors
 
     @staticmethod
     def _convert(string, type, message):
