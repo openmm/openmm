@@ -710,7 +710,7 @@ class CharmmPsfFile(object):
                 last_residue = None
             if resid != last_residue:
                 last_residue = resid
-                residue = topology.addResidue(atom.residue.resname, chain, resid)
+                residue = topology.addResidue(atom.residue.resname, chain, str(atom.residue.idx), atom.residue.inscode)
             if atom.type is not None:
                 # This is the most reliable way of determining the element
                 atomic_num = atom.type.atomic_number
