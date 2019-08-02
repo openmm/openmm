@@ -232,6 +232,60 @@ class TestCharmmFiles(unittest.TestCase):
                     dtheta = math.pi-angle
                 self.assertAlmostEqual(energy, dtheta**2, delta=1e-5)
 
+    def test_Residues(self):
+        """Test that residues are read correctly, even if they have the same RESID while being in separate segments."""
+        m14 = (["C{}".format(i) for i in range(1,14)]
+               + ["H{}".format(i) for i in range(1,12)]
+               + ["N{}".format(i) for i in range(1,4)]
+               )
+        tip3 = ["OH2", "H1", "H2"]
+        pot = ["POT"]
+        cla = ["CLA"]
+        psf = CharmmPsfFile('systems/charmm-solvated/isa_wat.3_kcl.m14.psf')
+        for residue in psf.topology.residues():
+            atoms = [atom.name for atom in residue.atoms()]
+            if residue.name == "M14":
+                self.assertCountEqual(m14, atoms)
+            elif residue.name == "TIP3":
+                self.assertCountEqual(tip3, atoms)
+            elif residue.name == "POT":
+                self.assertCountEqual(pot, atoms)
+            elif residue.name == "CLA":
+                self.assertCountEqual(cla, atoms)
+            else:
+                self.assertTrue(False)
+
+    def test_NoLongRangeCorrection(self):
+        """Test that long range correction is disabled."""
+        parameters = CharmmParameterSet(
+            'systems/charmm-solvated/envi.str',
+            'systems/charmm-solvated/m14.rtf',
+            'systems/charmm-solvated/m14.prm'
+        )
+        psf = CharmmPsfFile('systems/charmm-solvated/isa_wat.3_kcl.m14.psf')
+        psf.setBox(3.0584*nanometers,3.0584*nanometers,3.0584*nanometers)
+        system = psf.createSystem(parameters, nonbondedMethod=PME)
+        for force in system.getForces():
+            if isinstance(force, CustomNonbondedForce):
+                self.assertFalse(force.getUseLongRangeCorrection())
+            if isinstance(force, NonbondedForce):
+                # TODO: why is this part of the code even reached???
+                # Does NBFIX not fire?
+                self.assertFalse(force.getUseDispersionCorrection())
+
+    def test_NoPsfWarning(self):
+        """Test that PSF warning is not thrown."""
+        parameters = CharmmParameterSet(
+            'systems/charmm-solvated/envi.str',
+            'systems/charmm-solvated/m14.rtf',
+            'systems/charmm-solvated/m14.prm'
+        )
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", CharmmPSFWarning)
+            psf = CharmmPsfFile('systems/charmm-solvated/isa_wat.3_kcl.m14.psf')
+            psf.setBox(3.0584*nanometers,3.0584*nanometers,3.0584*nanometers)
+            psf.createSystem(parameters, nonbondedMethod=PME)
+
 
 if __name__ == '__main__':
     unittest.main()
