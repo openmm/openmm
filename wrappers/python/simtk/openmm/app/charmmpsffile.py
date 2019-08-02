@@ -335,9 +335,9 @@ class CharmmPsfFile(object):
         set_molecules(atom_list)
         molecule_list = [atom.marked for atom in atom_list]
         if len(holder) == len(atom_list):
-            if molecule_list != holder:
-                warnings.warn('Detected PSF molecule section that is WRONG. '
-                              'Resetting molecularity.', CharmmPSFWarning)
+            #if molecule_list != holder:
+            #    warnings.warn('Detected PSF molecule section that is WRONG. '
+            #                  'Resetting molecularity.', CharmmPSFWarning)
             # We have a CHARMM PSF file; now do NUMLP/NUMLPH sections
             numlp, numlph = psfsections['NUMLP NUMLPH'][0]
             if numlp != 0 or numlph != 0:
@@ -632,13 +632,16 @@ class CharmmPsfFile(object):
 
         last_chain = None
         last_residue = None
+        is_new_chain = False
         # Add each chain (separate 'system's) and residue
         for atom in self.atom_list:
             resid = '%d%s' % (atom.residue.idx, atom.residue.inscode)
             if atom.system != last_chain:
                 chain = topology.addChain(atom.system)
                 last_chain = atom.system
-            if resid != last_residue:
+                is_new_chain = True
+            if resid != last_residue or is_new_chain:
+                is_new_chain = False
                 last_residue = resid
                 residue = topology.addResidue(atom.residue.resname, chain, resid)
             if atom.type is not None:
@@ -963,6 +966,7 @@ class CharmmPsfFile(object):
         # Add nonbonded terms now
         if verbose: print('Adding nonbonded interactions...')
         force = mm.NonbondedForce()
+        force.setUseDispersionCorrection(False)
         force.setForceGroup(self.NONBONDED_FORCE_GROUP)
         if not hasbox: # non-periodic
             if nonbondedMethod is ff.NoCutoff:
@@ -1102,7 +1106,6 @@ class CharmmPsfFile(object):
             if (nonbondedMethod in (ff.PME, ff.LJPME, ff.Ewald, ff.CutoffPeriodic)):
                 cforce.setNonbondedMethod(cforce.CutoffPeriodic)
                 cforce.setCutoffDistance(nonbondedCutoff)
-                cforce.setUseLongRangeCorrection(True)
             elif nonbondedMethod is ff.NoCutoff:
                 cforce.setNonbondedMethod(cforce.NoCutoff)
             elif nonbondedMethod is ff.CutoffNonPeriodic:
