@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -165,7 +165,7 @@ void CompiledExpression::setVariableLocations(map<string, double*>& variableLoca
 
 double CompiledExpression::evaluate() const {
 #ifdef LEPTON_USE_JIT
-    return ((double (*)()) jitCode)();
+    return jitCode();
 #else
     for (int i = 0; i < variablesToCopy.size(); i++)
         *variablesToCopy[i].first = *variablesToCopy[i].second;
@@ -188,24 +188,26 @@ double CompiledExpression::evaluate() const {
 
 #ifdef LEPTON_USE_JIT
 static double evaluateOperation(Operation* op, double* args) {
-    map<string, double>* dummyVariables = NULL;
-    return op->evaluate(args, *dummyVariables);
+    static map<string, double> dummyVariables;
+    return op->evaluate(args, dummyVariables);
 }
 
 void CompiledExpression::generateJitCode() {
-    X86Compiler c(&runtime);
-    c.addFunc(kFuncConvHost, FuncBuilder0<double>());
-    vector<X86XmmVar> workspaceVar(workspace.size());
+    CodeHolder code;
+    code.init(runtime.getCodeInfo());
+    X86Compiler c(&code);
+    c.addFunc(FuncSignature0<double>());
+    vector<X86Xmm> workspaceVar(workspace.size());
     for (int i = 0; i < (int) workspaceVar.size(); i++)
-        workspaceVar[i] = c.newXmmVar(kX86VarTypeXmmSd);
-    X86GpVar argsPointer(c);
+        workspaceVar[i] = c.newXmmSd();
+    X86Gp argsPointer = c.newIntPtr();
     c.mov(argsPointer, imm_ptr(&argValues[0]));
     
     // Load the arguments into variables.
     
     for (set<string>::const_iterator iter = variableNames.begin(); iter != variableNames.end(); ++iter) {
         map<string, int>::iterator index = variableIndices.find(*iter);
-        X86GpVar variablePointer(c);
+        X86Gp variablePointer = c.newIntPtr();
         c.mov(variablePointer, imm_ptr(&getVariableReference(index->first)));
         c.movsd(workspaceVar[index->second], x86::ptr(variablePointer, 0, 0));
     }
@@ -248,12 +250,12 @@ void CompiledExpression::generateJitCode() {
     
     // Load constants into variables.
     
-    vector<X86XmmVar> constantVar(constants.size());
+    vector<X86Xmm> constantVar(constants.size());
     if (constants.size() > 0) {
-        X86GpVar constantsPointer(c);
+        X86Gp constantsPointer = c.newIntPtr();
         c.mov(constantsPointer, imm_ptr(&constants[0]));
         for (int i = 0; i < (int) constants.size(); i++) {
-            constantVar[i] = c.newXmmVar(kX86VarTypeXmmSd);
+            constantVar[i] = c.newXmmSd();
             c.movsd(constantVar[i], x86::ptr(constantsPointer, 8*i, 0));
         }
     }
@@ -292,6 +294,9 @@ void CompiledExpression::generateJitCode() {
                 c.movsd(workspaceVar[target[step]], workspaceVar[args[0]]);
                 c.divsd(workspaceVar[target[step]], workspaceVar[args[1]]);
                 break;
+            case Operation::POWER:
+                generateTwoArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], workspaceVar[args[1]], pow);
+                break;
             case Operation::NEGATE:
                 c.xorps(workspaceVar[target[step]], workspaceVar[target[step]]);
                 c.subsd(workspaceVar[target[step]], workspaceVar[args[0]]);
@@ -322,6 +327,9 @@ void CompiledExpression::generateJitCode() {
                 break;
             case Operation::ATAN:
                 generateSingleArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], atan);
+                break;
+            case Operation::ATAN2:
+                generateTwoArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], workspaceVar[args[1]], atan2);
                 break;
             case Operation::SINH:
                 generateSingleArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], sinh);
@@ -377,9 +385,9 @@ void CompiledExpression::generateJitCode() {
                 
                 for (int i = 0; i < (int) args.size(); i++)
                     c.movsd(x86::ptr(argsPointer, 8*i, 0), workspaceVar[args[i]]);
-                X86GpVar fn(c, kVarTypeIntPtr);
+                X86Gp fn = c.newIntPtr();
                 c.mov(fn, imm_ptr((void*) evaluateOperation));
-                X86CallNode* call = c.call(fn, kFuncConvHost, FuncBuilder2<double, Operation*, double*>());
+                CCFuncCall* call = c.call(fn, FuncSignature2<double, Operation*, double*>());
                 call->setArg(0, imm_ptr(&op));
                 call->setArg(1, imm_ptr(&argValues[0]));
                 call->setRet(0, workspaceVar[target[step]]);
@@ -387,14 +395,24 @@ void CompiledExpression::generateJitCode() {
     }
     c.ret(workspaceVar[workspace.size()-1]);
     c.endFunc();
-    jitCode = c.make();
+    c.finalize();
+    runtime.add(&jitCode, &code);
 }
 
-void CompiledExpression::generateSingleArgCall(X86Compiler& c, X86XmmVar& dest, X86XmmVar& arg, double (*function)(double)) {
-    X86GpVar fn(c, kVarTypeIntPtr);
+void CompiledExpression::generateSingleArgCall(X86Compiler& c, X86Xmm& dest, X86Xmm& arg, double (*function)(double)) {
+    X86Gp fn = c.newIntPtr();
     c.mov(fn, imm_ptr((void*) function));
-    X86CallNode* call = c.call(fn, kFuncConvHost, FuncBuilder1<double, double>());
+    CCFuncCall* call = c.call(fn, FuncSignature1<double, double>());
     call->setArg(0, arg);
+    call->setRet(0, dest);
+}
+
+void CompiledExpression::generateTwoArgCall(X86Compiler& c, X86Xmm& dest, X86Xmm& arg1, X86Xmm& arg2, double (*function)(double, double)) {
+    X86Gp fn = c.newIntPtr();
+    c.mov(fn, imm_ptr((void*) function));
+    CCFuncCall* call = c.call(fn, FuncSignature2<double, double, double>());
+    call->setArg(0, arg1);
+    call->setArg(1, arg2);
     call->setRet(0, dest);
 }
 #endif

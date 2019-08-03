@@ -47,6 +47,33 @@ __global__ void sortShortList(DATA_TYPE* __restrict__ data, unsigned int length)
 }
 
 /**
+ * An alternate kernel for sorting short lists.  In this version every thread does a full
+ * scan through the data to select the destination for one element.  This involves more
+ * work, but also parallelizes much better.
+ */
+__global__ void sortShortList2(const DATA_TYPE* __restrict__ dataIn, DATA_TYPE* __restrict__ dataOut, unsigned int length) {
+    __shared__ DATA_TYPE dataBuffer[64];
+    int globalId = blockDim.x*blockIdx.x+threadIdx.x;
+    DATA_TYPE value = dataIn[globalId < length ? globalId : 0];
+    KEY_TYPE key = getValue(value);
+    int count = 0;
+    for (int blockStart = 0; blockStart < length; blockStart += blockDim.x) {
+        int numInBlock = min(blockDim.x, length-blockStart);
+        __syncthreads();
+        if (threadIdx.x < numInBlock)
+            dataBuffer[threadIdx.x] = dataIn[blockStart+threadIdx.x];
+        __syncthreads();
+        for (int i = 0; i < numInBlock; i++) {
+            KEY_TYPE otherKey = getValue(dataBuffer[i]);
+            if (otherKey < key || (otherKey == key && blockStart+i < globalId))
+                count++;
+        }
+    }
+    if (globalId < length)
+        dataOut[count] = value;
+}
+
+/**
  * Calculate the minimum and maximum value in the array to be sorted.  This kernel
  * is executed as a single work group.
  */
@@ -117,6 +144,7 @@ __global__ void computeBucketPositions(unsigned int numBuckets, unsigned int* __
         // Load the bucket sizes into local memory.
 
         unsigned int globalIndex = startBucket+threadIdx.x;
+        __syncthreads();
         posBuffer[threadIdx.x] = (globalIndex < numBuckets ? bucketOffset[globalIndex] : 0);
         __syncthreads();
 

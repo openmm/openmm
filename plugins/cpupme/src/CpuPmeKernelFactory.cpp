@@ -35,8 +35,10 @@ using namespace OpenMM;
 extern "C" OPENMM_EXPORT_PME void registerKernelFactories() {
     if (CpuCalcPmeReciprocalForceKernel::isProcessorSupported()) {
         CpuPmeKernelFactory* factory = new CpuPmeKernelFactory();
-        for (int i = 0; i < Platform::getNumPlatforms(); i++)
+        for (int i = 0; i < Platform::getNumPlatforms(); i++) {
             Platform::getPlatform(i).registerKernelFactory(CalcPmeReciprocalForceKernel::Name(), factory);
+            Platform::getPlatform(i).registerKernelFactory(CalcDispersionPmeReciprocalForceKernel::Name(), factory);
+        }
     }
 }
 

@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -76,6 +76,33 @@ namespace OpenMM {
  * the effect of all Lennard-Jones interactions beyond the cutoff in a periodic system.  When running a simulation
  * at constant pressure, this can improve the quality of the result.  Call setUseDispersionCorrection() to set whether
  * this should be used.
+ * 
+ * In some applications, it is useful to be able to inexpensively change the parameters of small groups of particles.
+ * Usually this is done to interpolate between two sets of parameters.  For example, a titratable group might have
+ * two states it can exist in, each described by a different set of parameters for the atoms that make up the
+ * group.  You might then want to smoothly interpolate between the two states.  This is done by first calling
+ * addGlobalParameter() to define a Context parameter, then addParticleParameterOffset() to create a "parameter offset"
+ * that depends on the Context parameter.  Each offset defines the following:
+ * 
+ * <ul>
+ * <li>A Context parameter used to interpolate between the states.</li>
+ * <li>A single particle whose parameters are influenced by the Context parameter.</li>
+ * <li>Three scale factors (chargeScale, sigmaScale, and epsilonScale) that specify how the Context parameter
+ * affects the particle.</li>
+ * </ul>
+ * 
+ * The "effective" parameters for a particle (those used to compute forces) are given by
+ * 
+ * <tt><pre>
+ * charge = baseCharge + param*chargeScale
+ * sigma = baseSigma + param*sigmaScale
+ * epsilon = baseEpsilon + param*epsilonScale
+ * </pre></tt>
+ * 
+ * where the "base" values are the ones specified by addParticle() and "oaram" is the current value
+ * of the Context parameter.  A single Context parameter can apply offsets to multiple particles,
+ * and multiple parameters can be used to apply offsets to the same particle.  Parameters can also be used
+ * to modify exceptions in exactly the same way by calling addExceptionParameterOffset().
  */
 
 class OPENMM_EXPORT NonbondedForce : public Force {
@@ -131,6 +158,24 @@ public:
      */
     int getNumExceptions() const {
         return exceptions.size();
+    }
+    /**
+     * Get the number of global parameters that have been added.
+     */
+    int getNumGlobalParameters() const {
+        return globalParameters.size();
+    }
+    /**
+     * Get the number of particles parameter offsets that have been added.
+     */
+    int getNumParticleParameterOffsets() const {
+        return particleOffsets.size();
+    }
+    /**
+     * Get the number of exception parameter offsets that have been added.
+     */
+    int getNumExceptionParameterOffsets() const {
+        return exceptionOffsets.size();
     }
     /**
      * Get the method used for handling long range nonbonded interactions.
@@ -356,6 +401,114 @@ public:
      */
     void createExceptionsFromBonds(const std::vector<std::pair<int, int> >& bonds, double coulomb14Scale, double lj14Scale);
     /**
+     * Add a new global parameter that parameter offsets may depend on.  The default value provided to
+     * this method is the initial value of the parameter in newly created Contexts.  You can change
+     * the value at any time by calling setParameter() on the Context.
+     * 
+     * @param name             the name of the parameter
+     * @param defaultValue     the default value of the parameter
+     * @return the index of the parameter that was added
+     */
+    int addGlobalParameter(const std::string& name, double defaultValue);
+    /**
+     * Get the name of a global parameter.
+     *
+     * @param index     the index of the parameter for which to get the name
+     * @return the parameter name
+     */
+    const std::string& getGlobalParameterName(int index) const;
+    /**
+     * Set the name of a global parameter.
+     *
+     * @param index          the index of the parameter for which to set the name
+     * @param name           the name of the parameter
+     */
+    void setGlobalParameterName(int index, const std::string& name);
+    /**
+     * Get the default value of a global parameter.
+     *
+     * @param index     the index of the parameter for which to get the default value
+     * @return the parameter default value
+     */
+    double getGlobalParameterDefaultValue(int index) const;
+    /**
+     * Set the default value of a global parameter.
+     *
+     * @param index          the index of the parameter for which to set the default value
+     * @param defaultValue   the default value of the parameter
+     */
+    void setGlobalParameterDefaultValue(int index, double defaultValue);
+    /**
+     * Add an offset to the per-particle parameters of a particular particle, based on a global parameter.
+     * 
+     * @param parameter       the name of the global parameter.  It must have already been added with addGlobalParameter().
+     *                        Its value can be modified at any time by calling Context::setParameter().
+     * @param particleIndex   the index of the particle whose parameters are affected
+     * @param chargeScale     this value multiplied by the parameter value is added to the particle's charge
+     * @param sigmaScale      this value multiplied by the parameter value is added to the particle's sigma
+     * @param epsilonScale    this value multiplied by the parameter value is added to the particle's epsilon
+     * @return the index of the offset that was added
+     */
+    int addParticleParameterOffset(const std::string& parameter, int particleIndex, double chargeScale, double sigmaScale, double epsilonScale);
+    /**
+     * Get the offset added to the per-particle parameters of a particular particle, based on a global parameter.
+     * 
+     * @param index           the index of the offset to query, as returned by addParticleParameterOffset()
+     * @param parameter       the name of the global parameter
+     * @param particleIndex   the index of the particle whose parameters are affected
+     * @param chargeScale     this value multiplied by the parameter value is added to the particle's charge
+     * @param sigmaScale      this value multiplied by the parameter value is added to the particle's sigma
+     * @param epsilonScale    this value multiplied by the parameter value is added to the particle's epsilon
+     */
+    void getParticleParameterOffset(int index, std::string& parameter, int& particleIndex, double& chargeScale, double& sigmaScale, double& epsilonScale) const;
+    /**
+     * Set the offset added to the per-particle parameters of a particular particle, based on a global parameter.
+     * 
+     * @param index           the index of the offset to modify, as returned by addParticleParameterOffset()
+     * @param parameter       the name of the global parameter.  It must have already been added with addGlobalParameter().
+     *                        Its value can be modified at any time by calling Context::setParameter().
+     * @param particleIndex   the index of the particle whose parameters are affected
+     * @param chargeScale     this value multiplied by the parameter value is added to the particle's charge
+     * @param sigmaScale      this value multiplied by the parameter value is added to the particle's sigma
+     * @param epsilonScale    this value multiplied by the parameter value is added to the particle's epsilon
+     */
+    void setParticleParameterOffset(int index, const std::string& parameter, int particleIndex, double chargeScale, double sigmaScale, double epsilonScale);
+    /**
+     * Add an offset to the parameters of a particular exception, based on a global parameter.
+     * 
+     * @param parameter       the name of the global parameter.  It must have already been added with addGlobalParameter().
+     *                        Its value can be modified at any time by calling Context::setParameter().
+     * @param exceptionIndex  the index of the exception whose parameters are affected
+     * @param chargeProdScale this value multiplied by the parameter value is added to the exception's charge product
+     * @param sigmaScale      this value multiplied by the parameter value is added to the exception's sigma
+     * @param epsilonScale    this value multiplied by the parameter value is added to the exception's epsilon
+     * @return the index of the offset that was added
+     */
+    int addExceptionParameterOffset(const std::string& parameter, int exceptionIndex, double chargeProdScale, double sigmaScale, double epsilonScale);
+    /**
+     * Get the offset added to the parameters of a particular exception, based on a global parameter.
+     * 
+     * @param index           the index of the offset to query, as returned by addExceptionParameterOffset()
+     * @param parameter       the name of the global parameter
+     * @param exceptionIndex  the index of the exception whose parameters are affected
+     * @param chargeProdScale this value multiplied by the parameter value is added to the exception's charge product
+     * @param sigmaScale      this value multiplied by the parameter value is added to the exception's sigma
+     * @param epsilonScale    this value multiplied by the parameter value is added to the exception's epsilon
+     */
+    void getExceptionParameterOffset(int index, std::string& parameter, int& exceptionIndex, double& chargeProdScale, double& sigmaScale, double& epsilonScale) const;
+    /**
+     * Set the offset added to the parameters of a particular exception, based on a global parameter.
+     * 
+     * @param index           the index of the offset to modify, as returned by addExceptionParameterOffset()
+     * @param parameter       the name of the global parameter.  It must have already been added with addGlobalParameter().
+     *                        Its value can be modified at any time by calling Context::setParameter().
+     * @param exceptionIndex  the index of the exception whose parameters are affected
+     * @param chargeProdScale this value multiplied by the parameter value is added to the exception's charge product
+     * @param sigmaScale      this value multiplied by the parameter value is added to the exception's sigma
+     * @param epsilonScale    this value multiplied by the parameter value is added to the exception's epsilon
+     */
+    void setExceptionParameterOffset(int index, const std::string& parameter, int exceptionIndex, double chargeProdScale, double sigmaScale, double epsilonScale);
+    /**
      * Get whether to add a contribution to the energy that approximately represents the effect of Lennard-Jones
      * interactions beyond the cutoff distance.  The energy depends on the volume of the periodic box, and is only
      * applicable when periodic boundary conditions are used.  When running simulations at constant pressure, adding
@@ -420,13 +573,20 @@ protected:
 private:
     class ParticleInfo;
     class ExceptionInfo;
+    class GlobalParameterInfo;
+    class ParticleOffsetInfo;
+    class ExceptionOffsetInfo;
     NonbondedMethod nonbondedMethod;
     double cutoffDistance, switchingDistance, rfDielectric, ewaldErrorTol, alpha, dalpha;
     bool useSwitchingFunction, useDispersionCorrection;
     int recipForceGroup, nx, ny, nz, dnx, dny, dnz;
     void addExclusionsToSet(const std::vector<std::set<int> >& bonded12, std::set<int>& exclusions, int baseParticle, int fromParticle, int currentLevel) const;
+    int getGlobalParameterIndex(const std::string& parameter) const;
     std::vector<ParticleInfo> particles;
     std::vector<ExceptionInfo> exceptions;
+    std::vector<GlobalParameterInfo> globalParameters;
+    std::vector<ParticleOffsetInfo> particleOffsets;
+    std::vector<ExceptionOffsetInfo> exceptionOffsets;
     std::map<std::pair<int, int>, int> exceptionMap;
 };
 
@@ -459,6 +619,54 @@ public:
     }
     ExceptionInfo(int particle1, int particle2, double chargeProd, double sigma, double epsilon) :
         particle1(particle1), particle2(particle2), chargeProd(chargeProd), sigma(sigma), epsilon(epsilon) {
+    }
+};
+
+/**
+ * This is an internal class used to record information about a global parameter.
+ * @private
+ */
+class NonbondedForce::GlobalParameterInfo {
+public:
+    std::string name;
+    double defaultValue;
+    GlobalParameterInfo() {
+    }
+    GlobalParameterInfo(const std::string& name, double defaultValue) : name(name), defaultValue(defaultValue) {
+    }
+};
+
+/**
+ * This is an internal class used to record information about a particle parameter offset.
+ * @private
+ */
+class NonbondedForce::ParticleOffsetInfo {
+public:
+    int particle, parameter;
+    double chargeScale, sigmaScale, epsilonScale;
+    ParticleOffsetInfo() {
+        particle = parameter = -1;
+        chargeScale = sigmaScale = epsilonScale = 0.0;
+    }
+    ParticleOffsetInfo(int parameter, int particle, double chargeScale, double sigmaScale, double epsilonScale) :
+        parameter(parameter), particle(particle), chargeScale(chargeScale), sigmaScale(sigmaScale), epsilonScale(epsilonScale) {
+    }
+};
+
+/**
+ * This is an internal class used to record information about an exception parameter offset.
+ * @private
+ */
+class NonbondedForce::ExceptionOffsetInfo {
+public:
+    int exception, parameter;
+    double chargeProdScale, sigmaScale, epsilonScale;
+    ExceptionOffsetInfo() {
+        exception = parameter = -1;
+        chargeProdScale = sigmaScale = epsilonScale = 0.0;
+    }
+    ExceptionOffsetInfo(int parameter, int exception, double chargeProdScale, double sigmaScale, double epsilonScale) :
+        parameter(parameter), exception(exception), chargeProdScale(chargeProdScale), sigmaScale(sigmaScale), epsilonScale(epsilonScale) {
     }
 };
 

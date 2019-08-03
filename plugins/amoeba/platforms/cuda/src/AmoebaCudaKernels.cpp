@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman, Mark Friedrichs                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -40,7 +40,6 @@
 #include "CudaFFT3D.h"
 #include "CudaForceInfo.h"
 #include "CudaKernelSources.h"
-#include "CudaNonbondedUtilities.h"
 #include "jama_lu.h"
 
 #include <algorithm>
@@ -90,13 +89,7 @@ private:
 };
 
 CudaCalcAmoebaBondForceKernel::CudaCalcAmoebaBondForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : 
-                CalcAmoebaBondForceKernel(name, platform), cu(cu), system(system), params(NULL) {
-}
-
-CudaCalcAmoebaBondForceKernel::~CudaCalcAmoebaBondForceKernel() {
-    cu.setAsCurrent();
-    if (params != NULL)
-        delete params;
+                CalcAmoebaBondForceKernel(name, platform), cu(cu), system(system) {
 }
 
 void CudaCalcAmoebaBondForceKernel::initialize(const System& system, const AmoebaBondForce& force) {
@@ -108,18 +101,18 @@ void CudaCalcAmoebaBondForceKernel::initialize(const System& system, const Amoeb
     if (numBonds == 0)
         return;
     vector<vector<int> > atoms(numBonds, vector<int>(2));
-    params = CudaArray::create<float2>(cu, numBonds, "bondParams");
+    params.initialize<float2>(cu, numBonds, "bondParams");
     vector<float2> paramVector(numBonds);
     for (int i = 0; i < numBonds; i++) {
         double length, k;
         force.getBondParameters(startIndex+i, atoms[i][0], atoms[i][1], length, k);
         paramVector[i] = make_float2((float) length, (float) k);
     }
-    params->upload(paramVector);
+    params.upload(paramVector);
     map<string, string> replacements;
     replacements["APPLY_PERIODIC"] = (force.usesPeriodicBoundaryConditions() ? "1" : "0");
     replacements["COMPUTE_FORCE"] = CudaAmoebaKernelSources::amoebaBondForce;
-    replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params->getDevicePointer(), "float2");
+    replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params.getDevicePointer(), "float2");
     replacements["CUBIC_K"] = cu.doubleToString(force.getAmoebaGlobalBondCubic());
     replacements["QUARTIC_K"] = cu.doubleToString(force.getAmoebaGlobalBondQuartic());
     cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaKernelSources::bondForce, replacements), force.getForceGroup());
@@ -149,7 +142,7 @@ void CudaCalcAmoebaBondForceKernel::copyParametersToContext(ContextImpl& context
         force.getBondParameters(startIndex+i, atom1, atom2, length, k);
         paramVector[i] = make_float2((float) length, (float) k);
     }
-    params->upload(paramVector);
+    params.upload(paramVector);
     
     // Mark that the current reordering may be invalid.
     
@@ -188,13 +181,7 @@ private:
 };
 
 CudaCalcAmoebaAngleForceKernel::CudaCalcAmoebaAngleForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) :
-            CalcAmoebaAngleForceKernel(name, platform), cu(cu), system(system), params(NULL) {
-}
-
-CudaCalcAmoebaAngleForceKernel::~CudaCalcAmoebaAngleForceKernel() {
-    cu.setAsCurrent();
-    if (params != NULL)
-        delete params;
+            CalcAmoebaAngleForceKernel(name, platform), cu(cu), system(system) {
 }
 
 void CudaCalcAmoebaAngleForceKernel::initialize(const System& system, const AmoebaAngleForce& force) {
@@ -206,18 +193,18 @@ void CudaCalcAmoebaAngleForceKernel::initialize(const System& system, const Amoe
     if (numAngles == 0)
         return;
     vector<vector<int> > atoms(numAngles, vector<int>(3));
-    params = CudaArray::create<float2>(cu, numAngles, "angleParams");
+    params.initialize<float2>(cu, numAngles, "angleParams");
     vector<float2> paramVector(numAngles);
     for (int i = 0; i < numAngles; i++) {
         double angle, k;
         force.getAngleParameters(startIndex+i, atoms[i][0], atoms[i][1], atoms[i][2], angle, k);
         paramVector[i] = make_float2((float) angle, (float) k);
     }
-    params->upload(paramVector);
+    params.upload(paramVector);
     map<string, string> replacements;
     replacements["APPLY_PERIODIC"] = (force.usesPeriodicBoundaryConditions() ? "1" : "0");
     replacements["COMPUTE_FORCE"] = CudaAmoebaKernelSources::amoebaAngleForce;
-    replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params->getDevicePointer(), "float2");
+    replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params.getDevicePointer(), "float2");
     replacements["CUBIC_K"] = cu.doubleToString(force.getAmoebaGlobalAngleCubic());
     replacements["QUARTIC_K"] = cu.doubleToString(force.getAmoebaGlobalAngleQuartic());
     replacements["PENTIC_K"] = cu.doubleToString(force.getAmoebaGlobalAnglePentic());
@@ -250,7 +237,7 @@ void CudaCalcAmoebaAngleForceKernel::copyParametersToContext(ContextImpl& contex
         force.getAngleParameters(startIndex+i, atom1, atom2, atom3, angle, k);
         paramVector[i] = make_float2((float) angle, (float) k);
     }
-    params->upload(paramVector);
+    params.upload(paramVector);
     
     // Mark that the current reordering may be invalid.
     
@@ -290,13 +277,7 @@ private:
 };
 
 CudaCalcAmoebaInPlaneAngleForceKernel::CudaCalcAmoebaInPlaneAngleForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : 
-          CalcAmoebaInPlaneAngleForceKernel(name, platform), cu(cu), system(system), params(NULL) {
-}
-
-CudaCalcAmoebaInPlaneAngleForceKernel::~CudaCalcAmoebaInPlaneAngleForceKernel() {
-    cu.setAsCurrent();
-    if (params != NULL)
-        delete params;
+          CalcAmoebaInPlaneAngleForceKernel(name, platform), cu(cu), system(system) {
 }
 
 void CudaCalcAmoebaInPlaneAngleForceKernel::initialize(const System& system, const AmoebaInPlaneAngleForce& force) {
@@ -308,17 +289,17 @@ void CudaCalcAmoebaInPlaneAngleForceKernel::initialize(const System& system, con
     if (numAngles == 0)
         return;
     vector<vector<int> > atoms(numAngles, vector<int>(4));
-    params = CudaArray::create<float2>(cu, numAngles, "angleParams");
+    params.initialize<float2>(cu, numAngles, "angleParams");
     vector<float2> paramVector(numAngles);
     for (int i = 0; i < numAngles; i++) {
         double angle, k;
         force.getAngleParameters(startIndex+i, atoms[i][0], atoms[i][1], atoms[i][2], atoms[i][3], angle, k);
         paramVector[i] = make_float2((float) angle, (float) k);
     }
-    params->upload(paramVector);
+    params.upload(paramVector);
     map<string, string> replacements;
     replacements["APPLY_PERIODIC"] = (force.usesPeriodicBoundaryConditions() ? "1" : "0");
-    replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params->getDevicePointer(), "float2");
+    replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params.getDevicePointer(), "float2");
     replacements["CUBIC_K"] = cu.doubleToString(force.getAmoebaGlobalInPlaneAngleCubic());
     replacements["QUARTIC_K"] = cu.doubleToString(force.getAmoebaGlobalInPlaneAngleQuartic());
     replacements["PENTIC_K"] = cu.doubleToString(force.getAmoebaGlobalInPlaneAnglePentic());
@@ -351,7 +332,7 @@ void CudaCalcAmoebaInPlaneAngleForceKernel::copyParametersToContext(ContextImpl&
         force.getAngleParameters(startIndex+i, atom1, atom2, atom3, atom4, angle, k);
         paramVector[i] = make_float2((float) angle, (float) k);
     }
-    params->upload(paramVector);
+    params.upload(paramVector);
     
     // Mark that the current reordering may be invalid.
     
@@ -393,13 +374,7 @@ private:
 };
 
 CudaCalcAmoebaPiTorsionForceKernel::CudaCalcAmoebaPiTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) :
-         CalcAmoebaPiTorsionForceKernel(name, platform), cu(cu), system(system), params(NULL) {
-}
-
-CudaCalcAmoebaPiTorsionForceKernel::~CudaCalcAmoebaPiTorsionForceKernel() {
-    cu.setAsCurrent();
-    if (params != NULL)
-        delete params;
+         CalcAmoebaPiTorsionForceKernel(name, platform), cu(cu), system(system) {
 }
 
 void CudaCalcAmoebaPiTorsionForceKernel::initialize(const System& system, const AmoebaPiTorsionForce& force) {
@@ -411,17 +386,17 @@ void CudaCalcAmoebaPiTorsionForceKernel::initialize(const System& system, const 
     if (numPiTorsions == 0)
         return;
     vector<vector<int> > atoms(numPiTorsions, vector<int>(6));
-    params = CudaArray::create<float>(cu, numPiTorsions, "piTorsionParams");
+    params.initialize<float>(cu, numPiTorsions, "piTorsionParams");
     vector<float> paramVector(numPiTorsions);
     for (int i = 0; i < numPiTorsions; i++) {
         double k;
         force.getPiTorsionParameters(startIndex+i, atoms[i][0], atoms[i][1], atoms[i][2], atoms[i][3], atoms[i][4], atoms[i][5], k);
         paramVector[i] = (float) k;
     }
-    params->upload(paramVector);
+    params.upload(paramVector);
     map<string, string> replacements;
     replacements["APPLY_PERIODIC"] = (force.usesPeriodicBoundaryConditions() ? "1" : "0");
-    replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params->getDevicePointer(), "float");
+    replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params.getDevicePointer(), "float");
     cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaAmoebaKernelSources::amoebaPiTorsionForce, replacements), force.getForceGroup());
     cu.addForce(new ForceInfo(force));
 }
@@ -449,7 +424,7 @@ void CudaCalcAmoebaPiTorsionForceKernel::copyParametersToContext(ContextImpl& co
         force.getPiTorsionParameters(startIndex+i, atom1, atom2, atom3, atom4, atom5, atom6, k);
         paramVector[i] = (float) k;
     }
-    params->upload(paramVector);
+    params.upload(paramVector);
     
     // Mark that the current reordering may be invalid.
     
@@ -488,15 +463,7 @@ private:
 };
 
 CudaCalcAmoebaStretchBendForceKernel::CudaCalcAmoebaStretchBendForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) :
-                   CalcAmoebaStretchBendForceKernel(name, platform), cu(cu), system(system), params1(NULL), params2(NULL) {
-}
-
-CudaCalcAmoebaStretchBendForceKernel::~CudaCalcAmoebaStretchBendForceKernel() {
-    cu.setAsCurrent();
-    if (params1 != NULL)
-        delete params1;
-    if (params2 != NULL)
-        delete params2;
+                   CalcAmoebaStretchBendForceKernel(name, platform), cu(cu), system(system) {
 }
 
 void CudaCalcAmoebaStretchBendForceKernel::initialize(const System& system, const AmoebaStretchBendForce& force) {
@@ -508,8 +475,8 @@ void CudaCalcAmoebaStretchBendForceKernel::initialize(const System& system, cons
     if (numStretchBends == 0)
         return;
     vector<vector<int> > atoms(numStretchBends, vector<int>(3));
-    params1 = CudaArray::create<float3>(cu, numStretchBends, "stretchBendParams");
-    params2 = CudaArray::create<float2>(cu, numStretchBends, "stretchBendForceConstants");
+    params1.initialize<float3>(cu, numStretchBends, "stretchBendParams");
+    params2.initialize<float2>(cu, numStretchBends, "stretchBendForceConstants");
     vector<float3> paramVector(numStretchBends);
     vector<float2> paramVectorK(numStretchBends);
     for (int i = 0; i < numStretchBends; i++) {
@@ -518,12 +485,12 @@ void CudaCalcAmoebaStretchBendForceKernel::initialize(const System& system, cons
         paramVector[i] = make_float3((float) lengthAB, (float) lengthCB, (float) angle);
         paramVectorK[i] = make_float2((float) k1, (float) k2);
     }
-    params1->upload(paramVector);
-    params2->upload(paramVectorK);
+    params1.upload(paramVector);
+    params2.upload(paramVectorK);
     map<string, string> replacements;
     replacements["APPLY_PERIODIC"] = (force.usesPeriodicBoundaryConditions() ? "1" : "0");
-    replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params1->getDevicePointer(), "float3");
-    replacements["FORCE_CONSTANTS"] = cu.getBondedUtilities().addArgument(params2->getDevicePointer(), "float2");
+    replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params1.getDevicePointer(), "float3");
+    replacements["FORCE_CONSTANTS"] = cu.getBondedUtilities().addArgument(params2.getDevicePointer(), "float2");
     replacements["RAD_TO_DEG"] = cu.doubleToString(180/M_PI);
     cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaAmoebaKernelSources::amoebaStretchBendForce, replacements), force.getForceGroup());
     cu.addForce(new ForceInfo(force));
@@ -554,8 +521,8 @@ void CudaCalcAmoebaStretchBendForceKernel::copyParametersToContext(ContextImpl& 
         paramVector[i] = make_float3((float) lengthAB, (float) lengthCB, (float) angle);
         paramVector1[i] = make_float2((float) k1, (float) k2);
     }
-    params1->upload(paramVector);
-    params2->upload(paramVector1);
+    params1.upload(paramVector);
+    params2.upload(paramVector1);
     
     // Mark that the current reordering may be invalid.
     
@@ -595,13 +562,7 @@ private:
 };
 
 CudaCalcAmoebaOutOfPlaneBendForceKernel::CudaCalcAmoebaOutOfPlaneBendForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) :
-          CalcAmoebaOutOfPlaneBendForceKernel(name, platform), cu(cu), system(system), params(NULL) {
-}
-
-CudaCalcAmoebaOutOfPlaneBendForceKernel::~CudaCalcAmoebaOutOfPlaneBendForceKernel() {
-    cu.setAsCurrent();
-    if (params != NULL)
-        delete params;
+          CalcAmoebaOutOfPlaneBendForceKernel(name, platform), cu(cu), system(system) {
 }
 
 void CudaCalcAmoebaOutOfPlaneBendForceKernel::initialize(const System& system, const AmoebaOutOfPlaneBendForce& force) {
@@ -613,17 +574,17 @@ void CudaCalcAmoebaOutOfPlaneBendForceKernel::initialize(const System& system, c
     if (numOutOfPlaneBends == 0)
         return;
     vector<vector<int> > atoms(numOutOfPlaneBends, vector<int>(4));
-    params = CudaArray::create<float>(cu, numOutOfPlaneBends, "outOfPlaneParams");
+    params.initialize<float>(cu, numOutOfPlaneBends, "outOfPlaneParams");
     vector<float> paramVector(numOutOfPlaneBends);
     for (int i = 0; i < numOutOfPlaneBends; i++) {
         double k;
         force.getOutOfPlaneBendParameters(startIndex+i, atoms[i][0], atoms[i][1], atoms[i][2], atoms[i][3], k);
         paramVector[i] = (float) k;
     }
-    params->upload(paramVector);
+    params.upload(paramVector);
     map<string, string> replacements;
     replacements["APPLY_PERIODIC"] = (force.usesPeriodicBoundaryConditions() ? "1" : "0");
-    replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params->getDevicePointer(), "float");
+    replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params.getDevicePointer(), "float");
     replacements["CUBIC_K"] = cu.doubleToString(force.getAmoebaGlobalOutOfPlaneBendCubic());
     replacements["QUARTIC_K"] = cu.doubleToString(force.getAmoebaGlobalOutOfPlaneBendQuartic());
     replacements["PENTIC_K"] = cu.doubleToString(force.getAmoebaGlobalOutOfPlaneBendPentic());
@@ -656,7 +617,7 @@ void CudaCalcAmoebaOutOfPlaneBendForceKernel::copyParametersToContext(ContextImp
         force.getOutOfPlaneBendParameters(startIndex+i, atom1, atom2, atom3, atom4, k);
         paramVector[i] = (float) k;
     }
-    params->upload(paramVector);
+    params.upload(paramVector);
     
     // Mark that the current reordering may be invalid.
     
@@ -696,17 +657,7 @@ private:
 };
 
 CudaCalcAmoebaTorsionTorsionForceKernel::CudaCalcAmoebaTorsionTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) :
-                CalcAmoebaTorsionTorsionForceKernel(name, platform), cu(cu), system(system), gridValues(NULL), gridParams(NULL), torsionParams(NULL) {
-}
-
-CudaCalcAmoebaTorsionTorsionForceKernel::~CudaCalcAmoebaTorsionTorsionForceKernel() {
-    cu.setAsCurrent();
-    if (gridValues != NULL)
-        delete gridValues;
-    if (gridParams != NULL)
-        delete gridParams;
-    if (torsionParams != NULL)
-        delete torsionParams;
+                CalcAmoebaTorsionTorsionForceKernel(name, platform), cu(cu), system(system) {
 }
 
 void CudaCalcAmoebaTorsionTorsionForceKernel::initialize(const System& system, const AmoebaTorsionTorsionForce& force) {
@@ -722,10 +673,10 @@ void CudaCalcAmoebaTorsionTorsionForceKernel::initialize(const System& system, c
     
     vector<vector<int> > atoms(numTorsionTorsions, vector<int>(5));
     vector<int2> torsionParamsVec(numTorsionTorsions);
-    torsionParams = CudaArray::create<int2>(cu, numTorsionTorsions, "torsionTorsionParams");
+    torsionParams.initialize<int2>(cu, numTorsionTorsions, "torsionTorsionParams");
     for (int i = 0; i < numTorsionTorsions; i++)
         force.getTorsionTorsionParameters(startIndex+i, atoms[i][0], atoms[i][1], atoms[i][2], atoms[i][3], atoms[i][4], torsionParamsVec[i].x, torsionParamsVec[i].y);
-    torsionParams->upload(torsionParamsVec);
+    torsionParams.upload(torsionParamsVec);
     
     // Record the grids.
     
@@ -749,15 +700,15 @@ void CudaCalcAmoebaTorsionTorsionForceKernel::initialize(const System& system, c
             for (int k = 0; k < grid[j].size(); k++)
                 gridValuesVec.push_back(make_float4((float) grid[j][k][2], (float) grid[j][k][3], (float) grid[j][k][4], (float) grid[j][k][5]));
     }
-    gridValues = CudaArray::create<float4>(cu, gridValuesVec.size(), "torsionTorsionGridValues");
-    gridParams = CudaArray::create<float4>(cu, gridParamsVec.size(), "torsionTorsionGridParams");
-    gridValues->upload(gridValuesVec);
-    gridParams->upload(gridParamsVec);
+    gridValues.initialize<float4>(cu, gridValuesVec.size(), "torsionTorsionGridValues");
+    gridParams.initialize<float4>(cu, gridParamsVec.size(), "torsionTorsionGridParams");
+    gridValues.upload(gridValuesVec);
+    gridParams.upload(gridParamsVec);
     map<string, string> replacements;
     replacements["APPLY_PERIODIC"] = (force.usesPeriodicBoundaryConditions() ? "1" : "0");
-    replacements["GRID_VALUES"] = cu.getBondedUtilities().addArgument(gridValues->getDevicePointer(), "float4");
-    replacements["GRID_PARAMS"] = cu.getBondedUtilities().addArgument(gridParams->getDevicePointer(), "float4");
-    replacements["TORSION_PARAMS"] = cu.getBondedUtilities().addArgument(torsionParams->getDevicePointer(), "int2");
+    replacements["GRID_VALUES"] = cu.getBondedUtilities().addArgument(gridValues.getDevicePointer(), "float4");
+    replacements["GRID_PARAMS"] = cu.getBondedUtilities().addArgument(gridParams.getDevicePointer(), "float4");
+    replacements["TORSION_PARAMS"] = cu.getBondedUtilities().addArgument(torsionParams.getDevicePointer(), "int2");
     replacements["RAD_TO_DEG"] = cu.doubleToString(180/M_PI);
     cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaAmoebaKernelSources::amoebaTorsionTorsionForce, replacements), force.getForceGroup());
     cu.getBondedUtilities().addPrefixCode(CudaAmoebaKernelSources::bicubic);
@@ -814,123 +765,11 @@ private:
 
 CudaCalcAmoebaMultipoleForceKernel::CudaCalcAmoebaMultipoleForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : 
         CalcAmoebaMultipoleForceKernel(name, platform), cu(cu), system(system), hasInitializedScaleFactors(false), hasInitializedFFT(false), multipolesAreValid(false), hasCreatedEvent(false),
-        multipoleParticles(NULL), molecularDipoles(NULL), molecularQuadrupoles(NULL), labFrameDipoles(NULL), labFrameQuadrupoles(NULL), sphericalDipoles(NULL), sphericalQuadrupoles(NULL),
-        fracDipoles(NULL), fracQuadrupoles(NULL), field(NULL), fieldPolar(NULL), inducedField(NULL), inducedFieldPolar(NULL), torque(NULL), dampingAndThole(NULL), inducedDipole(NULL),
-        diisCoefficients(NULL), inducedDipolePolar(NULL), inducedDipoleErrors(NULL), prevDipoles(NULL), prevDipolesPolar(NULL), prevDipolesGk(NULL),
-        prevDipolesGkPolar(NULL), prevErrors(NULL), diisMatrix(NULL), polarizability(NULL), extrapolatedDipole(NULL), extrapolatedDipolePolar(NULL),
-        extrapolatedDipoleGk(NULL), extrapolatedDipoleGkPolar(NULL), inducedDipoleFieldGradient(NULL), inducedDipoleFieldGradientPolar(NULL),
-        inducedDipoleFieldGradientGk(NULL), inducedDipoleFieldGradientGkPolar(NULL), extrapolatedDipoleFieldGradient(NULL), extrapolatedDipoleFieldGradientPolar(NULL),
-        extrapolatedDipoleFieldGradientGk(NULL), extrapolatedDipoleFieldGradientGkPolar(NULL), covalentFlags(NULL), polarizationGroupFlags(NULL),
-        pmeGrid(NULL), pmeBsplineModuliX(NULL), pmeBsplineModuliY(NULL), pmeBsplineModuliZ(NULL), pmeIgrid(NULL), pmePhi(NULL),
-        pmePhid(NULL), pmePhip(NULL), pmePhidp(NULL), pmeCphi(NULL), lastPositions(NULL), sort(NULL), gkKernel(NULL) {
+        gkKernel(NULL) {
 }
 
 CudaCalcAmoebaMultipoleForceKernel::~CudaCalcAmoebaMultipoleForceKernel() {
     cu.setAsCurrent();
-    if (multipoleParticles != NULL)
-        delete multipoleParticles;
-    if (molecularDipoles != NULL)
-        delete molecularDipoles;
-    if (molecularQuadrupoles != NULL)
-        delete molecularQuadrupoles;
-    if (labFrameDipoles != NULL)
-        delete labFrameDipoles;
-    if (labFrameQuadrupoles != NULL)
-        delete labFrameQuadrupoles;
-    if (sphericalDipoles != NULL)
-        delete sphericalDipoles;
-    if (sphericalQuadrupoles != NULL)
-        delete sphericalQuadrupoles;
-    if (fracDipoles != NULL)
-        delete fracDipoles;
-    if (fracQuadrupoles != NULL)
-        delete fracQuadrupoles;
-    if (field != NULL)
-        delete field;
-    if (fieldPolar != NULL)
-        delete fieldPolar;
-    if (inducedField != NULL)
-        delete inducedField;
-    if (inducedFieldPolar != NULL)
-        delete inducedFieldPolar;
-    if (torque != NULL)
-        delete torque;
-    if (dampingAndThole != NULL)
-        delete dampingAndThole;
-    if (inducedDipole != NULL)
-        delete inducedDipole;
-    if (inducedDipolePolar != NULL)
-        delete inducedDipolePolar;
-    if (inducedDipoleErrors != NULL)
-        delete inducedDipoleErrors;
-    if (prevDipoles != NULL)
-        delete prevDipoles;
-    if (prevDipolesPolar != NULL)
-        delete prevDipolesPolar;
-    if (prevDipolesGk != NULL)
-        delete prevDipolesGk;
-    if (prevDipolesGkPolar != NULL)
-        delete prevDipolesGkPolar;
-    if (prevErrors != NULL)
-        delete prevErrors;
-    if (diisMatrix != NULL)
-        delete diisMatrix;
-    if (diisCoefficients != NULL)
-        delete diisCoefficients;
-    if (extrapolatedDipole != NULL)
-        delete extrapolatedDipole;
-    if (extrapolatedDipolePolar != NULL)
-        delete extrapolatedDipolePolar;
-    if (extrapolatedDipoleGk != NULL)
-        delete extrapolatedDipoleGk;
-    if (extrapolatedDipoleGkPolar != NULL)
-        delete extrapolatedDipoleGkPolar;
-    if (inducedDipoleFieldGradient != NULL)
-        delete inducedDipoleFieldGradient;
-    if (inducedDipoleFieldGradientPolar != NULL)
-        delete inducedDipoleFieldGradientPolar;
-    if (inducedDipoleFieldGradientGk != NULL)
-        delete inducedDipoleFieldGradientGk;
-    if (inducedDipoleFieldGradientGkPolar != NULL)
-        delete inducedDipoleFieldGradientGkPolar;
-    if (extrapolatedDipoleFieldGradient != NULL)
-        delete extrapolatedDipoleFieldGradient;
-    if (extrapolatedDipoleFieldGradientPolar != NULL)
-        delete extrapolatedDipoleFieldGradientPolar;
-    if (extrapolatedDipoleFieldGradientGk != NULL)
-        delete extrapolatedDipoleFieldGradientGk;
-    if (extrapolatedDipoleFieldGradientGkPolar != NULL)
-        delete extrapolatedDipoleFieldGradientGkPolar;
-    if (polarizability != NULL)
-        delete polarizability;
-    if (covalentFlags != NULL)
-        delete covalentFlags;
-    if (polarizationGroupFlags != NULL)
-        delete polarizationGroupFlags;
-    if (pmeGrid != NULL)
-        delete pmeGrid;
-    if (pmeBsplineModuliX != NULL)
-        delete pmeBsplineModuliX;
-    if (pmeBsplineModuliY != NULL)
-        delete pmeBsplineModuliY;
-    if (pmeBsplineModuliZ != NULL)
-        delete pmeBsplineModuliZ;
-    if (pmeIgrid != NULL)
-        delete pmeIgrid;
-    if (pmePhi != NULL)
-        delete pmePhi;
-    if (pmePhid != NULL)
-        delete pmePhid;
-    if (pmePhip != NULL)
-        delete pmePhip;
-    if (pmePhidp != NULL)
-        delete pmePhidp;
-    if (pmeCphi != NULL)
-        delete pmeCphi;
-    if (lastPositions != NULL)
-        delete lastPositions;
-    if (sort != NULL)
-        delete sort;
     if (hasInitializedFFT)
         cufftDestroy(fft);
     if (hasCreatedEvent)
@@ -986,56 +825,56 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         for (int j = 0; j < 5; j++)
             molecularQuadrupolesVec.push_back(0);
     }
-    dampingAndThole = CudaArray::create<float2>(cu, paddedNumAtoms, "dampingAndThole");
-    polarizability = CudaArray::create<float>(cu, paddedNumAtoms, "polarizability");
-    multipoleParticles = CudaArray::create<int4>(cu, paddedNumAtoms, "multipoleParticles");
-    molecularDipoles = CudaArray::create<float>(cu, 3*paddedNumAtoms, "molecularDipoles");
-    molecularQuadrupoles = CudaArray::create<float>(cu, 5*paddedNumAtoms, "molecularQuadrupoles");
-    lastPositions = new CudaArray(cu, cu.getPosq().getSize(), cu.getPosq().getElementSize(), "lastPositions");
-    dampingAndThole->upload(dampingAndTholeVec);
-    polarizability->upload(polarizabilityVec);
-    multipoleParticles->upload(multipoleParticlesVec);
-    molecularDipoles->upload(molecularDipolesVec);
-    molecularQuadrupoles->upload(molecularQuadrupolesVec);
+    dampingAndThole.initialize<float2>(cu, paddedNumAtoms, "dampingAndThole");
+    polarizability.initialize<float>(cu, paddedNumAtoms, "polarizability");
+    multipoleParticles.initialize<int4>(cu, paddedNumAtoms, "multipoleParticles");
+    molecularDipoles.initialize<float>(cu, 3*paddedNumAtoms, "molecularDipoles");
+    molecularQuadrupoles.initialize<float>(cu, 5*paddedNumAtoms, "molecularQuadrupoles");
+    lastPositions.initialize(cu, cu.getPosq().getSize(), cu.getPosq().getElementSize(), "lastPositions");
+    dampingAndThole.upload(dampingAndTholeVec);
+    polarizability.upload(polarizabilityVec);
+    multipoleParticles.upload(multipoleParticlesVec);
+    molecularDipoles.upload(molecularDipolesVec);
+    molecularQuadrupoles.upload(molecularQuadrupolesVec);
     posq.upload(&temp[0]);
     
     // Create workspace arrays.
     
     polarizationType = force.getPolarizationType();
     int elementSize = (cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
-    labFrameDipoles = new CudaArray(cu, 3*paddedNumAtoms, elementSize, "labFrameDipoles");
-    labFrameQuadrupoles = new CudaArray(cu, 5*paddedNumAtoms, elementSize, "labFrameQuadrupoles");
-    sphericalDipoles = new CudaArray(cu, 3*paddedNumAtoms, elementSize, "sphericalDipoles");
-    sphericalQuadrupoles = new CudaArray(cu, 5*paddedNumAtoms, elementSize, "sphericalQuadrupoles");
-    fracDipoles = new CudaArray(cu, 3*paddedNumAtoms, elementSize, "fracDipoles");
-    fracQuadrupoles = new CudaArray(cu, 6*paddedNumAtoms, elementSize, "fracQuadrupoles");
-    field = new CudaArray(cu, 3*paddedNumAtoms, sizeof(long long), "field");
-    fieldPolar = new CudaArray(cu, 3*paddedNumAtoms, sizeof(long long), "fieldPolar");
-    torque = new CudaArray(cu, 3*paddedNumAtoms, sizeof(long long), "torque");
-    inducedDipole = new CudaArray(cu, 3*paddedNumAtoms, elementSize, "inducedDipole");
-    inducedDipolePolar = new CudaArray(cu, 3*paddedNumAtoms, elementSize, "inducedDipolePolar");
+    labFrameDipoles.initialize(cu, 3*paddedNumAtoms, elementSize, "labFrameDipoles");
+    labFrameQuadrupoles.initialize(cu, 5*paddedNumAtoms, elementSize, "labFrameQuadrupoles");
+    sphericalDipoles.initialize(cu, 3*paddedNumAtoms, elementSize, "sphericalDipoles");
+    sphericalQuadrupoles.initialize(cu, 5*paddedNumAtoms, elementSize, "sphericalQuadrupoles");
+    fracDipoles.initialize(cu, 3*paddedNumAtoms, elementSize, "fracDipoles");
+    fracQuadrupoles.initialize(cu, 6*paddedNumAtoms, elementSize, "fracQuadrupoles");
+    field.initialize(cu, 3*paddedNumAtoms, sizeof(long long), "field");
+    fieldPolar.initialize(cu, 3*paddedNumAtoms, sizeof(long long), "fieldPolar");
+    torque.initialize(cu, 3*paddedNumAtoms, sizeof(long long), "torque");
+    inducedDipole.initialize(cu, 3*paddedNumAtoms, elementSize, "inducedDipole");
+    inducedDipolePolar.initialize(cu, 3*paddedNumAtoms, elementSize, "inducedDipolePolar");
     if (polarizationType == AmoebaMultipoleForce::Mutual) {
-        inducedDipoleErrors = new CudaArray(cu, cu.getNumThreadBlocks(), sizeof(float2), "inducedDipoleErrors");
-        prevDipoles = new CudaArray(cu, 3*numMultipoles*MaxPrevDIISDipoles, elementSize, "prevDipoles");
-        prevDipolesPolar = new CudaArray(cu, 3*numMultipoles*MaxPrevDIISDipoles, elementSize, "prevDipolesPolar");
-        prevErrors = new CudaArray(cu, 3*numMultipoles*MaxPrevDIISDipoles, elementSize, "prevErrors");
-        diisMatrix = new CudaArray(cu, MaxPrevDIISDipoles*MaxPrevDIISDipoles, elementSize, "diisMatrix");
-        diisCoefficients = new CudaArray(cu, MaxPrevDIISDipoles+1, sizeof(float), "diisMatrix");
+        inducedDipoleErrors.initialize(cu, cu.getNumThreadBlocks(), sizeof(float2), "inducedDipoleErrors");
+        prevDipoles.initialize(cu, 3*numMultipoles*MaxPrevDIISDipoles, elementSize, "prevDipoles");
+        prevDipolesPolar.initialize(cu, 3*numMultipoles*MaxPrevDIISDipoles, elementSize, "prevDipolesPolar");
+        prevErrors.initialize(cu, 3*numMultipoles*MaxPrevDIISDipoles, elementSize, "prevErrors");
+        diisMatrix.initialize(cu, MaxPrevDIISDipoles*MaxPrevDIISDipoles, elementSize, "diisMatrix");
+        diisCoefficients.initialize(cu, MaxPrevDIISDipoles+1, sizeof(float), "diisMatrix");
         CHECK_RESULT(cuEventCreate(&syncEvent, CU_EVENT_DISABLE_TIMING), "Error creating event for AmoebaMultipoleForce");
         hasCreatedEvent = true;
     }
     else if (polarizationType == AmoebaMultipoleForce::Extrapolated) {
         int numOrders = force.getExtrapolationCoefficients().size();
-        extrapolatedDipole = new CudaArray(cu, 3*numMultipoles*numOrders, elementSize, "extrapolatedDipole");
-        extrapolatedDipolePolar = new CudaArray(cu, 3*numMultipoles*numOrders, elementSize, "extrapolatedDipolePolar");
-        inducedDipoleFieldGradient = new CudaArray(cu, 6*paddedNumAtoms, sizeof(long long), "inducedDipoleFieldGradient");
-        inducedDipoleFieldGradientPolar = new CudaArray(cu, 6*paddedNumAtoms, sizeof(long long), "inducedDipoleFieldGradientPolar");
-        extrapolatedDipoleFieldGradient = new CudaArray(cu, 6*numMultipoles*(numOrders-1), elementSize, "extrapolatedDipoleFieldGradient");
-        extrapolatedDipoleFieldGradientPolar = new CudaArray(cu, 6*numMultipoles*(numOrders-1), elementSize, "extrapolatedDipoleFieldGradientPolar");
+        extrapolatedDipole.initialize(cu, 3*numMultipoles*numOrders, elementSize, "extrapolatedDipole");
+        extrapolatedDipolePolar.initialize(cu, 3*numMultipoles*numOrders, elementSize, "extrapolatedDipolePolar");
+        inducedDipoleFieldGradient.initialize(cu, 6*paddedNumAtoms, sizeof(long long), "inducedDipoleFieldGradient");
+        inducedDipoleFieldGradientPolar.initialize(cu, 6*paddedNumAtoms, sizeof(long long), "inducedDipoleFieldGradientPolar");
+        extrapolatedDipoleFieldGradient.initialize(cu, 6*numMultipoles*(numOrders-1), elementSize, "extrapolatedDipoleFieldGradient");
+        extrapolatedDipoleFieldGradientPolar.initialize(cu, 6*numMultipoles*(numOrders-1), elementSize, "extrapolatedDipoleFieldGradientPolar");
     }
-    cu.addAutoclearBuffer(*field);
-    cu.addAutoclearBuffer(*fieldPolar);
-    cu.addAutoclearBuffer(*torque);
+    cu.addAutoclearBuffer(field);
+    cu.addAutoclearBuffer(fieldPolar);
+    cu.addAutoclearBuffer(torque);
     
     // Record which atoms should be flagged as exclusions based on covalent groups, and determine
     // the values for the covalent group flags.
@@ -1090,8 +929,8 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
     else
         maxInducedIterations = 0;
     if (polarizationType != AmoebaMultipoleForce::Direct) {
-        inducedField = new CudaArray(cu, 3*paddedNumAtoms, sizeof(long long), "inducedField");
-        inducedFieldPolar = new CudaArray(cu, 3*paddedNumAtoms, sizeof(long long), "inducedFieldPolar");
+        inducedField.initialize(cu, 3*paddedNumAtoms, sizeof(long long), "inducedField");
+        inducedFieldPolar.initialize(cu, 3*paddedNumAtoms, sizeof(long long), "inducedFieldPolar");
     }
     usePME = (force.getNonbondedMethod() == AmoebaMultipoleForce::PME);
     
@@ -1180,18 +1019,18 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         fixedThreadMemory += 4*elementSize;
         inducedThreadMemory += 13*elementSize;
         if (polarizationType == AmoebaMultipoleForce::Mutual) {
-            prevDipolesGk = new CudaArray(cu, 3*numMultipoles*MaxPrevDIISDipoles, elementSize, "prevDipolesGk");
-            prevDipolesGkPolar = new CudaArray(cu, 3*numMultipoles*MaxPrevDIISDipoles, elementSize, "prevDipolesGkPolar");
+            prevDipolesGk.initialize(cu, 3*numMultipoles*MaxPrevDIISDipoles, elementSize, "prevDipolesGk");
+            prevDipolesGkPolar.initialize(cu, 3*numMultipoles*MaxPrevDIISDipoles, elementSize, "prevDipolesGkPolar");
         }
         else if (polarizationType == AmoebaMultipoleForce::Extrapolated) {
             inducedThreadMemory += 12*elementSize;
             int numOrders = force.getExtrapolationCoefficients().size();
-            extrapolatedDipoleGk = new CudaArray(cu, 3*numMultipoles*numOrders, elementSize, "extrapolatedDipoleGk");
-            extrapolatedDipoleGkPolar = new CudaArray(cu, 3*numMultipoles*numOrders, elementSize, "extrapolatedDipoleGkPolar");
-            inducedDipoleFieldGradientGk = new CudaArray(cu, 6*numMultipoles, elementSize, "inducedDipoleFieldGradientGk");
-            inducedDipoleFieldGradientGkPolar = new CudaArray(cu, 6*numMultipoles, elementSize, "inducedDipoleFieldGradientGkPolar");
-            extrapolatedDipoleFieldGradientGk = new CudaArray(cu, 6*numMultipoles*(numOrders-1), elementSize, "extrapolatedDipoleFieldGradientGk");
-            extrapolatedDipoleFieldGradientGkPolar = new CudaArray(cu, 6*numMultipoles*(numOrders-1), elementSize, "extrapolatedDipoleFieldGradientGkPolar");
+            extrapolatedDipoleGk.initialize(cu, 3*numMultipoles*numOrders, elementSize, "extrapolatedDipoleGk");
+            extrapolatedDipoleGkPolar.initialize(cu, 3*numMultipoles*numOrders, elementSize, "extrapolatedDipoleGkPolar");
+            inducedDipoleFieldGradientGk.initialize(cu, 6*numMultipoles, elementSize, "inducedDipoleFieldGradientGk");
+            inducedDipoleFieldGradientGkPolar.initialize(cu, 6*numMultipoles, elementSize, "inducedDipoleFieldGradientGkPolar");
+            extrapolatedDipoleFieldGradientGk.initialize(cu, 6*numMultipoles*(numOrders-1), elementSize, "extrapolatedDipoleFieldGradientGk");
+            extrapolatedDipoleFieldGradientGkPolar.initialize(cu, 6*numMultipoles*(numOrders-1), elementSize, "extrapolatedDipoleFieldGradientGkPolar");
         }
     }
     int maxThreads = cu.getNonbondedUtilities().getForceThreadBlockSize();
@@ -1274,19 +1113,16 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         // Create required data structures.
 
         int elementSize = (cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
-        pmeGrid = new CudaArray(cu, gridSizeX*gridSizeY*gridSizeZ, 2*elementSize, "pmeGrid");
-        cu.addAutoclearBuffer(*pmeGrid);
-        pmeBsplineModuliX = new CudaArray(cu, gridSizeX, elementSize, "pmeBsplineModuliX");
-        pmeBsplineModuliY = new CudaArray(cu, gridSizeY, elementSize, "pmeBsplineModuliY");
-        pmeBsplineModuliZ = new CudaArray(cu, gridSizeZ, elementSize, "pmeBsplineModuliZ");
-        pmeIgrid = CudaArray::create<int4>(cu, numMultipoles, "pmeIgrid");
-        pmePhi = new CudaArray(cu, 20*numMultipoles, elementSize, "pmePhi");
-        pmePhid = new CudaArray(cu, 10*numMultipoles, elementSize, "pmePhid");
-        pmePhip = new CudaArray(cu, 10*numMultipoles, elementSize, "pmePhip");
-        pmePhidp = new CudaArray(cu, 20*numMultipoles, elementSize, "pmePhidp");
-        pmeCphi = new CudaArray(cu, 10*numMultipoles, elementSize, "pmeCphi");
-        pmeAtomRange = CudaArray::create<int>(cu, gridSizeX*gridSizeY*gridSizeZ+1, "pmeAtomRange");
-        sort = new CudaSort(cu, new SortTrait(), cu.getNumAtoms());
+        pmeGrid.initialize(cu, gridSizeX*gridSizeY*gridSizeZ, 2*elementSize, "pmeGrid");
+        cu.addAutoclearBuffer(pmeGrid);
+        pmeBsplineModuliX.initialize(cu, gridSizeX, elementSize, "pmeBsplineModuliX");
+        pmeBsplineModuliY.initialize(cu, gridSizeY, elementSize, "pmeBsplineModuliY");
+        pmeBsplineModuliZ.initialize(cu, gridSizeZ, elementSize, "pmeBsplineModuliZ");
+        pmePhi.initialize(cu, 20*numMultipoles, elementSize, "pmePhi");
+        pmePhid.initialize(cu, 10*numMultipoles, elementSize, "pmePhid");
+        pmePhip.initialize(cu, 10*numMultipoles, elementSize, "pmePhip");
+        pmePhidp.initialize(cu, 20*numMultipoles, elementSize, "pmePhidp");
+        pmeCphi.initialize(cu, 10*numMultipoles, elementSize, "pmeCphi");
         cufftResult result = cufftPlan3d(&fft, gridSizeX, gridSizeY, gridSizeZ, cu.getUseDoublePrecision() ? CUFFT_Z2Z : CUFFT_C2C);
         if (result != CUFFT_SUCCESS)
             throw OpenMMException("Error initializing FFT: "+cu.intToString(result));
@@ -1368,22 +1204,22 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
             }
             if (cu.getUseDoublePrecision()) {
                 if (dim == 0)
-                    pmeBsplineModuliX->upload(moduli);
+                    pmeBsplineModuliX.upload(moduli);
                 else if (dim == 1)
-                    pmeBsplineModuliY->upload(moduli);
+                    pmeBsplineModuliY.upload(moduli);
                 else
-                    pmeBsplineModuliZ->upload(moduli);
+                    pmeBsplineModuliZ.upload(moduli);
             }
             else {
                 vector<float> modulif(ndata);
                 for (int i = 0; i < ndata; i++)
                     modulif[i] = (float) moduli[i];
                 if (dim == 0)
-                    pmeBsplineModuliX->upload(modulif);
+                    pmeBsplineModuliX.upload(modulif);
                 else if (dim == 1)
-                    pmeBsplineModuliY->upload(modulif);
+                    pmeBsplineModuliY.upload(modulif);
                 else
-                    pmeBsplineModuliZ->upload(modulif);
+                    pmeBsplineModuliZ.upload(modulif);
             }
         }
     }
@@ -1409,7 +1245,7 @@ void CudaCalcAmoebaMultipoleForceKernel::initializeScaleFactors() {
         ushort2 tile = exclusionTiles[i];
         exclusionTileMap[make_pair(tile.x, tile.y)] = i;
     }
-    covalentFlags = CudaArray::create<uint2>(cu, nb.getExclusions().getSize(), "covalentFlags");
+    covalentFlags.initialize<uint2>(cu, nb.getExclusions().getSize(), "covalentFlags");
     vector<uint2> covalentFlagsVec(nb.getExclusions().getSize(), make_uint2(0, 0));
     for (int3 values : covalentFlagValues) {
         int atom1 = values.x;
@@ -1439,11 +1275,11 @@ void CudaCalcAmoebaMultipoleForceKernel::initializeScaleFactors() {
             covalentFlagsVec[index+offset2].y |= f2<<offset1;
         }
     }
-    covalentFlags->upload(covalentFlagsVec);
+    covalentFlags.upload(covalentFlagsVec);
     
     // Do the same for the polarization flags.
     
-    polarizationGroupFlags = CudaArray::create<unsigned int>(cu, nb.getExclusions().getSize(), "polarizationGroupFlags");
+    polarizationGroupFlags.initialize<unsigned int>(cu, nb.getExclusions().getSize(), "polarizationGroupFlags");
     vector<unsigned int> polarizationGroupFlagsVec(nb.getExclusions().getSize(), 0);
     for (int2 values : polarizationFlagValues) {
         int atom1 = values.x;
@@ -1466,7 +1302,7 @@ void CudaCalcAmoebaMultipoleForceKernel::initializeScaleFactors() {
             polarizationGroupFlagsVec[index+offset2] |= 1<<offset1;
         }
     }
-    polarizationGroupFlags->upload(polarizationGroupFlagsVec);
+    polarizationGroupFlags.upload(polarizationGroupFlagsVec);
 }
 
 double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -1484,38 +1320,38 @@ double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool in
     
     // Compute the lab frame moments.
 
-    void* computeMomentsArgs[] = {&cu.getPosq().getDevicePointer(), &multipoleParticles->getDevicePointer(),
-        &molecularDipoles->getDevicePointer(), &molecularQuadrupoles->getDevicePointer(),
-        &labFrameDipoles->getDevicePointer(), &labFrameQuadrupoles->getDevicePointer(),
-        &sphericalDipoles->getDevicePointer(), &sphericalQuadrupoles->getDevicePointer()};
+    void* computeMomentsArgs[] = {&cu.getPosq().getDevicePointer(), &multipoleParticles.getDevicePointer(),
+        &molecularDipoles.getDevicePointer(), &molecularQuadrupoles.getDevicePointer(),
+        &labFrameDipoles.getDevicePointer(), &labFrameQuadrupoles.getDevicePointer(),
+        &sphericalDipoles.getDevicePointer(), &sphericalQuadrupoles.getDevicePointer()};
     cu.executeKernel(computeMomentsKernel, computeMomentsArgs, cu.getNumAtoms());
     int startTileIndex = nb.getStartTileIndex();
     int numTileIndices = nb.getNumTiles();
     int numForceThreadBlocks = nb.getNumForceThreadBlocks();
     int elementSize = (cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
-    if (pmeGrid == NULL) {
+    if (!pmeGrid.isInitialized()) {
         // Compute induced dipoles.
         
         if (gkKernel == NULL) {
-            void* computeFixedFieldArgs[] = {&field->getDevicePointer(), &fieldPolar->getDevicePointer(), &cu.getPosq().getDevicePointer(),
-                &covalentFlags->getDevicePointer(), &polarizationGroupFlags->getDevicePointer(), &nb.getExclusionTiles().getDevicePointer(), &startTileIndex, &numTileIndices,
-                &labFrameDipoles->getDevicePointer(), &labFrameQuadrupoles->getDevicePointer(), &dampingAndThole->getDevicePointer()};
+            void* computeFixedFieldArgs[] = {&field.getDevicePointer(), &fieldPolar.getDevicePointer(), &cu.getPosq().getDevicePointer(),
+                &covalentFlags.getDevicePointer(), &polarizationGroupFlags.getDevicePointer(), &nb.getExclusionTiles().getDevicePointer(), &startTileIndex, &numTileIndices,
+                &labFrameDipoles.getDevicePointer(), &labFrameQuadrupoles.getDevicePointer(), &dampingAndThole.getDevicePointer()};
             cu.executeKernel(computeFixedFieldKernel, computeFixedFieldArgs, numForceThreadBlocks*fixedFieldThreads, fixedFieldThreads);
-            void* recordInducedDipolesArgs[] = {&field->getDevicePointer(), &fieldPolar->getDevicePointer(),
-                &inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(), &polarizability->getDevicePointer()};
+            void* recordInducedDipolesArgs[] = {&field.getDevicePointer(), &fieldPolar.getDevicePointer(),
+                &inducedDipole.getDevicePointer(), &inducedDipolePolar.getDevicePointer(), &polarizability.getDevicePointer()};
             cu.executeKernel(recordInducedDipolesKernel, recordInducedDipolesArgs, cu.getNumAtoms());
         }
         else {
             gkKernel->computeBornRadii();
-            void* computeFixedFieldArgs[] = {&field->getDevicePointer(), &fieldPolar->getDevicePointer(), &cu.getPosq().getDevicePointer(),
-                &covalentFlags->getDevicePointer(), &polarizationGroupFlags->getDevicePointer(), &nb.getExclusionTiles().getDevicePointer(), &startTileIndex, &numTileIndices,
-                &gkKernel->getBornRadii()->getDevicePointer(), &gkKernel->getField()->getDevicePointer(),
-                &labFrameDipoles->getDevicePointer(), &labFrameQuadrupoles->getDevicePointer(), &dampingAndThole->getDevicePointer()};
+            void* computeFixedFieldArgs[] = {&field.getDevicePointer(), &fieldPolar.getDevicePointer(), &cu.getPosq().getDevicePointer(),
+                &covalentFlags.getDevicePointer(), &polarizationGroupFlags.getDevicePointer(), &nb.getExclusionTiles().getDevicePointer(), &startTileIndex, &numTileIndices,
+                &gkKernel->getBornRadii().getDevicePointer(), &gkKernel->getField().getDevicePointer(),
+                &labFrameDipoles.getDevicePointer(), &labFrameQuadrupoles.getDevicePointer(), &dampingAndThole.getDevicePointer()};
             cu.executeKernel(computeFixedFieldKernel, computeFixedFieldArgs, numForceThreadBlocks*fixedFieldThreads, fixedFieldThreads);
-            void* recordInducedDipolesArgs[] = {&field->getDevicePointer(), &fieldPolar->getDevicePointer(),
-                &gkKernel->getField()->getDevicePointer(), &gkKernel->getInducedDipoles()->getDevicePointer(),
-                &gkKernel->getInducedDipolesPolar()->getDevicePointer(), &inducedDipole->getDevicePointer(),
-                &inducedDipolePolar->getDevicePointer(), &polarizability->getDevicePointer()};
+            void* recordInducedDipolesArgs[] = {&field.getDevicePointer(), &fieldPolar.getDevicePointer(),
+                &gkKernel->getField().getDevicePointer(), &gkKernel->getInducedDipoles().getDevicePointer(),
+                &gkKernel->getInducedDipolesPolar().getDevicePointer(), &inducedDipole.getDevicePointer(),
+                &inducedDipolePolar.getDevicePointer(), &polarizability.getDevicePointer()};
             cu.executeKernel(recordInducedDipolesKernel, recordInducedDipolesArgs, cu.getNumAtoms());
         }
         
@@ -1532,14 +1368,14 @@ double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool in
         
         // Compute electrostatic force.
         
-        void* electrostaticsArgs[] = {&cu.getForce().getDevicePointer(), &torque->getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(),
-            &cu.getPosq().getDevicePointer(), &covalentFlags->getDevicePointer(), &polarizationGroupFlags->getDevicePointer(),
+        void* electrostaticsArgs[] = {&cu.getForce().getDevicePointer(), &torque.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(),
+            &cu.getPosq().getDevicePointer(), &covalentFlags.getDevicePointer(), &polarizationGroupFlags.getDevicePointer(),
             &nb.getExclusionTiles().getDevicePointer(), &startTileIndex, &numTileIndices,
-            &sphericalDipoles->getDevicePointer(), &sphericalQuadrupoles->getDevicePointer(),
-            &inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(), &dampingAndThole->getDevicePointer()};
+            &sphericalDipoles.getDevicePointer(), &sphericalQuadrupoles.getDevicePointer(),
+            &inducedDipole.getDevicePointer(), &inducedDipolePolar.getDevicePointer(), &dampingAndThole.getDevicePointer()};
         cu.executeKernel(electrostaticsKernel, electrostaticsArgs, numForceThreadBlocks*electrostaticsThreads, electrostaticsThreads);
         if (gkKernel != NULL)
-            gkKernel->finishComputation(*torque, *labFrameDipoles, *labFrameQuadrupoles, *inducedDipole, *inducedDipolePolar, *dampingAndThole, *covalentFlags, *polarizationGroupFlags);
+            gkKernel->finishComputation(torque, labFrameDipoles, labFrameQuadrupoles, inducedDipole, inducedDipolePolar, dampingAndThole, covalentFlags, polarizationGroupFlags);
     }
     else {
         // Compute reciprocal box vectors.
@@ -1571,73 +1407,73 @@ double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool in
         // Reciprocal space calculation.
         
         unsigned int maxTiles = nb.getInteractingTiles().getSize();
-        void* pmeTransformMultipolesArgs[] = {&labFrameDipoles->getDevicePointer(), &labFrameQuadrupoles->getDevicePointer(),
-            &fracDipoles->getDevicePointer(), &fracQuadrupoles->getDevicePointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
+        void* pmeTransformMultipolesArgs[] = {&labFrameDipoles.getDevicePointer(), &labFrameQuadrupoles.getDevicePointer(),
+            &fracDipoles.getDevicePointer(), &fracQuadrupoles.getDevicePointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
         cu.executeKernel(pmeTransformMultipolesKernel, pmeTransformMultipolesArgs, cu.getNumAtoms());
-        void* pmeSpreadFixedMultipolesArgs[] = {&cu.getPosq().getDevicePointer(), &fracDipoles->getDevicePointer(), &fracQuadrupoles->getDevicePointer(),
-            &pmeGrid->getDevicePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
+        void* pmeSpreadFixedMultipolesArgs[] = {&cu.getPosq().getDevicePointer(), &fracDipoles.getDevicePointer(), &fracQuadrupoles.getDevicePointer(),
+            &pmeGrid.getDevicePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
             recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
         cu.executeKernel(pmeSpreadFixedMultipolesKernel, pmeSpreadFixedMultipolesArgs, cu.getNumAtoms());
-        void* finishSpreadArgs[] = {&pmeGrid->getDevicePointer()};
-        if (cu.getUseDoublePrecision())
-            cu.executeKernel(pmeFinishSpreadChargeKernel, finishSpreadArgs, pmeGrid->getSize());
-        if (cu.getUseDoublePrecision())
-            cufftExecZ2Z(fft, (double2*) pmeGrid->getDevicePointer(), (double2*) pmeGrid->getDevicePointer(), CUFFT_FORWARD);
+        void* finishSpreadArgs[] = {&pmeGrid.getDevicePointer()};
+        if (cu.getUseDoublePrecision()) {
+            cu.executeKernel(pmeFinishSpreadChargeKernel, finishSpreadArgs, pmeGrid.getSize());
+            cufftExecZ2Z(fft, (double2*) pmeGrid.getDevicePointer(), (double2*) pmeGrid.getDevicePointer(), CUFFT_FORWARD);
+        }
         else
-            cufftExecC2C(fft, (float2*) pmeGrid->getDevicePointer(), (float2*) pmeGrid->getDevicePointer(), CUFFT_FORWARD);
-        void* pmeConvolutionArgs[] = {&pmeGrid->getDevicePointer(), &pmeBsplineModuliX->getDevicePointer(), &pmeBsplineModuliY->getDevicePointer(),
-            &pmeBsplineModuliZ->getDevicePointer(), cu.getPeriodicBoxSizePointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
+            cufftExecC2C(fft, (float2*) pmeGrid.getDevicePointer(), (float2*) pmeGrid.getDevicePointer(), CUFFT_FORWARD);
+        void* pmeConvolutionArgs[] = {&pmeGrid.getDevicePointer(), &pmeBsplineModuliX.getDevicePointer(), &pmeBsplineModuliY.getDevicePointer(),
+            &pmeBsplineModuliZ.getDevicePointer(), cu.getPeriodicBoxSizePointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
         cu.executeKernel(pmeConvolutionKernel, pmeConvolutionArgs, gridSizeX*gridSizeY*gridSizeZ, 256);
         if (cu.getUseDoublePrecision())
-            cufftExecZ2Z(fft, (double2*) pmeGrid->getDevicePointer(), (double2*) pmeGrid->getDevicePointer(), CUFFT_INVERSE);
+            cufftExecZ2Z(fft, (double2*) pmeGrid.getDevicePointer(), (double2*) pmeGrid.getDevicePointer(), CUFFT_INVERSE);
         else
-            cufftExecC2C(fft, (float2*) pmeGrid->getDevicePointer(), (float2*) pmeGrid->getDevicePointer(), CUFFT_INVERSE);
-        void* pmeFixedPotentialArgs[] = {&pmeGrid->getDevicePointer(), &pmePhi->getDevicePointer(), &field->getDevicePointer(),
-            &fieldPolar ->getDevicePointer(), &cu.getPosq().getDevicePointer(), &labFrameDipoles->getDevicePointer(),
+            cufftExecC2C(fft, (float2*) pmeGrid.getDevicePointer(), (float2*) pmeGrid.getDevicePointer(), CUFFT_INVERSE);
+        void* pmeFixedPotentialArgs[] = {&pmeGrid.getDevicePointer(), &pmePhi.getDevicePointer(), &field.getDevicePointer(),
+            &fieldPolar .getDevicePointer(), &cu.getPosq().getDevicePointer(), &labFrameDipoles.getDevicePointer(),
             cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
             recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
         cu.executeKernel(pmeFixedPotentialKernel, pmeFixedPotentialArgs, cu.getNumAtoms());
-        void* pmeTransformFixedPotentialArgs[] = {&pmePhi->getDevicePointer(), &pmeCphi->getDevicePointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
+        void* pmeTransformFixedPotentialArgs[] = {&pmePhi.getDevicePointer(), &pmeCphi.getDevicePointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
         cu.executeKernel(pmeTransformPotentialKernel, pmeTransformFixedPotentialArgs, cu.getNumAtoms());
-        void* pmeFixedForceArgs[] = {&cu.getPosq().getDevicePointer(), &cu.getForce().getDevicePointer(), &torque->getDevicePointer(),
-            &cu.getEnergyBuffer().getDevicePointer(), &labFrameDipoles->getDevicePointer(), &labFrameQuadrupoles->getDevicePointer(),
-            &fracDipoles->getDevicePointer(), &fracQuadrupoles->getDevicePointer(), &pmePhi->getDevicePointer(), &pmeCphi->getDevicePointer(),
+        void* pmeFixedForceArgs[] = {&cu.getPosq().getDevicePointer(), &cu.getForce().getDevicePointer(), &torque.getDevicePointer(),
+            &cu.getEnergyBuffer().getDevicePointer(), &labFrameDipoles.getDevicePointer(), &labFrameQuadrupoles.getDevicePointer(),
+            &fracDipoles.getDevicePointer(), &fracQuadrupoles.getDevicePointer(), &pmePhi.getDevicePointer(), &pmeCphi.getDevicePointer(),
             recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
         cu.executeKernel(pmeFixedForceKernel, pmeFixedForceArgs, cu.getNumAtoms());
         
         // Direct space calculation.
         
-        void* computeFixedFieldArgs[] = {&field->getDevicePointer(), &fieldPolar->getDevicePointer(), &cu.getPosq().getDevicePointer(),
-            &covalentFlags->getDevicePointer(), &polarizationGroupFlags->getDevicePointer(), &nb.getExclusionTiles().getDevicePointer(), &startTileIndex, &numTileIndices,
+        void* computeFixedFieldArgs[] = {&field.getDevicePointer(), &fieldPolar.getDevicePointer(), &cu.getPosq().getDevicePointer(),
+            &covalentFlags.getDevicePointer(), &polarizationGroupFlags.getDevicePointer(), &nb.getExclusionTiles().getDevicePointer(), &startTileIndex, &numTileIndices,
             &nb.getInteractingTiles().getDevicePointer(), &nb.getInteractionCount().getDevicePointer(), cu.getPeriodicBoxSizePointer(),
             cu.getInvPeriodicBoxSizePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
             &maxTiles, &nb.getBlockCenters().getDevicePointer(), &nb.getInteractingAtoms().getDevicePointer(),
-            &labFrameDipoles->getDevicePointer(), &labFrameQuadrupoles->getDevicePointer(), &dampingAndThole->getDevicePointer()};
+            &labFrameDipoles.getDevicePointer(), &labFrameQuadrupoles.getDevicePointer(), &dampingAndThole.getDevicePointer()};
         cu.executeKernel(computeFixedFieldKernel, computeFixedFieldArgs, numForceThreadBlocks*fixedFieldThreads, fixedFieldThreads);
-        void* recordInducedDipolesArgs[] = {&field->getDevicePointer(), &fieldPolar->getDevicePointer(),
-            &inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(), &polarizability->getDevicePointer()};
+        void* recordInducedDipolesArgs[] = {&field.getDevicePointer(), &fieldPolar.getDevicePointer(),
+            &inducedDipole.getDevicePointer(), &inducedDipolePolar.getDevicePointer(), &polarizability.getDevicePointer()};
         cu.executeKernel(recordInducedDipolesKernel, recordInducedDipolesArgs, cu.getNumAtoms());
 
         // Reciprocal space calculation for the induced dipoles.
 
-        cu.clearBuffer(*pmeGrid);
-        void* pmeSpreadInducedDipolesArgs[] = {&cu.getPosq().getDevicePointer(), &inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(),
-            &pmeGrid->getDevicePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
+        cu.clearBuffer(pmeGrid);
+        void* pmeSpreadInducedDipolesArgs[] = {&cu.getPosq().getDevicePointer(), &inducedDipole.getDevicePointer(), &inducedDipolePolar.getDevicePointer(),
+            &pmeGrid.getDevicePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
             recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
         cu.executeKernel(pmeSpreadInducedDipolesKernel, pmeSpreadInducedDipolesArgs, cu.getNumAtoms());
-        if (cu.getUseDoublePrecision())
-            cu.executeKernel(pmeFinishSpreadChargeKernel, finishSpreadArgs, pmeGrid->getSize());
-        if (cu.getUseDoublePrecision())
-            cufftExecZ2Z(fft, (double2*) pmeGrid->getDevicePointer(), (double2*) pmeGrid->getDevicePointer(), CUFFT_FORWARD);
+        if (cu.getUseDoublePrecision()) {
+            cu.executeKernel(pmeFinishSpreadChargeKernel, finishSpreadArgs, pmeGrid.getSize());
+            cufftExecZ2Z(fft, (double2*) pmeGrid.getDevicePointer(), (double2*) pmeGrid.getDevicePointer(), CUFFT_FORWARD);
+        }
         else
-            cufftExecC2C(fft, (float2*) pmeGrid->getDevicePointer(), (float2*) pmeGrid->getDevicePointer(), CUFFT_FORWARD);
+            cufftExecC2C(fft, (float2*) pmeGrid.getDevicePointer(), (float2*) pmeGrid.getDevicePointer(), CUFFT_FORWARD);
         cu.executeKernel(pmeConvolutionKernel, pmeConvolutionArgs, gridSizeX*gridSizeY*gridSizeZ, 256);
         if (cu.getUseDoublePrecision())
-            cufftExecZ2Z(fft, (double2*) pmeGrid->getDevicePointer(), (double2*) pmeGrid->getDevicePointer(), CUFFT_INVERSE);
+            cufftExecZ2Z(fft, (double2*) pmeGrid.getDevicePointer(), (double2*) pmeGrid.getDevicePointer(), CUFFT_INVERSE);
         else
-            cufftExecC2C(fft, (float2*) pmeGrid->getDevicePointer(), (float2*) pmeGrid->getDevicePointer(), CUFFT_INVERSE);
-        void* pmeInducedPotentialArgs[] = {&pmeGrid->getDevicePointer(), &pmePhid->getDevicePointer(), &pmePhip->getDevicePointer(),
-            &pmePhidp->getDevicePointer(), &cu.getPosq().getDevicePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(),
+            cufftExecC2C(fft, (float2*) pmeGrid.getDevicePointer(), (float2*) pmeGrid.getDevicePointer(), CUFFT_INVERSE);
+        void* pmeInducedPotentialArgs[] = {&pmeGrid.getDevicePointer(), &pmePhid.getDevicePointer(), &pmePhip.getDevicePointer(),
+            &pmePhidp.getDevicePointer(), &cu.getPosq().getDevicePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(),
             cu.getPeriodicBoxVecZPointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
         cu.executeKernel(pmeInducedPotentialKernel, pmeInducedPotentialArgs, cu.getNumAtoms());
         
@@ -1654,22 +1490,22 @@ double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool in
         
         // Compute electrostatic force.
         
-        void* electrostaticsArgs[] = {&cu.getForce().getDevicePointer(), &torque->getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(),
-            &cu.getPosq().getDevicePointer(), &covalentFlags->getDevicePointer(), &polarizationGroupFlags->getDevicePointer(),
+        void* electrostaticsArgs[] = {&cu.getForce().getDevicePointer(), &torque.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(),
+            &cu.getPosq().getDevicePointer(), &covalentFlags.getDevicePointer(), &polarizationGroupFlags.getDevicePointer(),
             &nb.getExclusionTiles().getDevicePointer(), &startTileIndex, &numTileIndices,
             &nb.getInteractingTiles().getDevicePointer(), &nb.getInteractionCount().getDevicePointer(),
             cu.getPeriodicBoxSizePointer(), cu.getInvPeriodicBoxSizePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
             &maxTiles, &nb.getBlockCenters().getDevicePointer(), &nb.getInteractingAtoms().getDevicePointer(),
-            &sphericalDipoles->getDevicePointer(), &sphericalQuadrupoles->getDevicePointer(),
-            &inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(), &dampingAndThole->getDevicePointer()};
+            &sphericalDipoles.getDevicePointer(), &sphericalQuadrupoles.getDevicePointer(),
+            &inducedDipole.getDevicePointer(), &inducedDipolePolar.getDevicePointer(), &dampingAndThole.getDevicePointer()};
         cu.executeKernel(electrostaticsKernel, electrostaticsArgs, numForceThreadBlocks*electrostaticsThreads, electrostaticsThreads);
-        void* pmeTransformInducedPotentialArgs[] = {&pmePhidp->getDevicePointer(), &pmeCphi->getDevicePointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
+        void* pmeTransformInducedPotentialArgs[] = {&pmePhidp.getDevicePointer(), &pmeCphi.getDevicePointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
         cu.executeKernel(pmeTransformPotentialKernel, pmeTransformInducedPotentialArgs, cu.getNumAtoms());
-        void* pmeInducedForceArgs[] = {&cu.getPosq().getDevicePointer(), &cu.getForce().getDevicePointer(), &torque->getDevicePointer(),
-            &cu.getEnergyBuffer().getDevicePointer(), &labFrameDipoles->getDevicePointer(), &labFrameQuadrupoles->getDevicePointer(),
-            &fracDipoles->getDevicePointer(), &fracQuadrupoles->getDevicePointer(),
-            &inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(), &pmePhi->getDevicePointer(), &pmePhid->getDevicePointer(),
-            &pmePhip->getDevicePointer(), &pmePhidp->getDevicePointer(), &pmeCphi->getDevicePointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
+        void* pmeInducedForceArgs[] = {&cu.getPosq().getDevicePointer(), &cu.getForce().getDevicePointer(), &torque.getDevicePointer(),
+            &cu.getEnergyBuffer().getDevicePointer(), &labFrameDipoles.getDevicePointer(), &labFrameQuadrupoles.getDevicePointer(),
+            &fracDipoles.getDevicePointer(), &fracQuadrupoles.getDevicePointer(),
+            &inducedDipole.getDevicePointer(), &inducedDipolePolar.getDevicePointer(), &pmePhi.getDevicePointer(), &pmePhid.getDevicePointer(),
+            &pmePhip.getDevicePointer(), &pmePhidp.getDevicePointer(), &pmeCphi.getDevicePointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
         cu.executeKernel(pmeInducedForceKernel, pmeInducedForceArgs, cu.getNumAtoms());
     }
     
@@ -1677,28 +1513,28 @@ double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool in
     
     if (polarizationType == AmoebaMultipoleForce::Extrapolated) {
         if (gkKernel == NULL) {
-            void* extrapolatedArgs[] = {&cu.getForce().getDevicePointer(), &extrapolatedDipole->getDevicePointer(),
-                &extrapolatedDipolePolar->getDevicePointer(), &extrapolatedDipoleFieldGradient->getDevicePointer(), &extrapolatedDipoleFieldGradientPolar->getDevicePointer()};
+            void* extrapolatedArgs[] = {&cu.getForce().getDevicePointer(), &extrapolatedDipole.getDevicePointer(),
+                &extrapolatedDipolePolar.getDevicePointer(), &extrapolatedDipoleFieldGradient.getDevicePointer(), &extrapolatedDipoleFieldGradientPolar.getDevicePointer()};
             cu.executeKernel(addExtrapolatedGradientKernel, extrapolatedArgs, numMultipoles);
         }
         else {
-            void* extrapolatedArgs[] = {&cu.getForce().getDevicePointer(), &extrapolatedDipole->getDevicePointer(),
-                &extrapolatedDipolePolar->getDevicePointer(), &extrapolatedDipoleFieldGradient->getDevicePointer(), &extrapolatedDipoleFieldGradientPolar->getDevicePointer(),
-                &extrapolatedDipoleGk->getDevicePointer(), &extrapolatedDipoleGkPolar->getDevicePointer(),
-                &extrapolatedDipoleFieldGradientGk->getDevicePointer(), &extrapolatedDipoleFieldGradientGkPolar->getDevicePointer()};
+            void* extrapolatedArgs[] = {&cu.getForce().getDevicePointer(), &extrapolatedDipole.getDevicePointer(),
+                &extrapolatedDipolePolar.getDevicePointer(), &extrapolatedDipoleFieldGradient.getDevicePointer(), &extrapolatedDipoleFieldGradientPolar.getDevicePointer(),
+                &extrapolatedDipoleGk.getDevicePointer(), &extrapolatedDipoleGkPolar.getDevicePointer(),
+                &extrapolatedDipoleFieldGradientGk.getDevicePointer(), &extrapolatedDipoleFieldGradientGkPolar.getDevicePointer()};
             cu.executeKernel(addExtrapolatedGradientKernel, extrapolatedArgs, numMultipoles);
         }
     }
 
     // Map torques to force.
 
-    void* mapTorqueArgs[] = {&cu.getForce().getDevicePointer(), &torque->getDevicePointer(),
-        &cu.getPosq().getDevicePointer(), &multipoleParticles->getDevicePointer()};
+    void* mapTorqueArgs[] = {&cu.getForce().getDevicePointer(), &torque.getDevicePointer(),
+        &cu.getPosq().getDevicePointer(), &multipoleParticles.getDevicePointer()};
     cu.executeKernel(mapTorqueKernel, mapTorqueArgs, cu.getNumAtoms());
     
     // Record the current atom positions so we can tell later if they have changed.
     
-    cu.getPosq().copyTo(*lastPositions);
+    cu.getPosq().copyTo(lastPositions);
     multipolesAreValid = true;
     return 0.0;
 }
@@ -1710,19 +1546,19 @@ void CudaCalcAmoebaMultipoleForceKernel::computeInducedField(void** recipBoxVect
     int numForceThreadBlocks = nb.getNumForceThreadBlocks();
     unsigned int maxTiles = 0;
     vector<void*> computeInducedFieldArgs;
-    computeInducedFieldArgs.push_back(&inducedField->getDevicePointer());
-    computeInducedFieldArgs.push_back(&inducedFieldPolar->getDevicePointer());
+    computeInducedFieldArgs.push_back(&inducedField.getDevicePointer());
+    computeInducedFieldArgs.push_back(&inducedFieldPolar.getDevicePointer());
     computeInducedFieldArgs.push_back(&cu.getPosq().getDevicePointer());
     computeInducedFieldArgs.push_back(&nb.getExclusionTiles().getDevicePointer());
-    computeInducedFieldArgs.push_back(&inducedDipole->getDevicePointer());
-    computeInducedFieldArgs.push_back(&inducedDipolePolar->getDevicePointer());
+    computeInducedFieldArgs.push_back(&inducedDipole.getDevicePointer());
+    computeInducedFieldArgs.push_back(&inducedDipolePolar.getDevicePointer());
     computeInducedFieldArgs.push_back(&startTileIndex);
     computeInducedFieldArgs.push_back(&numTileIndices);
     if (polarizationType == AmoebaMultipoleForce::Extrapolated) {
-        computeInducedFieldArgs.push_back(&inducedDipoleFieldGradient->getDevicePointer());
-        computeInducedFieldArgs.push_back(&inducedDipoleFieldGradientPolar->getDevicePointer());
+        computeInducedFieldArgs.push_back(&inducedDipoleFieldGradient.getDevicePointer());
+        computeInducedFieldArgs.push_back(&inducedDipoleFieldGradientPolar.getDevicePointer());
     }
-    if (pmeGrid != NULL) {
+    if (pmeGrid.isInitialized()) {
         computeInducedFieldArgs.push_back(&nb.getInteractingTiles().getDevicePointer());
         computeInducedFieldArgs.push_back(&nb.getInteractionCount().getDevicePointer());
         computeInducedFieldArgs.push_back(cu.getPeriodicBoxSizePointer());
@@ -1735,70 +1571,69 @@ void CudaCalcAmoebaMultipoleForceKernel::computeInducedField(void** recipBoxVect
         computeInducedFieldArgs.push_back(&nb.getInteractingAtoms().getDevicePointer());
     }
     if (gkKernel != NULL) {
-        computeInducedFieldArgs.push_back(&gkKernel->getInducedField()->getDevicePointer());
-        computeInducedFieldArgs.push_back(&gkKernel->getInducedFieldPolar()->getDevicePointer());
-        computeInducedFieldArgs.push_back(&gkKernel->getInducedDipoles()->getDevicePointer());
-        computeInducedFieldArgs.push_back(&gkKernel->getInducedDipolesPolar()->getDevicePointer());
-        computeInducedFieldArgs.push_back(&gkKernel->getBornRadii()->getDevicePointer());
+        computeInducedFieldArgs.push_back(&gkKernel->getInducedField().getDevicePointer());
+        computeInducedFieldArgs.push_back(&gkKernel->getInducedFieldPolar().getDevicePointer());
+        computeInducedFieldArgs.push_back(&gkKernel->getInducedDipoles().getDevicePointer());
+        computeInducedFieldArgs.push_back(&gkKernel->getInducedDipolesPolar().getDevicePointer());
+        computeInducedFieldArgs.push_back(&gkKernel->getBornRadii().getDevicePointer());
         if (polarizationType == AmoebaMultipoleForce::Extrapolated) {
-            computeInducedFieldArgs.push_back(&inducedDipoleFieldGradientGk->getDevicePointer());
-            computeInducedFieldArgs.push_back(&inducedDipoleFieldGradientGkPolar->getDevicePointer());
+            computeInducedFieldArgs.push_back(&inducedDipoleFieldGradientGk.getDevicePointer());
+            computeInducedFieldArgs.push_back(&inducedDipoleFieldGradientGkPolar.getDevicePointer());
         }
     }
-    computeInducedFieldArgs.push_back(&dampingAndThole->getDevicePointer());
-    cu.clearBuffer(*inducedField);
-    cu.clearBuffer(*inducedFieldPolar);
+    computeInducedFieldArgs.push_back(&dampingAndThole.getDevicePointer());
+    cu.clearBuffer(inducedField);
+    cu.clearBuffer(inducedFieldPolar);
     if (polarizationType == AmoebaMultipoleForce::Extrapolated) {
-        cu.clearBuffer(*inducedDipoleFieldGradient);
-        cu.clearBuffer(*inducedDipoleFieldGradientPolar);
+        cu.clearBuffer(inducedDipoleFieldGradient);
+        cu.clearBuffer(inducedDipoleFieldGradientPolar);
     }
     if (gkKernel != NULL) {
-        cu.clearBuffer(*gkKernel->getInducedField());
-        cu.clearBuffer(*gkKernel->getInducedFieldPolar());
+        cu.clearBuffer(gkKernel->getInducedField());
+        cu.clearBuffer(gkKernel->getInducedFieldPolar());
         if (polarizationType == AmoebaMultipoleForce::Extrapolated) {
-            cu.clearBuffer(*inducedDipoleFieldGradientGk);
-            cu.clearBuffer(*inducedDipoleFieldGradientGkPolar);
+            cu.clearBuffer(inducedDipoleFieldGradientGk);
+            cu.clearBuffer(inducedDipoleFieldGradientGkPolar);
         }
     }
-    if (pmeGrid == NULL)
+    if (!pmeGrid.isInitialized())
         cu.executeKernel(computeInducedFieldKernel, &computeInducedFieldArgs[0], numForceThreadBlocks*inducedFieldThreads, inducedFieldThreads);
     else {
         maxTiles = nb.getInteractingTiles().getSize();
         cu.executeKernel(computeInducedFieldKernel, &computeInducedFieldArgs[0], numForceThreadBlocks*inducedFieldThreads, inducedFieldThreads);
-        cu.clearBuffer(*pmeGrid);
-        void* pmeSpreadInducedDipolesArgs[] = {&cu.getPosq().getDevicePointer(), &inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(),
-            &pmeGrid->getDevicePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
+        cu.clearBuffer(pmeGrid);
+        void* pmeSpreadInducedDipolesArgs[] = {&cu.getPosq().getDevicePointer(), &inducedDipole.getDevicePointer(), &inducedDipolePolar.getDevicePointer(),
+            &pmeGrid.getDevicePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
             recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
         cu.executeKernel(pmeSpreadInducedDipolesKernel, pmeSpreadInducedDipolesArgs, cu.getNumAtoms());
         if (cu.getUseDoublePrecision()) {
-            void* finishSpreadArgs[] = {&pmeGrid->getDevicePointer()};
-            cu.executeKernel(pmeFinishSpreadChargeKernel, finishSpreadArgs, pmeGrid->getSize());
+            void* finishSpreadArgs[] = {&pmeGrid.getDevicePointer()};
+            cu.executeKernel(pmeFinishSpreadChargeKernel, finishSpreadArgs, pmeGrid.getSize());
+            cufftExecZ2Z(fft, (double2*) pmeGrid.getDevicePointer(), (double2*) pmeGrid.getDevicePointer(), CUFFT_FORWARD);
         }
-        if (cu.getUseDoublePrecision())
-            cufftExecZ2Z(fft, (double2*) pmeGrid->getDevicePointer(), (double2*) pmeGrid->getDevicePointer(), CUFFT_FORWARD);
         else
-            cufftExecC2C(fft, (float2*) pmeGrid->getDevicePointer(), (float2*) pmeGrid->getDevicePointer(), CUFFT_FORWARD);
-        void* pmeConvolutionArgs[] = {&pmeGrid->getDevicePointer(), &pmeBsplineModuliX->getDevicePointer(), &pmeBsplineModuliY->getDevicePointer(),
-            &pmeBsplineModuliZ->getDevicePointer(), cu.getPeriodicBoxSizePointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
+            cufftExecC2C(fft, (float2*) pmeGrid.getDevicePointer(), (float2*) pmeGrid.getDevicePointer(), CUFFT_FORWARD);
+        void* pmeConvolutionArgs[] = {&pmeGrid.getDevicePointer(), &pmeBsplineModuliX.getDevicePointer(), &pmeBsplineModuliY.getDevicePointer(),
+            &pmeBsplineModuliZ.getDevicePointer(), cu.getPeriodicBoxSizePointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
         cu.executeKernel(pmeConvolutionKernel, pmeConvolutionArgs, gridSizeX*gridSizeY*gridSizeZ, 256);
         if (cu.getUseDoublePrecision())
-            cufftExecZ2Z(fft, (double2*) pmeGrid->getDevicePointer(), (double2*) pmeGrid->getDevicePointer(), CUFFT_INVERSE);
+            cufftExecZ2Z(fft, (double2*) pmeGrid.getDevicePointer(), (double2*) pmeGrid.getDevicePointer(), CUFFT_INVERSE);
         else
-            cufftExecC2C(fft, (float2*) pmeGrid->getDevicePointer(), (float2*) pmeGrid->getDevicePointer(), CUFFT_INVERSE);
-        void* pmeInducedPotentialArgs[] = {&pmeGrid->getDevicePointer(), &pmePhid->getDevicePointer(), &pmePhip->getDevicePointer(),
-            &pmePhidp->getDevicePointer(), &cu.getPosq().getDevicePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(),
+            cufftExecC2C(fft, (float2*) pmeGrid.getDevicePointer(), (float2*) pmeGrid.getDevicePointer(), CUFFT_INVERSE);
+        void* pmeInducedPotentialArgs[] = {&pmeGrid.getDevicePointer(), &pmePhid.getDevicePointer(), &pmePhip.getDevicePointer(),
+            &pmePhidp.getDevicePointer(), &cu.getPosq().getDevicePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(),
             cu.getPeriodicBoxVecZPointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
         cu.executeKernel(pmeInducedPotentialKernel, pmeInducedPotentialArgs, cu.getNumAtoms());
         if (polarizationType == AmoebaMultipoleForce::Extrapolated) {
-            void* pmeRecordInducedFieldDipolesArgs[] = {&pmePhid->getDevicePointer(), &pmePhip->getDevicePointer(),
-                &inducedField->getDevicePointer(), &inducedFieldPolar->getDevicePointer(), &inducedDipole->getDevicePointer(),
-                &inducedDipolePolar->getDevicePointer(), &inducedDipoleFieldGradient->getDevicePointer(), &inducedDipoleFieldGradientPolar->getDevicePointer(),
+            void* pmeRecordInducedFieldDipolesArgs[] = {&pmePhid.getDevicePointer(), &pmePhip.getDevicePointer(),
+                &inducedField.getDevicePointer(), &inducedFieldPolar.getDevicePointer(), &inducedDipole.getDevicePointer(),
+                &inducedDipolePolar.getDevicePointer(), &inducedDipoleFieldGradient.getDevicePointer(), &inducedDipoleFieldGradientPolar.getDevicePointer(),
                 recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
             cu.executeKernel(pmeRecordInducedFieldDipolesKernel, pmeRecordInducedFieldDipolesArgs, cu.getNumAtoms());
         }
         else {
-            void* pmeRecordInducedFieldDipolesArgs[] = {&pmePhid->getDevicePointer(), &pmePhip->getDevicePointer(),
-                &inducedField->getDevicePointer(), &inducedFieldPolar->getDevicePointer(), &inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(),
+            void* pmeRecordInducedFieldDipolesArgs[] = {&pmePhid.getDevicePointer(), &pmePhip.getDevicePointer(),
+                &inducedField.getDevicePointer(), &inducedFieldPolar.getDevicePointer(), &inducedDipole.getDevicePointer(), &inducedDipolePolar.getDevicePointer(),
                 recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
             cu.executeKernel(pmeRecordInducedFieldDipolesKernel, pmeRecordInducedFieldDipolesArgs, cu.getNumAtoms());
         }
@@ -1813,39 +1648,39 @@ bool CudaCalcAmoebaMultipoleForceKernel::iterateDipolesByDIIS(int iteration) {
     // Record the dipoles and errors into the lists of previous dipoles.
     
     if (gkKernel != NULL) {
-        void* recordDIISDipolesGkArgs[] = {&field->getDevicePointer(), &fieldPolar->getDevicePointer(), &gkKernel->getField()->getDevicePointer(), &gkKernel->getInducedField()->getDevicePointer(),
-            &gkKernel->getInducedFieldPolar()->getDevicePointer(), &gkKernel->getInducedDipoles()->getDevicePointer(), &gkKernel->getInducedDipolesPolar()->getDevicePointer(), 
-            &polarizability->getDevicePointer(), &inducedDipoleErrors->getDevicePointer(), &prevDipolesGk->getDevicePointer(),
-            &prevDipolesGkPolar->getDevicePointer(), &prevErrors->getDevicePointer(), &iteration, &falseValue, &diisMatrix->getDevicePointer()};
+        void* recordDIISDipolesGkArgs[] = {&field.getDevicePointer(), &fieldPolar.getDevicePointer(), &gkKernel->getField().getDevicePointer(), &gkKernel->getInducedField().getDevicePointer(),
+            &gkKernel->getInducedFieldPolar().getDevicePointer(), &gkKernel->getInducedDipoles().getDevicePointer(), &gkKernel->getInducedDipolesPolar().getDevicePointer(), 
+            &polarizability.getDevicePointer(), &inducedDipoleErrors.getDevicePointer(), &prevDipolesGk.getDevicePointer(),
+            &prevDipolesGkPolar.getDevicePointer(), &prevErrors.getDevicePointer(), &iteration, &falseValue, &diisMatrix.getDevicePointer()};
         cu.executeKernel(recordDIISDipolesKernel, recordDIISDipolesGkArgs, cu.getNumThreadBlocks()*cu.ThreadBlockSize, cu.ThreadBlockSize, cu.ThreadBlockSize*elementSize*2);
     }
-    void* recordDIISDipolesArgs[] = {&field->getDevicePointer(), &fieldPolar->getDevicePointer(), &npt, &inducedField->getDevicePointer(),
-        &inducedFieldPolar->getDevicePointer(), &inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(),
-        &polarizability->getDevicePointer(), &inducedDipoleErrors->getDevicePointer(), &prevDipoles->getDevicePointer(),
-        &prevDipolesPolar->getDevicePointer(), &prevErrors->getDevicePointer(), &iteration, &trueValue, &diisMatrix->getDevicePointer()};
+    void* recordDIISDipolesArgs[] = {&field.getDevicePointer(), &fieldPolar.getDevicePointer(), &npt, &inducedField.getDevicePointer(),
+        &inducedFieldPolar.getDevicePointer(), &inducedDipole.getDevicePointer(), &inducedDipolePolar.getDevicePointer(),
+        &polarizability.getDevicePointer(), &inducedDipoleErrors.getDevicePointer(), &prevDipoles.getDevicePointer(),
+        &prevDipolesPolar.getDevicePointer(), &prevErrors.getDevicePointer(), &iteration, &trueValue, &diisMatrix.getDevicePointer()};
     cu.executeKernel(recordDIISDipolesKernel, recordDIISDipolesArgs, cu.getNumThreadBlocks()*cu.ThreadBlockSize, cu.ThreadBlockSize, cu.ThreadBlockSize*elementSize*2);
     float2* errors = (float2*) cu.getPinnedBuffer();
-    inducedDipoleErrors->download(errors, false);
+    inducedDipoleErrors.download(errors, false);
     cuEventRecord(syncEvent, cu.getCurrentStream());
     
     // Build the DIIS matrix.
     
     int numPrev = (iteration+1 < MaxPrevDIISDipoles ? iteration+1 : MaxPrevDIISDipoles);
-    void* buildMatrixArgs[] = {&prevErrors->getDevicePointer(), &iteration, &diisMatrix->getDevicePointer()};
+    void* buildMatrixArgs[] = {&prevErrors.getDevicePointer(), &iteration, &diisMatrix.getDevicePointer()};
     int threadBlocks = min(numPrev, cu.getNumThreadBlocks());
     int blockSize = 512;
     cu.executeKernel(buildMatrixKernel, buildMatrixArgs, threadBlocks*blockSize, blockSize, blockSize*elementSize);
     
     // Solve the matrix.
 
-    void* solveMatrixArgs[] = {&iteration, &diisMatrix->getDevicePointer(), &diisCoefficients->getDevicePointer()};
+    void* solveMatrixArgs[] = {&iteration, &diisMatrix.getDevicePointer(), &diisCoefficients.getDevicePointer()};
     cu.executeKernel(solveMatrixKernel, solveMatrixArgs, 32, 32);
     
     // Determine whether the iteration has converged.
     
     cuEventSynchronize(syncEvent);
     double total1 = 0.0, total2 = 0.0;
-    for (int j = 0; j < inducedDipoleErrors->getSize(); j++) {
+    for (int j = 0; j < inducedDipoleErrors.getSize(); j++) {
         total1 += errors[j].x;
         total2 += errors[j].y;
     }
@@ -1854,12 +1689,12 @@ bool CudaCalcAmoebaMultipoleForceKernel::iterateDipolesByDIIS(int iteration) {
     
     // Compute the dipoles.
     
-    void* updateInducedFieldArgs[] = {&inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(),
-        &prevDipoles->getDevicePointer(), &prevDipolesPolar->getDevicePointer(), &diisCoefficients->getDevicePointer(), &numPrev};
+    void* updateInducedFieldArgs[] = {&inducedDipole.getDevicePointer(), &inducedDipolePolar.getDevicePointer(),
+        &prevDipoles.getDevicePointer(), &prevDipolesPolar.getDevicePointer(), &diisCoefficients.getDevicePointer(), &numPrev};
     cu.executeKernel(updateInducedFieldKernel, updateInducedFieldArgs, 3*cu.getNumAtoms(), 256);
     if (gkKernel != NULL) {
-        void* updateInducedFieldGkArgs[] = {&gkKernel->getInducedDipoles()->getDevicePointer(), &gkKernel->getInducedDipolesPolar()->getDevicePointer(),
-            &prevDipolesGk->getDevicePointer(), &prevDipolesGkPolar->getDevicePointer(), &diisCoefficients->getDevicePointer(), &numPrev};
+        void* updateInducedFieldGkArgs[] = {&gkKernel->getInducedDipoles().getDevicePointer(), &gkKernel->getInducedDipolesPolar().getDevicePointer(),
+            &prevDipolesGk.getDevicePointer(), &prevDipolesGkPolar.getDevicePointer(), &diisCoefficients.getDevicePointer(), &numPrev};
         cu.executeKernel(updateInducedFieldKernel, updateInducedFieldGkArgs, 3*cu.getNumAtoms(), 256);
     }
     return false;
@@ -1869,16 +1704,16 @@ void CudaCalcAmoebaMultipoleForceKernel::computeExtrapolatedDipoles(void** recip
     // Start by storing the direct dipoles as PT0
 
     if (gkKernel == NULL) {
-        void* initArgs[] = {&inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(), &extrapolatedDipole->getDevicePointer(),
-            &extrapolatedDipolePolar->getDevicePointer(), &inducedDipoleFieldGradient->getDevicePointer(), &inducedDipoleFieldGradientPolar->getDevicePointer()};
-        cu.executeKernel(initExtrapolatedKernel, initArgs, extrapolatedDipole->getSize());
+        void* initArgs[] = {&inducedDipole.getDevicePointer(), &extrapolatedDipole.getDevicePointer(), &inducedDipolePolar.getDevicePointer(),
+            &extrapolatedDipolePolar.getDevicePointer(), &inducedDipoleFieldGradient.getDevicePointer(), &inducedDipoleFieldGradientPolar.getDevicePointer()};
+        cu.executeKernel(initExtrapolatedKernel, initArgs, extrapolatedDipole.getSize());
     }
     else {
-        void* initArgs[] = {&inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(), &extrapolatedDipole->getDevicePointer(),
-            &extrapolatedDipolePolar->getDevicePointer(), &inducedDipoleFieldGradient->getDevicePointer(), &inducedDipoleFieldGradientPolar->getDevicePointer(),
-            &gkKernel->getInducedDipoles()->getDevicePointer(), &gkKernel->getInducedDipolesPolar()->getDevicePointer(), &extrapolatedDipoleGk->getDevicePointer(),
-            &extrapolatedDipoleGkPolar->getDevicePointer(), &inducedDipoleFieldGradientGk->getDevicePointer(), &inducedDipoleFieldGradientGkPolar->getDevicePointer()};
-        cu.executeKernel(initExtrapolatedKernel, initArgs, extrapolatedDipole->getSize());
+        void* initArgs[] = {&inducedDipole.getDevicePointer(), &extrapolatedDipole.getDevicePointer(), &inducedDipolePolar.getDevicePointer(),
+            &extrapolatedDipolePolar.getDevicePointer(), &inducedDipoleFieldGradient.getDevicePointer(), &inducedDipoleFieldGradientPolar.getDevicePointer(),
+            &gkKernel->getInducedDipoles().getDevicePointer(), &gkKernel->getInducedDipolesPolar().getDevicePointer(), &extrapolatedDipoleGk.getDevicePointer(),
+            &extrapolatedDipoleGkPolar.getDevicePointer(), &inducedDipoleFieldGradientGk.getDevicePointer(), &inducedDipoleFieldGradientGkPolar.getDevicePointer()};
+        cu.executeKernel(initExtrapolatedKernel, initArgs, extrapolatedDipole.getSize());
     }
 
     // Recursively apply alpha.Tau to the µ_(n) components to generate µ_(n+1), and store the result
@@ -1886,37 +1721,38 @@ void CudaCalcAmoebaMultipoleForceKernel::computeExtrapolatedDipoles(void** recip
     for (int order = 1; order < maxExtrapolationOrder; ++order) {
         computeInducedField(recipBoxVectorPointer);
         if (gkKernel == NULL) {
-            void* iterateArgs[] = {&order, &inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(), &extrapolatedDipole->getDevicePointer(),
-                &extrapolatedDipolePolar->getDevicePointer(), &inducedDipoleFieldGradient->getDevicePointer(), &inducedDipoleFieldGradientPolar->getDevicePointer(),
-                &inducedField->getDevicePointer(), &inducedFieldPolar->getDevicePointer(), &extrapolatedDipoleFieldGradient->getDevicePointer(), &extrapolatedDipoleFieldGradientPolar->getDevicePointer(),
-                &polarizability->getDevicePointer()};
-            cu.executeKernel(iterateExtrapolatedKernel, iterateArgs, extrapolatedDipole->getSize());
+            void* iterateArgs[] = {&order, &inducedDipole.getDevicePointer(), &extrapolatedDipole.getDevicePointer(), &inducedField.getDevicePointer(),
+                &inducedDipolePolar.getDevicePointer(), &extrapolatedDipolePolar.getDevicePointer(), &inducedFieldPolar.getDevicePointer(),
+                &inducedDipoleFieldGradient.getDevicePointer(), &inducedDipoleFieldGradientPolar.getDevicePointer(),
+                &extrapolatedDipoleFieldGradient.getDevicePointer(), &extrapolatedDipoleFieldGradientPolar.getDevicePointer(), &polarizability.getDevicePointer()};
+            cu.executeKernel(iterateExtrapolatedKernel, iterateArgs, extrapolatedDipole.getSize());
         }
         else {
-            void* iterateArgs[] = {&order, &inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(), &extrapolatedDipole->getDevicePointer(),
-                &extrapolatedDipolePolar->getDevicePointer(), &inducedDipoleFieldGradient->getDevicePointer(), &inducedDipoleFieldGradientPolar->getDevicePointer(),
-                &inducedField->getDevicePointer(), &inducedFieldPolar->getDevicePointer(), &extrapolatedDipoleFieldGradient->getDevicePointer(), &extrapolatedDipoleFieldGradientPolar->getDevicePointer(),
-                &gkKernel->getInducedDipoles()->getDevicePointer(), &gkKernel->getInducedDipolesPolar()->getDevicePointer(), &extrapolatedDipoleGk->getDevicePointer(),
-                &extrapolatedDipoleGkPolar->getDevicePointer(), &inducedDipoleFieldGradientGk->getDevicePointer(), &inducedDipoleFieldGradientGkPolar->getDevicePointer(),
-                &gkKernel->getInducedField()->getDevicePointer(), &gkKernel->getInducedFieldPolar()->getDevicePointer(),
-                &extrapolatedDipoleFieldGradientGk->getDevicePointer(), &extrapolatedDipoleFieldGradientGkPolar->getDevicePointer(),
-                &polarizability->getDevicePointer()};
-            cu.executeKernel(iterateExtrapolatedKernel, iterateArgs, extrapolatedDipole->getSize());
+            void* iterateArgs[] = {&order, &inducedDipole.getDevicePointer(), &extrapolatedDipole.getDevicePointer(), &inducedField.getDevicePointer(),
+                &inducedDipolePolar.getDevicePointer(), &extrapolatedDipolePolar.getDevicePointer(), &inducedFieldPolar.getDevicePointer(),
+                &inducedDipoleFieldGradient.getDevicePointer(), &inducedDipoleFieldGradientPolar.getDevicePointer(),
+                &extrapolatedDipoleFieldGradient.getDevicePointer(), &extrapolatedDipoleFieldGradientPolar.getDevicePointer(),
+                &gkKernel->getInducedDipoles().getDevicePointer(), &gkKernel->getInducedDipolesPolar().getDevicePointer(), &extrapolatedDipoleGk.getDevicePointer(),
+                &extrapolatedDipoleGkPolar.getDevicePointer(), &inducedDipoleFieldGradientGk.getDevicePointer(), &inducedDipoleFieldGradientGkPolar.getDevicePointer(),
+                &gkKernel->getInducedField().getDevicePointer(), &gkKernel->getInducedFieldPolar().getDevicePointer(),
+                &extrapolatedDipoleFieldGradientGk.getDevicePointer(), &extrapolatedDipoleFieldGradientGkPolar.getDevicePointer(),
+                &polarizability.getDevicePointer()};
+            cu.executeKernel(iterateExtrapolatedKernel, iterateArgs, extrapolatedDipole.getSize());
         }
     }
     
     // Take a linear combination of the µ_(n) components to form the total dipole
 
     if (gkKernel == NULL) {
-        void* computeArgs[] = {&inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(), &extrapolatedDipole->getDevicePointer(),
-                &extrapolatedDipolePolar->getDevicePointer()};
-        cu.executeKernel(computeExtrapolatedKernel, computeArgs, extrapolatedDipole->getSize());
+        void* computeArgs[] = {&inducedDipole.getDevicePointer(), &extrapolatedDipole.getDevicePointer(), &inducedDipolePolar.getDevicePointer(),
+                &extrapolatedDipolePolar.getDevicePointer()};
+        cu.executeKernel(computeExtrapolatedKernel, computeArgs, extrapolatedDipole.getSize());
     }
     else {
-        void* computeArgs[] = {&inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(), &extrapolatedDipole->getDevicePointer(),
-                &extrapolatedDipolePolar->getDevicePointer(), &gkKernel->getInducedDipoles()->getDevicePointer(), &gkKernel->getInducedDipolesPolar()->getDevicePointer(),
-                &extrapolatedDipoleGk->getDevicePointer(), &extrapolatedDipoleGkPolar->getDevicePointer()};
-        cu.executeKernel(computeExtrapolatedKernel, computeArgs, extrapolatedDipole->getSize());
+        void* computeArgs[] = {&inducedDipole.getDevicePointer(), &extrapolatedDipole.getDevicePointer(), &inducedDipolePolar.getDevicePointer(),
+                &extrapolatedDipolePolar.getDevicePointer(), &gkKernel->getInducedDipoles().getDevicePointer(), &gkKernel->getInducedDipolesPolar().getDevicePointer(),
+                &extrapolatedDipoleGk.getDevicePointer(), &extrapolatedDipoleGkPolar.getDevicePointer()};
+        cu.executeKernel(computeExtrapolatedKernel, computeArgs, extrapolatedDipole.getSize());
     }
     computeInducedField(recipBoxVectorPointer);
 }
@@ -1927,7 +1763,7 @@ void CudaCalcAmoebaMultipoleForceKernel::ensureMultipolesValid(ContextImpl& cont
         if (cu.getUseDoublePrecision()) {
             vector<double4> pos1, pos2;
             cu.getPosq().download(pos1);
-            lastPositions->download(pos2);
+            lastPositions.download(pos2);
             for (int i = 0; i < numParticles; i++)
                 if (pos1[i].x != pos2[i].x || pos1[i].y != pos2[i].y || pos1[i].z != pos2[i].z) {
                     multipolesAreValid = false;
@@ -1937,7 +1773,7 @@ void CudaCalcAmoebaMultipoleForceKernel::ensureMultipolesValid(ContextImpl& cont
         else {
             vector<float4> pos1, pos2;
             cu.getPosq().download(pos1);
-            lastPositions->download(pos2);
+            lastPositions.download(pos2);
             for (int i = 0; i < numParticles; i++)
                 if (pos1[i].x != pos2[i].x || pos1[i].y != pos2[i].y || pos1[i].z != pos2[i].z) {
                     multipolesAreValid = false;
@@ -1957,13 +1793,13 @@ void CudaCalcAmoebaMultipoleForceKernel::getLabFramePermanentDipoles(ContextImpl
     const vector<int>& order = cu.getAtomIndex();
     if (cu.getUseDoublePrecision()) {
         vector<double> labDipoleVec;
-        labFrameDipoles->download(labDipoleVec);
+        labFrameDipoles.download(labDipoleVec);
         for (int i = 0; i < numParticles; i++)
             dipoles[order[i]] = Vec3(labDipoleVec[3*i], labDipoleVec[3*i+1], labDipoleVec[3*i+2]);
     }
     else {
         vector<float> labDipoleVec;
-        labFrameDipoles->download(labDipoleVec);
+        labFrameDipoles.download(labDipoleVec);
         for (int i = 0; i < numParticles; i++)
             dipoles[order[i]] = Vec3(labDipoleVec[3*i], labDipoleVec[3*i+1], labDipoleVec[3*i+2]);
     }
@@ -1977,13 +1813,13 @@ void CudaCalcAmoebaMultipoleForceKernel::getInducedDipoles(ContextImpl& context,
     const vector<int>& order = cu.getAtomIndex();
     if (cu.getUseDoublePrecision()) {
         vector<double> d;
-        inducedDipole->download(d);
+        inducedDipole.download(d);
         for (int i = 0; i < numParticles; i++)
             dipoles[order[i]] = Vec3(d[3*i], d[3*i+1], d[3*i+2]);
     }
     else {
         vector<float> d;
-        inducedDipole->download(d);
+        inducedDipole.download(d);
         for (int i = 0; i < numParticles; i++)
             dipoles[order[i]] = Vec3(d[3*i], d[3*i+1], d[3*i+2]);
     }
@@ -2002,8 +1838,8 @@ void CudaCalcAmoebaMultipoleForceKernel::getTotalDipoles(ContextImpl& context, v
         double totalDipoleVecX;
         double totalDipoleVecY;
         double totalDipoleVecZ;
-        inducedDipole->download(inducedDipoleVec);
-        labFrameDipoles->download(labDipoleVec);
+        inducedDipole.download(inducedDipoleVec);
+        labFrameDipoles.download(labDipoleVec);
         cu.getPosq().download(posqVec);
         for (int i = 0; i < numParticles; i++) {
             totalDipoleVecX = labDipoleVec[3*i] + inducedDipoleVec[3*i];
@@ -2019,8 +1855,8 @@ void CudaCalcAmoebaMultipoleForceKernel::getTotalDipoles(ContextImpl& context, v
         float totalDipoleVecX;
         float totalDipoleVecY;
         float totalDipoleVecZ;
-        inducedDipole->download(inducedDipoleVec);
-        labFrameDipoles->download(labDipoleVec);
+        inducedDipole.download(inducedDipoleVec);
+        labFrameDipoles.download(labDipoleVec);
         cu.getPosq().download(posqVec);
         for (int i = 0; i < numParticles; i++) {
             totalDipoleVecX = labDipoleVec[3*i] + inducedDipoleVec[3*i];
@@ -2055,8 +1891,8 @@ void CudaCalcAmoebaMultipoleForceKernel::getElectrostaticPotential(ContextImpl& 
     
     // Compute the potential.
     
-    void* computePotentialArgs[] = {&cu.getPosq().getDevicePointer(), &labFrameDipoles->getDevicePointer(),
-        &labFrameQuadrupoles->getDevicePointer(), &inducedDipole->getDevicePointer(), &points.getDevicePointer(),
+    void* computePotentialArgs[] = {&cu.getPosq().getDevicePointer(), &labFrameDipoles.getDevicePointer(),
+        &labFrameQuadrupoles.getDevicePointer(), &inducedDipole.getDevicePointer(), &points.getDevicePointer(),
         &potential.getDevicePointer(), &numPoints, cu.getPeriodicBoxSizePointer(), cu.getInvPeriodicBoxSizePointer(),
         cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer()};
     int blockSize = 128;
@@ -2118,9 +1954,9 @@ void CudaCalcAmoebaMultipoleForceKernel::computeSystemMultipoleMoments(ContextIm
     double zyqdp = 0.0;
     double zzqdp = 0.0;
     vector<T> labDipoleVec, inducedDipoleVec, quadrupoleVec;
-    labFrameDipoles->download(labDipoleVec);
-    inducedDipole->download(inducedDipoleVec);
-    labFrameQuadrupoles->download(quadrupoleVec);
+    labFrameDipoles.download(labDipoleVec);
+    inducedDipole.download(inducedDipoleVec);
+    labFrameQuadrupoles.download(quadrupoleVec);
     for (int i = 0; i < numAtoms; i++) {
         totalCharge += posqLocal[i].w;
         double netDipoleX = (labDipoleVec[3*i]    + inducedDipoleVec[3*i]);
@@ -2246,11 +2082,11 @@ void CudaCalcAmoebaMultipoleForceKernel::copyParametersToContext(ContextImpl& co
         for (int j = 0; j < 5; j++)
             molecularQuadrupolesVec.push_back(0);
     }
-    dampingAndThole->upload(dampingAndTholeVec);
-    polarizability->upload(polarizabilityVec);
-    multipoleParticles->upload(multipoleParticlesVec);
-    molecularDipoles->upload(molecularDipolesVec);
-    molecularQuadrupoles->upload(molecularQuadrupolesVec);
+    dampingAndThole.upload(dampingAndTholeVec);
+    polarizability.upload(polarizabilityVec);
+    multipoleParticles.upload(multipoleParticlesVec);
+    molecularDipoles.upload(molecularDipolesVec);
+    molecularQuadrupoles.upload(molecularQuadrupolesVec);
     cu.getPosq().upload(cu.getPinnedBuffer());
     cu.invalidateMolecules();
     multipolesAreValid = false;
@@ -2284,30 +2120,7 @@ private:
 };
 
 CudaCalcAmoebaGeneralizedKirkwoodForceKernel::CudaCalcAmoebaGeneralizedKirkwoodForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : 
-           CalcAmoebaGeneralizedKirkwoodForceKernel(name, platform), cu(cu), system(system), hasInitializedKernels(false), params(NULL), bornRadii(NULL), field(NULL),
-           inducedField(NULL), inducedFieldPolar(NULL), inducedDipoleS(NULL), inducedDipolePolarS(NULL), bornSum(NULL), bornForce(NULL) {
-}
-
-CudaCalcAmoebaGeneralizedKirkwoodForceKernel::~CudaCalcAmoebaGeneralizedKirkwoodForceKernel() {
-    cu.setAsCurrent();
-    if (params != NULL)
-        delete params;
-    if (bornRadii != NULL)
-        delete bornRadii;
-    if (field != NULL)
-        delete field;
-    if (inducedField != NULL)
-        delete inducedField;
-    if (inducedFieldPolar != NULL)
-        delete inducedFieldPolar;
-    if (inducedDipoleS != NULL)
-        delete inducedDipoleS;
-    if (inducedDipolePolarS != NULL)
-        delete inducedDipolePolarS;
-    if (bornSum != NULL)
-        delete bornSum;
-    if (bornForce != NULL)
-        delete bornForce;
+           CalcAmoebaGeneralizedKirkwoodForceKernel(name, platform), cu(cu), system(system), hasInitializedKernels(false) {
 }
 
 void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System& system, const AmoebaGeneralizedKirkwoodForce& force) {
@@ -2322,21 +2135,21 @@ void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System& syst
     CudaNonbondedUtilities& nb = cu.getNonbondedUtilities();
     int paddedNumAtoms = cu.getPaddedNumAtoms();
     int elementSize = (cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
-    params = CudaArray::create<float2>(cu, paddedNumAtoms, "amoebaGkParams");
-    bornRadii = new CudaArray(cu, paddedNumAtoms, elementSize, "bornRadii");
-    field = new CudaArray(cu, 3*paddedNumAtoms, sizeof(long long), "gkField");
-    bornSum = CudaArray::create<long long>(cu, paddedNumAtoms, "bornSum");
-    bornForce = CudaArray::create<long long>(cu, paddedNumAtoms, "bornForce");
-    inducedDipoleS = new CudaArray(cu, 3*paddedNumAtoms, elementSize, "inducedDipoleS");
-    inducedDipolePolarS = new CudaArray(cu, 3*paddedNumAtoms, elementSize, "inducedDipolePolarS");
+    params.initialize<float2>(cu, paddedNumAtoms, "amoebaGkParams");
+    bornRadii .initialize(cu, paddedNumAtoms, elementSize, "bornRadii");
+    field .initialize(cu, 3*paddedNumAtoms, sizeof(long long), "gkField");
+    bornSum.initialize<long long>(cu, paddedNumAtoms, "bornSum");
+    bornForce.initialize<long long>(cu, paddedNumAtoms, "bornForce");
+    inducedDipoleS .initialize(cu, 3*paddedNumAtoms, elementSize, "inducedDipoleS");
+    inducedDipolePolarS .initialize(cu, 3*paddedNumAtoms, elementSize, "inducedDipolePolarS");
     polarizationType = multipoles->getPolarizationType();
     if (polarizationType != AmoebaMultipoleForce::Direct) {
-        inducedField = new CudaArray(cu, 3*paddedNumAtoms, sizeof(long long), "gkInducedField");
-        inducedFieldPolar = new CudaArray(cu, 3*paddedNumAtoms, sizeof(long long), "gkInducedFieldPolar");
+        inducedField .initialize(cu, 3*paddedNumAtoms, sizeof(long long), "gkInducedField");
+        inducedFieldPolar .initialize(cu, 3*paddedNumAtoms, sizeof(long long), "gkInducedFieldPolar");
     }
-    cu.addAutoclearBuffer(*field);
-    cu.addAutoclearBuffer(*bornSum);
-    cu.addAutoclearBuffer(*bornForce);
+    cu.addAutoclearBuffer(field);
+    cu.addAutoclearBuffer(bornSum);
+    cu.addAutoclearBuffer(bornForce);
     vector<float2> paramsVector(paddedNumAtoms);
     for (int i = 0; i < force.getNumParticles(); i++) {
         double charge, radius, scalingFactor;
@@ -2352,7 +2165,7 @@ void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System& syst
         if (charge != charge2)
             throw OpenMMException("AmoebaGeneralizedKirkwoodForce and AmoebaMultipoleForce must specify the same charge for every atom");
     }
-    params->upload(paramsVector);
+    params.upload(paramsVector);
     
     // Select the number of threads for each kernel.
     
@@ -2457,10 +2270,10 @@ void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::computeBornRadii() {
     CudaNonbondedUtilities& nb = cu.getNonbondedUtilities();
     int numTiles = nb.getNumTiles();
     int numForceThreadBlocks = nb.getNumForceThreadBlocks();
-    void* computeBornSumArgs[] = {&bornSum->getDevicePointer(), &cu.getPosq().getDevicePointer(),
-        &params->getDevicePointer(), &numTiles};
+    void* computeBornSumArgs[] = {&bornSum.getDevicePointer(), &cu.getPosq().getDevicePointer(),
+        &params.getDevicePointer(), &numTiles};
     cu.executeKernel(computeBornSumKernel, computeBornSumArgs, numForceThreadBlocks*computeBornSumThreads, computeBornSumThreads);
-    void* reduceBornSumArgs[] = {&bornSum->getDevicePointer(), &params->getDevicePointer(), &bornRadii->getDevicePointer()};
+    void* reduceBornSumArgs[] = {&bornSum.getDevicePointer(), &params.getDevicePointer(), &bornRadii.getDevicePointer()};
     cu.executeKernel(reduceBornSumKernel, reduceBornSumArgs, cu.getNumAtoms());
 }
 
@@ -2475,27 +2288,27 @@ void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::finishComputation(CudaArray& 
     
     void* gkForceArgs[] = {&cu.getForce().getDevicePointer(), &torque.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(),
         &cu.getPosq().getDevicePointer(), &startTileIndex, &numTileIndices, &labFrameDipoles.getDevicePointer(),
-        &labFrameQuadrupoles.getDevicePointer(), &inducedDipoleS->getDevicePointer(), &inducedDipolePolarS->getDevicePointer(),
-        &bornRadii->getDevicePointer(), &bornForce->getDevicePointer()};
+        &labFrameQuadrupoles.getDevicePointer(), &inducedDipoleS.getDevicePointer(), &inducedDipolePolarS.getDevicePointer(),
+        &bornRadii.getDevicePointer(), &bornForce.getDevicePointer()};
     cu.executeKernel(gkForceKernel, gkForceArgs, numForceThreadBlocks*gkForceThreads, gkForceThreads);
 
     // Compute the surface area force.
     
     if (includeSurfaceArea) {
-        void* surfaceAreaArgs[] = {&bornForce->getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(), &params->getDevicePointer(), &bornRadii->getDevicePointer()};
+        void* surfaceAreaArgs[] = {&bornForce.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(), &params.getDevicePointer(), &bornRadii.getDevicePointer()};
         cu.executeKernel(surfaceAreaKernel, surfaceAreaArgs, cu.getNumAtoms());
     }
     
     // Apply the remaining terms.
     
     void* chainRuleArgs[] = {&cu.getForce().getDevicePointer(), &cu.getPosq().getDevicePointer(), &startTileIndex, &numTileIndices,
-        &params->getDevicePointer(), &bornRadii->getDevicePointer(), &bornForce->getDevicePointer()};
+        &params.getDevicePointer(), &bornRadii.getDevicePointer(), &bornForce.getDevicePointer()};
     cu.executeKernel(chainRuleKernel, chainRuleArgs, numForceThreadBlocks*chainRuleThreads, chainRuleThreads);    
     void* ediffArgs[] = {&cu.getForce().getDevicePointer(), &torque.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(),
         &cu.getPosq().getDevicePointer(), &covalentFlags.getDevicePointer(), &polarizationGroupFlags.getDevicePointer(),
         &nb.getExclusionTiles().getDevicePointer(), &startTileIndex, &numTileIndices,
         &labFrameDipoles.getDevicePointer(), &labFrameQuadrupoles.getDevicePointer(), &inducedDipole.getDevicePointer(),
-        &inducedDipolePolar.getDevicePointer(), &inducedDipoleS->getDevicePointer(), &inducedDipolePolarS->getDevicePointer(),
+        &inducedDipolePolar.getDevicePointer(), &inducedDipoleS.getDevicePointer(), &inducedDipolePolarS.getDevicePointer(),
         &dampingAndThole.getDevicePointer()};
     cu.executeKernel(ediffKernel, ediffArgs, numForceThreadBlocks*ediffThreads, ediffThreads);
 }
@@ -2515,7 +2328,7 @@ void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::copyParametersToContext(Conte
         force.getParticleParameters(i, charge, radius, scalingFactor);
         paramsVector[i] = make_float2((float) radius, (float) (scalingFactor*radius));
     }
-    params->upload(paramsVector);
+    params.upload(paramsVector);
     cu.invalidateMolecules();
 }
 
@@ -2539,33 +2352,22 @@ private:
 };
 
 CudaCalcAmoebaVdwForceKernel::CudaCalcAmoebaVdwForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) :
-        CalcAmoebaVdwForceKernel(name, platform), cu(cu), system(system), hasInitializedNonbonded(false), sigmaEpsilon(NULL),
-        bondReductionAtoms(NULL), bondReductionFactors(NULL), tempPosq(NULL), tempForces(NULL), nonbonded(NULL) {
+        CalcAmoebaVdwForceKernel(name, platform), cu(cu), system(system), hasInitializedNonbonded(false), nonbonded(NULL) {
 }
 
 CudaCalcAmoebaVdwForceKernel::~CudaCalcAmoebaVdwForceKernel() {
     cu.setAsCurrent();
-    if (sigmaEpsilon != NULL)
-        delete sigmaEpsilon;
-    if (bondReductionAtoms != NULL)
-        delete bondReductionAtoms;
-    if (bondReductionFactors != NULL)
-        delete bondReductionFactors;
-    if (tempPosq != NULL)
-        delete tempPosq;
-    if (tempForces != NULL)
-        delete tempForces;
     if (nonbonded != NULL)
         delete nonbonded;
 }
 
 void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const AmoebaVdwForce& force) {
     cu.setAsCurrent();
-    sigmaEpsilon = CudaArray::create<float2>(cu, cu.getPaddedNumAtoms(), "sigmaEpsilon");
-    bondReductionAtoms = CudaArray::create<int>(cu, cu.getPaddedNumAtoms(), "bondReductionAtoms");
-    bondReductionFactors = CudaArray::create<float>(cu, cu.getPaddedNumAtoms(), "sigmaEpsilon");
-    tempPosq = new CudaArray(cu, cu.getPaddedNumAtoms(), cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4), "tempPosq");
-    tempForces = CudaArray::create<long long>(cu, 3*cu.getPaddedNumAtoms(), "tempForces");
+    sigmaEpsilon.initialize<float2>(cu, cu.getPaddedNumAtoms(), "sigmaEpsilon");
+    bondReductionAtoms.initialize<int>(cu, cu.getPaddedNumAtoms(), "bondReductionAtoms");
+    bondReductionFactors.initialize<float>(cu, cu.getPaddedNumAtoms(), "sigmaEpsilon");
+    tempPosq.initialize(cu, cu.getPaddedNumAtoms(), cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4), "tempPosq");
+    tempForces.initialize<long long>(cu, 3*cu.getPaddedNumAtoms(), "tempForces");
     
     // Record atom parameters.
     
@@ -2583,9 +2385,9 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
         force.getParticleExclusions(i, exclusions[i]);
         exclusions[i].push_back(i);
     }
-    sigmaEpsilon->upload(sigmaEpsilonVec);
-    bondReductionAtoms->upload(bondReductionAtomsVec);
-    bondReductionFactors->upload(bondReductionFactorsVec);
+    sigmaEpsilon.upload(sigmaEpsilonVec);
+    bondReductionAtoms.upload(bondReductionAtomsVec);
+    bondReductionFactors.upload(bondReductionFactorsVec);
     if (force.getUseDispersionCorrection())
         dispersionCoefficient = AmoebaVdwForceImpl::calcDispersionCorrection(system, force);
     else
@@ -2596,7 +2398,7 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
     // this force, so it will have its own neighbor list and interaction kernel.
     
     nonbonded = new CudaNonbondedUtilities(cu);
-    nonbonded->addParameter(CudaNonbondedUtilities::ParameterInfo("sigmaEpsilon", "float", 2, sizeof(float2), sigmaEpsilon->getDevicePointer()));
+    nonbonded->addParameter(CudaNonbondedUtilities::ParameterInfo("sigmaEpsilon", "float", 2, sizeof(float2), sigmaEpsilon.getDevicePointer()));
     
     // Create the interaction kernel.
     
@@ -2647,17 +2449,17 @@ double CudaCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool includeF
         hasInitializedNonbonded = true;
         nonbonded->initialize(system);
     }
-    cu.getPosq().copyTo(*tempPosq);
-    cu.getForce().copyTo(*tempForces);
-    void* prepareArgs[] = {&cu.getForce().getDevicePointer(), &cu.getPosq().getDevicePointer(), &tempPosq->getDevicePointer(),
-        &bondReductionAtoms->getDevicePointer(), &bondReductionFactors->getDevicePointer()};
+    cu.getPosq().copyTo(tempPosq);
+    cu.getForce().copyTo(tempForces);
+    void* prepareArgs[] = {&cu.getForce().getDevicePointer(), &cu.getPosq().getDevicePointer(), &tempPosq.getDevicePointer(),
+        &bondReductionAtoms.getDevicePointer(), &bondReductionFactors.getDevicePointer()};
     cu.executeKernel(prepareKernel, prepareArgs, cu.getPaddedNumAtoms());
     nonbonded->prepareInteractions(1);
     nonbonded->computeInteractions(1, includeForces, includeEnergy);
-    void* spreadArgs[] = {&cu.getForce().getDevicePointer(), &tempForces->getDevicePointer(), &bondReductionAtoms->getDevicePointer(), &bondReductionFactors->getDevicePointer()};
+    void* spreadArgs[] = {&cu.getForce().getDevicePointer(), &tempForces.getDevicePointer(), &bondReductionAtoms.getDevicePointer(), &bondReductionFactors.getDevicePointer()};
     cu.executeKernel(spreadKernel, spreadArgs, cu.getPaddedNumAtoms());
-    tempPosq->copyTo(cu.getPosq());
-    tempForces->copyTo(cu.getForce());
+    tempPosq.copyTo(cu.getPosq());
+    tempForces.copyTo(cu.getForce());
     double4 box = cu.getPeriodicBoxSize();
     return dispersionCoefficient/(box.x*box.y*box.z);
 }
@@ -2682,9 +2484,9 @@ void CudaCalcAmoebaVdwForceKernel::copyParametersToContext(ContextImpl& context,
         bondReductionAtomsVec[i] = ivIndex;
         bondReductionFactorsVec[i] = (float) reductionFactor;
     }
-    sigmaEpsilon->upload(sigmaEpsilonVec);
-    bondReductionAtoms->upload(bondReductionAtomsVec);
-    bondReductionFactors->upload(bondReductionFactorsVec);
+    sigmaEpsilon.upload(sigmaEpsilonVec);
+    bondReductionAtoms.upload(bondReductionAtomsVec);
+    bondReductionFactors.upload(bondReductionFactorsVec);
     if (force.getUseDispersionCorrection())
         dispersionCoefficient = AmoebaVdwForceImpl::calcDispersionCorrection(system, force);
     else
@@ -2711,13 +2513,7 @@ private:
 };
 
 CudaCalcAmoebaWcaDispersionForceKernel::CudaCalcAmoebaWcaDispersionForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : 
-           CalcAmoebaWcaDispersionForceKernel(name, platform), cu(cu), system(system), radiusEpsilon(NULL) {
-}
-
-CudaCalcAmoebaWcaDispersionForceKernel::~CudaCalcAmoebaWcaDispersionForceKernel() {
-    cu.setAsCurrent();
-    if (radiusEpsilon != NULL)
-        delete radiusEpsilon;
+           CalcAmoebaWcaDispersionForceKernel(name, platform), cu(cu), system(system) {
 }
 
 void CudaCalcAmoebaWcaDispersionForceKernel::initialize(const System& system, const AmoebaWcaDispersionForce& force) {
@@ -2732,8 +2528,8 @@ void CudaCalcAmoebaWcaDispersionForceKernel::initialize(const System& system, co
         force.getParticleParameters(i, radius, epsilon);
         radiusEpsilonVec[i] = make_float2((float) radius, (float) epsilon);
     }
-    radiusEpsilon = CudaArray::create<float2>(cu, paddedNumAtoms, "radiusEpsilon");
-    radiusEpsilon->upload(radiusEpsilonVec);
+    radiusEpsilon.initialize<float2>(cu, paddedNumAtoms, "radiusEpsilon");
+    radiusEpsilon.upload(radiusEpsilonVec);
     
     // Create the kernel.
     
@@ -2768,7 +2564,7 @@ double CudaCalcAmoebaWcaDispersionForceKernel::execute(ContextImpl& context, boo
     int numForceThreadBlocks = nb.getNumForceThreadBlocks();
     int forceThreadBlockSize = nb.getForceThreadBlockSize();
     void* forceArgs[] = {&cu.getForce().getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(),
-        &cu.getPosq().getDevicePointer(), &startTileIndex, &numTileIndices, &radiusEpsilon->getDevicePointer()};
+        &cu.getPosq().getDevicePointer(), &startTileIndex, &numTileIndices, &radiusEpsilon.getDevicePointer()};
     cu.executeKernel(forceKernel, forceArgs, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
     return totalMaximumDispersionEnergy;
 }
@@ -2788,7 +2584,1160 @@ void CudaCalcAmoebaWcaDispersionForceKernel::copyParametersToContext(ContextImpl
         force.getParticleParameters(i, radius, epsilon);
         radiusEpsilonVec[i] = make_float2((float) radius, (float) epsilon);
     }
-    radiusEpsilon->upload(radiusEpsilonVec);
+    radiusEpsilon.upload(radiusEpsilonVec);
     totalMaximumDispersionEnergy = AmoebaWcaDispersionForceImpl::getTotalMaximumDispersionEnergy(force);
     cu.invalidateMolecules();
+}
+
+/* -------------------------------------------------------------------------- *
+ *                           HippoNonbondedForce                              *
+ * -------------------------------------------------------------------------- */
+
+class CudaCalcHippoNonbondedForceKernel::ForceInfo : public CudaForceInfo {
+public:
+    ForceInfo(const HippoNonbondedForce& force) : force(force) {
+    }
+    bool areParticlesIdentical(int particle1, int particle2) {
+        double charge1, coreCharge1, alpha1, epsilon1, damping1, c61, pauliK1, pauliQ1, pauliAlpha1, polarizability1;
+        double charge2, coreCharge2, alpha2, epsilon2, damping2, c62, pauliK2, pauliQ2, pauliAlpha2, polarizability2;
+        int axisType1, multipoleZ1, multipoleX1, multipoleY1;
+        int axisType2, multipoleZ2, multipoleX2, multipoleY2;
+        vector<double> dipole1, dipole2, quadrupole1, quadrupole2;
+        force.getParticleParameters(particle1, charge1, dipole1, quadrupole1, coreCharge1, alpha1, epsilon1, damping1, c61, pauliK1, pauliQ1, pauliAlpha1,
+                                    polarizability1, axisType1, multipoleZ1, multipoleX1, multipoleY1);
+        force.getParticleParameters(particle2, charge2, dipole2, quadrupole2, coreCharge2, alpha2, epsilon2, damping2, c62, pauliK2, pauliQ2, pauliAlpha2,
+                                    polarizability2, axisType2, multipoleZ2, multipoleX2, multipoleY2);
+        if (charge1 != charge2 || coreCharge1 != coreCharge2 || alpha1 != alpha2 || epsilon1 != epsilon1 || damping1 != damping2 || c61 != c62 ||
+                pauliK1 != pauliK2 || pauliQ1 != pauliQ2 || pauliAlpha1 != pauliAlpha2 || polarizability1 != polarizability2 || axisType1 != axisType2) {
+            return false;
+        }
+        for (int i = 0; i < dipole1.size(); ++i)
+            if (dipole1[i] != dipole2[i])
+                return false;
+        for (int i = 0; i < quadrupole1.size(); ++i)
+            if (quadrupole1[i] != quadrupole2[i])
+                return false;
+        return true;
+    }
+    int getNumParticleGroups() {
+        return force.getNumExceptions();
+    }
+    void getParticlesInGroup(int index, vector<int>& particles) {
+        int particle1, particle2;
+        double multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale, chargeTransferScale;
+        force.getExceptionParameters(index, particle1, particle2, multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale, chargeTransferScale);
+        particles.resize(2);
+        particles[0] = particle1;
+        particles[1] = particle2;
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        int particle1, particle2;
+        double multipoleMultipoleScale1, dipoleMultipoleScale1, dipoleDipoleScale1, dispersionScale1, repulsionScale1, chargeTransferScale1;
+        double multipoleMultipoleScale2, dipoleMultipoleScale2, dipoleDipoleScale2, dispersionScale2, repulsionScale2, chargeTransferScale2;
+        force.getExceptionParameters(group1, particle1, particle2, multipoleMultipoleScale1, dipoleMultipoleScale1, dipoleDipoleScale1, dispersionScale1, repulsionScale1, chargeTransferScale1);
+        force.getExceptionParameters(group2, particle1, particle2, multipoleMultipoleScale2, dipoleMultipoleScale2, dipoleDipoleScale2, dispersionScale2, repulsionScale2, chargeTransferScale2);
+        return (multipoleMultipoleScale1 == multipoleMultipoleScale2 && dipoleMultipoleScale1 == dipoleMultipoleScale2 &&
+                dipoleDipoleScale1 == dipoleDipoleScale2 && dispersionScale1 == dispersionScale2 && repulsionScale1 == repulsionScale2 && chargeTransferScale1 == chargeTransferScale2);
+    }
+private:
+    const HippoNonbondedForce& force;
+};
+
+class CudaCalcHippoNonbondedForceKernel::TorquePostComputation : public CudaContext::ForcePostComputation {
+public:
+    TorquePostComputation(CudaCalcHippoNonbondedForceKernel& owner) : owner(owner) {
+    }
+    double computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
+        owner.addTorquesToForces();
+        return 0.0;
+    }
+private:
+    CudaCalcHippoNonbondedForceKernel& owner;
+};
+
+CudaCalcHippoNonbondedForceKernel::CudaCalcHippoNonbondedForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : 
+        CalcHippoNonbondedForceKernel(name, platform), cu(cu), system(system), sort(NULL), hasInitializedKernels(false), hasInitializedFFT(false), multipolesAreValid(false) {
+}
+
+CudaCalcHippoNonbondedForceKernel::~CudaCalcHippoNonbondedForceKernel() {
+    cu.setAsCurrent();
+    if (sort != NULL)
+        delete sort;
+    if (hasInitializedFFT) {
+        cufftDestroy(fftForward);
+        cufftDestroy(fftBackward);
+        cufftDestroy(dfftForward);
+        cufftDestroy(dfftBackward);
+    }
+}
+
+void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const HippoNonbondedForce& force) {
+    cu.setAsCurrent();
+    extrapolationCoefficients = force.getExtrapolationCoefficients();
+    usePME = (force.getNonbondedMethod() == HippoNonbondedForce::PME);
+
+    // Initialize particle parameters.
+
+    numParticles = force.getNumParticles();
+    vector<double> coreChargeVec, valenceChargeVec, alphaVec, epsilonVec, dampingVec, c6Vec, pauliKVec, pauliQVec, pauliAlphaVec, polarizabilityVec;
+    vector<double> localDipolesVec, localQuadrupolesVec;
+    vector<int4> multipoleParticlesVec;
+    vector<vector<int> > exclusions(numParticles);
+    for (int i = 0; i < numParticles; i++) {
+        double charge, coreCharge, alpha, epsilon, damping, c6, pauliK, pauliQ, pauliAlpha, polarizability;
+        int axisType, atomX, atomY, atomZ;
+        vector<double> dipole, quadrupole;
+        force.getParticleParameters(i, charge, dipole, quadrupole, coreCharge, alpha, epsilon, damping, c6, pauliK, pauliQ, pauliAlpha,
+                                    polarizability, axisType, atomZ, atomX, atomY);
+        coreChargeVec.push_back(coreCharge);
+        valenceChargeVec.push_back(charge-coreCharge);
+        alphaVec.push_back(alpha);
+        epsilonVec.push_back(epsilon);
+        dampingVec.push_back(damping);
+        c6Vec.push_back(c6);
+        pauliKVec.push_back(pauliK);
+        pauliQVec.push_back(pauliQ);
+        pauliAlphaVec.push_back(pauliAlpha);
+        polarizabilityVec.push_back(polarizability);
+        multipoleParticlesVec.push_back(make_int4(atomX, atomY, atomZ, axisType));
+        for (int j = 0; j < 3; j++)
+            localDipolesVec.push_back(dipole[j]);
+        localQuadrupolesVec.push_back(quadrupole[0]);
+        localQuadrupolesVec.push_back(quadrupole[1]);
+        localQuadrupolesVec.push_back(quadrupole[2]);
+        localQuadrupolesVec.push_back(quadrupole[4]);
+        localQuadrupolesVec.push_back(quadrupole[5]);
+        exclusions[i].push_back(i);
+    }
+    int paddedNumAtoms = cu.getPaddedNumAtoms();
+    for (int i = numParticles; i < paddedNumAtoms; i++) {
+        coreChargeVec.push_back(0);
+        valenceChargeVec.push_back(0);
+        alphaVec.push_back(0);
+        epsilonVec.push_back(0);
+        dampingVec.push_back(0);
+        c6Vec.push_back(0);
+        pauliKVec.push_back(0);
+        pauliQVec.push_back(0);
+        pauliAlphaVec.push_back(0);
+        polarizabilityVec.push_back(0);
+        multipoleParticlesVec.push_back(make_int4(0, 0, 0, 0));
+        for (int j = 0; j < 3; j++)
+            localDipolesVec.push_back(0);
+        for (int j = 0; j < 5; j++)
+            localQuadrupolesVec.push_back(0);
+    }
+    int elementSize = (cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
+    coreCharge.initialize(cu, paddedNumAtoms, elementSize, "coreCharge");
+    valenceCharge.initialize(cu, paddedNumAtoms, elementSize, "valenceCharge");
+    alpha.initialize(cu, paddedNumAtoms, elementSize, "alpha");
+    epsilon.initialize(cu, paddedNumAtoms, elementSize, "epsilon");
+    damping.initialize(cu, paddedNumAtoms, elementSize, "damping");
+    c6.initialize(cu, paddedNumAtoms, elementSize, "c6");
+    pauliK.initialize(cu, paddedNumAtoms, elementSize, "pauliK");
+    pauliQ.initialize(cu, paddedNumAtoms, elementSize, "pauliQ");
+    pauliAlpha.initialize(cu, paddedNumAtoms, elementSize, "pauliAlpha");
+    polarizability.initialize(cu, paddedNumAtoms, elementSize, "polarizability");
+    multipoleParticles.initialize<int4>(cu, paddedNumAtoms, "multipoleParticles");
+    localDipoles.initialize(cu, 3*paddedNumAtoms, elementSize, "localDipoles");
+    localQuadrupoles.initialize(cu, 5*paddedNumAtoms, elementSize, "localQuadrupoles");
+    lastPositions.initialize(cu, cu.getPosq().getSize(), cu.getPosq().getElementSize(), "lastPositions");
+    coreCharge.upload(coreChargeVec, true);
+    valenceCharge.upload(valenceChargeVec, true);
+    alpha.upload(alphaVec, true);
+    epsilon.upload(epsilonVec, true);
+    damping.upload(dampingVec, true);
+    c6.upload(c6Vec, true);
+    pauliK.upload(pauliKVec, true);
+    pauliQ.upload(pauliQVec, true);
+    pauliAlpha.upload(pauliAlphaVec, true);
+    polarizability.upload(polarizabilityVec, true);
+    multipoleParticles.upload(multipoleParticlesVec);
+    localDipoles.upload(localDipolesVec, true);
+    localQuadrupoles.upload(localQuadrupolesVec, true);
+    
+    // Create workspace arrays.
+    
+    labDipoles.initialize(cu, paddedNumAtoms, 3*elementSize, "dipole");
+    labQuadrupoles[0].initialize(cu, paddedNumAtoms, elementSize, "qXX");
+    labQuadrupoles[1].initialize(cu, paddedNumAtoms, elementSize, "qXY");
+    labQuadrupoles[2].initialize(cu, paddedNumAtoms, elementSize, "qXZ");
+    labQuadrupoles[3].initialize(cu, paddedNumAtoms, elementSize, "qYY");
+    labQuadrupoles[4].initialize(cu, paddedNumAtoms, elementSize, "qYZ");
+    fracDipoles.initialize(cu, paddedNumAtoms, 3*elementSize, "fracDipoles");
+    fracQuadrupoles.initialize(cu, 6*paddedNumAtoms, elementSize, "fracQuadrupoles");
+    field.initialize(cu, 3*paddedNumAtoms, sizeof(long long), "field");
+    inducedField.initialize(cu, 3*paddedNumAtoms, sizeof(long long), "inducedField");
+    torque.initialize(cu, 3*paddedNumAtoms, sizeof(long long), "torque");
+    inducedDipole.initialize(cu, paddedNumAtoms, 3*elementSize, "inducedDipole");
+    int numOrders = extrapolationCoefficients.size();
+    extrapolatedDipole.initialize(cu, 3*numParticles*numOrders, elementSize, "extrapolatedDipole");
+    extrapolatedPhi.initialize(cu, 10*numParticles*numOrders, elementSize, "extrapolatedPhi");
+    cu.addAutoclearBuffer(field);
+    cu.addAutoclearBuffer(torque);
+    
+    // Record exceptions and exclusions.
+    
+    vector<double> exceptionScaleVec[6];
+    vector<int2> exceptionAtomsVec;
+    for (int i = 0; i < force.getNumExceptions(); i++) {
+        int particle1, particle2;
+        double multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale, chargeTransferScale;
+        force.getExceptionParameters(i, particle1, particle2, multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale, chargeTransferScale);
+        exclusions[particle1].push_back(particle2);
+        exclusions[particle2].push_back(particle1);
+        if (usePME || multipoleMultipoleScale != 0 || dipoleMultipoleScale != 0 || dipoleDipoleScale != 0 || dispersionScale != 0 || repulsionScale != 0 || chargeTransferScale != 0) {
+            exceptionAtomsVec.push_back(make_int2(particle1, particle2));
+            exceptionScaleVec[0].push_back(multipoleMultipoleScale);
+            exceptionScaleVec[1].push_back(dipoleMultipoleScale);
+            exceptionScaleVec[2].push_back(dipoleDipoleScale);
+            exceptionScaleVec[3].push_back(dispersionScale);
+            exceptionScaleVec[4].push_back(repulsionScale);
+            exceptionScaleVec[5].push_back(chargeTransferScale);
+        }
+    }
+    if (exceptionAtomsVec.size() > 0) {
+        exceptionAtoms.initialize<int2>(cu, exceptionAtomsVec.size(), "exceptionAtoms");
+        exceptionAtoms.upload(exceptionAtomsVec);
+        for (int i = 0; i < 6; i++) {
+            exceptionScales[i].initialize(cu, exceptionAtomsVec.size(), elementSize, "exceptionScales");
+            exceptionScales[i].upload(exceptionScaleVec[i], true);
+        }
+    }
+    
+    // Create the kernels.
+
+    bool useShuffle = (cu.getComputeCapability() >= 3.0 && !cu.getUseDoublePrecision());
+    map<string, string> defines;
+    defines["HIPPO"] = "1";
+    defines["NUM_ATOMS"] = cu.intToString(numParticles);
+    defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
+    defines["NUM_BLOCKS"] = cu.intToString(cu.getNumAtomBlocks());
+    defines["ENERGY_SCALE_FACTOR"] = cu.doubleToString(138.9354558456);
+    if (useShuffle)
+        defines["USE_SHUFFLE"] = "";
+    maxExtrapolationOrder = extrapolationCoefficients.size();
+    defines["MAX_EXTRAPOLATION_ORDER"] = cu.intToString(maxExtrapolationOrder);
+    stringstream coefficients;
+    for (int i = 0; i < maxExtrapolationOrder; i++) {
+        if (i > 0)
+            coefficients << ",";
+        double sum = 0;
+        for (int j = i; j < maxExtrapolationOrder; j++)
+            sum += extrapolationCoefficients[j];
+        coefficients << cu.doubleToString(sum);
+    }
+    defines["EXTRAPOLATION_COEFFICIENTS_SUM"] = coefficients.str();
+    cutoff = force.getCutoffDistance();
+    if (usePME) {
+        int nx, ny, nz;
+        force.getPMEParameters(pmeAlpha, nx, ny, nz);
+        if (nx == 0 || pmeAlpha == 0) {
+            NonbondedForce nb;
+            nb.setEwaldErrorTolerance(force.getEwaldErrorTolerance());
+            nb.setCutoffDistance(force.getCutoffDistance());
+            NonbondedForceImpl::calcPMEParameters(system, nb, pmeAlpha, gridSizeX, gridSizeY, gridSizeZ, false);
+            gridSizeX = CudaFFT3D::findLegalDimension(gridSizeX);
+            gridSizeY = CudaFFT3D::findLegalDimension(gridSizeY);
+            gridSizeZ = CudaFFT3D::findLegalDimension(gridSizeZ);
+        } else {
+            gridSizeX = CudaFFT3D::findLegalDimension(nx);
+            gridSizeY = CudaFFT3D::findLegalDimension(ny);
+            gridSizeZ = CudaFFT3D::findLegalDimension(nz);
+        }
+        force.getDPMEParameters(dpmeAlpha, nx, ny, nz);
+        if (nx == 0 || dpmeAlpha == 0) {
+            NonbondedForce nb;
+            nb.setEwaldErrorTolerance(force.getEwaldErrorTolerance());
+            nb.setCutoffDistance(force.getCutoffDistance());
+            NonbondedForceImpl::calcPMEParameters(system, nb, dpmeAlpha, dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, true);
+            dispersionGridSizeX = CudaFFT3D::findLegalDimension(dispersionGridSizeX);
+            dispersionGridSizeY = CudaFFT3D::findLegalDimension(dispersionGridSizeY);
+            dispersionGridSizeZ = CudaFFT3D::findLegalDimension(dispersionGridSizeZ);
+        } else {
+            dispersionGridSizeX = CudaFFT3D::findLegalDimension(nx);
+            dispersionGridSizeY = CudaFFT3D::findLegalDimension(ny);
+            dispersionGridSizeZ = CudaFFT3D::findLegalDimension(nz);
+        }
+        defines["EWALD_ALPHA"] = cu.doubleToString(pmeAlpha);
+        defines["SQRT_PI"] = cu.doubleToString(sqrt(M_PI));
+        defines["USE_EWALD"] = "";
+        defines["USE_CUTOFF"] = "";
+        defines["USE_PERIODIC"] = "";
+        defines["CUTOFF_SQUARED"] = cu.doubleToString(force.getCutoffDistance()*force.getCutoffDistance());
+    }
+    CUmodule module = cu.createModule(CudaKernelSources::vectorOps+CudaAmoebaKernelSources::hippoMultipoles, defines);
+    computeMomentsKernel = cu.getKernel(module, "computeLabFrameMoments");
+    recordInducedDipolesKernel = cu.getKernel(module, "recordInducedDipoles");
+    mapTorqueKernel = cu.getKernel(module, "mapTorqueToForce");
+    module = cu.createModule(CudaKernelSources::vectorOps+CudaAmoebaKernelSources::multipoleInducedField, defines);
+    initExtrapolatedKernel = cu.getKernel(module, "initExtrapolatedDipoles");
+    iterateExtrapolatedKernel = cu.getKernel(module, "iterateExtrapolatedDipoles");
+    computeExtrapolatedKernel = cu.getKernel(module, "computeExtrapolatedDipoles");
+    polarizationEnergyKernel = cu.getKernel(module, "computePolarizationEnergy");
+
+    // Set up PME.
+    
+    if (usePME) {
+        // Create the PME kernels.
+
+        map<string, string> pmeDefines;
+        pmeDefines["HIPPO"] = "1";
+        pmeDefines["EWALD_ALPHA"] = cu.doubleToString(pmeAlpha);
+        pmeDefines["DISPERSION_EWALD_ALPHA"] = cu.doubleToString(dpmeAlpha);
+        pmeDefines["PME_ORDER"] = cu.intToString(PmeOrder);
+        pmeDefines["NUM_ATOMS"] = cu.intToString(numParticles);
+        pmeDefines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
+        pmeDefines["EPSILON_FACTOR"] = cu.doubleToString(138.9354558456);
+        pmeDefines["GRID_SIZE_X"] = cu.intToString(gridSizeX);
+        pmeDefines["GRID_SIZE_Y"] = cu.intToString(gridSizeY);
+        pmeDefines["GRID_SIZE_Z"] = cu.intToString(gridSizeZ);
+        pmeDefines["M_PI"] = cu.doubleToString(M_PI);
+        pmeDefines["SQRT_PI"] = cu.doubleToString(sqrt(M_PI));
+        pmeDefines["EXTRAPOLATION_COEFFICIENTS_SUM"] = coefficients.str();
+        pmeDefines["MAX_EXTRAPOLATION_ORDER"] = cu.intToString(maxExtrapolationOrder);
+        CUmodule module = cu.createModule(CudaKernelSources::vectorOps+CudaAmoebaKernelSources::multipolePme, pmeDefines);
+        pmeTransformMultipolesKernel = cu.getKernel(module, "transformMultipolesToFractionalCoordinates");
+        pmeTransformPotentialKernel = cu.getKernel(module, "transformPotentialToCartesianCoordinates");
+        pmeSpreadFixedMultipolesKernel = cu.getKernel(module, "gridSpreadFixedMultipoles");
+        pmeSpreadInducedDipolesKernel = cu.getKernel(module, "gridSpreadInducedDipoles");
+        pmeFinishSpreadChargeKernel = cu.getKernel(module, "finishSpreadCharge");
+        pmeConvolutionKernel = cu.getKernel(module, "reciprocalConvolution");
+        pmeFixedPotentialKernel = cu.getKernel(module, "computeFixedPotentialFromGrid");
+        pmeInducedPotentialKernel = cu.getKernel(module, "computeInducedPotentialFromGrid");
+        pmeFixedForceKernel = cu.getKernel(module, "computeFixedMultipoleForceAndEnergy");
+        pmeInducedForceKernel = cu.getKernel(module, "computeInducedDipoleForceAndEnergy");
+        pmeRecordInducedFieldDipolesKernel = cu.getKernel(module, "recordInducedFieldDipoles");
+        pmeSelfEnergyKernel = cu.getKernel(module, "calculateSelfEnergyAndTorque");
+
+        // Create the dispersion PME kernels.
+
+        pmeDefines["EWALD_ALPHA"] = cu.doubleToString(dpmeAlpha);
+        pmeDefines["EPSILON_FACTOR"] = "1";
+        pmeDefines["GRID_SIZE_X"] = cu.intToString(dispersionGridSizeX);
+        pmeDefines["GRID_SIZE_Y"] = cu.intToString(dispersionGridSizeY);
+        pmeDefines["GRID_SIZE_Z"] = cu.intToString(dispersionGridSizeZ);
+        pmeDefines["RECIP_EXP_FACTOR"] = cu.doubleToString(M_PI*M_PI/(dpmeAlpha*dpmeAlpha));
+        pmeDefines["CHARGE"] = "charges[atom]";
+        pmeDefines["USE_LJPME"] = "1";
+        module = cu.createModule(CudaKernelSources::vectorOps+CudaKernelSources::pme, pmeDefines);
+        dpmeFinishSpreadChargeKernel = cu.getKernel(module, "finishSpreadCharge");
+        dpmeGridIndexKernel = cu.getKernel(module, "findAtomGridIndex");
+        dpmeSpreadChargeKernel = cu.getKernel(module, "gridSpreadCharge");
+        dpmeConvolutionKernel = cu.getKernel(module, "reciprocalConvolution");
+        dpmeEvalEnergyKernel = cu.getKernel(module, "gridEvaluateEnergy");
+        dpmeInterpolateForceKernel = cu.getKernel(module, "gridInterpolateForce");
+
+        // Create required data structures.
+
+        int roundedZSize = PmeOrder*(int) ceil(gridSizeZ/(double) PmeOrder);
+        int gridElements = gridSizeX*gridSizeY*roundedZSize;
+        roundedZSize = PmeOrder*(int) ceil(dispersionGridSizeZ/(double) PmeOrder);
+        gridElements = max(gridElements, dispersionGridSizeX*dispersionGridSizeY*roundedZSize);
+        pmeGrid1.initialize(cu, gridElements, elementSize, "pmeGrid1");
+        pmeGrid2.initialize(cu, gridElements, 2*elementSize, "pmeGrid2");
+        cu.addAutoclearBuffer(pmeGrid1);
+        pmeBsplineModuliX.initialize(cu, gridSizeX, elementSize, "pmeBsplineModuliX");
+        pmeBsplineModuliY.initialize(cu, gridSizeY, elementSize, "pmeBsplineModuliY");
+        pmeBsplineModuliZ.initialize(cu, gridSizeZ, elementSize, "pmeBsplineModuliZ");
+        dpmeBsplineModuliX.initialize(cu, dispersionGridSizeX, elementSize, "dpmeBsplineModuliX");
+        dpmeBsplineModuliY.initialize(cu, dispersionGridSizeY, elementSize, "dpmeBsplineModuliY");
+        dpmeBsplineModuliZ.initialize(cu, dispersionGridSizeZ, elementSize, "dpmeBsplineModuliZ");
+        pmePhi.initialize(cu, 20*numParticles, elementSize, "pmePhi");
+        pmePhidp.initialize(cu, 20*numParticles, elementSize, "pmePhidp");
+        pmeCphi.initialize(cu, 10*numParticles, elementSize, "pmeCphi");
+        pmeAtomGridIndex.initialize<int2>(cu, numParticles, "pmeAtomGridIndex");
+        sort = new CudaSort(cu, new SortTrait(), cu.getNumAtoms());
+        cufftResult result = cufftPlan3d(&fftForward, gridSizeX, gridSizeY, gridSizeZ, cu.getUseDoublePrecision() ? CUFFT_D2Z : CUFFT_R2C);
+        if (result != CUFFT_SUCCESS)
+            throw OpenMMException("Error initializing FFT: "+cu.intToString(result));
+        result = cufftPlan3d(&fftBackward, gridSizeX, gridSizeY, gridSizeZ, cu.getUseDoublePrecision() ? CUFFT_Z2D : CUFFT_C2R);
+        if (result != CUFFT_SUCCESS)
+            throw OpenMMException("Error initializing FFT: "+cu.intToString(result));
+        result = cufftPlan3d(&dfftForward, dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, cu.getUseDoublePrecision() ? CUFFT_D2Z : CUFFT_R2C);
+        if (result != CUFFT_SUCCESS)
+            throw OpenMMException("Error initializing FFT: "+cu.intToString(result));
+        result = cufftPlan3d(&dfftBackward, dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, cu.getUseDoublePrecision() ? CUFFT_Z2D : CUFFT_C2R);
+        if (result != CUFFT_SUCCESS)
+            throw OpenMMException("Error initializing FFT: "+cu.intToString(result));
+        hasInitializedFFT = true;
+
+        // Initialize the B-spline moduli.
+
+        double data[PmeOrder];
+        double x = 0.0;
+        data[0] = 1.0 - x;
+        data[1] = x;
+        for (int i = 2; i < PmeOrder; i++) {
+            double denom = 1.0/i;
+            data[i] = x*data[i-1]*denom;
+            for (int j = 1; j < i; j++)
+                data[i-j] = ((x+j)*data[i-j-1] + ((i-j+1)-x)*data[i-j])*denom;
+            data[0] = (1.0-x)*data[0]*denom;
+        }
+        int maxSize = max(max(gridSizeX, gridSizeY), gridSizeZ);
+        vector<double> bsplines_data(maxSize+1, 0.0);
+        for (int i = 2; i <= PmeOrder+1; i++)
+            bsplines_data[i] = data[i-2];
+        for (int dim = 0; dim < 3; dim++) {
+            int ndata = (dim == 0 ? gridSizeX : dim == 1 ? gridSizeY : gridSizeZ);
+            vector<double> moduli(ndata);
+
+            // get the modulus of the discrete Fourier transform
+
+            double factor = 2.0*M_PI/ndata;
+            for (int i = 0; i < ndata; i++) {
+                double sc = 0.0;
+                double ss = 0.0;
+                for (int j = 1; j <= ndata; j++) {
+                    double arg = factor*i*(j-1);
+                    sc += bsplines_data[j]*cos(arg);
+                    ss += bsplines_data[j]*sin(arg);
+                }
+                moduli[i] = sc*sc+ss*ss;
+            }
+
+            // Fix for exponential Euler spline interpolation failure.
+
+            double eps = 1.0e-7;
+            if (moduli[0] < eps)
+                moduli[0] = 0.9*moduli[1];
+            for (int i = 1; i < ndata-1; i++)
+                if (moduli[i] < eps)
+                    moduli[i] = 0.9*(moduli[i-1]+moduli[i+1]);
+            if (moduli[ndata-1] < eps)
+                moduli[ndata-1] = 0.9*moduli[ndata-2];
+
+            // Compute and apply the optimal zeta coefficient.
+
+            int jcut = 50;
+            for (int i = 1; i <= ndata; i++) {
+                int k = i - 1;
+                if (i > ndata/2)
+                    k = k - ndata;
+                double zeta;
+                if (k == 0)
+                    zeta = 1.0;
+                else {
+                    double sum1 = 1.0;
+                    double sum2 = 1.0;
+                    factor = M_PI*k/ndata;
+                    for (int j = 1; j <= jcut; j++) {
+                        double arg = factor/(factor+M_PI*j);
+                        sum1 += pow(arg, PmeOrder);
+                        sum2 += pow(arg, 2*PmeOrder);
+                    }
+                    for (int j = 1; j <= jcut; j++) {
+                        double arg = factor/(factor-M_PI*j);
+                        sum1 += pow(arg, PmeOrder);
+                        sum2 += pow(arg, 2*PmeOrder);
+                    }
+                    zeta = sum2/sum1;
+                }
+                moduli[i-1] = moduli[i-1]*zeta*zeta;
+            }
+            if (cu.getUseDoublePrecision()) {
+                if (dim == 0)
+                    pmeBsplineModuliX.upload(moduli);
+                else if (dim == 1)
+                    pmeBsplineModuliY.upload(moduli);
+                else
+                    pmeBsplineModuliZ.upload(moduli);
+            }
+            else {
+                vector<float> modulif(ndata);
+                for (int i = 0; i < ndata; i++)
+                    modulif[i] = (float) moduli[i];
+                if (dim == 0)
+                    pmeBsplineModuliX.upload(modulif);
+                else if (dim == 1)
+                    pmeBsplineModuliY.upload(modulif);
+                else
+                    pmeBsplineModuliZ.upload(modulif);
+            }
+        }
+
+        // Initialize the b-spline moduli for dispersion PME.
+
+        maxSize = max(max(dispersionGridSizeX, dispersionGridSizeY), dispersionGridSizeZ);
+        vector<double> ddata(PmeOrder);
+        bsplines_data.resize(maxSize);
+        data[PmeOrder-1] = 0.0;
+        data[1] = 0.0;
+        data[0] = 1.0;
+        for (int i = 3; i < PmeOrder; i++) {
+            double div = 1.0/(i-1.0);
+            data[i-1] = 0.0;
+            for (int j = 1; j < (i-1); j++)
+                data[i-j-1] = div*(j*data[i-j-2]+(i-j)*data[i-j-1]);
+            data[0] = div*data[0];
+        }
+
+        // Differentiate.
+
+        ddata[0] = -data[0];
+        for (int i = 1; i < PmeOrder; i++)
+            ddata[i] = data[i-1]-data[i];
+        double div = 1.0/(PmeOrder-1);
+        data[PmeOrder-1] = 0.0;
+        for (int i = 1; i < (PmeOrder-1); i++)
+            data[PmeOrder-i-1] = div*(i*data[PmeOrder-i-2]+(PmeOrder-i)*data[PmeOrder-i-1]);
+        data[0] = div*data[0];
+        for (int i = 0; i < maxSize; i++)
+            bsplines_data[i] = 0.0;
+        for (int i = 1; i <= PmeOrder; i++)
+            bsplines_data[i] = data[i-1];
+
+        // Evaluate the actual bspline moduli for X/Y/Z.
+
+        for(int dim = 0; dim < 3; dim++) {
+            int ndata = (dim == 0 ? dispersionGridSizeX : dim == 1 ? dispersionGridSizeY : dispersionGridSizeZ);
+            vector<double> moduli(ndata);
+            for (int i = 0; i < ndata; i++) {
+                double sc = 0.0;
+                double ss = 0.0;
+                for (int j = 0; j < ndata; j++) {
+                    double arg = (2.0*M_PI*i*j)/ndata;
+                    sc += bsplines_data[j]*cos(arg);
+                    ss += bsplines_data[j]*sin(arg);
+                }
+                moduli[i] = sc*sc+ss*ss;
+            }
+            for (int i = 0; i < ndata; i++)
+                if (moduli[i] < 1.0e-7)
+                    moduli[i] = (moduli[i-1]+moduli[i+1])*0.5;
+            if (dim == 0)
+                dpmeBsplineModuliX.upload(moduli, true);
+            else if (dim == 1)
+                dpmeBsplineModuliY.upload(moduli, true);
+            else
+                dpmeBsplineModuliZ.upload(moduli, true);
+        }
+    }
+
+    // Add the interaction to the default nonbonded kernel.
+    
+    CudaNonbondedUtilities& nb = cu.getNonbondedUtilities();
+    nb.setKernelSource(CudaAmoebaKernelSources::hippoInteractionHeader+CudaAmoebaKernelSources::hippoNonbonded);
+    nb.addArgument(CudaNonbondedUtilities::ParameterInfo("torqueBuffers", "unsigned long long", 1, torque.getElementSize(), torque.getDevicePointer(), false));
+    nb.addArgument(CudaNonbondedUtilities::ParameterInfo("extrapolatedDipole", "real3", 1, extrapolatedDipole.getElementSize(), extrapolatedDipole.getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("coreCharge", "real", 1, coreCharge.getElementSize(), coreCharge.getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("valenceCharge", "real", 1, valenceCharge.getElementSize(), valenceCharge.getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("alpha", "real", 1, alpha.getElementSize(), alpha.getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("epsilon", "real", 1, epsilon.getElementSize(), epsilon.getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("damping", "real", 1, damping.getElementSize(), damping.getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("c6", "real", 1, c6.getElementSize(), c6.getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("pauliK", "real", 1, pauliK.getElementSize(), pauliK.getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("pauliQ", "real", 1, pauliQ.getElementSize(), pauliQ.getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("pauliAlpha", "real", 1, pauliAlpha.getElementSize(), pauliAlpha.getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("dipole", "real", 3, labDipoles.getElementSize(), labDipoles.getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("inducedDipole", "real", 3, inducedDipole.getElementSize(), inducedDipole.getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("qXX", "real", 1, labQuadrupoles[0].getElementSize(), labQuadrupoles[0].getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("qXY", "real", 1, labQuadrupoles[1].getElementSize(), labQuadrupoles[1].getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("qXZ", "real", 1, labQuadrupoles[2].getElementSize(), labQuadrupoles[2].getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("qYY", "real", 1, labQuadrupoles[3].getElementSize(), labQuadrupoles[3].getDevicePointer()));
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("qYZ", "real", 1, labQuadrupoles[4].getElementSize(), labQuadrupoles[4].getDevicePointer()));
+    map<string, string> replacements;
+    replacements["ENERGY_SCALE_FACTOR"] = cu.doubleToString(138.9354558456);
+    replacements["SWITCH_CUTOFF"] = cu.doubleToString(force.getSwitchingDistance());
+    replacements["SWITCH_C3"] = cu.doubleToString(10/pow(force.getSwitchingDistance()-force.getCutoffDistance(), 3.0));
+    replacements["SWITCH_C4"] = cu.doubleToString(15/pow(force.getSwitchingDistance()-force.getCutoffDistance(), 4.0));
+    replacements["SWITCH_C5"] = cu.doubleToString(6/pow(force.getSwitchingDistance()-force.getCutoffDistance(), 5.0));
+    replacements["MAX_EXTRAPOLATION_ORDER"] = cu.intToString(maxExtrapolationOrder);
+    replacements["EXTRAPOLATION_COEFFICIENTS_SUM"] = coefficients.str();
+    replacements["USE_EWALD"] = (usePME ? "1" : "0");
+    replacements["PME_ALPHA"] = (usePME ? cu.doubleToString(pmeAlpha) : "0");
+    replacements["DPME_ALPHA"] = (usePME ? cu.doubleToString(dpmeAlpha) : "0");
+    replacements["SQRT_PI"] = cu.doubleToString(sqrt(M_PI));
+    string interactionSource = cu.replaceStrings(CudaAmoebaKernelSources::hippoInteraction, replacements);
+    nb.addInteraction(usePME, usePME, true, force.getCutoffDistance(), exclusions, interactionSource, force.getForceGroup());
+    nb.setUsePadding(false);
+    
+    // Create the kernel for computing exceptions.
+    
+    if (exceptionAtoms.isInitialized()) {
+        replacements["COMPUTE_INTERACTION"] = interactionSource;
+        string exceptionsSrc = CudaKernelSources::vectorOps+CudaAmoebaKernelSources::hippoInteractionHeader+CudaAmoebaKernelSources::hippoNonbondedExceptions;
+        exceptionsSrc = cu.replaceStrings(exceptionsSrc, replacements);
+        defines["NUM_EXCEPTIONS"] = cu.intToString(exceptionAtoms.getSize());
+        module = cu.createModule(exceptionsSrc, defines);
+        computeExceptionsKernel = cu.getKernel(module, "computeNonbondedExceptions");
+    }
+    cu.addForce(new ForceInfo(force));
+    cu.addPostComputation(new TorquePostComputation(*this));
+}
+
+void CudaCalcHippoNonbondedForceKernel::createFieldKernel(const string& interactionSrc, vector<CudaArray*> params,
+            CudaArray& fieldBuffer, CUfunction& kernel, vector<void*>& args, CUfunction& exceptionKernel, vector<void*>& exceptionArgs,
+            CudaArray& exceptionScale) {
+    // Create the kernel source.
+
+    map<string, string> replacements;
+    replacements["COMPUTE_FIELD"] = interactionSrc;
+    stringstream extraArgs, atomParams, loadLocal1, loadLocal2, load1, load2, load3;
+    for (auto param : params) {
+        string name = param->getName();
+        string type = (param->getElementSize() == 4 || param->getElementSize() == 8 ? "real" : "real3");
+        extraArgs << ", const " << type << "* __restrict__ " << name;
+        atomParams << type << " " << name << ";\n";
+        loadLocal1 << "localData[localAtomIndex]." << name << " = " << name << "1;\n";
+        loadLocal2 << "localData[localAtomIndex]." << name << " = " << name << "[j];\n";
+        load1 << type << " " << name << "1 = " << name << "[atom1];\n";
+        load2 << type << " " << name << "2 = localData[atom2]." << name << ";\n";
+        load3 << type << " " << name << "2 = " << name << "[atom2];\n";
+    }
+    replacements["PARAMETER_ARGUMENTS"] = extraArgs.str();
+    replacements["ATOM_PARAMETER_DATA"] = atomParams.str();
+    replacements["LOAD_LOCAL_PARAMETERS_FROM_1"] = loadLocal1.str();
+    replacements["LOAD_LOCAL_PARAMETERS_FROM_GLOBAL"] = loadLocal2.str();
+    replacements["LOAD_ATOM1_PARAMETERS"] = load1.str();
+    replacements["LOAD_ATOM2_PARAMETERS"] = load2.str();
+    replacements["LOAD_ATOM2_PARAMETERS_FROM_GLOBAL"] = load3.str();
+    string src = cu.replaceStrings(CudaAmoebaKernelSources::hippoComputeField, replacements);
+
+    // Set defines and create the kernel.
+
+    map<string, string> defines;
+    if (usePME) {
+        defines["USE_CUTOFF"] = "1";
+        defines["USE_PERIODIC"] = "1";
+        defines["USE_EWALD"] = "1";
+        defines["PME_ALPHA"] = cu.doubleToString(pmeAlpha);
+        defines["SQRT_PI"] = cu.doubleToString(sqrt(M_PI));
+    }
+    defines["WARPS_PER_GROUP"] = cu.intToString(cu.getNonbondedUtilities().getForceThreadBlockSize()/CudaContext::TileSize);
+    defines["THREAD_BLOCK_SIZE"] = cu.intToString(cu.getNonbondedUtilities().getForceThreadBlockSize());
+    defines["CUTOFF"] = cu.doubleToString(cutoff);
+    defines["CUTOFF_SQUARED"] = cu.doubleToString(cutoff*cutoff);
+    defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
+    defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
+    defines["NUM_BLOCKS"] = cu.intToString(cu.getNumAtomBlocks());
+    defines["TILE_SIZE"] = cu.intToString(CudaContext::TileSize);
+    defines["NUM_TILES_WITH_EXCLUSIONS"] = cu.intToString(cu.getNonbondedUtilities().getExclusionTiles().getSize());
+    defines["NUM_EXCEPTIONS"] = cu.intToString(exceptionAtoms.isInitialized() ? exceptionAtoms.getSize() : 0);
+    CUmodule module = cu.createModule(CudaKernelSources::vectorOps+src, defines);
+    kernel = cu.getKernel(module, "computeField");
+
+    // Build the list of arguments.
+
+    CudaNonbondedUtilities& nb = cu.getNonbondedUtilities();
+    args.push_back(&cu.getPosq().getDevicePointer());
+    args.push_back(&cu.getNonbondedUtilities().getExclusions().getDevicePointer());
+    args.push_back(&cu.getNonbondedUtilities().getExclusionTiles().getDevicePointer());
+    args.push_back(&fieldBuffer.getDevicePointer());
+    if (nb.getUseCutoff()) {
+        args.push_back(&nb.getInteractingTiles().getDevicePointer());
+        args.push_back(&nb.getInteractionCount().getDevicePointer());
+        args.push_back(cu.getPeriodicBoxSizePointer());
+        args.push_back(cu.getInvPeriodicBoxSizePointer());
+        args.push_back(cu.getPeriodicBoxVecXPointer());
+        args.push_back(cu.getPeriodicBoxVecYPointer());
+        args.push_back(cu.getPeriodicBoxVecZPointer());
+        args.push_back(&maxTiles);
+        args.push_back(&nb.getBlockCenters().getDevicePointer());
+        args.push_back(&nb.getBlockBoundingBoxes().getDevicePointer());
+        args.push_back(&nb.getInteractingAtoms().getDevicePointer());
+    }
+    else
+        args.push_back(&maxTiles);
+    for (auto param : params)
+        args.push_back(&param->getDevicePointer());
+    
+    // If there are any exceptions, build the kernel and arguments to compute them.
+    
+    if (exceptionAtoms.isInitialized()) {
+        exceptionKernel = cu.getKernel(module, "computeFieldExceptions");
+        exceptionArgs.push_back(&cu.getPosq().getDevicePointer());
+        exceptionArgs.push_back(&fieldBuffer.getDevicePointer());
+        exceptionArgs.push_back(&exceptionAtoms.getDevicePointer());
+        exceptionArgs.push_back(&exceptionScale.getDevicePointer());
+        if (nb.getUseCutoff()) {
+            exceptionArgs.push_back(cu.getPeriodicBoxSizePointer());
+            exceptionArgs.push_back(cu.getInvPeriodicBoxSizePointer());
+            exceptionArgs.push_back(cu.getPeriodicBoxVecXPointer());
+            exceptionArgs.push_back(cu.getPeriodicBoxVecYPointer());
+            exceptionArgs.push_back(cu.getPeriodicBoxVecZPointer());
+        }
+        for (auto param : params)
+            exceptionArgs.push_back(&param->getDevicePointer());
+    }
+}
+
+double CudaCalcHippoNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    CudaNonbondedUtilities& nb = cu.getNonbondedUtilities();
+    if (!hasInitializedKernels) {
+        hasInitializedKernels = true;
+        
+        // These kernels can't be compiled in initialize(), because the nonbonded utilities object
+        // has not yet been initialized then.
+
+        maxTiles = (nb.getUseCutoff() ? nb.getInteractingTiles().getSize() : cu.getNumAtomBlocks()*(cu.getNumAtomBlocks()+1)/2);
+        createFieldKernel(CudaAmoebaKernelSources::hippoFixedField, {&coreCharge, &valenceCharge, &alpha, &labDipoles, &labQuadrupoles[0],
+                &labQuadrupoles[1], &labQuadrupoles[2], &labQuadrupoles[3], &labQuadrupoles[4]}, field, fixedFieldKernel, fixedFieldArgs,
+                fixedFieldExceptionKernel, fixedFieldExceptionArgs, exceptionScales[1]);
+        createFieldKernel(CudaAmoebaKernelSources::hippoMutualField, {&alpha, &inducedDipole}, inducedField, mutualFieldKernel, mutualFieldArgs,
+                mutualFieldExceptionKernel, mutualFieldExceptionArgs, exceptionScales[2]);
+        if (exceptionAtoms.isInitialized()) {
+            computeExceptionsArgs.push_back(&cu.getForce().getDevicePointer());
+            computeExceptionsArgs.push_back(&cu.getEnergyBuffer().getDevicePointer());
+            computeExceptionsArgs.push_back(&torque.getDevicePointer());
+            computeExceptionsArgs.push_back(&cu.getPosq().getDevicePointer());
+            computeExceptionsArgs.push_back(&extrapolatedDipole.getDevicePointer());
+            computeExceptionsArgs.push_back(&exceptionAtoms.getDevicePointer());
+            computeExceptionsArgs.push_back(&exceptionScales[0].getDevicePointer());
+            computeExceptionsArgs.push_back(&exceptionScales[1].getDevicePointer());
+            computeExceptionsArgs.push_back(&exceptionScales[2].getDevicePointer());
+            computeExceptionsArgs.push_back(&exceptionScales[3].getDevicePointer());
+            computeExceptionsArgs.push_back(&exceptionScales[4].getDevicePointer());
+            computeExceptionsArgs.push_back(&exceptionScales[5].getDevicePointer());
+            computeExceptionsArgs.push_back(&coreCharge.getDevicePointer());
+            computeExceptionsArgs.push_back(&valenceCharge.getDevicePointer());
+            computeExceptionsArgs.push_back(&alpha.getDevicePointer());
+            computeExceptionsArgs.push_back(&epsilon.getDevicePointer());
+            computeExceptionsArgs.push_back(&damping.getDevicePointer());
+            computeExceptionsArgs.push_back(&c6.getDevicePointer());
+            computeExceptionsArgs.push_back(&pauliK.getDevicePointer());
+            computeExceptionsArgs.push_back(&pauliQ.getDevicePointer());
+            computeExceptionsArgs.push_back(&pauliAlpha.getDevicePointer());
+            computeExceptionsArgs.push_back(&labDipoles.getDevicePointer());
+            computeExceptionsArgs.push_back(&inducedDipole.getDevicePointer());
+            computeExceptionsArgs.push_back(&labQuadrupoles[0].getDevicePointer());
+            computeExceptionsArgs.push_back(&labQuadrupoles[1].getDevicePointer());
+            computeExceptionsArgs.push_back(&labQuadrupoles[2].getDevicePointer());
+            computeExceptionsArgs.push_back(&labQuadrupoles[3].getDevicePointer());
+            computeExceptionsArgs.push_back(&labQuadrupoles[4].getDevicePointer());
+            computeExceptionsArgs.push_back(&extrapolatedDipole.getDevicePointer());
+            if (nb.getUseCutoff()) {
+                computeExceptionsArgs.push_back(cu.getPeriodicBoxSizePointer());
+                computeExceptionsArgs.push_back(cu.getInvPeriodicBoxSizePointer());
+                computeExceptionsArgs.push_back(cu.getPeriodicBoxVecXPointer());
+                computeExceptionsArgs.push_back(cu.getPeriodicBoxVecYPointer());
+                computeExceptionsArgs.push_back(cu.getPeriodicBoxVecZPointer());
+            }
+        }
+    }
+    
+    // Make sure the arrays for the neighbor list haven't been recreated.
+
+    if (nb.getUseCutoff()) {
+        if (maxTiles < nb.getInteractingTiles().getSize()) {
+            maxTiles = nb.getInteractingTiles().getSize();
+            fixedFieldArgs[4] = &nb.getInteractingTiles().getDevicePointer();
+            fixedFieldArgs[14] = &nb.getInteractingAtoms().getDevicePointer();
+            mutualFieldArgs[4] = &nb.getInteractingTiles().getDevicePointer();
+            mutualFieldArgs[14] = &nb.getInteractingAtoms().getDevicePointer();
+        }
+    }
+
+    // Compute the lab frame moments.
+
+    void* computeMomentsArgs[] = {&cu.getPosq().getDevicePointer(), &multipoleParticles.getDevicePointer(),
+        &localDipoles.getDevicePointer(), &localQuadrupoles.getDevicePointer(),
+        &labDipoles.getDevicePointer(), &labQuadrupoles[0].getDevicePointer(),
+        &labQuadrupoles[1].getDevicePointer(), &labQuadrupoles[2].getDevicePointer(),
+        &labQuadrupoles[3].getDevicePointer(), &labQuadrupoles[4].getDevicePointer()};
+    cu.executeKernel(computeMomentsKernel, computeMomentsArgs, cu.getNumAtoms());
+
+    void* recipBoxVectorPointer[3];
+    if (usePME) {
+        // Compute reciprocal box vectors.
+        
+        Vec3 boxVectors[3];
+        cu.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+        double determinant = boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2];
+        double scale = 1.0/determinant;
+        double3 recipBoxVectors[3];
+        recipBoxVectors[0] = make_double3(boxVectors[1][1]*boxVectors[2][2]*scale, 0, 0);
+        recipBoxVectors[1] = make_double3(-boxVectors[1][0]*boxVectors[2][2]*scale, boxVectors[0][0]*boxVectors[2][2]*scale, 0);
+        recipBoxVectors[2] = make_double3((boxVectors[1][0]*boxVectors[2][1]-boxVectors[1][1]*boxVectors[2][0])*scale, -boxVectors[0][0]*boxVectors[2][1]*scale, boxVectors[0][0]*boxVectors[1][1]*scale);
+        float3 recipBoxVectorsFloat[3];
+        if (cu.getUseDoublePrecision()) {
+            recipBoxVectorPointer[0] = &recipBoxVectors[0];
+            recipBoxVectorPointer[1] = &recipBoxVectors[1];
+            recipBoxVectorPointer[2] = &recipBoxVectors[2];
+        }
+        else {
+            recipBoxVectorsFloat[0] = make_float3((float) recipBoxVectors[0].x, 0, 0);
+            recipBoxVectorsFloat[1] = make_float3((float) recipBoxVectors[1].x, (float) recipBoxVectors[1].y, 0);
+            recipBoxVectorsFloat[2] = make_float3((float) recipBoxVectors[2].x, (float) recipBoxVectors[2].y, (float) recipBoxVectors[2].z);
+            recipBoxVectorPointer[0] = &recipBoxVectorsFloat[0];
+            recipBoxVectorPointer[1] = &recipBoxVectorsFloat[1];
+            recipBoxVectorPointer[2] = &recipBoxVectorsFloat[2];
+        }
+
+        // Reciprocal space calculation for electrostatics.
+        
+        void* pmeTransformMultipolesArgs[] = {&labDipoles.getDevicePointer(), &labQuadrupoles[0].getDevicePointer(),
+            &labQuadrupoles[1].getDevicePointer(), &labQuadrupoles[2].getDevicePointer(),
+            &labQuadrupoles[3].getDevicePointer(), &labQuadrupoles[4].getDevicePointer(),
+            &fracDipoles.getDevicePointer(), &fracQuadrupoles.getDevicePointer(),
+            recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
+        cu.executeKernel(pmeTransformMultipolesKernel, pmeTransformMultipolesArgs, cu.getNumAtoms());
+        void* pmeSpreadFixedMultipolesArgs[] = {&cu.getPosq().getDevicePointer(), &fracDipoles.getDevicePointer(), &fracQuadrupoles.getDevicePointer(),
+            &pmeGrid1.getDevicePointer(), &coreCharge.getDevicePointer(), &valenceCharge.getDevicePointer(),
+            cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
+            recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
+        cu.executeKernel(pmeSpreadFixedMultipolesKernel, pmeSpreadFixedMultipolesArgs, cu.getNumAtoms());
+        if (cu.getUseDoublePrecision()) {
+            void* finishSpreadArgs[] = {&pmeGrid1.getDevicePointer()};
+            cu.executeKernel(pmeFinishSpreadChargeKernel, finishSpreadArgs, pmeGrid1.getSize());
+            cufftExecD2Z(fftForward, (double*) pmeGrid1.getDevicePointer(), (double2*) pmeGrid2.getDevicePointer());
+        }
+        else
+            cufftExecR2C(fftForward, (float*) pmeGrid1.getDevicePointer(), (float2*) pmeGrid2.getDevicePointer());
+        void* pmeConvolutionArgs[] = {&pmeGrid2.getDevicePointer(), &pmeBsplineModuliX.getDevicePointer(), &pmeBsplineModuliY.getDevicePointer(),
+            &pmeBsplineModuliZ.getDevicePointer(), cu.getPeriodicBoxSizePointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
+        cu.executeKernel(pmeConvolutionKernel, pmeConvolutionArgs, gridSizeX*gridSizeY*gridSizeZ, 256);
+        if (cu.getUseDoublePrecision())
+            cufftExecZ2D(fftBackward, (double2*) pmeGrid2.getDevicePointer(), (double*) pmeGrid1.getDevicePointer());
+        else
+            cufftExecC2R(fftBackward, (float2*) pmeGrid2.getDevicePointer(), (float*) pmeGrid1.getDevicePointer());
+        void* pmeFixedPotentialArgs[] = {&pmeGrid1.getDevicePointer(), &pmePhi.getDevicePointer(), &field.getDevicePointer(),
+            &cu.getPosq().getDevicePointer(), &labDipoles.getDevicePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(),
+            cu.getPeriodicBoxVecZPointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
+        cu.executeKernel(pmeFixedPotentialKernel, pmeFixedPotentialArgs, cu.getNumAtoms());
+        void* pmeTransformFixedPotentialArgs[] = {&pmePhi.getDevicePointer(), &pmeCphi.getDevicePointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
+        cu.executeKernel(pmeTransformPotentialKernel, pmeTransformFixedPotentialArgs, cu.getNumAtoms());
+        void* pmeFixedForceArgs[] = {&cu.getPosq().getDevicePointer(), &cu.getForce().getDevicePointer(), &torque.getDevicePointer(),
+            &cu.getEnergyBuffer().getDevicePointer(), &labDipoles.getDevicePointer(), &coreCharge.getDevicePointer(),
+            &valenceCharge.getDevicePointer(), &labQuadrupoles[0].getDevicePointer(),
+            &labQuadrupoles[1].getDevicePointer(), &labQuadrupoles[2].getDevicePointer(),
+            &labQuadrupoles[3].getDevicePointer(), &labQuadrupoles[4].getDevicePointer(),
+            &fracDipoles.getDevicePointer(), &fracQuadrupoles.getDevicePointer(), &pmePhi.getDevicePointer(), &pmeCphi.getDevicePointer(),
+            recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
+        cu.executeKernel(pmeFixedForceKernel, pmeFixedForceArgs, cu.getNumAtoms());
+
+        // Reciprocal space calculation for dispersion.
+
+        void* gridIndexArgs[] = {&cu.getPosq().getDevicePointer(), &pmeAtomGridIndex.getDevicePointer(), cu.getPeriodicBoxSizePointer(),
+                cu.getInvPeriodicBoxSizePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
+                recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
+        cu.executeKernel(dpmeGridIndexKernel, gridIndexArgs, cu.getNumAtoms());
+        sort->sort(pmeAtomGridIndex);
+        cu.clearBuffer(pmeGrid2);
+        void* spreadArgs[] = {&cu.getPosq().getDevicePointer(), &pmeGrid2.getDevicePointer(), cu.getPeriodicBoxSizePointer(),
+                cu.getInvPeriodicBoxSizePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
+                recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2], &pmeAtomGridIndex.getDevicePointer(),
+                &c6.getDevicePointer()};
+        cu.executeKernel(dpmeSpreadChargeKernel, spreadArgs, cu.getNumAtoms(), 128);
+        void* finishSpreadArgs[] = {&pmeGrid2.getDevicePointer(), &pmeGrid1.getDevicePointer()};
+        cu.executeKernel(dpmeFinishSpreadChargeKernel, finishSpreadArgs, dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ, 256);
+        if (cu.getUseDoublePrecision())
+            cufftExecD2Z(dfftForward, (double*) pmeGrid1.getDevicePointer(), (double2*) pmeGrid2.getDevicePointer());
+        else
+            cufftExecR2C(dfftForward, (float*) pmeGrid1.getDevicePointer(), (float2*) pmeGrid2.getDevicePointer());
+        if (includeEnergy) {
+            void* computeEnergyArgs[] = {&pmeGrid2.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(),
+                    &dpmeBsplineModuliX.getDevicePointer(), &dpmeBsplineModuliY.getDevicePointer(), &dpmeBsplineModuliZ.getDevicePointer(),
+                    cu.getPeriodicBoxSizePointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
+            cu.executeKernel(dpmeEvalEnergyKernel, computeEnergyArgs, dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ);
+        }
+        void* convolutionArgs[] = {&pmeGrid2.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(),
+                &dpmeBsplineModuliX.getDevicePointer(), &dpmeBsplineModuliY.getDevicePointer(), &dpmeBsplineModuliZ.getDevicePointer(),
+                cu.getPeriodicBoxSizePointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
+        cu.executeKernel(dpmeConvolutionKernel, convolutionArgs, dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ, 256);
+        if (cu.getUseDoublePrecision())
+            cufftExecZ2D(dfftBackward, (double2*) pmeGrid2.getDevicePointer(), (double*) pmeGrid1.getDevicePointer());
+        else
+            cufftExecC2R(dfftBackward, (float2*) pmeGrid2.getDevicePointer(), (float*)  pmeGrid1.getDevicePointer());
+        void* interpolateArgs[] = {&cu.getPosq().getDevicePointer(), &cu.getForce().getDevicePointer(), &pmeGrid1.getDevicePointer(), cu.getPeriodicBoxSizePointer(),
+                cu.getInvPeriodicBoxSizePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
+                recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2], &pmeAtomGridIndex.getDevicePointer(),
+                &c6.getDevicePointer()};
+        cu.executeKernel(dpmeInterpolateForceKernel, interpolateArgs, cu.getNumAtoms(), 128);
+    }
+
+    // Compute the field from fixed multipoles.
+
+    cu.executeKernel(fixedFieldKernel, &fixedFieldArgs[0], nb.getNumForceThreadBlocks()*nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());
+    if (fixedFieldExceptionArgs.size() > 0)
+        cu.executeKernel(fixedFieldExceptionKernel, &fixedFieldExceptionArgs[0], exceptionAtoms.getSize());
+
+    // Iterate the induced dipoles.
+
+    computeExtrapolatedDipoles(recipBoxVectorPointer);
+
+    // Add the polarization energy.
+
+    if (includeEnergy) {
+        void* polarizationEnergyArgs[] = {&cu.getEnergyBuffer().getDevicePointer(), &inducedDipole.getDevicePointer(),
+            &extrapolatedDipole.getDevicePointer(), &polarizability.getDevicePointer()};
+        cu.executeKernel(polarizationEnergyKernel, polarizationEnergyArgs, cu.getNumAtoms());
+    }
+
+    // Compute the forces due to the reciprocal space PME calculation for induced dipoles.
+
+    if (usePME) {
+        void* pmeTransformInducedPotentialArgs[] = {&pmePhidp.getDevicePointer(), &pmeCphi.getDevicePointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
+        cu.executeKernel(pmeTransformPotentialKernel, pmeTransformInducedPotentialArgs, cu.getNumAtoms());
+        void* pmeInducedForceArgs[] = {&cu.getPosq().getDevicePointer(), &cu.getForce().getDevicePointer(), &torque.getDevicePointer(),
+            &cu.getEnergyBuffer().getDevicePointer(), &labDipoles.getDevicePointer(), &coreCharge.getDevicePointer(),
+            &valenceCharge.getDevicePointer(), &extrapolatedDipole.getDevicePointer(), &extrapolatedPhi.getDevicePointer(),
+            &labQuadrupoles[0].getDevicePointer(), &labQuadrupoles[1].getDevicePointer(), &labQuadrupoles[2].getDevicePointer(),
+            &labQuadrupoles[3].getDevicePointer(), &labQuadrupoles[4].getDevicePointer(), &fracDipoles.getDevicePointer(),
+            &fracQuadrupoles.getDevicePointer(), &inducedDipole.getDevicePointer(), &pmePhi.getDevicePointer(), &pmePhidp.getDevicePointer(),
+            &pmeCphi.getDevicePointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
+        cu.executeKernel(pmeInducedForceKernel, pmeInducedForceArgs, cu.getNumAtoms());
+        void* pmeSelfEnergyArgs[] = {&torque.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(),
+            &labDipoles.getDevicePointer(), &coreCharge.getDevicePointer(), &valenceCharge.getDevicePointer(), &c6.getDevicePointer(),
+            &inducedDipole.getDevicePointer(), &labQuadrupoles[0].getDevicePointer(), &labQuadrupoles[1].getDevicePointer(),
+            &labQuadrupoles[2].getDevicePointer(), &labQuadrupoles[3].getDevicePointer(), &labQuadrupoles[4].getDevicePointer()};
+        cu.executeKernel(pmeSelfEnergyKernel, pmeSelfEnergyArgs, cu.getNumAtoms());
+    }
+
+    // Compute nonbonded exceptions.
+
+    if (exceptionAtoms.isInitialized())
+        cu.executeKernel(computeExceptionsKernel, &computeExceptionsArgs[0], exceptionAtoms.getSize());
+
+    // Record the current atom positions so we can tell later if they have changed.
+    
+    cu.getPosq().copyTo(lastPositions);
+    multipolesAreValid = true;
+    return 0.0;
+}
+
+void CudaCalcHippoNonbondedForceKernel::computeInducedField(void** recipBoxVectorPointer, int optOrder) {
+    CudaNonbondedUtilities& nb = cu.getNonbondedUtilities();
+    cu.clearBuffer(inducedField);
+    cu.executeKernel(mutualFieldKernel, &mutualFieldArgs[0], nb.getNumForceThreadBlocks()*nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());
+    if (mutualFieldExceptionArgs.size() > 0)
+        cu.executeKernel(mutualFieldExceptionKernel, &mutualFieldExceptionArgs[0], exceptionAtoms.getSize());
+    if (usePME) {
+        cu.clearBuffer(pmeGrid1);
+        void* pmeSpreadInducedDipolesArgs[] = {&cu.getPosq().getDevicePointer(), &inducedDipole.getDevicePointer(),
+            &pmeGrid1.getDevicePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
+            recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
+        cu.executeKernel(pmeSpreadInducedDipolesKernel, pmeSpreadInducedDipolesArgs, cu.getNumAtoms());
+        if (cu.getUseDoublePrecision()) {
+            void* finishSpreadArgs[] = {&pmeGrid1.getDevicePointer()};
+            cu.executeKernel(pmeFinishSpreadChargeKernel, finishSpreadArgs, pmeGrid1.getSize());
+            cufftExecD2Z(fftForward, (double*) pmeGrid1.getDevicePointer(), (double2*) pmeGrid2.getDevicePointer());
+        }
+        else
+            cufftExecR2C(fftForward, (float*) pmeGrid1.getDevicePointer(), (float2*) pmeGrid2.getDevicePointer());
+        void* pmeConvolutionArgs[] = {&pmeGrid2.getDevicePointer(), &pmeBsplineModuliX.getDevicePointer(), &pmeBsplineModuliY.getDevicePointer(),
+            &pmeBsplineModuliZ.getDevicePointer(), cu.getPeriodicBoxSizePointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
+        cu.executeKernel(pmeConvolutionKernel, pmeConvolutionArgs, gridSizeX*gridSizeY*gridSizeZ, 256);
+        if (cu.getUseDoublePrecision())
+            cufftExecZ2D(fftBackward, (double2*) pmeGrid2.getDevicePointer(), (double*) pmeGrid1.getDevicePointer());
+        else
+            cufftExecC2R(fftBackward, (float2*) pmeGrid2.getDevicePointer(), (float*) pmeGrid1.getDevicePointer());
+        void* pmeInducedPotentialArgs[] = {&pmeGrid1.getDevicePointer(), &extrapolatedPhi.getDevicePointer(), &optOrder,
+            &pmePhidp.getDevicePointer(), &cu.getPosq().getDevicePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(),
+            cu.getPeriodicBoxVecZPointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
+        cu.executeKernel(pmeInducedPotentialKernel, pmeInducedPotentialArgs, cu.getNumAtoms());
+        void* pmeRecordInducedFieldDipolesArgs[] = {&pmePhidp.getDevicePointer(), &inducedField.getDevicePointer(),
+            &inducedDipole.getDevicePointer(), recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
+        cu.executeKernel(pmeRecordInducedFieldDipolesKernel, pmeRecordInducedFieldDipolesArgs, cu.getNumAtoms());
+    }
+}
+
+void CudaCalcHippoNonbondedForceKernel::computeExtrapolatedDipoles(void** recipBoxVectorPointer) {
+    // Start by storing the direct dipoles as PT0
+
+    void* recordInducedDipolesArgs[] = {&field.getDevicePointer(), &inducedDipole.getDevicePointer(), &polarizability.getDevicePointer()};
+    cu.executeKernel(recordInducedDipolesKernel, recordInducedDipolesArgs, cu.getNumAtoms());
+    void* initArgs[] = {&inducedDipole.getDevicePointer(), &extrapolatedDipole.getDevicePointer()};
+    cu.executeKernel(initExtrapolatedKernel, initArgs, extrapolatedDipole.getSize());
+
+    // Recursively apply alpha.Tau to the µ_(n) components to generate µ_(n+1), and store the result
+
+    for (int order = 1; order < maxExtrapolationOrder; ++order) {
+        computeInducedField(recipBoxVectorPointer, order-1);
+        void* iterateArgs[] = {&order, &inducedDipole.getDevicePointer(), &extrapolatedDipole.getDevicePointer(), &inducedField.getDevicePointer(), &polarizability.getDevicePointer()};
+        cu.executeKernel(iterateExtrapolatedKernel, iterateArgs, extrapolatedDipole.getSize());
+    }
+    
+    // Take a linear combination of the µ_(n) components to form the total dipole
+
+    void* computeArgs[] = {&inducedDipole.getDevicePointer(), &extrapolatedDipole.getDevicePointer()};
+    cu.executeKernel(computeExtrapolatedKernel, computeArgs, extrapolatedDipole.getSize());
+    computeInducedField(recipBoxVectorPointer, maxExtrapolationOrder-1);
+}
+
+void CudaCalcHippoNonbondedForceKernel::addTorquesToForces() {
+    void* mapTorqueArgs[] = {&cu.getForce().getDevicePointer(), &torque.getDevicePointer(),
+        &cu.getPosq().getDevicePointer(), &multipoleParticles.getDevicePointer()};
+    cu.executeKernel(mapTorqueKernel, mapTorqueArgs, cu.getNumAtoms());
+}
+
+void CudaCalcHippoNonbondedForceKernel::getInducedDipoles(ContextImpl& context, vector<Vec3>& dipoles) {
+    ensureMultipolesValid(context);
+    int numParticles = cu.getNumAtoms();
+    dipoles.resize(numParticles);
+    const vector<int>& order = cu.getAtomIndex();
+    if (cu.getUseDoublePrecision()) {
+        vector<double3> d;
+        inducedDipole.download(d);
+        for (int i = 0; i < numParticles; i++)
+            dipoles[order[i]] = Vec3(d[i].x, d[i].y, d[i].z);
+    }
+    else {
+        vector<float3> d;
+        inducedDipole.download(d);
+        for (int i = 0; i < numParticles; i++)
+            dipoles[order[i]] = Vec3(d[i].x, d[i].y, d[i].z);
+    }
+}
+
+void CudaCalcHippoNonbondedForceKernel::ensureMultipolesValid(ContextImpl& context) {
+    if (multipolesAreValid) {
+        int numParticles = cu.getNumAtoms();
+        if (cu.getUseDoublePrecision()) {
+            vector<double4> pos1, pos2;
+            cu.getPosq().download(pos1);
+            lastPositions.download(pos2);
+            for (int i = 0; i < numParticles; i++)
+                if (pos1[i].x != pos2[i].x || pos1[i].y != pos2[i].y || pos1[i].z != pos2[i].z) {
+                    multipolesAreValid = false;
+                    break;
+                }
+        }
+        else {
+            vector<float4> pos1, pos2;
+            cu.getPosq().download(pos1);
+            lastPositions.download(pos2);
+            for (int i = 0; i < numParticles; i++)
+                if (pos1[i].x != pos2[i].x || pos1[i].y != pos2[i].y || pos1[i].z != pos2[i].z) {
+                    multipolesAreValid = false;
+                    break;
+                }
+        }
+    }
+    if (!multipolesAreValid)
+        context.calcForcesAndEnergy(false, false, -1);
+}
+
+void CudaCalcHippoNonbondedForceKernel::getLabFramePermanentDipoles(ContextImpl& context, vector<Vec3>& dipoles) {
+    ensureMultipolesValid(context);
+    int numParticles = cu.getNumAtoms();
+    dipoles.resize(numParticles);
+    const vector<int>& order = cu.getAtomIndex();
+    if (cu.getUseDoublePrecision()) {
+        vector<double3> labDipoleVec;
+        labDipoles.download(labDipoleVec);
+        for (int i = 0; i < numParticles; i++)
+            dipoles[order[i]] = Vec3(labDipoleVec[i].x, labDipoleVec[i].y, labDipoleVec[i].z);
+    }
+    else {
+        vector<float3> labDipoleVec;
+        labDipoles.download(labDipoleVec);
+        for (int i = 0; i < numParticles; i++)
+            dipoles[order[i]] = Vec3(labDipoleVec[i].x, labDipoleVec[i].y, labDipoleVec[i].z);
+    }
+}
+
+void CudaCalcHippoNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const HippoNonbondedForce& force) {
+    // Make sure the new parameters are acceptable.
+    
+    cu.setAsCurrent();
+    if (force.getNumParticles() != cu.getNumAtoms())
+        throw OpenMMException("updateParametersInContext: The number of particles has changed");
+    
+    // Record the per-particle parameters.
+    
+    vector<double> coreChargeVec, valenceChargeVec, alphaVec, epsilonVec, dampingVec, c6Vec, pauliKVec, pauliQVec, pauliAlphaVec, polarizabilityVec;
+    vector<double> localDipolesVec, localQuadrupolesVec;
+    vector<int4> multipoleParticlesVec;
+    for (int i = 0; i < numParticles; i++) {
+        double charge, coreCharge, alpha, epsilon, damping, c6, pauliK, pauliQ, pauliAlpha, polarizability;
+        int axisType, atomX, atomY, atomZ;
+        vector<double> dipole, quadrupole;
+        force.getParticleParameters(i, charge, dipole, quadrupole, coreCharge, alpha, epsilon, damping, c6, pauliK, pauliQ, pauliAlpha,
+                                    polarizability, axisType, atomZ, atomX, atomY);
+        coreChargeVec.push_back(coreCharge);
+        valenceChargeVec.push_back(charge-coreCharge);
+        alphaVec.push_back(alpha);
+        epsilonVec.push_back(epsilon);
+        dampingVec.push_back(damping);
+        c6Vec.push_back(c6);
+        pauliKVec.push_back(pauliK);
+        pauliQVec.push_back(pauliQ);
+        pauliAlphaVec.push_back(pauliAlpha);
+        polarizabilityVec.push_back(polarizability);
+        multipoleParticlesVec.push_back(make_int4(atomX, atomY, atomZ, axisType));
+        for (int j = 0; j < 3; j++)
+            localDipolesVec.push_back(dipole[j]);
+        localQuadrupolesVec.push_back(quadrupole[0]);
+        localQuadrupolesVec.push_back(quadrupole[1]);
+        localQuadrupolesVec.push_back(quadrupole[2]);
+        localQuadrupolesVec.push_back(quadrupole[4]);
+        localQuadrupolesVec.push_back(quadrupole[5]);
+    }
+    int paddedNumAtoms = cu.getPaddedNumAtoms();
+    for (int i = numParticles; i < paddedNumAtoms; i++) {
+        coreChargeVec.push_back(0);
+        valenceChargeVec.push_back(0);
+        alphaVec.push_back(0);
+        epsilonVec.push_back(0);
+        dampingVec.push_back(0);
+        c6Vec.push_back(0);
+        pauliKVec.push_back(0);
+        pauliQVec.push_back(0);
+        pauliAlphaVec.push_back(0);
+        polarizabilityVec.push_back(0);
+        multipoleParticlesVec.push_back(make_int4(0, 0, 0, 0));
+        for (int j = 0; j < 3; j++)
+            localDipolesVec.push_back(0);
+        for (int j = 0; j < 5; j++)
+            localQuadrupolesVec.push_back(0);
+    }
+    coreCharge.upload(coreChargeVec, true);
+    valenceCharge.upload(valenceChargeVec, true);
+    alpha.upload(alphaVec, true);
+    epsilon.upload(epsilonVec, true);
+    damping.upload(dampingVec, true);
+    c6.upload(c6Vec, true);
+    pauliK.upload(pauliKVec, true);
+    pauliQ.upload(pauliQVec, true);
+    pauliAlpha.upload(pauliAlphaVec, true);
+    polarizability.upload(polarizabilityVec, true);
+    multipoleParticles.upload(multipoleParticlesVec);
+    localDipoles.upload(localDipolesVec, true);
+    localQuadrupoles.upload(localQuadrupolesVec, true);
+    
+    // Record the per-exception parameters.
+
+    vector<double> exceptionScaleVec[6];
+    vector<int2> exceptionAtomsVec;
+    for (int i = 0; i < force.getNumExceptions(); i++) {
+        int particle1, particle2;
+        double multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale, chargeTransferScale;
+        force.getExceptionParameters(i, particle1, particle2, multipoleMultipoleScale, dipoleMultipoleScale, dipoleDipoleScale, dispersionScale, repulsionScale, chargeTransferScale);
+        if (usePME || multipoleMultipoleScale != 0 || dipoleMultipoleScale != 0 || dipoleDipoleScale != 0 || dispersionScale != 0 || repulsionScale != 0 || chargeTransferScale != 0) {
+            exceptionAtomsVec.push_back(make_int2(particle1, particle2));
+            exceptionScaleVec[0].push_back(multipoleMultipoleScale);
+            exceptionScaleVec[1].push_back(dipoleMultipoleScale);
+            exceptionScaleVec[2].push_back(dipoleDipoleScale);
+            exceptionScaleVec[3].push_back(dispersionScale);
+            exceptionScaleVec[4].push_back(repulsionScale);
+            exceptionScaleVec[5].push_back(chargeTransferScale);
+        }
+    }
+    if (exceptionAtomsVec.size() > 0) {
+        if (!exceptionAtoms.isInitialized() || exceptionAtoms.getSize() != exceptionAtomsVec.size())
+            throw OpenMMException("updateParametersInContext: The number of exceptions has changed");
+        exceptionAtoms.upload(exceptionAtomsVec);
+        for (int i = 0; i < 6; i++)
+            exceptionScales[i].upload(exceptionScaleVec[i], true);
+    }
+    else if (exceptionAtoms.isInitialized())
+        throw OpenMMException("updateParametersInContext: The number of exceptions has changed");
+    cu.invalidateMolecules();
+    multipolesAreValid = false;
+}
+
+void CudaCalcHippoNonbondedForceKernel::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
+    alpha = pmeAlpha;
+    nx = gridSizeX;
+    ny = gridSizeY;
+    nz = gridSizeZ;
+}
+
+void CudaCalcHippoNonbondedForceKernel::getDPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
+    alpha = dpmeAlpha;
+    nx = dispersionGridSizeX;
+    ny = dispersionGridSizeY;
+    nz = dispersionGridSizeZ;
 }

@@ -27,12 +27,16 @@ def run_tests():
     between them for a test system. If a problem is detected, TestingError is
     raised.
     """
+    print()
+    print('OpenMM Version:', Platform.getOpenMMVersion())
+    print('Git Revision:', version.git_revision)
+    print()
 
     # Create a System for the tests.
     data_dir = os.path.join(os.path.abspath(os.path.split(__file__)[0]), 'openmm', 'app', 'data')
     pdb = PDBFile(os.path.join(data_dir, 'test.pdb'))
     forcefield = ForceField('amber99sb.xml', 'tip3p.xml')
-    system = forcefield.createSystem(pdb.topology, nonbondedMethod=PME, nonbondedCutoff=1*nanometer, constraints=HBonds)
+    system = forcefield.createSystem(pdb.topology, nonbondedMethod=LJPME, nonbondedCutoff=1*nanometer, constraints=HBonds, ewaldErrorTolerance=1e-4)
 
     # List all installed platforms and compute forces with each one.
 
@@ -63,6 +67,7 @@ def run_tests():
 
     # See how well the platforms agree.
 
+    errorsOk = True
     if numPlatforms > 1:
         print()
         print("Median difference in forces between platforms:")
@@ -75,9 +80,17 @@ def run_tests():
                         d = f1-f2
                         error = sqrt((d[0]*d[0]+d[1]*d[1]+d[2]*d[2])/(f1[0]*f1[0]+f1[1]*f1[1]+f1[2]*f1[2]))
                         errors.append(error)
-                    print("{0} vs. {1}: {2:g}".format(Platform.getPlatform(j).getName(),
-                                                  Platform.getPlatform(i).getName(),
-                                                  sorted(errors)[len(errors)//2]))
+                    median = sorted(errors)[len(errors)//2]
+                    if median < 1e-4:
+                        message = ''
+                    else:
+                        message = '  *** LARGE DIFFERENCE **'
+                        errorsOk = False
+                    print("{0} vs. {1}: {2:g}{3}".format(Platform.getPlatform(j).getName(),
+                                                  Platform.getPlatform(i).getName(), median, message))
+    if errorsOk:
+        print()
+        print('All differences are within tolerance.')
 
 
 def main():

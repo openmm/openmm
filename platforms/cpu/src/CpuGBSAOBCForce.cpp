@@ -1,4 +1,4 @@
-/* Portions copyright (c) 2006-2017 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2018 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -24,7 +24,6 @@
 #include "CpuGBSAOBCForce.h"
 #include "SimTKOpenMMRealType.h"
 #include "openmm/internal/vectorize.h"
-#include "openmm/internal/gmx_atomic.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
@@ -95,21 +94,19 @@ void CpuGBSAOBCForce::computeForce(const AlignedArray<float>& posq, vector<Align
     threadBornForces.resize(numThreads);
     for (int i = 0; i < numThreads; i++)
         threadBornForces[i].resize(particleParams.size()+3);
-    gmx_atomic_t counter;
-    this->atomicCounter = &counter;
     
     // Signal the threads to start running and wait for them to finish.
     
-    gmx_atomic_set(&counter, 0);
+    atomicCounter = 0;
     threads.execute([&] (ThreadPool& threads, int threadIndex) { threadComputeForce(threads, threadIndex); });
     threads.waitForThreads(); // Compute Born radii
-    gmx_atomic_set(&counter, 0);
+    atomicCounter = 0;
     threads.resumeThreads();
     threads.waitForThreads(); // Compute surface area term
-    gmx_atomic_set(&counter, 0);
+    atomicCounter = 0;
     threads.resumeThreads();
     threads.waitForThreads(); // First loop
-    gmx_atomic_set(&counter, 0);
+    atomicCounter = 0;
     threads.resumeThreads();
     threads.waitForThreads(); // Second loop
     
@@ -138,12 +135,15 @@ void CpuGBSAOBCForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
     // Calculate Born radii
 
     while (true) {
-        int blockStart = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 4);
+        int blockStart = atomicCounter.fetch_add(4);
         if (blockStart >= numParticles)
             break;
         int numInBlock = min(4, numParticles-blockStart);
         ivec4 blockAtomIndex(blockStart, blockStart+1, blockStart+2, blockStart+3);
-        float atomRadius[4], atomx[4], atomy[4], atomz[4];
+        float atomRadius[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+        float atomx[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+        float atomy[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+        float atomz[4] = {0.0f, 0.0f, 0.0f, 0.0f};
         int blockMask[4] = {0, 0, 0, 0};
         for (int i = 0; i < numInBlock; i++) {
             int atomIndex = blockStart+i;
@@ -212,7 +212,7 @@ void CpuGBSAOBCForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
     for (int i = 0; i < numParticles; i++)
         bornForces[i] = 0.0f;
     while (true) {
-        int atomI = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+        int atomI = atomicCounter++;
         if (atomI >= numParticles)
             break;
         if (bornRadii[atomI] > 0) {
@@ -237,12 +237,15 @@ void CpuGBSAOBCForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
     else
         preFactor = 0.0f;
     while (true) {
-        int blockStart = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 4);
+        int blockStart = atomicCounter.fetch_add(4);
         if (blockStart >= numParticles)
             break;
         int numInBlock = min(4, numParticles-blockStart);
         ivec4 blockAtomIndex(blockStart, blockStart+1, blockStart+2, blockStart+3);
-        float atomCharge[4], atomx[4], atomy[4], atomz[4];
+        float atomCharge[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+        float atomx[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+        float atomy[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+        float atomz[4] = {0.0f, 0.0f, 0.0f, 0.0f};
         int blockMask[4] = {0, 0, 0, 0};
         fvec4 blockAtomForceX(0.0f), blockAtomForceY(0.0f), blockAtomForceZ(0.0f), blockAtomBornForce(0.0f);
         for (int i = 0; i < numInBlock; i++) {
@@ -312,7 +315,7 @@ void CpuGBSAOBCForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
     // Second loop of Born energy computation.
 
     while (true) {
-        int blockStart = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 4);
+        int blockStart = atomicCounter.fetch_add(4);
         if (blockStart >= numParticles)
             break;
         fvec4 bornForce(0.0f);

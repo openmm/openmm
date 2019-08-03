@@ -64,6 +64,7 @@ public:
     std::vector<std::string> getKernelNames();
     void getCollectiveVariableValues(ContextImpl& context, std::vector<double>& values);
     Context& getInnerContext();
+    void updateParametersInContext(ContextImpl& context);
 private:
     const CustomCVForce& owner;
     Kernel kernel;

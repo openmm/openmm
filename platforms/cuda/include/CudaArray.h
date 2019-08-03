@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -58,6 +58,11 @@ public:
         return new CudaArray(context, size, sizeof(T), name);
     }
     /**
+     * Create an uninitialized CudaArray object.  It does not point to any device memory,
+     * and cannot be used until initialize() is called on it.
+     */
+    CudaArray();
+    /**
      * Create a CudaArray object.
      *
      * @param context           the context for which to create the array
@@ -67,6 +72,36 @@ public:
      */
     CudaArray(CudaContext& context, int size, int elementSize, const std::string& name);
     ~CudaArray();
+    /**
+     * Initialize this object.
+     *
+     * @param context           the context for which to create the array
+     * @param size              the number of elements in the array
+     * @param elementSize       the size of each element in bytes
+     * @param name              the name of the array
+     */
+    void initialize(CudaContext& context, int size, int elementSize, const std::string& name);
+    /**
+     * Initialize this object.  The template argument is the data type of each array element.
+     *
+     * @param context           the context for which to create the array
+     * @param size              the number of elements in the array
+     * @param name              the name of the array
+     */
+    template <class T>
+    void initialize(CudaContext& context, int size, const std::string& name) {
+        initialize(context, size, sizeof(T), name);
+    }
+    /**
+     * Recreate the internal storage to have a different size.
+     */
+    void resize(int size);
+    /**
+     * Get whether this array has been initialized.
+     */
+    bool isInitialized() const {
+        return (pointer != 0);
+    }
     /**
      * Get the number of elements in the array.
      */
@@ -95,7 +130,27 @@ public:
      * Copy the values in a vector to the device memory.
      */
     template <class T>
-    void upload(const std::vector<T>& data) {
+    void upload(const std::vector<T>& data, bool convert = true) {
+        if (convert && data.size() == size && sizeof(T) != elementSize) {
+            if (sizeof(T) == 2*elementSize) {
+                // Convert values from double to single precision.
+                const double* d = reinterpret_cast<const double*>(&data[0]);
+                std::vector<float> v(elementSize*size/sizeof(float));
+                for (int i = 0; i < v.size(); i++)
+                    v[i] = (float) d[i];
+                upload(&v[0], true);
+                return;
+            }
+            if (2*sizeof(T) == elementSize) {
+                // Convert values from single to double precision.
+                const float* d = reinterpret_cast<const float*>(&data[0]);
+                std::vector<double> v(elementSize*size/sizeof(double));
+                for (int i = 0; i < v.size(); i++)
+                    v[i] = (double) d[i];
+                upload(&v[0], true);
+                return;
+            }
+        }
         if (sizeof(T) != elementSize || data.size() != size)
             throw OpenMMException("Error uploading array "+name+": The specified vector does not match the size of the array");
         upload(&data[0], true);
@@ -134,7 +189,7 @@ public:
      */
     void copyTo(CudaArray& dest) const;
 private:
-    CudaContext& context;
+    CudaContext* context;
     CUdeviceptr pointer;
     int size, elementSize;
     bool ownsMemory;

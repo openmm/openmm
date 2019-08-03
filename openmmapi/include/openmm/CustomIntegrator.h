@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2017 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -194,7 +194,7 @@ namespace OpenMM {
  *
  * <tt><pre>
  * integrator.beginIfBlock("uniform < acceptanceProbability");
- * integrator.computePerDof("x", "xnew");
+ * integrator.addComputePerDof("x", "xnew");
  * integrator.endBlock();
  * </pre></tt>
  *
@@ -202,6 +202,21 @@ namespace OpenMM {
  * only involve global variables, not per-DOF ones.  It may use any of the
  * following comparison operators: =, <. >, !=, <=, >=.  Blocks may be nested
  * inside each other.
+ * 
+ * "Per-DOF" computations can also be thought of as per-particle computations
+ * that operate on three component vectors.  For example, "x+dt*v" means to take
+ * the particle's velocity (a vector), multiply it by the step size, and add the
+ * position (also a vector).  The result is a new vector that can be stored into
+ * a per-DOF variable with addComputePerDof(), or it can be summed over all
+ * components of all particles with addComputeSum().  Because the calculation is
+ * done on vectors, you can use functions that operate explicitly on vectors
+ * rather than just computing each component independently.  For example, the
+ * following line uses a cross product to compute the angular momentum of each
+ * particle and stores it into a per-DOF variable.
+ * 
+ * <tt><pre>
+ * integrator.addComputePerDof("angularMomentum", "m*cross(x, v)");
+ * </pre></tt>
  * 
  * Another feature of CustomIntegrator is that it can use derivatives of the
  * potential energy with respect to context parameters.  These derivatives are
@@ -239,9 +254,21 @@ namespace OpenMM {
  * the force from a single force group, or a random number.
  *
  * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
- * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs, floor, ceil, step, delta, select.  All trigonometric functions
+ * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, atan2, sinh, cosh, tanh, erf, erfc, min, max, abs, floor, ceil, step, delta, select.  All trigonometric functions
  * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  delta(x) = 1 if x is 0, 0 otherwise.
  * select(x,y,z) = z if x = 0, y otherwise.  An expression may also involve intermediate quantities that are defined following the main expression, using ";" as a separator.
+ * 
+ * Expressions used in ComputePerDof and ComputeSum steps can also use the following
+ * functions that operate on vectors: cross(a, b) is the cross product of two
+ * vectors; dot(a, b) is the dot product of two vectors; _x(a), _y(a), and _z(a)
+ * extract a single component from a vector; and vector(a, b, c) creates a new
+ * vector with the x component of the first argument, the y component of the
+ * second argument, and the z component of the third argument.  Remember that every
+ * quantity appearing in a vector expression is a vector.  Functions that appear
+ * to return a scalar really return a vector whose components are all the same.
+ * For example, _z(a) returns the vector (a.z, a.z, a.z).  Likewise, wherever a
+ * constant appears in the expression, it really means a vector whose components
+ * all have the same value.
  *
  * In addition, you can call addTabulatedFunction() to define a new function based on tabulated values.  You specify the function by
  * creating a TabulatedFunction object.  That function can then appear in expressions.

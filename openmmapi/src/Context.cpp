@@ -36,6 +36,8 @@
 #include "SimTKOpenMMRealType.h"
 #include "sfmt/SFMT.h"
 #include <cmath>
+#include <iostream>
+#include <sstream>
 
 using namespace OpenMM;
 using namespace std;
@@ -242,14 +244,19 @@ void Context::computeVirtualSites() {
     impl->computeVirtualSites();
 }
 
-void Context::reinitialize() {
+void Context::reinitialize(bool preserveState) {
     const System& system = impl->getSystem();
     Integrator& integrator = impl->getIntegrator();
     Platform& platform = impl->getPlatform();
+    stringstream checkpoint(ios_base::out | ios_base::in | ios_base::binary);
+    if (preserveState)
+        createCheckpoint(checkpoint);
     integrator.cleanup();
     delete impl;
     impl = new ContextImpl(*this, system, integrator, &platform, properties);
     impl->initialize();
+    if (preserveState)
+        loadCheckpoint(checkpoint);
 }
 
 void Context::createCheckpoint(ostream& stream) {

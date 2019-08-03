@@ -127,7 +127,7 @@ class ReferenceCustomCompoundBondIxn : public ReferenceBondIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculatePairIxn(std::vector<OpenMM::Vec3>& atomCoordinates, double** bondParameters,
+      void calculatePairIxn(std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<std::vector<double> >& bondParameters,
                             const std::map<std::string, double>& globalParameters,
                             std::vector<OpenMM::Vec3>& forces, double* totalEnergy, double* energyParamDerivs);
 

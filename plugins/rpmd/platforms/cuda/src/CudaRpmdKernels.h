@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -46,9 +46,8 @@ namespace OpenMM {
 class CudaIntegrateRPMDStepKernel : public IntegrateRPMDStepKernel {
 public:
     CudaIntegrateRPMDStepKernel(std::string name, const Platform& platform, CudaContext& cu) :
-            IntegrateRPMDStepKernel(name, platform), cu(cu), forces(NULL), positions(NULL), velocities(NULL), contractedForces(NULL), contractedPositions(NULL) {
+            IntegrateRPMDStepKernel(name, platform), cu(cu) {
     }
-    ~CudaIntegrateRPMDStepKernel();
     /**
      * Initialize the kernel.
      *
@@ -91,11 +90,11 @@ private:
     int numCopies, numParticles, workgroupSize;
     std::map<int, int> groupsByCopies;
     int groupsNotContracted;
-    CudaArray* forces;
-    CudaArray* positions;
-    CudaArray* velocities;
-    CudaArray* contractedForces;
-    CudaArray* contractedPositions;
+    CudaArray forces;
+    CudaArray positions;
+    CudaArray velocities;
+    CudaArray contractedForces;
+    CudaArray contractedPositions;
     CUfunction pileKernel, stepKernel, velocitiesKernel, copyToContextKernel, copyFromContextKernel, translateKernel;
     std::map<int, CUfunction> positionContractionKernels;
     std::map<int, CUfunction> forceContractionKernels;

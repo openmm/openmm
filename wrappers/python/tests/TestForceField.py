@@ -76,6 +76,21 @@ class TestForceField(unittest.TestCase):
                     cutoff_distance = force.getCutoffDistance()
             self.assertEqual(cutoff_distance, cutoff_check)
 
+    def test_SwitchingDistance(self):
+        """Test that the switchDistance parameter is processed correctly."""
+
+        for switchDistance in [None, 0.9*nanometers]:
+            system = self.forcefield1.createSystem(self.pdb1.topology,
+                                                   nonbondedMethod=PME,
+                                                   switchDistance=switchDistance)
+            for force in system.getForces():
+                if isinstance(force, NonbondedForce):
+                    if switchDistance is None:
+                        self.assertFalse(force.getUseSwitchingFunction())
+                    else:
+                        self.assertTrue(force.getUseSwitchingFunction())
+                        self.assertEqual(switchDistance, force.getSwitchingDistance())
+
     def test_RemoveCMMotion(self):
         """Test both options (True and False) for the removeCMMotion parameter."""
         for b in [True, False]:
@@ -762,7 +777,7 @@ class TestForceField(unittest.TestCase):
   <Atom type="B" sigma="2" epsilon="0.2"/>
   <Atom type="C" sigma="3" epsilon="0.3"/>
   <Atom type="D" sigma="4" epsilon="0.4"/>
-  <Atom type="E" sigma="5" epsilon="0.5"/>
+  <Atom type="E" sigma="4" epsilon="0.4"/>
   <NBFixPair type1="A" type2="D" sigma="2.5" epsilon="1.1"/>
   <NBFixPair type1="A" type2="E" sigma="3.5" epsilon="1.5"/>
  </LennardJonesForce>
@@ -778,7 +793,7 @@ class TestForceField(unittest.TestCase):
         context.setPositions(positions)
         def ljEnergy(sigma, epsilon, r):
             return 4*epsilon*((sigma/r)**12-(sigma/r)**6)
-        expected = 0.3*ljEnergy(2.5, 1.1, 3)  + 0.3*ljEnergy(3.5, sqrt(0.1), 3) + ljEnergy(3.5, 1.5, 4)
+        expected = 0.3*ljEnergy(2.5, 1.1, 3) + 0.3*ljEnergy(3.0, sqrt(0.08), 3) + ljEnergy(3.5, 1.5, 4)
         self.assertAlmostEqual(expected, context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilojoules_per_mole))
 
     def test_IgnoreExternalBonds(self):
@@ -829,6 +844,14 @@ class TestForceField(unittest.TestCase):
 
         self.assertEqual(system1_indexes, [51, 56, 54, 55])
         self.assertEqual(system2_indexes, [51, 55, 54, 56])
+
+    def test_Disulfides(self):
+        """Test that various force fields handle disulfides correctly."""
+        pdb = PDBFile('systems/bpti.pdb')
+        for ff in ['amber99sb.xml', 'amber14-all.xml', 'charmm36.xml', 'amberfb15.xml', 'amoeba2013.xml']:
+            forcefield = ForceField(ff)
+            system = forcefield.createSystem(pdb.topology)
+
 
 class AmoebaTestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method with the AMOEBA forcefield."""

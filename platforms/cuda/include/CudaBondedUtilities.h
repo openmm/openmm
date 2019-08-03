@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -81,7 +81,6 @@ namespace OpenMM {
 class OPENMM_EXPORT_CUDA CudaBondedUtilities {
 public:
     CudaBondedUtilities(CudaContext& context);
-    ~CudaBondedUtilities();
     /**
      * Add a bonded interaction.
      *
@@ -136,7 +135,7 @@ private:
     std::vector<int> forceGroup;
     std::vector<CUdeviceptr> arguments;
     std::vector<std::string> argTypes;
-    std::vector<std::vector<CudaArray*> > atomIndices;
+    std::vector<std::vector<CudaArray> > atomIndices;
     std::vector<std::string> prefixCode;
     std::vector<std::string> energyParameterDerivatives;
     std::vector<void*> kernelArgs;

@@ -37,7 +37,7 @@ __kernel void computePerDof(__global real4* restrict posq, __global real4* restr
         mixed4 position = loadPos(posq, posqCorrection, index);
 #endif
         mixed4 velocity = velm[index];
-        real4 f = force[index];
+        mixed4 f = convert_mixed4(force[index]);
         mixed mass = 1/velocity.w;
         if (velocity.w != 0.0) {
             int gaussianIndex = gaussianBaseIndex;

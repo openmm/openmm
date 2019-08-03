@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -34,13 +34,6 @@ using namespace OpenMM;
 using namespace std;
 
 OpenCLBondedUtilities::OpenCLBondedUtilities(OpenCLContext& context) : context(context), numForceBuffers(0), maxBonds(0), allGroups(0), hasInitializedKernels(false) {
-}
-
-OpenCLBondedUtilities::~OpenCLBondedUtilities() {
-    for (int i = 0; i < (int) atomIndices.size(); i++)
-        delete atomIndices[i];
-    for (int i = 0; i < (int) bufferIndices.size(); i++)
-        delete bufferIndices[i];
 }
 
 void OpenCLBondedUtilities::addInteraction(const vector<vector<int> >& atoms, const string& source, int group) {
@@ -92,6 +85,7 @@ void OpenCLBondedUtilities::initialize(const System& system) {
     vector<vector<cl_uint> > bufferVec(numForces);
     vector<vector<int> > bufferCounter(numForces, vector<int>(system.getNumParticles(), 0));
     vector<int> numBuffers(numForces, 0);
+    atomIndices.resize(numForces);
     for (int i = 0; i < numForces; i++) {
         int numBonds = forceAtoms[i].size();
         int numAtoms = forceAtoms[i][0].size();
@@ -101,9 +95,8 @@ void OpenCLBondedUtilities::initialize(const System& system) {
             for (int atom = 0; atom < numAtoms; atom++)
                 indexVec[bond*width+atom] = forceAtoms[i][bond][atom];
         }
-        OpenCLArray* indices = OpenCLArray::create<cl_uint>(context, indexVec.size(), "bondedIndices");
-        indices->upload(indexVec);
-        atomIndices.push_back(indices);
+        atomIndices[i].initialize<cl_uint>(context, indexVec.size(), "bondedIndices");
+        atomIndices[i].upload(indexVec);
         bufferVec[i].resize(width*numBonds, 0);
         for (int bond = 0; bond < numBonds; bond++) {
             for (int atom = 0; atom < numAtoms; atom++)
@@ -177,9 +170,8 @@ void OpenCLBondedUtilities::initialize(const System& system) {
                 for (int bond = 0; bond < numBonds; bond++)
                     for (int atom = 0; atom < numAtoms; atom++)
                         bufferVec[force][bond*width+atom] += bufferCounter[forceSets[i][k]][forceAtoms[force][bond][atom]];
-            OpenCLArray* buffers = OpenCLArray::create<cl_uint>(context, bufferVec[force].size(), "bondedBufferIndices");
-            buffers->upload(bufferVec[force]);
-            bufferIndices[force] = buffers;
+            bufferIndices[force].initialize<cl_uint>(context, bufferVec[force].size(), "bondedBufferIndices");
+            bufferIndices[force].upload(bufferVec[force]);
         }
 
     // Create the kernels.
@@ -291,8 +283,8 @@ void OpenCLBondedUtilities::computeInteractions(int groups) {
             kernel.setArg<cl::Buffer>(index++, context.getPosq().getDeviceBuffer());
             index += 6;
             for (int j = 0; j < (int) forceSets[i].size(); j++) {
-                kernel.setArg<cl::Buffer>(index++, atomIndices[forceSets[i][j]]->getDeviceBuffer());
-                kernel.setArg<cl::Buffer>(index++, bufferIndices[forceSets[i][j]]->getDeviceBuffer());
+                kernel.setArg<cl::Buffer>(index++, atomIndices[forceSets[i][j]].getDeviceBuffer());
+                kernel.setArg<cl::Buffer>(index++, bufferIndices[forceSets[i][j]].getDeviceBuffer());
             }
             for (int j = 0; j < (int) arguments.size(); j++)
                 kernel.setArg<cl::Memory>(index++, *arguments[j]);

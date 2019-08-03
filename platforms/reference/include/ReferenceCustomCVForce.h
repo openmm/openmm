@@ -53,6 +53,12 @@ public:
     ~ReferenceCustomCVForce();
 
     /**
+     * Update any tabulated functions used by the force.  This is called when the user calls
+     * updateParametersInContext().
+     */
+    void updateTabulatedFunctions(const OpenMM::CustomCVForce& force);
+
+    /**
      * Calculate the interaction.
      * 
      * @param innerContext       the context created by the force for evaluating collective variables

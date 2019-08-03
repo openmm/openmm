@@ -28,31 +28,64 @@
 #include "lepton/CustomFunction.h"
 #include "lepton/ParsedExpression.h"
 #include "lepton/Parser.h"
+#include "lepton/Operation.h"
 
 using namespace OpenMM;
+using namespace Lepton;
 using namespace std;
 
 ReferenceCustomCVForce::ReferenceCustomCVForce(const CustomCVForce& force) {
+    for (int i = 0; i < force.getNumCollectiveVariables(); i++)
+        variableNames.push_back(force.getCollectiveVariableName(i));
+    for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++)
+        paramDerivNames.push_back(force.getEnergyParameterDerivativeName(i));
+
     // Create custom functions for the tabulated functions.
 
-    map<string, Lepton::CustomFunction*> functions;
+    map<string, CustomFunction*> functions;
     for (int i = 0; i < (int) force.getNumTabulatedFunctions(); i++)
         functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
 
     // Create the expressions.
 
-    Lepton::ParsedExpression energyExpr = Lepton::Parser::parse(force.getEnergyFunction(), functions);
+    ParsedExpression energyExpr = Parser::parse(force.getEnergyFunction(), functions);
     energyExpression = energyExpr.createProgram();
-    for (int i = 0; i < force.getNumCollectiveVariables(); i++) {
-        string name = force.getCollectiveVariableName(i);
-        variableNames.push_back(name);
+    variableDerivExpressions.clear();
+    for (auto& name : variableNames)
         variableDerivExpressions.push_back(energyExpr.differentiate(name).optimize().createProgram());
-    }
-    for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
-        string name = force.getEnergyParameterDerivativeName(i);
-        paramDerivNames.push_back(name);
+    paramDerivExpressions.clear();
+    for (auto& name : paramDerivNames)
         paramDerivExpressions.push_back(energyExpr.differentiate(name).optimize().createProgram());
+
+    // Delete the custom functions.
+
+    for (auto& function : functions)
+        delete function.second;
+}
+
+static void replaceFunctionsInExpression(map<string, CustomFunction*>& functions, ExpressionProgram& expression) {
+    for (int i = 0; i < expression.getNumOperations(); i++) {
+        if (expression.getOperation(i).getId() == Operation::CUSTOM) {
+            const Operation::Custom& op = dynamic_cast<const Operation::Custom&>(expression.getOperation(i));
+            expression.setOperation(i, new Operation::Custom(op.getName(), functions[op.getName()]->clone(), op.getDerivOrder()));
+        }
     }
+}
+
+void ReferenceCustomCVForce::updateTabulatedFunctions(const OpenMM::CustomCVForce& force) {
+    // Create custom functions for the tabulated functions.
+
+    map<string, CustomFunction*> functions;
+    for (int i = 0; i < (int) force.getNumTabulatedFunctions(); i++)
+        functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
+
+    // Replace tabulated functions in the expressions.
+
+    replaceFunctionsInExpression(functions, energyExpression);
+    for (auto& expression : variableDerivExpressions)
+        replaceFunctionsInExpression(functions, expression);
+    for (auto& expression : paramDerivExpressions)
+        replaceFunctionsInExpression(functions, expression);
 
     // Delete the custom functions.
 

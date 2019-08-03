@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -39,11 +39,11 @@
 #include <pthread.h>
 #include <cl.hpp>
 #include "windowsExportOpenCL.h"
+#include "OpenCLArray.h"
 #include "OpenCLPlatform.h"
 
 namespace OpenMM {
 
-class OpenCLArray;
 class OpenCLForceInfo;
 class OpenCLIntegrationUtilities;
 class OpenCLExpressionUtilities;
@@ -172,9 +172,13 @@ public:
      */
     void initialize();
     /**
-     * Add an OpenCLForce to this context.
+     * Add an OpenCLForceInfo to this context.
      */
     void addForce(OpenCLForceInfo* force);
+    /**
+     * Get all OpenCLForceInfos that have been added to this context.
+     */
+    std::vector<OpenCLForceInfo*>& getForceInfos();
     /**
      * Get the cl::Context associated with this object.
      */
@@ -227,49 +231,49 @@ public:
      * Get the array which contains the position (the xyz components) and charge (the w component) of each atom.
      */
     OpenCLArray& getPosq() {
-        return *posq;
+        return posq;
     }
     /**
      * Get the array which contains a correction to the position of each atom.  This only exists if getUseMixedPrecision() returns true.
      */
     OpenCLArray& getPosqCorrection() {
-        return *posqCorrection;
+        return posqCorrection;
     }
     /**
      * Get the array which contains the velocity (the xyz components) and inverse mass (the w component) of each atom.
      */
     OpenCLArray& getVelm() {
-        return *velm;
+        return velm;
     }
     /**
      * Get the array which contains the force on each atom.
      */
     OpenCLArray& getForce() {
-        return *force;
+        return force;
     }
     /**
      * Get the array which contains the buffers in which forces are computed.
      */
     OpenCLArray& getForceBuffers() {
-        return *forceBuffers;
+        return forceBuffers;
     }
     /**
      * Get the array which contains a contribution to each force represented as 64 bit fixed point.
      */
     OpenCLArray& getLongForceBuffer() {
-        return *longForceBuffer;
+        return longForceBuffer;
     }
     /**
      * Get the array which contains the buffer in which energy is computed.
      */
     OpenCLArray& getEnergyBuffer() {
-        return *energyBuffer;
+        return energyBuffer;
     }
     /**
      * Get the array which contains the buffer in which derivatives of the energy with respect to parameters are computed.
      */
     OpenCLArray& getEnergyParamDerivBuffer() {
-        return *energyParamDerivBuffer;
+        return energyParamDerivBuffer;
     }
     /**
      * Get a pointer to a block of pinned memory that can be used for efficient transfers between host and device.
@@ -288,7 +292,7 @@ public:
      * Get the array which contains the index of each atom.
      */
     OpenCLArray& getAtomIndexArray() {
-        return *atomIndexDevice;
+        return atomIndexDevice;
     }
     /**
      * Get the number of cells by which the positions are offset.
@@ -619,6 +623,11 @@ public:
      */
     void setCharges(const std::vector<double>& charges);
     /**
+     * Request to use the fourth element of the posq array for storing charges.  Since only one force can
+     * do that, this returns true the first time it is called, and false on all subsequent calls.
+     */
+    bool requestPosqCharges();
+    /**
      * Get the thread used by this context for executing parallel computations.
      */
     WorkThread& getWorkThread() {
@@ -738,7 +747,7 @@ private:
     int numThreadBlocks;
     int numForceBuffers;
     int simdWidth;
-    bool supports64BitGlobalAtomics, supportsDoublePrecision, useDoublePrecision, useMixedPrecision, atomsWereReordered, boxIsTriclinic, forcesValid;
+    bool supports64BitGlobalAtomics, supportsDoublePrecision, useDoublePrecision, useMixedPrecision, atomsWereReordered, boxIsTriclinic, forcesValid, hasAssignedPosqCharges;
     mm_float4 periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ;
     mm_double4 periodicBoxSizeDouble, invPeriodicBoxSizeDouble, periodicBoxVecXDouble, periodicBoxVecYDouble, periodicBoxVecZDouble;
     std::string defaultOptimizationOptions;
@@ -762,17 +771,17 @@ private:
     std::vector<mm_int4> posCellOffsets;
     cl::Buffer* pinnedBuffer;
     void* pinnedMemory;
-    OpenCLArray* posq;
-    OpenCLArray* posqCorrection;
-    OpenCLArray* velm;
-    OpenCLArray* force;
-    OpenCLArray* forceBuffers;
-    OpenCLArray* longForceBuffer;
-    OpenCLArray* energyBuffer;
-    OpenCLArray* energySum;
-    OpenCLArray* energyParamDerivBuffer;
-    OpenCLArray* atomIndexDevice;
-    OpenCLArray* chargeBuffer;
+    OpenCLArray posq;
+    OpenCLArray posqCorrection;
+    OpenCLArray velm;
+    OpenCLArray force;
+    OpenCLArray forceBuffers;
+    OpenCLArray longForceBuffer;
+    OpenCLArray energyBuffer;
+    OpenCLArray energySum;
+    OpenCLArray energyParamDerivBuffer;
+    OpenCLArray atomIndexDevice;
+    OpenCLArray chargeBuffer;
     std::vector<std::string> energyParamDerivNames;
     std::map<std::string, double> energyParamDerivWorkspace;
     std::vector<int> atomIndex;
@@ -803,14 +812,14 @@ struct OpenCLContext::MoleculeGroup {
 /**
  * This abstract class defines a task to be executed on the worker thread.
  */
-class OpenCLContext::WorkTask {
+class OPENMM_EXPORT_OPENCL OpenCLContext::WorkTask {
 public:
     virtual void execute() = 0;
     virtual ~WorkTask() {
     }
 };
 
-class OpenCLContext::WorkThread {
+class OPENMM_EXPORT_OPENCL OpenCLContext::WorkThread {
 public:
     struct ThreadData;
     WorkThread();
@@ -845,7 +854,7 @@ private:
  * Objects that need to know when reordering happens should create a ReorderListener
  * and register it by calling addReorderListener().
  */
-class OpenCLContext::ReorderListener {
+class OPENMM_EXPORT_OPENCL OpenCLContext::ReorderListener {
 public:
     virtual void execute() = 0;
     virtual ~ReorderListener() {
@@ -858,7 +867,7 @@ public:
  * that need to be performed at a nonstandard point in the process.  After creating a
  * ForcePreComputation, register it by calling addForcePreComputation().
  */
-class OpenCLContext::ForcePreComputation {
+class OPENMM_EXPORT_OPENCL OpenCLContext::ForcePreComputation {
 public:
     virtual ~ForcePreComputation() {
     }
@@ -876,7 +885,7 @@ public:
  * that need to be performed at a nonstandard point in the process.  After creating a
  * ForcePostComputation, register it by calling addForcePostComputation().
  */
-class OpenCLContext::ForcePostComputation {
+class OPENMM_EXPORT_OPENCL OpenCLContext::ForcePostComputation {
 public:
     virtual ~ForcePostComputation() {
     }

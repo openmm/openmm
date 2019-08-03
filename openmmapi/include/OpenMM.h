@@ -65,6 +65,7 @@
 #include "openmm/OpenMMException.h"
 #include "openmm/PeriodicTorsionForce.h"
 #include "openmm/RBTorsionForce.h"
+#include "openmm/RMSDForce.h"
 #include "openmm/State.h"
 #include "openmm/System.h"
 #include "openmm/TabulatedFunction.h"

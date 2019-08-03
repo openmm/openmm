@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2017 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2018 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -30,6 +30,7 @@
 #include "openmm/internal/CompiledExpressionSet.h"
 #include "openmm/internal/ThreadPool.h"
 #include "openmm/internal/vectorize.h"
+#include <atomic>
 #include <map>
 #include <set>
 #include <utility>
@@ -110,7 +111,6 @@ class CpuCustomNonbondedForce {
          @param posq             atom coordinates in float format
          @param atomCoordinates  atom coordinates
          @param atomParameters   atom parameters (charges, c6, c12, ...)     atomParameters[atomIndex][paramterIndex]
-         @param fixedParameters  non atom parameters (not currently used)
          @param globalParameters the values of global parameters
          @param forces           force array (forces added)
          @param totalEnergy      total energy
@@ -118,9 +118,9 @@ class CpuCustomNonbondedForce {
 
          --------------------------------------------------------------------------------------- */
 
-    void calculatePairIxn(int numberOfAtoms, float* posq, std::vector<OpenMM::Vec3>& atomCoordinates, double** atomParameters,
-                          double* fixedParameters, const std::map<std::string, double>& globalParameters,
-                          std::vector<AlignedArray<float> >& threadForce, bool includeForce, bool includeEnergy, double& totalEnergy, double* energyParamDerivs);
+    void calculatePairIxn(int numberOfAtoms, float* posq, std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<std::vector<double> >& atomParameters,
+                          const std::map<std::string, double>& globalParameters, std::vector<AlignedArray<float> >& threadForce,
+                          bool includeForce, bool includeEnergy, double& totalEnergy, double* energyParamDerivs);
 private:
     class ThreadData;
 
@@ -144,11 +144,11 @@ private:
     int numberOfAtoms;
     float* posq;
     Vec3 const* atomCoordinates;
-    double** atomParameters;        
+    std::vector<double>* atomParameters;        
     const std::map<std::string, double>* globalParameters;
     std::vector<AlignedArray<float> >* threadForce;
     bool includeForce, includeEnergy;
-    void* atomicCounter;
+    std::atomic<int> atomicCounter;
 
     /**
      * This routine contains the code executed by each thread.

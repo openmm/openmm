@@ -65,6 +65,7 @@ matrix:
 
     - language: objective-c
       os: osx
+      osx_image: xcode9.3
       env: ==OSX==
            OPENCL=false
            CUDA=false
@@ -108,9 +109,10 @@ before_install:
   - wget http://anaconda.org/omnia/ccache/3.2.4/download/${TRAVIS_OS_NAME}-64/ccache-3.2.4-0.tar.bz2
   - mkdir -p $HOME/ccache && tar xf ccache-3.2.4-0.tar.bz2 -C $HOME/ccache
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+      brew cask uninstall oclint;
       brew install fftw;
       brew install -y https://raw.githubusercontent.com/Homebrew/homebrew-core/5b680fb58fedfb00cd07a7f69f5a621bb9240f3b/Formula/doxygen.rb;
-      sudo easy_install pytest;
+      sudo pip install -U pytest --ignore-installed six;
     fi
   - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
       CMAKE_URL="http://cmake.org/files/v3.7/cmake-3.7.2-Linux-x86_64.tar.gz";
@@ -130,9 +132,9 @@ before_install:
       ${AMDAPPSDK}/bin/x86_64/clinfo;
       sudo apt-get install -y libgl1-mesa-dev;
     fi
-  # Install swig for Python wrappers. However, testing CUDA and OpenCL, we
-  # skip the Python wrapper for speed. We're not using anaconda python,
-  # but this is a fast way to get an apparently functional precompiled
+  # Install SWIG and Cython for Python wrappers. However, testing CUDA and
+  # OpenCL, we skip the Python wrapper for speed. We're not using anaconda
+  # python, but this is a fast way to get an apparently functional precompiled
   # build of swig that's more modern than what's in apt.
   - if [[ "$OPENCL" == "false" && "$CUDA" == "false" && "$TRAVIS_OS_NAME" == "linux" ]]; then
       wget http://anaconda.org/omnia/swig/3.0.7/download/linux-64/swig-3.0.7-0.tar.bz2;
@@ -140,6 +142,7 @@ before_install:
       tar -xjvf swig-3.0.7-0.tar.bz2 -C $HOME/swig;
       export PATH=$HOME/swig/bin:$PATH;
       export SWIG_LIB=$HOME/swig/share/swig/3.0.7;
+      pip install cython;
     fi
   - if [[ "$OPENCL" == "false" && "$CUDA" == "false" && "$TRAVIS_OS_NAME" == "osx" ]]; then
       wget http://anaconda.org/omnia/swig/3.0.7/download/osx-64/swig-3.0.7-0.tar.bz2;
@@ -147,6 +150,7 @@ before_install:
       tar -xjvf swig-3.0.7-0.tar.bz2 -C $HOME/swig;
       export PATH=$HOME/swig/bin:$PATH;
       export SWIG_LIB=$HOME/swig/share/swig/3.0.7;
+      sudo pip install cython;
     fi
 
   - if [[ "$CUDA" == "true" ]]; then
@@ -181,8 +185,9 @@ script:
   - python devtools/run-ctest.py --start-time $START_TIME
 
   - if [[ ! -z "${DOCS_DEPLOY}" && "${DOCS_DEPLOY}" = "true" ]]; then
-      pip install sphinx==1.5.6 sphinxcontrib-bibtex sphinxcontrib-lunrsearch sphinxcontrib-autodoc_doxygen;
+      pip install sphinx sphinxcontrib-bibtex sphinxcontrib-lunrsearch sphinxcontrib-autodoc_doxygen;
       make sphinxhtml;
+      make sphinxpdf;
       make C++ApiDocs PythonApiDocs;
       mkdir -p api-docs;
       mv sphinx-docs/userguide/html api-docs/userguide;

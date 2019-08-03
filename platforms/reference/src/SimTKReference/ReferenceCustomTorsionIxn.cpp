@@ -1,4 +1,4 @@
-/* Portions copyright (c) 2010-2016 Stanford University and Simbios.
+/* Portions copyright (c) 2010-2018 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -38,7 +38,7 @@ using namespace OpenMM;
    --------------------------------------------------------------------------------------- */
 
 ReferenceCustomTorsionIxn::ReferenceCustomTorsionIxn(const Lepton::CompiledExpression& energyExpression,
-        const Lepton::CompiledExpression& forceExpression, const vector<string>& parameterNames, map<string, double> globalParameters,
+        const Lepton::CompiledExpression& forceExpression, const vector<string>& parameterNames,
         const vector<Lepton::CompiledExpression> energyParamDerivExpressions) :
         energyExpression(energyExpression), forceExpression(forceExpression), usePeriodic(false), energyParamDerivExpressions(energyParamDerivExpressions) {
     expressionSet.registerExpression(this->energyExpression);
@@ -49,8 +49,6 @@ ReferenceCustomTorsionIxn::ReferenceCustomTorsionIxn(const Lepton::CompiledExpre
     numParameters = parameterNames.size();
     for (auto& param : parameterNames)
         torsionParamIndex.push_back(expressionSet.getVariableIndex(param));
-    for (auto& param : globalParameters)
-        expressionSet.setVariable(expressionSet.getVariableIndex(param.first), param.second);
 }
 
 /**---------------------------------------------------------------------------------------
@@ -69,6 +67,11 @@ void ReferenceCustomTorsionIxn::setPeriodic(OpenMM::Vec3* vectors) {
     boxVectors[2] = vectors[2];
 }
 
+void ReferenceCustomTorsionIxn::setGlobalParameters(std::map<std::string, double> parameters) {
+    for (auto& param : parameters)
+        expressionSet.setVariable(expressionSet.getVariableIndex(param.first), param.second);
+}
+
 /**---------------------------------------------------------------------------------------
 
    Calculate Custom Torsion Ixn
@@ -81,9 +84,9 @@ void ReferenceCustomTorsionIxn::setPeriodic(OpenMM::Vec3* vectors) {
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceCustomTorsionIxn::calculateBondIxn(int* atomIndices,
+void ReferenceCustomTorsionIxn::calculateBondIxn(vector<int>& atomIndices,
                                                 vector<Vec3>& atomCoordinates,
-                                                double* parameters,
+                                                vector<double>& parameters,
                                                 vector<Vec3>& forces,
                                                 double* totalEnergy, double* energyParamDerivs) {
    double deltaR[3][ReferenceForce::LastDeltaRIndex];

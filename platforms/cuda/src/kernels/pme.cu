@@ -3,8 +3,8 @@ extern "C" __global__ void findAtomGridIndex(const real4* __restrict__ posq, int
             real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
     // Compute the index of the grid point each atom is associated with.
     
-    for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
-        real4 pos = posq[i];
+    for (int atom = blockIdx.x*blockDim.x+threadIdx.x; atom < NUM_ATOMS; atom += blockDim.x*gridDim.x) {
+        real4 pos = posq[atom];
         APPLY_PERIODIC_TO_POS(pos)
         real3 t = make_real3(pos.x*recipBoxVecX.x+pos.y*recipBoxVecY.x+pos.z*recipBoxVecZ.x,
                              pos.y*recipBoxVecY.y+pos.z*recipBoxVecZ.y,
@@ -15,26 +15,49 @@ extern "C" __global__ void findAtomGridIndex(const real4* __restrict__ posq, int
         int3 gridIndex = make_int3(((int) t.x) % GRID_SIZE_X,
                                    ((int) t.y) % GRID_SIZE_Y,
                                    ((int) t.z) % GRID_SIZE_Z);
-        pmeAtomGridIndex[i] = make_int2(i, gridIndex.x*GRID_SIZE_Y*GRID_SIZE_Z+gridIndex.y*GRID_SIZE_Z+gridIndex.z);
+        pmeAtomGridIndex[atom] = make_int2(atom, gridIndex.x*GRID_SIZE_Y*GRID_SIZE_Z+gridIndex.y*GRID_SIZE_Z+gridIndex.z);
     }
 }
 
 extern "C" __global__ void gridSpreadCharge(const real4* __restrict__ posq, real* __restrict__ originalPmeGrid,
         real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
         real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ, const int2* __restrict__ pmeAtomGridIndex
-#ifdef USE_LJPME
+#ifdef CHARGE_FROM_SIGEPS
         , const float2* __restrict__ sigmaEpsilon
+#else
+        , const real* __restrict__ charges
 #endif
         ) {
-    real3 data[PME_ORDER];
-    const real scale = RECIP(PME_ORDER-1);
+    // To improve memory efficiency, we divide indices along the z axis into
+    // PME_ORDER blocks, where the data for each block is stored together.  We
+    // can ensure that all threads write to the same block at the same time,
+    // which leads to better coalescing of writes.
+    
+    __shared__ int zindexTable[GRID_SIZE_Z+PME_ORDER];
+    int blockSize = (int) ceil(GRID_SIZE_Z/(real) PME_ORDER);
+    for (int i = threadIdx.x; i < GRID_SIZE_Z+PME_ORDER; i += blockDim.x) {
+        int zindex = i % GRID_SIZE_Z;
+	int block = zindex % PME_ORDER;
+        zindexTable[i] = zindex/PME_ORDER + block*GRID_SIZE_X*GRID_SIZE_Y*blockSize;
+    }
+    __syncthreads();
     
     // Process the atoms in spatially sorted order.  This improves efficiency when writing
     // the grid values.
     
+    real3 data[PME_ORDER];
+    const real scale = RECIP(PME_ORDER-1);
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
         int atom = pmeAtomGridIndex[i].x;
         real4 pos = posq[atom];
+#ifdef CHARGE_FROM_SIGEPS
+        const float2 sigEps = sigmaEpsilon[atom];
+        const real charge = 8*sigEps.x*sigEps.x*sigEps.x*sigEps.y;
+#else
+        const real charge = (CHARGE)*EPSILON_FACTOR;
+#endif
+        if (charge == 0)
+            continue;
         APPLY_PERIODIC_TO_POS(pos)
         real3 t = make_real3(pos.x*recipBoxVecX.x+pos.y*recipBoxVecY.x+pos.z*recipBoxVecZ.x,
                              pos.y*recipBoxVecY.y+pos.z*recipBoxVecZ.y,
@@ -66,41 +89,28 @@ extern "C" __global__ void gridSpreadCharge(const real4* __restrict__ posq, real
         data[0] = scale*(make_real3(1)-dr)*data[0];
         
         // Spread the charge from this atom onto each grid point.
-        
-#ifdef USE_LJPME
-        const float2 sigEps = sigmaEpsilon[atom];
-        const real charge = 8*sigEps.x*sigEps.x*sigEps.x*sigEps.y;
-#else
-        const real charge = pos.w;
-#endif
+
+	int izoffset = (PME_ORDER-(gridIndex.z%PME_ORDER)) % PME_ORDER;
         for (int ix = 0; ix < PME_ORDER; ix++) {
             int xbase = gridIndex.x+ix;
             xbase -= (xbase >= GRID_SIZE_X ? GRID_SIZE_X : 0);
-            xbase = xbase*GRID_SIZE_Y*GRID_SIZE_Z;
-            real dx = data[ix].x;
-            
+            xbase = xbase*GRID_SIZE_Y;
+            real dx = charge*data[ix].x;
             for (int iy = 0; iy < PME_ORDER; iy++) {
                 int ybase = gridIndex.y+iy;
                 ybase -= (ybase >= GRID_SIZE_Y ? GRID_SIZE_Y : 0);
-                ybase = xbase + ybase*GRID_SIZE_Z;
-                real dy = data[iy].y;
-                
-                for (int iz = 0; iz < PME_ORDER; iz++) {
+                ybase = (xbase+ybase)*blockSize;
+                real dxdy = dx*data[iy].y;
+                for (int i = 0; i < PME_ORDER; i++) {
+		    int iz = (i+izoffset) % PME_ORDER;
                     int zindex = gridIndex.z+iz;
-                    zindex -= (zindex >= GRID_SIZE_Z ? GRID_SIZE_Z : 0);
-                    int index = ybase + zindex;
-
-                    real add = charge*dx*dy*data[iz].z;
-#ifdef USE_DOUBLE_PRECISION
+                    int index = ybase + zindexTable[zindex];
+                    real add = dxdy*data[iz].z;
+#if defined(USE_DOUBLE_PRECISION) || defined(USE_DETERMINISTIC_FORCES)
                     unsigned long long * ulonglong_p = (unsigned long long *) originalPmeGrid;
                     atomicAdd(&ulonglong_p[index],  static_cast<unsigned long long>((long long) (add*0x100000000)));
-#elif __CUDA_ARCH__ < 200 || defined(USE_DETERMINISTIC_FORCES)
-                    unsigned long long * ulonglong_p = (unsigned long long *) originalPmeGrid;
-                    int gridIndex = index;
-                    gridIndex = (gridIndex%2 == 0 ? gridIndex/2 : (gridIndex+GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z)/2);
-                    atomicAdd(&ulonglong_p[gridIndex],  static_cast<unsigned long long>((long long) (add*0x100000000)));
 #else
-                    atomicAdd(&originalPmeGrid[index], add*EPSILON_FACTOR);
+                    atomicAdd(&originalPmeGrid[index], add);
 #endif
                 }
             }
@@ -108,20 +118,36 @@ extern "C" __global__ void gridSpreadCharge(const real4* __restrict__ posq, real
     }
 }
 
-extern "C" __global__ void finishSpreadCharge(long long* __restrict__ originalPmeGrid) {
-    real* floatGrid = (real*) originalPmeGrid;
-    const unsigned int gridSize = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
-    real scale = EPSILON_FACTOR/(real) 0x100000000;
-#ifdef USE_DOUBLE_PRECISION
-    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < gridSize; index += blockDim.x*gridDim.x)
-        floatGrid[index] = scale*originalPmeGrid[index];
+extern "C" __global__ void finishSpreadCharge(
+#if defined(USE_DOUBLE_PRECISION) || defined(USE_DETERMINISTIC_FORCES)
+        const long long* __restrict__ grid1,
 #else
-    for (int index = 2*(blockIdx.x*blockDim.x+threadIdx.x); index < gridSize; index += 2*blockDim.x*gridDim.x) {
-        floatGrid[index] = scale*originalPmeGrid[index/2];
-        if (index+1 < gridSize)
-            floatGrid[index+1] = scale*originalPmeGrid[(index+gridSize+1)/2];
-    }
+        const real* __restrict__ grid1,
 #endif
+        real* __restrict__ grid2) {
+    // During charge spreading, we shuffled the order of indices along the z
+    // axis to make memory access more efficient.  We now need to unshuffle
+    // them.  If the values were accumulated as fixed point, we also need to
+    // convert them to floating point.
+
+    __shared__ int zindexTable[GRID_SIZE_Z];
+    int blockSize = (int) ceil(GRID_SIZE_Z/(real) PME_ORDER);
+    for (int i = threadIdx.x; i < GRID_SIZE_Z; i += blockDim.x) {
+	int block = i % PME_ORDER;
+        zindexTable[i] = i/PME_ORDER + block*GRID_SIZE_X*GRID_SIZE_Y*blockSize;
+    }
+    __syncthreads();
+    const unsigned int gridSize = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
+    real scale = 1/(real) 0x100000000;
+    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < gridSize; index += blockDim.x*gridDim.x) {
+        int zindex = index%GRID_SIZE_Z;
+        int loadIndex = zindexTable[zindex] + blockSize*(int) (index/GRID_SIZE_Z);
+#if defined(USE_DOUBLE_PRECISION) || defined(USE_DETERMINISTIC_FORCES)
+        grid2[index] = scale*grid1[loadIndex];
+#else
+        grid2[index] = grid1[loadIndex];
+#endif
+    }
 }
 
 // convolutes on the halfcomplex_pmeGrid, which is of size NX*NY*(NZ/2+1) as F(Q) is conjugate symmetric
@@ -249,8 +275,10 @@ extern "C" __global__
 void gridInterpolateForce(const real4* __restrict__ posq, unsigned long long* __restrict__ forceBuffers, const real* __restrict__ originalPmeGrid,
         real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
         real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ, const int2* __restrict__ pmeAtomGridIndex
-#ifdef USE_LJPME
+#ifdef CHARGE_FROM_SIGEPS
         , const float2* __restrict__ sigmaEpsilon
+#else
+        , const real* __restrict__ charges
 #endif
         ) {
     real3 data[PME_ORDER];
@@ -324,11 +352,11 @@ void gridInterpolateForce(const real4* __restrict__ posq, unsigned long long* __
                 }
             }
         }
-#ifdef USE_LJPME
+#ifdef CHARGE_FROM_SIGEPS
         const float2 sigEps = sigmaEpsilon[atom];
         real q = 8*sigEps.x*sigEps.x*sigEps.x*sigEps.y;
 #else
-        real q = pos.w*EPSILON_FACTOR;
+        real q = CHARGE*EPSILON_FACTOR;
 #endif
         real forceX = -q*(force.x*GRID_SIZE_X*recipBoxVecX.x);
         real forceY = -q*(force.x*GRID_SIZE_X*recipBoxVecY.x+force.y*GRID_SIZE_Y*recipBoxVecY.y);

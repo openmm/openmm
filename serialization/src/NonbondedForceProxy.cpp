@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -42,7 +42,7 @@ NonbondedForceProxy::NonbondedForceProxy() : SerializationProxy("NonbondedForce"
 }
 
 void NonbondedForceProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 2);
+    node.setIntProperty("version", 3);
     const NonbondedForce& force = *reinterpret_cast<const NonbondedForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
     node.setIntProperty("method", (int) force.getNonbondedMethod());
@@ -65,6 +65,25 @@ void NonbondedForceProxy::serialize(const void* object, SerializationNode& node)
     node.setIntProperty("ljny", ny);
     node.setIntProperty("ljnz", nz);
     node.setIntProperty("recipForceGroup", force.getReciprocalSpaceForceGroup());
+    SerializationNode& globalParams = node.createChildNode("GlobalParameters");
+    for (int i = 0; i < force.getNumGlobalParameters(); i++)
+        globalParams.createChildNode("Parameter").setStringProperty("name", force.getGlobalParameterName(i)).setDoubleProperty("default", force.getGlobalParameterDefaultValue(i));
+    SerializationNode& particleOffsets = node.createChildNode("ParticleOffsets");
+    for (int i = 0; i < force.getNumParticleParameterOffsets(); i++) {
+        int particle;
+        double chargeScale, sigmaScale, epsilonScale;
+        string parameter;
+        force.getParticleParameterOffset(i, parameter, particle, chargeScale, sigmaScale, epsilonScale);
+        particleOffsets.createChildNode("Offset").setStringProperty("parameter", parameter).setIntProperty("particle", particle).setDoubleProperty("q", chargeScale).setDoubleProperty("sig", sigmaScale).setDoubleProperty("eps", epsilonScale);
+    }
+    SerializationNode& exceptionOffsets = node.createChildNode("ExceptionOffsets");
+    for (int i = 0; i < force.getNumExceptionParameterOffsets(); i++) {
+        int exception;
+        double chargeProdScale, sigmaScale, epsilonScale;
+        string parameter;
+        force.getExceptionParameterOffset(i, parameter, exception, chargeProdScale, sigmaScale, epsilonScale);
+        exceptionOffsets.createChildNode("Offset").setStringProperty("parameter", parameter).setIntProperty("exception", exception).setDoubleProperty("q", chargeProdScale).setDoubleProperty("sig", sigmaScale).setDoubleProperty("eps", epsilonScale);
+    }
     SerializationNode& particles = node.createChildNode("Particles");
     for (int i = 0; i < force.getNumParticles(); i++) {
         double charge, sigma, epsilon;
@@ -82,7 +101,7 @@ void NonbondedForceProxy::serialize(const void* object, SerializationNode& node)
 
 void* NonbondedForceProxy::deserialize(const SerializationNode& node) const {
     int version = node.getIntProperty("version");
-    if (version < 1 || version > 2)
+    if (version < 1 || version > 3)
         throw OpenMMException("Unsupported version number");
     NonbondedForce* force = new NonbondedForce();
     try {
@@ -107,6 +126,17 @@ void* NonbondedForceProxy::deserialize(const SerializationNode& node) const {
             force->setLJPMEParameters(alpha, nx, ny, nz);
         }
         force->setReciprocalSpaceForceGroup(node.getIntProperty("recipForceGroup", -1));
+        if (version >= 3) {
+            const SerializationNode& globalParams = node.getChildNode("GlobalParameters");
+            for (auto& parameter : globalParams.getChildren())
+                force->addGlobalParameter(parameter.getStringProperty("name"), parameter.getDoubleProperty("default"));
+            const SerializationNode& particleOffsets = node.getChildNode("ParticleOffsets");
+            for (auto& offset : particleOffsets.getChildren())
+                force->addParticleParameterOffset(offset.getStringProperty("parameter"), offset.getIntProperty("particle"), offset.getDoubleProperty("q"), offset.getDoubleProperty("sig"), offset.getDoubleProperty("eps"));
+            const SerializationNode& exceptionOffsets = node.getChildNode("ExceptionOffsets");
+            for (auto& offset : exceptionOffsets.getChildren())
+                force->addExceptionParameterOffset(offset.getStringProperty("parameter"), offset.getIntProperty("exception"), offset.getDoubleProperty("q"), offset.getDoubleProperty("sig"), offset.getDoubleProperty("eps"));
+        }
         const SerializationNode& particles = node.getChildNode("Particles");
         for (auto& particle : particles.getChildren())
             force->addParticle(particle.getDoubleProperty("q"), particle.getDoubleProperty("sig"), particle.getDoubleProperty("eps"));

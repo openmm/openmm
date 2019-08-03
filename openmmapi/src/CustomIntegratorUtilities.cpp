@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2015-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2015-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -83,9 +83,17 @@ void CustomIntegratorUtilities::analyzeComputations(const ContextImpl& context, 
     forceGroup.resize(numSteps, -2);
     vector<CustomIntegrator::ComputationType> stepType(numSteps);
     vector<string> stepVariable(numSteps);
+    vector<bool> alwaysInvalidatesForces(numSteps, false);
     map<string, Lepton::CustomFunction*> customFunctions = functions;
-    DerivFunction derivFunction;
-    customFunctions["deriv"] = &derivFunction;
+    Lepton::PlaceholderFunction fn1(1), fn2(2), fn3(3);
+    customFunctions["deriv"] = &fn2;
+    map<string, Lepton::CustomFunction*> vectorFunctions = customFunctions;
+    vectorFunctions["dot"] = &fn2;
+    vectorFunctions["cross"] = &fn2;
+    vectorFunctions["_x"] = &fn1;
+    vectorFunctions["_y"] = &fn1;
+    vectorFunctions["_z"] = &fn1;
+    vectorFunctions["vector"] = &fn3;
 
     // Parse the expressions.
 
@@ -100,6 +108,8 @@ void CustomIntegratorUtilities::analyzeComputations(const ContextImpl& context, 
             expressions[step].push_back(Lepton::Parser::parse(lhs, customFunctions).optimize());
             expressions[step].push_back(Lepton::Parser::parse(rhs, customFunctions).optimize());
         }
+        else if (stepType[step] == CustomIntegrator::ComputePerDof || stepType[step] == CustomIntegrator::ComputeSum)
+            expressions[step].push_back(Lepton::Parser::parse(expression, vectorFunctions).optimize());
         else if (expression.size() > 0)
             expressions[step].push_back(Lepton::Parser::parse(expression, customFunctions).optimize());
     }
@@ -111,9 +121,10 @@ void CustomIntegratorUtilities::analyzeComputations(const ContextImpl& context, 
     for (auto force : context.getForceImpls())
         for (auto& param : force->getDefaultParameters())
             affectsForce.insert(param.first);
-    for (int i = 0; i < numSteps; i++)
-        invalidatesForces[i] = (stepType[i] == CustomIntegrator::ConstrainPositions || stepType[i] == CustomIntegrator::UpdateContextState ||
-                affectsForce.find(stepVariable[i]) != affectsForce.end());
+    for (int i = 0; i < numSteps; i++) {
+        alwaysInvalidatesForces[i] = (stepType[i] == CustomIntegrator::ConstrainPositions || affectsForce.find(stepVariable[i]) != affectsForce.end());
+        invalidatesForces[i] = (alwaysInvalidatesForces[i] || stepType[i] == CustomIntegrator::UpdateContextState);
+    }
 
     // Make a list of which steps require valid forces or energy to be known.
 
@@ -191,10 +202,16 @@ void CustomIntegratorUtilities::analyzeComputations(const ContextImpl& context, 
     // or don't.  For each "while" block there are three possibilities: don't execute it; execute it and then
     // continue on; or execute it and then jump back to the beginning.  I'm assuming the number of blocks will
     // always remain small.  Otherwise, this could become very expensive!
+    //
+    // We also need to consider two full passes through the algorithm.  That way, we detect if a step at the beginning
+    // means a step at the end should compute both forces and energy.
 
-    vector<int> jumps(numSteps, -1);
+    vector<int> jumps(2*numSteps, -1);
     vector<int> stepsInPath;
-    enumeratePaths(0, stepsInPath, jumps, blockEnd, stepType, needsForces, needsEnergy, invalidatesForces, forceGroup, computeBoth);
+    int numBlocks = blockEnd.size();
+    for (int i = 0; i < numBlocks; i++)
+        blockEnd.push_back(blockEnd[i]+numSteps);
+    enumeratePaths(0, stepsInPath, jumps, blockEnd, stepType, needsForces, needsEnergy, alwaysInvalidatesForces, forceGroup, computeBoth);
     
     // Make sure calls to deriv() all valid.
     
@@ -210,8 +227,9 @@ void CustomIntegratorUtilities::enumeratePaths(int firstStep, vector<int> steps,
             const vector<bool>& invalidatesForces, const vector<int>& forceGroup, vector<bool>& computeBoth) {
     int step = firstStep;
     int numSteps = stepType.size();
-    while (step < numSteps) {
+    while (step < 2*numSteps) {
         steps.push_back(step);
+        int index = step % stepType.size();
         if (jumps[step] > 0) {
             // Follow the jump and remove it from the list.
 
@@ -219,7 +237,7 @@ void CustomIntegratorUtilities::enumeratePaths(int firstStep, vector<int> steps,
             jumps[step] = -1;
             step = nextStep;
         }
-        else if (stepType[step] == CustomIntegrator::IfBlockStart) {
+        else if (stepType[index] == CustomIntegrator::IfBlockStart) {
             // Consider skipping the block.
 
             enumeratePaths(blockEnd[step]+1, steps, jumps, blockEnd, stepType, needsForces, needsEnergy, invalidatesForces, forceGroup, computeBoth);
@@ -228,7 +246,7 @@ void CustomIntegratorUtilities::enumeratePaths(int firstStep, vector<int> steps,
 
             step++;
         }
-        else if (stepType[step] == CustomIntegrator::WhileBlockStart && jumps[step] != -2) {
+        else if (stepType[index] == CustomIntegrator::WhileBlockStart && jumps[step] != -2) {
             // Consider skipping the block.
 
             enumeratePaths(blockEnd[step]+1, steps, jumps, blockEnd, stepType, needsForces, needsEnergy, invalidatesForces, forceGroup, computeBoth);
@@ -253,21 +271,24 @@ void CustomIntegratorUtilities::analyzeForceComputationsForPath(vector<int>& ste
             const vector<bool>& invalidatesForces, const vector<int>& forceGroup, vector<bool>& computeBoth) {
     vector<pair<int, int> > candidatePoints;
     for (int step : steps) {
-        if (invalidatesForces[step]) {
+        int index = step % computeBoth.size();
+        if (invalidatesForces[index]) {
             // Forces and energies are invalidated at this step, so anything from this point on won't affect what we do at earlier steps.
 
             candidatePoints.clear();
         }
-        if (needsForces[step] || needsEnergy[step]) {
+        if (needsForces[index] || needsEnergy[index]) {
             // See if this step affects what we do at earlier points.
 
-            for (auto candidate : candidatePoints)
-                if (candidate.second == forceGroup[step] && ((needsForces[candidate.first] && needsEnergy[step]) || (needsEnergy[candidate.first] && needsForces[step])))
-                    computeBoth[candidate.first] = true;
+            for (auto candidate : candidatePoints) {
+                int candidateIndex = candidate.first % computeBoth.size();
+                if (candidate.second == forceGroup[index] && ((needsForces[candidateIndex] && needsEnergy[index]) || (needsEnergy[candidateIndex] && needsForces[index])))
+                    computeBoth[candidateIndex] = true;
+            }
 
             // Add this to the list of candidates that might be affected by later steps.
 
-            candidatePoints.push_back(make_pair(step, forceGroup[step]));
+            candidatePoints.push_back(make_pair(step, forceGroup[index]));
         }
     }
 }

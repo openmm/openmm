@@ -14,13 +14,14 @@ def timeIntegration(context, steps, initialSteps):
     context.getIntegrator().step(steps)
     context.getState(getEnergy=True)
     end = datetime.now()
-    elapsed = end -start
+    elapsed = end-start
     return elapsed.seconds + elapsed.microseconds*1e-6
 
 def runOneTest(testName, options):
     """Perform a single benchmarking simulation."""
     explicit = (testName in ('rf', 'pme', 'amoebapme'))
     amoeba = (testName in ('amoebagk', 'amoebapme'))
+    apoa1 = testName.startswith('apoa1')
     hydrogenMass = None
     print()
     if amoeba:
@@ -54,7 +55,20 @@ def runOneTest(testName, options):
         dt = 0.002*unit.picoseconds
         integ = mm.MTSIntegrator(dt, [(0,2), (1,1)])
     else:
-        if explicit:
+        if apoa1:
+            ff = app.ForceField('amber14/protein.ff14SB.xml', 'amber14/lipid17.xml', 'amber14/tip3p.xml')
+            pdb = app.PDBFile('apoa1.pdb')
+            if testName == 'apoa1pme':
+                method = app.PME
+                cutoff = options.cutoff
+            elif testName == 'apoa1ljpme':
+                method = app.LJPME
+                cutoff = options.cutoff
+            else:
+                method = app.CutoffPeriodic
+                cutoff = 1*unit.nanometers
+            friction = 1*(1/unit.picoseconds)
+        elif explicit:
             ff = app.ForceField('amber99sb.xml', 'tip3p.xml')
             pdb = app.PDBFile('5dfr_solv-cube_equil.pdb')
             if testName == 'pme':
@@ -116,7 +130,7 @@ def runOneTest(testName, options):
 parser = OptionParser()
 platformNames = [mm.Platform.getPlatform(i).getName() for i in range(mm.Platform.getNumPlatforms())]
 parser.add_option('--platform', dest='platform', choices=platformNames, help='name of the platform to benchmark')
-parser.add_option('--test', dest='test', choices=('gbsa', 'rf', 'pme', 'amoebagk', 'amoebapme'), help='the test to perform: gbsa, rf, pme, amoebagk, or amoebapme [default: all]')
+parser.add_option('--test', dest='test', choices=('gbsa', 'rf', 'pme', 'apoa1rf', 'apoa1pme', 'apoa1ljpme', 'amoebagk', 'amoebapme'), help='the test to perform: gbsa, rf, pme, apoa1rf, apoa1pme, apoa1ljpme, amoebagk, or amoebapme [default: all]')
 parser.add_option('--pme-cutoff', default='0.9', dest='cutoff', type='float', help='direct space cutoff for PME in nm [default: 0.9]')
 parser.add_option('--seconds', default='60', dest='seconds', type='float', help='target simulation length in seconds [default: 60]')
 parser.add_option('--polarization', default='mutual', dest='polarization', choices=('direct', 'extrapolated', 'mutual'), help='the polarization method for AMOEBA: direct, extrapolated, or mutual [default: mutual]')
@@ -138,7 +152,7 @@ if options.platform in ('CUDA', 'OpenCL'):
 # Run the simulations.
 
 if options.test is None:
-    for test in ('gbsa', 'rf', 'pme', 'amoebagk', 'amoebapme'):
+    for test in ('gbsa', 'rf', 'pme', 'apoa1rf', 'apoa1pme', 'apoa1ljpme', 'amoebagk', 'amoebapme'):
         try:
             runOneTest(test, options)
         except Exception as ex:

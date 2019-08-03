@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -44,6 +44,8 @@
 #include "CpuPlatform.h"
 #include "openmm/kernels.h"
 #include "openmm/System.h"
+#include <array>
+#include <tuple>
 
 namespace OpenMM {
 
@@ -98,9 +100,8 @@ private:
 class CpuCalcHarmonicAngleForceKernel : public CalcHarmonicAngleForceKernel {
 public:
     CpuCalcHarmonicAngleForceKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data) :
-            CalcHarmonicAngleForceKernel(name, platform), data(data), angleIndexArray(NULL), angleParamArray(NULL), usePeriodic(false) {
+            CalcHarmonicAngleForceKernel(name, platform), data(data), usePeriodic(false) {
     }
-    ~CpuCalcHarmonicAngleForceKernel();
     /**
      * Initialize the kernel.
      * 
@@ -127,8 +128,8 @@ public:
 private:
     CpuPlatform::PlatformData& data;
     int numAngles;
-    int **angleIndexArray;
-    double **angleParamArray;
+    std::vector<std::vector<int> > angleIndexArray;
+    std::vector<std::vector<double> > angleParamArray;
     CpuBondForce bondForce;
     bool usePeriodic;
 };
@@ -139,9 +140,8 @@ private:
 class CpuCalcPeriodicTorsionForceKernel : public CalcPeriodicTorsionForceKernel {
 public:
     CpuCalcPeriodicTorsionForceKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data) :
-            CalcPeriodicTorsionForceKernel(name, platform), data(data), torsionIndexArray(NULL), torsionParamArray(NULL), usePeriodic(false) {
+            CalcPeriodicTorsionForceKernel(name, platform), data(data), usePeriodic(false) {
     }
-    ~CpuCalcPeriodicTorsionForceKernel();
     /**
      * Initialize the kernel.
      * 
@@ -168,8 +168,8 @@ public:
 private:
     CpuPlatform::PlatformData& data;
     int numTorsions;
-    int **torsionIndexArray;
-    double **torsionParamArray;
+    std::vector<std::vector<int> > torsionIndexArray;
+    std::vector<std::vector<double> > torsionParamArray;
     CpuBondForce bondForce;
     bool usePeriodic;
 };
@@ -180,9 +180,8 @@ private:
 class CpuCalcRBTorsionForceKernel : public CalcRBTorsionForceKernel {
 public:
     CpuCalcRBTorsionForceKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data) :
-            CalcRBTorsionForceKernel(name, platform), data(data), torsionIndexArray(NULL), torsionParamArray(NULL), usePeriodic(false) {
+            CalcRBTorsionForceKernel(name, platform), data(data), usePeriodic(false) {
     }
-    ~CpuCalcRBTorsionForceKernel();
     /**
      * Initialize the kernel.
      * 
@@ -209,8 +208,8 @@ public:
 private:
     CpuPlatform::PlatformData& data;
     int numTorsions;
-    int **torsionIndexArray;
-    double **torsionParamArray;
+    std::vector<std::vector<int> > torsionIndexArray;
+    std::vector<std::vector<double> > torsionParamArray;
     CpuBondForce bondForce;
     bool usePeriodic;
 };
@@ -267,16 +266,22 @@ public:
     void getLJPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
 private:
     class PmeIO;
+    void computeParameters(ContextImpl& context, bool offsetsOnly);
     CpuPlatform::PlatformData& data;
-    int numParticles, num14;
-    int **bonded14IndexArray;
-    double **bonded14ParamArray;
+    int numParticles, num14, chargePosqIndex, ljPosqIndex;
+    std::vector<std::vector<int> > bonded14IndexArray;
+    std::vector<std::vector<double> > bonded14ParamArray;
     double nonbondedCutoff, switchingDistance, rfDielectric, ewaldAlpha, ewaldDispersionAlpha, ewaldSelfEnergy, dispersionCoefficient;
     int kmax[3], gridSize[3], dispersionGridSize[3];
-    bool useSwitchingFunction, useOptimizedPme, hasInitializedPme, hasInitializedDispersionPme;
+    bool useSwitchingFunction, useOptimizedPme, hasInitializedPme, hasInitializedDispersionPme, hasParticleOffsets, hasExceptionOffsets;
     std::vector<std::set<int> > exclusions;
     std::vector<std::pair<float, float> > particleParams;
     std::vector<float> C6params;
+    std::vector<float> charges;
+    std::vector<std::array<double, 3> > baseParticleParams, baseExceptionParams;
+    std::vector<std::vector<std::tuple<double, double, double, int> > > particleParamOffsets, exceptionParamOffsets;
+    std::vector<std::string> paramNames;
+    std::vector<double> paramValues;
     NonbondedMethod nonbondedMethod;
     CpuNonbondedForce* nonbonded;
     Kernel optimizedPme, optimizedDispersionPme;
@@ -313,10 +318,10 @@ public:
      * @param force      the CustomNonbondedForce to copy the parameters from
      */
     void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force);
-private:
+private:   
     CpuPlatform::PlatformData& data;
     int numParticles;
-    double **particleParamArray;
+    std::vector<std::vector<double> > particleParamArray;
     double nonbondedCutoff, switchingDistance, periodicBoxSize[3], longRangeCoefficient;
     bool useSwitchingFunction, hasInitializedLongRangeCorrection;
     CustomNonbondedForce* forceCopy;
@@ -363,7 +368,9 @@ public:
     void copyParametersToContext(ContextImpl& context, const GBSAOBCForce& force);
 private:
     CpuPlatform::PlatformData& data;
+    int posqIndex;
     std::vector<std::pair<float, float> > particleParams;
+    std::vector<float> charges;
     CpuGBSAOBCForce obc;
 };
 
@@ -403,7 +410,7 @@ private:
     CpuPlatform::PlatformData& data;
     int numParticles;
     bool isPeriodic;
-    double **particleParamArray;
+    std::vector<std::vector<double> > particleParamArray;
     double nonbondedCutoff;
     CpuCustomGBForce* ixn;
     CpuNeighborList* neighborList;
@@ -450,7 +457,7 @@ private:
     CpuPlatform::PlatformData& data;
     int numParticles;
     double cutoffDistance;
-    double **particleParamArray;
+    std::vector<std::vector<double> > particleParamArray;
     CpuCustomManyParticleForce* ixn;
     std::vector<std::string> globalParameterNames;
     NonbondedMethod nonbondedMethod;

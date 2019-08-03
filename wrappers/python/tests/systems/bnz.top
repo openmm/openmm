@@ -1,0 +1,173 @@
+;
+;	File '6lyz_gmx.top' was generated
+;	By user: sunhwan (40816)
+;	On host: kuta
+;	At date: Fri Nov 10 13:02:26 2017
+;
+;	This is a standalone topology file
+;
+;	Created by:
+;	           :-) GROMACS - gmx pdb2gmx, 2017-dev-20170822-762c6f0 (-:
+;	
+;	Executable:   /home/sunhwan/local/gromacs/src/gromacs/build/bin/gmx
+;	Data prefix:  /home/sunhwan/local/gromacs/src/gromacs (source tree)
+;	Working dir:  /data/sunhwan/work/lysozyme/1_setup
+;	Command line:
+;	  gmx pdb2gmx -f 6lyz_4pdb2gmx.pdb -o 6lyz_gmx.pdb -p 6lyz_gmx.top -ff charmm36 -water tip3p -ter -merge all
+;	Force field was read from current directory or a relative path - path added.
+;
+
+[ defaults ]
+; nbfunc	comb-rule	gen-pairs	fudgeLJ	fudgeQQ
+1	2	yes	1.0	1.0
+
+[ atomtypes ]
+;type atnum         mass   charge  ?           sigma  epsilon
+CG2R61    6    12.011000    0.000  A  0.355005321205  0.29288
+HGR61     1     1.008000    0.000  A  0.242003727796  0.12552
+LP        0     0.000000    0.00   A  0.0             0.0    ; pram
+
+; NBFIX for LP, rmin=1.2/2^(1/6), eps=4.184*.01
+[ nonbond_params ]
+LP     LP  1  1.069078461768  0.041840000000                 ; pram
+
+[ bondtypes ]
+;      i        j  func           b0           kb
+  CG2R61   CG2R61     1   0.13750000    255224.00
+  CG2R61    HGR61     1   0.10800000    284512.00
+
+[ angletypes ]
+;      i        j        k  func       theta0       ktheta          ub0          kub
+  CG2R61   CG2R61   CG2R61     5   120.000000   334.720000   0.24162000     29288.00
+  CG2R61   CG2R61    HGR61     5   120.000000   251.040000   0.21525000     18409.60
+
+[ dihedraltypes ]
+;      i        j        k        l  func         phi0         kphi  mult
+  CG2R61   CG2R61   CG2R61   CG2R61     9   180.000000    12.970400     2
+  CG2R61   CG2R61   CG2R61    HGR61     9   180.000000    17.572800     2
+   HGR61   CG2R61   CG2R61    HGR61     9   180.000000    10.041600     2
+
+[ dihedraltypes ]
+; 'improper' dihedrals 
+;      i        j        k        l  func         phi0         kphi
+
+[ moleculetype ]
+; Name            nrexcl
+BENX              3
+
+[ atoms ]
+;   nr       type  resnr residue  atom   cgnr     charge       mass  typeB    chargeB      massB
+; residue   1 BENX rtp BENX q  0.0
+     1     CG2R61      1   BENX     CG      1     -0.115     12.011   ; qtot -0.115
+     2      HGR61      1   BENX     HG      1      0.115      1.008   ; qtot 0
+     3     CG2R61      1   BENX    CD1      1     -0.115     12.011   ; qtot -0.115
+     4      HGR61      1   BENX    HD1      1      0.115      1.008   ; qtot 0
+     5     CG2R61      1   BENX    CD2      1     -0.115     12.011   ; qtot -0.115
+     6      HGR61      1   BENX    HD2      1      0.115      1.008   ; qtot 0
+     7     CG2R61      1   BENX    CE1      1     -0.115     12.011   ; qtot -0.115
+     8      HGR61      1   BENX    HE1      1      0.115      1.008   ; qtot 0
+     9     CG2R61      1   BENX    CE2      1     -0.115     12.011   ; qtot -0.115
+    10      HGR61      1   BENX    HE2      1      0.115      1.008   ; qtot 0
+    11     CG2R61      1   BENX     CZ      1     -0.115     12.011   ; qtot -0.115
+    12      HGR61      1   BENX     HZ      1      0.115      1.008   ; qtot 0
+    13         LP      1   BENX    LPA      1      0.000      0.000   ; qtot 0
+
+[ bonds ]
+;  ai    aj funct            c0            c1            c2            c3
+    1     2     1 
+    1     3     1 
+    1     5     1 
+    3     4     1 
+    3     7     1 
+    5     6     1 
+    5     9     1 
+    7     8     1 
+    7    11     1 
+    9    10     1 
+    9    11     1 
+   11    12     1 
+
+[ pairs ]
+;  ai    aj funct            c0            c1            c2            c3
+    1     8     1 
+    1    10     1 
+    1    11     1 
+    2     4     1 
+    2     6     1 
+    2     7     1 
+    2     9     1 
+    3     6     1 
+    3     9     1 
+    3    12     1 
+    4     5     1 
+    4     8     1 
+    4    11     1 
+    5     7     1 
+    5    12     1 
+    6    10     1 
+    6    11     1 
+    7    10     1 
+    8     9     1 
+    8    12     1 
+   10    12     1 
+
+[ angles ]
+;  ai    aj    ak funct            c0            c1            c2            c3
+    2     1     3     5 
+    2     1     5     5 
+    3     1     5     5 
+    1     3     4     5 
+    1     3     7     5 
+    4     3     7     5 
+    1     5     6     5 
+    1     5     9     5 
+    6     5     9     5 
+    3     7     8     5 
+    3     7    11     5 
+    8     7    11     5 
+    5     9    10     5 
+    5     9    11     5 
+   10     9    11     5 
+    7    11     9     5 
+    7    11    12     5 
+    9    11    12     5 
+
+[ dihedrals ]
+;  ai    aj    ak    al funct            c0            c1            c2            c3            c4            c5
+    2     1     3     4     9 
+    2     1     3     7     9 
+    5     1     3     4     9 
+    5     1     3     7     9 
+    2     1     5     6     9 
+    2     1     5     9     9 
+    3     1     5     6     9 
+    3     1     5     9     9 
+    1     3     7     8     9 
+    1     3     7    11     9 
+    4     3     7     8     9 
+    4     3     7    11     9 
+    1     5     9    10     9 
+    1     5     9    11     9 
+    6     5     9    10     9 
+    6     5     9    11     9 
+    3     7    11     9     9 
+    3     7    11    12     9 
+    8     7    11     9     9 
+    8     7    11    12     9 
+    5     9    11     7     9 
+    5     9    11    12     9 
+   10     9    11     7     9 
+   10     9    11    12     9 
+
+
+[ virtual_sites2 ]
+; Vsite from                    funct   a 
+13       1       11       1      0.500
+
+[ system ]
+; Name
+two benzene
+
+[ molecules ]
+; Compound        #mols
+BENX     2

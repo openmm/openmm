@@ -11,7 +11,7 @@ the ParmEd program and was ported for use with OpenMM.
 Copyright (c) 2014-2016 the Authors
 
 Author: Jason M. Swails
-Contributors:
+Contributors: Jing Huang
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -57,7 +57,7 @@ from simtk.openmm.app.internal.charmm.exceptions import (
 import warnings
 
 TINY = 1e-8
-WATNAMES = ('WAT', 'HOH', 'TIP3', 'TIP4', 'TIP5', 'SPCE', 'SPC')
+WATNAMES = ('WAT', 'HOH', 'TIP3', 'TIP4', 'TIP5', 'SPCE', 'SPC', 'SWM4', 'SWM6')
 if sys.version_info >= (3, 0):
     xrange = range
 
@@ -117,22 +117,29 @@ class CharmmPsfFile(object):
 
     This structure has numerous attributes that are lists of the elements of
     this structure, including atoms, bonds, torsions, etc. The attributes are
-        - residue_list
-        - atom_list
-        - bond_list
-        - angle_list
-        - dihedral_list
-        - dihedral_parameter_list
-        - improper_list
-        - cmap_list
-        - donor_list    # hbonds donors?
-        - acceptor_list # hbond acceptors?
-        - group_list    # list of nonbonded interaction groups
+
+    - residue_list
+    - atom_list
+    - bond_list
+    - angle_list
+    - dihedral_list
+    - dihedral_parameter_list
+    - improper_list
+    - cmap_list
+    - donor_list    # hbonds donors?
+    - acceptor_list # hbond acceptors?
+    - group_list    # list of nonbonded interaction groups
+
+    Four additional lists for Drude psf:
+    - drudeconsts_list
+    - drudepair_list
+    - lonepair_list
+    - aniso_list
 
     Additional attribute is available if a CharmmParameterSet is loaded into
     this structure.
 
-        - urey_bradley_list
+    - urey_bradley_list
 
     The lengths of each of these lists gives the pointers (e.g., natom, nres,
     etc.)
@@ -159,7 +166,7 @@ class CharmmPsfFile(object):
     GB_FORCE_GROUP = 6
 
     @_catchindexerror
-    def __init__(self, psf_name):
+    def __init__(self, psf_name, periodicBoxVectors=None, unitCellDimensions=None):
         """Opens and parses a PSF file, then instantiates a CharmmPsfFile
         instance from the data.
 
@@ -167,6 +174,11 @@ class CharmmPsfFile(object):
         ----------
         psf_name : str
             Name of the PSF file (it must exist)
+        periodicBoxVectors : tuple of Vec3
+            the vectors defining the periodic box
+        unitCellDimensions : Vec3
+            the dimensions of the crystallographic unit cell.  For
+            non-rectangular unit cells, specify periodicBoxVectors instead.
 
         Raises
         ------
@@ -185,6 +197,8 @@ class CharmmPsfFile(object):
                                      line.strip())
             # Store the flags
             psf_flags = line.split()[1:]
+            # Determine whether it's a Drude polarizable system
+            IsDrudePSF = 'DRUDE' in psf_flags
             # Now get all of the sections and store them in a dict
             psf.readline()
             # Now get all of the sections
@@ -202,6 +216,8 @@ class CharmmPsfFile(object):
         # Parse all of the atoms
         residue_list = ResidueList()
         atom_list = AtomList()
+        if IsDrudePSF:
+            drudeconsts_list = TrackedList()
         for i in xrange(natom):
             words = psfsections['NATOM'][1][i].split()
             system = words[1]
@@ -225,19 +241,31 @@ class CharmmPsfFile(object):
             atom = residue_list.add_atom(system, resid, resname, name,
                             attype, charge, mass, inscode, props)
             atom_list.append(atom)
+            if IsDrudePSF:
+                alpha = conv(words[9], float, 'alpha')
+                thole = conv(words[10], float, 'thole')
+                drudeconsts_list.append([alpha, thole])
         atom_list.assign_indexes()
         atom_list.changed = False
         # Now get the number of bonds
         nbond = conv(psfsections['NBOND'][0], int, 'number of bonds')
         holder = psfsections['NBOND'][1]
         bond_list = TrackedList()
+        if IsDrudePSF:
+            drudepair_list = TrackedList()
         if len(holder) != nbond * 2:
             raise CharmmPSFError('Got %d indexes for %d bonds' %
                                  (len(holder), nbond))
         for i in range(nbond):
             id1 = holder[2*i  ] - 1
             id2 = holder[2*i+1] - 1
-            bond_list.append(Bond(atom_list[id1], atom_list[id2]))
+            # ignore any bond pair involving Drude or lonepairs: possible using atom's prop
+            if (atom_list[id1].name[0]=='D' or atom_list[id2].name[0]=='D'):
+                drudepair_list.append([min(id1,id2), max(id1,id2)])
+            elif (atom_list[id1].name[0:2]=='LP' or atom_list[id2].name[0:2]=='LP' or atom_list[id1].name=='OM' or atom_list[id2].name=='OM'):
+                pass
+            else:
+                bond_list.append(Bond(atom_list[id1], atom_list[id2]))
         bond_list.changed = False
         # Now get the number of angles and the angle list
         ntheta = conv(psfsections['NTHETA'][0], int, 'number of angles')
@@ -341,12 +369,53 @@ class CharmmPsfFile(object):
                 # Therefore, we only check the lengths of the lists now rather than their contents.
                 warnings.warn('Detected PSF molecule section that is WRONG. '
                               'Resetting molecularity.', CharmmPSFWarning)
-            # We have a CHARMM PSF file; now do NUMLP/NUMLPH sections
-            numlp, numlph = psfsections['NUMLP NUMLPH'][0]
-            if numlp != 0 or numlph != 0:
-                raise NotImplemented('Cannot currently handle PSFs with lone '
-                                     'pairs defined in the NUMLP/NUMLPH '
-                                     'section.')
+        # We have a CHARMM PSF file; now do NUMLP/NUMLPH sections
+        numlp, numlph = psfsections['NUMLP NUMLPH'][0]
+        holder = psfsections['NUMLP NUMLPH'][1]
+        lonepair_list = TrackedList()
+        if numlp != 0 or numlph != 0:
+            lp_hostnum_list=[]
+            lp_distance_list=[]
+            lp_angle_list=[]
+            lp_dihe_list=[]
+            for i in range(numlp):
+                lpline = holder[i].split()
+                if len(lpline)!=6 or lpline[2] != 'F' :
+                    raise CharmmPSFError('Lonepair format error')
+                else:
+                    lp_hostnum_list.append(int(lpline[0]))
+                    lp_distance_list.append(float(lpline[3]))
+                    lp_angle_list.append(float(lpline[4]))
+                    lp_dihe_list.append(float(lpline[5]))
+            lp_atom_counter=0
+            for i in range(numlp):
+                idall=[]
+                for j in range(lp_hostnum_list[i]+1):
+                    iline = int((lp_atom_counter+j)/8)+numlp
+                    icolumn = (lp_atom_counter+j)%8
+                    idall.append(int(holder[iline].split()[icolumn])-1)
+                if len(idall)==3:
+                    idall.append(-1) # use id4=-1 to mark colinear
+                lonepair_list.append([idall[0], idall[1], idall[2], idall[3], lp_distance_list[i], lp_angle_list[i], lp_dihe_list[i]])
+                lp_atom_counter += lp_hostnum_list[i]+1
+        # In Drude psf, here comes anisotropic section
+        if IsDrudePSF:
+            numaniso = psfsections['NUMANISO'][0]
+            holder = psfsections['NUMANISO'][1]
+            aniso_list = TrackedList()
+            if numaniso != 0:
+               k_list=[]
+               for i in range(numaniso):
+                   lpline = holder[i].split()
+                   k_list.append([float(lpline[0]),float(lpline[1]),float(lpline[2])])
+               for i in range(numaniso):
+                    lpline = holder[int(i/2)+numaniso].split()
+                    icolumn = (i%2) * 4
+                    id1=int(lpline[icolumn])  -1
+                    id2=int(lpline[icolumn+1])-1
+                    id3=int(lpline[icolumn+2])-1
+                    id4=int(lpline[icolumn+3])-1
+                    aniso_list.append([id1, id2, id3, id4, k_list[i][0], k_list[i][1], k_list[i][2]])
         # Now do the CMAPs
         ncrterm = conv(psfsections['NCRTERM'][0], int, 'Number of cross-terms')
         holder = psfsections['NCRTERM'][1]
@@ -377,13 +446,25 @@ class CharmmPsfFile(object):
         self.dihedral_list = dihedral_list
         self.dihedral_parameter_list = TrackedList()
         self.improper_list = improper_list
+        self.lonepair_list = lonepair_list
+        if IsDrudePSF:
+            self.drudeconsts_list = drudeconsts_list
+            self.drudepair_list = drudepair_list
+            self.aniso_list = aniso_list
         self.cmap_list = cmap_list
         self.donor_list = donor_list
         self.acceptor_list = acceptor_list
         self.group_list = group_list
         self.title = title
         self.flags = psf_flags
-        self.box_vectors = None
+        if unitCellDimensions is not None:
+            if periodicBoxVectors is not None:
+                raise ValueError("specify either periodicBoxVectors or unitCellDimensions, but not both")
+            if u.is_quantity(unitCellDimensions):
+                unitCellDimensions = unitCellDimensions.value_in_unit(u.nanometers)
+            self.box_vectors = (Vec3(unitCellDimensions[0], 0, 0), Vec3(0, unitCellDimensions[1], 0), Vec3(0, 0, unitCellDimensions[2]))*u.nanometers
+        else:
+            self.box_vectors = periodicBoxVectors
 
     @staticmethod
     def _convert(string, type, message):
@@ -451,8 +532,8 @@ class CharmmPsfFile(object):
             # blank line) as well as any sections that have 0 members.
             line = psf.readline().strip()
         data = []
-        if title == 'NATOM' or title == 'NTITLE':
-            # Store these two sections as strings (ATOM section we will parse
+        if title == 'NATOM' or title == 'NTITLE' or title == 'NUMLP NUMLPH' or title == 'NUMANISO':
+            # Store these four sections as strings (ATOM section we will parse
             # later). The rest of the sections are integer pointers
             while line:
                 data.append(line)
@@ -635,22 +716,21 @@ class CharmmPsfFile(object):
 
         last_chain = None
         last_residue = None
-        is_new_chain = False
         # Add each chain (separate 'system's) and residue
         for atom in self.atom_list:
             resid = '%d%s' % (atom.residue.idx, atom.residue.inscode)
             if atom.system != last_chain:
                 chain = topology.addChain(atom.system)
                 last_chain = atom.system
-                is_new_chain = True
-            if resid != last_residue or is_new_chain:
-                is_new_chain = False
+                last_residue = None
+            if resid != last_residue:
                 last_residue = resid
-                residue = topology.addResidue(atom.residue.resname, chain, resid)
+                residue = topology.addResidue(atom.residue.resname, chain, str(atom.residue.idx), atom.residue.inscode)
             if atom.type is not None:
                 # This is the most reliable way of determining the element
                 atomic_num = atom.type.atomic_number
-                elem = element.Element.getByAtomicNumber(atomic_num)
+                if atomic_num != 0:
+                    elem = element.Element.getByAtomicNumber(atomic_num)
             else:
                 # Figure it out from the mass
                 elem = element.Element.getByMass(atom.mass)
@@ -719,7 +799,7 @@ class CharmmPsfFile(object):
             solvent.
         implicitSolventSaltConc : float=0.0*u.moles/u.liter
             Salt concentration for GB simulations. Converted to Debye length
-            `kappa'
+            ``kappa``
         temperature : float=298.15*u.kelvin
             Temperature used in the salt concentration-to-kappa conversion for
             GB salt concentration term
@@ -745,7 +825,7 @@ class CharmmPsfFile(object):
             raise a ValueError
         """
         # Load the parameter set
-        self.loadParameters(params.condense())
+        self.loadParameters(params)
         hasbox = self.topology.getUnitCellDimensions() is not None
         # Check GB input parameters
         if implicitSolvent is not None and gbsaModel not in ('ACE', None):
@@ -782,7 +862,7 @@ class CharmmPsfFile(object):
                             u.kilojoule_per_mole)
         ene_conv = dihe_frc_conv
 
-        # Create the system and determine if any of our atoms have NBFIX (and
+        # Create the system and determine if any of our atoms have NBFIX or NBTHOLE (and
         # therefore requires a CustomNonbondedForce instead)
         typenames = set()
         system = mm.System()
@@ -801,6 +881,24 @@ class CharmmPsfFile(object):
                         raise StopIteration
         except StopIteration:
             pass
+        has_nbthole_terms = False
+        try:
+            for i, typename in enumerate(typenames):
+                typ = params.atom_types_str[typename]
+                for j in range(i, len(typenames)):
+                    if typenames[j] in typ.nbthole:
+                        has_nbthole_terms = True
+                        raise StopIteration
+        except StopIteration:
+            pass
+        # test if the system containing the Drude particles
+        has_drude_particle = False
+        try:
+            if self.drudeconsts_list:
+                has_drude_particle = True
+        except AttributeError:
+            pass
+
         # Set up the constraints
         if verbose and (constraints is not None and not rigidWater):
             print('Adding constraints...')
@@ -827,6 +925,36 @@ class CharmmPsfFile(object):
                     bond.atom2.residue.resname in WATNAMES):
                     system.addConstraint(bond.atom1.idx, bond.atom2.idx,
                                          bond.bond_type.req*length_conv)
+
+        # Add virtual sites
+        if hasattr(self, 'lonepair_list'):
+            if verbose: print('Adding lonepairs...')
+            for lpsite in self.lonepair_list:
+                index=lpsite[0]
+                atom1=lpsite[1]
+                atom2=lpsite[2]
+                atom3=lpsite[3]
+                if atom3 > 0: 
+                    if lpsite[4] > 0 : # relative lonepair type
+                        r = lpsite[4] /10.0 # in nanometer
+                        xweights = [-1.0, 0.0, 1.0]
+                    elif lpsite[4] < 0: # bisector lonepair type
+                        r = lpsite[4] / (-10.0)
+                        xweights = [-1.0, 0.5, 0.5]
+                    theta = lpsite[5] * pi / 180.0
+                    phi = (180.0 - lpsite[6]) * pi / 180.0
+                    p = [r*cos(theta), r*sin(theta)*cos(phi), r*sin(theta)*sin(phi)]
+                    p = [x if abs(x) > 1e-10 else 0 for x in p] # Avoid tiny numbers caused by roundoff error
+                    system.setVirtualSite(index, mm.LocalCoordinatesSite(atom1, atom3, atom2, mm.Vec3(1.0, 0.0, 0.0), mm.Vec3(xweights[0],xweights[1],xweights[2]), mm.Vec3(0.0, -1.0, 1.0), mm.Vec3(p[0],p[1],p[2])))
+                else: # colinear lonepair type
+                    # find a real atom to be the third one for LocalCoordinatesSite
+                    for bond in self.bond_list:
+                        if (bond.atom1.idx == atom2 and bond.atom2.idx != atom1):
+                            a3=bond.atom2.idx
+                        elif (bond.atom2.idx == atom2 and bond.atom1.idx != atom1):
+                            a3=bond.atom1.idx
+                    r = lpsite[4] / 10.0 # in nanometer
+                    system.setVirtualSite(index, mm.LocalCoordinatesSite(atom1, atom2, a3, mm.Vec3(1.0, 0.0, 0.0), mm.Vec3(1.0,-1.0, 0.0), mm.Vec3(0.0, -1.0, 1.0), mm.Vec3(r,0.0,0.0)))   
         # Add Bond forces
         if verbose: print('Adding bonds...')
         force = mm.HarmonicBondForce()
@@ -1075,8 +1203,8 @@ class CharmmPsfFile(object):
                     if lj_idx_list[j] > 0: continue # already assigned
                     if atom2 is atom:
                         lj_idx_list[j] = num_lj_types
-                    elif not atom.nbfix:
-                        # Only non-NBFIXed atom types can be compressed
+                    elif not atom.nbfix and not atom.nbthole:
+                        # Only non-NBFIXed and non-NBTholed atom types can be compressed
                         ljtype2 = (atom2.rmin, atom2.epsilon)
                         if ljtype == ljtype2:
                             lj_idx_list[j] = num_lj_types
@@ -1130,6 +1258,68 @@ class CharmmPsfFile(object):
             for i in lj_idx_list:
                 cforce.addParticle((i - 1,)) # adjust for indexing from 0
 
+        # Add NBTHOLE terms
+        if has_drude_particle and has_nbthole_terms:
+            nbt_idx_list = [0 for atom in self.atom_list]
+            nbt_alpha_list = [0 for atom in self.atom_list] # only save alpha for NBThole pairs
+            num_nbt_types = 0 
+            nbt_type_list = []
+            nbt_set_list = []
+            for i, atom in enumerate(self.atom_list):
+                atom = atom.type
+                if not atom.nbthole: continue # get them as zero
+                if nbt_idx_list[i]: continue # already assigned
+                num_nbt_types += 1
+                nbt_idx_list[i] = num_nbt_types
+                nbt_idx_list[i+1] = num_nbt_types
+                nbt_alpha_list[i] = pow(-1*self.drudeconsts_list[i][0],-1./6.)
+                nbt_alpha_list[i+1] = pow(-1*self.drudeconsts_list[i][0],-1./6.)
+                nbt_type_list.append(atom)
+                nbt_set_list.append([i,i+1])
+                for j in range(i+1, len(self.atom_list)):
+                    atom2 = self.atom_list[j].type
+                    if nbt_idx_list[j] > 0: continue # already assigned
+                    if atom2 is atom:
+               	       nbt_idx_list[j] = num_nbt_types
+               	       nbt_idx_list[j+1] = num_nbt_types
+                       nbt_alpha_list[j] = pow(-1*self.drudeconsts_list[j][0],-1./6.)
+                       nbt_alpha_list[j+1] = pow(-1*self.drudeconsts_list[j][0],-1./6.)
+                       nbt_set_list[num_nbt_types-1].append(j)
+                       nbt_set_list[num_nbt_types-1].append(j+1)
+            num_total_nbt=num_nbt_types+1 # use zero index for all the atoms with no nbthole
+            nbt_interset_list=[]
+            # need to get all other particles as an independent group, so in total num_nbt_types+1
+            coef = [0 for i in range(num_total_nbt*num_total_nbt)]
+            for i in range(num_nbt_types):
+                for j in range(num_nbt_types):
+                    namej = nbt_type_list[j].name
+                    nbt_value = nbt_type_list[i].nbthole.get(namej,0)
+                    if abs(nbt_value)>TINY and i<j :  nbt_interset_list.append([i+1,j+1])
+                    coef[i+1+num_total_nbt*(j+1)]=nbt_value
+            nbtforce = mm.CustomNonbondedForce('-138.935456*charge1*charge2*(1.0+0.5*screen*r)*exp(-1.0*screen*r)/r; screen=coef(type1, type2) * alpha1*alpha2*10.0')
+            nbtforce.addTabulatedFunction('coef', mm.Discrete2DFunction(num_total_nbt, num_total_nbt, coef))
+            nbtforce.addPerParticleParameter('charge')
+            nbtforce.addPerParticleParameter('alpha')
+            nbtforce.addPerParticleParameter('type')
+            nbtforce.setForceGroup(self.NONBONDED_FORCE_GROUP)
+            # go through all the particles to set up per-particle parameters
+            for i in range(system.getNumParticles()):
+                c=force.getParticleParameters(i)
+                cc=c[0]/u.elementary_charge
+                aa=nbt_alpha_list[i]
+                ti=nbt_idx_list[i]
+                nbtforce.addParticle([cc,aa,ti])
+            # set interaction group
+            for a in nbt_interset_list:
+                ai=a[0]
+                aj=a[1]
+                nbtforce.addInteractionGroup(nbt_set_list[ai-1],nbt_set_list[aj-1])
+            nbtforce.setNonbondedMethod(nbtforce.CutoffPeriodic)
+            nbtforce.setCutoffDistance(0.5*u.nanometer)
+            nbtforce.setUseSwitchingFunction(False)
+            # now, add the actual force to the system
+            system.addForce(nbtforce)
+
         # Add 1-4 interactions
         excluded_atom_pairs = set() # save these pairs so we don't zero them out
         sigma_scale = 2**(-1/6)
@@ -1155,20 +1345,99 @@ class CharmmPsfFile(object):
             )
 
         # Add excluded atoms
+        # Drude and lonepairs will be excluded based on their parent atoms
+        parent_exclude_list=[]
         for atom in self.atom_list:
-            # Exclude all bonds and angles
+            parent_exclude_list.append([])
+        for lpsite in self.lonepair_list:
+            idx = lpsite[1]
+            idxa = lpsite[0]
+            parent_exclude_list[idx].append(idxa)
+            force.addException(idx, idxa, 0.0, 0.1, 0.0)
+        if has_drude_particle:
+            for pair in self.drudepair_list:
+                idx = pair[0]
+                idxa = pair[1]
+                parent_exclude_list[idx].append(idxa)
+                force.addException(idx, idxa, 0.0, 0.1, 0.0)
+            # If lonepairs and Drude particles are bonded to the same parent atom, add exception
+            for excludeterm in parent_exclude_list:
+                if(len(excludeterm) >= 2):
+                    for i in range(len(excludeterm)):
+                        for j in range(i):
+                            force.addException(excludeterm[j], excludeterm[i], 0.0, 0.1, 0.0)
+        # Exclude all bonds and angles, as well as the lonepair/Drude attached onto them
+        for atom in self.atom_list:
             for atom2 in atom.bond_partners:
                 if atom2.idx > atom.idx:
-                    force.addException(atom.idx, atom2.idx, 0.0, 0.1, 0.0)
+                    for excludeatom in [atom.idx]+parent_exclude_list[atom.idx]:
+                        for excludeatom2 in [atom2.idx]+parent_exclude_list[atom2.idx]:
+                            force.addException(excludeatom, excludeatom2, 0.0, 0.1, 0.0)
             for atom2 in atom.angle_partners:
                 if atom2.idx > atom.idx:
-                    force.addException(atom.idx, atom2.idx, 0.0, 0.1, 0.0)
+                    for excludeatom in [atom.idx]+parent_exclude_list[atom.idx]:
+                        for excludeatom2 in [atom2.idx]+parent_exclude_list[atom2.idx]:
+                            force.addException(excludeatom, excludeatom2, 0.0, 0.1, 0.0)
             for atom2 in atom.dihedral_partners:
                 if atom2.idx <= atom.idx: continue
                 if ((atom.idx, atom2.idx) in excluded_atom_pairs):
                     continue
                 force.addException(atom.idx, atom2.idx, 0.0, 0.1, 0.0)
         system.addForce(force)
+
+        # Add Drude particles (Drude force)
+        if has_drude_particle:
+            if verbose: print('Adding Drude force and Thole screening...')
+            drudeforce = mm.DrudeForce()
+            drudeforce.setForceGroup(7)
+            for pair in self.drudepair_list:
+                parentatom=pair[0]
+                drudeatom=pair[1]
+                p=[-1, -1, -1]
+                a11 = 0 
+                a22 = 0
+                charge = self.atom_list[drudeatom].charge
+                polarizability = self.drudeconsts_list[parentatom][0]/(-1000.0)
+                for aniso in self.aniso_list: # not smart to do another loop, but the number of aniso is small anyway
+                    if (parentatom==aniso[0]):
+                        p[0]=aniso[1]
+                        p[1]=aniso[2]
+                        p[2]=aniso[3]
+                        k11=aniso[4]
+                        k22=aniso[5]
+                        k33=aniso[6]
+                        # solve out DrudeK, which should equal 500.0
+                        a = k11+k22+3*k33
+                        b = 2*k11*k22+4*k11*k33+4*k22*k33+6*k33*k33
+                        c = 3*k33*(k11+k33)*(k22+k33)
+                        DrudeK = (sqrt(b*b-4*a*c)-b)/2/a
+                        a11=round(DrudeK/(k11+k33+DrudeK),5)
+                        a22=round(DrudeK/(k22+k33+DrudeK),5)
+                drudeforce.addParticle(drudeatom, parentatom, p[0], p[1], p[2], charge, polarizability, a11, a22 )
+            system.addForce(drudeforce)
+            particleMap = {}
+            for i in range(drudeforce.getNumParticles()):
+                particleMap[drudeforce.getParticleParameters(i)[0]] = i
+            
+            for bond in self.bond_list:
+                alpha1 = self.drudeconsts_list[bond.atom1.idx][0]
+                alpha2 = self.drudeconsts_list[bond.atom2.idx][0] 
+                if abs(alpha1) > TINY and abs(alpha2) > TINY: # both are Drude parent atoms
+                    thole1 = self.drudeconsts_list[bond.atom1.idx][1]
+                    thole2 = self.drudeconsts_list[bond.atom2.idx][1]
+                    drude1 = bond.atom1.idx + 1 # CHARMM psf has hard-coded rule that the Drude is next to its parent
+                    drude2 = bond.atom2.idx + 1
+                    drudeforce.addScreenedPair(particleMap[drude1], particleMap[drude2], thole1+thole2)
+            for ang in self.angle_list:
+                alpha1 = self.drudeconsts_list[ang.atom1.idx][0]
+                alpha2 = self.drudeconsts_list[ang.atom3.idx][0] 
+                if abs(alpha1) > TINY and abs(alpha2) > TINY: # both are Drude parent atoms
+                    thole1 = self.drudeconsts_list[ang.atom1.idx][1]
+                    thole2 = self.drudeconsts_list[ang.atom3.idx][1]
+                    drude1 = ang.atom1.idx + 1 # CHARMM psf has hard-coded rule that the Drude is next to its parent
+                    drude2 = ang.atom3.idx + 1
+                    drudeforce.addScreenedPair(particleMap[drude1], particleMap[drude2], thole1+thole2)
+
         # If we needed a CustomNonbondedForce, map all of the exceptions from
         # the NonbondedForce to the CustomNonbondedForce
         if has_nbfix_terms:
@@ -1176,6 +1445,10 @@ class CharmmPsfFile(object):
                 ii, jj, q, eps, sig = force.getExceptionParameters(i)
                 cforce.addExclusion(ii, jj)
             system.addForce(cforce)
+        if has_drude_particle and has_nbthole_terms:
+            for i in range(force.getNumExceptions()):
+                ii, jj, q, eps, sig = force.getExceptionParameters(i)
+                nbtforce.addExclusion(ii, jj)
 
         # Add GB model if we're doing one
         if implicitSolvent is not None:
@@ -1372,15 +1645,26 @@ def set_molecules(atom_list):
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 def _set_owner(atom_list, owner_array, atm, mol_id):
-    """ Recursively sets ownership of given atom and all bonded partners """
+    """ Sets ownership of given atom and all bonded partners """
+    # This could be written more simply as a recursive function, but that leads
+    # to stack overflows, so I flattened it into an iterative one.
+    partners = [atom_list[atm].bond_partners]
+    loop_index = [0]
     atom_list[atm].marked = mol_id
-    for partner in atom_list[atm].bond_partners:
+    while len(partners) > 0:
+        if loop_index[-1] >= len(partners[-1]):
+            partners.pop()
+            loop_index.pop()
+            continue
+        partner = partners[-1][loop_index[-1]]
+        loop_index[-1] += 1
         if not partner.marked:
             owner_array.append(partner.idx)
-            _set_owner(atom_list, owner_array, partner.idx, mol_id)
+            partner.marked = mol_id
+            partners.append(partner.bond_partners)
+            loop_index.append(0)
         elif partner.marked != mol_id:
-            raise MoleculeError('Atom %d in multiple molecules' %
-                                partner.idx)
+            raise MoleculeError('Atom %d in multiple molecules' % partner.idx)
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

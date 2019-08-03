@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -108,6 +108,13 @@ double NonbondedForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includ
     if (owner.getReciprocalSpaceForceGroup() >= 0)
         includeReciprocal = ((groups&(1<<owner.getReciprocalSpaceForceGroup())) != 0);
     return kernel.getAs<CalcNonbondedForceKernel>().execute(context, includeForces, includeEnergy, includeDirect, includeReciprocal);
+}
+
+map<string, double> NonbondedForceImpl::getDefaultParameters() {
+    map<string, double> parameters;
+    for (int i = 0; i < owner.getNumGlobalParameters(); i++)
+        parameters[owner.getGlobalParameterName(i)] = owner.getGlobalParameterDefaultValue(i);
+    return parameters;
 }
 
 std::vector<std::string> NonbondedForceImpl::getKernelNames() {
@@ -228,15 +235,33 @@ double NonbondedForceImpl::evalIntegral(double r, double rs, double rc, double s
 double NonbondedForceImpl::calcDispersionCorrection(const System& system, const NonbondedForce& force) {
     if (force.getNonbondedMethod() == NonbondedForce::NoCutoff || force.getNonbondedMethod() == NonbondedForce::CutoffNonPeriodic)
         return 0.0;
-    
+
+    // Record sigma and epsilon for every particle, including the default value
+    // for every offset parameter.
+
+    vector<double> sigma(force.getNumParticles()), epsilon(force.getNumParticles());
+    for (int i = 0; i < force.getNumParticles(); i++) {
+        double charge;
+        force.getParticleParameters(i, charge, sigma[i], epsilon[i]);
+    }
+    map<string, double> param;
+    for (int i = 0; i < force.getNumGlobalParameters(); i++)
+        param[force.getGlobalParameterName(i)] = force.getGlobalParameterDefaultValue(i);
+    for (int i = 0; i < force.getNumParticleParameterOffsets(); i++) {
+        string parameter;
+        int index;
+        double chargeScale, sigmaScale, epsilonScale;
+        force.getParticleParameterOffset(i, parameter, index, chargeScale, sigmaScale, epsilonScale);
+        sigma[index] += param[parameter]*sigmaScale;
+        epsilon[index] += param[parameter]*epsilonScale;
+    }
+
     // Identify all particle classes (defined by sigma and epsilon), and count the number of
     // particles in each class.
 
     map<pair<double, double>, int> classCounts;
     for (int i = 0; i < force.getNumParticles(); i++) {
-        double charge, sigma, epsilon;
-        force.getParticleParameters(i, charge, sigma, epsilon);
-        pair<double, double> key = make_pair(sigma, epsilon);
+        pair<double, double> key = make_pair(sigma[i], epsilon[i]);
         map<pair<double, double>, int>::iterator entry = classCounts.find(key);
         if (entry == classCounts.end())
             classCounts[key] = 1;

@@ -159,22 +159,34 @@ void testTabulatedFunction() {
     system.addForce(cv);
     Context context(system, integrator, platform);
     vector<Vec3> positions(1);
-    for (double x = xmin-0.15; x < xmax+0.2; x += 0.1) {
-        for (double y = ymin-0.15; y < ymax+0.2; y += 0.1) {
-            positions[0] = Vec3(x, y, 1.5);
-            context.setPositions(positions);
-            State state = context.getState(State::Forces | State::Energy);
-            const vector<Vec3>& forces = state.getForces();
-            double energy = 1;
-            Vec3 force(0, 0, 0);
-            if (x >= xmin && x <= xmax && y >= ymin && y <= ymax) {
-                energy = sin(0.25*x)*cos(0.33*y)+1;
-                force[0] = -0.25*cos(0.25*x)*cos(0.33*y);
-                force[1] = 0.3*sin(0.25*x)*sin(0.33*y);
+    double scale = 1.0;
+    for (int i = 0; i < 2; i++) {
+        for (double x = xmin-0.15; x < xmax+0.2; x += 0.1) {
+            for (double y = ymin-0.15; y < ymax+0.2; y += 0.1) {
+                positions[0] = Vec3(x, y, 1.5);
+                context.setPositions(positions);
+                State state = context.getState(State::Forces | State::Energy);
+                const vector<Vec3>& forces = state.getForces();
+                double energy = 1;
+                Vec3 force(0, 0, 0);
+                if (x >= xmin && x <= xmax && y >= ymin && y <= ymax) {
+                    energy = scale*sin(0.25*x)*cos(0.33*y)+1;
+                    force[0] = -scale*0.25*cos(0.25*x)*cos(0.33*y);
+                    force[1] = scale*0.3*sin(0.25*x)*sin(0.33*y);
+                }
+                ASSERT_EQUAL_VEC(force, forces[0], 0.1);
+                ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), 0.05);
             }
-            ASSERT_EQUAL_VEC(force, forces[0], 0.1);
-            ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), 0.05);
         }
+        
+        // Now update the tabulated function, call updateParametersInContext(),
+        // and see if it's still correct.
+        
+        for (int j = 0; j < table.size(); j++)
+            table[j] *= 2;
+        dynamic_cast<Continuous2DFunction&>(cv->getTabulatedFunction(0)).setFunctionParameters(xsize, ysize, table, xmin, xmax, ymin, ymax);
+        cv->updateParametersInContext(context);
+        scale *= 2.0;
     }
 }
 

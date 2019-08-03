@@ -133,5 +133,21 @@ class TestPdbxFile(unittest.TestCase):
             self.assertEqual(bond1[0].name, bond2[0].name)
             self.assertEqual(bond1[1].name, bond2[1].name)
 
+    def testMultiChain(self):
+        """Test reading and writing a file that includes multiple chains"""
+        cif_ori = PDBxFile('systems/multichain.pdbx')
+
+        output = StringIO()
+        PDBxFile.writeFile(cif_ori.topology, cif_ori.positions, output, keepIds=True)
+        input = StringIO(output.getvalue())
+        cif_new = PDBxFile(input)
+        output.close()
+        input.close()
+
+        self.assertEqual(cif_ori.topology.getNumChains(), cif_new.topology.getNumChains())
+
+        for chain1, chain2 in zip(cif_ori.topology.chains(), cif_new.topology.chains()):
+            self.assertEqual(chain1.id, chain2.id)
+
 if __name__ == '__main__':
     unittest.main()

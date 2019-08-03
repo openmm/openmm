@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2017 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2018 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -31,6 +31,7 @@
 #include "openmm/internal/CompiledExpressionSet.h"
 #include "openmm/internal/ThreadPool.h"
 #include "openmm/internal/vectorize.h"
+#include <atomic>
 #include <map>
 #include <set>
 #include <vector>
@@ -59,11 +60,11 @@ private:
     // The following variables are used to make information accessible to the individual threads.
     int numberOfAtoms;
     float* posq;
-    double** atomParameters;
+    std::vector<double>* atomParameters;
     const std::map<std::string, double>* globalParameters;
     std::vector<AlignedArray<float> >* threadForce;
     bool includeForce, includeEnergy;
-    void* atomicCounter;
+    std::atomic<int> atomicCounter;
     
     /**
      * This routine contains the code executed by each thread.
@@ -81,7 +82,7 @@ private:
      * @param useExclusions    specifies whether to use exclusions
      */
 
-    void calculateParticlePairValue(int index, ThreadData& data, int numAtoms, float* posq, double** atomParameters,
+    void calculateParticlePairValue(int index, ThreadData& data, int numAtoms, float* posq, std::vector<double>* atomParameters,
                                     bool useExclusions, const fvec4& boxSize, const fvec4& invBoxSize);
 
     /**
@@ -95,7 +96,7 @@ private:
      * @param atomParameters   atomParameters[atomIndex][paramterIndex]
      */
 
-    void calculateOnePairValue(int index, int atom1, int atom2, ThreadData& data, float* posq, double** atomParameters,
+    void calculateOnePairValue(int index, int atom1, int atom2, ThreadData& data, float* posq, std::vector<double>* atomParameters,
                                std::vector<float>& valueArray, const fvec4& boxSize, const fvec4& invBoxSize);
 
     /**
@@ -110,7 +111,7 @@ private:
      * @param totalEnergy      the energy contribution is added to this
      */
 
-    void calculateSingleParticleEnergyTerm(int index, ThreadData& data, int numAtoms, float* posq, double** atomParameters, float* forces, double& totalEnergy);
+    void calculateSingleParticleEnergyTerm(int index, ThreadData& data, int numAtoms, float* posq, std::vector<double>* atomParameters, float* forces, double& totalEnergy);
 
     /**
      * Calculate an energy term that is based on particle pairs
@@ -125,7 +126,7 @@ private:
      * @param totalEnergy      the energy contribution is added to this
      */
 
-    void calculateParticlePairEnergyTerm(int index, ThreadData& data, int numAtoms, float* posq, double** atomParameters,
+    void calculateParticlePairEnergyTerm(int index, ThreadData& data, int numAtoms, float* posq, std::vector<double>* atomParameters,
                                     bool useExclusions, float* forces, double& totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize);
 
     /**
@@ -141,7 +142,7 @@ private:
      * @param totalEnergy      the energy contribution is added to this
      */
 
-    void calculateOnePairEnergyTerm(int index, int atom1, int atom2, ThreadData& data, float* posq, double** atomParameters,
+    void calculateOnePairEnergyTerm(int index, int atom1, int atom2, ThreadData& data, float* posq, std::vector<double>* atomParameters,
                                float* forces, double& totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize);
 
     /**
@@ -154,7 +155,7 @@ private:
      * @param forces           forces on atoms are added to this
      */
 
-    void calculateChainRuleForces(ThreadData& data, int numAtoms, float* posq, double** atomParameters,
+    void calculateChainRuleForces(ThreadData& data, int numAtoms, float* posq, std::vector<double>* atomParameters,
                                     float* forces, const fvec4& boxSize, const fvec4& invBoxSize);
 
     /**
@@ -169,7 +170,7 @@ private:
      * @param isExcluded       specifies whether this is an excluded pair
      */
 
-    void calculateOnePairChainRule(int atom1, int atom2, ThreadData& data, float* posq, double** atomParameters,
+    void calculateOnePairChainRule(int atom1, int atom2, ThreadData& data, float* posq, std::vector<double>* atomParameters,
                                float* forces, bool isExcluded, const fvec4& boxSize, const fvec4& invBoxSize);
 
     /**
@@ -231,7 +232,7 @@ public:
      * @param energyParamDerivs  derivatives of the energy with respect to global parameters
      */
 
-    void calculateIxn(int numberOfAtoms, float* posq, double** atomParameters, std::map<std::string, double>& globalParameters,
+    void calculateIxn(int numberOfAtoms, float* posq, std::vector<std::vector<double> >& atomParameters, std::map<std::string, double>& globalParameters,
             std::vector<AlignedArray<float> >& threadForce, bool includeForce, bool includeEnergy, double& totalEnergy, double* energyParamDerivs);
 };
 

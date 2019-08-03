@@ -28,6 +28,7 @@
 #include "OpenCLExpressionUtilities.h"
 #include "OpenCLKernelSources.h"
 #include "SimTKOpenMMRealType.h"
+#include <algorithm>
 #include <map>
 #include <sstream>
 #include <string>
@@ -158,7 +159,7 @@ int OpenCLFFT3D::findLegalDimension(int minimum) {
 }
 
 cl::Kernel OpenCLFFT3D::createKernel(int xsize, int ysize, int zsize, int& threads, int axis, bool forward, bool inputIsReal) {
-    int maxThreads = std::min(256, (int) context.getDevice().getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>());
+    int maxThreads = min(256, (int) context.getDevice().getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>());
     while (maxThreads > 128 && maxThreads-64 >= zsize)
         maxThreads -= 64;
     bool isCPU = context.getDevice().getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU;

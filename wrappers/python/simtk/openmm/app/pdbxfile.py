@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2015 Stanford University and the Authors.
+Portions copyright (c) 2015-2019 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors: Jason Swails
 
@@ -70,23 +70,34 @@ class PDBxFile(object):
         # Load the file.
 
         inputFile = file
+        ownHandle = False
         if isinstance(file, str):
             inputFile = open(file)
+            ownHandle = True
         reader = PdbxReader(inputFile)
         data = []
         reader.read(data)
+        if ownHandle:
+            inputFile.close()
         block = data[0]
 
         # Build the topology.
 
         atomData = block.getObj('atom_site')
-        atomNameCol = atomData.getAttributeIndex('label_atom_id')
+        atomNameCol = atomData.getAttributeIndex('auth_atom_id')
+        if atomNameCol == -1:
+            atomNameCol = atomData.getAttributeIndex('label_atom_id')
         atomIdCol = atomData.getAttributeIndex('id')
-        resNameCol = atomData.getAttributeIndex('label_comp_id')
-        resIdCol = atomData.getAttributeIndex('label_seq_id')
+        resNameCol = atomData.getAttributeIndex('auth_comp_id')
+        if resNameCol == -1:
+            resNameCol = atomData.getAttributeIndex('label_comp_id')
         resNumCol = atomData.getAttributeIndex('auth_seq_id')
-        asymIdCol = atomData.getAttributeIndex('label_asym_id')
-        chainIdCol = atomData.getAttributeIndex('label_entity_id')
+        if resNumCol == -1:
+            resNumCol = atomData.getAttributeIndex('label_seq_id')
+        resInsertionCol = atomData.getAttributeIndex('pdbx_PDB_ins_code')
+        chainIdCol = atomData.getAttributeIndex('auth_asym_id')
+        if chainIdCol == -1:
+            chainIdCol = atomData.getAttributeIndex('label_asym_id')
         elementCol = atomData.getAttributeIndex('type_symbol')
         altIdCol = atomData.getAttributeIndex('label_alt_id')
         modelCol = atomData.getAttributeIndex('pdbx_PDB_model_num')
@@ -95,12 +106,11 @@ class PDBxFile(object):
         zCol = atomData.getAttributeIndex('Cartn_z')
         lastChainId = None
         lastResId = None
-        lastAsymId = None
         atomTable = {}
         atomsInResidue = set()
         models = []
         for row in atomData.getRowList():
-            atomKey = ((row[resIdCol], row[asymIdCol], row[atomNameCol]))
+            atomKey = ((row[resNumCol], row[chainIdCol], row[atomNameCol]))
             model = ('1' if modelCol == -1 else row[modelCol])
             if model not in models:
                 models.append(model)
@@ -115,15 +125,15 @@ class PDBxFile(object):
 
                 if lastChainId != row[chainIdCol]:
                     # The start of a new chain.
-                    chain = top.addChain(row[asymIdCol])
+                    chain = top.addChain(row[chainIdCol])
                     lastChainId = row[chainIdCol]
                     lastResId = None
-                    lastAsymId = None
-                if lastResId != row[resIdCol] or lastAsymId != row[asymIdCol] or (lastResId == '.' and row[atomNameCol] in atomsInResidue):
+                if lastResId != row[resNumCol] or lastChainId != row[chainIdCol] or (lastResId == '.' and row[atomNameCol] in atomsInResidue):
                     # The start of a new residue.
-                    res = top.addResidue(row[resNameCol], chain, None if resNumCol == -1 else row[resNumCol])
-                    lastResId = row[resIdCol]
-                    lastAsymId = row[asymIdCol]
+                    resId = (None if resNumCol == -1 else row[resNumCol])
+                    resIC = ('' if resInsertionCol == -1 else row[resInsertionCol])
+                    res = top.addResidue(row[resNameCol], chain, resId, resIC)
+                    lastResId = row[resNumCol]
                     atomsInResidue.clear()
                 element = None
                 try:
@@ -139,7 +149,7 @@ class PDBxFile(object):
                 try:
                     atom = atomTable[atomKey]
                 except KeyError:
-                    raise ValueError('Unknown atom %s in residue %s %s for model %s' % (row[atomNameCol], row[resNameCol], row[resIdCol], model))
+                    raise ValueError('Unknown atom %s in residue %s %s for model %s' % (row[atomNameCol], row[resNameCol], row[resNumCol], model))
                 if atom.index != len(self._positions[modelIndex]):
                     raise ValueError('Atom %s for model %s does not match the order of atoms for model %s' % (row[atomIdCol], model, models[0]))
             self._positions[modelIndex].append(Vec3(float(row[xCol]), float(row[yCol]), float(row[zCol]))*0.1)
@@ -387,16 +397,18 @@ class PDBxFile(object):
             for (resIndex, res) in enumerate(residues):
                 if keepIds:
                     resId = res.id
+                    resIC = (res.insertionCode if len(res.insertionCode) > 0 else '.')
                 else:
                     resId = resIndex + 1
+                    resIC = '.'
                 for atom in res.atoms():
                     coords = positions[posIndex]
                     if atom.element is not None:
                         symbol = atom.element.symbol
                     else:
                         symbol = '?'
-                    line = "ATOM  %5d %-3s %-4s . %-4s %s ? %5s . %10.4f %10.4f %10.4f  0.0  0.0  ?  ?  ?  ?  ?  .  %5s %4s %s %4s %5d"
-                    print(line % (atomIndex, symbol, atom.name, res.name, chainName, resId, coords[0], coords[1], coords[2],
+                    line = "ATOM  %5d %-3s %-4s . %-4s %s ? %5s %s %10.4f %10.4f %10.4f  0.0  0.0  ?  ?  ?  ?  ?  .  %5s %4s %s %4s %5d"
+                    print(line % (atomIndex, symbol, atom.name, res.name, chainName, resId, resIC, coords[0], coords[1], coords[2],
                                   resId, res.name, chainName, atom.name, modelIndex), file=file)
                     posIndex += 1
                     atomIndex += 1

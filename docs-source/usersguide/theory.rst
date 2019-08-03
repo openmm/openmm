@@ -762,6 +762,26 @@ where :math:`m_i` and :math:`\mathbf{v}_i` are the mass and velocity of particle
 \ *i*\ .  It then subtracts :math:`\mathbf{v}_\text{CM}` from the velocity of every
 particle.
 
+RMSDForce
+*********
+
+RMSDForce computes the root-mean-squared deviation (RMSD) between the current
+particle positions :math:`\mathbf{x}_i` and a set of reference positions
+:math:`\mathbf{x}_i^\text{ref}`:
+
+.. math::
+   \text{RMSD} = \sqrt{\frac{\sum_{i} \| \mathbf{x}_i - \mathbf{x}_i^\text{ref} \|^2}{N}}
+
+Before computing this, the reference positions are first translated and rotated
+so as to minimize the RMSD.  The computed value is therefore :math:`argmin(\text{RMSD})`,
+where the :math:`argmin` is taken over all possible translations and rotations.
+
+This force is normally used with a CustomCVForce (see Section :ref:`customcvforce`).
+One rarely wants a force whose energy exactly equals the RMSD, but there are many
+situations where it is useful to have a restraining or biasing force that depends
+on the RMSD in some way.
+
+
 Custom Forces
 #############
 
@@ -831,7 +851,7 @@ by the user.  That is, the interaction energy of each angle is given by
 
 
 where :math:`f(\theta)` is a user defined mathematical expression.  The angle
-:math:`\theta` is guaranteed to be in the range [-π, π].  Like PeriodicTorsionForce, it
+:math:`\theta` is guaranteed to be in the range :math:`[-\pi, +\pi]`\ .  Like PeriodicTorsionForce, it
 is defined to be zero when the first and last particles are on the same side of
 the bond formed by the middle two particles (the *cis* configuration).
 
@@ -953,7 +973,7 @@ of four particles.  That is, the interaction energy of each bond is given by
 where *f*\ (\ *...*\ ) is a user defined mathematical expression.  It may
 depend on an arbitrary set of positions {\ :math:`x_i`\ }, distances {\ :math:`r_i`\ },
 angles {\ :math:`\theta_i`\ }, and dihedral angles {\ :math:`\phi_i`\ }
-guaranteed to be in the range [-π, π]. 
+guaranteed to be in the range :math:`[-\pi, +\pi]`\ .
 
 Each distance, angle, or dihedral is defined by specifying a sequence of
 particles chosen from among the particles that make up the bond.  A distance
@@ -1158,6 +1178,8 @@ specified in three ways:
 * Per-donor parameters are defined by specifying a value for each donor group.
 * Per-acceptor parameters are defined by specifying a value for each acceptor group.
 
+.. _customcvforce:
+
 CustomCVForce
 *************
 
@@ -1187,7 +1209,7 @@ The following operators are supported: + (add), - (subtract), * (multiply), /
 (divide), and ^ (power).  Parentheses “(“ and “)” may be used for grouping.
 
 The following standard functions are supported: sqrt, exp, log, sin, cos, sec,
-csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs,
+csc, tan, cot, asin, acos, atan, atan2, sinh, cosh, tanh, erf, erfc, min, max, abs,
 floor, ceil, step, delta, select. step(x) = 0 if x < 0, 1 otherwise.
 delta(x) = 1 if x is 0, 0 otherwise.  select(x,y,z) = z if x = 0, y otherwise.
 Some custom forces allow additional functions to be defined from tabulated values.
@@ -1211,6 +1233,32 @@ is exactly equivalent to
 
 The definition of an intermediate value may itself involve other intermediate
 values.  All uses of a value must appear *before* that value’s definition.
+
+Setting Parameters
+******************
+
+Most custom forces have two types of parameters you can define.  The simplest type
+are global parameters, which represent a single number.  The value is stored in
+the :class:`Context`, and can be changed at any time by calling :meth:`setParameter`
+on it.  Global parameters are designed to be very inexpensive to change.  Even if
+you set a new value for a global parameter on every time step, the overhead will
+usually be quite small.  There can be exceptions to this rule, however.  For
+example, if a :class:`CustomNonbondedForce` uses a long range correction, changing
+a global parameter may require the correction coefficient to be recalculated,
+which is expensive.
+
+The other type of parameter is ones that record many values, one for each element
+of the force, such as per-particle or per-bond parameters.  These values are stored
+directly in the force object itself, and hence are part of the system definition.
+When a :class:`Context` is created, the values are copied over to it, and thereafter
+the two are disconnected.  Modifying the force will have no effect on any
+:class:`Context` that already exists.
+
+Some forces do provide a way to modify these parameters via an :meth:`updateParametersInContext`
+method.  These methods tend to be somewhat expensive, so it is best not to call
+them too often.  On the other hand, they are still much less expensive than calling
+:meth:`reinitialize` on the :class:`Context`, which is the other way of updating
+the system definition for a running simulation.
 
 Parameter Derivatives
 *********************

@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2016 Stanford University and the Authors.
+Portions copyright (c) 2012-2018 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
@@ -106,12 +106,12 @@ class PDBFile(object):
                 resName = residue.get_name()
                 if resName in PDBFile._residueNameReplacements:
                     resName = PDBFile._residueNameReplacements[resName]
-                r = top.addResidue(resName, c, str(residue.number))
+                r = top.addResidue(resName, c, str(residue.number), residue.insertion_code)
                 if resName in PDBFile._atomNameReplacements:
                     atomReplacements = PDBFile._atomNameReplacements[resName]
                 else:
                     atomReplacements = {}
-                for atom in residue.atoms:
+                for atom in residue.iter_atoms():
                     atomName = atom.get_name()
                     if atomName in atomReplacements:
                         atomName = atomReplacements[atomName]
@@ -153,7 +153,7 @@ class PDBFile(object):
             coords = []
             for chain in model.iter_chains():
                 for residue in chain.iter_residues():
-                    for atom in residue.atoms:
+                    for atom in residue.iter_atoms():
                         pos = atom.get_position().value_in_unit(nanometers)
                         coords.append(Vec3(pos[0], pos[1], pos[2]))
             self._positions.append(coords*nanometers)
@@ -319,7 +319,8 @@ class PDBFile(object):
             If True, keep the residue and chain IDs specified in the Topology
             rather than generating new ones.  Warning: It is up to the caller to
             make sure these are valid IDs that satisfy the requirements of the
-            PDB format.  Otherwise, the output file will be invalid.
+            PDB format.  No guarantees are made about what will happen if they
+            are not, and the output file could be invalid.
         extraParticleIdentifier : string=' '
             String to write in the element column of the ATOM records for atoms whose element is None (extra particles)
         """
@@ -339,7 +340,7 @@ class PDBFile(object):
         if modelIndex is not None:
             print("MODEL     %4d" % modelIndex, file=file)
         for (chainIndex, chain) in enumerate(topology.chains()):
-            if keepIds:
+            if keepIds and len(chain.id) == 1:
                 chainName = chain.id
             else:
                 chainName = chr(ord('A')+chainIndex%26)
@@ -349,10 +350,14 @@ class PDBFile(object):
                     resName = res.name[:3]
                 else:
                     resName = res.name
-                if keepIds:
+                if keepIds and len(res.id) < 5:
                     resId = res.id
                 else:
                     resId = "%4d" % ((resIndex+1)%10000)
+                if len(res.insertionCode) == 1:
+                    resIC = res.insertionCode
+                else:
+                    resIC = " "
                 if res.name in nonHeterogens:
                     recordName = "ATOM  "
                 else:
@@ -369,10 +374,11 @@ class PDBFile(object):
                     else:
                         atomName = atom.name
                     coords = positions[posIndex]
-                    line = "%s%5d %-4s %3s %s%4s    %s%s%s  1.00  0.00          %2s  " % (
-                        recordName, atomIndex%100000, atomName, resName, chainName, resId, _format_83(coords[0]),
+                    line = "%s%5d %-4s %3s %s%4s%1s   %s%s%s  1.00  0.00          %2s  " % (
+                        recordName, atomIndex%100000, atomName, resName, chainName, resId, resIC, _format_83(coords[0]),
                         _format_83(coords[1]), _format_83(coords[2]), symbol)
-                    assert len(line) == 80, 'Fixed width overflow detected'
+                    if len(line) != 80:
+                        raise ValueError('Fixed width overflow detected')
                     print(line, file=file)
                     posIndex += 1
                     atomIndex += 1

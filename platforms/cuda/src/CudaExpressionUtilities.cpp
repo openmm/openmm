@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -69,17 +69,27 @@ void CudaExpressionUtilities::processExpression(stringstream& out, const Express
         processExpression(out, node.getChildren()[i], temps, functions, functionNames, prefix, functionParams, allExpressions, tempType);
     string name = prefix+context.intToString(temps.size());
     bool hasRecordedNode = false;
+    bool isVecType = (tempType[tempType.size()-1] == '3');
     
     out << tempType << " " << name << " = ";
     switch (node.getOperation().getId()) {
         case Operation::CONSTANT:
-            out << context.doubleToString(dynamic_cast<const Operation::Constant*>(&node.getOperation())->getValue());
+        {
+            string value = context.doubleToString(dynamic_cast<const Operation::Constant*>(&node.getOperation())->getValue());
+            if (isVecType)
+                out << "make_" << tempType << "(" << value << ")";
+            else
+                out << value;
             break;
+        }
         case Operation::VARIABLE:
             throw OpenMMException("Unknown variable in expression: "+node.getOperation().getName());
         case Operation::CUSTOM:
         {
-            out << "0.0f;\n";
+            if (isVecType)
+                out << "make_" << tempType << "(0);\n";
+            else
+                out << "0;\n";
             temps.push_back(make_pair(node, name));
             hasRecordedNode = true;
 
@@ -87,6 +97,7 @@ void CudaExpressionUtilities::processExpression(stringstream& out, const Express
             // at once, so check to see if both are needed.
 
             vector<const ExpressionTreeNode*> nodes;
+            nodes.push_back(&node);
             for (int j = 0; j < (int) allExpressions.size(); j++)
                 findRelatedCustomFunctions(node, allExpressions[j].getRootNode(), nodes);
             vector<string> nodeNames;
@@ -137,6 +148,71 @@ void CudaExpressionUtilities::processExpression(stringstream& out, const Express
                         out << nodeNames[j] << " = (periodicDistance_r2 > 0 ? -periodicDistance_delta.z*periodicDistance_rinv : 0);\n";
                 }
             }
+            else if (node.getOperation().getName() == "dot") {
+                for (int j = 0; j < nodes.size(); j++) {
+                    const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
+                    string child1 = getTempName(node.getChildren()[0], temps);
+                    string child2 = getTempName(node.getChildren()[1], temps);
+                    if (derivOrder[0] == 0 && derivOrder[1] == 0)
+                        out << nodeNames[j] << " = make_" << tempType << "(dot(" << child1 << ", " << child2 << "));\n";
+                    else
+                        throw OpenMMException("Unsupported derivative order for dot()");
+                }
+            }
+            else if (node.getOperation().getName() == "cross") {
+                for (int j = 0; j < nodes.size(); j++) {
+                    const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
+                    string child1 = getTempName(node.getChildren()[0], temps);
+                    string child2 = getTempName(node.getChildren()[1], temps);
+                    if (derivOrder[0] == 0 && derivOrder[1] == 0)
+                        out << nodeNames[j] << " = cross(" << child1 << ", " << child2 << ");\n";
+                    else
+                        throw OpenMMException("Unsupported derivative order for cross()");
+                }
+            }
+            else if (node.getOperation().getName() == "vector") {
+                for (int j = 0; j < nodes.size(); j++) {
+                    const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
+                    if (derivOrder[0] == 0 && derivOrder[1] == 0 && derivOrder[2] == 0) {
+                        out << nodeNames[j] << ".x = " << getTempName(node.getChildren()[0], temps) << ".x;\n";
+                        out << nodeNames[j] << ".y = " << getTempName(node.getChildren()[1], temps) << ".y;\n";
+                        out << nodeNames[j] << ".z = " << getTempName(node.getChildren()[2], temps) << ".z;\n";
+                    }
+                    else if (derivOrder[0] == 1 && derivOrder[1] == 0 && derivOrder[2] == 0)
+                        out << nodeNames[j] << ".x = 1;\n";
+                    else if (derivOrder[0] == 0 && derivOrder[1] == 1 && derivOrder[2] == 0)
+                        out << nodeNames[j] << ".y = 1;\n";
+                    else if (derivOrder[0] == 0 && derivOrder[1] == 0 && derivOrder[2] == 1)
+                        out << nodeNames[j] << ".z = 1;\n";
+                }
+            }
+            else if (node.getOperation().getName() == "_x") {
+                for (int j = 0; j < nodes.size(); j++) {
+                    const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
+                    if (derivOrder[0] == 0)
+                        out << nodeNames[j] << " = make_" << tempType << "(" << getTempName(node.getChildren()[0], temps) << ".x);\n";
+                    else
+                        throw OpenMMException("Unsupported derivative order for _x()");
+                }
+            }
+            else if (node.getOperation().getName() == "_y") {
+                for (int j = 0; j < nodes.size(); j++) {
+                    const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
+                    if (derivOrder[0] == 0)
+                        out << nodeNames[j] << " = make_" << tempType << "(" << getTempName(node.getChildren()[0], temps) << ".y);\n";
+                    else
+                        throw OpenMMException("Unsupported derivative order for _y()");
+                }
+            }
+            else if (node.getOperation().getName() == "_z") {
+                for (int j = 0; j < nodes.size(); j++) {
+                    const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
+                    if (derivOrder[0] == 0)
+                        out << nodeNames[j] << " = make_" << tempType << "(" << getTempName(node.getChildren()[0], temps) << ".z);\n";
+                    else
+                        throw OpenMMException("Unsupported derivative order for _z()");
+                }
+            }
             else {
                 // This is a tabulated function.
                 
@@ -150,172 +226,185 @@ void CudaExpressionUtilities::processExpression(stringstream& out, const Express
                     paramsFloat.push_back(context.doubleToString(functionParams[i][j]));
                     paramsInt.push_back(context.intToString((int) functionParams[i][j]));
                 }
-                if (dynamic_cast<const Continuous1DFunction*>(functions[i]) != NULL) {
-                    out << "real x = " << getTempName(node.getChildren()[0], temps) << ";\n";
-                    out << "if (x >= " << paramsFloat[0] << " && x <= " << paramsFloat[1] << ") {\n";
-                    out << "x = (x - " << paramsFloat[0] << ")*" << paramsFloat[2] << ";\n";
-                    out << "int index = (int) (floor(x));\n";
-                    out << "index = min(index, (int) " << paramsInt[3] << ");\n";
-                    out << "float4 coeff = " << functionNames[i].second << "[index];\n";
-                    out << "real b = x-index;\n";
-                    out << "real a = 1.0f-b;\n";
-                    for (int j = 0; j < nodes.size(); j++) {
-                        const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
-                        if (derivOrder[0] == 0)
-                            out << nodeNames[j] << " = a*coeff.x+b*coeff.y+((a*a*a-a)*coeff.z+(b*b*b-b)*coeff.w)/(" << paramsFloat[2] << "*" << paramsFloat[2] << ");\n";
-                        else
-                            out << nodeNames[j] << " = (coeff.y-coeff.x)*" << paramsFloat[2] << "+((1.0f-3.0f*a*a)*coeff.z+(3.0f*b*b-1.0f)*coeff.w)/" << paramsFloat[2] << ";\n";
+                vector<string> suffixes;
+                if (isVecType) {
+                    suffixes.push_back(".x");
+                    suffixes.push_back(".y");
+                    suffixes.push_back(".z");
+                }
+                else {
+                    suffixes.push_back("");
+                }
+                for (auto& suffix : suffixes) {
+                    out << "{\n";
+                    if (dynamic_cast<const Continuous1DFunction*>(functions[i]) != NULL) {
+                        out << "real x = " << getTempName(node.getChildren()[0], temps) << suffix << ";\n";
+                        out << "if (x >= " << paramsFloat[0] << " && x <= " << paramsFloat[1] << ") {\n";
+                        out << "x = (x - " << paramsFloat[0] << ")*" << paramsFloat[2] << ";\n";
+                        out << "int index = (int) (floor(x));\n";
+                        out << "index = min(index, (int) " << paramsInt[3] << ");\n";
+                        out << "float4 coeff = " << functionNames[i].second << "[index];\n";
+                        out << "real b = x-index;\n";
+                        out << "real a = 1.0f-b;\n";
+                        for (int j = 0; j < nodes.size(); j++) {
+                            const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
+                            if (derivOrder[0] == 0)
+                                out << nodeNames[j] << suffix << " = a*coeff.x+b*coeff.y+((a*a*a-a)*coeff.z+(b*b*b-b)*coeff.w)/(" << paramsFloat[2] << "*" << paramsFloat[2] << ");\n";
+                            else
+                                out << nodeNames[j] << suffix << " = (coeff.y-coeff.x)*" << paramsFloat[2] << "+((1.0f-3.0f*a*a)*coeff.z+(3.0f*b*b-1.0f)*coeff.w)/" << paramsFloat[2] << ";\n";
+                        }
+                        out << "}\n";
+                    }
+                    else if (dynamic_cast<const Continuous2DFunction*>(functions[i]) != NULL) {
+                        out << "real x = " << getTempName(node.getChildren()[0], temps) << suffix << ";\n";
+                        out << "real y = " << getTempName(node.getChildren()[1], temps) << suffix << ";\n";
+                        out << "if (x >= " << paramsFloat[2] << " && x <= " << paramsFloat[3] << " && y >= " << paramsFloat[4] << " && y <= " << paramsFloat[5] << ") {\n";
+                        out << "x = (x - " << paramsFloat[2] << ")*" << paramsFloat[6] << ";\n";
+                        out << "y = (y - " << paramsFloat[4] << ")*" << paramsFloat[7] << ";\n";
+                        out << "int s = min((int) floor(x), " << paramsInt[0] << "-1);\n";
+                        out << "int t = min((int) floor(y), " << paramsInt[1] << "-1);\n";
+                        out << "int coeffIndex = 4*(s+" << paramsInt[0] << "*t);\n";
+                        out << "float4 c[4];\n";
+                        for (int j = 0; j < 4; j++)
+                            out << "c[" << j << "] = " << functionNames[i].second << "[coeffIndex+" << j << "];\n";
+                        out << "real da = x-s;\n";
+                        out << "real db = y-t;\n";
+                        for (int j = 0; j < nodes.size(); j++) {
+                            const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
+                            if (derivOrder[0] == 0 && derivOrder[1] == 0) {
+                                out << nodeNames[j] << suffix << " = da*" << nodeNames[j] << suffix << " + ((c[3].w*db + c[3].z)*db + c[3].y)*db + c[3].x;\n";
+                                out << nodeNames[j] << suffix << " = da*" << nodeNames[j] << suffix << " + ((c[2].w*db + c[2].z)*db + c[2].y)*db + c[2].x;\n";
+                                out << nodeNames[j] << suffix << " = da*" << nodeNames[j] << suffix << " + ((c[1].w*db + c[1].z)*db + c[1].y)*db + c[1].x;\n";
+                                out << nodeNames[j] << suffix << " = da*" << nodeNames[j] << suffix << " + ((c[0].w*db + c[0].z)*db + c[0].y)*db + c[0].x;\n";
+                            }
+                            else if (derivOrder[0] == 1 && derivOrder[1] == 0) {
+                                out << nodeNames[j] << suffix << " = db*" << nodeNames[j] << suffix << " + (3.0f*c[3].w*da + 2.0f*c[2].w)*da + c[1].w;\n";
+                                out << nodeNames[j] << suffix << " = db*" << nodeNames[j] << suffix << " + (3.0f*c[3].z*da + 2.0f*c[2].z)*da + c[1].z;\n";
+                                out << nodeNames[j] << suffix << " = db*" << nodeNames[j] << suffix << " + (3.0f*c[3].y*da + 2.0f*c[2].y)*da + c[1].y;\n";
+                                out << nodeNames[j] << suffix << " = db*" << nodeNames[j] << suffix << " + (3.0f*c[3].x*da + 2.0f*c[2].x)*da + c[1].x;\n";
+                                out << nodeNames[j] << suffix << " *= " << paramsFloat[6] << ";\n";
+                            }
+                            else if (derivOrder[0] == 0 && derivOrder[1] == 1) {
+                                out << nodeNames[j] << suffix << " = da*" << nodeNames[j] << suffix << " + (3.0f*c[3].w*db + 2.0f*c[3].z)*db + c[3].y;\n";
+                                out << nodeNames[j] << suffix << " = da*" << nodeNames[j] << suffix << " + (3.0f*c[2].w*db + 2.0f*c[2].z)*db + c[2].y;\n";
+                                out << nodeNames[j] << suffix << " = da*" << nodeNames[j] << suffix << " + (3.0f*c[1].w*db + 2.0f*c[1].z)*db + c[1].y;\n";
+                                out << nodeNames[j] << suffix << " = da*" << nodeNames[j] << suffix << " + (3.0f*c[0].w*db + 2.0f*c[0].z)*db + c[0].y;\n";
+                                out << nodeNames[j] << suffix << " *= " << paramsFloat[7] << ";\n";
+                            }
+                            else
+                                throw OpenMMException("Unsupported derivative order for Continuous2DFunction");
+                        }
+                        out << "}\n";
+                    }
+                    else if (dynamic_cast<const Continuous3DFunction*>(functions[i]) != NULL) {
+                        out << "real x = " << getTempName(node.getChildren()[0], temps) << suffix << ";\n";
+                        out << "real y = " << getTempName(node.getChildren()[1], temps) << suffix << ";\n";
+                        out << "real z = " << getTempName(node.getChildren()[2], temps) << suffix << ";\n";
+                        out << "if (x >= " << paramsFloat[3] << " && x <= " << paramsFloat[4] << " && y >= " << paramsFloat[5] << " && y <= " << paramsFloat[6] << " && z >= " << paramsFloat[7] << " && z <= " << paramsFloat[8] << ") {\n";
+                        out << "x = (x - " << paramsFloat[3] << ")*" << paramsFloat[9] << ";\n";
+                        out << "y = (y - " << paramsFloat[5] << ")*" << paramsFloat[10] << ";\n";
+                        out << "z = (z - " << paramsFloat[7] << ")*" << paramsFloat[11] << ";\n";
+                        out << "int s = min((int) floor(x), " << paramsInt[0] << "-1);\n";
+                        out << "int t = min((int) floor(y), " << paramsInt[1] << "-1);\n";
+                        out << "int u = min((int) floor(z), " << paramsInt[2] << "-1);\n";
+                        out << "int coeffIndex = 16*(s+" << paramsInt[0] << "*(t+" << paramsInt[1] << "*u));\n";
+                        out << "float4 c[16];\n";
+                        for (int j = 0; j < 16; j++)
+                            out << "c[" << j << "] = " << functionNames[i].second << "[coeffIndex+" << j << "];\n";
+                        out << "real da = x-s;\n";
+                        out << "real db = y-t;\n";
+                        out << "real dc = z-u;\n";
+                        for (int j = 0; j < nodes.size(); j++) {
+                            const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
+                            if (derivOrder[0] == 0 && derivOrder[1] == 0 && derivOrder[2] == 0) {
+                                out << "real value[4] = {0, 0, 0, 0};\n";
+                                for (int k = 3; k >= 0; k--)
+                                    for (int m = 0; m < 4; m++) {
+                                        int base = k + 4*m;
+                                        out << "value[" << m << "] = db*value[" << m << "] + ((c[" << base << "].w*da + c[" << base << "].z)*da + c[" << base << "].y)*da + c[" << base << "].x;\n";
+                                    }
+                                out << nodeNames[j] << suffix << " = value[0] + dc*(value[1] + dc*(value[2] + dc*value[3]));\n";
+                            }
+                            else if (derivOrder[0] == 1 && derivOrder[1] == 0 && derivOrder[2] == 0) {
+                                out << "real derivx[4] = {0, 0, 0, 0};\n";
+                                for (int k = 3; k >= 0; k--)
+                                    for (int m = 0; m < 4; m++) {
+                                        int base = k + 4*m;
+                                        out << "derivx[" << m << "] = db*derivx[" << m << "] + (3*c[" << base << "].w*da + 2*c[" << base << "].z)*da + c[" << base << "].y;\n";
+                                    }
+                                out << nodeNames[j] << suffix << " = derivx[0] + dc*(derivx[1] + dc*(derivx[2] + dc*derivx[3]));\n";
+                                out << nodeNames[j] << suffix << " *= " << paramsFloat[9] << ";\n";
+                            }
+                            else if (derivOrder[0] == 0 && derivOrder[1] == 1 && derivOrder[2] == 0) {
+                                const string suffixes[] = {".x", ".y", ".z", ".w"};
+                                out << "real derivy[4] = {0, 0, 0, 0};\n";
+                                for (int k = 3; k >= 0; k--)
+                                    for (int m = 0; m < 4; m++) {
+                                        int base = 4*m;
+                                        string suffix = suffixes[k];
+                                        out << "derivy[" << m << "] = da*derivy[" << m << "] + (3*c[" << (base+3) << "]" << suffix << "*db + 2*c[" << (base+2) << "]" << suffix << ")*db + c[" << (base+1) << "]" << suffix << ";\n";
+                                    }
+                                out << nodeNames[j] << suffix << " = derivy[0] + dc*(derivy[1] + dc*(derivy[2] + dc*derivy[3]));\n";
+                                out << nodeNames[j] << suffix << " *= " << paramsFloat[10] << ";\n";
+                            }
+                            else if (derivOrder[0] == 0 && derivOrder[1] == 0 && derivOrder[2] == 1) {
+                                out << "real derivz[4] = {0, 0, 0, 0};\n";
+                                for (int k = 3; k >= 0; k--)
+                                    for (int m = 0; m < 4; m++) {
+                                        int base = k + 4*m;
+                                        out << "derivz[" << m << "] = db*derivz[" << m << "] + ((c[" << base << "].w*da + c[" << base << "].z)*da + c[" << base << "].y)*da + c[" << base << "].x;\n";
+                                    }
+                                out << nodeNames[j] << suffix << " = derivz[1] + dc*(2*derivz[2] + dc*3*derivz[3]);\n";
+                                out << nodeNames[j] << suffix << " *= " << paramsFloat[11] << ";\n";
+                            }
+                            else
+                                throw OpenMMException("Unsupported derivative order for Continuous3DFunction");
+                        }
+                        out << "}\n";
+                    }
+                    else if (dynamic_cast<const Discrete1DFunction*>(functions[i]) != NULL) {
+                        for (int j = 0; j < nodes.size(); j++) {
+                            const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
+                            if (derivOrder[0] == 0) {
+                                out << "real x = " << getTempName(node.getChildren()[0], temps) << suffix << ";\n";
+                                out << "if (x >= 0 && x < " << paramsInt[0] << ") {\n";
+                                out << "int index = (int) floor(x+0.5f);\n";
+                                out << nodeNames[j] << suffix << " = " << functionNames[i].second << "[index];\n";
+                                out << "}\n";
+                            }
+                        }
+                    }
+                    else if (dynamic_cast<const Discrete2DFunction*>(functions[i]) != NULL) {
+                        for (int j = 0; j < nodes.size(); j++) {
+                            const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
+                            if (derivOrder[0] == 0 && derivOrder[1] == 0) {
+                                out << "int x = (int) floor(" << getTempName(node.getChildren()[0], temps) << suffix << "+0.5f);\n";
+                                out << "int y = (int) floor(" << getTempName(node.getChildren()[1], temps) << suffix << "+0.5f);\n";
+                                out << "int xsize = (int) " << paramsInt[0] << ";\n";
+                                out << "int ysize = (int) " << paramsInt[1] << ";\n";
+                                out << "int index = x+y*xsize;\n";
+                                out << "if (index >= 0 && index < xsize*ysize)\n";
+                                out << nodeNames[j] << suffix << " = " << functionNames[i].second << "[index];\n";
+                            }
+                        }
+                    }
+                    else if (dynamic_cast<const Discrete3DFunction*>(functions[i]) != NULL) {
+                        for (int j = 0; j < nodes.size(); j++) {
+                            const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
+                            if (derivOrder[0] == 0 && derivOrder[1] == 0 && derivOrder[2] == 0) {
+                                out << "int x = (int) floor(" << getTempName(node.getChildren()[0], temps) << suffix << "+0.5f);\n";
+                                out << "int y = (int) floor(" << getTempName(node.getChildren()[1], temps) << suffix << "+0.5f);\n";
+                                out << "int z = (int) floor(" << getTempName(node.getChildren()[2], temps) << suffix << "+0.5f);\n";
+                                out << "int xsize = (int) " << paramsInt[0] << ";\n";
+                                out << "int ysize = (int) " << paramsInt[1] << ";\n";
+                                out << "int zsize = (int) " << paramsInt[2] << ";\n";
+                                out << "int index = x+(y+z*ysize)*xsize;\n";
+                                out << "if (index >= 0 && index < xsize*ysize*zsize)\n";
+                                out << nodeNames[j] << suffix << " = " << functionNames[i].second << "[index];\n";
+                            }
+                        }
                     }
                     out << "}\n";
-                }
-                else if (dynamic_cast<const Continuous2DFunction*>(functions[i]) != NULL) {
-                    out << "real x = " << getTempName(node.getChildren()[0], temps) << ";\n";
-                    out << "real y = " << getTempName(node.getChildren()[1], temps) << ";\n";
-                    out << "if (x >= " << paramsFloat[2] << " && x <= " << paramsFloat[3] << " && y >= " << paramsFloat[4] << " && y <= " << paramsFloat[5] << ") {\n";
-                    out << "x = (x - " << paramsFloat[2] << ")*" << paramsFloat[6] << ";\n";
-                    out << "y = (y - " << paramsFloat[4] << ")*" << paramsFloat[7] << ";\n";
-                    out << "int s = min((int) floor(x), " << paramsInt[0] << "-1);\n";
-                    out << "int t = min((int) floor(y), " << paramsInt[1] << "-1);\n";
-                    out << "int coeffIndex = 4*(s+" << paramsInt[0] << "*t);\n";
-                    out << "float4 c[4];\n";
-                    for (int j = 0; j < 4; j++)
-                        out << "c[" << j << "] = " << functionNames[i].second << "[coeffIndex+" << j << "];\n";
-                    out << "real da = x-s;\n";
-                    out << "real db = y-t;\n";
-                    for (int j = 0; j < nodes.size(); j++) {
-                        const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
-                        if (derivOrder[0] == 0 && derivOrder[1] == 0) {
-                            out << nodeNames[j] << " = da*" << nodeNames[j] << " + ((c[3].w*db + c[3].z)*db + c[3].y)*db + c[3].x;\n";
-                            out << nodeNames[j] << " = da*" << nodeNames[j] << " + ((c[2].w*db + c[2].z)*db + c[2].y)*db + c[2].x;\n";
-                            out << nodeNames[j] << " = da*" << nodeNames[j] << " + ((c[1].w*db + c[1].z)*db + c[1].y)*db + c[1].x;\n";
-                            out << nodeNames[j] << " = da*" << nodeNames[j] << " + ((c[0].w*db + c[0].z)*db + c[0].y)*db + c[0].x;\n";
-                        }
-                        else if (derivOrder[0] == 1 && derivOrder[1] == 0) {
-                            out << nodeNames[j] << " = db*" << nodeNames[j] << " + (3.0f*c[3].w*da + 2.0f*c[2].w)*da + c[1].w;\n";
-                            out << nodeNames[j] << " = db*" << nodeNames[j] << " + (3.0f*c[3].z*da + 2.0f*c[2].z)*da + c[1].z;\n";
-                            out << nodeNames[j] << " = db*" << nodeNames[j] << " + (3.0f*c[3].y*da + 2.0f*c[2].y)*da + c[1].y;\n";
-                            out << nodeNames[j] << " = db*" << nodeNames[j] << " + (3.0f*c[3].x*da + 2.0f*c[2].x)*da + c[1].x;\n";
-                            out << nodeNames[j] << " *= " << paramsFloat[6] << ";\n";
-                        }
-                        else if (derivOrder[0] == 0 && derivOrder[1] == 1) {
-                            out << nodeNames[j] << " = da*" << nodeNames[j] << " + (3.0f*c[3].w*db + 2.0f*c[3].z)*db + c[3].y;\n";
-                            out << nodeNames[j] << " = da*" << nodeNames[j] << " + (3.0f*c[2].w*db + 2.0f*c[2].z)*db + c[2].y;\n";
-                            out << nodeNames[j] << " = da*" << nodeNames[j] << " + (3.0f*c[1].w*db + 2.0f*c[1].z)*db + c[1].y;\n";
-                            out << nodeNames[j] << " = da*" << nodeNames[j] << " + (3.0f*c[0].w*db + 2.0f*c[0].z)*db + c[0].y;\n";
-                            out << nodeNames[j] << " *= " << paramsFloat[7] << ";\n";
-                        }
-                        else
-                            throw OpenMMException("Unsupported derivative order for Continuous2DFunction");
-                    }
-                    out << "}\n";
-                }
-                else if (dynamic_cast<const Continuous3DFunction*>(functions[i]) != NULL) {
-                    out << "real x = " << getTempName(node.getChildren()[0], temps) << ";\n";
-                    out << "real y = " << getTempName(node.getChildren()[1], temps) << ";\n";
-                    out << "real z = " << getTempName(node.getChildren()[2], temps) << ";\n";
-                    out << "if (x >= " << paramsFloat[3] << " && x <= " << paramsFloat[4] << " && y >= " << paramsFloat[5] << " && y <= " << paramsFloat[6] << " && z >= " << paramsFloat[7] << " && z <= " << paramsFloat[8] << ") {\n";
-                    out << "x = (x - " << paramsFloat[3] << ")*" << paramsFloat[9] << ";\n";
-                    out << "y = (y - " << paramsFloat[5] << ")*" << paramsFloat[10] << ";\n";
-                    out << "z = (z - " << paramsFloat[7] << ")*" << paramsFloat[11] << ";\n";
-                    out << "int s = min((int) floor(x), " << paramsInt[0] << "-1);\n";
-                    out << "int t = min((int) floor(y), " << paramsInt[1] << "-1);\n";
-                    out << "int u = min((int) floor(z), " << paramsInt[2] << "-1);\n";
-                    out << "int coeffIndex = 16*(s+" << paramsInt[0] << "*(t+" << paramsInt[1] << "*u));\n";
-                    out << "float4 c[16];\n";
-                    for (int j = 0; j < 16; j++)
-                        out << "c[" << j << "] = " << functionNames[i].second << "[coeffIndex+" << j << "];\n";
-                    out << "real da = x-s;\n";
-                    out << "real db = y-t;\n";
-                    out << "real dc = z-u;\n";
-                    for (int j = 0; j < nodes.size(); j++) {
-                        const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
-                        if (derivOrder[0] == 0 && derivOrder[1] == 0 && derivOrder[2] == 0) {
-                            out << "real value[4] = {0, 0, 0, 0};\n";
-                            for (int k = 3; k >= 0; k--)
-                                for (int m = 0; m < 4; m++) {
-                                    int base = k + 4*m;
-                                    out << "value[" << m << "] = db*value[" << m << "] + ((c[" << base << "].w*da + c[" << base << "].z)*da + c[" << base << "].y)*da + c[" << base << "].x;\n";
-                                }
-                            out << nodeNames[j] << " = value[0] + dc*(value[1] + dc*(value[2] + dc*value[3]));\n";
-                        }
-                        else if (derivOrder[0] == 1 && derivOrder[1] == 0 && derivOrder[2] == 0) {
-                            out << "real derivx[4] = {0, 0, 0, 0};\n";
-                            for (int k = 3; k >= 0; k--)
-                                for (int m = 0; m < 4; m++) {
-                                    int base = k + 4*m;
-                                    out << "derivx[" << m << "] = db*derivx[" << m << "] + (3*c[" << base << "].w*da + 2*c[" << base << "].z)*da + c[" << base << "].y;\n";
-                                }
-                            out << nodeNames[j] << " = derivx[0] + dc*(derivx[1] + dc*(derivx[2] + dc*derivx[3]));\n";
-                            out << nodeNames[j] << " *= " << paramsFloat[9] << ";\n";
-                        }
-                        else if (derivOrder[0] == 0 && derivOrder[1] == 1 && derivOrder[2] == 0) {
-                            const string suffixes[] = {".x", ".y", ".z", ".w"};
-                            out << "real derivy[4] = {0, 0, 0, 0};\n";
-                            for (int k = 3; k >= 0; k--)
-                                for (int m = 0; m < 4; m++) {
-                                    int base = 4*m;
-                                    string suffix = suffixes[k];
-                                    out << "derivy[" << m << "] = da*derivy[" << m << "] + (3*c[" << (base+3) << "]" << suffix << "*db + 2*c[" << (base+2) << "]" << suffix << ")*db + c[" << (base+1) << "]" << suffix << ";\n";
-                                }
-                            out << nodeNames[j] << " = derivy[0] + dc*(derivy[1] + dc*(derivy[2] + dc*derivy[3]));\n";
-                            out << nodeNames[j] << " *= " << paramsFloat[10] << ";\n";
-                        }
-                        else if (derivOrder[0] == 0 && derivOrder[1] == 0 && derivOrder[2] == 1) {
-                            out << "real derivz[4] = {0, 0, 0, 0};\n";
-                            for (int k = 3; k >= 0; k--)
-                                for (int m = 0; m < 4; m++) {
-                                    int base = k + 4*m;
-                                    out << "derivz[" << m << "] = db*derivz[" << m << "] + ((c[" << base << "].w*da + c[" << base << "].z)*da + c[" << base << "].y)*da + c[" << base << "].x;\n";
-                                }
-                            out << nodeNames[j] << " = derivz[1] + dc*(2*derivz[2] + dc*3*derivz[3]);\n";
-                            out << nodeNames[j] << " *= " << paramsFloat[11] << ";\n";
-                        }
-                        else
-                            throw OpenMMException("Unsupported derivative order for Continuous3DFunction");
-                    }
-                    out << "}\n";
-                }
-                else if (dynamic_cast<const Discrete1DFunction*>(functions[i]) != NULL) {
-                    for (int j = 0; j < nodes.size(); j++) {
-                        const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
-                        if (derivOrder[0] == 0) {
-                            out << "real x = " << getTempName(node.getChildren()[0], temps) << ";\n";
-                            out << "if (x >= 0 && x < " << paramsInt[0] << ") {\n";
-                            out << "int index = (int) floor(x+0.5f);\n";
-                            out << nodeNames[j] << " = " << functionNames[i].second << "[index];\n";
-                            out << "}\n";
-                        }
-                    }
-                }
-                else if (dynamic_cast<const Discrete2DFunction*>(functions[i]) != NULL) {
-                    for (int j = 0; j < nodes.size(); j++) {
-                        const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
-                        if (derivOrder[0] == 0 && derivOrder[1] == 0) {
-                            out << "int x = (int) floor(" << getTempName(node.getChildren()[0], temps) << "+0.5f);\n";
-                            out << "int y = (int) floor(" << getTempName(node.getChildren()[1], temps) << "+0.5f);\n";
-                            out << "int xsize = (int) " << paramsInt[0] << ";\n";
-                            out << "int ysize = (int) " << paramsInt[1] << ";\n";
-                            out << "int index = x+y*xsize;\n";
-                            out << "if (index >= 0 && index < xsize*ysize)\n";
-                            out << nodeNames[j] << " = " << functionNames[i].second << "[index];\n";
-                        }
-                    }
-                }
-                else if (dynamic_cast<const Discrete3DFunction*>(functions[i]) != NULL) {
-                    for (int j = 0; j < nodes.size(); j++) {
-                        const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
-                        if (derivOrder[0] == 0 && derivOrder[1] == 0 && derivOrder[2] == 0) {
-                            out << "int x = (int) floor(" << getTempName(node.getChildren()[0], temps) << "+0.5f);\n";
-                            out << "int y = (int) floor(" << getTempName(node.getChildren()[1], temps) << "+0.5f);\n";
-                            out << "int z = (int) floor(" << getTempName(node.getChildren()[2], temps) << "+0.5f);\n";
-                            out << "int xsize = (int) " << paramsInt[0] << ";\n";
-                            out << "int ysize = (int) " << paramsInt[1] << ";\n";
-                            out << "int zsize = (int) " << paramsInt[2] << ";\n";
-                            out << "int index = x+(y+z*ysize)*xsize;\n";
-                            out << "if (index >= 0 && index < xsize*ysize*zsize)\n";
-                            out << nodeNames[j] << " = " << functionNames[i].second << "[index];\n";
-                        }
-                    }
                 }
             }
             out << "}";
@@ -357,62 +446,94 @@ void CudaExpressionUtilities::processExpression(stringstream& out, const Express
             out << "-" << getTempName(node.getChildren()[0], temps);
             break;
         case Operation::SQRT:
-            out << "SQRT(" << getTempName(node.getChildren()[0], temps) << ")";
+            callFunction(out, "sqrtf", "sqrt", getTempName(node.getChildren()[0], temps), tempType); 
             break;
         case Operation::EXP:
-            out << "EXP(" << getTempName(node.getChildren()[0], temps) << ")";
+            callFunction(out, "expf", "exp", getTempName(node.getChildren()[0], temps), tempType);
             break;
         case Operation::LOG:
-            out << "LOG(" << getTempName(node.getChildren()[0], temps) << ")";
+            callFunction(out, "logf", "log", getTempName(node.getChildren()[0], temps), tempType);
             break;
         case Operation::SIN:
-            out << "SIN(" << getTempName(node.getChildren()[0], temps) << ")";
+            callFunction(out, "sinf", "sin", getTempName(node.getChildren()[0], temps), tempType);
             break;
         case Operation::COS:
-            out << "COS(" << getTempName(node.getChildren()[0], temps) << ")";
+            callFunction(out, "cosf", "cos", getTempName(node.getChildren()[0], temps), tempType);
             break;
         case Operation::SEC:
-            out << "RECIP(COS(" << getTempName(node.getChildren()[0], temps) << "))";
+            out << "1/";
+            callFunction(out, "cosf", "cos", getTempName(node.getChildren()[0], temps), tempType);
             break;
         case Operation::CSC:
-            out << "RECIP(SIN(" << getTempName(node.getChildren()[0], temps) << "))";
+            out << "1/";
+            callFunction(out, "sinf", "sin", getTempName(node.getChildren()[0], temps), tempType);
             break;
         case Operation::TAN:
-            out << "TAN(" << getTempName(node.getChildren()[0], temps) << ")";
+            callFunction(out, "tanf", "tan", getTempName(node.getChildren()[0], temps), tempType);
             break;
         case Operation::COT:
-            out << "RECIP(TAN(" << getTempName(node.getChildren()[0], temps) << "))";
+            out << "1/";
+            callFunction(out, "tanf", "tan", getTempName(node.getChildren()[0], temps), tempType);
             break;
         case Operation::ASIN:
-            out << "ASIN(" << getTempName(node.getChildren()[0], temps) << ")";
+            callFunction(out, "asinf", "asin", getTempName(node.getChildren()[0], temps), tempType);
             break;
         case Operation::ACOS:
-            out << "ACOS(" << getTempName(node.getChildren()[0], temps) << ")";
+            callFunction(out, "acosf", "acos", getTempName(node.getChildren()[0], temps), tempType);
             break;
         case Operation::ATAN:
-            out << "ATAN(" << getTempName(node.getChildren()[0], temps) << ")";
+            callFunction(out, "atanf", "atan", getTempName(node.getChildren()[0], temps), tempType);
+            break;
+        case Operation::ATAN2:
+            callFunction2(out, "atan2f", "atan2", getTempName(node.getChildren()[0], temps), getTempName(node.getChildren()[1], temps), tempType);
             break;
         case Operation::SINH:
-            out << "sinh(" << getTempName(node.getChildren()[0], temps) << ")";
+            callFunction(out, "sinh", "sinh", getTempName(node.getChildren()[0], temps), tempType);
             break;
         case Operation::COSH:
-            out << "cosh(" << getTempName(node.getChildren()[0], temps) << ")";
+            callFunction(out, "cosh", "cosh", getTempName(node.getChildren()[0], temps), tempType);
             break;
         case Operation::TANH:
-            out << "tanh(" << getTempName(node.getChildren()[0], temps) << ")";
+            callFunction(out, "tanh", "tanh", getTempName(node.getChildren()[0], temps), tempType);
             break;
         case Operation::ERF:
-            out << "erf(" << getTempName(node.getChildren()[0], temps) << ")";
+            callFunction(out, "erf", "erf", getTempName(node.getChildren()[0], temps), tempType);
             break;
         case Operation::ERFC:
-            out << "erfc(" << getTempName(node.getChildren()[0], temps) << ")";
+            callFunction(out, "erfc", "erfc", getTempName(node.getChildren()[0], temps), tempType);
             break;
         case Operation::STEP:
-            out << getTempName(node.getChildren()[0], temps) << " >= 0.0f ? 1.0f : 0.0f";
+        {
+            string compareVal = getTempName(node.getChildren()[0], temps);
+            if (isVecType) {
+                out << "make_" << tempType << "(0);\n";
+                out << "{\n";
+                out << tempType<<" tempCompareValue = " << compareVal << ";\n";
+                out << name << ".x = (tempCompareValue.x >= 0 ? 1 : 0);\n";
+                out << name << ".y = (tempCompareValue.y >= 0 ? 1 : 0);\n";
+                out << name << ".z = (tempCompareValue.z >= 0 ? 1 : 0);\n";
+                out << "}\n";
+            }
+            else
+                out << compareVal << " >= 0 ? 1 : 0";
             break;
+        }
         case Operation::DELTA:
-            out << getTempName(node.getChildren()[0], temps) << " == 0.0f ? 1.0f : 0.0f";
+        {
+            string compareVal = getTempName(node.getChildren()[0], temps);
+            if (isVecType) {
+                out << "make_" << tempType << "(0);\n";
+                out << "{\n";
+                out << tempType<<" tempCompareValue = " << compareVal << ";\n";
+                out << name << ".x = (tempCompareValue.x == 0 ? 1 : 0);\n";
+                out << name << ".y = (tempCompareValue.y == 0 ? 1 : 0);\n";
+                out << name << ".z = (tempCompareValue.z == 0 ? 1 : 0);\n";
+                out << "}\n";
+            }
+            else
+                out << compareVal << " == 0 ? 1 : 0";
             break;
+        }
         case Operation::SQUARE:
         {
             string arg = getTempName(node.getChildren()[0], temps);
@@ -429,7 +550,16 @@ void CudaExpressionUtilities::processExpression(stringstream& out, const Express
             out << "RECIP(" << getTempName(node.getChildren()[0], temps) << ")";
             break;
         case Operation::ADD_CONSTANT:
-            out << context.doubleToString(dynamic_cast<const Operation::AddConstant*>(&node.getOperation())->getValue()) << "+" << getTempName(node.getChildren()[0], temps);
+            if (isVecType) {
+                string val = context.doubleToString(dynamic_cast<const Operation::AddConstant*>(&node.getOperation())->getValue());
+                string arg = getTempName(node.getChildren()[0], temps);
+                out << "make_" << tempType << "(";
+                out << val << "+" << arg << ".x, ";
+                out << val << "+" << arg << ".y, ";
+                out << val << "+" << arg << ".z)";
+            }
+            else
+                out << context.doubleToString(dynamic_cast<const Operation::AddConstant*>(&node.getOperation())->getValue()) << "+" << getTempName(node.getChildren()[0], temps);
             break;
         case Operation::MULTIPLY_CONSTANT:
             out << context.doubleToString(dynamic_cast<const Operation::MultiplyConstant*>(&node.getOperation())->getValue()) << "*" << getTempName(node.getChildren()[0], temps);
@@ -492,23 +622,38 @@ void CudaExpressionUtilities::processExpression(stringstream& out, const Express
             break;
         }
         case Operation::MIN:
-            out << "min((" << tempType << ") " << getTempName(node.getChildren()[0], temps) << ", (" << tempType << ") " << getTempName(node.getChildren()[1], temps) << ")";
+            callFunction2(out, "min", "min", getTempName(node.getChildren()[0], temps), getTempName(node.getChildren()[1], temps), tempType);
             break;
         case Operation::MAX:
-            out << "max((" << tempType << ") " << getTempName(node.getChildren()[0], temps) << ", (" << tempType << ") " << getTempName(node.getChildren()[1], temps) << ")";
+            callFunction2(out, "max", "max", getTempName(node.getChildren()[0], temps), getTempName(node.getChildren()[1], temps), tempType);
             break;
         case Operation::ABS:
-            out << "fabs(" << getTempName(node.getChildren()[0], temps) << ")";
+            callFunction(out, "fabs", "fabs", getTempName(node.getChildren()[0], temps), tempType);
             break;
         case Operation::FLOOR:
-            out << "floor(" << getTempName(node.getChildren()[0], temps) << ")";
+            callFunction(out, "floor", "floor", getTempName(node.getChildren()[0], temps), tempType);
             break;
         case Operation::CEIL:
-            out << "ceil(" << getTempName(node.getChildren()[0], temps) << ")";
+            callFunction(out, "ceil", "ceil", getTempName(node.getChildren()[0], temps), tempType);
             break;
         case Operation::SELECT:
-            out << "(" << getTempName(node.getChildren()[0], temps) << " != 0 ? " << getTempName(node.getChildren()[1], temps) << " : " << getTempName(node.getChildren()[2], temps) << ")";
+        {
+            string compareVal = getTempName(node.getChildren()[0], temps);
+            string val1 = getTempName(node.getChildren()[1], temps);
+            string val2 = getTempName(node.getChildren()[2], temps);
+            if (isVecType) {
+                out << "make_" << tempType << "(0);\n";
+                out << "{\n";
+                out << tempType<<" tempCompareValue = " << compareVal << ";\n";
+                out << name << ".x = (tempCompareValue.x != 0 ? " << val1 << ".x : " << val2 << ".x);\n";
+                out << name << ".y = (tempCompareValue.y != 0 ? " << val1 << ".y : " << val2 << ".y);\n";
+                out << name << ".z = (tempCompareValue.z != 0 ? " << val1 << ".z : " << val2 << ".z);\n";
+                out << "}\n";
+            }
+            else
+                out << "(" << compareVal << " != 0 ? " << val1 << " : " << val2 << ")";
             break;
+        }
         default:
             throw OpenMMException("Internal error: Unknown operation in user-defined expression: "+node.getOperation().getName());
     }
@@ -776,4 +921,28 @@ Lepton::CustomFunction* CudaExpressionUtilities::getFunctionPlaceholder(const Ta
 
 Lepton::CustomFunction* CudaExpressionUtilities::getPeriodicDistancePlaceholder() {
     return &periodicDistance;
+}
+
+void CudaExpressionUtilities::callFunction(stringstream& out, string singleFn, string doubleFn, const string& arg, const string& tempType) {
+    bool isDouble = (tempType[0] == 'd');
+    bool isVector = (tempType[tempType.size()-1] == '3');
+    string fn = (isDouble ? doubleFn : singleFn);
+    if (isVector)
+        out<<"make_"<<tempType<<"("<<fn<<"("<<arg<<".x), "<<fn<<"("<<arg<<".y), "<<fn<<"("<<arg<<".z))";
+    else
+        out<<fn<<"("<<arg<<")";
+}
+
+void CudaExpressionUtilities::callFunction2(stringstream& out, string singleFn, string doubleFn, const string& arg1, const string& arg2, const string& tempType) {
+    bool isDouble = (tempType[0] == 'd');
+    bool isVector = (tempType[tempType.size()-1] == '3');
+    string fn = (isDouble ? doubleFn : singleFn);
+    if (isVector) {
+        out<<"make_"<<tempType<<"(";
+        out<<fn<<"("<<arg1<<".x, "<<arg2<<".x), ";
+        out<<fn<<"("<<arg1<<".y, "<<arg2<<".y), ";
+        out<<fn<<"("<<arg1<<".z, "<<arg2<<".z))";
+    }
+    else
+        out<<fn<<"(("<<tempType<<") "<<arg1<<", ("<<tempType<<") "<<arg2<<")";
 }

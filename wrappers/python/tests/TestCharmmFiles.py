@@ -93,12 +93,10 @@ class TestCharmmFiles(unittest.TestCase):
     def test_NBFIX(self):
         """Tests CHARMM systems with NBFIX Lennard-Jones modifications"""
         warnings.filterwarnings('ignore', category=CharmmPSFWarning)
-        psf = CharmmPsfFile('systems/ala3_solv.psf')
+        psf = CharmmPsfFile('systems/ala3_solv.psf', unitCellDimensions=Vec3(32.7119500, 32.9959600, 33.0071500)*angstroms)
         crd = CharmmCrdFile('systems/ala3_solv.crd')
         params = CharmmParameterSet('systems/par_all36_prot.prm',
                                     'systems/toppar_water_ions.str')
-        # Box dimensions (found from bounding box)
-        psf.setBox(32.7119500*angstroms, 32.9959600*angstroms, 33.0071500*angstroms)
 
         # Turn off charges so we only test the Lennard-Jones energies
         for a in psf.atom_list:
@@ -116,6 +114,49 @@ class TestCharmmFiles(unittest.TestCase):
         ene = state.getPotentialEnergy().value_in_unit(kilocalories_per_mole)
         self.assertAlmostEqual(ene, 15490.0033559, delta=0.05)
 
+    def test_Drude(self):
+        """Test CHARMM systems with Drude force field"""
+        warnings.filterwarnings('ignore', category=CharmmPSFWarning)
+        psf = CharmmPsfFile('systems/ala3_solv_drude.psf')
+        crd = CharmmCrdFile('systems/ala3_solv_drude.crd')
+        params = CharmmParameterSet('systems/toppar_drude_master_protein_2013e.str')
+        # Box dimensions (cubic box)
+        psf.setBox(33.2*angstroms, 33.2*angstroms, 33.2*angstroms)
+
+        # Now compute the full energy
+        plat = Platform.getPlatformByName('Reference')
+        system = psf.createSystem(params, nonbondedMethod=PME)
+        integrator = DrudeLangevinIntegrator(300*kelvin, 1.0/picosecond, 1*kelvin, 10/picosecond, 0.001*picoseconds)
+        con = Context(system, integrator, plat)
+        con.setPositions(crd.positions)
+
+        state = con.getState(getEnergy=True, enforcePeriodicBox=True)
+        ene = state.getPotentialEnergy().value_in_unit(kilocalories_per_mole)
+        self.assertAlmostEqual(ene, -1831.54, delta=0.5)
+
+    def test_Lonepair(self):
+        """Test the lonepair facilities, in particular the colinear type of lonepairs"""
+        warnings.filterwarnings('ignore', category=CharmmPSFWarning)
+        psf = CharmmPsfFile('systems/chlb_cgenff.psf')
+        crd = CharmmCrdFile('systems/chlb_cgenff.crd')
+        params = CharmmParameterSet('systems/top_all36_cgenff.rtf',
+                                    'systems/par_all36_cgenff.prm')
+        plat = Platform.getPlatformByName('Reference')
+        system = psf.createSystem(params)
+        con = Context(system, VerletIntegrator(2*femtoseconds), plat)
+        con.setPositions(crd.positions)
+        init_coor = con.getState(getPositions=True).getPositions()
+        # move the position of the lonepair and recompute its coordinates
+        plp=12
+        crd.positions[plp] = Vec3(0.5, 1.0, 1.5) * angstrom
+        con.setPositions(crd.positions)
+        con.computeVirtualSites()
+        new_coor = con.getState(getPositions=True).getPositions()
+        
+        self.assertAlmostEqual(init_coor[plp][0]/nanometers, new_coor[plp][0]/nanometers)
+        self.assertAlmostEqual(init_coor[plp][1]/nanometers, new_coor[plp][1]/nanometers)
+        self.assertAlmostEqual(init_coor[plp][2]/nanometers, new_coor[plp][2]/nanometers)
+
     def test_InsCode(self):
         """ Test the parsing of PSF files that contain insertion codes in their residue numbers """
         psf = CharmmPsfFile('systems/4TVP-dmj_wat-ion.psf')
@@ -126,12 +167,11 @@ class TestCharmmFiles(unittest.TestCase):
     def testSystemOptions(self):
         """ Test various options in CharmmPsfFile.createSystem """
         warnings.filterwarnings('ignore', category=CharmmPSFWarning)
-        psf = CharmmPsfFile('systems/ala3_solv.psf')
+        psf = CharmmPsfFile('systems/ala3_solv.psf',
+                            periodicBoxVectors=(Vec3(32.7119500, 0, 0)*angstroms, Vec3(0, 32.9959600, 0)*angstroms, Vec3(0, 0, 33.0071500)*angstroms))
         crd = CharmmCrdFile('systems/ala3_solv.crd')
         params = CharmmParameterSet('systems/par_all36_prot.prm',
                                     'systems/toppar_water_ions.str')
-        # Box dimensions (found from bounding box)
-        psf.setBox(32.7119500*angstroms, 32.9959600*angstroms, 33.0071500*angstroms)
 
         # Check some illegal options
         self.assertRaises(ValueError, lambda:

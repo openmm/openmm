@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2013 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2018 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -176,9 +176,7 @@ void ReferenceLJCoulombIxn::setUseLJPME(double alpha, int meshSize[3]) {
    @param atomParameters   atom parameters                             atomParameters[atomIndex][paramterIndex]
    @param exclusions       atom exclusion indices
                            exclusions[atomIndex] contains the list of exclusions for that atom
-   @param fixedParameters  non atom parameters (not currently used)
    @param forces           force array (forces added)
-   @param energyByAtom     atom energy
    @param totalEnergy      total energy
    @param includeDirect      true if direct space interactions should be included
    @param includeReciprocal  true if reciprocal space interactions should be included
@@ -186,9 +184,8 @@ void ReferenceLJCoulombIxn::setUseLJPME(double alpha, int meshSize[3]) {
    --------------------------------------------------------------------------------------- */
 
 void ReferenceLJCoulombIxn::calculateEwaldIxn(int numberOfAtoms, vector<Vec3>& atomCoordinates,
-                                              double** atomParameters, vector<set<int> >& exclusions,
-                                              double* fixedParameters, vector<Vec3>& forces,
-                                              double* energyByAtom, double* totalEnergy, bool includeDirect, bool includeReciprocal) const {
+                                              vector<vector<double> >& atomParameters, vector<set<int> >& exclusions,
+                                              vector<Vec3>& forces, double* totalEnergy, bool includeDirect, bool includeReciprocal) const {
     typedef std::complex<double> d_complex;
 
     static const double epsilon     =  1.0;
@@ -224,9 +221,6 @@ void ReferenceLJCoulombIxn::calculateEwaldIxn(int numberOfAtoms, vector<Vec3>& a
                 selfEwaldEnergy -= pow(alphaDispersionEwald, 6.0) * 64.0*pow(atomParameters[atomID][SigIndex], 6.0) * pow(atomParameters[atomID][EpsIndex], 2.0) / 12.0;
             }
             totalSelfEwaldEnergy            -= selfEwaldEnergy;
-            if (energyByAtom) {
-                energyByAtom[atomID]        -= selfEwaldEnergy;
-            }
         }
     }
 
@@ -252,33 +246,20 @@ void ReferenceLJCoulombIxn::calculateEwaldIxn(int numberOfAtoms, vector<Vec3>& a
         if (totalEnergy)
             *totalEnergy += recipEnergy;
 
-        if (energyByAtom)
-            for (int n = 0; n < numberOfAtoms; n++)
-                energyByAtom[n] += recipEnergy;
-
         pme_destroy(pmedata);
 
         if (ljpme) {
             // Dispersion reciprocal space terms
             pme_init(&pmedata,alphaDispersionEwald,numberOfAtoms,dispersionMeshDim,5,1);
 
-            std::vector<Vec3> dpmeforces;
-            for (int i = 0; i < numberOfAtoms; i++){
+            std::vector<Vec3> dpmeforces(numberOfAtoms);
+            for (int i = 0; i < numberOfAtoms; i++)
                 charges[i] = 8.0*pow(atomParameters[i][SigIndex], 3.0) * atomParameters[i][EpsIndex];
-                dpmeforces.push_back(Vec3());
-            }
             pme_exec_dpme(pmedata,atomCoordinates,dpmeforces,charges,periodicBoxVectors,&recipDispersionEnergy);
-            for (int i = 0; i < numberOfAtoms; i++){
-                forces[i][0] -= 2.0*dpmeforces[i][0];
-                forces[i][1] -= 2.0*dpmeforces[i][1];
-                forces[i][2] -= 2.0*dpmeforces[i][2];
-            }
+            for (int i = 0; i < numberOfAtoms; i++)
+                forces[i] += dpmeforces[i];
             if (totalEnergy)
                 *totalEnergy += recipDispersionEnergy;
-
-            if (energyByAtom)
-                for (int n = 0; n < numberOfAtoms; n++)
-                    energyByAtom[n] += recipDispersionEnergy;
             pme_destroy(pmedata);
         }
     }
@@ -373,10 +354,6 @@ void ReferenceLJCoulombIxn::calculateEwaldIxn(int numberOfAtoms, vector<Vec3>& a
 
                     if (totalEnergy)
                         *totalEnergy += recipEnergy;
-
-                    if (energyByAtom)
-                        for (int n = 0; n < numberOfAtoms; n++)
-                            energyByAtom[n] += recipEnergy;
 
                     lowrz = 1 - numRz;
                 }
@@ -473,11 +450,6 @@ void ReferenceLJCoulombIxn::calculateEwaldIxn(int numberOfAtoms, vector<Vec3>& a
         totalVdwEnergy             += vdwEnergy;
         totalRealSpaceEwaldEnergy  += realSpaceEwaldEnergy;
 
-        if (energyByAtom) {
-            energyByAtom[ii] += realSpaceEwaldEnergy + vdwEnergy;
-            energyByAtom[jj] += realSpaceEwaldEnergy + vdwEnergy;
-        }
-
     }
 
     if (totalEnergy)
@@ -537,10 +509,6 @@ void ReferenceLJCoulombIxn::calculateEwaldIxn(int numberOfAtoms, vector<Vec3>& a
                 }
 
                 totalExclusionEnergy += realSpaceEwaldEnergy;
-                if (energyByAtom) {
-                    energyByAtom[ii] -= realSpaceEwaldEnergy;
-                    energyByAtom[jj] -= realSpaceEwaldEnergy;
-                }
             }
         }
 
@@ -558,9 +526,7 @@ void ReferenceLJCoulombIxn::calculateEwaldIxn(int numberOfAtoms, vector<Vec3>& a
    @param atomParameters   atom parameters                             atomParameters[atomIndex][paramterIndex]
    @param exclusions       atom exclusion indices
                            exclusions[atomIndex] contains the list of exclusions for that atom
-   @param fixedParameters  non atom parameters (not currently used)
    @param forces           force array (forces added)
-   @param energyByAtom     atom energy
    @param totalEnergy      total energy
    @param includeDirect      true if direct space interactions should be included
    @param includeReciprocal  true if reciprocal space interactions should be included
@@ -568,12 +534,11 @@ void ReferenceLJCoulombIxn::calculateEwaldIxn(int numberOfAtoms, vector<Vec3>& a
    --------------------------------------------------------------------------------------- */
 
 void ReferenceLJCoulombIxn::calculatePairIxn(int numberOfAtoms, vector<Vec3>& atomCoordinates,
-                                             double** atomParameters, vector<set<int> >& exclusions,
-                                             double* fixedParameters, vector<Vec3>& forces,
-                                             double* energyByAtom, double* totalEnergy, bool includeDirect, bool includeReciprocal) const {
+                                             vector<vector<double> >& atomParameters, vector<set<int> >& exclusions,
+                                             vector<Vec3>& forces, double* totalEnergy, bool includeDirect, bool includeReciprocal) const {
 
     if (ewald || pme || ljpme) {
-        calculateEwaldIxn(numberOfAtoms, atomCoordinates, atomParameters, exclusions, fixedParameters, forces, energyByAtom,
+        calculateEwaldIxn(numberOfAtoms, atomCoordinates, atomParameters, exclusions, forces,
                           totalEnergy, includeDirect, includeReciprocal);
         return;
     }
@@ -581,7 +546,7 @@ void ReferenceLJCoulombIxn::calculatePairIxn(int numberOfAtoms, vector<Vec3>& at
         return;
     if (cutoff) {
         for (auto& pair : *neighborList)
-            calculateOneIxn(pair.first, pair.second, atomCoordinates, atomParameters, forces, energyByAtom, totalEnergy);
+            calculateOneIxn(pair.first, pair.second, atomCoordinates, atomParameters, forces, totalEnergy);
     }
     else {
         for (int ii = 0; ii < numberOfAtoms; ii++) {
@@ -589,7 +554,7 @@ void ReferenceLJCoulombIxn::calculatePairIxn(int numberOfAtoms, vector<Vec3>& at
 
             for (int jj = ii+1; jj < numberOfAtoms; jj++)
                 if (exclusions[jj].find(ii) == exclusions[jj].end())
-                    calculateOneIxn(ii, jj, atomCoordinates, atomParameters, forces, energyByAtom, totalEnergy);
+                    calculateOneIxn(ii, jj, atomCoordinates, atomParameters, forces, totalEnergy);
         }
     }
 }
@@ -603,14 +568,13 @@ void ReferenceLJCoulombIxn::calculatePairIxn(int numberOfAtoms, vector<Vec3>& at
      @param atomCoordinates  atom coordinates
      @param atomParameters   atom parameters (charges, c6, c12, ...)     atomParameters[atomIndex][paramterIndex]
      @param forces           force array (forces added)
-     @param energyByAtom     atom energy
      @param totalEnergy      total energy
 
      --------------------------------------------------------------------------------------- */
 
 void ReferenceLJCoulombIxn::calculateOneIxn(int ii, int jj, vector<Vec3>& atomCoordinates,
-                                            double** atomParameters, vector<Vec3>& forces,
-                                            double* energyByAtom, double* totalEnergy) const {
+                                            vector<vector<double> >& atomParameters, vector<Vec3>& forces,
+                                            double* totalEnergy) const {
     double deltaR[2][ReferenceForce::LastDeltaRIndex];
 
     // get deltaR, R2, and R between 2 atoms
@@ -665,9 +629,5 @@ void ReferenceLJCoulombIxn::calculateOneIxn(int ii, int jj, vector<Vec3>& atomCo
 
     if (totalEnergy)
         *totalEnergy += energy;
-    if (energyByAtom) {
-        energyByAtom[ii] += energy;
-        energyByAtom[jj] += energy;
-    }
 }
 

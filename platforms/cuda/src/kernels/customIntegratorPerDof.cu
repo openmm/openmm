@@ -23,8 +23,12 @@ inline __device__ void storePos(real4* __restrict__ posq, real4* __restrict__ po
 #endif
 }
 
-inline __device__ double4 convertToDouble4(mixed4 a) {
+inline __device__ double4 convertToDouble4(float4 a) {
     return make_double4(a.x, a.y, a.z, a.w);
+}
+
+inline __device__ double4 convertToDouble4(double4 a) {
+    return a;
 }
 
 inline __device__ mixed4 convertFromDouble4(double4 a) {
@@ -36,7 +40,7 @@ extern "C" __global__ void computePerDof(real4* __restrict__ posq, real4* __rest
         mixed* __restrict__ sum, const float4* __restrict__ gaussianValues, unsigned int gaussianBaseIndex, const float4* __restrict__ uniformValues,
         const mixed energy, mixed* __restrict__ energyParamDerivs
         PARAMETER_ARGUMENTS) {
-    mixed stepSize = dt[0].y;
+    double3 stepSize = make_double3(dt[0].y);
     int index = blockIdx.x*blockDim.x+threadIdx.x;
     const double forceScale = 1.0/0xFFFFFFFF;
     while (index < NUM_ATOMS) {
@@ -47,7 +51,7 @@ extern "C" __global__ void computePerDof(real4* __restrict__ posq, real4* __rest
 #endif
         double4 velocity = convertToDouble4(velm[index]);
         double4 f = make_double4(forceScale*force[index], forceScale*force[index+PADDED_NUM_ATOMS], forceScale*force[index+PADDED_NUM_ATOMS*2], 0.0);
-        double mass = 1.0/velocity.w;
+        double3 mass = make_double3(1.0/velocity.w);
         if (velocity.w != 0.0) {
             int gaussianIndex = gaussianBaseIndex;
             int uniformIndex = 0;

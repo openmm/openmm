@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -28,6 +28,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "OpenCLArray.h"
+#include "OpenCLContext.h"
 #include "windowsExportOpenCL.h"
 
 namespace OpenMM {
@@ -86,14 +87,14 @@ public:
 private:
     OpenCLContext& context;
     SortTrait* trait;
-    OpenCLArray* dataRange;
-    OpenCLArray* bucketOfElement;
-    OpenCLArray* offsetInBucket;
-    OpenCLArray* bucketOffset;
-    OpenCLArray* buckets;
-    cl::Kernel shortListKernel, computeRangeKernel, assignElementsKernel, computeBucketPositionsKernel, copyToBucketsKernel, sortBucketsKernel;
+    OpenCLArray dataRange;
+    OpenCLArray bucketOfElement;
+    OpenCLArray offsetInBucket;
+    OpenCLArray bucketOffset;
+    OpenCLArray buckets;
+    cl::Kernel shortListKernel, shortList2Kernel, computeRangeKernel, assignElementsKernel, computeBucketPositionsKernel, copyToBucketsKernel, sortBucketsKernel;
     unsigned int dataLength, rangeKernelSize, positionsKernelSize, sortKernelSize;
-    bool isShortList;
+    bool isShortList, useShortList2;
 };
 
 /**

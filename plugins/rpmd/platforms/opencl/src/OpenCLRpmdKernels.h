@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -45,9 +45,8 @@ namespace OpenMM {
 class OpenCLIntegrateRPMDStepKernel : public IntegrateRPMDStepKernel {
 public:
     OpenCLIntegrateRPMDStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) :
-            IntegrateRPMDStepKernel(name, platform), cl(cl), hasInitializedKernel(false), forces(NULL), positions(NULL), velocities(NULL), contractedForces(NULL), contractedPositions(NULL) {
+            IntegrateRPMDStepKernel(name, platform), cl(cl), hasInitializedKernel(false) {
     }
-    ~OpenCLIntegrateRPMDStepKernel();
     /**
      * Initialize the kernel.
      *
@@ -92,11 +91,11 @@ private:
     int numCopies, numParticles, workgroupSize;
     std::map<int, int> groupsByCopies;
     int groupsNotContracted;
-    OpenCLArray* forces;
-    OpenCLArray* positions;
-    OpenCLArray* velocities;
-    OpenCLArray* contractedForces;
-    OpenCLArray* contractedPositions;
+    OpenCLArray forces;
+    OpenCLArray positions;
+    OpenCLArray velocities;
+    OpenCLArray contractedForces;
+    OpenCLArray contractedPositions;
     cl::Kernel pileKernel, stepKernel, velocitiesKernel, copyToContextKernel, copyFromContextKernel, translateKernel;
     std::map<int, cl::Kernel> positionContractionKernels;
     std::map<int, cl::Kernel> forceContractionKernels;

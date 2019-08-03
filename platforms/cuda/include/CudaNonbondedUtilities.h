@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -143,6 +143,11 @@ public:
      */
     double getMaxCutoffDistance();
     /**
+     * Given a nonbonded cutoff, get the padded cutoff distance used in computing
+     * the neighbor list.
+     */
+    double padCutoff(double cutoff);
+    /**
      * Prepare to compute interactions.  This updates the neighbor list.
      */
     void prepareInteractions(int forceGroups);
@@ -164,61 +169,68 @@ public:
      * Get the array containing the center of each atom block.
      */
     CudaArray& getBlockCenters() {
-        return *blockCenter;
+        return blockCenter;
     }
     /**
      * Get the array containing the dimensions of each atom block.
      */
     CudaArray& getBlockBoundingBoxes() {
-        return *blockBoundingBox;
+        return blockBoundingBox;
     }
     /**
      * Get the array whose first element contains the number of tiles with interactions.
      */
     CudaArray& getInteractionCount() {
-        return *interactionCount;
+        return interactionCount;
     }
     /**
      * Get the array containing tiles with interactions.
      */
     CudaArray& getInteractingTiles() {
-        return *interactingTiles;
+        return interactingTiles;
     }
     /**
      * Get the array containing the atoms in each tile with interactions.
      */
     CudaArray& getInteractingAtoms() {
-        return *interactingAtoms;
+        return interactingAtoms;
     }
     /**
      * Get the array containing single pairs in the neighbor list.
      */
     CudaArray& getSinglePairs() {
-        return *singlePairs;
+        return singlePairs;
     }
     /**
      * Get the array containing exclusion flags.
      */
     CudaArray& getExclusions() {
-        return *exclusions;
+        return exclusions;
     }
     /**
      * Get the array containing tiles with exclusions.
      */
     CudaArray& getExclusionTiles() {
-        return *exclusionTiles;
+        return exclusionTiles;
     }
     /**
      * Get the array containing the index into the exclusion array for each tile.
      */
     CudaArray& getExclusionIndices() {
-        return *exclusionIndices;
+        return exclusionIndices;
     }
     /**
      * Get the array listing where the exclusion data starts for each row.
      */
     CudaArray& getExclusionRowIndices() {
-        return *exclusionRowIndices;
+        return exclusionRowIndices;
+    }
+    /**
+     * Get the array containing a flag for whether the neighbor list was rebuilt
+     * on the most recent call to prepareInteractions().
+     */
+    CudaArray& getRebuildNeighborList() {
+        return rebuildNeighborList;
     }
     /**
      * Get the index of the first tile this context is responsible for processing.
@@ -265,27 +277,32 @@ public:
      * @param groups    the set of force groups
      */
     void createKernelsForGroups(int groups);
+    /**
+     * Set the source code for the main kernel.  This defaults to the content of nonbonded.cu.  It only needs to be
+     * changed in very unusual circumstances.
+     */
+    void setKernelSource(const std::string& source);
 private:
     class KernelSet;
     class BlockSortTrait;
     CudaContext& context;
     std::map<int, KernelSet> groupKernels;
-    CudaArray* exclusionTiles;
-    CudaArray* exclusions;
-    CudaArray* exclusionIndices;
-    CudaArray* exclusionRowIndices;
-    CudaArray* interactingTiles;
-    CudaArray* interactingAtoms;
-    CudaArray* interactionCount;
-    CudaArray* singlePairs;
-    CudaArray* singlePairCount;
-    CudaArray* blockCenter;
-    CudaArray* blockBoundingBox;
-    CudaArray* sortedBlocks;
-    CudaArray* sortedBlockCenter;
-    CudaArray* sortedBlockBoundingBox;
-    CudaArray* oldPositions;
-    CudaArray* rebuildNeighborList;
+    CudaArray exclusionTiles;
+    CudaArray exclusions;
+    CudaArray exclusionIndices;
+    CudaArray exclusionRowIndices;
+    CudaArray interactingTiles;
+    CudaArray interactingAtoms;
+    CudaArray interactionCount;
+    CudaArray singlePairs;
+    CudaArray singlePairCount;
+    CudaArray blockCenter;
+    CudaArray blockBoundingBox;
+    CudaArray sortedBlocks;
+    CudaArray sortedBlockCenter;
+    CudaArray sortedBlockBoundingBox;
+    CudaArray oldPositions;
+    CudaArray rebuildNeighborList;
     CudaSort* blockSorter;
     CUevent downloadCountEvent;
     int* pinnedCountBuffer;
@@ -299,6 +316,7 @@ private:
     double lastCutoff;
     bool useCutoff, usePeriodic, anyExclusions, usePadding, forceRebuildNeighborList, canUsePairList;
     int startTileIndex, numTiles, startBlockIndex, numBlocks, maxTiles, maxSinglePairs, maxExclusions, numForceThreadBlocks, forceThreadBlockSize, numAtoms, groupFlags;
+    std::string kernelSource;
 };
 
 /**
@@ -331,9 +349,10 @@ public:
      * @param numComponents  the number of components in the parameter
      * @param size           the size of the parameter in bytes
      * @param memory         the memory containing the parameter values
+     * @param constant       whether the memory should be marked as constant
      */
-    ParameterInfo(const std::string& name, const std::string& componentType, int numComponents, int size, CUdeviceptr memory) :
-            name(name), componentType(componentType), numComponents(numComponents), size(size), memory(memory) {
+    ParameterInfo(const std::string& name, const std::string& componentType, int numComponents, int size, CUdeviceptr memory, bool constant=true) :
+            name(name), componentType(componentType), numComponents(numComponents), size(size), memory(memory), constant(constant) {
         if (numComponents == 1)
             type = componentType;
         else {
@@ -360,12 +379,16 @@ public:
     CUdeviceptr& getMemory() {
         return memory;
     }
+    bool isConstant() const {
+        return constant;
+    }
 private:
     std::string name;
     std::string componentType;
     std::string type;
     int size, numComponents;
     CUdeviceptr memory;
+    bool constant;
 };
 
 } // namespace OpenMM

@@ -315,6 +315,19 @@ class SwigInputBuilder:
             self.fOut.write(",\n         OpenMM::%s" % name)
         self.fOut.write(");\n\n")
 
+        for classNode in self._orderedClassNodes:
+            methodList=getClassMethodList(classNode, self.skipMethods)
+            for items in methodList:
+                (shortClassName, memberNode,
+                 shortMethDefinition, methName,
+                 isConstructors, isDestructor, templateType, templateName) = items
+                if shortMethDefinition == 'TabulatedFunction& getTabulatedFunction':
+                    self.fOut.write("%factory(OpenMM::TabulatedFunction& OpenMM::")
+                    self.fOut.write("%s::%s" % (shortClassName, methName))
+                    for name in sorted(tabulatedFunctionSubclassList):
+                        self.fOut.write(",\n         OpenMM::%s" % name)
+                    self.fOut.write(");\n\n")
+
         self.fOut.write("%factory(OpenMM::VirtualSite& OpenMM::System::getVirtualSite, OpenMM::TwoParticleAverageSite, OpenMM::ThreeParticleAverageSite, OpenMM::OutOfPlaneSite, OpenMM::LocalCoordinatesSite);\n\n")
         self.fOut.write("\n")
 

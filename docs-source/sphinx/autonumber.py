@@ -1,22 +1,22 @@
 from docutils.parsers.rst import roles
-from docutils.nodes import Text, reference, section
+from docutils.nodes import Text, reference, section, label
 from sphinx.roles import XRefRole
-    
-class autonumber(Text):
+
+class autonumber(label):
     pass
-    
+
 class autonumber_ref(reference):
     pass
 
 def autonumber_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
-    return ([autonumber(text)], [])
+    return ([autonumber(text=text)], [])
 
 def doctree_resolved(app, doctree, docname):
     index = {};
     refTable = {}
     if app.config.autonumber_by_chapter:
         # Record the number of each chapter
-        
+
         env = app.builder.env
         sectionNumbers = {}
         for doc in env.toc_secnumbers:
@@ -24,9 +24,9 @@ def doctree_resolved(app, doctree, docname):
             for sectionId in sections:
                 sectionNumbers[sectionId[1:]] = sections[sectionId]
         lastChapter = -1
-    
+
     # Assign numbers to all the autonumbered objects.
-    
+
     for node in doctree.traverse(autonumber):
         category = node.astext().split(',')[0]
         if category in index:
@@ -47,13 +47,13 @@ def doctree_resolved(app, doctree, docname):
             newNode = Text('%s %d-%d' % (category, chapter, nextNumber))
             lastChapter = chapter
         else:
-            newNode = Text('%s %d' % (category, nextNumber))            
+            newNode = Text('%s %d' % (category, nextNumber))
         index[category] = nextNumber
         refTable[node.astext()] = newNode
         node.parent.replace(node, newNode)
-    
+
     # Replace references with the name of the referenced object
-    
+
     for ref_info in doctree.traverse(autonumber_ref):
         target = ref_info['reftarget']
         if target not in refTable:
@@ -67,5 +67,4 @@ def setup(app):
     app.add_node(autonumber_ref)
     app.add_role('autonumref', XRefRole(nodeclass=autonumber_ref))
     app.connect('doctree-resolved', doctree_resolved)
-
 

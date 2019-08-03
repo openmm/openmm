@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2017 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -35,8 +35,8 @@
 #include "AlignedArray.h"
 #include "openmm/Vec3.h"
 #include "windowsExportCpu.h"
-#include "openmm/internal/gmx_atomic.h"
 #include "openmm/internal/ThreadPool.h"
+#include <atomic>
 #include <set>
 #include <utility>
 #include <vector>
@@ -75,7 +75,7 @@ private:
     int numAtoms;
     bool usePeriodic;
     float maxDistance;
-    gmx_atomic_t atomicCounter;
+    std::atomic<int> atomicCounter;
 };
 
 } // namespace OpenMM

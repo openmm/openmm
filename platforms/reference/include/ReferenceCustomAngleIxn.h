@@ -1,4 +1,4 @@
-/* Portions copyright (c) 2010-2016 Stanford University and Simbios.
+/* Portions copyright (c) 2010-2018 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -51,7 +51,7 @@ class ReferenceCustomAngleIxn : public ReferenceBondIxn {
          --------------------------------------------------------------------------------------- */
 
        ReferenceCustomAngleIxn(const Lepton::CompiledExpression& energyExpression, const Lepton::CompiledExpression& forceExpression,
-                              const std::vector<std::string>& parameterNames, std::map<std::string, double> globalParameters,
+                              const std::vector<std::string>& parameterNames,
                               const std::vector<Lepton::CompiledExpression> energyParamDerivExpressions);
 
       /**---------------------------------------------------------------------------------------
@@ -72,6 +72,14 @@ class ReferenceCustomAngleIxn : public ReferenceBondIxn {
       
       void setPeriodic(OpenMM::Vec3* vectors);
 
+       /**---------------------------------------------------------------------------------------
+      
+         Set the values of all global parameters.
+      
+         --------------------------------------------------------------------------------------- */
+      
+       void setGlobalParameters(std::map<std::string, double> parameters);
+
       /**---------------------------------------------------------------------------------------
 
          Calculate Custom Angle Ixn
@@ -84,8 +92,8 @@ class ReferenceCustomAngleIxn : public ReferenceBondIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateBondIxn(int* atomIndices, std::vector<OpenMM::Vec3>& atomCoordinates,
-                            double* parameters, std::vector<OpenMM::Vec3>& forces,
+      void calculateBondIxn(std::vector<int>& atomIndices, std::vector<OpenMM::Vec3>& atomCoordinates,
+                            std::vector<double>& parameters, std::vector<OpenMM::Vec3>& forces,
                             double* totalEnergy, double* energyParamDerivs);
 
 

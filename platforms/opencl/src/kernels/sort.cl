@@ -46,6 +46,32 @@ __kernel void sortShortList(__global DATA_TYPE* restrict data, uint length, __lo
 }
 
 /**
+ * An alternate kernel for sorting short lists.  In this version every thread does a full
+ * scan through the data to select the destination for one element.  This involves more
+ * work, but also parallelizes much better.
+ */
+__kernel void sortShortList2(__global const DATA_TYPE* restrict dataIn, __global DATA_TYPE* restrict dataOut, int length) {
+    __local DATA_TYPE dataBuffer[64];
+    DATA_TYPE value = dataIn[get_global_id(0) < length ? get_global_id(0) : 0];
+    KEY_TYPE key = getValue(value);
+    int count = 0;
+    for (int blockStart = 0; blockStart < length; blockStart += get_local_size(0)) {
+        int numInBlock = min((int) get_local_size(0), length-blockStart);
+        barrier(CLK_LOCAL_MEM_FENCE);
+        if (get_local_id(0) < numInBlock)
+            dataBuffer[get_local_id(0)] = dataIn[blockStart+get_local_id(0)];
+        barrier(CLK_LOCAL_MEM_FENCE);
+        for (int i = 0; i < numInBlock; i++) {
+            KEY_TYPE otherKey = getValue(dataBuffer[i]);
+            if (otherKey < key || (otherKey == key && blockStart+i < get_global_id(0)))
+                count++;
+        }
+    }
+    if (get_global_id(0) < length)
+        dataOut[count] = value;
+}
+
+/**
  * Calculate the minimum and maximum value in the array to be sorted.  This kernel
  * is executed as a single work group.
  */
@@ -121,6 +147,7 @@ __kernel void computeBucketPositions(uint numBuckets, __global uint* restrict bu
         // Load the bucket sizes into local memory.
 
         uint globalIndex = startBucket+get_local_id(0);
+        barrier(CLK_LOCAL_MEM_FENCE);
         buffer[get_local_id(0)] = (globalIndex < numBuckets ? bucketOffset[globalIndex] : 0);
         barrier(CLK_LOCAL_MEM_FENCE);
 

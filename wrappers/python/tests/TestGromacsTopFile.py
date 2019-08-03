@@ -63,6 +63,22 @@ class TestGromacsTopFile(unittest.TestCase):
         ene = context.getState(getEnergy=True).getPotentialEnergy()
         self.assertAlmostEqual(ene.value_in_unit(kilojoules_per_mole), -346.940915296)
 
+    def test_ionic(self):
+        """Test simulating an ionic liquid"""
+        gro = GromacsGroFile('systems/ionic.gro')
+        top = GromacsTopFile('systems/ionic.top', periodicBoxVectors=gro.getPeriodicBoxVectors())
+        system = top.createSystem(nonbondedMethod=PME, nonbondedCutoff=1.2)
+        for f in system.getForces():
+            if isinstance(f, CustomNonbondedForce):
+                f.setUseLongRangeCorrection(True)
+
+        context = Context(system, VerletIntegrator(1*femtosecond),
+                          Platform.getPlatformByName('Reference'))
+        context.setPositions(gro.positions)
+        energy = context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilojoules_per_mole)
+        self.assertAlmostEqual(energy, 3135.33, delta=energy*0.005)
+        self.assertEqual(1400, system.getNumConstraints())
+
     def test_Cutoff(self):
         """Test to make sure the nonbondedCutoff parameter is passed correctly."""
 
@@ -150,6 +166,24 @@ class TestGromacsTopFile(unittest.TestCase):
         totalMass1 = sum([system1.getParticleMass(i) for i in range(system1.getNumParticles())]).value_in_unit(amu)
         totalMass2 = sum([system2.getParticleMass(i) for i in range(system2.getNumParticles())]).value_in_unit(amu)
         self.assertAlmostEqual(totalMass1, totalMass2)
+
+    def test_VirtualParticle(self):
+        """Test virtual particle works correctly."""
+
+        top = GromacsTopFile('systems/bnz.top')
+        gro = GromacsGroFile('systems/bnz.gro')
+        system = top.createSystem()
+
+        self.assertEqual(26, system.getNumParticles())
+        self.assertEqual(1, len(top._moleculeTypes['BENX'].vsites2))
+
+        context = Context(system, VerletIntegrator(1*femtosecond),
+                          Platform.getPlatformByName('Reference'))
+        context.setPositions(gro.positions)
+        context.computeVirtualSites()
+        ene = context.getState(getEnergy=True).getPotentialEnergy()
+        # the energy output is from gromacs and it only prints out 6 sig digits.
+        self.assertAlmostEqual(ene.value_in_unit(kilojoules_per_mole), 1.88855e+02, places=3)
 
 if __name__ == '__main__':
     unittest.main()

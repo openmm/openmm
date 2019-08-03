@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2017 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -52,7 +52,7 @@ bool CpuCalcDispersionPmeReciprocalForceKernel::hasInitializedThreads = false;
 int CpuCalcDispersionPmeReciprocalForceKernel::numThreads = 0;
 
 static void spreadCharge(float* posq, float* grid, int gridx, int gridy, int gridz, int numParticles, Vec3* periodicBoxVectors, Vec3* recipBoxVectors,
-        gmx_atomic_t& atomicCounter, const float epsilonFactor, int threadIndex, int numThreads, bool deterministic) {
+        atomic<int>& atomicCounter, const float epsilonFactor, int threadIndex, int numThreads, bool deterministic) {
     float temp[4];
     fvec4 boxSize((float) periodicBoxVectors[0][0], (float) periodicBoxVectors[1][1], (float) periodicBoxVectors[2][2], 0);
     fvec4 invBoxSize((float) recipBoxVectors[0][0], (float) recipBoxVectors[1][1], (float) recipBoxVectors[2][2], 0);
@@ -69,7 +69,7 @@ static void spreadCharge(float* posq, float* grid, int gridx, int gridy, int gri
     int i = threadIndex;
     while (true) {
         if (!deterministic)
-            i = gmx_atomic_fetch_add(&atomicCounter, 1);
+            i = atomicCounter++;
         if (i >= numParticles)
             break;
 
@@ -310,7 +310,7 @@ static void reciprocalConvolution(int start, int end, fftwf_complex* grid, vecto
     }
 }
 
-static void interpolateForces(float* posq, float* force, float* grid, int gridx, int gridy, int gridz, int numParticles, Vec3* periodicBoxVectors, Vec3* recipBoxVectors, gmx_atomic_t& atomicCounter, const float epsilonFactor) {
+static void interpolateForces(float* posq, float* force, float* grid, int gridx, int gridy, int gridz, int numParticles, Vec3* periodicBoxVectors, Vec3* recipBoxVectors, atomic<int>& atomicCounter, const float epsilonFactor) {
     fvec4 boxSize((float) periodicBoxVectors[0][0], (float) periodicBoxVectors[1][1], (float) periodicBoxVectors[2][2], 0);
     fvec4 invBoxSize((float) recipBoxVectors[0][0], (float) recipBoxVectors[1][1], (float) recipBoxVectors[2][2], 0);
     fvec4 recipBoxVec0((float) recipBoxVectors[0][0], (float) recipBoxVectors[0][1], (float) recipBoxVectors[0][2], 0);
@@ -321,7 +321,7 @@ static void interpolateForces(float* posq, float* force, float* grid, int gridx,
     fvec4 one(1);
     fvec4 scale(1.0f/(PME_ORDER-1));
     while (true) {
-        int i = gmx_atomic_fetch_add(&atomicCounter, 1);
+        int i = atomicCounter++;
         if (i >= numParticles)
             break;
 
@@ -545,7 +545,7 @@ void CpuCalcPmeReciprocalForceKernel::runMainThread() {
         if (isDeleted)
             break;
         posq = io->getPosq();
-        gmx_atomic_set(&atomicCounter, 0);
+        atomicCounter = 0;
         threads.execute([&] (ThreadPool& threads, int threadIndex) { runWorkerThread(threads, threadIndex); }); // Signal threads to perform charge spreading.
         threads.waitForThreads();
         threads.resumeThreads(); // Signal threads to sum the charge grids.
@@ -564,7 +564,7 @@ void CpuCalcPmeReciprocalForceKernel::runMainThread() {
         threads.resumeThreads(); // Signal threads to perform reciprocal convolution.
         threads.waitForThreads();
         fftwf_execute_dft_c2r(backwardFFT, complexGrid, realGrid);
-        gmx_atomic_set(&atomicCounter, 0);
+        atomicCounter = 0;
         threads.resumeThreads(); // Signal threads to interpolate forces.
         threads.waitForThreads();
         isFinished = true;
@@ -837,7 +837,7 @@ void CpuCalcDispersionPmeReciprocalForceKernel::runMainThread() {
             break;
         posq = io->getPosq();
         ComputeTask task(*this);
-        gmx_atomic_set(&atomicCounter, 0);
+        atomicCounter = 0;
         threads.execute(task); // Signal threads to perform charge spreading.
         threads.waitForThreads();
         threads.resumeThreads(); // Signal threads to sum the charge grids.
@@ -856,7 +856,7 @@ void CpuCalcDispersionPmeReciprocalForceKernel::runMainThread() {
         threads.resumeThreads(); // Signal threads to perform reciprocal convolution.
         threads.waitForThreads();
         fftwf_execute_dft_c2r(backwardFFT, complexGrid, realGrid);
-        gmx_atomic_set(&atomicCounter, 0);
+        atomicCounter = 0;
         threads.resumeThreads(); // Signal threads to interpolate forces.
         threads.waitForThreads();
         isFinished = true;
@@ -903,7 +903,7 @@ void CpuCalcDispersionPmeReciprocalForceKernel::runWorkerThread(ThreadPool& thre
     interpolateForces(posq, &force[0], realGrid, gridx, gridy, gridz, numParticles, periodicBoxVectors, recipBoxVectors, atomicCounter, epsilonFactor);
 }
 
-void CpuCalcDispersionPmeReciprocalForceKernel::beginComputation(IO& io, const Vec3* periodicBoxVectors, bool includeEnergy) {
+void CpuCalcDispersionPmeReciprocalForceKernel::beginComputation(CalcPmeReciprocalForceKernel::IO& io, const Vec3* periodicBoxVectors, bool includeEnergy) {
     this->io = &io;
     this->periodicBoxVectors[0] = periodicBoxVectors[0];
     this->periodicBoxVectors[1] = periodicBoxVectors[1];
@@ -927,7 +927,7 @@ void CpuCalcDispersionPmeReciprocalForceKernel::beginComputation(IO& io, const V
     pthread_mutex_unlock(&lock);
 }
 
-double CpuCalcDispersionPmeReciprocalForceKernel::finishComputation(IO& io) {
+double CpuCalcDispersionPmeReciprocalForceKernel::finishComputation(CalcPmeReciprocalForceKernel::IO& io) {
     pthread_mutex_lock(&lock);
     while (!isFinished) {
         pthread_cond_wait(&endCondition, &lock);

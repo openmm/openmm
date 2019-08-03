@@ -29,16 +29,11 @@
 
 using namespace OpenMM;
 
-OpenCLCompact::OpenCLCompact(OpenCLContext& context) : context(context), dgBlockCounts(NULL) {
-    dgBlockCounts = OpenCLArray::create<cl_uint>(context, context.getNumThreadBlocks(), "dgBlockCounts");
+OpenCLCompact::OpenCLCompact(OpenCLContext& context) : context(context) {
+    dgBlockCounts.initialize<cl_uint>(context, context.getNumThreadBlocks(), "dgBlockCounts");
     cl::Program program = context.createProgram(OpenCLKernelSources::compact);
     countKernel = cl::Kernel(program, "countElts");
     moveValidKernel = cl::Kernel(program, "moveValidElementsStaged");
-}
-
-OpenCLCompact::~OpenCLCompact() {
-    if (dgBlockCounts != NULL)
-        delete dgBlockCounts;
 }
 
 void OpenCLCompact::compactStream(OpenCLArray& dOut, OpenCLArray& dIn, OpenCLArray& dValid, OpenCLArray& numValid) {
@@ -51,7 +46,7 @@ void OpenCLCompact::compactStream(OpenCLArray& dOut, OpenCLArray& dIn, OpenCLArr
 
     // TODO: implement loop over blocks of 10M
     // Phase 1: Calculate number of valid elements per thread block
-    countKernel.setArg<cl::Buffer>(0, dgBlockCounts->getDeviceBuffer());
+    countKernel.setArg<cl::Buffer>(0, dgBlockCounts.getDeviceBuffer());
     countKernel.setArg<cl::Buffer>(1, dValid.getDeviceBuffer());
     countKernel.setArg<cl_uint>(2, len);
     countKernel.setArg(3, 128*sizeof(cl_uint), NULL);
@@ -61,7 +56,7 @@ void OpenCLCompact::compactStream(OpenCLArray& dOut, OpenCLArray& dIn, OpenCLArr
     moveValidKernel.setArg<cl::Buffer>(0, dIn.getDeviceBuffer());
     moveValidKernel.setArg<cl::Buffer>(1, dOut.getDeviceBuffer());
     moveValidKernel.setArg<cl::Buffer>(2, dValid.getDeviceBuffer());
-    moveValidKernel.setArg<cl::Buffer>(3, dgBlockCounts->getDeviceBuffer());
+    moveValidKernel.setArg<cl::Buffer>(3, dgBlockCounts.getDeviceBuffer());
     moveValidKernel.setArg<cl_uint>(4, len);
     moveValidKernel.setArg<cl::Buffer>(5, numValid.getDeviceBuffer());
     moveValidKernel.setArg(6, 128*sizeof(cl_uint), NULL);

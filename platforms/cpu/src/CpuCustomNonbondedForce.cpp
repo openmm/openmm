@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2017 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2018 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -28,7 +28,6 @@
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceForce.h"
 #include "CpuCustomNonbondedForce.h"
-#include "openmm/internal/gmx_atomic.h"
 
 using namespace OpenMM;
 using namespace std;
@@ -120,23 +119,21 @@ void CpuCustomNonbondedForce::setPeriodic(Vec3* periodicBoxVectors) {
 }
 
 
-void CpuCustomNonbondedForce::calculatePairIxn(int numberOfAtoms, float* posq, vector<Vec3>& atomCoordinates, double** atomParameters,
-                                               double* fixedParameters, const map<string, double>& globalParameters,
-                                               vector<AlignedArray<float> >& threadForce, bool includeForce, bool includeEnergy, double& totalEnergy, double* energyParamDerivs) {
+void CpuCustomNonbondedForce::calculatePairIxn(int numberOfAtoms, float* posq, vector<Vec3>& atomCoordinates, vector<vector<double> >& atomParameters,
+                                               const map<string, double>& globalParameters, vector<AlignedArray<float> >& threadForce,
+                                               bool includeForce, bool includeEnergy, double& totalEnergy, double* energyParamDerivs) {
     // Record the parameters for the threads.
     
     this->numberOfAtoms = numberOfAtoms;
     this->posq = posq;
     this->atomCoordinates = &atomCoordinates[0];
-    this->atomParameters = atomParameters;
+    this->atomParameters = &atomParameters[0];
     this->globalParameters = &globalParameters;
     this->threadForce = &threadForce;
     this->includeForce = includeForce;
     this->includeEnergy = includeEnergy;
     threadEnergy.resize(threads.getNumThreads());
-    gmx_atomic_t counter;
-    gmx_atomic_set(&counter, 0);
-    this->atomicCounter = &counter;
+    atomicCounter = 0;
     
     // Signal the threads to start running and wait for them to finish.
     
@@ -176,10 +173,9 @@ void CpuCustomNonbondedForce::threadComputeForce(ThreadPool& threads, int thread
     if (useInteractionGroups) {
         // The user has specified interaction groups, so compute only the requested interactions.
         
-        while (true) {
-            int i = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
-            if (i >= groupInteractions.size())
-                break;
+        int start = threadIndex*groupInteractions.size()/numThreads;
+        int end = (threadIndex+1)*groupInteractions.size()/numThreads;
+        for (int i = start; i < end; i++) {
             int atom1 = groupInteractions[i].first;
             int atom2 = groupInteractions[i].second;
             for (int j = 0; j < (int) paramNames.size(); j++) {
@@ -193,7 +189,7 @@ void CpuCustomNonbondedForce::threadComputeForce(ThreadPool& threads, int thread
         // We are using a cutoff, so get the interactions from the neighbor list.
 
         while (true) {
-            int blockIndex = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            int blockIndex = atomicCounter++;
             if (blockIndex >= neighborList->getNumBlocks())
                 break;
             const int blockSize = neighborList->getBlockSize();
@@ -219,7 +215,7 @@ void CpuCustomNonbondedForce::threadComputeForce(ThreadPool& threads, int thread
         // Every particle interacts with every other one.
         
         while (true) {
-            int ii = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            int ii = atomicCounter++;
             if (ii >= numberOfAtoms)
                 break;
             for (int jj = ii+1; jj < numberOfAtoms; jj++) {
@@ -252,7 +248,9 @@ void CpuCustomNonbondedForce::calculateOneIxn(int ii, int jj, ThreadData& data,
     // accumulate forces
 
     double dEdR = (includeForce ? data.forceExpression.evaluate()/r : 0.0);
-    double energy = (includeEnergy ? data.energyExpression.evaluate() : 0.0);
+    double energy = 0.0;
+    if (includeEnergy || (useSwitch && r > switchingDistance))
+        energy = data.energyExpression.evaluate();
     double switchValue = 1.0;
     if (useSwitch) {
         if (r > switchingDistance) {

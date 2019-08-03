@@ -152,7 +152,7 @@ class ReferenceCustomHbondIxn : public ReferenceBondIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculatePairIxn(std::vector<OpenMM::Vec3>& atomCoordinates, double** donorParameters, double** acceptorParameters,
+      void calculatePairIxn(std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<std::vector<double> >& donorParameters, std::vector<std::vector<double> >& acceptorParameters,
                             std::vector<std::set<int> >& exclusions, const std::map<std::string, double>& globalParameters,
                             std::vector<OpenMM::Vec3>& forces, double* totalEnergy) const;
 

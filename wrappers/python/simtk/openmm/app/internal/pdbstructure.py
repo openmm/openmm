@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2015 Stanford University and the Authors.
+Portions copyright (c) 2012-2018 Stanford University and the Authors.
 Authors: Christopher M. Bruns
 Contributors: Peter Eastman
 
@@ -158,36 +158,11 @@ class PdbStructure(object):
         for pdb_line in input_stream:
             if not isinstance(pdb_line, str):
                 pdb_line = pdb_line.decode('utf-8')
+            command = pdb_line[:6]
             # Look for atoms
-            if (pdb_line.find("ATOM  ") == 0) or (pdb_line.find("HETATM") == 0):
+            if command == "ATOM  " or command == "HETATM":
                 self._add_atom(Atom(pdb_line, self, self.extraParticleIdentifier))
-            # Notice MODEL punctuation, for the next level of detail
-            # in the structure->model->chain->residue->atom->position hierarchy
-            elif (pdb_line.find("MODEL") == 0):
-                model_number = int(pdb_line[10:14])
-                self._add_model(Model(model_number))
-                self._reset_atom_numbers()
-                self._reset_residue_numbers()
-            elif (pdb_line.find("ENDMDL") == 0):
-                self._current_model._finalize()
-                if not self.load_all_models:
-                    break
-            elif (pdb_line.find("END") == 0):
-                self._current_model._finalize()
-                if not self.load_all_models:
-                    break
-            elif (pdb_line.find("TER") == 0 and pdb_line.split()[0] == "TER"):
-                self._current_model._current_chain._add_ter_record()
-                self._reset_residue_numbers()
-            elif (pdb_line.find("CRYST1") == 0):
-                a_length = float(pdb_line[6:15])*0.1
-                b_length = float(pdb_line[15:24])*0.1
-                c_length = float(pdb_line[24:33])*0.1
-                alpha = float(pdb_line[33:40])*math.pi/180.0
-                beta = float(pdb_line[40:47])*math.pi/180.0
-                gamma = float(pdb_line[47:54])*math.pi/180.0
-                self._periodic_box_vectors = computePeriodicBoxVectors(a_length, b_length, c_length, alpha, beta, gamma)
-            elif (pdb_line.find("CONECT") == 0):
+            elif command == "CONECT":
                 atoms = [int(pdb_line[6:11])]
                 for pos in (11,16,21,26):
                     try:
@@ -195,12 +170,38 @@ class PdbStructure(object):
                     except:
                         pass
                 self._current_model.connects.append(atoms)
-            elif (pdb_line.find("SEQRES") == 0):
+            # Notice MODEL punctuation, for the next level of detail
+            # in the structure->model->chain->residue->atom->position hierarchy
+            elif pdb_line[:5] == "MODEL":
+                model_number = int(pdb_line[10:14])
+                self._add_model(Model(model_number))
+                self._reset_atom_numbers()
+                self._reset_residue_numbers()
+            elif command == "ENDMDL":
+                self._current_model._finalize()
+                if not self.load_all_models:
+                    break
+            elif pdb_line[:3] == "END":
+                self._current_model._finalize()
+                if not self.load_all_models:
+                    break
+            elif pdb_line[:3] == "TER" and pdb_line.split()[0] == "TER":
+                self._current_model._current_chain._add_ter_record()
+                self._reset_residue_numbers()
+            elif command == "CRYST1":
+                a_length = float(pdb_line[6:15])*0.1
+                b_length = float(pdb_line[15:24])*0.1
+                c_length = float(pdb_line[24:33])*0.1
+                alpha = float(pdb_line[33:40])*math.pi/180.0
+                beta = float(pdb_line[40:47])*math.pi/180.0
+                gamma = float(pdb_line[47:54])*math.pi/180.0
+                self._periodic_box_vectors = computePeriodicBoxVectors(a_length, b_length, c_length, alpha, beta, gamma)
+            elif command == "SEQRES":
                 chain_id = pdb_line[11]
                 if len(self.sequences) == 0 or chain_id != self.sequences[-1].chain_id:
                     self.sequences.append(Sequence(chain_id))
                 self.sequences[-1].residues.extend(pdb_line[19:].split())
-            elif (pdb_line.find("MODRES") == 0):
+            elif command == "MODRES":
                 self.modified_residues.append(ModifiedResidue(pdb_line[16], int(pdb_line[18:22]), pdb_line[12:15].strip(), pdb_line[24:27].strip()))
         self._finalize()
 
@@ -785,11 +786,11 @@ class Atom(object):
         except:
             occupancy = 1.0
         try:
-            temperature_factor = float(pdb_line[60:66]) * unit.angstroms * unit.angstroms
+            temperature_factor = unit.Quantity(float(pdb_line[60:66]), unit.angstroms**2)
         except:
-            temperature_factor = 0.0 * unit.angstroms * unit.angstroms
+            temperature_factor = unit.Quantity(0.0, unit.angstroms**2)
         self.locations = {}
-        loc = Atom.Location(alternate_location_indicator, Vec3(x,y,z) * unit.angstroms, occupancy, temperature_factor, self.residue_name_with_spaces)
+        loc = Atom.Location(alternate_location_indicator, unit.Quantity(Vec3(x,y,z), unit.angstroms), occupancy, temperature_factor, self.residue_name_with_spaces)
         self.locations[alternate_location_indicator] = loc
         self.default_location_id = alternate_location_indicator
         # segment id, element_symbol, and formal_charge are not always present

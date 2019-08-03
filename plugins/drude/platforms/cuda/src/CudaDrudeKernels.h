@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -45,9 +45,8 @@ namespace OpenMM {
 class CudaCalcDrudeForceKernel : public CalcDrudeForceKernel {
 public:
     CudaCalcDrudeForceKernel(std::string name, const Platform& platform, CudaContext& cu) :
-            CalcDrudeForceKernel(name, platform), cu(cu), particleParams(NULL), pairParams(NULL) {
+            CalcDrudeForceKernel(name, platform), cu(cu) {
     }
-    ~CudaCalcDrudeForceKernel();
     /**
      * Initialize the kernel.
      * 
@@ -73,8 +72,8 @@ public:
     void copyParametersToContext(ContextImpl& context, const DrudeForce& force);
 private:
     CudaContext& cu;
-    CudaArray* particleParams;
-    CudaArray* pairParams;
+    CudaArray particleParams;
+    CudaArray pairParams;
 };
 
 /**
@@ -83,9 +82,8 @@ private:
 class CudaIntegrateDrudeLangevinStepKernel : public IntegrateDrudeLangevinStepKernel {
 public:
     CudaIntegrateDrudeLangevinStepKernel(std::string name, const Platform& platform, CudaContext& cu) :
-            IntegrateDrudeLangevinStepKernel(name, platform), cu(cu), normalParticles(NULL), pairParticles(NULL) {
+            IntegrateDrudeLangevinStepKernel(name, platform), cu(cu) {
     }
-    ~CudaIntegrateDrudeLangevinStepKernel();
     /**
      * Initialize the kernel.
      *
@@ -111,8 +109,8 @@ public:
 private:
     CudaContext& cu;
     double prevStepSize;
-    CudaArray* normalParticles;
-    CudaArray* pairParticles;
+    CudaArray normalParticles;
+    CudaArray pairParticles;
     CUfunction kernel1, kernel2, hardwallKernel;
 };
 

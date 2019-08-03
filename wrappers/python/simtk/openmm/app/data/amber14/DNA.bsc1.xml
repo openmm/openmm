@@ -1,0 +1,1548 @@
+<ForceField>
+  <Info>
+    <DateGenerated>2017-11-25</DateGenerated>
+    <Source Source="leaprc.DNA.bsc1" md5hash="8c9b56948dc597f8d8930bb798c3e090" sourcePackage="AmberTools" sourcePackageVersion="17">leaprc.DNA.bsc1</Source>
+    <Reference>Ivani, I.; Dans, P.D.; Noy, A.; Perez, A.; Faustino, I.; Hopsital, A.; Walther, J.; Andrio, P.; Goni, R.; Balaceanu, A.; Portella, G.; Battistini, F.; GelpA, J.L.; Gonzalez, C.; Vendruscolo, M.; Laughton, C.A.; Harris, S.; Case, D.A.; Orozco, M. Parmbsc1: A refined force field for DNA simulations. Nature Meth., 2016, 13, 55-58.</Reference>
+  </Info>
+  <AtomTypes>
+    <Type class="C" element="C" mass="12.01" name="DNA-C"/>
+    <Type class="CA" element="C" mass="12.01" name="DNA-CA"/>
+    <Type class="CB" element="C" mass="12.01" name="DNA-CB"/>
+    <Type class="CI" element="C" mass="12.01" name="DNA-CI"/>
+    <Type class="CK" element="C" mass="12.01" name="DNA-CK"/>
+    <Type class="CM" element="C" mass="12.01" name="DNA-CM"/>
+    <Type class="CQ" element="C" mass="12.01" name="DNA-CQ"/>
+    <Type class="CT" element="C" mass="12.01" name="DNA-CT"/>
+    <Type class="H" element="H" mass="1.008" name="DNA-H"/>
+    <Type class="HC" element="H" mass="1.008" name="DNA-HC"/>
+    <Type class="H1" element="H" mass="1.008" name="DNA-H1"/>
+    <Type class="H2" element="H" mass="1.008" name="DNA-H2"/>
+    <Type class="HA" element="H" mass="1.008" name="DNA-HA"/>
+    <Type class="H4" element="H" mass="1.008" name="DNA-H4"/>
+    <Type class="H5" element="H" mass="1.008" name="DNA-H5"/>
+    <Type class="HO" element="H" mass="1.008" name="DNA-HO"/>
+    <Type class="NA" element="N" mass="14.01" name="DNA-NA"/>
+    <Type class="NB" element="N" mass="14.01" name="DNA-NB"/>
+    <Type class="NC" element="N" mass="14.01" name="DNA-NC"/>
+    <Type class="N2" element="N" mass="14.01" name="DNA-N2"/>
+    <Type class="N*" element="N" mass="14.01" name="DNA-N*"/>
+    <Type class="O" element="O" mass="16.0" name="DNA-O"/>
+    <Type class="O2" element="O" mass="16.0" name="DNA-O2"/>
+    <Type class="OH" element="O" mass="16.0" name="DNA-OH"/>
+    <Type class="OS" element="O" mass="16.0" name="DNA-OS"/>
+    <Type class="P" element="P" mass="30.97" name="DNA-P"/>
+    <Type class="CE" element="C" mass="12.001" name="DNA-CE"/>
+    <Type class="C1" element="C" mass="12.01" name="DNA-C1"/>
+    <Type class="C2" element="C" mass="12.01" name="DNA-C2"/>
+  </AtomTypes>
+  <Residues>
+    <Residue name="DA">
+      <Atom charge="1.1659" name="P" type="DNA-P"/>
+      <Atom charge="-0.7761" name="OP1" type="DNA-O2"/>
+      <Atom charge="-0.7761" name="OP2" type="DNA-O2"/>
+      <Atom charge="-0.4954" name="O5'" type="DNA-OS"/>
+      <Atom charge="-0.0069" name="C5'" type="DNA-CI"/>
+      <Atom charge="0.0754" name="H5'" type="DNA-H1"/>
+      <Atom charge="0.0754" name="H5''" type="DNA-H1"/>
+      <Atom charge="0.1629" name="C4'" type="DNA-CT"/>
+      <Atom charge="0.1176" name="H4'" type="DNA-H1"/>
+      <Atom charge="-0.3691" name="O4'" type="DNA-OS"/>
+      <Atom charge="0.0431" name="C1'" type="DNA-CT"/>
+      <Atom charge="0.1838" name="H1'" type="DNA-H2"/>
+      <Atom charge="-0.0268" name="N9" type="DNA-N*"/>
+      <Atom charge="0.1607" name="C8" type="DNA-C1"/>
+      <Atom charge="0.1877" name="H8" type="DNA-H5"/>
+      <Atom charge="-0.6175" name="N7" type="DNA-NB"/>
+      <Atom charge="0.0725" name="C5" type="DNA-CB"/>
+      <Atom charge="0.6897" name="C6" type="DNA-CA"/>
+      <Atom charge="-0.9123" name="N6" type="DNA-N2"/>
+      <Atom charge="0.4167" name="H61" type="DNA-H"/>
+      <Atom charge="0.4167" name="H62" type="DNA-H"/>
+      <Atom charge="-0.7624" name="N1" type="DNA-NC"/>
+      <Atom charge="0.5716" name="C2" type="DNA-CQ"/>
+      <Atom charge="0.0598" name="H2" type="DNA-H5"/>
+      <Atom charge="-0.7417" name="N3" type="DNA-NC"/>
+      <Atom charge="0.38" name="C4" type="DNA-CB"/>
+      <Atom charge="0.0713" name="C3'" type="DNA-CE"/>
+      <Atom charge="0.0985" name="H3'" type="DNA-H1"/>
+      <Atom charge="-0.0854" name="C2'" type="DNA-CT"/>
+      <Atom charge="0.0718" name="H2'" type="DNA-HC"/>
+      <Atom charge="0.0718" name="H2''" type="DNA-HC"/>
+      <Atom charge="-0.5232" name="O3'" type="DNA-OS"/>
+      <Bond atomName1="P" atomName2="OP1"/>
+      <Bond atomName1="P" atomName2="OP2"/>
+      <Bond atomName1="P" atomName2="O5'"/>
+      <Bond atomName1="O5'" atomName2="C5'"/>
+      <Bond atomName1="C5'" atomName2="H5'"/>
+      <Bond atomName1="C5'" atomName2="H5''"/>
+      <Bond atomName1="C5'" atomName2="C4'"/>
+      <Bond atomName1="C4'" atomName2="H4'"/>
+      <Bond atomName1="C4'" atomName2="O4'"/>
+      <Bond atomName1="C4'" atomName2="C3'"/>
+      <Bond atomName1="O4'" atomName2="C1'"/>
+      <Bond atomName1="C1'" atomName2="H1'"/>
+      <Bond atomName1="C1'" atomName2="N9"/>
+      <Bond atomName1="C1'" atomName2="C2'"/>
+      <Bond atomName1="N9" atomName2="C8"/>
+      <Bond atomName1="N9" atomName2="C4"/>
+      <Bond atomName1="C8" atomName2="H8"/>
+      <Bond atomName1="C8" atomName2="N7"/>
+      <Bond atomName1="N7" atomName2="C5"/>
+      <Bond atomName1="C5" atomName2="C6"/>
+      <Bond atomName1="C5" atomName2="C4"/>
+      <Bond atomName1="C6" atomName2="N6"/>
+      <Bond atomName1="C6" atomName2="N1"/>
+      <Bond atomName1="N6" atomName2="H61"/>
+      <Bond atomName1="N6" atomName2="H62"/>
+      <Bond atomName1="N1" atomName2="C2"/>
+      <Bond atomName1="C2" atomName2="H2"/>
+      <Bond atomName1="C2" atomName2="N3"/>
+      <Bond atomName1="N3" atomName2="C4"/>
+      <Bond atomName1="C3'" atomName2="H3'"/>
+      <Bond atomName1="C3'" atomName2="C2'"/>
+      <Bond atomName1="C3'" atomName2="O3'"/>
+      <Bond atomName1="C2'" atomName2="H2'"/>
+      <Bond atomName1="C2'" atomName2="H2''"/>
+      <ExternalBond atomName="P"/>
+      <ExternalBond atomName="O3'"/>
+    </Residue>
+    <Residue name="DA3">
+      <Atom charge="1.1659" name="P" type="DNA-P"/>
+      <Atom charge="-0.7761" name="OP1" type="DNA-O2"/>
+      <Atom charge="-0.7761" name="OP2" type="DNA-O2"/>
+      <Atom charge="-0.4954" name="O5'" type="DNA-OS"/>
+      <Atom charge="-0.0069" name="C5'" type="DNA-CI"/>
+      <Atom charge="0.0754" name="H5'" type="DNA-H1"/>
+      <Atom charge="0.0754" name="H5''" type="DNA-H1"/>
+      <Atom charge="0.1629" name="C4'" type="DNA-CT"/>
+      <Atom charge="0.1176" name="H4'" type="DNA-H1"/>
+      <Atom charge="-0.3691" name="O4'" type="DNA-OS"/>
+      <Atom charge="0.0431" name="C1'" type="DNA-CT"/>
+      <Atom charge="0.1838" name="H1'" type="DNA-H2"/>
+      <Atom charge="-0.0268" name="N9" type="DNA-N*"/>
+      <Atom charge="0.1607" name="C8" type="DNA-C1"/>
+      <Atom charge="0.1877" name="H8" type="DNA-H5"/>
+      <Atom charge="-0.6175" name="N7" type="DNA-NB"/>
+      <Atom charge="0.0725" name="C5" type="DNA-CB"/>
+      <Atom charge="0.6897" name="C6" type="DNA-CA"/>
+      <Atom charge="-0.9123" name="N6" type="DNA-N2"/>
+      <Atom charge="0.4167" name="H61" type="DNA-H"/>
+      <Atom charge="0.4167" name="H62" type="DNA-H"/>
+      <Atom charge="-0.7624" name="N1" type="DNA-NC"/>
+      <Atom charge="0.5716" name="C2" type="DNA-CQ"/>
+      <Atom charge="0.0598" name="H2" type="DNA-H5"/>
+      <Atom charge="-0.7417" name="N3" type="DNA-NC"/>
+      <Atom charge="0.38" name="C4" type="DNA-CB"/>
+      <Atom charge="0.0713" name="C3'" type="DNA-CE"/>
+      <Atom charge="0.0985" name="H3'" type="DNA-H1"/>
+      <Atom charge="-0.0854" name="C2'" type="DNA-CT"/>
+      <Atom charge="0.0718" name="H2'" type="DNA-HC"/>
+      <Atom charge="0.0718" name="H2''" type="DNA-HC"/>
+      <Atom charge="-0.6549" name="O3'" type="DNA-OH"/>
+      <Atom charge="0.4396" name="HO3'" type="DNA-HO"/>
+      <Bond atomName1="P" atomName2="OP1"/>
+      <Bond atomName1="P" atomName2="OP2"/>
+      <Bond atomName1="P" atomName2="O5'"/>
+      <Bond atomName1="O5'" atomName2="C5'"/>
+      <Bond atomName1="C5'" atomName2="H5'"/>
+      <Bond atomName1="C5'" atomName2="H5''"/>
+      <Bond atomName1="C5'" atomName2="C4'"/>
+      <Bond atomName1="C4'" atomName2="H4'"/>
+      <Bond atomName1="C4'" atomName2="O4'"/>
+      <Bond atomName1="C4'" atomName2="C3'"/>
+      <Bond atomName1="O4'" atomName2="C1'"/>
+      <Bond atomName1="C1'" atomName2="H1'"/>
+      <Bond atomName1="C1'" atomName2="N9"/>
+      <Bond atomName1="C1'" atomName2="C2'"/>
+      <Bond atomName1="N9" atomName2="C8"/>
+      <Bond atomName1="N9" atomName2="C4"/>
+      <Bond atomName1="C8" atomName2="H8"/>
+      <Bond atomName1="C8" atomName2="N7"/>
+      <Bond atomName1="N7" atomName2="C5"/>
+      <Bond atomName1="C5" atomName2="C6"/>
+      <Bond atomName1="C5" atomName2="C4"/>
+      <Bond atomName1="C6" atomName2="N6"/>
+      <Bond atomName1="C6" atomName2="N1"/>
+      <Bond atomName1="N6" atomName2="H61"/>
+      <Bond atomName1="N6" atomName2="H62"/>
+      <Bond atomName1="N1" atomName2="C2"/>
+      <Bond atomName1="C2" atomName2="H2"/>
+      <Bond atomName1="C2" atomName2="N3"/>
+      <Bond atomName1="N3" atomName2="C4"/>
+      <Bond atomName1="C3'" atomName2="H3'"/>
+      <Bond atomName1="C3'" atomName2="C2'"/>
+      <Bond atomName1="C3'" atomName2="O3'"/>
+      <Bond atomName1="C2'" atomName2="H2'"/>
+      <Bond atomName1="C2'" atomName2="H2''"/>
+      <Bond atomName1="O3'" atomName2="HO3'"/>
+      <ExternalBond atomName="P"/>
+    </Residue>
+    <Residue name="DA5">
+      <Atom charge="0.4422" name="HO5'" type="DNA-HO"/>
+      <Atom charge="-0.6318" name="O5'" type="DNA-OH"/>
+      <Atom charge="-0.0069" name="C5'" type="DNA-CI"/>
+      <Atom charge="0.0754" name="H5'" type="DNA-H1"/>
+      <Atom charge="0.0754" name="H5''" type="DNA-H1"/>
+      <Atom charge="0.1629" name="C4'" type="DNA-CT"/>
+      <Atom charge="0.1176" name="H4'" type="DNA-H1"/>
+      <Atom charge="-0.3691" name="O4'" type="DNA-OS"/>
+      <Atom charge="0.0431" name="C1'" type="DNA-CT"/>
+      <Atom charge="0.1838" name="H1'" type="DNA-H2"/>
+      <Atom charge="-0.0268" name="N9" type="DNA-N*"/>
+      <Atom charge="0.1607" name="C8" type="DNA-C1"/>
+      <Atom charge="0.1877" name="H8" type="DNA-H5"/>
+      <Atom charge="-0.6175" name="N7" type="DNA-NB"/>
+      <Atom charge="0.0725" name="C5" type="DNA-CB"/>
+      <Atom charge="0.6897" name="C6" type="DNA-CA"/>
+      <Atom charge="-0.9123" name="N6" type="DNA-N2"/>
+      <Atom charge="0.4167" name="H61" type="DNA-H"/>
+      <Atom charge="0.4167" name="H62" type="DNA-H"/>
+      <Atom charge="-0.7624" name="N1" type="DNA-NC"/>
+      <Atom charge="0.5716" name="C2" type="DNA-CQ"/>
+      <Atom charge="0.0598" name="H2" type="DNA-H5"/>
+      <Atom charge="-0.7417" name="N3" type="DNA-NC"/>
+      <Atom charge="0.38" name="C4" type="DNA-CB"/>
+      <Atom charge="0.0713" name="C3'" type="DNA-CE"/>
+      <Atom charge="0.0985" name="H3'" type="DNA-H1"/>
+      <Atom charge="-0.0854" name="C2'" type="DNA-CT"/>
+      <Atom charge="0.0718" name="H2'" type="DNA-HC"/>
+      <Atom charge="0.0718" name="H2''" type="DNA-HC"/>
+      <Atom charge="-0.5232" name="O3'" type="DNA-OS"/>
+      <Bond atomName1="HO5'" atomName2="O5'"/>
+      <Bond atomName1="O5'" atomName2="C5'"/>
+      <Bond atomName1="C5'" atomName2="H5'"/>
+      <Bond atomName1="C5'" atomName2="H5''"/>
+      <Bond atomName1="C5'" atomName2="C4'"/>
+      <Bond atomName1="C4'" atomName2="H4'"/>
+      <Bond atomName1="C4'" atomName2="O4'"/>
+      <Bond atomName1="C4'" atomName2="C3'"/>
+      <Bond atomName1="O4'" atomName2="C1'"/>
+      <Bond atomName1="C1'" atomName2="H1'"/>
+      <Bond atomName1="C1'" atomName2="N9"/>
+      <Bond atomName1="C1'" atomName2="C2'"/>
+      <Bond atomName1="N9" atomName2="C8"/>
+      <Bond atomName1="N9" atomName2="C4"/>
+      <Bond atomName1="C8" atomName2="H8"/>
+      <Bond atomName1="C8" atomName2="N7"/>
+      <Bond atomName1="N7" atomName2="C5"/>
+      <Bond atomName1="C5" atomName2="C6"/>
+      <Bond atomName1="C5" atomName2="C4"/>
+      <Bond atomName1="C6" atomName2="N6"/>
+      <Bond atomName1="C6" atomName2="N1"/>
+      <Bond atomName1="N6" atomName2="H61"/>
+      <Bond atomName1="N6" atomName2="H62"/>
+      <Bond atomName1="N1" atomName2="C2"/>
+      <Bond atomName1="C2" atomName2="H2"/>
+      <Bond atomName1="C2" atomName2="N3"/>
+      <Bond atomName1="N3" atomName2="C4"/>
+      <Bond atomName1="C3'" atomName2="H3'"/>
+      <Bond atomName1="C3'" atomName2="C2'"/>
+      <Bond atomName1="C3'" atomName2="O3'"/>
+      <Bond atomName1="C2'" atomName2="H2'"/>
+      <Bond atomName1="C2'" atomName2="H2''"/>
+      <ExternalBond atomName="O3'"/>
+    </Residue>
+    <Residue name="DAN">
+      <Atom charge="0.4422" name="HO5'" type="DNA-HO"/>
+      <Atom charge="-0.6318" name="O5'" type="DNA-OH"/>
+      <Atom charge="-0.0069" name="C5'" type="DNA-CI"/>
+      <Atom charge="0.0754" name="H5'" type="DNA-H1"/>
+      <Atom charge="0.0754" name="H5''" type="DNA-H1"/>
+      <Atom charge="0.1629" name="C4'" type="DNA-CT"/>
+      <Atom charge="0.1176" name="H4'" type="DNA-H1"/>
+      <Atom charge="-0.3691" name="O4'" type="DNA-OS"/>
+      <Atom charge="0.0431" name="C1'" type="DNA-CT"/>
+      <Atom charge="0.1838" name="H1'" type="DNA-H2"/>
+      <Atom charge="-0.0268" name="N9" type="DNA-N*"/>
+      <Atom charge="0.1607" name="C8" type="DNA-C1"/>
+      <Atom charge="0.1877" name="H8" type="DNA-H5"/>
+      <Atom charge="-0.6175" name="N7" type="DNA-NB"/>
+      <Atom charge="0.0725" name="C5" type="DNA-CB"/>
+      <Atom charge="0.6897" name="C6" type="DNA-CA"/>
+      <Atom charge="-0.9123" name="N6" type="DNA-N2"/>
+      <Atom charge="0.4167" name="H61" type="DNA-H"/>
+      <Atom charge="0.4167" name="H62" type="DNA-H"/>
+      <Atom charge="-0.7624" name="N1" type="DNA-NC"/>
+      <Atom charge="0.5716" name="C2" type="DNA-CQ"/>
+      <Atom charge="0.0598" name="H2" type="DNA-H5"/>
+      <Atom charge="-0.7417" name="N3" type="DNA-NC"/>
+      <Atom charge="0.38" name="C4" type="DNA-CB"/>
+      <Atom charge="0.0713" name="C3'" type="DNA-CE"/>
+      <Atom charge="0.0985" name="H3'" type="DNA-H1"/>
+      <Atom charge="-0.0854" name="C2'" type="DNA-CT"/>
+      <Atom charge="0.0718" name="H2'" type="DNA-HC"/>
+      <Atom charge="0.0718" name="H2''" type="DNA-HC"/>
+      <Atom charge="-0.6549" name="O3'" type="DNA-OH"/>
+      <Atom charge="0.4396" name="HO3'" type="DNA-HO"/>
+      <Bond atomName1="HO5'" atomName2="O5'"/>
+      <Bond atomName1="O5'" atomName2="C5'"/>
+      <Bond atomName1="C5'" atomName2="H5'"/>
+      <Bond atomName1="C5'" atomName2="H5''"/>
+      <Bond atomName1="C5'" atomName2="C4'"/>
+      <Bond atomName1="C4'" atomName2="H4'"/>
+      <Bond atomName1="C4'" atomName2="O4'"/>
+      <Bond atomName1="C4'" atomName2="C3'"/>
+      <Bond atomName1="O4'" atomName2="C1'"/>
+      <Bond atomName1="C1'" atomName2="H1'"/>
+      <Bond atomName1="C1'" atomName2="N9"/>
+      <Bond atomName1="C1'" atomName2="C2'"/>
+      <Bond atomName1="N9" atomName2="C8"/>
+      <Bond atomName1="N9" atomName2="C4"/>
+      <Bond atomName1="C8" atomName2="H8"/>
+      <Bond atomName1="C8" atomName2="N7"/>
+      <Bond atomName1="N7" atomName2="C5"/>
+      <Bond atomName1="C5" atomName2="C6"/>
+      <Bond atomName1="C5" atomName2="C4"/>
+      <Bond atomName1="C6" atomName2="N6"/>
+      <Bond atomName1="C6" atomName2="N1"/>
+      <Bond atomName1="N6" atomName2="H61"/>
+      <Bond atomName1="N6" atomName2="H62"/>
+      <Bond atomName1="N1" atomName2="C2"/>
+      <Bond atomName1="C2" atomName2="H2"/>
+      <Bond atomName1="C2" atomName2="N3"/>
+      <Bond atomName1="N3" atomName2="C4"/>
+      <Bond atomName1="C3'" atomName2="H3'"/>
+      <Bond atomName1="C3'" atomName2="C2'"/>
+      <Bond atomName1="C3'" atomName2="O3'"/>
+      <Bond atomName1="C2'" atomName2="H2'"/>
+      <Bond atomName1="C2'" atomName2="H2''"/>
+      <Bond atomName1="O3'" atomName2="HO3'"/>
+    </Residue>
+    <Residue name="DC">
+      <Atom charge="1.1659" name="P" type="DNA-P"/>
+      <Atom charge="-0.7761" name="OP1" type="DNA-O2"/>
+      <Atom charge="-0.7761" name="OP2" type="DNA-O2"/>
+      <Atom charge="-0.4954" name="O5'" type="DNA-OS"/>
+      <Atom charge="-0.0069" name="C5'" type="DNA-CI"/>
+      <Atom charge="0.0754" name="H5'" type="DNA-H1"/>
+      <Atom charge="0.0754" name="H5''" type="DNA-H1"/>
+      <Atom charge="0.1629" name="C4'" type="DNA-CT"/>
+      <Atom charge="0.1176" name="H4'" type="DNA-H1"/>
+      <Atom charge="-0.3691" name="O4'" type="DNA-OS"/>
+      <Atom charge="-0.0116" name="C1'" type="DNA-CT"/>
+      <Atom charge="0.1963" name="H1'" type="DNA-H2"/>
+      <Atom charge="-0.0339" name="N1" type="DNA-N*"/>
+      <Atom charge="-0.0183" name="C6" type="DNA-CM"/>
+      <Atom charge="0.2293" name="H6" type="DNA-H4"/>
+      <Atom charge="-0.5222" name="C5" type="DNA-CM"/>
+      <Atom charge="0.1863" name="H5" type="DNA-HA"/>
+      <Atom charge="0.8439" name="C4" type="DNA-CA"/>
+      <Atom charge="-0.9773" name="N4" type="DNA-N2"/>
+      <Atom charge="0.4314" name="H41" type="DNA-H"/>
+      <Atom charge="0.4314" name="H42" type="DNA-H"/>
+      <Atom charge="-0.7748" name="N3" type="DNA-NC"/>
+      <Atom charge="0.7959" name="C2" type="DNA-C"/>
+      <Atom charge="-0.6548" name="O2" type="DNA-O"/>
+      <Atom charge="0.0713" name="C3'" type="DNA-CE"/>
+      <Atom charge="0.0985" name="H3'" type="DNA-H1"/>
+      <Atom charge="-0.0854" name="C2'" type="DNA-CT"/>
+      <Atom charge="0.0718" name="H2'" type="DNA-HC"/>
+      <Atom charge="0.0718" name="H2''" type="DNA-HC"/>
+      <Atom charge="-0.5232" name="O3'" type="DNA-OS"/>
+      <Bond atomName1="P" atomName2="OP1"/>
+      <Bond atomName1="P" atomName2="OP2"/>
+      <Bond atomName1="P" atomName2="O5'"/>
+      <Bond atomName1="O5'" atomName2="C5'"/>
+      <Bond atomName1="C5'" atomName2="H5'"/>
+      <Bond atomName1="C5'" atomName2="H5''"/>
+      <Bond atomName1="C5'" atomName2="C4'"/>
+      <Bond atomName1="C4'" atomName2="H4'"/>
+      <Bond atomName1="C4'" atomName2="O4'"/>
+      <Bond atomName1="C4'" atomName2="C3'"/>
+      <Bond atomName1="O4'" atomName2="C1'"/>
+      <Bond atomName1="C1'" atomName2="H1'"/>
+      <Bond atomName1="C1'" atomName2="N1"/>
+      <Bond atomName1="C1'" atomName2="C2'"/>
+      <Bond atomName1="N1" atomName2="C6"/>
+      <Bond atomName1="N1" atomName2="C2"/>
+      <Bond atomName1="C6" atomName2="H6"/>
+      <Bond atomName1="C6" atomName2="C5"/>
+      <Bond atomName1="C5" atomName2="H5"/>
+      <Bond atomName1="C5" atomName2="C4"/>
+      <Bond atomName1="C4" atomName2="N4"/>
+      <Bond atomName1="C4" atomName2="N3"/>
+      <Bond atomName1="N4" atomName2="H41"/>
+      <Bond atomName1="N4" atomName2="H42"/>
+      <Bond atomName1="N3" atomName2="C2"/>
+      <Bond atomName1="C2" atomName2="O2"/>
+      <Bond atomName1="C3'" atomName2="H3'"/>
+      <Bond atomName1="C3'" atomName2="C2'"/>
+      <Bond atomName1="C3'" atomName2="O3'"/>
+      <Bond atomName1="C2'" atomName2="H2'"/>
+      <Bond atomName1="C2'" atomName2="H2''"/>
+      <ExternalBond atomName="P"/>
+      <ExternalBond atomName="O3'"/>
+    </Residue>
+    <Residue name="DC3">
+      <Atom charge="1.1659" name="P" type="DNA-P"/>
+      <Atom charge="-0.7761" name="OP1" type="DNA-O2"/>
+      <Atom charge="-0.7761" name="OP2" type="DNA-O2"/>
+      <Atom charge="-0.4954" name="O5'" type="DNA-OS"/>
+      <Atom charge="-0.0069" name="C5'" type="DNA-CI"/>
+      <Atom charge="0.0754" name="H5'" type="DNA-H1"/>
+      <Atom charge="0.0754" name="H5''" type="DNA-H1"/>
+      <Atom charge="0.1629" name="C4'" type="DNA-CT"/>
+      <Atom charge="0.1176" name="H4'" type="DNA-H1"/>
+      <Atom charge="-0.3691" name="O4'" type="DNA-OS"/>
+      <Atom charge="-0.0116" name="C1'" type="DNA-CT"/>
+      <Atom charge="0.1963" name="H1'" type="DNA-H2"/>
+      <Atom charge="-0.0339" name="N1" type="DNA-N*"/>
+      <Atom charge="-0.0183" name="C6" type="DNA-CM"/>
+      <Atom charge="0.2293" name="H6" type="DNA-H4"/>
+      <Atom charge="-0.5222" name="C5" type="DNA-CM"/>
+      <Atom charge="0.1863" name="H5" type="DNA-HA"/>
+      <Atom charge="0.8439" name="C4" type="DNA-CA"/>
+      <Atom charge="-0.9773" name="N4" type="DNA-N2"/>
+      <Atom charge="0.4314" name="H41" type="DNA-H"/>
+      <Atom charge="0.4314" name="H42" type="DNA-H"/>
+      <Atom charge="-0.7748" name="N3" type="DNA-NC"/>
+      <Atom charge="0.7959" name="C2" type="DNA-C"/>
+      <Atom charge="-0.6548" name="O2" type="DNA-O"/>
+      <Atom charge="0.0713" name="C3'" type="DNA-CE"/>
+      <Atom charge="0.0985" name="H3'" type="DNA-H1"/>
+      <Atom charge="-0.0854" name="C2'" type="DNA-CT"/>
+      <Atom charge="0.0718" name="H2'" type="DNA-HC"/>
+      <Atom charge="0.0718" name="H2''" type="DNA-HC"/>
+      <Atom charge="-0.6549" name="O3'" type="DNA-OH"/>
+      <Atom charge="0.4396" name="HO3'" type="DNA-HO"/>
+      <Bond atomName1="P" atomName2="OP1"/>
+      <Bond atomName1="P" atomName2="OP2"/>
+      <Bond atomName1="P" atomName2="O5'"/>
+      <Bond atomName1="O5'" atomName2="C5'"/>
+      <Bond atomName1="C5'" atomName2="H5'"/>
+      <Bond atomName1="C5'" atomName2="H5''"/>
+      <Bond atomName1="C5'" atomName2="C4'"/>
+      <Bond atomName1="C4'" atomName2="H4'"/>
+      <Bond atomName1="C4'" atomName2="O4'"/>
+      <Bond atomName1="C4'" atomName2="C3'"/>
+      <Bond atomName1="O4'" atomName2="C1'"/>
+      <Bond atomName1="C1'" atomName2="H1'"/>
+      <Bond atomName1="C1'" atomName2="N1"/>
+      <Bond atomName1="C1'" atomName2="C2'"/>
+      <Bond atomName1="N1" atomName2="C6"/>
+      <Bond atomName1="N1" atomName2="C2"/>
+      <Bond atomName1="C6" atomName2="H6"/>
+      <Bond atomName1="C6" atomName2="C5"/>
+      <Bond atomName1="C5" atomName2="H5"/>
+      <Bond atomName1="C5" atomName2="C4"/>
+      <Bond atomName1="C4" atomName2="N4"/>
+      <Bond atomName1="C4" atomName2="N3"/>
+      <Bond atomName1="N4" atomName2="H41"/>
+      <Bond atomName1="N4" atomName2="H42"/>
+      <Bond atomName1="N3" atomName2="C2"/>
+      <Bond atomName1="C2" atomName2="O2"/>
+      <Bond atomName1="C3'" atomName2="H3'"/>
+      <Bond atomName1="C3'" atomName2="C2'"/>
+      <Bond atomName1="C3'" atomName2="O3'"/>
+      <Bond atomName1="C2'" atomName2="H2'"/>
+      <Bond atomName1="C2'" atomName2="H2''"/>
+      <Bond atomName1="O3'" atomName2="HO3'"/>
+      <ExternalBond atomName="P"/>
+    </Residue>
+    <Residue name="DC5">
+      <Atom charge="0.4422" name="HO5'" type="DNA-HO"/>
+      <Atom charge="-0.6318" name="O5'" type="DNA-OH"/>
+      <Atom charge="-0.0069" name="C5'" type="DNA-CI"/>
+      <Atom charge="0.0754" name="H5'" type="DNA-H1"/>
+      <Atom charge="0.0754" name="H5''" type="DNA-H1"/>
+      <Atom charge="0.1629" name="C4'" type="DNA-CT"/>
+      <Atom charge="0.1176" name="H4'" type="DNA-H1"/>
+      <Atom charge="-0.3691" name="O4'" type="DNA-OS"/>
+      <Atom charge="-0.0116" name="C1'" type="DNA-CT"/>
+      <Atom charge="0.1963" name="H1'" type="DNA-H2"/>
+      <Atom charge="-0.0339" name="N1" type="DNA-N*"/>
+      <Atom charge="-0.0183" name="C6" type="DNA-CM"/>
+      <Atom charge="0.2293" name="H6" type="DNA-H4"/>
+      <Atom charge="-0.5222" name="C5" type="DNA-CM"/>
+      <Atom charge="0.1863" name="H5" type="DNA-HA"/>
+      <Atom charge="0.8439" name="C4" type="DNA-CA"/>
+      <Atom charge="-0.9773" name="N4" type="DNA-N2"/>
+      <Atom charge="0.4314" name="H41" type="DNA-H"/>
+      <Atom charge="0.4314" name="H42" type="DNA-H"/>
+      <Atom charge="-0.7748" name="N3" type="DNA-NC"/>
+      <Atom charge="0.7959" name="C2" type="DNA-C"/>
+      <Atom charge="-0.6548" name="O2" type="DNA-O"/>
+      <Atom charge="0.0713" name="C3'" type="DNA-CE"/>
+      <Atom charge="0.0985" name="H3'" type="DNA-H1"/>
+      <Atom charge="-0.0854" name="C2'" type="DNA-CT"/>
+      <Atom charge="0.0718" name="H2'" type="DNA-HC"/>
+      <Atom charge="0.0718" name="H2''" type="DNA-HC"/>
+      <Atom charge="-0.5232" name="O3'" type="DNA-OS"/>
+      <Bond atomName1="HO5'" atomName2="O5'"/>
+      <Bond atomName1="O5'" atomName2="C5'"/>
+      <Bond atomName1="C5'" atomName2="H5'"/>
+      <Bond atomName1="C5'" atomName2="H5''"/>
+      <Bond atomName1="C5'" atomName2="C4'"/>
+      <Bond atomName1="C4'" atomName2="H4'"/>
+      <Bond atomName1="C4'" atomName2="O4'"/>
+      <Bond atomName1="C4'" atomName2="C3'"/>
+      <Bond atomName1="O4'" atomName2="C1'"/>
+      <Bond atomName1="C1'" atomName2="H1'"/>
+      <Bond atomName1="C1'" atomName2="N1"/>
+      <Bond atomName1="C1'" atomName2="C2'"/>
+      <Bond atomName1="N1" atomName2="C6"/>
+      <Bond atomName1="N1" atomName2="C2"/>
+      <Bond atomName1="C6" atomName2="H6"/>
+      <Bond atomName1="C6" atomName2="C5"/>
+      <Bond atomName1="C5" atomName2="H5"/>
+      <Bond atomName1="C5" atomName2="C4"/>
+      <Bond atomName1="C4" atomName2="N4"/>
+      <Bond atomName1="C4" atomName2="N3"/>
+      <Bond atomName1="N4" atomName2="H41"/>
+      <Bond atomName1="N4" atomName2="H42"/>
+      <Bond atomName1="N3" atomName2="C2"/>
+      <Bond atomName1="C2" atomName2="O2"/>
+      <Bond atomName1="C3'" atomName2="H3'"/>
+      <Bond atomName1="C3'" atomName2="C2'"/>
+      <Bond atomName1="C3'" atomName2="O3'"/>
+      <Bond atomName1="C2'" atomName2="H2'"/>
+      <Bond atomName1="C2'" atomName2="H2''"/>
+      <ExternalBond atomName="O3'"/>
+    </Residue>
+    <Residue name="DCN">
+      <Atom charge="0.4422" name="HO5'" type="DNA-HO"/>
+      <Atom charge="-0.6318" name="O5'" type="DNA-OH"/>
+      <Atom charge="-0.0069" name="C5'" type="DNA-CI"/>
+      <Atom charge="0.0754" name="H5'" type="DNA-H1"/>
+      <Atom charge="0.0754" name="H5''" type="DNA-H1"/>
+      <Atom charge="0.1629" name="C4'" type="DNA-CT"/>
+      <Atom charge="0.1176" name="H4'" type="DNA-H1"/>
+      <Atom charge="-0.3691" name="O4'" type="DNA-OS"/>
+      <Atom charge="-0.0116" name="C1'" type="DNA-CT"/>
+      <Atom charge="0.1963" name="H1'" type="DNA-H2"/>
+      <Atom charge="-0.0339" name="N1" type="DNA-N*"/>
+      <Atom charge="-0.0183" name="C6" type="DNA-CM"/>
+      <Atom charge="0.2293" name="H6" type="DNA-H4"/>
+      <Atom charge="-0.5222" name="C5" type="DNA-CM"/>
+      <Atom charge="0.1863" name="H5" type="DNA-HA"/>
+      <Atom charge="0.8439" name="C4" type="DNA-CA"/>
+      <Atom charge="-0.9773" name="N4" type="DNA-N2"/>
+      <Atom charge="0.4314" name="H41" type="DNA-H"/>
+      <Atom charge="0.4314" name="H42" type="DNA-H"/>
+      <Atom charge="-0.7748" name="N3" type="DNA-NC"/>
+      <Atom charge="0.7959" name="C2" type="DNA-C"/>
+      <Atom charge="-0.6548" name="O2" type="DNA-O"/>
+      <Atom charge="0.0713" name="C3'" type="DNA-CE"/>
+      <Atom charge="0.0985" name="H3'" type="DNA-H1"/>
+      <Atom charge="-0.0854" name="C2'" type="DNA-CT"/>
+      <Atom charge="0.0718" name="H2'" type="DNA-HC"/>
+      <Atom charge="0.0718" name="H2''" type="DNA-HC"/>
+      <Atom charge="-0.6549" name="O3'" type="DNA-OH"/>
+      <Atom charge="0.4396" name="HO3'" type="DNA-HO"/>
+      <Bond atomName1="HO5'" atomName2="O5'"/>
+      <Bond atomName1="O5'" atomName2="C5'"/>
+      <Bond atomName1="C5'" atomName2="H5'"/>
+      <Bond atomName1="C5'" atomName2="H5''"/>
+      <Bond atomName1="C5'" atomName2="C4'"/>
+      <Bond atomName1="C4'" atomName2="H4'"/>
+      <Bond atomName1="C4'" atomName2="O4'"/>
+      <Bond atomName1="C4'" atomName2="C3'"/>
+      <Bond atomName1="O4'" atomName2="C1'"/>
+      <Bond atomName1="C1'" atomName2="H1'"/>
+      <Bond atomName1="C1'" atomName2="N1"/>
+      <Bond atomName1="C1'" atomName2="C2'"/>
+      <Bond atomName1="N1" atomName2="C6"/>
+      <Bond atomName1="N1" atomName2="C2"/>
+      <Bond atomName1="C6" atomName2="H6"/>
+      <Bond atomName1="C6" atomName2="C5"/>
+      <Bond atomName1="C5" atomName2="H5"/>
+      <Bond atomName1="C5" atomName2="C4"/>
+      <Bond atomName1="C4" atomName2="N4"/>
+      <Bond atomName1="C4" atomName2="N3"/>
+      <Bond atomName1="N4" atomName2="H41"/>
+      <Bond atomName1="N4" atomName2="H42"/>
+      <Bond atomName1="N3" atomName2="C2"/>
+      <Bond atomName1="C2" atomName2="O2"/>
+      <Bond atomName1="C3'" atomName2="H3'"/>
+      <Bond atomName1="C3'" atomName2="C2'"/>
+      <Bond atomName1="C3'" atomName2="O3'"/>
+      <Bond atomName1="C2'" atomName2="H2'"/>
+      <Bond atomName1="C2'" atomName2="H2''"/>
+      <Bond atomName1="O3'" atomName2="HO3'"/>
+    </Residue>
+    <Residue name="DG">
+      <Atom charge="1.1659" name="P" type="DNA-P"/>
+      <Atom charge="-0.7761" name="OP1" type="DNA-O2"/>
+      <Atom charge="-0.7761" name="OP2" type="DNA-O2"/>
+      <Atom charge="-0.4954" name="O5'" type="DNA-OS"/>
+      <Atom charge="-0.0069" name="C5'" type="DNA-CI"/>
+      <Atom charge="0.0754" name="H5'" type="DNA-H1"/>
+      <Atom charge="0.0754" name="H5''" type="DNA-H1"/>
+      <Atom charge="0.1629" name="C4'" type="DNA-CT"/>
+      <Atom charge="0.1176" name="H4'" type="DNA-H1"/>
+      <Atom charge="-0.3691" name="O4'" type="DNA-OS"/>
+      <Atom charge="0.0358" name="C1'" type="DNA-CT"/>
+      <Atom charge="0.1746" name="H1'" type="DNA-H2"/>
+      <Atom charge="0.0577" name="N9" type="DNA-N*"/>
+      <Atom charge="0.0736" name="C8" type="DNA-CK"/>
+      <Atom charge="0.1997" name="H8" type="DNA-H5"/>
+      <Atom charge="-0.5725" name="N7" type="DNA-NB"/>
+      <Atom charge="0.1991" name="C5" type="DNA-CB"/>
+      <Atom charge="0.4918" name="C6" type="DNA-C"/>
+      <Atom charge="-0.5699" name="O6" type="DNA-O"/>
+      <Atom charge="-0.5053" name="N1" type="DNA-NA"/>
+      <Atom charge="0.352" name="H1" type="DNA-H"/>
+      <Atom charge="0.7432" name="C2" type="DNA-CA"/>
+      <Atom charge="-0.923" name="N2" type="DNA-N2"/>
+      <Atom charge="0.4235" name="H21" type="DNA-H"/>
+      <Atom charge="0.4235" name="H22" type="DNA-H"/>
+      <Atom charge="-0.6636" name="N3" type="DNA-NC"/>
+      <Atom charge="0.1814" name="C4" type="DNA-CB"/>
+      <Atom charge="0.0713" name="C3'" type="DNA-CE"/>
+      <Atom charge="0.0985" name="H3'" type="DNA-H1"/>
+      <Atom charge="-0.0854" name="C2'" type="DNA-CT"/>
+      <Atom charge="0.0718" name="H2'" type="DNA-HC"/>
+      <Atom charge="0.0718" name="H2''" type="DNA-HC"/>
+      <Atom charge="-0.5232" name="O3'" type="DNA-OS"/>
+      <Bond atomName1="P" atomName2="OP1"/>
+      <Bond atomName1="P" atomName2="OP2"/>
+      <Bond atomName1="P" atomName2="O5'"/>
+      <Bond atomName1="O5'" atomName2="C5'"/>
+      <Bond atomName1="C5'" atomName2="H5'"/>
+      <Bond atomName1="C5'" atomName2="H5''"/>
+      <Bond atomName1="C5'" atomName2="C4'"/>
+      <Bond atomName1="C4'" atomName2="H4'"/>
+      <Bond atomName1="C4'" atomName2="O4'"/>
+      <Bond atomName1="C4'" atomName2="C3'"/>
+      <Bond atomName1="O4'" atomName2="C1'"/>
+      <Bond atomName1="C1'" atomName2="H1'"/>
+      <Bond atomName1="C1'" atomName2="N9"/>
+      <Bond atomName1="C1'" atomName2="C2'"/>
+      <Bond atomName1="N9" atomName2="C8"/>
+      <Bond atomName1="N9" atomName2="C4"/>
+      <Bond atomName1="C8" atomName2="H8"/>
+      <Bond atomName1="C8" atomName2="N7"/>
+      <Bond atomName1="N7" atomName2="C5"/>
+      <Bond atomName1="C5" atomName2="C6"/>
+      <Bond atomName1="C5" atomName2="C4"/>
+      <Bond atomName1="C6" atomName2="O6"/>
+      <Bond atomName1="C6" atomName2="N1"/>
+      <Bond atomName1="N1" atomName2="H1"/>
+      <Bond atomName1="N1" atomName2="C2"/>
+      <Bond atomName1="C2" atomName2="N2"/>
+      <Bond atomName1="C2" atomName2="N3"/>
+      <Bond atomName1="N2" atomName2="H21"/>
+      <Bond atomName1="N2" atomName2="H22"/>
+      <Bond atomName1="N3" atomName2="C4"/>
+      <Bond atomName1="C3'" atomName2="H3'"/>
+      <Bond atomName1="C3'" atomName2="C2'"/>
+      <Bond atomName1="C3'" atomName2="O3'"/>
+      <Bond atomName1="C2'" atomName2="H2'"/>
+      <Bond atomName1="C2'" atomName2="H2''"/>
+      <ExternalBond atomName="P"/>
+      <ExternalBond atomName="O3'"/>
+    </Residue>
+    <Residue name="DG3">
+      <Atom charge="1.1659" name="P" type="DNA-P"/>
+      <Atom charge="-0.7761" name="OP1" type="DNA-O2"/>
+      <Atom charge="-0.7761" name="OP2" type="DNA-O2"/>
+      <Atom charge="-0.4954" name="O5'" type="DNA-OS"/>
+      <Atom charge="-0.0069" name="C5'" type="DNA-CI"/>
+      <Atom charge="0.0754" name="H5'" type="DNA-H1"/>
+      <Atom charge="0.0754" name="H5''" type="DNA-H1"/>
+      <Atom charge="0.1629" name="C4'" type="DNA-CT"/>
+      <Atom charge="0.1176" name="H4'" type="DNA-H1"/>
+      <Atom charge="-0.3691" name="O4'" type="DNA-OS"/>
+      <Atom charge="0.0358" name="C1'" type="DNA-CT"/>
+      <Atom charge="0.1746" name="H1'" type="DNA-H2"/>
+      <Atom charge="0.0577" name="N9" type="DNA-N*"/>
+      <Atom charge="0.0736" name="C8" type="DNA-CK"/>
+      <Atom charge="0.1997" name="H8" type="DNA-H5"/>
+      <Atom charge="-0.5725" name="N7" type="DNA-NB"/>
+      <Atom charge="0.1991" name="C5" type="DNA-CB"/>
+      <Atom charge="0.4918" name="C6" type="DNA-C"/>
+      <Atom charge="-0.5699" name="O6" type="DNA-O"/>
+      <Atom charge="-0.5053" name="N1" type="DNA-NA"/>
+      <Atom charge="0.352" name="H1" type="DNA-H"/>
+      <Atom charge="0.7432" name="C2" type="DNA-CA"/>
+      <Atom charge="-0.923" name="N2" type="DNA-N2"/>
+      <Atom charge="0.4235" name="H21" type="DNA-H"/>
+      <Atom charge="0.4235" name="H22" type="DNA-H"/>
+      <Atom charge="-0.6636" name="N3" type="DNA-NC"/>
+      <Atom charge="0.1814" name="C4" type="DNA-CB"/>
+      <Atom charge="0.0713" name="C3'" type="DNA-CE"/>
+      <Atom charge="0.0985" name="H3'" type="DNA-H1"/>
+      <Atom charge="-0.0854" name="C2'" type="DNA-CT"/>
+      <Atom charge="0.0718" name="H2'" type="DNA-HC"/>
+      <Atom charge="0.0718" name="H2''" type="DNA-HC"/>
+      <Atom charge="-0.6549" name="O3'" type="DNA-OH"/>
+      <Atom charge="0.4396" name="HO3'" type="DNA-HO"/>
+      <Bond atomName1="P" atomName2="OP1"/>
+      <Bond atomName1="P" atomName2="OP2"/>
+      <Bond atomName1="P" atomName2="O5'"/>
+      <Bond atomName1="O5'" atomName2="C5'"/>
+      <Bond atomName1="C5'" atomName2="H5'"/>
+      <Bond atomName1="C5'" atomName2="H5''"/>
+      <Bond atomName1="C5'" atomName2="C4'"/>
+      <Bond atomName1="C4'" atomName2="H4'"/>
+      <Bond atomName1="C4'" atomName2="O4'"/>
+      <Bond atomName1="C4'" atomName2="C3'"/>
+      <Bond atomName1="O4'" atomName2="C1'"/>
+      <Bond atomName1="C1'" atomName2="H1'"/>
+      <Bond atomName1="C1'" atomName2="N9"/>
+      <Bond atomName1="C1'" atomName2="C2'"/>
+      <Bond atomName1="N9" atomName2="C8"/>
+      <Bond atomName1="N9" atomName2="C4"/>
+      <Bond atomName1="C8" atomName2="H8"/>
+      <Bond atomName1="C8" atomName2="N7"/>
+      <Bond atomName1="N7" atomName2="C5"/>
+      <Bond atomName1="C5" atomName2="C6"/>
+      <Bond atomName1="C5" atomName2="C4"/>
+      <Bond atomName1="C6" atomName2="O6"/>
+      <Bond atomName1="C6" atomName2="N1"/>
+      <Bond atomName1="N1" atomName2="H1"/>
+      <Bond atomName1="N1" atomName2="C2"/>
+      <Bond atomName1="C2" atomName2="N2"/>
+      <Bond atomName1="C2" atomName2="N3"/>
+      <Bond atomName1="N2" atomName2="H21"/>
+      <Bond atomName1="N2" atomName2="H22"/>
+      <Bond atomName1="N3" atomName2="C4"/>
+      <Bond atomName1="C3'" atomName2="H3'"/>
+      <Bond atomName1="C3'" atomName2="C2'"/>
+      <Bond atomName1="C3'" atomName2="O3'"/>
+      <Bond atomName1="C2'" atomName2="H2'"/>
+      <Bond atomName1="C2'" atomName2="H2''"/>
+      <Bond atomName1="O3'" atomName2="HO3'"/>
+      <ExternalBond atomName="P"/>
+    </Residue>
+    <Residue name="DG5">
+      <Atom charge="0.4422" name="HO5'" type="DNA-HO"/>
+      <Atom charge="-0.6318" name="O5'" type="DNA-OH"/>
+      <Atom charge="-0.0069" name="C5'" type="DNA-CI"/>
+      <Atom charge="0.0754" name="H5'" type="DNA-H1"/>
+      <Atom charge="0.0754" name="H5''" type="DNA-H1"/>
+      <Atom charge="0.1629" name="C4'" type="DNA-CT"/>
+      <Atom charge="0.1176" name="H4'" type="DNA-H1"/>
+      <Atom charge="-0.3691" name="O4'" type="DNA-OS"/>
+      <Atom charge="0.0358" name="C1'" type="DNA-CT"/>
+      <Atom charge="0.1746" name="H1'" type="DNA-H2"/>
+      <Atom charge="0.0577" name="N9" type="DNA-N*"/>
+      <Atom charge="0.0736" name="C8" type="DNA-CK"/>
+      <Atom charge="0.1997" name="H8" type="DNA-H5"/>
+      <Atom charge="-0.5725" name="N7" type="DNA-NB"/>
+      <Atom charge="0.1991" name="C5" type="DNA-CB"/>
+      <Atom charge="0.4918" name="C6" type="DNA-C"/>
+      <Atom charge="-0.5699" name="O6" type="DNA-O"/>
+      <Atom charge="-0.5053" name="N1" type="DNA-NA"/>
+      <Atom charge="0.352" name="H1" type="DNA-H"/>
+      <Atom charge="0.7432" name="C2" type="DNA-CA"/>
+      <Atom charge="-0.923" name="N2" type="DNA-N2"/>
+      <Atom charge="0.4235" name="H21" type="DNA-H"/>
+      <Atom charge="0.4235" name="H22" type="DNA-H"/>
+      <Atom charge="-0.6636" name="N3" type="DNA-NC"/>
+      <Atom charge="0.1814" name="C4" type="DNA-CB"/>
+      <Atom charge="0.0713" name="C3'" type="DNA-CE"/>
+      <Atom charge="0.0985" name="H3'" type="DNA-H1"/>
+      <Atom charge="-0.0854" name="C2'" type="DNA-CT"/>
+      <Atom charge="0.0718" name="H2'" type="DNA-HC"/>
+      <Atom charge="0.0718" name="H2''" type="DNA-HC"/>
+      <Atom charge="-0.5232" name="O3'" type="DNA-OS"/>
+      <Bond atomName1="HO5'" atomName2="O5'"/>
+      <Bond atomName1="O5'" atomName2="C5'"/>
+      <Bond atomName1="C5'" atomName2="H5'"/>
+      <Bond atomName1="C5'" atomName2="H5''"/>
+      <Bond atomName1="C5'" atomName2="C4'"/>
+      <Bond atomName1="C4'" atomName2="H4'"/>
+      <Bond atomName1="C4'" atomName2="O4'"/>
+      <Bond atomName1="C4'" atomName2="C3'"/>
+      <Bond atomName1="O4'" atomName2="C1'"/>
+      <Bond atomName1="C1'" atomName2="H1'"/>
+      <Bond atomName1="C1'" atomName2="N9"/>
+      <Bond atomName1="C1'" atomName2="C2'"/>
+      <Bond atomName1="N9" atomName2="C8"/>
+      <Bond atomName1="N9" atomName2="C4"/>
+      <Bond atomName1="C8" atomName2="H8"/>
+      <Bond atomName1="C8" atomName2="N7"/>
+      <Bond atomName1="N7" atomName2="C5"/>
+      <Bond atomName1="C5" atomName2="C6"/>
+      <Bond atomName1="C5" atomName2="C4"/>
+      <Bond atomName1="C6" atomName2="O6"/>
+      <Bond atomName1="C6" atomName2="N1"/>
+      <Bond atomName1="N1" atomName2="H1"/>
+      <Bond atomName1="N1" atomName2="C2"/>
+      <Bond atomName1="C2" atomName2="N2"/>
+      <Bond atomName1="C2" atomName2="N3"/>
+      <Bond atomName1="N2" atomName2="H21"/>
+      <Bond atomName1="N2" atomName2="H22"/>
+      <Bond atomName1="N3" atomName2="C4"/>
+      <Bond atomName1="C3'" atomName2="H3'"/>
+      <Bond atomName1="C3'" atomName2="C2'"/>
+      <Bond atomName1="C3'" atomName2="O3'"/>
+      <Bond atomName1="C2'" atomName2="H2'"/>
+      <Bond atomName1="C2'" atomName2="H2''"/>
+      <ExternalBond atomName="O3'"/>
+    </Residue>
+    <Residue name="DGN">
+      <Atom charge="0.4422" name="HO5'" type="DNA-HO"/>
+      <Atom charge="-0.6318" name="O5'" type="DNA-OH"/>
+      <Atom charge="-0.0069" name="C5'" type="DNA-CI"/>
+      <Atom charge="0.0754" name="H5'" type="DNA-H1"/>
+      <Atom charge="0.0754" name="H5''" type="DNA-H1"/>
+      <Atom charge="0.1629" name="C4'" type="DNA-CT"/>
+      <Atom charge="0.1176" name="H4'" type="DNA-H1"/>
+      <Atom charge="-0.3691" name="O4'" type="DNA-OS"/>
+      <Atom charge="0.0358" name="C1'" type="DNA-CT"/>
+      <Atom charge="0.1746" name="H1'" type="DNA-H2"/>
+      <Atom charge="0.0577" name="N9" type="DNA-N*"/>
+      <Atom charge="0.0736" name="C8" type="DNA-CK"/>
+      <Atom charge="0.1997" name="H8" type="DNA-H5"/>
+      <Atom charge="-0.5725" name="N7" type="DNA-NB"/>
+      <Atom charge="0.1991" name="C5" type="DNA-CB"/>
+      <Atom charge="0.4918" name="C6" type="DNA-C"/>
+      <Atom charge="-0.5699" name="O6" type="DNA-O"/>
+      <Atom charge="-0.5053" name="N1" type="DNA-NA"/>
+      <Atom charge="0.352" name="H1" type="DNA-H"/>
+      <Atom charge="0.7432" name="C2" type="DNA-CA"/>
+      <Atom charge="-0.923" name="N2" type="DNA-N2"/>
+      <Atom charge="0.4235" name="H21" type="DNA-H"/>
+      <Atom charge="0.4235" name="H22" type="DNA-H"/>
+      <Atom charge="-0.6636" name="N3" type="DNA-NC"/>
+      <Atom charge="0.1814" name="C4" type="DNA-CB"/>
+      <Atom charge="0.0713" name="C3'" type="DNA-CE"/>
+      <Atom charge="0.0985" name="H3'" type="DNA-H1"/>
+      <Atom charge="-0.0854" name="C2'" type="DNA-CT"/>
+      <Atom charge="0.0718" name="H2'" type="DNA-HC"/>
+      <Atom charge="0.0718" name="H2''" type="DNA-HC"/>
+      <Atom charge="-0.6549" name="O3'" type="DNA-OH"/>
+      <Atom charge="0.4396" name="HO3'" type="DNA-HO"/>
+      <Bond atomName1="HO5'" atomName2="O5'"/>
+      <Bond atomName1="O5'" atomName2="C5'"/>
+      <Bond atomName1="C5'" atomName2="H5'"/>
+      <Bond atomName1="C5'" atomName2="H5''"/>
+      <Bond atomName1="C5'" atomName2="C4'"/>
+      <Bond atomName1="C4'" atomName2="H4'"/>
+      <Bond atomName1="C4'" atomName2="O4'"/>
+      <Bond atomName1="C4'" atomName2="C3'"/>
+      <Bond atomName1="O4'" atomName2="C1'"/>
+      <Bond atomName1="C1'" atomName2="H1'"/>
+      <Bond atomName1="C1'" atomName2="N9"/>
+      <Bond atomName1="C1'" atomName2="C2'"/>
+      <Bond atomName1="N9" atomName2="C8"/>
+      <Bond atomName1="N9" atomName2="C4"/>
+      <Bond atomName1="C8" atomName2="H8"/>
+      <Bond atomName1="C8" atomName2="N7"/>
+      <Bond atomName1="N7" atomName2="C5"/>
+      <Bond atomName1="C5" atomName2="C6"/>
+      <Bond atomName1="C5" atomName2="C4"/>
+      <Bond atomName1="C6" atomName2="O6"/>
+      <Bond atomName1="C6" atomName2="N1"/>
+      <Bond atomName1="N1" atomName2="H1"/>
+      <Bond atomName1="N1" atomName2="C2"/>
+      <Bond atomName1="C2" atomName2="N2"/>
+      <Bond atomName1="C2" atomName2="N3"/>
+      <Bond atomName1="N2" atomName2="H21"/>
+      <Bond atomName1="N2" atomName2="H22"/>
+      <Bond atomName1="N3" atomName2="C4"/>
+      <Bond atomName1="C3'" atomName2="H3'"/>
+      <Bond atomName1="C3'" atomName2="C2'"/>
+      <Bond atomName1="C3'" atomName2="O3'"/>
+      <Bond atomName1="C2'" atomName2="H2'"/>
+      <Bond atomName1="C2'" atomName2="H2''"/>
+      <Bond atomName1="O3'" atomName2="HO3'"/>
+    </Residue>
+    <Residue name="DT">
+      <Atom charge="1.1659" name="P" type="DNA-P"/>
+      <Atom charge="-0.7761" name="OP1" type="DNA-O2"/>
+      <Atom charge="-0.7761" name="OP2" type="DNA-O2"/>
+      <Atom charge="-0.4954" name="O5'" type="DNA-OS"/>
+      <Atom charge="-0.0069" name="C5'" type="DNA-CI"/>
+      <Atom charge="0.0754" name="H5'" type="DNA-H1"/>
+      <Atom charge="0.0754" name="H5''" type="DNA-H1"/>
+      <Atom charge="0.1629" name="C4'" type="DNA-CT"/>
+      <Atom charge="0.1176" name="H4'" type="DNA-H1"/>
+      <Atom charge="-0.3691" name="O4'" type="DNA-OS"/>
+      <Atom charge="0.068" name="C1'" type="DNA-CT"/>
+      <Atom charge="0.1804" name="H1'" type="DNA-H2"/>
+      <Atom charge="-0.0239" name="N1" type="DNA-N*"/>
+      <Atom charge="-0.2209" name="C6" type="DNA-C2"/>
+      <Atom charge="0.2607" name="H6" type="DNA-H4"/>
+      <Atom charge="0.0025" name="C5" type="DNA-C2"/>
+      <Atom charge="-0.2269" name="C7" type="DNA-CT"/>
+      <Atom charge="0.077" name="H71" type="DNA-HC"/>
+      <Atom charge="0.077" name="H72" type="DNA-HC"/>
+      <Atom charge="0.077" name="H73" type="DNA-HC"/>
+      <Atom charge="0.5194" name="C4" type="DNA-C"/>
+      <Atom charge="-0.5563" name="O4" type="DNA-O"/>
+      <Atom charge="-0.434" name="N3" type="DNA-NA"/>
+      <Atom charge="0.342" name="H3" type="DNA-H"/>
+      <Atom charge="0.5677" name="C2" type="DNA-C"/>
+      <Atom charge="-0.5881" name="O2" type="DNA-O"/>
+      <Atom charge="0.0713" name="C3'" type="DNA-CE"/>
+      <Atom charge="0.0985" name="H3'" type="DNA-H1"/>
+      <Atom charge="-0.0854" name="C2'" type="DNA-CT"/>
+      <Atom charge="0.0718" name="H2'" type="DNA-HC"/>
+      <Atom charge="0.0718" name="H2''" type="DNA-HC"/>
+      <Atom charge="-0.5232" name="O3'" type="DNA-OS"/>
+      <Bond atomName1="P" atomName2="OP1"/>
+      <Bond atomName1="P" atomName2="OP2"/>
+      <Bond atomName1="P" atomName2="O5'"/>
+      <Bond atomName1="O5'" atomName2="C5'"/>
+      <Bond atomName1="C5'" atomName2="H5'"/>
+      <Bond atomName1="C5'" atomName2="H5''"/>
+      <Bond atomName1="C5'" atomName2="C4'"/>
+      <Bond atomName1="C4'" atomName2="H4'"/>
+      <Bond atomName1="C4'" atomName2="O4'"/>
+      <Bond atomName1="C4'" atomName2="C3'"/>
+      <Bond atomName1="O4'" atomName2="C1'"/>
+      <Bond atomName1="C1'" atomName2="H1'"/>
+      <Bond atomName1="C1'" atomName2="N1"/>
+      <Bond atomName1="C1'" atomName2="C2'"/>
+      <Bond atomName1="N1" atomName2="C6"/>
+      <Bond atomName1="N1" atomName2="C2"/>
+      <Bond atomName1="C6" atomName2="H6"/>
+      <Bond atomName1="C6" atomName2="C5"/>
+      <Bond atomName1="C5" atomName2="C7"/>
+      <Bond atomName1="C5" atomName2="C4"/>
+      <Bond atomName1="C7" atomName2="H71"/>
+      <Bond atomName1="C7" atomName2="H72"/>
+      <Bond atomName1="C7" atomName2="H73"/>
+      <Bond atomName1="C4" atomName2="O4"/>
+      <Bond atomName1="C4" atomName2="N3"/>
+      <Bond atomName1="N3" atomName2="H3"/>
+      <Bond atomName1="N3" atomName2="C2"/>
+      <Bond atomName1="C2" atomName2="O2"/>
+      <Bond atomName1="C3'" atomName2="H3'"/>
+      <Bond atomName1="C3'" atomName2="C2'"/>
+      <Bond atomName1="C3'" atomName2="O3'"/>
+      <Bond atomName1="C2'" atomName2="H2'"/>
+      <Bond atomName1="C2'" atomName2="H2''"/>
+      <ExternalBond atomName="P"/>
+      <ExternalBond atomName="O3'"/>
+    </Residue>
+    <Residue name="DT3">
+      <Atom charge="1.1659" name="P" type="DNA-P"/>
+      <Atom charge="-0.7761" name="OP1" type="DNA-O2"/>
+      <Atom charge="-0.7761" name="OP2" type="DNA-O2"/>
+      <Atom charge="-0.4954" name="O5'" type="DNA-OS"/>
+      <Atom charge="-0.0069" name="C5'" type="DNA-CI"/>
+      <Atom charge="0.0754" name="H5'" type="DNA-H1"/>
+      <Atom charge="0.0754" name="H5''" type="DNA-H1"/>
+      <Atom charge="0.1629" name="C4'" type="DNA-CT"/>
+      <Atom charge="0.1176" name="H4'" type="DNA-H1"/>
+      <Atom charge="-0.3691" name="O4'" type="DNA-OS"/>
+      <Atom charge="0.068" name="C1'" type="DNA-CT"/>
+      <Atom charge="0.1804" name="H1'" type="DNA-H2"/>
+      <Atom charge="-0.0239" name="N1" type="DNA-N*"/>
+      <Atom charge="-0.2209" name="C6" type="DNA-C2"/>
+      <Atom charge="0.2607" name="H6" type="DNA-H4"/>
+      <Atom charge="0.0025" name="C5" type="DNA-C2"/>
+      <Atom charge="-0.2269" name="C7" type="DNA-CT"/>
+      <Atom charge="0.077" name="H71" type="DNA-HC"/>
+      <Atom charge="0.077" name="H72" type="DNA-HC"/>
+      <Atom charge="0.077" name="H73" type="DNA-HC"/>
+      <Atom charge="0.5194" name="C4" type="DNA-C"/>
+      <Atom charge="-0.5563" name="O4" type="DNA-O"/>
+      <Atom charge="-0.434" name="N3" type="DNA-NA"/>
+      <Atom charge="0.342" name="H3" type="DNA-H"/>
+      <Atom charge="0.5677" name="C2" type="DNA-C"/>
+      <Atom charge="-0.5881" name="O2" type="DNA-O"/>
+      <Atom charge="0.0713" name="C3'" type="DNA-CE"/>
+      <Atom charge="0.0985" name="H3'" type="DNA-H1"/>
+      <Atom charge="-0.0854" name="C2'" type="DNA-CT"/>
+      <Atom charge="0.0718" name="H2'" type="DNA-HC"/>
+      <Atom charge="0.0718" name="H2''" type="DNA-HC"/>
+      <Atom charge="-0.6549" name="O3'" type="DNA-OH"/>
+      <Atom charge="0.4396" name="HO3'" type="DNA-HO"/>
+      <Bond atomName1="P" atomName2="OP1"/>
+      <Bond atomName1="P" atomName2="OP2"/>
+      <Bond atomName1="P" atomName2="O5'"/>
+      <Bond atomName1="O5'" atomName2="C5'"/>
+      <Bond atomName1="C5'" atomName2="H5'"/>
+      <Bond atomName1="C5'" atomName2="H5''"/>
+      <Bond atomName1="C5'" atomName2="C4'"/>
+      <Bond atomName1="C4'" atomName2="H4'"/>
+      <Bond atomName1="C4'" atomName2="O4'"/>
+      <Bond atomName1="C4'" atomName2="C3'"/>
+      <Bond atomName1="O4'" atomName2="C1'"/>
+      <Bond atomName1="C1'" atomName2="H1'"/>
+      <Bond atomName1="C1'" atomName2="N1"/>
+      <Bond atomName1="C1'" atomName2="C2'"/>
+      <Bond atomName1="N1" atomName2="C6"/>
+      <Bond atomName1="N1" atomName2="C2"/>
+      <Bond atomName1="C6" atomName2="H6"/>
+      <Bond atomName1="C6" atomName2="C5"/>
+      <Bond atomName1="C5" atomName2="C7"/>
+      <Bond atomName1="C5" atomName2="C4"/>
+      <Bond atomName1="C7" atomName2="H71"/>
+      <Bond atomName1="C7" atomName2="H72"/>
+      <Bond atomName1="C7" atomName2="H73"/>
+      <Bond atomName1="C4" atomName2="O4"/>
+      <Bond atomName1="C4" atomName2="N3"/>
+      <Bond atomName1="N3" atomName2="H3"/>
+      <Bond atomName1="N3" atomName2="C2"/>
+      <Bond atomName1="C2" atomName2="O2"/>
+      <Bond atomName1="C3'" atomName2="H3'"/>
+      <Bond atomName1="C3'" atomName2="C2'"/>
+      <Bond atomName1="C3'" atomName2="O3'"/>
+      <Bond atomName1="C2'" atomName2="H2'"/>
+      <Bond atomName1="C2'" atomName2="H2''"/>
+      <Bond atomName1="O3'" atomName2="HO3'"/>
+      <ExternalBond atomName="P"/>
+    </Residue>
+    <Residue name="DT5">
+      <Atom charge="0.4422" name="HO5'" type="DNA-HO"/>
+      <Atom charge="-0.6318" name="O5'" type="DNA-OH"/>
+      <Atom charge="-0.0069" name="C5'" type="DNA-CI"/>
+      <Atom charge="0.0754" name="H5'" type="DNA-H1"/>
+      <Atom charge="0.0754" name="H5''" type="DNA-H1"/>
+      <Atom charge="0.1629" name="C4'" type="DNA-CT"/>
+      <Atom charge="0.1176" name="H4'" type="DNA-H1"/>
+      <Atom charge="-0.3691" name="O4'" type="DNA-OS"/>
+      <Atom charge="0.068" name="C1'" type="DNA-CT"/>
+      <Atom charge="0.1804" name="H1'" type="DNA-H2"/>
+      <Atom charge="-0.0239" name="N1" type="DNA-N*"/>
+      <Atom charge="-0.2209" name="C6" type="DNA-C2"/>
+      <Atom charge="0.2607" name="H6" type="DNA-H4"/>
+      <Atom charge="0.0025" name="C5" type="DNA-C2"/>
+      <Atom charge="-0.2269" name="C7" type="DNA-CT"/>
+      <Atom charge="0.077" name="H71" type="DNA-HC"/>
+      <Atom charge="0.077" name="H72" type="DNA-HC"/>
+      <Atom charge="0.077" name="H73" type="DNA-HC"/>
+      <Atom charge="0.5194" name="C4" type="DNA-C"/>
+      <Atom charge="-0.5563" name="O4" type="DNA-O"/>
+      <Atom charge="-0.434" name="N3" type="DNA-NA"/>
+      <Atom charge="0.342" name="H3" type="DNA-H"/>
+      <Atom charge="0.5677" name="C2" type="DNA-C"/>
+      <Atom charge="-0.5881" name="O2" type="DNA-O"/>
+      <Atom charge="0.0713" name="C3'" type="DNA-CE"/>
+      <Atom charge="0.0985" name="H3'" type="DNA-H1"/>
+      <Atom charge="-0.0854" name="C2'" type="DNA-CT"/>
+      <Atom charge="0.0718" name="H2'" type="DNA-HC"/>
+      <Atom charge="0.0718" name="H2''" type="DNA-HC"/>
+      <Atom charge="-0.5232" name="O3'" type="DNA-OS"/>
+      <Bond atomName1="HO5'" atomName2="O5'"/>
+      <Bond atomName1="O5'" atomName2="C5'"/>
+      <Bond atomName1="C5'" atomName2="H5'"/>
+      <Bond atomName1="C5'" atomName2="H5''"/>
+      <Bond atomName1="C5'" atomName2="C4'"/>
+      <Bond atomName1="C4'" atomName2="H4'"/>
+      <Bond atomName1="C4'" atomName2="O4'"/>
+      <Bond atomName1="C4'" atomName2="C3'"/>
+      <Bond atomName1="O4'" atomName2="C1'"/>
+      <Bond atomName1="C1'" atomName2="H1'"/>
+      <Bond atomName1="C1'" atomName2="N1"/>
+      <Bond atomName1="C1'" atomName2="C2'"/>
+      <Bond atomName1="N1" atomName2="C6"/>
+      <Bond atomName1="N1" atomName2="C2"/>
+      <Bond atomName1="C6" atomName2="H6"/>
+      <Bond atomName1="C6" atomName2="C5"/>
+      <Bond atomName1="C5" atomName2="C7"/>
+      <Bond atomName1="C5" atomName2="C4"/>
+      <Bond atomName1="C7" atomName2="H71"/>
+      <Bond atomName1="C7" atomName2="H72"/>
+      <Bond atomName1="C7" atomName2="H73"/>
+      <Bond atomName1="C4" atomName2="O4"/>
+      <Bond atomName1="C4" atomName2="N3"/>
+      <Bond atomName1="N3" atomName2="H3"/>
+      <Bond atomName1="N3" atomName2="C2"/>
+      <Bond atomName1="C2" atomName2="O2"/>
+      <Bond atomName1="C3'" atomName2="H3'"/>
+      <Bond atomName1="C3'" atomName2="C2'"/>
+      <Bond atomName1="C3'" atomName2="O3'"/>
+      <Bond atomName1="C2'" atomName2="H2'"/>
+      <Bond atomName1="C2'" atomName2="H2''"/>
+      <ExternalBond atomName="O3'"/>
+    </Residue>
+    <Residue name="DTN">
+      <Atom charge="0.4422" name="HO5'" type="DNA-HO"/>
+      <Atom charge="-0.6318" name="O5'" type="DNA-OH"/>
+      <Atom charge="-0.0069" name="C5'" type="DNA-CI"/>
+      <Atom charge="0.0754" name="H5'" type="DNA-H1"/>
+      <Atom charge="0.0754" name="H5''" type="DNA-H1"/>
+      <Atom charge="0.1629" name="C4'" type="DNA-CT"/>
+      <Atom charge="0.1176" name="H4'" type="DNA-H1"/>
+      <Atom charge="-0.3691" name="O4'" type="DNA-OS"/>
+      <Atom charge="0.068" name="C1'" type="DNA-CT"/>
+      <Atom charge="0.1804" name="H1'" type="DNA-H2"/>
+      <Atom charge="-0.0239" name="N1" type="DNA-N*"/>
+      <Atom charge="-0.2209" name="C6" type="DNA-C2"/>
+      <Atom charge="0.2607" name="H6" type="DNA-H4"/>
+      <Atom charge="0.0025" name="C5" type="DNA-C2"/>
+      <Atom charge="-0.2269" name="C7" type="DNA-CT"/>
+      <Atom charge="0.077" name="H71" type="DNA-HC"/>
+      <Atom charge="0.077" name="H72" type="DNA-HC"/>
+      <Atom charge="0.077" name="H73" type="DNA-HC"/>
+      <Atom charge="0.5194" name="C4" type="DNA-C"/>
+      <Atom charge="-0.5563" name="O4" type="DNA-O"/>
+      <Atom charge="-0.434" name="N3" type="DNA-NA"/>
+      <Atom charge="0.342" name="H3" type="DNA-H"/>
+      <Atom charge="0.5677" name="C2" type="DNA-C"/>
+      <Atom charge="-0.5881" name="O2" type="DNA-O"/>
+      <Atom charge="0.0713" name="C3'" type="DNA-CE"/>
+      <Atom charge="0.0985" name="H3'" type="DNA-H1"/>
+      <Atom charge="-0.0854" name="C2'" type="DNA-CT"/>
+      <Atom charge="0.0718" name="H2'" type="DNA-HC"/>
+      <Atom charge="0.0718" name="H2''" type="DNA-HC"/>
+      <Atom charge="-0.6549" name="O3'" type="DNA-OH"/>
+      <Atom charge="0.4396" name="HO3'" type="DNA-HO"/>
+      <Bond atomName1="HO5'" atomName2="O5'"/>
+      <Bond atomName1="O5'" atomName2="C5'"/>
+      <Bond atomName1="C5'" atomName2="H5'"/>
+      <Bond atomName1="C5'" atomName2="H5''"/>
+      <Bond atomName1="C5'" atomName2="C4'"/>
+      <Bond atomName1="C4'" atomName2="H4'"/>
+      <Bond atomName1="C4'" atomName2="O4'"/>
+      <Bond atomName1="C4'" atomName2="C3'"/>
+      <Bond atomName1="O4'" atomName2="C1'"/>
+      <Bond atomName1="C1'" atomName2="H1'"/>
+      <Bond atomName1="C1'" atomName2="N1"/>
+      <Bond atomName1="C1'" atomName2="C2'"/>
+      <Bond atomName1="N1" atomName2="C6"/>
+      <Bond atomName1="N1" atomName2="C2"/>
+      <Bond atomName1="C6" atomName2="H6"/>
+      <Bond atomName1="C6" atomName2="C5"/>
+      <Bond atomName1="C5" atomName2="C7"/>
+      <Bond atomName1="C5" atomName2="C4"/>
+      <Bond atomName1="C7" atomName2="H71"/>
+      <Bond atomName1="C7" atomName2="H72"/>
+      <Bond atomName1="C7" atomName2="H73"/>
+      <Bond atomName1="C4" atomName2="O4"/>
+      <Bond atomName1="C4" atomName2="N3"/>
+      <Bond atomName1="N3" atomName2="H3"/>
+      <Bond atomName1="N3" atomName2="C2"/>
+      <Bond atomName1="C2" atomName2="O2"/>
+      <Bond atomName1="C3'" atomName2="H3'"/>
+      <Bond atomName1="C3'" atomName2="C2'"/>
+      <Bond atomName1="C3'" atomName2="O3'"/>
+      <Bond atomName1="C2'" atomName2="H2'"/>
+      <Bond atomName1="C2'" atomName2="H2''"/>
+      <Bond atomName1="O3'" atomName2="HO3'"/>
+    </Residue>
+  </Residues>
+  <HarmonicBondForce>
+    <Bond k="259407.99999999994" length="0.1525" type1="DNA-C" type2="DNA-C"/>
+    <Bond k="392459.19999999995" length="0.1409" type1="DNA-C" type2="DNA-CA"/>
+    <Bond k="374049.5999999999" length="0.1419" type1="DNA-C" type2="DNA-CB"/>
+    <Bond k="343087.99999999994" length="0.1444" type1="DNA-C" type2="DNA-CM"/>
+    <Bond k="265265.6" length="0.1522" type1="DNA-C" type2="DNA-CT"/>
+    <Bond k="354803.19999999995" length="0.1383" type1="DNA-C" type2="DNA-N*"/>
+    <Bond k="349782.3999999999" length="0.1388" type1="DNA-C" type2="DNA-NA"/>
+    <Bond k="382417.5999999999" length="0.1358" type1="DNA-C" type2="DNA-NC"/>
+    <Bond k="476975.9999999999" length="0.12290000000000001" type1="DNA-C" type2="DNA-O"/>
+    <Bond k="548940.7999999999" length="0.125" type1="DNA-C" type2="DNA-O2"/>
+    <Bond k="376559.99999999994" length="0.13640000000000002" type1="DNA-C" type2="DNA-OH"/>
+    <Bond k="376559.99999999994" length="0.1323" type1="DNA-C" type2="DNA-OS"/>
+    <Bond k="307105.5999999999" length="0.10800000000000001" type1="DNA-C" type2="DNA-H4"/>
+    <Bond k="307105.5999999999" length="0.10800000000000001" type1="DNA-C" type2="DNA-H5"/>
+    <Bond k="392459.19999999995" length="0.13999999999999999" type1="DNA-CA" type2="DNA-CA"/>
+    <Bond k="392459.19999999995" length="0.1404" type1="DNA-CA" type2="DNA-CB"/>
+    <Bond k="357313.5999999999" length="0.1433" type1="DNA-CA" type2="DNA-CM"/>
+    <Bond k="265265.6" length="0.15100000000000002" type1="DNA-CA" type2="DNA-CT"/>
+    <Bond k="307105.5999999999" length="0.10800000000000001" type1="DNA-CA" type2="DNA-HA"/>
+    <Bond k="307105.5999999999" length="0.10800000000000001" type1="DNA-CA" type2="DNA-H4"/>
+    <Bond k="402500.79999999993" length="0.134" type1="DNA-CA" type2="DNA-N2"/>
+    <Bond k="357313.5999999999" length="0.1381" type1="DNA-CA" type2="DNA-NA"/>
+    <Bond k="404174.3999999999" length="0.1339" type1="DNA-CA" type2="DNA-NC"/>
+    <Bond k="376559.99999999994" length="0.13640000000000002" type1="DNA-CA" type2="DNA-OH"/>
+    <Bond k="435135.99999999994" length="0.137" type1="DNA-CB" type2="DNA-CB"/>
+    <Bond k="364844.79999999993" length="0.13740000000000002" type1="DNA-CB" type2="DNA-N*"/>
+    <Bond k="346435.19999999995" length="0.1391" type1="DNA-CB" type2="DNA-NB"/>
+    <Bond k="385764.79999999993" length="0.13540000000000002" type1="DNA-CB" type2="DNA-NC"/>
+    <Bond k="307105.5999999999" length="0.10800000000000001" type1="DNA-CK" type2="DNA-H5"/>
+    <Bond k="368191.99999999994" length="0.1371" type1="DNA-CK" type2="DNA-N*"/>
+    <Bond k="442667.1999999999" length="0.13040000000000002" type1="DNA-CK" type2="DNA-NB"/>
+    <Bond k="459403.1999999999" length="0.135" type1="DNA-CM" type2="DNA-CM"/>
+    <Bond k="265265.6" length="0.15100000000000002" type1="DNA-CM" type2="DNA-CT"/>
+    <Bond k="307105.5999999999" length="0.10800000000000001" type1="DNA-CM" type2="DNA-HA"/>
+    <Bond k="307105.5999999999" length="0.10800000000000001" type1="DNA-CM" type2="DNA-H4"/>
+    <Bond k="307105.5999999999" length="0.10800000000000001" type1="DNA-CM" type2="DNA-H5"/>
+    <Bond k="374886.3999999999" length="0.1365" type1="DNA-CM" type2="DNA-N*"/>
+    <Bond k="401663.99999999994" length="0.124" type1="DNA-CM" type2="DNA-OS"/>
+    <Bond k="307105.5999999999" length="0.10800000000000001" type1="DNA-CQ" type2="DNA-H5"/>
+    <Bond k="420073.5999999999" length="0.13240000000000002" type1="DNA-CQ" type2="DNA-NC"/>
+    <Bond k="259407.99999999994" length="0.1526" type1="DNA-CT" type2="DNA-CT"/>
+    <Bond k="284511.99999999994" length="0.10900000000000001" type1="DNA-CT" type2="DNA-HC"/>
+    <Bond k="284511.99999999994" length="0.10900000000000001" type1="DNA-CT" type2="DNA-H1"/>
+    <Bond k="284511.99999999994" length="0.10900000000000001" type1="DNA-CT" type2="DNA-H2"/>
+    <Bond k="282001.5999999999" length="0.14750000000000002" type1="DNA-CT" type2="DNA-N*"/>
+    <Bond k="282001.5999999999" length="0.1463" type1="DNA-CT" type2="DNA-N2"/>
+    <Bond k="267775.99999999994" length="0.141" type1="DNA-CT" type2="DNA-OH"/>
+    <Bond k="267775.99999999994" length="0.141" type1="DNA-CT" type2="DNA-OS"/>
+    <Bond k="439319.99999999994" length="0.148" type1="DNA-O2" type2="DNA-P"/>
+    <Bond k="192463.99999999997" length="0.16100000000000003" type1="DNA-OH" type2="DNA-P"/>
+    <Bond k="192463.99999999997" length="0.16100000000000003" type1="DNA-OS" type2="DNA-P"/>
+    <Bond k="209199.99999999997" length="0.18400000000000002" type1="DNA-NA" type2="DNA-P"/>
+    <Bond k="363171.19999999995" length="0.101" type1="DNA-H" type2="DNA-N2"/>
+    <Bond k="363171.19999999995" length="0.101" type1="DNA-H" type2="DNA-N*"/>
+    <Bond k="363171.19999999995" length="0.101" type1="DNA-H" type2="DNA-NA"/>
+    <Bond k="462750.3999999999" length="0.096" type1="DNA-HO" type2="DNA-OH"/>
+    <Bond k="462750.3999999999" length="0.096" type1="DNA-HO" type2="DNA-OS"/>
+    <Bond k="284511.99999999994" length="0.10900000000000001" type1="DNA-CI" type2="DNA-H1"/>
+    <Bond k="259407.99999999994" length="0.1526" type1="DNA-CI" type2="DNA-CT"/>
+    <Bond k="267775.99999999994" length="0.141" type1="DNA-OS" type2="DNA-CI"/>
+    <Bond k="267775.99999999994" length="0.141" type1="DNA-OH" type2="DNA-CI"/>
+    <Bond k="284511.99999999994" length="0.10900000000000001" type1="DNA-CE" type2="DNA-H1"/>
+    <Bond k="259407.99999999994" length="0.1526" type1="DNA-CE" type2="DNA-CT"/>
+    <Bond k="267775.99999999994" length="0.141" type1="DNA-OS" type2="DNA-CE"/>
+    <Bond k="267775.99999999994" length="0.141" type1="DNA-CE" type2="DNA-OH"/>
+    <Bond k="307105.5999999999" length="0.10800000000000001" type1="DNA-C1" type2="DNA-H5"/>
+    <Bond k="368191.99999999994" length="0.1371" type1="DNA-C1" type2="DNA-N*"/>
+    <Bond k="442667.1999999999" length="0.13040000000000002" type1="DNA-C1" type2="DNA-NB"/>
+    <Bond k="343087.99999999994" length="0.1444" type1="DNA-C" type2="DNA-C2"/>
+    <Bond k="459403.1999999999" length="0.135" type1="DNA-C2" type2="DNA-C2"/>
+    <Bond k="265265.6" length="0.15100000000000002" type1="DNA-C2" type2="DNA-CT"/>
+    <Bond k="307105.5999999999" length="0.10800000000000001" type1="DNA-C2" type2="DNA-HA"/>
+    <Bond k="307105.5999999999" length="0.10800000000000001" type1="DNA-C2" type2="DNA-H4"/>
+    <Bond k="374886.3999999999" length="0.1365" type1="DNA-C2" type2="DNA-N*"/>
+  </HarmonicBondForce>
+  <HarmonicAngleForce>
+    <Angle angle="2.0943951023931953" k="669.44" type1="DNA-C" type2="DNA-C" type3="DNA-O"/>
+    <Angle angle="2.0943951023931953" k="669.44" type1="DNA-C" type2="DNA-C" type3="DNA-OH"/>
+    <Angle angle="2.0943951023931953" k="527.184" type1="DNA-CA" type2="DNA-C" type3="DNA-CA"/>
+    <Angle angle="2.0943951023931953" k="585.76" type1="DNA-CA" type2="DNA-C" type3="DNA-OH"/>
+    <Angle angle="2.0943951023931953" k="585.76" type1="DNA-CA" type2="DNA-C" type3="DNA-OS"/>
+    <Angle angle="1.9425514574696887" k="585.76" type1="DNA-CB" type2="DNA-C" type3="DNA-NA"/>
+    <Angle angle="2.2479840765686965" k="669.44" type1="DNA-CB" type2="DNA-C" type3="DNA-O"/>
+    <Angle angle="1.99142067652553" k="585.76" type1="DNA-CM" type2="DNA-C" type3="DNA-NA"/>
+    <Angle angle="2.1868975527488947" k="669.44" type1="DNA-CM" type2="DNA-C" type3="DNA-O"/>
+    <Angle angle="2.101376419401173" k="669.44" type1="DNA-CT" type2="DNA-C" type3="DNA-O"/>
+    <Angle angle="2.0420352248333655" k="585.76" type1="DNA-CT" type2="DNA-C" type3="DNA-O2"/>
+    <Angle angle="2.0420352248333655" k="527.184" type1="DNA-CT" type2="DNA-C" type3="DNA-CT"/>
+    <Angle angle="2.007128639793479" k="669.44" type1="DNA-CT" type2="DNA-C" type3="DNA-OS"/>
+    <Angle angle="1.9198621771937625" k="669.44" type1="DNA-CT" type2="DNA-C" type3="DNA-OH"/>
+    <Angle angle="2.014109956801456" k="585.76" type1="DNA-N*" type2="DNA-C" type3="DNA-NA"/>
+    <Angle angle="2.069960492865275" k="585.76" type1="DNA-N*" type2="DNA-C" type3="DNA-NC"/>
+    <Angle angle="2.1101030656611446" k="669.44" type1="DNA-N*" type2="DNA-C" type3="DNA-O"/>
+    <Angle angle="2.1048670779051615" k="669.44" type1="DNA-NA" type2="DNA-C" type3="DNA-O"/>
+    <Angle angle="2.138028333693054" k="669.44" type1="DNA-NC" type2="DNA-C" type3="DNA-O"/>
+    <Angle angle="2.199114857512855" k="669.44" type1="DNA-O" type2="DNA-C" type3="DNA-O"/>
+    <Angle angle="2.0943951023931953" k="669.44" type1="DNA-O" type2="DNA-C" type3="DNA-OH"/>
+    <Angle angle="2.181661564992912" k="669.44" type1="DNA-O" type2="DNA-C" type3="DNA-OS"/>
+    <Angle angle="2.199114857512855" k="669.44" type1="DNA-O2" type2="DNA-C" type3="DNA-O2"/>
+    <Angle angle="2.0943951023931953" k="418.40000000000003" type1="DNA-H4" type2="DNA-C" type3="DNA-C"/>
+    <Angle angle="2.007128639793479" k="418.40000000000003" type1="DNA-H4" type2="DNA-C" type3="DNA-CM"/>
+    <Angle angle="2.007128639793479" k="418.40000000000003" type1="DNA-H4" type2="DNA-C" type3="DNA-CT"/>
+    <Angle angle="2.0943951023931953" k="418.40000000000003" type1="DNA-H4" type2="DNA-C" type3="DNA-O"/>
+    <Angle angle="2.0943951023931953" k="418.40000000000003" type1="DNA-H4" type2="DNA-C" type3="DNA-OH"/>
+    <Angle angle="2.076941809873252" k="418.40000000000003" type1="DNA-H5" type2="DNA-C" type3="DNA-O"/>
+    <Angle angle="1.8675022996339325" k="418.40000000000003" type1="DNA-H5" type2="DNA-C" type3="DNA-OH"/>
+    <Angle angle="1.8675022996339325" k="418.40000000000003" type1="DNA-H5" type2="DNA-C" type3="DNA-OS"/>
+    <Angle angle="2.0943951023931953" k="527.184" type1="DNA-C" type2="DNA-CA" type3="DNA-CA"/>
+    <Angle angle="2.0943951023931953" k="418.40000000000003" type1="DNA-C" type2="DNA-CA" type3="DNA-HA"/>
+    <Angle angle="2.0943951023931953" k="527.184" type1="DNA-CA" type2="DNA-CA" type3="DNA-CA"/>
+    <Angle angle="2.0943951023931953" k="527.184" type1="DNA-CA" type2="DNA-CA" type3="DNA-CB"/>
+    <Angle angle="2.0943951023931953" k="585.76" type1="DNA-CA" type2="DNA-CA" type3="DNA-CT"/>
+    <Angle angle="2.0943951023931953" k="418.40000000000003" type1="DNA-CA" type2="DNA-CA" type3="DNA-HA"/>
+    <Angle angle="2.0943951023931953" k="418.40000000000003" type1="DNA-CA" type2="DNA-CA" type3="DNA-H4"/>
+    <Angle angle="2.0943951023931953" k="585.76" type1="DNA-CA" type2="DNA-CA" type3="DNA-OH"/>
+    <Angle angle="2.0943951023931953" k="418.40000000000003" type1="DNA-CB" type2="DNA-CA" type3="DNA-HA"/>
+    <Angle angle="2.0943951023931953" k="418.40000000000003" type1="DNA-CB" type2="DNA-CA" type3="DNA-H4"/>
+    <Angle angle="2.155481626212997" k="585.76" type1="DNA-CB" type2="DNA-CA" type3="DNA-N2"/>
+    <Angle angle="2.0472712125893486" k="585.76" type1="DNA-CB" type2="DNA-CA" type3="DNA-NC"/>
+    <Angle angle="2.0961404316451895" k="585.76" type1="DNA-CM" type2="DNA-CA" type3="DNA-N2"/>
+    <Angle angle="2.1205750411731104" k="585.76" type1="DNA-CM" type2="DNA-CA" type3="DNA-NC"/>
+    <Angle angle="2.151990967709008" k="585.76" type1="DNA-NA" type2="DNA-CA" type3="DNA-NC"/>
+    <Angle angle="2.0245819323134224" k="585.76" type1="DNA-N2" type2="DNA-CA" type3="DNA-NA"/>
+    <Angle angle="2.0821777976292353" k="585.76" type1="DNA-N2" type2="DNA-CA" type3="DNA-NC"/>
+    <Angle angle="2.0943951023931953" k="585.76" type1="DNA-N2" type2="DNA-CA" type3="DNA-N2"/>
+    <Angle angle="2.080432468377241" k="527.184" type1="DNA-C" type2="DNA-CB" type3="DNA-CB"/>
+    <Angle angle="2.2689280275926285" k="585.76" type1="DNA-C" type2="DNA-CB" type3="DNA-NB"/>
+    <Angle angle="2.0472712125893486" k="527.184" type1="DNA-CA" type2="DNA-CB" type3="DNA-CB"/>
+    <Angle angle="2.3108159296404924" k="585.76" type1="DNA-CA" type2="DNA-CB" type3="DNA-NB"/>
+    <Angle angle="1.8535396656179781" k="585.76" type1="DNA-CB" type2="DNA-CB" type3="DNA-N*"/>
+    <Angle angle="1.9268434942017398" k="585.76" type1="DNA-CB" type2="DNA-CB" type3="DNA-NB"/>
+    <Angle angle="2.2287854547967587" k="585.76" type1="DNA-CB" type2="DNA-CB" type3="DNA-NC"/>
+    <Angle angle="2.202605516016844" k="585.76" type1="DNA-N*" type2="DNA-CB" type3="DNA-NC"/>
+    <Angle angle="2.1476276445790226" k="418.40000000000003" type1="DNA-H5" type2="DNA-CK" type3="DNA-N*"/>
+    <Angle angle="2.1476276445790226" k="418.40000000000003" type1="DNA-H5" type2="DNA-CK" type3="DNA-NB"/>
+    <Angle angle="1.9879300180215413" k="585.76" type1="DNA-N*" type2="DNA-CK" type3="DNA-NB"/>
+    <Angle angle="2.1066124071571557" k="527.184" type1="DNA-C" type2="DNA-CM" type3="DNA-CM"/>
+    <Angle angle="2.0891591146372126" k="585.76" type1="DNA-C" type2="DNA-CM" type3="DNA-CT"/>
+    <Angle angle="2.0891591146372126" k="418.40000000000003" type1="DNA-C" type2="DNA-CM" type3="DNA-HA"/>
+    <Angle angle="2.0891591146372126" k="418.40000000000003" type1="DNA-C" type2="DNA-CM" type3="DNA-H4"/>
+    <Angle angle="2.0420352248333655" k="527.184" type1="DNA-CA" type2="DNA-CM" type3="DNA-CM"/>
+    <Angle angle="2.151990967709008" k="418.40000000000003" type1="DNA-CA" type2="DNA-CM" type3="DNA-HA"/>
+    <Angle angle="2.151990967709008" k="418.40000000000003" type1="DNA-CA" type2="DNA-CM" type3="DNA-H4"/>
+    <Angle angle="2.0891591146372126" k="585.76" type1="DNA-CM" type2="DNA-CM" type3="DNA-CT"/>
+    <Angle angle="2.0891591146372126" k="418.40000000000003" type1="DNA-CM" type2="DNA-CM" type3="DNA-HA"/>
+    <Angle angle="2.0891591146372126" k="418.40000000000003" type1="DNA-CM" type2="DNA-CM" type3="DNA-H4"/>
+    <Angle angle="2.1153390534171272" k="585.76" type1="DNA-CM" type2="DNA-CM" type3="DNA-N*"/>
+    <Angle angle="2.181661564992912" k="669.44" type1="DNA-CM" type2="DNA-CM" type3="DNA-OS"/>
+    <Angle angle="2.0786871391252464" k="418.40000000000003" type1="DNA-H4" type2="DNA-CM" type3="DNA-N*"/>
+    <Angle angle="1.9722220547535925" k="418.40000000000003" type1="DNA-H4" type2="DNA-CM" type3="DNA-OS"/>
+    <Angle angle="2.0943951023931953" k="292.88" type1="DNA-HA" type2="DNA-CM" type3="DNA-HA"/>
+    <Angle angle="2.0943951023931953" k="418.40000000000003" type1="DNA-HA" type2="DNA-CM" type3="DNA-CT"/>
+    <Angle angle="2.253220064324679" k="585.76" type1="DNA-NC" type2="DNA-CQ" type3="DNA-NC"/>
+    <Angle angle="2.0149826214274533" k="418.40000000000003" type1="DNA-H5" type2="DNA-CQ" type3="DNA-NC"/>
+    <Angle angle="1.911135530933791" k="292.88" type1="DNA-H1" type2="DNA-CT" type3="DNA-H1"/>
+    <Angle angle="1.911135530933791" k="418.40000000000003" type1="DNA-H1" type2="DNA-CT" type3="DNA-N*"/>
+    <Angle angle="1.911135530933791" k="418.40000000000003" type1="DNA-H1" type2="DNA-CT" type3="DNA-OH"/>
+    <Angle angle="1.911135530933791" k="418.40000000000003" type1="DNA-H1" type2="DNA-CT" type3="DNA-OS"/>
+    <Angle angle="1.911135530933791" k="418.40000000000003" type1="DNA-H1" type2="DNA-CT" type3="DNA-CM"/>
+    <Angle angle="1.911135530933791" k="418.40000000000003" type1="DNA-H1" type2="DNA-CT" type3="DNA-N2"/>
+    <Angle angle="1.911135530933791" k="292.88" type1="DNA-H2" type2="DNA-CT" type3="DNA-H2"/>
+    <Angle angle="1.911135530933791" k="418.40000000000003" type1="DNA-H2" type2="DNA-CT" type3="DNA-N*"/>
+    <Angle angle="1.911135530933791" k="418.40000000000003" type1="DNA-H2" type2="DNA-CT" type3="DNA-OS"/>
+    <Angle angle="1.911135530933791" k="292.88" type1="DNA-HC" type2="DNA-CT" type3="DNA-HC"/>
+    <Angle angle="1.911135530933791" k="418.40000000000003" type1="DNA-HC" type2="DNA-CT" type3="DNA-CM"/>
+    <Angle angle="1.911135530933791" k="418.40000000000003" type1="DNA-C" type2="DNA-CT" type3="DNA-H1"/>
+    <Angle angle="1.911135530933791" k="418.40000000000003" type1="DNA-C" type2="DNA-CT" type3="DNA-HC"/>
+    <Angle angle="1.9390607989657" k="527.184" type1="DNA-C" type2="DNA-CT" type3="DNA-CT"/>
+    <Angle angle="1.911135530933791" k="502.08000000000004" type1="DNA-C" type2="DNA-CT" type3="DNA-OS"/>
+    <Angle angle="1.911135530933791" k="418.40000000000003" type1="DNA-CA" type2="DNA-CT" type3="DNA-HC"/>
+    <Angle angle="1.9373154697137058" k="527.184" type1="DNA-CM" type2="DNA-CT" type3="DNA-CT"/>
+    <Angle angle="1.911135530933791" k="418.40000000000003" type1="DNA-CM" type2="DNA-CT" type3="DNA-OS"/>
+    <Angle angle="1.911135530933791" k="334.72" type1="DNA-CT" type2="DNA-CT" type3="DNA-CT"/>
+    <Angle angle="1.911135530933791" k="418.40000000000003" type1="DNA-CT" type2="DNA-CT" type3="DNA-HC"/>
+    <Angle angle="1.911135530933791" k="418.40000000000003" type1="DNA-CT" type2="DNA-CT" type3="DNA-H1"/>
+    <Angle angle="1.911135530933791" k="418.40000000000003" type1="DNA-CT" type2="DNA-CT" type3="DNA-H2"/>
+    <Angle angle="1.911135530933791" k="418.40000000000003" type1="DNA-CT" type2="DNA-CT" type3="DNA-N*"/>
+    <Angle angle="1.911135530933791" k="418.40000000000003" type1="DNA-CT" type2="DNA-CT" type3="DNA-OH"/>
+    <Angle angle="1.911135530933791" k="418.40000000000003" type1="DNA-CT" type2="DNA-CT" type3="DNA-OS"/>
+    <Angle angle="1.9896753472735358" k="527.184" type1="DNA-CT" type2="DNA-CT" type3="DNA-CA"/>
+    <Angle angle="1.9408061282176945" k="669.44" type1="DNA-CT" type2="DNA-CT" type3="DNA-N2"/>
+    <Angle angle="1.7627825445142729" k="1338.88" type1="DNA-OS" type2="DNA-CT" type3="DNA-OS"/>
+    <Angle angle="1.911135530933791" k="418.40000000000003" type1="DNA-OS" type2="DNA-CT" type3="DNA-N*"/>
+    <Angle angle="2.1223203704251046" k="585.76" type1="DNA-C" type2="DNA-N*" type3="DNA-CM"/>
+    <Angle angle="2.0525072003453313" k="585.76" type1="DNA-C" type2="DNA-N*" type3="DNA-CT"/>
+    <Angle angle="2.080432468377241" k="418.40000000000003" type1="DNA-C" type2="DNA-N*" type3="DNA-H"/>
+    <Angle angle="1.8395770316020235" k="585.76" type1="DNA-CB" type2="DNA-N*" type3="DNA-CK"/>
+    <Angle angle="2.1956241990088667" k="585.76" type1="DNA-CB" type2="DNA-N*" type3="DNA-CT"/>
+    <Angle angle="2.1956241990088667" k="418.40000000000003" type1="DNA-CB" type2="DNA-N*" type3="DNA-H"/>
+    <Angle angle="2.2479840765686965" k="585.76" type1="DNA-CK" type2="DNA-N*" type3="DNA-CT"/>
+    <Angle angle="2.2479840765686965" k="418.40000000000003" type1="DNA-CK" type2="DNA-N*" type3="DNA-H"/>
+    <Angle angle="2.1153390534171272" k="585.76" type1="DNA-CM" type2="DNA-N*" type3="DNA-CT"/>
+    <Angle angle="2.1153390534171272" k="418.40000000000003" type1="DNA-CM" type2="DNA-N*" type3="DNA-H"/>
+    <Angle angle="2.0943951023931953" k="418.40000000000003" type1="DNA-CA" type2="DNA-N2" type3="DNA-H"/>
+    <Angle angle="2.150245638457014" k="418.40000000000003" type1="DNA-CA" type2="DNA-N2" type3="DNA-CT"/>
+    <Angle angle="2.0664698343612864" k="418.40000000000003" type1="DNA-CT" type2="DNA-N2" type3="DNA-H"/>
+    <Angle angle="2.0943951023931953" k="292.88" type1="DNA-H" type2="DNA-N2" type3="DNA-H"/>
+    <Angle angle="2.2060961745208325" k="585.76" type1="DNA-C" type2="DNA-NA" type3="DNA-C"/>
+    <Angle angle="2.1851522234969005" k="585.76" type1="DNA-C" type2="DNA-NA" type3="DNA-CA"/>
+    <Angle angle="2.038544566329377" k="418.40000000000003" type1="DNA-C" type2="DNA-NA" type3="DNA-H"/>
+    <Angle angle="2.059488517353309" k="418.40000000000003" type1="DNA-CA" type2="DNA-NA" type3="DNA-H"/>
+    <Angle angle="1.811651763570114" k="585.76" type1="DNA-CB" type2="DNA-NB" type3="DNA-CK"/>
+    <Angle angle="2.1031217486531673" k="585.76" type1="DNA-C" type2="DNA-NC" type3="DNA-CA"/>
+    <Angle angle="1.9582594207376378" k="585.76" type1="DNA-CA" type2="DNA-NC" type3="DNA-CB"/>
+    <Angle angle="2.069960492865275" k="585.76" type1="DNA-CA" type2="DNA-NC" type3="DNA-CQ"/>
+    <Angle angle="1.9373154697137058" k="585.76" type1="DNA-CB" type2="DNA-NC" type3="DNA-CQ"/>
+    <Angle angle="1.9722220547535925" k="418.40000000000003" type1="DNA-C" type2="DNA-OH" type3="DNA-HO"/>
+    <Angle angle="1.9722220547535925" k="418.40000000000003" type1="DNA-CA" type2="DNA-OH" type3="DNA-HO"/>
+    <Angle angle="1.8936822384138476" k="460.24" type1="DNA-CT" type2="DNA-OH" type3="DNA-HO"/>
+    <Angle angle="1.8936822384138476" k="376.56" type1="DNA-HO" type2="DNA-OH" type3="DNA-P"/>
+    <Angle angle="2.0420352248333655" k="502.08000000000004" type1="DNA-C" type2="DNA-OS" type3="DNA-CT"/>
+    <Angle angle="2.0420352248333655" k="502.08000000000004" type1="DNA-CM" type2="DNA-OS" type3="DNA-CT"/>
+    <Angle angle="1.911135530933791" k="502.08000000000004" type1="DNA-CT" type2="DNA-OS" type3="DNA-CT"/>
+    <Angle angle="2.1031217486531673" k="836.8000000000001" type1="DNA-CT" type2="DNA-OS" type3="DNA-P"/>
+    <Angle angle="2.1031217486531673" k="836.8000000000001" type1="DNA-C" type2="DNA-OS" type3="DNA-P"/>
+    <Angle angle="2.1031217486531673" k="836.8000000000001" type1="DNA-P" type2="DNA-OS" type3="DNA-P"/>
+    <Angle angle="1.888969849433463" k="376.56" type1="DNA-O2" type2="DNA-P" type3="DNA-OH"/>
+    <Angle angle="2.092649773141201" k="1171.52" type1="DNA-O2" type2="DNA-P" type3="DNA-O2"/>
+    <Angle angle="1.888969849433463" k="836.8000000000001" type1="DNA-O2" type2="DNA-P" type3="DNA-OS"/>
+    <Angle angle="1.790707812546182" k="376.56" type1="DNA-OH" type2="DNA-P" type3="DNA-OS"/>
+    <Angle angle="1.790707812546182" k="376.56" type1="DNA-OS" type2="DNA-P" type3="DNA-OS"/>
+    <Angle angle="1.911135530933791" k="418.40000000000003" type1="DNA-H1" type2="DNA-CI" type3="DNA-CT"/>
+    <Angle angle="1.911135530933791" k="292.88" type1="DNA-H1" type2="DNA-CI" type3="DNA-H1"/>
+    <Angle angle="1.911135530933791" k="418.40000000000003" type1="DNA-CI" type2="DNA-CT" type3="DNA-H1"/>
+    <Angle angle="1.911135530933791" k="418.40000000000003" type1="DNA-CI" type2="DNA-CT" type3="DNA-OS"/>
+    <Angle angle="1.911135530933791" k="334.72" type1="DNA-CI" type2="DNA-CT" type3="DNA-CT"/>
+    <Angle angle="1.911135530933791" k="418.40000000000003" type1="DNA-OS" type2="DNA-CI" type3="DNA-H1"/>
+    <Angle angle="1.911135530933791" k="418.40000000000003" type1="DNA-OS" type2="DNA-CI" type3="DNA-CT"/>
+    <Angle angle="2.1031217486531673" k="836.8000000000001" type1="DNA-P" type2="DNA-OS" type3="DNA-CI"/>
+    <Angle angle="1.911135530933791" k="418.40000000000003" type1="DNA-OH" type2="DNA-CI" type3="DNA-H1"/>
+    <Angle angle="1.911135530933791" k="418.40000000000003" type1="DNA-OH" type2="DNA-CI" type3="DNA-CT"/>
+    <Angle angle="1.8936822384138476" k="460.24" type1="DNA-HO" type2="DNA-OH" type3="DNA-CI"/>
+    <Angle angle="1.911135530933791" k="334.72" type1="DNA-CT" type2="DNA-CE" type3="DNA-CT"/>
+    <Angle angle="1.911135530933791" k="418.40000000000003" type1="DNA-H1" type2="DNA-CE" type3="DNA-CT"/>
+    <Angle angle="1.911135530933791" k="418.40000000000003" type1="DNA-H1" type2="DNA-CE" type3="DNA-OS"/>
+    <Angle angle="1.911135530933791" k="418.40000000000003" type1="DNA-H1" type2="DNA-CT" type3="DNA-CE"/>
+    <Angle angle="1.911135530933791" k="334.72" type1="DNA-CI" type2="DNA-CT" type3="DNA-CE"/>
+    <Angle angle="1.911135530933791" k="418.40000000000003" type1="DNA-CE" type2="DNA-CT" type3="DNA-OS"/>
+    <Angle angle="1.911135530933791" k="334.72" type1="DNA-CE" type2="DNA-CT" type3="DNA-CT"/>
+    <Angle angle="1.911135530933791" k="418.40000000000003" type1="DNA-CE" type2="DNA-CT" type3="DNA-HC"/>
+    <Angle angle="1.911135530933791" k="418.40000000000003" type1="DNA-OS" type2="DNA-CE" type3="DNA-CT"/>
+    <Angle angle="2.1031217486531673" k="836.8000000000001" type1="DNA-P" type2="DNA-OS" type3="DNA-CE"/>
+    <Angle angle="1.911135530933791" k="418.40000000000003" type1="DNA-H1" type2="DNA-CE" type3="DNA-OH"/>
+    <Angle angle="1.8936822384138476" k="460.24" type1="DNA-CE" type2="DNA-OH" type3="DNA-HO"/>
+    <Angle angle="1.911135530933791" k="418.40000000000003" type1="DNA-CT" type2="DNA-CE" type3="DNA-OH"/>
+    <Angle angle="2.1476276445790226" k="418.40000000000003" type1="DNA-H5" type2="DNA-C1" type3="DNA-N*"/>
+    <Angle angle="2.1476276445790226" k="418.40000000000003" type1="DNA-H5" type2="DNA-C1" type3="DNA-NB"/>
+    <Angle angle="1.9879300180215413" k="585.76" type1="DNA-N*" type2="DNA-C1" type3="DNA-NB"/>
+    <Angle angle="1.8395770316020235" k="585.76" type1="DNA-CB" type2="DNA-N*" type3="DNA-C1"/>
+    <Angle angle="2.2479840765686965" k="585.76" type1="DNA-C1" type2="DNA-N*" type3="DNA-CT"/>
+    <Angle angle="1.811651763570114" k="585.76" type1="DNA-CB" type2="DNA-NB" type3="DNA-C1"/>
+    <Angle angle="1.99142067652553" k="585.76" type1="DNA-C2" type2="DNA-C" type3="DNA-NA"/>
+    <Angle angle="2.1868975527488947" k="669.44" type1="DNA-C2" type2="DNA-C" type3="DNA-O"/>
+    <Angle angle="1.911135530933791" k="418.40000000000003" type1="DNA-HC" type2="DNA-CT" type3="DNA-C2"/>
+    <Angle angle="2.1223203704251046" k="585.76" type1="DNA-C" type2="DNA-N*" type3="DNA-C2"/>
+    <Angle angle="2.1153390534171272" k="585.76" type1="DNA-C2" type2="DNA-N*" type3="DNA-CT"/>
+    <Angle angle="2.1066124071571557" k="527.184" type1="DNA-C" type2="DNA-C2" type3="DNA-C2"/>
+    <Angle angle="2.0891591146372126" k="585.76" type1="DNA-C2" type2="DNA-C2" type3="DNA-CT"/>
+    <Angle angle="2.0891591146372126" k="418.40000000000003" type1="DNA-C2" type2="DNA-C2" type3="DNA-HA"/>
+    <Angle angle="2.0891591146372126" k="418.40000000000003" type1="DNA-C2" type2="DNA-C2" type3="DNA-H4"/>
+    <Angle angle="2.1153390534171272" k="585.76" type1="DNA-C2" type2="DNA-C2" type3="DNA-N*"/>
+    <Angle angle="2.0891591146372126" k="585.76" type1="DNA-C" type2="DNA-C2" type3="DNA-CT"/>
+    <Angle angle="2.0891591146372126" k="418.40000000000003" type1="DNA-C" type2="DNA-C2" type3="DNA-HA"/>
+    <Angle angle="2.0786871391252464" k="418.40000000000003" type1="DNA-H4" type2="DNA-C2" type3="DNA-N*"/>
+  </HarmonicAngleForce>
+  <PeriodicTorsionForce ordering="amber">
+    <Proper k1="15.167" periodicity1="2" phase1="3.141592653589793" type1="" type2="DNA-C" type3="DNA-C" type4=""/>
+    <Proper k1="15.167" periodicity1="2" phase1="3.141592653589793" type1="" type2="DNA-C" type3="DNA-CA" type4=""/>
+    <Proper k1="12.552" periodicity1="2" phase1="3.141592653589793" type1="" type2="DNA-C" type3="DNA-CB" type4=""/>
+    <Proper k1="9.1002" periodicity1="2" phase1="3.141592653589793" type1="" type2="DNA-C" type3="DNA-CM" type4=""/>
+    <Proper k1="0.0" periodicity1="2" phase1="0.0" type1="" type2="DNA-C" type3="DNA-CT" type4=""/>
+    <Proper k1="6.0668" periodicity1="2" phase1="3.141592653589793" type1="" type2="DNA-C" type3="DNA-N*" type4=""/>
+    <Proper k1="5.6484000000000005" periodicity1="2" phase1="3.141592653589793" type1="" type2="DNA-C" type3="DNA-NA" type4=""/>
+    <Proper k1="16.736" periodicity1="2" phase1="3.141592653589793" type1="" type2="DNA-C" type3="DNA-NC" type4=""/>
+    <Proper k1="11.7152" periodicity1="2" phase1="3.141592653589793" type1="" type2="DNA-C" type3="DNA-O" type4=""/>
+    <Proper k1="9.623199999999999" periodicity1="2" phase1="3.141592653589793" type1="" type2="DNA-C" type3="DNA-OH" type4=""/>
+    <Proper k1="11.296800000000001" periodicity1="2" phase1="3.141592653589793" type1="" type2="DNA-C" type3="DNA-OS" type4=""/>
+    <Proper k1="15.167" periodicity1="2" phase1="3.141592653589793" type1="" type2="DNA-CA" type3="DNA-CA" type4=""/>
+    <Proper k1="14.644" periodicity1="2" phase1="3.141592653589793" type1="" type2="DNA-CA" type3="DNA-CB" type4=""/>
+    <Proper k1="10.6692" periodicity1="2" phase1="3.141592653589793" type1="" type2="DNA-CA" type3="DNA-CM" type4=""/>
+    <Proper k1="0.0" periodicity1="2" phase1="0.0" type1="" type2="DNA-CA" type3="DNA-CT" type4=""/>
+    <Proper k1="10.0416" periodicity1="2" phase1="3.141592653589793" type1="" type2="DNA-CA" type3="DNA-N2" type4=""/>
+    <Proper k1="6.276" periodicity1="2" phase1="3.141592653589793" type1="" type2="DNA-CA" type3="DNA-NA" type4=""/>
+    <Proper k1="20.0832" periodicity1="2" phase1="3.141592653589793" type1="" type2="DNA-CA" type3="DNA-NC" type4=""/>
+    <Proper k1="3.7656" periodicity1="2" phase1="3.141592653589793" type1="" type2="DNA-CA" type3="DNA-OH" type4=""/>
+    <Proper k1="22.8028" periodicity1="2" phase1="3.141592653589793" type1="" type2="DNA-CB" type3="DNA-CB" type4=""/>
+    <Proper k1="6.9036" periodicity1="2" phase1="3.141592653589793" type1="" type2="DNA-CB" type3="DNA-N*" type4=""/>
+    <Proper k1="10.6692" periodicity1="2" phase1="3.141592653589793" type1="" type2="DNA-CB" type3="DNA-NB" type4=""/>
+    <Proper k1="17.3636" periodicity1="2" phase1="3.141592653589793" type1="" type2="DNA-CB" type3="DNA-NC" type4=""/>
+    <Proper k1="7.1128" periodicity1="2" phase1="3.141592653589793" type1="" type2="DNA-CK" type3="DNA-N*" type4=""/>
+    <Proper k1="41.84" periodicity1="2" phase1="3.141592653589793" type1="" type2="DNA-CK" type3="DNA-NB" type4=""/>
+    <Proper k1="27.823600000000003" periodicity1="2" phase1="3.141592653589793" type1="" type2="DNA-CM" type3="DNA-CM" type4=""/>
+    <Proper k1="0.0" periodicity1="3" phase1="0.0" type1="" type2="DNA-CM" type3="DNA-CT" type4=""/>
+    <Proper k1="7.740400000000001" periodicity1="2" phase1="3.141592653589793" type1="" type2="DNA-CM" type3="DNA-N*" type4=""/>
+    <Proper k1="4.3932" periodicity1="2" phase1="3.141592653589793" type1="" type2="DNA-CM" type3="DNA-OS" type4=""/>
+    <Proper k1="28.4512" periodicity1="2" phase1="3.141592653589793" type1="" type2="DNA-CQ" type3="DNA-NC" type4=""/>
+    <Proper k1="0.6508444444444444" periodicity1="3" phase1="0.0" type1="" type2="DNA-CT" type3="DNA-CT" type4=""/>
+    <Proper k1="0.0" periodicity1="2" phase1="0.0" type1="" type2="DNA-CT" type3="DNA-N*" type4=""/>
+    <Proper k1="0.0" periodicity1="3" phase1="0.0" type1="" type2="DNA-CT" type3="DNA-N2" type4=""/>
+    <Proper k1="0.6973333333333334" periodicity1="3" phase1="0.0" type1="" type2="DNA-CT" type3="DNA-OH" type4=""/>
+    <Proper k1="1.6038666666666666" periodicity1="3" phase1="0.0" type1="" type2="DNA-CT" type3="DNA-OS" type4=""/>
+    <Proper k1="1.046" periodicity1="3" phase1="0.0" type1="" type2="DNA-OH" type3="DNA-P" type4=""/>
+    <Proper k1="1.046" periodicity1="3" phase1="0.0" type1="" type2="DNA-OS" type3="DNA-P" type4=""/>
+    <Proper k1="1.6038666666666666" periodicity1="3" phase1="0.0" type1="" type2="DNA-CI" type3="DNA-OS" type4=""/>
+    <Proper k1="0.6973333333333334" periodicity1="3" phase1="0.0" type1="" type2="DNA-CI" type3="DNA-OH" type4=""/>
+    <Proper k1="0.6508444444444444" periodicity1="3" phase1="0.0" type1="" type2="DNA-CI" type3="DNA-CT" type4=""/>
+    <Proper k1="1.6024720000000001" k2="0.41840000000000005" periodicity1="3" periodicity2="2" phase1="0.0" phase2="3.141592653589793" type1="DNA-CT" type2="DNA-OS" type3="DNA-CT" type4="DNA-CI"/>
+    <Proper k1="0.0" k2="1.046" periodicity1="3" periodicity2="1" phase1="0.0" phase2="0.0" type1="DNA-H1" type2="DNA-CI" type3="DNA-CT" type4="DNA-OS"/>
+    <Proper k1="0.0" k2="1.046" periodicity1="3" periodicity2="1" phase1="0.0" phase2="0.0" type1="DNA-H1" type2="DNA-CI" type3="DNA-CT" type4="DNA-OH"/>
+    <Proper k1="0.0" k2="1.046" periodicity1="3" periodicity2="1" phase1="0.0" phase2="0.0" type1="DNA-H1" type2="DNA-CT" type3="DNA-CI" type4="DNA-OS"/>
+    <Proper k1="0.0" k2="1.046" periodicity1="3" periodicity2="1" phase1="0.0" phase2="0.0" type1="DNA-H1" type2="DNA-CT" type3="DNA-CI" type4="DNA-OH"/>
+    <Proper k1="0.75312" k2="1.046" k3="0.8368000000000001" periodicity1="3" periodicity2="2" periodicity3="1" phase1="0.0" phase2="3.141592653589793" phase3="3.141592653589793" type1="DNA-CI" type2="DNA-CT" type3="DNA-CT" type4="DNA-CT"/>
+    <Proper k1="0.7747973040000001" k2="5.257325704" k3="1.484725872" periodicity1="1" periodicity2="2" periodicity3="3" phase1="0.5549288319349986" phase2="6.142853854002235" phase3="6.235144770452592" type1="DNA-OS" type2="DNA-P" type3="DNA-OS" type4="DNA-CI"/>
+    <Proper k1="0.7747973040000001" k2="5.257325704" k3="1.484725872" periodicity1="1" periodicity2="2" periodicity3="3" phase1="0.5549288319349986" phase2="6.142853854002235" phase3="6.235144770452592" type1="DNA-OH" type2="DNA-P" type3="DNA-OS" type4="DNA-CI"/>
+    <Proper k1="4.92891936" k2="0.385354768" k3="4.02848072" periodicity1="1" periodicity2="2" periodicity3="3" phase1="3.3331692425337263" phase2="5.159765562356967" phase3="6.0754099683820435" type1="DNA-CT" type2="DNA-CT" type3="DNA-CI" type4="DNA-OS"/>
+    <Proper k1="4.92891936" k2="0.385354768" k3="4.02848072" periodicity1="1" periodicity2="2" periodicity3="3" phase1="3.3331692425337263" phase2="5.159765562356967" phase3="6.0754099683820435" type1="DNA-CT" type2="DNA-CT" type3="DNA-CI" type4="DNA-OH"/>
+    <Proper k1="1.046" k2="5.0208" periodicity1="3" periodicity2="2" phase1="0.0" phase2="0.0" type1="DNA-OH" type2="DNA-P" type3="DNA-OS" type4="DNA-CT"/>
+    <Proper k1="1.046" k2="5.0208" periodicity1="3" periodicity2="2" phase1="0.0" phase2="0.0" type1="DNA-OS" type2="DNA-P" type3="DNA-OS" type4="DNA-CT"/>
+    <Proper k1="3.3472000000000004" k2="0.0" k3="0.33472" periodicity1="1" periodicity2="2" periodicity3="3" phase1="0.0" phase2="0.0" phase3="3.141592653589793" type1="DNA-H1" type2="DNA-CT" type3="DNA-C" type4="DNA-O"/>
+    <Proper k1="3.3472000000000004" k2="0.0" k3="0.33472" periodicity1="1" periodicity2="2" periodicity3="3" phase1="0.0" phase2="0.0" phase3="3.141592653589793" type1="DNA-HC" type2="DNA-CT" type3="DNA-C" type4="DNA-O"/>
+    <Proper k1="0.6276" periodicity1="3" phase1="0.0" type1="DNA-HC" type2="DNA-CT" type3="DNA-CT" type4="DNA-HC"/>
+    <Proper k1="0.66944" periodicity1="3" phase1="0.0" type1="DNA-HC" type2="DNA-CT" type3="DNA-CT" type4="DNA-CT"/>
+    <Proper k1="1.58992" k2="4.811599999999999" periodicity1="3" periodicity2="1" phase1="3.141592653589793" phase2="0.0" type1="DNA-HC" type2="DNA-CT" type3="DNA-CM" type4="DNA-CM"/>
+    <Proper k1="0.66944" k2="1.046" periodicity1="3" periodicity2="1" phase1="0.0" phase2="0.0" type1="DNA-HO" type2="DNA-OH" type3="DNA-CT" type4="DNA-CT"/>
+    <Proper k1="9.623199999999999" k2="7.9496" periodicity1="2" periodicity2="1" phase1="3.141592653589793" phase2="0.0" type1="DNA-HO" type2="DNA-OH" type3="DNA-C" type4="DNA-O"/>
+    <Proper k1="9.1002" k2="1.2552" periodicity1="2" periodicity2="3" phase1="3.141592653589793" phase2="0.0" type1="DNA-CM" type2="DNA-CM" type3="DNA-C" type4="DNA-O"/>
+    <Proper k1="27.823600000000003" k2="7.9496" periodicity1="2" periodicity2="1" phase1="3.141592653589793" phase2="3.141592653589793" type1="DNA-CT" type2="DNA-CM" type3="DNA-CM" type4="DNA-CT"/>
+    <Proper k1="0.75312" k2="1.046" k3="0.8368000000000001" periodicity1="3" periodicity2="2" periodicity3="1" phase1="0.0" phase2="3.141592653589793" phase3="3.141592653589793" type1="DNA-CT" type2="DNA-CT" type3="DNA-CT" type4="DNA-CT"/>
+    <Proper k1="1.6024720000000001" k2="0.41840000000000005" periodicity1="3" periodicity2="2" phase1="0.0" phase2="3.141592653589793" type1="DNA-CT" type2="DNA-CT" type3="DNA-OS" type4="DNA-CT"/>
+    <Proper k1="1.6024720000000001" k2="3.3472000000000004" periodicity1="3" periodicity2="1" phase1="0.0" phase2="3.141592653589793" type1="DNA-CT" type2="DNA-CT" type3="DNA-OS" type4="DNA-C"/>
+    <Proper k1="0.41840000000000005" k2="3.5564" k3="5.6484000000000005" periodicity1="3" periodicity2="2" periodicity3="1" phase1="0.0" phase2="3.141592653589793" phase3="3.141592653589793" type1="DNA-CT" type2="DNA-OS" type3="DNA-CT" type4="DNA-OS"/>
+    <Proper k1="1.6024720000000001" k2="2.7196000000000002" periodicity1="3" periodicity2="2" phase1="0.0" phase2="0.0" type1="DNA-CT" type2="DNA-OS" type3="DNA-CT" type4="DNA-N*"/>
+    <Proper k1="11.296800000000001" k2="5.8576" periodicity1="2" periodicity2="1" phase1="3.141592653589793" phase2="3.141592653589793" type1="DNA-O" type2="DNA-C" type3="DNA-OS" type4="DNA-CT"/>
+    <Proper k1="1.8409600000000002" k2="7.23832" k3="3.3890400000000005" periodicity1="3" periodicity2="2" periodicity3="1" phase1="3.8362336958835366" phase2="0.06981317007977318" phase3="1.5271630954950384" type1="DNA-OS" type2="DNA-CT" type3="DNA-N*" type4="DNA-CK"/>
+    <Proper k1="1.0878400000000001" k2="6.35968" k3="4.30952" periodicity1="3" periodicity2="2" periodicity3="1" phase1="3.6582101121801145" phase2="0.1361356816555577" phase3="3.225368457685521" type1="DNA-OS" type2="DNA-CT" type3="DNA-N*" type4="DNA-CM"/>
+    <Proper k1="0.602496" k2="4.916200000000001" periodicity1="3" periodicity2="2" phase1="0.0" phase2="0.0" type1="DNA-OS" type2="DNA-CT" type3="DNA-CT" type4="DNA-OS"/>
+    <Proper k1="0.602496" k2="4.916200000000001" periodicity1="3" periodicity2="2" phase1="0.0" phase2="0.0" type1="DNA-OS" type2="DNA-CT" type3="DNA-CT" type4="DNA-OH"/>
+    <Proper k1="0.602496" k2="4.916200000000001" periodicity1="3" periodicity2="2" phase1="0.0" phase2="0.0" type1="DNA-OH" type2="DNA-CT" type3="DNA-CT" type4="DNA-OH"/>
+    <Proper k1="0.0" k2="1.046" periodicity1="3" periodicity2="1" phase1="0.0" phase2="0.0" type1="DNA-H1" type2="DNA-CT" type3="DNA-CT" type4="DNA-OS"/>
+    <Proper k1="0.0" k2="1.046" periodicity1="3" periodicity2="1" phase1="0.0" phase2="0.0" type1="DNA-H1" type2="DNA-CT" type3="DNA-CT" type4="DNA-OH"/>
+    <Proper k1="0.0" k2="1.046" periodicity1="3" periodicity2="1" phase1="0.0" phase2="0.0" type1="DNA-HC" type2="DNA-CT" type3="DNA-CT" type4="DNA-OS"/>
+    <Proper k1="0.0" k2="1.046" periodicity1="3" periodicity2="1" phase1="0.0" phase2="0.0" type1="DNA-HC" type2="DNA-CT" type3="DNA-CT" type4="DNA-OH"/>
+    <Proper k1="1.6038666666666666" periodicity1="3" phase1="0.0" type1="" type2="DNA-CE" type3="DNA-OS" type4=""/>
+    <Proper k1="0.6973333333333334" periodicity1="3" phase1="0.0" type1="" type2="DNA-CE" type3="DNA-OH" type4=""/>
+    <Proper k1="0.6508444444444444" periodicity1="3" phase1="0.0" type1="" type2="DNA-CE" type3="DNA-CT" type4=""/>
+    <Proper k1="7.1128" periodicity1="2" phase1="3.141592653589793" type1="" type2="DNA-C1" type3="DNA-N*" type4=""/>
+    <Proper k1="41.84" periodicity1="2" phase1="3.141592653589793" type1="" type2="DNA-C1" type3="DNA-NB" type4=""/>
+    <Proper k1="9.1002" periodicity1="2" phase1="3.141592653589793" type1="" type2="DNA-C" type3="DNA-C2" type4=""/>
+    <Proper k1="27.823600000000003" periodicity1="2" phase1="3.141592653589793" type1="" type2="DNA-C2" type3="DNA-C2" type4=""/>
+    <Proper k1="0.0" periodicity1="3" phase1="0.0" type1="" type2="DNA-C2" type3="DNA-CT" type4=""/>
+    <Proper k1="7.740400000000001" periodicity1="2" phase1="3.141592653589793" type1="" type2="DNA-C2" type3="DNA-N*" type4=""/>
+    <Proper k1="1.58992" k2="4.811599999999999" periodicity1="3" periodicity2="1" phase1="3.141592653589793" phase2="0.0" type1="DNA-HC" type2="DNA-CT" type3="DNA-C2" type4="DNA-C2"/>
+    <Proper k1="9.1002" k2="1.2552" periodicity1="2" periodicity2="3" phase1="3.141592653589793" phase2="0.0" type1="DNA-C2" type2="DNA-C2" type3="DNA-C" type4="DNA-O"/>
+    <Proper k1="4.92891936" k2="0.385354768" k3="4.02848072" periodicity1="1" periodicity2="2" periodicity3="3" phase1="3.3331692425337263" phase2="5.159765562356967" phase3="6.0754099683820435" type1="DNA-CE" type2="DNA-CT" type3="DNA-CI" type4="DNA-OS"/>
+    <Proper k1="4.92891936" k2="0.385354768" k3="4.02848072" periodicity1="1" periodicity2="2" periodicity3="3" phase1="3.3331692425337263" phase2="5.159765562356967" phase3="6.0754099683820435" type1="DNA-CE" type2="DNA-CT" type3="DNA-CI" type4="DNA-OH"/>
+    <Proper k1="0.66944" periodicity1="3" phase1="0.0" type1="DNA-H1" type2="DNA-CI" type3="DNA-CT" type4="DNA-CE"/>
+    <Proper k1="1.6037272" k2="0.41840000000000005" periodicity1="3" periodicity2="2" phase1="0.0" phase2="3.141592653589793" type1="DNA-CE" type2="DNA-CT" type3="DNA-OS" type4="DNA-CT"/>
+    <Proper k1="0.602496" k2="4.916200000000001" periodicity1="3" periodicity2="2" phase1="0.0" phase2="0.0" type1="DNA-OS" type2="DNA-CE" type3="DNA-CT" type4="DNA-OS"/>
+    <Proper k1="0.602496" k2="4.916200000000001" periodicity1="3" periodicity2="2" phase1="0.0" phase2="0.0" type1="DNA-OH" type2="DNA-CE" type3="DNA-CT" type4="DNA-OS"/>
+    <Proper k1="4.518439672" k2="1.334767128" k3="0.229433824" periodicity1="1" periodicity2="2" periodicity3="3" phase1="5.196980170799692" phase2="3.501312866407458" phase3="2.6463830545385836" type1="DNA-P" type2="DNA-OS" type3="DNA-CE" type4="DNA-CT"/>
+    <Proper k1="4.518439672" k2="1.334767128" k3="0.229433824" periodicity1="1" periodicity2="2" periodicity3="3" phase1="5.196980170799692" phase2="3.501312866407458" phase3="2.6463830545385836" type1="DNA-HO" type2="DNA-OH" type3="DNA-CE" type4="DNA-CT"/>
+    <Proper k1="1.346658056" k2="2.2786064" k3="3.335250496" periodicity1="1" periodicity2="2" periodicity3="3" phase1="1.150450880678732" phase2="0.09537997469346253" phase3="5.156624318769228" type1="DNA-OS" type2="DNA-P" type3="DNA-OS" type4="DNA-CE"/>
+    <Proper k1="5.0208" k2="3.7656" periodicity1="1" periodicity2="3" phase1="0.6710790973918198" phase2="-0.03892084231947355" type1="DNA-CT" type2="DNA-CT" type3="DNA-CE" type4="DNA-CT"/>
+    <Proper k1="5.0208" periodicity1="1" phase1="5.627116041354919" type1="DNA-CT" type2="DNA-CE" type3="DNA-CT" type4="DNA-OS"/>
+    <Proper k1="1.7154399999999999" k2="7.99144" k3="3.80744" periodicity1="3" periodicity2="2" periodicity3="1" phase1="3.9339721339952187" phase2="0.012217304763960306" phase3="2.0961404316451895" type1="DNA-OS" type2="DNA-CT" type3="DNA-N*" type4="DNA-C1"/>
+    <Proper k1="0.7112800000000001" k2="6.98728" k3="4.1421600000000005" periodicity1="3" periodicity2="2" periodicity3="1" phase1="3.680899392456041" phase2="0.08203047484373349" phase3="3.2812189937493397" type1="DNA-OS" type2="DNA-CT" type3="DNA-N*" type4="DNA-C2"/>
+    <Improper k1="43.932" periodicity1="2" phase1="3.141592653589793" type1="DNA-C" type2="" type3="" type4="DNA-O"/>
+    <Improper k1="43.932" periodicity1="2" phase1="3.141592653589793" type1="DNA-C" type2="" type3="DNA-O2" type4="DNA-O2"/>
+    <Improper k1="4.184" periodicity1="2" phase1="3.141592653589793" type1="DNA-N2" type2="" type3="" type4="DNA-H"/>
+    <Improper k1="4.184" periodicity1="2" phase1="3.141592653589793" type1="DNA-NA" type2="" type3="" type4="DNA-H"/>
+    <Improper k1="43.932" periodicity1="2" phase1="3.141592653589793" type1="DNA-CA" type2="" type3="DNA-N2" type4="DNA-N2"/>
+    <Improper k1="4.6024" periodicity1="2" phase1="3.141592653589793" type1="DNA-CA" type2="" type3="" type4="DNA-HA"/>
+    <Improper k1="4.6024" periodicity1="2" phase1="3.141592653589793" type1="DNA-CQ" type2="" type3="" type4="DNA-H5"/>
+    <Improper k1="4.6024" periodicity1="2" phase1="3.141592653589793" type1="DNA-CK" type2="" type3="" type4="DNA-H5"/>
+    <Improper k1="4.6024" periodicity1="2" phase1="3.141592653589793" type1="DNA-CM" type2="" type3="" type4="DNA-H4"/>
+    <Improper k1="4.6024" periodicity1="2" phase1="3.141592653589793" type1="DNA-CM" type2="" type3="" type4="DNA-HA"/>
+    <Improper k1="4.6024" periodicity1="2" phase1="3.141592653589793" type1="DNA-CA" type2="" type3="" type4="DNA-H4"/>
+    <Improper k1="4.6024" periodicity1="2" phase1="3.141592653589793" type1="DNA-CA" type2="" type3="" type4="DNA-H5"/>
+    <Improper k1="4.184" periodicity1="2" phase1="3.141592653589793" type1="DNA-N*" type2="DNA-CB" type3="DNA-CK" type4="DNA-CT"/>
+    <Improper k1="4.184" periodicity1="2" phase1="3.141592653589793" type1="DNA-N*" type2="DNA-C" type3="DNA-CM" type4="DNA-CT"/>
+    <Improper k1="43.932" periodicity1="2" phase1="3.141592653589793" type1="DNA-C" type2="DNA-CT" type3="DNA-O" type4="DNA-OH"/>
+    <Improper k1="4.6024" periodicity1="2" phase1="3.141592653589793" type1="DNA-CA" type2="DNA-CA" type3="DNA-CA" type4="DNA-CT"/>
+    <Improper k1="4.6024" periodicity1="2" phase1="3.141592653589793" type1="DNA-CM" type2="DNA-C" type3="DNA-CM" type4="DNA-CT"/>
+    <Improper k1="4.6024" periodicity1="2" phase1="3.141592653589793" type1="DNA-CA" type2="DNA-CM" type3="DNA-N2" type4="DNA-NC"/>
+    <Improper k1="4.6024" periodicity1="2" phase1="3.141592653589793" type1="DNA-CA" type2="DNA-CB" type3="DNA-N2" type4="DNA-NC"/>
+    <Improper k1="4.6024" periodicity1="2" phase1="3.141592653589793" type1="DNA-CA" type2="DNA-N2" type3="DNA-NA" type4="DNA-NC"/>
+    <Improper k1="4.6024" periodicity1="2" phase1="3.141592653589793" type1="DNA-C" type2="DNA-CA" type3="DNA-CA" type4="DNA-OH"/>
+    <Improper k1="4.6024" periodicity1="2" phase1="3.141592653589793" type1="DNA-CA" type2="DNA-CA" type3="DNA-CA" type4="DNA-OH"/>
+    <Improper k1="4.6024" periodicity1="2" phase1="3.141592653589793" type1="DNA-C" type2="DNA-H5" type3="DNA-O" type4="DNA-OH"/>
+    <Improper k1="4.6024" periodicity1="2" phase1="3.141592653589793" type1="DNA-C" type2="DNA-H5" type3="DNA-O" type4="DNA-OS"/>
+    <Improper k1="4.6024" periodicity1="2" phase1="3.141592653589793" type1="DNA-CM" type2="DNA-CM" type3="DNA-CT" type4="DNA-HA"/>
+    <Improper k1="4.6024" periodicity1="2" phase1="3.141592653589793" type1="DNA-C" type2="DNA-CM" type3="DNA-H4" type4="DNA-O"/>
+    <Improper k1="4.6024" periodicity1="2" phase1="3.141592653589793" type1="DNA-C" type2="DNA-CA" type3="DNA-CA" type4="DNA-OS"/>
+    <Improper k1="4.6024" periodicity1="2" phase1="3.141592653589793" type1="DNA-C1" type2="" type3="" type4="DNA-H5"/>
+    <Improper k1="4.184" periodicity1="2" phase1="3.141592653589793" type1="DNA-N*" type2="DNA-C1" type3="DNA-CB" type4="DNA-CT"/>
+    <Improper k1="4.6024" periodicity1="2" phase1="3.141592653589793" type1="DNA-C2" type2="" type3="" type4="DNA-H4"/>
+    <Improper k1="4.6024" periodicity1="2" phase1="3.141592653589793" type1="DNA-C2" type2="" type3="" type4="DNA-HA"/>
+    <Improper k1="4.184" periodicity1="2" phase1="3.141592653589793" type1="DNA-N*" type2="DNA-C" type3="DNA-C2" type4="DNA-CT"/>
+    <Improper k1="4.6024" periodicity1="2" phase1="3.141592653589793" type1="DNA-C2" type2="DNA-C" type3="DNA-C2" type4="DNA-CT"/>
+    <Improper k1="4.6024" periodicity1="2" phase1="3.141592653589793" type1="DNA-CA" type2="DNA-C2" type3="DNA-N2" type4="DNA-NC"/>
+    <Improper k1="4.6024" periodicity1="2" phase1="3.141592653589793" type1="DNA-C2" type2="DNA-C2" type3="DNA-CT" type4="DNA-HA"/>
+    <Improper k1="4.6024" periodicity1="2" phase1="3.141592653589793" type1="DNA-C" type2="DNA-C2" type3="DNA-H4" type4="DNA-O"/>
+  </PeriodicTorsionForce>
+  <NonbondedForce coulomb14scale="0.8333333333333334" lj14scale="0.5">
+    <UseAttributeFromResidue name="charge"/>
+    <Atom epsilon="0.359824" sigma="0.3399669508423535" type="DNA-C"/>
+    <Atom epsilon="0.359824" sigma="0.3399669508423535" type="DNA-CA"/>
+    <Atom epsilon="0.359824" sigma="0.3399669508423535" type="DNA-CB"/>
+    <Atom epsilon="0.4577296" sigma="0.3399669508423535" type="DNA-CI"/>
+    <Atom epsilon="0.359824" sigma="0.3399669508423535" type="DNA-CK"/>
+    <Atom epsilon="0.359824" sigma="0.3399669508423535" type="DNA-CM"/>
+    <Atom epsilon="0.359824" sigma="0.3399669508423535" type="DNA-CQ"/>
+    <Atom epsilon="0.4577296" sigma="0.3399669508423535" type="DNA-CT"/>
+    <Atom epsilon="0.06568879999999999" sigma="0.10690784617684071" type="DNA-H"/>
+    <Atom epsilon="0.06568879999999999" sigma="0.2649532787749369" type="DNA-HC"/>
+    <Atom epsilon="0.06568879999999999" sigma="0.2471353044121301" type="DNA-H1"/>
+    <Atom epsilon="0.06568879999999999" sigma="0.22931733004932334" type="DNA-H2"/>
+    <Atom epsilon="0.06276" sigma="0.25996424595335105" type="DNA-HA"/>
+    <Atom epsilon="0.06276" sigma="0.2510552587719476" type="DNA-H4"/>
+    <Atom epsilon="0.06276" sigma="0.24214627159054422" type="DNA-H5"/>
+    <Atom epsilon="0.0" sigma="1.0" type="DNA-HO"/>
+    <Atom epsilon="0.7112800000000001" sigma="0.3249998523775958" type="DNA-NA"/>
+    <Atom epsilon="0.7112800000000001" sigma="0.3249998523775958" type="DNA-NB"/>
+    <Atom epsilon="0.7112800000000001" sigma="0.3249998523775958" type="DNA-NC"/>
+    <Atom epsilon="0.7112800000000001" sigma="0.3249998523775958" type="DNA-N2"/>
+    <Atom epsilon="0.7112800000000001" sigma="0.3249998523775958" type="DNA-N*"/>
+    <Atom epsilon="0.87864" sigma="0.2959921901149463" type="DNA-O"/>
+    <Atom epsilon="0.87864" sigma="0.2959921901149463" type="DNA-O2"/>
+    <Atom epsilon="0.8803136" sigma="0.3066473387839048" type="DNA-OH"/>
+    <Atom epsilon="0.7112800000000001" sigma="0.3000012343465779" type="DNA-OS"/>
+    <Atom epsilon="0.8368000000000001" sigma="0.37417746161894255" type="DNA-P"/>
+    <Atom epsilon="0.4577296" sigma="0.3399669508423535" type="DNA-CE"/>
+    <Atom epsilon="0.359824" sigma="0.3399669508423535" type="DNA-C1"/>
+    <Atom epsilon="0.359824" sigma="0.3399669508423535" type="DNA-C2"/>
+  </NonbondedForce>
+</ForceField>

@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
  * Authors:                                                                   *
  * Contributors:                                                              *
  *                                                                            *
@@ -30,7 +30,9 @@
 #include "openmm/System.h"
 #include "openmm/amoebaKernels.h"
 #include "openmm/AmoebaMultipoleForce.h"
+#include "openmm/HippoNonbondedForce.h"
 #include "AmoebaReferenceMultipoleForce.h"
+#include "AmoebaReferenceHippoNonbondedForce.h"
 #include "ReferenceNeighborList.h"
 #include "SimTKOpenMMRealType.h"
 
@@ -689,6 +691,90 @@ private:
     int includeCavityTerm;
     int directPolarization;
     const System& system;
+};
+
+/**
+ * This kernel is invoked by HippoNonbondedForce to calculate the forces acting on the system and the energy of the system.
+ */
+class ReferenceCalcHippoNonbondedForceKernel : public CalcHippoNonbondedForceKernel {
+public:
+    ReferenceCalcHippoNonbondedForceKernel(std::string name, const Platform& platform, const System& system);
+    ~ReferenceCalcHippoNonbondedForceKernel();
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param force      the HippoNonbondedForce this kernel will be used for
+     */
+    void initialize(const System& system, const HippoNonbondedForce& force);
+    /**
+     * Setup for AmoebaReferenceHippoNonbondedForce instance. 
+     *
+     * @param context        the current context
+     *
+     * @return pointer to initialized instance of AmoebaReferenceHippoNonbondedForce
+     */
+    void setupAmoebaReferenceHippoNonbondedForce(ContextImpl& context);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Get the induced dipole moments of all particles.
+     * 
+     * @param context    the Context for which to get the induced dipoles
+     * @param dipoles    the induced dipole moment of particle i is stored into the i'th element
+     */
+    void getInducedDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
+    /**
+     * Get the fixed dipole moments of all particles in the global reference frame.
+     * 
+     * @param context    the Context for which to get the fixed dipoles
+     * @param dipoles    the fixed dipole moment of particle i is stored into the i'th element
+     */
+    void getLabFramePermanentDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
+    /**
+     * Get the total dipole moments of all particles in the global reference frame.
+     * 
+     * @param context    the Context for which to get the fixed dipoles
+     * @param dipoles    the fixed dipole moment of particle i is stored into the i'th element
+     */
+    void getTotalDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the HippoNonbondedForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const HippoNonbondedForce& force);
+    /**
+     * Get the parameters being used for PME.
+     * 
+     * @param alpha   the separation parameter
+     * @param nx      the number of grid points along the X axis
+     * @param ny      the number of grid points along the Y axis
+     * @param nz      the number of grid points along the Z axis
+     */
+    void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
+    /**
+     * Get the parameters being used for dispersion PME.
+     * 
+     * @param alpha   the separation parameter
+     * @param nx      the number of grid points along the X axis
+     * @param ny      the number of grid points along the Y axis
+     * @param nz      the number of grid points along the Z axis
+     */
+    void getDPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
+
+private:
+
+    AmoebaReferenceHippoNonbondedForce* ixn;
+    int numParticles;
 };
 
 } // namespace OpenMM

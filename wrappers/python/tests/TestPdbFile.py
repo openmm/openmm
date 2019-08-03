@@ -67,12 +67,13 @@ class TestPdbFile(unittest.TestCase):
 
     def test_BinaryStream(self):
         """Test reading a stream that was opened in binary mode."""
-        pdb = PDBFile(open('systems/triclinic.pdb', 'rb'))
+        with open('systems/triclinic.pdb', 'rb') as infile:
+            pdb = PDBFile(infile)
         self.assertEqual(len(pdb.positions), 8)
 
     def test_ExtraParticles(self):
         """Test reading, and writing and re-reading of a file containing extra particle atoms."""
-        pdb = PDBFile('systems/tip5p.pdb')  
+        pdb = PDBFile('systems/tip5p.pdb')
         for atom in pdb.topology.atoms():
             if atom.index > 2:
                 self.assertEqual(None, atom.element)
@@ -84,6 +85,13 @@ class TestPdbFile(unittest.TestCase):
             if atom.index > 2:
                 self.assertEqual(None, atom.element)
 
+    def test_AltLocs(self):
+        """Test reading a file that includes AltLocs"""
+        pdb = PDBFile('systems/altlocs.pdb')
+        self.assertEqual(1, pdb.topology.getNumResidues())
+        self.assertEqual(19, pdb.topology.getNumAtoms())
+        self.assertEqual(19, len(pdb.positions))
+        self.assertEqual('ILE', list(pdb.topology.residues())[0].name)
 
     def assertVecAlmostEqual(self, p1, p2, tol=1e-7):
         unit = p1.unit

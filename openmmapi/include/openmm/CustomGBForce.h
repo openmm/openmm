@@ -133,7 +133,7 @@ namespace OpenMM {
  * computed.  You can then query its value in a Context by calling getState() on it.
  *
  * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
- * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs, floor, ceil, step, delta, select.  All trigonometric functions
+ * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, atan2, sinh, cosh, tanh, erf, erfc, min, max, abs, floor, ceil, step, delta, select.  All trigonometric functions
  * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  delta(x) = 1 if x is 0, 0 otherwise.
  * select(x,y,z) = z if x = 0, y otherwise.  In expressions for particle pair calculations, the names of per-particle parameters and computed values
  * have the suffix "1" or "2" appended to them to indicate the values for the two interacting particles.  As seen in the above example,
@@ -288,7 +288,9 @@ public:
      */
     void setPerParticleParameterName(int index, const std::string& name);
     /**
-     * Add a new global parameter that the interaction may depend on.
+     * Add a new global parameter that the interaction may depend on.  The default value provided to
+     * this method is the initial value of the parameter in newly created Contexts.  You can change
+     * the value at any time by calling setParameter() on the Context.
      *
      * @param name             the name of the parameter
      * @param defaultValue     the default value of the parameter

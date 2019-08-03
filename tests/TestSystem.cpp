@@ -54,7 +54,7 @@ void testCreateSystem() {
     ASSERT_EQUAL(numParticles, system.getNumParticles());
     for (int i = 0; i < numParticles; i++) {
         double mass = (i == 5 ? 100.0 : 1.0+0.1*i);
-        ASSERT_EQUAL(mass, system.getParticleMass(i));
+        ASSERT_EQUAL_TOL(mass, system.getParticleMass(i), 1e-15);
     }
     
     // Test adding, removing, and modifying constraints.

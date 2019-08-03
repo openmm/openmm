@@ -111,3 +111,8 @@ void CustomCVForceImpl::getCollectiveVariableValues(ContextImpl& context, vector
 Context& CustomCVForceImpl::getInnerContext() {
     return *innerContext;
 }
+
+void CustomCVForceImpl::updateParametersInContext(ContextImpl& context) {
+    kernel.getAs<CalcCustomCVForceKernel>().copyParametersToContext(context, owner);
+    context.systemChanged();
+}

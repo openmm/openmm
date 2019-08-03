@@ -1269,7 +1269,7 @@ void testWater2DpmeEnergiesForcesWithExclusions() {
     const vector<Vec3>& forces = state.getForces();
 
 
-    ASSERT_EQUAL_TOL(refenergy, energy, 1E-4);
+    ASSERT_EQUAL_TOL(refenergy, energy, 5E-4);
     for (int n = 0; n < numAtoms; ++n)
         ASSERT_EQUAL_VEC(refforces[n], forces[n], 5E-4);
 }
@@ -1306,6 +1306,11 @@ void testWater125DpmeVsLongCutoffNoExclusions() {
 
     State state = context.getState(State::Forces | State::Energy);
     double energy = state.getPotentialEnergy();
+
+    // Make another call to the get the energy to test that the call is
+    // idempotent when Coulomb terms are absent.
+    double secondEnergy = context.getState(State::Energy).getPotentialEnergy();
+    ASSERT_EQUAL_TOL(secondEnergy, energy, 5E-5);
 
 //Gromacs reference values.  See comments in testWater2DpmeEnergiesForcesNoExclusions() for details.
 //Coordinates are from make_waterbox, and the .gro file looks like

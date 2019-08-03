@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2013 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2018 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -58,7 +58,7 @@ class ReferenceCustomExternalIxn {
 
        ReferenceCustomExternalIxn(const Lepton::CompiledExpression& energyExpression, const Lepton::CompiledExpression& forceExpressionX,
                               const Lepton::CompiledExpression& forceExpressionY, const Lepton::CompiledExpression& forceExpressionZ,
-                              const std::vector<std::string>& parameterNames, std::map<std::string, double> globalParameters);
+                              const std::vector<std::string>& parameterNames);
 
       /**---------------------------------------------------------------------------------------
 
@@ -67,6 +67,14 @@ class ReferenceCustomExternalIxn {
          --------------------------------------------------------------------------------------- */
 
        ~ReferenceCustomExternalIxn();
+
+       /**---------------------------------------------------------------------------------------
+      
+         Set the values of all global parameters.
+      
+         --------------------------------------------------------------------------------------- */
+      
+       void setGlobalParameters(std::map<std::string, double> parameters);
 
       /**---------------------------------------------------------------------------------------
 
@@ -81,7 +89,7 @@ class ReferenceCustomExternalIxn {
          --------------------------------------------------------------------------------------- */
 
       void calculateForce(int atomIndex, std::vector<OpenMM::Vec3>& atomCoordinates,
-                          double* parameters, std::vector<OpenMM::Vec3>& forces, double* energy) const;
+                          std::vector<double>& parameters, std::vector<OpenMM::Vec3>& forces, double* energy) const;
 
 
 };

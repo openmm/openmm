@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2017 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2018 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -32,7 +32,6 @@
 #include "ReferenceTabulatedFunction.h"
 #include "openmm/internal/CustomManyParticleForceImpl.h"
 #include "lepton/CustomFunction.h"
-#include "openmm/internal/gmx_atomic.h"
 
 using namespace OpenMM;
 using namespace std;
@@ -88,20 +87,18 @@ CpuCustomManyParticleForce::~CpuCustomManyParticleForce() {
         delete data;
 }
 
-void CpuCustomManyParticleForce::calculateIxn(AlignedArray<float>& posq, double** particleParameters,
+void CpuCustomManyParticleForce::calculateIxn(AlignedArray<float>& posq, vector<vector<double> >& particleParameters,
                                                   const map<string, double>& globalParameters, vector<AlignedArray<float> >& threadForce,
                                                   bool includeForces, bool includeEnergy, double& energy) {
     // Record the parameters for the threads.
     
     this->posq = &posq[0];
-    this->particleParameters = particleParameters;
+    this->particleParameters = &particleParameters[0];
     this->globalParameters = &globalParameters;
     this->threadForce = &threadForce;
     this->includeForces = includeForces;
     this->includeEnergy = includeEnergy;
-    gmx_atomic_t counter;
-    gmx_atomic_set(&counter, 0);
-    this->atomicCounter = &counter;
+    atomicCounter = 0;
     if (useCutoff) {
         // Construct a neighbor list.  We use CpuNeighborList to do this, but then copy the result
         // into a new data structure.  This is needed because in UniqueCentralParticle mode, the
@@ -156,7 +153,7 @@ void CpuCustomManyParticleForce::threadComputeForce(ThreadPool& threads, int thr
         // Loop over interactions from the neighbor list.
         
         while (true) {
-            int i = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            int i = atomicCounter++;
             if (i >= numParticles)
                 break;
             particleIndices[0] = i;
@@ -170,7 +167,7 @@ void CpuCustomManyParticleForce::threadComputeForce(ThreadPool& threads, int thr
         for (int i = 0; i < numParticles; i++)
             particles[i] = i;
         while (true) {
-            int i = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            int i = atomicCounter++;
             if (i >= numParticles)
                 break;
             particleIndices[0] = i;
@@ -209,7 +206,7 @@ void CpuCustomManyParticleForce::setPeriodic(Vec3* periodicBoxVectors) {
 }
 
 void CpuCustomManyParticleForce::loopOverInteractions(vector<int>& availableParticles, vector<int>& particleSet, int loopIndex, int startIndex,
-                                                          double** particleParameters, float* forces, ThreadData& data, const fvec4& boxSize, const fvec4& invBoxSize) {
+                                                      vector<double>* particleParameters, float* forces, ThreadData& data, const fvec4& boxSize, const fvec4& invBoxSize) {
     int numParticles = availableParticles.size();
     double cutoff2 = cutoffDistance*cutoffDistance;
     int checkRange = (centralParticleMode ? 1 : loopIndex);
@@ -243,7 +240,7 @@ void CpuCustomManyParticleForce::loopOverInteractions(vector<int>& availablePart
     }
 }
 
-void CpuCustomManyParticleForce::calculateOneIxn(vector<int>& particleSet, double** particleParameters, float* forces, ThreadData& data, const fvec4& boxSize, const fvec4& invBoxSize) {
+void CpuCustomManyParticleForce::calculateOneIxn(vector<int>& particleSet, vector<double>* particleParameters, float* forces, ThreadData& data, const fvec4& boxSize, const fvec4& invBoxSize) {
     // Select the ordering to use for the particles.
     
     vector<int>& permutedParticles = data.permutedParticles;

@@ -90,6 +90,7 @@ SKIP_METHODS = [('State', 'getPositions'),
                 ('UpdateTimeKernel',),
                 ('VdwInfo',),
                 ('WcaDispersionInfo',),
+                ('Context',  'getIntegrator'),
                 ('Context',  'createCheckpoint'),
                 ('Context',  'loadCheckpoint'),
                 ('CudaPlatform',),
@@ -129,6 +130,10 @@ NO_OUTPUT_ARGS = [('LocalEnergyMinimizer', 'minimize', 'context'),
                   ('AmoebaMultipoleForce', 'getInducedDipoles', 'context'),
                   ('AmoebaMultipoleForce', 'getLabFramePermanentDipoles', 'context'),
                   ('AmoebaMultipoleForce', 'getTotalDipoles', 'context'),
+                  ('HippoNonbondedForce', 'addParticle', 'dipole'),
+                  ('HippoNonbondedForce', 'addParticle', 'quadrupole'),
+                  ('HippoNonbondedForce', 'getInducedDipoles', 'context'),
+                  ('HippoNonbondedForce', 'getLabFramePermanentDipoles', 'context'),
 ]
 
 # SWIG assumes the target language shadow class owns the C++ class
@@ -147,6 +152,7 @@ STEAL_OWNERSHIP = {("Platform", "registerPlatform") : [0],
                    ("CustomManyParticleForce", "addTabulatedFunction") : [1],
                    ("CustomCVForce", "addTabulatedFunction") : [1],
                    ("CustomCVForce", "addCollectiveVariable") : [1],
+                   ("CustomIntegrator", "addTabulatedFunction") : [1],
                    ("CompoundIntegrator", "addIntegrator") : [0],
 }
 
@@ -323,6 +329,13 @@ UNITS = {
 ("AmoebaWcaDispersionForce",              "getSlevy")                                      :  ( None, ()),
 ("AmoebaWcaDispersionForce",              "getShctd")                                      :  ( None, ()),
 
+("HippoNonbondedForce",                 "getExtrapolationCoefficients")                  :  ( None, ()),
+("HippoNonbondedForce",                 "getParticleParameters")                         :  ( None, ('unit.elementary_charge', 'unit.elementary_charge*unit.nanometer',
+                                                                                                      'unit.elementary_charge*unit.nanometer**2', 'unit.elementary_charge',
+                                                                                                       None, None, None, None, None, None, None, None, None, None, None, None)),
+("HippoNonbondedForce",                 "getInducedDipoles")                             :  ( None, ()),
+("HippoNonbondedForce",                 "getLabFramePermanentDipoles")                   :  ( None, ()),
+
 ("Context", "getParameter") : (None, ()),
 ("Context", "getParameters") : (None, ()),
 ("Context", "getMolecules") : (None, ()),
@@ -452,5 +465,7 @@ UNITS = {
 ("DrudeSCFIntegrator", "getMinimizationErrorTolerance") : ("unit.kilojoules_per_mole/unit.nanometer", ()),
 ("RPMDIntegrator", "getContractions") : (None, ()),
 ("RPMDIntegrator", "getTotalEnergy") : ("unit.kilojoules_per_mole", ()),
+("RMSDForce", "getReferencePositions") : ("unit.nanometer", ()),
+("RMSDForce", "getParticles") : (None, ()),
 }
 

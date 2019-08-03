@@ -59,6 +59,7 @@ extern "C" OPENMM_EXPORT void registerKernelFactories() {
              platform.registerKernelFactory(CalcAmoebaMultipoleForceKernel::Name(), factory);
              platform.registerKernelFactory(CalcAmoebaGeneralizedKirkwoodForceKernel::Name(), factory);
              platform.registerKernelFactory(CalcAmoebaWcaDispersionForceKernel::Name(), factory);
+             platform.registerKernelFactory(CalcHippoNonbondedForceKernel::Name(), factory);
         }
     }
 }
@@ -104,6 +105,9 @@ KernelImpl* AmoebaReferenceKernelFactory::createKernelImpl(std::string name, con
 
     if (name == CalcAmoebaWcaDispersionForceKernel::Name())
         return new ReferenceCalcAmoebaWcaDispersionForceKernel(name, platform, context.getSystem());
+
+    if (name == CalcHippoNonbondedForceKernel::Name())
+        return new ReferenceCalcHippoNonbondedForceKernel(name, platform, context.getSystem());
 
     throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '")+name+"'").c_str());
 }

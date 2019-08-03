@@ -4,8 +4,11 @@
 
 .. _the-openmm-application-layer-introduction:
 
-The OpenMM Application Layer: Introduction
-##########################################
+The OpenMM Application Layer: Getting Started
+#############################################
+
+Introduction
+************
 
 The first thing to understand about the OpenMM “application layer” is that it is
 not exactly an application in the traditional sense: there is no program called
@@ -32,23 +35,9 @@ the results.
 .. _installing-openmm:
 
 Installing OpenMM
-#################
+*****************
 
-Follow these instructions to install OpenMM.  There also is an online
-troubleshooting guide that describes common problems and how to fix them
-(http://wiki.simtk.org/openmm/FAQApp).
-
-There are two ways to install OpenMM: using the Conda package manager (http://conda.pydata.org),
-or with standalone installers.  (A third option is to compile it from source, which is
-discussed in Chapter :ref:`compiling-openmm-from-source-code`.)  Using Conda is
-the easier method, and is recommended for most users.  It is described first,
-and then the following sections describe how to use the standalone installers
-for various platforms.
-
-
-Installing with Conda
-*********************
-
+OpenMM is installed using the Conda package manager (http://conda.pydata.org).
 Conda is included as part of the Anaconda Python distribution, which you can
 download from http://docs.continuum.io/anaconda/install.  This is a Python
 distribution specifically designed for scientific applications, with many of the
@@ -58,12 +47,16 @@ which includes only Python itself, plus the Conda package manager.  That offers
 a much smaller initial download, with the ability to then install only the
 packages you want.
 
-1. Begin by installing the most recent 64 bit, Python 3.x version of either
+(A third option is to compile OpenMM from source.  This provides more flexibility,
+but it is much more work, and there is rarely a need for anyone but advanced users
+to compile from source.  Detailed instruction are in Chapter :ref:`compiling-openmm-from-source-code`.)
+
+\1. Begin by installing the most recent 64 bit, Python 3.x version of either
 Anaconda or Miniconda.
 
-2. (Optional) If you want to run OpenMM on a GPU, install CUDA and/or OpenCL.
+\2. (Optional) If you want to run OpenMM on a GPU, install CUDA and/or OpenCL.
 
-  * If you have an Nvidia GPU, download CUDA 8.0 from
+  * If you have an Nvidia GPU, download CUDA from
     https://developer.nvidia.com/cuda-downloads.  Be sure to install both the
     drivers and toolkit.  OpenCL is included with the CUDA drivers.
   * If you have an AMD GPU and are using Linux or Windows, download the latest
@@ -74,7 +67,20 @@ Anaconda or Miniconda.
 3. Open a command line terminal and type the following command
 ::
 
-    conda install -c omnia openmm
+    conda install -c omnia -c conda-forge openmm
+
+This installs a version of OpenMM that is compiled to work with CUDA 9.2.
+Alternatively you can request a version that is compiled for a specific CUDA
+version with the command
+::
+
+    conda install -c omnia/label/cuda92 -c conda-forge openmm
+
+where :code:`cuda92` should be replaced with the particular CUDA version
+installed on your computer.  Supported values are :code:`cuda75`, :code:`cuda80`,
+:code:`cuda90`, :code:`cuda91`, :code:`cuda92`, and :code:`cuda100`.  Because
+different CUDA releases are not binary compatible with each other, OpenMM can
+only work with the particular CUDA version it was compiled with.
 
 4. Verify your installation by typing the following command:
 ::
@@ -85,223 +91,6 @@ This command confirms that OpenMM is installed, checks whether GPU acceleration
 is available (via the OpenCL and/or CUDA platforms), and verifies that all
 platforms produce consistent results.
 
-
-.. _installing-on-mac-os-x:
-
-Installing on Mac OS X
-**********************
-
-OpenMM works on Mac OS X 10.7 or later.  OpenCL is supported on OS X 10.10.3 or
-later.
-
-1. Download the pre-compiled binary of OpenMM for Mac OS X from
-https://simtk.org/project/xml/downloads.xml?group_id=161, then double click
-the .zip file to expand it.
-
-2. If you have not already done so, install Apple’s Xcode developer tools from
-the App Store.  They are required to use OpenMM.  (With Xcode 4.3 and later, you
-must then launch Xcode, open the Preferences window, go to the Downloads tab,
-and tell it to install the command line tools.  With Xcode 4.2 and earlier, the
-command line tools are automatically installed when you install Xcode.)
-
-3. (Optional) If you have an Nvidia GPU and want to use the CUDA platform,
-download CUDA 8.0 from https://developer.nvidia.com/cuda-downloads.  Be sure to
-install both the drivers and toolkit.
-
-4. (Optional) If you plan to use the CPU platform, it is recommended that you
-install FFTW, available from http://www.fftw.org.  When configuring it, be sure
-to specify single precision and multiple threads (the |--|\ :code:`enable-float`
-and |--|\ :code:`enable-threads` options).  OpenMM will still work without FFTW,
-but the performance of particle mesh Ewald (PME) will be much worse.
-
-5. Launch the Terminal application.  Change to the OpenMM directory by typing
-::
-
-    cd <openmm_directory>
-
-where :code:`<openmm_directory>` is the path to the OpenMM folder.  Then run
-the install script by typing
-::
-
-    sudo ./install.sh
-
-It will prompt you for an install location and the path to the python
-executable.  Unless you are certain you know what you are doing, accept the
-defaults for both options.
-
-6. (Optional) To use the CUDA platform on an Nvidia GPU, you must add the CUDA
-libraries to your library path so your computer knows where to find them.  You
-can do this by typing
-::
-
-    export DYLD_LIBRARY_PATH=/usr/local/cuda/lib
-
-This will affect only the particular Terminal window you type it into.  If you
-want to run OpenMM in another Terminal window, you must type the above command
-in the new window.
-
-7. Verify your installation by typing the following command:
-::
-
-    python -m simtk.testInstallation
-
-This command confirms that OpenMM is installed, checks whether GPU acceleration
-is available (via the OpenCL and/or CUDA platforms), and verifies that all
-platforms produce consistent results.
-
-Important Note: Some Mac laptops have two GPUs, only one of which is capable of
-running OpenMM.   If you have a laptop, open the System Preferences and go to
-the Energy Saver panel.  There will be a checkbox labeled “Automatic graphics
-switching”, which should be disabled.  Otherwise, trying to run OpenMM may
-produce an error.  You will only see this option if your laptop has two GPUs
-
-.. _installing-on-linux:
-
-Installing on Linux
-*******************
-
-1. Download the pre-compiled binary of OpenMM for Linux from
-https://simtk.org/project/xml/downloads.xml?group_id=161, then double click the
-.zip file to expand it.
-
-2. Make sure you have Python 2.7 or higher (earlier versions will not work) and
-a C++ compiler (typically :program:`gcc` or :program:`clang`) installed on your computer.  You can
-check what version of Python is installed by typing :code:`python` |--|\ :code:`version`
-into a console window.
-
-3. (Optional) If you want to run OpenMM on a GPU, install CUDA and/or OpenCL.
-
-  * If you have an Nvidia GPU, download CUDA 8.0 from
-    https://developer.nvidia.com/cuda-downloads.  Be sure to install both the
-    drivers and toolkit.  OpenCL is included with the CUDA drivers.
-  * If you have an AMD GPU, download the latest version of the Catalyst driver
-    from http://support.amd.com.
-
-4. (Optional) If you plan to use the CPU platform, it is recommended that you
-install FFTW.  It is probably available through your system’s package manager
-such as :program:`yum` or :program:`apt-get`\ .  Alternatively, you can download
-it from http://www.fftw.org.  When configuring it, be sure to specify single
-precision and multiple threads (the |--|\ :code:`enable-float` and
-|--|\ :code:`enable-threads` options).  OpenMM will still work without FFTW, but the
-performance of particle mesh Ewald (PME) will be much worse.
-
-5. In a console window, change to the OpenMM directory by typing
-::
-
-    cd <openmm_directory>
-
-where :code:`<openmm_directory>` is the path to the OpenMM folder.  Then run
-the install script by typing
-::
-
-    sudo ./install.sh
-
-It will prompt you for an install location and the path to the python
-executable.  Unless you are certain you know what you are doing, accept the
-defaults for both options.
-
-6. (Optional) To use the CUDA platform on an Nvidia GPU, you must add the CUDA
-libraries to your library path so your computer knows where to find them.  You
-can do this by typing
-::
-
-    export LD_LIBRARY_PATH=/usr/local/cuda/lib
-
-This will affect only the particular console window you type it into.  If you
-want to run OpenMM in another console window, you must type the above command in
-the new window.
-
-7. Verify your installation by typing the following command:
-::
-
-    python -m simtk.testInstallation
-
-This command confirms that OpenMM is installed, checks whether GPU acceleration
-is available (via the OpenCL and/or CUDA platforms), and verifies that all
-platforms produce consistent results.
-
-.. _installing-on-windows:
-
-Installing on Windows
-*********************
-
-1. Download the pre-compiled binary of OpenMM for Windows from
-https://simtk.org/project/xml/downloads.xml?group_id=161, then double click the
-.zip file to expand it.  Move the files to :file:`C:\\Program Files\\OpenMM`.
-
-2. Make sure you have the 64-bit version of Python 3.3 or 3.4 (other versions will not
-work) installed on your computer.  To do this, launch the Python program (either
-the command line version or the GUI version).  The first line in the Python
-window will indicate the version you have, as well as whether you have a 32-bit
-or 64-bit version.
-
-3. Double click the Python API Installer to install the Python components.  (On
-some versions of Windows, a “Program Compatibility Assistant” window may appear
-with the warning, “This program might not have installed correctly.”  This is
-just Microsoft trying to scare you.  Click “This program installed correctly”
-and ignore it.)
-
-4. (Optional) If you want to run OpenMM on a GPU, install CUDA and/or OpenCL.
-
-  * If you have an Nvidia GPU, download CUDA 8.0 from
-    https://developer.nvidia.com/cuda-downloads.  Be sure to install both the
-    drivers and toolkit.  OpenCL is included with the CUDA drivers.
-  * If you have an AMD GPU, download the latest version of the Catalyst driver
-    from http://support.amd.com.
-
-
-5. (Optional) If you plan to use the CPU platform, it is recommended that you
-install FFTW.  Precompiled binaries are available from http://www.fftw.org.
-OpenMM will still work without FFTW, but the performance of particle mesh Ewald
-(PME) will be much worse.
-
-6. Before running OpenMM, you must add the OpenMM and FFTW libraries to your
-PATH environment variable.  You may also need to add the Python executable to
-your PATH.
-
-  * To find out if the Python executable is already in your PATH, open a command
-    prompt window by clicking on :menuselection:`Start --> Programs --> Accessories --> Command Prompt`.
-    (On Windows 7, select :menuselection:`Start --> All Programs --> Accessories --> Command Prompt`).
-    Type
-    ::
-
-        python
-
-    If you get an error message, such as "‘python’ is not recognized as an
-    internal or external command, operable program or batch file," then you need
-    to add Python to your PATH.  To do so, locate it by typing
-    ::
-
-        dir C:\py*
-
-    The files are typically located in a directory like :file:`C:\\Python33`.  Remember this
-    location.  You will need to enter it, along with the location of the OpenMM
-    libraries, later in this process.
-
-  * Click on :menuselection:`Start --> Control Panel --> System` (On Windows 7, select :menuselection:`Start -->
-    Control Panel --> System and Security --> System`)
-  * Click on the :menuselection:`Advanced` tab or the :menuselection:`Advanced system settings` link
-  * Click :menuselection:`Environment Variables`
-  * Under :menuselection:`System variables`, select the line for :menuselection:`Path` and click :menuselection:`Edit…`
-  * Add :file:`C:\\Program Files\\OpenMM\\lib` and :file:`C:\\Program Files\\OpenMM\\lib\\plugins`
-    to the “Variable value”.  If you also need to add Python or FFTW to your
-    PATH, enter their directory locations here.  Directory locations need to be
-    separated by semi-colons (;).
-
-
-    If you installed OpenMM somewhere other than the default location, you must also
-    set :envvar:`OPENMM_PLUGIN_DIR` to point to the plugins directory.  If this variable is
-    not set, it will assume plugins are in the default location (:file:`C:\\Program
-    Files\\OpenMM\\lib\\plugins`).
-
-7. Verify your installation by typing the following command:
-::
-
-    python -m simtk.testInstallation
-
-This command confirms that OpenMM is installed, checks whether GPU acceleration
-is available (via the OpenCL and/or CUDA platforms), and verifies that all
-platforms produce consistent results.
 
 .. _running-simulations:
 
@@ -314,7 +103,7 @@ A First Example
 ***************
 
 Let’s begin with our first example of an OpenMM script. It loads a PDB file
-called :file:`input.pdb` that defines a biomolecular system, parameterizes it using the Amber99SB force field and TIP3P water
+called :file:`input.pdb` that defines a biomolecular system, parameterizes it using the Amber14 force field and TIP3P-FB water
 model, energy minimizes it, simulates it for 10,000 steps with a Langevin
 integrator, and saves a snapshot frame to a PDB file called :file:`output.pdb` every 1000 time
 steps.
@@ -328,7 +117,7 @@ steps.
         from sys import stdout
 
         pdb = PDBFile('input.pdb')
-        forcefield = ForceField('amber99sb.xml', 'tip3p.xml')
+        forcefield = ForceField('amber14-all.xml', 'amber14/tip3pfb.xml')
         system = forcefield.createSystem(pdb.topology, nonbondedMethod=PME,
                 nonbondedCutoff=1*nanometer, constraints=HBonds)
         integrator = LangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
@@ -390,14 +179,14 @@ Make sure you include the single quotes around the file name.  OpenMM also can l
 files in the newer PDBx/mmCIF format: just change :class:`PDBFile` to :class:`PDBxFile`.
 ::
 
-    forcefield = ForceField('amber99sb.xml', 'tip3p.xml')
+    forcefield = ForceField('amber14-all.xml', 'amber14/tip3pfb.xml')
 
 This line specifies the force field to use for the simulation.  Force fields are
 defined by XML files.  OpenMM includes XML files defining lots of standard force fields (see Section :ref:`force-fields`).
 If you find you need to extend the repertoire of force fields available,
 you can find more information on how to create these XML files in Chapter :ref:`creating-force-fields`.
-In this case we load two of those files: :file:`amber99sb.xml`, which contains the
-Amber99SB force field, and :file:`tip3p.xml`, which contains the TIP3P water model.  The
+In this case we load two of those files: :file:`amber14-all.xml`, which contains the
+Amber14 force field, and :file:`amber14/tip3pfb.xml`, which contains the TIP3P-FB water model.  The
 :class:`ForceField` object is assigned to a variable called :code:`forcefield`\ .
 ::
 
@@ -681,31 +470,37 @@ Note that both the CHARMM and XPLOR versions of the :file:`psf` file format are 
 
 .. _the-script-builder-application:
 
-The Script Builder Application
-******************************
+The OpenMM-Setup Application
+****************************
 
-One option for writing your own scripts is to start with one of the examples
-given above (the one in Section :ref:`a-first-example` if you are starting from a PDB file, section
-:ref:`using_amber_files` if you are starting from AMBER :file:`prmtop` and :file:`inpcrd` files, section
-:ref:`using_gromacs_files` if you are starting from Gromacs :file:`gro` and :file:`top` files, or section
-:ref:`using-charmm-files` if you are starting from CHARMM files), then customize it
-to suit your needs.  Another option is to use the `OpenMM Script Builder`_ application.
+One way to create your own scripts is to start with one of the examples given
+above and customize it to suit your needs, but there's an even easier option.
+OpenMM-Setup is a graphical application that walks you through the whole process
+of loading your input files and setting options.  It then generates a complete
+script, and can even run it for you.
 
-
-.. figure:: ../images/ScriptBuilder.png
+.. figure:: ../images/OpenMMSetup.png
    :align: center
    :width: 100%
 
-   :autonumber:`Figure,script builder`:  The Script Builder application
+   :autonumber:`Figure,openmm setup`:  The OpenMM-Setup application
 
-This is a web application available at https://builder.openmm.org.  It provides
-a graphical interface with simple choices for all the most common simulation
-options, then automatically generates a script based on them.  As you change the
-settings, the script is instantly updated to reflect them.  Once everything is
-set the way you want, click the :menuselection:`Save Script` button to save it to disk, or
-simply copy and paste it into a text editor.
+To install OpenMM-Setup, open a command line terminal and type the following command
+::
 
-.. _`OpenMM Script Builder`: https://builder.openmm.org
+    conda install -c omnia openmm-setup
+
+You can then launch it by typing the command
+::
+
+    openmm-setup
+
+It will automatically open a window in your web browser displaying the user interface.
+
+OpenMM-Setup is far more than just a script generator.  It can fix problems in
+your input files, add missing atoms, build membranes and water boxes, and much
+more.  It is a very easy way to quickly do all necessary preparation and setup.
+We highly recommend it to all users of OpenMM, from novices to experts.
 
 .. _simulation-parameters:
 
@@ -760,9 +555,171 @@ the main force field, and possibly a second file to define the water model
 (either implicit or explicit).  For example:
 ::
 
-    forcefield = ForceField('amber99sb.xml', 'tip3p.xml')
+    forcefield = ForceField('amber14-all.xml', 'amber14/tip3pfb.xml')
 
-For the main force field, OpenMM provides the following options:
+In some cases, one XML file may load several others.  For example, :file:`amber14-all.xml`
+is really just a shortcut for loading several different files that together make up
+the AMBER14 force field.  If you need finer grained control over which parameters
+are loaded, you can instead specify the component files individually.
+
+Be aware that some force fields and water models include "extra particles", such
+as lone pairs or Drude particles.  Examples include the CHARMM polarizable force
+field and all of the 4 and 5 site water models.  To use these force fields, you
+must first add the extra particles to the :class:`Topology`.  See section
+:ref:`adding-or-removing-extra-particles` for details.
+
+The force fields described below are the ones that are bundled with OpenMM.
+Additional force fields are available online at https://github.com/choderalab/openmm-forcefields.
+
+Amber14
+-------
+
+The Amber14\ :cite:`Maier2015` force field is made up of various files that define
+parameters for proteins, DNA, RNA, lipids, water, and ions.
+
+.. tabularcolumns:: |l|L|
+
+===================================  ============================================
+File                                 Parameters
+===================================  ============================================
+:file:`amber14/protein.ff14SB.xml`   Protein (recommended)
+:file:`amber14/protein.ff15ipq.xml`  Protein (alternative)
+:file:`amber14/DNA.OL15.xml`         DNA (recommended)
+:file:`amber14/DNA.bsc1.xml`         DNA (alternative)
+:file:`amber14/RNA.OL3.xml`          RNA
+:file:`amber14/lipid17.xml`          Lipid
+:file:`amber14/tip3p.xml`            TIP3P water model\ :cite:`Jorgensen1983` and ions
+:file:`amber14/tip3pfb.xml`          TIP3P-FB water model\ :cite:`Wang2014` and ions
+:file:`amber14/tip4pew.xml`          TIP4P-Ew water model\ :cite:`Horn2004` and ions
+:file:`amber14/tip4pfb.xml`          TIP4P-FB water model\ :cite:`Wang2014` and ions
+:file:`amber14/spce.xml`             SPC/E water model\ :cite:`Berendsen1987` and ions
+===================================  ============================================
+
+As a convenience, the file :file:`amber14-all.xml` can be used as a shortcut to include
+:file:`amber14/protein.ff14SB.xml`, :file:`amber14/DNA.OL15.xml`, :file:`amber14/RNA.OL3.xml`,
+and :file:`amber14/lipid17.xml`.  In most cases, you can simply include that file,
+plus one of the water models, such as :file:`amber14/tip3pfb.xml` for the TIP3P-FB
+water model and ions\ :cite:`Wang2014`:
+::
+
+    forcefield = ForceField('amber14-all.xml', 'amber14/tip3pfb.xml')
+
+.. tip:: The solvent model XML files included under the :file:`amber14/` directory
+         include both water *and* ions compatible with that water model, so if you
+         mistakenly specify :file:`tip3p.xml` instead of :file:`amber14/tip3p.xml`,
+         you run the risk of having :class:`ForceField` throw an exception since
+         :file:`tip3p.xml` will be missing parameters for ions in your system.
+
+The converted parameter sets come from the `AmberTools 17 release <http://ambermd.org/AmberTools17-get.html>`_
+and were converted using the `openmm-forcefields <https://github.com/choderalab/openmm-forcefields>`_ package and `ParmEd <https://github.com/parmed/parmed>`_.
+
+CHARMM36
+--------
+
+The CHARMM36\ :cite:`Best2012` force field provides parameters for proteins, DNA,
+RNA, lipids, carbohydrates, water, ions, and various small molecules (see `here <http://mackerell.umaryland.edu/charmm_ff.shtml#refs>`_
+for full references).
+
+.. tabularcolumns:: |l|L|
+
+=================================  ============================================
+File                               Parameters
+=================================  ============================================
+:file:`charmm36.xml`               Protein, DNA, RNA, lipids, carbohydrates, and small molecules
+:file:`charmm36/water.xml`         Default CHARMM water model (a modified version of TIP3P\ :cite:`Jorgensen1983`) and ions
+:file:`charmm36/spce.xml`          SPC/E water model\ :cite:`Berendsen1987` and ions
+:file:`charmm36/tip3p-pme-b.xml`   TIP3P-PME-B water model\ :cite:`Price2004` and ions
+:file:`charmm36/tip3p-pme-f.xml`   TIP3P-PME-F water model\ :cite:`Price2004` and ions
+:file:`charmm36/tip4pew.xml`       TIP4P-Ew water model\ :cite:`Horn2004` and ions
+:file:`charmm36/tip4p2005.xml`     TIP4P-2005 water model\ :cite:`Abascal2005` and ions
+:file:`charmm36/tip5p.xml`         TIP5P water model\ :cite:`Mahoney2000` and ions
+:file:`charmm36/tip5pew.xml`       TIP5P-Ew water model\ :cite:`Rick2004` and ions
+=================================  ============================================
+
+The file :file:`charmm36.xml` bundles everything but the water and ions into a single
+file.  In most cases, you can simply include that file, plus one of the water models,
+such as :file:`charmm36/water.xml`, which specifies the default CHARMM water model
+(a modified version of TIP3P\ :cite:`Jorgensen1983`) and ions:
+::
+
+    forcefield = ForceField('charmm36.xml', 'charmm36/water.xml')
+
+.. warning:: Drude polarizable sites and lone pairs are not yet supported
+             by `ParmEd <https://github.com/parmed/parmed>`_ and the CHARMM36 forcefields
+             that depend on these features are not included in this port.
+             To use the CHARMM 2013 polarizable force field\ :cite:`Lopes2013`,
+             include the single file :file:`charmm_polar_2013.xml`.
+
+.. tip:: The solvent model XML files included under the :file:`charmm36/` directory
+         include both water *and* ions compatible with that water model, so if you
+         mistakenly specify :file:`tip3p.xml` instead of :file:`charmm36/water.xml`,
+         you run the risk of having :class:`ForceField` raise an exception due to
+         missing parameters for ions in your system.
+
+.. tip:: CHARMM makes extensive use of patches, which are automatically combined with
+         residue templates to create an expanded library of patched residue templates
+         by :class:`ForceField`. That means that patched residues, such as ``ACE`` and
+         ``NME`` patched termini, must occur as a single residue in order for :class:`ForceField`
+         to correctly match the residue template and apply parameters. Since these
+         patched residues are not standard PDB residues, :class:`Modeller` does not know
+         how to add hydrogens to these nonstandard residues, and your input topologies
+         must already contain appropriate hydrogens. This can often cause problems when
+         trying to read in PDB files from sources such as `CHARMM-GUI <http://charmm-gui.org/>`_
+         that do not generate PDB files that comply with the `PDB standard <http://www.wwpdb.org/documentation/file-format>`_.
+         If you're using files from `CHARMM-GUI <http://charmm-gui.org/>`_, it's easiest to load
+         the PSF file directly, as discussed in Section :ref:`using-charmm-files`.
+
+.. tip:: Trying to read in PDB files from sources such as `CHARMM-GUI <http://charmm-gui.org/>`_
+         that do not generate PDB files that comply with the `PDB standard <http://www.wwpdb.org/documentation/file-format>`_
+         and omit ``CONECT`` records specifying bonds between residues (such as cysteines)
+         or include ``CONECT`` records specifying non-chemical ``H-H`` bonds in waters
+         can cause issues with the detection and parameter assignment for disulfide bonds.
+         Make sure the files you read in comply with the appropriate standards regarding
+         additional bonds and nonstandard residue definitions. If you're using files from
+         `CHARMM-GUI <http://charmm-gui.org/>`_, it's easiest to load
+         the PSF file directly, as discussed in Section :ref:`using-charmm-files`.
+
+The converted parameter sets come from the `CHARMM36 July 2017 update <http://mackerell.umaryland.edu/charmm_ff.shtml>`_
+and were converted using the `openmm-forcefields <https://github.com/choderalab/openmm-forcefields>`_ package and `parmed <https://github.com/parmed/parmed>`_.
+
+AMOEBA
+------
+
+The AMOEBA polarizable force field provides parameters for proteins, water, and ions.
+
+.. tabularcolumns:: |l|L|
+
+=============================  ================================================================================
+File                           Parameters
+=============================  ================================================================================
+:file:`amoeba2013.xml`         AMOEBA 2013\ :cite:`Shi2013`
+:file:`amoeba2013_gk.xml`      Generalized Kirkwood solvation model\ :cite:`Schnieders2007` for use with AMOEBA 2013 force field
+:file:`amoeba2009.xml`         AMOEBA 2009\ :cite:`Ren2002`.  This force field is deprecated.  It is
+                               recommended to use AMOEBA 2013 instead.
+:file:`amoeba2009_gk.xml`      Generalized Kirkwood solvation model for use with AMOEBA 2009 force field
+=============================  ================================================================================
+
+For explicit solvent simulations, just include the single file :file:`amoeba2013.xml`.
+AMOEBA also supports implicit solvent using a Generalized Kirkwood model.  To enable
+it, also include :file:`amoeba2013_gk.xml`.
+
+The older AMOEBA 2009 force field is provided only for backward compatibility, and is not
+recommended for most simulations.
+
+CHARMM Polarizable Force Field
+------------------------------
+
+To use the CHARMM 2013 polarizable force field\ :cite:`Lopes2013`, include the
+single file :file:`charmm_polar_2013.xml`.  It includes parameters for proteins,
+water, and ions.  When using this force field, remember to add extra particles to
+the :class:`Topology` as described in section :ref:`adding-or-removing-extra-particles`.
+
+Older Amber Force Fields
+------------------------
+
+OpenMM includes several older Amber force fields as well.  For most simulations
+Amber14 is preferred over any of these, but they are still useful for reproducing
+older results.
 
 .. tabularcolumns:: |l|L|
 
@@ -775,19 +732,33 @@ File                           Force Field
 :code:`amber99sbnmr.xml`       Amber99SB with modifications to fit NMR data\ :cite:`Li2010`
 :code:`amber03.xml`            Amber03\ :cite:`Duan2003`
 :code:`amber10.xml`            Amber10 (documented in the AmberTools_ manual as `ff10`)
-:code:`amberfb15.xml`          AMBER-FB15\ :cite:`Wang2017`. Intramolecular parameters optimized with
-                               ForceBalance using high-level ab initio data.
-:code:`amoeba2009.xml`         AMOEBA 2009\ :cite:`Ren2002`.  This force field is deprecated.  It is 
-                               recommended to use AMOEBA 2013 instead.
-:code:`amoeba2013.xml`         AMOEBA 2013\ :cite:`Shi2013`
-:code:`charmm_polar_2013.xml`  CHARMM 2013 polarizable force field\ :cite:`Lopes2013`
 =============================  ================================================================================
 
+Several of these force fields support implicit solvent.  To enable it, also
+include the corresponding OBC file.
 
-The AMBER files do not include parameters for water molecules.  This allows you
-to separately select which water model you want to use.  For simulations that
-include explicit water molecules, you should also specify one of the following
-files:
+.. tabularcolumns:: |l|L|
+
+=========================  =================================================================================================
+File                       Implicit Solvation Model
+=========================  =================================================================================================
+:code:`amber96_obc.xml`    GBSA-OBC solvation model\ :cite:`Onufriev2004` for use with Amber96 force field
+:code:`amber99_obc.xml`    GBSA-OBC solvation model for use with Amber99 force field and its variants
+:code:`amber03_obc.xml`    GBSA-OBC solvation model for use with Amber03 force field
+:code:`amber10_obc.xml`    GBSA-OBC solvation model for use with Amber10 force field
+=========================  =================================================================================================
+
+Note that the GBSA-OBC parameters in these files are those used in TINKER.\ :cite:`Tinker`
+They are designed for use with Amber force fields, but they are different from
+the parameters found in the AMBER application.
+
+Water Models
+------------
+
+The following files define popular water models.  They can be used with force fields
+that do not provide their own water models.  When using Amber14 or CHARMM36, use
+the water files included with those force fields instead, since they also include
+ion parameters.
 
 .. tabularcolumns:: |l|L|
 
@@ -803,52 +774,6 @@ File                 Water Model
 :code:`swm4ndp.xml`  SWM4-NDP water model\ :cite:`Lamoureux2006`
 ===================  ============================================
 
-
-For the polarizable force fields (AMOEBA and CHARMM), only one explicit water model
-is currently available and the water parameters are included in the same file as
-the macromolecule parameters.  Also, the polarizable force fields only include
-parameters for amino acids and ions, not for nucleic acids.
-
-If you want to include an implicit solvation model, you can also specify one of
-the following files:
-
-.. tabularcolumns:: |l|L|
-
-=========================  =================================================================================================
-File                       Implicit Solvation Model
-=========================  =================================================================================================
-:code:`amber96_obc.xml`    GBSA-OBC solvation model\ :cite:`Onufriev2004` for use with Amber96 force field
-:code:`amber99_obc.xml`    GBSA-OBC solvation model for use with Amber99 force fields
-:code:`amber03_obc.xml`    GBSA-OBC solvation model for use with Amber03 force field
-:code:`amber10_obc.xml`    GBSA-OBC solvation model for use with Amber10 force field
-:code:`amoeba2009_gk.xml`  Generalized Kirkwood solvation model\ :cite:`Schnieders2007` for use with AMOEBA 2009 force field
-:code:`amoeba2013_gk.xml`  Generalized Kirkwood solvation model for use with AMOEBA 2013 force field
-=========================  =================================================================================================
-
-
-For example, to use the GBSA-OBC solvation model with the Amber99SB force field,
-you would type:
-::
-
-    forcefield = ForceField('amber99sb.xml', 'amber99_obc.xml')
-
-Note that the GBSA-OBC parameters in these files are those used in TINKER.\ :cite:`Tinker`
-They are designed for use with Amber force fields, but they are different from
-the parameters found in the AMBER application.
-
-If you are running a vacuum simulation, you do not need to specify a water
-model.  The following line specifies the Amber10 force field and no water model.
-If you try to use it with a PDB file that contains explicit water, it will
-produce an error since no water parameters are defined:
-::
-
-    forcefield = ForceField('amber10.xml')
-
-Be aware that some force fields and water models include "extra particles", such
-as lone pairs or Drude particles.  Examples include the CHARMM polarizable force
-field and all of the 4 and 5 site water models.  To use these force fields, you
-must first add the extra particles to the :class:`Topology`.  See section
-:ref:`adding-or-removing-extra-particles` for details.
 
 AMBER Implicit Solvent
 ======================
@@ -939,6 +864,16 @@ error tolerance for the force computation.  For example:
 The error tolerance is roughly equal to the fractional error in the forces due
 to truncating the Ewald summation.  If you do not specify it, a default value of
 0.0005 is used.
+
+Another optional parameter when using a cutoff is :code:`switchDistance`.  This
+causes Lennard-Jones interactions to smoothly go to zero over some finite range,
+rather than being sharply truncated at the cutoff distance.  This can improve
+energy conservation.  To use it, specify a distance at which the interactions
+should start being reduced.  For example:
+::
+
+    system = prmtop.createSystem(nonbondedMethod=PME, nonbondedCutoff=1*nanometer,
+            switchDistance=0.9*nanometer)
 
 
 Nonbonded Forces for AMOEBA
@@ -1164,16 +1099,6 @@ Multiple Time Step Integrator
 The :class:`MTSIntegrator` class implements the rRESPA multiple time step
 algorithm\ :cite:`Tuckerman1992`.  This allows some forces in the system to be evaluated more
 frequently than others.  For details on how to use it, consult the API
-documentation.
-
-aMD Integrator
---------------
-
-There are three different integrator types that implement variations of the
-aMD\ :cite:`Hamelberg2007` accelerated sampling algorithm: :class:`AMDIntegrator`,
-:class:`AMDForceGroupIntegrator`, and :class:`DualAMDIntegrator`.  They
-perform integration on a modified potential energy surface to allow much faster
-sampling of conformations.  For details on how to use them, consult the API
 documentation.
 
 Compound Integrator
@@ -1436,6 +1361,55 @@ a checkpoint file every 5,000 steps, for example:
 
 Note that the checkpoint reporter will overwrite the last checkpoint file.
 
+
+Enhanced Sampling Methods
+=========================
+
+In many situations, the goal of a simulation is to sample the range of configurations
+accessible to a system.  It does not matter whether the simulation represents a
+single, physically realistic trajectory, only whether it produces a correct distribution
+of states.  In this case, a variety of methods can be used to sample configuration
+space much more quickly and efficiently than a single physical trajectory would.
+These are known as enhanced sampling methods.  OpenMM offers several that you
+can choose from.  They are briefly described here.  Consult the API documentation
+for more detailed descriptions and example code.
+
+Simulated Tempering
+-------------------
+
+Simulated tempering\ :cite:`Marinari1992` involves making frequent changes to the
+temperature of a simulation.  At high temperatures, it can quickly cross energy barriers
+and explore a wide range of configurations.  At lower temperatures, it more thoroughly
+explores each local region of configuration space.  This is a powerful method to
+speed up sampling when you do not know in advance what motions you want to sample.
+Simply specify the range of temperatures to simulate and the algorithm handles
+everything for you mostly automatically.
+
+Metadynamics
+------------
+
+Metadynamics\ :cite:`Barducci2008` is used when you do know in advance what
+motions you want to sample.  You specify one or more collective variables, and the
+algorithm adds a biasing potential to make the simulation explore a wide range of
+values for those variables.  It does this by periodically adding "bumps" to the biasing
+potential at the current values of the collective variables.  This encourages the simulation
+to move away from regions it has already explored and sample a wide range of values.
+At the end of the simulation, the biasing potential can be used to calculate the
+free energy of the system as a function of the collective variables.
+
+Accelerated Molecular Dynamics (aMD)
+------------------------------------
+
+aMD\ :cite:`Hamelberg2007` is another method that can be used when you do not know in
+advance what motions you want to accelerate.  It alters the potential energy surface
+by adding a "boost" potential whenever the potential energy is below a threshold.
+This makes local minima shallower and allows more frequent transitions between them.
+The boost can be applied to the total potential energy, to just a subset of interactions
+(typically the dihedral torsions), or both.  There are separate integrator classes
+for each of these options: :class:`AMDIntegrator`, :class:`AMDForceGroupIntegrator`,
+and :class:`DualAMDIntegrator`.
+
+
 .. _model-building-and-editing:
 
 Model Building and Editing
@@ -1581,6 +1555,29 @@ Allowed values for :code:`positiveIon` are ``'Cs+'``, ``'K+'``, ``'Li+'``, ``'Na
 ``'I-'``.  Be sure to include the single quotes around the value.  Also be aware
 some force fields do not include parameters for all of these ion types, so you
 need to use types that are supported by your chosen force field.
+
+Adding a Membrane
+*****************
+
+If you want to simulate a membrane protein, you may need to create a membrane as
+well.  You can do this by calling :meth:`addMembrane`.  Call it *instead* of
+:meth:`addSolvent`, not in addition to it.  This one method adds the membrane,
+solvent, and ions all at once, making sure the lipid head groups are properly
+solvated.  For example, this creates a POPC membrane, ensuring at least 1 nm of
+padding on all sides:
+::
+
+    modeller.addMembrane(forcefield, lipidType='POPC', minimumPadding=1*nanometer)
+
+The membrane is added in the XY plane, and the existing protein is assumed to already be oriented
+and positioned correctly.  When possible, it is recommended to start with a model
+from the `Orientations of Proteins in Membranes`_ (OPM) database.  Otherwise, it
+is up to you to select the protein position yourself.
+
+Because this method also adds solvent, it takes many of the same arguments as
+:meth:`addSolvent`.  See the API documentation for details.
+
+.. _`Orientations of Proteins in Membranes`: http://opm.phar.umich.edu
 
 .. _adding-or-removing-extra-particles:
 
@@ -1794,7 +1791,7 @@ Here is the definition of the :class:`ForceReporter` class:
 
             def describeNextReport(self, simulation):
                 steps = self._reportInterval - simulation.currentStep%self._reportInterval
-                return (steps, False, False, True, False)
+                return (steps, False, False, True, False, None)
 
             def report(self, simulation, state):
                 forces = state.getForces().value_in_unit(kilojoules/mole/nanometer)
@@ -1814,7 +1811,7 @@ We then have two methods that every reporter must implement:
 :meth:`describeNextReport()` and :meth:`report()`.  A Simulation object
 periodically calls :meth:`describeNextReport()` on each of its reporters to
 find out when that reporter will next generate a report, and what information
-will be needed to generate it.  The return value should be a five element tuple,
+will be needed to generate it.  The return value should be a six element tuple,
 whose elements are as follows:
 
 * The number of time steps until the next report.  We calculate this as
@@ -1825,6 +1822,9 @@ whose elements are as follows:
 * Whether the next report will need particle velocities.
 * Whether the next report will need forces.
 * Whether the next report will need energies.
+* Whether the positions should be wrapped to the periodic box.  If None, it will
+  automatically decide whether to wrap positions based on whether the System uses
+  periodic boundary conditions.
 
 
 When the time comes for the next scheduled report, the :class:`Simulation` calls
@@ -2955,12 +2955,6 @@ The :code:`file` attribute gives the path of the file to include.  It may be
 relative either to the directory containing the parent XML file (the one with
 the :code:`<Include>` tag) or the OpenMM data directory (the one containing
 built in force fields).
-
-The included file is fully processed before any other tags in the parent file
-are processed, and its definitions are added to the force field.  This means the
-parent file can refer to atom types defined in the included file, but not the
-other way around.  If there are multiple :code:`<Include>` tags, they are processed
-in the order they appear in the file.
 
 
 Using Multiple Files

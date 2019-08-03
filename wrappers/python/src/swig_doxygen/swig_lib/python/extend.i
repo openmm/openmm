@@ -6,6 +6,9 @@
 %extend OpenMM::Context {
 
   %pythoncode %{
+    def getIntegrator(self):
+        return self._integrator
+
     def getState(self, getPositions=False, getVelocities=False,
                  getForces=False, getEnergy=False, getParameters=False,
                  getParameterDerivatives=False, enforcePeriodicBox=False, groups=-1):
@@ -46,7 +49,7 @@
                         ((1<<x) & 0xffffffff for x in groups))
             else:
                 raise TypeError('%s is neither an int nor set' % groups)
-        if groups_mask > 0x80000000:
+        if groups_mask >= 0x80000000:
             groups_mask -= 0x100000000
         types = 0
         if getPositions:
@@ -157,7 +160,7 @@ Parameters:
                         ((1<<x) & 0xffffffff for x in groups))
             else:
                 raise TypeError('%s is neither an int nor set' % groups)
-        if groups_mask > 0x80000000:
+        if groups_mask >= 0x80000000:
             groups_mask -= 0x100000000
         types = 0
         if getPositions:

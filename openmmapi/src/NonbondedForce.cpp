@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -254,6 +254,84 @@ void NonbondedForce::addExclusionsToSet(const vector<set<int> >& bonded12, set<i
         if (currentLevel > 0)
             addExclusionsToSet(bonded12, exclusions, baseParticle, i, currentLevel-1);
     }
+}
+
+int NonbondedForce::addGlobalParameter(const string& name, double defaultValue) {
+    globalParameters.push_back(GlobalParameterInfo(name, defaultValue));
+    return globalParameters.size()-1;
+}
+
+const string& NonbondedForce::getGlobalParameterName(int index) const {
+    ASSERT_VALID_INDEX(index, globalParameters);
+    return globalParameters[index].name;
+}
+
+void NonbondedForce::setGlobalParameterName(int index, const string& name) {
+    ASSERT_VALID_INDEX(index, globalParameters);
+    globalParameters[index].name = name;
+}
+
+double NonbondedForce::getGlobalParameterDefaultValue(int index) const {
+    ASSERT_VALID_INDEX(index, globalParameters);
+    return globalParameters[index].defaultValue;
+}
+
+void NonbondedForce::setGlobalParameterDefaultValue(int index, double defaultValue) {
+    ASSERT_VALID_INDEX(index, globalParameters);
+    globalParameters[index].defaultValue = defaultValue;
+}
+
+int NonbondedForce::getGlobalParameterIndex(const std::string& parameter) const {
+    for (int i = 0; i < globalParameters.size(); i++)
+        if (globalParameters[i].name == parameter)
+            return i;
+    throw OpenMMException("There is no global parameter called '"+parameter+"'");
+}
+
+int NonbondedForce::addParticleParameterOffset(const std::string& parameter, int particleIndex, double chargeScale, double sigmaScale, double epsilonScale) {
+    particleOffsets.push_back(ParticleOffsetInfo(getGlobalParameterIndex(parameter), particleIndex, chargeScale, sigmaScale, epsilonScale));
+    return particleOffsets.size()-1;
+}
+
+void NonbondedForce::getParticleParameterOffset(int index, std::string& parameter, int& particleIndex, double& chargeScale, double& sigmaScale, double& epsilonScale) const {
+    ASSERT_VALID_INDEX(index, particleOffsets);
+    parameter = globalParameters[particleOffsets[index].parameter].name;
+    particleIndex = particleOffsets[index].particle;
+    chargeScale = particleOffsets[index].chargeScale;
+    sigmaScale = particleOffsets[index].sigmaScale;
+    epsilonScale = particleOffsets[index].epsilonScale;
+}
+
+void NonbondedForce::setParticleParameterOffset(int index, const std::string& parameter, int particleIndex, double chargeScale, double sigmaScale, double epsilonScale) {
+    ASSERT_VALID_INDEX(index, particleOffsets);
+    particleOffsets[index].parameter = getGlobalParameterIndex(parameter);
+    particleOffsets[index].particle = particleIndex;
+    particleOffsets[index].chargeScale = chargeScale;
+    particleOffsets[index].sigmaScale = sigmaScale;
+    particleOffsets[index].epsilonScale = epsilonScale;
+}
+
+int NonbondedForce::addExceptionParameterOffset(const std::string& parameter, int exceptionIndex, double chargeProdScale, double sigmaScale, double epsilonScale) {
+    exceptionOffsets.push_back(ExceptionOffsetInfo(getGlobalParameterIndex(parameter), exceptionIndex, chargeProdScale, sigmaScale, epsilonScale));
+    return exceptionOffsets.size()-1;
+}
+
+void NonbondedForce::getExceptionParameterOffset(int index, std::string& parameter, int& exceptionIndex, double& chargeProdScale, double& sigmaScale, double& epsilonScale) const {
+    ASSERT_VALID_INDEX(index, exceptionOffsets);
+    parameter = globalParameters[exceptionOffsets[index].parameter].name;
+    exceptionIndex = exceptionOffsets[index].exception;
+    chargeProdScale = exceptionOffsets[index].chargeProdScale;
+    sigmaScale = exceptionOffsets[index].sigmaScale;
+    epsilonScale = exceptionOffsets[index].epsilonScale;
+}
+
+void NonbondedForce::setExceptionParameterOffset(int index, const std::string& parameter, int exceptionIndex, double chargeProdScale, double sigmaScale, double epsilonScale) {
+    ASSERT_VALID_INDEX(index, exceptionOffsets);
+    exceptionOffsets[index].parameter = getGlobalParameterIndex(parameter);
+    exceptionOffsets[index].exception = exceptionIndex;
+    exceptionOffsets[index].chargeProdScale = chargeProdScale;
+    exceptionOffsets[index].sigmaScale = sigmaScale;
+    exceptionOffsets[index].epsilonScale = epsilonScale;
 }
 
 int NonbondedForce::getReciprocalSpaceForceGroup() const {

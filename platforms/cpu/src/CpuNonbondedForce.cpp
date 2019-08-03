@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2017 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2018 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -28,7 +28,6 @@
 #include "CpuNonbondedForce.h"
 #include "ReferenceForce.h"
 #include "ReferencePME.h"
-#include "openmm/internal/gmx_atomic.h"
 #include <algorithm>
 #include <iostream>
 
@@ -277,9 +276,9 @@ void CpuNonbondedForce::calculateReciprocalIxn(int numberOfAtoms, float* posq, c
             double recipDispersionEnergy = 0.0;
             pme_exec_dpme(pmedata,atomCoordinates,dpmeforces,charges,periodicBoxVectors,&recipDispersionEnergy);
             for (int i = 0; i < numberOfAtoms; i++){
-                forces[i][0] -= 2.0*dpmeforces[i][0];
-                forces[i][1] -= 2.0*dpmeforces[i][1];
-                forces[i][2] -= 2.0*dpmeforces[i][2];
+                forces[i][0] += dpmeforces[i][0];
+                forces[i][1] += dpmeforces[i][1];
+                forces[i][2] += dpmeforces[i][2];
             }
             if (totalEnergy)
                 *totalEnergy += recipDispersionEnergy;
@@ -389,9 +388,7 @@ void CpuNonbondedForce::calculateDirectIxn(int numberOfAtoms, float* posq, const
     this->threadForce = &threadForce;
     includeEnergy = (totalEnergy != NULL);
     threadEnergy.resize(threads.getNumThreads());
-    gmx_atomic_t counter;
-    gmx_atomic_set(&counter, 0);
-    this->atomicCounter = &counter;
+    atomicCounter = 0;
     
     // Signal the threads to start running and wait for them to finish.
     
@@ -401,7 +398,7 @@ void CpuNonbondedForce::calculateDirectIxn(int numberOfAtoms, float* posq, const
     // Signal the threads to subtract the exclusions.
     
     if (ewald || pme) {
-        gmx_atomic_set(&counter, 0);
+        atomicCounter = 0;
         threads.resumeThreads();
         threads.waitForThreads();
     }
@@ -429,7 +426,7 @@ void CpuNonbondedForce::threadComputeDirect(ThreadPool& threads, int threadIndex
     if (ewald || pme || ljpme) {
         // Compute the interactions from the neighbor list.
         while (true) {
-            int nextBlock = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            int nextBlock = atomicCounter++;
             if (nextBlock >= neighborList->getNumBlocks())
                 break;
             calculateBlockEwaldIxn(nextBlock, forces, energyPtr, boxSize, invBoxSize);
@@ -440,7 +437,7 @@ void CpuNonbondedForce::threadComputeDirect(ThreadPool& threads, int threadIndex
         threads.syncThreads();
         const int groupSize = max(1, numberOfAtoms/(10*numThreads));
         while (true) {
-            int start = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), groupSize);
+            int start = atomicCounter.fetch_add(groupSize);
             if (start >= numberOfAtoms)
                 break;
             int end = min(start+groupSize, numberOfAtoms);
@@ -490,7 +487,7 @@ void CpuNonbondedForce::threadComputeDirect(ThreadPool& threads, int threadIndex
         // Compute the interactions from the neighbor list.
 
         while (true) {
-            int nextBlock = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            int nextBlock = atomicCounter++;
             if (nextBlock >= neighborList->getNumBlocks())
                 break;
             calculateBlockIxn(nextBlock, forces, energyPtr, boxSize, invBoxSize);
@@ -500,7 +497,7 @@ void CpuNonbondedForce::threadComputeDirect(ThreadPool& threads, int threadIndex
         // Loop over all atom pairs
 
         while (true) {
-            int i = gmx_atomic_fetch_add(reinterpret_cast<gmx_atomic_t*>(atomicCounter), 1);
+            int i = atomicCounter++;
             if (i >= numberOfAtoms)
                 break;
             for (int j = i+1; j < numberOfAtoms; j++)
