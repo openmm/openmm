@@ -309,8 +309,6 @@ class TestCharmmFiles(unittest.TestCase):
             if isinstance(force, CustomNonbondedForce):
                 self.assertFalse(force.getUseLongRangeCorrection())
             if isinstance(force, NonbondedForce):
-                # TODO: why is this part of the code even reached???
-                # Does NBFIX not fire?
                 self.assertFalse(force.getUseDispersionCorrection())
 
     def test_NoPsfWarning(self):
