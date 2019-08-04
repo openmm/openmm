@@ -213,19 +213,24 @@ public:
      */
     static void loadPluginLibrary(const std::string& file);
     /**
-     * Load multiple dynamic libraries (DLLs) which contain OpenMM plugins from a single directory.
-     * This method loops over every file contained in the specified directory and calls loadPluginLibrary()
+     * Load multiple dynamic libraries (DLLs) which contain OpenMM plugins from one or more directories.
+     * Multiple fully-qualified paths can be joined together with ':' on unix-like systems
+     * (or ';' on windows-like systems); each will be searched for plugins, in-order. For example,
+     * '/foo/plugins:/bar/plugins' will search both `/foo/plugins` and `/bar/plugins`. If an
+     * identically-named plugin is encountered twice it will be loaded at both points; be careful!!!
+     *
+     * This method loops over every file contained in the specified directories and calls loadPluginLibrary()
      * for each one.  If an error occurs while trying to load a particular file, that file is simply
      * ignored. You can retrieve a list of all such errors by calling getPluginLoadFailures().
      *
-     * @param directory    the path to the directory containing libraries to load
+     * @param directory    a ':' (unix) or ';' (windows) deliminated list of paths containing libraries to load
      * @return the names of all files which were successfully loaded as libraries
      */
     static std::vector<std::string> loadPluginsFromDirectory(const std::string& directory);
     /**
      * Get the default directory from which to load plugins.  If the environment variable
      * OPENMM_PLUGIN_DIR is set, this returns its value.  Otherwise, it returns a platform
-     * specific default location.
+     * specific default location. 
      *
      * @return the path to the default plugin directory
      */
