@@ -112,7 +112,7 @@ class TestCharmmFiles(unittest.TestCase):
 
         state = con.getState(getEnergy=True, enforcePeriodicBox=True)
         ene = state.getPotentialEnergy().value_in_unit(kilocalories_per_mole)
-        self.assertAlmostEqual(ene, 15490.0033559, delta=0.05)
+        self.assertAlmostEqual(ene, 15559.71602, delta=0.05)
 
     def test_Drude(self):
         """Test CHARMM systems with Drude force field"""
@@ -125,14 +125,14 @@ class TestCharmmFiles(unittest.TestCase):
 
         # Now compute the full energy
         plat = Platform.getPlatformByName('Reference')
-        system = psf.createSystem(params, nonbondedMethod=PME)
+        system = psf.createSystem(params, nonbondedMethod=PME, ewaldErrorTolerance=0.00005)
         integrator = DrudeLangevinIntegrator(300*kelvin, 1.0/picosecond, 1*kelvin, 10/picosecond, 0.001*picoseconds)
         con = Context(system, integrator, plat)
         con.setPositions(crd.positions)
 
         state = con.getState(getEnergy=True, enforcePeriodicBox=True)
         ene = state.getPotentialEnergy().value_in_unit(kilocalories_per_mole)
-        self.assertAlmostEqual(ene, -1831.54, delta=0.5)
+        self.assertAlmostEqual(ene, -1788.36644, delta=1.0)
 
     def test_Lonepair(self):
         """Test the lonepair facilities, in particular the colinear type of lonepairs"""
