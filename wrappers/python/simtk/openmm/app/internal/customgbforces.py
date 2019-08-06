@@ -250,7 +250,7 @@ def _bondi_radii(topology):
         E.silicon:      2.1,
         E.phosphorus:   1.85,
         E.sulfur:       1.8,
-        E.chlorine:     1.5,
+        E.chlorine:     1.7,
     }
 
     if _have_numpy:
@@ -272,7 +272,7 @@ def _mbondi_radii(topology, all_bonds = None):
         E.silicon:      2.1,
         E.phosphorus:   1.85,
         E.sulfur:       1.8,
-        E.chlorine:     1.5,
+        E.chlorine:     1.7,
     }
     if _have_numpy:
         radii = numpy.empty(topology.getNumAtoms(), numpy.double)
@@ -310,7 +310,7 @@ def _mbondi2_radii(topology, all_bonds = None):
         E.silicon:      2.1,
         E.phosphorus:   1.85,
         E.sulfur:       1.8,
-        E.chlorine:     1.5,
+        E.chlorine:     1.7,
     }
     if _have_numpy:
         radii = numpy.empty(topology.getNumAtoms(), numpy.double)
