@@ -383,7 +383,6 @@ class TestAmberPrmtopFile(unittest.TestCase):
         # Now make sure that out-of-range parameters *do* raise
         self.assertRaises(ValueError, lambda: f.addParticle([0, 0.9, 0.5]))
         self.assertRaises(ValueError, lambda: f.addParticle([0, 0.21, 0.5]))
-    
-        
+
 if __name__ == '__main__':
     unittest.main()
