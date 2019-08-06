@@ -2439,7 +2439,7 @@ class LennardJonesGenerator(object):
 
         for atom in data.atoms:
             self.force.addParticle((typeToMergedType[data.atomType[atom]],))
-        self.force.setUseLongRangeCorrection(True)
+        self.force.setUseLongRangeCorrection(bool(args.get('useLongRangeCorrection', False)))
         self.force.setCutoffDistance(nonbondedCutoff)
         sys.addForce(self.force)
 

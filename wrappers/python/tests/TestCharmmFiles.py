@@ -285,13 +285,13 @@ class TestCharmmFiles(unittest.TestCase):
         for residue in psf.topology.residues():
             atoms = [atom.name for atom in residue.atoms()]
             if residue.name == "M14":
-                self.assertCountEqual(m14, atoms)
+                self.assertEqual(sorted(m14), sorted(atoms))
             elif residue.name == "TIP3":
-                self.assertCountEqual(tip3, atoms)
+                self.assertEqual(sorted(tip3), sorted(atoms))
             elif residue.name == "POT":
-                self.assertCountEqual(pot, atoms)
+                self.assertEqual(sorted(pot), sorted(atoms))
             elif residue.name == "CLA":
-                self.assertCountEqual(cla, atoms)
+                self.assertEqual(sorted(cla), sorted(atoms))
             else:
                 self.assertTrue(False)
 
