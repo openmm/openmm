@@ -127,6 +127,14 @@ class TestAmberPrmtopFile(unittest.TestCase):
                     self.assertTrue(found_matching_solvent_dielectric and
                                     found_matching_solute_dielectric)
 
+    def test_ImplicitSolventZeroSA(self):
+        """Test that requesting gbsaModel=None yields a surface area energy of 0 when 
+           prmtop.createSystem produces a GBSAOBCForce"""
+        system = prmtop2.createSystem(implicitSolvent=OBC2, gbsaModel=None)
+        for force in system.getForces():
+            if isinstance(force, GBSAOBCForce):
+                self.assertEqual(force.getSurfaceAreaEnergy(), 0*kilojoule/(nanometer**2*mole))
+
     def test_HydrogenMass(self):
         """Test that altering the mass of hydrogens works correctly."""
 
