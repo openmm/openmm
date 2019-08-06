@@ -989,6 +989,8 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
                 gb = mm.GBSAOBCForce()
                 gb.setSoluteDielectric(soluteDielectric)
                 gb.setSolventDielectric(solventDielectric)
+                if gbsaModel is None:
+                    gb.setSurfaceAreaEnergy(0)
         elif gbmodel == 'GBn':
             gb = customgb.GBSAGBnForce(solventDielectric, soluteDielectric, gbsaModel, cutoff, implicitSolventKappa)
         elif gbmodel == 'GBn2':
