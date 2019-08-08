@@ -7200,7 +7200,7 @@
    <Torsion map="2" class1="CD2O1A" class2="ND3A3" class3="CD31C" class4="CD2O1A" class5="ND2A2"/>
    <Torsion map="2" class1="CD2O1A" class2="ND3A3" class3="CD31C" class4="CD2O1A" class5="ND3A3"/>
  </CMAPTorsionForce>
- <NonbondedForce coulomb14scale="1.0" lj14scale="1.0">
+ <NonbondedForce coulomb14scale="1.0" lj14scale="1.0" useDispersionCorrection="False">
   <Atom type="0" charge="1.71639" sigma="1.0" epsilon="1.0"/>
   <Atom type="1" charge="-1.11466" sigma="1.0" epsilon="1.0"/>
   <Atom type="2" charge="0.55733" sigma="1.0" epsilon="1.0"/>
@@ -11370,6 +11370,7 @@ sigma14 = [
 
 customNonbondedForce = mm.CustomNonbondedForce('4*eps*((sig/r)^12-(sig/r)^6); eps=epsilon(type1, type2); sig=sigma(type1, type2)')
 customNonbondedForce.setNonbondedMethod(min(nonbondedForce.getNonbondedMethod(), 2))
+customNonbondedForce.setUseLongRangeCorrection(False)
 customNonbondedForce.setCutoffDistance(nonbondedForce.getCutoffDistance())
 customNonbondedForce.addTabulatedFunction('epsilon', mm.Discrete2DFunction(numAtomClasses, numAtomClasses, epsilon))
 customNonbondedForce.addTabulatedFunction('sigma', mm.Discrete2DFunction(numAtomClasses, numAtomClasses, sigma))

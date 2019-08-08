@@ -6,6 +6,7 @@ from simtk.unit import *
 import simtk.openmm.app.element as elem
 import simtk.openmm.app.forcefield as forcefield
 import math
+import textwrap
 try:
     from cStringIO import StringIO
 except ImportError:
@@ -50,16 +51,77 @@ class TestForceField(unittest.TestCase):
                                 for f in forces))
 
     def test_DispersionCorrection(self):
-        """Test to make sure the nonbondedCutoff parameter is passed correctly."""
+        """Test to make sure that the dispersion/long-range correction is set properly."""
+        top = Topology()
+        chain = top.addChain()
 
-        for useDispersionCorrection in [True, False]:
-            system = self.forcefield1.createSystem(self.pdb1.topology,
-                                                   nonbondedCutoff=2*nanometer,
-                                                   useDispersionCorrection=useDispersionCorrection)
-
+        for lrc in (True, False):
+            xml = textwrap.dedent(
+                """
+                <ForceField>
+                 <LennardJonesForce lj14scale="0.3" useDispersionCorrection="{lrc}">
+                  <Atom type="A" sigma="1" epsilon="0.1"/>
+                  <Atom type="B" sigma="2" epsilon="0.2"/>
+                  <NBFixPair type1="A" type2="B" sigma="2.5" epsilon="1.1"/>
+                 </LennardJonesForce>
+                 <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5" useDispersionCorrection="{lrc2}">
+                  <Atom type="A" sigma="0.315" epsilon="0.635"/>
+                 </NonbondedForce>
+                </ForceField>
+                """
+            )
+            ff = ForceField(StringIO(xml.format(lrc=lrc, lrc2=lrc)))
+            system = ff.createSystem(top)
+            checked_nonbonded = False
+            checked_custom = False
             for force in system.getForces():
                 if isinstance(force, NonbondedForce):
-                    self.assertEqual(useDispersionCorrection, force.getUseDispersionCorrection())
+                    self.assertEqual(force.getUseDispersionCorrection(), lrc)
+                    checked_nonbonded = True
+                elif isinstance(force, CustomNonbondedForce):
+                    self.assertEqual(force.getUseLongRangeCorrection(), lrc)
+                    checked_custom = True
+            self.assertTrue(checked_nonbonded and checked_custom)
+
+            # check that the keyword argument overwrites xml input
+            lrc_kwarg = not lrc
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter("always")
+                system2 = ff.createSystem(top, useDispersionCorrection=lrc_kwarg)
+                self.assertTrue(len(w) == 2)
+                assert "conflict" in str(w[-1].message).lower()
+            checked_nonbonded = False
+            checked_custom = False
+            for force in system2.getForces():
+                if isinstance(force, NonbondedForce):
+                    self.assertEqual(force.getUseDispersionCorrection(), lrc_kwarg)
+                    checked_nonbonded = True
+                elif isinstance(force, CustomNonbondedForce):
+                    self.assertEqual(force.getUseLongRangeCorrection(), lrc_kwarg)
+                    checked_custom = True
+            self.assertTrue(checked_nonbonded and checked_custom)
+
+            # check that no warning is generated when useDispersionCorrection is not in the xml file
+            xml = textwrap.dedent(
+                """
+                <ForceField>
+                 <LennardJonesForce lj14scale="0.3">
+                  <Atom type="A" sigma="1" epsilon="0.1"/>
+                  <Atom type="B" sigma="2" epsilon="0.2"/>
+                  <NBFixPair type1="A" type2="B" sigma="2.5" epsilon="1.1"/>
+                 </LennardJonesForce>
+                 <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5">
+                  <Atom type="A" sigma="0.315" epsilon="0.635"/>
+                 </NonbondedForce>
+                </ForceField>
+                """
+            )
+            ff = ForceField(StringIO(xml))
+            system = ff.createSystem(top)
+            for lrc_kwarg in [True, False]:
+                with warnings.catch_warnings():
+                    warnings.simplefilter("error")
+                    system2 = ff.createSystem(top, useDispersionCorrection=lrc_kwarg)
 
     def test_Cutoff(self):
         """Test to make sure the nonbondedCutoff parameter is passed correctly."""
@@ -227,7 +289,7 @@ class TestForceField(unittest.TestCase):
         angles = forcefield.HarmonicAngleGenerator(ff)
         angles.registerAngle({'class1':'HW', 'class2':'OW', 'class3':'HW', 'angle':1.82421813418*radians, 'k':836.8*kilojoules_per_mole/radian})
         ff.registerGenerator(angles)
-        nonbonded = forcefield.NonbondedGenerator(ff, 0.833333, 0.5)
+        nonbonded = forcefield.NonbondedGenerator(ff, 0.833333, 0.5, True)
         nonbonded.registerAtom({'type':'tip3p-O', 'charge':-0.834, 'sigma':0.31507524065751241*nanometers, 'epsilon':0.635968*kilojoules_per_mole})
         nonbonded.registerAtom({'type':'tip3p-H', 'charge':0.417, 'sigma':1*nanometers, 'epsilon':0*kilojoules_per_mole})
         ff.registerGenerator(nonbonded)
@@ -712,7 +774,7 @@ class TestForceField(unittest.TestCase):
    <Atom name="SOD" type="SOD"/>
   </Residue>
  </Residues>
- <LennardJonesForce lj14scale="1.0">
+ <LennardJonesForce lj14scale="1.0" useDispersionCorrection="False">
   <Atom type="CLA" sigma="0.404468018036" epsilon="0.6276"/>
   <Atom type="SOD" sigma="0.251367073323" epsilon="0.1962296"/>
   <NBFixPair type1="CLA" type2="SOD" sigma="0.33239431" epsilon="0.350933"/>
@@ -939,6 +1001,7 @@ class AmoebaTestForceField(unittest.TestCase):
         for f1, f2, in zip(state1.getForces().value_in_unit(kilojoules_per_mole/nanometer), state2.getForces().value_in_unit(kilojoules_per_mole/nanometer)):
             diff = norm(f1-f2)
             self.assertTrue(diff < 0.1 or diff/norm(f1) < 1e-3)
+
 
 if __name__ == '__main__':
     unittest.main()
