@@ -1,7 +1,7 @@
 ## How to Get Support for OpenMM
 
 There are two main venues for getting support for OpenMM: the [discussion forum](https://simtk.org/forums/viewforum.php?f=161)
-and the [Github repository](https://github.com/pandegroup/openmm).  There is some overlap
+and the [Github repository](https://github.com/openmm/openmm).  There is some overlap
 between the two, but generally speaking the forum is for user oriented issues while the
 repository is for developer oriented issues.  If you have a question about how to use OpenMM
 (including writing programs that access it through its public API), post on the forum.  If
