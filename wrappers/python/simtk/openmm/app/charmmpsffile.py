@@ -363,7 +363,10 @@ class CharmmPsfFile(object):
         set_molecules(atom_list)
         molecule_list = [atom.marked for atom in atom_list]
         if len(holder) == len(atom_list):
-            if molecule_list != holder:
+            if len(molecule_list) != len(holder):
+                # The MOLNT section is only used for fluctuating charge models,
+                # which are currently not supported anyway.
+                # Therefore, we only check the lengths of the lists now rather than their contents.
                 warnings.warn('Detected PSF molecule section that is WRONG. '
                               'Resetting molecularity.', CharmmPSFWarning)
         # We have a CHARMM PSF file; now do NUMLP/NUMLPH sections
@@ -1094,6 +1097,7 @@ class CharmmPsfFile(object):
         # Add nonbonded terms now
         if verbose: print('Adding nonbonded interactions...')
         force = mm.NonbondedForce()
+        force.setUseDispersionCorrection(False)
         force.setForceGroup(self.NONBONDED_FORCE_GROUP)
         if not hasbox: # non-periodic
             if nonbondedMethod is ff.NoCutoff:
@@ -1233,7 +1237,6 @@ class CharmmPsfFile(object):
             if (nonbondedMethod in (ff.PME, ff.LJPME, ff.Ewald, ff.CutoffPeriodic)):
                 cforce.setNonbondedMethod(cforce.CutoffPeriodic)
                 cforce.setCutoffDistance(nonbondedCutoff)
-                cforce.setUseLongRangeCorrection(True)
             elif nonbondedMethod is ff.NoCutoff:
                 cforce.setNonbondedMethod(cforce.NoCutoff)
             elif nonbondedMethod is ff.CutoffNonPeriodic:
