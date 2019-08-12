@@ -32,6 +32,18 @@
 #include <string>
 #define __CL_ENABLE_EXCEPTIONS
 #define CL_USE_DEPRECATED_OPENCL_1_1_APIS
+#ifndef CL_DEVICE_SIMD_PER_COMPUTE_UNIT_AMD
+  #define CL_DEVICE_SIMD_PER_COMPUTE_UNIT_AMD 0x4040
+#endif
+#ifndef CL_DEVICE_SIMD_WIDTH_AMD
+  #define CL_DEVICE_SIMD_WIDTH_AMD 0x4041
+#endif
+#ifndef CL_DEVICE_SIMD_INSTRUCTION_WIDTH_AMD
+  #define CL_DEVICE_SIMD_INSTRUCTION_WIDTH_AMD 0x4042
+#endif
+#ifndef CL_DEVICE_WAVEFRONT_WIDTH_AMD
+  #define CL_DEVICE_WAVEFRONT_WIDTH_AMD 0x4043
+#endif
 #ifdef _MSC_VER
     // Prevent Windows from defining macros that interfere with other code.
     #define NOMINMAX
