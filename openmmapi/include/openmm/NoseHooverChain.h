@@ -49,6 +49,12 @@ namespace OpenMM {
  *
  * where the total number of timesteps used to propagate the chain in each step is
  * the number of MTS steps multiplied by the number of terms in the Yoshida-Suzuki decomposition.
+ *
+ * Two types of NHC may be created.  The first is a simple thermostat that couples with a given subset
+ * of the atoms within a system, controling their absolute motion.  The second is more elaborate and
+ * can thermostat tethered pairs of atoms and in this case two thermostats are created: one that controls
+ * the absolute center of mass velocity of each pair and another that controls their motion relative to
+ * one another.
  */
 
 class OPENMM_EXPORT NoseHooverChain {
@@ -56,23 +62,29 @@ public:
     /**
      * Create a NoseHooverChain.
      * 
-     * @param defaultTemperature        the default temperature of the heat bath (in Kelvin)
-     * @param defaultCollisionFrequency the default collision frequency (in 1/ps)
-     * @param defaultNumDOFs            the default number of degrees of freedom in the particles that
-     *                                  interact with this chain
-     * @param defaultChainLength        the default length of (number of particles in) this heat bath
-     * @param defaultNumMTS             the default number of multi time steps used to propagate this chain
-     * @param defaultNumYoshidaSuzuki   the default number of Yoshida Suzuki steps used to propagate this chain (1, 3, or 5).
-     * @param defaultChainID            the default chain id used to distinguish this Nose-Hoover chain from others that may
-     *                                  be used to control a different set of particles, e.g. for Drude oscillators
-     * @param thermostatedAtoms         the list of atoms to be handled by this thermostat
-     * @param parentAtoms               the list of parent atoms, if this thermostat handles Drude particles. Empty vector otherwise.
+     * @param defaultTemperature                the default temperature of the heat bath for absolute motion (in Kelvin)
+     * @param defaultRelativeTemperature        the default temperature of the heat bath for relative motion(in Kelvin).
+     *                                          This is only used if the list of thermostated pairs is not empty.
+     * @param defaultCollisionFrequency         the default collision frequency for absolute motion (in 1/ps)
+     * @param defaultRelativeCollisionFrequency the default collision frequency for relative motion(in 1/ps).
+     *                                          This is only used if the list of thermostated pairs is not empty.
+     * @param defaultNumDOFs                    the default number of degrees of freedom in the particles that
+     *                                          interact with this chain
+     * @param defaultChainLength                the default length of (number of particles in) this heat bath
+     * @param defaultNumMTS                     the default number of multi time steps used to propagate this chain
+     * @param defaultNumYoshidaSuzuki           the default number of Yoshida Suzuki steps used to propagate this chain (1, 3, or 5).
+     * @param defaultChainID                    the default chain id used to distinguish this Nose-Hoover chain from others that may
+     *                                          be used to control a different set of particles, e.g. for Drude oscillators
+     * @param thermostatedAtoms                 the list of atoms to be handled by this thermostat
+     * @param thermostatedPairs                 the list of connected pairs to be thermostated; their absolute center of mass motion will
+     *                                          be thermostated independently from their motion relative to one another.
      */
-    NoseHooverChain(double defaultTemperature, double defaultCollisionFrequency, int defaultNumDOFs, int defaultChainLength,
+    NoseHooverChain(double defaultTemperature, double defaultRelativeTemperature, double defaultCollisionFrequency,
+                    double defaultRelativeCollisionFrequency, int defaultNumDOFs, int defaultChainLength,
                     int defaultNumMTS, int defaultNumYoshidaSuzuki, int defaultChainID,
-                    const std::vector<int>& thermostatedAtoms, const std::vector<int>& parentAtoms);
+                    const std::vector<int>& thermostatedAtoms, const std::vector< std::pair< int, int > > &thermostatedPairs);
     /**
-     * Get the default temperature of the heat bath (in Kelvin).
+     * Get the default temperature of the heat bath for treating absolute particle motion (in Kelvin).
      *
      * @return the default temperature of the heat bath, measured in Kelvin.
      */
@@ -80,8 +92,8 @@ public:
         return defaultTemp;
     }
     /**
-     * Set the default temperature of the heat bath.  This will affect any new Contexts you create,
-     * but not ones that already exist.
+     * Set the default temperature of the heat bath for treating absolute particle motion.
+     * This will affect any new Contexts you create, but not ones that already exist.
      *
      * @param temperature the default temperature of the heat bath (in Kelvin)
      */
@@ -89,7 +101,25 @@ public:
         defaultTemp = temperature;
     }
     /**
-     * Get the default collision frequency (in 1/ps).
+     * Get the default temperature of the heat bath for treating relative particle motion (in Kelvin).
+     *
+     * @return the default temperature of the heat bath, measured in Kelvin.
+     */
+    double getDefaultRelativeTemperature() const {
+        return defaultRelativeTemp;
+    }
+    /**
+     * Set the default temperature of the heat bath for treating relative motion if this thermostat has
+     * been set up to treat connected pairs of atoms.  This will affect any new Contexts you create,
+     * but not ones that already exist.
+     *
+     * @param temperature the default temperature of the heat bath for relative motion (in Kelvin)
+     */
+    void setDefaultRelativeTemperature(double temperature) {
+        defaultRelativeTemp = temperature;
+    }
+    /**
+     * Get the default collision frequency for treating absolute particle motion (in 1/ps).
      *
      * @return the default collision frequency, measured in 1/ps.
      */
@@ -97,13 +127,31 @@ public:
         return defaultFreq;
     }
     /**
-     * Set the default collision frequency.  This will affect any new Contexts you create,
-     * but not those that already exist.
+     * Set the default collision frequency for treating absolute particle motion.
+     * This will affect any new Contexts you create, but not those that already exist.
      *
      * @param frequency the default collision frequency (in 1/ps)
      */
     void setDefaultCollisionFrequency(double frequency) {
         defaultFreq = frequency;
+    }
+    /**
+     * Get the default collision frequency for treating relative particle motion (in 1/ps).
+     *
+     * @return the default collision frequency, measured in 1/ps.
+     */
+    double getDefaultRelativeCollisionFrequency() const {
+        return defaultRelativeFreq;
+    }
+    /**
+     * Set the default collision frequency for treating relative particle motion if this thermostat has
+     * been set up to handle connected pairs of atoms.  This will affect any new Contexts you create,
+     * but not those that already exist.
+     *
+     * @param frequency the default collision frequency (in 1/ps)
+     */
+    void setDefaultRelativeCollisionFrequency(double frequency) {
+        defaultRelativeFreq = frequency;
     }
     /**
      * Get the default number of degrees of freedom in the particles controled by this heat bath.
@@ -209,26 +257,22 @@ public:
         thermostatedAtoms = atomIDs;
     }
     /**
-     * In case this thermostat handles the kinetic energy of Drude particles relative to the
-     * atoms that they are attached to, get the atom ids of all parent atoms.
+     * Get the list of any connected pairs to be handled by this thermostat.
      * If this is a regular thermostat, returns an empty vector.
      *
-     * @returns ids of all parent atoms
+     * @returns list of connected pairs.
      */
-    const std::vector<int>& getParentAtoms() const {
-        return parentAtoms;
+    const std::vector< std::pair< int, int > >& getThermostatedPairs() const {
+        return thermostatedPairs;
     }
     /**
      * In case this thermostat handles the kinetic energy of Drude particles 
      * set the atom IDs of all parent atoms. 
      *
-     * @param parentIDs 
+     * @param pairIDs the list of connected pairs to thermostat.
      */
-    void setParentAtoms(const std::vector<int>& parentIDs){
-        if (not parentIDs.size() == thermostatedAtoms.size()){
-            throw OpenMMException("The number of parent atoms has to be the same as the number of thermostated atoms, or zero.");
-        }
-        parentAtoms = parentIDs;
+    void setThermostatedPairs(const std::vector< std::pair< int, int > >& pairIDs){
+        thermostatedPairs = pairIDs;
     }
     /**
      * Get the default weights used in the Yoshida Suzuki multi time step decomposition (dimensionless) 
@@ -246,11 +290,12 @@ public:
         return false;
     }
 private:
-    double defaultTemp, defaultFreq; //, defaultTimeStep;
+    double defaultTemp, defaultFreq, defaultRelativeTemp, defaultRelativeFreq;
     int defaultNumDOFs, defaultChainLength, defaultNumMTS, defaultNumYS;
     // The suffix used to distinguish NH chains, e.g. for Drude particles vs. regular particles.
     int defaultChainID;
-    std::vector<int> thermostatedAtoms, parentAtoms;
+    std::vector<int> thermostatedAtoms;
+    std::vector<std::pair<int, int>> thermostatedPairs;
 };
 
 } // namespace OpenMM

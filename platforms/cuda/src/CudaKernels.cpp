@@ -7076,7 +7076,7 @@ double CudaIntegrateVerletStepKernel::computeKineticEnergy(ContextImpl& context,
     return cu.getIntegrationUtilities().computeKineticEnergy(0.5*integrator.getStepSize());
 }
 
-void CudaIntegrateVelocityVerletStepKernel::initialize(const System& system, const VelocityVerletIntegrator& integrator) {
+void CudaIntegrateVelocityVerletStepKernel::initialize(const System& system, const NoseHooverIntegrator& integrator) {
     cu.getPlatformData().initializeContexts(system);
     cu.setAsCurrent();
     map<string, string> defines;
@@ -7086,7 +7086,7 @@ void CudaIntegrateVelocityVerletStepKernel::initialize(const System& system, con
     kernel3 = cu.getKernel(module, "integrateVelocityVerletPart3");
 }
 
-void CudaIntegrateVelocityVerletStepKernel::execute(ContextImpl& context, const VelocityVerletIntegrator& integrator, bool &forcesAreValid) {
+void CudaIntegrateVelocityVerletStepKernel::execute(ContextImpl& context, const NoseHooverIntegrator& integrator, bool &forcesAreValid) {
     cu.setAsCurrent();
     CudaIntegrationUtilities& integration = cu.getIntegrationUtilities();
     int numAtoms = cu.getNumAtoms();
@@ -7136,7 +7136,7 @@ void CudaIntegrateVelocityVerletStepKernel::execute(ContextImpl& context, const 
     cu.reorderAtoms();
 }
 
-double CudaIntegrateVelocityVerletStepKernel::computeKineticEnergy(ContextImpl& context, const VelocityVerletIntegrator& integrator) {
+double CudaIntegrateVelocityVerletStepKernel::computeKineticEnergy(ContextImpl& context, const NoseHooverIntegrator& integrator) {
     return cu.getIntegrationUtilities().computeKineticEnergy(0);
 }
 
@@ -8512,7 +8512,7 @@ double CudaNoseHooverChainKernel::computeMaskedKineticEnergy(ContextImpl& contex
     bool useDouble = cu.getUseDoublePrecision() || cu.getUseMixedPrecision();
 
     int chainID = nhc.getDefaultChainID();
-    const auto & parents = nhc.getParentAtoms();
+    const auto & parents = nhc.getThermostatedPairs();
     const auto & thermostatedAtoms = nhc.getThermostatedAtoms();
     auto nAtoms = cu.getPaddedNumAtoms();
     if (!masks.count(chainID)) { 

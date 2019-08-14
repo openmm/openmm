@@ -35,7 +35,7 @@
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/System.h"
-#include "openmm/VelocityVerletIntegrator.h"
+#include "openmm/NoseHooverIntegrator.h"
 #include "openmm/VirtualSite.h"
 #include "SimTKOpenMMRealType.h"
 #include "sfmt/SFMT.h"
@@ -51,7 +51,7 @@ void testVVSingleBond() {
     System system;
     system.addParticle(2.0);
     system.addParticle(2.0);
-    VelocityVerletIntegrator integrator(0.01);
+    NoseHooverIntegrator integrator(0.01);
     HarmonicBondForce* forceField = new HarmonicBondForce();
     forceField->addBond(0, 1, 1.5, 1);
     system.addForce(forceField);
@@ -86,7 +86,7 @@ void testVVConstraints() {
     const int numParticles = 8;
     const int numConstraints = 5;
     System system;
-    VelocityVerletIntegrator integrator(0.001);
+    NoseHooverIntegrator integrator(0.001);
     integrator.setConstraintTolerance(1e-5);
     NonbondedForce* forceField = new NonbondedForce();
     for (int i = 0; i < numParticles; ++i) {
@@ -138,7 +138,7 @@ void testVVConstraints() {
 void testVVConstrainedClusters() {
     const int numParticles = 7;
     System system;
-    VelocityVerletIntegrator integrator(0.001);
+    NoseHooverIntegrator integrator(0.001);
     integrator.setConstraintTolerance(1e-5);
     NonbondedForce* forceField = new NonbondedForce();
     for (int i = 0; i < numParticles; ++i) {
@@ -205,7 +205,7 @@ void testVVConstrainedMasslessParticles() {
     vector<Vec3> positions(2);
     positions[0] = Vec3(-1, 0, 0);
     positions[1] = Vec3(1, 0, 0);
-    VelocityVerletIntegrator integrator(0.01);
+    NoseHooverIntegrator integrator(0.01);
     bool failed = false;
     try {
         // This should throw an exception.
@@ -250,7 +250,7 @@ void testThreeParticleVirtualSite() {
     forceField->addParticle(2, params);
     params[0] = 0.4;
     forceField->addParticle(3, params);
-    VelocityVerletIntegrator integrator(0.002);
+    NoseHooverIntegrator integrator(0.002);
     Context context(system, integrator, platform);
     vector<Vec3> positions(4);
     positions[0] = Vec3(0, 0, 0);

@@ -1150,7 +1150,7 @@ public:
      * @param system     the System this kernel will be applied to
      * @param integrator the VelocityVerletIntegrator this kernel will be used for
      */
-    void initialize(const System& system, const VelocityVerletIntegrator& integrator);
+    void initialize(const System& system, const NoseHooverIntegrator& integrator);
     /**
      * Execute the kernel.
      * 
@@ -1159,14 +1159,14 @@ public:
      * @param forcesAreValid a reference to the parent integrator's boolean for keeping
      *                       track of the validity of the current forces.
      */
-    void execute(ContextImpl& context, const VelocityVerletIntegrator& integrator, bool &forcesAreValid);
+    void execute(ContextImpl& context, const NoseHooverIntegrator& integrator, bool &forcesAreValid);
     /**
      * Compute the kinetic energy.
      * 
      * @param context    the context in which to execute this kernel
      * @param integrator the VelocityVerletIntegrator this kernel is being used for
      */
-    double computeKineticEnergy(ContextImpl& context, const VelocityVerletIntegrator& integrator);
+    double computeKineticEnergy(ContextImpl& context, const NoseHooverIntegrator& integrator);
 private:
     ReferencePlatform::PlatformData& data;
     ReferenceVelocityVerletDynamics* dynamics;
@@ -1446,11 +1446,11 @@ public:
      * 
      * @param context  the context in which to execute this kernel
      * @param noseHooverChain the object describing the chain to be propagated.
-     * @param kineticEnergy the kineticEnergy of the particles being thermostated by this chain.
+     * @param kineticEnergy the {absolute, relative} kinetic energies of the particles being thermostated by this chain.
      * @param timeStep the time step used by the integrator.
-     * @return the velocity scale factor to apply to the particles associated with this heat bath.
+     * @return the velocity scale factors to apply to the {absolute, relative} motion of particles associated with this heat bath.
      */
-    virtual double propagateChain(ContextImpl& context, const NoseHooverChain &nhc, double kineticEnergy, double timeStep);
+    virtual std::pair<double, double> propagateChain(ContextImpl& context, const NoseHooverChain &nhc, std::pair<double, double> kineticEnergy, double timeStep);
     /**
      * Execute the kernal that computes the total (kinetic + potential) heat bath energy.
      *
@@ -1468,16 +1468,16 @@ public:
      * @param downloadValue whether the computed value should be downloaded and returned.
      *
      */
-     virtual double computeMaskedKineticEnergy(ContextImpl& context, const NoseHooverChain &noseHooverChain, bool downloadValue);
+     virtual std::pair<double, double> computeMaskedKineticEnergy(ContextImpl& context, const NoseHooverChain &noseHooverChain, bool downloadValue);
 
     /**
      * Execute the kernel that scales the velocities of particles associated with a nose hoover chain
      *
      * @param context the context in which to execute this kernel
      * @param noseHooverChain the chain whose energy is to be determined.
-     * @param scaleFactor the multiplicative factor by which velocities are scaled.
+     * @param scaleFactor the multiplicative factor by which {absolute, relative} velocities are scaled.
      */
-    virtual void scaleVelocities(ContextImpl& context, const NoseHooverChain &noseHooverChain, double scaleFactor);
+    virtual void scaleVelocities(ContextImpl& context, const NoseHooverChain &noseHooverChain, std::pair<double, double> scaleFactor);
 
 
 private:

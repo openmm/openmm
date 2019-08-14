@@ -1,5 +1,5 @@
-#ifndef OPENMM_VELOCITYVERLETINTEGRATOR_H_
-#define OPENMM_VELOCITYVERLETINTEGRATOR_H_
+#ifndef OPENMM_NOSEHOOVERINTEGRATOR_H_
+#define OPENMM_NOSEHOOVERINTEGRATOR_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -47,16 +47,32 @@ class System;
  * thermostats, using the velocity Verlet propagation algorithm.
  */
 
-class OPENMM_EXPORT VelocityVerletIntegrator : public Integrator {
+class OPENMM_EXPORT NoseHooverIntegrator : public Integrator {
 public:
     /**
-     * Create a VelocityVerletIntegrator.
+     * Create a NoseHooverIntegrator.  This version creates a bare velocity Verlet integrator
+     * with no thermostats; any thermostats should be added by calling addThermostat.
      * 
      * @param stepSize the step size with which to integrate the system (in picoseconds)
      */
-    explicit VelocityVerletIntegrator(double stepSize);
+    explicit NoseHooverIntegrator(double stepSize);
+    /**
+     * Create a NoseHooverIntegrator.
+     *
+     * @param stepSize the step size with which to integrate the system (in picoseconds)
+     * @param system the system to be thermostated.  Note: this must be setup, i.e. all
+     *        particles should have been added, before calling this function.
+     * @param temperature the target temperature for the system.
+     * @param collisionFrequency the frequency of the interaction with the heat bath (in 1/ps).
+     * @param chainLength the number of beads in the Nose-Hoover chain.
+     * @param numMTS the number of step in the  multiple time step chain propagation algorithm.
+     * @param numYoshidaSuzuki the number of terms in the Yoshida-Suzuki multi time step decomposition
+     *        used in the chain propagation algorithm (must be 1, 3, or 5).
+     */
+    explicit NoseHooverIntegrator(double stepSize, System &system, double temperature, int collisionFrequnency,
+                                  int chainLength = 3, int numMTS = 3, int numYoshidaSuzuki = 3);
 
-    virtual ~VelocityVerletIntegrator(); 
+    virtual ~NoseHooverIntegrator();
    /**
      * Advance a simulation through time by taking a series of time steps.
      * 
@@ -64,7 +80,7 @@ public:
      */
     void step(int steps);
     /**
-     * Add a Nose-Hoover Chain thermostat to control the temperature of the system
+     * Add a simple Nose-Hoover Chain thermostat to control the temperature of the full system
      *
      * @param system the system to be thermostated.  Note: this must be setup, i.e. all
      *        particles should have been added, before calling this function.
@@ -75,28 +91,38 @@ public:
      * @param numYoshidaSuzuki the number of terms in the Yoshida-Suzuki multi time step decomposition
      *        used in the chain propagation algorithm (must be 1, 3, or 5).
      */
-     int addNoseHooverChainThermostat(System& system, double temperature, double collisionFrequency,
-                                             int chainLength, int numMTS, int numYoshidaSuzuki);
+     int addThermostat(System& system, double temperature, double collisionFrequency,
+                       int chainLength, int numMTS, int numYoshidaSuzuki);
     /**
-     * Add a Nose-Hoover Chain thermostat to control the temperature of the system
+     * Add a Nose-Hoover Chain thermostat to control the temperature of a collection of atoms and/or pairs of
+     * connected atoms within the full system.  A list of atoms defining the atoms to be thermostated is
+     * provided and the thermostat will only control members of that list.  Additionally a list of pairs of
+     * connected atoms may be provided; in this case both the center of mass absolute motion of each pair is
+     * controlled as well as their motion relative to each other, which is independently thermostated.
      *
      * @param system the system to be thermostated.  Note: this must be setup, i.e. all
      *        particles should have been added, before calling this function.
-     * @param mask list of particle ids to be thermostated.
-     * @param parents either an empty list of a list describing the parent atoms that each thermostated
-     *        atom is connected to.
-     * @param temperature the target temperature for the system.
-     * @param collisionFrequency the frequency of the interaction with the heat bath (in 1/ps).
+     * @param thermostatedParticles list of particle ids to be thermostated.
+     * @param thermostatedPairs a list of pairs of connected atoms whose absolute center of mass motion
+     *        and motion relative to one another will be independently thermostated.
+     * @param temperature the target temperature for each pair's absolute of center of mass motion.
+     * @param relativeTemperature the target temperature for each pair's relative motion.
+     * @param collisionFrequency the frequency of the interaction with the heat bath for the
+     *        pairs' center of mass motion (in 1/ps).
+     * @param relativeCollisionFrequency the frequency of the interaction with the heat bath for the
+     *        pairs' relative motion (in 1/ps).
      * @param chainLength the number of beads in the Nose-Hoover chain.
      * @param numMTS the number of step in the  multiple time step chain propagation algorithm.
      * @param numYoshidaSuzuki the number of terms in the Yoshida-Suzuki multi time step decomposition
      *        used in the chain propagation algorithm (must be 1, 3, or 5).
      */
-     int addMaskedNoseHooverChainThermostat(System& system, const std::vector<int>& mask, const std::vector<int>& parents,
-                                             double temperature, double collisionFrequency,
-                                             int chainLength, int numMTS, int numYoshidaSuzuki);
+     int addSubsystemThermostat(System& system, const std::vector<int>& thermostatedParticles,
+                                const std::vector< std::pair< int, int> >& thermostatedPairs,
+                                double temperature, double relativeTemperature,
+                                double collisionFrequency, double relativeCollisionFrequency,
+                                int chainLength = 3, int numMTS = 3, int numYoshidaSuzuki = 3);
     /**
-     * Get the temperature of the i-th chain (in Kelvin).
+     * Get the temperature of the i-th chain for controling absolute particle motion (in Kelvin).
      * 
      * @param chainID the index of the Nose-Hoover chain (default=0).
      * 
@@ -104,14 +130,29 @@ public:
      */
     double getTemperature(int chainID=0) const;
     /**
-     * set the temperature of the i-th chain.
+     * set the (absolute motion) temperature of the i-th chain.
      *
      * @param temperature the temperature for the Nose-Hoover chain thermostat (in Kelvin).
      * @param chainID The id of the Nose-Hoover chain for which the temperature is set (default=0).
      */
     void setTemperature(double temperature, int chainID=0);
     /**
-     * Get the collision frequency of the i-th chain (in 1/picosecond).
+     * Get the temperature of the i-th chain for controling pairs' relative particle motion (in Kelvin).
+     *
+     * @param chainID the index of the Nose-Hoover chain (default=0).
+     *
+     * @return the temperature.
+     */
+    double getRelativeTemperature(int chainID=0) const;
+    /**
+     * set the (relative pair motion) temperature of the i-th chain.
+     *
+     * @param temperature the temperature for the Nose-Hoover chain thermostat (in Kelvin).
+     * @param chainID The id of the Nose-Hoover chain for which the temperature is set (default=0).
+     */
+    void setRelativeTemperature(double temperature, int chainID=0);
+    /**
+     * Get the collision frequency for absolute motion of the i-th chain (in 1/picosecond).
      * 
      * @param chainID the index of the Nose-Hoover chain (default=0).
      *
@@ -119,12 +160,27 @@ public:
      */
     double getCollisionFrequency(int chainID=0) const;
     /**
-     * Set the collision frequency of the i-th chain.
+     * Set the collision frequency for absolute motion of the i-th chain.
      *
      * @param frequency the collision frequency in picosecond.
      * @param chainID the index of the Nose-Hoover chain (default=0).
      */
     void setCollisionFrequency(double frequency, int chainID=0);
+    /**
+     * Get the collision frequency for pairs' relative motion of the i-th chain (in 1/picosecond).
+     *
+     * @param chainID the index of the Nose-Hoover chain (default=0).
+     *
+     * @return the collision frequency.
+     */
+    double getRelativeCollisionFrequency(int chainID=0) const;
+    /**
+     * Set the collision frequency for pairs' relative motion of the i-th chain.
+     *
+     * @param frequency the collision frequency in picosecond.
+     * @param chainID the index of the Nose-Hoover chain (default=0).
+     */
+    void setRelativeCollisionFrequency(double frequency, int chainID=0);
     /**
      * Compute the total (potential + kinetic) heat bath energy for all heat baths
      * associated with this integrator, at the current time.
@@ -154,11 +210,11 @@ protected:
      * Advance any Nose-Hoover chains associated with this integrator and determine
      * scale factor for the velocities.
      * 
-     * @param kineticEnergy  the kinetic energy of the system that the chain is thermostating
+     * @param kineticEnergy  the {absolute, relative} kinetic energies of the system that the chain is thermostating
      * @param chainID        id of the Nose-Hoover-Chain
      * @return the scale factor to be applied to the velocities of the particles thermostated by the chain.
      */
-    double propagateChain(double kineticEnergy, int chainID=0);
+    std::pair<double, double> propagateChain(std::pair<double, double> kineticEnergy, int chainID=0);
     /**
      * This will be called by the Context when it is created.  It informs the Integrator
      * of what context it will be integrating, and gives it a chance to do any necessary initialization.
@@ -186,4 +242,4 @@ protected:
 
 } // namespace OpenMM
 
-#endif /*OPENMM_VELOCITYVERLETINTEGRATOR_H_*/
+#endif /*OPENMM_NOSEHOOVERINTEGRATOR_H_*/

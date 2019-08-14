@@ -30,7 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "CudaTests.h"
-#include "TestVelocityVerletIntegrator.h"
+#include "TestNoseHooverIntegrator.h"
 
 void runPlatformTests() {
 }

@@ -30,7 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "ReferenceTests.h"
-#include "TestVelocityVerletIntegrator.h"
+#include "TestNoseHooverIntegrator.h"
 
 void runPlatformTests() {
 }

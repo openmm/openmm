@@ -1,5 +1,5 @@
-#ifndef OPENMM_DRUDEVELOCITYVERLETINTEGRATOR_H_
-#define OPENMM_DRUDEVELOCITYVERLETINTEGRATOR_H_
+#ifndef OPENMM_DRUDENOSEHOOVERINTEGRATOR_H_
+#define OPENMM_DRUDENOSEHOOVERINTEGRATOR_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -32,7 +32,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/VelocityVerletIntegrator.h"
+#include "openmm/NoseHooverIntegrator.h"
 #include "openmm/Kernel.h"
 #include "openmm/internal/windowsExportDrude.h"
 
@@ -49,33 +49,28 @@ namespace OpenMM {
  * particles.
  */
 
-class OPENMM_EXPORT_DRUDE DrudeVelocityVerletIntegrator : public VelocityVerletIntegrator {
+class OPENMM_EXPORT_DRUDE DrudeNoseHooverIntegrator : public NoseHooverIntegrator {
 public:
     /**
-     * Create a DrudeVelocityVerletIntegrator.
+     * Create a DrudeNoseHooverIntegrator.
      *
      * @param stepSize       the step size with which to integrator the system (in picoseconds)
-     */
-    DrudeVelocityVerletIntegrator(double stepSize);
-
-    virtual ~DrudeVelocityVerletIntegrator(); 
-    /**
-     * Add a Nose-Hoover Chain thermostat to control the temperature of the system
-     *
      * @param system the system to be thermostated.  Note: this must be setup, i.e. all
      *        particles should have been added, before calling this function.
      * @param temperature the target temperature for the system.
-     * @param collisionFrequency the frequency of the interaction with the heat bath (in 1/ps).
-     * @param temperature the target temperature for the drude particles..
-     * @param collisionFrequency the frequency of the interaction of the drude particles with the heat bath (in 1/ps).
+     * @param drudeTemperature the target temperature for the Drude particles, relative to their parent atom.
+     * @param collisionFrequency the frequency of the system's interaction with the heat bath (in 1/ps).
+     * @param drudeCollisionFrequency the frequency of the drude particles' interaction with the heat bath (in 1/ps).
      * @param chainLength the number of beads in the Nose-Hoover chain.
      * @param numMTS the number of step in the  multiple time step chain propagation algorithm.
      * @param numYoshidaSuzuki the number of terms in the Yoshida-Suzuki multi time step decomposition
      *        used in the chain propagation algorithm (must be 1, 3, or 5).
      */
-    int addDrudeNoseHooverChainThermostat(System& system, double temperature, double collisionFrequency,
-                                          double drudeTemperature, double drudeCollisionFrequency,
-                                          int chainLength, int numMTS, int numYoshidaSuzuki);
+    DrudeNoseHooverIntegrator(double stepSize, System &system, double temperature, double drudeTemperature,
+                              double collisionFrequency, double drudeCollisionFrequency,
+                              int chainLength = 3, int numMTS = 3, int numYoshidaSuzuki = 3);
+
+    virtual ~DrudeNoseHooverIntegrator();
     /**
      * This will be called by the Context when it is created.  It informs the Integrator
      * of what context it will be integrating, and gives it a chance to do any necessary initialization.
@@ -94,4 +89,4 @@ public:
 
 } // namespace OpenMM
 
-#endif /*OPENMM_DRUDEVELOCITYVERLETINTEGRATOR_H_*/
+#endif /*OPENMM_DRUDENOSEHOOVERINTEGRATOR_H_*/

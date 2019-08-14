@@ -2150,14 +2150,14 @@ ReferenceIntegrateVelocityVerletStepKernel::~ReferenceIntegrateVelocityVerletSte
         delete dynamics;
 }
 
-void ReferenceIntegrateVelocityVerletStepKernel::initialize(const System& system, const VelocityVerletIntegrator& integrator) {
+void ReferenceIntegrateVelocityVerletStepKernel::initialize(const System& system, const NoseHooverIntegrator& integrator) {
     int numParticles = system.getNumParticles();
     masses.resize(numParticles);
     for (int i = 0; i < numParticles; ++i)
         masses[i] = system.getParticleMass(i);
 }
 
-void ReferenceIntegrateVelocityVerletStepKernel::execute(ContextImpl& context, const VelocityVerletIntegrator& integrator, bool &forcesAreValid) {
+void ReferenceIntegrateVelocityVerletStepKernel::execute(ContextImpl& context, const NoseHooverIntegrator& integrator, bool &forcesAreValid) {
     double stepSize = integrator.getStepSize();
     vector<Vec3>& posData = extractPositions(context);
     vector<Vec3>& velData = extractVelocities(context);
@@ -2175,7 +2175,7 @@ void ReferenceIntegrateVelocityVerletStepKernel::execute(ContextImpl& context, c
     data.stepCount++;
 }
 
-double ReferenceIntegrateVelocityVerletStepKernel::computeKineticEnergy(ContextImpl& context, const VelocityVerletIntegrator& integrator) {
+double ReferenceIntegrateVelocityVerletStepKernel::computeKineticEnergy(ContextImpl& context, const NoseHooverIntegrator& integrator) {
     return computeShiftedKineticEnergy(context, masses, 0);
 }
 
@@ -2470,8 +2470,10 @@ void ReferenceNoseHooverChainKernel::initialize() {
     //SimTKOpenMMUtilities::setRandomNumberSeed((unsigned int) thermostat.getRandomNumberSeed());
 }
 
-double ReferenceNoseHooverChainKernel::propagateChain(ContextImpl& context, const NoseHooverChain &nhc, double kineticEnergy, double timeStep) {
-    if (kineticEnergy < 1e-8) return 1.0;  // (catches the problem of zero velocities in the first dynamics step, where we have nothing to scale)
+std::pair<double, double> ReferenceNoseHooverChainKernel::propagateChain(ContextImpl& context, const NoseHooverChain &nhc, std::pair<double, double> kineticEnergy, double timeStep) {
+    double absKE = kineticEnergy.first;
+    double relKE = kineticEnergy.second;
+    if (absKE < 1e-8) return {1.0, 1.0};  // (catches the problem of zero velocities in the first dynamics step, where we have nothing to scale)
     // Get the variables describing the NHC
     int chainLength = nhc.getDefaultChainLength();
     int chainID = nhc.getDefaultChainID();
@@ -2497,10 +2499,34 @@ double ReferenceNoseHooverChainKernel::propagateChain(ContextImpl& context, cons
     if (chainVelocities.size() < chainLength){
         chainVelocities.resize(chainLength, 0);
     }
-    double scale = chainPropagator->propagate(kineticEnergy, chainVelocities, chainPositions, numDOFs,
-                                              temperature, collisionFrequency, timeStep,
+    double absScale = chainPropagator->propagate(absKE, chainVelocities, chainPositions, numDOFs,
+                                                 temperature, collisionFrequency, timeStep,
+                                                 numMTS, nhc.getDefaultYoshidaSuzukiWeights());
+    double relScale = 0;
+    int numPairs = nhc.getThermostatedPairs().size();
+    if(numPairs){
+        double relativeTemperature = nhc.getDefaultRelativeTemperature();
+        double relativeCollisionFrequency = nhc.getDefaultRelativeCollisionFrequency();
+        if (allChainPositions.size() < chainID+2){
+            allChainPositions.resize(chainID+2);
+        }
+        if (allChainVelocities.size() < chainID+2){
+            allChainVelocities.resize(chainID+2);
+        }
+        auto& chainPositions = allChainPositions.at(chainID+1);
+        auto& chainVelocities = allChainVelocities.at(chainID+1);
+        if (chainPositions.size() < chainLength){
+            chainPositions.resize(chainLength, 0);
+        }
+        if (chainVelocities.size() < chainLength){
+            chainVelocities.resize(chainLength, 0);
+        }
+        relScale = chainPropagator->propagate(relKE, chainVelocities, chainPositions, 3*numPairs,
+                                              relativeTemperature, relativeCollisionFrequency, timeStep,
                                               numMTS, nhc.getDefaultYoshidaSuzukiWeights());
-    return scale;
+
+    }
+    return {absScale, relScale};
 }
 
 double ReferenceNoseHooverChainKernel::computeHeatBathEnergy(ContextImpl& context, const NoseHooverChain &nhc) {
@@ -2527,9 +2553,9 @@ double ReferenceNoseHooverChainKernel::computeHeatBathEnergy(ContextImpl& contex
     return kineticEnergy + potentialEnergy;
 }
 
-double ReferenceNoseHooverChainKernel::computeMaskedKineticEnergy(ContextImpl& context, const NoseHooverChain &noseHooverChain, bool downloadValue) {
-    const std::vector<int>& mask = noseHooverChain.getThermostatedAtoms();
-    const std::vector<int>& parents = noseHooverChain.getParentAtoms();
+std::pair<double, double> ReferenceNoseHooverChainKernel::computeMaskedKineticEnergy(ContextImpl& context, const NoseHooverChain &noseHooverChain, bool downloadValue) {
+    const std::vector<int>& atomsList = noseHooverChain.getThermostatedAtoms();
+    const std::vector<std::pair<int,int>>& pairsList = noseHooverChain.getThermostatedPairs();
     std::vector<Vec3>& velocities = extractVelocities(context);
     const System& system = context.getSystem();
     int numParticles = system.getNumParticles();
@@ -2537,44 +2563,64 @@ double ReferenceNoseHooverChainKernel::computeMaskedKineticEnergy(ContextImpl& c
     for (int i = 0; i < numParticles; ++i)
         masses[i] = system.getParticleMass(i);
 
-    double ke = 0;
-    if (parents.size() == 0){
-        // scale absolute velocities
-        for (auto m: mask){ 
-            ke += 0.5 * masses[m] * velocities[m].dot(velocities[m]);
-        }
-    } else {
-        // scale velocities relative to parent
-        assert(parents.size() == mask.size()); 
-        Vec3 velocity;
-        double mass;
-        for (int i=0; i < mask.size(); i++){
-            velocity = velocities[mask[i]] - velocities[parents[i]];
-            mass = masses[mask[i]] * masses[parents[i]] / (masses[mask[i]] + masses[parents[i]]);
-            ke += 0.5 * mass * velocity.dot(velocity);
-        }
+    double comKE = 0;
+    double relKE = 0;
+    // kinetic energy of individual atoms
+    for (const auto &m: atomsList){
+        comKE += 0.5 * masses[m] * velocities[m].dot(velocities[m]);
+    }
+    // center of mass kinetic energy of pairs
+    for (const auto &p: pairsList){
+        double m1 = masses[p.first];
+        double m2 = masses[p.second];
+        Vec3 v1 = velocities[p.first];
+        Vec3 v2 = velocities[p.second];
+        double invMass = 1.0 / (m1 + m2);
+        double redMass = m1 * m2 * invMass;
+        double fracM1 = m1 * invMass;
+        double fracM2 = m2 * invMass;
+        Vec3 comVelocity = fracM1 * v1 + fracM2 * v2;
+        Vec3 relVelocity = v2 - v1;
+
+        comKE += 0.5 * (m1 + m2) * comVelocity.dot(comVelocity);
+        relKE += 0.5 * redMass * relVelocity.dot(relVelocity);
     }
     // We ignore the downloadValue argument here and always return the correct value
-    return ke;
+    return {comKE, relKE};
 }
 
 
-void ReferenceNoseHooverChainKernel::scaleVelocities(ContextImpl& context, const NoseHooverChain &noseHooverChain, double scaleFactor) {
-    const std::vector<int>& mask = noseHooverChain.getThermostatedAtoms();
-    const std::vector<int>& parents = noseHooverChain.getParentAtoms();
+void ReferenceNoseHooverChainKernel::scaleVelocities(ContextImpl& context, const NoseHooverChain &noseHooverChain, std::pair<double, double> scaleFactors) {
+    const auto& atoms = noseHooverChain.getThermostatedAtoms();
+    const auto& pairs = noseHooverChain.getThermostatedPairs();
     std::vector<Vec3>& velocities = extractVelocities(context);
+    double absScale = scaleFactors.first;
+    double relScale = scaleFactors.second;
 
-    if (parents.size() == 0){
-        // scale absolute velocities
-        for (auto m: mask){
-            velocities[m] *= scaleFactor;
-        }
-    } else {
-        // scale velocities relative to parent
-        assert(parents.size() == mask.size());
-        for (int i=0; i < mask.size(); i++){
-            velocities[mask[i]] = velocities[parents[i]] + scaleFactor * (velocities[mask[i]] - velocities[parents[i]]);
-        }
+    const System& system = context.getSystem();
+    int numParticles = system.getNumParticles();
+    std::vector<double> masses(numParticles);
+    for (int i = 0; i < numParticles; ++i)
+        masses[i] = system.getParticleMass(i);
+    // scale absolute velocities
+    for (const auto &a: atoms){
+        velocities[a] *= absScale;
+    }
+    // scale relative velocities and absolute center of mass velocities for each pair
+    for (const auto &p: pairs){
+        int p1 = p.first;
+        int p2 = p.second;
+        double m1 = masses[p.first];
+        double m2 = masses[p.second];
+        Vec3 v1 = velocities[p.first];
+        Vec3 v2 = velocities[p.second];
+        double invMass = 1.0 / (m1 + m2);
+        double fracM1 = m1 * invMass;
+        double fracM2 = m2 * invMass;
+        Vec3 comVelocity = fracM1 * v1 + fracM2 * v2;
+        Vec3 relVelocity = v2 - v1;
+        velocities[p1] = absScale * comVelocity - relScale * relVelocity * fracM2;
+        velocities[p2] = absScale * comVelocity + relScale * relVelocity * fracM1;
     }
 }
 

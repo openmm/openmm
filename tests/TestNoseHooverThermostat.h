@@ -31,7 +31,7 @@
 
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/NoseHooverChain.h"
-#include "openmm/VelocityVerletIntegrator.h"
+#include "openmm/NoseHooverIntegrator.h"
 #include "openmm/Context.h"
 #include "openmm/State.h"
 #include "openmm/HarmonicBondForce.h"
@@ -65,8 +65,8 @@ void testHarmonicOscillator() {
     auto harmonic_restraint = new CustomExternalForce("0.5*(x^2+y^2+z^2)");
     harmonic_restraint->addParticle(0);
     system.addForce(harmonic_restraint);
-    VelocityVerletIntegrator integrator(0.001);
-    integrator.addNoseHooverChainThermostat(system, temperature, frequency, chain_length, mts, ys);
+    NoseHooverIntegrator integrator(0.001);
+    integrator.addThermostat(system, temperature, frequency, chain_length, mts, ys);
     Context context(system, integrator, platform);
     context.setPositions(positions);
     context.setVelocities(velocities);
@@ -156,15 +156,16 @@ void testDimerBox(bool constrain=true) {
             }
         }
     }
- 
-    VelocityVerletIntegrator integrator(0.001);
+    bool simpleConstruct = true;
     double temperature = 300; // kelvin
     double collisionFrequency = 25; // 1/ps
     int numMTS = 3;
     int numYS = 3;
     int chainLength = 5;
-    integrator.addNoseHooverChainThermostat(system, temperature, collisionFrequency,
-                                            chainLength, numMTS, numYS);
+    auto integrator = simpleConstruct ? NoseHooverIntegrator(0.001, system, temperature, collisionFrequency, chainLength, numMTS, numYS)
+                                      : NoseHooverIntegrator(0.001);
+    if (!simpleConstruct)
+        integrator.addThermostat(system, temperature, collisionFrequency, chainLength, numMTS, numYS);
     Context context(system, integrator, platform);
     context.setPositions(positions);
     context.setVelocitiesToTemperature(temperature);
@@ -212,7 +213,7 @@ void testDimerBox(bool constrain=true) {
 
 void testCheckpoints() {
     double timeStep = 0.001;
-    VelocityVerletIntegrator integrator(timeStep), newIntegrator(timeStep);
+    NoseHooverIntegrator integrator(timeStep), newIntegrator(timeStep);
     System system;
     double mass = 1;
     system.addParticle(mass);
@@ -223,17 +224,11 @@ void testCheckpoints() {
     system.addForce(force);
     double kineticEnergy = 1e6;
     double temperature=300, collisionFrequency=1, chainLength=3, numMTS=3, numYS=3;
-    integrator.addMaskedNoseHooverChainThermostat(system, std::vector<int>(1,0), std::vector<int>(), temperature, collisionFrequency,
-                                                                  chainLength, numMTS, numYS);
-    newIntegrator.addMaskedNoseHooverChainThermostat(system, std::vector<int>(1,0), std::vector<int>(), temperature, collisionFrequency,
-                                                                  chainLength, numMTS, numYS);
     chainLength = 10;
-    integrator.addMaskedNoseHooverChainThermostat(system, std::vector<int>(1,1),  std::vector<int>(1,0), 
-                                                                  temperature, collisionFrequency,
-                                                                  chainLength, numMTS, numYS);
-    newIntegrator.addMaskedNoseHooverChainThermostat(system, std::vector<int>(1,1),  std::vector<int>(1,0), 
-                                                                  temperature, collisionFrequency,
-                                                                  chainLength, numMTS, numYS);
+    integrator.addSubsystemThermostat(system, std::vector<int>(), std::vector<std::pair<int,int>>{{0,1}},  temperature, temperature, collisionFrequency, collisionFrequency,
+                                      chainLength, numMTS, numYS);
+    newIntegrator.addSubsystemThermostat(system, std::vector<int>(), std::vector<std::pair<int,int>>{{0,1}},  temperature, temperature, collisionFrequency, collisionFrequency,
+                                      chainLength, numMTS, numYS);
     Context context(system, integrator, platform);
     Context newContext(system, newIntegrator, platform);
     std::vector<Vec3> positions(2);

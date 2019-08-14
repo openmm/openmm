@@ -34,13 +34,15 @@
 
 using namespace OpenMM;
 
-NoseHooverChain::NoseHooverChain(double defaultTemperature, double defaultCollisionFrequency, 
+NoseHooverChain::NoseHooverChain(double defaultTemperature, double defaultRelativeTemperature, double defaultCollisionFrequency,
+                                 double defaultRelativeCollisionFrequency,
                                  int defaultNumDOFs, int defaultChainLength, int defaultNumMTS,
                                  int defaultNumYoshidaSuzuki, int defaultChainID,
-                                 const std::vector<int>& thermostatedAtoms, const std::vector<int>& parentAtoms):
-        defaultTemp(defaultTemperature), defaultFreq(defaultCollisionFrequency), defaultNumDOFs(defaultNumDOFs),
+                                 const std::vector<int>& thermostatedAtoms, const std::vector<std::pair<int, int> > &thermostatedPairs):
+        defaultTemp(defaultTemperature), defaultRelativeTemp(defaultRelativeTemperature), defaultFreq(defaultCollisionFrequency),
+        defaultRelativeFreq(defaultRelativeCollisionFrequency), defaultNumDOFs(defaultNumDOFs),
         defaultChainLength(defaultChainLength), defaultNumMTS(defaultNumMTS), defaultNumYS(defaultNumYoshidaSuzuki),
-        defaultChainID(defaultChainID), thermostatedAtoms(thermostatedAtoms), parentAtoms(parentAtoms) 
+        defaultChainID(defaultChainID), thermostatedAtoms(thermostatedAtoms), thermostatedPairs(thermostatedPairs)
 {}
 
 

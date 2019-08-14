@@ -29,7 +29,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/DrudeVelocityVerletIntegrator.h"
+#include "openmm/DrudeNoseHooverIntegrator.h"
 #include "openmm/Context.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
@@ -46,13 +46,10 @@ using namespace OpenMM;
 using std::string;
 using std::vector;
 
-DrudeVelocityVerletIntegrator::DrudeVelocityVerletIntegrator(double stepSize) : VelocityVerletIntegrator(stepSize) { }
-
-DrudeVelocityVerletIntegrator::~DrudeVelocityVerletIntegrator() { }
-
-int DrudeVelocityVerletIntegrator::addDrudeNoseHooverChainThermostat(System& system, double temperature, double collisionFrequency,
-                                                                     double drudeTemperature, double drudeCollisionFrequency,
-                                                                     int chainLength, int numMTS, int numYoshidaSuzuki) {
+DrudeNoseHooverIntegrator::DrudeNoseHooverIntegrator(double stepSize, System &system, double temperature, double drudeTemperature,
+                                                     double collisionFrequency, double drudeCollisionFrequency,
+                                                     int chainLength, int numMTS, int numYoshidaSuzuki) :
+    NoseHooverIntegrator(stepSize) {
     const DrudeForce* drudeForce = NULL;
     for (int i = 0; i < system.getNumForces(); i++)
         if (dynamic_cast<const DrudeForce*>(&system.getForce(i)) != NULL) {
@@ -63,30 +60,31 @@ int DrudeVelocityVerletIntegrator::addDrudeNoseHooverChainThermostat(System& sys
         }
     if (drudeForce == NULL)
         throw OpenMMException("The System does not contain a DrudeForce");
-    std::set<int> realParticlesSet; 
+    std::set<int> realParticlesSet;
     vector<int> realParticles, drudeParticles, drudeParents;
+    vector<std::pair<int, int>> drudePairs;
     for (int i = 0; i < system.getNumParticles(); i++) {
-        if (system.getParticleMass(i) > 0.0) realParticlesSet.insert(i); 
+        if (system.getParticleMass(i) > 0.0) realParticlesSet.insert(i);
     }
     for (int i = 0; i < drudeForce->getNumParticles(); i++) {
         int p, p1, p2, p3, p4;
         double charge, polarizability, aniso12, aniso34;
         drudeForce->getParticleParameters(i, p, p1, p2, p3, p4, charge, polarizability, aniso12, aniso34);
         realParticlesSet.erase(p);
-        drudeParticles.push_back(p);
-        drudeParents.push_back(p1);
+        realParticlesSet.erase(p1);
+        drudePairs.push_back({p,p1});
     }
     for(const auto &p : realParticlesSet) realParticles.push_back(p);
-    
-    addMaskedNoseHooverChainThermostat(system, realParticles, vector<int>(), temperature, collisionFrequency,
-                                      chainLength, numMTS, numYoshidaSuzuki);
-    addMaskedNoseHooverChainThermostat(system, drudeParticles, drudeParents, drudeTemperature, drudeCollisionFrequency,
-                                      chainLength, numMTS, numYoshidaSuzuki);
-    return noseHooverChains.size() - 1;
+
+    addSubsystemThermostat(system, realParticles, drudePairs, temperature, drudeTemperature, collisionFrequency,
+                           drudeCollisionFrequency, chainLength, numMTS, numYoshidaSuzuki);
 }
 
-void DrudeVelocityVerletIntegrator::initialize(ContextImpl& contextRef) {
-    VelocityVerletIntegrator::initialize(contextRef);
+DrudeNoseHooverIntegrator::~DrudeNoseHooverIntegrator() { }
+
+
+void DrudeNoseHooverIntegrator::initialize(ContextImpl& contextRef) {
+    NoseHooverIntegrator::initialize(contextRef);
     if (owner != NULL && &contextRef.getOwner() != owner)
         throw OpenMMException("This Integrator is already bound to a context");
     const DrudeForce* drudeForce = NULL;
@@ -113,17 +111,17 @@ void DrudeVelocityVerletIntegrator::initialize(ContextImpl& contextRef) {
     owner = &contextRef.getOwner();
 }
 
-double DrudeVelocityVerletIntegrator::computeDrudeKineticEnergy() {
+double DrudeNoseHooverIntegrator::computeDrudeKineticEnergy() {
     double kE = 0.0;
     for (const auto &nhc: noseHooverChains){
-        if (nhc.getParentAtoms().size() != 0) {
-            kE += nhcKernel.getAs<NoseHooverChainKernel>().computeMaskedKineticEnergy(*context, nhc, true);
+        if (nhc.getThermostatedPairs().size() != 0) {
+            kE += nhcKernel.getAs<NoseHooverChainKernel>().computeMaskedKineticEnergy(*context, nhc, true).second;
         }
     }
     return kE;
 }
 
-double DrudeVelocityVerletIntegrator::computeTotalKineticEnergy() {
+double DrudeNoseHooverIntegrator::computeTotalKineticEnergy() {
     return vvKernel.getAs<IntegrateVelocityVerletStepKernel>().computeKineticEnergy(*context, *this);
 }
 

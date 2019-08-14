@@ -1380,7 +1380,7 @@ public:
      * @param system     the System this kernel will be applied to
      * @param integrator the VelocityVerletIntegrator this kernel will be used for
      */
-    void initialize(const System& system, const VelocityVerletIntegrator& integrator);
+    void initialize(const System& system, const NoseHooverIntegrator& integrator);
     /**
      * Execute the kernel.
      * 
@@ -1389,14 +1389,14 @@ public:
      * @param forcesAreValid a reference to the parent integrator's boolean for keeping
      *                       track of the validity of the current forces.
      */
-    void execute(ContextImpl& context, const VelocityVerletIntegrator& integrator, bool &forcesAreValid);
+    void execute(ContextImpl& context, const NoseHooverIntegrator& integrator, bool &forcesAreValid);
     /**
      * Compute the kinetic energy.
      * 
      * @param context    the context in which to execute this kernel
      * @param integrator the VelocityVerletIntegrator this kernel is being used for
      */
-    double computeKineticEnergy(ContextImpl& context, const VelocityVerletIntegrator& integrator);
+    double computeKineticEnergy(ContextImpl& context, const NoseHooverIntegrator& integrator);
 private:
     CudaContext& cu;
     CUfunction kernel1, kernel2, kernel3;

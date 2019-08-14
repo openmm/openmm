@@ -29,7 +29,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/VelocityVerletIntegrator.h"
+#include "openmm/NoseHooverIntegrator.h"
 #include "openmm/Context.h"
 #include "openmm/Force.h"
 #include "openmm/System.h"
@@ -46,24 +46,28 @@ using namespace OpenMM;
 using std::string;
 using std::vector;
 
-VelocityVerletIntegrator::VelocityVerletIntegrator(double stepSize):
+NoseHooverIntegrator::NoseHooverIntegrator(double stepSize):
     forcesAreValid(false)
 {
     setStepSize(stepSize);
     setConstraintTolerance(1e-5);
 }
+NoseHooverIntegrator::NoseHooverIntegrator(double stepSize, System &system, double temperature, int collisionFrequnency,
+                                           int chainLength, int numMTS, int numYoshidaSuzuki) : forcesAreValid(false) {
+    setStepSize(stepSize);
+    setConstraintTolerance(1e-5);
+    addThermostat(system, temperature, collisionFrequnency, chainLength, numMTS, numYoshidaSuzuki);
+}
 
-VelocityVerletIntegrator::~VelocityVerletIntegrator() {}
+NoseHooverIntegrator::~NoseHooverIntegrator() {}
 
-double VelocityVerletIntegrator::propagateChain(double kineticEnergy, int chainID) {
+std::pair<double, double> NoseHooverIntegrator::propagateChain(std::pair<double, double> kineticEnergy, int chainID) {
     return nhcKernel.getAs<NoseHooverChainKernel>().propagateChain(*context, noseHooverChains.at(chainID), kineticEnergy, getStepSize());
 }
 
-int VelocityVerletIntegrator::addNoseHooverChainThermostat(System& system, double temperature, double collisionFrequency,
+int NoseHooverIntegrator::addThermostat(System& system, double temperature, double collisionFrequency,
                                                            int chainLength, int numMTS, int numYoshidaSuzuki) {
-    int numForces = system.getNumForces();
     std::vector<int> thermostatedParticles;
-    std::vector<int> parentParticles;
     for(int particle = 0; particle < system.getNumParticles(); ++particle) {
         double mass = system.getParticleMass(particle);
         if ( (mass > 0) && (mass < 0.8) ){
@@ -75,51 +79,62 @@ int VelocityVerletIntegrator::addNoseHooverChainThermostat(System& system, doubl
         }
     }
 
-    return addMaskedNoseHooverChainThermostat(system, thermostatedParticles, parentParticles, temperature, collisionFrequency, chainLength, numMTS, numYoshidaSuzuki);
+    return addSubsystemThermostat(system, thermostatedParticles, std::vector<std::pair<int, int>>(), temperature, temperature,
+                                  collisionFrequency, collisionFrequency, chainLength, numMTS, numYoshidaSuzuki);
 }
 
-int VelocityVerletIntegrator::addMaskedNoseHooverChainThermostat(System& system, const std::vector<int>& thermostatedParticles, const std::vector<int>& parentParticles,
-                                         double temperature, double collisionFrequency,
-                                         int chainLength, int numMTS, int numYoshidaSuzuki){
-    const auto & mask = thermostatedParticles; // just an alias
+int NoseHooverIntegrator::addSubsystemThermostat(System& system, const std::vector<int>& thermostatedParticles,
+                                                 const std::vector< std::pair< int, int> > &thermostatedPairs,
+                                                 double temperature, double relativeTemperature,
+                                                 double collisionFrequency, double relativeCollisionFrequency,
+                                                 int chainLength, int numMTS, int numYoshidaSuzuki) {
     if (context) {
         throw OpenMMException("Nose-Hoover chains cannot be added after binding this integrator to a context.");
     }
-    if ((parentParticles.size() != mask.size()) && (parentParticles.size() != 0)) {
-        throw OpenMMException("The number of parent particles has to be either equal to the number of thermostated particles (to thermostat relative motion)"
-                              " or zero (to thermostat absolute motion).");
-    }
     // figure out the number of DOFs
-    int nDOF = 3*mask.size();
+    int nDOF = 3*(thermostatedParticles.size() + thermostatedPairs.size());
     for (int constraintNum = 0; constraintNum < system.getNumConstraints(); constraintNum++) {
         int particle1, particle2;
         double distance;
         system.getConstraintParameters(constraintNum, particle1, particle2, distance);
-        bool particle1_in_mask = (std::find(mask.begin(), mask.end(), particle1) != mask.end());
-        bool particle2_in_mask = (std::find(mask.begin(), mask.end(), particle2) != mask.end());
+        bool particle1_in_thermostatedParticles = ((std::find(thermostatedParticles.begin(), thermostatedParticles.end(), particle1)
+                                                    != thermostatedParticles.end())) ||
+                                                  (std::find_if(thermostatedPairs.begin(), thermostatedPairs.end(),
+                                                   [&particle1](const std::pair<int, int>& pair){ return pair.first == particle1 || pair.second == particle1;})
+                                                      != thermostatedPairs.end());
+        bool particle2_in_thermostatedParticles = ((std::find(thermostatedParticles.begin(), thermostatedParticles.end(), particle2)
+                                                    != thermostatedParticles.end())) ||
+                                                  (std::find_if(thermostatedPairs.begin(), thermostatedPairs.end(),
+                                                   [&particle2](const std::pair<int, int>& pair){ return pair.first == particle2 || pair.second == particle2;})
+                                                      != thermostatedPairs.end());
         if ((system.getParticleMass(particle1) > 0) && (system.getParticleMass(particle2) > 0)){
-            if ((particle1_in_mask && !particle2_in_mask) || (!particle1_in_mask && particle2_in_mask)){
+            if ((particle1_in_thermostatedParticles && !particle2_in_thermostatedParticles) ||
+                 (!particle1_in_thermostatedParticles && particle2_in_thermostatedParticles)){
                 throw OpenMMException("Cannot add only one of particles " + std::to_string(particle1) + " and " + std::to_string(particle2)
                                         + " to NoseHooverChain, because they are connected by a constraint.");
             }
-            if (particle1_in_mask && particle2_in_mask){
+            if (particle1_in_thermostatedParticles && particle2_in_thermostatedParticles){
                 nDOF -= 1;
             }
         }
     }
     int numForces = system.getNumForces();
-    if (parentParticles.size() == 0){ // remove 3 degrees of freedom from thermostats that act on absolute motions
+    if (thermostatedPairs.size() == 0){ // remove 3 degrees of freedom from thermostats that act on absolute motions
         for (int forceNum = 0; forceNum < numForces; ++forceNum) {
-            if (dynamic_cast<CMMotionRemover*>(&system.getForce(forceNum))) nDOF -= 3;
+//            if (dynamic_cast<CMMotionRemover*>(&system.getForce(forceNum))) nDOF -= 3;
         }
     }
 
-    // make sure that thermostats do not overlap 
+    // make sure that thermostats do not overlap
     for (auto &other_nhc: noseHooverChains) {
-        for (auto &particle: mask){
-            bool isParticleInOtherChain = (std::find(other_nhc.getThermostatedAtoms().begin(), 
-                                                    other_nhc.getThermostatedAtoms().end(),
-                                                    particle) == other_nhc.getThermostatedAtoms().begin());
+        for (auto &particle: thermostatedParticles){
+            bool isParticleInOtherChain = (std::find(other_nhc.getThermostatedAtoms().begin(),
+                                                     other_nhc.getThermostatedAtoms().end(),
+                                                     particle) != other_nhc.getThermostatedAtoms().end()) ||
+                                          (std::find_if(other_nhc.getThermostatedPairs().begin(),
+                                                        other_nhc.getThermostatedPairs().end(),
+                                           [&particle](const std::pair<int, int>& pair){ return pair.first == particle || pair.second == particle;})
+                                              != other_nhc.getThermostatedPairs().end());
             if (isParticleInOtherChain){
                 throw OpenMMException("Found particle " + std::to_string(particle) + "in a different NoseHooverChain, "
                                       "but particles can only be thermostated by one thermostat.");
@@ -127,16 +142,19 @@ int VelocityVerletIntegrator::addMaskedNoseHooverChainThermostat(System& system,
         }
     }
 
-    // create and add new chain 
-    int chainID = noseHooverChains.size();
-    auto nhc = NoseHooverChain(temperature, collisionFrequency, nDOF, chainLength,
-                                    numMTS, numYoshidaSuzuki, chainID,
-                                    thermostatedParticles, parentParticles);
+    // create and add new chain
+    int chainID = 0;
+    for(const auto &c : noseHooverChains) {
+        // We need to account for the fact that a NHC with pairs thermostated has both a relative and an absolute chain
+        chainID += c.getThermostatedPairs().size() ? 2 : 1;
+    }
+    auto nhc = NoseHooverChain(temperature, relativeTemperature, collisionFrequency, relativeCollisionFrequency,
+                               nDOF, chainLength, numMTS, numYoshidaSuzuki, chainID, thermostatedParticles, thermostatedPairs);
     noseHooverChains.push_back(nhc);
     return chainID;
 }
 
-double VelocityVerletIntegrator::getTemperature(int chainID) const {
+double NoseHooverIntegrator::getTemperature(int chainID) const {
     if (chainID >= noseHooverChains.size()) {
         throw OpenMMException("Cannot get temperature for chainID " + std::to_string(chainID)
                 + ". Only " + std::to_string(noseHooverChains.size()) + " have been registered with this integrator."
@@ -145,7 +163,7 @@ double VelocityVerletIntegrator::getTemperature(int chainID) const {
     return noseHooverChains.at(chainID).getDefaultTemperature();
 }
 
-void VelocityVerletIntegrator::setTemperature(double temperature, int chainID){
+void NoseHooverIntegrator::setTemperature(double temperature, int chainID){
     if (chainID >= noseHooverChains.size()) {
         throw OpenMMException("Cannot set temperature for chainID " + std::to_string(chainID)
                 + ". Only " + std::to_string(noseHooverChains.size()) + " have been registered with this integrator."
@@ -155,15 +173,35 @@ void VelocityVerletIntegrator::setTemperature(double temperature, int chainID){
 
 }
 
-double VelocityVerletIntegrator::getCollisionFrequency(int chainID) const {
+double NoseHooverIntegrator::getRelativeTemperature(int chainID) const {
+    if (chainID >= noseHooverChains.size()) {
+        throw OpenMMException("Cannot get relative temperature for chainID " + std::to_string(chainID)
+                + ". Only " + std::to_string(noseHooverChains.size()) + " have been registered with this integrator."
+        );
+    }
+    return noseHooverChains.at(chainID).getDefaultRelativeTemperature();
+}
+
+void NoseHooverIntegrator::setRelativeTemperature(double temperature, int chainID){
+    if (chainID >= noseHooverChains.size()) {
+        throw OpenMMException("Cannot set relative temperature for chainID " + std::to_string(chainID)
+                + ". Only " + std::to_string(noseHooverChains.size()) + " have been registered with this integrator."
+        );
+    }
+    noseHooverChains.at(chainID).setDefaultRelativeTemperature(temperature);
+
+}
+
+double NoseHooverIntegrator::getCollisionFrequency(int chainID) const {
     if (chainID >= noseHooverChains.size()) {
         throw OpenMMException("Cannot get collision frequency for chainID " + std::to_string(chainID)
                 + ". Only " + std::to_string(noseHooverChains.size()) + " have been registered with this integrator."
         );
     }
     return noseHooverChains.at(chainID).getDefaultCollisionFrequency();
-} 
-void VelocityVerletIntegrator::setCollisionFrequency(double frequency, int chainID){
+}
+
+void NoseHooverIntegrator::setCollisionFrequency(double frequency, int chainID){
     if (chainID >= noseHooverChains.size()) {
         throw OpenMMException("Cannot set collision frequency for chainID " + std::to_string(chainID)
                 + ". Only " + std::to_string(noseHooverChains.size()) + " have been registered with this integrator."
@@ -172,12 +210,31 @@ void VelocityVerletIntegrator::setCollisionFrequency(double frequency, int chain
     noseHooverChains.at(chainID).setDefaultCollisionFrequency(frequency);
 }
 
-double VelocityVerletIntegrator::computeKineticEnergy() {
+double NoseHooverIntegrator::getRelativeCollisionFrequency(int chainID) const {
+    if (chainID >= noseHooverChains.size()) {
+        throw OpenMMException("Cannot get relative collision frequency for chainID " + std::to_string(chainID)
+                + ". Only " + std::to_string(noseHooverChains.size()) + " have been registered with this integrator."
+        );
+    }
+    return noseHooverChains.at(chainID).getDefaultRelativeCollisionFrequency();
+}
+
+void NoseHooverIntegrator::setRelativeCollisionFrequency(double frequency, int chainID){
+    if (chainID >= noseHooverChains.size()) {
+        throw OpenMMException("Cannot set relative collision frequency for chainID " + std::to_string(chainID)
+                + ". Only " + std::to_string(noseHooverChains.size()) + " have been registered with this integrator."
+        );
+    }
+    noseHooverChains.at(chainID).setDefaultRelativeCollisionFrequency(frequency);
+}
+
+double NoseHooverIntegrator::computeKineticEnergy() {
     double kE = 0.0;
     if(noseHooverChains.size()) {
         for (const auto &nhc: noseHooverChains){
-            if (nhc.getParentAtoms().size() == 0) {
-                kE += nhcKernel.getAs<NoseHooverChainKernel>().computeMaskedKineticEnergy(*context, nhc, true);
+            if (nhc.getThermostatedPairs().size() == 0) {
+                auto KEs = nhcKernel.getAs<NoseHooverChainKernel>().computeMaskedKineticEnergy(*context, nhc, true);
+                kE += std::get<0>(KEs);
             }
         }
     } else {
@@ -186,7 +243,7 @@ double VelocityVerletIntegrator::computeKineticEnergy() {
     return kE;
 }
 
-double VelocityVerletIntegrator::computeHeatBathEnergy() {
+double NoseHooverIntegrator::computeHeatBathEnergy() {
     double energy = 0;
     for(auto &nhc : noseHooverChains) {
         energy += nhcKernel.getAs<NoseHooverChainKernel>().computeHeatBathEnergy(*context, nhc);
@@ -194,7 +251,7 @@ double VelocityVerletIntegrator::computeHeatBathEnergy() {
     return energy;
 }
 
-void VelocityVerletIntegrator::initialize(ContextImpl& contextRef) {
+void NoseHooverIntegrator::initialize(ContextImpl& contextRef) {
     if (owner != NULL && &contextRef.getOwner() != owner)
         throw OpenMMException("This Integrator is already bound to a context");
     context = &contextRef;
@@ -206,22 +263,22 @@ void VelocityVerletIntegrator::initialize(ContextImpl& contextRef) {
     forcesAreValid = false;
 }
 
-void VelocityVerletIntegrator::cleanup() {
+void NoseHooverIntegrator::cleanup() {
     vvKernel = Kernel();
     nhcKernel = Kernel();
 }
 
-vector<string> VelocityVerletIntegrator::getKernelNames() {
+vector<string> NoseHooverIntegrator::getKernelNames() {
     std::vector<std::string> names;
     names.push_back(NoseHooverChainKernel::Name());
     names.push_back(IntegrateVelocityVerletStepKernel::Name());
     return names;
 }
 
-void VelocityVerletIntegrator::step(int steps) {
+void NoseHooverIntegrator::step(int steps) {
     if (context == NULL)
         throw OpenMMException("This Integrator is not bound to a context!");
-    double scale, kineticEnergy;
+    std::pair<double, double> scale, kineticEnergy;
     for (int i = 0; i < steps; ++i) {
         context->updateContextState();
         for(auto &nhc : noseHooverChains) {

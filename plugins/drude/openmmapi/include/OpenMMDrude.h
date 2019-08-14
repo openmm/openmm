@@ -35,6 +35,6 @@
 #include "openmm/DrudeForce.h"
 #include "openmm/DrudeLangevinIntegrator.h"
 #include "openmm/DrudeSCFIntegrator.h"
-#include "openmm/DrudeVelocityVerletIntegrator.h"
+#include "openmm/DrudeNIntegrator.h"
 
 #endif /*OPENMM_DRUDE_H_*/
