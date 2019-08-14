@@ -1,5 +1,0 @@
-docs
-examples
-include
-lib
-licenses
