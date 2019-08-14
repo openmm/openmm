@@ -2833,11 +2833,11 @@ void CudaCalcAmoebaCTForceKernel::initialize(const System& system, const AmoebaC
     cu.setAsCurrent();
 
     // Initialize CT parameters
-    
+
     CTTypes = CudaArray::create<long long>(cu, cu.getPaddedNumAtoms(), "CTTypes");
     int xsize = force.getNumCTprTypes();
     apreBexp = CudaArray::create<float2>(cu, xsize * xsize, "apreBexp");
-	
+
     vector<float2> apreBexpVec(xsize * xsize, make_float2(1, 0));
     for (int i = 0; i < xsize; ++i) {
         for (int j = 0; j < xsize; ++j) {
@@ -2846,7 +2846,7 @@ void CudaCalcAmoebaCTForceKernel::initialize(const System& system, const AmoebaC
             force.getCTprParameters(i, j, combinedApre, combinedBexp);
             apreBexpVec[k].x = static_cast<float>(combinedApre);
             apreBexpVec[k].y = static_cast<float>(combinedBexp);
-            //fprintf(stdout, "\n combinedApre (%f %i %i)  \n", combinedApre, i, j); //PASSED 
+            //fprintf(stdout, "\n combinedApre (%f %i %i)  \n", combinedApre, i, j); //PASSED
             //fprintf(stdout, "\n combinedBexp (%f %i %i) \n", combinedBexp, i, j); //PASSED
         }
     }
@@ -2869,7 +2869,7 @@ void CudaCalcAmoebaCTForceKernel::initialize(const System& system, const AmoebaC
     nonbonded = new CudaNonbondedUtilities(cu);
     nonbonded->addParameter(CudaNonbondedUtilities::ParameterInfo("CTTypes", "long long", 1, sizeof(long long), CTTypes->getDevicePointer()));
     nonbonded->addArgument(CudaNonbondedUtilities::ParameterInfo("apreBexp", "float", 2, sizeof(float2), apreBexp->getDevicePointer()));
-    
+
     // Create the interaction kernel.
     map<string, string> replacements;
     replacements["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
@@ -2884,7 +2884,7 @@ void CudaCalcAmoebaCTForceKernel::initialize(const System& system, const AmoebaC
     bool useCutoff = (force.getNonbondedMethod() != AmoebaCTForce::NoCutoff);
 
     nonbonded->addInteraction(useCutoff, useCutoff, true, force.getCutoffDistance(), exclusions,
-    cu.replaceStrings(CudaAmoebaKernelSources::amoebaCTForce2, replacements), 0);
+    cu.replaceStrings(CudaAmoebaKernelSources::amoebaCTForce, replacements), 0);
     cu.addForce(new ForceInfo(force));
 }
 
@@ -2895,7 +2895,7 @@ double CudaCalcAmoebaCTForceKernel::execute(ContextImpl& context, bool includeFo
    }
    nonbonded->prepareInteractions(1);
    nonbonded->computeInteractions(1, true, true);
-   return 0.0; 
+   return 0.0;
 }
 
 void CudaCalcAmoebaCTForceKernel::copyParametersToContext(ContextImpl& context, const AmoebaCTForce& force) {
