@@ -42,7 +42,7 @@ c
       big = 1.0d12
       if (use_bounds) then
          vdwcut = 9.0d0
-         ctcut =  4.5d0
+         ctcut =  6.0d0
          chgcut = 9.0d0
          dplcut = 9.0d0
          mpolecut = 9.0d0
@@ -55,7 +55,6 @@ c
       end if
       ewaldcut = 7.0d0
       usolvcut = 4.5d0
-      ctcut =  4.5d0
 c
 c     set defaults for tapering, Hessian cutoff and neighbor buffers
 c
