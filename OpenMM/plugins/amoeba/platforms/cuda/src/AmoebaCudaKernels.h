@@ -644,10 +644,8 @@ private:
     bool hasInitializedNonbonded;
     CudaArray* CTTypes;
     CudaArray* apreBexp;
-    CudaArray* tempPosq;
-    CudaArray* tempForces;
     CudaNonbondedUtilities* nonbonded;
-    CUfunction prepareKernel, spreadKernel;
+    
 };
 
 /**
