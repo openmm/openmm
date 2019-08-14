@@ -2817,8 +2817,6 @@ CudaCalcAmoebaCTForceKernel::CudaCalcAmoebaCTForceKernel(std::string name, const
     , hasInitializedNonbonded(false)
     , CTTypes(NULL)
     , apreBexp(NULL)
-    , tempPosq(NULL)
-    , tempForces(NULL)
     , nonbonded(NULL) {}
 
 CudaCalcAmoebaCTForceKernel::~CudaCalcAmoebaCTForceKernel() {
@@ -2827,10 +2825,6 @@ CudaCalcAmoebaCTForceKernel::~CudaCalcAmoebaCTForceKernel() {
         delete CTTypes;
     if (apreBexp != NULL)
         delete apreBexp;
-    if (tempPosq != NULL)
-        delete tempPosq;
-    if (tempForces != NULL)
-        delete tempForces;
     if (nonbonded != NULL)
         delete nonbonded;
 }
@@ -2843,9 +2837,7 @@ void CudaCalcAmoebaCTForceKernel::initialize(const System& system, const AmoebaC
     CTTypes = CudaArray::create<long long>(cu, cu.getPaddedNumAtoms(), "CTTypes");
     int xsize = force.getNumCTprTypes();
     apreBexp = CudaArray::create<float2>(cu, xsize * xsize, "apreBexp");
-    tempPosq = new CudaArray(cu, cu.getPaddedNumAtoms(), cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4), "tempPosq");
-    tempForces = CudaArray::create<long long>(cu, 3 * cu.getPaddedNumAtoms(), "tempForces");
-
+	
     vector<float2> apreBexpVec(xsize * xsize, make_float2(1, 0));
     for (int i = 0; i < xsize; ++i) {
         for (int j = 0; j < xsize; ++j) {
@@ -2893,12 +2885,6 @@ void CudaCalcAmoebaCTForceKernel::initialize(const System& system, const AmoebaC
 
     nonbonded->addInteraction(useCutoff, useCutoff, true, force.getCutoffDistance(), exclusions,
     cu.replaceStrings(CudaAmoebaKernelSources::amoebaCTForce2, replacements), 0);
-
-    map<string, string> defines;
-    defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
-    CUmodule module = cu.createModule(CudaAmoebaKernelSources::amoebaCTForce1, defines);
-    prepareKernel = cu.getKernel(module, "prepareToComputeForce");
-    spreadKernel = cu.getKernel(module, "spreadForces");
     cu.addForce(new ForceInfo(force));
 }
 
@@ -2907,17 +2893,8 @@ double CudaCalcAmoebaCTForceKernel::execute(ContextImpl& context, bool includeFo
        hasInitializedNonbonded = true;
        nonbonded->initialize(system);
    }
-   cu.getPosq().copyTo(*tempPosq);
-   cu.getForce().copyTo(*tempForces);
-   void* prepareArgs[] = {&cu.getForce().getDevicePointer(), &cu.getPosq().getDevicePointer(), &tempPosq->getDevicePointer()};
-   cu.executeKernel(prepareKernel, prepareArgs, cu.getPaddedNumAtoms());
    nonbonded->prepareInteractions(1);
    nonbonded->computeInteractions(1, true, true);
-   void* spreadArgs[] = { &cu.getForce().getDevicePointer(),
-       &tempForces->getDevicePointer()};
-   cu.executeKernel(spreadKernel, spreadArgs, cu.getPaddedNumAtoms());
-   tempPosq->copyTo(cu.getPosq());
-   tempForces->copyTo(cu.getForce());
    return 0.0; 
 }
 
