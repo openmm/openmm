@@ -69,7 +69,7 @@ Anaconda or Miniconda.
 
     conda install -c omnia -c conda-forge openmm
 
-This installs a version of OpenMM that is compiled to work with CUDA 9.2.
+This installs a version of OpenMM that is compiled to work with CUDA 10.1.
 Alternatively you can request a version that is compiled for a specific CUDA
 version with the command
 ::
@@ -78,7 +78,7 @@ version with the command
 
 where :code:`cuda92` should be replaced with the particular CUDA version
 installed on your computer.  Supported values are :code:`cuda75`, :code:`cuda80`,
-:code:`cuda90`, :code:`cuda91`, :code:`cuda92`, and :code:`cuda100`.  Because
+:code:`cuda90`, :code:`cuda91`, :code:`cuda92`, :code:`cuda100`, and :code:`cuda101`.  Because
 different CUDA releases are not binary compatible with each other, OpenMM can
 only work with the particular CUDA version it was compiled with.
 
