@@ -499,6 +499,9 @@ private:
     int numParticles;
     int useCutoff;
     int usePBC;
+    int alchemicalMethod;
+    double n;
+    double alpha;
     double cutoff;
     double dispersionCoefficient;
     std::vector<int> indexIVs;
@@ -506,6 +509,7 @@ private:
     std::vector<double> sigmas;
     std::vector<double> epsilons;
     std::vector<double> reductions;
+    std::vector<bool> isAlchemical;
     std::string sigmaCombiningRule;
     std::string epsilonCombiningRule;
     const System& system;

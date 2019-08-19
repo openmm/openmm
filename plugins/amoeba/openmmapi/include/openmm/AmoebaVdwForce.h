@@ -312,9 +312,9 @@ private:
     NonbondedMethod nonbondedMethod;
     double cutoff;
     bool useDispersionCorrection;
-    AlchemicalMethod alchemicalMethod = AlchemicalMethod.None;
-    int n = 5;
-    double alpha = 0.7;
+    AlchemicalMethod alchemicalMethod;
+    int n;
+    double alpha;
 
     std::string sigmaCombiningRule;
     std::string epsilonCombiningRule;

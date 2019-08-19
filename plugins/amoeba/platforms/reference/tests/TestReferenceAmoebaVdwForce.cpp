@@ -142,10 +142,11 @@ void testVdw() {
     for (int ii = 0; ii < amoebaVdwForce->getNumParticles();  ii++) {
         int indexIV;
         double sigma, epsilon, reduction;
-        amoebaVdwForce->getParticleParameters(ii, indexIV, sigma, epsilon, reduction);
+        bool isAlchemical;
+        amoebaVdwForce->getParticleParameters(ii, indexIV, sigma, epsilon, reduction, isAlchemical);
         sigma        *= AngstromToNm;
         epsilon      *= CalToJoule;
-        amoebaVdwForce->setParticleParameters(ii, indexIV, sigma, epsilon, reduction);
+        amoebaVdwForce->setParticleParameters(ii, indexIV, sigma, epsilon, reduction, isAlchemical);
     }
     platformName = "Reference";
     Context context(system, integrator, Platform::getPlatformByName(platformName));
@@ -173,8 +174,9 @@ void testVdw() {
     for (int i = 0; i < numberOfParticles; i++) {
         int indexIV;
         double mass, sigma, epsilon, reduction;
-        amoebaVdwForce->getParticleParameters(i, indexIV, sigma, epsilon, reduction);
-        amoebaVdwForce->setParticleParameters(i, indexIV, 0.9*sigma, 2.0*epsilon, 0.95*reduction);
+        bool isAlchemical;
+        amoebaVdwForce->getParticleParameters(i, indexIV, sigma, epsilon, reduction, isAlchemical);
+        amoebaVdwForce->setParticleParameters(i, indexIV, 0.9*sigma, 2.0*epsilon, 0.95*reduction, isAlchemical);
     }
     LangevinIntegrator integrator2(0.0, 0.1, 0.01);
     Context context2(system, integrator2, Platform::getPlatformByName(platformName));

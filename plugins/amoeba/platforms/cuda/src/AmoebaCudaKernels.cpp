@@ -2343,9 +2343,10 @@ public:
     bool areParticlesIdentical(int particle1, int particle2) {
         int iv1, iv2;
         double sigma1, sigma2, epsilon1, epsilon2, reduction1, reduction2;
-        force.getParticleParameters(particle1, iv1, sigma1, epsilon1, reduction1);
-        force.getParticleParameters(particle2, iv2, sigma2, epsilon2, reduction2);
-        return (sigma1 == sigma2 && epsilon1 == epsilon2 && reduction1 == reduction2);
+        bool isAlchemical1, isAlchemical2;
+        force.getParticleParameters(particle1, iv1, sigma1, epsilon1, reduction1, isAlchemical1);
+        force.getParticleParameters(particle2, iv2, sigma2, epsilon2, reduction2, isAlchemical2);
+        return (sigma1 == sigma2 && epsilon1 == epsilon2 && reduction1 == reduction2 && isAlchemical1 == isAlchemical2);
     }
 private:
     const AmoebaVdwForce& force;
@@ -2378,7 +2379,8 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
     for (int i = 0; i < force.getNumParticles(); i++) {
         int ivIndex;
         double sigma, epsilon, reductionFactor;
-        force.getParticleParameters(i, ivIndex, sigma, epsilon, reductionFactor);
+        bool isAlchemical;
+        force.getParticleParameters(i, ivIndex, sigma, epsilon, reductionFactor, isAlchemical);
         sigmaEpsilonVec[i] = make_float2((float) sigma, (float) epsilon);
         bondReductionAtomsVec[i] = ivIndex;
         bondReductionFactorsVec[i] = (float) reductionFactor;
@@ -2479,7 +2481,8 @@ void CudaCalcAmoebaVdwForceKernel::copyParametersToContext(ContextImpl& context,
     for (int i = 0; i < force.getNumParticles(); i++) {
         int ivIndex;
         double sigma, epsilon, reductionFactor;
-        force.getParticleParameters(i, ivIndex, sigma, epsilon, reductionFactor);
+        bool isAlchemical;
+        force.getParticleParameters(i, ivIndex, sigma, epsilon, reductionFactor, isAlchemical);
         sigmaEpsilonVec[i] = make_float2((float) sigma, (float) epsilon);
         bondReductionAtomsVec[i] = ivIndex;
         bondReductionFactorsVec[i] = (float) reductionFactor;

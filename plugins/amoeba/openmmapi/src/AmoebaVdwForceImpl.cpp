@@ -90,10 +90,11 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
     map<pair<double, double>, int> classCounts;
     for (int i = 0; i < force.getNumParticles(); i++) {
         double sigma, epsilon, reduction;
+        bool isAlchemical;
         // The variables reduction, ivindex are not used.
         int ivindex;
         // Get the sigma and epsilon parameters, ignoring everything else.
-        force.getParticleParameters(i, ivindex, sigma, epsilon, reduction);
+        force.getParticleParameters(i, ivindex, sigma, epsilon, reduction, isAlchemical);
         pair<double, double> key = make_pair(sigma, epsilon);
         map<pair<double, double>, int>::iterator entry = classCounts.find(key);
         if (entry == classCounts.end())
