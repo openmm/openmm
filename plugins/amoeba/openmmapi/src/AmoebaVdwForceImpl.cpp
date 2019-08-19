@@ -260,3 +260,5 @@ std::vector<std::string> AmoebaVdwForceImpl::getKernelNames() {
 void AmoebaVdwForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcAmoebaVdwForceKernel>().copyParametersToContext(context, owner);
 }
+
+

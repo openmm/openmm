@@ -140,11 +140,11 @@ void AmoebaVdwForce::setAlchemicalMethod(AlchemicalMethod method) {
     alchemicalMethod = method;
 }
 
-void AmoebaVdwForce::setSoftcorePower(double power) {
+void AmoebaVdwForce::setSoftcorePower(int power) {
     n = power;
 }
 
-double AmoebaVdwForce::getSoftcorePower() const {
+int AmoebaVdwForce::getSoftcorePower() const {
     return n;
 }
 

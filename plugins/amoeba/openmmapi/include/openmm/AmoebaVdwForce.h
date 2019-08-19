@@ -258,12 +258,12 @@ public:
     /**
      * Set the softcore power on lambda (default = 5).
      */
-    void setSoftcorePower(double n);
+    void setSoftcorePower(int n);
 
     /**
      * Get the softcore power on lambda.
      */
-    double getSoftcorePower() const;
+    int getSoftcorePower() const;
 
     /**
      * Set the softcore alpha value (default = 0.7).

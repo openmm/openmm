@@ -1059,7 +1059,7 @@ double ReferenceCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool inc
     vector<Vec3>& forceData = extractForces(context);
     AmoebaReferenceVdwForce vdwForce(sigmaCombiningRule, epsilonCombiningRule);
     double energy;
-    double lambda = context.getParameter("AmoebaVdwLambda");
+    double lambda = context.getParameter(AmoebaVdwForce::Lambda());
     if (useCutoff) {
         vdwForce.setCutoff(cutoff);
         computeNeighborListVoxelHash(*neighborList, numParticles, posData, allExclusions, extractBoxVectors(context), usePBC, cutoff, 0.0);
