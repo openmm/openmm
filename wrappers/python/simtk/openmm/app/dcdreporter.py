@@ -101,7 +101,10 @@ class DCDReporter(object):
         """
 
         if self._dcd is None:
-            self._dcd = DCDFile(self._out, simulation.topology, simulation.integrator.getStepSize(), 0, self._reportInterval, self._append)
+            self._dcd = DCDFile(
+                self._out, simulation.topology, simulation.integrator.getStepSize(),
+                simulation.currentStep, self._reportInterval, self._append
+            )
         self._dcd.writeModel(state.getPositions(), periodicBoxVectors=state.getPeriodicBoxVectors())
 
     def __del__(self):
