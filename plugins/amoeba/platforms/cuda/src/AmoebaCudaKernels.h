@@ -547,7 +547,7 @@ public:
      * Initialize the kernel.
      * 
      * @param system     the System this kernel will be applied to
-     * @param force      the AmoebaMultipoleForce this kernel will be used for
+     * @param force      the AmoebaVdwForce this kernel will be used for
      */
     void initialize(const System& system, const AmoebaVdwForce& force);
     /**
@@ -575,6 +575,7 @@ private:
     CudaArray sigmaEpsilon;
     CudaArray bondReductionAtoms;
     CudaArray bondReductionFactors;
+    CudaArray isAlchemical
     CudaArray tempPosq;
     CudaArray tempForces;
     CudaNonbondedUtilities* nonbonded;
