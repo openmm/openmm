@@ -1,4 +1,4 @@
-
+{
 #ifdef USE_CUTOFF
     unsigned int includeInteraction = (!isExcluded && r2 < CUTOFF_SQUARED);
 #else
@@ -26,46 +26,38 @@
     real epsilon_s = SQRT(sigmaEpsilon1.y) + SQRT(sigmaEpsilon2.y);
     real epsilon = (epsilon_s == 0.0f ? (real) 0 : 4*sigmaEpsilon1.y*sigmaEpsilon2.y/(epsilon_s*epsilon_s));
 #endif
-
     real softcore = 0.0f;
 #if VDW_ALCHEMICAL_METHOD == 1
-    // Decouple
     if (isAlchemical1 != isAlchemical2) { 
        epsilon = epsilon * pow(VDW_LAMBDA, VDW_SOFTCORE_POWER);
        softcore = VDW_SOFTCORE_ALPHA * (1.0 - vdwLambda) * (1.0 - vdwLambda);
     }
-#else if VDW_ALCHEMICAL_METHOD == 2 
-    // Annihilate
+#elif VDW_ALCHEMICAL_METHOD == 2 
     if (isAlchemical1 || isAlchemical2) {
        epsilon = epsilon * pow(VDW_LAMBDA, VDW_SOFTCORE_POWER);
        softcore = VDW_SOFTCORE_ALPHA * (1.0 - vdwLambda) * (1.0 - vdwLambda);
     }
-@endif
-
-    // The Buffered-14-7 buffering constants.
-    real dhal = 0.07;
-    real ghal = 0.12;
-    // The buffering constant plus one.
-    real dhal1 = 1.07;
-    real ghal1 = 1.12;
-
+#endif
+    real dhal = 0.07f;
+    real ghal = 0.12f;
+    real dhal1 = 1.07f;
+    real ghal1 = 1.12f;
     real rho = r / sigma;
     real rho2 = rho * rho;
     real rho6 = rho2 * rho2 * rho2;
     real rhoplus = rho + dhal;
     real rhodec2 = rhoplus * rhoplus;
     real rhodec = rhodec2 * rhodec2 * rhodec2;
-    real s1 = 1.0 / (softcore + rhodec * rhoplus);
-    real s2 = 1.0 / (softcore + rho6 * rho + 0.12);
+    real s1 = 1.0f / (softcore + rhodec * rhoplus);
+    real s2 = 1.0f / (softcore + rho6 * rho + ghal);
     real point72 = dhal1 * dhal1;
     real t1 = dhal1 * point72 * point72 * point72 * s1;
     real t2 = ghal1 * s2;
-    real t2min = t2 - 2;
-    real dt1 = -7.0 * rhodec * t1 * s1;
-    real dt2 = -7.0 * rho6 * t2 * s2;
+    real t2min = t2 - 2.0f;
+    real dt1 = -7.0f * rhodec * t1 * s1;
+    real dt2 = -7.0f * rho6 * t2 * s2;
     real termEnergy = epsilon * t1 * t2min;
     real deltaE = epsilon * (dt1 * t2min + t1 * dt2) / sigma;
-
 #ifdef USE_CUTOFF
     if (r > TAPER_CUTOFF) {
         real x = r-TAPER_CUTOFF;
