@@ -27,22 +27,18 @@
     real epsilon = (epsilon_s == 0.0f ? (real) 0 : 4*sigmaEpsilon1.y*sigmaEpsilon2.y/(epsilon_s*epsilon_s));
 #endif
 
-    real softcore = 0.0;
-#if USE_SOFTCORE == 1
+    real softcore = 0.0f;
+#if VDW_ALCHEMICAL_METHOD == 1
     // Decouple
-    bool both = isAlchemicalI && isAlchemicalJ;
-    bool either = isAlchemicalI || isAlchemicalJ;
-    bool soft = !both && either;
-    if (soft) { 
+    if (isAlchemical1 != isAlchemical2) { 
        epsilon = epsilon * pow(VDW_LAMBDA, VDW_SOFTCORE_POWER);
-       softcore = VDW_SOFTCORE_ALPHA * (1.0 - VDW_LAMBDA) * (1.0 - VDW_LAMBDA);
+       softcore = VDW_SOFTCORE_ALPHA * (1.0 - vdwLambda) * (1.0 - vdwLambda);
     }
-#else if USE_SOFTCORE == 2 
+#else if VDW_ALCHEMICAL_METHOD == 2 
     // Annihilate
-    bool soft = isAlchemicalI || isAlchemicalJ;
-    if (soft) {
+    if (isAlchemical1 || isAlchemical2) {
        epsilon = epsilon * pow(VDW_LAMBDA, VDW_SOFTCORE_POWER);
-       softcore = VDW_SOFTCORE_ALPHA * (1.0 - VDW_LAMBDA) * (1.0 - VDW_LAMBDA);
+       softcore = VDW_SOFTCORE_ALPHA * (1.0 - vdwLambda) * (1.0 - vdwLambda);
     }
 @endif
 

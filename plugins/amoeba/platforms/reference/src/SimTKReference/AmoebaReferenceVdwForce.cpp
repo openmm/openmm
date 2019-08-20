@@ -313,24 +313,18 @@ double AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles, double
                 double combinedEpsilon = (this->*_combineEpsilons)(epsilonI, epsilons[jj]);
                 double softcore = 0.0;
 
-                // Apply softcore modifications using an alchemical method.
-                if (this->_alchemicalMethod != None) {
-                   if (isAlchemicalI || isAlchemical[jj]) {
-                      // Decouple maintains interactions between two softcore atoms.
-                      if (this->_alchemicalMethod == Decouple && isAlchemicalI && isAlchemical[jj]) {
-                         // No softcore 
-                      } else {
-                         combinedEpsilon *= pow(lambda, this->_n); 
-                         softcore = this->_alpha * pow(1.0 - lambda, 2);
-                      } 
-                   }
+                if (this->_alchemicalMethod == Decouple && (isAlchemicalI != isAlchemical[jj])) {
+                   combinedEpsilon *= pow(lambda, this->_n);
+                   softcore = this->_alpha * pow(1.0 - lambda, 2);
+                } else if (this->_alchemicalMethod == Annihilate && (isAlchemicalI || isAlchemical[jj])) {
+                   combinedEpsilon *= pow(lambda, this->_n);
+                   softcore = this->_alpha * pow(1.0 - lambda, 2);
                 }
 
                 Vec3 force;
-                energy                     += calculatePairIxn(combinedSigma, combinedEpsilon, softcore,
-                                                               reducedPositions[ii], reducedPositions[jj],
-                                                               force);
-                
+                energy += calculatePairIxn(combinedSigma, combinedEpsilon, softcore,
+                                           reducedPositions[ii], reducedPositions[jj], force);
+
                 if (indexIVs[ii] == ii) {
                     forces[ii][0] -= force[0];
                     forces[ii][1] -= force[1];
@@ -390,22 +384,17 @@ double AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles, double
         int isAlchemicalI      = isAlchemical[siteI];
         int isAlchemicalJ      = isAlchemical[siteJ];
 
-        // Apply softcore modifications using an alchemical method.
-        if (this->_alchemicalMethod != None) {
-           if (isAlchemicalI || isAlchemicalJ) {
-              // Decouple maintains interactions between two softcore atoms.
-              if (this->_alchemicalMethod == Decouple && isAlchemicalI && isAlchemicalJ) {
-                 // No softcore
-              } else {
-                 combinedEpsilon *= pow(lambda, this->_n);
-                 softcore = this->_alpha * pow(1.0 - lambda, 2);
-              }
-           }
+        if (this->_alchemicalMethod == Decouple && (isAlchemicalI != isAlchemicalJ)) {
+           combinedEpsilon *= pow(lambda, this->_n);
+           softcore = this->_alpha * pow(1.0 - lambda, 2);
+        } else if (this->_alchemicalMethod == Annihilate && (isAlchemicalI || isAlchemicalJ)) {
+           combinedEpsilon *= pow(lambda, this->_n);
+           softcore = this->_alpha * pow(1.0 - lambda, 2);
         }
 
         Vec3 force;
-        energy                     += calculatePairIxn(combinedSigma, combinedEpsilon, softcore,
-                                                       reducedPositions[siteI], reducedPositions[siteJ], force);
+        energy += calculatePairIxn(combinedSigma, combinedEpsilon, softcore,
+                                   reducedPositions[siteI], reducedPositions[siteJ], force);
                 
         if (indexIVs[siteI] == siteI) {
             forces[siteI][0] -= force[0];

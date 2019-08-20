@@ -91,7 +91,7 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
     for (int i = 0; i < force.getNumParticles(); i++) {
         double sigma, epsilon, reduction;
         bool isAlchemical;
-        // The variables reduction, ivindex are not used.
+        // The variables reduction, ivindex and isAlchemical are not used.
         int ivindex;
         // Get the sigma and epsilon parameters, ignoring everything else.
         force.getParticleParameters(i, ivindex, sigma, epsilon, reduction, isAlchemical);
@@ -152,8 +152,11 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
     int ndelta = int(double(nstep) * (range - cut));
     double rdelta = (range - cut) / double(ndelta);
     double offset = cut - 0.5 * rdelta;
-    double dhal = 0.07; // This magic number also appears in kCalculateAmoebaCudaVdw14_7.cu
-    double ghal = 0.12; // This magic number also appears in kCalculateAmoebaCudaVdw14_7.cu
+
+    // Buffered-14-7 buffering constants
+    double dhal = 0.07; 
+    double ghal = 0.12;
+
     double elrc = 0.0; // This number is incremented and passed out at the end
     double e = 0.0;
     double sigma, epsilon; // The pairwise sigma and epsilon parameters.

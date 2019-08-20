@@ -575,7 +575,8 @@ private:
     CudaArray sigmaEpsilon;
     CudaArray bondReductionAtoms;
     CudaArray bondReductionFactors;
-    CudaArray isAlchemical
+    CudaArray isAlchemical;
+    CudaArray vdwLambda;
     CudaArray tempPosq;
     CudaArray tempForces;
     CudaNonbondedUtilities* nonbonded;
