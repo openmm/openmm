@@ -2562,9 +2562,12 @@ class GBSAOBCGenerator(object):
         generator.params.parseDefinitions(element)
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
-        methodMap = {NoCutoff:mm.NonbondedForce.NoCutoff,
-                     CutoffNonPeriodic:mm.NonbondedForce.CutoffNonPeriodic,
-                     CutoffPeriodic:mm.NonbondedForce.CutoffPeriodic}
+        methodMap = {NoCutoff:mm.GBSAOBCForce.NoCutoff,
+                     CutoffNonPeriodic:mm.GBSAOBCForce.CutoffNonPeriodic,
+                     CutoffPeriodic:mm.GBSAOBCForce.CutoffPeriodic,
+                     Ewald:mm.GBSAOBCForce.CutoffPeriodic,
+                     PME:mm.GBSAOBCForce.CutoffPeriodic,
+                     LJPME:mm.GBSAOBCForce.CutoffPeriodic}
         if nonbondedMethod not in methodMap:
             raise ValueError('Illegal nonbonded method for GBSAOBCForce')
         force = mm.GBSAOBCForce()
@@ -2799,7 +2802,10 @@ class CustomNonbondedGenerator(object):
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         methodMap = {NoCutoff:mm.CustomNonbondedForce.NoCutoff,
                      CutoffNonPeriodic:mm.CustomNonbondedForce.CutoffNonPeriodic,
-                     CutoffPeriodic:mm.CustomNonbondedForce.CutoffPeriodic}
+                     CutoffPeriodic:mm.CustomNonbondedForce.CutoffPeriodic,
+                     Ewald:mm.CustomNonbondedForce.CutoffPeriodic,
+                     PME:mm.CustomNonbondedForce.CutoffPeriodic,
+                     LJPME:mm.CustomNonbondedForce.CutoffPeriodic}
         if nonbondedMethod not in methodMap:
             raise ValueError('Illegal nonbonded method for CustomNonbondedForce')
         force = mm.CustomNonbondedForce(self.energy)
@@ -2859,7 +2865,10 @@ class CustomGBGenerator(object):
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         methodMap = {NoCutoff:mm.CustomGBForce.NoCutoff,
                      CutoffNonPeriodic:mm.CustomGBForce.CutoffNonPeriodic,
-                     CutoffPeriodic:mm.CustomGBForce.CutoffPeriodic}
+                     CutoffPeriodic:mm.CustomGBForce.CutoffPeriodic,
+                     Ewald:mm.CustomGBForce.CutoffPeriodic,
+                     PME:mm.CustomGBForce.CutoffPeriodic,
+                     LJPME:mm.CustomGBForce.CutoffPeriodic}
         if nonbondedMethod not in methodMap:
             raise ValueError('Illegal nonbonded method for CustomGBForce')
         force = mm.CustomGBForce()
@@ -2942,7 +2951,10 @@ class CustomHbondGenerator(object):
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         methodMap = {NoCutoff:mm.CustomHbondForce.NoCutoff,
                      CutoffNonPeriodic:mm.CustomHbondForce.CutoffNonPeriodic,
-                     CutoffPeriodic:mm.CustomHbondForce.CutoffPeriodic}
+                     CutoffPeriodic:mm.CustomHbondForce.CutoffPeriodic,
+                     Ewald:mm.CustomHbondForce.CutoffPeriodic,
+                     PME:mm.CustomHbondForce.CutoffPeriodic,
+                     LJPME:mm.CustomHbondForce.CutoffPeriodic}
         if nonbondedMethod not in methodMap:
             raise ValueError('Illegal nonbonded method for CustomNonbondedForce')
         force = mm.CustomHbondForce(self.energy)
@@ -3080,7 +3092,10 @@ class CustomManyParticleGenerator(object):
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         methodMap = {NoCutoff:mm.CustomManyParticleForce.NoCutoff,
                      CutoffNonPeriodic:mm.CustomManyParticleForce.CutoffNonPeriodic,
-                     CutoffPeriodic:mm.CustomManyParticleForce.CutoffPeriodic}
+                     CutoffPeriodic:mm.CustomManyParticleForce.CutoffPeriodic,
+                     Ewald:mm.CustomManyParticleForce.CutoffPeriodic,
+                     PME:mm.CustomManyParticleForce.CutoffPeriodic,
+                     LJPME:mm.CustomManyParticleForce.CutoffPeriodic}
         if nonbondedMethod not in methodMap:
             raise ValueError('Illegal nonbonded method for CustomManyParticleForce')
         force = mm.CustomManyParticleForce(self.particlesPerSet, self.energy)
