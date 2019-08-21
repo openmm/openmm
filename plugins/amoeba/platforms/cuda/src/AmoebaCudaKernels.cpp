@@ -2365,7 +2365,7 @@ CudaCalcAmoebaVdwForceKernel::~CudaCalcAmoebaVdwForceKernel() {
 void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const AmoebaVdwForce& force) {
     cu.setAsCurrent();
     sigmaEpsilon.initialize<float2>(cu, cu.getPaddedNumAtoms(), "sigmaEpsilon");
-    isAlchemical.initialize<int>(cu, cu.getPaddedNumAtoms(), "isAlchemical");
+    isAlchemical.initialize<float>(cu, cu.getPaddedNumAtoms(), "isAlchemical");
     vdwLambda.initialize<float>(cu, 1, "vdwLambda");
     bondReductionAtoms.initialize<int>(cu, cu.getPaddedNumAtoms(), "bondReductionAtoms");
     bondReductionFactors.initialize<float>(cu, cu.getPaddedNumAtoms(), "bondReductionFactors");
@@ -2375,7 +2375,7 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
     // Record atom parameters.
     
     vector<float2> sigmaEpsilonVec(cu.getPaddedNumAtoms(), make_float2(0, 1));
-    vector<int> isAlchemicalVec(cu.getPaddedNumAtoms(), 0);
+    vector<float> isAlchemicalVec(cu.getPaddedNumAtoms(), 0);
     vector<int> bondReductionAtomsVec(cu.getPaddedNumAtoms(), 0);
     vector<float> bondReductionFactorsVec(cu.getPaddedNumAtoms(), 0);
     vector<vector<int> > exclusions(cu.getNumAtoms());
@@ -2385,7 +2385,7 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
         bool alchemical;
         force.getParticleParameters(i, ivIndex, sigma, epsilon, reductionFactor, alchemical);
         sigmaEpsilonVec[i] = make_float2((float) sigma, (float) epsilon);
-        isAlchemicalVec[i] = (alchemical) ? 1 : 0;
+        isAlchemicalVec[i] = (alchemical) ? 1.0f : 0.0f;
         bondReductionAtomsVec[i] = ivIndex;
         bondReductionFactorsVec[i] = (float) reductionFactor;
         force.getParticleExclusions(i, exclusions[i]);
@@ -2402,7 +2402,7 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
 
     // A single lambda parameter to define the alchemical vdW state.
     vector<float> vdwLambdaVec(1, 0);
-    vdwLambdaVec[0] = 1.0;
+    vdwLambdaVec[0] = 1.0f;
     vdwLambda.upload(vdwLambdaVec);
  
     // This force is applied based on modified atom positions, where hydrogens have been moved slightly
@@ -2411,7 +2411,7 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
     
     nonbonded = new CudaNonbondedUtilities(cu);
     nonbonded->addParameter(CudaNonbondedUtilities::ParameterInfo("sigmaEpsilon", "float", 2, sizeof(float2), sigmaEpsilon.getDevicePointer()));
-    nonbonded->addParameter(CudaNonbondedUtilities::ParameterInfo("isAlchemical", "int", 1, sizeof(int), isAlchemical.getDevicePointer()));
+    nonbonded->addParameter(CudaNonbondedUtilities::ParameterInfo("isAlchemical", "float", 1, sizeof(float), isAlchemical.getDevicePointer()));
     nonbonded->addArgument(CudaNonbondedUtilities::ParameterInfo("vdwLambda", "float", 1, sizeof(float), vdwLambda.getDevicePointer()));
     
     // Create the interaction kernel.
@@ -2498,7 +2498,7 @@ void CudaCalcAmoebaVdwForceKernel::copyParametersToContext(ContextImpl& context,
     
     // Record the per-particle parameters.
     vector<float2> sigmaEpsilonVec(cu.getPaddedNumAtoms(), make_float2(0, 1));
-    vector<int> isAlchemicalVec(cu.getPaddedNumAtoms(), 0);
+    vector<float> isAlchemicalVec(cu.getPaddedNumAtoms(), 0);
     vector<int> bondReductionAtomsVec(cu.getPaddedNumAtoms(), 0);
     vector<float> bondReductionFactorsVec(cu.getPaddedNumAtoms(), 0);
     for (int i = 0; i < force.getNumParticles(); i++) {
@@ -2507,7 +2507,7 @@ void CudaCalcAmoebaVdwForceKernel::copyParametersToContext(ContextImpl& context,
         bool alchemical;
         force.getParticleParameters(i, ivIndex, sigma, epsilon, reductionFactor, alchemical);
         sigmaEpsilonVec[i] = make_float2((float) sigma, (float) epsilon);
-        isAlchemicalVec[i] = (alchemical) ? 1 : 0;
+        isAlchemicalVec[i] = (alchemical) ? 1.0f : 0.0f;
         bondReductionAtomsVec[i] = ivIndex;
         bondReductionFactorsVec[i] = (float) reductionFactor;
     }
