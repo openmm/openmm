@@ -996,9 +996,6 @@ ReferenceCalcAmoebaVdwForceKernel::ReferenceCalcAmoebaVdwForceKernel(std::string
        CalcAmoebaVdwForceKernel(name, platform), system(system) {
     useCutoff = 0;
     usePBC = 0;
-    alchemicalMethod = 0;
-    n = 5;
-    alpha = 0.7;
     cutoff = 1.0e+10;
     neighborList = NULL;
 }
@@ -1048,7 +1045,7 @@ void ReferenceCalcAmoebaVdwForceKernel::initialize(const System& system, const A
     cutoff                 = force.getCutoffDistance();
     neighborList           = useCutoff ? new NeighborList() : NULL;
     dispersionCoefficient  = force.getUseDispersionCorrection() ?  AmoebaVdwForceImpl::calcDispersionCorrection(system, force) : 0.0;
-    alchemicalMethod       = (int) force.getAlchemicalMethod();
+    alchemicalMethod       = force.getAlchemicalMethod();
     n                      = force.getSoftcorePower();
     alpha                  = force.getSoftcoreAlpha();
 }
@@ -1058,6 +1055,15 @@ double ReferenceCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool inc
     vector<Vec3>& posData   = extractPositions(context);
     vector<Vec3>& forceData = extractForces(context);
     AmoebaReferenceVdwForce vdwForce(sigmaCombiningRule, epsilonCombiningRule);
+    if (alchemicalMethod == AmoebaVdwForce::Decouple) {
+       vdwForce.setAlchemicalMethod(AmoebaReferenceVdwForce::Decouple);
+    } else if (alchemicalMethod == AmoebaVdwForce::Annihilate) {
+       vdwForce.setAlchemicalMethod(AmoebaReferenceVdwForce::Annihilate);
+    } else {
+       vdwForce.setAlchemicalMethod(AmoebaReferenceVdwForce::None);
+    }
+    vdwForce.setSoftcorePower(n);
+    vdwForce.setSoftcoreAlpha(alpha);
     double energy;
     double lambda = context.getParameter(AmoebaVdwForce::Lambda());
     if (useCutoff) {
@@ -1090,7 +1096,6 @@ void ReferenceCalcAmoebaVdwForceKernel::copyParametersToContext(ContextImpl& con
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
 
     // Record the values.
-
     for (int i = 0; i < numParticles; ++i) {
         int indexIV;
         double sigma, epsilon, reduction;

@@ -29,13 +29,13 @@
     real softcore = 0.0f;
 #if VDW_ALCHEMICAL_METHOD == 1
     if (isAlchemical1 != isAlchemical2) { 
-       epsilon = epsilon * pow(VDW_LAMBDA, VDW_SOFTCORE_POWER);
-       softcore = VDW_SOFTCORE_ALPHA * (1.0 - vdwLambda) * (1.0 - vdwLambda);
-    }
 #elif VDW_ALCHEMICAL_METHOD == 2 
     if (isAlchemical1 || isAlchemical2) {
-       epsilon = epsilon * pow(VDW_LAMBDA, VDW_SOFTCORE_POWER);
-       softcore = VDW_SOFTCORE_ALPHA * (1.0 - vdwLambda) * (1.0 - vdwLambda);
+#endif
+#if VDW_ALCHEMICAL_METHOD != 0
+       real lambda = vdwLambda[0];
+       epsilon = epsilon * POW(lambda, VDW_SOFTCORE_POWER);
+       softcore = VDW_SOFTCORE_ALPHA * (1.0f - lambda) * (1.0f - lambda);
     }
 #endif
     real dhal = 0.07f;

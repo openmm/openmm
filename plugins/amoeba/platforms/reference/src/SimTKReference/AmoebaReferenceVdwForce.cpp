@@ -364,7 +364,7 @@ double AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles, double
 
     std::vector<Vec3> reducedPositions;
     setReducedPositions(numParticles, particlePositions, indexIVs, reductions, reducedPositions);
- 
+
     // loop over neighbor list
     //    (1) calculate pair vdw ixn
     //    (2) accumulate forces: if particle is a site where interaction position != particle position,

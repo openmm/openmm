@@ -499,11 +499,11 @@ private:
     int numParticles;
     int useCutoff;
     int usePBC;
-    int alchemicalMethod;
-    double n;
-    double alpha;
     double cutoff;
     double dispersionCoefficient;
+    AmoebaVdwForce::AlchemicalMethod alchemicalMethod;
+    int n;
+    double alpha;
     std::vector<int> indexIVs;
     std::vector< std::set<int> > allExclusions;
     std::vector<double> sigmas;
