@@ -188,7 +188,8 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
             // ARITHMETIC = 1
             // GEOMETRIC  = 2
             // HARMONIC   = 3
-            // HHG        = 4
+            // W-H        = 4
+            // HHG        = 5
             if (epsilonCombiningRule == "ARITHMETIC") {
               epsilon = 0.5f * (iEpsilon + jEpsilon);
             } else if (epsilonCombiningRule == "GEOMETRIC") {
@@ -199,6 +200,13 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
               } else {
                 epsilon = 0.0;
               }
+            } else if (epsilonCombiningRule == "W-H") {
+              double iSigma3 = iSigma * iSigma * iSigma;
+              double jSigma3 = jSigma * jSigma * jSigma;
+              double iSigma6 = iSigma3 * iSigma3;
+              double jSigma6 = jSigma3 * jSigma3;
+              double eps_s = std::sqrt(iEpsilon*jEpsilon);
+              epsilon = (eps_s == 0.0 ? 0.0 : 2.0f*eps_s*iSigma3*jSigma3/(iSigma6 + jSigma6));
             } else {
               double epsilonS = std::sqrt(iEpsilon) + std::sqrt(jEpsilon);
               if (epsilonS != 0.0) {
