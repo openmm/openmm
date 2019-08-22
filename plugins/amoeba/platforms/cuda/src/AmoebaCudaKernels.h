@@ -571,12 +571,22 @@ private:
     CudaContext& cu;
     const System& system;
     bool hasInitializedNonbonded;
+
+    // True if the AmoebaVdwForce AlchemicalMethod is not None.
+    bool hasAlchemical;
+    // Pinned host memory; allocated if necessary in initialize, and freed in the destructor.
+    void* vdwLambdaPinnedBuffer;
+    // Device memory for the alchemical state.
+    CudaArray vdwLambda;
+    // Only update device memory when lambda changes.
+    float currentVdwLambda;
+    // Per particle alchemical flag.
+    CudaArray isAlchemical;
+
     double dispersionCoefficient;
     CudaArray sigmaEpsilon;
     CudaArray bondReductionAtoms;
     CudaArray bondReductionFactors;
-    CudaArray isAlchemical;
-    CudaArray vdwLambda;
     CudaArray tempPosq;
     CudaArray tempForces;
     CudaNonbondedUtilities* nonbonded;

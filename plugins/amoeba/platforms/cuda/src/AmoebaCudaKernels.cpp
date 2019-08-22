@@ -2353,32 +2353,40 @@ private:
 };
 
 CudaCalcAmoebaVdwForceKernel::CudaCalcAmoebaVdwForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) :
-        CalcAmoebaVdwForceKernel(name, platform), cu(cu), system(system), hasInitializedNonbonded(false), nonbonded(NULL) {
+        CalcAmoebaVdwForceKernel(name, platform), cu(cu), system(system), hasInitializedNonbonded(false), nonbonded(NULL), vdwLambdaPinnedBuffer(NULL) {
 }
 
 CudaCalcAmoebaVdwForceKernel::~CudaCalcAmoebaVdwForceKernel() {
     cu.setAsCurrent();
     if (nonbonded != NULL)
         delete nonbonded;
+    if (vdwLambdaPinnedBuffer != NULL) 
+        cuMemFreeHost(vdwLambdaPinnedBuffer);                              
 }
 
 void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const AmoebaVdwForce& force) {
     cu.setAsCurrent();
     sigmaEpsilon.initialize<float2>(cu, cu.getPaddedNumAtoms(), "sigmaEpsilon");
-    isAlchemical.initialize<float>(cu, cu.getPaddedNumAtoms(), "isAlchemical");
-    vdwLambda.initialize<float>(cu, 1, "vdwLambda");
     bondReductionAtoms.initialize<int>(cu, cu.getPaddedNumAtoms(), "bondReductionAtoms");
     bondReductionFactors.initialize<float>(cu, cu.getPaddedNumAtoms(), "bondReductionFactors");
     tempPosq.initialize(cu, cu.getPaddedNumAtoms(), cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4), "tempPosq");
     tempForces.initialize<long long>(cu, 3*cu.getPaddedNumAtoms(), "tempForces");
     
     // Record atom parameters.
-    
     vector<float2> sigmaEpsilonVec(cu.getPaddedNumAtoms(), make_float2(0, 1));
     vector<float> isAlchemicalVec(cu.getPaddedNumAtoms(), 0);
     vector<int> bondReductionAtomsVec(cu.getPaddedNumAtoms(), 0);
     vector<float> bondReductionFactorsVec(cu.getPaddedNumAtoms(), 0);
     vector<vector<int> > exclusions(cu.getNumAtoms());
+
+    // Handle Alchemical parameters.
+    hasAlchemical = force.getAlchemicalMethod() != AmoebaVdwForce::None;
+    if (hasAlchemical) {
+       isAlchemical.initialize<float>(cu, cu.getPaddedNumAtoms(), "isAlchemical");
+       vdwLambda.initialize<float>(cu, 1, "vdwLambda");
+       CHECK_RESULT(cuMemHostAlloc(&vdwLambdaPinnedBuffer, sizeof(float), 0), "Error allocating vdwLambda pinned buffer");
+    }
+
     for (int i = 0; i < force.getNumParticles(); i++) {
         int ivIndex;
         double sigma, epsilon, reductionFactor;
@@ -2392,7 +2400,6 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
         exclusions[i].push_back(i);
     }
     sigmaEpsilon.upload(sigmaEpsilonVec);
-    isAlchemical.upload(isAlchemicalVec);
     bondReductionAtoms.upload(bondReductionAtomsVec);
     bondReductionFactors.upload(bondReductionFactorsVec);
     if (force.getUseDispersionCorrection())
@@ -2400,19 +2407,21 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
     else
         dispersionCoefficient = 0.0;               
 
-    // A single lambda parameter to define the alchemical vdW state.
-    vector<float> vdwLambdaVec(1, 0);
-    vdwLambdaVec[0] = 1.0f;
-    vdwLambda.upload(vdwLambdaVec);
- 
     // This force is applied based on modified atom positions, where hydrogens have been moved slightly
     // closer to their parent atoms.  We therefore create a separate CudaNonbondedUtilities just for
     // this force, so it will have its own neighbor list and interaction kernel.
     
     nonbonded = new CudaNonbondedUtilities(cu);
     nonbonded->addParameter(CudaNonbondedUtilities::ParameterInfo("sigmaEpsilon", "float", 2, sizeof(float2), sigmaEpsilon.getDevicePointer()));
-    nonbonded->addParameter(CudaNonbondedUtilities::ParameterInfo("isAlchemical", "float", 1, sizeof(float), isAlchemical.getDevicePointer()));
-    nonbonded->addArgument(CudaNonbondedUtilities::ParameterInfo("vdwLambda", "float", 1, sizeof(float), vdwLambda.getDevicePointer()));
+
+    if (hasAlchemical) {
+       isAlchemical.upload(isAlchemicalVec);
+       ((float*) vdwLambdaPinnedBuffer)[0] = 1.0f;
+       currentVdwLambda = 1.0f;
+       vdwLambda.upload(vdwLambdaPinnedBuffer, false);
+       nonbonded->addParameter(CudaNonbondedUtilities::ParameterInfo("isAlchemical", "float", 1, sizeof(float), isAlchemical.getDevicePointer()));
+       nonbonded->addArgument(CudaNonbondedUtilities::ParameterInfo("vdwLambda", "float", 1, sizeof(float), vdwLambda.getDevicePointer()));
+    }
     
     // Create the interaction kernel.
     
@@ -2431,16 +2440,16 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
         replacements["EPSILON_COMBINING_RULE"] = "1";
     else if (epsilonCombiningRule == "GEOMETRIC")
         replacements["EPSILON_COMBINING_RULE"] = "2";
-    else if (epsilonCombiningRule == "HARMONIC")
+    else if (epsilonCombiningRule =="HARMONIC")
         replacements["EPSILON_COMBINING_RULE"] = "3";
     else if (epsilonCombiningRule == "HHG")
         replacements["EPSILON_COMBINING_RULE"] = "4";
     else
         throw OpenMMException("Illegal combining rule for sigma: "+sigmaCombiningRule);
 
+    replacements["VDW_ALCHEMICAL_METHOD"] = cu.intToString(force.getAlchemicalMethod()); 
     replacements["VDW_SOFTCORE_POWER"] = cu.intToString(force.getSoftcorePower());
     replacements["VDW_SOFTCORE_ALPHA"] = cu.doubleToString(force.getSoftcoreAlpha()); 
-    replacements["VDW_ALCHEMICAL_METHOD"] = cu.intToString(force.getAlchemicalMethod()); 
 
     double cutoff = force.getCutoffDistance();
     double taperCutoff = cutoff*0.9;
@@ -2469,10 +2478,15 @@ double CudaCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool includeF
         nonbonded->initialize(system);
     }
 
-    // Not sure about passing a Context parameter to the Kernal?
-    vector<float> vdwLambdaVec(1, 0);
-    vdwLambdaVec[0] = context.getParameter(AmoebaVdwForce::Lambda());
-    vdwLambda.upload(vdwLambdaVec);
+    if (hasAlchemical) {
+       float contextLambda = context.getParameter(AmoebaVdwForce::Lambda());
+       if (contextLambda != currentVdwLambda) {
+          // Non-blocking copy of vdwLambda to device memory
+          ((float*) vdwLambdaPinnedBuffer)[0] = contextLambda;
+          vdwLambda.upload(vdwLambdaPinnedBuffer, false);
+          currentVdwLambda = contextLambda;
+       }
+    }
 
     cu.getPosq().copyTo(tempPosq);
     cu.getForce().copyTo(tempForces);
@@ -2512,7 +2526,7 @@ void CudaCalcAmoebaVdwForceKernel::copyParametersToContext(ContextImpl& context,
         bondReductionFactorsVec[i] = (float) reductionFactor;
     }
     sigmaEpsilon.upload(sigmaEpsilonVec);
-    isAlchemical.upload(isAlchemicalVec);
+    if (hasAlchemical) isAlchemical.upload(isAlchemicalVec);
     bondReductionAtoms.upload(bondReductionAtomsVec);
     bondReductionFactors.upload(bondReductionFactorsVec);
     if (force.getUseDispersionCorrection())

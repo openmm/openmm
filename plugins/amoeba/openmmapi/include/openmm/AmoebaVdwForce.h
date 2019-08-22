@@ -50,6 +50,19 @@ namespace OpenMM {
  * particle to another one.  This is typically done for hydrogens to place the interaction site slightly
  * closer to the parent atom.  The fraction is known as the "reduction factor", since it reduces the distance
  * from the parent atom to the interaction site.
+ *
+ * Support is also available for softcore interactions based on setting a per particle alchemical flag and
+ * setting the AmoebaVdwForce to use an "AlchemicalMethod" -- either Decouple or Annihilate.
+ * For Decouple, two alchemical atoms interact normally. For Annihilate, all interactions involving an 
+ * alchemical atom are influenced. The softcore state is specified by setting a single 
+ * Context parameter "AmoebaVdwLambda" between 0.0 and 1.0.
+ *
+ * The softcore functional form can be modified by setting the softcore power (default of 5) and the softcore
+ * alpha (default of 0,7). For more information on the softcore functional form see Eq. 2 from:
+ * Jiao, D.;  Golubkov, P. A.;  Darden, T. A.; Ren, P., 
+ * Calculation of protein-ligand binding free energy by using a polarizable potential.
+ * Proc. Natl. Acad. Sci. U.S.A. 2008, 105 (17), 6290-6295.
+ * https://www.pnas.org/content/105/17/6290.
  */
 
 class OPENMM_EXPORT_AMOEBA AmoebaVdwForce : public Force {
