@@ -252,6 +252,7 @@ private:
     double arithmeticEpsilonCombiningRule(double epsilonI, double epsilonJ) const;
     double  geometricEpsilonCombiningRule(double epsilonI, double epsilonJ) const;
     double  harmonicEpsilonCombiningRule(double epsilonI, double epsilonJ) const;
+    double  whEpsilonCombiningRule(double sigmaI, double sigmaJ, double epsilonI, double epsilonJ) const;
     double  hhgEpsilonCombiningRule(double epsilonI, double epsilonJ) const;
 
     /**---------------------------------------------------------------------------------------

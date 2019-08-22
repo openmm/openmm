@@ -4431,7 +4431,7 @@ class AmoebaVdwGenerator(object):
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
 
         sigmaMap = {'ARITHMETIC':1, 'GEOMETRIC':1, 'CUBIC-MEAN':1}
-        epsilonMap = {'ARITHMETIC':1, 'GEOMETRIC':1, 'HARMONIC':1, 'HHG':1}
+        epsilonMap = {'ARITHMETIC':1, 'GEOMETRIC':1, 'HARMONIC':1, 'W-H':1, 'HHG':1}
 
         force = mm.AmoebaVdwForce()
         sys.addForce(force)
