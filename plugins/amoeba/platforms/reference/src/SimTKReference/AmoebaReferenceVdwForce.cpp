@@ -142,18 +142,18 @@ std::string AmoebaReferenceVdwForce::getEpsilonCombiningRule() const {
     return _epsilonCombiningRule;
 }
 
-double AmoebaReferenceVdwForce::arithmeticEpsilonCombiningRule(double epsilonI, double epsilonJ) const {
+double AmoebaReferenceVdwForce::arithmeticEpsilonCombiningRule(double epsilonI, double epsilonJ, double sigmaI, double sigmaJ) const {
     return 0.5*(epsilonI + epsilonJ);
 }
 
-double AmoebaReferenceVdwForce::geometricEpsilonCombiningRule(double epsilonI, double epsilonJ) const {
+double AmoebaReferenceVdwForce::geometricEpsilonCombiningRule(double epsilonI, double epsilonJ, double sigmaI, double sigmaJ) const {
     return sqrt(epsilonI*epsilonJ);
 }
 
-double AmoebaReferenceVdwForce::harmonicEpsilonCombiningRule(double epsilonI, double epsilonJ) const {
+double AmoebaReferenceVdwForce::harmonicEpsilonCombiningRule(double epsilonI, double epsilonJ, double sigmaI, double sigmaJ) const {
     return (epsilonI != 0.0 && epsilonJ != 0.0) ? 2.0*(epsilonI*epsilonJ)/(epsilonI + epsilonJ) : 0.0;
 }
-double AmoebaReferenceVdwForce::whEpsilonCombiningRule(double sigmaI, double sigmaJ, double epsilonI, double epsilonJ) const {
+double AmoebaReferenceVdwForce::whEpsilonCombiningRule(double epsilonI, double epsilonJ, double sigmaI, double sigmaJ) const {
     double  sigmaI3 = sigmaI * sigmaI * sigmaI;
     double  sigmaJ3 = sigmaJ * sigmaJ * sigmaJ;
     double  sigmaI6 = sigmaI3 * sigmaI3;
@@ -162,7 +162,7 @@ double AmoebaReferenceVdwForce::whEpsilonCombiningRule(double sigmaI, double sig
     return (epsilonI != 0.0 && epsilonJ != 0.0) ? 2.0*eps_s*sigmaI3*sigmaJ3/(sigmaI6+sigmaJ6) : 0.0;
 }
 
-double AmoebaReferenceVdwForce::hhgEpsilonCombiningRule(double epsilonI, double epsilonJ) const {
+double AmoebaReferenceVdwForce::hhgEpsilonCombiningRule(double epsilonI, double epsilonJ, double sigmaI, double sigmaJ) const {
     double denominator = sqrt(epsilonI) + sqrt(epsilonJ);
     return (epsilonI != 0.0 && epsilonJ != 0.0) ? 4.0*(epsilonI*epsilonJ)/(denominator*denominator) : 0.0;
 }
