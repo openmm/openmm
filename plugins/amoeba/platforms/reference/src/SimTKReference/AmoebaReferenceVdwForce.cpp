@@ -294,7 +294,7 @@ double AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles,
             if (exclusions[jj] == 0) {
 
                 double combinedSigma   = (this->*_combineSigmas)(sigmaI, sigmas[jj]);
-                double combinedEpsilon = (this->*_combineEpsilons)(epsilonI, epsilons[jj]);
+                double combinedEpsilon = (this->*_combineEpsilons)(epsilonI, epsilons[jj], sigmaI, sigmas[jj]);
 
                 Vec3 force;
                 energy                     += calculatePairIxn(combinedSigma, combinedEpsilon,
@@ -354,7 +354,7 @@ double AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles,
         int siteJ                   = pair.second;
 
         double combinedSigma   = (this->*_combineSigmas)(sigmas[siteI], sigmas[siteJ]);
-        double combinedEpsilon = (this->*_combineEpsilons)(epsilons[siteI], epsilons[siteJ]);
+        double combinedEpsilon = (this->*_combineEpsilons)(epsilons[siteI], epsilons[siteJ], sigmas[siteI], sigmas[siteJ]);
 
         Vec3 force;
         energy                     += calculatePairIxn(combinedSigma, combinedEpsilon,
