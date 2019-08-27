@@ -69,7 +69,7 @@ Anaconda or Miniconda.
 
     conda install -c omnia -c conda-forge openmm
 
-This installs a version of OpenMM that is compiled to work with CUDA 9.2.
+This installs a version of OpenMM that is compiled to work with CUDA 10.1.
 Alternatively you can request a version that is compiled for a specific CUDA
 version with the command
 ::
@@ -78,7 +78,7 @@ version with the command
 
 where :code:`cuda92` should be replaced with the particular CUDA version
 installed on your computer.  Supported values are :code:`cuda75`, :code:`cuda80`,
-:code:`cuda90`, :code:`cuda91`, :code:`cuda92`, and :code:`cuda100`.  Because
+:code:`cuda90`, :code:`cuda91`, :code:`cuda92`, :code:`cuda100`, and :code:`cuda101`.  Because
 different CUDA releases are not binary compatible with each other, OpenMM can
 only work with the particular CUDA version it was compiled with.
 
@@ -1101,16 +1101,6 @@ algorithm\ :cite:`Tuckerman1992`.  This allows some forces in the system to be e
 frequently than others.  For details on how to use it, consult the API
 documentation.
 
-aMD Integrator
---------------
-
-There are three different integrator types that implement variations of the
-aMD\ :cite:`Hamelberg2007` accelerated sampling algorithm: :class:`AMDIntegrator`,
-:class:`AMDForceGroupIntegrator`, and :class:`DualAMDIntegrator`.  They
-perform integration on a modified potential energy surface to allow much faster
-sampling of conformations.  For details on how to use them, consult the API
-documentation.
-
 Compound Integrator
 -------------------
 
@@ -1370,6 +1360,55 @@ a checkpoint file every 5,000 steps, for example:
     simulation.reporters.append(CheckpointReporter('checkpnt.chk', 5000))
 
 Note that the checkpoint reporter will overwrite the last checkpoint file.
+
+
+Enhanced Sampling Methods
+=========================
+
+In many situations, the goal of a simulation is to sample the range of configurations
+accessible to a system.  It does not matter whether the simulation represents a
+single, physically realistic trajectory, only whether it produces a correct distribution
+of states.  In this case, a variety of methods can be used to sample configuration
+space much more quickly and efficiently than a single physical trajectory would.
+These are known as enhanced sampling methods.  OpenMM offers several that you
+can choose from.  They are briefly described here.  Consult the API documentation
+for more detailed descriptions and example code.
+
+Simulated Tempering
+-------------------
+
+Simulated tempering\ :cite:`Marinari1992` involves making frequent changes to the
+temperature of a simulation.  At high temperatures, it can quickly cross energy barriers
+and explore a wide range of configurations.  At lower temperatures, it more thoroughly
+explores each local region of configuration space.  This is a powerful method to
+speed up sampling when you do not know in advance what motions you want to sample.
+Simply specify the range of temperatures to simulate and the algorithm handles
+everything for you mostly automatically.
+
+Metadynamics
+------------
+
+Metadynamics\ :cite:`Barducci2008` is used when you do know in advance what
+motions you want to sample.  You specify one or more collective variables, and the
+algorithm adds a biasing potential to make the simulation explore a wide range of
+values for those variables.  It does this by periodically adding "bumps" to the biasing
+potential at the current values of the collective variables.  This encourages the simulation
+to move away from regions it has already explored and sample a wide range of values.
+At the end of the simulation, the biasing potential can be used to calculate the
+free energy of the system as a function of the collective variables.
+
+Accelerated Molecular Dynamics (aMD)
+------------------------------------
+
+aMD\ :cite:`Hamelberg2007` is another method that can be used when you do not know in
+advance what motions you want to accelerate.  It alters the potential energy surface
+by adding a "boost" potential whenever the potential energy is below a threshold.
+This makes local minima shallower and allows more frequent transitions between them.
+The boost can be applied to the total potential energy, to just a subset of interactions
+(typically the dihedral torsions), or both.  There are separate integrator classes
+for each of these options: :class:`AMDIntegrator`, :class:`AMDForceGroupIntegrator`,
+and :class:`DualAMDIntegrator`.
+
 
 .. _model-building-and-editing:
 

@@ -37,7 +37,6 @@
 #include "openmm/internal/ContextImpl.h"
 #ifdef WIN32
 #include <windows.h>
-#include <sstream>
 #else
 #ifndef __PNACL__
     #include <dlfcn.h>
@@ -45,6 +44,7 @@
 #include <dirent.h>
 #include <cstdlib>
 #endif
+#include <sstream>
 #include <set>
 #include <algorithm>
 
@@ -261,31 +261,42 @@ void Platform::loadPluginLibrary(const string& file) {
 vector<string> Platform::loadPluginsFromDirectory(const string& directory) {
     vector<string> files;
     char dirSeparator;
+    char pathSeparator;
+    stringstream sdirectory(directory);
 #ifdef WIN32
     dirSeparator = '\\';
+    pathSeparator = ';';
     WIN32_FIND_DATA fileInfo;
-    string filePattern(directory + dirSeparator + "*.dll");
-    HANDLE findHandle = FindFirstFile(filePattern.c_str(), &fileInfo);
-    if (findHandle != INVALID_HANDLE_VALUE) {
-        do {
-            if (fileInfo.cFileName[0] != '.')
-                files.push_back(string(fileInfo.cFileName));
-        } while (FindNextFile(findHandle, &fileInfo));
-        FindClose(findHandle);
+
+    for (string path; std::getline(sdirectory, path, pathSeparator);) {
+        string filePattern(path + dirSeparator + "*.dll");
+        HANDLE findHandle = FindFirstFile(filePattern.c_str(), &fileInfo);
+        if (findHandle != INVALID_HANDLE_VALUE) {
+            do {
+                if (fileInfo.cFileName[0] != '.')
+                    files.push_back(path+dirSeparator+string(fileInfo.cFileName));
+            } while (FindNextFile(findHandle, &fileInfo));
+            FindClose(findHandle);
+        }
     }
     vector<HMODULE> plugins;
 #else
-    dirSeparator = '/';
     DIR* dir;
+    dirSeparator = '/';
+    pathSeparator = ':';
     struct dirent *entry;
-    dir = opendir(directory.c_str());
-    if (dir != NULL) {
-        while ((entry = readdir(dir)) != NULL) {
-            if (entry->d_name[0] != '.')
-                files.push_back(string(entry->d_name));
+
+    for (string path; std::getline(sdirectory, path, pathSeparator);) {
+        dir = opendir(path.c_str());
+        if (dir != NULL) {
+            while ((entry = readdir(dir)) != NULL) {
+                if (entry->d_name[0] != '.')
+                    files.push_back(path+dirSeparator+string(entry->d_name));
+            }
+            closedir(dir);
         }
-        closedir(dir);
     }
+
     vector<void*> plugins;
 #endif
     vector<string> loadedLibraries;
@@ -294,7 +305,7 @@ vector<string> Platform::loadPluginsFromDirectory(const string& directory) {
 
     for (unsigned int i = 0; i < files.size(); ++i) {
         try {
-            plugins.push_back(loadOneLibrary(directory+dirSeparator+files[i]));
+            plugins.push_back(loadOneLibrary(files[i]));
             loadedLibraries.push_back(files[i]);
         } catch (OpenMMException& ex) {
 	    pluginLoadFailures.push_back(ex.what());

@@ -47,7 +47,7 @@ ONE_TIMESCALE = 1 / TIMESCALE
 class CharmmCrdFile(object):
     """
     Reads and parses a CHARMM coordinate file (.crd) into its components,
-    namely the coordinates, CHARMM atom types, resid, resname, etc.
+    namely the coordinates, CHARMM atom types, resname, etc.
 
     Attributes
     ----------
@@ -69,7 +69,6 @@ class CharmmCrdFile(object):
         self.atomno = []                   # Atom number
         self.resno = []                    # Residue number
         self.resname = []                  # Residue name
-        self.resid = []                    # Residue ID
         self.attype = []                   # Atom type
         self.positions = []                # 3N atomic coordinates
         self.title = []                    # .crd file title block
@@ -105,7 +104,7 @@ class CharmmCrdFile(object):
             try:
                 self.natom = int(line.strip().split()[0])
     
-                for row in range(self.natom):
+                for _ in range(self.natom):
                     line = crdfile.readline().strip().split()
                     self.atomno.append(int(line[0]))
                     self.resno.append(int(line[1]))
@@ -114,7 +113,6 @@ class CharmmCrdFile(object):
                     pos = Vec3(float(line[4]), float(line[5]), float(line[6]))
                     self.positions.append(pos)
                     self.segid.append(line[7])
-                    self.resid.append(int(line[8]))
                     self.weighting.append(float(line[9]))
     
                 if self.natom != len(self.positions):
@@ -124,7 +122,7 @@ class CharmmCrdFile(object):
                                            len(self.positions))
                     )
     
-            except (ValueError, IndexError) as e:
+            except (ValueError, IndexError):
                 raise CharmmFileError('Error parsing CHARMM coordinate file')
 
         # Apply units to the positions now. Do it this way to allow for

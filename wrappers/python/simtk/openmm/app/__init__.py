@@ -6,7 +6,7 @@ from __future__ import absolute_import
 __docformat__ = "epytext en"
 
 __author__ = "Peter Eastman"
-__copyright__ = "Copyright 2016, Stanford University and Peter Eastman"
+__copyright__ = "Copyright 2016-2019, Stanford University and Peter Eastman"
 __credits__ = []
 __license__ = "MIT"
 __maintainer__ = "Peter Eastman"
@@ -32,6 +32,8 @@ from .checkpointreporter import CheckpointReporter
 from .charmmcrdfiles import CharmmCrdFile, CharmmRstFile
 from .charmmparameterset import CharmmParameterSet
 from .charmmpsffile import CharmmPsfFile, CharmmPSFWarning
+from .simulatedtempering import SimulatedTempering
+from .metadynamics import Metadynamics, BiasVariable
 
 # Enumerated values
 

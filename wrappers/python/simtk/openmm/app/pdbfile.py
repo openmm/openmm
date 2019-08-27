@@ -352,9 +352,11 @@ class PDBFile(object):
                     resName = res.name
                 if keepIds and len(res.id) < 5:
                     resId = res.id
-                    resIC = res.insertionCode
                 else:
                     resId = "%4d" % ((resIndex+1)%10000)
+                if len(res.insertionCode) == 1:
+                    resIC = res.insertionCode
+                else:
                     resIC = " "
                 if res.name in nonHeterogens:
                     recordName = "ATOM  "

@@ -37,6 +37,7 @@ import os
 import itertools
 import xml.etree.ElementTree as etree
 import math
+import warnings
 from math import sqrt, cos
 from copy import deepcopy
 from collections import defaultdict
@@ -2273,10 +2274,11 @@ class NonbondedGenerator(object):
 
     SCALETOL = 1e-5
 
-    def __init__(self, forcefield, coulomb14scale, lj14scale):
+    def __init__(self, forcefield, coulomb14scale, lj14scale, useDispersionCorrection):
         self.ff = forcefield
         self.coulomb14scale = coulomb14scale
         self.lj14scale = lj14scale
+        self.useDispersionCorrection = useDispersionCorrection
         self.params = ForceField._AtomTypeParameters(forcefield, 'NonbondedForce', 'Atom', ('charge', 'sigma', 'epsilon'))
 
     def registerAtom(self, parameters):
@@ -2285,15 +2287,31 @@ class NonbondedGenerator(object):
     @staticmethod
     def parseElement(element, ff):
         existing = [f for f in ff._forces if isinstance(f, NonbondedGenerator)]
+        if 'useDispersionCorrection' in element.attrib:
+            useDispersionCorrection = bool(eval(element.attrib.get('useDispersionCorrection')))
+        else:
+            useDispersionCorrection = None
         if len(existing) == 0:
-            generator = NonbondedGenerator(ff, float(element.attrib['coulomb14scale']), float(element.attrib['lj14scale']))
+            generator = NonbondedGenerator(
+                ff,
+                float(element.attrib['coulomb14scale']),
+                float(element.attrib['lj14scale']),
+                useDispersionCorrection
+            )
             ff.registerGenerator(generator)
         else:
             # Multiple <NonbondedForce> tags were found, probably in different files.  Simply add more types to the existing one.
             generator = existing[0]
-            if abs(generator.coulomb14scale - float(element.attrib['coulomb14scale'])) > NonbondedGenerator.SCALETOL or \
-                    abs(generator.lj14scale - float(element.attrib['lj14scale'])) > NonbondedGenerator.SCALETOL:
+            if (abs(generator.coulomb14scale - float(element.attrib['coulomb14scale'])) > NonbondedGenerator.SCALETOL
+                or abs(generator.lj14scale - float(element.attrib['lj14scale'])) > NonbondedGenerator.SCALETOL
+            ):
                 raise ValueError('Found multiple NonbondedForce tags with different 1-4 scales')
+            if (
+                    generator.useDispersionCorrection is not None
+                    and useDispersionCorrection is not None
+                    and generator.useDispersionCorrection != useDispersionCorrection
+            ):
+                raise ValueError('Found multiple NonbondedForce tags with different useDispersionCorrection settings.')
         generator.params.parseDefinitions(element)
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
@@ -2317,7 +2335,18 @@ class NonbondedGenerator(object):
         if 'ewaldErrorTolerance' in args:
             force.setEwaldErrorTolerance(args['ewaldErrorTolerance'])
         if 'useDispersionCorrection' in args:
-            force.setUseDispersionCorrection(bool(args['useDispersionCorrection']))
+            lrc_keyword = bool(args['useDispersionCorrection'])
+            if self.useDispersionCorrection is not None and lrc_keyword != self.useDispersionCorrection:
+                warnings.warn(
+                    "Conflicting settings for useDispersionCorrection in createSystem() and forcefield file. "
+                    "Using the one specified in createSystem()."
+                )
+            force.setUseDispersionCorrection(lrc_keyword)
+        elif self.useDispersionCorrection is not None:
+            force.setUseDispersionCorrection(self.useDispersionCorrection)
+        else:
+            # by default
+            force.setUseDispersionCorrection(True)
         sys.addForce(force)
 
     def postprocessSystem(self, sys, data, args):
@@ -2334,10 +2363,11 @@ parsers["NonbondedForce"] = NonbondedGenerator.parseElement
 class LennardJonesGenerator(object):
     """A NBFix generator to construct the L-J force with NBFIX implemented as a lookup table"""
 
-    def __init__(self, forcefield, lj14scale):
+    def __init__(self, forcefield, lj14scale, useDispersionCorrection):
         self.ff = forcefield
         self.nbfixTypes = {}
         self.lj14scale = lj14scale
+        self.useDispersionCorrection = useDispersionCorrection
         self.ljTypes = ForceField._AtomTypeParameters(forcefield, 'LennardJonesForce', 'Atom', ('sigma', 'epsilon'))
 
     def registerNBFIX(self, parameters):
@@ -2356,14 +2386,28 @@ class LennardJonesGenerator(object):
     @staticmethod
     def parseElement(element, ff):
         existing = [f for f in ff._forces if isinstance(f, LennardJonesGenerator)]
+        if 'useDispersionCorrection' in element.attrib:
+            useDispersionCorrection = bool(eval(element.attrib.get('useDispersionCorrection')))
+        else:
+            useDispersionCorrection = None
         if len(existing) == 0:
-            generator = LennardJonesGenerator(ff, float(element.attrib['lj14scale']))
+            generator = LennardJonesGenerator(
+                ff,
+                float(element.attrib['lj14scale']),
+                useDispersionCorrection=useDispersionCorrection
+            )
             ff.registerGenerator(generator)
         else:
             # Multiple <LennardJonesForce> tags were found, probably in different files
             generator = existing[0]
             if abs(generator.lj14scale - float(element.attrib['lj14scale'])) > NonbondedGenerator.SCALETOL:
                 raise ValueError('Found multiple LennardJonesForce tags with different 1-4 scales')
+            if (
+                    generator.useDispersionCorrection is not None
+                    and useDispersionCorrection is not None
+                    and generator.useDispersionCorrection != useDispersionCorrection
+            ):
+                raise ValueError('Found multiple LennardJonesForce tags with different useDispersionCorrection settings.')
         for LJ in element.findall('Atom'):
             generator.registerLennardJones(LJ.attrib)
         for Nbfix in element.findall('NBFixPair'):
@@ -2434,12 +2478,24 @@ class LennardJonesGenerator(object):
         if args['switchDistance'] is not None:
             self.force.setUseSwitchingFunction(True)
             self.force.setSwitchingDistance(args['switchDistance'])
+        if 'useDispersionCorrection' in args:
+            lrc_keyword = bool(args['useDispersionCorrection'])
+            if self.useDispersionCorrection is not None and lrc_keyword != self.useDispersionCorrection:
+                warnings.warn(
+                    "Conflicting settings for useDispersionCorrection in createSystem() and forcefield file. "
+                    "Using the one specified in createSystem()."
+                )
+            self.force.setUseLongRangeCorrection(lrc_keyword)
+        elif self.useDispersionCorrection is not None:
+            self.force.setUseLongRangeCorrection(self.useDispersionCorrection)
+        else:
+            # by default
+            self.force.setUseLongRangeCorrection(True)
 
         # Add the particles
 
         for atom in data.atoms:
             self.force.addParticle((typeToMergedType[data.atomType[atom]],))
-        self.force.setUseLongRangeCorrection(True)
         self.force.setCutoffDistance(nonbondedCutoff)
         sys.addForce(self.force)
 
@@ -2506,9 +2562,12 @@ class GBSAOBCGenerator(object):
         generator.params.parseDefinitions(element)
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
-        methodMap = {NoCutoff:mm.NonbondedForce.NoCutoff,
-                     CutoffNonPeriodic:mm.NonbondedForce.CutoffNonPeriodic,
-                     CutoffPeriodic:mm.NonbondedForce.CutoffPeriodic}
+        methodMap = {NoCutoff:mm.GBSAOBCForce.NoCutoff,
+                     CutoffNonPeriodic:mm.GBSAOBCForce.CutoffNonPeriodic,
+                     CutoffPeriodic:mm.GBSAOBCForce.CutoffPeriodic,
+                     Ewald:mm.GBSAOBCForce.CutoffPeriodic,
+                     PME:mm.GBSAOBCForce.CutoffPeriodic,
+                     LJPME:mm.GBSAOBCForce.CutoffPeriodic}
         if nonbondedMethod not in methodMap:
             raise ValueError('Illegal nonbonded method for GBSAOBCForce')
         force = mm.GBSAOBCForce()
@@ -2743,7 +2802,10 @@ class CustomNonbondedGenerator(object):
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         methodMap = {NoCutoff:mm.CustomNonbondedForce.NoCutoff,
                      CutoffNonPeriodic:mm.CustomNonbondedForce.CutoffNonPeriodic,
-                     CutoffPeriodic:mm.CustomNonbondedForce.CutoffPeriodic}
+                     CutoffPeriodic:mm.CustomNonbondedForce.CutoffPeriodic,
+                     Ewald:mm.CustomNonbondedForce.CutoffPeriodic,
+                     PME:mm.CustomNonbondedForce.CutoffPeriodic,
+                     LJPME:mm.CustomNonbondedForce.CutoffPeriodic}
         if nonbondedMethod not in methodMap:
             raise ValueError('Illegal nonbonded method for CustomNonbondedForce')
         force = mm.CustomNonbondedForce(self.energy)
@@ -2803,7 +2865,10 @@ class CustomGBGenerator(object):
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         methodMap = {NoCutoff:mm.CustomGBForce.NoCutoff,
                      CutoffNonPeriodic:mm.CustomGBForce.CutoffNonPeriodic,
-                     CutoffPeriodic:mm.CustomGBForce.CutoffPeriodic}
+                     CutoffPeriodic:mm.CustomGBForce.CutoffPeriodic,
+                     Ewald:mm.CustomGBForce.CutoffPeriodic,
+                     PME:mm.CustomGBForce.CutoffPeriodic,
+                     LJPME:mm.CustomGBForce.CutoffPeriodic}
         if nonbondedMethod not in methodMap:
             raise ValueError('Illegal nonbonded method for CustomGBForce')
         force = mm.CustomGBForce()
@@ -2886,7 +2951,10 @@ class CustomHbondGenerator(object):
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         methodMap = {NoCutoff:mm.CustomHbondForce.NoCutoff,
                      CutoffNonPeriodic:mm.CustomHbondForce.CutoffNonPeriodic,
-                     CutoffPeriodic:mm.CustomHbondForce.CutoffPeriodic}
+                     CutoffPeriodic:mm.CustomHbondForce.CutoffPeriodic,
+                     Ewald:mm.CustomHbondForce.CutoffPeriodic,
+                     PME:mm.CustomHbondForce.CutoffPeriodic,
+                     LJPME:mm.CustomHbondForce.CutoffPeriodic}
         if nonbondedMethod not in methodMap:
             raise ValueError('Illegal nonbonded method for CustomNonbondedForce')
         force = mm.CustomHbondForce(self.energy)
@@ -3024,7 +3092,10 @@ class CustomManyParticleGenerator(object):
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         methodMap = {NoCutoff:mm.CustomManyParticleForce.NoCutoff,
                      CutoffNonPeriodic:mm.CustomManyParticleForce.CutoffNonPeriodic,
-                     CutoffPeriodic:mm.CustomManyParticleForce.CutoffPeriodic}
+                     CutoffPeriodic:mm.CustomManyParticleForce.CutoffPeriodic,
+                     Ewald:mm.CustomManyParticleForce.CutoffPeriodic,
+                     PME:mm.CustomManyParticleForce.CutoffPeriodic,
+                     LJPME:mm.CustomManyParticleForce.CutoffPeriodic}
         if nonbondedMethod not in methodMap:
             raise ValueError('Illegal nonbonded method for CustomManyParticleForce')
         force = mm.CustomManyParticleForce(self.particlesPerSet, self.energy)

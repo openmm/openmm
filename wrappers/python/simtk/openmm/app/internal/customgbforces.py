@@ -250,7 +250,7 @@ def _bondi_radii(topology):
         E.silicon:      2.1,
         E.phosphorus:   1.85,
         E.sulfur:       1.8,
-        E.chlorine:     1.5,
+        E.chlorine:     1.7,
     }
 
     if _have_numpy:
@@ -272,7 +272,7 @@ def _mbondi_radii(topology, all_bonds = None):
         E.silicon:      2.1,
         E.phosphorus:   1.85,
         E.sulfur:       1.8,
-        E.chlorine:     1.5,
+        E.chlorine:     1.7,
     }
     if _have_numpy:
         radii = numpy.empty(topology.getNumAtoms(), numpy.double)
@@ -310,7 +310,7 @@ def _mbondi2_radii(topology, all_bonds = None):
         E.silicon:      2.1,
         E.phosphorus:   1.85,
         E.sulfur:       1.8,
-        E.chlorine:     1.5,
+        E.chlorine:     1.7,
     }
     if _have_numpy:
         radii = numpy.empty(topology.getNumAtoms(), numpy.double)
@@ -541,7 +541,7 @@ class GBSAHCTForce(CustomAmberGBForceBase):
         self.addPerParticleParameter("charge")
         self.addPerParticleParameter("or") # Offset radius
         self.addPerParticleParameter("sr") # Scaled offset radius
-        self.addComputedValue("I", "step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r);"
+        self.addComputedValue("I", "select(step(r+sr2-or1), 0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r), 0);"
                                    "U=r+sr2;"
                                    "L=max(or1, D);"
                                    "D=abs(r-sr2)",
@@ -607,7 +607,7 @@ class GBSAOBC1Force(CustomAmberGBForceBase):
         self.addPerParticleParameter("charge")
         self.addPerParticleParameter("or") # Offset radius
         self.addPerParticleParameter("sr") # Scaled offset radius
-        self.addComputedValue("I",  "step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r);"
+        self.addComputedValue("I",  "select(step(r+sr2-or1), 0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r), 0);"
                                     "U=r+sr2;"
                                     "L=max(or1, D);"
                                     "D=abs(r-sr2)", CustomGBForce.ParticlePairNoExclusions)
@@ -675,7 +675,7 @@ class GBSAOBC2Force(GBSAOBC1Force):
         self.addPerParticleParameter("charge")
         self.addPerParticleParameter("or") # Offset radius
         self.addPerParticleParameter("sr") # Scaled offset radius
-        self.addComputedValue("I",  "step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r);"
+        self.addComputedValue("I",  "select(step(r+sr2-or1), 0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r), 0);"
                                     "U=r+sr2;"
                                     "L=max(or1, D);"
                                     "D=abs(r-sr2)", CustomGBForce.ParticlePairNoExclusions)

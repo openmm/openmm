@@ -93,12 +93,10 @@ class TestCharmmFiles(unittest.TestCase):
     def test_NBFIX(self):
         """Tests CHARMM systems with NBFIX Lennard-Jones modifications"""
         warnings.filterwarnings('ignore', category=CharmmPSFWarning)
-        psf = CharmmPsfFile('systems/ala3_solv.psf')
+        psf = CharmmPsfFile('systems/ala3_solv.psf', unitCellDimensions=Vec3(32.7119500, 32.9959600, 33.0071500)*angstroms)
         crd = CharmmCrdFile('systems/ala3_solv.crd')
         params = CharmmParameterSet('systems/par_all36_prot.prm',
                                     'systems/toppar_water_ions.str')
-        # Box dimensions (found from bounding box)
-        psf.setBox(32.7119500*angstroms, 32.9959600*angstroms, 33.0071500*angstroms)
 
         # Turn off charges so we only test the Lennard-Jones energies
         for a in psf.atom_list:
@@ -114,7 +112,7 @@ class TestCharmmFiles(unittest.TestCase):
 
         state = con.getState(getEnergy=True, enforcePeriodicBox=True)
         ene = state.getPotentialEnergy().value_in_unit(kilocalories_per_mole)
-        self.assertAlmostEqual(ene, 15490.0033559, delta=0.05)
+        self.assertAlmostEqual(ene, 15559.71602, delta=0.05)
 
     def test_Drude(self):
         """Test CHARMM systems with Drude force field"""
@@ -127,14 +125,14 @@ class TestCharmmFiles(unittest.TestCase):
 
         # Now compute the full energy
         plat = Platform.getPlatformByName('Reference')
-        system = psf.createSystem(params, nonbondedMethod=PME)
+        system = psf.createSystem(params, nonbondedMethod=PME, ewaldErrorTolerance=0.00005)
         integrator = DrudeLangevinIntegrator(300*kelvin, 1.0/picosecond, 1*kelvin, 10/picosecond, 0.001*picoseconds)
         con = Context(system, integrator, plat)
         con.setPositions(crd.positions)
 
         state = con.getState(getEnergy=True, enforcePeriodicBox=True)
         ene = state.getPotentialEnergy().value_in_unit(kilocalories_per_mole)
-        self.assertAlmostEqual(ene, -1831.54, delta=0.5)
+        self.assertAlmostEqual(ene, -1788.36644, delta=1.0)
 
     def test_Lonepair(self):
         """Test the lonepair facilities, in particular the colinear type of lonepairs"""
@@ -169,12 +167,11 @@ class TestCharmmFiles(unittest.TestCase):
     def testSystemOptions(self):
         """ Test various options in CharmmPsfFile.createSystem """
         warnings.filterwarnings('ignore', category=CharmmPSFWarning)
-        psf = CharmmPsfFile('systems/ala3_solv.psf')
+        psf = CharmmPsfFile('systems/ala3_solv.psf',
+                            periodicBoxVectors=(Vec3(32.7119500, 0, 0)*angstroms, Vec3(0, 32.9959600, 0)*angstroms, Vec3(0, 0, 33.0071500)*angstroms))
         crd = CharmmCrdFile('systems/ala3_solv.crd')
         params = CharmmParameterSet('systems/par_all36_prot.prm',
                                     'systems/toppar_water_ions.str')
-        # Box dimensions (found from bounding box)
-        psf.setBox(32.7119500*angstroms, 32.9959600*angstroms, 33.0071500*angstroms)
 
         # Check some illegal options
         self.assertRaises(ValueError, lambda:
@@ -274,6 +271,58 @@ class TestCharmmFiles(unittest.TestCase):
                 else:
                     dtheta = math.pi-angle
                 self.assertAlmostEqual(energy, dtheta**2, delta=1e-5)
+
+    def test_Residues(self):
+        """Test that residues are read correctly, even if they have the same RESID while being in separate segments."""
+        m14 = (["C{}".format(i) for i in range(1,14)]
+               + ["H{}".format(i) for i in range(1,12)]
+               + ["N{}".format(i) for i in range(1,4)]
+               )
+        tip3 = ["OH2", "H1", "H2"]
+        pot = ["POT"]
+        cla = ["CLA"]
+        psf = CharmmPsfFile('systems/charmm-solvated/isa_wat.3_kcl.m14.psf')
+        for residue in psf.topology.residues():
+            atoms = [atom.name for atom in residue.atoms()]
+            if residue.name == "M14":
+                self.assertEqual(sorted(m14), sorted(atoms))
+            elif residue.name == "TIP3":
+                self.assertEqual(sorted(tip3), sorted(atoms))
+            elif residue.name == "POT":
+                self.assertEqual(sorted(pot), sorted(atoms))
+            elif residue.name == "CLA":
+                self.assertEqual(sorted(cla), sorted(atoms))
+            else:
+                self.assertTrue(False)
+
+    def test_NoLongRangeCorrection(self):
+        """Test that long range correction is disabled."""
+        parameters = CharmmParameterSet(
+            'systems/charmm-solvated/envi.str',
+            'systems/charmm-solvated/m14.rtf',
+            'systems/charmm-solvated/m14.prm'
+        )
+        psf = CharmmPsfFile('systems/charmm-solvated/isa_wat.3_kcl.m14.psf')
+        psf.setBox(3.0584*nanometers,3.0584*nanometers,3.0584*nanometers)
+        system = psf.createSystem(parameters, nonbondedMethod=PME)
+        for force in system.getForces():
+            if isinstance(force, CustomNonbondedForce):
+                self.assertFalse(force.getUseLongRangeCorrection())
+            if isinstance(force, NonbondedForce):
+                self.assertFalse(force.getUseDispersionCorrection())
+
+    def test_NoPsfWarning(self):
+        """Test that PSF warning is not thrown."""
+        parameters = CharmmParameterSet(
+            'systems/charmm-solvated/envi.str',
+            'systems/charmm-solvated/m14.rtf',
+            'systems/charmm-solvated/m14.prm'
+        )
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", CharmmPSFWarning)
+            psf = CharmmPsfFile('systems/charmm-solvated/isa_wat.3_kcl.m14.psf')
+            psf.setBox(3.0584*nanometers,3.0584*nanometers,3.0584*nanometers)
+            psf.createSystem(parameters, nonbondedMethod=PME)
 
 
 if __name__ == '__main__':

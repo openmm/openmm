@@ -377,7 +377,7 @@ for values in sorted(uniqueCmaps, key=lambda x: uniqueCmaps[x]):
 for map in cmaps:
     print('   <Torsion map="%d" class1="%s" class2="%s" class3="%s" class4="%s" class5="%s"/>' % (uniqueCmaps[map.values], map.classes[0], map.classes[1], map.classes[2], map.classes[3], map.classes[4]))
 print(' </CMAPTorsionForce>')
-print(' <NonbondedForce coulomb14scale="1.0" lj14scale="1.0">')
+print(' <NonbondedForce coulomb14scale="1.0" lj14scale="1.0" useDispersionCorrection="False">')
 for type in atomTypes:
     print('  <Atom type="%d" charge="%g" sigma="1.0" epsilon="1.0"/>' % (type.type, type.charge))
 print(' </NonbondedForce>')
@@ -464,6 +464,7 @@ print("""]
 
 customNonbondedForce = mm.CustomNonbondedForce('4*eps*((sig/r)^12-(sig/r)^6); eps=epsilon(type1, type2); sig=sigma(type1, type2)')
 customNonbondedForce.setNonbondedMethod(min(nonbondedForce.getNonbondedMethod(), 2))
+customNonbondedForce.setUseLongRangeCorrection(False)
 customNonbondedForce.addTabulatedFunction('epsilon', mm.Discrete2DFunction(numAtomClasses, numAtomClasses, epsilon))
 customNonbondedForce.addTabulatedFunction('sigma', mm.Discrete2DFunction(numAtomClasses, numAtomClasses, sigma))
 customNonbondedForce.addPerParticleParameter('type')

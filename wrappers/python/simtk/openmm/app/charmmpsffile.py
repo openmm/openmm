@@ -166,7 +166,7 @@ class CharmmPsfFile(object):
     GB_FORCE_GROUP = 6
 
     @_catchindexerror
-    def __init__(self, psf_name):
+    def __init__(self, psf_name, periodicBoxVectors=None, unitCellDimensions=None):
         """Opens and parses a PSF file, then instantiates a CharmmPsfFile
         instance from the data.
 
@@ -174,6 +174,11 @@ class CharmmPsfFile(object):
         ----------
         psf_name : str
             Name of the PSF file (it must exist)
+        periodicBoxVectors : tuple of Vec3
+            the vectors defining the periodic box
+        unitCellDimensions : Vec3
+            the dimensions of the crystallographic unit cell.  For
+            non-rectangular unit cells, specify periodicBoxVectors instead.
 
         Raises
         ------
@@ -358,7 +363,10 @@ class CharmmPsfFile(object):
         set_molecules(atom_list)
         molecule_list = [atom.marked for atom in atom_list]
         if len(holder) == len(atom_list):
-            if molecule_list != holder:
+            if len(molecule_list) != len(holder):
+                # The MOLNT section is only used for fluctuating charge models,
+                # which are currently not supported anyway.
+                # Therefore, we only check the lengths of the lists now rather than their contents.
                 warnings.warn('Detected PSF molecule section that is WRONG. '
                               'Resetting molecularity.', CharmmPSFWarning)
         # We have a CHARMM PSF file; now do NUMLP/NUMLPH sections
@@ -449,7 +457,14 @@ class CharmmPsfFile(object):
         self.group_list = group_list
         self.title = title
         self.flags = psf_flags
-        self.box_vectors = None
+        if unitCellDimensions is not None:
+            if periodicBoxVectors is not None:
+                raise ValueError("specify either periodicBoxVectors or unitCellDimensions, but not both")
+            if u.is_quantity(unitCellDimensions):
+                unitCellDimensions = unitCellDimensions.value_in_unit(u.nanometers)
+            self.box_vectors = (Vec3(unitCellDimensions[0], 0, 0), Vec3(0, unitCellDimensions[1], 0), Vec3(0, 0, unitCellDimensions[2]))*u.nanometers
+        else:
+            self.box_vectors = periodicBoxVectors
 
     @staticmethod
     def _convert(string, type, message):
@@ -710,7 +725,7 @@ class CharmmPsfFile(object):
                 last_residue = None
             if resid != last_residue:
                 last_residue = resid
-                residue = topology.addResidue(atom.residue.resname, chain, resid)
+                residue = topology.addResidue(atom.residue.resname, chain, str(atom.residue.idx), atom.residue.inscode)
             if atom.type is not None:
                 # This is the most reliable way of determining the element
                 atomic_num = atom.type.atomic_number
@@ -1082,6 +1097,7 @@ class CharmmPsfFile(object):
         # Add nonbonded terms now
         if verbose: print('Adding nonbonded interactions...')
         force = mm.NonbondedForce()
+        force.setUseDispersionCorrection(False)
         force.setForceGroup(self.NONBONDED_FORCE_GROUP)
         if not hasbox: # non-periodic
             if nonbondedMethod is ff.NoCutoff:
@@ -1221,7 +1237,6 @@ class CharmmPsfFile(object):
             if (nonbondedMethod in (ff.PME, ff.LJPME, ff.Ewald, ff.CutoffPeriodic)):
                 cforce.setNonbondedMethod(cforce.CutoffPeriodic)
                 cforce.setCutoffDistance(nonbondedCutoff)
-                cforce.setUseLongRangeCorrection(True)
             elif nonbondedMethod is ff.NoCutoff:
                 cforce.setNonbondedMethod(cforce.NoCutoff)
             elif nonbondedMethod is ff.CutoffNonPeriodic:
