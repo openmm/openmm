@@ -1731,11 +1731,11 @@ public:
      * 
      * @param context  the context in which to execute this kernel
      * @param noseHooverChain the object describing the chain to be propagated.
-     * @param kineticEnergy the kineticEnergy of the particles being thermostated by this chain.
+     * @param kineticEnergies the {absolute, relative} kineticEnergy of the particles being thermostated by this chain.
      * @param timeStep the time step used by the integrator.
-     * @return the velocity scale factor to apply to the particles associated with this heat bath.
+     * @return the {absolute, relative} velocity scale factor to apply to the particles associated with this heat bath.
      */
-    virtual double propagateChain(ContextImpl& context, const NoseHooverChain &nhc, double kineticEnergy, double timeStep);
+    virtual std::pair<double, double> propagateChain(ContextImpl& context, const NoseHooverChain &nhc, std::pair<double, double> kineticEnergies, double timeStep);
     /**
      * Execute the kernal that computes the total (kinetic + potential) heat bath energy.
      *
@@ -1753,26 +1753,29 @@ public:
      * @param downloadValue whether the computed value should be downloaded and returned.
      *
      */
-     virtual double computeMaskedKineticEnergy(ContextImpl& context, const NoseHooverChain &noseHooverChain, bool downloadValue);
+     virtual std::pair<double,double> computeMaskedKineticEnergy(ContextImpl& context, const NoseHooverChain &noseHooverChain, bool downloadValue);
 
     /**
      * Execute the kernel that scales the velocities of particles associated with a nose hoover chain
      *
      * @param context the context in which to execute this kernel
      * @param noseHooverChain the chain whose energy is to be determined.
-     * @param scaleFactor the multiplicative factor by which velocities are scaled.
+     * @param scaleFactors the {absolute, relative} multiplicative factor by which velocities are scaled.
      */
-    virtual void scaleVelocities(ContextImpl& context, const NoseHooverChain &noseHooverChain, double scaleFactor);
+    virtual void scaleVelocities(ContextImpl& context, const NoseHooverChain &noseHooverChain, std::pair<double, double> scaleFactors);
 
 private:
+    int sumWorkGroupSize;
     CudaContext& cu;
     CudaArray scaleFactorBuffer, kineticEnergyBuffer, chainMasses, chainForces, heatBathEnergy;
-    std::map<int, CudaArray> masks;
+    std::map<int, CudaArray> atomlists, pairlists;
     std::map<int, CUfunction> propagateKernels;
     CUfunction reduceEnergyKernel;
     CUfunction computeHeatBathEnergyKernel;
-    CUfunction computeMaskedKineticEnergyKernel;
-    CUfunction scaleVelocitiesKernel;
+    CUfunction computeAtomsKineticEnergyKernel;
+    CUfunction computePairsKineticEnergyKernel;
+    CUfunction scaleAtomsVelocitiesKernel;
+    CUfunction scalePairsVelocitiesKernel;
 };
 
 /**

@@ -2477,54 +2477,58 @@ std::pair<double, double> ReferenceNoseHooverChainKernel::propagateChain(Context
     // Get the variables describing the NHC
     int chainLength = nhc.getDefaultChainLength();
     int chainID = nhc.getDefaultChainID();
-    double temperature = nhc.getDefaultTemperature();
-    double collisionFrequency = nhc.getDefaultCollisionFrequency();
     int numDOFs = nhc.getDefaultNumDegreesOfFreedom();
     int numMTS = nhc.getDefaultNumMultiTimeSteps();
 
     // Get the state of the NHC from the context
     auto& allChainPositions = extractNoseHooverPositions(context);
     auto& allChainVelocities = extractNoseHooverVelocities(context);
-    if (allChainPositions.size() < chainID+1){
-        allChainPositions.resize(chainID+1);
-    }
-    if (allChainVelocities.size() < chainID+1){
-        allChainVelocities.resize(chainID+1);
-    }
-    auto& chainPositions = allChainPositions.at(chainID);
-    auto& chainVelocities = allChainVelocities.at(chainID);
-    if (chainPositions.size() < chainLength){
-        chainPositions.resize(chainLength, 0);
-    }
-    if (chainVelocities.size() < chainLength){
-        chainVelocities.resize(chainLength, 0);
-    }
-    double absScale = chainPropagator->propagate(absKE, chainVelocities, chainPositions, numDOFs,
-                                                 temperature, collisionFrequency, timeStep,
-                                                 numMTS, nhc.getDefaultYoshidaSuzukiWeights());
-    double relScale = 0;
-    int numPairs = nhc.getThermostatedPairs().size();
-    if(numPairs){
-        double relativeTemperature = nhc.getDefaultRelativeTemperature();
-        double relativeCollisionFrequency = nhc.getDefaultRelativeCollisionFrequency();
-        if (allChainPositions.size() < chainID+2){
-            allChainPositions.resize(chainID+2);
+
+    int nAtoms = nhc.getThermostatedAtoms().size();
+    double absScale = 0;
+    if (nAtoms) {
+        if (allChainPositions.size() < 2*chainID+1){
+            allChainPositions.resize(2*chainID+1);
         }
-        if (allChainVelocities.size() < chainID+2){
-            allChainVelocities.resize(chainID+2);
+        if (allChainVelocities.size() < 2*chainID+1){
+            allChainVelocities.resize(2*chainID+1);
         }
-        auto& chainPositions = allChainPositions.at(chainID+1);
-        auto& chainVelocities = allChainVelocities.at(chainID+1);
+        auto& chainPositions = allChainPositions.at(2*chainID);
+        auto& chainVelocities = allChainVelocities.at(2*chainID);
         if (chainPositions.size() < chainLength){
             chainPositions.resize(chainLength, 0);
         }
         if (chainVelocities.size() < chainLength){
             chainVelocities.resize(chainLength, 0);
         }
-        relScale = chainPropagator->propagate(relKE, chainVelocities, chainPositions, 3*numPairs,
-                                              relativeTemperature, relativeCollisionFrequency, timeStep,
+        double temperature = nhc.getDefaultTemperature();
+        double collisionFrequency = nhc.getDefaultCollisionFrequency();
+        absScale = chainPropagator->propagate(absKE, chainVelocities, chainPositions, numDOFs,
+                                              temperature, collisionFrequency, timeStep,
                                               numMTS, nhc.getDefaultYoshidaSuzukiWeights());
-
+    }
+    double relScale = 0;
+    int nPairs = nhc.getThermostatedPairs().size();
+    if (nPairs) {
+        if (allChainPositions.size() < 2*chainID+2){
+            allChainPositions.resize(2*chainID+2);
+        }
+        if (allChainVelocities.size() < 2*chainID+2){
+            allChainVelocities.resize(2*chainID+2);
+        }
+        auto& chainPositions = allChainPositions.at(2*chainID+1);
+        auto& chainVelocities = allChainVelocities.at(2*chainID+1);
+        if (chainPositions.size() < chainLength){
+            chainPositions.resize(chainLength, 0);
+        }
+        if (chainVelocities.size() < chainLength){
+            chainVelocities.resize(chainLength, 0);
+        }
+        double temperature = nhc.getDefaultRelativeTemperature();
+        double collisionFrequency = nhc.getDefaultRelativeCollisionFrequency();
+        relScale = chainPropagator->propagate(relKE, chainVelocities, chainPositions, 3*nPairs,
+                                              temperature, collisionFrequency, timeStep,
+                                              numMTS, nhc.getDefaultYoshidaSuzukiWeights());
     }
     return {absScale, relScale};
 }
@@ -2534,21 +2538,41 @@ double ReferenceNoseHooverChainKernel::computeHeatBathEnergy(ContextImpl& contex
     double kineticEnergy = 0;
     int chainLength = nhc.getDefaultChainLength();
     int chainID = nhc.getDefaultChainID();
-    double temperature = nhc.getDefaultTemperature();
-    double collisionFrequency = nhc.getDefaultCollisionFrequency();
-    double kT = temperature * BOLTZ;
-    int numDOFs = nhc.getDefaultNumDegreesOfFreedom();
+    int nAtoms = nhc.getThermostatedAtoms().size();
+    int nPairs = nhc.getThermostatedPairs().size();
     auto& nhcPositions = extractNoseHooverPositions(context);
     auto& nhcVelocities = extractNoseHooverVelocities(context);
-    for(int i = 0; i < chainLength; ++i) {
-        double prefac = i ? 1 : numDOFs;
-        double mass = prefac * kT / (collisionFrequency * collisionFrequency);
-        double velocity = nhcVelocities[chainID][i];
-        // The kinetic energy of this bead
-        kineticEnergy += 0.5 * mass * velocity * velocity;
-        // The potential energy of this bead
-        double position = nhcPositions[chainID][i];
-        potentialEnergy += prefac * kT * position;
+    if (nAtoms) {
+        double temperature = nhc.getDefaultTemperature();
+        double collisionFrequency = nhc.getDefaultCollisionFrequency();
+        double kT = temperature * BOLTZ;
+        int numDOFs = nhc.getDefaultNumDegreesOfFreedom();
+        for(int i = 0; i < chainLength; ++i) {
+            double prefac = i ? 1 : numDOFs;
+            double mass = prefac * kT / (collisionFrequency * collisionFrequency);
+            double velocity = nhcVelocities[2*chainID][i];
+            // The kinetic energy of this bead
+            kineticEnergy += 0.5 * mass * velocity * velocity;
+            // The potential energy of this bead
+            double position = nhcPositions[2*chainID][i];
+            potentialEnergy += prefac * kT * position;
+        }
+    }
+    if (nPairs) {
+        double temperature = nhc.getDefaultRelativeTemperature();
+        double collisionFrequency = nhc.getDefaultRelativeCollisionFrequency();
+        double kT = temperature * BOLTZ;
+        int numDOFs = 3 * nPairs;
+        for(int i = 0; i < chainLength; ++i) {
+            double prefac = i ? 1 : numDOFs;
+            double mass = prefac * kT / (collisionFrequency * collisionFrequency);
+            double velocity = nhcVelocities[2*chainID+1][i];
+            // The kinetic energy of this bead
+            kineticEnergy += 0.5 * mass * velocity * velocity;
+            // The potential energy of this bead
+            double position = nhcPositions[2*chainID+1][i];
+            potentialEnergy += prefac * kT * position;
+        }
     }
     return kineticEnergy + potentialEnergy;
 }

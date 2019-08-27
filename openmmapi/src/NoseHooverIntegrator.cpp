@@ -121,7 +121,7 @@ int NoseHooverIntegrator::addSubsystemThermostat(System& system, const std::vect
     int numForces = system.getNumForces();
     if (thermostatedPairs.size() == 0){ // remove 3 degrees of freedom from thermostats that act on absolute motions
         for (int forceNum = 0; forceNum < numForces; ++forceNum) {
-//            if (dynamic_cast<CMMotionRemover*>(&system.getForce(forceNum))) nDOF -= 3;
+            if (dynamic_cast<CMMotionRemover*>(&system.getForce(forceNum))) nDOF -= 3;
         }
     }
 
@@ -143,11 +143,7 @@ int NoseHooverIntegrator::addSubsystemThermostat(System& system, const std::vect
     }
 
     // create and add new chain
-    int chainID = 0;
-    for(const auto &c : noseHooverChains) {
-        // We need to account for the fact that a NHC with pairs thermostated has both a relative and an absolute chain
-        chainID += c.getThermostatedPairs().size() ? 2 : 1;
-    }
+    int chainID = noseHooverChains.size();
     auto nhc = NoseHooverChain(temperature, relativeTemperature, collisionFrequency, relativeCollisionFrequency,
                                nDOF, chainLength, numMTS, numYoshidaSuzuki, chainID, thermostatedParticles, thermostatedPairs);
     noseHooverChains.push_back(nhc);
@@ -232,10 +228,7 @@ double NoseHooverIntegrator::computeKineticEnergy() {
     double kE = 0.0;
     if(noseHooverChains.size()) {
         for (const auto &nhc: noseHooverChains){
-            if (nhc.getThermostatedPairs().size() == 0) {
-                auto KEs = nhcKernel.getAs<NoseHooverChainKernel>().computeMaskedKineticEnergy(*context, nhc, true);
-                kE += std::get<0>(KEs);
-            }
+            kE += nhcKernel.getAs<NoseHooverChainKernel>().computeMaskedKineticEnergy(*context, nhc, true).first;
         }
     } else {
         kE = vvKernel.getAs<IntegrateVelocityVerletStepKernel>().computeKineticEnergy(*context, *this);

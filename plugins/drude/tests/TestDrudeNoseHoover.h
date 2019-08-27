@@ -117,8 +117,8 @@ void testWaterBox(Platform& platform){
     int chainLength = 4;
     int numMTS = 3;
     int numYS = 3;
-    double frequency = 50.0;
-    double frequencyDrude = 25.0;
+    double frequency = 100.0;
+    double frequencyDrude = 80.0;
     int randomSeed = 100;
     DrudeNoseHooverIntegrator integ(0.0005, system, temperature, temperatureDrude,
                                     frequency, frequencyDrude, chainLength, numMTS, numYS);;
@@ -138,12 +138,12 @@ void testWaterBox(Platform& platform){
     context.applyConstraints(1e-6);
     // Equilibrate.
     
-    integ.step(5000);
+    integ.step(800);
     
     // Compute the internal and center of mass temperatures.
     
     double totalKE = 0;
-    int numSteps = 100000;
+    const int numSteps = 800;
     double meanTemp = 0.0;
     double meanDrudeTemp = 0.0;
     double meanConserved = 0.0;
@@ -154,7 +154,6 @@ void testWaterBox(Platform& platform){
         double PE = state.getPotentialEnergy();
         double fullKE = integ.computeTotalKineticEnergy();
         double drudeKE = integ.computeDrudeKineticEnergy();
-        KE = fullKE - drudeKE;
         double temp = KE/(0.5*numStandardDof*BOLTZ);
         double drudeTemp = drudeKE/(0.5*numDrudeDof*BOLTZ);
         meanTemp = (i*meanTemp + temp)/(i+1);
@@ -162,7 +161,7 @@ void testWaterBox(Platform& platform){
         double heatBathEnergy = integ.computeHeatBathEnergy();
         double conserved = PE + fullKE + heatBathEnergy;
         meanConserved = (i*meanConserved + conserved)/(i+1);
-#define DEBUG 1
+#define DEBUG 0
 #if DEBUG
         if(i%10 == 0)
         std::cout << std::setw(6) << i
@@ -170,15 +169,17 @@ void testWaterBox(Platform& platform){
                   << std::setprecision(8) << std::setw(16) << drudeKE
                   << std::setprecision(8) << std::setw(16) << meanTemp
                   << std::setprecision(8) << std::setw(16) << meanDrudeTemp
+                  << std::setprecision(8) << std::setw(16) << heatBathEnergy
+                  << std::setprecision(8) << std::setw(16) << fullKE
                   << std::setprecision(8) << std::setw(16) << conserved
                   << std::endl;
 #endif
         totalKE += KE;
-//        ASSERT(fabs(meanConserved - conserved) < 0.5);
+        ASSERT(fabs(meanConserved - conserved) < 0.2);
     }
     totalKE /= numSteps;
-//    ASSERT_USUALLY_EQUAL_TOL(temperature, meanTemp, 0.02);
-//    ASSERT_USUALLY_EQUAL_TOL(temperatureDrude, meanDrudeTemp, 0.10);
+    ASSERT_USUALLY_EQUAL_TOL(temperature, meanTemp, 0.03);
+    ASSERT_USUALLY_EQUAL_TOL(temperatureDrude, meanDrudeTemp, 0.03);
 }
 
 int main(int argc, char* argv[]) {

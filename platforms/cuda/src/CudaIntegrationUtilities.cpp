@@ -808,7 +808,6 @@ double CudaIntegrationUtilities::computeKineticEnergy(double timeShift) {
                 energy += (v.x*v.x+v.y*v.y+v.z*v.z)/v.w;
         }
     }
-    
     // Restore the velocities.
     
     if (timeShift != 0)
