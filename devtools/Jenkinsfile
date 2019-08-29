@@ -6,15 +6,15 @@ pipeline {
             parallel {
                 stage("Build and test CUDA platform") {
                     agent {
-                        dockerfile {
-                            dir "devtools/ci/jenkins"
-                            label "cuda"
+                        docker {
+                            image "swails/openmm-all:latest"
+                            label "cuda && docker"
+                            alwaysPull true
                         }
                     }
                     steps {
-                        sh '''#!/bin/bash -lex
+                        sh '''#!/bin/bash -ex
                             git clean -fxd && git checkout .
-                            env
                             export OPENMM_CUDA_COMPILER=`which nvcc`
                             bash -e devtools/ci/jenkins/install.sh
                             bash -e devtools/ci/jenkins/test.sh -R 'TestCuda' --parallel 2
@@ -24,17 +24,15 @@ pipeline {
 
                 stage("Build and test OpenCL platform") {
                     agent {
-                        dockerfile {
-                            dir "devtools/ci/jenkins"
-                            label "cuda"
-                            filename "Dockerfile.opencl"
+                        docker {
+                            image "swails/openmm-all:latest"
+                            label "cuda && docker"
+                            alwaysPull true
                         }
                     }
                     steps {
-                        sh '''#!/bin/bash -lex
+                        sh '''#!/bin/bash -ex
                             git clean -fxd && git checkout .
-                            env
-                            export OPENMM_CUDA_COMPILER=`which nvcc`
                             bash -e devtools/ci/jenkins/install.sh
                             bash -e devtools/ci/jenkins/test.sh -R 'TestOpenCL' --parallel 2
                         '''
@@ -43,8 +41,10 @@ pipeline {
 
                 stage("Build/test CPU platforms") {
                     agent {
-                        dockerfile {
-                            dir "devtools/ci/jenkins"
+                        docker {
+                            image "swails/openmm-all:latest"
+                            label "docker"
+                            alwaysPull true
                         }
                     }
 
