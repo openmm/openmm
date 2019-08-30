@@ -13,12 +13,11 @@ pipeline {
                         }
                     }
                     steps {
-                        sh '''#!/bin/bash -ex
-                            git clean -fxd && git checkout .
-                            export OPENMM_CUDA_COMPILER=`which nvcc`
-                            bash -e devtools/ci/jenkins/install.sh
-                            bash -e devtools/ci/jenkins/test.sh -R 'TestCuda' --parallel 2
-                        '''
+                        sh "git clean -fxd && git checkout ."
+                        withEnv(["OPENMM_CUDA_COMPILER=/usr/local/cuda/bin/nvcc"]) {
+                            sh "bash -e devtools/ci/jenkins/install.sh"
+                            sh "bash -e devtools/ci/jenkins/test.sh -R 'TestCuda' --parallel 2"
+                        }
                     }
                 }
 
@@ -31,11 +30,9 @@ pipeline {
                         }
                     }
                     steps {
-                        sh '''#!/bin/bash -ex
-                            git clean -fxd && git checkout .
-                            bash -e devtools/ci/jenkins/install.sh
-                            bash -e devtools/ci/jenkins/test.sh -R 'TestOpenCL' --parallel 2
-                        '''
+                        sh "git clean -fxd && git checkout ."
+                        sh "bash -e devtools/ci/jenkins/install.sh"
+                        sh "bash -e devtools/ci/jenkins/test.sh -R 'TestCuda' --parallel 2"
                     }
                 }
 
@@ -49,10 +46,9 @@ pipeline {
                     }
 
                     steps {
-                        sh '''#!/bin/bash -lex
-                        git clean -fxd && git checkout .
-                        bash -e devtools/ci/jenkins/install_and_test_cpu.sh
-                        '''
+                        sh "git clean -fxd && git checkout ."
+                        sh "bash -e devtools/ci/jenkins/install.sh"
+                        sh "bash -e devtools/ci/jenkins/test.sh -R 'TestCuda' --parallel 2"
                     }
                 }
             }

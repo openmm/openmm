@@ -1,3 +1,4 @@
+#!/bin/bash -ex
 # This script is executed via the line:
 #   source devtools/ci/jenkins/install.sh
 # in a bash shell with the -lex options turned on
