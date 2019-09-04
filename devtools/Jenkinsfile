@@ -47,8 +47,7 @@ pipeline {
 
                     steps {
                         sh "git clean -fxd && git checkout ."
-                        sh "devtools/ci/jenkins/install.sh"
-                        sh "devtools/ci/jenkins/test.sh -R 'Test(Cpu|Reference)' --parallel 4"
+                        sh "devtools/ci/jenkins/install_and_test_cpu.sh"
                     }
                 }
             }
