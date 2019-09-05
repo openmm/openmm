@@ -39,7 +39,7 @@ pipeline {
                 stage("Build/test CPU platforms") {
                     agent {
                         docker {
-                            image "swails/openmm-all:latest"
+                            image "swails/openmm-cpu:latest"
                             label "docker"
                             alwaysPull true
                         }
