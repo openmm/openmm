@@ -123,7 +123,7 @@ public:
      * Set the maximum step size the integrator will ever use, in ps.  If this
      * is 0 (the default), no limit will be applied to step sizes.
      */
-    double setMaximumStepSize(double size) {
+    void setMaximumStepSize(double size) {
         maxStepSize = size;
     }
     /**
