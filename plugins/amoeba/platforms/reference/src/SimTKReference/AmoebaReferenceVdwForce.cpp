@@ -396,7 +396,6 @@ double AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles, double
 
         double combinedEpsilon = (this->*_combineEpsilons)(epsilons[siteI], epsilons[siteJ], sigmas[siteI], sigmas[siteJ]);
 
-        double combinedEpsilon = (this->*_combineEpsilons)(epsilons[siteI], epsilons[siteJ]);
         double softcore        = 0.0;
         int isAlchemicalI      = isAlchemical[siteI];
         int isAlchemicalJ      = isAlchemical[siteJ];
