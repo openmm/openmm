@@ -7594,6 +7594,8 @@ double OpenCLIntegrateVariableVerletStepKernel::execute(ContextImpl& context, co
     // Select the step size to use.
 
     double maxStepSize = maxTime-cl.getTime();
+    if (integrator.getMaximumStepSize() > 0)
+        maxStepSize = min(integrator.getMaximumStepSize(), maxStepSize);
     float maxStepSizeFloat = (float) maxStepSize;
     if (useDouble) {
         selectSizeKernel.setArg<cl_double>(1, maxStepSize);
@@ -7691,6 +7693,8 @@ double OpenCLIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, 
     // Select the step size to use.
 
     double maxStepSize = maxTime-cl.getTime();
+    if (integrator.getMaximumStepSize() > 0)
+        maxStepSize = min(integrator.getMaximumStepSize(), maxStepSize);
     float maxStepSizeFloat = (float) maxStepSize;
     if (useDouble) {
         selectSizeKernel.setArg<cl_double>(0, maxStepSize);

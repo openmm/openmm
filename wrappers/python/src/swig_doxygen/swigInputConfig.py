@@ -205,6 +205,7 @@ UNITS = {
 ("*", "getSoluteDielectric") : (None, ()),
 ("*", "getSolventDielectric") : (None, ()),
 ("*", "getStepSize") : ("unit.picosecond", ()),
+("*", "getMaximumStepSize") : ("unit.picosecond", ()),
 ("*", "getSystem") : (None, ()),
 ("*", "getTabulatedFunction") : (None, ()),
 ("*", "getUseDispersionCorrection") : (None, ()),
