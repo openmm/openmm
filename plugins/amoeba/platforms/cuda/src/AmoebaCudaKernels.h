@@ -547,7 +547,7 @@ public:
      * Initialize the kernel.
      * 
      * @param system     the System this kernel will be applied to
-     * @param force      the AmoebaMultipoleForce this kernel will be used for
+     * @param force      the AmoebaVdwForce this kernel will be used for
      */
     void initialize(const System& system, const AmoebaVdwForce& force);
     /**
@@ -571,6 +571,18 @@ private:
     CudaContext& cu;
     const System& system;
     bool hasInitializedNonbonded;
+
+    // True if the AmoebaVdwForce AlchemicalMethod is not None.
+    bool hasAlchemical;
+    // Pinned host memory; allocated if necessary in initialize, and freed in the destructor.
+    void* vdwLambdaPinnedBuffer;
+    // Device memory for the alchemical state.
+    CudaArray vdwLambda;
+    // Only update device memory when lambda changes.
+    float currentVdwLambda;
+    // Per particle alchemical flag.
+    CudaArray isAlchemical;
+
     double dispersionCoefficient;
     CudaArray sigmaEpsilon;
     CudaArray bondReductionAtoms;

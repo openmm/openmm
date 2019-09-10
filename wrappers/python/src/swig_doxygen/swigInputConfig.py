@@ -309,15 +309,14 @@ UNITS = {
 ("AmoebaTorsionTorsionForce",             "getTorsionTorsionParameters")                   :  ( None, ()),
 ("AmoebaTorsionTorsionForce",             "getTorsionTorsionGrid")                         :  ( None, ()),
 
-# LPW 2012-10 : Is this a duplicate entry?
-#("AmoebaVdwForce",                        "getParticleParameters")                         :  ( None, (None, None, None, 'unit.nanometer', 'unit.kilojoule_per_mole', None)),
 ("AmoebaVdwForce",                        "getSigmaCombiningRule")                         :  ( None, ()),
 ("AmoebaVdwForce",                        "getEpsilonCombiningRule")                       :  ( None, ()),
 ("AmoebaVdwForce",                        "getParticleExclusions")                         :  ( None, ()),
+("AmoebaVdwForce",                        "getAlchemicalMethod")                           :  ( None, ()),
+("AmoebaVdwForce",                        "getSoftcorePower")                              :  ( None, ()),
+("AmoebaVdwForce",                        "getSoftcoreAlpha")                              :  ( None, ()),
 ("AmoebaVdwForce",                        "getCutoff")                                     :  ( 'unit.nanometer', ()),
-# LPW 2012-10 Modified because it no longer returns ivIndex and classIndex.
-# ("AmoebaVdwForce",                        "getParticleParameters")                         :  ( None, (None, None, 'unit.nanometer', 'unit.kilojoule_per_mole', None)),
-("AmoebaVdwForce",                        "getParticleParameters")                         :  ( None, (None, 'unit.nanometer', 'unit.kilojoule_per_mole', None)),
+("AmoebaVdwForce",                        "getParticleParameters")                         :  ( None, (None, 'unit.nanometer', 'unit.kilojoule_per_mole', None, None)),
 
 ("AmoebaWcaDispersionForce",              "getParticleParameters")                         :  ( None, ('unit.nanometer', 'unit.kilojoule_per_mole')),
 ("AmoebaWcaDispersionForce",              "getAwater")                                     :  ( '1/(unit.nanometer*unit.nanometer*unit.nanometer)',()),

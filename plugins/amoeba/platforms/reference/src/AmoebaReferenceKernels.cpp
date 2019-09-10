@@ -1017,14 +1017,16 @@ void ReferenceCalcAmoebaVdwForceKernel::initialize(const System& system, const A
     sigmas.resize(numParticles);
     epsilons.resize(numParticles);
     reductions.resize(numParticles);
+    isAlchemical.resize(numParticles);
 
     for (int ii = 0; ii < numParticles; ii++) {
 
         int indexIV;
         double sigma, epsilon, reduction;
+        bool alchemical;
         std::vector<int> exclusions;
 
-        force.getParticleParameters(ii, indexIV, sigma, epsilon, reduction);
+        force.getParticleParameters(ii, indexIV, sigma, epsilon, reduction, alchemical);
         force.getParticleExclusions(ii, exclusions);
         for (unsigned int jj = 0; jj < exclusions.size(); jj++) {
            allExclusions[ii].insert(exclusions[jj]);
@@ -1034,6 +1036,7 @@ void ReferenceCalcAmoebaVdwForceKernel::initialize(const System& system, const A
         sigmas[ii]        = sigma;
         epsilons[ii]      = epsilon;
         reductions[ii]    = reduction;
+        isAlchemical[ii]  = alchemical;
     }   
     sigmaCombiningRule     = force.getSigmaCombiningRule();
     epsilonCombiningRule   = force.getEpsilonCombiningRule();
@@ -1042,7 +1045,9 @@ void ReferenceCalcAmoebaVdwForceKernel::initialize(const System& system, const A
     cutoff                 = force.getCutoffDistance();
     neighborList           = useCutoff ? new NeighborList() : NULL;
     dispersionCoefficient  = force.getUseDispersionCorrection() ?  AmoebaVdwForceImpl::calcDispersionCorrection(system, force) : 0.0;
-
+    alchemicalMethod       = force.getAlchemicalMethod();
+    n                      = force.getSoftcorePower();
+    alpha                  = force.getSoftcoreAlpha();
 }
 
 double ReferenceCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -1050,7 +1055,17 @@ double ReferenceCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool inc
     vector<Vec3>& posData   = extractPositions(context);
     vector<Vec3>& forceData = extractForces(context);
     AmoebaReferenceVdwForce vdwForce(sigmaCombiningRule, epsilonCombiningRule);
+    if (alchemicalMethod == AmoebaVdwForce::Decouple) {
+       vdwForce.setAlchemicalMethod(AmoebaReferenceVdwForce::Decouple);
+    } else if (alchemicalMethod == AmoebaVdwForce::Annihilate) {
+       vdwForce.setAlchemicalMethod(AmoebaReferenceVdwForce::Annihilate);
+    } else {
+       vdwForce.setAlchemicalMethod(AmoebaReferenceVdwForce::None);
+    }
+    vdwForce.setSoftcorePower(n);
+    vdwForce.setSoftcoreAlpha(alpha);
     double energy;
+    double lambda = context.getParameter(AmoebaVdwForce::Lambda());
     if (useCutoff) {
         vdwForce.setCutoff(cutoff);
         computeNeighborListVoxelHash(*neighborList, numParticles, posData, allExclusions, extractBoxVectors(context), usePBC, cutoff, 0.0);
@@ -1062,14 +1077,16 @@ double ReferenceCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool inc
                 throw OpenMMException("The periodic box size has decreased to less than twice the cutoff.");
             }
             vdwForce.setPeriodicBox(boxVectors);
-            energy  = vdwForce.calculateForceAndEnergy(numParticles, posData, indexIVs, sigmas, epsilons, reductions, *neighborList, forceData);
+            energy  = vdwForce.calculateForceAndEnergy(numParticles, lambda, posData, indexIVs, sigmas, epsilons, 
+                                                       reductions, isAlchemical, *neighborList, forceData);
             energy += dispersionCoefficient/(boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2]);
         } else {
             vdwForce.setNonbondedMethod(AmoebaReferenceVdwForce::CutoffNonPeriodic);
         }
     } else {
         vdwForce.setNonbondedMethod(AmoebaReferenceVdwForce::NoCutoff);
-        energy = vdwForce.calculateForceAndEnergy(numParticles, posData, indexIVs, sigmas, epsilons, reductions, allExclusions, forceData);
+        energy = vdwForce.calculateForceAndEnergy(numParticles, lambda, posData, indexIVs, sigmas, epsilons, 
+                                                  reductions, isAlchemical, allExclusions, forceData);
     }
     return static_cast<double>(energy);
 }
@@ -1079,15 +1096,16 @@ void ReferenceCalcAmoebaVdwForceKernel::copyParametersToContext(ContextImpl& con
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
 
     // Record the values.
-
     for (int i = 0; i < numParticles; ++i) {
         int indexIV;
         double sigma, epsilon, reduction;
-        force.getParticleParameters(i, indexIV, sigma, epsilon, reduction);
+        bool alchemical;
+        force.getParticleParameters(i, indexIV, sigma, epsilon, reduction, alchemical);
         indexIVs[i] = indexIV;
         sigmas[i] = sigma;
         epsilons[i] = epsilon;
         reductions[i]= reduction;
+        isAlchemical[i]= alchemical;
     }
 }
 

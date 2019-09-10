@@ -60,7 +60,9 @@ public:
     }
     double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups);
     std::map<std::string, double> getDefaultParameters() {
-        return std::map<std::string, double>(); // This force field doesn't define any parameters.
+       std::map<std::string, double> parameters;
+       parameters[AmoebaVdwForce::Lambda()] = 1.0;
+       return parameters;
     }
     std::vector<std::string> getKernelNames();
     /**

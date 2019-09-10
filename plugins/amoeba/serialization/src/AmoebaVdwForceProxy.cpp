@@ -42,25 +42,29 @@ AmoebaVdwForceProxy::AmoebaVdwForceProxy() : SerializationProxy("AmoebaVdwForce"
 }
 
 void AmoebaVdwForceProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 2);
+    node.setIntProperty("version", 3);
     const AmoebaVdwForce& force = *reinterpret_cast<const AmoebaVdwForce*>(object);
 
     node.setIntProperty("forceGroup", force.getForceGroup());
     node.setStringProperty("SigmaCombiningRule", force.getSigmaCombiningRule());
     node.setStringProperty("EpsilonCombiningRule", force.getEpsilonCombiningRule());
     node.setDoubleProperty("VdwCutoff", force.getCutoffDistance());
-
     node.setIntProperty("method", (int) force.getNonbondedMethod());
+
+    node.setDoubleProperty("n", force.getSoftcorePower());
+    node.setDoubleProperty("alpha", force.getSoftcoreAlpha());
+    node.setIntProperty("alchemicalMethod", (int) force.getAlchemicalMethod());
 
     SerializationNode& particles = node.createChildNode("VdwParticles");
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(force.getNumParticles()); ii++) {
 
         int ivIndex;
         double sigma, epsilon, reductionFactor;
-        force.getParticleParameters(ii, ivIndex, sigma, epsilon, reductionFactor);
+        bool isAlchemical;
+        force.getParticleParameters(ii, ivIndex, sigma, epsilon, reductionFactor, isAlchemical);
 
         SerializationNode& particle = particles.createChildNode("Particle");
-        particle.setIntProperty("ivIndex", ivIndex).setDoubleProperty("sigma", sigma).setDoubleProperty("epsilon", epsilon).setDoubleProperty("reductionFactor", reductionFactor);
+        particle.setIntProperty("ivIndex", ivIndex).setDoubleProperty("sigma", sigma).setDoubleProperty("epsilon", epsilon).setDoubleProperty("reductionFactor", reductionFactor).setBoolProperty("isAlchemical",isAlchemical);
 
         std::vector< int > exclusions;
         force.getParticleExclusions(ii,  exclusions);
@@ -74,7 +78,7 @@ void AmoebaVdwForceProxy::serialize(const void* object, SerializationNode& node)
 
 void* AmoebaVdwForceProxy::deserialize(const SerializationNode& node) const {
     int version = node.getIntProperty("version");
-    if (version < 1 || version > 2)
+    if (version < 1 || version > 3)
         throw OpenMMException("Unsupported version number");
     AmoebaVdwForce* force = new AmoebaVdwForce();
     try {
@@ -85,10 +89,23 @@ void* AmoebaVdwForceProxy::deserialize(const SerializationNode& node) const {
         force->setCutoffDistance(node.getDoubleProperty("VdwCutoff"));
         force->setNonbondedMethod((AmoebaVdwForce::NonbondedMethod) node.getIntProperty("method"));
 
+        if (version > 2) {
+           force->setAlchemicalMethod((AmoebaVdwForce::AlchemicalMethod) node.getIntProperty("alchemicalMethod"));
+           force->setSoftcorePower(node.getDoubleProperty("n"));
+           force->setSoftcoreAlpha(node.getDoubleProperty("alpha"));
+        }
+
         const SerializationNode& particles = node.getChildNode("VdwParticles");
         for (unsigned int ii = 0; ii < particles.getChildren().size(); ii++) {
             const SerializationNode& particle = particles.getChildren()[ii];
-            force->addParticle(particle.getIntProperty("ivIndex"), particle.getDoubleProperty("sigma"), particle.getDoubleProperty("epsilon"), particle.getDoubleProperty("reductionFactor"));
+
+            if (version < 3) 
+               force->addParticle(particle.getIntProperty("ivIndex"), particle.getDoubleProperty("sigma"), 
+                                  particle.getDoubleProperty("epsilon"), particle.getDoubleProperty("reductionFactor"));
+            else 
+               force->addParticle(particle.getIntProperty("ivIndex"), particle.getDoubleProperty("sigma"), 
+                                  particle.getDoubleProperty("epsilon"), particle.getDoubleProperty("reductionFactor"), 
+                                  particle.getBoolProperty("isAlchemical"));
 
             // exclusions
 

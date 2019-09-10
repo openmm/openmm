@@ -38,28 +38,30 @@ using namespace OpenMM;
 using std::string;
 using std::vector;
 
-AmoebaVdwForce::AmoebaVdwForce() : nonbondedMethod(NoCutoff), sigmaCombiningRule("CUBIC-MEAN"), epsilonCombiningRule("HHG"), cutoff(1.0e+10), useDispersionCorrection(true) {
+AmoebaVdwForce::AmoebaVdwForce() : nonbondedMethod(NoCutoff), sigmaCombiningRule("CUBIC-MEAN"), epsilonCombiningRule("HHG"), cutoff(1.0e+10), useDispersionCorrection(true), alchemicalMethod(None), n(5), alpha(0.7) {
 }
 
-int AmoebaVdwForce::addParticle(int parentIndex, double sigma, double epsilon, double reductionFactor) {
-    parameters.push_back(VdwInfo(parentIndex, sigma, epsilon, reductionFactor));
+int AmoebaVdwForce::addParticle(int parentIndex, double sigma, double epsilon, double reductionFactor, bool isAlchemical) {
+    parameters.push_back(VdwInfo(parentIndex, sigma, epsilon, reductionFactor, isAlchemical));
     return parameters.size()-1;
 }
 
 void AmoebaVdwForce::getParticleParameters(int particleIndex, int& parentIndex,
-                                           double& sigma, double& epsilon, double& reductionFactor) const {
+                                           double& sigma, double& epsilon, double& reductionFactor, bool& isAlchemical) const {
     parentIndex     = parameters[particleIndex].parentIndex;
     sigma           = parameters[particleIndex].sigma;
     epsilon         = parameters[particleIndex].epsilon;
     reductionFactor = parameters[particleIndex].reductionFactor;
+    isAlchemical    = parameters[particleIndex].isAlchemical;
 }
 
 void AmoebaVdwForce::setParticleParameters(int particleIndex, int parentIndex,
-                                           double sigma, double epsilon, double reductionFactor) {
+                                           double sigma, double epsilon, double reductionFactor, bool isAlchemical) {
     parameters[particleIndex].parentIndex     = parentIndex;
     parameters[particleIndex].sigma           = sigma;
     parameters[particleIndex].epsilon         = epsilon;
     parameters[particleIndex].reductionFactor = reductionFactor;
+    parameters[particleIndex].isAlchemical    = isAlchemical;
 }
 
 void AmoebaVdwForce::setSigmaCombiningRule(const std::string& inputSigmaCombiningRule) {
@@ -127,6 +129,33 @@ void AmoebaVdwForce::setNonbondedMethod(NonbondedMethod method) {
         throw OpenMMException("AmoebaVdwForce: Illegal value for nonbonded method");
     nonbondedMethod = method;
 }
+
+AmoebaVdwForce::AlchemicalMethod AmoebaVdwForce::getAlchemicalMethod() const {
+    return alchemicalMethod;
+}
+
+void AmoebaVdwForce::setAlchemicalMethod(AlchemicalMethod method) {
+    if (method < 0 || method > 2)
+        throw OpenMMException("AmoebaVdwForce: Illegal value for alchemical method");
+    alchemicalMethod = method;
+}
+
+void AmoebaVdwForce::setSoftcorePower(int power) {
+    n = power;
+}
+
+int AmoebaVdwForce::getSoftcorePower() const {
+    return n;
+}
+
+void AmoebaVdwForce::setSoftcoreAlpha(double a) {
+    alpha = a;
+}
+
+double AmoebaVdwForce::getSoftcoreAlpha() const {
+    return alpha;
+}
+
 
 ForceImpl* AmoebaVdwForce::createImpl() const {
     return new AmoebaVdwForceImpl(*this);
