@@ -440,6 +440,13 @@ void testVdwAmmoniaCubicMeanWH() {
 void testVdwAlchemical(int power, double alpha, double lambda, AmoebaVdwForce::AlchemicalMethod method) {
 
     std::string testName      = "testVdwAlchemical";
+
+    int numberOfParticles     = 8;
+    double boxDimension       = -1.0;
+    double cutoff             = 9000000.0;
+    std::vector<Vec3> forces;
+    double energy;
+
     setupAndGetForcesEnergyVdwAmmonia2("CUBIC-MEAN", "HHG", cutoff, boxDimension, forces, energy,
                                       method, power, alpha, lambda);
     std::vector<Vec3> expectedForces(numberOfParticles);
