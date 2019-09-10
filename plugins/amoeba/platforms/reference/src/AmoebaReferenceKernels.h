@@ -501,11 +501,15 @@ private:
     int usePBC;
     double cutoff;
     double dispersionCoefficient;
+    AmoebaVdwForce::AlchemicalMethod alchemicalMethod;
+    int n;
+    double alpha;
     std::vector<int> indexIVs;
     std::vector< std::set<int> > allExclusions;
     std::vector<double> sigmas;
     std::vector<double> epsilons;
     std::vector<double> reductions;
+    std::vector<bool> isAlchemical;
     std::string sigmaCombiningRule;
     std::string epsilonCombiningRule;
     const System& system;
