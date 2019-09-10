@@ -2225,6 +2225,8 @@ double ReferenceIntegrateVariableLangevinStepKernel::execute(ContextImpl& contex
         prevErrorTol = errorTol;
     }
     double maxStepSize = maxTime-data.time;
+    if (integrator.getMaximumStepSize() > 0)
+        maxStepSize = min(integrator.getMaximumStepSize(), maxStepSize);
     dynamics->update(context.getSystem(), posData, velData, forceData, masses, maxStepSize, integrator.getConstraintTolerance());
     data.time += dynamics->getDeltaT();
     if (dynamics->getDeltaT() == maxStepSize)
@@ -2264,6 +2266,8 @@ double ReferenceIntegrateVariableVerletStepKernel::execute(ContextImpl& context,
         prevErrorTol = errorTol;
     }
     double maxStepSize = maxTime-data.time;
+    if (integrator.getMaximumStepSize() > 0)
+        maxStepSize = min(integrator.getMaximumStepSize(), maxStepSize);
     dynamics->update(context.getSystem(), posData, velData, forceData, masses, maxStepSize, integrator.getConstraintTolerance());
     data.time += dynamics->getDeltaT();
     if (dynamics->getDeltaT() == maxStepSize)

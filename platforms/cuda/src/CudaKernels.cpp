@@ -7221,6 +7221,8 @@ double CudaIntegrateVariableVerletStepKernel::execute(ContextImpl& context, cons
     // Select the step size to use.
 
     double maxStepSize = maxTime-cu.getTime();
+    if (integrator.getMaximumStepSize() > 0)
+        maxStepSize = min(integrator.getMaximumStepSize(), maxStepSize);
     float maxStepSizeFloat = (float) maxStepSize;
     double tol = integrator.getErrorTolerance();
     float tolFloat = (float) tol;
@@ -7295,6 +7297,8 @@ double CudaIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, co
     // Select the step size to use.
 
     double maxStepSize = maxTime-cu.getTime();
+    if (integrator.getMaximumStepSize() > 0)
+        maxStepSize = min(integrator.getMaximumStepSize(), maxStepSize);
     float maxStepSizeFloat = (float) maxStepSize;
     double tol = integrator.getErrorTolerance();
     float tolFloat = (float) tol;
