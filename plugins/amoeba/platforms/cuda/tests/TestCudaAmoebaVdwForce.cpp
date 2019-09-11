@@ -403,13 +403,6 @@ void testVdwAmmoniaCubicMeanWH() {
 
     std::string testName      = "testVdwAmmoniaCubicMeanWH";
 
-// test alchemical VDW 
-
-void testVdwAlchemical(int power, double alpha, double lambda, AmoebaVdwForce::AlchemicalMethod method) {
-
-    std::string testName      = "testVdwAlchemical";
-
-
     int numberOfParticles     = 8;
     double boxDimension       = -1.0;
     double cutoff             = 9000000.0;
@@ -431,6 +424,17 @@ void testVdwAlchemical(int power, double alpha, double lambda, AmoebaVdwForce::A
     expectedForces[6]         = Vec3(-1.8544507e+02,   8.4027272e-03,   6.0950274e+00);
     expectedForces[7]         = Vec3( 1.4159723e+00,   2.7168386e-01,  -1.5376786e-01);
 
+    double tolerance          = 1.0e-04;
+    compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
+}
+
+
+// test alchemical VDW 
+
+void testVdwAlchemical(int power, double alpha, double lambda, AmoebaVdwForce::AlchemicalMethod method) {
+
+    std::string testName      = "testVdwAlchemical";
+
     setupAndGetForcesEnergyVdwAmmonia2("CUBIC-MEAN", "HHG", cutoff, boxDimension, forces, energy,
                                       method, power, alpha, lambda);
     std::vector<Vec3> expectedForces(numberOfParticles);
@@ -450,7 +454,6 @@ void testVdwAlchemical(int power, double alpha, double lambda, AmoebaVdwForce::A
     for (int i=0; i<8; i++) {
         expectedForces[i] *= scale;
     }
-
 
     double tolerance          = 1.0e-04;
     compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);

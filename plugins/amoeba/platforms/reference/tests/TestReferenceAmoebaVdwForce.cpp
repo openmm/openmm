@@ -466,6 +466,9 @@ void testVdwAlchemical(int power, double alpha, double lambda, AmoebaVdwForce::A
     for (int i=0; i<8; i++) {
         expectedForces[i] *= scale;
     }
+
+    double tolerance          = 1.0e-04;
+    compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
 }
 
 // test VDW w/ sigmaRule=Arithmetic and epsilonRule=Arithmetic
