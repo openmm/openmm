@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -30,14 +30,11 @@
  * -------------------------------------------------------------------------- */
 
 #include "ReferencePlatform.h"
-#include "ReferenceConstraints.h"
 #include "ReferenceKernelFactory.h"
 #include "ReferenceKernels.h"
 #include "openmm/internal/ContextImpl.h"
 #include "SimTKOpenMMRealType.h"
 #include "openmm/Vec3.h"
-#include <map>
-#include <vector>
 
 using namespace OpenMM;
 using namespace std;
@@ -107,11 +104,11 @@ ReferencePlatform::PlatformData::PlatformData(const System& system) : time(0.0),
 }
 
 ReferencePlatform::PlatformData::~PlatformData() {
-    delete (vector<Vec3>*) positions;
-    delete (vector<Vec3>*) velocities;
-    delete (vector<Vec3>*) forces;
-    delete (Vec3*) periodicBoxSize;
-    delete[] (Vec3*) periodicBoxVectors;
-    delete (ReferenceConstraints*) constraints;
-    delete (map<string, double>*) energyParameterDerivatives;
+    delete positions;
+    delete velocities;
+    delete forces;
+    delete periodicBoxSize;
+    delete[] periodicBoxVectors;
+    delete constraints;
+    delete energyParameterDerivatives;
 }
