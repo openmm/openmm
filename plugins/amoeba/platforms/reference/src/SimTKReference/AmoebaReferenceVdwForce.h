@@ -34,6 +34,7 @@ namespace OpenMM {
 
 class AmoebaReferenceVdwForce;
 typedef double (AmoebaReferenceVdwForce::*CombiningFunction)(double x, double y) const;
+typedef double (AmoebaReferenceVdwForce::*CombiningFunctionEpsilon)(double x, double y, double z, double w) const;
 
 // ---------------------------------------------------------------------------------------
 
@@ -333,13 +334,16 @@ private:
     Vec3 _periodicBoxVectors[3];
     CombiningFunction _combineSigmas;
     double arithmeticSigmaCombiningRule(double sigmaI, double sigmaJ) const;
-    double geometricSigmaCombiningRule(double sigmaI, double sigmaJ) const;
-    double cubicMeanSigmaCombiningRule(double sigmaI, double sigmaJ) const;
-    CombiningFunction _combineEpsilons;
-    double arithmeticEpsilonCombiningRule(double epsilonI, double epsilonJ) const;
-    double geometricEpsilonCombiningRule(double epsilonI, double epsilonJ) const;
-    double harmonicEpsilonCombiningRule(double epsilonI, double epsilonJ) const;
-    double hhgEpsilonCombiningRule(double epsilonI, double epsilonJ) const;
+    double  geometricSigmaCombiningRule(double sigmaI, double sigmaJ) const;
+    double  cubicMeanSigmaCombiningRule(double sigmaI, double sigmaJ) const;
+
+    CombiningFunctionEpsilon _combineEpsilons;
+    double arithmeticEpsilonCombiningRule(double epsilonI, double epsilonJ, double sigmaI, double sigmaJ) const;
+    double  geometricEpsilonCombiningRule(double epsilonI, double epsilonJ, double sigmaI, double sigmaJ) const;
+    double  harmonicEpsilonCombiningRule(double epsilonI, double epsilonJ, double sigmaI, double sigmaJ) const;
+    double  whEpsilonCombiningRule(double epsilonI, double epsilonJ, double sigmaI, double sigmaJ) const;
+    double  hhgEpsilonCombiningRule(double epsilonI, double epsilonJ, double sigmaI, double sigmaJ) const;
+
 
     /**---------------------------------------------------------------------------------------
     

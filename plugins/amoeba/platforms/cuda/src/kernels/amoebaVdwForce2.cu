@@ -22,6 +22,13 @@
 #elif EPSILON_COMBINING_RULE == 3
     real epssum = sigmaEpsilon1.y+sigmaEpsilon2.y;
     real epsilon = (epssum == 0.0f ? (real) 0 : 2*(sigmaEpsilon1.y*sigmaEpsilon2.y)/(sigmaEpsilon1.y+sigmaEpsilon2.y));
+#elif EPSILON_COMBINING_RULE == 4
+    real sigma1_3 = sigmaEpsilon1.x*sigmaEpsilon1.x*sigmaEpsilon1.x;
+    real sigma2_3 = sigmaEpsilon2.x*sigmaEpsilon2.x*sigmaEpsilon2.x;
+    real sigma1_6 = sigma1_3*sigma1_3; 
+    real sigma2_6 = sigma2_3*sigma2_3;
+    real eps_s = SQRT(sigmaEpsilon1.y*sigmaEpsilon2.y);
+    real epsilon = (eps_s == 0.0f ? (real) 0 : 2*eps_s*sigma1_3*sigma2_3/(sigma1_6 + sigma2_6));
 #else
     real epsilon_s = SQRT(sigmaEpsilon1.y) + SQRT(sigmaEpsilon2.y);
     real epsilon = (epsilon_s == 0.0f ? (real) 0 : 4*sigmaEpsilon1.y*sigmaEpsilon2.y/(epsilon_s*epsilon_s));

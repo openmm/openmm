@@ -2442,8 +2442,10 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
         replacements["EPSILON_COMBINING_RULE"] = "2";
     else if (epsilonCombiningRule =="HARMONIC")
         replacements["EPSILON_COMBINING_RULE"] = "3";
-    else if (epsilonCombiningRule == "HHG")
+    else if (epsilonCombiningRule == "W-H")
         replacements["EPSILON_COMBINING_RULE"] = "4";
+    else if (epsilonCombiningRule == "HHG")
+        replacements["EPSILON_COMBINING_RULE"] = "5";
     else
         throw OpenMMException("Illegal combining rule for sigma: "+sigmaCombiningRule);
 

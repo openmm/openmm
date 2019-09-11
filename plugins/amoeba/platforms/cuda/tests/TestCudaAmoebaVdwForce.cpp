@@ -396,17 +396,44 @@ void testVdwAmmoniaCubicMeanHhg() {
     compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
 }
 
-// test alchemical VDW 
 
-void testVdwAlchemical(int power, double alpha, double lambda, AmoebaVdwForce::AlchemicalMethod method) {
+// test VDW w/ sigmaRule=CubicMean and epsilonRule=W-H
 
-    std::string testName      = "testVdwAlchemical";
+void testVdwAmmoniaCubicMeanWH() {
+
+    std::string testName      = "testVdwAmmoniaCubicMeanWH";
 
     int numberOfParticles     = 8;
     double boxDimension       = -1.0;
     double cutoff             = 9000000.0;
     std::vector<Vec3> forces;
     double energy;
+
+
+    setupAndGetForcesEnergyVdwAmmonia("CUBIC-MEAN", "W-H", cutoff, boxDimension, forces, energy);
+    std::vector<Vec3> expectedForces(numberOfParticles);
+
+    double expectedEnergy     =  3.771794e+00;
+
+    expectedForces[0]         = Vec3( 2.3979839e+02,  -1.1829842e-02,  -5.3258772e+00);
+    expectedForces[1]         = Vec3(-1.9942459e+00,   4.3142144e-01,  -1.7290171e-01);
+    expectedForces[2]         = Vec3(-1.9935442e+00,  -4.2937965e-01,  -1.7369876e-01);
+    expectedForces[3]         = Vec3(-8.9050582e-01,  -4.8659920e-04,   2.2190848e-01);
+    expectedForces[4]         = Vec3(-5.2306326e+01,   1.4895040e-03,  -3.3588483e-01);
+    expectedForces[5]         = Vec3( 1.4153288e+00,  -2.7130186e-01,  -1.5480591e-01);
+    expectedForces[6]         = Vec3(-1.8544507e+02,   8.4027272e-03,   6.0950274e+00);
+    expectedForces[7]         = Vec3( 1.4159723e+00,   2.7168386e-01,  -1.5376786e-01);
+
+    double tolerance          = 1.0e-04;
+    compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
+}
+
+
+// test alchemical VDW 
+
+void testVdwAlchemical(int power, double alpha, double lambda, AmoebaVdwForce::AlchemicalMethod method) {
+
+    std::string testName      = "testVdwAlchemical";
 
     setupAndGetForcesEnergyVdwAmmonia2("CUBIC-MEAN", "HHG", cutoff, boxDimension, forces, energy,
                                       method, power, alpha, lambda);
@@ -2089,6 +2116,10 @@ int main(int argc, char* argv[]) {
         // test VDW w/ sigmaRule=CubicMean and epsilonRule=HHG
 
         testVdwAmmoniaCubicMeanHhg();
+
+	// test VDW w/ sigmaRule=CubicMean and epsilonRule=HHG
+
+        testVdwAmmoniaCubicMeanWH();
 
         // test VDW w/ sigmaRule=Arithmetic and epsilonRule=Arithmetic
 

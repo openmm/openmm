@@ -155,6 +155,8 @@ void AmoebaReferenceVdwForce::setEpsilonCombiningRule(const std::string& epsilon
          _combineEpsilons = &AmoebaReferenceVdwForce::arithmeticEpsilonCombiningRule;
     } else if (_epsilonCombiningRule == "HARMONIC") {
          _combineEpsilons = &AmoebaReferenceVdwForce::harmonicEpsilonCombiningRule;
+    } else if (_epsilonCombiningRule == "W-H") {
+         _combineEpsilons = &AmoebaReferenceVdwForce::whEpsilonCombiningRule;
     } else if (_epsilonCombiningRule == "HHG") {
          _combineEpsilons = &AmoebaReferenceVdwForce::hhgEpsilonCombiningRule;
     } else {
@@ -166,19 +168,27 @@ std::string AmoebaReferenceVdwForce::getEpsilonCombiningRule() const {
     return _epsilonCombiningRule;
 }
 
-double AmoebaReferenceVdwForce::arithmeticEpsilonCombiningRule(double epsilonI, double epsilonJ) const {
+double AmoebaReferenceVdwForce::arithmeticEpsilonCombiningRule(double epsilonI, double epsilonJ, double sigmaI, double sigmaJ) const {
     return 0.5*(epsilonI + epsilonJ);
 }
 
-double AmoebaReferenceVdwForce::geometricEpsilonCombiningRule(double epsilonI, double epsilonJ) const {
+double AmoebaReferenceVdwForce::geometricEpsilonCombiningRule(double epsilonI, double epsilonJ, double sigmaI, double sigmaJ) const {
     return sqrt(epsilonI*epsilonJ);
 }
 
-double AmoebaReferenceVdwForce::harmonicEpsilonCombiningRule(double epsilonI, double epsilonJ) const {
+double AmoebaReferenceVdwForce::harmonicEpsilonCombiningRule(double epsilonI, double epsilonJ, double sigmaI, double sigmaJ) const {
     return (epsilonI != 0.0 && epsilonJ != 0.0) ? 2.0*(epsilonI*epsilonJ)/(epsilonI + epsilonJ) : 0.0;
 }
+double AmoebaReferenceVdwForce::whEpsilonCombiningRule(double epsilonI, double epsilonJ, double sigmaI, double sigmaJ) const {
+    double  sigmaI3 = sigmaI * sigmaI * sigmaI;
+    double  sigmaJ3 = sigmaJ * sigmaJ * sigmaJ;
+    double  sigmaI6 = sigmaI3 * sigmaI3;
+    double  sigmaJ6 = sigmaJ3 * sigmaJ3;
+    double  eps_s = sqrt(epsilonI*epsilonJ);
+    return (epsilonI != 0.0 && epsilonJ != 0.0) ? 2.0*eps_s*sigmaI3*sigmaJ3/(sigmaI6+sigmaJ6) : 0.0;
+}
 
-double AmoebaReferenceVdwForce::hhgEpsilonCombiningRule(double epsilonI, double epsilonJ) const {
+double AmoebaReferenceVdwForce::hhgEpsilonCombiningRule(double epsilonI, double epsilonJ, double sigmaI, double sigmaJ) const {
     double denominator = sqrt(epsilonI) + sqrt(epsilonJ);
     return (epsilonI != 0.0 && epsilonJ != 0.0) ? 4.0*(epsilonI*epsilonJ)/(denominator*denominator) : 0.0;
 }
@@ -310,7 +320,10 @@ double AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles, double
             if (exclusions[jj] == 0) {
 
                 double combinedSigma   = (this->*_combineSigmas)(sigmaI, sigmas[jj]);
-                double combinedEpsilon = (this->*_combineEpsilons)(epsilonI, epsilons[jj]);
+
+                double combinedEpsilon = (this->*_combineEpsilons)(epsilonI, epsilons[jj], sigmaI, sigmas[jj]);
+
+              
                 double softcore = 0.0;
 
                 if (this->_alchemicalMethod == Decouple && (isAlchemicalI != isAlchemical[jj])) {
@@ -320,6 +333,7 @@ double AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles, double
                    combinedEpsilon *= pow(lambda, this->_n);
                    softcore = this->_alpha * pow(1.0 - lambda, 2);
                 }
+
 
                 Vec3 force;
                 energy += calculatePairIxn(combinedSigma, combinedEpsilon, softcore,
@@ -379,7 +393,9 @@ double AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles, double
         int siteJ                   = pair.second;
 
         double combinedSigma   = (this->*_combineSigmas)(sigmas[siteI], sigmas[siteJ]);
-        double combinedEpsilon = (this->*_combineEpsilons)(epsilons[siteI], epsilons[siteJ]);
+
+        double combinedEpsilon = (this->*_combineEpsilons)(epsilons[siteI], epsilons[siteJ], sigmas[siteI], sigmas[siteJ]);
+
         double softcore        = 0.0;
         int isAlchemicalI      = isAlchemical[siteI];
         int isAlchemicalJ      = isAlchemical[siteJ];
@@ -391,6 +407,7 @@ double AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles, double
            combinedEpsilon *= pow(lambda, this->_n);
            softcore = this->_alpha * pow(1.0 - lambda, 2);
         }
+
 
         Vec3 force;
         energy += calculatePairIxn(combinedSigma, combinedEpsilon, softcore,
