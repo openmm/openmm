@@ -305,7 +305,7 @@ void testArgonBox() {
     integrator.setMaximumStepSize(maxStep);
     for (int i = 0; i < 100; i++) {
         integrator.step(1);
-        ASSERT(integrator.getStepSize() <= maxStep);
+        ASSERT(integrator.getStepSize() <= maxStep*1.000001);
     }
 }
 

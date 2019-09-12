@@ -396,7 +396,6 @@ void testVdwAmmoniaCubicMeanHhg() {
     compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
 }
 
-
 // test VDW w/ sigmaRule=CubicMean and epsilonRule=W-H
 
 void testVdwAmmoniaCubicMeanWH() {
@@ -435,6 +434,12 @@ void testVdwAlchemical(int power, double alpha, double lambda, AmoebaVdwForce::A
 
     std::string testName      = "testVdwAlchemical";
 
+    int numberOfParticles     = 8;
+    double boxDimension       = -1.0;
+    double cutoff             = 9000000.0;
+    std::vector<Vec3> forces;
+    double energy;
+
     setupAndGetForcesEnergyVdwAmmonia2("CUBIC-MEAN", "HHG", cutoff, boxDimension, forces, energy,
                                       method, power, alpha, lambda);
     std::vector<Vec3> expectedForces(numberOfParticles);
@@ -458,7 +463,6 @@ void testVdwAlchemical(int power, double alpha, double lambda, AmoebaVdwForce::A
     double tolerance          = 1.0e-04;
     compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
 }
-
 
 // test VDW w/ sigmaRule=Arithmetic and epsilonRule=Arithmetic
 
