@@ -319,17 +319,8 @@ other Platforms.
 
 When using the reference Platform, the “platform-specific data” stored in
 ContextImpl is of type ReferencePlatform::PlatformData, which is declared in
-ReferencePlatform.h.  Several of the fields in this class are declared as void*
-to avoid having to include SimTKOpenMMRealType.h in ReferencePlatform.h.  If you
-look in ReferenceKernels.cpp, you will find code for extracting the correct
-values of these fields.  For example:
-::
-
-    static vector<Vec3>& extractPositions(ContextImpl& context) {
-        ReferencePlatform::PlatformData* data =
-                reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-        return *((vector<Vec3>*) data->positions);
-    }
+ReferencePlatform.h.  It has fields for storing positions, velocities, box
+vectors, and other types of data.
 
 The PlatformData’s vector of forces contains one element for each particle.  At
 the start of each force evaluation, all elements of it are set to zero.  Each

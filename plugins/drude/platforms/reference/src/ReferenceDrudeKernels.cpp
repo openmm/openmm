@@ -43,22 +43,22 @@ using namespace std;
 
 static vector<Vec3>& extractPositions(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-    return *((vector<Vec3>*) data->positions);
+    return *data->positions;
 }
 
 static vector<Vec3>& extractVelocities(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-    return *((vector<Vec3>*) data->velocities);
+    return *data->velocities;
 }
 
 static vector<Vec3>& extractForces(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-    return *((vector<Vec3>*) data->forces);
+    return *data->forces;
 }
 
 static ReferenceConstraints& extractConstraints(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-    return *(ReferenceConstraints*) data->constraints;
+    return *data->constraints;
 }
 
 static double computeShiftedKineticEnergy(ContextImpl& context, vector<double>& inverseMasses, double timeShift) {

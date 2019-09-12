@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -35,6 +35,9 @@
 #include "openmm/Platform.h"
 #include "openmm/System.h"
 #include "openmm/internal/windowsExport.h"
+#include "ReferenceConstraints.h"
+#include <map>
+#include <vector>
 
 namespace OpenMM {
 
@@ -62,13 +65,13 @@ public:
     ~PlatformData();
     int numParticles, stepCount;
     double time;
-    void* positions;
-    void* velocities;
-    void* forces;
-    void* periodicBoxSize;
-    void* periodicBoxVectors;
-    void* constraints;
-    void* energyParameterDerivatives;
+    std::vector<Vec3>* positions;
+    std::vector<Vec3>* velocities;
+    std::vector<Vec3>* forces;
+    Vec3* periodicBoxSize;
+    Vec3* periodicBoxVectors;
+    ReferenceConstraints* constraints;
+    std::map<std::string, double>* energyParameterDerivatives;
 };
 } // namespace OpenMM
 
