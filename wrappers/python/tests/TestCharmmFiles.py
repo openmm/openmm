@@ -5,7 +5,13 @@ from simtk.openmm import *
 from simtk.unit import *
 import simtk.openmm.app.element as elem
 import math
+import os
+import tempfile
 import warnings
+if sys.version_info >= (3,0):
+    from io import StringIO
+else:
+    from cStringIO import StringIO
 
 class TestCharmmFiles(unittest.TestCase):
 
@@ -323,6 +329,25 @@ class TestCharmmFiles(unittest.TestCase):
             psf = CharmmPsfFile('systems/charmm-solvated/isa_wat.3_kcl.m14.psf')
             psf.setBox(3.0584*nanometers,3.0584*nanometers,3.0584*nanometers)
             psf.createSystem(parameters, nonbondedMethod=PME)
+
+    def test_NBXMod(self):
+        """Test that all values of NBXMod are interpreted correctly."""
+        crd = CharmmCrdFile('systems/ala_ala_ala.crd')
+        with open('systems/charmm22.par') as parfile:
+            par = parfile.read()
+        # The following values were computed with CHARMM.
+        modeEnergy = {0: 754318.20507, 1: 754318.20507, 2: 908.35224, 3: 59.65279, 4: -241.12856, 5: 39.13169}
+        for nbxmod in range(-5, 6):
+            with tempfile.NamedTemporaryFile(suffix='.par', mode='w', delete=False) as parfile:
+                parfile.write(par.replace('nbxmod  5', 'nbxmod %d' % nbxmod))
+                parfile.close()
+                params = CharmmParameterSet('systems/charmm22.rtf', parfile.name)
+                os.remove(parfile.name)
+            system = self.psf_c.createSystem(params, nonbondedMethod=NoCutoff)
+            context = Context(system, VerletIntegrator(1*femtoseconds), Platform.getPlatformByName('Reference'))
+            context.setPositions(crd.positions)
+            energy = context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilocalories_per_mole)
+            self.assertAlmostEqual(energy, modeEnergy[abs(nbxmod)], delta=1e-3*abs(energy))
 
 
 if __name__ == '__main__':

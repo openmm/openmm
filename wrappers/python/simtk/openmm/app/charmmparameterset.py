@@ -116,6 +116,7 @@ class CharmmParameterSet(object):
         self.nbfix_types = dict()
         self.nbthole_types = dict()
         self.parametersets = []
+        self.nbxmod = 5
 
         # Load all of the files
         tops, pars, strs = [], [], []
@@ -228,8 +229,17 @@ class CharmmParameterSet(object):
         nonbonded_types = dict() # Holder
         parameterset = None
         read_first_nonbonded = False
+        previous = ''
         for line in f:
-            line = line.strip()
+            line = previous+line.strip()
+            previous = ''
+            if line.endswith('-'):
+                # This will be continued on the next line.
+                previous = line[:-1]
+                continue
+            if line.startswith('!'):
+                # This is a comment.
+                continue
             if not line:
                 # This is a blank line
                 continue
@@ -258,6 +268,12 @@ class CharmmParameterSet(object):
             if line.startswith('NONBONDED'):
                 read_first_nonbonded = False
                 section = 'NONBONDED'
+                fields = line.upper().split()
+                if 'NBXMOD' in fields:
+                    nbxmod = int(fields[fields.index('NBXMOD')+1])
+                    if nbxmod not in list(range(-5, 6)):
+                        raise CharmmFileError('Unsupported value for NBXMOD: %d' % nbxmod)
+                    self.nbxmod = nbxmod
                 continue
             if line.startswith('NBFIX'):
                 section = 'NBFIX'

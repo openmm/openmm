@@ -1323,26 +1323,28 @@ class CharmmPsfFile(object):
         # Add 1-4 interactions
         excluded_atom_pairs = set() # save these pairs so we don't zero them out
         sigma_scale = 2**(-1/6)
-        for tor in self.dihedral_parameter_list:
-            # First check to see if atoms 1 and 4 are already excluded because
-            # they are 1-2 or 1-3 pairs (would happen in 6-member rings or
-            # fewer). Then check that they're not already added as exclusions
-            if tor.atom1 in tor.atom4.bond_partners: continue
-            if tor.atom1 in tor.atom4.angle_partners: continue
-            key = min((tor.atom1.idx, tor.atom4.idx),
-                      (tor.atom4.idx, tor.atom1.idx))
-            if key in excluded_atom_pairs: continue # multiterm...
-            charge_prod = (tor.atom1.charge * tor.atom4.charge)
-            epsilon = (sqrt(abs(tor.atom1.type.epsilon_14) * ene_conv *
-                            abs(tor.atom4.type.epsilon_14) * ene_conv))
-            sigma = (tor.atom1.type.rmin_14 + tor.atom4.type.rmin_14) * (
-                     length_conv * sigma_scale)
-            force.addException(tor.atom1.idx, tor.atom4.idx,
-                               charge_prod, sigma, epsilon)
-            excluded_atom_pairs.add(
-                    min((tor.atom1.idx, tor.atom4.idx),
-                        (tor.atom4.idx, tor.atom1.idx))
-            )
+        nbxmod = abs(params.nbxmod)
+        if nbxmod == 5:
+            for tor in self.dihedral_parameter_list:
+                # First check to see if atoms 1 and 4 are already excluded because
+                # they are 1-2 or 1-3 pairs (would happen in 6-member rings or
+                # fewer). Then check that they're not already added as exclusions
+                if tor.atom1 in tor.atom4.bond_partners: continue
+                if tor.atom1 in tor.atom4.angle_partners: continue
+                key = min((tor.atom1.idx, tor.atom4.idx),
+                          (tor.atom4.idx, tor.atom1.idx))
+                if key in excluded_atom_pairs: continue # multiterm...
+                charge_prod = (tor.atom1.charge * tor.atom4.charge)
+                epsilon = (sqrt(abs(tor.atom1.type.epsilon_14) * ene_conv *
+                                abs(tor.atom4.type.epsilon_14) * ene_conv))
+                sigma = (tor.atom1.type.rmin_14 + tor.atom4.type.rmin_14) * (
+                         length_conv * sigma_scale)
+                force.addException(tor.atom1.idx, tor.atom4.idx,
+                                   charge_prod, sigma, epsilon)
+                excluded_atom_pairs.add(
+                        min((tor.atom1.idx, tor.atom4.idx),
+                            (tor.atom4.idx, tor.atom1.idx))
+                )
 
         # Add excluded atoms
         # Drude and lonepairs will be excluded based on their parent atoms
@@ -1368,21 +1370,24 @@ class CharmmPsfFile(object):
                             force.addException(excludeterm[j], excludeterm[i], 0.0, 0.1, 0.0)
         # Exclude all bonds and angles, as well as the lonepair/Drude attached onto them
         for atom in self.atom_list:
-            for atom2 in atom.bond_partners:
-                if atom2.idx > atom.idx:
-                    for excludeatom in [atom.idx]+parent_exclude_list[atom.idx]:
-                        for excludeatom2 in [atom2.idx]+parent_exclude_list[atom2.idx]:
-                            force.addException(excludeatom, excludeatom2, 0.0, 0.1, 0.0)
-            for atom2 in atom.angle_partners:
-                if atom2.idx > atom.idx:
-                    for excludeatom in [atom.idx]+parent_exclude_list[atom.idx]:
-                        for excludeatom2 in [atom2.idx]+parent_exclude_list[atom2.idx]:
-                            force.addException(excludeatom, excludeatom2, 0.0, 0.1, 0.0)
-            for atom2 in atom.dihedral_partners:
-                if atom2.idx <= atom.idx: continue
-                if ((atom.idx, atom2.idx) in excluded_atom_pairs):
-                    continue
-                force.addException(atom.idx, atom2.idx, 0.0, 0.1, 0.0)
+            if nbxmod > 1:
+                for atom2 in atom.bond_partners:
+                    if atom2.idx > atom.idx:
+                        for excludeatom in [atom.idx]+parent_exclude_list[atom.idx]:
+                            for excludeatom2 in [atom2.idx]+parent_exclude_list[atom2.idx]:
+                                force.addException(excludeatom, excludeatom2, 0.0, 0.1, 0.0)
+            if nbxmod > 2:
+                for atom2 in atom.angle_partners:
+                    if atom2.idx > atom.idx:
+                        for excludeatom in [atom.idx]+parent_exclude_list[atom.idx]:
+                            for excludeatom2 in [atom2.idx]+parent_exclude_list[atom2.idx]:
+                                force.addException(excludeatom, excludeatom2, 0.0, 0.1, 0.0)
+            if nbxmod > 3:
+                for atom2 in atom.dihedral_partners:
+                    if atom2.idx <= atom.idx: continue
+                    if ((atom.idx, atom2.idx) in excluded_atom_pairs):
+                        continue
+                    force.addException(atom.idx, atom2.idx, 0.0, 0.1, 0.0)
         system.addForce(force)
 
         # Add Drude particles (Drude force)
