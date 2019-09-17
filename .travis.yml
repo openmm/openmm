@@ -24,7 +24,7 @@ matrix:
            CC=$CCACHE/gcc
            CXX=$CCACHE/g++
            CMAKE_FLAGS="
-           -OPENMM_BUILD_OPENCL_LIB=ON
+           -DOPENMM_BUILD_OPENCL_LIB=ON
            -DOPENMM_BUILD_OPENCL_TESTS=ON
            -DOPENMM_BUILD_STATIC_LIB=OFF
            -DOPENMM_BUILD_CPU_LIB=OFF
@@ -70,7 +70,9 @@ matrix:
            OPENCL=false
            CUDA=false
            CMAKE_FLAGS="
-             -DOPENMM_BUILD_OPENCL_TESTS=OFF"
+             -DOPENMM_BUILD_OPENCL_LIB=ON
+             -DOPENMM_BUILD_OPENCL_TESTS=ON
+             -DOPENMM_BUILD_OPENCL_DOUBLE_PRECISION_TESTS=OFF"
       addons: {apt: {packages: []}}
 
     - sudo: false
