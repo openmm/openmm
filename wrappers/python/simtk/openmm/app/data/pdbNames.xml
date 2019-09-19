@@ -239,19 +239,19 @@
   <Atom name="HN2" alt1="2H" alt2="HT2" alt3="H2"/>
  </Residue>
  <Residue name="UNK" type="Protein"/>
- <Residue name="A" alt1="ADE" type="Nucleic">
+ <Residue name="A" alt1="ADE" alt2="A3" alt3="A5" type="Nucleic">
   <Atom name="H61" alt1="1H6"/>
   <Atom name="H62" alt1="2H6"/>
  </Residue>
- <Residue name="G" alt1="GUA" type="Nucleic">
+ <Residue name="G" alt1="GUA" alt2="G3" alt3="G5" type="Nucleic">
   <Atom name="H21" alt1="1H2"/>
   <Atom name="H22" alt1="2H2"/>
  </Residue>
- <Residue name="C" alt1="CYT" type="Nucleic">
+ <Residue name="C" alt1="CYT" alt2="C3" alt3="C5" type="Nucleic">
   <Atom name="H41" alt1="1H4"/>
   <Atom name="H42" alt1="2H4"/>
  </Residue>
- <Residue name="U" alt1="URA" type="Nucleic"/>
+ <Residue name="U" alt1="URA" alt2="U3" alt3="U5" type="Nucleic"/>
  <Residue name="DA" alt1="DAD" alt2="DA3" alt3="DA5" type="Nucleic">
   <Atom name="H61" alt1="1H6"/>
   <Atom name="H62" alt1="2H6"/>
