@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -35,7 +35,6 @@
 #include "ForceImpl.h"
 #include "openmm/MonteCarloBarostat.h"
 #include "openmm/Kernel.h"
-#include "sfmt/SFMT.h"
 #include <string>
 
 namespace OpenMM {
@@ -62,7 +61,6 @@ private:
     const MonteCarloBarostat& owner;
     int step, numAttempted, numAccepted;
     double volumeScale;
-    OpenMM_SFMT::SFMT random;
     Kernel kernel;
 };
 
