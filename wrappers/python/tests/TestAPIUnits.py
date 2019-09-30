@@ -1176,6 +1176,28 @@ class TestAPIUnits(unittest.TestCase):
         self.assertEqual(force.getDefaultTemperature(), 298.15*kelvin)
         self.assertAlmostEqualUnit(force.getDefaultCollisionFrequency(), 1/picosecond)
 
+    def testMonteCarloMembraneBarostat(self):
+        """ Tests the MonteCarloMembraneBarostat API features """
+        force = MonteCarloMembraneBarostat(1.0, 1.5, 300, MonteCarloMembraneBarostat.XYAnisotropic, MonteCarloMembraneBarostat.ZFixed, 25)
+        self.assertEqual(force.getDefaultPressure(), 1.0*bar)
+        self.assertEqual(force.getDefaultSurfaceTension(), 1.5*bar*nanometer)
+        self.assertEqual(force.getDefaultTemperature(), 300*kelvin)
+        self.assertEqual(force.getXYMode(), MonteCarloMembraneBarostat.XYAnisotropic)
+        self.assertEqual(force.getZMode(), MonteCarloMembraneBarostat.ZFixed)
+        self.assertEqual(force.getFrequency(), 25)
+
+        force = MonteCarloMembraneBarostat(1.1*bar, 2.0*bar*nanometer, 350*kelvin, MonteCarloMembraneBarostat.XYAnisotropic, MonteCarloMembraneBarostat.ZFixed, 25)
+        self.assertEqual(force.getDefaultPressure(), 1.1*bar)
+        self.assertEqual(force.getDefaultSurfaceTension(), 2.0*bar*nanometer)
+        self.assertEqual(force.getDefaultTemperature(), 350*kelvin)
+
+        force.setDefaultPressure(1.2*bar)
+        force.setDefaultSurfaceTension(2.5*bar*nanometer)
+        force.setDefaultTemperature(298.15)
+        self.assertEqual(force.getDefaultPressure(), 1.2*bar)
+        self.assertEqual(force.getDefaultSurfaceTension(), 2.5*bar*nanometer)
+        self.assertEqual(force.getDefaultTemperature(), 298.15*kelvin)
+
     def testDrudeSCFIntegrator(self):
         """ Tests the DrudeSCFIntegrator API features """
         integrator = DrudeSCFIntegrator(0.002)
