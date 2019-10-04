@@ -273,9 +273,11 @@ extern "C" __global__ void findBlocksWithInteractions(real4 periodicBoxSize, rea
             // Loop over any blocks we identified as potentially containing neighbors.
             
             int includeBlockFlags = BALLOT(includeBlock2);
+            int forceIncludeFlags = BALLOT(forceInclude);
             while (includeBlockFlags != 0) {
                 int i = __ffs(includeBlockFlags)-1;
                 includeBlockFlags &= includeBlockFlags-1;
+                forceInclude = (forceIncludeFlags>>i) & 1;
                 unsigned short y = (unsigned short) sortedBlocks[block2Base+i].y;
 
                 // Check each atom in block Y for interactions.
