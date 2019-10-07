@@ -237,7 +237,7 @@ joules = joule = Unit({joule_base_unit: 1.0})
 define_prefixed_units(joule_base_unit, module = sys.modules[__name__])
 erg_base_unit = ScaledUnit(1.0, dyne * centimeter, "erg", "erg")
 erg = ergs = Unit({erg_base_unit: 1.0})
-hartree_base_unit = ScaledUnit(4.3597447222071e-18, joule_base_unit, "hartree", "Ha")
+hartree_base_unit = ScaledUnit(4.3597447222071e-18, joule, "hartree", "Ha")
 hartree = hartrees = Unit({hartree_base_unit: 1.0})
 
 # In molecular simulations, "kilojoules" are in microscopic units
