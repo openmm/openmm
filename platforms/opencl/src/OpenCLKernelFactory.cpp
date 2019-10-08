@@ -118,6 +118,8 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
         return new OpenCLIntegrateVerletStepKernel(name, platform, cl);
     if (name == IntegrateLangevinStepKernel::Name())
         return new OpenCLIntegrateLangevinStepKernel(name, platform, cl);
+    if (name == IntegrateBAOABStepKernel::Name())
+        return new OpenCLIntegrateBAOABStepKernel(name, platform, cl);
     if (name == IntegrateBrownianStepKernel::Name())
         return new OpenCLIntegrateBrownianStepKernel(name, platform, cl);
     if (name == IntegrateVariableVerletStepKernel::Name())
