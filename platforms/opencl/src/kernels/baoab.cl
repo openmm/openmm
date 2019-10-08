@@ -1,4 +1,4 @@
-enum {VelScale, ForceScale, NoiseScale, MaxParams};
+enum {VelScale, NoiseScale};
 
 /**
  * Perform the first step of BAOAB integration.
@@ -28,7 +28,6 @@ __kernel void integrateBAOABPart1(__global mixed4* restrict velm, __global const
 __kernel void integrateBAOABPart2(__global real4* restrict posq, __global real4* restrict posqCorrection, __global mixed4* restrict velm, __global mixed4* restrict posDelta,
         __global mixed4* restrict oldDelta, __global const mixed* restrict paramBuffer, __global const mixed2* restrict dt, __global const float4* restrict random, unsigned int randomIndex) {
     mixed vscale = paramBuffer[VelScale];
-    mixed fscale = paramBuffer[ForceScale];
     mixed noisescale = paramBuffer[NoiseScale];
     mixed halfdt = 0.5*dt[0].y;
     mixed invHalfdt = 1/halfdt;
@@ -38,7 +37,7 @@ __kernel void integrateBAOABPart2(__global real4* restrict posq, __global real4*
         mixed4 velocity = velm[index];
         if (velocity.w != 0.0) {
             mixed4 delta = posDelta[index];
-            mixed sqrtInvMass = sqrt(velocity.w);
+            mixed sqrtInvMass = SQRT(velocity.w);
             velocity.xyz += (delta.xyz-oldDelta[index].xyz)*invHalfdt;
             velocity.x = vscale*velocity.x + noisescale*sqrtInvMass*random[randomIndex].x;
             velocity.y = vscale*velocity.y + noisescale*sqrtInvMass*random[randomIndex].y;

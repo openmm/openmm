@@ -7484,11 +7484,11 @@ void OpenCLIntegrateBAOABStepKernel::initialize(const System& system, const BAOA
     kernel2 = cl::Kernel(program, "integrateBAOABPart2");
     kernel3 = cl::Kernel(program, "integrateBAOABPart3");
     if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {
-        params.initialize<cl_double>(cl, 3, "baoabParams");
+        params.initialize<cl_double>(cl, 2, "baoabParams");
         oldDelta.initialize<mm_double4>(cl, cl.getPaddedNumAtoms(), "oldDelta");
     }
     else {
-        params.initialize<cl_float>(cl, 3, "baoabParams");
+        params.initialize<cl_float>(cl, 2, "baoabParams");
         oldDelta.initialize<mm_float4>(cl, cl.getPaddedNumAtoms(), "oldDelta");
     }
     prevStepSize = -1.0;
@@ -7533,12 +7533,10 @@ void OpenCLIntegrateBAOABStepKernel::execute(ContextImpl& context, const BAOABLa
 
         double kT = BOLTZ*temperature;
         double vscale = exp(-stepSize*friction);
-        double fscale = (friction == 0 ? stepSize : (1-vscale)/friction);
         double noisescale = sqrt(kT*(1-vscale*vscale));
         vector<cl_double> p(params.getSize());
         p[0] = vscale;
-        p[1] = fscale;
-        p[2] = noisescale;
+        p[1] = noisescale;
         params.upload(p, true, true);
         prevTemp = temperature;
         prevFriction = friction;

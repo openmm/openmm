@@ -1172,7 +1172,7 @@ private:
 };
 
 /**
- * This kernel is invoked by LangevinIntegrator to take one time step.
+ * This kernel is invoked by BAOABLangevinIntegrator to take one time step.
  */
 class ReferenceIntegrateBAOABStepKernel : public IntegrateBAOABStepKernel {
 public:
