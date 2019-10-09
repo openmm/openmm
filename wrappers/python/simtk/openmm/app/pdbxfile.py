@@ -397,7 +397,7 @@ class PDBxFile(object):
             for (resIndex, res) in enumerate(residues):
                 if keepIds:
                     resId = res.id
-                    resIC = (res.insertionCode if len(res.insertionCode) > 0 else '.')
+                    resIC = (res.insertionCode if res.insertionCode.strip() else '.')
                 else:
                     resId = resIndex + 1
                     resIC = '.'
