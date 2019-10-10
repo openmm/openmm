@@ -11,7 +11,29 @@ else:
 
 class TestPdbxFile(unittest.TestCase):
     """Test the PDBx/mmCIF file parser"""
- 
+
+    def test_FormatConversion(self):
+        """Test conversion from PDB to PDBx"""
+
+        mol = PDBFile('systems/ala_ala_ala.pdb')
+
+        # Write to 'file'
+        output = StringIO()
+        PDBxFile.writeFile(mol.topology, mol.positions, output,
+                           keepIds=True)
+
+        # Read from 'file'
+        input = StringIO(output.getvalue())
+        try:
+            pdbx = PDBxFile(input)
+        except Exception:
+            self.fail('Parser failed to read PDBx/mmCIF file')
+
+        # Close file handles
+        output.close()
+        input.close()
+
+
     def test_Triclinic(self):
         """Test parsing a file that describes a triclinic box."""
         pdb = PDBxFile('systems/triclinic.pdbx')
