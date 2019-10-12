@@ -1400,18 +1400,22 @@ class Modeller(object):
         
         newAtoms = {}
         lipidChain = membraneTopology.addChain()
+        lipidResNum = 1  # renumber lipid residues to handle large patches
         for (nearest, residue, pos) in addedLipids:
             if skipFromLeaf[lipidLeaf[residue]] > 0:
                 # Remove the same number of residues from each leaf.
                 skipFromLeaf[lipidLeaf[residue]] -= 1
             else:
-                newResidue = membraneTopology.addResidue(residue.name, lipidChain, residue.id, residue.insertionCode)
+                newResidue = membraneTopology.addResidue(residue.name, lipidChain, lipidResNum, residue.insertionCode)
+                lipidResNum += 1
+                
                 for atom in residue.atoms():
                     newAtom = membraneTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
                     newAtoms[atom] = newAtom
                 membranePos += pos
                 for bond in resBonds[residue]:
                     membraneTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]], bond.type, bond.order)
+
         del lipidLeaf
         del addedLipids
         
