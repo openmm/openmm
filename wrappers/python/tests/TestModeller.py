@@ -1078,27 +1078,36 @@ class TestModeller(unittest.TestCase):
 
 
     def test_addMembrane(self):
-        """Test adding a membrane."""
-        pdb = PDBFile('systems/alanine-dipeptide-implicit.pdb')
-        modeller = Modeller(pdb.topology, pdb.positions)
+        """Test adding a membrane to a realistic system."""
+        
+        mol = PDBxFile('systems/gpcr.cif')
+        modeller = Modeller(mol.topology, mol.positions)
         ff = ForceField('amber14-all.xml', 'amber14/tip3p.xml')
 
-        # Add a membrane around alanine dipeptide???  I know, it's a silly thing to do,
-        # but it's fast, and all we care about is whether it works!
+        # Add a membrane around the GPCR
+        modeller.addMembrane(ff, minimumPadding=1.1*nanometers, ionicStrength=1*molar)
 
-        modeller.addMembrane(ff, minimumPadding=0.5*nanometers, ionicStrength=1*molar)
+        # Make sure we added everything correctly
         resCount = defaultdict(int)
         for res in modeller.topology.residues():
             resCount[res.name] += 1
-        self.assertTrue(resCount['POP'] > 1)
         self.assertTrue(resCount['HOH'] > 1)
         self.assertTrue(resCount['CL'] > 1)
-        self.assertEqual(resCount['CL'], resCount['NA'])
-        self.assertEqual(1, resCount['ALA'])
-        originalSize = max(pdb.positions) - min(pdb.positions)
+        self.assertTrue(resCount['NA'] > 1)
+        self.assertTrue(resCount['CL'] > resCount['NA'])  # overall negative
+        self.assertEqual(16, resCount['ALA'])
+        self.assertEqual(226, resCount['POP'])  # 2x128 - overlapping
+
+        # Check lipid numbering for repetitions
+        lipidIdList = [(r.chain.id, r.id) for r in modeller.topology.residues()
+                       if r.name == 'POP']
+        self.assertEqual(len(lipidIdList), len(set(lipidIdList)))
+
+        # Check dimensions to see if padding was respected
+        originalSize = max(mol.positions) - min(mol.positions)
         newSize = modeller.topology.getUnitCellDimensions()
         for i in range(3):
-            self.assertTrue(newSize[i] >= originalSize[i]+0.5*nanometers)
+            self.assertTrue(newSize[i] >= originalSize[i]+1.1*nanometers)
 
 
     def assertVecAlmostEqual(self, p1, p2, tol=1e-7):
