@@ -934,7 +934,7 @@ class CharmmPsfFile(object):
                 atom1=lpsite[1]
                 atom2=lpsite[2]
                 atom3=lpsite[3]
-                if atom3 > 0: 
+                if atom3 >= 0: 
                     if lpsite[4] > 0 : # relative lonepair type
                         r = lpsite[4] /10.0 # in nanometer
                         xweights = [-1.0, 0.0, 1.0]
