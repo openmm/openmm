@@ -20,7 +20,7 @@ install:
   - "set CCLASH_DIR=C:\\ProgramData\\cclash"
 
 # Download FFTW3 for PME plugin
-  - Invoke-WebRequest ftp://ftp.fftw.org/pub/fftw/fftw-3.3.4-dll64.zip -OutFile fftw-3.3.4-dll64.zip
+  - ps: Invoke-WebRequest ftp://ftp.fftw.org/pub/fftw/fftw-3.3.4-dll64.zip -OutFile fftw-3.3.4-dll64.zip
   - 7z x fftw-3.3.4-dll64.zip -oC:\fftw > null
   - cd C:\fftw
   - lib /def:libfftw3f-3.def
