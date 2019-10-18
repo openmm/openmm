@@ -87,16 +87,20 @@ void ReferenceBAOABDynamics::updatePart2(int numberOfAtoms, vector<Vec3>& atomCo
     }
 }
 
-void ReferenceBAOABDynamics::updatePart3(int numberOfAtoms, vector<Vec3>& atomCoordinates,
+void ReferenceBAOABDynamics::updatePart3(OpenMM::ContextImpl& context, int numberOfAtoms, vector<Vec3>& atomCoordinates,
                                               vector<Vec3>& velocities, vector<Vec3>& forces, vector<double>& inverseMasses,
                                               vector<Vec3>& xPrime) {
     const double halfdt = 0.5*getDeltaT();
     for (int i = 0; i < numberOfAtoms; i++) {
         if (inverseMasses[i] != 0.0) {
             velocities[i] += (xPrime[i]-oldx[i])/halfdt;
-            velocities[i] += (halfdt*inverseMasses[i])*forces[i];
             atomCoordinates[i] = xPrime[i];
         }
+    }
+    context.calcForcesAndEnergy(true, false);
+    for (int i = 0; i < numberOfAtoms; i++) {
+        if (inverseMasses[i] != 0.0)
+            velocities[i] += (halfdt*inverseMasses[i])*forces[i];
     }
 }
 
@@ -135,8 +139,7 @@ void ReferenceBAOABDynamics::update(ContextImpl& context, vector<Vec3>& atomCoor
 
     // 3rd update
 
-    context.calcForcesAndEnergy(true, false);
-    updatePart3(numberOfAtoms, atomCoordinates, velocities, forces, inverseMasses, xPrime);
+    updatePart3(context, numberOfAtoms, atomCoordinates, velocities, forces, inverseMasses, xPrime);
     if (referenceConstraintAlgorithm)
         referenceConstraintAlgorithm->applyToVelocities(atomCoordinates, velocities, inverseMasses, tolerance);
 

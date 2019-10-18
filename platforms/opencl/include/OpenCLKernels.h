@@ -1421,7 +1421,7 @@ private:
     double prevTemp, prevFriction, prevStepSize;
     bool hasInitializedKernels;
     OpenCLArray params, oldDelta;
-    cl::Kernel kernel1, kernel2, kernel3;
+    cl::Kernel kernel1, kernel2, kernel3, kernel4;
 };
 
 /**

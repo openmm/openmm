@@ -7152,6 +7152,7 @@ void CudaIntegrateBAOABStepKernel::initialize(const System& system, const BAOABL
     kernel1 = cu.getKernel(module, "integrateBAOABPart1");
     kernel2 = cu.getKernel(module, "integrateBAOABPart2");
     kernel3 = cu.getKernel(module, "integrateBAOABPart3");
+    kernel4 = cu.getKernel(module, "integrateBAOABPart4");
     if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
         params.initialize<double>(cu, 3, "baoabParams");
         oldDelta.initialize<double4>(cu, cu.getPaddedNumAtoms(), "oldDelta");
@@ -7202,11 +7203,13 @@ void CudaIntegrateBAOABStepKernel::execute(ContextImpl& context, const BAOABLang
             &oldDelta.getDevicePointer(), &params.getDevicePointer(), &integration.getStepSize().getDevicePointer(), &integration.getRandom().getDevicePointer(), &randomIndex};
     cu.executeKernel(kernel2, args2, numAtoms, 128);
     integration.applyConstraints(integrator.getConstraintTolerance());
-    context.calcForcesAndEnergy(true, false);
-    void* args3[] = {&numAtoms, &paddedNumAtoms, &cu.getPosq().getDevicePointer(), &posCorrection, &cu.getVelm().getDevicePointer(),
-            &cu.getForce().getDevicePointer(), &integration.getPosDelta().getDevicePointer(),
-            &oldDelta.getDevicePointer(), &integration.getStepSize().getDevicePointer()};
+    void* args3[] = {&numAtoms, &cu.getPosq().getDevicePointer(), &posCorrection, &cu.getVelm().getDevicePointer(),
+            &integration.getPosDelta().getDevicePointer(), &oldDelta.getDevicePointer(), &integration.getStepSize().getDevicePointer()};
     cu.executeKernel(kernel3, args3, numAtoms, 128);
+    context.calcForcesAndEnergy(true, false);
+    void* args4[] = {&numAtoms, &paddedNumAtoms, &cu.getVelm().getDevicePointer(),
+            &cu.getForce().getDevicePointer(), &integration.getStepSize().getDevicePointer()};
+    cu.executeKernel(kernel4, args4, numAtoms, 128);
     integration.applyVelocityConstraints(integrator.getConstraintTolerance());
     integration.computeVirtualSites();
 
@@ -7215,6 +7218,8 @@ void CudaIntegrateBAOABStepKernel::execute(ContextImpl& context, const BAOABLang
     cu.setTime(cu.getTime()+stepSize);
     cu.setStepCount(cu.getStepCount()+1);
     cu.reorderAtoms();
+    if (cu.getAtomsWereReordered())
+        forcesAreValid = false;
     
     // Reduce UI lag.
     

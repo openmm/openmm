@@ -121,6 +121,7 @@ class OPENMM_EXPORT ReferenceBAOABDynamics : public ReferenceDynamics {
       
          Third update
       
+         @param context             the context this integrator is updating
          @param numberOfAtoms       number of atoms
          @param atomCoordinates     atom coordinates
          @param velocities          velocities
@@ -129,7 +130,7 @@ class OPENMM_EXPORT ReferenceBAOABDynamics : public ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
       
-      virtual void updatePart3(int numberOfAtoms, std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<OpenMM::Vec3>& velocities,
+      virtual void updatePart3(OpenMM::ContextImpl& context, int numberOfAtoms, std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<OpenMM::Vec3>& velocities,
                        std::vector<OpenMM::Vec3>& forces, std::vector<double>& masses, std::vector<OpenMM::Vec3>& xPrime);
 };
 

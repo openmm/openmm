@@ -75,18 +75,17 @@ extern "C" __global__ void integrateBAOABPart2(int numAtoms, real4* __restrict__
  * Perform the third step of BAOAB integration.
  */
 
-extern "C" __global__ void integrateBAOABPart3(int numAtoms, int paddedNumAtoms, real4* __restrict__ posq, real4* __restrict__ posqCorrection, mixed4* __restrict__ velm,
-        const long long* __restrict__ force, mixed4* __restrict__ posDelta, mixed4* __restrict__ oldDelta, const mixed2* __restrict__ dt) {
+extern "C" __global__ void integrateBAOABPart3(int numAtoms, real4* __restrict__ posq, real4* __restrict__ posqCorrection, mixed4* __restrict__ velm,
+        mixed4* __restrict__ posDelta, mixed4* __restrict__ oldDelta, const mixed2* __restrict__ dt) {
     mixed halfdt = 0.5*dt[0].y;
     mixed invHalfdt = 1/halfdt;
-    mixed fscale = halfdt/(mixed) 0x100000000;
     for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < numAtoms; index += blockDim.x*gridDim.x) {
         mixed4 velocity = velm[index];
         if (velocity.w != 0.0) {
             mixed4 delta = posDelta[index];
-            velocity.x += (delta.x-oldDelta[index].x)*invHalfdt + fscale*velocity.w*force[index];
-            velocity.y += (delta.y-oldDelta[index].y)*invHalfdt + fscale*velocity.w*force[index+paddedNumAtoms];
-            velocity.z += (delta.z-oldDelta[index].z)*invHalfdt + fscale*velocity.w*force[index+paddedNumAtoms*2];
+            velocity.x += (delta.x-oldDelta[index].x)*invHalfdt;
+            velocity.y += (delta.y-oldDelta[index].y)*invHalfdt;
+            velocity.z += (delta.z-oldDelta[index].z)*invHalfdt;
             velm[index] = velocity;
 #ifdef USE_MIXED_PRECISION
             real4 pos1 = posq[index];
@@ -104,6 +103,25 @@ extern "C" __global__ void integrateBAOABPart3(int numAtoms, int paddedNumAtoms,
 #else
             posq[index] = pos;
 #endif
+        }
+    }
+}
+
+/**
+ * Perform the fourth step of BAOAB integration.
+ */
+
+extern "C" __global__ void integrateBAOABPart4(int numAtoms, int paddedNumAtoms, mixed4* __restrict__ velm,
+        const long long* __restrict__ force, const mixed2* __restrict__ dt) {
+    mixed halfdt = 0.5*dt[0].y;
+    mixed fscale = halfdt/(mixed) 0x100000000;
+    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < numAtoms; index += blockDim.x*gridDim.x) {
+        mixed4 velocity = velm[index];
+        if (velocity.w != 0.0) {
+            velocity.x += fscale*velocity.w*force[index];
+            velocity.y += fscale*velocity.w*force[index+paddedNumAtoms];
+            velocity.z += fscale*velocity.w*force[index+paddedNumAtoms*2];
+            velm[index] = velocity;
         }
     }
 }

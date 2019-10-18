@@ -7483,6 +7483,7 @@ void OpenCLIntegrateBAOABStepKernel::initialize(const System& system, const BAOA
     kernel1 = cl::Kernel(program, "integrateBAOABPart1");
     kernel2 = cl::Kernel(program, "integrateBAOABPart2");
     kernel3 = cl::Kernel(program, "integrateBAOABPart3");
+    kernel4 = cl::Kernel(program, "integrateBAOABPart4");
     if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {
         params.initialize<cl_double>(cl, 2, "baoabParams");
         oldDelta.initialize<mm_double4>(cl, cl.getPaddedNumAtoms(), "oldDelta");
@@ -7515,10 +7516,12 @@ void OpenCLIntegrateBAOABStepKernel::execute(ContextImpl& context, const BAOABLa
         kernel3.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
         setPosqCorrectionArg(cl, kernel3, 1);
         kernel3.setArg<cl::Buffer>(2, cl.getVelm().getDeviceBuffer());
-        kernel3.setArg<cl::Buffer>(3, cl.getForce().getDeviceBuffer());
-        kernel3.setArg<cl::Buffer>(4, integration.getPosDelta().getDeviceBuffer());
-        kernel3.setArg<cl::Buffer>(5, oldDelta.getDeviceBuffer());
-        kernel3.setArg<cl::Buffer>(6, integration.getStepSize().getDeviceBuffer());
+        kernel3.setArg<cl::Buffer>(3, integration.getPosDelta().getDeviceBuffer());
+        kernel3.setArg<cl::Buffer>(4, oldDelta.getDeviceBuffer());
+        kernel3.setArg<cl::Buffer>(5, integration.getStepSize().getDeviceBuffer());
+        kernel4.setArg<cl::Buffer>(0, cl.getVelm().getDeviceBuffer());
+        kernel4.setArg<cl::Buffer>(1, cl.getForce().getDeviceBuffer());
+        kernel4.setArg<cl::Buffer>(2, integration.getStepSize().getDeviceBuffer());
     }
     if (!forcesAreValid) {
         context.calcForcesAndEnergy(true, false);
@@ -7550,8 +7553,9 @@ void OpenCLIntegrateBAOABStepKernel::execute(ContextImpl& context, const BAOABLa
     integration.applyConstraints(integrator.getConstraintTolerance());
     cl.executeKernel(kernel2, numAtoms);
     integration.applyConstraints(integrator.getConstraintTolerance());
-    context.calcForcesAndEnergy(true, false);
     cl.executeKernel(kernel3, numAtoms);
+    context.calcForcesAndEnergy(true, false);
+    cl.executeKernel(kernel4, numAtoms);
     integration.applyVelocityConstraints(integrator.getConstraintTolerance());
     integration.computeVirtualSites();
 
@@ -7560,6 +7564,8 @@ void OpenCLIntegrateBAOABStepKernel::execute(ContextImpl& context, const BAOABLa
     cl.setTime(cl.getTime()+stepSize);
     cl.setStepCount(cl.getStepCount()+1);
     cl.reorderAtoms();
+    if (cl.getAtomsWereReordered())
+        forcesAreValid = false;
     
     // Reduce UI lag.
     

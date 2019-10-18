@@ -71,16 +71,16 @@ __kernel void integrateBAOABPart2(__global real4* restrict posq, __global real4*
  */
 
 __kernel void integrateBAOABPart3(__global real4* restrict posq, __global real4* restrict posqCorrection, __global mixed4* restrict velm,
-        __global const real4* restrict force, __global mixed4* restrict posDelta, __global mixed4* restrict oldDelta, __global const mixed2* restrict dt) {
+         __global mixed4* restrict posDelta, __global mixed4* restrict oldDelta, __global const mixed2* restrict dt) {
     mixed halfdt = 0.5*dt[0].y;
     mixed invHalfdt = 1/halfdt;
     for (int index = get_global_id(0); index < NUM_ATOMS; index += get_global_size(0)) {
         mixed4 velocity = velm[index];
         if (velocity.w != 0.0) {
             mixed4 delta = posDelta[index];
-            velocity.x += (delta.x-oldDelta[index].x)*invHalfdt + halfdt*velocity.w*force[index].x;
-            velocity.y += (delta.y-oldDelta[index].y)*invHalfdt + halfdt*velocity.w*force[index].y;
-            velocity.z += (delta.z-oldDelta[index].z)*invHalfdt + halfdt*velocity.w*force[index].z;
+            velocity.x += (delta.x-oldDelta[index].x)*invHalfdt;
+            velocity.y += (delta.y-oldDelta[index].y)*invHalfdt;
+            velocity.z += (delta.z-oldDelta[index].z)*invHalfdt;
             velm[index] = velocity;
 #ifdef USE_MIXED_PRECISION
             real4 pos1 = posq[index];
@@ -96,6 +96,23 @@ __kernel void integrateBAOABPart3(__global real4* restrict posq, __global real4*
 #else
             posq[index] = pos;
 #endif
+        }
+    }
+}
+
+/**
+ * Perform the fourth step of BAOAB integration.
+ */
+
+__kernel void integrateBAOABPart4(__global mixed4* restrict velm, __global const real4* restrict force, __global const mixed2* restrict dt) {
+    mixed halfdt = 0.5*dt[0].y;
+    for (int index = get_global_id(0); index < NUM_ATOMS; index += get_global_size(0)) {
+        mixed4 velocity = velm[index];
+        if (velocity.w != 0.0) {
+            velocity.x += halfdt*velocity.w*force[index].x;
+            velocity.y += halfdt*velocity.w*force[index].y;
+            velocity.z += halfdt*velocity.w*force[index].z;
+            velm[index] = velocity;
         }
     }
 }

@@ -1437,7 +1437,7 @@ private:
     CudaContext& cu;
     double prevTemp, prevFriction, prevStepSize;
     CudaArray params, oldDelta;
-    CUfunction kernel1, kernel2, kernel3;
+    CUfunction kernel1, kernel2, kernel3, kernel4;
 };
 
 /**
