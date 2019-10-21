@@ -95,13 +95,13 @@ class OPENMM_EXPORT ReferenceBAOABDynamics : public ReferenceDynamics {
          @param atomCoordinates     atom coordinates
          @param velocities          velocities
          @param forces              forces
-         @param masses              atom masses
+         @param inverseMasses       inverse atom masses
          @param xPrime              xPrime
       
          --------------------------------------------------------------------------------------- */
       
       virtual void updatePart1(int numberOfAtoms, std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<OpenMM::Vec3>& velocities,
-                       std::vector<OpenMM::Vec3>& forces, std::vector<double>& masses, std::vector<OpenMM::Vec3>& xPrime);
+                       std::vector<OpenMM::Vec3>& forces, std::vector<double>& inverseMasses, std::vector<OpenMM::Vec3>& xPrime);
       
       /**---------------------------------------------------------------------------------------
       
@@ -110,12 +110,13 @@ class OPENMM_EXPORT ReferenceBAOABDynamics : public ReferenceDynamics {
          @param numberOfAtoms       number of atoms
          @param atomCoordinates     atom coordinates
          @param velocities          velocities
-         @param masses              atom masses
+         @param inverseMasses       inverse atom masses
+         @param xPrime              xPrime
       
          --------------------------------------------------------------------------------------- */
       
       virtual void updatePart2(int numberOfAtoms, std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<OpenMM::Vec3>& velocities,
-                       std::vector<double>& masses, std::vector<OpenMM::Vec3>& xPrime);
+                       std::vector<double>& inverseMasses, std::vector<OpenMM::Vec3>& xPrime);
       
       /**---------------------------------------------------------------------------------------
       
@@ -126,12 +127,13 @@ class OPENMM_EXPORT ReferenceBAOABDynamics : public ReferenceDynamics {
          @param atomCoordinates     atom coordinates
          @param velocities          velocities
          @param forces              forces
-         @param masses              atom masses
+         @param inverseMasses       inverse atom masses
+         @param xPrime              xPrime
       
          --------------------------------------------------------------------------------------- */
       
       virtual void updatePart3(OpenMM::ContextImpl& context, int numberOfAtoms, std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<OpenMM::Vec3>& velocities,
-                       std::vector<OpenMM::Vec3>& forces, std::vector<double>& masses, std::vector<OpenMM::Vec3>& xPrime);
+                       std::vector<OpenMM::Vec3>& forces, std::vector<double>& inverseMasses, std::vector<OpenMM::Vec3>& xPrime);
 };
 
 } // namespace OpenMM

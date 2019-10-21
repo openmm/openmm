@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -1351,4 +1351,44 @@ void CpuIntegrateLangevinStepKernel::execute(ContextImpl& context, const Langevi
 
 double CpuIntegrateLangevinStepKernel::computeKineticEnergy(ContextImpl& context, const LangevinIntegrator& integrator) {
     return computeShiftedKineticEnergy(context, masses, 0.5*integrator.getStepSize());
+}
+
+CpuIntegrateBAOABStepKernel::~CpuIntegrateBAOABStepKernel() {
+    if (dynamics)
+        delete dynamics;
+}
+
+void CpuIntegrateBAOABStepKernel::initialize(const System& system, const BAOABLangevinIntegrator& integrator) {
+    int numParticles = system.getNumParticles();
+    masses.resize(numParticles);
+    for (int i = 0; i < numParticles; ++i)
+        masses[i] = system.getParticleMass(i);
+    data.random.initialize(integrator.getRandomNumberSeed(), data.threads.getNumThreads());
+}
+
+void CpuIntegrateBAOABStepKernel::execute(ContextImpl& context, const BAOABLangevinIntegrator& integrator, bool& forcesAreValid) {
+    double temperature = integrator.getTemperature();
+    double friction = integrator.getFriction();
+    double stepSize = integrator.getStepSize();
+    vector<Vec3>& posData = extractPositions(context);
+    vector<Vec3>& velData = extractVelocities(context);
+    if (dynamics == 0 || temperature != prevTemp || friction != prevFriction || stepSize != prevStepSize) {
+        // Recreate the computation objects with the new parameters.
+        
+        if (dynamics)
+            delete dynamics;
+        dynamics = new CpuBAOABDynamics(context.getSystem().getNumParticles(), stepSize, friction, temperature, data.threads, data.random);
+        dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
+        prevTemp = temperature;
+        prevFriction = friction;
+        prevStepSize = stepSize;
+    }
+    dynamics->update(context, posData, velData, masses, forcesAreValid, integrator.getConstraintTolerance());
+    ReferencePlatform::PlatformData* refData = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
+    refData->time += stepSize;
+    refData->stepCount++;
+}
+
+double CpuIntegrateBAOABStepKernel::computeKineticEnergy(ContextImpl& context, const BAOABLangevinIntegrator& integrator) {
+    return computeShiftedKineticEnergy(context, masses, 0.0);
 }
