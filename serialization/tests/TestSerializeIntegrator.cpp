@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman, Yutong Zhao                                        *
  * Contributors:                                                              *
  *                                                                            *
@@ -31,6 +31,7 @@
 
 #include "openmm/internal/AssertionUtilities.h"
 
+#include "openmm/BAOABLangevinIntegrator.h"
 #include "openmm/BrownianIntegrator.h"
 #include "openmm/CompoundIntegrator.h"
 #include "openmm/CustomIntegrator.h"
@@ -65,6 +66,20 @@ void testSerializeLangevinIntegrator() {
     stringstream ss;
     XmlSerializer::serialize<Integrator>(intg, "LangevinIntegrator", ss);
     LangevinIntegrator *intg2 = dynamic_cast<LangevinIntegrator*>(XmlSerializer::deserialize<Integrator>(ss));
+    ASSERT_EQUAL(intg->getConstraintTolerance(), intg2->getConstraintTolerance());
+    ASSERT_EQUAL(intg->getStepSize(), intg2->getStepSize());
+    ASSERT_EQUAL(intg->getTemperature(), intg2->getTemperature());
+    ASSERT_EQUAL(intg->getFriction(), intg2->getFriction());
+    ASSERT_EQUAL(intg->getRandomNumberSeed(), intg2->getRandomNumberSeed());
+    delete intg;
+    delete intg2;
+}
+
+void testSerializeBAOABLangevinIntegrator() {
+    BAOABLangevinIntegrator *intg = new BAOABLangevinIntegrator(372.4, 1.234, 0.0018);
+    stringstream ss;
+    XmlSerializer::serialize<Integrator>(intg, "BAOABLangevinIntegrator", ss);
+    BAOABLangevinIntegrator *intg2 = dynamic_cast<BAOABLangevinIntegrator*>(XmlSerializer::deserialize<Integrator>(ss));
     ASSERT_EQUAL(intg->getConstraintTolerance(), intg2->getConstraintTolerance());
     ASSERT_EQUAL(intg->getStepSize(), intg2->getStepSize());
     ASSERT_EQUAL(intg->getTemperature(), intg2->getTemperature());
@@ -244,6 +259,7 @@ int main() {
         testSerializeVariableLangevinIntegrator();
         testSerializeVariableVerletIntegrator();
         testSerializeLangevinIntegrator();
+        testSerializeBAOABLangevinIntegrator();
         testSerializeCompoundIntegrator();
     }
     catch(const exception& e) {
