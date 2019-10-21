@@ -22,7 +22,7 @@ params = CharmmParameterSet('charmm22.rtf', 'charmm22.par')
 # Instantiate the system
 system = psf.createSystem(params, nonbondedMethod=NoCutoff,
                           nonbondedCutoff=None)
-integrator = LangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
+integrator = BAOABLangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
 simulation = Simulation(psf.topology, system, integrator)
 simulation.context.setPositions(pdb.getPositions())
 simulation.minimizeEnergy()

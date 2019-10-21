@@ -1338,6 +1338,21 @@ The integration is done using a leap-frog method similar to VerletIntegrator.
 :cite:`Izaguirre2010` The same comments about the offset between positions and
 velocities apply to this integrator as to that one.
 
+BAOABLangevinIntegrator
+***********************
+
+This integrator is similar to LangevinIntegerator, but it instead uses the BAOAB
+discretization. :cite:`Leimkuhler2013` This tends to produce more accurate
+sampling of configurational properties (such as free energies), but less
+accurate sampling of kinetic properties (such as mean kinetic energy).  Because
+configurational properties are much more important than kinetic ones in most
+simulations, this integrator is generally preferred over LangevinIntegrator.  It
+often allows one to use a larger time step while still maintaining similar or
+better accuracy.
+
+Unlike LangevinIntegrator, this does not use a leap-frog algorithm.  The
+positions and velocities all correspond to the same point in time.
+
 BrownianIntegrator
 ******************
 

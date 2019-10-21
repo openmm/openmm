@@ -120,7 +120,7 @@ steps.
         forcefield = ForceField('amber14-all.xml', 'amber14/tip3pfb.xml')
         system = forcefield.createSystem(pdb.topology, nonbondedMethod=PME,
                 nonbondedCutoff=1*nanometer, constraints=HBonds)
-        integrator = LangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
+        integrator = BAOABLangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
         simulation = Simulation(pdb.topology, system, integrator)
         simulation.context.setPositions(pdb.positions)
         simulation.minimizeEnergy()
@@ -210,10 +210,10 @@ convenient and less error-prone.  We could have equivalently specified
 The units system will be described in more detail later, in Section :ref:`units-and-dimensional-analysis`.
 ::
 
-    integrator = LangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
+    integrator = BAOABLangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
 
 This line creates the integrator to use for advancing the equations of motion.
-It specifies a :class:`LangevinIntegrator`, which performs Langevin dynamics,
+It specifies a :class:`BAOABLangevinIntegrator`, which performs Langevin dynamics,
 and assigns it to a variable called :code:`integrator`\ .  It also specifies
 the values of three parameters that are specific to Langevin dynamics: the
 simulation temperature (300 K), the friction coefficient (1 ps\ :sup:`-1`\ ), and
@@ -295,7 +295,7 @@ found in OpenMM’s :file:`examples` folder with the name :file:`simulateAmber.p
         inpcrd = AmberInpcrdFile('input.inpcrd')
         system = prmtop.createSystem(nonbondedMethod=PME, nonbondedCutoff=1*nanometer,
                 constraints=HBonds)
-        integrator = LangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
+        integrator = BAOABLangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
         simulation = Simulation(prmtop.topology, system, integrator)
         simulation.context.setPositions(inpcrd.positions)
         if inpcrd.boxVectors is not None:
@@ -389,7 +389,7 @@ with the name :file:`simulateGromacs.py`.
                 includeDir='/usr/local/gromacs/share/gromacs/top')
         system = top.createSystem(nonbondedMethod=PME, nonbondedCutoff=1*nanometer,
                 constraints=HBonds)
-        integrator = LangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
+        integrator = BAOABLangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
         simulation = Simulation(top.topology, system, integrator)
         simulation.context.setPositions(gro.positions)
         simulation.minimizeEnergy()
@@ -453,7 +453,7 @@ on the :class:`CharmmPsfFile`.
         params = CharmmParameterSet('charmm22.rtf', 'charmm22.prm')
         system = psf.createSystem(params, nonbondedMethod=NoCutoff,
                 nonbondedCutoff=1*nanometer, constraints=HBonds)
-        integrator = LangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
+        integrator = BAOABLangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
         simulation = Simulation(psf.topology, system, integrator)
         simulation.context.setPositions(pdb.positions)
         simulation.minimizeEnergy()
@@ -1022,13 +1022,13 @@ Integrators
 OpenMM offers a choice of several different integration methods.  You select
 which one to use by creating an integrator object of the appropriate type.
 
-Langevin Integrator
--------------------
+BAOAB Langevin Integrator
+-------------------------
 
 In the examples of the previous sections, we used Langevin integration:
 ::
 
-    integrator = LangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
+    integrator = BAOABLangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
 
 The three parameter values in this line are the simulation temperature (300 K),
 the friction coefficient (1 ps\ :sup:`-1`\ ), and the step size (0.002 ps).  You
@@ -1036,6 +1036,16 @@ are free to change these to whatever values you want.  Be sure to specify units
 on all values.  For example, the step size could be written either as
 :code:`0.002*picoseconds` or :code:`2*femtoseconds`\ .  They are exactly
 equivalent.
+
+Langevin Integrator
+-------------------
+
+:code:`LangevinIntegrator` is very similar to :code:`BAOABLangevinIntegrator`,
+but it uses a different discretization of the Langevin equation.
+:code:`BAOABLangevinIntegrator` tends to produce more accurate configurational
+sampling, and therefore is preferred for most applications.  Also note that
+:code:`LangevinIntegrator` (unlike :code:`BAOABLangevinIntegrator`) is a leapfrog
+integrator, so the velocities are offset by half a time step from the positions.
 
 Leapfrog Verlet Integrator
 --------------------------
@@ -1145,7 +1155,7 @@ previous section:
     system = prmtop.createSystem(nonbondedMethod=PME, nonbondedCutoff=1*nanometer,
             constraints=HBonds)
     system.addForce(MonteCarloBarostat(1*bar, 300*kelvin))
-    integrator = LangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
+    integrator = BAOABLangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
     ...
 
 The parameters of the Monte Carlo barostat are the pressure (1 bar) and
@@ -1705,7 +1715,7 @@ executing 1000 time steps at each temperature:
         :autonumber:`Example,simulated annealing`
 
 This code needs very little explanation.  The loop is executed 100 times.  Each
-time through, it adjusts the temperature of the :class:`LangevinIntegrator` and then
+time through, it adjusts the temperature of the :class:`BAOABLangevinIntegrator` and then
 calls :code:`step(1000)` to take 1000 time steps.
 
 Applying an External Force to Particles: a Spherical Container
@@ -1737,7 +1747,7 @@ coordinates.  Here is the code to do it:
         system.addForce(force)
         for i in range(system.getNumParticles()):
             force.addParticle(i, [])
-        integrator = LangevinIntegrator(300*kelvin, 91/picosecond, 0.002*picoseconds)
+        integrator = BAOABLangevinIntegrator(300*kelvin, 91/picosecond, 0.002*picoseconds)
         ...
 
     .. caption::
