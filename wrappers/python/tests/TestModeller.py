@@ -1,9 +1,13 @@
+from collections import defaultdict
 import unittest
+import math
+import sys
+
 from validateModeller import *
 from simtk.openmm.app import *
 from simtk.openmm import *
 from simtk.unit import *
-from collections import defaultdict
+
 if sys.version_info >= (3, 0):
     from io import StringIO
 else:
@@ -1079,7 +1083,7 @@ class TestModeller(unittest.TestCase):
 
     def test_addMembrane(self):
         """Test adding a membrane to a realistic system."""
-        
+
         mol = PDBxFile('systems/gpcr.cif')
         modeller = Modeller(mol.topology, mol.positions)
         ff = ForceField('amber14-all.xml', 'amber14/tip3p.xml')
@@ -1091,12 +1095,26 @@ class TestModeller(unittest.TestCase):
         resCount = defaultdict(int)
         for res in modeller.topology.residues():
             resCount[res.name] += 1
-        self.assertTrue(resCount['HOH'] > 1)
-        self.assertTrue(resCount['CL'] > 1)
-        self.assertTrue(resCount['NA'] > 1)
-        self.assertTrue(resCount['CL'] > resCount['NA'])  # overall negative
+
         self.assertEqual(16, resCount['ALA'])
         self.assertEqual(226, resCount['POP'])  # 2x128 - overlapping
+        self.assertTrue(resCount['HOH'] > 1)
+
+        deltaQ = resCount['CL'] - resCount['NA']
+        self.assertEqual(deltaQ, 10)  # protein net q: +10
+
+        # Check _addIons did the right thing.
+        expected_ion_fraction = 1.0*molar/(55.4*molar)
+
+        total_water = resCount['HOH']
+        total_water_ions = resCount['HOH'] + resCount['CL'] + resCount['NA']
+
+        # total_water_ions - protein charge
+        expected_sodium = math.floor((total_water_ions-10)*expected_ion_fraction+0.5)
+        expected_chlorine = expected_sodium + 10
+
+        self.assertEqual(resCount['CL'], expected_chlorine)
+        self.assertEqual(resCount['NA'], expected_sodium)
 
         # Check lipid numbering for repetitions
         lipidIdList = [(r.chain.id, r.id) for r in modeller.topology.residues()
