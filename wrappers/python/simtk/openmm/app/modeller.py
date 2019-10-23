@@ -258,13 +258,16 @@ class Modeller(object):
         self.topology = newTopology
         self.positions = newPositions
 
-    def _addIons(self, forcefield, replaceableMols, ionCutoff=0.05*nanometer, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar, neutralize=True):
+    def _addIons(self, forcefield, numWaters, replaceableMols, ionCutoff=0.05*nanometer, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar, neutralize=True):
         """Adds ions to the system by replacing certain molecules.
 
         Parameters
         ----------
         forcefield : ForceField
             the ForceField to use to determine the total charge of the system.
+        numWaters : int
+            the total number of water molecules in the simulation box, used to
+            calculate the number of ions / concentration to add.
         replaceableMols : dict
             the molecules to replace by ions, as a dictionary of residue:positions
         ionCutoff: distance=0.5*nanometer
@@ -326,51 +329,52 @@ class Modeller(object):
                 numPositive -= totalCharge
 
         if ionicStrength > 0 * molar:
-            numIons = (numReplaceableMols - numPositive - numNegative) * ionicStrength / (55.4 * molar)  # Pure water is about 55.4 molar (depending on temperature)
+            numIons = (numWaters - numPositive - numNegative) * ionicStrength / (55.4 * molar)  # Pure water is about 55.4 molar (depending on temperature)
             numPairs = int(floor(numIons + 0.5))
             numPositive += numPairs
             numNegative += numPairs
         totalIons = numPositive + numNegative
 
-        # Randomly select a set of waters
-        # while ensuring ions are not placed too close to each other.
-        modeller = Modeller(self.topology, self.positions)
+        if totalIons > 0:
+            # Randomly select a set of waters
+            # while ensuring ions are not placed too close to each other.
+            modeller = Modeller(self.topology, self.positions)
 
-        replaceableList = list(replaceableMols.keys())
-        numAddedIons = 0
-        numTrials = 10  # Attempts to add ions N times before quitting
-        toReplace = []  # list of molecules to be replaced
-        while numAddedIons < totalIons:
-            pickedMol = random.choice(replaceableList)
-            replaceableList.remove(pickedMol)
-            # Check distance to other ions
-            for pos in ionPositions:
-                distance = norm(pos - replaceableMols[pickedMol])
-                if distance <= ionCutoff:
-                    numTrials -= 1
-                    break
-            else:
-                toReplace.append(pickedMol)
-                ionPositions.append(replaceableMols[pickedMol])
-                numAddedIons += 1
+            replaceableList = list(replaceableMols.keys())
+            numAddedIons = 0
+            numTrials = 10  # Attempts to add ions N times before quitting
+            toReplace = []  # list of molecules to be replaced
+            while numAddedIons < totalIons:
+                pickedMol = random.choice(replaceableList)
+                replaceableList.remove(pickedMol)
+                # Check distance to other ions
+                for pos in ionPositions:
+                    distance = norm(pos - replaceableMols[pickedMol])
+                    if distance <= ionCutoff:
+                        numTrials -= 1
+                        break
+                else:
+                    toReplace.append(pickedMol)
+                    ionPositions.append(replaceableMols[pickedMol])
+                    numAddedIons += 1
 
-                n_trials = 10
+                    n_trials = 10
 
-            if n_trials == 0:
-                raise ValueError('Could not add more than {} ions to the system'.format(numAddedIons))
+                if n_trials == 0:
+                    raise ValueError('Could not add more than {} ions to the system'.format(numAddedIons))
 
-        # Replace waters/ions in the topology
-        modeller.delete(toReplace)
-        ionChain = modeller.topology.addChain()
-        for i, water in enumerate(toReplace):
-            element = (positiveElement if i < numPositive else negativeElement)
-            newResidue = modeller.topology.addResidue(element.symbol.upper(), ionChain)
-            modeller.topology.addAtom(element.symbol, element, newResidue)
-            modeller.positions.append(replaceableMols[water])
+            # Replace waters/ions in the topology
+            modeller.delete(toReplace)
+            ionChain = modeller.topology.addChain()
+            for i, water in enumerate(toReplace):
+                element = (positiveElement if i < numPositive else negativeElement)
+                newResidue = modeller.topology.addResidue(element.symbol.upper(), ionChain)
+                modeller.topology.addAtom(element.symbol, element, newResidue)
+                modeller.positions.append(replaceableMols[water])
 
-        # Update topology/positions
-        self.topology = modeller.topology
-        self.positions = modeller.positions
+            # Update topology/positions
+            self.topology = modeller.topology
+            self.positions = modeller.positions
 
     def addSolvent(self, forcefield, model='tip3p', boxSize=None, boxVectors=None, padding=None, numAdded=None, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar, neutralize=True):
         """Add solvent (both water and ions) to the model to fill a rectangular box.
@@ -621,8 +625,11 @@ class Modeller(object):
                         if atom.element == _oxygen:
                             waterPos[residue] = newPositions[atom.index]
 
+        # Total number of waters in the box
+        numTotalWaters = len(waterPos)
+
         # Add ions to neutralize the system.
-        self._addIons(forcefield, waterPos, positiveIon=positiveIon, negativeIon=negativeIon, ionicStrength=ionicStrength, neutralize=neutralize)
+        self._addIons(forcefield, numTotalWaters, waterPos, positiveIon=positiveIon, negativeIon=negativeIon, ionicStrength=ionicStrength, neutralize=neutralize)
 
     class _ResidueData:
         """Inner class used to encapsulate data about the hydrogens for a residue."""
@@ -1221,33 +1228,33 @@ class Modeller(object):
 
     def addMembrane(self, forcefield, lipidType='POPC', membraneCenterZ=0*nanometer, minimumPadding=1*nanometer, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar, neutralize=True):
         """Add a lipid membrane to the model.
-        
+
         This method actually adds both a membrane and a water box.  It is best to build them together,
         both to avoid adding waters inside the membrane and to ensure that lipid head groups are properly
         solvated.  For that reason, this method includes many of the same arguments as addSolvent().
-        
+
         The membrane is added in the XY plane, and the existing protein is assumed to already be oriented
         and positioned correctly.  When possible, it is recommended to start with a model from the
         Orientations of Proteins in Membranes (OPM) database at http://opm.phar.umich.edu.  Otherwise, it
         is up to you to select the protein position yourself.
-        
+
         The algorithm is based on the one described in Wolf et al., J. Comp. Chem. 31, pp. 2169-2174 (2010).
         It begins by tiling copies of a pre-equilibrated membrane patch to create a membrane of the desired
         size.  Next it scales down the protein by 50% along the X and Y axes.  Any lipid within a cutoff
         distance of the scaled protein is removed.  It also ensures that equal numbers of lipids are removed
         from each leaf of the membrane.  Finally, 1000 steps of molecular dynamics are performed to let
         the membrane relax while the protein is gradually scaled back up to its original size.
-        
+
         The size of the membrane and water box are determined by the minimumPadding argument.  All
         pre-existing atoms are guaranteed to be at least this far from any edge of the periodic box.  It
         is also possible for the periodic box to have more padding than requested.  In particular, it only
         adds whole copies of the pre-equilibrated membrane patch, so the box dimensions will always be
         integer multiples of the patch size.  That may lead to a larger membrane than what you requested.
-        
+
         This method has built in support for POPC and POPE lipids.  You can also build other types of
         membranes by providing a pre-equilibrated, solvated membrane patch that can be tiled in the XY
         plane to form the membrane.
-        
+
         Parameters
         ----------
         forcefield : ForceField
@@ -1282,8 +1289,8 @@ class Modeller(object):
             membraneCenterZ = membraneCenterZ.value_in_unit(nanometer)
         if is_quantity(minimumPadding):
             minimumPadding = minimumPadding.value_in_unit(nanometer)
-        
-        # Figure out how many copies of the membrane patch we need in each direction. 
+
+        # Figure out how many copies of the membrane patch we need in each direction.
 
         proteinPos = self.positions.value_in_unit(nanometer)
         proteinMinPos = Vec3(*[min((p[i] for p in proteinPos)) for i in range(3)])
@@ -1298,15 +1305,15 @@ class Modeller(object):
         patchCenterPos = (patchMinPos+patchMaxPos)/2
         nx = int(ceil((proteinSize[0]+2*minimumPadding)/patchSize[0]))
         ny = int(ceil((proteinSize[1]+2*minimumPadding)/patchSize[1]))
-       
+
         # Record the bonds for each residue.
-        
+
         resBonds = defaultdict(list)
         for bond in patch.topology.bonds():
             resBonds[bond[0].residue].append(bond)
-        
+
         # Identify which leaf of the membrane each lipid is in.
-        
+
         numLipidAtoms = 0
         resMeanZ = {}
         membraneMeanZ = 0.0
@@ -1322,17 +1329,17 @@ class Modeller(object):
                 resMeanZ[res] = sumZ/numResAtoms
         membraneMeanZ /= numLipidAtoms
         lipidLeaf = dict((res, 0 if resMeanZ[res] < membraneMeanZ else 1) for res in resMeanZ)
-        
+
         # Compute scaled positions for the protein.
-        
+
         scaledProteinPos = [None]*len(proteinPos)
         for i, p in enumerate(proteinPos):
             p = p-proteinCenterPos
             p = Vec3(0.5*p[0], 0.5*p[1], p[2])
             scaledProteinPos[i] = p+proteinCenterPos
-        
+
         # Create a new Topology for the membrane.
-        
+
         membraneTopology = Topology()
         membranePos = []
         boxSizeZ = patchSize[2]
@@ -1341,14 +1348,13 @@ class Modeller(object):
         else:
             boxSizeZ = max(boxSizeZ, proteinSize[2]+2*minimumPadding)
         membraneTopology.setUnitCellDimensions((nx*patchSize[0], ny*patchSize[1], boxSizeZ))
-        
+
         # Add membrane patches.  We exclude any water that is within a cutoff distance of either the actual or scaled
         # protein, and any lipid that is within a cutoff distance of the scaled protein.  We also keep track of how
         # many lipids have been excluded from each leaf of the membrane, so we can make sure exactly the same
         # number get removed from each leaf.
-        
+
         overlapCutoff = 0.22
-        chain = membraneTopology.addChain()
         addedWater = []
         addedLipids = []
         removedFromLeaf = [0, 0]
@@ -1395,9 +1401,9 @@ class Modeller(object):
         del cellLists
         del cells
         del proteinCells
-        
+
         # Add the lipids.
-        
+
         newAtoms = {}
         lipidChain = membraneTopology.addChain()
         lipidResNum = 1  # renumber lipid residues to handle large patches
@@ -1408,7 +1414,7 @@ class Modeller(object):
             else:
                 newResidue = membraneTopology.addResidue(residue.name, lipidChain, lipidResNum, residue.insertionCode)
                 lipidResNum += 1
-                
+
                 for atom in residue.atoms():
                     newAtom = membraneTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
                     newAtoms[atom] = newAtom
@@ -1418,9 +1424,9 @@ class Modeller(object):
 
         del lipidLeaf
         del addedLipids
-        
+
         # Add the solvent.
-        
+
         solventChain = membraneTopology.addChain()
         for (residue, pos) in addedWater:
             newResidue = membraneTopology.addResidue(residue.name, solventChain, residue.id, residue.insertionCode)
@@ -1436,7 +1442,7 @@ class Modeller(object):
         gc.collect()
 
         # Create a System for the lipids, then add in the protein as stationary particles.
-        
+
         system = forcefield.createSystem(membraneTopology, nonbondedMethod=CutoffPeriodic)
         proteinSystem = forcefield.createSystem(self.topology, nonbondedMethod=CutoffNonPeriodic)
         numMembraneParticles = system.getNumParticles()
@@ -1458,9 +1464,9 @@ class Modeller(object):
         del membranePos
         del scaledProteinCells
         gc.collect()
-        
+
         # Run a simulation while slowly scaling up the protein so the membrane can relax.
-        
+
         integrator = LangevinIntegrator(10.0, 50.0, 0.001)
         context = Context(system, integrator)
         context.setPositions(mergedPositions)
@@ -1483,24 +1489,24 @@ class Modeller(object):
                     mergedPositions[j+numMembraneParticles] = (weight1*proteinPos[j] + weight2*scaledProteinPos[j])
             context.setPositions(mergedPositions)
             integrator.step(20)
-        
+
         # Add the membrane to the protein.
-        
+
         modeller = Modeller(self.topology, self.positions)
         modeller.add(membraneTopology, context.getState(getPositions=True).getPositions()[:numMembraneParticles])
         modeller.topology.setPeriodicBoxVectors(membraneTopology.getPeriodicBoxVectors())
         del context
         del system
         del integrator
-        
+
         # Depending on the box size, we may need to add more water beyond what was included with the membrane patch.
-        
+
         needExtraWater = (boxSizeZ > patchSize[2])
         if needExtraWater:
             modeller.addSolvent(forcefield, neutralize=False)
-        
+
         # Record the positions of all waters that have been added.
-        
+
         waterPos = {}
         for chain in list(modeller.topology.chains())[-2:]:
             for residue in chain.residues():
@@ -1538,6 +1544,11 @@ class Modeller(object):
                         if atom.element == elem.oxygen:
                             waterPos[residue] = modeller.positions[atom.index]
 
+        # Total number of water molecules
+        # Use this number to avoid underestimating the concentration of ions
+        # in _addIons after we exclude waters close to lipids.
+        numTotalWaters = len(waterPos)
+
         # Calculate lipid Z boundaries
         lipidNames = {res.name for res in patch.topology.residues() if res.name != 'HOH'}
         lipidZMax = sys.float_info.min
@@ -1559,12 +1570,12 @@ class Modeller(object):
             if lowerZBoundary < waterZ.value_in_unit(nanometer) < upperZBoundary:
                 del waterPos[wRes]
 
-        self._addIons(forcefield, waterPos, positiveIon=positiveIon, negativeIon=negativeIon, ionicStrength=ionicStrength, neutralize=neutralize)
+        self._addIons(forcefield, numTotalWaters, waterPos, positiveIon=positiveIon, negativeIon=negativeIon, ionicStrength=ionicStrength, neutralize=neutralize)
 
 
 class _CellList(object):
     """This class organizes atom positions into cells, so the neighbors of a point can be quickly retrieved"""
-    
+
     def __init__(self, positions, maxCutoff, vectors, periodic):
         self.positions = positions[:]
         self.cells = {}
