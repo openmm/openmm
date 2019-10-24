@@ -51,7 +51,7 @@ namespace OpenMM {
 
 class OPENMM_EXPORT_PME CpuCalcPmeReciprocalForceKernel : public CalcPmeReciprocalForceKernel {
 public:
-    CpuCalcPmeReciprocalForceKernel(std::string name, const Platform& platform) : CalcPmeReciprocalForceKernel(name, platform),
+    CpuCalcPmeReciprocalForceKernel(const std::string& name, const Platform& platform) : CalcPmeReciprocalForceKernel(name, platform),
             hasCreatedPlan(false), isDeleted(false), realGrid(NULL), complexGrid(NULL) {
     }
     /**
@@ -144,7 +144,7 @@ private:
 
 class OPENMM_EXPORT_PME CpuCalcDispersionPmeReciprocalForceKernel : public CalcDispersionPmeReciprocalForceKernel {
 public:
-    CpuCalcDispersionPmeReciprocalForceKernel(std::string name, const Platform& platform) : CalcDispersionPmeReciprocalForceKernel(name, platform),
+    CpuCalcDispersionPmeReciprocalForceKernel(const std::string& name, const Platform& platform) : CalcDispersionPmeReciprocalForceKernel(name, platform),
             hasCreatedPlan(false), isDeleted(false), realGrid(NULL), complexGrid(NULL)  {
     }
     /**

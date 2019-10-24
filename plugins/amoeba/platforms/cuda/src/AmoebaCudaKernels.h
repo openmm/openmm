@@ -45,7 +45,7 @@ class CudaCalcAmoebaGeneralizedKirkwoodForceKernel;
  */
 class CudaCalcAmoebaBondForceKernel : public CalcAmoebaBondForceKernel {
 public:
-    CudaCalcAmoebaBondForceKernel(std::string name, 
+    CudaCalcAmoebaBondForceKernel(const std::string& name,
                                           const Platform& platform,
                                           CudaContext& cu,
                                           const System& system);
@@ -85,7 +85,7 @@ private:
  */
 class CudaCalcAmoebaAngleForceKernel : public CalcAmoebaAngleForceKernel {
 public:
-    CudaCalcAmoebaAngleForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system);
+    CudaCalcAmoebaAngleForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system);
     /**
      * Initialize the kernel.
      * 
@@ -122,7 +122,7 @@ private:
  */
 class CudaCalcAmoebaInPlaneAngleForceKernel : public CalcAmoebaInPlaneAngleForceKernel {
 public:
-    CudaCalcAmoebaInPlaneAngleForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system);
+    CudaCalcAmoebaInPlaneAngleForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system);
     /**
      * Initialize the kernel.
      * 
@@ -159,7 +159,7 @@ private:
  */
 class CudaCalcAmoebaPiTorsionForceKernel : public CalcAmoebaPiTorsionForceKernel {
 public:
-    CudaCalcAmoebaPiTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system);
+    CudaCalcAmoebaPiTorsionForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system);
     /**
      * Initialize the kernel.
      * 
@@ -196,7 +196,7 @@ private:
  */
 class CudaCalcAmoebaStretchBendForceKernel : public CalcAmoebaStretchBendForceKernel {
 public:
-    CudaCalcAmoebaStretchBendForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system);
+    CudaCalcAmoebaStretchBendForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system);
     /**
      * Initialize the kernel.
      * 
@@ -234,7 +234,7 @@ private:
  */
 class CudaCalcAmoebaOutOfPlaneBendForceKernel : public CalcAmoebaOutOfPlaneBendForceKernel {
 public:
-    CudaCalcAmoebaOutOfPlaneBendForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system);
+    CudaCalcAmoebaOutOfPlaneBendForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system);
     /**
      * Initialize the kernel.
      * 
@@ -271,7 +271,7 @@ private:
  */
 class CudaCalcAmoebaTorsionTorsionForceKernel : public CalcAmoebaTorsionTorsionForceKernel {
 public:
-    CudaCalcAmoebaTorsionTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system);
+    CudaCalcAmoebaTorsionTorsionForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system);
     /**
      * Initialize the kernel.
      * 
@@ -304,7 +304,7 @@ private:
  */
 class CudaCalcAmoebaMultipoleForceKernel : public CalcAmoebaMultipoleForceKernel {
 public:
-    CudaCalcAmoebaMultipoleForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system);
+    CudaCalcAmoebaMultipoleForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system);
     ~CudaCalcAmoebaMultipoleForceKernel();
     /**
      * Initialize the kernel.
@@ -466,7 +466,7 @@ private:
  */
 class CudaCalcAmoebaGeneralizedKirkwoodForceKernel : public CalcAmoebaGeneralizedKirkwoodForceKernel {
 public:
-    CudaCalcAmoebaGeneralizedKirkwoodForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system);
+    CudaCalcAmoebaGeneralizedKirkwoodForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system);
     /**
      * Initialize the kernel.
      * 
@@ -541,7 +541,7 @@ private:
  */
 class CudaCalcAmoebaVdwForceKernel : public CalcAmoebaVdwForceKernel {
 public:
-    CudaCalcAmoebaVdwForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system);
+    CudaCalcAmoebaVdwForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system);
     ~CudaCalcAmoebaVdwForceKernel();
     /**
      * Initialize the kernel.
@@ -598,7 +598,7 @@ private:
  */
 class CudaCalcAmoebaWcaDispersionForceKernel : public CalcAmoebaWcaDispersionForceKernel {
 public:
-    CudaCalcAmoebaWcaDispersionForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system);
+    CudaCalcAmoebaWcaDispersionForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system);
     /**
      * Initialize the kernel.
      * 
@@ -636,7 +636,7 @@ private:
  */
 class CudaCalcHippoNonbondedForceKernel : public CalcHippoNonbondedForceKernel {
 public:
-    CudaCalcHippoNonbondedForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system);
+    CudaCalcHippoNonbondedForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system);
     ~CudaCalcHippoNonbondedForceKernel();
     /**
      * Initialize the kernel.
