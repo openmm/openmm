@@ -67,9 +67,10 @@ build_script:
 
 test_script:
   - python -m simtk.testInstallation
-  - python %APPVEYOR_BUILD_FOLDER%\devtools\run-ctest.py
+  #- python %APPVEYOR_BUILD_FOLDER%\devtools\run-ctest.py
   - cd python\tests
-  - py.test -v -s
+  #- py.test -v
+  - python TestModeller.py
 
 cache:
 - C:\ProgramData\cclash -> appveyor.yml

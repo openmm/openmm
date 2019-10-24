@@ -1272,6 +1272,7 @@ class Modeller(object):
         neutralize : bool=True
             whether to add ions to neutralize the system
         """
+        print(1)
         if 'topology' in dir(lipidType) and 'positions' in dir(lipidType):
             patch = lipidType
         elif lipidType.upper() in ('POPC', 'POPE'):
@@ -1285,6 +1286,7 @@ class Modeller(object):
         
         # Figure out how many copies of the membrane patch we need in each direction. 
 
+        print(2)
         proteinPos = self.positions.value_in_unit(nanometer)
         proteinMinPos = Vec3(*[min((p[i] for p in proteinPos)) for i in range(3)])
         proteinMaxPos = Vec3(*[max((p[i] for p in proteinPos)) for i in range(3)])
@@ -1301,6 +1303,7 @@ class Modeller(object):
        
         # Record the bonds for each residue.
         
+        print(3)
         resBonds = defaultdict(list)
         for bond in patch.topology.bonds():
             resBonds[bond[0].residue].append(bond)
@@ -1333,6 +1336,7 @@ class Modeller(object):
         
         # Create a new Topology for the membrane.
         
+        print(4)
         membraneTopology = Topology()
         membranePos = []
         boxSizeZ = patchSize[2]
@@ -1398,6 +1402,7 @@ class Modeller(object):
         
         # Add the lipids.
         
+        print(5)
         newAtoms = {}
         lipidChain = membraneTopology.addChain()
         lipidResNum = 1  # renumber lipid residues to handle large patches
@@ -1421,6 +1426,7 @@ class Modeller(object):
         
         # Add the solvent.
         
+        print(6)
         solventChain = membraneTopology.addChain()
         for (residue, pos) in addedWater:
             newResidue = membraneTopology.addResidue(residue.name, solventChain, residue.id, residue.insertionCode)
@@ -1437,6 +1443,7 @@ class Modeller(object):
 
         # Create a System for the lipids, then add in the protein as stationary particles.
         
+        print(7)
         system = forcefield.createSystem(membraneTopology, nonbondedMethod=CutoffPeriodic)
         proteinSystem = forcefield.createSystem(self.topology, nonbondedMethod=CutoffNonPeriodic)
         numMembraneParticles = system.getNumParticles()
@@ -1461,6 +1468,7 @@ class Modeller(object):
         
         # Run a simulation while slowly scaling up the protein so the membrane can relax.
         
+        print(8)
         integrator = LangevinIntegrator(10.0, 50.0, 0.001)
         context = Context(system, integrator)
         print("membrane platform:", context.getPlatform().getName())
@@ -1474,6 +1482,7 @@ class Modeller(object):
         except:
             hasNumpy = False
         for i in range(50):
+            print('step', i)
             weight1 = i/49.0
             weight2 = 1.0-weight1
             mergedPositions = context.getState(getPositions=True).getPositions(asNumpy=hasNumpy).value_in_unit(nanometer)
@@ -1487,6 +1496,7 @@ class Modeller(object):
         
         # Add the membrane to the protein.
         
+        print(9)
         modeller = Modeller(self.topology, self.positions)
         modeller.add(membraneTopology, context.getState(getPositions=True).getPositions()[:numMembraneParticles])
         modeller.topology.setPeriodicBoxVectors(membraneTopology.getPeriodicBoxVectors())
@@ -1510,6 +1520,7 @@ class Modeller(object):
                         if atom.element == elem.oxygen:
                             waterPos[residue] = modeller.positions[atom.index].value_in_unit(nanometer)
 
+        print(10)
         # We may have added extra water molecules inside the membrane.  We really only wanted to extend the box
         # without adding more water in the existing box, so remove the unwanted ones.
         if needExtraWater:
@@ -1560,7 +1571,9 @@ class Modeller(object):
             if lowerZBoundary < waterZ.value_in_unit(nanometer) < upperZBoundary:
                 del waterPos[wRes]
 
+        print(11)
         self._addIons(forcefield, waterPos, positiveIon=positiveIon, negativeIon=negativeIon, ionicStrength=ionicStrength, neutralize=neutralize)
+        print(12)
 
 
 class _CellList(object):
