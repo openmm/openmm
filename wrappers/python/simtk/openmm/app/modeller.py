@@ -1463,6 +1463,7 @@ class Modeller(object):
         
         integrator = LangevinIntegrator(10.0, 50.0, 0.001)
         context = Context(system, integrator)
+        print("membrane platform:", context.getPlatform().getName())
         context.setPositions(mergedPositions)
         LocalEnergyMinimizer.minimize(context, 10.0, 30)
         try:

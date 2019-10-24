@@ -66,9 +66,10 @@ build_script:
   - cmake --build . --target PythonInstall
 
 test_script:
+  - python -m simtk.testInstallation
   - python %APPVEYOR_BUILD_FOLDER%\devtools\run-ctest.py
   - cd python\tests
-  - py.test -v
+  - py.test -v -s
 
 cache:
 - C:\ProgramData\cclash -> appveyor.yml
