@@ -7473,6 +7473,111 @@ double OpenCLIntegrateLangevinStepKernel::computeKineticEnergy(ContextImpl& cont
     return cl.getIntegrationUtilities().computeKineticEnergy(0.5*integrator.getStepSize());
 }
 
+void OpenCLIntegrateBAOABStepKernel::initialize(const System& system, const BAOABLangevinIntegrator& integrator) {
+    cl.getPlatformData().initializeContexts(system);
+    cl.getIntegrationUtilities().initRandomNumberGenerator(integrator.getRandomNumberSeed());
+    map<string, string> defines;
+    defines["NUM_ATOMS"] = cl.intToString(cl.getNumAtoms());
+    defines["PADDED_NUM_ATOMS"] = cl.intToString(cl.getPaddedNumAtoms());
+    cl::Program program = cl.createProgram(OpenCLKernelSources::baoab, defines, "");
+    kernel1 = cl::Kernel(program, "integrateBAOABPart1");
+    kernel2 = cl::Kernel(program, "integrateBAOABPart2");
+    kernel3 = cl::Kernel(program, "integrateBAOABPart3");
+    kernel4 = cl::Kernel(program, "integrateBAOABPart4");
+    if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {
+        params.initialize<cl_double>(cl, 2, "baoabParams");
+        oldDelta.initialize<mm_double4>(cl, cl.getPaddedNumAtoms(), "oldDelta");
+    }
+    else {
+        params.initialize<cl_float>(cl, 2, "baoabParams");
+        oldDelta.initialize<mm_float4>(cl, cl.getPaddedNumAtoms(), "oldDelta");
+    }
+    prevStepSize = -1.0;
+}
+
+void OpenCLIntegrateBAOABStepKernel::execute(ContextImpl& context, const BAOABLangevinIntegrator& integrator, bool& forcesAreValid) {
+    OpenCLIntegrationUtilities& integration = cl.getIntegrationUtilities();
+    int numAtoms = cl.getNumAtoms();
+    if (!hasInitializedKernels) {
+        hasInitializedKernels = true;
+        kernel1.setArg<cl::Buffer>(0, cl.getVelm().getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(1, cl.getForce().getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(2, integration.getPosDelta().getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(3, oldDelta.getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(4, integration.getStepSize().getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
+        setPosqCorrectionArg(cl, kernel2, 1);
+        kernel2.setArg<cl::Buffer>(2, cl.getVelm().getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(3, integration.getPosDelta().getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(4, oldDelta.getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(5, params.getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(6, integration.getStepSize().getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(7, integration.getRandom().getDeviceBuffer());
+        kernel3.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
+        setPosqCorrectionArg(cl, kernel3, 1);
+        kernel3.setArg<cl::Buffer>(2, cl.getVelm().getDeviceBuffer());
+        kernel3.setArg<cl::Buffer>(3, integration.getPosDelta().getDeviceBuffer());
+        kernel3.setArg<cl::Buffer>(4, oldDelta.getDeviceBuffer());
+        kernel3.setArg<cl::Buffer>(5, integration.getStepSize().getDeviceBuffer());
+        kernel4.setArg<cl::Buffer>(0, cl.getVelm().getDeviceBuffer());
+        kernel4.setArg<cl::Buffer>(1, cl.getForce().getDeviceBuffer());
+        kernel4.setArg<cl::Buffer>(2, integration.getStepSize().getDeviceBuffer());
+    }
+    if (!forcesAreValid) {
+        context.calcForcesAndEnergy(true, false);
+        forcesAreValid = true;
+    }
+    double temperature = integrator.getTemperature();
+    double friction = integrator.getFriction();
+    double stepSize = integrator.getStepSize();
+    cl.getIntegrationUtilities().setNextStepSize(stepSize);
+    if (temperature != prevTemp || friction != prevFriction || stepSize != prevStepSize) {
+        // Calculate the integration parameters.
+
+        double kT = BOLTZ*temperature;
+        double vscale = exp(-stepSize*friction);
+        double noisescale = sqrt(kT*(1-vscale*vscale));
+        vector<cl_double> p(params.getSize());
+        p[0] = vscale;
+        p[1] = noisescale;
+        params.upload(p, true, true);
+        prevTemp = temperature;
+        prevFriction = friction;
+        prevStepSize = stepSize;
+    }
+
+    // Perform the integrator.
+
+    kernel2.setArg<cl_uint>(8, integration.prepareRandomNumbers(cl.getPaddedNumAtoms()));
+    cl.executeKernel(kernel1, numAtoms);
+    integration.applyConstraints(integrator.getConstraintTolerance());
+    cl.executeKernel(kernel2, numAtoms);
+    integration.applyConstraints(integrator.getConstraintTolerance());
+    cl.executeKernel(kernel3, numAtoms);
+    context.calcForcesAndEnergy(true, false);
+    cl.executeKernel(kernel4, numAtoms);
+    integration.applyVelocityConstraints(integrator.getConstraintTolerance());
+    integration.computeVirtualSites();
+
+    // Update the time and step count.
+
+    cl.setTime(cl.getTime()+stepSize);
+    cl.setStepCount(cl.getStepCount()+1);
+    cl.reorderAtoms();
+    if (cl.getAtomsWereReordered())
+        forcesAreValid = false;
+    
+    // Reduce UI lag.
+    
+#ifdef WIN32
+    cl.getQueue().flush();
+#endif
+}
+
+double OpenCLIntegrateBAOABStepKernel::computeKineticEnergy(ContextImpl& context, const BAOABLangevinIntegrator& integrator) {
+    return cl.getIntegrationUtilities().computeKineticEnergy(0.0);
+}
+
 OpenCLIntegrateBrownianStepKernel::~OpenCLIntegrateBrownianStepKernel() {
 }
 

@@ -7143,6 +7143,95 @@ double CudaIntegrateLangevinStepKernel::computeKineticEnergy(ContextImpl& contex
     return cu.getIntegrationUtilities().computeKineticEnergy(0.5*integrator.getStepSize());
 }
 
+void CudaIntegrateBAOABStepKernel::initialize(const System& system, const BAOABLangevinIntegrator& integrator) {
+    cu.getPlatformData().initializeContexts(system);
+    cu.setAsCurrent();
+    cu.getIntegrationUtilities().initRandomNumberGenerator(integrator.getRandomNumberSeed());
+    map<string, string> defines;
+    CUmodule module = cu.createModule(CudaKernelSources::baoab, defines, "");
+    kernel1 = cu.getKernel(module, "integrateBAOABPart1");
+    kernel2 = cu.getKernel(module, "integrateBAOABPart2");
+    kernel3 = cu.getKernel(module, "integrateBAOABPart3");
+    kernel4 = cu.getKernel(module, "integrateBAOABPart4");
+    if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
+        params.initialize<double>(cu, 3, "baoabParams");
+        oldDelta.initialize<double4>(cu, cu.getPaddedNumAtoms(), "oldDelta");
+    }
+    else {
+        params.initialize<float>(cu, 3, "baoabParams");
+        oldDelta.initialize<float4>(cu, cu.getPaddedNumAtoms(), "oldDelta");
+    }
+    prevStepSize = -1.0;
+}
+
+void CudaIntegrateBAOABStepKernel::execute(ContextImpl& context, const BAOABLangevinIntegrator& integrator, bool& forcesAreValid) {
+    CudaIntegrationUtilities& integration = cu.getIntegrationUtilities();
+    int numAtoms = cu.getNumAtoms();
+    int paddedNumAtoms = cu.getPaddedNumAtoms();
+    if (!forcesAreValid) {
+        context.calcForcesAndEnergy(true, false);
+        forcesAreValid = true;
+    }
+    double temperature = integrator.getTemperature();
+    double friction = integrator.getFriction();
+    double stepSize = integrator.getStepSize();
+    cu.getIntegrationUtilities().setNextStepSize(stepSize);
+    if (temperature != prevTemp || friction != prevFriction || stepSize != prevStepSize) {
+        // Calculate the integration parameters.
+
+        double kT = BOLTZ*temperature;
+        double vscale = exp(-stepSize*friction);
+        double noisescale = sqrt(kT*(1-vscale*vscale));
+        vector<double> p(params.getSize());
+        p[0] = vscale;
+        p[1] = noisescale;
+        params.upload(p, true);
+        prevTemp = temperature;
+        prevFriction = friction;
+        prevStepSize = stepSize;
+    }
+
+    // Perform the integrator.
+
+    int randomIndex = integration.prepareRandomNumbers(cu.getPaddedNumAtoms());
+    CUdeviceptr posCorrection = (cu.getUseMixedPrecision() ? cu.getPosqCorrection().getDevicePointer() : 0);
+    void* args1[] = {&numAtoms, &paddedNumAtoms, &cu.getVelm().getDevicePointer(), &cu.getForce().getDevicePointer(), &integration.getPosDelta().getDevicePointer(),
+            &oldDelta.getDevicePointer(), &integration.getStepSize().getDevicePointer()};
+    cu.executeKernel(kernel1, args1, numAtoms, 128);
+    integration.applyConstraints(integrator.getConstraintTolerance());
+    void* args2[] = {&numAtoms, &cu.getPosq().getDevicePointer(), &posCorrection, &cu.getVelm().getDevicePointer(), &integration.getPosDelta().getDevicePointer(),
+            &oldDelta.getDevicePointer(), &params.getDevicePointer(), &integration.getStepSize().getDevicePointer(), &integration.getRandom().getDevicePointer(), &randomIndex};
+    cu.executeKernel(kernel2, args2, numAtoms, 128);
+    integration.applyConstraints(integrator.getConstraintTolerance());
+    void* args3[] = {&numAtoms, &cu.getPosq().getDevicePointer(), &posCorrection, &cu.getVelm().getDevicePointer(),
+            &integration.getPosDelta().getDevicePointer(), &oldDelta.getDevicePointer(), &integration.getStepSize().getDevicePointer()};
+    cu.executeKernel(kernel3, args3, numAtoms, 128);
+    context.calcForcesAndEnergy(true, false);
+    void* args4[] = {&numAtoms, &paddedNumAtoms, &cu.getVelm().getDevicePointer(),
+            &cu.getForce().getDevicePointer(), &integration.getStepSize().getDevicePointer()};
+    cu.executeKernel(kernel4, args4, numAtoms, 128);
+    integration.applyVelocityConstraints(integrator.getConstraintTolerance());
+    integration.computeVirtualSites();
+
+    // Update the time and step count.
+
+    cu.setTime(cu.getTime()+stepSize);
+    cu.setStepCount(cu.getStepCount()+1);
+    cu.reorderAtoms();
+    if (cu.getAtomsWereReordered())
+        forcesAreValid = false;
+    
+    // Reduce UI lag.
+    
+#ifdef WIN32
+    cu.getQueue().flush();
+#endif
+}
+
+double CudaIntegrateBAOABStepKernel::computeKineticEnergy(ContextImpl& context, const BAOABLangevinIntegrator& integrator) {
+    return cu.getIntegrationUtilities().computeKineticEnergy(0.0);
+}
+
 void CudaIntegrateBrownianStepKernel::initialize(const System& system, const BrownianIntegrator& integrator) {
     cu.getPlatformData().initializeContexts(system);
     cu.setAsCurrent();

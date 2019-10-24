@@ -6,8 +6,8 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2019 Stanford University and the Authors.      *
- * Authors: Peter Eastman                                                     *
+ * Portions copyright (c) 2010-2019 Stanford University and the Authors.      *
+ * Authors: Peter Eastman, Yutong Zhao                                        *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -29,39 +29,32 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "CpuKernelFactory.h"
-#include "CpuKernels.h"
-#include "CpuPlatform.h"
-#include "openmm/internal/ContextImpl.h"
-#include "openmm/OpenMMException.h"
+#include "openmm/serialization/BAOABLangevinIntegratorProxy.h"
+#include <OpenMM.h>
 
+using namespace std;
 using namespace OpenMM;
 
-KernelImpl* CpuKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {
-    CpuPlatform::PlatformData& data = CpuPlatform::getPlatformData(context);
-    if (name == CalcForcesAndEnergyKernel::Name())
-        return new CpuCalcForcesAndEnergyKernel(name, platform, data, context);
-    if (name == CalcHarmonicAngleForceKernel::Name())
-        return new CpuCalcHarmonicAngleForceKernel(name, platform, data);
-    if (name == CalcPeriodicTorsionForceKernel::Name())
-        return new CpuCalcPeriodicTorsionForceKernel(name, platform, data);
-    if (name == CalcRBTorsionForceKernel::Name())
-        return new CpuCalcRBTorsionForceKernel(name, platform, data);
-    if (name == CalcNonbondedForceKernel::Name())
-        return new CpuCalcNonbondedForceKernel(name, platform, data);
-    if (name == CalcCustomNonbondedForceKernel::Name())
-        return new CpuCalcCustomNonbondedForceKernel(name, platform, data);
-    if (name == CalcCustomManyParticleForceKernel::Name())
-        return new CpuCalcCustomManyParticleForceKernel(name, platform, data);
-    if (name == CalcGBSAOBCForceKernel::Name())
-        return new CpuCalcGBSAOBCForceKernel(name, platform, data);
-    if (name == CalcCustomGBForceKernel::Name())
-        return new CpuCalcCustomGBForceKernel(name, platform, data);
-    if (name == CalcGayBerneForceKernel::Name())
-        return new CpuCalcGayBerneForceKernel(name, platform, data);
-    if (name == IntegrateLangevinStepKernel::Name())
-        return new CpuIntegrateLangevinStepKernel(name, platform, data);
-    if (name == IntegrateBAOABStepKernel::Name())
-        return new CpuIntegrateBAOABStepKernel(name, platform, data);
-    throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '") + name + "'").c_str());
+BAOABLangevinIntegratorProxy::BAOABLangevinIntegratorProxy() : SerializationProxy("BAOABLangevinIntegrator") {
+
+}
+
+void BAOABLangevinIntegratorProxy::serialize(const void* object, SerializationNode& node) const {
+    node.setIntProperty("version", 1);
+    const BAOABLangevinIntegrator& integrator = *reinterpret_cast<const BAOABLangevinIntegrator*>(object);
+    node.setDoubleProperty("stepSize", integrator.getStepSize());
+    node.setDoubleProperty("constraintTolerance", integrator.getConstraintTolerance());
+    node.setDoubleProperty("temperature", integrator.getTemperature());
+    node.setDoubleProperty("friction", integrator.getFriction());
+    node.setIntProperty("randomSeed", integrator.getRandomNumberSeed());
+}
+
+void* BAOABLangevinIntegratorProxy::deserialize(const SerializationNode& node) const {
+    if (node.getIntProperty("version") != 1)
+        throw OpenMMException("Unsupported version number");
+    BAOABLangevinIntegrator *integrator = new BAOABLangevinIntegrator(node.getDoubleProperty("temperature"),
+            node.getDoubleProperty("friction"), node.getDoubleProperty("stepSize"));
+    integrator->setConstraintTolerance(node.getDoubleProperty("constraintTolerance"));
+    integrator->setRandomNumberSeed(node.getIntProperty("randomSeed"));
+    return integrator;
 }

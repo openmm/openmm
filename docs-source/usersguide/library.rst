@@ -243,14 +243,14 @@ simulation might look like:
         angles->addAngle(angle[i].particle1, angle[i].particle2,
             angle[i].particle3, angle[i].angle, angle[i].k);
     // ...create and initialize other force field terms in the same way
-    LangevinIntegrator integrator(temperature, friction, stepSize);
+    BAOABLangevinIntegrator integrator(temperature, friction, stepSize);
     Context context(system, integrator);
     context.setPositions(initialPositions);
     context.setVelocities(initialVelocities);
     integrator.step(10000);
 
 We create a System, add various Forces to it, and set parameters on both the
-System and the Forces.  We then create a LangevinIntegrator, initialize a
+System and the Forces.  We then create a BAOABLangevinIntegrator, initialize a
 Context in which to run a simulation, and instruct the Integrator to advance the
 simulation for 10,000 time steps.
 

@@ -6,7 +6,7 @@ from sys import stdout
 gro = GromacsGroFile('input.gro')
 top = GromacsTopFile('input.top', periodicBoxVectors=gro.getPeriodicBoxVectors())
 system = top.createSystem(nonbondedMethod=PME, nonbondedCutoff=1*nanometer, constraints=HBonds)
-integrator = LangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
+integrator = BAOABLangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
 simulation = Simulation(top.topology, system, integrator)
 simulation.context.setPositions(gro.positions)
 simulation.minimizeEnergy()

@@ -30,6 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/AndersenThermostat.h"
+#include "openmm/BAOABLangevinIntegrator.h"
 #include "openmm/BrownianIntegrator.h"
 #include "openmm/CMAPTorsionForce.h"
 #include "openmm/CMMotionRemover.h"
@@ -65,6 +66,7 @@
 #include "openmm/VerletIntegrator.h"
 
 #include "openmm/serialization/SerializationProxy.h"
+#include "openmm/serialization/BAOABLangevinIntegratorProxy.h"
 #include "openmm/serialization/BrownianIntegratorProxy.h"
 #include "openmm/serialization/AndersenThermostatProxy.h"
 #include "openmm/serialization/CMAPTorsionForceProxy.h"
@@ -117,6 +119,7 @@ using namespace OpenMM;
 
 extern "C" void registerSerializationProxies() {
     SerializationProxy::registerProxy(typeid(AndersenThermostat), new AndersenThermostatProxy());
+    SerializationProxy::registerProxy(typeid(BAOABLangevinIntegrator), new BAOABLangevinIntegratorProxy());
     SerializationProxy::registerProxy(typeid(BrownianIntegrator), new BrownianIntegratorProxy());
     SerializationProxy::registerProxy(typeid(CMAPTorsionForce), new CMAPTorsionForceProxy());
     SerializationProxy::registerProxy(typeid(CMMotionRemover), new CMMotionRemoverProxy());

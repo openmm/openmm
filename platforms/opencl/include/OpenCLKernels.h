@@ -1384,6 +1384,47 @@ private:
 };
 
 /**
+ * This kernel is invoked by BAOABLangevinIntegrator to take one time step.
+ */
+class OpenCLIntegrateBAOABStepKernel : public IntegrateBAOABStepKernel {
+public:
+    OpenCLIntegrateBAOABStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateBAOABStepKernel(name, platform), cl(cl),
+            hasInitializedKernels(false) {
+    }
+    /**
+     * Initialize the kernel, setting up the particle masses.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param integrator the BAOABLangevinIntegrator this kernel will be used for
+     */
+    void initialize(const System& system, const BAOABLangevinIntegrator& integrator);
+    /**
+     * Execute the kernel.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the BAOABLangevinIntegrator this kernel is being used for
+     * @param forcesAreValid if the context has been modified since the last time step, this will be
+     *                       false to show that cached forces are invalid and must be recalculated.
+     *                       On exit, this should specify whether the cached forces are valid at the
+     *                       end of the step.
+     */
+    void execute(ContextImpl& context, const BAOABLangevinIntegrator& integrator, bool& forcesAreValid);
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the BAOABLangevinIntegrator this kernel is being used for
+     */
+    double computeKineticEnergy(ContextImpl& context, const BAOABLangevinIntegrator& integrator);
+private:
+    OpenCLContext& cl;
+    double prevTemp, prevFriction, prevStepSize;
+    bool hasInitializedKernels;
+    OpenCLArray params, oldDelta;
+    cl::Kernel kernel1, kernel2, kernel3, kernel4;
+};
+
+/**
  * This kernel is invoked by BrownianIntegrator to take one time step.
  */
 class OpenCLIntegrateBrownianStepKernel : public IntegrateBrownianStepKernel {

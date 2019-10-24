@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -29,39 +29,58 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "CpuKernelFactory.h"
-#include "CpuKernels.h"
-#include "CpuPlatform.h"
-#include "openmm/internal/ContextImpl.h"
+#include "openmm/BAOABLangevinIntegrator.h"
+#include "openmm/Context.h"
 #include "openmm/OpenMMException.h"
+#include "openmm/internal/ContextImpl.h"
+#include "openmm/kernels.h"
+#include <string>
 
 using namespace OpenMM;
+using std::string;
+using std::vector;
 
-KernelImpl* CpuKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {
-    CpuPlatform::PlatformData& data = CpuPlatform::getPlatformData(context);
-    if (name == CalcForcesAndEnergyKernel::Name())
-        return new CpuCalcForcesAndEnergyKernel(name, platform, data, context);
-    if (name == CalcHarmonicAngleForceKernel::Name())
-        return new CpuCalcHarmonicAngleForceKernel(name, platform, data);
-    if (name == CalcPeriodicTorsionForceKernel::Name())
-        return new CpuCalcPeriodicTorsionForceKernel(name, platform, data);
-    if (name == CalcRBTorsionForceKernel::Name())
-        return new CpuCalcRBTorsionForceKernel(name, platform, data);
-    if (name == CalcNonbondedForceKernel::Name())
-        return new CpuCalcNonbondedForceKernel(name, platform, data);
-    if (name == CalcCustomNonbondedForceKernel::Name())
-        return new CpuCalcCustomNonbondedForceKernel(name, platform, data);
-    if (name == CalcCustomManyParticleForceKernel::Name())
-        return new CpuCalcCustomManyParticleForceKernel(name, platform, data);
-    if (name == CalcGBSAOBCForceKernel::Name())
-        return new CpuCalcGBSAOBCForceKernel(name, platform, data);
-    if (name == CalcCustomGBForceKernel::Name())
-        return new CpuCalcCustomGBForceKernel(name, platform, data);
-    if (name == CalcGayBerneForceKernel::Name())
-        return new CpuCalcGayBerneForceKernel(name, platform, data);
-    if (name == IntegrateLangevinStepKernel::Name())
-        return new CpuIntegrateLangevinStepKernel(name, platform, data);
-    if (name == IntegrateBAOABStepKernel::Name())
-        return new CpuIntegrateBAOABStepKernel(name, platform, data);
-    throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '") + name + "'").c_str());
+BAOABLangevinIntegrator::BAOABLangevinIntegrator(double temperature, double frictionCoeff, double stepSize) {
+    setTemperature(temperature);
+    setFriction(frictionCoeff);
+    setStepSize(stepSize);
+    setConstraintTolerance(1e-5);
+    setRandomNumberSeed(0);
+    forcesAreValid = false;
+}
+
+void BAOABLangevinIntegrator::initialize(ContextImpl& contextRef) {
+    if (owner != NULL && &contextRef.getOwner() != owner)
+        throw OpenMMException("This Integrator is already bound to a context");
+    context = &contextRef;
+    owner = &contextRef.getOwner();
+    kernel = context->getPlatform().createKernel(IntegrateBAOABStepKernel::Name(), contextRef);
+    kernel.getAs<IntegrateBAOABStepKernel>().initialize(contextRef.getSystem(), *this);
+}
+
+void BAOABLangevinIntegrator::cleanup() {
+    kernel = Kernel();
+}
+
+void BAOABLangevinIntegrator::stateChanged(State::DataType changed) {
+    forcesAreValid = false;
+}
+
+vector<string> BAOABLangevinIntegrator::getKernelNames() {
+    std::vector<std::string> names;
+    names.push_back(IntegrateBAOABStepKernel::Name());
+    return names;
+}
+
+double BAOABLangevinIntegrator::computeKineticEnergy() {
+    return kernel.getAs<IntegrateBAOABStepKernel>().computeKineticEnergy(*context, *this);
+}
+
+void BAOABLangevinIntegrator::step(int steps) {
+    if (context == NULL)
+        throw OpenMMException("This Integrator is not bound to a context!");  
+    for (int i = 0; i < steps; ++i) {
+        context->updateContextState();
+        kernel.getAs<IntegrateBAOABStepKernel>().execute(*context, *this, forcesAreValid);
+    }
 }
