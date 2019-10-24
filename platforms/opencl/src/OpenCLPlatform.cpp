@@ -144,9 +144,14 @@ bool OpenCLPlatform::isPlatformSupported() {
     // Make sure at least one OpenCL implementation is installed.
 
     std::vector<cl::Platform> platforms;
-    cl::Platform::get(&platforms);
-    if (platforms.size() == 0)
+    try {
+        cl::Platform::get(&platforms);
+        if (platforms.size() == 0)
+            return false;
+    }
+    catch (...) {
         return false;
+    }
     return true;
 }
 
