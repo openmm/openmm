@@ -1080,12 +1080,17 @@ class TestModeller(unittest.TestCase):
     def test_addMembrane(self):
         """Test adding a membrane to a realistic system."""
         
+        print('a')
         mol = PDBxFile('systems/gpcr.cif')
+        print('b')
         modeller = Modeller(mol.topology, mol.positions)
+        print('c')
         ff = ForceField('amber14-all.xml', 'amber14/tip3p.xml')
+        print('d')
 
         # Add a membrane around the GPCR
         modeller.addMembrane(ff, minimumPadding=1.1*nanometers, ionicStrength=1*molar)
+        print('e')
 
         # Make sure we added everything correctly
         resCount = defaultdict(int)

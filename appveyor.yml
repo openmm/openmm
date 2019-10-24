@@ -70,7 +70,7 @@ test_script:
   #- python %APPVEYOR_BUILD_FOLDER%\devtools\run-ctest.py
   - cd python\tests
   #- py.test -v
-  - python TestModeller.py
+  - python TestModeller.py -v
 
 cache:
 - C:\ProgramData\cclash -> appveyor.yml
