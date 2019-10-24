@@ -35,7 +35,7 @@
 #include "Integrator.h"
 #include "openmm/State.h"
 #include "openmm/Kernel.h"
-#include "openmm/NoseHooverChain.h"
+#include "internal/NoseHooverChain.h"
 #include "internal/windowsExport.h"
 
 namespace OpenMM {
@@ -58,15 +58,15 @@ public:
     /**
      * Create a NoseHooverIntegrator.
      *
-     * @param stepSize the step size with which to integrate the system (in picoseconds)
      * @param temperature the target temperature for the system.
      * @param collisionFrequency the frequency of the interaction with the heat bath (in 1/ps).
+     * @param stepSize the step size with which to integrate the system (in picoseconds)
      * @param chainLength the number of beads in the Nose-Hoover chain.
      * @param numMTS the number of step in the  multiple time step chain propagation algorithm.
      * @param numYoshidaSuzuki the number of terms in the Yoshida-Suzuki multi time step decomposition
      *        used in the chain propagation algorithm (must be 1, 3, or 5).
      */
-    explicit NoseHooverIntegrator(double stepSize, double temperature, int collisionFrequnency,
+    explicit NoseHooverIntegrator(double temperature, int collisionFrequnency, double stepSize, 
                                   int chainLength = 3, int numMTS = 3, int numYoshidaSuzuki = 3);
 
     virtual ~NoseHooverIntegrator();
@@ -99,9 +99,9 @@ public:
      * @param thermostatedPairs a list of pairs of connected atoms whose absolute center of mass motion
      *        and motion relative to one another will be independently thermostated.
      * @param temperature the target temperature for each pair's absolute of center of mass motion.
-     * @param relativeTemperature the target temperature for each pair's relative motion.
      * @param collisionFrequency the frequency of the interaction with the heat bath for the
      *        pairs' center of mass motion (in 1/ps).
+     * @param relativeTemperature the target temperature for each pair's relative motion.
      * @param relativeCollisionFrequency the frequency of the interaction with the heat bath for the
      *        pairs' relative motion (in 1/ps).
      * @param chainLength the number of beads in the Nose-Hoover chain.
@@ -111,8 +111,8 @@ public:
      */
      int addSubsystemThermostat(const std::vector<int>& thermostatedParticles,
                                 const std::vector< std::pair< int, int> >& thermostatedPairs,
-                                double temperature, double relativeTemperature,
-                                double collisionFrequency, double relativeCollisionFrequency,
+                                double temperature, double collisionFrequency, double relativeTemperature,
+                                double relativeCollisionFrequency,
                                 int chainLength = 3, int numMTS = 3, int numYoshidaSuzuki = 3);
     /**
      * Get the temperature of the i-th chain for controling absolute particle motion (in Kelvin).

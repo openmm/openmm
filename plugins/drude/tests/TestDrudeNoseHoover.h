@@ -30,7 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/internal/AssertionUtilities.h"
-#include "openmm/NoseHooverChain.h"
+#include "openmm/internal/NoseHooverChain.h"
 #include "openmm/CMMotionRemover.h"
 #include "openmm/DrudeNoseHooverIntegrator.h"
 #include "openmm/Context.h"
@@ -120,8 +120,9 @@ void testWaterBox(Platform& platform){
     double frequency = 100.0;
     double frequencyDrude = 80.0;
     int randomSeed = 100;
-    DrudeNoseHooverIntegrator integ(0.0005, temperature, temperatureDrude,
-                                    frequency, frequencyDrude, chainLength, numMTS, numYS);;
+    DrudeNoseHooverIntegrator integ(temperature, frequency, 
+                                    temperatureDrude, frequencyDrude, 0.0005, 
+                                    chainLength, numMTS, numYS);
     Context context(system, integ, platform);
     context.setPositions(positions);
     context.setVelocitiesToTemperature(temperature, randomSeed);
@@ -179,7 +180,7 @@ void testWaterBox(Platform& platform){
     }
     totalKE /= numSteps;
     ASSERT_USUALLY_EQUAL_TOL(temperature, meanTemp, 0.03);
-    ASSERT_USUALLY_EQUAL_TOL(temperatureDrude, meanDrudeTemp, 0.03);
+    ASSERT_USUALLY_EQUAL_TOL(temperatureDrude, meanDrudeTemp, 0.04);
 }
 
 int main(int argc, char* argv[]) {

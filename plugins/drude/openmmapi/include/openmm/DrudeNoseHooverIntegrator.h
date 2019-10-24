@@ -54,18 +54,18 @@ public:
     /**
      * Create a DrudeNoseHooverIntegrator.
      *
-     * @param stepSize       the step size with which to integrator the system (in picoseconds)
      * @param temperature the target temperature for the system.
-     * @param drudeTemperature the target temperature for the Drude particles, relative to their parent atom.
      * @param collisionFrequency the frequency of the system's interaction with the heat bath (in 1/ps).
+     * @param drudeTemperature the target temperature for the Drude particles, relative to their parent atom.
      * @param drudeCollisionFrequency the frequency of the drude particles' interaction with the heat bath (in 1/ps).
+     * @param stepSize       the step size with which to integrator the system (in picoseconds)
      * @param chainLength the number of beads in the Nose-Hoover chain.
      * @param numMTS the number of step in the  multiple time step chain propagation algorithm.
      * @param numYoshidaSuzuki the number of terms in the Yoshida-Suzuki multi time step decomposition
      *        used in the chain propagation algorithm (must be 1, 3, or 5).
      */
-    DrudeNoseHooverIntegrator(double stepSize, double temperature, double drudeTemperature,
-                              double collisionFrequency, double drudeCollisionFrequency,
+    DrudeNoseHooverIntegrator(double temperature, double collisionFrequency, 
+                              double drudeTemperature, double drudeCollisionFrequency, double stepSize, 
                               int chainLength = 3, int numMTS = 3, int numYoshidaSuzuki = 3);
 
     virtual ~DrudeNoseHooverIntegrator();

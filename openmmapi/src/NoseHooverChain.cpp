@@ -29,7 +29,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/NoseHooverChain.h"
+#include "openmm/internal/NoseHooverChain.h"
 #include "openmm/OpenMMException.h"
 
 using namespace OpenMM;

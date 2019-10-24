@@ -32,11 +32,11 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "Force.h"
+#include "openmm/Force.h"
 #include <string>
 #include <vector>
 #include "openmm/OpenMMException.h"
-#include "internal/windowsExport.h"
+#include "windowsExport.h"
 
 namespace OpenMM {
 

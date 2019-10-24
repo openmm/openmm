@@ -55,7 +55,7 @@
 #include "openmm/KernelImpl.h"
 #include "openmm/LangevinIntegrator.h"
 #include "openmm/MonteCarloBarostat.h"
-#include "openmm/NoseHooverChain.h"
+#include "openmm/internal/NoseHooverChain.h"
 #include "openmm/PeriodicTorsionForce.h"
 #include "openmm/RBTorsionForce.h"
 #include "openmm/RMSDForce.h"
@@ -1060,7 +1060,7 @@ public:
 };
 
 /**
- * This kernel is invoked by VelocityVerletIntegrator to take one time step.
+ * This kernel is invoked by NoseHooverIntegrator to take one time step.
  */
 class IntegrateVelocityVerletStepKernel : public KernelImpl {
 public:
@@ -1073,14 +1073,14 @@ public:
      * Initialize the kernel.
      * 
      * @param system     the System this kernel will be applied to
-     * @param integrator the VelocityVerletIntegrator this kernel will be used for
+     * @param integrator the NoseHooverIntegrator this kernel will be used for
      */
     virtual void initialize(const System& system, const NoseHooverIntegrator& integrator) = 0;
     /**
      * Execute the kernel.
      * 
      * @param context    the context in which to execute this kernel
-     * @param integrator the VelocityVerletIntegrator this kernel is being used for
+     * @param integrator the NoseHooverIntegrator this kernel is being used for
      * @param forcesAreValid a reference to the parent integrator's boolean for keeping
      *                       track of the validity of the current forces.
      */
@@ -1089,7 +1089,7 @@ public:
      * Compute the kinetic energy.
      * 
      * @param context    the context in which to execute this kernel
-     * @param integrator the VelocityVerletIntegrator this kernel is being used for
+     * @param integrator the NoseHooverIntegrator this kernel is being used for
      */
     virtual double computeKineticEnergy(ContextImpl& context, const NoseHooverIntegrator& integrator) = 0;
 };

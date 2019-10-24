@@ -30,7 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/internal/AssertionUtilities.h"
-#include "openmm/NoseHooverChain.h"
+#include "openmm/internal/NoseHooverChain.h"
 #include "openmm/NoseHooverIntegrator.h"
 #include "openmm/Context.h"
 #include "openmm/State.h"
@@ -162,7 +162,7 @@ void testDimerBox(bool constrain=true) {
     int numMTS = 3;
     int numYS = 3;
     int chainLength = 5;
-    auto integrator = simpleConstruct ? NoseHooverIntegrator(0.001, temperature, collisionFrequency, chainLength, numMTS, numYS)
+    auto integrator = simpleConstruct ? NoseHooverIntegrator(temperature, collisionFrequency, 0.001, chainLength, numMTS, numYS)
                                       : NoseHooverIntegrator(0.001);
     if (!simpleConstruct)
         integrator.addThermostat(temperature, collisionFrequency, chainLength, numMTS, numYS);
@@ -225,9 +225,9 @@ void testCheckpoints() {
     double kineticEnergy = 1e6;
     double temperature=300, collisionFrequency=1, chainLength=3, numMTS=3, numYS=3;
     chainLength = 10;
-    integrator.addSubsystemThermostat(std::vector<int>(), std::vector<std::pair<int,int>>{{0,1}},  temperature, temperature, collisionFrequency, collisionFrequency,
+    integrator.addSubsystemThermostat(std::vector<int>(), std::vector<std::pair<int,int>>{{0,1}},  temperature, collisionFrequency, temperature, collisionFrequency,
                                       chainLength, numMTS, numYS);
-    newIntegrator.addSubsystemThermostat(std::vector<int>(), std::vector<std::pair<int,int>>{{0,1}},  temperature, temperature, collisionFrequency, collisionFrequency,
+    newIntegrator.addSubsystemThermostat(std::vector<int>(), std::vector<std::pair<int,int>>{{0,1}},  temperature, collisionFrequency, temperature, collisionFrequency,
                                       chainLength, numMTS, numYS);
     Context context(system, integrator, platform);
     Context newContext(system, newIntegrator, platform);

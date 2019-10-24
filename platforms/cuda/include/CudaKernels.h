@@ -1367,7 +1367,7 @@ private:
 };
 
 /*
- * This kernel is invoked by VelocityVerletIntegrator to take one time step.
+ * This kernel is invoked by NoseHooverIntegrator to take one time step.
  */
 class CudaIntegrateVelocityVerletStepKernel : public IntegrateVelocityVerletStepKernel {
 public:
@@ -1378,7 +1378,7 @@ public:
      * Initialize the kernel.
      * 
      * @param system     the System this kernel will be applied to
-     * @param integrator the VelocityVerletIntegrator this kernel will be used for
+     * @param integrator the NoseHooverIntegrator this kernel will be used for
      */
     void initialize(const System& system, const NoseHooverIntegrator& integrator);
     /**
@@ -1394,7 +1394,7 @@ public:
      * Compute the kinetic energy.
      * 
      * @param context    the context in which to execute this kernel
-     * @param integrator the VelocityVerletIntegrator this kernel is being used for
+     * @param integrator the NoseHooverIntegrator this kernel is being used for
      */
     double computeKineticEnergy(ContextImpl& context, const NoseHooverIntegrator& integrator);
 private:

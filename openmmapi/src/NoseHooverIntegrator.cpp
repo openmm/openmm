@@ -33,10 +33,11 @@
 #include "openmm/Context.h"
 #include "openmm/Force.h"
 #include "openmm/System.h"
-#include "openmm/NoseHooverChain.h"
+#include "openmm/internal/NoseHooverChain.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/CMMotionRemover.h"
 #include "openmm/internal/ContextImpl.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "openmm/kernels.h"
 #include <iostream>
 #include <string>
@@ -52,7 +53,7 @@ NoseHooverIntegrator::NoseHooverIntegrator(double stepSize):
     setStepSize(stepSize);
     setConstraintTolerance(1e-5);
 }
-NoseHooverIntegrator::NoseHooverIntegrator(double stepSize, double temperature, int collisionFrequnency,
+NoseHooverIntegrator::NoseHooverIntegrator(double temperature, int collisionFrequnency, double stepSize,
                                            int chainLength, int numMTS, int numYoshidaSuzuki) : forcesAreValid(false) {
     setStepSize(stepSize);
     setConstraintTolerance(1e-5);
@@ -67,16 +68,16 @@ std::pair<double, double> NoseHooverIntegrator::propagateChain(std::pair<double,
 
 
 int NoseHooverIntegrator::addThermostat(double temperature, double collisionFrequency,
-                                                           int chainLength, int numMTS, int numYoshidaSuzuki) {
+                                        int chainLength, int numMTS, int numYoshidaSuzuki) {
 
-    return addSubsystemThermostat(std::vector<int>(), std::vector<std::pair<int, int>>(), temperature, temperature,
-                                  collisionFrequency, collisionFrequency, chainLength, numMTS, numYoshidaSuzuki);
+    return addSubsystemThermostat(std::vector<int>(), std::vector<std::pair<int, int>>(), temperature,
+                                  collisionFrequency, temperature, collisionFrequency, chainLength, numMTS, numYoshidaSuzuki);
 }
 
 int NoseHooverIntegrator::addSubsystemThermostat(const std::vector<int>& thermostatedParticles,
                                                  const std::vector< std::pair< int, int> > &thermostatedPairs,
-                                                 double temperature, double relativeTemperature,
-                                                 double collisionFrequency, double relativeCollisionFrequency,
+                                                 double temperature, double collisionFrequency,
+                                                 double relativeTemperature, double relativeCollisionFrequency,
                                                  int chainLength, int numMTS, int numYoshidaSuzuki) {
     auto data = ThermostatData(thermostatedParticles, thermostatedPairs, temperature,
                                relativeTemperature, collisionFrequency,
@@ -195,82 +196,50 @@ void NoseHooverIntegrator::createThermostats(const System &system) {
 }
 
 double NoseHooverIntegrator::getTemperature(int chainID) const {
-    if (chainID >= noseHooverChains.size()) {
-        throw OpenMMException("Cannot get temperature for chainID " + std::to_string(chainID)
-                + ". Only " + std::to_string(noseHooverChains.size()) + " have been registered with this integrator."
-        );
-    }
-    return noseHooverChains.at(chainID).getDefaultTemperature();
+    ASSERT_VALID_INDEX(chainID, noseHooverChains);
+    return noseHooverChains[chainID].getDefaultTemperature();
 }
 
 void NoseHooverIntegrator::setTemperature(double temperature, int chainID){
-    if (chainID >= noseHooverChains.size()) {
-        throw OpenMMException("Cannot set temperature for chainID " + std::to_string(chainID)
-                + ". Only " + std::to_string(noseHooverChains.size()) + " have been registered with this integrator."
-        );
-    }
-    noseHooverChains.at(chainID).setDefaultTemperature(temperature);
+    ASSERT_VALID_INDEX(chainID, noseHooverChains);
+    noseHooverChains[chainID].setDefaultTemperature(temperature);
 
 }
 
 double NoseHooverIntegrator::getRelativeTemperature(int chainID) const {
-    if (chainID >= noseHooverChains.size()) {
-        throw OpenMMException("Cannot get relative temperature for chainID " + std::to_string(chainID)
-                + ". Only " + std::to_string(noseHooverChains.size()) + " have been registered with this integrator."
-        );
-    }
-    return noseHooverChains.at(chainID).getDefaultRelativeTemperature();
+    ASSERT_VALID_INDEX(chainID, noseHooverChains);
+    return noseHooverChains[chainID].getDefaultRelativeTemperature();
 }
 
 void NoseHooverIntegrator::setRelativeTemperature(double temperature, int chainID){
-    if (chainID >= noseHooverChains.size()) {
-        throw OpenMMException("Cannot set relative temperature for chainID " + std::to_string(chainID)
-                + ". Only " + std::to_string(noseHooverChains.size()) + " have been registered with this integrator."
-        );
-    }
-    noseHooverChains.at(chainID).setDefaultRelativeTemperature(temperature);
+    ASSERT_VALID_INDEX(chainID, noseHooverChains);
+    noseHooverChains[chainID].setDefaultRelativeTemperature(temperature);
 
 }
 
 double NoseHooverIntegrator::getCollisionFrequency(int chainID) const {
-    if (chainID >= noseHooverChains.size()) {
-        throw OpenMMException("Cannot get collision frequency for chainID " + std::to_string(chainID)
-                + ". Only " + std::to_string(noseHooverChains.size()) + " have been registered with this integrator."
-        );
-    }
-    return noseHooverChains.at(chainID).getDefaultCollisionFrequency();
+    ASSERT_VALID_INDEX(chainID, noseHooverChains);
+    return noseHooverChains[chainID].getDefaultCollisionFrequency();
 }
 
 void NoseHooverIntegrator::setCollisionFrequency(double frequency, int chainID){
-    if (chainID >= noseHooverChains.size()) {
-        throw OpenMMException("Cannot set collision frequency for chainID " + std::to_string(chainID)
-                + ". Only " + std::to_string(noseHooverChains.size()) + " have been registered with this integrator."
-        );
-    }
-    noseHooverChains.at(chainID).setDefaultCollisionFrequency(frequency);
+    ASSERT_VALID_INDEX(chainID, noseHooverChains);
+    noseHooverChains[chainID].setDefaultCollisionFrequency(frequency);
 }
 
 double NoseHooverIntegrator::getRelativeCollisionFrequency(int chainID) const {
-    if (chainID >= noseHooverChains.size()) {
-        throw OpenMMException("Cannot get relative collision frequency for chainID " + std::to_string(chainID)
-                + ". Only " + std::to_string(noseHooverChains.size()) + " have been registered with this integrator."
-        );
-    }
-    return noseHooverChains.at(chainID).getDefaultRelativeCollisionFrequency();
+    ASSERT_VALID_INDEX(chainID, noseHooverChains);
+    return noseHooverChains[chainID].getDefaultRelativeCollisionFrequency();
 }
 
 void NoseHooverIntegrator::setRelativeCollisionFrequency(double frequency, int chainID){
-    if (chainID >= noseHooverChains.size()) {
-        throw OpenMMException("Cannot set relative collision frequency for chainID " + std::to_string(chainID)
-                + ". Only " + std::to_string(noseHooverChains.size()) + " have been registered with this integrator."
-        );
-    }
-    noseHooverChains.at(chainID).setDefaultRelativeCollisionFrequency(frequency);
+    ASSERT_VALID_INDEX(chainID, noseHooverChains);
+    noseHooverChains[chainID].setDefaultRelativeCollisionFrequency(frequency);
 }
 
 double NoseHooverIntegrator::computeKineticEnergy() {
     double kE = 0.0;
-    if(noseHooverChains.size()) {
+    if(noseHooverChains.size() > 0) {
         for (const auto &nhc: noseHooverChains){
             kE += nhcKernel.getAs<NoseHooverChainKernel>().computeMaskedKineticEnergy(*context, nhc, true).first;
         }
@@ -308,7 +277,7 @@ void NoseHooverIntegrator::initialize(ContextImpl& contextRef) {
             for(int particle = 0; particle < system.getNumParticles(); ++particle) {
                 double mass = system.getParticleMass(particle);
                 if ( (mass > 0) && (mass < 0.8) ){
-                    std::cout << "Warning: Found particles with mass between 0.0 and 0.8 dalton. Did you mean to make a DrudeVelocityVerletIntegrator instead? "
+                    std::cout << "Warning: Found particles with mass between 0.0 and 0.8 dalton. Did you mean to make a DrudeNoseHooverIntegrator instead? "
                                  "The thermostat you are about to use will not treat these particles as Drude particles!" << std::endl;
                 }
                 if(system.getParticleMass(particle) > 0) {

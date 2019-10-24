@@ -46,13 +46,13 @@ using namespace OpenMM;
 using std::string;
 using std::vector;
 
-DrudeNoseHooverIntegrator::DrudeNoseHooverIntegrator(double stepSize, double temperature, double drudeTemperature,
-                                                     double collisionFrequency, double drudeCollisionFrequency,
-                                                     int chainLength, int numMTS, int numYoshidaSuzuki) :
+DrudeNoseHooverIntegrator::DrudeNoseHooverIntegrator(double temperature, double collisionFrequency, 
+                                                     double drudeTemperature, double drudeCollisionFrequency,
+                                                     double stepSize, int chainLength, int numMTS, int numYoshidaSuzuki) :
     NoseHooverIntegrator(stepSize) {
 
     addSubsystemThermostat(std::vector<int>(), std::vector<std::pair<int, int>>(), temperature,
-                           drudeTemperature, collisionFrequency, drudeCollisionFrequency,
+                           collisionFrequency, drudeTemperature, drudeCollisionFrequency,
                            chainLength, numMTS, numYoshidaSuzuki);
 }
 
