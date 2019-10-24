@@ -1,7 +1,7 @@
 enum {VelScale, NoiseScale};
 
 /**
- * Perform the first step of BAOAB integration.
+ * Perform the first part of BAOAB integration: velocity half step, then position half step.
  */
 
 __kernel void integrateBAOABPart1(__global mixed4* restrict velm, __global const real4* restrict force, __global mixed4* restrict posDelta,
@@ -22,7 +22,8 @@ __kernel void integrateBAOABPart1(__global mixed4* restrict velm, __global const
 }
 
 /**
- * Perform the second step of BAOAB integration.
+ * Perform the second part of BAOAB integration: apply constraint forces to velocities, then interact with heat bath,
+ * then position half step.
  */
 
 __kernel void integrateBAOABPart2(__global real4* restrict posq, __global real4* restrict posqCorrection, __global mixed4* restrict velm, __global mixed4* restrict posDelta,
@@ -67,7 +68,8 @@ __kernel void integrateBAOABPart2(__global real4* restrict posq, __global real4*
 }
 
 /**
- * Perform the third step of BAOAB integration.
+ * Perform the third part of BAOAB integration: apply constraint forces to velocities, then record
+ * the constrained positions in preparation for computing forces.
  */
 
 __kernel void integrateBAOABPart3(__global real4* restrict posq, __global real4* restrict posqCorrection, __global mixed4* restrict velm,
@@ -101,7 +103,7 @@ __kernel void integrateBAOABPart3(__global real4* restrict posq, __global real4*
 }
 
 /**
- * Perform the fourth step of BAOAB integration.
+ * Perform the fourth part of BAOAB integration: velocity half step.
  */
 
 __kernel void integrateBAOABPart4(__global mixed4* restrict velm, __global const real4* restrict force, __global const mixed2* restrict dt) {

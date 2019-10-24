@@ -1,7 +1,7 @@
 enum {VelScale, NoiseScale};
 
 /**
- * Perform the first step of BAOAB integration.
+ * Perform the first part of BAOAB integration: velocity half step, then position half step.
  */
 
 extern "C" __global__ void integrateBAOABPart1(int numAtoms, int paddedNumAtoms, mixed4* __restrict__ velm, const long long* __restrict__ force, mixed4* __restrict__ posDelta,
@@ -23,7 +23,8 @@ extern "C" __global__ void integrateBAOABPart1(int numAtoms, int paddedNumAtoms,
 }
 
 /**
- * Perform the second step of BAOAB integration.
+ * Perform the second part of BAOAB integration: apply constraint forces to velocities, then interact with heat bath,
+ * then position half step.
  */
 
 extern "C" __global__ void integrateBAOABPart2(int numAtoms, real4* __restrict__ posq, real4* __restrict__ posqCorrection, mixed4* __restrict__ velm, mixed4* __restrict__ posDelta,
@@ -72,7 +73,8 @@ extern "C" __global__ void integrateBAOABPart2(int numAtoms, real4* __restrict__
 }
 
 /**
- * Perform the third step of BAOAB integration.
+ * Perform the third part of BAOAB integration: apply constraint forces to velocities, then record
+ * the constrained positions in preparation for computing forces.
  */
 
 extern "C" __global__ void integrateBAOABPart3(int numAtoms, real4* __restrict__ posq, real4* __restrict__ posqCorrection, mixed4* __restrict__ velm,
@@ -108,7 +110,7 @@ extern "C" __global__ void integrateBAOABPart3(int numAtoms, real4* __restrict__
 }
 
 /**
- * Perform the fourth step of BAOAB integration.
+ * Perform the fourth part of BAOAB integration: velocity half step.
  */
 
 extern "C" __global__ void integrateBAOABPart4(int numAtoms, int paddedNumAtoms, mixed4* __restrict__ velm,
