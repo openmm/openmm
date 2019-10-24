@@ -46,49 +46,36 @@ using namespace OpenMM;
 using std::string;
 using std::vector;
 
-DrudeNoseHooverIntegrator::DrudeNoseHooverIntegrator(double stepSize, System &system, double temperature, double drudeTemperature,
+DrudeNoseHooverIntegrator::DrudeNoseHooverIntegrator(double stepSize, double temperature, double drudeTemperature,
                                                      double collisionFrequency, double drudeCollisionFrequency,
                                                      int chainLength, int numMTS, int numYoshidaSuzuki) :
     NoseHooverIntegrator(stepSize) {
-    const DrudeForce* drudeForce = NULL;
-    for (int i = 0; i < system.getNumForces(); i++)
-        if (dynamic_cast<const DrudeForce*>(&system.getForce(i)) != NULL) {
-            if (drudeForce == NULL)
-                drudeForce = dynamic_cast<const DrudeForce*>(&system.getForce(i));
-            else
-                throw OpenMMException("The System contains multiple DrudeForces");
-        }
-    if (drudeForce == NULL)
-        throw OpenMMException("The System does not contain a DrudeForce");
-    std::set<int> realParticlesSet;
-    vector<int> realParticles, drudeParticles, drudeParents;
-    vector<std::pair<int, int>> drudePairs;
-    for (int i = 0; i < system.getNumParticles(); i++) {
-        if (system.getParticleMass(i) > 0.0) realParticlesSet.insert(i);
-    }
-    for (int i = 0; i < drudeForce->getNumParticles(); i++) {
-        int p, p1, p2, p3, p4;
-        double charge, polarizability, aniso12, aniso34;
-        drudeForce->getParticleParameters(i, p, p1, p2, p3, p4, charge, polarizability, aniso12, aniso34);
-        realParticlesSet.erase(p);
-        realParticlesSet.erase(p1);
-        drudePairs.push_back({p,p1});
-    }
-    for(const auto &p : realParticlesSet) realParticles.push_back(p);
 
-    addSubsystemThermostat(system, realParticles, drudePairs, temperature, drudeTemperature, collisionFrequency,
-                           drudeCollisionFrequency, chainLength, numMTS, numYoshidaSuzuki);
+    addSubsystemThermostat(std::vector<int>(), std::vector<std::pair<int, int>>(), temperature,
+                           drudeTemperature, collisionFrequency, drudeCollisionFrequency,
+                           chainLength, numMTS, numYoshidaSuzuki);
 }
 
 DrudeNoseHooverIntegrator::~DrudeNoseHooverIntegrator() { }
 
 
 void DrudeNoseHooverIntegrator::initialize(ContextImpl& contextRef) {
-    NoseHooverIntegrator::initialize(contextRef);
+
     if (owner != NULL && &contextRef.getOwner() != owner)
         throw OpenMMException("This Integrator is already bound to a context");
+
+    context = &contextRef;
+    owner = &contextRef.getOwner();
+    vvKernel = context->getPlatform().createKernel(IntegrateVelocityVerletStepKernel::Name(), contextRef);
+    vvKernel.getAs<IntegrateVelocityVerletStepKernel>().initialize(contextRef.getSystem(), *this);
+    nhcKernel = context->getPlatform().createKernel(NoseHooverChainKernel::Name(), contextRef);
+    nhcKernel.getAs<NoseHooverChainKernel>().initialize();
+    forcesAreValid = false;
+
+    // check for drude particles and build the Nose-Hoover Chains
+    const System& system = context->getSystem();
     const DrudeForce* drudeForce = NULL;
-    const System& system = contextRef.getSystem();
+
     bool hasCMMotionRemover = false;
     for (int i = 0; i < system.getNumForces(); i++){
         if (dynamic_cast<const DrudeForce*>(&system.getForce(i)) != NULL) {
@@ -107,8 +94,27 @@ void DrudeNoseHooverIntegrator::initialize(ContextImpl& contextRef) {
         std::cout << "Warning: Did not find a center-of-mass motion remover in the system. "
                      "This is problematic when using Drude." << std::endl;
     }
-    context = &contextRef;
-    owner = &contextRef.getOwner();
+    for (auto& thermostat: thermostatData){
+        if ( (thermostat.thermostatedParticles.size() == 0) && (thermostat.thermostatedPairs.size() == 0) ){
+            std::set<int> realParticlesSet;
+            vector<int> realParticles, drudeParticles, drudeParents;
+            vector<std::pair<int, int>> drudePairs;
+            for (int i = 0; i < system.getNumParticles(); i++) {
+                if (system.getParticleMass(i) > 0.0) realParticlesSet.insert(i);
+            }
+            for (int i = 0; i < drudeForce->getNumParticles(); i++) {
+                int p, p1, p2, p3, p4;
+                double charge, polarizability, aniso12, aniso34;
+                drudeForce->getParticleParameters(i, p, p1, p2, p3, p4, charge, polarizability, aniso12, aniso34);
+                realParticlesSet.erase(p);
+                realParticlesSet.erase(p1);
+                thermostat.thermostatedPairs.push_back({p,p1});
+            }
+            for(const auto &p : realParticlesSet) thermostat.thermostatedParticles.push_back(p);
+        }
+    }
+
+    createThermostats(system);
 }
 
 double DrudeNoseHooverIntegrator::computeDrudeKineticEnergy() {

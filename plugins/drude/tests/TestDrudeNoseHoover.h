@@ -120,7 +120,7 @@ void testWaterBox(Platform& platform){
     double frequency = 100.0;
     double frequencyDrude = 80.0;
     int randomSeed = 100;
-    DrudeNoseHooverIntegrator integ(0.0005, system, temperature, temperatureDrude,
+    DrudeNoseHooverIntegrator integ(0.0005, temperature, temperatureDrude,
                                     frequency, frequencyDrude, chainLength, numMTS, numYS);;
     Context context(system, integ, platform);
     context.setPositions(positions);

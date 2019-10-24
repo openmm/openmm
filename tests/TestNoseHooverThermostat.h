@@ -66,7 +66,7 @@ void testHarmonicOscillator() {
     harmonic_restraint->addParticle(0);
     system.addForce(harmonic_restraint);
     NoseHooverIntegrator integrator(0.001);
-    integrator.addThermostat(system, temperature, frequency, chain_length, mts, ys);
+    integrator.addThermostat(temperature, frequency, chain_length, mts, ys);
     Context context(system, integrator, platform);
     context.setPositions(positions);
     context.setVelocities(velocities);
@@ -162,10 +162,10 @@ void testDimerBox(bool constrain=true) {
     int numMTS = 3;
     int numYS = 3;
     int chainLength = 5;
-    auto integrator = simpleConstruct ? NoseHooverIntegrator(0.001, system, temperature, collisionFrequency, chainLength, numMTS, numYS)
+    auto integrator = simpleConstruct ? NoseHooverIntegrator(0.001, temperature, collisionFrequency, chainLength, numMTS, numYS)
                                       : NoseHooverIntegrator(0.001);
     if (!simpleConstruct)
-        integrator.addThermostat(system, temperature, collisionFrequency, chainLength, numMTS, numYS);
+        integrator.addThermostat(temperature, collisionFrequency, chainLength, numMTS, numYS);
     Context context(system, integrator, platform);
     context.setPositions(positions);
     context.setVelocitiesToTemperature(temperature);
@@ -225,9 +225,9 @@ void testCheckpoints() {
     double kineticEnergy = 1e6;
     double temperature=300, collisionFrequency=1, chainLength=3, numMTS=3, numYS=3;
     chainLength = 10;
-    integrator.addSubsystemThermostat(system, std::vector<int>(), std::vector<std::pair<int,int>>{{0,1}},  temperature, temperature, collisionFrequency, collisionFrequency,
+    integrator.addSubsystemThermostat(std::vector<int>(), std::vector<std::pair<int,int>>{{0,1}},  temperature, temperature, collisionFrequency, collisionFrequency,
                                       chainLength, numMTS, numYS);
-    newIntegrator.addSubsystemThermostat(system, std::vector<int>(), std::vector<std::pair<int,int>>{{0,1}},  temperature, temperature, collisionFrequency, collisionFrequency,
+    newIntegrator.addSubsystemThermostat(std::vector<int>(), std::vector<std::pair<int,int>>{{0,1}},  temperature, temperature, collisionFrequency, collisionFrequency,
                                       chainLength, numMTS, numYS);
     Context context(system, integrator, platform);
     Context newContext(system, newIntegrator, platform);

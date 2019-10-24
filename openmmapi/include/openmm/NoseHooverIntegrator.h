@@ -41,7 +41,6 @@
 namespace OpenMM {
 
 class System;
-
 /**
  * This is an Integrator which simulates a System using one or more Nose Hoover chain
  * thermostats, using the velocity Verlet propagation algorithm.
@@ -60,8 +59,6 @@ public:
      * Create a NoseHooverIntegrator.
      *
      * @param stepSize the step size with which to integrate the system (in picoseconds)
-     * @param system the system to be thermostated.  Note: this must be setup, i.e. all
-     *        particles should have been added, before calling this function.
      * @param temperature the target temperature for the system.
      * @param collisionFrequency the frequency of the interaction with the heat bath (in 1/ps).
      * @param chainLength the number of beads in the Nose-Hoover chain.
@@ -69,7 +66,7 @@ public:
      * @param numYoshidaSuzuki the number of terms in the Yoshida-Suzuki multi time step decomposition
      *        used in the chain propagation algorithm (must be 1, 3, or 5).
      */
-    explicit NoseHooverIntegrator(double stepSize, System &system, double temperature, int collisionFrequnency,
+    explicit NoseHooverIntegrator(double stepSize, double temperature, int collisionFrequnency,
                                   int chainLength = 3, int numMTS = 3, int numYoshidaSuzuki = 3);
 
     virtual ~NoseHooverIntegrator();
@@ -82,8 +79,6 @@ public:
     /**
      * Add a simple Nose-Hoover Chain thermostat to control the temperature of the full system
      *
-     * @param system the system to be thermostated.  Note: this must be setup, i.e. all
-     *        particles should have been added, before calling this function.
      * @param temperature the target temperature for the system.
      * @param collisionFrequency the frequency of the interaction with the heat bath (in 1/ps).
      * @param chainLength the number of beads in the Nose-Hoover chain.
@@ -91,7 +86,7 @@ public:
      * @param numYoshidaSuzuki the number of terms in the Yoshida-Suzuki multi time step decomposition
      *        used in the chain propagation algorithm (must be 1, 3, or 5).
      */
-     int addThermostat(System& system, double temperature, double collisionFrequency,
+     int addThermostat(double temperature, double collisionFrequency,
                        int chainLength, int numMTS, int numYoshidaSuzuki);
     /**
      * Add a Nose-Hoover Chain thermostat to control the temperature of a collection of atoms and/or pairs of
@@ -100,8 +95,6 @@ public:
      * connected atoms may be provided; in this case both the center of mass absolute motion of each pair is
      * controlled as well as their motion relative to each other, which is independently thermostated.
      *
-     * @param system the system to be thermostated.  Note: this must be setup, i.e. all
-     *        particles should have been added, before calling this function.
      * @param thermostatedParticles list of particle ids to be thermostated.
      * @param thermostatedPairs a list of pairs of connected atoms whose absolute center of mass motion
      *        and motion relative to one another will be independently thermostated.
@@ -116,7 +109,7 @@ public:
      * @param numYoshidaSuzuki the number of terms in the Yoshida-Suzuki multi time step decomposition
      *        used in the chain propagation algorithm (must be 1, 3, or 5).
      */
-     int addSubsystemThermostat(System& system, const std::vector<int>& thermostatedParticles,
+     int addSubsystemThermostat(const std::vector<int>& thermostatedParticles,
                                 const std::vector< std::pair< int, int> >& thermostatedPairs,
                                 double temperature, double relativeTemperature,
                                 double collisionFrequency, double relativeCollisionFrequency,
@@ -222,6 +215,10 @@ protected:
      */
     void initialize(ContextImpl& context);
     /**
+     * Goes through the list of requested thermostat data and creates the thermostat chains.
+     */
+    void createThermostats(const System& system);
+    /**
      * This will be called by the Context when it is destroyed to let the Integrator do any necessary
      * cleanup.  It will also get called again if the application calls reinitialize() on the Context.
      */
@@ -234,6 +231,25 @@ protected:
      * Compute the kinetic energy of the system at the current time.
      */
     virtual double computeKineticEnergy();
+
+    struct ThermostatData {
+        std::vector<int> thermostatedParticles;
+        std::vector< std::pair< int, int> > thermostatedPairs;
+        double temperature;
+        double relativeTemperature;
+        double collisionFrequency;
+        double relativeCollisionFrequency;
+        int chainLength;
+        int numMTS;
+        int numYoshidaSuzuki;
+        ThermostatData(const std::vector<int>&particles, const std::vector<std::pair<int, int>> &pairs, double temp,
+                       double relTemp, double freq, double relFreq, int length, int MTS, int YS) :
+                               thermostatedParticles(particles), thermostatedPairs(pairs), temperature(temp),
+                               relativeTemperature(relTemp), collisionFrequency(freq), relativeCollisionFrequency(relFreq),
+                               chainLength(length), numMTS(MTS), numYoshidaSuzuki(YS) {}
+    };
+
+    std::vector<ThermostatData> thermostatData;
 
     std::vector<NoseHooverChain> noseHooverChains;
     bool forcesAreValid;

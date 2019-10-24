@@ -55,8 +55,6 @@ public:
      * Create a DrudeNoseHooverIntegrator.
      *
      * @param stepSize       the step size with which to integrator the system (in picoseconds)
-     * @param system the system to be thermostated.  Note: this must be setup, i.e. all
-     *        particles should have been added, before calling this function.
      * @param temperature the target temperature for the system.
      * @param drudeTemperature the target temperature for the Drude particles, relative to their parent atom.
      * @param collisionFrequency the frequency of the system's interaction with the heat bath (in 1/ps).
@@ -66,7 +64,7 @@ public:
      * @param numYoshidaSuzuki the number of terms in the Yoshida-Suzuki multi time step decomposition
      *        used in the chain propagation algorithm (must be 1, 3, or 5).
      */
-    DrudeNoseHooverIntegrator(double stepSize, System &system, double temperature, double drudeTemperature,
+    DrudeNoseHooverIntegrator(double stepSize, double temperature, double drudeTemperature,
                               double collisionFrequency, double drudeCollisionFrequency,
                               int chainLength = 3, int numMTS = 3, int numYoshidaSuzuki = 3);
 
