@@ -1493,7 +1493,7 @@ class Modeller(object):
                     mergedPositions[j+numMembraneParticles] = (weight1*proteinPos[j] + weight2*scaledProteinPos[j])
             context.setPositions(mergedPositions)
             integrator.step(20)
-            assert False
+            assert i<10
         
         # Add the membrane to the protein.
         
