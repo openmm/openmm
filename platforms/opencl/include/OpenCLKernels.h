@@ -1625,7 +1625,7 @@ private:
     double energy;
     float energyFloat;
     int numGlobalVariables, sumWorkGroupSize;
-    bool hasInitializedKernels, deviceGlobalsAreCurrent, modifiesParameters, keNeedsForce, hasAnyConstraints, needsEnergyParamDerivs;
+    bool hasInitializedKernels, deviceGlobalsAreCurrent, modifiesParameters, hasAnyConstraints, needsEnergyParamDerivs;
     std::vector<bool> deviceValuesAreCurrent;
     mutable std::vector<bool> localValuesAreCurrent;
     OpenCLArray globalValues;

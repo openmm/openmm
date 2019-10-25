@@ -76,6 +76,10 @@ double BAOABLangevinIntegrator::computeKineticEnergy() {
     return kernel.getAs<IntegrateBAOABStepKernel>().computeKineticEnergy(*context, *this);
 }
 
+bool BAOABLangevinIntegrator::kineticEnergyRequiresForce() const {
+    return false;
+}
+
 void BAOABLangevinIntegrator::step(int steps) {
     if (context == NULL)
         throw OpenMMException("This Integrator is not bound to a context!");  

@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -120,8 +120,19 @@ protected:
      * Compute the kinetic energy of the system at the current time.  This may be different from simply
      * mv<sup>2</sup>/2.  For example, a leapfrog integrator will store velocities offset by half a step,
      * but the kinetic energy should be computed at the current time, not delayed by half a step.
+     * 
+     * If kineticEnergyRequiresForce() returns true, this method can assume that valid forces
+     * have already been computed.
      */
     virtual double computeKineticEnergy() = 0;
+    /**
+     * Get whether computeKineticEnergy() expects forces to have been computed.  The default
+     * implementation returns true to be safe.  Non-leapfrog integrators can override this to
+     * return false, which makes calling getState() to query the energy less expensive.
+     */
+    virtual bool kineticEnergyRequiresForce() const {
+        return true;
+    }
 private:
     double stepSize, constraintTol;
 };

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2017 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -35,6 +35,9 @@
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/kernels.h"
+#include "lepton/CompiledExpression.h"
+#include "lepton/ParsedExpression.h"
+#include "lepton/Parser.h"
 #include <set>
 #include <string>
 
@@ -45,7 +48,7 @@ CustomIntegrator::CustomIntegrator(double stepSize) : globalsAreCurrent(true), f
     setStepSize(stepSize);
     setConstraintTolerance(1e-5);
     setRandomNumberSeed(0);
-    kineticEnergy = "m*v*v/2";
+    setKineticEnergyExpression("m*v*v/2");
 }
 
 CustomIntegrator::~CustomIntegrator() {
@@ -103,7 +106,12 @@ vector<string> CustomIntegrator::getKernelNames() {
 }
 
 double CustomIntegrator::computeKineticEnergy() {
+    forcesAreValid = keNeedsForce;
     return kernel.getAs<IntegrateCustomStepKernel>().computeKineticEnergy(*context, *this, forcesAreValid);
+}
+
+bool CustomIntegrator::kineticEnergyRequiresForce() const {
+    return keNeedsForce;
 }
 
 void CustomIntegrator::step(int steps) {
@@ -312,4 +320,6 @@ const string& CustomIntegrator::getKineticEnergyExpression() const {
 
 void CustomIntegrator::setKineticEnergyExpression(const string& expression) {
     kineticEnergy = expression;
+    Lepton::CompiledExpression expr = Lepton::Parser::parse(kineticEnergy).createCompiledExpression();
+    keNeedsForce = (expr.getVariables().find("f") != expr.getVariables().end());
 }
