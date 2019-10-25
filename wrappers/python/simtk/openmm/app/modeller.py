@@ -1470,8 +1470,10 @@ class Modeller(object):
         
         print(8)
         integrator = LangevinIntegrator(10.0, 50.0, 0.001)
-        context = Context(system, integrator)
+        from simtk.openmm import Platform
+        context = Context(system, integrator, Platform.getPlatformByName('CPU'))
         print("membrane platform:", context.getPlatform().getName())
+        print(context.getPlatform().getPropertyValue(context, 'CpuThreads'), 'threads')
         context.setPositions(mergedPositions)
         LocalEnergyMinimizer.minimize(context, 10.0, 30)
         try:
@@ -1493,7 +1495,7 @@ class Modeller(object):
                     mergedPositions[j+numMembraneParticles] = (weight1*proteinPos[j] + weight2*scaledProteinPos[j])
             context.setPositions(mergedPositions)
             integrator.step(20)
-            assert i<10
+            assert i<2
         
         # Add the membrane to the protein.
         
