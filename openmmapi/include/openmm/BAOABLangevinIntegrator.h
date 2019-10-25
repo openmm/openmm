@@ -140,6 +140,10 @@ protected:
      * Compute the kinetic energy of the system at the current time.
      */
     double computeKineticEnergy();
+    /**
+     * Computing kinetic energy for this integrator does not require forces.
+     */
+    bool kineticEnergyRequiresForce() const;
 private:
     double temperature, friction;
     int randomNumberSeed;

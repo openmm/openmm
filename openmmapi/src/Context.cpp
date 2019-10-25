@@ -96,8 +96,9 @@ State Context::getState(int types, bool enforcePeriodicBox, int groups) const {
     bool includeForces = types&State::Forces;
     bool includeEnergy = types&State::Energy;
     bool includeParameterDerivs = types&State::ParameterDerivatives;
+    bool needForcesForEnergy = (includeEnergy && getIntegrator().kineticEnergyRequiresForce());
     if (includeForces || includeEnergy || includeParameterDerivs) {
-        double energy = impl->calcForcesAndEnergy(includeForces || includeEnergy || includeParameterDerivs, includeEnergy, groups);
+        double energy = impl->calcForcesAndEnergy(includeForces || needForcesForEnergy || includeParameterDerivs, includeEnergy, groups);
         if (includeEnergy)
             builder.setEnergy(impl->calcKineticEnergy(), energy);
         if (includeForces) {

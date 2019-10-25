@@ -8364,7 +8364,6 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
             kineticEnergyKernel.setArg<cl::Buffer>(index++, array.getDeviceBuffer());
         for (auto& array : tabulatedFunctions)
             kineticEnergyKernel.setArg<cl::Buffer>(index++, array.getDeviceBuffer());
-        keNeedsForce = usesVariable(keExpression, "f");
 
         // Create a second kernel to sum the values.
 
@@ -8627,16 +8626,6 @@ bool OpenCLIntegrateCustomStepKernel::evaluateCondition(int step) {
 
 double OpenCLIntegrateCustomStepKernel::computeKineticEnergy(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid) {
     prepareForComputation(context, integrator, forcesAreValid);
-    if (keNeedsForce && !forcesAreValid) {
-        // Compute the force.  We want to then mark that forces are valid, which means also computing
-        // potential energy if any steps will expect it to be valid too.
-        
-        bool willNeedEnergy = false;
-        for (int i = 0; i < integrator.getNumComputations(); i++)
-            willNeedEnergy |= needsEnergy[i];
-        energy = context.calcForcesAndEnergy(true, willNeedEnergy, -1);
-        forcesAreValid = true;
-    }
     cl.clearBuffer(sumBuffer);
     kineticEnergyKernel.setArg<cl::Buffer>(8, cl.getIntegrationUtilities().getRandom().getDeviceBuffer());
     kineticEnergyKernel.setArg<cl_uint>(9, 0);

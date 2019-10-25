@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -133,6 +133,10 @@ protected:
      * Compute the kinetic energy of the system at the current time.
      */
     double computeKineticEnergy();
+    /**
+     * Computing kinetic energy for this integrator does not require forces.
+     */
+    bool kineticEnergyRequiresForce() const;
 private:
     double temperature, friction;
     int randomNumberSeed;

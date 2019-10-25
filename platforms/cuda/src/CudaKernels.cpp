@@ -7957,7 +7957,6 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
             kineticEnergyArgs.push_back(&array.getDevicePointer());
         for (auto& array : tabulatedFunctions)
             kineticEnergyArgs.push_back(&array.getDevicePointer());
-        keNeedsForce = usesVariable(keExpression, "f");
 
         // Create a second kernel to sum the values.
 
@@ -8213,17 +8212,6 @@ bool CudaIntegrateCustomStepKernel::evaluateCondition(int step) {
 
 double CudaIntegrateCustomStepKernel::computeKineticEnergy(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid) {
     prepareForComputation(context, integrator, forcesAreValid);
-    if (keNeedsForce && !forcesAreValid) {
-        // Compute the force.  We want to then mark that forces are valid, which means also computing
-        // potential energy if any steps will expect it to be valid too.
-        
-        bool willNeedEnergy = false;
-        for (int i = 0; i < integrator.getNumComputations(); i++)
-            willNeedEnergy |= needsEnergy[i];
-        energy = context.calcForcesAndEnergy(true, willNeedEnergy, -1);
-        energyFloat = (float) energy;
-        forcesAreValid = true;
-    }
     CUdeviceptr posCorrection = (cu.getUseMixedPrecision() ? cu.getPosqCorrection().getDevicePointer() : 0);
     int randomIndex = 0;
     kineticEnergyArgs[1] = &posCorrection;
