@@ -1474,7 +1474,6 @@ class Modeller(object):
         print("membrane platform:", context.getPlatform().getName())
         context.setPositions(mergedPositions)
         LocalEnergyMinimizer.minimize(context, 10.0, 30)
-        assert False
         try:
             import numpy as np
             hasNumpy = True
@@ -1483,7 +1482,7 @@ class Modeller(object):
         except:
             hasNumpy = False
         for i in range(50):
-            print('step', i)
+            print('step', i, context.getState(getEnergy=True).getPotentialEnergy())
             weight1 = i/49.0
             weight2 = 1.0-weight1
             mergedPositions = context.getState(getPositions=True).getPositions(asNumpy=hasNumpy).value_in_unit(nanometer)
@@ -1494,6 +1493,7 @@ class Modeller(object):
                     mergedPositions[j+numMembraneParticles] = (weight1*proteinPos[j] + weight2*scaledProteinPos[j])
             context.setPositions(mergedPositions)
             integrator.step(20)
+            assert False
         
         # Add the membrane to the protein.
         
