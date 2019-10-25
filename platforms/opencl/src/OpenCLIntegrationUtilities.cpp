@@ -848,6 +848,24 @@ int OpenCLIntegrationUtilities::prepareRandomNumbers(int numValues) {
 }
 
 void OpenCLIntegrationUtilities::createCheckpoint(ostream& stream) {
+    size_t numChains = noseHooverChainState.size();
+    bool useDouble = context.getUseDoublePrecision() || context.getUseMixedPrecision();
+    stream.write((char*) &numChains, sizeof(size_t));
+    for (auto &chainState: noseHooverChainState){
+        int chainID = chainState.first;
+        size_t chainLength = chainState.second.getSize();
+        stream.write((char*) &chainID, sizeof(int));
+        stream.write((char*) &chainLength, sizeof(size_t));
+        if (useDouble) {
+            vector<mm_double2> stateVec;
+            chainState.second.download(stateVec);
+            stream.write((char*) stateVec.data(), sizeof(mm_double2)*chainLength);
+        } else {
+            vector<mm_float2> stateVec;
+            chainState.second.download(stateVec);
+            stream.write((char*) stateVec.data(), sizeof(mm_float2)*chainLength);
+        }
+    }
     if (!random.isInitialized()) 
         return;
     stream.write((char*) &randomPos, sizeof(int));
@@ -860,6 +878,28 @@ void OpenCLIntegrationUtilities::createCheckpoint(ostream& stream) {
 }
 
 void OpenCLIntegrationUtilities::loadCheckpoint(istream& stream) {
+    size_t numChains, chainLength;
+    bool useDouble = context.getUseDoublePrecision() || context.getUseMixedPrecision();
+    stream.read((char*) &numChains, sizeof(size_t));
+    noseHooverChainState.clear();
+    for (size_t i=0; i<numChains; i++){
+        int chainID;
+        stream.read((char*) &chainID, sizeof(int));
+        stream.read((char*) &chainLength, sizeof(size_t));
+        if (useDouble) {
+            noseHooverChainState[chainID] = OpenCLArray();
+            noseHooverChainState[chainID].initialize<mm_double2>(context, chainLength, "chainState" + std::to_string(chainID));
+            std::vector<mm_double2> stateVec(chainLength);
+            stream.read((char*) &stateVec[0], sizeof(mm_double2)*chainLength);
+            noseHooverChainState[chainID].upload(stateVec);
+        } else {
+            noseHooverChainState[chainID] = OpenCLArray();
+            noseHooverChainState[chainID].initialize<mm_float2>(context, chainLength, "chainState" + std::to_string(chainID));
+            std::vector<mm_float2> stateVec(chainLength);
+            stream.read((char*) &stateVec[0], sizeof(mm_float2)*chainLength);
+            noseHooverChainState[chainID].upload(stateVec);
+        }
+    }
     if (!random.isInitialized()) 
         return; 
     stream.read((char*) &randomPos, sizeof(int));
@@ -918,3 +958,7 @@ double OpenCLIntegrationUtilities::computeKineticEnergy(double timeShift) {
         posDelta.copyTo(context.getVelm());
     return 0.5*energy;
 }
+
+std::map<int, OpenCLArray>& OpenCLIntegrationUtilities::getNoseHooverChainState(){
+    return noseHooverChainState;
+};
