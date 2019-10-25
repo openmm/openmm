@@ -712,6 +712,8 @@ class Modeller(object):
         automatically, this function will only add hydrogens.  It will never remove ones that are already present in the
         model, regardless of the specified pH.
 
+        In all cases, the positions of existing atoms (including existing hydrogens) are not modified.
+
         Definitions for standard amino acids and nucleotides are built in.  You can call loadHydrogenDefinitions() to load
         additional definitions for other residue types.
 
@@ -930,14 +932,16 @@ class Modeller(object):
 
         # The hydrogens were added at random positions.  Now perform an energy minimization to fix them up.
 
+        addedH = set(newIndices)  # keep track of Hs added
+
         if forcefield is not None:
             # Use the ForceField the user specified.
 
             system = forcefield.createSystem(newTopology, rigidWater=False, nonbondedMethod=CutoffNonPeriodic)
             atoms = list(newTopology.atoms())
             for i in range(system.getNumParticles()):
-                if atoms[i].element != elem.hydrogen:
-                    # This is a heavy atom, so make it immobile.
+                if i not in addedH:
+                    # Existing atom, make it immobile.
                     system.setParticleMass(i, 0)
         else:
             # Create a System that restrains the distance of each hydrogen from its parent atom
@@ -955,7 +959,7 @@ class Modeller(object):
             bondedTo = []
             for atom in newTopology.atoms():
                 nonbonded.addParticle([])
-                if atom.element != elem.hydrogen:
+                if atom.index not in addedH:  # make immobile
                     system.addParticle(0.0)
                 else:
                     system.addParticle(1.0)
@@ -1221,33 +1225,33 @@ class Modeller(object):
 
     def addMembrane(self, forcefield, lipidType='POPC', membraneCenterZ=0*nanometer, minimumPadding=1*nanometer, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar, neutralize=True):
         """Add a lipid membrane to the model.
-        
+
         This method actually adds both a membrane and a water box.  It is best to build them together,
         both to avoid adding waters inside the membrane and to ensure that lipid head groups are properly
         solvated.  For that reason, this method includes many of the same arguments as addSolvent().
-        
+
         The membrane is added in the XY plane, and the existing protein is assumed to already be oriented
         and positioned correctly.  When possible, it is recommended to start with a model from the
         Orientations of Proteins in Membranes (OPM) database at http://opm.phar.umich.edu.  Otherwise, it
         is up to you to select the protein position yourself.
-        
+
         The algorithm is based on the one described in Wolf et al., J. Comp. Chem. 31, pp. 2169-2174 (2010).
         It begins by tiling copies of a pre-equilibrated membrane patch to create a membrane of the desired
         size.  Next it scales down the protein by 50% along the X and Y axes.  Any lipid within a cutoff
         distance of the scaled protein is removed.  It also ensures that equal numbers of lipids are removed
         from each leaf of the membrane.  Finally, 1000 steps of molecular dynamics are performed to let
         the membrane relax while the protein is gradually scaled back up to its original size.
-        
+
         The size of the membrane and water box are determined by the minimumPadding argument.  All
         pre-existing atoms are guaranteed to be at least this far from any edge of the periodic box.  It
         is also possible for the periodic box to have more padding than requested.  In particular, it only
         adds whole copies of the pre-equilibrated membrane patch, so the box dimensions will always be
         integer multiples of the patch size.  That may lead to a larger membrane than what you requested.
-        
+
         This method has built in support for POPC and POPE lipids.  You can also build other types of
         membranes by providing a pre-equilibrated, solvated membrane patch that can be tiled in the XY
         plane to form the membrane.
-        
+
         Parameters
         ----------
         forcefield : ForceField
@@ -1282,8 +1286,8 @@ class Modeller(object):
             membraneCenterZ = membraneCenterZ.value_in_unit(nanometer)
         if is_quantity(minimumPadding):
             minimumPadding = minimumPadding.value_in_unit(nanometer)
-        
-        # Figure out how many copies of the membrane patch we need in each direction. 
+
+        # Figure out how many copies of the membrane patch we need in each direction.
 
         proteinPos = self.positions.value_in_unit(nanometer)
         proteinMinPos = Vec3(*[min((p[i] for p in proteinPos)) for i in range(3)])
@@ -1298,15 +1302,15 @@ class Modeller(object):
         patchCenterPos = (patchMinPos+patchMaxPos)/2
         nx = int(ceil((proteinSize[0]+2*minimumPadding)/patchSize[0]))
         ny = int(ceil((proteinSize[1]+2*minimumPadding)/patchSize[1]))
-       
+
         # Record the bonds for each residue.
-        
+
         resBonds = defaultdict(list)
         for bond in patch.topology.bonds():
             resBonds[bond[0].residue].append(bond)
-        
+
         # Identify which leaf of the membrane each lipid is in.
-        
+
         numLipidAtoms = 0
         resMeanZ = {}
         membraneMeanZ = 0.0
@@ -1322,17 +1326,17 @@ class Modeller(object):
                 resMeanZ[res] = sumZ/numResAtoms
         membraneMeanZ /= numLipidAtoms
         lipidLeaf = dict((res, 0 if resMeanZ[res] < membraneMeanZ else 1) for res in resMeanZ)
-        
+
         # Compute scaled positions for the protein.
-        
+
         scaledProteinPos = [None]*len(proteinPos)
         for i, p in enumerate(proteinPos):
             p = p-proteinCenterPos
             p = Vec3(0.5*p[0], 0.5*p[1], p[2])
             scaledProteinPos[i] = p+proteinCenterPos
-        
+
         # Create a new Topology for the membrane.
-        
+
         membraneTopology = Topology()
         membranePos = []
         boxSizeZ = patchSize[2]
@@ -1341,12 +1345,12 @@ class Modeller(object):
         else:
             boxSizeZ = max(boxSizeZ, proteinSize[2]+2*minimumPadding)
         membraneTopology.setUnitCellDimensions((nx*patchSize[0], ny*patchSize[1], boxSizeZ))
-        
+
         # Add membrane patches.  We exclude any water that is within a cutoff distance of either the actual or scaled
         # protein, and any lipid that is within a cutoff distance of the scaled protein.  We also keep track of how
         # many lipids have been excluded from each leaf of the membrane, so we can make sure exactly the same
         # number get removed from each leaf.
-        
+
         overlapCutoff = 0.22
         chain = membraneTopology.addChain()
         addedWater = []
@@ -1395,9 +1399,9 @@ class Modeller(object):
         del cellLists
         del cells
         del proteinCells
-        
+
         # Add the lipids.
-        
+
         newAtoms = {}
         lipidChain = membraneTopology.addChain()
         lipidResNum = 1  # renumber lipid residues to handle large patches
@@ -1408,7 +1412,7 @@ class Modeller(object):
             else:
                 newResidue = membraneTopology.addResidue(residue.name, lipidChain, lipidResNum, residue.insertionCode)
                 lipidResNum += 1
-                
+
                 for atom in residue.atoms():
                     newAtom = membraneTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
                     newAtoms[atom] = newAtom
@@ -1418,9 +1422,9 @@ class Modeller(object):
 
         del lipidLeaf
         del addedLipids
-        
+
         # Add the solvent.
-        
+
         solventChain = membraneTopology.addChain()
         for (residue, pos) in addedWater:
             newResidue = membraneTopology.addResidue(residue.name, solventChain, residue.id, residue.insertionCode)
@@ -1436,7 +1440,7 @@ class Modeller(object):
         gc.collect()
 
         # Create a System for the lipids, then add in the protein as stationary particles.
-        
+
         system = forcefield.createSystem(membraneTopology, nonbondedMethod=CutoffPeriodic)
         proteinSystem = forcefield.createSystem(self.topology, nonbondedMethod=CutoffNonPeriodic)
         numMembraneParticles = system.getNumParticles()
@@ -1458,9 +1462,9 @@ class Modeller(object):
         del membranePos
         del scaledProteinCells
         gc.collect()
-        
+
         # Run a simulation while slowly scaling up the protein so the membrane can relax.
-        
+
         integrator = LangevinIntegrator(10.0, 50.0, 0.001)
         context = Context(system, integrator)
         context.setPositions(mergedPositions)
@@ -1483,24 +1487,24 @@ class Modeller(object):
                     mergedPositions[j+numMembraneParticles] = (weight1*proteinPos[j] + weight2*scaledProteinPos[j])
             context.setPositions(mergedPositions)
             integrator.step(20)
-        
+
         # Add the membrane to the protein.
-        
+
         modeller = Modeller(self.topology, self.positions)
         modeller.add(membraneTopology, context.getState(getPositions=True).getPositions()[:numMembraneParticles])
         modeller.topology.setPeriodicBoxVectors(membraneTopology.getPeriodicBoxVectors())
         del context
         del system
         del integrator
-        
+
         # Depending on the box size, we may need to add more water beyond what was included with the membrane patch.
-        
+
         needExtraWater = (boxSizeZ > patchSize[2])
         if needExtraWater:
             modeller.addSolvent(forcefield, neutralize=False)
-        
+
         # Record the positions of all waters that have been added.
-        
+
         waterPos = {}
         for chain in list(modeller.topology.chains())[-2:]:
             for residue in chain.residues():
@@ -1564,7 +1568,7 @@ class Modeller(object):
 
 class _CellList(object):
     """This class organizes atom positions into cells, so the neighbors of a point can be quickly retrieved"""
-    
+
     def __init__(self, positions, maxCutoff, vectors, periodic):
         self.positions = positions[:]
         self.cells = {}
