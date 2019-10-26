@@ -1,0 +1,131 @@
+# OpenMM Windows build and testing
+# Currently a port of the existing AppVeyor script to Azure.
+# Some steps were not ported (like cclash) and optimization is welcome!
+
+trigger:
+- master
+
+pool:
+  vmImage: 'windows-latest'
+
+variables:
+  solution: '**/*.sln'
+  buildPlatform: 'x86|x64|ARM'
+  buildConfiguration: 'Release'
+  appxPackageDir: '$(build.artifactStagingDirectory)\AppxPackages\\'
+  cmakeFlags: -DOPENMM_BUILD_PME_PLUGIN=ON -DOPENCL_INCLUDE_DIR=$(Build.SourcesDirectory)/opencl/inc -DOPENCL_LIBRARY=$(Build.SourcesDirectory)/opencl/lib/OpenCL.lib -DFFTW_LIBRARY=$(Build.SourcesDirectory)/fftw/libfftw3f-3.lib -DFFTW_INCLUDES=$(Build.SourcesDirectory)/fftw -DOPENMM_BUILD_EXAMPLES=OFF -DOPENMM_BUILD_OPENCL_TESTS=OFF -DCMAKE_BUILD_TYPE=Release -LA'
+  cmakeCompilers: '-DCMAKE_CXX_COMPILER="cl.exe" -DCMAKE_C_COMPILER="cl.exe"'
+
+steps:
+
+  # Find the VS Path call to get the CXX and C compiler
+  # Solution proposed by https://github.com/Microsoft/azure-pipelines-tasks/issues/9737#issuecomment-542899788
+  # Flags are `x64 -vsvars_ver=14.0` for VS2015 (Yes, 14.0=VS2015) per https://docs.microsoft.com/en-us/cpp/build/building-on-the-command-line?view=vs-2019
+  # 14.0 does not exist in the 'windows-latest', but the AppVeyor build was not using it anyways, it was using the VS2019 and never calling the 2015 set.
+- script: |
+    pushd "%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\"
+    for /f "delims=" %%x in ('.\vswhere.exe -latest -property InstallationPath') do set VSPATH=%%x
+    popd
+    echo ###vso[task.setvariable variable=VSPATH]%VSPATH%
+  displayName: "Find the VS2015 path to call vcvarsall.bat properly in the CMake blocks later"
+
+- script: python -m pip install --upgrade pytest numpy cython
+  displayName: 'Install Python tools'
+
+- task: PowerShell@2
+  inputs:
+    targetType: 'inline'
+    script: 'Invoke-WebRequest ftp://ftp.fftw.org/pub/fftw/fftw-3.3.4-dll64.zip -OutFile fftw-3.3.4-dll64.zip'
+    errorActionPreference: stop
+  displayName: "Download FFTW3 Plugin for PME"
+
+- task: ExtractFiles@1
+  inputs:
+    archiveFilePatterns: 'fftw*.zip'
+    destinationFolder: '$(Build.SourcesDirectory)/fftw'
+    cleanDestinationFolder: true
+  displayName: "Extract FFTW"
+
+- script: |
+    call "$(VSPATH)\VC\Auxiliary\Build\vcvarsall.bat" x64
+    lib /def:libfftw3f-3.def
+  workingDirectory: '$(Build.SourcesDirectory)/fftw'
+  failOnStderr: true
+  displayName: "Make FFTW a library library"
+
+- task: CmdLine@2
+  inputs:
+    script: 'choco install -y doxygen.install swig > null'
+  displayName: "Download and install some OpenMM build dependencies (doxygen, swig)"
+
+# Powershell script appears to have a bug with workingDirectory if it does not exist: https://github.com/microsoft/azure-pipelines-agent/issues/1664
+- task: PowerShell@2
+  inputs:
+    targetType: 'inline'
+    script: |
+      mkdir $(Build.SourcesDirectory)/opencl
+      cd $(Build.SourcesDirectory)/opencl
+      [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12;
+      $opencl_registry = "https://www.khronos.org/registry/cl"
+      $opencl_github = "KhronosGroup/OpenCL-Headers"
+      wget $opencl_registry/specs/opencl-icd-1.2.11.0.tgz -OutFile opencl-icd-1.2.11.0.tgz
+      7z x opencl-icd-1.2.11.0.tgz > $null
+      7z x opencl-icd-1.2.11.0.tar > $null
+      mv .\icd\* .
+      mkdir inc/CL > $null
+      wget https://github.com/$opencl_github/tree/master/CL -UseBasicParsing | select -ExpandProperty links | where {$_.href -like "*.h*"} | select -ExpandProperty title | foreach{ wget https://raw.githubusercontent.com/$opencl_github/master/CL/$_ -OutFile inc/CL/$_ -UseBasicParsing}
+      mkdir lib > $null
+    # workingDirectory: '$(Build.SourcesDirectory)/opencl'
+  displayName: "Download OpenCL Headers and build the ICD loader"
+
+
+- script: |
+    call "$(VSPATH)\VC\Auxiliary\Build\vcvarsall.bat" x64
+    cmake -G "NMake Makefiles" $(cmakeCompilers) ..
+  displayName: "Generate OpenCL NMake files with CMake"
+  workingDirectory: '$(Build.SourcesDirectory)/opencl/lib'
+
+- task: CmdLine@2
+  inputs:
+    script: |
+      call "$(VSPATH)\VC\Auxiliary\Build\vcvarsall.bat" x64
+      nmake
+    workingDirectory: '$(Build.SourcesDirectory)/opencl/lib'
+    # Nmake prints to stderr, so failing on this is a bad idea
+    failOnStderr: false
+  displayName: "Run NMAKE on OpenCL build"
+
+# script directives don't make the workingDirectory before trying to operate in them
+- task: PowerShell@2
+  inputs:
+    targetType: 'inline'
+    script: |
+      mkdir $(Build.SourcesDirectory)/build > $null
+  displayName: "Prepare the OpenMM build folder"
+
+- script: |
+    call "$(VSPATH)\VC\Auxiliary\Build\vcvarsall.bat" x64
+    cmake -G "NMake Makefiles" $(cmakeFlags) $(cmakeCompilers) -DCMAKE_CXX_FLAGS_RELEASE="/MD /Od /Ob0 /D NDEBUG" ..
+  workingDirectory: '$(Build.SourcesDirectory)/build'
+  displayName: "Generate OpenMM NMake files with CMake"
+
+- script: |
+    call "$(VSPATH)\VC\Auxiliary\Build\vcvarsall.bat" x64
+    cmake --build . --target install
+  workingDirectory: '$(Build.SourcesDirectory)/build'
+  displayName: "Build and Install OpenMM"
+
+- script: |
+    call "$(VSPATH)\VC\Auxiliary\Build\vcvarsall.bat" x64
+    cmake --build . --target PythonInstall
+  workingDirectory: '$(Build.SourcesDirectory)/build'
+  displayName: "Install OpenMM's Python Components"
+
+# I think the vcvarsall.bat has to be called here as well otherwise the PythonPath isnt set right, Maybe?
+- script: |
+    call "$(VSPATH)\VC\Auxiliary\Build\vcvarsall.bat" x64
+    python $(Build.SourcesDirectory)/devtools/run-ctest.py
+    cd python\tests
+    pytest -v
+  workingDirectory: '$(Build.SourcesDirectory)/build'
+  displayName: "Test Install"
