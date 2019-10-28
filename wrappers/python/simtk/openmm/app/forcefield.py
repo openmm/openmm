@@ -888,7 +888,23 @@ class ForceField(object):
                 template = allMatches[0][0]
                 matches = allMatches[0][1]
             elif len(allMatches) > 1:
-                raise Exception('Multiple matching templates found for residue %d (%s): %s.' % (res.index+1, res.name, ', '.join(match[0].name for match in allMatches)))
+                # We found multiple matches.  This is OK if and only if they assign identical types and parameters to all atoms.
+                t1, m1 = allMatches[0]
+                atoms1 = [t1.atoms[m] for m in m1]
+                allIdentical = True
+                for t2, m2 in allMatches[1:]:
+                    atoms2 = [t2.atoms[m] for m in m2]
+                    if any(a1.type != a2.type or a1.parameters != a2.parameters for a1,a2 in zip(atoms1, atoms2)):
+                        allIdentical = False
+                    # Properly comparing virtual sites really needs a much more complicated analysis.  This simple check
+                    # could easily fail for templates containing vsites, even if they're actually identical.  Since we
+                    # currently have no force fields that include both patches and vsites, I'm not going to worry about it now.
+                    if t1.virtualSites != t2.virtualSites:
+                        allIdentical = False
+                if not allIdentical:
+                    raise Exception('Multiple matching templates found for residue %d (%s): %s.' % (res.index+1, res.name, ', '.join(match[0].name for match in allMatches)))
+                template = allMatches[0][0]
+                matches = allMatches[0][1]
         return [template, matches]
 
     def _buildBondedToAtomList(self, topology):

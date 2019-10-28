@@ -69,8 +69,8 @@ class PDBFile(object):
 
         Parameters
         ----------
-        file : string
-            the name of the file to load
+        file : string or file
+            the name of the file to load.  Alternatively you can pass an open file object.
         extraParticleIdentifier : string='EP'
             if this value appears in the element column for an ATOM record, the Atom's element will be set to None to mark it as an extra particle
         """
