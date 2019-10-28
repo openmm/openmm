@@ -258,13 +258,16 @@ class Modeller(object):
         self.topology = newTopology
         self.positions = newPositions
 
-    def _addIons(self, forcefield, replaceableMols, ionCutoff=0.05*nanometer, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar, neutralize=True):
+    def _addIons(self, forcefield, numWaters, replaceableMols, ionCutoff=0.05*nanometer, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar, neutralize=True):
         """Adds ions to the system by replacing certain molecules.
 
         Parameters
         ----------
         forcefield : ForceField
             the ForceField to use to determine the total charge of the system.
+        numWaters : int
+            the total number of water molecules in the simulation box, used to
+            calculate the number of ions / concentration to add.
         replaceableMols : dict
             the molecules to replace by ions, as a dictionary of residue:positions
         ionCutoff: distance=0.5*nanometer
@@ -326,51 +329,52 @@ class Modeller(object):
                 numPositive -= totalCharge
 
         if ionicStrength > 0 * molar:
-            numIons = (numReplaceableMols - numPositive - numNegative) * ionicStrength / (55.4 * molar)  # Pure water is about 55.4 molar (depending on temperature)
+            numIons = (numWaters - numPositive - numNegative) * ionicStrength / (55.4 * molar)  # Pure water is about 55.4 molar (depending on temperature)
             numPairs = int(floor(numIons + 0.5))
             numPositive += numPairs
             numNegative += numPairs
         totalIons = numPositive + numNegative
 
-        # Randomly select a set of waters
-        # while ensuring ions are not placed too close to each other.
-        modeller = Modeller(self.topology, self.positions)
+        if totalIons > 0:
+            # Randomly select a set of waters
+            # while ensuring ions are not placed too close to each other.
+            modeller = Modeller(self.topology, self.positions)
 
-        replaceableList = list(replaceableMols.keys())
-        numAddedIons = 0
-        numTrials = 10  # Attempts to add ions N times before quitting
-        toReplace = []  # list of molecules to be replaced
-        while numAddedIons < totalIons:
-            pickedMol = random.choice(replaceableList)
-            replaceableList.remove(pickedMol)
-            # Check distance to other ions
-            for pos in ionPositions:
-                distance = norm(pos - replaceableMols[pickedMol])
-                if distance <= ionCutoff:
-                    numTrials -= 1
-                    break
-            else:
-                toReplace.append(pickedMol)
-                ionPositions.append(replaceableMols[pickedMol])
-                numAddedIons += 1
+            replaceableList = list(replaceableMols.keys())
+            numAddedIons = 0
+            numTrials = 10  # Attempts to add ions N times before quitting
+            toReplace = []  # list of molecules to be replaced
+            while numAddedIons < totalIons:
+                pickedMol = random.choice(replaceableList)
+                replaceableList.remove(pickedMol)
+                # Check distance to other ions
+                for pos in ionPositions:
+                    distance = norm(pos - replaceableMols[pickedMol])
+                    if distance <= ionCutoff:
+                        numTrials -= 1
+                        break
+                else:
+                    toReplace.append(pickedMol)
+                    ionPositions.append(replaceableMols[pickedMol])
+                    numAddedIons += 1
 
-                n_trials = 10
+                    n_trials = 10
 
-            if n_trials == 0:
-                raise ValueError('Could not add more than {} ions to the system'.format(numAddedIons))
+                if n_trials == 0:
+                    raise ValueError('Could not add more than {} ions to the system'.format(numAddedIons))
 
-        # Replace waters/ions in the topology
-        modeller.delete(toReplace)
-        ionChain = modeller.topology.addChain()
-        for i, water in enumerate(toReplace):
-            element = (positiveElement if i < numPositive else negativeElement)
-            newResidue = modeller.topology.addResidue(element.symbol.upper(), ionChain)
-            modeller.topology.addAtom(element.symbol, element, newResidue)
-            modeller.positions.append(replaceableMols[water])
+            # Replace waters/ions in the topology
+            modeller.delete(toReplace)
+            ionChain = modeller.topology.addChain()
+            for i, water in enumerate(toReplace):
+                element = (positiveElement if i < numPositive else negativeElement)
+                newResidue = modeller.topology.addResidue(element.symbol.upper(), ionChain)
+                modeller.topology.addAtom(element.symbol, element, newResidue)
+                modeller.positions.append(replaceableMols[water])
 
-        # Update topology/positions
-        self.topology = modeller.topology
-        self.positions = modeller.positions
+            # Update topology/positions
+            self.topology = modeller.topology
+            self.positions = modeller.positions
 
     def addSolvent(self, forcefield, model='tip3p', boxSize=None, boxVectors=None, padding=None, numAdded=None, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar, neutralize=True):
         """Add solvent (both water and ions) to the model to fill a rectangular box.
@@ -621,8 +625,11 @@ class Modeller(object):
                         if atom.element == _oxygen:
                             waterPos[residue] = newPositions[atom.index]
 
+        # Total number of waters in the box
+        numTotalWaters = len(waterPos)
+
         # Add ions to neutralize the system.
-        self._addIons(forcefield, waterPos, positiveIon=positiveIon, negativeIon=negativeIon, ionicStrength=ionicStrength, neutralize=neutralize)
+        self._addIons(forcefield, numTotalWaters, waterPos, positiveIon=positiveIon, negativeIon=negativeIon, ionicStrength=ionicStrength, neutralize=neutralize)
 
     class _ResidueData:
         """Inner class used to encapsulate data about the hydrogens for a residue."""
@@ -1352,7 +1359,6 @@ class Modeller(object):
         # number get removed from each leaf.
 
         overlapCutoff = 0.22
-        chain = membraneTopology.addChain()
         addedWater = []
         addedLipids = []
         removedFromLeaf = [0, 0]
@@ -1542,6 +1548,11 @@ class Modeller(object):
                         if atom.element == elem.oxygen:
                             waterPos[residue] = modeller.positions[atom.index]
 
+        # Total number of water molecules
+        # Use this number to avoid underestimating the concentration of ions
+        # in _addIons after we exclude waters close to lipids.
+        numTotalWaters = len(waterPos)
+
         # Calculate lipid Z boundaries
         lipidNames = {res.name for res in patch.topology.residues() if res.name != 'HOH'}
         lipidZMax = sys.float_info.min
@@ -1563,7 +1574,7 @@ class Modeller(object):
             if lowerZBoundary < waterZ.value_in_unit(nanometer) < upperZBoundary:
                 del waterPos[wRes]
 
-        self._addIons(forcefield, waterPos, positiveIon=positiveIon, negativeIon=negativeIon, ionicStrength=ionicStrength, neutralize=neutralize)
+        self._addIons(forcefield, numTotalWaters, waterPos, positiveIon=positiveIon, negativeIon=negativeIon, ionicStrength=ionicStrength, neutralize=neutralize)
 
 
 class _CellList(object):
