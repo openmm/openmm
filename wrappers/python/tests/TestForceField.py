@@ -477,7 +477,7 @@ class TestForceField(unittest.TestCase):
         self.assertEqual(unmatched_residues[0].chain.id, 'X')
         self.assertEqual(unmatched_residues[0].id, '1')
 
-    def test_ggenerateTemplatesForUnmatchedResidues(self):
+    def test_generateTemplatesForUnmatchedResidues(self):
         """Test generation of blank forcefield residue templates for unmatched residues."""
         #
         # Test where we generate parameters for only a ligand.
