@@ -48,7 +48,7 @@ namespace OpenMM {
  */
 class ReferenceCalcDrudeForceKernel : public CalcDrudeForceKernel {
 public:
-    ReferenceCalcDrudeForceKernel(std::string name, const Platform& platform) : CalcDrudeForceKernel(name, platform) {
+    ReferenceCalcDrudeForceKernel(const std::string& name, const Platform& platform) : CalcDrudeForceKernel(name, platform) {
     }
     /**
      * Initialize the kernel.
@@ -85,7 +85,7 @@ private:
  */
 class ReferenceIntegrateDrudeLangevinStepKernel : public IntegrateDrudeLangevinStepKernel {
 public:
-    ReferenceIntegrateDrudeLangevinStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) :
+    ReferenceIntegrateDrudeLangevinStepKernel(const std::string& name, const Platform& platform, ReferencePlatform::PlatformData& data) :
         IntegrateDrudeLangevinStepKernel(name, platform), data(data) {
     }
     ~ReferenceIntegrateDrudeLangevinStepKernel();
@@ -126,7 +126,7 @@ private:
  */
 class ReferenceIntegrateDrudeSCFStepKernel : public IntegrateDrudeSCFStepKernel {
 public:
-    ReferenceIntegrateDrudeSCFStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) :
+    ReferenceIntegrateDrudeSCFStepKernel(const std::string& name, const Platform& platform, ReferencePlatform::PlatformData& data) :
         IntegrateDrudeSCFStepKernel(name, platform), data(data), minimizerPos(NULL) {
     }
     ~ReferenceIntegrateDrudeSCFStepKernel();

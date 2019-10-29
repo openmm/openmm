@@ -44,7 +44,7 @@ namespace OpenMM {
  */
 class CudaCalcDrudeForceKernel : public CalcDrudeForceKernel {
 public:
-    CudaCalcDrudeForceKernel(std::string name, const Platform& platform, CudaContext& cu) :
+    CudaCalcDrudeForceKernel(const std::string& name, const Platform& platform, CudaContext& cu) :
             CalcDrudeForceKernel(name, platform), cu(cu) {
     }
     /**
@@ -81,7 +81,7 @@ private:
  */
 class CudaIntegrateDrudeLangevinStepKernel : public IntegrateDrudeLangevinStepKernel {
 public:
-    CudaIntegrateDrudeLangevinStepKernel(std::string name, const Platform& platform, CudaContext& cu) :
+    CudaIntegrateDrudeLangevinStepKernel(const std::string& name, const Platform& platform, CudaContext& cu) :
             IntegrateDrudeLangevinStepKernel(name, platform), cu(cu) {
     }
     /**
@@ -119,7 +119,7 @@ private:
  */
 class CudaIntegrateDrudeSCFStepKernel : public IntegrateDrudeSCFStepKernel {
 public:
-    CudaIntegrateDrudeSCFStepKernel(std::string name, const Platform& platform, CudaContext& cu) :
+    CudaIntegrateDrudeSCFStepKernel(const std::string& name, const Platform& platform, CudaContext& cu) :
             IntegrateDrudeSCFStepKernel(name, platform), cu(cu), minimizerPos(NULL) {
     }
     ~CudaIntegrateDrudeSCFStepKernel();

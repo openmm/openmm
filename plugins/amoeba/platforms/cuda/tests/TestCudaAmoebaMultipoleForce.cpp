@@ -880,7 +880,7 @@ static void testQuadrupoleValidation() {
 
 static void setupAndGetForcesEnergyMultipoleIonsAndWater(AmoebaMultipoleForce::NonbondedMethod nonbondedMethod,
                                                           AmoebaMultipoleForce::PolarizationType polarizationType,
-                                                          double cutoff, int inputPmeGridDimension, std::string testName,
+                                                          double cutoff, int inputPmeGridDimension, const std::string& testName,
                                                           std::vector<Vec3>& forces, double& energy) {
 
     // beginning of Multipole setup

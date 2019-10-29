@@ -83,7 +83,7 @@ static Vec3* extractBoxVectors(ContextImpl& context) {
 
 // ***************************************************************************
 
-ReferenceCalcAmoebaBondForceKernel::ReferenceCalcAmoebaBondForceKernel(std::string name, const Platform& platform, const System& system) : 
+ReferenceCalcAmoebaBondForceKernel::ReferenceCalcAmoebaBondForceKernel(const std::string& name, const Platform& platform, const System& system) :
                 CalcAmoebaBondForceKernel(name, platform), system(system) {
 }
 
@@ -140,7 +140,7 @@ void ReferenceCalcAmoebaBondForceKernel::copyParametersToContext(ContextImpl& co
 
 // ***************************************************************************
 
-ReferenceCalcAmoebaAngleForceKernel::ReferenceCalcAmoebaAngleForceKernel(std::string name, const Platform& platform, const System& system) :
+ReferenceCalcAmoebaAngleForceKernel::ReferenceCalcAmoebaAngleForceKernel(const std::string& name, const Platform& platform, const System& system) :
             CalcAmoebaAngleForceKernel(name, platform), system(system) {
 }
 
@@ -196,7 +196,7 @@ void ReferenceCalcAmoebaAngleForceKernel::copyParametersToContext(ContextImpl& c
     }
 }
 
-ReferenceCalcAmoebaInPlaneAngleForceKernel::ReferenceCalcAmoebaInPlaneAngleForceKernel(std::string name, const Platform& platform, const System& system) : 
+ReferenceCalcAmoebaInPlaneAngleForceKernel::ReferenceCalcAmoebaInPlaneAngleForceKernel(const std::string& name, const Platform& platform, const System& system) :
           CalcAmoebaInPlaneAngleForceKernel(name, platform), system(system) {
 }
 
@@ -254,7 +254,7 @@ void ReferenceCalcAmoebaInPlaneAngleForceKernel::copyParametersToContext(Context
     }
 }
 
-ReferenceCalcAmoebaPiTorsionForceKernel::ReferenceCalcAmoebaPiTorsionForceKernel(std::string name, const Platform& platform, const System& system) :
+ReferenceCalcAmoebaPiTorsionForceKernel::ReferenceCalcAmoebaPiTorsionForceKernel(const std::string& name, const Platform& platform, const System& system) :
          CalcAmoebaPiTorsionForceKernel(name, platform), system(system) {
 }
 
@@ -309,7 +309,7 @@ void ReferenceCalcAmoebaPiTorsionForceKernel::copyParametersToContext(ContextImp
     }
 }
 
-ReferenceCalcAmoebaStretchBendForceKernel::ReferenceCalcAmoebaStretchBendForceKernel(std::string name, const Platform& platform, const System& system) :
+ReferenceCalcAmoebaStretchBendForceKernel::ReferenceCalcAmoebaStretchBendForceKernel(const std::string& name, const Platform& platform, const System& system) :
                    CalcAmoebaStretchBendForceKernel(name, platform), system(system) {
 }
 
@@ -367,7 +367,7 @@ void ReferenceCalcAmoebaStretchBendForceKernel::copyParametersToContext(ContextI
     }
 }
 
-ReferenceCalcAmoebaOutOfPlaneBendForceKernel::ReferenceCalcAmoebaOutOfPlaneBendForceKernel(std::string name, const Platform& platform, const System& system) :
+ReferenceCalcAmoebaOutOfPlaneBendForceKernel::ReferenceCalcAmoebaOutOfPlaneBendForceKernel(const std::string& name, const Platform& platform, const System& system) :
           CalcAmoebaOutOfPlaneBendForceKernel(name, platform), system(system) {
 }
 
@@ -428,7 +428,7 @@ void ReferenceCalcAmoebaOutOfPlaneBendForceKernel::copyParametersToContext(Conte
     }
 }
 
-ReferenceCalcAmoebaTorsionTorsionForceKernel::ReferenceCalcAmoebaTorsionTorsionForceKernel(std::string name, const Platform& platform, const System& system) :
+ReferenceCalcAmoebaTorsionTorsionForceKernel::ReferenceCalcAmoebaTorsionTorsionForceKernel(const std::string& name, const Platform& platform, const System& system) :
                 CalcAmoebaTorsionTorsionForceKernel(name, platform), system(system) {
 }
 
@@ -510,7 +510,7 @@ double ReferenceCalcAmoebaTorsionTorsionForceKernel::execute(ContextImpl& contex
  *                             AmoebaMultipole                                *
  * -------------------------------------------------------------------------- */
 
-ReferenceCalcAmoebaMultipoleForceKernel::ReferenceCalcAmoebaMultipoleForceKernel(std::string name, const Platform& platform, const System& system) : 
+ReferenceCalcAmoebaMultipoleForceKernel::ReferenceCalcAmoebaMultipoleForceKernel(const std::string& name, const Platform& platform, const System& system) :
          CalcAmoebaMultipoleForceKernel(name, platform), system(system), numMultipoles(0), mutualInducedMaxIterations(60), mutualInducedTargetEpsilon(1.0e-03),
                                                          usePme(false),alphaEwald(0.0), cutoffDistance(1.0) {  
 
@@ -871,7 +871,7 @@ void ReferenceCalcAmoebaMultipoleForceKernel::getPMEParameters(double& alpha, in
  *                       AmoebaGeneralizedKirkwood                            *
  * -------------------------------------------------------------------------- */
 
-ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel(std::string name, const Platform& platform, const System& system) : 
+ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel(const std::string& name, const Platform& platform, const System& system) :
            CalcAmoebaGeneralizedKirkwoodForceKernel(name, platform), system(system) {
 }
 
@@ -992,7 +992,7 @@ void ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::copyParametersToContext(
     }
 }
 
-ReferenceCalcAmoebaVdwForceKernel::ReferenceCalcAmoebaVdwForceKernel(std::string name, const Platform& platform, const System& system) :
+ReferenceCalcAmoebaVdwForceKernel::ReferenceCalcAmoebaVdwForceKernel(const std::string& name, const Platform& platform, const System& system) :
        CalcAmoebaVdwForceKernel(name, platform), system(system) {
     useCutoff = 0;
     usePBC = 0;
@@ -1113,7 +1113,7 @@ void ReferenceCalcAmoebaVdwForceKernel::copyParametersToContext(ContextImpl& con
  *                           AmoebaWcaDispersion                              *
  * -------------------------------------------------------------------------- */
 
-ReferenceCalcAmoebaWcaDispersionForceKernel::ReferenceCalcAmoebaWcaDispersionForceKernel(std::string name, const Platform& platform, const System& system) : 
+ReferenceCalcAmoebaWcaDispersionForceKernel::ReferenceCalcAmoebaWcaDispersionForceKernel(const std::string& name, const Platform& platform, const System& system) :
            CalcAmoebaWcaDispersionForceKernel(name, platform), system(system) {
 }
 
@@ -1176,7 +1176,7 @@ void ReferenceCalcAmoebaWcaDispersionForceKernel::copyParametersToContext(Contex
  *                              HippoNonbonded                                *
  * -------------------------------------------------------------------------- */
 
-ReferenceCalcHippoNonbondedForceKernel::ReferenceCalcHippoNonbondedForceKernel(std::string name, const Platform& platform, const System& system) : 
+ReferenceCalcHippoNonbondedForceKernel::ReferenceCalcHippoNonbondedForceKernel(const std::string& name, const Platform& platform, const System& system) :
          CalcHippoNonbondedForceKernel(name, platform), ixn(NULL) {
 }
 

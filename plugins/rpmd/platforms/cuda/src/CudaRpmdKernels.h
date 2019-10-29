@@ -45,7 +45,7 @@ namespace OpenMM {
  */
 class CudaIntegrateRPMDStepKernel : public IntegrateRPMDStepKernel {
 public:
-    CudaIntegrateRPMDStepKernel(std::string name, const Platform& platform, CudaContext& cu) :
+    CudaIntegrateRPMDStepKernel(const std::string& name, const Platform& platform, CudaContext& cu) :
             IntegrateRPMDStepKernel(name, platform), cu(cu) {
     }
     /**

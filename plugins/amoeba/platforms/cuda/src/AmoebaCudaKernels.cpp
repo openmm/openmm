@@ -88,7 +88,7 @@ private:
     const AmoebaBondForce& force;
 };
 
-CudaCalcAmoebaBondForceKernel::CudaCalcAmoebaBondForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : 
+CudaCalcAmoebaBondForceKernel::CudaCalcAmoebaBondForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system) :
                 CalcAmoebaBondForceKernel(name, platform), cu(cu), system(system) {
 }
 
@@ -180,7 +180,7 @@ private:
     const AmoebaAngleForce& force;
 };
 
-CudaCalcAmoebaAngleForceKernel::CudaCalcAmoebaAngleForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) :
+CudaCalcAmoebaAngleForceKernel::CudaCalcAmoebaAngleForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system) :
             CalcAmoebaAngleForceKernel(name, platform), cu(cu), system(system) {
 }
 
@@ -276,7 +276,7 @@ private:
     const AmoebaInPlaneAngleForce& force;
 };
 
-CudaCalcAmoebaInPlaneAngleForceKernel::CudaCalcAmoebaInPlaneAngleForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : 
+CudaCalcAmoebaInPlaneAngleForceKernel::CudaCalcAmoebaInPlaneAngleForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system) :
           CalcAmoebaInPlaneAngleForceKernel(name, platform), cu(cu), system(system) {
 }
 
@@ -373,7 +373,7 @@ private:
     const AmoebaPiTorsionForce& force;
 };
 
-CudaCalcAmoebaPiTorsionForceKernel::CudaCalcAmoebaPiTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) :
+CudaCalcAmoebaPiTorsionForceKernel::CudaCalcAmoebaPiTorsionForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system) :
          CalcAmoebaPiTorsionForceKernel(name, platform), cu(cu), system(system) {
 }
 
@@ -462,7 +462,7 @@ private:
     const AmoebaStretchBendForce& force;
 };
 
-CudaCalcAmoebaStretchBendForceKernel::CudaCalcAmoebaStretchBendForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) :
+CudaCalcAmoebaStretchBendForceKernel::CudaCalcAmoebaStretchBendForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system) :
                    CalcAmoebaStretchBendForceKernel(name, platform), cu(cu), system(system) {
 }
 
@@ -561,7 +561,7 @@ private:
     const AmoebaOutOfPlaneBendForce& force;
 };
 
-CudaCalcAmoebaOutOfPlaneBendForceKernel::CudaCalcAmoebaOutOfPlaneBendForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) :
+CudaCalcAmoebaOutOfPlaneBendForceKernel::CudaCalcAmoebaOutOfPlaneBendForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system) :
           CalcAmoebaOutOfPlaneBendForceKernel(name, platform), cu(cu), system(system) {
 }
 
@@ -656,7 +656,7 @@ private:
     const AmoebaTorsionTorsionForce& force;
 };
 
-CudaCalcAmoebaTorsionTorsionForceKernel::CudaCalcAmoebaTorsionTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) :
+CudaCalcAmoebaTorsionTorsionForceKernel::CudaCalcAmoebaTorsionTorsionForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system) :
                 CalcAmoebaTorsionTorsionForceKernel(name, platform), cu(cu), system(system) {
 }
 
@@ -763,7 +763,7 @@ private:
     const AmoebaMultipoleForce& force;
 };
 
-CudaCalcAmoebaMultipoleForceKernel::CudaCalcAmoebaMultipoleForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : 
+CudaCalcAmoebaMultipoleForceKernel::CudaCalcAmoebaMultipoleForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system) :
         CalcAmoebaMultipoleForceKernel(name, platform), cu(cu), system(system), hasInitializedScaleFactors(false), hasInitializedFFT(false), multipolesAreValid(false), hasCreatedEvent(false),
         gkKernel(NULL) {
 }
@@ -2119,7 +2119,7 @@ private:
     const AmoebaGeneralizedKirkwoodForce& force;
 };
 
-CudaCalcAmoebaGeneralizedKirkwoodForceKernel::CudaCalcAmoebaGeneralizedKirkwoodForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : 
+CudaCalcAmoebaGeneralizedKirkwoodForceKernel::CudaCalcAmoebaGeneralizedKirkwoodForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system) :
            CalcAmoebaGeneralizedKirkwoodForceKernel(name, platform), cu(cu), system(system), hasInitializedKernels(false) {
 }
 
@@ -2352,7 +2352,7 @@ private:
     const AmoebaVdwForce& force;
 };
 
-CudaCalcAmoebaVdwForceKernel::CudaCalcAmoebaVdwForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) :
+CudaCalcAmoebaVdwForceKernel::CudaCalcAmoebaVdwForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system) :
         CalcAmoebaVdwForceKernel(name, platform), cu(cu), system(system), hasInitializedNonbonded(false), nonbonded(NULL), vdwLambdaPinnedBuffer(NULL) {
 }
 
@@ -2556,7 +2556,7 @@ private:
     const AmoebaWcaDispersionForce& force;
 };
 
-CudaCalcAmoebaWcaDispersionForceKernel::CudaCalcAmoebaWcaDispersionForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : 
+CudaCalcAmoebaWcaDispersionForceKernel::CudaCalcAmoebaWcaDispersionForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system) :
            CalcAmoebaWcaDispersionForceKernel(name, platform), cu(cu), system(system) {
 }
 
@@ -2699,7 +2699,7 @@ private:
     CudaCalcHippoNonbondedForceKernel& owner;
 };
 
-CudaCalcHippoNonbondedForceKernel::CudaCalcHippoNonbondedForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : 
+CudaCalcHippoNonbondedForceKernel::CudaCalcHippoNonbondedForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system) :
         CalcHippoNonbondedForceKernel(name, platform), cu(cu), system(system), sort(NULL), hasInitializedKernels(false), hasInitializedFFT(false), multipolesAreValid(false) {
 }
 

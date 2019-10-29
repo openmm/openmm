@@ -44,7 +44,7 @@ namespace OpenMM {
  */
 class OPENMM_EXPORT_CUDACOMPILER CudaRuntimeCompilerKernel : public CudaCompilerKernel {
 public:
-    CudaRuntimeCompilerKernel(std::string name, const Platform& platform) : CudaCompilerKernel(name, platform) {
+    CudaRuntimeCompilerKernel(const std::string& name, const Platform& platform) : CudaCompilerKernel(name, platform) {
     }
     /**
      * Compile a kernel to PTX.
