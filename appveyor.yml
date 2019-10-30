@@ -10,6 +10,7 @@ install:
   - "set PATH=C:\\Python35-x64;C:\\Python35-x64\\Scripts;%PATH%"
   - "set PATH=C:\\Program Files (x86)\\Git\\bin;%PATH%"
   - pip install pytest
+  - pip install pytest-timeout
   - pip install numpy
   - pip install cython
 
@@ -69,8 +70,8 @@ test_script:
   - python -m simtk.testInstallation
   #- python %APPVEYOR_BUILD_FOLDER%\devtools\run-ctest.py
   - cd python\tests
-  #- py.test -v
-  - python TestModeller.py -v
+  - py.test -v --timeout=180
+  #- python TestModeller.py -v
 
 cache:
 - C:\ProgramData\cclash -> appveyor.yml
