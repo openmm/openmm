@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -ex
 
 EXTRA_CMAKE_ARGS="-DOPENMM_BUILD_CUDA_LIB=false -DOPENMM_BUILD_OPENCL_LIB=false"
 . devtools/ci/jenkins/install.sh

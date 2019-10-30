@@ -1,9 +1,13 @@
+from collections import defaultdict
 import unittest
+import math
+import sys
+
 from validateModeller import *
 from simtk.openmm.app import *
 from simtk.openmm import *
 from simtk.unit import *
-from collections import defaultdict
+
 if sys.version_info >= (3, 0):
     from io import StringIO
 else:
@@ -1078,27 +1082,50 @@ class TestModeller(unittest.TestCase):
 
 
     def test_addMembrane(self):
-        """Test adding a membrane."""
-        pdb = PDBFile('systems/alanine-dipeptide-implicit.pdb')
-        modeller = Modeller(pdb.topology, pdb.positions)
+        """Test adding a membrane to a realistic system."""
+
+        mol = PDBxFile('systems/gpcr.cif')
+        modeller = Modeller(mol.topology, mol.positions)
         ff = ForceField('amber14-all.xml', 'amber14/tip3p.xml')
 
-        # Add a membrane around alanine dipeptide???  I know, it's a silly thing to do,
-        # but it's fast, and all we care about is whether it works!
+        # Add a membrane around the GPCR
+        modeller.addMembrane(ff, minimumPadding=1.1*nanometers, ionicStrength=1*molar)
 
-        modeller.addMembrane(ff, minimumPadding=0.5*nanometers, ionicStrength=1*molar)
+        # Make sure we added everything correctly
         resCount = defaultdict(int)
         for res in modeller.topology.residues():
             resCount[res.name] += 1
-        self.assertTrue(resCount['POP'] > 1)
+
+        self.assertEqual(16, resCount['ALA'])
+        self.assertEqual(226, resCount['POP'])  # 2x128 - overlapping
         self.assertTrue(resCount['HOH'] > 1)
-        self.assertTrue(resCount['CL'] > 1)
-        self.assertEqual(resCount['CL'], resCount['NA'])
-        self.assertEqual(1, resCount['ALA'])
-        originalSize = max(pdb.positions) - min(pdb.positions)
+
+        deltaQ = resCount['CL'] - resCount['NA']
+        self.assertEqual(deltaQ, 10)  # protein net q: +10
+
+        # Check _addIons did the right thing.
+        expected_ion_fraction = 1.0*molar/(55.4*molar)
+
+        total_water = resCount['HOH']
+        total_water_ions = resCount['HOH'] + resCount['CL'] + resCount['NA']
+
+        # total_water_ions - protein charge
+        expected_sodium = math.floor((total_water_ions-10)*expected_ion_fraction+0.5)
+        expected_chlorine = expected_sodium + 10
+
+        self.assertEqual(resCount['CL'], expected_chlorine)
+        self.assertEqual(resCount['NA'], expected_sodium)
+
+        # Check lipid numbering for repetitions
+        lipidIdList = [(r.chain.id, r.id) for r in modeller.topology.residues()
+                       if r.name == 'POP']
+        self.assertEqual(len(lipidIdList), len(set(lipidIdList)))
+
+        # Check dimensions to see if padding was respected
+        originalSize = max(mol.positions) - min(mol.positions)
         newSize = modeller.topology.getUnitCellDimensions()
         for i in range(3):
-            self.assertTrue(newSize[i] >= originalSize[i]+0.5*nanometers)
+            self.assertTrue(newSize[i] >= originalSize[i]+1.1*nanometers)
 
 
     def assertVecAlmostEqual(self, p1, p2, tol=1e-7):

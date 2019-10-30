@@ -243,6 +243,7 @@ extern "C" __global__ void findBlocksWithInteractions(real4 periodicBoxSize, rea
         for (int block2Base = block1+1; block2Base < NUM_BLOCKS; block2Base += 32) {
             int block2 = block2Base+indexInWarp;
             bool includeBlock2 = (block2 < NUM_BLOCKS);
+            bool forceInclude = false;
             if (includeBlock2) {
                 real4 blockCenterY = sortedBlockCenter[block2];
                 real4 blockSizeY = sortedBlockBoundingBox[block2];
@@ -260,7 +261,7 @@ extern "C" __global__ void findBlocksWithInteractions(real4 periodicBoxSize, rea
                 // If there's any possibility we might have missed it, do a detailed check.
 
                 if (periodicBoxSize.z/2-blockSizeX.z-blockSizeY.z < PADDED_CUTOFF || periodicBoxSize.y/2-blockSizeX.y-blockSizeY.y < PADDED_CUTOFF)
-                    includeBlock2 = true;
+                    includeBlock2 = forceInclude = true;
 #endif
                 if (includeBlock2) {
                     unsigned short y = (unsigned short) sortedBlocks[block2].y;
@@ -272,9 +273,11 @@ extern "C" __global__ void findBlocksWithInteractions(real4 periodicBoxSize, rea
             // Loop over any blocks we identified as potentially containing neighbors.
             
             int includeBlockFlags = BALLOT(includeBlock2);
+            int forceIncludeFlags = BALLOT(forceInclude);
             while (includeBlockFlags != 0) {
                 int i = __ffs(includeBlockFlags)-1;
                 includeBlockFlags &= includeBlockFlags-1;
+                forceInclude = (forceIncludeFlags>>i) & 1;
                 unsigned short y = (unsigned short) sortedBlocks[block2Base+i].y;
 
                 // Check each atom in block Y for interactions.
@@ -291,7 +294,7 @@ extern "C" __global__ void findBlocksWithInteractions(real4 periodicBoxSize, rea
 #ifdef USE_PERIODIC
                 APPLY_PERIODIC_TO_DELTA(atomDelta)
 #endif
-                int atomFlags = BALLOT(atomDelta.x*atomDelta.x+atomDelta.y*atomDelta.y+atomDelta.z*atomDelta.z < (PADDED_CUTOFF+blockCenterY.w)*(PADDED_CUTOFF+blockCenterY.w));
+                int atomFlags = BALLOT(forceInclude || atomDelta.x*atomDelta.x+atomDelta.y*atomDelta.y+atomDelta.z*atomDelta.z < (PADDED_CUTOFF+blockCenterY.w)*(PADDED_CUTOFF+blockCenterY.w));
                 int interacts = 0;
                 if (atom2 < NUM_ATOMS && atomFlags != 0) {
                     int first = __ffs(atomFlags)-1;
