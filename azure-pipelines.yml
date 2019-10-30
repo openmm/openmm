@@ -9,10 +9,6 @@ pool:
   vmImage: 'windows-latest'
 
 variables:
-  solution: '**/*.sln'
-  buildPlatform: 'x86|x64|ARM'
-  buildConfiguration: 'Release'
-  appxPackageDir: '$(build.artifactStagingDirectory)\AppxPackages\\'
   cmakeFlags: -DOPENMM_BUILD_PME_PLUGIN=ON -DOPENCL_INCLUDE_DIR=$(Build.SourcesDirectory)/opencl/inc -DOPENCL_LIBRARY=$(Build.SourcesDirectory)/opencl/lib/OpenCL.lib -DFFTW_LIBRARY=$(Build.SourcesDirectory)/fftw/libfftw3f-3.lib -DFFTW_INCLUDES=$(Build.SourcesDirectory)/fftw -DOPENMM_BUILD_EXAMPLES=OFF -DOPENMM_BUILD_OPENCL_TESTS=OFF -DCMAKE_BUILD_TYPE=Release -LA'
   cmakeCompilers: '-DCMAKE_CXX_COMPILER="cl.exe" -DCMAKE_C_COMPILER="cl.exe"'
 
