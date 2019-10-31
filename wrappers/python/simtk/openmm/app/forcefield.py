@@ -632,6 +632,29 @@ class ForceField(object):
             atom = self.getAtomIndexByName(atom_name)
             self.addExternalBond(atom)
 
+        def areParametersIdentical(self, template2, matchingAtoms, matchingAtoms2):
+            """Get whether this template and another one both assign identical atom types and parameters to all atoms.
+            
+            Parameters
+            ----------
+            template2: _TemplateData
+                the template to compare this one to
+            matchingAtoms: list
+                the indices of atoms in this template that atoms of the residue are matched to
+            matchingAtoms2: list
+                the indices of atoms in template2 that atoms of the residue are matched to
+            """
+            atoms1 = [self.atoms[m] for m in matchingAtoms]
+            atoms2 = [template2.atoms[m] for m in matchingAtoms2]
+            if any(a1.type != a2.type or a1.parameters != a2.parameters for a1,a2 in zip(atoms1, atoms2)):
+                return False
+            # Properly comparing virtual sites really needs a much more complicated analysis.  This simple check
+            # could easily fail for templates containing vsites, even if they're actually identical.  Since we
+            # currently have no force fields that include both patches and vsites, I'm not going to worry about it now.
+            if self.virtualSites != template2.virtualSites:
+                return False
+            return True
+
     class _TemplateAtomData(object):
         """Inner class used to encapsulate data about an atom in a residue template definition."""
         def __init__(self, name, type, element, parameters={}):
@@ -866,7 +889,7 @@ class ForceField(object):
 
         Returns
         -------
-        template : _ForceFieldTemplate
+        template : _TemplateData
             The matching forcefield residue template, or None if no matches are found.
         matches : list
             a list specifying which atom of the template each atom of the residue
@@ -888,7 +911,13 @@ class ForceField(object):
                 template = allMatches[0][0]
                 matches = allMatches[0][1]
             elif len(allMatches) > 1:
-                raise Exception('Multiple matching templates found for residue %d (%s): %s.' % (res.index+1, res.name, ', '.join(match[0].name for match in allMatches)))
+                # We found multiple matches.  This is OK if and only if they assign identical types and parameters to all atoms.
+                t1, m1 = allMatches[0]
+                for t2, m2 in allMatches[1:]:
+                    if not t1.areParametersIdentical(t2, m1, m2):
+                        raise Exception('Multiple non-identical matching templates found for residue %d (%s): %s.' % (res.index+1, res.name, ', '.join(match[0].name for match in allMatches)))
+                template = allMatches[0][0]
+                matches = allMatches[0][1]
         return [template, matches]
 
     def _buildBondedToAtomList(self, topology):
