@@ -80,8 +80,8 @@ public:
             voxelSizeZ = boxVectors[2][2]/nz;
         }
         else {
-            ny = max(1, (int) floorf((maxy-miny)/voxelSizeY+0.5f));
-            nz = max(1, (int) floorf((maxz-minz)/voxelSizeZ+0.5f));
+            ny = max(1, min(500, (int) floorf((maxy-miny)/voxelSizeY+0.5f)));
+            nz = max(1, min(500, (int) floorf((maxz-minz)/voxelSizeZ+0.5f)));
             if (maxy > miny)
                 voxelSizeY = (maxy-miny)/ny;
             if (maxz > minz)
