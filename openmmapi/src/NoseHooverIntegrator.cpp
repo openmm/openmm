@@ -250,7 +250,9 @@ double NoseHooverIntegrator::computeKineticEnergy() {
 double NoseHooverIntegrator::computeHeatBathEnergy() {
     double energy = 0;
     for(auto &nhc : noseHooverChains) {
-        energy += nhcKernel.getAs<NoseHooverChainKernel>().computeHeatBathEnergy(*context, nhc);
+        if (context && (nhc.getDefaultNumDegreesOfFreedom() > 0)) {
+            energy += nhcKernel.getAs<NoseHooverChainKernel>().computeHeatBathEnergy(*context, nhc);
+        }
     }
     return energy;
 }

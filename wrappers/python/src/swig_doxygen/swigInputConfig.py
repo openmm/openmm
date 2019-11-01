@@ -475,7 +475,7 @@ UNITS = {
 ("MonteCarloMembraneBarostat", "MonteCarloMembraneBarostat") : (None, ("unit.bar", "unit.bar*unit.nanometer", "unit.kelvin", None, None, None)),
 ("MonteCarloMembraneBarostat", "getXYMode") : (None, ()),
 ("MonteCarloMembraneBarostat", "getZMode") : (None, ()),
-("DrudeLangevinIntegrator", "getDrudeFriction") : ("1/unit.picosecond", ()),
+("DrudeLangevinIntegrator", "getDrudeFriction") : ("unit.picosecond**-1", ()),
 ("DrudeSCFIntegrator", "getMinimizationErrorTolerance") : ("unit.kilojoules_per_mole/unit.nanometer", ()),
 ("RPMDIntegrator", "getContractions") : (None, ()),
 ("RPMDIntegrator", "getTotalEnergy") : ("unit.kilojoules_per_mole", ()),
@@ -485,14 +485,13 @@ UNITS = {
 #("NoseHooverChain", "getThermostatedPairs") : (None, ()),
 #("NoseHooverChain", "getThermostatedAtoms") : (None, ()),
 #("NoseHooverChain", "getDefaultYoshidaSuzukiWeights") : (None, ()),
-#("NoseHooverIntegrator", "NoseHooverIntegrator") : (None, ("unit.kelvin", "1/unit.picosecond", "unit,picosecond", None, None, None)),
 ("NoseHooverIntegrator", "setTemperature") : (None, ("unit.kelvin", None)),
 ("NoseHooverIntegrator", "setRelativeTemperature") : (None, ("unit.kelvin", None) ),
-("NoseHooverIntegrator", "setCollisionFrequency") : (None, ("1/unit.picosecond", None)),
-("NoseHooverIntegrator", "setRelativeCollisionFrequency") : (None, ("1/unit.picosecond", None)),
+("NoseHooverIntegrator", "setCollisionFrequency") : (None, ("unit.picosecond**-1", None)),
+("NoseHooverIntegrator", "setRelativeCollisionFrequency") : (None, ("unit.picosecond**-1", None)),
 ("NoseHooverIntegrator", "computeHeatBathEnergy") : ( "unit.kilojoules_per_mole", ()),
-("NoseHooverIntegrator", "addThermostat"): (None, ("unit.kelvin", "1/unit.picosecond", None, None, None)),
+("NoseHooverIntegrator", "addThermostat"): (None, ("unit.kelvin", "unit.picosecond**-1", None, None, None)),
 ("NoseHooverIntegrator", "addSubsystemThermostat"):
-    (None, (None, None, "unit.kelvin", "1/unit.picosecond", "unit.kelvin", "1/unit.picosecond", None, None, None))
+    (None, (None, None, "unit.kelvin", "unit.picosecond**-1", "unit.kelvin", "unit.picosecond**-1", None, None, None))
 }
 
