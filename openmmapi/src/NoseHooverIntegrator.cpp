@@ -53,11 +53,11 @@ NoseHooverIntegrator::NoseHooverIntegrator(double stepSize):
     setStepSize(stepSize);
     setConstraintTolerance(1e-5);
 }
-NoseHooverIntegrator::NoseHooverIntegrator(double temperature, int collisionFrequnency, double stepSize,
+NoseHooverIntegrator::NoseHooverIntegrator(double temperature, double collisionFrequency, double stepSize,
                                            int chainLength, int numMTS, int numYoshidaSuzuki) : forcesAreValid(false) {
     setStepSize(stepSize);
     setConstraintTolerance(1e-5);
-    addThermostat(temperature, collisionFrequnency, chainLength, numMTS, numYoshidaSuzuki);
+    addThermostat(temperature, collisionFrequency, chainLength, numMTS, numYoshidaSuzuki);
 }
 
 NoseHooverIntegrator::~NoseHooverIntegrator() {}
@@ -79,40 +79,45 @@ int NoseHooverIntegrator::addSubsystemThermostat(const std::vector<int>& thermos
                                                  double temperature, double collisionFrequency,
                                                  double relativeTemperature, double relativeCollisionFrequency,
                                                  int chainLength, int numMTS, int numYoshidaSuzuki) {
-    auto data = ThermostatData(thermostatedParticles, thermostatedPairs, temperature,
-                               relativeTemperature, collisionFrequency,
-                               relativeCollisionFrequency, chainLength, numMTS, numYoshidaSuzuki);
-    thermostatData.push_back(data);
-    return thermostatData.size() - 1;
+    int chainID = noseHooverChains.size();
+    int nDOF = 0; // is set in initializeThermostats()
+    noseHooverChains.emplace_back(temperature, relativeTemperature,
+                                 collisionFrequency, relativeCollisionFrequency,
+                                 nDOF, chainLength, numMTS,
+                                 numYoshidaSuzuki, chainID,
+                                 thermostatedParticles, thermostatedPairs);
+    return chainID;
 }
 
 
-void NoseHooverIntegrator::createThermostats(const System &system) {
+void NoseHooverIntegrator::initializeThermostats(const System &system) {
 
-    for (const auto &thermostat : thermostatData) {
+    for (auto &thermostat : noseHooverChains) {
+        const auto &thermostatedParticles = thermostat.getThermostatedAtoms();
+        const auto &thermostatedPairs = thermostat.getThermostatedPairs();
 
         // figure out the number of DOFs
-        int nDOF = 3*(thermostat.thermostatedParticles.size() + thermostat.thermostatedPairs.size());
+        int nDOF = 3*(thermostatedParticles.size() + thermostatedPairs.size());
         for (int constraintNum = 0; constraintNum < system.getNumConstraints(); constraintNum++) {
             int particle1, particle2;
             double distance;
             system.getConstraintParameters(constraintNum, particle1, particle2, distance);
-            bool particle1_in_thermostatedParticles = ((std::find(thermostat.thermostatedParticles.begin(),
-                                                                  thermostat.thermostatedParticles.end(), particle1)
-                                                                    != thermostat.thermostatedParticles.end())) ||
-                                                      (std::find_if(thermostat.thermostatedPairs.begin(),
-                                                                    thermostat.thermostatedPairs.end(),
+            bool particle1_in_thermostatedParticles = ((std::find(thermostatedParticles.begin(),
+                                                                  thermostatedParticles.end(), particle1)
+                                                                    != thermostatedParticles.end())) ||
+                                                      (std::find_if(thermostatedPairs.begin(),
+                                                                    thermostatedPairs.end(),
                                                                     [&particle1](const std::pair<int, int>& pair){
                                                                            return pair.first == particle1 || pair.second == particle1;})
-                                                                      != thermostat.thermostatedPairs.end());
-            bool particle2_in_thermostatedParticles = ((std::find(thermostat.thermostatedParticles.begin(),
-                                                                  thermostat.thermostatedParticles.end(), particle2)
-                                                                    != thermostat.thermostatedParticles.end())) ||
-                                                      (std::find_if(thermostat.thermostatedPairs.begin(),
-                                                                    thermostat.thermostatedPairs.end(),
+                                                                      != thermostatedPairs.end());
+            bool particle2_in_thermostatedParticles = ((std::find(thermostatedParticles.begin(),
+                                                                  thermostatedParticles.end(), particle2)
+                                                                    != thermostatedParticles.end())) ||
+                                                      (std::find_if(thermostatedPairs.begin(),
+                                                                    thermostatedPairs.end(),
                                                                     [&particle2](const std::pair<int, int>& pair){
                                                                            return pair.first == particle2 || pair.second == particle2;})
-                                                                      != thermostat.thermostatedPairs.end());
+                                                                      != thermostatedPairs.end());
             if ((system.getParticleMass(particle1) > 0) && (system.getParticleMass(particle2) > 0)){
                 if ((particle1_in_thermostatedParticles && !particle2_in_thermostatedParticles) ||
                      (!particle1_in_thermostatedParticles && particle2_in_thermostatedParticles)){
@@ -127,21 +132,14 @@ void NoseHooverIntegrator::createThermostats(const System &system) {
 
         // remove 3 degrees of freedom from thermostats that act on absolute motions
         int numForces = system.getNumForces();
-        if (thermostat.thermostatedPairs.size() == 0){
+        if (thermostatedPairs.size() == 0){
             for (int forceNum = 0; forceNum < numForces; ++forceNum) {
                 if (dynamic_cast<const CMMotionRemover*>(&system.getForce(forceNum))) nDOF -= 3;
             }
         }
 
-        // create and add new chain
-        int chainID = noseHooverChains.size();
-        auto chain = NoseHooverChain(thermostat.temperature, thermostat.relativeTemperature,
-                                     thermostat.collisionFrequency, thermostat.relativeCollisionFrequency,
-                                     nDOF, thermostat.chainLength, thermostat.numMTS,
-                                     thermostat.numYoshidaSuzuki, chainID,
-                                     thermostat.thermostatedParticles, thermostat.thermostatedPairs);
-        noseHooverChains.push_back(chain);
-
+        // set number of DoFs for chain 
+        thermostat.setDefaultNumDegreesOfFreedom(nDOF);
     }
 
 
@@ -271,9 +269,10 @@ void NoseHooverIntegrator::initialize(ContextImpl& contextRef) {
 
     // check for drude particles and build the Nose-Hoover Chains
     const System& system = context->getSystem();
-    for (auto& thermostat: thermostatData){
+    for (auto& thermostat: noseHooverChains){
         // if there are no thermostated particles or pairs in the lists this is a regular thermostat for the whole (non-Drude) system
-        if ( (thermostat.thermostatedParticles.size() == 0) && (thermostat.thermostatedPairs.size() == 0) ){
+        if ( (thermostat.getThermostatedAtoms().size() == 0) && (thermostat.getThermostatedPairs().size() == 0) ){
+            std::vector<int> thermostatedParticles;
             for(int particle = 0; particle < system.getNumParticles(); ++particle) {
                 double mass = system.getParticleMass(particle);
                 if ( (mass > 0) && (mass < 0.8) ){
@@ -281,13 +280,14 @@ void NoseHooverIntegrator::initialize(ContextImpl& contextRef) {
                                  "The thermostat you are about to use will not treat these particles as Drude particles!" << std::endl;
                 }
                 if(system.getParticleMass(particle) > 0) {
-                    thermostat.thermostatedParticles.push_back(particle);
+                   thermostatedParticles.push_back(particle);
                 }
             }
+            thermostat.setThermostatedAtoms(thermostatedParticles);
         }
     }
 
-    createThermostats(system);
+    initializeThermostats(system);
 }
 
 void NoseHooverIntegrator::cleanup() {

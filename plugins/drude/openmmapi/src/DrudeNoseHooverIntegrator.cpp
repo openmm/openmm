@@ -94,8 +94,8 @@ void DrudeNoseHooverIntegrator::initialize(ContextImpl& contextRef) {
         std::cout << "Warning: Did not find a center-of-mass motion remover in the system. "
                      "This is problematic when using Drude." << std::endl;
     }
-    for (auto& thermostat: thermostatData){
-        if ( (thermostat.thermostatedParticles.size() == 0) && (thermostat.thermostatedPairs.size() == 0) ){
+    for (auto& thermostat: noseHooverChains){
+        if ( (thermostat.getThermostatedAtoms().size() == 0) && (thermostat.getThermostatedPairs().size() == 0) ){
             std::set<int> realParticlesSet;
             vector<int> realParticles, drudeParticles, drudeParents;
             vector<std::pair<int, int>> drudePairs;
@@ -108,13 +108,14 @@ void DrudeNoseHooverIntegrator::initialize(ContextImpl& contextRef) {
                 drudeForce->getParticleParameters(i, p, p1, p2, p3, p4, charge, polarizability, aniso12, aniso34);
                 realParticlesSet.erase(p);
                 realParticlesSet.erase(p1);
-                thermostat.thermostatedPairs.push_back({p,p1});
+                drudePairs.push_back({p,p1});
             }
-            for(const auto &p : realParticlesSet) thermostat.thermostatedParticles.push_back(p);
+            thermostat.setThermostatedPairs(drudePairs);
+            thermostat.setThermostatedAtoms(std::vector<int>(realParticlesSet.begin(), realParticlesSet.end()));
         }
     }
 
-    createThermostats(system);
+    initializeThermostats(system);
 }
 
 double DrudeNoseHooverIntegrator::computeDrudeKineticEnergy() {

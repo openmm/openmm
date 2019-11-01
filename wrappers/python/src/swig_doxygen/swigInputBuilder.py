@@ -21,6 +21,9 @@ except ImportError:
 INDENT = "   "
 docTags = {'emphasis':'i', 'bold':'b', 'itemizedlist':'ul', 'listitem':'li', 'preformatted':'pre', 'computeroutput':'tt', 'subscript':'sub'}
 
+def is_method_abstract(argstring):
+    return argstring.split(")")[-1].find("=0") >= 0
+
 def striphtmltags(s):
     """Strip a couple html tags used inside docstrings in the C++ source
     to produce something more easily read as plain text.
@@ -511,7 +514,7 @@ class SwigInputBuilder:
                 mArgsstring = getText("argsstring", memberNode)
             if self.fOutPythonprepend and \
                len(paramList) and \
-               mArgsstring.find('=0') < 0:
+               not is_method_abstract(mArgsstring):
                 text = '''
 %pythonprepend OpenMM::{shortClassName}::{methName}{mArgsstring} %{{{{{{0}}
 %}}}}'''.format(shortClassName=shortClassName, methName=methName, mArgsstring=mArgsstring)
@@ -528,6 +531,7 @@ class SwigInputBuilder:
         s = ("the %s object does not own its corresponding OpenMM object"
              % self.__class__.__name__)
         raise Exception(s)'''.format(argName=argName)
+
 
                 # Convert input arguments to the proper units, if specified.
                 if key not in methodsWithOutputArgs:
@@ -563,9 +567,10 @@ class SwigInputBuilder:
 
             # write pythonappend blocks
             if self.fOutPythonappend \
-               and mArgsstring.find('=0') < 0:
+               and not is_method_abstract(mArgsstring):
                 key = (shortClassName, methName)
-                #print "key %s %s \n" % (shortClassName, methName)
+                #sys.stdout.write("key %s %s \n" % (shortClassName, methName))
+
                 addText=''
                 returnType = getText("type", memberNode)
 
@@ -619,8 +624,15 @@ class SwigInputBuilder:
                             pType = getText('type', pNode)
                         except IndexError:
                             pType = getText('type/ref', pNode)
+                        # parse default arguments
+                        try:
+                            defaultValue = getText('defval', pNode)
+                        except:
+                            defaultValue = ""
+                        if defaultValue != "":
+                            defaultValue = "=%s" %defaultValue
                         pName = getText('declname', pNode)
-                        self.fOutPythonappend.write("%s%s %s" % (sepChar, pType, pName))
+                        self.fOutPythonappend.write("%s%s %s%s" % (sepChar, pType, pName, defaultValue))
                         sepChar=', '
 
                         if pType.find('&')>=0 and \

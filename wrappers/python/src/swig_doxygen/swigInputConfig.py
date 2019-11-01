@@ -217,6 +217,9 @@ UNITS = {
 ("*", "getTabulatedFunction") : (None, ()),
 ("*", "getUseDispersionCorrection") : (None, ()),
 ("*", "getTemperature") : ("unit.kelvin", ()),
+("*", "getRelativeTemperature") : ("unit.kelvin", ()),
+("*", "getCollisionFrequency") : ( "1/unit.picosecond", ()),
+("*", "getRelativeCollisionFrequency") : ( "1/unit.picosecond", ()),
 ("*", "getUseDispersionCorrection") : (None, ()),
 ("*", "getWeight") : (None, ()),
 ("*", "getWeight12") : (None, ()),
@@ -343,9 +346,11 @@ UNITS = {
 ("HippoNonbondedForce",                 "getInducedDipoles")                             :  ( None, ()),
 ("HippoNonbondedForce",                 "getLabFramePermanentDipoles")                   :  ( None, ()),
 
+
 ("Context", "getParameter") : (None, ()),
 ("Context", "getParameters") : (None, ()),
 ("Context", "getMolecules") : (None, ()),
+("Context", "getState") : (None, (None, None, None)),
 ("CMAPTorsionForce", "getMapParameters") : (None, (None, 'unit.kilojoule_per_mole')),
 ("CMAPTorsionForce", "getTorsionParameters") : (None, ()),
 ("CMMotionRemover", "getFrequency") : (None, ()),
@@ -466,17 +471,28 @@ UNITS = {
 ("System", "getVirtualSite") : (None, ()),
 ("DrudeLangevinIntegrator", "getDrudeTemperature") : ("unit.kelvin", ()),
 ("DrudeLangevinIntegrator", "getMaxDrudeDistance") : ("unit.nanometer", ()),
+
 ("MonteCarloMembraneBarostat", "MonteCarloMembraneBarostat") : (None, ("unit.bar", "unit.bar*unit.nanometer", "unit.kelvin", None, None, None)),
 ("MonteCarloMembraneBarostat", "getXYMode") : (None, ()),
 ("MonteCarloMembraneBarostat", "getZMode") : (None, ()),
 ("DrudeLangevinIntegrator", "getDrudeFriction") : ("1/unit.picosecond", ()),
-("NoseHooverChain", "getThermostatedPairs") : (None, ()),
-("NoseHooverChain", "getThermostatedAtoms") : (None, ()),
-("NoseHooverChain", "getDefaultYoshidaSuzukiWeights") : (None, ()),
 ("DrudeSCFIntegrator", "getMinimizationErrorTolerance") : ("unit.kilojoules_per_mole/unit.nanometer", ()),
 ("RPMDIntegrator", "getContractions") : (None, ()),
 ("RPMDIntegrator", "getTotalEnergy") : ("unit.kilojoules_per_mole", ()),
+("RPMDIntegrator", "getState"): (None,(None, None, None, None)),
 ("RMSDForce", "getReferencePositions") : ("unit.nanometer", ()),
 ("RMSDForce", "getParticles") : (None, ()),
+#("NoseHooverChain", "getThermostatedPairs") : (None, ()),
+#("NoseHooverChain", "getThermostatedAtoms") : (None, ()),
+#("NoseHooverChain", "getDefaultYoshidaSuzukiWeights") : (None, ()),
+#("NoseHooverIntegrator", "NoseHooverIntegrator") : (None, ("unit.kelvin", "1/unit.picosecond", "unit,picosecond", None, None, None)),
+("NoseHooverIntegrator", "setTemperature") : (None, ("unit.kelvin", None)),
+("NoseHooverIntegrator", "setRelativeTemperature") : (None, ("unit.kelvin", None) ),
+("NoseHooverIntegrator", "setCollisionFrequency") : (None, ("1/unit.picosecond", None)),
+("NoseHooverIntegrator", "setRelativeCollisionFrequency") : (None, ("1/unit.picosecond", None)),
+("NoseHooverIntegrator", "computeHeatBathEnergy") : ( "unit.kilojoules_per_mole", ()),
+("NoseHooverIntegrator", "addThermostat"): (None, ("unit.kelvin", "1/unit.picosecond", None, None, None)),
+("NoseHooverIntegrator", "addSubsystemThermostat"):
+    (None, (None, None, "unit.kelvin", "1/unit.picosecond", "unit.kelvin", "1/unit.picosecond", None, None, None))
 }
 

@@ -54,10 +54,10 @@ public:
     /**
      * Create a DrudeNoseHooverIntegrator.
      *
-     * @param temperature the target temperature for the system.
-     * @param collisionFrequency the frequency of the system's interaction with the heat bath (in 1/ps).
-     * @param drudeTemperature the target temperature for the Drude particles, relative to their parent atom.
-     * @param drudeCollisionFrequency the frequency of the drude particles' interaction with the heat bath (in 1/ps).
+     * @param temperature the target temperature for the system (in Kelvin).
+     * @param collisionFrequency the frequency of the system's interaction with the heat bath (in inverse picoseconds).
+     * @param drudeTemperature the target temperature for the Drude particles, relative to their parent atom (in Kelvin).
+     * @param drudeCollisionFrequency the frequency of the drude particles' interaction with the heat bath (in inverse picoseconds).
      * @param stepSize       the step size with which to integrator the system (in picoseconds)
      * @param chainLength the number of beads in the Nose-Hoover chain.
      * @param numMTS the number of step in the  multiple time step chain propagation algorithm.

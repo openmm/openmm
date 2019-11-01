@@ -58,15 +58,15 @@ public:
     /**
      * Create a NoseHooverIntegrator.
      *
-     * @param temperature the target temperature for the system.
-     * @param collisionFrequency the frequency of the interaction with the heat bath (in 1/ps).
+     * @param temperature the target temperature for the system (in Kelvin).
+     * @param collisionFrequency the frequency of the interaction with the heat bath (in inverse picoseconds).
      * @param stepSize the step size with which to integrate the system (in picoseconds)
      * @param chainLength the number of beads in the Nose-Hoover chain.
      * @param numMTS the number of step in the  multiple time step chain propagation algorithm.
      * @param numYoshidaSuzuki the number of terms in the Yoshida-Suzuki multi time step decomposition
      *        used in the chain propagation algorithm (must be 1, 3, or 5).
      */
-    explicit NoseHooverIntegrator(double temperature, int collisionFrequnency, double stepSize, 
+    explicit NoseHooverIntegrator(double temperature, double collisionFrequency, double stepSize,
                                   int chainLength = 3, int numMTS = 3, int numYoshidaSuzuki = 3);
 
     virtual ~NoseHooverIntegrator();
@@ -81,7 +81,7 @@ public:
      *
      * @param temperature the target temperature for the system.
      * @param collisionFrequency the frequency of the interaction with the heat bath (in 1/ps).
-     * @param chainLength the number of beads in the Nose-Hoover chain.
+     * @param chainLength the number of beads in the Nose-Hoover chain
      * @param numMTS the number of step in the  multiple time step chain propagation algorithm.
      * @param numYoshidaSuzuki the number of terms in the Yoshida-Suzuki multi time step decomposition
      *        used in the chain propagation algorithm (must be 1, 3, or 5).
@@ -94,6 +94,7 @@ public:
      * provided and the thermostat will only control members of that list.  Additionally a list of pairs of
      * connected atoms may be provided; in this case both the center of mass absolute motion of each pair is
      * controlled as well as their motion relative to each other, which is independently thermostated.
+     * If both the list of thermostated particles and thermostated pairs are empty all particles will be thermostated.
      *
      * @param thermostatedParticles list of particle ids to be thermostated.
      * @param thermostatedPairs a list of pairs of connected atoms whose absolute center of mass motion
@@ -215,9 +216,9 @@ protected:
      */
     void initialize(ContextImpl& context);
     /**
-     * Goes through the list of requested thermostat data and creates the thermostat chains.
+     * Goes through the list of thermostats, sets the number of DOFs, and checks for errors in the thermostats.
      */
-    void createThermostats(const System& system);
+    void initializeThermostats(const System& system);
     /**
      * This will be called by the Context when it is destroyed to let the Integrator do any necessary
      * cleanup.  It will also get called again if the application calls reinitialize() on the Context.
@@ -231,25 +232,6 @@ protected:
      * Compute the kinetic energy of the system at the current time.
      */
     virtual double computeKineticEnergy();
-
-    struct ThermostatData {
-        std::vector<int> thermostatedParticles;
-        std::vector< std::pair< int, int> > thermostatedPairs;
-        double temperature;
-        double relativeTemperature;
-        double collisionFrequency;
-        double relativeCollisionFrequency;
-        int chainLength;
-        int numMTS;
-        int numYoshidaSuzuki;
-        ThermostatData(const std::vector<int>&particles, const std::vector<std::pair<int, int>> &pairs, double temp,
-                       double relTemp, double freq, double relFreq, int length, int MTS, int YS) :
-                               thermostatedParticles(particles), thermostatedPairs(pairs), temperature(temp),
-                               relativeTemperature(relTemp), collisionFrequency(freq), relativeCollisionFrequency(relFreq),
-                               chainLength(length), numMTS(MTS), numYoshidaSuzuki(YS) {}
-    };
-
-    std::vector<ThermostatData> thermostatData;
 
     std::vector<NoseHooverChain> noseHooverChains;
     bool forcesAreValid;

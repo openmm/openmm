@@ -1165,6 +1165,21 @@ class TestAPIUnits(unittest.TestCase):
         self.assertAlmostEqualUnit(integrator.getFriction(), 0.1/microsecond)
         self.assertEqual(integrator.getStepSize(), 1*femtosecond)
 
+    def testNoseHooverIntegrator(self):
+        """ Tests the NoseHooverIntegrator API features """
+        integrator = NoseHooverIntegrator(300, 0.1, 1)
+        self.assertEqual(integrator.getTemperature(0), 300*kelvin)
+        self.assertEqual(integrator.getCollisionFrequency(), 0.1/picosecond)
+        self.assertEqual(integrator.getStepSize(), 1*picosecond)
+
+        integrator = NoseHooverIntegrator(300*kelvin, 0.1/microsecond, 1*femtosecond)
+        self.assertEqual(integrator.getTemperature(), 300*kelvin)
+        self.assertAlmostEqualUnit(integrator.getCollisionFrequency(), 0.1/microsecond)
+        self.assertEqual(integrator.getStepSize(), 1*femtosecond)
+
+        integrator = NoseHooverIntegrator(1*femtosecond)
+        self.assertEqual(integrator.getStepSize(), 1*femtosecond)
+
     def testAndersenThermostat(self):
         """ Tests the AndersenThermostat API features """
         force = AndersenThermostat(300*kelvin, 1/microsecond)
