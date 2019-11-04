@@ -115,13 +115,13 @@ steps:
   displayName: "Generate OpenMM NMake files with CMake"
 
 - script: |
-    # call "$(VSPATH)\VC\Auxiliary\Build\vcvarsall.bat" x64
+    call "$(VSPATH)\VC\Auxiliary\Build\vcvarsall.bat" x64
     cmake --build . --target install
   workingDirectory: '$(Build.SourcesDirectory)/build'
   displayName: "Build and Install OpenMM"
 
 - script: |
-    # call "$(VSPATH)\VC\Auxiliary\Build\vcvarsall.bat" x64
+    call "$(VSPATH)\VC\Auxiliary\Build\vcvarsall.bat" x64
     cmake --build . --target PythonInstall
   workingDirectory: '$(Build.SourcesDirectory)/build'
   displayName: "Install OpenMM's Python Components"
@@ -134,9 +134,18 @@ steps:
   workingDirectory: '$(Build.SourcesDirectory)/build'
   displayName: "Debug stuff"
 
+- script: |
+    call "$(VSPATH)\VC\Auxiliary\Build\vcvarsall.bat" x64
+    pip list
+    python -c 'help("modules")'
+    python -m site
+    ls $(python -m site --user-site)
+  workingDirectory: '$(Build.SourcesDirectory)/build'
+  displayName: "Debug stuff with vsvarsall to see if its different"
+
 # I think the vcvarsall.bat has to be called here as well otherwise the PythonPath isnt set right, Maybe?
 - script: |
-    # call "$(VSPATH)\VC\Auxiliary\Build\vcvarsall.bat" x64
+    call "$(VSPATH)\VC\Auxiliary\Build\vcvarsall.bat" x64
     python $(Build.SourcesDirectory)/devtools/run-ctest.py
     cd python\tests
     pytest -v
