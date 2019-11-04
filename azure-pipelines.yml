@@ -130,7 +130,7 @@ steps:
     pip list
     python -c 'help("modules")'
     python -m site
-    ls $(python -m site --user-site)
+    ls "$(python -m site --user-site)"
   workingDirectory: '$(Build.SourcesDirectory)/build'
   displayName: "Debug stuff"
 
@@ -139,7 +139,7 @@ steps:
     pip list
     python -c 'help("modules")'
     python -m site
-    ls $(python -m site --user-site)
+    ls "$(python -m site --user-site)"
   workingDirectory: '$(Build.SourcesDirectory)/build'
   displayName: "Debug stuff with vsvarsall to see if its different"
 
