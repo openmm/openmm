@@ -126,20 +126,22 @@ steps:
   workingDirectory: '$(Build.SourcesDirectory)/build'
   displayName: "Install OpenMM's Python Components"
 
-- script: |
+- bash: |
     pip list
     python -c 'help("modules")'
     python -m site
-    ls "$(python -m site --user-site)"
+    which python
+    ls "C:\\hostedtoolcache\\windows\\Python\\3.7.4\\x64\\lib\\site-packages"
   workingDirectory: '$(Build.SourcesDirectory)/build'
   displayName: "Debug stuff"
 
-- script: |
+- bash: |
     call "$(VSPATH)\VC\Auxiliary\Build\vcvarsall.bat" x64
     pip list
     python -c 'help("modules")'
     python -m site
-    ls "$(python -m site --user-site)"
+    which python
+    ls "C:\\hostedtoolcache\\windows\\Python\\3.7.4\\x64\\lib\\site-packages"
   workingDirectory: '$(Build.SourcesDirectory)/build'
   displayName: "Debug stuff with vsvarsall to see if its different"
 
