@@ -25,6 +25,15 @@ steps:
     echo ###vso[task.setvariable variable=VSPATH]%VSPATH%
   displayName: "Find the VS2015 path to call vcvarsall.bat properly in the CMake blocks later"
 
+# Use Python version
+# Use the specified version of Python from the tool cache, optionally adding it to the PATH
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: '3.x'
+    addToPath: true
+    architecture: 'x64' # Options: x86, x64 (this argument applies only on Windows agents)
+  displayName: 'Set the Python version to correct the paths for later'
+
 - script: python -m pip install --upgrade pytest numpy cython
   displayName: 'Install Python tools'
 
