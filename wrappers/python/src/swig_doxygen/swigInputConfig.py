@@ -482,9 +482,9 @@ UNITS = {
 ("RPMDIntegrator", "getState"): (None,(None, None, None, None)),
 ("RMSDForce", "getReferencePositions") : ("unit.nanometer", ()),
 ("RMSDForce", "getParticles") : (None, ()),
-#("NoseHooverChain", "getThermostatedPairs") : (None, ()),
-#("NoseHooverChain", "getThermostatedAtoms") : (None, ()),
-#("NoseHooverChain", "getDefaultYoshidaSuzukiWeights") : (None, ()),
+("NoseHooverChain", "getThermostatedPairs") : (None, ()),
+("NoseHooverChain", "getThermostatedAtoms") : (None, ()),
+("NoseHooverChain", "getDefaultYoshidaSuzukiWeights") : (None, ()),
 ("NoseHooverIntegrator", "setTemperature") : (None, ("unit.kelvin", None)),
 ("NoseHooverIntegrator", "setRelativeTemperature") : (None, ("unit.kelvin", None) ),
 ("NoseHooverIntegrator", "setCollisionFrequency") : (None, ("unit.picosecond**-1", None)),
@@ -492,6 +492,7 @@ UNITS = {
 ("NoseHooverIntegrator", "computeHeatBathEnergy") : ( "unit.kilojoules_per_mole", ()),
 ("NoseHooverIntegrator", "addThermostat"): (None, ("unit.kelvin", "unit.picosecond**-1", None, None, None)),
 ("NoseHooverIntegrator", "addSubsystemThermostat"):
-    (None, (None, None, "unit.kelvin", "unit.picosecond**-1", "unit.kelvin", "unit.picosecond**-1", None, None, None))
+    (None, (None, None, "unit.kelvin", "unit.picosecond**-1", "unit.kelvin", "unit.picosecond**-1", None, None, None)),
+("NoseHooverIntegrator", "getNumNoseHooverThermostats") : (None, ()),
+("NoseHooverIntegrator", "getNoseHooverThermostat") : (None, ()),
 }
-

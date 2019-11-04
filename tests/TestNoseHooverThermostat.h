@@ -30,7 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/internal/AssertionUtilities.h"
-#include "openmm/internal/NoseHooverChain.h"
+#include "openmm/NoseHooverChain.h"
 #include "openmm/NoseHooverIntegrator.h"
 #include "openmm/Context.h"
 #include "openmm/State.h"

@@ -55,7 +55,6 @@
 #include "openmm/KernelImpl.h"
 #include "openmm/LangevinIntegrator.h"
 #include "openmm/MonteCarloBarostat.h"
-#include "openmm/internal/NoseHooverChain.h"
 #include "openmm/PeriodicTorsionForce.h"
 #include "openmm/RBTorsionForce.h"
 #include "openmm/RMSDForce.h"
@@ -65,6 +64,7 @@
 #include "openmm/VariableVerletIntegrator.h"
 #include "openmm/VerletIntegrator.h"
 #include "openmm/NoseHooverIntegrator.h"
+#include "openmm/NoseHooverChain.h"
 #include <iosfwd>
 #include <set>
 #include <string>

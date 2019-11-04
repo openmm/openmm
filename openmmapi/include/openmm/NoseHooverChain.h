@@ -36,7 +36,7 @@
 #include <string>
 #include <vector>
 #include "openmm/OpenMMException.h"
-#include "windowsExport.h"
+#include "internal/windowsExport.h"
 
 namespace OpenMM {
 

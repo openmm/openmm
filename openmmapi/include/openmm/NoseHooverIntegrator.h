@@ -35,7 +35,7 @@
 #include "Integrator.h"
 #include "openmm/State.h"
 #include "openmm/Kernel.h"
-#include "internal/NoseHooverChain.h"
+#include "NoseHooverChain.h"
 #include "internal/windowsExport.h"
 
 namespace OpenMM {
@@ -118,7 +118,7 @@ public:
     /**
      * Get the temperature of the i-th chain for controling absolute particle motion (in Kelvin).
      * 
-     * @param chainID the index of the Nose-Hoover chain (default=0).
+     * @param chainID the index of the Nose-Hoover chain thermostat (default=0).
      * 
      * @return the temperature.
      */
@@ -127,13 +127,13 @@ public:
      * set the (absolute motion) temperature of the i-th chain.
      *
      * @param temperature the temperature for the Nose-Hoover chain thermostat (in Kelvin).
-     * @param chainID The id of the Nose-Hoover chain for which the temperature is set (default=0).
+     * @param chainID The id of the Nose-Hoover chain thermostat for which the temperature is set (default=0).
      */
     void setTemperature(double temperature, int chainID=0);
     /**
      * Get the temperature of the i-th chain for controling pairs' relative particle motion (in Kelvin).
      *
-     * @param chainID the index of the Nose-Hoover chain (default=0).
+     * @param chainID the index of the Nose-Hoover chain thermostat (default=0).
      *
      * @return the temperature.
      */
@@ -142,13 +142,13 @@ public:
      * set the (relative pair motion) temperature of the i-th chain.
      *
      * @param temperature the temperature for the Nose-Hoover chain thermostat (in Kelvin).
-     * @param chainID The id of the Nose-Hoover chain for which the temperature is set (default=0).
+     * @param chainID The id of the Nose-Hoover chain thermostat for which the temperature is set (default=0).
      */
     void setRelativeTemperature(double temperature, int chainID=0);
     /**
      * Get the collision frequency for absolute motion of the i-th chain (in 1/picosecond).
      * 
-     * @param chainID the index of the Nose-Hoover chain (default=0).
+     * @param chainID the index of the Nose-Hoover chain thermostat (default=0).
      *
      * @return the collision frequency.
      */
@@ -157,13 +157,13 @@ public:
      * Set the collision frequency for absolute motion of the i-th chain.
      *
      * @param frequency the collision frequency in picosecond.
-     * @param chainID the index of the Nose-Hoover chain (default=0).
+     * @param chainID the index of the Nose-Hoover chain thermostat (default=0).
      */
     void setCollisionFrequency(double frequency, int chainID=0);
     /**
      * Get the collision frequency for pairs' relative motion of the i-th chain (in 1/picosecond).
      *
-     * @param chainID the index of the Nose-Hoover chain (default=0).
+     * @param chainID the index of the Nose-Hoover chain thermostat (default=0).
      *
      * @return the collision frequency.
      */
@@ -172,7 +172,7 @@ public:
      * Set the collision frequency for pairs' relative motion of the i-th chain.
      *
      * @param frequency the collision frequency in picosecond.
-     * @param chainID the index of the Nose-Hoover chain (default=0).
+     * @param chainID the index of the Nose-Hoover chain thermostat (default=0).
      */
     void setRelativeCollisionFrequency(double frequency, int chainID=0);
     /**
@@ -183,9 +183,15 @@ public:
     /**
      * Get the number of Nose-Hoover chains registered with this integrator.
      */
-    int getNumNoseHooverChains() const {
+    int getNumNoseHooverThermostats() const {
         return noseHooverChains.size();
     }
+    /**
+     * Get the NoseHooverChain thermostat 
+     *
+     * @param chainID the index of the Nose-Hoover chain thermostat (default=0).
+     */
+    const NoseHooverChain& getNoseHooverThermostat(int chainID=0) const ;
     /**
      * This will be called by the Context when the user modifies aspects of the context state, such
      * as positions, velocities, or parameters.  This gives the Integrator a chance to discard cached
@@ -198,7 +204,13 @@ public:
     virtual void stateChanged(State::DataType changed) {
        if (State::Positions == changed) forcesAreValid = false;
     }
-
+    /**
+     * Return false, if this integrator was set up with the 'default constructor' that thermostats the whole system,
+     * true otherwise. Required for serialization.
+     */
+    bool hasSubsystemThermostats() const {
+        return hasSubsystemThermostats_;
+    }
 protected:
    /**
      * Advance any Nose-Hoover chains associated with this integrator and determine
@@ -236,6 +248,7 @@ protected:
     std::vector<NoseHooverChain> noseHooverChains;
     bool forcesAreValid;
     Kernel vvKernel, nhcKernel;
+    bool hasSubsystemThermostats_;
 };
 
 } // namespace OpenMM

@@ -193,7 +193,7 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
         extra_compile_args.append('/EHsc')
     else:
         if platform.system() == 'Darwin':
-            extra_compile_args += ['-std=c++11 -stdlib=libc++', '-mmacosx-version-min=10.7']
+            extra_compile_args += ['-stdlib=libc++', '-mmacosx-version-min=10.7']
             extra_link_args += ['-stdlib=libc++', '-mmacosx-version-min=10.7', '-Wl', '-rpath', openmm_lib_path]
             # Hard-code CC and CXX to clang, since gcc/g++ will *not* work with
             # Anaconda, despite the fact that distutils will try to use them.

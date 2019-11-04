@@ -33,7 +33,7 @@
 #include "openmm/Context.h"
 #include "openmm/Force.h"
 #include "openmm/System.h"
-#include "openmm/internal/NoseHooverChain.h"
+#include "openmm/NoseHooverChain.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/CMMotionRemover.h"
 #include "openmm/internal/ContextImpl.h"
@@ -48,13 +48,17 @@ using std::string;
 using std::vector;
 
 NoseHooverIntegrator::NoseHooverIntegrator(double stepSize):
-    forcesAreValid(false)
+    forcesAreValid(false),
+    hasSubsystemThermostats_(true)
 {
     setStepSize(stepSize);
     setConstraintTolerance(1e-5);
 }
 NoseHooverIntegrator::NoseHooverIntegrator(double temperature, double collisionFrequency, double stepSize,
-                                           int chainLength, int numMTS, int numYoshidaSuzuki) : forcesAreValid(false) {
+                                           int chainLength, int numMTS, int numYoshidaSuzuki) : 
+    forcesAreValid(false),
+    hasSubsystemThermostats_(false) {
+
     setStepSize(stepSize);
     setConstraintTolerance(1e-5);
     addThermostat(temperature, collisionFrequency, chainLength, numMTS, numYoshidaSuzuki);
@@ -69,7 +73,7 @@ std::pair<double, double> NoseHooverIntegrator::propagateChain(std::pair<double,
 
 int NoseHooverIntegrator::addThermostat(double temperature, double collisionFrequency,
                                         int chainLength, int numMTS, int numYoshidaSuzuki) {
-
+    hasSubsystemThermostats_ = false;
     return addSubsystemThermostat(std::vector<int>(), std::vector<std::pair<int, int>>(), temperature,
                                   collisionFrequency, temperature, collisionFrequency, chainLength, numMTS, numYoshidaSuzuki);
 }
@@ -80,6 +84,14 @@ int NoseHooverIntegrator::addSubsystemThermostat(const std::vector<int>& thermos
                                                  double relativeTemperature, double relativeCollisionFrequency,
                                                  int chainLength, int numMTS, int numYoshidaSuzuki) {
     int chainID = noseHooverChains.size();
+    // check if one thermostat already applies to all atoms or pairs
+    if ( (chainID > 0) && (noseHooverChains[0].getThermostatedAtoms().size()*noseHooverChains[0].getThermostatedPairs().size() == 0) ) {
+        throw OpenMMException(
+            "Cannot add thermostat, since one of the thermostats already in the integrator applies to all particles. "
+            "To manually add thermostats, use the constructor that takes only the "
+            "step size as an input argument."
+        );
+    }
     int nDOF = 0; // is set in initializeThermostats()
     noseHooverChains.emplace_back(temperature, relativeTemperature,
                                  collisionFrequency, relativeCollisionFrequency,
@@ -89,6 +101,10 @@ int NoseHooverIntegrator::addSubsystemThermostat(const std::vector<int>& thermos
     return chainID;
 }
 
+const NoseHooverChain& NoseHooverIntegrator::getNoseHooverThermostat(int chainID) const {
+    ASSERT_VALID_INDEX(chainID, noseHooverChains);
+    return noseHooverChains[chainID];
+}
 
 void NoseHooverIntegrator::initializeThermostats(const System &system) {
 

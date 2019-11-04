@@ -36,12 +36,12 @@
 #include "openmm/kernels.h"
 #include "openmm/internal/CompiledExpressionSet.h"
 #include "openmm/internal/CustomIntegratorUtilities.h"
-#include "openmm/internal/NoseHooverChain.h"
 #include "lepton/CompiledExpression.h"
 #include "lepton/ExpressionProgram.h"
 #include "openmm/System.h"
 
 namespace OpenMM {
+
 
 /**
  * This kernel is invoked at the beginning and end of force and energy computations.  It gives the

@@ -51,6 +51,7 @@ DrudeNoseHooverIntegrator::DrudeNoseHooverIntegrator(double temperature, double 
                                                      double stepSize, int chainLength, int numMTS, int numYoshidaSuzuki) :
     NoseHooverIntegrator(stepSize) {
 
+    hasSubsystemThermostats_ = false;
     addSubsystemThermostat(std::vector<int>(), std::vector<std::pair<int, int>>(), temperature,
                            collisionFrequency, drudeTemperature, drudeCollisionFrequency,
                            chainLength, numMTS, numYoshidaSuzuki);

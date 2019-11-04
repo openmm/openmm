@@ -75,6 +75,7 @@
 #include "openmm/Vec3.h"
 #include "openmm/VerletIntegrator.h"
 #include "openmm/NoseHooverIntegrator.h"
+#include "openmm/NoseHooverChain.h"
 #include "openmm/VirtualSite.h"
 #include "openmm/Platform.h"
 #include "openmm/serialization/XmlSerializer.h"
