@@ -151,5 +151,5 @@ steps:
     python $(Build.SourcesDirectory)/devtools/run-ctest.py
     cd python\tests
     pytest -v
-  workingDirectory: '$(Build.SourcesDirectory)/build'
+  workingDirectory: '$(Build.SourcesDirectory)'
   displayName: "Test Install"
