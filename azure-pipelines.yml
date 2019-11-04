@@ -146,8 +146,8 @@ steps:
   displayName: "Debug stuff with vsvarsall to see if its different"
 
 # I think the vcvarsall.bat has to be called here as well otherwise the PythonPath isnt set right, Maybe?
-- script: |
-    call "$(VSPATH)\VC\Auxiliary\Build\vcvarsall.bat" x64
+- bash: |
+    # call "$(VSPATH)\VC\Auxiliary\Build\vcvarsall.bat" x64
     python $(Build.SourcesDirectory)/devtools/run-ctest.py
     cd python\tests
     pytest -v
