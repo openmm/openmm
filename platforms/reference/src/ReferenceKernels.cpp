@@ -2170,7 +2170,8 @@ void ReferenceIntegrateVelocityVerletStepKernel::execute(ContextImpl& context, c
         dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
         prevStepSize = stepSize;
     }
-    dynamics->update(context, context.getSystem(), posData, velData, forceData, masses, integrator.getConstraintTolerance(), forcesAreValid);
+    dynamics->update(context, context.getSystem(), posData, velData, forceData, masses, integrator.getConstraintTolerance(), forcesAreValid,
+                     integrator.getAllAtoms(), integrator.getAllPairs(), integrator.getMaximumPairDistance());
     data.time += stepSize;
     data.stepCount++;
 }

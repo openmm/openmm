@@ -51,6 +51,7 @@ DrudeNoseHooverIntegrator::DrudeNoseHooverIntegrator(double temperature, double 
                                                      double stepSize, int chainLength, int numMTS, int numYoshidaSuzuki) :
     NoseHooverIntegrator(stepSize) {
 
+    setMaxDrudeDistance(0);
     hasSubsystemThermostats_ = false;
     addSubsystemThermostat(std::vector<int>(), std::vector<std::pair<int, int>>(), temperature,
                            collisionFrequency, drudeTemperature, drudeCollisionFrequency,
@@ -59,6 +60,15 @@ DrudeNoseHooverIntegrator::DrudeNoseHooverIntegrator(double temperature, double 
 
 DrudeNoseHooverIntegrator::~DrudeNoseHooverIntegrator() { }
 
+double DrudeNoseHooverIntegrator::getMaxDrudeDistance() const {
+    return maxPairDistance_;
+}
+
+void DrudeNoseHooverIntegrator::setMaxDrudeDistance(double distance) {
+    if (distance < 0)
+        throw OpenMMException("setMaxDrudeDistance: Distance cannot be negative");
+    maxPairDistance_ = distance;
+}
 
 void DrudeNoseHooverIntegrator::initialize(ContextImpl& contextRef) {
 

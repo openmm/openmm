@@ -76,6 +76,16 @@ public:
      */
     void initialize(ContextImpl& context);
     /**
+     * Get the maximum distance a Drude particle can ever move from its parent particle, measured in nm.  This is implemented
+     * with a hard wall constraint.  If this distance is set to 0 (the default), the hard wall constraint is omitted.
+     */
+    double getMaxDrudeDistance() const;
+    /**
+     * Set the maximum distance a Drude particle can ever move from its parent particle, measured in nm.  This is implemented
+     * with a hard wall constraint.  If this distance is set to 0 (the default), the hard wall constraint is omitted.
+     */
+    void setMaxDrudeDistance(double distance);
+    /**
      * Compute the kinetic energy of the drude particles at the current time.
      */
     double computeDrudeKineticEnergy();

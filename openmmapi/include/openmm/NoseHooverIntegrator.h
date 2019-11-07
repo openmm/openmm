@@ -38,6 +38,8 @@
 #include "NoseHooverChain.h"
 #include "internal/windowsExport.h"
 
+#include <tuple>
+
 namespace OpenMM {
 
 class System;
@@ -211,6 +213,24 @@ public:
     bool hasSubsystemThermostats() const {
         return hasSubsystemThermostats_;
     }
+    /**
+     * Gets the maximum distance (in nm) that a connected pair may stray from each other. If zero, there are no
+     * constraints on the intra-pair separation.
+     */
+    double getMaximumPairDistance() const { return maxPairDistance_; }
+    /**
+     * Sets the maximum distance (in nm) that a connected pair may stray from each other, implemented using a hard
+     * wall. If set to zero, the hard wall constraint is omited and the pairs are free to be separated by any distance.
+     */
+    void setMaximumPairDistance(double distance) { maxPairDistance_ = distance; }
+    /**
+     * Get a list of all individual atoms (i.e. not involved in a connected Drude-like pair) in the system.
+     */
+    const std::vector<int> & getAllAtoms() const { return allAtoms; }
+    /**
+     * Get a list of all connected Drude-like pairs, and their target relative temperature, in the system.
+     */
+    const std::vector<std::tuple<int, int, double>> & getAllPairs() const { return allPairs; }
 protected:
    /**
      * Advance any Nose-Hoover chains associated with this integrator and determine
@@ -246,9 +266,12 @@ protected:
     virtual double computeKineticEnergy();
 
     std::vector<NoseHooverChain> noseHooverChains;
+    std::vector<int> allAtoms;
+    std::vector<std::tuple<int, int, double>> allPairs;
     bool forcesAreValid;
     Kernel vvKernel, nhcKernel;
     bool hasSubsystemThermostats_;
+    double maxPairDistance_;
 };
 
 } // namespace OpenMM

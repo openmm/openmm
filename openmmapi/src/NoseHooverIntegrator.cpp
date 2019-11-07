@@ -108,9 +108,20 @@ const NoseHooverChain& NoseHooverIntegrator::getNoseHooverThermostat(int chainID
 
 void NoseHooverIntegrator::initializeThermostats(const System &system) {
 
+    allAtoms.clear();
+    allPairs.clear();
+    std::set<int> allAtomsSet;
+    for (int atom = 0; atom < system.getNumParticles(); ++atom) allAtomsSet.insert(atom);
+
     for (auto &thermostat : noseHooverChains) {
         const auto &thermostatedParticles = thermostat.getThermostatedAtoms();
         const auto &thermostatedPairs = thermostat.getThermostatedPairs();
+
+        for( auto& pair : thermostatedPairs ) {
+            allAtomsSet.erase(pair.first);
+            allAtomsSet.erase(pair.second);
+            allPairs.emplace_back(pair.first, pair.second, thermostat.getDefaultRelativeTemperature());
+        }
 
         // figure out the number of DOFs
         int nDOF = 3*(thermostatedParticles.size() + thermostatedPairs.size());
@@ -207,6 +218,8 @@ void NoseHooverIntegrator::initializeThermostats(const System &system) {
             }
         }
     }
+
+    for(const auto& atom : allAtomsSet) allAtoms.push_back(atom);
 }
 
 double NoseHooverIntegrator::getTemperature(int chainID) const {
@@ -278,6 +291,7 @@ void NoseHooverIntegrator::initialize(ContextImpl& contextRef) {
         throw OpenMMException("This Integrator is already bound to a context");
 
     context = &contextRef;
+    const System& system = context->getSystem();
     owner = &contextRef.getOwner();
     vvKernel = context->getPlatform().createKernel(IntegrateVelocityVerletStepKernel::Name(), contextRef);
     vvKernel.getAs<IntegrateVelocityVerletStepKernel>().initialize(contextRef.getSystem(), *this);
@@ -286,7 +300,6 @@ void NoseHooverIntegrator::initialize(ContextImpl& contextRef) {
     forcesAreValid = false;
 
     // check for drude particles and build the Nose-Hoover Chains
-    const System& system = context->getSystem();
     for (auto& thermostat: noseHooverChains){
         // if there are no thermostated particles or pairs in the lists this is a regular thermostat for the whole (non-Drude) system
         if ( (thermostat.getThermostatedAtoms().size() == 0) && (thermostat.getThermostatedPairs().size() == 0) ){

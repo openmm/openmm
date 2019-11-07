@@ -71,11 +71,15 @@ class ReferenceVelocityVerletDynamics : public ReferenceDynamics {
          @param masses              atom masses
          @param tolerance           the constraint tolerance
          @param forcesAreValid      whether the forces are valid (duh!)
+         @param allAtoms            a list of all atoms not involved in a Drude-like pair
+         @param allPairs            a list of all Drude-like pairs, and their KT values, in the system
+         @param maxPairDistance     the maximum separation allowed for a Drude-like pair
       
          --------------------------------------------------------------------------------------- */
      
       void update(OpenMM::ContextImpl &context, const OpenMM::System& system, std::vector<OpenMM::Vec3>& atomCoordinates,
-                  std::vector<OpenMM::Vec3>& velocities, std::vector<OpenMM::Vec3>& forces, std::vector<double>& masses, double tolerance, bool &forcesAreValid);
+                  std::vector<OpenMM::Vec3>& velocities, std::vector<OpenMM::Vec3>& forces, std::vector<double>& masses, double tolerance, bool &forcesAreValid,
+                  const std::vector<int> & allAtoms, const std::vector<std::tuple<int, int, double>> & allPairs, double maxPairDistance);
       
 };
 
