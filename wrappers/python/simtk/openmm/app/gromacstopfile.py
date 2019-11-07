@@ -563,20 +563,27 @@ class GromacsTopFile(object):
                     if atomName in atomReplacements:
                         atomName = atomReplacements[atomName]
 
-                    # Try to guess the element.
+                    # Try to determine the element.
 
-                    upper = atomName.upper()
-                    if upper.startswith('CL'):
-                        element = elem.chlorine
-                    elif upper.startswith('NA'):
-                        element = elem.sodium
-                    elif upper.startswith('MG'):
-                        element = elem.magnesium
+                    atomicNumber = self._atomTypes[fields[1]][2]
+                    if atomicNumber is None:
+                        # Try to guess the element from the name.
+                        upper = atomName.upper()
+                        if upper.startswith('CL'):
+                            element = elem.chlorine
+                        elif upper.startswith('NA'):
+                            element = elem.sodium
+                        elif upper.startswith('MG'):
+                            element = elem.magnesium
+                        else:
+                            try:
+                                element = elem.get_by_symbol(atomName[0])
+                            except KeyError:
+                                element = None
+                    elif atomicNumber == '0':
+                        element = None
                     else:
-                        try:
-                            element = elem.get_by_symbol(atomName[0])
-                        except KeyError:
-                            element = None
+                        element = elem.Element.getByAtomicNumber(int(atomicNumber))
                     atoms.append(top.addAtom(atomName, element, r))
 
                 # Add bonds to the topology
