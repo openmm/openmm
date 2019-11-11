@@ -48,6 +48,11 @@ try:
     have_gzip = True
 except: have_gzip = False
 
+try:
+    import numpy
+    have_numpy = True
+except: have_numpy = False
+
 class SimulatedTempering(object):
     """SimulatedTempering implements the simulated tempering algorithm for accelerated sampling.
     
@@ -214,7 +219,10 @@ class SimulatedTempering(object):
                     # Rescale the velocities.
                     
                     scale = math.sqrt(self.temperatures[j]/self.temperatures[self.currentTemperature])
-                    velocities = [v*scale for v in state.getVelocities().value_in_unit(unit.nanometers/unit.picoseconds)]
+                    if have_numpy:
+                        velocities = scale*state.getVelocities(asNumpy=True).value_in_unit(unit.nanometers/unit.picoseconds)
+                    else:
+                        velocities = [v*scale for v in state.getVelocities().value_in_unit(unit.nanometers/unit.picoseconds)]
                     self.simulation.context.setVelocities(velocities)
 
                     # Select this temperature.
