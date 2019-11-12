@@ -1399,7 +1399,9 @@ public:
     double computeKineticEnergy(ContextImpl& context, const NoseHooverIntegrator& integrator);
 private:
     CudaContext& cu;
-    CUfunction kernel1, kernel2, kernel3;
+    float prevMaxPairDistance;
+    CudaArray maxPairDistanceBuffer, pairListBuffer, atomListBuffer, pairTemperatureBuffer;
+    CUfunction kernel1, kernel2, kernel3, kernelHardWall;
 };
 
 /**

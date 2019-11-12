@@ -30,9 +30,11 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/internal/AssertionUtilities.h"
-#include "openmm/NoseHooverIntegrator.h"
+#include "openmm/DrudeNoseHooverIntegrator.h"
+#include "ReferencePlatform.h"
 #include "openmm/serialization/XmlSerializer.h"
 #include "openmm/System.h"
+#include "openmm/DrudeForce.h"
 #include "openmm/Context.h"
 #include <iostream>
 #include <sstream>
@@ -40,7 +42,11 @@
 using namespace OpenMM;
 using namespace std;
 
-void assertIntegratorsEqual(const NoseHooverIntegrator& integrator1, const NoseHooverIntegrator& integrator2){
+extern "C" void registerDrudeSerializationProxies();
+//extern "C" OPENMM_EXPORT void registerDrudeReferenceKernelFactories(); 
+//extern "C" OPENMM_EXPORT void registerKernelFactories();
+
+void assertIntegratorsEqual(const DrudeNoseHooverIntegrator& integrator1, const DrudeNoseHooverIntegrator& integrator2){
     ASSERT_EQUAL(integrator1.getStepSize(), integrator2.getStepSize());
     ASSERT_EQUAL(integrator1.getConstraintTolerance(), integrator2.getConstraintTolerance());
     ASSERT_EQUAL(integrator1.getMaximumPairDistance(), integrator2.getMaximumPairDistance());
@@ -73,39 +79,18 @@ void assertIntegratorsEqual(const NoseHooverIntegrator& integrator1, const NoseH
 }
 
 void testSerialization() {
-
-    // Check with custom subsystem thermostats
-
-    NoseHooverIntegrator integrator_sub (0.0006);
-    integrator_sub.setConstraintTolerance(0.0404);
-    integrator_sub.setMaximumPairDistance(0.0051);
-    integrator_sub.addSubsystemThermostat(
-        {0,1,2,3,4,7}, {{0,7}}, 301.1, 1.1, 1.2, 1.3, 9, 2, 5
-    );
-
-    // Serialize and then deserialize it.
-
-    stringstream buffer;
-    XmlSerializer::serialize<NoseHooverIntegrator>(&integrator_sub, "Integrator", buffer);
-    NoseHooverIntegrator* copy = XmlSerializer::deserialize<NoseHooverIntegrator>(buffer);
-    assertIntegratorsEqual(integrator_sub, *copy);
-
     // Check with default constructor
-
     System system;
+    system.addForce(new DrudeForce());
     for (int i=0; i<10; i++) system.addParticle(1.0);
-    NoseHooverIntegrator integrator(331, 1.1, 0.004, 5, 5, 5);
-    Context context(system, integrator);
+    DrudeNoseHooverIntegrator integrator(331, 0.21, 1.1, 0.1, 0.004, 5, 5, 5);
 
     // Serialize and then deserialize it.
     stringstream buffer2;
-    XmlSerializer::serialize<NoseHooverIntegrator>(&integrator, "Integrator", buffer2);
-    copy = XmlSerializer::deserialize<NoseHooverIntegrator>(buffer2);
-    // for thermostats that apply to the whole system, the particles are not serialized ...
-    ASSERT_EQUAL(copy->getNoseHooverThermostat(0).getThermostatedAtoms().size(), 0);
+    XmlSerializer::serialize<DrudeNoseHooverIntegrator>(&integrator, "Integrator", buffer2);
+    DrudeNoseHooverIntegrator* copy = XmlSerializer::deserialize<DrudeNoseHooverIntegrator>(buffer2);
 
-    // ... but assigned when creating a context.
-    Context context2(system, *copy);
+    ASSERT_EQUAL(copy->getNoseHooverThermostat(0).getThermostatedAtoms().size(), 0);
     assertIntegratorsEqual(integrator, *copy);
 
 }

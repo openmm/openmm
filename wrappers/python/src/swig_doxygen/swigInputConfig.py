@@ -114,6 +114,8 @@ SKIP_METHODS = [('State', 'getPositions'),
                 ('LocalCoordinatesSite',  'getOriginWeights', 0),
                 ('LocalCoordinatesSite',  'getXWeights', 0),
                 ('LocalCoordinatesSite',  'getYWeights', 0),
+                ("NoseHooverIntegrator", "getAllAtoms"),
+                ("NoseHooverIntegrator", "getAllPairs"),
 ]
 
 # The build script assumes method args that are non-const references are
@@ -471,7 +473,6 @@ UNITS = {
 ("System", "getVirtualSite") : (None, ()),
 ("DrudeLangevinIntegrator", "getDrudeTemperature") : ("unit.kelvin", ()),
 ("DrudeLangevinIntegrator", "getMaxDrudeDistance") : ("unit.nanometer", ()),
-
 ("MonteCarloMembraneBarostat", "MonteCarloMembraneBarostat") : (None, ("unit.bar", "unit.bar*unit.nanometer", "unit.kelvin", None, None, None)),
 ("MonteCarloMembraneBarostat", "getXYMode") : (None, ()),
 ("MonteCarloMembraneBarostat", "getZMode") : (None, ()),
@@ -495,4 +496,8 @@ UNITS = {
     (None, (None, None, "unit.kelvin", "unit.picosecond**-1", "unit.kelvin", "unit.picosecond**-1", None, None, None)),
 ("NoseHooverIntegrator", "getNumNoseHooverThermostats") : (None, ()),
 ("NoseHooverIntegrator", "getNoseHooverThermostat") : (None, ()),
+("NoseHooverIntegrator", "getMaximumPairDistance") : ("unit.nanometer", ()),
+("NoseHooverIntegrator", "setMaximumPairDistance") : (None, ("unit.nanometer",)),
+("DrudeNoseHooverIntegrator", "getMaxDrudeDistance") : ("unit.nanometer", ()),
+("DrudeNoseHooverIntegrator", "setMaxDrudeDistance") : (None, ("unit.nanometer",)),
 }

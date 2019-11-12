@@ -1381,7 +1381,9 @@ public:
     double computeKineticEnergy(ContextImpl& context, const NoseHooverIntegrator& integrator);
 private:
     OpenCLContext& cl;
-    cl::Kernel kernel1, kernel2, kernel3;
+    float prevMaxPairDistance;
+    OpenCLArray maxPairDistanceBuffer, pairListBuffer, atomListBuffer, pairTemperatureBuffer; 
+    cl::Kernel kernel1, kernel2, kernel3, kernelHardWall;
 };
 
 /**

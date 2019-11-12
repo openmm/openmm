@@ -7080,38 +7080,78 @@ void CudaIntegrateVelocityVerletStepKernel::initialize(const System& system, con
     cu.getPlatformData().initializeContexts(system);
     cu.setAsCurrent();
     map<string, string> defines;
+    defines["BOLTZ"] = cu.doubleToString(BOLTZ);
     CUmodule module = cu.createModule(CudaKernelSources::velocityVerlet, defines, "");
     kernel1 = cu.getKernel(module, "integrateVelocityVerletPart1");
     kernel2 = cu.getKernel(module, "integrateVelocityVerletPart2");
     kernel3 = cu.getKernel(module, "integrateVelocityVerletPart3");
+    kernelHardWall = cu.getKernel(module, "integrateVelocityVerletHardWall");
+    prevMaxPairDistance = -1.0;
+    maxPairDistanceBuffer.initialize<float>(cu, 1, "maxPairDistanceBuffer");
 }
 
 void CudaIntegrateVelocityVerletStepKernel::execute(ContextImpl& context, const NoseHooverIntegrator& integrator, bool &forcesAreValid) {
     cu.setAsCurrent();
     CudaIntegrationUtilities& integration = cu.getIntegrationUtilities();
-    int numAtoms = cu.getNumAtoms();
     int paddedNumAtoms = cu.getPaddedNumAtoms();
     double dt = integrator.getStepSize();
     cu.getIntegrationUtilities().setNextStepSize(dt);
 
     if( !forcesAreValid ) context.calcForcesAndEnergy(true, false);
 
+    const auto& atomList = integrator.getAllAtoms();
+    const auto& pairList = integrator.getAllPairs();
+    int numAtoms = atomList.size();
+    int numPairs = pairList.size();
+    int numParticles = numAtoms + 2*numPairs;
+    float maxPairDistance = integrator.getMaximumPairDistance();
+    // Make sure atom and pair metadata is uploaded and has the correct dimensions
+    if (prevMaxPairDistance != maxPairDistance) {
+        std::vector<float> tmp(1, maxPairDistance);
+        maxPairDistanceBuffer.upload(tmp);
+        prevMaxPairDistance = maxPairDistance;
+    }
+    if (numAtoms !=0 && (!atomListBuffer.isInitialized() || atomListBuffer.getSize() != numAtoms)) {
+        atomListBuffer.initialize<int>(cu, atomList.size(), "atomListBuffer");
+        atomListBuffer.upload(atomList);
+    }
+    if (numPairs !=0 && (!pairListBuffer.isInitialized() || pairListBuffer.getSize() != numPairs)) {
+        std::vector<int2> tmp;
+        std::vector<float> tmp2;
+        for(const auto &pair : pairList) {
+            tmp.push_back(make_int2(std::get<0>(pair), std::get<1>(pair)));
+            tmp2.push_back(std::get<2>(pair));
+        }
+        pairListBuffer.initialize<int2>(cu, pairList.size(), "pairListBuffer");
+        pairListBuffer.upload(tmp);
+        pairTemperatureBuffer.initialize<float>(cu, pairList.size(), "pairTemperatureBuffer");
+        pairTemperatureBuffer.upload(tmp2);
+    }
     //// Call the first integration kernel.
 
     CUdeviceptr posCorrection = (cu.getUseMixedPrecision() ? cu.getPosqCorrection().getDevicePointer() : 0);
-    void* args1[] = {&numAtoms, &paddedNumAtoms, &cu.getIntegrationUtilities().getStepSize().getDevicePointer(), &cu.getPosq().getDevicePointer(), &posCorrection,
-            &cu.getVelm().getDevicePointer(), &cu.getForce().getDevicePointer(), &integration.getPosDelta().getDevicePointer()};
-    cu.executeKernel(kernel1, args1, numAtoms, 128);
+    void* args1[] = {&numAtoms, &numPairs, &paddedNumAtoms, &cu.getIntegrationUtilities().getStepSize().getDevicePointer(), &cu.getPosq().getDevicePointer(), &posCorrection,
+            &cu.getVelm().getDevicePointer(), &cu.getForce().getDevicePointer(), &integration.getPosDelta().getDevicePointer(),
+            &atomListBuffer.getDevicePointer(), &pairListBuffer.getDevicePointer()};
+    cu.executeKernel(kernel1, args1, std::max(numAtoms,numPairs), 128);
 
     //// Apply constraints.
 
     integration.applyConstraints(integrator.getConstraintTolerance());
 
     //// Call the second integration kernel.
-
-    void* args2[] = {&numAtoms, &cu.getIntegrationUtilities().getStepSize().getDevicePointer(), &cu.getPosq().getDevicePointer(), &posCorrection,
+    void* args2[] = {&numParticles, &cu.getIntegrationUtilities().getStepSize().getDevicePointer(), &cu.getPosq().getDevicePointer(), &posCorrection,
             &cu.getVelm().getDevicePointer(), &integration.getPosDelta().getDevicePointer()};
-    cu.executeKernel(kernel2, args2, numAtoms, 128);
+    cu.executeKernel(kernel2, args2, numParticles, 128);
+
+    if (numPairs > 0) {
+        //// Enforce hard wall constraint
+        void* argsHardWall[] = {&numPairs, &maxPairDistanceBuffer.getDevicePointer(), 
+                 &cu.getIntegrationUtilities().getStepSize().getDevicePointer(), &cu.getPosq().getDevicePointer(), &posCorrection,
+                 &cu.getVelm().getDevicePointer(), &pairListBuffer.getDevicePointer(), 
+                 &pairTemperatureBuffer.getDevicePointer()}; 
+        cu.executeKernel(kernelHardWall, argsHardWall, numPairs, 128);
+    }
 
     integration.computeVirtualSites();
 
@@ -7120,10 +7160,10 @@ void CudaIntegrateVelocityVerletStepKernel::execute(ContextImpl& context, const 
     forcesAreValid = true;
 
     //// Call the third integration kernel.
-
-    void* args3[] = {&numAtoms, &paddedNumAtoms, &cu.getIntegrationUtilities().getStepSize().getDevicePointer(), &cu.getPosq().getDevicePointer(), &posCorrection,
-            &cu.getVelm().getDevicePointer(), &cu.getForce().getDevicePointer(), &integration.getPosDelta().getDevicePointer()};
-    cu.executeKernel(kernel3, args3, numAtoms, 128);
+    void* args3[] = {&numAtoms, &numPairs, &paddedNumAtoms, &cu.getIntegrationUtilities().getStepSize().getDevicePointer(), &cu.getPosq().getDevicePointer(), &posCorrection,
+            &cu.getVelm().getDevicePointer(), &cu.getForce().getDevicePointer(), &integration.getPosDelta().getDevicePointer(),
+            &atomListBuffer.getDevicePointer(), &pairListBuffer.getDevicePointer()};
+    cu.executeKernel(kernel3, args3, std::max(numAtoms,numPairs), 128);
 
     // TODO: Figure out if this is really needed.  The constraint velocities are accounted for
     // in a finite difference sense in the step 3 kernel, when the velocities are updated.

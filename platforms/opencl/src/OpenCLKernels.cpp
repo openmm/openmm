@@ -7395,45 +7395,101 @@ double OpenCLIntegrateVerletStepKernel::computeKineticEnergy(ContextImpl& contex
 void OpenCLIntegrateVelocityVerletStepKernel::initialize(const System& system, const NoseHooverIntegrator& integrator) {
     cl.getPlatformData().initializeContexts(system);
     map<string, string> defines;
+    defines["BOLTZ"] = cl.doubleToString(BOLTZ);
     cl::Program program = cl.createProgram(OpenCLKernelSources::velocityVerlet, defines, "");
     kernel1 = cl::Kernel(program, "integrateVelocityVerletPart1");
     kernel2 = cl::Kernel(program, "integrateVelocityVerletPart2");
     kernel3 = cl::Kernel(program, "integrateVelocityVerletPart3");
+    kernelHardWall = cl::Kernel(program, "integrateVelocityVerletHardWall");
+    prevMaxPairDistance = (cl_float) -1.0;
+    maxPairDistanceBuffer.initialize<cl_float>(cl, 1, "maxPairDistanceBuffer");
 }
 
 void OpenCLIntegrateVelocityVerletStepKernel::execute(ContextImpl& context, const NoseHooverIntegrator& integrator, bool &forcesAreValid) {
     OpenCLIntegrationUtilities& integration = cl.getIntegrationUtilities();
-    int numAtoms = cl.getNumAtoms();
     int paddedNumAtoms = cl.getPaddedNumAtoms();
     double dt = integrator.getStepSize();
     cl.getIntegrationUtilities().setNextStepSize(dt);
 
     if( !forcesAreValid ) context.calcForcesAndEnergy(true, false);
 
-    //// Call the first integration kernel.
+    const auto& atomList = integrator.getAllAtoms();
+    const auto& pairList = integrator.getAllPairs();
+    int numAtoms = atomList.size();
+    int numPairs = pairList.size();
+    int numParticles = numAtoms + 2*numPairs;
+    float maxPairDistance = integrator.getMaximumPairDistance();
+    // Make sure atom and pair metadata is uploaded and has the correct dimensions
+    if (prevMaxPairDistance != maxPairDistance) {
+        std::vector<float> tmp(1, maxPairDistance);
+        maxPairDistanceBuffer.upload(tmp);
+        prevMaxPairDistance = maxPairDistance;
+    }
+    if (numAtoms !=0 && (!atomListBuffer.isInitialized() || atomListBuffer.getSize() != numAtoms)) {
+        atomListBuffer.initialize<cl_int>(cl, atomList.size(), "atomListBuffer");
+        atomListBuffer.upload(atomList);
+    }
+    if (numPairs !=0 && (!pairListBuffer.isInitialized() || pairListBuffer.getSize() != numPairs)) {
+        std::vector<mm_int2> tmp;
+        std::vector<float> tmp2;
+        for(const auto &pair : pairList) {
+            tmp.push_back(mm_int2(std::get<0>(pair), std::get<1>(pair)));
+            tmp2.push_back(std::get<2>(pair));
+        }
+        pairListBuffer.initialize<mm_int2>(cl, pairList.size(), "pairListBuffer");
+        pairListBuffer.upload(tmp);
+        pairTemperatureBuffer.initialize<cl_float>(cl, pairList.size(), "pairTemperatureBuffer");
+        pairTemperatureBuffer.upload(tmp2);
+    }
+
+//// Call the first integration kernel.
     kernel1.setArg<cl_int>(0, numAtoms);
-    kernel1.setArg<cl_int>(1, paddedNumAtoms);
-    kernel1.setArg<cl::Buffer>(2, cl.getIntegrationUtilities().getStepSize().getDeviceBuffer());
-    kernel1.setArg<cl::Buffer>(3, cl.getPosq().getDeviceBuffer());
-    setPosqCorrectionArg(cl, kernel1, 4);
-    kernel1.setArg<cl::Buffer>(5, cl.getVelm().getDeviceBuffer());
-    kernel1.setArg<cl::Buffer>(6, cl.getForce().getDeviceBuffer());
-    kernel1.setArg<cl::Buffer>(7, integration.getPosDelta().getDeviceBuffer());
-    cl.executeKernel(kernel1, numAtoms);
+    kernel1.setArg<cl_int>(1, numPairs);
+    kernel1.setArg<cl_int>(2, paddedNumAtoms);
+    kernel1.setArg<cl::Buffer>(3, cl.getIntegrationUtilities().getStepSize().getDeviceBuffer());
+    kernel1.setArg<cl::Buffer>(4, cl.getPosq().getDeviceBuffer());
+    setPosqCorrectionArg(cl, kernel1, 5);
+    kernel1.setArg<cl::Buffer>(6, cl.getVelm().getDeviceBuffer());
+    kernel1.setArg<cl::Buffer>(7, cl.getForce().getDeviceBuffer());
+    kernel1.setArg<cl::Buffer>(8, integration.getPosDelta().getDeviceBuffer());
+    if (numAtoms > 0) {
+        kernel1.setArg<cl::Buffer>(9, atomListBuffer.getDeviceBuffer());
+    } else {
+        kernel1.setArg<void*>(9, NULL);
+    }
+    if (numPairs > 0) {
+        kernel1.setArg<cl::Buffer>(10, pairListBuffer.getDeviceBuffer());
+    } else {
+        kernel1.setArg<void*>(10, NULL);
+    }
+    cl.executeKernel(kernel1, std::max(numAtoms, numPairs));
 
     //// Apply constraints.
 
     integration.applyConstraints(integrator.getConstraintTolerance());
 
     //// Call the second integration kernel.
-
-    kernel2.setArg<cl_int>(0, numAtoms);
+    kernel2.setArg<cl_int>(0, numParticles);
     kernel2.setArg<cl::Buffer>(1, cl.getIntegrationUtilities().getStepSize().getDeviceBuffer());
     kernel2.setArg<cl::Buffer>(2, cl.getPosq().getDeviceBuffer());
     setPosqCorrectionArg(cl, kernel2, 3);
     kernel2.setArg<cl::Buffer>(4, cl.getVelm().getDeviceBuffer());
     kernel2.setArg<cl::Buffer>(5, integration.getPosDelta().getDeviceBuffer());
-    cl.executeKernel(kernel2, numAtoms);
+    cl.executeKernel(kernel2, numParticles);
+
+    if (numPairs > 0) {
+        //// Enforce hard wall constraint
+        kernelHardWall.setArg<cl_int>(0, numPairs);
+        kernelHardWall.setArg<cl::Buffer>(1, maxPairDistanceBuffer.getDeviceBuffer());
+        kernelHardWall.setArg<cl::Buffer>(2, cl.getIntegrationUtilities().getStepSize().getDeviceBuffer());
+        kernelHardWall.setArg<cl::Buffer>(3, cl.getPosq().getDeviceBuffer());
+        setPosqCorrectionArg(cl, kernelHardWall, 4);
+        kernelHardWall.setArg<cl::Buffer>(5, cl.getVelm().getDeviceBuffer());
+        kernelHardWall.setArg<cl::Buffer>(6, pairListBuffer.getDeviceBuffer());
+        kernelHardWall.setArg<cl::Buffer>(7, pairTemperatureBuffer.getDeviceBuffer());
+        cl.executeKernel(kernelHardWall, numPairs);
+    }
+
 
     integration.computeVirtualSites();
 
@@ -7443,14 +7499,25 @@ void OpenCLIntegrateVelocityVerletStepKernel::execute(ContextImpl& context, cons
 
     //// Call the third integration kernel.
     kernel3.setArg<cl_int>(0, numAtoms);
-    kernel3.setArg<cl_int>(1, paddedNumAtoms);
-    kernel3.setArg<cl::Buffer>(2, cl.getIntegrationUtilities().getStepSize().getDeviceBuffer());
-    kernel3.setArg<cl::Buffer>(3, cl.getPosq().getDeviceBuffer());
-    setPosqCorrectionArg(cl, kernel3, 4);
-    kernel3.setArg<cl::Buffer>(5, cl.getVelm().getDeviceBuffer());
-    kernel3.setArg<cl::Buffer>(6, cl.getForce().getDeviceBuffer());
-    kernel3.setArg<cl::Buffer>(7, integration.getPosDelta().getDeviceBuffer());
-    cl.executeKernel(kernel3, numAtoms);
+    kernel3.setArg<cl_int>(1, numPairs);
+    kernel3.setArg<cl_int>(2, paddedNumAtoms);
+    kernel3.setArg<cl::Buffer>(3, cl.getIntegrationUtilities().getStepSize().getDeviceBuffer());
+    kernel3.setArg<cl::Buffer>(4, cl.getPosq().getDeviceBuffer());
+    setPosqCorrectionArg(cl, kernel3, 5);
+    kernel3.setArg<cl::Buffer>(6, cl.getVelm().getDeviceBuffer());
+    kernel3.setArg<cl::Buffer>(7, cl.getForce().getDeviceBuffer());
+    kernel3.setArg<cl::Buffer>(8, integration.getPosDelta().getDeviceBuffer());
+    if (numAtoms > 0) {
+        kernel3.setArg<cl::Buffer>(9, atomListBuffer.getDeviceBuffer());
+    } else {
+        kernel3.setArg<void*>(9, NULL);
+    }
+    if (numPairs > 0) {
+        kernel3.setArg<cl::Buffer>(10, pairListBuffer.getDeviceBuffer());
+    } else {
+        kernel3.setArg<void*>(10, NULL);
+    }
+    cl.executeKernel(kernel3, std::max(numAtoms, numPairs));
 
     integration.applyVelocityConstraints(integrator.getConstraintTolerance());
 

@@ -45,6 +45,7 @@ void NoseHooverIntegratorProxy::serialize(const void* object, SerializationNode&
     const NoseHooverIntegrator& integrator = *reinterpret_cast<const NoseHooverIntegrator*>(object);
     node.setDoubleProperty("stepSize", integrator.getStepSize());
     node.setDoubleProperty("constraintTolerance", integrator.getConstraintTolerance());
+    node.setDoubleProperty("maximumPairDistance", integrator.getMaximumPairDistance());
     node.setBoolProperty("hasSubsystemThermostats", integrator.hasSubsystemThermostats());
     if (integrator.hasSubsystemThermostats()) {
         // Serialize all thermostats separately
@@ -121,6 +122,7 @@ void* NoseHooverIntegratorProxy::deserialize(const SerializationNode& node) cons
         );
     }
     integrator->setConstraintTolerance(node.getDoubleProperty("constraintTolerance"));
+    integrator->setMaximumPairDistance(node.getDoubleProperty("maximumPairDistance"));
 
     return integrator;
 }

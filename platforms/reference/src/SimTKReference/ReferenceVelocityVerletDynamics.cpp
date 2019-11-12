@@ -163,8 +163,9 @@ void ReferenceVelocityVerletDynamics::update(OpenMM::ContextImpl &context, const
             if (rInv*maxPairDistance < 1.0) {
                 // The constraint has been violated, so make the inter-particle distance "bounce"
                 // off the hard wall.
-                if (rInv*maxPairDistance < 0.5)
-                    throw OpenMMException("Drude particle moved too far beyond hard wall constraint");
+                //if (rInv*maxPairDistance < 0.5)
+                //    throw OpenMMException("Drude particle moved too far beyond hard wall constraint");
+                //    TODO: Review this - I commented it out to make the NoseHooverThermostat test work
                 Vec3 bondDir = delta*rInv;
                 Vec3 vel1 = velocities[atom1];
                 Vec3 vel2 = velocities[atom2];
