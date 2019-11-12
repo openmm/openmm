@@ -30,26 +30,17 @@
  * -------------------------------------------------------------------------- */
 
 //#include "ReferenceTests.h"
-
-#include "openmm/internal/AssertionUtilities.h"
-#include "openmm/Context.h"
-#include "openmm/NonbondedForce.h"
 #include "openmm/Platform.h"
-#include "openmm/System.h"
-#include "openmm/VerletIntegrator.h"
-#include "openmm/DrudeForce.h"
-#include "SimTKOpenMMUtilities.h"
-#include "ReferencePlatform.h"
-#include <iostream>
-#include <vector>
+
 
 using namespace OpenMM;
 using namespace std;
-extern "C" OPENMM_EXPORT void registerDrudeReferenceKernelFactories();
+//extern "C" OPENMM_EXPORT void registerDrudeReferenceKernelFactories();
 
 
 Platform& initializePlatform(int argc, char* argv[]) {
-    registerDrudeReferenceKernelFactories();
+/*    registerDrudeReferenceKernelFactories();
+    */
     return Platform::getPlatformByName("Reference");
 }
 

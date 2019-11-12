@@ -48,13 +48,13 @@ using namespace std;
 
 extern "C" OPENMM_EXPORT void registerDrudeOpenCLKernelFactories();
 
+void runPlatformTests() { }
+
+#include "TestDrudeNoseHoover.h"
+
 Platform& initializePlatform(int argc, char* argv[]) {
     registerDrudeOpenCLKernelFactories();
     if (argc > 1) Platform::getPlatformByName("OpenCL").setPropertyDefaultValue("Precision", std::string(argv[1]));   
     return Platform::getPlatformByName("OpenCL");
 }
-
-#include "TestDrudeNoseHoover.h"
-
-void runPlatformTests() { }
 

@@ -48,8 +48,9 @@ using namespace std;
 
 extern "C" OPENMM_EXPORT void registerDrudeCudaKernelFactories();
 
-//OpenMM::CudaPlatform platform; 
+void runPlatformTests() { }
 
+#include "TestDrudeNoseHoover.h"
 
 Platform& initializePlatform(int argc, char* argv[]) {
     registerDrudeCudaKernelFactories();
@@ -57,7 +58,4 @@ Platform& initializePlatform(int argc, char* argv[]) {
     return Platform::getPlatformByName("CUDA");
 }
 
-#include "TestDrudeNoseHoover.h"
-
-void runPlatformTests() { }
 
