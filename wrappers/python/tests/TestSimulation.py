@@ -146,6 +146,12 @@ class TestSimulation(unittest.TestCase):
 
         self.assertTrue(endTime >= startTime+timedelta(seconds=5))
         self.assertTrue(endTime < startTime+timedelta(seconds=10))
+        
+        # Check that the time and step count are consistent.
+        
+        time = simulation.context.getState().getTime().value_in_unit(picoseconds)
+        expectedTime = simulation.currentStep*integrator.getStepSize().value_in_unit(picoseconds)
+        self.assertAlmostEqual(expectedTime, time)
 
         # Load the checkpoint and state and make sure they are both correct.
 
