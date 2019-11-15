@@ -95,7 +95,7 @@ matrix:
            CMAKE_FLAGS="-DOPENMM_GENERATE_API_DOCS=ON"
 
     - sudo: false
-      dist: trusty
+      dist: xenial
       python: 3.8
       env: ==PYTHON_3_8==
            OPENCL=false
