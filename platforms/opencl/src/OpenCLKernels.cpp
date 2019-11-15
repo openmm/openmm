@@ -7413,8 +7413,8 @@ void OpenCLIntegrateVelocityVerletStepKernel::execute(ContextImpl& context, cons
 
     if( !forcesAreValid ) context.calcForcesAndEnergy(true, false);
 
-    const auto& atomList = integrator.getAllAtoms();
-    const auto& pairList = integrator.getAllPairs();
+    const auto& atomList = integrator.getAllThermostatedIndividualParticles();
+    const auto& pairList = integrator.getAllThermostatedPairs();
     int numAtoms = atomList.size();
     int numPairs = pairList.size();
     int numParticles = numAtoms + 2*numPairs;
@@ -8852,17 +8852,17 @@ std::pair<double, double> OpenCLNoseHooverChainKernel::propagateChain(ContextImp
 
     bool useDouble = cl.getUseDoublePrecision() || cl.getUseMixedPrecision();
 
-    int chainID = nhc.getDefaultChainID();
+    int chainID = nhc.getChainID();
     int nAtoms = nhc.getThermostatedAtoms().size();
     int nPairs = nhc.getThermostatedPairs().size();
-    int chainLength = nhc.getDefaultChainLength();
-    int numYS = nhc.getDefaultNumYoshidaSuzukiTimeSteps();
-    int numMTS = nhc.getDefaultNumMultiTimeSteps();
-    int numDOFs = nhc.getDefaultNumDegreesOfFreedom();
-    double temperature = nhc.getDefaultTemperature();
-    double frequency = nhc.getDefaultCollisionFrequency();
-    double relativeTemperature = nhc.getDefaultRelativeTemperature();
-    double relativeFrequency = nhc.getDefaultRelativeCollisionFrequency();
+    int chainLength = nhc.getChainLength();
+    int numYS = nhc.getNumYoshidaSuzukiTimeSteps();
+    int numMTS = nhc.getNumMultiTimeSteps();
+    int numDOFs = nhc.getNumDegreesOfFreedom();
+    double temperature = nhc.getTemperature();
+    double frequency = nhc.getCollisionFrequency();
+    double relativeTemperature = nhc.getRelativeTemperature();
+    double relativeFrequency = nhc.getRelativeCollisionFrequency();
 
     if (numYS != 1 && numYS != 3 && numYS != 5) {
         throw OpenMMException("Number of Yoshida Suzuki time steps has to be 1, 3, or 5.");
@@ -8979,8 +8979,8 @@ double OpenCLNoseHooverChainKernel::computeHeatBathEnergy(ContextImpl& context, 
 
     bool useDouble = cl.getUseDoublePrecision() || cl.getUseMixedPrecision();
 
-    int chainID = nhc.getDefaultChainID();
-    int chainLength = nhc.getDefaultChainLength();
+    int chainID = nhc.getChainID();
+    int chainLength = nhc.getChainLength();
 
     auto & chainState = cl.getIntegrationUtilities().getNoseHooverChainState();
 
@@ -9008,9 +9008,9 @@ double OpenCLNoseHooverChainKernel::computeHeatBathEnergy(ContextImpl& context, 
     cl.clearBuffer(heatBathEnergy);
 
     if (absChainIsValid) {
-        int numDOFs = nhc.getDefaultNumDegreesOfFreedom();
-        double temperature = nhc.getDefaultTemperature();
-        double frequency = nhc.getDefaultCollisionFrequency();
+        int numDOFs = nhc.getNumDegreesOfFreedom();
+        double temperature = nhc.getTemperature();
+        double frequency = nhc.getCollisionFrequency();
         double kT = BOLTZ * temperature;
         float kTfloat = (float) kT;
         float frequencyFloat = (float) frequency;
@@ -9028,8 +9028,8 @@ double OpenCLNoseHooverChainKernel::computeHeatBathEnergy(ContextImpl& context, 
     }
     if (relChainIsValid) {
         int numDOFs = 3 * nhc.getThermostatedPairs().size();
-        double temperature = nhc.getDefaultRelativeTemperature();
-        double frequency = nhc.getDefaultRelativeCollisionFrequency();
+        double temperature = nhc.getRelativeTemperature();
+        double frequency = nhc.getRelativeCollisionFrequency();
         double kT = BOLTZ * temperature;
         float kTfloat = (float) kT;
         float frequencyFloat = (float) frequency;
@@ -9060,7 +9060,7 @@ std::pair<double, double> OpenCLNoseHooverChainKernel::computeMaskedKineticEnerg
 
     bool useDouble = cl.getUseDoublePrecision() || cl.getUseMixedPrecision();
 
-    int chainID = nhc.getDefaultChainID();
+    int chainID = nhc.getChainID();
     const auto & nhcAtoms = nhc.getThermostatedAtoms();
     const auto & nhcPairs = nhc.getThermostatedPairs();
     auto nAtoms = nhcAtoms.size();
@@ -9147,7 +9147,7 @@ void OpenCLNoseHooverChainKernel::scaleVelocities(ContextImpl& context, const No
     // For now we assume that the atoms and pairs info is valid, because compute{Atoms|Pairs}KineticEnergy must have been
     // called before this kernel.  If that ever ceases to be true, some sanity checks are needed here.
 
-    int chainID = nhc.getDefaultChainID();
+    int chainID = nhc.getChainID();
     auto nAtoms = nhc.getThermostatedAtoms().size();
     auto nPairs = nhc.getThermostatedPairs().size();
     if(nAtoms) {

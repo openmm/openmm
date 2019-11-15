@@ -98,18 +98,13 @@ void testHarmonicOscillator() {
     ASSERT_EQUAL_TOL(temperature, mean_temperature, 0.02);
 }
 
-void testDimerBox(bool constrain=true) {
-    // Check conservation of system + bath energy for a harmonic oscillator
-    System system;
-    int numMolecules = 20;
+int makeDimerBox(System& system, std::vector<Vec3>& positions, bool constrain=true, int numMolecules=20, double bondLength=0.1){
     double boxLength = 2; // nm
     Vec3 a(boxLength, 0.0, 0.0);
     Vec3 b(0.0, boxLength, 0.0);
     Vec3 c(0.0, 0.0, boxLength);
     double mass = 20;
     double bondForceConstant = 30000; //0.001;
-    double bondLength = 0.1;
-    double bondLengthSquared = bondLength * bondLength;
     int numDOF = 0;
     NonbondedForce* forceField = new NonbondedForce();
     HarmonicBondForce* bondForce = new HarmonicBondForce();
@@ -134,7 +129,6 @@ void testDimerBox(bool constrain=true) {
     system.addForce(forceField);
     system.addForce(bondForce);
     system.setDefaultPeriodicBoxVectors(a, b, c);
-    std::vector<Vec3> positions(numMolecules*2);
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
     for (int i = 0; i < numMolecules; i++) {
@@ -156,6 +150,18 @@ void testDimerBox(bool constrain=true) {
             }
         }
     }
+    return numDOF;
+}
+
+void testDimerBox(bool constrain=true) {
+    // Check conservation of system + bath energy for a harmonic oscillator
+    int numMolecules = 20;
+    double bondLength = 0.1;
+    double bondLengthSquared = bondLength * bondLength;
+    System system;
+    std::vector<Vec3> positions(numMolecules*2);
+    int numDOF = makeDimerBox(system, positions, constrain, numMolecules, bondLength);
+
     bool simpleConstruct = true;
     double temperature = 300; // kelvin
     double collisionFrequency = 25; // 1/ps
@@ -270,6 +276,18 @@ void testCheckpoints() {
         ASSERT_EQUAL_VEC(state.getVelocities()[0], state2.getVelocities()[0], 1e-6); 
         ASSERT_EQUAL_VEC(state.getVelocities()[1], state2.getVelocities()[1], 1e-6); 
     }
+}
+
+void testAPIChangeNumParticles() {
+    bool constrain = true;
+    int numMolecules = 20;
+    double bondLength = 0.1;
+    double bondLengthSquared = bondLength * bondLength;
+    System system;
+    std::vector<Vec3> positions(numMolecules*2);
+    int numDOF = makeDimerBox(system, positions, constrain, numMolecules, bondLength);
+
+    
 }
 
 void runPlatformTests();

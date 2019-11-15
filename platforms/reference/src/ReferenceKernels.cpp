@@ -2171,7 +2171,7 @@ void ReferenceIntegrateVelocityVerletStepKernel::execute(ContextImpl& context, c
         prevStepSize = stepSize;
     }
     dynamics->update(context, context.getSystem(), posData, velData, forceData, masses, integrator.getConstraintTolerance(), forcesAreValid,
-                     integrator.getAllAtoms(), integrator.getAllPairs(), integrator.getMaximumPairDistance());
+                     integrator.getAllThermostatedIndividualParticles(), integrator.getAllThermostatedPairs(), integrator.getMaximumPairDistance());
     data.time += stepSize;
     data.stepCount++;
 }
@@ -2476,10 +2476,10 @@ std::pair<double, double> ReferenceNoseHooverChainKernel::propagateChain(Context
     double relKE = kineticEnergy.second;
     if (absKE < 1e-8) return {1.0, 1.0};  // (catches the problem of zero velocities in the first dynamics step, where we have nothing to scale)
     // Get the variables describing the NHC
-    int chainLength = nhc.getDefaultChainLength();
-    int chainID = nhc.getDefaultChainID();
-    int numDOFs = nhc.getDefaultNumDegreesOfFreedom();
-    int numMTS = nhc.getDefaultNumMultiTimeSteps();
+    int chainLength = nhc.getChainLength();
+    int chainID = nhc.getChainID();
+    int numDOFs = nhc.getNumDegreesOfFreedom();
+    int numMTS = nhc.getNumMultiTimeSteps();
 
     // Get the state of the NHC from the context
     auto& allChainPositions = extractNoseHooverPositions(context);
@@ -2502,11 +2502,11 @@ std::pair<double, double> ReferenceNoseHooverChainKernel::propagateChain(Context
         if (chainVelocities.size() < chainLength){
             chainVelocities.resize(chainLength, 0);
         }
-        double temperature = nhc.getDefaultTemperature();
-        double collisionFrequency = nhc.getDefaultCollisionFrequency();
+        double temperature = nhc.getTemperature();
+        double collisionFrequency = nhc.getCollisionFrequency();
         absScale = chainPropagator->propagate(absKE, chainVelocities, chainPositions, numDOFs,
                                               temperature, collisionFrequency, timeStep,
-                                              numMTS, nhc.getDefaultYoshidaSuzukiWeights());
+                                              numMTS, nhc.getYoshidaSuzukiWeights());
     }
     double relScale = 0;
     int nPairs = nhc.getThermostatedPairs().size();
@@ -2525,11 +2525,11 @@ std::pair<double, double> ReferenceNoseHooverChainKernel::propagateChain(Context
         if (chainVelocities.size() < chainLength){
             chainVelocities.resize(chainLength, 0);
         }
-        double temperature = nhc.getDefaultRelativeTemperature();
-        double collisionFrequency = nhc.getDefaultRelativeCollisionFrequency();
+        double temperature = nhc.getRelativeTemperature();
+        double collisionFrequency = nhc.getRelativeCollisionFrequency();
         relScale = chainPropagator->propagate(relKE, chainVelocities, chainPositions, 3*nPairs,
                                               temperature, collisionFrequency, timeStep,
-                                              numMTS, nhc.getDefaultYoshidaSuzukiWeights());
+                                              numMTS, nhc.getYoshidaSuzukiWeights());
     }
     return {absScale, relScale};
 }
@@ -2537,17 +2537,17 @@ std::pair<double, double> ReferenceNoseHooverChainKernel::propagateChain(Context
 double ReferenceNoseHooverChainKernel::computeHeatBathEnergy(ContextImpl& context, const NoseHooverChain &nhc) {
     double potentialEnergy = 0;
     double kineticEnergy = 0;
-    int chainLength = nhc.getDefaultChainLength();
-    int chainID = nhc.getDefaultChainID();
+    int chainLength = nhc.getChainLength();
+    int chainID = nhc.getChainID();
     int nAtoms = nhc.getThermostatedAtoms().size();
     int nPairs = nhc.getThermostatedPairs().size();
     auto& nhcPositions = extractNoseHooverPositions(context);
     auto& nhcVelocities = extractNoseHooverVelocities(context);
     if (nAtoms) {
-        double temperature = nhc.getDefaultTemperature();
-        double collisionFrequency = nhc.getDefaultCollisionFrequency();
+        double temperature = nhc.getTemperature();
+        double collisionFrequency = nhc.getCollisionFrequency();
         double kT = temperature * BOLTZ;
-        int numDOFs = nhc.getDefaultNumDegreesOfFreedom();
+        int numDOFs = nhc.getNumDegreesOfFreedom();
         for(int i = 0; i < chainLength; ++i) {
             double prefac = i ? 1 : numDOFs;
             double mass = prefac * kT / (collisionFrequency * collisionFrequency);
@@ -2560,8 +2560,8 @@ double ReferenceNoseHooverChainKernel::computeHeatBathEnergy(ContextImpl& contex
         }
     }
     if (nPairs) {
-        double temperature = nhc.getDefaultRelativeTemperature();
-        double collisionFrequency = nhc.getDefaultRelativeCollisionFrequency();
+        double temperature = nhc.getRelativeTemperature();
+        double collisionFrequency = nhc.getRelativeCollisionFrequency();
         double kT = temperature * BOLTZ;
         int numDOFs = 3 * nPairs;
         for(int i = 0; i < chainLength; ++i) {

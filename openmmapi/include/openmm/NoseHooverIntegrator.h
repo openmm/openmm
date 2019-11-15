@@ -185,7 +185,7 @@ public:
     /**
      * Get the number of Nose-Hoover chains registered with this integrator.
      */
-    int getNumNoseHooverThermostats() const {
+    int getNumThermostats() const {
         return noseHooverChains.size();
     }
     /**
@@ -193,7 +193,7 @@ public:
      *
      * @param chainID the index of the Nose-Hoover chain thermostat (default=0).
      */
-    const NoseHooverChain& getNoseHooverThermostat(int chainID=0) const ;
+    const NoseHooverChain& getThermostat(int chainID=0) const ;
     /**
      * This will be called by the Context when the user modifies aspects of the context state, such
      * as positions, velocities, or parameters.  This gives the Integrator a chance to discard cached
@@ -226,11 +226,11 @@ public:
     /**
      * Get a list of all individual atoms (i.e. not involved in a connected Drude-like pair) in the system.
      */
-    const std::vector<int> & getAllAtoms() const { return allAtoms; }
+    const std::vector<int> & getAllThermostatedIndividualParticles() const { return allAtoms; }
     /**
      * Get a list of all connected Drude-like pairs, and their target relative temperature, in the system.
      */
-    const std::vector<std::tuple<int, int, double>> & getAllPairs() const { return allPairs; }
+    const std::vector<std::tuple<int, int, double>> & getAllThermostatedPairs() const { return allPairs; }
 protected:
    /**
      * Advance any Nose-Hoover chains associated with this integrator and determine

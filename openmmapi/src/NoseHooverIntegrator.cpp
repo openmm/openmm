@@ -101,7 +101,7 @@ int NoseHooverIntegrator::addSubsystemThermostat(const std::vector<int>& thermos
     return chainID;
 }
 
-const NoseHooverChain& NoseHooverIntegrator::getNoseHooverThermostat(int chainID) const {
+const NoseHooverChain& NoseHooverIntegrator::getThermostat(int chainID) const {
     ASSERT_VALID_INDEX(chainID, noseHooverChains);
     return noseHooverChains[chainID];
 }
@@ -120,7 +120,7 @@ void NoseHooverIntegrator::initializeThermostats(const System &system) {
         for( auto& pair : thermostatedPairs ) {
             allAtomsSet.erase(pair.first);
             allAtomsSet.erase(pair.second);
-            allPairs.emplace_back(pair.first, pair.second, thermostat.getDefaultRelativeTemperature());
+            allPairs.emplace_back(pair.first, pair.second, thermostat.getRelativeTemperature());
         }
 
         // figure out the number of DOFs
@@ -166,7 +166,7 @@ void NoseHooverIntegrator::initializeThermostats(const System &system) {
         }
 
         // set number of DoFs for chain 
-        thermostat.setDefaultNumDegreesOfFreedom(nDOF);
+        thermostat.setNumDegreesOfFreedom(nDOF);
     }
 
 
@@ -213,7 +213,7 @@ void NoseHooverIntegrator::initializeThermostats(const System &system) {
         // make sure that massless particles are not thermostated
         for(auto particle: nhc.getThermostatedAtoms()){
             double mass = system.getParticleMass(particle);
-            if (mass < 1e-8) {
+            if (mass == 0.0) {
                 throw OpenMMException("Found a particle with no mass (" + std::to_string(particle) + ") in a thermostat. Massless particles cannot be thermostated.");
             }
         }
@@ -224,44 +224,44 @@ void NoseHooverIntegrator::initializeThermostats(const System &system) {
 
 double NoseHooverIntegrator::getTemperature(int chainID) const {
     ASSERT_VALID_INDEX(chainID, noseHooverChains);
-    return noseHooverChains[chainID].getDefaultTemperature();
+    return noseHooverChains[chainID].getTemperature();
 }
 
 void NoseHooverIntegrator::setTemperature(double temperature, int chainID){
     ASSERT_VALID_INDEX(chainID, noseHooverChains);
-    noseHooverChains[chainID].setDefaultTemperature(temperature);
+    noseHooverChains[chainID].setTemperature(temperature);
 
 }
 
 double NoseHooverIntegrator::getRelativeTemperature(int chainID) const {
     ASSERT_VALID_INDEX(chainID, noseHooverChains);
-    return noseHooverChains[chainID].getDefaultRelativeTemperature();
+    return noseHooverChains[chainID].getRelativeTemperature();
 }
 
 void NoseHooverIntegrator::setRelativeTemperature(double temperature, int chainID){
     ASSERT_VALID_INDEX(chainID, noseHooverChains);
-    noseHooverChains[chainID].setDefaultRelativeTemperature(temperature);
+    noseHooverChains[chainID].setRelativeTemperature(temperature);
 
 }
 
 double NoseHooverIntegrator::getCollisionFrequency(int chainID) const {
     ASSERT_VALID_INDEX(chainID, noseHooverChains);
-    return noseHooverChains[chainID].getDefaultCollisionFrequency();
+    return noseHooverChains[chainID].getCollisionFrequency();
 }
 
 void NoseHooverIntegrator::setCollisionFrequency(double frequency, int chainID){
     ASSERT_VALID_INDEX(chainID, noseHooverChains);
-    noseHooverChains[chainID].setDefaultCollisionFrequency(frequency);
+    noseHooverChains[chainID].setCollisionFrequency(frequency);
 }
 
 double NoseHooverIntegrator::getRelativeCollisionFrequency(int chainID) const {
     ASSERT_VALID_INDEX(chainID, noseHooverChains);
-    return noseHooverChains[chainID].getDefaultRelativeCollisionFrequency();
+    return noseHooverChains[chainID].getRelativeCollisionFrequency();
 }
 
 void NoseHooverIntegrator::setRelativeCollisionFrequency(double frequency, int chainID){
     ASSERT_VALID_INDEX(chainID, noseHooverChains);
-    noseHooverChains[chainID].setDefaultRelativeCollisionFrequency(frequency);
+    noseHooverChains[chainID].setRelativeCollisionFrequency(frequency);
 }
 
 double NoseHooverIntegrator::computeKineticEnergy() {
@@ -279,7 +279,7 @@ double NoseHooverIntegrator::computeKineticEnergy() {
 double NoseHooverIntegrator::computeHeatBathEnergy() {
     double energy = 0;
     for(auto &nhc : noseHooverChains) {
-        if (context && (nhc.getDefaultNumDegreesOfFreedom() > 0)) {
+        if (context && (nhc.getNumDegreesOfFreedom() > 0)) {
             energy += nhcKernel.getAs<NoseHooverChainKernel>().computeHeatBathEnergy(*context, nhc);
         }
     }

@@ -62,183 +62,146 @@ public:
     /**
      * Create a NoseHooverChain.
      * 
-     * @param defaultTemperature                the default temperature of the heat bath for absolute motion (in Kelvin)
-     * @param defaultRelativeTemperature        the default temperature of the heat bath for relative motion(in Kelvin).
-     *                                          This is only used if the list of thermostated pairs is not empty.
-     * @param defaultCollisionFrequency         the default collision frequency for absolute motion (in 1/ps)
-     * @param defaultRelativeCollisionFrequency the default collision frequency for relative motion(in 1/ps).
-     *                                          This is only used if the list of thermostated pairs is not empty.
-     * @param defaultNumDOFs                    the default number of degrees of freedom in the particles that
-     *                                          interact with this chain
-     * @param defaultChainLength                the default length of (number of particles in) this heat bath
-     * @param defaultNumMTS                     the default number of multi time steps used to propagate this chain
-     * @param defaultNumYoshidaSuzuki           the default number of Yoshida Suzuki steps used to propagate this chain (1, 3, or 5).
-     * @param defaultChainID                    the default chain id used to distinguish this Nose-Hoover chain from others that may
+     * @param temperature                the temperature of the heat bath for absolute motion (in Kelvin)
+     * @param collisionFrequency         the collision frequency for absolute motion (in 1/ps)
+     * @param relativeTemperature        the temperature of the heat bath for relative motion(in Kelvin).
+     *                                   This is only used if the list of thermostated pairs is not empty.
+     * @param relativeCollisionFrequency the collision frequency for relative motion(in 1/ps).
+     *                                   This is only used if the list of thermostated pairs is not empty.
+     * @param numDOFs                    the number of degrees of freedom in the particles that
+     *                                   interact with this chain
+     * @param chainLength                the length of (number of particles in) this heat bath
+     * @param numMTS                     the number of multi time steps used to propagate this chain
+     * @param numYoshidaSuzuki           the number of Yoshida Suzuki steps used to propagate this chain (1, 3, or 5).
+     * @param chainID                    the chain id used to distinguish this Nose-Hoover chain from others that may
      *                                          be used to control a different set of particles, e.g. for Drude oscillators
      * @param thermostatedAtoms                 the list of atoms to be handled by this thermostat
      * @param thermostatedPairs                 the list of connected pairs to be thermostated; their absolute center of mass motion will
      *                                          be thermostated independently from their motion relative to one another.
      */
-    NoseHooverChain(double defaultTemperature, double defaultRelativeTemperature, double defaultCollisionFrequency,
-                    double defaultRelativeCollisionFrequency, int defaultNumDOFs, int defaultChainLength,
-                    int defaultNumMTS, int defaultNumYoshidaSuzuki, int defaultChainID,
+    NoseHooverChain(double temperature, double relativeTemperature, double collisionFrequency,
+                    double relativeCollisionFrequency, int numDOFs, int chainLength,
+                    int numMTS, int numYoshidaSuzuki, int chainID,
                     const std::vector<int>& thermostatedAtoms, const std::vector< std::pair< int, int > > &thermostatedPairs);
     /**
-     * Get the default temperature of the heat bath for treating absolute particle motion (in Kelvin).
+     * Get the temperature of the heat bath for treating absolute particle motion (in Kelvin).
      *
-     * @return the default temperature of the heat bath, measured in Kelvin.
+     * @return the temperature of the heat bath, measured in Kelvin.
      */
-    double getDefaultTemperature() const {
-        return defaultTemp;
+    double getTemperature() const {
+        return temp;
     }
     /**
-     * Set the default temperature of the heat bath for treating absolute particle motion.
+     * Set the temperature of the heat bath for treating absolute particle motion.
      * This will affect any new Contexts you create, but not ones that already exist.
      *
-     * @param temperature the default temperature of the heat bath (in Kelvin)
+     * @param temperature the temperature of the heat bath (in Kelvin)
      */
-    void setDefaultTemperature(double temperature) {
-        defaultTemp = temperature;
+    void setTemperature(double temperature) {
+        temp = temperature;
     }
     /**
-     * Get the default temperature of the heat bath for treating relative particle motion (in Kelvin).
+     * Get the temperature of the heat bath for treating relative particle motion (in Kelvin).
      *
-     * @return the default temperature of the heat bath, measured in Kelvin.
+     * @return the temperature of the heat bath, measured in Kelvin.
      */
-    double getDefaultRelativeTemperature() const {
-        return defaultRelativeTemp;
+    double getRelativeTemperature() const {
+        return relativeTemp;
     }
     /**
-     * Set the default temperature of the heat bath for treating relative motion if this thermostat has
+     * Set the temperature of the heat bath for treating relative motion if this thermostat has
      * been set up to treat connected pairs of atoms.  This will affect any new Contexts you create,
      * but not ones that already exist.
      *
-     * @param temperature the default temperature of the heat bath for relative motion (in Kelvin)
+     * @param temperature the temperature of the heat bath for relative motion (in Kelvin)
      */
-    void setDefaultRelativeTemperature(double temperature) {
-        defaultRelativeTemp = temperature;
+    void setRelativeTemperature(double temperature) {
+        relativeTemp = temperature;
     }
     /**
-     * Get the default collision frequency for treating absolute particle motion (in 1/ps).
+     * Get the collision frequency for treating absolute particle motion (in 1/ps).
      *
-     * @return the default collision frequency, measured in 1/ps.
+     * @return the collision frequency, measured in 1/ps.
      */
-    double getDefaultCollisionFrequency() const {
-        return defaultFreq;
+    double getCollisionFrequency() const {
+        return freq;
     }
     /**
-     * Set the default collision frequency for treating absolute particle motion.
+     * Set the collision frequency for treating absolute particle motion.
      * This will affect any new Contexts you create, but not those that already exist.
      *
-     * @param frequency the default collision frequency (in 1/ps)
+     * @param frequency the collision frequency (in 1/ps)
      */
-    void setDefaultCollisionFrequency(double frequency) {
-        defaultFreq = frequency;
+    void setCollisionFrequency(double frequency) {
+        freq = frequency;
     }
     /**
-     * Get the default collision frequency for treating relative particle motion (in 1/ps).
+     * Get the collision frequency for treating relative particle motion (in 1/ps).
      *
-     * @return the default collision frequency, measured in 1/ps.
+     * @return the collision frequency, measured in 1/ps.
      */
-    double getDefaultRelativeCollisionFrequency() const {
-        return defaultRelativeFreq;
+    double getRelativeCollisionFrequency() const {
+        return relativeFreq;
     }
     /**
-     * Set the default collision frequency for treating relative particle motion if this thermostat has
+     * Set the collision frequency for treating relative particle motion if this thermostat has
      * been set up to handle connected pairs of atoms.  This will affect any new Contexts you create,
      * but not those that already exist.
      *
-     * @param frequency the default collision frequency (in 1/ps)
+     * @param frequency the collision frequency (in 1/ps)
      */
-    void setDefaultRelativeCollisionFrequency(double frequency) {
-        defaultRelativeFreq = frequency;
+    void setRelativeCollisionFrequency(double frequency) {
+        relativeFreq = frequency;
     }
     /**
-     * Get the default number of degrees of freedom in the particles controled by this heat bath.
+     * Get the number of degrees of freedom in the particles controled by this heat bath.
      *
-     * @return the default number of degrees of freedom.
+     * @return the number of degrees of freedom.
      */
-    int getDefaultNumDegreesOfFreedom() const {
-        return defaultNumDOFs;
+    int getNumDegreesOfFreedom() const {
+        return numDOFs;
     }
     /**
-     * Set the default number of degrees of freedom in the particles controled by this heat bath.
+     * Set the number of degrees of freedom in the particles controled by this heat bath.
      * This will affect any new Contexts you create, but not those that already exist.
      *
-     * @param numDOFs 
+     * @param numDOF  the number of degrees of freedom.
      */
-    void setDefaultNumDegreesOfFreedom(int numDOFs) {
-        defaultNumDOFs = numDOFs;
+    void setNumDegreesOfFreedom(int numDOF) {
+        numDOFs = numDOF;
     }
     /**
-     * Get the default chain length of this heat bath.
+     * Get the chain length of this heat bath.
      *
-     * @return the default chain length.
+     * @return the chain length.
      */
-    int getDefaultChainLength() const {
-        return defaultChainLength;
+    int getChainLength() const {
+        return chainLength;
     }
     /**
-     * Set the default chain length of this heat bath.
-     * This will affect any new Contexts you create, but not those that already exist.
+     * Get the number of steps used in the multi time step propagation.
      *
-     * @param numDOFs 
+     * @returns the number of multi time steps.
      */
-    void setDefaultChainLength(int chainLength) {
-        defaultChainLength = chainLength;
+    int getNumMultiTimeSteps() const {
+        return numMTS;
     }
     /**
-     * Get the default number of steps used in the multi time step propagation.
-     *
-     * @returns the default number of multi time steps.
-     */
-    int getDefaultNumMultiTimeSteps() const {
-        return defaultNumMTS;
-    }
-    /**
-     * Set the default number of steps used in the multi time step propagation.
-     * This will affect any new Contexts you create, but not those that already exist.
-     *
-     * @param numSteps 
-     */
-    void setDefaultNumMultiTimeSteps(int numSteps) {
-        defaultNumMTS = numSteps;
-    }
-    /**
-     * Get the default number of steps used in the Yoshida-Suzuki decomposition for
+     * Get the number of steps used in the Yoshida-Suzuki decomposition for
      * multi time step propagation.
      *
-     * @returns the default number of multi time steps in the Yoshida-Suzuki decomposition.
+     * @returns the number of multi time steps in the Yoshida-Suzuki decomposition.
      */
-    int getDefaultNumYoshidaSuzukiTimeSteps() const {
-        return defaultNumYS;
+    int getNumYoshidaSuzukiTimeSteps() const {
+        return numYS;
     }
     /**
-     * Set the default number of steps used in the Yoshida-Suzuki decomposition for
-     * multi time step propagation. This will affect any new Contexts you create,
-     * but not those that already exist.
-     * 
-     * @param the default number of multi time steps in the Yoshida-Suzuki decomposition.
-     */
-    void setDefaultNumYoshidaSuzukiTimeSteps(int numSteps) {
-        defaultNumYS = numSteps;
-    }
-    /**
-     * Get the default chain id used to identify this chain
+     * Get the chain id used to identify this chain
      *
-     * @returns the default chain id 
+     * @returns the chain id 
      */
-    int getDefaultChainID() const {
-        return defaultChainID;
-    }
-    /**
-     * Set the default chain id used to identify this chain
-     * This will affect any new Contexts you create, but not those that already exist.
-     *
-     * @param the default chain id
-     */
-    void setDefaultChainID(int chainID) {
-        defaultChainID = chainID;
+    int getChainID() const {
+        return chainID;
     }
     /**
      * Get the atom ids of all atoms that are thermostated 
@@ -275,11 +238,11 @@ public:
         thermostatedPairs = pairIDs;
     }
     /**
-     * Get the default weights used in the Yoshida Suzuki multi time step decomposition (dimensionless) 
+     * Get the weights used in the Yoshida Suzuki multi time step decomposition (dimensionless) 
      *
      * @returns the weights for the Yoshida-Suzuki integration
      */
-    std::vector<double> getDefaultYoshidaSuzukiWeights() const;
+    std::vector<double> getYoshidaSuzukiWeights() const;
     /**
      * Returns whether or not this force makes use of periodic boundary
      * conditions.
@@ -290,10 +253,10 @@ public:
         return false;
     }
 private:
-    double defaultTemp, defaultFreq, defaultRelativeTemp, defaultRelativeFreq;
-    int defaultNumDOFs, defaultChainLength, defaultNumMTS, defaultNumYS;
+    double temp, freq, relativeTemp, relativeFreq;
+    int numDOFs, chainLength, numMTS, numYS;
     // The suffix used to distinguish NH chains, e.g. for Drude particles vs. regular particles.
-    int defaultChainID;
+    int chainID;
     std::vector<int> thermostatedAtoms;
     std::vector<std::pair<int, int>> thermostatedPairs;
 };

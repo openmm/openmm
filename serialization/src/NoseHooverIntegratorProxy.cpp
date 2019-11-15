@@ -49,16 +49,16 @@ void NoseHooverIntegratorProxy::serialize(const void* object, SerializationNode&
     node.setBoolProperty("hasSubsystemThermostats", integrator.hasSubsystemThermostats());
     if (integrator.hasSubsystemThermostats()) {
         // Serialize all thermostats separately
-        for (int i = 0; i < integrator.getNumNoseHooverThermostats(); i++){
-            const auto& chain = integrator.getNoseHooverThermostat(i);
+        for (int i = 0; i < integrator.getNumThermostats(); i++){
+            const auto& chain = integrator.getThermostat(i);
             auto& chainNode = node.createChildNode("Thermostat");
-            chainNode.setDoubleProperty("temperature", chain.getDefaultTemperature());
-            chainNode.setDoubleProperty("collisionFrequency", chain.getDefaultCollisionFrequency());
-            chainNode.setDoubleProperty("relativeTemperature", chain.getDefaultRelativeTemperature());
-            chainNode.setDoubleProperty("relativeCollisionFrequency", chain.getDefaultRelativeCollisionFrequency());
-            chainNode.setIntProperty("chainLength", chain.getDefaultChainLength());
-            chainNode.setIntProperty("numMTS", chain.getDefaultNumMultiTimeSteps());
-            chainNode.setIntProperty("numYS", chain.getDefaultNumYoshidaSuzukiTimeSteps());
+            chainNode.setDoubleProperty("temperature", chain.getTemperature());
+            chainNode.setDoubleProperty("collisionFrequency", chain.getCollisionFrequency());
+            chainNode.setDoubleProperty("relativeTemperature", chain.getRelativeTemperature());
+            chainNode.setDoubleProperty("relativeCollisionFrequency", chain.getRelativeCollisionFrequency());
+            chainNode.setIntProperty("chainLength", chain.getChainLength());
+            chainNode.setIntProperty("numMTS", chain.getNumMultiTimeSteps());
+            chainNode.setIntProperty("numYS", chain.getNumYoshidaSuzukiTimeSteps());
             auto& particlesNode = chainNode.createChildNode("ThermostatedAtoms");
             for (int particle: chain.getThermostatedAtoms()){
                 particlesNode.createChildNode("Particle").setIntProperty("index", particle);
@@ -73,9 +73,9 @@ void NoseHooverIntegratorProxy::serialize(const void* object, SerializationNode&
     } else { // Serialize standard thermostat
         node.setDoubleProperty("temperature", integrator.getTemperature());
         node.setDoubleProperty("collisionFrequency", integrator.getCollisionFrequency());
-        node.setIntProperty("chainLength", integrator.getNoseHooverThermostat().getDefaultChainLength());
-        node.setIntProperty("numMTS", integrator.getNoseHooverThermostat().getDefaultNumMultiTimeSteps());
-        node.setIntProperty("numYS", integrator.getNoseHooverThermostat().getDefaultNumYoshidaSuzukiTimeSteps());
+        node.setIntProperty("chainLength", integrator.getThermostat().getChainLength());
+        node.setIntProperty("numMTS", integrator.getThermostat().getNumMultiTimeSteps());
+        node.setIntProperty("numYS", integrator.getThermostat().getNumYoshidaSuzukiTimeSteps());
     }
 
 }

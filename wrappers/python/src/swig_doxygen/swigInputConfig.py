@@ -114,8 +114,8 @@ SKIP_METHODS = [('State', 'getPositions'),
                 ('LocalCoordinatesSite',  'getOriginWeights', 0),
                 ('LocalCoordinatesSite',  'getXWeights', 0),
                 ('LocalCoordinatesSite',  'getYWeights', 0),
-                ("NoseHooverIntegrator", "getAllAtoms"),
-                ("NoseHooverIntegrator", "getAllPairs"),
+                ("NoseHooverIntegrator", "getAllThermostatedIndividualParticles"),
+                ("NoseHooverIntegrator", "getAllThermostatedPairs"),
 ]
 
 # The build script assumes method args that are non-const references are
@@ -170,7 +170,6 @@ UNITS = {
 ("*", "getCutoffDistance") : ("unit.nanometers", ()),
 ("*", "getSwitchingDistance") : ("unit.nanometers", ()),
 ("*", "getDefaultCollisionFrequency") : ("1/unit.picosecond", ()),
-("*", "getDefaultRelativeCollisionFrequency") : ("1/unit.picosecond", ()),
 ("*", "getDefaultPeriodicBoxVectors")
  : (None, ('unit.nanometer', 'unit.nanometer', 'unit.nanometer')),
 ("*", "getDefaultPressure") : ("unit.bar", ()),
@@ -185,7 +184,7 @@ UNITS = {
 ("*", "setDefaultSurfaceTension") : (None, ("unit.bar*unit.nanometer",)),
 ("*", "getDefaultTemperature") : ("unit.kelvin", ()),
 ("*", "setDefaultTemperature") : (None, ("unit.kelvin",)),
-("*", "getDefaultRelativeTemperature") : ("unit.kelvin", ()),
+("*", "getRelativeTemperature") : ("unit.kelvin", ()),
 ("*", "getErrorTolerance") : (None, ()),
 ("*", "getEwaldErrorTolerance") : (None, ()),
 ("*", "getFriction") : ("1/unit.picosecond", ()),
@@ -485,7 +484,7 @@ UNITS = {
 ("RMSDForce", "getParticles") : (None, ()),
 ("NoseHooverChain", "getThermostatedPairs") : (None, ()),
 ("NoseHooverChain", "getThermostatedAtoms") : (None, ()),
-("NoseHooverChain", "getDefaultYoshidaSuzukiWeights") : (None, ()),
+("NoseHooverChain", "getYoshidaSuzukiWeights") : (None, ()),
 ("NoseHooverIntegrator", "setTemperature") : (None, ("unit.kelvin", None)),
 ("NoseHooverIntegrator", "setRelativeTemperature") : (None, ("unit.kelvin", None) ),
 ("NoseHooverIntegrator", "setCollisionFrequency") : (None, ("unit.picosecond**-1", None)),
@@ -494,8 +493,8 @@ UNITS = {
 ("NoseHooverIntegrator", "addThermostat"): (None, ("unit.kelvin", "unit.picosecond**-1", None, None, None)),
 ("NoseHooverIntegrator", "addSubsystemThermostat"):
     (None, (None, None, "unit.kelvin", "unit.picosecond**-1", "unit.kelvin", "unit.picosecond**-1", None, None, None)),
-("NoseHooverIntegrator", "getNumNoseHooverThermostats") : (None, ()),
-("NoseHooverIntegrator", "getNoseHooverThermostat") : (None, ()),
+("NoseHooverIntegrator", "getNumThermostats") : (None, ()),
+("NoseHooverIntegrator", "getThermostat") : (None, ()),
 ("NoseHooverIntegrator", "getMaximumPairDistance") : ("unit.nanometer", ()),
 ("NoseHooverIntegrator", "setMaximumPairDistance") : (None, ("unit.nanometer",)),
 ("DrudeNoseHooverIntegrator", "getMaxDrudeDistance") : ("unit.nanometer", ()),

@@ -34,20 +34,20 @@
 
 using namespace OpenMM;
 
-NoseHooverChain::NoseHooverChain(double defaultTemperature, double defaultRelativeTemperature, double defaultCollisionFrequency,
-                                 double defaultRelativeCollisionFrequency,
-                                 int defaultNumDOFs, int defaultChainLength, int defaultNumMTS,
-                                 int defaultNumYoshidaSuzuki, int defaultChainID,
+NoseHooverChain::NoseHooverChain(double temperature, double relativeTemperature, double collisionFrequency,
+                                 double relativeCollisionFrequency,
+                                 int numDOFs_, int chainLength_, int numMTS_,
+                                 int numYoshidaSuzuki, int chainID_,
                                  const std::vector<int>& thermostatedAtoms, const std::vector<std::pair<int, int> > &thermostatedPairs):
-        defaultTemp(defaultTemperature), defaultRelativeTemp(defaultRelativeTemperature), defaultFreq(defaultCollisionFrequency),
-        defaultRelativeFreq(defaultRelativeCollisionFrequency), defaultNumDOFs(defaultNumDOFs),
-        defaultChainLength(defaultChainLength), defaultNumMTS(defaultNumMTS), defaultNumYS(defaultNumYoshidaSuzuki),
-        defaultChainID(defaultChainID), thermostatedAtoms(thermostatedAtoms), thermostatedPairs(thermostatedPairs)
+        temp(temperature), relativeTemp(relativeTemperature), freq(collisionFrequency),
+        relativeFreq(relativeCollisionFrequency), numDOFs(numDOFs_),
+        chainLength(chainLength_), numMTS(numMTS_), numYS(numYoshidaSuzuki),
+        chainID(chainID_), thermostatedAtoms(thermostatedAtoms), thermostatedPairs(thermostatedPairs)
 {}
 
 
-std::vector<double> NoseHooverChain::getDefaultYoshidaSuzukiWeights() const {
-    switch (defaultNumYS) {
+std::vector<double> NoseHooverChain::getYoshidaSuzukiWeights() const {
+    switch (numYS) {
         case 1:
             return {1};
         case 3:

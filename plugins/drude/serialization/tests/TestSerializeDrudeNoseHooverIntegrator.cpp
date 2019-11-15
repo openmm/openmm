@@ -50,18 +50,18 @@ void assertIntegratorsEqual(const DrudeNoseHooverIntegrator& integrator1, const 
     ASSERT_EQUAL(integrator1.getStepSize(), integrator2.getStepSize());
     ASSERT_EQUAL(integrator1.getConstraintTolerance(), integrator2.getConstraintTolerance());
     ASSERT_EQUAL(integrator1.getMaximumPairDistance(), integrator2.getMaximumPairDistance());
-    ASSERT_EQUAL(integrator1.getNumNoseHooverThermostats(), integrator2.getNumNoseHooverThermostats());
-    for (int i = 0; i < integrator1.getNumNoseHooverThermostats(); i++) {
-        const auto &thermostat1 = integrator1.getNoseHooverThermostat(i);
-        const auto &thermostat2 = integrator2.getNoseHooverThermostat(i);
-        ASSERT_EQUAL(thermostat1.getDefaultTemperature(), thermostat2.getDefaultTemperature());
-        ASSERT_EQUAL(thermostat1.getDefaultCollisionFrequency(), thermostat2.getDefaultCollisionFrequency());
-        ASSERT_EQUAL(thermostat1.getDefaultRelativeTemperature(), thermostat2.getDefaultRelativeTemperature());
-        ASSERT_EQUAL(thermostat1.getDefaultRelativeCollisionFrequency(), thermostat2.getDefaultRelativeCollisionFrequency());
-        ASSERT_EQUAL(thermostat1.getDefaultChainLength(), thermostat2.getDefaultChainLength());
-        ASSERT_EQUAL(thermostat1.getDefaultNumMultiTimeSteps(), thermostat2.getDefaultNumMultiTimeSteps());
-        ASSERT_EQUAL(thermostat1.getDefaultNumYoshidaSuzukiTimeSteps(), thermostat2.getDefaultNumYoshidaSuzukiTimeSteps());
-        ASSERT_EQUAL(thermostat1.getDefaultChainID(), thermostat2.getDefaultChainID());
+    ASSERT_EQUAL(integrator1.getNumThermostats(), integrator2.getNumThermostats());
+    for (int i = 0; i < integrator1.getNumThermostats(); i++) {
+        const auto &thermostat1 = integrator1.getThermostat(i);
+        const auto &thermostat2 = integrator2.getThermostat(i);
+        ASSERT_EQUAL(thermostat1.getTemperature(), thermostat2.getTemperature());
+        ASSERT_EQUAL(thermostat1.getCollisionFrequency(), thermostat2.getCollisionFrequency());
+        ASSERT_EQUAL(thermostat1.getRelativeTemperature(), thermostat2.getRelativeTemperature());
+        ASSERT_EQUAL(thermostat1.getRelativeCollisionFrequency(), thermostat2.getRelativeCollisionFrequency());
+        ASSERT_EQUAL(thermostat1.getChainLength(), thermostat2.getChainLength());
+        ASSERT_EQUAL(thermostat1.getNumMultiTimeSteps(), thermostat2.getNumMultiTimeSteps());
+        ASSERT_EQUAL(thermostat1.getNumYoshidaSuzukiTimeSteps(), thermostat2.getNumYoshidaSuzukiTimeSteps());
+        ASSERT_EQUAL(thermostat1.getChainID(), thermostat2.getChainID());
         const auto &thermostat1Atoms = thermostat1.getThermostatedAtoms();
         const auto &thermostat2Atoms = thermostat2.getThermostatedAtoms();
         ASSERT_EQUAL(thermostat1Atoms.size(), thermostat2Atoms.size());
@@ -90,7 +90,7 @@ void testSerialization() {
     XmlSerializer::serialize<DrudeNoseHooverIntegrator>(&integrator, "Integrator", buffer2);
     DrudeNoseHooverIntegrator* copy = XmlSerializer::deserialize<DrudeNoseHooverIntegrator>(buffer2);
 
-    ASSERT_EQUAL(copy->getNoseHooverThermostat(0).getThermostatedAtoms().size(), 0);
+    ASSERT_EQUAL(copy->getThermostat(0).getThermostatedAtoms().size(), 0);
     assertIntegratorsEqual(integrator, *copy);
 
 }

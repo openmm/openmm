@@ -336,7 +336,7 @@ double testPositionsAfterShortRun(Platform &platform) {
     const auto &v = state.getVelocities();
     const auto &p = state.getPositions();
 
-    const double TOL = 1e-4;
+    const double TOL = 3e-4;
     ASSERT_EQUAL_VEC(Vec3(      0.35675068,       0.65083786,       0.27473552), v[0], TOL);
     ASSERT_EQUAL_VEC(Vec3(     0.099853537,        0.2840745,      0.069048963), v[1], TOL);
     ASSERT_EQUAL_VEC(Vec3(      0.24183664,       0.12975303,       -1.1057667), v[2], TOL);

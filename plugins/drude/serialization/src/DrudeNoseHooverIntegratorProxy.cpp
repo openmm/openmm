@@ -54,9 +54,9 @@ void DrudeNoseHooverIntegratorProxy::serialize(const void* object, Serialization
     node.setDoubleProperty("relativeTemperature", integrator.getRelativeTemperature());
     node.setDoubleProperty("collisionFrequency", integrator.getCollisionFrequency());
     node.setDoubleProperty("relativeCollisionFrequency", integrator.getRelativeCollisionFrequency());
-    node.setIntProperty("chainLength", integrator.getNoseHooverThermostat().getDefaultChainLength());
-    node.setIntProperty("numMTS", integrator.getNoseHooverThermostat().getDefaultNumMultiTimeSteps());
-    node.setIntProperty("numYS", integrator.getNoseHooverThermostat().getDefaultNumYoshidaSuzukiTimeSteps());
+    node.setIntProperty("chainLength", integrator.getThermostat().getChainLength());
+    node.setIntProperty("numMTS", integrator.getThermostat().getNumMultiTimeSteps());
+    node.setIntProperty("numYS", integrator.getThermostat().getNumYoshidaSuzukiTimeSteps());
 }
 
 void* DrudeNoseHooverIntegratorProxy::deserialize(const SerializationNode& node) const {
