@@ -75,7 +75,7 @@ matrix:
 
     - sudo: false
       dist: trusty
-      python: 2.7_with_system_site_packages
+      python: 3.6
       env: ==STATIC_LIB==
            OPENCL=false
            CUDA=false
@@ -85,8 +85,8 @@ matrix:
 
     - sudo: false
       dist: trusty
-      python: 2.7_with_system_site_packages
-      env: ==PYTHON_2==
+      python: 3.6
+      env: ==PYTHON_3_6==
            OPENCL=false
            CUDA=false
            CC=$CCACHE/clang
@@ -95,9 +95,9 @@ matrix:
            CMAKE_FLAGS="-DOPENMM_GENERATE_API_DOCS=ON"
 
     - sudo: false
-      dist: trusty
-      python: 3.4
-      env: ==PYTHON_3==
+      dist: xenial
+      python: 3.8
+      env: ==PYTHON_3_8==
            OPENCL=false
            CUDA=false
            CC=$CCACHE/gcc
