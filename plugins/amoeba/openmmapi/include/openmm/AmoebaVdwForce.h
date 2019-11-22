@@ -50,10 +50,31 @@ namespace OpenMM {
  * particle to another one.  This is typically done for hydrogens to place the interaction site slightly
  * closer to the parent atom.  The fraction is known as the "reduction factor", since it reduces the distance
  * from the parent atom to the interaction site.
+ *
+ * Support is also available for softcore interactions based on setting a per particle alchemical flag and
+ * setting the AmoebaVdwForce to use an "AlchemicalMethod" -- either Decouple or Annihilate.
+ * For Decouple, two alchemical atoms interact normally. For Annihilate, all interactions involving an 
+ * alchemical atom are influenced. The softcore state is specified by setting a single 
+ * Context parameter "AmoebaVdwLambda" between 0.0 and 1.0.
+ *
+ * The softcore functional form can be modified by setting the softcore power (default of 5) and the softcore
+ * alpha (default of 0,7). For more information on the softcore functional form see Eq. 2 from:
+ * Jiao, D.;  Golubkov, P. A.;  Darden, T. A.; Ren, P., 
+ * Calculation of protein-ligand binding free energy by using a polarizable potential.
+ * Proc. Natl. Acad. Sci. U.S.A. 2008, 105 (17), 6290-6295.
+ * https://www.pnas.org/content/105/17/6290.
  */
 
 class OPENMM_EXPORT_AMOEBA AmoebaVdwForce : public Force {
 public:
+    /**
+     * This is the name of the parameter which stores the current Amoeba vdW lambda value.
+     */
+    static const std::string& Lambda() {
+        static const std::string key = "AmoebaVdwLambda";
+        return key;
+    }
+
     /**
      * This is an enumeration of the different methods that may be used for handling long range nonbonded forces.
      */
@@ -68,6 +89,24 @@ public:
          * each other particle.  Interactions beyond the cutoff distance are ignored.
          */
         CutoffPeriodic = 1,
+    };
+
+    /**
+     * This is an enumeration of the different alchemical methods used when applying softcore interactions.
+     */
+    enum AlchemicalMethod {
+        /**
+         * All vdW interactions are treated normally. This is the default.
+         */
+        None = 0,
+        /**
+         * Maintain full strength vdW interactions between two alchemical particles.
+         */
+        Decouple = 1,
+        /**
+         * Interactions between two alchemical particles are turned off at lambda=0.
+         */
+        Annihilate = 2,
     };
 
     /**
@@ -91,8 +130,10 @@ public:
      * @param epsilon         vdw epsilon
      * @param reductionFactor the fraction of the distance along the line from the parent particle to this particle
      *                        at which the interaction site should be placed
+     * @param isAlchemical    if true, this vdW particle is undergoing an alchemical change.
      */
-    void setParticleParameters(int particleIndex, int parentIndex, double sigma, double epsilon, double reductionFactor);
+    void setParticleParameters(int particleIndex, int parentIndex, double sigma, double epsilon, 
+                               double reductionFactor, bool isAlchemical = false);
 
     /**
      * Get the force field parameters for a vdw particle.
@@ -103,8 +144,10 @@ public:
      * @param[out] epsilon         vdw epsilon
      * @param[out] reductionFactor the fraction of the distance along the line from the parent particle to this particle
      *                             at which the interaction site should be placed
+     * @param[out] isAlchemical    if true, this vdW particle is undergoing an alchemical change.
      */
-    void getParticleParameters(int particleIndex, int& parentIndex, double& sigma, double& epsilon, double& reductionFactor) const;
+    void getParticleParameters(int particleIndex, int& parentIndex, double& sigma, double& epsilon, 
+                               double& reductionFactor, bool& isAlchemical) const;
 
 
     /**
@@ -115,9 +158,10 @@ public:
      * @param epsilon         vdw epsilon
      * @param reductionFactor the fraction of the distance along the line from the parent particle to this particle
      *                        at which the interaction site should be placed
+     * @param isAlchemical    if true, this vdW particle is undergoing an alchemical change.
      * @return index of added particle
      */
-    int addParticle(int parentIndex, double sigma, double epsilon, double reductionFactor);
+    int addParticle(int parentIndex, double sigma, double epsilon, double reductionFactor, bool isAlchemical = false);
 
     /**
      * Set sigma combining rule
@@ -136,14 +180,14 @@ public:
     /**
      * Set epsilon combining rule
      *
-     * @param epsilonCombiningRule   epsilon combining rule:   'ARITHMETIC', 'GEOMETRIC'. 'HARMONIC', 'HHG'
+     * @param epsilonCombiningRule   epsilon combining rule:   'ARITHMETIC', 'GEOMETRIC'. 'HARMONIC', 'W-H', 'HHG'
      */
     void setEpsilonCombiningRule(const std::string& epsilonCombiningRule);
 
     /**
      * Get epsilon combining rule
      *
-     * @return epsilonCombiningRule   epsilon combining rule:  'ARITHMETIC', 'GEOMETRIC'. 'HARMONIC', 'HHG'
+     * @return epsilonCombiningRule   epsilon combining rule:  'ARITHMETIC', 'GEOMETRIC'. 'HARMONIC', 'W-H', 'HHG'
      */
     const std::string& getEpsilonCombiningRule(void) const;
 
@@ -223,6 +267,37 @@ public:
      * Set the method used for handling long range nonbonded interactions.
      */
     void setNonbondedMethod(NonbondedMethod method);
+
+    /**
+     * Set the softcore power on lambda (default = 5).
+     */
+    void setSoftcorePower(int n);
+
+    /**
+     * Get the softcore power on lambda.
+     */
+    int getSoftcorePower() const;
+
+    /**
+     * Set the softcore alpha value (default = 0.7).
+     */
+    void setSoftcoreAlpha(double alpha);
+
+    /**
+     * Get the softcore alpha value.
+     */
+    double getSoftcoreAlpha() const;
+
+    /**
+     * Get the method used for alchemical interactions.
+     */
+    AlchemicalMethod getAlchemicalMethod() const;
+
+    /**
+     * Set the method used for handling long range nonbonded interactions.
+     */
+    void setAlchemicalMethod(AlchemicalMethod method);
+
     /**
      * Update the per-particle parameters in a Context to match those stored in this Force object.  This method provides
      * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
@@ -250,6 +325,9 @@ private:
     NonbondedMethod nonbondedMethod;
     double cutoff;
     bool useDispersionCorrection;
+    AlchemicalMethod alchemicalMethod;
+    int n;
+    double alpha;
 
     std::string sigmaCombiningRule;
     std::string epsilonCombiningRule;
@@ -267,14 +345,16 @@ class AmoebaVdwForce::VdwInfo {
 public:
     int parentIndex;
     double reductionFactor, sigma, epsilon, cutoff;
+    bool isAlchemical;
     VdwInfo() {
         parentIndex = -1;
         reductionFactor      = 0.0;
         sigma                = 1.0;
         epsilon              = 0.0;
+        isAlchemical         = false;
     }
-    VdwInfo(int parentIndex, double sigma, double epsilon, double reductionFactor) :
-        parentIndex(parentIndex), reductionFactor(reductionFactor), sigma(sigma), epsilon(epsilon)  {
+    VdwInfo(int parentIndex, double sigma, double epsilon, double reductionFactor, bool isAlchemical) :
+        parentIndex(parentIndex), reductionFactor(reductionFactor), sigma(sigma), epsilon(epsilon), isAlchemical(isAlchemical)  {
     }
 };
 

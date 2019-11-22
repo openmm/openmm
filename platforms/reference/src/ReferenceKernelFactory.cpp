@@ -90,6 +90,8 @@ KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Pla
         return new ReferenceIntegrateVerletStepKernel(name, platform, data);
     if (name == IntegrateLangevinStepKernel::Name())
         return new ReferenceIntegrateLangevinStepKernel(name, platform, data);
+    if (name == IntegrateBAOABStepKernel::Name())
+        return new ReferenceIntegrateBAOABStepKernel(name, platform, data);
     if (name == IntegrateBrownianStepKernel::Name())
         return new ReferenceIntegrateBrownianStepKernel(name, platform, data);
     if (name == IntegrateVariableLangevinStepKernel::Name())

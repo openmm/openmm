@@ -33,6 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/AndersenThermostat.h"
+#include "openmm/BAOABLangevinIntegrator.h"
 #include "openmm/BrownianIntegrator.h"
 #include "openmm/CMAPTorsionForce.h"
 #include "openmm/CMMotionRemover.h"

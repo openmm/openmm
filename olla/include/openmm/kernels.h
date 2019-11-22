@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -33,6 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/AndersenThermostat.h"
+#include "openmm/BAOABLangevinIntegrator.h"
 #include "openmm/BrownianIntegrator.h"
 #include "openmm/CMAPTorsionForce.h"
 #include "openmm/CMMotionRemover.h"
@@ -1088,6 +1089,43 @@ public:
      * @param integrator the LangevinIntegrator this kernel is being used for
      */
     virtual double computeKineticEnergy(ContextImpl& context, const LangevinIntegrator& integrator) = 0;
+};
+
+/**
+ * This kernel is invoked by BAOABLangevinIntegrator to take one time step.
+ */
+class IntegrateBAOABStepKernel : public KernelImpl {
+public:
+    static std::string Name() {
+        return "IntegrateBAOABStep";
+    }
+    IntegrateBAOABStepKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param integrator the BAOABLangevinIntegrator this kernel will be used for
+     */
+    virtual void initialize(const System& system, const BAOABLangevinIntegrator& integrator) = 0;
+    /**
+     * Execute the kernel.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the BAOABLangevinIntegrator this kernel is being used for
+     * @param forcesAreValid if the context has been modified since the last time step, this will be
+     *                       false to show that cached forces are invalid and must be recalculated.
+     *                       On exit, this should specify whether the cached forces are valid at the
+     *                       end of the step.
+     */
+    virtual void execute(ContextImpl& context, const BAOABLangevinIntegrator& integrator, bool& forcesAreValid) = 0;
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the BAOABLangevinIntegrator this kernel is being used for
+     */
+    virtual double computeKineticEnergy(ContextImpl& context, const BAOABLangevinIntegrator& integrator) = 0;
 };
 
 /**

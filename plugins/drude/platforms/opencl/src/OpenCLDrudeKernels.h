@@ -44,7 +44,7 @@ namespace OpenMM {
  */
 class OpenCLCalcDrudeForceKernel : public CalcDrudeForceKernel {
 public:
-    OpenCLCalcDrudeForceKernel(std::string name, const Platform& platform, OpenCLContext& cl) :
+    OpenCLCalcDrudeForceKernel(const std::string& name, const Platform& platform, OpenCLContext& cl) :
             CalcDrudeForceKernel(name, platform), cl(cl) {
     }
     /**
@@ -81,7 +81,7 @@ private:
  */
 class OpenCLIntegrateDrudeLangevinStepKernel : public IntegrateDrudeLangevinStepKernel {
 public:
-    OpenCLIntegrateDrudeLangevinStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) :
+    OpenCLIntegrateDrudeLangevinStepKernel(const std::string& name, const Platform& platform, OpenCLContext& cl) :
             IntegrateDrudeLangevinStepKernel(name, platform), cl(cl), hasInitializedKernels(false) {
     }
     /**
@@ -120,7 +120,7 @@ private:
  */
 class OpenCLIntegrateDrudeSCFStepKernel : public IntegrateDrudeSCFStepKernel {
 public:
-    OpenCLIntegrateDrudeSCFStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) :
+    OpenCLIntegrateDrudeSCFStepKernel(const std::string& name, const Platform& platform, OpenCLContext& cl) :
             IntegrateDrudeSCFStepKernel(name, platform), cl(cl), hasInitializedKernels(false), minimizerPos(NULL) {
     }
     ~OpenCLIntegrateDrudeSCFStepKernel();

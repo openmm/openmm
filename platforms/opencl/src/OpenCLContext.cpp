@@ -131,7 +131,6 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
                     // This attribute does not ensure that all queries are supported by the runtime (it may be an older runtime,
                     // or the CPU device) so still have to check for errors.
                     try {
-#ifdef CL_DEVICE_SIMD_WIDTH_AMD
                         processingElementsPerComputeUnit =
                             // AMD GPUs either have a single VLIW SIMD or multiple scalar SIMDs.
                             // The SIMD width is the number of threads the SIMD executes per cycle.
@@ -145,7 +144,6 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
                         // Just in case any of the queries return 0.
                         if (processingElementsPerComputeUnit <= 0)
                             processingElementsPerComputeUnit = 1;
-#endif
                     }
                     catch (cl::Error err) {
                         // Runtime does not support the queries so use default.
@@ -221,7 +219,6 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
                     // This attribute does not ensure that all queries are supported by the runtime so still have to
                     // check for errors.
                     try {
-#ifdef CL_DEVICE_SIMD_PER_COMPUTE_UNIT_AMD
                         // Must catch cl:Error as will fail if runtime does not support queries.
 
                         cl_uint simdPerComputeUnit = device.getInfo<CL_DEVICE_SIMD_PER_COMPUTE_UNIT_AMD>();
@@ -230,12 +227,15 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
                         // If the GPU has multiple SIMDs per compute unit then it is uses the scalar instruction
                         // set instead of the VLIW instruction set. It therefore needs more thread blocks per
                         // compute unit to hide memory latency.
-                        if (simdPerComputeUnit > 1)
-                            numThreadBlocksPerComputeUnit = 4 * simdPerComputeUnit;
+                        if (simdPerComputeUnit > 1) {
+                            if (simdWidth == 32)
+                                numThreadBlocksPerComputeUnit = 6*simdPerComputeUnit; // Navi seems to like more thread blocks than older GPUs
+                            else
+                                numThreadBlocksPerComputeUnit = 4*simdPerComputeUnit;
+                        }
 
                         // If the queries are supported then must be newer than SDK 2.4.
                         amdPostSdk2_4 = true;
-#endif
                     }
                     catch (cl::Error err) {
                         // Runtime does not support the query so is unlikely to be the newer scalar GPU.
@@ -254,7 +254,7 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
         if (supportsDoublePrecision)
             compilationDefines["SUPPORTS_DOUBLE_PRECISION"] = "";
         if (simdWidth >= 32)
-            compilationDefines["SYNC_WARPS"] = "";
+            compilationDefines["SYNC_WARPS"] = "mem_fence(CLK_LOCAL_MEM_FENCE)";
         else
             compilationDefines["SYNC_WARPS"] = "barrier(CLK_LOCAL_MEM_FENCE)";
         vector<cl::Device> contextDevices;
@@ -729,7 +729,7 @@ void OpenCLContext::clearAutoclearBuffers() {
         executeKernel(clearTwoBuffersKernel, max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]), 128);
     }
     else if (total-base == 1) {
-        clearBuffer(*autoclearBuffers[base], autoclearBufferSizes[base]);
+        clearBuffer(*autoclearBuffers[base], autoclearBufferSizes[base]*4);
     }
 }
 

@@ -88,6 +88,7 @@ OpenCLPlatform::OpenCLPlatform() {
     registerKernelFactory(CalcGayBerneForceKernel::Name(), factory);
     registerKernelFactory(IntegrateVerletStepKernel::Name(), factory);
     registerKernelFactory(IntegrateLangevinStepKernel::Name(), factory);
+    registerKernelFactory(IntegrateBAOABStepKernel::Name(), factory);
     registerKernelFactory(IntegrateBrownianStepKernel::Name(), factory);
     registerKernelFactory(IntegrateVariableVerletStepKernel::Name(), factory);
     registerKernelFactory(IntegrateVariableLangevinStepKernel::Name(), factory);
@@ -141,6 +142,17 @@ bool OpenCLPlatform::isPlatformSupported() {
         return false;
 #endif
 
+    // Make sure at least one OpenCL implementation is installed.
+
+    std::vector<cl::Platform> platforms;
+    try {
+        cl::Platform::get(&platforms);
+        if (platforms.size() == 0)
+            return false;
+    }
+    catch (...) {
+        return false;
+    }
     return true;
 }
 

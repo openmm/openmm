@@ -69,8 +69,8 @@ class PDBFile(object):
 
         Parameters
         ----------
-        file : string
-            the name of the file to load
+        file : string or file
+            the name of the file to load.  Alternatively you can pass an open file object.
         extraParticleIdentifier : string='EP'
             if this value appears in the element column for an ATOM record, the Atom's element will be set to None to mark it as an extra particle
         """
@@ -352,9 +352,11 @@ class PDBFile(object):
                     resName = res.name
                 if keepIds and len(res.id) < 5:
                     resId = res.id
-                    resIC = res.insertionCode
                 else:
                     resId = "%4d" % ((resIndex+1)%10000)
+                if len(res.insertionCode) == 1:
+                    resIC = res.insertionCode
+                else:
                     resIC = " "
                 if res.name in nonHeterogens:
                     recordName = "ATOM  "

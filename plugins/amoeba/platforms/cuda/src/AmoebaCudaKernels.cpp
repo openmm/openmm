@@ -88,7 +88,7 @@ private:
     const AmoebaBondForce& force;
 };
 
-CudaCalcAmoebaBondForceKernel::CudaCalcAmoebaBondForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : 
+CudaCalcAmoebaBondForceKernel::CudaCalcAmoebaBondForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system) :
                 CalcAmoebaBondForceKernel(name, platform), cu(cu), system(system) {
 }
 
@@ -180,7 +180,7 @@ private:
     const AmoebaAngleForce& force;
 };
 
-CudaCalcAmoebaAngleForceKernel::CudaCalcAmoebaAngleForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) :
+CudaCalcAmoebaAngleForceKernel::CudaCalcAmoebaAngleForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system) :
             CalcAmoebaAngleForceKernel(name, platform), cu(cu), system(system) {
 }
 
@@ -276,7 +276,7 @@ private:
     const AmoebaInPlaneAngleForce& force;
 };
 
-CudaCalcAmoebaInPlaneAngleForceKernel::CudaCalcAmoebaInPlaneAngleForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : 
+CudaCalcAmoebaInPlaneAngleForceKernel::CudaCalcAmoebaInPlaneAngleForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system) :
           CalcAmoebaInPlaneAngleForceKernel(name, platform), cu(cu), system(system) {
 }
 
@@ -373,7 +373,7 @@ private:
     const AmoebaPiTorsionForce& force;
 };
 
-CudaCalcAmoebaPiTorsionForceKernel::CudaCalcAmoebaPiTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) :
+CudaCalcAmoebaPiTorsionForceKernel::CudaCalcAmoebaPiTorsionForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system) :
          CalcAmoebaPiTorsionForceKernel(name, platform), cu(cu), system(system) {
 }
 
@@ -462,7 +462,7 @@ private:
     const AmoebaStretchBendForce& force;
 };
 
-CudaCalcAmoebaStretchBendForceKernel::CudaCalcAmoebaStretchBendForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) :
+CudaCalcAmoebaStretchBendForceKernel::CudaCalcAmoebaStretchBendForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system) :
                    CalcAmoebaStretchBendForceKernel(name, platform), cu(cu), system(system) {
 }
 
@@ -561,7 +561,7 @@ private:
     const AmoebaOutOfPlaneBendForce& force;
 };
 
-CudaCalcAmoebaOutOfPlaneBendForceKernel::CudaCalcAmoebaOutOfPlaneBendForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) :
+CudaCalcAmoebaOutOfPlaneBendForceKernel::CudaCalcAmoebaOutOfPlaneBendForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system) :
           CalcAmoebaOutOfPlaneBendForceKernel(name, platform), cu(cu), system(system) {
 }
 
@@ -656,7 +656,7 @@ private:
     const AmoebaTorsionTorsionForce& force;
 };
 
-CudaCalcAmoebaTorsionTorsionForceKernel::CudaCalcAmoebaTorsionTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) :
+CudaCalcAmoebaTorsionTorsionForceKernel::CudaCalcAmoebaTorsionTorsionForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system) :
                 CalcAmoebaTorsionTorsionForceKernel(name, platform), cu(cu), system(system) {
 }
 
@@ -763,7 +763,7 @@ private:
     const AmoebaMultipoleForce& force;
 };
 
-CudaCalcAmoebaMultipoleForceKernel::CudaCalcAmoebaMultipoleForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : 
+CudaCalcAmoebaMultipoleForceKernel::CudaCalcAmoebaMultipoleForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system) :
         CalcAmoebaMultipoleForceKernel(name, platform), cu(cu), system(system), hasInitializedScaleFactors(false), hasInitializedFFT(false), multipolesAreValid(false), hasCreatedEvent(false),
         gkKernel(NULL) {
 }
@@ -2119,7 +2119,7 @@ private:
     const AmoebaGeneralizedKirkwoodForce& force;
 };
 
-CudaCalcAmoebaGeneralizedKirkwoodForceKernel::CudaCalcAmoebaGeneralizedKirkwoodForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : 
+CudaCalcAmoebaGeneralizedKirkwoodForceKernel::CudaCalcAmoebaGeneralizedKirkwoodForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system) :
            CalcAmoebaGeneralizedKirkwoodForceKernel(name, platform), cu(cu), system(system), hasInitializedKernels(false) {
 }
 
@@ -2343,43 +2343,57 @@ public:
     bool areParticlesIdentical(int particle1, int particle2) {
         int iv1, iv2;
         double sigma1, sigma2, epsilon1, epsilon2, reduction1, reduction2;
-        force.getParticleParameters(particle1, iv1, sigma1, epsilon1, reduction1);
-        force.getParticleParameters(particle2, iv2, sigma2, epsilon2, reduction2);
-        return (sigma1 == sigma2 && epsilon1 == epsilon2 && reduction1 == reduction2);
+        bool isAlchemical1, isAlchemical2;
+        force.getParticleParameters(particle1, iv1, sigma1, epsilon1, reduction1, isAlchemical1);
+        force.getParticleParameters(particle2, iv2, sigma2, epsilon2, reduction2, isAlchemical2);
+        return (sigma1 == sigma2 && epsilon1 == epsilon2 && reduction1 == reduction2 && isAlchemical1 == isAlchemical2);
     }
 private:
     const AmoebaVdwForce& force;
 };
 
-CudaCalcAmoebaVdwForceKernel::CudaCalcAmoebaVdwForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) :
-        CalcAmoebaVdwForceKernel(name, platform), cu(cu), system(system), hasInitializedNonbonded(false), nonbonded(NULL) {
+CudaCalcAmoebaVdwForceKernel::CudaCalcAmoebaVdwForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system) :
+        CalcAmoebaVdwForceKernel(name, platform), cu(cu), system(system), hasInitializedNonbonded(false), nonbonded(NULL), vdwLambdaPinnedBuffer(NULL) {
 }
 
 CudaCalcAmoebaVdwForceKernel::~CudaCalcAmoebaVdwForceKernel() {
     cu.setAsCurrent();
     if (nonbonded != NULL)
         delete nonbonded;
+    if (vdwLambdaPinnedBuffer != NULL) 
+        cuMemFreeHost(vdwLambdaPinnedBuffer);                              
 }
 
 void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const AmoebaVdwForce& force) {
     cu.setAsCurrent();
     sigmaEpsilon.initialize<float2>(cu, cu.getPaddedNumAtoms(), "sigmaEpsilon");
     bondReductionAtoms.initialize<int>(cu, cu.getPaddedNumAtoms(), "bondReductionAtoms");
-    bondReductionFactors.initialize<float>(cu, cu.getPaddedNumAtoms(), "sigmaEpsilon");
+    bondReductionFactors.initialize<float>(cu, cu.getPaddedNumAtoms(), "bondReductionFactors");
     tempPosq.initialize(cu, cu.getPaddedNumAtoms(), cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4), "tempPosq");
     tempForces.initialize<long long>(cu, 3*cu.getPaddedNumAtoms(), "tempForces");
     
     // Record atom parameters.
-    
     vector<float2> sigmaEpsilonVec(cu.getPaddedNumAtoms(), make_float2(0, 1));
+    vector<float> isAlchemicalVec(cu.getPaddedNumAtoms(), 0);
     vector<int> bondReductionAtomsVec(cu.getPaddedNumAtoms(), 0);
     vector<float> bondReductionFactorsVec(cu.getPaddedNumAtoms(), 0);
     vector<vector<int> > exclusions(cu.getNumAtoms());
+
+    // Handle Alchemical parameters.
+    hasAlchemical = force.getAlchemicalMethod() != AmoebaVdwForce::None;
+    if (hasAlchemical) {
+       isAlchemical.initialize<float>(cu, cu.getPaddedNumAtoms(), "isAlchemical");
+       vdwLambda.initialize<float>(cu, 1, "vdwLambda");
+       CHECK_RESULT(cuMemHostAlloc(&vdwLambdaPinnedBuffer, sizeof(float), 0), "Error allocating vdwLambda pinned buffer");
+    }
+
     for (int i = 0; i < force.getNumParticles(); i++) {
         int ivIndex;
         double sigma, epsilon, reductionFactor;
-        force.getParticleParameters(i, ivIndex, sigma, epsilon, reductionFactor);
+        bool alchemical;
+        force.getParticleParameters(i, ivIndex, sigma, epsilon, reductionFactor, alchemical);
         sigmaEpsilonVec[i] = make_float2((float) sigma, (float) epsilon);
+        isAlchemicalVec[i] = (alchemical) ? 1.0f : 0.0f;
         bondReductionAtomsVec[i] = ivIndex;
         bondReductionFactorsVec[i] = (float) reductionFactor;
         force.getParticleExclusions(i, exclusions[i]);
@@ -2392,13 +2406,22 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
         dispersionCoefficient = AmoebaVdwForceImpl::calcDispersionCorrection(system, force);
     else
         dispersionCoefficient = 0.0;               
- 
+
     // This force is applied based on modified atom positions, where hydrogens have been moved slightly
     // closer to their parent atoms.  We therefore create a separate CudaNonbondedUtilities just for
     // this force, so it will have its own neighbor list and interaction kernel.
     
     nonbonded = new CudaNonbondedUtilities(cu);
     nonbonded->addParameter(CudaNonbondedUtilities::ParameterInfo("sigmaEpsilon", "float", 2, sizeof(float2), sigmaEpsilon.getDevicePointer()));
+
+    if (hasAlchemical) {
+       isAlchemical.upload(isAlchemicalVec);
+       ((float*) vdwLambdaPinnedBuffer)[0] = 1.0f;
+       currentVdwLambda = 1.0f;
+       vdwLambda.upload(vdwLambdaPinnedBuffer, false);
+       nonbonded->addParameter(CudaNonbondedUtilities::ParameterInfo("isAlchemical", "float", 1, sizeof(float), isAlchemical.getDevicePointer()));
+       nonbonded->addArgument(CudaNonbondedUtilities::ParameterInfo("vdwLambda", "float", 1, sizeof(float), vdwLambda.getDevicePointer()));
+    }
     
     // Create the interaction kernel.
     
@@ -2417,12 +2440,19 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
         replacements["EPSILON_COMBINING_RULE"] = "1";
     else if (epsilonCombiningRule == "GEOMETRIC")
         replacements["EPSILON_COMBINING_RULE"] = "2";
-    else if (epsilonCombiningRule == "HARMONIC")
+    else if (epsilonCombiningRule =="HARMONIC")
         replacements["EPSILON_COMBINING_RULE"] = "3";
-    else if (epsilonCombiningRule == "HHG")
+    else if (epsilonCombiningRule == "W-H")
         replacements["EPSILON_COMBINING_RULE"] = "4";
+    else if (epsilonCombiningRule == "HHG")
+        replacements["EPSILON_COMBINING_RULE"] = "5";
     else
         throw OpenMMException("Illegal combining rule for sigma: "+sigmaCombiningRule);
+
+    replacements["VDW_ALCHEMICAL_METHOD"] = cu.intToString(force.getAlchemicalMethod()); 
+    replacements["VDW_SOFTCORE_POWER"] = cu.intToString(force.getSoftcorePower());
+    replacements["VDW_SOFTCORE_ALPHA"] = cu.doubleToString(force.getSoftcoreAlpha()); 
+
     double cutoff = force.getCutoffDistance();
     double taperCutoff = cutoff*0.9;
     replacements["CUTOFF_DISTANCE"] = cu.doubleToString(force.getCutoffDistance());
@@ -2449,6 +2479,17 @@ double CudaCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool includeF
         hasInitializedNonbonded = true;
         nonbonded->initialize(system);
     }
+
+    if (hasAlchemical) {
+       float contextLambda = context.getParameter(AmoebaVdwForce::Lambda());
+       if (contextLambda != currentVdwLambda) {
+          // Non-blocking copy of vdwLambda to device memory
+          ((float*) vdwLambdaPinnedBuffer)[0] = contextLambda;
+          vdwLambda.upload(vdwLambdaPinnedBuffer, false);
+          currentVdwLambda = contextLambda;
+       }
+    }
+
     cu.getPosq().copyTo(tempPosq);
     cu.getForce().copyTo(tempForces);
     void* prepareArgs[] = {&cu.getForce().getDevicePointer(), &cu.getPosq().getDevicePointer(), &tempPosq.getDevicePointer(),
@@ -2472,19 +2513,22 @@ void CudaCalcAmoebaVdwForceKernel::copyParametersToContext(ContextImpl& context,
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
     
     // Record the per-particle parameters.
-    
     vector<float2> sigmaEpsilonVec(cu.getPaddedNumAtoms(), make_float2(0, 1));
+    vector<float> isAlchemicalVec(cu.getPaddedNumAtoms(), 0);
     vector<int> bondReductionAtomsVec(cu.getPaddedNumAtoms(), 0);
     vector<float> bondReductionFactorsVec(cu.getPaddedNumAtoms(), 0);
     for (int i = 0; i < force.getNumParticles(); i++) {
         int ivIndex;
         double sigma, epsilon, reductionFactor;
-        force.getParticleParameters(i, ivIndex, sigma, epsilon, reductionFactor);
+        bool alchemical;
+        force.getParticleParameters(i, ivIndex, sigma, epsilon, reductionFactor, alchemical);
         sigmaEpsilonVec[i] = make_float2((float) sigma, (float) epsilon);
+        isAlchemicalVec[i] = (alchemical) ? 1.0f : 0.0f;
         bondReductionAtomsVec[i] = ivIndex;
         bondReductionFactorsVec[i] = (float) reductionFactor;
     }
     sigmaEpsilon.upload(sigmaEpsilonVec);
+    if (hasAlchemical) isAlchemical.upload(isAlchemicalVec);
     bondReductionAtoms.upload(bondReductionAtomsVec);
     bondReductionFactors.upload(bondReductionFactorsVec);
     if (force.getUseDispersionCorrection())
@@ -2512,7 +2556,7 @@ private:
     const AmoebaWcaDispersionForce& force;
 };
 
-CudaCalcAmoebaWcaDispersionForceKernel::CudaCalcAmoebaWcaDispersionForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : 
+CudaCalcAmoebaWcaDispersionForceKernel::CudaCalcAmoebaWcaDispersionForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system) :
            CalcAmoebaWcaDispersionForceKernel(name, platform), cu(cu), system(system) {
 }
 
@@ -2655,7 +2699,7 @@ private:
     CudaCalcHippoNonbondedForceKernel& owner;
 };
 
-CudaCalcHippoNonbondedForceKernel::CudaCalcHippoNonbondedForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : 
+CudaCalcHippoNonbondedForceKernel::CudaCalcHippoNonbondedForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system) :
         CalcHippoNonbondedForceKernel(name, platform), cu(cu), system(system), sort(NULL), hasInitializedKernels(false), hasInitializedFFT(false), multipolesAreValid(false) {
 }
 

@@ -172,6 +172,13 @@ class TestGromacsTopFile(unittest.TestCase):
 
         top = GromacsTopFile('systems/bnz.top')
         gro = GromacsGroFile('systems/bnz.gro')
+        for atom in top.topology.atoms():
+            if atom.name.startswith('C'):
+                self.assertEqual(elem.carbon, atom.element)
+            elif atom.name.startswith('H'):
+                self.assertEqual(elem.hydrogen, atom.element)
+            else:
+                self.assertIsNone(atom.element)
         system = top.createSystem()
 
         self.assertEqual(26, system.getNumParticles())

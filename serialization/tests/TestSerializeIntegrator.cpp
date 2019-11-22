@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman, Yutong Zhao                                        *
  * Contributors:                                                              *
  *                                                                            *
@@ -31,6 +31,7 @@
 
 #include "openmm/internal/AssertionUtilities.h"
 
+#include "openmm/BAOABLangevinIntegrator.h"
 #include "openmm/BrownianIntegrator.h"
 #include "openmm/CompoundIntegrator.h"
 #include "openmm/CustomIntegrator.h"
@@ -74,6 +75,20 @@ void testSerializeLangevinIntegrator() {
     delete intg2;
 }
 
+void testSerializeBAOABLangevinIntegrator() {
+    BAOABLangevinIntegrator *intg = new BAOABLangevinIntegrator(372.4, 1.234, 0.0018);
+    stringstream ss;
+    XmlSerializer::serialize<Integrator>(intg, "BAOABLangevinIntegrator", ss);
+    BAOABLangevinIntegrator *intg2 = dynamic_cast<BAOABLangevinIntegrator*>(XmlSerializer::deserialize<Integrator>(ss));
+    ASSERT_EQUAL(intg->getConstraintTolerance(), intg2->getConstraintTolerance());
+    ASSERT_EQUAL(intg->getStepSize(), intg2->getStepSize());
+    ASSERT_EQUAL(intg->getTemperature(), intg2->getTemperature());
+    ASSERT_EQUAL(intg->getFriction(), intg2->getFriction());
+    ASSERT_EQUAL(intg->getRandomNumberSeed(), intg2->getRandomNumberSeed());
+    delete intg;
+    delete intg2;
+}
+
 void testSerializeBrownianIntegrator() {
     BrownianIntegrator *intg = new BrownianIntegrator(243.1, 3.234, 0.0021);
     stringstream ss;
@@ -89,29 +104,31 @@ void testSerializeBrownianIntegrator() {
 }
 
 void testSerializeVariableVerletIntegrator() {
-    VariableVerletIntegrator *intg = new VariableVerletIntegrator(0.04234);
+    VariableVerletIntegrator intg(0.04234);
+    intg.setMaximumStepSize(0.32);
     stringstream ss;
-    XmlSerializer::serialize<Integrator>(intg, "VariableVerletIntegrator", ss);
+    XmlSerializer::serialize<Integrator>(&intg, "VariableVerletIntegrator", ss);
     VariableVerletIntegrator *intg2 = dynamic_cast<VariableVerletIntegrator*>(XmlSerializer::deserialize<Integrator>(ss));
-    ASSERT_EQUAL(intg->getConstraintTolerance(), intg2->getConstraintTolerance());
-    ASSERT_EQUAL(intg->getStepSize(), intg2->getStepSize());
-    ASSERT_EQUAL(intg->getErrorTolerance(), intg2->getErrorTolerance());
-    delete intg;
+    ASSERT_EQUAL(intg.getConstraintTolerance(), intg2->getConstraintTolerance());
+    ASSERT_EQUAL(intg.getStepSize(), intg2->getStepSize());
+    ASSERT_EQUAL(intg.getErrorTolerance(), intg2->getErrorTolerance());
+    ASSERT_EQUAL(intg.getMaximumStepSize(), intg2->getMaximumStepSize());
     delete intg2;
 }
 
 void testSerializeVariableLangevinIntegrator() {
-    VariableLangevinIntegrator *intg = new VariableLangevinIntegrator(243.1, 3.234, 0.0021);
+    VariableLangevinIntegrator intg(243.1, 3.234, 0.0021);
+    intg.setMaximumStepSize(0.32);
     stringstream ss;
-    XmlSerializer::serialize<Integrator>(intg, "VariableLangevinIntegrator", ss);
+    XmlSerializer::serialize<Integrator>(&intg, "VariableLangevinIntegrator", ss);
     VariableLangevinIntegrator *intg2 = dynamic_cast<VariableLangevinIntegrator*>(XmlSerializer::deserialize<Integrator>(ss));
-    ASSERT_EQUAL(intg->getConstraintTolerance(), intg2->getConstraintTolerance());
-    ASSERT_EQUAL(intg->getStepSize(), intg2->getStepSize());
-    ASSERT_EQUAL(intg->getErrorTolerance(), intg2->getErrorTolerance());
-    ASSERT_EQUAL(intg->getFriction(), intg2->getFriction());
-    ASSERT_EQUAL(intg->getTemperature(), intg2->getTemperature());
-    ASSERT_EQUAL(intg->getRandomNumberSeed(), intg2->getRandomNumberSeed());
-    delete intg;
+    ASSERT_EQUAL(intg.getConstraintTolerance(), intg2->getConstraintTolerance());
+    ASSERT_EQUAL(intg.getStepSize(), intg2->getStepSize());
+    ASSERT_EQUAL(intg.getErrorTolerance(), intg2->getErrorTolerance());
+    ASSERT_EQUAL(intg.getFriction(), intg2->getFriction());
+    ASSERT_EQUAL(intg.getTemperature(), intg2->getTemperature());
+    ASSERT_EQUAL(intg.getRandomNumberSeed(), intg2->getRandomNumberSeed());
+    ASSERT_EQUAL(intg.getMaximumStepSize(), intg2->getMaximumStepSize());
     delete intg2;
 }
 
@@ -242,6 +259,7 @@ int main() {
         testSerializeVariableLangevinIntegrator();
         testSerializeVariableVerletIntegrator();
         testSerializeLangevinIntegrator();
+        testSerializeBAOABLangevinIntegrator();
         testSerializeCompoundIntegrator();
     }
     catch(const exception& e) {

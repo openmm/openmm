@@ -132,9 +132,9 @@ void AmoebaTorsionTorsionForceImpl::reorderGrid(const TorsionTorsionGrid& grid, 
 
             // increment map iterators
 
-            mapJJ++;
+            ++mapJJ;
             if (mapJJ == map_Double_IntPair.end()) {
-                mapII++;
+                ++mapII;
                 if (mapII == mapAngles.end()) {
                     if ((jj != (grid[ii].size()-1)) && (ii != (grid.size()-1))) {
                         char buffer[1024];

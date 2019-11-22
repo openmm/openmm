@@ -1,11 +1,11 @@
-os: Visual Studio 2015
+os: Visual Studio 2019
 platform: x64
 configuration: Release
 shallow_clone: true
 install:
 
 # Setup shell for VS2015, x64
-  - call "c:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" amd64
+  - call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvarsall.bat" amd64
 # Set path to python, git-bash tools.
   - "set PATH=C:\\Python35-x64;C:\\Python35-x64\\Scripts;%PATH%"
   - "set PATH=C:\\Program Files (x86)\\Git\\bin;%PATH%"
@@ -20,7 +20,7 @@ install:
   - "set CCLASH_DIR=C:\\ProgramData\\cclash"
 
 # Download FFTW3 for PME plugin
-  - C:\MinGW\msys\1.0\bin\wget -q ftp://ftp.fftw.org/pub/fftw/fftw-3.3.4-dll64.zip
+  - ps: Invoke-WebRequest ftp://ftp.fftw.org/pub/fftw/fftw-3.3.4-dll64.zip -OutFile fftw-3.3.4-dll64.zip
   - 7z x fftw-3.3.4-dll64.zip -oC:\fftw > null
   - cd C:\fftw
   - lib /def:libfftw3f-3.def
@@ -28,7 +28,7 @@ install:
   - "set PATH=C:\\fftw;%PATH%"
 
 # Download and install some OpenMM build dependencies (doxygen, swig)
-  - choco install -y doxygen.portable swig > null
+  - choco install -y doxygen.install swig > null
 
 # Download OpenCL Headers and build the ICD loader
   - ps: "[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12;"

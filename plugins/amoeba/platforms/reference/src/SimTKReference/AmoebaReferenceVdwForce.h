@@ -34,6 +34,7 @@ namespace OpenMM {
 
 class AmoebaReferenceVdwForce;
 typedef double (AmoebaReferenceVdwForce::*CombiningFunction)(double x, double y) const;
+typedef double (AmoebaReferenceVdwForce::*CombiningFunctionEpsilon)(double x, double y, double z, double w) const;
 
 // ---------------------------------------------------------------------------------------
 
@@ -63,6 +64,25 @@ public:
          */
         CutoffPeriodic = 2,
     };
+
+    /**
+     * This is an enumeration of the different alchemical methods used when applying softcore interactions.
+     */
+    enum AlchemicalMethod {
+        /**
+         * All vdW interactions are treated normally. This is the default.
+         */
+        None = 0,
+        /**
+         * Maintain full strength vdW interactions between two alchemical particles.
+         */
+        Decouple = 1,
+        /**
+         * Interactions between two alchemical particles are turned off at lambda=0.
+         */
+        Annihilate = 2,
+    };
+
  
     /**---------------------------------------------------------------------------------------
        
@@ -110,6 +130,27 @@ public:
     void setNonbondedMethod(NonbondedMethod nonbondedMethod);
 
     /**---------------------------------------------------------------------------------------
+
+       Get alchemical method
+
+       @return alchemical method
+
+       --------------------------------------------------------------------------------------- */
+
+    AlchemicalMethod getAlchemicalMethod() const;
+
+    /**---------------------------------------------------------------------------------------
+
+       Set alchemical method
+
+       @param alchemical method
+
+       --------------------------------------------------------------------------------------- */
+
+    void setAlchemicalMethod(AlchemicalMethod alchemicalMethod);
+
+
+    /**---------------------------------------------------------------------------------------
     
        Get cutoff
     
@@ -128,6 +169,47 @@ public:
        --------------------------------------------------------------------------------------- */
     
     void setCutoff(double cutoff);
+
+    /**---------------------------------------------------------------------------------------
+   
+       Get softcore power
+   
+       @return n
+   
+       --------------------------------------------------------------------------------------- */
+   
+    int getSoftcorePower() const;
+
+    /**---------------------------------------------------------------------------------------
+   
+       Set softcore power
+   
+       @param n
+
+       --------------------------------------------------------------------------------------- */
+
+    void setSoftcorePower(int n);
+
+   /**---------------------------------------------------------------------------------------
+
+       Get softcore alpha
+  
+       @return alpha
+  
+       --------------------------------------------------------------------------------------- */
+  
+    double getSoftcoreAlpha() const;
+
+    /**---------------------------------------------------------------------------------------
+  
+       Set softcore alpha 
+  
+       @param alpha
+
+       --------------------------------------------------------------------------------------- */
+
+    void setSoftcoreAlpha(double alpha);
+
 
     /**---------------------------------------------------------------------------------------
     
@@ -184,11 +266,13 @@ public:
        Calculate Amoeba Hal vdw ixns
     
        @param numParticles            number of particles
+       @param lambda                  lambda value
        @param particlePositions       Cartesian coordinates of particles
        @param indexIVs                position index for associated reducing particle
        @param sigmas                  particle sigmas 
        @param epsilons                particle epsilons
        @param reductions              particle reduction factors
+       @param isAlchemical            particle alchemical flag
        @param vdwExclusions           particle exclusions
        @param forces                  add forces to this vector
     
@@ -196,10 +280,11 @@ public:
     
        --------------------------------------------------------------------------------------- */
     
-    double calculateForceAndEnergy(int numParticles, const std::vector<OpenMM::Vec3>& particlePositions,
+    double calculateForceAndEnergy(int numParticles, double lambda, const std::vector<OpenMM::Vec3>& particlePositions,
                                    const std::vector<int>& indexIVs, 
                                    const std::vector<double>& sigmas, const std::vector<double>& epsilons,
                                    const std::vector<double>& reductions,
+                                   const std::vector<bool>& isAlchemical,
                                    const std::vector< std::set<int> >& vdwExclusions,
                                    std::vector<OpenMM::Vec3>& forces) const;
          
@@ -208,11 +293,13 @@ public:
        Calculate Vdw ixn using neighbor list
     
        @param numParticles            number of particles
+       @param lambda                  lambda value
        @param particlePositions       Cartesian coordinates of particles
        @param indexIVs                position index for associated reducing particle
        @param sigmas                  particle sigmas 
        @param epsilons                particle epsilons
        @param reductions              particle reduction factors
+       @param isAlchemical            particle alchemical flag
        @param neighborList            neighbor list
        @param forces                  add forces to this vector
     
@@ -220,17 +307,16 @@ public:
     
        --------------------------------------------------------------------------------------- */
     
-    double calculateForceAndEnergy(int numParticles, const std::vector<OpenMM::Vec3>& particlePositions, 
+    double calculateForceAndEnergy(int numParticles, double lambda, const std::vector<OpenMM::Vec3>& particlePositions, 
                                    const std::vector<int>& indexIVs, 
                                    const std::vector<double>& sigmas, const std::vector<double>& epsilons,
                                    const std::vector<double>& reductions,
+                                   const std::vector<bool>& isAlchemical,
                                    const NeighborList& neighborList,
                                    std::vector<OpenMM::Vec3>& forces) const;
          
 private:
-
     // taper coefficient indices
-
     static const int C3=0;
     static const int C4=1;
     static const int C5=2;
@@ -238,6 +324,9 @@ private:
     std::string _sigmaCombiningRule;
     std::string _epsilonCombiningRule;
     NonbondedMethod _nonbondedMethod;
+    AlchemicalMethod _alchemicalMethod;
+    double _n;
+    double _alpha;
     double _cutoff;
     double _taperCutoffFactor;
     double _taperCutoff;
@@ -248,11 +337,13 @@ private:
     double  geometricSigmaCombiningRule(double sigmaI, double sigmaJ) const;
     double  cubicMeanSigmaCombiningRule(double sigmaI, double sigmaJ) const;
 
-    CombiningFunction _combineEpsilons;
-    double arithmeticEpsilonCombiningRule(double epsilonI, double epsilonJ) const;
-    double  geometricEpsilonCombiningRule(double epsilonI, double epsilonJ) const;
-    double  harmonicEpsilonCombiningRule(double epsilonI, double epsilonJ) const;
-    double  hhgEpsilonCombiningRule(double epsilonI, double epsilonJ) const;
+    CombiningFunctionEpsilon _combineEpsilons;
+    double arithmeticEpsilonCombiningRule(double epsilonI, double epsilonJ, double sigmaI, double sigmaJ) const;
+    double  geometricEpsilonCombiningRule(double epsilonI, double epsilonJ, double sigmaI, double sigmaJ) const;
+    double  harmonicEpsilonCombiningRule(double epsilonI, double epsilonJ, double sigmaI, double sigmaJ) const;
+    double  whEpsilonCombiningRule(double epsilonI, double epsilonJ, double sigmaI, double sigmaJ) const;
+    double  hhgEpsilonCombiningRule(double epsilonI, double epsilonJ, double sigmaI, double sigmaJ) const;
+
 
     /**---------------------------------------------------------------------------------------
     
@@ -308,6 +399,7 @@ private:
     
        @param  combindedSigma       combined sigmas
        @param  combindedEpsilon     combined epsilons
+       @param  softcore             softcore offset parameter
        @param  particleIPosition    particle I position 
        @param  particleJPosition    particle J position 
        @param  force                output force
@@ -316,7 +408,7 @@ private:
 
        --------------------------------------------------------------------------------------- */
     
-    double calculatePairIxn(double combindedSigma, double combindedEpsilon,
+    double calculatePairIxn(double combindedSigma, double combindedEpsilon, double softcore,
                             const Vec3& particleIPosition, const Vec3& particleJPosition,
                             Vec3& force) const;
 

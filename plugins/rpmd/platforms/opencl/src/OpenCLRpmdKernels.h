@@ -44,7 +44,7 @@ namespace OpenMM {
  */
 class OpenCLIntegrateRPMDStepKernel : public IntegrateRPMDStepKernel {
 public:
-    OpenCLIntegrateRPMDStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) :
+    OpenCLIntegrateRPMDStepKernel(const std::string& name, const Platform& platform, OpenCLContext& cl) :
             IntegrateRPMDStepKernel(name, platform), cl(cl), hasInitializedKernel(false) {
     }
     /**

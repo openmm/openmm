@@ -289,6 +289,24 @@ void testArgonBox() {
         double energy = state.getKineticEnergy() + state.getPotentialEnergy();
         ASSERT_EQUAL_TOL(initialEnergy, energy, 0.01);
     }
+
+    // Compute the mean step size.
+    
+    double meanStep = 0;
+    for (int i = 0; i < 100; i++) {
+        integrator.step(1);
+        meanStep += integrator.getStepSize();
+    }
+    meanStep /= 100;
+    double maxStep = meanStep/2;
+    
+    // Now set a limit on the step size and see if it is obeyed.
+    
+    integrator.setMaximumStepSize(maxStep);
+    for (int i = 0; i < 100; i++) {
+        integrator.step(1);
+        ASSERT(integrator.getStepSize() <= maxStep*1.000001);
+    }
 }
 
 void runPlatformTests();

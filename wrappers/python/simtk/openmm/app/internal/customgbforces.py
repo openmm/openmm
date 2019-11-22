@@ -250,7 +250,7 @@ def _bondi_radii(topology):
         E.silicon:      2.1,
         E.phosphorus:   1.85,
         E.sulfur:       1.8,
-        E.chlorine:     1.5,
+        E.chlorine:     1.7,
     }
 
     if _have_numpy:
@@ -272,7 +272,7 @@ def _mbondi_radii(topology, all_bonds = None):
         E.silicon:      2.1,
         E.phosphorus:   1.85,
         E.sulfur:       1.8,
-        E.chlorine:     1.5,
+        E.chlorine:     1.7,
     }
     if _have_numpy:
         radii = numpy.empty(topology.getNumAtoms(), numpy.double)
@@ -310,7 +310,7 @@ def _mbondi2_radii(topology, all_bonds = None):
         E.silicon:      2.1,
         E.phosphorus:   1.85,
         E.sulfur:       1.8,
-        E.chlorine:     1.5,
+        E.chlorine:     1.7,
     }
     if _have_numpy:
         radii = numpy.empty(topology.getNumAtoms(), numpy.double)
@@ -389,17 +389,19 @@ def _createEnergyTerms(force, solventDielectric, soluteDielectric, SA, cutoff, k
                                 "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))"+params, CustomGBForce.ParticlePairNoExclusions)
 
 
-_SCREEN_PARAMETERS = { # normal, GBn, GBn2
-        E.hydrogen : (0.85, 1.09085413633, 1.425952),
-        E.carbon : (0.72, 0.48435382330, 1.058554),
-        E.nitrogen : (0.79, 0.700147318409, 0.733599),
-        E.oxygen : (0.85, 1.06557401132, 1.061039),
-        E.fluorine : (0.88, 0.5, 0.5),
-        E.phosphorus : (0.86, 0.5, 0.5),
-        E.sulfur : (0.96, 0.602256336067, -0.703469),
-        None : (0.8, 0.5, 0.5) # default
+_SCREEN_PARAMETERS = { # normal, GBn, GBn2, GBn2 nucleic
+        E.hydrogen : (0.85, 1.09085413633, 1.425952, 1.696538),
+        E.carbon : (0.72, 0.48435382330, 1.058554, 1.268902),
+        E.nitrogen : (0.79, 0.700147318409, 0.733599, 1.4259728),
+        E.oxygen : (0.85, 1.06557401132, 1.061039, 0.1840098),
+        E.fluorine : (0.88, 0.5, 0.5, 0.5),
+        E.phosphorus : (0.86, 0.5, 0.5, 1.5450597),
+        E.sulfur : (0.96, 0.602256336067, -0.703469, 0.05),
+        None : (0.8, 0.5, 0.5, 0.5) # default
 }
 _SCREEN_PARAMETERS[E.deuterium] = _SCREEN_PARAMETERS[E.hydrogen]
+
+_NUCLEIC_ACID_RESIDUES = ['A', 'C', 'G', 'U', 'DA', 'DC', 'DG', 'DT']
 
 def _screen_parameter(atom):
     return _SCREEN_PARAMETERS.get(atom.element, _SCREEN_PARAMETERS[None])
@@ -541,7 +543,7 @@ class GBSAHCTForce(CustomAmberGBForceBase):
         self.addPerParticleParameter("charge")
         self.addPerParticleParameter("or") # Offset radius
         self.addPerParticleParameter("sr") # Scaled offset radius
-        self.addComputedValue("I", "step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r);"
+        self.addComputedValue("I", "select(step(r+sr2-or1), 0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r), 0);"
                                    "U=r+sr2;"
                                    "L=max(or1, D);"
                                    "D=abs(r-sr2)",
@@ -607,7 +609,7 @@ class GBSAOBC1Force(CustomAmberGBForceBase):
         self.addPerParticleParameter("charge")
         self.addPerParticleParameter("or") # Offset radius
         self.addPerParticleParameter("sr") # Scaled offset radius
-        self.addComputedValue("I",  "step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r);"
+        self.addComputedValue("I",  "select(step(r+sr2-or1), 0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r), 0);"
                                     "U=r+sr2;"
                                     "L=max(or1, D);"
                                     "D=abs(r-sr2)", CustomGBForce.ParticlePairNoExclusions)
@@ -675,7 +677,7 @@ class GBSAOBC2Force(GBSAOBC1Force):
         self.addPerParticleParameter("charge")
         self.addPerParticleParameter("or") # Offset radius
         self.addPerParticleParameter("sr") # Scaled offset radius
-        self.addComputedValue("I",  "step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r);"
+        self.addComputedValue("I",  "select(step(r+sr2-or1), 0.5*(1/L-1/U+0.25*(r-sr2^2/r)*(1/(U^2)-1/(L^2))+0.5*log(L/U)/r), 0);"
                                     "U=r+sr2;"
                                     "L=max(or1, D);"
                                     "D=abs(r-sr2)", CustomGBForce.ParticlePairNoExclusions)
@@ -873,7 +875,16 @@ class GBSAGBn2Force(GBSAGBnForce):
         E.oxygen:       [0.867814, 0.876635, 0.387882],
         E.sulfur:       [0.867814, 0.876635, 0.387882],
     }
-    _default_atom_params = [0.8, 4.85, 0.5]
+    _atom_params_nucleic = {
+        E.hydrogen:     [0.537050, 0.362861, 0.116704],
+        E.deuterium:    [0.537050, 0.362861, 0.116704],
+        E.carbon:       [0.331670, 0.196842, 0.093422],
+        E.nitrogen:     [0.686311, 0.463189, 0.138722],
+        E.oxygen:       [0.606344, 0.463006, 0.142262],
+        E.sulfur:       [0.606344, 0.463006, 0.142262],
+        E.phosphorus:   [0.418365, 0.290054, 0.1064245],
+    }
+    _default_atom_params = [1.0, 0.8, 4.851]
 
     @classmethod
     def getStandardParameters(cls, topology):
@@ -897,14 +908,23 @@ class GBSAGBn2Force(GBSAGBnForce):
             radii = numpy.empty([natoms,5], numpy.double)
             radii[:,0] = _mbondi3_radii(topology)/10
             for atom, rad in zip(topology.atoms(), radii):
-                rad[1] = _screen_parameter(atom)[2]
-                rad[2:] = cls._atom_params.get(atom.element, cls._default_atom_params)
+                if atom.residue.name in _NUCLEIC_ACID_RESIDUES:
+                    rad[1] = _screen_parameter(atom)[3]
+                    rad[2:] = cls._atom_params_nucleic.get(atom.element, cls._default_atom_params)
+                else:
+                    rad[1] = _screen_parameter(atom)[2]
+                    rad[2:] = cls._atom_params.get(atom.element, cls._default_atom_params)
         else:
             radii = [[r/10, 0, 0, 0, 0] for r in _mbondi3_radii(topology)]
             for atom, rad in zip(topology.atoms(), radii):
-                rad[1] = _screen_parameter(atom)[2]
-                for i, p in enumerate(cls._atom_params.get(atom.element, cls._default_atom_params)):
-                    rad[2+i] = p
+                if atom.residue.name in _NUCLEIC_ACID_RESIDUES:
+                    rad[1] = _screen_parameter(atom)[3]
+                    for i, p in enumerate(cls._atom_params_nucleic.get(atom.element, cls._default_atom_params)):
+                        rad[2+i] = p
+                else:
+                    rad[1] = _screen_parameter(atom)[2]
+                    for i, p in enumerate(cls._atom_params.get(atom.element, cls._default_atom_params)):
+                        rad[2+i] = p
         return radii
 
     def _addEnergyTerms(self):

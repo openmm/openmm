@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman, Yutong Zhao                                        *
  * Contributors:                                                              *
  *                                                                            *
@@ -36,22 +36,23 @@ using namespace std;
 using namespace OpenMM;
 
 VariableLangevinIntegratorProxy::VariableLangevinIntegratorProxy() : SerializationProxy("VariableLangevinIntegrator") {
-
 }
 
 void VariableLangevinIntegratorProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 1);
+    node.setIntProperty("version", 2);
     const VariableLangevinIntegrator& integrator = *reinterpret_cast<const VariableLangevinIntegrator*>(object);
     node.setDoubleProperty("stepSize", integrator.getStepSize());
     node.setDoubleProperty("constraintTolerance", integrator.getConstraintTolerance());
     node.setDoubleProperty("temperature", integrator.getTemperature());
     node.setDoubleProperty("friction", integrator.getFriction());
     node.setDoubleProperty("errorTol", integrator.getErrorTolerance());
+    node.setDoubleProperty("maxStepSize", integrator.getMaximumStepSize());
     node.setIntProperty("randomSeed", integrator.getRandomNumberSeed());
 }
 
 void* VariableLangevinIntegratorProxy::deserialize(const SerializationNode& node) const {
-    if (node.getIntProperty("version") != 1)
+    int version = node.getIntProperty("version");
+    if (version < 1 || version > 2)
         throw OpenMMException("Unsupported version number");
     VariableLangevinIntegrator *integrator = new VariableLangevinIntegrator(node.getDoubleProperty("temperature"),
                                                             node.getDoubleProperty("friction"),
@@ -59,5 +60,7 @@ void* VariableLangevinIntegratorProxy::deserialize(const SerializationNode& node
     integrator->setStepSize(node.getDoubleProperty("stepSize"));
     integrator->setConstraintTolerance(node.getDoubleProperty("constraintTolerance"));
     integrator->setRandomNumberSeed(node.getIntProperty("randomSeed"));
+    if (version > 1)
+        integrator->setMaximumStepSize(node.getDoubleProperty("maxStepSize"));
     return integrator;
 }

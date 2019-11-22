@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -39,7 +39,7 @@
 namespace OpenMM {
 
 /**
- * This is an error contolled, variable time step Integrator that simulates a System using the
+ * This is an error controlled, variable time step Integrator that simulates a System using the
  * leap-frog Verlet algorithm.  It compares the result of the Verlet integrator to that of an
  * explicit Euler integrator, takes the difference between the two as a measure of the integration
  * error in each time step, and continuously adjusts the step size to keep the error below a
@@ -56,6 +56,10 @@ namespace OpenMM {
  * This makes it most appropriate for constant temperate simulations.  In constant energy simulations
  * where precise energy conservation over long time periods is important, a fixed step size Verlet
  * integrator may be more appropriate.
+ * 
+ * You can optionally set a maximum step size it will ever use.  This is useful to prevent it
+ * from taking excessively large steps in usual situations, such as when the system is right at
+ * a local energy minimum.
  */
 
 class OPENMM_EXPORT VariableVerletIntegrator : public Integrator {
@@ -77,6 +81,20 @@ public:
      */
     void setErrorTolerance(double tol) {
         errorTol = tol;
+    }
+    /**
+     * Get the maximum step size the integrator will ever use, in ps.  If this
+     * is 0 (the default), no limit will be applied to step sizes.
+     */
+    double getMaximumStepSize() const {
+        return maxStepSize;
+    }
+    /**
+     * Set the maximum step size the integrator will ever use, in ps.  If this
+     * is 0 (the default), no limit will be applied to step sizes.
+     */
+    void setMaximumStepSize(double size) {
+        maxStepSize = size;
     }
     /**
      * Advance a simulation through time by taking a series of time steps.
@@ -114,7 +132,7 @@ protected:
      */
     double computeKineticEnergy();
 private:
-    double errorTol;
+    double errorTol, maxStepSize;
     Kernel kernel;
 };
 

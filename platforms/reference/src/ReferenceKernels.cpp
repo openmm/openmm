@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -33,6 +33,7 @@
 #include "ReferenceObc.h"
 #include "ReferenceAndersenThermostat.h"
 #include "ReferenceAngleBondIxn.h"
+#include "ReferenceBAOABDynamics.h"
 #include "ReferenceBondForce.h"
 #include "ReferenceBrownianDynamics.h"
 #include "ReferenceCCMAAlgorithm.h"
@@ -91,37 +92,37 @@ using namespace std;
 
 static vector<Vec3>& extractPositions(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-    return *((vector<Vec3>*) data->positions);
+    return *data->positions;
 }
 
 static vector<Vec3>& extractVelocities(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-    return *((vector<Vec3>*) data->velocities);
+    return *data->velocities;
 }
 
 static vector<Vec3>& extractForces(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-    return *((vector<Vec3>*) data->forces);
+    return *data->forces;
 }
 
 static Vec3& extractBoxSize(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-    return *(Vec3*) data->periodicBoxSize;
+    return *data->periodicBoxSize;
 }
 
 static Vec3* extractBoxVectors(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-    return (Vec3*) data->periodicBoxVectors;
+    return data->periodicBoxVectors;
 }
 
 static ReferenceConstraints& extractConstraints(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-    return *(ReferenceConstraints*) data->constraints;
+    return *data->constraints;
 }
 
 static map<string, double>& extractEnergyParameterDerivatives(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-    return *((map<string, double>*) data->energyParameterDerivatives);
+    return *data->energyParameterDerivatives;
 }
 
 /**
@@ -2149,6 +2150,49 @@ double ReferenceIntegrateLangevinStepKernel::computeKineticEnergy(ContextImpl& c
     return computeShiftedKineticEnergy(context, masses, 0.5*integrator.getStepSize());
 }
 
+ReferenceIntegrateBAOABStepKernel::~ReferenceIntegrateBAOABStepKernel() {
+    if (dynamics)
+        delete dynamics;
+}
+
+void ReferenceIntegrateBAOABStepKernel::initialize(const System& system, const BAOABLangevinIntegrator& integrator) {
+    int numParticles = system.getNumParticles();
+    masses.resize(numParticles);
+    for (int i = 0; i < numParticles; ++i)
+        masses[i] = system.getParticleMass(i);
+    SimTKOpenMMUtilities::setRandomNumberSeed((unsigned int) integrator.getRandomNumberSeed());
+}
+
+void ReferenceIntegrateBAOABStepKernel::execute(ContextImpl& context, const BAOABLangevinIntegrator& integrator, bool& forcesAreValid) {
+    double temperature = integrator.getTemperature();
+    double friction = integrator.getFriction();
+    double stepSize = integrator.getStepSize();
+    vector<Vec3>& posData = extractPositions(context);
+    vector<Vec3>& velData = extractVelocities(context);
+    if (dynamics == 0 || temperature != prevTemp || friction != prevFriction || stepSize != prevStepSize) {
+        // Recreate the computation objects with the new parameters.
+        
+        if (dynamics)
+            delete dynamics;
+        dynamics = new ReferenceBAOABDynamics(
+                context.getSystem().getNumParticles(), 
+                stepSize, 
+                friction, 
+                temperature);
+        dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
+        prevTemp = temperature;
+        prevFriction = friction;
+        prevStepSize = stepSize;
+    }
+    dynamics->update(context, posData, velData, masses, forcesAreValid, integrator.getConstraintTolerance());
+    data.time += stepSize;
+    data.stepCount++;
+}
+
+double ReferenceIntegrateBAOABStepKernel::computeKineticEnergy(ContextImpl& context, const BAOABLangevinIntegrator& integrator) {
+    return computeShiftedKineticEnergy(context, masses, 0.0);
+}
+
 ReferenceIntegrateBrownianStepKernel::~ReferenceIntegrateBrownianStepKernel() {
     if (dynamics)
         delete dynamics;
@@ -2225,6 +2269,8 @@ double ReferenceIntegrateVariableLangevinStepKernel::execute(ContextImpl& contex
         prevErrorTol = errorTol;
     }
     double maxStepSize = maxTime-data.time;
+    if (integrator.getMaximumStepSize() > 0)
+        maxStepSize = min(integrator.getMaximumStepSize(), maxStepSize);
     dynamics->update(context.getSystem(), posData, velData, forceData, masses, maxStepSize, integrator.getConstraintTolerance());
     data.time += dynamics->getDeltaT();
     if (dynamics->getDeltaT() == maxStepSize)
@@ -2264,6 +2310,8 @@ double ReferenceIntegrateVariableVerletStepKernel::execute(ContextImpl& context,
         prevErrorTol = errorTol;
     }
     double maxStepSize = maxTime-data.time;
+    if (integrator.getMaximumStepSize() > 0)
+        maxStepSize = min(integrator.getMaximumStepSize(), maxStepSize);
     dynamics->update(context.getSystem(), posData, velData, forceData, masses, maxStepSize, integrator.getConstraintTolerance());
     data.time += dynamics->getDeltaT();
     if (dynamics->getDeltaT() == maxStepSize)

@@ -90,10 +90,11 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
     map<pair<double, double>, int> classCounts;
     for (int i = 0; i < force.getNumParticles(); i++) {
         double sigma, epsilon, reduction;
-        // The variables reduction, ivindex are not used.
+        bool isAlchemical;
+        // The variables reduction, ivindex and isAlchemical are not used.
         int ivindex;
         // Get the sigma and epsilon parameters, ignoring everything else.
-        force.getParticleParameters(i, ivindex, sigma, epsilon, reduction);
+        force.getParticleParameters(i, ivindex, sigma, epsilon, reduction, isAlchemical);
         pair<double, double> key = make_pair(sigma, epsilon);
         map<pair<double, double>, int>::iterator entry = classCounts.find(key);
         if (entry == classCounts.end())
@@ -151,8 +152,11 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
     int ndelta = int(double(nstep) * (range - cut));
     double rdelta = (range - cut) / double(ndelta);
     double offset = cut - 0.5 * rdelta;
-    double dhal = 0.07; // This magic number also appears in kCalculateAmoebaCudaVdw14_7.cu
-    double ghal = 0.12; // This magic number also appears in kCalculateAmoebaCudaVdw14_7.cu
+
+    // Buffered-14-7 buffering constants
+    double dhal = 0.07; 
+    double ghal = 0.12;
+
     double elrc = 0.0; // This number is incremented and passed out at the end
     double e = 0.0;
     double sigma, epsilon; // The pairwise sigma and epsilon parameters.
@@ -188,7 +192,8 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
             // ARITHMETIC = 1
             // GEOMETRIC  = 2
             // HARMONIC   = 3
-            // HHG        = 4
+            // W-H        = 4
+            // HHG        = 5
             if (epsilonCombiningRule == "ARITHMETIC") {
               epsilon = 0.5f * (iEpsilon + jEpsilon);
             } else if (epsilonCombiningRule == "GEOMETRIC") {
@@ -199,6 +204,13 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
               } else {
                 epsilon = 0.0;
               }
+            } else if (epsilonCombiningRule == "W-H") {
+              double iSigma3 = iSigma * iSigma * iSigma;
+              double jSigma3 = jSigma * jSigma * jSigma;
+              double iSigma6 = iSigma3 * iSigma3;
+              double jSigma6 = jSigma3 * jSigma3;
+              double eps_s = std::sqrt(iEpsilon*jEpsilon);
+              epsilon = (eps_s == 0.0 ? 0.0 : 2.0f*eps_s*iSigma3*jSigma3/(iSigma6 + jSigma6));
             } else {
               double epsilonS = std::sqrt(iEpsilon) + std::sqrt(jEpsilon);
               if (epsilonS != 0.0) {
@@ -259,3 +271,5 @@ std::vector<std::string> AmoebaVdwForceImpl::getKernelNames() {
 void AmoebaVdwForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcAmoebaVdwForceKernel>().copyParametersToContext(context, owner);
 }
+
+

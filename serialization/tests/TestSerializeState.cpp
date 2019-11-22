@@ -128,7 +128,7 @@ void testSerialization() {
 	map<string, double>::const_iterator it1=p1.begin();
 	map<string, double>::const_iterator it2=p2.begin();
 	//maps are ordered, so iterators should be in the same order. 
-	for (it1 = p1.begin(); it1 != p1.end(); it1++, it2++) {
+	for (it1 = p1.begin(); it1 != p1.end(); ++it1, ++it2) {
 		assert((it1->first).compare(it2->first) == 0);
 		ASSERT_EQUAL(it1->second, it2->second);
 	}

@@ -1402,6 +1402,45 @@ private:
 };
 
 /**
+ * This kernel is invoked by BAOABLangevinIntegrator to take one time step.
+ */
+class CudaIntegrateBAOABStepKernel : public IntegrateBAOABStepKernel {
+public:
+    CudaIntegrateBAOABStepKernel(std::string name, const Platform& platform, CudaContext& cu) : IntegrateBAOABStepKernel(name, platform), cu(cu) {
+    }
+    /**
+     * Initialize the kernel, setting up the particle masses.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param integrator the BAOABLangevinIntegrator this kernel will be used for
+     */
+    void initialize(const System& system, const BAOABLangevinIntegrator& integrator);
+    /**
+     * Execute the kernel.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the BAOABLangevinIntegrator this kernel is being used for
+     * @param forcesAreValid if the context has been modified since the last time step, this will be
+     *                       false to show that cached forces are invalid and must be recalculated.
+     *                       On exit, this should specify whether the cached forces are valid at the
+     *                       end of the step.
+     */
+    void execute(ContextImpl& context, const BAOABLangevinIntegrator& integrator, bool& forcesAreValid);
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the BAOABLangevinIntegrator this kernel is being used for
+     */
+    double computeKineticEnergy(ContextImpl& context, const BAOABLangevinIntegrator& integrator);
+private:
+    CudaContext& cu;
+    double prevTemp, prevFriction, prevStepSize;
+    CudaArray params, oldDelta;
+    CUfunction kernel1, kernel2, kernel3, kernel4;
+};
+
+/**
  * This kernel is invoked by BrownianIntegrator to take one time step.
  */
 class CudaIntegrateBrownianStepKernel : public IntegrateBrownianStepKernel {
@@ -1594,7 +1633,7 @@ private:
     double energy;
     float energyFloat;
     int numGlobalVariables, sumWorkGroupSize;
-    bool hasInitializedKernels, deviceGlobalsAreCurrent, modifiesParameters, keNeedsForce, hasAnyConstraints, needsEnergyParamDerivs;
+    bool hasInitializedKernels, deviceGlobalsAreCurrent, modifiesParameters, hasAnyConstraints, needsEnergyParamDerivs;
     std::vector<bool> deviceValuesAreCurrent;
     mutable std::vector<bool> localValuesAreCurrent; 
     CudaArray globalValues;

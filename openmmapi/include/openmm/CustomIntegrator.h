@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -627,6 +627,10 @@ protected:
      * Compute the kinetic energy of the system at the current time.
      */
     double computeKineticEnergy();
+    /**
+     * Get whether computeKineticEnergy() expects forces to have been computed.
+     */
+    bool kineticEnergyRequiresForce() const;
 private:
     class ComputationInfo;
     class FunctionInfo;
@@ -639,7 +643,7 @@ private:
     std::string kineticEnergy;
     mutable bool globalsAreCurrent;
     int randomNumberSeed;
-    bool forcesAreValid;
+    bool forcesAreValid, keNeedsForce;
     Kernel kernel;
 };
 

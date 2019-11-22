@@ -58,32 +58,32 @@ using namespace std;
 
 static vector<Vec3>& extractPositions(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-    return *((vector<Vec3>*) data->positions);
+    return *data->positions;
 }
 
 static vector<Vec3>& extractVelocities(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-    return *((vector<Vec3>*) data->velocities);
+    return *data->velocities;
 }
 
 static vector<Vec3>& extractForces(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-    return *((vector<Vec3>*) data->forces);
+    return *data->forces;
 }
 
 static Vec3& extractBoxSize(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-    return *(Vec3*) data->periodicBoxSize;
+    return *data->periodicBoxSize;
 }
 
 static Vec3* extractBoxVectors(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-    return (Vec3*) data->periodicBoxVectors;
+    return data->periodicBoxVectors;
 }
 
 // ***************************************************************************
 
-ReferenceCalcAmoebaBondForceKernel::ReferenceCalcAmoebaBondForceKernel(std::string name, const Platform& platform, const System& system) : 
+ReferenceCalcAmoebaBondForceKernel::ReferenceCalcAmoebaBondForceKernel(const std::string& name, const Platform& platform, const System& system) :
                 CalcAmoebaBondForceKernel(name, platform), system(system) {
 }
 
@@ -140,7 +140,7 @@ void ReferenceCalcAmoebaBondForceKernel::copyParametersToContext(ContextImpl& co
 
 // ***************************************************************************
 
-ReferenceCalcAmoebaAngleForceKernel::ReferenceCalcAmoebaAngleForceKernel(std::string name, const Platform& platform, const System& system) :
+ReferenceCalcAmoebaAngleForceKernel::ReferenceCalcAmoebaAngleForceKernel(const std::string& name, const Platform& platform, const System& system) :
             CalcAmoebaAngleForceKernel(name, platform), system(system) {
 }
 
@@ -196,7 +196,7 @@ void ReferenceCalcAmoebaAngleForceKernel::copyParametersToContext(ContextImpl& c
     }
 }
 
-ReferenceCalcAmoebaInPlaneAngleForceKernel::ReferenceCalcAmoebaInPlaneAngleForceKernel(std::string name, const Platform& platform, const System& system) : 
+ReferenceCalcAmoebaInPlaneAngleForceKernel::ReferenceCalcAmoebaInPlaneAngleForceKernel(const std::string& name, const Platform& platform, const System& system) :
           CalcAmoebaInPlaneAngleForceKernel(name, platform), system(system) {
 }
 
@@ -254,7 +254,7 @@ void ReferenceCalcAmoebaInPlaneAngleForceKernel::copyParametersToContext(Context
     }
 }
 
-ReferenceCalcAmoebaPiTorsionForceKernel::ReferenceCalcAmoebaPiTorsionForceKernel(std::string name, const Platform& platform, const System& system) :
+ReferenceCalcAmoebaPiTorsionForceKernel::ReferenceCalcAmoebaPiTorsionForceKernel(const std::string& name, const Platform& platform, const System& system) :
          CalcAmoebaPiTorsionForceKernel(name, platform), system(system) {
 }
 
@@ -309,7 +309,7 @@ void ReferenceCalcAmoebaPiTorsionForceKernel::copyParametersToContext(ContextImp
     }
 }
 
-ReferenceCalcAmoebaStretchBendForceKernel::ReferenceCalcAmoebaStretchBendForceKernel(std::string name, const Platform& platform, const System& system) :
+ReferenceCalcAmoebaStretchBendForceKernel::ReferenceCalcAmoebaStretchBendForceKernel(const std::string& name, const Platform& platform, const System& system) :
                    CalcAmoebaStretchBendForceKernel(name, platform), system(system) {
 }
 
@@ -367,7 +367,7 @@ void ReferenceCalcAmoebaStretchBendForceKernel::copyParametersToContext(ContextI
     }
 }
 
-ReferenceCalcAmoebaOutOfPlaneBendForceKernel::ReferenceCalcAmoebaOutOfPlaneBendForceKernel(std::string name, const Platform& platform, const System& system) :
+ReferenceCalcAmoebaOutOfPlaneBendForceKernel::ReferenceCalcAmoebaOutOfPlaneBendForceKernel(const std::string& name, const Platform& platform, const System& system) :
           CalcAmoebaOutOfPlaneBendForceKernel(name, platform), system(system) {
 }
 
@@ -428,7 +428,7 @@ void ReferenceCalcAmoebaOutOfPlaneBendForceKernel::copyParametersToContext(Conte
     }
 }
 
-ReferenceCalcAmoebaTorsionTorsionForceKernel::ReferenceCalcAmoebaTorsionTorsionForceKernel(std::string name, const Platform& platform, const System& system) :
+ReferenceCalcAmoebaTorsionTorsionForceKernel::ReferenceCalcAmoebaTorsionTorsionForceKernel(const std::string& name, const Platform& platform, const System& system) :
                 CalcAmoebaTorsionTorsionForceKernel(name, platform), system(system) {
 }
 
@@ -510,7 +510,7 @@ double ReferenceCalcAmoebaTorsionTorsionForceKernel::execute(ContextImpl& contex
  *                             AmoebaMultipole                                *
  * -------------------------------------------------------------------------- */
 
-ReferenceCalcAmoebaMultipoleForceKernel::ReferenceCalcAmoebaMultipoleForceKernel(std::string name, const Platform& platform, const System& system) : 
+ReferenceCalcAmoebaMultipoleForceKernel::ReferenceCalcAmoebaMultipoleForceKernel(const std::string& name, const Platform& platform, const System& system) :
          CalcAmoebaMultipoleForceKernel(name, platform), system(system), numMultipoles(0), mutualInducedMaxIterations(60), mutualInducedTargetEpsilon(1.0e-03),
                                                          usePme(false),alphaEwald(0.0), cutoffDistance(1.0) {  
 
@@ -871,7 +871,7 @@ void ReferenceCalcAmoebaMultipoleForceKernel::getPMEParameters(double& alpha, in
  *                       AmoebaGeneralizedKirkwood                            *
  * -------------------------------------------------------------------------- */
 
-ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel(std::string name, const Platform& platform, const System& system) : 
+ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel(const std::string& name, const Platform& platform, const System& system) :
            CalcAmoebaGeneralizedKirkwoodForceKernel(name, platform), system(system) {
 }
 
@@ -992,7 +992,7 @@ void ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::copyParametersToContext(
     }
 }
 
-ReferenceCalcAmoebaVdwForceKernel::ReferenceCalcAmoebaVdwForceKernel(std::string name, const Platform& platform, const System& system) :
+ReferenceCalcAmoebaVdwForceKernel::ReferenceCalcAmoebaVdwForceKernel(const std::string& name, const Platform& platform, const System& system) :
        CalcAmoebaVdwForceKernel(name, platform), system(system) {
     useCutoff = 0;
     usePBC = 0;
@@ -1017,14 +1017,16 @@ void ReferenceCalcAmoebaVdwForceKernel::initialize(const System& system, const A
     sigmas.resize(numParticles);
     epsilons.resize(numParticles);
     reductions.resize(numParticles);
+    isAlchemical.resize(numParticles);
 
     for (int ii = 0; ii < numParticles; ii++) {
 
         int indexIV;
         double sigma, epsilon, reduction;
+        bool alchemical;
         std::vector<int> exclusions;
 
-        force.getParticleParameters(ii, indexIV, sigma, epsilon, reduction);
+        force.getParticleParameters(ii, indexIV, sigma, epsilon, reduction, alchemical);
         force.getParticleExclusions(ii, exclusions);
         for (unsigned int jj = 0; jj < exclusions.size(); jj++) {
            allExclusions[ii].insert(exclusions[jj]);
@@ -1034,6 +1036,7 @@ void ReferenceCalcAmoebaVdwForceKernel::initialize(const System& system, const A
         sigmas[ii]        = sigma;
         epsilons[ii]      = epsilon;
         reductions[ii]    = reduction;
+        isAlchemical[ii]  = alchemical;
     }   
     sigmaCombiningRule     = force.getSigmaCombiningRule();
     epsilonCombiningRule   = force.getEpsilonCombiningRule();
@@ -1042,7 +1045,9 @@ void ReferenceCalcAmoebaVdwForceKernel::initialize(const System& system, const A
     cutoff                 = force.getCutoffDistance();
     neighborList           = useCutoff ? new NeighborList() : NULL;
     dispersionCoefficient  = force.getUseDispersionCorrection() ?  AmoebaVdwForceImpl::calcDispersionCorrection(system, force) : 0.0;
-
+    alchemicalMethod       = force.getAlchemicalMethod();
+    n                      = force.getSoftcorePower();
+    alpha                  = force.getSoftcoreAlpha();
 }
 
 double ReferenceCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -1050,7 +1055,17 @@ double ReferenceCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool inc
     vector<Vec3>& posData   = extractPositions(context);
     vector<Vec3>& forceData = extractForces(context);
     AmoebaReferenceVdwForce vdwForce(sigmaCombiningRule, epsilonCombiningRule);
+    if (alchemicalMethod == AmoebaVdwForce::Decouple) {
+       vdwForce.setAlchemicalMethod(AmoebaReferenceVdwForce::Decouple);
+    } else if (alchemicalMethod == AmoebaVdwForce::Annihilate) {
+       vdwForce.setAlchemicalMethod(AmoebaReferenceVdwForce::Annihilate);
+    } else {
+       vdwForce.setAlchemicalMethod(AmoebaReferenceVdwForce::None);
+    }
+    vdwForce.setSoftcorePower(n);
+    vdwForce.setSoftcoreAlpha(alpha);
     double energy;
+    double lambda = context.getParameter(AmoebaVdwForce::Lambda());
     if (useCutoff) {
         vdwForce.setCutoff(cutoff);
         computeNeighborListVoxelHash(*neighborList, numParticles, posData, allExclusions, extractBoxVectors(context), usePBC, cutoff, 0.0);
@@ -1062,14 +1077,16 @@ double ReferenceCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool inc
                 throw OpenMMException("The periodic box size has decreased to less than twice the cutoff.");
             }
             vdwForce.setPeriodicBox(boxVectors);
-            energy  = vdwForce.calculateForceAndEnergy(numParticles, posData, indexIVs, sigmas, epsilons, reductions, *neighborList, forceData);
+            energy  = vdwForce.calculateForceAndEnergy(numParticles, lambda, posData, indexIVs, sigmas, epsilons, 
+                                                       reductions, isAlchemical, *neighborList, forceData);
             energy += dispersionCoefficient/(boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2]);
         } else {
             vdwForce.setNonbondedMethod(AmoebaReferenceVdwForce::CutoffNonPeriodic);
         }
     } else {
         vdwForce.setNonbondedMethod(AmoebaReferenceVdwForce::NoCutoff);
-        energy = vdwForce.calculateForceAndEnergy(numParticles, posData, indexIVs, sigmas, epsilons, reductions, allExclusions, forceData);
+        energy = vdwForce.calculateForceAndEnergy(numParticles, lambda, posData, indexIVs, sigmas, epsilons, 
+                                                  reductions, isAlchemical, allExclusions, forceData);
     }
     return static_cast<double>(energy);
 }
@@ -1079,15 +1096,16 @@ void ReferenceCalcAmoebaVdwForceKernel::copyParametersToContext(ContextImpl& con
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
 
     // Record the values.
-
     for (int i = 0; i < numParticles; ++i) {
         int indexIV;
         double sigma, epsilon, reduction;
-        force.getParticleParameters(i, indexIV, sigma, epsilon, reduction);
+        bool alchemical;
+        force.getParticleParameters(i, indexIV, sigma, epsilon, reduction, alchemical);
         indexIVs[i] = indexIV;
         sigmas[i] = sigma;
         epsilons[i] = epsilon;
         reductions[i]= reduction;
+        isAlchemical[i]= alchemical;
     }
 }
 
@@ -1095,7 +1113,7 @@ void ReferenceCalcAmoebaVdwForceKernel::copyParametersToContext(ContextImpl& con
  *                           AmoebaWcaDispersion                              *
  * -------------------------------------------------------------------------- */
 
-ReferenceCalcAmoebaWcaDispersionForceKernel::ReferenceCalcAmoebaWcaDispersionForceKernel(std::string name, const Platform& platform, const System& system) : 
+ReferenceCalcAmoebaWcaDispersionForceKernel::ReferenceCalcAmoebaWcaDispersionForceKernel(const std::string& name, const Platform& platform, const System& system) :
            CalcAmoebaWcaDispersionForceKernel(name, platform), system(system) {
 }
 
@@ -1158,7 +1176,7 @@ void ReferenceCalcAmoebaWcaDispersionForceKernel::copyParametersToContext(Contex
  *                              HippoNonbonded                                *
  * -------------------------------------------------------------------------- */
 
-ReferenceCalcHippoNonbondedForceKernel::ReferenceCalcHippoNonbondedForceKernel(std::string name, const Platform& platform, const System& system) : 
+ReferenceCalcHippoNonbondedForceKernel::ReferenceCalcHippoNonbondedForceKernel(const std::string& name, const Platform& platform, const System& system) :
          CalcHippoNonbondedForceKernel(name, platform), ixn(NULL) {
 }
 

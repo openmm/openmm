@@ -166,7 +166,7 @@ class CharmmPsfFile(object):
     GB_FORCE_GROUP = 6
 
     @_catchindexerror
-    def __init__(self, psf_name):
+    def __init__(self, psf_name, periodicBoxVectors=None, unitCellDimensions=None):
         """Opens and parses a PSF file, then instantiates a CharmmPsfFile
         instance from the data.
 
@@ -174,6 +174,11 @@ class CharmmPsfFile(object):
         ----------
         psf_name : str
             Name of the PSF file (it must exist)
+        periodicBoxVectors : tuple of Vec3
+            the vectors defining the periodic box
+        unitCellDimensions : Vec3
+            the dimensions of the crystallographic unit cell.  For
+            non-rectangular unit cells, specify periodicBoxVectors instead.
 
         Raises
         ------
@@ -358,7 +363,10 @@ class CharmmPsfFile(object):
         set_molecules(atom_list)
         molecule_list = [atom.marked for atom in atom_list]
         if len(holder) == len(atom_list):
-            if molecule_list != holder:
+            if len(molecule_list) != len(holder):
+                # The MOLNT section is only used for fluctuating charge models,
+                # which are currently not supported anyway.
+                # Therefore, we only check the lengths of the lists now rather than their contents.
                 warnings.warn('Detected PSF molecule section that is WRONG. '
                               'Resetting molecularity.', CharmmPSFWarning)
         # We have a CHARMM PSF file; now do NUMLP/NUMLPH sections
@@ -449,7 +457,14 @@ class CharmmPsfFile(object):
         self.group_list = group_list
         self.title = title
         self.flags = psf_flags
-        self.box_vectors = None
+        if unitCellDimensions is not None:
+            if periodicBoxVectors is not None:
+                raise ValueError("specify either periodicBoxVectors or unitCellDimensions, but not both")
+            if u.is_quantity(unitCellDimensions):
+                unitCellDimensions = unitCellDimensions.value_in_unit(u.nanometers)
+            self.box_vectors = (Vec3(unitCellDimensions[0], 0, 0), Vec3(0, unitCellDimensions[1], 0), Vec3(0, 0, unitCellDimensions[2]))*u.nanometers
+        else:
+            self.box_vectors = periodicBoxVectors
 
     @staticmethod
     def _convert(string, type, message):
@@ -710,7 +725,7 @@ class CharmmPsfFile(object):
                 last_residue = None
             if resid != last_residue:
                 last_residue = resid
-                residue = topology.addResidue(atom.residue.resname, chain, resid)
+                residue = topology.addResidue(atom.residue.resname, chain, str(atom.residue.idx), atom.residue.inscode)
             if atom.type is not None:
                 # This is the most reliable way of determining the element
                 atomic_num = atom.type.atomic_number
@@ -919,7 +934,7 @@ class CharmmPsfFile(object):
                 atom1=lpsite[1]
                 atom2=lpsite[2]
                 atom3=lpsite[3]
-                if atom3 > 0: 
+                if atom3 >= 0: 
                     if lpsite[4] > 0 : # relative lonepair type
                         r = lpsite[4] /10.0 # in nanometer
                         xweights = [-1.0, 0.0, 1.0]
@@ -1082,6 +1097,7 @@ class CharmmPsfFile(object):
         # Add nonbonded terms now
         if verbose: print('Adding nonbonded interactions...')
         force = mm.NonbondedForce()
+        force.setUseDispersionCorrection(False)
         force.setForceGroup(self.NONBONDED_FORCE_GROUP)
         if not hasbox: # non-periodic
             if nonbondedMethod is ff.NoCutoff:
@@ -1221,7 +1237,6 @@ class CharmmPsfFile(object):
             if (nonbondedMethod in (ff.PME, ff.LJPME, ff.Ewald, ff.CutoffPeriodic)):
                 cforce.setNonbondedMethod(cforce.CutoffPeriodic)
                 cforce.setCutoffDistance(nonbondedCutoff)
-                cforce.setUseLongRangeCorrection(True)
             elif nonbondedMethod is ff.NoCutoff:
                 cforce.setNonbondedMethod(cforce.NoCutoff)
             elif nonbondedMethod is ff.CutoffNonPeriodic:
@@ -1308,26 +1323,28 @@ class CharmmPsfFile(object):
         # Add 1-4 interactions
         excluded_atom_pairs = set() # save these pairs so we don't zero them out
         sigma_scale = 2**(-1/6)
-        for tor in self.dihedral_parameter_list:
-            # First check to see if atoms 1 and 4 are already excluded because
-            # they are 1-2 or 1-3 pairs (would happen in 6-member rings or
-            # fewer). Then check that they're not already added as exclusions
-            if tor.atom1 in tor.atom4.bond_partners: continue
-            if tor.atom1 in tor.atom4.angle_partners: continue
-            key = min((tor.atom1.idx, tor.atom4.idx),
-                      (tor.atom4.idx, tor.atom1.idx))
-            if key in excluded_atom_pairs: continue # multiterm...
-            charge_prod = (tor.atom1.charge * tor.atom4.charge)
-            epsilon = (sqrt(abs(tor.atom1.type.epsilon_14) * ene_conv *
-                            abs(tor.atom4.type.epsilon_14) * ene_conv))
-            sigma = (tor.atom1.type.rmin_14 + tor.atom4.type.rmin_14) * (
-                     length_conv * sigma_scale)
-            force.addException(tor.atom1.idx, tor.atom4.idx,
-                               charge_prod, sigma, epsilon)
-            excluded_atom_pairs.add(
-                    min((tor.atom1.idx, tor.atom4.idx),
-                        (tor.atom4.idx, tor.atom1.idx))
-            )
+        nbxmod = abs(params.nbxmod)
+        if nbxmod == 5:
+            for tor in self.dihedral_parameter_list:
+                # First check to see if atoms 1 and 4 are already excluded because
+                # they are 1-2 or 1-3 pairs (would happen in 6-member rings or
+                # fewer). Then check that they're not already added as exclusions
+                if tor.atom1 in tor.atom4.bond_partners: continue
+                if tor.atom1 in tor.atom4.angle_partners: continue
+                key = min((tor.atom1.idx, tor.atom4.idx),
+                          (tor.atom4.idx, tor.atom1.idx))
+                if key in excluded_atom_pairs: continue # multiterm...
+                charge_prod = (tor.atom1.charge * tor.atom4.charge)
+                epsilon = (sqrt(abs(tor.atom1.type.epsilon_14) * ene_conv *
+                                abs(tor.atom4.type.epsilon_14) * ene_conv))
+                sigma = (tor.atom1.type.rmin_14 + tor.atom4.type.rmin_14) * (
+                         length_conv * sigma_scale)
+                force.addException(tor.atom1.idx, tor.atom4.idx,
+                                   charge_prod, sigma, epsilon)
+                excluded_atom_pairs.add(
+                        min((tor.atom1.idx, tor.atom4.idx),
+                            (tor.atom4.idx, tor.atom1.idx))
+                )
 
         # Add excluded atoms
         # Drude and lonepairs will be excluded based on their parent atoms
@@ -1353,21 +1370,24 @@ class CharmmPsfFile(object):
                             force.addException(excludeterm[j], excludeterm[i], 0.0, 0.1, 0.0)
         # Exclude all bonds and angles, as well as the lonepair/Drude attached onto them
         for atom in self.atom_list:
-            for atom2 in atom.bond_partners:
-                if atom2.idx > atom.idx:
-                    for excludeatom in [atom.idx]+parent_exclude_list[atom.idx]:
-                        for excludeatom2 in [atom2.idx]+parent_exclude_list[atom2.idx]:
-                            force.addException(excludeatom, excludeatom2, 0.0, 0.1, 0.0)
-            for atom2 in atom.angle_partners:
-                if atom2.idx > atom.idx:
-                    for excludeatom in [atom.idx]+parent_exclude_list[atom.idx]:
-                        for excludeatom2 in [atom2.idx]+parent_exclude_list[atom2.idx]:
-                            force.addException(excludeatom, excludeatom2, 0.0, 0.1, 0.0)
-            for atom2 in atom.dihedral_partners:
-                if atom2.idx <= atom.idx: continue
-                if ((atom.idx, atom2.idx) in excluded_atom_pairs):
-                    continue
-                force.addException(atom.idx, atom2.idx, 0.0, 0.1, 0.0)
+            if nbxmod > 1:
+                for atom2 in atom.bond_partners:
+                    if atom2.idx > atom.idx:
+                        for excludeatom in [atom.idx]+parent_exclude_list[atom.idx]:
+                            for excludeatom2 in [atom2.idx]+parent_exclude_list[atom2.idx]:
+                                force.addException(excludeatom, excludeatom2, 0.0, 0.1, 0.0)
+            if nbxmod > 2:
+                for atom2 in atom.angle_partners:
+                    if atom2.idx > atom.idx:
+                        for excludeatom in [atom.idx]+parent_exclude_list[atom.idx]:
+                            for excludeatom2 in [atom2.idx]+parent_exclude_list[atom2.idx]:
+                                force.addException(excludeatom, excludeatom2, 0.0, 0.1, 0.0)
+            if nbxmod > 3:
+                for atom2 in atom.dihedral_partners:
+                    if atom2.idx <= atom.idx: continue
+                    if ((atom.idx, atom2.idx) in excluded_atom_pairs):
+                        continue
+                    force.addException(atom.idx, atom2.idx, 0.0, 0.1, 0.0)
         system.addForce(force)
 
         # Add Drude particles (Drude force)

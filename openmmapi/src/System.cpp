@@ -138,7 +138,7 @@ bool System::usesPeriodicBoundaryConditions() const {
     bool uses_pbc = false;
     bool all_forces_implement = true;
     for (std::vector<Force*>::const_iterator it = forces.begin();
-            it != forces.end(); it++) {
+            it != forces.end(); ++it) {
         try {
             if ((*it)->usesPeriodicBoundaryConditions())
                 uses_pbc = true;

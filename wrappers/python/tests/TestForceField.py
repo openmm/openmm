@@ -6,6 +6,7 @@ from simtk.unit import *
 import simtk.openmm.app.element as elem
 import simtk.openmm.app.forcefield as forcefield
 import math
+import textwrap
 try:
     from cStringIO import StringIO
 except ImportError:
@@ -50,16 +51,77 @@ class TestForceField(unittest.TestCase):
                                 for f in forces))
 
     def test_DispersionCorrection(self):
-        """Test to make sure the nonbondedCutoff parameter is passed correctly."""
+        """Test to make sure that the dispersion/long-range correction is set properly."""
+        top = Topology()
+        chain = top.addChain()
 
-        for useDispersionCorrection in [True, False]:
-            system = self.forcefield1.createSystem(self.pdb1.topology,
-                                                   nonbondedCutoff=2*nanometer,
-                                                   useDispersionCorrection=useDispersionCorrection)
-
+        for lrc in (True, False):
+            xml = textwrap.dedent(
+                """
+                <ForceField>
+                 <LennardJonesForce lj14scale="0.3" useDispersionCorrection="{lrc}">
+                  <Atom type="A" sigma="1" epsilon="0.1"/>
+                  <Atom type="B" sigma="2" epsilon="0.2"/>
+                  <NBFixPair type1="A" type2="B" sigma="2.5" epsilon="1.1"/>
+                 </LennardJonesForce>
+                 <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5" useDispersionCorrection="{lrc2}">
+                  <Atom type="A" sigma="0.315" epsilon="0.635"/>
+                 </NonbondedForce>
+                </ForceField>
+                """
+            )
+            ff = ForceField(StringIO(xml.format(lrc=lrc, lrc2=lrc)))
+            system = ff.createSystem(top)
+            checked_nonbonded = False
+            checked_custom = False
             for force in system.getForces():
                 if isinstance(force, NonbondedForce):
-                    self.assertEqual(useDispersionCorrection, force.getUseDispersionCorrection())
+                    self.assertEqual(force.getUseDispersionCorrection(), lrc)
+                    checked_nonbonded = True
+                elif isinstance(force, CustomNonbondedForce):
+                    self.assertEqual(force.getUseLongRangeCorrection(), lrc)
+                    checked_custom = True
+            self.assertTrue(checked_nonbonded and checked_custom)
+
+            # check that the keyword argument overwrites xml input
+            lrc_kwarg = not lrc
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter("always")
+                system2 = ff.createSystem(top, useDispersionCorrection=lrc_kwarg)
+                self.assertTrue(len(w) == 2)
+                assert "conflict" in str(w[-1].message).lower()
+            checked_nonbonded = False
+            checked_custom = False
+            for force in system2.getForces():
+                if isinstance(force, NonbondedForce):
+                    self.assertEqual(force.getUseDispersionCorrection(), lrc_kwarg)
+                    checked_nonbonded = True
+                elif isinstance(force, CustomNonbondedForce):
+                    self.assertEqual(force.getUseLongRangeCorrection(), lrc_kwarg)
+                    checked_custom = True
+            self.assertTrue(checked_nonbonded and checked_custom)
+
+            # check that no warning is generated when useDispersionCorrection is not in the xml file
+            xml = textwrap.dedent(
+                """
+                <ForceField>
+                 <LennardJonesForce lj14scale="0.3">
+                  <Atom type="A" sigma="1" epsilon="0.1"/>
+                  <Atom type="B" sigma="2" epsilon="0.2"/>
+                  <NBFixPair type1="A" type2="B" sigma="2.5" epsilon="1.1"/>
+                 </LennardJonesForce>
+                 <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5">
+                  <Atom type="A" sigma="0.315" epsilon="0.635"/>
+                 </NonbondedForce>
+                </ForceField>
+                """
+            )
+            ff = ForceField(StringIO(xml))
+            system = ff.createSystem(top)
+            for lrc_kwarg in [True, False]:
+                with warnings.catch_warnings():
+                    warnings.simplefilter("error")
+                    system2 = ff.createSystem(top, useDispersionCorrection=lrc_kwarg)
 
     def test_Cutoff(self):
         """Test to make sure the nonbondedCutoff parameter is passed correctly."""
@@ -227,7 +289,7 @@ class TestForceField(unittest.TestCase):
         angles = forcefield.HarmonicAngleGenerator(ff)
         angles.registerAngle({'class1':'HW', 'class2':'OW', 'class3':'HW', 'angle':1.82421813418*radians, 'k':836.8*kilojoules_per_mole/radian})
         ff.registerGenerator(angles)
-        nonbonded = forcefield.NonbondedGenerator(ff, 0.833333, 0.5)
+        nonbonded = forcefield.NonbondedGenerator(ff, 0.833333, 0.5, True)
         nonbonded.registerAtom({'type':'tip3p-O', 'charge':-0.834, 'sigma':0.31507524065751241*nanometers, 'epsilon':0.635968*kilojoules_per_mole})
         nonbonded.registerAtom({'type':'tip3p-H', 'charge':0.417, 'sigma':1*nanometers, 'epsilon':0*kilojoules_per_mole})
         ff.registerGenerator(nonbonded)
@@ -415,7 +477,7 @@ class TestForceField(unittest.TestCase):
         self.assertEqual(unmatched_residues[0].chain.id, 'X')
         self.assertEqual(unmatched_residues[0].id, '1')
 
-    def test_ggenerateTemplatesForUnmatchedResidues(self):
+    def test_generateTemplatesForUnmatchedResidues(self):
         """Test generation of blank forcefield residue templates for unmatched residues."""
         #
         # Test where we generate parameters for only a ligand.
@@ -712,7 +774,7 @@ class TestForceField(unittest.TestCase):
    <Atom name="SOD" type="SOD"/>
   </Residue>
  </Residues>
- <LennardJonesForce lj14scale="1.0">
+ <LennardJonesForce lj14scale="1.0" useDispersionCorrection="False">
   <Atom type="CLA" sigma="0.404468018036" epsilon="0.6276"/>
   <Atom type="SOD" sigma="0.251367073323" epsilon="0.1962296"/>
   <NBFixPair type1="CLA" type2="SOD" sigma="0.33239431" epsilon="0.350933"/>
@@ -852,6 +914,33 @@ class TestForceField(unittest.TestCase):
             forcefield = ForceField(ff)
             system = forcefield.createSystem(pdb.topology)
 
+    def test_IdenticalTemplates(self):
+        """Test a case where patches produce two identical templates."""
+        ff = ForceField('charmm36.xml')
+        pdb = PDBFile(StringIO("""
+ATOM      1  N   HIS     1A   -2.670    -0.476   0.475  1.00  0.00           N
+ATOM      2  HT1 HIS     1A   -2.645    -1.336   1.036  1.00  0.00           H
+ATOM      3  HT2 HIS     1A   -2.859    -0.751  -0.532  1.00  0.00           H
+ATOM      4  HT3 HIS     1A   -3.415     0.201   0.731  1.00  0.00           H
+ATOM      5  CA  HIS     1A   -1.347     0.163   0.471  1.00  0.00           C
+ATOM      6  HA  HIS     1A   -1.111     0.506   1.479  1.00  0.00           H
+ATOM      7  CB  HIS     1A   -0.352    -0.857  -0.040  1.00  0.00           C
+ATOM      8  HB1 HIS     1A   -0.360    -1.741   0.636  1.00  0.00           H
+ATOM      9  HB2 HIS     1A   -0.640    -1.175  -1.046  1.00  0.00           H
+ATOM     10  CG  HIS     1A    1.003    -0.275  -0.063  1.00  0.00           C
+ATOM     11  CD2 HIS     1A    2.143    -0.931  -0.476  1.00  0.00           C
+ATOM     12  HD2 HIS     1A    2.217    -1.952  -0.840  1.00  0.00           H
+ATOM     13  NE2 HIS     1A    3.137    -0.024  -0.328  1.00  0.00           N
+ATOM     14  HE2 HIS     1A    4.132    -0.238  -0.565  1.00  0.00           H
+ATOM     15  CE1 HIS     1A    2.649     1.130   0.150  1.00  0.00           C
+ATOM     16  HE1 HIS     1A    3.233     2.020   0.360  1.00  0.00           H
+ATOM     17  ND1 HIS     1A    1.323     0.973   0.314  1.00  0.00           N
+ATOM     18  C   HIS     1A   -1.465     1.282  -0.497  1.00  0.00           C
+ATOM     19  OT1 HIS     1A   -2.108     2.309  -0.180  1.00  0.00           O
+ATOM     20  OT2 HIS     1A   -0.864     1.172  -1.737  1.00  0.00           O
+END"""))
+        # If the check is not done correctly, this will throw an exception.
+        ff.createSystem(pdb.topology)
 
 class AmoebaTestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method with the AMOEBA forcefield."""
@@ -939,6 +1028,7 @@ class AmoebaTestForceField(unittest.TestCase):
         for f1, f2, in zip(state1.getForces().value_in_unit(kilojoules_per_mole/nanometer), state2.getForces().value_in_unit(kilojoules_per_mole/nanometer)):
             diff = norm(f1-f2)
             self.assertTrue(diff < 0.1 or diff/norm(f1) < 1e-3)
+
 
 if __name__ == '__main__':
     unittest.main()
