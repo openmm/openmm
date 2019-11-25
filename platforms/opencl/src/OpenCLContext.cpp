@@ -35,6 +35,8 @@
 #include "OpenCLIntegrationUtilities.h"
 #include "OpenCLKernelSources.h"
 #include "OpenCLNonbondedUtilities.h"
+#include "OpenCLProgram.h"
+#include "ComputeArray.h"
 #include "hilbert.h"
 #include "openmm/Platform.h"
 #include "openmm/System.h"
@@ -511,38 +513,6 @@ vector<OpenCLForceInfo*>& OpenCLContext::getForceInfos() {
     return forces;
 }
 
-string OpenCLContext::replaceStrings(const string& input, const std::map<std::string, std::string>& replacements) const {
-    static set<char> symbolChars;
-    if (symbolChars.size() == 0) {
-        symbolChars.insert('_');
-        for (char c = 'a'; c <= 'z'; c++)
-            symbolChars.insert(c);
-        for (char c = 'A'; c <= 'Z'; c++)
-            symbolChars.insert(c);
-        for (char c = '0'; c <= '9'; c++)
-            symbolChars.insert(c);
-    }
-    string result = input;
-    for (auto& pair : replacements) {
-        int index = 0;
-        int size = pair.first.size();
-        do {
-            index = result.find(pair.first, index);
-            if (index != result.npos) {
-                if ((index == 0 || symbolChars.find(result[index-1]) == symbolChars.end()) && (index == result.size()-size || symbolChars.find(result[index+size]) == symbolChars.end())) {
-                    // We have found a complete symbol, not part of a longer symbol.
-
-                    result.replace(index, size, pair.second);
-                    index += pair.second.size();
-                }
-                else
-                    index++;
-            }
-        } while (index != result.npos);
-    }
-    return result;
-}
-
 cl::Program OpenCLContext::createProgram(const string source, const char* optimizationFlags) {
     return createProgram(source, map<string, string>(), optimizationFlags);
 }
@@ -620,19 +590,25 @@ void OpenCLContext::restoreDefaultQueue() {
     currentQueue = defaultQueue;
 }
 
-string OpenCLContext::doubleToString(double value) const {
-    stringstream s;
-    s.precision(useDoublePrecision ? 16 : 8);
-    s << scientific << value;
-    if (!useDoublePrecision)
-        s << "f";
-    return s.str();
+OpenCLArray* OpenCLContext::createArray() {
+    return new OpenCLArray();
 }
 
-string OpenCLContext::intToString(int value) const {
-    stringstream s;
-    s << value;
-    return s.str();
+ComputeProgram OpenCLContext::compileProgram(const std::string source, const std::map<std::string, std::string>& defines) {
+    cl::Program program = createProgram(OpenCLKernelSources::common+source, defines);
+    return shared_ptr<ComputeProgramImpl>(new OpenCLProgram(*this, program));
+}
+
+OpenCLArray& OpenCLContext::unwrap(ArrayInterface& array) const {
+    OpenCLArray* clarray;
+    ComputeArray* wrapper = dynamic_cast<ComputeArray*>(&array);
+    if (wrapper != NULL)
+        clarray = dynamic_cast<OpenCLArray*>(&wrapper->getArray());
+    else
+        clarray = dynamic_cast<OpenCLArray*>(&array);
+    if (clarray == NULL)
+        throw OpenMMException("Array argument is not an OpenCLArray");
+    return *clarray;
 }
 
 void OpenCLContext::executeKernel(cl::Kernel& kernel, int workUnits, int blockSize) {
@@ -776,7 +752,7 @@ void OpenCLContext::setCharges(const vector<double>& charges) {
     vector<double> c(numAtoms);
     for (int i = 0; i < numAtoms; i++)
         c[i] = charges[i];
-    chargeBuffer.upload(c, true, true);
+    chargeBuffer.upload(c, true);
     setChargesKernel.setArg<cl::Buffer>(0, chargeBuffer.getDeviceBuffer());
     setChargesKernel.setArg<cl::Buffer>(1, posq.getDeviceBuffer());
     setChargesKernel.setArg<cl::Buffer>(2, atomIndexDevice.getDeviceBuffer());

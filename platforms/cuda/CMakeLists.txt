@@ -19,7 +19,7 @@ endif(BUILD_TESTING AND OPENMM_BUILD_CUDA_TESTS)
 
 # The source is organized into subdirectories, but we handle them all from
 # this CMakeLists file rather than letting CMake visit them as SUBDIRS.
-SET(OPENMM_SOURCE_SUBDIRS .)
+SET(OPENMM_SOURCE_SUBDIRS . ../common)
 
 
 # Collect up information about the version of the OpenMM library we're building

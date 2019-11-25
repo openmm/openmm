@@ -94,7 +94,7 @@ public:
      *                  precision will be performed as necessary
      */
     template <class T>
-    void upload(const std::vector<T>& data, bool convert=true) {
+    void upload(const std::vector<T>& data, bool convert=false) {
         if (convert && data.size() == getSize() && sizeof(T) != getElementSize()) {
             if (sizeof(T) == 2*getElementSize()) {
                 // Convert values from double to single precision.

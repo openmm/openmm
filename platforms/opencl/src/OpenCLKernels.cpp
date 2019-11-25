@@ -1874,11 +1874,11 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
                                 moduli[i] = (moduli[i-1]+moduli[i+1])*0.5f;
                         }
                         if (dim == 0)
-                            xmoduli->upload(moduli, true, true);
+                            xmoduli->upload(moduli, true);
                         else if (dim == 1)
-                            ymoduli->upload(moduli, true, true);
+                            ymoduli->upload(moduli, true);
                         else
-                            zmoduli->upload(moduli, true, true);
+                            zmoduli->upload(moduli, true);
                     }
                 }
             }
@@ -2213,7 +2213,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
     }
     if (paramChanged) {
         recomputeParams = true;
-        globalParams.upload(paramValues, true, true);
+        globalParams.upload(paramValues, true);
     }
     double energy = (includeReciprocal ? ewaldSelfEnergy : 0.0);
     if (recomputeParams || hasOffsets) {
@@ -3194,7 +3194,7 @@ void OpenCLCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOB
         chargeVec[i] = charge;
         paramsVector[i] = mm_float2((float) radius, (float) (scalingFactor*radius));
     }
-    charges.upload(chargeVec, true, true);
+    charges.upload(chargeVec, true);
     params.upload(paramsVector);
     prefactor = -ONE_4PI_EPS0*((1.0/force.getSoluteDielectric())-(1.0/force.getSolventDielectric()));
     surfaceAreaFactor = -6.0*4*M_PI*force.getSurfaceAreaEnergy();
@@ -3361,7 +3361,7 @@ void OpenCLCalcGBSAOBCForceKernel::copyParametersToContext(ContextImpl& context,
     }
     for (int i = numParticles; i < cl.getPaddedNumAtoms(); i++)
         paramsVector[i] = mm_float2(1,1);
-    charges.upload(chargeVector, true, true);
+    charges.upload(chargeVector, true);
     params.upload(paramsVector);
     
     // Mark that the current reordering may be invalid.
@@ -5235,7 +5235,7 @@ void OpenCLCalcCustomCentroidBondForceKernel::initialize(const System& system, c
         groupWeights.initialize<float>(cl, groupParticleVec.size(), "groupWeights");
         centerPositions.initialize<mm_float4>(cl, numGroups, "centerPositions");
     }
-    groupWeights.upload(groupWeightVec, true, true);
+    groupWeights.upload(groupWeightVec, true);
     groupOffsets.initialize<int>(cl, groupOffsetVec.size(), "groupOffsets");
     groupOffsets.upload(groupOffsetVec);
     groupForces.initialize<long long>(cl, numGroups*3, "groupForces");
@@ -7213,7 +7213,7 @@ void OpenCLCalcRMSDForceKernel::recordParameters(const RMSDForce& force) {
     vector<mm_double4> pos;
     for (Vec3 p : centeredPositions)
         pos.push_back(mm_double4(p[0], p[1], p[2], 0));
-    referencePos.upload(pos, true, true);
+    referencePos.upload(pos, true);
 
     // Record the sum of the norms of the reference positions.
 
@@ -7436,7 +7436,7 @@ void OpenCLIntegrateLangevinStepKernel::execute(ContextImpl& context, const Lang
         p[0] = vscale;
         p[1] = fscale;
         p[2] = noisescale;
-        params.upload(p, true, true);
+        params.upload(p, true);
         prevTemp = temperature;
         prevFriction = friction;
         prevStepSize = stepSize;
@@ -7540,7 +7540,7 @@ void OpenCLIntegrateBAOABStepKernel::execute(ContextImpl& context, const BAOABLa
         vector<cl_double> p(params.getSize());
         p[0] = vscale;
         p[1] = noisescale;
-        params.upload(p, true, true);
+        params.upload(p, true);
         prevTemp = temperature;
         prevFriction = friction;
         prevStepSize = stepSize;
@@ -8493,7 +8493,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
                     if (perDofEnergyParamDerivNames.size() > 0) {
                         for (int i = 0; i < perDofEnergyParamDerivNames.size(); i++)
                             localPerDofEnergyParamDerivs[i] = energyParamDerivs[perDofEnergyParamDerivNames[i]];
-                        perDofEnergyParamDerivs.upload(localPerDofEnergyParamDerivs, true, true);
+                        perDofEnergyParamDerivs.upload(localPerDofEnergyParamDerivs, true);
                     }
                 }
                 forcesAreValid = true;
@@ -8504,7 +8504,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
         if (needsGlobals[step] && !deviceGlobalsAreCurrent) {
             // Upload the global values to the device.
             
-            globalValues.upload(localGlobalValues, true, true);
+            globalValues.upload(localGlobalValues, true);
             deviceGlobalsAreCurrent = true;
         }
         bool stepInvalidatesForces = invalidatesForces[step];

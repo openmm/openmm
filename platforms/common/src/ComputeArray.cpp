@@ -37,6 +37,12 @@ ComputeArray::~ComputeArray() {
         delete impl;
 }
 
+ArrayInterface& ComputeArray::getArray() {
+    if (impl == NULL)
+        throw OpenMMException("ComputeArray has not been initialized");
+    return *impl;
+}
+
 void ComputeArray::initialize(ComputeContext& context, int size, int elementSize, const std::string& name) {
     if (impl != NULL)
         throw OpenMMException("The array "+getName()+" has already been initialized");

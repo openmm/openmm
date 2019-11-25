@@ -53,6 +53,7 @@
 #include "windowsExportOpenCL.h"
 #include "OpenCLArray.h"
 #include "OpenCLPlatform.h"
+#include "ComputeContext.h"
 
 namespace OpenMM {
 
@@ -64,25 +65,9 @@ class OpenCLNonbondedUtilities;
 class System;
 
 /**
- * We can't use predefined vector types like cl_float4, since different OpenCL implementations currently define
- * them in incompatible ways.  Hopefully that will be fixed in the future.  In the mean time, we define our own
- * types to represent them on the host.
+ * These are a few extra vector types beyond the ones in ComputeVectorTypes.h.
  */
 
-struct mm_float2 {
-    cl_float x, y;
-    mm_float2() {
-    }
-    mm_float2(cl_float x, cl_float y) : x(x), y(y) {
-    }
-};
-struct mm_float4 {
-    cl_float x, y, z, w;
-    mm_float4() {
-    }
-    mm_float4(cl_float x, cl_float y, cl_float z, cl_float w) : x(x), y(y), z(z), w(w) {
-    }
-};
 struct mm_float8 {
     cl_float s0, s1, s2, s3, s4, s5, s6, s7;
     mm_float8() {
@@ -101,39 +86,11 @@ struct mm_float16 {
         s8(s8), s9(s9), s10(s10), s11(s11), s12(s12), s13(s13), s14(s14), s15(15) {
     }
 };
-struct mm_double2 {
-    cl_double x, y;
-    mm_double2() {
-    }
-    mm_double2(cl_double x, cl_double y) : x(x), y(y) {
-    }
-};
-struct mm_double4 {
-    cl_double x, y, z, w;
-    mm_double4() {
-    }
-    mm_double4(cl_double x, cl_double y, cl_double z, cl_double w) : x(x), y(y), z(z), w(w) {
-    }
-};
 struct mm_ushort2 {
     cl_ushort x, y;
     mm_ushort2() {
     }
     mm_ushort2(cl_ushort x, cl_ushort y) : x(x), y(y) {
-    }
-};
-struct mm_int2 {
-    cl_int x, y;
-    mm_int2() {
-    }
-    mm_int2(cl_int x, cl_int y) : x(x), y(y) {
-    }
-};
-struct mm_int4 {
-    cl_int x, y, z, w;
-    mm_int4() {
-    }
-    mm_int4(cl_int x, cl_int y, cl_int z, cl_int w) : x(x), y(y), z(z), w(w) {
     }
 };
 struct mm_int8 {
@@ -166,7 +123,7 @@ struct mm_int16 {
  * thread is not used and calculations are performed on the main application thread.
  */
 
-class OPENMM_EXPORT_OPENCL OpenCLContext {
+class OPENMM_EXPORT_OPENCL OpenCLContext : public ComputeContext {
 public:
     class WorkTask;
     class WorkThread;
@@ -240,6 +197,24 @@ public:
      */
     void restoreDefaultQueue();
     /**
+     * Construct an uninitialized array of the appropriate class for this platform.  The returned
+     * value should be created on the heap with the "new" operator.
+     */
+    OpenCLArray* createArray();
+    /**
+     * Compile source code to create a ComputeProgram.
+     *
+     * @param source             the source code of the program
+     * @param defines            a set of preprocessor definitions (name, value) to define when compiling the program
+     */
+    ComputeProgram compileProgram(const std::string source, const std::map<std::string, std::string>& defines=std::map<std::string, std::string>());
+    /**
+     * Convert an array to an OpenCLArray.  If the argument is already an OpenCLArray, this simply casts it.
+     * If the argument is a ComputeArray that wraps an OpenCLArray, this returns the wrapped array.  For any
+     * other argument, this throws an exception.
+     */
+    OpenCLArray& unwrap(ArrayInterface& array) const;
+    /**
      * Get the array which contains the position (the xyz components) and charge (the w component) of each atom.
      */
     OpenCLArray& getPosq() {
@@ -312,14 +287,6 @@ public:
     std::vector<mm_int4>& getPosCellOffsets() {
         return posCellOffsets;
     }
-    /**
-     * Replace all occurrences of a list of substrings.
-     *
-     * @param input   a string to process
-     * @param replacements a set of strings that should be replaced with new strings wherever they appear in the input string
-     * @return a new string produced by performing the replacements
-     */
-    std::string replaceStrings(const std::string& input, const std::map<std::string, std::string>& replacements) const;
     /**
      * Create an OpenCL Program from source code.
      *
@@ -514,15 +481,6 @@ public:
     bool getBoxIsTriclinic() const {
         return boxIsTriclinic;
     }
-    /**
-     * Convert a number to a string in a format suitable for including in a kernel.
-     * This takes into account whether the context uses single or double precision.
-     */
-    std::string doubleToString(double value) const;
-    /**
-     * Convert a number to a string in a format suitable for including in a kernel.
-     */
-    std::string intToString(int value) const;
     /**
      * Get the vectors defining the periodic box.
      */

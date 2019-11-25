@@ -424,9 +424,9 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
                 atomConstraintsVec[i+j*numAtoms] = (forward ? inverseOrder[atomConstraints[i][j]]+1 : -inverseOrder[atomConstraints[i][j]]-1);
             }
         }
-        ccmaDistance.upload(distanceVec, true, true);
-        ccmaReducedMass.upload(reducedMassVec, true, true);
-        ccmaConstraintMatrixValue.upload(constraintMatrixValueVec, true, true);
+        ccmaDistance.upload(distanceVec, true);
+        ccmaReducedMass.upload(reducedMassVec, true);
+        ccmaConstraintMatrixValue.upload(constraintMatrixValueVec, true);
         ccmaAtoms.upload(atomsVec);
         ccmaAtomConstraints.upload(atomConstraintsVec);
         ccmaNumAtomConstraints.upload(numAtomConstraintsVec);
@@ -536,14 +536,14 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
     vsiteLocalCoordsWeights.initialize(context, max(1, (int) vsiteLocalCoordsWeightVec.size()), elementSize, "vsiteLocalCoordsWeights");
     vsiteLocalCoordsPos.initialize(context, max(1, (int) vsiteLocalCoordsPosVec.size()), 4*elementSize, "vsiteLocalCoordsPos");
     if (num2Avg > 0)
-        vsite2AvgWeights.upload(vsite2AvgWeightVec, true, true);
+        vsite2AvgWeights.upload(vsite2AvgWeightVec, true);
     if (num3Avg > 0)
-        vsite3AvgWeights.upload(vsite3AvgWeightVec, true, true);
+        vsite3AvgWeights.upload(vsite3AvgWeightVec, true);
     if (numOutOfPlane > 0)
-        vsiteOutOfPlaneWeights.upload(vsiteOutOfPlaneWeightVec, true, true);
+        vsiteOutOfPlaneWeights.upload(vsiteOutOfPlaneWeightVec, true);
     if (numLocalCoords > 0) {
-        vsiteLocalCoordsWeights.upload(vsiteLocalCoordsWeightVec, true, true);
-        vsiteLocalCoordsPos.upload(vsiteLocalCoordsPosVec, true, true);
+        vsiteLocalCoordsWeights.upload(vsiteLocalCoordsWeightVec, true);
+        vsiteLocalCoordsPos.upload(vsiteLocalCoordsPosVec, true);
     }
     
     // If multiple virtual sites depend on the same particle, make sure the force distribution

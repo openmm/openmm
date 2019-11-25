@@ -1,6 +1,3 @@
-#ifndef OPENMM_COMPUTEPROGRAM_H_
-#define OPENMM_COMPUTEPROGRAM_H_
-
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -27,37 +24,46 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "ComputeKernel.h"
-#include <memory>
+#include "OpenCLKernel.h"
+#include "ComputeArray.h"
 
-namespace OpenMM {
+using namespace OpenMM;
+using namespace std;
 
-/**
- * This abstract class represents a compiled program that can be executed on a computing
- * device.  A ComputeProgramImpl is created by calling compileProgram() on a ComputeContext,
- * which returns an instance of a platform-specific subclass.  The source code for a
- * ComputeProgramImpl typically contains one or more kernels.  Call createKernel() to get
- * ComputeKernels for the kernels, which can then be executed.
- * 
- * Instead of referring to this class directly, it is best to use ComputeProgram, which is
- * a typedef for a shared_ptr to a ComputeProgramImpl.  This allows you to treat it as having
- * value semantics, and frees you from having to manage memory.  
- */
+OpenCLKernel::OpenCLKernel(OpenCLContext& context, cl::Kernel kernel) : context(context), kernel(kernel) {
+}
 
-class ComputeProgramImpl {
-public:
-    virtual ~ComputeProgramImpl() {
-    }
-    /**
-     * Create a ComputeKernel for one of the kernels in this program.
-     * 
-     * @param name    the name of the kernel to get
-     */
-    virtual ComputeKernel createKernel(const std::string& name) = 0;
-};
+const string& OpenCLKernel::getName() const {
+    return kernel.getInfo<CL_KERNEL_FUNCTION_NAME>();
+}
 
-typedef std::shared_ptr<ComputeProgramImpl> ComputeProgram;
+void OpenCLKernel::execute(int threads, int blockSize) {
+    // Set args that are specified by OpenCLArrays.  We can't do this earlier, because it's
+    // possible resize() will get called on an array, causing its internal storage to be
+    // recreated.
+    
+    for (int i = 0; i < arrayArgs.size(); i++)
+        if (arrayArgs[i] != NULL)
+            kernel.setArg<cl::Buffer>(i, arrayArgs[i]->getDeviceBuffer());
+    context.executeKernel(kernel, threads, blockSize);
+}
 
-} // namespace OpenMM
+void OpenCLKernel::addArrayArg(ArrayInterface& value) {
+    int index = arrayArgs.size();
+    arrayArgs.push_back(NULL);
+    setArrayArg(index, value);
+}
 
-#endif /*OPENMM_COMPUTEPROGRAM_H_*/
+void OpenCLKernel::addPrimitiveArg(void* value, int size) {
+    int index = arrayArgs.size();
+    arrayArgs.push_back(NULL);
+    setPrimitiveArg(index, value, size);
+}
+
+void OpenCLKernel::setArrayArg(int index, ArrayInterface& value) {
+    arrayArgs[index] = &context.unwrap(value);
+}
+
+void OpenCLKernel::setPrimitiveArg(int index, void* value, int size) {
+    kernel.setArg(index, size, value);
+}

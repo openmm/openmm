@@ -49,6 +49,10 @@ public:
      */
     ~ComputeArray();
     /**
+     * Get the internal array this object is wrapping.
+     */
+    ArrayInterface& getArray();
+    /**
      * Initialize this array.
      *
      * @param context           the context for which to create the array
@@ -57,6 +61,17 @@ public:
      * @param name              the name of the array
      */
     void initialize(ComputeContext& context, int size, int elementSize, const std::string& name);
+    /**
+     * Initialize this object.  The template argument is the data type of each array element.
+     *
+     * @param context           the context for which to create the array
+     * @param size              the number of elements in the array
+     * @param name              the name of the array
+     */
+    template <class T>
+    void initialize(ComputeContext& context, int size, const std::string& name) {
+        initialize(context, size, sizeof(T), name);
+    }
     /**
      * Recreate the internal storage to have a different size.
      */
@@ -81,6 +96,20 @@ public:
      * Get the context this array belongs to.
      */
     ComputeContext& getContext();
+    /**
+     * Copy the values in a vector to the Buffer.
+     */
+    template <class T>
+    void upload(const std::vector<T>& data, bool convert=false) {
+        ArrayInterface::upload(data, convert);
+    }
+    /**
+     * Copy the values in the Buffer to a vector.
+     */
+    template <class T>
+    void download(std::vector<T>& data) const {
+        ArrayInterface::download(data);
+    }
     /**
      * Copy the values from host memory to the array.
      * 
