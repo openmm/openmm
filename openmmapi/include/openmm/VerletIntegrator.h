@@ -76,7 +76,6 @@ protected:
      * Compute the kinetic energy of the system at the current time.
      */
     double computeKineticEnergy();
-private:
     Kernel kernel;
 };
 

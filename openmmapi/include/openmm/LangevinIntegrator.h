@@ -133,10 +133,10 @@ protected:
      * Compute the kinetic energy of the system at the current time.
      */
     double computeKineticEnergy();
+    Kernel kernel;
 private:
     double temperature, friction;
     int randomNumberSeed;
-    Kernel kernel;
 };
 
 } // namespace OpenMM
