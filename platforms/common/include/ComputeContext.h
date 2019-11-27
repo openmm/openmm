@@ -79,6 +79,15 @@ public:
      */
     virtual bool getUseMixedPrecision() const = 0;
     /**
+     * Get the number of atoms in the system.
+     */
+    virtual int getNumAtoms() const = 0;
+    /**
+     * Get the number of atoms, rounded up to a multiple of 32.  This is the actual size of
+     * most arrays with one element per atom.
+     */
+    virtual int getPaddedNumAtoms() const = 0;
+    /**
      * Get the array which contains the position (the xyz components) and charge (the w component) of each atom.
      */
     virtual ArrayInterface& getPosq() = 0;

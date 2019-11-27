@@ -30,6 +30,7 @@
 #include "ArrayInterface.h"
 #include <memory>
 #include <string>
+#include <type_traits>
 
 namespace OpenMM {
 
@@ -59,12 +60,16 @@ public:
      * @param value     the value to pass to the kernel
      */
     template <class T>
-    void addArg(T& value) {
-        ArrayInterface* array = dynamic_cast<ArrayInterface*>(&value);
-        if (array != NULL)
-            addArrayArg(*array);
-        else
-            addPrimitiveArg(&value, sizeof(value));
+    typename std::enable_if<std::is_fundamental<T>::value, void>::type addArg(T& value) {
+        addPrimitiveArg(&value, sizeof(value));
+    }
+    /**
+     * Add an argument to pass the kernel when it is invoked.
+     * 
+     * @param value     the value to pass to the kernel
+     */
+    void addArg(ArrayInterface& value) {
+        addArrayArg(value);
     }
     /**
      * Set the value of an argument to pass the kernel when it is invoked.
@@ -73,12 +78,17 @@ public:
      * @param value     the value to pass to the kernel
      */
     template <class T>
-    void setArg(int index, T& value) {
-        ArrayInterface* array = dynamic_cast<ArrayInterface*>(&value);
-        if (array != NULL)
-            setArrayArg(index, *array);
-        else
-            setPrimitiveArg(index, &value, sizeof(value));
+    typename std::enable_if<std::is_fundamental<T>::value, void>::type setArg(int index, T& value) {
+        setPrimitiveArg(index, &value, sizeof(value));
+    }
+    /**
+     * Set the value of an argument to pass the kernel when it is invoked.
+     * 
+     * @param index     the index of the argument to set
+     * @param value     the value to pass to the kernel
+     */
+    void setArg(int index, ArrayInterface& value) {
+        setArrayArg(index, value);
     }
     /**
      * Execute this kernel.
@@ -88,7 +98,7 @@ public:
      * @param blockSize    the number of threads in each thread block.  If this is omitted, a
      *                     default size that is appropriate for the computing device is used.
      */
-    void execute(int threads, int blockSize=-1);
+    virtual void execute(int threads, int blockSize=-1) = 0;
 protected:
     /**
      * Add an argument to pass the kernel when it is invoked, where the value is a

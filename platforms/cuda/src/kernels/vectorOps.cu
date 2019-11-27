@@ -594,6 +594,14 @@ inline __device__ double4 normalize(double4 a) {
 
 // Strip off the fourth component of a vector.
 
+inline __device__ short3 trimTo3(short4 v) {
+    return make_short3(v.x, v.y, v.z);
+}
+
+inline __device__ int3 trimTo3(int4 v) {
+    return make_int3(v.x, v.y, v.z);
+}
+
 inline __device__ float3 trimTo3(float4 v) {
     return make_float3(v.x, v.y, v.z);
 }

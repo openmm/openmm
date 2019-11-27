@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -26,6 +26,7 @@
 
 #include "OpenCLKernelFactory.h"
 #include "OpenCLParallelKernels.h"
+#include "CommonKernels.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/OpenMMException.h"
 
@@ -133,6 +134,6 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
     if (name == ApplyMonteCarloBarostatKernel::Name())
         return new OpenCLApplyMonteCarloBarostatKernel(name, platform, cl);
     if (name == RemoveCMMotionKernel::Name())
-        return new OpenCLRemoveCMMotionKernel(name, platform, cl);
+        return new CommonRemoveCMMotionKernel(name, platform, cl);
     throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '")+name+"'").c_str());
 }
