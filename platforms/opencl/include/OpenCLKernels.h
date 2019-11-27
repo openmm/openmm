@@ -1755,33 +1755,6 @@ private:
     std::vector<int> lastAtomOrder;
 };
 
-/**
- * This kernel is invoked to remove center of mass motion from the system.
- */
-class OpenCLRemoveCMMotionKernel : public RemoveCMMotionKernel {
-public:
-    OpenCLRemoveCMMotionKernel(std::string name, const Platform& platform, OpenCLContext& cl) : RemoveCMMotionKernel(name, platform), cl(cl) {
-    }
-    /**
-     * Initialize the kernel, setting up the particle masses.
-     *
-     * @param system     the System this kernel will be applied to
-     * @param force      the CMMotionRemover this kernel will be used for
-     */
-    void initialize(const System& system, const CMMotionRemover& force);
-    /**
-     * Execute the kernel.
-     *
-     * @param context    the context in which to execute this kernel
-     */
-    void execute(ContextImpl& context);
-private:
-    OpenCLContext& cl;
-    int frequency;
-    OpenCLArray cmMomentum;
-    cl::Kernel kernel1, kernel2;
-};
-
 } // namespace OpenMM
 
 #endif /*OPENMM_OPENCLKERNELS_H_*/

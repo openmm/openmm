@@ -31,7 +31,7 @@
 #define CL_USE_DEPRECATED_OPENCL_1_1_APIS
 #include "openmm/OpenMMException.h"
 #include "windowsExportOpenCL.h"
-#include "ArrayInterface.h"
+#include "openmm/common/ArrayInterface.h"
 #include <cl.hpp>
 #include <iostream>
 #include <sstream>

@@ -27,8 +27,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "ComputeProgram.h"
-#include "ComputeVectorTypes.h"
+#include "openmm/common/ComputeProgram.h"
+#include "openmm/common/ComputeVectorTypes.h"
 #include <map>
 #include <string>
 

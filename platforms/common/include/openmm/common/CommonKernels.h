@@ -1,3 +1,6 @@
+#ifndef OPENMM_COMMONKERNELS_H_
+#define OPENMM_COMMONKERNELS_H_
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -6,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2019 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -24,46 +27,40 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "OpenCLKernel.h"
 #include "openmm/common/ComputeArray.h"
+#include "openmm/common/ComputeContext.h"
+#include "openmm/Platform.h"
+#include "openmm/kernels.h"
 
-using namespace OpenMM;
-using namespace std;
+namespace OpenMM {
 
-OpenCLKernel::OpenCLKernel(OpenCLContext& context, cl::Kernel kernel) : context(context), kernel(kernel) {
-}
+/**
+ * This kernel is invoked to remove center of mass motion from the system.
+ */
+class CommonRemoveCMMotionKernel : public RemoveCMMotionKernel {
+public:
+    CommonRemoveCMMotionKernel(std::string name, const Platform& platform, ComputeContext& cc) : RemoveCMMotionKernel(name, platform), cc(cc) {
+    }
+    /**
+     * Initialize the kernel, setting up the particle masses.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CMMotionRemover this kernel will be used for
+     */
+    void initialize(const System& system, const CMMotionRemover& force);
+    /**
+     * Execute the kernel.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void execute(ContextImpl& context);
+private:
+    ComputeContext& cc;
+    int frequency;
+    ComputeArray cmMomentum;
+    ComputeKernel kernel1, kernel2;
+};
 
-const string& OpenCLKernel::getName() const {
-    return kernel.getInfo<CL_KERNEL_FUNCTION_NAME>();
-}
+} // namespace OpenMM
 
-void OpenCLKernel::execute(int threads, int blockSize) {
-    // Set args that are specified by OpenCLArrays.  We can't do this earlier, because it's
-    // possible resize() will get called on an array, causing its internal storage to be
-    // recreated.
-    
-    for (int i = 0; i < arrayArgs.size(); i++)
-        if (arrayArgs[i] != NULL)
-            kernel.setArg<cl::Buffer>(i, arrayArgs[i]->getDeviceBuffer());
-    context.executeKernel(kernel, threads, blockSize);
-}
-
-void OpenCLKernel::addArrayArg(ArrayInterface& value) {
-    int index = arrayArgs.size();
-    arrayArgs.push_back(NULL);
-    setArrayArg(index, value);
-}
-
-void OpenCLKernel::addPrimitiveArg(void* value, int size) {
-    int index = arrayArgs.size();
-    arrayArgs.push_back(NULL);
-    setPrimitiveArg(index, value, size);
-}
-
-void OpenCLKernel::setArrayArg(int index, ArrayInterface& value) {
-    arrayArgs[index] = &context.unwrap(value);
-}
-
-void OpenCLKernel::setPrimitiveArg(int index, void* value, int size) {
-    kernel.setArg(index, size, value);
-}
+#endif /*OPENMM_COMMONKERNELS_H_*/

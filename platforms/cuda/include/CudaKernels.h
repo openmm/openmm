@@ -1763,33 +1763,6 @@ private:
     std::vector<int> lastAtomOrder;
 };
 
-/**
- * This kernel is invoked to remove center of mass motion from the system.
- */
-class CudaRemoveCMMotionKernel : public RemoveCMMotionKernel {
-public:
-    CudaRemoveCMMotionKernel(std::string name, const Platform& platform, CudaContext& cu) : RemoveCMMotionKernel(name, platform), cu(cu) {
-    }
-    /**
-     * Initialize the kernel, setting up the particle masses.
-     *
-     * @param system     the System this kernel will be applied to
-     * @param force      the CMMotionRemover this kernel will be used for
-     */
-    void initialize(const System& system, const CMMotionRemover& force);
-    /**
-     * Execute the kernel.
-     *
-     * @param context    the context in which to execute this kernel
-     */
-    void execute(ContextImpl& context);
-private:
-    CudaContext& cu;
-    int frequency;
-    CudaArray cmMomentum;
-    CUfunction kernel1, kernel2;
-};
-
 } // namespace OpenMM
 
 #endif /*OPENMM_CUDAKERNELS_H_*/

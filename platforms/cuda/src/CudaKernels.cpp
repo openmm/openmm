@@ -8439,26 +8439,3 @@ void CudaApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context)
         throw OpenMMException(m.str());
     }
 }
-
-void CudaRemoveCMMotionKernel::initialize(const System& system, const CMMotionRemover& force) {
-    cu.setAsCurrent();
-    frequency = force.getFrequency();
-    int numAtoms = cu.getNumAtoms();
-    cmMomentum.initialize<float4>(cu, (numAtoms+CudaContext::ThreadBlockSize-1)/CudaContext::ThreadBlockSize, "cmMomentum");
-    double totalMass = 0.0;
-    for (int i = 0; i < numAtoms; i++)
-        totalMass += system.getParticleMass(i);
-    map<string, string> defines;
-    defines["INVERSE_TOTAL_MASS"] = cu.doubleToString(totalMass == 0 ? 0.0 : 1.0/totalMass);
-    CUmodule module = cu.createModule(CudaKernelSources::removeCM, defines);
-    kernel1 = cu.getKernel(module, "calcCenterOfMassMomentum");
-    kernel2 = cu.getKernel(module, "removeCenterOfMassMomentum");
-}
-
-void CudaRemoveCMMotionKernel::execute(ContextImpl& context) {
-    cu.setAsCurrent();
-    int numAtoms = cu.getNumAtoms();
-    void* args[] = {&numAtoms, &cu.getVelm().getDevicePointer(), &cmMomentum.getDevicePointer()};
-    cu.executeKernel(kernel1, args, cu.getNumAtoms(), cu.ThreadBlockSize, cu.ThreadBlockSize*sizeof(float4));
-    cu.executeKernel(kernel2, args, cu.getNumAtoms(), cu.ThreadBlockSize, cu.ThreadBlockSize*sizeof(float4));
-}

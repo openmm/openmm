@@ -1,5 +1,5 @@
-#ifndef OPENMM_COMPUTEKERNEL_H_
-#define OPENMM_COMPUTEKERNEL_H_
+#ifndef OPENMM_CUDAKERNEL_H_
+#define OPENMM_CUDAKERNEL_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -27,69 +27,31 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "ArrayInterface.h"
-#include <memory>
+#include "CudaArray.h"
+#include "CudaContext.h"
 #include <string>
-#include <type_traits>
+#include <vector>
 
 namespace OpenMM {
 
 /**
- * This abstract class represents a kernel that can be executed on a computing device.
- * Call createKernel() on a ComputeProgramImpl to create an instance of a platform-specific
- * subclass.  Then call addArg() to specify the values to pass for all of the kernel's arguments.
- * Finally, call execute() to execute the kernel.  If you need to modify the values of kernel
- * arguments between invocations, use setArg() to change the value of an argument.
- * 
- * Instead of referring to this class directly, it is best to use ComputeKernel, which is
- * a typedef for a shared_ptr to a ComputeKernelImpl.  This allows you to treat it as having
- * value semantics, and frees you from having to manage memory.  
+ * This is the CUDA implementation of the ComputeKernelImpl interface. 
  */
 
-class ComputeKernelImpl {
+class CudaKernel : public ComputeKernelImpl {
 public:
-    virtual ~ComputeKernelImpl() {
-    }
+    /**
+     * Create a new CudaKernel.
+     * 
+     * @param context      the context this kernel belongs to
+     * @param kernel       the kernel to be invoked
+     * @param name         the name of the kernel function
+     */
+    CudaKernel(CudaContext& context, CUfunction kernel, const std::string& name);
     /**
      * Get the name of this kernel.
      */
-    virtual const std::string& getName() const = 0;
-    /**
-     * Add an argument to pass the kernel when it is invoked.
-     * 
-     * @param value     the value to pass to the kernel
-     */
-    template <class T>
-    typename std::enable_if<std::is_fundamental<T>::value, void>::type addArg(T& value) {
-        addPrimitiveArg(&value, sizeof(value));
-    }
-    /**
-     * Add an argument to pass the kernel when it is invoked.
-     * 
-     * @param value     the value to pass to the kernel
-     */
-    void addArg(ArrayInterface& value) {
-        addArrayArg(value);
-    }
-    /**
-     * Set the value of an argument to pass the kernel when it is invoked.
-     * 
-     * @param index     the index of the argument to set
-     * @param value     the value to pass to the kernel
-     */
-    template <class T>
-    typename std::enable_if<std::is_fundamental<T>::value, void>::type setArg(int index, T& value) {
-        setPrimitiveArg(index, &value, sizeof(value));
-    }
-    /**
-     * Set the value of an argument to pass the kernel when it is invoked.
-     * 
-     * @param index     the index of the argument to set
-     * @param value     the value to pass to the kernel
-     */
-    void setArg(int index, ArrayInterface& value) {
-        setArrayArg(index, value);
-    }
+    const std::string& getName() const;
     /**
      * Execute this kernel.
      *
@@ -98,7 +60,7 @@ public:
      * @param blockSize    the number of threads in each thread block.  If this is omitted, a
      *                     default size that is appropriate for the computing device is used.
      */
-    virtual void execute(int threads, int blockSize=-1) = 0;
+    void execute(int threads, int blockSize=-1);
 protected:
     /**
      * Add an argument to pass the kernel when it is invoked, where the value is a
@@ -106,14 +68,14 @@ protected:
      * 
      * @param value     the value to pass to the kernel
      */
-    virtual void addArrayArg(ArrayInterface& value) = 0;
+    void addArrayArg(ArrayInterface& value);
     /**
      * Add an argument to pass the kernel when it is invoked, where the value is a primitive type.
      * 
      * @param value    a pointer to the argument value
      * @param size     the size of the value in bytes
      */
-    virtual void addPrimitiveArg(void* value, int size) = 0;
+    void addPrimitiveArg(void* value, int size);
     /**
      * Add an argument to pass the kernel when it is invoked, where the value is a
      * subclass of ArrayInterface.
@@ -121,7 +83,7 @@ protected:
      * @param index     the index of the argument to set
      * @param value     the value to pass to the kernel
      */
-    virtual void setArrayArg(int index, ArrayInterface& value) = 0;
+    void setArrayArg(int index, ArrayInterface& value);
     /**
      * Add an argument to pass the kernel when it is invoked, where the value is a primitive type.
      * 
@@ -129,11 +91,16 @@ protected:
      * @param value    a pointer to the argument value
      * @param size     the size of the value in bytes
      */
-    virtual void setPrimitiveArg(int index, void* value, int size) = 0;
+    void setPrimitiveArg(int index, void* value, int size);
+private:
+    CudaContext& context;
+    CUfunction kernel;
+    std::string name;
+    std::vector<double4> primitiveArgs;
+    std::vector<CudaArray*> arrayArgs;
+    std::vector<void*> argPointers;
 };
-
-typedef std::shared_ptr<ComputeKernelImpl> ComputeKernel;
 
 } // namespace OpenMM
 
-#endif /*OPENMM_COMPUTEKERNEL_H_*/
+#endif /*OPENMM_CUDAKERNEL_H_*/

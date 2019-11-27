@@ -28,6 +28,7 @@
 #include "CudaKernels.h"
 #include "CudaParallelKernels.h"
 #include "CudaPlatform.h"
+#include "openmm/common/CommonKernels.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/OpenMMException.h"
 
@@ -135,6 +136,6 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
     if (name == ApplyMonteCarloBarostatKernel::Name())
         return new CudaApplyMonteCarloBarostatKernel(name, platform, cu);
     if (name == RemoveCMMotionKernel::Name())
-        return new CudaRemoveCMMotionKernel(name, platform, cu);
+        return new CommonRemoveCMMotionKernel(name, platform, cu);
     throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '")+name+"'").c_str());
 }

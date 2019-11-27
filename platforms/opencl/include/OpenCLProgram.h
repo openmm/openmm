@@ -27,7 +27,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "ComputeProgram.h"
+#include "openmm/common/ComputeProgram.h"
 #include "OpenCLContext.h"
 
 namespace OpenMM {

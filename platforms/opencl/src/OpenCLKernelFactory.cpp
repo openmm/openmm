@@ -26,7 +26,7 @@
 
 #include "OpenCLKernelFactory.h"
 #include "OpenCLParallelKernels.h"
-#include "CommonKernels.h"
+#include "openmm/common/CommonKernels.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/OpenMMException.h"
 

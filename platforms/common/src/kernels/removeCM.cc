@@ -7,8 +7,12 @@ KERNEL void calcCenterOfMassMomentum(int numAtoms, GLOBAL const mixed4* RESTRICT
     float3 cm = make_float3(0, 0, 0);
     for (int index = GLOBAL_ID; index < numAtoms; index += GLOBAL_SiZE) {
         mixed4 velocity = velm[index];
-        if (velocity.w != 0)
-            cm += trimTo3(velocity)/velocity.w;
+        if (velocity.w != 0) {
+            mixed mass = RECIP(velocity.w);
+            cm.x += (float) (velocity.x*mass);
+            cm.y += (float) (velocity.y*mass);
+            cm.z += (float) (velocity.z*mass);
+        }
     }
 
     // Sum the threads in this group.

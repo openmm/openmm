@@ -1,6 +1,3 @@
-#ifndef OPENMM_COMPUTEPROGRAM_H_
-#define OPENMM_COMPUTEPROGRAM_H_
-
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -27,37 +24,54 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "ComputeKernel.h"
-#include <memory>
+#include "CudaKernel.h"
+#include "openmm/common/ComputeArray.h"
+#include <cstring>
+#include <vector>
 
-namespace OpenMM {
+using namespace OpenMM;
+using namespace std;
 
-/**
- * This abstract class represents a compiled program that can be executed on a computing
- * device.  A ComputeProgramImpl is created by calling compileProgram() on a ComputeContext,
- * which returns an instance of a platform-specific subclass.  The source code for a
- * ComputeProgramImpl typically contains one or more kernels.  Call createKernel() to get
- * ComputeKernels for the kernels, which can then be executed.
- * 
- * Instead of referring to this class directly, it is best to use ComputeProgram, which is
- * a typedef for a shared_ptr to a ComputeProgramImpl.  This allows you to treat it as having
- * value semantics, and frees you from having to manage memory.  
- */
+CudaKernel::CudaKernel(CudaContext& context, CUfunction kernel, const string& name) : context(context), kernel(kernel), name(name) {
+}
 
-class ComputeProgramImpl {
-public:
-    virtual ~ComputeProgramImpl() {
+const string& CudaKernel::getName() const {
+    return name;
+}
+
+void CudaKernel::execute(int threads, int blockSize) {
+    int numArgs = arrayArgs.size();
+    argPointers.resize(numArgs);
+    for (int i = 0; i < numArgs; i++) {
+        if (arrayArgs[i] != NULL)
+            argPointers[i] = &arrayArgs[i]->getDevicePointer();
+        else
+            argPointers[i] = &primitiveArgs[i];
     }
-    /**
-     * Create a ComputeKernel for one of the kernels in this program.
-     * 
-     * @param name    the name of the kernel to get
-     */
-    virtual ComputeKernel createKernel(const std::string& name) = 0;
-};
+    context.executeKernel(kernel, argPointers.data(), threads, blockSize);
+}
 
-typedef std::shared_ptr<ComputeProgramImpl> ComputeProgram;
+void CudaKernel::addArrayArg(ArrayInterface& value) {
+    int index = arrayArgs.size();
+    primitiveArgs.push_back(make_double4(0, 0, 0, 0));
+    arrayArgs.push_back(NULL);
+    setArrayArg(index, value);
+}
 
-} // namespace OpenMM
+void CudaKernel::addPrimitiveArg(void* value, int size) {
+    int index = arrayArgs.size();
+    primitiveArgs.push_back(make_double4(0, 0, 0, 0));
+    arrayArgs.push_back(NULL);
+    setPrimitiveArg(index, value, size);
+}
 
-#endif /*OPENMM_COMPUTEPROGRAM_H_*/
+void CudaKernel::setArrayArg(int index, ArrayInterface& value) {
+    arrayArgs[index] = &context.unwrap(value);
+}
+
+void CudaKernel::setPrimitiveArg(int index, void* value, int size) {
+    if (size > sizeof(double4))
+        throw OpenMMException("Unsupported value type for kernel argument");
+    memcpy(&primitiveArgs[index], value, size);
+    arrayArgs[index] = NULL;
+}

@@ -53,7 +53,7 @@
 #include "windowsExportOpenCL.h"
 #include "OpenCLArray.h"
 #include "OpenCLPlatform.h"
-#include "ComputeContext.h"
+#include "openmm/common/ComputeContext.h"
 
 namespace OpenMM {
 

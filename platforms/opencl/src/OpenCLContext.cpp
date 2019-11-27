@@ -36,7 +36,7 @@
 #include "OpenCLKernelSources.h"
 #include "OpenCLNonbondedUtilities.h"
 #include "OpenCLProgram.h"
-#include "ComputeArray.h"
+#include "openmm/common/ComputeArray.h"
 #include "hilbert.h"
 #include "openmm/Platform.h"
 #include "openmm/System.h"

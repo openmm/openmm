@@ -36,6 +36,8 @@
 #include "CudaKernels.h"
 #include "CudaKernelSources.h"
 #include "CudaNonbondedUtilities.h"
+#include "CudaProgram.h"
+#include "openmm/common/ComputeArray.h"
 #include "SHA1.h"
 #include "hilbert.h"
 #include "openmm/OpenMMException.h"
@@ -497,38 +499,6 @@ void CudaContext::setAsCurrent() {
         cuCtxSetCurrent(context);
 }
 
-string CudaContext::replaceStrings(const string& input, const std::map<std::string, std::string>& replacements) const {
-    static set<char> symbolChars;
-    if (symbolChars.size() == 0) {
-        symbolChars.insert('_');
-        for (char c = 'a'; c <= 'z'; c++)
-            symbolChars.insert(c);
-        for (char c = 'A'; c <= 'Z'; c++)
-            symbolChars.insert(c);
-        for (char c = '0'; c <= '9'; c++)
-            symbolChars.insert(c);
-    }
-    string result = input;
-    for (auto& pair : replacements) {
-        int index = 0;
-        int size = pair.first.size();
-        do {
-            index = result.find(pair.first, index);
-            if (index != result.npos) {
-                if ((index == 0 || symbolChars.find(result[index-1]) == symbolChars.end()) && (index == result.size()-size || symbolChars.find(result[index+size]) == symbolChars.end())) {
-                    // We have found a complete symbol, not part of a longer symbol.
-
-                    result.replace(index, size, pair.second);
-                    index += pair.second.size();
-                }
-                else
-                    index++;
-            }
-        } while (index != result.npos);
-    }
-    return result;
-}
-
 CUmodule CudaContext::createModule(const string source, const char* optimizationFlags) {
     return createModule(source, map<string, string>(), optimizationFlags);
 }
@@ -716,19 +686,25 @@ void CudaContext::restoreDefaultStream() {
     setCurrentStream(0);
 }
 
-string CudaContext::doubleToString(double value) const {
-    stringstream s;
-    s.precision(useDoublePrecision ? 16 : 8);
-    s << scientific << value;
-    if (!useDoublePrecision)
-        s << "f";
-    return s.str();
+CudaArray* CudaContext::createArray() {
+    return new CudaArray();
 }
 
-string CudaContext::intToString(int value) const {
-    stringstream s;
-    s << value;
-    return s.str();
+ComputeProgram CudaContext::compileProgram(const std::string source, const std::map<std::string, std::string>& defines) {
+    CUmodule module = createModule(CudaKernelSources::common+CudaKernelSources::vectorOps+source, defines);
+    return shared_ptr<ComputeProgramImpl>(new CudaProgram(*this, module));
+}
+
+CudaArray& CudaContext::unwrap(ArrayInterface& array) const {
+    CudaArray* cuarray;
+    ComputeArray* wrapper = dynamic_cast<ComputeArray*>(&array);
+    if (wrapper != NULL)
+        cuarray = dynamic_cast<CudaArray*>(&wrapper->getArray());
+    else
+        cuarray = dynamic_cast<CudaArray*>(&array);
+    if (cuarray == NULL)
+        throw OpenMMException("Array argument is not an CudaArray");
+    return *cuarray;
 }
 
 std::string CudaContext::getErrorString(CUresult result) {

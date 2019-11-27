@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2012-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2012-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -51,10 +51,10 @@ CudaArray::~CudaArray() {
     }
 }
 
-void CudaArray::initialize(CudaContext& context, int size, int elementSize, const std::string& name) {
+void CudaArray::initialize(ComputeContext& context, int size, int elementSize, const std::string& name) {
     if (this->pointer != 0)
         throw OpenMMException("CudaArray has already been initialized");
-    this->context = &context;
+    this->context = &dynamic_cast<CudaContext&>(context);
     this->size = size;
     this->elementSize = elementSize;
     this->name = name;
@@ -80,6 +80,10 @@ void CudaArray::resize(int size) {
     }
     pointer = 0;
     initialize(*context, size, elementSize, name);
+}
+
+ComputeContext& CudaArray::getContext() {
+    return *context;
 }
 
 void CudaArray::upload(const void* data, bool blocking) {
@@ -112,12 +116,13 @@ void CudaArray::download(void* data, bool blocking) const {
     }
 }
 
-void CudaArray::copyTo(CudaArray& dest) const {
+void CudaArray::copyTo(ArrayInterface& dest) const {
     if (pointer == 0)
         throw OpenMMException("CudaArray has not been initialized");
     if (dest.getSize() != size || dest.getElementSize() != elementSize)
         throw OpenMMException("Error copying array "+name+" to "+dest.getName()+": The destination array does not match the size of the array");
-    CUresult result = cuMemcpyDtoDAsync(dest.getDevicePointer(), pointer, size*elementSize, context->getCurrentStream());
+    CudaArray& cuDest = context->unwrap(dest);
+    CUresult result = cuMemcpyDtoDAsync(cuDest.getDevicePointer(), pointer, size*elementSize, context->getCurrentStream());
     if (result != CUDA_SUCCESS) {
         std::stringstream str;
         str<<"Error copying array "<<name<<" to "<<dest.getName()<<": "<<CudaContext::getErrorString(result)<<" ("<<result<<")";

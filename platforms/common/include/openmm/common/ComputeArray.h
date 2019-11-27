@@ -27,7 +27,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "ArrayInterface.h"
+#include "openmm/common/ArrayInterface.h"
 
 namespace OpenMM {
 

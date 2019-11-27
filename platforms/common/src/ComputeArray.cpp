@@ -24,8 +24,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "ComputeArray.h"
-#include "ComputeContext.h"
+#include "openmm/common/ComputeArray.h"
+#include "openmm/common/ComputeContext.h"
 
 using namespace OpenMM;
 

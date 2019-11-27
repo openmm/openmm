@@ -24,7 +24,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "CommonKernels.h"
+#include "openmm/common/CommonKernels.h"
 #include "openmm/Context.h"
 #include "openmm/internal/AndersenThermostatImpl.h"
 #include "CommonKernelSources.h"

@@ -43,6 +43,7 @@
 #include "windowsExportCuda.h"
 #include "CudaArray.h"
 #include "CudaPlatform.h"
+#include "openmm/common/ComputeContext.h"
 #include "openmm/Kernel.h"
 
 typedef unsigned int tileflags;
@@ -67,7 +68,7 @@ class System;
  * thread is not used and calculations are performed on the main application thread.
  */
 
-class OPENMM_EXPORT_CUDA CudaContext {
+class OPENMM_EXPORT_CUDA CudaContext : public ComputeContext {
 public:
     class WorkTask;
     class WorkThread;
@@ -153,6 +154,24 @@ public:
      */
     void restoreDefaultStream();
     /**
+     * Construct an uninitialized array of the appropriate class for this platform.  The returned
+     * value should be created on the heap with the "new" operator.
+     */
+    CudaArray* createArray();
+    /**
+     * Compile source code to create a ComputeProgram.
+     *
+     * @param source             the source code of the program
+     * @param defines            a set of preprocessor definitions (name, value) to define when compiling the program
+     */
+    ComputeProgram compileProgram(const std::string source, const std::map<std::string, std::string>& defines=std::map<std::string, std::string>());
+    /**
+     * Convert an array to an CudaArray.  If the argument is already an CudaArray, this simply casts it.
+     * If the argument is a ComputeArray that wraps a CudaArray, this returns the wrapped array.  For any
+     * other argument, this throws an exception.
+     */
+    CudaArray& unwrap(ArrayInterface& array) const;
+    /**
      * Get the array which contains the position (the xyz components) and charge (the w component) of each atom.
      */
     CudaArray& getPosq() {
@@ -174,6 +193,13 @@ public:
      * Get the array which contains the force on each atom (represented as three long longs in 64 bit fixed point).
      */
     CudaArray& getForce() {
+        return force;
+    }
+    /**
+     * Get the array which contains a contribution to each force represented as 64 bit fixed point.
+     * This is a synonym for getForce().  It exists to satisfy the ComputeContext interface.
+     */
+    CudaArray& getLongForceBuffer() {
         return force;
     }
     /**
@@ -213,14 +239,6 @@ public:
     std::vector<int4>& getPosCellOffsets() {
         return posCellOffsets;
     }
-    /**
-     * Replace all occurrences of a list of substrings.
-     *
-     * @param input   a string to process
-     * @param replacements a set of strings that should be replaced with new strings wherever they appear in the input string
-     * @return a new string produced by performing the replacements
-     */
-    std::string replaceStrings(const std::string& input, const std::map<std::string, std::string>& replacements) const;
     /**
      * Create a CUDA module from source code.
      *
@@ -379,6 +397,24 @@ public:
         return numThreadBlocks;
     }
     /**
+     * Get the SIMD width of the device being used.
+     */
+    int getSIMDWidth() const {
+        return 32;
+    }
+    /**
+     * Get whether the device being used supports 64 bit atomic operations on global memory.
+     */
+    bool getSupports64BitGlobalAtomics() const {
+        return true;
+    }
+    /**
+     * Get whether the device being used supports double precision math.
+     */
+    bool getSupportsDoublePrecision() const {
+        return true;
+    }
+    /**
      * Get whether double precision is being used.
      */
     bool getUseDoublePrecision() const {
@@ -396,15 +432,6 @@ public:
     bool getBoxIsTriclinic() const {
         return boxIsTriclinic;
     }
-    /**
-     * Convert a number to a string in a format suitable for including in a kernel.
-     * This takes into account whether the context uses single or double precision.
-     */
-    std::string doubleToString(double value) const;
-    /**
-     * Convert a number to a string in a format suitable for including in a kernel.
-     */
-    std::string intToString(int value) const;
     /**
      * Convert a CUDA result code to the corresponding string description.
      */

@@ -1,6 +1,3 @@
-#ifndef OPENMM_COMMONKERNELS_H_
-#define OPENMM_COMMONKERNELS_H_
-
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -9,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2019 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -27,40 +24,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "ComputeArray.h"
-#include "ComputeContext.h"
-#include "openmm/Platform.h"
-#include "openmm/kernels.h"
+#include "CudaProgram.h"
+#include "CudaKernel.h"
 
-namespace OpenMM {
+using namespace OpenMM;
+using namespace std;
 
-/**
- * This kernel is invoked to remove center of mass motion from the system.
- */
-class CommonRemoveCMMotionKernel : public RemoveCMMotionKernel {
-public:
-    CommonRemoveCMMotionKernel(std::string name, const Platform& platform, ComputeContext& cc) : RemoveCMMotionKernel(name, platform), cc(cc) {
-    }
-    /**
-     * Initialize the kernel, setting up the particle masses.
-     *
-     * @param system     the System this kernel will be applied to
-     * @param force      the CMMotionRemover this kernel will be used for
-     */
-    void initialize(const System& system, const CMMotionRemover& force);
-    /**
-     * Execute the kernel.
-     *
-     * @param context    the context in which to execute this kernel
-     */
-    void execute(ContextImpl& context);
-private:
-    ComputeContext& cc;
-    int frequency;
-    ComputeArray cmMomentum;
-    ComputeKernel kernel1, kernel2;
-};
+CudaProgram::CudaProgram(CudaContext& context, CUmodule module) : context(context), module(module) {
+}
 
-} // namespace OpenMM
-
-#endif /*OPENMM_COMMONKERNELS_H_*/
+ComputeKernel CudaProgram::createKernel(const string& name) {
+    CUfunction kernel = context.getKernel(module, name.c_str());
+    return shared_ptr<ComputeKernelImpl>(new CudaKernel(context, kernel, name));
+}

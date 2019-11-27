@@ -1,3 +1,6 @@
+#ifndef OPENMM_CUDAPROGRAM_H_
+#define OPENMM_CUDAPROGRAM_H_
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -24,46 +27,35 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "OpenCLKernel.h"
-#include "openmm/common/ComputeArray.h"
+#include "openmm/common/ComputeProgram.h"
+#include "CudaContext.h"
 
-using namespace OpenMM;
-using namespace std;
+namespace OpenMM {
 
-OpenCLKernel::OpenCLKernel(OpenCLContext& context, cl::Kernel kernel) : context(context), kernel(kernel) {
-}
+/**
+ * This is the CUDA implementation of the ComputeProgramImpl interface. 
+ */
 
-const string& OpenCLKernel::getName() const {
-    return kernel.getInfo<CL_KERNEL_FUNCTION_NAME>();
-}
+class CudaProgram : public ComputeProgramImpl {
+public:
+    /**
+     * Create a new CudaProgram.
+     * 
+     * @param context      the context this kernel belongs to
+     * @param module       the compiled module
+     */
+    CudaProgram(CudaContext& context, CUmodule module);
+    /**
+     * Create a ComputeKernel for one of the kernels in this program.
+     * 
+     * @param name    the name of the kernel to get
+     */
+    ComputeKernel createKernel(const std::string& name);
+private:
+    CudaContext& context;
+    CUmodule module;
+};
 
-void OpenCLKernel::execute(int threads, int blockSize) {
-    // Set args that are specified by OpenCLArrays.  We can't do this earlier, because it's
-    // possible resize() will get called on an array, causing its internal storage to be
-    // recreated.
-    
-    for (int i = 0; i < arrayArgs.size(); i++)
-        if (arrayArgs[i] != NULL)
-            kernel.setArg<cl::Buffer>(i, arrayArgs[i]->getDeviceBuffer());
-    context.executeKernel(kernel, threads, blockSize);
-}
+} // namespace OpenMM
 
-void OpenCLKernel::addArrayArg(ArrayInterface& value) {
-    int index = arrayArgs.size();
-    arrayArgs.push_back(NULL);
-    setArrayArg(index, value);
-}
-
-void OpenCLKernel::addPrimitiveArg(void* value, int size) {
-    int index = arrayArgs.size();
-    arrayArgs.push_back(NULL);
-    setPrimitiveArg(index, value, size);
-}
-
-void OpenCLKernel::setArrayArg(int index, ArrayInterface& value) {
-    arrayArgs[index] = &context.unwrap(value);
-}
-
-void OpenCLKernel::setPrimitiveArg(int index, void* value, int size) {
-    kernel.setArg(index, size, value);
-}
+#endif /*OPENMM_CUDAPROGRAM_H_*/

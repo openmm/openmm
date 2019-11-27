@@ -8831,30 +8831,3 @@ void OpenCLApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& contex
     cl.getQueue().enqueueCopyBuffer(savedPositions.getDeviceBuffer(), cl.getPosq().getDeviceBuffer(), 0, 0, bytesToCopy);
     cl.getQueue().enqueueCopyBuffer(savedForces.getDeviceBuffer(), cl.getForce().getDeviceBuffer(), 0, 0, bytesToCopy);
 }
-
-void OpenCLRemoveCMMotionKernel::initialize(const System& system, const CMMotionRemover& force) {
-    frequency = force.getFrequency();
-    int numAtoms = cl.getNumAtoms();
-    cmMomentum.initialize<mm_float4>(cl, (numAtoms+OpenCLContext::ThreadBlockSize-1)/OpenCLContext::ThreadBlockSize, "cmMomentum");
-    double totalMass = 0.0;
-    for (int i = 0; i < numAtoms; i++)
-        totalMass += system.getParticleMass(i);
-    map<string, string> defines;
-    defines["INVERSE_TOTAL_MASS"] = cl.doubleToString(totalMass == 0 ? 0.0 : 1.0/totalMass);
-    cl::Program program = cl.createProgram(OpenCLKernelSources::removeCM, defines);
-    kernel1 = cl::Kernel(program, "calcCenterOfMassMomentum");
-    kernel1.setArg<cl_int>(0, numAtoms);
-    kernel1.setArg<cl::Buffer>(1, cl.getVelm().getDeviceBuffer());
-    kernel1.setArg<cl::Buffer>(2, cmMomentum.getDeviceBuffer());
-    kernel1.setArg(3, OpenCLContext::ThreadBlockSize*sizeof(mm_float4), NULL);
-    kernel2 = cl::Kernel(program, "removeCenterOfMassMomentum");
-    kernel2.setArg<cl_int>(0, numAtoms);
-    kernel2.setArg<cl::Buffer>(1, cl.getVelm().getDeviceBuffer());
-    kernel2.setArg<cl::Buffer>(2, cmMomentum.getDeviceBuffer());
-    kernel2.setArg(3, OpenCLContext::ThreadBlockSize*sizeof(mm_float4), NULL);
-}
-
-void OpenCLRemoveCMMotionKernel::execute(ContextImpl& context) {
-    cl.executeKernel(kernel1, cl.getNumAtoms());
-    cl.executeKernel(kernel2, cl.getNumAtoms());
-}
