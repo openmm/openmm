@@ -337,7 +337,7 @@ void CudaParallelCalcCustomBondForceKernel::copyParametersToContext(ContextImpl&
 
 class CudaParallelCalcHarmonicAngleForceKernel::Task : public CudaContext::WorkTask {
 public:
-    Task(ContextImpl& context, CudaCalcHarmonicAngleForceKernel& kernel, bool includeForce,
+    Task(ContextImpl& context, CommonCalcHarmonicAngleForceKernel& kernel, bool includeForce,
             bool includeEnergy, double& energy) : context(context), kernel(kernel),
             includeForce(includeForce), includeEnergy(includeEnergy), energy(energy) {
     }
@@ -346,7 +346,7 @@ public:
     }
 private:
     ContextImpl& context;
-    CudaCalcHarmonicAngleForceKernel& kernel;
+    CommonCalcHarmonicAngleForceKernel& kernel;
     bool includeForce, includeEnergy;
     double& energy;
 };
@@ -354,7 +354,7 @@ private:
 CudaParallelCalcHarmonicAngleForceKernel::CudaParallelCalcHarmonicAngleForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, const System& system) :
         CalcHarmonicAngleForceKernel(name, platform), data(data) {
     for (int i = 0; i < (int) data.contexts.size(); i++)
-        kernels.push_back(Kernel(new CudaCalcHarmonicAngleForceKernel(name, platform, *data.contexts[i], system)));
+        kernels.push_back(Kernel(new CommonCalcHarmonicAngleForceKernel(name, platform, *data.contexts[i], system)));
 }
 
 void CudaParallelCalcHarmonicAngleForceKernel::initialize(const System& system, const HarmonicAngleForce& force) {
@@ -419,7 +419,7 @@ void CudaParallelCalcCustomAngleForceKernel::copyParametersToContext(ContextImpl
 
 class CudaParallelCalcPeriodicTorsionForceKernel::Task : public CudaContext::WorkTask {
 public:
-    Task(ContextImpl& context, CudaCalcPeriodicTorsionForceKernel& kernel, bool includeForce,
+    Task(ContextImpl& context, CommonCalcPeriodicTorsionForceKernel& kernel, bool includeForce,
             bool includeEnergy, double& energy) : context(context), kernel(kernel),
             includeForce(includeForce), includeEnergy(includeEnergy), energy(energy) {
     }
@@ -428,7 +428,7 @@ public:
     }
 private:
     ContextImpl& context;
-    CudaCalcPeriodicTorsionForceKernel& kernel;
+    CommonCalcPeriodicTorsionForceKernel& kernel;
     bool includeForce, includeEnergy;
     double& energy;
 };
@@ -436,7 +436,7 @@ private:
 CudaParallelCalcPeriodicTorsionForceKernel::CudaParallelCalcPeriodicTorsionForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, const System& system) :
         CalcPeriodicTorsionForceKernel(name, platform), data(data) {
     for (int i = 0; i < (int) data.contexts.size(); i++)
-        kernels.push_back(Kernel(new CudaCalcPeriodicTorsionForceKernel(name, platform, *data.contexts[i], system)));
+        kernels.push_back(Kernel(new CommonCalcPeriodicTorsionForceKernel(name, platform, *data.contexts[i], system)));
 }
 
 void CudaParallelCalcPeriodicTorsionForceKernel::initialize(const System& system, const PeriodicTorsionForce& force) {
@@ -460,7 +460,7 @@ void CudaParallelCalcPeriodicTorsionForceKernel::copyParametersToContext(Context
 
 class CudaParallelCalcRBTorsionForceKernel::Task : public CudaContext::WorkTask {
 public:
-    Task(ContextImpl& context, CudaCalcRBTorsionForceKernel& kernel, bool includeForce,
+    Task(ContextImpl& context, CommonCalcRBTorsionForceKernel& kernel, bool includeForce,
             bool includeEnergy, double& energy) : context(context), kernel(kernel),
             includeForce(includeForce), includeEnergy(includeEnergy), energy(energy) {
     }
@@ -469,7 +469,7 @@ public:
     }
 private:
     ContextImpl& context;
-    CudaCalcRBTorsionForceKernel& kernel;
+    CommonCalcRBTorsionForceKernel& kernel;
     bool includeForce, includeEnergy;
     double& energy;
 };
@@ -477,7 +477,7 @@ private:
 CudaParallelCalcRBTorsionForceKernel::CudaParallelCalcRBTorsionForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, const System& system) :
         CalcRBTorsionForceKernel(name, platform), data(data) {
     for (int i = 0; i < (int) data.contexts.size(); i++)
-        kernels.push_back(Kernel(new CudaCalcRBTorsionForceKernel(name, platform, *data.contexts[i], system)));
+        kernels.push_back(Kernel(new CommonCalcRBTorsionForceKernel(name, platform, *data.contexts[i], system)));
 }
 
 void CudaParallelCalcRBTorsionForceKernel::initialize(const System& system, const RBTorsionForce& force) {
@@ -501,7 +501,7 @@ void CudaParallelCalcRBTorsionForceKernel::copyParametersToContext(ContextImpl& 
 
 class CudaParallelCalcCMAPTorsionForceKernel::Task : public CudaContext::WorkTask {
 public:
-    Task(ContextImpl& context, CudaCalcCMAPTorsionForceKernel& kernel, bool includeForce,
+    Task(ContextImpl& context, CommonCalcCMAPTorsionForceKernel& kernel, bool includeForce,
             bool includeEnergy, double& energy) : context(context), kernel(kernel),
             includeForce(includeForce), includeEnergy(includeEnergy), energy(energy) {
     }
@@ -510,7 +510,7 @@ public:
     }
 private:
     ContextImpl& context;
-    CudaCalcCMAPTorsionForceKernel& kernel;
+    CommonCalcCMAPTorsionForceKernel& kernel;
     bool includeForce, includeEnergy;
     double& energy;
 };
@@ -518,7 +518,7 @@ private:
 CudaParallelCalcCMAPTorsionForceKernel::CudaParallelCalcCMAPTorsionForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, const System& system) :
         CalcCMAPTorsionForceKernel(name, platform), data(data) {
     for (int i = 0; i < (int) data.contexts.size(); i++)
-        kernels.push_back(Kernel(new CudaCalcCMAPTorsionForceKernel(name, platform, *data.contexts[i], system)));
+        kernels.push_back(Kernel(new CommonCalcCMAPTorsionForceKernel(name, platform, *data.contexts[i], system)));
 }
 
 void CudaParallelCalcCMAPTorsionForceKernel::initialize(const System& system, const CMAPTorsionForce& force) {

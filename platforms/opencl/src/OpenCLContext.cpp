@@ -381,6 +381,12 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
         compilationDefines["EXP"] = "exp";
         compilationDefines["LOG"] = "log";
     }
+    compilationDefines["COS"] = "cos";
+    compilationDefines["SIN"] = "sin";
+    compilationDefines["TAN"] = "tan";
+    compilationDefines["ACOS"] = "acos";
+    compilationDefines["ASIN"] = "asin";
+    compilationDefines["ATAN"] = "atan";
 
     // Set defines for applying periodic boundary conditions.
 

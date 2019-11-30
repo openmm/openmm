@@ -82,15 +82,15 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
     if (name == CalcCustomBondForceKernel::Name())
         return new CudaCalcCustomBondForceKernel(name, platform, cu, context.getSystem());
     if (name == CalcHarmonicAngleForceKernel::Name())
-        return new CudaCalcHarmonicAngleForceKernel(name, platform, cu, context.getSystem());
+        return new CommonCalcHarmonicAngleForceKernel(name, platform, cu, context.getSystem());
     if (name == CalcCustomAngleForceKernel::Name())
         return new CudaCalcCustomAngleForceKernel(name, platform, cu, context.getSystem());
     if (name == CalcPeriodicTorsionForceKernel::Name())
-        return new CudaCalcPeriodicTorsionForceKernel(name, platform, cu, context.getSystem());
+        return new CommonCalcPeriodicTorsionForceKernel(name, platform, cu, context.getSystem());
     if (name == CalcRBTorsionForceKernel::Name())
-        return new CudaCalcRBTorsionForceKernel(name, platform, cu, context.getSystem());
+        return new CommonCalcRBTorsionForceKernel(name, platform, cu, context.getSystem());
     if (name == CalcCMAPTorsionForceKernel::Name())
-        return new CudaCalcCMAPTorsionForceKernel(name, platform, cu, context.getSystem());
+        return new CommonCalcCMAPTorsionForceKernel(name, platform, cu, context.getSystem());
     if (name == CalcCustomTorsionForceKernel::Name())
         return new CudaCalcCustomTorsionForceKernel(name, platform, cu, context.getSystem());
     if (name == CalcNonbondedForceKernel::Name())

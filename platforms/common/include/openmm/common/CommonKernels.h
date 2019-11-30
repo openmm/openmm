@@ -77,6 +77,174 @@ private:
 };
 
 /**
+ * This kernel is invoked by HarmonicAngleForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CommonCalcHarmonicAngleForceKernel : public CalcHarmonicAngleForceKernel {
+public:
+    CommonCalcHarmonicAngleForceKernel(std::string name, const Platform& platform, ComputeContext& cc, const System& system) : CalcHarmonicAngleForceKernel(name, platform),
+            hasInitializedKernel(false), cc(cc), system(system) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the HarmonicAngleForce this kernel will be used for
+     */
+    void initialize(const System& system, const HarmonicAngleForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the HarmonicAngleForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force);
+private:
+    class ForceInfo;
+    int numAngles;
+    bool hasInitializedKernel;
+    ComputeContext& cc;
+    ForceInfo* info;
+    const System& system;
+    ComputeArray params;
+};
+
+/**
+ * This kernel is invoked by PeriodicTorsionForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CommonCalcPeriodicTorsionForceKernel : public CalcPeriodicTorsionForceKernel {
+public:
+    CommonCalcPeriodicTorsionForceKernel(std::string name, const Platform& platform, ComputeContext& cc, const System& system) : CalcPeriodicTorsionForceKernel(name, platform),
+            hasInitializedKernel(false), cc(cc), system(system) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the PeriodicTorsionForce this kernel will be used for
+     */
+    void initialize(const System& system, const PeriodicTorsionForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the PeriodicTorsionForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force);
+private:
+    class ForceInfo;
+    int numTorsions;
+    bool hasInitializedKernel;
+    ComputeContext& cc;
+    ForceInfo* info;
+    const System& system;
+    ComputeArray params;
+};
+
+/**
+ * This kernel is invoked by RBTorsionForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CommonCalcRBTorsionForceKernel : public CalcRBTorsionForceKernel {
+public:
+    CommonCalcRBTorsionForceKernel(std::string name, const Platform& platform, ComputeContext& cc, const System& system) : CalcRBTorsionForceKernel(name, platform),
+            hasInitializedKernel(false), cc(cc), system(system) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the RBTorsionForce this kernel will be used for
+     */
+    void initialize(const System& system, const RBTorsionForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the RBTorsionForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const RBTorsionForce& force);
+private:
+    class ForceInfo;
+    int numTorsions;
+    bool hasInitializedKernel;
+    ComputeContext& cc;
+    ForceInfo* info;
+    const System& system;
+    ComputeArray params1;
+    ComputeArray params2;
+};
+
+/**
+ * This kernel is invoked by CMAPTorsionForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CommonCalcCMAPTorsionForceKernel : public CalcCMAPTorsionForceKernel {
+public:
+    CommonCalcCMAPTorsionForceKernel(std::string name, const Platform& platform, ComputeContext& cc, const System& system) : CalcCMAPTorsionForceKernel(name, platform),
+            hasInitializedKernel(false), cc(cc), system(system) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CMAPTorsionForce this kernel will be used for
+     */
+    void initialize(const System& system, const CMAPTorsionForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CMAPTorsionForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CMAPTorsionForce& force);
+private:
+    class ForceInfo;
+    int numTorsions;
+    bool hasInitializedKernel;
+    ComputeContext& cc;
+    ForceInfo* info;
+    const System& system;
+    std::vector<mm_int2> mapPositionsVec;
+    ComputeArray coefficients;
+    ComputeArray mapPositions;
+    ComputeArray torsionMaps;
+};
+
+/**
  * This kernel is invoked to remove center of mass motion from the system.
  */
 class CommonRemoveCMMotionKernel : public RemoveCMMotionKernel {

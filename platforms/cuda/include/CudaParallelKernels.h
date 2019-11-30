@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -175,8 +175,8 @@ private:
 class CudaParallelCalcHarmonicAngleForceKernel : public CalcHarmonicAngleForceKernel {
 public:
     CudaParallelCalcHarmonicAngleForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, const System& system);
-    CudaCalcHarmonicAngleForceKernel& getKernel(int index) {
-        return dynamic_cast<CudaCalcHarmonicAngleForceKernel&>(kernels[index].getImpl());
+    CommonCalcHarmonicAngleForceKernel& getKernel(int index) {
+        return dynamic_cast<CommonCalcHarmonicAngleForceKernel&>(kernels[index].getImpl());
     }
     /**
      * Initialize the kernel.
@@ -251,8 +251,8 @@ private:
 class CudaParallelCalcPeriodicTorsionForceKernel : public CalcPeriodicTorsionForceKernel {
 public:
     CudaParallelCalcPeriodicTorsionForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, const System& system);
-    CudaCalcPeriodicTorsionForceKernel& getKernel(int index) {
-        return dynamic_cast<CudaCalcPeriodicTorsionForceKernel&>(kernels[index].getImpl());
+    CommonCalcPeriodicTorsionForceKernel& getKernel(int index) {
+        return dynamic_cast<CommonCalcPeriodicTorsionForceKernel&>(kernels[index].getImpl());
     }
     /**
      * Initialize the kernel.
@@ -289,8 +289,8 @@ private:
 class CudaParallelCalcRBTorsionForceKernel : public CalcRBTorsionForceKernel {
 public:
     CudaParallelCalcRBTorsionForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, const System& system);
-    CudaCalcRBTorsionForceKernel& getKernel(int index) {
-        return dynamic_cast<CudaCalcRBTorsionForceKernel&>(kernels[index].getImpl());
+    CommonCalcRBTorsionForceKernel& getKernel(int index) {
+        return dynamic_cast<CommonCalcRBTorsionForceKernel&>(kernels[index].getImpl());
     }
     /**
      * Initialize the kernel.
@@ -327,8 +327,8 @@ private:
 class CudaParallelCalcCMAPTorsionForceKernel : public CalcCMAPTorsionForceKernel {
 public:
     CudaParallelCalcCMAPTorsionForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, const System& system);
-    CudaCalcCMAPTorsionForceKernel& getKernel(int index) {
-        return dynamic_cast<CudaCalcCMAPTorsionForceKernel&>(kernels[index].getImpl());
+    CommonCalcCMAPTorsionForceKernel& getKernel(int index) {
+        return dynamic_cast<CommonCalcCMAPTorsionForceKernel&>(kernels[index].getImpl());
     }
     /**
      * Initialize the kernel.

@@ -292,7 +292,7 @@ void OpenCLParallelCalcCustomBondForceKernel::copyParametersToContext(ContextImp
 
 class OpenCLParallelCalcHarmonicAngleForceKernel::Task : public OpenCLContext::WorkTask {
 public:
-    Task(ContextImpl& context, OpenCLCalcHarmonicAngleForceKernel& kernel, bool includeForce,
+    Task(ContextImpl& context, CommonCalcHarmonicAngleForceKernel& kernel, bool includeForce,
             bool includeEnergy, double& energy) : context(context), kernel(kernel),
             includeForce(includeForce), includeEnergy(includeEnergy), energy(energy) {
     }
@@ -301,7 +301,7 @@ public:
     }
 private:
     ContextImpl& context;
-    OpenCLCalcHarmonicAngleForceKernel& kernel;
+    CommonCalcHarmonicAngleForceKernel& kernel;
     bool includeForce, includeEnergy;
     double& energy;
 };
@@ -309,7 +309,7 @@ private:
 OpenCLParallelCalcHarmonicAngleForceKernel::OpenCLParallelCalcHarmonicAngleForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, const System& system) :
         CalcHarmonicAngleForceKernel(name, platform), data(data) {
     for (int i = 0; i < (int) data.contexts.size(); i++)
-        kernels.push_back(Kernel(new OpenCLCalcHarmonicAngleForceKernel(name, platform, *data.contexts[i], system)));
+        kernels.push_back(Kernel(new CommonCalcHarmonicAngleForceKernel(name, platform, *data.contexts[i], system)));
 }
 
 void OpenCLParallelCalcHarmonicAngleForceKernel::initialize(const System& system, const HarmonicAngleForce& force) {
@@ -374,7 +374,7 @@ void OpenCLParallelCalcCustomAngleForceKernel::copyParametersToContext(ContextIm
 
 class OpenCLParallelCalcPeriodicTorsionForceKernel::Task : public OpenCLContext::WorkTask {
 public:
-    Task(ContextImpl& context, OpenCLCalcPeriodicTorsionForceKernel& kernel, bool includeForce,
+    Task(ContextImpl& context, CommonCalcPeriodicTorsionForceKernel& kernel, bool includeForce,
             bool includeEnergy, double& energy) : context(context), kernel(kernel),
             includeForce(includeForce), includeEnergy(includeEnergy), energy(energy) {
     }
@@ -383,7 +383,7 @@ public:
     }
 private:
     ContextImpl& context;
-    OpenCLCalcPeriodicTorsionForceKernel& kernel;
+    CommonCalcPeriodicTorsionForceKernel& kernel;
     bool includeForce, includeEnergy;
     double& energy;
 };
@@ -391,7 +391,7 @@ private:
 OpenCLParallelCalcPeriodicTorsionForceKernel::OpenCLParallelCalcPeriodicTorsionForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, const System& system) :
         CalcPeriodicTorsionForceKernel(name, platform), data(data) {
     for (int i = 0; i < (int) data.contexts.size(); i++)
-        kernels.push_back(Kernel(new OpenCLCalcPeriodicTorsionForceKernel(name, platform, *data.contexts[i], system)));
+        kernels.push_back(Kernel(new CommonCalcPeriodicTorsionForceKernel(name, platform, *data.contexts[i], system)));
 }
 
 void OpenCLParallelCalcPeriodicTorsionForceKernel::initialize(const System& system, const PeriodicTorsionForce& force) {
@@ -415,7 +415,7 @@ void OpenCLParallelCalcPeriodicTorsionForceKernel::copyParametersToContext(Conte
 
 class OpenCLParallelCalcRBTorsionForceKernel::Task : public OpenCLContext::WorkTask {
 public:
-    Task(ContextImpl& context, OpenCLCalcRBTorsionForceKernel& kernel, bool includeForce,
+    Task(ContextImpl& context, CommonCalcRBTorsionForceKernel& kernel, bool includeForce,
             bool includeEnergy, double& energy) : context(context), kernel(kernel),
             includeForce(includeForce), includeEnergy(includeEnergy), energy(energy) {
     }
@@ -424,7 +424,7 @@ public:
     }
 private:
     ContextImpl& context;
-    OpenCLCalcRBTorsionForceKernel& kernel;
+    CommonCalcRBTorsionForceKernel& kernel;
     bool includeForce, includeEnergy;
     double& energy;
 };
@@ -432,7 +432,7 @@ private:
 OpenCLParallelCalcRBTorsionForceKernel::OpenCLParallelCalcRBTorsionForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, const System& system) :
         CalcRBTorsionForceKernel(name, platform), data(data) {
     for (int i = 0; i < (int) data.contexts.size(); i++)
-        kernels.push_back(Kernel(new OpenCLCalcRBTorsionForceKernel(name, platform, *data.contexts[i], system)));
+        kernels.push_back(Kernel(new CommonCalcRBTorsionForceKernel(name, platform, *data.contexts[i], system)));
 }
 
 void OpenCLParallelCalcRBTorsionForceKernel::initialize(const System& system, const RBTorsionForce& force) {
@@ -456,7 +456,7 @@ void OpenCLParallelCalcRBTorsionForceKernel::copyParametersToContext(ContextImpl
 
 class OpenCLParallelCalcCMAPTorsionForceKernel::Task : public OpenCLContext::WorkTask {
 public:
-    Task(ContextImpl& context, OpenCLCalcCMAPTorsionForceKernel& kernel, bool includeForce,
+    Task(ContextImpl& context, CommonCalcCMAPTorsionForceKernel& kernel, bool includeForce,
             bool includeEnergy, double& energy) : context(context), kernel(kernel),
             includeForce(includeForce), includeEnergy(includeEnergy), energy(energy) {
     }
@@ -465,7 +465,7 @@ public:
     }
 private:
     ContextImpl& context;
-    OpenCLCalcCMAPTorsionForceKernel& kernel;
+    CommonCalcCMAPTorsionForceKernel& kernel;
     bool includeForce, includeEnergy;
     double& energy;
 };
@@ -473,7 +473,7 @@ private:
 OpenCLParallelCalcCMAPTorsionForceKernel::OpenCLParallelCalcCMAPTorsionForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, const System& system) :
         CalcCMAPTorsionForceKernel(name, platform), data(data) {
     for (int i = 0; i < (int) data.contexts.size(); i++)
-        kernels.push_back(Kernel(new OpenCLCalcCMAPTorsionForceKernel(name, platform, *data.contexts[i], system)));
+        kernels.push_back(Kernel(new CommonCalcCMAPTorsionForceKernel(name, platform, *data.contexts[i], system)));
 }
 
 void OpenCLParallelCalcCMAPTorsionForceKernel::initialize(const System& system, const CMAPTorsionForce& force) {

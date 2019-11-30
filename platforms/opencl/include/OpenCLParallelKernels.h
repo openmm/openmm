@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -174,8 +174,8 @@ private:
 class OpenCLParallelCalcHarmonicAngleForceKernel : public CalcHarmonicAngleForceKernel {
 public:
     OpenCLParallelCalcHarmonicAngleForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, const System& system);
-    OpenCLCalcHarmonicAngleForceKernel& getKernel(int index) {
-        return dynamic_cast<OpenCLCalcHarmonicAngleForceKernel&>(kernels[index].getImpl());
+    CommonCalcHarmonicAngleForceKernel& getKernel(int index) {
+        return dynamic_cast<CommonCalcHarmonicAngleForceKernel&>(kernels[index].getImpl());
     }
     /**
      * Initialize the kernel.
@@ -250,8 +250,8 @@ private:
 class OpenCLParallelCalcPeriodicTorsionForceKernel : public CalcPeriodicTorsionForceKernel {
 public:
     OpenCLParallelCalcPeriodicTorsionForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, const System& system);
-    OpenCLCalcPeriodicTorsionForceKernel& getKernel(int index) {
-        return dynamic_cast<OpenCLCalcPeriodicTorsionForceKernel&>(kernels[index].getImpl());
+    CommonCalcPeriodicTorsionForceKernel& getKernel(int index) {
+        return dynamic_cast<CommonCalcPeriodicTorsionForceKernel&>(kernels[index].getImpl());
     }
     /**
      * Initialize the kernel.
@@ -288,8 +288,8 @@ private:
 class OpenCLParallelCalcRBTorsionForceKernel : public CalcRBTorsionForceKernel {
 public:
     OpenCLParallelCalcRBTorsionForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, const System& system);
-    OpenCLCalcRBTorsionForceKernel& getKernel(int index) {
-        return dynamic_cast<OpenCLCalcRBTorsionForceKernel&>(kernels[index].getImpl());
+    CommonCalcRBTorsionForceKernel& getKernel(int index) {
+        return dynamic_cast<CommonCalcRBTorsionForceKernel&>(kernels[index].getImpl());
     }
     /**
      * Initialize the kernel.
@@ -326,8 +326,8 @@ private:
 class OpenCLParallelCalcCMAPTorsionForceKernel : public CalcCMAPTorsionForceKernel {
 public:
     OpenCLParallelCalcCMAPTorsionForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, const System& system);
-    OpenCLCalcCMAPTorsionForceKernel& getKernel(int index) {
-        return dynamic_cast<OpenCLCalcCMAPTorsionForceKernel&>(kernels[index].getImpl());
+    CommonCalcCMAPTorsionForceKernel& getKernel(int index) {
+        return dynamic_cast<CommonCalcCMAPTorsionForceKernel&>(kernels[index].getImpl());
     }
     /**
      * Initialize the kernel.
