@@ -490,88 +490,6 @@ void CudaVirtualSitesKernel::computePositions(ContextImpl& context) {
     cu.getIntegrationUtilities().computeVirtualSites();
 }
 
-class CudaCalcHarmonicBondForceKernel::ForceInfo : public CudaForceInfo {
-public:
-    ForceInfo(const HarmonicBondForce& force) : force(force) {
-    }
-    int getNumParticleGroups() {
-        return force.getNumBonds();
-    }
-    void getParticlesInGroup(int index, vector<int>& particles) {
-        int particle1, particle2;
-        double length, k;
-        force.getBondParameters(index, particle1, particle2, length, k);
-        particles.resize(2);
-        particles[0] = particle1;
-        particles[1] = particle2;
-    }
-    bool areGroupsIdentical(int group1, int group2) {
-        int particle1, particle2;
-        double length1, length2, k1, k2;
-        force.getBondParameters(group1, particle1, particle2, length1, k1);
-        force.getBondParameters(group2, particle1, particle2, length2, k2);
-        return (length1 == length2 && k1 == k2);
-    }
-private:
-    const HarmonicBondForce& force;
-};
-
-void CudaCalcHarmonicBondForceKernel::initialize(const System& system, const HarmonicBondForce& force) {
-    cu.setAsCurrent();
-    int numContexts = cu.getPlatformData().contexts.size();
-    int startIndex = cu.getContextIndex()*force.getNumBonds()/numContexts;
-    int endIndex = (cu.getContextIndex()+1)*force.getNumBonds()/numContexts;
-    numBonds = endIndex-startIndex;
-    if (numBonds == 0)
-        return;
-    vector<vector<int> > atoms(numBonds, vector<int>(2));
-    params.initialize<float2>(cu, numBonds, "bondParams");
-    vector<float2> paramVector(numBonds);
-    for (int i = 0; i < numBonds; i++) {
-        double length, k;
-        force.getBondParameters(startIndex+i, atoms[i][0], atoms[i][1], length, k);
-        paramVector[i] = make_float2((float) length, (float) k);
-    }
-    params.upload(paramVector);
-    map<string, string> replacements;
-    replacements["APPLY_PERIODIC"] = (force.usesPeriodicBoundaryConditions() ? "1" : "0");
-    replacements["COMPUTE_FORCE"] = CudaKernelSources::harmonicBondForce;
-    replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params.getDevicePointer(), "float2");
-    cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaKernelSources::bondForce, replacements), force.getForceGroup());
-    info = new ForceInfo(force);
-    cu.addForce(info);
-}
-
-double CudaCalcHarmonicBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    return 0.0;
-}
-
-void CudaCalcHarmonicBondForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicBondForce& force) {
-    cu.setAsCurrent();
-    int numContexts = cu.getPlatformData().contexts.size();
-    int startIndex = cu.getContextIndex()*force.getNumBonds()/numContexts;
-    int endIndex = (cu.getContextIndex()+1)*force.getNumBonds()/numContexts;
-    if (numBonds != endIndex-startIndex)
-        throw OpenMMException("updateParametersInContext: The number of bonds has changed");
-    if (numBonds == 0)
-        return;
-    
-    // Record the per-bond parameters.
-    
-    vector<float2> paramVector(numBonds);
-    for (int i = 0; i < numBonds; i++) {
-        int atom1, atom2;
-        double length, k;
-        force.getBondParameters(startIndex+i, atom1, atom2, length, k);
-        paramVector[i] = make_float2((float) length, (float) k);
-    }
-    params.upload(paramVector);
-    
-    // Mark that the current reordering may be invalid.
-    
-    cu.invalidateMolecules();
-}
-
 class CudaCalcCustomBondForceKernel::ForceInfo : public CudaForceInfo {
 public:
     ForceInfo(const CustomBondForce& force) : force(force) {
@@ -6649,7 +6567,7 @@ void CudaCalcGayBerneForceKernel::sortAtoms() {
 
 class CudaCalcCustomCVForceKernel::ForceInfo : public CudaForceInfo {
 public:
-    ForceInfo(CudaForceInfo& force) : force(force) {
+    ForceInfo(ComputeForceInfo& force) : force(force) {
     }
     bool areParticlesIdentical(int particle1, int particle2) {
         return force.areParticlesIdentical(particle1, particle2);
@@ -6664,7 +6582,7 @@ public:
         return force.areGroupsIdentical(group1, group2);
     }
 private:
-    CudaForceInfo& force;
+    ComputeForceInfo& force;
 };
 
 class CudaCalcCustomCVForceKernel::ReorderListener : public CudaContext::ReorderListener {
@@ -6749,7 +6667,7 @@ void CudaCalcCustomCVForceKernel::initialize(const System& system, const CustomC
 
     // This context needs to respect all forces in the inner context when reordering atoms.
 
-    for (CudaForceInfo* info : cu2.getForceInfos())
+    for (auto* info : cu2.getForceInfos())
         cu.addForce(new ForceInfo(*info));
 }
 

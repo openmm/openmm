@@ -52,6 +52,7 @@
 #include <cl.hpp>
 #include "windowsExportOpenCL.h"
 #include "OpenCLArray.h"
+#include "OpenCLBondedUtilities.h"
 #include "OpenCLPlatform.h"
 #include "openmm/common/ComputeContext.h"
 
@@ -60,7 +61,6 @@ namespace OpenMM {
 class OpenCLForceInfo;
 class OpenCLIntegrationUtilities;
 class OpenCLExpressionUtilities;
-class OpenCLBondedUtilities;
 class OpenCLNonbondedUtilities;
 class System;
 
@@ -141,13 +141,18 @@ public:
      */
     void initialize();
     /**
-     * Add an OpenCLForceInfo to this context.
+     * Add an ComputeForceInfo to this context.
      */
-    void addForce(OpenCLForceInfo* force);
+    void addForce(ComputeForceInfo* force);
     /**
-     * Get all OpenCLForceInfos that have been added to this context.
+     * Get all ComputeForceInfos that have been added to this context.
      */
-    std::vector<OpenCLForceInfo*>& getForceInfos();
+    std::vector<ComputeForceInfo*>& getForceInfos();
+    /**
+     * Request that the context provide at least a particular number of force buffers.
+     * Force kernels should call this during initialization.
+     */
+    void requestForceBuffers(int minBuffers);
     /**
      * Get the cl::Context associated with this object.
      */
@@ -177,6 +182,14 @@ public:
      */
     OpenCLPlatform::PlatformData& getPlatformData() {
         return platformData;
+    }
+    /**
+     * Get the number of contexts being used for the current simulation.
+     * This is relevant when a simulation is parallelized across multiple devices.  In that case,
+     * one OpenCLContext is created for each device.
+     */
+    int getNumContexts() const {
+        return platformData.contexts.size();
     }
     /**
      * Get the index of this context in the list stored in the PlatformData.
@@ -685,7 +698,7 @@ public:
      * may be invalid.  This should be called whenever force field parameters change.  It will cause the
      * definitions and order to be revalidated.
      */
-    bool invalidateMolecules(OpenCLForceInfo* force);
+    bool invalidateMolecules(ComputeForceInfo* force);
 private:
     struct Molecule;
     struct MoleculeGroup;
@@ -735,7 +748,7 @@ private:
     cl::Kernel reduceForcesKernel;
     cl::Kernel reduceEnergyKernel;
     cl::Kernel setChargesKernel;
-    std::vector<OpenCLForceInfo*> forces;
+    std::vector<ComputeForceInfo*> forces;
     std::vector<Molecule> molecules;
     std::vector<MoleculeGroup> moleculeGroups;
     std::vector<mm_int4> posCellOffsets;

@@ -78,7 +78,7 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
     if (name == VirtualSitesKernel::Name())
         return new CudaVirtualSitesKernel(name, platform, cu);
     if (name == CalcHarmonicBondForceKernel::Name())
-        return new CudaCalcHarmonicBondForceKernel(name, platform, cu, context.getSystem());
+        return new CommonCalcHarmonicBondForceKernel(name, platform, cu, context.getSystem());
     if (name == CalcCustomBondForceKernel::Name())
         return new CudaCalcCustomBondForceKernel(name, platform, cu, context.getSystem());
     if (name == CalcHarmonicAngleForceKernel::Name())

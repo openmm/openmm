@@ -31,7 +31,6 @@
 #include "CudaContext.h"
 #include "CudaArray.h"
 #include "CudaBondedUtilities.h"
-#include "CudaForceInfo.h"
 #include "CudaIntegrationUtilities.h"
 #include "CudaKernels.h"
 #include "CudaKernelSources.h"
@@ -486,11 +485,11 @@ void CudaContext::initialize() {
     nonbonded->initialize(system);
 }
 
-void CudaContext::addForce(CudaForceInfo* force) {
+void CudaContext::addForce(ComputeForceInfo* force) {
     forces.push_back(force);
 }
 
-vector<CudaForceInfo*>& CudaContext::getForceInfos() {
+vector<ComputeForceInfo*>& CudaContext::getForceInfos() {
     return forces;
 }
 
@@ -542,6 +541,7 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
         src << "typedef float4 mixed4;\n";
     }
     src << "typedef unsigned int tileflags;\n";
+    src << CudaKernelSources::common << endl;
     for (auto& pair : defines) {
         src << "#define " << pair.first;
         if (!pair.second.empty())
@@ -691,7 +691,7 @@ CudaArray* CudaContext::createArray() {
 }
 
 ComputeProgram CudaContext::compileProgram(const std::string source, const std::map<std::string, std::string>& defines) {
-    CUmodule module = createModule(CudaKernelSources::common+CudaKernelSources::vectorOps+source, defines);
+    CUmodule module = createModule(CudaKernelSources::vectorOps+source, defines);
     return shared_ptr<ComputeProgramImpl>(new CudaProgram(*this, module));
 }
 
@@ -834,7 +834,7 @@ bool CudaContext::requestPosqCharges() {
 /**
  * This class ensures that atom reordering doesn't break virtual sites.
  */
-class CudaContext::VirtualSiteInfo : public CudaForceInfo {
+class CudaContext::VirtualSiteInfo : public ComputeForceInfo {
 public:
     VirtualSiteInfo(const System& system) {
         for (int i = 0; i < system.getNumParticles(); i++) {
@@ -1042,7 +1042,7 @@ void CudaContext::invalidateMolecules() {
             return;
 }
 
-bool CudaContext::invalidateMolecules(CudaForceInfo* force) {
+bool CudaContext::invalidateMolecules(ComputeForceInfo* force) {
     if (numAtoms == 0 || nonbonded == NULL || !nonbonded->getUseCutoff())
         return false;
     bool valid = true;

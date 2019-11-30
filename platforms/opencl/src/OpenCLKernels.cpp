@@ -516,86 +516,6 @@ void OpenCLVirtualSitesKernel::computePositions(ContextImpl& context) {
     cl.getIntegrationUtilities().computeVirtualSites();
 }
 
-class OpenCLCalcHarmonicBondForceKernel::ForceInfo : public OpenCLForceInfo {
-public:
-    ForceInfo(const HarmonicBondForce& force) : OpenCLForceInfo(0), force(force) {
-    }
-    int getNumParticleGroups() {
-        return force.getNumBonds();
-    }
-    void getParticlesInGroup(int index, vector<int>& particles) {
-        int particle1, particle2;
-        double length, k;
-        force.getBondParameters(index, particle1, particle2, length, k);
-        particles.resize(2);
-        particles[0] = particle1;
-        particles[1] = particle2;
-    }
-    bool areGroupsIdentical(int group1, int group2) {
-        int particle1, particle2;
-        double length1, length2, k1, k2;
-        force.getBondParameters(group1, particle1, particle2, length1, k1);
-        force.getBondParameters(group2, particle1, particle2, length2, k2);
-        return (length1 == length2 && k1 == k2);
-    }
-private:
-    const HarmonicBondForce& force;
-};
-
-void OpenCLCalcHarmonicBondForceKernel::initialize(const System& system, const HarmonicBondForce& force) {
-    int numContexts = cl.getPlatformData().contexts.size();
-    int startIndex = cl.getContextIndex()*force.getNumBonds()/numContexts;
-    int endIndex = (cl.getContextIndex()+1)*force.getNumBonds()/numContexts;
-    numBonds = endIndex-startIndex;
-    if (numBonds == 0)
-        return;
-    vector<vector<int> > atoms(numBonds, vector<int>(2));
-    params.initialize<mm_float2>(cl, numBonds, "bondParams");
-    vector<mm_float2> paramVector(numBonds);
-    for (int i = 0; i < numBonds; i++) {
-        double length, k;
-        force.getBondParameters(startIndex+i, atoms[i][0], atoms[i][1], length, k);
-        paramVector[i] = mm_float2((cl_float) length, (cl_float) k);
-    }
-    params.upload(paramVector);
-    map<string, string> replacements;
-    replacements["APPLY_PERIODIC"] = (force.usesPeriodicBoundaryConditions() ? "1" : "0");
-    replacements["COMPUTE_FORCE"] = OpenCLKernelSources::harmonicBondForce;
-    replacements["PARAMS"] = cl.getBondedUtilities().addArgument(params.getDeviceBuffer(), "float2");
-    cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::bondForce, replacements), force.getForceGroup());
-    info = new ForceInfo(force);
-    cl.addForce(info);
-}
-
-double OpenCLCalcHarmonicBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    return 0.0;
-}
-
-void OpenCLCalcHarmonicBondForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicBondForce& force) {
-    int numContexts = cl.getPlatformData().contexts.size();
-    int startIndex = cl.getContextIndex()*force.getNumBonds()/numContexts;
-    int endIndex = (cl.getContextIndex()+1)*force.getNumBonds()/numContexts;
-    if (numBonds != endIndex-startIndex)
-        throw OpenMMException("updateParametersInContext: The number of bonds has changed");
-    if (numBonds == 0)
-        return;
-    
-    // Record the per-bond parameters.
-    
-    vector<mm_float2> paramVector(numBonds);
-    for (int i = 0; i < numBonds; i++) {
-        int atom1, atom2;
-        double length, k;
-        force.getBondParameters(startIndex+i, atom1, atom2, length, k);
-        paramVector[i] = mm_float2((cl_float) length, (cl_float) k);
-    }
-    params.upload(paramVector);
-    
-    // Mark that the current reordering may be invalid.
-    
-    cl.invalidateMolecules(info);
-}
-
 class OpenCLCalcCustomBondForceKernel::ForceInfo : public OpenCLForceInfo {
 public:
     ForceInfo(const CustomBondForce& force) : OpenCLForceInfo(0), force(force) {
@@ -6927,7 +6847,7 @@ void OpenCLCalcGayBerneForceKernel::sortAtoms() {
 
 class OpenCLCalcCustomCVForceKernel::ForceInfo : public OpenCLForceInfo {
 public:
-    ForceInfo(OpenCLForceInfo& force) : OpenCLForceInfo(0), force(force) {
+    ForceInfo(ComputeForceInfo& force) : OpenCLForceInfo(0), force(force) {
     }
     bool areParticlesIdentical(int particle1, int particle2) {
         return force.areParticlesIdentical(particle1, particle2);
@@ -6942,7 +6862,7 @@ public:
         return force.areGroupsIdentical(group1, group2);
     }
 private:
-    OpenCLForceInfo& force;
+    ComputeForceInfo& force;
 };
 
 class OpenCLCalcCustomCVForceKernel::ReorderListener : public OpenCLContext::ReorderListener {
@@ -7028,7 +6948,7 @@ void OpenCLCalcCustomCVForceKernel::initialize(const System& system, const Custo
 
     // This context needs to respect all forces in the inner context when reordering atoms.
 
-    for (OpenCLForceInfo* info : cl2.getForceInfos())
+    for (auto* info : cl2.getForceInfos())
         cl.addForce(new ForceInfo(*info));
 }
 

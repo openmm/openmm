@@ -1,3 +1,6 @@
+#ifndef OPENMM_COMPUTEFORCEINFO_H_
+#define OPENMM_COMPUTEFORCEINFO_H_
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -6,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2012 Stanford University and the Authors.           *
+ * Portions copyright (c) 2009-2019 Stanford University and the Authors.       *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -24,23 +27,39 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "CudaForceInfo.h"
+#include <vector>
 
-using namespace OpenMM;
-using namespace std;
+namespace OpenMM {
 
-bool CudaForceInfo::areParticlesIdentical(int particle1, int particle2) {
-    return true;
-}
+/**
+ * ComputeForceInfo objects describe information about the behavior and requirements of
+ * a force.  They exist primarily to help a ComputeContext determine how particles can be
+ * reordered without affecting forces.  Force kernels create them during initialization
+ * and add them to the ComputeContext by calling addForce().
+ */
 
-int CudaForceInfo::getNumParticleGroups() {
-    return 0;
-}
+class ComputeForceInfo {
+public:
+    ComputeForceInfo() {
+    }
+    /**
+     * Get whether or not two particles have identical force field parameters.
+     */
+    virtual bool areParticlesIdentical(int particle1, int particle2);
+    /**
+     * Get the number of particle groups defined by this force.
+     */
+    virtual int getNumParticleGroups();
+    /**
+     * Get the list of particles in a particular group.
+     */
+    virtual void getParticlesInGroup(int index, std::vector<int>& particles);
+    /**
+     * Get whether two particle groups are identical.
+     */
+    virtual bool areGroupsIdentical(int group1, int group2);
+};
 
-void CudaForceInfo::getParticlesInGroup(int index, vector<int>& particles) {
-    return;
-}
+} // namespace OpenMM
 
-bool CudaForceInfo::areGroupsIdentical(int group1, int group2) {
-    return true;
-}
+#endif /*OPENMM_COMPUTEFORCEINFO_H_*/

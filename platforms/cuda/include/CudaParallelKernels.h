@@ -30,6 +30,7 @@
 #include "CudaPlatform.h"
 #include "CudaContext.h"
 #include "CudaKernels.h"
+#include "openmm/common/CommonKernels.h"
 
 namespace OpenMM {
 
@@ -98,8 +99,8 @@ private:
 class CudaParallelCalcHarmonicBondForceKernel : public CalcHarmonicBondForceKernel {
 public:
     CudaParallelCalcHarmonicBondForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, const System& system);
-    CudaCalcHarmonicBondForceKernel& getKernel(int index) {
-        return dynamic_cast<CudaCalcHarmonicBondForceKernel&>(kernels[index].getImpl());
+    CommonCalcHarmonicBondForceKernel& getKernel(int index) {
+        return dynamic_cast<CommonCalcHarmonicBondForceKernel&>(kernels[index].getImpl());
     }
     /**
      * Initialize the kernel.

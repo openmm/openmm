@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009 Stanford University and the Authors.           *
+ * Portions copyright (c) 2012-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -24,23 +24,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "OpenCLForceInfo.h"
+#include "openmm/common/ComputeForceInfo.h"
 
 using namespace OpenMM;
 using namespace std;
 
-bool OpenCLForceInfo::areParticlesIdentical(int particle1, int particle2) {
+bool ComputeForceInfo::areParticlesIdentical(int particle1, int particle2) {
     return true;
 }
 
-int OpenCLForceInfo::getNumParticleGroups() {
+int ComputeForceInfo::getNumParticleGroups() {
     return 0;
 }
 
-void OpenCLForceInfo::getParticlesInGroup(int index, vector<int>& particles) {
+void ComputeForceInfo::getParticlesInGroup(int index, vector<int>& particles) {
     return;
 }
 
-bool OpenCLForceInfo::areGroupsIdentical(int group1, int group2) {
+bool ComputeForceInfo::areGroupsIdentical(int group1, int group2) {
     return true;
 }

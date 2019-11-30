@@ -1,5 +1,5 @@
-#ifndef OPENMM_CUDABONDEDUTILITIES_H_
-#define OPENMM_CUDABONDEDUTILITIES_H_
+#ifndef OPENMM_BONDEDUTILITIES_H_
+#define OPENMM_BONDEDUTILITIES_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -27,19 +27,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "CudaArray.h"
-#include "openmm/System.h"
-#include "openmm/common/BondedUtilities.h"
+#include "openmm/common/ArrayInterface.h"
 #include <string>
 #include <vector>
 
 namespace OpenMM {
 
-class CudaContext;
-    
 /**
+ * This abstract class defines an interface for computing bonded interactions.  Call
+ * getBondedUtilities() on a ComputeContext to get the BondedUtilities object for that
+ * context.
+ * 
  * This class provides a generic mechanism for evaluating bonded interactions.  You write only
- * the source code needed to compute one interaction, and this class takes care of creating
+ * the source code needed to compute one interaction, and this object takes care of creating
  * and executing a complete kernel that loops over bonds, evaluates each one, and accumulates
  * the resulting forces and energies.  This offers two advantages.  First, it simplifies the
  * task of writing a new Force.  Second, it allows multiple forces to be evaluated by a single
@@ -80,9 +80,10 @@ class CudaContext;
  * from your interaction code.
  */
 
-class OPENMM_EXPORT_CUDA CudaBondedUtilities : public BondedUtilities {
+class BondedUtilities {
 public:
-    CudaBondedUtilities(CudaContext& context);
+    virtual ~BondedUtilities() {
+    }
     /**
      * Add a bonded interaction.
      *
@@ -91,16 +92,7 @@ public:
      * @param source   the code to evaluate the interaction
      * @param group    the force group in which the interaction should be calculated
      */
-    void addInteraction(const std::vector<std::vector<int> >& atoms, const std::string& source, int group);
-    /**
-     * Add an argument that should be passed to the interaction kernel.
-     * 
-     * @param data    the device memory containing the data to pass
-     * @param type    the data type contained in the memory (e.g. "float4")
-     * @return the name that will be used for the argument.  Any code you pass to addInteraction() should
-     * refer to it by this name.
-     */
-    std::string addArgument(CUdeviceptr data, const std::string& type);
+    virtual void addInteraction(const std::vector<std::vector<int> >& atoms, const std::string& source, int group) = 0;
     /**
      * Add an argument that should be passed to the interaction kernel.
      * 
@@ -109,7 +101,7 @@ public:
      * @return the name that will be used for the argument.  Any code you pass to addInteraction() should
      * refer to it by this name.
      */
-    std::string addArgument(ArrayInterface& data, const std::string& type);
+    virtual std::string addArgument(ArrayInterface& data, const std::string& type) = 0;
     /**
      * Register that the interaction kernel will be computing the derivative of the potential energy
      * with respect to a parameter.
@@ -118,42 +110,16 @@ public:
      * @return the variable that will be used to accumulate the derivative.  Any code you pass to addInteraction() should
      * add its contributions to this variable.
      */
-    std::string addEnergyParameterDerivative(const std::string& param);
+    virtual std::string addEnergyParameterDerivative(const std::string& param) = 0;
     /**
-     * Add some Cuda code that should be included in the program, before the start of the kernel.
+     * Add some code that should be included in the program, before the start of the kernel.
      * This can be used, for example, to define functions that will be called by the kernel.
      * 
      * @param source   the code to include
      */
-    void addPrefixCode(const std::string& source);
-    /**
-     * Initialize this object in preparation for a simulation.
-     */
-    void initialize(const System& system);
-    /**
-     * Compute the bonded interactions.
-     * 
-     * @param groups        a set of bit flags for which force groups to include
-     */
-    void computeInteractions(int groups);
-private:
-    std::string createForceSource(int forceIndex, int numBonds, int numAtoms, int group, const std::string& computeForce);
-    CudaContext& context;
-    CUfunction kernel;
-    std::vector<std::vector<std::vector<int> > > forceAtoms;
-    std::vector<std::vector<int> > indexWidth;
-    std::vector<std::string> forceSource;
-    std::vector<int> forceGroup;
-    std::vector<CUdeviceptr> arguments;
-    std::vector<std::string> argTypes;
-    std::vector<std::vector<CudaArray> > atomIndices;
-    std::vector<std::string> prefixCode;
-    std::vector<std::string> energyParameterDerivatives;
-    std::vector<void*> kernelArgs;
-    int numForceBuffers, maxBonds, allGroups;
-    bool hasInitializedKernels, hasInteractions;
+    virtual void addPrefixCode(const std::string& source) = 0;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_CUDABONDEDUTILITIES_H_*/
+#endif /*OPENMM_BONDEDUTILITIES_H_*/

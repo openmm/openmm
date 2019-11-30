@@ -34,6 +34,48 @@
 
 namespace OpenMM {
 
+
+/**
+ * This kernel is invoked by HarmonicBondForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CommonCalcHarmonicBondForceKernel : public CalcHarmonicBondForceKernel {
+public:
+    CommonCalcHarmonicBondForceKernel(std::string name, const Platform& platform, ComputeContext& cc, const System& system) : CalcHarmonicBondForceKernel(name, platform),
+            hasInitializedKernel(false), cc(cc), system(system) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the HarmonicBondForce this kernel will be used for
+     */
+    void initialize(const System& system, const HarmonicBondForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the HarmonicBondForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const HarmonicBondForce& force);
+private:
+    class ForceInfo;
+    int numBonds;
+    bool hasInitializedKernel;
+    ComputeContext& cc;
+    ForceInfo* info;
+    const System& system;
+    ComputeArray params;
+};
+
 /**
  * This kernel is invoked to remove center of mass motion from the system.
  */

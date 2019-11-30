@@ -27,6 +27,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
+#include "openmm/common/BondedUtilities.h"
+#include "openmm/common/ComputeForceInfo.h"
 #include "openmm/common/ComputeProgram.h"
 #include "openmm/common/ComputeVectorTypes.h"
 #include <map>
@@ -46,6 +48,31 @@ class ComputeContext {
 public:
     virtual ~ComputeContext() {
     }
+    /**
+     * Add a ComputeForceInfo to this context.  Force kernels call this during initialization
+     * to provide information about particular forces.
+     */
+    virtual void addForce(ComputeForceInfo* force) = 0;
+    /**
+     * Set this as the current context for the calling thread.  This should be called before
+     * doing any computation when you do not know what other code has just been executing on
+     * the thread.  Platforms that rely on binding contexts to threads (such as CUDA) need to
+     * implement this.
+     */
+    virtual void setAsCurrent() {
+    }
+    /**
+     * Get the number of contexts being used for the current simulation.
+     * This is relevant when a simulation is parallelized across multiple devices.  In that case,
+     * one ComputeContext is created for each device.
+     */
+    virtual int getNumContexts() const = 0;
+    /**
+     * Get the index of this context in the list of ones being used for the current simulation.
+     * This is relevant when a simulation is parallelized across multiple devices.  In that case,
+     * one ComputeContext is created for each device.
+     */
+    virtual int getContextIndex() const = 0;
     /**
      * Construct an uninitialized array of the appropriate class for this platform.  The returned
      * value should be created on the heap with the "new" operator.
@@ -132,6 +159,25 @@ public:
      * Get whether the periodic box is triclinic.
      */
     virtual bool getBoxIsTriclinic() const = 0;
+    /**
+     * Get the BondedUtilities for this context.
+     */
+    virtual BondedUtilities& getBondedUtilities() = 0;
+    /**
+     * Mark that the current molecule definitions (and hence the atom order) may be invalid.
+     * This should be called whenever force field parameters change.  It will cause the definitions
+     * and order to be revalidated.
+     * 
+     * If you know which force has changed, calling the alternate form that takes a ComputeForceInfo
+     * is more efficient.
+     */
+    virtual void invalidateMolecules() = 0;
+    /**
+     * Mark that the current molecule definitions from one particular force (and hence the atom order)
+     * may be invalid.  This should be called whenever force field parameters change.  It will cause the
+     * definitions and order to be revalidated.
+     */
+    virtual bool invalidateMolecules(ComputeForceInfo* force) = 0;
 };
 
 } // namespace OpenMM

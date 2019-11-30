@@ -30,6 +30,7 @@
 #include "OpenCLPlatform.h"
 #include "OpenCLContext.h"
 #include "OpenCLKernels.h"
+#include "openmm/common/CommonKernels.h"
 
 namespace OpenMM {
 
@@ -97,8 +98,8 @@ private:
 class OpenCLParallelCalcHarmonicBondForceKernel : public CalcHarmonicBondForceKernel {
 public:
     OpenCLParallelCalcHarmonicBondForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, const System& system);
-    OpenCLCalcHarmonicBondForceKernel& getKernel(int index) {
-        return dynamic_cast<OpenCLCalcHarmonicBondForceKernel&>(kernels[index].getImpl());
+    CommonCalcHarmonicBondForceKernel& getKernel(int index) {
+        return dynamic_cast<CommonCalcHarmonicBondForceKernel&>(kernels[index].getImpl());
     }
     /**
      * Initialize the kernel.

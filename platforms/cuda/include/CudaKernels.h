@@ -260,47 +260,6 @@ private:
 };
 
 /**
- * This kernel is invoked by HarmonicBondForce to calculate the forces acting on the system and the energy of the system.
- */
-class CudaCalcHarmonicBondForceKernel : public CalcHarmonicBondForceKernel {
-public:
-    CudaCalcHarmonicBondForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcHarmonicBondForceKernel(name, platform),
-            hasInitializedKernel(false), cu(cu), system(system) {
-    }
-    /**
-     * Initialize the kernel.
-     *
-     * @param system     the System this kernel will be applied to
-     * @param force      the HarmonicBondForce this kernel will be used for
-     */
-    void initialize(const System& system, const HarmonicBondForce& force);
-    /**
-     * Execute the kernel to calculate the forces and/or energy.
-     *
-     * @param context        the context in which to execute this kernel
-     * @param includeForces  true if forces should be calculated
-     * @param includeEnergy  true if the energy should be calculated
-     * @return the potential energy due to the force
-     */
-    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-    /**
-     * Copy changed parameters over to a context.
-     *
-     * @param context    the context to copy parameters to
-     * @param force      the HarmonicBondForce to copy the parameters from
-     */
-    void copyParametersToContext(ContextImpl& context, const HarmonicBondForce& force);
-private:
-    class ForceInfo;
-    int numBonds;
-    bool hasInitializedKernel;
-    CudaContext& cu;
-    ForceInfo* info;
-    const System& system;
-    CudaArray params;
-};
-
-/**
  * This kernel is invoked by CustomBondForce to calculate the forces acting on the system and the energy of the system.
  */
 class CudaCalcCustomBondForceKernel : public CalcCustomBondForceKernel {

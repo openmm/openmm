@@ -70,7 +70,7 @@ static void CL_CALLBACK errorCallback(const char* errinfo, const void* private_i
 }
 
 OpenCLContext::OpenCLContext(const System& system, int platformIndex, int deviceIndex, const string& precision, OpenCLPlatform::PlatformData& platformData, OpenCLContext* originalContext) :
-        system(system), time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), stepsSinceReorder(99999), atomsWereReordered(false), hasAssignedPosqCharges(false),
+        system(system), time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), stepsSinceReorder(99999), numForceBuffers(0), atomsWereReordered(false), hasAssignedPosqCharges(false),
         integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
     if (precision == "single") {
         useDoublePrecision = false;
@@ -280,7 +280,13 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
             velm.initialize<mm_double4>(*this, paddedNumAtoms, "velm");
             compilationDefines["USE_DOUBLE_PRECISION"] = "1";
             compilationDefines["convert_real4"] = "convert_double4";
+            compilationDefines["make_real2"] = "make_double2";
+            compilationDefines["make_real3"] = "make_double3";
+            compilationDefines["make_real4"] = "make_double4";
             compilationDefines["convert_mixed4"] = "convert_double4";
+            compilationDefines["make_mixed2"] = "make_double2";
+            compilationDefines["make_mixed3"] = "make_double3";
+            compilationDefines["make_mixed4"] = "make_double4";
         }
         else if (useMixedPrecision) {
             posq.initialize<mm_float4>(*this, paddedNumAtoms, "posq");
@@ -288,13 +294,25 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
             velm.initialize<mm_double4>(*this, paddedNumAtoms, "velm");
             compilationDefines["USE_MIXED_PRECISION"] = "1";
             compilationDefines["convert_real4"] = "convert_float4";
+            compilationDefines["make_real2"] = "make_float2";
+            compilationDefines["make_real3"] = "make_float3";
+            compilationDefines["make_real4"] = "make_float4";
             compilationDefines["convert_mixed4"] = "convert_double4";
+            compilationDefines["make_mixed2"] = "make_double2";
+            compilationDefines["make_mixed3"] = "make_double3";
+            compilationDefines["make_mixed4"] = "make_double4";
         }
         else {
             posq.initialize<mm_float4>(*this, paddedNumAtoms, "posq");
             velm.initialize<mm_float4>(*this, paddedNumAtoms, "velm");
             compilationDefines["convert_real4"] = "convert_float4";
+            compilationDefines["make_real2"] = "make_float2";
+            compilationDefines["make_real3"] = "make_float3";
+            compilationDefines["make_real4"] = "make_float4";
             compilationDefines["convert_mixed4"] = "convert_float4";
+            compilationDefines["make_mixed2"] = "make_float2";
+            compilationDefines["make_mixed3"] = "make_float3";
+            compilationDefines["make_mixed4"] = "make_float4";
         }
         posCellOffsets.resize(paddedNumAtoms, mm_int4(0, 0, 0, 0));
         atomIndexDevice.initialize<cl_int>(*this, paddedNumAtoms, "atomIndexDevice");
@@ -449,10 +467,8 @@ OpenCLContext::~OpenCLContext() {
 
 void OpenCLContext::initialize() {
     bonded->initialize(system);
-    numForceBuffers = platformData.contexts.size();
+    numForceBuffers = std::max(numForceBuffers, (int) platformData.contexts.size());
     numForceBuffers = std::max(numForceBuffers, bonded->getNumForceBuffers());
-    for (auto force : forces)
-        numForceBuffers = std::max(numForceBuffers, force->getRequiredForceBuffers());
     int energyBufferSize = max(numThreadBlocks*ThreadBlockSize, nonbonded->getNumEnergyBuffers());
     if (useDoublePrecision) {
         forceBuffers.initialize<mm_double4>(*this, paddedNumAtoms*numForceBuffers, "forceBuffers");
@@ -505,12 +521,19 @@ void OpenCLContext::initialize() {
     nonbonded->initialize(system);
 }
 
-void OpenCLContext::addForce(OpenCLForceInfo* force) {
+void OpenCLContext::addForce(ComputeForceInfo* force) {
     forces.push_back(force);
+    OpenCLForceInfo* clinfo = dynamic_cast<OpenCLForceInfo*>(force);
+    if (clinfo != NULL)
+        requestForceBuffers(clinfo->getRequiredForceBuffers());
 }
 
-vector<OpenCLForceInfo*>& OpenCLContext::getForceInfos() {
+vector<ComputeForceInfo*>& OpenCLContext::getForceInfos() {
     return forces;
+}
+
+void OpenCLContext::requestForceBuffers(int minBuffers) {
+    numForceBuffers = std::max(numForceBuffers, minBuffers);
 }
 
 cl::Program OpenCLContext::createProgram(const string source, const char* optimizationFlags) {
@@ -556,6 +579,7 @@ cl::Program OpenCLContext::createProgram(const string source, const map<string, 
         src << "typedef float3 mixed3;\n";
         src << "typedef float4 mixed4;\n";
     }
+    src << OpenCLKernelSources::common << endl;
     for (auto& pair : defines) {
         src << "#define " << pair.first;
         if (!pair.second.empty())
@@ -595,7 +619,7 @@ OpenCLArray* OpenCLContext::createArray() {
 }
 
 ComputeProgram OpenCLContext::compileProgram(const std::string source, const std::map<std::string, std::string>& defines) {
-    cl::Program program = createProgram(OpenCLKernelSources::common+source, defines);
+    cl::Program program = createProgram(source, defines);
     return shared_ptr<ComputeProgramImpl>(new OpenCLProgram(*this, program));
 }
 
@@ -769,9 +793,9 @@ bool OpenCLContext::requestPosqCharges() {
 /**
  * This class ensures that atom reordering doesn't break virtual sites.
  */
-class OpenCLContext::VirtualSiteInfo : public OpenCLForceInfo {
+class OpenCLContext::VirtualSiteInfo : public ComputeForceInfo {
 public:
-    VirtualSiteInfo(const System& system) : OpenCLForceInfo(0) {
+    VirtualSiteInfo(const System& system) {
         for (int i = 0; i < system.getNumParticles(); i++) {
             if (system.isVirtualSite(i)) {
                 const VirtualSite& vsite = system.getVirtualSite(i);
@@ -977,7 +1001,7 @@ void OpenCLContext::invalidateMolecules() {
             return;
 }
 
-bool OpenCLContext::invalidateMolecules(OpenCLForceInfo* force) {
+bool OpenCLContext::invalidateMolecules(ComputeForceInfo* force) {
     if (numAtoms == 0 || nonbonded == NULL || !nonbonded->getUseCutoff())
         return false;
     bool valid = true;

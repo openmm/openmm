@@ -42,6 +42,7 @@
 #include <vector_functions.h>
 #include "windowsExportCuda.h"
 #include "CudaArray.h"
+#include "CudaBondedUtilities.h"
 #include "CudaPlatform.h"
 #include "openmm/common/ComputeContext.h"
 #include "openmm/Kernel.h"
@@ -50,10 +51,8 @@ typedef unsigned int tileflags;
 
 namespace OpenMM {
 
-class CudaForceInfo;
 class CudaExpressionUtilities;
 class CudaIntegrationUtilities;
-class CudaBondedUtilities;
 class CudaNonbondedUtilities;
 class System;
 
@@ -87,13 +86,13 @@ public:
      */
     void initialize();
     /**
-     * Add a CudaForceInfo to this context.
+     * Add a ComputeForceInfo to this context.
      */
-    void addForce(CudaForceInfo* force);
+    void addForce(ComputeForceInfo* force);
     /**
-     * Get all CudaForceInfos that have been added to this context.
+     * Get all ComputeForceInfos that have been added to this context.
      */
-    std::vector<CudaForceInfo*>& getForceInfos();
+    std::vector<ComputeForceInfo*>& getForceInfos();
     /**
      * Get the CUcontext associated with this object.
      */
@@ -134,6 +133,14 @@ public:
      */
     CudaPlatform::PlatformData& getPlatformData() {
         return platformData;
+    }
+    /**
+     * Get the number of contexts being used for the current simulation.
+     * This is relevant when a simulation is parallelized across multiple devices.  In that case,
+     * one CudaContext is created for each device.
+     */
+    int getNumContexts() const {
+        return platformData.contexts.size();
     }
     /**
      * Get the index of this context in the list stored in the PlatformData.
@@ -627,7 +634,7 @@ public:
      * may be invalid.  This should be called whenever force field parameters change.  It will cause the
      * definitions and order to be revalidated.
      */
-    bool invalidateMolecules(CudaForceInfo* force);
+    bool invalidateMolecules(ComputeForceInfo* force);
 private:
     /**
      * Compute a sorted list of device indices in decreasing order of desirability
@@ -680,7 +687,7 @@ private:
     CUfunction clearSixBuffersKernel;
     CUfunction reduceEnergyKernel;
     CUfunction setChargesKernel;
-    std::vector<CudaForceInfo*> forces;
+    std::vector<ComputeForceInfo*> forces;
     std::vector<Molecule> molecules;
     std::vector<MoleculeGroup> moleculeGroups;
     std::vector<int4> posCellOffsets;

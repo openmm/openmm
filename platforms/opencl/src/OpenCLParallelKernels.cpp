@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -210,7 +210,7 @@ double OpenCLParallelCalcForcesAndEnergyKernel::finishComputation(ContextImpl& c
 
 class OpenCLParallelCalcHarmonicBondForceKernel::Task : public OpenCLContext::WorkTask {
 public:
-    Task(ContextImpl& context, OpenCLCalcHarmonicBondForceKernel& kernel, bool includeForce,
+    Task(ContextImpl& context, CommonCalcHarmonicBondForceKernel& kernel, bool includeForce,
             bool includeEnergy, double& energy) : context(context), kernel(kernel),
             includeForce(includeForce), includeEnergy(includeEnergy), energy(energy) {
     }
@@ -219,7 +219,7 @@ public:
     }
 private:
     ContextImpl& context;
-    OpenCLCalcHarmonicBondForceKernel& kernel;
+    CommonCalcHarmonicBondForceKernel& kernel;
     bool includeForce, includeEnergy;
     double& energy;
 };
@@ -227,7 +227,7 @@ private:
 OpenCLParallelCalcHarmonicBondForceKernel::OpenCLParallelCalcHarmonicBondForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, const System& system) :
         CalcHarmonicBondForceKernel(name, platform), data(data) {
     for (int i = 0; i < (int) data.contexts.size(); i++)
-        kernels.push_back(Kernel(new OpenCLCalcHarmonicBondForceKernel(name, platform, *data.contexts[i], system)));
+        kernels.push_back(Kernel(new CommonCalcHarmonicBondForceKernel(name, platform, *data.contexts[i], system)));
 }
 
 void OpenCLParallelCalcHarmonicBondForceKernel::initialize(const System& system, const HarmonicBondForce& force) {

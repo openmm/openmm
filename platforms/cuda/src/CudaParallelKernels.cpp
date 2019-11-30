@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -255,7 +255,7 @@ double CudaParallelCalcForcesAndEnergyKernel::finishComputation(ContextImpl& con
 
 class CudaParallelCalcHarmonicBondForceKernel::Task : public CudaContext::WorkTask {
 public:
-    Task(ContextImpl& context, CudaCalcHarmonicBondForceKernel& kernel, bool includeForce,
+    Task(ContextImpl& context, CommonCalcHarmonicBondForceKernel& kernel, bool includeForce,
             bool includeEnergy, double& energy) : context(context), kernel(kernel),
             includeForce(includeForce), includeEnergy(includeEnergy), energy(energy) {
     }
@@ -264,7 +264,7 @@ public:
     }
 private:
     ContextImpl& context;
-    CudaCalcHarmonicBondForceKernel& kernel;
+    CommonCalcHarmonicBondForceKernel& kernel;
     bool includeForce, includeEnergy;
     double& energy;
 };
@@ -272,7 +272,7 @@ private:
 CudaParallelCalcHarmonicBondForceKernel::CudaParallelCalcHarmonicBondForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, const System& system) :
         CalcHarmonicBondForceKernel(name, platform), data(data) {
     for (int i = 0; i < (int) data.contexts.size(); i++)
-        kernels.push_back(Kernel(new CudaCalcHarmonicBondForceKernel(name, platform, *data.contexts[i], system)));
+        kernels.push_back(Kernel(new CommonCalcHarmonicBondForceKernel(name, platform, *data.contexts[i], system)));
 }
 
 void CudaParallelCalcHarmonicBondForceKernel::initialize(const System& system, const HarmonicBondForce& force) {
