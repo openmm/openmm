@@ -49,7 +49,7 @@
 
 using namespace OpenMM;
 using namespace std;
-#define DEBUG 0
+
 void testHarmonicOscillator() {
     const double mass = 1.0;
     double temperature = 300;
@@ -83,18 +83,7 @@ void testHarmonicOscillator() {
         double PE = state.getPotentialEnergy();
         double time = state.getTime();
         double energy = kinetic_energy + PE + integrator.computeHeatBathEnergy();
-#if DEBUG
-        std::cout << " Time: " << std::setw(4) << time 
-                  << " Temperature: " << std::setw(8) << std::setprecision(3) << temp
-                  << " Mean Temp: " << std::setw(8) << std::setprecision(3) << mean_temperature
-                  << " Kinet Energy: " << std::setw(12) << std::setprecision(8) << kinetic_energy
-                  << " Poten Energy: " << std::setw(12) << std::setprecision(8) << PE
-                  << " Total Energy: " << std::setw(12) << std::setprecision(8) << energy << std::endl;
-#endif
     }
-#if DEBUG
-    std::cout << "Mean Temperature: " << mean_temperature << std::endl;;
-#endif
     ASSERT_EQUAL_TOL(temperature, mean_temperature, 0.02);
 }
 
@@ -164,7 +153,7 @@ void testDimerBox(bool constrain=true) {
 
     bool simpleConstruct = true;
     double temperature = 300; // kelvin
-    double collisionFrequency = 25; // 1/ps
+    double collisionFrequency = 200; // 1/ps
     int numMTS = 3;
     int numYS = 3;
     int chainLength = 5;
@@ -175,9 +164,8 @@ void testDimerBox(bool constrain=true) {
     Context context(system, integrator, platform);
     context.setPositions(positions);
     context.setVelocitiesToTemperature(temperature);
-    integrator.step(1500);
 
-    int nSteps = 2000;
+    int nSteps = 1500;
     double mean_temp = 0.0;
     std::vector<double> energies(nSteps);
     for (int i = 0; i < nSteps; ++i) {
@@ -197,12 +185,6 @@ void testDimerBox(bool constrain=true) {
         double instantaneous_temperature = 2 * KE / (BOLTZ * numDOF);
         mean_temp = (i*mean_temp + instantaneous_temperature)/(i+1);
         double energy = KE + PE + integrator.computeHeatBathEnergy();
-#if DEBUG
-        if(i % 10 == 0) std::cout << " Time: " << std::setw(4) << time 
-                                  << " Temperature: " << std::setw(8) << std::setprecision(3) << temperature
-                                  << " Mean Temperature: " << std::setw(8) << std::setprecision(3) << mean_temp
-                                  << " Total Energy: " << std::setw(12) << std::setprecision(8) << energy << std::endl;
-#endif
         energies[i] = energy;
     }
     double sum = std::accumulate(energies.begin(), energies.end(), 0.0);
@@ -210,71 +192,67 @@ void testDimerBox(bool constrain=true) {
     double sq_sum = std::inner_product(energies.begin(), energies.end(), energies.begin(), 0.0);
     double std = std::sqrt(sq_sum / energies.size() - mean * mean);
     double relative_std = std / mean;
-    //std::cout << "Relative STD of energy " << relative_std << std::endl;
     // Check mean temperature
-    ASSERT_EQUAL_TOL(temperature, temperature, 1e-2);
+    ASSERT_USUALLY_EQUAL_TOL(temperature, mean_temp, 1e-2);
     // Check fluctuation of conserved (total bath + system) energy
-    ASSERT_EQUAL_TOL(relative_std, 0, 1e-4);
+    ASSERT_USUALLY_EQUAL_TOL(relative_std, 0, 5e-4);
 }
 
 void testCheckpoints() {
+    // Create a system with Drude-like particles to be thermostated as a pair, as well as another
+    // particle to be thermostated independently, to test all integrator features.
     double timeStep = 0.001;
     NoseHooverIntegrator integrator(timeStep), newIntegrator(timeStep);
     System system;
     double mass = 1;
+    system.addParticle(8*mass);
     system.addParticle(mass);
-    system.addParticle(mass);
-    NonbondedForce* force = new NonbondedForce();
-    force->addParticle(0, 0.1, 1.0);
-    force->addParticle(0, 0.1, 1.0);
+    system.addParticle(5*mass);
+    HarmonicBondForce* force = new HarmonicBondForce();
+    force->addBond(0, 1, 0.1, 50.0);
+    force->addBond(0, 2, 0.1, 50.0);
     system.addForce(force);
     double kineticEnergy = 1e6;
     double temperature=300, collisionFrequency=1, chainLength=3, numMTS=3, numYS=3;
     chainLength = 10;
-    integrator.addSubsystemThermostat(std::vector<int>(), std::vector<std::pair<int,int>>{{0,1}},  temperature, collisionFrequency, temperature, collisionFrequency,
+    integrator.addSubsystemThermostat(std::vector<int>{2}, std::vector<std::pair<int,int>>{{0,1}},  temperature, collisionFrequency, temperature, collisionFrequency,
                                       chainLength, numMTS, numYS);
-    newIntegrator.addSubsystemThermostat(std::vector<int>(), std::vector<std::pair<int,int>>{{0,1}},  temperature, collisionFrequency, temperature, collisionFrequency,
+    newIntegrator.addSubsystemThermostat(std::vector<int>{2}, std::vector<std::pair<int,int>>{{0,1}},  temperature, collisionFrequency, temperature, collisionFrequency,
                                       chainLength, numMTS, numYS);
     Context context(system, integrator, platform);
     Context newContext(system, newIntegrator, platform);
-    std::vector<Vec3> positions(2);
-    positions[1] = {0.1,0.1,0.1};
+    std::vector<Vec3> positions(3);
+    std::vector<Vec3> velocities(3);
+    positions[1] = {0.1, 0.0, 0.0};
+    velocities[1] = {0.1,0.2,-0.2};
+    positions[2] = {-0.1, 0.001, 0.001};
+    velocities[2] = {-0.1,0.2,-0.2};
     context.setPositions(positions);
-    integrator.step(300);
-#if DEBUG
-    std::cout << std::endl << std::endl << std::endl << "writing checkpoint";
-#endif
+    context.setVelocities(velocities);
+
+    // Run a short simulation and checkpoint..
+    integrator.step(500);
     std::stringstream checkpoint; 
     context.createCheckpoint(checkpoint);
-    
-    State state = context.getState(State::Positions | State::Velocities);
-    for (size_t i=0; i<100; i++){
-        state = context.getState(State::Positions | State::Velocities);
-#if DEBUG
-        std::cout << "posvel" << state.getPositions()[0] << " " << state.getVelocities()[0] << std::endl;
-#endif
+
+    // Now continue the simulation
+    for (size_t i=0; i<25; i++){
         integrator.step(1);
     }
-#if DEBUG
-    std::cout << std::endl << std::endl << "loading checkpoint" << std::endl;
-#endif
-    newContext.loadCheckpoint(checkpoint);
 
-    
-    State state2 = context.getState(State::Positions | State::Velocities);
-    for (size_t i=0; i<100; i++){
-        state2 = newContext.getState(State::Positions | State::Velocities);
-#if DEBUG
-        std::cout << "posvel" << state2.getPositions()[0] << " " << state2.getVelocities()[0] << std::endl;
-#endif
+    // And try the same, starting from the checkpoint
+    newContext.loadCheckpoint(checkpoint);
+    for (size_t i=0; i<25; i++){
         newIntegrator.step(1);
     }
 
+    State state1 = context.getState(State::Positions | State::Velocities);
+    State state2 = newContext.getState(State::Positions | State::Velocities);
     for (int i=0; i<3;i++){
-        ASSERT_EQUAL_VEC(state.getPositions()[0], state2.getPositions()[0], 1e-6); 
-        ASSERT_EQUAL_VEC(state.getPositions()[1], state2.getPositions()[1], 1e-6); 
-        ASSERT_EQUAL_VEC(state.getVelocities()[0], state2.getVelocities()[0], 1e-6); 
-        ASSERT_EQUAL_VEC(state.getVelocities()[1], state2.getVelocities()[1], 1e-6); 
+        ASSERT_EQUAL_VEC(state1.getPositions()[0], state2.getPositions()[0], 1e-6); 
+        ASSERT_EQUAL_VEC(state1.getPositions()[1], state2.getPositions()[1], 1e-6); 
+        ASSERT_EQUAL_VEC(state1.getVelocities()[0], state2.getVelocities()[0], 1e-6); 
+        ASSERT_EQUAL_VEC(state1.getVelocities()[1], state2.getVelocities()[1], 1e-6); 
     }
 }
 
