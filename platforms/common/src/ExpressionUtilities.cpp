@@ -24,7 +24,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "CudaExpressionUtilities.h"
+#include "openmm/common/ExpressionUtilities.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/SplineFitter.h"
 #include "lepton/Operation.h"
@@ -33,10 +33,10 @@ using namespace OpenMM;
 using namespace Lepton;
 using namespace std;
 
-CudaExpressionUtilities::CudaExpressionUtilities(CudaContext& context) : context(context), fp1(1), fp2(2), fp3(3), periodicDistance(6) {
+ExpressionUtilities::ExpressionUtilities(ComputeContext& context) : context(context), fp1(1), fp2(2), fp3(3), periodicDistance(6) {
 }
 
-string CudaExpressionUtilities::createExpressions(const map<string, ParsedExpression>& expressions, const map<string, string>& variables,
+string ExpressionUtilities::createExpressions(const map<string, ParsedExpression>& expressions, const map<string, string>& variables,
         const vector<const TabulatedFunction*>& functions, const vector<pair<string, string> >& functionNames, const string& prefix, const string& tempType) {
     vector<pair<ExpressionTreeNode, string> > variableNodes;
     for (map<string, string>::const_iterator iter = variables.begin(); iter != variables.end(); ++iter)
@@ -44,7 +44,7 @@ string CudaExpressionUtilities::createExpressions(const map<string, ParsedExpres
     return createExpressions(expressions, variableNodes, functions, functionNames, prefix, tempType);
 }
 
-string CudaExpressionUtilities::createExpressions(const map<string, ParsedExpression>& expressions, const vector<pair<ExpressionTreeNode, string> >& variables,
+string ExpressionUtilities::createExpressions(const map<string, ParsedExpression>& expressions, const vector<pair<ExpressionTreeNode, string> >& variables,
         const vector<const TabulatedFunction*>& functions, const vector<pair<string, string> >& functionNames, const string& prefix, const string& tempType) {
     stringstream out;
     vector<ParsedExpression> allExpressions;
@@ -59,7 +59,7 @@ string CudaExpressionUtilities::createExpressions(const map<string, ParsedExpres
     return out.str();
 }
 
-void CudaExpressionUtilities::processExpression(stringstream& out, const ExpressionTreeNode& node, vector<pair<ExpressionTreeNode, string> >& temps,
+void ExpressionUtilities::processExpression(stringstream& out, const ExpressionTreeNode& node, vector<pair<ExpressionTreeNode, string> >& temps,
         const vector<const TabulatedFunction*>& functions, const vector<pair<string, string> >& functionNames, const string& prefix, const vector<vector<double> >& functionParams,
         const vector<ParsedExpression>& allExpressions, const string& tempType) {
     for (int i = 0; i < (int) temps.size(); i++)
@@ -662,7 +662,7 @@ void CudaExpressionUtilities::processExpression(stringstream& out, const Express
         temps.push_back(make_pair(node, name));
 }
 
-string CudaExpressionUtilities::getTempName(const ExpressionTreeNode& node, const vector<pair<ExpressionTreeNode, string> >& temps) {
+string ExpressionUtilities::getTempName(const ExpressionTreeNode& node, const vector<pair<ExpressionTreeNode, string> >& temps) {
     for (int i = 0; i < (int) temps.size(); i++)
         if (temps[i].first == node)
             return temps[i].second;
@@ -671,7 +671,7 @@ string CudaExpressionUtilities::getTempName(const ExpressionTreeNode& node, cons
     throw OpenMMException(out.str());
 }
 
-void CudaExpressionUtilities::findRelatedCustomFunctions(const ExpressionTreeNode& node, const ExpressionTreeNode& searchNode,
+void ExpressionUtilities::findRelatedCustomFunctions(const ExpressionTreeNode& node, const ExpressionTreeNode& searchNode,
             vector<const Lepton::ExpressionTreeNode*>& nodes) {
     if (searchNode.getOperation().getId() == Operation::CUSTOM && node.getOperation().getName() == searchNode.getOperation().getName()) {
         // Make sure the arguments are identical.
@@ -695,7 +695,7 @@ void CudaExpressionUtilities::findRelatedCustomFunctions(const ExpressionTreeNod
             findRelatedCustomFunctions(node, searchNode.getChildren()[i], nodes);
 }
 
-void CudaExpressionUtilities::findRelatedPowers(const ExpressionTreeNode& node, const ExpressionTreeNode& searchNode, map<int, const ExpressionTreeNode*>& powers) {
+void ExpressionUtilities::findRelatedPowers(const ExpressionTreeNode& node, const ExpressionTreeNode& searchNode, map<int, const ExpressionTreeNode*>& powers) {
     if (searchNode.getOperation().getId() == Operation::POWER_CONSTANT && node.getChildren()[0] == searchNode.getChildren()[0]) {
         double realPower = dynamic_cast<const Operation::PowerConstant*>(&searchNode.getOperation())->getValue();
         int power = (int) realPower;
@@ -712,7 +712,7 @@ void CudaExpressionUtilities::findRelatedPowers(const ExpressionTreeNode& node, 
             findRelatedPowers(node, searchNode.getChildren()[i], powers);
 }
 
-vector<float> CudaExpressionUtilities::computeFunctionCoefficients(const TabulatedFunction& function, int& width) {
+vector<float> ExpressionUtilities::computeFunctionCoefficients(const TabulatedFunction& function, int& width) {
     if (dynamic_cast<const Continuous1DFunction*>(&function) != NULL) {
         // Compute the spline coefficients.
 
@@ -827,7 +827,7 @@ vector<float> CudaExpressionUtilities::computeFunctionCoefficients(const Tabulat
     throw OpenMMException("computeFunctionCoefficients: Unknown function type");
 }
 
-vector<vector<double> > CudaExpressionUtilities::computeFunctionParameters(const vector<const TabulatedFunction*>& functions) {
+vector<vector<double> > ExpressionUtilities::computeFunctionParameters(const vector<const TabulatedFunction*>& functions) {
     vector<vector<double> > params(functions.size());
     for (int i = 0; i < (int) functions.size(); i++) {
         if (dynamic_cast<const Continuous1DFunction*>(functions[i]) != NULL) {
@@ -903,7 +903,7 @@ vector<vector<double> > CudaExpressionUtilities::computeFunctionParameters(const
     return params;
 }
 
-Lepton::CustomFunction* CudaExpressionUtilities::getFunctionPlaceholder(const TabulatedFunction& function) {
+Lepton::CustomFunction* ExpressionUtilities::getFunctionPlaceholder(const TabulatedFunction& function) {
     if (dynamic_cast<const Continuous1DFunction*>(&function) != NULL)
         return &fp1;
     if (dynamic_cast<const Continuous2DFunction*>(&function) != NULL)
@@ -919,11 +919,11 @@ Lepton::CustomFunction* CudaExpressionUtilities::getFunctionPlaceholder(const Ta
     throw OpenMMException("getFunctionPlaceholder: Unknown function type");
 }
 
-Lepton::CustomFunction* CudaExpressionUtilities::getPeriodicDistancePlaceholder() {
+Lepton::CustomFunction* ExpressionUtilities::getPeriodicDistancePlaceholder() {
     return &periodicDistance;
 }
 
-void CudaExpressionUtilities::callFunction(stringstream& out, string singleFn, string doubleFn, const string& arg, const string& tempType) {
+void ExpressionUtilities::callFunction(stringstream& out, string singleFn, string doubleFn, const string& arg, const string& tempType) {
     bool isDouble = (tempType[0] == 'd');
     bool isVector = (tempType[tempType.size()-1] == '3');
     string fn = (isDouble ? doubleFn : singleFn);
@@ -933,7 +933,7 @@ void CudaExpressionUtilities::callFunction(stringstream& out, string singleFn, s
         out<<fn<<"("<<arg<<")";
 }
 
-void CudaExpressionUtilities::callFunction2(stringstream& out, string singleFn, string doubleFn, const string& arg1, const string& arg2, const string& tempType) {
+void ExpressionUtilities::callFunction2(stringstream& out, string singleFn, string doubleFn, const string& arg1, const string& arg2, const string& tempType) {
     bool isDouble = (tempType[0] == 'd');
     bool isVector = (tempType[tempType.size()-1] == '3');
     string fn = (isDouble ? doubleFn : singleFn);
