@@ -1004,7 +1004,7 @@ class Modeller(object):
         del context
         return actualVariants
 
-    def addExtraParticles(self, forcefield):
+    def addExtraParticles(self, forcefield, ignoreExternalBonds=False):
         """Add missing extra particles to the model that are required by a force
         field.
 
@@ -1090,7 +1090,7 @@ class Modeller(object):
                 signature = _createResidueSignature([atom.element for atom in residue.atoms()])
                 if signature in forcefield._templateSignatures:
                     for t in forcefield._templateSignatures[signature]:
-                        if compiled.matchResidueToTemplate(residue, t, bondedToAtom, False) is not None:
+                        if compiled.matchResidueToTemplate(residue, t, bondedToAtom, ignoreExternalBonds) is not None:
                             matchFound = True
                 if matchFound:
                     # Just copy the residue over.
@@ -1109,7 +1109,7 @@ class Modeller(object):
                     if signature in forcefield._templateSignatures:
                         for t in forcefield._templateSignatures[signature]:
                             if t in templatesNoEP:
-                                matches = compiled.matchResidueToTemplate(residueNoEP, templatesNoEP[t], bondedToAtomNoEP, False)
+                                matches = compiled.matchResidueToTemplate(residueNoEP, templatesNoEP[t], bondedToAtomNoEP, ignoreExternalBonds)
                                 if matches is not None:
                                     template = t;
                                     # Record the corresponding atoms.
