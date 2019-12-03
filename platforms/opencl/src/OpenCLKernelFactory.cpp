@@ -78,11 +78,11 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
     if (name == CalcHarmonicBondForceKernel::Name())
         return new CommonCalcHarmonicBondForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcCustomBondForceKernel::Name())
-        return new OpenCLCalcCustomBondForceKernel(name, platform, cl, context.getSystem());
+        return new CommonCalcCustomBondForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcHarmonicAngleForceKernel::Name())
         return new CommonCalcHarmonicAngleForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcCustomAngleForceKernel::Name())
-        return new OpenCLCalcCustomAngleForceKernel(name, platform, cl, context.getSystem());
+        return new CommonCalcCustomAngleForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcPeriodicTorsionForceKernel::Name())
         return new CommonCalcPeriodicTorsionForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcRBTorsionForceKernel::Name())
@@ -90,7 +90,7 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
     if (name == CalcCMAPTorsionForceKernel::Name())
         return new CommonCalcCMAPTorsionForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcCustomTorsionForceKernel::Name())
-        return new OpenCLCalcCustomTorsionForceKernel(name, platform, cl, context.getSystem());
+        return new CommonCalcCustomTorsionForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcNonbondedForceKernel::Name())
         return new OpenCLCalcNonbondedForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcCustomNonbondedForceKernel::Name())
@@ -100,13 +100,13 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
     if (name == CalcCustomGBForceKernel::Name())
         return new OpenCLCalcCustomGBForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcCustomExternalForceKernel::Name())
-        return new OpenCLCalcCustomExternalForceKernel(name, platform, cl, context.getSystem());
+        return new CommonCalcCustomExternalForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcCustomHbondForceKernel::Name())
         return new OpenCLCalcCustomHbondForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcCustomCentroidBondForceKernel::Name())
         return new OpenCLCalcCustomCentroidBondForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcCustomCompoundBondForceKernel::Name())
-        return new OpenCLCalcCustomCompoundBondForceKernel(name, platform, cl, context.getSystem());
+        return new CommonCalcCustomCompoundBondForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcCustomCVForceKernel::Name())
         return new OpenCLCalcCustomCVForceKernel(name, platform, cl);
     if (name == CalcRMSDForceKernel::Name())

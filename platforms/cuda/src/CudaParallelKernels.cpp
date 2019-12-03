@@ -296,7 +296,7 @@ void CudaParallelCalcHarmonicBondForceKernel::copyParametersToContext(ContextImp
 
 class CudaParallelCalcCustomBondForceKernel::Task : public CudaContext::WorkTask {
 public:
-    Task(ContextImpl& context, CudaCalcCustomBondForceKernel& kernel, bool includeForce,
+    Task(ContextImpl& context, CommonCalcCustomBondForceKernel& kernel, bool includeForce,
             bool includeEnergy, double& energy) : context(context), kernel(kernel),
             includeForce(includeForce), includeEnergy(includeEnergy), energy(energy) {
     }
@@ -305,7 +305,7 @@ public:
     }
 private:
     ContextImpl& context;
-    CudaCalcCustomBondForceKernel& kernel;
+    CommonCalcCustomBondForceKernel& kernel;
     bool includeForce, includeEnergy;
     double& energy;
 };
@@ -313,7 +313,7 @@ private:
 CudaParallelCalcCustomBondForceKernel::CudaParallelCalcCustomBondForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, const System& system) :
         CalcCustomBondForceKernel(name, platform), data(data) {
     for (int i = 0; i < (int) data.contexts.size(); i++)
-        kernels.push_back(Kernel(new CudaCalcCustomBondForceKernel(name, platform, *data.contexts[i], system)));
+        kernels.push_back(Kernel(new CommonCalcCustomBondForceKernel(name, platform, *data.contexts[i], system)));
 }
 
 void CudaParallelCalcCustomBondForceKernel::initialize(const System& system, const CustomBondForce& force) {
@@ -378,7 +378,7 @@ void CudaParallelCalcHarmonicAngleForceKernel::copyParametersToContext(ContextIm
 
 class CudaParallelCalcCustomAngleForceKernel::Task : public CudaContext::WorkTask {
 public:
-    Task(ContextImpl& context, CudaCalcCustomAngleForceKernel& kernel, bool includeForce,
+    Task(ContextImpl& context, CommonCalcCustomAngleForceKernel& kernel, bool includeForce,
             bool includeEnergy, double& energy) : context(context), kernel(kernel),
             includeForce(includeForce), includeEnergy(includeEnergy), energy(energy) {
     }
@@ -387,7 +387,7 @@ public:
     }
 private:
     ContextImpl& context;
-    CudaCalcCustomAngleForceKernel& kernel;
+    CommonCalcCustomAngleForceKernel& kernel;
     bool includeForce, includeEnergy;
     double& energy;
 };
@@ -395,7 +395,7 @@ private:
 CudaParallelCalcCustomAngleForceKernel::CudaParallelCalcCustomAngleForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, const System& system) :
         CalcCustomAngleForceKernel(name, platform), data(data) {
     for (int i = 0; i < (int) data.contexts.size(); i++)
-        kernels.push_back(Kernel(new CudaCalcCustomAngleForceKernel(name, platform, *data.contexts[i], system)));
+        kernels.push_back(Kernel(new CommonCalcCustomAngleForceKernel(name, platform, *data.contexts[i], system)));
 }
 
 void CudaParallelCalcCustomAngleForceKernel::initialize(const System& system, const CustomAngleForce& force) {
@@ -542,7 +542,7 @@ void CudaParallelCalcCMAPTorsionForceKernel::copyParametersToContext(ContextImpl
 
 class CudaParallelCalcCustomTorsionForceKernel::Task : public CudaContext::WorkTask {
 public:
-    Task(ContextImpl& context, CudaCalcCustomTorsionForceKernel& kernel, bool includeForce,
+    Task(ContextImpl& context, CommonCalcCustomTorsionForceKernel& kernel, bool includeForce,
             bool includeEnergy, double& energy) : context(context), kernel(kernel),
             includeForce(includeForce), includeEnergy(includeEnergy), energy(energy) {
     }
@@ -551,7 +551,7 @@ public:
     }
 private:
     ContextImpl& context;
-    CudaCalcCustomTorsionForceKernel& kernel;
+    CommonCalcCustomTorsionForceKernel& kernel;
     bool includeForce, includeEnergy;
     double& energy;
 };
@@ -559,7 +559,7 @@ private:
 CudaParallelCalcCustomTorsionForceKernel::CudaParallelCalcCustomTorsionForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, const System& system) :
         CalcCustomTorsionForceKernel(name, platform), data(data) {
     for (int i = 0; i < (int) data.contexts.size(); i++)
-        kernels.push_back(Kernel(new CudaCalcCustomTorsionForceKernel(name, platform, *data.contexts[i], system)));
+        kernels.push_back(Kernel(new CommonCalcCustomTorsionForceKernel(name, platform, *data.contexts[i], system)));
 }
 
 void CudaParallelCalcCustomTorsionForceKernel::initialize(const System& system, const CustomTorsionForce& force) {
@@ -673,7 +673,7 @@ void CudaParallelCalcCustomNonbondedForceKernel::copyParametersToContext(Context
 
 class CudaParallelCalcCustomExternalForceKernel::Task : public CudaContext::WorkTask {
 public:
-    Task(ContextImpl& context, CudaCalcCustomExternalForceKernel& kernel, bool includeForce,
+    Task(ContextImpl& context, CommonCalcCustomExternalForceKernel& kernel, bool includeForce,
             bool includeEnergy, double& energy) : context(context), kernel(kernel),
             includeForce(includeForce), includeEnergy(includeEnergy), energy(energy) {
     }
@@ -682,7 +682,7 @@ public:
     }
 private:
     ContextImpl& context;
-    CudaCalcCustomExternalForceKernel& kernel;
+    CommonCalcCustomExternalForceKernel& kernel;
     bool includeForce, includeEnergy;
     double& energy;
 };
@@ -690,7 +690,7 @@ private:
 CudaParallelCalcCustomExternalForceKernel::CudaParallelCalcCustomExternalForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, const System& system) :
         CalcCustomExternalForceKernel(name, platform), data(data) {
     for (int i = 0; i < (int) data.contexts.size(); i++)
-        kernels.push_back(Kernel(new CudaCalcCustomExternalForceKernel(name, platform, *data.contexts[i], system)));
+        kernels.push_back(Kernel(new CommonCalcCustomExternalForceKernel(name, platform, *data.contexts[i], system)));
 }
 
 void CudaParallelCalcCustomExternalForceKernel::initialize(const System& system, const CustomExternalForce& force) {
@@ -755,7 +755,7 @@ void CudaParallelCalcCustomHbondForceKernel::copyParametersToContext(ContextImpl
 
 class CudaParallelCalcCustomCompoundBondForceKernel::Task : public CudaContext::WorkTask {
 public:
-    Task(ContextImpl& context, CudaCalcCustomCompoundBondForceKernel& kernel, bool includeForce,
+    Task(ContextImpl& context, CommonCalcCustomCompoundBondForceKernel& kernel, bool includeForce,
             bool includeEnergy, double& energy) : context(context), kernel(kernel),
             includeForce(includeForce), includeEnergy(includeEnergy), energy(energy) {
     }
@@ -764,7 +764,7 @@ public:
     }
 private:
     ContextImpl& context;
-    CudaCalcCustomCompoundBondForceKernel& kernel;
+    CommonCalcCustomCompoundBondForceKernel& kernel;
     bool includeForce, includeEnergy;
     double& energy;
 };
@@ -772,7 +772,7 @@ private:
 CudaParallelCalcCustomCompoundBondForceKernel::CudaParallelCalcCustomCompoundBondForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, const System& system) :
         CalcCustomCompoundBondForceKernel(name, platform), data(data) {
     for (int i = 0; i < (int) data.contexts.size(); i++)
-        kernels.push_back(Kernel(new CudaCalcCustomCompoundBondForceKernel(name, platform, *data.contexts[i], system)));
+        kernels.push_back(Kernel(new CommonCalcCustomCompoundBondForceKernel(name, platform, *data.contexts[i], system)));
 }
 
 void CudaParallelCalcCustomCompoundBondForceKernel::initialize(const System& system, const CustomCompoundBondForce& force) {

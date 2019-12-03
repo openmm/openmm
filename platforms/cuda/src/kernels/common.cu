@@ -4,6 +4,7 @@
  */
 
 #define KERNEL extern "C" __global__
+#define DEVICE __device__
 #define LOCAL __shared__
 #define GLOBAL
 #define RESTRICT __restrict__

@@ -61,14 +61,6 @@ public:
     std::vector<CudaNonbondedUtilities::ParameterInfo>& getBuffers() {
         return buffers;
     }
-    /**
-     * Get a suffix to add to variable names when accessing a certain parameter.
-     *
-     * @param index         the index of the parameter
-     * @param extraSuffix   an extra suffix to add to the variable name
-     * @return the suffix to append
-     */
-    std::string getParameterSuffix(int index, const std::string& extraSuffix = "") const;
 private:
     std::vector<CudaNonbondedUtilities::ParameterInfo> buffers;
 };

@@ -37,6 +37,7 @@
 namespace OpenMM {
 
 class ArrayInterface;
+class ExpressionUtilities;
 
 /**
  * This abstract class defines the interface by which platforms compile and execute
@@ -159,6 +160,10 @@ public:
      * Get whether the periodic box is triclinic.
      */
     virtual bool getBoxIsTriclinic() const = 0;
+    /**
+     * Get the ExpressionUtilities for this context.
+     */
+    virtual ExpressionUtilities& getExpressionUtilities() = 0;
     /**
      * Get the BondedUtilities for this context.
      */

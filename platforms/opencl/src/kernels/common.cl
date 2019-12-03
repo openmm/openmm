@@ -4,6 +4,7 @@
  */
 
 #define KERNEL __kernel
+#define DEVICE
 #define LOCAL __local
 #define GLOBAL __global
 #define RESTRICT restrict

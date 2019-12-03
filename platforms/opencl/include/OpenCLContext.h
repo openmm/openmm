@@ -53,6 +53,7 @@
 #include "windowsExportOpenCL.h"
 #include "OpenCLArray.h"
 #include "OpenCLBondedUtilities.h"
+#include "OpenCLExpressionUtilities.h"
 #include "OpenCLPlatform.h"
 #include "openmm/common/ComputeContext.h"
 
@@ -60,7 +61,6 @@ namespace OpenMM {
 
 class OpenCLForceInfo;
 class OpenCLIntegrationUtilities;
-class OpenCLExpressionUtilities;
 class OpenCLNonbondedUtilities;
 class System;
 

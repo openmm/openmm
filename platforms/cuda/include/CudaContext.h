@@ -43,6 +43,7 @@
 #include "windowsExportCuda.h"
 #include "CudaArray.h"
 #include "CudaBondedUtilities.h"
+#include "CudaExpressionUtilities.h"
 #include "CudaPlatform.h"
 #include "openmm/common/ComputeContext.h"
 #include "openmm/Kernel.h"
@@ -51,7 +52,6 @@ typedef unsigned int tileflags;
 
 namespace OpenMM {
 
-class CudaExpressionUtilities;
 class CudaIntegrationUtilities;
 class CudaNonbondedUtilities;
 class System;
