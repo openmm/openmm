@@ -1023,6 +1023,10 @@ class Modeller(object):
         ----------
         forcefield : ForceField
             the ForceField defining what extra particles should be present
+        ignoreExternalBonds : boolean=False
+            If true, ignore external bonds when matching residues to templates.
+            This is useful when the Topology represents one piece of a larger
+            molecule, so chains are not terminated properly.
         """
         # Create copies of all residue templates that have had all extra points removed.
 
