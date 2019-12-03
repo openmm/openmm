@@ -1,5 +1,5 @@
-#ifndef OPENMM_OPENCLPARAMETERSET_H_
-#define OPENMM_OPENCLPARAMETERSET_H_
+#ifndef OPENMM_COMPUTEPARAMETERSET_H_
+#define OPENMM_COMPUTEPARAMETERSET_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -27,51 +27,84 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "OpenCLContext.h"
-#include "OpenCLNonbondedUtilities.h"
-#include "openmm/common/ComputeParameterSet.h"
+#include "openmm/common/ArrayInterface.h"
+#include "openmm/common/ComputeContext.h"
+#include "openmm/common/ComputeParameterInfo.h"
+#include <string>
+#include <vector>
 
 namespace OpenMM {
 
-class OpenCLNonbondedUtilities;
-
 /**
- * This class exists for backward compatibility.  For most purposes you can use
- * ComputeParameterSet directly instead.
+ * This class represents a set of floating point parameter values for a set of objects (particles, bonds, etc.).
+ * It automatically creates an appropriate set of arrays to hold the parameter values, based
+ * on the number of parameters required.
  */
 
-class OPENMM_EXPORT_OPENCL OpenCLParameterSet : public ComputeParameterSet {
+class ComputeParameterSet {
 public:
     /**
-     * Create an OpenCLParameterSet.
+     * Create an ComputeParameterSet.
      *
      * @param context          the context for which to create the parameter set
      * @param numParameters    the number of parameters for each object
      * @param numObjects       the number of objects to store parameter values for
      * @param name             the name of the parameter set
-     * @param bufferPerParameter  if true, a separate cl::Buffer is created for each parameter.  If false,
-     *                            multiple parameters may be combined into a single buffer.
+     * @param arrayPerParameter   if true, a separate array is created for each parameter.  If false,
+     *                            multiple parameters may be combined into a single array for efficiency.
      * @param useDoublePrecision  whether values should be stored as single or double precision
      */
-    OpenCLParameterSet(OpenCLContext& context, int numParameters, int numObjects, const std::string& name, bool bufferPerParameter=false, bool useDoublePrecision=false);
+    ComputeParameterSet(ComputeContext& context, int numParameters, int numObjects, const std::string& name, bool arrayPerParameter=false, bool useDoublePrecision=false);
+    ~ComputeParameterSet();
     /**
-     * Get a set of OpenCLNonbondedUtilities::ParameterInfo objects which describe the Buffers
-     * containing the data.
+     * Get the number of parameters.
      */
-    std::vector<OpenCLNonbondedUtilities::ParameterInfo>& getBuffers() {
-        return buffers;
+    int getNumParameters() const {
+        return numParameters;
     }
     /**
-     * Get a set of OpenCLNonbondedUtilities::ParameterInfo objects which describe the Buffers
+     * Get the number of objects.
+     */
+    int getNumObjects() const {
+        return numObjects;
+    }
+    /**
+     * Get the values of all parameters.
+     *
+     * @param values on exit, values[i][j] contains the value of parameter j for object i
+     */
+    template <class T>
+    void getParameterValues(std::vector<std::vector<T> >& values);
+    /**
+     * Set the values of all parameters.
+     *
+     * @param values values[i][j] contains the value of parameter j for object i
+     */
+    template <class T>
+    void setParameterValues(const std::vector<std::vector<T> >& values);
+    /**
+     * Get a vector of ComputeParameterInfo objects which describe the arrays
      * containing the data.
      */
-    const std::vector<OpenCLNonbondedUtilities::ParameterInfo>& getBuffers() const {
-        return buffers;
+    std::vector<ComputeParameterInfo>& getParameterInfos() {
+        return parameters;
     }
+    /**
+     * Get a suffix to add to variable names when accessing a certain parameter.
+     *
+     * @param index         the index of the parameter
+     * @param extraSuffix   an extra suffix to add to the variable name
+     * @return the suffix to append
+     */
+    std::string getParameterSuffix(int index, const std::string& extraSuffix="") const;
 private:
-    std::vector<OpenCLNonbondedUtilities::ParameterInfo> buffers;
+    ComputeContext& context;
+    int numParameters, numObjects, elementSize;
+    std::string name;
+    std::vector<ArrayInterface*> arrays;
+    std::vector<ComputeParameterInfo> parameters;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_OPENCLPARAMETERSET_H_*/
+#endif /*OPENMM_COMPUTEPARAMETERSET_H_*/
