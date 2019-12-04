@@ -112,7 +112,7 @@ public:
      * @param particle3    the index of the third particle
      * @param weight1      the weight factor (between 0 and 1) for the first particle
      * @param weight2      the weight factor (between 0 and 1) for the second particle
-     * @param weight2      the weight factor (between 0 and 1) for the third particle
+     * @param weight3      the weight factor (between 0 and 1) for the third particle
      */
     ThreeParticleAverageSite(int particle1, int particle2, int particle3, double weight1, double weight2, double weight3);
     /**

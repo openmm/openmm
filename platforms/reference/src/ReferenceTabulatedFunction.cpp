@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2014-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2014-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -56,19 +56,22 @@ using namespace std;
 using Lepton::CustomFunction;
 
 extern "C" OPENMM_EXPORT CustomFunction* createReferenceTabulatedFunction(const TabulatedFunction& function) {
+    CustomFunction* fn;
     if (dynamic_cast<const Continuous1DFunction*>(&function) != NULL)
-        return new ReferenceContinuous1DFunction(dynamic_cast<const Continuous1DFunction&>(function));
-    if (dynamic_cast<const Continuous2DFunction*>(&function) != NULL)
-        return new ReferenceContinuous2DFunction(dynamic_cast<const Continuous2DFunction&>(function));
-    if (dynamic_cast<const Continuous3DFunction*>(&function) != NULL)
-        return new ReferenceContinuous3DFunction(dynamic_cast<const Continuous3DFunction&>(function));
-    if (dynamic_cast<const Discrete1DFunction*>(&function) != NULL)
-        return new ReferenceDiscrete1DFunction(dynamic_cast<const Discrete1DFunction&>(function));
-    if (dynamic_cast<const Discrete2DFunction*>(&function) != NULL)
-        return new ReferenceDiscrete2DFunction(dynamic_cast<const Discrete2DFunction&>(function));
-    if (dynamic_cast<const Discrete3DFunction*>(&function) != NULL)
-        return new ReferenceDiscrete3DFunction(dynamic_cast<const Discrete3DFunction&>(function));
-    throw OpenMMException("createReferenceTabulatedFunction: Unknown function type");
+        fn = new ReferenceContinuous1DFunction(dynamic_cast<const Continuous1DFunction&>(function));
+    else if (dynamic_cast<const Continuous2DFunction*>(&function) != NULL)
+        fn = new ReferenceContinuous2DFunction(dynamic_cast<const Continuous2DFunction&>(function));
+    else if (dynamic_cast<const Continuous3DFunction*>(&function) != NULL)
+        fn = new ReferenceContinuous3DFunction(dynamic_cast<const Continuous3DFunction&>(function));
+    else if (dynamic_cast<const Discrete1DFunction*>(&function) != NULL)
+        fn = new ReferenceDiscrete1DFunction(dynamic_cast<const Discrete1DFunction&>(function));
+    else if (dynamic_cast<const Discrete2DFunction*>(&function) != NULL)
+        fn = new ReferenceDiscrete2DFunction(dynamic_cast<const Discrete2DFunction&>(function));
+    else if (dynamic_cast<const Discrete3DFunction*>(&function) != NULL)
+        fn = new ReferenceDiscrete3DFunction(dynamic_cast<const Discrete3DFunction&>(function));
+    else
+        throw OpenMMException("createReferenceTabulatedFunction: Unknown function type");
+    return new SharedFunctionWrapper(shared_ptr<const CustomFunction>(fn));
 }
 
 ReferenceContinuous1DFunction::ReferenceContinuous1DFunction(const Continuous1DFunction& function) : function(function) {
@@ -297,4 +300,23 @@ double ReferenceDiscrete3DFunction::evaluateDerivative(const double* arguments, 
 
 CustomFunction* ReferenceDiscrete3DFunction::clone() const {
     return new ReferenceDiscrete3DFunction(function);
+}
+
+SharedFunctionWrapper::SharedFunctionWrapper(shared_ptr<const CustomFunction> pointer) : pointer(pointer) {
+}
+
+int SharedFunctionWrapper::getNumArguments() const {
+    return pointer->getNumArguments();
+}
+
+double SharedFunctionWrapper::evaluate(const double* arguments) const {
+    return pointer->evaluate(arguments);
+}
+
+double SharedFunctionWrapper::evaluateDerivative(const double* arguments, const int* derivOrder) const {
+    return pointer->evaluateDerivative(arguments, derivOrder);
+}
+
+CustomFunction* SharedFunctionWrapper::clone() const {
+    return new SharedFunctionWrapper(pointer);
 }
