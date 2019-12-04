@@ -248,12 +248,10 @@ void testCheckpoints() {
 
     State state1 = context.getState(State::Positions | State::Velocities);
     State state2 = newContext.getState(State::Positions | State::Velocities);
-    for (int i=0; i<3;i++){
-        ASSERT_EQUAL_VEC(state1.getPositions()[0], state2.getPositions()[0], 1e-6); 
-        ASSERT_EQUAL_VEC(state1.getPositions()[1], state2.getPositions()[1], 1e-6); 
-        ASSERT_EQUAL_VEC(state1.getVelocities()[0], state2.getVelocities()[0], 1e-6); 
-        ASSERT_EQUAL_VEC(state1.getVelocities()[1], state2.getVelocities()[1], 1e-6); 
-    }
+    ASSERT_EQUAL_VEC(state1.getPositions()[0], state2.getPositions()[0], 1e-6); 
+    ASSERT_EQUAL_VEC(state1.getPositions()[1], state2.getPositions()[1], 1e-6); 
+    ASSERT_EQUAL_VEC(state1.getVelocities()[0], state2.getVelocities()[0], 1e-6); 
+    ASSERT_EQUAL_VEC(state1.getVelocities()[1], state2.getVelocities()[1], 1e-6); 
 }
 
 void testAPIChangeNumParticles() {
@@ -265,7 +263,6 @@ void testAPIChangeNumParticles() {
     std::vector<Vec3> positions(numMolecules*2);
     int numDOF = makeDimerBox(system, positions, constrain, numMolecules, bondLength);
 
-    
 }
 
 void runPlatformTests();
