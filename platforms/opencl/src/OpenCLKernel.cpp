@@ -50,20 +50,26 @@ void OpenCLKernel::execute(int threads, int blockSize) {
 
 void OpenCLKernel::addArrayArg(ArrayInterface& value) {
     int index = arrayArgs.size();
-    arrayArgs.push_back(NULL);
+    addEmptyArg();
     setArrayArg(index, value);
 }
 
-void OpenCLKernel::addPrimitiveArg(void* value, int size) {
+void OpenCLKernel::addPrimitiveArg(const void* value, int size) {
     int index = arrayArgs.size();
-    arrayArgs.push_back(NULL);
+    addEmptyArg();
     setPrimitiveArg(index, value, size);
+}
+
+void OpenCLKernel::addEmptyArg() {
+    arrayArgs.push_back(NULL);
 }
 
 void OpenCLKernel::setArrayArg(int index, ArrayInterface& value) {
     arrayArgs[index] = &context.unwrap(value);
 }
 
-void OpenCLKernel::setPrimitiveArg(int index, void* value, int size) {
-    kernel.setArg(index, size, value);
+void OpenCLKernel::setPrimitiveArg(int index, const void* value, int size) {
+    // The const_cast is needed because of a bug in the OpenCL C++ wrappers.  clSetKernelArg()
+    // declares the value to be const, but the C++ wrapper doesn't.
+    kernel.setArg(index, size, const_cast<void*>(value));
 }

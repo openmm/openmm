@@ -472,6 +472,56 @@ private:
 };
 
 /**
+ * This kernel is invoked by CustomCentroidBondForce to calculate the forces acting on the system.
+ */
+class CommonCalcCustomCentroidBondForceKernel : public CalcCustomCentroidBondForceKernel {
+public:
+    CommonCalcCustomCentroidBondForceKernel(std::string name, const Platform& platform, ComputeContext& cc, const System& system) : CalcCustomCentroidBondForceKernel(name, platform),
+            cc(cc), params(NULL), system(system) {
+    }
+    ~CommonCalcCustomCentroidBondForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomCentroidBondForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomCentroidBondForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomCentroidBondForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CustomCentroidBondForce& force);
+
+private:
+    class ForceInfo;
+    int numGroups, numBonds;
+    bool needEnergyParamDerivs;
+    ComputeContext& cc;
+    ForceInfo* info;
+    ComputeParameterSet* params;
+    ComputeArray globals, groupParticles, groupWeights, groupOffsets;
+    ComputeArray groupForces, bondGroups, centerPositions;
+    std::vector<std::string> globalParamNames;
+    std::vector<float> globalParamValues;
+    std::vector<ComputeArray> tabulatedFunctions;
+    std::vector<void*> groupForcesArgs;
+    ComputeKernel computeCentersKernel, groupForcesKernel, applyForcesKernel;
+    const System& system;
+};
+
+/**
  * This kernel is invoked to remove center of mass motion from the system.
  */
 class CommonRemoveCMMotionKernel : public RemoveCMMotionKernel {

@@ -739,8 +739,8 @@ int CudaContext::computeThreadBlockSize(double memory, bool preferShared) const 
     return threads;
 }
 
-void CudaContext::clearBuffer(CudaArray& array) {
-    clearBuffer(array.getDevicePointer(), array.getSize()*array.getElementSize());
+void CudaContext::clearBuffer(ArrayInterface& array) {
+    clearBuffer(unwrap(array).getDevicePointer(), array.getSize()*array.getElementSize());
 }
 
 void CudaContext::clearBuffer(CUdeviceptr memory, int size) {
@@ -749,8 +749,8 @@ void CudaContext::clearBuffer(CUdeviceptr memory, int size) {
     executeKernel(clearBufferKernel, args, words, 128);
 }
 
-void CudaContext::addAutoclearBuffer(CudaArray& array) {
-    addAutoclearBuffer(array.getDevicePointer(), array.getSize()*array.getElementSize());
+void CudaContext::addAutoclearBuffer(ArrayInterface& array) {
+    addAutoclearBuffer(unwrap(array).getDevicePointer(), array.getSize()*array.getElementSize());
 }
 
 void CudaContext::addAutoclearBuffer(CUdeviceptr memory, int size) {

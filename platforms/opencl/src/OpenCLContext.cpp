@@ -655,8 +655,8 @@ void OpenCLContext::executeKernel(cl::Kernel& kernel, int workUnits, int blockSi
     }
 }
 
-void OpenCLContext::clearBuffer(OpenCLArray& array) {
-    clearBuffer(array.getDeviceBuffer(), array.getSize()*array.getElementSize());
+void OpenCLContext::clearBuffer(ArrayInterface& array) {
+    clearBuffer(unwrap(array).getDeviceBuffer(), array.getSize()*array.getElementSize());
 }
 
 void OpenCLContext::clearBuffer(cl::Memory& memory, int size) {
@@ -666,8 +666,8 @@ void OpenCLContext::clearBuffer(cl::Memory& memory, int size) {
     executeKernel(clearBufferKernel, words, 128);
 }
 
-void OpenCLContext::addAutoclearBuffer(OpenCLArray& array) {
-    addAutoclearBuffer(array.getDeviceBuffer(), array.getSize()*array.getElementSize());
+void OpenCLContext::addAutoclearBuffer(ArrayInterface& array) {
+    addAutoclearBuffer(unwrap(array).getDeviceBuffer(), array.getSize()*array.getElementSize());
 }
 
 void OpenCLContext::addAutoclearBuffer(cl::Memory& memory, int size) {

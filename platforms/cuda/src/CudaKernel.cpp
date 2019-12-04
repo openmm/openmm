@@ -53,23 +53,26 @@ void CudaKernel::execute(int threads, int blockSize) {
 
 void CudaKernel::addArrayArg(ArrayInterface& value) {
     int index = arrayArgs.size();
-    primitiveArgs.push_back(make_double4(0, 0, 0, 0));
-    arrayArgs.push_back(NULL);
+    addEmptyArg();
     setArrayArg(index, value);
 }
 
-void CudaKernel::addPrimitiveArg(void* value, int size) {
+void CudaKernel::addPrimitiveArg(const void* value, int size) {
     int index = arrayArgs.size();
+    addEmptyArg();
+    setPrimitiveArg(index, value, size);
+}
+
+void CudaKernel::addEmptyArg() {
     primitiveArgs.push_back(make_double4(0, 0, 0, 0));
     arrayArgs.push_back(NULL);
-    setPrimitiveArg(index, value, size);
 }
 
 void CudaKernel::setArrayArg(int index, ArrayInterface& value) {
     arrayArgs[index] = &context.unwrap(value);
 }
 
-void CudaKernel::setPrimitiveArg(int index, void* value, int size) {
+void CudaKernel::setPrimitiveArg(int index, const void* value, int size) {
     if (size > sizeof(double4))
         throw OpenMMException("Unsupported value type for kernel argument");
     memcpy(&primitiveArgs[index], value, size);

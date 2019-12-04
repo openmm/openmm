@@ -75,7 +75,11 @@ protected:
      * @param value    a pointer to the argument value
      * @param size     the size of the value in bytes
      */
-    void addPrimitiveArg(void* value, int size);
+    void addPrimitiveArg(const void* value, int size);
+    /**
+     * Add a placeholder for an argument without specifying its value.
+     */
+    void addEmptyArg();
     /**
      * Add an argument to pass the kernel when it is invoked, where the value is a
      * subclass of ArrayInterface.
@@ -91,7 +95,7 @@ protected:
      * @param value    a pointer to the argument value
      * @param size     the size of the value in bytes
      */
-    void setPrimitiveArg(int index, void* value, int size);
+    void setPrimitiveArg(int index, const void* value, int size);
 private:
     CudaContext& context;
     CUfunction kernel;

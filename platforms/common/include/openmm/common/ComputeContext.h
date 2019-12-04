@@ -31,8 +31,10 @@
 #include "openmm/common/ComputeForceInfo.h"
 #include "openmm/common/ComputeProgram.h"
 #include "openmm/common/ComputeVectorTypes.h"
+#include "openmm/Vec3.h"
 #include <map>
 #include <string>
+#include <vector>
 
 namespace OpenMM {
 
@@ -86,6 +88,14 @@ public:
      * @param defines            a set of preprocessor definitions (name, value) to define when compiling the program
      */
     virtual ComputeProgram compileProgram(const std::string source, const std::map<std::string, std::string>& defines=std::map<std::string, std::string>()) = 0;
+    /**
+     * Set all elements of an array to 0.
+     */
+    void clearBuffer(ArrayInterface& array);
+    /**
+     * Register an array that should be automatically cleared (all elements set to 0) at the start of each force or energy computation.
+     */
+    virtual void addAutoclearBuffer(ArrayInterface& array) = 0;
     /**
      * Get the SIMD width of the device being used.
      */
@@ -161,6 +171,14 @@ public:
      */
     virtual bool getBoxIsTriclinic() const = 0;
     /**
+     * Get the vectors defining the periodic box.
+     */
+    virtual void getPeriodicBoxVectors(Vec3& a, Vec3& b, Vec3& c) const = 0;
+    /**
+     * Set the vectors defining the periodic box.
+     */
+    virtual void setPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3& c) = 0; 
+    /**
      * Get the ExpressionUtilities for this context.
      */
     virtual ExpressionUtilities& getExpressionUtilities() = 0;
@@ -168,6 +186,23 @@ public:
      * Get the BondedUtilities for this context.
      */
     virtual BondedUtilities& getBondedUtilities() = 0;
+    /**
+     * Get the names of all parameters with respect to which energy derivatives are computed.
+     */
+    virtual const std::vector<std::string>& getEnergyParamDerivNames() const = 0;
+    /**
+     * Get a workspace data structure used for accumulating the values of derivatives of the energy
+     * with respect to parameters.
+     */
+    virtual std::map<std::string, double>& getEnergyParamDerivWorkspace() = 0;
+    /**
+     * Register that the derivative of potential energy with respect to a context parameter
+     * will need to be calculated.  If this is called multiple times for a single parameter,
+     * it is only added to the list once.
+     * 
+     * @param param    the name of the parameter to add
+     */
+    virtual void addEnergyParameterDerivative(const std::string& param) = 0;
     /**
      * Mark that the current molecule definitions (and hence the atom order) may be invalid.
      * This should be called whenever force field parameters change.  It will cause the definitions

@@ -3,6 +3,10 @@
  * common compute framework.
  */
 
+#ifdef SUPPORTS_64_BIT_ATOMICS
+#pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
+#endif
+
 #define KERNEL __kernel
 #define DEVICE
 #define LOCAL __local
@@ -11,10 +15,15 @@
 #define LOCAL_ID get_local_id(0)
 #define LOCAL_SIZE get_local_size(0)
 #define GLOBAL_ID get_global_id(0)
-#define GLOBAL_SiZE get_global_size(0)
+#define GLOBAL_SIZE get_global_size(0)
 #define GROUP_ID get_group_id(0)
 #define NUM_GROUPS get_num_groups(0)
-#define SYNC_THREADS barrier(CLK_GLOBAL_MEM_FENCE);
+#define SYNC_THREADS barrier(CLK_LOCAL_MEM_FENCE);
+#define MEM_FENCE mem_fence(CLK_LOCAL_MEM_FENCE+CLK_GLOBAL_MEM_FENCE);
+#define ATOMIC_ADD(dest, value) atom_add(dest, value)
+
+typedef long mm_long;
+typedef unsigned long mm_ulong;
 
 #define make_short2(x...) (short2) (x)
 #define make_short3(x...) (short3) (x)

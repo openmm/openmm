@@ -291,7 +291,7 @@ public:
     /**
      * Set all elements of an array to 0.
      */
-    void clearBuffer(CudaArray& array);
+    void clearBuffer(ArrayInterface& array);
     /**
      * Set all elements of an array to 0.
      *
@@ -302,7 +302,7 @@ public:
     /**
      * Register a buffer that should be automatically cleared (all elements set to 0) at the start of each force or energy computation.
      */
-    void addAutoclearBuffer(CudaArray& array);
+    void addAutoclearBuffer(ArrayInterface& array);
     /**
      * Register a buffer that should be automatically cleared (all elements set to 0) at the start of each force or energy computation.
      *

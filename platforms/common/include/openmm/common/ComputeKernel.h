@@ -60,7 +60,7 @@ public:
      * @param value     the value to pass to the kernel
      */
     template <class T>
-    typename std::enable_if<std::is_fundamental<T>::value, void>::type addArg(T& value) {
+    typename std::enable_if<std::is_trivially_copyable<T>::value, void>::type addArg(const T& value) {
         addPrimitiveArg(&value, sizeof(value));
     }
     /**
@@ -72,13 +72,20 @@ public:
         addArrayArg(value);
     }
     /**
+     * Add a placeholder for an argument without specifying its value.  The value must
+     * be provided by calling setArg() before the kernel is executed.
+     */
+    void addArg() {
+        addEmptyArg();
+    }
+    /**
      * Set the value of an argument to pass the kernel when it is invoked.
      * 
      * @param index     the index of the argument to set
      * @param value     the value to pass to the kernel
      */
     template <class T>
-    typename std::enable_if<std::is_fundamental<T>::value, void>::type setArg(int index, T& value) {
+    typename std::enable_if<std::is_trivially_copyable<T>::value, void>::type setArg(int index, const T& value) {
         setPrimitiveArg(index, &value, sizeof(value));
     }
     /**
@@ -113,7 +120,11 @@ protected:
      * @param value    a pointer to the argument value
      * @param size     the size of the value in bytes
      */
-    virtual void addPrimitiveArg(void* value, int size) = 0;
+    virtual void addPrimitiveArg(const void* value, int size) = 0;
+    /**
+     * Add a placeholder for an argument without specifying its value.
+     */
+    virtual void addEmptyArg() = 0;
     /**
      * Add an argument to pass the kernel when it is invoked, where the value is a
      * subclass of ArrayInterface.
@@ -129,7 +140,7 @@ protected:
      * @param value    a pointer to the argument value
      * @param size     the size of the value in bytes
      */
-    virtual void setPrimitiveArg(int index, void* value, int size) = 0;
+    virtual void setPrimitiveArg(int index, const void* value, int size) = 0;
 };
 
 typedef std::shared_ptr<ComputeKernelImpl> ComputeKernel;
