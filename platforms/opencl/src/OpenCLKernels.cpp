@@ -7426,19 +7426,28 @@ void OpenCLIntegrateVelocityVerletStepKernel::execute(ContextImpl& context, cons
         prevMaxPairDistance = maxPairDistance;
     }
     if (numAtoms !=0 && (!atomListBuffer.isInitialized() || atomListBuffer.getSize() != numAtoms)) {
-        atomListBuffer.initialize<cl_int>(cl, atomList.size(), "atomListBuffer");
+        if (atomListBuffer.isInitialized()) {
+            atomListBuffer.resize(atomList.size());
+        } else {
+            atomListBuffer.initialize<cl_int>(cl, atomList.size(), "atomListBuffer");
+        }
         atomListBuffer.upload(atomList);
     }
     if (numPairs !=0 && (!pairListBuffer.isInitialized() || pairListBuffer.getSize() != numPairs)) {
+        if (pairListBuffer.isInitialized()) {
+            pairListBuffer.resize(pairList.size());
+            pairTemperatureBuffer.resize(pairList.size());
+        } else {
+            pairListBuffer.initialize<mm_int2>(cl, pairList.size(), "pairListBuffer");
+            pairTemperatureBuffer.initialize<cl_float>(cl, pairList.size(), "pairTemperatureBuffer");
+        }
         std::vector<mm_int2> tmp;
         std::vector<float> tmp2;
         for(const auto &pair : pairList) {
             tmp.push_back(mm_int2(std::get<0>(pair), std::get<1>(pair)));
             tmp2.push_back(std::get<2>(pair));
         }
-        pairListBuffer.initialize<mm_int2>(cl, pairList.size(), "pairListBuffer");
         pairListBuffer.upload(tmp);
-        pairTemperatureBuffer.initialize<cl_float>(cl, pairList.size(), "pairTemperatureBuffer");
         pairTemperatureBuffer.upload(tmp2);
     }
 
@@ -8873,25 +8882,43 @@ std::pair<double, double> OpenCLNoseHooverChainKernel::propagateChain(ContextImp
     if (!scaleFactorBuffer.isInitialized() ||scaleFactorBuffer.getSize() == 0) {
         if(useDouble){
             std::vector<mm_double2> zeros{{0,0}};
-            scaleFactorBuffer.initialize<mm_double2>(cl, 1, "scaleFactorBuffer");
+            if (scaleFactorBuffer.isInitialized()) {
+                scaleFactorBuffer.resize(1);
+            } else {
+                scaleFactorBuffer.initialize<mm_double2>(cl, 1, "scaleFactorBuffer");
+            }
             scaleFactorBuffer.upload(zeros);
         } else {
             std::vector<mm_float2> zeros{{0,0}};
-            scaleFactorBuffer.initialize<mm_float2>(cl, 1, "scaleFactorBuffer");
+            if (scaleFactorBuffer.isInitialized()) {
+                scaleFactorBuffer.resize(1);
+            } else {
+                scaleFactorBuffer.initialize<mm_float2>(cl, 1, "scaleFactorBuffer");
+            }
             scaleFactorBuffer.upload(zeros);
         }
     }
     if (!chainForces.isInitialized() || !chainMasses.isInitialized() ){
         if(useDouble){
             std::vector<cl_double> zeros(chainLength,0);
-            chainMasses.initialize<cl_double>(cl, chainLength, "chainMasses");
-            chainForces.initialize<cl_double>(cl, chainLength, "chainForces");
+            if (chainForces.isInitialized()) {
+                chainMasses.resize(chainLength);
+                chainForces.resize(chainLength);
+            } else {
+                chainMasses.initialize<cl_double>(cl, chainLength, "chainMasses");
+                chainForces.initialize<cl_double>(cl, chainLength, "chainForces");
+            }
             chainMasses.upload(zeros);
             chainForces.upload(zeros);
         } else {
             std::vector<cl_float> zeros(chainLength,0);
-            chainMasses.initialize<cl_float>(cl, chainLength, "chainMasses");
-            chainForces.initialize<cl_float>(cl, chainLength, "chainForces");
+            if (chainForces.isInitialized()) {
+                chainMasses.resize(chainLength);
+                chainForces.resize(chainLength);
+            } else {
+                chainMasses.initialize<cl_float>(cl, chainLength, "chainMasses");
+                chainForces.initialize<cl_float>(cl, chainLength, "chainForces");
+            }
             chainMasses.upload(zeros);
             chainForces.upload(zeros);
         }
@@ -8906,11 +8933,19 @@ std::pair<double, double> OpenCLNoseHooverChainKernel::propagateChain(ContextImp
         if (chainState.at(2*chainID).getSize() != chainLength) {
             // We need to upload the OpenCL array
             if(useDouble){
-                chainState.at(2*chainID).initialize<mm_double2>(cl, chainLength, "chainState" + std::to_string(2*chainID));
+                if (chainState.at(2*chainID).isInitialized()) {
+                    chainState.at(2*chainID).resize(chainLength);
+                } else {
+                    chainState.at(2*chainID).initialize<mm_double2>(cl, chainLength, "chainState" + std::to_string(2*chainID));
+                }
                 std::vector<mm_double2> zeros(chainLength, mm_double2(0.0, 0.0));
                 chainState.at(2*chainID).upload(zeros.data());
             } else {
-                chainState.at(2*chainID).initialize<mm_float2>(cl, chainLength, "chainState" + std::to_string(2*chainID));
+                if (chainState.at(2*chainID).isInitialized()) {
+                    chainState.at(2*chainID).resize(chainLength);
+                } else {
+                    chainState.at(2*chainID).initialize<mm_float2>(cl, chainLength, "chainState" + std::to_string(2*chainID));
+                }
                 std::vector<mm_float2> zeros(chainLength, mm_float2(0.0f, 0.0f));
                 chainState.at(2*chainID).upload(zeros.data());
             }
@@ -8941,11 +8976,19 @@ std::pair<double, double> OpenCLNoseHooverChainKernel::propagateChain(ContextImp
         if (chainState.at(2*chainID+1).getSize() != chainLength) {
             // We need to upload the OpenCL array
             if(useDouble){
-                chainState.at(2*chainID+1).initialize<mm_double2>(cl, chainLength, "chainState" + std::to_string(2*chainID+1));
+                if (chainState.at(2*chainID+1).isInitialized()) {
+                    chainState.at(2*chainID+1).resize(chainLength);
+                } else {
+                    chainState.at(2*chainID+1).initialize<mm_double2>(cl, chainLength, "chainState" + std::to_string(2*chainID+1));
+                }
                 std::vector<mm_double2> zeros(chainLength, mm_double2(0.0, 0.0));
                 chainState.at(2*chainID+1).upload(zeros.data());
             } else {
-                chainState.at(2*chainID+1).initialize<mm_float2>(cl, chainLength, "chainState" + std::to_string(2*chainID+1));
+                if (chainState.at(2*chainID+1).isInitialized()) {
+                    chainState.at(2*chainID+1).resize(chainLength);
+                } else {
+                    chainState.at(2*chainID+1).initialize<mm_float2>(cl, chainLength, "chainState" + std::to_string(2*chainID+1));
+                }
                 std::vector<mm_float2> zeros(chainLength, mm_float2(0.0f, 0.0f));
                 chainState.at(2*chainID+1).upload(zeros.data());
             }

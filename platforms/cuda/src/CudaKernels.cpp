@@ -7112,19 +7112,28 @@ void CudaIntegrateVelocityVerletStepKernel::execute(ContextImpl& context, const 
         prevMaxPairDistance = maxPairDistance;
     }
     if (numAtoms !=0 && (!atomListBuffer.isInitialized() || atomListBuffer.getSize() != numAtoms)) {
-        atomListBuffer.initialize<int>(cu, atomList.size(), "atomListBuffer");
+        if(atomListBuffer.isInitialized()) {
+            atomListBuffer.resize(atomList.size());
+        } else {
+            atomListBuffer.initialize<int>(cu, atomList.size(), "atomListBuffer");
+        }
         atomListBuffer.upload(atomList);
     }
     if (numPairs !=0 && (!pairListBuffer.isInitialized() || pairListBuffer.getSize() != numPairs)) {
+        if (pairListBuffer.isInitialized()) {
+            pairListBuffer.resize(pairList.size());
+            pairTemperatureBuffer.resize(pairList.size());
+        } else {
+            pairListBuffer.initialize<int2>(cu, pairList.size(), "pairListBuffer");
+            pairTemperatureBuffer.initialize<float>(cu, pairList.size(), "pairTemperatureBuffer");
+        }
         std::vector<int2> tmp;
         std::vector<float> tmp2;
         for(const auto &pair : pairList) {
             tmp.push_back(make_int2(std::get<0>(pair), std::get<1>(pair)));
             tmp2.push_back(std::get<2>(pair));
         }
-        pairListBuffer.initialize<int2>(cu, pairList.size(), "pairListBuffer");
         pairListBuffer.upload(tmp);
-        pairTemperatureBuffer.initialize<float>(cu, pairList.size(), "pairTemperatureBuffer");
         pairTemperatureBuffer.upload(tmp2);
     }
     //// Call the first integration kernel.
@@ -8447,24 +8456,42 @@ std::pair<double, double> CudaNoseHooverChainKernel::propagateChain(ContextImpl&
     if (!scaleFactorBuffer.isInitialized() ||scaleFactorBuffer.getSize() == 0) {
         if(useDouble){
             std::vector<double2> zeros{{0,0}};
-            scaleFactorBuffer.initialize<double2>(cu, 1, "scaleFactorBuffer");
+            if (scaleFactorBuffer.isInitialized()) {
+                scaleFactorBuffer.resize(1);
+            } else {
+                scaleFactorBuffer.initialize<double2>(cu, 1, "scaleFactorBuffer");
+            }
             scaleFactorBuffer.upload(zeros);
         } else {
             std::vector<float2> zeros{{0,0}};
-            scaleFactorBuffer.initialize<float2>(cu, 1, "scaleFactorBuffer");
+            if (scaleFactorBuffer.isInitialized()) {
+                scaleFactorBuffer.resize(1);
+            } else {
+                scaleFactorBuffer.initialize<float2>(cu, 1, "scaleFactorBuffer");
+            }
             scaleFactorBuffer.upload(zeros);
         }
     }
     std::vector<double> zeros(chainLength,0);
     if (!chainForces.isInitialized() || !chainMasses.isInitialized() ){
         if(useDouble){
-            chainMasses.initialize<double>(cu, chainLength, "chainMasses");
-            chainForces.initialize<double>(cu, chainLength, "chainForces");
+            if (chainForces.isInitialized()) {
+                chainMasses.resize(chainLength);
+                chainForces.resize(chainLength);
+            } else {
+                chainMasses.initialize<double>(cu, chainLength, "chainMasses");
+                chainForces.initialize<double>(cu, chainLength, "chainForces");
+            }
             chainMasses.upload(zeros);
             chainForces.upload(zeros);
         } else {
-            chainMasses.initialize<float>(cu, chainLength, "chainMasses");
-            chainForces.initialize<float>(cu, chainLength, "chainForces");
+            if (chainForces.isInitialized()) {
+                chainMasses.resize(chainLength);
+                chainForces.resize(chainLength);
+            } else {
+                chainMasses.initialize<float>(cu, chainLength, "chainMasses");
+                chainForces.initialize<float>(cu, chainLength, "chainForces");
+            }
             chainMasses.upload(zeros);
             chainForces.upload(zeros);
         }
@@ -8479,11 +8506,19 @@ std::pair<double, double> CudaNoseHooverChainKernel::propagateChain(ContextImpl&
         if (chainState.at(2*chainID).getSize() != chainLength) {
             // We need to upload the CUDA array
             if(useDouble){
-                chainState.at(2*chainID).initialize<double2>(cu, chainLength, "chainState" + std::to_string(2*chainID));
+                if (chainState.at(2*chainID).isInitialized()) {
+                    chainState.at(2*chainID).resize(chainLength);
+                } else {
+                    chainState.at(2*chainID).initialize<double2>(cu, chainLength, "chainState" + std::to_string(2*chainID));
+                }
                 std::vector<double2> zeros(chainLength, make_double2(0, 0));
                 chainState.at(2*chainID).upload(zeros.data());
             } else {
-                chainState.at(2*chainID).initialize<float2>(cu, chainLength, "chainState" + std::to_string(2*chainID));
+                if (chainState.at(2*chainID).isInitialized()) {
+                    chainState.at(2*chainID).resize(chainLength);
+                } else {
+                    chainState.at(2*chainID).initialize<float2>(cu, chainLength, "chainState" + std::to_string(2*chainID));
+                }
                 std::vector<float2> zeros(chainLength, make_float2(0, 0));
                 chainState.at(2*chainID).upload(zeros.data());
             }
@@ -8510,11 +8545,19 @@ std::pair<double, double> CudaNoseHooverChainKernel::propagateChain(ContextImpl&
         if (chainState.at(2*chainID+1).getSize() != chainLength) {
             // We need to upload the CUDA array
             if(useDouble){
-                chainState.at(2*chainID+1).initialize<double2>(cu, chainLength, "chainState" + std::to_string(2*chainID+1));
+                if (chainState.at(2*chainID+1).isInitialized()) {
+                    chainState.at(2*chainID+1).resize(chainLength);
+                } else {
+                    chainState.at(2*chainID+1).initialize<double2>(cu, chainLength, "chainState" + std::to_string(2*chainID+1));
+                }
                 std::vector<double2> zeros(chainLength, make_double2(0, 0));
                 chainState.at(2*chainID+1).upload(zeros.data());
             } else {
-                chainState.at(2*chainID+1).initialize<float2>(cu, chainLength, "chainState" + std::to_string(2*chainID+1));
+                if (chainState.at(2*chainID+1).isInitialized()) {
+                    chainState.at(2*chainID+1).resize(chainLength);
+                } else {
+                    chainState.at(2*chainID+1).initialize<float2>(cu, chainLength, "chainState" + std::to_string(2*chainID+1));
+                }
                 std::vector<float2> zeros(chainLength, make_float2(0, 0));
                 chainState.at(2*chainID+1).upload(zeros.data());
             }
