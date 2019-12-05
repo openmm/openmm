@@ -724,7 +724,7 @@ extern "C" __global__ void computeVirtualSites(real4* __restrict__ posq, real4* 
         mixed4 pos3 = loadPos(posq, posqCorrection, atoms.w);
         mixed4 v12 = pos2-pos1;
         mixed4 v13 = pos3-pos1;
-        mixed3 cr = cross(v12, v13);
+        mixed4 cr = cross(v12, v13);
         pos.x = pos1.x + v12.x*weights.x + v13.x*weights.y + cr.x*weights.z;
         pos.y = pos1.y + v12.y*weights.x + v13.y*weights.y + cr.y*weights.z;
         pos.z = pos1.z + v12.z*weights.x + v13.z*weights.y + cr.z*weights.z;

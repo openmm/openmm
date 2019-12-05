@@ -5,7 +5,7 @@
 KERNEL void calcCenterOfMassMomentum(int numAtoms, GLOBAL const mixed4* RESTRICT velm, GLOBAL float3* RESTRICT cmMomentum) {
     LOCAL float3 temp[64];
     float3 cm = make_float3(0, 0, 0);
-    for (int index = GLOBAL_ID; index < numAtoms; index += GLOBAL_SiZE) {
+    for (int index = GLOBAL_ID; index < numAtoms; index += GLOBAL_SIZE) {
         mixed4 velocity = velm[index];
         if (velocity.w != 0) {
             mixed mass = RECIP(velocity.w);
@@ -72,7 +72,7 @@ KERNEL void removeCenterOfMassMomentum(int numAtoms, GLOBAL mixed4* RESTRICT vel
 
     // Now remove the center of mass velocity from each atom.
 
-    for (int index = GLOBAL_ID; index < numAtoms; index += GLOBAL_SiZE) {
+    for (int index = GLOBAL_ID; index < numAtoms; index += GLOBAL_SIZE) {
         velm[index].x -= cm.x;
         velm[index].y -= cm.y;
         velm[index].z -= cm.z;

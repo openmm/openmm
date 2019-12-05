@@ -522,6 +522,58 @@ private:
 };
 
 /**
+ * This kernel is invoked by CustomManyParticleForce to calculate the forces acting on the system.
+ */
+class CommonCalcCustomManyParticleForceKernel : public CalcCustomManyParticleForceKernel {
+public:
+    CommonCalcCustomManyParticleForceKernel(std::string name, const Platform& platform, ComputeContext& cc, const System& system) : CalcCustomManyParticleForceKernel(name, platform),
+            hasInitializedKernel(false), cc(cc), params(NULL), system(system) {
+    }
+    ~CommonCalcCustomManyParticleForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomManyParticleForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomManyParticleForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomManyParticleForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CustomManyParticleForce& force);
+
+private:
+    class ForceInfo;
+    ComputeContext& cc;
+    ForceInfo* info;
+    bool hasInitializedKernel;
+    NonbondedMethod nonbondedMethod;
+    int maxNeighborPairs, forceWorkgroupSize, findNeighborsWorkgroupSize;
+    ComputeParameterSet* params;
+    ComputeArray globals, particleTypes,  orderIndex, particleOrder;
+    ComputeArray exclusions, exclusionStartIndex, blockCenter, blockBoundingBox;
+    ComputeArray neighborPairs, numNeighborPairs, neighborStartIndex, numNeighborsForAtom, neighbors;
+    std::vector<std::string> globalParamNames;
+    std::vector<float> globalParamValues;
+    std::vector<ComputeArray> tabulatedFunctions;
+    const System& system;
+    ComputeKernel forceKernel, blockBoundsKernel, neighborsKernel, startIndicesKernel, copyPairsKernel;
+    ComputeEvent event;
+};
+
+/**
  * This kernel is invoked to remove center of mass motion from the system.
  */
 class CommonRemoveCMMotionKernel : public RemoveCMMotionKernel {

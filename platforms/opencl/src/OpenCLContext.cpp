@@ -31,6 +31,7 @@
 #include "OpenCLContext.h"
 #include "OpenCLArray.h"
 #include "OpenCLBondedUtilities.h"
+#include "OpenCLEvent.h"
 #include "OpenCLForceInfo.h"
 #include "OpenCLIntegrationUtilities.h"
 #include "OpenCLKernelSources.h"
@@ -622,6 +623,10 @@ void OpenCLContext::restoreDefaultQueue() {
 
 OpenCLArray* OpenCLContext::createArray() {
     return new OpenCLArray();
+}
+
+ComputeEvent OpenCLContext::createEvent() {
+    return shared_ptr<ComputeEventImpl>(new OpenCLEvent(*this));
 }
 
 ComputeProgram OpenCLContext::compileProgram(const std::string source, const std::map<std::string, std::string>& defines) {

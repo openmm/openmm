@@ -166,6 +166,10 @@ public:
      */
     CudaArray* createArray();
     /**
+     * Construct a ComputeEvent object of the appropriate class for this platform.
+     */
+    ComputeEvent createEvent();
+    /**
      * Compile source code to create a ComputeProgram.
      *
      * @param source             the source code of the program

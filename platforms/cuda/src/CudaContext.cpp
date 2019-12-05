@@ -31,6 +31,7 @@
 #include "CudaContext.h"
 #include "CudaArray.h"
 #include "CudaBondedUtilities.h"
+#include "CudaEvent.h"
 #include "CudaIntegrationUtilities.h"
 #include "CudaKernels.h"
 #include "CudaKernelSources.h"
@@ -688,6 +689,10 @@ void CudaContext::restoreDefaultStream() {
 
 CudaArray* CudaContext::createArray() {
     return new CudaArray();
+}
+
+ComputeEvent CudaContext::createEvent() {
+    return shared_ptr<ComputeEventImpl>(new CudaEvent(*this));
 }
 
 ComputeProgram CudaContext::compileProgram(const std::string source, const std::map<std::string, std::string>& defines) {

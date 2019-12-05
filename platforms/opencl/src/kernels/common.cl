@@ -18,7 +18,7 @@
 #define GLOBAL_SIZE get_global_size(0)
 #define GROUP_ID get_group_id(0)
 #define NUM_GROUPS get_num_groups(0)
-#define SYNC_THREADS barrier(CLK_LOCAL_MEM_FENCE);
+#define SYNC_THREADS barrier(CLK_LOCAL_MEM_FENCE+CLK_GLOBAL_MEM_FENCE);
 #define MEM_FENCE mem_fence(CLK_LOCAL_MEM_FENCE+CLK_GLOBAL_MEM_FENCE);
 #define ATOMIC_ADD(dest, value) atom_add(dest, value)
 
@@ -28,7 +28,7 @@ typedef unsigned long mm_ulong;
 #define make_short2(x...) (short2) (x)
 #define make_short3(x...) (short3) (x)
 #define make_short4(x...) (short4) (x)
-#define make_int2(x...) (int2) (x))
+#define make_int2(x...) (int2) (x)
 #define make_int3(x...) (int3) (x)
 #define make_int4(x...) (int4) (x)
 #define make_float2(x...) (float2) (x)

@@ -28,6 +28,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/common/BondedUtilities.h"
+#include "openmm/common/ComputeEvent.h"
 #include "openmm/common/ComputeForceInfo.h"
 #include "openmm/common/ComputeProgram.h"
 #include "openmm/common/ComputeVectorTypes.h"
@@ -81,6 +82,10 @@ public:
      * value should be created on the heap with the "new" operator.
      */
     virtual ArrayInterface* createArray() = 0;
+    /**
+     * Construct a ComputeEvent object of the appropriate class for this platform.
+     */
+    virtual ComputeEvent createEvent() = 0;
     /**
      * Compile source code to create a ComputeProgram.
      *
@@ -149,6 +154,15 @@ public:
      * Get the array which contains the buffer in which derivatives of the energy with respect to parameters are computed.
      */
     virtual ArrayInterface& getEnergyParamDerivBuffer() = 0;
+    /**
+     * Get a pointer to a block of pinned memory that can be used for asynchronous transfers between host and device.
+     * This is guaranteed to be at least as large as any of the arrays returned by methods of this class.
+     * 
+     * Because this buffer is freely available to all code, care is needed to avoid conflicts.  Only access this
+     * buffer from the main thread, and make sure all transfers are complete before you invoke any other code that
+     * might make use of it
+     */
+    virtual void* getPinnedBuffer() = 0;
     /**
      * Replace all occurrences of a list of substrings.
      *

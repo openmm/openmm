@@ -35,7 +35,7 @@ inline __device__ real computeAngle(real4 vec1, real4 vec2) {
     if (cosine > 0.99f || cosine < -0.99f) {
         // We're close to the singularity in acos(), so take the cross product and use asin() instead.
 
-        real3 crossProduct = cross(vec1, vec2);
+        real3 crossProduct = trimTo3(cross(vec1, vec2));
         real scale = vec1.w*vec2.w;
         angle = ASIN(SQRT(dot(crossProduct, crossProduct)/scale));
         if (cosine < 0.0f)
@@ -50,7 +50,7 @@ inline __device__ real computeAngle(real4 vec1, real4 vec2) {
  * Compute the cross product of two vectors, setting the fourth component to the squared magnitude.
  */
 inline __device__ real4 computeCross(real4 vec1, real4 vec2) {
-    real3 result = cross(vec1, vec2);
+    real4 result = cross(vec1, vec2);
     return make_real4(result.x, result.y, result.z, result.x*result.x + result.y*result.y + result.z*result.z);
 }
 
