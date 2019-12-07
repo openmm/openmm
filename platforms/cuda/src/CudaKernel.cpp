@@ -35,7 +35,7 @@ using namespace std;
 CudaKernel::CudaKernel(CudaContext& context, CUfunction kernel, const string& name) : context(context), kernel(kernel), name(name) {
 }
 
-const string& CudaKernel::getName() const {
+string CudaKernel::getName() const {
     return name;
 }
 

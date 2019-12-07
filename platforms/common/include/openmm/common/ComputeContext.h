@@ -32,8 +32,11 @@
 #include "openmm/common/ComputeForceInfo.h"
 #include "openmm/common/ComputeProgram.h"
 #include "openmm/common/ComputeVectorTypes.h"
+#include "openmm/common/NonbondedUtilities.h"
 #include "openmm/Vec3.h"
+#include <pthread.h>
 #include <map>
+#include <queue>
 #include <string>
 #include <vector>
 
@@ -41,6 +44,8 @@ namespace OpenMM {
 
 class ArrayInterface;
 class ExpressionUtilities;
+class System;
+class ThreadPool;
 
 /**
  * This abstract class defines the interface by which platforms compile and execute
@@ -50,13 +55,24 @@ class ExpressionUtilities;
 
 class ComputeContext {
 public:
-    virtual ~ComputeContext() {
-    }
+    class WorkTask;
+    class WorkThread;
+    class ReorderListener;
+    class ForcePreComputation;
+    class ForcePostComputation;
+    ComputeContext(const System& system);
+    virtual ~ComputeContext();
     /**
      * Add a ComputeForceInfo to this context.  Force kernels call this during initialization
      * to provide information about particular forces.
      */
-    virtual void addForce(ComputeForceInfo* force) = 0;
+    virtual void addForce(ComputeForceInfo* force);
+    /**
+     * Get all ComputeForceInfos that have been added to this context.
+     */
+    std::vector<ComputeForceInfo*>& getForceInfos() {
+        return forces;
+    }
     /**
      * Set this as the current context for the calling thread.  This should be called before
      * doing any computation when you do not know what other code has just been executing on
@@ -122,14 +138,128 @@ public:
      */
     virtual bool getUseMixedPrecision() const = 0;
     /**
-     * Get the number of atoms in the system.
+     * Get the current simulation time.
      */
-    virtual int getNumAtoms() const = 0;
+    double getTime() {
+        return time;
+    }
     /**
-     * Get the number of atoms, rounded up to a multiple of 32.  This is the actual size of
+     * Set the current simulation time.
+     */
+    void setTime(double t) {
+        time = t;
+    }
+    /**
+     * Get the number of integration steps that have been taken.
+     */
+    int getStepCount() {
+        return stepCount;
+    }
+    /**
+     * Set the number of integration steps that have been taken.
+     */
+    void setStepCount(int steps) {
+        stepCount = steps;
+    }
+    /**
+     * Get the number of times forces or energy has been computed.
+     */
+    int getComputeForceCount() {
+        return computeForceCount;
+    }
+    /**
+     * Set the number of times forces or energy has been computed.
+     */
+    void setComputeForceCount(int count) {
+        computeForceCount = count;
+    }
+    /**
+     * Get the number of time steps since the atoms were reordered.
+     */
+    int getStepsSinceReorder() const {
+        return stepsSinceReorder;
+    }
+    /**
+     * Set the number of time steps since the atoms were reordered.
+     */
+    void setStepsSinceReorder(int steps) {
+        stepsSinceReorder = steps;
+    }
+    /**
+     * Get whether atoms were reordered during the most recent force/energy computation.
+     */
+    bool getAtomsWereReordered() const {
+        return atomsWereReordered;
+    }
+    /**
+     * Set whether atoms were reordered during the most recent force/energy computation.
+     */
+    void setAtomsWereReordered(bool wereReordered) {
+        atomsWereReordered = wereReordered;
+    }
+    /**
+     * Reorder the internal arrays of atoms to try to keep spatially contiguous atoms close
+     * together in the arrays.
+     */
+    void reorderAtoms();
+    /**
+     * Add a listener that should be called whenever atoms get reordered.  The OpenCLContext
+     * assumes ownership of the object, and deletes it when the context itself is deleted.
+     */
+    void addReorderListener(ReorderListener* listener);
+    /**
+     * Get the list of ReorderListeners.
+     */
+    std::vector<ReorderListener*>& getReorderListeners() {
+        return reorderListeners;
+    }
+    /**
+     * Add a pre-computation that should be called at the very start of force and energy evaluations.
+     * The OpenCLContext assumes ownership of the object, and deletes it when the context itself is deleted.
+     */
+    void addPreComputation(ForcePreComputation* computation);
+    /**
+     * Get the list of ForcePreComputations.
+     */
+    std::vector<ForcePreComputation*>& getPreComputations() {
+        return preComputations;
+    }
+    /**
+     * Add a post-computation that should be called at the very end of force and energy evaluations.
+     * The OpenCLContext assumes ownership of the object, and deletes it when the context itself is deleted.
+     */
+    void addPostComputation(ForcePostComputation* computation);
+    /**
+     * Get the list of ForcePostComputations.
+     */
+    std::vector<ForcePostComputation*>& getPostComputations() {
+        return postComputations;
+    }
+    /**
+     * Get the flag that marks whether the current force evaluation is valid.
+     */
+    bool getForcesValid() const {
+        return forcesValid;
+    }
+    /**
+     * Get the flag that marks whether the current force evaluation is valid.
+     */
+    void setForcesValid(bool valid) {
+        forcesValid = valid;
+    }
+    /**
+     * Get the number of atoms.
+     */
+    int getNumAtoms() const {
+        return numAtoms;
+    }
+    /**
+     * Get the number of atoms, rounded up to a multiple of TileSize.  This is the actual size of
      * most arrays with one element per atom.
      */
-    virtual int getPaddedNumAtoms() const = 0;
+    int getPaddedNumAtoms() const {
+        return paddedNumAtoms;
+    }
     /**
      * Get the array which contains the position (the xyz components) and charge (the w component) of each atom.
      */
@@ -163,6 +293,30 @@ public:
      * might make use of it
      */
     virtual void* getPinnedBuffer() = 0;
+    /**
+     * Get a shared ThreadPool that code can use to parallelize operations.
+     * 
+     * Because this object is freely available to all code, care is needed to avoid conflicts.  Only use it
+     * from the main thread, and make sure all operations are complete before you invoke any other code that
+     * might make use of it
+     */
+    virtual ThreadPool& getThreadPool() = 0;
+    /**
+     * Get the host-side vector which contains the index of each atom.
+     */
+    const std::vector<int>& getAtomIndex() const {
+        return atomIndex;
+    }
+    /**
+     * Get the array which contains the index of each atom.
+     */
+    virtual ArrayInterface& getAtomIndexArray() = 0;
+    /**
+     * Get the number of cells by which the positions are offset.
+     */
+    std::vector<mm_int4>& getPosCellOffsets() {
+        return posCellOffsets;
+    }
     /**
      * Replace all occurrences of a list of substrings.
      *
@@ -201,6 +355,16 @@ public:
      */
     virtual BondedUtilities& getBondedUtilities() = 0;
     /**
+     * Get the NonbondedUtilities for this context.
+     */
+    virtual NonbondedUtilities& getNonbondedUtilities() = 0;
+    /**
+     * Get the thread used by this context for executing parallel computations.
+     */
+    WorkThread& getWorkThread() {
+        return *thread;
+    }
+    /**
      * Get the names of all parameters with respect to which energy derivatives are computed.
      */
     virtual const std::vector<std::string>& getEnergyParamDerivNames() const = 0;
@@ -225,13 +389,137 @@ public:
      * If you know which force has changed, calling the alternate form that takes a ComputeForceInfo
      * is more efficient.
      */
-    virtual void invalidateMolecules() = 0;
+    void invalidateMolecules();
     /**
      * Mark that the current molecule definitions from one particular force (and hence the atom order)
      * may be invalid.  This should be called whenever force field parameters change.  It will cause the
      * definitions and order to be revalidated.
      */
-    virtual bool invalidateMolecules(ComputeForceInfo* force) = 0;
+    bool invalidateMolecules(ComputeForceInfo* force);
+protected:
+    struct Molecule;
+    struct MoleculeGroup;
+    class VirtualSiteInfo;
+    void findMoleculeGroups();
+    /**
+     * This is the internal implementation of reorderAtoms(), templatized by the numerical precision in use.
+     */
+    template <class Real, class Real4, class Mixed, class Mixed4>
+    void reorderAtomsImpl();
+    const System& system;
+    double time;
+    int numAtoms, paddedNumAtoms, stepCount, computeForceCount, stepsSinceReorder;
+    bool atomsWereReordered, forcesValid;
+    std::vector<ComputeForceInfo*> forces;
+    std::vector<Molecule> molecules;
+    std::vector<MoleculeGroup> moleculeGroups;
+    std::vector<int> atomIndex;
+    std::vector<mm_int4> posCellOffsets;
+    std::vector<ReorderListener*> reorderListeners;
+    std::vector<ForcePreComputation*> preComputations;
+    std::vector<ForcePostComputation*> postComputations;
+    WorkThread* thread;
+};
+
+struct ComputeContext::Molecule {
+    std::vector<int> atoms;
+    std::vector<int> constraints;
+    std::vector<std::vector<int> > groups;
+};
+
+struct ComputeContext::MoleculeGroup {
+    std::vector<int> atoms;
+    std::vector<int> instances;
+    std::vector<int> offsets;
+};
+
+/**
+ * This abstract class defines a task to be executed on the worker thread.
+ */
+class ComputeContext::WorkTask {
+public:
+    virtual void execute() = 0;
+    virtual ~WorkTask() {
+    }
+};
+
+class ComputeContext::WorkThread {
+public:
+    struct ThreadData;
+    WorkThread();
+    ~WorkThread();
+    /**
+     * Request that a task be executed on the worker thread.  The argument should have been allocated on the
+     * heap with the "new" operator.  After its execute() method finishes, the object will be deleted automatically.
+     */
+    void addTask(ComputeContext::WorkTask* task);
+    /**
+     * Get whether the worker thread is idle, waiting for a task to be added.
+     */
+    bool isWaiting();
+    /**
+     * Get whether the worker thread has exited.
+     */
+    bool isFinished();
+    /**
+     * Block until all tasks have finished executing and the worker thread is idle.
+     */
+    void flush();
+private:
+    std::queue<ComputeContext::WorkTask*> tasks;
+    bool waiting, finished;
+    pthread_mutex_t queueLock;
+    pthread_cond_t waitForTaskCondition, queueEmptyCondition;
+    pthread_t thread;
+};
+
+/**
+ * This abstract class defines a function to be executed whenever atoms get reordered.
+ * Objects that need to know when reordering happens should create a ReorderListener
+ * and register it by calling addReorderListener().
+ */
+class ComputeContext::ReorderListener {
+public:
+    virtual void execute() = 0;
+    virtual ~ReorderListener() {
+    }
+};
+
+/**
+ * This abstract class defines a function to be executed at the very beginning of force and
+ * energy evaluation, before any other calculation has been done.  It is useful for operations
+ * that need to be performed at a nonstandard point in the process.  After creating a
+ * ForcePreComputation, register it by calling addForcePreComputation().
+ */
+class ComputeContext::ForcePreComputation {
+public:
+    virtual ~ForcePreComputation() {
+    }
+    /**
+     * @param includeForce  true if forces should be computed
+     * @param includeEnergy true if potential energy should be computed
+     * @param groups        a set of bit flags for which force groups to include
+     */
+    virtual void computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) = 0;
+};
+
+/**
+ * This abstract class defines a function to be executed at the very end of force and
+ * energy evaluation, after all other calculations have been done.  It is useful for operations
+ * that need to be performed at a nonstandard point in the process.  After creating a
+ * ForcePostComputation, register it by calling addForcePostComputation().
+ */
+class ComputeContext::ForcePostComputation {
+public:
+    virtual ~ForcePostComputation() {
+    }
+    /**
+     * @param includeForce  true if forces should be computed
+     * @param includeEnergy true if potential energy should be computed
+     * @param groups        a set of bit flags for which force groups to include
+     * @return an optional contribution to add to the potential energy.
+     */
+    virtual double computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) = 0;
 };
 
 } // namespace OpenMM

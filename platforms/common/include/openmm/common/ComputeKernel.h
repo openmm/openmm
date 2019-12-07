@@ -53,7 +53,7 @@ public:
     /**
      * Get the name of this kernel.
      */
-    virtual const std::string& getName() const = 0;
+    virtual std::string getName() const = 0;
     /**
      * Add an argument to pass the kernel when it is invoked.
      * 

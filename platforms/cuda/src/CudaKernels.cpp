@@ -180,7 +180,7 @@ void CudaUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3>&
             double4* posq = (double4*) cu.getPinnedBuffer();
             for (int i = start; i < end; ++i) {
                 double4 pos = posq[i];
-                int4 offset = cu.getPosCellOffsets()[i];
+                mm_int4 offset = cu.getPosCellOffsets()[i];
                 positions[order[i]] = Vec3(pos.x, pos.y, pos.z)-boxVectors[0]*offset.x-boxVectors[1]*offset.y-boxVectors[2]*offset.z;
             }
         }
@@ -189,7 +189,7 @@ void CudaUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3>&
             for (int i = start; i < end; ++i) {
                 float4 pos1 = posq[i];
                 float4 pos2 = posCorrection[i];
-                int4 offset = cu.getPosCellOffsets()[i];
+                mm_int4 offset = cu.getPosCellOffsets()[i];
                 positions[order[i]] = Vec3((double)pos1.x+(double)pos2.x, (double)pos1.y+(double)pos2.y, (double)pos1.z+(double)pos2.z)-boxVectors[0]*offset.x-boxVectors[1]*offset.y-boxVectors[2]*offset.z;
             }
         }
@@ -197,7 +197,7 @@ void CudaUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3>&
             float4* posq = (float4*) cu.getPinnedBuffer();
             for (int i = start; i < end; ++i) {
                 float4 pos = posq[i];
-                int4 offset = cu.getPosCellOffsets()[i];
+                mm_int4 offset = cu.getPosCellOffsets()[i];
                 positions[order[i]] = Vec3(pos.x, pos.y, pos.z)-boxVectors[0]*offset.x-boxVectors[1]*offset.y-boxVectors[2]*offset.z;
             }
         }
@@ -252,7 +252,7 @@ void CudaUpdateStateDataKernel::setPositions(ContextImpl& context, const vector<
         cu.getPosqCorrection().upload(posCorrection);
     }
     for (auto& offset : cu.getPosCellOffsets())
-        offset = make_int4(0, 0, 0, 0);
+        offset = mm_int4(0, 0, 0, 0);
     cu.reorderAtoms();
 }
 
@@ -266,7 +266,7 @@ void CudaUpdateStateDataKernel::getVelocities(ContextImpl& context, vector<Vec3>
         cu.getVelm().download(velm);
         for (int i = 0; i < numParticles; ++i) {
             double4 vel = velm[i];
-            int4 offset = cu.getPosCellOffsets()[i];
+            mm_int4 offset = cu.getPosCellOffsets()[i];
             velocities[order[i]] = Vec3(vel.x, vel.y, vel.z);
         }
     }
@@ -275,7 +275,7 @@ void CudaUpdateStateDataKernel::getVelocities(ContextImpl& context, vector<Vec3>
         cu.getVelm().download(velm);
         for (int i = 0; i < numParticles; ++i) {
             float4 vel = velm[i];
-            int4 offset = cu.getPosCellOffsets()[i];
+            mm_int4 offset = cu.getPosCellOffsets()[i];
             velocities[order[i]] = Vec3(vel.x, vel.y, vel.z);
         }
     }
@@ -5927,7 +5927,7 @@ void CudaApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, d
 		    &cu.getPosq().getDevicePointer(), &moleculeAtoms.getDevicePointer(), &moleculeStartIndex.getDevicePointer()};
     cu.executeKernel(kernel, args, cu.getNumAtoms());
     for (auto& offset : cu.getPosCellOffsets())
-        offset = make_int4(0, 0, 0, 0);
+        offset = mm_int4(0, 0, 0, 0);
     lastAtomOrder = cu.getAtomIndex();
 }
 

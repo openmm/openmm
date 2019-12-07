@@ -27,6 +27,7 @@
 #include "openmm/OpenMMException.h"
 #include "OpenCLNonbondedUtilities.h"
 #include "OpenCLArray.h"
+#include "OpenCLContext.h"
 #include "OpenCLKernelSources.h"
 #include "OpenCLExpressionUtilities.h"
 #include "OpenCLSort.h"

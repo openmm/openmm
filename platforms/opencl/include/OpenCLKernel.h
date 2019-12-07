@@ -51,7 +51,7 @@ public:
     /**
      * Get the name of this kernel.
      */
-    const std::string& getName() const;
+    std::string getName() const;
     /**
      * Execute this kernel.
      *

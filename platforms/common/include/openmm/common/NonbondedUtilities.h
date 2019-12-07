@@ -1,3 +1,6 @@
+#ifndef OPENMM_NONBONDEDUTILITIES_H_
+#define OPENMM_NONBONDEDUTILITIES_H_
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -6,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2019 Stanford University and the Authors.           *
+ * Portions copyright (c) 2009-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -24,52 +27,47 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "OpenCLKernel.h"
-#include "openmm/common/ComputeArray.h"
+namespace OpenMM {
 
-using namespace OpenMM;
-using namespace std;
+/**
+ * This class provides a generic interface for calculating nonbonded interactions.  Clients only need
+ * to provide the code for evaluating a single interaction and the list of parameters it depends on.
+ * A complete kernel is then synthesized using an appropriate algorithm to evaluate all interactions on
+ * all atoms.  Call addInteraction() to define a nonbonded interaction, and addParameter() to define
+ * per-particle parameters that the interaction depends on.
+ *
+ * During each force or energy evaluation, the following sequence of steps takes place:
+ *
+ * 1. Data structures (e.g. neighbor lists) are calculated to allow nonbonded interactions to be evaluated
+ * quickly.
+ *
+ * 2. calcForcesAndEnergy() is called on each ForceImpl in the System.
+ *
+ * 3. Finally, the default interaction kernel is invoked to calculate all interactions that were added
+ * to it.
+ *
+ * This sequence means that the default interaction kernel may depend on quantities that were calculated
+ * by ForceImpls during calcForcesAndEnergy().
+ */
 
-OpenCLKernel::OpenCLKernel(OpenCLContext& context, cl::Kernel kernel) : context(context), kernel(kernel) {
-}
+class NonbondedUtilities {
+public:
+    virtual ~NonbondedUtilities() {
+    }
+    /**
+     * Get whether a cutoff is being used.
+     */
+    virtual bool getUseCutoff() = 0;
+    /**
+     * Get whether periodic boundary conditions are being used.
+     */
+    virtual bool getUsePeriodic() = 0;
+    /**
+     * Get the maximum cutoff distance used by any interaction.
+     */
+    virtual double getMaxCutoffDistance() = 0;
+};
 
-string OpenCLKernel::getName() const {
-    return kernel.getInfo<CL_KERNEL_FUNCTION_NAME>();
-}
+} // namespace OpenMM
 
-void OpenCLKernel::execute(int threads, int blockSize) {
-    // Set args that are specified by OpenCLArrays.  We can't do this earlier, because it's
-    // possible resize() will get called on an array, causing its internal storage to be
-    // recreated.
-    
-    for (int i = 0; i < arrayArgs.size(); i++)
-        if (arrayArgs[i] != NULL)
-            kernel.setArg<cl::Buffer>(i, arrayArgs[i]->getDeviceBuffer());
-    context.executeKernel(kernel, threads, blockSize);
-}
-
-void OpenCLKernel::addArrayArg(ArrayInterface& value) {
-    int index = arrayArgs.size();
-    addEmptyArg();
-    setArrayArg(index, value);
-}
-
-void OpenCLKernel::addPrimitiveArg(const void* value, int size) {
-    int index = arrayArgs.size();
-    addEmptyArg();
-    setPrimitiveArg(index, value, size);
-}
-
-void OpenCLKernel::addEmptyArg() {
-    arrayArgs.push_back(NULL);
-}
-
-void OpenCLKernel::setArrayArg(int index, ArrayInterface& value) {
-    arrayArgs[index] = &context.unwrap(value);
-}
-
-void OpenCLKernel::setPrimitiveArg(int index, const void* value, int size) {
-    // The const_cast is needed because of a bug in the OpenCL C++ wrappers.  clSetKernelArg()
-    // declares the value to be const, but the C++ wrapper doesn't.
-    kernel.setArg(index, size, const_cast<void*>(value));
-}
+#endif /*OPENMM_NONBONDEDUTILITIES_H_*/

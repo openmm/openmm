@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -27,15 +27,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "OpenCLContext.h"
 #include "openmm/System.h"
+#include "OpenCLArray.h"
 #include "OpenCLExpressionUtilities.h"
+#include "openmm/common/NonbondedUtilities.h"
+#include <cl.hpp>
 #include <sstream>
 #include <string>
 #include <vector>
 
 namespace OpenMM {
     
+class OpenCLContext;
 class OpenCLSort;
 
 /**
@@ -63,7 +66,7 @@ class OpenCLSort;
  * by ForceImpls during calcForcesAndEnergy().
  */
 
-class OPENMM_EXPORT_OPENCL OpenCLNonbondedUtilities {
+class OPENMM_EXPORT_OPENCL OpenCLNonbondedUtilities : public NonbondedUtilities {
 public:
     class ParameterInfo;
     OpenCLNonbondedUtilities(OpenCLContext& context);

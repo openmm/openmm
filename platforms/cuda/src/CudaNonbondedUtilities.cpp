@@ -27,6 +27,7 @@
 #include "openmm/OpenMMException.h"
 #include "CudaNonbondedUtilities.h"
 #include "CudaArray.h"
+#include "CudaContext.h"
 #include "CudaKernelSources.h"
 #include "CudaExpressionUtilities.h"
 #include "CudaSort.h"
