@@ -2571,6 +2571,383 @@ void CommonCalcCustomManyParticleForceKernel::copyParametersToContext(ContextImp
     cc.invalidateMolecules(info);
 }
 
+class CommonCalcGayBerneForceKernel::ForceInfo : public ComputeForceInfo {
+public:
+    ForceInfo(const GayBerneForce& force) : force(force) {
+    }
+    bool areParticlesIdentical(int particle1, int particle2) {
+        int xparticle1, yparticle1;
+        double sigma1, epsilon1, sx1, sy1, sz1, ex1, ey1, ez1;
+        int xparticle2, yparticle2;
+        double sigma2, epsilon2, sx2, sy2, sz2, ex2, ey2, ez2;
+        force.getParticleParameters(particle1, sigma1, epsilon1, xparticle1, yparticle1, sx1, sy1, sz1, ex1, ey1, ez1);
+        force.getParticleParameters(particle2, sigma2, epsilon2, xparticle2, yparticle2, sx2, sy2, sz2, ex2, ey2, ez2);
+        return (sigma1 == sigma2 && epsilon1 == epsilon2 && sx1 == sx2 && sy1 == sy2 && sz1 == sz2 && ex1 == ex2 && ey1 == ey2 && ez1 == ez2);
+    }
+    int getNumParticleGroups() {
+        return force.getNumExceptions()+force.getNumParticles();
+    }
+    void getParticlesInGroup(int index, vector<int>& particles) {
+        if (index < force.getNumExceptions()) {
+            int particle1, particle2;
+            double sigma, epsilon;
+            force.getExceptionParameters(index, particle1, particle2, sigma, epsilon);
+            particles.resize(2);
+            particles[0] = particle1;
+            particles[1] = particle2;
+        }
+        else {
+            int particle = index-force.getNumExceptions();
+            int xparticle, yparticle;
+            double sigma, epsilon, sx, sy, sz, ex, ey, ez;
+            force.getParticleParameters(particle, sigma, epsilon, xparticle, yparticle, sx, sy, sz, ex, ey, ez);
+            particles.clear();
+            particles.push_back(particle);
+            if (xparticle > -1)
+                particles.push_back(xparticle);
+            if (yparticle > -1)
+                particles.push_back(yparticle);
+        }
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        if (group1 < force.getNumExceptions() && group2 < force.getNumExceptions()) {
+            int particle1, particle2;
+            double sigma1, sigma2, epsilon1, epsilon2;
+            force.getExceptionParameters(group1, particle1, particle2, sigma1, epsilon1);
+            force.getExceptionParameters(group2, particle1, particle2, sigma2, epsilon2);
+            return (sigma1 == sigma2 && epsilon1 == epsilon2);
+        }
+        return true;
+    }
+private:
+    const GayBerneForce& force;
+};
+
+class CommonCalcGayBerneForceKernel::ReorderListener : public ComputeContext::ReorderListener {
+public:
+    ReorderListener(CommonCalcGayBerneForceKernel& owner) : owner(owner) {
+    }
+    void execute() {
+        owner.sortAtoms();
+    }
+private:
+    CommonCalcGayBerneForceKernel& owner;
+};
+
+void CommonCalcGayBerneForceKernel::initialize(const System& system, const GayBerneForce& force) {
+    if (!cc.getSupports64BitGlobalAtomics())
+        throw OpenMMException("GayBerneForce requires a device that supports 64 bit atomic operations");
+
+    // Initialize interactions.
+
+    int numParticles = force.getNumParticles();
+    sigParams.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "sigParams");
+    epsParams.initialize<mm_float2>(cc, cc.getPaddedNumAtoms(), "epsParams");
+    scale.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "scale");
+    axisParticleIndices.initialize<mm_int2>(cc, cc.getPaddedNumAtoms(), "axisParticleIndices");
+    sortedParticles.initialize<int>(cc, cc.getPaddedNumAtoms(), "sortedParticles");
+    aMatrix.initialize<float>(cc, 9*cc.getPaddedNumAtoms(), "aMatrix");
+    bMatrix.initialize<float>(cc, 9*cc.getPaddedNumAtoms(), "bMatrix");
+    gMatrix.initialize<float>(cc, 9*cc.getPaddedNumAtoms(), "gMatrix");
+    vector<mm_float4> sigParamsVector(cc.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
+    vector<mm_float2> epsParamsVector(cc.getPaddedNumAtoms(), mm_float2(0, 0));
+    vector<mm_float4> scaleVector(cc.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
+    vector<mm_int2> axisParticleVector(cc.getPaddedNumAtoms(), mm_int2(0, 0));
+    isRealParticle.resize(cc.getPaddedNumAtoms());
+    for (int i = 0; i < numParticles; i++) {
+        int xparticle, yparticle;
+        double sigma, epsilon, sx, sy, sz, ex, ey, ez;
+        force.getParticleParameters(i, sigma, epsilon, xparticle, yparticle, sx, sy, sz, ex, ey, ez);
+        axisParticleVector[i] = mm_int2(xparticle, yparticle);
+        sigParamsVector[i] = mm_float4((float) (0.5*sigma), (float) (0.25*sx*sx), (float) (0.25*sy*sy), (float) (0.25*sz*sz));
+        epsParamsVector[i] = mm_float2((float) sqrt(epsilon), (float) (0.125*(sx*sy + sz*sz)*sqrt(sx*sy)));
+        scaleVector[i] = mm_float4((float) (1/sqrt(ex)), (float) (1/sqrt(ey)), (float) (1/sqrt(ez)), 0);
+        isRealParticle[i] = (epsilon != 0.0);
+    }
+    sigParams.upload(sigParamsVector);
+    epsParams.upload(epsParamsVector);
+    scale.upload(scaleVector);
+    axisParticleIndices.upload(axisParticleVector);
+    
+    // Record exceptions and exclusions.
+
+    vector<mm_float2> exceptionParamsVec;
+    for (int i = 0; i < force.getNumExceptions(); i++) {
+        int particle1, particle2;
+        double sigma, epsilon;
+        force.getExceptionParameters(i, particle1, particle2, sigma, epsilon);
+        if (epsilon != 0.0) {
+            exceptionParamsVec.push_back(mm_float2((float) sigma, (float) epsilon));
+            exceptionAtoms.push_back(make_pair(particle1, particle2));
+            isRealParticle[particle1] = true;
+            isRealParticle[particle2] = true;
+        }
+        if (isRealParticle[particle1] && isRealParticle[particle2])
+            excludedPairs.push_back(pair<int, int>(particle1, particle2));
+    }
+    numRealParticles = 0;
+    for (int i = 0; i < isRealParticle.size(); i++)
+        if (isRealParticle[i])
+            numRealParticles++;
+    int numExceptions = exceptionParamsVec.size();
+    exclusions.initialize<int>(cc, max(1, (int) excludedPairs.size()), "exclusions");
+    exclusionStartIndex.initialize<int>(cc, numRealParticles+1, "exclusionStartIndex");
+    exceptionParticles.initialize<mm_int4>(cc, max(1, numExceptions), "exceptionParticles");
+    exceptionParams.initialize<mm_float2>(cc, max(1, numExceptions), "exceptionParams");
+    if (numExceptions > 0)
+        exceptionParams.upload(exceptionParamsVec);
+    
+    // Create data structures used for the neighbor list.
+
+    int numAtomBlocks = (numRealParticles+31)/32;
+    int elementSize = (cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
+    blockCenter.initialize(cc, numAtomBlocks, 4*elementSize, "blockCenter");
+    blockBoundingBox.initialize(cc, numAtomBlocks, 4*elementSize, "blockBoundingBox");
+    sortedPos.initialize(cc, numRealParticles, 4*elementSize, "sortedPos");
+    maxNeighborBlocks = numRealParticles*2;
+    neighbors.initialize<int>(cc, maxNeighborBlocks*32, "neighbors");
+    neighborIndex.initialize<int>(cc, maxNeighborBlocks, "neighborIndex");
+    neighborBlockCount.initialize<int>(cc, 1, "neighborBlockCount");
+    event = cc.createEvent();
+
+    // Create array for accumulating torques.
+    
+    torque.initialize<long long>(cc, 3*cc.getPaddedNumAtoms(), "torque");
+    cc.addAutoclearBuffer(torque);
+
+    // Create the kernels.
+    
+    nonbondedMethod = force.getNonbondedMethod();
+    bool useCutoff = (nonbondedMethod != GayBerneForce::NoCutoff);
+    bool usePeriodic = (nonbondedMethod == GayBerneForce::CutoffPeriodic);
+    map<string, string> defines;
+    defines["USE_SWITCH"] = (useCutoff && force.getUseSwitchingFunction() ? "1" : "0");
+    double cutoff = force.getCutoffDistance();
+    defines["CUTOFF_SQUARED"] = cc.doubleToString(cutoff*cutoff);
+    if (useCutoff) {
+        defines["USE_CUTOFF"] = 1;
+        if (usePeriodic)
+            defines["USE_PERIODIC"] = "1";
+        
+        // Compute the switching coefficients.
+        
+        if (force.getUseSwitchingFunction()) {
+            defines["SWITCH_CUTOFF"] = cc.doubleToString(force.getSwitchingDistance());
+            defines["SWITCH_C3"] = cc.doubleToString(10/pow(force.getSwitchingDistance()-cutoff, 3.0));
+            defines["SWITCH_C4"] = cc.doubleToString(15/pow(force.getSwitchingDistance()-cutoff, 4.0));
+            defines["SWITCH_C5"] = cc.doubleToString(6/pow(force.getSwitchingDistance()-cutoff, 5.0));
+        }
+    }
+    defines["PADDED_NUM_ATOMS"] = cc.intToString(cc.getPaddedNumAtoms());
+    ComputeProgram program = cc.compileProgram(CommonKernelSources::gayBerne, defines);
+    framesKernel = program->createKernel("computeEllipsoidFrames");
+    blockBoundsKernel = program->createKernel("findBlockBounds");
+    neighborsKernel = program->createKernel("findNeighbors");
+    forceKernel = program->createKernel("computeForce");
+    torqueKernel = program->createKernel("applyTorques");
+    info = new ForceInfo(force);
+    cc.addForce(info);
+    cc.addReorderListener(new ReorderListener(*this));
+}
+
+double CommonCalcGayBerneForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    if (!hasInitializedKernels) {
+        hasInitializedKernels = true;
+        sortAtoms();
+        framesKernel->addArg(numRealParticles);
+        framesKernel->addArg(cc.getPosq());
+        framesKernel->addArg(axisParticleIndices);
+        framesKernel->addArg(sigParams);
+        framesKernel->addArg(scale);
+        framesKernel->addArg(aMatrix);
+        framesKernel->addArg(bMatrix);
+        framesKernel->addArg(gMatrix);
+        framesKernel->addArg(sortedParticles);
+        blockBoundsKernel->addArg(numRealParticles);
+        for (int i = 0; i < 5; i++)
+            blockBoundsKernel->addArg(); // Periodic box information will be set just before it is executed.
+        blockBoundsKernel->addArg(sortedParticles);
+        blockBoundsKernel->addArg(cc.getPosq());
+        blockBoundsKernel->addArg(sortedPos);
+        blockBoundsKernel->addArg(blockCenter);
+        blockBoundsKernel->addArg(blockBoundingBox);
+        blockBoundsKernel->addArg(neighborBlockCount);
+        neighborsKernel->addArg(numRealParticles);
+        neighborsKernel->addArg(maxNeighborBlocks);
+        for (int i = 0; i < 5; i++)
+            neighborsKernel->addArg(); // Periodic box information will be set just before it is executed.
+        neighborsKernel->addArg(sortedPos);
+        neighborsKernel->addArg(blockCenter);
+        neighborsKernel->addArg(blockBoundingBox);
+        neighborsKernel->addArg(neighbors);
+        neighborsKernel->addArg(neighborIndex);
+        neighborsKernel->addArg(neighborBlockCount);
+        neighborsKernel->addArg(exclusions);
+        neighborsKernel->addArg(exclusionStartIndex);
+        forceKernel->addArg(cc.getLongForceBuffer());
+        forceKernel->addArg(torque);
+        forceKernel->addArg(numRealParticles);
+        forceKernel->addArg((int) exceptionAtoms.size());
+        forceKernel->addArg(cc.getEnergyBuffer());
+        forceKernel->addArg(sortedPos);
+        forceKernel->addArg(sigParams);
+        forceKernel->addArg(epsParams);
+        forceKernel->addArg(sortedParticles);
+        forceKernel->addArg(aMatrix);
+        forceKernel->addArg(bMatrix);
+        forceKernel->addArg(gMatrix);
+        forceKernel->addArg(exclusions);
+        forceKernel->addArg(exclusionStartIndex);
+        forceKernel->addArg(exceptionParticles);
+        forceKernel->addArg(exceptionParams);
+        if (nonbondedMethod != GayBerneForce::NoCutoff) {
+            forceKernel->addArg(maxNeighborBlocks);
+            forceKernel->addArg(neighbors);
+            forceKernel->addArg(neighborIndex);
+            forceKernel->addArg(neighborBlockCount);
+            for (int i = 0; i < 5; i++)
+                forceKernel->addArg(); // Periodic box information will be set just before it is executed.
+        }
+        torqueKernel->addArg(cc.getLongForceBuffer());
+        torqueKernel->addArg(torque);
+        torqueKernel->addArg(numRealParticles);
+        torqueKernel->addArg(cc.getPosq());
+        torqueKernel->addArg(axisParticleIndices);
+        torqueKernel->addArg(sortedParticles);
+    }
+    framesKernel->execute(numRealParticles);
+    setPeriodicBoxArgs(cc, blockBoundsKernel, 1);
+    blockBoundsKernel->execute((numRealParticles+31)/32);
+    if (nonbondedMethod == GayBerneForce::NoCutoff)
+        forceKernel->execute(cc.getNonbondedUtilities().getNumForceThreadBlocks()*cc.getNonbondedUtilities().getForceThreadBlockSize());
+    else {
+        while (true) {
+            setPeriodicBoxArgs(cc, neighborsKernel, 2);
+            neighborsKernel->execute(numRealParticles);
+            int* count = (int*) cc.getPinnedBuffer();
+            neighborBlockCount.download(count, false);
+            event->enqueue();
+            setPeriodicBoxArgs(cc, forceKernel, 20);
+            forceKernel->execute(cc.getNonbondedUtilities().getNumForceThreadBlocks()*cc.getNonbondedUtilities().getForceThreadBlockSize());
+            event->wait();
+            if (*count <= maxNeighborBlocks)
+                break;
+            
+            // There wasn't enough room for the neighbor list, so we need to recreate it.
+
+            maxNeighborBlocks = (int) ceil((*count)*1.1);
+            neighbors.resize(maxNeighborBlocks*32);
+            neighborIndex.resize(maxNeighborBlocks);
+            neighborsKernel->setArg(10, neighbors);
+            neighborsKernel->setArg(11, neighborIndex);
+            forceKernel->setArg(17, neighbors);
+            forceKernel->setArg(18, neighborIndex);
+        }
+    }
+    torqueKernel->execute(numRealParticles);
+    return 0.0;
+}
+
+void CommonCalcGayBerneForceKernel::copyParametersToContext(ContextImpl& context, const GayBerneForce& force) {
+    // Make sure the new parameters are acceptable.
+    
+    if (force.getNumParticles() != cc.getNumAtoms())
+        throw OpenMMException("updateParametersInContext: The number of particles has changed");
+    vector<int> exceptions;
+    for (int i = 0; i < force.getNumExceptions(); i++) {
+        int particle1, particle2;
+        double sigma, epsilon;
+        force.getExceptionParameters(i, particle1, particle2, sigma, epsilon);
+        if (exceptionAtoms.size() > exceptions.size() && make_pair(particle1, particle2) == exceptionAtoms[exceptions.size()])
+            exceptions.push_back(i);
+        else if (epsilon != 0.0)
+            throw OpenMMException("updateParametersInContext: The set of non-excluded exceptions has changed");
+    }
+    int numExceptions = exceptionAtoms.size();
+    
+    // Record the per-particle parameters.
+    
+    vector<mm_float4> sigParamsVector(cc.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
+    vector<mm_float2> epsParamsVector(cc.getPaddedNumAtoms(), mm_float2(0, 0));
+    vector<mm_float4> scaleVector(cc.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
+    for (int i = 0; i < force.getNumParticles(); i++) {
+        int xparticle, yparticle;
+        double sigma, epsilon, sx, sy, sz, ex, ey, ez;
+        force.getParticleParameters(i, sigma, epsilon, xparticle, yparticle, sx, sy, sz, ex, ey, ez);
+        sigParamsVector[i] = mm_float4((float) (0.5*sigma), (float) (0.25*sx*sx), (float) (0.25*sy*sy), (float) (0.25*sz*sz));
+        epsParamsVector[i] = mm_float2((float) sqrt(epsilon), (float) (0.125*(sx*sy + sz*sz)*sqrt(sx*sy)));
+        scaleVector[i] = mm_float4((float) (1/sqrt(ex)), (float) (1/sqrt(ey)), (float) (1/sqrt(ez)), 0);
+        if (epsilon != 0.0 && !isRealParticle[i])
+            throw OpenMMException("updateParametersInContext: The set of ignored particles (ones with epsilon=0) has changed");
+    }
+    sigParams.upload(sigParamsVector);
+    epsParams.upload(epsParamsVector);
+    scale.upload(scaleVector);
+    
+    // Record the exceptions.
+    
+    if (numExceptions > 0) {
+        vector<mm_float2> exceptionParamsVec(numExceptions);
+        for (int i = 0; i < numExceptions; i++) {
+            int atom1, atom2;
+            double sigma, epsilon;
+            force.getExceptionParameters(exceptions[i], atom1, atom2, sigma, epsilon);
+            exceptionParamsVec[i] = mm_float2((float) sigma, (float) epsilon);
+        }
+        exceptionParams.upload(exceptionParamsVec);
+    }
+    cc.invalidateMolecules(info);
+    sortAtoms();
+}
+
+void CommonCalcGayBerneForceKernel::sortAtoms() {
+    // Sort the list of atoms by type to avoid thread divergence.  This is executed every time
+    // the atoms are reordered.
+    
+    int nextIndex = 0;
+    vector<int> particles(cc.getPaddedNumAtoms(), 0);
+    const vector<int>& order = cc.getAtomIndex();
+    vector<int> inverseOrder(order.size(), -1);
+    for (int i = 0; i < cc.getNumAtoms(); i++) {
+        int atom = order[i];
+        if (isRealParticle[atom]) {
+            inverseOrder[atom] = nextIndex;
+            particles[nextIndex++] = atom;
+        }
+    }
+    sortedParticles.upload(particles);
+    
+    // Update the list of exception particles.
+    
+    int numExceptions = exceptionAtoms.size();
+    if (numExceptions > 0) {
+        vector<mm_int4> exceptionParticlesVec(numExceptions);
+        for (int i = 0; i < numExceptions; i++)
+            exceptionParticlesVec[i] = mm_int4(exceptionAtoms[i].first, exceptionAtoms[i].second, inverseOrder[exceptionAtoms[i].first], inverseOrder[exceptionAtoms[i].second]);
+        exceptionParticles.upload(exceptionParticlesVec);
+    }
+    
+    // Rebuild the list of exclusions.
+    
+    vector<vector<int> > excludedAtoms(numRealParticles);
+    for (int i = 0; i < excludedPairs.size(); i++) {
+        int first = inverseOrder[min(excludedPairs[i].first, excludedPairs[i].second)];
+        int second = inverseOrder[max(excludedPairs[i].first, excludedPairs[i].second)];
+        excludedAtoms[first].push_back(second);
+    }
+    int index = 0;
+    vector<int> exclusionVec(exclusions.getSize());
+    vector<int> startIndexVec(exclusionStartIndex.getSize());
+    for (int i = 0; i < numRealParticles; i++) {
+        startIndexVec[i] = index;
+        for (int j = 0; j < excludedAtoms[i].size(); j++)
+            exclusionVec[index++] = excludedAtoms[i][j];
+    }
+    startIndexVec[numRealParticles] = index;
+    exclusions.upload(exclusionVec);
+    exclusionStartIndex.upload(startIndexVec);
+}
+
 void CommonRemoveCMMotionKernel::initialize(const System& system, const CMMotionRemover& force) {
     cc.setAsCurrent();
     frequency = force.getFrequency();

@@ -10,8 +10,8 @@
 #define RESTRICT __restrict__
 #define LOCAL_ID threadIdx.x
 #define LOCAL_SIZE blockDim.x
-#define GLOBAL_ID blockIdx.x*blockDim.x+threadIdx.x
-#define GLOBAL_SIZE blockDim.x*gridDim.x
+#define GLOBAL_ID (blockIdx.x*blockDim.x+threadIdx.x)
+#define GLOBAL_SIZE (blockDim.x*gridDim.x)
 #define GROUP_ID blockIdx.x
 #define NUM_GROUPS gridDim.x
 #define SYNC_THREADS __syncthreads();

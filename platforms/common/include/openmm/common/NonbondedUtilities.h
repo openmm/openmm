@@ -63,6 +63,14 @@ public:
      */
     virtual bool getUsePeriodic() = 0;
     /**
+     * Get the number of thread blocks used for computing nonbonded forces.
+     */
+    virtual int getNumForceThreadBlocks() = 0;
+    /**
+     * Get the size of each thread block used for computing nonbonded forces.
+     */
+    virtual int getForceThreadBlockSize() = 0;
+    /**
      * Get the maximum cutoff distance used by any interaction.
      */
     virtual double getMaxCutoffDistance() = 0;

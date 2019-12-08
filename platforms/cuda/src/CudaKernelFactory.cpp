@@ -116,7 +116,7 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
     if (name == CalcCustomManyParticleForceKernel::Name())
         return new CommonCalcCustomManyParticleForceKernel(name, platform, cu, context.getSystem());
     if (name == CalcGayBerneForceKernel::Name())
-        return new CudaCalcGayBerneForceKernel(name, platform, cu);
+        return new CommonCalcGayBerneForceKernel(name, platform, cu);
     if (name == IntegrateVerletStepKernel::Name())
         return new CudaIntegrateVerletStepKernel(name, platform, cu);
     if (name == IntegrateLangevinStepKernel::Name())

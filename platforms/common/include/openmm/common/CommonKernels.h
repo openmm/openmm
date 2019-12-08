@@ -574,6 +574,58 @@ private:
 };
 
 /**
+ * This kernel is invoked by GayBerneForce to calculate the forces acting on the system.
+ */
+class CommonCalcGayBerneForceKernel : public CalcGayBerneForceKernel {
+public:
+    CommonCalcGayBerneForceKernel(std::string name, const Platform& platform, ComputeContext& cc) : CalcGayBerneForceKernel(name, platform), cc(cc),
+            hasInitializedKernels(false) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the GayBerneForce this kernel will be used for
+     */
+    void initialize(const System& system, const GayBerneForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the GayBerneForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const GayBerneForce& force);
+private:
+    class ForceInfo;
+    class ReorderListener;
+    void sortAtoms();
+    ComputeContext& cc;
+    ForceInfo* info;
+    bool hasInitializedKernels;
+    int numRealParticles, maxNeighborBlocks;
+    GayBerneForce::NonbondedMethod nonbondedMethod;
+    ComputeArray sortedParticles, axisParticleIndices, sigParams, epsParams;
+    ComputeArray scale, exceptionParticles, exceptionParams;
+    ComputeArray aMatrix, bMatrix, gMatrix;
+    ComputeArray exclusions, exclusionStartIndex, blockCenter, blockBoundingBox;
+    ComputeArray neighbors, neighborIndex, neighborBlockCount;
+    ComputeArray sortedPos, torque;
+    std::vector<bool> isRealParticle;
+    std::vector<std::pair<int, int> > exceptionAtoms;
+    std::vector<std::pair<int, int> > excludedPairs;
+    ComputeKernel framesKernel, blockBoundsKernel, neighborsKernel, forceKernel, torqueKernel;
+    ComputeEvent event;
+};
+
+/**
  * This kernel is invoked to remove center of mass motion from the system.
  */
 class CommonRemoveCMMotionKernel : public RemoveCMMotionKernel {
