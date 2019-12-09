@@ -32,6 +32,7 @@
 #include "openmm/common/ComputeForceInfo.h"
 #include "openmm/common/ComputeProgram.h"
 #include "openmm/common/ComputeVectorTypes.h"
+#include "openmm/common/IntegrationUtilities.h"
 #include "openmm/common/NonbondedUtilities.h"
 #include "openmm/Vec3.h"
 #include <pthread.h>
@@ -347,6 +348,10 @@ public:
      */
     virtual void setPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3& c) = 0; 
     /**
+     * Get the IntegrationUtilities for this context.
+     */
+    virtual IntegrationUtilities& getIntegrationUtilities() = 0;
+    /**
      * Get the ExpressionUtilities for this context.
      */
     virtual ExpressionUtilities& getExpressionUtilities() = 0;
@@ -358,6 +363,11 @@ public:
      * Get the NonbondedUtilities for this context.
      */
     virtual NonbondedUtilities& getNonbondedUtilities() = 0;
+    /**
+     * This should be called by the Integrator from its own initialize() method.
+     * It ensures all contexts are fully initialized.
+     */
+    virtual void initializeContexts() = 0;
     /**
      * Get the thread used by this context for executing parallel computations.
      */
@@ -396,6 +406,13 @@ public:
      * definitions and order to be revalidated.
      */
     bool invalidateMolecules(ComputeForceInfo* force);
+    /**
+     * Wait until all work that has been queued (kernel executions, asynchronous data transfers, etc.)
+     * has been submitted to the device.  This does not mean it has necessarily been completed.
+     * Calling this periodically may improve the responsiveness of the computer's GUI, but at the
+     * expense of reduced simulation performance.
+     */
+    virtual void flushQueue() = 0;
 protected:
     struct Molecule;
     struct MoleculeGroup;

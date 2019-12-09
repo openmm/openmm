@@ -118,7 +118,7 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
     if (name == CalcGayBerneForceKernel::Name())
         return new CommonCalcGayBerneForceKernel(name, platform, cu);
     if (name == IntegrateVerletStepKernel::Name())
-        return new CudaIntegrateVerletStepKernel(name, platform, cu);
+        return new CommonIntegrateVerletStepKernel(name, platform, cu);
     if (name == IntegrateLangevinStepKernel::Name())
         return new CudaIntegrateLangevinStepKernel(name, platform, cu);
     if (name == IntegrateBAOABStepKernel::Name())
@@ -126,7 +126,7 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
     if (name == IntegrateBrownianStepKernel::Name())
         return new CudaIntegrateBrownianStepKernel(name, platform, cu);
     if (name == IntegrateVariableVerletStepKernel::Name())
-        return new CudaIntegrateVariableVerletStepKernel(name, platform, cu);
+        return new CommonIntegrateVariableVerletStepKernel(name, platform, cu);
     if (name == IntegrateVariableLangevinStepKernel::Name())
         return new CudaIntegrateVariableLangevinStepKernel(name, platform, cu);
     if (name == IntegrateCustomStepKernel::Name())

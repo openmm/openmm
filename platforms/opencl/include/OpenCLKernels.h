@@ -698,42 +698,6 @@ private:
 };
 
 /**
- * This kernel is invoked by VerletIntegrator to take one time step.
- */
-class OpenCLIntegrateVerletStepKernel : public IntegrateVerletStepKernel {
-public:
-    OpenCLIntegrateVerletStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateVerletStepKernel(name, platform), cl(cl),
-            hasInitializedKernels(false) {
-    }
-    ~OpenCLIntegrateVerletStepKernel();
-    /**
-     * Initialize the kernel.
-     *
-     * @param system     the System this kernel will be applied to
-     * @param integrator the VerletIntegrator this kernel will be used for
-     */
-    void initialize(const System& system, const VerletIntegrator& integrator);
-    /**
-     * Execute the kernel.
-     *
-     * @param context    the context in which to execute this kernel
-     * @param integrator the VerletIntegrator this kernel is being used for
-     */
-    void execute(ContextImpl& context, const VerletIntegrator& integrator);
-    /**
-     * Compute the kinetic energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @param integrator the VerletIntegrator this kernel is being used for
-     */
-    double computeKineticEnergy(ContextImpl& context, const VerletIntegrator& integrator);
-private:
-    OpenCLContext& cl;
-    bool hasInitializedKernels;
-    cl::Kernel kernel1, kernel2;
-};
-
-/**
  * This kernel is invoked by LangevinIntegrator to take one time step.
  */
 class OpenCLIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
@@ -846,45 +810,6 @@ private:
     double prevTemp, prevFriction, prevStepSize;
     bool hasInitializedKernels;
     cl::Kernel kernel1, kernel2;
-};
-
-/**
- * This kernel is invoked by VariableVerletIntegrator to take one time step.
- */
-class OpenCLIntegrateVariableVerletStepKernel : public IntegrateVariableVerletStepKernel {
-public:
-    OpenCLIntegrateVariableVerletStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateVariableVerletStepKernel(name, platform), cl(cl),
-            hasInitializedKernels(false) {
-    }
-    ~OpenCLIntegrateVariableVerletStepKernel();
-    /**
-     * Initialize the kernel.
-     *
-     * @param system     the System this kernel will be applied to
-     * @param integrator the VariableVerletIntegrator this kernel will be used for
-     */
-    void initialize(const System& system, const VariableVerletIntegrator& integrator);
-    /**
-     * Execute the kernel.
-     *
-     * @param context    the context in which to execute this kernel
-     * @param integrator the VariableVerletIntegrator this kernel is being used for
-     * @param maxTime    the maximum time beyond which the simulation should not be advanced
-     * @return the size of the step that was taken
-     */
-    double execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime);
-    /**
-     * Compute the kinetic energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @param integrator the VariableVerletIntegrator this kernel is being used for
-     */
-    double computeKineticEnergy(ContextImpl& context, const VariableVerletIntegrator& integrator);
-private:
-    OpenCLContext& cl;
-    bool hasInitializedKernels;
-    int blockSize;
-    cl::Kernel kernel1, kernel2, selectSizeKernel;
 };
 
 /**

@@ -25,6 +25,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "CudaIntegrationUtilities.h"
+#include "CudaContext.h"
 #include "CudaArray.h"
 #include "CudaKernelSources.h"
 #include "openmm/internal/OSRngSeed.h"

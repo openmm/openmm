@@ -488,14 +488,13 @@ void OpenCLContext::initialize() {
         energyBuffer.initialize<cl_float>(*this, energyBufferSize, "energyBuffer");
         energySum.initialize<cl_float>(*this, 1, "energySum");
     }
-    if (supports64BitGlobalAtomics) {
-        longForceBuffer.initialize<cl_long>(*this, 3*paddedNumAtoms, "longForceBuffer");
-        reduceForcesKernel.setArg<cl::Buffer>(0, longForceBuffer.getDeviceBuffer());
-        reduceForcesKernel.setArg<cl::Buffer>(1, forceBuffers.getDeviceBuffer());
-        reduceForcesKernel.setArg<cl_int>(2, paddedNumAtoms);
-        reduceForcesKernel.setArg<cl_int>(3, numForceBuffers);
+    longForceBuffer.initialize<cl_long>(*this, 3*paddedNumAtoms, "longForceBuffer");
+    reduceForcesKernel.setArg<cl::Buffer>(0, longForceBuffer.getDeviceBuffer());
+    reduceForcesKernel.setArg<cl::Buffer>(1, forceBuffers.getDeviceBuffer());
+    reduceForcesKernel.setArg<cl_int>(2, paddedNumAtoms);
+    reduceForcesKernel.setArg<cl_int>(3, numForceBuffers);
+    if (supports64BitGlobalAtomics)
         addAutoclearBuffer(longForceBuffer);
-    }
     addAutoclearBuffer(forceBuffers);
     addAutoclearBuffer(energyBuffer);
     int numEnergyParamDerivs = energyParamDerivNames.size();
@@ -519,6 +518,10 @@ void OpenCLContext::initialize() {
     velm.upload(pinnedMemory);
     findMoleculeGroups();
     nonbonded->initialize(system);
+}
+
+void OpenCLContext::initializeContexts() {
+    getPlatformData().initializeContexts(system);
 }
 
 void OpenCLContext::addForce(ComputeForceInfo* force) {
@@ -734,10 +737,7 @@ void OpenCLContext::clearAutoclearBuffers() {
 }
 
 void OpenCLContext::reduceForces() {
-    if (supports64BitGlobalAtomics)
-        executeKernel(reduceForcesKernel, paddedNumAtoms, 128);
-    else
-        reduceBuffer(forceBuffers, numForceBuffers);
+    executeKernel(reduceForcesKernel, paddedNumAtoms, 128);
 }
 
 void OpenCLContext::reduceBuffer(OpenCLArray& array, int numBuffers) {
@@ -797,4 +797,8 @@ void OpenCLContext::addEnergyParameterDerivative(const string& param) {
         if (param == energyParamDerivNames[i])
             return;
     energyParamDerivNames.push_back(param);
+}
+
+void OpenCLContext::flushQueue() {
+    getQueue().flush();
 }

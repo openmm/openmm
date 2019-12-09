@@ -4155,52 +4155,6 @@ void CudaCalcRMSDForceKernel::copyParametersToContext(ContextImpl& context, cons
     cu.invalidateMolecules(info);
 }
 
-void CudaIntegrateVerletStepKernel::initialize(const System& system, const VerletIntegrator& integrator) {
-    cu.getPlatformData().initializeContexts(system);
-    cu.setAsCurrent();
-    map<string, string> defines;
-    CUmodule module = cu.createModule(CudaKernelSources::verlet, defines, "");
-    kernel1 = cu.getKernel(module, "integrateVerletPart1");
-    kernel2 = cu.getKernel(module, "integrateVerletPart2");
-}
-
-void CudaIntegrateVerletStepKernel::execute(ContextImpl& context, const VerletIntegrator& integrator) {
-    cu.setAsCurrent();
-    CudaIntegrationUtilities& integration = cu.getIntegrationUtilities();
-    int numAtoms = cu.getNumAtoms();
-    int paddedNumAtoms = cu.getPaddedNumAtoms();
-    double dt = integrator.getStepSize();
-    cu.getIntegrationUtilities().setNextStepSize(dt);
-
-    // Call the first integration kernel.
-
-    CUdeviceptr posCorrection = (cu.getUseMixedPrecision() ? cu.getPosqCorrection().getDevicePointer() : 0);
-    void* args1[] = {&numAtoms, &paddedNumAtoms, &cu.getIntegrationUtilities().getStepSize().getDevicePointer(), &cu.getPosq().getDevicePointer(), &posCorrection,
-            &cu.getVelm().getDevicePointer(), &cu.getForce().getDevicePointer(), &integration.getPosDelta().getDevicePointer()};
-    cu.executeKernel(kernel1, args1, numAtoms, 128);
-
-    // Apply constraints.
-
-    integration.applyConstraints(integrator.getConstraintTolerance());
-
-    // Call the second integration kernel.
-
-    void* args2[] = {&numAtoms, &cu.getIntegrationUtilities().getStepSize().getDevicePointer(), &cu.getPosq().getDevicePointer(), &posCorrection,
-            &cu.getVelm().getDevicePointer(), &integration.getPosDelta().getDevicePointer()};
-    cu.executeKernel(kernel2, args2, numAtoms, 128);
-    integration.computeVirtualSites();
-
-    // Update the time and step count.
-
-    cu.setTime(cu.getTime()+dt);
-    cu.setStepCount(cu.getStepCount()+1);
-    cu.reorderAtoms();
-}
-
-double CudaIntegrateVerletStepKernel::computeKineticEnergy(ContextImpl& context, const VerletIntegrator& integrator) {
-    return cu.getIntegrationUtilities().computeKineticEnergy(0.5*integrator.getStepSize());
-}
-
 void CudaIntegrateLangevinStepKernel::initialize(const System& system, const LangevinIntegrator& integrator) {
     cu.getPlatformData().initializeContexts(system);
     cu.setAsCurrent();
@@ -4415,79 +4369,6 @@ void CudaIntegrateBrownianStepKernel::execute(ContextImpl& context, const Browni
 
 double CudaIntegrateBrownianStepKernel::computeKineticEnergy(ContextImpl& context, const BrownianIntegrator& integrator) {
     return cu.getIntegrationUtilities().computeKineticEnergy(0);
-}
-
-void CudaIntegrateVariableVerletStepKernel::initialize(const System& system, const VariableVerletIntegrator& integrator) {
-    cu.getPlatformData().initializeContexts(system);
-    cu.setAsCurrent();
-    map<string, string> defines;
-    CUmodule module = cu.createModule(CudaKernelSources::verlet, defines, "");
-    kernel1 = cu.getKernel(module, "integrateVerletPart1");
-    kernel2 = cu.getKernel(module, "integrateVerletPart2");
-    selectSizeKernel = cu.getKernel(module, "selectVerletStepSize");
-    blockSize = min(256, system.getNumParticles());
-}
-
-double CudaIntegrateVariableVerletStepKernel::execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime) {
-    cu.setAsCurrent();
-    CudaIntegrationUtilities& integration = cu.getIntegrationUtilities();
-    int numAtoms = cu.getNumAtoms();
-    int paddedNumAtoms = cu.getPaddedNumAtoms();
-
-    // Select the step size to use.
-
-    double maxStepSize = maxTime-cu.getTime();
-    if (integrator.getMaximumStepSize() > 0)
-        maxStepSize = min(integrator.getMaximumStepSize(), maxStepSize);
-    float maxStepSizeFloat = (float) maxStepSize;
-    double tol = integrator.getErrorTolerance();
-    float tolFloat = (float) tol;
-    bool useDouble = cu.getUseDoublePrecision() || cu.getUseMixedPrecision();
-    void* argsSelect[] = {&numAtoms, &paddedNumAtoms, useDouble ? (void*) &maxStepSize : (void*) &maxStepSizeFloat,
-            useDouble ? (void*) &tol : (void*) &tolFloat,
-            &cu.getIntegrationUtilities().getStepSize().getDevicePointer(),
-            &cu.getVelm().getDevicePointer(), &cu.getForce().getDevicePointer()};
-    int sharedSize = blockSize*(useDouble ? sizeof(double) : sizeof(float));
-    cu.executeKernel(selectSizeKernel, argsSelect, blockSize, blockSize, sharedSize);
-
-    // Call the first integration kernel.
-
-    CUdeviceptr posCorrection = (cu.getUseMixedPrecision() ? cu.getPosqCorrection().getDevicePointer() : 0);
-    void* args1[] = {&numAtoms, &paddedNumAtoms, &cu.getIntegrationUtilities().getStepSize().getDevicePointer(), &cu.getPosq().getDevicePointer(), &posCorrection,
-            &cu.getVelm().getDevicePointer(), &cu.getForce().getDevicePointer(), &integration.getPosDelta().getDevicePointer()};
-    cu.executeKernel(kernel1, args1, numAtoms, 128);
-
-    // Apply constraints.
-
-    integration.applyConstraints(integrator.getConstraintTolerance());
-
-    // Call the second integration kernel.
-
-    void* args2[] = {&numAtoms, &cu.getIntegrationUtilities().getStepSize().getDevicePointer(), &cu.getPosq().getDevicePointer(), &posCorrection,
-            &cu.getVelm().getDevicePointer(), &integration.getPosDelta().getDevicePointer()};
-    cu.executeKernel(kernel2, args2, numAtoms, 128);
-    integration.computeVirtualSites();
-
-    // Update the time and step count.
-
-    double dt = cu.getIntegrationUtilities().getLastStepSize();
-    double time = cu.getTime()+dt;
-    if (useDouble) {
-        if (dt == maxStepSize)
-            time = maxTime; // Avoid round-off error
-    }
-    else {
-        if (dt == maxStepSizeFloat)
-            time = maxTime; // Avoid round-off error
-    }
-    cu.setTime(time);
-    cu.setStepCount(cu.getStepCount()+1);
-    cu.reorderAtoms();
-    return dt;
-}
-
-double CudaIntegrateVariableVerletStepKernel::computeKineticEnergy(ContextImpl& context, const VariableVerletIntegrator& integrator) {
-    return cu.getIntegrationUtilities().computeKineticEnergy(0.5*integrator.getStepSize());
 }
 
 void CudaIntegrateVariableLangevinStepKernel::initialize(const System& system, const VariableLangevinIntegrator& integrator) {

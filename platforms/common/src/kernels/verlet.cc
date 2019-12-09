@@ -2,13 +2,17 @@
  * Perform the first step of Verlet integration.
  */
 
-extern "C" __global__ void integrateVerletPart1(int numAtoms, int paddedNumAtoms, const mixed2* __restrict__ dt, const real4* __restrict__ posq,
-        const real4* __restrict__ posqCorrection, mixed4* __restrict__ velm, const long long* __restrict__ force, mixed4* __restrict__ posDelta) {
+KERNEL void integrateVerletPart1(int numAtoms, int paddedNumAtoms, GLOBAL const mixed2* RESTRICT dt, GLOBAL const real4* RESTRICT posq,
+        GLOBAL mixed4* RESTRICT velm, GLOBAL const mm_long* RESTRICT force, GLOBAL mixed4* RESTRICT posDelta
+#ifdef USE_MIXED_PRECISION
+        , GLOBAL const real4* RESTRICT posqCorrection
+#endif
+    ) {
     const mixed2 stepSize = dt[0];
     const mixed dtPos = stepSize.y;
     const mixed dtVel = 0.5f*(stepSize.x+stepSize.y);
     const mixed scale = dtVel/(mixed) 0x100000000;
-    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < numAtoms; index += blockDim.x*gridDim.x) {
+    for (int index = GLOBAL_ID; index < numAtoms; index += GLOBAL_SIZE) {
         mixed4 velocity = velm[index];
         if (velocity.w != 0.0) {
 #ifdef USE_MIXED_PRECISION
@@ -34,19 +38,24 @@ extern "C" __global__ void integrateVerletPart1(int numAtoms, int paddedNumAtoms
  * Perform the second step of Verlet integration.
  */
 
-extern "C" __global__ void integrateVerletPart2(int numAtoms, mixed2* __restrict__ dt, real4* __restrict__ posq,
-        real4* __restrict__ posqCorrection, mixed4* __restrict__ velm, const mixed4* __restrict__ posDelta) {
+KERNEL void integrateVerletPart2(int numAtoms, GLOBAL mixed2* RESTRICT dt, GLOBAL real4* RESTRICT posq,
+        GLOBAL mixed4* RESTRICT velm, GLOBAL const mixed4* RESTRICT posDelta
+#ifdef USE_MIXED_PRECISION
+        , GLOBAL real4* RESTRICT posqCorrection
+#endif
+    ) {
     mixed2 stepSize = dt[0];
-#if __CUDA_ARCH__ >= 130
+#ifdef SUPPORTS_DOUBLE_PRECISION
     double oneOverDt = 1.0/stepSize.y;
 #else
     float oneOverDt = 1.0f/stepSize.y;
     float correction = (1.0f-oneOverDt*stepSize.y)/stepSize.y;
 #endif
-    int index = blockIdx.x*blockDim.x+threadIdx.x;
-    if (index == 0)
+    if (GLOBAL_ID == 0)
         dt[0].x = stepSize.y;
-    for (; index < numAtoms; index += blockDim.x*gridDim.x) {
+    SYNC_THREADS;
+    int index = GLOBAL_ID;
+    for (; index < numAtoms; index += GLOBAL_SIZE) {
         mixed4 velocity = velm[index];
         if (velocity.w != 0.0) {
 #ifdef USE_MIXED_PRECISION
@@ -60,7 +69,7 @@ extern "C" __global__ void integrateVerletPart2(int numAtoms, mixed2* __restrict
             pos.x += delta.x;
             pos.y += delta.y;
             pos.z += delta.z;
-#if __CUDA_ARCH__ >= 130
+#ifdef SUPPORTS_DOUBLE_PRECISION
             velocity = make_mixed4((mixed) (delta.x*oneOverDt), (mixed) (delta.y*oneOverDt), (mixed) (delta.z*oneOverDt), velocity.w);
 #else
             velocity = make_mixed4((mixed) (delta.x*oneOverDt+delta.x*correction), (mixed) (delta.y*oneOverDt+delta.y*correction), (mixed) (delta.z*oneOverDt+delta.z*correction), velocity.w);
@@ -80,28 +89,28 @@ extern "C" __global__ void integrateVerletPart2(int numAtoms, mixed2* __restrict
  * Select the step size to use for the next step.
  */
 
-extern "C" __global__ void selectVerletStepSize(int numAtoms, int paddedNumAtoms, mixed maxStepSize, mixed errorTol, mixed2* __restrict__ dt, const mixed4* __restrict__ velm, const long long* __restrict__ force) {
+KERNEL void selectVerletStepSize(int numAtoms, int paddedNumAtoms, mixed maxStepSize, mixed errorTol, GLOBAL mixed2* RESTRICT dt, GLOBAL const mixed4* RESTRICT velm, GLOBAL const mm_long* RESTRICT force) {
     // Calculate the error.
 
-    extern __shared__ mixed error[];
-    mixed err = 0.0f;
+    LOCAL mixed error[256];
+    mixed err = 0;
     const mixed scale = RECIP((mixed) 0x100000000);
-    for (int index = threadIdx.x; index < numAtoms; index += blockDim.x*gridDim.x) {
+    for (int index = LOCAL_ID; index < numAtoms; index += GLOBAL_SIZE) {
         mixed3 f = make_mixed3(scale*force[index], scale*force[index+paddedNumAtoms], scale*force[index+paddedNumAtoms*2]);
         mixed invMass = velm[index].w;
         err += (f.x*f.x + f.y*f.y + f.z*f.z)*invMass*invMass;
     }
-    error[threadIdx.x] = err;
-    __syncthreads();
+    error[LOCAL_ID] = err;
+    SYNC_THREADS;
 
     // Sum the errors from all threads.
 
-    for (unsigned int offset = 1; offset < blockDim.x; offset *= 2) {
-        if (threadIdx.x+offset < blockDim.x && (threadIdx.x&(2*offset-1)) == 0)
-            error[threadIdx.x] += error[threadIdx.x+offset];
-        __syncthreads();
+    for (unsigned int offset = 1; offset < LOCAL_SIZE; offset *= 2) {
+        if (LOCAL_ID+offset < LOCAL_SIZE && (LOCAL_ID&(2*offset-1)) == 0)
+            error[LOCAL_ID] += error[LOCAL_ID+offset];
+        SYNC_THREADS;
     }
-    if (threadIdx.x == 0) {
+    if (LOCAL_ID == 0) {
         mixed totalError = SQRT(error[0]/(numAtoms*3));
         mixed newStepSize = SQRT(errorTol/totalError);
         mixed oldStepSize = dt[0].y;

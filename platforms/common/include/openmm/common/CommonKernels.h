@@ -626,6 +626,79 @@ private:
 };
 
 /**
+ * This kernel is invoked by VerletIntegrator to take one time step.
+ */
+class CommonIntegrateVerletStepKernel : public IntegrateVerletStepKernel {
+public:
+    CommonIntegrateVerletStepKernel(std::string name, const Platform& platform, ComputeContext& cc) : IntegrateVerletStepKernel(name, platform), cc(cc),
+            hasInitializedKernels(false) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param integrator the VerletIntegrator this kernel will be used for
+     */
+    void initialize(const System& system, const VerletIntegrator& integrator);
+    /**
+     * Execute the kernel.
+     *
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VerletIntegrator this kernel is being used for
+     */
+    void execute(ContextImpl& context, const VerletIntegrator& integrator);
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VerletIntegrator this kernel is being used for
+     */
+    double computeKineticEnergy(ContextImpl& context, const VerletIntegrator& integrator);
+private:
+    ComputeContext& cc;
+    bool hasInitializedKernels;
+    ComputeKernel kernel1, kernel2;
+};
+
+/**
+ * This kernel is invoked by VerletIntegrator to take one time step.
+ */
+class CommonIntegrateVariableVerletStepKernel : public IntegrateVariableVerletStepKernel {
+public:
+    CommonIntegrateVariableVerletStepKernel(std::string name, const Platform& platform, ComputeContext& cc) : IntegrateVariableVerletStepKernel(name, platform), cc(cc),
+            hasInitializedKernels(false) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param integrator the VariableVerletIntegrator this kernel will be used for
+     */
+    void initialize(const System& system, const VariableVerletIntegrator& integrator);
+    /**
+     * Execute the kernel.
+     *
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VariableVerletIntegrator this kernel is being used for
+     * @param maxTime    the maximum time beyond which the simulation should not be advanced
+     * @return the size of the step that was taken
+     */
+    double execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime);
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VariableVerletIntegrator this kernel is being used for
+     */
+    double computeKineticEnergy(ContextImpl& context, const VariableVerletIntegrator& integrator);
+private:
+    ComputeContext& cc;
+    bool hasInitializedKernels;
+    int blockSize;
+    ComputeKernel kernel1, kernel2, selectSizeKernel;
+};
+
+/**
  * This kernel is invoked to remove center of mass motion from the system.
  */
 class CommonRemoveCMMotionKernel : public RemoveCMMotionKernel {

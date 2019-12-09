@@ -116,7 +116,7 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
     if (name == CalcGayBerneForceKernel::Name())
         return new CommonCalcGayBerneForceKernel(name, platform, cl);
     if (name == IntegrateVerletStepKernel::Name())
-        return new OpenCLIntegrateVerletStepKernel(name, platform, cl);
+        return new CommonIntegrateVerletStepKernel(name, platform, cl);
     if (name == IntegrateLangevinStepKernel::Name())
         return new OpenCLIntegrateLangevinStepKernel(name, platform, cl);
     if (name == IntegrateBAOABStepKernel::Name())
@@ -124,7 +124,7 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
     if (name == IntegrateBrownianStepKernel::Name())
         return new OpenCLIntegrateBrownianStepKernel(name, platform, cl);
     if (name == IntegrateVariableVerletStepKernel::Name())
-        return new OpenCLIntegrateVariableVerletStepKernel(name, platform, cl);
+        return new CommonIntegrateVariableVerletStepKernel(name, platform, cl);
     if (name == IntegrateVariableLangevinStepKernel::Name())
         return new OpenCLIntegrateVariableLangevinStepKernel(name, platform, cl);
     if (name == IntegrateCustomStepKernel::Name())

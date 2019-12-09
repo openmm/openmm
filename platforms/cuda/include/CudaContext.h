@@ -43,6 +43,7 @@
 #include "CudaArray.h"
 #include "CudaBondedUtilities.h"
 #include "CudaExpressionUtilities.h"
+#include "CudaIntegrationUtilities.h"
 #include "CudaNonbondedUtilities.h"
 #include "CudaPlatform.h"
 #include "openmm/common/ComputeContext.h"
@@ -51,8 +52,6 @@
 typedef unsigned int tileflags;
 
 namespace OpenMM {
-
-class CudaIntegrationUtilities;
 
 /**
  * This class contains the information associated with a Context by the CUDA Platform.  Each CudaContext is
@@ -457,6 +456,11 @@ public:
         return *nonbonded;
     }
     /**
+     * This should be called by the Integrator from its own initialize() method.
+     * It ensures all contexts are fully initialized.
+     */
+    void initializeContexts();
+    /**
      * Set the particle charges.  These are packed into the fourth element of the posq array.
      */
     void setCharges(const std::vector<double>& charges);
@@ -486,6 +490,13 @@ public:
      * @param param    the name of the parameter to add
      */
     void addEnergyParameterDerivative(const std::string& param);
+    /**
+     * Wait until all work that has been queued (kernel executions, asynchronous data transfers, etc.)
+     * has been submitted to the device.  This does not mean it has necessarily been completed.
+     * Calling this periodically may improve the responsiveness of the computer's GUI, but at the
+     * expense of reduced simulation performance.
+     */
+    void flushQueue();
 private:
     /**
      * Compute a sorted list of device indices in decreasing order of desirability

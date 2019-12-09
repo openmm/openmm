@@ -2948,6 +2948,171 @@ void CommonCalcGayBerneForceKernel::sortAtoms() {
     exclusionStartIndex.upload(startIndexVec);
 }
 
+void CommonIntegrateVerletStepKernel::initialize(const System& system, const VerletIntegrator& integrator) {
+    cc.initializeContexts();
+    cc.setAsCurrent();
+    ComputeProgram program = cc.compileProgram(CommonKernelSources::verlet);
+    kernel1 = program->createKernel("integrateVerletPart1");
+    kernel2 = program->createKernel("integrateVerletPart2");
+}
+
+void CommonIntegrateVerletStepKernel::execute(ContextImpl& context, const VerletIntegrator& integrator) {
+    cc.setAsCurrent();
+    IntegrationUtilities& integration = cc.getIntegrationUtilities();
+    int numAtoms = cc.getNumAtoms();
+    int paddedNumAtoms = cc.getPaddedNumAtoms();
+    double dt = integrator.getStepSize();
+    if (!hasInitializedKernels) {
+        hasInitializedKernels = true;
+        kernel1->addArg(numAtoms);
+        kernel1->addArg(paddedNumAtoms);
+        kernel1->addArg(integration.getStepSize());
+        kernel1->addArg(cc.getPosq());
+        kernel1->addArg(cc.getVelm());
+        kernel1->addArg(cc.getLongForceBuffer());
+        kernel1->addArg(integration.getPosDelta());
+        if (cc.getUseMixedPrecision())
+            kernel1->addArg(cc.getPosqCorrection());
+        kernel2->addArg(numAtoms);
+        kernel2->addArg(integration.getStepSize());
+        kernel2->addArg(cc.getPosq());
+        kernel2->addArg(cc.getVelm());
+        kernel2->addArg(integration.getPosDelta());
+        if (cc.getUseMixedPrecision())
+            kernel2->addArg(cc.getPosqCorrection());
+    }
+    integration.setNextStepSize(dt);
+
+    // Call the first integration kernel.
+
+    kernel1->execute(numAtoms);
+
+    // Apply constraints.
+
+    integration.applyConstraints(integrator.getConstraintTolerance());
+
+    // Call the second integration kernel.
+
+    kernel2->execute(numAtoms);
+    integration.computeVirtualSites();
+
+    // Update the time and step count.
+
+    cc.setTime(cc.getTime()+dt);
+    cc.setStepCount(cc.getStepCount()+1);
+    cc.reorderAtoms();
+    
+    // Reduce UI lag.
+    
+#ifdef WIN32
+    cc.flushQueue();
+#endif
+}
+
+double CommonIntegrateVerletStepKernel::computeKineticEnergy(ContextImpl& context, const VerletIntegrator& integrator) {
+    return cc.getIntegrationUtilities().computeKineticEnergy(0.5*integrator.getStepSize());
+}
+
+void CommonIntegrateVariableVerletStepKernel::initialize(const System& system, const VariableVerletIntegrator& integrator) {
+    cc.initializeContexts();
+    cc.setAsCurrent();
+    ComputeProgram program = cc.compileProgram(CommonKernelSources::verlet);
+    kernel1 = program->createKernel("integrateVerletPart1");
+    kernel2 = program->createKernel("integrateVerletPart2");
+    selectSizeKernel = program->createKernel("selectVerletStepSize");
+    blockSize = min(256, system.getNumParticles());
+}
+
+double CommonIntegrateVariableVerletStepKernel::execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime) {
+    cc.setAsCurrent();
+    IntegrationUtilities& integration = cc.getIntegrationUtilities();
+    int numAtoms = cc.getNumAtoms();
+    int paddedNumAtoms = cc.getPaddedNumAtoms();
+    if (!hasInitializedKernels) {
+        hasInitializedKernels = true;
+        kernel1->addArg(numAtoms);
+        kernel1->addArg(paddedNumAtoms);
+        kernel1->addArg(integration.getStepSize());
+        kernel1->addArg(cc.getPosq());
+        kernel1->addArg(cc.getVelm());
+        kernel1->addArg(cc.getLongForceBuffer());
+        kernel1->addArg(integration.getPosDelta());
+        if (cc.getUseMixedPrecision())
+            kernel1->addArg(cc.getPosqCorrection());
+        kernel2->addArg(numAtoms);
+        kernel2->addArg(integration.getStepSize());
+        kernel2->addArg(cc.getPosq());
+        kernel2->addArg(cc.getVelm());
+        kernel2->addArg(integration.getPosDelta());
+        if (cc.getUseMixedPrecision())
+            kernel2->addArg(cc.getPosqCorrection());
+        selectSizeKernel->addArg(numAtoms);
+        selectSizeKernel->addArg(paddedNumAtoms);
+        selectSizeKernel->addArg();
+        selectSizeKernel->addArg();
+        selectSizeKernel->addArg(cc.getIntegrationUtilities().getStepSize());
+        selectSizeKernel->addArg(cc.getVelm());
+        selectSizeKernel->addArg(cc.getLongForceBuffer());
+    }
+
+    // Select the step size to use.
+
+    bool useDouble = cc.getUseDoublePrecision() || cc.getUseMixedPrecision();
+    double maxStepSize = maxTime-cc.getTime();
+    if (integrator.getMaximumStepSize() > 0)
+        maxStepSize = min(integrator.getMaximumStepSize(), maxStepSize);
+    float maxStepSizeFloat = (float) maxStepSize;
+    if (useDouble) {
+        selectSizeKernel->setArg(2, maxStepSize);
+        selectSizeKernel->setArg(3, integrator.getErrorTolerance());
+    }
+    else {
+        selectSizeKernel->setArg(2, maxStepSizeFloat);
+        selectSizeKernel->setArg(3, (float) integrator.getErrorTolerance());
+    }
+    selectSizeKernel->execute(blockSize, blockSize);
+
+    // Call the first integration kernel.
+
+    kernel1->execute(numAtoms);
+
+    // Apply constraints.
+
+    integration.applyConstraints(integrator.getConstraintTolerance());
+
+    // Call the second integration kernel.
+
+    kernel2->execute(numAtoms);
+    integration.computeVirtualSites();
+    
+    // Reduce UI lag.
+    
+#ifdef WIN32
+    cc.flushQueue();
+#endif
+
+    // Update the time and step count.
+
+    double dt = cc.getIntegrationUtilities().getLastStepSize();
+    double time = cc.getTime()+dt;
+    if (useDouble) {
+        if (dt == maxStepSize)
+            time = maxTime; // Avoid round-off error
+    }
+    else {
+        if (dt == maxStepSizeFloat)
+            time = maxTime; // Avoid round-off error
+    }
+    cc.setTime(time);
+    cc.setStepCount(cc.getStepCount()+1);
+    cc.reorderAtoms();
+    return dt;
+}
+
+double CommonIntegrateVariableVerletStepKernel::computeKineticEnergy(ContextImpl& context, const VariableVerletIntegrator& integrator) {
+    return cc.getIntegrationUtilities().computeKineticEnergy(0.5*integrator.getStepSize());
+}
+
 void CommonRemoveCMMotionKernel::initialize(const System& system, const CMMotionRemover& force) {
     cc.setAsCurrent();
     frequency = force.getFrequency();

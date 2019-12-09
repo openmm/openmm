@@ -268,6 +268,7 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
         compilationDefines["SHFL(var, srcLane)"] = "__shfl(var, srcLane);";
         compilationDefines["BALLOT(var)"] = "__ballot(var);";
     }
+    compilationDefines["SUPPORTS_DOUBLE_PRECISION"] = "1";
     if (useDoublePrecision) {
         posq.initialize<double4>(*this, paddedNumAtoms, "posq");
         velm.initialize<double4>(*this, paddedNumAtoms, "velm");
@@ -477,6 +478,10 @@ void CudaContext::initialize() {
     }
     findMoleculeGroups();
     nonbonded->initialize(system);
+}
+
+void CudaContext::initializeContexts() {
+    getPlatformData().initializeContexts(system);
 }
 
 void CudaContext::setAsCurrent() {
@@ -828,6 +833,10 @@ void CudaContext::addEnergyParameterDerivative(const string& param) {
         if (param == energyParamDerivNames[i])
             return;
     energyParamDerivNames.push_back(param);
+}
+
+void CudaContext::flushQueue() {
+    cuStreamSynchronize(getCurrentStream());
 }
 
 vector<int> CudaContext::getDevicePrecedence() {

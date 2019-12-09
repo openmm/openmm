@@ -53,6 +53,7 @@
 #include "OpenCLArray.h"
 #include "OpenCLBondedUtilities.h"
 #include "OpenCLExpressionUtilities.h"
+#include "OpenCLIntegrationUtilities.h"
 #include "OpenCLNonbondedUtilities.h"
 #include "OpenCLPlatform.h"
 #include "openmm/common/ComputeContext.h"
@@ -60,7 +61,6 @@
 namespace OpenMM {
 
 class OpenCLForceInfo;
-class OpenCLIntegrationUtilities;
 
 /**
  * These are a few extra vector types beyond the ones in ComputeVectorTypes.h.
@@ -584,6 +584,11 @@ public:
         return *nonbonded;
     }
     /**
+     * This should be called by the Integrator from its own initialize() method.
+     * It ensures all contexts are fully initialized.
+     */
+    void initializeContexts();
+    /**
      * Set the particle charges.  These are packed into the fourth element of the posq array.
      */
     void setCharges(const std::vector<double>& charges);
@@ -613,6 +618,13 @@ public:
      * @param param    the name of the parameter to add
      */
     void addEnergyParameterDerivative(const std::string& param);
+    /**
+     * Wait until all work that has been queued (kernel executions, asynchronous data transfers, etc.)
+     * has been submitted to the device.  This does not mean it has necessarily been completed.
+     * Calling this periodically may improve the responsiveness of the computer's GUI, but at the
+     * expense of reduced simulation performance.
+     */
+    void flushQueue();
 private:
     OpenCLPlatform::PlatformData& platformData;
     int deviceIndex;

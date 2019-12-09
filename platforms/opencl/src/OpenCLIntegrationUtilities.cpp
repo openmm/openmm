@@ -25,6 +25,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "OpenCLIntegrationUtilities.h"
+#include "OpenCLContext.h"
 #include "OpenCLKernelSources.h"
 #include "openmm/internal/OSRngSeed.h"
 #include "openmm/HarmonicAngleForce.h"
@@ -32,6 +33,7 @@
 #include "quern.h"
 #include "OpenCLExpressionUtilities.h"
 #include "ReferenceCCMAAlgorithm.h"
+#include <cl.hpp>
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>

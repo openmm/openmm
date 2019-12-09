@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -27,19 +27,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
+#include "CudaArray.h"
 #include "openmm/System.h"
-#include "CudaContext.h"
+#include "openmm/common/IntegrationUtilities.h"
 #include "windowsExportCuda.h"
+#include <cuda.h>
+#include <builtin_types.h>
 #include <iosfwd>
 
 namespace OpenMM {
+
+class CudaContext;
 
 /**
  * This class implements features that are used by many different integrators, including
  * common workspace arrays, random number generation, and enforcing constraints.
  */
 
-class OPENMM_EXPORT_CUDA CudaIntegrationUtilities {
+class OPENMM_EXPORT_CUDA CudaIntegrationUtilities : public IntegrationUtilities {
 public:
     CudaIntegrationUtilities(CudaContext& context, const System& system);
     ~CudaIntegrationUtilities();
