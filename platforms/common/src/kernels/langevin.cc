@@ -4,13 +4,13 @@ enum {VelScale, ForceScale, NoiseScale, MaxParams};
  * Perform the first step of Langevin integration.
  */
 
-extern "C" __global__ void integrateLangevinPart1(int numAtoms, int paddedNumAtoms, mixed4* __restrict__ velm, const long long* __restrict__ force, mixed4* __restrict__ posDelta,
-        const mixed* __restrict__ paramBuffer, const mixed2* __restrict__ dt, const float4* __restrict__ random, unsigned int randomIndex) {
+KERNEL void integrateLangevinPart1(int numAtoms, int paddedNumAtoms, GLOBAL mixed4* RESTRICT velm, GLOBAL const mm_long* RESTRICT force, GLOBAL mixed4* RESTRICT posDelta,
+        GLOBAL const mixed* RESTRICT paramBuffer, GLOBAL const mixed2* RESTRICT dt, GLOBAL const float4* RESTRICT random, unsigned int randomIndex) {
     mixed vscale = paramBuffer[VelScale];
     mixed fscale = paramBuffer[ForceScale]/(mixed) 0x100000000;
     mixed noisescale = paramBuffer[NoiseScale];
     mixed stepSize = dt[0].y;
-    int index = blockIdx.x*blockDim.x+threadIdx.x;
+    int index = GLOBAL_ID;
     randomIndex += index;
     while (index < numAtoms) {
         mixed4 velocity = velm[index];
@@ -22,8 +22,8 @@ extern "C" __global__ void integrateLangevinPart1(int numAtoms, int paddedNumAto
             velm[index] = velocity;
             posDelta[index] = make_mixed4(stepSize*velocity.x, stepSize*velocity.y, stepSize*velocity.z, 0);
         }
-        randomIndex += blockDim.x*gridDim.x;
-        index += blockDim.x*gridDim.x;
+        randomIndex += GLOBAL_SIZE;
+        index += GLOBAL_SIZE;
     }
 }
 
@@ -31,14 +31,18 @@ extern "C" __global__ void integrateLangevinPart1(int numAtoms, int paddedNumAto
  * Perform the second step of Langevin integration.
  */
 
-extern "C" __global__ void integrateLangevinPart2(int numAtoms, real4* __restrict__ posq, real4* __restrict__ posqCorrection, const mixed4* __restrict__ posDelta, mixed4* __restrict__ velm, const mixed2* __restrict__ dt) {
-#if __CUDA_ARCH__ >= 130
+KERNEL void integrateLangevinPart2(int numAtoms, GLOBAL real4* RESTRICT posq, GLOBAL const mixed4* RESTRICT posDelta, GLOBAL mixed4* RESTRICT velm, GLOBAL const mixed2* RESTRICT dt
+#ifdef USE_MIXED_PRECISION
+        , GLOBAL real4* RESTRICT posqCorrection
+#endif
+        ) {
+#ifdef SUPPORTS_DOUBLE_PRECISION
     double invStepSize = 1.0/dt[0].y;
 #else
     float invStepSize = 1.0f/dt[0].y;
     float correction = (1.0f-invStepSize*dt[0].y)/dt[0].y;
 #endif
-    int index = blockIdx.x*blockDim.x+threadIdx.x;
+    int index = GLOBAL_ID;
     while (index < numAtoms) {
         mixed4 vel = velm[index];
         if (vel.w != 0) {
@@ -53,7 +57,7 @@ extern "C" __global__ void integrateLangevinPart2(int numAtoms, real4* __restric
             pos.x += delta.x;
             pos.y += delta.y;
             pos.z += delta.z;
-#if __CUDA_ARCH__ >= 130
+#ifdef SUPPORTS_DOUBLE_PRECISION
             vel.x = (mixed) (invStepSize*delta.x);
             vel.y = (mixed) (invStepSize*delta.y);
             vel.z = (mixed) (invStepSize*delta.z);
@@ -70,7 +74,7 @@ extern "C" __global__ void integrateLangevinPart2(int numAtoms, real4* __restric
 #endif
             velm[index] = vel;
         }
-        index += blockDim.x*gridDim.x;
+        index += GLOBAL_SIZE;
     }
 }
 
@@ -78,32 +82,30 @@ extern "C" __global__ void integrateLangevinPart2(int numAtoms, real4* __restric
  * Select the step size to use for the next step.
  */
 
-extern "C" __global__ void selectLangevinStepSize(int numAtoms, int paddedNumAtoms, mixed maxStepSize, mixed errorTol, mixed friction, mixed kT, mixed2* __restrict__ dt,
-        const mixed4* __restrict__ velm, const long long* __restrict__ force, mixed* __restrict__ paramBuffer) {
+KERNEL void selectLangevinStepSize(int numAtoms, int paddedNumAtoms, mixed maxStepSize, mixed errorTol, mixed friction, mixed kT, GLOBAL mixed2* RESTRICT dt,
+        GLOBAL const mixed4* RESTRICT velm, GLOBAL const mm_long* RESTRICT force, GLOBAL mixed* RESTRICT paramBuffer) {
     // Calculate the error.
 
-    extern __shared__ mixed params[];
-    mixed* error = &params[MaxParams];
+    LOCAL mixed error[256];
+    LOCAL mixed params[MaxParams];
     mixed err = 0;
-    unsigned int index = threadIdx.x;
     const mixed scale = RECIP((mixed) 0x100000000);
-    while (index < numAtoms) {
+    for (int index = LOCAL_ID; index < numAtoms; index += LOCAL_SIZE) {
         mixed3 f = make_mixed3(scale*force[index], scale*force[index+paddedNumAtoms], scale*force[index+paddedNumAtoms*2]);
         mixed invMass = velm[index].w;
         err += (f.x*f.x + f.y*f.y + f.z*f.z)*invMass*invMass;
-        index += blockDim.x*gridDim.x;
     }
-    error[threadIdx.x] = err;
-    __syncthreads();
+    error[LOCAL_ID] = err;
+    SYNC_THREADS;
 
     // Sum the errors from all threads.
 
-    for (unsigned int offset = 1; offset < blockDim.x; offset *= 2) {
-        if (threadIdx.x+offset < blockDim.x && (threadIdx.x&(2*offset-1)) == 0)
-            error[threadIdx.x] += error[threadIdx.x+offset];
-        __syncthreads();
+    for (unsigned int offset = 1; offset < LOCAL_SIZE; offset *= 2) {
+        if (LOCAL_ID+offset < LOCAL_SIZE && (LOCAL_ID&(2*offset-1)) == 0)
+            error[LOCAL_ID] += error[LOCAL_ID+offset];
+        SYNC_THREADS;
     }
-    if (blockIdx.x*blockDim.x+threadIdx.x == 0) {
+    if (GLOBAL_ID == 0) {
         // Select the new step size.
 
         mixed totalError = SQRT(error[0]/(numAtoms*3));
@@ -126,7 +128,7 @@ extern "C" __global__ void selectLangevinStepSize(int numAtoms, int paddedNumAto
         params[ForceScale] = fscale;
         params[NoiseScale] = noisescale;
     }
-    __syncthreads();
-    if (threadIdx.x < MaxParams)
-        paramBuffer[threadIdx.x] = params[threadIdx.x];
+    SYNC_THREADS;
+    if (LOCAL_ID < MaxParams)
+        paramBuffer[LOCAL_ID] = params[LOCAL_ID];
 }

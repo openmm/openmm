@@ -268,7 +268,6 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
         compilationDefines["SHFL(var, srcLane)"] = "__shfl(var, srcLane);";
         compilationDefines["BALLOT(var)"] = "__ballot(var);";
     }
-    compilationDefines["SUPPORTS_DOUBLE_PRECISION"] = "1";
     if (useDoublePrecision) {
         posq.initialize<double4>(*this, paddedNumAtoms, "posq");
         velm.initialize<double4>(*this, paddedNumAtoms, "velm");

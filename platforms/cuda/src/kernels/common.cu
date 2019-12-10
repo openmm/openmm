@@ -20,3 +20,6 @@
 
 typedef long long mm_long;
 typedef unsigned long long mm_ulong;
+
+#define SUPPORTS_64_BIT_ATOMICS 1
+#define SUPPORTS_DOUBLE_PRECISION 1

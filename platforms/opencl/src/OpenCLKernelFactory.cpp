@@ -118,15 +118,15 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
     if (name == IntegrateVerletStepKernel::Name())
         return new CommonIntegrateVerletStepKernel(name, platform, cl);
     if (name == IntegrateLangevinStepKernel::Name())
-        return new OpenCLIntegrateLangevinStepKernel(name, platform, cl);
+        return new CommonIntegrateLangevinStepKernel(name, platform, cl);
     if (name == IntegrateBAOABStepKernel::Name())
-        return new OpenCLIntegrateBAOABStepKernel(name, platform, cl);
+        return new CommonIntegrateBAOABStepKernel(name, platform, cl);
     if (name == IntegrateBrownianStepKernel::Name())
-        return new OpenCLIntegrateBrownianStepKernel(name, platform, cl);
+        return new CommonIntegrateBrownianStepKernel(name, platform, cl);
     if (name == IntegrateVariableVerletStepKernel::Name())
         return new CommonIntegrateVariableVerletStepKernel(name, platform, cl);
     if (name == IntegrateVariableLangevinStepKernel::Name())
-        return new OpenCLIntegrateVariableLangevinStepKernel(name, platform, cl);
+        return new CommonIntegrateVariableLangevinStepKernel(name, platform, cl);
     if (name == IntegrateCustomStepKernel::Name())
         return new OpenCLIntegrateCustomStepKernel(name, platform, cl);
     if (name == ApplyAndersenThermostatKernel::Name())

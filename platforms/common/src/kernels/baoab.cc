@@ -4,11 +4,11 @@ enum {VelScale, NoiseScale};
  * Perform the first part of BAOAB integration: velocity half step, then position half step.
  */
 
-extern "C" __global__ void integrateBAOABPart1(int numAtoms, int paddedNumAtoms, mixed4* __restrict__ velm, const long long* __restrict__ force, mixed4* __restrict__ posDelta,
-        mixed4* __restrict__ oldDelta, const mixed2* __restrict__ dt) {
+KERNEL void integrateBAOABPart1(int numAtoms, int paddedNumAtoms, GLOBAL mixed4* RESTRICT velm, GLOBAL const mm_long* RESTRICT force, GLOBAL mixed4* RESTRICT posDelta,
+        GLOBAL mixed4* RESTRICT oldDelta, GLOBAL const mixed2* RESTRICT dt) {
     mixed halfdt = 0.5*dt[0].y;
     mixed fscale = halfdt/(mixed) 0x100000000;
-    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < numAtoms; index += blockDim.x*gridDim.x) {
+    for (int index = GLOBAL_ID; index < numAtoms; index += GLOBAL_SIZE) {
         mixed4 velocity = velm[index];
         if (velocity.w != 0.0) {
             velocity.x += fscale*velocity.w*force[index];
@@ -27,13 +27,17 @@ extern "C" __global__ void integrateBAOABPart1(int numAtoms, int paddedNumAtoms,
  * then position half step.
  */
 
-extern "C" __global__ void integrateBAOABPart2(int numAtoms, real4* __restrict__ posq, real4* __restrict__ posqCorrection, mixed4* __restrict__ velm, mixed4* __restrict__ posDelta,
-        mixed4* __restrict__ oldDelta, const mixed* __restrict__ paramBuffer, const mixed2* __restrict__ dt, const float4* __restrict__ random, unsigned int randomIndex) {
+KERNEL void integrateBAOABPart2(int numAtoms, GLOBAL real4* RESTRICT posq, GLOBAL mixed4* RESTRICT velm, GLOBAL mixed4* RESTRICT posDelta,
+        GLOBAL mixed4* RESTRICT oldDelta, GLOBAL const mixed* RESTRICT paramBuffer, GLOBAL const mixed2* RESTRICT dt, GLOBAL const float4* RESTRICT random, unsigned int randomIndex
+#ifdef USE_MIXED_PRECISION
+        , GLOBAL real4* RESTRICT posqCorrection
+#endif
+        ) {
     mixed vscale = paramBuffer[VelScale];
     mixed noisescale = paramBuffer[NoiseScale];
     mixed halfdt = 0.5*dt[0].y;
     mixed invHalfdt = 1/halfdt;
-    int index = blockIdx.x*blockDim.x+threadIdx.x;
+    int index = GLOBAL_ID;
     randomIndex += index;
     while (index < numAtoms) {
         mixed4 velocity = velm[index];
@@ -67,8 +71,8 @@ extern "C" __global__ void integrateBAOABPart2(int numAtoms, real4* __restrict__
             posDelta[index] = delta;
             oldDelta[index] = delta;
         }
-        randomIndex += blockDim.x*gridDim.x;
-        index += blockDim.x*gridDim.x;
+        randomIndex += GLOBAL_SIZE;
+        index += GLOBAL_SIZE;
     }
 }
 
@@ -77,11 +81,15 @@ extern "C" __global__ void integrateBAOABPart2(int numAtoms, real4* __restrict__
  * the constrained positions in preparation for computing forces.
  */
 
-extern "C" __global__ void integrateBAOABPart3(int numAtoms, real4* __restrict__ posq, real4* __restrict__ posqCorrection, mixed4* __restrict__ velm,
-        mixed4* __restrict__ posDelta, mixed4* __restrict__ oldDelta, const mixed2* __restrict__ dt) {
+KERNEL void integrateBAOABPart3(int numAtoms, GLOBAL real4* RESTRICT posq, GLOBAL mixed4* RESTRICT velm,
+         GLOBAL mixed4* RESTRICT posDelta, GLOBAL mixed4* RESTRICT oldDelta, GLOBAL const mixed2* RESTRICT dt
+#ifdef USE_MIXED_PRECISION
+        , GLOBAL real4* RESTRICT posqCorrection
+#endif
+        ) {
     mixed halfdt = 0.5*dt[0].y;
     mixed invHalfdt = 1/halfdt;
-    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < numAtoms; index += blockDim.x*gridDim.x) {
+    for (int index = GLOBAL_ID; index < numAtoms; index += GLOBAL_SIZE) {
         mixed4 velocity = velm[index];
         if (velocity.w != 0.0) {
             mixed4 delta = posDelta[index];
@@ -113,11 +121,11 @@ extern "C" __global__ void integrateBAOABPart3(int numAtoms, real4* __restrict__
  * Perform the fourth part of BAOAB integration: velocity half step.
  */
 
-extern "C" __global__ void integrateBAOABPart4(int numAtoms, int paddedNumAtoms, mixed4* __restrict__ velm,
-        const long long* __restrict__ force, const mixed2* __restrict__ dt) {
+KERNEL void integrateBAOABPart4(int numAtoms, int paddedNumAtoms, GLOBAL mixed4* RESTRICT velm,
+        GLOBAL const mm_long* RESTRICT force, GLOBAL const mixed2* RESTRICT dt) {
     mixed halfdt = 0.5*dt[0].y;
     mixed fscale = halfdt/(mixed) 0x100000000;
-    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < numAtoms; index += blockDim.x*gridDim.x) {
+    for (int index = GLOBAL_ID; index < numAtoms; index += GLOBAL_SIZE) {
         mixed4 velocity = velm[index];
         if (velocity.w != 0.0) {
             velocity.x += fscale*velocity.w*force[index];

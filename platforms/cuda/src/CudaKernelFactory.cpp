@@ -120,15 +120,15 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
     if (name == IntegrateVerletStepKernel::Name())
         return new CommonIntegrateVerletStepKernel(name, platform, cu);
     if (name == IntegrateLangevinStepKernel::Name())
-        return new CudaIntegrateLangevinStepKernel(name, platform, cu);
+        return new CommonIntegrateLangevinStepKernel(name, platform, cu);
     if (name == IntegrateBAOABStepKernel::Name())
-        return new CudaIntegrateBAOABStepKernel(name, platform, cu);
+        return new CommonIntegrateBAOABStepKernel(name, platform, cu);
     if (name == IntegrateBrownianStepKernel::Name())
-        return new CudaIntegrateBrownianStepKernel(name, platform, cu);
+        return new CommonIntegrateBrownianStepKernel(name, platform, cu);
     if (name == IntegrateVariableVerletStepKernel::Name())
         return new CommonIntegrateVariableVerletStepKernel(name, platform, cu);
     if (name == IntegrateVariableLangevinStepKernel::Name())
-        return new CudaIntegrateVariableLangevinStepKernel(name, platform, cu);
+        return new CommonIntegrateVariableLangevinStepKernel(name, platform, cu);
     if (name == IntegrateCustomStepKernel::Name())
         return new CudaIntegrateCustomStepKernel(name, platform, cu);
     if (name == ApplyAndersenThermostatKernel::Name())

@@ -2,18 +2,18 @@
  * Perform the first step of Brownian integration.
  */
 
-extern "C" __global__ void integrateBrownianPart1(int numAtoms, int paddedNumAtoms, mixed tauDeltaT, mixed noiseAmplitude, const long long* __restrict__ force,
-        mixed4* __restrict__ posDelta, const mixed4* __restrict__ velm, const float4* __restrict__ random, unsigned int randomIndex) {
-    randomIndex += blockIdx.x*blockDim.x+threadIdx.x;
+KERNEL void integrateBrownianPart1(int numAtoms, int paddedNumAtoms, mixed tauDeltaT, mixed noiseAmplitude, GLOBAL const mm_long* RESTRICT force,
+        GLOBAL mixed4* RESTRICT posDelta, GLOBAL const mixed4* RESTRICT velm, GLOBAL const float4* RESTRICT random, unsigned int randomIndex) {
+    randomIndex += GLOBAL_ID;
     const mixed fscale = tauDeltaT/(mixed) 0x100000000;
-    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < numAtoms; index += blockDim.x*gridDim.x) {
+    for (int index = GLOBAL_ID; index < numAtoms; index += GLOBAL_SIZE) {
         mixed invMass = velm[index].w;
         if (invMass != 0) {
             posDelta[index].x = fscale*invMass*force[index] + noiseAmplitude*SQRT(invMass)*random[randomIndex].x;
             posDelta[index].y = fscale*invMass*force[index+paddedNumAtoms] + noiseAmplitude*SQRT(invMass)*random[randomIndex].y;
             posDelta[index].z = fscale*invMass*force[index+paddedNumAtoms*2] + noiseAmplitude*SQRT(invMass)*random[randomIndex].z;
         }
-        randomIndex += blockDim.x*gridDim.x;
+        randomIndex += GLOBAL_SIZE;
     }
 }
 
@@ -21,9 +21,12 @@ extern "C" __global__ void integrateBrownianPart1(int numAtoms, int paddedNumAto
  * Perform the second step of Brownian integration.
  */
 
-extern "C" __global__ void integrateBrownianPart2(int numAtoms, mixed deltaT, real4* posq, real4* __restrict__ posqCorrection, mixed4* velm, const mixed4* __restrict__ posDelta) {
-    const mixed oneOverDeltaT = RECIP(deltaT);
-    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < numAtoms; index += blockDim.x*gridDim.x) {
+KERNEL void integrateBrownianPart2(int numAtoms, mixed oneOverDeltaT, GLOBAL real4* posq, GLOBAL mixed4* velm, GLOBAL const mixed4* RESTRICT posDelta
+#ifdef USE_MIXED_PRECISION
+        , GLOBAL real4* RESTRICT posqCorrection
+#endif
+        ) {
+    for (int index = GLOBAL_ID; index < numAtoms; index += GLOBAL_SIZE) {
         if (velm[index].w != 0) {
             mixed4 delta = posDelta[index];
             velm[index].x = oneOverDeltaT*delta.x;

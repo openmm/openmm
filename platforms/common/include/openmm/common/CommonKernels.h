@@ -661,6 +661,120 @@ private:
 };
 
 /**
+ * This kernel is invoked by LangevinIntegrator to take one time step.
+ */
+class CommonIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
+public:
+    CommonIntegrateLangevinStepKernel(std::string name, const Platform& platform, ComputeContext& cc) : IntegrateLangevinStepKernel(name, platform), cc(cc),
+            hasInitializedKernels(false) {
+    }
+    /**
+     * Initialize the kernel, setting up the particle masses.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param integrator the LangevinIntegrator this kernel will be used for
+     */
+    void initialize(const System& system, const LangevinIntegrator& integrator);
+    /**
+     * Execute the kernel.
+     *
+     * @param context    the context in which to execute this kernel
+     * @param integrator the LangevinIntegrator this kernel is being used for
+     */
+    void execute(ContextImpl& context, const LangevinIntegrator& integrator);
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the LangevinIntegrator this kernel is being used for
+     */
+    double computeKineticEnergy(ContextImpl& context, const LangevinIntegrator& integrator);
+private:
+    ComputeContext& cc;
+    double prevTemp, prevFriction, prevStepSize;
+    bool hasInitializedKernels;
+    ComputeArray params;
+    ComputeKernel kernel1, kernel2;
+};
+
+/**
+ * This kernel is invoked by BAOABLangevinIntegrator to take one time step.
+ */
+class CommonIntegrateBAOABStepKernel : public IntegrateBAOABStepKernel {
+public:
+    CommonIntegrateBAOABStepKernel(std::string name, const Platform& platform, ComputeContext& cc) : IntegrateBAOABStepKernel(name, platform), cc(cc),
+            hasInitializedKernels(false) {
+    }
+    /**
+     * Initialize the kernel, setting up the particle masses.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param integrator the BAOABLangevinIntegrator this kernel will be used for
+     */
+    void initialize(const System& system, const BAOABLangevinIntegrator& integrator);
+    /**
+     * Execute the kernel.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the BAOABLangevinIntegrator this kernel is being used for
+     * @param forcesAreValid if the context has been modified since the last time step, this will be
+     *                       false to show that cached forces are invalid and must be recalculated.
+     *                       On exit, this should specify whether the cached forces are valid at the
+     *                       end of the step.
+     */
+    void execute(ContextImpl& context, const BAOABLangevinIntegrator& integrator, bool& forcesAreValid);
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the BAOABLangevinIntegrator this kernel is being used for
+     */
+    double computeKineticEnergy(ContextImpl& context, const BAOABLangevinIntegrator& integrator);
+private:
+    ComputeContext& cc;
+    double prevTemp, prevFriction, prevStepSize;
+    bool hasInitializedKernels;
+    ComputeArray params, oldDelta;
+    ComputeKernel kernel1, kernel2, kernel3, kernel4;
+};
+
+/**
+ * This kernel is invoked by BrownianIntegrator to take one time step.
+ */
+class CommonIntegrateBrownianStepKernel : public IntegrateBrownianStepKernel {
+public:
+    CommonIntegrateBrownianStepKernel(std::string name, const Platform& platform, ComputeContext& cc) : IntegrateBrownianStepKernel(name, platform), cc(cc),
+            hasInitializedKernels(false), prevTemp(-1), prevFriction(-1), prevStepSize(-1) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param integrator the BrownianIntegrator this kernel will be used for
+     */
+    void initialize(const System& system, const BrownianIntegrator& integrator);
+    /**
+     * Execute the kernel.
+     *
+     * @param context    the context in which to execute this kernel
+     * @param integrator the BrownianIntegrator this kernel is being used for
+     */
+    void execute(ContextImpl& context, const BrownianIntegrator& integrator);
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the BrownianIntegrator this kernel is being used for
+     */
+    double computeKineticEnergy(ContextImpl& context, const BrownianIntegrator& integrator);
+private:
+    ComputeContext& cc;
+    double prevTemp, prevFriction, prevStepSize;
+    bool hasInitializedKernels;
+    ComputeKernel kernel1, kernel2;
+};
+
+/**
  * This kernel is invoked by VerletIntegrator to take one time step.
  */
 class CommonIntegrateVariableVerletStepKernel : public IntegrateVariableVerletStepKernel {
@@ -696,6 +810,46 @@ private:
     bool hasInitializedKernels;
     int blockSize;
     ComputeKernel kernel1, kernel2, selectSizeKernel;
+};
+
+/**
+ * This kernel is invoked by VariableLangevinIntegrator to take one time step.
+ */
+class CommonIntegrateVariableLangevinStepKernel : public IntegrateVariableLangevinStepKernel {
+public:
+    CommonIntegrateVariableLangevinStepKernel(std::string name, const Platform& platform, ComputeContext& cc) : IntegrateVariableLangevinStepKernel(name, platform), cc(cc),
+            hasInitializedKernels(false) {
+    }
+    /**
+     * Initialize the kernel, setting up the particle masses.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param integrator the VariableLangevinIntegrator this kernel will be used for
+     */
+    void initialize(const System& system, const VariableLangevinIntegrator& integrator);
+    /**
+     * Execute the kernel.
+     *
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VariableLangevinIntegrator this kernel is being used for
+     * @param maxTime    the maximum time beyond which the simulation should not be advanced
+     * @return the size of the step that was taken
+     */
+    double execute(ContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime);
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VariableLangevinIntegrator this kernel is being used for
+     */
+    double computeKineticEnergy(ContextImpl& context, const VariableLangevinIntegrator& integrator);
+private:
+    ComputeContext& cc;
+    bool hasInitializedKernels;
+    int blockSize;
+    ComputeArray params;
+    ComputeKernel kernel1, kernel2, selectSizeKernel;
+    double prevTemp, prevFriction, prevErrorTol;
 };
 
 /**
