@@ -349,6 +349,18 @@ class TestCharmmFiles(unittest.TestCase):
             energy = context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilocalories_per_mole)
             self.assertAlmostEqual(energy, modeEnergy[abs(nbxmod)], delta=1e-3*abs(energy))
 
+    def test_Nonbonded_Exclusion(self):
+        """Test that the 1-2, 1-3 and 1-4 pairs are correctly excluded or scaled."""
+        psf = CharmmPsfFile('systems/MoS2.psf')
+        pdb = PDBFile('systems/MoS2.pdb')
+        params = CharmmParameterSet('systems/MoS2.prm')
+        system = psf.createSystem(params, nonbondedMethod=NoCutoff)
+        context = Context(system, VerletIntegrator(1*femtoseconds), Platform.getPlatformByName('Reference'))
+        context.setPositions(pdb.positions)
+        energy = context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilocalories_per_mole)
+        # Compare with value computed with NAMD.
+        self.assertAlmostEqual(energy, -2154.5539, delta=1e-3*abs(energy))
+
 
 if __name__ == '__main__':
     unittest.main()
