@@ -25,18 +25,18 @@
 typedef long mm_long;
 typedef unsigned long mm_ulong;
 
-#define make_short2(x...) (short2) (x)
-#define make_short3(x...) (short3) (x)
-#define make_short4(x...) (short4) (x)
-#define make_int2(x...) (int2) (x)
-#define make_int3(x...) (int3) (x)
-#define make_int4(x...) (int4) (x)
-#define make_float2(x...) (float2) (x)
-#define make_float3(x...) (float3) (x)
-#define make_float4(x...) (float4) (x)
-#define make_double2(x...) (double2) (x)
-#define make_double3(x...) (double3) (x)
-#define make_double4(x...) (double4) (x)
+#define make_short2(x...) ((short2) (x))
+#define make_short3(x...) ((short3) (x))
+#define make_short4(x...) ((short4) (x))
+#define make_int2(x...) ((int2) (x))
+#define make_int3(x...) ((int3) (x))
+#define make_int4(x...) ((int4) (x))
+#define make_float2(x...) ((float2) (x))
+#define make_float3(x...) ((float3) (x))
+#define make_float4(x...) ((float4) (x))
+#define make_double2(x...) ((double2) (x))
+#define make_double3(x...) ((double3) (x))
+#define make_double4(x...) ((double4) (x))
 
 #define trimTo3(v) v.xyz
 

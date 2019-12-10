@@ -27,6 +27,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
+#include "openmm/common/ArrayInterface.h"
 #include "openmm/common/BondedUtilities.h"
 #include "openmm/common/ComputeEvent.h"
 #include "openmm/common/ComputeForceInfo.h"
@@ -43,7 +44,6 @@
 
 namespace OpenMM {
 
-class ArrayInterface;
 class ExpressionUtilities;
 class System;
 class ThreadPool;
@@ -113,7 +113,7 @@ public:
     /**
      * Set all elements of an array to 0.
      */
-    void clearBuffer(ArrayInterface& array);
+    virtual void clearBuffer(ArrayInterface& array) = 0;
     /**
      * Register an array that should be automatically cleared (all elements set to 0) at the start of each force or energy computation.
      */
@@ -261,6 +261,10 @@ public:
     int getPaddedNumAtoms() const {
         return paddedNumAtoms;
     }
+    /**
+     * Get the standard number of thread blocks to use when executing kernels.
+     */
+    virtual int getNumThreadBlocks() const = 0;
     /**
      * Get the array which contains the position (the xyz components) and charge (the w component) of each atom.
      */

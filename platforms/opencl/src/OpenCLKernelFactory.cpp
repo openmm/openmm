@@ -128,7 +128,7 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
     if (name == IntegrateVariableLangevinStepKernel::Name())
         return new CommonIntegrateVariableLangevinStepKernel(name, platform, cl);
     if (name == IntegrateCustomStepKernel::Name())
-        return new OpenCLIntegrateCustomStepKernel(name, platform, cl);
+        return new CommonIntegrateCustomStepKernel(name, platform, cl);
     if (name == ApplyAndersenThermostatKernel::Name())
         return new OpenCLApplyAndersenThermostatKernel(name, platform, cl);
     if (name == ApplyMonteCarloBarostatKernel::Name())
