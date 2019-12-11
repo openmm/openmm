@@ -61,6 +61,15 @@ public:
     void step(int steps);
 };
 
+class OPENMM_EXPORT MultiStepVerletIntegrator3 : public VerletIntegrator {
+public:
+    MultiStepVerletIntegrator3(double stepSize, int fastGroups, int slowGroups);
+    void step(int steps);
+private:
+    int fastGroups;
+    int slowGroups;
+};
+
 } // namespace OpenMM
 
 #endif /*OPENMM_MULTISTEPINTEGRATOR_H_*/

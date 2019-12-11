@@ -78,6 +78,9 @@ if __name__ == '__main__':
     elif integratorType == 'm2':
         setForceGroups(system)
         integrator = MultiStepVerletIntegrator2(0.5*femtoseconds, 2)
+    elif integratorType == 'm3':
+        setForceGroups(system)
+        integrator = MultiStepVerletIntegrator3(1.0*femtoseconds, 1, 2)
 
     platform = Platform.getPlatformByName('CUDA')
     #properties = {'DeterministicForces': 'true', 'Precision': 'double'}

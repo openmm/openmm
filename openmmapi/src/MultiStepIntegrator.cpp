@@ -75,3 +75,23 @@ void MultiStepLangevinIntegrator::step(int steps) {
         kernel.getAs<IntegrateLangevinStepKernel>().execute(*context, *this);
     }
 }
+
+MultiStepVerletIntegrator3::MultiStepVerletIntegrator3(double stepSize, int fastGroups, int slowGroups)
+    : VerletIntegrator(stepSize/2), fastGroups(fastGroups), slowGroups(slowGroups) {}
+
+void MultiStepVerletIntegrator3::step(int steps) {
+
+    if (context == NULL)
+        throw OpenMMException("This Integrator is not bound to a context!");
+
+    for (int i = 0; i < steps; ++i) {
+        context->updateContextState();
+        context->calcForcesAndEnergy(true, false, fastGroups);
+        kernel.getAs<IntegrateVerletStepKernel>().execute(*context, *this);
+
+        context->updateContextState();
+        // The forces of "slowGroups" have to be scaled by 2!
+        context->calcForcesAndEnergy(true, false, fastGroups | slowGroups);
+        kernel.getAs<IntegrateVerletStepKernel>().execute(*context, *this);
+    }
+}
