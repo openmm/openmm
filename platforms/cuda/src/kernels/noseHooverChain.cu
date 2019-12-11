@@ -125,8 +125,8 @@ extern "C" __global__ void scalePairsVelocities(mixed2 * __restrict__ scaleFacto
     for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < numPairs; index += blockDim.x*gridDim.x) {
         int atom1 = pairs[index].x;
         int atom2 = pairs[index].y;
-        mixed4 &v1 = velm[atom1];
-        mixed4 &v2 = velm[atom2];
+        mixed4 v1 = velm[atom1];
+        mixed4 v2 = velm[atom2];
         mixed m1 = v1.w == 0 ? 0 : 1 / v1.w;
         mixed m2 = v2.w == 0 ? 0 : 1 / v2.w;
         mixed4 cv;
@@ -143,6 +143,8 @@ extern "C" __global__ void scalePairsVelocities(mixed2 * __restrict__ scaleFacto
         v2.x = absScale * cv.x + relScale * rv.x * m1 / (m1 + m2);
         v2.y = absScale * cv.y + relScale * rv.y * m1 / (m1 + m2);
         v2.z = absScale * cv.z + relScale * rv.z * m1 / (m1 + m2);
+        velm[atom1] = v1;
+        velm[atom2] = v2;
     }
 }
 

@@ -1761,7 +1761,7 @@ public:
 private:
     int sumWorkGroupSize;
     OpenCLContext& cl;
-    OpenCLArray scaleFactorBuffer, kineticEnergyBuffer, chainMasses, chainForces, heatBathEnergy;
+    OpenCLArray energyBuffer, scaleFactorBuffer, kineticEnergyBuffer, chainMasses, chainForces, heatBathEnergy;
     std::map<int, OpenCLArray> atomlists, pairlists;
     std::map<int, cl::Kernel> propagateKernels;
     cl::Kernel reduceEnergyKernel;

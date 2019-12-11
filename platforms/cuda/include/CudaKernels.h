@@ -1769,7 +1769,7 @@ public:
 private:
     int sumWorkGroupSize;
     CudaContext& cu;
-    CudaArray scaleFactorBuffer, kineticEnergyBuffer, chainMasses, chainForces, heatBathEnergy;
+    CudaArray energyBuffer, scaleFactorBuffer, kineticEnergyBuffer, chainMasses, chainForces, heatBathEnergy;
     std::map<int, CudaArray> atomlists, pairlists;
     std::map<int, CUfunction> propagateKernels;
     CUfunction reduceEnergyKernel;

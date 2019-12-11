@@ -8855,6 +8855,12 @@ void OpenCLNoseHooverChainKernel::initialize() {
     computePairsKineticEnergyKernel = cl::Kernel(program, "computePairsKineticEnergy");
     scaleAtomsVelocitiesKernel = cl::Kernel(program, "scaleAtomsVelocities");
     scalePairsVelocitiesKernel = cl::Kernel(program, "scalePairsVelocities");
+    int energyBufferSize = cl.getEnergyBuffer().getSize();
+    if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {
+        energyBuffer.initialize<mm_double2>(cl, energyBufferSize, "energyBuffer");
+    } else {
+        energyBuffer.initialize<mm_float2>(cl, energyBufferSize, "energyBuffer");
+    }
 }
 
 std::pair<double, double> OpenCLNoseHooverChainKernel::propagateChain(ContextImpl& context, const NoseHooverChain &nhc, std::pair<double, double> kineticEnergies, double timeStep) {
@@ -9145,28 +9151,28 @@ std::pair<double, double> OpenCLNoseHooverChainKernel::computeMaskedKineticEnerg
     }
     cl.clearBuffer(cl.getEnergyBuffer());
     if (nAtoms) {
-        computeAtomsKineticEnergyKernel.setArg<cl::Buffer>(0, cl.getEnergyBuffer().getDeviceBuffer());
+        computeAtomsKineticEnergyKernel.setArg<cl::Buffer>(0, energyBuffer.getDeviceBuffer());
         computeAtomsKineticEnergyKernel.setArg<cl_int>(1, nAtoms);
         computeAtomsKineticEnergyKernel.setArg<cl::Buffer>(2, cl.getVelm().getDeviceBuffer());
         computeAtomsKineticEnergyKernel.setArg<cl::Buffer>(3, atomlists[chainID].getDeviceBuffer());
         cl.executeKernel(computeAtomsKineticEnergyKernel, nAtoms);
     }
     if (nPairs) {
-        computePairsKineticEnergyKernel.setArg<cl::Buffer>(0, cl.getEnergyBuffer().getDeviceBuffer());
+        computePairsKineticEnergyKernel.setArg<cl::Buffer>(0, energyBuffer.getDeviceBuffer());
         computePairsKineticEnergyKernel.setArg<cl_int>(1, nPairs);
         computePairsKineticEnergyKernel.setArg<cl::Buffer>(2, cl.getVelm().getDeviceBuffer());
         computePairsKineticEnergyKernel.setArg<cl::Buffer>(3, pairlists[chainID].getDeviceBuffer());
         cl.executeKernel(computePairsKineticEnergyKernel, nPairs);
     }
-    int bufferSize = cl.getEnergyBuffer().getSize() / 2; // Halve it to account for the fact that we're storing mixed2 instead of mixed in there
+    int bufferSize = energyBuffer.getSize();
     int workGroupSize  = cl.getDevice().getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>();
     if (workGroupSize > 512)
         workGroupSize = 512;
-    reduceEnergyKernel.setArg<cl::Buffer>(0, cl.getEnergyBuffer().getDeviceBuffer());
+    reduceEnergyKernel.setArg<cl::Buffer>(0, energyBuffer.getDeviceBuffer());
     reduceEnergyKernel.setArg<cl::Buffer>(1, kineticEnergyBuffer.getDeviceBuffer());
     reduceEnergyKernel.setArg<cl_int>(2, bufferSize);
     reduceEnergyKernel.setArg<cl_int>(3, workGroupSize);
-    reduceEnergyKernel.setArg(4, 2*workGroupSize*cl.getEnergyBuffer().getElementSize(), NULL);
+    reduceEnergyKernel.setArg(4, workGroupSize*energyBuffer.getElementSize(), NULL);
     cl.executeKernel(reduceEnergyKernel, workGroupSize, workGroupSize);
 
     std::pair<double, double> KEs = {0, 0};

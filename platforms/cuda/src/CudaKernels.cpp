@@ -8428,6 +8428,13 @@ void CudaNoseHooverChainKernel::initialize() {
     computePairsKineticEnergyKernel = cu.getKernel(module, "computePairsKineticEnergy");
     scaleAtomsVelocitiesKernel = cu.getKernel(module, "scaleAtomsVelocities");
     scalePairsVelocitiesKernel = cu.getKernel(module, "scalePairsVelocities");
+
+    int energyBufferSize = cu.getEnergyBuffer().getSize();
+    if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
+        energyBuffer.initialize<double2>(cu, energyBufferSize, "energyBuffer");
+    } else {
+        energyBuffer.initialize<float2>(cu, energyBufferSize, "energyBuffer");
+    }
 }
 
 std::pair<double, double> CudaNoseHooverChainKernel::propagateChain(ContextImpl& context, const NoseHooverChain &nhc, std::pair<double, double> kineticEnergies, double timeStep) {
@@ -8709,9 +8716,9 @@ std::pair<double, double> CudaNoseHooverChainKernel::computeMaskedKineticEnergy(
     }
 
     //taken from CudaContext::reduceEnergy(); the final kinetic energy will live in the kineticEnergy buffer
-    int bufferSize = cu.getEnergyBuffer().getSize() / 2; // Halve it to account for the fact that we're storing mixed2 instead of mixed in there
-    void* args2[] = {&cu.getEnergyBuffer().getDevicePointer(), &kineticEnergyBuffer.getDevicePointer(), &bufferSize, &sumWorkGroupSize};
-    cu.executeKernel(reduceEnergyKernel, args2, sumWorkGroupSize, sumWorkGroupSize, 2*sumWorkGroupSize*cu.getEnergyBuffer().getElementSize());
+    int bufferSize = energyBuffer.getSize();
+    void* args2[] = {&energyBuffer.getDevicePointer(), &kineticEnergyBuffer.getDevicePointer(), &bufferSize, &sumWorkGroupSize};
+    cu.executeKernel(reduceEnergyKernel, args2, sumWorkGroupSize, sumWorkGroupSize, sumWorkGroupSize*energyBuffer.getElementSize());
 
     std::pair<double, double> KEs = {0, 0};
     if (downloadValue) {
