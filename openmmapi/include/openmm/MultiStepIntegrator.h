@@ -37,7 +37,7 @@
 
 namespace OpenMM {
 
-class MultiStep {
+class OPENMM_EXPORT MultiStep {
 public:
     MultiStep(int fastGroups_, int slowGroups_, int slowPeriod_);
     int getGroups();
