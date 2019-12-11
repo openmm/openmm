@@ -47,6 +47,37 @@ def MultiStepVerletIntegrator2(timeStep, slowPeriod):
 
     return integrator
 
+def MultiStepVerletIntegrator4(timeStep):
+
+    integrator = CustomIntegrator(timeStep)
+
+    integrator.addPerDofVariable('fe', 0)
+
+    integrator.addUpdateContextState()
+
+    integrator.addComputePerDof('v', 'v+0.25*dt*f0/m')
+    integrator.addComputePerDof('x', 'x+0.5*dt*v')
+    integrator.addComputePerDof('v', 'v+0.5*dt*f0/m')
+
+    integrator.addUpdateContextState()
+
+    # integrator.addComputePerDof('fe', 'f0 + 2*f1') # This doesn't work
+    integrator.addComputePerDof('fe', 'f0')
+    integrator.addComputePerDof('fe', 'fe + f1') # Does the same as MultiStepVerletIntegrator3
+    # integrator.addComputePerDof('fe', 'fe + 2*f1') # This is what it has to do
+
+    integrator.addComputePerDof('v', 'v+0.25*dt*fe/m')
+    integrator.addComputePerDof('x', 'x+0.5*dt*v')
+
+    # integrator.addComputePerDof('fe', 'f0 + 2*f1') # This doesn't work
+    integrator.addComputePerDof('fe', 'f0')
+    integrator.addComputePerDof('fe', 'fe + f1') # Does the same as MultiStepVerletIntegrator3
+    # integrator.addComputePerDof('fe', 'fe + 2*f1') # This is what it has to do
+
+    integrator.addComputePerDof('v', 'v+0.25*dt*fe/m')
+
+    return integrator
+
 def setForceGroups(system):
 
     for force in system.getForces():
@@ -81,6 +112,9 @@ if __name__ == '__main__':
     elif integratorType == 'm3':
         setForceGroups(system)
         integrator = MultiStepVerletIntegrator3(1.0*femtoseconds, 1, 2)
+    elif integratorType == 'm4':
+        setForceGroups(system)
+        integrator = MultiStepVerletIntegrator4(1.0*femtoseconds)
 
     platform = Platform.getPlatformByName('CUDA')
     #properties = {'DeterministicForces': 'true', 'Precision': 'double'}
