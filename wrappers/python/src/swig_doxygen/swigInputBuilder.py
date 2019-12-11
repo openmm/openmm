@@ -374,14 +374,17 @@ class SwigInputBuilder:
                     docstring = striphtmltags(docstring)
                     self.fOutDocstring.write('%%feature("docstring") %s "%s";\n' % (className, docstring))
             self.fOut.write("class %s" % className)
-            if className in self.configModule.MISSING_BASE_CLASSES:
-                self.fOut.write(" : public %s" %
-                                self.configModule.MISSING_BASE_CLASSES[className])
 
+            baseNames = []
+            if className in self.configModule.MISSING_BASE_CLASSES:
+                baseNames.append(self.configModule.MISSING_BASE_CLASSES[className])
             for baseNodePnt in findNodes(classNode, "basecompoundref", prot="public"):
                 if "refid" in baseNodePnt.attrib:
                     baseName = stripOpenmmPrefix(getText(".", baseNodePnt))
-                    self.fOut.write(" : public %s" % baseName)
+                    baseNames.append(baseName)
+            if baseNames:
+                self.fOut.write(" : public %s" % ", public ".join(baseNames))
+
             self.fOut.write(" {\n")
             self.fOut.write("public:\n")
             self.writeEnumerations(classNode)
