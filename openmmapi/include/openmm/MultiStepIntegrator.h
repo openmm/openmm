@@ -48,13 +48,13 @@ private:
     int slowStep;
 };
 
-class MultiStepVerletIntegrator : public VerletIntegrator, public MultiStep {
+class OPENMM_EXPORT MultiStepVerletIntegrator : public VerletIntegrator, public MultiStep {
 public:
     MultiStepVerletIntegrator(double stepSize, int fastGroups, int slowGroups, int slowPeriod);
     void step(int steps);
 };
 
-class MultiStepLangevinIntegrator : public LangevinIntegrator, public MultiStep {
+class OPENMM_EXPORT MultiStepLangevinIntegrator : public LangevinIntegrator, public MultiStep {
 public:
     MultiStepLangevinIntegrator(double temperature, double frictionCoeff, double stepSize,
                                 int fastGroups, int slowGroups, int slowPeriod);
