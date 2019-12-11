@@ -27,6 +27,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
+#include "openmm/common/ArrayInterface.h"
+#include "openmm/common/ComputeParameterInfo.h"
+#include <string>
+#include <vector>
+
 namespace OpenMM {
 
 /**
@@ -55,6 +60,35 @@ public:
     virtual ~NonbondedUtilities() {
     }
     /**
+     * Add a nonbonded interaction to be evaluated by the default interaction kernel.
+     *
+     * @param usesCutoff     specifies whether a cutoff should be applied to this interaction
+     * @param usesPeriodic   specifies whether periodic boundary conditions should be applied to this interaction
+     * @param usesExclusions specifies whether this interaction uses exclusions.  If this is true, it must have identical exclusions to every other interaction.
+     * @param cutoffDistance the cutoff distance for this interaction (ignored if usesCutoff is false)
+     * @param exclusionList  for each atom, specifies the list of other atoms whose interactions should be excluded
+     * @param kernel         the code to evaluate the interaction
+     * @param forceGroup     the force group in which the interaction should be calculated
+     */
+    virtual void addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance, const std::vector<std::vector<int> >& exclusionList, const std::string& kernel, int forceGroup) = 0;
+    /**
+     * Add a per-atom parameter that the default interaction kernel may depend on.
+     */
+    virtual void addParameter(ComputeParameterInfo parameter) = 0;
+    /**
+     * Add an array (other than a per-atom parameter) that should be passed as an argument to the default interaction kernel.
+     */
+    virtual void addArgument(ComputeParameterInfo parameter) = 0;
+    /**
+     * Register that the interaction kernel will be computing the derivative of the potential energy
+     * with respect to a parameter.
+     * 
+     * @param param   the name of the parameter
+     * @return the variable that will be used to accumulate the derivative.  Any code you pass to addInteraction() should
+     * add its contributions to this variable.
+     */
+    virtual std::string addEnergyParameterDerivative(const std::string& param) = 0;
+    /**
      * Get whether a cutoff is being used.
      */
     virtual bool getUseCutoff() = 0;
@@ -74,6 +108,16 @@ public:
      * Get the maximum cutoff distance used by any interaction.
      */
     virtual double getMaxCutoffDistance() = 0;
+    /**
+     * Given a nonbonded cutoff, get the padded cutoff distance used in computing
+     * the neighbor list.
+     */
+    virtual double padCutoff(double cutoff) = 0;
+    /**
+     * Get the array containing a flag for whether the neighbor list was rebuilt
+     * on the most recent call to prepareInteractions().
+     */
+    virtual ArrayInterface& getRebuildNeighborList() = 0;
 };
 
 } // namespace OpenMM

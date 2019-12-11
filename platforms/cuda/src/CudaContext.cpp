@@ -39,7 +39,6 @@
 #include "CudaProgram.h"
 #include "openmm/common/ComputeArray.h"
 #include "SHA1.h"
-#include "openmm/OpenMMException.h"
 #include "openmm/Platform.h"
 #include "openmm/System.h"
 #include "openmm/VirtualSite.h"

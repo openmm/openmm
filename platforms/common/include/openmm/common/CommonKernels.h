@@ -525,6 +525,58 @@ private:
 };
 
 /**
+ * This kernel is invoked by CustomNonbondedForce to calculate the forces acting on the system.
+ */
+class CommonCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
+public:
+    CommonCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, ComputeContext& cc, const System& system) : CalcCustomNonbondedForceKernel(name, platform),
+            cc(cc), params(NULL), forceCopy(NULL), system(system), hasInitializedKernel(false) {
+    }
+    ~CommonCalcCustomNonbondedForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomNonbondedForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomNonbondedForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomNonbondedForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force);
+private:
+    class ForceInfo;
+    void initInteractionGroups(const CustomNonbondedForce& force, const std::string& interactionSource, const std::vector<std::string>& tableTypes);
+    ComputeContext& cc;
+    ForceInfo* info;
+    ComputeParameterSet* params;
+    ComputeArray globals, interactionGroupData, filteredGroupData, numGroupTiles;
+    ComputeKernel interactionGroupKernel, prepareNeighborListKernel, buildNeighborListKernel;
+    std::vector<void*> interactionGroupArgs;
+    std::vector<std::string> globalParamNames;
+    std::vector<float> globalParamValues;
+    std::vector<ComputeArray> tabulatedFunctions;
+    double longRangeCoefficient;
+    std::vector<double> longRangeCoefficientDerivs;
+    bool hasInitializedLongRangeCorrection, hasInitializedKernel, hasParamDerivs, useNeighborList;
+    int numGroupThreadBlocks;
+    CustomNonbondedForce* forceCopy;
+    const System& system;
+};
+
+/**
  * This kernel is invoked by CustomManyParticleForce to calculate the forces acting on the system.
  */
 class CommonCalcCustomManyParticleForceKernel : public CalcCustomManyParticleForceKernel {

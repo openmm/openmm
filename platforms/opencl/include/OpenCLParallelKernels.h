@@ -460,8 +460,8 @@ private:
 class OpenCLParallelCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
 public:
     OpenCLParallelCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, const System& system);
-    OpenCLCalcCustomNonbondedForceKernel& getKernel(int index) {
-        return dynamic_cast<OpenCLCalcCustomNonbondedForceKernel&>(kernels[index].getImpl());
+    CommonCalcCustomNonbondedForceKernel& getKernel(int index) {
+        return dynamic_cast<CommonCalcCustomNonbondedForceKernel&>(kernels[index].getImpl());
     }
     /**
      * Initialize the kernel.

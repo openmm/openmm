@@ -85,6 +85,10 @@ CudaNonbondedUtilities::~CudaNonbondedUtilities() {
     cuEventDestroy(downloadCountEvent);
 }
 
+void CudaNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance, const vector<vector<int> >& exclusionList, const string& kernel, int forceGroup) {
+    addInteraction(usesCutoff, usesPeriodic, usesExclusions, cutoffDistance, exclusionList, kernel, forceGroup, false);
+}
+
 void CudaNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance, const vector<vector<int> >& exclusionList, const string& kernel, int forceGroup, bool supportsPairList) {
     if (groupCutoff.size() > 0) {
         if (usesCutoff != useCutoff)
@@ -111,8 +115,18 @@ void CudaNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic, 
     }
 }
 
+void CudaNonbondedUtilities::addParameter(ComputeParameterInfo parameter) {
+    parameters.push_back(ParameterInfo(parameter.getName(), parameter.getComponentType(), parameter.getNumComponents(),
+            parameter.getSize(), context.unwrap(parameter.getArray()).getDevicePointer()));
+}
+
 void CudaNonbondedUtilities::addParameter(const ParameterInfo& parameter) {
     parameters.push_back(parameter);
+}
+
+void CudaNonbondedUtilities::addArgument(ComputeParameterInfo parameter) {
+    arguments.push_back(ParameterInfo(parameter.getName(), parameter.getComponentType(), parameter.getNumComponents(),
+            parameter.getSize(), context.unwrap(parameter.getArray()).getDevicePointer()));
 }
 
 void CudaNonbondedUtilities::addArgument(const ParameterInfo& parameter) {

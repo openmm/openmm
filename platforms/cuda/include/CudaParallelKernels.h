@@ -461,8 +461,8 @@ private:
 class CudaParallelCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
 public:
     CudaParallelCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, const System& system);
-    CudaCalcCustomNonbondedForceKernel& getKernel(int index) {
-        return dynamic_cast<CudaCalcCustomNonbondedForceKernel&>(kernels[index].getImpl());
+    CommonCalcCustomNonbondedForceKernel& getKernel(int index) {
+        return dynamic_cast<CommonCalcCustomNonbondedForceKernel&>(kernels[index].getImpl());
     }
     /**
      * Initialize the kernel.

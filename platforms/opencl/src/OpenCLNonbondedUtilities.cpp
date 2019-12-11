@@ -125,8 +125,18 @@ void OpenCLNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic
     }
 }
 
+void OpenCLNonbondedUtilities::addParameter(ComputeParameterInfo parameter) {
+    parameters.push_back(ParameterInfo(parameter.getName(), parameter.getComponentType(), parameter.getNumComponents(),
+            parameter.getSize(), context.unwrap(parameter.getArray()).getDeviceBuffer()));
+}
+
 void OpenCLNonbondedUtilities::addParameter(const ParameterInfo& parameter) {
     parameters.push_back(parameter);
+}
+
+void OpenCLNonbondedUtilities::addArgument(ComputeParameterInfo parameter) {
+    arguments.push_back(ParameterInfo(parameter.getName(), parameter.getComponentType(), parameter.getNumComponents(),
+            parameter.getSize(), context.unwrap(parameter.getArray()).getDeviceBuffer()));
 }
 
 void OpenCLNonbondedUtilities::addArgument(const ParameterInfo& parameter) {

@@ -278,6 +278,12 @@ public:
      */
     virtual ArrayInterface& getVelm() = 0;
     /**
+     * On devices that do not support 64 bit atomics, this returns an array containing buffers of type real4 in which
+     * forces can be accumulated.  Do not call this if getSupports64BitGlobalAtomics() returns true.  The returned value
+     * in that case is undefined, and it may throw an exception.
+     */
+    virtual ArrayInterface& getForceBuffers() = 0;
+    /**
      * Get the array which contains a contribution to each force represented as 64 bit fixed point.
      */
     virtual ArrayInterface& getLongForceBuffer() = 0;

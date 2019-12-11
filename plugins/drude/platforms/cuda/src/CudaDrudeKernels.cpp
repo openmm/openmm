@@ -36,6 +36,7 @@
 #include "CudaForceInfo.h"
 #include "CudaIntegrationUtilities.h"
 #include "CudaKernelSources.h"
+#include "CommonKernelSources.h"
 #include "SimTKOpenMMRealType.h"
 #include <set>
 
@@ -392,7 +393,7 @@ void CudaIntegrateDrudeSCFStepKernel::initialize(const System& system, const Dru
     map<string, string> defines;
     defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
     defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
-    CUmodule module = cu.createModule(CudaKernelSources::verlet, defines, "");
+    CUmodule module = cu.createModule(CommonKernelSources::verlet, defines, "");
     kernel1 = cu.getKernel(module, "integrateVerletPart1");
     kernel2 = cu.getKernel(module, "integrateVerletPart2");
     prevStepSize = -1.0;

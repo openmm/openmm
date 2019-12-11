@@ -374,59 +374,6 @@ private:
 };
 
 /**
- * This kernel is invoked by CustomNonbondedForce to calculate the forces acting on the system.
- */
-class OpenCLCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
-public:
-    OpenCLCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCustomNonbondedForceKernel(name, platform),
-            cl(cl), params(NULL), forceCopy(NULL), system(system), hasInitializedKernel(false) {
-    }
-    ~OpenCLCalcCustomNonbondedForceKernel();
-    /**
-     * Initialize the kernel.
-     *
-     * @param system     the System this kernel will be applied to
-     * @param force      the CustomNonbondedForce this kernel will be used for
-     */
-    void initialize(const System& system, const CustomNonbondedForce& force);
-    /**
-     * Execute the kernel to calculate the forces and/or energy.
-     *
-     * @param context        the context in which to execute this kernel
-     * @param includeForces  true if forces should be calculated
-     * @param includeEnergy  true if the energy should be calculated
-     * @return the potential energy due to the force
-     */
-    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-    /**
-     * Copy changed parameters over to a context.
-     *
-     * @param context    the context to copy parameters to
-     * @param force      the CustomNonbondedForce to copy the parameters from
-     */
-    void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force);
-private:
-    class ForceInfo;
-    void initInteractionGroups(const CustomNonbondedForce& force, const std::string& interactionSource, const std::vector<std::string>& tableTypes);
-    OpenCLContext& cl;
-    ForceInfo* info;
-    OpenCLParameterSet* params;
-    OpenCLArray globals;
-    OpenCLArray interactionGroupData, filteredGroupData, numGroupTiles;
-    cl::Kernel interactionGroupKernel, prepareNeighborListKernel, buildNeighborListKernel;
-    std::vector<void*> interactionGroupArgs;
-    std::vector<std::string> globalParamNames;
-    std::vector<cl_float> globalParamValues;
-    std::vector<OpenCLArray> tabulatedFunctions;
-    double longRangeCoefficient;
-    std::vector<double> longRangeCoefficientDerivs;
-    bool hasInitializedLongRangeCorrection, hasInitializedKernel, hasParamDerivs, useNeighborList;
-    int numGroupThreadBlocks;
-    CustomNonbondedForce* forceCopy;
-    const System& system;
-};
-
-/**
  * This kernel is invoked by GBSAOBCForce to calculate the forces acting on the system.
  */
 class OpenCLCalcGBSAOBCForceKernel : public CalcGBSAOBCForceKernel {

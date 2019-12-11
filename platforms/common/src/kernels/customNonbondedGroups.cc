@@ -10,29 +10,75 @@ typedef struct {
 
 /**
  * Find the maximum of a value across all threads in a warp, and return that to
- * every thread.  This is only needed on Volta and later.  On earlier architectures,
- * we can just return the value that was passed in.
+ * every thread.
  */
-__device__ int reduceMax(int val) {
-#if __CUDA_ARCH__ >= 700
-    for (int mask = 16; mask > 0; mask /= 2) 
-        val = max(val, __shfl_xor_sync(0xffffffff, val, mask));
+#ifdef __CUDA_ARCH__
+DEVICE int reduceMax(int val, int* temp) {
+#else
+DEVICE int reduceMax(int val, LOCAL int* temp) {
 #endif
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
+    // CUDA lets us do this slightly more efficiently by using shuffle operations.
+    for (int mask = 16; mask > 0; mask /= 2)
+        val = max(val, __shfl_xor_sync(0xffffffff, val, mask));
     return val;
+#else
+    int indexInWarp = LOCAL_ID%32;
+    temp[LOCAL_ID] = val;
+    SYNC_WARPS;
+    for (int offset = 16; offset > 0; offset /= 2) {
+        if (offset < indexInWarp)
+            temp[LOCAL_ID] = max(temp[LOCAL_ID], temp[LOCAL_ID+offset]);
+        SYNC_WARPS;
+    }
+    return temp[LOCAL_ID-indexInWarp];
+#endif
 }
 
-extern "C" __global__ void computeInteractionGroups(
-        unsigned long long* __restrict__ forceBuffers, mixed* __restrict__ energyBuffer, const real4* __restrict__ posq, const int4* __restrict__ groupData,
-        const int* __restrict__ numGroupTiles, bool useNeighborList,
+#ifndef SUPPORTS_64_BIT_ATOMICS
+/**
+ * This function is used on devices that don't support 64 bit atomics.  Multiple threads within
+ * a single tile might have computed forces on the same atom.  This loops over them and makes sure
+ * that only one thread updates the force on any given atom.
+ */
+void writeForces(GLOBAL real4* forceBuffers, LOCAL AtomData* localData, int atomIndex) {
+    localData[LOCAL_ID].x = atomIndex;
+    SYNC_WARPS;
+    real4 forceSum = make_real4(0);
+    int start = (LOCAL_ID/TILE_SIZE)*TILE_SIZE;
+    int end = start+32;
+    bool isFirst = true;
+    for (int i = start; i < end; i++)
+        if (localData[i].x == atomIndex) {
+            forceSum += (real4) (localData[i].fx, localData[i].fy, localData[i].fz, 0);
+            isFirst &= (i >= LOCAL_ID);
+        }
+    const unsigned int warp = GLOBAL_ID/TILE_SIZE;
+    unsigned int offset = atomIndex + warp*PADDED_NUM_ATOMS;
+    if (isFirst)
+        forceBuffers[offset] += forceSum;
+    SYNC_WARPS;
+}
+#endif
+
+KERNEL void computeInteractionGroups(
+#ifdef SUPPORTS_64_BIT_ATOMICS
+        GLOBAL mm_ulong* RESTRICT forceBuffers,
+#else
+        GLOBAL real4* RESTRICT forceBuffers,
+#endif
+        GLOBAL mixed* RESTRICT energyBuffer, GLOBAL const real4* RESTRICT posq, GLOBAL const int4* RESTRICT groupData,
+        GLOBAL const int* RESTRICT numGroupTiles, int useNeighborList,
         real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ
         PARAMETER_ARGUMENTS) {
-    const unsigned int totalWarps = (blockDim.x*gridDim.x)/TILE_SIZE;
-    const unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/TILE_SIZE; // global warpIndex
-    const unsigned int tgx = threadIdx.x & (TILE_SIZE-1); // index within the warp
-    const unsigned int tbx = threadIdx.x - tgx;           // block warpIndex
+    const unsigned int totalWarps = GLOBAL_SIZE/TILE_SIZE;
+    const unsigned int warp = GLOBAL_ID/TILE_SIZE; // global warpIndex
+    const unsigned int tgx = LOCAL_ID & (TILE_SIZE-1); // index within the warp
+    const unsigned int tbx = LOCAL_ID - tgx;           // block warpIndex
     mixed energy = 0;
     INIT_DERIVATIVES
-    __shared__ AtomData localData[LOCAL_MEMORY_SIZE];
+    LOCAL AtomData localData[LOCAL_MEMORY_SIZE];
+    LOCAL int reductionBuffer[LOCAL_MEMORY_SIZE];
 
     const unsigned int startTile = (useNeighborList ? warp*numGroupTiles[0]/totalWarps : FIRST_TILE+warp*(LAST_TILE-FIRST_TILE)/totalWarps);
     const unsigned int endTile = (useNeighborList ? (warp+1)*numGroupTiles[0]/totalWarps : FIRST_TILE+(warp+1)*(LAST_TILE-FIRST_TILE)/totalWarps);
@@ -47,16 +93,16 @@ extern "C" __global__ void computeInteractionGroups(
         LOAD_ATOM1_PARAMETERS
         real3 force = make_real3(0);
         real4 posq2 = posq[atom2];
-        localData[threadIdx.x].x = posq2.x;
-        localData[threadIdx.x].y = posq2.y;
-        localData[threadIdx.x].z = posq2.z;
-        localData[threadIdx.x].q = posq2.w;
+        localData[LOCAL_ID].x = posq2.x;
+        localData[LOCAL_ID].y = posq2.y;
+        localData[LOCAL_ID].z = posq2.z;
+        localData[LOCAL_ID].q = posq2.w;
         LOAD_LOCAL_PARAMETERS
-        localData[threadIdx.x].fx = 0.0f;
-        localData[threadIdx.x].fy = 0.0f;
-        localData[threadIdx.x].fz = 0.0f;
+        localData[LOCAL_ID].fx = 0.0f;
+        localData[LOCAL_ID].fy = 0.0f;
+        localData[LOCAL_ID].fz = 0.0f;
         int tj = tgx;
-        int rangeStop = rangeStart + reduceMax(rangeEnd-rangeStart);
+        int rangeStop = rangeStart + reduceMax(rangeEnd-rangeStart, reductionBuffer);
         SYNC_WARPS;
         for (int j = rangeStart; j < rangeStop; j++) {
             if (j < rangeEnd) {
@@ -93,17 +139,25 @@ extern "C" __global__ void computeInteractionGroups(
             }
             SYNC_WARPS;
         }
+#ifdef SUPPORTS_64_BIT_ATOMICS
         if (exclusions != 0) {
-            atomicAdd(&forceBuffers[atom1], static_cast<unsigned long long>((long long) (force.x*0x100000000)));
-            atomicAdd(&forceBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force.y*0x100000000)));
-            atomicAdd(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force.z*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[atom1], (mm_ulong) ((mm_long) (force.x*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force.y*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force.z*0x100000000)));
         }
-        atomicAdd(&forceBuffers[atom2], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fx*0x100000000)));
-        atomicAdd(&forceBuffers[atom2+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fy*0x100000000)));
-        atomicAdd(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fz*0x100000000)));
+        ATOMIC_ADD(&forceBuffers[atom2], (mm_ulong) ((mm_long) (localData[LOCAL_ID].fx*0x100000000)));
+        ATOMIC_ADD(&forceBuffers[atom2+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].fy*0x100000000)));
+        ATOMIC_ADD(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].fz*0x100000000)));
         SYNC_WARPS;
+#else
+        writeForces(forceBuffers, localData, atom2);
+        localData[LOCAL_ID].fx = force.x;
+        localData[LOCAL_ID].fy = force.y;
+        localData[LOCAL_ID].fz = force.z;
+        writeForces(forceBuffers, localData, atom1);
+#endif
     }
-    energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += energy;
+    energyBuffer[GLOBAL_ID] += energy;
     SAVE_DERIVATIVES
 }
 
@@ -111,7 +165,7 @@ extern "C" __global__ void computeInteractionGroups(
  * If the neighbor list needs to be rebuilt, reset the number of tiles to 0.  This is
  * executed by a single thread.
  */
-extern "C" __global__  void prepareToBuildNeighborList(int* __restrict__ rebuildNeighborList, int* __restrict__ numGroupTiles) {
+KERNEL void prepareToBuildNeighborList(GLOBAL int* RESTRICT rebuildNeighborList, GLOBAL int* RESTRICT numGroupTiles) {
     if (rebuildNeighborList[0] == 1)
         numGroupTiles[0] = 0;
 }
@@ -120,8 +174,8 @@ extern "C" __global__  void prepareToBuildNeighborList(int* __restrict__ rebuild
  * Filter the list of tiles to include only ones that have interactions within the
  * padded cutoff.
  */
-extern "C" __global__  void buildNeighborList(int* __restrict__ rebuildNeighborList, int* __restrict__ numGroupTiles,
-        const real4* __restrict__ posq, const int4* __restrict__ groupData, int4* __restrict__ filteredGroupData,
+KERNEL void buildNeighborList(GLOBAL int* RESTRICT rebuildNeighborList, GLOBAL int* RESTRICT numGroupTiles,
+        GLOBAL const real4* RESTRICT posq, GLOBAL const int4* RESTRICT groupData, GLOBAL int4* RESTRICT filteredGroupData,
         real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ) {
     
     // If the neighbor list doesn't need to be rebuilt on this step, return immediately.
@@ -129,15 +183,15 @@ extern "C" __global__  void buildNeighborList(int* __restrict__ rebuildNeighborL
     if (rebuildNeighborList[0] == 0)
         return;
 
-    const unsigned int totalWarps = (blockDim.x*gridDim.x)/TILE_SIZE;
-    const unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/TILE_SIZE; // global warpIndex
-    const unsigned int local_warp = threadIdx.x/TILE_SIZE; // local warpIndex
-    const unsigned int tgx = threadIdx.x & (TILE_SIZE-1); // index within the warp
-    const unsigned int tbx = threadIdx.x - tgx;           // block warpIndex
-
-    __shared__ real4 localPos[LOCAL_MEMORY_SIZE];
-    __shared__ volatile bool anyInteraction[WARPS_IN_BLOCK];
-    __shared__ volatile int tileIndex[WARPS_IN_BLOCK];
+    const unsigned int totalWarps = GLOBAL_SIZE/TILE_SIZE;
+    const unsigned int warp = GLOBAL_ID/TILE_SIZE; // global warpIndex
+    const unsigned int local_warp = LOCAL_ID/TILE_SIZE; // local warpIndex
+    const unsigned int tgx = LOCAL_ID & (TILE_SIZE-1); // index within the warp
+    const unsigned int tbx = LOCAL_ID - tgx;           // block warpIndex
+    LOCAL real4 localPos[LOCAL_MEMORY_SIZE];
+    LOCAL volatile bool anyInteraction[WARPS_IN_BLOCK];
+    LOCAL volatile int tileIndex[WARPS_IN_BLOCK];
+    LOCAL int reductionBuffer[LOCAL_MEMORY_SIZE];
 
     const unsigned int startTile = warp*NUM_TILES/totalWarps;
     const unsigned int endTile = (warp+1)*NUM_TILES/totalWarps;
@@ -149,11 +203,11 @@ extern "C" __global__  void buildNeighborList(int* __restrict__ rebuildNeighborL
         const int rangeEnd = (atomData.z>>16)&0xFFFF;
         const int exclusions = atomData.w;
         real4 posq1 = posq[atom1];
-        localPos[threadIdx.x] = posq[atom2];
+        localPos[LOCAL_ID] = posq[atom2];
         if (tgx == 0)
             anyInteraction[local_warp] = false;
         int tj = tgx;
-        int rangeStop = rangeStart + reduceMax(rangeEnd-rangeStart);
+        int rangeStop = rangeStart + reduceMax(rangeEnd-rangeStart, reductionBuffer);
         SYNC_WARPS;
         for (int j = rangeStart; j < rangeStop && !anyInteraction[local_warp]; j++) {
             SYNC_WARPS;
@@ -174,7 +228,7 @@ extern "C" __global__  void buildNeighborList(int* __restrict__ rebuildNeighborL
         if (anyInteraction[local_warp]) {
             SYNC_WARPS;
             if (tgx == 0)
-                tileIndex[local_warp] = atomicAdd(numGroupTiles, 1);
+                tileIndex[local_warp] = ATOMIC_ADD(numGroupTiles, 1);
             SYNC_WARPS;
             filteredGroupData[TILE_SIZE*tileIndex[local_warp]+tgx] = atomData;
         }

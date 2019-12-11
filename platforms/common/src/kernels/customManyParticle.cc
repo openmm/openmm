@@ -181,7 +181,7 @@ KERNEL void findNeighbors(real4 periodicBoxSize, real4 invPeriodicBoxSize, real4
         ) {
     LOCAL real3 positionCache[FIND_NEIGHBORS_WORKGROUP_SIZE];
     int indexInWarp = LOCAL_ID%32;
-#ifndef CUDA_VERSION
+#ifndef __CUDA_ARCH__
     LOCAL bool includeBlockFlags[FIND_NEIGHBORS_WORKGROUP_SIZE];
     int warpStart = LOCAL_ID-indexInWarp;
 #endif
@@ -220,7 +220,7 @@ KERNEL void findNeighbors(real4 periodicBoxSize, real4 invPeriodicBoxSize, real4
             
             // Loop over any blocks we identified as potentially containing neighbors.
             
-#ifdef CUDA_VERSION
+#ifdef __CUDA_ARCH__
             int includeBlockFlags = BALLOT(includeBlock2);
             while (includeBlockFlags != 0) {
                 int i = __ffs(includeBlockFlags)-1;

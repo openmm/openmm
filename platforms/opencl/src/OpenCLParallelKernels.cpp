@@ -587,7 +587,7 @@ void OpenCLParallelCalcNonbondedForceKernel::getLJPMEParameters(double& alpha, i
 
 class OpenCLParallelCalcCustomNonbondedForceKernel::Task : public OpenCLContext::WorkTask {
 public:
-    Task(ContextImpl& context, OpenCLCalcCustomNonbondedForceKernel& kernel, bool includeForce,
+    Task(ContextImpl& context, CommonCalcCustomNonbondedForceKernel& kernel, bool includeForce,
             bool includeEnergy, double& energy) : context(context), kernel(kernel),
             includeForce(includeForce), includeEnergy(includeEnergy), energy(energy) {
     }
@@ -596,7 +596,7 @@ public:
     }
 private:
     ContextImpl& context;
-    OpenCLCalcCustomNonbondedForceKernel& kernel;
+    CommonCalcCustomNonbondedForceKernel& kernel;
     bool includeForce, includeEnergy;
     double& energy;
 };
@@ -604,7 +604,7 @@ private:
 OpenCLParallelCalcCustomNonbondedForceKernel::OpenCLParallelCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, const System& system) :
         CalcCustomNonbondedForceKernel(name, platform), data(data) {
     for (int i = 0; i < (int) data.contexts.size(); i++)
-        kernels.push_back(Kernel(new OpenCLCalcCustomNonbondedForceKernel(name, platform, *data.contexts[i], system)));
+        kernels.push_back(Kernel(new CommonCalcCustomNonbondedForceKernel(name, platform, *data.contexts[i], system)));
 }
 
 void OpenCLParallelCalcCustomNonbondedForceKernel::initialize(const System& system, const CustomNonbondedForce& force) {

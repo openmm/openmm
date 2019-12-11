@@ -81,15 +81,39 @@ public:
      * @param exclusionList    for each atom, specifies the list of other atoms whose interactions should be excluded
      * @param kernel           the code to evaluate the interaction
      * @param forceGroup       the force group in which the interaction should be calculated
+     */
+    void addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance, const std::vector<std::vector<int> >& exclusionList, const std::string& kernel, int forceGroup);
+    /**
+     * Add a nonbonded interaction to be evaluated by the default interaction kernel.
+     *
+     * @param usesCutoff       specifies whether a cutoff should be applied to this interaction
+     * @param usesPeriodic     specifies whether periodic boundary conditions should be applied to this interaction
+     * @param usesExclusions   specifies whether this interaction uses exclusions.  If this is true, it must have identical exclusions to every other interaction.
+     * @param cutoffDistance   the cutoff distance for this interaction (ignored if usesCutoff is false)
+     * @param exclusionList    for each atom, specifies the list of other atoms whose interactions should be excluded
+     * @param kernel           the code to evaluate the interaction
+     * @param forceGroup       the force group in which the interaction should be calculated
      * @param supportsPairList specifies whether this interaction can work with a neighbor list that uses a separate pair list
      */
-    void addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance, const std::vector<std::vector<int> >& exclusionList, const std::string& kernel, int forceGroup, bool supportsPairList=false);
+    void addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance, const std::vector<std::vector<int> >& exclusionList, const std::string& kernel, int forceGroup, bool supportsPairList);
     /**
      * Add a per-atom parameter that the default interaction kernel may depend on.
+     */
+    void addParameter(ComputeParameterInfo parameter);
+    /**
+     * Add a per-atom parameter that the default interaction kernel may depend on.
+     * 
+     * @deprecated Use the version that takes a ComputeParameterInfo instead.
      */
     void addParameter(const ParameterInfo& parameter);
     /**
      * Add an array (other than a per-atom parameter) that should be passed as an argument to the default interaction kernel.
+     */
+    void addArgument(ComputeParameterInfo parameter);
+    /**
+     * Add an array (other than a per-atom parameter) that should be passed as an argument to the default interaction kernel.
+     * 
+     * @deprecated Use the version that takes a ComputeParameterInfo instead.
      */
     void addArgument(const ParameterInfo& parameter);
     /**

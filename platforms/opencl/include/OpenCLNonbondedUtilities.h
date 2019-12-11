@@ -86,9 +86,21 @@ public:
     /**
      * Add a per-atom parameter that the default interaction kernel may depend on.
      */
+    void addParameter(ComputeParameterInfo parameter);
+    /**
+     * Add a per-atom parameter that the default interaction kernel may depend on.
+     * 
+     * @deprecated Use the version that takes a ComputeParameterInfo instead.
+     */
     void addParameter(const ParameterInfo& parameter);
     /**
      * Add an array (other than a per-atom parameter) that should be passed as an argument to the default interaction kernel.
+     */
+    void addArgument(ComputeParameterInfo parameter);
+    /**
+     * Add an array (other than a per-atom parameter) that should be passed as an argument to the default interaction kernel.
+     * 
+     * @deprecated Use the version that takes a ComputeParameterInfo instead.
      */
     void addArgument(const ParameterInfo& parameter);
     /**

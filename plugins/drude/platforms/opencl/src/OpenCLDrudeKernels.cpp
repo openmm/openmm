@@ -35,7 +35,7 @@
 #include "OpenCLBondedUtilities.h"
 #include "OpenCLForceInfo.h"
 #include "OpenCLIntegrationUtilities.h"
-#include "OpenCLKernelSources.h"
+#include "CommonKernelSources.h"
 #include "SimTKOpenMMRealType.h"
 #include <set>
 
@@ -398,7 +398,7 @@ void OpenCLIntegrateDrudeSCFStepKernel::initialize(const System& system, const D
 
     // Create the kernels.
     
-    cl::Program program = cl.createProgram(OpenCLKernelSources::verlet, "");
+    cl::Program program = cl.createProgram(CommonKernelSources::verlet, "");
     kernel1 = cl::Kernel(program, "integrateVerletPart1");
     kernel2 = cl::Kernel(program, "integrateVerletPart2");
     prevStepSize = -1.0;

@@ -393,59 +393,6 @@ private:
 };
 
 /**
- * This kernel is invoked by CustomNonbondedForce to calculate the forces acting on the system.
- */
-class CudaCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
-public:
-    CudaCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomNonbondedForceKernel(name, platform),
-            cu(cu), params(NULL), forceCopy(NULL), system(system), hasInitializedKernel(false) {
-    }
-    ~CudaCalcCustomNonbondedForceKernel();
-    /**
-     * Initialize the kernel.
-     *
-     * @param system     the System this kernel will be applied to
-     * @param force      the CustomNonbondedForce this kernel will be used for
-     */
-    void initialize(const System& system, const CustomNonbondedForce& force);
-    /**
-     * Execute the kernel to calculate the forces and/or energy.
-     *
-     * @param context        the context in which to execute this kernel
-     * @param includeForces  true if forces should be calculated
-     * @param includeEnergy  true if the energy should be calculated
-     * @return the potential energy due to the force
-     */
-    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-    /**
-     * Copy changed parameters over to a context.
-     *
-     * @param context    the context to copy parameters to
-     * @param force      the CustomNonbondedForce to copy the parameters from
-     */
-    void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force);
-private:
-    class ForceInfo;
-    void initInteractionGroups(const CustomNonbondedForce& force, const std::string& interactionSource, const std::vector<std::string>& tableTypes);
-    CudaContext& cu;
-    ForceInfo* info;
-    CudaParameterSet* params;
-    CudaArray globals;
-    CudaArray interactionGroupData, filteredGroupData, numGroupTiles;
-    CUfunction interactionGroupKernel, prepareNeighborListKernel, buildNeighborListKernel;
-    std::vector<void*> interactionGroupArgs, prepareNeighborListArgs, buildNeighborListArgs;
-    std::vector<std::string> globalParamNames;
-    std::vector<float> globalParamValues;
-    std::vector<CudaArray> tabulatedFunctions;
-    double longRangeCoefficient;
-    std::vector<double> longRangeCoefficientDerivs;
-    bool hasInitializedLongRangeCorrection, hasInitializedKernel, hasParamDerivs, useNeighborList;
-    int numGroupThreadBlocks;
-    CustomNonbondedForce* forceCopy;
-    const System& system;
-};
-
-/**
  * This kernel is invoked by GBSAOBCForce to calculate the forces acting on the system.
  */
 class CudaCalcGBSAOBCForceKernel : public CalcGBSAOBCForceKernel {

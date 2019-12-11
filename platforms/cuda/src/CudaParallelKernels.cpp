@@ -632,7 +632,7 @@ void CudaParallelCalcNonbondedForceKernel::getLJPMEParameters(double& alpha, int
 
 class CudaParallelCalcCustomNonbondedForceKernel::Task : public CudaContext::WorkTask {
 public:
-    Task(ContextImpl& context, CudaCalcCustomNonbondedForceKernel& kernel, bool includeForce,
+    Task(ContextImpl& context, CommonCalcCustomNonbondedForceKernel& kernel, bool includeForce,
             bool includeEnergy, double& energy) : context(context), kernel(kernel),
             includeForce(includeForce), includeEnergy(includeEnergy), energy(energy) {
     }
@@ -641,7 +641,7 @@ public:
     }
 private:
     ContextImpl& context;
-    CudaCalcCustomNonbondedForceKernel& kernel;
+    CommonCalcCustomNonbondedForceKernel& kernel;
     bool includeForce, includeEnergy;
     double& energy;
 };
@@ -649,7 +649,7 @@ private:
 CudaParallelCalcCustomNonbondedForceKernel::CudaParallelCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, const System& system) :
         CalcCustomNonbondedForceKernel(name, platform), data(data) {
     for (int i = 0; i < (int) data.contexts.size(); i++)
-        kernels.push_back(Kernel(new CudaCalcCustomNonbondedForceKernel(name, platform, *data.contexts[i], system)));
+        kernels.push_back(Kernel(new CommonCalcCustomNonbondedForceKernel(name, platform, *data.contexts[i], system)));
 }
 
 void CudaParallelCalcCustomNonbondedForceKernel::initialize(const System& system, const CustomNonbondedForce& force) {

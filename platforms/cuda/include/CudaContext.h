@@ -46,6 +46,7 @@
 #include "CudaIntegrationUtilities.h"
 #include "CudaNonbondedUtilities.h"
 #include "CudaPlatform.h"
+#include "openmm/OpenMMException.h"
 #include "openmm/common/ComputeContext.h"
 #include "openmm/Kernel.h"
 
@@ -201,6 +202,13 @@ public:
      */
     CudaArray& getLongForceBuffer() {
         return force;
+    }
+    /**
+     * All CUDA devices support 64 bit atomics, so this throws an exception.
+     * @return 
+     */
+    ArrayInterface& getForceBuffers() {
+        throw OpenMMException("CUDA platform does not use floating point force buffers");
     }
     /**
      * Get the array which contains the buffer in which energy is computed.
