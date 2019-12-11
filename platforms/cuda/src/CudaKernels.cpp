@@ -8705,13 +8705,13 @@ std::pair<double, double> CudaNoseHooverChainKernel::computeMaskedKineticEnergy(
             kineticEnergyBuffer.upload(zeros);
         }
     }
-    cu.clearBuffer(cu.getEnergyBuffer());
+    cu.clearBuffer(energyBuffer);
     if (nAtoms) {
-        void *args[] = {&cu.getEnergyBuffer().getDevicePointer(),&nAtoms, &cu.getVelm().getDevicePointer(), &atomlists[chainID].getDevicePointer()};
+        void *args[] = {&energyBuffer.getDevicePointer(),&nAtoms, &cu.getVelm().getDevicePointer(), &atomlists[chainID].getDevicePointer()};
         cu.executeKernel(computeAtomsKineticEnergyKernel, args, nAtoms);
     }
     if (nPairs) {
-        void *args[] = {&cu.getEnergyBuffer().getDevicePointer(),&nPairs, &cu.getVelm().getDevicePointer(), &pairlists[chainID].getDevicePointer()};
+        void *args[] = {&energyBuffer.getDevicePointer(),&nPairs, &cu.getVelm().getDevicePointer(), &pairlists[chainID].getDevicePointer()};
         cu.executeKernel(computePairsKineticEnergyKernel, args, nPairs);
     }
 

@@ -105,11 +105,9 @@ void ReferenceVelocityVerletDynamics::update(OpenMM::ContextImpl &context, const
     // Regular atoms
     for (const auto &atom : atomList) {
         if (masses[atom] != 0.0) {
-            for (int xyz = 0; xyz < 3; ++xyz) {
-                velocities[atom][xyz] += 0.5 * inverseMasses[atom]*forces[atom][xyz]*getDeltaT();
-                xPrime[atom][xyz] = atomCoordinates[atom][xyz];
-                atomCoordinates[atom][xyz] += velocities[atom][xyz]*getDeltaT();
-            }
+            velocities[atom] += 0.5 * inverseMasses[atom]*forces[atom]*getDeltaT();
+            xPrime[atom] = atomCoordinates[atom];
+            atomCoordinates[atom] += velocities[atom]*getDeltaT();
         }
     }
     // Connected particles
@@ -129,18 +127,14 @@ void ReferenceVelocityVerletDynamics::update(OpenMM::ContextImpl &context, const
         comVel += 0.5 * comForce * getDeltaT() * invTotMass;
         relVel += 0.5 * relForce * getDeltaT() * invRedMass; 
         if (m1 != 0.0) {
-            for (int xyz = 0; xyz < 3; ++xyz) {
-                velocities[atom1][xyz] = comVel[xyz] - relVel[xyz]*mass2fract;
-                xPrime[atom1][xyz] = atomCoordinates[atom1][xyz];
-                atomCoordinates[atom1][xyz] += velocities[atom1][xyz]*getDeltaT();
-            }
+            velocities[atom1] = comVel - relVel*mass2fract;
+            xPrime[atom1] = atomCoordinates[atom1];
+            atomCoordinates[atom1] += velocities[atom1]*getDeltaT();
         }
         if (m2 != 0.0) {
-            for (int xyz = 0; xyz < 3; ++xyz) {
-                velocities[atom2][xyz] = comVel[xyz] + relVel[xyz]*mass1fract;
-                xPrime[atom2][xyz] = atomCoordinates[atom2][xyz];
-                atomCoordinates[atom2][xyz] += velocities[atom2][xyz]*getDeltaT();
-            }
+            velocities[atom2] = comVel + relVel*mass1fract;
+            xPrime[atom2] = atomCoordinates[atom2];
+            atomCoordinates[atom2] += velocities[atom2]*getDeltaT();
         }
     }
 
@@ -235,9 +229,7 @@ void ReferenceVelocityVerletDynamics::update(OpenMM::ContextImpl &context, const
     // Regular atoms
     for (const auto &atom : atomList) {
         if (masses[atom] != 0.0) {
-            for (int xyz = 0; xyz < 3; ++xyz) {
-                velocities[atom][xyz] += 0.5 * inverseMasses[atom]*forces[atom][xyz]*getDeltaT() + (atomCoordinates[atom][xyz] - xPrime[atom][xyz])/getDeltaT();
-            }
+            velocities[atom] += 0.5 * inverseMasses[atom]*forces[atom]*getDeltaT() + (atomCoordinates[atom] - xPrime[atom])/getDeltaT();
         }
     }
     // Connected particles
@@ -257,14 +249,10 @@ void ReferenceVelocityVerletDynamics::update(OpenMM::ContextImpl &context, const
         comVel += 0.5 * comForce * getDeltaT() * invTotMass;
         relVel += 0.5 * relForce * getDeltaT() * invRedMass; 
         if (m1 != 0.0) {
-            for (int xyz = 0; xyz < 3; ++xyz) {
-                velocities[atom1][xyz] = comVel[xyz] - relVel[xyz]*mass2fract + (atomCoordinates[atom1][xyz] - xPrime[atom1][xyz])/getDeltaT();
-            }
+            velocities[atom1] = comVel - relVel*mass2fract + (atomCoordinates[atom1] - xPrime[atom1])/getDeltaT();
         }
         if (m2 != 0.0) {
-            for (int xyz = 0; xyz < 3; ++xyz) {
-                velocities[atom2][xyz] = comVel[xyz] + relVel[xyz]*mass1fract + (atomCoordinates[atom2][xyz] - xPrime[atom2][xyz])/getDeltaT();
-            }
+            velocities[atom2] = comVel + relVel*mass1fract + (atomCoordinates[atom2] - xPrime[atom2])/getDeltaT();
         }
     }
     if (referenceConstraintAlgorithm)
