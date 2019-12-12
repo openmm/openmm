@@ -218,7 +218,8 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     }
 
     int major, minor;
-    CHECK_RESULT(cuDeviceComputeCapability(&major, &minor, device));
+    CHECK_RESULT(cuDeviceGetAttribute(&major, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR, device));
+    CHECK_RESULT(cuDeviceGetAttribute(&minor, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR, device));
     int numThreadBlocksPerComputeUnit = (major == 6 ? 4 : 6);
     if (cudaDriverVersion < 7000) {
         // This is a workaround to support GTX 980 with CUDA 6.5.  It reports
@@ -847,7 +848,8 @@ vector<int> CudaContext::getDevicePrecedence() {
     for (int i = 0; i < numDevices; i++) {
         CHECK_RESULT(cuDeviceGet(&thisDevice, i));
         int major, minor, clock, multiprocessors, speed;
-        CHECK_RESULT(cuDeviceComputeCapability(&major, &minor, thisDevice));
+        CHECK_RESULT(cuDeviceGetAttribute(&major, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR, thisDevice));
+        CHECK_RESULT(cuDeviceGetAttribute(&minor, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR, thisDevice));
         if (major == 1 && minor < 2)
             continue;
 
