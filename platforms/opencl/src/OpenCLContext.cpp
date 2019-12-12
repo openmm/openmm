@@ -337,8 +337,7 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
     clearFiveBuffersKernel = cl::Kernel(utilities, "clearFiveBuffers");
     clearSixBuffersKernel = cl::Kernel(utilities, "clearSixBuffers");
     reduceReal4Kernel = cl::Kernel(utilities, "reduceReal4Buffer");
-    if (supports64BitGlobalAtomics)
-        reduceForcesKernel = cl::Kernel(utilities, "reduceForces");
+    reduceForcesKernel = cl::Kernel(utilities, "reduceForces");
     reduceEnergyKernel = cl::Kernel(utilities, "reduceEnergy");
     setChargesKernel = cl::Kernel(utilities, "setCharges");
 

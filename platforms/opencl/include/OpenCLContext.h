@@ -435,6 +435,12 @@ public:
         return numThreadBlocks;
     }
     /**
+     * Get the maximum number of threads in a thread block supported by this device.
+     */
+    int getMaxThreadBlockSize() const {
+        return device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>();
+    }
+    /**
      * Get the number of force buffers.
      */
     int getNumForceBuffers() const {

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -41,13 +41,6 @@
 
 using namespace OpenMM;
 using namespace std;
-
-static void setPosqCorrectionArg(OpenCLContext& cl, cl::Kernel& kernel, int index) {
-    if (cl.getUseMixedPrecision())
-        kernel.setArg<cl::Buffer>(index, cl.getPosqCorrection().getDeviceBuffer());
-    else
-        kernel.setArg<void*>(index, NULL);
-}
 
 class OpenCLDrudeForceInfo : public OpenCLForceInfo {
 public:
@@ -411,18 +404,21 @@ void OpenCLIntegrateDrudeSCFStepKernel::execute(ContextImpl& context, const Drud
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;
         kernel1.setArg<cl_int>(0, numAtoms);
-        kernel1.setArg<cl::Buffer>(1, cl.getIntegrationUtilities().getStepSize().getDeviceBuffer());
-        kernel1.setArg<cl::Buffer>(2, cl.getPosq().getDeviceBuffer());
-        setPosqCorrectionArg(cl, kernel1, 3);
+        kernel1.setArg<cl_int>(1, cl.getPaddedNumAtoms());
+        kernel1.setArg<cl::Buffer>(2, cl.getIntegrationUtilities().getStepSize().getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(3, cl.getPosq().getDeviceBuffer());
         kernel1.setArg<cl::Buffer>(4, cl.getVelm().getDeviceBuffer());
-        kernel1.setArg<cl::Buffer>(5, cl.getForce().getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(5, cl.getLongForceBuffer().getDeviceBuffer());
         kernel1.setArg<cl::Buffer>(6, integration.getPosDelta().getDeviceBuffer());
+        if (cl.getUseMixedPrecision())
+            kernel1.setArg<cl::Buffer>(7, cl.getPosqCorrection().getDeviceBuffer());
         kernel2.setArg<cl_int>(0, numAtoms);
         kernel2.setArg<cl::Buffer>(1, cl.getIntegrationUtilities().getStepSize().getDeviceBuffer());
         kernel2.setArg<cl::Buffer>(2, cl.getPosq().getDeviceBuffer());
-        setPosqCorrectionArg(cl, kernel2, 3);
-        kernel2.setArg<cl::Buffer>(4, cl.getVelm().getDeviceBuffer());
-        kernel2.setArg<cl::Buffer>(5, integration.getPosDelta().getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(3, cl.getVelm().getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(4, integration.getPosDelta().getDeviceBuffer());
+        if (cl.getUseMixedPrecision())
+            kernel2.setArg<cl::Buffer>(5, cl.getPosqCorrection().getDeviceBuffer());
     }
     if (dt != prevStepSize) {
         if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {

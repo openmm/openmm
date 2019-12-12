@@ -330,6 +330,12 @@ public:
         return numThreadBlocks;
     }
     /**
+     * Get the maximum number of threads in a thread block supported by this device.
+     */
+    int getMaxThreadBlockSize() const {
+        return 1024;
+    }
+    /**
      * Get the SIMD width of the device being used.
      */
     int getSIMDWidth() const {

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -421,10 +421,11 @@ void CudaIntegrateDrudeSCFStepKernel::execute(ContextImpl& context, const DrudeS
 
     // Call the first integration kernel.
 
-    CUdeviceptr posCorrection = (cu.getUseMixedPrecision() ? cu.getPosqCorrection().getDevicePointer() : 0);
-    void* args1[] = {&numAtoms, &paddedNumAtoms, &cu.getIntegrationUtilities().getStepSize().getDevicePointer(), &cu.getPosq().getDevicePointer(), &posCorrection,
+    vector<void*> args1 = {&numAtoms, &paddedNumAtoms, &cu.getIntegrationUtilities().getStepSize().getDevicePointer(), &cu.getPosq().getDevicePointer(),
             &cu.getVelm().getDevicePointer(), &cu.getForce().getDevicePointer(), &integration.getPosDelta().getDevicePointer()};
-    cu.executeKernel(kernel1, args1, numAtoms);
+    if (cu.getUseMixedPrecision())
+        args1.push_back(&cu.getPosqCorrection().getDevicePointer());
+    cu.executeKernel(kernel1, args1.data(), numAtoms);
 
     // Apply constraints.
 
@@ -432,9 +433,11 @@ void CudaIntegrateDrudeSCFStepKernel::execute(ContextImpl& context, const DrudeS
 
     // Call the second integration kernel.
 
-    void* args2[] = {&numAtoms, &cu.getIntegrationUtilities().getStepSize().getDevicePointer(), &cu.getPosq().getDevicePointer(), &posCorrection,
+    vector<void*> args2 = {&numAtoms, &cu.getIntegrationUtilities().getStepSize().getDevicePointer(), &cu.getPosq().getDevicePointer(),
             &cu.getVelm().getDevicePointer(), &integration.getPosDelta().getDevicePointer()};
-    cu.executeKernel(kernel2, args2, numAtoms);
+    if (cu.getUseMixedPrecision())
+        args2.push_back(&cu.getPosqCorrection().getDevicePointer());
+    cu.executeKernel(kernel2, args2.data(), numAtoms);
 
     // Update the positions of virtual sites and Drude particles.
 

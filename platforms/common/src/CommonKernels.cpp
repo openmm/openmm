@@ -4258,7 +4258,9 @@ void CommonIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
         stepTarget.resize(numSteps);
         merged.resize(numSteps, false);
         modifiesParameters = false;
-        sumWorkGroupSize = 512;
+        sumWorkGroupSize = cc.getMaxThreadBlockSize();
+        if (sumWorkGroupSize > 512)
+            sumWorkGroupSize = 512;
         map<string, string> defines;
         defines["NUM_ATOMS"] = cc.intToString(cc.getNumAtoms());
         defines["PADDED_NUM_ATOMS"] = cc.intToString(cc.getPaddedNumAtoms());

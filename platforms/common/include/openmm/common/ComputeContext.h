@@ -266,6 +266,10 @@ public:
      */
     virtual int getNumThreadBlocks() const = 0;
     /**
+     * Get the maximum number of threads in a thread block supported by this device.
+     */
+    virtual int getMaxThreadBlockSize() const = 0;
+    /**
      * Get the array which contains the position (the xyz components) and charge (the w component) of each atom.
      */
     virtual ArrayInterface& getPosq() = 0;
