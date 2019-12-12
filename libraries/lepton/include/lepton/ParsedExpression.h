@@ -116,6 +116,7 @@ private:
     static ExpressionTreeNode precalculateConstantSubexpressions(const ExpressionTreeNode& node);
     static ExpressionTreeNode substituteSimplerExpression(const ExpressionTreeNode& node);
     static ExpressionTreeNode differentiate(const ExpressionTreeNode& node, const std::string& variable);
+    static bool isConstant(const ExpressionTreeNode& node);
     static double getConstantValue(const ExpressionTreeNode& node);
     static ExpressionTreeNode renameNodeVariables(const ExpressionTreeNode& node, const std::map<std::string, std::string>& replacements);
     ExpressionTreeNode rootNode;
